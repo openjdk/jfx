@@ -27,18 +27,66 @@ package javafx.scene.shape;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import java.lang.ref.SoftReference;
 import javafx.scene.shape.Shape3D.Key;
 
 final class PredefinedMeshManager {
-
-    private static final PredefinedMeshManager INSTANCE = new PredefinedMeshManager();
     private static final int INITAL_CAPACITY = 17; // TODO
     private static final float LOAD_FACTOR = 0.75f;
 
-    private Map<Key, TriangleMesh> boxCache = null;
-    private Map<Key, TriangleMesh> sphereCache = null;
-    private Map<Key, TriangleMesh> cylinderCache = null;
+    private static class TriangleMeshCache {
+        Map<Key, SoftReference<TriangleMesh>> cache = new HashMap<>(INITAL_CAPACITY, LOAD_FACTOR);
+
+        private TriangleMesh get(Key key) {
+            cleanCache();
+            return (cache.containsKey(key))? cache.get(key).get() : null;
+        }
+
+        private void put(Key key, TriangleMesh mesh) {
+            cleanCache();
+            if (mesh != null) {
+                cache.put(key, new SoftReference<TriangleMesh>(mesh));
+            }
+        }
+
+        private void cleanCache() {
+            cache.values().removeIf(ref -> ref.get() == null);
+        }
+
+        private void clear() {
+            cache.clear();
+        }
+
+        private int size() {
+            cleanCache();
+            return cache.size();
+        }
+
+        // for testing purpose
+        private void printStats(String name) {
+            System.out.println(name + " size:    " + size());
+        }
+
+        private void invalidateMesh(Key key) {
+            if (cache.containsKey(key)) {
+                TriangleMesh mesh = cache.get(key).get();
+                if (mesh != null) {
+                    mesh.decRef();
+                    int count = mesh.getRefCount();
+                    if (count == 0) {
+                        cache.remove(key);
+                    }
+                } else {
+                    cache.remove(key);
+                }
+            }
+        }
+    }
+
+    private static final PredefinedMeshManager INSTANCE = new PredefinedMeshManager();
+    private TriangleMeshCache boxCache = null;
+    private TriangleMeshCache sphereCache = null;
+    private TriangleMeshCache cylinderCache = null;
 
     private PredefinedMeshManager() {}
 
@@ -93,40 +141,19 @@ final class PredefinedMeshManager {
 
     synchronized void invalidateBoxMesh(Key key) {
         if (boxCache != null) {
-            TriangleMesh mesh = boxCache.get(key);
-            if (mesh != null) {
-                mesh.decRef();
-                int count = mesh.getRefCount();
-                if (count == 0) {
-                    boxCache.remove(key);
-                }
-            }
+            boxCache.invalidateMesh(key);
         }
     }
 
     synchronized void invalidateSphereMesh(Key key) {
         if (sphereCache != null) {
-            TriangleMesh mesh = sphereCache.get(key);
-            if (mesh != null) {
-                mesh.decRef();
-                int count = mesh.getRefCount();
-                if (count == 0) {
-                    sphereCache.remove(key);
-                }
-            }
+            sphereCache.invalidateMesh(key);
         }
     }
 
     synchronized void invalidateCylinderMesh(Key key) {
         if (cylinderCache != null) {
-            TriangleMesh mesh = cylinderCache.get(key);
-            if (mesh != null) {
-                mesh.decRef();
-                int count = mesh.getRefCount();
-                if (count == 0) {
-                    cylinderCache.remove(key);
-                }
-            }
+            cylinderCache.invalidateMesh(key);
         }
     }
 
@@ -146,15 +173,15 @@ final class PredefinedMeshManager {
     // for testing purpose
     synchronized void printStats() {
         if (boxCache != null) {
-            System.out.println("BoxCache size:  " +  boxCache.size());
+            boxCache.printStats("BoxCache");
         }
 
         if (sphereCache != null) {
-            System.out.println("SphereCache size:    " + sphereCache.size());
+            sphereCache.printStats("SphereCache");
         }
 
         if (cylinderCache != null) {
-            System.out.println("CylinderCache size:    " + cylinderCache.size());
+            cylinderCache.printStats("CylinderCache");
         }
     }
 
@@ -189,19 +216,19 @@ final class PredefinedMeshManager {
     private final static class BoxCacheLoader {
 
         // lazy & thread-safe instantiation
-        private static final Map<Key, TriangleMesh> INSTANCE = new HashMap<>(INITAL_CAPACITY, LOAD_FACTOR);
+        private static final TriangleMeshCache INSTANCE = new TriangleMeshCache();
     }
 
     private final static class SphereCacheLoader {
 
         // lazy & thread-safe instantiation
-        private static final Map<Key, TriangleMesh> INSTANCE = new HashMap<>(INITAL_CAPACITY, LOAD_FACTOR);
+        private static final TriangleMeshCache INSTANCE = new TriangleMeshCache();
     }
 
     private final static class CylinderCacheLoader {
 
         // lazy & thread-safe instantiation
-        private static final Map<Key, TriangleMesh> INSTANCE = new HashMap<>(INITAL_CAPACITY, LOAD_FACTOR);
+        private static final TriangleMeshCache INSTANCE = new TriangleMeshCache();
     }
 
 };
