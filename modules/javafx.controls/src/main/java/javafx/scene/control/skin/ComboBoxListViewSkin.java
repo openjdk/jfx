@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,7 +176,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             listView.requestLayout();
         });
         registerChangeListener(control.converterProperty(), e -> updateListViewItems());
-        registerChangeListener(control.buttonCellProperty(), e -> updateButtonCell());
+        registerChangeListener(control.buttonCellProperty(), e -> {
+            updateButtonCell();
+            updateDisplayArea();
+        });
         registerChangeListener(control.valueProperty(), e -> {
             updateValue();
             control.fireEvent(new ActionEvent());
@@ -464,7 +467,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 comboBox.getButtonCell() : getDefaultCellFactory().call(listView);
         buttonCell.setMouseTransparent(true);
         buttonCell.updateListView(listView);
-        updateDisplayArea();
+
         // As long as the screen-reader is concerned this node is not a list item.
         // This matters because the screen-reader counts the number of list item
         // within combo and speaks it to the user.

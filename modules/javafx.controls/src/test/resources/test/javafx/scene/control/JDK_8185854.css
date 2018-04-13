@@ -1,0 +1,7 @@
+.combo-box {
+   -fx-skin: "test.com.sun.javafx.scene.control.customSkins.JDK8185854.ComboBoxCustomSkin";
+}
+
+.tab-pane {
+    -fx-skin: "test.com.sun.javafx.scene.control.customSkins.JDK8185854.TabPaneCustomSkin";
+}
