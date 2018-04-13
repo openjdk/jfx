@@ -131,7 +131,7 @@ And finally, if the application needs to restore the intrinsically computed valu
 Applications cannot reliably query the bounds of a resizable node until it has been
 added to a scene because the size of that node may be dependent on CSS.  This is
 because CSS is used to style many aspects of a node which affect it's preferred size
-(font, padding, borders, etc) and so the node cannot be layed out (resized) until
+(font, padding, borders, etc) and so the node cannot be laid out (resized) until
 CSS has been applied and the parent can access valid size range metrics.
 This is always true for Controls (and any panes that contain them), because they
 rely on CSS for their default style, even if no user-level style sheets have been set.
@@ -188,7 +188,7 @@ once all effects, clipping, and transforms have been applied.
      </tr>
      <tr>
          <th scope="row">{@link javafx.scene.Group Group}</th>
-         <td>Union of all visible childrens' visual bounds ({@code boundsInParent})
+         <td>Union of all visible children's visual bounds ({@code boundsInParent})
              Does NOT include effect, clip, or transforms set directly on group,
              however DOES include effect, clip, transforms set on individual children since
              those are included in the child's {@code boundsInParent}.

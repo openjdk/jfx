@@ -107,7 +107,7 @@ import javafx.scene.Node;
  * Applications may restore the computed values by setting these properties back
  * to Region.USE_COMPUTED_SIZE.
  * <p>
- * AnchorPane does not clip its content by default, so it is possible that childrens'
+ * AnchorPane does not clip its content by default, so it is possible that children's
  * bounds may extend outside its own bounds if the anchor pane is resized smaller
  * than its preferred size.</p>
  *

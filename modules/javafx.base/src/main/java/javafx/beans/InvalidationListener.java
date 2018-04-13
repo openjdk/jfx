@@ -53,7 +53,7 @@ public interface InvalidationListener {
      * {@code InvalidationListener}. It is called if an {@link Observable}
      * becomes invalid.
      * <p>
-     * In general is is considered bad practice to modify the observed value in
+     * In general, it is considered bad practice to modify the observed value in
      * this method.
      *
      * @param observable

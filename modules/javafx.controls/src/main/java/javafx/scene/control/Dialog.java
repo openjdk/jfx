@@ -101,11 +101,12 @@ import com.sun.javafx.tk.Toolkit;
  * on if the {@link DialogPane#createButton(ButtonType)} method has been overridden. A
  * typical approach is therefore along the following lines:
  *
- * <pre>{@code ButtonType loginButtonType = new ButtonType("Login", ButtonData.OK_DONE);
- * Dialog<String> dialog = new Dialog<>();
- * dialog.getDialogPane().getButtonTypes().add(loginButtonType);
- * boolean disabled = false; // computed based on content of text fields, for example
- * dialog.getDialogPane().lookupButton(loginButtonType).setDisable(disabled);}</pre>
+ * <pre>{@code
+ *     ButtonType loginButtonType = new ButtonType("Login", ButtonData.OK_DONE);
+ *     Dialog<String> dialog = new Dialog<>();
+ *     dialog.getDialogPane().getButtonTypes().add(loginButtonType);
+ *     boolean disabled = false; // computed based on content of text fields, for example
+ *     dialog.getDialogPane().lookupButton(loginButtonType).setDisable(disabled);}</pre>
  *
  * <p>Once a Dialog is instantiated and fully configured, the next step is to
  * show it. More often than not, dialogs are shown in a modal and blocking
@@ -125,20 +126,23 @@ import com.sun.javafx.tk.Toolkit;
  * equally valid ways of showing a dialog:
  *
  * <p><strong>Option 1: The 'traditional' approach</strong>
- * <pre>{@code Optional<ButtonType> result = dialog.showAndWait();
+ * <pre>{@code
+ * Optional<ButtonType> result = dialog.showAndWait();
  * if (result.isPresent() && result.get() == ButtonType.OK) {
  *     formatSystem();
  * }}</pre>
  *
  * <p><strong>Option 2: The traditional + Optional approach</strong>
- * <pre>{@code dialog.showAndWait().ifPresent(response -> {
+ * <pre>{@code
+ * dialog.showAndWait().ifPresent(response -> {
  *     if (response == ButtonType.OK) {
  *         formatSystem();
  *     }
  * });}</pre>
  *
  * <p><strong>Option 3: The fully lambda approach</strong>
- * <pre>{@code dialog.showAndWait()
+ * <pre>{@code
+ * dialog.showAndWait()
  *      .filter(response -> response == ButtonType.OK)
  *      .ifPresent(response -> formatSystem());}</pre>
  *
@@ -1008,7 +1012,7 @@ public class Dialog<R> implements EventTarget {
 
     // This code is called both in the normal and in the abnormal case (i.e.
     // both when a button is clicked and when the user forces a window closed
-    // with keyboard OS-specific shortchuts or OS-native titlebar buttons).
+    // with keyboard OS-specific shortcuts or OS-native titlebar buttons).
     @SuppressWarnings("unchecked")
     void setResultAndClose(ButtonType cmd, boolean close) {
         Callback<ButtonType, R> resultConverter = getResultConverter();

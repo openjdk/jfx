@@ -48,7 +48,7 @@ import javafx.util.Callback;
  * <p>
  * The z-order of the children is defined by the order of the children list
  * with the 0th child being the bottom and last child on top.  If a border and/or
- * padding have been set, the children will be layed out within those insets.
+ * padding have been set, the children will be laid out within those insets.
  * <p>
  * The stackpane will attempt to resize each child to fill its content area.
  * If the child could not be sized to fill the stackpane (either because it was
@@ -56,7 +56,8 @@ import javafx.util.Callback;
  * the area using the alignment property, which defaults to Pos.CENTER.
  * <p>
  * StackPane example:
- * <pre>{@code     StackPane stack = new StackPane();
+ * <pre>{@code
+ *     StackPane stack = new StackPane();
  *     stack.getChildren().addAll(new Rectangle(100,100,Color.BLUE), new Label("Go!));
  * }</pre>
  * <p>
@@ -101,7 +102,7 @@ import javafx.util.Callback;
  * to USE_COMPUTED_SIZE.
  *
  * <p>
- * StackPane does not clip its content by default, so it is possible that childrens'
+ * StackPane does not clip its content by default, so it is possible that children's
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the stackpane.</p>
  *

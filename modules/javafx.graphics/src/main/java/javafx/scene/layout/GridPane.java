@@ -70,7 +70,7 @@ import javafx.util.Callback;
 
 /**
  * GridPane lays out its children within a flexible grid of rows and columns.
- * If a border and/or padding is set, then its content will be layed out within
+ * If a border and/or padding is set, then its content will be laid out within
  * those insets.
  * <p>
  * A child may be placed anywhere within the grid and may span multiple
@@ -223,7 +223,7 @@ import javafx.util.Callback;
  * Applications may restore the computed values by setting these properties back
  * to USE_COMPUTED_SIZE.
  * <p>
- * GridPane does not clip its content by default, so it is possible that childrens'
+ * GridPane does not clip its content by default, so it is possible that children's
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within it space.</p>
  *

@@ -307,7 +307,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * A <b>scaling</b> transformation causes a node to either appear larger or
  * smaller depending on the scaling factor. Scaling alters the coordinate space
  * of the node such that each unit of distance along the axis in local
- * coordinates is multipled by the scale factor. As with rotation
+ * coordinates is multiplied by the scale factor. As with rotation
  * transformations, scaling transformations are applied about a "pivot" point.
  * You can think of this as the point in the Node around which you "zoom".  For
  * example, if you create a {@link javafx.scene.shape.Rectangle} with a
@@ -2071,7 +2071,7 @@ public abstract class Node implements EventTarget, Styleable {
     private void doLayoutPass() {
         if (this instanceof Parent) {
             // TODO: As an optimization we only need to layout those dirty
-            // roots that are descendents of this node
+            // roots that are descendants of this node
             Parent p = (Parent)this;
             for (int i = 0; i < 3; i++) {
                 p.layout();
@@ -3245,7 +3245,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      * For perspective camera, this method first exams node's bounds against
      * camera's clipping plane to cut off those out of viewing frustrum. After
-     * computing areaInScreen, it applys a tight viewing frustrum check using
+     * computing areaInScreen, it applies a tight viewing frustrum check using
      * canonical view volume.
      *
      * The result of areaInScreen comes from the product of
@@ -3332,7 +3332,7 @@ public abstract class Node implements EventTarget, Styleable {
                     tempTx.preConcatenate(camera.getSceneToLocalTransform());
                     tempTx.transform(localBounds, nodeInCameraBounds);
 
-                    // Compare in camera coornidate
+                    // Compare in camera coordinate
                     if (nodeInCameraBounds.getMinZ() > camera.getFarClip()
                             || nodeInCameraBounds.getMaxZ() < camera.getNearClip()) {
                         return 0;
@@ -3768,7 +3768,7 @@ public abstract class Node implements EventTarget, Styleable {
             return computeLocalBounds(bounds, tx);
         } else {
             // 3D transformations and
-            // selected 2D transformations (unifrom transform, flip, quadrant rotation).
+            // selected 2D transformations (uniform transform, flip, quadrant rotation).
             // These 2D transformation will yield tight bounds when applied on the pre-computed
             // geomBounds
             // Note: Transforming the local bounds into a 3D space will yield a bounds
@@ -4278,9 +4278,11 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
-     * {@link #sceneToLocal(double, double)}
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * arguments are in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(double, double)}.
+     *
      * @param x the x coordinate
      * @param y the y coordinate
      * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
@@ -4317,9 +4319,11 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
-     * {@link #sceneToLocal(javafx.geometry.Point2D)}
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * arguments are in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(javafx.geometry.Point2D)}.
+     *
      * @param point the point
      * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
      * @return local coordinates of the point
@@ -4332,8 +4336,9 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a bounds from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * arguments are in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
      * {@link #sceneToLocal(javafx.geometry.Bounds)}.
      * <p>
      *     Since 3D bounds cannot be converted with {@code rootScene} set to {@code true}, trying to convert 3D bounds will yield {@code null}.
@@ -4632,9 +4637,10 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its scene.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
-     * {@link #localToScene(javafx.geometry.Point3D)}
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * result point is in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Point3D)}.
      *
      * @param localPoint the point in local coordinates
      * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
@@ -4657,9 +4663,10 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its scene.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
-     * {@link #localToScene(double, double, double)}
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * result point is in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(double, double, double)}.
      *
      * @param x the x coordinate of the point in local coordinates
      * @param y the y coordinate of the point in local coordinates
@@ -4677,9 +4684,10 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its scene.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
-     * {@link #localToScene(javafx.geometry.Point2D)}
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * result point is in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Point2D)}.
      *
      * @param localPoint the point in local coordinates
      * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
@@ -4699,9 +4707,10 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
      * into the coordinate space of its scene.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
-     * {@link #localToScene(double, double)}
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * result point is in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(double, double)}.
      *
      * @param x the x coordinate of the point in local coordinates
      * @param y the y coordinate of the point in local coordinates
@@ -4718,9 +4727,10 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Transforms a bounds from the local coordinate space of this {@code Node}
      * into the coordinate space of its scene.
-     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result bounds are in {@link Scene} coordinates
-     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
-     * {@link #localToScene(javafx.geometry.Bounds)}
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the
+     * result bounds are in {@link Scene} coordinates of the Node returned by {@link #getScene()}.
+     * Otherwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Bounds)}.
      *
      * @param localBounds the bounds in local coordinates
      * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
@@ -7130,8 +7140,8 @@ public abstract class Node implements EventTarget, Styleable {
                         }
 
                         NodeHelper.markDirty(Node.this, DirtyBits.NODE_EFFECT);
-                        // bounds may have changed regardeless whether
-                        // the dirty flag on efffect is set
+                        // bounds may have changed regardless whether
+                        // the dirty flag on effect is set
                         localBoundsChanged();
                     }
 
@@ -8472,8 +8482,8 @@ public abstract class Node implements EventTarget, Styleable {
         if (isTreeVisible) {
             isTreeVisible = parentNode == null || parentNode.isTreeVisible();
         }
-        // When the parent has changed to visible and we have unsynchornized visibility,
-        // we have to synchronize, because the rendering will now pass throught the newly-visible parent
+        // When the parent has changed to visible and we have unsynchronized visibility,
+        // we have to synchronize, because the rendering will now pass through the newly-visible parent
         // Otherwise an invisible Node might get rendered
         if (parentChanged && parentNode != null && parentNode.isTreeVisible()
                 && isDirty(DirtyBits.NODE_VISIBLE)) {
@@ -9373,7 +9383,7 @@ public abstract class Node implements EventTarget, Styleable {
                 // If the node is part of a subscene, then we must ensure that
                 // the we not only mark subScene.root dirty, but continue and
                 // call subScene.notifyParentsOfInvalidatedCSS() until
-                // Scene.root gets marked dirty, via the recurisve call:
+                // Scene.root gets marked dirty, via the recursive call:
                 subScene.cssFlag = CssFlags.UPDATE;
                 subScene.notifyParentsOfInvalidatedCSS();
             }
@@ -9809,9 +9819,9 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * The role description of this {@code Node}.
      * <p>
-     * Noramlly, when a role is provided for a node, the screen reader
+     * Normally, when a role is provided for a node, the screen reader
      * speaks the role as well as the contents of the node.  When this
-     * value is set, it is possbile to override the default.  This is
+     * value is set, it is possible to override the default.  This is
      * useful because the set of roles is predefined.  For example,
      * it is possible to set the role of a node to be a button, but
      * have the role description be arbitrary text.

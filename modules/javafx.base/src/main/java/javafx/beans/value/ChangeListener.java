@@ -50,7 +50,7 @@ public interface ChangeListener<T> {
      * {@code ChangeListener}. It is called if the value of an
      * {@link ObservableValue} changes.
      * <p>
-     * In general is is considered bad practice to modify the observed value in
+     * In general, it is considered bad practice to modify the observed value in
      * this method.
      *
      * @param observable

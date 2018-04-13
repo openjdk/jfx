@@ -811,7 +811,7 @@ public class MouseEvent extends InputEvent {
     private final boolean secondaryButtonDown;
 
     /**
-     * Returns {@code true} if secondary button (button 1, usually the right)
+     * Returns {@code true} if secondary button (button 3, usually the right)
      * is currently pressed. Note that this is different from the
      * {@code getButton()} method that indicates which button press was
      * responsible for this event while this method indicates whether the

@@ -52,7 +52,7 @@ import javafx.util.Callback;
 
 /**
  * HBox lays out its children in a single horizontal row.
- * If the hbox has a border and/or padding set, then the contents will be layed
+ * If the hbox has a border and/or padding set, then the contents will be laid
  * out within those insets.
  * <p>
  * HBox example:
@@ -109,7 +109,7 @@ import javafx.util.Callback;
  * Applications may restore the computed values by setting these properties back
  * to USE_COMPUTED_SIZE.
  * <p>
- * HBox does not clip its content by default, so it is possible that childrens'
+ * HBox does not clip its content by default, so it is possible that children's
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the hbox.</p>
  *

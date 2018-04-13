@@ -56,7 +56,7 @@ import javafx.util.Callback;
  * wrapping at the flowpane's height.  If the flowpane has a border and/or padding set,
  * the content will be flowed within those insets.
  * <p>
- * FlowPane's prefWrapLength property establishes it's preferred width
+ * FlowPane's prefWrapLength property establishes its preferred width
  * (for horizontal) or preferred height (for vertical). Applications should set
  * prefWrapLength if the default value (400) doesn't suffice.  Note that prefWrapLength
  * is used only for calculating the preferred size and may not reflect the actual
@@ -137,13 +137,13 @@ import javafx.util.Callback;
  * FlowPane provides properties for setting the size range directly.  These
  * properties default to the sentinel value Region.USE_COMPUTED_SIZE, however the
  * application may set them to other values as needed:
- * <pre>{@code
- *     <b>flowpane.setMaxWidth(500);</b>
- * }</pre>
+ * <pre><code>
+ *     <b>flowPane.setMaxWidth(500);</b>
+ * </code></pre>
  * Applications may restore the computed values by setting these properties back
  * to Region.USE_COMPUTED_SIZE.
  * <p>
- * FlowPane does not clip its content by default, so it is possible that childrens'
+ * FlowPane does not clip its content by default, so it is possible that children's
  * bounds may extend outside its own bounds if a child's pref size is larger than
  * the space flowpane has to allocate for it.</p>
  *

@@ -85,10 +85,6 @@ public class Box extends Shape3D {
 
     private TriangleMesh mesh;
 
-    /**
-     * Creates a new instance of {@code Box} of dimension 2 by 2 by 2.
-     */
-
     public static final double DEFAULT_SIZE = 2;
 
     {
@@ -96,6 +92,9 @@ public class Box extends Shape3D {
         BoxHelper.initHelper(this);
     }
 
+    /**
+     * Creates a new instance of {@code Box} of dimension 2 by 2 by 2.
+     */
     public Box() {
         this(DEFAULT_SIZE, DEFAULT_SIZE, DEFAULT_SIZE);
     }

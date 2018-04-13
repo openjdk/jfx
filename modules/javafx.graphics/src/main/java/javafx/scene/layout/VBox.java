@@ -50,7 +50,7 @@ import javafx.util.Callback;
 
 /**
  * VBox lays out its children in a single vertical column.
- * If the vbox has a border and/or padding set, then the contents will be layed
+ * If the vbox has a border and/or padding set, then the contents will be laid
  * out within those insets.
  * <p>
  * VBox example:
@@ -109,7 +109,7 @@ import javafx.util.Callback;
  * Applications may restore the computed values by setting these properties back
  * to USE_COMPUTED_SIZE.
  * <p>
- * VBox does not clip its content by default, so it is possible that childrens'
+ * VBox does not clip its content by default, so it is possible that children's
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the vbox.</p>
  *

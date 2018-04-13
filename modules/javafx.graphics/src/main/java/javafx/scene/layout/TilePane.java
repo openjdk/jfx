@@ -143,11 +143,14 @@ import javafx.util.Callback;
  * <p>
  * TilePane provides properties for setting the size range directly.  These
  * properties default to the sentinel value Region.USE_COMPUTED_SIZE, however the
- * application may set them to other values as needed, e.g. {@code tilepane.setMaxWidth(500)}.
+ * application may set them to other values as needed:
+ * <pre><code>
+ *     <b>tilePane.setMaxWidth(500);</b>
+ * </code></pre>
  * Applications may restore the computed values by setting these properties back
  * to Region.USE_COMPUTED_SIZE.
  * <p>
- * TilePane does not clip its content by default, so it is possible that childrens'
+ * TilePane does not clip its content by default, so it is possible that children's'
  * bounds may extend outside the tiles (and possibly the tilepane bounds) if a
  * child's pref size prevents it from being fit within its tile. Also, if the tilepane
  * is resized smaller than its preferred size, it may not be able to fit all the
