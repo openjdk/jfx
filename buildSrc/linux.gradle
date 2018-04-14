@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,8 +85,14 @@ setupTools("linux_gtk2",
         propFile << "libsGTK2=" << results3.toString().trim()  << "\n";
     },
     { properties ->
-        gtk2CCFlags.addAll(properties.getProperty("cflagsGTK2").split(" "))
-        gtk2LinkFlags.addAll(properties.getProperty("libsGTK2").split(" "))
+        def cflagsGTK2 = properties.getProperty("cflagsGTK2")
+        def libsGTK2 = properties.getProperty("libsGTK2")
+        if (cflagsGTK2 && libsGTK2) {
+            gtk2CCFlags.addAll(cflagsGTK2.split(" "))
+            gtk2LinkFlags.addAll(libsGTK2.split(" "))
+        } else {
+            throw new IllegalStateException("GTK2 development packages not found. If GTK2 packages are installed, please remove the build directory and try again.")
+        }
     }
 )
 
@@ -110,11 +116,11 @@ setupTools("linux_gtk3",
 
     },
     { properties ->
-        String ccflags =  properties.getProperty("cflagsGTK3")
-        String ldflags =  properties.getProperty("libsGTK3")
-        if (ccflags != null && ! ccflags.equals("")) {
-            gtk3CCFlags.addAll(properties.getProperty("cflagsGTK3").split(" "))
-            gtk3LinkFlags.addAll(properties.getProperty("libsGTK3").split(" "))
+        def ccflags =  properties.getProperty("cflagsGTK3")
+        def ldflags =  properties.getProperty("libsGTK3")
+        if (ccflags && ldflags) {
+            gtk3CCFlags.addAll(ccflags.split(" "))
+            gtk3LinkFlags.addAll(ldflags.split(" "))
         } else {
             logger.info("Warning: GTK3 development packages not found, not building GTK3 support");
             LINUX.buildGTK3 = false
@@ -141,8 +147,14 @@ setupTools("linux_pango_tools",
         propFile << "libs=" << results.toString().trim();
     },
     { properties ->
-        pangoCCFlags.addAll(properties.getProperty("cflags").split(" "))
-        pangoLinkFlags.addAll(properties.getProperty("libs").split(" "))
+        def cflags = properties.getProperty("cflags")
+        def libs = properties.getProperty("libs")
+        if (cflags && libs) {
+            pangoCCFlags.addAll(cflags.split(" "))
+            pangoLinkFlags.addAll(libs.split(" "))
+        } else {
+            throw new IllegalStateException("Linux pango packages not found.\nIf pango packages are installed, please remove the build directory and try again.")
+        }
     }
 )
 
@@ -166,8 +178,14 @@ setupTools("linux_freetype_tools",
         propFile << "libs=" << results.toString().trim();
     },
     { properties ->
-        freetypeCCFlags.addAll(properties.getProperty("cflags").split(" "))
-        freetypeLinkFlags.addAll(properties.getProperty("libs").split(" "))
+        def cflags = properties.getProperty("cflags")
+        def libs = properties.getProperty("libs")
+        if (cflags && libs) {
+            freetypeCCFlags.addAll(cflags.split(" "))
+            freetypeLinkFlags.addAll(libs.split(" "))
+        } else {
+            throw new IllegalStateException("Linux freetype packages not found.\nIf freetype pacakges are installed, please remove the build directory and try again.")
+        }
     }
 )
 
