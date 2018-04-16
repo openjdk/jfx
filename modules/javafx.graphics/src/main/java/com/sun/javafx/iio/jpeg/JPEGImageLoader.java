@@ -101,8 +101,6 @@ public class JPEGImageLoader extends ImageLoaderImpl {
             int outColorSpaceCode, int scaleNum, int scaleDenom);
 
     private native boolean decompressIndirect(long structPointer, boolean reportProgress, byte[] array) throws IOException;
-    // Uncomment next line for direct ByteBuffers.
-    //private native ByteBuffer decompressDirect(long structPointer, boolean reportProgress) throws IOException;
 
     static {
         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
@@ -232,14 +230,24 @@ public class JPEGImageLoader extends ImageLoaderImpl {
             outNumComponents = startDecompression(structPointer,
                     outColorSpaceCode, width, height);
 
-            // Uncomment next line for direct ByteBuffer.
-            //buffer = decompressDirect(structPointer, listeners != null && !listeners.isEmpty());
-            // Comment out next three lines to suppress indirect ByteBuffers.
-            byte[] array = new byte[outWidth*outHeight*outNumComponents];
+            if (outWidth < 0 || outHeight < 0 || outNumComponents < 0) {
+               throw new IOException("negative dimension.");
+            }
+            if (outWidth > (Integer.MAX_VALUE / outNumComponents)) {
+               throw new IOException("bad width.");
+            }
+            int scanlineStride = outWidth * outNumComponents;
+            if (scanlineStride > (Integer.MAX_VALUE / outHeight)) {
+               throw new IOException("bad height.");
+            }
+
+            byte[] array = new byte[scanlineStride*outHeight];
             buffer = ByteBuffer.wrap(array);
             decompressIndirect(structPointer, listeners != null && !listeners.isEmpty(), buffer.array());
         } catch (IOException e) {
             throw e;
+        } catch (Throwable t) {
+            throw new IOException(t);
         } finally {
             accessLock.unlock();
             dispose();
