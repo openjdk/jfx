@@ -66,7 +66,6 @@ import org.junit.Test;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
-import javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.tk.Toolkit;
 
@@ -76,9 +75,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.SingleSelectionModelShim;
+import javafx.scene.control.skin.TabPaneSkin;
+import javafx.scene.control.skin.TabPaneSkinShim;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -103,7 +105,7 @@ public class TabPaneTest {
         tab1 = new Tab("one");
         tab2 = new Tab("two");
         tab3 = new Tab("three");
-        sm = TabPaneShim.getTabPane_abPaneSelectionModel(tabPane);
+        sm = TabPaneShim.getTabPaneSelectionModel(tabPane);
         root = new StackPane();
         scene = new Scene(root);
         stage = new Stage();
@@ -1161,5 +1163,27 @@ public class TabPaneTest {
                 fail("InterruptedException occurred during Thread.sleep()");
             }
         }
+    }
+
+    // Test for JDK-8157690
+    @Test public void testPopupItemsOnSortingTabs() {
+        tabPane.setMaxSize(20, 20);
+        root.getChildren().add(tabPane);
+        tabPane.getTabs().addAll(tab1, tab2, tab3);
+        show();
+        tk.firePulse();
+        TabPaneSkin tbSkin = (TabPaneSkin) tabPane.getSkin();
+        assertNotNull(tbSkin);
+        ContextMenu tabsMenu = TabPaneSkinShim.getTabsMenu(tbSkin);
+        assertNotNull(tabsMenu);
+        assertEquals("ContextMenu should contain 3 items.", 3, tabsMenu.getItems().size());
+
+        tabPane.getTabs().sort((o1, o2) -> sortCompare(o1, o2));
+        tk.firePulse();
+        assertEquals("ContextMenu should contain 3 items.", 3, tabsMenu.getItems().size());
+    }
+
+    private int sortCompare(Tab t1, Tab t2) {
+        return t2.getText().compareTo(t1.getText());
     }
 }

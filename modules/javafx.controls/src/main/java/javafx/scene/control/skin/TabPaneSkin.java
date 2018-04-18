@@ -477,24 +477,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 tabRegion.removeListeners(tab);
                 removeTabContent(tab);
 
-                // remove the menu item from the popup menu
-                ContextMenu popupMenu = tabHeaderArea.controlButtons.popup;
-                TabMenuItem tabItem = null;
-                if (popupMenu != null) {
-                    for (MenuItem item : popupMenu.getItems()) {
-                        tabItem = (TabMenuItem) item;
-                        if (tab == tabItem.getTab()) {
-                            break;
-                        }
-                        tabItem = null;
-                    }
-                }
-                if (tabItem != null) {
-                    tabItem.dispose();
-                    popupMenu.getItems().remove(tabItem);
-                }
-                // end of removing menu item
-
                 EventHandler<ActionEvent> cleanup = ae -> {
                     tabRegion.animationState = TabAnimationState.NONE;
 
@@ -1817,7 +1799,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 showControlButtons = true;
             } else {
                 setVisible(false);
-                popup.getItems().clear();
+                clearPopupMenu();
                 popup = null;
             }
 
@@ -1831,7 +1813,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             if (popup == null) {
                 popup = new ContextMenu();
             }
-            popup.getItems().clear();
+            clearPopupMenu();
             ToggleGroup group = new ToggleGroup();
             ObservableList<RadioMenuItem> menuitems = FXCollections.<RadioMenuItem>observableArrayList();
             for (final Tab tab : getSkinnable().getTabs()) {
@@ -1841,6 +1823,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 menuitems.add(item);
             }
             popup.getItems().addAll(menuitems);
+        }
+
+        private void clearPopupMenu() {
+            for (MenuItem item : popup.getItems()) {
+                ((TabMenuItem) item).dispose();
+            }
+            popup.getItems().clear();
         }
 
         private void showPopupMenu() {
@@ -1880,7 +1869,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         public void dispose() {
+            textProperty().unbind();
             tab.disableProperty().removeListener(weakDisableListener);
+            tab = null;
         }
     }
 
@@ -2233,5 +2224,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             anim.getOnFinished().handle(null);
             anim.stop();
         }
+    }
+
+    // For testing purpose.
+    ContextMenu test_getTabsMenu() {
+        return tabHeaderArea.controlButtons.popup;
     }
 }
