@@ -1752,6 +1752,8 @@ project(":graphics") {
         main = "org.antlr.Tool"
 
         args = [
+            "-Xconversiontimeout",
+            "30000",
             "-o",
             "$buildDir/gensrc/antlr",
             "com/sun/scenario/effect/compiler/JSL.g" ]
