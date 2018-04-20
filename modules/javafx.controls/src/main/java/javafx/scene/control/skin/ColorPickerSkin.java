@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -343,7 +343,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
     }
 
-    private static final Map<Color, String> colorNameMap = new HashMap<>(24);
+    private static final Map<Color, String> colorNameMap = new HashMap<>(30);
     private static final Map<Color, String> cssNameMap = new HashMap<>(139);
     static {
         // Translatable display names for the most common colors
@@ -364,11 +364,17 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         colorNameMap.put(LIGHTGRAY,   Properties.getColorPickerString("colorName.lightgray"));
         colorNameMap.put(LIGHTGREEN,  Properties.getColorPickerString("colorName.lightgreen"));
         colorNameMap.put(LIGHTYELLOW, Properties.getColorPickerString("colorName.lightyellow"));
+        colorNameMap.put(LIME,        Properties.getColorPickerString("colorName.lime"));
         colorNameMap.put(MAGENTA,     Properties.getColorPickerString("colorName.magenta"));
+        colorNameMap.put(MAROON,      Properties.getColorPickerString("colorName.maroon"));
         colorNameMap.put(MEDIUMBLUE,  Properties.getColorPickerString("colorName.mediumblue"));
+        colorNameMap.put(NAVY,        Properties.getColorPickerString("colorName.navy"));
+        colorNameMap.put(OLIVE,       Properties.getColorPickerString("colorName.olive"));
         colorNameMap.put(ORANGE,      Properties.getColorPickerString("colorName.orange"));
         colorNameMap.put(PINK,        Properties.getColorPickerString("colorName.pink"));
+        colorNameMap.put(PURPLE,      Properties.getColorPickerString("colorName.purple"));
         colorNameMap.put(RED,         Properties.getColorPickerString("colorName.red"));
+        colorNameMap.put(TEAL,        Properties.getColorPickerString("colorName.teal"));
         colorNameMap.put(WHITE,       Properties.getColorPickerString("colorName.white"));
         colorNameMap.put(YELLOW,      Properties.getColorPickerString("colorName.yellow"));
 
