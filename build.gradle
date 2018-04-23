@@ -2160,13 +2160,11 @@ project(":controls") {
 }
 
 project(":swing") {
-    // Now that JMX is gone, we can likely uncomment the following as
-    // a fix for JDK-8195669
-    /* should not be built, but needed in JMX
+
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
     }
-    */
+
     project.ext.buildModule = COMPILE_SWING
     project.ext.includeSources = true
     project.ext.moduleRuntime = true
