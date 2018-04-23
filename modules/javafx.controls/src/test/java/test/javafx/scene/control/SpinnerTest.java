@@ -42,9 +42,11 @@ import javafx.scene.control.SpinnerShim;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.SpinnerValueFactoryShim;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
@@ -1403,5 +1405,28 @@ public class SpinnerTest {
 
         assertTrue(defMsg, enterDefaultPass);
         assertTrue(canMsg, escapeCancelPass);
+    }
+
+    @Test public void spinnerDelayTest() {
+        Spinner<Double> spinner = new Spinner<>(-100, 100, 2.5, 0.5);
+
+        spinner.setInitialDelay(null);
+        assertEquals(300.0, spinner.getInitialDelay().toMillis(), 0.001);
+        spinner.setInitialDelay(new Duration(500));
+        assertEquals(500.0, spinner.getInitialDelay().toMillis(), 0.001);
+
+        spinner.setRepeatDelay(null);
+        assertEquals(60.0, spinner.getRepeatDelay().toMillis(), 0.001);
+        spinner.setRepeatDelay(new Duration(200));
+        assertEquals(200.0, spinner.getRepeatDelay().toMillis(), 0.001);
+
+        spinner.setStyle("-fx-initial-delay: 400ms; -fx-repeat-delay: 100ms");
+        FlowPane root = new FlowPane();
+        root.getChildren().addAll(spinner);
+        Scene scene = new Scene(root, 150, 150);
+        scene.getRoot().applyCss();
+
+        assertEquals(400.0, spinner.getInitialDelay().toMillis(), 0.001);
+        assertEquals(100.0, spinner.getRepeatDelay().toMillis(), 0.001);
     }
 }

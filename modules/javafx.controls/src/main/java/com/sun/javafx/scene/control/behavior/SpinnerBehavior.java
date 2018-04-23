@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -128,10 +128,12 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
         }
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
-        final KeyFrame kf = new KeyFrame(Duration.millis(INITIAL_DURATION_MS), spinningKeyFrameEventHandler);
-        timeline.getKeyFrames().setAll(kf);
+        timeline.setDelay(getNode().getInitialDelay());
+        final KeyFrame start = new KeyFrame(Duration.ZERO, spinningKeyFrameEventHandler);
+        final KeyFrame repeat = new KeyFrame(getNode().getRepeatDelay());
+        timeline.getKeyFrames().setAll(start, repeat);
         timeline.playFromStart();
-        timeline.play();
+
         spinningKeyFrameEventHandler.handle(null);
     }
 

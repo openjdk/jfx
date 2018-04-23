@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,17 +34,30 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.TemporalUnit;
+
+import javafx.css.CssMetaData;
+import javafx.css.converter.DurationConverter;
+import javafx.css.Styleable;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.SimpleStyleableObjectProperty;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A single line text field that lets the user select a number or an object
@@ -598,7 +611,122 @@ public class Spinner<T> extends Control {
     public final String getPromptText() { return getEditor().getPromptText(); }
     public final void setPromptText(String value) { getEditor().setPromptText(value); }
 
+    private final ObjectProperty<Duration> initialDelay =
+                            new SimpleStyleableObjectProperty<>(INITIAL_DELAY,
+                            this, "initialDelay", new Duration(300));
 
+    /**
+     * The duration that the mouse has to be pressed on an arrow button
+     * before the next value steps. Successive step duration is set using
+     * {@link #repeatDelayProperty() repeat delay}.
+     *
+     * @return inital delay property
+     * @since 11
+     * @defaultValue 300ms
+     */
+    public final ObjectProperty<Duration> initialDelayProperty() {
+        return initialDelay;
+    }
+
+    public final void setInitialDelay(Duration value) {
+        if (value != null) {
+            initialDelay.set(value);
+        }
+    }
+
+    public final Duration getInitialDelay() {
+        return initialDelay.get();
+    }
+
+    private final ObjectProperty<Duration> repeatDelay =
+                            new SimpleStyleableObjectProperty<>(REPEAT_DELAY,
+                            this, "repeatDelay", new Duration(60));
+
+    /**
+     * The duration that the mouse has to be pressed for each successive step
+     * after the first value steps. Initial step duration is set using
+     * {@link #initialDelayProperty() initial delay}.
+     *
+     * @return repeat delay property
+     * @since 11
+     * @defaultValue 60ms
+     */
+    public final ObjectProperty<Duration> repeatDelayProperty() {
+        return repeatDelay;
+    }
+
+    public final void setRepeatDelay(Duration value) {
+        if (value != null) {
+            repeatDelay.set(value);
+        }
+    }
+
+    public final Duration getRepeatDelay() {
+        return repeatDelay.get();
+    }
+
+    /***************************************************************************
+     *                                                                         *
+     * Stylesheet Handling                                                     *
+     *                                                                         *
+     **************************************************************************/
+
+    private static final CssMetaData<Spinner<?>,Duration> INITIAL_DELAY =
+                                    new CssMetaData<Spinner<?>,Duration>("-fx-initial-delay",
+                                        DurationConverter.getInstance(), new Duration(300)) {
+
+        @Override
+        public boolean isSettable(Spinner<?> spinner) {
+            return !spinner.initialDelayProperty().isBound();
+        }
+
+        @Override
+        public StyleableProperty<Duration> getStyleableProperty(Spinner<?> spinner) {
+            return (StyleableProperty<Duration>)(WritableValue<Duration>)spinner.initialDelayProperty();
+        }
+    };
+
+    private static final CssMetaData<Spinner<?>,Duration> REPEAT_DELAY =
+                                   new CssMetaData<Spinner<?>,Duration>("-fx-repeat-delay",
+                                        DurationConverter.getInstance(), new Duration(60)) {
+
+        @Override
+        public boolean isSettable(Spinner<?> spinner) {
+            return !spinner.repeatDelayProperty().isBound();
+        }
+
+        @Override
+        public StyleableProperty<Duration> getStyleableProperty(Spinner<?> spinner) {
+            return (StyleableProperty<Duration>)(WritableValue<Duration>)spinner.repeatDelayProperty();
+        }
+    };
+
+    private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+    static {
+        final List<CssMetaData<? extends Styleable, ?>> styleables =
+            new ArrayList<>(Control.getClassCssMetaData());
+        styleables.add(INITIAL_DELAY);
+        styleables.add(REPEAT_DELAY);
+        STYLEABLES = Collections.unmodifiableList(styleables);
+    }
+
+    /*
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its superclasses.
+     * @since 11
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return STYLEABLES;
+    }
+
+    /*
+     * {@inheritDoc}
+     * @since 11
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
+        return getClassCssMetaData();
+    }
 
     /***************************************************************************
      *                                                                         *
