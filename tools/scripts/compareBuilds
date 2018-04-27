@@ -4,6 +4,7 @@
 #
 # usage: compareBuilds full_path_to_top_one full_path_to_top_two
 
+# TODO KCR: update this to also compare standalone sdk
 
 one="$1"
 two="$2"

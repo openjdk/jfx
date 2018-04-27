@@ -5,6 +5,8 @@
 # in place
 #
 
+# TODO KCR: update this for standalone vs bundled sdk
+
 TOP="$1"
 
 do_cygpath() 

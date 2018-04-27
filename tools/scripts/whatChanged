@@ -8,6 +8,8 @@
 #  and then the sums files will be updated.
 #
 
+# TODO KCR: update this to also compare standalone sdk
+
 TOP="$PWD"
 BLDTOP="${TOP}/build"
 HASHDIR="$BLDTOP/hashes"

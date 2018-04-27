@@ -124,7 +124,7 @@
     </target>
 
     <!-- COPY LIBS INTO JAR FILE: so that we have a simple single jar application -->
-    <target name="-post-jar" depends="jfx-deployment">
+    <target name="-post-jar">
         <zip destfile="${dist.jar}" update="true">
             <!-- Rename license and notice file -->
             <mappedresources>
@@ -178,25 +178,4 @@
        </java>
     </target>
     
-    <target name="jfx-deployment">
-        <!-- Delete the Ensemble8.jar build by netbeans as we will build one with JavaFX packager -->
-        <delete file="${dist.jar}"/>
-       <!-- tasks for deployment and executable jars -->
-        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
-                 uri="javafx:com.sun.javafx.tools.ant"
-                 classpath="${platform.home}/lib/ant-javafx.jar"/>
-         
-        <fx:application id="ensemble8"
-                        name="${application.title}"
-                        mainClass="ensemble.EnsembleApp"/>
-        <fx:jar destfile="${dist.jar}">
-            <fx:application refId="ensemble8"/>
-            <fileset dir="${build.classes.dir}"/>
-            <manifest>
-                <attribute name="Implementation-Vendor" value="${application.vendor}"/>
-                <attribute name="Implementation-Title" value="${application.title}"/>
-                <attribute name="Implementation-Version" value="1.0"/>
-            </manifest>
-        </fx:jar>
-    </target>    
 </project>

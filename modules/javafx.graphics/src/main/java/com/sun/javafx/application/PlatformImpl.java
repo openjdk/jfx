@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,6 +91,10 @@ public class PlatformImpl {
     private static boolean isThreadMerged = false;
     private static String applicationType = "";
     private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
+
+    private static final boolean verbose
+            = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+                Boolean.getBoolean("javafx.verbose"));
 
     private static final boolean DEBUG
             = AccessController.doPrivileged((PrivilegedAction<Boolean>) ()
@@ -217,6 +221,13 @@ public class PlatformImpl {
             s = System.getProperty("javafx.embed.singleThread");
             if (s != null) {
                 isThreadMerged = Boolean.valueOf(s);
+                if (isThreadMerged && !isSupported(ConditionalFeature.SWING)) {
+                    isThreadMerged = false;
+                    if (verbose) {
+                        System.err.println(
+                        "WARNING: javafx.embed.singleThread ignored (javafx.swing module not found)");
+                    }
+                }
             }
             return null;
         });

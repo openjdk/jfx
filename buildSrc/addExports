@@ -1,5 +1,9 @@
 # buildSrc/addExports: temporary --add-exports and --add-reads
 #
+# NOTE: this is only used for the bundled sdk build. It is needed only
+# for changes that have been added to module-info.java and are not in
+# the minimum required boot JDK.
+#
 # After a promoted jdk build includes the module-info changes associated
 # with a particular fix, we might eventually remove the --add-exports or
 # --add-reads from this file for that fix, after bumping the minimum jdk

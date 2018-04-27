@@ -25,6 +25,7 @@
 
 package test.launchertest;
 
+import java.io.File;
 import java.util.ArrayList;
 import junit.framework.AssertionFailedError;
 import org.junit.Test;
@@ -46,7 +47,14 @@ public class ModuleLauncherTest {
 
     private final int testExitCode = ERROR_NONE;
 
-    private void doTestLaunchModule(String modulePath, String testAppName) throws Exception {
+    private void doTestLaunchModule(String appModulePath, String testAppName) throws Exception {
+        final String javafxModulePath = System.getProperty("worker.module.path");
+        String modulePath;
+        if (javafxModulePath != null) {
+            modulePath = javafxModulePath + File.pathSeparator + appModulePath;
+        } else {
+            modulePath = appModulePath;
+        }
         assertNotNull(testAppName);
         System.err.println("The following Unknown module WARNING messages are expected:");
         String mpArg = "--module-path=" + modulePath;
