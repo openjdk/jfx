@@ -1,4 +1,4 @@
-## xmlsoft.org: libxslt v1.1.28
+## xmlsoft.org: libxslt v1.1.32
 
 ### libxslt License
 <pre>

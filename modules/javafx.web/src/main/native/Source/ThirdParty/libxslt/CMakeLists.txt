@@ -1,23 +1,23 @@
 set(XSLT_SOURCES
-    libxslt/attributes.c
-    libxslt/documents.c
-    libxslt/extensions.c
-    libxslt/extra.c
-    libxslt/functions.c
-    libxslt/imports.c
-    libxslt/keys.c
-    libxslt/namespaces.c
-    libxslt/numbers.c
-    libxslt/pattern.c
-    libxslt/preproc.c
-    libxslt/security.c
-    libxslt/templates.c
-    libxslt/transform.c
-    libxslt/variables.c
-    libxslt/xslt.c
-    libxslt/xsltlocale.c
-    libxslt/xsltutils.c
-    libxslt/attrvt.c
+    src/libxslt/attributes.c
+    src/libxslt/documents.c
+    src/libxslt/extensions.c
+    src/libxslt/extra.c
+    src/libxslt/functions.c
+    src/libxslt/imports.c
+    src/libxslt/keys.c
+    src/libxslt/namespaces.c
+    src/libxslt/numbers.c
+    src/libxslt/pattern.c
+    src/libxslt/preproc.c
+    src/libxslt/security.c
+    src/libxslt/templates.c
+    src/libxslt/transform.c
+    src/libxslt/variables.c
+    src/libxslt/xslt.c
+    src/libxslt/xsltlocale.c
+    src/libxslt/xsltutils.c
+    src/libxslt/attrvt.c
 )
 
 # XSLT_COMPILE_OPTIONS are taken from Chromium.
@@ -29,6 +29,9 @@ if (WIN32)
         # TODO(brucedawson): http://crbug.com/554200 4311 is a VS
         # 2015 64-bit warning for pointer truncation
         "/wd4311"
+
+        # security.c: from 'const char *' to 'LPCWSTR'
+        "/wd4133"
     )
 elseif (APPLE)
     set(XSLT_PLATFORM_INCLUDE_DIRECTORY mac)
@@ -42,6 +45,7 @@ elseif (APPLE)
         # xsltDefaultRegion and xsltCalibrateTimestamps are only
         # used with certain preprocessor defines set.
         "-Wno-unused-function"
+        "-Wno-unused-variable"
      )
 elseif (UNIX AND NOT APPLE)
     set(XSLT_PLATFORM_INCLUDE_DIRECTORY linux)
@@ -63,7 +67,7 @@ add_library(XSLTJava STATIC ${XSLT_SOURCES})
 target_link_libraries(XSLTJava PUBLIC XMLJava)
 
 target_include_directories(XSLTJava
-    PUBLIC "."
+    PUBLIC "src"
     PRIVATE "${XSLT_PLATFORM_INCLUDE_DIRECTORY}"
 )
 
