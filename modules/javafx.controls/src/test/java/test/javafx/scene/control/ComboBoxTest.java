@@ -77,6 +77,7 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -108,12 +109,22 @@ public class ComboBoxTest {
      ********************************************************************/
 
     @Before public void setup() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+
         comboBox = new ComboBox<String>();
         comboBox.setSkin(new ComboBoxListViewSkin<>(comboBox));
         sm = comboBox.getSelectionModel();
     }
 
-
+    @After public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
+    }
 
     /*********************************************************************
      *                                                                   *
@@ -634,6 +645,10 @@ public class ComboBoxTest {
     }
 
     @Test public void ensureImpl_getPseudoClassStateReturnsValidValue() {
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+
         Set<PseudoClass> pseudoClassStates = comboBox.getPseudoClassStates();
         assertFalse(comboBox.isEditable());
         assertTrue(pseudoClassStates.size() >= 0);
@@ -708,6 +723,10 @@ public class ComboBoxTest {
     }
 
     @Test public void ensureCanToggleShowing() {
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+
         comboBox.show();
         assertTrue(comboBox.isShowing());
         comboBox.hide();
@@ -715,6 +734,10 @@ public class ComboBoxTest {
     }
 
     @Test public void ensureCanNotToggleShowingWhenDisabled() {
+        Stage stage = new Stage();
+        Scene scene = new Scene(comboBox);
+        stage.setScene(scene);
+
         comboBox.setDisable(true);
         comboBox.show();
         assertFalse(comboBox.isShowing());

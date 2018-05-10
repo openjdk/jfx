@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -403,6 +403,11 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
 
     private void positionAndShowPopup() {
+        final ComboBoxBase<T> comboBoxBase = getSkinnable();
+        if (comboBoxBase.getScene() == null) {
+            return;
+        }
+
         final PopupControl _popup = getPopup();
         _popup.getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
 
@@ -415,10 +420,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popupNeedsReconfiguring = true;
         reconfigurePopup();
 
-        final ComboBoxBase<T> comboBoxBase = getSkinnable();
         _popup.show(comboBoxBase.getScene().getWindow(),
-                snapPositionX(p.getX()),
-                snapPositionY(p.getY()));
+                    snapPositionX(p.getX()),
+                    snapPositionY(p.getY()));
 
         popupContent.requestFocus();
 
