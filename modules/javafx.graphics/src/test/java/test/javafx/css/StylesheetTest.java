@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,6 +77,8 @@ import static org.junit.Assert.assertEquals;
 public class StylesheetTest {
 
     String testURL = null;
+    final String EXPECTED_WARNING = "EXPECTED WARNING: This is a negative test"
+        + " to verify loop detection in CSS. A Loop detected warning message is expected.";
 
     public StylesheetTest() {
         testURL = getClass().getResource("HonorDeveloperSettingsTest_UA.css").toExternalForm();
@@ -320,6 +322,8 @@ public class StylesheetTest {
             // reset fill
             ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
 
+            System.err.println(EXPECTED_WARNING);
+
             // loop in style!
             rect.setStyle("-fx-base: -fx-fill; -fx-fill: -fx-base;");
             root.applyCss();
@@ -354,6 +358,8 @@ public class StylesheetTest {
 
             // reset fill
             ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
+
+            System.err.println(EXPECTED_WARNING);
 
             // loop in style!
             rect.setStyle("-fx-base: -fx-color; -fx-color: -fx-base; -fx-fill: radial-gradient(radius 100%, red, -fx-color);");
@@ -396,6 +402,8 @@ public class StylesheetTest {
             // reset fill
             ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
 
+            System.err.println(EXPECTED_WARNING);
+
             // loop in style
             root.setStyle("-fx-base: -fx-color;");
 
@@ -430,6 +438,8 @@ public class StylesheetTest {
 
             // reset fill
             ((StyleableProperty<Paint>)rect.fillProperty()).applyStyle(null, null);
+
+            System.err.println(EXPECTED_WARNING);
 
             // loop in style!
             root.setStyle("-fx-base: -fx-fill;");
