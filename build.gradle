@@ -333,6 +333,7 @@ ext.JAVA_HOME = JDK_HOME
 defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
+defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
 defineProperty("JDK_DOCS", "https://docs.oracle.com/javase/10/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
@@ -4304,6 +4305,11 @@ task sdk() {
     }
 }
 
+task jmods() {
+    dependsOn(sdk)
+    // real work items added later.
+}
+
 task appsjar() {
     dependsOn(sdk)
     // Note: the jar dependencies get added elsewhere see project(":apps")
@@ -4343,7 +4349,7 @@ task checkCache() {
 }
 
 task publicExports() {
-    dependsOn(sdk, apps, javadoc, jdkZip)
+    dependsOn(sdk, jmods, apps, javadoc, jdkZip)
     // note the real work is below in the compileTargets
 }
 
@@ -4357,7 +4363,7 @@ task perf() {
 }
 
 task zips() {
-    dependsOn(sdk, javadoc, apps, jdkZip, publicExports, perf)
+    dependsOn(sdk, jmods, javadoc, apps, jdkZip, publicExports, perf)
     // note the real work is below in the compileTargets
 }
 
@@ -4509,13 +4515,18 @@ compileTargets { t ->
         def docsBundleName = "javafx-docs-${RELEASE_VERSION}"
         def docsArtifactsDir = "${artifactsDir}/${docsBundleName}"
 
+        def jmodsDirName = "jmods"
+        def jmodsDir = "${rootProject.buildDir}/${jmodsDirName}"
+        def jmodsBundleName = "javafx-jmods-${RELEASE_VERSION}"
+        def jmodsArtifactsDir = "${artifactsDir}/${jmodsBundleName}"
+
         def publicExportsTask = task ("publicExportsStandalone${t.capital}") {
             group = "Basic"
             description = "Creates the disk layout for sdk, jmods, and docs"
         }
         publicExports.dependsOn(publicExportsTask)
 
-        def copyArtifactsSdkTask = task("copyArtifactsSdk$t.capital", type: Copy, dependsOn: [sdk,apps,javadoc]) {
+        def copyArtifactsSdkTask = task("copyArtifactsSdk$t.capital", type: Copy, dependsOn: [sdk,jmods,apps,javadoc]) {
             from sdkDir
             into sdkArtifactsDir
         }
@@ -4540,6 +4551,12 @@ compileTargets { t ->
             into "${docsArtifactsDir}/api"
         }
         publicExportsTask.dependsOn(copyArtifactsDocsTask)
+
+        def copyArtifactsJmodsTask = task("copyArtifactsJmods$t.capital", type: Copy, dependsOn: copyArtifactsDocsTask) {
+            from jmodsDir
+            into "${jmodsArtifactsDir}"
+        }
+        publicExportsTask.dependsOn(copyArtifactsJmodsTask)
 
         def zipsTask = task ("zipsStandalone${t.capital}") {
             group = "Basic"
@@ -4568,6 +4585,15 @@ compileTargets { t ->
             into "${docsBundleName}"
         }
         zipsTask.dependsOn(zipDocsTask)
+
+        def zipJmodsTask = task("zipJmods$t.capital", type: Zip, dependsOn: zipDocsTask) {
+            destinationDir = file("${bundlesDir}")
+            archiveName = "${jmodsBundleName}.zip"
+            includeEmptyDirs = false
+            from jmodsArtifactsDir
+            into "${jmodsBundleName}"
+        }
+        zipsTask.dependsOn(zipJmodsTask)
     }
 }
 
@@ -5367,6 +5393,54 @@ compileTargets { t ->
     sdkTask.dependsOn(buildModulesTask)
 }
 sdk.dependsOn(buildModules)
+
+// Build the jmod for each module for the standalone SDK only.
+compileTargets { t ->
+    if (!HAS_JAVAFX_MODULES) {
+        def targetProperties = project.ext[t.upper]
+
+        def platformPrefix = targetProperties.platformPrefix
+        def jmodsDirName = "${platformPrefix}jmods"
+        def jmodsDir = "${rootProject.buildDir}/${jmodsDirName}"
+        def standaloneSdkDirName = "${platformPrefix}sdk"
+        def standaloneSdkDir = "${rootProject.buildDir}/${standaloneSdkDirName}"
+        def standaloneLegalDir = "${standaloneSdkDir}/legal"
+
+        moduleProjList.each { project ->
+            def moduleName = project.ext.moduleName
+            def buildDir = project.buildDir
+
+            def srcClassesDir = "${buildDir}/${platformPrefix}module-classes"
+            def srcLibDir = "${buildDir}/${platformPrefix}module-lib"
+            def srcLegalDir = "${standaloneLegalDir}/${moduleName}"
+
+            def jmodName = "${moduleName}.jmod"
+            def jmodFile = "${jmodsDir}/${jmodName}"
+            def jmodTask = project.task("jmod$t.capital", group: "Build", dependsOn: sdk) {
+                doLast {
+                    mkdir jmodsDir
+                    delete(jmodFile);
+                    exec {
+                        commandLine(JMOD)
+                        args("create")
+                        args("--class-path")
+                        args(srcClassesDir)
+                        // Not all modules have a "lib" dir
+                        if (file(srcLibDir).isDirectory()) {
+                            args("--libs")
+                            args(srcLibDir)
+                        }
+                        args("--legal-notices")
+                        args(srcLegalDir)
+                        args(jmodFile)
+                    }
+                }
+            }
+
+            jmods.dependsOn(jmodTask)
+        }
+    }
+}
 
 task checkrepo() {
     doLast {
