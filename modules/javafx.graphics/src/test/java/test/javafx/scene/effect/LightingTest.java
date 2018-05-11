@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -403,8 +403,16 @@ public class LightingTest extends EffectsTestBase {
         assertEquals(null, effect.getBumpInput());
     }
 
+    int countIllegalArgumentException = 0;
     @Test
     public void testCyclesForBoundInput() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof IllegalArgumentException) {
+                countIllegalArgumentException++;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
         ObjectProperty vContentInput = new SimpleObjectProperty();
         effect.contentInputProperty().bind(vContentInput);
         // try setting itself as content input
@@ -452,6 +460,9 @@ public class LightingTest extends EffectsTestBase {
 
         assertEquals(null, effect.getContentInput());
         assertEquals(null, effect.getBumpInput());
+
+        assertEquals("Cycle in effect chain detected, exception should occur 5 times.", 5, countIllegalArgumentException);
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     @Test

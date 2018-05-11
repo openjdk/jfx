@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,15 @@ public class Node_bind_Test {
          assertEquals(rectA.getClip(), clip2);
      }
 
+     int countIllegalArgumentException = 0;
      @Test public void testIllegalClip() {
+         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+             if (throwable instanceof IllegalArgumentException) {
+                 countIllegalArgumentException++;
+             } else {
+                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+             }
+         });
          Rectangle rectA = new Rectangle(300, 300);
          Rectangle clip1 = new Rectangle(10, 10);
          Rectangle clip2 = new Rectangle(100, 100);
@@ -64,9 +72,20 @@ public class Node_bind_Test {
          assertEquals(rectA.getClip(), clip1);
          v.set(clip2);
          assertNotSame(rectA.getClip(), clip2);
+
+         assertEquals("Cycle in effect chain detected, exception should occur once.", 1, countIllegalArgumentException);
+         Thread.currentThread().setUncaughtExceptionHandler(null);
      }
 
      @Test public void testBackToLegalClip() {
+         countIllegalArgumentException = 0;
+         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+             if (throwable instanceof IllegalArgumentException) {
+                 countIllegalArgumentException++;
+             } else {
+                 Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+             }
+         });
          Rectangle rectA = new Rectangle(300, 300);
          Rectangle clip1 = new Rectangle(10, 10);
          Rectangle clip2 = new Rectangle(100, 100);
@@ -76,6 +95,9 @@ public class Node_bind_Test {
          assertEquals(rectA.getClip(), clip1);
          v.set(clip2);
          assertEquals(rectA.getClip(), clip1);
+
+         assertEquals("Cycle in effect chain detected, exception should occur once.", 1, countIllegalArgumentException);
+         Thread.currentThread().setUncaughtExceptionHandler(null);
      }
 
      @Test public void testEffect() {

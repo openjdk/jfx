@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -346,8 +346,16 @@ public class BlendTest extends EffectsTestBase {
         assertEquals(f, effect.getTopInput());
     }
 
+    int countIllegalArgumentException = 0;
     @Test
     public void testCyclesForBoundInput() {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof IllegalArgumentException) {
+                countIllegalArgumentException++;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
         ObjectProperty vTop = new SimpleObjectProperty();
         effect.topInputProperty().bind(vTop);
 
@@ -403,6 +411,9 @@ public class BlendTest extends EffectsTestBase {
         vTop.set(f);
         assertEquals(f, effect.getBottomInput());
         assertEquals(f, effect.getTopInput());
+
+        assertEquals("Cycle in effect chain detected, exception should occur 5 times.", 5, countIllegalArgumentException);
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     @Test

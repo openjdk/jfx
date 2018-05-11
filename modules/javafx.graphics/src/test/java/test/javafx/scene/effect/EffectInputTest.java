@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -185,8 +185,16 @@ public class EffectInputTest {
         }
     }
 
+    int countIllegalArgumentException = 0;
     @Test
     public void testCycleForBoundInput() throws Exception  {
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof IllegalArgumentException) {
+                countIllegalArgumentException++;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
         final Class effect1Class = Class.forName("javafx.scene.effect." + effect1Name);
         final Class effect2Class = Class.forName("javafx.scene.effect." + effect2Name);
 
@@ -210,5 +218,8 @@ public class EffectInputTest {
         setInput2.invoke(effect2, effect1);
         v.set(effect2);
         assertEquals(null, getInput1.invoke(effect1));
+
+        assertEquals("Cycle in effect chain detected, exception should occur 2 times.", 2, countIllegalArgumentException);
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 }
