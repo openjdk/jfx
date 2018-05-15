@@ -47,6 +47,7 @@
 --add-exports javafx.graphics/com.sun.scenario=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene=ALL-UNNAMED
 --add-opens javafx.graphics/javafx.scene.layout=ALL-UNNAMED
+--add-opens javafx.graphics/javafx.scene.paint=ALL-UNNAMED
 #
 # compile time additions
 --add-exports=javafx.base/com.sun.javafx.runtime=ALL-UNNAMED
