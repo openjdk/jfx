@@ -172,6 +172,19 @@
 #JDK_DOCS = file:///Library/Java/JavaVirtualMachines/jdk1.8.0/Content/Home/docs/api
 #JDK_DOCS = relative/path/to/docs/api
 
+# If you want to link against a docs URL that is not accessible to you at build
+# time (e.g., in case you are behind a firewall), you can set the
+# JDK_DOCS_LINK property to the URL of a local javadocs bundle that will
+# be used to resolve the symbols.
+
+#JDK_DOCS_LINK = file:///opt/javadocs/jdk10/docs/api
+
+# If you want to use a local repository for downloading dependencies
+# rather than maven central, you can set the JFX_DEPS_URL property
+# to point to your local server.
+
+#JFX_DEPS_URL=http:/local.server.my.compay.com/dependencies
+
 # Specify the build configuration: Release, Debug, or DebugNative. The default setting is Debug.
 
 #CONF = Release

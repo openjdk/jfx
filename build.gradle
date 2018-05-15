@@ -359,6 +359,12 @@ if (BUILD_CLOSED) {
 defineProperty("GRADLE_VERSION_CHECK", "true")
 ext.IS_GRADLE_VERSION_CHECK = Boolean.parseBoolean(GRADLE_VERSION_CHECK)
 
+// JFX_DEPS_URL specifies the optional location of an alternate local repository
+defineProperty("JFX_DEPS_URL", "")
+
+// JDK_DOCS_LINK specifies the optional URL for offline javadoc linking
+defineProperty("JDK_DOCS_LINK", "")
+
 // COMPILE_WEBKIT specifies whether to build all of webkit.
 defineProperty("COMPILE_WEBKIT", "false")
 ext.IS_COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
@@ -551,8 +557,8 @@ project.ext.set("defaultHostTarget", IS_MAC ? "mac" : IS_WINDOWS ? "win" : IS_LI
 defineProperty("COMPILE_TARGETS", "$defaultHostTarget")
 
 // Flag indicating whether to import cross compile tools
-def importCrossTools = BUILD_CLOSED ? true : false;
-if (!importCrossTools && hasProperty("IMPORT_CROSS_TOOLS")) {
+def importCrossTools = false
+if (hasProperty("IMPORT_CROSS_TOOLS")) {
     importCrossTools = Boolean.parseBoolean(IMPORT_CROSS_TOOLS);
 }
 ext.IS_IMPORT_CROSS_TOOLS = importCrossTools
@@ -1613,14 +1619,29 @@ void addJCov(p, test) {
 }
 
 allprojects {
-    // Setup the repositories that we'll download libraries from. Maven Central is
-    // just easy for most things. The custom "ivy" repo is for downloading SWT. The way it
-    // works is to setup the download URL such that it will resolve to the actual jar file
-    // to download. See SWT_FILE_NAME for the name of the jar that will be used as the
-    // "artifact" in the pattern below. Note that the closed builds use different repositories
-    // so if you are debugging a closed-build artifact related build issue, check out the
-    // closed gradle file instead.
-    if (!BUILD_CLOSED) {
+
+    // Setup the repositories that we'll download libraries from.
+    // By default we use Maven Central for most things. The custom "ivy"
+    // repo is for downloading SWT. The way it works is to setup the
+    // download URL such that it will resolve to the actual jar file to
+    // download. See SWT_FILE_NAME for the name of the jar that will be
+    // used as the "artifact" in the pattern below.
+    // If JFX_DEPS_URL is set, then that overrides the default
+    // repositories. This allows the dependencies to be cached locally.
+
+    if (JFX_DEPS_URL != "") {
+        repositories {
+            ivy {
+                url JFX_DEPS_URL
+                layout "pattern", {
+                    artifact "[artifact]-[revision](-[classifier]).[ext]"
+                    artifact "[artifact].[ext]"
+                }
+            }
+        }
+    }
+
+    if (JFX_DEPS_URL == "") {
         repositories {
             mavenCentral()
             ivy {
@@ -1632,7 +1653,7 @@ allprojects {
         }
     }
 
-    if (!BUILD_CLOSED && IS_BUILD_LIBAV_STUBS) {
+    if (JFX_DEPS_URL == "" && IS_BUILD_LIBAV_STUBS) {
         repositories {
             ivy {
                 url libAVRepositoryURL
@@ -2484,7 +2505,7 @@ project(":fxpackager") {
 
     // fxpackager has a dependency on ant in order to build the ant jar,
     // and as such needs to point to the apache binary repository
-    if (!BUILD_CLOSED) {
+    if (JFX_DEPS_URL == "") {
         repositories {
             maven {
                 url "https://repository.apache.org"
@@ -4261,8 +4282,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")
     options.locale("en");
-    if (BUILD_CLOSED) {
-        options.linksOffline(JDK_DOCS, JDK_DOCS_CLOSED);
+    if (JDK_DOCS_LINK != "") {
+        options.linksOffline(JDK_DOCS, JDK_DOCS_LINK);
     } else {
         options.links(JDK_DOCS);
     }
