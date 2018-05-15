@@ -43,6 +43,10 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
      *                                                                        *
      *************************************************************************/
 
+    final String EXPECTED_WARNING = "EXPECTED WARNING: This is a negative test"
+        + " to verify that negative value is not accepted for -fx-background-radius."
+        + " A 'No radii value may be < 0' warning message is expected.";
+
     @Test(timeout = 20000)
     public void basicFill() {
         setStyle("-fx-background-color: red;");
@@ -192,6 +196,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     // NOTE: A negative radius from CSS is treated as 0.
     @Test(timeout = 20000)
     public void basicFill_NegativeRadius1() {
+        System.err.println(EXPECTED_WARNING);
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: -10");
@@ -201,6 +206,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     // NOTE: A negative radius from CSS is treated as 0.
     @Test(timeout = 20000)
     public void basicFill_NegativeRadius2() {
+        System.err.println(EXPECTED_WARNING);
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: -10 -20");
@@ -210,6 +216,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     // NOTE: A negative radius from CSS is treated as 0.
     @Test(timeout = 20000)
     public void basicFill_NegativeRadius3() {
+        System.err.println(EXPECTED_WARNING);
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: -10 -20 -30");
@@ -219,6 +226,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
     // NOTE: A negative radius from CSS is treated as 0.
     @Test(timeout = 20000)
     public void basicFill_NegativeRadius4() {
+        System.err.println(EXPECTED_WARNING);
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: -10 -20 -30 -40");
