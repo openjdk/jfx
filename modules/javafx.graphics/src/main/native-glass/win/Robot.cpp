@@ -268,8 +268,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseWheel
     ::mouse_event(MOUSEEVENTF_WHEEL, 0, 0, wheelAmt * -1 * WHEEL_DELTA, 0);
 }
 
-void GetScreenCapture(jint x, jint y, jint devw, jint devh,
-                      jint *pixelData, jint retw, jint reth);
+void GetScreenCapture(jint x, jint y, jint width, jint height, jint *pixelData);
 
 /*
  * Class:     com_sun_glass_ui_win_WinRobot
@@ -288,7 +287,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getPixelColor
     jint val = 0;
     //NOTE: we don't use the ::GetPixel() on the screen DC because it's not capable of
     //      getting the correct colors when non-opaque windows are present
-    GetScreenCapture(dx, dy, 1, 1, &val, 1, 1);
+    GetScreenCapture(dx, dy, 1, 1, &val);
     return val;
 }
 
@@ -307,7 +306,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     jint * pixelData = (jint *)(new BYTE[pixelDataSize]);
 
     if (pixelData) {
-        GetScreenCapture(x, y, width, height, pixelData, width, height);
+        GetScreenCapture(x, y, width, height, pixelData);
 
         // copy pixels into Java array
         env->SetIntArrayRegion(pixelArray, 0, numPixels, pixelData);
@@ -315,8 +314,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     }
 }
 
-void GetScreenCapture(jint x, jint y, jint devw, jint devh,
-                      jint *pixelData, jint retw, jint reth)
+void GetScreenCapture(jint x, jint y, jint width, jint height, jint *pixelData)
 {
     HDC hdcScreen = ::CreateDC(TEXT("DISPLAY"), NULL, NULL, NULL);
     HDC hdcMem = ::CreateCompatibleDC(hdcScreen);
@@ -325,7 +323,7 @@ void GetScreenCapture(jint x, jint y, jint devw, jint devh,
     HPALETTE hOldPalette = NULL;
 
     // create an offscreen bitmap
-    hbitmap = ::CreateCompatibleBitmap(hdcScreen, retw, reth);
+    hbitmap = ::CreateCompatibleBitmap(hdcScreen, width, height);
     if (hbitmap == NULL) {
         //TODO: OOM might be better?
         //throw std::bad_alloc();
@@ -344,11 +342,7 @@ void GetScreenCapture(jint x, jint y, jint devw, jint devh,
     // CAPTUREBLT flag is required to capture WS_EX_LAYERED windows' contents
     // correctly on Win2K/XP
     static const DWORD dwRop = SRCCOPY|CAPTUREBLT;
-    if (retw == devw && reth == devh) {
-        ::BitBlt(hdcMem, 0, 0, retw, reth, hdcScreen, x, y, dwRop);
-    } else {
-        ::StretchBlt(hdcMem, 0, 0, retw, reth, hdcScreen, x, y, devw, devh, dwRop);
-    }
+    ::BitBlt(hdcMem, 0, 0, width, height, hdcScreen, x, y, dwRop);
 
     static const int BITS_PER_PIXEL = 32;
 
@@ -360,8 +354,8 @@ void GetScreenCapture(jint x, jint y, jint devw, jint devh,
     // prepare BITMAPINFO for a 32-bit RGB bitmap
     ::memset(&BitmapInfo, 0, sizeof(BitmapInfo));
     BitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    BitmapInfo.bmiHeader.biWidth = retw;
-    BitmapInfo.bmiHeader.biHeight = -reth; // negative height means a top-down DIB
+    BitmapInfo.bmiHeader.biWidth = width;
+    BitmapInfo.bmiHeader.biHeight = -height; // negative height means a top-down DIB
     BitmapInfo.bmiHeader.biPlanes = 1;
     BitmapInfo.bmiHeader.biBitCount = BITS_PER_PIXEL;
     BitmapInfo.bmiHeader.biCompression = BI_BITFIELDS;
@@ -376,11 +370,11 @@ void GetScreenCapture(jint x, jint y, jint devw, jint devh,
     BitmapInfo.bmiColors[2] = blueMask;
 
     // Get the bitmap data in device-independent, 32-bit packed pixel format
-    ::GetDIBits(hdcMem, hbitmap, 0, reth, pixelData, (BITMAPINFO *)&BitmapInfo, DIB_RGB_COLORS);
+    ::GetDIBits(hdcMem, hbitmap, 0, height, pixelData, (BITMAPINFO *)&BitmapInfo, DIB_RGB_COLORS);
 
     // convert Win32 pixel format (BGRX) to Java format (ARGB)
     ASSERT(sizeof(jint) == sizeof(RGBQUAD));
-    jint numPixels = retw * reth;
+    jint numPixels = width * height;
     jint *pPixel = pixelData;
     for(int nPixel = 0; nPixel < numPixels; nPixel++) {
         RGBQUAD * prgbq = (RGBQUAD *) pPixel;
