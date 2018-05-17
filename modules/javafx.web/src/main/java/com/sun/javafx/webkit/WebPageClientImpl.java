@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.webkit;
 
 import com.sun.javafx.scene.NodeHelper;
+import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -81,14 +82,16 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
         }
     }
 
-    private Tooltip  tooltip;
+    private WeakReference<Tooltip> tooltipRef;
     private boolean  isTooltipRegistered = false;
     private String oldTooltipText = "";
     @Override public void setTooltip(final String tooltipText) {
         WebView view = accessor.getView();
         if (tooltipText != null) {
+            Tooltip tooltip = (tooltipRef == null) ? null : tooltipRef.get();
             if (tooltip == null) {
                 tooltip = new Tooltip(tooltipText);
+                tooltipRef = new WeakReference<Tooltip>(tooltip);
             } else {
                 tooltip.setText(tooltipText);
                 if (!oldTooltipText.equals(tooltipText)) {
@@ -102,7 +105,10 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
                 isTooltipRegistered = true;
             }
         } else if (isTooltipRegistered) {
-            Tooltip.uninstall(view, tooltip);
+            Tooltip tooltip = tooltipRef.get();
+            if (tooltip != null) {
+                Tooltip.uninstall(view, tooltip);
+            }
             isTooltipRegistered = false;
         }
     }
