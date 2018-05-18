@@ -37,11 +37,6 @@ import javafx.scene.shape.Cylinder;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import java.util.concurrent.TimeUnit;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.CountDownLatch;
 
 import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.*;
@@ -56,13 +51,8 @@ import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.*;
  */
 public class MeshManagerCacheLeakApp {
 
-    // Socket for communicating with MeshManagerCacheLeakTest
-    private static Socket socket;
-    private static OutputStream out;
-    private static boolean statusWritten = false;
-
     static String shapeType;
-    static int numShapes = 0;
+    static int numShapes;
     CountDownLatch latch;
     static CountDownLatch startupLatch = new CountDownLatch(1);
     static Group container;
@@ -84,31 +74,10 @@ public class MeshManagerCacheLeakApp {
         }
     }
 
-    private static void initSocket(String[] args) throws Exception {
-        int port = Integer.parseInt(args[0]);
-        socket = new Socket((String)null, port);
-        out = socket.getOutputStream();
-        out.write(SOCKET_HANDSHAKE);
-        out.flush();
-    }
-
-    private synchronized static void writeStatus(int status) {
-        if (!statusWritten) {
-            statusWritten = true;
-            try {
-                out.write(status);
-                out.flush();
-            } catch (IOException ex) {
-                ex.printStackTrace(System.err);
-            }
-        }
-    }
-
     public void testOOM() {
         System.gc();
         System.runFinalization();
 
-        AtomicInteger err = new AtomicInteger(STATUS_OOM);
         try {
             // 2. Reserve maximum of available memory.
             byte[] mem = null;
@@ -143,11 +112,9 @@ public class MeshManagerCacheLeakApp {
                         container.getChildren().add(shp);
                         latch.countDown();
                     } catch (OutOfMemoryError e) {
-                        writeStatus(err.get());
-                        System.exit(0);
+                        System.exit(ERROR_OOM);
                     } catch (Exception e) {
-                        writeStatus(err.get());
-                        System.exit(0);
+                        System.exit(ERROR_OOM);
                     }
                 });
                 waitForLatch(latch, 5, -1);
@@ -165,16 +132,12 @@ public class MeshManagerCacheLeakApp {
                 waitForLatch(latch, 5, -1);
             }
         } catch (OutOfMemoryError e) {
-            writeStatus(err.get());
-            System.exit(0);
+            System.exit(ERROR_OOM);
         } catch (Exception e) {
-            writeStatus(err.get());
-            System.exit(0);
+            System.exit(ERROR_OOM);
         }
 
         // 4. Verify that, no OOM occurs.
-        err.set(STATUS_OK);
-        writeStatus(err.get());
         System.exit(ERROR_NONE);
     }
 
@@ -189,14 +152,8 @@ public class MeshManagerCacheLeakApp {
     }
 
     public static void main(String[] args) {
-        try {
-            initSocket(args);
-        } catch (Exception ex) {
-            ex.printStackTrace(System.err);
-            System.exit(ERROR_SOCKET);
-        }
-        shapeType = args[1];
-        numShapes = Integer.parseInt(args[2]);
+        shapeType = args[0];
+        numShapes = Integer.parseInt(args[1]);
 
         MeshManagerCacheLeakApp test = new MeshManagerCacheLeakApp();
         new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();

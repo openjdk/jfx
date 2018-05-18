@@ -25,9 +25,6 @@
 
 package test.javafx.scene.shape.meshmanagercacheleaktest;
 
-import java.io.InputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
 
 import javafx.application.ConditionalFeature;
@@ -46,8 +43,8 @@ import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.*;
  */
 public class MeshManagerCacheLeakTest {
 
-    private static final String className = MeshManagerCacheLeakTest.class.getName();
-    private static final String pkgName = className.substring(0, className.lastIndexOf("."));
+    private final String className = MeshManagerCacheLeakTest.class.getName();
+    private final String pkgName = className.substring(0, className.lastIndexOf("."));
     private final String testAppName = pkgName + "." + "MeshManagerCacheLeakApp";
 
     @Before
@@ -55,79 +52,59 @@ public class MeshManagerCacheLeakTest {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
-    @Test
-    public void testMeshManagerCacheLeak() throws Exception {
-        // Initilaize the socket
-        final ServerSocket service = new ServerSocket(0);
-        final int port = service.getLocalPort();
+    @Test (timeout = 15000)
+    public void testSphereCacheLeakTest() throws Exception {
+        testMeshManagerCacheLeak("Sphere", "10");
+    }
+
+    @Test (timeout = 15000)
+    public void testCylinderCacheLeakTest() throws Exception {
+        testMeshManagerCacheLeak("Cylinder", "25");
+    }
+
+    @Test (timeout = 20000)
+    public void testBoxCacheLeakTest() throws Exception {
+        testMeshManagerCacheLeak("Box", "350");
+    }
+
+    private void testMeshManagerCacheLeak(String shape, String count) throws Exception {
         String[] jvmArgs = {"-Xmx16m"};
-        String[] testArgs = { "Sphere", "Cylinder", "Box"};
-        String[] numShapes = { "10", "25", "350"};
+        // Launch the test app
+        final ArrayList<String> cmd = test.util.Util.createApplicationLaunchCommand(
+            testAppName, null, null, jvmArgs);
+        // and add our arguments
+        cmd.add(String.valueOf(shape));
+        cmd.add(String.valueOf(count));
+        ProcessBuilder builder = new ProcessBuilder(cmd);
+        builder.redirectError(ProcessBuilder.Redirect.INHERIT);
+        builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+        Process process = builder.start();
 
-        for (int i = 0; i < testArgs.length; ++i) {
-            // Launch the test app
-            final ArrayList<String> cmd
-                    = test.util.Util.createApplicationLaunchCommand(testAppName,
-                            null, null, jvmArgs);
-            // and add our arguments
-            cmd.add(String.valueOf(port));
-            cmd.add(String.valueOf(testArgs[i]));
-            cmd.add(String.valueOf(numShapes[i]));
-            ProcessBuilder builder = new ProcessBuilder(cmd);
-            builder.redirectError(ProcessBuilder.Redirect.INHERIT);
-            builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-            Process process = builder.start();
+        // Make sure that the process exited as expected
+        int retVal = process.waitFor();
+        switch (retVal) {
+            case 0:
+                fail(testAppName + ": Unexpected exit 0 with cache test of : " + shape);
+                break;
 
-            // Accept a connection from the test app
-            final Socket socket = service.accept();
-            final InputStream in = socket.getInputStream();
+            case 1:
+                fail(testAppName + ": Unable to launch java application with cache test of : " + shape);
+                break;
 
-            // Read the "handshake" token
-            int handshake = in.read();
-            Assert.assertEquals("Socket handshake failed,", SOCKET_HANDSHAKE, handshake);
+            case ERROR_NONE:
+                break;
 
-            // Read the status code from the test app.
-            int status = in.read();
-            switch (status) {
-                case STATUS_OK:
-                    break;
-                case STATUS_OOM:
-                    fail(testAppName
-                        + ": OOM occured with cache of : " + testArgs[i]);
-                    break;
-                default:
-                    fail(testAppName + ": Unexpected status: " + status + " with cache of : " + testArgs[i]);
-            }
+            case ERROR_OOM:
+                fail(testAppName + ": OOM occured with cache test of : " + shape);
+                break;
 
-            // Make sure that the process exited as expected
-            int retVal = process.waitFor();
-            switch (retVal) {
-                case ERROR_NONE:
-                    break;
+            case ERROR_LAUNCH:
+                fail(testAppName + ": Window was not shown for more than 10 secs, with cache test of : " + shape);
+                break;
 
-                case 0:
-                    fail(testAppName + ": Unexpected exit 0 with cache test of : " + testArgs[i]);
-                    break;
-
-                case 1:
-                    fail(testAppName + ": Unable to launch java application with cache test of : " + testArgs[i]);
-                    break;
-
-                case ERROR_SOCKET:
-                    fail(testAppName + ": Error connecting to socket with cache test of : " + testArgs[i]);
-                    break;
-
-                case ERROR_OOM:
-                    fail(testAppName + ": OOM occured with cache test of : " + testArgs[i]);
-                    break;
-
-                case ERROR_LAUNCH:
-                    fail(testAppName + ": Window was not shown for more than 10 secs, with cache test of : " + testArgs[i]);
-                    break;
-
-                default:
-                    fail(testAppName + ": Unexpected error exit: " + retVal + " with cache test of : " + testArgs[i]);
-            }
+            default:
+                fail(testAppName + ": Unexpected error exit: " + retVal + " with cache test of : " + shape);
+                break;
         }
     }
 }

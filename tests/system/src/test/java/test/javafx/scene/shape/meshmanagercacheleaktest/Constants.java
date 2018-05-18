@@ -29,13 +29,6 @@ public class Constants {
     // Error exit codes. Note that 0 and 1 are reserved for normal exit and
     // failure to launch java, respectively
     public static final int ERROR_NONE = 2;
-    public static final int ERROR_SOCKET = 3;
-    public static final int ERROR_OOM = 4;
-    public static final int ERROR_LAUNCH = 5;
-
-    // Socket handshake value used at initialization (8-bit value)
-    public static final int SOCKET_HANDSHAKE = 126;
-
-    public static final int STATUS_OK = 1;
-    public static final int STATUS_OOM = 2;
+    public static final int ERROR_OOM = 3;
+    public static final int ERROR_LAUNCH = 4;
 }

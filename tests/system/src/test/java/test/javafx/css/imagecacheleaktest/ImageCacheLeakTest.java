@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package test.javafx.css.imagecacheleaktest;
 
-import java.io.InputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.ArrayList;
 
 import org.junit.Test;
@@ -45,66 +42,40 @@ public class ImageCacheLeakTest {
     private static final String pkgName = className.substring(0, className.lastIndexOf("."));
     private final String testAppName = pkgName + "." + "ImageCacheLeakApp";
 
-    @Test
+    @Test (timeout = 15000)
     public void testImageCacheLeak() throws Exception {
-        // Initilaize the socket
-        final ServerSocket service = new ServerSocket(0);
-        final int port = service.getLocalPort();
+
         String[] jvmArgs = new String[1];
         jvmArgs[0] = new String("-Xmx16m");
 
         // Launch the test app
-        final ArrayList<String> cmd
-                = test.util.Util.createApplicationLaunchCommand(testAppName,
-                        null, null, jvmArgs);
-        // and add our argument
-        cmd.add(String.valueOf(port));
+        final ArrayList<String> cmd = test.util.Util.createApplicationLaunchCommand(
+                testAppName, null, null, jvmArgs);
         ProcessBuilder builder = new ProcessBuilder(cmd);
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         Process process = builder.start();
 
-        // Accept a connection from the test app
-        final Socket socket = service.accept();
-        final InputStream in = socket.getInputStream();
-
-        // Read the "handshake" token
-        int handshake = in.read();
-        Assert.assertEquals("Socket handshake failed,", SOCKET_HANDSHAKE, handshake);
-
-        // Read the status code from the test app.
-        int status = in.read();
-        switch (status) {
-            case STATUS_OK:
-                break;
-            case STATUS_LEAK:
-                fail(testAppName
-                    + ": CSS styled image1 causes memory leak.");
-                break;
-            case STATUS_INCORRECT_GC:
-                fail(testAppName
-                    + ": CSS styled image2 is incorrectly GCed.");
-                break;
-            default:
-                fail(testAppName + ": Unexpected status: " + status);
-        }
-
         // Make sure that the process exited as expected
         int retVal = process.waitFor();
         switch (retVal) {
-            case ERROR_NONE:
-                break;
-
-            case ERROR_SOCKET:
-                fail(testAppName + ": Error connecting to socket");
-                break;
-
             case 0:
                 fail(testAppName + ": Unexpected exit 0");
                 break;
 
             case 1:
-                fail(testAppName + ": Unable to launch java application");
+                fail(testAppName + ": Unexpected exit 1, unable to launch java application");
+                break;
+
+            case ERROR_NONE:
+                break;
+
+            case ERROR_LEAK:
+                fail(testAppName + ": CSS styled image1 causes memory leak.");
+                break;
+
+            case ERROR_INCORRECT_GC:
+                fail(testAppName + ": CSS styled image2 is incorrectly GCed.");
                 break;
 
             case ERROR_IMAGE_VIEW:

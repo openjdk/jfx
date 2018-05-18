@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import java.lang.ref.WeakReference;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.concurrent.atomic.AtomicInteger;
-import javafx.application.Application;
-
 import static test.javafx.css.imagecacheleaktest.Constants.*;
 
 /*
@@ -53,42 +47,21 @@ import static test.javafx.css.imagecacheleaktest.Constants.*;
  */
 public class ImageCacheLeakApp extends Application {
 
-    // Socket for communicating with ImageCacheLeakTest
-    private static Socket socket;
-    private static OutputStream out;
-    private static boolean statusWritten = false;
-
-    private static void initSocket(String[] args) throws Exception {
-        int port = Integer.parseInt(args[0]);
-        socket = new Socket((String)null, port);
-        out = socket.getOutputStream();
-        out.write(SOCKET_HANDSHAKE);
-        out.flush();
-    }
-
-    private synchronized static void writeStatus(int status) {
-        if (!statusWritten) {
-            statusWritten = true;
-            try {
-                out.write(status);
-                out.flush();
-            } catch (IOException ex) {
-                ex.printStackTrace(System.err);
-            }
-        }
-    }
+    WeakReference<Image> img1Ref;
+    WeakReference<Image> img2Ref;
+    int err = ERROR_NONE;
+    ImageView imageView;
+    Group root;
+    Scene scene;
 
     @Override
     public void start(Stage stage) throws Exception {
-        WeakReference<Image> img1Ref;
-        WeakReference<Image> img2Ref;
-        AtomicInteger err = new AtomicInteger(STATUS_OK);
 
         // 1. Create scene & add css stylesheet.
-        ImageView imageView = new ImageView();
-        Group root = new Group();
+        imageView = new ImageView();
+        root = new Group();
         root.getChildren().add(imageView);
-        Scene scene = new Scene(root);
+        scene = new Scene(root);
         stage.setScene(scene);
         scene.getStylesheets().add(ImageCacheLeakApp.class.getResource("css.css").toExternalForm());
         stage.show();
@@ -117,25 +90,18 @@ public class ImageCacheLeakApp extends Application {
         } finally {
             // 4.1 Verify that unused image gets GCed.
             if (img1Ref.get() != null) {
-                err.set(STATUS_LEAK);
+                err = ERROR_LEAK;
             }
             // 4.2 Verify that image being used does not get GCed.
             if (img2Ref.get() == null) {
-                err.set(STATUS_INCORRECT_GC);
+                err = ERROR_INCORRECT_GC;
             }
-            writeStatus(err.get());
             stage.hide();
-            System.exit(ERROR_NONE);
+            System.exit(err);
         }
     }
 
     public static void main(String[] args) {
-        try {
-            initSocket(args);
-        } catch (Exception ex) {
-            ex.printStackTrace(System.err);
-            System.exit(ERROR_SOCKET);
-        }
         Application.launch(args);
     }
 }
