@@ -395,7 +395,7 @@ defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
 // BUILD_FXPACKAGER enables building the packager modules and native code
-defineProperty("BUILD_FXPACKAGER", "true")
+defineProperty("BUILD_FXPACKAGER", "false")
 ext.IS_BUILD_FXPACKAGER = Boolean.parseBoolean(BUILD_FXPACKAGER)
 
 // RETAIN_PACKAGER_TESTS specifies whether the tests in fxpackager should
