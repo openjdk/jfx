@@ -50,6 +50,7 @@ public class MeshManagerCacheLeakTest {
     @Before
     public void setUp() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8201763
     }
 
     @Test (timeout = 15000)
