@@ -80,6 +80,7 @@ elseif (UNIX)
     list(APPEND WTF_INCLUDE_DIRECTORIES
         "${WTF_DIR}/wtf/efl"
     )
+    list(APPEND WTF_LIBRARIES rt)
 elseif (WIN32)
     list(APPEND WTF_SOURCES
         PlatformUserPreferredLanguagesWin.cpp

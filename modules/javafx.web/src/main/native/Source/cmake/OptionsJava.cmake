@@ -107,7 +107,7 @@ if (WIN32)
 
 elseif(APPLE)
 else()
-    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-dynamic -static-libstdc++")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic")
 endif()
 
 WEBKIT_OPTION_BEGIN()

@@ -26,9 +26,9 @@ CFLAGS = -DTARGET_OS_LINUX=1     \
          -DHAVE_CONFIG_H         \
          -DJFXMEDIA_JNI_EXPORTS  \
          -DLINUX                 \
+         -ffunction-sections -fdata-sections
 
-
-CPPFLAGS = -fno-rtti
+CPPFLAGS = -fno-rtti -ffunction-sections -fdata-sections
 
 BASE_INCLUDES = -I$(SRCBASE_DIR) \
 		-I$(GENERATED_HEADERS_DIR)
@@ -55,7 +55,8 @@ ifdef HOST_COMPILE
 	           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
 		  $(PACKAGES_INCLUDES)
 
-	LDFLAGS = -Wl,-rpath,\$$ORIGIN -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS)
+	LDFLAGS = -Wl,-rpath,\$$ORIGIN -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
+            -static-libgcc -static-libstdc++ -Wl,--gc-sections
 else
 	CFLAGS += $(EXTRA_CFLAGS)
 	INCLUDES = $(BASE_INCLUDES)

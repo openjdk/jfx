@@ -521,7 +521,7 @@ template<class... _Args> struct conjunction : wtf_conjunction_impl<_Args...> { }
 
 } // namespace std
 
-#if COMPILER(GCC) && GCC_VERSION < 40904
+#if COMPILER(GCC) && GCC_VERSION < 40902
 namespace std {
     template<class T>
         struct is_final

@@ -28,7 +28,8 @@ CFLAGS = -fPIC                   \
          -D__MEDIALIB_OLD_NAMES  \
          -DGST_DISABLE_LOADSAVE  \
          -DGST_DISABLE_GST_DEBUG \
-         -DGSTREAMER_LITE
+         -DGSTREAMER_LITE \
+         -ffunction-sections -fdata-sections
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
@@ -45,7 +46,8 @@ INCLUDES = -I$(SRCBASE_DIR) \
 PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
 PACKAGES_LIBS := $(shell pkg-config --libs glib-2.0 gobject-2.0)
 
-LDFLAGS = -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS)
+LDFLAGS = -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) \
+          -static-libgcc -static-libstdc++ -Wl,--gc-sections
 
 ifeq ($(ARCH), x32)
     CFLAGS += -m32
