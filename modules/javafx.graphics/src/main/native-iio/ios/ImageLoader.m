@@ -328,6 +328,9 @@
 
         CGImageRef cgImageNew = CGBitmapContextCreateImage(cgContext);
 
+        IIOLog(@"Releasing old cgImage before assigning new one");
+        CGImageRelease(cgImage);
+
         [self setCgImage : cgImageNew];
         [self setNComponents : nComp];
         [self setColorSpace : [self resolveJavaColorSpace : CGColorSpaceGetModel(cgColorSpace)
