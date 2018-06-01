@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,16 +62,26 @@ jclass getJScrollBarThemeClass()
 
 JLObject getJScrollBarTheme(Scrollbar& sb)
 {
-    FrameView* fv = sb.root();
+    FrameView* fv = sb.enabled() ? sb.root() : nullptr;
     if (!fv) {
         // the scrollbar has been detached
         return 0;
     }
+
     Page* page = fv->frame().page();
-    JLObject jWebPage = ((ChromeClientJava*)&page->chrome().client())->platformPage();
+    if (!page) {
+        return 0;
+    }
+
+    auto& chromeClient = page->chrome().client();
+    if (!chromeClient.isJavaChromeClient()) {
+        // Non Java ChromeClient, might be a utility Page(svg?), refer Page::isUtilityPage
+        return 0;
+    }
+
+    JLObject jWebPage = static_cast<ChromeClientJava&>(chromeClient).platformPage();
 
     JNIEnv* env = WebCore_GetJavaEnv();
-
     static jmethodID mid  = env->GetMethodID(
         PG_GetWebPageClass(env),
         "getScrollBarTheme",
