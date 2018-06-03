@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,17 +107,19 @@ public final class DDasher implements DPathConsumer2D, MarlinConst {
      * @param recycleDashes true to indicate to recycle the given dash array
      * @return this instance
      */
-    public DDasher init(final DPathConsumer2D out, double[] dash, int dashLen,
-                double phase, boolean recycleDashes)
+    public DDasher init(final DPathConsumer2D out, final double[] dash, final int dashLen,
+                        double phase, final boolean recycleDashes)
     {
         this.out = out;
 
         // Normalize so 0 <= phase < dash[0]
         int sidx = 0;
         dashOn = true;
+
+        // note: BasicStroke constructor checks dash elements and sum > 0
         double sum = 0.0d;
-        for (double d : dash) {
-            sum += d;
+        for (int i = 0; i < dashLen; i++) {
+            sum += dash[i];
         }
         double cycles = phase / sum;
         if (phase < 0.0d) {
@@ -125,13 +127,13 @@ public final class DDasher implements DPathConsumer2D, MarlinConst {
                 phase = 0.0d;
             } else {
                 int fullcycles = FloatMath.floor_int(-cycles);
-                if ((fullcycles & dash.length & 1) != 0) {
+                if ((fullcycles & dashLen & 1) != 0) {
                     dashOn = !dashOn;
                 }
                 phase += fullcycles * sum;
                 while (phase < 0.0d) {
                     if (--sidx < 0) {
-                        sidx = dash.length - 1;
+                        sidx = dashLen - 1;
                     }
                     phase += dash[sidx];
                     dashOn = !dashOn;
@@ -142,14 +144,14 @@ public final class DDasher implements DPathConsumer2D, MarlinConst {
                 phase = 0.0d;
             } else {
                 int fullcycles = FloatMath.floor_int(cycles);
-                if ((fullcycles & dash.length & 1) != 0) {
+                if ((fullcycles & dashLen & 1) != 0) {
                     dashOn = !dashOn;
                 }
                 phase -= fullcycles * sum;
                 double d;
                 while (phase >= (d = dash[sidx])) {
                     phase -= d;
-                    sidx = (sidx + 1) % dash.length;
+                    sidx = (sidx + 1) % dashLen;
                     dashOn = !dashOn;
                 }
             }
