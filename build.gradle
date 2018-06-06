@@ -1729,11 +1729,6 @@ allprojects {
     }
 }
 
-// Qualified exports needed by javafx.* modules (excluding javafx.swing)
-def qualExportsCore = [
-    "--add-exports=java.desktop/sun.print=javafx.graphics",
-]
-
 // Qualified exports needed by javafx.swing
 def qualExportsSwing = [
         "--add-exports=java.desktop/java.awt.dnd.peer=javafx.swing",
@@ -1819,8 +1814,6 @@ project(":base") {
     sourceSets.main.java.srcDirs += "$buildDir/gensrc/java"
 
     compileJava.dependsOn processVersionInfo
-
-    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -1935,7 +1928,6 @@ project(":graphics") {
             '-implicit:none',
             '--module-source-path', defaultModuleSourcePath
             ] )
-        options.compilerArgs.addAll(qualExportsCore)
     }
     classes.dependsOn(compileFullJava)
 
@@ -2245,8 +2237,6 @@ project(":graphics") {
             }
         }
     }
-
-    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":controls") {
@@ -2305,8 +2295,6 @@ project(":controls") {
         into project.moduleShimsDir
         include "**/*.bss"
     })
-
-    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":swing") {
@@ -2342,7 +2330,6 @@ project(":swing") {
         }
     }
 
-    compileJava.options.compilerArgs.addAll(qualExportsCore)
     compileJava.options.compilerArgs.addAll(qualExportsSwing)
 }
 
@@ -2436,8 +2423,6 @@ project(":fxml") {
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
-
-    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":fxpackagerservices") {
@@ -3638,8 +3623,6 @@ project(":media") {
             dependsOn buildNativeTargets
         }
     }
-
-    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":web") {
@@ -3870,8 +3853,6 @@ project(":web") {
     if (IS_COMPILE_WEBKIT) {
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
-
-    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 // This project is for system tests that need to run with a full SDK.

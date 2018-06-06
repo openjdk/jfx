@@ -80,6 +80,8 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.glass.utils.NativeLibLoader;
+import com.sun.prism.impl.PrismSettings;
 
 import com.sun.prism.j2d.PrismPrintGraphics;
 
@@ -88,6 +90,21 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 public class J2DPrinterJob implements PrinterJobImpl {
+
+    static {
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            String libName = "prism_common";
+
+            if (PrismSettings.verbose) {
+                System.out.println("Loading Prism common native library ...");
+            }
+            NativeLibLoader.loadLibrary(libName);
+            if (PrismSettings.verbose) {
+                System.out.println("\tsucceeded.");
+            }
+            return null;
+        });
+    }
 
     javafx.print.PrinterJob fxPrinterJob;
     java.awt.print.PrinterJob pJob2D;
@@ -106,16 +123,24 @@ public class J2DPrinterJob implements PrinterJobImpl {
             PrintRequestAttribute alwaysOnTop = null;
             try {
                 if (onTopClass == null) {
-                    onTopClass = Class.forName("sun.print.DialogOnTop");
+                    onTopClass =
+                        Class.forName("javax.print.attribute.standard.DialogOwner");
                 }
-                Constructor<PrintRequestAttribute> cons =
-                     onTopClass.getConstructor(long.class);
-                alwaysOnTop = cons.newInstance(id);
+                if (id == 0) {
+                    Constructor<PrintRequestAttribute>
+                         cons = onTopClass.getConstructor();
+                    alwaysOnTop = cons.newInstance();
+                } else {
+                    alwaysOnTop = getAlwaysOnTop(onTopClass, id);
+                }
             } catch (Throwable t) {
             }
             return alwaysOnTop;
         });
     }
+
+    private static native
+        PrintRequestAttribute getAlwaysOnTop(Class onTopClass, long id);
 
     public J2DPrinterJob(javafx.print.PrinterJob fxJob) {
 
@@ -159,7 +184,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
             printReqAttrSet.remove(onTopClass);
         }
         if (owner != null) {
-            long id = WindowHelper.getPeer(owner).getRawHandle();
+            long id = 0L;
+            if (PlatformUtil.isWindows()) {
+                id = WindowHelper.getPeer(owner).getRawHandle();
+            }
             PrintRequestAttribute alwaysOnTop = getAlwaysOnTop(id);
             if (alwaysOnTop != null) {
                 printReqAttrSet.add(alwaysOnTop);
@@ -230,7 +258,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
             printReqAttrSet.remove(onTopClass);
         }
         if (owner != null) {
-            long id = WindowHelper.getPeer(owner).getRawHandle();
+            long id = 0L;
+            if (PlatformUtil.isWindows()) {
+                id = WindowHelper.getPeer(owner).getRawHandle();
+            }
             PrintRequestAttribute alwaysOnTop = getAlwaysOnTop(id);
             if (alwaysOnTop != null) {
                 printReqAttrSet.add(alwaysOnTop);

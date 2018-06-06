@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,9 +23,26 @@
  * questions.
  */
 
-exports java.awt.dnd.peer to javafx.swing;
-exports sun.awt to javafx.swing;
-exports sun.awt.dnd to javafx.swing;
-exports sun.awt.image to javafx.swing;
-exports sun.java2d to javafx.swing;
-exports sun.swing to javafx.swing;
+#include <jni.h>
+#include "com_sun_prism_j2d_print_J2DPrinterJob.h"
+
+/*
+ * Class com_sun_prism_j2d_print_J2DPrinterJob2D
+ * Method: getAlwaysOnTop
+ * Signature (Ljava/lang/Class;J)Ljavax.print.attribute.standard.DialogOwner;
+ */
+JNIEXPORT jobject
+Java_com_sun_prism_j2d_print_J2DPrinterJob_getAlwaysOnTop(
+ JNIEnv *env, jclass cls, jclass ownerClass, jlong id) {
+
+    jmethodID cons;
+    if (ownerClass == NULL) {
+        return NULL;
+    }
+    cons = (*env)->GetMethodID(env, ownerClass, "<init>", "(J)V");
+    if (cons == NULL || (*env)->ExceptionCheck(env)) {
+        return NULL;
+    }
+    return (*env)->NewObject(env, ownerClass, cons, id);
+}
+
