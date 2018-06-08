@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,26 @@
 JNIEXPORT jboolean JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXPlatform_osxPlatformInit
     (JNIEnv *env, jclass klass)
 {
+    // Workaround for JDK-8202393. All errors will be considered as warnings if code below fails.
+    NSBundle *main = [NSBundle mainBundle];
+    if (main != nil) {
+        NSDictionary *dictionary = main.infoDictionary;
+        if (dictionary != nil) {
+            if ([dictionary isKindOfClass:[NSMutableDictionary class]]) {
+                NSMutableDictionary *mDictionary = (NSMutableDictionary *)dictionary;
+                NSDictionary *data = @{@"NSAllowsArbitraryLoads" : @YES, @"NSAllowsArbitraryLoadsForMedia" : @YES};
+                mDictionary[@"NSAppTransportSecurity"] = data;
+                LOGGER_INFOMSG("OSXPlatform: Info dictionary updated successfully.");
+            } else {
+                LOGGER_WARNMSG("OSXPlatform: Info dictionary is not mutable dictionary.");
+            }
+        } else {
+            LOGGER_WARNMSG("OSXPlatform: Cannot get info dictionary.");
+        }
+    } else {
+        LOGGER_WARNMSG("OSXPlatform: Cannot get main bundle.");
+    }
+
     // Tell OSXMediaPlayer to initialize itself
     return (jboolean)[OSXMediaPlayer initPlayerPlatform];
 }
