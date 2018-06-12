@@ -1235,7 +1235,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 @Override
                 public void handle(MouseEvent me) {
                     Tab tab = getTab();
-                    if (behavior.canCloseTab(tab)) {
+                    if (me.getButton().equals(MouseButton.PRIMARY) && behavior.canCloseTab(tab)) {
                         behavior.closeTab(tab);
                         setOnMousePressed(null);
                         me.consume();
@@ -1427,19 +1427,27 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             });
             setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
-                    if (getTab().isDisable()) {
+                    Tab tab = getTab();
+                    if (tab.isDisable()) {
                         return;
+                    }
+                    if (me.getButton().equals(MouseButton.MIDDLE)
+                        || me.getButton().equals(MouseButton.PRIMARY)) {
+                        
+                        if (tab.getContextMenu() != null 
+                            && tab.getContextMenu().isShowing()) {
+                            tab.getContextMenu().hide();
+                        }
                     }
                     if (me.getButton().equals(MouseButton.MIDDLE)) {
                         if (showCloseButton()) {
-                            Tab tab = getTab();
                             if (behavior.canCloseTab(tab)) {
                                 removeListeners(tab);
                                 behavior.closeTab(tab);
                             }
                         }
                     } else if (me.getButton().equals(MouseButton.PRIMARY)) {
-                        behavior.selectTab(getTab());
+                        behavior.selectTab(tab);
                     }
                 }
             });
@@ -2005,18 +2013,24 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     }
 
     private void handleHeaderMousePressed(MouseEvent event) {
-        ((StackPane)event.getSource()).setMouseTransparent(true);
-        startDrag(event);
+        if (event.getButton().equals(MouseButton.PRIMARY)) {
+            ((StackPane) event.getSource()).setMouseTransparent(true);
+            startDrag(event);
+        }
     }
 
     private void handleHeaderMouseReleased(MouseEvent event) {
-        ((StackPane)event.getSource()).setMouseTransparent(false);
-        stopDrag();
-        event.consume();
+        if (event.getButton().equals(MouseButton.PRIMARY)) {
+            ((StackPane) event.getSource()).setMouseTransparent(false);
+            stopDrag();
+            event.consume();
+        }
     }
 
     private void handleHeaderDragged(MouseEvent event) {
-        perfromDrag(event);
+        if (event.getButton().equals(MouseButton.PRIMARY)) {
+            perfromDrag(event);
+        }
     }
 
     private double getDragDelta(double curr, double prev) {
