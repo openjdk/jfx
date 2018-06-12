@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,43 +102,16 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1keyRelease
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseMove
     (JNIEnv *env, jobject jrobot, jint x, jint y)
 {
-    int oldAccel[3], newAccel[3];
-    INT_PTR oldSpeed, newSpeed;
-    BOOL bResult;
-
     jfloat fx = (jfloat) x + 0.5f;
     jfloat fy = (jfloat) y + 0.5f;
     GlassScreen::FX2Win(&fx, &fy);
-    x = (jint) fx;
-    y = (jint) fy;
-
-    // The following values set mouse ballistics to 1 mickey/pixel.
-    newAccel[0] = 0;
-    newAccel[1] = 0;
-    newAccel[2] = 0;
-    newSpeed = 10;
-
-    // Save the Current Mouse Acceleration Constants
-    bResult = ::SystemParametersInfo(SPI_GETMOUSE, 0, oldAccel, 0);
-    bResult = ::SystemParametersInfo(SPI_GETMOUSESPEED, 0, &oldSpeed, 0);
-    // Set the new Mouse Acceleration Constants (Disabled).
-    bResult = ::SystemParametersInfo(SPI_SETMOUSE, 0, newAccel, SPIF_SENDCHANGE);
-    bResult = ::SystemParametersInfo(SPI_SETMOUSESPEED, 0,
-            (PVOID)newSpeed,
-            SPIF_SENDCHANGE);
-
-    POINT curPos;
-    ::GetCursorPos(&curPos);
-    x -= curPos.x;
-    y -= curPos.y;
-
-    ::mouse_event(MOUSEEVENTF_MOVE, x, y, 0, 0);
-    // Move the cursor to the desired coordinates.
-
-    // Restore the old Mouse Acceleration Constants.
-    bResult = ::SystemParametersInfo(SPI_SETMOUSE,0, oldAccel, SPIF_SENDCHANGE);
-    bResult = ::SystemParametersInfo(SPI_SETMOUSESPEED, 0, (PVOID)oldSpeed,
-            SPIF_SENDCHANGE);
+    INPUT mouseInput = {0};
+    mouseInput.type = INPUT_MOUSE;
+    mouseInput.mi.time = 0;
+    mouseInput.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+    mouseInput.mi.dx = (jint)(fx * 65536.0 / ::GetSystemMetrics(SM_CXSCREEN));
+    mouseInput.mi.dy = (jint)(fy * 65536.0 / ::GetSystemMetrics(SM_CYSCREEN));
+    ::SendInput(1, &mouseInput, sizeof(mouseInput));
 }
 
 /*
