@@ -1433,8 +1433,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     }
                     if (me.getButton().equals(MouseButton.MIDDLE)
                         || me.getButton().equals(MouseButton.PRIMARY)) {
-                        
-                        if (tab.getContextMenu() != null 
+
+                        if (tab.getContextMenu() != null
                             && tab.getContextMenu().isShowing()) {
                             tab.getContextMenu().hide();
                         }
