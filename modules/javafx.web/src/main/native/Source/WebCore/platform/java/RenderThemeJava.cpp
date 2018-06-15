@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -187,7 +187,7 @@ bool RenderThemeJava::paintWidget(
     JNIEnv* env = WebCore_GetJavaEnv();
 
     WTF::Vector<jbyte> extParams;
-    if (JNI_EXPAND(SLIDER) == widgetIndex) {
+    if (JNI_EXPAND(SLIDER) == widgetIndex && is<RenderSlider>(object)) {
         HTMLInputElement& input = downcast<RenderSlider>(object).element(); //XXX: recheck
 
         extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
@@ -206,20 +206,22 @@ bool RenderThemeJava::paintWidget(
         *(jfloat *)data = jfloat(input.valueAsNumber());
     } else if (JNI_EXPAND(PROGRESS_BAR) == widgetIndex) {
 #if ENABLE(PROGRESS_ELEMENT)
-        RenderProgress& renderProgress = downcast<RenderProgress>(object);
+        if (is<RenderProgress>(object)) {
+            RenderProgress& renderProgress = downcast<RenderProgress>(object);
 
-        extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
-        jbyte *data = extParams.data();
-        *(jint *)data = jint(renderProgress.isDeterminate() ? 1 : 0);
-        data += sizeof(jint);
+            extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
+            jbyte *data = extParams.data();
+            *(jint *)data = jint(renderProgress.isDeterminate() ? 1 : 0);
+            data += sizeof(jint);
 
-        *(jfloat *)data = jfloat(renderProgress.position());
-        data += sizeof(jfloat);
+            *(jfloat *)data = jfloat(renderProgress.position());
+            data += sizeof(jfloat);
 
-        *(jfloat *)data = jfloat(renderProgress.animationProgress());
-        data += sizeof(jfloat);
+            *(jfloat *)data = jfloat(renderProgress.animationProgress());
+            data += sizeof(jfloat);
 
-        *(jfloat *)data = jfloat(renderProgress.animationStartTime());
+            *(jfloat *)data = jfloat(renderProgress.animationStartTime());
+        }
 #endif
 #if ENABLE(METER_ELEMENT)
     } else if (JNI_EXPAND(METER) == widgetIndex) {
@@ -230,7 +232,7 @@ bool RenderThemeJava::paintWidget(
             value = meter->valueRatio();
             region = meter->gaugeRegion();
 #if ENABLE(PROGRESS_ELEMENT)
-        } else if (object.isProgress()) {
+        } else if (is<RenderProgress>(object>)) {
             RenderProgress& renderProgress = downcast<RenderProgress>(object);
             value = jfloat(renderProgress.position());
 #endif
