@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,7 +251,7 @@ static void gst_dshowwrapper_class_init (GstDShowWrapperClass *klass)
     GstElementClass *element_class = (GstElementClass*)klass;
     GObjectClass *gobject_class = (GObjectClass*)klass;
 
-    gst_element_class_set_details_simple(element_class,
+    gst_element_class_set_metadata(element_class,
         "DShowWrapper",
         "Codec/Decoder/Audio/Video",
         "Direct Show Wrapper",

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,7 +114,7 @@ avcdecoder_class_init (AvcDecoderClass * klass)
     GstElementClass *gstelement_class = (GstElementClass *) klass;
     GObjectClass *gobject_class = (GObjectClass*)klass;
 
-    gst_element_class_set_details_simple(gstelement_class,
+    gst_element_class_set_metadata(gstelement_class,
                                          "AVCDecoder",
                                          "Codec/Decoder/Video",
                                          "Decode raw MPEG-4 H.264 video stream",

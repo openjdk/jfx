@@ -27,6 +27,7 @@
 #include <gst/gstobject.h>
 #include <gst/gstformat.h>
 #include <gst/gstpluginfeature.h>
+#include <gst/base/base-prelude.h>
 
 G_BEGIN_DECLS
 
@@ -217,6 +218,7 @@ struct _GstIndexEntry {
       const gchar       *key;
     } format;
   } data;
+  // FIXME 2.0: add padding
 };
 
 /**
@@ -238,6 +240,7 @@ struct _GstIndexGroup {
 
   /* peer group that contains more certain entries */
   gint peergroup;
+  // FIXME 2.0: add padding
 };
 
 /**

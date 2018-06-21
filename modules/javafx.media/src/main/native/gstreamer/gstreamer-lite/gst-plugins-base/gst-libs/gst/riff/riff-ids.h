@@ -23,6 +23,7 @@
 #define __GST_RIFF_IDS_H__
 
 #include <gst/gst.h>
+#include "riff-prelude.h"
 
 G_BEGIN_DECLS
 
@@ -34,6 +35,7 @@ G_BEGIN_DECLS
 /* tags */
 #define GST_RIFF_TAG_RIFF GST_MAKE_FOURCC ('R','I','F','F')
 #define GST_RIFF_TAG_AVF0 GST_MAKE_FOURCC ('A','V','F','0')
+#define GST_RIFF_TAG_RF64 GST_MAKE_FOURCC ('R','F','6','4')
 #define GST_RIFF_TAG_RIFX GST_MAKE_FOURCC ('R','I','F','X')
 #define GST_RIFF_TAG_LIST GST_MAKE_FOURCC ('L','I','S','T')
 #define GST_RIFF_TAG_avih GST_MAKE_FOURCC ('a','v','i','h')
@@ -62,6 +64,7 @@ G_BEGIN_DECLS
 #define GST_RIFF_TAG_note GST_MAKE_FOURCC ('n','o','t','e')
 #define GST_RIFF_TAG_smpl GST_MAKE_FOURCC ('s','m','p','l')
 #define GST_RIFF_TAG_inst GST_MAKE_FOURCC ('i','n','s','t')
+#define GST_RIFF_TAG_FLLR GST_MAKE_FOURCC ('F','L','L','R')
 
 /* LIST types */
 #define GST_RIFF_LIST_movi GST_MAKE_FOURCC ('m','o','v','i')
@@ -186,8 +189,8 @@ G_BEGIN_DECLS
 #define GST_RIFF_CVID GST_MAKE_FOURCC ('C', 'V', 'I', 'D')
 #define GST_RIFF_ULTI GST_MAKE_FOURCC ('U', 'L', 'T', 'I')
 #define GST_RIFF_ulti GST_MAKE_FOURCC ('u', 'l', 't', 'i')
-#define GST_RIFF_YUV9 GST_MAKE_FOURCC ('Y', 'V', 'U', '9')
-#define GST_RIFF_YVU9 GST_MAKE_FOURCC ('Y', 'U', 'V', '9')
+#define GST_RIFF_YUV9 GST_MAKE_FOURCC ('Y', 'U', 'V', '9')
+#define GST_RIFF_YVU9 GST_MAKE_FOURCC ('Y', 'V', 'U', '9')
 #define GST_RIFF_XMPG GST_MAKE_FOURCC ('X', 'M', 'P', 'G')
 #define GST_RIFF_xmpg GST_MAKE_FOURCC ('x', 'm', 'p', 'g')
 #define GST_RIFF_VDOW GST_MAKE_FOURCC ('V', 'D', 'O', 'W')
@@ -324,7 +327,7 @@ typedef struct _gst_riff_strf_auds {       /* == WaveHeader (?) */
 #define GST_RIFF_WAVE_FORMAT_DOLBY_AC2      (0x0030)
 #define GST_RIFF_WAVE_FORMAT_GSM610         (0x0031)
 #define GST_RIFF_WAVE_FORMAT_MSN            (0x0032)
-#define GST_RIFF_WAVE_FORMAT_ANTEX_ADPCME   (0x0033
+#define GST_RIFF_WAVE_FORMAT_ANTEX_ADPCME   (0x0033)
 #define GST_RIFF_WAVE_FORMAT_CONTROL_RES_VQLPC (0x0034)
 #define GST_RIFF_WAVE_FORMAT_DIGIREAL       (0x0035)
 #define GST_RIFF_WAVE_FORMAT_DIGIADPCM      (0x0036)
@@ -357,6 +360,7 @@ typedef struct _gst_riff_strf_auds {       /* == WaveHeader (?) */
 #define GST_RIFF_WAVE_FORMAT_CANOPUS_ATRAC  (0x0063)
 #define GST_RIFF_WAVE_FORMAT_G726_ADPCM     (0x0064)
 #define GST_RIFF_WAVE_FORMAT_G722_ADPCM     (0x0065)
+#define GST_RIFF_WAVE_FORMAT_ADPCM_G722     (0x028F)
 #define GST_RIFF_WAVE_FORMAT_DSAT_DISPLAY   (0x0067)
 #define GST_RIFF_WAVE_FORMAT_ADPCM_IMA_WAV (0x0069)
 /* FIXME: where are these from? are they used at all? */

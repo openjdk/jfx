@@ -126,6 +126,14 @@ gst_alsa_get_pcm_format (GstAudioFormat fmt)
       return SND_PCM_FORMAT_U32_LE;
     case GST_AUDIO_FORMAT_U32BE:
       return SND_PCM_FORMAT_U32_BE;
+    case GST_AUDIO_FORMAT_F32LE:
+      return SND_PCM_FORMAT_FLOAT_LE;
+    case GST_AUDIO_FORMAT_F32BE:
+      return SND_PCM_FORMAT_FLOAT_BE;
+    case GST_AUDIO_FORMAT_F64LE:
+      return SND_PCM_FORMAT_FLOAT64_LE;
+    case GST_AUDIO_FORMAT_F64BE:
+      return SND_PCM_FORMAT_FLOAT64_BE;
     default:
       break;
   }
@@ -149,7 +157,8 @@ format_supported (const GValue * format_val, snd_pcm_format_mask_t * mask,
 
   finfo = gst_audio_format_get_info (format);
 
-  if (GST_AUDIO_FORMAT_INFO_ENDIANNESS (finfo) != endianness)
+  if (GST_AUDIO_FORMAT_INFO_ENDIANNESS (finfo) != endianness
+      && GST_AUDIO_FORMAT_INFO_ENDIANNESS (finfo) != 0)
     return FALSE;
 
   pcm_format = gst_alsa_get_pcm_format (format);
@@ -729,40 +738,43 @@ const GstAudioChannelPosition alsa_position[][8] = {
 #define ITEM(x, y) \
   [SND_CHMAP_ ## x] = GST_AUDIO_CHANNEL_POSITION_ ## y + 1
 
-static GstAudioChannelPosition gst_pos[SND_CHMAP_LAST + 1] = {
-  ITEM(MONO, MONO),
-  ITEM(FL, FRONT_LEFT),
-  ITEM(FR, FRONT_RIGHT),
-  ITEM(FC, FRONT_CENTER),
-  ITEM(RL, REAR_LEFT),
-  ITEM(RR, REAR_RIGHT),
-  ITEM(RC, REAR_CENTER),
-  ITEM(LFE, LFE1),
-  ITEM(SL, SIDE_LEFT),
-  ITEM(SR, SIDE_RIGHT),
-  ITEM(FLC, FRONT_LEFT_OF_CENTER),
-  ITEM(FRC, FRONT_RIGHT_OF_CENTER),
-  ITEM(FLW, WIDE_LEFT),
-  ITEM(FRW, WIDE_RIGHT),
-  ITEM(TC, TOP_CENTER),
-  ITEM(TFL, TOP_FRONT_LEFT),
-  ITEM(TFR, TOP_FRONT_RIGHT),
-  ITEM(TFC, TOP_FRONT_CENTER),
-  ITEM(TRL, TOP_REAR_LEFT),
-  ITEM(TRR, TOP_REAR_RIGHT),
-  ITEM(TRC, TOP_REAR_CENTER),
-  ITEM(LLFE, LFE1),
-  ITEM(RLFE, LFE2),
-  ITEM(BC, BOTTOM_FRONT_CENTER),
-  ITEM(BLC, BOTTOM_FRONT_LEFT),
-  ITEM(BRC, BOTTOM_FRONT_LEFT),
+static const GstAudioChannelPosition gst_pos[SND_CHMAP_LAST + 1] = {
+  ITEM (MONO, MONO),
+  ITEM (FL, FRONT_LEFT),
+  ITEM (FR, FRONT_RIGHT),
+  ITEM (FC, FRONT_CENTER),
+  ITEM (RL, REAR_LEFT),
+  ITEM (RR, REAR_RIGHT),
+  ITEM (RC, REAR_CENTER),
+  ITEM (LFE, LFE1),
+  ITEM (SL, SIDE_LEFT),
+  ITEM (SR, SIDE_RIGHT),
+  ITEM (FLC, FRONT_LEFT_OF_CENTER),
+  ITEM (FRC, FRONT_RIGHT_OF_CENTER),
+  ITEM (FLW, WIDE_LEFT),
+  ITEM (FRW, WIDE_RIGHT),
+  ITEM (TC, TOP_CENTER),
+  ITEM (TFL, TOP_FRONT_LEFT),
+  ITEM (TFR, TOP_FRONT_RIGHT),
+  ITEM (TFC, TOP_FRONT_CENTER),
+  ITEM (TRL, TOP_REAR_LEFT),
+  ITEM (TRR, TOP_REAR_RIGHT),
+  ITEM (TRC, TOP_REAR_CENTER),
+  ITEM (LLFE, LFE1),
+  ITEM (RLFE, LFE2),
+  ITEM (BC, BOTTOM_FRONT_CENTER),
+  ITEM (BLC, BOTTOM_FRONT_LEFT),
+  ITEM (BRC, BOTTOM_FRONT_LEFT),
 };
+
 #undef ITEM
 
-gboolean alsa_chmap_to_channel_positions (const snd_pcm_chmap_t *chmap,
-                      GstAudioChannelPosition *pos)
+gboolean
+alsa_chmap_to_channel_positions (const snd_pcm_chmap_t * chmap,
+    GstAudioChannelPosition * pos)
 {
   int c;
+  gboolean all_mono = TRUE;
 
   for (c = 0; c < chmap->channels; c++) {
     if (chmap->pos[c] > SND_CHMAP_LAST)
@@ -771,7 +783,64 @@ gboolean alsa_chmap_to_channel_positions (const snd_pcm_chmap_t *chmap,
     if (!pos[c])
       return FALSE;
     pos[c]--;
+
+    if (pos[c] != GST_AUDIO_CHANNEL_POSITION_MONO)
+      all_mono = FALSE;
   }
+
+  if (all_mono && chmap->channels > 1) {
+    /* GST_AUDIO_CHANNEL_POSITION_MONO can only be used with 1 channel and
+     * GST_AUDIO_CHANNEL_POSITION_NONE is meant to be used for position-less
+     * multi channels.
+     * Converting as ALSA can only express such configuration by using an array
+     * full of SND_CHMAP_MONO.
+     */
+    for (c = 0; c < chmap->channels; c++)
+      pos[c] = GST_AUDIO_CHANNEL_POSITION_NONE;
+  }
+
   return TRUE;
+}
+
+void
+alsa_detect_channels_mapping (GstObject * obj, snd_pcm_t * handle,
+    GstAudioRingBufferSpec * spec, guint channels, GstAudioRingBuffer * buf)
+{
+  snd_pcm_chmap_t *chmap;
+  GstAudioChannelPosition pos[8];
+
+  if (spec->type != GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW || channels >= 9)
+    return;
+
+  chmap = snd_pcm_get_chmap (handle);
+  if (!chmap) {
+    GST_LOG_OBJECT (obj, "ALSA driver does not implement channels mapping API");
+    return;
+  }
+
+  if (chmap->channels != channels) {
+    GST_LOG_OBJECT (obj,
+        "got channels mapping for %u channels but stream has %u channels; ignoring",
+        chmap->channels, channels);
+    goto out;
+  }
+
+  if (alsa_chmap_to_channel_positions (chmap, pos)) {
+#ifndef GST_DISABLE_GST_DEBUG
+    {
+      gchar *tmp = gst_audio_channel_positions_to_string (pos, channels);
+
+      GST_LOG_OBJECT (obj, "got channels mapping %s", tmp);
+      g_free (tmp);
+    }
+#endif /* GST_DISABLE_GST_DEBUG */
+
+    gst_audio_ring_buffer_set_channel_positions (buf, pos);
+  } else {
+    GST_LOG_OBJECT (obj, "failed to convert ALSA channels mapping");
+  }
+
+out:
+  free (chmap);
 }
 #endif /* SND_CHMAP_API_VERSION */

@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gstmeta
+ * @title: GstMeta
  * @short_description: Buffer metadata
  *
  * The #GstMeta structure should be included as the first member of a #GstBuffer
@@ -157,7 +158,8 @@ gst_meta_api_type_get_tags (GType api)
  * The same @info can be retrieved later with gst_meta_get_info() by using
  * @impl as the key.
  *
- * Returns: (transfer none): a #GstMetaInfo that can be used to access metadata.
+ * Returns: (transfer none) (nullable): a #GstMetaInfo that can be used to
+ * access metadata.
  */
 
 const GstMetaInfo *
@@ -171,6 +173,10 @@ gst_meta_register (GType api, const gchar * impl, gsize size,
   g_return_val_if_fail (api != 0, NULL);
   g_return_val_if_fail (impl != NULL, NULL);
   g_return_val_if_fail (size != 0, NULL);
+
+  if (init_func == NULL)
+    g_critical ("Registering meta implementation '%s' without init function",
+        impl);
 
   /* first try to register the implementation name. It's possible
    * that this fails because it was already registered. Don't warn,

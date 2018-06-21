@@ -372,31 +372,36 @@ void CGstAVPlaybackPipeline::OnAppSinkVideoFrameDiscont(CGstAVPlaybackPipeline* 
     gint width, height;
 
     GstCaps* caps = gst_sample_get_caps(pSample);
-    const GstStructure* str = gst_caps_get_structure(caps, 0);
+    if (caps == NULL)
+        return;
 
-    if(!gst_structure_get_int(str, "width", &width))
+    const GstStructure* str = gst_caps_get_structure(caps, 0);
+    if (str == NULL)
+        return;
+
+    if (!gst_structure_get_int(str, "width", &width))
     {
         pPipeline->m_pEventDispatcher->Warning (WARNING_GSTREAMER_PIPELINE_FRAME_SIZE, (char*)"width could not be retrieved from preroll GstBuffer");
         width = 0;
     }
-    if(!gst_structure_get_int(str, "height", &height))
+    if (!gst_structure_get_int(str, "height", &height))
     {
         pPipeline->m_pEventDispatcher->Warning (WARNING_GSTREAMER_PIPELINE_FRAME_SIZE, (char*)"height could not be retrieved from preroll GstBuffer");
         height = 0;
     }
 
-    if(pPipeline->m_SendFrameSizeEvent || width != pPipeline->m_FrameWidth || height != pPipeline->m_FrameHeight)
+    if (pPipeline->m_SendFrameSizeEvent || width != pPipeline->m_FrameWidth || height != pPipeline->m_FrameHeight)
     {
         // Save values for possible later use.
         pPipeline->m_FrameWidth = width;
         pPipeline->m_FrameHeight = height;
 
-        if(pPipeline->m_pEventDispatcher != NULL)
+        if (pPipeline->m_pEventDispatcher != NULL)
         {
             pPipeline->m_SendFrameSizeEvent = !pPipeline->m_pEventDispatcher->SendFrameSizeChangedEvent(pPipeline->m_FrameWidth, pPipeline->m_FrameHeight);
             if (pPipeline->m_SendFrameSizeEvent)
             {
-                if(!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_JNI_SEND_FRAME_SIZE_CHANGED_EVENT))
+                if (!pPipeline->m_pEventDispatcher->SendPlayerMediaErrorEvent(ERROR_JNI_SEND_FRAME_SIZE_CHANGED_EVENT))
                 {
                     LOGGER_LOGMSG(LOGGER_ERROR, "Cannot send media error event.\n");
                 }

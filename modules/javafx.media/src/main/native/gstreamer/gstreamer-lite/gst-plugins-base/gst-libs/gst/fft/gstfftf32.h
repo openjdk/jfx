@@ -48,14 +48,22 @@ struct _GstFFTF32Complex
 };
 
 /* Functions */
+
+GST_FFT_API
 GstFFTF32 *   gst_fft_f32_new           (gint len, gboolean inverse);
+
+GST_FFT_API
 void          gst_fft_f32_free          (GstFFTF32 *self);
 
+GST_FFT_API
 void          gst_fft_f32_fft           (GstFFTF32 *self, const gfloat *timedata,
                                          GstFFTF32Complex *freqdata);
+
+GST_FFT_API
 void          gst_fft_f32_inverse_fft   (GstFFTF32 *self, const GstFFTF32Complex *freqdata,
                                          gfloat *timedata);
 
+GST_FFT_API
 void          gst_fft_f32_window        (GstFFTF32 *self, gfloat *timedata, GstFFTWindow window);
 
 G_END_DECLS

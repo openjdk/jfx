@@ -23,6 +23,7 @@
 
 /**
  * SECTION:gsttypefindhelper
+ * @title: GstTypeFindHelper
  * @short_description: Utility functions for typefinding
  *
  * Utility functions for elements doing typefinding:
@@ -43,8 +44,7 @@
 /* ********************** typefinding in pull mode ************************ */
 
 static void
-helper_find_suggest (gpointer data, GstTypeFindProbability probability,
-    GstCaps * caps);
+helper_find_suggest (gpointer data, guint probability, GstCaps * caps);
 
 typedef struct
 {
@@ -167,10 +167,16 @@ helper_find_peek (gpointer data, gint64 offset, guint size)
   buf_offset = GST_BUFFER_OFFSET (buffer);
   buf_size = gst_buffer_get_size (buffer);
 
-  if ((buf_offset != -1 && buf_offset != offset) || buf_size < size) {
-    GST_DEBUG ("dropping short buffer: %" G_GUINT64_FORMAT "-%" G_GUINT64_FORMAT
-        " instead of %" G_GUINT64_FORMAT "-%" G_GUINT64_FORMAT,
-        buf_offset, buf_offset + buf_size - 1, offset, offset + size - 1);
+  if (buf_size < size) {
+    GST_DEBUG ("dropping short buffer of size %" G_GSIZE_FORMAT ","
+        "requested size was %u", buf_size, size);
+    gst_buffer_unref (buffer);
+    return NULL;
+  }
+
+  if (buf_offset != -1 && buf_offset != offset) {
+    GST_DEBUG ("dropping buffer with unexpected offset %" G_GUINT64_FORMAT ", "
+        "expected offset was %" G_GUINT64_FORMAT, buf_offset, offset);
     gst_buffer_unref (buffer);
     return NULL;
   }
@@ -217,8 +223,7 @@ map_failed:
  * If given @probability is higher, replace previously store caps.
  */
 static void
-helper_find_suggest (gpointer data, GstTypeFindProbability probability,
-    GstCaps * caps)
+helper_find_suggest (gpointer data, guint probability, GstCaps * caps)
 {
   GstTypeFindHelper *helper = (GstTypeFindHelper *) data;
 
@@ -447,7 +452,15 @@ buf_helper_find_peek (gpointer data, gint64 off, guint size)
     return NULL;
   }
 
-  if ((off + size) <= helper->size)
+  /* If we request beyond the available size, we're sure we can't return
+   * anything regardless of the requested offset */
+  if (size > helper->size)
+    return NULL;
+
+  /* Only return data if there's enough room left for the given offset.
+   * This is the same as "if (off + size <= helper->size)" except that
+   * it doesn't exceed type limits */
+  if (off <= helper->size - size)
     return helper->data + off;
 
   return NULL;
@@ -462,8 +475,7 @@ buf_helper_find_peek (gpointer data, gint64 off, guint size)
  * If given @probability is higher, replace previously store caps.
  */
 static void
-buf_helper_find_suggest (gpointer data, GstTypeFindProbability probability,
-    GstCaps * caps)
+buf_helper_find_suggest (gpointer data, guint probability, GstCaps * caps)
 {
   GstTypeFindBufHelper *helper = (GstTypeFindBufHelper *) data;
 
@@ -482,7 +494,7 @@ buf_helper_find_suggest (gpointer data, GstTypeFindProbability probability,
  * gst_type_find_helper_for_data:
  * @obj: (allow-none): object doing the typefinding, or %NULL (used for logging)
  * @data: (in) (transfer none): a pointer with data to typefind
- * @size: (in) (transfer none): the size of @data
+ * @size: (in): the size of @data
  * @prob: (out) (allow-none): location to store the probability of the found
  *     caps, or %NULL
  *

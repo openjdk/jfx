@@ -98,7 +98,7 @@ struct _GstQueue {
   GstSegment src_segment;
 
   /* position of src/sink */
-  GstClockTime sinktime, srctime;
+  GstClockTimeDiff sinktime, srctime;
   /* TRUE if either position needs to be recalculated */
   gboolean sink_tainted, src_tainted;
 
@@ -135,6 +135,7 @@ struct _GstQueue {
 
   GCond query_handled;
   gboolean last_query;
+  GstQuery *last_handled_query;
 
   gboolean flush_on_eos; /* flush on EOS */
 };

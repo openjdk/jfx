@@ -4,7 +4,7 @@
 
 LINKER = link.exe
 
-GLIB_VERSION = 2.42.1
+GLIB_VERSION = 2.56.1
 export GLIB_DIR = ../../../3rd_party/glib/glib-$(GLIB_VERSION)
 
 GSTREAMER_TARGET = libgstreamer.lib

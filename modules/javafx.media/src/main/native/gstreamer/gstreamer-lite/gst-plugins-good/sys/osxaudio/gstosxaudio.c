@@ -30,6 +30,11 @@
 #include "gstosxaudioelement.h"
 #include "gstosxaudiosink.h"
 #include "gstosxaudiosrc.h"
+#ifndef GSTREAMER_LITE
+#ifndef HAVE_IOS
+#include "gstosxaudiodeviceprovider.h"
+#endif
+#endif // GSTREAMER_LITE
 
 #ifdef GSTREAMER_LITE
 gboolean
@@ -50,6 +55,14 @@ plugin_init (GstPlugin * plugin)
     return FALSE;
   }
 #endif // GSTREAMER_LITE_TEST
+
+#ifndef GSTREAMER_LITE
+#ifndef HAVE_IOS
+  if (!gst_device_provider_register (plugin, "osxaudiodeviceprovider",
+          GST_RANK_PRIMARY, GST_TYPE_OSX_AUDIO_DEVICE_PROVIDER))
+    return FALSE;
+#endif
+#endif // GSTREAMER_LITE
 
   return TRUE;
 }

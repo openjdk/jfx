@@ -22,6 +22,7 @@
 
 /**
  * SECTION:gstaudiobasesrc
+ * @title: GstAudioBaseSrc
  * @short_description: Base class for audio sources
  * @see_also: #GstAudioSrc, #GstAudioRingBuffer.
  *
@@ -43,29 +44,6 @@
 
 GST_DEBUG_CATEGORY_STATIC (gst_audio_base_src_debug);
 #define GST_CAT_DEFAULT gst_audio_base_src_debug
-
-GType
-gst_audio_base_src_slave_method_get_type (void)
-{
-  static volatile gsize slave_method_type = 0;
-  /* FIXME 2.0: nick should be "retimestamp" not "re-timestamp" */
-  static const GEnumValue slave_method[] = {
-    {GST_AUDIO_BASE_SRC_SLAVE_RESAMPLE,
-        "GST_AUDIO_BASE_SRC_SLAVE_RESAMPLE", "resample"},
-    {GST_AUDIO_BASE_SRC_SLAVE_RETIMESTAMP,
-        "GST_AUDIO_BASE_SRC_SLAVE_RETIMESTAMP", "re-timestamp"},
-    {GST_AUDIO_BASE_SRC_SLAVE_SKEW, "GST_AUDIO_BASE_SRC_SLAVE_SKEW", "skew"},
-    {GST_AUDIO_BASE_SRC_SLAVE_NONE, "GST_AUDIO_BASE_SRC_SLAVE_NONE", "none"},
-    {0, NULL, NULL},
-  };
-
-  if (g_once_init_enter (&slave_method_type)) {
-    GType tmp =
-        g_enum_register_static ("GstAudioBaseSrcSlaveMethod", slave_method);
-    g_once_init_leave (&slave_method_type, tmp);
-  }
-  return (GType) slave_method_type;
-}
 
 #define GST_AUDIO_BASE_SRC_GET_PRIVATE(obj)  \
    (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_AUDIO_BASE_SRC, GstAudioBaseSrcPrivate))
@@ -169,14 +147,17 @@ gst_audio_base_src_class_init (GstAudioBaseSrcClass * klass)
       g_param_spec_int64 ("buffer-time", "Buffer Time",
           "Size of audio buffer in microseconds. This is the maximum amount "
           "of data that is buffered in the device and the maximum latency that "
-          "the source reports", 1, G_MAXINT64, DEFAULT_BUFFER_TIME,
+          "the source reports. This value might be ignored by the element if "
+          "necessary; see \"actual-buffer-time\"",
+          1, G_MAXINT64, DEFAULT_BUFFER_TIME,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   g_object_class_install_property (gobject_class, PROP_LATENCY_TIME,
       g_param_spec_int64 ("latency-time", "Latency Time",
           "The minimum amount of data to read in each iteration in "
-          "microseconds. This is the minimum latency that the source reports",
-          1, G_MAXINT64, DEFAULT_LATENCY_TIME,
+          "microseconds. This is the minimum latency that the source reports. "
+          "This value might be ignored by the element if necessary; see "
+          "\"actual-latency-time\"", 1, G_MAXINT64, DEFAULT_LATENCY_TIME,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
   /**
@@ -269,7 +250,7 @@ gst_audio_base_src_dispose (GObject * object)
 
   GST_OBJECT_LOCK (src);
   if (src->clock) {
-    gst_audio_clock_invalidate (src->clock);
+    gst_audio_clock_invalidate (GST_AUDIO_CLOCK (src->clock));
     gst_object_unref (src->clock);
     src->clock = NULL;
   }
@@ -579,6 +560,9 @@ gst_audio_base_src_setcaps (GstBaseSrc * bsrc, GstCaps * caps)
 
   g_object_notify (G_OBJECT (src), "actual-buffer-time");
   g_object_notify (G_OBJECT (src), "actual-latency-time");
+
+  gst_element_post_message (GST_ELEMENT_CAST (bsrc),
+      gst_message_new_latency (GST_OBJECT (bsrc)));
 
   return TRUE;
 
@@ -986,7 +970,7 @@ gst_audio_base_src_create (GstBaseSrc * bsrc, guint64 offset, guint length,
         }
         break;
       }
-      case GST_AUDIO_BASE_SRC_SLAVE_RETIMESTAMP:
+      case GST_AUDIO_BASE_SRC_SLAVE_RE_TIMESTAMP:
       {
         GstClockTime base_time, latency;
 
@@ -1021,7 +1005,7 @@ gst_audio_base_src_create (GstBaseSrc * bsrc, guint64 offset, guint length,
     } else {
       /* to get the timestamp against the clock we also need to add our
        * offset */
-      timestamp = gst_audio_clock_adjust (clock, timestamp);
+      timestamp = gst_audio_clock_adjust (GST_AUDIO_CLOCK (clock), timestamp);
     }
 
     /* we are not slaved, subtract base_time */
@@ -1124,17 +1108,28 @@ gst_audio_base_src_change_state (GstElement * element,
   GstAudioBaseSrc *src = GST_AUDIO_BASE_SRC (element);
 
   switch (transition) {
-    case GST_STATE_CHANGE_NULL_TO_READY:
+    case GST_STATE_CHANGE_NULL_TO_READY:{
+      GstAudioRingBuffer *rb;
+
       GST_DEBUG_OBJECT (src, "NULL->READY");
+      gst_audio_clock_reset (GST_AUDIO_CLOCK (src->clock), 0);
+      rb = gst_audio_base_src_create_ringbuffer (src);
+      if (rb == NULL)
+        goto create_failed;
+
       GST_OBJECT_LOCK (src);
-      if (src->ringbuffer == NULL) {
-        gst_audio_clock_reset (GST_AUDIO_CLOCK (src->clock), 0);
-        src->ringbuffer = gst_audio_base_src_create_ringbuffer (src);
-      }
+      src->ringbuffer = rb;
       GST_OBJECT_UNLOCK (src);
-      if (!gst_audio_ring_buffer_open_device (src->ringbuffer))
+
+      if (!gst_audio_ring_buffer_open_device (src->ringbuffer)) {
+        GST_OBJECT_LOCK (src);
+        gst_object_unparent (GST_OBJECT_CAST (src->ringbuffer));
+        src->ringbuffer = NULL;
+        GST_OBJECT_UNLOCK (src);
         goto open_failed;
+      }
       break;
+    }
     case GST_STATE_CHANGE_READY_TO_PAUSED:
       GST_DEBUG_OBJECT (src, "READY->PAUSED");
       src->next_sample = -1;
@@ -1197,6 +1192,12 @@ gst_audio_base_src_change_state (GstElement * element,
   return ret;
 
   /* ERRORS */
+create_failed:
+  {
+    /* subclass must post a meaningful error message */
+    GST_DEBUG_OBJECT (src, "create failed");
+    return GST_STATE_CHANGE_FAILURE;
+  }
 open_failed:
   {
     /* subclass must post a meaningful error message */

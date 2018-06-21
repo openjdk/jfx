@@ -25,8 +25,31 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "video-color.h"
+
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT ensure_debug_category()
+static GstDebugCategory *
+ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    gsize cat_done;
+
+    cat_done = (gsize) _gst_debug_category_new ("video-color", 0,
+        "video-color object");
+
+    g_once_init_leave (&cat_gonce, cat_done);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#else
+#define ensure_debug_category() /* NOOP */
+#endif /* GST_DISABLE_GST_DEBUG */
 
 typedef struct
 {
@@ -43,14 +66,16 @@ typedef struct
 #define DEFAULT_YUV_SD  0
 #define DEFAULT_YUV_HD  1
 #define DEFAULT_RGB     3
-#define DEFAULT_GRAY    4
-#define DEFAULT_UNKNOWN 5
+#define DEFAULT_YUV_UHD 4
+#define DEFAULT_GRAY    5
+#define DEFAULT_UNKNOWN 6
 
 static const ColorimetryInfo colorimetry[] = {
-  MAKE_COLORIMETRY (BT601, _16_235, BT601, BT709, BT470M),
+  MAKE_COLORIMETRY (BT601, _16_235, BT601, BT709, SMPTE170M),
   MAKE_COLORIMETRY (BT709, _16_235, BT709, BT709, BT709),
   MAKE_COLORIMETRY (SMPTE240M, _16_235, SMPTE240M, SMPTE240M, SMPTE240M),
-  MAKE_COLORIMETRY (NONAME, _0_255, RGB, UNKNOWN, UNKNOWN),
+  MAKE_COLORIMETRY (SRGB, _0_255, RGB, SRGB, BT709),
+  MAKE_COLORIMETRY (BT2020, _16_235, BT2020, BT2020_12, BT2020),
   MAKE_COLORIMETRY (NONAME, _0_255, BT601, UNKNOWN, UNKNOWN),
   MAKE_COLORIMETRY (NONAME, _UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
 };
@@ -67,10 +92,12 @@ gst_video_get_colorimetry (const gchar * s)
   return NULL;
 }
 
-#define IS_EQUAL(ci,i) (((ci)->color.range == (i)->range) && \
-                        ((ci)->color.matrix == (i)->matrix) && \
-                        ((ci)->color.transfer == (i)->transfer) && \
-                        ((ci)->color.primaries == (i)->primaries))
+#define CI_IS_EQUAL(ci,i) (((ci)->range == (i)->range) && \
+                        ((ci)->matrix == (i)->matrix) && \
+                        ((ci)->transfer == (i)->transfer) && \
+                        ((ci)->primaries == (i)->primaries))
+
+#define IS_EQUAL(ci,i) CI_IS_EQUAL(&(ci)->color, (i))
 
 #define IS_UNKNOWN(ci) (IS_EQUAL (&colorimetry[DEFAULT_UNKNOWN], ci))
 
@@ -82,16 +109,18 @@ gst_video_get_colorimetry (const gchar * s)
  * Parse the colorimetry string and update @cinfo with the parsed
  * values.
  *
- * Returns: #TRUE if @color points to valid colorimetry info.
+ * Returns: %TRUE if @color points to valid colorimetry info.
  */
 gboolean
 gst_video_colorimetry_from_string (GstVideoColorimetry * cinfo,
     const gchar * color)
 {
   const ColorimetryInfo *ci;
+  gboolean res = FALSE;
 
   if ((ci = gst_video_get_colorimetry (color))) {
     *cinfo = ci->color;
+    res = TRUE;
   } else {
     gint r, m, t, p;
 
@@ -100,9 +129,10 @@ gst_video_colorimetry_from_string (GstVideoColorimetry * cinfo,
       cinfo->matrix = m;
       cinfo->transfer = t;
       cinfo->primaries = p;
+      res = TRUE;
     }
   }
-  return TRUE;
+  return res;
 }
 
 /**
@@ -114,7 +144,7 @@ gst_video_colorimetry_from_string (GstVideoColorimetry * cinfo,
  * Returns: a string representation of @cinfo.
  */
 gchar *
-gst_video_colorimetry_to_string (GstVideoColorimetry * cinfo)
+gst_video_colorimetry_to_string (const GstVideoColorimetry * cinfo)
 {
   gint i;
 
@@ -138,11 +168,12 @@ gst_video_colorimetry_to_string (GstVideoColorimetry * cinfo)
  * Check if the colorimetry information in @info matches that of the
  * string @color.
  *
- * Returns: #TRUE if @color conveys the same colorimetry info as the color
+ * Returns: %TRUE if @color conveys the same colorimetry info as the color
  * information in @info.
  */
 gboolean
-gst_video_colorimetry_matches (GstVideoColorimetry * cinfo, const gchar * color)
+gst_video_colorimetry_matches (const GstVideoColorimetry * cinfo,
+    const gchar * color)
 {
   const ColorimetryInfo *ci;
 
@@ -215,21 +246,31 @@ gst_video_color_range_offsets (GstVideoColorRange range,
   GST_DEBUG ("offset: %d %d %d %d", offset[0], offset[1], offset[2], offset[3]);
 }
 
-
-#if 0
-typedef struct
+/**
+ * gst_video_colorimetry_is_equal:
+ * @cinfo: a #GstVideoColorimetry
+ * @other: another #GstVideoColorimetry
+ *
+ * Compare the 2 colorimetry sets for equality
+ *
+ * Returns: %TRUE if @cinfo and @other are equal.
+ *
+ * Since: 1.6
+ */
+gboolean
+gst_video_colorimetry_is_equal (const GstVideoColorimetry * cinfo,
+    const GstVideoColorimetry * other)
 {
-  GstVideoColorPrimaries primaries;
-  gdouble xW, yW;
-  gdouble xR, yR;
-  gdouble xG, yG;
-  gdouble xB, yB;
-} PrimariesInfo;
+  g_return_val_if_fail (cinfo != NULL, FALSE);
+  g_return_val_if_fail (other != NULL, FALSE);
+
+  return CI_IS_EQUAL (cinfo, other);
+}
 
 #define WP_C    0.31006, 0.31616
 #define WP_D65  0.31271, 0.32902
 
-static const PrimariesInfo primaries[] = {
+static const GstVideoColorPrimariesInfo color_primaries[] = {
   {GST_VIDEO_COLOR_PRIMARIES_UNKNOWN, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
   {GST_VIDEO_COLOR_PRIMARIES_BT709, WP_D65, 0.64, 0.33, 0.30, 0.60, 0.15, 0.06},
   {GST_VIDEO_COLOR_PRIMARIES_BT470M, WP_C, 0.67, 0.33, 0.21, 0.71, 0.14, 0.08},
@@ -240,6 +281,278 @@ static const PrimariesInfo primaries[] = {
   {GST_VIDEO_COLOR_PRIMARIES_SMPTE240M, WP_D65, 0.63, 0.34, 0.31, 0.595, 0.155,
       0.07},
   {GST_VIDEO_COLOR_PRIMARIES_FILM, WP_C, 0.681, 0.319, 0.243, 0.692, 0.145,
-      0.049}
+      0.049},
+  {GST_VIDEO_COLOR_PRIMARIES_BT2020, WP_D65, 0.708, 0.292, 0.170, 0.797, 0.131,
+      0.046},
+  {GST_VIDEO_COLOR_PRIMARIES_ADOBERGB, WP_D65, 0.64, 0.33, 0.21, 0.71, 0.15,
+      0.06}
 };
-#endif
+
+/**
+ * gst_video_color_primaries_get_info:
+ * @primaries: a #GstVideoColorPrimaries
+ *
+ * Get information about the chromaticity coordinates of @primaries.
+ *
+ * Returns: a #GstVideoColorPrimariesInfo for @primaries.
+ *
+ * Since: 1.6
+ */
+const GstVideoColorPrimariesInfo *
+gst_video_color_primaries_get_info (GstVideoColorPrimaries primaries)
+{
+  g_return_val_if_fail ((gint) primaries <
+      G_N_ELEMENTS (color_primaries), NULL);
+
+  return &color_primaries[primaries];
+}
+
+/**
+ * gst_video_color_matrix_get_Kr_Kb:
+ * @matrix: a #GstVideoColorMatrix
+ * @Kr: result red channel coefficient
+ * @Kb: result blue channel coefficient
+ *
+ * Get the coefficients used to convert between Y'PbPr and R'G'B' using @matrix.
+ *
+ * When:
+ *
+ * |[
+ *   0.0 <= [Y',R',G',B'] <= 1.0)
+ *   (-0.5 <= [Pb,Pr] <= 0.5)
+ * ]|
+ *
+ * the general conversion is given by:
+ *
+ * |[
+ *   Y' = Kr*R' + (1-Kr-Kb)*G' + Kb*B'
+ *   Pb = (B'-Y')/(2*(1-Kb))
+ *   Pr = (R'-Y')/(2*(1-Kr))
+ * ]|
+ *
+ * and the other way around:
+ *
+ * |[
+ *   R' = Y' + Cr*2*(1-Kr)
+ *   G' = Y' - Cb*2*(1-Kb)*Kb/(1-Kr-Kb) - Cr*2*(1-Kr)*Kr/(1-Kr-Kb)
+ *   B' = Y' + Cb*2*(1-Kb)
+ * ]|
+ *
+ * Returns: TRUE if @matrix was a YUV color format and @Kr and @Kb contain valid
+ *    values.
+ *
+ * Since: 1.6
+ */
+gboolean
+gst_video_color_matrix_get_Kr_Kb (GstVideoColorMatrix matrix, gdouble * Kr,
+    gdouble * Kb)
+{
+  gboolean res = TRUE;
+
+  switch (matrix) {
+      /* RGB */
+    default:
+    case GST_VIDEO_COLOR_MATRIX_RGB:
+      res = FALSE;
+      break;
+      /* YUV */
+    case GST_VIDEO_COLOR_MATRIX_FCC:
+      *Kr = 0.30;
+      *Kb = 0.11;
+      break;
+    case GST_VIDEO_COLOR_MATRIX_BT709:
+      *Kr = 0.2126;
+      *Kb = 0.0722;
+      break;
+    case GST_VIDEO_COLOR_MATRIX_BT601:
+      *Kr = 0.2990;
+      *Kb = 0.1140;
+      break;
+    case GST_VIDEO_COLOR_MATRIX_SMPTE240M:
+      *Kr = 0.212;
+      *Kb = 0.087;
+      break;
+    case GST_VIDEO_COLOR_MATRIX_BT2020:
+      *Kr = 0.2627;
+      *Kb = 0.0593;
+      break;
+  }
+  GST_DEBUG ("matrix: %d, Kr %f, Kb %f", matrix, *Kr, *Kb);
+
+  return res;
+}
+
+/**
+ * gst_video_color_transfer_encode:
+ * @func: a #GstVideoTransferFunction
+ * @val: a value
+ *
+ * Convert @val to its gamma encoded value.
+ *
+ * For a linear value L in the range [0..1], conversion to the non-linear
+ * (gamma encoded) L' is in general performed with a power function like:
+ *
+ * |[
+ *    L' = L ^ (1 / gamma)
+ * ]|
+ *
+ * Depending on @func, different formulas might be applied. Some formulas
+ * encode a linear segment in the lower range.
+ *
+ * Returns: the gamme encoded value of @val
+ *
+ * Since: 1.6
+ */
+gdouble
+gst_video_color_transfer_encode (GstVideoTransferFunction func, gdouble val)
+{
+  gdouble res;
+
+  switch (func) {
+    case GST_VIDEO_TRANSFER_UNKNOWN:
+    case GST_VIDEO_TRANSFER_GAMMA10:
+    default:
+      res = val;
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA18:
+      res = pow (val, 1.0 / 1.8);
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA20:
+      res = pow (val, 1.0 / 2.0);
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA22:
+      res = pow (val, 1.0 / 2.2);
+      break;
+    case GST_VIDEO_TRANSFER_BT709:
+      if (val < 0.018)
+        res = 4.5 * val;
+      else
+        res = 1.099 * pow (val, 0.45) - 0.099;
+      break;
+    case GST_VIDEO_TRANSFER_SMPTE240M:
+      if (val < 0.0228)
+        res = val * 4.0;
+      else
+        res = 1.1115 * pow (val, 0.45) - 0.1115;
+      break;
+    case GST_VIDEO_TRANSFER_SRGB:
+      if (val <= 0.0031308)
+        res = 12.92 * val;
+      else
+        res = 1.055 * pow (val, 1.0 / 2.4) - 0.055;
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA28:
+      res = pow (val, 1 / 2.8);
+      break;
+    case GST_VIDEO_TRANSFER_LOG100:
+      if (val < 0.01)
+        res = 0.0;
+      else
+        res = 1.0 + log10 (val) / 2.0;
+      break;
+    case GST_VIDEO_TRANSFER_LOG316:
+      if (val < 0.0031622777)
+        res = 0.0;
+      else
+        res = 1.0 + log10 (val) / 2.5;
+      break;
+    case GST_VIDEO_TRANSFER_BT2020_12:
+      if (val < 0.0181)
+        res = 4.5 * val;
+      else
+        res = 1.0993 * pow (val, 0.45) - 0.0993;
+      break;
+    case GST_VIDEO_TRANSFER_ADOBERGB:
+      res = pow (val, 1.0 / 2.19921875);
+      break;
+  }
+  return res;
+}
+
+/**
+ * gst_video_color_transfer_decode:
+ * @func: a #GstVideoTransferFunction
+ * @val: a value
+ *
+ * Convert @val to its gamma decoded value. This is the inverse operation of
+ * @gst_video_color_transfer_encode().
+ *
+ * For a non-linear value L' in the range [0..1], conversion to the linear
+ * L is in general performed with a power function like:
+ *
+ * |[
+ *    L = L' ^ gamma
+ * ]|
+ *
+ * Depending on @func, different formulas might be applied. Some formulas
+ * encode a linear segment in the lower range.
+ *
+ * Returns: the gamme decoded value of @val
+ *
+ * Since: 1.6
+ */
+gdouble
+gst_video_color_transfer_decode (GstVideoTransferFunction func, gdouble val)
+{
+  gdouble res;
+
+  switch (func) {
+    case GST_VIDEO_TRANSFER_UNKNOWN:
+    case GST_VIDEO_TRANSFER_GAMMA10:
+    default:
+      res = val;
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA18:
+      res = pow (val, 1.8);
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA20:
+      res = pow (val, 2.0);
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA22:
+      res = pow (val, 2.2);
+      break;
+    case GST_VIDEO_TRANSFER_BT709:
+      if (val < 0.081)
+        res = val / 4.5;
+      else
+        res = pow ((val + 0.099) / 1.099, 1.0 / 0.45);
+      break;
+    case GST_VIDEO_TRANSFER_SMPTE240M:
+      if (val < 0.0913)
+        res = val / 4.0;
+      else
+        res = pow ((val + 0.1115) / 1.1115, 1.0 / 0.45);
+      break;
+    case GST_VIDEO_TRANSFER_SRGB:
+      if (val <= 0.04045)
+        res = val / 12.92;
+      else
+        res = pow ((val + 0.055) / 1.055, 2.4);
+      break;
+    case GST_VIDEO_TRANSFER_GAMMA28:
+      res = pow (val, 2.8);
+      break;
+    case GST_VIDEO_TRANSFER_LOG100:
+      if (val == 0.0)
+        res = 0.0;
+      else
+        res = pow (10.0, 2.0 * (val - 1.0));
+      break;
+    case GST_VIDEO_TRANSFER_LOG316:
+      if (val == 0.0)
+        res = 0.0;
+      else
+        res = pow (10.0, 2.5 * (val - 1.0));
+      break;
+    case GST_VIDEO_TRANSFER_BT2020_12:
+      if (val < 0.08145)
+        res = val / 4.5;
+      else
+        res = pow ((val + 0.0993) / 1.0993, 1.0 / 0.45);
+      break;
+    case GST_VIDEO_TRANSFER_ADOBERGB:
+      res = pow (val, 2.19921875);
+      break;
+  }
+  return res;
+}

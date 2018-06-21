@@ -21,16 +21,14 @@
 
 /**
  * SECTION:gsttagid3
+ * @title: ID3 tag utils
  * @short_description: tag mappings and support functions for plugins
  *                     dealing with ID3v1 and ID3v2 tags
  * @see_also: #GstTagList
  *
- * <refsect2>
- * <para>
  * Contains various utility functions for plugins to parse or create
  * ID3 tags and map ID3v2 identifiers to and from GStreamer identifiers.
- * </para>
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -95,6 +93,7 @@ static const GstTagEntryMatch tag_matches[] = {
   {GST_TAG_ARTIST, "TPE1"},
   {GST_TAG_ALBUM_ARTIST, "TPE2"},
   {GST_TAG_COMPOSER, "TCOM"},
+  {GST_TAG_CONDUCTOR, "TPE3"},
   {GST_TAG_COPYRIGHT, "TCOP"},
   {GST_TAG_COPYRIGHT_URI, "WCOP"},
   {GST_TAG_ENCODED_BY, "TENC"},
@@ -113,6 +112,7 @@ static const GstTagEntryMatch tag_matches[] = {
   {GST_TAG_PUBLISHER, "TPUB"},
   {GST_TAG_INTERPRETED_BY, "TPE4"},
   {GST_TAG_MUSICAL_KEY, "TKEY"},
+  {GST_TAG_PRIVATE_DATA, "PRIV"},
   {NULL, NULL}
 };
 

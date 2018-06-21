@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gstchildproxy
+ * @title: GstChildProxy
  * @short_description: Interface for multi child elements.
  * @see_also: #GstBin
  *
@@ -116,10 +117,16 @@ gst_child_proxy_default_get_child_by_name (GstChildProxy * parent,
 GObject *
 gst_child_proxy_get_child_by_name (GstChildProxy * parent, const gchar * name)
 {
+  GstChildProxyInterface *iface;
+
   g_return_val_if_fail (GST_IS_CHILD_PROXY (parent), 0);
 
-  return (GST_CHILD_PROXY_GET_INTERFACE (parent)->get_child_by_name (parent,
-          name));
+  iface = GST_CHILD_PROXY_GET_INTERFACE (parent);
+
+  if (iface->get_child_by_name != NULL)
+    return iface->get_child_by_name (parent, name);
+
+  return NULL;
 }
 
 /**
@@ -137,10 +144,16 @@ gst_child_proxy_get_child_by_name (GstChildProxy * parent, const gchar * name)
 GObject *
 gst_child_proxy_get_child_by_index (GstChildProxy * parent, guint index)
 {
+  GstChildProxyInterface *iface;
+
   g_return_val_if_fail (GST_IS_CHILD_PROXY (parent), NULL);
 
-  return (GST_CHILD_PROXY_GET_INTERFACE (parent)->get_child_by_index (parent,
-          index));
+  iface = GST_CHILD_PROXY_GET_INTERFACE (parent);
+
+  if (iface->get_child_by_index != NULL)
+    return iface->get_child_by_index (parent, index);
+
+  return NULL;
 }
 
 /**
@@ -156,9 +169,16 @@ gst_child_proxy_get_child_by_index (GstChildProxy * parent, guint index)
 guint
 gst_child_proxy_get_children_count (GstChildProxy * parent)
 {
+  GstChildProxyInterface *iface;
+
   g_return_val_if_fail (GST_IS_CHILD_PROXY (parent), 0);
 
-  return (GST_CHILD_PROXY_GET_INTERFACE (parent)->get_children_count (parent));
+  iface = GST_CHILD_PROXY_GET_INTERFACE (parent);
+
+  if (iface->get_children_count != NULL)
+    return iface->get_children_count (parent);
+
+  return 0;
 }
 
 /**

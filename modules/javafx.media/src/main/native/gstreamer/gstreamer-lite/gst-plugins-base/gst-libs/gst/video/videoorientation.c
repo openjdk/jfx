@@ -29,6 +29,7 @@
 
 /**
  * SECTION:gstvideoorientation
+ * @title: GstVideoOrientation
  * @short_description: Interface for elements providing video orientation
  * controls
  *
@@ -39,36 +40,11 @@
 /* FIXME 0.11: check if we need to add API for sometimes-supportedness
  * (aka making up for GstImplementsInterface removal) (probably yes) */
 
-static void gst_video_orientation_iface_init (GstVideoOrientationInterface *
-    iface);
+G_DEFINE_INTERFACE (GstVideoOrientation, gst_video_orientation, 0)
 
-GType
-gst_video_orientation_get_type (void)
-{
-  static GType gst_video_orientation_type = 0;
-
-  if (!gst_video_orientation_type) {
-    static const GTypeInfo gst_video_orientation_info = {
-      sizeof (GstVideoOrientationInterface),
-      (GBaseInitFunc) gst_video_orientation_iface_init,
-      NULL,
-      NULL,
-      NULL,
-      NULL,
-      0,
-      0,
-      NULL,
-    };
-
-    gst_video_orientation_type = g_type_register_static (G_TYPE_INTERFACE,
-        "GstVideoOrientation", &gst_video_orientation_info, 0);
-  }
-
-  return gst_video_orientation_type;
-}
-
-static void
-gst_video_orientation_iface_init (GstVideoOrientationInterface * iface)
+     static void
+         gst_video_orientation_default_init (GstVideoOrientationInterface *
+    iface)
 {
   /* default virtual functions */
 

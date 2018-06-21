@@ -21,6 +21,9 @@
 #ifndef __GST_PLUGINLOADER_H__
 #define __GST_PLUGINLOADER_H__
 
+#include <glib.h>
+#include <gst/gstregistry.h>
+
 G_BEGIN_DECLS
 
 typedef struct _GstPluginLoader GstPluginLoader;

@@ -19,15 +19,13 @@
 
 /**
  * SECTION:gsttaglanguagecodes
+ * @title: ISO-639 lang mappings
  * @short_description: mappings for ISO-639 language codes and names
  * @see_also: #GstTagList
  *
- * <refsect2>
- * <para>
  * Provides helper functions to convert between the various ISO-639 language
  * codes, and to map language codes to language names.
- * </para>
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H

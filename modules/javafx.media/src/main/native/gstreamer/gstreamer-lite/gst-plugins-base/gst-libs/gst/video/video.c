@@ -38,20 +38,18 @@
 #ifndef GSTREAMER_LITE
 /**
  * SECTION:gstvideo
+ * @title: GstVideoAlignment
  * @short_description: Support library for video operations
  *
- * <refsect2>
- * <para>
  * This library contains some helper functions and includes the
  * videosink and videofilter base classes.
- * </para>
- * </refsect2>
+ *
  */
 
 /**
  * gst_video_calculate_display_ratio:
- * @dar_n: Numerator of the calculated display_ratio
- * @dar_d: Denominator of the calculated display_ratio
+ * @dar_n: (out): Numerator of the calculated display_ratio
+ * @dar_d: (out): Denominator of the calculated display_ratio
  * @video_width: Width of the video frame in pixels
  * @video_height: Height of the video frame in pixels
  * @video_par_n: Numerator of the pixel aspect ratio of the input video.
@@ -104,7 +102,97 @@ error_overflow:
     return FALSE;
   }
 }
+#endif // GSTREAMER_LITE
 
+/**
+ * gst_video_guess_framerate:
+ * @duration: Nominal duration of one frame
+ * @dest_n: (out) (allow-none): Numerator of the calculated framerate
+ * @dest_d: (out) (allow-none): Denominator of the calculated framerate
+ *
+ * Given the nominal duration of one video frame,
+ * this function will check some standard framerates for
+ * a close match (within 0.1%) and return one if possible,
+ *
+ * It will calculate an arbitrary framerate if no close
+ * match was found, and return %FALSE.
+ *
+ * It returns %FALSE if a duration of 0 is passed.
+ *
+ * Returns: %TRUE if a close "standard" framerate was
+ * recognised, and %FALSE otherwise.
+ *
+ * Since: 1.6
+ */
+gboolean
+gst_video_guess_framerate (GstClockTime duration, gint * dest_n, gint * dest_d)
+{
+  const int common_den[] = { 1, 2, 3, 4, 1001 };
+  int best_n, best_d, gcd;
+  guint64 best_error = G_MAXUINT64;
+  guint64 a;
+  int i;
+
+  if (G_UNLIKELY (duration == 0))
+    return FALSE;
+
+  /* Use a limited precision conversion by default for more sensible results,
+   * unless the frame duration is absurdly small (high speed cameras?) */
+  if (duration > 100000) {
+    best_n = GST_SECOND / 10000;
+    best_d = duration / 10000;
+  } else {
+    best_n = GST_SECOND;
+    best_d = duration;
+  }
+
+  for (i = 0; i < G_N_ELEMENTS (common_den); i++) {
+    gint d = common_den[i];
+    gint n = gst_util_uint64_scale_round (d, GST_SECOND, duration);
+
+    /* For NTSC framerates, round to the nearest 1000 fps */
+    if (d == 1001) {
+      n += 500;
+      n -= (n % 1000);
+    }
+
+    if (n > 0) {
+      /* See what duration the given framerate should be */
+      a = gst_util_uint64_scale_int (GST_SECOND, d, n);
+      /* Compute absolute error */
+      a = (a < duration) ? (duration - a) : (a - duration);
+      if (a < 2) {
+        /* Really precise - take this option */
+        if (dest_n)
+          *dest_n = n;
+        if (dest_d)
+          *dest_d = d;
+        return TRUE;
+      }
+      /* If within 0.1%, remember this denominator */
+      if (a * 1000 < duration && a < best_error) {
+        best_error = a;
+        best_n = n;
+        best_d = d;
+      }
+    }
+  }
+
+  /* set results */
+  gcd = gst_util_greatest_common_divisor (best_n, best_d);
+  if (gcd) {
+    best_n /= gcd;
+    best_d /= gcd;
+  }
+  if (dest_n)
+    *dest_n = best_n;
+  if (dest_d)
+    *dest_d = best_d;
+
+  return (best_error != G_MAXUINT64);
+}
+
+#ifndef GSTREAMER_LITE
 /**
  * gst_video_alignment_reset:
  * @align: a #GstVideoAlignment

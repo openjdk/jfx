@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gstdataqueue
+ * @title: GstDataQueue
  * @short_description: Threadsafe queueing object
  *
  * #GstDataQueue is an object that handles threadsafe queueing of objects. It
@@ -217,9 +218,10 @@ gst_data_queue_init (GstDataQueue * queue)
  * @checkdata: a #gpointer that will be passed to the @checkfull, @fullcallback,
  *   and @emptycallback callbacks.
  *
- * Creates a new #GstDataQueue. The difference with @gst_data_queue_new is that it will
- * not emit the 'full' and 'empty' signals, but instead calling directly @fullcallback
- * or @emptycallback.
+ * Creates a new #GstDataQueue. If @fullcallback or @emptycallback are supplied, then
+ * the #GstDataQueue will call the respective callback to signal full or empty condition.
+ * If the callbacks are NULL the #GstDataQueue will instead emit 'full' and 'empty'
+ * signals.
  *
  * Returns: a new #GstDataQueue.
  *
@@ -234,7 +236,7 @@ gst_data_queue_new (GstDataQueueCheckFullFunction checkfull,
 
   g_return_val_if_fail (checkfull != NULL, NULL);
 
-  ret = g_object_newv (GST_TYPE_DATA_QUEUE, 0, NULL);
+  ret = g_object_new (GST_TYPE_DATA_QUEUE, NULL);
   ret->priv->checkfull = checkfull;
   ret->priv->checkdata = checkdata;
   ret->priv->fullcallback = fullcallback;

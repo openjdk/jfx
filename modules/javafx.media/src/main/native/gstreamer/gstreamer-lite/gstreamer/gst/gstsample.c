@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gstsample
+ * @title: GstSample
  * @short_description: A media sample
  * @see_also: #GstBuffer, #GstCaps, #GstSegment
  *
@@ -42,6 +43,7 @@ struct _GstSample
   GstCaps *caps;
   GstSegment segment;
   GstStructure *info;
+  GstBufferList *buffer_list;
 };
 
 GType _gst_sample_type = 0;
@@ -64,6 +66,10 @@ _gst_sample_copy (GstSample * sample)
   copy = gst_sample_new (sample->buffer, sample->caps, &sample->segment,
       (sample->info) ? gst_structure_copy (sample->info) : NULL);
 
+  if (sample->buffer_list)
+    copy->buffer_list = (GstBufferList *)
+        gst_mini_object_ref (GST_MINI_OBJECT_CAST (sample->buffer_list));
+
   return copy;
 }
 
@@ -80,6 +86,9 @@ _gst_sample_free (GstSample * sample)
     gst_structure_set_parent_refcount (sample->info, NULL);
     gst_structure_free (sample->info);
   }
+  if (sample->buffer_list)
+    gst_mini_object_unref (GST_MINI_OBJECT_CAST (sample->buffer_list));
+
   g_slice_free1 (sizeof (GstSample), sample);
 }
 
@@ -198,7 +207,7 @@ gst_sample_get_segment (GstSample * sample)
  *
  * Get extra information associated with @sample.
  *
- * Returns: (transfer none): the extra info of @sample.
+ * Returns: (transfer none) (nullable): the extra info of @sample.
  *  The info remains valid as long as @sample is valid.
  */
 const GstStructure *
@@ -207,4 +216,47 @@ gst_sample_get_info (GstSample * sample)
   g_return_val_if_fail (GST_IS_SAMPLE (sample), NULL);
 
   return sample->info;
+}
+
+/**
+ * gst_sample_get_buffer_list:
+ * @sample: a #GstSample
+ *
+ * Get the buffer list associated with @sample
+ *
+ * Returns: (transfer none) (nullable): the buffer list of @sample or %NULL
+ *  when there is no buffer list. The buffer list remains valid as long as
+ *  @sample is valid.  If you need to hold on to it for longer than
+ *  that, take a ref to the buffer list with gst_mini_object_ref ().
+ *
+ * Since: 1.6
+ */
+GstBufferList *
+gst_sample_get_buffer_list (GstSample * sample)
+{
+  g_return_val_if_fail (GST_IS_SAMPLE (sample), NULL);
+
+  return sample->buffer_list;
+}
+
+/**
+ * gst_sample_set_buffer_list:
+ * @sample: a #GstSample
+ * @buffer_list: a #GstBufferList
+ *
+ * Set the buffer list associated with @sample
+ *
+ * Since: 1.6
+ */
+void
+gst_sample_set_buffer_list (GstSample * sample, GstBufferList * buffer_list)
+{
+  GstBufferList *old = NULL;
+  g_return_if_fail (GST_IS_SAMPLE (sample));
+  old = sample->buffer_list;
+  sample->buffer_list = (GstBufferList *)
+      gst_mini_object_ref (GST_MINI_OBJECT_CAST (buffer_list));
+
+  if (old)
+    gst_mini_object_unref (GST_MINI_OBJECT_CAST (old));
 }

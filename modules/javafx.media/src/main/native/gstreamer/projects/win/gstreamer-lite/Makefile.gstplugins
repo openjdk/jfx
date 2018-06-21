@@ -28,11 +28,7 @@ DEP_DIRS = $(BUILD_DIR) $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 C_SOURCES = gst-plugins-bad/gst/aiff/aiff.c \
 			gst-plugins-bad/gst/aiff/aiffparse.c \
 			gst-plugins-base/gst/app/gstapp.c \
-			gst-plugins-base/gst/audioconvert/audioconvert.c \
 			gst-plugins-base/gst/audioconvert/gstaudioconvert.c \
-			gst-plugins-base/gst/audioconvert/gstaudioconvertorc-dist.c \
-			gst-plugins-base/gst/audioconvert/gstaudioquantize.c \
-			gst-plugins-base/gst/audioconvert/gstchannelmix.c \
 			gst-plugins-base/gst/audioconvert/plugin.c \
 			gst-plugins-base/gst/typefind/gsttypefindfunctions.c \
 			gst-plugins-good/gst/audioparsers/gstmpegaudioparse.c \
@@ -43,6 +39,7 @@ C_SOURCES = gst-plugins-bad/gst/aiff/aiff.c \
 			gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
 			gst-plugins-good/gst/isomp4/isomp4-plugin.c \
 			gst-plugins-good/gst/isomp4/qtdemux.c \
+			gst-plugins-good/gst/isomp4/gstisoff.c \
 			gst-plugins-good/gst/isomp4/qtdemux_dump.c \
 			gst-plugins-good/gst/isomp4/qtdemux_lang.c \
 			gst-plugins-good/gst/isomp4/qtdemux_types.c \
@@ -109,7 +106,7 @@ OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
 
 default: $(TARGET)
 
-$(TARGET): $(OBJECTS) 
+$(TARGET): $(OBJECTS)
 	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(OBJECTS): | $(DEP_DIRS)

@@ -112,6 +112,9 @@
     <Filter Include="projects\plugins">
       <UniqueIdentifier>{e2244338-d282-4c36-b3aa-f2565f17726a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="gst-plugins-base\gst-libs\gst\video">
+      <UniqueIdentifier>{33b70c2b-443c-4863-a713-143eb265dbfc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gstreamer\gst\gst.c">
@@ -579,6 +582,93 @@
     <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\streamvolume.c">
       <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalance.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalancechannel.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\convertframe.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideodecoder.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoencoder.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideofilter.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideometa.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideopool.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideosink.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideotimecode.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoutils.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\navigation.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-blend.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-chroma.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-color.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-converter.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-dither.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-enumtypes.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-event.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-format.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-frame.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-info.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-multiview.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-orc-dist.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\videoorientation.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\videooverlay.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-overlay-composition.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-tile.c">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\audio.h">
@@ -635,5 +725,100 @@
     <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\audio\streamvolume.h">
       <Filter>gst-plugins-base\gst-libs\gst\audio</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalance.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\colorbalancechannel.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideodecoder.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoencoder.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideofilter.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideometa.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideopool.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideosink.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideotimecode.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\gstvideoutils.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\navigation.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-blend.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-chroma.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-color.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-converter.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-dither.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-enumtypes.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-event.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-format.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-frame.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-info.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-multiview.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-orc.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-orc-dist.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\videoorientation.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\videooverlay.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-overlay-composition.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-prelude.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-tile.h">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\gstreamer\gstreamer-lite\gst-plugins-base\gst-libs\gst\video\video-orc.orc">
+      <Filter>gst-plugins-base\gst-libs\gst\video</Filter>
+    </None>
   </ItemGroup>
 </Project>

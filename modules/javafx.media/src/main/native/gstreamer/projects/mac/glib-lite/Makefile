@@ -5,7 +5,7 @@
 BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
 TARGET_DIRS = $(BUILD_DIR)
 
-SRCBASE_DIR = ../../../3rd_party/glib/glib-2.42.1/
+SRCBASE_DIR = ../../../3rd_party/glib/glib-2.56.1/
 LIBFFI_DIR = ../../../3rd_party/libffi
 OBJBASE_DIR = $(BUILD_DIR)/obj/glib-lite
 

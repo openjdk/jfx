@@ -18,6 +18,7 @@
  */
 /**
  * SECTION:gstaudiochannels
+ * @title: Audio-channels
  * @short_description: Support library for audio channel handling
  *
  * This library contains some helper functions for multichannel audio.
@@ -30,6 +31,29 @@
 #include <string.h>
 
 #include "audio-channels.h"
+
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT ensure_debug_category()
+static GstDebugCategory *
+ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    gsize cat_done;
+
+    cat_done = (gsize) _gst_debug_category_new ("audio-channels", 0,
+        "audio-channels object");
+
+    g_once_init_leave (&cat_gonce, cat_done);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#else
+#define ensure_debug_category() /* NOOP */
+#endif /* GST_DISABLE_GST_DEBUG */
+
 
 static const GstAudioChannelPosition default_channel_order[64] = {
   GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT,
@@ -97,6 +121,19 @@ static const GstAudioChannelPosition default_channel_order[64] = {
   GST_AUDIO_CHANNEL_POSITION_INVALID,
   GST_AUDIO_CHANNEL_POSITION_INVALID
 };
+
+/*
+ * Compares @channels audio channel positions @p1 and @p2 if they are equal.
+ * In other words, tells whether channel reordering is needed (unequal) or not (equal).
+ *
+ * Returns: %TRUE if the channel positions are equal, i.e. no reordering is needed.
+ */
+static gboolean
+gst_audio_channel_positions_equal (const GstAudioChannelPosition * p1,
+    const GstAudioChannelPosition * p2, gint channels)
+{
+  return memcmp (p1, p2, channels * sizeof (p1[0])) == 0;
+}
 
 static gboolean
 check_valid_channel_positions (const GstAudioChannelPosition * position,
@@ -188,7 +225,7 @@ gst_audio_reorder_channels (gpointer data, gsize size, GstAudioFormat format,
   if (size == 0)
     return TRUE;
 
-  if (memcmp (from, to, channels * sizeof (from[0])) == 0)
+  if (gst_audio_channel_positions_equal (from, to, channels))
     return TRUE;
 
   if (!gst_audio_get_channel_reorder_map (channels, from, to, reorder_map))
@@ -237,7 +274,11 @@ gst_audio_buffer_reorder_channels (GstBuffer * buffer,
   g_return_val_if_fail (GST_IS_BUFFER (buffer), FALSE);
   g_return_val_if_fail (gst_buffer_is_writable (buffer), FALSE);
 
-  gst_buffer_map (buffer, &info, GST_MAP_READWRITE);
+  if (gst_audio_channel_positions_equal (from, to, channels))
+    return TRUE;
+
+  if (!gst_buffer_map (buffer, &info, GST_MAP_READWRITE))
+    return FALSE;
 
   ret =
       gst_audio_reorder_channels (info.data, info.size, format, channels, from,
@@ -273,7 +314,7 @@ gst_audio_check_valid_channel_positions (const GstAudioChannelPosition *
  * @position: (array length=channels): The %GstAudioChannelPositions
  * @channels: The number of channels.
  * @force_order: Only consider the GStreamer channel order.
- * @channel_mask: (array): the output channel mask
+ * @channel_mask: (out): the output channel mask
  *
  * Convert the @position array of @channels channels to a bitmask.
  *
@@ -301,6 +342,8 @@ gst_audio_channel_positions_to_mask (const GstAudioChannelPosition * position,
  * (which should have at least @channels entries ensured by caller).
  * If @channel_mask is set to 0, it is considered as 'not present' for purpose
  * of conversion.
+ * A partially valid @channel_mask with less bits set than the number
+ * of channels is considered valid.
  *
  * Returns: %TRUE if channel and channel mask are valid and could be converted
  */
@@ -331,14 +374,12 @@ gst_audio_channel_positions_from_mask (gint channels, guint64 channel_mask,
       if ((channel_mask & (G_GUINT64_CONSTANT (1) << i))) {
         if (j < channels)
           position[j] = default_channel_order[i];
-        if (default_channel_order[i] == GST_AUDIO_CHANNEL_POSITION_INVALID)
-          goto invalid_channel_mask;
         j++;
       }
     }
-
     if (j != channels)
-      goto invalid_channel_mask;
+      GST_WARNING ("Only partially valid channel mask 0x%016" G_GINT64_MODIFIER
+          "x for %d channels", channel_mask, channels);
   }
 
   return TRUE;
@@ -349,13 +390,7 @@ no_channel_mask:
     GST_ERROR ("no channel-mask property given");
     return FALSE;
   }
-invalid_channel_mask:
-  {
-    GST_ERROR ("Invalid channel mask 0x%016" G_GINT64_MODIFIER
-        "x for %d channels", channel_mask, channels);
-    return FALSE;
   }
-}
 
 
 /**
@@ -464,4 +499,165 @@ gst_audio_channel_positions_to_valid_order (GstAudioChannelPosition * position,
   memcpy (position, tmp, sizeof (tmp[0]) * channels);
 
   return TRUE;
+}
+
+#define _P(pos) (G_GUINT64_CONSTANT (1) << GST_AUDIO_CHANNEL_POSITION_ ##pos)
+
+static const guint64 default_masks[] = {
+  /* 1 channel */
+  0,
+  /* 2 channels */
+  _P (FRONT_LEFT) | _P (FRONT_RIGHT),
+  /* 3 channels (2.1) */
+  _P (FRONT_LEFT) | _P (FRONT_RIGHT) | _P (LFE1),
+  /* 4 channels (4.0) */
+  _P (FRONT_LEFT) | _P (FRONT_RIGHT) | _P (REAR_LEFT) | _P (REAR_RIGHT),
+  /* 5 channels */
+  _P (FRONT_LEFT) | _P (FRONT_RIGHT) | _P (REAR_LEFT) | _P (REAR_RIGHT)
+      | _P (FRONT_CENTER),
+  /* 6 channels (5.1) */
+  _P (FRONT_LEFT) |
+      _P (FRONT_RIGHT) |
+      _P (REAR_LEFT) | _P (REAR_RIGHT) | _P (FRONT_CENTER) | _P (LFE1),
+  /* 7 channels (6.1) */
+  _P (FRONT_LEFT) |
+      _P (FRONT_RIGHT) |
+      _P (REAR_LEFT) |
+      _P (REAR_RIGHT) | _P (FRONT_CENTER) | _P (LFE1) | _P (REAR_CENTER),
+  /* 8 channels (7.1) */
+  _P (FRONT_LEFT) |
+      _P (FRONT_RIGHT) |
+      _P (REAR_LEFT) |
+      _P (REAR_RIGHT) |
+      _P (FRONT_CENTER) | _P (LFE1) | _P (SIDE_LEFT) | _P (SIDE_RIGHT),
+};
+
+/**
+ * gst_audio_channel_get_fallback_mask:
+ * @channels: the number of channels
+ *
+ * Get the fallback channel-mask for the given number of channels.
+ *
+ * This function returns a reasonable fallback channel-mask and should be
+ * called as a last resort when the specific channel map is unknown.
+ *
+ * Returns: a fallback channel-mask for @channels or 0 when there is no
+ * mask and mono.
+ *
+ * Since: 1.8
+ */
+guint64
+gst_audio_channel_get_fallback_mask (gint channels)
+{
+  g_return_val_if_fail (channels > 0, 0);
+
+  if (channels > 8)
+    return 0;
+
+  return default_masks[channels - 1];
+}
+
+static const gchar *
+position_to_string (GstAudioChannelPosition pos)
+{
+  switch (pos) {
+    case GST_AUDIO_CHANNEL_POSITION_NONE:
+      return "NONE";
+    case GST_AUDIO_CHANNEL_POSITION_MONO:
+      return "MONO";
+    case GST_AUDIO_CHANNEL_POSITION_INVALID:
+      return "INVALID";
+    case GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT:
+      return "FL";
+    case GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT:
+      return "FR";
+    case GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER:
+      return "FC";
+    case GST_AUDIO_CHANNEL_POSITION_LFE1:
+      return "LFE1";
+    case GST_AUDIO_CHANNEL_POSITION_REAR_LEFT:
+      return "RL";
+    case GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT:
+      return "RR";
+    case GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER:
+      return "FLoC";
+    case GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER:
+      return "FRoC";
+    case GST_AUDIO_CHANNEL_POSITION_REAR_CENTER:
+      return "RC";
+    case GST_AUDIO_CHANNEL_POSITION_LFE2:
+      return "LF2";
+    case GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT:
+      return "SL";
+    case GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT:
+      return "SR";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT:
+      return "TFL";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT:
+      return "TFR";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER:
+      return "TFC";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_CENTER:
+      return "TFC";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT:
+      return "TRL";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT:
+      return "TRR";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT:
+      return "TSL";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT:
+      return "TSR";
+    case GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER:
+      return "TRC";
+    case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER:
+      return "BFC";
+    case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT:
+      return "BFL";
+    case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT:
+      return "BFR";
+    case GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT:
+      return "WL";
+    case GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT:
+      return "WR";
+    case GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT:
+      return "SL";
+    case GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT:
+      return "SR";
+    default:
+      break;
+  }
+
+  return "UNKNOWN";
+}
+
+/**
+ * gst_audio_channel_positions_to_string:
+ * @position: (array length=channels): The %GstAudioChannelPositions
+ *   to convert.
+ * @channels: The number of channels.
+ *
+ * Converts @position to a human-readable string representation for
+ * debugging purposes.
+ *
+ * Returns: (transfer full): a newly allocated string representing
+ * @position
+ *
+ * Since 1.10
+ */
+gchar *
+gst_audio_channel_positions_to_string (const GstAudioChannelPosition * position,
+    gint channels)
+{
+  guint i;
+  GString *tmp;
+
+  g_return_val_if_fail (channels > 0, FALSE);
+  g_return_val_if_fail (position != NULL, FALSE);
+
+  tmp = g_string_new ("[");
+  for (i = 0; i < channels; i++)
+    g_string_append_printf (tmp, " %s", position_to_string (position[i]));
+  g_string_append (tmp, " ]");
+
+  return g_string_free (tmp, FALSE);
 }

@@ -24,7 +24,10 @@
 
 #include <gst/audio/gstaudioringbuffer.h>
 
+GST_AUDIO_API
 guint       gst_audio_iec61937_frame_size  (const GstAudioRingBufferSpec * spec);
+
+GST_AUDIO_API
 gboolean    gst_audio_iec61937_payload     (const guint8 * src, guint src_n,
                                             guint8 * dst, guint dst_n,
                                             const GstAudioRingBufferSpec * spec,

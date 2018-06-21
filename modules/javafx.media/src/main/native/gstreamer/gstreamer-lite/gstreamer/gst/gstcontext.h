@@ -24,6 +24,8 @@
 #ifndef __GST_CONTEXT_H__
 #define __GST_CONTEXT_H__
 
+#include <glib.h>
+
 G_BEGIN_DECLS
 
 typedef struct _GstContext GstContext;
@@ -31,7 +33,11 @@ typedef struct _GstContext GstContext;
 #include <gst/gstminiobject.h>
 #include <gst/gststructure.h>
 
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_context_type;
+#else // GSTREAMER_LITE
 GST_EXPORT GType _gst_context_type;
+#endif // GSTREAMER_LITE
 
 #define GST_TYPE_CONTEXT                         (_gst_context_type)
 #define GST_IS_CONTEXT(obj)                      (GST_IS_MINI_OBJECT_TYPE (obj, GST_TYPE_CONTEXT))
@@ -40,6 +46,7 @@ GST_EXPORT GType _gst_context_type;
 
 
 
+GST_API
 GType           gst_context_get_type            (void);
 
 
@@ -52,10 +59,6 @@ GType           gst_context_get_type            (void);
  *
  * Returns: @context (for convenience when doing assignments)
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstContext * gst_context_ref (GstContext * context);
-#endif
-
 static inline GstContext *
 gst_context_ref (GstContext * context)
 {
@@ -69,10 +72,6 @@ gst_context_ref (GstContext * context)
  * Convenience macro to decrease the reference count of the context, possibly
  * freeing it.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void gst_context_unref (GstContext * context);
-#endif
-
 static inline void
 gst_context_unref (GstContext * context)
 {
@@ -90,10 +89,6 @@ gst_context_unref (GstContext * context)
  *
  * MT safe
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstContext * gst_context_copy (const GstContext * context);
-#endif
-
 static inline GstContext *
 gst_context_copy (const GstContext * context)
 {
@@ -136,25 +131,33 @@ gst_context_copy (const GstContext * context)
  *
  * Returns: %TRUE if @new_context was different from @old_context
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gboolean gst_context_replace (GstContext **old_context, GstContext *new_context);
-#endif
-
 static inline gboolean
 gst_context_replace (GstContext **old_context, GstContext *new_context)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_context, (GstMiniObject *) new_context);
 }
 
+GST_API
 GstContext *          gst_context_new                      (const gchar * context_type,
                                                             gboolean persistent) G_GNUC_MALLOC;
-
+GST_API
 const gchar *         gst_context_get_context_type         (const GstContext * context);
+
+GST_API
 gboolean              gst_context_has_context_type         (const GstContext * context, const gchar * context_type);
+
+GST_API
 const GstStructure *  gst_context_get_structure            (const GstContext * context);
+
+GST_API
 GstStructure *        gst_context_writable_structure       (GstContext * context);
 
+GST_API
 gboolean              gst_context_is_persistent            (const GstContext * context);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstContext, gst_context_unref)
+#endif
 
 G_END_DECLS
 

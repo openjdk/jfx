@@ -62,7 +62,8 @@ enum TfFlags
   TF_DEFAULT_SAMPLE_DURATION  = 0x000008,   /* default-sample-duration-present */
   TF_DEFAULT_SAMPLE_SIZE      = 0x000010,   /* default-sample-size-present */
   TF_DEFAULT_SAMPLE_FLAGS     = 0x000020,   /* default-sample-flags-present */
-  TF_DURATION_IS_EMPTY        = 0x100000    /* duration-is-empty */
+  TF_DURATION_IS_EMPTY        = 0x010000,   /* duration-is-empty */
+  TF_DEFAULT_BASE_IS_MOOF     = 0x020000    /* default-base-is-moof */
 };
 
 enum TrFlags

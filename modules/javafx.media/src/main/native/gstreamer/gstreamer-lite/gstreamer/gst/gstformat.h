@@ -92,20 +92,33 @@ struct _GstFormatDefinition
   GQuark       quark;
 };
 
+GST_API
 const gchar*    gst_format_get_name             (GstFormat format);
+
+GST_API
 GQuark          gst_format_to_quark             (GstFormat format);
 
 /* register a new format */
+
+GST_API
 GstFormat       gst_format_register             (const gchar *nick,
                                                  const gchar *description);
+
+GST_API
 GstFormat       gst_format_get_by_nick          (const gchar *nick);
 
 /* check if a format is in an array of formats */
+
+GST_API
 gboolean        gst_formats_contains            (const GstFormat *formats, GstFormat format);
 
 /* query for format details */
+
+GST_API
 const GstFormatDefinition*
                 gst_format_get_details          (GstFormat format);
+
+GST_API
 GstIterator*    gst_format_iterate_definitions  (void);
 
 G_END_DECLS

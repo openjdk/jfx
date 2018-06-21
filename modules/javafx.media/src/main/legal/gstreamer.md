@@ -1,10 +1,10 @@
-## GStreamer v1.4.4
+## GStreamer v1.14.0
 
 ### GStreamer Notice
 <pre>
-You are receiving a copy of GStreamer, Version: 1.4.4 in either source or
+You are receiving a copy of GStreamer, Version: 1.14.0 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GStreamer, Version: 1.4.4; it is
+Oracle license do NOT apply to the GStreamer, Version: 1.14.0; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:

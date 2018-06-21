@@ -23,9 +23,13 @@
 #define __GST_FFT__H__
 
 #include <gst/fft/gstfft.h>
+#ifndef GSTREAMER_LITE
 #include <gst/fft/gstffts16.h>
 #include <gst/fft/gstffts32.h>
 #include <gst/fft/gstfftf32.h>
 #include <gst/fft/gstfftf64.h>
+#else // GSTREAMER_LITE
+#include <gst/fft/gstfftf32.h>
+#endif GSTREAMER_LITE
 
 #endif /* __GST_FFT__H__ */

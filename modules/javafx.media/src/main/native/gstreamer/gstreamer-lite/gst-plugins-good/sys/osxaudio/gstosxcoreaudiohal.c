@@ -49,15 +49,19 @@ _audio_system_set_runloop (CFRunLoopRef runLoop)
 }
 
 static inline AudioDeviceID
-_audio_system_get_default_output (void)
+_audio_system_get_default_device (gboolean output)
 {
   OSStatus status = noErr;
   UInt32 propertySize = sizeof (AudioDeviceID);
   AudioDeviceID device_id = kAudioDeviceUnknown;
+  AudioObjectPropertySelector prop_selector;
+
+  prop_selector = output ? kAudioHardwarePropertyDefaultOutputDevice :
+      kAudioHardwarePropertyDefaultInputDevice;
 
   AudioObjectPropertyAddress defaultDeviceAddress = {
-    kAudioHardwarePropertyDefaultOutputDevice,
-    kAudioDevicePropertyScopeOutput,
+    prop_selector,
+    kAudioObjectPropertyScopeGlobal,
     kAudioObjectPropertyElementMaster
   };
 
@@ -66,6 +70,8 @@ _audio_system_get_default_output (void)
   if (status != noErr) {
     GST_ERROR ("failed getting default output device: %d", (int) status);
   }
+
+  GST_DEBUG ("Default device id: %u", (unsigned) device_id);
 
   return device_id;
 }
@@ -79,7 +85,7 @@ _audio_system_get_devices (gint * ndevices)
 
   AudioObjectPropertyAddress audioDevicesAddress = {
     kAudioHardwarePropertyDevices,
-    kAudioDevicePropertyScopeOutput,
+    kAudioObjectPropertyScopeGlobal,
     kAudioObjectPropertyElementMaster
   };
 
@@ -107,15 +113,19 @@ _audio_system_get_devices (gint * ndevices)
 }
 
 static inline gboolean
-_audio_device_is_alive (AudioDeviceID device_id)
+_audio_device_is_alive (AudioDeviceID device_id, gboolean output)
 {
   OSStatus status = noErr;
   int alive = FALSE;
   UInt32 propertySize = sizeof (alive);
+  AudioObjectPropertyScope prop_scope;
+
+  prop_scope = output ? kAudioDevicePropertyScopeOutput :
+      kAudioDevicePropertyScopeInput;
 
   AudioObjectPropertyAddress audioDeviceAliveAddress = {
     kAudioDevicePropertyDeviceIsAlive,
-    kAudioDevicePropertyScopeOutput,
+    prop_scope,
     kAudioObjectPropertyElementMaster
   };
 
@@ -249,15 +259,19 @@ _audio_device_set_mixing (AudioDeviceID device_id, gboolean enable_mix)
 }
 
 static inline gchar *
-_audio_device_get_name (AudioDeviceID device_id)
+_audio_device_get_name (AudioDeviceID device_id, gboolean output)
 {
   OSStatus status = noErr;
   UInt32 propertySize = 0;
   gchar *device_name = NULL;
+  AudioObjectPropertyScope prop_scope;
+
+  prop_scope = output ? kAudioDevicePropertyScopeOutput :
+      kAudioDevicePropertyScopeInput;
 
   AudioObjectPropertyAddress deviceNameAddress = {
     kAudioDevicePropertyDeviceName,
-    kAudioDevicePropertyScopeOutput,
+    prop_scope,
     kAudioObjectPropertyElementMaster
   };
 
@@ -305,16 +319,22 @@ _audio_device_has_output (AudioDeviceID device_id)
   return TRUE;
 }
 
-AudioChannelLayout *
-gst_core_audio_audio_device_get_channel_layout (AudioDeviceID device_id)
+#ifdef GST_CORE_AUDIO_DEBUG
+static AudioChannelLayout *
+gst_core_audio_audio_device_get_channel_layout (AudioDeviceID device_id,
+    gboolean output)
 {
   OSStatus status = noErr;
   UInt32 propertySize = 0;
   AudioChannelLayout *layout = NULL;
+  AudioObjectPropertyScope prop_scope;
+
+  prop_scope = output ? kAudioDevicePropertyScopeOutput :
+      kAudioDevicePropertyScopeInput;
 
   AudioObjectPropertyAddress channelLayoutAddress = {
     kAudioDevicePropertyPreferredChannelLayout,
-    kAudioDevicePropertyScopeOutput,
+    prop_scope,
     kAudioObjectPropertyElementMaster
   };
 
@@ -322,7 +342,7 @@ gst_core_audio_audio_device_get_channel_layout (AudioDeviceID device_id)
   status = AudioObjectGetPropertyDataSize (device_id,
       &channelLayoutAddress, 0, NULL, &propertySize);
   if (status != noErr) {
-    GST_ERROR ("failed to get prefered layout: %d", (int) status);
+    GST_ERROR ("failed to get preferred layout: %d", (int) status);
     goto beach;
   }
 
@@ -331,7 +351,7 @@ gst_core_audio_audio_device_get_channel_layout (AudioDeviceID device_id)
   status = AudioObjectGetPropertyData (device_id,
       &channelLayoutAddress, 0, NULL, &propertySize, layout);
   if (status != noErr) {
-    GST_ERROR ("failed to get prefered layout: %d", (int) status);
+    GST_ERROR ("failed to get preferred layout: %d", (int) status);
     goto failed;
   }
 
@@ -365,6 +385,7 @@ failed:
   g_free (layout);
   return NULL;
 }
+#endif
 
 static inline AudioStreamID *
 _audio_device_get_streams (AudioDeviceID device_id, gint * nstreams)
@@ -988,6 +1009,8 @@ _io_proc_spdif_stop (GstCoreAudio * core_audio)
 static gboolean
 gst_core_audio_open_impl (GstCoreAudio * core_audio)
 {
+  gboolean ret;
+
   /* The following is needed to instruct HAL to create their own
    * thread to handle the notifications. */
   _audio_system_set_runloop (NULL);
@@ -1002,8 +1025,21 @@ gst_core_audio_open_impl (GstCoreAudio * core_audio)
    * we will do input with it.
    * http://developer.apple.com/technotes/tn2002/tn2091.html
    */
-  return gst_core_audio_open_device (core_audio, kAudioUnitSubType_HALOutput,
+  ret = gst_core_audio_open_device (core_audio, kAudioUnitSubType_HALOutput,
       "HALOutput");
+  if (!ret) {
+    GST_DEBUG ("Could not open device");
+    goto done;
+  }
+
+  ret = gst_core_audio_bind_device (core_audio);
+  if (!ret) {
+    GST_DEBUG ("Could not bind device");
+    goto done;
+  }
+
+done:
+  return ret;
 }
 
 static gboolean
@@ -1087,6 +1123,15 @@ gst_core_audio_initialize_impl (GstCoreAudio * core_audio,
     gboolean is_passthrough, guint32 * frame_size)
 {
   gboolean ret = FALSE;
+  OSStatus status;
+
+  /* Uninitialize the AudioUnit before changing formats */
+  status = AudioUnitUninitialize (core_audio->audiounit);
+  if (status) {
+    GST_ERROR_OBJECT (core_audio, "Failed to uninitialize AudioUnit: %d",
+        (int) status);
+    return FALSE;
+  }
 
   core_audio->is_passthrough = is_passthrough;
   if (is_passthrough) {
@@ -1101,11 +1146,8 @@ gst_core_audio_initialize_impl (GstCoreAudio * core_audio,
     if (!gst_core_audio_set_format (core_audio, format))
       goto done;
 
-    if (!gst_core_audio_set_channels_layout (core_audio,
+    if (!gst_core_audio_set_channel_layout (core_audio,
             format.mChannelsPerFrame, caps))
-      goto done;
-
-    if (!gst_core_audio_bind_device (core_audio))
       goto done;
 
     if (core_audio->is_src) {
@@ -1124,20 +1166,33 @@ gst_core_audio_initialize_impl (GstCoreAudio * core_audio,
   ret = TRUE;
 
 done:
+  /* Format changed, initialise the AudioUnit again */
+  status = AudioUnitInitialize (core_audio->audiounit);
+  if (status) {
+    GST_ERROR_OBJECT (core_audio, "Failed to initialize AudioUnit: %d",
+        (int) status);
+    ret = FALSE;
+  }
+
   if (ret) {
     GST_DEBUG_OBJECT (core_audio, "osxbuf ring buffer acquired");
   }
+
   return ret;
 }
 
 static gboolean
-gst_core_audio_select_device_impl (AudioDeviceID * device_id)
+gst_core_audio_select_device_impl (GstCoreAudio * core_audio)
 {
   AudioDeviceID *devices = NULL;
+  AudioDeviceID device_id = core_audio->device_id;
   AudioDeviceID default_device_id = 0;
-  AudioChannelLayout *channel_layout;
   gint i, ndevices = 0;
+  gboolean output = !core_audio->is_src;
   gboolean res = FALSE;
+#ifdef GST_CORE_AUDIO_DEBUG
+  AudioChannelLayout *channel_layout;
+#endif
 
   devices = _audio_system_get_devices (&ndevices);
 
@@ -1148,10 +1203,11 @@ gst_core_audio_select_device_impl (AudioDeviceID * device_id)
 
   GST_DEBUG ("found %d audio device(s)", ndevices);
 
+#ifdef GST_CORE_AUDIO_DEBUG
   for (i = 0; i < ndevices; i++) {
     gchar *device_name;
 
-    if ((device_name = _audio_device_get_name (devices[i]))) {
+    if ((device_name = _audio_device_get_name (devices[i], output))) {
       if (!_audio_device_has_output (devices[i])) {
         GST_DEBUG ("Input Device ID: %u Name: %s",
             (unsigned) devices[i], device_name);
@@ -1160,7 +1216,7 @@ gst_core_audio_select_device_impl (AudioDeviceID * device_id)
             (unsigned) devices[i], device_name);
 
         channel_layout =
-            gst_core_audio_audio_device_get_channel_layout (devices[i]);
+            gst_core_audio_audio_device_get_channel_layout (devices[i], output);
         if (channel_layout) {
           gst_core_audio_dump_channel_layout (channel_layout);
           g_free (channel_layout);
@@ -1170,30 +1226,38 @@ gst_core_audio_select_device_impl (AudioDeviceID * device_id)
       g_free (device_name);
     }
   }
+#endif
 
   /* Find the ID of the default output device */
-  default_device_id = _audio_system_get_default_output ();
+  default_device_id = _audio_system_get_default_device (output);
 
   /* Here we decide if selected device is valid or autoselect
    * the default one when required */
-  if (*device_id == kAudioDeviceUnknown) {
+  if (device_id == kAudioDeviceUnknown) {
     if (default_device_id != kAudioDeviceUnknown) {
-      *device_id = default_device_id;
+      device_id = default_device_id;
       res = TRUE;
+    } else {
+      GST_ERROR ("No device of required type available");
+      res = FALSE;
     }
   } else {
     for (i = 0; i < ndevices; i++) {
-      if (*device_id == devices[i]) {
+      if (device_id == devices[i]) {
         res = TRUE;
+        break;
       }
     }
 
-    if (res && !_audio_device_is_alive (*device_id)) {
+    if (res && !_audio_device_is_alive (device_id, output)) {
       GST_ERROR ("Requested device not usable");
       res = FALSE;
       goto done;
     }
   }
+
+  if (res)
+    core_audio->device_id = device_id;
 
 done:
   g_free (devices);
@@ -1220,35 +1284,4 @@ gst_core_audio_audio_device_is_spdif_avail_impl (AudioDeviceID device_id)
   }
 
   return res;
-}
-
-static gboolean
-gst_core_audio_select_source_device_impl (AudioDeviceID * device_id)
-{
-  OSStatus status;
-  UInt32 propertySize;
-
-  if (*device_id == kAudioDeviceUnknown) {
-    /* If no specific device has been selected by the user, then pick the
-     * default device */
-    GST_DEBUG ("Selecting device for OSXAudioSrc");
-    propertySize = sizeof (*device_id);
-    status = AudioHardwareGetProperty (kAudioHardwarePropertyDefaultInputDevice,
-        &propertySize, device_id);
-
-    if (status) {
-      GST_WARNING ("AudioHardwareGetProperty returned %d", (int) status);
-    } else {
-      GST_DEBUG ("AudioHardwareGetProperty returned 0");
-    }
-
-    if (*device_id == kAudioDeviceUnknown) {
-      GST_WARNING ("AudioHardwareGetProperty: device_id is "
-          "kAudioDeviceUnknown");
-    }
-
-    GST_DEBUG ("AudioHardwareGetProperty: device_id is %lu", (long) *device_id);
-  }
-
-  return TRUE;
 }

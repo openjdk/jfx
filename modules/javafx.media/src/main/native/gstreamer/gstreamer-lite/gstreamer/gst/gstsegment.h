@@ -56,19 +56,28 @@ typedef enum {
  * @GST_SEEK_FLAG_KEY_UNIT: seek to the nearest keyframe. This might be
  *                     faster but less accurate.
  * @GST_SEEK_FLAG_SEGMENT: perform a segment seek.
- * @GST_SEEK_FLAG_SKIP: when doing fast forward or fast reverse playback, allow
+ * @GST_SEEK_FLAG_TRICKMODE: when doing fast forward or fast reverse playback, allow
  *                     elements to skip frames instead of generating all
- *                     frames.
+ *                     frames. (Since 1.6)
  * @GST_SEEK_FLAG_SNAP_BEFORE: go to a location before the requested position,
- *                     if KEY_UNIT this means the keyframe at or before the
- *                     requested position the one at or before the seek target.
+ *                     if %GST_SEEK_FLAG_KEY_UNIT this means the keyframe at or before
+ *                     the requested position the one at or before the seek target.
  * @GST_SEEK_FLAG_SNAP_AFTER: go to a location after the requested position,
- *                     if KEY_UNIT this means the keyframe at of after the
+ *                     if %GST_SEEK_FLAG_KEY_UNIT this means the keyframe at of after the
  *                     requested position.
  * @GST_SEEK_FLAG_SNAP_NEAREST: go to a position near the requested position,
- *                     if KEY_UNIT this means the keyframe closest to the
- *                     requested position, if both keyframes are at an equal
- *                     distance, behaves like SNAP_BEFORE.
+ *                     if %GST_SEEK_FLAG_KEY_UNIT this means the keyframe closest
+ *                     to the requested position, if both keyframes are at an equal
+ *                     distance, behaves like %GST_SEEK_FLAG_SNAP_BEFORE.
+ * @GST_SEEK_FLAG_TRICKMODE_KEY_UNITS: when doing fast forward or fast reverse
+ *                     playback, request that elements only decode keyframes
+ *                     and skip all other content, for formats that have
+ *                     keyframes. (Since 1.6)
+ * @GST_SEEK_FLAG_TRICKMODE_NO_AUDIO: when doing fast forward or fast reverse
+ *                     playback, request that audio decoder elements skip
+ *                     decoding and output only gap events or silence. (Since 1.6)
+ * @GST_SEEK_FLAG_SKIP: Deprecated backward compatibility flag, replaced
+ *                     by %GST_SEEK_FLAG_TRICKMODE
  *
  * Flags to be used with gst_element_seek() or gst_event_new_seek(). All flags
  * can be used together.
@@ -82,22 +91,28 @@ typedef enum {
  *
  * When performing a segment seek: after the playback of the segment completes,
  * no EOS will be emitted by the element that performed the seek, but a
- * #GST_MESSAGE_SEGMENT_DONE message will be posted on the bus by the element.
+ * %GST_MESSAGE_SEGMENT_DONE message will be posted on the bus by the element.
  * When this message is posted, it is possible to send a new seek event to
  * continue playback. With this seek method it is possible to perform seamless
  * looping or simple linear editing.
  *
  * When doing fast forward (rate > 1.0) or fast reverse (rate < -1.0) trickmode
- * playback, the @GST_SEEK_FLAG_SKIP flag can be used to instruct decoders
+ * playback, the %GST_SEEK_FLAG_TRICKMODE flag can be used to instruct decoders
  * and demuxers to adjust the playback rate by skipping frames. This can improve
  * performance and decrease CPU usage because not all frames need to be decoded.
  *
- * The @GST_SEEK_FLAG_SNAP_BEFORE flag can be used to snap to the previous
- * relevant location, and the @GST_SEEK_FLAG_SNAP_AFTER flag can be used to
- * select the next relevant location. If KEY_UNIT is specified, the relevant
- * location is a keyframe. If both flags are specified, the nearest of these
- * locations will be selected. If none are specified, the implementation is
+ * Beyond that, the %GST_SEEK_FLAG_TRICKMODE_KEY_UNITS flag can be used to
+ * request that decoders skip all frames except key units, and
+ * %GST_SEEK_FLAG_TRICKMODE_NO_AUDIO flags can be used to request that audio
+ * decoders do no decoding at all, and simple output silence.
+ *
+ * The %GST_SEEK_FLAG_SNAP_BEFORE flag can be used to snap to the previous
+ * relevant location, and the %GST_SEEK_FLAG_SNAP_AFTER flag can be used to
+ * select the next relevant location. If %GST_SEEK_FLAG_KEY_UNIT is specified,
+ * the relevant location is a keyframe. If both flags are specified, the nearest
+ * of these locations will be selected. If none are specified, the implementation is
  * free to select whichever it wants.
+ *
  * The before and after here are in running time, so when playing backwards,
  * the next location refers to the one that will played in next, and not the
  * one that is located after in the actual source stream.
@@ -112,11 +127,16 @@ typedef enum {
   GST_SEEK_FLAG_ACCURATE        = (1 << 1),
   GST_SEEK_FLAG_KEY_UNIT        = (1 << 2),
   GST_SEEK_FLAG_SEGMENT         = (1 << 3),
+  GST_SEEK_FLAG_TRICKMODE       = (1 << 4),
+  /* FIXME 2.0: Remove _SKIP flag,
+   * which was kept for backward compat when _TRICKMODE was added */
   GST_SEEK_FLAG_SKIP            = (1 << 4),
   GST_SEEK_FLAG_SNAP_BEFORE     = (1 << 5),
   GST_SEEK_FLAG_SNAP_AFTER      = (1 << 6),
   GST_SEEK_FLAG_SNAP_NEAREST    = GST_SEEK_FLAG_SNAP_BEFORE | GST_SEEK_FLAG_SNAP_AFTER,
   /* Careful to restart next flag with 1<<7 here */
+  GST_SEEK_FLAG_TRICKMODE_KEY_UNITS = (1 << 7),
+  GST_SEEK_FLAG_TRICKMODE_NO_AUDIO  = (1 << 8),
 } GstSeekFlags;
 
 /**
@@ -124,8 +144,14 @@ typedef enum {
  * @GST_SEGMENT_FLAG_NONE: no flags
  * @GST_SEGMENT_FLAG_RESET: reset the pipeline running_time to the segment
  *                          running_time
- * @GST_SEGMENT_FLAG_SKIP: perform skip playback
+ * @GST_SEGMENT_FLAG_TRICKMODE: perform skip playback (Since 1.6)
  * @GST_SEGMENT_FLAG_SEGMENT: send SEGMENT_DONE instead of EOS
+ * @GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS: Decode only keyframes, where
+ *                                        possible (Since 1.6)
+ * @GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO: Do not decode any audio, where
+ *                                        possible (Since 1.6)
+ * @GST_SEGMENT_FLAG_SKIP: Deprecated backward compatibility flag, replaced
+ *                         by @GST_SEGMENT_FLAG_TRICKMODE
  *
  * Flags for the GstSegment structure. Currently mapped to the corresponding
  * values of the seek flags.
@@ -134,26 +160,35 @@ typedef enum {
 typedef enum { /*< flags >*/
   GST_SEGMENT_FLAG_NONE            = GST_SEEK_FLAG_NONE,
   GST_SEGMENT_FLAG_RESET           = GST_SEEK_FLAG_FLUSH,
-  GST_SEGMENT_FLAG_SKIP            = GST_SEEK_FLAG_SKIP,
+  GST_SEGMENT_FLAG_TRICKMODE       = GST_SEEK_FLAG_TRICKMODE,
+  /* FIXME 2.0: Remove _SKIP flag,
+   * which was kept for backward compat when _TRICKMODE was added */
+  GST_SEGMENT_FLAG_SKIP            = GST_SEEK_FLAG_TRICKMODE,
   GST_SEGMENT_FLAG_SEGMENT         = GST_SEEK_FLAG_SEGMENT,
-#ifdef GSTREAMER_LITE
-  GST_SEGMENT_FLAG_UPDATE          = (1 << 7) // Make sure it does not conflicts with GstSeekFlags
+  GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS = GST_SEEK_FLAG_TRICKMODE_KEY_UNITS,
+#ifndef GSTREAMER_LITE
+  GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO      = GST_SEEK_FLAG_TRICKMODE_NO_AUDIO
+#else // GSTREAMER_LITE
+  GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO      = GST_SEEK_FLAG_TRICKMODE_NO_AUDIO,
+  GST_SEGMENT_FLAG_UPDATE          = (1 << 9) // Make sure it does not conflicts with GstSeekFlags
 #endif // GSTREAMER_LITE
 } GstSegmentFlags;
 
 /**
  * GstSegment:
  * @flags: flags for this segment
- * @rate: the rate of the segment
+ * @rate: the playback rate of the segment
  * @applied_rate: the already applied rate to the segment
  * @format: the format of the segment values
- * @base: the base of the segment
- * @offset: the offset to apply to @start or @stop
- * @start: the start of the segment
- * @stop: the stop of the segment
- * @time: the stream time of the segment
- * @position: the position in the segment
- * @duration: the duration of the segment
+ * @base: the running time (plus elapsed time, see offset) of the segment start
+ * @offset: the amount (in buffer timestamps) that has already been elapsed in
+ *     the segment
+ * @start: the start of the segment in buffer timestamp time (PTS)
+ * @stop: the stop of the segment in buffer timestamp time (PTS)
+ * @time: the stream time of the segment start
+ * @position: the buffer timestamp position in the segment (used internally by
+ *     elements such as sources, demuxers or parsers to track progress)
+ * @duration: the duration of the stream
  *
  * A helper structure that holds the configured region of
  * interest in a media file.
@@ -179,31 +214,72 @@ struct _GstSegment {
   gpointer        _gst_reserved[GST_PADDING];
 };
 
+GST_API
 GType        gst_segment_get_type            (void);
 
+GST_API
 GstSegment * gst_segment_new                 (void) G_GNUC_MALLOC;
+
+GST_API
 GstSegment * gst_segment_copy                (const GstSegment *segment) G_GNUC_MALLOC;
+
+GST_API
 void         gst_segment_copy_into           (const GstSegment *src, GstSegment *dest);
+
+GST_API
 void         gst_segment_free                (GstSegment *segment);
 
+GST_API
 void         gst_segment_init                (GstSegment *segment, GstFormat format);
 
+GST_API
+gint         gst_segment_to_stream_time_full (const GstSegment *segment, GstFormat format, guint64 position, guint64 * stream_time);
+
+GST_API
 guint64      gst_segment_to_stream_time      (const GstSegment *segment, GstFormat format, guint64 position);
+
+GST_API
+gint         gst_segment_position_from_stream_time_full (const GstSegment * segment, GstFormat format, guint64 stream_time, guint64 * position);
+
+GST_API
+guint64      gst_segment_position_from_stream_time (const GstSegment * segment, GstFormat format, guint64 stream_time);
+
+GST_API
 guint64      gst_segment_to_running_time     (const GstSegment *segment, GstFormat format, guint64 position);
+
+GST_API
+gint         gst_segment_to_running_time_full (const GstSegment *segment, GstFormat format, guint64 position,
+                                               guint64 * running_time);
+
+GST_DEPRECATED_FOR(gst_segment_position_from_running_time)
 guint64      gst_segment_to_position         (const GstSegment *segment, GstFormat format, guint64 running_time);
 
+GST_API
+gint         gst_segment_position_from_running_time_full (const GstSegment *segment, GstFormat format, guint64 running_time, guint64 * position);
+
+GST_API
+guint64      gst_segment_position_from_running_time (const GstSegment *segment, GstFormat format, guint64 running_time);
+
+GST_API
 gboolean     gst_segment_set_running_time    (GstSegment *segment, GstFormat format, guint64 running_time);
 
+GST_API
 gboolean     gst_segment_offset_running_time (GstSegment *segment, GstFormat format, gint64 offset);
 
+GST_API
 gboolean     gst_segment_clip                (const GstSegment *segment, GstFormat format, guint64 start,
                                               guint64 stop, guint64 *clip_start, guint64 *clip_stop);
-
-
+GST_API
 gboolean     gst_segment_do_seek             (GstSegment * segment, gdouble rate,
                                               GstFormat format, GstSeekFlags flags,
                                               GstSeekType start_type, guint64 start,
                                               GstSeekType stop_type, guint64 stop, gboolean * update);
+GST_API
+gboolean     gst_segment_is_equal            (const GstSegment * s0, const GstSegment * s1);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstSegment, gst_segment_free)
+#endif
 
 G_END_DECLS
 

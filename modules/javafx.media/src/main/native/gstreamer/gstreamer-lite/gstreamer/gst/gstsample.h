@@ -25,12 +25,17 @@
 #define __GST_SAMPLE_H__
 
 #include <gst/gstbuffer.h>
+#include <gst/gstbufferlist.h>
 #include <gst/gstcaps.h>
 #include <gst/gstsegment.h>
 
 G_BEGIN_DECLS
 
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_sample_type;
+#else // GSTREAMER_LITE
 GST_EXPORT GType _gst_sample_type;
+#endif // GSTREAMER_LITE
 
 #define GST_TYPE_SAMPLE      (_gst_sample_type)
 #define GST_IS_SAMPLE(obj)   (GST_IS_MINI_OBJECT_TYPE(obj, GST_TYPE_SAMPLE))
@@ -46,18 +51,33 @@ GST_EXPORT GType _gst_sample_type;
  */
 typedef struct _GstSample GstSample;
 
-GType gst_sample_get_type            (void);
+GST_API
+GType                gst_sample_get_type      (void);
 
 /* allocation */
+
+GST_API
 GstSample *          gst_sample_new           (GstBuffer          *buffer,
                                                GstCaps            *caps,
                                                const GstSegment   *segment,
                                                GstStructure       *info);
-
+GST_API
 GstBuffer *          gst_sample_get_buffer    (GstSample *sample);
+
+GST_API
 GstCaps *            gst_sample_get_caps      (GstSample *sample);
+
+GST_API
 GstSegment *         gst_sample_get_segment   (GstSample *sample);
+
+GST_API
 const GstStructure * gst_sample_get_info      (GstSample *sample);
+
+GST_API
+GstBufferList *      gst_sample_get_buffer_list (GstSample *sample);
+
+GST_API
+void                 gst_sample_set_buffer_list (GstSample *sample, GstBufferList *buffer_list);
 
 /* refcounting */
 /**
@@ -68,10 +88,6 @@ const GstStructure * gst_sample_get_info      (GstSample *sample);
  *
  * Returns: (transfer full): @sample
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstSample * gst_sample_ref (GstSample * sample);
-#endif
-
 static inline GstSample *
 gst_sample_ref (GstSample * sample)
 {
@@ -86,10 +102,6 @@ gst_sample_ref (GstSample * sample)
  * Decreases the refcount of the sample. If the refcount reaches 0, the
  * sample will be freed.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void gst_sample_unref (GstSample * sample);
-#endif
-
 static inline void
 gst_sample_unref (GstSample * sample)
 {
@@ -108,10 +120,6 @@ gst_sample_unref (GstSample * sample)
  *
  * Since: 1.2
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstSample * gst_sample_copy (const GstSample * buf);
-#endif
-
 static inline GstSample *
 gst_sample_copy (const GstSample * buf)
 {
@@ -145,6 +153,10 @@ gst_sample_copy (const GstSample * buf)
  * Returns: (transfer none): sample
  */
 #define         gst_value_get_sample(v)         GST_SAMPLE_CAST (g_value_get_boxed(v))
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstSample, gst_sample_unref)
+#endif
 
 G_END_DECLS
 

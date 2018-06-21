@@ -24,10 +24,11 @@
 
 /**
  * SECTION:gstparse
+ * @title: GstParse
  * @short_description: Get a pipeline from a text pipeline description
  *
  * These function allow to create a pipeline based on the syntax used in the
- * gst-launch utility (see man-page for syntax documentation).
+ * gst-launch-1.0 utility (see man-page for syntax documentation).
  *
  * Please note that these functions take several measures to create
  * somewhat dynamic pipelines. Due to that such pipelines are not always
@@ -43,26 +44,6 @@
 #ifndef GST_DISABLE_PARSE
 #include "parse/types.h"
 #endif
-
-static GstParseContext *
-gst_parse_context_copy (const GstParseContext * context)
-{
-  GstParseContext *ret = NULL;
-#ifndef GST_DISABLE_PARSE
-
-  ret = gst_parse_context_new ();
-  if (context) {
-    GQueue missing_copy = G_QUEUE_INIT;
-    GList *l;
-
-    for (l = context->missing_elements; l != NULL; l = l->next)
-      g_queue_push_tail (&missing_copy, g_strdup ((const gchar *) l->data));
-
-    ret->missing_elements = missing_copy.head;
-  }
-#endif
-  return ret;
-}
 
 G_DEFINE_BOXED_TYPE (GstParseContext, gst_parse_context,
         (GBoxedCopyFunc) gst_parse_context_copy,
@@ -94,8 +75,8 @@ gst_parse_error_quark (void)
  *
  * Free-function: gst_parse_context_free
  *
- * Returns: (transfer full): a newly-allocated parse context. Free with
- *     gst_parse_context_free() when no longer needed.
+ * Returns: (transfer full) (nullable): a newly-allocated parse context. Free
+ *     with gst_parse_context_free() when no longer needed.
  */
 GstParseContext *
 gst_parse_context_new (void)
@@ -110,6 +91,34 @@ gst_parse_context_new (void)
 #else
   return NULL;
 #endif
+}
+
+/**
+ * gst_parse_context_copy:
+ * @context: a #GstParseContext
+ *
+ * Copies the @context.
+ *
+ * Returns: (transfer full) (nullable): A copied #GstParseContext
+ */
+GstParseContext *
+gst_parse_context_copy (const GstParseContext * context)
+{
+  GstParseContext *ret = NULL;
+#ifndef GST_DISABLE_PARSE
+
+  ret = gst_parse_context_new ();
+  if (context) {
+    GQueue missing_copy = G_QUEUE_INIT;
+    GList *l;
+
+    for (l = context->missing_elements; l != NULL; l = l->next)
+      g_queue_push_tail (&missing_copy, g_strdup ((const gchar *) l->data));
+
+    ret->missing_elements = missing_copy.head;
+  }
+#endif
+  return ret;
 }
 
 /**
@@ -139,7 +148,7 @@ gst_parse_context_free (GstParseContext * context)
  * or gst_parse_launchv_full(). Will only return results if an error code
  * of %GST_PARSE_ERROR_NO_SUCH_ELEMENT was returned.
  *
- * Returns: (transfer full) (array zero-terminated=1) (element-type gchar*): a
+ * Returns: (transfer full) (array zero-terminated=1) (element-type gchar*) (nullable): a
  *     %NULL-terminated array of element factory name strings of missing
  *     elements. Free with g_strfreev() when no longer needed.
  */
@@ -209,7 +218,8 @@ _gst_parse_escape (const gchar * str)
  * @error will contain an error message if an erroneous pipeline is specified.
  * An error does not mean that the pipeline could not be constructed.
  *
- * Returns: (transfer floating): a new element on success and %NULL on failure.
+ * Returns: (transfer floating) (nullable): a new element on success and %NULL
+ * on failure.
  */
 GstElement *
 gst_parse_launchv (const gchar ** argv, GError ** error)
@@ -229,10 +239,11 @@ gst_parse_launchv (const gchar ** argv, GError ** error)
  * @error will contain an error message if an erroneous pipeline is specified.
  * An error does not mean that the pipeline could not be constructed.
  *
- * Returns: (transfer floating): a new element on success; on failure, either %NULL
- *   or a partially-constructed bin or element will be returned and @error will
- *   be set (unless you passed #GST_PARSE_FLAG_FATAL_ERRORS in @flags, then
- *   %NULL will always be returned on failure)
+ * Returns: (transfer floating) (nullable): a new element on success; on
+ *   failure, either %NULL or a partially-constructed bin or element will be
+ *   returned and @error will be set (unless you passed
+ *   #GST_PARSE_FLAG_FATAL_ERRORS in @flags, then %NULL will always be returned
+ *   on failure)
  */
 GstElement *
 gst_parse_launchv_full (const gchar ** argv, GstParseContext * context,
@@ -282,9 +293,10 @@ gst_parse_launchv_full (const gchar ** argv, GstParseContext * context,
  * the @error is set. In this case there was a recoverable parsing error and you
  * can try to play the pipeline.
  *
- * Returns: (transfer floating): a new element on success, %NULL on failure. If
- *    more than one toplevel element is specified by the @pipeline_description,
- *   all elements are put into a #GstPipeline, which than is returned.
+ * Returns: (transfer floating) (nullable): a new element on success, %NULL on
+ *   failure. If more than one toplevel element is specified by the
+ *   @pipeline_description, all elements are put into a #GstPipeline, which
+ *   than is returned.
  */
 GstElement *
 gst_parse_launch (const gchar * pipeline_description, GError ** error)
@@ -306,9 +318,11 @@ gst_parse_launch (const gchar * pipeline_description, GError ** error)
  * the @error is set. In this case there was a recoverable parsing error and you
  * can try to play the pipeline.
  *
- * Returns: (transfer floating): a new element on success, %NULL on failure. If
- *    more than one toplevel element is specified by the @pipeline_description,
- *    all elements are put into a #GstPipeline, which then is returned.
+ * Returns: (transfer floating) (nullable): a new element on success, %NULL on
+ *    failure. If more than one toplevel element is specified by the
+ *    @pipeline_description, all elements are put into a #GstPipeline, which
+ *    then is returned (unless the GST_PARSE_FLAG_PLACE_IN_BIN flag is set, in
+ *    which case they are put in a #GstBin instead).
  */
 GstElement *
 gst_parse_launch_full (const gchar * pipeline_description,

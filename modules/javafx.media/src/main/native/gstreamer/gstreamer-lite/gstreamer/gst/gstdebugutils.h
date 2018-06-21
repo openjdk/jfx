@@ -33,9 +33,14 @@ G_BEGIN_DECLS
  * GstDebugGraphDetails:
  * @GST_DEBUG_GRAPH_SHOW_MEDIA_TYPE: show caps-name on edges
  * @GST_DEBUG_GRAPH_SHOW_CAPS_DETAILS: show caps-details on edges
- * @GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS: show modified parameters on elements
+ * @GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS: show modified parameters on
+ *                                           elements
  * @GST_DEBUG_GRAPH_SHOW_STATES: show element states
- * @GST_DEBUG_GRAPH_SHOW_ALL: show all details
+ * @GST_DEBUG_GRAPH_SHOW_FULL_PARAMS: show full element parameter values even
+ *                                    if they are very long
+ * @GST_DEBUG_GRAPH_SHOW_ALL: show all the typical details that one might want
+ * @GST_DEBUG_GRAPH_SHOW_VERBOSE: show all details regardless of how large or
+ *                                verbose they make the resulting output
  *
  * Available details for pipeline graphs produced by GST_DEBUG_BIN_TO_DOT_FILE()
  * and GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS().
@@ -45,13 +50,21 @@ typedef enum {
   GST_DEBUG_GRAPH_SHOW_CAPS_DETAILS       = (1<<1),
   GST_DEBUG_GRAPH_SHOW_NON_DEFAULT_PARAMS = (1<<2),
   GST_DEBUG_GRAPH_SHOW_STATES             = (1<<3),
-  GST_DEBUG_GRAPH_SHOW_ALL                = ((1<<4)-1)
+  GST_DEBUG_GRAPH_SHOW_FULL_PARAMS        = (1<<4),
+  GST_DEBUG_GRAPH_SHOW_ALL                = ((1<<4)-1),
+  GST_DEBUG_GRAPH_SHOW_VERBOSE            = (-1)
 } GstDebugGraphDetails;
 
 
 /********** pipeline graphs **********/
 
+GST_API
+gchar * gst_debug_bin_to_dot_data (GstBin *bin, GstDebugGraphDetails details);
+
+GST_API
 void gst_debug_bin_to_dot_file (GstBin *bin, GstDebugGraphDetails details, const gchar *file_name);
+
+GST_API
 void gst_debug_bin_to_dot_file_with_ts (GstBin *bin, GstDebugGraphDetails details, const gchar *file_name);
 
 #ifndef GST_DISABLE_GST_DEBUG
@@ -65,10 +78,12 @@ void gst_debug_bin_to_dot_file_with_ts (GstBin *bin, GstDebugGraphDetails detail
  *
  * To aid debugging applications one can use this method to write out the whole
  * network of gstreamer elements that form the pipeline into an dot file.
- * This file can be processed with graphviz to get an image.
- * <informalexample><programlisting>
+ * This file can be processed with graphviz to get an image, like this:
+ * |[
  *  dot -Tpng -oimage.png graph_lowlevel.dot
- * </programlisting></informalexample>
+ * ]|
+ * There is also a utility called xdot which allows you to view the dot file
+ * directly without converting it first.
  *
  * The macro is only active if gstreamer is configured with
  * &quot;--gst-enable-gst-debug&quot; and the environment variable

@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gsttagsetter
+ * @title: GstTagsetter
  * @short_description: Element interface that allows setting and retrieval
  *                     of media metadata
  *
@@ -43,7 +44,7 @@
  * any tags received from upstream and the tags set by the application via
  * the interface. This can be done like this:
  *
- * |[
+ * |[<!-- language="C" -->
  * GstTagMergeMode merge_mode;
  * const GstTagList *application_tags;
  * const GstTagList *event_tags;

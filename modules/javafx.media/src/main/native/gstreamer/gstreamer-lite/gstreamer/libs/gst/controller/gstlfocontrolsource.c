@@ -23,6 +23,7 @@
 
 /**
  * SECTION:gstlfocontrolsource
+ * @title: GstLFOControlSource
  * @short_description: LFO control source
  *
  * #GstLFOControlSource is a #GstControlSource, that provides several periodic
@@ -371,32 +372,6 @@ enum
   PROP_OFFSET
 };
 
-GType
-gst_lfo_waveform_get_type (void)
-{
-  static gsize gtype = 0;
-  static const GEnumValue values[] = {
-    {GST_LFO_WAVEFORM_SINE, "GST_LFO_WAVEFORM_SINE",
-        "sine"},
-    {GST_LFO_WAVEFORM_SQUARE, "GST_LFO_WAVEFORM_SQUARE",
-        "square"},
-    {GST_LFO_WAVEFORM_SAW, "GST_LFO_WAVEFORM_SAW",
-        "saw"},
-    {GST_LFO_WAVEFORM_REVERSE_SAW, "GST_LFO_WAVEFORM_REVERSE_SAW",
-        "reverse-saw"},
-    {GST_LFO_WAVEFORM_TRIANGLE, "GST_LFO_WAVEFORM_TRIANGLE",
-        "triangle"},
-    {0, NULL, NULL}
-  };
-
-  if (g_once_init_enter (&gtype)) {
-    GType tmp = g_enum_register_static ("GstLFOWaveform", values);
-    g_once_init_leave (&gtype, tmp);
-  }
-
-  return (GType) gtype;
-}
-
 #define _do_init \
   GST_DEBUG_CATEGORY_INIT (GST_CAT_DEFAULT, "lfo control source", 0, "low frequency oscillator control source")
 
@@ -423,7 +398,12 @@ gst_lfo_control_source_reset (GstLFOControlSource * self)
 GstControlSource *
 gst_lfo_control_source_new (void)
 {
-  return g_object_newv (GST_TYPE_LFO_CONTROL_SOURCE, 0, NULL);
+  GstControlSource *csource = g_object_new (GST_TYPE_LFO_CONTROL_SOURCE, NULL);
+
+  /* Clear floating flag */
+  gst_object_ref_sink (csource);
+
+  return csource;
 }
 
 static gboolean

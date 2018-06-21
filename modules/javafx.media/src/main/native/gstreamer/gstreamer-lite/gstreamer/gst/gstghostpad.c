@@ -24,6 +24,7 @@
 
 /**
  * SECTION:gstghostpad
+ * @title: GstGhostPad
  * @short_description: Pseudo link pads
  * @see_also: #GstPad
  *
@@ -318,10 +319,13 @@ gst_ghost_pad_internal_activate_pull_default (GstPad * pad, GstObject * parent,
     GST_LOG_OBJECT (pad, "activating peer");
     ret = gst_pad_activate_mode (other, GST_PAD_MODE_PULL, active);
     gst_object_unref (other);
-  } else {
+  } else if (active) {
     /* this is failure, we can't activate pull if there is no peer */
     GST_LOG_OBJECT (pad, "not src and no peer, failing");
     ret = FALSE;
+  } else {
+    GST_LOG_OBJECT (pad, "deactivating pull, with no peer - allowing");
+    ret = TRUE;
   }
 
   return ret;
@@ -406,10 +410,13 @@ gst_ghost_pad_activate_pull_default (GstPad * pad, GstObject * parent,
     GST_LOG_OBJECT (pad, "activating peer");
     ret = gst_pad_activate_mode (other, GST_PAD_MODE_PULL, active);
     gst_object_unref (other);
-  } else {
-    /* no peer, we fail */
-    GST_LOG_OBJECT (pad, "pad not src and no peer, failing");
+  } else if (active) {
+    /* this is failure, we can't activate pull if there is no peer */
+    GST_LOG_OBJECT (pad, "not src and no peer, failing");
     ret = FALSE;
+  } else {
+    GST_LOG_OBJECT (pad, "deactivating pull, with no peer - allowing");
+    ret = TRUE;
   }
 
   return ret;
@@ -499,13 +506,16 @@ gst_ghost_pad_dispose (GObject * object)
 
   GST_OBJECT_LOCK (pad);
   internal = GST_PROXY_PAD_INTERNAL (pad);
-
+  if (internal) {
   gst_pad_set_activatemode_function (internal, NULL);
+
+    GST_PROXY_PAD_INTERNAL (pad) = NULL;
+    GST_PROXY_PAD_INTERNAL (internal) = NULL;
 
   /* disposes of the internal pad, since the ghostpad is the only possible object
    * that has a refcount on the internal pad. */
   gst_object_unparent (GST_OBJECT_CAST (internal));
-  GST_PROXY_PAD_INTERNAL (pad) = NULL;
+  }
 
   GST_OBJECT_UNLOCK (pad);
 
@@ -533,8 +543,7 @@ gst_ghost_pad_construct (GstGhostPad * gpad)
   GstPad *pad, *internal;
 
   g_return_val_if_fail (GST_IS_GHOST_PAD (gpad), FALSE);
-  g_return_val_if_fail (GST_GHOST_PAD_PRIVATE (gpad)->constructed == FALSE,
-      FALSE);
+  g_return_val_if_fail (!GST_GHOST_PAD_PRIVATE (gpad)->constructed, FALSE);
 
   g_object_get (gpad, "direction", &dir, "template", &templ, NULL);
 
@@ -609,7 +618,6 @@ parent_failed:
     g_critical ("Could not set internal pad %s:%s",
         GST_DEBUG_PAD_NAME (internal));
     GST_OBJECT_UNLOCK (pad);
-    gst_object_unref (internal);
     return FALSE;
   }
 }
@@ -619,12 +627,17 @@ gst_ghost_pad_new_full (const gchar * name, GstPadDirection dir,
     GstPadTemplate * templ)
 {
   GstGhostPad *ret;
-
   g_return_val_if_fail (dir != GST_PAD_UNKNOWN, NULL);
 
   /* OBJECT CREATION */
   if (templ) {
-    ret = g_object_new (GST_TYPE_GHOST_PAD, "name", name,
+    GType pad_type =
+        GST_PAD_TEMPLATE_GTYPE (templ) ==
+        G_TYPE_NONE ? GST_TYPE_GHOST_PAD : GST_PAD_TEMPLATE_GTYPE (templ);
+
+    g_return_val_if_fail (g_type_is_a (pad_type, GST_TYPE_GHOST_PAD), NULL);
+
+    ret = g_object_new (pad_type, "name", name,
         "direction", dir, "template", templ, NULL);
   } else {
     ret = g_object_new (GST_TYPE_GHOST_PAD, "name", name,
@@ -653,7 +666,7 @@ construct_failed:
  *
  * The created ghostpad will not have a padtemplate.
  *
- * Returns: (transfer full) (nullable): a new #GstPad, or %NULL in
+ * Returns: (transfer floating) (nullable): a new #GstPad, or %NULL in
  * case of an error.
  */
 GstPad *
@@ -721,7 +734,7 @@ set_target_failed:
  *
  * Will ref the target.
  *
- * Returns: (transfer full) (nullable): a new #GstPad, or %NULL in
+ * Returns: (transfer floating) (nullable): a new #GstPad, or %NULL in
  * case of an error.
  */
 
@@ -764,7 +777,7 @@ set_target_failed:
  * Create a new ghostpad based on @templ, without setting a target. The
  * direction will be taken from the @templ.
  *
- * Returns: (transfer full) (nullable): a new #GstPad, or %NULL in
+ * Returns: (transfer floating) (nullable): a new #GstPad, or %NULL in
  * case of an error.
  */
 GstPad *
@@ -814,7 +827,7 @@ gst_ghost_pad_get_target (GstGhostPad * gpad)
  * is unlinked and links to the new target are established. if @newtarget is
  * %NULL the target will be cleared.
  *
- * Returns: (transfer full): %TRUE if the new target could be set. This function
+ * Returns: %TRUE if the new target could be set. This function
  *     can return %FALSE when the internal pads could not be linked.
  */
 gboolean
@@ -826,10 +839,16 @@ gst_ghost_pad_set_target (GstGhostPad * gpad, GstPad * newtarget)
 
   g_return_val_if_fail (GST_IS_GHOST_PAD (gpad), FALSE);
   g_return_val_if_fail (GST_PAD_CAST (gpad) != newtarget, FALSE);
-  g_return_val_if_fail (newtarget != GST_PROXY_PAD_INTERNAL (gpad), FALSE);
 
   GST_OBJECT_LOCK (gpad);
   internal = GST_PROXY_PAD_INTERNAL (gpad);
+
+  if (newtarget == internal) {
+    GST_OBJECT_UNLOCK (gpad);
+    GST_WARNING_OBJECT (gpad, "Target has already been set to %s:%s",
+        GST_DEBUG_PAD_NAME (newtarget));
+    return TRUE;
+  }
 
   if (newtarget)
     GST_DEBUG_OBJECT (gpad, "set target %s:%s", GST_DEBUG_PAD_NAME (newtarget));

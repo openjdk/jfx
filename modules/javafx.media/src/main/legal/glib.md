@@ -1,10 +1,10 @@
-## GNU Glib v2.42.1
+## GNU Glib v2.56.1
 
 ### Glib Notice
 <pre>
-You are receiving a copy of GNU Glib, Version: 2.42.1 in either source or
+You are receiving a copy of GNU Glib, Version: 2.56.1 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
-Oracle license do NOT apply to the GNU Glib, Version: 2.42.1; it is
+Oracle license do NOT apply to the GNU Glib, Version: 2.56.1; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:

@@ -32,16 +32,14 @@
 
 /**
  * SECTION:gsttag
+ * @title: Tags
  * @short_description: additional tag definitions for plugins and applications
  * @see_also: #GstTagList
  *
- * <refsect2>
- * <para>
  * Contains additional standardized GStreamer tag definitions for plugins
  * and applications, and functions to register them with the GStreamer
  * tag system.
- * </para>
- * </refsect2>
+ *
  */
 
 #ifndef GST_DISABLE_GST_DEBUG
@@ -117,6 +115,12 @@ gst_tag_register_tags_internal (gpointer unused)
   gst_tag_register_static (GST_TAG_CAPTURING_FOCAL_LENGTH, GST_TAG_FLAG_META,
       G_TYPE_DOUBLE, _("capturing focal length"),
       _("Focal length of the lens used capturing the image, in mm"), NULL);
+
+  gst_tag_register_static (GST_TAG_CAPTURING_FOCAL_LENGTH_35_MM,
+      GST_TAG_FLAG_META, G_TYPE_DOUBLE,
+      _("capturing 35 mm equivalent focal length"),
+      _("35 mm equivalent focal length of the lens used capturing the image, "
+          "in mm"), NULL);
 
   gst_tag_register_static (GST_TAG_CAPTURING_DIGITAL_ZOOM_RATIO,
       GST_TAG_FLAG_META, G_TYPE_DOUBLE, _("capturing digital zoom ratio"),
@@ -219,65 +223,6 @@ gst_tag_register_musicbrainz_tags (void)
   static GOnce mb_once = G_ONCE_INIT;
 
   g_once (&mb_once, gst_tag_register_tags_internal, NULL);
-}
-
-static void
-register_tag_image_type_enum (GType * id)
-{
-  static const GEnumValue image_types[] = {
-    {GST_TAG_IMAGE_TYPE_NONE, "GST_TAG_IMAGE_TYPE_NONE", "none"},
-    {GST_TAG_IMAGE_TYPE_UNDEFINED, "GST_TAG_IMAGE_TYPE_UNDEFINED", "undefined"},
-    {GST_TAG_IMAGE_TYPE_FRONT_COVER, "GST_TAG_IMAGE_TYPE_FRONT_COVER",
-        "front-cover"},
-    {GST_TAG_IMAGE_TYPE_BACK_COVER, "GST_TAG_IMAGE_TYPE_BACK_COVER",
-        "back-cover"},
-    {GST_TAG_IMAGE_TYPE_LEAFLET_PAGE, "GST_TAG_IMAGE_TYPE_LEAFLET_PAGE",
-        "leaflet-page"},
-    {GST_TAG_IMAGE_TYPE_MEDIUM, "GST_TAG_IMAGE_TYPE_MEDIUM", "medium"},
-    {GST_TAG_IMAGE_TYPE_LEAD_ARTIST, "GST_TAG_IMAGE_TYPE_LEAD_ARTIST",
-        "lead-artist"},
-    {GST_TAG_IMAGE_TYPE_ARTIST, "GST_TAG_IMAGE_TYPE_ARTIST", "artist"},
-    {GST_TAG_IMAGE_TYPE_CONDUCTOR, "GST_TAG_IMAGE_TYPE_CONDUCTOR", "conductor"},
-    {GST_TAG_IMAGE_TYPE_BAND_ORCHESTRA, "GST_TAG_IMAGE_TYPE_BAND_ORCHESTRA",
-        "band-orchestra"},
-    {GST_TAG_IMAGE_TYPE_COMPOSER, "GST_TAG_IMAGE_TYPE_COMPOSER", "composer"},
-    {GST_TAG_IMAGE_TYPE_LYRICIST, "GST_TAG_IMAGE_TYPE_LYRICIST", "lyricist"},
-    {GST_TAG_IMAGE_TYPE_RECORDING_LOCATION,
-          "GST_TAG_IMAGE_TYPE_RECORDING_LOCATION",
-        "recording-location"},
-    {GST_TAG_IMAGE_TYPE_DURING_RECORDING, "GST_TAG_IMAGE_TYPE_DURING_RECORDING",
-        "during-recording"},
-    {GST_TAG_IMAGE_TYPE_DURING_PERFORMANCE,
-          "GST_TAG_IMAGE_TYPE_DURING_PERFORMANCE",
-        "during-performance"},
-    {GST_TAG_IMAGE_TYPE_VIDEO_CAPTURE, "GST_TAG_IMAGE_TYPE_VIDEO_CAPTURE",
-        "video-capture"},
-    {GST_TAG_IMAGE_TYPE_FISH, "GST_TAG_IMAGE_TYPE_FISH", "fish"},
-    {GST_TAG_IMAGE_TYPE_ILLUSTRATION, "GST_TAG_IMAGE_TYPE_ILLUSTRATION",
-        "illustration"},
-    {GST_TAG_IMAGE_TYPE_BAND_ARTIST_LOGO, "GST_TAG_IMAGE_TYPE_BAND_ARTIST_LOGO",
-        "artist-logo"},
-    {GST_TAG_IMAGE_TYPE_PUBLISHER_STUDIO_LOGO,
-          "GST_TAG_IMAGE_TYPE_PUBLISHER_STUDIO_LOGO",
-        "publisher-studio-logo"},
-    {0, NULL, NULL}
-  };
-
-  *id = g_enum_register_static ("GstTagImageType", image_types);
-
-  /* work around thread-safety issue with class creation in GLib */
-  g_type_class_ref (*id);
-}
-
-GType
-gst_tag_image_type_get_type (void)
-{
-  static GType id;
-
-  static GOnce once = G_ONCE_INIT;
-
-  g_once (&once, (GThreadFunc) register_tag_image_type_enum, &id);
-  return id;
 }
 
 static inline gboolean

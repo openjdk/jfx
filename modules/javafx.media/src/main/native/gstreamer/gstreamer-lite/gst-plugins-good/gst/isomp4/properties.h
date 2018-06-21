@@ -46,7 +46,7 @@
 #include <glib.h>
 #include <string.h>
 
-/**
+/*
  * Functions for copying atoms properties.
  *
  * All of them receive, as the input, the property to be copied, the destination

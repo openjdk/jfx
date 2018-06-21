@@ -36,6 +36,7 @@
 
 G_BEGIN_DECLS
 
+GST_PBUTILS_API
 void    gst_pb_utils_init (void);
 
 G_END_DECLS

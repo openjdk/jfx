@@ -24,17 +24,18 @@
 
 /**
  * SECTION:element-volume
+ * @title: volume
  *
  * The volume element changes the volume of the audio data.
  *
- * <refsect2>
- * <title>Example launch line</title>
+ * ## Example launch line
  * |[
- * gst-launch -v -m audiotestsrc ! volume volume=0.5 ! level ! fakesink silent=TRUE
- * ]| This pipeline shows that the level of audiotestsrc has been halved
+ * gst-launch-1.0 -v -m audiotestsrc ! volume volume=0.5 ! level ! fakesink silent=TRUE
+ * ]|
+ *  This pipeline shows that the level of audiotestsrc has been halved
  * (peak values are around -6 dB and RMS around -9 dB) compared to
  * the same pipeline without the volume element.
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -233,7 +234,7 @@ volume_choose_func (GstVolume * self, const GstAudioInfo * info)
 
 static gboolean
 volume_update_volume (GstVolume * self, const GstAudioInfo * info,
-    gfloat volume, gboolean mute)
+    gdouble volume, gboolean mute)
 {
   gboolean passthrough;
   gboolean res;
@@ -254,10 +255,14 @@ volume_update_volume (GstVolume * self, const GstAudioInfo * info,
     self->current_mute = FALSE;
     self->current_volume = volume;
 
-    self->current_vol_i8 = volume * VOLUME_UNITY_INT8;
-    self->current_vol_i16 = volume * VOLUME_UNITY_INT16;
-    self->current_vol_i24 = volume * VOLUME_UNITY_INT24;
-    self->current_vol_i32 = volume * VOLUME_UNITY_INT32;
+    self->current_vol_i8 =
+        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT8);
+    self->current_vol_i16 =
+        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT16);
+    self->current_vol_i24 =
+        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT24);
+    self->current_vol_i32 =
+        (gint) ((gdouble) volume * (gdouble) VOLUME_UNITY_INT32);
 
     passthrough = (self->current_vol_i16 == VOLUME_UNITY_INT16);
   }
@@ -341,7 +346,7 @@ gst_volume_class_init (GstVolumeClass * klass)
 static void
 gst_volume_init (GstVolume * self)
 {
-  self->mute = DEFAULT_PROP_MUTE;;
+  self->mute = DEFAULT_PROP_MUTE;
   self->volume = DEFAULT_PROP_VOLUME;
 
   self->tracklist = NULL;
@@ -646,7 +651,7 @@ volume_setup (GstAudioFilter * filter, const GstAudioInfo * info)
 {
   gboolean res;
   GstVolume *self = GST_VOLUME (filter);
-  gfloat volume;
+  gdouble volume;
   gboolean mute;
 
   GST_OBJECT_LOCK (self);
@@ -686,7 +691,7 @@ volume_before_transform (GstBaseTransform * base, GstBuffer * buffer)
 {
   GstClockTime timestamp;
   GstVolume *self = GST_VOLUME (base);
-  gfloat volume;
+  gdouble volume;
   gboolean mute;
 
   timestamp = GST_BUFFER_TIMESTAMP (buffer);
@@ -760,7 +765,7 @@ volume_transform_ip (GstBaseTransform * base, GstBuffer * outbuf)
       self->volumes_count = nsamples;
     }
 
-      if (volume_cb) {
+      if (volume_cb && self->volumes) {
         have_volumes =
             gst_control_binding_get_value_array (volume_cb, ts, interval,
             nsamples, (gpointer) self->volumes);
@@ -770,7 +775,7 @@ volume_transform_ip (GstBaseTransform * base, GstBuffer * outbuf)
         volume_orc_memset_f64 (self->volumes, self->current_volume, nsamples);
       }
 
-      if (mute_cb) {
+      if (mute_cb && self->mutes) {
         have_mutes = gst_control_binding_get_value_array (mute_cb, ts, interval,
             nsamples, (gpointer) self->mutes);
         gst_object_replace ((GstObject **) & mute_cb, NULL);

@@ -19,40 +19,28 @@
  */
 /**
  * SECTION:gstvideooverlay
+ * @title: GstVideoOverlay
  * @short_description: Interface for setting/getting a window system resource
  *    on elements supporting it to configure a window into which to render a
  *    video.
  *
- * <refsect2>
- * <para>
  * The #GstVideoOverlay interface is used for 2 main purposes :
- * <itemizedlist>
- * <listitem>
- * <para>
- * To get a grab on the Window where the video sink element is going to render.
- * This is achieved by either being informed about the Window identifier that
- * the video sink element generated, or by forcing the video sink element to use
- * a specific Window identifier for rendering.
- * </para>
- * </listitem>
- * <listitem>
- * <para>
- * To force a redrawing of the latest video frame the video sink element
- * displayed on the Window. Indeed if the #GstPipeline is in #GST_STATE_PAUSED
- * state, moving the Window around will damage its content. Application
- * developers will want to handle the Expose events themselves and force the
- * video sink element to refresh the Window's content.
- * </para>
- * </listitem>
- * </itemizedlist>
- * </para>
- * <para>
+ *
+ * * To get a grab on the Window where the video sink element is going to render.
+ *   This is achieved by either being informed about the Window identifier that
+ *   the video sink element generated, or by forcing the video sink element to use
+ *   a specific Window identifier for rendering.
+ * * To force a redrawing of the latest video frame the video sink element
+ *   displayed on the Window. Indeed if the #GstPipeline is in #GST_STATE_PAUSED
+ *   state, moving the Window around will damage its content. Application
+ *   developers will want to handle the Expose events themselves and force the
+ *   video sink element to refresh the Window's content.
+ *
  * Using the Window created by the video sink is probably the simplest scenario,
  * in some cases, though, it might not be flexible enough for application
  * developers if they need to catch events such as mouse moves and button
  * clicks.
- * </para>
- * <para>
+ *
  * Setting a specific Window identifier on the video sink element is the most
  * flexible solution but it has some issues. Indeed the application needs to set
  * its Window identifier at the right time to avoid internal Window creation
@@ -93,11 +81,9 @@
  * ...
  * }
  * ]|
- * </para>
- * </refsect2>
- * <refsect2>
- * <title>Two basic usage scenarios</title>
- * <para>
+ *
+ * ## Two basic usage scenarios
+ *
  * There are two basic usage scenarios: in the simplest case, the application
  * uses #playbin or #plasink or knows exactly what particular element is used
  * for video output, which is usually the case when the application creates
@@ -109,8 +95,7 @@
  * As #playbin and #playsink implement the video overlay interface and proxy
  * it transparently to the actual video sink even if it is created later, this
  * case also applies when using these elements.
- * </para>
- * <para>
+ *
  * In the other and more common case, the application does not know in advance
  * what GStreamer video sink element will be used for video output. This is
  * usually the case when an element such as #autovideosink is used.
@@ -122,8 +107,7 @@
  * posts a prepare-window-handle message, and that is also why this message needs
  * to be handled in a sync bus handler which will be called from the streaming
  * thread directly (because the video sink will need an answer right then).
- * </para>
- * <para>
+ *
  * As response to the prepare-window-handle element message in the bus sync
  * handler, the application may use gst_video_overlay_set_window_handle() to tell
  * the video sink to render onto an existing window surface. At this point the
@@ -139,11 +123,9 @@
  * Gtk+ 2.18 and later, which is likely to cause problems when called from a
  * sync handler; see below for a better approach without GDK_WINDOW_XID()
  * used in the callback).
- * </para>
- * </refsect2>
- * <refsect2>
- * <title>GstVideoOverlay and Gtk+</title>
- * <para>
+ *
+ * ## GstVideoOverlay and Gtk+
+ *
  * |[
  * #include &lt;gst/video/videooverlay.h&gt;
  * #include &lt;gtk/gtk.h&gt;
@@ -242,11 +224,9 @@
  *   ...
  * }
  * ]|
- * </para>
- * </refsect2>
- * <refsect2>
- * <title>GstVideoOverlay and Qt</title>
- * <para>
+ *
+ * ## GstVideoOverlay and Qt
+ *
  * |[
  * #include &lt;glib.h&gt;
  * #include &lt;gst/gst.h&gt;
@@ -302,8 +282,7 @@
  *   return ret;
  * }
  * ]|
- * </para>
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -311,6 +290,14 @@
 #endif
 
 #include "videooverlay.h"
+
+enum
+{
+  PROP_RENDER_RECTANGLE,
+};
+
+GST_DEBUG_CATEGORY_STATIC (gst_video_overlay_debug);
+#define GST_CAT_DEFAULT gst_video_overlay_debug
 
 GType
 gst_video_overlay_get_type (void)
@@ -332,6 +319,9 @@ gst_video_overlay_get_type (void)
 
     gst_video_overlay_type = g_type_register_static (G_TYPE_INTERFACE,
         "GstVideoOverlay", &gst_video_overlay_info, 0);
+
+    GST_DEBUG_CATEGORY_INIT (gst_video_overlay_debug, "videooverlay", 0,
+        "videooverlay interface");
   }
 
   return gst_video_overlay_type;
@@ -522,4 +512,89 @@ gst_is_video_overlay_prepare_window_handle_message (GstMessage * msg)
     return FALSE;
 
   return gst_message_has_name (msg, "prepare-window-handle");
+}
+
+
+/**
+ * gst_video_overlay_install_properties:
+ * @oclass: The class on which the properties will be installed
+ * @last_prop_id: The first free property ID to use
+ *
+ * This helper shall be used by classes implementing the #GstVideoOverlay
+ * interface that want the render rectangle to be controllable using
+ * properties. This helper will install "render-rectangle" property into the
+ * class.
+ *
+ * Since 1.14
+ */
+void
+gst_video_overlay_install_properties (GObjectClass * oclass, gint last_prop_id)
+{
+  g_object_class_install_property (oclass, last_prop_id + PROP_RENDER_RECTANGLE,
+      gst_param_spec_array ("render-rectangle", "Render Rectangle",
+          "The render rectangle ('<x, y, width, height>')",
+          g_param_spec_int ("rect-value", "Rectangle Value",
+              "One of x, y, width or height value.", -1, G_MAXINT, -1,
+              G_PARAM_WRITABLE | G_PARAM_STATIC_STRINGS),
+          G_PARAM_WRITABLE | G_PARAM_STATIC_STRINGS));
+}
+
+/**
+ * gst_video_overlay_set_property:
+ * @object: The instance on which the property is set
+ * @last_prop_id: The highest property ID.
+ * @property_id: The property ID
+ * @value: The #GValue to be set
+ *
+ * This helper shall be used by classes implementing the #GstVideoOverlay
+ * interface that want the render rectangle to be controllable using
+ * properties. This helper will parse and set the render rectangle calling
+ * gst_video_overlay_set_render_rectangle().
+ *
+ * Returns: %TRUE if the @property_id matches the GstVideoOverlay property
+ *
+ * Since 1.14
+ */
+gboolean
+gst_video_overlay_set_property (GObject * object, gint last_prop_id,
+    guint property_id, const GValue * value)
+{
+  gboolean ret = FALSE;
+
+  if (property_id == last_prop_id) {
+    const GValue *v;
+    gint rect[4], i;
+
+    ret = TRUE;
+
+    if (gst_value_array_get_size (value) != 4)
+      goto wrong_format;
+
+    for (i = 0; i < 4; i++) {
+      v = gst_value_array_get_value (value, i);
+      if (!G_VALUE_HOLDS_INT (v))
+        goto wrong_format;
+
+      rect[i] = g_value_get_int (v);
+    }
+
+    gst_video_overlay_set_render_rectangle (GST_VIDEO_OVERLAY (object),
+        rect[0], rect[1], rect[2], rect[3]);
+  }
+
+  return ret;
+
+wrong_format:
+  {
+    GValue string = G_VALUE_INIT;
+
+    g_value_init (&string, G_TYPE_STRING);
+    g_value_transform (value, &string);
+
+    g_critical ("Badly formated rectangle, must contains four gint (got '%s')",
+        g_value_get_string (&string));
+
+    g_value_unset (&string);
+    return TRUE;
+  }
 }

@@ -21,11 +21,15 @@
  */
 /**
  * SECTION:gstdirectcontrolbinding
+ * @title: GstDirectControlBinding
  * @short_description: direct attachment for control sources
  *
  * A value mapping object that attaches control sources to gobject properties. It
- * will map the control values [0.0 ... 1.0] to the target property range. If a
- * control value is outside of the range, it will be clipped.
+ * will map the control values directly to the target property range. If a
+ * non-absolute direct control binding is used, the value range [0.0 ... 1.0]
+ * is mapped to full target property range, and all values outside the range
+ * will be clipped. An absolute control binding will not do any value
+ * transformations.
  */
 
 #include <glib-object.h>
@@ -37,6 +41,7 @@
 
 #define GST_CAT_DEFAULT control_binding_debug
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
+
 
 static GObject *gst_direct_control_binding_constructor (GType type,
     guint n_construct_params, GObjectConstructParam * construct_params);
@@ -70,6 +75,7 @@ enum
 {
   PROP_0,
   PROP_CS,
+  PROP_ABSOLUTE,
   PROP_LAST
 };
 
@@ -97,8 +103,22 @@ convert_value_to_##type (GstDirectControlBinding *self, gdouble s, gpointer d_) 
   \
   s = CLAMP (s, 0.0, 1.0); \
   *d = (g##type) ROUNDING_OP (pspec->minimum * (1-s)) + (g##type) ROUNDING_OP (pspec->maximum * s); \
+} \
+\
+static void \
+abs_convert_g_value_to_##type (GstDirectControlBinding *self, gdouble s, GValue *d) \
+{ \
+  g##type v; \
+  v = (g##type) ROUNDING_OP (s); \
+  g_value_set_##type (d, v); \
+} \
+\
+static void \
+abs_convert_value_to_##type (GstDirectControlBinding *self, gdouble s, gpointer d_) \
+{ \
+  g##type *d = (g##type *)d_; \
+  *d = (g##type) ROUNDING_OP (s); \
 }
-
 
 DEFINE_CONVERT (int, Int, INT, rint);
 DEFINE_CONVERT (uint, UInt, UINT, rint);
@@ -180,6 +200,12 @@ gst_direct_control_binding_class_init (GstDirectControlBindingClass * klass)
       GST_TYPE_CONTROL_SOURCE,
       G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
+  properties[PROP_ABSOLUTE] =
+      g_param_spec_boolean ("absolute", "Absolute",
+      "Whether the control values are absolute",
+      FALSE,
+      G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS);
+
   g_object_class_install_properties (gobject_class, PROP_LAST, properties);
 }
 
@@ -209,46 +235,43 @@ gst_direct_control_binding_constructor (GType type, guint n_construct_params,
     GST_DEBUG ("  using type %s", g_type_name (base));
 
     /* select mapping function */
+
+#define SET_CONVERT_FUNCTION(type) \
+    if (self->ABI.abi.want_absolute) { \
+        self->convert_g_value = abs_convert_g_value_to_##type; \
+        self->convert_value = abs_convert_value_to_##type; \
+    } \
+    else { \
+        self->convert_g_value = convert_g_value_to_##type; \
+        self->convert_value = convert_value_to_##type; \
+    } \
+    self->byte_size = sizeof (g##type);
+
+
     switch (base) {
       case G_TYPE_INT:
-        self->convert_g_value = convert_g_value_to_int;
-        self->convert_value = convert_value_to_int;
-        self->byte_size = sizeof (gint);
+        SET_CONVERT_FUNCTION (int);
         break;
       case G_TYPE_UINT:
-        self->convert_g_value = convert_g_value_to_uint;
-        self->convert_value = convert_value_to_uint;
-        self->byte_size = sizeof (guint);
+        SET_CONVERT_FUNCTION (uint);
         break;
       case G_TYPE_LONG:
-        self->convert_g_value = convert_g_value_to_long;
-        self->convert_value = convert_value_to_long;
-        self->byte_size = sizeof (glong);
+        SET_CONVERT_FUNCTION (long);
         break;
       case G_TYPE_ULONG:
-        self->convert_g_value = convert_g_value_to_ulong;
-        self->convert_value = convert_value_to_ulong;
-        self->byte_size = sizeof (gulong);
+        SET_CONVERT_FUNCTION (ulong);
         break;
       case G_TYPE_INT64:
-        self->convert_g_value = convert_g_value_to_int64;
-        self->convert_value = convert_value_to_int64;
-        self->byte_size = sizeof (gint64);
+        SET_CONVERT_FUNCTION (int64);
         break;
       case G_TYPE_UINT64:
-        self->convert_g_value = convert_g_value_to_uint64;
-        self->convert_value = convert_value_to_uint64;
-        self->byte_size = sizeof (guint64);
+        SET_CONVERT_FUNCTION (uint64);
         break;
       case G_TYPE_FLOAT:
-        self->convert_g_value = convert_g_value_to_float;
-        self->convert_value = convert_value_to_float;
-        self->byte_size = sizeof (gfloat);
+        SET_CONVERT_FUNCTION (float);
         break;
       case G_TYPE_DOUBLE:
-        self->convert_g_value = convert_g_value_to_double;
-        self->convert_value = convert_value_to_double;
-        self->byte_size = sizeof (gdouble);
+        SET_CONVERT_FUNCTION (double);
         break;
       case G_TYPE_BOOLEAN:
         self->convert_g_value = convert_g_value_to_boolean;
@@ -280,6 +303,9 @@ gst_direct_control_binding_set_property (GObject * object, guint prop_id,
     case PROP_CS:
       self->cs = g_value_dup_object (value);
       break;
+    case PROP_ABSOLUTE:
+      self->ABI.abi.want_absolute = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -295,6 +321,9 @@ gst_direct_control_binding_get_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_CS:
       g_value_set_object (value, self->cs);
+      break;
+    case PROP_ABSOLUTE:
+      g_value_set_boolean (value, self->ABI.abi.want_absolute);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -318,7 +347,8 @@ gst_direct_control_binding_finalize (GObject * object)
 {
   GstDirectControlBinding *self = GST_DIRECT_CONTROL_BINDING (object);
 
-  g_value_unset (&self->cur_value);
+  if (G_IS_VALUE (&self->cur_value))
+    g_value_unset (&self->cur_value);
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -482,7 +512,8 @@ gst_direct_control_binding_get_g_value_array (GstControlBinding * _self,
  * @cs: the control source
  *
  * Create a new control-binding that attaches the #GstControlSource to the
- * #GObject property.
+ * #GObject property. It will map the control source range [0.0 ... 1.0] to
+ * the full target property range, and clip all values outside this range.
  *
  * Returns: (transfer floating): the new #GstDirectControlBinding
  */
@@ -492,4 +523,27 @@ gst_direct_control_binding_new (GstObject * object, const gchar * property_name,
 {
   return (GstControlBinding *) g_object_new (GST_TYPE_DIRECT_CONTROL_BINDING,
       "object", object, "name", property_name, "control-source", cs, NULL);
+}
+
+/**
+ * gst_direct_control_binding_new_absolute:
+ * @object: the object of the property
+ * @property_name: the property-name to attach the control source
+ * @cs: the control source
+ *
+ * Create a new control-binding that attaches the #GstControlSource to the
+ * #GObject property. It will directly map the control source values to the
+ * target property range without any transformations.
+ *
+ * Returns: (transfer floating): the new #GstDirectControlBinding
+ *
+ * Since: 1.6
+ */
+GstControlBinding *
+gst_direct_control_binding_new_absolute (GstObject * object,
+    const gchar * property_name, GstControlSource * cs)
+{
+  return (GstControlBinding *) g_object_new (GST_TYPE_DIRECT_CONTROL_BINDING,
+      "object", object, "name", property_name, "control-source", cs, "absolute",
+      TRUE, NULL);
 }

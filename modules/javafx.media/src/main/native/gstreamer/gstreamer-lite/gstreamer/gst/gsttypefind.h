@@ -94,26 +94,31 @@ struct _GstTypeFind {
 };
 
 #ifndef GSTREAMER_LITE
+GST_API
 GType     gst_type_find_get_type   (void);
 #endif // GSTREAMER_LITE
 
 /* typefind function interface */
+
+GST_API
 const guint8 *  gst_type_find_peek       (GstTypeFind   * find,
                                     gint64          offset,
                                     guint           size);
-
+GST_API
 void            gst_type_find_suggest    (GstTypeFind   * find,
                                     guint           probability,
                                           GstCaps       * caps);
-
+GST_API
 void            gst_type_find_suggest_simple (GstTypeFind * find,
                                         guint         probability,
                                         const char  * media_type,
                                         const char  * fieldname, ...);
-
+GST_API
 guint64   gst_type_find_get_length (GstTypeFind   * find);
 
 /* registration interface */
+
+GST_API
 gboolean  gst_type_find_register   (GstPlugin            * plugin,
                                     const gchar          * name,
                                     guint                  rank,

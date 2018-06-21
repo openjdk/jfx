@@ -143,6 +143,18 @@ typedef struct _GstRegistryChunkDeviceProviderFactory
 } GstRegistryChunkDeviceProviderFactory;
 
 /*
+ * GstRegistryChunkDynamicTypeFactory:
+ *
+ * A structure containing the dynamic type factory flags field
+ */
+typedef struct _GstRegistryChunkDynamicTypeFactory
+{
+  GstRegistryChunkPluginFeature plugin_feature;
+
+  guint type_flags;
+} GstRegistryChunkDynamicTypeFactory;
+
+/*
  * GstRegistryChunkPadTemplate:
  *
  * A structure containing the static pad templates of a plugin feature

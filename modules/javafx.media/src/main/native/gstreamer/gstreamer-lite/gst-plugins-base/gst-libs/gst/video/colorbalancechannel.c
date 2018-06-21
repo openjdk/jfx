@@ -27,13 +27,14 @@
 
 /**
  * SECTION:gstcolorbalancechannel
+ * @title: GstColorBalanceChannel
  * @short_description: Object representing a channel from the #GstColorBalance
  *         interface.
  *
- * <refsect2><para>The #GstColorBalanceChannel object represents a parameter
+ * The #GstColorBalanceChannel object represents a parameter
  * for modifying the color balance implemented by an element providing the
  * #GstColorBalance interface. For example, Hue or Saturation.
- * </para></refsect2>
+ *
  */
 
 enum

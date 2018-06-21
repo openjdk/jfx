@@ -23,6 +23,7 @@
 
 /**
  * SECTION:gstregistry
+ * @title: GstRegistry
  * @short_description: Abstract base class for management of #GstPlugin objects
  * @see_also: #GstPlugin, #GstPluginFeature
  *
@@ -44,48 +45,28 @@
  *
  * On startup, plugins are searched for in the plugin search path. The following
  * locations are checked in this order:
- * <itemizedlist>
- *   <listitem>
- *     <para>location from --gst-plugin-path commandline option.</para>
- *   </listitem>
- *   <listitem>
- *     <para>the GST_PLUGIN_PATH environment variable.</para>
- *   </listitem>
- *   <listitem>
- *     <para>the GST_PLUGIN_SYSTEM_PATH environment variable.</para>
- *   </listitem>
- *   <listitem>
- *     <para>default locations (if GST_PLUGIN_SYSTEM_PATH is not set). Those
- *       default locations are:
- *       <filename>$XDG_DATA_HOME/gstreamer-$GST_API_VERSION/plugins/</filename>
- *       and <filename>$prefix/libs/gstreamer-$GST_API_VERSION/</filename>.
- *       <ulink url="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">
- *       <filename>$XDG_DATA_HOME</filename></ulink> defaults to
- *       <filename>$HOME/.local/share</filename>.
- *     </para>
- *   </listitem>
- * </itemizedlist>
+ *
+ * * location from --gst-plugin-path commandline option.
+ * * the GST_PLUGIN_PATH environment variable.
+ * * the GST_PLUGIN_SYSTEM_PATH environment variable.
+ * * default locations (if GST_PLUGIN_SYSTEM_PATH is not set).
+ *   Those default locations are:
+ *   `$XDG_DATA_HOME/gstreamer-$GST_API_VERSION/plugins/`
+ *   and `$prefix/libs/gstreamer-$GST_API_VERSION/`.
+ *   [$XDG_DATA_HOME](http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html) defaults to
+ *   `$HOME/.local/share`.
+ *
  * The registry cache file is loaded from
- * <filename>$XDG_CACHE_HOME/gstreamer-$GST_API_VERSION/registry-$ARCH.bin</filename>
- * (where
- * <ulink url="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">
- * <filename>$XDG_CACHE_HOME</filename></ulink> defaults to
- * <filename>$HOME/.cache</filename>) or the file listed in the GST_REGISTRY
+ * `$XDG_CACHE_HOME/gstreamer-$GST_API_VERSION/registry-$ARCH.bin`
+ * (where $XDG_CACHE_HOME defaults to `$HOME/.cache`) or the file listed in the `GST_REGISTRY`
  * env var. One reason to change the registry location is for testing.
  *
  * For each plugin that is found in the plugin search path, there could be 3
  * possibilities for cached information:
- * <itemizedlist>
- *   <listitem>
- *     <para>the cache may not contain information about a given file.</para>
- *   </listitem>
- *   <listitem>
- *     <para>the cache may have stale information.</para>
- *   </listitem>
- *   <listitem>
- *     <para>the cache may have current information.</para>
- *   </listitem>
- * </itemizedlist>
+ *
+ *   * the cache may not contain information about a given file.
+ *   * the cache may have stale information.
+ *   * the cache may have current information.
  *
  * In the first two cases, the plugin is loaded and the cache updated. In
  * addition to these cases, the cache may have entries for plugins that are not
@@ -97,7 +78,7 @@
  * checked to make sure the information is minimally valid. If not, the entry is
  * simply dropped.
  *
- * <emphasis role="bold">Implementation notes:</emphasis>
+ * ## Implementation notes:
  *
  * The "cache" and "registry" are different concepts and can represent
  * different sets of plugins. For various reasons, at init time, the cache is
@@ -198,6 +179,7 @@ struct _GstRegistryPrivate
   GList *plugins;
   GList *features;
 
+  guint n_plugins;
 #if 0
   GList *paths;
 #endif
@@ -241,6 +223,8 @@ static gboolean _gst_enable_registry_fork = DEFAULT_FORK;
 extern GSList *_priv_gst_preload_plugins;
 
 #ifndef GST_DISABLE_REGISTRY
+/* Set to TRUE to disable registry, behaves similar to GST_DISABLE_REGISTRY */
+gboolean _priv_gst_disable_registry = FALSE;
 /*set to TRUE when registry needn't to be updated */
 gboolean _priv_gst_disable_registry_update = FALSE;
 extern GList *_priv_gst_plugin_paths;
@@ -344,6 +328,7 @@ gst_registry_finalize (GObject * object)
 
   plugins = registry->priv->plugins;
   registry->priv->plugins = NULL;
+  registry->priv->n_plugins = 0;
 
   GST_DEBUG_OBJECT (registry, "registry finalize");
   p = plugins;
@@ -415,7 +400,7 @@ gst_registry_get (void)
 
   g_mutex_lock (&_gst_registry_mutex);
   if (G_UNLIKELY (!_gst_registry_default)) {
-    _gst_registry_default = g_object_newv (GST_TYPE_REGISTRY, 0, NULL);
+    _gst_registry_default = g_object_new (GST_TYPE_REGISTRY, NULL);
     gst_object_ref_sink (GST_OBJECT_CAST (_gst_registry_default));
   }
   registry = _gst_registry_default;
@@ -498,10 +483,12 @@ gst_registry_get_path_list (GstRegistry * registry)
 /**
  * gst_registry_add_plugin:
  * @registry: the registry to add the plugin to
- * @plugin: (transfer full): the plugin to add
+ * @plugin: (transfer floating): the plugin to add
  *
  * Add the plugin to the registry. The plugin-added signal will be emitted.
- * This function will sink @plugin.
+ *
+ * @plugin's reference count will be incremented, and any floating
+ * reference will be removed (see gst_object_ref_sink())
  *
  * Returns: %TRUE on success.
  *
@@ -532,12 +519,15 @@ gst_registry_add_plugin (GstRegistry * registry, GstPlugin * plugin)
         GST_WARNING_OBJECT (registry,
             "Not replacing plugin because new one (%s) is blacklisted but for a different location than existing one (%s)",
             plugin->filename, existing_plugin->filename);
+        /* Keep reference counting consistent */
+        gst_object_ref_sink (plugin);
         gst_object_unref (plugin);
         GST_OBJECT_UNLOCK (registry);
         return FALSE;
       }
       registry->priv->plugins =
           g_list_remove (registry->priv->plugins, existing_plugin);
+      --registry->priv->n_plugins;
       if (G_LIKELY (existing_plugin->basename))
         g_hash_table_remove (registry->priv->basename_hash,
             existing_plugin->basename);
@@ -549,6 +539,8 @@ gst_registry_add_plugin (GstRegistry * registry, GstPlugin * plugin)
       plugin, GST_STR_NULL (plugin->filename));
 
   registry->priv->plugins = g_list_prepend (registry->priv->plugins, plugin);
+  ++registry->priv->n_plugins;
+
   if (G_LIKELY (plugin->basename))
     g_hash_table_replace (registry->priv->basename_hash, plugin->basename,
         plugin);
@@ -614,6 +606,7 @@ gst_registry_remove_plugin (GstRegistry * registry, GstPlugin * plugin)
 
   GST_OBJECT_LOCK (registry);
   registry->priv->plugins = g_list_remove (registry->priv->plugins, plugin);
+  --registry->priv->n_plugins;
   if (G_LIKELY (plugin->basename))
     g_hash_table_remove (registry->priv->basename_hash, plugin->basename);
   gst_registry_remove_features_for_plugin_unlocked (registry, plugin);
@@ -624,10 +617,12 @@ gst_registry_remove_plugin (GstRegistry * registry, GstPlugin * plugin)
 /**
  * gst_registry_add_feature:
  * @registry: the registry to add the plugin to
- * @feature: (transfer full): the feature to add
+ * @feature: (transfer floating): the feature to add
  *
  * Add the feature to the registry. The feature-added signal will be emitted.
- * This function sinks @feature.
+ *
+ * @feature's reference count will be incremented, and any floating
+ * reference will be removed (see gst_object_ref_sink())
  *
  * Returns: %TRUE on success.
  *
@@ -730,26 +725,30 @@ GList *
 gst_registry_plugin_filter (GstRegistry * registry,
     GstPluginFilter filter, gboolean first, gpointer user_data)
 {
-  GList *list = NULL;
+  GstPlugin **plugins;
+  GList *walk, *list = NULL;
+  guint n_plugins, i;
 
   g_return_val_if_fail (GST_IS_REGISTRY (registry), NULL);
 
   GST_OBJECT_LOCK (registry);
-  {
-    const GList *walk;
+  n_plugins = registry->priv->n_plugins;
+  plugins = g_newa (GstPlugin *, n_plugins + 1);
+  for (walk = registry->priv->plugins, i = 0; walk != NULL; walk = walk->next)
+    plugins[i++] = gst_object_ref (walk->data);
+  GST_OBJECT_UNLOCK (registry);
 
-    for (walk = registry->priv->plugins; walk != NULL; walk = walk->next) {
-      GstPlugin *plugin = walk->data;
-
-      if (filter == NULL || filter (plugin, user_data)) {
-        list = g_list_prepend (list, gst_object_ref (plugin));
+  for (i = 0; i < n_plugins; ++i) {
+    if (filter == NULL || filter (plugins[i], user_data)) {
+      list = g_list_prepend (list, gst_object_ref (plugins[i]));
 
         if (first)
           break;
   }
     }
-  }
-  GST_OBJECT_UNLOCK (registry);
+
+  for (i = 0; i < n_plugins; ++i)
+    gst_object_unref (plugins[i]);
 
   return list;
 }
@@ -904,26 +903,30 @@ GList *
 gst_registry_feature_filter (GstRegistry * registry,
     GstPluginFeatureFilter filter, gboolean first, gpointer user_data)
 {
-  GList *list = NULL;
+  GstPluginFeature **features;
+  GList *walk, *list = NULL;
+  guint n_features, i;
 
   g_return_val_if_fail (GST_IS_REGISTRY (registry), NULL);
 
   GST_OBJECT_LOCK (registry);
-  {
-    const GList *walk;
+  n_features = g_hash_table_size (registry->priv->feature_hash);
+  features = g_newa (GstPluginFeature *, n_features + 1);
+  for (walk = registry->priv->features, i = 0; walk != NULL; walk = walk->next)
+    features[i++] = gst_object_ref (walk->data);
+  GST_OBJECT_UNLOCK (registry);
 
-    for (walk = registry->priv->features; walk != NULL; walk = walk->next) {
-      GstPluginFeature *feature = walk->data;
-
-      if (filter == NULL || filter (feature, user_data)) {
-        list = g_list_prepend (list, gst_object_ref (feature));
+  for (i = 0; i < n_features; ++i) {
+    if (filter == NULL || filter (features[i], user_data)) {
+      list = g_list_prepend (list, gst_object_ref (features[i]));
 
         if (first)
           break;
   }
     }
-  }
-  GST_OBJECT_UNLOCK (registry);
+
+  for (i = 0; i < n_features; ++i)
+    gst_object_unref (features[i]);
 
   return list;
 }
@@ -1253,7 +1256,8 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
     /* We don't use a GError here because a failure to load some shared
      * objects as plugins is normal (particularly in the uninstalled case)
      */
-    newplugin = gst_plugin_load_file (filename, NULL);
+    newplugin = _priv_gst_plugin_load_file_for_registry (filename,
+        context->registry, NULL);
   }
 
   if (newplugin) {
@@ -1368,7 +1372,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
         g_free (filename);
         continue;
       }
-      /* FIXME 0.11: Don't recurse into directories, this behaviour
+      /* FIXME 2.0: Don't recurse into directories, this behaviour
        * is inconsistent with other PATH environment variables
        */
       if (level > 0) {
@@ -1388,7 +1392,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
       g_free (filename);
       continue;
     }
-    if (!g_str_has_suffix (dirent, G_MODULE_SUFFIX)
+    if (!g_str_has_suffix (dirent, "." G_MODULE_SUFFIX)
 #ifdef GST_EXTRA_MODULE_SUFFIX
         && !g_str_has_suffix (dirent, GST_EXTRA_MODULE_SUFFIX)
 #endif
@@ -1523,9 +1527,9 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
     /* plug-ins are considered unique by basename; if the given name
      * was already seen by the registry, we ignore it */
     plugin = gst_registry_lookup_bn (context->registry, dirent);
-#else
+#else // GSTREAMER_LITE
     plugin = gst_registry_lookup (context->registry, filename);
-#endif
+#endif // GSTREAMER_LITE
     if (plugin) {
       gboolean env_vars_changed, deps_changed = FALSE;
 
@@ -1607,7 +1611,7 @@ gst_registry_scan_path_internal (GstRegistryScanContext * context,
 /**
  * gst_registry_scan_path:
  * @registry: the registry to add found plugins to
- * @path: the path to scan
+ * @path: (type filename): the path to scan
  *
  * Scan the given path for plugins to add to the registry. The syntax of the
  * path is specific to the registry.
@@ -1768,6 +1772,7 @@ gst_registry_remove_cache_plugins (GstRegistry * registry)
       GST_DEBUG_OBJECT (registry, "removing cached plugin \"%s\"",
           GST_STR_NULL (plugin->filename));
       registry->priv->plugins = g_list_delete_link (registry->priv->plugins, g);
+      --registry->priv->n_plugins;
       if (G_LIKELY (plugin->basename))
         g_hash_table_remove (registry->priv->basename_hash, plugin->basename);
       gst_registry_remove_features_for_plugin_unlocked (registry, plugin);
@@ -2145,6 +2150,7 @@ gst_update_registry (void)
   gboolean res;
 
 #ifndef GST_DISABLE_REGISTRY
+  if (!_priv_gst_disable_registry) {
   GError *err = NULL;
 
   res = ensure_current_registry (&err);
@@ -2153,6 +2159,10 @@ gst_update_registry (void)
     g_error_free (err);
   } else {
     GST_LOG ("registry update succeeded");
+  }
+  } else {
+    GST_INFO ("registry update disabled by environment");
+    res = TRUE;
   }
 
 #else

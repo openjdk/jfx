@@ -86,7 +86,7 @@ struct _GstWavParse {
   guint16 blockalign;
   guint16 width;
   guint32 av_bps;
-  guint32 fact;
+  guint64 fact;
 
   /* real bps used or 0 when no bitrate is known */
   guint32 bps;
@@ -122,6 +122,9 @@ struct _GstWavParse {
   gboolean discont;
 
   gboolean ignore_length;
+
+  /* Size of the data as written in the chunk size */
+  guint32 chunk_size;
 };
 
 struct _GstWavParseClass {

@@ -56,43 +56,49 @@ struct _GstTagSetterInterface
   /* virtual table */
 };
 
+GST_API
 GType           gst_tag_setter_get_type             (void);
 
+GST_API
 void            gst_tag_setter_reset_tags             (GstTagSetter * setter);
 
+GST_API
 void            gst_tag_setter_merge_tags           (GstTagSetter *     setter,
                                                      const GstTagList * list,
                                                      GstTagMergeMode    mode);
+GST_API
 void            gst_tag_setter_add_tags             (GstTagSetter *     setter,
                                                      GstTagMergeMode    mode,
                                                      const gchar *      tag,
                                                      ...) G_GNUC_NULL_TERMINATED;
-
+GST_API
 void            gst_tag_setter_add_tag_values       (GstTagSetter *     setter,
                                                      GstTagMergeMode    mode,
                                                      const gchar *      tag,
                                                      ...) G_GNUC_NULL_TERMINATED;
-
+GST_API
 void            gst_tag_setter_add_tag_valist       (GstTagSetter *     setter,
                                                      GstTagMergeMode    mode,
                                                      const gchar *      tag,
                                                      va_list            var_args);
-
+GST_API
 void            gst_tag_setter_add_tag_valist_values(GstTagSetter *     setter,
                                                      GstTagMergeMode    mode,
                                                      const gchar *      tag,
                                                      va_list            var_args);
-
+GST_API
 void            gst_tag_setter_add_tag_value        (GstTagSetter *     setter,
                                                      GstTagMergeMode    mode,
                                                      const gchar *      tag,
                                                      const GValue *     value);
-
+GST_API
 const GstTagList *
                 gst_tag_setter_get_tag_list          (GstTagSetter *    setter);
 
+GST_API
 void            gst_tag_setter_set_tag_merge_mode    (GstTagSetter *    setter,
                                                       GstTagMergeMode   mode);
+GST_API
 GstTagMergeMode gst_tag_setter_get_tag_merge_mode    (GstTagSetter *    setter);
 
 G_END_DECLS

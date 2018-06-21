@@ -55,11 +55,8 @@
 #if 0
 #define GST_DISABLE_GST_DEBUG 1
 #define GST_DISABLE_PARSE 1
-#define GST_DISABLE_TRACE 1
-#define GST_DISABLE_ALLOC_TRACE 1
 #define GST_DISABLE_REGISTRY 1
 #define GST_DISABLE_PLUGIN 1
-#define GST_HAVE_GLIB_2_8 1
 #endif
 
 /***** default padding of structures *****/
@@ -84,22 +81,6 @@
  * Configures the inclusion of the gst-launch parser
  */
 /* #undef GST_DISABLE_LOADSAVE */
-
-/**
- * GST_DISABLE_TRACE:
- *
- * Configures the inclusion of a resource tracing facility
- * (seems to be unused)
- */
-/* #undef GST_DISABLE_TRACE */
-
-/**
- * GST_DISABLE_ALLOC_TRACE:
- *
- * Configures the use of a memory tracer based on the resource tracer
- * if TRACE is disabled, ALLOC_TRACE is disabled as well
- */
-/* #undef GST_DISABLE_ALLOC_TRACE */
 
 /**
  * GST_DISABLE_REGISTRY:
@@ -133,20 +114,54 @@
  * On Windows, this exports the plugin definition from the DLL.
  * On other platforms, this gets defined as a no-op.
  */
+/* Only use __declspec(dllexport/import) when we have been built with MSVC or
+ * the user is linking to us with MSVC. The only remaining case is when we were
+ * built with MinGW and are linking with MinGW in which case we rely on the
+ * linker to auto-export/import symbols. Of course all this is only used when
+ * not linking statically.
+ *
+ * NOTE: To link to GStreamer statically on Windows, you must define
+ * GST_STATIC_COMPILATION or the prototypes will cause the compiler to search
+ * for the symbol inside a DLL.
+ */
 #ifdef _MSC_VER
-#define GST_PLUGIN_EXPORT __declspec(dllexport) extern
-#ifdef GST_EXPORTS
-#define GST_EXPORT __declspec(dllexport) extern
-#else
-#define GST_EXPORT __declspec(dllimport) extern
-#endif
+# define GST_PLUGIN_EXPORT __declspec(dllexport)
+# ifdef GST_EXPORTS
+#  define GST_EXPORT __declspec(dllexport)
+# else
+#  define GST_EXPORT __declspec(dllimport) extern
+# endif
 #else /* not _MSC_VER */
-#define GST_PLUGIN_EXPORT
-#if (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
-#define GST_EXPORT extern __attribute__ ((visibility ("default")))
-#else
-#define GST_EXPORT extern
+# if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
+#  define GST_PLUGIN_EXPORT __attribute__ ((visibility ("default")))
+#  define GST_EXPORT extern __attribute__ ((visibility ("default")))
+# else
+#  define GST_PLUGIN_EXPORT
+#  define GST_EXPORT extern
+# endif
 #endif
+
+#ifdef GSTREAMER_LITE
+  // We using def file to limit export, so not need to export all APIs
+  #ifndef GST_API
+    #define GST_API
+  #endif
+#else // GSTREAMER_LITE
+  #ifndef GST_API
+    #define GST_API GST_EXPORT
+  #endif
+#endif // GSTREAMER_LITE
+
+/* These macros are used to mark deprecated functions in GStreamer headers,
+ * and thus have to be exposed in installed headers. But please
+ * do *not* use them in other projects. Instead, use G_DEPRECATED
+ * or define your own wrappers around it. */
+#ifndef GST_DISABLE_DEPRECATED
+#define GST_DEPRECATED GST_API
+#define GST_DEPRECATED_FOR(f) GST_API
+#else
+#define GST_DEPRECATED G_DEPRECATED GST_API
+#define GST_DEPRECATED_FOR(f) G_DEPRECATED_FOR(f) GST_API
 #endif
 
 #endif /* __GST_CONFIG_H__ */

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
-my @files = ("../../main/native/gstreamer/3rd_party/glib/glib-2.42.1/build/win32/vs100/glib-lite.def",
-             "../../main/native/gstreamer/3rd_party/glib/glib-2.42.1/build/win32/vs100/glib-liteD.def");
+my @files = ("../../main/native/gstreamer/3rd_party/glib/glib-2.56.1/build/win32/vs100/glib-lite.def",
+             "../../main/native/gstreamer/3rd_party/glib/glib-2.56.1/build/win32/vs100/glib-liteD.def");
 
 foreach $file (@files)
 {
@@ -48,7 +48,7 @@ sub process_file
 #		print OUTFILE "${symbol}\r\n";
 		$ordinal++;
 	}
-	
+
 	close(OUTFILE);
 
 	print("Renaming $tmpfile to $infile\n\n");

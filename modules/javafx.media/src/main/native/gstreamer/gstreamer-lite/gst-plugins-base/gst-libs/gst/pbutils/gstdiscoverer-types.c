@@ -248,6 +248,7 @@ gst_discoverer_audio_info_copy_int (GstDiscovererAudioInfo * ptr)
   ret = gst_discoverer_audio_info_new ();
 
   ret->channels = ptr->channels;
+  ret->channel_mask = ptr->channel_mask;
   ret->sample_rate = ptr->sample_rate;
   ret->depth = ptr->depth;
   ret->bitrate = ptr->bitrate;
@@ -410,6 +411,9 @@ gst_discoverer_info_copy (GstDiscovererInfo * ptr)
         stream_map);
   }
   ret->duration = ptr->duration;
+  ret->result = ptr->result;
+  ret->seekable = ptr->seekable;
+  ret->live = ptr->live;
   if (ptr->misc)
     ret->misc = gst_structure_copy (ptr->misc);
 
@@ -690,7 +694,7 @@ gst_discoverer_stream_info_get_stream_id (GstDiscovererStreamInfo * info)
  * @info: a #GstDiscovererStreamInfo
  *
  * Deprecated: This functions is deprecated since version 1.4, use
- * gst_discoverer_stream_get_missing_elements_installer_details
+ * #gst_discoverer_info_get_missing_elements_installer_details
  *
  * Returns: (transfer none): additional information regarding the stream (for
  * example codec version, profile, etc..). If you wish to use the #GstStructure
@@ -745,6 +749,19 @@ gst_discoverer_container_info_get_streams (GstDiscovererContainerInfo * info)
  */
 
 AUDIO_INFO_ACCESSOR_CODE (channels, guint, 0);
+
+/**
+ * gst_discoverer_audio_info_get_channel_mask:
+ * @info: a #GstDiscovererAudioInfo
+ *
+ * Returns: the channel-mask of the stream, refer to
+ * gst_audio_channel_positions_from_mask() for more
+ * information.
+ *
+ * Since: 1.14
+ */
+
+AUDIO_INFO_ACCESSOR_CODE (channel_mask, guint64, G_MAXUINT64);
 
 /**
  * gst_discoverer_audio_info_get_sample_rate:
@@ -897,7 +914,7 @@ VIDEO_INFO_ACCESSOR_CODE (max_bitrate, guint, 0);
  * gst_discoverer_video_info_is_image:
  * @info: a #GstDiscovererVideoInfo
  *
- * Returns: #TRUE if the video stream corresponds to an image (i.e. only contains
+ * Returns: %TRUE if the video stream corresponds to an image (i.e. only contains
  * one frame).
  */
 gboolean
@@ -1012,11 +1029,22 @@ DISCOVERER_INFO_ACCESSOR_CODE (duration, GstClockTime, GST_CLOCK_TIME_NONE);
 DISCOVERER_INFO_ACCESSOR_CODE (seekable, gboolean, FALSE);
 
 /**
+ * gst_discoverer_info_get_live:
+ * @info: a #GstDiscovererInfo
+ *
+ * Returns: whether the URI is live.
+ *
+ * Since: 1.14
+ */
+
+DISCOVERER_INFO_ACCESSOR_CODE (live, gboolean, FALSE);
+
+/**
  * gst_discoverer_info_get_misc:
  * @info: a #GstDiscovererInfo
  *
  * Deprecated: This functions is deprecated since version 1.4, use
- * gst_discoverer_info_get_missing_elements_installer_details
+ * #gst_discoverer_info_get_missing_elements_installer_details
  *
  * Returns: (transfer none): Miscellaneous information stored as a #GstStructure
  * (for example: information about missing plugins). If you wish to use the
@@ -1085,9 +1113,10 @@ DISCOVERER_INFO_ACCESSOR_CODE (toc, const GstToc *, NULL);
  *
  * Get the installer details for missing elements
  *
- * Returns: (transfer full) (array zero-terminated=1): An array of strings
+ * Returns: (transfer none) (array zero-terminated=1): An array of strings
  * containing informations about how to install the various missing elements
- * for @info to be usable. Free with g_strfreev().
+ * for @info to be usable. If you wish to use the strings after the life-time
+ * of @info, you will need to copy them.
  *
  * Since: 1.4
  */

@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gsttocsetter
+ * @title: GstTocSetter
  * @short_description: Element interface that allows setting and retrieval
  *                     of the TOC
  *
@@ -126,7 +127,6 @@ gst_toc_setter_reset (GstTocSetter * setter)
  *
  * Return current TOC the setter uses. The TOC should not be
  * modified without making it writable first.
- *
  *
  * Returns: (transfer full) (nullable): TOC set, or %NULL. Unref with
  *     gst_toc_unref() when no longer needed

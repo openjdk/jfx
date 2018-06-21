@@ -24,7 +24,48 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifndef GSTREAMER_LITE
+#include "video-orc.h"
+#else // GSTREAMER_LITE
+#include "video-orc-dist.h"
+#endif // GSTREAMER_LITE
 #include "video-format.h"
+
+
+/**
+ * SECTION:gstvideochroma
+ * @title: GstVideoChromaResample
+ * @short_description: Functions and utility object for operating on chroma video planes
+ *
+ * The functions gst_video_chroma_from_string() and gst_video_chroma_to_string() convert
+ * between #GstVideoChromaSite and string descriptions.
+ *
+ * #GstVideoChromaResample is a utility object for resampling chroma planes
+ * and converting between different chroma sampling sitings.
+ *
+ */
+
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT ensure_debug_category()
+static GstDebugCategory *
+ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    gsize cat_done;
+
+    cat_done = (gsize) _gst_debug_category_new ("video-chroma", 0,
+        "video-chroma object");
+
+    g_once_init_leave (&cat_gonce, cat_done);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#else
+#define ensure_debug_category() /* NOOP */
+#endif /* GST_DISABLE_GST_DEBUG */
 
 typedef struct
 {
@@ -105,7 +146,7 @@ struct _GstVideoChromaResample
 #define PB3(i)         (l3[3 + 4 * (i)])
 
 #define FILT_1_1(a,b)          ((a) + (b) + 1) >> 1
-#define FILT_1_1_1_1(a,b,c,d)  ((a) + (b) + (c) + (d) + 2) >> 2
+#define FILT_1_3_3_1(a,b,c,d)  ((a) + 3*((b)+(c)) + (d) + 4) >> 3
 
 #define FILT_3_1(a,b)          (3*(a) + (b) + 2) >> 2
 #define FILT_1_3(a,b)          ((a) + 3*(b) + 2) >> 2
@@ -119,7 +160,7 @@ struct _GstVideoChromaResample
 
 #define FILT_10_3_2_1(a,b,c,d)      (10*(a) + 3*(b) + 2*(c) + (d) + 8) >> 16
 #define FILT_1_2_3_10(a,b,c,d)      ((a) + 2*(b) + 3*(c) + 10*(d) + 8) >> 16
-#define FILT_1_2_3_4_3_2_1(a,b,c,d,e,f,g) ((a) + 2*(b) + 3*(c) + 4*(d) + 3*(e) + 2*(f) + (g) + 8) >> 16
+#define FILT_1_2_3_4_3_2_1(a,b,c,d,e,f,g) ((a) + 2*((b)+(f)) + 3*((c)+(e)) + 4*(d) + (g) + 8) >> 16
 
 /* 2x horizontal upsampling without cositing
  *
@@ -131,9 +172,9 @@ struct _GstVideoChromaResample
  *  x   x
  *  a   b
  */
-#define MAKE_UPSAMPLE_H2(type)                                          \
+#define MAKE_UPSAMPLE_H2(name,type)                                     \
 static void                                                             \
-video_chroma_up_h2_##type (GstVideoChromaResample *resample,            \
+video_chroma_up_h2_##name (GstVideoChromaResample *resample,            \
     gpointer pixels, gint width)                                        \
 {                                                                       \
   type *p = pixels;                                                     \
@@ -163,16 +204,13 @@ video_chroma_up_h2_##type (GstVideoChromaResample *resample,            \
  * b x  x  x
  *   O--O--O-  <---- b
  */
-#define MAKE_UPSAMPLE_V2(type)                                          \
+#define MAKE_UPSAMPLE_V2(name,type)                                     \
 static void                                                             \
-video_chroma_up_v2_##type (GstVideoChromaResample *resample,            \
+video_chroma_up_v2_##name (GstVideoChromaResample *resample,            \
     gpointer lines[], gint width)                                       \
 {                                                                       \
-  gint i;                                                               \
   type *l0 = lines[0];                                                  \
   type *l1 = lines[1];                                                  \
-  type tr0, tr1;                                                        \
-  type tb0, tb1;                                                        \
                                                                         \
   if (resample->h_resample) {                                           \
     resample->h_resample (resample, l0, width);                         \
@@ -180,15 +218,7 @@ video_chroma_up_v2_##type (GstVideoChromaResample *resample,            \
       resample->h_resample (resample, l1, width);                       \
   }                                                                     \
   if (l0 != l1) {                                                       \
-    for (i = 0; i < width; i++) {                                       \
-      tr0 = PR0(i), tr1 = PR1(i);                                       \
-      tb0 = PB0(i), tb1 = PB1(i);                                       \
-                                                                        \
-      PR0(i) = FILT_3_1 (tr0, tr1);                                     \
-      PB0(i) = FILT_3_1 (tb0, tb1);                                     \
-      PR1(i) = FILT_1_3 (tr0, tr1);                                     \
-      PB1(i) = FILT_1_3 (tb0, tb1);                                     \
-    }                                                                   \
+    video_orc_chroma_up_v2_##name (l0, l1, l0, l1, width);              \
   }                                                                     \
 }
 /* 2x vertical upsampling interlaced without cositing
@@ -208,9 +238,9 @@ video_chroma_up_v2_##type (GstVideoChromaResample *resample,            \
  * d               x  x  x
  *   --------------O--O--O-
  */
-#define MAKE_UPSAMPLE_VI2(type)                                         \
+#define MAKE_UPSAMPLE_VI2(name,type)                                    \
 static void                                                             \
-video_chroma_up_vi2_##type (GstVideoChromaResample *resample,           \
+video_chroma_up_vi2_##name (GstVideoChromaResample *resample,           \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   gint i;                                                               \
@@ -259,10 +289,20 @@ video_chroma_up_vi2_##type (GstVideoChromaResample *resample,           \
  * x x x x
  * a b c d
  */
-#define MAKE_DOWNSAMPLE_H2(type)                                        \
+#define MAKE_DOWNSAMPLE_H2_ORC(name,type)                               \
 static void                                                             \
-video_chroma_down_h2_##type (GstVideoChromaResample *resample,         \
-    gpointer pixels, gint width)                        \
+video_chroma_down_h2_##name (GstVideoChromaResample *resample,          \
+    gpointer pixels, gint width)                                        \
+{                                                                       \
+  type *p = pixels;                                                     \
+                                                                        \
+  video_orc_chroma_down_h2_##name (p, p, width / 2);                    \
+}
+
+#define MAKE_DOWNSAMPLE_H2(name,type)                                   \
+static void                                                             \
+video_chroma_down_h2_##name (GstVideoChromaResample *resample,          \
+    gpointer pixels, gint width)                                        \
 {                                                                       \
   type *p = pixels;                                                     \
   gint i;                                                               \
@@ -284,29 +324,19 @@ video_chroma_down_h2_##type (GstVideoChromaResample *resample,         \
  *   O  O  O
  * d x--x--x-
  */
-#define MAKE_DOWNSAMPLE_V2(type)                                        \
+#define MAKE_DOWNSAMPLE_V2(name,type)                                   \
 static void                                                             \
-video_chroma_down_v2_##type (GstVideoChromaResample *resample,          \
+video_chroma_down_v2_##name (GstVideoChromaResample *resample,          \
     gpointer lines[], gint width)                                       \
 {                                                                       \
-  gint i;                                                               \
   type *l0 = lines[0];                                                  \
   type *l1 = lines[1];                                                  \
                                                                         \
-  if (resample->h_resample) {                                           \
-    resample->h_resample (resample, l0, width);                         \
-    if (l0 != l1)                                                       \
-      resample->h_resample (resample, l1, width);                       \
-  }                                                                     \
-  if (l0 != l1) {                                                       \
-    for (i = 0; i < width; i++) {                                       \
-      type tr0 = PR0(i), tr1 = PR1(i);                                  \
-      type tb0 = PB0(i), tb1 = PB1(i);                                  \
+  if (l0 != l1)                                                         \
+    video_orc_chroma_down_v2_##name (l0, l0, l1, width);                \
                                                                         \
-      PR0(i) = FILT_1_1 (tr0, tr1);                                     \
-      PB0(i) = FILT_1_1 (tb0, tb1);                                     \
-    }                                                                   \
-  }                                                                     \
+  if (resample->h_resample)                                             \
+    resample->h_resample (resample, l0, width);                         \
 }
 /* 2x vertical downsampling interlaced without cositing
  *
@@ -319,9 +349,9 @@ video_chroma_down_v2_##type (GstVideoChromaResample *resample,          \
  *                 O  O  O  <---
  * d --------------x--x--x-
  */
-#define MAKE_DOWNSAMPLE_VI2(type)                                       \
+#define MAKE_DOWNSAMPLE_VI2(name,type)                                  \
 static void                                                             \
-video_chroma_down_vi2_##type (GstVideoChromaResample *resample,         \
+video_chroma_down_vi2_##name (GstVideoChromaResample *resample,         \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -329,18 +359,18 @@ video_chroma_down_vi2_##type (GstVideoChromaResample *resample,         \
     resample->h_resample (resample, lines[0], width);                   \
 }
 
-MAKE_UPSAMPLE_H2 (guint16);
-MAKE_UPSAMPLE_H2 (guint8);
-MAKE_UPSAMPLE_V2 (guint16);
-MAKE_UPSAMPLE_V2 (guint8);
-MAKE_UPSAMPLE_VI2 (guint16);
-MAKE_UPSAMPLE_VI2 (guint8);
-MAKE_DOWNSAMPLE_H2 (guint16);
-MAKE_DOWNSAMPLE_H2 (guint8);
-MAKE_DOWNSAMPLE_V2 (guint16);
-MAKE_DOWNSAMPLE_V2 (guint8);
-MAKE_DOWNSAMPLE_VI2 (guint16);
-MAKE_DOWNSAMPLE_VI2 (guint8);
+MAKE_UPSAMPLE_H2 (u16, guint16);
+MAKE_UPSAMPLE_H2 (u8, guint8);
+MAKE_UPSAMPLE_V2 (u16, guint16);
+MAKE_UPSAMPLE_V2 (u8, guint8);
+MAKE_UPSAMPLE_VI2 (u16, guint16);
+MAKE_UPSAMPLE_VI2 (u8, guint8);
+MAKE_DOWNSAMPLE_H2 (u16, guint16);
+MAKE_DOWNSAMPLE_H2_ORC (u8, guint8);
+MAKE_DOWNSAMPLE_V2 (u16, guint16);
+MAKE_DOWNSAMPLE_V2 (u8, guint8);
+MAKE_DOWNSAMPLE_VI2 (u16, guint16);
+MAKE_DOWNSAMPLE_VI2 (u8, guint8);
 
 /* 4x horizontal upsampling without cositing
  *
@@ -353,9 +383,9 @@ MAKE_DOWNSAMPLE_VI2 (guint8);
  *    x       x
  *    a       b
  */
-#define MAKE_UPSAMPLE_H4(type)                                          \
+#define MAKE_UPSAMPLE_H4(name,type)                                          \
 static void                                                             \
-video_chroma_up_h4_##type (GstVideoChromaResample *resample,           \
+video_chroma_up_h4_##name (GstVideoChromaResample *resample,           \
     gpointer pixels, gint width)                        \
 {                                                                       \
   type *p = pixels;                                                     \
@@ -393,9 +423,9 @@ video_chroma_up_h4_##type (GstVideoChromaResample *resample,           \
  *   O--O--O-
  *   O--O--O-
  */
-#define MAKE_UPSAMPLE_V4(type)                                          \
+#define MAKE_UPSAMPLE_V4(name,type)                                          \
 static void                                                             \
-video_chroma_up_v4_##type (GstVideoChromaResample *resample,            \
+video_chroma_up_v4_##name (GstVideoChromaResample *resample,            \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   gint i;                                                               \
@@ -435,9 +465,9 @@ video_chroma_up_v4_##type (GstVideoChromaResample *resample,            \
 /* 4x vertical upsampling interlaced without cositing
  *
  */
-#define MAKE_UPSAMPLE_VI4(type)                                         \
+#define MAKE_UPSAMPLE_VI4(name,type)                                         \
 static void                                                             \
-video_chroma_up_vi4_##type (GstVideoChromaResample *resample,           \
+video_chroma_up_vi4_##name (GstVideoChromaResample *resample,           \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -448,16 +478,16 @@ video_chroma_up_vi4_##type (GstVideoChromaResample *resample,           \
 
 /* 4x horizontal downsampling without cositing
  *
- *    +------ (a + b + c + d + 2) >> 2
+ *    +------ (a + 3*b + 3*c + d + 4) >> 3
  *    |
  *    v
  * ---O-------O---
  * x x x x x x x x
  * a b c d e f g h
  */
-#define MAKE_DOWNSAMPLE_H4(type)                                        \
+#define MAKE_DOWNSAMPLE_H4(name,type)                                        \
 static void                                                             \
-video_chroma_down_h4_##type (GstVideoChromaResample *resample,         \
+video_chroma_down_h4_##name (GstVideoChromaResample *resample,         \
     gpointer pixels, gint width)                        \
 {                                                                       \
   type *p = pixels;                                                     \
@@ -467,8 +497,8 @@ video_chroma_down_h4_##type (GstVideoChromaResample *resample,         \
     type tr0 = PR(i), tr1 = PR(i+1), tr2 = PR(i+2), tr3 = PR(i+3);      \
     type tb0 = PB(i), tb1 = PB(i+1), tb2 = PB(i+2), tb3 = PB(i+3);      \
                                                                         \
-    PR(i) = FILT_1_1_1_1 (tr0, tr1, tr2, tr3);                          \
-    PB(i) = FILT_1_1_1_1 (tb0, tb1, tb2, tb3);                          \
+    PR(i) = FILT_1_3_3_1 (tr0, tr1, tr2, tr3);                          \
+    PB(i) = FILT_1_3_3_1 (tb0, tb1, tb2, tb3);                          \
   }                                                                     \
 }
 
@@ -476,7 +506,7 @@ video_chroma_down_h4_##type (GstVideoChromaResample *resample,         \
  *
  * a x--x--x-
  * b x--x--x-
- *   O  O  O   <---- (a + b + c + d + 2) >> 2
+ *   O  O  O   <---- (a + 3*b + 3*c + d + 4) >> 4
  * c x--x--x-
  * d x--x--x-
  * e x--x--x-
@@ -485,42 +515,27 @@ video_chroma_down_h4_##type (GstVideoChromaResample *resample,         \
  * g x--x--x-
  * h x--x--x-
  */
-#define MAKE_DOWNSAMPLE_V4(type)                                        \
+#define MAKE_DOWNSAMPLE_V4(name,type)                               \
 static void                                                             \
-video_chroma_down_v4_##type (GstVideoChromaResample *resample,          \
+video_chroma_down_v4_##name (GstVideoChromaResample *resample,          \
     gpointer lines[], gint width)                                       \
 {                                                                       \
-  gint i;                                                               \
   type *l0 = lines[0];                                                  \
   type *l1 = lines[1];                                                  \
   type *l2 = lines[2];                                                  \
   type *l3 = lines[3];                                                  \
                                                                         \
-  if (resample->h_resample) {                                           \
-    resample->h_resample (resample, l0, width);                         \
-    if (l0 != l1)                                                       \
-      resample->h_resample (resample, l1, width);                       \
-    if (l1 != l2)                                                       \
-      resample->h_resample (resample, l2, width);                       \
-    if (l2 != l3)                                                       \
-      resample->h_resample (resample, l3, width);                       \
-  }                                                                     \
-  for (i = 0; i < width; i++) {                                         \
-    type tr0 = PR0(i), tr1 = PR1(i);                                    \
-    type tr2 = PR2(i), tr3 = PR3(i);                                    \
-    type tb0 = PB0(i), tb1 = PB1(i);                                    \
-    type tb2 = PB2(i), tb3 = PB3(i);                                    \
+  video_orc_chroma_down_v4_##name(l0, l0, l1, l2, l3, width);           \
                                                                         \
-    PR0(i) = FILT_1_1_1_1 (tr0, tr1, tr2, tr3);                         \
-    PB0(i) = FILT_1_1_1_1 (tb0, tb1, tb2, tb3);                         \
-  }                                                                     \
+  if (resample->h_resample)                                             \
+    resample->h_resample (resample, l0, width);                         \
 }
 /* 4x vertical downsampling interlaced without cositing
  *
  */
-#define MAKE_DOWNSAMPLE_VI4(type)                                       \
+#define MAKE_DOWNSAMPLE_VI4(name,type)                                       \
 static void                                                             \
-video_chroma_down_vi4_##type (GstVideoChromaResample *resample,         \
+video_chroma_down_vi4_##name (GstVideoChromaResample *resample,         \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -529,18 +544,18 @@ video_chroma_down_vi4_##type (GstVideoChromaResample *resample,         \
   }                                                                     \
 }
 
-MAKE_UPSAMPLE_H4 (guint16);
-MAKE_UPSAMPLE_H4 (guint8);
-MAKE_UPSAMPLE_V4 (guint16);
-MAKE_UPSAMPLE_V4 (guint8);
-MAKE_UPSAMPLE_VI4 (guint16);
-MAKE_UPSAMPLE_VI4 (guint8);
-MAKE_DOWNSAMPLE_H4 (guint16);
-MAKE_DOWNSAMPLE_H4 (guint8);
-MAKE_DOWNSAMPLE_V4 (guint16);
-MAKE_DOWNSAMPLE_V4 (guint8);
-MAKE_DOWNSAMPLE_VI4 (guint16);
-MAKE_DOWNSAMPLE_VI4 (guint8);
+MAKE_UPSAMPLE_H4 (u16, guint16);
+MAKE_UPSAMPLE_H4 (u8, guint8);
+MAKE_UPSAMPLE_V4 (u16, guint16);
+MAKE_UPSAMPLE_V4 (u8, guint8);
+MAKE_UPSAMPLE_VI4 (u16, guint16);
+MAKE_UPSAMPLE_VI4 (u8, guint8);
+MAKE_DOWNSAMPLE_H4 (u16, guint16);
+MAKE_DOWNSAMPLE_H4 (u8, guint8);
+MAKE_DOWNSAMPLE_V4 (u16, guint16);
+MAKE_DOWNSAMPLE_V4 (u8, guint8);
+MAKE_DOWNSAMPLE_VI4 (u16, guint16);
+MAKE_DOWNSAMPLE_VI4 (u8, guint8);
 
 /* 2x horizontal upsampling with cositing
  *
@@ -551,9 +566,19 @@ MAKE_DOWNSAMPLE_VI4 (guint8);
  * x   x
  * a   b
  */
-#define MAKE_UPSAMPLE_H2_CS(type)                                       \
+#define MAKE_UPSAMPLE_H2_CS_ORC(name,type)                              \
 static void                                                             \
-video_chroma_up_h2_cs_##type (GstVideoChromaResample *resample,         \
+video_chroma_up_h2_cs_##name (GstVideoChromaResample *resample,         \
+    gpointer pixels, gint width)                                        \
+{                                                                       \
+  type *p = pixels;                                                     \
+  /* ORC version is slower */                                           \
+  video_orc_chroma_up_h2_cs_##name (p, p, p, width-1);                  \
+}
+
+#define MAKE_UPSAMPLE_H2_CS(name,type)                                  \
+static void                                                             \
+video_chroma_up_h2_cs_##name (GstVideoChromaResample *resample,         \
     gpointer pixels, gint width)                                        \
 {                                                                       \
   type *p = pixels;                                                     \
@@ -571,9 +596,9 @@ video_chroma_up_h2_cs_##type (GstVideoChromaResample *resample,         \
  * b x O--O--O-
  *     O--O--O-
  */
-#define MAKE_UPSAMPLE_V2_CS(type)                                       \
+#define MAKE_UPSAMPLE_V2_CS(name,type)                                       \
 static void                                                             \
-video_chroma_up_v2_cs_##type (GstVideoChromaResample *resample,         \
+video_chroma_up_v2_cs_##name (GstVideoChromaResample *resample,         \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -584,9 +609,9 @@ video_chroma_up_v2_cs_##type (GstVideoChromaResample *resample,         \
 /* 2x vertical upsampling interlaced with cositing
  *
  */
-#define MAKE_UPSAMPLE_VI2_CS(type)                                      \
+#define MAKE_UPSAMPLE_VI2_CS(name,type)                                      \
 static void                                                             \
-video_chroma_up_vi2_cs_##type (GstVideoChromaResample *resample,        \
+video_chroma_up_vi2_cs_##name (GstVideoChromaResample *resample,        \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -604,9 +629,9 @@ video_chroma_up_vi2_cs_##type (GstVideoChromaResample *resample,        \
  * x x x x x x
  * a b c d e f
  */
-#define MAKE_DOWNSAMPLE_H2_CS(type)                                     \
+#define MAKE_DOWNSAMPLE_H2_CS(name,type)                                     \
 static void                                                             \
-video_chroma_down_h2_cs_##type (GstVideoChromaResample *resample,       \
+video_chroma_down_h2_cs_##name (GstVideoChromaResample *resample,       \
     gpointer pixels, gint width)                                        \
 {                                                                       \
   type *p = pixels;                                                     \
@@ -636,9 +661,9 @@ video_chroma_down_h2_cs_##type (GstVideoChromaResample *resample,       \
  * e x O--O--O-
  * f x --------
  */
-#define MAKE_DOWNSAMPLE_V2_CS(type)                                     \
+#define MAKE_DOWNSAMPLE_V2_CS(name,type)                                     \
 static void                                                             \
-video_chroma_down_v2_cs_##type (GstVideoChromaResample *resample,       \
+video_chroma_down_v2_cs_##name (GstVideoChromaResample *resample,       \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -649,9 +674,9 @@ video_chroma_down_v2_cs_##type (GstVideoChromaResample *resample,       \
 /* 2x vertical downsampling interlaced with cositing
  *
  */
-#define MAKE_DOWNSAMPLE_VI2_CS(type)                                    \
+#define MAKE_DOWNSAMPLE_VI2_CS(name,type)                                    \
 static void                                                             \
-video_chroma_down_vi2_cs_##type (GstVideoChromaResample *resample,      \
+video_chroma_down_vi2_cs_##name (GstVideoChromaResample *resample,      \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -660,18 +685,18 @@ video_chroma_down_vi2_cs_##type (GstVideoChromaResample *resample,      \
   }                                                                     \
 }
 
-MAKE_UPSAMPLE_H2_CS (guint16);
-MAKE_UPSAMPLE_H2_CS (guint8);
-MAKE_UPSAMPLE_V2_CS (guint16);
-MAKE_UPSAMPLE_V2_CS (guint8);
-MAKE_UPSAMPLE_VI2_CS (guint16);
-MAKE_UPSAMPLE_VI2_CS (guint8);
-MAKE_DOWNSAMPLE_H2_CS (guint16);
-MAKE_DOWNSAMPLE_H2_CS (guint8);
-MAKE_DOWNSAMPLE_V2_CS (guint16);
-MAKE_DOWNSAMPLE_V2_CS (guint8);
-MAKE_DOWNSAMPLE_VI2_CS (guint16);
-MAKE_DOWNSAMPLE_VI2_CS (guint8);
+MAKE_UPSAMPLE_H2_CS (u16, guint16);
+MAKE_UPSAMPLE_H2_CS (u8, guint8);
+MAKE_UPSAMPLE_V2_CS (u16, guint16);
+MAKE_UPSAMPLE_V2_CS (u8, guint8);
+MAKE_UPSAMPLE_VI2_CS (u16, guint16);
+MAKE_UPSAMPLE_VI2_CS (u8, guint8);
+MAKE_DOWNSAMPLE_H2_CS (u16, guint16);
+MAKE_DOWNSAMPLE_H2_CS (u8, guint8);
+MAKE_DOWNSAMPLE_V2_CS (u16, guint16);
+MAKE_DOWNSAMPLE_V2_CS (u8, guint8);
+MAKE_DOWNSAMPLE_VI2_CS (u16, guint16);
+MAKE_DOWNSAMPLE_VI2_CS (u8, guint8);
 
 /* 4x horizontal upsampling with cositing
  *
@@ -683,9 +708,9 @@ MAKE_DOWNSAMPLE_VI2_CS (guint8);
  * x       x
  * a       b
  */
-#define MAKE_UPSAMPLE_H4_CS(type)                                       \
+#define MAKE_UPSAMPLE_H4_CS(name,type)                                       \
 static void                                                             \
-video_chroma_up_h4_cs_##type (GstVideoChromaResample *resample,        \
+video_chroma_up_h4_cs_##name (GstVideoChromaResample *resample,        \
     gpointer pixels, gint width)                        \
 {                                                                       \
   type *p = pixels;                                                        \
@@ -712,9 +737,9 @@ video_chroma_up_h4_cs_##type (GstVideoChromaResample *resample,        \
  * b x O--O--O-
  *     O--O--O-
  */
-#define MAKE_UPSAMPLE_V4_CS(type)                                       \
+#define MAKE_UPSAMPLE_V4_CS(name,type)                                       \
 static void                                                             \
-video_chroma_up_v4_cs_##type (GstVideoChromaResample *resample,         \
+video_chroma_up_v4_cs_##name (GstVideoChromaResample *resample,         \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -725,9 +750,9 @@ video_chroma_up_v4_cs_##type (GstVideoChromaResample *resample,         \
 /* 4x vertical upsampling interlaced with cositing
  *
  */
-#define MAKE_UPSAMPLE_VI4_CS(type)                                      \
+#define MAKE_UPSAMPLE_VI4_CS(name,type)                                      \
 static void                                                             \
-video_chroma_up_vi4_cs_##type (GstVideoChromaResample *resample,        \
+video_chroma_up_vi4_cs_##name (GstVideoChromaResample *resample,        \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -744,9 +769,9 @@ video_chroma_up_vi4_cs_##type (GstVideoChromaResample *resample,        \
  * x x x x x x x x
  * a b c d e f g h
  */
-#define MAKE_DOWNSAMPLE_H4_CS(type)                                     \
+#define MAKE_DOWNSAMPLE_H4_CS(name,type)                                     \
 static void                                                             \
-video_chroma_down_h4_cs_##type (GstVideoChromaResample *resample,      \
+video_chroma_down_h4_cs_##name (GstVideoChromaResample *resample,      \
     gpointer pixels, gint width)                        \
 {                                                                       \
   type *p = pixels;                                                     \
@@ -780,9 +805,9 @@ video_chroma_down_h4_cs_##type (GstVideoChromaResample *resample,      \
  * i x O--O--O-
  * j x --------
  */
-#define MAKE_DOWNSAMPLE_V4_CS(type)                                     \
+#define MAKE_DOWNSAMPLE_V4_CS(name,type)                                     \
 static void                                                             \
-video_chroma_down_v4_cs_##type (GstVideoChromaResample *resample,       \
+video_chroma_down_v4_cs_##name (GstVideoChromaResample *resample,       \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -793,9 +818,9 @@ video_chroma_down_v4_cs_##type (GstVideoChromaResample *resample,       \
 /* 4x vertical downsampling interlaced with cositing
  *
  */
-#define MAKE_DOWNSAMPLE_VI4_CS(type)                                    \
+#define MAKE_DOWNSAMPLE_VI4_CS(name,type)                                    \
 static void                                                             \
-video_chroma_down_vi4_cs_##type (GstVideoChromaResample *resample,      \
+video_chroma_down_vi4_cs_##name (GstVideoChromaResample *resample,      \
     gpointer lines[], gint width)                                       \
 {                                                                       \
   /* FIXME */                                                           \
@@ -804,18 +829,18 @@ video_chroma_down_vi4_cs_##type (GstVideoChromaResample *resample,      \
   }                                                                     \
 }
 
-MAKE_UPSAMPLE_H4_CS (guint16);
-MAKE_UPSAMPLE_H4_CS (guint8);
-MAKE_UPSAMPLE_V4_CS (guint16);
-MAKE_UPSAMPLE_V4_CS (guint8);
-MAKE_UPSAMPLE_VI4_CS (guint16);
-MAKE_UPSAMPLE_VI4_CS (guint8);
-MAKE_DOWNSAMPLE_H4_CS (guint16);
-MAKE_DOWNSAMPLE_H4_CS (guint8);
-MAKE_DOWNSAMPLE_V4_CS (guint16);
-MAKE_DOWNSAMPLE_V4_CS (guint8);
-MAKE_DOWNSAMPLE_VI4_CS (guint16);
-MAKE_DOWNSAMPLE_VI4_CS (guint8);
+MAKE_UPSAMPLE_H4_CS (u16, guint16);
+MAKE_UPSAMPLE_H4_CS (u8, guint8);
+MAKE_UPSAMPLE_V4_CS (u16, guint16);
+MAKE_UPSAMPLE_V4_CS (u8, guint8);
+MAKE_UPSAMPLE_VI4_CS (u16, guint16);
+MAKE_UPSAMPLE_VI4_CS (u8, guint8);
+MAKE_DOWNSAMPLE_H4_CS (u16, guint16);
+MAKE_DOWNSAMPLE_H4_CS (u8, guint8);
+MAKE_DOWNSAMPLE_V4_CS (u16, guint16);
+MAKE_DOWNSAMPLE_V4_CS (u8, guint8);
+MAKE_DOWNSAMPLE_VI4_CS (u16, guint16);
+MAKE_DOWNSAMPLE_VI4_CS (u8, guint8);
 
 typedef struct
 {
@@ -825,22 +850,22 @@ typedef struct
 
 static const HorizResampler h_resamplers[] = {
   {NULL},
-  {video_chroma_up_h2_guint8},
-  {video_chroma_down_h2_guint8},
-  {video_chroma_up_h2_guint16},
-  {video_chroma_down_h2_guint16},
-  {video_chroma_up_h2_cs_guint8},
-  {video_chroma_down_h2_cs_guint8},
-  {video_chroma_up_h2_cs_guint16},
-  {video_chroma_down_h2_cs_guint16},
-  {video_chroma_up_h4_guint8},
-  {video_chroma_down_h4_guint8},
-  {video_chroma_up_h4_guint16},
-  {video_chroma_down_h4_guint16},
-  {video_chroma_up_h4_cs_guint8},
-  {video_chroma_down_h4_cs_guint8},
-  {video_chroma_up_h4_cs_guint16},
-  {video_chroma_down_h4_cs_guint16}
+  {video_chroma_up_h2_u8},
+  {video_chroma_down_h2_u8},
+  {video_chroma_up_h2_u16},
+  {video_chroma_down_h2_u16},
+  {video_chroma_up_h2_cs_u8},
+  {video_chroma_down_h2_cs_u8},
+  {video_chroma_up_h2_cs_u16},
+  {video_chroma_down_h2_cs_u16},
+  {video_chroma_up_h4_u8},
+  {video_chroma_down_h4_u8},
+  {video_chroma_up_h4_u16},
+  {video_chroma_down_h4_u16},
+  {video_chroma_up_h4_cs_u8},
+  {video_chroma_down_h4_cs_u8},
+  {video_chroma_up_h4_cs_u16},
+  {video_chroma_down_h4_cs_u16}
 };
 
 typedef struct
@@ -861,46 +886,46 @@ video_chroma_none (GstVideoChromaResample * resample,
 
 static const VertResampler v_resamplers[] = {
   {video_chroma_none, 1, 0},
-  {video_chroma_up_v2_guint8, 2, -1},
-  {video_chroma_down_v2_guint8, 2, 0},
+  {video_chroma_up_v2_u8, 2, -1},
+  {video_chroma_down_v2_u8, 2, 0},
   /* 16 bits */
-  {video_chroma_up_v2_guint16, 2, -1},
-  {video_chroma_down_v2_guint16, 2, 0},
+  {video_chroma_up_v2_u16, 2, -1},
+  {video_chroma_down_v2_u16, 2, 0},
   /* cosited */
-  {video_chroma_up_v2_cs_guint8, 1, 0}, /* IMPLEMENT ME */
-  {video_chroma_down_v2_cs_guint8, 1, 0},       /* IMPLEMENT ME */
-  {video_chroma_up_v2_cs_guint16, 1, 0},        /* IMPLEMENT ME */
-  {video_chroma_down_v2_cs_guint16, 1, 0},      /* IMPLEMENT ME */
+  {video_chroma_up_v2_cs_u8, 1, 0},     /* IMPLEMENT ME */
+  {video_chroma_down_v2_cs_u8, 1, 0},   /* IMPLEMENT ME */
+  {video_chroma_up_v2_cs_u16, 1, 0},    /* IMPLEMENT ME */
+  {video_chroma_down_v2_cs_u16, 1, 0},  /* IMPLEMENT ME */
   /* 4x */
-  {video_chroma_up_v4_guint8, 4, -2},
-  {video_chroma_down_v4_guint8, 4, 0},
-  {video_chroma_up_v4_guint16, 4, -2},
-  {video_chroma_down_v4_guint16, 4, 0},
-  {video_chroma_up_v4_cs_guint8, 1, 0}, /* IMPLEMENT ME */
-  {video_chroma_down_v4_cs_guint8, 1, 0},       /* IMPLEMENT ME */
-  {video_chroma_up_v4_cs_guint16, 1, 0},        /* IMPLEMENT ME */
-  {video_chroma_down_v4_cs_guint16, 1, 0},      /* IMPLEMENT ME */
+  {video_chroma_up_v4_u8, 4, -2},
+  {video_chroma_down_v4_u8, 4, 0},
+  {video_chroma_up_v4_u16, 4, -2},
+  {video_chroma_down_v4_u16, 4, 0},
+  {video_chroma_up_v4_cs_u8, 1, 0},     /* IMPLEMENT ME */
+  {video_chroma_down_v4_cs_u8, 1, 0},   /* IMPLEMENT ME */
+  {video_chroma_up_v4_cs_u16, 1, 0},    /* IMPLEMENT ME */
+  {video_chroma_down_v4_cs_u16, 1, 0},  /* IMPLEMENT ME */
   /* interlaced */
-  {video_chroma_up_vi2_guint8, 4, -2},
-  {video_chroma_down_vi2_guint8, 1, 0}, /* IMPLEMENT ME */
-  {video_chroma_up_vi2_guint16, 4, -2},
-  {video_chroma_down_vi2_guint16, 1, 0},        /* IMPLEMENT ME */
-  {video_chroma_up_vi2_cs_guint8, 1, 0},        /* IMPLEMENT ME */
-  {video_chroma_down_vi2_cs_guint8, 1, 0},      /* IMPLEMENT ME */
-  {video_chroma_up_vi2_cs_guint16, 1, 0},       /* IMPLEMENT ME */
-  {video_chroma_down_vi2_cs_guint16, 1, 0},     /* IMPLEMENT ME */
-  {video_chroma_up_vi4_guint8, 1, 0},   /* IMPLEMENT ME */
-  {video_chroma_down_vi4_guint8, 1, 0}, /* IMPLEMENT ME */
-  {video_chroma_up_vi4_guint16, 1, 0},  /* IMPLEMENT ME */
-  {video_chroma_down_vi4_guint16, 1, 0},        /* IMPLEMENT ME */
-  {video_chroma_up_vi4_cs_guint8, 1, 0},        /* IMPLEMENT ME */
-  {video_chroma_down_vi4_cs_guint8, 1, 0},      /* IMPLEMENT ME */
-  {video_chroma_up_vi4_cs_guint16, 1, 0},       /* IMPLEMENT ME */
-  {video_chroma_down_vi4_cs_guint16, 1, 0},     /* IMPLEMENT ME */
+  {video_chroma_up_vi2_u8, 4, -2},
+  {video_chroma_down_vi2_u8, 1, 0},     /* IMPLEMENT ME */
+  {video_chroma_up_vi2_u16, 4, -2},
+  {video_chroma_down_vi2_u16, 1, 0},    /* IMPLEMENT ME */
+  {video_chroma_up_vi2_cs_u8, 1, 0},    /* IMPLEMENT ME */
+  {video_chroma_down_vi2_cs_u8, 1, 0},  /* IMPLEMENT ME */
+  {video_chroma_up_vi2_cs_u16, 1, 0},   /* IMPLEMENT ME */
+  {video_chroma_down_vi2_cs_u16, 1, 0}, /* IMPLEMENT ME */
+  {video_chroma_up_vi4_u8, 1, 0},       /* IMPLEMENT ME */
+  {video_chroma_down_vi4_u8, 1, 0},     /* IMPLEMENT ME */
+  {video_chroma_up_vi4_u16, 1, 0},      /* IMPLEMENT ME */
+  {video_chroma_down_vi4_u16, 1, 0},    /* IMPLEMENT ME */
+  {video_chroma_up_vi4_cs_u8, 1, 0},    /* IMPLEMENT ME */
+  {video_chroma_down_vi4_cs_u8, 1, 0},  /* IMPLEMENT ME */
+  {video_chroma_up_vi4_cs_u16, 1, 0},   /* IMPLEMENT ME */
+  {video_chroma_down_vi4_cs_u16, 1, 0}, /* IMPLEMENT ME */
 };
 
 /**
- * gst_video_chroma_resample_new:
+ * gst_video_chroma_resample_new: (skip)
  * @method: a #GstVideoChromaMethod
  * @site: a #GstVideoChromaSite
  * @flags: #GstVideoChromaFlags
@@ -909,7 +934,7 @@ static const VertResampler v_resamplers[] = {
  * @v_factor: vertical resampling factor
  *
  * Create a new resampler object for the given parameters. When @h_factor or
- * @v_factoris > 0, upsampling will be used, otherwise subsampling is
+ * @v_factor is > 0, upsampling will be used, otherwise subsampling is
  * performed.
  *
  * Returns: a new #GstVideoChromaResample that should be freed with
@@ -941,6 +966,9 @@ gst_video_chroma_resample_new (GstVideoChromaMethod method,
     h_index =
         ((ABS (h_factor) - 1) * 8) + (cosite ? 4 : 0) + (bits ==
         16 ? 2 : 0) + (h_factor < 0 ? 1 : 0) + 1;
+
+  GST_DEBUG ("h_resample %d, factor %d, cosite %d", h_index, h_factor, cosite);
+
   cosite = (site & GST_VIDEO_CHROMA_SITE_V_COSITED ? 1 : 0);
   if (v_factor == 0)
     v_index = 0;
@@ -948,6 +976,11 @@ gst_video_chroma_resample_new (GstVideoChromaMethod method,
     v_index =
         ((ABS (v_factor) - 1) * 8) + (cosite ? 4 : 0) + (bits ==
         16 ? 2 : 0) + (v_factor < 0 ? 1 : 0) + 1;
+
+  if (flags & GST_VIDEO_CHROMA_FLAG_INTERLACED)
+    v_index += 16;
+
+  GST_DEBUG ("v_resample %d, factor %d, cosite %d", v_index, v_factor, cosite);
 
   result = g_slice_new (GstVideoChromaResample);
   result->method = method;
@@ -961,8 +994,8 @@ gst_video_chroma_resample_new (GstVideoChromaMethod method,
   result->n_lines = v_resamplers[v_index].n_lines;
   result->offset = v_resamplers[v_index].offset;
 
-  GST_DEBUG ("select resample %p %d, factor %d, "
-      "cosite %d, bits %d", result, h_index, h_factor, cosite, bits);
+  GST_DEBUG ("resample %p, bits %d, n_lines %u, offset %d", result, bits,
+      result->n_lines, result->offset);
 
   return result;
 }

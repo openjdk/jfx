@@ -174,6 +174,21 @@ struct _GstAudioEncoder {
  *                      Propose buffer allocation parameters for upstream elements.
  *                      Subclasses should chain up to the parent implementation to
  *                      invoke the default handler.
+ * @transform_meta: Optional. Transform the metadata on the input buffer to the
+ *                  output buffer. By default this method copies all meta without
+ *                  tags and meta with only the "audio" tag. subclasses can
+ *                  implement this method and return %TRUE if the metadata is to be
+ *                  copied. Since 1.6
+ * @sink_query:     Optional.
+ *                  Query handler on the sink pad. This function should
+ *                  return TRUE if the query could be performed. Subclasses
+ *                  should chain up to the parent implementation to invoke the
+ *                  default handler. Since 1.6
+ * @src_query:      Optional.
+ *                  Query handler on the source pad. This function should
+ *                  return TRUE if the query could be performed. Subclasses
+ *                  should chain up to the parent implementation to invoke the
+ *                  default handler. Since 1.6
  *
  * Subclasses can override any of the available virtual methods or not, as
  * needed. At minimum @set_format and @handle_frame needs to be overridden.
@@ -218,96 +233,147 @@ struct _GstAudioEncoderClass {
   gboolean      (*propose_allocation) (GstAudioEncoder * enc,
                                        GstQuery * query);
 
+  gboolean      (*transform_meta)     (GstAudioEncoder *enc, GstBuffer *outbuf,
+                                       GstMeta *meta, GstBuffer *inbuf);
+
+  gboolean      (*sink_query)         (GstAudioEncoder *encoder,
+                       GstQuery *query);
+
+  gboolean      (*src_query)          (GstAudioEncoder *encoder,
+                       GstQuery *query);
+
+
   /*< private >*/
-  gpointer       _gst_reserved[GST_PADDING_LARGE];
+  gpointer       _gst_reserved[GST_PADDING_LARGE-3];
 };
 
+GST_AUDIO_API
 GType           gst_audio_encoder_get_type         (void);
 
+GST_AUDIO_API
 GstFlowReturn   gst_audio_encoder_finish_frame (GstAudioEncoder * enc,
                                                 GstBuffer       * buffer,
                                                 gint              samples);
 
+GST_AUDIO_API
 GstCaps *       gst_audio_encoder_proxy_getcaps (GstAudioEncoder * enc,
                                                  GstCaps         * caps,
                                                  GstCaps         * filter);
 
+GST_AUDIO_API
 gboolean        gst_audio_encoder_set_output_format  (GstAudioEncoder    * enc,
                                                       GstCaps            * caps);
 
+GST_AUDIO_API
 gboolean        gst_audio_encoder_negotiate          (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 GstBuffer *     gst_audio_encoder_allocate_output_buffer (GstAudioEncoder * enc,
                                                           gsize             size);
 
 /* context parameters */
+
+GST_AUDIO_API
 GstAudioInfo  * gst_audio_encoder_get_audio_info (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 gint            gst_audio_encoder_get_frame_samples_min (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_frame_samples_min (GstAudioEncoder * enc, gint num);
 
+GST_AUDIO_API
 gint            gst_audio_encoder_get_frame_samples_max (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_frame_samples_max (GstAudioEncoder * enc, gint num);
 
+GST_AUDIO_API
 gint            gst_audio_encoder_get_frame_max (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_frame_max (GstAudioEncoder * enc, gint num);
 
+GST_AUDIO_API
 gint            gst_audio_encoder_get_lookahead (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_lookahead (GstAudioEncoder * enc, gint num);
 
+GST_AUDIO_API
 void            gst_audio_encoder_get_latency (GstAudioEncoder * enc,
                                                GstClockTime    * min,
                                                GstClockTime    * max);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_latency (GstAudioEncoder * enc,
                                                GstClockTime      min,
                                                GstClockTime      max);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_headers (GstAudioEncoder * enc,
                                                GList           * headers);
 
+GST_AUDIO_API
+void            gst_audio_encoder_set_allocation_caps (GstAudioEncoder * enc,
+                                                       GstCaps         * allocation_caps);
+
 /* object properties */
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_mark_granule (GstAudioEncoder * enc,
                                                     gboolean enabled);
 
+GST_AUDIO_API
 gboolean        gst_audio_encoder_get_mark_granule (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_perfect_timestamp (GstAudioEncoder * enc,
                                                          gboolean          enabled);
 
+GST_AUDIO_API
 gboolean        gst_audio_encoder_get_perfect_timestamp (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_hard_resync (GstAudioEncoder * enc,
                                                    gboolean          enabled);
 
+GST_AUDIO_API
 gboolean        gst_audio_encoder_get_hard_resync (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_tolerance (GstAudioEncoder * enc,
                                                  GstClockTime      tolerance);
 
+GST_AUDIO_API
 GstClockTime    gst_audio_encoder_get_tolerance (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_hard_min (GstAudioEncoder * enc,
                                                 gboolean enabled);
 
+GST_AUDIO_API
 gboolean        gst_audio_encoder_get_hard_min (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_set_drainable (GstAudioEncoder * enc,
                                                  gboolean enabled);
 
+GST_AUDIO_API
 gboolean        gst_audio_encoder_get_drainable (GstAudioEncoder * enc);
 
+GST_AUDIO_API
 void            gst_audio_encoder_get_allocator (GstAudioEncoder * enc,
                                                  GstAllocator ** allocator,
                                                  GstAllocationParams * params);
 
+GST_AUDIO_API
 void            gst_audio_encoder_merge_tags (GstAudioEncoder * enc,
                                               const GstTagList * tags, GstTagMergeMode mode);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioEncoder, gst_object_unref)
+#endif
 
 G_END_DECLS
 

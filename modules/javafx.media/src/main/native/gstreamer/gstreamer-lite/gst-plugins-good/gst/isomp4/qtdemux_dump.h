@@ -61,7 +61,11 @@ gboolean qtdemux_dump_cmvd (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
 gboolean qtdemux_dump_ctts (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
+gboolean qtdemux_dump_cslg (GstQTDemux * qtdemux, GstByteReader * data,
+    int depth);
 gboolean qtdemux_dump_mfro (GstQTDemux * qtdemux, GstByteReader * data,
+    int depth);
+gboolean qtdemux_dump_mfhd (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
 gboolean qtdemux_dump_tfra (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
@@ -78,6 +82,14 @@ gboolean qtdemux_dump_sdtp (GstQTDemux * qtdemux, GstByteReader * data,
 gboolean qtdemux_dump_tfdt (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
 gboolean qtdemux_dump_unknown (GstQTDemux * qtdemux, GstByteReader * data,
+    int depth);
+gboolean qtdemux_dump_svmi (GstQTDemux *qtdemux, GstByteReader *data,
+    int depth);
+gboolean qtdemux_dump_dfLa (GstQTDemux * qtdemux, GstByteReader * data,
+    int depth);
+gboolean qtdemux_dump_fLaC (GstQTDemux * qtdemux, GstByteReader * data,
+    int depth);
+gboolean qtdemux_dump_gmin (GstQTDemux * qtdemux, GstByteReader * data,
     int depth);
 
 gboolean qtdemux_node_dump (GstQTDemux * qtdemux, GNode * node);

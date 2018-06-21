@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gsttaskpool
+ * @title: GstTaskPool
  * @short_description: Pool of GStreamer streaming threads
  * @see_also: #GstTask, #GstPad
  *
@@ -139,8 +140,6 @@ gst_task_pool_class_init (GstTaskPoolClass * klass)
 static void
 gst_task_pool_init (GstTaskPool * pool)
 {
-  /* clear floating flag */
-  gst_object_ref_sink (pool);
 }
 
 #ifndef GST_DISABLE_GST_DEBUG
@@ -165,7 +164,10 @@ gst_task_pool_new (void)
 {
   GstTaskPool *pool;
 
-  pool = g_object_newv (GST_TYPE_TASK_POOL, 0, NULL);
+  pool = g_object_new (GST_TYPE_TASK_POOL, NULL);
+
+  /* clear floating flag */
+  gst_object_ref_sink (pool);
 
   return pool;
 }

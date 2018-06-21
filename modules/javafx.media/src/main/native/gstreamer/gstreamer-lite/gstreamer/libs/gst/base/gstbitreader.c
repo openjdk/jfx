@@ -29,6 +29,7 @@
 
 /**
  * SECTION:gstbitreader
+ * @title: GstBitReader
  * @short_description: Reads any number of bits from a memory buffer
  *
  * #GstBitReader provides a bit reader that can read any number of bits
@@ -37,7 +38,7 @@
  */
 
 /**
- * gst_bit_reader_new:
+ * gst_bit_reader_new: (skip)
  * @data: (array length=size): Data from which the #GstBitReader
  *   should read
  * @size: Size of @data in bytes

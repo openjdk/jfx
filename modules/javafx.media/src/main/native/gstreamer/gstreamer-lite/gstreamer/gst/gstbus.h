@@ -132,51 +132,100 @@ struct _GstBusClass
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_API
 GType                   gst_bus_get_type                (void);
 
+GST_API
 GstBus*                 gst_bus_new                     (void);
 
+GST_API
 gboolean                gst_bus_post                    (GstBus * bus, GstMessage * message);
 
+GST_API
 gboolean                gst_bus_have_pending            (GstBus * bus);
+
+GST_API
 GstMessage *            gst_bus_peek                    (GstBus * bus);
+
+GST_API
 GstMessage *            gst_bus_pop                     (GstBus * bus);
+
+GST_API
 GstMessage *            gst_bus_pop_filtered            (GstBus * bus, GstMessageType types);
+
+GST_API
 GstMessage *            gst_bus_timed_pop               (GstBus * bus, GstClockTime timeout);
+
+GST_API
 GstMessage *            gst_bus_timed_pop_filtered      (GstBus * bus, GstClockTime timeout, GstMessageType types);
+
+GST_API
 void                    gst_bus_set_flushing            (GstBus * bus, gboolean flushing);
 
 /* synchronous dispatching */
+
+GST_API
 void                    gst_bus_set_sync_handler        (GstBus * bus, GstBusSyncHandler func,
                                                          gpointer user_data, GDestroyNotify notify);
+
+/* asynchronous message notifications */
+
+GST_API
+void                    gst_bus_get_pollfd              (GstBus * bus, GPollFD *fd);
+
 /* GSource based dispatching */
+
+GST_API
 GSource *               gst_bus_create_watch            (GstBus * bus);
+
+GST_API
 guint                   gst_bus_add_watch_full          (GstBus * bus,
                                                          gint priority,
                                                          GstBusFunc func,
                                                          gpointer user_data,
                                                          GDestroyNotify notify);
+GST_API
 guint                   gst_bus_add_watch               (GstBus * bus,
                                                          GstBusFunc func,
                                                          gpointer user_data);
+GST_API
+gboolean                gst_bus_remove_watch            (GstBus * bus);
 
 /* polling the bus */
+
+GST_API
 GstMessage*             gst_bus_poll                    (GstBus *bus, GstMessageType events,
                                                          GstClockTime timeout);
 
 /* signal based dispatching helper functions. */
+
+GST_API
 gboolean                gst_bus_async_signal_func       (GstBus *bus, GstMessage *message,
                                                          gpointer data);
+GST_API
 GstBusSyncReply         gst_bus_sync_signal_handler     (GstBus *bus, GstMessage *message,
                                                          gpointer data);
 
 /* convenience api to add/remove a gsource that emits the async signals */
+
+GST_API
 void                    gst_bus_add_signal_watch        (GstBus * bus);
+
+GST_API
 void                    gst_bus_add_signal_watch_full   (GstBus * bus, gint priority);
+
+GST_API
 void                    gst_bus_remove_signal_watch     (GstBus * bus);
 
+GST_API
 void                    gst_bus_enable_sync_message_emission (GstBus * bus);
+
+GST_API
 void                    gst_bus_disable_sync_message_emission (GstBus * bus);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBus, gst_object_unref)
+#endif
 
 G_END_DECLS
 

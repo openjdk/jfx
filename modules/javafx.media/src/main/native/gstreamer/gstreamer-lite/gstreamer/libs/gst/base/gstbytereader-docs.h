@@ -520,7 +520,7 @@ gdouble gst_byte_reader_peek_float64_be_unchecked (GstByteReader * reader);
  *
  * Returns: (transfer none): a constant pointer to the current data position
  */
-const guint8 * gst_byte_reader_peek_data_unchecked (GstByteReader * reader);
+const guint8 * gst_byte_reader_peek_data_unchecked (const GstByteReader * reader);
 /**
  * gst_byte_reader_get_data_unchecked:
  * @reader: a #GstByteReader instance

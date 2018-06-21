@@ -150,18 +150,22 @@ gst_core_audio_io_proc_stop (GstCoreAudio * core_audio)
 }
 
 AudioBufferList *
-buffer_list_alloc (int channels, int size)
+buffer_list_alloc (UInt32 channels, UInt32 size, gboolean interleaved)
 {
   AudioBufferList *list;
-  int total_size;
-  int n;
+  gsize list_size;
+  UInt32 num_buffers, n;
 
-  total_size = sizeof (AudioBufferList) + 1 * sizeof (AudioBuffer);
-  list = (AudioBufferList *) g_malloc (total_size);
+  num_buffers = interleaved ? 1 : channels;
+  /* AudioBufferList member mBuffers is variable-length array */
+  list_size = G_STRUCT_OFFSET (AudioBufferList, mBuffers[num_buffers]);
+  list = (AudioBufferList *) g_malloc (list_size);
 
-  list->mNumberBuffers = 1;
-  for (n = 0; n < (int) list->mNumberBuffers; ++n) {
-    list->mBuffers[n].mNumberChannels = channels;
+  list->mNumberBuffers = num_buffers;
+  for (n = 0; n < num_buffers; ++n) {
+    /* See http://lists.apple.com/archives/coreaudio-api/2015/Feb/msg00027.html */
+    list->mBuffers[n].mNumberChannels = interleaved ? channels : 1;
+    /* AudioUnitRender will keep overwriting mDataByteSize */
     list->mBuffers[n].mDataByteSize = size;
     list->mBuffers[n].mData = g_malloc (size);
   }
@@ -172,11 +176,13 @@ buffer_list_alloc (int channels, int size)
 void
 buffer_list_free (AudioBufferList * list)
 {
-  int n;
+  UInt32 n;
 
-  for (n = 0; n < (int) list->mNumberBuffers; ++n) {
-    if (list->mBuffers[n].mData)
-      g_free (list->mBuffers[n].mData);
+  if (list == NULL)
+    return;
+
+  for (n = 0; n < list->mNumberBuffers; ++n) {
+    g_free (list->mBuffers[n].mData);
   }
 
   g_free (list);
@@ -208,39 +214,67 @@ audiounit_error:
   return FALSE;
 }
 
-gboolean
-gst_core_audio_set_channels_layout (GstCoreAudio * core_audio,
-    gint channels, GstCaps * caps)
+static gboolean
+_core_audio_set_property (GstCoreAudio * core_audio, AudioUnitPropertyID inID,
+    void *inData, UInt32 inDataSize)
 {
-  /* Configure the output stream and allocate ringbuffer memory */
-  AudioChannelLayout *layout = NULL;
   OSStatus status;
-  int layoutSize, element, i;
   AudioUnitScope scope;
-  GstStructure *structure;
-  GstAudioChannelPosition *positions = NULL;
-  guint64 channel_mask;
+  AudioUnitElement element;
 
-  /* Describe channels */
-  layoutSize = sizeof (AudioChannelLayout) +
-      channels * sizeof (AudioChannelDescription);
-  layout = g_malloc (layoutSize);
+  scope = CORE_AUDIO_INNER_SCOPE (core_audio);
+  element = CORE_AUDIO_ELEMENT (core_audio);
 
-  structure = gst_caps_get_structure (caps, 0);
-  if (gst_structure_get (structure, "channel-mask", GST_TYPE_BITMASK,
-          &channel_mask, NULL)) {
-    positions = g_new (GstAudioChannelPosition, channels);
-    gst_audio_channel_positions_from_mask (channels, channel_mask, positions);
+  status =
+      AudioUnitSetProperty (core_audio->audiounit, inID, scope, element, inData,
+      inDataSize);
+
+  if (status != noErr) {
+    GST_WARNING_OBJECT (core_audio->osxbuf,
+        "Failed to set Audio Unit property: %d", (int) status);
+    return FALSE;;
   }
 
+  return TRUE;
+}
+
+/* The AudioUnit must be uninitialized before calling this */
+gboolean
+gst_core_audio_set_channel_layout (GstCoreAudio * core_audio,
+    gint channels, GstCaps * caps)
+{
+  AudioChannelLayout *layout = NULL;
+  gboolean ret;
+  gsize layoutSize;
+  gint i;
+  GstStructure *structure;
+  GstAudioChannelPosition positions[GST_OSX_AUDIO_MAX_CHANNEL];
+  guint64 channel_mask;
+
+  g_return_val_if_fail (channels <= GST_OSX_AUDIO_MAX_CHANNEL, FALSE);
+
+  /* Determine the channel positions */
+  structure = gst_caps_get_structure (caps, 0);
+  channel_mask = 0;
+  gst_structure_get (structure, "channel-mask", GST_TYPE_BITMASK, &channel_mask,
+      NULL);
+
+  if (channel_mask != 0)
+    gst_audio_channel_positions_from_mask (channels, channel_mask, positions);
+
+  /* AudioChannelLayout member mChannelDescriptions is variable-length array */
+  layoutSize =
+      G_STRUCT_OFFSET (AudioChannelLayout, mChannelDescriptions[channels]);
+  layout = g_malloc (layoutSize);
+
+  /* Fill out the AudioChannelLayout */
   layout->mChannelLayoutTag = kAudioChannelLayoutTag_UseChannelDescriptions;
   layout->mChannelBitmap = 0;   /* Not used */
   layout->mNumberChannelDescriptions = channels;
   for (i = 0; i < channels; i++) {
-    if (positions) {
+    if (channel_mask != 0) {
       layout->mChannelDescriptions[i].mChannelLabel =
-          gst_audio_channel_position_to_coreaudio_channel_label (positions[i],
-          i);
+          gst_audio_channel_position_to_core_audio (positions[i], i);
     } else {
       /* Discrete channel numbers are ORed into this */
       layout->mChannelDescriptions[i].mChannelLabel =
@@ -248,61 +282,31 @@ gst_core_audio_set_channels_layout (GstCoreAudio * core_audio,
     }
 
     /* Others unused */
-    layout->mChannelDescriptions[i].mChannelFlags = 0;
+    layout->mChannelDescriptions[i].mChannelFlags = kAudioChannelFlags_AllOff;
     layout->mChannelDescriptions[i].mCoordinates[0] = 0.f;
     layout->mChannelDescriptions[i].mCoordinates[1] = 0.f;
     layout->mChannelDescriptions[i].mCoordinates[2] = 0.f;
   }
 
-  if (positions) {
-    g_free (positions);
-    positions = NULL;
-  }
-
-  scope = core_audio->is_src ? kAudioUnitScope_Output : kAudioUnitScope_Input;
-  element = core_audio->is_src ? 1 : 0;
-
-  if (layoutSize) {
-    status = AudioUnitSetProperty (core_audio->audiounit,
-        kAudioUnitProperty_AudioChannelLayout,
-        scope, element, layout, layoutSize);
-    if (status) {
-      GST_WARNING_OBJECT (core_audio->osxbuf,
-          "Failed to set output channel layout: %d", (int) status);
-      return FALSE;
-    }
-  }
+  /* Sets GStreamer-ordered channel layout on the inner scope.
+   * Reordering between the inner scope and outer scope is handled
+   * by the Audio Unit itself. */
+  ret = _core_audio_set_property (core_audio,
+      kAudioUnitProperty_AudioChannelLayout, layout, layoutSize);
 
   g_free (layout);
-  return TRUE;
+  return ret;
 }
 
+/* The AudioUnit must be uninitialized before calling this */
 gboolean
 gst_core_audio_set_format (GstCoreAudio * core_audio,
     AudioStreamBasicDescription format)
 {
-  /* Configure the output stream and allocate ringbuffer memory */
-  OSStatus status;
-  UInt32 propertySize;
-  int element;
-  AudioUnitScope scope;
-
   GST_DEBUG_OBJECT (core_audio->osxbuf, "Setting format for AudioUnit");
 
-  scope = core_audio->is_src ? kAudioUnitScope_Output : kAudioUnitScope_Input;
-  element = core_audio->is_src ? 1 : 0;
-
-  propertySize = sizeof (AudioStreamBasicDescription);
-  status = AudioUnitSetProperty (core_audio->audiounit,
-      kAudioUnitProperty_StreamFormat, scope, element, &format, propertySize);
-
-  if (status) {
-    GST_WARNING_OBJECT (core_audio->osxbuf,
-        "Failed to set audio description: %d", (int) status);
-    return FALSE;;
-  }
-
-  return TRUE;
+  return _core_audio_set_property (core_audio, kAudioUnitProperty_StreamFormat,
+      &format, sizeof (AudioStreamBasicDescription));
 }
 
 gboolean
@@ -370,14 +374,10 @@ gst_core_audio_open_device (GstCoreAudio * core_audio, OSType sub_type,
 }
 
 AudioChannelLabel
-gst_audio_channel_position_to_coreaudio_channel_label (GstAudioChannelPosition
+gst_audio_channel_position_to_core_audio (GstAudioChannelPosition
     position, int channel)
 {
   switch (position) {
-    case GST_AUDIO_CHANNEL_POSITION_NONE:
-      return kAudioChannelLabel_Discrete_0 | channel;
-    case GST_AUDIO_CHANNEL_POSITION_MONO:
-      return kAudioChannelLabel_Mono;
     case GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT:
       return kAudioChannelLabel_Left;
     case GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT:
@@ -392,16 +392,138 @@ gst_audio_channel_position_to_coreaudio_channel_label (GstAudioChannelPosition
       return kAudioChannelLabel_LFEScreen;
     case GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER:
       return kAudioChannelLabel_Center;
-    case GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER:
-      return kAudioChannelLabel_Center; // ???
-    case GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER:
-      return kAudioChannelLabel_Center; // ???
     case GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT:
       return kAudioChannelLabel_LeftSurroundDirect;
     case GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT:
       return kAudioChannelLabel_RightSurroundDirect;
+    case GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER:
+      return kAudioChannelLabel_LeftCenter;
+    case GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER:
+      return kAudioChannelLabel_RightCenter;
+    case GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT:
+      return kAudioChannelLabel_TopBackLeft;
+    case GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER:
+      return kAudioChannelLabel_TopBackCenter;
+    case GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT:
+      return kAudioChannelLabel_TopBackRight;
+    case GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT:
+      return kAudioChannelLabel_LeftWide;
+    case GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT:
+      return kAudioChannelLabel_RightWide;
+    case GST_AUDIO_CHANNEL_POSITION_LFE2:
+      return kAudioChannelLabel_LFE2;
+    case GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT:
+      return kAudioChannelLabel_VerticalHeightLeft;
+    case GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT:
+      return kAudioChannelLabel_VerticalHeightRight;
+    case GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER:
+      return kAudioChannelLabel_VerticalHeightCenter;
+
+      /* Special position values */
+    case GST_AUDIO_CHANNEL_POSITION_NONE:
+      return kAudioChannelLabel_Discrete_0 | channel;
+    case GST_AUDIO_CHANNEL_POSITION_MONO:
+      return kAudioChannelLabel_Mono;
+
+      /* Following positions are unmapped --
+       * i.e. mapped to kAudioChannelLabel_Unknown: */
+    case GST_AUDIO_CHANNEL_POSITION_TOP_CENTER:
+    case GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_LEFT:
+    case GST_AUDIO_CHANNEL_POSITION_TOP_SIDE_RIGHT:
+    case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_CENTER:
+    case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_LEFT:
+    case GST_AUDIO_CHANNEL_POSITION_BOTTOM_FRONT_RIGHT:
+    case GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT:
+    case GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT:
     default:
       return kAudioChannelLabel_Unknown;
+  }
+}
+
+/* Performs a best-effort conversion. 'channel' is used for warnings only. */
+GstAudioChannelPosition
+gst_core_audio_channel_label_to_gst (AudioChannelLabel label,
+    int channel, gboolean warn)
+{
+  switch (label) {
+    case kAudioChannelLabel_Left:
+      return GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+    case kAudioChannelLabel_Right:
+      return GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+    case kAudioChannelLabel_Center:
+      return GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER;
+    case kAudioChannelLabel_LFEScreen:
+      return GST_AUDIO_CHANNEL_POSITION_LFE1;
+    case kAudioChannelLabel_LeftSurround:
+      return GST_AUDIO_CHANNEL_POSITION_REAR_LEFT;
+    case kAudioChannelLabel_RightSurround:
+      return GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT;
+    case kAudioChannelLabel_LeftSurroundDirect:
+      return GST_AUDIO_CHANNEL_POSITION_SIDE_LEFT;
+    case kAudioChannelLabel_RightSurroundDirect:
+      return GST_AUDIO_CHANNEL_POSITION_SIDE_RIGHT;
+    case kAudioChannelLabel_CenterSurround:
+      return GST_AUDIO_CHANNEL_POSITION_REAR_CENTER;
+    case kAudioChannelLabel_LeftCenter:
+      return GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT_OF_CENTER;
+    case kAudioChannelLabel_RightCenter:
+      return GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT_OF_CENTER;
+    case kAudioChannelLabel_TopBackLeft:
+      return GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT;
+    case kAudioChannelLabel_TopBackCenter:
+      return GST_AUDIO_CHANNEL_POSITION_TOP_REAR_CENTER;
+    case kAudioChannelLabel_TopBackRight:
+      return GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT;
+    case kAudioChannelLabel_LeftWide:
+      return GST_AUDIO_CHANNEL_POSITION_WIDE_LEFT;
+    case kAudioChannelLabel_RightWide:
+      return GST_AUDIO_CHANNEL_POSITION_WIDE_RIGHT;
+    case kAudioChannelLabel_LFE2:
+      return GST_AUDIO_CHANNEL_POSITION_LFE2;
+    case kAudioChannelLabel_VerticalHeightLeft:
+      return GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT;
+    case kAudioChannelLabel_VerticalHeightRight:
+      return GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT;
+    case kAudioChannelLabel_VerticalHeightCenter:
+      return GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_CENTER;
+
+      /* Special position values */
+
+    case kAudioChannelLabel_Mono:
+      /* GST_AUDIO_CHANNEL_POSITION_MONO is only for 1-channel layouts */
+      return GST_AUDIO_CHANNEL_POSITION_INVALID;
+    case kAudioChannelLabel_Discrete:
+      return GST_AUDIO_CHANNEL_POSITION_NONE;
+
+      /*
+         Following labels are unmapped --
+         i.e. mapped to GST_AUDIO_CHANNEL_POSITION_INVALID:
+       */
+    case kAudioChannelLabel_RearSurroundLeft:
+    case kAudioChannelLabel_RearSurroundRight:
+    case kAudioChannelLabel_TopCenterSurround:
+    case kAudioChannelLabel_LeftTotal:
+    case kAudioChannelLabel_RightTotal:
+    case kAudioChannelLabel_HearingImpaired:
+    case kAudioChannelLabel_Narration:
+    case kAudioChannelLabel_DialogCentricMix:
+    case kAudioChannelLabel_CenterSurroundDirect:
+    case kAudioChannelLabel_Haptic:
+    default:
+      if (label >> 16 != 0) {   /* kAudioChannelLabel_Discrete_N */
+        /* no way to store discrete channel order */
+        if (warn)
+          GST_WARNING
+              ("Core Audio channel %u labeled kAudioChannelLabel_Discrete_%u -- discrete order will be lost",
+              channel, ((unsigned int) label) & 0xFFFF);
+        return GST_AUDIO_CHANNEL_POSITION_NONE;
+      } else {
+        if (warn)
+          GST_WARNING
+              ("Core Audio channel %u has unsupported label %d and will be skipped",
+              channel, (int) label);
+        return GST_AUDIO_CHANNEL_POSITION_INVALID;
+      }
   }
 }
 

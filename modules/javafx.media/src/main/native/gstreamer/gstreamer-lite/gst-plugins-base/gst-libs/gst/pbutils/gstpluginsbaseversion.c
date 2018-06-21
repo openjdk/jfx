@@ -19,6 +19,7 @@
 
 /**
  * SECTION:gstpluginsbaseversion
+ * @title: Version
  * @short_description: GStreamer gst-plugins-base libraries version macros.
  *
  * Use the GST_PLUGINS_BASE_VERSION_* macros e.g. to check what version of

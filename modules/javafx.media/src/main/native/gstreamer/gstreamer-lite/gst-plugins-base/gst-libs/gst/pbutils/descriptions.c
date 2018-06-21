@@ -19,21 +19,18 @@
 
 /**
  * SECTION:gstpbutilsdescriptions
+ * @title: Descriptions
  * @short_description: Provides human-readable descriptions for caps/codecs
  * and encoder, decoder, URI source and URI sink elements
  *
- * <refsect2>
- * <para>
  * The above functions provide human-readable strings for media formats
  * and decoder/demuxer/depayloader/encoder/muxer/payloader elements for use
  * in error dialogs or other messages shown to users.
- * </para>
- * <para>
+ *
  * gst_pb_utils_add_codec_description_to_tag_list() is a utility function
  * for demuxer and decoder elements to add audio/video codec tags from a
  * given (fixed) #GstCaps.
- * </para>
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -134,6 +131,8 @@ static const FormatInfo formats[] = {
   {"audio/x-amr-wb-sh", "Adaptive Multi Rate WideBand (AMR-WB)",
       AUDIO_CONTAINER, "amr"},
   {"audio/x-au", "Sun .au", AUDIO_CONTAINER, "au"},
+  {"audio/x-audible", "Audible Audio", AUDIO_CONTAINER, "aa"},
+  {"audio/x-caf", "Apple Core Audio Format", AUDIO_CONTAINER, "caf"},
   {"audio/x-celt", "Constrained Energy Lapped Transform (CELT)", FLAG_AUDIO,
       ""},
   {"audio/x-cinepak", "Cinepak Audio", FLAG_AUDIO, ""},
@@ -193,11 +192,11 @@ static const FormatInfo formats[] = {
   {"video/x-apple-video", "Apple video", FLAG_VIDEO, ""},
   {"video/x-aasc", "Autodesk Animator", FLAG_VIDEO, ""},
   {"video/x-camtasia", "TechSmith Camtasia", FLAG_VIDEO, ""},
+  {"video/x-cavs", "Chinese AVS (CAVS)", FLAG_VIDEO, ""},
   {"video/x-cdxa", "RIFF/CDXA (VCD)", AV_CONTAINER, ""},
   {"video/x-cinepak", "Cinepak Video", FLAG_VIDEO, ""},
   {"video/x-cirrus-logic-accupak", "Cirrus Logipak AccuPak", FLAG_VIDEO, ""},
   {"video/x-compressed-yuv", N_("CYUV Lossless"), FLAG_VIDEO, ""},
-  {"video/x-dirac", "Dirac", FLAG_VIDEO, ""},
   {"video/x-dnxhd", "Digital Nonlinear Extensible High Definition (DNxHD)",
       FLAG_VIDEO, ""},
   {"subpicture/x-dvd", "DVD subpicture", FLAG_VIDEO, ""},
@@ -286,8 +285,10 @@ static const FormatInfo formats[] = {
   {"application/x-teletext", "Teletext", 0, ""},
   {"application/x-kate", "Kate", 0, ""},
   {"subtitle/x-kate", N_("Kate subtitle format"), FLAG_SUB, ""},
+  {"application/x-subtitle-vtt", N_("WebVTT subtitle format"), FLAG_SUB, ""},
   {"subpicture/x-dvb", "DVB subtitles", FLAG_SUB, ""},
   {"subpicture/x-pgs", "PGS subtitles", FLAG_SUB, ""},
+  {"subpicture/x-xsub", "XSUB subtitles", FLAG_SUB, ""},
 
   /* non-audio/video/container formats */
   {"hdv/aux-v", "HDV AUX-V", 0, ""},
@@ -304,6 +305,7 @@ static const FormatInfo formats[] = {
   {"video/mpeg", NULL, FLAG_VIDEO, ""},
   {"video/x-asus", NULL, FLAG_VIDEO, ""},
   {"video/x-ati-vcr", NULL, FLAG_VIDEO, ""},
+  {"video/x-dirac", NULL, FLAG_VIDEO, ""},
   {"video/x-divx", NULL, FLAG_VIDEO, ""},
   {"video/x-dv", "Digital Video (DV) System Stream",
       FLAG_CONTAINER | FLAG_SYSTEMSTREAM, "dv"},
@@ -354,6 +356,102 @@ static const FormatInfo formats[] = {
 };
 #endif // GSTREAMER_LITE
 
+static const gchar *
+pbutils_desc_get_profile_name_from_nick (const gchar * map, gsize map_len,
+    const gchar * nick)
+{
+  const gchar *end = map + map_len;
+  const gchar *p;
+
+  p = map;
+  while (*p != '\0' && p < end) {
+    guint len = strlen (p);
+
+    if (strcmp (p, nick) == 0)
+      return p + len + 1;
+    p += len + 1;
+    p += strlen (p) + 1;
+  }
+  return NULL;
+}
+
+static const gchar *
+pbutils_desc_get_mpeg2v_profile_name_from_nick (const gchar * nick)
+{
+  static const gchar map[] =
+      "simple\000Simple\000main\000Main\000high\000High\000";
+
+  return pbutils_desc_get_profile_name_from_nick (map, sizeof (map), nick);
+}
+
+static const gchar *
+pbutils_desc_get_mpeg4v_profile_name_from_nick (const gchar * nick)
+{
+  static const gchar map[] = "simple\000Simple\000"
+      "simple-scalable\000Simple Scalable\000"
+      "core\000Core\000"
+      "main\000Main\000"
+      "n-bit\000N-bit\000"
+      "scalable\000Scalable\000"
+      "hybrid\000Hybrid\000"
+      "advanced-real-time-simple\000Advanced Real-Time Simple\000"
+      "core-scalable\000Core-Scalable\000"
+      "advanced-coding-efficiency\000Advanced Coding Efficiency\000"
+      "advanced-core\000Advanced Core\000"
+      "advanced-scalable-texture\000Advanced Scalable Texture\000"
+      "simple-face\000Simple Face Animation\000"
+      "simple-fba\000Simple FBA\000"
+      "simple-studio\000Simple Studio\000"
+      "core-studio\000Core Studio\000"
+      "advanced-simple\000Advanced Simple\000"
+      "fine-granularity-scalable\000Fine Granularity Scalable\000"
+      "basic-animated-texture\000Basic Animated Texture\000"
+      "baseline\000Baseline Profile\000";
+
+  return pbutils_desc_get_profile_name_from_nick (map, sizeof (map), nick);
+}
+
+static const gchar *
+pbutils_desc_get_h264_profile_name_from_nick (const gchar * nick)
+{
+  static const gchar map[] = "baseline\000Baseline\000"
+      "constrained-baseline\000Constrained Baseline\000"
+      "main\000Main\000"
+      "extended\000Extended\000"
+      "high\000High\000"
+      "high-10-intra\000High 10 Intra\000"
+      "high-10\000High 10\000"
+      "high-4:2:2-intra\000High 4:2:2 Intra\000"
+      "high-4:2:2\000High 4:2:2\000"
+      "high-4:4:4-intra\000High 4:4:4 Intra\000"
+      "high-4:4:4\000High 4:4:4\000"
+      "cavlc-4:4:4-intra\000CAVLC 4:4:4 Intra\000"
+      "multiview-high\000Multiview High\000"
+      "stereo-high\000Stereo High\000"
+      "scalable-constrained-baseline\000Scalable Constrained Baseline\000"
+      "scalable-baseline\000Scalable Baseline\000"
+      "scalable-high\000Scalable High\000";
+
+  return pbutils_desc_get_profile_name_from_nick (map, sizeof (map), nick);
+}
+
+static const gchar *
+pbutils_desc_get_h265_profile_name_from_nick (const gchar * nick)
+{
+  static const gchar map[] = "main\000Main\000"
+      "main-10\000Main 10\000"
+      "main-12\000Main 12\000"
+      "main-4:2:2-10\000Main 4:2:2 10\000"
+      "main-4:2:2-12\000Main 4:2:2 12\000"
+      "main-4:4:4\000Main 4:4:4\000"
+      "main-4:4:4-10\000Main 4:4:4 10\000"
+      "main-4:4:4-12\000Main 4:4:4 12\000"
+      "main-4:4:4-16-intra\000Main 4:4:4 16 Intra\000"
+      "main-still-picture\000Main Still Picture\000";
+
+  return pbutils_desc_get_profile_name_from_nick (map, sizeof (map), nick);
+}
+
 /* returns static descriptions and dynamic ones (such as video/x-raw),
  * or NULL if caps aren't known at all */
 static gchar *
@@ -362,6 +460,8 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
   const GstStructure *s;
 
   g_assert (info != NULL);
+
+  gst_pb_utils_init_locale_text_domain ();
 
   if (info->desc != NULL)
     return g_strdup (_(info->desc));
@@ -457,6 +557,7 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
     return g_strdup (ret);
   } else if (strcmp (info->type, "video/x-h264") == 0) {
     const gchar *variant, *ret;
+    const gchar *profile;
 
     variant = gst_structure_get_string (s, "variant");
     if (variant == NULL)
@@ -471,10 +572,34 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
       GST_WARNING ("Unknown H264 variant '%s'", variant);
       ret = "H.264";
     }
+    /* profile */
+    profile = gst_structure_get_string (s, "profile");
+    if (profile != NULL)
+      profile = pbutils_desc_get_h264_profile_name_from_nick (profile);
+    if (profile == NULL)
     return g_strdup (ret);
+    return g_strdup_printf ("%s (%s Profile)", ret, profile);
   } else if (strcmp (info->type, "video/x-h265") == 0) {
-    /* TODO: Any variants? */
+    const gchar *profile = gst_structure_get_string (s, "profile");
+
+    if (profile != NULL)
+      profile = pbutils_desc_get_h265_profile_name_from_nick (profile);
+    if (profile != NULL)
+      return g_strdup_printf ("H.265 (%s Profile)", profile);
+
     return g_strdup ("H.265");
+  } else if (strcmp (info->type, "video/x-dirac") == 0) {
+    const gchar *profile = gst_structure_get_string (s, "profile");
+    if (profile == NULL)
+      return g_strdup ("Dirac");
+    if (strcmp (profile, "vc2-low-delay") == 0)
+      return g_strdup_printf ("Dirac (%s)", "VC-2 Low Delay Profile");
+    else if (strcmp (profile, "vc2-simple") == 0)
+      return g_strdup_printf ("Dirac (%s)", "VC-2 Simple Profile");
+    else if (strcmp (profile, "vc2-main") == 0)
+      return g_strdup_printf ("Dirac (%s)", "VC-2 Main Profile");
+    else
+      return g_strdup ("Dirac");
   } else if (strcmp (info->type, "video/x-divx") == 0) {
     gint ver = 0;
 
@@ -701,6 +826,18 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
       if (sysstream) {
         return g_strdup_printf ("MPEG-%d System Stream", ver);
       } else {
+        const gchar *profile = gst_structure_get_string (s, "profile");
+        if (profile != NULL) {
+          if (ver == 4)
+            profile = pbutils_desc_get_mpeg4v_profile_name_from_nick (profile);
+          else if (ver == 2)
+            profile = pbutils_desc_get_mpeg2v_profile_name_from_nick (profile);
+          else
+            profile = NULL;
+        }
+        if (profile != NULL)
+          return g_strdup_printf ("MPEG-%d Video (%s Profile)", ver, profile);
+        else
         return g_strdup_printf ("MPEG-%d Video", ver);
       }
     }
@@ -822,6 +959,8 @@ gst_pb_utils_get_source_description (const gchar * protocol)
 
   g_return_val_if_fail (protocol != NULL, NULL);
 
+  gst_pb_utils_init_locale_text_domain ();
+
   if (strcmp (protocol, "cdda") == 0)
     return g_strdup (_("Audio CD source"));
 
@@ -911,6 +1050,8 @@ gst_pb_utils_get_decoder_description (const GstCaps * caps)
 
   g_return_val_if_fail (gst_caps_is_fixed (tmp), NULL);
 
+  gst_pb_utils_init_locale_text_domain ();
+
   /* special-case RTP caps */
   if (caps_are_rtp_caps (tmp, "video", &str)) {
     ret = g_strdup_printf (_("%s video RTP depayloader"), str);
@@ -961,6 +1102,7 @@ gst_pb_utils_get_encoder_description (const GstCaps * caps)
   g_return_val_if_fail (GST_IS_CAPS (caps), NULL);
   tmp = copy_and_clean_caps (caps);
   g_return_val_if_fail (gst_caps_is_fixed (tmp), NULL);
+  gst_pb_utils_init_locale_text_domain ();
 
   /* special-case RTP caps */
   if (caps_are_rtp_caps (tmp, "video", &str)) {
@@ -1008,6 +1150,8 @@ gst_pb_utils_get_element_description (const gchar * factory_name)
   gchar *ret;
 
   g_return_val_if_fail (factory_name != NULL, NULL);
+
+  gst_pb_utils_init_locale_text_domain ();
 
   ret = g_strdup_printf (_("GStreamer element %s"), factory_name);
   if (ret && g_str_has_prefix (ret, factory_name))

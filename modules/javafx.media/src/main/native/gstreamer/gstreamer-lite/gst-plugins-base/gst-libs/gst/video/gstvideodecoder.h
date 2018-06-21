@@ -40,8 +40,9 @@ G_BEGIN_DECLS
   (G_TYPE_INSTANCE_GET_CLASS((obj),GST_TYPE_VIDEO_DECODER,GstVideoDecoderClass))
 #define GST_IS_VIDEO_DECODER(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_VIDEO_DECODER))
-#define GST_IS_VIDEO_DECODER_CLASS(obj) \
+#define GST_IS_VIDEO_DECODER_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_TYPE((klass),GST_TYPE_VIDEO_DECODER))
+#define GST_VIDEO_DECODER_CAST(obj) ((GstVideoDecoder *)(obj))
 
 /**
  * GST_VIDEO_DECODER_SINK_NAME:
@@ -116,6 +117,8 @@ typedef struct _GstVideoDecoderPrivate GstVideoDecoderPrivate;
 
 
 /* do not use this one, use macro below */
+
+GST_VIDEO_API
 GstFlowReturn _gst_video_decoder_error (GstVideoDecoder *dec, gint weight,
                                              GQuark domain, gint code,
                                              gchar *txt, gchar *debug,
@@ -187,7 +190,7 @@ struct _GstVideoDecoder
   GstVideoDecoderPrivate *priv;
 
   /*< private >*/
-  void             *padding[GST_PADDING_LARGE];
+  gpointer padding[GST_PADDING_LARGE];
 };
 
 /**
@@ -214,8 +217,12 @@ struct _GstVideoDecoder
  * @handle_frame:   Provides input data frame to subclass.
  * @finish:         Optional.
  *                  Called to request subclass to dispatch any pending remaining
- *                  data (e.g. at EOS or segment end). Sub-classes should be prepared
- *                  to handle new data afterward, or seamless segment processing will break.
+ *                  data at EOS. Sub-classes can refuse to decode new data after.
+ * @drain:      Optional.
+ *                  Called to request subclass to decode any data it can at this
+ *                  point, but that more data may arrive after. (e.g. at segment end).
+ *                  Sub-classes should be prepared to handle new data afterward,
+ *                  or seamless segment processing will break. Since: 1.6
  * @sink_event:     Optional.
  *                  Event handler on the sink pad. This function should return
  *                  TRUE if the event was handled and should be discarded
@@ -255,6 +262,16 @@ struct _GstVideoDecoder
  *                  return TRUE if the query could be performed. Subclasses
  *                  should chain up to the parent implementation to invoke the
  *                  default handler. Since 1.4
+ * @getcaps:        Optional.
+ *                  Allows for a custom sink getcaps implementation.
+ *                  If not implemented, default returns
+ *                  gst_video_decoder_proxy_getcaps
+ *                  applied to sink template caps.
+ * @transform_meta: Optional. Transform the metadata on the input buffer to the
+ *                  output buffer. By default this method is copies all meta without
+ *                  tags and meta with only the "video" tag. subclasses can
+ *                  implement this method and return %TRUE if the metadata is to be
+ *                  copied. Since 1.6
  *
  * Subclasses can override any of the available virtual methods or not, as
  * needed. At minimum @handle_frame needs to be overridden, and @set_format
@@ -311,91 +328,153 @@ struct _GstVideoDecoderClass
   gboolean      (*src_query)      (GstVideoDecoder *decoder,
                    GstQuery *query);
 
+  GstCaps*      (*getcaps)        (GstVideoDecoder *decoder,
+                                   GstCaps *filter);
+
+  GstFlowReturn (*drain)          (GstVideoDecoder *decoder);
+
+  gboolean      (*transform_meta) (GstVideoDecoder *decoder,
+                                   GstVideoCodecFrame *frame,
+                                   GstMeta * meta);
 
   /*< private >*/
-  void         *padding[GST_PADDING_LARGE-3];
+  gpointer padding[GST_PADDING_LARGE-6];
 };
 
+GST_VIDEO_API
 GType    gst_video_decoder_get_type (void);
 
 /* Context parameters */
+
+GST_VIDEO_API
 void     gst_video_decoder_set_packetized (GstVideoDecoder * decoder,
                        gboolean packetized);
 
+GST_VIDEO_API
 gboolean gst_video_decoder_get_packetized (GstVideoDecoder * decoder);
 
+GST_VIDEO_API
 void     gst_video_decoder_set_estimate_rate (GstVideoDecoder * dec,
                           gboolean          enabled);
 
+GST_VIDEO_API
 gint     gst_video_decoder_get_estimate_rate (GstVideoDecoder * dec);
 
+GST_VIDEO_API
 void     gst_video_decoder_set_max_errors (GstVideoDecoder * dec,
                        gint              num);
 
+GST_VIDEO_API
 gint     gst_video_decoder_get_max_errors (GstVideoDecoder * dec);
 
+GST_VIDEO_API
 void     gst_video_decoder_set_needs_format (GstVideoDecoder * dec,
                                              gboolean enabled);
 
+GST_VIDEO_API
 gboolean gst_video_decoder_get_needs_format (GstVideoDecoder * dec);
 
+GST_VIDEO_API
 void     gst_video_decoder_set_latency (GstVideoDecoder *decoder,
                     GstClockTime min_latency,
                     GstClockTime max_latency);
+
+GST_VIDEO_API
 void     gst_video_decoder_get_latency (GstVideoDecoder *decoder,
                     GstClockTime *min_latency,
                     GstClockTime *max_latency);
 
+GST_VIDEO_API
 void     gst_video_decoder_get_allocator (GstVideoDecoder *decoder,
                                           GstAllocator **allocator,
                                           GstAllocationParams *params);
+
+GST_VIDEO_API
 GstBufferPool *gst_video_decoder_get_buffer_pool (GstVideoDecoder *decoder);
 
 /* Object methods */
 
+GST_VIDEO_API
 GstVideoCodecFrame *gst_video_decoder_get_frame        (GstVideoDecoder *decoder,
                                 int frame_number);
 
+GST_VIDEO_API
 GstVideoCodecFrame *gst_video_decoder_get_oldest_frame (GstVideoDecoder *decoder);
 
+GST_VIDEO_API
 GList *             gst_video_decoder_get_frames       (GstVideoDecoder *decoder);
 
 /* Parsing related methods */
+
+GST_VIDEO_API
 void           gst_video_decoder_add_to_frame     (GstVideoDecoder *decoder,
                            int n_bytes);
+
+GST_VIDEO_API
 GstFlowReturn  gst_video_decoder_have_frame       (GstVideoDecoder *decoder);
+
+GST_VIDEO_API
 gsize          gst_video_decoder_get_pending_frame_size (GstVideoDecoder *decoder);
 
+GST_VIDEO_API
 GstBuffer     *gst_video_decoder_allocate_output_buffer (GstVideoDecoder * decoder);
 
+GST_VIDEO_API
+GstFlowReturn  gst_video_decoder_allocate_output_frame_with_params (GstVideoDecoder *decoder,
+                                                                    GstVideoCodecFrame * frame,
+                                                                    GstBufferPoolAcquireParams *params);
+
+GST_VIDEO_API
 GstFlowReturn  gst_video_decoder_allocate_output_frame  (GstVideoDecoder *decoder,
                                  GstVideoCodecFrame *frame);
 
+GST_VIDEO_API
 GstVideoCodecState *gst_video_decoder_set_output_state (GstVideoDecoder *decoder,
                             GstVideoFormat fmt, guint width, guint height,
                             GstVideoCodecState *reference);
 
+GST_VIDEO_API
 GstVideoCodecState *gst_video_decoder_get_output_state (GstVideoDecoder *decoder);
 
+GST_VIDEO_API
 gboolean         gst_video_decoder_negotiate           (GstVideoDecoder * decoder);
 
+GST_VIDEO_API
 GstClockTimeDiff gst_video_decoder_get_max_decode_time (GstVideoDecoder *decoder,
                             GstVideoCodecFrame *frame);
 
+GST_VIDEO_API
 gdouble          gst_video_decoder_get_qos_proportion (GstVideoDecoder * decoder);
 
+GST_VIDEO_API
 GstFlowReturn    gst_video_decoder_finish_frame (GstVideoDecoder *decoder,
                          GstVideoCodecFrame *frame);
 
+GST_VIDEO_API
 GstFlowReturn    gst_video_decoder_drop_frame (GstVideoDecoder *dec,
                            GstVideoCodecFrame *frame);
 
+GST_VIDEO_API
 void             gst_video_decoder_release_frame (GstVideoDecoder * dec,
                           GstVideoCodecFrame * frame);
 
+GST_VIDEO_API
 void             gst_video_decoder_merge_tags (GstVideoDecoder *decoder,
                                                const GstTagList *tags,
                                                GstTagMergeMode mode);
+
+GST_VIDEO_API
+GstCaps *        gst_video_decoder_proxy_getcaps (GstVideoDecoder * decoder,
+                          GstCaps         * caps,
+                                                  GstCaps         * filter);
+
+GST_VIDEO_API
+void             gst_video_decoder_set_use_default_pad_acceptcaps (GstVideoDecoder * decoder,
+                                                                   gboolean use);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstVideoDecoder, gst_object_unref)
+#endif
 
 G_END_DECLS
 

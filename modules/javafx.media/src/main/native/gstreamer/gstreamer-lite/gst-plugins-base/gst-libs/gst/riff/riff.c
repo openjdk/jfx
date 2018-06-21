@@ -20,6 +20,7 @@
  */
 /**
  * SECTION:gstriff
+ * @title: Riff utilities
  * @short_description: Riff fileformat utillity functions.
  *
  * A collection of functions to handle riff base files, such as avi, wav and

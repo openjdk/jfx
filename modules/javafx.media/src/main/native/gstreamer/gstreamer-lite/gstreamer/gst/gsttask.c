@@ -22,6 +22,7 @@
 
 /**
  * SECTION:gsttask
+ * @title: GstTask
  * @short_description: Abstraction of GStreamer streaming threads.
  * @see_also: #GstElement, #GstPad
  *
@@ -78,6 +79,10 @@
 #include <sys/prctl.h>
 #endif
 
+#ifdef HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID
+#include <pthread.h>
+#endif
+
 GST_DEBUG_CATEGORY_STATIC (task_debug);
 #define GST_CAT_DEFAULT (task_debug)
 
@@ -107,6 +112,7 @@ struct _GstTaskPrivate
 };
 
 #ifdef _MSC_VER
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 struct _THREADNAME_INFO
@@ -129,7 +135,7 @@ SetThreadName (DWORD dwThreadID, LPCSTR szThreadName)
 
   __try {
     RaiseException (0x406D1388, 0, sizeof (info) / sizeof (DWORD),
-        (DWORD *) & info);
+        (const ULONG_PTR *) &info);
   }
   __except (EXCEPTION_CONTINUE_EXECUTION) {
   }
@@ -158,6 +164,8 @@ init_klass_pool (GstTaskClass * klass)
     gst_object_unref (klass->pool);
   }
   klass->pool = gst_task_pool_new ();
+  /* Classes are never destroyed so this ref will never be dropped */
+  GST_OBJECT_FLAG_SET (klass->pool, GST_OBJECT_FLAG_MAY_BE_LEAKED);
   gst_task_pool_prepare (klass->pool, NULL);
   g_mutex_unlock (&pool_lock);
 }
@@ -195,9 +203,6 @@ gst_task_init (GstTask * task)
   g_mutex_lock (&pool_lock);
   task->priv->pool = gst_object_ref (klass->pool);
   g_mutex_unlock (&pool_lock);
-
-  /* clear floating flag */
-  gst_object_ref_sink (task);
 }
 
 static void
@@ -246,8 +251,19 @@ gst_task_configure_name (GstTask * task)
       GST_DEBUG_OBJECT (task, "Failed to set thread name");
   }
   GST_OBJECT_UNLOCK (task);
-#endif
-#ifdef _MSC_VER
+#elif defined(HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID)
+  const gchar *name;
+
+  GST_OBJECT_LOCK (task);
+  name = GST_OBJECT_NAME (task);
+
+  /* set the thread name to something easily identifiable */
+  GST_DEBUG_OBJECT (task, "Setting thread name to '%s'", name);
+  if (pthread_setname_np (name))
+    GST_DEBUG_OBJECT (task, "Failed to set thread name");
+
+  GST_OBJECT_UNLOCK (task);
+#elif defined (_MSC_VER)
   const gchar *name;
   name = GST_OBJECT_NAME (task);
 
@@ -292,7 +308,6 @@ gst_task_func (GstTask * task)
   gst_task_configure_name (task);
 
   while (G_LIKELY (GET_TASK_STATE (task) != GST_TASK_STOPPED)) {
-    if (G_UNLIKELY (GET_TASK_STATE (task) == GST_TASK_PAUSED)) {
       GST_OBJECT_LOCK (task);
       while (G_UNLIKELY (GST_TASK_STATE (task) == GST_TASK_PAUSED)) {
         g_rec_mutex_unlock (lock);
@@ -304,19 +319,19 @@ gst_task_func (GstTask * task)
         GST_OBJECT_UNLOCK (task);
         /* locking order.. */
         g_rec_mutex_lock (lock);
+      GST_OBJECT_LOCK (task);
+    }
 
-        GST_OBJECT_LOCK (task);
         if (G_UNLIKELY (GET_TASK_STATE (task) == GST_TASK_STOPPED)) {
           GST_OBJECT_UNLOCK (task);
-          goto done;
-        }
-      }
+      break;
+    } else {
       GST_OBJECT_UNLOCK (task);
     }
 
     task->func (task->user_data);
   }
-done:
+
   g_rec_mutex_unlock (lock);
 
   GST_OBJECT_LOCK (task);
@@ -369,6 +384,9 @@ gst_task_cleanup_all (void)
   if ((klass = g_type_class_peek (GST_TYPE_TASK))) {
     init_klass_pool (klass);
   }
+
+  /* GstElement owns a GThreadPool */
+  _priv_gst_element_cleanup ();
 }
 
 /**
@@ -400,12 +418,17 @@ gst_task_new (GstTaskFunction func, gpointer user_data, GDestroyNotify notify)
 {
   GstTask *task;
 
-  task = g_object_newv (GST_TYPE_TASK, 0, NULL);
+  g_return_val_if_fail (func != NULL, NULL);
+
+  task = g_object_new (GST_TYPE_TASK, NULL);
   task->func = func;
   task->user_data = user_data;
   task->notify = notify;
 
   GST_DEBUG ("Created task %p", task);
+
+  /* clear floating flag */
+  gst_object_ref_sink (task);
 
   return task;
 }
@@ -426,6 +449,8 @@ gst_task_new (GstTaskFunction func, gpointer user_data, GDestroyNotify notify)
 void
 gst_task_set_lock (GstTask * task, GRecMutex * mutex)
 {
+  g_return_if_fail (GST_IS_TASK (task));
+
   GST_OBJECT_LOCK (task);
   if (G_UNLIKELY (task->running))
     goto is_running;
@@ -781,9 +806,9 @@ gst_task_join (GstTask * task)
   gpointer id;
   GstTaskPool *pool = NULL;
 
-  priv = task->priv;
-
   g_return_val_if_fail (GST_IS_TASK (task), FALSE);
+
+  priv = task->priv;
 
   tself = g_thread_self ();
 

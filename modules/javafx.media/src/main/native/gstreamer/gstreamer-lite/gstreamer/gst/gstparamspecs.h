@@ -75,14 +75,24 @@ G_BEGIN_DECLS
 #define GST_PARAM_SPEC_FRACTION(pspec)    (G_TYPE_CHECK_INSTANCE_CAST ((pspec), GST_TYPE_PARAM_FRACTION, GstParamSpecFraction))
 
 
+#define GST_TYPE_PARAM_ARRAY_LIST           (gst_param_spec_array_get_type ())
+#define GST_IS_PARAM_SPEC_ARRAY_LIST(pspec) (G_TYPE_CHECK_INSTANCE_TYPE ((pspec), GST_TYPE_PARAM_ARRAY_LIST))
+#define GST_PARAM_SPEC_ARRAY_LIST(pspec)    (G_TYPE_CHECK_INSTANCE_CAST ((pspec), GST_TYPE_PARAM_ARRAY_LIST, GstParamSpecArray))
+
+
 /* --- get_type functions --- */
 
+GST_API
 GType  gst_param_spec_fraction_get_type (void);
+
+GST_API
+GType  gst_param_spec_array_get_type (void);
 
 
 /* --- typedefs & structures --- */
 
 typedef struct _GstParamSpecFraction GstParamSpecFraction;
+typedef struct _GstParamSpecArray GstParamSpecArray;
 
 /**
  * GstParamSpecFraction:
@@ -105,15 +115,36 @@ struct _GstParamSpecFraction {
   gint          def_num, def_den;
 };
 
+/**
+ * GstParamSpecArray:
+ * @parent_instance: super class
+ * @value_array: the array of values
+ *
+ * A GParamSpec derived structure that contains the meta data for fractional
+ * properties.
+ */
+struct _GstParamSpecArray {
+  GParamSpec    parent_instance;
+
+  GParamSpec * element_spec;
+};
+
 
 /* --- GParamSpec prototypes --- */
 
+GST_API
 GParamSpec  * gst_param_spec_fraction (const gchar * name,
                                        const gchar * nick,
                                        const gchar * blurb,
                                        gint min_num, gint min_denom,
                                        gint max_num, gint max_denom,
                                        gint default_num, gint default_denom,
+                                       GParamFlags flags) G_GNUC_MALLOC;
+GST_API
+GParamSpec  * gst_param_spec_array    (const gchar * name,
+                                       const gchar * nick,
+                                       const gchar * blurb,
+                                       GParamSpec * element_spec,
                                        GParamFlags flags) G_GNUC_MALLOC;
 
 G_END_DECLS

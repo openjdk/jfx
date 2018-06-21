@@ -22,6 +22,8 @@
 #ifndef __GST_MESSAGE_H__
 #define __GST_MESSAGE_H__
 
+#include <glib.h>
+
 G_BEGIN_DECLS
 
 typedef struct _GstMessage GstMessage;
@@ -108,6 +110,15 @@ typedef struct _GstMessage GstMessage;
  *     a #GstDeviceProvider (Since 1.4)
  * @GST_MESSAGE_DEVICE_REMOVED: Message indicating a #GstDevice was removed
  *     from a #GstDeviceProvider (Since 1.4)
+ * @GST_MESSAGE_PROPERTY_NOTIFY: Message indicating a #GObject property has
+ *     changed (Since 1.10)
+ * @GST_MESSAGE_STREAM_COLLECTION: Message indicating a new #GstStreamCollection
+ *     is available (Since 1.10)
+ * @GST_MESSAGE_STREAMS_SELECTED: Message indicating the active selection of
+ *     #GstStreams has changed (Since 1.10)
+ * @GST_MESSAGE_REDIRECT: Message indicating to request the application to
+ *     try to play the given URL(s). Useful if for example a HTTP 302/303
+ *     response is received with a non-HTTP URL inside. (Since 1.10)
  * @GST_MESSAGE_ANY: mask for all of the above messages.
  *
  * The different message types that are available.
@@ -153,9 +164,13 @@ typedef enum
   GST_MESSAGE_STREAM_START      = (1 << 28),
   GST_MESSAGE_NEED_CONTEXT      = (1 << 29),
   GST_MESSAGE_HAVE_CONTEXT      = (1 << 30),
-  GST_MESSAGE_EXTENDED          = (1 << 31),
+  GST_MESSAGE_EXTENDED          = (gint) (1u << 31),
   GST_MESSAGE_DEVICE_ADDED      = GST_MESSAGE_EXTENDED + 1,
   GST_MESSAGE_DEVICE_REMOVED    = GST_MESSAGE_EXTENDED + 2,
+  GST_MESSAGE_PROPERTY_NOTIFY   = GST_MESSAGE_EXTENDED + 3,
+  GST_MESSAGE_STREAM_COLLECTION = GST_MESSAGE_EXTENDED + 4,
+  GST_MESSAGE_STREAMS_SELECTED  = GST_MESSAGE_EXTENDED + 5,
+  GST_MESSAGE_REDIRECT          = GST_MESSAGE_EXTENDED + 6,
   GST_MESSAGE_ANY               = (gint) (0xffffffff)
 } GstMessageType;
 
@@ -169,8 +184,14 @@ typedef enum
 #ifndef GSTREAMER_LITE
 #include <gst/gstdevice.h>
 #endif // GSTREAMER_LITE
+#include <gst/gststreams.h>
+#include <gst/gststreamcollection.h>
 
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_message_type;
+#else // GSTREAMER_LITE
 GST_EXPORT GType _gst_message_type;
+#endif // GSTREAMER_LITE
 
 #define GST_TYPE_MESSAGE                         (_gst_message_type)
 #define GST_IS_MESSAGE(obj)                      (GST_IS_MINI_OBJECT_TYPE (obj, GST_TYPE_MESSAGE))
@@ -199,7 +220,7 @@ GST_EXPORT GType _gst_message_type;
  * @message: a #GstMessage
  *
  * Check if the message is in the extended message group
- * (Since 1.4)
+ * Since: 1.4
  */
 #define GST_MESSAGE_TYPE_IS_EXTENDED(message)       (!!(GST_MESSAGE_CAST(message)->type & GST_MESSAGE_EXTENDED))
 
@@ -325,9 +346,15 @@ struct _GstMessage
   GCond           cond;
 };
 
+#include <gst/gstquery.h>
+
+GST_API
 GType           gst_message_get_type            (void);
 
+GST_API
 const gchar*    gst_message_type_get_name       (GstMessageType type);
+
+GST_API
 GQuark          gst_message_type_to_quark       (GstMessageType type);
 
 /* refcounting */
@@ -339,10 +366,6 @@ GQuark          gst_message_type_to_quark       (GstMessageType type);
  *
  * Returns: @msg (for convenience when doing assignments)
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstMessage * gst_message_ref (GstMessage * msg);
-#endif
-
 static inline GstMessage *
 gst_message_ref (GstMessage * msg)
 {
@@ -356,10 +379,6 @@ gst_message_ref (GstMessage * msg)
  * Convenience macro to decrease the reference count of the message, possibly
  * freeing it.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void gst_message_unref (GstMessage * msg);
-#endif
-
 static inline void
 gst_message_unref (GstMessage * msg)
 {
@@ -377,10 +396,6 @@ gst_message_unref (GstMessage * msg)
  *
  * MT safe
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstMessage * gst_message_copy (const GstMessage * msg);
-#endif
-
 static inline GstMessage *
 gst_message_copy (const GstMessage * msg)
 {
@@ -423,10 +438,6 @@ gst_message_copy (const GstMessage * msg)
  *
  * Returns: %TRUE if @new_message was different from @old_message
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gboolean gst_message_replace (GstMessage **old_message, GstMessage *new_message);
-#endif
-
 static inline gboolean
 gst_message_replace (GstMessage **old_message, GstMessage *new_message)
 {
@@ -435,183 +446,383 @@ gst_message_replace (GstMessage **old_message, GstMessage *new_message)
 
 
 /* custom messages */
+
+GST_API
 GstMessage *    gst_message_new_custom          (GstMessageType type,
                                                  GstObject    * src,
                                                  GstStructure * structure) G_GNUC_MALLOC;
+GST_API
 const GstStructure *
                 gst_message_get_structure       (GstMessage *message);
 
+GST_API
+GstStructure *  gst_message_writable_structure  (GstMessage *message);
+
+GST_API
 gboolean        gst_message_has_name            (GstMessage *message, const gchar *name);
 
 /* identifiers for events and messages */
+
+GST_API
 guint32         gst_message_get_seqnum          (GstMessage *message);
+
+GST_API
 void            gst_message_set_seqnum          (GstMessage *message, guint32 seqnum);
 
 /* EOS */
+
+GST_API
 GstMessage *    gst_message_new_eos             (GstObject * src) G_GNUC_MALLOC;
 
 /* ERROR */
 
+GST_API
 GstMessage *    gst_message_new_error           (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC;
+
+GST_API
+GstMessage *    gst_message_new_error_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_error         (GstMessage *message, GError **gerror, gchar **debug);
 
+GST_API
+void            gst_message_parse_error_details (GstMessage *message, const GstStructure **structure);
+
 /* WARNING */
+
+GST_API
 GstMessage *    gst_message_new_warning         (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC;
+
+GST_API
+GstMessage *    gst_message_new_warning_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_warning       (GstMessage *message, GError **gerror, gchar **debug);
 
+GST_API
+void            gst_message_parse_warning_details (GstMessage *message, const GstStructure **structure);
+
 /* INFO */
+
+GST_API
 GstMessage *    gst_message_new_info            (GstObject * src, GError * error, const gchar * debug) G_GNUC_MALLOC;
+
+GST_API
+GstMessage *    gst_message_new_info_with_details (GstObject * src, GError * error, const gchar * debug, GstStructure * details) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_info          (GstMessage *message, GError **gerror, gchar **debug);
 
+GST_API
+void            gst_message_parse_info_details  (GstMessage *message, const GstStructure **structure);
+
 /* TAG */
+
+GST_API
 GstMessage *    gst_message_new_tag             (GstObject * src, GstTagList * tag_list) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_tag           (GstMessage *message, GstTagList **tag_list);
 
 /* BUFFERING */
+
+GST_API
 GstMessage *    gst_message_new_buffering         (GstObject * src, gint percent) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_buffering       (GstMessage *message, gint *percent);
+
+GST_API
 void            gst_message_set_buffering_stats   (GstMessage *message, GstBufferingMode mode,
                                                    gint avg_in, gint avg_out,
                                                    gint64 buffering_left);
+GST_API
 void            gst_message_parse_buffering_stats (GstMessage *message, GstBufferingMode *mode,
                                                    gint *avg_in, gint *avg_out,
                                                    gint64 *buffering_left);
 
 /* STATE_CHANGED */
+
+GST_API
 GstMessage *    gst_message_new_state_changed   (GstObject * src, GstState oldstate,
                                                  GstState newstate, GstState pending) G_GNUC_MALLOC;
+GST_API
 void            gst_message_parse_state_changed (GstMessage *message, GstState *oldstate,
                                                  GstState *newstate, GstState *pending);
 
 /* STATE_DIRTY */
+
+GST_API
 GstMessage *    gst_message_new_state_dirty     (GstObject * src) G_GNUC_MALLOC;
 
 /* STEP_DONE */
+
+GST_API
 GstMessage *    gst_message_new_step_done       (GstObject * src, GstFormat format, guint64 amount,
                                                  gdouble rate, gboolean flush, gboolean intermediate,
                                                  guint64 duration, gboolean eos) G_GNUC_MALLOC;
+GST_API
 void            gst_message_parse_step_done     (GstMessage * message, GstFormat *format, guint64 *amount,
                                                  gdouble *rate, gboolean *flush, gboolean *intermediate,
                                                  guint64 *duration, gboolean *eos);
 /* CLOCK_PROVIDE */
+
+GST_API
 GstMessage *    gst_message_new_clock_provide   (GstObject * src, GstClock *clock, gboolean ready) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_clock_provide (GstMessage *message, GstClock **clock,
                                                  gboolean *ready);
 
 /* CLOCK_LOST */
+
+GST_API
 GstMessage *    gst_message_new_clock_lost      (GstObject * src, GstClock *clock) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_clock_lost    (GstMessage *message, GstClock **clock);
 
 /* NEW_CLOCK */
+
+GST_API
 GstMessage *    gst_message_new_new_clock       (GstObject * src, GstClock *clock) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_new_clock     (GstMessage *message, GstClock **clock);
 
 /* APPLICATION */
+
+GST_API
 GstMessage *    gst_message_new_application     (GstObject * src, GstStructure * structure) G_GNUC_MALLOC;
 
 /* ELEMENT */
+
+GST_API
 GstMessage *    gst_message_new_element         (GstObject * src, GstStructure * structure) G_GNUC_MALLOC;
 
 /* SEGMENT_START */
+
+GST_API
 GstMessage *    gst_message_new_segment_start   (GstObject * src, GstFormat format, gint64 position) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_segment_start (GstMessage *message, GstFormat *format,
                                                  gint64 *position);
 
 /* SEGMENT_DONE */
+
+GST_API
 GstMessage *    gst_message_new_segment_done    (GstObject * src, GstFormat format, gint64 position) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_segment_done  (GstMessage *message, GstFormat *format,
                                                  gint64 *position);
 
 /* DURATION_CHANGED */
+
+GST_API
 GstMessage *    gst_message_new_duration_changed (GstObject * src) G_GNUC_MALLOC;
 
 /* LATENCY */
+
+GST_API
 GstMessage *    gst_message_new_latency         (GstObject * src) G_GNUC_MALLOC;
 
 /* ASYNC_START */
+
+GST_API
 GstMessage *    gst_message_new_async_start     (GstObject * src) G_GNUC_MALLOC;
 
 /* ASYNC_DONE */
+
+GST_API
 GstMessage *    gst_message_new_async_done      (GstObject * src, GstClockTime running_time) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_async_done    (GstMessage *message, GstClockTime *running_time);
 
 /* STRUCTURE CHANGE */
+
+GST_API
 GstMessage *    gst_message_new_structure_change   (GstObject * src, GstStructureChangeType type,
                                                     GstElement *owner, gboolean busy) G_GNUC_MALLOC;
+GST_API
 void            gst_message_parse_structure_change (GstMessage *message, GstStructureChangeType *type,
                                                     GstElement **owner, gboolean *busy);
 
 /* STREAM STATUS */
+
+GST_API
 GstMessage *    gst_message_new_stream_status        (GstObject * src, GstStreamStatusType type,
                                                       GstElement *owner) G_GNUC_MALLOC;
+GST_API
 void            gst_message_parse_stream_status      (GstMessage *message, GstStreamStatusType *type,
                                                       GstElement **owner);
+GST_API
 void            gst_message_set_stream_status_object (GstMessage *message, const GValue *object);
+
+GST_API
 const GValue *  gst_message_get_stream_status_object (GstMessage *message);
 
 /* REQUEST_STATE */
+
+GST_API
 GstMessage *    gst_message_new_request_state   (GstObject * src, GstState state) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_request_state (GstMessage * message, GstState *state);
 
 /* STEP_START */
+
+GST_API
 GstMessage *    gst_message_new_step_start      (GstObject * src, gboolean active, GstFormat format,
                                                  guint64 amount, gdouble rate, gboolean flush,
                                                  gboolean intermediate) G_GNUC_MALLOC;
+GST_API
 void            gst_message_parse_step_start    (GstMessage * message, gboolean *active, GstFormat *format,
                                                  guint64 *amount, gdouble *rate, gboolean *flush,
                                                  gboolean *intermediate);
 
 /* QOS */
+
+GST_API
 GstMessage *    gst_message_new_qos             (GstObject * src, gboolean live, guint64 running_time,
                                                  guint64 stream_time, guint64 timestamp, guint64 duration) G_GNUC_MALLOC;
+GST_API
 void            gst_message_set_qos_values      (GstMessage * message, gint64 jitter, gdouble proportion,
                                                  gint quality);
+GST_API
 void            gst_message_set_qos_stats       (GstMessage * message, GstFormat format, guint64 processed,
                                                  guint64 dropped);
+GST_API
 void            gst_message_parse_qos           (GstMessage * message, gboolean * live, guint64 * running_time,
                                                  guint64 * stream_time, guint64 * timestamp, guint64 * duration);
+GST_API
 void            gst_message_parse_qos_values    (GstMessage * message, gint64 * jitter, gdouble * proportion,
                                                  gint * quality);
+GST_API
 void            gst_message_parse_qos_stats     (GstMessage * message, GstFormat * format, guint64 * processed,
                                                  guint64 * dropped);
 /* PROGRESS */
+
+GST_API
 GstMessage *    gst_message_new_progress           (GstObject * src, GstProgressType type, const gchar *code,
                                                     const gchar *text) G_GNUC_MALLOC;
+GST_API
 void            gst_message_parse_progress         (GstMessage * message, GstProgressType * type, gchar ** code,
                                                     gchar ** text);
 
 /* TOC */
+
+GST_API
 GstMessage *    gst_message_new_toc             (GstObject *src, GstToc *toc, gboolean updated);
+
+GST_API
 void            gst_message_parse_toc           (GstMessage *message, GstToc **toc, gboolean *updated);
 
 /* RESET_TIME */
+
+GST_API
 GstMessage *    gst_message_new_reset_time      (GstObject * src, GstClockTime running_time) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_reset_time    (GstMessage *message, GstClockTime *running_time);
 
 /* STREAM_START */
+
+GST_API
 GstMessage *    gst_message_new_stream_start    (GstObject * src) G_GNUC_MALLOC;
 
+GST_API
 void            gst_message_set_group_id        (GstMessage *message, guint group_id);
+
+GST_API
 gboolean        gst_message_parse_group_id      (GstMessage *message, guint *group_id);
 
 /* NEED_CONTEXT */
+
+GST_API
 GstMessage *    gst_message_new_need_context    (GstObject * src, const gchar * context_type) G_GNUC_MALLOC;
+
+GST_API
 gboolean        gst_message_parse_context_type  (GstMessage * message, const gchar ** context_type);
 
 /* HAVE_CONTEXT */
+
+GST_API
 GstMessage *    gst_message_new_have_context    (GstObject * src, GstContext *context) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_have_context  (GstMessage *message, GstContext **context);
 
 #ifndef GSTREAMER_LITE
 /* DEVICE_ADDED */
+
+GST_API
 GstMessage *    gst_message_new_device_added    (GstObject * src, GstDevice * device) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_device_added  (GstMessage * message, GstDevice ** device);
 
 /* DEVICE_REMOVED */
+
+GST_API
 GstMessage *    gst_message_new_device_removed    (GstObject * src, GstDevice * device) G_GNUC_MALLOC;
+
+GST_API
 void            gst_message_parse_device_removed  (GstMessage * message, GstDevice ** device);
 #endif // GSTREAMER_LITE
 
+/* PROPERTY_NOTIFY */
+
+GST_API
+GstMessage *    gst_message_new_property_notify   (GstObject * src, const gchar * property_name, GValue * val) G_GNUC_MALLOC;
+
+GST_API
+void            gst_message_parse_property_notify (GstMessage * message, GstObject ** object, const gchar ** property_name, const GValue ** property_value);
+
+/* STREAM_COLLECTION */
+
+GST_API
+GstMessage *    gst_message_new_stream_collection   (GstObject * src, GstStreamCollection * collection) G_GNUC_MALLOC;
+
+GST_API
+void            gst_message_parse_stream_collection (GstMessage *message, GstStreamCollection **collection);
+
+/* STREAMS_SELECTED */
+
+GST_API
+GstMessage *    gst_message_new_streams_selected (GstObject *src, GstStreamCollection *collection);
+
+GST_API
+void            gst_message_streams_selected_add (GstMessage *message, GstStream *stream);
+
+GST_API
+void            gst_message_parse_streams_selected (GstMessage * message, GstStreamCollection **collection);
+
+GST_API
+guint           gst_message_streams_selected_get_size (GstMessage * message);
+
+GST_API
+GstStream      *gst_message_streams_selected_get_stream (GstMessage *message, guint idx);
+
+/* REDIRECT */
+
+GST_API
+GstMessage *    gst_message_new_redirect             (GstObject * src, const gchar * location, GstTagList * tag_list, const GstStructure * entry_struct) G_GNUC_MALLOC;
+
+GST_API
+void            gst_message_add_redirect_entry       (GstMessage * message, const gchar * location, GstTagList * tag_list, const GstStructure * entry_struct);
+
+GST_API
+void            gst_message_parse_redirect_entry     (GstMessage * message, gsize entry_index, const gchar ** location, GstTagList ** tag_list, const GstStructure ** entry_struct);
+
+GST_API
+gsize           gst_message_get_num_redirect_entries (GstMessage * message);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstMessage, gst_message_unref)
+#endif
 
 G_END_DECLS
 

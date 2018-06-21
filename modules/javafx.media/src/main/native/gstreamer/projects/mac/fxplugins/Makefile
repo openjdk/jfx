@@ -7,7 +7,7 @@ TARGET_DIRS = $(BUILD_DIR)
 
 BASE_DIR = ../../..
 
-GLIB_VERSION = 2.42.1
+GLIB_VERSION = 2.56.1
 GLIB_DIR = $(BASE_DIR)/3rd_party/glib/glib-$(GLIB_VERSION)
 
 SRCBASE_DIR = $(BASE_DIR)/plugins
@@ -87,4 +87,4 @@ $(TARGET_DIRS):
 	mkdir -p $(TARGET_DIRS)
 
 $(TARGET): $(OBJECTS)
-	$(LINKER) -dynamiclib $(OBJECTS) $(ON2_LIB) $(LDFLAGS) -o $@
+	$(LINKER) -dynamiclib $(OBJECTS) $(LDFLAGS) -o $@

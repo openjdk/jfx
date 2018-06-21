@@ -24,8 +24,9 @@
 
 /**
  * SECTION:gstinfo
+ * @title: GstInfo
  * @short_description: Debugging and logging facilities
- * @see_also: #gstreamer-gstconfig, #gstreamer-Gst for command line parameters
+ * @see_also: #gst-running for command line parameters
  * and environment variables that affect the debugging output.
  *
  * GStreamer's debugging subsystem is an easy way to get information about what
@@ -50,12 +51,12 @@
  * categories. This is easily done with 3 lines. At the top of your code,
  * declare
  * the variables and set the default category.
- * |[
+ * |[<!-- language="C" -->
  *   GST_DEBUG_CATEGORY_STATIC (my_category);  // define category (statically)
  *   #define GST_CAT_DEFAULT my_category       // set as default
  * ]|
  * After that you only need to initialize the category.
- * |[
+ * |[<!-- language="C" -->
  *   GST_DEBUG_CATEGORY_INIT (my_category, "my category",
  *                            0, "This is my very own");
  * ]|
@@ -90,7 +91,6 @@
 #undef gst_debug_add_log_function
 
 #ifndef GST_DISABLE_GST_DEBUG
-
 #ifdef HAVE_DLFCN_H
 #  include <dlfcn.h>
 #endif
@@ -127,8 +127,33 @@
 
 static char *gst_info_printf_pointer_extension_func (const char *format,
     void *ptr);
+#else /* GST_DISABLE_GST_DEBUG */
 
+#include <glib/gprintf.h>
 #endif /* !GST_DISABLE_GST_DEBUG */
+
+#ifdef HAVE_UNWIND
+/* No need for remote debugging so turn on the 'local only' optimizations in
+ * libunwind */
+#define UNW_LOCAL_ONLY
+
+#include <libunwind.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <errno.h>
+
+#ifdef HAVE_DW
+#include <elfutils/libdwfl.h>
+#endif /* HAVE_DW */
+#endif /* HAVE_UNWIND */
+
+#ifdef HAVE_BACKTRACE
+#include <execinfo.h>
+#define BT_BUF_SIZE 100
+#endif /* HAVE_BACKTRACE */
 
 extern gboolean gst_is_initialized (void);
 
@@ -176,6 +201,7 @@ GstDebugCategory *_priv_GST_CAT_POLL = NULL;
 GstDebugCategory *GST_CAT_META = NULL;
 GstDebugCategory *GST_CAT_LOCKING = NULL;
 GstDebugCategory *GST_CAT_CONTEXT = NULL;
+GstDebugCategory *_priv_GST_CAT_PROTECTION = NULL;
 
 
 #endif /* !defined(GST_DISABLE_GST_DEBUG) || !defined(GST_REMOVE_DISABLED) */
@@ -184,12 +210,6 @@ GstDebugCategory *GST_CAT_CONTEXT = NULL;
 
 /* underscore is to prevent conflict with GST_CAT_DEBUG define */
 GST_DEBUG_CATEGORY_STATIC (_GST_CAT_DEBUG);
-
-/* time of initialization, so we get useful debugging output times
- * FIXME: we use this in gstdebugutils.c, what about a function + macro to
- * get the running time: GST_DEBUG_RUNNING_TIME
- */
-GstClockTime _priv_gst_info_start_time;
 
 #if 0
 #if defined __sgi__
@@ -258,13 +278,14 @@ LogFuncEntry;
 static GMutex __log_func_mutex;
 static GSList *__log_functions = NULL;
 
+/* whether to add the default log function in gst_init() */
+static gboolean add_default_log_func = TRUE;
+
 #define PRETTY_TAGS_DEFAULT  TRUE
 static gboolean pretty_tags = PRETTY_TAGS_DEFAULT;
 
 static volatile gint G_GNUC_MAY_ALIAS __default_level = GST_LEVEL_DEFAULT;
 static volatile gint G_GNUC_MAY_ALIAS __use_color = GST_DEBUG_COLOR_MODE_ON;
-
-static FILE *log_file;
 
 /* FIXME: export this? */
 gboolean
@@ -282,9 +303,6 @@ _priv_gst_in_valgrind (void)
 #ifdef HAVE_VALGRIND_VALGRIND_H
     if (RUNNING_ON_VALGRIND) {
       GST_CAT_INFO (GST_CAT_GST_INIT, "we're running inside valgrind");
-      printf ("GStreamer has detected that it is running inside valgrind.\n");
-      printf ("It might now take different code paths to ease debugging.\n");
-      printf ("Of course, this may also lead to different bugs.\n");
       in_valgrind = GST_VG_INSIDE;
     } else {
       GST_CAT_LOG (GST_CAT_GST_INIT, "not doing extra valgrind stuff");
@@ -299,18 +317,50 @@ _priv_gst_in_valgrind (void)
   return (in_valgrind == GST_VG_INSIDE);
 }
 
+static gchar *
+_replace_pattern_in_gst_debug_file_name (gchar * name, const char *token,
+    guint val)
+{
+  gchar *token_start;
+  if ((token_start = strstr (name, token))) {
+    gsize token_len = strlen (token);
+    gchar *name_prefix = name;
+    gchar *name_suffix = token_start + token_len;
+    token_start[0] = '\0';
+    name = g_strdup_printf ("%s%u%s", name_prefix, val, name_suffix);
+    g_free (name_prefix);
+  }
+  return name;
+}
+
+static gchar *
+_priv_gst_debug_file_name (const gchar * env)
+{
+  gchar *name;
+
+  name = g_strdup (env);
+  name = _replace_pattern_in_gst_debug_file_name (name, "%p", getpid ());
+  name = _replace_pattern_in_gst_debug_file_name (name, "%r", g_random_int ());
+
+  return name;
+}
+
 /* Initialize the debugging system */
 void
 _priv_gst_debug_init (void)
 {
   const gchar *env;
+  FILE *log_file;
 
+  if (add_default_log_func) {
   env = g_getenv ("GST_DEBUG_FILE");
   if (env != NULL && *env != '\0') {
     if (strcmp (env, "-") == 0) {
       log_file = stdout;
     } else {
-      log_file = g_fopen (env, "w");
+        gchar *name = _priv_gst_debug_file_name (env);
+        log_file = g_fopen (name, "w");
+        g_free (name);
       if (log_file == NULL) {
         g_printerr ("Could not open log file '%s' for writing: %s\n", env,
             g_strerror (errno));
@@ -321,8 +371,8 @@ _priv_gst_debug_init (void)
     log_file = stderr;
   }
 
-  /* get time we started for debugging messages */
-  _priv_gst_info_start_time = gst_util_get_timestamp ();
+    gst_debug_add_log_function (gst_debug_log_default, log_file, NULL);
+  }
 
   __gst_printf_pointer_extension_set_func
       (gst_info_printf_pointer_extension_func);
@@ -332,8 +382,6 @@ _priv_gst_debug_init (void)
       GST_DEBUG_UNDERLINE, NULL);
   _GST_CAT_DEBUG = _gst_debug_category_new ("GST_DEBUG",
       GST_DEBUG_BOLD | GST_DEBUG_FG_YELLOW, "debugging subsystem");
-
-  gst_debug_add_log_function (gst_debug_log_default, NULL, NULL);
 
   /* FIXME: add descriptions here */
   GST_CAT_GST_INIT = _gst_debug_category_new ("GST_INIT",
@@ -394,6 +442,8 @@ _priv_gst_debug_init (void)
   GST_CAT_META = _gst_debug_category_new ("GST_META", 0, "meta");
   GST_CAT_LOCKING = _gst_debug_category_new ("GST_LOCKING", 0, "locking");
   GST_CAT_CONTEXT = _gst_debug_category_new ("GST_CONTEXT", 0, NULL);
+  _priv_GST_CAT_PROTECTION =
+      _gst_debug_category_new ("GST_PROTECTION", 0, "protection");
 
   /* print out the valgrind message if we're in valgrind */
   _priv_gst_in_valgrind ();
@@ -413,10 +463,9 @@ _priv_gst_debug_init (void)
     gst_debug_set_color_mode_from_string (env);
 
   env = g_getenv ("GST_DEBUG");
-  if (env) {
+  if (env)
     gst_debug_set_threshold_from_string (env, FALSE);
   }
-}
 
 /* we can't do this further above, because we initialize the GST_CAT_DEFAULT struct */
 #define GST_CAT_DEFAULT _GST_CAT_DEBUG
@@ -448,7 +497,6 @@ gst_debug_log (GstDebugCategory * category, GstDebugLevel level,
   va_end (var_args);
 }
 
-#ifdef G_OS_WIN32
 /* based on g_basename(), which we can't use because it was deprecated */
 static inline const gchar *
 gst_path_basename (const gchar * file_name)
@@ -471,7 +519,6 @@ gst_path_basename (const gchar * file_name)
 
   return file_name;
 }
-#endif
 
 /**
  * gst_debug_log_valist:
@@ -497,16 +544,13 @@ gst_debug_log_valist (GstDebugCategory * category, GstDebugLevel level,
   GSList *handler;
 
   g_return_if_fail (category != NULL);
+
+  if (level > gst_debug_category_get_threshold (category))
+    return;
+
   g_return_if_fail (file != NULL);
   g_return_if_fail (function != NULL);
   g_return_if_fail (format != NULL);
-
-  /* The predefined macro __FILE__ is always the exact path given to the
-   * compiler with MSVC, which may or may not be the basename.  We work
-   * around it at runtime to improve the readability. */
-#ifdef G_OS_WIN32
-  file = gst_path_basename (file);
-#endif
 
   message.message = NULL;
   message.format = format;
@@ -530,7 +574,7 @@ gst_debug_log_valist (GstDebugCategory * category, GstDebugLevel level,
  * Gets the string representation of a #GstDebugMessage. This function is used
  * in debug handlers to extract the message.
  *
- * Returns: the string representation of a #GstDebugMessage.
+ * Returns: (nullable): the string representation of a #GstDebugMessage.
  */
 const gchar *
 gst_debug_message_get (GstDebugMessage * message)
@@ -585,7 +629,7 @@ static inline gchar *
 gst_info_structure_to_string (const GstStructure * s)
 {
   if (G_LIKELY (s)) {
-    gchar *str = gst_structure_to_string (s);;
+    gchar *str = gst_structure_to_string (s);
     if (G_UNLIKELY (pretty_tags && s->name == GST_QUARK (TAGLIST)))
       return prettify_structure_string (str);
     else
@@ -597,14 +641,54 @@ gst_info_structure_to_string (const GstStructure * s)
 static inline gchar *
 gst_info_describe_buffer (GstBuffer * buffer)
 {
+  const gchar *offset_str = "none";
+  const gchar *offset_end_str = "none";
+  gchar offset_buf[32], offset_end_buf[32];
+
+  if (GST_BUFFER_OFFSET_IS_VALID (buffer)) {
+    g_snprintf (offset_buf, sizeof (offset_buf), "%" G_GUINT64_FORMAT,
+        GST_BUFFER_OFFSET (buffer));
+    offset_str = offset_buf;
+  }
+  if (GST_BUFFER_OFFSET_END_IS_VALID (buffer)) {
+    g_snprintf (offset_end_buf, sizeof (offset_end_buf), "%" G_GUINT64_FORMAT,
+        GST_BUFFER_OFFSET_END (buffer));
+    offset_end_str = offset_end_buf;
+  }
+
   return g_strdup_printf ("buffer: %p, pts %" GST_TIME_FORMAT ", dts %"
       GST_TIME_FORMAT ", dur %" GST_TIME_FORMAT ", size %" G_GSIZE_FORMAT
-      ", offset %" G_GUINT64_FORMAT ", offset_end %" G_GUINT64_FORMAT
-      ", flags 0x%x", buffer, GST_TIME_ARGS (GST_BUFFER_PTS (buffer)),
+      ", offset %s, offset_end %s, flags 0x%x", buffer,
+      GST_TIME_ARGS (GST_BUFFER_PTS (buffer)),
       GST_TIME_ARGS (GST_BUFFER_DTS (buffer)),
       GST_TIME_ARGS (GST_BUFFER_DURATION (buffer)),
-      gst_buffer_get_size (buffer), GST_BUFFER_OFFSET (buffer),
-      GST_BUFFER_OFFSET_END (buffer), GST_BUFFER_FLAGS (buffer));
+      gst_buffer_get_size (buffer), offset_str, offset_end_str,
+      GST_BUFFER_FLAGS (buffer));
+}
+
+static inline gchar *
+gst_info_describe_buffer_list (GstBufferList * list)
+{
+  GstClockTime pts = GST_CLOCK_TIME_NONE;
+  GstClockTime dts = GST_CLOCK_TIME_NONE;
+  gsize total_size = 0;
+  guint n, i;
+
+  n = gst_buffer_list_length (list);
+  for (i = 0; i < n; ++i) {
+    GstBuffer *buf = gst_buffer_list_get (list, i);
+
+    if (i == 0) {
+      pts = GST_BUFFER_PTS (buf);
+      dts = GST_BUFFER_DTS (buf);
+    }
+
+    total_size += gst_buffer_get_size (buf);
+  }
+
+  return g_strdup_printf ("bufferlist: %p, %u buffers, pts %" GST_TIME_FORMAT
+      ", dts %" GST_TIME_FORMAT ", size %" G_GSIZE_FORMAT, list, n,
+      GST_TIME_ARGS (pts), GST_TIME_ARGS (dts), total_size);
 }
 
 static inline gchar *
@@ -646,6 +730,62 @@ gst_info_describe_query (GstQuery * query)
   ret = g_strdup_printf ("%s query: %p, %s", GST_QUERY_TYPE_NAME (query),
       query, (s ? s : "(NULL)"));
   g_free (s);
+  return ret;
+}
+
+static inline gchar *
+gst_info_describe_stream (GstStream * stream)
+{
+  gchar *ret, *caps_str = NULL, *tags_str = NULL;
+  GstCaps *caps;
+  GstTagList *tags;
+
+  caps = gst_stream_get_caps (stream);
+  if (caps) {
+    caps_str = gst_caps_to_string (caps);
+    gst_caps_unref (caps);
+  }
+
+  tags = gst_stream_get_tags (stream);
+  if (tags) {
+    tags_str = gst_tag_list_to_string (tags);
+    gst_tag_list_unref (tags);
+  }
+
+  ret =
+      g_strdup_printf ("stream %s %p, ID %s, flags 0x%x, caps [%s], tags [%s]",
+      gst_stream_type_get_name (gst_stream_get_stream_type (stream)), stream,
+      gst_stream_get_stream_id (stream), gst_stream_get_stream_flags (stream),
+      caps_str ? caps_str : "", tags_str ? tags_str : "");
+
+  g_free (caps_str);
+  g_free (tags_str);
+
+  return ret;
+}
+
+static inline gchar *
+gst_info_describe_stream_collection (GstStreamCollection * collection)
+{
+  gchar *ret;
+  GString *streams_str;
+  guint i;
+
+  streams_str = g_string_new ("<");
+  for (i = 0; i < gst_stream_collection_get_size (collection); i++) {
+    GstStream *stream = gst_stream_collection_get_stream (collection, i);
+    gchar *s;
+
+    s = gst_info_describe_stream (stream);
+    g_string_append_printf (streams_str, " %s,", s);
+    g_free (s);
+  }
+  g_string_append (streams_str, " >");
+
+  ret = g_strdup_printf ("collection %p (%d streams) %s", collection,
+      gst_stream_collection_get_size (collection), streams_str->str);
+
+  g_string_free (streams_str, TRUE);
   return ret;
 }
 
@@ -693,6 +833,9 @@ gst_debug_print_object (gpointer ptr)
   if (GST_IS_BUFFER (ptr)) {
     return gst_info_describe_buffer (GST_BUFFER_CAST (ptr));
   }
+  if (GST_IS_BUFFER_LIST (ptr)) {
+    return gst_info_describe_buffer_list (GST_BUFFER_LIST_CAST (ptr));
+  }
 #ifdef USE_POISONING
   if (*(guint32 *) ptr == 0xffffffff) {
     return g_strdup_printf ("<poisoned@%p>", ptr);
@@ -721,6 +864,14 @@ gst_debug_print_object (gpointer ptr)
     ret = g_strdup_printf ("context '%s'='%s'", type, s);
     g_free (s);
     return ret;
+  }
+  if (GST_IS_STREAM (object)) {
+    return gst_info_describe_stream (GST_STREAM_CAST (object));
+  }
+  if (GST_IS_STREAM_COLLECTION (object)) {
+    return
+        gst_info_describe_stream_collection (GST_STREAM_COLLECTION_CAST
+        (object));
   }
   if (GST_IS_PAD (object) && GST_OBJECT_NAME (object)) {
     return g_strdup_printf ("<%s:%s>", GST_DEBUG_PAD_NAME (object));
@@ -790,6 +941,9 @@ gst_info_printf_pointer_extension_func (const char *format, void *ptr)
         break;
       case 'B':                /* GST_SEGMENT_FORMAT */
         s = gst_debug_print_segment (ptr);
+        break;
+      case 'a':                /* GST_WRAPPED_PTR_FORMAT */
+        s = priv_gst_string_take_and_wrap (gst_debug_print_object (ptr));
         break;
       default:
         /* must have been compiled against a newer version with an extension
@@ -962,12 +1116,13 @@ static const gchar *levelcolormap[GST_LEVEL_COUNT] = {
  * @message: the actual message
  * @object: (transfer none) (allow-none): the object this message relates to,
  *     or %NULL if none
- * @unused: an unused variable, reserved for some user_data.
+ * @user_data: the FILE* to log to
  *
  * The default logging handler used by GStreamer. Logging functions get called
- * whenever a macro like GST_DEBUG or similar is used. This function outputs the
- * message and additional info to stderr (or the log file specified via the
- * GST_DEBUG_FILE environment variable).
+ * whenever a macro like GST_DEBUG or similar is used. By default this function
+ * is setup to output the message and additional info to stderr (or the log file
+ * specified via the GST_DEBUG_FILE environment variable) as received via
+ * @user_data.
  *
  * You can add other handlers by using gst_debug_add_log_function().
  * And you can remove this handler by calling
@@ -976,15 +1131,23 @@ static const gchar *levelcolormap[GST_LEVEL_COUNT] = {
 void
 gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
     const gchar * file, const gchar * function, gint line,
-    GObject * object, GstDebugMessage * message, gpointer unused)
+    GObject * object, GstDebugMessage * message, gpointer user_data)
 {
   gint pid;
   GstClockTime elapsed;
   gchar *obj = NULL;
   GstDebugColorMode color_mode;
+  FILE *log_file = user_data ? user_data : stderr;
+  gchar c;
 
-  if (level > gst_debug_category_get_threshold (category))
-    return;
+  /* __FILE__ might be a file name or an absolute path or a
+   * relative path, irrespective of the exact compiler used,
+   * in which case we want to shorten it to the filename for
+   * readability. */
+  c = file[0];
+  if (c == '.' || c == '/' || c == '\\' || (c != '\0' && file[1] == ':')) {
+    file = gst_path_basename (file);
+  }
 
   pid = getpid ();
   color_mode = gst_debug_get_color_mode ();
@@ -992,11 +1155,10 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
   if (object) {
     obj = gst_debug_print_object (object);
   } else {
-    obj = g_strdup ("");
+    obj = (gchar *) "";
   }
 
-  elapsed = GST_CLOCK_DIFF (_priv_gst_info_start_time,
-      gst_util_get_timestamp ());
+  elapsed = GST_CLOCK_DIFF (_priv_gst_start_time, gst_util_get_timestamp ());
 
   if (color_mode != GST_DEBUG_COLOR_MODE_OFF) {
 #ifdef G_OS_WIN32
@@ -1075,6 +1237,7 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
 #undef PRINT_FMT
   }
 
+  if (object != NULL)
   g_free (obj);
 }
 
@@ -1208,7 +1371,8 @@ gst_debug_remove_with_compare_func (GCompareFunc func, gpointer data)
 
 /**
  * gst_debug_remove_log_function:
- * @func: (scope call): the log function to remove
+ * @func: (scope call) (allow-none): the log function to remove, or %NULL to
+ *     remove the default log function
  *
  * Removes all registered instances of the given logging functions.
  *
@@ -1225,9 +1389,18 @@ gst_debug_remove_log_function (GstLogFunction func)
   removals =
       gst_debug_remove_with_compare_func
       (gst_debug_compare_log_function_by_func, (gpointer) func);
-  if (gst_is_initialized ())
+
+  if (gst_is_initialized ()) {
     GST_DEBUG ("removed log function %p %d times from log function list", func,
         removals);
+  } else {
+    /* If the default log function is removed before gst_init() was called,
+     * set a flag so we don't add it in gst_init() later */
+    if (func == gst_debug_log_default) {
+      add_default_log_func = FALSE;
+      ++removals;
+    }
+  }
 
   return removals;
 }
@@ -1349,8 +1522,8 @@ gst_debug_get_color_mode (void)
  * If activated, debugging messages are sent to the debugging
  * handlers.
  * It makes sense to deactivate it for speed issues.
- * <note><para>This function is not threadsafe. It makes sense to only call it
- * during initialization.</para></note>
+ * > This function is not threadsafe. It makes sense to only call it
+ * during initialization.
  */
 void
 gst_debug_set_active (gboolean active)
@@ -1446,7 +1619,7 @@ for_each_threshold_by_entry (gpointer data, gpointer user_data)
 
   if (g_pattern_match_string (entry->pat, cat->name)) {
     if (gst_is_initialized ())
-      GST_LOG ("category %s matches pattern %p - gets set to level %d",
+      GST_TRACE ("category %s matches pattern %p - gets set to level %d",
           cat->name, entry->pat, entry->level);
     gst_debug_category_set_threshold (cat, entry->level);
   }
@@ -1507,11 +1680,25 @@ gst_debug_unset_threshold_for_name (const gchar * name)
       g_slice_free (LevelNameEntry, entry);
       g_slist_free_1 (walk);
       walk = __level_name;
+    } else {
+      walk = g_slist_next (walk);
     }
   }
   g_mutex_unlock (&__level_name_mutex);
   g_pattern_spec_free (pat);
   gst_debug_reset_all_thresholds ();
+}
+
+static void
+gst_debug_apply_patterns_to_category (GstDebugCategory * cat)
+{
+  GSList *l;
+
+  g_mutex_lock (&__level_name_mutex);
+  for (l = __level_name; l != NULL; l = l->next) {
+    for_each_threshold_by_entry (cat, (LevelNameEntry *) l->data);
+  }
+  g_mutex_unlock (&__level_name_mutex);
 }
 
 GstDebugCategory *
@@ -1546,6 +1733,9 @@ _gst_debug_category_new (const gchar * name, guint color,
   }
   g_mutex_unlock (&__cat_mutex);
 
+  /* ensure the filter is applied to categories registered after _debug_init */
+  gst_debug_apply_patterns_to_category (cat);
+
   return cat;
 }
 
@@ -1579,11 +1769,9 @@ gst_debug_category_free (GstDebugCategory * category)
  * Sets the threshold of the category to the given level. Debug information will
  * only be output if the threshold is lower or equal to the level of the
  * debugging message.
- * <note><para>
- * Do not use this function in production code, because other functions may
- * change the threshold of categories as side effect. It is however a nice
- * function to use when debugging (even from gdb).
- * </para></note>
+ * > Do not use this function in production code, because other functions may
+ * > change the threshold of categories as side effect. It is however a nice
+ * > function to use when debugging (even from gdb).
  */
 void
 gst_debug_category_set_threshold (GstDebugCategory * category,
@@ -1801,8 +1989,8 @@ gst_debug_set_threshold_from_string (const gchar * list, gboolean reset)
 
   g_assert (list);
 
-  if (reset == TRUE)
-    gst_debug_set_default_threshold (0);
+  if (reset)
+    gst_debug_set_default_threshold (GST_LEVEL_DEFAULT);
 
   split = g_strsplit (list, ",", 0);
 
@@ -1815,8 +2003,15 @@ gst_debug_set_threshold_from_string (const gchar * list, gboolean reset)
         const gchar *category;
 
         if (parse_debug_category (values[0], &category)
-            && parse_debug_level (values[1], &level))
+            && parse_debug_level (values[1], &level)) {
           gst_debug_set_threshold_for_name (category, level);
+
+          /* bump min-level anyway to allow the category to be registered in the
+           * future still */
+          if (level > _gst_debug_min) {
+            _gst_debug_min = level;
+      }
+        }
       }
 
       g_strfreev (values);
@@ -2167,7 +2362,6 @@ _gst_debug_dump_mem (GstDebugCategory * cat, const gchar * file,
  * fallback function that cleans up the format string and replaces all pointer
  * extension formats with plain %p. */
 #ifdef GST_DISABLE_GST_DEBUG
-#include <glib/gprintf.h>
 int
 __gst_info_fallback_vasprintf (char **result, char const *format, va_list args)
 {
@@ -2204,70 +2398,709 @@ __gst_info_fallback_vasprintf (char **result, char const *format, va_list args)
 }
 #endif
 
-#ifdef GST_ENABLE_FUNC_INSTRUMENTATION
-/* FIXME make this thread specific */
-static GSList *stack_trace = NULL;
-
-void
-__cyg_profile_func_enter (void *this_fn, void *call_site)
-    G_GNUC_NO_INSTRUMENT;
-     void __cyg_profile_func_enter (void *this_fn, void *call_site)
+/**
+ * gst_info_vasprintf:
+ * @result: (out): the resulting string
+ * @format: a printf style format string
+ * @args: the va_list of printf arguments for @format
+ *
+ * Allocates and fills a string large enough (including the terminating null
+ * byte) to hold the specified printf style @format and @args.
+ *
+ * This function deals with the GStreamer specific printf specifiers
+ * #GST_PTR_FORMAT and #GST_SEGMENT_FORMAT.  If you do not have these specifiers
+ * in your @format string, you do not need to use this function and can use
+ * alternatives such as g_vasprintf().
+ *
+ * Free @result with g_free().
+ *
+ * Returns: the length of the string allocated into @result or -1 on any error
+ *
+ * Since: 1.8
+ */
+gint
+gst_info_vasprintf (gchar ** result, const gchar * format, va_list args)
 {
-  gchar *name = _gst_debug_nameof_funcptr (this_fn);
-  gchar *site = _gst_debug_nameof_funcptr (call_site);
-
-  GST_CAT_DEBUG (GST_CAT_CALL_TRACE, "entering function %s from %s", name,
-      site);
-  stack_trace =
-      g_slist_prepend (stack_trace, g_strdup_printf ("%8p in %s from %p (%s)",
-          this_fn, name, call_site, site));
-
-  g_free (name);
-  g_free (site);
+  /* This will fallback to __gst_info_fallback_vasprintf() via a #define in
+   * gst_private.h if the debug system is disabled which will remove the gst
+   * specific printf format specifiers */
+  return __gst_vasprintf (result, format, args);
 }
 
-void
-__cyg_profile_func_exit (void *this_fn, void *call_site)
-    G_GNUC_NO_INSTRUMENT;
-     void __cyg_profile_func_exit (void *this_fn, void *call_site)
+/**
+ * gst_info_strdup_vprintf:
+ * @format: a printf style format string
+ * @args: the va_list of printf arguments for @format
+ *
+ * Allocates, fills and returns a null terminated string from the printf style
+ * @format string and @args.
+ *
+ * See gst_info_vasprintf() for when this function is required.
+ *
+ * Free with g_free().
+ *
+ * Returns: (nullable): a newly allocated null terminated string or %NULL on any error
+ *
+ * Since: 1.8
+ */
+gchar *
+gst_info_strdup_vprintf (const gchar * format, va_list args)
 {
-  gchar *name = _gst_debug_nameof_funcptr (this_fn);
+  gchar *ret;
 
-  GST_CAT_DEBUG (GST_CAT_CALL_TRACE, "leaving function %s", name);
-  g_free (stack_trace->data);
-  stack_trace = g_slist_delete_link (stack_trace, stack_trace);
+  if (gst_info_vasprintf (&ret, format, args) < 0)
+    ret = NULL;
 
-  g_free (name);
+  return ret;
+}
+
+/**
+ * gst_info_strdup_printf:
+ * @format: a printf style format string
+ * @...: the printf arguments for @format
+ *
+ * Allocates, fills and returns a 0-terminated string from the printf style
+ * @format string and corresponding arguments.
+ *
+ * See gst_info_vasprintf() for when this function is required.
+ *
+ * Free with g_free().
+ *
+ * Returns: (nullable): a newly allocated null terminated string or %NULL on any error
+ *
+ * Since: 1.8
+ */
+gchar *
+gst_info_strdup_printf (const gchar * format, ...)
+{
+  gchar *ret;
+  va_list args;
+
+  va_start (args, format);
+  ret = gst_info_strdup_vprintf (format, args);
+  va_end (args);
+
+  return ret;
+}
+
+/**
+ * gst_print:
+ * @format: a printf style format string
+ * @...: the printf arguments for @format
+ *
+ * Outputs a formatted message via the GLib print handler. The default print
+ * handler simply outputs the message to stdout.
+ *
+ * This function will not append a new-line character at the end, unlike
+ * gst_println() which will.
+ *
+ * All strings must be in ASCII or UTF-8 encoding.
+ *
+ * This function differs from g_print() in that it supports all the additional
+ * printf specifiers that are supported by GStreamer's debug logging system,
+ * such as #GST_PTR_FORMAT and #GST_SEGMENT_FORMAT.
+ *
+ * This function is primarily for printing debug output.
+ *
+ * Since: 1.12
+ */
+void
+gst_print (const gchar * format, ...)
+{
+  va_list args;
+  gchar *str;
+
+  va_start (args, format);
+  str = gst_info_strdup_vprintf (format, args);
+  va_end (args);
+
+  g_print ("%s", str);
+  g_free (str);
+}
+
+/**
+ * gst_println:
+ * @format: a printf style format string
+ * @...: the printf arguments for @format
+ *
+ * Outputs a formatted message via the GLib print handler. The default print
+ * handler simply outputs the message to stdout.
+ *
+ * This function will append a new-line character at the end, unlike
+ * gst_print() which will not.
+ *
+ * All strings must be in ASCII or UTF-8 encoding.
+ *
+ * This function differs from g_print() in that it supports all the additional
+ * printf specifiers that are supported by GStreamer's debug logging system,
+ * such as #GST_PTR_FORMAT and #GST_SEGMENT_FORMAT.
+ *
+ * This function is primarily for printing debug output.
+ *
+ * Since: 1.12
+ */
+void
+gst_println (const gchar * format, ...)
+{
+  va_list args;
+  gchar *str;
+
+  va_start (args, format);
+  str = gst_info_strdup_vprintf (format, args);
+  va_end (args);
+
+  g_print ("%s\n", str);
+  g_free (str);
+}
+
+/**
+ * gst_printerr:
+ * @format: a printf style format string
+ * @...: the printf arguments for @format
+ *
+ * Outputs a formatted message via the GLib error message handler. The default
+ * handler simply outputs the message to stderr.
+ *
+ * This function will not append a new-line character at the end, unlike
+ * gst_printerrln() which will.
+ *
+ * All strings must be in ASCII or UTF-8 encoding.
+ *
+ * This function differs from g_printerr() in that it supports the additional
+ * printf specifiers that are supported by GStreamer's debug logging system,
+ * such as #GST_PTR_FORMAT and #GST_SEGMENT_FORMAT.
+ *
+ * This function is primarily for printing debug output.
+ *
+ * Since: 1.12
+ */
+void
+gst_printerr (const gchar * format, ...)
+{
+  va_list args;
+  gchar *str;
+
+  va_start (args, format);
+  str = gst_info_strdup_vprintf (format, args);
+  va_end (args);
+
+  g_printerr ("%s", str);
+  g_free (str);
+}
+
+/**
+ * gst_printerrln:
+ * @format: a printf style format string
+ * @...: the printf arguments for @format
+ *
+ * Outputs a formatted message via the GLib error message handler. The default
+ * handler simply outputs the message to stderr.
+ *
+ * This function will append a new-line character at the end, unlike
+ * gst_printerr() which will not.
+ *
+ * All strings must be in ASCII or UTF-8 encoding.
+ *
+ * This function differs from g_printerr() in that it supports the additional
+ * printf specifiers that are supported by GStreamer's debug logging system,
+ * such as #GST_PTR_FORMAT and #GST_SEGMENT_FORMAT.
+ *
+ * This function is primarily for printing debug output.
+ *
+ * Since: 1.12
+ */
+void
+gst_printerrln (const gchar * format, ...)
+{
+  va_list args;
+  gchar *str;
+
+  va_start (args, format);
+  str = gst_info_strdup_vprintf (format, args);
+  va_end (args);
+
+  g_printerr ("%s\n", str);
+  g_free (str);
+  }
+
+#ifdef HAVE_UNWIND
+#ifdef HAVE_DW
+static gboolean
+append_debug_info (GString * trace, Dwfl * dwfl, const void *ip)
+{
+  Dwfl_Line *line;
+  Dwarf_Addr addr;
+  Dwfl_Module *module;
+  const gchar *function_name;
+
+  if (dwfl_linux_proc_report (dwfl, getpid ()) != 0)
+    return FALSE;
+
+  if (dwfl_report_end (dwfl, NULL, NULL))
+    return FALSE;
+
+  addr = (uintptr_t) ip;
+  module = dwfl_addrmodule (dwfl, addr);
+  function_name = dwfl_module_addrname (module, addr);
+
+  g_string_append_printf (trace, "%s (", function_name ? function_name : "??");
+
+  line = dwfl_getsrc (dwfl, addr);
+  if (line != NULL) {
+    gint nline;
+    Dwarf_Addr addr;
+    const gchar *filename = dwfl_lineinfo (line, &addr,
+        &nline, NULL, NULL, NULL);
+
+    g_string_append_printf (trace, "%s:%d", strrchr (filename,
+            G_DIR_SEPARATOR) + 1, nline);
+  } else {
+    const gchar *eflfile = NULL;
+
+    dwfl_module_info (module, NULL, NULL, NULL, NULL, NULL, &eflfile, NULL);
+    g_string_append_printf (trace, "%s:%p", eflfile ? eflfile : "??", ip);
+}
+
+  return TRUE;
+}
+#endif /* HAVE_DW */
+
+static gchar *
+generate_unwind_trace (GstStackTraceFlags flags)
+{
+  gint unret;
+  unw_context_t uc;
+  unw_cursor_t cursor;
+  gboolean use_libunwind = TRUE;
+  GString *trace = g_string_new (NULL);
+
+#ifdef HAVE_DW
+  Dwfl *dwfl = NULL;
+  Dwfl_Callbacks callbacks = {
+    .find_elf = dwfl_linux_proc_find_elf,
+    .find_debuginfo = dwfl_standard_find_debuginfo,
+  };
+
+  if ((flags & GST_STACK_TRACE_SHOW_FULL))
+    dwfl = dwfl_begin (&callbacks);
+#endif /* HAVE_DW */
+
+  unret = unw_getcontext (&uc);
+  if (unret) {
+    GST_DEBUG ("Could not get libunwind context (%d)", unret);
+
+    goto done;
+  }
+  unret = unw_init_local (&cursor, &uc);
+  if (unret) {
+    GST_DEBUG ("Could not init libunwind context (%d)", unret);
+
+    goto done;
+  }
+
+  while (unw_step (&cursor) > 0) {
+#ifdef HAVE_DW
+    if (dwfl) {
+      unw_word_t ip;
+
+      unret = unw_get_reg (&cursor, UNW_REG_IP, &ip);
+      if (unret) {
+        GST_DEBUG ("libunwind could read frame info (%d)", unret);
+
+        goto done;
+      }
+
+      if (append_debug_info (trace, dwfl, (void *) (ip - 4))) {
+        use_libunwind = FALSE;
+        g_string_append (trace, ")\n");
+      }
+    }
+#endif /* HAVE_DW */
+
+    if (use_libunwind) {
+      char name[32];
+
+      unw_word_t offset = 0;
+      unw_get_proc_name (&cursor, name, sizeof (name), &offset);
+      g_string_append_printf (trace, "%s (0x%" G_GSIZE_FORMAT ")\n", name,
+          (gsize) offset);
+    }
+  }
+
+done:
+#ifdef HAVE_DW
+  if (dwfl)
+    dwfl_end (dwfl);
+#endif
+
+  return g_string_free (trace, FALSE);
+}
+
+#endif /* HAVE_UNWIND */
+
+#ifdef HAVE_BACKTRACE
+static gchar *
+generate_backtrace_trace (void)
+{
+  int j, nptrs;
+  void *buffer[BT_BUF_SIZE];
+  char **strings;
+  GString *trace;
+
+  trace = g_string_new (NULL);
+  nptrs = backtrace (buffer, BT_BUF_SIZE);
+
+  strings = backtrace_symbols (buffer, nptrs);
+
+  if (!strings)
+    return NULL;
+
+  for (j = 0; j < nptrs; j++)
+    g_string_append_printf (trace, "%s\n", strings[j]);
+
+  free (strings);
+
+  return g_string_free (trace, FALSE);
+}
+#else
+#define generate_backtrace_trace() NULL
+#endif /* HAVE_BACKTRACE */
+
+/**
+ * gst_debug_get_stack_trace:
+ * @flags: A set of #GstStackTraceFlags to determine how the stack
+ * trace should look like. Pass 0 to retrieve a minimal backtrace.
+ *
+ * Returns: (nullable): a stack trace, if libunwind or glibc backtrace are
+ * present, else %NULL.
+ *
+ * Since: 1.12
+ */
+gchar *
+gst_debug_get_stack_trace (GstStackTraceFlags flags)
+{
+  gchar *trace = NULL;
+#ifdef HAVE_BACKTRACE
+  gboolean have_backtrace = TRUE;
+#else
+  gboolean have_backtrace = FALSE;
+#endif
+
+#ifdef HAVE_UNWIND
+  if ((flags & GST_STACK_TRACE_SHOW_FULL) || !have_backtrace)
+    trace = generate_unwind_trace (flags);
+#endif /* HAVE_UNWIND */
+
+  if (trace)
+    return trace;
+  else if (have_backtrace)
+    return generate_backtrace_trace ();
+
+  return NULL;
 }
 
 /**
  * gst_debug_print_stack_trace:
  *
- * If GST_ENABLE_FUNC_INSTRUMENTATION is defined a stacktrace is available for
- * gstreamer code, which can be printed with this function.
+ * If libunwind or glibc backtrace are present
+ * a stack trace is printed.
  */
 void
 gst_debug_print_stack_trace (void)
 {
-  GSList *walk = stack_trace;
-  gint count = 0;
+  gchar *trace = gst_debug_get_stack_trace (GST_STACK_TRACE_SHOW_FULL);
 
-  if (walk)
-    walk = g_slist_next (walk);
+  if (trace)
+    g_print ("%s\n", trace);
 
-  while (walk) {
-    gchar *name = (gchar *) walk->data;
-
-    g_print ("#%-2d %s\n", count++, name);
-
-    walk = g_slist_next (walk);
-  }
+  g_free (trace);
 }
-#else
-void
-gst_debug_print_stack_trace (void)
+
+#ifndef GST_DISABLE_GST_DEBUG
+typedef struct
 {
-  /* nothing because it's compiled out */
+  guint max_size_per_thread;
+  guint thread_timeout;
+  GQueue threads;
+  GHashTable *thread_index;
+} GstRingBufferLogger;
+
+typedef struct
+{
+  GList *link;
+  gint64 last_use;
+  GThread *thread;
+
+  GQueue log;
+  gsize log_size;
+} GstRingBufferLog;
+
+G_LOCK_DEFINE_STATIC (ring_buffer_logger);
+static GstRingBufferLogger *ring_buffer_logger = NULL;
+
+static void
+gst_ring_buffer_logger_log (GstDebugCategory * category,
+    GstDebugLevel level,
+    const gchar * file,
+    const gchar * function,
+    gint line, GObject * object, GstDebugMessage * message, gpointer user_data)
+{
+  GstRingBufferLogger *logger = user_data;
+  gint pid;
+  GThread *thread;
+  GstClockTime elapsed;
+  gchar *obj = NULL;
+  gchar c;
+  gchar *output;
+  gsize output_len;
+  GstRingBufferLog *log;
+  gint64 now = g_get_monotonic_time ();
+  const gchar *message_str = gst_debug_message_get (message);
+
+  G_LOCK (ring_buffer_logger);
+
+  if (logger->thread_timeout > 0) {
+    /* Remove all threads that saw no output since thread_timeout seconds.
+     * By construction these are all at the tail of the queue, and the queue
+     * is ordered by last use, so we just need to look at the tail.
+     */
+    while (logger->threads.tail) {
+      log = logger->threads.tail->data;
+      if (log->last_use + logger->thread_timeout * G_USEC_PER_SEC >= now)
+        break;
+
+      g_hash_table_remove (logger->thread_index, log->thread);
+      while ((output = g_queue_pop_head (&log->log)))
+        g_free (output);
+      g_free (log);
+      g_queue_pop_tail (&logger->threads);
+    }
+  }
+
+  /* Get logger for this thread, and put it back at the
+   * head of the threads queue */
+  thread = g_thread_self ();
+  log = g_hash_table_lookup (logger->thread_index, thread);
+  if (!log) {
+    log = g_new0 (GstRingBufferLog, 1);
+    g_queue_init (&log->log);
+    log->log_size = 0;
+    g_queue_push_head (&logger->threads, log);
+    log->link = logger->threads.head;
+    log->thread = thread;
+    g_hash_table_insert (logger->thread_index, thread, log);
+  } else {
+    g_queue_unlink (&logger->threads, log->link);
+    g_queue_push_head_link (&logger->threads, log->link);
+  }
+  log->last_use = now;
+
+  /* __FILE__ might be a file name or an absolute path or a
+   * relative path, irrespective of the exact compiler used,
+   * in which case we want to shorten it to the filename for
+   * readability. */
+  c = file[0];
+  if (c == '.' || c == '/' || c == '\\' || (c != '\0' && file[1] == ':')) {
+    file = gst_path_basename (file);
+  }
+
+  pid = getpid ();
+
+  if (object) {
+    obj = gst_debug_print_object (object);
+  } else {
+    obj = (gchar *) "";
+  }
+
+  elapsed = GST_CLOCK_DIFF (_priv_gst_start_time, gst_util_get_timestamp ());
+
+  /* no color, all platforms */
+#define PRINT_FMT " "PID_FMT" "PTR_FMT" %s "CAT_FMT" %s\n"
+  output =
+      g_strdup_printf ("%" GST_TIME_FORMAT PRINT_FMT, GST_TIME_ARGS (elapsed),
+      pid, thread, gst_debug_level_get_name (level),
+      gst_debug_category_get_name (category), file, line, function, obj,
+      message_str);
+#undef PRINT_FMT
+
+  output_len = strlen (output);
+
+  if (output_len < logger->max_size_per_thread) {
+    gchar *buf;
+
+    /* While using a GQueue here is not the most efficient thing to do, we
+     * have to allocate a string for every output anyway and could just store
+     * that instead of copying it to an actual ringbuffer.
+     * Better than GQueue would be GstQueueArray, but that one is in
+     * libgstbase and we can't use it here. That one allocation will not make
+     * much of a difference anymore, considering the number of allocations
+     * needed to get to this point...
+     */
+    while (log->log_size + output_len > logger->max_size_per_thread) {
+      buf = g_queue_pop_head (&log->log);
+      log->log_size -= strlen (buf);
+      g_free (buf);
+    }
+    g_queue_push_tail (&log->log, output);
+    log->log_size += output_len;
+  } else {
+    gchar *buf;
+
+    /* Can't really write anything as the line is bigger than the maximum
+     * allowed log size already, so just remove everything */
+
+    while ((buf = g_queue_pop_head (&log->log)))
+      g_free (buf);
+    g_free (output);
+    log->log_size = 0;
+  }
+
+  if (object != NULL)
+    g_free (obj);
+
+  G_UNLOCK (ring_buffer_logger);
 }
 
-#endif /* GST_ENABLE_FUNC_INSTRUMENTATION */
+/**
+ * gst_debug_ring_buffer_logger_get_logs:
+ *
+ * Fetches the current logs per thread from the ring buffer logger. See
+ * gst_debug_add_ring_buffer_logger() for details.
+ *
+ * Returns: (transfer full) (array zero-terminated): NULL-terminated array of
+ * strings with the debug output per thread
+ *
+ * Since: 1.14
+ */
+gchar **
+gst_debug_ring_buffer_logger_get_logs (void)
+{
+  gchar **logs, **tmp;
+  GList *l;
+
+  g_return_val_if_fail (ring_buffer_logger != NULL, NULL);
+
+  G_LOCK (ring_buffer_logger);
+
+  tmp = logs = g_new0 (gchar *, ring_buffer_logger->threads.length + 1);
+  for (l = ring_buffer_logger->threads.head; l; l = l->next) {
+    GstRingBufferLog *log = l->data;
+    GList *l;
+    gchar *p;
+    gsize len;
+
+    *tmp = p = g_new0 (gchar, log->log_size + 1);
+
+    for (l = log->log.head; l; l = l->next) {
+      len = strlen (l->data);
+      memcpy (p, l->data, len);
+      p += len;
+    }
+
+    tmp++;
+  }
+
+  G_UNLOCK (ring_buffer_logger);
+
+  return logs;
+}
+
+static void
+gst_ring_buffer_logger_free (GstRingBufferLogger * logger)
+{
+  G_LOCK (ring_buffer_logger);
+  if (ring_buffer_logger == logger) {
+    GstRingBufferLog *log;
+
+    while ((log = g_queue_pop_head (&logger->threads))) {
+      gchar *buf;
+      while ((buf = g_queue_pop_head (&log->log)))
+        g_free (buf);
+      g_free (log);
+    }
+
+    g_hash_table_unref (logger->thread_index);
+
+    g_free (logger);
+    ring_buffer_logger = NULL;
+  }
+  G_UNLOCK (ring_buffer_logger);
+}
+
+/**
+ * gst_debug_add_ring_buffer_logger:
+ * @max_size_per_thread: Maximum size of log per thread in bytes
+ * @thread_timeout: Timeout for threads in seconds
+ *
+ * Adds a memory ringbuffer based debug logger that stores up to
+ * @max_size_per_thread bytes of logs per thread and times out threads after
+ * @thread_timeout seconds of inactivity.
+ *
+ * Logs can be fetched with gst_debug_ring_buffer_logger_get_logs() and the
+ * logger can be removed again with gst_debug_remove_ring_buffer_logger().
+ * Only one logger at a time is possible.
+ *
+ * Since: 1.14
+ */
+void
+gst_debug_add_ring_buffer_logger (guint max_size_per_thread,
+    guint thread_timeout)
+{
+  GstRingBufferLogger *logger;
+
+  G_LOCK (ring_buffer_logger);
+
+  if (ring_buffer_logger) {
+    g_warn_if_reached ();
+    G_UNLOCK (ring_buffer_logger);
+    return;
+  }
+
+  logger = ring_buffer_logger = g_new0 (GstRingBufferLogger, 1);
+
+  logger->max_size_per_thread = max_size_per_thread;
+  logger->thread_timeout = thread_timeout;
+  logger->thread_index = g_hash_table_new (g_direct_hash, g_direct_equal);
+  g_queue_init (&logger->threads);
+
+  gst_debug_add_log_function (gst_ring_buffer_logger_log, logger,
+      (GDestroyNotify) gst_ring_buffer_logger_free);
+  G_UNLOCK (ring_buffer_logger);
+}
+
+/**
+ * gst_debug_remove_ring_buffer_logger:
+ *
+ * Removes any previously added ring buffer logger with
+ * gst_debug_add_ring_buffer_logger().
+ *
+ * Since: 1.14
+ */
+void
+gst_debug_remove_ring_buffer_logger (void)
+{
+  gst_debug_remove_log_function (gst_ring_buffer_logger_log);
+}
+
+#else /* GST_DISABLE_GST_DEBUG */
+#ifndef GST_REMOVE_DISABLED
+
+gchar **
+gst_debug_ring_buffer_logger_get_logs (void)
+{
+  return NULL;
+}
+
+void
+gst_debug_add_ring_buffer_logger (guint max_size_per_thread,
+    guint thread_timeout)
+{
+}
+
+void
+gst_debug_remove_ring_buffer_logger (void)
+{
+}
+
+#endif /* GST_REMOVE_DISABLED */
+#endif /* GST_DISABLE_GST_DEBUG */

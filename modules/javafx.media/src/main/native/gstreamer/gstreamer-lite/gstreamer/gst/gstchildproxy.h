@@ -67,36 +67,48 @@ struct _GstChildProxyInterface
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_API
 GType     gst_child_proxy_get_type (void);
 
+GST_API
 GObject * gst_child_proxy_get_child_by_name  (GstChildProxy * parent, const gchar * name);
 
+GST_API
 guint     gst_child_proxy_get_children_count (GstChildProxy * parent);
+
+GST_API
 GObject * gst_child_proxy_get_child_by_index (GstChildProxy * parent, guint index);
 
+GST_API
 gboolean  gst_child_proxy_lookup             (GstChildProxy *object, const gchar *name,
                                               GObject **target, GParamSpec **pspec);
-
+GST_API
 void      gst_child_proxy_get_property       (GstChildProxy * object, const gchar *name,
                                               GValue *value);
+GST_API
 void      gst_child_proxy_get_valist         (GstChildProxy * object,
                                               const gchar * first_property_name,
                                               va_list var_args);
+GST_API
 void      gst_child_proxy_get                (GstChildProxy * object,
                                               const gchar * first_property_name,
                                               ...) G_GNUC_NULL_TERMINATED;
-
+GST_API
 void      gst_child_proxy_set_property       (GstChildProxy * object, const gchar *name,
                                               const GValue *value);
+
+GST_API
 void      gst_child_proxy_set_valist         (GstChildProxy* object,
                                               const gchar * first_property_name,
                                               va_list var_args);
+GST_API
 void      gst_child_proxy_set                (GstChildProxy * object,
                                               const gchar * first_property_name,
                                               ...) G_GNUC_NULL_TERMINATED;
-
+GST_API
 void      gst_child_proxy_child_added        (GstChildProxy * parent, GObject * child,
                                               const gchar *name);
+GST_API
 void      gst_child_proxy_child_removed      (GstChildProxy * parent, GObject * child,
                                               const gchar *name);
 

@@ -30,8 +30,17 @@
 
 G_BEGIN_DECLS
 
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_toc_type;
+#else // GSTREAMER_LITE
 GST_EXPORT GType _gst_toc_type;
+#endif // GSTREAMER_LITE
+
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_toc_entry_type;
+#else // GSTREAMER_LITE
 GST_EXPORT GType _gst_toc_entry_type;
+#endif // GSTREAMER_LITE
 
 #define GST_TYPE_TOC (_gst_toc_type)
 #define GST_TYPE_TOC_ENTRY (_gst_toc_entry_type)
@@ -127,21 +136,37 @@ typedef enum {
 #define GST_TOC_REPEAT_COUNT_INFINITE (-1)
 
 /* functions to return type structures */
+
+GST_API
 GType           gst_toc_get_type                (void);
+
+GST_API
 GType           gst_toc_entry_get_type          (void);
 
 /* functions to create, ref and unref/free TOCs */
+
+GST_API
 GstToc *           gst_toc_new                     (GstTocScope scope);
 
+GST_API
 GstTocScope        gst_toc_get_scope               (const GstToc *toc);
 
+GST_API
 void               gst_toc_set_tags                (GstToc *toc, GstTagList * tags);
+
+GST_API
 void               gst_toc_merge_tags              (GstToc *toc, GstTagList *tags, GstTagMergeMode mode);
+
+GST_API
 GstTagList *       gst_toc_get_tags                (const GstToc *toc);
 
-void               gst_toc_append_entry               (GstToc *toc, GstTocEntry *entry);
+GST_API
+void               gst_toc_append_entry            (GstToc *toc, GstTocEntry *entry);
+
+GST_API
 GList *            gst_toc_get_entries             (const GstToc *toc);
 
+GST_API
 void               gst_toc_dump                    (GstToc *toc);
 
 #define gst_toc_ref(toc)            (GstToc*)gst_mini_object_ref(GST_MINI_OBJECT_CAST(toc))
@@ -150,6 +175,8 @@ void               gst_toc_dump                    (GstToc *toc);
 #define gst_toc_make_writable(toc)  (GstToc*)gst_mini_object_make_writable(GST_MINI_OBJECT_CAST(toc))
 
 /* functions to create, ref and unref/free TOC entries */
+
+GST_API
 GstTocEntry *   gst_toc_entry_new               (GstTocEntryType type, const gchar *uid);
 
 #define gst_toc_entry_ref(entry)            (GstTocEntry*)gst_mini_object_ref(GST_MINI_OBJECT_CAST(entry))
@@ -157,32 +184,74 @@ GstTocEntry *   gst_toc_entry_new               (GstTocEntryType type, const gch
 #define gst_toc_entry_copy(entry)           (GstTocEntry*)gst_mini_object_copy(GST_MINI_OBJECT_CAST(entry))
 #define gst_toc_entry_make_writable(entry)  (GstTocEntry*)gst_mini_object_make_writable(GST_MINI_OBJECT_CAST(entry))
 
+GST_API
 GstTocEntry *      gst_toc_find_entry                    (const GstToc *toc, const gchar *uid);
 
+GST_API
 GstTocEntryType    gst_toc_entry_get_entry_type          (const GstTocEntry *entry);
+
+GST_API
 const gchar *      gst_toc_entry_get_uid                 (const GstTocEntry *entry);
 
-void               gst_toc_entry_append_sub_entry           (GstTocEntry *entry, GstTocEntry *subentry);
+GST_API
+void               gst_toc_entry_append_sub_entry        (GstTocEntry *entry, GstTocEntry *subentry);
+
+GST_API
 GList *            gst_toc_entry_get_sub_entries         (const GstTocEntry *entry);
 
+GST_API
 void               gst_toc_entry_set_tags                (GstTocEntry *entry, GstTagList *tags);
+
+GST_API
 void               gst_toc_entry_merge_tags              (GstTocEntry *entry, GstTagList *tags, GstTagMergeMode mode);
+
+GST_API
 GstTagList *       gst_toc_entry_get_tags                (const GstTocEntry *entry);
 
+GST_API
 gboolean           gst_toc_entry_is_alternative          (const GstTocEntry *entry);
+
+GST_API
 gboolean           gst_toc_entry_is_sequence             (const GstTocEntry *entry);
 
+GST_API
 void               gst_toc_entry_set_start_stop_times    (GstTocEntry *entry, gint64 start, gint64 stop);
+
+GST_API
 gboolean           gst_toc_entry_get_start_stop_times    (const GstTocEntry *entry, gint64 *start, gint64 *stop);
 
+GST_API
 void               gst_toc_entry_set_loop                (GstTocEntry *entry, GstTocLoopType loop_type, gint repeat_count);
+
+GST_API
 gboolean           gst_toc_entry_get_loop                (const GstTocEntry *entry, GstTocLoopType *loop_type, gint *repeat_count);
 
+GST_API
 GstToc *           gst_toc_entry_get_toc                 (GstTocEntry *entry);
+
+GST_API
 GstTocEntry *      gst_toc_entry_get_parent              (GstTocEntry *entry);
 
 
+GST_API
 const gchar *      gst_toc_entry_type_get_nick     (GstTocEntryType type);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+static inline void
+_gst_autoptr_toc_unref (GstToc *toc)
+{
+  gst_toc_unref (toc);
+}
+
+static inline void
+_gst_autoptr_toc_entry_unref (GstTocEntry *entry)
+{
+  gst_toc_entry_unref (entry);
+}
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstToc, _gst_autoptr_toc_unref)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTocEntry, _gst_autoptr_toc_entry_unref)
+#endif
 
 G_END_DECLS
 

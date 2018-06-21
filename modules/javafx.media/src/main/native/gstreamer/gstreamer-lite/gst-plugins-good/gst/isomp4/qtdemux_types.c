@@ -17,9 +17,12 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "qtdemux_debug.h"
 #include "qtdemux_types.h"
 #include "qtdemux_dump.h"
 #include "fourcc.h"
+
+#define GST_CAT_DEFAULT qtdemux_debug
 
 static const QtNodeType qt_node_types[] = {
   {FOURCC_moov, "movie", QT_FLAG_CONTAINER,},
@@ -51,8 +54,8 @@ static const QtNodeType qt_node_types[] = {
   {FOURCC_vmhd, "video media information", 0,
       qtdemux_dump_vmhd},
   {FOURCC_smhd, "sound media information", 0},
-  {FOURCC_gmhd, "base media information header", 0},
-  {FOURCC_gmin, "base media info", 0},
+  {FOURCC_gmhd, "base media information header", QT_FLAG_CONTAINER},
+  {FOURCC_gmin, "base media info", 0, qtdemux_dump_gmin},
   {FOURCC_dinf, "data information", QT_FLAG_CONTAINER},
   {FOURCC_dref, "data reference", 0,
       qtdemux_dump_dref},
@@ -84,11 +87,17 @@ static const QtNodeType qt_node_types[] = {
   {FOURCC_mhdr, "mhdr", QT_FLAG_CONTAINER,},
   {FOURCC_jp2h, "jp2h", QT_FLAG_CONTAINER,},
   {FOURCC_colr, "colr", 0,},
+  {FOURCC_clap, "clap", 0,},
+  {FOURCC_tapt, "tapt", 0,},
+  {FOURCC_ihdr, "ihdr", 0,},
   {FOURCC_fiel, "fiel", 0,},
   {FOURCC_jp2x, "jp2x", 0,},
   {FOURCC_alac, "alac", 0,},
+  {FOURCC_fLaC, "fLaC", 0, qtdemux_dump_fLaC},
+  {FOURCC_dfLa, "dfLa", 0, qtdemux_dump_dfLa},
   {FOURCC_wave, "wave", QT_FLAG_CONTAINER},
   {FOURCC_appl, "appl", QT_FLAG_CONTAINER},
+  {FOURCC_cfhd, "cfhd", QT_FLAG_CONTAINER},
   {FOURCC_esds, "esds", 0},
   {FOURCC_hnti, "hnti", QT_FLAG_CONTAINER},
   {FOURCC_rtp_, "rtp ", 0, qtdemux_dump_unknown},
@@ -137,15 +146,18 @@ static const QtNodeType qt_node_types[] = {
   {FOURCC_keyw, "Keywords", QT_FLAG_CONTAINER,},
   {FOURCC_kywd, "Keywords", QT_FLAG_CONTAINER,},
   {FOURCC__too, "Encoder", QT_FLAG_CONTAINER,},
+  {FOURCC__swr, "Application Name", QT_FLAG_CONTAINER,},
   {FOURCC_____, "----", QT_FLAG_CONTAINER,},
   {FOURCC_data, "data", 0, qtdemux_dump_unknown},
   {FOURCC_free, "free", 0,},
+  {FOURCC_skip, "skip", 0,},
   {FOURCC_SVQ3, "SVQ3", 0,},
   {FOURCC_rmra, "rmra", QT_FLAG_CONTAINER,},
   {FOURCC_rmda, "rmda", QT_FLAG_CONTAINER,},
   {FOURCC_rdrf, "rdrf", 0,},
   {FOURCC__gen, "Custom Genre", QT_FLAG_CONTAINER,},
   {FOURCC_ctts, "Composition time to sample", 0, qtdemux_dump_ctts},
+  {FOURCC_cslg, "Composition Shift Least Greatest", 0, qtdemux_dump_cslg},
   {FOURCC_XiTh, "XiTh", 0},
   {FOURCC_XdxT, "XdxT", 0},
   {FOURCC_loci, "loci", 0},
@@ -157,7 +169,7 @@ static const QtNodeType qt_node_types[] = {
   {FOURCC_mfro, "movie fragment random access offset", 0,
       qtdemux_dump_mfro},
   {FOURCC_moof, "movie fragment", QT_FLAG_CONTAINER,},
-  {FOURCC_mfhd, "movie fragment header", 0,},
+  {FOURCC_mfhd, "movie fragment header", 0, qtdemux_dump_mfhd},
   {FOURCC_traf, "track fragment", QT_FLAG_CONTAINER,},
   {FOURCC_tfhd, "track fragment header", 0,
       qtdemux_dump_tfhd},
@@ -182,6 +194,25 @@ static const QtNodeType qt_node_types[] = {
   {FOURCC_chap, "Chapter Reference"},
   {FOURCC_btrt, "Bitrate information", 0},
   {FOURCC_frma, "Audio codec format", 0},
+  {FOURCC_name, "name", 0},
+  {FOURCC_mean, "mean", 0},
+  {FOURCC_svmi, "Stereoscopic Video Media Information", 0,
+      qtdemux_dump_svmi},
+  {FOURCC_scdi, "Stereoscopic Camera and Display Information", 0,
+      qtdemux_dump_unknown},
+  {FOURCC_saiz, "sample auxiliary information sizes", 0},
+  {FOURCC_saio, "sample auxiliary information offsets", 0},
+  {FOURCC_encv, "encrypted visual sample entry", 0},
+  {FOURCC_enca, "encrypted audio sample entry", 0},
+  {FOURCC_enct, "encrypted text sample entry", 0},
+  {FOURCC_encs, "encrypted system sample entry", 0},
+  {FOURCC_sinf, "protection scheme information", QT_FLAG_CONTAINER},
+  {FOURCC_frma, "original format", 0},
+  {FOURCC_schm, "scheme type", 0},
+  {FOURCC_schi, "scheme information", QT_FLAG_CONTAINER},
+  {FOURCC_pssh, "protection system specific header", 0},
+  {FOURCC_tenc, "track encryption", 0},
+  {FOURCC_stpp, "XML subtitle sample entry", 0},
   {0, "unknown", 0,},
 };
 

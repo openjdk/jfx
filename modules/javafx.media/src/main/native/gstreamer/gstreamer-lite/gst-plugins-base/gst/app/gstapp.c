@@ -18,6 +18,7 @@
  */
 /**
  * SECTION:element-appsrc
+ * @title: appsrc
  *
  * The appsrc element can be used by applications to insert data into a
  * GStreamer pipeline. Unlike most GStreamer elements, Appsrc provides
@@ -29,6 +30,7 @@
  */
 /**
  * SECTION:element-appsink
+ * @title: appsink
  *
  * Appsink is a sink plugin that supports many different methods for making
  * the application get a handle on the GStreamer data in a pipeline. Unlike

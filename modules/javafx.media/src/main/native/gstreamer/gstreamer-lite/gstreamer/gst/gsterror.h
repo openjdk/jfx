@@ -126,7 +126,7 @@ typedef enum
  * @GST_RESOURCE_ERROR_NO_SPACE_LEFT: used when the resource has no space left.
  * @GST_RESOURCE_ERROR_NOT_AUTHORIZED: used when the resource can't be opened
  *                                     due to missing authorization.
- *                                     Since: 1.2.4
+ *                                     (Since 1.2.4)
  * @GST_RESOURCE_ERROR_NUM_ERRORS: the number of resource error types.
  *
  * Resource errors are for any resource used by an element:
@@ -242,10 +242,19 @@ typedef enum
  */
 #define GST_ERROR_SYSTEM    ("system error: %s", g_strerror (errno))
 
+GST_API
 gchar *gst_error_get_message (GQuark domain, gint code);
+
+GST_API
 GQuark gst_stream_error_quark (void);
+
+GST_API
 GQuark gst_core_error_quark (void);
+
+GST_API
 GQuark gst_resource_error_quark (void);
+
+GST_API
 GQuark gst_library_error_quark (void);
 
 G_END_DECLS

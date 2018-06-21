@@ -26,6 +26,7 @@
 
 #include <glib-object.h>
 #include <gst/gst.h>
+#include <gst/controller/controller-enumtypes.h>
 
 G_BEGIN_DECLS
 
@@ -41,8 +42,6 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_CLASS_TYPE ((vtable), GST_TYPE_LFO_CONTROL_SOURCE))
 #define GST_LFO_CONTROL_SOURCE_GET_CLASS(inst) \
   (G_TYPE_INSTANCE_GET_CLASS ((inst), GST_TYPE_LFO_CONTROL_SOURCE, GstLFOControlSourceClass))
-
-#define GST_TYPE_LFO_WAVEFORM (gst_lfo_waveform_get_type ())
 
 typedef struct _GstLFOControlSource GstLFOControlSource;
 typedef struct _GstLFOControlSourceClass GstLFOControlSourceClass;
@@ -88,12 +87,17 @@ struct _GstLFOControlSourceClass {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_CONTROLLER_API
 GType gst_lfo_control_source_get_type (void);
-GType gst_lfo_waveform_get_type (void);
 
 /* Functions */
 
+GST_CONTROLLER_API
 GstControlSource *gst_lfo_control_source_new (void);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstLFOControlSource, gst_object_unref)
+#endif
 
 G_END_DECLS
 

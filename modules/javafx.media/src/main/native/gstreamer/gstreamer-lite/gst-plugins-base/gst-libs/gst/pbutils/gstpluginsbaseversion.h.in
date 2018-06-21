@@ -20,7 +20,8 @@
 #ifndef __GST_PLUGINS_BASE_VERSION_H__
 #define __GST_PLUGINS_BASE_VERSION_H__
 
-#include <glib.h>
+#include <gst/gst.h>
+#include <gst/pbutils/pbutils-prelude.h>
 
 G_BEGIN_DECLS
 
@@ -67,8 +68,10 @@ G_BEGIN_DECLS
      (GST_PLUGINS_BASE_VERSION_MAJOR == (major) && GST_PLUGINS_BASE_VERSION_MINOR == (minor) && \
       GST_PLUGINS_BASE_VERSION_MICRO + 1 == (micro) && GST_PLUGINS_BASE_VERSION_NANO > 0))
 
+GST_PBUTILS_API
 void     gst_plugins_base_version (guint *major, guint *minor, guint *micro, guint *nano);
 
+GST_PBUTILS_API
 gchar *  gst_plugins_base_version_string (void);
 
 G_END_DECLS

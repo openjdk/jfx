@@ -19,6 +19,8 @@
 #ifndef __GST_MACROS_H__
 #define __GST_MACROS_H__
 
+#include <glib.h>
+
 G_BEGIN_DECLS
 
 #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)

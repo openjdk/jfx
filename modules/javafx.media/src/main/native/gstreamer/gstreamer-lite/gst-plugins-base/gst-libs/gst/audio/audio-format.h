@@ -171,12 +171,18 @@ typedef enum
 /**
  * GstAudioPackFlags:
  * @GST_AUDIO_PACK_FLAG_NONE: No flag
+ * @GST_AUDIO_PACK_FLAG_TRUNCATE_RANGE: When the source has a smaller depth
+ *   than the target format, set the least significant bits of the target
+ *   to 0. This is likely sightly faster but less accurate. When this flag
+ *   is not specified, the most significant bits of the source are duplicated
+ *   in the least significant bits of the destination.
  *
  * The different flags that can be used when packing and unpacking.
  */
 typedef enum
 {
-  GST_AUDIO_PACK_FLAG_NONE       = 0
+  GST_AUDIO_PACK_FLAG_NONE             = 0,
+  GST_AUDIO_PACK_FLAG_TRUNCATE_RANGE   = (1 << 0)
 } GstAudioPackFlags;
 
 /**
@@ -244,6 +250,7 @@ struct _GstAudioFormatInfo {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_AUDIO_API
 GType gst_audio_format_info_get_type (void);
 
 #define GST_AUDIO_FORMAT_INFO_FORMAT(info)           ((info)->format)
@@ -261,15 +268,21 @@ GType gst_audio_format_info_get_type (void);
 #define GST_AUDIO_FORMAT_INFO_DEPTH(info)            ((info)->depth)
 
 
+GST_AUDIO_API
 GstAudioFormat gst_audio_format_build_integer    (gboolean sign, gint endianness,
                                                   gint width, gint depth) G_GNUC_CONST;
 
+GST_AUDIO_API
 GstAudioFormat gst_audio_format_from_string      (const gchar *format) G_GNUC_CONST;
+
+GST_AUDIO_API
 const gchar *  gst_audio_format_to_string        (GstAudioFormat format) G_GNUC_CONST;
 
+GST_AUDIO_API
 const GstAudioFormatInfo *
                gst_audio_format_get_info         (GstAudioFormat format) G_GNUC_CONST;
 
+GST_AUDIO_API
 void           gst_audio_format_fill_silence     (const GstAudioFormatInfo *info,
                                                   gpointer dest, gsize length);
 

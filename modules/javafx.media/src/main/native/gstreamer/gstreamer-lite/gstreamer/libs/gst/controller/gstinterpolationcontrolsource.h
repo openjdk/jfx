@@ -28,6 +28,7 @@
 #include <gst/gst.h>
 
 #include <gst/controller/gsttimedvaluecontrolsource.h>
+#include <gst/controller/controller-enumtypes.h>
 
 G_BEGIN_DECLS
 
@@ -44,8 +45,6 @@ G_BEGIN_DECLS
 #define GST_INTERPOLATION_CONTROL_SOURCE_GET_CLASS(inst) \
   (G_TYPE_INSTANCE_GET_CLASS ((inst), GST_TYPE_INTERPOLATION_CONTROL_SOURCE, GstInterpolationControlSourceClass))
 
-#define GST_TYPE_INTERPOLATION_MODE (gst_interpolation_mode_get_type ())
-
 typedef struct _GstInterpolationControlSource GstInterpolationControlSource;
 typedef struct _GstInterpolationControlSourceClass GstInterpolationControlSourceClass;
 typedef struct _GstInterpolationControlSourcePrivate GstInterpolationControlSourcePrivate;
@@ -54,7 +53,11 @@ typedef struct _GstInterpolationControlSourcePrivate GstInterpolationControlSour
  * GstInterpolationMode:
  * @GST_INTERPOLATION_MODE_NONE: steps-like interpolation, default
  * @GST_INTERPOLATION_MODE_LINEAR: linear interpolation
- * @GST_INTERPOLATION_MODE_CUBIC: cubic interpolation
+ * @GST_INTERPOLATION_MODE_CUBIC: cubic interpolation (natural), may overshoot
+ *   the min or max values set by the control point, but is more 'curvy'
+ * @GST_INTERPOLATION_MODE_CUBIC_MONOTONIC: monotonic cubic interpolation, will not
+ *   produce any values outside of the min-max range set by the control points
+ *   (Since 1.8)
  *
  * The various interpolation modes available.
  */
@@ -62,7 +65,8 @@ typedef enum
 {
   GST_INTERPOLATION_MODE_NONE,
   GST_INTERPOLATION_MODE_LINEAR,
-  GST_INTERPOLATION_MODE_CUBIC
+  GST_INTERPOLATION_MODE_CUBIC,
+  GST_INTERPOLATION_MODE_CUBIC_MONOTONIC,
 } GstInterpolationMode;
 
 /**
@@ -85,12 +89,17 @@ struct _GstInterpolationControlSourceClass {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_CONTROLLER_API
 GType gst_interpolation_control_source_get_type (void);
-GType gst_interpolation_mode_get_type (void);
 
 /* Functions */
 
+GST_CONTROLLER_API
 GstControlSource * gst_interpolation_control_source_new (void);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstInterpolationControlSource, gst_object_unref)
+#endif
 
 G_END_DECLS
 

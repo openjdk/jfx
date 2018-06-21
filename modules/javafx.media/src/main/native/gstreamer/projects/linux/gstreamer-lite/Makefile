@@ -100,6 +100,7 @@ gstreamer/gst/gst.c \
             gstreamer/gst/gstcontrolsource.c \
             gstreamer/gst/gstdatetime.c \
             gstreamer/gst/gstdebugutils.c \
+            gstreamer/gst/gstdynamictypefactory.c \
             gstreamer/gst/gstelement.c \
             gstreamer/gst/gstelementfactory.c \
             gstreamer/gst/gstenumtypes.c \
@@ -124,6 +125,7 @@ gstreamer/gst/gst.c \
             gstreamer/gst/gstpluginloader.c \
             gstreamer/gst/gstpoll.c \
             gstreamer/gst/gstpreset.c \
+            gstreamer/gst/gstprotection.c \
             gstreamer/gst/gstquark.c \
             gstreamer/gst/gstquery.c \
             gstreamer/gst/gstregistry.c \
@@ -133,13 +135,18 @@ gstreamer/gst/gst.c \
             gstreamer/gst/gstsegment.c \
             gstreamer/gst/gststructure.c \
             gstreamer/gst/gstsystemclock.c \
+            gstreamer/gst/gststreamcollection.c \
+            gstreamer/gst/gststreams.c \
             gstreamer/gst/gsttaglist.c \
             gstreamer/gst/gsttagsetter.c \
             gstreamer/gst/gsttask.c \
             gstreamer/gst/gsttaskpool.c \
             gstreamer/gst/gsttoc.c \
             gstreamer/gst/gsttocsetter.c \
-            gstreamer/gst/gsttrace.c \
+            gstreamer/gst/gsttracer.c \
+            gstreamer/gst/gsttracerfactory.c \
+            gstreamer/gst/gsttracerrecord.c \
+            gstreamer/gst/gsttracerutils.c \
             gstreamer/gst/gsttypefind.c \
             gstreamer/gst/gsttypefindfactory.c \
             gstreamer/gst/gsturi.c \
@@ -163,7 +170,11 @@ gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/app/gstappsink.c \
             gst-plugins-base/gst-libs/gst/audio/audio.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
+            gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \
+            gst-plugins-base/gst-libs/gst/audio/audio-converter.c \
+            gst-plugins-base/gst-libs/gst/audio/audio-resampler.c \
             gst-plugins-base/gst-libs/gst/audio/audio-enumtypes.c \
+            gst-plugins-base/gst-libs/gst/audio/audio-quantize.c \
             gst-plugins-base/gst-libs/gst/audio/audio-format.c \
             gst-plugins-base/gst-libs/gst/audio/audio-info.c \
             gst-plugins-base/gst-libs/gst/audio/gstaudiobasesink.c \
@@ -178,20 +189,12 @@ gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/audio/gstaudioringbuffer.c \
             gst-plugins-base/gst-libs/gst/audio/gstaudiosink.c \
             gst-plugins-base/gst-libs/gst/audio/gstaudiosrc.c \
+            gst-plugins-base/gst-libs/gst/audio/gstaudioutilsprivate.c \
             gst-plugins-base/gst-libs/gst/audio/streamvolume.c \
             gst-plugins-base/gst-libs/gst/fft/gstfft.c \
             gst-plugins-base/gst-libs/gst/fft/gstfftf32.c \
-            gst-plugins-base/gst-libs/gst/fft/gstfftf64.c \
-            gst-plugins-base/gst-libs/gst/fft/gstffts16.c \
-            gst-plugins-base/gst-libs/gst/fft/gstffts32.c \
             gst-plugins-base/gst-libs/gst/fft/kiss_fft_f32.c \
-            gst-plugins-base/gst-libs/gst/fft/kiss_fft_f64.c \
-            gst-plugins-base/gst-libs/gst/fft/kiss_fft_s16.c \
-            gst-plugins-base/gst-libs/gst/fft/kiss_fft_s32.c \
             gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f32.c \
-            gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f64.c \
-            gst-plugins-base/gst-libs/gst/fft/kiss_fftr_s16.c \
-            gst-plugins-base/gst-libs/gst/fft/kiss_fftr_s32.c \
             gst-plugins-base/gst-libs/gst/pbutils/codec-utils.c \
             gst-plugins-base/gst-libs/gst/pbutils/descriptions.c \
             gst-plugins-base/gst-libs/gst/pbutils/encoding-profile.c \
@@ -211,21 +214,22 @@ gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/tag/id3v2frames.c \
             gst-plugins-base/gst-libs/gst/tag/lang.c \
             gst-plugins-base/gst-libs/gst/tag/tags.c \
+            gst-plugins-base/gst-libs/gst/tag/tag-enumtypes.c \
+            gst-plugins-base/gst-libs/gst/video/video.c \
             gst-plugins-base/gst-libs/gst/video/video-chroma.c \
             gst-plugins-base/gst-libs/gst/video/video-color.c \
+            gst-plugins-base/gst-libs/gst/video/video-converter.c \
             gst-plugins-base/gst-libs/gst/video/video-format.c \
+            gst-plugins-base/gst-libs/gst/video/video-enumtypes.c \
             gst-plugins-base/gst-libs/gst/video/video-info.c \
+            gst-plugins-base/gst-libs/gst/video/video-multiview.c \
             gst-plugins-base/gst-libs/gst/video/video-orc-dist.c \
             gst-plugins-base/gst-libs/gst/video/video-tile.c \
             gst-plugins-good/gst/audiofx/audiofx.c \
             gst-plugins-good/gst/audiofx/audiopanorama.c \
             gst-plugins-good/gst/audiofx/audiopanoramaorc.c \
             gst-plugins-base/gst/audioconvert/plugin.c \
-            gst-plugins-base/gst/audioconvert/audioconvert.c \
             gst-plugins-base/gst/audioconvert/gstaudioconvert.c \
-            gst-plugins-base/gst/audioconvert/gstaudioconvertorc.c \
-            gst-plugins-base/gst/audioconvert/gstaudioquantize.c \
-            gst-plugins-base/gst/audioconvert/gstchannelmix.c \
             gst-plugins-bad/gst/aiff/aiff.c \
             gst-plugins-bad/gst/aiff/aiffparse.c \
             gst-plugins-base/gst/app/gstapp.c \
@@ -236,6 +240,7 @@ gstreamer/gst/gst.c \
             gst-plugins-good/gst/equalizer/gstiirequalizernbands.c \
             gst-plugins-good/gst/isomp4/isomp4-plugin.c \
             gst-plugins-good/gst/isomp4/qtdemux.c \
+            gst-plugins-good/gst/isomp4/gstisoff.c \
             gst-plugins-good/gst/isomp4/qtdemux_dump.c \
             gst-plugins-good/gst/isomp4/qtdemux_lang.c \
             gst-plugins-good/gst/isomp4/qtdemux_types.c \

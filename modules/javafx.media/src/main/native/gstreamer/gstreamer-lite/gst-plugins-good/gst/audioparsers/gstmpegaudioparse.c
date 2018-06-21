@@ -29,7 +29,8 @@
  * <refsect2>
  * <title>Example launch line</title>
  * |[
- * gst-launch-1.0 filesrc location=test.mp3 ! mpegaudioparse ! mad ! autoaudiosink
+ * gst-launch-1.0 filesrc location=test.mp3 ! mpegaudioparse ! mpg123audiodec
+ *  ! audioconvert ! audioresample ! autoaudiosink
  * ]|
  * </refsect2>
  */
@@ -177,10 +178,8 @@ gst_mpeg_audio_parse_class_init (GstMpegAudioParseClass * klass)
 
   g_type_class_ref (GST_TYPE_MPEG_AUDIO_CHANNEL_MODE);
 
-  gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&sink_template));
-  gst_element_class_add_pad_template (element_class,
-      gst_static_pad_template_get (&src_template));
+  gst_element_class_add_static_pad_template (element_class, &sink_template);
+  gst_element_class_add_static_pad_template (element_class, &src_template);
 
   gst_element_class_set_static_metadata (element_class, "MPEG1 Audio Parser",
       "Codec/Parser/Audio",
@@ -207,8 +206,9 @@ gst_mpeg_audio_parse_reset (GstMpegAudioParse * mp3parse)
   mp3parse->xing_total_time = 0;
   mp3parse->xing_bytes = 0;
   mp3parse->xing_vbr_scale = 0;
-  memset (mp3parse->xing_seek_table, 0, 100);
-  memset (mp3parse->xing_seek_table_inverse, 0, 256);
+  memset (mp3parse->xing_seek_table, 0, sizeof (mp3parse->xing_seek_table));
+  memset (mp3parse->xing_seek_table_inverse, 0,
+      sizeof (mp3parse->xing_seek_table_inverse));
 
   mp3parse->vbri_bitrate = 0;
   mp3parse->vbri_frames = 0;
@@ -227,6 +227,7 @@ gst_mpeg_audio_parse_init (GstMpegAudioParse * mp3parse)
 {
   gst_mpeg_audio_parse_reset (mp3parse);
   GST_PAD_SET_ACCEPT_INTERSECT (GST_BASE_PARSE_SINK_PAD (mp3parse));
+  GST_PAD_SET_ACCEPT_TEMPLATE (GST_BASE_PARSE_SINK_PAD (mp3parse));
 }
 
 static void
@@ -434,7 +435,7 @@ gst_mp3parse_validate_extended (GstMpegAudioParse * mp3parse, GstBuffer * buf,
     if (G_UNLIKELY (!bpf)) {
       GST_DEBUG_OBJECT (mp3parse, "next header invalid (bitrate 0)");
       *valid = FALSE;
-      return TRUE;
+      goto cleanup;
     }
 
     offset += bpf;
@@ -606,7 +607,7 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
   GstMpegAudioParse *mp3parse = GST_MPEG_AUDIO_PARSE (parse);
   GstBuffer *buf = frame->buffer;
   GstByteReader reader;
-  gint off, bpf;
+  gint off, bpf = 0;
   gboolean lost_sync, draining, valid, caps_change;
   guint32 header;
   guint bitrate, layer, rate, channels, version, mode, crc;
@@ -672,7 +673,7 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
         /* not enough data */
         gst_base_parse_set_min_frame_size (parse, valid);
         *skipsize = 0;
-        return FALSE;
+        goto cleanup;
       } else {
         GST_DEBUG_OBJECT (parse, "determined freeform size %d", valid);
         mp3parse->freerate = valid;
@@ -684,7 +685,7 @@ gst_mpeg_audio_parse_handle_frame (GstBaseParse * parse,
     if (!bpf) {
       /* did not come up with valid freeform length, reject after all */
       *skipsize = 1;
-      return FALSE;
+      goto cleanup;
     }
   }
 
@@ -927,7 +928,7 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
 
         if (table[percent] == i) {
           mp3parse->xing_seek_table_inverse[i] = percent * 100;
-        } else if (table[percent] < i && percent < 99) {
+        } else if (percent < 99 && table[percent]) {
           gdouble fa, fb, fx;
           gint a = percent, b = percent + 1;
 
@@ -948,8 +949,9 @@ gst_mpeg_audio_parse_handle_first_frame (GstMpegAudioParse * mp3parse,
     skip_toc:
       data += 100;
     } else {
-      memset (mp3parse->xing_seek_table, 0, 100);
-      memset (mp3parse->xing_seek_table_inverse, 0, 256);
+      memset (mp3parse->xing_seek_table, 0, sizeof (mp3parse->xing_seek_table));
+      memset (mp3parse->xing_seek_table_inverse, 0,
+          sizeof (mp3parse->xing_seek_table_inverse));
     }
 
     if (xing_flags & XING_VBR_SCALE_FLAG) {
@@ -1320,45 +1322,16 @@ gst_mpeg_audio_parse_pre_push_frame (GstBaseParse * parse,
     GstBaseParseFrame * frame)
 {
   GstMpegAudioParse *mp3parse = GST_MPEG_AUDIO_PARSE (parse);
-  GstTagList *taglist;
-
-  /* tag sending done late enough in hook to ensure pending events
-   * have already been sent */
-
-  if (!mp3parse->sent_codec_tag) {
-    GstCaps *caps;
-
-    taglist = gst_tag_list_new_empty ();
-
-    /* codec tag */
-    caps = gst_pad_get_current_caps (GST_BASE_PARSE_SRC_PAD (parse));
-    gst_pb_utils_add_codec_description_to_tag_list (taglist,
-        GST_TAG_AUDIO_CODEC, caps);
-    gst_caps_unref (caps);
-
-    if (mp3parse->hdr_bitrate > 0 && mp3parse->xing_bitrate == 0 &&
-        mp3parse->vbri_bitrate == 0) {
-      /* We don't have a VBR bitrate, so post the available bitrate as
-       * nominal and let baseparse calculate the real bitrate */
-      gst_tag_list_add (taglist, GST_TAG_MERGE_REPLACE,
-          GST_TAG_NOMINAL_BITRATE, mp3parse->hdr_bitrate, NULL);
-    }
-    gst_pad_push_event (GST_BASE_PARSE_SRC_PAD (mp3parse),
-        gst_event_new_tag (taglist));
-
-    /* also signals the end of first-frame processing */
-    mp3parse->sent_codec_tag = TRUE;
-  }
+  GstTagList *taglist = NULL;
 
   /* we will create a taglist (if any of the parameters has changed)
    * to add the tags that changed */
-  taglist = NULL;
   if (mp3parse->last_posted_crc != mp3parse->last_crc) {
     gboolean using_crc;
 
-    if (!taglist) {
+    if (!taglist)
       taglist = gst_tag_list_new_empty ();
-    }
+
     mp3parse->last_posted_crc = mp3parse->last_crc;
     if (mp3parse->last_posted_crc == CRC_PROTECTED) {
       using_crc = TRUE;
@@ -1370,19 +1343,56 @@ gst_mpeg_audio_parse_pre_push_frame (GstBaseParse * parse,
   }
 
   if (mp3parse->last_posted_channel_mode != mp3parse->last_mode) {
-    if (!taglist) {
+    if (!taglist)
       taglist = gst_tag_list_new_empty ();
-    }
+
     mp3parse->last_posted_channel_mode = mp3parse->last_mode;
 
     gst_tag_list_add (taglist, GST_TAG_MERGE_REPLACE, GST_TAG_MODE,
         gst_mpeg_audio_channel_mode_get_nick (mp3parse->last_mode), NULL);
   }
 
-  /* if the taglist exists, we need to send it */
+  /* tag sending done late enough in hook to ensure pending events
+   * have already been sent */
+  if (taglist != NULL || !mp3parse->sent_codec_tag) {
+    GstCaps *caps;
+
+    if (taglist == NULL)
+      taglist = gst_tag_list_new_empty ();
+
+    /* codec tag */
+    caps = gst_pad_get_current_caps (GST_BASE_PARSE_SRC_PAD (parse));
+    if (G_UNLIKELY (caps == NULL)) {
+      gst_tag_list_unref (taglist);
+
+      if (GST_PAD_IS_FLUSHING (GST_BASE_PARSE_SRC_PAD (parse))) {
+        GST_INFO_OBJECT (parse, "Src pad is flushing");
+        return GST_FLOW_FLUSHING;
+      } else {
+        GST_INFO_OBJECT (parse, "Src pad is not negotiated!");
+        return GST_FLOW_NOT_NEGOTIATED;
+      }
+    }
+    gst_pb_utils_add_codec_description_to_tag_list (taglist,
+        GST_TAG_AUDIO_CODEC, caps);
+    gst_caps_unref (caps);
+
+    if (mp3parse->hdr_bitrate > 0 && mp3parse->xing_bitrate == 0 &&
+        mp3parse->vbri_bitrate == 0) {
+      /* We don't have a VBR bitrate, so post the available bitrate as
+       * nominal and let baseparse calculate the real bitrate */
+      gst_tag_list_add (taglist, GST_TAG_MERGE_REPLACE,
+          GST_TAG_NOMINAL_BITRATE, mp3parse->hdr_bitrate, NULL);
+    }
+
+    /* also signals the end of first-frame processing */
+    mp3parse->sent_codec_tag = TRUE;
+  }
+
+  /* if the taglist exists, we need to update it so it gets sent out */
   if (taglist) {
-    gst_pad_push_event (GST_BASE_PARSE_SRC_PAD (mp3parse),
-        gst_event_new_tag (taglist));
+    gst_base_parse_merge_tags (parse, taglist, GST_TAG_MERGE_REPLACE);
+    gst_tag_list_unref (taglist);
   }
 
   /* usual clipping applies */

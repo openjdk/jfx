@@ -21,6 +21,7 @@
 
 /**
  * SECTION:gststructure
+ * @title: GstStructure
  * @short_description: Generic structure containing fields of names and values
  * @see_also: #GstCaps, #GstMessage, #GstEvent, #GstQuery
  *
@@ -63,6 +64,10 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+/* FIXME 2.0: suppress warnings for deprecated API such as GValueArray
+ * with newer GLib versions (>= 2.31.0) */
+#define GLIB_DISABLE_DEPRECATION_WARNINGS
 
 #include <string.h>
 
@@ -115,9 +120,6 @@ static void gst_structure_transform_to_string (const GValue * src_value,
     GValue * dest_value);
 static GstStructure *gst_structure_copy_conditional (const GstStructure *
     structure);
-static gboolean gst_structure_parse_value (gchar * str, gchar ** after,
-    GValue * value, GType default_type);
-static gboolean gst_structure_parse_simple_string (gchar * s, gchar ** end);
 
 GType _gst_structure_type = 0;
 
@@ -621,7 +623,8 @@ gst_structure_set_valist_internal (GstStructure * structure,
  * @fieldname: the name of the field to set
  * @...: variable arguments
  *
- * Parses the variable arguments and sets fields accordingly.
+ * Parses the variable arguments and sets fields accordingly. Fields that
+ * weren't already part of the structure are added as needed.
  * Variable arguments should be in the form field name, field type
  * (as a GType), value(s).  The last variable argument should be %NULL.
  */
@@ -667,15 +670,9 @@ gst_structure_id_set_valist_internal (GstStructure * structure,
     GstStructureField field = { 0 };
 
     field.name = fieldname;
-
     type = va_arg (varargs, GType);
 
-#ifndef G_VALUE_COLLECT_INIT
-    g_value_init (&field.value, type);
-    G_VALUE_COLLECT (&field.value, varargs, 0, &err);
-#else
     G_VALUE_COLLECT_INIT (&field.value, type, varargs, 0, &err);
-#endif
     if (G_UNLIKELY (err)) {
       g_critical ("%s", err);
       return;
@@ -884,7 +881,8 @@ gst_structure_get_field (const GstStructure * structure,
  *
  * Get the value of the field with name @fieldname.
  *
- * Returns: the #GValue corresponding to the field with the given name.
+ * Returns: (nullable): the #GValue corresponding to the field with the given
+ * name.
  */
 const GValue *
 gst_structure_get_value (const GstStructure * structure,
@@ -909,8 +907,8 @@ gst_structure_get_value (const GstStructure * structure,
  *
  * Get the value of the field with GQuark @field.
  *
- * Returns: the #GValue corresponding to the field with the given name
- *          identifier.
+ * Returns: (nullable): the #GValue corresponding to the field with the given
+ * name identifier.
  */
 const GValue *
 gst_structure_id_get_value (const GstStructure * structure, GQuark field)
@@ -1108,7 +1106,8 @@ gst_structure_nth_field_name (const GstStructure * structure, guint index)
  * @user_data: (closure): private data
  *
  * Calls the provided function once for each field in the #GstStructure. The
- * function must not modify the fields. Also see gst_structure_map_in_place().
+ * function must not modify the fields. Also see gst_structure_map_in_place()
+ * and gst_structure_filter_and_map_in_place().
  *
  * Returns: %TRUE if the supplied function returns %TRUE For each of the fields,
  * %FALSE otherwise.
@@ -1172,6 +1171,51 @@ gst_structure_map_in_place (GstStructure * structure,
   }
 
   return TRUE;
+}
+
+/**
+ * gst_structure_filter_and_map_in_place:
+ * @structure: a #GstStructure
+ * @func: (scope call): a function to call for each field
+ * @user_data: (closure): private data
+ *
+ * Calls the provided function once for each field in the #GstStructure. In
+ * contrast to gst_structure_foreach(), the function may modify the fields.
+ * In contrast to gst_structure_map_in_place(), the field is removed from
+ * the structure if %FALSE is returned from the function.
+ * The structure must be mutable.
+ *
+ * Since: 1.6
+ */
+void
+gst_structure_filter_and_map_in_place (GstStructure * structure,
+    GstStructureFilterMapFunc func, gpointer user_data)
+{
+  guint i, len;
+  GstStructureField *field;
+  gboolean ret;
+
+  g_return_if_fail (structure != NULL);
+  g_return_if_fail (IS_MUTABLE (structure));
+  g_return_if_fail (func != NULL);
+  len = GST_STRUCTURE_FIELDS (structure)->len;
+
+  for (i = 0; i < len;) {
+    field = GST_STRUCTURE_FIELD (structure, i);
+
+    ret = func (field->name, &field->value, user_data);
+
+    if (!ret) {
+      if (G_IS_VALUE (&field->value)) {
+        g_value_unset (&field->value);
+      }
+      GST_STRUCTURE_FIELDS (structure) =
+          g_array_remove_index (GST_STRUCTURE_FIELDS (structure), i);
+      len = GST_STRUCTURE_FIELDS (structure)->len;
+    } else {
+      i++;
+    }
+  }
 }
 
 /**
@@ -1514,7 +1558,7 @@ gst_structure_get_date_time (const GstStructure * structure,
   if (!GST_VALUE_HOLDS_DATE_TIME (&field->value))
     return FALSE;
 
-  /* FIXME: 0.11 g_value_dup_boxed() -> g_value_get_boxed() */
+  /* FIXME 2.0: g_value_dup_boxed() -> g_value_get_boxed() */
   *value = g_value_dup_boxed (&field->value);
 
   return TRUE;
@@ -1682,125 +1726,46 @@ gst_structure_get_fraction (const GstStructure * structure,
   return TRUE;
 }
 
-typedef struct _GstStructureAbbreviation
+/**
+ * gst_structure_get_flagset:
+ * @structure: a #GstStructure
+ * @fieldname: the name of a field
+ * @value_flags: (out) (allow-none): a pointer to a guint for the flags field
+ * @value_mask: (out) (allow-none): a pointer to a guint for the mask field
+ *
+ * Read the GstFlagSet flags and mask out of the structure into the
+ * provided pointers.
+ *
+ * Returns: %TRUE if the values could be set correctly. If there was no field
+ * with @fieldname or the existing field did not contain a GstFlagSet, this
+ * function returns %FALSE.
+ *
+ * Since: 1.6
+ */
+gboolean
+gst_structure_get_flagset (const GstStructure * structure,
+    const gchar * fieldname, guint * value_flags, guint * value_mask)
 {
-  const gchar *type_name;
-  GType type;
-}
-GstStructureAbbreviation;
+  GstStructureField *field;
 
-/* return a copy of an array of GstStructureAbbreviation containing all the
- * known type_string, GType maps, including abbreviations for common types */
-static GstStructureAbbreviation *
-gst_structure_get_abbrs (gint * n_abbrs)
-{
-  static GstStructureAbbreviation *abbrs = NULL;
-  static volatile gsize num = 0;
+  g_return_val_if_fail (structure != NULL, FALSE);
+  g_return_val_if_fail (fieldname != NULL, FALSE);
 
-  if (g_once_init_enter (&num)) {
-    /* dynamically generate the array */
-    gsize _num;
-    GstStructureAbbreviation dyn_abbrs[] = {
-      {"int", G_TYPE_INT}
-      ,
-      {"i", G_TYPE_INT}
-      ,
-      {"uint", G_TYPE_UINT}
-      ,
-      {"u", G_TYPE_UINT}
-      ,
-      {"float", G_TYPE_FLOAT}
-      ,
-      {"f", G_TYPE_FLOAT}
-      ,
-      {"double", G_TYPE_DOUBLE}
-      ,
-      {"d", G_TYPE_DOUBLE}
-      ,
-      {"buffer", GST_TYPE_BUFFER}
-      ,
-      {"fraction", GST_TYPE_FRACTION}
-      ,
-      {"boolean", G_TYPE_BOOLEAN}
-      ,
-      {"bool", G_TYPE_BOOLEAN}
-      ,
-      {"b", G_TYPE_BOOLEAN}
-      ,
-      {"string", G_TYPE_STRING}
-      ,
-      {"str", G_TYPE_STRING}
-      ,
-      {"s", G_TYPE_STRING}
-      ,
-      {"structure", GST_TYPE_STRUCTURE}
-      ,
-      {"date", G_TYPE_DATE}
-      ,
-      {"datetime", GST_TYPE_DATE_TIME}
-      ,
-      {"bitmask", GST_TYPE_BITMASK}
-      ,
-      {"sample", GST_TYPE_SAMPLE}
-      ,
-      {"taglist", GST_TYPE_TAG_LIST}
-    };
-    _num = G_N_ELEMENTS (dyn_abbrs);
-    /* permanently allocate and copy the array now */
-    abbrs = g_new0 (GstStructureAbbreviation, _num);
-    memcpy (abbrs, dyn_abbrs, sizeof (GstStructureAbbreviation) * _num);
-    g_once_init_leave (&num, _num);
-  }
-  *n_abbrs = num;
+  field = gst_structure_get_field (structure, fieldname);
 
-  return abbrs;
-}
+  if (field == NULL || !GST_VALUE_HOLDS_FLAG_SET (&field->value))
+    return FALSE;
 
-/* given a type_name that could be a type abbreviation or a registered GType,
- * return a matching GType */
-static GType
-gst_structure_gtype_from_abbr (const char *type_name)
-{
-  int i;
-  GstStructureAbbreviation *abbrs;
-  gint n_abbrs;
+  if (value_flags)
+    *value_flags = gst_value_get_flagset_flags (&field->value);
+  if (value_mask)
+    *value_mask = gst_value_get_flagset_mask (&field->value);
 
-  g_return_val_if_fail (type_name != NULL, G_TYPE_INVALID);
-
-  abbrs = gst_structure_get_abbrs (&n_abbrs);
-
-  for (i = 0; i < n_abbrs; i++) {
-    if (strcmp (type_name, abbrs[i].type_name) == 0) {
-      return abbrs[i].type;
+  return TRUE;
     }
-  }
-
-  /* this is the fallback */
-  return g_type_from_name (type_name);
-}
-
-static const char *
-gst_structure_to_abbr (GType type)
-{
-  int i;
-  GstStructureAbbreviation *abbrs;
-  gint n_abbrs;
-
-  g_return_val_if_fail (type != G_TYPE_INVALID, NULL);
-
-  abbrs = gst_structure_get_abbrs (&n_abbrs);
-
-  for (i = 0; i < n_abbrs; i++) {
-    if (type == abbrs[i].type) {
-      return abbrs[i].type_name;
-    }
-  }
-
-  return g_type_name (type);
-}
 
 static GType
-gst_structure_value_get_generic_type (GValue * val)
+gst_structure_value_get_generic_type (const GValue * val)
 {
   if (G_VALUE_TYPE (val) == GST_TYPE_LIST
       || G_VALUE_TYPE (val) == GST_TYPE_ARRAY) {
@@ -1841,20 +1806,87 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
 
     field = GST_STRUCTURE_FIELD (structure, i);
 
+    if (G_VALUE_TYPE (&field->value) == GST_TYPE_ARRAY) {
+      t = _priv_gst_value_serialize_any_list (&field->value, "< ", " >", FALSE);
+    } else if (G_VALUE_TYPE (&field->value) == GST_TYPE_LIST) {
+      t = _priv_gst_value_serialize_any_list (&field->value, "{ ", " }", FALSE);
+    } else {
     t = gst_value_serialize (&field->value);
+    }
+
     type = gst_structure_value_get_generic_type (&field->value);
 
     g_string_append_len (s, ", ", 2);
     /* FIXME: do we need to escape fieldnames? */
     g_string_append (s, g_quark_to_string (field->name));
     g_string_append_len (s, "=(", 2);
-    g_string_append (s, gst_structure_to_abbr (type));
+    g_string_append (s, _priv_gst_value_gtype_to_abbr (type));
     g_string_append_c (s, ')');
-    g_string_append (s, t == NULL ? "NULL" : t);
+    if (t) {
+      g_string_append (s, t);
     g_free (t);
+    } else {
+      if (!G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_STRING) &&
+          !(G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_POINTER) &&
+              g_value_get_pointer (&field->value) == NULL))
+        GST_WARNING ("No value transform to serialize field '%s' of type '%s'",
+            g_quark_to_string (field->name),
+            _priv_gst_value_gtype_to_abbr (type));
+      /* TODO(ensonic): don't print NULL if field->value is not empty */
+      g_string_append (s, "NULL");
+  }
   }
 
   g_string_append_c (s, ';');
+  return TRUE;
+}
+
+gboolean
+priv__gst_structure_append_template_to_gstring (GQuark field_id,
+    const GValue * value, gpointer user_data)
+{
+  GType type = gst_structure_value_get_generic_type (value);
+  GString *s = (GString *) user_data;
+
+  g_string_append_len (s, ", ", 2);
+  /* FIXME: do we need to escape fieldnames? */
+  g_string_append (s, g_quark_to_string (field_id));
+  g_string_append_len (s, "=(", 2);
+  g_string_append (s, _priv_gst_value_gtype_to_abbr (type));
+  g_string_append_c (s, ')');
+
+  //TODO(ensonic): table like GstStructureAbbreviation (or extend it)
+  if (type == G_TYPE_INT) {
+    g_string_append_len (s, "%i", 2);
+  } else if (type == G_TYPE_UINT) {
+    g_string_append_len (s, "%u", 2);
+  } else if (type == G_TYPE_FLOAT) {
+    g_string_append_len (s, "%f", 2);
+  } else if (type == G_TYPE_DOUBLE) {
+    g_string_append_len (s, "%lf", 3);
+  } else if (type == G_TYPE_STRING) {
+    g_string_append_len (s, "%s", 2);
+  } else if (type == G_TYPE_BOOLEAN) {
+    /* we normally store this as a string, but can parse it also from an int */
+    g_string_append_len (s, "%i", 2);
+  } else if (type == G_TYPE_INT64) {
+    g_string_append (s, "%" G_GINT64_FORMAT);
+  } else if (type == G_TYPE_UINT64) {
+    g_string_append (s, "%" G_GUINT64_FORMAT);
+  } else if (type == GST_TYPE_STRUCTURE) {
+    g_string_append (s, "%" GST_WRAPPED_PTR_FORMAT);
+  } else if (g_type_is_a (type, G_TYPE_ENUM)
+      || g_type_is_a (type, G_TYPE_FLAGS)) {
+    g_string_append_len (s, "%i", 2);
+  } else if (type == G_TYPE_GTYPE) {
+    g_string_append_len (s, "%s", 2);
+  } else if (type == G_TYPE_POINTER) {
+    g_string_append_len (s, "%p", 2);
+  } else {
+    GST_WARNING ("unhandled type: %s", g_type_name (type));
+    g_string_append (s, "%" GST_WRAPPED_PTR_FORMAT);
+  }
+
   return TRUE;
 }
 
@@ -1865,7 +1897,7 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
  * Converts @structure to a human-readable string representation.
  *
  * For debugging purposes its easier to do something like this:
- * |[
+ * |[<!-- language="C" -->
  * GST_LOG ("structure is %" GST_PTR_FORMAT, structure);
  * ]|
  * This prints the structure in human readable form.
@@ -1899,254 +1931,6 @@ gst_structure_to_string (const GstStructure * structure)
   return g_string_free (s, FALSE);
 }
 
-/*
- * r will still point to the string. if end == next, the string will not be
- * null-terminated. In all other cases it will be.
- * end = pointer to char behind end of string, next = pointer to start of
- * unread data.
- * THIS FUNCTION MODIFIES THE STRING AND DETECTS INSIDE A NONTERMINATED STRING
- */
-static gboolean
-gst_structure_parse_string (gchar * s, gchar ** end, gchar ** next,
-    gboolean unescape)
-{
-  gchar *w;
-
-  if (*s == 0)
-    return FALSE;
-
-  if (*s != '"') {
-    int ret;
-
-    ret = gst_structure_parse_simple_string (s, end);
-    *next = *end;
-
-    return ret;
-  }
-
-  if (unescape) {
-    w = s;
-    s++;
-    while (*s != '"') {
-      if (G_UNLIKELY (*s == 0))
-        return FALSE;
-      if (G_UNLIKELY (*s == '\\'))
-        s++;
-      *w = *s;
-      w++;
-      s++;
-    }
-    s++;
-  } else {
-    /* Find the closing quotes */
-    s++;
-    while (*s != '"') {
-      if (G_UNLIKELY (*s == 0))
-        return FALSE;
-      if (G_UNLIKELY (*s == '\\'))
-        s++;
-      s++;
-    }
-    s++;
-    w = s;
-  }
-
-  *end = w;
-  *next = s;
-
-  return TRUE;
-}
-
-static gboolean
-gst_structure_parse_range (gchar * s, gchar ** after, GValue * value,
-    GType type)
-{
-  GValue value1 = { 0 };
-  GValue value2 = { 0 };
-  GValue value3 = { 0 };
-  GType range_type;
-  gboolean ret, have_step = FALSE;
-
-  if (*s != '[')
-    return FALSE;
-  s++;
-
-  ret = gst_structure_parse_value (s, &s, &value1, type);
-  if (ret == FALSE)
-    return FALSE;
-
-  while (g_ascii_isspace (*s))
-    s++;
-
-  if (*s != ',')
-    return FALSE;
-  s++;
-
-  while (g_ascii_isspace (*s))
-    s++;
-
-  ret = gst_structure_parse_value (s, &s, &value2, type);
-  if (ret == FALSE)
-    return FALSE;
-
-  while (g_ascii_isspace (*s))
-    s++;
-
-  /* optional step for int and int64 */
-  if (G_VALUE_TYPE (&value1) == G_TYPE_INT
-      || G_VALUE_TYPE (&value1) == G_TYPE_INT64) {
-    if (*s == ',') {
-      s++;
-
-      while (g_ascii_isspace (*s))
-        s++;
-
-      ret = gst_structure_parse_value (s, &s, &value3, type);
-      if (ret == FALSE)
-        return FALSE;
-
-      while (g_ascii_isspace (*s))
-        s++;
-
-      have_step = TRUE;
-    }
-  }
-
-  if (*s != ']')
-    return FALSE;
-  s++;
-
-  if (G_VALUE_TYPE (&value1) != G_VALUE_TYPE (&value2))
-    return FALSE;
-  if (have_step && G_VALUE_TYPE (&value1) != G_VALUE_TYPE (&value3))
-    return FALSE;
-
-  if (G_VALUE_TYPE (&value1) == G_TYPE_DOUBLE) {
-    range_type = GST_TYPE_DOUBLE_RANGE;
-    g_value_init (value, range_type);
-    gst_value_set_double_range (value,
-        gst_g_value_get_double_unchecked (&value1),
-        gst_g_value_get_double_unchecked (&value2));
-  } else if (G_VALUE_TYPE (&value1) == G_TYPE_INT) {
-    range_type = GST_TYPE_INT_RANGE;
-    g_value_init (value, range_type);
-    if (have_step)
-      gst_value_set_int_range_step (value,
-          gst_g_value_get_int_unchecked (&value1),
-          gst_g_value_get_int_unchecked (&value2),
-          gst_g_value_get_int_unchecked (&value3));
-    else
-      gst_value_set_int_range (value, gst_g_value_get_int_unchecked (&value1),
-          gst_g_value_get_int_unchecked (&value2));
-  } else if (G_VALUE_TYPE (&value1) == G_TYPE_INT64) {
-    range_type = GST_TYPE_INT64_RANGE;
-    g_value_init (value, range_type);
-    if (have_step)
-      gst_value_set_int64_range_step (value,
-          gst_g_value_get_int64_unchecked (&value1),
-          gst_g_value_get_int64_unchecked (&value2),
-          gst_g_value_get_int64_unchecked (&value3));
-    else
-      gst_value_set_int64_range (value,
-          gst_g_value_get_int64_unchecked (&value1),
-          gst_g_value_get_int64_unchecked (&value2));
-  } else if (G_VALUE_TYPE (&value1) == GST_TYPE_FRACTION) {
-    range_type = GST_TYPE_FRACTION_RANGE;
-    g_value_init (value, range_type);
-    gst_value_set_fraction_range (value, &value1, &value2);
-  } else {
-    return FALSE;
-  }
-
-  *after = s;
-  return TRUE;
-}
-
-static gboolean
-gst_structure_parse_any_list (gchar * s, gchar ** after, GValue * value,
-    GType type, GType list_type, char begin, char end)
-{
-  GValue list_value = { 0 };
-  gboolean ret;
-  GArray *array;
-
-  g_value_init (value, list_type);
-  array = g_value_peek_pointer (value);
-
-  if (*s != begin)
-    return FALSE;
-  s++;
-
-  while (g_ascii_isspace (*s))
-    s++;
-  if (*s == end) {
-    s++;
-    *after = s;
-    return TRUE;
-  }
-
-  ret = gst_structure_parse_value (s, &s, &list_value, type);
-  if (ret == FALSE)
-    return FALSE;
-
-  g_array_append_val (array, list_value);
-
-  while (g_ascii_isspace (*s))
-    s++;
-
-  while (*s != end) {
-    if (*s != ',')
-      return FALSE;
-    s++;
-
-    while (g_ascii_isspace (*s))
-      s++;
-
-    memset (&list_value, 0, sizeof (list_value));
-    ret = gst_structure_parse_value (s, &s, &list_value, type);
-    if (ret == FALSE)
-      return FALSE;
-
-    g_array_append_val (array, list_value);
-    while (g_ascii_isspace (*s))
-      s++;
-  }
-
-  s++;
-
-  *after = s;
-  return TRUE;
-}
-
-static gboolean
-gst_structure_parse_list (gchar * s, gchar ** after, GValue * value, GType type)
-{
-  return gst_structure_parse_any_list (s, after, value, type, GST_TYPE_LIST,
-      '{', '}');
-}
-
-static gboolean
-gst_structure_parse_array (gchar * s, gchar ** after, GValue * value,
-    GType type)
-{
-  return gst_structure_parse_any_list (s, after, value, type,
-      GST_TYPE_ARRAY, '<', '>');
-}
-
-static gboolean
-gst_structure_parse_simple_string (gchar * str, gchar ** end)
-{
-  char *s = str;
-
-  while (G_LIKELY (GST_ASCII_IS_STRING (*s))) {
-    s++;
-  }
-
-  *end = s;
-
-  return (s != str);
-}
-
 static gboolean
 gst_structure_parse_field (gchar * str,
     gchar ** after, GstStructureField * field)
@@ -2161,7 +1945,7 @@ gst_structure_parse_field (gchar * str,
   while (g_ascii_isspace (*s) || (s[0] == '\\' && g_ascii_isspace (s[1])))
     s++;
   name = s;
-  if (G_UNLIKELY (!gst_structure_parse_simple_string (s, &name_end))) {
+  if (G_UNLIKELY (!_priv_gst_value_parse_simple_string (s, &name_end))) {
     GST_WARNING ("failed to parse simple string, str=%s", str);
     return FALSE;
   }
@@ -2182,7 +1966,7 @@ gst_structure_parse_field (gchar * str,
   GST_DEBUG ("trying field name '%s'", name);
   *name_end = c;
 
-  if (G_UNLIKELY (!gst_structure_parse_value (s, &s, &field->value,
+  if (G_UNLIKELY (!_priv_gst_value_parse_value (s, &s, &field->value,
               G_TYPE_INVALID))) {
     GST_WARNING ("failed to parse value %s", str);
     return FALSE;
@@ -2190,106 +1974,6 @@ gst_structure_parse_field (gchar * str,
 
   *after = s;
   return TRUE;
-}
-
-static gboolean
-gst_structure_parse_value (gchar * str,
-    gchar ** after, GValue * value, GType default_type)
-{
-  gchar *type_name;
-  gchar *type_end;
-  gchar *value_s;
-  gchar *value_end;
-  gchar *s;
-  gchar c;
-  int ret = 0;
-  GType type = default_type;
-
-  s = str;
-  while (g_ascii_isspace (*s))
-    s++;
-
-  /* check if there's a (type_name) 'cast' */
-  type_name = NULL;
-  if (*s == '(') {
-    s++;
-    while (g_ascii_isspace (*s))
-      s++;
-    type_name = s;
-    if (G_UNLIKELY (!gst_structure_parse_simple_string (s, &type_end)))
-      return FALSE;
-    s = type_end;
-    while (g_ascii_isspace (*s))
-      s++;
-    if (G_UNLIKELY (*s != ')'))
-      return FALSE;
-    s++;
-    while (g_ascii_isspace (*s))
-      s++;
-
-    c = *type_end;
-    *type_end = 0;
-    type = gst_structure_gtype_from_abbr (type_name);
-    GST_DEBUG ("trying type name '%s'", type_name);
-    *type_end = c;
-
-    if (G_UNLIKELY (type == G_TYPE_INVALID)) {
-      GST_WARNING ("invalid type");
-      return FALSE;
-    }
-  }
-
-  while (g_ascii_isspace (*s))
-    s++;
-  if (*s == '[') {
-    ret = gst_structure_parse_range (s, &s, value, type);
-  } else if (*s == '{') {
-    ret = gst_structure_parse_list (s, &s, value, type);
-  } else if (*s == '<') {
-    ret = gst_structure_parse_array (s, &s, value, type);
-  } else {
-    value_s = s;
-
-    if (G_UNLIKELY (type == G_TYPE_INVALID)) {
-      GType try_types[] =
-          { G_TYPE_INT, G_TYPE_DOUBLE, GST_TYPE_FRACTION, G_TYPE_BOOLEAN,
-        G_TYPE_STRING
-      };
-      int i;
-
-      if (G_UNLIKELY (!gst_structure_parse_string (s, &value_end, &s, TRUE)))
-        return FALSE;
-      /* Set NULL terminator for deserialization */
-      c = *value_end;
-      *value_end = '\0';
-
-      for (i = 0; i < G_N_ELEMENTS (try_types); i++) {
-        g_value_init (value, try_types[i]);
-        ret = gst_value_deserialize (value, value_s);
-        if (ret)
-          break;
-        g_value_unset (value);
-      }
-    } else {
-      g_value_init (value, type);
-
-      if (G_UNLIKELY (!gst_structure_parse_string (s, &value_end, &s,
-                  (type != G_TYPE_STRING))))
-        return FALSE;
-      /* Set NULL terminator for deserialization */
-      c = *value_end;
-      *value_end = '\0';
-
-      ret = gst_value_deserialize (value, value_s);
-      if (G_UNLIKELY (!ret))
-        g_value_unset (value);
-    }
-    *value_end = c;
-  }
-
-  *after = s;
-
-  return ret;
 }
 
 gboolean
@@ -2308,7 +1992,7 @@ priv_gst_structure_parse_name (gchar * str, gchar ** start, gchar ** end,
 
   *start = r;
 
-  if (G_UNLIKELY (!gst_structure_parse_string (r, &w, &r, TRUE))) {
+  if (G_UNLIKELY (!_priv_gst_value_parse_string (r, &w, &r, TRUE))) {
     GST_WARNING ("Failed to parse structure string '%s'", str);
     return FALSE;
   }
@@ -3192,7 +2876,7 @@ gst_structure_intersect_field2 (GQuark id, const GValue * val1, gpointer data)
  *
  * Intersects @struct1 and @struct2 and returns the intersection.
  *
- * Returns: Intersection of @struct1 and @struct2
+ * Returns: (nullable): Intersection of @struct1 and @struct2
  */
 GstStructure *
 gst_structure_intersect (const GstStructure * struct1,
@@ -3340,4 +3024,146 @@ gst_structure_fixate (GstStructure * structure)
   g_return_if_fail (GST_IS_STRUCTURE (structure));
 
   gst_structure_foreach (structure, default_fixate, structure);
+}
+
+static gboolean
+_gst_structure_get_any_list (GstStructure * structure, GType type,
+    const gchar * fieldname, GValueArray ** array)
+{
+  GstStructureField *field;
+  GValue val = G_VALUE_INIT;
+
+  g_return_val_if_fail (structure != NULL, FALSE);
+  g_return_val_if_fail (fieldname != NULL, FALSE);
+  g_return_val_if_fail (array != NULL, FALSE);
+
+  field = gst_structure_get_field (structure, fieldname);
+
+  if (field == NULL || G_VALUE_TYPE (&field->value) != type)
+    return FALSE;
+
+  g_value_init (&val, G_TYPE_VALUE_ARRAY);
+
+  if (g_value_transform (&field->value, &val)) {
+    *array = g_value_get_boxed (&val);
+    return TRUE;
+  }
+
+  g_value_unset (&val);
+  return FALSE;
+}
+
+/**
+ * gst_structure_get_array:
+ * @structure: a #GstStructure
+ * @fieldname: the name of a field
+ * @array: (out): a pointer to a #GValueArray
+ *
+ * This is useful in language bindings where unknown #GValue types are not
+ * supported. This function will convert the %GST_TYPE_ARRAY and
+ * %GST_TYPE_LIST into a newly allocated #GValueArray and return it through
+ * @array. Be aware that this is slower then getting the #GValue directly.
+ *
+ * Returns: %TRUE if the value could be set correctly. If there was no field
+ * with @fieldname or the existing field did not contain an int, this function
+ * returns %FALSE.
+ */
+gboolean
+gst_structure_get_array (GstStructure * structure, const gchar * fieldname,
+    GValueArray ** array)
+{
+  return _gst_structure_get_any_list (structure, GST_TYPE_ARRAY, fieldname,
+      array);
+}
+
+/**
+ * gst_structure_get_list:
+ * @structure: a #GstStructure
+ * @fieldname: the name of a field
+ * @array: (out): a pointer to a #GValueArray
+ *
+ * This is useful in language bindings where unknown #GValue types are not
+ * supported. This function will convert the %GST_TYPE_ARRAY and
+ * %GST_TYPE_LIST into a newly allocated GValueArray and return it through
+ * @array. Be aware that this is slower then getting the #GValue directly.
+ *
+ * Returns: %TRUE if the value could be set correctly. If there was no field
+ * with @fieldname or the existing field did not contain an int, this function
+ * returns %FALSE.
+ *
+ * Since 1.12
+ */
+gboolean
+gst_structure_get_list (GstStructure * structure, const gchar * fieldname,
+    GValueArray ** array)
+{
+  return _gst_structure_get_any_list (structure, GST_TYPE_LIST, fieldname,
+      array);
+}
+
+static void
+_gst_structure_set_any_list (GstStructure * structure, GType type,
+    const gchar * fieldname, const GValueArray * array)
+{
+  GValue arval = G_VALUE_INIT;
+  GValue value = G_VALUE_INIT;
+
+  g_return_if_fail (structure != NULL);
+  g_return_if_fail (fieldname != NULL);
+  g_return_if_fail (array != NULL);
+  g_return_if_fail (IS_MUTABLE (structure));
+
+  g_value_init (&value, type);
+  g_value_init (&arval, G_TYPE_VALUE_ARRAY);
+  g_value_set_static_boxed (&arval, array);
+
+  if (g_value_transform (&arval, &value)) {
+    gst_structure_id_set_value_internal (structure,
+        g_quark_from_string (fieldname), &value);
+  } else {
+    g_warning ("Failed to convert a GValueArray");
+  }
+
+  g_value_unset (&arval);
+  g_value_unset (&value);
+}
+
+/**
+ * gst_structure_set_array:
+ * @structure: a #GstStructure
+ * @fieldname: the name of a field
+ * @array: a pointer to a #GValueArray
+ *
+ * This is useful in language bindings where unknown GValue types are not
+ * supported. This function will convert a @array to %GST_TYPE_ARRAY and set
+ * the field specified by @fieldname.  Be aware that this is slower then using
+ * %GST_TYPE_ARRAY in a #GValue directly.
+ *
+ * Since 1.12
+ */
+void
+gst_structure_set_array (GstStructure * structure, const gchar * fieldname,
+    const GValueArray * array)
+{
+  _gst_structure_set_any_list (structure, GST_TYPE_ARRAY, fieldname, array);
+}
+
+/**
+ * gst_structure_set_list:
+ * @structure: a #GstStructure
+ * @fieldname: the name of a field
+ * @array: a pointer to a #GValueArray
+ *
+ * This is useful in language bindings where unknown GValue types are not
+ * supported. This function will convert a @array to %GST_TYPE_ARRAY and set
+ * the field specified by @fieldname. Be aware that this is slower then using
+ * %GST_TYPE_ARRAY in a #GValue directly.
+ *
+ * Since 1.12
+ */
+void
+gst_structure_set_list (GstStructure * structure, const gchar * fieldname,
+    const GValueArray * array)
+{
+  _gst_structure_set_any_list (structure, GST_TYPE_LIST, fieldname, array);
 }

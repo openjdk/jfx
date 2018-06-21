@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Erik Walthinsen <omega@cse.ogi.edu>
  * Copyright (C) 2004 Wim Taymans <wim.taymans@gmail.com>
  * Copyright (C) 2007 Peter Kjellerstedt <pkj@axis.com>
- * Copyright (C) 2008 Ole André Vadla Ravnås <ole.andre.ravnas@tandberg.com>
+ * Copyright (C) 2008 Ole AndrÃ© Vadla RavnÃ¥s <ole.andre.ravnas@tandberg.com>
  *
  * gstpoll.c: File descriptor set
  *
@@ -23,6 +23,7 @@
  */
 /**
  * SECTION:gstpoll
+ * @title: GstPoll
  * @short_description: Keep track of file descriptors and make it possible
  *                     to wait on them in a cancellable way
  *
@@ -84,6 +85,12 @@
 #include <sys/socket.h>
 #endif
 
+#ifdef G_OS_WIN32
+#  ifndef EWOULDBLOCK
+#  define EWOULDBLOCK EAGAIN    /* This is just to placate gcc */
+#  endif
+#endif /* G_OS_WIN32 */
+
 /* OS/X needs this because of bad headers */
 #include <string.h>
 
@@ -133,7 +140,6 @@ struct _GstPoll
   GArray *active_fds;
 
 #ifndef G_OS_WIN32
-  gchar buf[1];
   GstPollFD control_read_fd;
   GstPollFD control_write_fd;
 #else
@@ -167,11 +173,106 @@ static gboolean gst_poll_add_fd_unlocked (GstPoll * set, GstPollFD * fd);
 #define MARK_REBUILD(s)     (g_atomic_int_set(&(s)->rebuild, 1))
 
 #ifndef G_OS_WIN32
-#define WAKE_EVENT(s)       (write ((s)->control_write_fd.fd, "W", 1) == 1)
-#define RELEASE_EVENT(s)    (read ((s)->control_read_fd.fd, (s)->buf, 1) == 1)
+
+static gboolean
+wake_event (GstPoll * set)
+{
+  ssize_t num_written;
+  while ((num_written = write (set->control_write_fd.fd, "W", 1)) != 1) {
+    if (num_written == -1 && errno != EAGAIN && errno != EINTR) {
+      g_critical ("%p: failed to wake event: %s", set, strerror (errno));
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+static gboolean
+release_event (GstPoll * set)
+{
+  gchar buf[1] = { '\0' };
+  ssize_t num_read;
+  while ((num_read = read (set->control_read_fd.fd, buf, 1)) != 1) {
+    if (num_read == -1 && errno != EAGAIN && errno != EINTR) {
+      g_critical ("%p: failed to release event: %s", set, strerror (errno));
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
 #else
-#define WAKE_EVENT(s)       (SetLastError (0), SetEvent ((s)->wakeup_event), errno = GetLastError () == NO_ERROR ? 0 : EACCES, errno == 0 ? 1 : 0)
-#define RELEASE_EVENT(s)    (ResetEvent ((s)->wakeup_event))
+
+static void
+format_last_error (gchar * buf, size_t buf_len)
+{
+  DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM;
+  LPCVOID src = NULL;
+  DWORD lang = 0;
+  DWORD id;
+  id = GetLastError ();
+  FormatMessage (flags, src, id, lang, buf, (DWORD) buf_len, NULL);
+  SetLastError (id);
+}
+
+static gboolean
+wake_event (GstPoll * set)
+{
+  SetLastError (0);
+  errno = 0;
+  if (!SetEvent (set->wakeup_event)) {
+    gchar msg[1024] = "<unknown>";
+    format_last_error (msg, sizeof (msg));
+    g_critical ("%p: failed to set wakup_event: %s", set, msg);
+    errno = EBADF;
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+static gboolean
+release_event (GstPoll * set)
+{
+  DWORD status;
+  SetLastError (0);
+  errno = 0;
+
+  status = WaitForSingleObject (set->wakeup_event, INFINITE);
+  if (status) {
+    const gchar *reason = "unknown";
+    gchar msg[1024] = "<unknown>";
+    switch (status) {
+      case WAIT_ABANDONED:
+        reason = "WAIT_ABANDONED";
+        break;
+      case WAIT_TIMEOUT:
+        reason = "WAIT_TIMEOUT";
+        break;
+      case WAIT_FAILED:
+        format_last_error (msg, sizeof (msg));
+        reason = msg;
+        break;
+      default:
+        reason = "other";
+        break;
+    }
+    g_critical ("%p: failed to block on wakup_event: %s", set, reason);
+    errno = EBADF;
+    return FALSE;
+  }
+
+  if (!ResetEvent (set->wakeup_event)) {
+    gchar msg[1024] = "<unknown>";
+    format_last_error (msg, sizeof (msg));
+    g_critical ("%p: failed to reset wakup_event: %s", set, msg);
+    errno = EBADF;
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 #endif
 
 /* the poll/select call is also performed on a control socket, that way
@@ -181,43 +282,49 @@ raise_wakeup (GstPoll * set)
 {
   gboolean result = TRUE;
 
-#ifdef GSTREAMER_LITE
+  /* makes testing control_pending and WAKE_EVENT() atomic. */
   g_mutex_lock (&set->lock);
-#endif // GSTREAMER_LITE
 
-  if (g_atomic_int_add (&set->control_pending, 1) == 0) {
+  if (set->control_pending == 0) {
     /* raise when nothing pending */
     GST_LOG ("%p: raise", set);
-    result = WAKE_EVENT (set);
+    result = wake_event (set);
   }
 
-#ifdef GSTREAMER_LITE
+  if (result) {
+    set->control_pending++;
+  }
+
   g_mutex_unlock (&set->lock);
-#endif // GSTREAMER_LITE
 
   return result;
 }
 
-/* note how bad things can happen when the 2 threads both raise and release the
- * wakeup. This is however not a problem because you must always pair a raise
- * with a release */
 static inline gboolean
 release_wakeup (GstPoll * set)
 {
-  gboolean result = TRUE;
+  gboolean result = FALSE;
 
-#ifdef GSTREAMER_LITE
+  /* makes testing/modifying control_pending and RELEASE_EVENT() atomic. */
   g_mutex_lock (&set->lock);
-#endif // GSTREAMER_LITE
 
-  if (g_atomic_int_dec_and_test (&set->control_pending)) {
+  if (set->control_pending > 0) {
+    /* release, only if this was the last pending. */
+    if (set->control_pending == 1) {
     GST_LOG ("%p: release", set);
-    result = RELEASE_EVENT (set);
+      result = release_event (set);
+    } else {
+      result = TRUE;
   }
 
-#ifdef GSTREAMER_LITE
+    if (result) {
+      set->control_pending--;
+    }
+  } else {
+    errno = EWOULDBLOCK;
+  }
+
   g_mutex_unlock (&set->lock);
-#endif // GSTREAMER_LITE
 
   return result;
 }
@@ -227,29 +334,19 @@ release_all_wakeup (GstPoll * set)
 {
   gint old;
 
-#ifdef GSTREAMER_LITE
+  /* makes testing control_pending and RELEASE_EVENT() atomic. */
   g_mutex_lock (&set->lock);
-#endif // GSTREAMER_LITE
 
-  while (TRUE) {
-    if (!(old = g_atomic_int_get (&set->control_pending)))
-      /* nothing pending, just exit */
-      break;
-
-    /* try to remove all pending control messages */
-    if (g_atomic_int_compare_and_exchange (&set->control_pending, old, 0)) {
-      /* we managed to remove all messages, read the control socket */
-      if (RELEASE_EVENT (set))
-        break;
-      else
-        /* retry again until we read it successfully */
-        g_atomic_int_add (&set->control_pending, 1);
+  if ((old = set->control_pending) > 0) {
+    GST_LOG ("%p: releasing %d", set, old);
+    if (release_event (set)) {
+      set->control_pending = 0;
+    } else {
+      old = 0;
     }
   }
 
-#ifdef GSTREAMER_LITE
   g_mutex_unlock (&set->lock);
-#endif // GSTREAMER_LITE
 
   return old;
 }
@@ -595,9 +692,6 @@ gst_poll_new (gboolean controllable)
     if (socketpair (PF_UNIX, SOCK_STREAM, 0, control_sock) < 0)
       goto no_socket_pair;
 
-    fcntl (control_sock[0], F_SETFL, O_NONBLOCK);
-    fcntl (control_sock[1], F_SETFL, O_NONBLOCK);
-
     nset->control_read_fd.fd = control_sock[0];
     nset->control_write_fd.fd = control_sock[1];
 
@@ -619,6 +713,7 @@ gst_poll_new (gboolean controllable)
   MARK_REBUILD (nset);
 
   nset->controllable = controllable;
+  nset->control_pending = 0;
 
   return nset;
 
@@ -1461,12 +1556,16 @@ winsock_error:
  * gst_poll_wait() will be affected by gst_poll_restart() and
  * gst_poll_set_flushing().
  *
+ * This function only works for non-timer #GstPoll objects created with
+ * gst_poll_new().
+ *
  * Returns: %TRUE if the controllability of @set could be updated.
  */
 gboolean
 gst_poll_set_controllable (GstPoll * set, gboolean controllable)
 {
   g_return_val_if_fail (set != NULL, FALSE);
+  g_return_val_if_fail (!set->timer, FALSE);
 
   GST_LOG ("%p: controllable : %d", set, controllable);
 
@@ -1483,11 +1582,15 @@ gst_poll_set_controllable (GstPoll * set, gboolean controllable)
  * used after adding or removing descriptors to @set.
  *
  * If @set is not controllable, then this call will have no effect.
+ *
+ * This function only works for non-timer #GstPoll objects created with
+ * gst_poll_new().
  */
 void
 gst_poll_restart (GstPoll * set)
 {
   g_return_if_fail (set != NULL);
+  g_return_if_fail (!set->timer);
 
   if (set->controllable && GET_WAITING (set) > 0) {
     /* we are controllable and waiting, wake up the waiter. The socket will be
@@ -1505,11 +1608,15 @@ gst_poll_restart (GstPoll * set)
  * to gst_poll_wait() will return -1, with errno set to EBUSY.
  *
  * Unsetting the flushing state will restore normal operation of @set.
+ *
+ * This function only works for non-timer #GstPoll objects created with
+ * gst_poll_new().
  */
 void
 gst_poll_set_flushing (GstPoll * set, gboolean flushing)
 {
   g_return_if_fail (set != NULL);
+  g_return_if_fail (!set->timer);
 
   GST_LOG ("%p: flushing: %d", set, flushing);
 
@@ -1537,8 +1644,12 @@ gst_poll_set_flushing (GstPoll * set, gboolean flushing)
  * gst_poll_read_control() have been performed, calls to gst_poll_wait() will
  * block again until their timeout expired.
  *
- * Returns: %TRUE on success. %FALSE when @set is not controllable or when the
- * byte could not be written.
+ * This function only works for timer #GstPoll objects created with
+ * gst_poll_new_timer().
+ *
+ * Returns: %TRUE on success. %FALSE when when the byte could not be written.
+ * errno contains the detailed error code but will never be EAGAIN, EINTR or
+ * EWOULDBLOCK. %FALSE always signals a critical error.
  */
 gboolean
 gst_poll_write_control (GstPoll * set)
@@ -1558,11 +1669,14 @@ gst_poll_write_control (GstPoll * set)
  * @set: a #GstPoll.
  *
  * Read a byte from the control socket of the controllable @set.
- * This function is mostly useful for timer #GstPoll objects created with
+ *
+ * This function only works for timer #GstPoll objects created with
  * gst_poll_new_timer().
  *
- * Returns: %TRUE on success. %FALSE when @set is not controllable or when there
- * was no byte to read.
+ * Returns: %TRUE on success. %FALSE when when there was no byte to read or
+ * reading the byte failed. If there was no byte to read, and only then, errno
+ * will contain EWOULDBLOCK or EAGAIN. For all other values of errno this always signals a
+ * critical error.
  */
 gboolean
 gst_poll_read_control (GstPoll * set)

@@ -79,25 +79,20 @@ enum
   ARG_DEVICE
 };
 
-#if (G_BYTE_ORDER == G_LITTLE_ENDIAN)
-# define FORMATS "{ S32LE }"
-#else
-# define FORMATS "{ S32BE }"
-#endif
-
 static GstStaticPadTemplate src_factory = GST_STATIC_PAD_TEMPLATE ("src",
     GST_PAD_SRC,
     GST_PAD_ALWAYS,
-    GST_STATIC_CAPS ("audio/x-raw, "
-        "format = (string) " FORMATS ", "
-        "layout = (string) interleaved, "
-        "rate = (int) [1, MAX], " "channels = (int) [1, MAX]")
+    GST_STATIC_CAPS (GST_OSX_AUDIO_SRC_CAPS)
     );
 
 static void gst_osx_audio_src_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_osx_audio_src_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
+
+static GstStateChangeReturn
+gst_osx_audio_src_change_state (GstElement * element,
+    GstStateChange transition);
 
 static GstCaps *gst_osx_audio_src_get_caps (GstBaseSrc * src, GstCaps * filter);
 
@@ -109,7 +104,6 @@ static OSStatus gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
     AudioUnitRenderActionFlags * ioActionFlags,
     const AudioTimeStamp * inTimeStamp, UInt32 inBusNumber,
     UInt32 inNumberFrames, AudioBufferList * bufferList);
-static void gst_osx_audio_src_select_device (GstOsxAudioSrc * osxsrc);
 
 static void
 gst_osx_audio_src_do_init (GType type)
@@ -122,11 +116,11 @@ gst_osx_audio_src_do_init (GType type)
 
   GST_DEBUG_CATEGORY_INIT (osx_audiosrc_debug, "osxaudiosrc", 0,
       "OSX Audio Src");
-  GST_DEBUG ("Adding static interface");
   g_type_add_interface_static (type, GST_OSX_AUDIO_ELEMENT_TYPE,
       &osxelement_info);
 }
 
+#define gst_osx_audio_src_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstOsxAudioSrc, gst_osx_audio_src,
     GST_TYPE_AUDIO_BASE_SRC, gst_osx_audio_src_do_init (g_define_type_id));
 
@@ -146,6 +140,9 @@ gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
   gobject_class->set_property = gst_osx_audio_src_set_property;
   gobject_class->get_property = gst_osx_audio_src_get_property;
 
+  gstelement_class->change_state =
+      GST_DEBUG_FUNCPTR (gst_osx_audio_src_change_state);
+
   gstbasesrc_class->get_caps = GST_DEBUG_FUNCPTR (gst_osx_audio_src_get_caps);
 
   g_object_class_install_property (gobject_class, ARG_DEVICE,
@@ -155,8 +152,7 @@ gst_osx_audio_src_class_init (GstOsxAudioSrcClass * klass)
   gstaudiobasesrc_class->create_ringbuffer =
       GST_DEBUG_FUNCPTR (gst_osx_audio_src_create_ringbuffer);
 
-  gst_element_class_add_pad_template (gstelement_class,
-      gst_static_pad_template_get (&src_factory));
+  gst_element_class_add_static_pad_template (gstelement_class, &src_factory);
 
   gst_element_class_set_static_metadata (gstelement_class, "Audio Source (OSX)",
       "Source/Audio",
@@ -170,7 +166,6 @@ gst_osx_audio_src_init (GstOsxAudioSrc * src)
   gst_base_src_set_live (GST_BASE_SRC (src), TRUE);
 
   src->device_id = kAudioDeviceUnknown;
-  src->deviceChannels = -1;
 }
 
 static void
@@ -205,43 +200,102 @@ gst_osx_audio_src_get_property (GObject * object, guint prop_id,
   }
 }
 
+static GstStateChangeReturn
+gst_osx_audio_src_change_state (GstElement * element, GstStateChange transition)
+{
+  GstOsxAudioSrc *osxsrc = GST_OSX_AUDIO_SRC (element);
+  GstOsxAudioRingBuffer *ringbuffer;
+  GstStateChangeReturn ret;
+
+  switch (transition) {
+    default:
+      break;
+  }
+
+  ret = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
+  if (ret == GST_STATE_CHANGE_FAILURE)
+    goto out;
+
+  switch (transition) {
+    case GST_STATE_CHANGE_NULL_TO_READY:
+      /* The device is open now, so fix our device_id if it changed */
+      ringbuffer =
+          GST_OSX_AUDIO_RING_BUFFER (GST_AUDIO_BASE_SRC (osxsrc)->ringbuffer);
+      if (ringbuffer->core_audio->device_id != osxsrc->device_id) {
+        osxsrc->device_id = ringbuffer->core_audio->device_id;
+        g_object_notify (G_OBJECT (osxsrc), "device");
+      }
+      break;
+
+    default:
+      break;
+  }
+
+out:
+  return ret;
+}
+
 static GstCaps *
 gst_osx_audio_src_get_caps (GstBaseSrc * src, GstCaps * filter)
 {
-  GstElementClass *gstelement_class;
   GstOsxAudioSrc *osxsrc;
-  GstPadTemplate *pad_template;
-  GstCaps *caps;
-  gint min, max;
+  GstAudioRingBuffer *buf;
+  GstOsxAudioRingBuffer *osxbuf;
+  GstCaps *caps, *filtered_caps;
 
-  gstelement_class = GST_ELEMENT_GET_CLASS (src);
   osxsrc = GST_OSX_AUDIO_SRC (src);
 
-  if (osxsrc->deviceChannels == -1) {
-    /* -1 means we don't know the number of channels yet.  for now, return
-     * template caps.
-     */
-    return NULL;
+  GST_OBJECT_LOCK (osxsrc);
+  buf = GST_AUDIO_BASE_SRC (src)->ringbuffer;
+  if (buf)
+    gst_object_ref (buf);
+  GST_OBJECT_UNLOCK (osxsrc);
+
+  if (!buf) {
+    GST_DEBUG_OBJECT (src, "no ring buffer, using template caps");
+    return GST_BASE_SRC_CLASS (parent_class)->get_caps (src, filter);
   }
 
-  max = osxsrc->deviceChannels;
-  if (max < 1)
-    max = 1;                    /* 0 channels means 1 channel? */
+  osxbuf = GST_OSX_AUDIO_RING_BUFFER (buf);
 
-  min = MIN (1, max);
+  /* protect against cached_caps going away */
+  GST_OBJECT_LOCK (buf);
 
-  pad_template = gst_element_class_get_pad_template (gstelement_class, "src");
-  g_return_val_if_fail (pad_template != NULL, NULL);
+  if (osxbuf->core_audio->cached_caps_valid) {
+    GST_LOG_OBJECT (src, "Returning cached caps");
+    caps = gst_caps_ref (osxbuf->core_audio->cached_caps);
+  } else if (buf->open) {
+    GstCaps *template_caps;
 
-  caps = gst_caps_copy (gst_pad_template_get_caps (pad_template));
+    /* Get template caps */
+    template_caps =
+        gst_pad_get_pad_template_caps (GST_AUDIO_BASE_SRC_PAD (osxsrc));
 
-  if (min == max) {
-    gst_caps_set_simple (caps, "channels", G_TYPE_INT, max, NULL);
+    /* Device is open, let's probe its caps */
+    caps = gst_core_audio_probe_caps (osxbuf->core_audio, template_caps);
+    gst_caps_replace (&osxbuf->core_audio->cached_caps, caps);
+
+    gst_caps_unref (template_caps);
   } else {
-    gst_caps_set_simple (caps, "channels", GST_TYPE_INT_RANGE, min, max, NULL);
+    GST_DEBUG_OBJECT (src, "ring buffer not open, using template caps");
+    caps = GST_BASE_SRC_CLASS (parent_class)->get_caps (src, NULL);
   }
 
-  return caps;
+  GST_OBJECT_UNLOCK (buf);
+
+  gst_object_unref (buf);
+
+  if (!caps)
+    return NULL;
+
+  if (!filter)
+    return caps;
+
+  /* Take care of filtered caps */
+  filtered_caps =
+      gst_caps_intersect_full (filter, caps, GST_CAPS_INTERSECT_FIRST);
+  gst_caps_unref (caps);
+  return filtered_caps;
 }
 
 static GstAudioRingBuffer *
@@ -252,18 +306,22 @@ gst_osx_audio_src_create_ringbuffer (GstAudioBaseSrc * src)
 
   osxsrc = GST_OSX_AUDIO_SRC (src);
 
-  gst_osx_audio_src_select_device (osxsrc);
-
-  GST_DEBUG ("Creating ringbuffer");
+  GST_DEBUG_OBJECT (osxsrc, "Creating ringbuffer");
   ringbuffer = g_object_new (GST_TYPE_OSX_AUDIO_RING_BUFFER, NULL);
-  GST_DEBUG ("osx src 0x%p element 0x%p  ioproc 0x%p", osxsrc,
+  GST_DEBUG_OBJECT (osxsrc, "osx src 0x%p element 0x%p  ioproc 0x%p", osxsrc,
       GST_OSX_AUDIO_ELEMENT_GET_INTERFACE (osxsrc),
       (void *) gst_osx_audio_src_io_proc);
 
   ringbuffer->core_audio->element =
       GST_OSX_AUDIO_ELEMENT_GET_INTERFACE (osxsrc);
   ringbuffer->core_audio->is_src = TRUE;
-  ringbuffer->core_audio->device_id = osxsrc->device_id;
+
+  /* By default the coreaudio instance created by the ringbuffer
+   * has device_id==kAudioDeviceUnknown. The user might have
+   * selected a different one here
+   */
+  if (ringbuffer->core_audio->device_id != osxsrc->device_id)
+    ringbuffer->core_audio->device_id = osxsrc->device_id;
 
   return GST_AUDIO_RING_BUFFER (ringbuffer);
 }
@@ -279,7 +337,15 @@ gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
   gint writeseg;
   gint len;
   gint remaining;
+  UInt32 n;
   gint offset = 0;
+
+  /* Previous invoke of AudioUnitRender changed mDataByteSize into
+   * number of bytes actually read. Reset the members. */
+  for (n = 0; n < buf->core_audio->recBufferList->mNumberBuffers; ++n) {
+    buf->core_audio->recBufferList->mBuffers[n].mDataByteSize =
+        buf->core_audio->recBufferSize;
+  }
 
   status = AudioUnitRender (buf->core_audio->audiounit, ioActionFlags,
       inTimeStamp, inBusNumber, inNumberFrames, buf->core_audio->recBufferList);
@@ -288,6 +354,9 @@ gst_osx_audio_src_io_proc (GstOsxAudioRingBuffer * buf,
     GST_WARNING_OBJECT (buf, "AudioUnitRender returned %d", (int) status);
     return status;
   }
+
+  /* TODO: To support non-interleaved audio, go over all mBuffers,
+   *       not just the first one. */
 
   remaining = buf->core_audio->recBufferList->mBuffers[0].mDataByteSize;
 
@@ -325,10 +394,4 @@ gst_osx_audio_src_osxelement_init (gpointer g_iface, gpointer iface_data)
   GstOsxAudioElementInterface *iface = (GstOsxAudioElementInterface *) g_iface;
 
   iface->io_proc = (AURenderCallback) gst_osx_audio_src_io_proc;
-}
-
-static void
-gst_osx_audio_src_select_device (GstOsxAudioSrc * osxsrc)
-{
-  gst_core_audio_select_source_device (&osxsrc->device_id);
 }

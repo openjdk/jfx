@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -134,7 +134,7 @@ static void hls_progress_buffer_class_init (HLSProgressBufferClass *klass)
     GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
     GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
 
-    gst_element_class_set_details_simple (element_class,
+    gst_element_class_set_metadata (element_class,
         "HLS Progressive download plugin",
         "Element",
         "Progressively stores incoming data in memory or file",

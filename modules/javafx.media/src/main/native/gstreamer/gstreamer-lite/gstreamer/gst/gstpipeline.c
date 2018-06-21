@@ -22,6 +22,7 @@
 
 /**
  * SECTION:gstpipeline
+ * @title: GstPipeline
  * @short_description: Top-level bin with clocking and bus management
                        functionality.
  * @see_also: #GstElement, #GstBin, #GstClock, #GstBus
@@ -94,12 +95,14 @@ enum
 
 #define DEFAULT_DELAY           0
 #define DEFAULT_AUTO_FLUSH_BUS  TRUE
+#define DEFAULT_LATENCY         GST_CLOCK_TIME_NONE
 
 enum
 {
   PROP_0,
   PROP_DELAY,
-  PROP_AUTO_FLUSH_BUS
+  PROP_AUTO_FLUSH_BUS,
+  PROP_LATENCY
 };
 
 #define GST_PIPELINE_GET_PRIVATE(obj)  \
@@ -114,6 +117,8 @@ struct _GstPipelinePrivate
    * PLAYING*/
   GstClockTime last_start_time;
   gboolean update_clock;
+
+  GstClockTime latency;
 };
 
 
@@ -128,6 +133,7 @@ static GstStateChangeReturn gst_pipeline_change_state (GstElement * element,
     GstStateChange transition);
 
 static void gst_pipeline_handle_message (GstBin * bin, GstMessage * message);
+static gboolean gst_pipeline_do_latency (GstBin * bin);
 
 /* static guint gst_pipeline_signals[LAST_SIGNAL] = { 0 }; */
 
@@ -178,6 +184,18 @@ gst_pipeline_class_init (GstPipelineClass * klass)
           "from READY into NULL state", DEFAULT_AUTO_FLUSH_BUS,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstPipeline:latency:
+   *
+   * Latency to configure on the pipeline. See gst_pipeline_set_latency().
+   *
+   * Since: 1.6
+   **/
+  g_object_class_install_property (gobject_class, PROP_LATENCY,
+      g_param_spec_uint64 ("latency", "Latency",
+          "Latency to configure on the pipeline", 0, G_MAXUINT64,
+          DEFAULT_LATENCY, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
   gobject_class->dispose = gst_pipeline_dispose;
 
   gst_element_class_set_static_metadata (gstelement_class, "Pipeline object",
@@ -191,6 +209,7 @@ gst_pipeline_class_init (GstPipelineClass * klass)
       GST_DEBUG_FUNCPTR (gst_pipeline_provide_clock_func);
   gstbin_class->handle_message =
       GST_DEBUG_FUNCPTR (gst_pipeline_handle_message);
+  gstbin_class->do_latency = GST_DEBUG_FUNCPTR (gst_pipeline_do_latency);
 }
 
 static void
@@ -203,6 +222,7 @@ gst_pipeline_init (GstPipeline * pipeline)
   /* set default property values */
   pipeline->priv->auto_flush_bus = DEFAULT_AUTO_FLUSH_BUS;
   pipeline->delay = DEFAULT_DELAY;
+  pipeline->priv->latency = DEFAULT_LATENCY;
 
   /* create and set a default bus */
   bus = gst_bus_new ();
@@ -224,7 +244,7 @@ gst_pipeline_dispose (GObject * object)
   GstPipeline *pipeline = GST_PIPELINE (object);
   GstClock **clock_p = &pipeline->fixed_clock;
 
-  GST_CAT_DEBUG_OBJECT (GST_CAT_REFCOUNTING, pipeline, "dispose");
+  GST_CAT_DEBUG_OBJECT (GST_CAT_REFCOUNTING, pipeline, "%p dispose", pipeline);
 
   /* clear and unref any fixed clock */
   gst_object_replace ((GstObject **) clock_p, NULL);
@@ -245,6 +265,9 @@ gst_pipeline_set_property (GObject * object, guint prop_id,
     case PROP_AUTO_FLUSH_BUS:
       gst_pipeline_set_auto_flush_bus (pipeline, g_value_get_boolean (value));
       break;
+    case PROP_LATENCY:
+      gst_pipeline_set_latency (pipeline, g_value_get_uint64 (value));
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -263,6 +286,9 @@ gst_pipeline_get_property (GObject * object, guint prop_id,
       break;
     case PROP_AUTO_FLUSH_BUS:
       g_value_set_boolean (value, gst_pipeline_get_auto_flush_bus (pipeline));
+      break;
+    case PROP_LATENCY:
+      g_value_set_uint64 (value, gst_pipeline_get_latency (pipeline));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -355,6 +381,14 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
   GstClock *clock;
 
   switch (transition) {
+    case GST_STATE_CHANGE_NULL_TO_NULL:
+      break;
+    case GST_STATE_CHANGE_READY_TO_READY:
+      break;
+    case GST_STATE_CHANGE_PAUSED_TO_PAUSED:
+      break;
+    case GST_STATE_CHANGE_PLAYING_TO_PLAYING:
+      break;
     case GST_STATE_CHANGE_NULL_TO_READY:
       GST_OBJECT_LOCK (element);
       if (element->bus)
@@ -365,6 +399,9 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
       GST_OBJECT_LOCK (element);
       pipeline->priv->update_clock = TRUE;
       GST_OBJECT_UNLOCK (element);
+
+      /* READY to PAUSED starts running_time from 0 */
+      reset_start_time (pipeline, 0);
       break;
     case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
     {
@@ -462,6 +499,8 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
       break;
     }
     case GST_STATE_CHANGE_PAUSED_TO_READY:
+      reset_start_time (pipeline, 0);
+      break;
     case GST_STATE_CHANGE_READY_TO_NULL:
       break;
   }
@@ -469,14 +508,18 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
   result = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
 
   switch (transition) {
+    case GST_STATE_CHANGE_NULL_TO_NULL:
+      break;
+    case GST_STATE_CHANGE_READY_TO_READY:
+      break;
+    case GST_STATE_CHANGE_PAUSED_TO_PAUSED:
+      break;
+    case GST_STATE_CHANGE_PLAYING_TO_PLAYING:
+      break;
     case GST_STATE_CHANGE_NULL_TO_READY:
       break;
     case GST_STATE_CHANGE_READY_TO_PAUSED:
-    {
-      /* READY to PAUSED starts running_time from 0 */
-      reset_start_time (pipeline, 0);
       break;
-    }
     case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
       break;
     case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
@@ -573,6 +616,75 @@ gst_pipeline_handle_message (GstBin * bin, GstMessage * message)
   GST_BIN_CLASS (parent_class)->handle_message (bin, message);
 }
 
+static gboolean
+gst_pipeline_do_latency (GstBin * bin)
+{
+  GstPipeline *pipeline = GST_PIPELINE (bin);
+  GstQuery *query;
+  GstClockTime latency;
+  GstClockTime min_latency, max_latency;
+  gboolean res;
+
+  GST_OBJECT_LOCK (pipeline);
+  latency = pipeline->priv->latency;
+  GST_OBJECT_UNLOCK (pipeline);
+
+  if (latency == GST_CLOCK_TIME_NONE)
+    return GST_BIN_CLASS (parent_class)->do_latency (bin);
+
+  GST_DEBUG_OBJECT (pipeline, "querying latency");
+
+  query = gst_query_new_latency ();
+  if ((res = gst_element_query (GST_ELEMENT_CAST (pipeline), query))) {
+    gboolean live;
+
+    gst_query_parse_latency (query, &live, &min_latency, &max_latency);
+
+    GST_DEBUG_OBJECT (pipeline,
+        "got min latency %" GST_TIME_FORMAT ", max latency %"
+        GST_TIME_FORMAT ", live %d", GST_TIME_ARGS (min_latency),
+        GST_TIME_ARGS (max_latency), live);
+
+    if (max_latency < min_latency) {
+      /* this is an impossible situation, some parts of the pipeline might not
+       * work correctly. We post a warning for now. */
+      GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
+          ("Impossible to configure latency: max %" GST_TIME_FORMAT " < min %"
+              GST_TIME_FORMAT ". Add queues or other buffering elements.",
+              GST_TIME_ARGS (max_latency), GST_TIME_ARGS (min_latency)));
+    }
+
+    if (latency < min_latency) {
+      /* This is a problematic situation as we will most likely drop lots of
+       * data if we configure a too low latency */
+      GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
+          ("Configured latency is lower than detected minimum latency: configured %"
+              GST_TIME_FORMAT " < min %" GST_TIME_FORMAT,
+              GST_TIME_ARGS (latency), GST_TIME_ARGS (min_latency)));
+    }
+  } else {
+    /* this is not a real problem, we just don't configure any latency. */
+    GST_WARNING_OBJECT (pipeline, "failed to query latency");
+  }
+  gst_query_unref (query);
+
+
+  /* configure latency on elements */
+  res =
+      gst_element_send_event (GST_ELEMENT_CAST (pipeline),
+      gst_event_new_latency (latency));
+  if (res) {
+    GST_INFO_OBJECT (pipeline, "configured latency of %" GST_TIME_FORMAT,
+        GST_TIME_ARGS (latency));
+  } else {
+    GST_WARNING_OBJECT (pipeline,
+        "did not really configure latency of %" GST_TIME_FORMAT,
+        GST_TIME_ARGS (latency));
+  }
+
+  return res;
+}
+
 /**
  * gst_pipeline_get_bus:
  * @pipeline: a #GstPipeline
@@ -627,15 +739,39 @@ gst_pipeline_provide_clock_func (GstElement * element)
 }
 
 /**
- * gst_pipeline_get_clock:
+ * gst_pipeline_get_clock: (skip)
  * @pipeline: a #GstPipeline
  *
- * Gets the current clock used by @pipeline.
+ * Gets the current clock used by @pipeline. Users of object
+ * oriented languages should use gst_pipeline_get_pipeline_clock()
+ * to avoid confusion with gst_element_get_clock() which has a different behavior.
+ *
+ * Unlike gst_element_get_clock(), this function will always return a
+ * clock, even if the pipeline is not in the PLAYING state.
  *
  * Returns: (transfer full): a #GstClock, unref after usage.
  */
 GstClock *
 gst_pipeline_get_clock (GstPipeline * pipeline)
+{
+  return gst_pipeline_get_pipeline_clock (pipeline);
+}
+
+/**
+ * gst_pipeline_get_pipeline_clock:
+ * @pipeline: a #GstPipeline
+ *
+ * Gets the current clock used by @pipeline.
+ *
+ * Unlike gst_element_get_clock(), this function will always return a
+ * clock, even if the pipeline is not in the PLAYING state.
+ *
+ * Returns: (transfer full): a #GstClock, unref after usage.
+ *
+ * Since: 1.6
+ */
+GstClock *
+gst_pipeline_get_pipeline_clock (GstPipeline * pipeline)
 {
   g_return_val_if_fail (GST_IS_PIPELINE (pipeline), NULL);
 
@@ -676,7 +812,7 @@ gst_pipeline_use_clock (GstPipeline * pipeline, GstClock * clock)
 }
 
 /**
- * gst_pipeline_set_clock:
+ * gst_pipeline_set_clock: (skip)
  * @pipeline: a #GstPipeline
  * @clock: (transfer none): the clock to set
  *
@@ -836,4 +972,61 @@ gst_pipeline_get_auto_flush_bus (GstPipeline * pipeline)
   GST_OBJECT_UNLOCK (pipeline);
 
   return res;
+}
+
+/**
+ * gst_pipeline_set_latency:
+ * @pipeline: a #GstPipeline
+ * @latency: latency to configure
+ *
+ * Sets the latency that should be configured on the pipeline. Setting
+ * GST_CLOCK_TIME_NONE will restore the default behaviour of using the minimum
+ * latency from the LATENCY query. Setting this is usually not required and
+ * the pipeline will figure out an appropriate latency automatically.
+ *
+ * Setting a too low latency, especially lower than the minimum latency from
+ * the LATENCY query, will most likely cause the pipeline to fail.
+ *
+ * Since: 1.6
+ */
+void
+gst_pipeline_set_latency (GstPipeline * pipeline, GstClockTime latency)
+{
+  gboolean changed;
+
+  g_return_if_fail (GST_IS_PIPELINE (pipeline));
+
+  GST_OBJECT_LOCK (pipeline);
+  changed = (pipeline->priv->latency != latency);
+  pipeline->priv->latency = latency;
+  GST_OBJECT_UNLOCK (pipeline);
+
+  if (changed)
+    gst_bin_recalculate_latency (GST_BIN_CAST (pipeline));
+}
+
+/**
+ * gst_pipeline_get_latency:
+ * @pipeline: a #GstPipeline
+ *
+ * Gets the latency that should be configured on the pipeline. See
+ * gst_pipeline_set_latency().
+ *
+ * Returns: Latency to configure on the pipeline or GST_CLOCK_TIME_NONE
+ *
+ * Since: 1.6
+ */
+
+GstClockTime
+gst_pipeline_get_latency (GstPipeline * pipeline)
+{
+  GstClockTime latency;
+
+  g_return_val_if_fail (GST_IS_PIPELINE (pipeline), GST_CLOCK_TIME_NONE);
+
+  GST_OBJECT_LOCK (pipeline);
+  latency = pipeline->priv->latency;
+  GST_OBJECT_UNLOCK (pipeline);
+
+  return latency;
 }

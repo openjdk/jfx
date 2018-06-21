@@ -31,6 +31,7 @@
 
 /**
  * SECTION:gstfftf32
+ * @title: GstFFTF32
  * @short_description: FFT functions for 32 bit float samples
  *
  * #GstFFTF32 provides a FFT implementation and related functions for
@@ -69,7 +70,7 @@ struct _GstFFTF32
 };
 
 /**
- * gst_fft_f32_new:
+ * gst_fft_f32_new: (skip)
  * @len: Length of the FFT in the time domain
  * @inverse: %TRUE if the #GstFFTF32 instance should be used for the inverse FFT
  *

@@ -26,8 +26,6 @@
 #include <gst/base/gstbasetransform.h>
 #include <gst/audio/audio.h>
 
-#include "audioconvert.h"
-
 #define GST_TYPE_AUDIO_CONVERT            (gst_audio_convert_get_type())
 #define GST_AUDIO_CONVERT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_AUDIO_CONVERT,GstAudioConvert))
 #define GST_AUDIO_CONVERT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_AUDIO_CONVERT,GstAudioConvertClass))
@@ -46,10 +44,15 @@ struct _GstAudioConvert
 {
   GstBaseTransform element;
 
-  AudioConvertCtx ctx;
+  /* properties */
+  GstAudioDitherMethod dither;
+  GstAudioNoiseShapingMethod ns;
+  GValue mix_matrix;
+  gboolean mix_matrix_was_set;
 
-  GstAudioConvertDithering dither;
-  GstAudioConvertNoiseShaping ns;
+  GstAudioInfo in_info;
+  GstAudioInfo out_info;
+  GstAudioConverter *convert;
 };
 
 struct _GstAudioConvertClass

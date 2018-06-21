@@ -30,11 +30,15 @@ typedef struct _GstVideoFrame GstVideoFrame;
  * GstVideoFrameFlags:
  * @GST_VIDEO_FRAME_FLAG_NONE: no flags
  * @GST_VIDEO_FRAME_FLAG_INTERLACED: The video frame is interlaced. In mixed
- *           interlace-mode, this flags specifies if the frame is interlace or
+ *           interlace-mode, this flag specifies if the frame is interlaced or
  *           progressive.
  * @GST_VIDEO_FRAME_FLAG_TFF: The video frame has the top field first
  * @GST_VIDEO_FRAME_FLAG_RFF: The video frame has the repeat flag
  * @GST_VIDEO_FRAME_FLAG_ONEFIELD: The video frame has one field
+ * @GST_VIDEO_FRAME_FLAG_MULTIPLE_VIEW: The video contains one or
+ *     more non-mono views
+ * @GST_VIDEO_FRAME_FLAG_FIRST_IN_BUNDLE: The video frame is the first
+ *     in a set of corresponding views provided as sequential frames.
  *
  * Extra video frame flags
  */
@@ -43,7 +47,9 @@ typedef enum {
   GST_VIDEO_FRAME_FLAG_INTERLACED   = (1 << 0),
   GST_VIDEO_FRAME_FLAG_TFF          = (1 << 1),
   GST_VIDEO_FRAME_FLAG_RFF          = (1 << 2),
-  GST_VIDEO_FRAME_FLAG_ONEFIELD     = (1 << 3)
+  GST_VIDEO_FRAME_FLAG_ONEFIELD     = (1 << 3),
+  GST_VIDEO_FRAME_FLAG_MULTIPLE_VIEW = (1 << 4),
+  GST_VIDEO_FRAME_FLAG_FIRST_IN_BUNDLE = (1 << 5)
 } GstVideoFrameFlags;
 
 /* circular dependency, need to include this after defining the enums */
@@ -53,6 +59,7 @@ typedef enum {
 /**
  * GstVideoFrame:
  * @info: the #GstVideoInfo
+ * @flags: #GstVideoFrameFlags for the frame
  * @buffer: the mapped buffer
  * @meta: pointer to metadata if any
  * @id: id of the mapped frame. the id can for example be used to
@@ -77,13 +84,21 @@ struct _GstVideoFrame {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_VIDEO_API
 gboolean    gst_video_frame_map           (GstVideoFrame *frame, GstVideoInfo *info,
                                            GstBuffer *buffer, GstMapFlags flags);
+
+GST_VIDEO_API
 gboolean    gst_video_frame_map_id        (GstVideoFrame *frame, GstVideoInfo *info,
                                            GstBuffer *buffer, gint id, GstMapFlags flags);
+
+GST_VIDEO_API
 void        gst_video_frame_unmap         (GstVideoFrame *frame);
 
+GST_VIDEO_API
 gboolean    gst_video_frame_copy          (GstVideoFrame *dest, const GstVideoFrame *src);
+
+GST_VIDEO_API
 gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFrame *src,
                                            guint plane);
 
@@ -135,8 +150,22 @@ gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFr
  * @GST_VIDEO_BUFFER_FLAG_ONEFIELD:    If the #GstBuffer is interlaced, then only the
  *                                     first field (as defined by the %GST_VIDEO_BUFFER_TFF
  *                                     flag setting) is to be displayed.
+ * @GST_VIDEO_BUFFER_FLAG_MULTIPLE_VIEW: The #GstBuffer contains one or more specific views,
+ *                                     such as left or right eye view. This flags is set on
+ *                                     any buffer that contains non-mono content - even for
+ *                                     streams that contain only a single viewpoint. In mixed
+ *                                     mono / non-mono streams, the absense of the flag marks
+ *                                     mono buffers.
+ * @GST_VIDEO_BUFFER_FLAG_FIRST_IN_BUNDLE: When conveying stereo/multiview content with
+ *                                     frame-by-frame methods, this flag marks the first buffer
+ *                                      in a bundle of frames that belong together.
+ * @GST_VIDEO_BUFFER_FLAG_LAST:        Offset to define more flags
  *
- * Additional video buffer flags.
+ * Additional video buffer flags. These flags can potentially be used on any
+ * buffers carrying video data - even encoded data.
+ *
+ * Note that these are only valid for #GstCaps of type: video/...
+ * They can conflict with other extended buffer flags.
  */
 typedef enum {
   GST_VIDEO_BUFFER_FLAG_INTERLACED  = (GST_BUFFER_FLAG_LAST << 0),
@@ -144,8 +173,29 @@ typedef enum {
   GST_VIDEO_BUFFER_FLAG_RFF         = (GST_BUFFER_FLAG_LAST << 2),
   GST_VIDEO_BUFFER_FLAG_ONEFIELD    = (GST_BUFFER_FLAG_LAST << 3),
 
+  GST_VIDEO_BUFFER_FLAG_MULTIPLE_VIEW = (GST_BUFFER_FLAG_LAST << 4),
+  GST_VIDEO_BUFFER_FLAG_FIRST_IN_BUNDLE = (GST_BUFFER_FLAG_LAST << 5),
+
   GST_VIDEO_BUFFER_FLAG_LAST        = (GST_BUFFER_FLAG_LAST << 8)
 } GstVideoBufferFlags;
+
+/**
+ * GstVideoFrameMapFlags:
+ * @GST_VIDEO_FRAME_MAP_FLAG_NO_REF:  Don't take another reference of the buffer and store it in
+ *                                    the GstVideoFrame. This makes sure that the buffer stays
+ *                                    writable while the frame is mapped, but requires that the
+ *                                    buffer reference stays valid until the frame is unmapped again.
+ * @GST_VIDEO_FRAME_MAP_FLAG_LAST:    Offset to define more flags
+ *
+ * Additional mapping flags for gst_video_frame_map().
+ *
+ * Since: 1.6
+ */
+typedef enum {
+  GST_VIDEO_FRAME_MAP_FLAG_NO_REF   = (GST_MAP_FLAG_LAST << 0),
+  GST_VIDEO_FRAME_MAP_FLAG_LAST     = (GST_MAP_FLAG_LAST << 8)
+  /* 8 more flags possible afterwards */
+} GstVideoFrameMapFlags;
 
 G_END_DECLS
 

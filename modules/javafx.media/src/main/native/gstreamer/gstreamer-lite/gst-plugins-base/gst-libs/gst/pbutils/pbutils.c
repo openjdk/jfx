@@ -19,53 +19,37 @@
 
 /**
  * SECTION:gstpbutils
+ * @title: Pbutils
  * @short_description: General Application and Plugin Utility Library
  *
- * <refsect2>
- * <para>
  * libgstpbutils is a general utility library for plugins and applications.
  * It currently provides the
  * following:
- * </para>
- * <itemizedlist>
- * <listitem>
- * <para>
- * human-readable description strings of codecs, elements, sources, decoders,
+ *
+ * * human-readable description strings of codecs, elements, sources, decoders,
  * encoders, or sinks from decoder/encoder caps, element names, or protocol
  * names.
- * </para>
- * </listitem>
- * <listitem>
- * <para>
- * support for applications to initiate installation of missing plugins (if
+ *
+ * * support for applications to initiate installation of missing plugins (if
  * this is supported by the distribution or operating system used)
- * </para>
- * </listitem>
- * <listitem>
- * <para>
- * API for GStreamer elements to create missing-plugin messages in order to
+ *
+ * * API for GStreamer elements to create missing-plugin messages in order to
  * communicate to the application that a certain type of plugin is missing
  * (decoder, encoder, URI protocol source, URI protocol sink, named element)
- * </para>
- * </listitem>
- * <listitem>
- * <para>
- * API for applications to recognise and handle missing-plugin messages
- * </para>
- * </listitem>
- * </itemizedlist>
- * <title>Linking to this library</title>
- * <para>
+ *
+ * * API for applications to recognise and handle missing-plugin messages
+ *
+ * ## Linking to this library
+ *
  * You should obtain the required CFLAGS and LIBS using pkg-config on the
  * gstreamer-plugins-base-0.10 module. You will then also need to add
  * '-lgstpbutils-0.10' manually to your LIBS line.
- * </para>
- * <title>Library initialisation</title>
- * <para>
+ *
+ * ## Library initialisation
+ *
  * Before using any of its functions, applications and plugins must call
  * gst_pb_utils_init() to initialise the library.
- * </para>
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -73,8 +57,30 @@
 #endif
 
 #include "pbutils.h"
+#include "pbutils-private.h"
 
 #include "gst/gst-i18n-plugin.h"
+
+static gpointer
+_init_locale_text_domain (gpointer data)
+{
+#ifdef ENABLE_NLS
+  GST_DEBUG ("binding text domain %s to locale dir %s", GETTEXT_PACKAGE,
+      LOCALEDIR);
+  bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
+  bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+#endif
+
+  return NULL;
+}
+
+void
+gst_pb_utils_init_locale_text_domain (void)
+{
+  static GOnce locale_init_once = G_ONCE_INIT;
+
+  g_once (&locale_init_once, _init_locale_text_domain, NULL);
+}
 
 /**
  * gst_pb_utils_init:
@@ -95,12 +101,7 @@ gst_pb_utils_init (void)
     GST_LOG ("already initialised");
     return;
   }
-#ifdef ENABLE_NLS
-  GST_DEBUG ("binding text domain %s to locale dir %s", GETTEXT_PACKAGE,
-      LOCALEDIR);
-  bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
-  bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
-#endif
+  gst_pb_utils_init_locale_text_domain ();
 
   inited = TRUE;
 }

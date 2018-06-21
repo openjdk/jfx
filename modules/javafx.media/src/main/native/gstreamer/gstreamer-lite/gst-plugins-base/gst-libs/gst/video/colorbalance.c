@@ -28,16 +28,15 @@
 
 /**
  * SECTION:gstcolorbalance
+ * @title: GstColorBalance
  * @short_description: Interface for adjusting color balance settings
  *
- * <refsect2><para>
  * This interface is implemented by elements which can perform some color
  * balance operation on video frames they process. For example, modifying
  * the brightness, contrast, hue or saturation.
- * </para><para>
+ *
  * Example elements are 'xvimagesink' and 'colorbalance'
- * </para>
- * </refsect2>
+ *
  */
 
 /* FIXME 0.11: check if we need to add API for sometimes-supportedness

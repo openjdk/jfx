@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -433,7 +433,7 @@ static gboolean progress_buffer_activatepush_src(GstPad *pad, GstObject *parent,
         if (gst_pad_is_linked(pad))
             return gst_pad_start_task(pad, progress_buffer_loop, element, NULL);
         else
-            return TRUE;
+            return FALSE;
     }
     else
     {
@@ -483,7 +483,7 @@ static void progress_buffer_create_sourcepad(ProgressBuffer *element)
     gst_element_add_pad (GST_ELEMENT (element), element->srcpad);
 
     // Activate pad
-    gst_pad_set_active (element->srcpad, TRUE);
+    gst_pad_set_active(element->srcpad, TRUE);
 
     // Send "no-more-pads"
     gst_element_no_more_pads(GST_ELEMENT (element));
@@ -675,8 +675,10 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
     GstSeekType  start_type, stop_type;
     gint64       position;
     GstSegment   segment;
+    guint32      seqnum;
 
     gst_event_parse_seek(event, &rate, &format, &flags, &start_type, &position, &stop_type, NULL);
+    seqnum = gst_event_get_seqnum(event);
 
     if (format != GST_FORMAT_BYTES || start_type != GST_SEEK_TYPE_SET)
         return FALSE;
@@ -692,7 +694,11 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
     }
 
     if (flags & GST_SEEK_FLAG_FLUSH)
-        gst_pad_push_event(pad, gst_event_new_flush_start());
+    {
+        GstEvent *e = gst_event_new_flush_start();
+        gst_event_set_seqnum(e, seqnum);
+        gst_pad_push_event(pad, e);
+    }
 
     // Signal the task to stop if it's waiting.
     g_mutex_lock(&element->lock);
@@ -740,7 +746,9 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
     if (!element->instant_seek)
     {
         element->is_source_seeking = TRUE;
-        if (!gst_pad_push_event(element->sinkpad, gst_event_new_seek(rate, GST_FORMAT_BYTES, flags, GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_NONE, 0)))
+        GstEvent *e = gst_event_new_seek(rate, GST_FORMAT_BYTES, flags, GST_SEEK_TYPE_SET, position, GST_SEEK_TYPE_NONE, 0);
+        gst_event_set_seqnum(e, seqnum);
+        if (!gst_pad_push_event(element->sinkpad, e))
         {
             element->instant_seek = TRUE;
             cache_set_read_position(element->cache, position - element->cache_read_offset);
@@ -755,8 +763,11 @@ static gboolean progress_buffer_perform_push_seek(ProgressBuffer *element, GstPa
     }
 #endif
 
-    if (flags & GST_SEEK_FLAG_FLUSH)
-        gst_pad_push_event(pad, gst_event_new_flush_stop(TRUE));
+    if (flags & GST_SEEK_FLAG_FLUSH) {
+        GstEvent *e = gst_event_new_flush_stop(TRUE);
+        gst_event_set_seqnum(e, seqnum);
+        gst_pad_push_event(pad, e);
+    }
 
     gst_pad_start_task(element->srcpad, progress_buffer_loop, element, NULL);
     GST_PAD_STREAM_UNLOCK(pad);

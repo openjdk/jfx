@@ -19,14 +19,12 @@
 
 /**
  * SECTION:gststreamvolume
+ * @title: GstStreamVolume
  * @short_description: Interface for elements that provide a stream volume
  *
- * <refsect2>
- * <para>
  * This interface is implemented by elements that provide a stream volume. Examples for
  * such elements are #volume and #playbin.
- * </para>
- * <para>
+ *
  * Applications can use this interface to get or set the current stream volume. For this
  * the "volume" #GObject property can be used or the helper functions gst_stream_volume_set_volume()
  * and gst_stream_volume_get_volume(). This volume is always a linear factor, i.e. 0.0 is muted
@@ -36,13 +34,11 @@
  *
  * Separate from the volume the stream can also be muted by the "mute" #GObject property or
  * gst_stream_volume_set_mute() and gst_stream_volume_get_mute().
- * </para>
- * <para>
+ *
  * Elements that provide some kind of stream volume should implement the "volume" and
  * "mute" #GObject properties and handle setting and getting of them properly.
  * The volume property is defined to be a linear volume factor.
- * </para>
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H

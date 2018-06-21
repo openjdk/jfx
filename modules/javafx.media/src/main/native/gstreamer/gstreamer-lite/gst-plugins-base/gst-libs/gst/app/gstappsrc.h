@@ -22,6 +22,8 @@
 
 #include <gst/gst.h>
 #include <gst/base/gstpushsrc.h>
+#include <gst/app/app-prelude.h>
+#include <gst/app/app-enumtypes.h>
 
 G_BEGIN_DECLS
 
@@ -41,6 +43,8 @@ G_BEGIN_DECLS
 typedef struct _GstAppSrc GstAppSrc;
 typedef struct _GstAppSrcClass GstAppSrcClass;
 typedef struct _GstAppSrcPrivate GstAppSrcPrivate;
+
+/* FIXME 2.0: Make the instance/class struct private */
 
 /**
  * GstAppSrcCallbacks: (skip)
@@ -107,46 +111,83 @@ struct _GstAppSrcClass
   /* actions */
   GstFlowReturn (*push_buffer)     (GstAppSrc *appsrc, GstBuffer *buffer);
   GstFlowReturn (*end_of_stream)   (GstAppSrc *appsrc);
+  GstFlowReturn (*push_sample)     (GstAppSrc *appsrc, GstSample *sample);
+  GstFlowReturn (*push_buffer_list) (GstAppSrc *appsrc, GstBufferList *buffer_list);
 
   /*< private >*/
-  gpointer     _gst_reserved[GST_PADDING];
+  gpointer     _gst_reserved[GST_PADDING-2];
 };
 
-GType gst_app_src_get_type(void);
+GST_APP_API
+GType            gst_app_src_get_type                (void);
 
-/* GType getter for GstAppStreamType */
-#define GST_TYPE_APP_STREAM_TYPE (gst_app_stream_type_get_type ())
-GType gst_app_stream_type_get_type (void);
-
+GST_APP_API
 void             gst_app_src_set_caps                (GstAppSrc *appsrc, const GstCaps *caps);
+
+GST_APP_API
 GstCaps*         gst_app_src_get_caps                (GstAppSrc *appsrc);
 
+GST_APP_API
 void             gst_app_src_set_size                (GstAppSrc *appsrc, gint64 size);
+
+GST_APP_API
 gint64           gst_app_src_get_size                (GstAppSrc *appsrc);
 
+GST_APP_API
+void             gst_app_src_set_duration            (GstAppSrc *appsrc, GstClockTime duration);
+
+GST_APP_API
+GstClockTime     gst_app_src_get_duration            (GstAppSrc *appsrc);
+
+GST_APP_API
 void             gst_app_src_set_stream_type         (GstAppSrc *appsrc, GstAppStreamType type);
+
+GST_APP_API
 GstAppStreamType gst_app_src_get_stream_type         (GstAppSrc *appsrc);
 
+GST_APP_API
 void             gst_app_src_set_max_bytes           (GstAppSrc *appsrc, guint64 max);
+
+GST_APP_API
 guint64          gst_app_src_get_max_bytes           (GstAppSrc *appsrc);
 
+GST_APP_API
 guint64          gst_app_src_get_current_level_bytes (GstAppSrc *appsrc);
 
+GST_APP_API
 void             gst_app_src_set_latency             (GstAppSrc *appsrc, guint64 min, guint64 max);
+
+GST_APP_API
 void             gst_app_src_get_latency             (GstAppSrc *appsrc, guint64 *min, guint64 *max);
 
+GST_APP_API
 void             gst_app_src_set_emit_signals        (GstAppSrc *appsrc, gboolean emit);
+
+GST_APP_API
 gboolean         gst_app_src_get_emit_signals        (GstAppSrc *appsrc);
 
+GST_APP_API
 GstFlowReturn    gst_app_src_push_buffer             (GstAppSrc *appsrc, GstBuffer *buffer);
+
+GST_APP_API
+GstFlowReturn    gst_app_src_push_buffer_list        (GstAppSrc * appsrc, GstBufferList * buffer_list);
+
+GST_APP_API
 GstFlowReturn    gst_app_src_end_of_stream           (GstAppSrc *appsrc);
 
+GST_APP_API
+GstFlowReturn    gst_app_src_push_sample             (GstAppSrc *appsrc, GstSample *sample);
+
+GST_APP_API
 void             gst_app_src_set_callbacks           (GstAppSrc * appsrc,
                                                       GstAppSrcCallbacks *callbacks,
                                                       gpointer user_data,
                                                       GDestroyNotify notify);
 
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAppSrc, gst_object_unref)
+#endif
+
 G_END_DECLS
 
 #endif
-

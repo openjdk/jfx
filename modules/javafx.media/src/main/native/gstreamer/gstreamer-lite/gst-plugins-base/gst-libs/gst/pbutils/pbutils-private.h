@@ -18,6 +18,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
+#include "gstdiscoverer.h"
+
 struct _GstDiscovererStreamInfo {
   GObject                parent;
 
@@ -44,6 +46,7 @@ struct _GstDiscovererContainerInfo {
 struct _GstDiscovererAudioInfo {
   GstDiscovererStreamInfo parent;
 
+  guint64 channel_mask;
   guint channels;
   guint sample_rate;
   guint depth;
@@ -99,6 +102,7 @@ struct _GstDiscovererInfo {
   GstStructure *misc;
   GstTagList *tags;
   GstToc *toc;
+  gboolean live;
   gboolean seekable;
   GPtrArray *missing_elements_details;
 
@@ -106,5 +110,8 @@ struct _GstDiscovererInfo {
 };
 
 /* missing-plugins.c */
-
+G_GNUC_INTERNAL
 GstCaps *copy_and_clean_caps (const GstCaps * caps);
+
+G_GNUC_INTERNAL
+void gst_pb_utils_init_locale_text_domain (void);

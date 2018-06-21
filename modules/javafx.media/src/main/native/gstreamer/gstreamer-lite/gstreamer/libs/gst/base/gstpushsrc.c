@@ -22,6 +22,7 @@
 
 /**
  * SECTION:gstpushsrc
+ * @title: GstPushSrc
  * @short_description: Base class for push based source elements
  * @see_also: #GstBaseSrc
  *

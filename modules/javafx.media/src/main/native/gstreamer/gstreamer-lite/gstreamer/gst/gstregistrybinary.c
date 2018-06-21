@@ -59,6 +59,7 @@
 #ifndef GSTREAMER_LITE
 #include <gst/gstdeviceproviderfactory.h>
 #endif // GSTREAMER_LITE
+#include <gst/gstdynamictypefactory.h>
 #include <gst/gsturi.h>
 #include <gst/gstinfo.h>
 #include <gst/gstenumtypes.h>
@@ -531,6 +532,7 @@ priv_gst_registry_binary_read_cache (GstRegistry * registry,
 #ifndef GSTREAMER_LITE
   GST_TYPE_DEVICE_PROVIDER_FACTORY;
 #endif // GSTREAMER_LITE
+  GST_TYPE_DYNAMIC_TYPE_FACTORY;
 
 #ifndef GST_DISABLE_GST_DEBUG
   timer = g_timer_new ();

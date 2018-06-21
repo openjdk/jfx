@@ -51,9 +51,9 @@ static gboolean gst_iir_equalizer_setup (GstAudioFilter * filter,
     const GstAudioInfo * info);
 static GstFlowReturn gst_iir_equalizer_transform_ip (GstBaseTransform * btrans,
     GstBuffer * buf);
+static void set_passthrough (GstIirEqualizer * equ);
 
 #ifdef GSTREAMER_LITE
-static void set_passthrough (GstIirEqualizer * equ);
 static void update_coefficients (GstIirEqualizer * equ);
 #endif // GSTREAMER_LITE
 
@@ -166,6 +166,7 @@ gst_iir_equalizer_band_set_property (GObject * object, guint prop_id,
         BANDS_LOCK (equ);
         equ->need_new_coefficients = TRUE;
         band->gain = gain;
+        set_passthrough (equ);
         BANDS_UNLOCK (equ);
         GST_DEBUG_OBJECT (band, "changed gain = %lf ", band->gain);
       }
@@ -222,12 +223,12 @@ gst_iir_equalizer_band_set_property (GObject * object, guint prop_id,
   // We need to update coefficients and disable passthrough
   // if needed, otherwise after we disable passthrough equalizer will not
   // get re-enabled.
-  BANDS_LOCK (equ);
-  if (equ->need_new_coefficients) {
-    update_coefficients (equ);
-    set_passthrough (equ);
-  }
-  BANDS_UNLOCK (equ);
+//  BANDS_LOCK (equ);
+//  if (equ->need_new_coefficients) {
+//    update_coefficients (equ);
+//    set_passthrough (equ);
+//  }
+//  BANDS_UNLOCK (equ);
 #endif // GSTREAMER_LITE
 
   gst_object_unref (equ);
@@ -355,7 +356,7 @@ gst_iir_equalizer_child_proxy_get_child_by_index (GstChildProxy * child_proxy,
     g_return_val_if_fail (index < equ->freq_band_count, NULL);
   }
 
-  ret = g_object_ref (equ->bands[index]);
+  ret = g_object_ref (G_OBJECT (equ->bands[index]));
   BANDS_UNLOCK (equ);
 
   GST_LOG_OBJECT (equ, "return child[%d] %" GST_PTR_FORMAT, index, ret);
@@ -407,7 +408,8 @@ static void
 gst_iir_equalizer_init (GstIirEqualizer * eq)
 {
   g_mutex_init (&eq->bands_lock);
-  eq->need_new_coefficients = TRUE;
+  /* Band gains are 0 by default, passthrough until they are changed */
+  gst_base_transform_set_passthrough (GST_BASE_TRANSFORM (eq), TRUE);
 }
 
 static void
@@ -886,7 +888,6 @@ gst_iir_equalizer_transform_ip (GstBaseTransform * btrans, GstBuffer * buf)
   BANDS_LOCK (equ);
   if (need_new_coefficients) {
     update_coefficients (equ);
-    set_passthrough (equ);
   }
   BANDS_UNLOCK (equ);
 

@@ -22,6 +22,7 @@
 
 #include <gst/gst.h>
 #include <gst/base/gstbasesink.h>
+#include <gst/app/app-prelude.h>
 
 G_BEGIN_DECLS
 
@@ -42,17 +43,19 @@ typedef struct _GstAppSink GstAppSink;
 typedef struct _GstAppSinkClass GstAppSinkClass;
 typedef struct _GstAppSinkPrivate GstAppSinkPrivate;
 
+/* FIXME 2.0: Make the instance/class struct private */
+
 /**
  * GstAppSinkCallbacks: (skip)
  * @eos: Called when the end-of-stream has been reached. This callback
- *       is called from the steaming thread.
+ *       is called from the streaming thread.
  * @new_preroll: Called when a new preroll sample is available.
- *       This callback is called from the steaming thread.
+ *       This callback is called from the streaming thread.
  *       The new preroll sample can be retrieved with
  *       gst_app_sink_pull_preroll() either from this callback
  *       or from any other thread.
  * @new_sample: Called when a new sample is available.
- *       This callback is called from the steaming thread.
+ *       This callback is called from the streaming thread.
  *       The new sample can be retrieved with
  *       gst_app_sink_pull_sample() either from this callback
  *       or from any other thread.
@@ -92,34 +95,76 @@ struct _GstAppSinkClass
   /* actions */
   GstSample *   (*pull_preroll)      (GstAppSink *appsink);
   GstSample *   (*pull_sample)       (GstAppSink *appsink);
+  GstSample *   (*try_pull_preroll)  (GstAppSink *appsink, GstClockTime timeout);
+  GstSample *   (*try_pull_sample)   (GstAppSink *appsink, GstClockTime timeout);
 
   /*< private >*/
-  gpointer     _gst_reserved[GST_PADDING];
+  gpointer     _gst_reserved[GST_PADDING - 2];
 };
 
-GType gst_app_sink_get_type(void);
+GST_APP_API
+GType           gst_app_sink_get_type         (void);
 
+GST_APP_API
 void            gst_app_sink_set_caps         (GstAppSink *appsink, const GstCaps *caps);
+
+GST_APP_API
 GstCaps *       gst_app_sink_get_caps         (GstAppSink *appsink);
 
+GST_APP_API
 gboolean        gst_app_sink_is_eos           (GstAppSink *appsink);
 
+GST_APP_API
 void            gst_app_sink_set_emit_signals (GstAppSink *appsink, gboolean emit);
+
+GST_APP_API
 gboolean        gst_app_sink_get_emit_signals (GstAppSink *appsink);
 
+GST_APP_API
 void            gst_app_sink_set_max_buffers  (GstAppSink *appsink, guint max);
+
+GST_APP_API
 guint           gst_app_sink_get_max_buffers  (GstAppSink *appsink);
 
+GST_APP_API
 void            gst_app_sink_set_drop         (GstAppSink *appsink, gboolean drop);
+
+GST_APP_API
 gboolean        gst_app_sink_get_drop         (GstAppSink *appsink);
 
+GST_APP_API
+void            gst_app_sink_set_buffer_list_support  (GstAppSink *appsink, gboolean enable_lists);
+
+GST_APP_API
+gboolean        gst_app_sink_get_buffer_list_support  (GstAppSink *appsink);
+
+GST_APP_API
+void            gst_app_sink_set_wait_on_eos  (GstAppSink *appsink, gboolean wait);
+
+GST_APP_API
+gboolean        gst_app_sink_get_wait_on_eos  (GstAppSink *appsink);
+
+GST_APP_API
 GstSample *     gst_app_sink_pull_preroll     (GstAppSink *appsink);
+
+GST_APP_API
 GstSample *     gst_app_sink_pull_sample      (GstAppSink *appsink);
 
+GST_APP_API
+GstSample *     gst_app_sink_try_pull_preroll (GstAppSink *appsink, GstClockTime timeout);
+
+GST_APP_API
+GstSample *     gst_app_sink_try_pull_sample  (GstAppSink *appsink, GstClockTime timeout);
+
+GST_APP_API
 void            gst_app_sink_set_callbacks    (GstAppSink * appsink,
                                                GstAppSinkCallbacks *callbacks,
                                                gpointer user_data,
                                                GDestroyNotify notify);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAppSink, gst_object_unref)
+#endif
 
 G_END_DECLS
 

@@ -20,6 +20,7 @@
  */
 /**
  * SECTION:gstminiobject
+ * @title: GstMiniObject
  * @short_description: Lightweight base class for the GStreamer object hierarchy
  *
  * #GstMiniObject is a simple structure that can be used to implement refcounted
@@ -57,11 +58,6 @@
 #include "gst/gstinfo.h"
 #include <gobject/gvaluecollector.h>
 
-#ifndef GST_DISABLE_TRACE
-#include "gsttrace.h"
-static GstAllocTrace *_gst_mini_object_trace;
-#endif
-
 /* Mutex used for weak referencing */
 G_LOCK_DEFINE_STATIC (qdata_mutex);
 static GQuark weak_ref_quark;
@@ -93,10 +89,6 @@ void
 _priv_gst_mini_object_initialize (void)
 {
   weak_ref_quark = g_quark_from_static_string ("GstMiniObjectWeakRefQuark");
-
-#ifndef GST_DISABLE_TRACE
-  _gst_mini_object_trace = _gst_alloc_trace_register ("GstMiniObject", 0);
-#endif
 }
 
 /**
@@ -129,20 +121,19 @@ gst_mini_object_init (GstMiniObject * mini_object, guint flags, GType type,
   mini_object->n_qdata = 0;
   mini_object->qdata = NULL;
 
-#ifndef GST_DISABLE_TRACE
-  _gst_alloc_trace_new (_gst_mini_object_trace, mini_object);
-#endif
+  GST_TRACER_MINI_OBJECT_CREATED (mini_object);
 }
 
 /**
- * gst_mini_object_copy:
+ * gst_mini_object_copy: (skip)
  * @mini_object: the mini-object to copy
  *
  * Creates a copy of the mini-object.
  *
  * MT safe
  *
- * Returns: (transfer full): the new mini-object.
+ * Returns: (transfer full) (nullable): the new mini-object if copying is
+ * possible, %NULL otherwise.
  */
 GstMiniObject *
 gst_mini_object_copy (const GstMiniObject * mini_object)
@@ -193,11 +184,13 @@ gst_mini_object_lock (GstMiniObject * object, GstLockFlags flags)
       access_mode &= ~GST_LOCK_FLAG_EXCLUSIVE;
     }
 
-    if (access_mode) {
       /* shared counter > 1 and write access is not allowed */
-      if (access_mode & GST_LOCK_FLAG_WRITE && IS_SHARED (state))
+    if (((state & GST_LOCK_FLAG_WRITE) != 0
+            || (access_mode & GST_LOCK_FLAG_WRITE) != 0)
+        && IS_SHARED (newstate))
         goto lock_failed;
 
+    if (access_mode) {
       if ((state & LOCK_FLAG_MASK) == 0) {
         /* nothing mapped, set access_mode */
         newstate |= access_mode;
@@ -297,7 +290,7 @@ gst_mini_object_is_writable (const GstMiniObject * mini_object)
 }
 
 /**
- * gst_mini_object_make_writable:
+ * gst_mini_object_make_writable: (skip)
  * @mini_object: (transfer full): the mini-object to make writable
  *
  * Checks if a mini-object is writable.  If not, a writable copy is made and
@@ -329,7 +322,7 @@ gst_mini_object_make_writable (GstMiniObject * mini_object)
 }
 
 /**
- * gst_mini_object_ref:
+ * gst_mini_object_ref: (skip)
  * @mini_object: the mini-object
  *
  * Increase the reference count of the mini-object.
@@ -346,6 +339,8 @@ gst_mini_object_make_writable (GstMiniObject * mini_object)
 GstMiniObject *
 gst_mini_object_ref (GstMiniObject * mini_object)
 {
+  gint old_refcount, new_refcount;
+
   g_return_val_if_fail (mini_object != NULL, NULL);
   /* we can't assert that the refcount > 0 since the _free functions
    * increments the refcount from 0 to 1 again to allow resurecting
@@ -353,11 +348,13 @@ gst_mini_object_ref (GstMiniObject * mini_object)
    g_return_val_if_fail (mini_object->refcount > 0, NULL);
    */
 
-  GST_CAT_TRACE (GST_CAT_REFCOUNTING, "%p ref %d->%d", mini_object,
-      GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object),
-      GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) + 1);
+  old_refcount = g_atomic_int_add (&mini_object->refcount, 1);
+  new_refcount = old_refcount + 1;
 
-  g_atomic_int_inc (&mini_object->refcount);
+  GST_CAT_TRACE (GST_CAT_REFCOUNTING, "%p ref %d->%d", mini_object,
+      old_refcount, new_refcount);
+
+  GST_TRACER_MINI_OBJECT_REFFED (mini_object, new_refcount);
 
   return mini_object;
 }
@@ -421,7 +418,7 @@ call_finalize_notify (GstMiniObject * obj)
 }
 
 /**
- * gst_mini_object_unref:
+ * gst_mini_object_unref: (skip)
  * @mini_object: the mini-object
  *
  * Decreases the reference count of the mini-object, possibly freeing
@@ -430,16 +427,22 @@ call_finalize_notify (GstMiniObject * obj)
 void
 gst_mini_object_unref (GstMiniObject * mini_object)
 {
+  gint old_refcount, new_refcount;
+
   g_return_if_fail (mini_object != NULL);
+  g_return_if_fail (GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) > 0);
+
+  old_refcount = g_atomic_int_add (&mini_object->refcount, -1);
+  new_refcount = old_refcount - 1;
+
+  g_return_if_fail (old_refcount > 0);
 
   GST_CAT_TRACE (GST_CAT_REFCOUNTING, "%p unref %d->%d",
-      mini_object,
-      GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object),
-      GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) - 1);
+      mini_object, old_refcount, new_refcount);
 
-  g_return_if_fail (mini_object->refcount > 0);
+  GST_TRACER_MINI_OBJECT_UNREFFED (mini_object, new_refcount);
 
-  if (G_UNLIKELY (g_atomic_int_dec_and_test (&mini_object->refcount))) {
+  if (new_refcount == 0) {
     gboolean do_free;
 
     if (mini_object->dispose)
@@ -458,9 +461,7 @@ gst_mini_object_unref (GstMiniObject * mini_object)
         call_finalize_notify (mini_object);
         g_free (mini_object->qdata);
       }
-#ifndef GST_DISABLE_TRACE
-      _gst_alloc_trace_free (_gst_mini_object_trace, mini_object);
-#endif
+      GST_TRACER_MINI_OBJECT_DESTROYED (mini_object);
       if (mini_object->free)
         mini_object->free (mini_object);
     }
@@ -514,14 +515,14 @@ gst_mini_object_replace (GstMiniObject ** olddata, GstMiniObject * newdata)
 }
 
 /**
- * gst_mini_object_steal:
+ * gst_mini_object_steal: (skip)
  * @olddata: (inout) (transfer full): pointer to a pointer to a mini-object to
  *     be stolen
  *
  * Replace the current #GstMiniObject pointer to by @olddata with %NULL and
  * return the old value.
  *
- * Returns: the #GstMiniObject at @oldata
+ * Returns: (nullable): the #GstMiniObject at @oldata
  */
 GstMiniObject *
 gst_mini_object_steal (GstMiniObject ** olddata)
@@ -629,7 +630,8 @@ gst_mini_object_weak_unref (GstMiniObject * object,
   if ((i = find_notify (object, weak_ref_quark, TRUE, notify, data)) != -1) {
     remove_notify (object, i);
   } else {
-    g_warning ("%s: couldn't find weak ref %p(%p)", G_STRFUNC, notify, data);
+    g_warning ("%s: couldn't find weak ref %p (object:%p data:%p)", G_STRFUNC,
+        notify, object, data);
   }
   G_UNLOCK (qdata_mutex);
 }

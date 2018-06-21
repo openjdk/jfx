@@ -164,35 +164,55 @@ struct _GstTaskClass {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_API
 void            gst_task_cleanup_all    (void);
 
+GST_API
 GType           gst_task_get_type       (void);
 
+GST_API
 GstTask*        gst_task_new            (GstTaskFunction func,
                                          gpointer user_data, GDestroyNotify notify);
-
+GST_API
 void            gst_task_set_lock       (GstTask *task, GRecMutex *mutex);
 
+GST_API
 GstTaskPool *   gst_task_get_pool       (GstTask *task);
+
+GST_API
 void            gst_task_set_pool       (GstTask *task, GstTaskPool *pool);
 
+GST_API
 void            gst_task_set_enter_callback  (GstTask *task,
                                               GstTaskThreadFunc enter_func,
                                               gpointer user_data,
                                               GDestroyNotify notify);
+GST_API
 void            gst_task_set_leave_callback  (GstTask *task,
                                               GstTaskThreadFunc leave_func,
                                               gpointer user_data,
                                               GDestroyNotify notify);
-
+GST_API
 GstTaskState    gst_task_get_state      (GstTask *task);
+
+GST_API
 gboolean        gst_task_set_state      (GstTask *task, GstTaskState state);
 
+GST_API
 gboolean        gst_task_start          (GstTask *task);
+
+GST_API
 gboolean        gst_task_stop           (GstTask *task);
+
+GST_API
 gboolean        gst_task_pause          (GstTask *task);
 
+GST_API
 gboolean        gst_task_join           (GstTask *task);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTask, gst_object_unref)
+#endif
 
 G_END_DECLS
 

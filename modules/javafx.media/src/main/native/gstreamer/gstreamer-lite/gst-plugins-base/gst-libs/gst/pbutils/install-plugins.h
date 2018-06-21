@@ -21,7 +21,8 @@
 #ifndef __GST_PB_UTILS_INSTALL_PLUGINS_H__
 #define __GST_PB_UTILS_INSTALL_PLUGINS_H__
 
-#include <glib-object.h>
+#include <gst/gst.h>
+#include <gst/pbutils/pbutils-prelude.h>
 
 G_BEGIN_DECLS
 
@@ -97,13 +98,31 @@ typedef enum {
 
 typedef struct _GstInstallPluginsContext GstInstallPluginsContext;
 
+GST_PBUTILS_API
 GstInstallPluginsContext * gst_install_plugins_context_new (void);
 
+GST_PBUTILS_API
+GstInstallPluginsContext * gst_install_plugins_context_copy (GstInstallPluginsContext * ctx);
+GST_PBUTILS_API
 void   gst_install_plugins_context_free    (GstInstallPluginsContext * ctx);
 
+GST_PBUTILS_API
+void   gst_install_plugins_context_set_confirm_search (GstInstallPluginsContext * ctx,
+                                                       gboolean                   confirm_search);
+
+GST_PBUTILS_API
+void   gst_install_plugins_context_set_desktop_id (GstInstallPluginsContext * ctx,
+                                                   const gchar              * desktop_id);
+
+GST_PBUTILS_API
+void   gst_install_plugins_context_set_startup_notification_id (GstInstallPluginsContext * ctx,
+                                                                const gchar              * startup_id);
+
+GST_PBUTILS_API
 void   gst_install_plugins_context_set_xid (GstInstallPluginsContext * ctx,
                                             guint                      xid);
 
+GST_PBUTILS_API
 GType  gst_install_plugins_context_get_type (void);
 
 /**
@@ -118,19 +137,28 @@ GType  gst_install_plugins_context_get_type (void);
 typedef void (*GstInstallPluginsResultFunc) (GstInstallPluginsReturn  result,
                                              gpointer                 user_data);
 
+GST_PBUTILS_API
 GstInstallPluginsReturn  gst_install_plugins_async (const gchar * const * details,
                                                     GstInstallPluginsContext  * ctx,
                                                     GstInstallPluginsResultFunc func,
                                                     gpointer                    user_data);
 
+GST_PBUTILS_API
 GstInstallPluginsReturn  gst_install_plugins_sync  (const gchar * const       * details,
                                                     GstInstallPluginsContext  * ctx);
 
+GST_PBUTILS_API
 const gchar * gst_install_plugins_return_get_name (GstInstallPluginsReturn ret);
 
+GST_PBUTILS_API
 gboolean      gst_install_plugins_installation_in_progress (void);
 
+GST_PBUTILS_API
 gboolean      gst_install_plugins_supported (void);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstInstallPluginsContext, gst_install_plugins_context_free)
+#endif
 
 G_END_DECLS
 

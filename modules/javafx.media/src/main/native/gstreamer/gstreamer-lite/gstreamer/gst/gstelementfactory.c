@@ -23,6 +23,7 @@
 
 /**
  * SECTION:gstelementfactory
+ * @title: GstElementFactory
  * @short_description: Create GstElements from a factory
  * @see_also: #GstElement, #GstPlugin, #GstPluginFeature, #GstPadTemplate.
  *
@@ -36,9 +37,8 @@
  *
  * The following code example shows you how to create a GstFileSrc element.
  *
- * <example>
- * <title>Using an element factory</title>
- * <programlisting language="c">
+ * ## Using an element factory
+ * |[<!-- language="C" -->
  *   #include &lt;gst/gst.h&gt;
  *
  *   GstElement *src;
@@ -51,8 +51,7 @@
  *   src = gst_element_factory_create (srcfactory, "src");
  *   g_return_if_fail (src != NULL);
  *   ...
- * </programlisting>
- * </example>
+ * ]|
  */
 
 #include "gst_private.h"
@@ -231,9 +230,7 @@ gst_element_register (GstPlugin * plugin, const gchar * name, guint rank,
     return TRUE;
   }
 
-  factory =
-      GST_ELEMENT_FACTORY_CAST (g_object_newv (GST_TYPE_ELEMENT_FACTORY, 0,
-          NULL));
+  factory = g_object_new (GST_TYPE_ELEMENT_FACTORY, NULL);
   gst_plugin_feature_set_name (GST_PLUGIN_FEATURE_CAST (factory), name);
   GST_LOG_OBJECT (factory, "Created new elementfactory for type %s",
       g_type_name (type));
@@ -370,10 +367,9 @@ gst_element_factory_create (GstElementFactory * factory, const gchar * name)
    * also set name as early as we can
    */
   if (name)
-    element =
-        GST_ELEMENT_CAST (g_object_new (factory->type, "name", name, NULL));
+    element = g_object_new (factory->type, "name", name, NULL);
   else
-    element = GST_ELEMENT_CAST (g_object_newv (factory->type, 0, NULL));
+    element = g_object_new (factory->type, NULL);
   if (G_UNLIKELY (element == NULL))
     goto no_element;
 
@@ -386,6 +382,9 @@ gst_element_factory_create (GstElementFactory * factory, const gchar * name)
   if (!g_atomic_pointer_compare_and_exchange (&oclass->elementfactory, NULL,
           factory))
     gst_object_unref (factory);
+  else
+    /* This ref will never be dropped as the class is never destroyed */
+    GST_OBJECT_FLAG_SET (factory, GST_OBJECT_FLAG_MAY_BE_LEAKED);
 
   GST_DEBUG ("created element \"%s\"", GST_OBJECT_NAME (factory));
 
@@ -448,12 +447,13 @@ gst_element_factory_make (const gchar * factoryname, const gchar * name)
     goto create_failed;
 
   gst_object_unref (factory);
+
   return element;
 
   /* ERRORS */
 no_factory:
   {
-    GST_INFO ("no such element factory \"%s\"!", factoryname);
+    GST_WARNING ("no such element factory \"%s\"!", factoryname);
     return NULL;
   }
 create_failed:
@@ -728,6 +728,12 @@ gst_element_factory_list_is_type (GstElementFactory * factory,
 
   if (!res && (type & GST_ELEMENT_FACTORY_TYPE_FORMATTER))
     res = (strstr (klass, "Formatter") != NULL);
+
+  if (!res && (type & GST_ELEMENT_FACTORY_TYPE_DECRYPTOR))
+    res = (strstr (klass, "Decryptor") != NULL);
+
+  if (!res && (type & GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR))
+    res = (strstr (klass, "Encryptor") != NULL);
 
   /* Filter by media type now, we only test if it
    * matched any of the types above or only checking the media

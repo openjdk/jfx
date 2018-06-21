@@ -16,12 +16,6 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-/**
- * SECTION:gstaudio
- * @short_description: Support library for audio elements
- *
- * This library contains some helper functions for audio elements.
- */
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
@@ -32,6 +26,29 @@
 #include "audio.h"
 
 #include <gst/gststructure.h>
+
+#ifndef GST_DISABLE_GST_DEBUG
+#define GST_CAT_DEFAULT ensure_debug_category()
+static GstDebugCategory *
+ensure_debug_category (void)
+{
+  static gsize cat_gonce = 0;
+
+  if (g_once_init_enter (&cat_gonce)) {
+    gsize cat_done;
+
+    cat_done = (gsize) _gst_debug_category_new ("audio-info", 0,
+        "audio-info object");
+
+    g_once_init_leave (&cat_gonce, cat_done);
+  }
+
+  return (GstDebugCategory *) cat_gonce;
+}
+#else
+#define ensure_debug_category() /* NOOP */
+#endif /* GST_DISABLE_GST_DEBUG */
+
 
 /**
  * gst_audio_info_copy:
@@ -104,7 +121,7 @@ gst_audio_info_init (GstAudioInfo * info)
  * @format: the format
  * @rate: the samplerate
  * @channels: the number of channels
- * @position: the channel positions
+ * @position: (array fixed-size=64) (nullable): the channel positions
  *
  * Set the default info for the audio info of @format and @rate and @channels.
  *

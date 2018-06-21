@@ -433,9 +433,11 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
     GstSeekFlags flags;
     GstSeekType  start_type, stop_type;
     gint64       start, stop, position, new_position;
+    guint32      seqnum;
 
     gst_event_parse_seek(event, &rate, &seek_format, &flags,
         &start_type, &start, &stop_type, &stop);
+    seqnum = gst_event_get_seqnum(event);
 
     if (GST_FORMAT_BYTES != seek_format && (element->mode & MODE_DEFAULT) == MODE_DEFAULT)
     {
@@ -447,7 +449,11 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
     }
 
     if (flags & GST_SEEK_FLAG_FLUSH)
-        gst_pad_push_event(pad, gst_event_new_flush_start());
+    {
+        GstEvent *e = gst_event_new_flush_start();
+        gst_event_set_seqnum(e, seqnum);
+        gst_pad_push_event(pad, e);
+    }
 
     g_mutex_lock(&element->lock);
     element->srcresult = GST_FLOW_FLUSHING;
@@ -496,8 +502,11 @@ static gboolean java_source_perform_seek(JavaSource *element, GstPad *pad, GstEv
     element->srcresult = GST_FLOW_OK;
     g_mutex_unlock(&element->lock);
 
-    if (flags & GST_SEEK_FLAG_FLUSH)
-        gst_pad_push_event(pad, gst_event_new_flush_stop(TRUE));
+    if (flags & GST_SEEK_FLAG_FLUSH) {
+        GstEvent *e = gst_event_new_flush_stop(TRUE);
+        gst_event_set_seqnum(e, seqnum);
+        gst_pad_push_event(pad, e);
+    }
 
     gst_pad_start_task(pad, java_source_loop, element, NULL);
 
@@ -799,7 +808,6 @@ static GstFlowReturn java_source_getrange(GstPad *pad, GstObject *parent, guint6
     gint     size = 0;
     guint    read = 0;
     guint    toRead = 0;
-    GstFlowReturn ret = GST_FLOW_ERROR;
     GstMapInfo info;
 
     // Do not read from Java more then MAX_READ_SIZE, so we do not allocate very large objects in Java
@@ -839,6 +847,14 @@ static GstFlowReturn java_source_getrange(GstPad *pad, GstObject *parent, guint6
             gst_buffer_unmap(buf, &info);
             gst_buffer_unref(buf);
             return GST_FLOW_EOS; // EOS
+        }
+        else if (size == 0)
+        {
+            gst_buffer_unmap(buf, &info);
+            gst_buffer_unref(buf);
+            return GST_FLOW_EOS; // EOS, if we return error qtdemux will signal
+            // critical error and with AudioClip we can get 0, when we trying to
+            // read at the end of file.
         }
     }
 

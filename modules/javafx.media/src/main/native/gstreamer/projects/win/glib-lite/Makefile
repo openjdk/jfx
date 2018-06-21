@@ -3,7 +3,7 @@
 #
 LINKER = link.exe
 
-GLIB_VERSION = 2.42.1
+GLIB_VERSION = 2.56.1
 
 export THIRD_PARTY_DIR = 3rd_party
 export GLIB_BASE_DIR = $(THIRD_PARTY_DIR)/glib/glib-$(GLIB_VERSION)
@@ -55,7 +55,7 @@ LIBS = $(addprefix $(BUILD_DIR)/,$(MODULES))
 default: $(TARGET)
 
 $(TARGET): $(LIBS)
-	$(LINKER) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib))) 
+	$(LINKER) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach lib,$(LIBS),$(shell cygpath -ma $(lib)))
 
 $(BUILD_DIR)/$(FFI_TARGET):
 	$(MAKE) TARGET=$(BUILD_DIR)/$(FFI_TARGET) -f Makefile.ffi

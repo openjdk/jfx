@@ -22,6 +22,7 @@
 
 /**
  * SECTION:gstpadtemplate
+ * @title: GstPadTemplate
  * @short_description: Describe the media type of a pad.
  * @see_also: #GstPad, #GstElementFactory
  *
@@ -51,10 +52,10 @@
  *
  * A padtemplate can be used to create a pad (see gst_pad_new_from_template()
  * or gst_pad_new_from_static_template ()) or to add to an element class
- * (see gst_element_class_add_pad_template ()).
+ * (see gst_element_class_add_static_pad_template ()).
  *
  * The following code example shows the code to create a pad from a padtemplate.
- * |[
+ * |[<!-- language="C" -->
  *   GstStaticPadTemplate my_template =
  *   GST_STATIC_PAD_TEMPLATE (
  *     "sink",          // the name of the pad
@@ -76,14 +77,13 @@
  *
  * The following example shows you how to add the padtemplate to an
  * element class, this is usually done in the class_init of the class:
- * |[
+ * |[<!-- language="C" -->
  *   static void
  *   my_element_class_init (GstMyElementClass *klass)
  *   {
  *     GstElementClass *gstelement_class = GST_ELEMENT_CLASS (klass);
  *
- *     gst_element_class_add_pad_template (gstelement_class,
- *         gst_static_pad_template_get (&amp;my_template));
+ *     gst_element_class_add_static_pad_template (gstelement_class, &amp;my_template);
  *   }
  * ]|
  */
@@ -105,7 +105,8 @@ enum
   PROP_NAME_TEMPLATE = 1,
   PROP_DIRECTION,
   PROP_PRESENCE,
-  PROP_CAPS
+  PROP_CAPS,
+  PROP_GTYPE,
 };
 
 enum
@@ -195,12 +196,28 @@ gst_pad_template_class_init (GstPadTemplateClass * klass)
           GST_TYPE_CAPS,
           G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
 
+  /**
+   * GstPadTemplate:gtype:
+   *
+   * The type of the pad described by the pad template.
+   *
+   * Since: 1.14
+   */
+  g_object_class_install_property (gobject_class, PROP_GTYPE,
+      g_param_spec_gtype ("gtype", "GType",
+          "The GType of the pad described by the pad template",
+          G_TYPE_NONE,
+          G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_STRINGS));
+
   gstobject_class->path_string_separator = "*";
 }
 
 static void
 gst_pad_template_init (GstPadTemplate * templ)
 {
+  /* GstPadTemplate objects are usually leaked */
+  GST_OBJECT_FLAG_SET (templ, GST_OBJECT_FLAG_MAY_BE_LEAKED);
+  GST_PAD_TEMPLATE_GTYPE (templ) = G_TYPE_NONE;
 }
 
 static void
@@ -220,14 +237,14 @@ gst_pad_template_dispose (GObject * object)
  * since it doesn't make sense.
  * SOMETIMES padtemplates can do whatever they want, they are provided by the
  * element.
- * REQUEST padtemplates can be reverse-parsed (the user asks for 'sink1', the
- * 'sink%d' template is automatically selected), so we need to restrict their
- * naming.
+ * REQUEST padtemplates can have multiple specifiers in case of %d and %u, like
+ * src_%u_%u, but %s only can be used once in the template.
  */
 static gboolean
 name_is_valid (const gchar * name, GstPadPresence presence)
 {
-  const gchar *str;
+  const gchar *str, *underscore = NULL;
+  gboolean has_s = FALSE;
 
   if (presence == GST_PAD_ALWAYS) {
     if (strchr (name, '%')) {
@@ -236,21 +253,39 @@ name_is_valid (const gchar * name, GstPadPresence presence)
       return FALSE;
     }
   } else if (presence == GST_PAD_REQUEST) {
-    if ((str = strchr (name, '%')) && strchr (str + 1, '%')) {
-      g_warning ("invalid name template %s: only one conversion specification"
-          " allowed in GST_PAD_REQUEST padtemplate", name);
+    str = strchr (name, '%');
+
+    while (str) {
+      if (*(str + 1) != 's' && *(str + 1) != 'd' && *(str + 1) != 'u') {
+        g_warning
+            ("invalid name template %s: conversion specification must be of"
+            " type '%%d', '%%u' or '%%s' for GST_PAD_REQUEST padtemplate",
+            name);
       return FALSE;
     }
-    if (str && (*(str + 1) != 's' && *(str + 1) != 'd' && *(str + 1) != 'u')) {
-      g_warning ("invalid name template %s: conversion specification must be of"
-          " type '%%d', '%%u' or '%%s' for GST_PAD_REQUEST padtemplate", name);
+
+      if (*(str + 1) == 's' && (*(str + 2) != '\0' || has_s)) {
+        g_warning
+            ("invalid name template %s: conversion specification of type '%%s'"
+            "only can be used once in the GST_PAD_REQUEST padtemplate at the "
+            "very end and not allowed any other characters with '%%s'", name);
       return FALSE;
     }
-    if (str && (*(str + 2) != '\0')) {
-      g_warning ("invalid name template %s: conversion specification must"
-          " appear at the end of the GST_PAD_REQUEST padtemplate name", name);
+
+      if (*(str + 1) == 's') {
+        has_s = TRUE;
+      }
+
+      underscore = strchr (str, '_');
+      str = strchr (str + 1, '%');
+
+      if (str && (!underscore || (underscore && str < underscore))) {
+        g_warning
+            ("invalid name template %s: each of conversion specifications "
+            "must be separated by an underscore", name);
       return FALSE;
     }
+  }
   }
 
   return TRUE;
@@ -266,7 +301,7 @@ G_DEFINE_POINTER_TYPE (GstStaticPadTemplate, gst_static_pad_template);
  *
  * Converts a #GstStaticPadTemplate into a #GstPadTemplate.
  *
- * Returns: (transfer full): a new #GstPadTemplate.
+ * Returns: (transfer floating) (nullable): a new #GstPadTemplate.
  */
 /* FIXME0.11: rename to gst_pad_template_new_from_static_pad_template() */
 GstPadTemplate *
@@ -292,6 +327,43 @@ gst_static_pad_template_get (GstStaticPadTemplate * pad_template)
 }
 
 /**
+ * gst_pad_template_new_from_static_pad_template_with_gtype:
+ * @pad_template: the static pad template
+ * @pad_type: The #GType of the pad to create
+ *
+ * Converts a #GstStaticPadTemplate into a #GstPadTemplate with a type.
+ *
+ * Returns: (transfer floating): a new #GstPadTemplate.
+ *
+ * Since: 1.14
+ */
+GstPadTemplate *
+gst_pad_template_new_from_static_pad_template_with_gtype (GstStaticPadTemplate *
+    pad_template, GType pad_type)
+{
+  GstPadTemplate *new;
+  GstCaps *caps;
+
+  g_return_val_if_fail (g_type_is_a (pad_type, GST_TYPE_PAD), NULL);
+
+  if (!name_is_valid (pad_template->name_template, pad_template->presence))
+    return NULL;
+
+  caps = gst_static_caps_get (&pad_template->static_caps);
+
+  new = g_object_new (gst_pad_template_get_type (),
+      "name", pad_template->name_template,
+      "name-template", pad_template->name_template,
+      "direction", pad_template->direction,
+      "presence", pad_template->presence, "caps", caps, "gtype", pad_type,
+      NULL);
+
+  gst_caps_unref (caps);
+
+  return new;
+}
+
+/**
  * gst_pad_template_new:
  * @name_template: the name template.
  * @direction: the #GstPadDirection of the template.
@@ -301,7 +373,7 @@ gst_static_pad_template_get (GstStaticPadTemplate * pad_template)
  * Creates a new pad template with a name according to the given template
  * and with the given arguments.
  *
- * Returns: (transfer floating): a new #GstPadTemplate.
+ * Returns: (transfer floating) (nullable): a new #GstPadTemplate.
  */
 GstPadTemplate *
 gst_pad_template_new (const gchar * name_template,
@@ -323,6 +395,48 @@ gst_pad_template_new (const gchar * name_template,
   new = g_object_new (gst_pad_template_get_type (),
       "name", name_template, "name-template", name_template,
       "direction", direction, "presence", presence, "caps", caps, NULL);
+
+  return new;
+}
+
+/**
+ * gst_pad_template_new_with_gtype:
+ * @name_template: the name template.
+ * @direction: the #GstPadDirection of the template.
+ * @presence: the #GstPadPresence of the pad.
+ * @caps: (transfer none): a #GstCaps set for the template.
+ * @pad_type: The #GType of the pad to create
+ *
+ * Creates a new pad template with a name according to the given template
+ * and with the given arguments.
+ *
+ * Returns: (transfer floating): a new #GstPadTemplate.
+ *
+ * Since: 1.14
+ */
+GstPadTemplate *
+gst_pad_template_new_with_gtype (const gchar * name_template,
+    GstPadDirection direction, GstPadPresence presence, GstCaps * caps,
+    GType pad_type)
+{
+  GstPadTemplate *new;
+
+  g_return_val_if_fail (name_template != NULL, NULL);
+  g_return_val_if_fail (caps != NULL, NULL);
+  g_return_val_if_fail (direction == GST_PAD_SRC
+      || direction == GST_PAD_SINK, NULL);
+  g_return_val_if_fail (presence == GST_PAD_ALWAYS
+      || presence == GST_PAD_SOMETIMES || presence == GST_PAD_REQUEST, NULL);
+  g_return_val_if_fail (g_type_is_a (pad_type, GST_TYPE_PAD), NULL);
+
+  if (!name_is_valid (name_template, presence)) {
+    return NULL;
+  }
+
+  new = g_object_new (gst_pad_template_get_type (),
+      "name", name_template, "name-template", name_template,
+      "direction", direction, "presence", presence, "caps", caps,
+      "gtype", pad_type, NULL);
 
   return new;
 }
@@ -398,6 +512,14 @@ gst_pad_template_set_property (GObject * object, guint prop_id,
       break;
     case PROP_CAPS:
       GST_PAD_TEMPLATE_CAPS (object) = g_value_dup_boxed (value);
+      if (GST_PAD_TEMPLATE_CAPS (object) != NULL) {
+        /* GstPadTemplate are usually leaked so are their caps */
+        GST_MINI_OBJECT_FLAG_SET (GST_PAD_TEMPLATE_CAPS (object),
+            GST_MINI_OBJECT_FLAG_MAY_BE_LEAKED);
+      }
+      break;
+    case PROP_GTYPE:
+      GST_PAD_TEMPLATE_GTYPE (object) = g_value_get_gtype (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -422,6 +544,9 @@ gst_pad_template_get_property (GObject * object, guint prop_id, GValue * value,
       break;
     case PROP_CAPS:
       g_value_set_boxed (value, GST_PAD_TEMPLATE_CAPS (object));
+      break;
+    case PROP_GTYPE:
+      g_value_set_gtype (value, GST_PAD_TEMPLATE_GTYPE (object));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

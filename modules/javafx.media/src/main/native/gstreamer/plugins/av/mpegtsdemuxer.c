@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -217,7 +217,7 @@ static void mpegts_demuxer_class_init(MpegTSDemuxerClass *g_class)
     gst_element_class_add_pad_template(gstelement_class, g_class->video_source_template);
     gst_element_class_add_pad_template(gstelement_class, gst_static_pad_template_get (&sink_template));
 
-    gst_element_class_set_details_simple(gstelement_class,
+    gst_element_class_set_metadata(gstelement_class,
                 "MPEG2 transport stream parser",
                 "Codec/Parser",
                 "Parses MPEG2 transport streams",

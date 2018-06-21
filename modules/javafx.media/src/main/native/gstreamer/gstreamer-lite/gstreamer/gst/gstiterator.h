@@ -225,9 +225,12 @@ struct _GstIterator {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_API
 GType                   gst_iterator_get_type           (void);
 
 /* creating iterators */
+
+GST_API
 GstIterator*            gst_iterator_new                (guint size,
                                                          GType type,
                                                          GMutex *lock,
@@ -237,36 +240,52 @@ GstIterator*            gst_iterator_new                (guint size,
                                                          GstIteratorItemFunction item,
                                                          GstIteratorResyncFunction resync,
                                                          GstIteratorFreeFunction free) G_GNUC_MALLOC;
-
+GST_API
 GstIterator*            gst_iterator_new_list           (GType type,
                                                          GMutex *lock,
                                                          guint32 *master_cookie,
                                                          GList **list,
                                                          GObject * owner,
                                                          GstIteratorItemFunction item) G_GNUC_MALLOC;
-
+GST_API
 GstIterator*            gst_iterator_new_single         (GType type,
                                                          const GValue * object) G_GNUC_MALLOC;
-
+GST_API
 GstIterator*            gst_iterator_copy               (const GstIterator *it) G_GNUC_MALLOC;
 
 /* using iterators */
+
+GST_API
 GstIteratorResult       gst_iterator_next               (GstIterator *it, GValue * elem);
+
+GST_API
 void                    gst_iterator_resync             (GstIterator *it);
+
+GST_API
 void                    gst_iterator_free               (GstIterator *it);
 
+GST_API
 void                    gst_iterator_push               (GstIterator *it, GstIterator *other);
 
 /* higher-order functions that operate on iterators */
+
+GST_API
 GstIterator*            gst_iterator_filter             (GstIterator *it, GCompareFunc func,
                                                          const GValue * user_data) G_GNUC_MALLOC;
+GST_API
 GstIteratorResult       gst_iterator_fold               (GstIterator *it,
                                                          GstIteratorFoldFunction func,
                                                          GValue *ret, gpointer user_data);
+GST_API
 GstIteratorResult       gst_iterator_foreach            (GstIterator *it,
                                                          GstIteratorForeachFunction func, gpointer user_data);
+GST_API
 gboolean                gst_iterator_find_custom        (GstIterator *it, GCompareFunc func,
                                                          GValue *elem, gpointer user_data);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstIterator, gst_iterator_free)
+#endif
 
 G_END_DECLS
 

@@ -19,6 +19,7 @@
 
 /**
  * SECTION:gstcaps
+ * @title: GstCaps
  * @short_description: Structure describing sets of media formats
  * @see_also: #GstStructure, #GstMiniObject
  *
@@ -34,7 +35,7 @@
  * handle or produce at runtime.
  *
  * A #GstCaps can be constructed with the following code fragment:
- * |[
+ * |[<!-- language="C" -->
  *   GstCaps *caps = gst_caps_new_simple ("video/x-raw",
  *      "format", G_TYPE_STRING, "I420",
  *      "framerate", GST_TYPE_FRACTION, 25, 1,
@@ -143,6 +144,21 @@ _priv_gst_caps_initialize (void)
 
   g_value_register_transform_func (_gst_caps_type,
       G_TYPE_STRING, gst_caps_transform_to_string);
+}
+
+void
+_priv_gst_caps_cleanup (void)
+{
+  gst_caps_unref (_gst_caps_any);
+  _gst_caps_any = NULL;
+  gst_caps_unref (_gst_caps_none);
+  _gst_caps_none = NULL;
+}
+
+GstCapsFeatures *
+__gst_caps_get_features_unchecked (const GstCaps * caps, guint idx)
+{
+  return gst_caps_get_features_unchecked (caps, idx);
 }
 
 static GstCaps *
@@ -379,9 +395,10 @@ G_DEFINE_POINTER_TYPE (GstStaticCaps, gst_static_caps);
  *
  * Converts a #GstStaticCaps to a #GstCaps.
  *
- * Returns: (transfer full): a pointer to the #GstCaps. Unref after usage.
- *     Since the core holds an additional ref to the returned caps,
- *     use gst_caps_make_writable() on the returned caps to modify it.
+ * Returns: (transfer full) (nullable): a pointer to the #GstCaps. Unref
+ *     after usage. Since the core holds an additional ref to the
+ *     returned caps, use gst_caps_make_writable() on the returned caps
+ *     to modify it.
  */
 GstCaps *
 gst_static_caps_get (GstStaticCaps * static_caps)
@@ -409,8 +426,13 @@ gst_static_caps_get (GstStaticCaps * static_caps)
     *caps = gst_caps_from_string (string);
 
     /* convert to string */
-    if (G_UNLIKELY (*caps == NULL))
+    if (G_UNLIKELY (*caps == NULL)) {
       g_critical ("Could not convert static caps \"%s\"", string);
+      goto done;
+    }
+
+    /* Caps generated from static caps are usually leaked */
+    GST_MINI_OBJECT_FLAG_SET (*caps, GST_MINI_OBJECT_FLAG_MAY_BE_LEAKED);
 
     GST_CAT_TRACE (GST_CAT_CAPS, "created %p from string %s", static_caps,
         string);
@@ -484,8 +506,6 @@ gst_caps_remove_and_get_structure (GstCaps * caps, guint idx)
   return s;
 }
 
-
-
 /**
  * gst_caps_steal_structure:
  * @caps: the #GstCaps to retrieve from
@@ -494,8 +514,8 @@ gst_caps_remove_and_get_structure (GstCaps * caps, guint idx)
  * Retrieves the structure with the given index from the list of structures
  * contained in @caps. The caller becomes the owner of the returned structure.
  *
- * Returns: (transfer full): a pointer to the #GstStructure corresponding
- *     to @index.
+ * Returns: (transfer full) (nullable): a pointer to the #GstStructure
+ *     corresponding to @index.
  */
 GstStructure *
 gst_caps_steal_structure (GstCaps * caps, guint index)
@@ -837,8 +857,8 @@ gst_caps_get_structure (const GstCaps * caps, guint index)
  * You do not need to free or unref the structure returned, it
  * belongs to the #GstCaps.
  *
- * Returns: (transfer none): a pointer to the #GstCapsFeatures corresponding
- *     to @index
+ * Returns: (transfer none) (nullable): a pointer to the #GstCapsFeatures
+ *     corresponding to @index
  *
  * Since: 1.2
  */
@@ -946,6 +966,10 @@ gst_caps_copy_nth (const GstCaps * caps, guint nth)
  *
  * Discard all but the first structure from @caps. Useful when
  * fixating.
+ *
+ * This function takes ownership of @caps and will call gst_caps_make_writable()
+ * on it if necessary, so you must not use @caps afterwards unless you keep an
+ * additional reference to it with gst_caps_ref().
  *
  * Returns: (transfer full): truncated caps
  */
@@ -1442,7 +1466,7 @@ gst_caps_can_intersect (const GstCaps * caps1, const GstCaps * caps2)
   len1 = GST_CAPS_LEN (caps1);
   len2 = GST_CAPS_LEN (caps2);
   for (i = 0; i < len1 + len2 - 1; i++) {
-    /* superset index goes from 0 to sgst_caps_structure_intersectuperset->structs->len-1 */
+    /* superset index goes from 0 to superset->structs->len-1 */
     j = MIN (i, len1 - 1);
     /* subset index stays 0 until i reaches superset->structs->len, then it
      * counts up from 1 to subset->structs->len - 1 */
@@ -1570,7 +1594,7 @@ gst_caps_intersect_zig_zag (GstCaps * caps1, GstCaps * caps2)
  * Unlike @gst_caps_intersect, the returned caps will be ordered in a similar
  * fashion as @caps1.
  *
- * Returns: the new #GstCaps
+ * Returns: (transfer full): the new #GstCaps
  */
 static GstCaps *
 gst_caps_intersect_first (GstCaps * caps1, GstCaps * caps2)
@@ -1641,7 +1665,7 @@ gst_caps_intersect_first (GstCaps * caps1, GstCaps * caps2)
  * to both @caps1 and @caps2, the order is defined by the #GstCapsIntersectMode
  * used.
  *
- * Returns: the new #GstCaps
+ * Returns: (transfer full): the new #GstCaps
  */
 GstCaps *
 gst_caps_intersect_full (GstCaps * caps1, GstCaps * caps2,
@@ -1669,7 +1693,7 @@ gst_caps_intersect_full (GstCaps * caps1, GstCaps * caps2,
  * Creates a new #GstCaps that contains all the formats that are common
  * to both @caps1 and @caps2. Defaults to %GST_CAPS_INTERSECT_ZIG_ZAG mode.
  *
- * Returns: the new #GstCaps
+ * Returns: (transfer full): the new #GstCaps
  */
 GstCaps *
 gst_caps_intersect (GstCaps * caps1, GstCaps * caps2)
@@ -1746,10 +1770,10 @@ gst_caps_structure_subtract (GSList ** into, const GstStructure * minuend,
  * @subtrahend: #GstCaps to subtract
  *
  * Subtracts the @subtrahend from the @minuend.
- * <note>This function does not work reliably if optional properties for caps
- * are included on one caps and omitted on the other.</note>
+ * > This function does not work reliably if optional properties for caps
+ * > are included on one caps and omitted on the other.
  *
- * Returns: the resulting caps
+ * Returns: (transfer full): the resulting caps
  */
 GstCaps *
 gst_caps_subtract (GstCaps * minuend, GstCaps * subtrahend)
@@ -1882,7 +1906,9 @@ gst_caps_normalize_foreach (GQuark field_id, const GValue * value, gpointer ptr)
  * @caps, but contains no lists.  Each list is expanded into separate
  * @GstStructures.
  *
- * This function takes ownership of @caps.
+ * This function takes ownership of @caps and will call gst_caps_make_writable()
+ * on it so you must not use @caps afterwards unless you keep an additional
+ * reference to it with gst_caps_ref().
  *
  * Returns: (transfer full): the normalized #GstCaps
  */
@@ -2043,9 +2069,13 @@ gst_caps_switch_structures (GstCaps * caps, GstStructure * old,
  * identical are merged.  Component structures that have values that can be
  * merged are also merged.
  *
+ * This function takes ownership of @caps and will call gst_caps_make_writable()
+ * on it if necessary, so you must not use @caps afterwards unless you keep an
+ * additional reference to it with gst_caps_ref().
+ *
  * This method does not preserve the original order of @caps.
  *
- * Returns: The simplified caps.
+ * Returns: (transfer full): The simplified caps.
  */
 GstCaps *
 gst_caps_simplify (GstCaps * caps)
@@ -2113,6 +2143,10 @@ gst_caps_simplify (GstCaps * caps)
  * values. First the caps will be truncated and then the first structure will be
  * fixated with gst_structure_fixate().
  *
+ * This function takes ownership of @caps and will call gst_caps_make_writable()
+ * on it so you must not use @caps afterwards unless you keep an additional
+ * reference to it with gst_caps_ref().
+ *
  * Returns: (transfer full): the fixated caps
  */
 GstCaps *
@@ -2149,7 +2183,7 @@ gst_caps_fixate (GstCaps * caps)
  * can be converted back to a #GstCaps by gst_caps_from_string().
  *
  * For debugging purposes its easier to do something like this:
- * |[
+ * |[<!-- language="C" -->
  * GST_LOG ("caps are %" GST_PTR_FORMAT, caps);
  * ]|
  * This prints the caps in human readable form.
@@ -2332,7 +2366,7 @@ gst_caps_from_string_inplace (GstCaps * caps, const gchar * string)
  * The current implementation of serialization will lead to unexpected results
  * when there are nested #GstCaps / #GstStructure deeper than one level.
  *
- * Returns: (transfer full): a newly allocated #GstCaps
+ * Returns: (transfer full) (nullable): a newly allocated #GstCaps
  */
 GstCaps *
 gst_caps_from_string (const gchar * string)
@@ -2361,4 +2395,152 @@ gst_caps_transform_to_string (const GValue * src_value, GValue * dest_value)
 
   g_value_take_string (dest_value,
       gst_caps_to_string (gst_value_get_caps (src_value)));
+}
+
+/**
+ * gst_caps_foreach:
+ * @caps: a #GstCaps
+ * @func: (scope call): a function to call for each field
+ * @user_data: (closure): private data
+ *
+ * Calls the provided function once for each structure and caps feature in the
+ * #GstCaps. The function must not modify the fields.
+ * Also see gst_caps_map_in_place() and gst_caps_filter_and_map_in_place().
+ *
+ * Returns: %TRUE if the supplied function returns %TRUE for each call,
+ * %FALSE otherwise.
+ *
+ * Since: 1.6
+ */
+gboolean
+gst_caps_foreach (const GstCaps * caps, GstCapsForeachFunc func,
+    gpointer user_data)
+{
+  guint i, n;
+  GstCapsFeatures *features;
+  GstStructure *structure;
+  gboolean ret;
+
+  g_return_val_if_fail (GST_IS_CAPS (caps), FALSE);
+  g_return_val_if_fail (func != NULL, FALSE);
+
+  n = GST_CAPS_LEN (caps);
+
+  for (i = 0; i < n; i++) {
+    features = gst_caps_get_features_unchecked (caps, i);
+    structure = gst_caps_get_structure_unchecked (caps, i);
+
+    ret = func (features, structure, user_data);
+    if (G_UNLIKELY (!ret))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * gst_caps_map_in_place:
+ * @caps: a #GstCaps
+ * @func: (scope call): a function to call for each field
+ * @user_data: (closure): private data
+ *
+ * Calls the provided function once for each structure and caps feature in the
+ * #GstCaps. In contrast to gst_caps_foreach(), the function may modify but not
+ * delete the structures and features. The caps must be mutable.
+ *
+ * Returns: %TRUE if the supplied function returns %TRUE for each call,
+ * %FALSE otherwise.
+ *
+ * Since: 1.6
+ */
+gboolean
+gst_caps_map_in_place (GstCaps * caps, GstCapsMapFunc func, gpointer user_data)
+{
+  guint i, n;
+  GstCapsFeatures *features;
+  GstStructure *structure;
+  gboolean ret;
+
+  g_return_val_if_fail (GST_IS_CAPS (caps), FALSE);
+  g_return_val_if_fail (gst_caps_is_writable (caps), FALSE);
+  g_return_val_if_fail (func != NULL, FALSE);
+
+  n = GST_CAPS_LEN (caps);
+
+  for (i = 0; i < n; i++) {
+    features = gst_caps_get_features_unchecked (caps, i);
+    structure = gst_caps_get_structure_unchecked (caps, i);
+
+    /* Provide sysmem features if there are none yet */
+    if (!features) {
+      features =
+          gst_caps_features_copy (GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY);
+      gst_caps_set_features (caps, i, features);
+    }
+
+    ret = func (features, structure, user_data);
+    if (G_UNLIKELY (!ret))
+      return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * gst_caps_filter_and_map_in_place:
+ * @caps: a #GstCaps
+ * @func: (scope call): a function to call for each field
+ * @user_data: (closure): private data
+ *
+ * Calls the provided function once for each structure and caps feature in the
+ * #GstCaps. In contrast to gst_caps_foreach(), the function may modify the
+ * structure and features. In contrast to gst_caps_filter_and_map_in_place(),
+ * the structure and features are removed from the caps if %FALSE is returned
+ * from the function.
+ * The caps must be mutable.
+ *
+ * Since: 1.6
+ */
+void
+gst_caps_filter_and_map_in_place (GstCaps * caps, GstCapsFilterMapFunc func,
+    gpointer user_data)
+{
+  guint i, n;
+  GstCapsFeatures *features;
+  GstStructure *structure;
+  gboolean ret;
+
+  g_return_if_fail (GST_IS_CAPS (caps));
+  g_return_if_fail (gst_caps_is_writable (caps));
+  g_return_if_fail (func != NULL);
+
+  n = GST_CAPS_LEN (caps);
+
+  for (i = 0; i < n;) {
+    features = gst_caps_get_features_unchecked (caps, i);
+    structure = gst_caps_get_structure_unchecked (caps, i);
+
+    /* Provide sysmem features if there are none yet */
+    if (!features) {
+      features =
+          gst_caps_features_copy (GST_CAPS_FEATURES_MEMORY_SYSTEM_MEMORY);
+      gst_caps_set_features (caps, i, features);
+    }
+
+    ret = func (features, structure, user_data);
+    if (!ret) {
+      GST_CAPS_ARRAY (caps) = g_array_remove_index (GST_CAPS_ARRAY (caps), i);
+
+      gst_structure_set_parent_refcount (structure, NULL);
+      gst_structure_free (structure);
+      if (features) {
+        gst_caps_features_set_parent_refcount (features, NULL);
+        gst_caps_features_free (features);
+      }
+
+      n = GST_CAPS_LEN (caps);
+    } else {
+      i++;
+    }
+  }
 }

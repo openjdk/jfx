@@ -4,7 +4,7 @@ CC = cl.exe
 LINKER = link.exe
 MAKEDEPEND = makedepend.exe
 
-GLIB_VERSION = 2.42.1
+GLIB_VERSION = 2.56.1
 
 BUILD_DIR = $(shell cygpath -u "$(OUTPUT_DIR)/$(BUILD_TYPE)")
 
@@ -152,7 +152,7 @@ OBJECTS = $(patsubst %.cpp,$(OBJBASE_DIR)/%.obj,$(CPP_SOURCES)) $(patsubst %.c,$
 
 default: $(TARGET)
 
-$(TARGET): $(DEPFILE) $(OBJECTS) 
+$(TARGET): $(DEPFILE) $(OBJECTS)
 	$(LINKER) $(LDFLAGS) $(shell cygpath -ma "$(RESOURCE)") $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(DEPFILE): | $(DEP_DIRS)

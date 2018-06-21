@@ -42,6 +42,9 @@ G_BEGIN_DECLS
  * GstBinFlags:
  * @GST_BIN_FLAG_NO_RESYNC: don't resync a state change when elements are
  *             added or linked in the bin (Since 1.0.5)
+ * @GST_BIN_FLAG_STREAMS_AWARE: Indicates whether the bin can handle elements
+ *             that add/remove source pads at any point in time without
+ *             first posting a no-more-pads signal (Since 1.10)
  * @GST_BIN_FLAG_LAST: the last enum in the series of flags for bins.
  * Derived classes can use this as first value in a list of flags.
  *
@@ -51,6 +54,7 @@ G_BEGIN_DECLS
  */
 typedef enum {
   GST_BIN_FLAG_NO_RESYNC    = (GST_ELEMENT_FLAG_LAST << 0),
+  GST_BIN_FLAG_STREAMS_AWARE    = (GST_ELEMENT_FLAG_LAST << 1),
   /* padding */
   GST_BIN_FLAG_LAST     = (GST_ELEMENT_FLAG_LAST << 5)
 } GstBinFlags;
@@ -140,6 +144,10 @@ struct _GstBin {
  * @add_element: method to add an element to a bin
  * @remove_element: method to remove an element from a bin
  * @handle_message: method to handle a message from the children
+ * @deep_element_added: method called when an element was added somewhere
+ *     in the bin hierarchy
+ * @deep_element_removed: method called when an element was removed somewhere
+ *     in the bin hierarchy
  *
  * Subclasses can override the @add_element and @remove_element to
  * update the list of children in the bin.
@@ -147,12 +155,18 @@ struct _GstBin {
  * The @handle_message method can be overridden to implement custom
  * message handling.  @handle_message takes ownership of the message, just like
  * #gst_element_post_message.
+ *
+ * The @deep_element_added vfunc will be called when a new element has been
+ * added to any bin inside this bin, so it will also be called if a new child
+ * was added to a sub-bin of this bin. #GstBin implementations that override
+ * this message should chain up to the parent class implementation so the
+ * element-added-deep signal is emitted on all parents.
  */
 struct _GstBinClass {
   GstElementClass parent_class;
 
   /*< private >*/
-  GThreadPool  *pool;
+  GThreadPool  *pool; /* deprecated */
 
   /* signals */
   void      (*element_added)    (GstBin *bin, GstElement *child);
@@ -169,34 +183,76 @@ struct _GstBinClass {
   /* signal */
   gboolean  (*do_latency)           (GstBin *bin);
 
+  /*< public >*/
+  /* signal */
+  void          (*deep_element_added)   (GstBin *bin, GstBin *sub_bin, GstElement *child);
+  void          (*deep_element_removed) (GstBin *bin, GstBin *sub_bin, GstElement *child);
+
   /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
+  gpointer _gst_reserved[GST_PADDING-2];
 };
 
+GST_API
 GType       gst_bin_get_type        (void);
+
+GST_API
 GstElement* gst_bin_new         (const gchar *name);
 
 /* add and remove elements from the bin */
+
+GST_API
 gboolean    gst_bin_add         (GstBin *bin, GstElement *element);
+
+GST_API
 gboolean    gst_bin_remove          (GstBin *bin, GstElement *element);
 
 /* retrieve a single child */
+
+GST_API
 GstElement* gst_bin_get_by_name      (GstBin *bin, const gchar *name);
+
+GST_API
 GstElement* gst_bin_get_by_name_recurse_up   (GstBin *bin, const gchar *name);
+
+GST_API
 GstElement* gst_bin_get_by_interface     (GstBin *bin, GType iface);
 
 /* retrieve multiple children */
+
+GST_API
 GstIterator*    gst_bin_iterate_elements     (GstBin *bin);
+
+GST_API
 GstIterator*    gst_bin_iterate_sorted       (GstBin *bin);
+
+GST_API
 GstIterator*    gst_bin_iterate_recurse      (GstBin *bin);
 
+GST_API
 GstIterator*    gst_bin_iterate_sinks        (GstBin *bin);
+
+GST_API
 GstIterator*    gst_bin_iterate_sources      (GstBin *bin);
+
+GST_API
 GstIterator*    gst_bin_iterate_all_by_interface (GstBin *bin, GType iface);
 
 /* latency */
+
+GST_API
 gboolean        gst_bin_recalculate_latency      (GstBin * bin);
 
+/* set and get suppressed flags */
+
+GST_API
+void            gst_bin_set_suppressed_flags (GstBin * bin, GstElementFlags flags);
+
+GST_API
+GstElementFlags gst_bin_get_suppressed_flags (GstBin * bin);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBin, gst_object_unref)
+#endif
 
 G_END_DECLS
 

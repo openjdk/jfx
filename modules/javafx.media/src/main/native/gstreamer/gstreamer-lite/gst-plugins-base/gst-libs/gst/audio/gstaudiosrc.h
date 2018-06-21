@@ -65,7 +65,7 @@ struct _GstAudioSrc {
  * @unprepare: undo the configuration
  * @close: close the device
  * @read: read samples from the audio device
- * @delay: the number of samples queued in the device
+ * @delay: the number of frames queued in the device
  * @reset: unblock a read to the device and reset.
  *
  * #GstAudioSrc class. Override the vmethod to implement
@@ -87,7 +87,7 @@ struct _GstAudioSrcClass {
   /* read samples from the device */
   guint    (*read)      (GstAudioSrc *src, gpointer data, guint length,
       GstClockTime *timestamp);
-  /* get number of samples queued in the device */
+  /* get number of frames queued in the device */
   guint    (*delay)     (GstAudioSrc *src);
   /* reset the audio device, unblock from a write */
   void     (*reset)     (GstAudioSrc *src);
@@ -96,7 +96,12 @@ struct _GstAudioSrcClass {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_AUDIO_API
 GType gst_audio_src_get_type(void);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioSrc, gst_object_unref)
+#endif
 
 G_END_DECLS
 

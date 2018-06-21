@@ -24,30 +24,72 @@
 #ifndef __GST_QUEUE_ARRAY_H__
 #define __GST_QUEUE_ARRAY_H__
 
+#include <gst/base/base-prelude.h>
+
+G_BEGIN_DECLS
+
 /**
  * GstQueueArray: (skip)
  */
 typedef struct _GstQueueArray GstQueueArray;
 
+GST_BASE_API
 GstQueueArray * gst_queue_array_new       (guint initial_size);
 
+GST_BASE_API
 void            gst_queue_array_free      (GstQueueArray * array);
 
+GST_BASE_API
 gpointer        gst_queue_array_pop_head  (GstQueueArray * array);
+
+GST_BASE_API
 gpointer        gst_queue_array_peek_head (GstQueueArray * array);
 
+GST_BASE_API
+gpointer        gst_queue_array_pop_tail  (GstQueueArray * array);
+
+GST_BASE_API
+gpointer        gst_queue_array_peek_tail (GstQueueArray * array);
+
+GST_BASE_API
 void            gst_queue_array_push_tail (GstQueueArray * array,
                                            gpointer        data);
-
+GST_BASE_API
 gboolean        gst_queue_array_is_empty  (GstQueueArray * array);
 
+GST_BASE_API
 gpointer        gst_queue_array_drop_element (GstQueueArray * array,
                                               guint           idx);
-
+GST_BASE_API
 guint           gst_queue_array_find (GstQueueArray * array,
                                       GCompareFunc    func,
                                       gpointer        data);
-
+GST_BASE_API
 guint           gst_queue_array_get_length (GstQueueArray * array);
+
+/* Functions for use with structures */
+
+GST_BASE_API
+GstQueueArray * gst_queue_array_new_for_struct (gsize struct_size,
+                                                guint initial_size);
+GST_BASE_API
+void            gst_queue_array_push_tail_struct (GstQueueArray * array,
+                                                  gpointer        p_struct);
+GST_BASE_API
+gpointer        gst_queue_array_pop_head_struct  (GstQueueArray * array);
+
+GST_BASE_API
+gpointer        gst_queue_array_peek_head_struct (GstQueueArray * array);
+
+GST_BASE_API
+gboolean        gst_queue_array_drop_struct      (GstQueueArray * array,
+                                                  guint           idx,
+                                                  gpointer        p_struct);
+GST_BASE_API
+gpointer        gst_queue_array_pop_tail_struct  (GstQueueArray * array);
+GST_BASE_API
+gpointer        gst_queue_array_peek_tail_struct (GstQueueArray * array);
+
+G_END_DECLS
 
 #endif

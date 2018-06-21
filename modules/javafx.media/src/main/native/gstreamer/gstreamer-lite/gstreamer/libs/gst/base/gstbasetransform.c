@@ -23,178 +23,114 @@
 
 /**
  * SECTION:gstbasetransform
+ * @title: GstBaseTransform
  * @short_description: Base class for simple transform filters
  * @see_also: #GstBaseSrc, #GstBaseSink
  *
- * This base class is for filter elements that process data.
+ * This base class is for filter elements that process data. Elements
+ * that are suitable for implementation using #GstBaseTransform are ones
+ * where the size and caps of the output is known entirely from the input
+ * caps and buffer sizes. These include elements that directly transform
+ * one buffer into another, modify the contents of a buffer in-place, as
+ * well as elements that collate multiple input buffers into one output buffer,
+ * or that expand one input buffer into multiple output buffers. See below
+ * for more concrete use cases.
  *
  * It provides for:
- * <itemizedlist>
- *   <listitem><para>one sinkpad and one srcpad</para></listitem>
- *   <listitem><para>
- *      Possible formats on sink and source pad implemented
- *      with custom transform_caps function. By default uses
- *      same format on sink and source.
- *   </para></listitem>
- *   <listitem><para>Handles state changes</para></listitem>
- *   <listitem><para>Does flushing</para></listitem>
- *   <listitem><para>Push mode</para></listitem>
- *   <listitem><para>
- *       Pull mode if the sub-class transform can operate on arbitrary data
- *    </para></listitem>
- * </itemizedlist>
  *
- * <refsect2>
- * <title>Use Cases</title>
- * <para>
- * <orderedlist>
- * <listitem>
- *   <itemizedlist><title>Passthrough mode</title>
- *   <listitem><para>
- *     Element has no interest in modifying the buffer. It may want to inspect it,
+ * * one sinkpad and one srcpad
+ * * Possible formats on sink and source pad implemented
+ *   with custom transform_caps function. By default uses
+ *   same format on sink and source.
+ *
+ * * Handles state changes
+ * * Does flushing
+ * * Push mode
+ * * Pull mode if the sub-class transform can operate on arbitrary data
+ *
+ * # Use Cases
+ *
+ * ## Passthrough mode
+ *
+ *   * Element has no interest in modifying the buffer. It may want to inspect it,
  *     in which case the element should have a transform_ip function. If there
  *     is no transform_ip function in passthrough mode, the buffer is pushed
  *     intact.
- *   </para></listitem>
- *   <listitem><para>
- *     The #GstBaseTransformClass.passthrough_on_same_caps variable
+ *
+ *   * The #GstBaseTransformClass.passthrough_on_same_caps variable
  *     will automatically set/unset passthrough based on whether the
  *     element negotiates the same caps on both pads.
- *   </para></listitem>
- *   <listitem><para>
- *     #GstBaseTransformClass.passthrough_on_same_caps on an element that
+ *
+ *   * #GstBaseTransformClass.passthrough_on_same_caps on an element that
  *     doesn't implement a transform_caps function is useful for elements that
  *     only inspect data (such as level)
- *   </para></listitem>
- *   </itemizedlist>
- *   <itemizedlist>
- *   <title>Example elements</title>
- *     <listitem>Level</listitem>
- *     <listitem>Videoscale, audioconvert, videoconvert, audioresample in
- *     certain modes.</listitem>
- *   </itemizedlist>
- * </listitem>
- * <listitem>
- *   <itemizedlist>
- *     <title>Modifications in-place - input buffer and output buffer are the
- *     same thing.</title>
- *   <listitem><para>
- *     The element must implement a transform_ip function.
- *   </para></listitem>
- *   <listitem><para>
- *     Output buffer size must <= input buffer size
- *   </para></listitem>
- *   <listitem><para>
- *     If the always_in_place flag is set, non-writable buffers will be copied
- *     and passed to the transform_ip function, otherwise a new buffer will be
- *     created and the transform function called.
- *   </para></listitem>
- *   <listitem><para>
- *     Incoming writable buffers will be passed to the transform_ip function
- *     immediately.  </para></listitem>
- *   <listitem><para>
- *     only implementing transform_ip and not transform implies always_in_place
- *     = %TRUE
- *   </para></listitem>
- *   </itemizedlist>
- *   <itemizedlist>
- *   <title>Example elements</title>
- *     <listitem>Volume</listitem>
- *     <listitem>Audioconvert in certain modes (signed/unsigned
- *     conversion)</listitem>
- *     <listitem>videoconvert in certain modes (endianness
- *     swapping)</listitem>
- *   </itemizedlist>
- *  </listitem>
- * <listitem>
- *   <itemizedlist>
- *   <title>Modifications only to the caps/metadata of a buffer</title>
- *   <listitem><para>
- *     The element does not require writable data, but non-writable buffers
- *     should be subbuffered so that the meta-information can be replaced.
- *   </para></listitem>
- *   <listitem><para>
- *     Elements wishing to operate in this mode should replace the
- *     prepare_output_buffer method to create subbuffers of the input buffer
- *     and set always_in_place to %TRUE
- *   </para></listitem>
- *   </itemizedlist>
- *   <itemizedlist>
- *   <title>Example elements</title>
- *     <listitem>Capsfilter when setting caps on outgoing buffers that have
- *     none.</listitem>
- *     <listitem>identity when it is going to re-timestamp buffers by
- *     datarate.</listitem>
- *   </itemizedlist>
- * </listitem>
- * <listitem>
- *   <itemizedlist><title>Normal mode</title>
- *   <listitem><para>
- *     always_in_place flag is not set, or there is no transform_ip function
- *   </para></listitem>
- *   <listitem><para>
- *     Element will receive an input buffer and output buffer to operate on.
- *   </para></listitem>
- *   <listitem><para>
- *     Output buffer is allocated by calling the prepare_output_buffer function.
- *   </para></listitem>
- *   </itemizedlist>
- *   <itemizedlist>
- *   <title>Example elements</title>
- *     <listitem>Videoscale, videoconvert, audioconvert when doing
- *     scaling/conversions</listitem>
- *   </itemizedlist>
- * </listitem>
- * <listitem>
- *   <itemizedlist><title>Special output buffer allocations</title>
- *   <listitem><para>
- *     Elements which need to do special allocation of their output buffers
+ *
+ *   * Example elements
+ *
+ *     * Level
+ *     * Videoscale, audioconvert, videoconvert, audioresample in certain modes.
+ *
+ * ## Modifications in-place - input buffer and output buffer are the same thing.
+ *
+ * * The element must implement a transform_ip function.
+ * * Output buffer size must <= input buffer size
+ * * If the always_in_place flag is set, non-writable buffers will be copied
+ *   and passed to the transform_ip function, otherwise a new buffer will be
+ *   created and the transform function called.
+ *
+ * * Incoming writable buffers will be passed to the transform_ip function
+ *   immediately.
+ * * only implementing transform_ip and not transform implies always_in_place = %TRUE
+ *
+ *   * Example elements:
+ *     * Volume
+ *     * Audioconvert in certain modes (signed/unsigned conversion)
+ *     * videoconvert in certain modes (endianness swapping)
+ *
+ * ## Modifications only to the caps/metadata of a buffer
+ *
+ * * The element does not require writable data, but non-writable buffers
+ *   should be subbuffered so that the meta-information can be replaced.
+ *
+ * * Elements wishing to operate in this mode should replace the
+ *   prepare_output_buffer method to create subbuffers of the input buffer
+ *   and set always_in_place to %TRUE
+ *
+ * * Example elements
+ *   * Capsfilter when setting caps on outgoing buffers that have
+ *     none.
+ *   * identity when it is going to re-timestamp buffers by
+ *     datarate.
+ *
+ * ## Normal mode
+ *   * always_in_place flag is not set, or there is no transform_ip function
+ *   * Element will receive an input buffer and output buffer to operate on.
+ *   * Output buffer is allocated by calling the prepare_output_buffer function.
+ *   * Example elements:
+ *     * Videoscale, videoconvert, audioconvert when doing
+ *     scaling/conversions
+ *
+ * ## Special output buffer allocations
+ *   * Elements which need to do special allocation of their output buffers
  *     beyond allocating output buffers via the negotiated allocator or
  *     buffer pool should implement the prepare_output_buffer method.
- *   </para></listitem>
- *   </itemizedlist>
- *   <itemizedlist>
- *   <title>Example elements</title>
- *     <listitem>efence</listitem>
- *   </itemizedlist>
- * </listitem>
- * </orderedlist>
- * </para>
- * </refsect2>
- * <refsect2>
- * <title>Sub-class settable flags on GstBaseTransform</title>
- * <para>
- * <itemizedlist>
- * <listitem><para>
- *   <itemizedlist><title>passthrough</title>
- *     <listitem><para>
- *       Implies that in the current configuration, the sub-class is not
- *       interested in modifying the buffers.
- *     </para></listitem>
- *     <listitem><para>
- *       Elements which are always in passthrough mode whenever the same caps
- *       has been negotiated on both pads can set the class variable
- *       passthrough_on_same_caps to have this behaviour automatically.
- *     </para></listitem>
- *   </itemizedlist>
- * </para></listitem>
- * <listitem><para>
- *   <itemizedlist><title>always_in_place</title>
- *     <listitem><para>
- *       Determines whether a non-writable buffer will be copied before passing
- *       to the transform_ip function.
- *     </para></listitem>
- *     <listitem><para>
- *       Implied %TRUE if no transform function is implemented.
- *     </para></listitem>
- *     <listitem><para>
- *       Implied %FALSE if ONLY transform function is implemented.
- *     </para></listitem>
- *   </itemizedlist>
- * </para></listitem>
- * </itemizedlist>
- * </para>
- * </refsect2>
+ *
+ *   * Example elements:
+ *     * efence
+ *
+ * # Sub-class settable flags on GstBaseTransform
+ *
+ * * passthrough
+ *
+ *   * Implies that in the current configuration, the sub-class is not interested in modifying the buffers.
+ *   * Elements which are always in passthrough mode whenever the same caps has been negotiated on both pads can set the class variable passthrough_on_same_caps to have this behaviour automatically.
+ *
+ * * always_in_place
+ *   * Determines whether a non-writable buffer will be copied before passing
+ *     to the transform_ip function.
+ *
+ *   * Implied %TRUE if no transform function is implemented.
+ *   * Implied %FALSE if ONLY transform function is implemented.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -275,6 +211,10 @@ static GstElementClass *parent_class = NULL;
 static void gst_base_transform_class_init (GstBaseTransformClass * klass);
 static void gst_base_transform_init (GstBaseTransform * trans,
     GstBaseTransformClass * klass);
+static GstFlowReturn default_submit_input_buffer (GstBaseTransform * trans,
+    gboolean is_discont, GstBuffer * input);
+static GstFlowReturn default_generate_output (GstBaseTransform * trans,
+    GstBuffer ** outbuf);
 
 /* we can't use G_DEFINE_ABSTRACT_TYPE because we need the klass in the _init
  * method to get to the padtemplates */
@@ -418,6 +358,8 @@ gst_base_transform_class_init (GstBaseTransformClass * klass)
   klass->prepare_output_buffer =
       GST_DEBUG_FUNCPTR (default_prepare_output_buffer);
   klass->copy_metadata = GST_DEBUG_FUNCPTR (default_copy_metadata);
+  klass->submit_input_buffer = GST_DEBUG_FUNCPTR (default_submit_input_buffer);
+  klass->generate_output = GST_DEBUG_FUNCPTR (default_generate_output);
 }
 
 static void
@@ -523,7 +465,7 @@ gst_base_transform_transform_caps (GstBaseTransform * trans,
     ret = klass->transform_caps (trans, direction, caps, filter);
     GST_LOG_OBJECT (trans, "  to: %" GST_PTR_FORMAT, ret);
 
-#ifndef G_DISABLE_ASSERT
+#ifdef GST_ENABLE_EXTRA_CHECKS
     if (filter) {
       if (!gst_caps_is_subset (ret, filter)) {
         GstCaps *intersection;
@@ -677,7 +619,7 @@ gst_base_transform_query_caps (GstBaseTransform * trans, GstPad * pad,
     GstCaps * filter)
 {
   GstPad *otherpad;
-  GstCaps *peercaps, *caps, *temp, *peerfilter = NULL;
+  GstCaps *peercaps = NULL, *caps, *temp, *peerfilter = NULL;
   GstCaps *templ, *otempl;
 
   otherpad = (pad == trans->srcpad) ? trans->sinkpad : trans->srcpad;
@@ -701,14 +643,26 @@ gst_base_transform_query_caps (GstBaseTransform * trans, GstPad * pad,
     GST_DEBUG_OBJECT (pad, "transformed  %" GST_PTR_FORMAT, peerfilter);
     gst_caps_unref (temp);
 
-    /* and filter against the template of the other pad */
-    GST_DEBUG_OBJECT (pad, "our template  %" GST_PTR_FORMAT, otempl);
-    /* We keep the caps sorted like the returned caps */
-    temp =
-        gst_caps_intersect_full (peerfilter, otempl, GST_CAPS_INTERSECT_FIRST);
-    GST_DEBUG_OBJECT (pad, "intersected %" GST_PTR_FORMAT, temp);
-    gst_caps_unref (peerfilter);
-    peerfilter = temp;
+    if (!gst_caps_is_empty (peerfilter)) {
+      /* and filter against the template of the other pad */
+      GST_DEBUG_OBJECT (pad, "our template  %" GST_PTR_FORMAT, otempl);
+      /* We keep the caps sorted like the returned caps */
+      temp =
+          gst_caps_intersect_full (peerfilter, otempl,
+          GST_CAPS_INTERSECT_FIRST);
+      GST_DEBUG_OBJECT (pad, "intersected %" GST_PTR_FORMAT, temp);
+      gst_caps_unref (peerfilter);
+      peerfilter = temp;
+    }
+  }
+
+  GST_DEBUG_OBJECT (pad, "peer filter caps %" GST_PTR_FORMAT, peerfilter);
+
+  if (peerfilter && gst_caps_is_empty (peerfilter)) {
+    GST_DEBUG_OBJECT (pad, "peer filter caps are empty");
+    caps = peerfilter;
+    peerfilter = NULL;
+    goto done;
   }
 
   /* query the peer with the transformed filter */
@@ -733,7 +687,7 @@ gst_base_transform_query_caps (GstBaseTransform * trans, GstPad * pad,
       GST_PAD_DIRECTION (otherpad), temp, filter);
   GST_DEBUG_OBJECT (pad, "transformed  %" GST_PTR_FORMAT, caps);
   gst_caps_unref (temp);
-  if (caps == NULL)
+  if (caps == NULL || gst_caps_is_empty (caps))
     goto done;
 
   if (peercaps) {
@@ -935,6 +889,9 @@ gst_base_transform_default_decide_allocation (GstBaseTransform * trans,
   return TRUE;
 
 config_failed:
+  if (pool)
+    gst_object_unref (pool);
+
   GST_ELEMENT_ERROR (trans, RESOURCE, SETTINGS,
       ("Failed to configure the buffer pool"),
       ("Configuration is most likely invalid, please report this issue."));
@@ -991,6 +948,15 @@ gst_base_transform_do_bufferpool (GstBaseTransform * trans, GstCaps * outcaps)
 
   if (!result)
     goto no_decide_allocation;
+
+  /* check again in case the sub-class have switch to passthrough/in-place
+   * after looking at the meta APIs */
+  if (priv->passthrough || priv->always_in_place) {
+    GST_DEBUG_OBJECT (trans, "no doing passthrough, delay bufferpool");
+    gst_base_transform_set_allocation (trans, NULL, NULL, NULL, NULL);
+    gst_query_unref (query);
+    return TRUE;
+  }
 
   /* we got configuration from our peer or the decide_allocation method,
    * parse them */
@@ -1109,7 +1075,7 @@ gst_base_transform_find_transform (GstBaseTransform * trans, GstPad * pad,
 
   /* The caps we can actually output is the intersection of the transformed
    * caps with the pad template for the pad */
-  if (othercaps) {
+  if (othercaps && !gst_caps_is_empty (othercaps)) {
     GstCaps *intersect, *templ_caps;
 
     templ_caps = gst_pad_get_pad_template_caps (otherpad);
@@ -1260,68 +1226,51 @@ static gboolean
 gst_base_transform_acceptcaps_default (GstBaseTransform * trans,
     GstPadDirection direction, GstCaps * caps)
 {
-#if 0
-  GstPad *otherpad;
-  GstCaps *othercaps = NULL;
-#endif
+  GstPad *pad, *otherpad;
+  GstCaps *templ, *otempl, *ocaps = NULL;
   gboolean ret = TRUE;
 
-#if 0
-  otherpad = (pad == trans->srcpad) ? trans->sinkpad : trans->srcpad;
+  pad =
+      (direction ==
+      GST_PAD_SINK) ? GST_BASE_TRANSFORM_SINK_PAD (trans) :
+      GST_BASE_TRANSFORM_SRC_PAD (trans);
+  otherpad =
+      (direction ==
+      GST_PAD_SINK) ? GST_BASE_TRANSFORM_SRC_PAD (trans) :
+      GST_BASE_TRANSFORM_SINK_PAD (trans);
 
-  /* we need fixed caps for the check, fall back to the default implementation
-   * if we don't */
-  if (!gst_caps_is_fixed (caps))
-#endif
-  {
-    GstCaps *allowed;
+  GST_DEBUG_OBJECT (trans, "accept caps %" GST_PTR_FORMAT, caps);
 
-    GST_DEBUG_OBJECT (trans, "accept caps %" GST_PTR_FORMAT, caps);
+  templ = gst_pad_get_pad_template_caps (pad);
+  otempl = gst_pad_get_pad_template_caps (otherpad);
 
-    /* get all the formats we can handle on this pad */
-    if (direction == GST_PAD_SRC)
-      allowed = gst_pad_query_caps (trans->srcpad, caps);
-    else
-      allowed = gst_pad_query_caps (trans->sinkpad, caps);
+  /* get all the formats we can handle on this pad */
+  GST_DEBUG_OBJECT (trans, "intersect with pad template: %" GST_PTR_FORMAT,
+      templ);
+  if (!gst_caps_can_intersect (caps, templ))
+    goto reject_caps;
 
-    if (!allowed) {
-      GST_DEBUG_OBJECT (trans, "gst_pad_query_caps() failed");
-      goto no_transform_possible;
-    }
-
-    GST_DEBUG_OBJECT (trans, "allowed caps %" GST_PTR_FORMAT, allowed);
-
-    /* intersect with the requested format */
-    ret = gst_caps_is_subset (caps, allowed);
-    gst_caps_unref (allowed);
-
-    if (!ret)
-      goto no_transform_possible;
-  }
-#if 0
-  else {
-    GST_DEBUG_OBJECT (pad, "accept caps %" GST_PTR_FORMAT, caps);
-
-    /* find best possible caps for the other pad as a way to see if we can
-     * transform this caps. */
-    othercaps = gst_base_transform_find_transform (trans, pad, caps, FALSE);
-    if (!othercaps || gst_caps_is_empty (othercaps))
-      goto no_transform_possible;
-
-    GST_DEBUG_OBJECT (pad, "we can transform to %" GST_PTR_FORMAT, othercaps);
-  }
-#endif
+  GST_DEBUG_OBJECT (trans, "trying to transform with filter: %"
+      GST_PTR_FORMAT " (the other pad template)", otempl);
+  ocaps = gst_base_transform_transform_caps (trans, direction, caps, otempl);
+  if (!ocaps || gst_caps_is_empty (ocaps))
+    goto no_transform_possible;
 
 done:
-#if 0
-  /* We know it's always NULL since we never use it */
-  if (othercaps)
-    gst_caps_unref (othercaps);
-#endif
-
+  GST_DEBUG_OBJECT (trans, "accept-caps result: %d", ret);
+  if (ocaps)
+    gst_caps_unref (ocaps);
+  gst_caps_unref (templ);
+  gst_caps_unref (otempl);
   return ret;
 
   /* ERRORS */
+reject_caps:
+  {
+    GST_DEBUG_OBJECT (trans, "caps can't intersect with the template");
+    ret = FALSE;
+    goto done;
+  }
 no_transform_possible:
   {
     GST_DEBUG_OBJECT (trans,
@@ -1342,7 +1291,7 @@ gst_base_transform_setcaps (GstBaseTransform * trans, GstPad * pad,
     GstCaps * incaps)
 {
   GstBaseTransformPrivate *priv = trans->priv;
-  GstCaps *outcaps, *prevcaps;
+  GstCaps *outcaps, *prev_incaps = NULL, *prev_outcaps = NULL;
   gboolean ret = TRUE;
 
   GST_DEBUG_OBJECT (pad, "have new caps %p %" GST_PTR_FORMAT, incaps, incaps);
@@ -1361,18 +1310,23 @@ gst_base_transform_setcaps (GstBaseTransform * trans, GstPad * pad,
     outcaps = gst_caps_ref (incaps);
   }
 
-  /* call configure now */
-  if (!(ret = gst_base_transform_configure_caps (trans, incaps, outcaps)))
-    goto failed_configure;
+  prev_incaps = gst_pad_get_current_caps (trans->sinkpad);
+  prev_outcaps = gst_pad_get_current_caps (trans->srcpad);
+  if (prev_incaps && prev_outcaps && gst_caps_is_equal (prev_incaps, incaps)
+      && gst_caps_is_equal (prev_outcaps, outcaps)) {
+    GST_DEBUG_OBJECT (trans,
+        "New caps equal to old ones: %" GST_PTR_FORMAT " -> %" GST_PTR_FORMAT,
+        incaps, outcaps);
+    ret = TRUE;
+  } else {
+    /* call configure now */
+    if (!(ret = gst_base_transform_configure_caps (trans, incaps, outcaps)))
+      goto failed_configure;
 
-  prevcaps = gst_pad_get_current_caps (trans->srcpad);
-
-  if (!prevcaps || !gst_caps_is_equal (outcaps, prevcaps))
-    /* let downstream know about our caps */
-    ret = gst_pad_set_caps (trans->srcpad, outcaps);
-
-  if (prevcaps)
-    gst_caps_unref (prevcaps);
+    if (!prev_outcaps || !gst_caps_is_equal (outcaps, prev_outcaps))
+      /* let downstream know about our caps */
+      ret = gst_pad_set_caps (trans->srcpad, outcaps);
+  }
 
   if (ret) {
     /* try to get a pool when needed */
@@ -1382,6 +1336,10 @@ gst_base_transform_setcaps (GstBaseTransform * trans, GstPad * pad,
 done:
   if (outcaps)
     gst_caps_unref (outcaps);
+  if (prev_incaps)
+    gst_caps_unref (prev_incaps);
+  if (prev_outcaps)
+    gst_caps_unref (prev_outcaps);
 
   GST_OBJECT_LOCK (trans);
   priv->negotiated = ret;
@@ -1435,6 +1393,41 @@ gst_base_transform_default_propose_allocation (GstBaseTransform * trans,
 }
 
 static gboolean
+gst_base_transform_reconfigure (GstBaseTransform * trans)
+{
+  gboolean reconfigure, ret = TRUE;
+
+  reconfigure = gst_pad_check_reconfigure (trans->srcpad);
+
+  if (G_UNLIKELY (reconfigure)) {
+    GstCaps *incaps;
+
+    GST_DEBUG_OBJECT (trans, "we had a pending reconfigure");
+
+    incaps = gst_pad_get_current_caps (trans->sinkpad);
+    if (incaps == NULL)
+      goto done;
+
+    /* if we need to reconfigure we pretend new caps arrived. This
+     * will reconfigure the transform with the new output format. */
+    if (!gst_base_transform_setcaps (trans, trans->sinkpad, incaps)) {
+      GST_ELEMENT_WARNING (trans, STREAM, FORMAT,
+          ("not negotiated"), ("not negotiated"));
+      ret = FALSE;
+    }
+
+    gst_caps_unref (incaps);
+  }
+
+done:
+
+  if (!ret)
+    gst_pad_mark_reconfigure (trans->srcpad);
+
+  return ret;
+}
+
+static gboolean
 gst_base_transform_default_query (GstBaseTransform * trans,
     GstPadDirection direction, GstQuery * query)
 {
@@ -1462,6 +1455,10 @@ gst_base_transform_default_query (GstBaseTransform * trans,
       if (direction != GST_PAD_SINK)
         goto done;
 
+      ret = gst_base_transform_reconfigure (trans);
+      if (G_UNLIKELY (!ret))
+        goto done;
+
       GST_OBJECT_LOCK (trans);
       if (!priv->negotiated && !priv->passthrough && (klass->set_caps != NULL)) {
         GST_DEBUG_OBJECT (trans,
@@ -1469,8 +1466,9 @@ gst_base_transform_default_query (GstBaseTransform * trans,
         GST_OBJECT_UNLOCK (trans);
         goto done;
       }
-      if ((decide_query = trans->priv->query))
-        gst_query_ref (decide_query);
+
+      decide_query = trans->priv->query;
+      trans->priv->query = NULL;
       GST_OBJECT_UNLOCK (trans);
 
       GST_DEBUG_OBJECT (trans,
@@ -1483,8 +1481,16 @@ gst_base_transform_default_query (GstBaseTransform * trans,
       else
         ret = FALSE;
 
-      if (decide_query)
-        gst_query_unref (decide_query);
+      if (decide_query) {
+        GST_OBJECT_LOCK (trans);
+
+        if (trans->priv->query == NULL)
+          trans->priv->query = decide_query;
+        else
+          gst_query_unref (decide_query);
+
+        GST_OBJECT_UNLOCK (trans);
+      }
 
       GST_DEBUG_OBJECT (trans, "ALLOCATION ret %d, %" GST_PTR_FORMAT, ret,
           query);
@@ -1554,7 +1560,7 @@ gst_base_transform_query (GstPad * pad, GstObject * parent, GstQuery * query)
   GstBaseTransformClass *bclass;
   gboolean ret = FALSE;
 
-  trans = GST_BASE_TRANSFORM (parent);
+  trans = GST_BASE_TRANSFORM_CAST (parent);
   bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
 
   if (bclass->query)
@@ -1700,12 +1706,7 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
 
   klass = GST_BASE_TRANSFORM_GET_CLASS (trans);
 
-  if (GST_META_FLAG_IS_SET (*meta, GST_META_FLAG_POOLED)) {
-    /* never call the transform_meta with pool private metadata */
-    GST_DEBUG_OBJECT (trans, "not copying pooled metadata %s",
-        g_type_name (info->api));
-    do_copy = FALSE;
-  } else if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)) {
+  if (gst_meta_api_type_has_tag (info->api, _gst_meta_tag_memory)) {
     /* never call the transform_meta with memory specific metadata */
     GST_DEBUG_OBJECT (trans, "not copying memory specific metadata %s",
         g_type_name (info->api));
@@ -1720,10 +1721,15 @@ foreach_metadata (GstBuffer * inbuf, GstMeta ** meta, gpointer user_data)
    * function and when it returns %TRUE */
   if (do_copy) {
     GstMetaTransformCopy copy_data = { FALSE, 0, -1 };
-    GST_DEBUG_OBJECT (trans, "copy metadata %s", g_type_name (info->api));
     /* simply copy then */
-    info->transform_func (outbuf, *meta, inbuf,
-        _gst_meta_transform_copy, &copy_data);
+    if (info->transform_func) {
+      GST_DEBUG_OBJECT (trans, "copy metadata %s", g_type_name (info->api));
+      info->transform_func (outbuf, *meta, inbuf,
+          _gst_meta_transform_copy, &copy_data);
+    } else {
+      GST_DEBUG_OBJECT (trans, "couldn't copy metadata %s",
+          g_type_name (info->api));
+    }
   }
   return TRUE;
 }
@@ -1805,7 +1811,7 @@ gst_base_transform_get_unit_size (GstBaseTransform * trans, GstCaps * caps,
   bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
   res = bclass->get_unit_size (trans, caps, size);
   GST_DEBUG_OBJECT (trans,
-      "caps %" GST_PTR_FORMAT ") has unit size %" G_GSIZE_FORMAT ", res %s",
+      "caps %" GST_PTR_FORMAT " has unit size %" G_GSIZE_FORMAT ", res %s",
       caps, *size, res ? "TRUE" : "FALSE");
 
   if (res) {
@@ -1835,7 +1841,7 @@ gst_base_transform_sink_event (GstPad * pad, GstObject * parent,
   GstBaseTransformClass *bclass;
   gboolean ret = TRUE;
 
-  trans = GST_BASE_TRANSFORM (parent);
+  trans = GST_BASE_TRANSFORM_CAST (parent);
   bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
 
   if (bclass->sink_event)
@@ -1881,6 +1887,8 @@ gst_base_transform_sink_eventfunc (GstBaseTransform * trans, GstEvent * event)
       /* clear any pending reconfigure flag */
       gst_pad_check_reconfigure (trans->srcpad);
       ret = gst_base_transform_setcaps (trans, trans->sinkpad, caps);
+      if (!ret)
+        gst_pad_mark_reconfigure (trans->srcpad);
 
       forward = FALSE;
       break;
@@ -1914,7 +1922,7 @@ gst_base_transform_src_event (GstPad * pad, GstObject * parent,
   GstBaseTransformClass *bclass;
   gboolean ret = TRUE;
 
-  trans = GST_BASE_TRANSFORM (parent);
+  trans = GST_BASE_TRANSFORM_CAST (parent);
   bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
 
   if (bclass->src_event)
@@ -1956,55 +1964,30 @@ gst_base_transform_src_eventfunc (GstBaseTransform * trans, GstEvent * event)
   return ret;
 }
 
-/* perform a transform on @inbuf and put the result in @outbuf.
- *
- * This function is common to the push and pull-based operations.
- *
- * This function takes ownership of @inbuf */
+/* Takes the input buffer */
 static GstFlowReturn
-gst_base_transform_handle_buffer (GstBaseTransform * trans, GstBuffer * inbuf,
-    GstBuffer ** outbuf)
+default_submit_input_buffer (GstBaseTransform * trans, gboolean is_discont,
+    GstBuffer * inbuf)
 {
-  GstBaseTransformClass *bclass;
+  GstBaseTransformClass *bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
   GstBaseTransformPrivate *priv = trans->priv;
   GstFlowReturn ret = GST_FLOW_OK;
-  gboolean want_in_place;
   GstClockTime running_time;
   GstClockTime timestamp;
-  gboolean reconfigure;
 
-  bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
+  if (G_UNLIKELY (!gst_base_transform_reconfigure (trans)))
+    goto not_negotiated;
 
-  reconfigure = gst_pad_check_reconfigure (trans->srcpad);
-
-  if (G_UNLIKELY (reconfigure)) {
-    GstCaps *incaps;
-
-    GST_DEBUG_OBJECT (trans, "we had a pending reconfigure");
-
-    incaps = gst_pad_get_current_caps (trans->sinkpad);
-    if (incaps == NULL)
-      goto no_reconfigure;
-
-    /* if we need to reconfigure we pretend new caps arrived. This
-     * will reconfigure the transform with the new output format. */
-    if (!gst_base_transform_setcaps (trans, trans->sinkpad, incaps)) {
-      gst_caps_unref (incaps);
-      goto not_negotiated;
-    }
-    gst_caps_unref (incaps);
-  }
-
-no_reconfigure:
   if (GST_BUFFER_OFFSET_IS_VALID (inbuf))
     GST_DEBUG_OBJECT (trans,
-        "handling buffer %p of size %" G_GSIZE_FORMAT " and offset %"
-        G_GUINT64_FORMAT, inbuf, gst_buffer_get_size (inbuf),
-        GST_BUFFER_OFFSET (inbuf));
+        "handling buffer %p of size %" G_GSIZE_FORMAT ", PTS %" GST_TIME_FORMAT
+        " and offset %" G_GUINT64_FORMAT, inbuf, gst_buffer_get_size (inbuf),
+        GST_TIME_ARGS (GST_BUFFER_PTS (inbuf)), GST_BUFFER_OFFSET (inbuf));
   else
     GST_DEBUG_OBJECT (trans,
-        "handling buffer %p of size %" G_GSIZE_FORMAT " and offset NONE", inbuf,
-        gst_buffer_get_size (inbuf));
+        "handling buffer %p of size %" G_GSIZE_FORMAT ", PTS %" GST_TIME_FORMAT
+        " and offset NONE", inbuf, gst_buffer_get_size (inbuf),
+        GST_TIME_ARGS (GST_BUFFER_PTS (inbuf)));
 
   /* Don't allow buffer handling before negotiation, except in passthrough mode
    * or if the class doesn't implement a set_caps function (in which case it doesn't
@@ -2012,12 +1995,6 @@ no_reconfigure:
    */
   if (!priv->negotiated && !priv->passthrough && (bclass->set_caps != NULL))
     goto not_negotiated;
-
-  /* Set discont flag so we can mark the outgoing buffer */
-  if (GST_BUFFER_IS_DISCONT (inbuf)) {
-    GST_DEBUG_OBJECT (trans, "got DISCONT buffer %p", inbuf);
-    priv->discont = TRUE;
-  }
 
   /* can only do QoS if the segment is in TIME */
   if (trans->segment.format != GST_FORMAT_TIME)
@@ -2072,11 +2049,49 @@ no_reconfigure:
 
       /* mark discont for next buffer */
       priv->discont = TRUE;
+      ret = GST_BASE_TRANSFORM_FLOW_DROPPED;
       goto skip;
     }
   }
 
 no_qos:
+  /* Stash input buffer where the default generate_output
+   * function can find it */
+  if (trans->queued_buf)
+    gst_buffer_unref (trans->queued_buf);
+  trans->queued_buf = inbuf;
+  return ret;
+skip:
+  gst_buffer_unref (inbuf);
+  return ret;
+
+not_negotiated:
+  {
+    gst_buffer_unref (inbuf);
+    if (GST_PAD_IS_FLUSHING (trans->srcpad))
+      return GST_FLOW_FLUSHING;
+    return GST_FLOW_NOT_NEGOTIATED;
+  }
+}
+
+static GstFlowReturn
+default_generate_output (GstBaseTransform * trans, GstBuffer ** outbuf)
+{
+  GstBaseTransformClass *bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
+  GstBaseTransformPrivate *priv = trans->priv;
+  GstFlowReturn ret = GST_FLOW_OK;
+  GstBuffer *inbuf;
+  gboolean want_in_place;
+
+  /* Retrieve stashed input buffer, if the default submit_input_buffer
+   * was run. Takes ownership back from there */
+  inbuf = trans->queued_buf;
+  trans->queued_buf = NULL;
+
+  /* This default processing method needs one input buffer to feed to
+   * the transform functions, we can't do anything without it */
+  if (inbuf == NULL)
+    return GST_FLOW_OK;
 
   /* first try to allocate an output buffer based on the currently negotiated
    * format. outbuf will contain a buffer suitable for doing the configured
@@ -2120,7 +2135,6 @@ no_qos:
     }
   }
 
-skip:
   /* only unref input buffer if we allocated a new outbuf buffer. If we reused
    * the input buffer, no refcount is changed to keep the input buffer writable
    * when needed. */
@@ -2130,14 +2144,6 @@ skip:
   return ret;
 
   /* ERRORS */
-not_negotiated:
-  {
-    gst_buffer_unref (inbuf);
-    *outbuf = NULL;
-    GST_ELEMENT_WARNING (trans, STREAM, FORMAT,
-        ("not negotiated"), ("not negotiated"));
-    return GST_FLOW_NOT_NEGOTIATED;
-  }
 no_prepare:
   {
     gst_buffer_unref (inbuf);
@@ -2162,23 +2168,65 @@ static GstFlowReturn
 gst_base_transform_getrange (GstPad * pad, GstObject * parent, guint64 offset,
     guint length, GstBuffer ** buffer)
 {
-  GstBaseTransform *trans;
-  GstBaseTransformClass *klass;
+  GstBaseTransformClass *klass = GST_BASE_TRANSFORM_GET_CLASS (parent);
+  GstBaseTransform *trans = GST_BASE_TRANSFORM_CAST (parent);
+  GstBaseTransformPrivate *priv = trans->priv;
   GstFlowReturn ret;
   GstBuffer *inbuf = NULL;
+  GstBuffer *outbuf = NULL;
 
-  trans = GST_BASE_TRANSFORM (parent);
+  /* Try and generate a buffer, if the sub-class wants more data,
+   * pull some and repeat until a buffer (or error) is produced */
+  do {
+    ret = klass->generate_output (trans, &outbuf);
 
-  ret = gst_pad_pull_range (trans->sinkpad, offset, length, &inbuf);
-  if (G_UNLIKELY (ret != GST_FLOW_OK))
-    goto pull_error;
+    /* Consume the DROPPED return value and go get more data */
+    if (ret == GST_BASE_TRANSFORM_FLOW_DROPPED)
+      ret = GST_FLOW_OK;
 
-  klass = GST_BASE_TRANSFORM_GET_CLASS (trans);
-  if (klass->before_transform)
-    klass->before_transform (trans, inbuf);
+    if (ret != GST_FLOW_OK || outbuf != NULL)
+      break;
 
-  ret = gst_base_transform_handle_buffer (trans, inbuf, buffer);
+    /* No buffer generated, try and pull data */
+    ret = gst_pad_pull_range (trans->sinkpad, offset, length, &inbuf);
+    if (G_UNLIKELY (ret != GST_FLOW_OK))
+      goto pull_error;
 
+    if (klass->before_transform)
+      klass->before_transform (trans, inbuf);
+
+    /* Set discont flag so we can mark the next outgoing buffer */
+    if (GST_BUFFER_IS_DISCONT (inbuf)) {
+      GST_DEBUG_OBJECT (trans, "got DISCONT buffer %p", inbuf);
+      priv->discont = TRUE;
+    }
+
+    /* FIXME: Input offsets and lengths need to be translated, as per
+     * the FIXME above. For now, just advance somewhat */
+    offset += gst_buffer_get_size (inbuf);
+
+    ret = klass->submit_input_buffer (trans, priv->discont, inbuf);
+    if (ret != GST_FLOW_OK) {
+      if (ret == GST_BASE_TRANSFORM_FLOW_DROPPED)
+        ret = GST_FLOW_OK;
+      goto done;
+    }
+  } while (ret == GST_FLOW_OK && outbuf == NULL);
+
+  *buffer = outbuf;
+  if (outbuf) {
+    /* apply DISCONT flag if the buffer is not yet marked as such */
+    if (priv->discont) {
+      GST_DEBUG_OBJECT (trans, "we have a pending DISCONT");
+      if (!GST_BUFFER_IS_DISCONT (outbuf)) {
+        GST_DEBUG_OBJECT (trans, "marking DISCONT on output buffer");
+        outbuf = gst_buffer_make_writable (outbuf);
+        GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_DISCONT);
+      }
+      priv->discont = FALSE;
+    }
+    priv->processed++;
+  }
 done:
   return ret;
 
@@ -2191,19 +2239,20 @@ pull_error:
   }
 }
 
+/* The flow of the chain function is the reverse of the
+ * getrange() function - we have data, feed it to the sub-class
+ * and then iterate, pushing buffers it generates until it either
+ * wants more data or returns an error */
 static GstFlowReturn
 gst_base_transform_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
 {
-  GstBaseTransform *trans;
-  GstBaseTransformClass *klass;
-  GstBaseTransformPrivate *priv;
+  GstBaseTransform *trans = GST_BASE_TRANSFORM_CAST (parent);
+  GstBaseTransformClass *klass = GST_BASE_TRANSFORM_GET_CLASS (trans);
+  GstBaseTransformPrivate *priv = trans->priv;
   GstFlowReturn ret;
   GstClockTime position = GST_CLOCK_TIME_NONE;
   GstClockTime timestamp, duration;
   GstBuffer *outbuf = NULL;
-
-  trans = GST_BASE_TRANSFORM (parent);
-  priv = trans->priv;
 
   timestamp = GST_BUFFER_TIMESTAMP (buffer);
   duration = GST_BUFFER_DURATION (buffer);
@@ -2216,54 +2265,68 @@ gst_base_transform_chain (GstPad * pad, GstObject * parent, GstBuffer * buffer)
       position = timestamp;
   }
 
-  klass = GST_BASE_TRANSFORM_GET_CLASS (trans);
   if (klass->before_transform)
     klass->before_transform (trans, buffer);
 
-  /* protect transform method and concurrent buffer alloc */
-  ret = gst_base_transform_handle_buffer (trans, buffer, &outbuf);
-
-  /* outbuf can be NULL, this means a dropped buffer, if we have a buffer but
-   * GST_BASE_TRANSFORM_FLOW_DROPPED we will not push either. */
-  if (outbuf != NULL) {
-    if (ret == GST_FLOW_OK) {
-      GstClockTime position_out = GST_CLOCK_TIME_NONE;
-
-      /* Remember last stop position */
-      if (position != GST_CLOCK_TIME_NONE &&
-          trans->segment.format == GST_FORMAT_TIME)
-        trans->segment.position = position;
-
-      if (GST_BUFFER_TIMESTAMP_IS_VALID (outbuf)) {
-        position_out = GST_BUFFER_TIMESTAMP (outbuf);
-        if (GST_BUFFER_DURATION_IS_VALID (outbuf))
-          position_out += GST_BUFFER_DURATION (outbuf);
-      } else if (position != GST_CLOCK_TIME_NONE) {
-        position_out = position;
-      }
-      if (position_out != GST_CLOCK_TIME_NONE
-          && trans->segment.format == GST_FORMAT_TIME)
-        priv->position_out = position_out;
-
-      /* apply DISCONT flag if the buffer is not yet marked as such */
-      if (trans->priv->discont) {
-        GST_DEBUG_OBJECT (trans, "we have a pending DISCONT");
-        if (!GST_BUFFER_IS_DISCONT (outbuf)) {
-          GST_DEBUG_OBJECT (trans, "marking DISCONT on output buffer");
-          outbuf = gst_buffer_make_writable (outbuf);
-          GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_DISCONT);
-        }
-        priv->discont = FALSE;
-      }
-      priv->processed++;
-
-      ret = gst_pad_push (trans->srcpad, outbuf);
-    } else {
-      GST_DEBUG_OBJECT (trans, "we got return %s", gst_flow_get_name (ret));
-      gst_buffer_unref (outbuf);
-    }
+  /* Set discont flag so we can mark the outgoing buffer */
+  if (GST_BUFFER_IS_DISCONT (buffer)) {
+    GST_DEBUG_OBJECT (trans, "got DISCONT buffer %p", buffer);
+    priv->discont = TRUE;
   }
 
+  /* Takes ownership of input buffer */
+  ret = klass->submit_input_buffer (trans, priv->discont, buffer);
+  if (ret != GST_FLOW_OK)
+    goto done;
+
+  do {
+    outbuf = NULL;
+
+    ret = klass->generate_output (trans, &outbuf);
+
+    /* outbuf can be NULL, this means a dropped buffer, if we have a buffer but
+     * GST_BASE_TRANSFORM_FLOW_DROPPED we will not push either. */
+    if (outbuf != NULL) {
+      if (ret == GST_FLOW_OK) {
+        GstClockTime position_out = GST_CLOCK_TIME_NONE;
+
+        /* Remember last stop position */
+        if (position != GST_CLOCK_TIME_NONE &&
+            trans->segment.format == GST_FORMAT_TIME)
+          trans->segment.position = position;
+
+        if (GST_BUFFER_TIMESTAMP_IS_VALID (outbuf)) {
+          position_out = GST_BUFFER_TIMESTAMP (outbuf);
+          if (GST_BUFFER_DURATION_IS_VALID (outbuf))
+            position_out += GST_BUFFER_DURATION (outbuf);
+        } else if (position != GST_CLOCK_TIME_NONE) {
+          position_out = position;
+        }
+        if (position_out != GST_CLOCK_TIME_NONE
+            && trans->segment.format == GST_FORMAT_TIME)
+          priv->position_out = position_out;
+
+        /* apply DISCONT flag if the buffer is not yet marked as such */
+        if (trans->priv->discont) {
+          GST_DEBUG_OBJECT (trans, "we have a pending DISCONT");
+          if (!GST_BUFFER_IS_DISCONT (outbuf)) {
+            GST_DEBUG_OBJECT (trans, "marking DISCONT on output buffer");
+            outbuf = gst_buffer_make_writable (outbuf);
+            GST_BUFFER_FLAG_SET (outbuf, GST_BUFFER_FLAG_DISCONT);
+          }
+          priv->discont = FALSE;
+        }
+        priv->processed++;
+
+        ret = gst_pad_push (trans->srcpad, outbuf);
+      } else {
+        GST_DEBUG_OBJECT (trans, "we got return %s", gst_flow_get_name (ret));
+        gst_buffer_unref (outbuf);
+      }
+    }
+  } while (ret == GST_FLOW_OK && outbuf != NULL);
+
+done:
   /* convert internal flow to OK and mark discont for the next buffer. */
   if (ret == GST_BASE_TRANSFORM_FLOW_DROPPED) {
     GST_DEBUG_OBJECT (trans, "dropped a buffer, marking DISCONT");
@@ -2280,7 +2343,7 @@ gst_base_transform_set_property (GObject * object, guint prop_id,
 {
   GstBaseTransform *trans;
 
-  trans = GST_BASE_TRANSFORM (object);
+  trans = GST_BASE_TRANSFORM_CAST (object);
 
   switch (prop_id) {
     case PROP_QOS:
@@ -2298,7 +2361,7 @@ gst_base_transform_get_property (GObject * object, guint prop_id,
 {
   GstBaseTransform *trans;
 
-  trans = GST_BASE_TRANSFORM (object);
+  trans = GST_BASE_TRANSFORM_CAST (object);
 
   switch (prop_id) {
     case PROP_QOS:
@@ -2366,6 +2429,9 @@ gst_base_transform_activate (GstBaseTransform * trans, gboolean active)
     gst_caps_replace (&priv->cache_caps1, NULL);
     gst_caps_replace (&priv->cache_caps2, NULL);
 
+    /* Make sure any left over buffer is freed */
+    gst_buffer_replace (&trans->queued_buf, NULL);
+
     if (priv->pad_mode != GST_PAD_MODE_NONE && bclass->stop)
       result &= bclass->stop (trans);
 
@@ -2382,7 +2448,7 @@ gst_base_transform_sink_activate_mode (GstPad * pad, GstObject * parent,
   gboolean result = FALSE;
   GstBaseTransform *trans;
 
-  trans = GST_BASE_TRANSFORM (parent);
+  trans = GST_BASE_TRANSFORM_CAST (parent);
 
   switch (mode) {
     case GST_PAD_MODE_PUSH:
@@ -2408,7 +2474,7 @@ gst_base_transform_src_activate_mode (GstPad * pad, GstObject * parent,
   gboolean result = FALSE;
   GstBaseTransform *trans;
 
-  trans = GST_BASE_TRANSFORM (parent);
+  trans = GST_BASE_TRANSFORM_CAST (parent);
 
   switch (mode) {
     case GST_PAD_MODE_PULL:
@@ -2455,7 +2521,7 @@ gst_base_transform_set_passthrough (GstBaseTransform * trans,
   bclass = GST_BASE_TRANSFORM_GET_CLASS (trans);
 
   GST_OBJECT_LOCK (trans);
-  if (passthrough == FALSE) {
+  if (!passthrough) {
     if (bclass->transform_ip || bclass->transform)
       trans->priv->passthrough = FALSE;
   } else {
@@ -2498,10 +2564,9 @@ gst_base_transform_is_passthrough (GstBaseTransform * trans)
  *
  * Determines whether a non-writable buffer will be copied before passing
  * to the transform_ip function.
- * <itemizedlist>
- *   <listitem>Always %TRUE if no transform function is implemented.</listitem>
- *   <listitem>Always %FALSE if ONLY transform function is implemented.</listitem>
- * </itemizedlist>
+ *
+ *   * Always %TRUE if no transform function is implemented.
+ *   * Always %FALSE if ONLY transform function is implemented.
  *
  * MT safe.
  */
@@ -2764,4 +2829,36 @@ gst_base_transform_get_allocator (GstBaseTransform * trans,
 
   if (params)
     *params = trans->priv->params;
+}
+
+/**
+ * gst_base_transform_update_src_caps:
+ * @trans: a #GstBaseTransform
+ * @updated_caps: An updated version of the srcpad caps to be pushed
+ * downstream
+ *
+ * Updates the srcpad caps and send the caps downstream. This function
+ * can be used by subclasses when they have already negotiated their caps
+ * but found a change in them (or computed new informations). This way,
+ * they can notify downstream about that change without loosing any
+ * buffer.
+ *
+ * Returns: %TRUE if the caps could be send downstream %FALSE otherwise
+ *
+ * Since: 1.6
+ */
+gboolean
+gst_base_transform_update_src_caps (GstBaseTransform * trans,
+    GstCaps * updated_caps)
+{
+  g_return_val_if_fail (GST_IS_BASE_TRANSFORM (trans), FALSE);
+
+  if (gst_pad_push_event (GST_BASE_TRANSFORM_SRC_PAD (trans),
+          gst_event_new_caps (updated_caps))) {
+    gst_pad_mark_reconfigure (trans->srcpad);
+
+    return TRUE;
+  }
+
+  return FALSE;
 }

@@ -19,6 +19,7 @@
 
 /**
  * SECTION:gsterror
+ * @title: GstError
  * @short_description: Categorized error messages
  * @see_also: #GstMessage
  *
@@ -66,43 +67,42 @@
  *
  * Elements throw errors using the #GST_ELEMENT_ERROR convenience macro:
  *
- * <example>
- * <title>Throwing an error</title>
- *   <programlisting>
+ * ## Throwing an error
+ *
+ *   |[
  *     GST_ELEMENT_ERROR (src, RESOURCE, NOT_FOUND,
  *       (_("No file name specified for reading.")), (NULL));
- *   </programlisting>
- * </example>
+ *   ]|
  *
  * Things to keep in mind:
- * <itemizedlist>
- *   <listitem><para>Don't go off inventing new error codes.  The ones
+ *
+ *   * Don't go off inventing new error codes.  The ones
  *     currently provided should be enough.  If you find your type of error
- *     does not fit the current codes, you should use FAILED.</para></listitem>
- *   <listitem><para>Don't provide a message if the default one suffices.
+ *     does not fit the current codes, you should use FAILED.
+ *   * Don't provide a message if the default one suffices.
  *     this keeps messages more uniform.  Use (%NULL) - not forgetting the
- *     parentheses.</para></listitem>
- *   <listitem><para>If you do supply a custom message, it should be
+ *     parentheses.
+ *   * If you do supply a custom message, it should be
  *     marked for translation.  The message should start with a capital
  *     and end with a period.  The message should describe the error in short,
  *     in a human-readable form, and without any complex technical terms.
  *     A user interface will present this message as the first thing a user
  *     sees.  Details, technical info, ... should go in the debug string.
- *   </para></listitem>
- *   <listitem><para>The debug string can be as you like.  Again, use (%NULL)
+ *
+ *   * The debug string can be as you like.  Again, use (%NULL)
  *     if there's nothing to add - file and line number will still be
  *     passed.  #GST_ERROR_SYSTEM can be used as a shortcut to give
- *     debug information on a system call error.</para></listitem>
- * </itemizedlist>
+ *     debug information on a system call error.
+ *
  */
 
-/* FIXME 0.11: the entire error system needs an overhaul - it's not very
+/* FIXME 2.0: the entire error system needs an overhaul - it's not very
  * useful the way it is. Also, we need to be able to specify additional
  * 'details' for errors (e.g. disk/file/resource error -> out-of-space; or
  * put the url/filename/device name that caused the error somewhere)
  * without having to add enums for every little thing.
  *
- * FIXME 0.11: get rid of GST_{CORE,LIBRARY,RESOURCE,STREAM}_ERROR_NUM_ERRORS.
+ * FIXME 2.0: get rid of GST_{CORE,LIBRARY,RESOURCE,STREAM}_ERROR_NUM_ERRORS.
  * Maybe also replace _quark() functions with g_quark_from_static_string()?
  */
 #ifdef HAVE_CONFIG_H

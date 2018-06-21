@@ -22,8 +22,11 @@
 #ifndef __GST_CONTROLLER_H__
 #define __GST_CONTROLLER_H__
 
+#include <gst/controller/controller-prelude.h>
+
 #include <gst/controller/gstargbcontrolbinding.h>
 #include <gst/controller/gstdirectcontrolbinding.h>
+#include <gst/controller/gstproxycontrolbinding.h>
 #include <gst/controller/gsttimedvaluecontrolsource.h>
 #include <gst/controller/gstinterpolationcontrolsource.h>
 #include <gst/controller/gsttriggercontrolsource.h>

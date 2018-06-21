@@ -27,10 +27,12 @@
 #include <gst/gst.h>
 #include <gst/video/video.h>
 
+GST_VIDEO_API
 void       gst_video_blend_scale_linear_RGBA  (GstVideoInfo * src, GstBuffer * src_buffer,
                                                gint dest_height, gint dest_width,
                                                GstVideoInfo * dest, GstBuffer ** dest_buffer);
 
+GST_VIDEO_API
 gboolean   gst_video_blend                    (GstVideoFrame * dest,
                                                GstVideoFrame * src,
                                                gint x, gint y,

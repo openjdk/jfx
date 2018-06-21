@@ -30,6 +30,9 @@
 #endif
 
 #include "gstdirectsoundsink.h"
+#ifndef GSTREAMER_LITE
+#include "gstdirectsounddevice.h"
+#endif // GSTREAMER_LITE
 
 #ifdef GSTREAMER_LITE
 gboolean
@@ -39,9 +42,19 @@ static gboolean
 plugin_init (GstPlugin * plugin)
 #endif // GSTREAMER_LITE
 {
+#ifdef GSTREAMER_LITE
   if (!gst_element_register (plugin, "directsoundsink", GST_RANK_PRIMARY,
           GST_TYPE_DIRECTSOUND_SINK))
     return FALSE;
+#else // GSTREAMER_LITE
+if (!gst_element_register (plugin, "directsoundsink", GST_RANK_SECONDARY,
+          GST_TYPE_DIRECTSOUND_SINK))
+    return FALSE;
+
+  if (!gst_device_provider_register (plugin, "directsoundsinkdeviceprovider",
+          GST_RANK_PRIMARY, GST_TYPE_DIRECTSOUND_DEVICE_PROVIDER))
+    return FALSE;
+#endif // GSTREAMER_LITE
 
   return TRUE;
 }

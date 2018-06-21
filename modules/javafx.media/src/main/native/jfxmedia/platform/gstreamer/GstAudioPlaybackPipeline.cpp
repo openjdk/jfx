@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -142,6 +142,9 @@ uint32_t CGstAudioPlaybackPipeline::Init()
 
     GstBus *pBus = gst_pipeline_get_bus (GST_PIPELINE (m_Elements[PIPELINE]));
     m_pBusSource = gst_bus_create_watch(pBus);
+    if (m_pBusSource == NULL)
+        return ERROR_MEMORY_ALLOCATION;
+
     g_source_set_callback(m_pBusSource, (GSourceFunc)BusCallback, m_pBusCallbackContent, (GDestroyNotify)BusCallbackDestroyNotify);
 
     ret = g_source_attach(m_pBusSource, ((CGstMediaManager*)pManager)->m_pMainContext);
@@ -1061,7 +1064,7 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
 
     switch (GST_MESSAGE_TYPE (msg)) {
 
-        case GST_MESSAGE_DURATION:
+        case GST_MESSAGE_DURATION_CHANGED:
         {
             if(NULL != pPipeline->m_pEventDispatcher)
             {

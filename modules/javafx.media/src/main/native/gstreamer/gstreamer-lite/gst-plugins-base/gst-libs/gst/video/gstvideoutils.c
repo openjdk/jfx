@@ -162,6 +162,8 @@ _gst_video_codec_state_free (GstVideoCodecState * state)
 
   if (state->caps)
     gst_caps_unref (state->caps);
+  if (state->allocation_caps)
+    gst_caps_unref (state->allocation_caps);
   if (state->codec_data)
     gst_buffer_unref (state->codec_data);
   g_slice_free (GstVideoCodecState, state);

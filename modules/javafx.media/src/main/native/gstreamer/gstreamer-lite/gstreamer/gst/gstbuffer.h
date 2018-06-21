@@ -27,13 +27,20 @@
 #include <gst/gstminiobject.h>
 #include <gst/gstclock.h>
 #include <gst/gstallocator.h>
+#include <gst/gstcaps.h>
 
 G_BEGIN_DECLS
 
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_buffer_type;
+#else // GSTREAMER_LITE
 GST_EXPORT GType _gst_buffer_type;
+#endif // GSTREAMER_LITE
 
 typedef struct _GstBuffer GstBuffer;
 typedef struct _GstBufferPool GstBufferPool;
+
+#include <gst/gstmeta.h>
 
 #define GST_TYPE_BUFFER                         (_gst_buffer_type)
 #define GST_IS_BUFFER(obj)                      (GST_IS_MINI_OBJECT_TYPE(obj, GST_TYPE_BUFFER))
@@ -93,6 +100,16 @@ typedef struct _GstBufferPool GstBufferPool;
  * Value will be %GST_CLOCK_TIME_NONE if the dts is unknown.
  */
 #define GST_BUFFER_DTS(buf)                     (GST_BUFFER_CAST(buf)->dts)
+/**
+ * GST_BUFFER_DTS_OR_PTS:
+ * @buf: a #GstBuffer.:
+ *
+ * Returns the buffer decoding timestamp (dts) if valid, else the buffer
+ * presentation time (pts)
+ *
+ * Since: 1.8
+ */
+#define GST_BUFFER_DTS_OR_PTS(buf)              (GST_BUFFER_DTS_IS_VALID(buf) ? GST_BUFFER_DTS(buf) : GST_BUFFER_PTS (buf))
 /**
  * GST_BUFFER_DURATION:
  * @buf: a #GstBuffer.
@@ -168,51 +185,61 @@ typedef struct _GstBufferPool GstBufferPool;
 
 /**
  * GstBufferFlags:
- * @GST_BUFFER_FLAG_LIVE:        the buffer is live data and should be discarded in
- *                               the PAUSED state.
- * @GST_BUFFER_FLAG_DECODE_ONLY: the buffer contains data that should be dropped
- *                               because it will be clipped against the segment
- *                               boundaries or because it does not contain data
- *                               that should be shown to the user.
- * @GST_BUFFER_FLAG_DISCONT:     the buffer marks a data discontinuity in the stream.
- *                               This typically occurs after a seek or a dropped buffer
- *                               from a live or network source.
- * @GST_BUFFER_FLAG_RESYNC:      the buffer timestamps might have a discontinuity
- *                               and this buffer is a good point to resynchronize.
- * @GST_BUFFER_FLAG_CORRUPTED:   the buffer data is corrupted.
- * @GST_BUFFER_FLAG_MARKER:      the buffer contains a media specific marker. for
- *                               video this is typically the end of a frame boundary, for audio
- *                               this is usually the start of a talkspurt.
- * @GST_BUFFER_FLAG_HEADER:      the buffer contains header information that is
- *                               needed to decode the following data.
- * @GST_BUFFER_FLAG_GAP:         the buffer has been created to fill a gap in the
- *                               stream and contains media neutral data (elements can
- *                               switch to optimized code path that ignores the buffer
- *                               content).
- * @GST_BUFFER_FLAG_DROPPABLE:   the buffer can be dropped without breaking the
- *                               stream, for example to reduce bandwidth.
- * @GST_BUFFER_FLAG_DELTA_UNIT:  this unit cannot be decoded independently.
- * @GST_BUFFER_FLAG_TAG_MEMORY:  this flag is set when memory of the buffer
- *                               is added/removed
- * @GST_BUFFER_FLAG_LAST:        additional media specific flags can be added starting from
- *                               this flag.
+ * @GST_BUFFER_FLAG_LIVE:          the buffer is live data and should be discarded in
+ *                                 the PAUSED state.
+ * @GST_BUFFER_FLAG_DECODE_ONLY:   the buffer contains data that should be dropped
+ *                                 because it will be clipped against the segment
+ *                                 boundaries or because it does not contain data
+ *                                 that should be shown to the user.
+ * @GST_BUFFER_FLAG_DISCONT:       the buffer marks a data discontinuity in the stream.
+ *                                 This typically occurs after a seek or a dropped buffer
+ *                                 from a live or network source.
+ * @GST_BUFFER_FLAG_RESYNC:        the buffer timestamps might have a discontinuity
+ *                                 and this buffer is a good point to resynchronize.
+ * @GST_BUFFER_FLAG_CORRUPTED:     the buffer data is corrupted.
+ * @GST_BUFFER_FLAG_MARKER:        the buffer contains a media specific marker. for
+ *                                 video this is typically the end of a frame boundary, for audio
+ *                                 this is usually the start of a talkspurt.
+ * @GST_BUFFER_FLAG_HEADER:        the buffer contains header information that is
+ *                                 needed to decode the following data.
+ * @GST_BUFFER_FLAG_GAP:           the buffer has been created to fill a gap in the
+ *                                 stream and contains media neutral data (elements can
+ *                                 switch to optimized code path that ignores the buffer
+ *                                 content).
+ * @GST_BUFFER_FLAG_DROPPABLE:     the buffer can be dropped without breaking the
+ *                                 stream, for example to reduce bandwidth.
+ * @GST_BUFFER_FLAG_DELTA_UNIT:    this unit cannot be decoded independently.
+ * @GST_BUFFER_FLAG_TAG_MEMORY:    this flag is set when memory of the buffer
+ *                                 is added/removed
+ * @GST_BUFFER_FLAG_SYNC_AFTER:    Elements which write to disk or permanent
+ *               storage should ensure the data is synced after
+ *               writing the contents of this buffer. (Since 1.6)
+ * @GST_BUFFER_FLAG_NON_DROPPABLE: This buffer is important and should not be dropped.
+ *                                 This can be used to mark important buffers, e.g. to flag
+ *                                 RTP packets carrying keyframes or codec setup data for RTP
+ *                                 Forward Error Correction purposes, or to prevent still video
+ *                                 frames from being dropped by elements due to QoS. (Since 1.14)
+ * @GST_BUFFER_FLAG_LAST:          additional media specific flags can be added starting from
+ *                                 this flag.
  *
  * A set of buffer flags used to describe properties of a #GstBuffer.
  */
 typedef enum {
-  GST_BUFFER_FLAG_LIVE        = (GST_MINI_OBJECT_FLAG_LAST << 0),
-  GST_BUFFER_FLAG_DECODE_ONLY = (GST_MINI_OBJECT_FLAG_LAST << 1),
-  GST_BUFFER_FLAG_DISCONT     = (GST_MINI_OBJECT_FLAG_LAST << 2),
-  GST_BUFFER_FLAG_RESYNC      = (GST_MINI_OBJECT_FLAG_LAST << 3),
-  GST_BUFFER_FLAG_CORRUPTED   = (GST_MINI_OBJECT_FLAG_LAST << 4),
-  GST_BUFFER_FLAG_MARKER      = (GST_MINI_OBJECT_FLAG_LAST << 5),
-  GST_BUFFER_FLAG_HEADER      = (GST_MINI_OBJECT_FLAG_LAST << 6),
-  GST_BUFFER_FLAG_GAP         = (GST_MINI_OBJECT_FLAG_LAST << 7),
-  GST_BUFFER_FLAG_DROPPABLE   = (GST_MINI_OBJECT_FLAG_LAST << 8),
-  GST_BUFFER_FLAG_DELTA_UNIT  = (GST_MINI_OBJECT_FLAG_LAST << 9),
-  GST_BUFFER_FLAG_TAG_MEMORY  = (GST_MINI_OBJECT_FLAG_LAST << 10),
+  GST_BUFFER_FLAG_LIVE          = (GST_MINI_OBJECT_FLAG_LAST << 0),
+  GST_BUFFER_FLAG_DECODE_ONLY   = (GST_MINI_OBJECT_FLAG_LAST << 1),
+  GST_BUFFER_FLAG_DISCONT       = (GST_MINI_OBJECT_FLAG_LAST << 2),
+  GST_BUFFER_FLAG_RESYNC        = (GST_MINI_OBJECT_FLAG_LAST << 3),
+  GST_BUFFER_FLAG_CORRUPTED     = (GST_MINI_OBJECT_FLAG_LAST << 4),
+  GST_BUFFER_FLAG_MARKER        = (GST_MINI_OBJECT_FLAG_LAST << 5),
+  GST_BUFFER_FLAG_HEADER        = (GST_MINI_OBJECT_FLAG_LAST << 6),
+  GST_BUFFER_FLAG_GAP           = (GST_MINI_OBJECT_FLAG_LAST << 7),
+  GST_BUFFER_FLAG_DROPPABLE     = (GST_MINI_OBJECT_FLAG_LAST << 8),
+  GST_BUFFER_FLAG_DELTA_UNIT    = (GST_MINI_OBJECT_FLAG_LAST << 9),
+  GST_BUFFER_FLAG_TAG_MEMORY    = (GST_MINI_OBJECT_FLAG_LAST << 10),
+  GST_BUFFER_FLAG_SYNC_AFTER    = (GST_MINI_OBJECT_FLAG_LAST << 11),
+  GST_BUFFER_FLAG_NON_DROPPABLE = (GST_MINI_OBJECT_FLAG_LAST << 12),
 
-  GST_BUFFER_FLAG_LAST        = (GST_MINI_OBJECT_FLAG_LAST << 16)
+  GST_BUFFER_FLAG_LAST          = (GST_MINI_OBJECT_FLAG_LAST << 16)
 } GstBufferFlags;
 
 /**
@@ -254,69 +281,136 @@ struct _GstBuffer {
   guint64                offset_end;
 };
 
+GST_API
 GType       gst_buffer_get_type            (void);
 
+GST_API
 guint       gst_buffer_get_max_memory      (void);
 
 /* allocation */
+
+GST_API
 GstBuffer * gst_buffer_new                 (void);
+
+GST_API
 GstBuffer * gst_buffer_new_allocate        (GstAllocator * allocator, gsize size,
                                             GstAllocationParams * params);
+GST_API
 GstBuffer * gst_buffer_new_wrapped_full    (GstMemoryFlags flags, gpointer data, gsize maxsize,
                                             gsize offset, gsize size, gpointer user_data,
                                             GDestroyNotify notify);
+GST_API
 GstBuffer * gst_buffer_new_wrapped         (gpointer data, gsize size);
 
 /* memory blocks */
+
+GST_API
 guint       gst_buffer_n_memory             (GstBuffer *buffer);
+
+GST_API
 void        gst_buffer_insert_memory        (GstBuffer *buffer, gint idx, GstMemory *mem);
+
+GST_API
 void        gst_buffer_replace_memory_range (GstBuffer *buffer, guint idx, gint length, GstMemory *mem);
+
+GST_API
 GstMemory * gst_buffer_peek_memory          (GstBuffer *buffer, guint idx);
+
+GST_API
 GstMemory * gst_buffer_get_memory_range     (GstBuffer *buffer, guint idx, gint length);
+
+GST_API
 void        gst_buffer_remove_memory_range  (GstBuffer *buffer, guint idx, gint length);
 
+GST_API
 void        gst_buffer_prepend_memory       (GstBuffer *buffer, GstMemory *mem);
+
+GST_API
 void        gst_buffer_append_memory        (GstBuffer *buffer, GstMemory *mem);
+
+GST_API
 void        gst_buffer_replace_memory       (GstBuffer *buffer, guint idx, GstMemory *mem);
+
+GST_API
 void        gst_buffer_replace_all_memory   (GstBuffer *buffer, GstMemory *mem);
+
+GST_API
 GstMemory * gst_buffer_get_memory           (GstBuffer *buffer, guint idx);
+
+GST_API
 GstMemory * gst_buffer_get_all_memory       (GstBuffer *buffer);
+
+GST_API
 void        gst_buffer_remove_memory        (GstBuffer *buffer, guint idx);
+
+GST_API
 void        gst_buffer_remove_all_memory    (GstBuffer *buffer);
 
+GST_API
 gboolean    gst_buffer_find_memory         (GstBuffer *buffer, gsize offset, gsize size,
                                             guint *idx, guint *length, gsize *skip);
-
+GST_API
 gboolean    gst_buffer_is_memory_range_writable  (GstBuffer *buffer, guint idx, gint length);
+
+GST_API
 gboolean    gst_buffer_is_all_memory_writable    (GstBuffer *buffer);
 
+GST_API
 gsize       gst_buffer_fill                (GstBuffer *buffer, gsize offset,
                                             gconstpointer src, gsize size);
+GST_API
 gsize       gst_buffer_extract             (GstBuffer *buffer, gsize offset,
                                             gpointer dest, gsize size);
+GST_API
 gint        gst_buffer_memcmp              (GstBuffer *buffer, gsize offset,
                                             gconstpointer mem, gsize size);
+GST_API
 gsize       gst_buffer_memset              (GstBuffer *buffer, gsize offset,
                                             guint8 val, gsize size);
-
+GST_API
 gsize       gst_buffer_get_sizes_range     (GstBuffer *buffer, guint idx, gint length,
                                             gsize *offset, gsize *maxsize);
+GST_API
 gboolean    gst_buffer_resize_range        (GstBuffer *buffer, guint idx, gint length,
                                             gssize offset, gssize size);
-
+GST_API
 gsize       gst_buffer_get_sizes           (GstBuffer *buffer, gsize *offset, gsize *maxsize);
+
+GST_API
 gsize       gst_buffer_get_size            (GstBuffer *buffer);
+
+GST_API
 void        gst_buffer_resize              (GstBuffer *buffer, gssize offset, gssize size);
+
+GST_API
 void        gst_buffer_set_size            (GstBuffer *buffer, gssize size);
 
+GST_API
 gboolean    gst_buffer_map_range           (GstBuffer *buffer, guint idx, gint length,
                                             GstMapInfo *info, GstMapFlags flags);
+GST_API
 gboolean    gst_buffer_map                 (GstBuffer *buffer, GstMapInfo *info, GstMapFlags flags);
 
+GST_API
 void        gst_buffer_unmap               (GstBuffer *buffer, GstMapInfo *info);
+
+GST_API
 void        gst_buffer_extract_dup         (GstBuffer *buffer, gsize offset,
                                             gsize size, gpointer *dest,
                                             gsize *dest_size);
+GST_API
+GstBufferFlags gst_buffer_get_flags        (GstBuffer * buffer);
+
+GST_API
+gboolean       gst_buffer_has_flags        (GstBuffer * buffer, GstBufferFlags flags);
+
+GST_API
+gboolean       gst_buffer_set_flags        (GstBuffer * buffer, GstBufferFlags flags);
+
+GST_API
+gboolean       gst_buffer_unset_flags      (GstBuffer * buffer, GstBufferFlags flags);
+
+
 
 /* refcounting */
 /**
@@ -333,10 +427,6 @@ void        gst_buffer_extract_dup         (GstBuffer *buffer, gsize offset,
  *
  * Returns: (transfer full): @buf
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstBuffer * gst_buffer_ref (GstBuffer * buf);
-#endif
-
 static inline GstBuffer *
 gst_buffer_ref (GstBuffer * buf)
 {
@@ -350,10 +440,6 @@ gst_buffer_ref (GstBuffer * buf)
  * Decreases the refcount of the buffer. If the refcount reaches 0, the buffer
  * with the associated metadata and memory will be freed.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void gst_buffer_unref (GstBuffer * buf);
-#endif
-
 static inline void
 gst_buffer_unref (GstBuffer * buf)
 {
@@ -365,21 +451,22 @@ gst_buffer_unref (GstBuffer * buf)
  * gst_buffer_copy:
  * @buf: a #GstBuffer.
  *
- * Create a copy of the given buffer. This will also make a newly allocated
- * copy of the data the source buffer contains.
+ * Create a copy of the given buffer. This will only copy the buffer's
+ * data to a newly allocated memory if needed (if the type of memory
+ * requires it), otherwise the underlying data is just referenced.
+ * Check gst_buffer_copy_deep() if you want to force the data
+ * to be copied to newly allocated memory.
  *
  * Returns: (transfer full): a new copy of @buf.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstBuffer * gst_buffer_copy (const GstBuffer * buf);
-#endif
-
 static inline GstBuffer *
 gst_buffer_copy (const GstBuffer * buf)
 {
   return GST_BUFFER (gst_mini_object_copy (GST_MINI_OBJECT_CONST_CAST (buf)));
 }
 
+GST_API
+GstBuffer * gst_buffer_copy_deep (const GstBuffer * buf);
 
 /**
  * GstBufferCopyFlags:
@@ -412,16 +499,16 @@ typedef enum {
 } GstBufferCopyFlags;
 
 /**
- * GST_BUFFER_COPY_METADATA:
+ * GST_BUFFER_COPY_METADATA: (value 7) (type GstBufferCopyFlags)
  *
  * Combination of all possible metadata fields that can be copied with
  * gst_buffer_copy_into().
  */
-#define GST_BUFFER_COPY_METADATA       (GST_BUFFER_COPY_FLAGS | GST_BUFFER_COPY_TIMESTAMPS |\
-                                        GST_BUFFER_COPY_META)
+#define GST_BUFFER_COPY_METADATA       ((GstBufferCopyFlags) (GST_BUFFER_COPY_FLAGS |\
+                                          GST_BUFFER_COPY_TIMESTAMPS | GST_BUFFER_COPY_META))
 
 /**
- * GST_BUFFER_COPY_ALL:
+ * GST_BUFFER_COPY_ALL: (value 15) (type GstBufferCopyFlags)
  *
  * Combination of all possible fields that can be copied with
  * gst_buffer_copy_into().
@@ -429,6 +516,8 @@ typedef enum {
 #define GST_BUFFER_COPY_ALL  ((GstBufferCopyFlags)(GST_BUFFER_COPY_METADATA | GST_BUFFER_COPY_MEMORY))
 
 /* copies memory or metadata into newly allocated buffer */
+
+GST_API
 gboolean        gst_buffer_copy_into            (GstBuffer *dest, GstBuffer *src,
                                                  GstBufferCopyFlags flags,
                                                  gsize offset, gsize size);
@@ -446,9 +535,24 @@ gboolean        gst_buffer_copy_into            (GstBuffer *dest, GstBuffer *src
  * gst_buffer_make_writable:
  * @buf: (transfer full): a #GstBuffer
  *
- * Makes a writable buffer from the given buffer. If the source buffer is
- * already writable, this will simply return the same buffer. A copy will
- * otherwise be made using gst_buffer_copy().
+ * Returns a writable copy of @buf. If the source buffer is
+ * already writable, this will simply return the same buffer.
+ *
+ * Use this function to ensure that a buffer can be safely modified before
+ * making changes to it, including changing the metadata such as PTS/DTS.
+ *
+ * If the reference count of the source buffer @buf is exactly one, the caller
+ * is the sole owner and this function will return the buffer object unchanged.
+ *
+ * If there is more than one reference on the object, a copy will be made using
+ * gst_buffer_copy(). The passed-in @buf will be unreffed in that case, and the
+ * caller will now own a reference to the new returned buffer object. Note
+ * that this just copies the buffer structure itself, the underlying memory is
+ * not copied if it can be shared amongst multiple buffers.
+ *
+ * In short, this function unrefs the buf in the argument and refs the buffer
+ * that it returns. Don't access the argument after calling this function unless
+ * you have an additional reference to it.
  *
  * Returns: (transfer full): a writable buffer which may or may not be the
  *     same as @buf
@@ -471,10 +575,6 @@ gboolean        gst_buffer_copy_into            (GstBuffer *dest, GstBuffer *src
  *
  * Returns: %TRUE when @obuf was different from @nbuf.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gboolean gst_buffer_replace (GstBuffer **obuf, GstBuffer *nbuf);
-#endif
-
 static inline gboolean
 gst_buffer_replace (GstBuffer **obuf, GstBuffer *nbuf)
 {
@@ -482,12 +582,17 @@ gst_buffer_replace (GstBuffer **obuf, GstBuffer *nbuf)
 }
 
 /* creating a region */
+
+GST_API
 GstBuffer*      gst_buffer_copy_region          (GstBuffer *parent, GstBufferCopyFlags flags,
                                                  gsize offset, gsize size);
 
 /* append two buffers */
+
+GST_API
 GstBuffer*      gst_buffer_append_region        (GstBuffer *buf1, GstBuffer *buf2,
                                                  gssize offset, gssize size);
+GST_API
 GstBuffer*      gst_buffer_append               (GstBuffer *buf1, GstBuffer *buf2);
 
 /* metadata */
@@ -514,13 +619,26 @@ GstBuffer*      gst_buffer_append               (GstBuffer *buf1, GstBuffer *buf
 typedef gboolean (*GstBufferForeachMetaFunc)    (GstBuffer *buffer, GstMeta **meta,
                                                  gpointer user_data);
 
+GST_API
 GstMeta *       gst_buffer_get_meta             (GstBuffer *buffer, GType api);
+
+GST_API
+guint           gst_buffer_get_n_meta           (GstBuffer *buffer, GType api_type);
+
+GST_API
 GstMeta *       gst_buffer_add_meta             (GstBuffer *buffer, const GstMetaInfo *info,
                                                  gpointer params);
+GST_API
 gboolean        gst_buffer_remove_meta          (GstBuffer *buffer, GstMeta *meta);
 
+GST_API
 GstMeta *       gst_buffer_iterate_meta         (GstBuffer *buffer, gpointer *state);
 
+GST_API
+GstMeta *       gst_buffer_iterate_meta_filtered (GstBuffer * buffer,
+                                                  gpointer  * state,
+                                                  GType       meta_api_type);
+GST_API
 gboolean        gst_buffer_foreach_meta         (GstBuffer *buffer,
                                                  GstBufferForeachMetaFunc func,
                                                  gpointer user_data);
@@ -552,6 +670,118 @@ gboolean        gst_buffer_foreach_meta         (GstBuffer *buffer,
  * Returns: (transfer none): buffer
  */
 #define         gst_value_get_buffer(v)         GST_BUFFER_CAST (g_value_get_boxed(v))
+
+typedef struct _GstParentBufferMeta GstParentBufferMeta;
+
+/**
+ * GstParentBufferMeta:
+ * @parent: the parent #GstMeta structure
+ * @buffer: the #GstBuffer on which a reference is being held.
+ *
+ * The #GstParentBufferMeta is a #GstMeta which can be attached to a #GstBuffer
+ * to hold a reference to another buffer that is only released when the child
+ * #GstBuffer is released.
+ *
+ * Typically, #GstParentBufferMeta is used when the child buffer is directly
+ * using the #GstMemory of the parent buffer, and wants to prevent the parent
+ * buffer from being returned to a buffer pool until the #GstMemory is available
+ * for re-use.
+ *
+ * Since: 1.6
+ */
+struct _GstParentBufferMeta
+{
+  GstMeta parent;
+
+  /*< public >*/
+  GstBuffer *buffer;
+};
+
+GST_API
+GType gst_parent_buffer_meta_api_get_type (void);
+#ifndef GST_DISABLE_DEPRECATED
+#define GST_TYPE_PARENT_BUFFER_META_API_TYPE GST_PARENT_BUFFER_META_API_TYPE
+#endif
+#define GST_PARENT_BUFFER_META_API_TYPE (gst_parent_buffer_meta_api_get_type())
+
+/**
+ * gst_buffer_get_parent_buffer_meta:
+ * @b: a #GstBuffer
+ *
+ * Find and return a #GstParentBufferMeta if one exists on the
+ * buffer
+ */
+#define gst_buffer_get_parent_buffer_meta(b) \
+  ((GstParentBufferMeta*)gst_buffer_get_meta((b),GST_PARENT_BUFFER_META_API_TYPE))
+
+GST_API
+const GstMetaInfo *gst_parent_buffer_meta_get_info (void);
+#define GST_PARENT_BUFFER_META_INFO (gst_parent_buffer_meta_get_info())
+
+/* implementation */
+
+GST_API
+GstParentBufferMeta *gst_buffer_add_parent_buffer_meta (GstBuffer *buffer,
+    GstBuffer *ref);
+
+typedef struct _GstReferenceTimestampMeta GstReferenceTimestampMeta;
+
+/**
+ * GstReferenceTimestampMeta:
+ * @parent: the parent #GstMeta structure
+ * @reference: identifier for the timestamp reference.
+ * @timestamp: timestamp
+ * @duration: duration, or %GST_CLOCK_TIME_NONE
+ *
+ * #GstReferenceTimestampMeta can be used to attach alternative timestamps and
+ * possibly durations to a #GstBuffer. These are generally not according to
+ * the pipeline clock and could be e.g. the NTP timestamp when the media was
+ * captured.
+ *
+ * The reference is stored as a #GstCaps in @reference. Examples of valid
+ * references would be "timestamp/x-drivername-stream" for timestamps that are locally
+ * generated by some driver named "drivername" when generating the stream,
+ * e.g. based on a frame counter, or "timestamp/x-ntp, host=pool.ntp.org,
+ * port=123" for timestamps based on a specific NTP server.
+ *
+ * Since: 1.14
+ */
+struct _GstReferenceTimestampMeta
+{
+  GstMeta parent;
+
+  /*< public >*/
+  GstCaps *reference;
+  GstClockTime timestamp, duration;
+};
+
+GST_API
+GType gst_reference_timestamp_meta_api_get_type (void);
+#define GST_REFERENCE_TIMESTAMP_META_API_TYPE (gst_reference_timestamp_meta_api_get_type())
+
+GST_API
+const GstMetaInfo *gst_reference_timestamp_meta_get_info (void);
+#define GST_REFERENCE_TIMESTAMP_META_INFO (gst_reference_timestamp_meta_get_info())
+
+/* implementation */
+
+GST_API
+GstReferenceTimestampMeta * gst_buffer_add_reference_timestamp_meta (GstBuffer  * buffer,
+                                                                     GstCaps    * reference,
+                                                                     GstClockTime timestamp,
+                                                                     GstClockTime duration);
+
+GST_API
+GstReferenceTimestampMeta * gst_buffer_get_reference_timestamp_meta (GstBuffer * buffer,
+                                                                     GstCaps   * reference);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBuffer, gst_buffer_unref)
+#endif
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBufferPool, gst_object_unref)
+#endif
 
 G_END_DECLS
 

@@ -22,43 +22,20 @@
 
 /**
  * SECTION:gstaudiosrc
+ * @title: GstAudioSrc
  * @short_description: Simple base class for audio sources
  * @see_also: #GstAudioBaseSrc, #GstAudioRingBuffer, #GstAudioSrc.
  *
  * This is the most simple base class for audio sources that only requires
  * subclasses to implement a set of simple functions:
  *
- * <variablelist>
- *   <varlistentry>
- *     <term>open()</term>
- *     <listitem><para>Open the device.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>prepare()</term>
- *     <listitem><para>Configure the device with the specified format.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>read()</term>
- *     <listitem><para>Read samples from the device.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>reset()</term>
- *     <listitem><para>Unblock reads and flush the device.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>delay()</term>
- *     <listitem><para>Get the number of samples in the device but not yet read.
- *     </para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>unprepare()</term>
- *     <listitem><para>Undo operations done by prepare.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>close()</term>
- *     <listitem><para>Close the device.</para></listitem>
- *   </varlistentry>
- * </variablelist>
+ * * `open()` :Open the device.
+ * * `prepare()` :Configure the device with the specified format.
+ * * `read()` :Read samples from the device.
+ * * `reset()` :Unblock reads and flush the device.
+ * * `delay()` :Get the number of samples in the device but not yet read.
+ * * `unprepare()` :Undo operations done by prepare.
+ * * `close()` :Close the device.
  *
  * All scheduling of samples and timestamps is done in this base class
  * together with #GstAudioBaseSrc using a default implementation of a
@@ -218,7 +195,7 @@ audioringbuffer_thread_func (GstAudioRingBuffer * buf)
   message = gst_message_new_stream_status (GST_OBJECT_CAST (buf),
       GST_STREAM_STATUS_TYPE_ENTER, GST_ELEMENT_CAST (src));
   g_value_init (&val, GST_TYPE_G_THREAD);
-  g_value_set_boxed (&val, src->thread);
+  g_value_set_boxed (&val, g_thread_self ());
   gst_message_set_stream_status_object (message, &val);
   g_value_unset (&val);
   GST_DEBUG_OBJECT (src, "posting ENTER stream status");
@@ -246,7 +223,8 @@ audioringbuffer_thread_func (GstAudioRingBuffer * buf)
         }
         left -= read;
         readptr += read;
-      } while (left > 0);
+
+      } while (left > 0 && g_atomic_int_get (&abuf->running));
 
       /* Update timestamp on buffer if required */
       gst_audio_ring_buffer_set_timestamp (buf, readseg, timestamp);
@@ -291,7 +269,7 @@ stop_running:
     message = gst_message_new_stream_status (GST_OBJECT_CAST (buf),
         GST_STREAM_STATUS_TYPE_LEAVE, GST_ELEMENT_CAST (src));
     g_value_init (&val, GST_TYPE_G_THREAD);
-    g_value_set_boxed (&val, src->thread);
+    g_value_set_boxed (&val, g_thread_self ());
     gst_message_set_stream_status_object (message, &val);
     g_value_unset (&val);
     GST_DEBUG_OBJECT (src, "posting LEAVE stream status");
@@ -393,7 +371,14 @@ gst_audio_src_ring_buffer_acquire (GstAudioRingBuffer * buf,
     goto could_not_open;
 
   buf->size = spec->segtotal * spec->segsize;
-  buf->memory = g_malloc0 (buf->size);
+  buf->memory = g_malloc (buf->size);
+  if (buf->spec.type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW) {
+    gst_audio_format_fill_silence (buf->spec.info.finfo, buf->memory,
+        buf->size);
+  } else {
+    /* FIXME, non-raw formats get 0 as the empty sample */
+    memset (buf->memory, 0, buf->size);
+  }
 
   abuf = GST_AUDIO_SRC_RING_BUFFER (buf);
   abuf->running = TRUE;

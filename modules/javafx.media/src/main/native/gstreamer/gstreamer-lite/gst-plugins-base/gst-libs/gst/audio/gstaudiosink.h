@@ -66,7 +66,7 @@ struct _GstAudioSink {
  * @unprepare: Undo operations done in prepare.
  * @close: Close the device.
  * @write: Write data to the device.
- * @delay: Return how many samples are still in the device. This is used to
+ * @delay: Return how many frames are still in the device. This is used to
  *         drive the synchronisation.
  * @reset: Returns as quickly as possible from a write and flush any pending
  *         samples from the device.
@@ -88,7 +88,7 @@ struct _GstAudioSinkClass {
   gboolean (*close)     (GstAudioSink *sink);
   /* write samples to the device */
   gint     (*write)     (GstAudioSink *sink, gpointer data, guint length);
-  /* get number of samples queued in the device */
+  /* get number of frames queued in the device */
   guint    (*delay)     (GstAudioSink *sink);
   /* reset the audio device, unblock from a write */
   void     (*reset)     (GstAudioSink *sink);
@@ -97,7 +97,12 @@ struct _GstAudioSinkClass {
   gpointer _gst_reserved[GST_PADDING];
 };
 
+GST_AUDIO_API
 GType gst_audio_sink_get_type(void);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAudioSink, gst_object_unref)
+#endif
 
 G_END_DECLS
 

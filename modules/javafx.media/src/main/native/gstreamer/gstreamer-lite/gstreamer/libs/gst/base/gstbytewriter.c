@@ -27,6 +27,7 @@
 
 /**
  * SECTION:gstbytewriter
+ * @title: GstByteWriter
  * @short_description: Writes different integer, string and floating point
  *     types to a memory buffer and allows reading
  *
@@ -39,7 +40,7 @@
  */
 
 /**
- * gst_byte_writer_new:
+ * gst_byte_writer_new: (skip)
  *
  * Creates a new, empty #GstByteWriter instance
  *
@@ -57,7 +58,7 @@ gst_byte_writer_new (void)
 }
 
 /**
- * gst_byte_writer_new_with_size:
+ * gst_byte_writer_new_with_size: (skip)
  * @size: Initial size of data
  * @fixed: If %TRUE the data can't be reallocated
  *
@@ -82,7 +83,7 @@ gst_byte_writer_new_with_size (guint size, gboolean fixed)
 }
 
 /**
- * gst_byte_writer_new_with_data:
+ * gst_byte_writer_new_with_data: (skip)
  * @data: Memory area for writing
  * @size: Size of @data in bytes
  * @initialized: If %TRUE the complete data can be read from the beginning

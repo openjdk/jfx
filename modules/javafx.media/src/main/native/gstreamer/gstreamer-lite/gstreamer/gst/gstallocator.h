@@ -24,6 +24,7 @@
 #define __GST_ALLOCATOR_H__
 
 #include <gst/gstmemory.h>
+#include <gst/gstobject.h>
 
 G_BEGIN_DECLS
 
@@ -39,6 +40,8 @@ typedef struct _GstAllocatorClass GstAllocatorClass;
 #define GST_ALLOCATOR_CAST(obj)            ((GstAllocator *)(obj))
 
 #define GST_TYPE_ALLOCATION_PARAMS (gst_allocation_params_get_type())
+
+GST_API
 GType gst_allocation_params_get_type(void);
 
 typedef struct _GstAllocationParams GstAllocationParams;
@@ -49,7 +52,12 @@ typedef struct _GstAllocationParams GstAllocationParams;
  * The default memory alignment in bytes - 1
  * an alignment of 7 would be the same as what malloc() guarantees.
  */
+
+#ifndef GSTREAMER_LITE
+GST_API gsize gst_memory_alignment;
+#else // GSTREAMER_LITE
 GST_EXPORT gsize gst_memory_alignment;
+#endif // GSTREAMER_LITE
 
 /**
  * GST_ALLOCATOR_SYSMEM:
@@ -97,6 +105,10 @@ typedef enum {
  * @mem_copy: the implementation of the GstMemoryCopyFunction
  * @mem_share: the implementation of the GstMemoryShareFunction
  * @mem_is_span: the implementation of the GstMemoryIsSpanFunction
+ * @mem_map_full: the implementation of the GstMemoryMapFullFunction.
+ *      Will be used instead of @mem_map if present. (Since 1.6)
+ * @mem_unmap_full: the implementation of the GstMemoryUnmapFullFunction.
+ *      Will be used instead of @mem_unmap if present. (Since 1.6)
  *
  * The #GstAllocator is used to create new memory.
  */
@@ -104,18 +116,21 @@ struct _GstAllocator
 {
   GstObject  object;
 
-  const gchar              *mem_type;
+  const gchar               *mem_type;
 
   /*< public >*/
-  GstMemoryMapFunction      mem_map;
-  GstMemoryUnmapFunction    mem_unmap;
+  GstMemoryMapFunction       mem_map;
+  GstMemoryUnmapFunction     mem_unmap;
 
-  GstMemoryCopyFunction     mem_copy;
-  GstMemoryShareFunction    mem_share;
-  GstMemoryIsSpanFunction   mem_is_span;
+  GstMemoryCopyFunction      mem_copy;
+  GstMemoryShareFunction     mem_share;
+  GstMemoryIsSpanFunction    mem_is_span;
+
+  GstMemoryMapFullFunction   mem_map_full;
+  GstMemoryUnmapFullFunction mem_unmap_full;
 
   /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
+  gpointer _gst_reserved[GST_PADDING - 2];
 
   GstAllocatorPrivate *priv;
 };
@@ -140,27 +155,49 @@ struct _GstAllocatorClass {
   gpointer _gst_reserved[GST_PADDING];
 };
 
-GType gst_allocator_get_type(void);
+GST_API
+GType          gst_allocator_get_type (void);
 
 /* allocators */
+
+GST_API
 void           gst_allocator_register        (const gchar *name, GstAllocator *allocator);
+
+GST_API
 GstAllocator * gst_allocator_find            (const gchar *name);
+
+GST_API
 void           gst_allocator_set_default     (GstAllocator * allocator);
 
 /* allocation parameters */
+
+GST_API
 void           gst_allocation_params_init    (GstAllocationParams *params);
+
+GST_API
 GstAllocationParams *
                gst_allocation_params_copy    (const GstAllocationParams *params) G_GNUC_MALLOC;
+
+GST_API
 void           gst_allocation_params_free    (GstAllocationParams *params);
 
 /* allocating memory blocks */
+
+GST_API
 GstMemory *    gst_allocator_alloc           (GstAllocator * allocator, gsize size,
                                               GstAllocationParams *params);
+
+GST_API
 void           gst_allocator_free            (GstAllocator * allocator, GstMemory *memory);
 
+GST_API
 GstMemory *    gst_memory_new_wrapped  (GstMemoryFlags flags, gpointer data, gsize maxsize,
                                         gsize offset, gsize size, gpointer user_data,
                                         GDestroyNotify notify);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAllocationParams, gst_allocation_params_free)
+#endif
 
 G_END_DECLS
 

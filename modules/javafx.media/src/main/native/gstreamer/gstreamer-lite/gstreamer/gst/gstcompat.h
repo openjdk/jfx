@@ -25,12 +25,16 @@
 #define __GSTCOMPAT_H__
 /**
  * SECTION:gstcompat
+ * @title: GstCompat
  * @short_description: Deprecated API entries
  *
  * Please do not use these in new code.
  * These symbols are only available by defining GST_DISABLE_DEPRECATED.
  * This can be done in CFLAGS for compiling old code.
  */
+
+#include <glib.h>
+#include <gst/gstpad.h>
 
 
 G_BEGIN_DECLS

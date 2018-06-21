@@ -57,6 +57,14 @@
 
 G_BEGIN_DECLS
 
+#define GST_OSX_AUDIO_SINK_CAPS "audio/x-raw, " \
+        "format = (string) " GST_AUDIO_FORMATS_ALL ", " \
+        "layout = (string) interleaved, " \
+        "rate = (int) [1, MAX], " \
+        "channels = (int) [1, 9];" \
+        "audio/x-ac3, framed = (boolean) true;" \
+        "audio/x-dts, framed = (boolean) true"
+
 #define GST_TYPE_OSX_AUDIO_SINK \
   (gst_osx_audio_sink_get_type())
 #define GST_OSX_AUDIO_SINK(obj) \
@@ -65,8 +73,6 @@ G_BEGIN_DECLS
   (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_OSX_AUDIO_SINK,GstOsxAudioSinkClass))
 #define GST_IS_OSX_AUDIO_SINK(obj) \
   (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_OSX_AUDIO_SINK))
-
-#define GST_OSX_AUDIO_MAX_CHANNEL (9)
 
 typedef struct _GstOsxAudioSink GstOsxAudioSink;
 typedef struct _GstOsxAudioSinkClass GstOsxAudioSinkClass;
@@ -79,10 +85,8 @@ struct _GstOsxAudioSink
 
   AudioUnit audiounit;
   double volume;
-  GstCaps *cached_caps;
 
   guint channels;
-  GstAudioChannelPosition channel_positions[GST_OSX_AUDIO_MAX_CHANNEL];
 };
 
 struct _GstOsxAudioSinkClass

@@ -23,6 +23,8 @@
 #ifndef __GST_META_H__
 #define __GST_META_H__
 
+#include <glib.h>
+
 G_BEGIN_DECLS
 
 typedef struct _GstMeta GstMeta;
@@ -103,6 +105,8 @@ struct _GstMeta {
   const GstMetaInfo *info;
 };
 
+#include <gst/gstbuffer.h>
+
 /**
  * GstMetaInitFunction:
  * @meta: a #GstMeta
@@ -127,7 +131,12 @@ typedef void (*GstMetaFreeFunction)     (GstMeta *meta, GstBuffer *buffer);
  *
  * GQuark for the "gst-copy" transform.
  */
+
+#ifndef GSTREAMER_LITE
+GST_API GQuark _gst_meta_transform_copy;
+#else // GSTREAMER_LITE
 GST_EXPORT GQuark _gst_meta_transform_copy;
+#endif // GSTREAMER_LITE
 
 /**
  * GST_META_TRANSFORM_IS_COPY:
@@ -194,24 +203,36 @@ struct _GstMetaInfo {
   GstMetaFreeFunction        free_func;
   GstMetaTransformFunction   transform_func;
 
-  /*< private >*/
-  gpointer _gst_reserved[GST_PADDING];
+  /* No padding needed, GstMetaInfo is always allocated by GStreamer and is
+   * not subclassable or stack-allocatable, so we can extend it as we please
+   * just like interfaces */
 };
 
+GST_API
 GType                gst_meta_api_type_register (const gchar *api,
                                                  const gchar **tags);
+GST_API
 gboolean             gst_meta_api_type_has_tag  (GType api, GQuark tag);
 
+GST_API
 const GstMetaInfo *  gst_meta_register          (GType api, const gchar *impl,
                                                  gsize size,
                                                  GstMetaInitFunction      init_func,
                                                  GstMetaFreeFunction      free_func,
                                                  GstMetaTransformFunction transform_func);
+GST_API
 const GstMetaInfo *  gst_meta_get_info          (const gchar * impl);
+
+GST_API
 const gchar* const*  gst_meta_api_type_get_tags (GType api);
 
 /* some default tags */
+
+#ifndef GSTREAMER_LITE
+GST_API GQuark _gst_meta_tag_memory;
+#else // GSTREAMER_LITE
 GST_EXPORT GQuark _gst_meta_tag_memory;
+#endif // GSTREAMER_LITE
 
 /**
  * GST_META_TAG_MEMORY:

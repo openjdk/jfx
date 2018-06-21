@@ -23,6 +23,7 @@
 #define __GST_BASE_PARSE_H__
 
 #include <gst/gst.h>
+#include <gst/base/base-prelude.h>
 
 G_BEGIN_DECLS
 
@@ -156,6 +157,7 @@ typedef struct _GstBaseParsePrivate GstBaseParsePrivate;
  * The opaque #GstBaseParse data structure.
  */
 struct _GstBaseParse {
+  /*< public >*/
   GstElement     element;
 
   /*< protected >*/
@@ -182,8 +184,10 @@ struct _GstBaseParse {
  * @stop:           Optional.
  *                  Called when the element stops processing.
  *                  Allows closing external resources.
- * @set_sink_caps:  allows the subclass to be notified of the actual caps set.
- * @get_sink_caps:  allows the subclass to do its own sink get caps if needed.
+ * @set_sink_caps:  Optional.
+ *                  Allows the subclass to be notified of the actual caps set.
+ * @get_sink_caps:  Optional.
+ *                  Allows the subclass to do its own sink get caps if needed.
  * @handle_frame:   Parses the input data into valid frames as defined by subclass
  *                  which should be passed to gst_base_parse_finish_frame().
  *                  The frame's input buffer is guaranteed writable,
@@ -222,8 +226,7 @@ struct _GstBaseParse {
  *                   parent to let the default handler run (Since 1.2)
  *
  * Subclasses can override any of the available virtual methods or not, as
- * needed. At minimum @check_valid_frame and @parse_frame needs to be
- * overridden.
+ * needed. At minimum @handle_frame needs to be overridden.
  */
 struct _GstBaseParseClass {
   GstElementClass parent_class;
@@ -273,75 +276,97 @@ struct _GstBaseParseClass {
   gpointer       _gst_reserved[GST_PADDING_LARGE - 2];
 };
 
+GST_BASE_API
 GType           gst_base_parse_get_type (void);
 
+GST_BASE_API
 GType           gst_base_parse_frame_get_type (void);
 
+GST_BASE_API
 GstBaseParseFrame * gst_base_parse_frame_new  (GstBuffer              * buffer,
                                                GstBaseParseFrameFlags   flags,
                                                gint                     overhead);
-
+GST_BASE_API
 void            gst_base_parse_frame_init      (GstBaseParseFrame * frame);
 
+GST_BASE_API
+GstBaseParseFrame * gst_base_parse_frame_copy  (GstBaseParseFrame * frame);
+GST_BASE_API
 void            gst_base_parse_frame_free      (GstBaseParseFrame * frame);
 
+GST_BASE_API
 GstFlowReturn   gst_base_parse_push_frame      (GstBaseParse      * parse,
                                                 GstBaseParseFrame * frame);
-
+GST_BASE_API
 GstFlowReturn   gst_base_parse_finish_frame    (GstBaseParse * parse,
                                                 GstBaseParseFrame * frame,
                                                 gint size);
-
+GST_BASE_API
 void            gst_base_parse_set_duration    (GstBaseParse      * parse,
                                                 GstFormat           fmt,
                                                 gint64              duration,
                                                 gint                interval);
-
+GST_BASE_API
 void            gst_base_parse_set_average_bitrate (GstBaseParse   * parse,
                                                     guint            bitrate);
-
+GST_BASE_API
 void            gst_base_parse_set_min_frame_size (GstBaseParse    * parse,
                                                    guint             min_size);
-
+GST_BASE_API
 void            gst_base_parse_set_has_timing_info (GstBaseParse   * parse,
                                                     gboolean         has_timing);
+GST_BASE_API
+void            gst_base_parse_drain           (GstBaseParse * parse);
 
+GST_BASE_API
 void            gst_base_parse_set_syncable    (GstBaseParse * parse,
                                                 gboolean       syncable);
-
+GST_BASE_API
 void            gst_base_parse_set_passthrough (GstBaseParse * parse,
                                                 gboolean       passthrough);
-
+GST_BASE_API
 void            gst_base_parse_set_pts_interpolation (GstBaseParse * parse,
                                                       gboolean pts_interpolate);
-
+GST_BASE_API
 void            gst_base_parse_set_infer_ts (GstBaseParse * parse,
                                              gboolean infer_ts);
-
+GST_BASE_API
 void            gst_base_parse_set_frame_rate  (GstBaseParse * parse,
                                                 guint          fps_num,
                                                 guint          fps_den,
                                                 guint          lead_in,
                                                 guint          lead_out);
-
+GST_BASE_API
 void            gst_base_parse_set_latency     (GstBaseParse * parse,
                                                 GstClockTime min_latency,
                                                 GstClockTime max_latency);
-
+GST_BASE_API
 gboolean        gst_base_parse_convert_default (GstBaseParse * parse,
                                                 GstFormat      src_format,
                                                 gint64         src_value,
                                                 GstFormat      dest_format,
                                                 gint64       * dest_value);
-
+GST_BASE_API
 gboolean        gst_base_parse_add_index_entry (GstBaseParse * parse,
                                                 guint64        offset,
                                                 GstClockTime   ts,
                                                 gboolean       key,
                                                 gboolean       force);
-
+GST_BASE_API
 void            gst_base_parse_set_ts_at_offset (GstBaseParse *parse,
                                                  gsize offset);
+GST_BASE_API
+void            gst_base_parse_merge_tags       (GstBaseParse  * parse,
+                                                 GstTagList    * tags,
+                                                 GstTagMergeMode mode);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseParseFrame, gst_base_parse_frame_free)
+#endif
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseParse, gst_object_unref)
+#endif
 
 G_END_DECLS
 

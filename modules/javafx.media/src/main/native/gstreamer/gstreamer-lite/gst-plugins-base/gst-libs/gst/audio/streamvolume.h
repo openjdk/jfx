@@ -21,6 +21,7 @@
 #define __GST_STREAM_VOLUME_H__
 
 #include <gst/gst.h>
+#include <gst/audio/audio-prelude.h>
 
 G_BEGIN_DECLS
 
@@ -58,17 +59,26 @@ typedef enum {
   GST_STREAM_VOLUME_FORMAT_DB
 } GstStreamVolumeFormat;
 
+GST_AUDIO_API
 GType           gst_stream_volume_get_type        (void);
+
+GST_AUDIO_API
 void            gst_stream_volume_set_volume      (GstStreamVolume *volume,
                                                    GstStreamVolumeFormat format,
                                                    gdouble val);
+
+GST_AUDIO_API
 gdouble         gst_stream_volume_get_volume      (GstStreamVolume *volume,
                                                    GstStreamVolumeFormat format);
 
+GST_AUDIO_API
 void            gst_stream_volume_set_mute        (GstStreamVolume *volume,
                                                    gboolean mute);
+
+GST_AUDIO_API
 gboolean        gst_stream_volume_get_mute        (GstStreamVolume *volume);
 
+GST_AUDIO_API
 gdouble         gst_stream_volume_convert_volume  (GstStreamVolumeFormat from,
                                                    GstStreamVolumeFormat to,
                                                    gdouble val) G_GNUC_CONST;

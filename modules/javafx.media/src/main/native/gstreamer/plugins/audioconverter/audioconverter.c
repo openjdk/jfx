@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -142,7 +142,7 @@ audioconverter_class_init (AudioConverterClass * klass)
 {
     GstElementClass *element_class = GST_ELEMENT_CLASS (klass);
 
-    gst_element_class_set_details_simple(element_class,
+    gst_element_class_set_metadata(element_class,
         "AudioConverter",
         "Codec/Decoder/Audio",
         "Decode raw MPEG audio stream to mono or stereo-interleaved PCM",

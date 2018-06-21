@@ -22,6 +22,7 @@
  */
 /**
  * SECTION:gstargbcontrolbinding
+ * @title: GstARGBControlBinding
  * @short_description: attachment for control sources to argb properties
  *
  * A value mapping object that attaches multiple control sources to a guint
@@ -165,19 +166,19 @@ gst_argb_control_binding_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_CS_A:
       gst_object_replace ((GstObject **) & self->cs_a,
-          g_value_dup_object (value));
+          g_value_get_object (value));
       break;
     case PROP_CS_R:
       gst_object_replace ((GstObject **) & self->cs_r,
-          g_value_dup_object (value));
+          g_value_get_object (value));
       break;
     case PROP_CS_G:
       gst_object_replace ((GstObject **) & self->cs_g,
-          g_value_dup_object (value));
+          g_value_get_object (value));
       break;
     case PROP_CS_B:
       gst_object_replace ((GstObject **) & self->cs_b,
-          g_value_dup_object (value));
+          g_value_get_object (value));
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);

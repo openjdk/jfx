@@ -19,6 +19,7 @@
 
 /**
  * SECTION:gstfft
+ * @title: GstFFT
  * @short_description: General FFT functions and declarations
  *
  * This library includes general definitions and functions, useful for
@@ -31,8 +32,11 @@
 #include <glib.h>
 
 #include "gstfft.h"
+#ifndef GSTREAMER_LITE
 #include "kiss_fft_s16.h"
+#endif // GSTREAMER_LITE
 
+#ifndef GSTREAMER_LITE
 /**
  * gst_fft_next_fast_length:
  * @n: Number for which the next fast length should be returned
@@ -55,3 +59,4 @@ gst_fft_next_fast_length (gint n)
   /* The real FFT needs an even length so calculate that */
   return 2 * kiss_fft_s16_next_fast_size (half);
 }
+#endif // GSTREAMER_LITE

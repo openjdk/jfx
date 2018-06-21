@@ -27,8 +27,6 @@
 
 #include <glib-object.h>
 
-#include <gst/gstcontrolsource.h>
-
 G_BEGIN_DECLS
 
 #define GST_TYPE_CONTROL_BINDING \
@@ -46,6 +44,9 @@ G_BEGIN_DECLS
 
 typedef struct _GstControlBinding GstControlBinding;
 typedef struct _GstControlBindingClass GstControlBindingClass;
+typedef struct _GstControlBindingPrivate GstControlBindingPrivate;
+
+#include <gst/gstcontrolsource.h>
 
 /* FIXME(2.0): remove, this is unused */
 typedef void (* GstControlBindingConvert) (GstControlBinding *binding, gdouble src_value, GValue *dest_value);
@@ -65,11 +66,26 @@ struct _GstControlBinding {
   GParamSpec *pspec;
 
   /*< private >*/
+#ifndef GSTREAMER_LITE
+#ifndef GST_DISABLE_DEPRECATED
   GstObject *object;            /* GstObject owning the property
                                  * (== parent when bound) */
+#else
+  gpointer __object;
+#endif
+#else // GSTREAMER_LITE
+  // Looks like a bug in GStreamer. Code expects __object even if
+  // GST_DISABLE_DEPRECATED is not defined.
+  gpointer __object;
+#endif // GSTREAMER_LITE
   gboolean disabled;
 
+  union {
+    struct {
+      GstControlBindingPrivate *priv;
+    } abi;
   gpointer _gst_reserved[GST_PADDING];
+  } ABI;
 };
 
 /**
@@ -100,21 +116,33 @@ struct _GstControlBindingClass
 
 #define GST_CONTROL_BINDING_PSPEC(cb) (((GstControlBinding *) cb)->pspec)
 
-GType gst_control_binding_get_type (void);
+GST_API
+GType               gst_control_binding_get_type (void);
 
 /* Functions */
 
+GST_API
 gboolean            gst_control_binding_sync_values        (GstControlBinding * binding, GstObject *object,
                                                             GstClockTime timestamp, GstClockTime last_sync);
+GST_API
 GValue *            gst_control_binding_get_value          (GstControlBinding *binding,
                                                             GstClockTime timestamp);
+GST_API
 gboolean            gst_control_binding_get_value_array    (GstControlBinding *binding, GstClockTime timestamp,
                                                             GstClockTime interval, guint n_values, gpointer values);
+GST_API
 gboolean            gst_control_binding_get_g_value_array  (GstControlBinding *binding, GstClockTime timestamp,
                                                             GstClockTime interval, guint n_values, GValue *values);
-
+GST_API
 void                gst_control_binding_set_disabled       (GstControlBinding * binding, gboolean disabled);
+
+GST_API
 gboolean            gst_control_binding_is_disabled        (GstControlBinding * binding);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstControlBinding, gst_object_unref)
+#endif
+
 G_END_DECLS
 
 #endif /* __GST_CONTROL_BINDING_H__ */

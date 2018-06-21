@@ -339,7 +339,7 @@ static void
 plugin_loader_create_blacklist_plugin (GstPluginLoader * l,
     PendingPluginEntry * entry)
 {
-  GstPlugin *plugin = g_object_newv (GST_TYPE_PLUGIN, 0, NULL);
+  GstPlugin *plugin = g_object_new (GST_TYPE_PLUGIN, NULL);
 
   plugin->filename = g_strdup (entry->filename);
   plugin->file_mtime = entry->file_mtime;
@@ -408,7 +408,7 @@ gst_plugin_loader_use_usr_bin_arch (void)
 static gboolean
 gst_plugin_loader_try_helper (GstPluginLoader * loader, gchar * location)
 {
-  char *argv[5] = { NULL, };
+  char *argv[6] = { NULL, };
   int c = 0;
 
 #if defined (__APPLE__) && defined (USR_BIN_ARCH_SWITCH)
@@ -419,9 +419,10 @@ gst_plugin_loader_try_helper (GstPluginLoader * loader, gchar * location)
 #endif
   argv[c++] = location;
   argv[c++] = (char *) "-l";
+  argv[c++] = _gst_executable_path;
   argv[c++] = NULL;
 
-  if (c > 3) {
+  if (c > 4) {
     GST_LOG ("Trying to spawn gst-plugin-scanner helper at %s with arch %s",
         location, argv[1]);
   } else {
@@ -453,6 +454,9 @@ gst_plugin_loader_try_helper (GstPluginLoader * loader, gchar * location)
 static gboolean
 gst_plugin_loader_spawn (GstPluginLoader * loader)
 {
+#ifdef GSTREAMER_LITE
+  return FALSE;
+#else // GSTREAMER_LITE
   const gchar *env;
   char *helper_bin;
   gboolean res = FALSE;
@@ -480,12 +484,12 @@ gst_plugin_loader_spawn (GstPluginLoader * loader)
     {
       gchar *basedir;
 
-      basedir = g_win32_get_package_installation_directory_of_module (_priv_gst_dll_handle);
-      helper_bin = g_build_filename (basedir,
-                                     "lib",
-                                     "gstreamer-" GST_API_VERSION,
-                                     "gst-plugin-scanner.exe",
-                                     NULL);
+      basedir =
+          g_win32_get_package_installation_directory_of_module
+          (_priv_gst_dll_handle);
+      helper_bin =
+          g_build_filename (basedir, GST_PLUGIN_SCANNER_SUBDIR,
+          "gstreamer-" GST_API_VERSION, "gst-plugin-scanner.exe", NULL);
       g_free (basedir);
     }
 #else
@@ -500,6 +504,7 @@ gst_plugin_loader_spawn (GstPluginLoader * loader)
   }
 
   return loader->child_running;
+#endif // GSTREAMER_LITE
 }
 
 static void
@@ -544,7 +549,7 @@ _gst_plugin_loader_client_run (void)
 
     dup_fd = dup (0);           /* STDIN */
     if (dup_fd == -1) {
-      GST_ERROR ("Failed to start. Could no dup STDIN, errno %d", errno);
+      GST_ERROR ("Failed to start. Could not dup STDIN, errno %d", errno);
       res = FALSE;
       goto beach;
     }
@@ -553,7 +558,7 @@ _gst_plugin_loader_client_run (void)
 
     dup_fd = dup (1);           /* STDOUT */
     if (dup_fd == -1) {
-      GST_ERROR ("Failed to start. Could no dup STDOUT, errno %d", errno);
+      GST_ERROR ("Failed to start. Could not dup STDOUT, errno %d", errno);
       res = FALSE;
       goto beach;
     }

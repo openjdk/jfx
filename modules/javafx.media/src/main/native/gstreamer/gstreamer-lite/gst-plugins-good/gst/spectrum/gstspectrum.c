@@ -22,7 +22,7 @@
  * SECTION:element-spectrum
  *
  * The Spectrum element analyzes the frequency spectrum of an audio signal.
- * If the #GstSpectrum:post-messages property is #TRUE, it sends analysis results
+ * If the #GstSpectrum:post-messages property is %TRUE, it sends analysis results
  * as element messages named
  * <classname>&quot;spectrum&quot;</classname> after each interval of time given
  * by the #GstSpectrum:interval property.
@@ -211,7 +211,7 @@ gst_spectrum_class_init (GstSpectrumClass * klass)
 #else
   g_object_class_install_property (gobject_class, PROP_BANDS,
       g_param_spec_uint ("bands", "Bands", "Number of frequency bands",
-          0, G_MAXUINT, DEFAULT_BANDS,
+          2, ((guint) G_MAXINT + 2) / 2, DEFAULT_BANDS,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 #endif // GSTREAMER_LITE
 
@@ -760,8 +760,7 @@ gst_spectrum_message_new (GstSpectrum * spectrum, GstClockTime timestamp,
             spectrum->bands);
       }
       if (spectrum->message_phase) {
-        gst_spectrum_message_add_array (pcv, cd->spect_magnitude,
-            spectrum->bands);
+        gst_spectrum_message_add_array (pcv, cd->spect_phase, spectrum->bands);
       }
     }
   }

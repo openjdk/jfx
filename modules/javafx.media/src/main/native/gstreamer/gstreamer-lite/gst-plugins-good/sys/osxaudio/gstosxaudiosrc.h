@@ -51,12 +51,19 @@
 
 G_BEGIN_DECLS
 
+#define GST_OSX_AUDIO_SRC_CAPS "audio/x-raw, " \
+        "format = (string) " GST_AUDIO_FORMATS_ALL ", " \
+        "layout = (string) interleaved, " \
+        "rate = (int) [1, MAX], " "channels = (int) [1, MAX]"
+
 #define GST_TYPE_OSX_AUDIO_SRC \
   (gst_osx_audio_src_get_type())
 #define GST_OSX_AUDIO_SRC(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj),GST_TYPE_OSX_AUDIO_SRC,GstOsxAudioSrc))
 #define GST_OSX_AUDIO_SRC_CLASS(klass) \
   (G_TYPE_CHECK_CLASS_CAST((klass),GST_TYPE_OSX_AUDIO_SRC,GstOsxAudioSrcClass))
+#define GST_IS_OSX_AUDIO_SRC(obj) \
+  (G_TYPE_CHECK_INSTANCE_TYPE((obj),GST_TYPE_OSX_AUDIO_SRC))
 
 typedef struct _GstOsxAudioSrc GstOsxAudioSrc;
 typedef struct _GstOsxAudioSrcClass GstOsxAudioSrcClass;
@@ -66,9 +73,6 @@ struct _GstOsxAudioSrc
   GstAudioBaseSrc src;
 
   AudioDeviceID device_id;
-
-  /* actual number of channels reported by input device */
-  int deviceChannels;
 };
 
 struct _GstOsxAudioSrcClass

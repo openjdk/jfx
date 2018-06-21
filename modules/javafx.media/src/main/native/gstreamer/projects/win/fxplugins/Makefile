@@ -5,7 +5,7 @@
 CC   = cl.exe
 LINKER = link.exe
 
-GLIB_VERSION = 2.42.1
+GLIB_VERSION = 2.56.1
 
 BASECLASSES_TARGET = baseclasses.lib
 MODULES = $(BASECLASSES_TARGET)
@@ -77,7 +77,6 @@ CFLAGS =   -DWIN32 \
            -D_WINDOWS \
            -D_USRDLL \
            -DENABLE_PULL_MODE=1 \
-           -DHAVE_CONFIG_H=on2_codecs_config.h \
            -DENABLE_SOURCE_SEEKING=1 \
            -DGSTREAMER_LITE \
            -DGST_REMOVE_DEPRECATED \
@@ -99,12 +98,10 @@ ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -DNDEBUG -Oy -MD -Gy -GF
     LDFLAGS += -opt:ref -opt:icf
     O1FLAGS = -O1
-    O2FLAGS = -O2
 else # debug
     LDFLAGS += -debug -pdb:$(PDB)
     CFLAGS += -D_DEBUG -Oy- -RTC1 -MDd -DENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION -wd"4018" -wd"4244" -wd"4274" -Zi -Fd$(PDB)
     O1FLAGS = -Od
-    O2FLAGS = -Od
 endif
 
 ifeq ($(ARCH), x32)
@@ -136,9 +133,6 @@ $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.cpp
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
 	$(CC) $(CFLAGS) $(O1FLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
-
-$(OBJBASE_DIR)/plugin_vp6/vp6decoder.obj: $(SRCBASE_DIR)/plugin_vp6/vp6decoder.c
-	$(CC) $(CFLAGS) $(O2FLAGS) -TC -c -Fo$(shell cygpath -ma $@) $<
 
 $(BASECLASSES_TARGET):
 	$(MAKE) TARGET=$(BUILD_DIR)/$(BASECLASSES_TARGET) -f Makefile.BaseClasses

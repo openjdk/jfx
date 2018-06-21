@@ -23,6 +23,7 @@
 
 /**
  * SECTION:gstformat
+ * @title: GstFormat
  * @short_description: Dynamically register new data formats
  * @see_also: #GstPad, #GstElement
  *

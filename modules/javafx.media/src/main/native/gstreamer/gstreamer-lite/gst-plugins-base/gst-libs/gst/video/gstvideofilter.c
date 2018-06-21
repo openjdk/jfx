@@ -20,17 +20,14 @@
 
  /**
  * SECTION:gstvideofilter
+ * @title: GstVideoFilter
  * @short_description: Base class for video filters
  *
- * <refsect2>
- * <para>
  * Provides useful functions and a base class for video filters.
- * </para>
- * <para>
+ *
  * The videofilter will by default enable QoS on the parent GstBaseTransform
  * to implement frame dropping.
- * </para>
- * </refsect2>
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -130,6 +127,9 @@ gst_video_filter_decide_allocation (GstBaseTransform * trans, GstQuery * query)
 
   if (gst_query_get_n_allocation_pools (query) > 0) {
     gst_query_parse_nth_allocation_pool (query, 0, &pool, &size, &min, &max);
+
+    if (!pool)
+      gst_query_parse_allocation (query, &outcaps, NULL);
 
     update_pool = TRUE;
   } else {
@@ -260,23 +260,16 @@ gst_video_filter_transform (GstBaseTransform * trans, GstBuffer * inbuf,
   if (fclass->transform_frame) {
     GstVideoFrame in_frame, out_frame;
 
-    if (!gst_video_frame_map (&in_frame, &filter->in_info, inbuf, GST_MAP_READ))
+    if (!gst_video_frame_map (&in_frame, &filter->in_info, inbuf,
+            GST_MAP_READ | GST_VIDEO_FRAME_MAP_FLAG_NO_REF))
       goto invalid_buffer;
 
     if (!gst_video_frame_map (&out_frame, &filter->out_info, outbuf,
-            GST_MAP_WRITE))
+            GST_MAP_WRITE | GST_VIDEO_FRAME_MAP_FLAG_NO_REF)) {
+      gst_video_frame_unmap (&in_frame);
       goto invalid_buffer;
-
-    /* GstVideoFrame has another reference, so the buffer looks unwriteable,
-     * meaning that we can't attach any metas or anything to it. Other
-     * map() functions like gst_buffer_map() don't get another reference
-     * of the buffer and expect the buffer reference to be kept until
-     * the buffer is unmapped again. */
-    gst_buffer_unref (inbuf);
-    gst_buffer_unref (outbuf);
+    }
     res = fclass->transform_frame (filter, &in_frame, &out_frame);
-    gst_buffer_ref (inbuf);
-    gst_buffer_ref (outbuf);
 
     gst_video_frame_unmap (&out_frame);
     gst_video_frame_unmap (&in_frame);
@@ -317,7 +310,7 @@ gst_video_filter_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
     GstVideoFrame frame;
     GstMapFlags flags;
 
-    flags = GST_MAP_READ;
+    flags = GST_MAP_READ | GST_VIDEO_FRAME_MAP_FLAG_NO_REF;
 
     if (!gst_base_transform_is_passthrough (trans))
       flags |= GST_MAP_WRITE;
@@ -325,14 +318,7 @@ gst_video_filter_transform_ip (GstBaseTransform * trans, GstBuffer * buf)
     if (!gst_video_frame_map (&frame, &filter->in_info, buf, flags))
       goto invalid_buffer;
 
-    /* GstVideoFrame has another reference, so the buffer looks unwriteable,
-     * meaning that we can't attach any metas or anything to it. Other
-     * map() functions like gst_buffer_map() don't get another reference
-     * of the buffer and expect the buffer reference to be kept until
-     * the buffer is unmapped again. */
-    gst_buffer_unref (buf);
     res = fclass->transform_frame_ip (filter, &frame);
-    gst_buffer_ref (buf);
 
     gst_video_frame_unmap (&frame);
   } else {
@@ -366,9 +352,9 @@ gst_video_filter_transform_meta (GstBaseTransform * trans, GstBuffer * inbuf,
 
   tags = gst_meta_api_type_get_tags (info->api);
 
-  if (tags && g_strv_length ((gchar **) tags) == 1
-      && gst_meta_api_type_has_tag (info->api,
-          g_quark_from_string (GST_META_TAG_VIDEO_STR)))
+  if (!tags || (g_strv_length ((gchar **) tags) == 1
+          && gst_meta_api_type_has_tag (info->api,
+              g_quark_from_string (GST_META_TAG_VIDEO_STR))))
     return TRUE;
 
   return GST_BASE_TRANSFORM_CLASS (parent_class)->transform_meta (trans, inbuf,

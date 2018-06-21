@@ -2,7 +2,7 @@
 # Mac OS X jfxmedia makefile
 #
 
-# OUTPUT_DIR, BUILD_TYPE and BASE_NAME are passed on the command line or from the 
+# OUTPUT_DIR, BUILD_TYPE and BASE_NAME are passed on the command line or from the
 # parent make process
 BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
 SRCBASE_DIR = ../..
@@ -10,7 +10,7 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia
 
 BASE_DIR = ../../..
 GSTREAMER_LITE_DIR = $(BASE_DIR)/gstreamer/gstreamer-lite
-GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib/glib-2.42.1
+GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib/glib-2.56.1
 
 OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 

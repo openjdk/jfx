@@ -24,7 +24,8 @@
 
  /**
  * SECTION:gsttriggercontrolsource
- * @short_description: interpolation control source
+ * @title: GstTriggerControlSource
+ * @short_description: trigger control source
  *
  * #GstTriggerControlSource is a #GstControlSource, that returns values from user-given
  * control points. It allows for a tolerance on the time-stamps.
@@ -187,7 +188,13 @@ G_DEFINE_TYPE_WITH_CODE (GstTriggerControlSource, gst_trigger_control_source,
 GstControlSource *
 gst_trigger_control_source_new (void)
 {
-  return g_object_newv (GST_TYPE_TRIGGER_CONTROL_SOURCE, 0, NULL);
+  GstControlSource *csource =
+      g_object_new (GST_TYPE_TRIGGER_CONTROL_SOURCE, NULL);
+
+  /* Clear floating flag */
+  gst_object_ref_sink (csource);
+
+  return csource;
 }
 
 static void

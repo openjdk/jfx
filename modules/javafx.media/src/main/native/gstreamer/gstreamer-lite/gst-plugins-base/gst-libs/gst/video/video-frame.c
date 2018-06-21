@@ -31,7 +31,21 @@
 #include "video-tile.h"
 #include "gstvideometa.h"
 
-GST_DEBUG_CATEGORY_EXTERN (GST_CAT_PERFORMANCE);
+#define CAT_PERFORMANCE video_frame_get_perf_category()
+
+static inline GstDebugCategory *
+video_frame_get_perf_category (void)
+{
+  static GstDebugCategory *cat = NULL;
+
+  if (g_once_init_enter (&cat)) {
+    GstDebugCategory *c;
+
+    GST_DEBUG_CATEGORY_GET (c, "GST_PERFORMANCE");
+    g_once_init_leave (&cat, c);
+  }
+  return cat;
+}
 
 /**
  * gst_video_frame_map_id:
@@ -72,13 +86,19 @@ gst_video_frame_map_id (GstVideoFrame * frame, GstVideoInfo * info,
   frame->info = *info;
 
   if (meta) {
+    /* All these values must be consistent */
+    g_return_val_if_fail (info->finfo->format == meta->format, FALSE);
+    g_return_val_if_fail (info->width <= meta->width, FALSE);
+    g_return_val_if_fail (info->height <= meta->height, FALSE);
+    g_return_val_if_fail (info->finfo->n_planes == meta->n_planes, FALSE);
+
     frame->info.finfo = gst_video_format_get_info (meta->format);
     frame->info.width = meta->width;
     frame->info.height = meta->height;
     frame->id = meta->id;
     frame->flags = meta->flags;
 
-    for (i = 0; i < info->finfo->n_planes; i++) {
+    for (i = 0; i < meta->n_planes; i++) {
       frame->info.offset[i] = meta->offset[i];
       if (!gst_video_meta_map (meta, i, &frame->map[i], &frame->data[i],
               &frame->info.stride[i], flags))
@@ -105,7 +125,10 @@ gst_video_frame_map_id (GstVideoFrame * frame, GstVideoInfo * info,
       frame->data[i] = frame->map[0].data + info->offset[i];
     }
   }
-  frame->buffer = gst_buffer_ref (buffer);
+  frame->buffer = buffer;
+  if ((flags & GST_VIDEO_FRAME_MAP_FLAG_NO_REF) == 0)
+    gst_buffer_ref (frame->buffer);
+
   frame->meta = meta;
 
   /* buffer flags enhance the frame flags */
@@ -163,10 +186,49 @@ invalid_size:
  * @buffer: the buffer to map
  * @flags: #GstMapFlags
  *
- * Use @info and @buffer to fill in the values of @frame.
+ * Use @info and @buffer to fill in the values of @frame. @frame is usually
+ * allocated on the stack, and you will pass the address to the #GstVideoFrame
+ * structure allocated on the stack; gst_video_frame_map() will then fill in
+ * the structures with the various video-specific information you need to access
+ * the pixels of the video buffer. You can then use accessor macros such as
+ * GST_VIDEO_FRAME_COMP_DATA(), GST_VIDEO_FRAME_PLANE_DATA(),
+ * GST_VIDEO_FRAME_COMP_STRIDE(), GST_VIDEO_FRAME_PLANE_STRIDE() etc.
+ * to get to the pixels.
+ *
+ * |[<!-- language="C" -->
+ *   GstVideoFrame vframe;
+ *   ...
+ *   // set RGB pixels to black one at a time
+ *   if (gst_video_frame_map (&amp;vframe, video_info, video_buffer, GST_MAP_WRITE)) {
+ *     guint8 *pixels = GST_VIDEO_FRAME_PLANE_DATA (vframe, 0);
+ *     guint stride = GST_VIDEO_FRAME_PLANE_STRIDE (vframe, 0);
+ *     guint pixel_stride = GST_VIDEO_FRAME_COMP_PSTRIDE (vframe, 0);
+ *
+ *     for (h = 0; h < height; ++h) {
+ *       for (w = 0; w < width; ++w) {
+ *         guint8 *pixel = pixels + h * stride + w * pixel_stride;
+ *
+ *         memset (pixel, 0, pixel_stride);
+ *       }
+ *     }
+ *
+ *     gst_video_frame_unmap (&amp;vframe);
+ *   }
+ *   ...
+ * ]|
  *
  * All video planes of @buffer will be mapped and the pointers will be set in
  * @frame->data.
+ *
+ * The purpose of this function is to make it easy for you to get to the video
+ * pixels in a generic way, without you having to worry too much about details
+ * such as whether the video data is allocated in one contiguous memory chunk
+ * or multiple memory chunks (e.g. one for each plane); or if custom strides
+ * and custom plane offsets are used or not (as signalled by GstVideoMeta on
+ * each buffer). This function will just fill the #GstVideoFrame structure
+ * with the right values and if you use the accessor macros everything will
+ * just work and you can access the data easily. It also maps the underlying
+ * memory chunks for you.
  *
  * Returns: %TRUE on success.
  */
@@ -189,11 +251,13 @@ gst_video_frame_unmap (GstVideoFrame * frame)
   GstBuffer *buffer;
   GstVideoMeta *meta;
   gint i;
+  GstMapFlags flags;
 
   g_return_if_fail (frame != NULL);
 
   buffer = frame->buffer;
   meta = frame->meta;
+  flags = frame->map[0].flags;
 
   if (meta) {
     for (i = 0; i < frame->info.finfo->n_planes; i++) {
@@ -202,7 +266,9 @@ gst_video_frame_unmap (GstVideoFrame * frame)
   } else {
     gst_buffer_unmap (buffer, &frame->map[0]);
   }
-  gst_buffer_unref (buffer);
+
+  if ((flags & GST_VIDEO_FRAME_MAP_FLAG_NO_REF) == 0)
+    gst_buffer_unref (frame->buffer);
 }
 
 /**
@@ -249,10 +315,16 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
     return TRUE;
   }
 
-  /* FIXME. assumes subsampling of component N is the same as plane N, which is
+  /* FIXME: assumes subsampling of component N is the same as plane N, which is
    * currently true for all formats we have but it might not be in the future. */
   w = GST_VIDEO_FRAME_COMP_WIDTH (dest,
       plane) * GST_VIDEO_FRAME_COMP_PSTRIDE (dest, plane);
+  /* FIXME: workaround for complex formats like v210, UYVP and IYU1 that have
+   * pstride == 0 */
+  if (w == 0)
+    w = MIN (GST_VIDEO_INFO_PLANE_STRIDE (dinfo, plane),
+        GST_VIDEO_INFO_PLANE_STRIDE (sinfo, plane));
+
   h = GST_VIDEO_FRAME_COMP_HEIGHT (dest, plane);
 
   ss = GST_VIDEO_INFO_PLANE_STRIDE (sinfo, plane);
@@ -297,8 +369,7 @@ gst_video_frame_copy_plane (GstVideoFrame * dest, const GstVideoFrame * src,
   } else {
     guint j;
 
-    GST_CAT_DEBUG (GST_CAT_PERFORMANCE, "copy plane %d, w:%d h:%d ", plane, w,
-        h);
+    GST_CAT_DEBUG (CAT_PERFORMANCE, "copy plane %d, w:%d h:%d ", plane, w, h);
 
     for (j = 0; j < h; j++) {
       memcpy (dp, sp, w);

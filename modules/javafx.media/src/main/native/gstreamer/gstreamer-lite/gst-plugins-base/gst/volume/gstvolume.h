@@ -61,7 +61,7 @@ struct _GstVolume {
   gfloat volume;
 
   gboolean current_mute;
-  gfloat current_volume;
+  gdouble current_volume;
 
   gint   current_vol_i32;
   gint   current_vol_i24; /* the _i(nt) values get synchronized with the */

@@ -26,11 +26,19 @@
 #include <gst/gstconfig.h>
 
 #include <glib-object.h>
+#include <gst/gstminiobject.h>
+#include <gst/gstobject.h>
 
 G_BEGIN_DECLS
 
+#ifndef GSTREAMER_LITE
+GST_API GType _gst_memory_type;
+#else // GSTREAMER_LITE
 GST_EXPORT GType _gst_memory_type;
+#endif // GSTREAMER_LITE
 #define GST_TYPE_MEMORY (_gst_memory_type)
+
+GST_API
 GType gst_memory_get_type(void);
 
 typedef struct _GstMemory GstMemory;
@@ -46,8 +54,8 @@ typedef struct _GstAllocator GstAllocator;
  * made when this memory needs to be shared between buffers.
  * @GST_MEMORY_FLAG_ZERO_PREFIXED: the memory prefix is filled with 0 bytes
  * @GST_MEMORY_FLAG_ZERO_PADDED: the memory padding is filled with 0 bytes
- * @GST_MEMORY_FLAG_PHYSICALLY_CONTIGUOUS: the memory is physically contiguous. Since 1.2
- * @GST_MEMORY_FLAG_NOT_MAPPABLE: the memory can't be mapped via gst_memory_map() without any preconditions. Since 1.2
+ * @GST_MEMORY_FLAG_PHYSICALLY_CONTIGUOUS: the memory is physically contiguous. (Since 1.2)
+ * @GST_MEMORY_FLAG_NOT_MAPPABLE: the memory can't be mapped via gst_memory_map() without any preconditions. (Since 1.2)
  * @GST_MEMORY_FLAG_LAST: first flag that can be used for custom purposes
  *
  * Flags for wrapped memory.
@@ -177,11 +185,11 @@ typedef enum {
 } GstMapFlags;
 
 /**
- * GST_MAP_READWRITE:
+ * GST_MAP_READWRITE: (value 3) (type GstMapFlags)
  *
  * GstMapFlags value alias for GST_MAP_READ | GST_MAP_WRITE
  */
-#define GST_MAP_READWRITE      (GST_MAP_READ | GST_MAP_WRITE)
+#define GST_MAP_READWRITE      ((GstMapFlags) (GST_MAP_READ | GST_MAP_WRITE))
 
 
 /**
@@ -215,7 +223,7 @@ typedef struct {
  *
  * Initializer for #GstMapInfo
  */
-#define GST_MAP_INFO_INIT { NULL, 0, NULL, 0, 0, }
+#define GST_MAP_INFO_INIT { NULL, (GstMapFlags) 0, NULL, 0, 0, { NULL, NULL, NULL, NULL}, {NULL, NULL, NULL, NULL}}
 
 /**
  * GstMemoryMapFunction:
@@ -233,14 +241,36 @@ typedef struct {
 typedef gpointer    (*GstMemoryMapFunction)       (GstMemory *mem, gsize maxsize, GstMapFlags flags);
 
 /**
+ * GstMemoryMapFullFunction:
+ * @mem: a #GstMemory
+ * @info: the #GstMapInfo to map with
+ * @maxsize: size to map
+ *
+ * Get the memory of @mem that can be accessed according to the mode specified
+ * in @info's flags. The function should return a pointer that contains at least
+ * @maxsize bytes.
+ *
+ * Returns: a pointer to memory of which at least @maxsize bytes can be
+ * accessed according to the access pattern in @info's flags.
+ */
+typedef gpointer    (*GstMemoryMapFullFunction)       (GstMemory *mem, GstMapInfo * info, gsize maxsize);
+
+/**
  * GstMemoryUnmapFunction:
  * @mem: a #GstMemory
  *
  * Return the pointer previously retrieved with gst_memory_map().
- *
- * Returns: %TRUE on success.
  */
 typedef void        (*GstMemoryUnmapFunction)     (GstMemory *mem);
+
+/**
+ * GstMemoryUnmapFullFunction:
+ * @mem: a #GstMemory
+ * @info: a #GstMapInfo
+ *
+ * Return the pointer previously retrieved with gst_memory_map() with @info.
+ */
+typedef void        (*GstMemoryUnmapFullFunction)     (GstMemory *mem, GstMapInfo * info);
 
 /**
  * GstMemoryCopyFunction:
@@ -284,11 +314,12 @@ typedef GstMemory * (*GstMemoryShareFunction)     (GstMemory *mem, gssize offset
  */
 typedef gboolean    (*GstMemoryIsSpanFunction)    (GstMemory *mem1, GstMemory *mem2, gsize *offset);
 
+GST_API
 void           gst_memory_init         (GstMemory *mem, GstMemoryFlags flags,
                                         GstAllocator *allocator, GstMemory *parent,
                                         gsize maxsize, gsize align,
                                         gsize offset, gsize size);
-
+GST_API
 gboolean       gst_memory_is_type      (GstMemory *mem, const gchar *mem_type);
 
 /* refcounting */
@@ -300,10 +331,6 @@ gboolean       gst_memory_is_type      (GstMemory *mem, const gchar *mem_type);
  *
  * Returns: (transfer full): @memory (for convenience when doing assignments)
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC GstMemory * gst_memory_ref (GstMemory * memory);
-#endif
-
 static inline GstMemory *
 gst_memory_ref (GstMemory * memory)
 {
@@ -316,10 +343,6 @@ gst_memory_ref (GstMemory * memory)
  *
  * Decrease the refcount of an memory, freeing it if the refcount reaches 0.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void gst_memory_unref (GstMemory * memory);
-#endif
-
 static inline void
 gst_memory_unref (GstMemory * memory)
 {
@@ -327,7 +350,11 @@ gst_memory_unref (GstMemory * memory)
 }
 
 /* getting/setting memory properties */
+
+GST_API
 gsize          gst_memory_get_sizes    (GstMemory *mem, gsize *offset, gsize *maxsize);
+
+GST_API
 void           gst_memory_resize       (GstMemory *mem, gssize offset, gsize size);
 
 #define        gst_memory_lock(m,f)        gst_mini_object_lock (GST_MINI_OBJECT_CAST (m), (f))
@@ -336,16 +363,36 @@ void           gst_memory_resize       (GstMemory *mem, gssize offset, gsize siz
 #define        gst_memory_make_writable(m) GST_MEMORY_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST (m)))
 
 /* retrieving data */
-GstMemory *    gst_memory_make_mapped  (GstMemory *mem, GstMapInfo *info, GstMapFlags flags);
+
+GST_API
+GstMemory *    gst_memory_make_mapped  (GstMemory *mem, GstMapInfo *info, GstMapFlags flags) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
 gboolean       gst_memory_map          (GstMemory *mem, GstMapInfo *info, GstMapFlags flags);
+
+GST_API
 void           gst_memory_unmap        (GstMemory *mem, GstMapInfo *info);
 
 /* copy and subregions */
-GstMemory *    gst_memory_copy         (GstMemory *mem, gssize offset, gssize size);
-GstMemory *    gst_memory_share        (GstMemory *mem, gssize offset, gssize size);
+
+GST_API
+GstMemory *    gst_memory_copy         (GstMemory *mem, gssize offset, gssize size) G_GNUC_WARN_UNUSED_RESULT;
+
+GST_API
+GstMemory *    gst_memory_share        (GstMemory *mem, gssize offset, gssize size) G_GNUC_WARN_UNUSED_RESULT;
 
 /* span memory */
+
+GST_API
 gboolean       gst_memory_is_span      (GstMemory *mem1, GstMemory *mem2, gsize *offset);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstMemory, gst_memory_unref)
+#endif
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAllocator, gst_object_unref)
+#endif
 
 G_END_DECLS
 

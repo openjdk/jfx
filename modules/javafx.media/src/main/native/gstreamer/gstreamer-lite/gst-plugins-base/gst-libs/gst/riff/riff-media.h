@@ -32,6 +32,7 @@ G_BEGIN_DECLS
  * Create caos. strh/strf, strf/strd_data and codec_name can be NULL.
  */
 
+GST_RIFF_API
 GstCaps * gst_riff_create_video_caps (guint32              codec_fcc,
                                       gst_riff_strh      * strh,
                                       gst_riff_strf_vids * strf,
@@ -39,6 +40,7 @@ GstCaps * gst_riff_create_video_caps (guint32              codec_fcc,
                                       GstBuffer          * strd_data,
                                       char              ** codec_name);
 
+GST_RIFF_API
 GstCaps * gst_riff_create_audio_caps (guint16              codec_id,
                                       gst_riff_strh      * strh,
                                       gst_riff_strf_auds * strf,
@@ -47,6 +49,7 @@ GstCaps * gst_riff_create_audio_caps (guint16              codec_id,
                                       char              ** codec_name,
                                       gint                 channel_reorder_map[18]);
 
+GST_RIFF_API
 GstCaps * gst_riff_create_iavs_caps  (guint32              codec_fcc,
                                       gst_riff_strh      * strh,
                                       gst_riff_strf_iavs * strf,
@@ -57,8 +60,13 @@ GstCaps * gst_riff_create_iavs_caps  (guint32              codec_fcc,
  * Create template caps (includes all known types).
  */
 
+GST_RIFF_API
 GstCaps * gst_riff_create_video_template_caps (void);
+
+GST_RIFF_API
 GstCaps * gst_riff_create_audio_template_caps (void);
+
+GST_RIFF_API
 GstCaps * gst_riff_create_iavs_template_caps  (void);
 
 G_END_DECLS

@@ -26,6 +26,7 @@
 #include "gstalsasink.h"
 #ifndef GSTREAMER_LITE
 #include "gstalsasrc.h"
+#include "gstalsamidisrc.h"
 #endif // GSTREAMER_LITE
 
 #include <gst/gst-i18n-plugin.h>
@@ -75,6 +76,12 @@ plugin_init (GstPlugin * plugin)
   if (!gst_element_register (plugin, "alsasink", GST_RANK_PRIMARY,
           GST_TYPE_ALSA_SINK))
     return FALSE;
+
+#ifndef GSTREAMER_LITE
+  if (!gst_element_register (plugin, "alsamidisrc", GST_RANK_PRIMARY,
+          GST_TYPE_ALSA_MIDI_SRC))
+    return FALSE;
+#endif // GSTREAMER_LITE
 
   GST_DEBUG_CATEGORY_INIT (alsa_debug, "alsa", 0, "alsa plugins");
 

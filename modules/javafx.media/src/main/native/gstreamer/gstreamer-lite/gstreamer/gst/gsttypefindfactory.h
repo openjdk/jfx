@@ -46,16 +46,28 @@ typedef struct _GstTypeFindFactoryClass GstTypeFindFactoryClass;
 
 /* typefinding interface */
 
+GST_API
 GType           gst_type_find_factory_get_type          (void);
 
+GST_API
 GList *         gst_type_find_factory_get_list          (void);
 
+GST_API
 const gchar * const * gst_type_find_factory_get_extensions (GstTypeFindFactory *factory);
 
+GST_API
 GstCaps *       gst_type_find_factory_get_caps          (GstTypeFindFactory *factory);
+
+GST_API
 gboolean        gst_type_find_factory_has_function      (GstTypeFindFactory *factory);
+
+GST_API
 void            gst_type_find_factory_call_function     (GstTypeFindFactory *factory,
                                                          GstTypeFind *find);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstTypeFindFactory, gst_object_unref)
+#endif
 
 G_END_DECLS
 

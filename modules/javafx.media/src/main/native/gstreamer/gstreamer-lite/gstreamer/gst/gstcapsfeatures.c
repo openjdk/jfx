@@ -20,6 +20,7 @@
 
 /**
  * SECTION:gstcapsfeatures
+ * @title: GstCapsFeatures
  * @short_description: A set of features in caps
  * @see_also: #GstCaps
  *
@@ -103,6 +104,18 @@ _priv_gst_caps_features_initialize (void)
   gst_caps_features_set_parent_refcount
       (_gst_caps_features_memory_system_memory,
       &static_caps_features_parent_refcount);
+}
+
+void
+_priv_gst_caps_features_cleanup (void)
+{
+  gst_caps_features_set_parent_refcount (_gst_caps_features_any, NULL);
+  gst_caps_features_free (_gst_caps_features_any);
+  _gst_caps_features_any = NULL;
+  gst_caps_features_set_parent_refcount
+      (_gst_caps_features_memory_system_memory, NULL);
+  gst_caps_features_free (_gst_caps_features_memory_system_memory);
+  _gst_caps_features_memory_system_memory = NULL;
 }
 
 gboolean
@@ -414,7 +427,7 @@ gst_caps_features_free (GstCapsFeatures * features)
  * Converts @features to a human-readable string representation.
  *
  * For debugging purposes its easier to do something like this:
- * |[
+ * |[<!-- language="C" -->
  * GST_LOG ("features is %" GST_PTR_FORMAT, features);
  * ]|
  * This prints the features in human readable form.
@@ -580,7 +593,7 @@ gst_caps_features_get_size (const GstCapsFeatures * features)
  *
  * Returns the @i-th feature of @features.
  *
- * Returns: The @i-th feature of @features.
+ * Returns: (nullable): The @i-th feature of @features.
  *
  * Since: 1.2
  */

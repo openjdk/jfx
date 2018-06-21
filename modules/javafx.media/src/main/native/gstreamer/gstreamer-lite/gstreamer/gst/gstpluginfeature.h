@@ -104,19 +104,33 @@ typedef gboolean        (*GstPluginFeatureFilter)       (GstPluginFeature *featu
                                                          gpointer user_data);
 
 /* normal GObject stuff */
+
+GST_API
 GType           gst_plugin_feature_get_type             (void);
 
+GST_API
 GstPluginFeature *
                 gst_plugin_feature_load                 (GstPluginFeature *feature);
 
+GST_API
 void            gst_plugin_feature_set_rank             (GstPluginFeature *feature, guint rank);
+
+GST_API
 guint           gst_plugin_feature_get_rank             (GstPluginFeature *feature);
 
+GST_API
 GstPlugin     * gst_plugin_feature_get_plugin           (GstPluginFeature *feature);
+
+GST_API
 const gchar   * gst_plugin_feature_get_plugin_name      (GstPluginFeature *feature);
 
+GST_API
 void            gst_plugin_feature_list_free            (GList *list);
+
+GST_API
 GList          *gst_plugin_feature_list_copy            (GList *list) G_GNUC_MALLOC;
+
+GST_API
 void            gst_plugin_feature_list_debug           (GList *list);
 
 /**
@@ -132,12 +146,18 @@ void            gst_plugin_feature_list_debug           (GList *list);
 #define GST_PLUGIN_FEATURE_LIST_DEBUG(list)
 #endif
 
+GST_API
 gboolean        gst_plugin_feature_check_version        (GstPluginFeature *feature,
                                                          guint             min_major,
                                                          guint             min_minor,
                                                          guint             min_micro);
+GST_API
 gint            gst_plugin_feature_rank_compare_func    (gconstpointer p1,
                              gconstpointer p2);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstPluginFeature, gst_object_unref)
+#endif
 
 G_END_DECLS
 

@@ -21,23 +21,28 @@
 #define __GST_VIDEO_EVENT_H__
 
 #include <gst/gst.h>
+#include <gst/video/video-prelude.h>
 
 G_BEGIN_DECLS
 
 /* video still frame event creation and parsing */
 
+GST_VIDEO_API
 GstEvent *     gst_video_event_new_still_frame   (gboolean in_still);
 
+GST_VIDEO_API
 gboolean       gst_video_event_parse_still_frame (GstEvent * event, gboolean * in_still);
 
 /* video force key unit event creation and parsing */
 
+GST_VIDEO_API
 GstEvent * gst_video_event_new_downstream_force_key_unit (GstClockTime timestamp,
                                                           GstClockTime stream_time,
                                                           GstClockTime running_time,
                                                           gboolean all_headers,
                                                           guint count);
 
+GST_VIDEO_API
 gboolean gst_video_event_parse_downstream_force_key_unit (GstEvent * event,
                                                           GstClockTime * timestamp,
                                                           GstClockTime * stream_time,
@@ -45,15 +50,18 @@ gboolean gst_video_event_parse_downstream_force_key_unit (GstEvent * event,
                                                           gboolean * all_headers,
                                                           guint * count);
 
+GST_VIDEO_API
 GstEvent * gst_video_event_new_upstream_force_key_unit (GstClockTime running_time,
                                                         gboolean all_headers,
                                                         guint count);
 
+GST_VIDEO_API
 gboolean gst_video_event_parse_upstream_force_key_unit (GstEvent * event,
                                                         GstClockTime * running_time,
                                                         gboolean * all_headers,
                                                         guint * count);
 
+GST_VIDEO_API
 gboolean gst_video_event_is_force_key_unit(GstEvent *event);
 
 G_END_DECLS

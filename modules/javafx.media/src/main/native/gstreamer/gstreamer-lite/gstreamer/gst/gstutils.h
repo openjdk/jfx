@@ -32,11 +32,28 @@
 
 G_BEGIN_DECLS
 
+GST_API
 void            gst_util_set_value_from_string  (GValue *value, const gchar *value_str);
+
+GST_API
 void            gst_util_set_object_arg         (GObject *object, const gchar *name, const gchar *value);
+
+GST_API
+gboolean        gst_util_set_object_array       (GObject * object, const gchar * name,
+                                                 const GValueArray * array);
+GST_API
+gboolean        gst_util_get_object_array       (GObject * object, const gchar * name,
+                                                 GValueArray ** array);
+GST_API
 void            gst_util_dump_mem               (const guchar *mem, guint size);
 
+GST_API
+void            gst_util_dump_buffer            (GstBuffer * buf);
+
+GST_API
 guint64         gst_util_gdouble_to_guint64     (gdouble value)  G_GNUC_CONST;
+
+GST_API
 gdouble         gst_util_guint64_to_gdouble     (guint64 value)  G_GNUC_CONST;
 
 /**
@@ -64,17 +81,55 @@ gdouble         gst_util_guint64_to_gdouble     (guint64 value)  G_GNUC_CONST;
 #define         gst_guint64_to_gdouble(value)   ((gdouble) (value))
 #endif
 
+GST_API
 guint64         gst_util_uint64_scale           (guint64 val, guint64 num, guint64 denom);
+
+GST_API
 guint64         gst_util_uint64_scale_round     (guint64 val, guint64 num, guint64 denom);
+
+GST_API
 guint64         gst_util_uint64_scale_ceil      (guint64 val, guint64 num, guint64 denom);
 
+GST_API
 guint64         gst_util_uint64_scale_int       (guint64 val, gint num, gint denom);
+
+GST_API
 guint64         gst_util_uint64_scale_int_round (guint64 val, gint num, gint denom);
+
+GST_API
 guint64         gst_util_uint64_scale_int_ceil  (guint64 val, gint num, gint denom);
 
+/**
+ * GST_SEQNUM_INVALID:
+ *
+ * A value which is guaranteed to never be returned by
+ * gst_util_seqnum_next().
+ *
+ * Can be used as a default value in variables used to store seqnum.
+ *
+ * Since: 1.14
+ */
+#define GST_SEQNUM_INVALID (0)
+
+GST_API
 guint32         gst_util_seqnum_next            (void);
+
+GST_API
 gint32          gst_util_seqnum_compare         (guint32 s1, guint32 s2);
 
+/**
+ * GST_GROUP_ID_INVALID:
+ *
+ * A value which is guaranteed to never be returned by
+ * gst_util_group_id_next().
+ *
+ * Can be used as a default value in variables used to store group_id.
+ *
+ * Since: 1.14
+ */
+#define GST_GROUP_ID_INVALID (0)
+
+GST_API
 guint           gst_util_group_id_next          (void);
 
 /**
@@ -116,25 +171,46 @@ guint           gst_util_group_id_next          (void);
 #ifndef __GTK_DOC_IGNORE__
 #if GST_HAVE_UNALIGNED_ACCESS
 static inline guint16 __gst_fast_read16(const guint8 *v) {
-  return *(const guint16*)(v);
+  return *(const guint16*)(const void*)(v);
 }
 static inline guint32 __gst_fast_read32(const guint8 *v) {
-  return *(const guint32*)(v);
+  return *(const guint32*)(const void*)(v);
 }
 static inline guint64 __gst_fast_read64(const guint8 *v) {
-  return *(const guint64*)(v);
+  return *(const guint64*)(const void*)(v);
 }
 static inline guint16 __gst_fast_read_swap16(const guint8 *v) {
-  return GUINT16_SWAP_LE_BE(*(const guint16*)(v));
+  return GUINT16_SWAP_LE_BE(*(const guint16*)(const void*)(v));
 }
 static inline guint32 __gst_fast_read_swap32(const guint8 *v) {
-  return GUINT32_SWAP_LE_BE(*(const guint32*)(v));
+  return GUINT32_SWAP_LE_BE(*(const guint32*)(const void*)(v));
 }
 static inline guint64 __gst_fast_read_swap64(const guint8 *v) {
-  return GUINT64_SWAP_LE_BE(*(const guint64*)(v));
+  return GUINT64_SWAP_LE_BE(*(const guint64*)(const void*)(v));
 }
 # define _GST_FAST_READ(s, d) __gst_fast_read##s((const guint8 *)(d))
 # define _GST_FAST_READ_SWAP(s, d) __gst_fast_read_swap##s((const guint8 *)(d))
+
+static inline void __gst_fast_write16 (guint8 *p, guint16 v) {
+  *(guint16*)(void*)(p) = v;
+}
+static inline void __gst_fast_write32 (guint8 *p, guint32 v) {
+  *(guint32*)(void*)(p) = v;
+}
+static inline void __gst_fast_write64 (guint8 *p, guint64 v) {
+  *(guint64*)(void*)(p) = v;
+}
+static inline void __gst_fast_write_swap16 (guint8 *p, guint16 v) {
+  *(guint16*)(void*)(p) = GUINT16_SWAP_LE_BE (v);
+}
+static inline void __gst_fast_write_swap32 (guint8 *p, guint32 v) {
+  *(guint32*)(void*)(p) = GUINT32_SWAP_LE_BE (v);
+}
+static inline void __gst_fast_write_swap64 (guint8 *p, guint64 v) {
+  *(guint64*)(void*)(p) = GUINT64_SWAP_LE_BE (v);
+}
+# define _GST_FAST_WRITE(s, d, v) __gst_fast_write##s((guint8 *)(d), (v))
+# define _GST_FAST_WRITE_SWAP(s, d, v) __gst_fast_write_swap##s((guint8 *)(d), (v))
 #endif
 #endif
 
@@ -309,70 +385,94 @@ static inline guint16 __gst_slow_read16_le (const guint8 * data) {
 /**
  * GST_WRITE_UINT64_BE:
  * @data: memory location
- * @num: value to store
+ * @val: value to store
  *
  * Store a 64 bit unsigned integer value in big endian format into the memory buffer.
  */
-#define GST_WRITE_UINT64_BE(data, num)  do { \
-                                          gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 64, 56, num); \
-                                          _GST_PUT (__put_data, 1, 64, 48, num); \
-                                          _GST_PUT (__put_data, 2, 64, 40, num); \
-                                          _GST_PUT (__put_data, 3, 64, 32, num); \
-                                          _GST_PUT (__put_data, 4, 64, 24, num); \
-                                          _GST_PUT (__put_data, 5, 64, 16, num); \
-                                          _GST_PUT (__put_data, 6, 64,  8, num); \
-                                          _GST_PUT (__put_data, 7, 64,  0, num); \
-                                        } while (0)
-
 /**
  * GST_WRITE_UINT64_LE:
  * @data: memory location
- * @num: value to store
+ * @val: value to store
  *
  * Store a 64 bit unsigned integer value in little endian format into the memory buffer.
  */
-#define GST_WRITE_UINT64_LE(data, num)  do { \
+#if GST_HAVE_UNALIGNED_ACCESS
+# if (G_BYTE_ORDER == G_BIG_ENDIAN)
+#  define GST_WRITE_UINT64_BE(data,val) _GST_FAST_WRITE(64,data,val)
+#  define GST_WRITE_UINT64_LE(data,val) _GST_FAST_WRITE_SWAP(64,data,val)
+# else
+#  define GST_WRITE_UINT64_BE(data,val) _GST_FAST_WRITE_SWAP(64,data,val)
+#  define GST_WRITE_UINT64_LE(data,val) _GST_FAST_WRITE(64,data,val)
+# endif
+#else
+#define GST_WRITE_UINT64_BE(data,val)   do { \
                                           gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 64,  0, num); \
-                                          _GST_PUT (__put_data, 1, 64,  8, num); \
-                                          _GST_PUT (__put_data, 2, 64, 16, num); \
-                                          _GST_PUT (__put_data, 3, 64, 24, num); \
-                                          _GST_PUT (__put_data, 4, 64, 32, num); \
-                                          _GST_PUT (__put_data, 5, 64, 40, num); \
-                                          _GST_PUT (__put_data, 6, 64, 48, num); \
-                                          _GST_PUT (__put_data, 7, 64, 56, num); \
+                                          guint64 __put_val = val; \
+                                          _GST_PUT (__put_data, 0, 64, 56, __put_val); \
+                                          _GST_PUT (__put_data, 1, 64, 48, __put_val); \
+                                          _GST_PUT (__put_data, 2, 64, 40, __put_val); \
+                                          _GST_PUT (__put_data, 3, 64, 32, __put_val); \
+                                          _GST_PUT (__put_data, 4, 64, 24, __put_val); \
+                                          _GST_PUT (__put_data, 5, 64, 16, __put_val); \
+                                          _GST_PUT (__put_data, 6, 64,  8, __put_val); \
+                                          _GST_PUT (__put_data, 7, 64,  0, __put_val); \
                                         } while (0)
+
+#define GST_WRITE_UINT64_LE(data,val)   do { \
+                                          gpointer __put_data = data; \
+                                          guint64 __put_val = val; \
+                                          _GST_PUT (__put_data, 0, 64,  0, __put_val); \
+                                          _GST_PUT (__put_data, 1, 64,  8, __put_val); \
+                                          _GST_PUT (__put_data, 2, 64, 16, __put_val); \
+                                          _GST_PUT (__put_data, 3, 64, 24, __put_val); \
+                                          _GST_PUT (__put_data, 4, 64, 32, __put_val); \
+                                          _GST_PUT (__put_data, 5, 64, 40, __put_val); \
+                                          _GST_PUT (__put_data, 6, 64, 48, __put_val); \
+                                          _GST_PUT (__put_data, 7, 64, 56, __put_val); \
+                                        } while (0)
+#endif /* !GST_HAVE_UNALIGNED_ACCESS */
 
 /**
  * GST_WRITE_UINT32_BE:
  * @data: memory location
- * @num: value to store
+ * @val: value to store
  *
  * Store a 32 bit unsigned integer value in big endian format into the memory buffer.
  */
-#define GST_WRITE_UINT32_BE(data, num)  do { \
-                                          gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 32, 24, num); \
-                                          _GST_PUT (__put_data, 1, 32, 16, num); \
-                                          _GST_PUT (__put_data, 2, 32,  8, num); \
-                                          _GST_PUT (__put_data, 3, 32,  0, num); \
-                                        } while (0)
-
 /**
  * GST_WRITE_UINT32_LE:
  * @data: memory location
- * @num: value to store
+ * @val: value to store
  *
  * Store a 32 bit unsigned integer value in little endian format into the memory buffer.
  */
-#define GST_WRITE_UINT32_LE(data, num)  do { \
+#if GST_HAVE_UNALIGNED_ACCESS
+# if (G_BYTE_ORDER == G_BIG_ENDIAN)
+#  define GST_WRITE_UINT32_BE(data,val) _GST_FAST_WRITE(32,data,val)
+#  define GST_WRITE_UINT32_LE(data,val) _GST_FAST_WRITE_SWAP(32,data,val)
+# else
+#  define GST_WRITE_UINT32_BE(data,val) _GST_FAST_WRITE_SWAP(32,data,val)
+#  define GST_WRITE_UINT32_LE(data,val) _GST_FAST_WRITE(32,data,val)
+# endif
+#else
+#define GST_WRITE_UINT32_BE(data,val)   do { \
                                           gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 32,  0, num); \
-                                          _GST_PUT (__put_data, 1, 32,  8, num); \
-                                          _GST_PUT (__put_data, 2, 32, 16, num); \
-                                          _GST_PUT (__put_data, 3, 32, 24, num); \
+                                          guint32 __put_val = val; \
+                                          _GST_PUT (__put_data, 0, 32, 24, __put_val); \
+                                          _GST_PUT (__put_data, 1, 32, 16, __put_val); \
+                                          _GST_PUT (__put_data, 2, 32,  8, __put_val); \
+                                          _GST_PUT (__put_data, 3, 32,  0, __put_val); \
                                         } while (0)
+
+#define GST_WRITE_UINT32_LE(data,val)   do { \
+                                          gpointer __put_data = data; \
+                                          guint32 __put_val = val; \
+                                          _GST_PUT (__put_data, 0, 32,  0, __put_val); \
+                                          _GST_PUT (__put_data, 1, 32,  8, __put_val); \
+                                          _GST_PUT (__put_data, 2, 32, 16, __put_val); \
+                                          _GST_PUT (__put_data, 3, 32, 24, __put_val); \
+                                        } while (0)
+#endif /* !GST_HAVE_UNALIGNED_ACCESS */
 
 /**
  * GST_WRITE_UINT24_BE:
@@ -383,9 +483,10 @@ static inline guint16 __gst_slow_read16_le (const guint8 * data) {
  */
 #define GST_WRITE_UINT24_BE(data, num)  do { \
                                           gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 32,  16, num); \
-                                          _GST_PUT (__put_data, 1, 32,  8, num); \
-                                          _GST_PUT (__put_data, 2, 32,  0, num); \
+                                          guint32 __put_val = num; \
+                                          _GST_PUT (__put_data, 0, 32,  16, __put_val); \
+                                          _GST_PUT (__put_data, 1, 32,  8, __put_val); \
+                                          _GST_PUT (__put_data, 2, 32,  0, __put_val); \
                                         } while (0)
 
 /**
@@ -397,36 +498,49 @@ static inline guint16 __gst_slow_read16_le (const guint8 * data) {
  */
 #define GST_WRITE_UINT24_LE(data, num)  do { \
                                           gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 32,  0, num); \
-                                          _GST_PUT (__put_data, 1, 32,  8, num); \
-                                          _GST_PUT (__put_data, 2, 32,  16, num); \
+                                          guint32 __put_val = num; \
+                                          _GST_PUT (__put_data, 0, 32,  0, __put_val); \
+                                          _GST_PUT (__put_data, 1, 32,  8, __put_val); \
+                                          _GST_PUT (__put_data, 2, 32,  16, __put_val); \
                                         } while (0)
 
 /**
  * GST_WRITE_UINT16_BE:
  * @data: memory location
- * @num: value to store
+ * @val: value to store
  *
  * Store a 16 bit unsigned integer value in big endian format into the memory buffer.
  */
-#define GST_WRITE_UINT16_BE(data, num)  do { \
-                                          gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 16,  8, num); \
-                                          _GST_PUT (__put_data, 1, 16,  0, num); \
-                                        } while (0)
-
 /**
  * GST_WRITE_UINT16_LE:
  * @data: memory location
- * @num: value to store
+ * @val: value to store
  *
  * Store a 16 bit unsigned integer value in little endian format into the memory buffer.
  */
-#define GST_WRITE_UINT16_LE(data, num)  do { \
+#if GST_HAVE_UNALIGNED_ACCESS
+# if (G_BYTE_ORDER == G_BIG_ENDIAN)
+#  define GST_WRITE_UINT16_BE(data,val) _GST_FAST_WRITE(16,data,val)
+#  define GST_WRITE_UINT16_LE(data,val) _GST_FAST_WRITE_SWAP(16,data,val)
+# else
+#  define GST_WRITE_UINT16_BE(data,val) _GST_FAST_WRITE_SWAP(16,data,val)
+#  define GST_WRITE_UINT16_LE(data,val) _GST_FAST_WRITE(16,data,val)
+# endif
+#else
+#define GST_WRITE_UINT16_BE(data,val)   do { \
                                           gpointer __put_data = data; \
-                                          _GST_PUT (__put_data, 0, 16,  0, num); \
-                                          _GST_PUT (__put_data, 1, 16,  8, num); \
+                                          guint16 __put_val = val; \
+                                          _GST_PUT (__put_data, 0, 16,  8, __put_val); \
+                                          _GST_PUT (__put_data, 1, 16,  0, __put_val); \
                                         } while (0)
+
+#define GST_WRITE_UINT16_LE(data,val)   do { \
+                                          gpointer __put_data = data; \
+                                          guint16 __put_val = val; \
+                                          _GST_PUT (__put_data, 0, 16,  0, __put_val); \
+                                          _GST_PUT (__put_data, 1, 16,  8, __put_val); \
+                                        } while (0)
+#endif /* !GST_HAVE_UNALIGNED_ACCESS */
 
 /**
  * GST_WRITE_UINT8:
@@ -451,11 +565,7 @@ static inline guint16 __gst_slow_read16_le (const guint8 * data) {
  *
  * Returns: @in byte-swapped.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gfloat GFLOAT_SWAP_LE_BE (gfloat in);
-#endif
-
-inline static gfloat
+static inline gfloat
 GFLOAT_SWAP_LE_BE(gfloat in)
 {
   union
@@ -477,11 +587,7 @@ GFLOAT_SWAP_LE_BE(gfloat in)
  *
  * Returns: @in byte-swapped.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gdouble GDOUBLE_SWAP_LE_BE (gdouble in);
-#endif
-
-inline static gdouble
+static inline gdouble
 GDOUBLE_SWAP_LE_BE(gdouble in)
 {
   union
@@ -584,11 +690,7 @@ GDOUBLE_SWAP_LE_BE(gdouble in)
  *
  * Returns: The floating point value read from @data
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gfloat GST_READ_FLOAT_LE (const guint8 *data);
-#endif
-
-inline static gfloat
+static inline gfloat
 GST_READ_FLOAT_LE(const guint8 *data)
 {
   union
@@ -609,11 +711,7 @@ GST_READ_FLOAT_LE(const guint8 *data)
  *
  * Returns: The floating point value read from @data
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gfloat GST_READ_FLOAT_BE (const guint8 *data);
-#endif
-
-inline static gfloat
+static inline gfloat
 GST_READ_FLOAT_BE(const guint8 *data)
 {
   union
@@ -634,11 +732,7 @@ GST_READ_FLOAT_BE(const guint8 *data)
  *
  * Returns: The double-precision floating point value read from @data
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gdouble GST_READ_DOUBLE_LE (const guint8 *data);
-#endif
-
-inline static gdouble
+static inline gdouble
 GST_READ_DOUBLE_LE(const guint8 *data)
 {
   union
@@ -659,11 +753,7 @@ GST_READ_DOUBLE_LE(const guint8 *data)
  *
  * Returns: The double-precision floating point value read from @data
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC gdouble GST_READ_DOUBLE_BE (const guint8 *data);
-#endif
-
-inline static gdouble
+static inline gdouble
 GST_READ_DOUBLE_BE(const guint8 *data)
 {
   union
@@ -683,11 +773,7 @@ GST_READ_DOUBLE_BE(const guint8 *data)
  *
  * Store a 32 bit float value in little endian format into the memory buffer.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void GST_WRITE_FLOAT_LE (guint8 *data, gfloat num);
-#endif
-
-inline static void
+static inline void
 GST_WRITE_FLOAT_LE(guint8 *data, gfloat num)
 {
   union
@@ -707,11 +793,7 @@ GST_WRITE_FLOAT_LE(guint8 *data, gfloat num)
  *
  * Store a 32 bit float value in big endian format into the memory buffer.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void GST_WRITE_FLOAT_BE (guint8 *data, gfloat num);
-#endif
-
-inline static void
+static inline void
 GST_WRITE_FLOAT_BE(guint8 *data, gfloat num)
 {
   union
@@ -731,11 +813,7 @@ GST_WRITE_FLOAT_BE(guint8 *data, gfloat num)
  *
  * Store a 64 bit double value in little endian format into the memory buffer.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void GST_WRITE_DOUBLE_LE (guint8 *data, gdouble num);
-#endif
-
-inline static void
+static inline void
 GST_WRITE_DOUBLE_LE(guint8 *data, gdouble num)
 {
   union
@@ -755,11 +833,7 @@ GST_WRITE_DOUBLE_LE(guint8 *data, gdouble num)
  *
  * Store a 64 bit double value in big endian format into the memory buffer.
  */
-#ifdef _FOOL_GTK_DOC_
-G_INLINE_FUNC void GST_WRITE_DOUBLE_BE (guint8 *data, gdouble num);
-#endif
-
-inline static void
+static inline void
 GST_WRITE_DOUBLE_BE(guint8 *data, gdouble num)
 {
   union
@@ -896,104 +970,188 @@ GST_WRITE_DOUBLE_BE(guint8 *data, gdouble num)
 #define GST_ROUND_DOWN_N(num,align) (((num) & ~((align) - 1)))
 
 
+GST_API
 void                    gst_object_default_error        (GstObject    * source,
                                                          const GError * error,
                                                          const gchar  * debug);
 
 /* element functions */
+
+GST_API
 void                    gst_element_create_all_pads     (GstElement *element);
+
+GST_API
 GstPad*                 gst_element_get_compatible_pad  (GstElement *element, GstPad *pad,
                                                          GstCaps *caps);
-
+GST_API
 GstPadTemplate*         gst_element_get_compatible_pad_template (GstElement *element, GstPadTemplate *compattempl);
 
+GST_API
 const gchar*            gst_element_state_get_name      (GstState state);
+
+GST_API
 const gchar *           gst_element_state_change_return_get_name (GstStateChangeReturn state_ret);
 
+GST_API
+const gchar *           gst_state_change_get_name       (GstStateChange transition);
+
+GST_API
 gboolean                gst_element_link                (GstElement *src, GstElement *dest);
+
+GST_API
 gboolean                gst_element_link_many           (GstElement *element_1,
                                                          GstElement *element_2, ...) G_GNUC_NULL_TERMINATED;
+GST_API
 gboolean                gst_element_link_filtered       (GstElement * src,
                                                          GstElement * dest,
                                                          GstCaps *filter);
+GST_API
 void                    gst_element_unlink              (GstElement *src, GstElement *dest);
+
+GST_API
 void                    gst_element_unlink_many         (GstElement *element_1,
                                                          GstElement *element_2, ...) G_GNUC_NULL_TERMINATED;
-
+GST_API
 gboolean                gst_element_link_pads           (GstElement *src, const gchar *srcpadname,
                                                          GstElement *dest, const gchar *destpadname);
+GST_API
 gboolean                gst_element_link_pads_full      (GstElement *src, const gchar *srcpadname,
                                                          GstElement *dest, const gchar *destpadname,
                                                          GstPadLinkCheck flags);
+GST_API
 void                    gst_element_unlink_pads         (GstElement *src, const gchar *srcpadname,
                                                          GstElement *dest, const gchar *destpadname);
-
+GST_API
 gboolean                gst_element_link_pads_filtered  (GstElement * src, const gchar * srcpadname,
                                                          GstElement * dest, const gchar * destpadname,
                                                          GstCaps *filter);
-
+GST_API
 gboolean                gst_element_seek_simple         (GstElement   *element,
                                                          GstFormat     format,
                                                          GstSeekFlags  seek_flags,
                                                          gint64        seek_pos);
 
 /* util elementfactory functions */
+
+GST_API
 gboolean gst_element_factory_can_sink_all_caps (GstElementFactory *factory, const GstCaps *caps);
+
+GST_API
 gboolean gst_element_factory_can_src_all_caps  (GstElementFactory *factory, const GstCaps *caps);
+
+GST_API
 gboolean gst_element_factory_can_sink_any_caps (GstElementFactory *factory, const GstCaps *caps);
+
+GST_API
 gboolean gst_element_factory_can_src_any_caps  (GstElementFactory *factory, const GstCaps *caps);
 
 /* util query functions */
+
+GST_API
 gboolean                gst_element_query_position      (GstElement *element, GstFormat format, gint64 *cur);
+
+GST_API
 gboolean                gst_element_query_duration      (GstElement *element, GstFormat format, gint64 *duration);
+
+GST_API
 gboolean                gst_element_query_convert       (GstElement *element, GstFormat src_format, gint64 src_val,
                                                          GstFormat dest_format, gint64 *dest_val);
 
 /* pad functions */
+
+GST_API
 void                    gst_pad_use_fixed_caps          (GstPad *pad);
+
+GST_API
 GstElement*             gst_pad_get_parent_element      (GstPad *pad);
 
 /* util query functions */
+
+GST_API
 gboolean                gst_pad_proxy_query_accept_caps (GstPad *pad, GstQuery *query);
+
+GST_API
 gboolean                gst_pad_proxy_query_caps        (GstPad *pad, GstQuery *query);
 
+GST_API
 gboolean                gst_pad_query_position          (GstPad *pad, GstFormat format, gint64 *cur);
+
+GST_API
 gboolean                gst_pad_query_duration          (GstPad *pad, GstFormat format, gint64 *duration);
+
+GST_API
 gboolean                gst_pad_query_convert           (GstPad *pad, GstFormat src_format, gint64 src_val,
                                                          GstFormat dest_format, gint64 *dest_val);
+GST_API
 GstCaps *               gst_pad_query_caps              (GstPad *pad, GstCaps *filter);
+
+GST_API
 gboolean                gst_pad_query_accept_caps       (GstPad *pad, GstCaps *caps);
 
-
+GST_API
+gboolean                gst_pad_link_maybe_ghosting      (GstPad            *src,
+                                                          GstPad            *sink);
+GST_API
+gboolean                gst_pad_link_maybe_ghosting_full (GstPad            *src,
+                                                          GstPad            *sink,
+                                                          GstPadLinkCheck   flags);
+GST_API
 gboolean                gst_pad_peer_query_position     (GstPad *pad, GstFormat format, gint64 *cur);
+
+GST_API
 gboolean                gst_pad_peer_query_duration     (GstPad *pad, GstFormat format, gint64 *duration);
+
+GST_API
 gboolean                gst_pad_peer_query_convert      (GstPad *pad, GstFormat src_format, gint64 src_val,
                                                          GstFormat dest_format, gint64 *dest_val);
+GST_API
 GstCaps *               gst_pad_peer_query_caps         (GstPad * pad, GstCaps *filter);
+
+GST_API
 gboolean                gst_pad_peer_query_accept_caps  (GstPad * pad, GstCaps *caps);
 
+GST_API
 gchar *                 gst_pad_create_stream_id               (GstPad * pad, GstElement * parent, const gchar *stream_id) G_GNUC_MALLOC;
+
+GST_API
 gchar *                 gst_pad_create_stream_id_printf        (GstPad * pad, GstElement * parent, const gchar *stream_id, ...) G_GNUC_PRINTF (3, 4) G_GNUC_MALLOC;
+
+GST_API
 gchar *                 gst_pad_create_stream_id_printf_valist (GstPad * pad, GstElement * parent, const gchar *stream_id, va_list var_args) G_GNUC_PRINTF (3, 0) G_GNUC_MALLOC;
 
+GST_API
 gchar *                 gst_pad_get_stream_id           (GstPad * pad);
 
+GST_API
+GstStream *             gst_pad_get_stream              (GstPad * pad);
+
 /* bin functions */
+
+GST_API
 void                    gst_bin_add_many                (GstBin *bin, GstElement *element_1, ...) G_GNUC_NULL_TERMINATED;
+
+GST_API
 void                    gst_bin_remove_many             (GstBin *bin, GstElement *element_1, ...) G_GNUC_NULL_TERMINATED;
+
+GST_API
 GstPad *                gst_bin_find_unlinked_pad       (GstBin *bin, GstPadDirection direction);
 
+GST_API
+gboolean                gst_bin_sync_children_states    (GstBin *bin);
+
 /* parse utility functions */
+
+GST_API
 GstElement *            gst_parse_bin_from_description      (const gchar     * bin_description,
                                                              gboolean          ghost_unlinked_pads,
                                                              GError         ** err);
-
+GST_API
 GstElement *            gst_parse_bin_from_description_full (const gchar     * bin_description,
                                                              gboolean          ghost_unlinked_pads,
                                                              GstParseContext * context,
                                                              GstParseFlags     flags,
                                                              GError         ** err);
-
+GST_API
 GstClockTime            gst_util_get_timestamp          (void);
 
 /**
@@ -1010,23 +1168,41 @@ typedef enum {
   GST_SEARCH_MODE_AFTER
 } GstSearchMode;
 
+GST_API
 gpointer      gst_util_array_binary_search      (gpointer array, guint num_elements,
                                                  gsize element_size, GCompareDataFunc search_func,
                                                  GstSearchMode mode, gconstpointer search_data,
                                                  gpointer user_data);
 
 /* fraction operations */
+
+GST_API
 gint          gst_util_greatest_common_divisor  (gint a, gint b);
+
+GST_API
 gint64        gst_util_greatest_common_divisor_int64 (gint64 a, gint64 b);
 
+GST_API
 void          gst_util_fraction_to_double       (gint src_n, gint src_d, gdouble *dest);
+
+GST_API
 void          gst_util_double_to_fraction       (gdouble src, gint *dest_n, gint *dest_d);
 
+GST_API
 gboolean      gst_util_fraction_multiply        (gint a_n, gint a_d, gint b_n, gint b_d,
                                                  gint *res_n, gint *res_d);
+GST_API
 gboolean      gst_util_fraction_add             (gint a_n, gint a_d, gint b_n, gint b_d,
                                                  gint *res_n, gint *res_d);
+GST_API
 gint          gst_util_fraction_compare         (gint a_n, gint a_d, gint b_n, gint b_d);
+
+GST_API
+gboolean      gst_calculate_linear_regression   (const GstClockTime * xy,
+                                                 GstClockTime * temp, guint n,
+                                                 GstClockTime * m_num, GstClockTime * m_denom,
+                                                 GstClockTime * b, GstClockTime * xbase,
+                                                 gdouble * r_squared);
 
 
 G_END_DECLS

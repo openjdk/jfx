@@ -20,6 +20,7 @@
 #define __ID3TAGS_H__
 
 #include <gst/gst.h>
+#include <gst/tag/tag-prelude.h>
 
 G_BEGIN_DECLS
 

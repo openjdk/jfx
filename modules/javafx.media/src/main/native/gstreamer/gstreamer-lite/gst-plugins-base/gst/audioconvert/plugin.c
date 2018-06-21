@@ -25,8 +25,6 @@
 
 #include "plugin.h"
 
-#include "gstaudioconvertorc.h"
-
 #ifdef GSTREAMER_LITE
 gboolean
 plugin_init_audioconvert (GstPlugin * plugin)

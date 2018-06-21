@@ -22,43 +22,27 @@
 
 /**
  * SECTION:gstaudiosink
+ * @title: GstAudioSink
  * @short_description: Simple base class for audio sinks
  * @see_also: #GstAudioBaseSink, #GstAudioRingBuffer, #GstAudioSink.
  *
  * This is the most simple base class for audio sinks that only requires
  * subclasses to implement a set of simple functions:
  *
- * <variablelist>
- *   <varlistentry>
- *     <term>open()</term>
- *     <listitem><para>Open the device.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>prepare()</term>
- *     <listitem><para>Configure the device with the specified format.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>write()</term>
- *     <listitem><para>Write samples to the device.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>reset()</term>
- *     <listitem><para>Unblock writes and flush the device.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>delay()</term>
- *     <listitem><para>Get the number of samples written but not yet played
- *     by the device.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>unprepare()</term>
- *     <listitem><para>Undo operations done by prepare.</para></listitem>
- *   </varlistentry>
- *   <varlistentry>
- *     <term>close()</term>
- *     <listitem><para>Close the device.</para></listitem>
- *   </varlistentry>
- * </variablelist>
+ * * `open()` :Open the device.
+ *
+ * * `prepare()` :Configure the device with the specified format.
+ *
+ * * `write()` :Write samples to the device.
+ *
+ * * `reset()` :Unblock writes and flush the device.
+ *
+ * * `delay()` :Get the number of samples written but not yet played
+ * by the device.
+ *
+ * * `unprepare()` :Undo operations done by prepare.
+ *
+ * * `close()` :Close the device.
  *
  * All scheduling of samples and timestamps is done in this base class
  * together with #GstAudioBaseSink using a default implementation of a
@@ -235,7 +219,7 @@ audioringbuffer_thread_func (GstAudioRingBuffer * buf)
   message = gst_message_new_stream_status (GST_OBJECT_CAST (buf),
       GST_STREAM_STATUS_TYPE_ENTER, GST_ELEMENT_CAST (sink));
   g_value_init (&val, GST_TYPE_G_THREAD);
-  g_value_set_boxed (&val, sink->thread);
+  g_value_set_boxed (&val, g_thread_self ());
   gst_message_set_stream_status_object (message, &val);
   g_value_unset (&val);
   GST_DEBUG_OBJECT (sink, "posting ENTER stream status");
@@ -320,7 +304,7 @@ stop_running:
     message = gst_message_new_stream_status (GST_OBJECT_CAST (buf),
         GST_STREAM_STATUS_TYPE_LEAVE, GST_ELEMENT_CAST (sink));
     g_value_init (&val, GST_TYPE_G_THREAD);
-    g_value_set_boxed (&val, sink->thread);
+    g_value_set_boxed (&val, g_thread_self ());
     gst_message_set_stream_status_object (message, &val);
     g_value_unset (&val);
     GST_DEBUG_OBJECT (sink, "posting LEAVE stream status");
@@ -412,7 +396,6 @@ gst_audio_sink_ring_buffer_acquire (GstAudioRingBuffer * buf,
   GstAudioSink *sink;
   GstAudioSinkClass *csink;
   gboolean result = FALSE;
-  GstAudioClock *clock;
 
   sink = GST_AUDIO_SINK (GST_OBJECT_PARENT (buf));
   csink = GST_AUDIO_SINK_GET_CLASS (sink);
@@ -422,15 +405,21 @@ gst_audio_sink_ring_buffer_acquire (GstAudioRingBuffer * buf,
   if (!result)
     goto could_not_prepare;
 
-  /* our clock will now start from 0 again */
-  clock = GST_AUDIO_CLOCK (GST_AUDIO_BASE_SINK (sink)->provided_clock);
-  gst_audio_clock_reset (clock, 0);
-
   /* set latency to one more segment as we need some headroom */
   spec->seglatency = spec->segtotal + 1;
 
   buf->size = spec->segtotal * spec->segsize;
-  buf->memory = g_malloc0 (buf->size);
+
+  buf->memory = g_malloc (buf->size);
+
+  if (buf->spec.type == GST_AUDIO_RING_BUFFER_FORMAT_TYPE_RAW) {
+    gst_audio_format_fill_silence (buf->spec.info.finfo, buf->memory,
+        buf->size);
+  } else {
+    /* FIXME, non-raw formats get 0 as the empty sample */
+    memset (buf->memory, 0, buf->size);
+  }
+
 
   return TRUE;
 
@@ -514,6 +503,7 @@ thread_failed:
       GST_ERROR_OBJECT (sink, "could not create thread %s", error->message);
     else
       GST_ERROR_OBJECT (sink, "could not create thread for unknown reason");
+    g_clear_error (&error);
     return FALSE;
   }
 }

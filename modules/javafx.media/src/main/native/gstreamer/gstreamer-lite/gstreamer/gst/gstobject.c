@@ -23,6 +23,7 @@
 
 /**
  * SECTION:gstobject
+ * @title: GstObject
  * @short_description: Base class for the GStreamer object hierarchy
  *
  * #GstObject provides a root for the object hierarchy tree filed in by the
@@ -42,9 +43,8 @@
  * gst_object_set_name() and gst_object_get_name() are used to set/get the name
  * of the object.
  *
- * <refsect2>
- * <title>controlled properties</title>
- * <para>
+ * ## controlled properties
+ *
  * Controlled properties offers a lightweight way to adjust gobject properties
  * over stream-time. It works by using time-stamped value pairs that are queued
  * for element-properties. At run-time the elements continuously pull value
@@ -52,42 +52,29 @@
  *
  * What needs to be changed in a #GstElement?
  * Very little - it is just two steps to make a plugin controllable!
- * <orderedlist>
- *   <listitem><para>
- *     mark gobject-properties paramspecs that make sense to be controlled,
+ *
+ *   * mark gobject-properties paramspecs that make sense to be controlled,
  *     by GST_PARAM_CONTROLLABLE.
- *   </para></listitem>
- *   <listitem><para>
- *     when processing data (get, chain, loop function) at the beginning call
+ *
+ *   * when processing data (get, chain, loop function) at the beginning call
  *     gst_object_sync_values(element,timestamp).
  *     This will make the controller update all GObject properties that are
  *     under its control with the current values based on the timestamp.
- *   </para></listitem>
- * </orderedlist>
  *
- * What needs to be done in applications?
- * Again it's not a lot to change.
- * <orderedlist>
- *   <listitem><para>
- *     create a #GstControlSource.
+ * What needs to be done in applications? Again it's not a lot to change.
+ *
+ *   * create a #GstControlSource.
  *     csource = gst_interpolation_control_source_new ();
  *     g_object_set (csource, "mode", GST_INTERPOLATION_MODE_LINEAR, NULL);
- *   </para></listitem>
- *   <listitem><para>
- *     Attach the #GstControlSource on the controller to a property.
+ *
+ *   * Attach the #GstControlSource on the controller to a property.
  *     gst_object_add_control_binding (object, gst_direct_control_binding_new (object, "prop1", csource));
- *   </para></listitem>
- *   <listitem><para>
- *     Set the control values
+ *
+ *   * Set the control values
  *     gst_timed_value_control_source_set ((GstTimedValueControlSource *)csource,0 * GST_SECOND, value1);
  *     gst_timed_value_control_source_set ((GstTimedValueControlSource *)csource,1 * GST_SECOND, value2);
- *   </para></listitem>
- *   <listitem><para>
- *     start your pipeline
- *   </para></listitem>
- * </orderedlist>
- * </para>
- * </refsect2>
+ *
+ *   * start your pipeline
  */
 
 #include "gst_private.h"
@@ -100,11 +87,6 @@
 #include "gstinfo.h"
 #include "gstparamspecs.h"
 #include "gstutils.h"
-
-#ifndef GST_DISABLE_TRACE
-#include "gsttrace.h"
-static GstAllocTrace *_gst_object_trace;
-#endif
 
 #define DEBUG_REFCOUNT
 
@@ -154,14 +136,17 @@ static GParamSpec *properties[PROP_LAST];
 G_DEFINE_ABSTRACT_TYPE (GstObject, gst_object, G_TYPE_INITIALLY_UNOWNED);
 
 static void
+gst_object_constructed (GObject * object)
+{
+  GST_TRACER_OBJECT_CREATED (GST_OBJECT_CAST (object));
+
+  ((GObjectClass *) gst_object_parent_class)->constructed (object);
+}
+
+static void
 gst_object_class_init (GstObjectClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-#ifndef GST_DISABLE_TRACE
-  _gst_object_trace =
-      _gst_alloc_trace_register (g_type_name (GST_TYPE_OBJECT), -2);
-#endif
 
   gobject_class->set_property = gst_object_set_property;
   gobject_class->get_property = gst_object_get_property;
@@ -208,6 +193,7 @@ gst_object_class_init (GstObjectClass * klass)
   gobject_class->dispatch_properties_changed
       = GST_DEBUG_FUNCPTR (gst_object_dispatch_properties_changed);
 
+  gobject_class->constructed = gst_object_constructed;
   gobject_class->dispose = gst_object_dispose;
   gobject_class->finalize = gst_object_finalize;
 }
@@ -219,10 +205,6 @@ gst_object_init (GstObject * object)
   object->parent = NULL;
   object->name = NULL;
   GST_CAT_TRACE_OBJECT (GST_CAT_REFCOUNTING, object, "%p new", object);
-
-#ifndef GST_DISABLE_TRACE
-  _gst_alloc_trace_new (_gst_object_trace, object);
-#endif
 
   object->flags = 0;
 
@@ -249,6 +231,7 @@ gst_object_ref (gpointer object)
 {
   g_return_val_if_fail (object != NULL, NULL);
 
+  GST_TRACER_OBJECT_REFFED (object, ((GObject *) object)->ref_count + 1);
 #ifdef DEBUG_REFCOUNT
   GST_CAT_TRACE_OBJECT (GST_CAT_REFCOUNTING, object, "%p ref %d->%d", object,
       ((GObject *) object)->ref_count, ((GObject *) object)->ref_count + 1);
@@ -275,6 +258,7 @@ gst_object_unref (gpointer object)
   g_return_if_fail (object != NULL);
   g_return_if_fail (((GObject *) object)->ref_count > 0);
 
+  GST_TRACER_OBJECT_UNREFFED (object, ((GObject *) object)->ref_count - 1);
 #ifdef DEBUG_REFCOUNT
   GST_CAT_TRACE_OBJECT (GST_CAT_REFCOUNTING, object, "%p unref %d->%d", object,
       ((GObject *) object)->ref_count, ((GObject *) object)->ref_count - 1);
@@ -294,6 +278,9 @@ gst_object_unref (gpointer object)
  * the floating flag while leaving the reference count unchanged. If the object
  * is not floating, then this call adds a new normal reference increasing the
  * reference count by one.
+ *
+ * For more background on "floating references" please see the #GObject
+ * documentation.
  */
 gpointer
 gst_object_ref_sink (gpointer object)
@@ -366,7 +353,7 @@ gst_object_dispose (GObject * object)
   GstObject *self = (GstObject *) object;
   GstObject *parent;
 
-  GST_CAT_TRACE_OBJECT (GST_CAT_REFCOUNTING, object, "dispose");
+  GST_CAT_TRACE_OBJECT (GST_CAT_REFCOUNTING, object, "%p dispose", object);
 
   GST_OBJECT_LOCK (object);
   if ((parent = GST_OBJECT_PARENT (object)))
@@ -408,16 +395,14 @@ gst_object_finalize (GObject * object)
 {
   GstObject *gstobject = GST_OBJECT_CAST (object);
 
-  GST_CAT_TRACE_OBJECT (GST_CAT_REFCOUNTING, object, "finalize");
+  GST_CAT_TRACE_OBJECT (GST_CAT_REFCOUNTING, object, "%p finalize", object);
 
   g_signal_handlers_destroy (object);
 
   g_free (gstobject->name);
   g_mutex_clear (&gstobject->lock);
 
-#ifndef GST_DISABLE_TRACE
-  _gst_alloc_trace_free (_gst_object_trace, object);
-#endif
+  GST_TRACER_OBJECT_DESTROYED (gstobject);
 
   ((GObjectClass *) gst_object_parent_class)->finalize (object);
 }
@@ -623,10 +608,8 @@ gst_object_set_name (GstObject * object, const gchar * name)
     GST_OBJECT_UNLOCK (object);
     result = gst_object_set_name_default (object);
   }
-  /* FIXME-0.11: this misses a g_object_notify (object, "name"); unless called
-   * from gst_object_set_property.
-   * Ideally remove such custom setters (or make it static).
-   */
+
+  g_object_notify (G_OBJECT (object), "name");
   return result;
 
   /* error */
@@ -670,7 +653,7 @@ gst_object_get_name (GstObject * object)
 
 /**
  * gst_object_set_parent:
- * @object: a #GstObject
+ * @object: (transfer floating): a #GstObject
  * @parent: new parent of object
  *
  * Sets the parent of @object to @parent. The object's reference count will
@@ -713,6 +696,8 @@ had_parent:
   {
     GST_CAT_DEBUG_OBJECT (GST_CAT_REFCOUNTING, object,
         "set parent failed, object already had a parent");
+    gst_object_ref_sink (object);
+    gst_object_unref (object);
     GST_OBJECT_UNLOCK (object);
     return FALSE;
   }
@@ -779,7 +764,35 @@ gst_object_unparent (GstObject * object)
 }
 
 /**
- * gst_object_has_ancestor:
+ * gst_object_has_as_parent:
+ * @object: a #GstObject to check
+ * @parent: a #GstObject to check as parent
+ *
+ * Check if @parent is the parent of @object.
+ * E.g. a #GstElement can check if it owns a given #GstPad.
+ *
+ * Returns: %FALSE if either @object or @parent is %NULL. %TRUE if @parent is
+ *          the parent of @object. Otherwise %FALSE.
+ *
+ * MT safe. Grabs and releases @object's locks.
+ * Since: 1.6
+ */
+gboolean
+gst_object_has_as_parent (GstObject * object, GstObject * parent)
+{
+  gboolean result = FALSE;
+
+  if (G_LIKELY (GST_IS_OBJECT (object) && GST_IS_OBJECT (parent))) {
+    GST_OBJECT_LOCK (object);
+    result = GST_OBJECT_PARENT (object) == parent;
+    GST_OBJECT_UNLOCK (object);
+  }
+
+  return result;
+}
+
+/**
+ * gst_object_has_as_ancestor:
  * @object: a #GstObject to check
  * @ancestor: a #GstObject to check as ancestor
  *
@@ -791,7 +804,7 @@ gst_object_unparent (GstObject * object)
  * MT safe. Grabs and releases @object's locks.
  */
 gboolean
-gst_object_has_ancestor (GstObject * object, GstObject * ancestor)
+gst_object_has_as_ancestor (GstObject * object, GstObject * ancestor)
 {
   GstObject *parent, *tmp;
 
@@ -812,6 +825,28 @@ gst_object_has_ancestor (GstObject * object, GstObject * ancestor)
 
   return FALSE;
 }
+
+/**
+ * gst_object_has_ancestor:
+ * @object: a #GstObject to check
+ * @ancestor: a #GstObject to check as ancestor
+ *
+ * Check if @object has an ancestor @ancestor somewhere up in
+ * the hierarchy. One can e.g. check if a #GstElement is inside a #GstPipeline.
+ *
+ * Returns: %TRUE if @ancestor is an ancestor of @object.
+ *
+ * Deprecated: Use gst_object_has_as_ancestor() instead.
+ *
+ * MT safe. Grabs and releases @object's locks.
+ */
+#ifndef GST_REMOVE_DEPRECATED
+gboolean
+gst_object_has_ancestor (GstObject * object, GstObject * ancestor)
+{
+  return gst_object_has_as_ancestor (object, ancestor);
+}
+#endif
 
 /**
  * gst_object_check_uniqueness:
@@ -1095,7 +1130,7 @@ gst_object_sync_values (GstObject * object, GstClockTime timestamp)
  * gst_object_has_active_control_bindings:
  * @object: the object that has controlled properties
  *
- * Check if the @object has an active controlled properties.
+ * Check if the @object has active controlled properties.
  *
  * Returns: %TRUE if the object has active controlled properties
  */
@@ -1170,12 +1205,13 @@ gst_object_set_control_binding_disabled (GstObject * object,
 /**
  * gst_object_add_control_binding:
  * @object: the controller object
- * @binding: (transfer full): the #GstControlBinding that should be used
+ * @binding: (transfer floating): the #GstControlBinding that should be used
  *
  * Attach the #GstControlBinding to the object. If there already was a
  * #GstControlBinding for this property it will be replaced.
  *
- * The @object will take ownership of the @binding.
+ * The object's reference count will be incremented, and any floating
+ * reference will be removed (see gst_object_ref_sink())
  *
  * Returns: %FALSE if the given @binding has not been setup for this object or
  * has been setup for a non suitable property, %TRUE otherwise.
@@ -1296,7 +1332,7 @@ gst_object_get_value (GstObject * object, const gchar * property_name,
 }
 
 /**
- * gst_object_get_value_array:
+ * gst_object_get_value_array: (skip)
  * @object: the object that has controlled properties
  * @property_name: the name of the property to get
  * @timestamp: the time that should be processed
@@ -1347,7 +1383,7 @@ gst_object_get_value_array (GstObject * object, const gchar * property_name,
  * @timestamp: the time that should be processed
  * @interval: the time spacing between subsequent values
  * @n_values: the number of values
- * @values: array to put control-values in
+ * @values: (array length=n_values): array to put control-values in
  *
  * Gets a number of #GValues for the given controlled property starting at the
  * requested time. The array @values need to hold enough space for @n_values of

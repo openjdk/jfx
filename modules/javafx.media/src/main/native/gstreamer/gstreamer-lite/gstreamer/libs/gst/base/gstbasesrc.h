@@ -25,6 +25,7 @@
 #define __GST_BASE_SRC_H__
 
 #include <gst/gst.h>
+#include <gst/base/base-prelude.h>
 
 G_BEGIN_DECLS
 
@@ -100,7 +101,10 @@ struct _GstBaseSrc {
   gint           num_buffers;
   gint           num_buffers_left;
 
-  gboolean       typefind;
+#ifndef GST_REMOVE_DEPRECATED
+  gboolean       typefind;      /* unused */
+#endif
+
   gboolean       running;
   GstEvent      *pending_seek;
 
@@ -127,7 +131,8 @@ struct _GstBaseSrc {
  * @get_times: Given a buffer, return the start and stop time when it
  *    should be pushed out. The base class will sync on the clock using
  *    these times.
- * @get_size: Return the total size of the resource, in the configured format.
+ * @get_size: Return the total size of the resource, in the format set by
+ *     gst_base_src_set_format().
  * @is_seekable: Check if the source can seek
  * @prepare_seek_segment: Prepare the #GstSegment that will be passed to the
  *   #GstBaseSrcClass.do_seek() vmethod for executing a seek
@@ -185,12 +190,19 @@ struct _GstBaseSrcClass {
   gboolean      (*start)        (GstBaseSrc *src);
   gboolean      (*stop)         (GstBaseSrc *src);
 
-  /* given a buffer, return start and stop time when it should be pushed
-   * out. The base class will sync on the clock using these times. */
+  /**
+   * GstBaseSrcClass::get_times:
+   * @start: (out):
+   * @end: (out):
+   *
+   * Given @buffer, return @start and @end time when it should be pushed
+   * out. The base class will sync on the clock using these times.
+   */
   void          (*get_times)    (GstBaseSrc *src, GstBuffer *buffer,
                                  GstClockTime *start, GstClockTime *end);
 
-  /* get the total size of the resource in bytes */
+  /* get the total size of the resource in the format set by
+   * gst_base_src_set_format() */
   gboolean      (*get_size)     (GstBaseSrc *src, guint64 *size);
 
   /* check if the resource is seekable */
@@ -215,8 +227,13 @@ struct _GstBaseSrcClass {
   /* notify subclasses of an event */
   gboolean      (*event)        (GstBaseSrc *src, GstEvent *event);
 
-  /* ask the subclass to create a buffer with offset and size, the default
-   * implementation will call alloc and fill. */
+  /**
+   * GstBaseSrcClass::create:
+   * @buf: (out):
+   *
+   * Ask the subclass to create a buffer with @offset and @size, the default
+   * implementation will call alloc and fill.
+   */
   GstFlowReturn (*create)       (GstBaseSrc *src, guint64 offset, guint size,
                                  GstBuffer **buf);
   /* ask the subclass to allocate an output buffer. The default implementation
@@ -231,44 +248,76 @@ struct _GstBaseSrcClass {
   gpointer       _gst_reserved[GST_PADDING_LARGE];
 };
 
-GType gst_base_src_get_type (void);
+GST_BASE_API
+GType           gst_base_src_get_type (void);
 
+GST_BASE_API
 GstFlowReturn   gst_base_src_wait_playing     (GstBaseSrc *src);
 
+GST_BASE_API
 void            gst_base_src_set_live         (GstBaseSrc *src, gboolean live);
+
+GST_BASE_API
 gboolean        gst_base_src_is_live          (GstBaseSrc *src);
 
+GST_BASE_API
 void            gst_base_src_set_format       (GstBaseSrc *src, GstFormat format);
 
+GST_BASE_API
 void            gst_base_src_set_dynamic_size (GstBaseSrc * src, gboolean dynamic);
 
+GST_BASE_API
 void            gst_base_src_set_automatic_eos (GstBaseSrc * src, gboolean automatic_eos);
 
+GST_BASE_API
 void            gst_base_src_set_async        (GstBaseSrc *src, gboolean async);
+
+GST_BASE_API
 gboolean        gst_base_src_is_async         (GstBaseSrc *src);
 
+GST_BASE_API
 void            gst_base_src_start_complete   (GstBaseSrc * basesrc, GstFlowReturn ret);
+
+GST_BASE_API
 GstFlowReturn   gst_base_src_start_wait       (GstBaseSrc * basesrc);
 
+GST_BASE_API
 gboolean        gst_base_src_query_latency    (GstBaseSrc *src, gboolean * live,
                                                GstClockTime * min_latency,
                                                GstClockTime * max_latency);
-
+GST_BASE_API
 void            gst_base_src_set_blocksize    (GstBaseSrc *src, guint blocksize);
+
+GST_BASE_API
 guint           gst_base_src_get_blocksize    (GstBaseSrc *src);
 
+GST_BASE_API
 void            gst_base_src_set_do_timestamp (GstBaseSrc *src, gboolean timestamp);
+
+GST_BASE_API
 gboolean        gst_base_src_get_do_timestamp (GstBaseSrc *src);
 
+GST_BASE_API
 gboolean        gst_base_src_new_seamless_segment (GstBaseSrc *src, gint64 start, gint64 stop, gint64 time);
 
+GST_BASE_API
 gboolean        gst_base_src_set_caps         (GstBaseSrc *src, GstCaps *caps);
 
+GST_BASE_API
 GstBufferPool * gst_base_src_get_buffer_pool  (GstBaseSrc *src);
+
+GST_BASE_API
 void            gst_base_src_get_allocator    (GstBaseSrc *src,
                                                GstAllocator **allocator,
                                                GstAllocationParams *params);
 
+GST_BASE_API
+void            gst_base_src_submit_buffer_list (GstBaseSrc    * src,
+                                                 GstBufferList * buffer_list);
+
+#ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSrc, gst_object_unref)
+#endif
 
 G_END_DECLS
 
