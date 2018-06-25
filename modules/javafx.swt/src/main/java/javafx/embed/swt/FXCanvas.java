@@ -184,6 +184,16 @@ public class FXCanvas extends Canvas {
             } catch (Exception e) {
                 // FAIL silently should the reflection fail
             }
+        } else if (SWT.getPlatform().equals("win32")) {
+            if (swtDPIUtilMethod == null) {
+                return 1.0;
+            }
+            try {
+                Integer value = (Integer) swtDPIUtilMethod.invoke(null);
+                return value.intValue() / 100.0;
+            } catch (Exception e) {
+                // FAIL silently should the reflection fail
+            }
         }
         return 1.0;
     }
@@ -225,6 +235,7 @@ public class FXCanvas extends Canvas {
     private static Method windowMethod;
     private static Method screenMethod;
     private static Method backingScaleFactorMethod;
+    private static Method swtDPIUtilMethod;
 
     static {
         if (SWT.getPlatform().equals("cocoa")) {
@@ -243,6 +254,16 @@ public class FXCanvas extends Canvas {
                 Class nsScreenClass = Class.forName("org.eclipse.swt.internal.cocoa.NSScreen");
                 backingScaleFactorMethod = nsScreenClass.getDeclaredMethod("backingScaleFactor");
                 backingScaleFactorMethod.setAccessible(true);
+            } catch (Exception e) {
+                //Fail silently.  If we can't get the methods, then the current version of SWT has no retina support
+            }
+        } else if (SWT.getPlatform().equals("win32")) {
+            try {
+                String autoScale = AccessController.doPrivileged((PrivilegedAction<String>)() -> System.getProperty("swt.autoScale"));
+                if (autoScale == null || ! "false".equalsIgnoreCase(autoScale)) {
+                    Class dpiUtilClass = Class.forName("org.eclipse.swt.internal.DPIUtil");
+                    swtDPIUtilMethod = dpiUtilClass.getMethod("getDeviceZoom");
+                }
             } catch (Exception e) {
                 //Fail silently.  If we can't get the methods, then the current version of SWT has no retina support
             }
@@ -311,8 +332,19 @@ public class FXCanvas extends Canvas {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             System.setProperty("com.sun.javafx.application.type", "FXCanvas");
             System.setProperty("javafx.embed.isEventThread", "true");
-            System.setProperty("glass.win.uiScale", "100%");
-            System.setProperty("glass.win.renderScale", "100%");
+            if (swtDPIUtilMethod == null) {
+                System.setProperty("glass.win.uiScale", "100%");
+                System.setProperty("glass.win.renderScale", "100%");
+            } else {
+                Integer scale = 100;
+                try {
+                    scale = (Integer) swtDPIUtilMethod.invoke(null);
+                } catch (Exception e) {
+                    //Fail silently
+                }
+                System.setProperty("glass.win.uiScale", scale + "%");
+                System.setProperty("glass.win.renderScale", scale + "%");
+            }
             System.setProperty("javafx.embed.eventProc", eventProcStr);
             return null;
         });
