@@ -85,33 +85,35 @@ ShadowRoot::~ShadowRoot()
     removeDetachedChildren();
 }
 
-Node::InsertionNotificationRequest ShadowRoot::insertedInto(ContainerNode& insertionPoint)
+Node::InsertedIntoAncestorResult ShadowRoot::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    bool wasInDocument = isConnected();
-    DocumentFragment::insertedInto(insertionPoint);
-    if (insertionPoint.isConnected() && !wasInDocument)
+    DocumentFragment::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (insertionType.connectedToDocument)
         document().didInsertInDocumentShadowRoot(*this);
-    return InsertionDone;
+    return InsertedIntoAncestorResult::Done;
 }
 
-void ShadowRoot::removedFrom(ContainerNode& insertionPoint)
+void ShadowRoot::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-    DocumentFragment::removedFrom(insertionPoint);
-    if (insertionPoint.isConnected() && !isConnected())
+    DocumentFragment::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    if (removalType.disconnectedFromDocument)
         document().didRemoveInDocumentShadowRoot(*this);
 }
 
-void ShadowRoot::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
+void ShadowRoot::moveShadowRootToNewParentScope(TreeScope& newScope, Document& newDocument)
 {
-    ASSERT_WITH_SECURITY_IMPLICATION(&document() == &oldDocument || &document() == &newDocument);
+    setParentTreeScope(newScope);
+    moveShadowRootToNewDocument(newDocument);
+}
+
+void ShadowRoot::moveShadowRootToNewDocument(Document& newDocument)
+{
     setDocumentScope(newDocument);
-    ASSERT_WITH_SECURITY_IMPLICATION(&document() == &newDocument);
-    ASSERT_WITH_SECURITY_IMPLICATION(&m_styleScope->document() == &oldDocument);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!parentTreeScope() || &parentTreeScope()->documentScope() == &newDocument);
 
     // Style scopes are document specific.
     m_styleScope = std::make_unique<Style::Scope>(*this);
-
-    DocumentFragment::didMoveToNewDocument(oldDocument, newDocument);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&m_styleScope->document() == &newDocument);
 }
 
 Style::Scope& ShadowRoot::styleScope()

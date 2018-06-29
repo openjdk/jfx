@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "IdentifierInlines.h"
-#include "JSWebAssemblyTable.h"
 #include "WasmMemoryInformation.h"
 #include "WasmNameSectionParser.h"
 #include "WasmOps.h"
@@ -56,22 +55,21 @@ auto ModuleParser::parse() -> Result
     WASM_PARSER_FAIL_IF(!parseUInt32(versionNumber), "can't parse version number");
     WASM_PARSER_FAIL_IF(versionNumber != expectedVersionNumber, "unexpected version number ", versionNumber, " expected ", expectedVersionNumber);
 
-    Section previousSection = Section::Custom;
+    // This is not really a known section.
+    Section previousKnownSection = Section::Begin;
     while (m_offset < length()) {
         uint8_t sectionByte;
 
         WASM_PARSER_FAIL_IF(!parseUInt7(sectionByte), "can't get section byte");
 
         Section section = Section::Custom;
-        if (sectionByte) {
-            if (isValidSection(sectionByte))
-                section = static_cast<Section>(sectionByte);
-        }
+        WASM_PARSER_FAIL_IF(!decodeSection(sectionByte, section));
+        ASSERT(section != Section::Begin);
 
         uint32_t sectionLength;
-        WASM_PARSER_FAIL_IF(!validateOrder(previousSection, section), "invalid section order, ", previousSection, " followed by ", section);
+        WASM_PARSER_FAIL_IF(!validateOrder(previousKnownSection, section), "invalid section order, ", previousKnownSection, " followed by ", section);
         WASM_PARSER_FAIL_IF(!parseVarUInt32(sectionLength), "can't get ", section, " section's length");
-        WASM_PARSER_FAIL_IF(sectionLength > length() - m_offset, section, "section of size ", sectionLength, " would overflow Module's size");
+        WASM_PARSER_FAIL_IF(sectionLength > length() - m_offset, section, " section of size ", sectionLength, " would overflow Module's size");
 
         auto end = m_offset + sectionLength;
 
@@ -81,18 +79,25 @@ auto ModuleParser::parse() -> Result
             WASM_FAIL_IF_HELPER_FAILS(parse ## NAME());             \
             break;                                                  \
         }
-        FOR_EACH_WASM_SECTION(WASM_SECTION_PARSE)
+        FOR_EACH_KNOWN_WASM_SECTION(WASM_SECTION_PARSE)
 #undef WASM_SECTION_PARSE
 
         case Section::Custom: {
             WASM_FAIL_IF_HELPER_FAILS(parseCustom(sectionLength));
             break;
         }
+
+        case Section::Begin: {
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
         }
 
         WASM_PARSER_FAIL_IF(end != m_offset, "parsing ended before the end of ", section, " section");
 
-        previousSection = section;
+
+        if (isKnownSection(section))
+            previousKnownSection = section;
     }
 
     return { };
@@ -180,14 +185,14 @@ auto ModuleParser::parseImport() -> PartialResult
             bool isImport = true;
             PartialResult result = parseTableHelper(isImport);
             if (UNLIKELY(!result))
-                return result.getUnexpected();
+                return makeUnexpected(WTFMove(result.error()));
             break;
         }
         case ExternalKind::Memory: {
             bool isImport = true;
             PartialResult result = parseMemoryHelper(isImport);
             if (UNLIKELY(!result))
-                return result.getUnexpected();
+                return makeUnexpected(WTFMove(result.error()));
             break;
         }
         case ExternalKind::Global: {
@@ -264,8 +269,8 @@ auto ModuleParser::parseTableHelper(bool isImport) -> PartialResult
     std::optional<uint32_t> maximum;
     PartialResult limits = parseResizableLimits(initial, maximum);
     if (UNLIKELY(!limits))
-        return limits.getUnexpected();
-    WASM_PARSER_FAIL_IF(!JSWebAssemblyTable::isValidSize(initial), "Table's initial page count of ", initial, " is invalid");
+        return makeUnexpected(WTFMove(limits.error()));
+    WASM_PARSER_FAIL_IF(initial > maxTableEntries, "Table's initial page count of ", initial, " is too big, maximum ", maxTableEntries);
 
     ASSERT(!maximum || *maximum >= initial);
 
@@ -286,7 +291,7 @@ auto ModuleParser::parseTable() -> PartialResult
     bool isImport = false;
     PartialResult result = parseTableHelper(isImport);
     if (UNLIKELY(!result))
-        return result.getUnexpected();
+        return makeUnexpected(WTFMove(result.error()));
 
     return { };
 }
@@ -304,7 +309,7 @@ auto ModuleParser::parseMemoryHelper(bool isImport) -> PartialResult
         std::optional<uint32_t> maximum;
         PartialResult limits = parseResizableLimits(initial, maximum);
         if (UNLIKELY(!limits))
-            return limits.getUnexpected();
+            return makeUnexpected(WTFMove(limits.error()));
         ASSERT(!maximum || *maximum >= initial);
         WASM_PARSER_FAIL_IF(!PageCount::isValid(initial), "Memory's initial page count of ", initial, " is invalid");
 
@@ -341,7 +346,8 @@ auto ModuleParser::parseGlobal() -> PartialResult
     uint32_t globalCount;
     WASM_PARSER_FAIL_IF(!parseVarUInt32(globalCount), "can't get Global section's count");
     WASM_PARSER_FAIL_IF(globalCount > maxGlobals, "Global section's count is too big ", globalCount, " maximum ", maxGlobals);
-    WASM_PARSER_FAIL_IF(!m_info->globals.tryReserveCapacity(globalCount + m_info->firstInternalGlobal), "can't allocate memory for ", globalCount + m_info->firstInternalGlobal, " globals");
+    size_t totalBytes = globalCount + m_info->firstInternalGlobal;
+    WASM_PARSER_FAIL_IF((static_cast<uint32_t>(totalBytes) < globalCount) || !m_info->globals.tryReserveCapacity(totalBytes), "can't allocate memory for ", totalBytes, " globals");
 
     for (uint32_t globalIndex = 0; globalIndex < globalCount; ++globalIndex) {
         Global global;
@@ -475,7 +481,7 @@ auto ModuleParser::parseCode() -> PartialResult
         WASM_PARSER_FAIL_IF(!parseVarUInt32(functionSize), "can't get ", i, "th Code function's size");
         WASM_PARSER_FAIL_IF(functionSize > length(), "Code function's size ", functionSize, " exceeds the module's size ", length());
         WASM_PARSER_FAIL_IF(functionSize > length() - m_offset, "Code function's size ", functionSize, " exceeds the module's remaining size", length() - m_offset);
-        WASM_PARSER_FAIL_IF(functionSize > std::numeric_limits<uint32_t>::max(), "Code function's size ", functionSize, " is too big");
+        WASM_PARSER_FAIL_IF(functionSize > maxFunctionSize, "Code function's size ", functionSize, " is too big");
 
         m_info->functionLocationInBinary[i].start = m_offset;
         m_info->functionLocationInBinary[i].end = m_offset + functionSize;
@@ -574,7 +580,7 @@ auto ModuleParser::parseData() -> PartialResult
         WASM_FAIL_IF_HELPER_FAILS(parseInitExpr(initOpcode, initExprBits, initExprType));
         WASM_PARSER_FAIL_IF(initExprType != I32, segmentNumber, "th Data segment's init_expr must produce an i32");
         WASM_PARSER_FAIL_IF(!parseVarUInt32(dataByteLength), "can't get ", segmentNumber, "th Data segment's data byte length");
-        WASM_PARSER_FAIL_IF(dataByteLength == std::numeric_limits<uint32_t>::max(), segmentNumber, "th Data segment's data byte length is too big ", dataByteLength);
+        WASM_PARSER_FAIL_IF(dataByteLength > maxModuleSize, segmentNumber, "th Data segment's data byte length is too big ", dataByteLength, " maximum ", maxModuleSize);
 
         Segment* segment = Segment::create(makeI32InitExpr(initOpcode, initExprBits), dataByteLength);
         WASM_PARSER_FAIL_IF(!segment, "can't allocate enough memory for ", segmentNumber, "th Data segment of size ", dataByteLength);

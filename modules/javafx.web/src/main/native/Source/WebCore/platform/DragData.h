@@ -53,13 +53,13 @@ namespace WebCore {
 class SelectionData;
 }
 typedef WebCore::SelectionData* DragDataRef;
-#elif PLATFORM(IOS) || PLATFORM(WPE)
-typedef void* DragDataRef;
 #elif PLATFORM(JAVA)
 #include "DataObjectJava.h"
 namespace WebCore {
-    typedef DataObjectJava* DragDataRef;
+typedef DataObjectJava* DragDataRef;
 }
+#else
+typedef void* DragDataRef;
 #endif
 
 namespace WebCore {
@@ -105,7 +105,7 @@ public:
     bool containsCompatibleContent(DraggingPurpose = DraggingPurpose::ForEditing) const;
     String asURL(FilenameConversionPolicy = ConvertFilenames, String* title = nullptr) const;
     String asPlainText() const;
-    void asFilenames(Vector<String>&) const;
+    Vector<String> asFilenames() const;
     Color asColor() const;
     bool canSmartReplace() const;
     bool containsColor() const;

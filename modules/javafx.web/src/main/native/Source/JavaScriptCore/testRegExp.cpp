@@ -70,23 +70,23 @@ public:
     long getElapsedMS(); // call stop() first
 
 private:
-    double m_startTime;
-    double m_stopTime;
+    MonotonicTime m_startTime;
+    MonotonicTime m_stopTime;
 };
 
 void StopWatch::start()
 {
-    m_startTime = monotonicallyIncreasingTime();
+    m_startTime = MonotonicTime::now();
 }
 
 void StopWatch::stop()
 {
-    m_stopTime = monotonicallyIncreasingTime();
+    m_stopTime = MonotonicTime::now();
 }
 
 long StopWatch::getElapsedMS()
 {
-    return static_cast<long>((m_stopTime - m_startTime) * 1000);
+    return (m_stopTime - m_startTime).millisecondsAs<long>();
 }
 
 struct RegExpTest {
@@ -315,7 +315,7 @@ static int scanString(char* buffer, int bufferLength, StringBuilder& builder, ch
     return -1;
 }
 
-static RegExp* parseRegExpLine(VM& vm, char* line, int lineLength)
+static RegExp* parseRegExpLine(VM& vm, char* line, int lineLength, const char** regexpError)
 {
     StringBuilder pattern;
 
@@ -330,9 +330,11 @@ static RegExp* parseRegExpLine(VM& vm, char* line, int lineLength)
     ++i;
 
     RegExp* r = RegExp::create(vm, pattern.toString(), regExpFlags(line + i));
-    if (r->isValid())
-        return r;
-    return nullptr;
+    if (!r->isValid()) {
+        *regexpError = r->errorMessage();
+        return nullptr;
+    }
+    return r;
 }
 
 static RegExpTest* parseTestLine(char* line, int lineLength)
@@ -431,6 +433,7 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
         size_t lineLength = 0;
         char* linePtr = 0;
         unsigned int lineNumber = 0;
+        const char* regexpError = nullptr;
 
         while ((linePtr = fgets(&lineBuffer[0], MaxLineLength, testCasesFile))) {
             lineLength = strlen(linePtr);
@@ -444,7 +447,11 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
                 continue;
 
             if (linePtr[0] == '/') {
-                regexp = parseRegExpLine(vm, linePtr, lineLength);
+                regexp = parseRegExpLine(vm, linePtr, lineLength, &regexpError);
+                if (!regexp) {
+                    failures++;
+                    fprintf(stderr, "Failure on line %u. '%s' %s\n", lineNumber, linePtr, regexpError);
+                }
             } else if (linePtr[0] == ' ') {
                 RegExpTest* regExpTest = parseTestLine(linePtr, lineLength);
 
@@ -461,10 +468,10 @@ static bool runFromFiles(GlobalObject* globalObject, const Vector<String>& files
             } else if (linePtr[0] == '-') {
                 tests++;
                 regexp = 0; // Reset the live regexp to avoid confusing other subsequent tests
-                bool successfullyParsed = parseRegExpLine(vm, linePtr + 1, lineLength - 1);
+                bool successfullyParsed = parseRegExpLine(vm, linePtr + 1, lineLength - 1, &regexpError);
                 if (successfullyParsed) {
                     failures++;
-                    fprintf(stderr, "Failure on line %u. '%s' is not a valid regexp\n", lineNumber, linePtr + 1);
+                    fprintf(stderr, "Failure on line %u. '%s' %s\n", lineNumber, linePtr + 1, regexpError);
                 }
             }
         }

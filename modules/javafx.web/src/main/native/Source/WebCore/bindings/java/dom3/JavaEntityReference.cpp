@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 

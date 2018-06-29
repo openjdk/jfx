@@ -43,26 +43,53 @@ class Text;
 namespace Style {
 
 struct ElementUpdate {
+#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
     ElementUpdate() = default;
     ElementUpdate(std::unique_ptr<RenderStyle> style, Change change, bool recompositeLayer)
-        : style(WTFMove(style))
-        , change(change)
-        , recompositeLayer(recompositeLayer)
-    { }
+        : style { WTFMove(style) }
+        , change { change }
+        , recompositeLayer { recompositeLayer }
+    {
+    }
+#endif
     std::unique_ptr<RenderStyle> style;
     Change change { NoChange };
     bool recompositeLayer { false };
 };
 
+enum class DescendantsToResolve { None, ChildrenWithExplicitInherit, Children, All };
+
+struct ElementUpdates {
+#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
+    ElementUpdates() = default;
+    ElementUpdates(ElementUpdate update, DescendantsToResolve descendantsToResolve, std::optional<ElementUpdate> beforePseudoElementUpdate, std::optional<ElementUpdate> afterPseudoElementUpdate)
+        : update { WTFMove(update) }
+        , descendantsToResolve(descendantsToResolve)
+        , beforePseudoElementUpdate { WTFMove(beforePseudoElementUpdate) }
+        , afterPseudoElementUpdate { WTFMove(afterPseudoElementUpdate) }
+    {
+    }
+#endif
+    ElementUpdate update;
+    DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
+    std::optional<ElementUpdate> beforePseudoElementUpdate;
+    std::optional<ElementUpdate> afterPseudoElementUpdate;
+};
+
 struct TextUpdate {
+#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
     TextUpdate() = default;
-    TextUpdate(unsigned offset, unsigned length)
-        : offset(offset)
-        , length(length)
-    { }
+    TextUpdate(unsigned offset, unsigned length, std::optional<std::unique_ptr<RenderStyle>> inheritedDisplayContentsStyle)
+        : offset { offset }
+        , length { length }
+        , inheritedDisplayContentsStyle { WTFMove(inheritedDisplayContentsStyle) }
+    {
+    }
+#endif
 
     unsigned offset { 0 };
     unsigned length { std::numeric_limits<unsigned>::max() };
+    std::optional<std::unique_ptr<RenderStyle>> inheritedDisplayContentsStyle;
 };
 
 class Update {
@@ -72,8 +99,8 @@ public:
 
     const ListHashSet<ContainerNode*>& roots() const { return m_roots; }
 
-    const ElementUpdate* elementUpdate(const Element&) const;
-    ElementUpdate* elementUpdate(const Element&);
+    const ElementUpdates* elementUpdates(const Element&) const;
+    ElementUpdates* elementUpdates(const Element&);
 
     const TextUpdate* textUpdate(const Text&) const;
 
@@ -84,7 +111,7 @@ public:
 
     unsigned size() const { return m_elements.size() + m_texts.size(); }
 
-    void addElement(Element&, Element* parent, ElementUpdate&&);
+    void addElement(Element&, Element* parent, ElementUpdates&&);
     void addText(Text&, Element* parent, TextUpdate&&);
     void addText(Text&, TextUpdate&&);
 
@@ -93,7 +120,7 @@ private:
 
     Document& m_document;
     ListHashSet<ContainerNode*> m_roots;
-    HashMap<const Element*, ElementUpdate> m_elements;
+    HashMap<const Element*, ElementUpdates> m_elements;
     HashMap<const Text*, TextUpdate> m_texts;
 };
 

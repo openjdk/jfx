@@ -88,7 +88,9 @@ namespace {
 // constants then the canonical form involves the lower-indexed value first. Given Add(x, y), it's
 // canonical if x->index() <= y->index().
 
-bool verbose = false;
+namespace B3ReduceStrengthInternal {
+static const bool verbose = false;
+}
 
 // FIXME: This IntRange stuff should be refactored into a general constant propagator. It's weird
 // that it's just sitting here in this file.
@@ -414,7 +416,7 @@ public:
 
             if (first)
                 first = false;
-            else if (verbose) {
+            else if (B3ReduceStrengthInternal::verbose) {
                 dataLog("B3 after iteration #", index - 1, " of reduceStrength:\n");
                 dataLog(m_proc);
             }
@@ -452,7 +454,7 @@ public:
                 m_block = block;
 
                 for (m_index = 0; m_index < block->size(); ++m_index) {
-                    if (verbose) {
+                    if (B3ReduceStrengthInternal::verbose) {
                         dataLog(
                             "Looking at ", *block, " #", m_index, ": ",
                             deepDump(m_proc, block->at(m_index)), "\n");
@@ -485,6 +487,15 @@ private:
     void reduceValueStrength()
     {
         switch (m_value->opcode()) {
+        case Opaque:
+            // Turn this: Opaque(Opaque(value))
+            // Into this: Opaque(value)
+            if (m_value->child(0)->opcode() == Opaque) {
+                replaceWithIdentity(m_value->child(0));
+                break;
+            }
+            break;
+
         case Add:
             handleCommutativity();
 
@@ -2026,7 +2037,7 @@ private:
     // early.
     void specializeSelect(Value* source)
     {
-        if (verbose)
+        if (B3ReduceStrengthInternal::verbose)
             dataLog("Specializing select: ", deepDump(m_proc, source), "\n");
 
         // This mutates startIndex to account for the fact that m_block got the front of it
@@ -2267,7 +2278,7 @@ private:
 
     void simplifyCFG()
     {
-        if (verbose) {
+        if (B3ReduceStrengthInternal::verbose) {
             dataLog("Before simplifyCFG:\n");
             dataLog(m_proc);
         }
@@ -2292,7 +2303,7 @@ private:
         // iterations needed to kill a lot of code.
 
         for (BasicBlock* block : m_proc) {
-            if (verbose)
+            if (B3ReduceStrengthInternal::verbose)
                 dataLog("Considering block ", *block, ":\n");
 
             checkPredecessorValidity();
@@ -2308,7 +2319,7 @@ private:
                     && successor->last()->opcode() == Jump) {
                     BasicBlock* newSuccessor = successor->successorBlock(0);
                     if (newSuccessor != successor) {
-                        if (verbose) {
+                        if (B3ReduceStrengthInternal::verbose) {
                             dataLog(
                                 "Replacing ", pointerDump(block), "->", pointerDump(successor),
                                 " with ", pointerDump(block), "->", pointerDump(newSuccessor),
@@ -2339,7 +2350,7 @@ private:
                         }
                     }
                     if (allSame) {
-                        if (verbose) {
+                        if (B3ReduceStrengthInternal::verbose) {
                             dataLog(
                                 "Changing ", pointerDump(block), "'s terminal to a Jump.\n");
                         }
@@ -2378,7 +2389,7 @@ private:
                     for (BasicBlock* newSuccessor : block->successorBlocks())
                         newSuccessor->replacePredecessor(successor, block);
 
-                    if (verbose) {
+                    if (B3ReduceStrengthInternal::verbose) {
                         dataLog(
                             "Merged ", pointerDump(block), "->", pointerDump(successor), "\n");
                     }
@@ -2388,7 +2399,7 @@ private:
             }
         }
 
-        if (m_changedCFG && verbose) {
+        if (m_changedCFG && B3ReduceStrengthInternal::verbose) {
             dataLog("B3 after simplifyCFG:\n");
             dataLog(m_proc);
         }

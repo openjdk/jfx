@@ -52,35 +52,45 @@ const ClassInfo StringConstructor::s_info = { "Function", &InternalFunction::s_i
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(StringConstructor);
 
+
+static EncodedJSValue JSC_HOST_CALL callStringConstructor(ExecState*);
+static EncodedJSValue JSC_HOST_CALL constructWithStringConstructor(ExecState*);
+
 StringConstructor::StringConstructor(VM& vm, Structure* structure)
-    : InternalFunction(vm, structure)
+    : InternalFunction(vm, structure, callStringConstructor, constructWithStringConstructor)
 {
 }
 
 void StringConstructor::finishCreation(VM& vm, StringPrototype* stringPrototype)
 {
     Base::finishCreation(vm, stringPrototype->classInfo()->className);
-    putDirectWithoutTransition(vm, vm.propertyNames->prototype, stringPrototype, ReadOnly | DontEnum | DontDelete);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, stringPrototype, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 // ------------------------------ Functions --------------------------------
 
-static NEVER_INLINE JSValue stringFromCharCodeSlowCase(ExecState* exec)
-{
-    unsigned length = exec->argumentCount();
-    UChar* buf;
-    auto impl = StringImpl::createUninitialized(length, buf);
-    for (unsigned i = 0; i < length; ++i)
-        buf[i] = static_cast<UChar>(exec->uncheckedArgument(i).toUInt32(exec));
-    return jsString(exec, WTFMove(impl));
-}
-
 static EncodedJSValue JSC_HOST_CALL stringFromCharCode(ExecState* exec)
 {
-    if (LIKELY(exec->argumentCount() == 1))
-        return JSValue::encode(jsSingleCharacterString(exec, exec->uncheckedArgument(0).toUInt32(exec)));
-    return JSValue::encode(stringFromCharCodeSlowCase(exec));
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    unsigned length = exec->argumentCount();
+    if (LIKELY(length == 1)) {
+        unsigned code = exec->uncheckedArgument(0).toUInt32(exec);
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        scope.release();
+        return JSValue::encode(jsSingleCharacterString(exec, code));
+    }
+
+    UChar* buf;
+    auto impl = StringImpl::createUninitialized(length, buf);
+    for (unsigned i = 0; i < length; ++i) {
+        buf[i] = static_cast<UChar>(exec->uncheckedArgument(i).toUInt32(exec));
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    }
+    scope.release();
+    return JSValue::encode(jsString(exec, WTFMove(impl)));
 }
 
 JSCell* JSC_HOST_CALL stringFromCharCode(ExecState* exec, int32_t arg)
@@ -134,12 +144,6 @@ static EncodedJSValue JSC_HOST_CALL constructWithStringConstructor(ExecState* ex
     return JSValue::encode(StringObject::create(vm, structure, str));
 }
 
-ConstructType StringConstructor::getConstructData(JSCell*, ConstructData& constructData)
-{
-    constructData.native.function = constructWithStringConstructor;
-    return ConstructType::Host;
-}
-
 JSCell* stringConstructor(ExecState* exec, JSValue argument)
 {
     if (argument.isSymbol())
@@ -152,12 +156,6 @@ static EncodedJSValue JSC_HOST_CALL callStringConstructor(ExecState* exec)
     if (!exec->argumentCount())
         return JSValue::encode(jsEmptyString(exec));
     return JSValue::encode(stringConstructor(exec, exec->uncheckedArgument(0)));
-}
-
-CallType StringConstructor::getCallData(JSCell*, CallData& callData)
-{
-    callData.native.function = callStringConstructor;
-    return CallType::Host;
 }
 
 } // namespace JSC

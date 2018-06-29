@@ -26,19 +26,19 @@
 #pragma once
 
 #include "JSObject.h"
-#include "WeakMapBase.h"
+#include "WeakMapImpl.h"
 
 namespace JSC {
 
-class JSWeakMap final : public WeakMapBase {
+class JSWeakMap final : public WeakMapImpl<WeakMapBucket<WeakMapBucketDataKeyValue>> {
 public:
-    using Base = WeakMapBase;
+    using Base = WeakMapImpl<WeakMapBucket<WeakMapBucketDataKeyValue>>;
 
     DECLARE_EXPORT_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(JSWeakMapType, StructureFlags), info());
     }
 
     static JSWeakMap* create(VM& vm, Structure* structure)
@@ -48,9 +48,9 @@ public:
         return instance;
     }
 
-    static JSWeakMap* create(ExecState* exec, Structure* structure)
+    ALWAYS_INLINE void set(VM& vm, JSObject* key, JSValue value)
     {
-        return create(exec->vm(), structure);
+        add(vm, key, value);
     }
 
 private:
@@ -61,5 +61,17 @@ private:
 
     static String toStringName(const JSObject*, ExecState*);
 };
+
+inline bool isJSWeakMap(JSCell* from)
+{
+    static_assert(std::is_final<JSWeakMap>::value, "");
+    return from->type() == JSWeakMapType;
+}
+
+inline bool isJSWeakMap(JSValue from)
+{
+    static_assert(std::is_final<JSWeakMap>::value, "");
+    return from.isCell() && from.asCell()->type() == JSWeakMapType;
+}
 
 } // namespace JSC

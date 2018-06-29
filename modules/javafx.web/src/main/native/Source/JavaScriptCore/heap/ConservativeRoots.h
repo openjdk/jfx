@@ -39,7 +39,6 @@ public:
     ~ConservativeRoots();
 
     void add(void* begin, void* end);
-    void add(void* begin, void* end, JITStubRoutineSet&);
     void add(void* begin, void* end, JITStubRoutineSet&, CodeBlockSet&);
 
     size_t size();
@@ -50,7 +49,7 @@ private:
     static const size_t nonInlineCapacity = 8192 / sizeof(HeapCell*);
 
     template<typename MarkHook>
-    void genericAddPointer(void*, HeapVersion, TinyBloomFilter, MarkHook&);
+    void genericAddPointer(void*, HeapVersion markingVersion, HeapVersion newlyAllocatedVersion, TinyBloomFilter, MarkHook&);
 
     template<typename MarkHook>
     void genericAddSpan(void*, void* end, MarkHook&);

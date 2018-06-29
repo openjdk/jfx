@@ -111,16 +111,26 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "RegExpTestIntrinsic";
     case RegExpTestFastIntrinsic:
         return "RegExpTestFastIntrinsic";
+    case RegExpMatchFastIntrinsic:
+        return "RegExpMatchFastIntrinsic";
+    case ObjectGetPrototypeOfIntrinsic:
+        return "ObjectGetPrototypeOfIntrinsic";
+    case ReflectGetPrototypeOfIntrinsic:
+        return "ReflectGetPrototypeOfIntrinsic";
     case StringPrototypeValueOfIntrinsic:
         return "StringPrototypeValueOfIntrinsic";
     case StringPrototypeReplaceIntrinsic:
         return "StringPrototypeReplaceIntrinsic";
     case StringPrototypeReplaceRegExpIntrinsic:
         return "StringPrototypeReplaceRegExpIntrinsic";
+    case StringPrototypeSliceIntrinsic:
+        return "StringPrototypeSliceIntrinsic";
     case StringPrototypeToLowerCaseIntrinsic:
         return "StringPrototypeToLowerCaseIntrinsic";
     case NumberPrototypeToStringIntrinsic:
         return "NumberPrototypeToStringIntrinsic";
+    case NumberIsIntegerIntrinsic:
+        return "NumberIsIntegerIntrinsic";
     case IMulIntrinsic:
         return "IMulIntrinsic";
     case RandomIntrinsic:
@@ -137,8 +147,36 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "JSMapGetIntrinsic";
     case JSMapHasIntrinsic:
         return "JSMapHasIntrinsic";
+    case JSMapSetIntrinsic:
+        return "JSMapSetIntrinsic";
+    case JSMapBucketHeadIntrinsic:
+        return "JSMapBucketHeadIntrinsic";
+    case JSMapBucketNextIntrinsic:
+        return "JSMapBucketNextIntrinsic";
+    case JSMapBucketKeyIntrinsic:
+        return "JSMapBucketKeyIntrinsic";
+    case JSMapBucketValueIntrinsic:
+        return "JSMapBucketValueIntrinsic";
     case JSSetHasIntrinsic:
         return "JSSetHasIntrinsic";
+    case JSSetAddIntrinsic:
+        return "JSSetAddIntrinsic";
+    case JSSetBucketHeadIntrinsic:
+        return "JSSetBucketHeadIntrinsic";
+    case JSSetBucketNextIntrinsic:
+        return "JSSetBucketNextIntrinsic";
+    case JSSetBucketKeyIntrinsic:
+        return "JSSetBucketKeyIntrinsic";
+    case JSWeakMapGetIntrinsic:
+        return "JSWeakMapGetIntrinsic";
+    case JSWeakMapHasIntrinsic:
+        return "JSWeakMapHasIntrinsic";
+    case JSWeakMapSetIntrinsic:
+        return "JSWeakMapSetIntrinsic";
+    case JSWeakSetHasIntrinsic:
+        return "JSWeakSetHasIntrinsic";
+    case JSWeakSetAddIntrinsic:
+        return "JSWeakSetAddIntrinsic";
     case HasOwnPropertyIntrinsic:
         return "HasOwnPropertyIntrinsic";
     case AtomicsAddIntrinsic:
@@ -173,8 +211,12 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "TypedArrayByteLengthIntrinsic";
     case TypedArrayByteOffsetIntrinsic:
         return "TypedArrayByteOffsetIntrinsic";
+    case UnderscoreProtoIntrinsic:
+        return "UnderscoreProtoIntrinsic";
     case DFGTrueIntrinsic:
         return "DFGTrueIntrinsic";
+    case FTLTrueIntrinsic:
+        return "FTLTrueIntrinsic";
     case OSRExitIntrinsic:
         return "OSRExitIntrinsic";
     case IsFinalTierIntrinsic:
@@ -185,6 +227,14 @@ const char* intrinsicName(Intrinsic intrinsic)
         return "CheckInt32Intrinsic";
     case FiatInt52Intrinsic:
         return "FiatInt52Intrinsic";
+    case CPUMfenceIntrinsic:
+        return "CPUMfenceIntrinsic";
+    case CPURdtscIntrinsic:
+        return "CPURdtscIntrinsic";
+    case CPUCpuidIntrinsic:
+        return "CPUCpuidIntrinsic";
+    case CPUPauseIntrinsic:
+        return "CPUPauseIntrinsic";
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;

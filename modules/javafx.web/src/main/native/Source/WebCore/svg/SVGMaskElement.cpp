@@ -84,13 +84,13 @@ bool SVGMaskElement::isSupportedAttribute(const QualifiedName& attrName)
         SVGLangSpace::addSupportedAttributes(set);
         SVGExternalResourcesRequired::addSupportedAttributes(set);
         set.add({
-            SVGNames::maskUnitsAttr,
-            SVGNames::maskContentUnitsAttr,
-            SVGNames::refYAttr,
-            SVGNames::xAttr,
-            SVGNames::yAttr,
-            SVGNames::widthAttr,
-            SVGNames::heightAttr,
+            SVGNames::maskUnitsAttr.get(),
+            SVGNames::maskContentUnitsAttr.get(),
+            SVGNames::refYAttr.get(),
+            SVGNames::xAttr.get(),
+            SVGNames::yAttr.get(),
+            SVGNames::widthAttr.get(),
+            SVGNames::heightAttr.get(),
         });
         return set;
     }());
@@ -155,7 +155,7 @@ void SVGMaskElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSourceParser)
+    if (change.source == ChildChangeSource::Parser)
         return;
 
     if (RenderObject* object = renderer())

@@ -25,6 +25,10 @@
 
 #pragma once
 
+#if USE(GLIB)
+#include <wtf/Function.h>
+#endif
+
 #if PLATFORM(MAC)
 OBJC_CLASS NSScreen;
 OBJC_CLASS NSWindow;
@@ -41,6 +45,10 @@ typedef struct _NSPoint NSPoint;
 OBJC_CLASS UIScreen;
 #endif
 
+#if USE(CG)
+typedef struct CGColorSpace *CGColorSpaceRef;
+#endif
+
 namespace WebCore {
 
 class FloatRect;
@@ -54,11 +62,19 @@ int screenDepthPerComponent(Widget*);
 bool screenIsMonochrome(Widget*);
 
 bool screenHasInvertedColors();
+#if USE(GLIB)
+double screenDPI();
+void setScreenDPIObserverHandler(Function<void()>&&, void*);
+#endif
 
 FloatRect screenRect(Widget*);
 FloatRect screenAvailableRect(Widget*);
 
 WEBCORE_EXPORT bool screenSupportsExtendedColor(Widget* = nullptr);
+
+#if USE(CG)
+WEBCORE_EXPORT CGColorSpaceRef screenColorSpace(Widget* = nullptr);
+#endif
 
 #if PLATFORM(MAC)
 

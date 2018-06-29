@@ -79,7 +79,7 @@ public final class DumpRenderTree {
     private boolean waiting;
     private boolean complete;
 
-    class ThemeClientImplStub extends ThemeClient {
+    static class ThemeClientImplStub extends ThemeClient {
         @Override
         protected RenderTheme createRenderTheme() {
             return new RenderThemeStub();
@@ -91,7 +91,7 @@ public final class DumpRenderTree {
         }
     };
 
-    class RenderThemeStub extends RenderTheme {
+    static class RenderThemeStub extends RenderTheme {
         @Override
         protected Ref createWidget(long id, int widgetIndex, int state, int w, int h, int bgColor, ByteBuffer extParams) {
             return null;
@@ -117,7 +117,7 @@ public final class DumpRenderTree {
         }
     }
 
-    class ScrollBarThemeStub extends ScrollBarTheme {
+    static class ScrollBarThemeStub extends ScrollBarTheme {
         @Override
         protected Ref createWidget(long id, int w, int h, int orientation, int value, int visibleSize, int totalSize) {
             return null;
@@ -145,7 +145,6 @@ public final class DumpRenderTree {
         eventSender = new EventSender(webPage);
 
         webPage.setBounds(0, 0, 800, 600);
-        webPage.setUsePageCache(true);
         webPage.setDeveloperExtrasEnabled(true);
         webPage.addLoadListenerClient(new DRTLoadListener());
 
@@ -185,18 +184,22 @@ public final class DumpRenderTree {
         PlatformImpl.startup(() -> {
             new WebEngine();    // initialize Webkit classes
             System.loadLibrary("DumpRenderTreeJava");
-            PageCache.setCapacity(1);
             drt = new DumpRenderTree();
+            PageCache.setCapacity(1);
             latch.countDown();
         });
         // wait for libraries to load
         latch.await();
     }
 
+    boolean complete() { return this.complete; }
+
     private void reset() {
         mlog("reset");
         // Reset native objects associated with WebPage
         webPage.resetToConsistentStateBeforeTesting();
+        // Clear frame name
+        webPage.reset(webPage.getMainFrame());
         // Reset zoom factors
         webPage.setZoomFactor(1.0f, true);
         webPage.setZoomFactor(1.0f, false);
@@ -231,7 +234,7 @@ public final class DumpRenderTree {
         l.await();
         Invoker.getInvoker().invokeOnEventThread(() -> {
             mlog("dispose");
-            // drt.uiClient.closePage();
+            webPage.stop();
             dispose();
         });
     }
@@ -439,6 +442,11 @@ public final class DumpRenderTree {
         return drt.getBackForwardList().size();
     }
 
+    // called from native
+    private static void clearBackForwardList() {
+        drt.getBackForwardList().clearBackForwardListForDRT();
+    }
+
     private static final String TEST_DIR_NAME = "LayoutTests";
     private static final int TEST_DIR_LEN = TEST_DIR_NAME.length();
     private static final String CUR_ITEM_STR = "curr->";
@@ -575,6 +583,9 @@ public final class DumpRenderTree {
         public void addMessageToConsole(String message, int lineNumber,
                                         String sourceId)
         {
+            if (complete) {
+                return;
+            }
             if (!message.isEmpty()) {
                 int pos = message.indexOf("file://");
                 if (pos != -1) {

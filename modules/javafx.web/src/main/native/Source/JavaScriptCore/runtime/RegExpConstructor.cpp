@@ -76,8 +76,12 @@ const ClassInfo RegExpConstructor::s_info = { "Function", &InternalFunction::s_i
 @end
 */
 
+
+static EncodedJSValue JSC_HOST_CALL callRegExpConstructor(ExecState*);
+static EncodedJSValue JSC_HOST_CALL constructWithRegExpConstructor(ExecState*);
+
 RegExpConstructor::RegExpConstructor(VM& vm, Structure* structure, RegExpPrototype* regExpPrototype)
-    : InternalFunction(vm, structure)
+    : InternalFunction(vm, structure, callRegExpConstructor, constructWithRegExpConstructor)
     , m_cachedResult(vm, this, regExpPrototype->emptyRegExp())
     , m_multiline(false)
 {
@@ -88,10 +92,10 @@ void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype,
     Base::finishCreation(vm, ASCIILiteral("RegExp"));
     ASSERT(inherits(vm, info()));
 
-    putDirectWithoutTransition(vm, vm.propertyNames->prototype, regExpPrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(2), ReadOnly | DontEnum);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, regExpPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(2), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 
-    putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, Accessor | ReadOnly | DontEnum);
+    putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 void RegExpConstructor::destroy(JSCell* cell)
@@ -213,7 +217,7 @@ inline RegExpFlags toFlags(ExecState* exec, JSValue flags)
     if (flags.isUndefined())
         return NoFlags;
     JSString* flagsString = flags.toStringOrNull(exec);
-    ASSERT(!!scope.exception() == !flagsString);
+    EXCEPTION_ASSERT(!!scope.exception() == !flagsString);
     if (UNLIKELY(!flagsString))
         return InvalidFlags;
 
@@ -233,7 +237,7 @@ static JSObject* regExpCreate(ExecState* exec, JSGlobalObject* globalObject, JSV
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     RegExpFlags flags = toFlags(exec, flagsArg);
-    ASSERT(!!scope.exception() == (flags == InvalidFlags));
+    EXCEPTION_ASSERT(!!scope.exception() == (flags == InvalidFlags));
     if (UNLIKELY(flags == InvalidFlags))
         return nullptr;
 
@@ -273,7 +277,7 @@ JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const A
 
         if (!flagsArg.isUndefined()) {
             RegExpFlags flags = toFlags(exec, flagsArg);
-            ASSERT(!!scope.exception() == (flags == InvalidFlags));
+            EXCEPTION_ASSERT(!!scope.exception() == (flags == InvalidFlags));
             if (flags == InvalidFlags)
                 return nullptr;
             regExp = RegExp::create(vm, regExp->pattern(), flags);
@@ -310,22 +314,10 @@ static EncodedJSValue JSC_HOST_CALL constructWithRegExpConstructor(ExecState* ex
     return JSValue::encode(constructRegExp(exec, asInternalFunction(exec->jsCallee())->globalObject(), args, exec->jsCallee(), exec->newTarget()));
 }
 
-ConstructType RegExpConstructor::getConstructData(JSCell*, ConstructData& constructData)
-{
-    constructData.native.function = constructWithRegExpConstructor;
-    return ConstructType::Host;
-}
-
 static EncodedJSValue JSC_HOST_CALL callRegExpConstructor(ExecState* exec)
 {
     ArgList args(exec);
     return JSValue::encode(constructRegExp(exec, asInternalFunction(exec->jsCallee())->globalObject(), args, exec->jsCallee()));
-}
-
-CallType RegExpConstructor::getCallData(JSCell*, CallData& callData)
-{
-    callData.native.function = callRegExpConstructor;
-    return CallType::Host;
 }
 
 } // namespace JSC

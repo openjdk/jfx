@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/UniqueRef.h>
@@ -50,7 +51,7 @@ public:
     static String vendor();
     static String vendorSub();
 
-    static bool onLine();
+    virtual bool onLine() const = 0;
 
     static String language();
     static Vector<String> languages();
@@ -60,7 +61,8 @@ protected:
 
 #if ENABLE(SERVICE_WORKER)
 public:
-    ServiceWorkerContainer* serviceWorker();
+    ServiceWorkerContainer& serviceWorker();
+    ExceptionOr<ServiceWorkerContainer&> serviceWorker(ScriptExecutionContext&);
 
 private:
     UniqueRef<ServiceWorkerContainer> m_serviceWorkerContainer;

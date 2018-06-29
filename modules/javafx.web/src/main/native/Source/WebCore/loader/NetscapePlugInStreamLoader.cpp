@@ -32,6 +32,7 @@
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -42,8 +43,8 @@ namespace WebCore {
 
 // FIXME: Skip Content Security Policy check when associated plugin element is in a user agent shadow tree.
 // See <https://bugs.webkit.org/show_bug.cgi?id=146663>.
-NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client)
-    : ResourceLoader(documentLoader, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, AllowStoredCredentials, ClientCredentialPolicy::MayAskClientForCredentials, FetchOptions::Credentials::Include, SkipSecurityCheck, FetchOptions::Mode::NoCors, DoNotIncludeCertificateInfo, ContentSecurityPolicyImposition::DoPolicyCheck, DefersLoadingPolicy::AllowDefersLoading, CachingPolicy::AllowCaching))
+NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(DocumentLoader& frame, NetscapePlugInStreamLoaderClient& client)
+    : ResourceLoader(frame, ResourceLoaderOptions(SendCallbacks, SniffContent, DoNotBufferData, StoredCredentialsPolicy::Use, ClientCredentialPolicy::MayAskClientForCredentials, FetchOptions::Credentials::Include, SkipSecurityCheck, FetchOptions::Mode::NoCors, DoNotIncludeCertificateInfo, ContentSecurityPolicyImposition::DoPolicyCheck, DefersLoadingPolicy::AllowDefersLoading, CachingPolicy::AllowCaching))
     , m_client(&client)
 {
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -51,17 +52,16 @@ NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(DocumentLoader& documentL
 #endif
 }
 
-NetscapePlugInStreamLoader::~NetscapePlugInStreamLoader()
-{
-}
+NetscapePlugInStreamLoader::~NetscapePlugInStreamLoader() = default;
 
-RefPtr<NetscapePlugInStreamLoader> NetscapePlugInStreamLoader::create(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client, const ResourceRequest& request)
+void NetscapePlugInStreamLoader::create(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<NetscapePlugInStreamLoader>&&)>&& completionHandler)
 {
-    auto loader(adoptRef(new NetscapePlugInStreamLoader(documentLoader, client)));
-    if (!loader->init(request))
-        return nullptr;
-
-    return loader;
+    auto loader(adoptRef(*new NetscapePlugInStreamLoader(documentLoader, client)));
+    loader->init(WTFMove(request), [loader = loader.copyRef(), completionHandler = WTFMove(completionHandler)] (bool initialized) mutable {
+        if (!initialized)
+            return completionHandler(nullptr);
+        completionHandler(WTFMove(loader));
+    });
 }
 
 bool NetscapePlugInStreamLoader::isDone() const
@@ -75,28 +75,25 @@ void NetscapePlugInStreamLoader::releaseResources()
     ResourceLoader::releaseResources();
 }
 
-bool NetscapePlugInStreamLoader::init(const ResourceRequest& request)
+void NetscapePlugInStreamLoader::init(ResourceRequest&& request, CompletionHandler<void(bool)>&& completionHandler)
 {
-    if (!ResourceLoader::init(request))
-        return false;
-
-    ASSERT(!reachedTerminalState());
-
-    m_documentLoader->addPlugInStreamLoader(*this);
-    m_isInitialized = true;
-
-    return true;
+    ResourceLoader::init(WTFMove(request), [this, protectedThis = makeRef(*this), completionHandler = WTFMove(completionHandler)] (bool success) mutable {
+        if (!success)
+            return completionHandler(false);
+        ASSERT(!reachedTerminalState());
+        m_documentLoader->addPlugInStreamLoader(*this);
+        m_isInitialized = true;
+        completionHandler(true);
+    });
 }
 
-void NetscapePlugInStreamLoader::willSendRequest(ResourceRequest&& request, const ResourceResponse& redirectResponse, WTF::Function<void(ResourceRequest&&)>&& callback)
+void NetscapePlugInStreamLoader::willSendRequest(ResourceRequest&& request, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& callback)
 {
-    RefPtr<NetscapePlugInStreamLoader> protectedThis(this);
-
-    m_client->willSendRequest(this, WTFMove(request), redirectResponse, [protectedThis, redirectResponse, callback = WTFMove(callback)](ResourceRequest request) {
+    m_client->willSendRequest(this, WTFMove(request), redirectResponse, [protectedThis = makeRef(*this), redirectResponse, callback = WTFMove(callback)] (ResourceRequest&& request) mutable {
         if (!request.isNull())
-            protectedThis->willSendRequestInternal(request, redirectResponse);
-
-        callback(WTFMove(request));
+            protectedThis->willSendRequestInternal(WTFMove(request), redirectResponse, WTFMove(callback));
+        else
+            callback({ });
     });
 }
 

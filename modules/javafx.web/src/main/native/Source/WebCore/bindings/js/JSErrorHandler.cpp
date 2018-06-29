@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,22 +40,20 @@
 #include "JSEvent.h"
 #include "JSMainThreadExecState.h"
 #include "JSMainThreadExecStateInstrumentation.h"
-#include <runtime/JSLock.h>
-#include <runtime/VMEntryScope.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/VMEntryScope.h>
 #include <wtf/Ref.h>
 
-using namespace JSC;
 
 namespace WebCore {
+using namespace JSC;
 
 JSErrorHandler::JSErrorHandler(JSObject* function, JSObject* wrapper, bool isAttribute, DOMWrapperWorld& world)
     : JSEventListener(function, wrapper, isAttribute, world)
 {
 }
 
-JSErrorHandler::~JSErrorHandler()
-{
-}
+JSErrorHandler::~JSErrorHandler() = default;
 
 void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext, Event& event)
 {
@@ -64,7 +62,8 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
 
     ErrorEvent& errorEvent = downcast<ErrorEvent>(event);
 
-    JSLockHolder lock(scriptExecutionContext.vm());
+    VM& vm = scriptExecutionContext.vm();
+    JSLockHolder lock(vm);
 
     JSObject* jsFunction = this->jsFunction(scriptExecutionContext);
     if (!jsFunction)
@@ -77,7 +76,7 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
     ExecState* exec = globalObject->globalExec();
 
     CallData callData;
-    CallType callType = jsFunction->methodTable()->getCallData(jsFunction, callData);
+    CallType callType = jsFunction->methodTable(vm)->getCallData(jsFunction, callData);
 
     if (callType != CallType::None) {
         Ref<JSErrorHandler> protectedThis(*this);
@@ -91,6 +90,7 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext& scriptExecutionContext,
         args.append(toJS<IDLUnsignedLong>(errorEvent.lineno()));
         args.append(toJS<IDLUnsignedLong>(errorEvent.colno()));
         args.append(errorEvent.error(*exec, *globalObject));
+        ASSERT(!args.hasOverflowed());
 
         VM& vm = globalObject->vm();
         VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : globalObject);

@@ -59,12 +59,7 @@
 #include <semaphore.h>
 #include <sys/mman.h>
 #include <unistd.h>
-
-#if OS(SOLARIS)
-#include <thread.h>
-#else
 #include <pthread.h>
-#endif
 
 #if HAVE(PTHREAD_NP_H)
 #include <pthread_np.h>
@@ -149,10 +144,10 @@ static UNUSED_FUNCTION bool isOnAlternativeSignalStack()
 
 void Thread::signalHandlerSuspendResume(int, siginfo_t*, void* ucontext)
 {
-    // Touching thread local atomic types from signal handlers is allowed.
+    // Touching a global variable atomic types from signal handlers is allowed.
     Thread* thread = targetThread.load();
 
-    if (thread->m_suspended.load(std::memory_order_acquire)) {
+    if (thread->m_suspendCount) {
         // This is signal handler invocation that is intended to be used to resume sigsuspend.
         // So this handler invocation itself should not process.
         //
@@ -285,9 +280,9 @@ int Thread::waitForCompletion()
     int joinResult = pthread_join(handle, 0);
 
     if (joinResult == EDEADLK)
-        LOG_ERROR("ThreadIdentifier %u was found to be deadlocked trying to quit", m_id);
+        LOG_ERROR("Thread %p was found to be deadlocked trying to quit", this);
     else if (joinResult)
-        LOG_ERROR("ThreadIdentifier %u was unable to be joined.\n", m_id);
+        LOG_ERROR("Thread %p was unable to be joined.\n", this);
 
     std::lock_guard<std::mutex> locker(m_mutex);
     ASSERT(joinableState() == Joinable);
@@ -305,7 +300,7 @@ void Thread::detach()
     std::lock_guard<std::mutex> locker(m_mutex);
     int detachResult = pthread_detach(m_handle);
     if (detachResult)
-        LOG_ERROR("ThreadIdentifier %u was unable to be detached\n", m_id);
+        LOG_ERROR("Thread %p was unable to be detached\n", this);
 
     if (!hasExited())
         didBecomeDetached();
@@ -313,18 +308,13 @@ void Thread::detach()
 
 Thread& Thread::initializeCurrentTLS()
 {
-    // Not a WTF-created thread, ThreadIdentifier is not established yet.
+    // Not a WTF-created thread, Thread is not established yet.
     Ref<Thread> thread = adoptRef(*new Thread());
     thread->establishPlatformSpecificHandle(pthread_self());
     thread->initializeInThread();
     initializeCurrentThreadEvenIfNonWTFCreated();
 
     return initializeTLS(WTFMove(thread));
-}
-
-ThreadIdentifier Thread::currentID()
-{
-    return current().id();
 }
 
 bool Thread::signal(int signalNumber)
@@ -338,7 +328,7 @@ bool Thread::signal(int signalNumber)
 
 auto Thread::suspend() -> Expected<void, PlatformSuspendError>
 {
-    RELEASE_ASSERT_WITH_MESSAGE(id() != currentThread(), "We do not support suspending the current thread itself.");
+    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::current(), "We do not support suspending the current thread itself.");
     // During suspend, suspend or resume should not be executed from the other threads.
     // We use global lock instead of per thread lock.
     // Consider the following case, there are threads A and B.
@@ -360,14 +350,12 @@ auto Thread::suspend() -> Expected<void, PlatformSuspendError>
     if (!m_suspendCount) {
         // Ideally, we would like to use pthread_sigqueue. It allows us to pass the argument to the signal handler.
         // But it can be used in a few platforms, like Linux.
-        // Instead, we use Thread* stored in the thread local storage to pass it to the signal handler.
+        // Instead, we use Thread* stored in a global variable to pass it to the signal handler.
         targetThread.store(this);
         int result = pthread_kill(m_handle, SigThreadSuspendResume);
         if (result)
             return makeUnexpected(result);
         globalSemaphoreForSuspendResume->wait();
-        // Release barrier ensures that this operation is always executed after all the above processing is done.
-        m_suspended.store(true, std::memory_order_release);
     }
     ++m_suspendCount;
     return { };
@@ -387,14 +375,12 @@ void Thread::resume()
         // There are several ways to distinguish the handler invocation for suspend and resume.
         // 1. Use different signal numbers. And check the signal number in the handler.
         // 2. Use some arguments to distinguish suspend and resume in the handler. If pthread_sigqueue can be used, we can take this.
-        // 3. Use thread local storage with atomic variables in the signal handler.
-        // In this implementaiton, we take (3). suspended flag is used to distinguish it.
+        // 3. Use thread's flag.
+        // In this implementaiton, we take (3). m_suspendCount is used to distinguish it.
         targetThread.store(this);
         if (pthread_kill(m_handle, SigThreadSuspendResume) == ESRCH)
             return;
         globalSemaphoreForSuspendResume->wait();
-        // Release barrier ensures that this operation is always executed after all the above processing is done.
-        m_suspended.store(false, std::memory_order_release);
     }
     --m_suspendCount;
 #endif
@@ -456,13 +442,9 @@ void Thread::establishPlatformSpecificHandle(pthread_t handle)
 {
     std::lock_guard<std::mutex> locker(m_mutex);
     m_handle = handle;
-    if (!m_id) {
-        static std::atomic<ThreadIdentifier> provider { 0 };
-        m_id = ++provider;
 #if OS(DARWIN)
-        m_platformThread = pthread_mach_thread_np(handle);
+    m_platformThread = pthread_mach_thread_np(handle);
 #endif
-    }
 }
 
 #if !HAVE(FAST_TLS)
@@ -567,18 +549,20 @@ void ThreadCondition::wait(Mutex& mutex)
     ASSERT_UNUSED(result, !result);
 }
 
-bool ThreadCondition::timedWait(Mutex& mutex, double absoluteTime)
+bool ThreadCondition::timedWait(Mutex& mutex, WallTime absoluteTime)
 {
-    if (absoluteTime < currentTime())
+    if (absoluteTime < WallTime::now())
         return false;
 
-    if (absoluteTime > INT_MAX) {
+    if (absoluteTime > WallTime::fromRawSeconds(INT_MAX)) {
         wait(mutex);
         return true;
     }
 
-    int timeSeconds = static_cast<int>(absoluteTime);
-    int timeNanoseconds = static_cast<int>((absoluteTime - timeSeconds) * 1E9);
+    double rawSeconds = absoluteTime.secondsSinceEpoch().value();
+
+    int timeSeconds = static_cast<int>(rawSeconds);
+    int timeNanoseconds = static_cast<int>((rawSeconds - timeSeconds) * 1E9);
 
     timespec targetTime;
     targetTime.tv_sec = timeSeconds;

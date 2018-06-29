@@ -30,6 +30,7 @@
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
+#include <wtf/ProcessID.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
@@ -76,6 +77,9 @@ public:
         virtual String browserName() const { return { }; }
         virtual String browserVersion() const { return { }; }
         virtual void requestAutomationSession(const String& sessionIdentifier) = 0;
+#if PLATFORM(COCOA)
+        virtual void requestAutomationSessionWithCapabilities(NSString *sessionIdentifier, NSDictionary *forwardedCapabilities) = 0;
+#endif
     };
 
     static void startDisabled();
@@ -105,9 +109,9 @@ public:
 
 #if PLATFORM(COCOA)
     bool hasParentProcessInformation() const { return m_parentProcessIdentifier != 0; }
-    pid_t parentProcessIdentifier() const { return m_parentProcessIdentifier; }
+    ProcessID parentProcessIdentifier() const { return m_parentProcessIdentifier; }
     RetainPtr<CFDataRef> parentProcessAuditData() const { return m_parentProcessAuditData; }
-    void setParentProcessInformation(pid_t, RetainPtr<CFDataRef> auditData);
+    void setParentProcessInformation(ProcessID, RetainPtr<CFDataRef> auditData);
     void setParentProcessInfomationIsDelayed();
 #endif
 
@@ -204,7 +208,7 @@ private:
     bool m_hasActiveDebugSession { false };
     bool m_pushScheduled { false };
 
-    pid_t m_parentProcessIdentifier { 0 };
+    ProcessID m_parentProcessIdentifier { 0 };
 #if PLATFORM(COCOA)
     RetainPtr<CFDataRef> m_parentProcessAuditData;
 #endif

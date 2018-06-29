@@ -1,4 +1,4 @@
-#! /usr/bin/perl
+#! /usr/bin/env perl
 #
 #   This file is part of the WebKit project
 #
@@ -102,7 +102,7 @@ for my $name (@allNames) {
 sub matchEnableFlags($)
 {
     my ($enable_flag) = @_;
-
+    
     if (exists($defines{$enable_flag})) {
         return 1;
     }

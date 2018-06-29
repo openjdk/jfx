@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
 #define growBufferReentrant() {                     \
     buffer_size *= 2;                           \
     buffer = (xmlChar **)                       \
-        xmlRealloc(buffer, buffer_size * sizeof(xmlChar*)); \
+            xmlRealloc(buffer, buffer_size * sizeof(xmlChar*)); \
     if (buffer == NULL) {                       \
     perror("realloc failed");                   \
     return(NULL);                           \
@@ -298,7 +298,7 @@ load_xpath_expr (xmlDocPtr parent_doc, const char* filename) {
     while(ns != NULL) {
     if(xmlXPathRegisterNs(ctx, ns->prefix, ns->href) != 0) {
         fprintf(stderr,"Error: unable to register NS with prefix=\"%s\" and href=\"%s\"\n", ns->prefix, ns->href);
-        xmlFree(expr);
+            xmlFree(expr);
         xmlXPathFreeContext(ctx);
         xmlFreeDoc(doc);
         return(NULL);
@@ -312,7 +312,7 @@ load_xpath_expr (xmlDocPtr parent_doc, const char* filename) {
     xpath = xmlXPathEvalExpression(expr, ctx);
     if(xpath == NULL) {
         fprintf(stderr,"Error: unable to evaluate xpath expression\n");
-    xmlFree(expr);
+        xmlFree(expr);
         xmlXPathFreeContext(ctx);
         xmlFreeDoc(doc);
         return(NULL);

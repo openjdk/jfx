@@ -48,11 +48,6 @@
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
-#if USE(GSTREAMER)
-#include "GRefPtrGStreamer.h"
-#include <owr/owr_gst_video_renderer.h>
-#endif
-
 namespace WebCore {
 
 class MediaStream;
@@ -62,7 +57,7 @@ class MediaStreamPrivate : public MediaStreamTrackPrivate::Observer, public RefC
 public:
     class Observer {
     public:
-        virtual ~Observer() { }
+        virtual ~Observer() = default;
 
         virtual void characteristicsChanged() { }
         virtual void activeStatusChanged() { }
@@ -107,19 +102,9 @@ public:
 
     FloatSize intrinsicSize() const;
 
-    WeakPtr<MediaStreamPrivate> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+    WeakPtr<MediaStreamPrivate> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
 
     void monitorOrientation(OrientationNotifier&);
-
-#if USE(GSTREAMER)
-    void setVideoRenderer(OwrGstVideoRenderer* renderer, GstElement* sink) { m_gstVideoRenderer = renderer; m_gstVideoSinkElement = sink; }
-    GRefPtr<GstElement> getVideoSinkElement() const { return m_gstVideoSinkElement; }
-    GRefPtr<OwrGstVideoRenderer> getVideoRenderer() const { return m_gstVideoRenderer; }
-
-private:
-    GRefPtr<GstElement> m_gstVideoSinkElement;
-    GRefPtr<OwrGstVideoRenderer> m_gstVideoRenderer;
-#endif
 
 private:
     MediaStreamPrivate(const MediaStreamTrackPrivateVector&, String&&);

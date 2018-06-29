@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc.  All rights reserved.
+ * Copyright (C) 2013-2107 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,26 +39,41 @@ class MockRealtimeMediaSourceCenter final : public RealtimeMediaSourceCenter {
 public:
     WEBCORE_EXPORT static void setMockRealtimeMediaSourceCenterEnabled(bool);
 
+    static RealtimeMediaSource::VideoCaptureFactory& videoCaptureSourceFactory() { return MockRealtimeVideoSource::factory(); }
+    static RealtimeMediaSource::AudioCaptureFactory& audioCaptureSourceFactory() { return MockRealtimeAudioSource::factory(); }
+
 private:
     MockRealtimeMediaSourceCenter() = default;
     friend NeverDestroyed<MockRealtimeMediaSourceCenter>;
 
-    RealtimeMediaSource::AudioCaptureFactory& defaultAudioFactory() final { return MockRealtimeAudioSource::factory(); }
-    RealtimeMediaSource::VideoCaptureFactory& defaultVideoFactory() final { return MockRealtimeVideoSource::factory(); }
-    CaptureDeviceManager& defaultAudioCaptureDeviceManager() final { return m_defaultAudioCaptureDeviceManager; }
-    CaptureDeviceManager& defaultVideoCaptureDeviceManager() final { return m_defaultVideoCaptureDeviceManager; }
+    RealtimeMediaSource::AudioCaptureFactory& audioFactory() final { return MockRealtimeAudioSource::factory(); }
+    RealtimeMediaSource::VideoCaptureFactory& videoFactory() final { return MockRealtimeVideoSource::factory(); }
+
+    CaptureDeviceManager& audioCaptureDeviceManager() final { return m_audioCaptureDeviceManager; }
+    CaptureDeviceManager& videoCaptureDeviceManager() final { return m_videoCaptureDeviceManager; }
+    CaptureDeviceManager& displayCaptureDeviceManager() final { return m_displayCaptureDeviceManager; }
+
+    static std::optional<CaptureDevice> captureDeviceWithPersistentID(CaptureDevice::DeviceType, const String&);
 
     class MockAudioCaptureDeviceManager final : public CaptureDeviceManager {
     private:
-        Vector<CaptureDevice>& captureDevices() final { return MockRealtimeMediaSource::audioDevices(); }
+        const Vector<CaptureDevice>& captureDevices() final { return MockRealtimeMediaSource::audioDevices(); }
+        std::optional<CaptureDevice> captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id) final { return MockRealtimeMediaSource::captureDeviceWithPersistentID(type, id); }
     };
     class MockVideoCaptureDeviceManager final : public CaptureDeviceManager {
     private:
-        Vector<CaptureDevice>& captureDevices() final { return MockRealtimeMediaSource::videoDevices(); }
+        const Vector<CaptureDevice>& captureDevices() final { return MockRealtimeMediaSource::videoDevices(); }
+        std::optional<CaptureDevice> captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id) final { return MockRealtimeMediaSource::captureDeviceWithPersistentID(type, id); }
+    };
+    class MockDisplayCaptureDeviceManager final : public CaptureDeviceManager {
+    private:
+        const Vector<CaptureDevice>& captureDevices() final { return MockRealtimeMediaSource::displayDevices(); }
+        std::optional<CaptureDevice> captureDeviceWithPersistentID(CaptureDevice::DeviceType type, const String& id) final { return MockRealtimeMediaSource::captureDeviceWithPersistentID(type, id); }
     };
 
-    MockAudioCaptureDeviceManager m_defaultAudioCaptureDeviceManager;
-    MockVideoCaptureDeviceManager m_defaultVideoCaptureDeviceManager;
+    MockAudioCaptureDeviceManager m_audioCaptureDeviceManager;
+    MockVideoCaptureDeviceManager m_videoCaptureDeviceManager;
+    MockDisplayCaptureDeviceManager m_displayCaptureDeviceManager;
 };
 
 }

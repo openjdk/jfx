@@ -88,7 +88,7 @@ namespace WebCore {
         class MainThreadBridge : public ThreadableLoaderClient {
         public:
             // All executed on the worker context's thread.
-            MainThreadBridge(ThreadableLoaderClientWrapper&, WorkerLoaderProxy&, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& outgoingReferrer, const SecurityOrigin*, const ContentSecurityPolicy*);
+            MainThreadBridge(ThreadableLoaderClientWrapper&, WorkerLoaderProxy&, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& outgoingReferrer, WorkerGlobalScope&);
             void cancel();
             void destroy();
 
@@ -117,6 +117,8 @@ namespace WebCore {
 
             // For use on the main thread.
             String m_taskMode;
+            unsigned long m_workerRequestIdentifier { 0 };
+            NetworkLoadMetrics m_networkLoadMetrics;
         };
 
         WorkerThreadableLoader(WorkerGlobalScope&, ThreadableLoaderClient&, const String& taskMode, ResourceRequest&&, const ThreadableLoaderOptions&, const String& referrer);

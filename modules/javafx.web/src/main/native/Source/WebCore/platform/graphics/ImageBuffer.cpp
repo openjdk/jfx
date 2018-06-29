@@ -28,6 +28,7 @@
 #include "config.h"
 #include "ImageBuffer.h"
 
+#include "ColorUtilities.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
 #include <wtf/MathExtras.h>
@@ -90,7 +91,7 @@ FloatSize ImageBuffer::clampedSize(const FloatSize& size, FloatSize& scale)
         return size;
 
     FloatSize clampedSize = ImageBuffer::clampedSize(size);
-    scale = FloatSize(clampedSize.width() / size.width(), clampedSize.height() / size.height());
+    scale = clampedSize / size;
     ASSERT(!sizeNeedsClamping(clampedSize));
     ASSERT(!sizeNeedsClamping(size, scale));
     return clampedSize;
@@ -126,8 +127,8 @@ void ImageBuffer::transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstCo
         return;
 
     // only sRGB <-> linearRGB are supported at the moment
-    if ((srcColorSpace != ColorSpaceLinearRGB && srcColorSpace != ColorSpaceDeviceRGB)
-        || (dstColorSpace != ColorSpaceLinearRGB && dstColorSpace != ColorSpaceDeviceRGB))
+    if ((srcColorSpace != ColorSpaceLinearRGB && srcColorSpace != ColorSpaceSRGB)
+        || (dstColorSpace != ColorSpaceLinearRGB && dstColorSpace != ColorSpaceSRGB))
         return;
 
     if (dstColorSpace == ColorSpaceLinearRGB) {
@@ -135,22 +136,18 @@ void ImageBuffer::transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstCo
             std::array<uint8_t, 256> array;
             for (unsigned i = 0; i < 256; i++) {
                 float color = i / 255.0f;
-                color = (color <= 0.04045f ? color / 12.92f : pow((color + 0.055f) / 1.055f, 2.4f));
-                color = std::max(0.0f, color);
-                color = std::min(1.0f, color);
+                color = sRGBToLinearColorComponent(color);
                 array[i] = static_cast<uint8_t>(round(color * 255));
             }
             return array;
         }();
         platformTransformColorSpace(linearRgbLUT);
-    } else if (dstColorSpace == ColorSpaceDeviceRGB) {
+    } else if (dstColorSpace == ColorSpaceSRGB) {
         static const std::array<uint8_t, 256> deviceRgbLUT= [] {
             std::array<uint8_t, 256> array;
             for (unsigned i = 0; i < 256; i++) {
                 float color = i / 255.0f;
-                color = (powf(color, 1.0f / 2.4f) * 1.055f) - 0.055f;
-                color = std::max(0.0f, color);
-                color = std::min(1.0f, color);
+                color = linearToSRGBColorComponent(color);
                 array[i] = static_cast<uint8_t>(round(color * 255));
             }
             return array;
@@ -164,21 +161,23 @@ void ImageBuffer::transformColorSpace(ColorSpace srcColorSpace, ColorSpace dstCo
 inline void ImageBuffer::genericConvertToLuminanceMask()
 {
     IntRect luminanceRect(IntPoint(), internalSize());
-    RefPtr<Uint8ClampedArray> srcPixelArray = getUnmultipliedImageData(luminanceRect);
+    auto srcPixelArray = getUnmultipliedImageData(luminanceRect);
+    if (!srcPixelArray)
+        return;
 
     unsigned pixelArrayLength = srcPixelArray->length();
     for (unsigned pixelOffset = 0; pixelOffset < pixelArrayLength; pixelOffset += 4) {
-        unsigned char a = srcPixelArray->item(pixelOffset + 3);
+        uint8_t a = srcPixelArray->item(pixelOffset + 3);
         if (!a)
             continue;
-        unsigned char r = srcPixelArray->item(pixelOffset);
-        unsigned char g = srcPixelArray->item(pixelOffset + 1);
-        unsigned char b = srcPixelArray->item(pixelOffset + 2);
+        uint8_t r = srcPixelArray->item(pixelOffset);
+        uint8_t g = srcPixelArray->item(pixelOffset + 1);
+        uint8_t b = srcPixelArray->item(pixelOffset + 2);
 
         double luma = (r * 0.2125 + g * 0.7154 + b * 0.0721) * ((double)a / 255.0);
         srcPixelArray->set(pixelOffset + 3, luma);
     }
-    putByteArray(Unmultiplied, srcPixelArray.get(), luminanceRect.size(), luminanceRect, IntPoint());
+    putByteArray(*srcPixelArray, AlphaPremultiplication::Unpremultiplied, luminanceRect.size(), luminanceRect, IntPoint());
 }
 
 void ImageBuffer::convertToLuminanceMask()
@@ -211,7 +210,7 @@ std::unique_ptr<ImageBuffer> ImageBuffer::createCompatibleBuffer(const FloatSize
         return nullptr;
 
     // Set up a corresponding scale factor on the graphics context.
-    buffer->context().scale(FloatSize(scaledSize.width() / size.width(), scaledSize.height() / size.height()));
+    buffer->context().scale(scaledSize / size);
     return buffer;
 }
 

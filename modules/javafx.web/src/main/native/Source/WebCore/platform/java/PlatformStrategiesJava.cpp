@@ -28,23 +28,26 @@
 
 #include "NotImplemented.h"
 #include "PlatformCookieJar.h"
+#include "FrameNetworkingContextJava.h"
 #include "NetworkStorageSession.h"
 
 #include "WebKitLegacy/WebCoreSupport/WebResourceLoadScheduler.h"
+#include <wtf/NeverDestroyed.h>
 #include <WebCore/BlobRegistryImpl.h>
+#include <WebCore/NetworkStorageSession.h>
 #include <WebCore/Page.h>
 #include <WebCore/PageGroup.h>
-#include <WebCore/LinkHash.h>
+#include <WebCore/PlatformCookieJar.h>
 
 namespace WebCore {
 void PlatformStrategiesJava::initialize()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(PlatformStrategiesJava, platformStrategies, ());
-    setPlatformStrategies(&platformStrategies);
+    static NeverDestroyed<PlatformStrategiesJava> platformStrategies;
 }
 
 PlatformStrategiesJava::PlatformStrategiesJava()
 {
+    setPlatformStrategies(this);
 }
 
 CookiesStrategy* PlatformStrategiesJava::createCookiesStrategy()
@@ -70,39 +73,40 @@ WebCore::BlobRegistry* PlatformStrategiesJava::createBlobRegistry()
 }
 
 // CookiesStrategy
-String PlatformStrategiesJava::cookiesForDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url)
+std::pair<String, bool> PlatformStrategiesJava::cookiesForDOM(const WebCore::NetworkStorageSession& session, const WebCore::URL& firstParty, const WebCore::URL& url, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, WebCore::IncludeSecureCookies includeSecureCookies)
 {
-    return WebCore::cookiesForDOM(session, firstParty, url);
+    return WebCore::cookiesForDOM(session, firstParty, url, frameID, pageID, includeSecureCookies);
 }
 
-void PlatformStrategiesJava::setCookiesFromDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url, const String& cookieString)
+void PlatformStrategiesJava::setCookiesFromDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, const String& cookieString)
 {
-    WebCore::setCookiesFromDOM(session, firstParty, url, cookieString);
+    WebCore::setCookiesFromDOM(session, firstParty, url, frameID, pageID, cookieString);
 }
 
-bool PlatformStrategiesJava::cookiesEnabled(const NetworkStorageSession& session, const URL& firstParty, const URL& url)
+bool PlatformStrategiesJava::cookiesEnabled(const NetworkStorageSession& session)
 {
-    return WebCore::cookiesEnabled(session, firstParty, url);
+    return WebCore::cookiesEnabled(session);
 }
 
-String PlatformStrategiesJava::cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const URL& firstParty, const URL& url)
+std::pair<String, bool> PlatformStrategiesJava::cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const URL& firstParty, const URL& url, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, WebCore::IncludeSecureCookies includeSecureCookies)
 {
-    return WebCore::cookieRequestHeaderFieldValue(session, firstParty, url);
+    return WebCore::cookieRequestHeaderFieldValue(session, firstParty, url, frameID, pageID, includeSecureCookies);
 }
 
-bool PlatformStrategiesJava::getRawCookies(const NetworkStorageSession& session, const URL& firstParty, const URL& url, Vector<Cookie>& rawCookies)
+std::pair<String, bool> PlatformStrategiesJava::cookieRequestHeaderFieldValue(PAL::SessionID sessionID, const URL& firstParty, const URL& url, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, WebCore::IncludeSecureCookies includeSecureCookies)
 {
-    return WebCore::getRawCookies(session, firstParty, url, rawCookies);
+    auto& session = sessionID.isEphemeral() ? FrameNetworkingContextJava::ensurePrivateBrowsingSession() : NetworkStorageSession::defaultStorageSession();
+    return WebCore::cookieRequestHeaderFieldValue(session, firstParty, url, frameID, pageID, includeSecureCookies);
+}
+
+bool PlatformStrategiesJava::getRawCookies(const NetworkStorageSession& session, const URL& firstParty, const URL& url, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, Vector<Cookie>& rawCookies)
+{
+    return WebCore::getRawCookies(session, firstParty, url, frameID, pageID, rawCookies);
 }
 
 void PlatformStrategiesJava::deleteCookie(const NetworkStorageSession& session, const URL& url, const String& cookieName)
 {
     WebCore::deleteCookie(session, url, cookieName);
-}
-
-String PlatformStrategiesJava::cookieRequestHeaderFieldValue(SessionID session, const URL& firstParty, const URL& url)
-{
-    return PlatformStrategiesJava::cookieRequestHeaderFieldValue(*NetworkStorageSession::storageSession(session), firstParty, url);
 }
 
 } // namespace WebCore

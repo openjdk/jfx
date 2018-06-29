@@ -41,19 +41,19 @@
 #include "JSEventListener.h"
 #include "Pasteboard.h"
 #include "Storage.h"
-#include <bindings/ScriptValue.h>
-#include <inspector/agents/InspectorAgent.h>
-#include <inspector/agents/InspectorConsoleAgent.h>
-#include <runtime/JSCInlines.h>
-#include <runtime/JSLock.h>
+#include <JavaScriptCore/InspectorAgent.h>
+#include <JavaScriptCore/InspectorConsoleAgent.h>
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/ScriptValue.h>
 #include <wtf/JSONValues.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 
+namespace WebCore {
+
 using namespace JSC;
 using namespace Inspector;
-
-namespace WebCore {
 
 Ref<CommandLineAPIHost> CommandLineAPIHost::create()
 {
@@ -65,9 +65,7 @@ CommandLineAPIHost::CommandLineAPIHost()
 {
 }
 
-CommandLineAPIHost::~CommandLineAPIHost()
-{
-}
+CommandLineAPIHost::~CommandLineAPIHost() = default;
 
 void CommandLineAPIHost::disconnect()
 {
@@ -95,7 +93,7 @@ static Vector<CommandLineAPIHost::ListenerEntry> listenerEntriesFromListenerInfo
 {
     VM& vm = state.vm();
 
-    Vector<CommandLineAPIHost::ListenerEntry> entires;
+    Vector<CommandLineAPIHost::ListenerEntry> entries;
     for (auto& eventListener : listenerInfo.eventListenerVector) {
         auto jsListener = JSEventListener::cast(&eventListener->callback());
         if (!jsListener) {
@@ -111,15 +109,15 @@ static Vector<CommandLineAPIHost::ListenerEntry> listenerEntriesFromListenerInfo
         if (!function)
             continue;
 
-        entires.append({ JSC::Strong<JSC::JSObject>(vm, function), eventListener->useCapture() });
+        entries.append({ JSC::Strong<JSC::JSObject>(vm, function), eventListener->useCapture(), eventListener->isPassive(), eventListener->isOnce() });
     }
 
-    return entires;
+    return entries;
 }
 
 auto CommandLineAPIHost::getEventListeners(JSC::ExecState& state, Node* node) -> EventListenersRecord
 {
-    if (m_domAgent)
+    if (!m_domAgent)
         return { };
 
     if (!node)

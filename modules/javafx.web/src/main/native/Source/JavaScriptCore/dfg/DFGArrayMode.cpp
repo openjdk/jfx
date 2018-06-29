@@ -210,12 +210,16 @@ ArrayMode ArrayMode::refine(
         // If we have an OriginalArray and the JSArray prototype chain is sane,
         // any indexed access always return undefined. We have a fast path for that.
         JSGlobalObject* globalObject = graph.globalObjectFor(node->origin.semantic);
+        Structure* arrayPrototypeStructure = globalObject->arrayPrototype()->structure();
+        Structure* objectPrototypeStructure = globalObject->objectPrototype()->structure();
         if ((node->op() == GetByVal || canBecomeGetArrayLength(graph, node))
             && arrayClass() == Array::OriginalArray
-            && globalObject->arrayPrototypeChainIsSane()
-            && !graph.hasExitSite(node->origin.semantic, OutOfBounds)) {
-            graph.registerAndWatchStructureTransition(globalObject->arrayPrototype()->structure());
-            graph.registerAndWatchStructureTransition(globalObject->objectPrototype()->structure());
+            && !graph.hasExitSite(node->origin.semantic, OutOfBounds)
+            && arrayPrototypeStructure->transitionWatchpointSetIsStillValid()
+            && objectPrototypeStructure->transitionWatchpointSetIsStillValid()
+            && globalObject->arrayPrototypeChainIsSane()) {
+            graph.registerAndWatchStructureTransition(arrayPrototypeStructure);
+            graph.registerAndWatchStructureTransition(objectPrototypeStructure);
             if (globalObject->arrayPrototypeChainIsSane())
                 return withSpeculation(Array::SaneChain);
         }
@@ -259,12 +263,15 @@ ArrayMode ArrayMode::refine(
 
         if (isDirectArgumentsSpeculation(base) || isScopedArgumentsSpeculation(base)) {
             // Handle out-of-bounds accesses as generic accesses.
-            if (graph.hasExitSite(node->origin.semantic, OutOfBounds) || !isInBounds())
+            Array::Type type = isDirectArgumentsSpeculation(base) ? Array::DirectArguments : Array::ScopedArguments;
+            if (graph.hasExitSite(node->origin.semantic, OutOfBounds) || !isInBounds()) {
+                // FIXME: Support OOB access for ScopedArguments.
+                // https://bugs.webkit.org/show_bug.cgi?id=179596
+                if (type == Array::DirectArguments)
+                    return ArrayMode(type, Array::NonArray, Array::OutOfBounds, Array::AsIs);
                 return ArrayMode(Array::Generic);
-
-            if (isDirectArgumentsSpeculation(base))
-                return withType(Array::DirectArguments);
-            return withType(Array::ScopedArguments);
+            }
+            return withType(type);
         }
 
         ArrayMode result;

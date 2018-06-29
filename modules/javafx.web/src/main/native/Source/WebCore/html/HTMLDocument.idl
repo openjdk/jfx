@@ -22,6 +22,6 @@
     CustomToJSObject,
     NewImpurePropertyFiresWatchpoints,
     OverrideBuiltins,
-] interface HTMLDocument : Document {
+] interface HTMLDocument : Document {    
     getter (DOMWindow or Element or HTMLCollection) (DOMString name);
 };

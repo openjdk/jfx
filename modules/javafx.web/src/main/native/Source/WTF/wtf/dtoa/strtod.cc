@@ -47,7 +47,7 @@ namespace double_conversion {
 #endif
     // 2^64 = 18446744073709551616 > 10^19
     static const int kMaxUint64DecimalDigits = 19;
-
+    
     // Max double: 1.7976931348623157 x 10^308
     // Min non-zero double: 4.9406564584124654 x 10^-324
     // Any x >= 10^309 is interpreted as +infinity.
@@ -56,10 +56,10 @@ namespace double_conversion {
     // as non-zero (equal to the min non-zero double).
     static const int kMaxDecimalPower = 309;
     static const int kMinDecimalPower = -324;
-
+    
     // 2^64 = 18446744073709551616
     static const uint64_t kMaxUint64 = UINT64_2PART_C(0xFFFFFFFF, FFFFFFFF);
-
+    
 #if defined(DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS)
     static const double exact_powers_of_ten[] = {
         1.0,  // 10^0
@@ -89,12 +89,12 @@ namespace double_conversion {
     };
     static const int kExactPowersOfTenSize = ARRAY_SIZE(exact_powers_of_ten);
 #endif
-
+    
     // Maximum number of significant digits in the decimal representation.
     // In fact the value is 772 (see conversions.cc), but to give us some margin
     // we round up to 780.
     static const int kMaxSignificantDecimalDigits = 780;
-
+    
     static BufferReference<const char> TrimLeadingZeros(BufferReference<const char> buffer) {
         for (int i = 0; i < buffer.length(); i++) {
             if (buffer[i] != '0') {
@@ -103,8 +103,8 @@ namespace double_conversion {
         }
         return BufferReference<const char>(buffer.start(), 0);
     }
-
-
+    
+    
     static BufferReference<const char> TrimTrailingZeros(BufferReference<const char> buffer) {
         for (int i = buffer.length() - 1; i >= 0; --i) {
             if (buffer[i] != '0') {
@@ -113,8 +113,8 @@ namespace double_conversion {
         }
         return BufferReference<const char>(buffer.start(), 0);
     }
-
-
+    
+    
     static void TrimToMaxSignificantDigits(BufferReference<const char> buffer,
                                            int exponent,
                                            char* significant_buffer,
@@ -131,7 +131,7 @@ namespace double_conversion {
         *significant_exponent =
         exponent + (buffer.length() - kMaxSignificantDecimalDigits);
     }
-
+    
     // Reads digits from the buffer and converts them to a uint64.
     // Reads in as many digits as fit into a uint64.
     // When the string starts with "1844674407370955161" no further digit is read.
@@ -149,8 +149,8 @@ namespace double_conversion {
         *number_of_read_digits = i;
         return result;
     }
-
-
+    
+    
     // Reads a DiyFp from the buffer.
     // The returned DiyFp is not necessarily normalized.
     // If remaining_decimals is zero then the returned DiyFp is accurate.
@@ -174,8 +174,8 @@ namespace double_conversion {
             *remaining_decimals = buffer.length() - read_digits;
         }
     }
-
-
+    
+    
     static bool DoubleStrtod(BufferReference<const char> trimmed,
                              int exponent,
                              double* result) {
@@ -230,8 +230,8 @@ namespace double_conversion {
         return false;
 #endif
     }
-
-
+    
+    
     // Returns 10^exponent as an exact DiyFp.
     // The given exponent must be in the range [1; kDecimalExponentDistance[.
     static DiyFp AdjustmentPowerOfTen(int exponent) {
@@ -253,8 +253,8 @@ namespace double_conversion {
                 return DiyFp(0, 0);
         }
     }
-
-
+    
+    
     // If the function returns true then the result is the correct double.
     // Otherwise it is either the correct double or the double that is just below
     // the correct double.
@@ -274,11 +274,11 @@ namespace double_conversion {
         // Move the remaining decimals into the exponent.
         exponent += remaining_decimals;
         int error = (remaining_decimals == 0 ? 0 : kDenominator / 2);
-
+        
         int old_e = input.e();
         input.Normalize();
         error <<= old_e - input.e();
-
+        
         ASSERT(exponent <= PowersOfTenCache::kMaxDecimalExponent);
         if (exponent < PowersOfTenCache::kMinDecimalExponent) {
             *result = 0.0;
@@ -289,7 +289,7 @@ namespace double_conversion {
         PowersOfTenCache::GetCachedPowerForDecimalExponent(exponent,
                                                            &cached_power,
                                                            &cached_decimal_exponent);
-
+        
         if (cached_decimal_exponent != exponent) {
             int adjustment_exponent = exponent - cached_decimal_exponent;
             DiyFp adjustment_power = AdjustmentPowerOfTen(adjustment_exponent);
@@ -303,7 +303,7 @@ namespace double_conversion {
                 error += kDenominator / 2;
             }
         }
-
+        
         input.Multiply(cached_power);
         // The error introduced by a multiplication of a*b equals
         //   error_a + error_b + error_a*error_b/2^64 + 0.5
@@ -314,11 +314,11 @@ namespace double_conversion {
         int error_ab = (error == 0 ? 0 : 1);  // We round up to 1.
         int fixed_error = kDenominator / 2;
         error += error_b + error_ab + fixed_error;
-
+        
         old_e = input.e();
         input.Normalize();
         error <<= old_e - input.e();
-
+        
         // See if the double's significand changes if we add/subtract the error.
         int order_of_magnitude = DiyFp::kSignificandSize + input.e();
         int effective_significand_size =
@@ -355,7 +355,7 @@ namespace double_conversion {
         // If the last_bits are too close to the half-way case than we are too
         // inaccurate and round down. In this case we return false so that we can
         // fall back to a more precise algorithm.
-
+        
         *result = Double(rounded_input).value();
         if (half_way - error < precision_bits && precision_bits < half_way + error) {
             // Too imprecise. The caller will have to fall back to a slower version.
@@ -366,8 +366,8 @@ namespace double_conversion {
             return true;
         }
     }
-
-
+    
+    
     // Returns the correct double for the buffer*10^exponent.
     // The variable guess should be a close guess that is either the correct double
     // or its lower neighbor (the nearest double less than the correct one).
@@ -381,9 +381,9 @@ namespace double_conversion {
         if (guess == Double::Infinity()) {
             return guess;
         }
-
+        
         DiyFp upper_boundary = Double(guess).UpperBoundary();
-
+        
         ASSERT(buffer.length() + exponent <= kMaxDecimalPower + 1);
         ASSERT(buffer.length() + exponent > kMinDecimalPower);
         ASSERT(buffer.length() <= kMaxSignificantDecimalDigits);
@@ -418,8 +418,8 @@ namespace double_conversion {
             return Double(guess).NextDouble();
         }
     }
-
-
+    
+    
     double Strtod(BufferReference<const char> buffer, int exponent) {
         BufferReference<const char> left_trimmed = TrimLeadingZeros(buffer);
         BufferReference<const char> trimmed = TrimTrailingZeros(left_trimmed);
@@ -440,7 +440,7 @@ namespace double_conversion {
         if (exponent + trimmed.length() <= kMinDecimalPower) {
             return 0.0;
         }
-
+        
         double guess;
         if (DoubleStrtod(trimmed, exponent, &guess) ||
             DiyFpStrtod(trimmed, exponent, &guess)) {
@@ -448,7 +448,7 @@ namespace double_conversion {
         }
         return BignumStrtod(trimmed, exponent, guess);
     }
-
+    
 }  // namespace double_conversion
 
 } // namespace WTF

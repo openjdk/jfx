@@ -42,6 +42,7 @@
 #include "GlyphBuffer.h"
 #include "OpenTypeTypes.h"
 #include "RefPtrCairo.h"
+#include "SurrogatePairAwareTextIterator.h"
 #include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
@@ -83,24 +84,33 @@ void Font::platformInit()
     float descent = narrowPrecisionToFloat(fontExtents.descent);
     float capHeight = narrowPrecisionToFloat(fontExtents.height);
     float lineGap = narrowPrecisionToFloat(fontExtents.height - fontExtents.ascent - fontExtents.descent);
+    std::optional<float> xHeight;
 
     {
         CairoFtFaceLocker cairoFtFaceLocker(m_platformData.scaledFont());
 
         // If the USE_TYPO_METRICS flag is set in the OS/2 table then we use typo metrics instead.
         FT_Face freeTypeFace = cairoFtFaceLocker.ftFace();
-        TT_OS2* OS2Table = freeTypeFace ? static_cast<TT_OS2*>(FT_Get_Sfnt_Table(freeTypeFace, ft_sfnt_os2)) : nullptr;
-        if (OS2Table) {
-            const FT_Short kUseTypoMetricsMask = 1 << 7;
-            if (OS2Table->fsSelection & kUseTypoMetricsMask) {
+        if (freeTypeFace && freeTypeFace->face_flags & FT_FACE_FLAG_SCALABLE) {
+            if (auto* OS2Table = static_cast<TT_OS2*>(FT_Get_Sfnt_Table(freeTypeFace, ft_sfnt_os2))) {
+                const FT_Short kUseTypoMetricsMask = 1 << 7;
                 // FT_Size_Metrics::y_scale is in 16.16 fixed point format.
                 // Its (fractional) value is a factor that converts vertical metrics from design units to units of 1/64 pixels.
                 double yscale = (freeTypeFace->size->metrics.y_scale / 65536.0) / 64.0;
-                ascent = narrowPrecisionToFloat(yscale * OS2Table->sTypoAscender);
-                descent = -narrowPrecisionToFloat(yscale * OS2Table->sTypoDescender);
-                lineGap = narrowPrecisionToFloat(yscale * OS2Table->sTypoLineGap);
+                if (OS2Table->fsSelection & kUseTypoMetricsMask) {
+                    ascent = narrowPrecisionToFloat(yscale * OS2Table->sTypoAscender);
+                    descent = -narrowPrecisionToFloat(yscale * OS2Table->sTypoDescender);
+                    lineGap = narrowPrecisionToFloat(yscale * OS2Table->sTypoLineGap);
+                }
+                xHeight = narrowPrecisionToFloat(yscale * OS2Table->sxHeight);
             }
         }
+    }
+
+    if (!xHeight) {
+        cairo_text_extents_t textExtents;
+        cairo_scaled_font_text_extents(m_platformData.scaledFont(), "x", &textExtents);
+        xHeight = narrowPrecisionToFloat((platformData().orientation() == Horizontal) ? textExtents.height : textExtents.width);
     }
 
     m_fontMetrics.setAscent(ascent);
@@ -108,11 +118,9 @@ void Font::platformInit()
     m_fontMetrics.setCapHeight(capHeight);
     m_fontMetrics.setLineSpacing(lroundf(ascent) + lroundf(descent) + lroundf(lineGap));
     m_fontMetrics.setLineGap(lineGap);
+    m_fontMetrics.setXHeight(xHeight.value());
 
     cairo_text_extents_t textExtents;
-    cairo_scaled_font_text_extents(m_platformData.scaledFont(), "x", &textExtents);
-    m_fontMetrics.setXHeight(narrowPrecisionToFloat((platformData().orientation() == Horizontal) ? textExtents.height : textExtents.width));
-
     cairo_scaled_font_text_extents(m_platformData.scaledFont(), " ", &textExtents);
     m_spaceWidth = narrowPrecisionToFloat((platformData().orientation() == Horizontal) ? textExtents.x_advance : -textExtents.y_advance);
 
@@ -191,9 +199,15 @@ bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t l
 
     UErrorCode error = U_ZERO_ERROR;
     Vector<UChar, 4> normalizedCharacters(length);
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
     int32_t normalizedLength = unorm_normalize(characters, length, UNORM_NFC, UNORM_UNICODE_3_2, &normalizedCharacters[0], length, &error);
-    // Can't render if we have an error or no composition occurred.
-    if (U_FAILURE(error) || (static_cast<size_t>(normalizedLength) == length))
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic pop
+#endif
+    if (U_FAILURE(error))
         return false;
 
     CairoFtFaceLocker cairoFtFaceLocker(m_platformData.scaledFont());
@@ -201,10 +215,16 @@ bool Font::canRenderCombiningCharacterSequence(const UChar* characters, size_t l
     if (!face)
         return false;
 
-    if (FcFreeTypeCharIndex(face, normalizedCharacters[0]))
-        addResult.iterator->value = true;
+    UChar32 character;
+    unsigned clusterLength = 0;
+    SurrogatePairAwareTextIterator iterator(normalizedCharacters.data(), 0, normalizedLength, normalizedLength);
+    for (iterator.advance(clusterLength); iterator.consume(character, clusterLength); iterator.advance(clusterLength)) {
+        if (!FcFreeTypeCharIndex(face, character))
+            return false;
+    }
 
-    return addResult.iterator->value;
+    addResult.iterator->value = true;
+    return true;
 }
 #endif
 

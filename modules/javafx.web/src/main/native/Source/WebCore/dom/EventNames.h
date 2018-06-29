@@ -115,6 +115,7 @@ namespace WebCore {
     macro(error) \
     macro(exit) \
     macro(fetch) \
+    macro(finish) \
     macro(focus) \
     macro(focusin) \
     macro(focusout) \
@@ -151,6 +152,7 @@ namespace WebCore {
     macro(loadingerror) \
     macro(loadstart) \
     macro(mark) \
+    macro(merchantvalidation) \
     macro(message) \
     macro(messageerror) \
     macro(mousedown) \
@@ -205,8 +207,10 @@ namespace WebCore {
     macro(select) \
     macro(selectionchange) \
     macro(selectstart) \
-    macro(shippingmethodselected) \
+    macro(shippingaddresschange) \
     macro(shippingcontactselected) \
+    macro(shippingmethodselected) \
+    macro(shippingoptionchange) \
     macro(show) \
     macro(signalingstatechange) \
     macro(slotchange) \
@@ -250,6 +254,13 @@ namespace WebCore {
     macro(versionchange) \
     macro(visibilitychange) \
     macro(volumechange) \
+    macro(vrdisplayactivate) \
+    macro(vrdisplayblur) \
+    macro(vrdisplayconnect) \
+    macro(vrdisplaydeactivate) \
+    macro(vrdisplaydisconnect) \
+    macro(vrdisplayfocus) \
+    macro(vrdisplaypresentchange) \
     macro(waiting) \
     macro(waitingforkey) \
     macro(webglcontextchanged) \
@@ -322,6 +333,7 @@ public:
     bool isWheelEventType(const AtomicString& eventType) const;
     bool isGestureEventType(const AtomicString& eventType) const;
     bool isTouchEventType(const AtomicString& eventType) const;
+    bool isTouchScrollBlockingEventType(const AtomicString& eventType) const;
 #if ENABLE(GAMEPAD)
     bool isGamepadEventType(const AtomicString& eventType) const;
 #endif
@@ -346,6 +358,12 @@ inline const EventNames& eventNames()
 inline bool EventNames::isGestureEventType(const AtomicString& eventType) const
 {
     return eventType == gesturestartEvent || eventType == gesturechangeEvent || eventType == gestureendEvent;
+}
+
+inline bool EventNames::isTouchScrollBlockingEventType(const AtomicString& eventType) const
+{
+    return eventType == touchstartEvent
+        || eventType == touchmoveEvent;
 }
 
 inline bool EventNames::isTouchEventType(const AtomicString& eventType) const

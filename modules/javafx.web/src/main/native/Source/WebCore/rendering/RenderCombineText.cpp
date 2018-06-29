@@ -23,9 +23,12 @@
 
 #include "RenderBlock.h"
 #include "StyleInheritedData.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderCombineText);
 
 const float textCombineMargin = 1.15f; // Allow em + 15% margin
 
@@ -126,7 +129,7 @@ void RenderCombineText::combineTextIfNeeded()
 
     GlyphOverflow glyphOverflow;
     glyphOverflow.computeBounds = true;
-    float combinedTextWidth = width(0, textLength(), horizontalFont, 0, nullptr, &glyphOverflow);
+    float combinedTextWidth = width(0, text().length(), horizontalFont, 0, nullptr, &glyphOverflow);
 
     float bestFitDelta = combinedTextWidth - emWidth;
     auto bestFitDescription = description;
@@ -145,7 +148,7 @@ void RenderCombineText::combineTextIfNeeded()
             compressedFont.update(fontSelector);
 
             glyphOverflow.left = glyphOverflow.top = glyphOverflow.right = glyphOverflow.bottom = 0;
-            float runWidth = RenderText::width(0, textLength(), compressedFont, 0, nullptr, &glyphOverflow);
+            float runWidth = RenderText::width(0, text().length(), compressedFont, 0, nullptr, &glyphOverflow);
             if (runWidth <= emWidth) {
                 combinedTextWidth = runWidth;
                 m_isCombined = true;
@@ -175,7 +178,7 @@ void RenderCombineText::combineTextIfNeeded()
             compressedFont.update(fontSelector);
 
             glyphOverflow.left = glyphOverflow.top = glyphOverflow.right = glyphOverflow.bottom = 0;
-            float runWidth = RenderText::width(0, textLength(), compressedFont, 0, nullptr, &glyphOverflow);
+            float runWidth = RenderText::width(0, text().length(), compressedFont, 0, nullptr, &glyphOverflow);
             if (runWidth <= emWidth) {
                 combinedTextWidth = runWidth;
                 m_isCombined = true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,9 @@ enum LocationKind {
     InvalidLocationKind,
 
     ArrayLengthLoc,
+    ArrayMaskLoc,
     VectorLengthLoc,
     ButterflyLoc,
-    ButterflyWithoutCagingLoc,
     CheckTypeInfoFlagsLoc,
     OverridesHasInstanceLoc,
     ClosureVariableLoc,
@@ -48,6 +48,7 @@ enum LocationKind {
     GlobalVariableLoc,
     HasIndexedPropertyLoc,
     IndexedPropertyDoubleLoc,
+    IndexedPropertyDoubleSaneChainLoc,
     IndexedPropertyInt52Loc,
     IndexedPropertyJSLoc,
     IndexedPropertyStorageLoc,
@@ -60,11 +61,15 @@ enum LocationKind {
     SetterLoc,
     StructureLoc,
     TypedArrayByteOffsetLoc,
+    PrototypeLoc,
     StackLoc,
     StackPayloadLoc,
     MapBucketLoc,
-    JSMapGetLoc,
-    MapHasLoc,
+    MapBucketHeadLoc,
+    MapBucketValueLoc,
+    MapBucketKeyLoc,
+    MapBucketNextLoc,
+    WeakMapGetLoc,
     DOMStateLoc,
 };
 

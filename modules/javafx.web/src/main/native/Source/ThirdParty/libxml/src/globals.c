@@ -47,7 +47,7 @@ static xmlMutexPtr xmlThrDefMutex = NULL;
 void xmlInitGlobals(void)
 {
     if (xmlThrDefMutex == NULL)
-        xmlThrDefMutex = xmlNewMutex();
+    xmlThrDefMutex = xmlNewMutex();
 }
 
 /**
@@ -732,7 +732,7 @@ __xmlMalloc(void){
     if (IS_MAIN_THREAD)
         return (&xmlMalloc);
     else
-    return (&xmlGetGlobalState()->xmlMalloc);
+        return (&xmlGetGlobalState()->xmlMalloc);
 }
 
 #undef xmlMallocAtomic
@@ -929,7 +929,7 @@ int xmlThrDefIndentTreeOutput(int v) {
     return ret;
 }
 
-#undef  xmlTreeIndentString
+#undef xmlTreeIndentString
 const char * *
 __xmlTreeIndentString(void) {
     if (IS_MAIN_THREAD)

@@ -61,7 +61,7 @@ struct( IDLInterface => {
     constants => '@',    # List of 'IDLConstant'
     operations => '@',    # List of 'IDLOperation'
     anonymousOperations => '@', # List of 'IDLOperation'
-    attributes => '@',    # List of 'IDLAttribute'    
+    attributes => '@',    # List of 'IDLAttribute'
     constructors => '@', # Constructors, list of 'IDLOperation'
     customConstructors => '@', # Custom constructors, list of 'IDLOperation'
     isException => '$', # Used for exception interfaces
@@ -213,7 +213,7 @@ sub new {
 sub assert
 {
     my $message = shift;
-    
+
     my $mess = longmess();
     print Dumper($mess);
 
@@ -520,7 +520,7 @@ sub moveExtendedAttributesApplicableToTypes
         }
     }
 }
-    
+
 sub typeDescription
 {
     my $type = shift;
@@ -1683,7 +1683,7 @@ sub parseAttributeRest
     my $next = $self->nextToken();
     if ($next->value() eq "attribute") {
         $self->assertTokenValue($self->getToken(), "attribute", __LINE__);
-        
+
         my $attribute = IDLAttribute->new();
         
         $self->assertExtendedAttributesValidForContext($extendedAttributeList, "attribute");
@@ -2043,14 +2043,14 @@ sub parseOperationRest
 
         my $name = $self->parseOptionalIdentifier();
         $operation->name(identifierRemoveNullablePrefix($name));
-        
+
         $self->assertTokenValue($self->getToken(), "(", $name, __LINE__);
-        
+
         push(@{$operation->arguments}, @{$self->parseArgumentList()});
-        
+
         $self->assertTokenValue($self->getToken(), ")", __LINE__);
         $self->assertTokenValue($self->getToken(), ";", __LINE__);
-        
+
         $self->assertExtendedAttributesValidForContext($extendedAttributeList, "operation");
         $operation->extendedAttributes($extendedAttributeList);
 
@@ -2319,7 +2319,7 @@ sub parseExtendedAttributeRest2
         $self->assertTokenValue($self->getToken(), "(", __LINE__);
         my @arguments = $self->parseIdentifierList();
         $self->assertTokenValue($self->getToken(), ")", __LINE__);
-        return @arguments;
+        return \@arguments;
     }
     if ($next->type() == IdentifierToken) {
         my $name = $self->parseName();

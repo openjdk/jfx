@@ -102,8 +102,10 @@ StyleResolver& Scope::resolver()
         if (!m_shadowRoot) {
             m_document.fontSelector().buildStarted();
             m_resolver->ruleSets().initializeUserStyle();
-        } else
+        } else {
+            m_resolver->ruleSets().setIsForShadowScope();
             m_resolver->ruleSets().setUsesSharedUserStyle(m_shadowRoot->mode() != ShadowRootMode::UserAgent);
+        }
 
         m_resolver->addCurrentSVGFontFaceRules();
         m_resolver->appendAuthorStyleSheets(m_activeStyleSheets);
@@ -130,6 +132,25 @@ void Scope::clearResolver()
 
     if (!m_shadowRoot)
         m_document.didClearStyleResolver();
+}
+
+void Scope::releaseMemory()
+{
+    if (!m_shadowRoot) {
+        for (auto* descendantShadowRoot : m_document.inDocumentShadowRoots())
+            descendantShadowRoot->styleScope().releaseMemory();
+    }
+
+#if ENABLE(CSS_SELECTOR_JIT)
+    for (auto& sheet : m_activeStyleSheets) {
+        sheet->contents().traverseRules([] (const StyleRuleBase& rule) {
+            if (is<StyleRule>(rule))
+                downcast<StyleRule>(rule).releaseCompiledSelectors();
+            return false;
+        });
+    }
+#endif
+    clearResolver();
 }
 
 Scope& Scope::forNode(Node& node)
@@ -444,6 +465,18 @@ static void filterEnabledNonemptyCSSStyleSheets(Vector<RefPtr<CSSStyleSheet>>& r
     }
 }
 
+static void invalidateHostAndSlottedStyleIfNeeded(ShadowRoot& shadowRoot, StyleResolver& resolver)
+{
+    auto& host = *shadowRoot.host();
+    if (!resolver.ruleSets().authorStyle().hostPseudoClassRules().isEmpty())
+        host.invalidateStyle();
+
+    if (!resolver.ruleSets().authorStyle().slottedPseudoElementRules().isEmpty()) {
+        for (auto& shadowChild : childrenOfType<Element>(host))
+            shadowChild.invalidateStyle();
+    }
+}
+
 void Scope::updateActiveStyleSheets(UpdateType updateType)
 {
     ASSERT(!m_pendingUpdate);
@@ -491,14 +524,7 @@ void Scope::updateActiveStyleSheets(UpdateType updateType)
         if (m_shadowRoot) {
             for (auto& shadowChild : childrenOfType<Element>(*m_shadowRoot))
                 shadowChild.invalidateStyleForSubtree();
-            if (m_shadowRoot->host()) {
-                if (!resolver().ruleSets().authorStyle().hostPseudoClassRules().isEmpty())
-                    m_shadowRoot->host()->invalidateStyle();
-                if (!resolver().ruleSets().authorStyle().slottedPseudoElementRules().isEmpty()) {
-                    for (auto& shadowChild : childrenOfType<Element>(*m_shadowRoot->host()))
-                        shadowChild.invalidateStyle();
-                }
-            }
+            invalidateHostAndSlottedStyleIfNeeded(*m_shadowRoot, resolver());
         } else
             m_document.scheduleForcedStyleRecalc();
     }
@@ -583,9 +609,14 @@ void Scope::clearPendingUpdate()
 
 void Scope::scheduleUpdate(UpdateType update)
 {
-    // FIXME: The m_isUpdatingStyleResolver test is here because extension stylesheets can get us here from StyleResolver::appendAuthorStyleSheets.
-    if (update == UpdateType::ContentsOrInterpretation && !m_isUpdatingStyleResolver)
-        clearResolver();
+    if (update == UpdateType::ContentsOrInterpretation) {
+        // :host and ::slotted rules might go away.
+        if (m_shadowRoot && m_resolver)
+            invalidateHostAndSlottedStyleIfNeeded(*m_shadowRoot, *m_resolver);
+        // FIXME: The m_isUpdatingStyleResolver test is here because extension stylesheets can get us here from StyleResolver::appendAuthorStyleSheets.
+        if (!m_isUpdatingStyleResolver)
+            clearResolver();
+    }
 
     if (!m_pendingUpdate || *m_pendingUpdate < update) {
         m_pendingUpdate = update;
@@ -596,6 +627,36 @@ void Scope::scheduleUpdate(UpdateType update)
     if (m_pendingUpdateTimer.isActive())
         return;
     m_pendingUpdateTimer.startOneShot(0_s);
+}
+
+void Scope::evaluateMediaQueriesForViewportChange()
+{
+    evaluateMediaQueries([] (StyleResolver& resolver) {
+        return resolver.hasMediaQueriesAffectedByViewportChange();
+    });
+}
+
+void Scope::evaluateMediaQueriesForAccessibilitySettingsChange()
+{
+    evaluateMediaQueries([] (StyleResolver& resolver) {
+        return resolver.hasMediaQueriesAffectedByAccessibilitySettingsChange();
+    });
+}
+
+template <typename TestFunction>
+void Scope::evaluateMediaQueries(TestFunction&& testFunction)
+{
+    if (!m_shadowRoot) {
+        for (auto* descendantShadowRoot : m_document.inDocumentShadowRoots())
+            descendantShadowRoot->styleScope().evaluateMediaQueries(testFunction);
+    }
+    auto* resolver = resolverIfExists();
+    if (!resolver)
+        return;
+    if (!testFunction(*resolver))
+        return;
+    scheduleUpdate(UpdateType::ContentsOrInterpretation);
+    InspectorInstrumentation::mediaQueryResultChanged(m_document);
 }
 
 void Scope::didChangeActiveStyleSheetCandidates()
@@ -612,7 +673,7 @@ void Scope::didChangeStyleSheetEnvironment()
 {
     if (!m_shadowRoot) {
         for (auto* descendantShadowRoot : m_document.inDocumentShadowRoots()) {
-            // Stylesheets is author shadow roots are are potentially affected.
+            // Stylesheets is author shadow roots are potentially affected.
             if (descendantShadowRoot->mode() != ShadowRootMode::UserAgent)
                 descendantShadowRoot->styleScope().scheduleUpdate(UpdateType::ContentsOrInterpretation);
         }

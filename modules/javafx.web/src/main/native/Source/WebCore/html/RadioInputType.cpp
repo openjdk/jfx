@@ -77,7 +77,7 @@ void RadioInputType::handleKeydownEvent(KeyboardEvent& event)
 
     // We can only stay within the form's children if the form hasn't been demoted to a leaf because
     // of malformed HTML.
-    Node* node = &element();
+    RefPtr<Node> node = &element();
     while ((node = (forward ? NodeTraversal::next(*node) : NodeTraversal::previous(*node)))) {
         // Once we encounter a form element, we know we're through.
         if (is<HTMLFormElement>(*node))
@@ -85,7 +85,7 @@ void RadioInputType::handleKeydownEvent(KeyboardEvent& event)
         // Look for more radio buttons.
         if (!is<HTMLInputElement>(*node))
             continue;
-        RefPtr<HTMLInputElement> inputElement = downcast<HTMLInputElement>(node);
+        RefPtr<HTMLInputElement> inputElement = downcast<HTMLInputElement>(node.get());
         if (inputElement->form() != element().form())
             break;
         if (inputElement->isRadioButton() && inputElement->name() == element().name() && inputElement->isFocusable()) {
@@ -120,7 +120,7 @@ bool RadioInputType::isKeyboardFocusable(KeyboardEvent& event) const
 
     // Never allow keyboard tabbing to leave you in the same radio group.  Always
     // skip any other elements in the group.
-    Element* currentFocusedNode = element().document().focusedElement();
+    RefPtr<Element> currentFocusedNode = element().document().focusedElement();
     if (is<HTMLInputElement>(currentFocusedNode)) {
         HTMLInputElement& focusedInput = downcast<HTMLInputElement>(*currentFocusedNode);
         if (focusedInput.isRadioButton() && focusedInput.form() == element().form() && focusedInput.name() == element().name())
@@ -153,22 +153,18 @@ void RadioInputType::willDispatchClick(InputElementClickState& state)
     element().setChecked(true, DispatchChangeEvent);
 }
 
-void RadioInputType::didDispatchClick(Event* event, const InputElementClickState& state)
+void RadioInputType::didDispatchClick(Event& event, const InputElementClickState& state)
 {
-    if (event->defaultPrevented() || event->defaultHandled()) {
+    if (event.defaultPrevented() || event.defaultHandled()) {
         // Restore the original selected radio button if possible.
         // Make sure it is still a radio button and only do the restoration if it still belongs to our group.
-        HTMLInputElement* checkedRadioButton = state.checkedRadioButton.get();
-        if (checkedRadioButton
-                && checkedRadioButton->isRadioButton()
-                && checkedRadioButton->form() == element().form()
-                && checkedRadioButton->name() == element().name()) {
-            checkedRadioButton->setChecked(true);
-        }
+        auto& button = state.checkedRadioButton;
+        if (button && button->isRadioButton() && button->form() == element().form() && button->name() == element().name())
+            button->setChecked(true);
     }
 
     // The work we did in willDispatchClick was default handling.
-    event->setDefaultHandled();
+    event.setDefaultHandled();
 }
 
 bool RadioInputType::isRadioButton() const

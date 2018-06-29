@@ -208,6 +208,13 @@ String imageToMarkup(const String& url, const Element& element)
 // WebCore::Pasteboard impl
 ///////////////////////////
 
+struct PasteboardFileCounter final : PasteboardFileReader {
+    void readFilename(const String&) final { ++count; }
+    void readBuffer(const String&, const String&, Ref<SharedBuffer>&&) final { ++count; }
+
+    unsigned count { 0 };
+};
+
 Pasteboard::Pasteboard(RefPtr<DataObjectJava> dataObject, bool copyPasteMode = false)
   : m_dataObject(dataObject),
     m_copyPasteMode(copyPasteMode)
@@ -222,11 +229,6 @@ Pasteboard::Pasteboard() : Pasteboard(DataObjectJava::create())
 std::unique_ptr<Pasteboard> Pasteboard::create(RefPtr<DataObjectJava> dataObject)
 {
     return std::unique_ptr<Pasteboard>(new Pasteboard(dataObject));
-}
-
-std::unique_ptr<Pasteboard> Pasteboard::createPrivate()
-{
-    return std::unique_ptr<Pasteboard>(new Pasteboard(DataObjectJava::create()));
 }
 
 std::unique_ptr<Pasteboard> Pasteboard::createForCopyAndPaste()
@@ -403,7 +405,19 @@ void Pasteboard::clear()
     }
 }
 
-Vector<String> Pasteboard::types()
+Vector<String> Pasteboard::typesSafeForBindings(const String&)
+{
+    notImplemented();
+    return { };
+}
+
+String Pasteboard::readOrigin()
+{
+    notImplemented();
+    return { };
+}
+
+Vector<String> Pasteboard::typesForLegacyUnsafeBindings()
 {
     if (m_dataObject) {
         return m_dataObject->types();
@@ -416,14 +430,26 @@ bool Pasteboard::hasData()
     return m_dataObject && m_dataObject->hasData();
 }
 
-Vector<String> Pasteboard::readFilenames()
+void Pasteboard::read(PasteboardFileReader& reader)
 {
     if (m_dataObject) {
-        Vector<String> fn;
-        m_dataObject->asFilenames(fn);
-        return fn;
+        for (const auto& filename : m_dataObject->asFilenames())
+            reader.readFilename(filename);
     }
-    return Vector<String>();
+}
+
+String Pasteboard::readStringInCustomData(const String&)
+{
+    notImplemented();
+    return { };
+}
+
+bool Pasteboard::containsFiles()
+{
+    // FIXME: This implementation can be slightly more efficient by avoiding calls to DragQueryFileW.
+    PasteboardFileCounter reader;
+    read(reader);
+    return reader.count;
 }
 
 void Pasteboard::read(PasteboardPlainText& text)
@@ -489,19 +515,6 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
     return nullptr;
 }
 
-void Pasteboard::writePasteboard(const Pasteboard& sourcePasteboard)
-{
-    if (m_dataObject) {
-        m_dataObject = sourcePasteboard.dataObject()->copy();
-    }
-    if (m_copyPasteMode) {
-        RefPtr<DataObjectJava> data = sourcePasteboard.dataObject();
-        if (data->containsURL()) jWriteURL(data->asURL(), data->asHTML());
-        if (data->containsHTML()) jWriteSelection(false, data->asPlainText(), data->asHTML());
-        if (data->containsPlainText()) jWritePlainText(data->asPlainText());
-    }
-}
-
 void Pasteboard::read(PasteboardWebContentReader&)
 {
 }
@@ -515,6 +528,10 @@ void Pasteboard::write(const PasteboardWebContent&)
 }
 
 void Pasteboard::writeMarkup(const String&)
+{
+}
+
+void Pasteboard::writeCustomData(const PasteboardCustomData&)
 {
 }
 

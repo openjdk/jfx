@@ -847,16 +847,15 @@ var
 -internal-variable-value
 
 //
-// UA Constants
+// Environment Variables
 //
-constant
+env
 
 //
 // CSS_PROP_BREAK_BEFORE/AFTER/INSIDE
 //
 avoid-column
 avoid-page
-avoid-region
 page
 recto
 region
@@ -1097,8 +1096,6 @@ x
 y
 #endif
 
-// -webkit-region-fragment
-// auto
 break
 
 wrap
@@ -1158,8 +1155,10 @@ cross-fade
 image-set
 linear-gradient
 radial-gradient
+conic-gradient
 repeating-linear-gradient
 repeating-radial-gradient
+repeating-conic-gradient
 -webkit-canvas
 -webkit-cross-fade
 -webkit-gradient
@@ -1208,6 +1207,7 @@ url
 cubic-bezier
 spring
 steps
+frames
 
 // colors
 rgb
@@ -1249,6 +1249,8 @@ path
 
 calc
 -webkit-calc
+min
+max
 
 #if defined(ENABLE_CSS_IMAGE_RESOLUTION) && ENABLE_CSS_IMAGE_RESOLUTION
 from-image
@@ -1338,3 +1340,17 @@ no-preference
 // auto-repeat
 auto-fill
 auto-fit
+
+// font-display
+// auto
+// block
+swap
+fallback
+optional
+
+#if defined(ENABLE_APPLICATION_MANIFEST) && ENABLE_APPLICATION_MANIFEST
+fullscreen
+standalone
+minimal-ui
+browser
+#endif

@@ -39,10 +39,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+namespace FileSystem {
 
 bool fileExists(const String& path)
 {
@@ -79,12 +83,12 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode)
         return invalidPlatformFileHandle;
 
     int platformFlag = 0;
-    if (mode == OpenForRead)
+    if (mode == FileOpenMode::Read)
         platformFlag |= O_RDONLY;
-    else if (mode == OpenForWrite)
+    else if (mode == FileOpenMode::Write)
         platformFlag |= (O_WRONLY | O_CREAT | O_TRUNC);
 #if OS(DARWIN)
-    else if (mode == OpenForEventsOnly)
+    else if (mode == FileOpenMode::EventsOnly)
         platformFlag |= O_EVTONLY;
 #endif
 
@@ -103,13 +107,13 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin o
 {
     int whence = SEEK_SET;
     switch (origin) {
-    case SeekFromBeginning:
+    case FileSeekOrigin::Beginning:
         whence = SEEK_SET;
         break;
-    case SeekFromCurrent:
+    case FileSeekOrigin::Current:
         whence = SEEK_CUR;
         break;
-    case SeekFromEnd:
+    case FileSeekOrigin::End:
         whence = SEEK_END;
         break;
     default:
@@ -145,12 +149,12 @@ int readFromFile(PlatformFileHandle handle, char* data, int length)
 }
 
 #if USE(FILE_LOCK)
-bool lockFile(PlatformFileHandle handle, FileLockMode lockMode)
+bool lockFile(PlatformFileHandle handle, OptionSet<FileLockMode> lockMode)
 {
-    COMPILE_ASSERT(LOCK_SH == LockShared, LockSharedEncodingIsAsExpected);
-    COMPILE_ASSERT(LOCK_EX == LockExclusive, LockExclusiveEncodingIsAsExpected);
-    COMPILE_ASSERT(LOCK_NB == LockNonBlocking, LockNonBlockingEncodingIsAsExpected);
-    int result = flock(handle, lockMode);
+    COMPILE_ASSERT(LOCK_SH == WTF::enumToUnderlyingType(FileLockMode::Shared), LockSharedEncodingIsAsExpected);
+    COMPILE_ASSERT(LOCK_EX == WTF::enumToUnderlyingType(FileLockMode::Exclusive), LockExclusiveEncodingIsAsExpected);
+    COMPILE_ASSERT(LOCK_NB == WTF::enumToUnderlyingType(FileLockMode::Nonblocking), LockNonblockingEncodingIsAsExpected);
+    int result = flock(handle, lockMode.toRaw());
     return (result != -1);
 }
 
@@ -238,21 +242,57 @@ bool getFileModificationTime(const String& path, time_t& result)
     return true;
 }
 
-bool getFileMetadata(const String& path, FileMetadata& metadata)
+static FileMetadata::Type toFileMetataType(struct stat fileInfo)
+{
+    if (S_ISDIR(fileInfo.st_mode))
+        return FileMetadata::Type::Directory;
+    if (S_ISLNK(fileInfo.st_mode))
+        return FileMetadata::Type::SymbolicLink;
+    return FileMetadata::Type::File;
+}
+
+static std::optional<FileMetadata> fileMetadataUsingFunction(const String& path, int (*statFunc)(const char*, struct stat*))
 {
     CString fsRep = fileSystemRepresentation(path);
 
     if (!fsRep.data() || fsRep.data()[0] == '\0')
-        return false;
+        return std::nullopt;
 
     struct stat fileInfo;
-    if (stat(fsRep.data(), &fileInfo))
+    if (statFunc(fsRep.data(), &fileInfo))
+        return std::nullopt;
+
+    String filename = pathGetFileName(path);
+    bool isHidden = !filename.isEmpty() && filename[0] == '.';
+    return FileMetadata {
+        static_cast<double>(fileInfo.st_mtime),
+        fileInfo.st_size,
+        isHidden,
+        toFileMetataType(fileInfo)
+    };
+}
+
+std::optional<FileMetadata> fileMetadata(const String& path)
+{
+    return fileMetadataUsingFunction(path, &lstat);
+}
+
+std::optional<FileMetadata> fileMetadataFollowingSymlinks(const String& path)
+{
+    return fileMetadataUsingFunction(path, &stat);
+}
+
+bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath)
+{
+    CString targetPathFSRep = fileSystemRepresentation(targetPath);
+    if (!targetPathFSRep.data() || targetPathFSRep.data()[0] == '\0')
         return false;
 
-    metadata.modificationTime = fileInfo.st_mtime;
-    metadata.length = fileInfo.st_size;
-    metadata.type = S_ISDIR(fileInfo.st_mode) ? FileMetadata::TypeDirectory : FileMetadata::TypeFile;
-    return true;
+    CString symbolicLinkPathFSRep = fileSystemRepresentation(symbolicLinkPath);
+    if (!symbolicLinkPathFSRep.data() || symbolicLinkPathFSRep.data()[0] == '\0')
+        return false;
+
+    return !symlink(targetPathFSRep.data(), symbolicLinkPathFSRep.data());
 }
 
 String pathByAppendingComponent(const String& path, const String& component)
@@ -260,6 +300,17 @@ String pathByAppendingComponent(const String& path, const String& component)
     if (path.endsWith('/'))
         return path + component;
     return path + "/" + component;
+}
+
+String pathByAppendingComponents(StringView path, const Vector<StringView>& components)
+{
+    StringBuilder builder;
+    builder.append(path);
+    for (auto& component : components) {
+        builder.append('/');
+        builder.append(component);
+    }
+    return builder.toString();
 }
 
 bool makeAllDirectories(const String& path)
@@ -397,4 +448,5 @@ std::optional<int32_t> getFileDeviceId(const CString& fsFile)
     return fileStat.st_dev;
 }
 
+} // namespace FileSystem
 } // namespace WebCore

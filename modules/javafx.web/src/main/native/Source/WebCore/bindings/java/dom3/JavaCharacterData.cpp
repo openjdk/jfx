@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/CharacterData.h>
@@ -56,7 +58,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_setDataImpl(JNI
     IMPL->setData(String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getLengthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CharacterDataImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->length();

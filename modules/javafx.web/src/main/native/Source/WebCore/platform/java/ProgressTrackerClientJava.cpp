@@ -36,6 +36,7 @@
 
 #include "com_sun_webkit_LoadListenerClient.h"
 
+namespace ProgressTrackerClientJavaInternal {
 static JGClass webPageClass;
 static jmethodID fireLoadEventMID;
 
@@ -52,6 +53,7 @@ static void initRefs(JNIEnv* env)
         ASSERT(fireLoadEventMID);
     }
 }
+}
 
 namespace WebCore {
 
@@ -66,6 +68,7 @@ void ProgressTrackerClientJava::progressStarted(Frame&)
 
 void ProgressTrackerClientJava::progressEstimateChanged(Frame& originatingProgressFrame)
 {
+    using namespace ProgressTrackerClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 

@@ -36,8 +36,11 @@
 #include "StyleFontSizeFunctions.h"
 #include "StyleResolver.h"
 #include "VisiblePosition.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGInlineText);
 
 static String applySVGWhitespaceRules(const String& string, bool preserveWhiteSpace)
 {
@@ -152,7 +155,7 @@ IntRect RenderSVGInlineText::linesBoundingBox() const
 bool RenderSVGInlineText::characterStartsNewTextChunk(int position) const
 {
     ASSERT(position >= 0);
-    ASSERT(position < static_cast<int>(textLength()));
+    ASSERT(position < static_cast<int>(text().length()));
 
     // Each <textPath> element starts a new text chunk, regardless of any x/y values.
     if (!position && parent()->isSVGTextPath() && !previousSibling())
@@ -165,9 +168,9 @@ bool RenderSVGInlineText::characterStartsNewTextChunk(int position) const
     return it->value.x != SVGTextLayoutAttributes::emptyValue() || it->value.y != SVGTextLayoutAttributes::emptyValue();
 }
 
-VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point, const RenderRegion*)
+VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point, const RenderFragmentContainer*)
 {
-    if (!firstTextBox() || !textLength())
+    if (!firstTextBox() || text().isEmpty())
         return createVisiblePosition(0, DOWNSTREAM);
 
     float baseline = m_scaledFont.fontMetrics().floatAscent();

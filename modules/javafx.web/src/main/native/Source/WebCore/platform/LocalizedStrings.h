@@ -215,6 +215,9 @@ namespace WebCore {
 
     String AXAutoFillCredentialsLabel();
     String AXAutoFillContactsLabel();
+    String AXAutoFillStrongPasswordLabel();
+    String AXAutoFillStrongConfirmationPasswordLabel();
+    String autoFillStrongPasswordLabel();
 
     String missingPluginText();
     String crashedPluginText();
@@ -310,6 +313,16 @@ namespace WebCore {
     WEBCORE_EXPORT String insertListTypeNumbered();
     WEBCORE_EXPORT String insertListTypeNumberedAccessibilityTitle();
     WEBCORE_EXPORT String exitFullScreenButtonAccessibilityTitle();
+#endif
+
+#if ENABLE(EXTRA_ZOOM_MODE)
+    WEBCORE_EXPORT String formControlCancelButtonTitle();
+    WEBCORE_EXPORT String formControlSubmitButtonTitle();
+    WEBCORE_EXPORT String formControlHideButtonTitle();
+    WEBCORE_EXPORT String formControlGoButtonTitle();
+    WEBCORE_EXPORT String formControlSearchButtonTitle();
+    WEBCORE_EXPORT String textInputModeWriteButton();
+    WEBCORE_EXPORT String textInputModeSpeechButton();
 #endif
 
 #if USE(GLIB) && defined(GETTEXT_PACKAGE)

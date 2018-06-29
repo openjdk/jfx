@@ -26,8 +26,10 @@
 
 #pragma once
 
-#include "ResourceHandleTypes.h"
+#include "HTTPHeaderNames.h"
+#include "StoredCredentialsPolicy.h"
 #include <wtf/Forward.h>
+#include <wtf/HashSet.h>
 
 namespace WebCore {
 
@@ -37,16 +39,19 @@ class ResourceResponse;
 class SecurityOrigin;
 class URL;
 
-bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&);
+WEBCORE_EXPORT bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&);
 bool isOnAccessControlSimpleRequestMethodWhitelist(const String&);
 
-void updateRequestForAccessControl(ResourceRequest&, SecurityOrigin&, StoredCredentials);
+WEBCORE_EXPORT void updateRequestForAccessControl(ResourceRequest&, SecurityOrigin&, StoredCredentialsPolicy);
 WEBCORE_EXPORT ResourceRequest createAccessControlPreflightRequest(const ResourceRequest&, SecurityOrigin&, const String&);
 
 bool isValidCrossOriginRedirectionURL(const URL&);
-void cleanRedirectedRequestForAccessControl(ResourceRequest&);
 
-WEBCORE_EXPORT bool passesAccessControlCheck(const ResourceResponse&, StoredCredentials, SecurityOrigin&, String& errorDescription);
-WEBCORE_EXPORT bool validatePreflightResponse(const ResourceRequest&, const ResourceResponse&, StoredCredentials, SecurityOrigin&, String& errorDescription);
+using HTTPHeaderNameSet = HashSet<HTTPHeaderName, WTF::IntHash<HTTPHeaderName>, WTF::StrongEnumHashTraits<HTTPHeaderName>>;
+HTTPHeaderNameSet httpHeadersToKeepFromCleaning(const HTTPHeaderMap&);
+WEBCORE_EXPORT void cleanHTTPRequestHeadersForAccessControl(ResourceRequest&, const HTTPHeaderNameSet& = { });
+
+WEBCORE_EXPORT bool passesAccessControlCheck(const ResourceResponse&, StoredCredentialsPolicy, SecurityOrigin&, String& errorDescription);
+WEBCORE_EXPORT bool validatePreflightResponse(const ResourceRequest&, const ResourceResponse&, StoredCredentialsPolicy, SecurityOrigin&, String& errorDescription);
 
 } // namespace WebCore

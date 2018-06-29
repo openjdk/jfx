@@ -536,8 +536,13 @@ bool Value::parseJSON(const String& jsonInput, RefPtr<Value>& output)
     const UChar* end = start + jsonInput.length();
     const UChar* tokenEnd;
     auto result = buildValue(start, end, &tokenEnd, 0);
-    if (!result || tokenEnd != end)
+    if (!result)
         return false;
+
+    for (const UChar* valueEnd = tokenEnd; valueEnd < end; ++valueEnd) {
+        if (!isSpaceOrNewline(*valueEnd))
+            return false;
+    }
 
     output = WTFMove(result);
     return true;
@@ -825,7 +830,7 @@ ArrayBase::ArrayBase()
 
 RefPtr<Value> ArrayBase::get(size_t index) const
 {
-    ASSERT_WITH_SECURITY_IMPLICATION(index < m_map.size());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(index < m_map.size());
     return m_map[index];
 }
 

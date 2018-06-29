@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/DeprecatedCSSOMValue.h>
@@ -43,7 +45,7 @@ extern "C" {
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSValueListImpl_getLengthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSValueListImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->length();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -252,7 +252,7 @@ bool JSGenericTypedArrayView<Adaptor>::set(
 
         RELEASE_ASSERT(other->canAccessRangeQuickly(objectOffset, length));
         bool success = validateRange(exec, offset, length);
-        ASSERT(!scope.exception() == success);
+        EXCEPTION_ASSERT(!scope.exception() == success);
         if (!success)
             return false;
 
@@ -300,7 +300,7 @@ bool JSGenericTypedArrayView<Adaptor>::set(
     case NotTypedArray:
     case TypeDataView: {
         bool success = validateRange(exec, offset, length);
-        ASSERT(!scope.exception() == success);
+        EXCEPTION_ASSERT(!scope.exception() == success);
         if (!success)
             return false;
 
@@ -309,7 +309,7 @@ bool JSGenericTypedArrayView<Adaptor>::set(
             JSValue value = object->get(exec, i + objectOffset);
             RETURN_IF_EXCEPTION(scope, false);
             bool success = setIndex(exec, offset + i, value);
-            ASSERT(!scope.exception() || !success);
+            EXCEPTION_ASSERT(!scope.exception() || !success);
             if (!success)
                 return false;
         }
@@ -355,14 +355,14 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlot(
 
     if (std::optional<uint32_t> index = parseIndex(propertyName)) {
         if (thisObject->isNeutered()) {
-            slot.setCustom(thisObject, None, throwNeuteredTypedArrayTypeError);
+            slot.setCustom(thisObject, static_cast<unsigned>(PropertyAttribute::None), throwNeuteredTypedArrayTypeError);
             return true;
         }
 
         if (thisObject->canGetIndexQuickly(index.value()))
-            slot.setValue(thisObject, DontDelete | ReadOnly, thisObject->getIndexQuickly(index.value()));
+            slot.setValue(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly, thisObject->getIndexQuickly(index.value()));
         else
-            slot.setValue(thisObject, DontDelete | ReadOnly, jsUndefined());
+            slot.setValue(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly, jsUndefined());
         return true;
     }
 
@@ -446,7 +446,7 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlotByIndex(
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
 
     if (thisObject->isNeutered()) {
-        slot.setCustom(thisObject, None, throwNeuteredTypedArrayTypeError);
+        slot.setCustom(thisObject, static_cast<unsigned>(PropertyAttribute::None), throwNeuteredTypedArrayTypeError);
         return true;
     }
 
@@ -458,7 +458,7 @@ bool JSGenericTypedArrayView<Adaptor>::getOwnPropertySlotByIndex(
     if (!thisObject->canGetIndexQuickly(propertyName))
         return false;
 
-    slot.setValue(thisObject, DontDelete, thisObject->getIndexQuickly(propertyName));
+    slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontDelete), thisObject->getIndexQuickly(propertyName));
     return true;
 }
 
@@ -504,7 +504,7 @@ size_t JSGenericTypedArrayView<Adaptor>::estimatedSize(JSCell* cell)
 
     if (thisObject->m_mode == OversizeTypedArray)
         return Base::estimatedSize(thisObject) + thisObject->byteSize();
-    if (thisObject->m_mode == FastTypedArray && thisObject->m_vector)
+    if (thisObject->m_mode == FastTypedArray && thisObject->m_poisonedVector)
         return Base::estimatedSize(thisObject) + thisObject->byteSize();
 
     return Base::estimatedSize(thisObject);
@@ -517,7 +517,7 @@ void JSGenericTypedArrayView<Adaptor>::visitChildren(JSCell* cell, SlotVisitor& 
 
     switch (thisObject->m_mode) {
     case FastTypedArray: {
-        if (void* vector = thisObject->m_vector.get())
+        if (void* vector = thisObject->m_poisonedVector.getMayBeNull())
             visitor.markAuxiliary(vector);
         break;
     }
@@ -559,12 +559,11 @@ ArrayBuffer* JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBuf
     VM& vm = *heap->vm();
     DeferGCForAWhile deferGC(*heap);
 
-    ASSERT(!thisObject->hasIndexingHeader());
-
     RELEASE_ASSERT(!thisObject->hasIndexingHeader());
-    thisObject->m_butterfly.set(vm, thisObject, Butterfly::createOrGrowArrayRight(
+    thisObject->setButterflyWithIndexingMask(vm, Butterfly::createOrGrowArrayRight(
         thisObject->butterfly(), vm, thisObject, thisObject->structure(),
-        thisObject->structure()->outOfLineCapacity(), false, 0, 0));
+        thisObject->structure()->outOfLineCapacity(), false, 0, 0),
+        WTF::computeIndexingMask(thisObject->length()));
 
     RefPtr<ArrayBuffer> buffer;
 
@@ -586,7 +585,7 @@ ArrayBuffer* JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBuf
     }
 
     thisObject->butterfly()->indexingHeader()->setArrayBuffer(buffer.get());
-    thisObject->m_vector.setWithoutBarrier(buffer->data());
+    thisObject->m_poisonedVector.setWithoutBarrier(buffer->data());
     WTF::storeStoreFence();
     thisObject->m_mode = WastefulTypedArray;
     heap->addReference(thisObject, buffer.get());

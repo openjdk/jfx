@@ -27,8 +27,8 @@
 #define RUNTIME_FUNCTION_H_
 
 #include "BridgeJSC.h"
-#include <runtime/InternalFunction.h>
-#include <runtime/JSGlobalObject.h>
+#include <JavaScriptCore/InternalFunction.h>
+#include <JavaScriptCore/JSGlobalObject.h>
 
 namespace JSC {
 
@@ -37,10 +37,11 @@ public:
     typedef InternalFunction Base;
     static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | TypeOfShouldCallGetCallData;
 
-    static RuntimeMethod* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, const String& name, Bindings::Method* method)
+    static RuntimeMethod* create(ExecState*, JSGlobalObject* globalObject, Structure* structure, const String& name, Bindings::Method* method)
     {
-        RuntimeMethod* runtimeMethod = new (NotNull, allocateCell<RuntimeMethod>(*exec->heap())) RuntimeMethod(globalObject, structure, method);
-        runtimeMethod->finishCreation(exec->vm(), name);
+        VM& vm = globalObject->vm();
+        RuntimeMethod* runtimeMethod = new (NotNull, allocateCell<RuntimeMethod>(vm.heap)) RuntimeMethod(globalObject, structure, method);
+        runtimeMethod->finishCreation(vm, name);
         return runtimeMethod;
     }
 
@@ -55,13 +56,12 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
 protected:
     RuntimeMethod(JSGlobalObject*, Structure*, Bindings::Method*);
     void finishCreation(VM&, const String&);
-    static CallType getCallData(JSCell*, CallData&);
 
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
 

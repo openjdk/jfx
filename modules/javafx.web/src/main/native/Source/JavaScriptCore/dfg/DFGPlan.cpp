@@ -41,7 +41,6 @@
 #include "DFGCriticalEdgeBreakingPhase.h"
 #include "DFGDCEPhase.h"
 #include "DFGFailedFinalizer.h"
-#include "DFGFixedButterflyAccessUncagingPhase.h"
 #include "DFGFixupPhase.h"
 #include "DFGGraphSafepoint.h"
 #include "DFGIntegerCheckCombiningPhase.h"
@@ -93,10 +92,10 @@
 
 namespace JSC {
 
-extern double totalDFGCompileTime;
-extern double totalFTLCompileTime;
-extern double totalFTLDFGCompileTime;
-extern double totalFTLB3CompileTime;
+extern Seconds totalDFGCompileTime;
+extern Seconds totalFTLCompileTime;
+extern Seconds totalFTLDFGCompileTime;
+extern Seconds totalFTLB3CompileTime;
 
 }
 
@@ -174,10 +173,10 @@ void Plan::compileInThread(ThreadData* threadData)
 {
     this->threadData = threadData;
 
-    double before = 0;
+    MonotonicTime before { };
     CString codeBlockName;
     if (UNLIKELY(computeCompileTimes()))
-        before = monotonicallyIncreasingTimeMS();
+        before = MonotonicTime::now();
     if (UNLIKELY(reportCompileTimes()))
         codeBlockName = toCString(*codeBlock);
 
@@ -191,9 +190,9 @@ void Plan::compileInThread(ThreadData* threadData)
     RELEASE_ASSERT(path == CancelPath || finalizer);
     RELEASE_ASSERT((path == CancelPath) == (stage == Cancelled));
 
-    double after = 0;
+    MonotonicTime after { };
     if (UNLIKELY(computeCompileTimes())) {
-        after = monotonicallyIncreasingTimeMS();
+        after = MonotonicTime::now();
 
         if (Options::reportTotalCompileTimes()) {
             if (isFTL(mode)) {
@@ -224,14 +223,14 @@ void Plan::compileInThread(ThreadData* threadData)
     }
     if (codeBlock) { // codeBlock will be null if the compilation was cancelled.
         if (path == FTLPath)
-            CODEBLOCK_LOG_EVENT(codeBlock, "ftlCompile", ("took ", after - before, " ms (DFG: ", m_timeBeforeFTL - before, ", B3: ", after - m_timeBeforeFTL, ") with ", pathName));
+            CODEBLOCK_LOG_EVENT(codeBlock, "ftlCompile", ("took ", (after - before).milliseconds(), " ms (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ") with ", pathName));
         else
-            CODEBLOCK_LOG_EVENT(codeBlock, "dfgCompile", ("took ", after - before, " ms with ", pathName));
+            CODEBLOCK_LOG_EVENT(codeBlock, "dfgCompile", ("took ", (after - before).milliseconds(), " ms with ", pathName));
     }
     if (UNLIKELY(reportCompileTimes())) {
-        dataLog("Optimized ", codeBlockName, " using ", mode, " with ", pathName, " into ", finalizer ? finalizer->codeSize() : 0, " bytes in ", after - before, " ms");
+        dataLog("Optimized ", codeBlockName, " using ", mode, " with ", pathName, " into ", finalizer ? finalizer->codeSize() : 0, " bytes in ", (after - before).milliseconds(), " ms");
         if (path == FTLPath)
-            dataLog(" (DFG: ", m_timeBeforeFTL - before, ", B3: ", after - m_timeBeforeFTL, ")");
+            dataLog(" (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ")");
         dataLog(".\n");
     }
 }
@@ -247,11 +246,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     }
 
     Graph dfg(*vm, *this);
-
-    if (!parse(dfg)) {
-        finalizer = std::make_unique<FailedFinalizer>(*this);
-        return FailPath;
-    }
+    parse(dfg);
 
     codeBlock->setCalleeSaveRegisters(RegisterSet::dfgCalleeSaveRegisters());
 
@@ -366,9 +361,8 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     // If we're doing validation, then run some analyses, to give them an opportunity
     // to self-validate. Now is as good a time as any to do this.
     if (validationEnabled()) {
-        dfg.ensureDominators();
-        dfg.ensureNaturalLoops();
-        dfg.ensurePrePostNumbering();
+        dfg.ensureCPSDominators();
+        dfg.ensureCPSNaturalLoops();
     }
 
     switch (mode) {
@@ -469,7 +463,6 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         RUN_PHASE(performCFA);
         RUN_PHASE(performGlobalStoreBarrierInsertion);
         RUN_PHASE(performStoreBarrierClustering);
-        RUN_PHASE(performFixedButterflyAccessUncaging);
         if (Options::useMovHintRemoval())
             RUN_PHASE(performMovHintRemoval);
         RUN_PHASE(performCleanUp);
@@ -498,7 +491,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         FTL::lowerDFGToB3(state);
 
         if (UNLIKELY(computeCompileTimes()))
-            m_timeBeforeFTL = monotonicallyIncreasingTimeMS();
+            m_timeBeforeFTL = MonotonicTime::now();
 
         if (Options::b3AlwaysFailsBeforeCompile()) {
             FTL::fail(state);
@@ -702,7 +695,8 @@ void Plan::cleanMustHandleValuesIfNecessary()
     if (!mustHandleValues.numberOfLocals())
         return;
 
-    FastBitVector liveness = codeBlock->alternative()->livenessAnalysis().getLivenessInfoAtBytecodeOffset(osrEntryBytecodeIndex);
+    CodeBlock* alternative = codeBlock->alternative();
+    FastBitVector liveness = alternative->livenessAnalysis().getLivenessInfoAtBytecodeOffset(alternative, osrEntryBytecodeIndex);
 
     for (unsigned local = mustHandleValues.numberOfLocals(); local--;) {
         if (!liveness[local])

@@ -1,61 +1,98 @@
 /*
- * Copyright (C) Canon Inc. 2016
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted, provided that the following conditions
- * are required to be met:
- *
+ * modification, are permitted provided that the following conditions
+ * are met:
  * 1. Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
+ *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- * notice, this list of conditions and the following disclaimer in the
- * documentation and/or other materials provided with the distribution.
- * 3. Neither the name of Canon Inc. nor the names of
- * its contributors may be used to endorse or promote products derived
- * from this software without specific prior written permission.
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY CANON INC. AND ITS CONTRIBUTORS "AS IS" AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL CANON INC. AND ITS CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+ * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
 
-#if ENABLE(WEB_ANIMATIONS)
-
 #include "AnimationTimeline.h"
+#include "GenericTaskQueue.h"
+#include "PlatformScreen.h"
+#include "Timer.h"
 #include <wtf/Ref.h>
-#include <wtf/WeakPtr.h>
+
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#include "DisplayRefreshMonitorClient.h"
+#endif
 
 namespace WebCore {
 
-class Document;
+class AnimationPlaybackEvent;
+class RenderElement;
 
-class DocumentTimeline final : public AnimationTimeline {
+class DocumentTimeline final : public AnimationTimeline
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    , public DisplayRefreshMonitorClient
+#endif
+{
 public:
-    static Ref<DocumentTimeline> create(Document&, double);
+    static Ref<DocumentTimeline> create(Document&, PlatformDisplayID);
     ~DocumentTimeline();
 
-    void attach(WebAnimation&);
-    void detach(WebAnimation&);
+    std::optional<Seconds> currentTime() override;
+    void pause() override;
 
-protected:
-    DocumentTimeline(Document&, double);
+    void animationTimingModelDidChange() override;
+    void windowScreenDidChange(PlatformDisplayID);
+
+    std::unique_ptr<RenderStyle> animatedStyleForRenderer(RenderElement& renderer);
+    void animationAcceleratedRunningStateDidChange(WebAnimation&);
+    bool runningAnimationsForElementAreAllAccelerated(Element&);
+    void detachFromDocument();
+
+    void enqueueAnimationPlaybackEvent(AnimationPlaybackEvent&);
 
 private:
-    WeakPtr<Document> m_document;
-    double m_originTime;
+    DocumentTimeline(Document&, PlatformDisplayID);
+
+    void scheduleInvalidationTaskIfNeeded();
+    void performInvalidationTask();
+    void updateAnimationSchedule();
+    void animationScheduleTimerFired();
+    void scheduleAnimationResolution();
+    void updateAnimations();
+    void performEventDispatchTask();
+
+    RefPtr<Document> m_document;
+    bool m_paused { false };
+    std::optional<Seconds> m_cachedCurrentTime;
+    GenericTaskQueue<Timer> m_invalidationTaskQueue;
+    GenericTaskQueue<Timer> m_eventDispatchTaskQueue;
+    bool m_needsUpdateAnimationSchedule { false };
+    Timer m_animationScheduleTimer;
+    HashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
+    Vector<Ref<AnimationPlaybackEvent>> m_pendingAnimationEvents;
+
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    // Override for DisplayRefreshMonitorClient
+    void displayRefreshFired() override;
+    RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const override;
+#else
+    void animationResolutionTimerFired();
+    Timer m_animationResolutionTimer;
+#endif
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_ANIMATION_TIMELINE(DocumentTimeline, isDocumentTimeline())
-
-#endif // ENABLE(WEB_ANIMATIONS)

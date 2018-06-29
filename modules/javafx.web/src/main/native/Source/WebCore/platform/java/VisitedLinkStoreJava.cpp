@@ -24,10 +24,12 @@
  */
 
 #include "config.h"
+
 #include "VisitedLinkStoreJava.h"
 
-#include "PageCache.h"
+#include <WebCore/PageCache.h>
 #include <wtf/NeverDestroyed.h>
+
 
 using namespace WebCore;
 
@@ -74,17 +76,17 @@ void VisitedLinkStoreJava::removeAllVisitedLinks()
 
 void VisitedLinkStoreJava::addVisitedLink(const String& urlString)
 {
-    addVisitedLinkHash(visitedLinkHash(urlString));
+    addVisitedLinkHash(computeSharedStringHash(urlString));
 }
 
-bool VisitedLinkStoreJava::isLinkVisited(Page& page, LinkHash linkHash, const URL&, const AtomicString&)
+bool VisitedLinkStoreJava::isLinkVisited(Page& page, SharedStringHash linkHash, const URL&, const AtomicString&)
 {
     populateVisitedLinksIfNeeded(page);
 
     return m_visitedLinkHashes.contains(linkHash);
 }
 
-void VisitedLinkStoreJava::addVisitedLink(Page&, LinkHash linkHash)
+void VisitedLinkStoreJava::addVisitedLink(Page&, SharedStringHash linkHash)
 {
     if (!s_shouldTrackVisitedLinks)
         return;
@@ -100,7 +102,7 @@ void VisitedLinkStoreJava::populateVisitedLinksIfNeeded(Page&)
     m_visitedLinksPopulated = true;
 }
 
-void VisitedLinkStoreJava::addVisitedLinkHash(LinkHash linkHash)
+void VisitedLinkStoreJava::addVisitedLinkHash(SharedStringHash linkHash)
 {
     ASSERT(s_shouldTrackVisitedLinks);
     m_visitedLinkHashes.add(linkHash);
@@ -117,4 +119,5 @@ void VisitedLinkStoreJava::removeVisitedLinkHashes()
 
     invalidateStylesForAllLinks();
 }
+
 

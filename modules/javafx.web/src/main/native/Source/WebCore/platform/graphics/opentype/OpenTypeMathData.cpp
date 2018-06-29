@@ -34,9 +34,9 @@
 #endif
 #include "SharedBuffer.h"
 
-using namespace std;
 
 namespace WebCore {
+using namespace std;
 
 #if ENABLE(OPENTYPE_MATH)
 namespace OpenType {
@@ -254,24 +254,24 @@ OpenTypeMathData::OpenTypeMathData(const FontPlatformData& font)
     const OpenType::MathVariants* mathVariants = math->mathVariants(*m_mathBuffer);
     if (!mathVariants)
         m_mathBuffer = nullptr;
+}
 #elif USE(HARFBUZZ)
 OpenTypeMathData::OpenTypeMathData(const FontPlatformData& font)
+    : m_mathFont(font.harfBuzzFace().createFont())
 {
-    HarfBuzzFace* face = font.harfBuzzFace();
-    if (face) {
-        m_mathFont.reset(face->createFont());
-        if (!hb_ot_math_has_data(hb_font_get_face(m_mathFont.get())))
-            m_mathFont.release();
-    }
-#else
+    if (!hb_ot_math_has_data(hb_font_get_face(m_mathFont.get())))
+        m_mathFont = nullptr;
+}
+#elif PLATFORM(JAVA)
 OpenTypeMathData::OpenTypeMathData(const FontPlatformData&)
 {
+    //TODO-java: Get font table data from prism
+}
+#else
+OpenTypeMathData::OpenTypeMathData(const FontPlatformData&) = default;
 #endif
-}
 
-OpenTypeMathData::~OpenTypeMathData()
-{
-}
+OpenTypeMathData::~OpenTypeMathData() = default;
 
 #if ENABLE(OPENTYPE_MATH)
 float OpenTypeMathData::getMathConstant(const Font& font, MathConstant constant) const

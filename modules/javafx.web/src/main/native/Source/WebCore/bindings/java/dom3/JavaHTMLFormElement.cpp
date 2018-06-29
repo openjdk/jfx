@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/HTMLCollection.h>
@@ -127,13 +129,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setNameImpl(J
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getNoValidateImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getNoValidateImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::novalidateAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setNoValidateImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_setNoValidateImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::novalidateAttr, value);
@@ -157,7 +159,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getElementsI
     return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->elementsForNativeBindings()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getLengthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
@@ -165,21 +167,21 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_getLengthImpl
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_submitImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_submitImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->submit();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_resetImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_resetImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->reset();
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_checkValidityImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLFormElementImpl_checkValidityImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->checkValidity();

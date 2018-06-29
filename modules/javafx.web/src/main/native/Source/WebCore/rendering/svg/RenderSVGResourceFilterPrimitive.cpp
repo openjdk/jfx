@@ -34,8 +34,11 @@
 #include "SVGFESpecularLightingElement.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceFilterPrimitive);
 
 RenderSVGResourceFilterPrimitive::RenderSVGResourceFilterPrimitive(SVGFilterPrimitiveStandardAttributes& filterPrimitiveElement, RenderStyle&& style)
     : RenderSVGHiddenContainer(filterPrimitiveElement, WTFMove(style))
@@ -101,11 +104,13 @@ FloatRect RenderSVGResourceFilterPrimitive::determineFilterPrimitiveSubregion(Fi
 
     FloatRect absoluteSubregion = filter.absoluteTransform().mapRect(subregion);
     FloatSize filterResolution = filter.filterResolution();
-    absoluteSubregion.scale(filterResolution.width(), filterResolution.height());
+    absoluteSubregion.scale(filterResolution);
+    // Save this before clipping so we can use it to map lighting points from user space to buffer coordinates.
+    effect.setUnclippedAbsoluteSubregion(absoluteSubregion);
 
     // Clip every filter effect to the filter region.
     FloatRect absoluteScaledFilterRegion = filter.filterRegion();
-    absoluteScaledFilterRegion.scale(filterResolution.width(), filterResolution.height());
+    absoluteScaledFilterRegion.scale(filterResolution);
     absoluteSubregion.intersect(absoluteScaledFilterRegion);
 
     effect.setMaxEffectRect(absoluteSubregion);

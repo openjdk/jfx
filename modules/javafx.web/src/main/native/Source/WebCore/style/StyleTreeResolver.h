@@ -51,13 +51,15 @@ public:
 
     std::unique_ptr<Update> resolve();
 
-    static ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, Element&, Change parentChange);
-
 private:
     std::unique_ptr<RenderStyle> styleForElement(Element&, const RenderStyle& inheritedStyle);
 
     void resolveComposedTree();
-    ElementUpdate resolveElement(Element&);
+
+    ElementUpdates resolveElement(Element&);
+
+    ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, Element&, Change);
+    ElementUpdate resolvePseudoStyle(Element&, const ElementUpdate&, PseudoId);
 
     struct Scope : RefCounted<Scope> {
         StyleResolver& styleResolver;
@@ -75,11 +77,11 @@ private:
         Element* element;
         const RenderStyle& style;
         Change change { NoChange };
+        DescendantsToResolve descendantsToResolve { DescendantsToResolve::None };
         bool didPushScope { false };
-        bool elementNeedingStyleRecalcAffectsNextSiblingElementStyle { false };
 
         Parent(Document&);
-        Parent(Element&, const RenderStyle&, Change);
+        Parent(Element&, const RenderStyle&, Change, DescendantsToResolve);
     };
 
     Scope& scope() { return m_scopeStack.last(); }
@@ -89,7 +91,7 @@ private:
     void pushEnclosingScope();
     void popScope();
 
-    void pushParent(Element&, const RenderStyle&, Change);
+    void pushParent(Element&, const RenderStyle&, Change, DescendantsToResolve);
     void popParent();
     void popParentsToDepth(unsigned depth);
 

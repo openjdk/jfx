@@ -30,7 +30,6 @@
 // Currently, there are 4 hooks.
 //    1. Loader.resolve
 //    2. Loader.fetch
-//    3. Loader.instantiate
 
 @globalPrivate
 function setStateToMax(entry, newState)
@@ -100,6 +99,7 @@ function newRegistryEntry(key)
         module: @undefined, // JSModuleRecord
         linkError: @undefined,
         linkSucceeded: true,
+        evaluated: false,
     };
 }
 
@@ -139,80 +139,30 @@ function fulfillFetch(entry, source)
     @setStateToMax(entry, @ModuleInstantiate);
 }
 
-function fulfillInstantiate(entry, optionalInstance, source)
-{
-    // https://whatwg.github.io/loader/#fulfill-instantiate
-
-    "use strict";
-
-    if (!entry.instantiate)
-        entry.instantiate = @newPromiseCapability(@InternalPromise).@promise;
-    this.commitInstantiated(entry, optionalInstance, source);
-
-    // FIXME: The draft fulfills the promise in the CommitInstantiated operation.
-    // But it CommitInstantiated is also used in the requestInstantiate and
-    // we should not "force fulfill" there.
-    // So we separate "force fulfill" operation from the CommitInstantiated operation.
-    // https://github.com/whatwg/loader/pull/67
-    this.forceFulfillPromise(entry.instantiate, entry);
-}
-
-function commitInstantiated(entry, optionalInstance, source)
-{
-    // https://whatwg.github.io/loader/#commit-instantiated
-
-    "use strict";
-
-    var moduleRecord = this.instantiation(optionalInstance, source, entry);
-
-    // FIXME: Described in the draft,
-    //   4. Fulfill entry.[[Instantiate]] with instance.
-    // But, instantiate promise should be fulfilled with the entry.
-    // We remove this statement because instantiate promise will be
-    // fulfilled without this "force fulfill" operation.
-    // https://github.com/whatwg/loader/pull/67
-
-    var dependencies = [];
-    var dependenciesMap = moduleRecord.dependenciesMap;
-    moduleRecord.registryEntry = entry;
-    var requestedModules = this.requestedModules(moduleRecord);
-    for (var i = 0, length = requestedModules.length; i < length; ++i) {
-        var depKey = requestedModules[i];
-        var pair = {
-            key: depKey,
-            value: @undefined
-        };
-        @putByValDirect(dependencies, dependencies.length, pair);
-        dependenciesMap.@set(depKey, pair);
-    }
-    entry.dependencies = dependencies;
-    entry.dependenciesMap = dependenciesMap;
-    entry.module = moduleRecord;
-    @setStateToMax(entry, @ModuleSatisfy);
-}
-
-function instantiation(result, source, entry)
-{
-    // https://whatwg.github.io/loader/#instantiation
-    // FIXME: Current implementation does not support optionalInstance.
-    // https://bugs.webkit.org/show_bug.cgi?id=148171
-
-    "use strict";
-
-    return this.parseModule(entry.key, source);
-}
-
 // Loader.
 
-function requestFetch(key, fetcher)
+function requestFetch(entry, parameters, fetcher)
 {
     // https://whatwg.github.io/loader/#request-fetch
 
     "use strict";
 
-    var entry = this.ensureRegistered(key);
-    if (entry.fetch)
-        return entry.fetch;
+    if (entry.fetch) {
+        var currentAttempt = entry.fetch;
+        if (entry.state !== @ModuleFetch)
+            return currentAttempt;
+
+        return currentAttempt.catch((error) => {
+            // Even if the existing fetching request failed, this attempt may succeed.
+            // For example, previous attempt used invalid integrity="" value. But this
+            // request could have the correct integrity="" value. In that case, we should
+            // retry fetching for this request.
+            // https://html.spec.whatwg.org/#fetch-a-single-module-script
+            if (currentAttempt === entry.fetch)
+                entry.fetch = @undefined;
+            return this.requestFetch(entry, parameters, fetcher);
+        });
+    }
 
     // Hook point.
     // 2. Loader.fetch
@@ -220,7 +170,7 @@ function requestFetch(key, fetcher)
     //     Take the key and fetch the resource actually.
     //     For example, JavaScriptCore shell can provide the hook fetching the resource
     //     from the local file system.
-    var fetchPromise = this.fetch(key, fetcher).then((source) => {
+    var fetchPromise = this.fetch(entry.key, parameters, fetcher).then((source) => {
         @setStateToMax(entry, @ModuleInstantiate);
         return source;
     });
@@ -228,125 +178,99 @@ function requestFetch(key, fetcher)
     return fetchPromise;
 }
 
-function requestInstantiate(key, fetcher)
+function requestInstantiate(entry, parameters, fetcher)
 {
     // https://whatwg.github.io/loader/#request-instantiate
 
     "use strict";
 
-    var entry = this.ensureRegistered(key);
+    // entry.instantiate is set if fetch succeeds.
     if (entry.instantiate)
         return entry.instantiate;
 
-    var instantiatePromise = this.requestFetch(key, fetcher).then((source) => {
-        // Hook point.
-        // 3. Loader.instantiate
-        //     https://whatwg.github.io/loader/#browser-instantiate
-        //     Take the key and the fetched source code, and instantiate the module record
-        //     by parsing the module source code.
-        //     It has the chance to provide the optional module instance that is different from
-        //     the ordinary one.
-        return this.instantiate(key, source, fetcher).then((optionalInstance) => {
-            this.commitInstantiated(entry, optionalInstance, source);
-            return entry;
-        });
+    var instantiatePromise = this.requestFetch(entry, parameters, fetcher).then((source) => {
+        // https://html.spec.whatwg.org/#fetch-a-single-module-script
+        // Now fetching request succeeds. Then even if instantiation fails, we should cache it.
+        // Instantiation won't be retried.
+        if (entry.instantiate)
+            return entry.instantiate;
+        entry.instantiate = instantiatePromise;
+
+        var key = entry.key;
+        var moduleRecord = this.parseModule(key, source);
+        var dependenciesMap = moduleRecord.dependenciesMap;
+        var requestedModules = this.requestedModules(moduleRecord);
+        var dependencies = @newArrayWithSize(requestedModules.length);
+        for (var i = 0, length = requestedModules.length; i < length; ++i) {
+            var depName = requestedModules[i];
+            var depKey = this.resolveSync(depName, key, fetcher);
+            var depEntry = this.ensureRegistered(depKey);
+            @putByValDirect(dependencies, i, depEntry);
+            dependenciesMap.@set(depName, depEntry);
+        }
+        entry.dependencies = dependencies;
+        entry.dependenciesMap = dependenciesMap;
+        entry.module = moduleRecord;
+        @setStateToMax(entry, @ModuleSatisfy);
+        return entry;
     });
-    entry.instantiate = instantiatePromise;
     return instantiatePromise;
 }
 
-function requestSatisfy(key, fetcher)
+function requestSatisfy(entry, parameters, fetcher, visited)
 {
-    // https://whatwg.github.io/loader/#satisfy-instance
+    // https://html.spec.whatwg.org/#internal-module-script-graph-fetching-procedure
 
     "use strict";
 
-    var entry = this.ensureRegistered(key);
     if (entry.satisfy)
         return entry.satisfy;
 
-    var satisfyPromise = this.requestInstantiate(key, fetcher).then((entry) => {
-        var depLoads = [];
+    visited.@add(entry);
+    var satisfyPromise = this.requestInstantiate(entry, parameters, fetcher).then((entry) => {
+        if (entry.satisfy)
+            return entry.satisfy;
+
+        var depLoads = @newArrayWithSize(entry.dependencies.length);
         for (var i = 0, length = entry.dependencies.length; i < length; ++i) {
-            let pair = entry.dependencies[i];
+            var depEntry = entry.dependencies[i];
+            var promise;
 
-            // Hook point.
-            // 1. Loader.resolve.
-            //     https://whatwg.github.io/loader/#browser-resolve
-            //     Take the name and resolve it to the unique identifier for the resource location.
-            //     For example, take the "jquery" and return the URL for the resource.
-            var promise = this.resolve(pair.key, key, fetcher).then((depKey) => {
-                var depEntry = this.ensureRegistered(depKey);
-
-                // Recursive resolving. The dependencies of this entry is being resolved or already resolved.
-                // Stop tracing the circular dependencies.
-                // But to retrieve the instantiated module record correctly,
-                // we need to wait for the instantiation for the dependent module.
-                // For example, reaching here, the module is starting resolving the dependencies.
-                // But the module may or may not reach the instantiation phase in the loader's pipeline.
-                // If we wait for the Satisfy for this module, it construct the circular promise chain and
-                // rejected by the Promises runtime. Since only we need is the instantiated module, instead of waiting
-                // the Satisfy for this module, we just wait Instantiate for this.
-                if (depEntry.satisfy) {
-                    return depEntry.instantiate.then((entry) => {
-                        pair.value = entry.module;
-                        return entry;
-                    });
-                }
-
-                return this.requestSatisfy(depKey, fetcher).then((entry) => {
-                    pair.value = entry.module;
-                    return entry;
-                });
-            });
-            @putByValDirect(depLoads, depLoads.length, promise);
+            // Recursive resolving. The dependencies of this entry is being resolved or already resolved.
+            // Stop tracing the circular dependencies.
+            // But to retrieve the instantiated module record correctly,
+            // we need to wait for the instantiation for the dependent module.
+            // For example, reaching here, the module is starting resolving the dependencies.
+            // But the module may or may not reach the instantiation phase in the loader's pipeline.
+            // If we wait for the Satisfy for this module, it construct the circular promise chain and
+            // rejected by the Promises runtime. Since only we need is the instantiated module, instead of waiting
+            // the Satisfy for this module, we just wait Instantiate for this.
+            if (visited.@has(depEntry))
+                promise = this.requestInstantiate(depEntry, @undefined, fetcher);
+            else {
+                // Currently, module loader do not pass any information for non-top-level module fetching.
+                promise = this.requestSatisfy(depEntry, @undefined, fetcher, visited);
+            }
+            @putByValDirect(depLoads, i, promise);
         }
 
-        return @InternalPromise.internalAll(depLoads).then((modules) => {
+        return @InternalPromise.internalAll(depLoads).then((entries) => {
+            if (entry.satisfy)
+                return entry;
             @setStateToMax(entry, @ModuleLink);
+            entry.satisfy = satisfyPromise;
             return entry;
         });
     });
 
-    entry.satisfy = satisfyPromise;
     return satisfyPromise;
-}
-
-function requestLink(key, fetcher)
-{
-    // https://whatwg.github.io/loader/#request-link
-
-    "use strict";
-
-    var entry = this.ensureRegistered(key);
-    if (entry.state > @ModuleLink) {
-        var deferred = @newPromiseCapability(@InternalPromise);
-        deferred.@resolve.@call(@undefined, entry);
-        return deferred.@promise;
-    }
-
-    return this.requestSatisfy(key, fetcher).then((entry) => {
-        this.link(entry, fetcher);
-        return entry;
-    });
-}
-
-function requestReady(key, fetcher)
-{
-    // https://whatwg.github.io/loader/#request-ready
-
-    "use strict";
-
-    return this.requestLink(key, fetcher).then((entry) => {
-        this.moduleEvaluation(entry.module, fetcher);
-    });
 }
 
 // Linking semantics.
 
 function link(entry, fetcher)
 {
-    // https://whatwg.github.io/loader/#link
+    // https://html.spec.whatwg.org/#fetch-the-descendants-of-and-instantiate-a-module-script
 
     "use strict";
 
@@ -361,12 +285,10 @@ function link(entry, fetcher)
         // we can call moduleDeclarationInstantiation with the correct order
         // without constructing the dependency graph by calling dependencyGraph.
         var dependencies = entry.dependencies;
-        for (var i = 0, length = dependencies.length; i < length; ++i) {
-            var pair = dependencies[i];
-            this.link(pair.value.registryEntry, fetcher);
-        }
+        for (var i = 0, length = dependencies.length; i < length; ++i)
+            this.link(dependencies[i], fetcher);
 
-        this.moduleDeclarationInstantiation(entry.module, fetcher);
+        this.moduleDeclarationInstantiation(entry.module, entry.key, fetcher);
     } catch (error) {
         entry.linkSucceeded = false;
         entry.linkError = error;
@@ -376,57 +298,38 @@ function link(entry, fetcher)
 
 // Module semantics.
 
-function moduleEvaluation(moduleRecord, fetcher)
+function moduleEvaluation(entry, fetcher)
 {
     // http://www.ecma-international.org/ecma-262/6.0/#sec-moduleevaluation
 
     "use strict";
 
-    if (moduleRecord.evaluated)
+    if (entry.evaluated)
         return;
-    moduleRecord.evaluated = true;
-
-    var entry = moduleRecord.registryEntry;
+    entry.evaluated = true;
 
     // The contents of the [[RequestedModules]] is cloned into entry.dependencies.
     var dependencies = entry.dependencies;
-    for (var i = 0, length = dependencies.length; i < length; ++i) {
-        var pair = dependencies[i];
-        var requiredModuleRecord = pair.value;
-        this.moduleEvaluation(requiredModuleRecord, fetcher);
-    }
-    this.evaluate(entry.key, moduleRecord, fetcher);
+    for (var i = 0, length = dependencies.length; i < length; ++i)
+        this.moduleEvaluation(dependencies[i], fetcher);
+
+    this.evaluate(entry.key, entry.module, fetcher);
 }
 
 // APIs to control the module loader.
 
-function provide(key, stage, value)
+function provideFetch(key, value)
 {
     "use strict";
 
     var entry = this.ensureRegistered(key);
 
-    if (stage === @ModuleFetch) {
-        if (entry.state > @ModuleFetch)
-            @throwTypeError("Requested module is already fetched.");
-        this.fulfillFetch(entry, value);
-        return;
-    }
-
-    if (stage === @ModuleInstantiate) {
-        if (entry.state > @ModuleInstantiate)
-            @throwTypeError("Requested module is already instantiated.");
-        this.fulfillFetch(entry, @undefined);
-        entry.fetch.then((source) => {
-            this.fulfillInstantiate(entry, value, source);
-        });
-        return;
-    }
-
-    @throwTypeError("Requested module is already ready to be executed.");
+    if (entry.state > @ModuleFetch)
+        @throwTypeError("Requested module is already fetched.");
+    this.fulfillFetch(entry, value);
 }
 
-function loadAndEvaluateModule(moduleName, referrer, fetcher)
+function loadModule(moduleName, parameters, fetcher)
 {
     "use strict";
 
@@ -434,21 +337,8 @@ function loadAndEvaluateModule(moduleName, referrer, fetcher)
     // resolve: moduleName => Promise(moduleKey)
     // Take the name and resolve it to the unique identifier for the resource location.
     // For example, take the "jquery" and return the URL for the resource.
-    return this.resolve(moduleName, referrer, fetcher).then((key) => {
-        return this.requestReady(key, fetcher);
-    });
-}
-
-function loadModule(moduleName, referrer, fetcher)
-{
-    "use strict";
-
-    // Loader.resolve hook point.
-    // resolve: moduleName => Promise(moduleKey)
-    // Take the name and resolve it to the unique identifier for the resource location.
-    // For example, take the "jquery" and return the URL for the resource.
-    return this.resolve(moduleName, referrer, fetcher).then((key) => {
-        return this.requestSatisfy(key, fetcher);
+    return this.resolve(moduleName, @undefined, fetcher).then((key) => {
+        return this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set);
     }).then((entry) => {
         return entry.key;
     });
@@ -463,14 +353,23 @@ function linkAndEvaluateModule(key, fetcher)
         @throwTypeError("Requested module is not instantiated yet.");
 
     this.link(entry, fetcher);
-    return this.moduleEvaluation(entry.module, fetcher);
+    return this.moduleEvaluation(entry, fetcher);
 }
 
-function requestImportModule(key, fetcher)
+function loadAndEvaluateModule(moduleName, parameters, fetcher)
 {
     "use strict";
 
-    return this.requestSatisfy(key, fetcher).then((entry) => {
+    return this.loadModule(moduleName, parameters, fetcher).then((key) => {
+        return this.linkAndEvaluateModule(key, fetcher);
+    });
+}
+
+function requestImportModule(key, parameters, fetcher)
+{
+    "use strict";
+
+    return this.requestSatisfy(this.ensureRegistered(key), parameters, fetcher, new @Set).then((entry) => {
         this.linkAndEvaluateModule(entry.key, fetcher);
         return this.getModuleNamespaceObject(entry.module);
     });

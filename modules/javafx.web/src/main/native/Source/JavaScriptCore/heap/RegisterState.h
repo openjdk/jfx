@@ -29,7 +29,7 @@
 
 namespace JSC {
 
-#if !OS(WINDOWS) && !(OS(LINUX) && CPU(ARM64))
+#if !OS(WINDOWS)
 
 // ALLOCATE_AND_GET_REGISTER_STATE has to ensure that the GC sees callee-saves. It achieves this by
 // ensuring that the callee-saves are either spilled to the stack or saved in the RegisterState. The code
@@ -131,25 +131,20 @@ struct RegisterState {
 #endif // !OS(WINDOWS)
 
 #ifndef ALLOCATE_AND_GET_REGISTER_STATE
-#if COMPILER(GCC_OR_CLANG)
-#define REGISTER_BUFFER_ALIGNMENT __attribute__ ((aligned (sizeof(void*))))
-#else
-#define REGISTER_BUFFER_ALIGNMENT
-#endif
 
-typedef jmp_buf RegisterState;
+using RegisterState = jmp_buf;
 
 // ALLOCATE_AND_GET_REGISTER_STATE() is a macro so that it is always "inlined" even in debug builds.
 #if COMPILER(MSVC)
 #pragma warning(push)
 #pragma warning(disable: 4611)
 #define ALLOCATE_AND_GET_REGISTER_STATE(registers) \
-    RegisterState registers REGISTER_BUFFER_ALIGNMENT; \
+    alignas(void*) RegisterState registers; \
     setjmp(registers)
 #pragma warning(pop)
 #else
 #define ALLOCATE_AND_GET_REGISTER_STATE(registers) \
-    RegisterState registers REGISTER_BUFFER_ALIGNMENT; \
+    alignas(void*) RegisterState registers; \
     setjmp(registers)
 #endif
 #endif // ALLOCATE_AND_GET_REGISTER_STATE

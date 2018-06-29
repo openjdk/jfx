@@ -50,11 +50,11 @@
 #endif
 
 #ifndef S_ISDIR
-#  ifdef _S_ISDIR
-#    define S_ISDIR(x) _S_ISDIR(x)
+#    ifdef _S_ISDIR
+#      define S_ISDIR(x) _S_ISDIR(x)
 #  elif defined(S_IFDIR)
-#    ifdef S_IFMT
-#      define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#        ifdef S_IFMT
+#          define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
 #    elif defined(_S_IFMT)
 #      define S_ISDIR(m) (((m) & _S_IFMT) == S_IFDIR)
 #    endif
@@ -618,7 +618,7 @@ xmlWrapGzOpenUtf8(const char *path, const char *mode)
     d = _wopen(wPath, m);
     if (d >= 0)
         fd = gzdopen(d, mode);
-        xmlFree(wPath);
+       xmlFree(wPath);
     }
 
     return fd;
@@ -676,7 +676,7 @@ xmlCheckFilename (const char *path)
 #endif
 #endif
     if (path == NULL)
-    return(0);
+        return(0);
 
 #ifdef HAVE_STAT
 #if defined(_WIN32) || defined (__DJGPP__) && !defined (__CYGWIN__)
@@ -912,10 +912,10 @@ xmlFileOpenW (const char *filename) {
 #elif(__MVS__)
     fd = fopen(path, "w");
 #else
-    fd = fopen(path, "wb");
+       fd = fopen(path, "wb");
 #endif /* WIN32 */
 
-    if (fd == NULL) xmlIOErr(0, path);
+     if (fd == NULL) xmlIOErr(0, path);
     return((void *) fd);
 }
 #endif /* LIBXML_OUTPUT_ENABLED */
@@ -3225,8 +3225,8 @@ xmlParserInputBufferGrow(xmlParserInputBufferPtr in, int len) {
     if (xmlBufGrow(in->buffer, len + 1) < 0) {
         xmlIOErrMemory("growing input buffer");
         in->error = XML_ERR_NO_MEMORY;
-        return(-1);
-    }
+            return(-1);
+        }
     buffer = (char *)xmlBufEnd(in->buffer);
 
     /*
@@ -3442,7 +3442,7 @@ xmlEscapeContent(unsigned char* out, int *outlen,
     inend = in + (*inlen);
 
     while ((in < inend) && (out < outend)) {
-    if (*in == '<') {
+        if (*in == '<') {
         if (outend - out < 4) break;
         *out++ = '&';
         *out++ = 'l';
@@ -3659,11 +3659,11 @@ xmlOutputBufferFlush(xmlOutputBufferPtr out) {
      */
     do {
         nbchars = xmlCharEncOutput(out, 0);
-        if (nbchars < 0) {
+    if (nbchars < 0) {
         xmlIOErr(XML_IO_ENCODER, NULL);
         out->error = XML_IO_ENCODER;
         return(-1);
-        }
+    }
     } while (nbchars);
     }
 

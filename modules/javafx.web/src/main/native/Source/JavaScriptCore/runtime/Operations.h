@@ -34,7 +34,7 @@ JSValue jsTypeStringForValue(CallFrame*, JSValue);
 JSValue jsTypeStringForValue(VM&, JSGlobalObject*, JSValue);
 bool jsIsObjectTypeOrNull(CallFrame*, JSValue);
 bool jsIsFunctionType(JSValue);
-size_t normalizePrototypeChain(CallFrame*, Structure*);
+size_t normalizePrototypeChain(CallFrame*, JSCell*, bool& sawPolyProto);
 
 ALWAYS_INLINE JSString* jsString(ExecState* exec, JSString* s1, JSString* s2)
 {
@@ -122,7 +122,7 @@ ALWAYS_INLINE JSValue jsStringFromRegisterArray(ExecState* exec, Register* strin
 {
     VM* vm = &exec->vm();
     auto scope = DECLARE_THROW_SCOPE(*vm);
-    JSRopeString::RopeBuilder ropeBuilder(*vm);
+    JSRopeString::RopeBuilder<RecordOverflow> ropeBuilder(*vm);
 
     for (unsigned i = 0; i < count; ++i) {
         JSValue v = strings[-static_cast<int>(i)].jsValue();
@@ -139,7 +139,7 @@ ALWAYS_INLINE JSValue jsStringFromArguments(ExecState* exec, JSValue thisValue)
 {
     VM* vm = &exec->vm();
     auto scope = DECLARE_THROW_SCOPE(*vm);
-    JSRopeString::RopeBuilder ropeBuilder(*vm);
+    JSRopeString::RopeBuilder<RecordOverflow> ropeBuilder(*vm);
     JSString* str = thisValue.toString(exec);
     RETURN_IF_EXCEPTION(scope, { });
     ropeBuilder.append(str);

@@ -22,9 +22,9 @@
 
 #if ENABLE(SPELLCHECK)
 
-#include <Language.h>
 #include <glib.h>
 #include <unicode/ubrk.h>
+#include <wtf/Language.h>
 #include <wtf/text/TextBreakIterator.h>
 
 namespace WebCore {
@@ -64,14 +64,12 @@ void TextCheckerEnchant::learnWord(const String& word)
         enchant_dict_add(dictionary, word.utf8().data(), -1);
 }
 
-void TextCheckerEnchant::checkSpellingOfWord(const CString& word, int start, int end, int& misspellingLocation, int& misspellingLength)
+void TextCheckerEnchant::checkSpellingOfWord(const String& word, int start, int end, int& misspellingLocation, int& misspellingLength)
 {
-    const char* string = word.data();
-    char* startPtr = g_utf8_offset_to_pointer(string, start);
-    int numberOfBytes = static_cast<int>(g_utf8_offset_to_pointer(string, end) - startPtr);
+    CString string = word.substring(start, end - start).utf8();
 
     for (auto& dictionary : m_enchantDictionaries) {
-        if (!enchant_dict_check(dictionary, startPtr, numberOfBytes)) {
+        if (!enchant_dict_check(dictionary, string.data(), string.length())) {
             // Stop checking, this word is ok in at least one dict.
             misspellingLocation = -1;
             misspellingLength = 0;
@@ -96,11 +94,10 @@ void TextCheckerEnchant::checkSpellingOfString(const String& string, int& misspe
     if (!iter)
         return;
 
-    CString utf8String = string.utf8();
     int start = ubrk_first(iter);
     for (int end = ubrk_next(iter); end != UBRK_DONE; end = ubrk_next(iter)) {
         if (isWordTextBreak(iter)) {
-            checkSpellingOfWord(utf8String, start, end, misspellingLocation, misspellingLength);
+            checkSpellingOfWord(string, start, end, misspellingLocation, misspellingLength);
             // Stop checking the next words If the current word is misspelled, to do not overwrite its misspelled location and length.
             if (misspellingLength)
                 return;
@@ -143,8 +140,8 @@ void TextCheckerEnchant::updateSpellCheckingLanguages(const Vector<String>& lang
         for (auto& language : languages) {
             CString currentLanguage = language.utf8();
             if (enchant_broker_dict_exists(m_broker, currentLanguage.data())) {
-                EnchantDict* dict = enchant_broker_request_dict(m_broker, currentLanguage.data());
-                spellDictionaries.append(dict);
+                if (auto* dict = enchant_broker_request_dict(m_broker, currentLanguage.data()))
+                    spellDictionaries.append(dict);
             }
         }
     } else {
@@ -152,15 +149,15 @@ void TextCheckerEnchant::updateSpellCheckingLanguages(const Vector<String>& lang
         CString utf8Language = defaultLanguage().utf8();
         const char* language = utf8Language.data();
         if (enchant_broker_dict_exists(m_broker, language)) {
-            EnchantDict* dict = enchant_broker_request_dict(m_broker, language);
-            spellDictionaries.append(dict);
+            if (auto* dict = enchant_broker_request_dict(m_broker, language))
+                spellDictionaries.append(dict);
         } else {
             // No dictionaries selected, we get the first one from the list.
             Vector<CString> allDictionaries;
             enchant_broker_list_dicts(m_broker, enchantDictDescribeCallback, &allDictionaries);
             if (!allDictionaries.isEmpty()) {
-                EnchantDict* dict = enchant_broker_request_dict(m_broker, allDictionaries.first().data());
-                spellDictionaries.append(dict);
+                if (auto* dict = enchant_broker_request_dict(m_broker, allDictionaries.first().data()))
+                    spellDictionaries.append(dict);
             }
         }
     }

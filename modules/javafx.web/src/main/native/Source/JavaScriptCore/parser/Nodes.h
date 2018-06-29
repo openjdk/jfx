@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2009, 2013, 2015-2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
@@ -102,7 +102,7 @@ namespace JSC {
 
     class ParserArenaFreeable {
     public:
-        // ParserArenaFreeable objects are are freed when the arena is deleted.
+        // ParserArenaFreeable objects are freed when the arena is deleted.
         // Destructors are not called. Clients must not call delete on such objects.
         void* operator new(size_t, ParserArena&);
     };
@@ -113,8 +113,20 @@ namespace JSC {
 
         // ParserArenaDeletable objects are deleted when the arena is deleted.
         // Clients must not call delete directly on such objects.
-        void* operator new(size_t, ParserArena&);
+        template<typename T> void* operator new(size_t, ParserArena&);
     };
+
+#define JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED_IMPL(__classToNew) \
+        void* operator new(size_t size, ParserArena& parserArena) \
+        { \
+            return ParserArenaDeletable::operator new<__classToNew>(size, parserArena); \
+        }
+
+#define JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(__classToNew) \
+    public: \
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED_IMPL(__classToNew) \
+    private: \
+        typedef int __thisIsHereToForceASemicolonAfterThisMacro
 
     class ParserArenaRoot {
         WTF_MAKE_FAST_ALLOCATED;
@@ -162,6 +174,7 @@ namespace JSC {
 
         virtual bool isNumber() const { return false; }
         virtual bool isString() const { return false; }
+        virtual bool isBigInt() const { return false; }
         virtual bool isObjectLiteral() const { return false; }
         virtual bool isArrayLiteral() const { return false; }
         virtual bool isNull() const { return false; }
@@ -186,8 +199,11 @@ namespace JSC {
         virtual bool isSpreadExpression() const { return false; }
         virtual bool isSuperNode() const { return false; }
         virtual bool isImportNode() const { return false; }
+        virtual bool isMetaProperty() const { return false; }
         virtual bool isNewTarget() const { return false; }
+        virtual bool isImportMeta() const { return false; }
         virtual bool isBytecodeIntrinsicNode() const { return false; }
+        virtual bool isBinaryOpNode() const { return false; }
 
         virtual void emitBytecodeInConditionContext(BytecodeGenerator&, Label&, Label&, FallThroughMode);
 
@@ -209,8 +225,11 @@ namespace JSC {
         void setLoc(unsigned firstLine, unsigned lastLine, int startOffset, int lineStartOffset);
         unsigned lastLine() const { return m_lastLine; }
 
-        StatementNode* next() { return m_next; }
+        StatementNode* next() const { return m_next; }
         void setNext(StatementNode* next) { m_next = next; }
+
+        virtual bool hasCompletionValue() const { return true; }
+        virtual bool hasEarlyBreakOrContinue() const { return false; }
 
         virtual bool isEmptyStatement() const { return false; }
         virtual bool isDebuggerStatement() const { return false; }
@@ -231,6 +250,7 @@ namespace JSC {
     };
 
     class VariableEnvironmentNode : public ParserArenaDeletable {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(VariableEnvironmentNode);
     public:
         typedef DeclarationStacks::FunctionStack FunctionStack;
 
@@ -320,6 +340,19 @@ namespace JSC {
         JSValue jsValue(BytecodeGenerator&) const override;
 
         const Identifier& m_value;
+    };
+
+    class BigIntNode final : public ConstantNode {
+    public:
+        BigIntNode(const JSTokenLocation&, const Identifier&, uint8_t radix);
+        const Identifier& value() { return m_value; }
+
+    private:
+        bool isBigInt() const final { return true; }
+        JSValue jsValue(BytecodeGenerator&) const final;
+
+        const Identifier& m_value;
+        const uint8_t m_radix;
     };
 
     class ThrowableExpressionData {
@@ -581,13 +614,32 @@ namespace JSC {
         ExpressionNode* m_expr;
     };
 
-    class NewTargetNode final : public ExpressionNode {
+    class MetaPropertyNode : public ExpressionNode {
+    public:
+        MetaPropertyNode(const JSTokenLocation&);
+
+    private:
+        bool isMetaProperty() const final { return true; }
+    };
+
+    class NewTargetNode final : public MetaPropertyNode {
     public:
         NewTargetNode(const JSTokenLocation&);
 
     private:
         bool isNewTarget() const final { return true; }
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+    };
+
+    class ImportMetaNode final : public MetaPropertyNode {
+    public:
+        ImportMetaNode(const JSTokenLocation&, ExpressionNode*);
+
+    private:
+        bool isImportMeta() const final { return true; }
+        RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        ExpressionNode* m_expr;
     };
 
     class ResolveNode : public ExpressionNode {
@@ -658,6 +710,8 @@ namespace JSC {
         Type type() const { return static_cast<Type>(m_type); }
         bool needsSuperBinding() const { return m_needsSuperBinding; }
         bool isClassProperty() const { return m_isClassProperty; }
+        bool isOverriddenByDuplicate() const { return m_isOverriddenByDuplicate; }
+        void setIsOverriddenByDuplicate() { m_isOverriddenByDuplicate = true; }
         PutType putType() const { return static_cast<PutType>(m_putType); }
 
     private:
@@ -669,6 +723,7 @@ namespace JSC {
         unsigned m_needsSuperBinding : 1;
         unsigned m_putType : 1;
         unsigned m_isClassProperty: 1;
+        unsigned m_isOverriddenByDuplicate: 1;
     };
 
     class PropertyListNode : public ExpressionNode {
@@ -1061,7 +1116,11 @@ namespace JSC {
         ExpressionNode* lhs() { return m_expr1; };
         ExpressionNode* rhs() { return m_expr2; };
 
+        bool isBinaryOpNode() const override { return true; }
+
     private:
+        enum class UInt32Result { UInt32, Constant, };
+
         void tryFoldToBranch(BytecodeGenerator&, TriState& branchCondition, ExpressionNode*& branchExpression);
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
@@ -1075,6 +1134,7 @@ namespace JSC {
         OpcodeID m_opcodeID;
     protected:
         bool m_rightHasAssignments;
+        bool m_shouldToUnsignedResult { true };
     };
 
     class PowNode : public BinaryOpNode {
@@ -1354,6 +1414,9 @@ namespace JSC {
         StatementNode* singleStatement() const;
         StatementNode* lastStatement() const;
 
+        bool hasCompletionValue() const;
+        bool hasEarlyBreakOrContinue() const;
+
         void emitBytecode(BytecodeGenerator&, RegisterID* destination);
         void analyzeModule(ModuleAnalyzer&);
 
@@ -1363,9 +1426,8 @@ namespace JSC {
     };
 
     class BlockNode : public StatementNode, public VariableEnvironmentNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(BlockNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         BlockNode(const JSTokenLocation&, SourceElements*, VariableEnvironment&, FunctionStack&&);
 
         StatementNode* singleStatement() const;
@@ -1373,6 +1435,9 @@ namespace JSC {
 
     private:
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool hasCompletionValue() const override;
+        bool hasEarlyBreakOrContinue() const override;
 
         bool isBlock() const override { return true; }
 
@@ -1386,6 +1451,7 @@ namespace JSC {
     private:
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
+        bool hasCompletionValue() const override { return false; }
         bool isEmptyStatement() const override { return true; }
     };
 
@@ -1393,6 +1459,7 @@ namespace JSC {
     public:
         DebuggerStatementNode(const JSTokenLocation&);
 
+        bool hasCompletionValue() const override { return false; }
         bool isDebuggerStatement() const override { return true; }
 
     private:
@@ -1418,6 +1485,8 @@ namespace JSC {
         DeclarationStatement(const JSTokenLocation&, ExpressionNode*);
     private:
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool hasCompletionValue() const override { return false; }
 
         ExpressionNode* m_expr;
     };
@@ -1479,9 +1548,8 @@ namespace JSC {
     };
 
     class ForNode : public StatementNode, public VariableEnvironmentNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ForNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         ForNode(const JSTokenLocation&, ExpressionNode* expr1, ExpressionNode* expr2, ExpressionNode* expr3, StatementNode*, VariableEnvironment&);
 
     private:
@@ -1496,9 +1564,8 @@ namespace JSC {
     class DestructuringPatternNode;
 
     class EnumerationNode : public StatementNode, public ThrowableExpressionData, public VariableEnvironmentNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(EnumerationNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         EnumerationNode(const JSTokenLocation&, ExpressionNode*, ExpressionNode*, StatementNode*, VariableEnvironment&);
 
         ExpressionNode* lexpr() const { return m_lexpr; }
@@ -1511,6 +1578,7 @@ namespace JSC {
     };
 
     class ForInNode : public EnumerationNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ForInNode);
     public:
         ForInNode(const JSTokenLocation&, ExpressionNode*, ExpressionNode*, StatementNode*, VariableEnvironment&);
 
@@ -1522,12 +1590,16 @@ namespace JSC {
     };
 
     class ForOfNode : public EnumerationNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ForOfNode);
     public:
-        ForOfNode(const JSTokenLocation&, ExpressionNode*, ExpressionNode*, StatementNode*, VariableEnvironment&);
+        ForOfNode(bool, const JSTokenLocation&, ExpressionNode*, ExpressionNode*, StatementNode*, VariableEnvironment&);
         bool isForOfNode() const override { return true; }
+        bool isForAwait() const { return m_isForAwait; }
 
     private:
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        const bool m_isForAwait;
     };
 
     class ContinueNode : public StatementNode, public ThrowableExpressionData {
@@ -1536,6 +1608,7 @@ namespace JSC {
         Label* trivialTarget(BytecodeGenerator&);
 
     private:
+        bool hasCompletionValue() const override { return false; }
         bool isContinue() const override { return true; }
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
@@ -1548,6 +1621,7 @@ namespace JSC {
         Label* trivialTarget(BytecodeGenerator&);
 
     private:
+        bool hasCompletionValue() const override { return false; }
         bool isBreak() const override { return true; }
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
@@ -1588,6 +1662,7 @@ namespace JSC {
         bool isLabel() const override { return true; }
 
     private:
+        bool hasCompletionValue() const override { return m_statement->hasCompletionValue(); }
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
         const Identifier& m_name;
@@ -1605,9 +1680,8 @@ namespace JSC {
     };
 
     class TryNode : public StatementNode, public VariableEnvironmentNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(TryNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         TryNode(const JSTokenLocation&, StatementNode* tryBlock, DestructuringPatternNode* catchPattern, StatementNode* catchBlock, VariableEnvironment& catchEnvironment, StatementNode* finallyBlock);
 
     private:
@@ -1621,11 +1695,14 @@ namespace JSC {
 
     class ScopeNode : public StatementNode, public ParserArenaRoot, public VariableEnvironmentNode {
     public:
+        // ScopeNode is never directly instantiate. The life-cycle of its derived classes are
+        // managed using std::unique_ptr. Hence, though ScopeNode extends VariableEnvironmentNode,
+        // which in turn extends ParserArenaDeletable, we don't want to use ParserArenaDeletable's
+        // new for allocation.
+        using ParserArenaRoot::operator new;
 
         ScopeNode(ParserArena&, const JSTokenLocation& start, const JSTokenLocation& end, bool inStrictContext);
         ScopeNode(ParserArena&, const JSTokenLocation& start, const JSTokenLocation& end, const SourceCode&, SourceElements*, VariableEnvironment&, FunctionStack&&, VariableEnvironment&, UniquedStringImplPtrSet&&, CodeFeatures, InnerArrowFunctionCodeFeatures, int numConstants);
-
-        using ParserArenaRoot::operator new;
 
         const SourceCode& source() const { return m_source; }
         const String& sourceURL() const { return m_source.provider()->url(); }
@@ -1671,6 +1748,9 @@ namespace JSC {
         }
 
         StatementNode* singleStatement() const;
+
+        bool hasCompletionValue() const override;
+        bool hasEarlyBreakOrContinue() const override;
 
         void emitStatementsBytecode(BytecodeGenerator&, RegisterID* destination);
 
@@ -1765,6 +1845,7 @@ namespace JSC {
     };
 
     class ImportSpecifierListNode : public ParserArenaDeletable {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ImportSpecifierListNode);
     public:
         typedef Vector<ImportSpecifierNode*, 3> Specifiers;
 
@@ -1781,6 +1862,7 @@ namespace JSC {
     class ModuleDeclarationNode : public StatementNode {
     public:
         virtual void analyzeModule(ModuleAnalyzer&) = 0;
+        bool hasCompletionValue() const override { return false; }
         bool isModuleDeclarationNode() const override { return true; }
 
     protected:
@@ -1854,6 +1936,7 @@ namespace JSC {
     };
 
     class ExportSpecifierListNode : public ParserArenaDeletable {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ExportSpecifierListNode);
     public:
         typedef Vector<ExportSpecifierNode*, 3> Specifiers;
 
@@ -1882,9 +1965,8 @@ namespace JSC {
     };
 
     class FunctionMetadataNode final : public Node, public ParserArenaDeletable {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(FunctionMetadataNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         FunctionMetadataNode(
             ParserArena&, const JSTokenLocation& start, const JSTokenLocation& end,
             unsigned startColumn, unsigned endColumn, int functionKeywordStart,
@@ -2053,9 +2135,8 @@ namespace JSC {
     };
 
     class ClassExprNode final : public ExpressionNode, public VariableEnvironmentNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ClassExprNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         ClassExprNode(const JSTokenLocation&, const Identifier&, const SourceCode& classSource,
             VariableEnvironment& classEnvironment, ExpressionNode* constructorExpresssion,
             ExpressionNode* parentClass, PropertyListNode* instanceMethods, PropertyListNode* staticMethods);
@@ -2097,9 +2178,8 @@ namespace JSC {
     };
 
     class ArrayPatternNode : public DestructuringPatternNode, public ThrowableExpressionData, public ParserArenaDeletable {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ArrayPatternNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         ArrayPatternNode();
         enum class BindingType {
             Elision,
@@ -2127,9 +2207,8 @@ namespace JSC {
     };
 
     class ObjectPatternNode : public DestructuringPatternNode, public ThrowableExpressionData, public ParserArenaDeletable {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(ObjectPatternNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         ObjectPatternNode();
         enum class BindingType {
             Element,
@@ -2245,6 +2324,7 @@ namespace JSC {
     };
 
     class FunctionParameters : public ParserArenaDeletable {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(FunctionParameters);
     public:
         FunctionParameters();
         ALWAYS_INLINE unsigned size() const { return m_patterns.size(); }
@@ -2278,6 +2358,7 @@ namespace JSC {
     public:
         FuncDeclNode(const JSTokenLocation&, const Identifier&, FunctionMetadataNode*, const SourceCode&);
 
+        bool hasCompletionValue() const override { return false; }
         bool isFuncDeclNode() const override { return true; }
         FunctionMetadataNode* metadata() { return m_metadata; }
 
@@ -2293,6 +2374,8 @@ namespace JSC {
 
     private:
         void emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool hasCompletionValue() const override { return false; }
 
         ExpressionNode* m_classDeclaration;
     };
@@ -2340,9 +2423,8 @@ namespace JSC {
     };
 
     class SwitchNode : public StatementNode, public VariableEnvironmentNode {
+        JSC_MAKE_PARSER_ARENA_DELETABLE_ALLOCATED(SwitchNode);
     public:
-        using ParserArenaDeletable::operator new;
-
         SwitchNode(const JSTokenLocation&, ExpressionNode*, CaseBlockNode*, VariableEnvironment&, FunctionStack&&);
 
     private:

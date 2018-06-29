@@ -297,7 +297,7 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     if (!keyEvent)
         return false;
 
-    Frame* frame = evt->target()->toNode()->document().frame();
+    Frame* frame = downcast<Node>(evt->target())->document().frame();
     if (!frame)
         return false;
 
@@ -466,10 +466,6 @@ void EditorClientJava::respondToChangedSelection(Frame *frame)
         frame->editor().cancelComposition();
         setInputMethodState(false);
     }
-}
-
-void EditorClientJava::didChangeSelectionAndUpdateLayout() {
-    notImplemented();
 }
 
 void EditorClientJava::updateEditorStateAfterLayoutIfEditabilityChanged() {
@@ -731,6 +727,12 @@ void EditorClientJava::getGuessesForWord(const String&, const String&, const Vis
 void EditorClientJava::requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
 {
     notImplemented();
+}
+
+String EditorClientJava::replacementURLForResource(Ref<WebCore::SharedBuffer>&&, const String&)
+{
+    notImplemented();
+    return { };
 }
 
 } // namespace WebCore

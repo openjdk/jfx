@@ -82,12 +82,8 @@ if (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
     set(WTF_CPU_ARM 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
     set(WTF_CPU_ARM64 1)
-elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "alpha*")
-    set(WTF_CPU_ALPHA 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^mips")
     set(WTF_CPU_MIPS 1)
-elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "sh4")
-    set(WTF_CPU_SH4 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(x64|x86_64|amd64)")
     set(WTF_CPU_X86_64 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x86)")
@@ -98,14 +94,8 @@ elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64")
     set(WTF_CPU_PPC64 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le")
     set(WTF_CPU_PPC64LE 1)
-elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "parisc*")
-    set(WTF_CPU_HPPA 1)
-elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "s390")
-    set(WTF_CPU_S390 1)
-elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "s390x")
-    set(WTF_CPU_S390X 1)
 else ()
-    message(FATAL_ERROR "Unknown CPU '${LOWERCASE_CMAKE_SYSTEM_PROCESSOR}'")
+    set(WTF_CPU_UNKNOWN 1)
 endif ()
 
 # -----------------------------------------------------------------------------
@@ -126,19 +116,15 @@ endif ()
 # -----------------------------------------------------------------------------
 # Default library types
 # -----------------------------------------------------------------------------
-option(SHARED_CORE "build WebCore as a shared library")
-
-if (SHARED_CORE)
-    set(WebCore_LIBRARY_TYPE SHARED)
-else ()
-    set(WebCore_LIBRARY_TYPE STATIC)
-endif ()
-
+# By default, only the highest-level libraries, WebKitLegacy and WebKit, are
+# shared, because properly building shared libraries that depend on each other
+# can be tricky. Override these in Options*.cmake for your port as needed.
 set(WTF_LIBRARY_TYPE STATIC)
-set(JavaScriptCore_LIBRARY_TYPE SHARED)
+set(JavaScriptCore_LIBRARY_TYPE STATIC)
 set(PAL_LIBRARY_TYPE STATIC)
+set(WebCore_LIBRARY_TYPE STATIC)
+set(WebKitLegacy_LIBRARY_TYPE SHARED)
 set(WebKit_LIBRARY_TYPE SHARED)
-set(WebKit2_LIBRARY_TYPE SHARED)
 set(WebCoreTestSupport_LIBRARY_TYPE STATIC)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE True)
@@ -177,6 +163,16 @@ add_subdirectory(Source)
 # -----------------------------------------------------------------------------
 if (ENABLE_TOOLS)
     add_subdirectory(Tools)
+endif ()
+
+if ("${PORT}" STREQUAL "GTK" OR "${PORT}" STREQUAL "WPE")
+    if (DEVELOPER_MODE)
+        add_subdirectory(PerformanceTests)
+    endif ()
+else ()
+    if (NOT PORT STREQUAL Java)
+    add_subdirectory(PerformanceTests)
+    endif ()
 endif ()
 
 # -----------------------------------------------------------------------------

@@ -38,9 +38,12 @@
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
 #include <limits>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFlexibleBox);
 
 struct RenderFlexibleBox::LineContext {
     LineContext(LayoutUnit crossAxisOffset, LayoutUnit crossAxisExtent, LayoutUnit maxAscent, Vector<FlexItem>&& flexItems)
@@ -69,9 +72,7 @@ RenderFlexibleBox::RenderFlexibleBox(Document& document, RenderStyle&& style)
     setChildrenInline(false); // All of our children must be block-level.
 }
 
-RenderFlexibleBox::~RenderFlexibleBox()
-{
-}
+RenderFlexibleBox::~RenderFlexibleBox() = default;
 
 const char* RenderFlexibleBox::renderName() const
 {
@@ -274,39 +275,38 @@ void RenderFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
 
     LayoutUnit previousHeight = logicalHeight();
     setLogicalHeight(borderAndPaddingLogicalHeight() + scrollbarLogicalHeight());
+    {
+        LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
 
-    LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+        preparePaginationBeforeBlockLayout(relayoutChildren);
 
-    preparePaginationBeforeBlockLayout(relayoutChildren);
+        m_numberOfInFlowChildrenOnFirstLine = -1;
 
-    m_numberOfInFlowChildrenOnFirstLine = -1;
+        beginUpdateScrollInfoAfterLayoutTransaction();
 
-    beginUpdateScrollInfoAfterLayoutTransaction();
+        prepareOrderIteratorAndMargins();
 
-    prepareOrderIteratorAndMargins();
+        // Fieldsets need to find their legend and position it inside the border of the object.
+        // The legend then gets skipped during normal layout. The same is true for ruby text.
+        // It doesn't get included in the normal layout process but is instead skipped.
+        layoutExcludedChildren(relayoutChildren);
 
-    // Fieldsets need to find their legend and position it inside the border of the object.
-    // The legend then gets skipped during normal layout. The same is true for ruby text.
-    // It doesn't get included in the normal layout process but is instead skipped.
-    layoutExcludedChildren(relayoutChildren);
+        ChildFrameRects oldChildRects;
+        appendChildFrameRects(oldChildRects);
 
-    ChildFrameRects oldChildRects;
-    appendChildFrameRects(oldChildRects);
+        layoutFlexItems(relayoutChildren);
 
-    layoutFlexItems(relayoutChildren);
+        endAndCommitUpdateScrollInfoAfterLayoutTransaction();
 
-    endAndCommitUpdateScrollInfoAfterLayoutTransaction();
+        if (logicalHeight() != previousHeight)
+            relayoutChildren = true;
 
-    if (logicalHeight() != previousHeight)
-        relayoutChildren = true;
+        layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
 
-    layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
-
-    repaintChildrenDuringLayoutIfMoved(oldChildRects);
-    // FIXME: css3/flexbox/repaint-rtl-column.html seems to repaint more overflow than it needs to.
-    computeOverflow(clientLogicalBottomAfterRepositioning());
-    statePusher.pop();
-
+        repaintChildrenDuringLayoutIfMoved(oldChildRects);
+        // FIXME: css3/flexbox/repaint-rtl-column.html seems to repaint more overflow than it needs to.
+        computeOverflow(clientLogicalBottomAfterRepositioning());
+    }
     updateLayerTransform();
 
     // We have to reset this, because changes to our ancestors' style can affect
@@ -314,8 +314,7 @@ void RenderFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
     // that function may re-enter this one.
     m_hasDefiniteHeight = SizeDefiniteness::Unknown;
 
-    // Update our scroll information if we're overflow:auto/scroll/hidden now that we know if
-    // we overflow or not.
+    // Update our scroll information if we're overflow:auto/scroll/hidden now that we know if we overflow or not.
     updateScrollInfoAfterLayout();
 
     repainter.repaintAfterLayout();
@@ -552,8 +551,8 @@ std::optional<LayoutUnit> RenderFlexibleBox::computeMainAxisExtentForChild(const
     }
 
     // FIXME: Figure out how this should work for regions and pass in the appropriate values.
-    RenderRegion* region = nullptr;
-    return child.computeLogicalWidthInRegionUsing(sizeType, size, contentLogicalWidth(), *this, region) - borderAndPadding;
+    RenderFragmentContainer* fragment = nullptr;
+    return child.computeLogicalWidthInFragmentUsing(sizeType, size, contentLogicalWidth(), *this, fragment) - borderAndPadding;
 }
 
 
@@ -1337,6 +1336,7 @@ static LayoutUnit justifyContentSpaceBetweenChildren(LayoutUnit availableFreeSpa
 static LayoutUnit alignmentOffset(LayoutUnit availableFreeSpace, ItemPosition position, LayoutUnit ascent, LayoutUnit maxAscent, bool isWrapReverse)
 {
     switch (position) {
+    case ItemPositionLegacy:
     case ItemPositionAuto:
     case ItemPositionNormal:
         ASSERT_NOT_REACHED();
@@ -1826,7 +1826,7 @@ void RenderFlexibleBox::applyStretchAlignmentToChild(RenderBox& child, LayoutUni
         }
     } else if (hasOrthogonalFlow(child) && child.style().logicalWidth().isAuto()) {
         LayoutUnit childWidth = std::max(LayoutUnit(), lineCrossAxisExtent - crossAxisMarginExtentForChild(child));
-        childWidth = child.constrainLogicalWidthInRegionByMinMax(childWidth, crossAxisContentExtent(), *this, nullptr);
+        childWidth = child.constrainLogicalWidthInFragmentByMinMax(childWidth, crossAxisContentExtent(), *this, nullptr);
 
         if (childWidth != child.logicalWidth()) {
             child.setOverrideLogicalContentWidth(childWidth - child.borderAndPaddingLogicalWidth());

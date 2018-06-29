@@ -33,6 +33,8 @@
 
 #include "config.h"
 #include "CurrentTime.h"
+#include "MonotonicTime.h"
+#include "WallTime.h"
 
 #include "Condition.h"
 #include "Lock.h"
@@ -150,7 +152,7 @@ static bool qpcAvailable()
     return available;
 }
 
-double currentTime()
+static inline double currentTime()
 {
     // Use a combination of ftime and QueryPerformanceCounter.
     // ftime returns the information we want, but doesn't have sufficient resolution.
@@ -195,7 +197,7 @@ double currentTime()
 
 #else
 
-double currentTime()
+static inline double currentTime()
 {
     static bool init = false;
     static double lastTime;
@@ -225,7 +227,7 @@ double currentTime()
 // better accuracy compared with Windows implementation of g_get_current_time:
 // (http://www.google.com/codesearch/p?hl=en#HHnNRjks1t0/glib-2.5.2/glib/gmain.c&q=g_get_current_time).
 // Non-Windows GTK builds could use gettimeofday() directly but for the sake of consistency lets use GTK function.
-double currentTime()
+static inline double currentTime()
 {
     GTimeVal now;
     g_get_current_time(&now);
@@ -234,7 +236,7 @@ double currentTime()
 
 #else
 
-double currentTime()
+static inline double currentTime()
 {
     struct timeval now;
     gettimeofday(&now, 0);
@@ -242,6 +244,11 @@ double currentTime()
 }
 
 #endif
+
+WallTime WallTime::now()
+{
+    return fromRawSeconds(currentTime());
+}
 
 #if USE(GLIB)
 
@@ -281,13 +288,14 @@ double monotonicallyIncreasingTime()
 
     return ticks / 1000.0;
 }
-#elif PLATFORM(JAVA) && OS(LINUX)
+
+#elif OS(LINUX) || OS(FREEBSD) || OS(OPENBSD) || OS(NETBSD)
 
 double monotonicallyIncreasingTime()
 {
-    auto now = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>
-          (now.time_since_epoch()).count() / (1000.0 * 1000.0);
+    struct timespec ts { };
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return static_cast<double>(ts.tv_sec) + ts.tv_nsec / 1.0e9;
 }
 
 #else
@@ -304,7 +312,7 @@ double monotonicallyIncreasingTime()
 
 #endif
 
-std::chrono::microseconds currentCPUTime()
+Seconds currentCPUTime()
 {
 #if OS(DARWIN)
     mach_msg_type_number_t infoCount = THREAD_BASIC_INFO_COUNT;
@@ -315,7 +323,7 @@ std::chrono::microseconds currentCPUTime()
     thread_info(threadPort, THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&info), &infoCount);
     mach_port_deallocate(mach_task_self(), threadPort);
 
-    return std::chrono::seconds(info.user_time.seconds + info.system_time.seconds) + std::chrono::microseconds(info.user_time.microseconds + info.system_time.microseconds);
+    return Seconds(info.user_time.seconds + info.system_time.seconds) + Seconds::fromMicroseconds(info.user_time.microseconds + info.system_time.microseconds);
 #elif OS(WINDOWS)
     union {
         FILETIME fileTime;
@@ -328,16 +336,20 @@ std::chrono::microseconds currentCPUTime()
 
     GetThreadTimes(GetCurrentThread(), &creationTime, &exitTime, &kernelTime.fileTime, &userTime.fileTime);
 
-    return std::chrono::microseconds((userTime.fileTimeAsLong + kernelTime.fileTimeAsLong) / 10);
+    return Seconds::fromMicroseconds((userTime.fileTimeAsLong + kernelTime.fileTimeAsLong) / 10);
+#elif OS(LINUX) || OS(FREEBSD) || OS(OPENBSD) || OS(NETBSD)
+    struct timespec ts { };
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+    return Seconds(ts.tv_sec) + Seconds::fromNanoseconds(ts.tv_nsec);
 #else
     // FIXME: We should return the time the current thread has spent executing.
 
-    static auto firstTime = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - firstTime);
+    static MonotonicTime firstTime = MonotonicTime::now();
+    return MonotonicTime::now() - firstTime;
 #endif
 }
 
-void sleep(double value)
+void sleep(Seconds value)
 {
     // It's very challenging to find portable ways of sleeping for less than a second. On UNIX, you want to
     // use usleep() but it's hard to #include it in a portable way (you'd think it's in unistd.h, but then
@@ -347,7 +359,7 @@ void sleep(double value)
     Lock fakeLock;
     Condition fakeCondition;
     LockHolder fakeLocker(fakeLock);
-    fakeCondition.waitFor(fakeLock, Seconds(value));
+    fakeCondition.waitFor(fakeLock, value);
 }
 
 } // namespace WTF

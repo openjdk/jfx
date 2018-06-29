@@ -33,7 +33,7 @@
 namespace WTF {
 
 namespace double_conversion {
-
+    
     void DiyFp::Multiply(const DiyFp& other) {
         // Simply "emulates" a 128 bit multiplication.
         // However: the resulting number only contains 64 bits. The least
@@ -56,7 +56,7 @@ namespace double_conversion {
         e_ += other.e_ + 64;
         f_ = result_f;
     }
-
+    
 }  // namespace double_conversion
 
 } // namespace WTF

@@ -28,66 +28,52 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MockRealtimeMediaSource_h
-#define MockRealtimeMediaSource_h
+#pragma once
 
 #if ENABLE(MEDIA_STREAM)
 
 #include "RealtimeMediaSource.h"
 
-#if USE(OPENWEBRTC)
-#include "RealtimeMediaSourceOwr.h"
-#endif
-
 namespace WebCore {
 
 class CaptureDevice;
 
-#if USE(OPENWEBRTC)
-using BaseRealtimeMediaSourceClass = RealtimeMediaSourceOwr;
-#else
-using BaseRealtimeMediaSourceClass = RealtimeMediaSource;
-#endif
-
-class MockRealtimeMediaSource : public BaseRealtimeMediaSourceClass {
+class MockRealtimeMediaSource : public RealtimeMediaSource {
 public:
-    virtual ~MockRealtimeMediaSource() { }
+    virtual ~MockRealtimeMediaSource() = default;
 
     static Vector<CaptureDevice>& audioDevices();
     static Vector<CaptureDevice>& videoDevices();
+    static Vector<CaptureDevice>& displayDevices();
+
+    static std::optional<CaptureDevice> captureDeviceWithPersistentID(CaptureDevice::DeviceType, const String&);
+
+    enum class MockDevice { Invalid, Microphone1, Microphone2, Camera1, Camera2, Screen1, Screen2 };
 
 protected:
     MockRealtimeMediaSource(const String& id, Type, const String& name);
 
     virtual void updateSettings(RealtimeMediaSourceSettings&) = 0;
     virtual void initializeCapabilities(RealtimeMediaSourceCapabilities&) = 0;
-#if !USE(OPENWEBRTC)
     virtual void initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints&) = 0;
-#endif
 
     const RealtimeMediaSourceCapabilities& capabilities() const override;
     const RealtimeMediaSourceSettings& settings() const override;
 
     RealtimeMediaSourceSupportedConstraints& supportedConstraints();
 
-    unsigned deviceIndex() { return m_deviceIndex; }
+    MockDevice device() const { return m_device; }
+    MockDevice m_device { MockDevice::Invalid };
 
 private:
     void initializeCapabilities();
-#if USE(OPENWEBRTC)
-    void initializeSettings() final;
-#else
     void initializeSettings();
-#endif
 
     RealtimeMediaSourceSettings m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
     std::unique_ptr<RealtimeMediaSourceCapabilities> m_capabilities;
-    unsigned m_deviceIndex { 0 };
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(MEDIA_STREAM)
-
-#endif // MockRealtimeMediaSource_h

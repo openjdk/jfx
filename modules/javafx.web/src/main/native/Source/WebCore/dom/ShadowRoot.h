@@ -81,6 +81,9 @@ public:
 
     const Vector<Node*>* assignedNodesForSlot(const HTMLSlotElement&);
 
+    void moveShadowRootToNewParentScope(TreeScope&, Document&);
+    void moveShadowRootToNewDocument(Document&);
+
 protected:
     ShadowRoot(Document&, ShadowRootMode);
 
@@ -94,9 +97,8 @@ private:
 
     Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
-    Node::InsertionNotificationRequest insertedInto(ContainerNode& insertionPoint) override;
-    void removedFrom(ContainerNode& insertionPoint) override;
-    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
+    Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
+    void removedFromAncestor(RemovalType, ContainerNode& insertionPoint) override;
 
     bool m_resetStyleInheritance { false };
     ShadowRootMode m_type { ShadowRootMode::UserAgent };

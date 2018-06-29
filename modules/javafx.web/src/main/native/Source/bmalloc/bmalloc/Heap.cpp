@@ -59,12 +59,12 @@ Heap::Heap(HeapKind kind, std::lock_guard<StaticMutex>&)
 #if GIGACAGE_ENABLED
         if (usingGigacage()) {
             RELEASE_BASSERT(gigacageBasePtr());
-            m_largeFree.add(LargeRange(gigacageBasePtr(), GIGACAGE_SIZE, 0));
+            m_largeFree.add(LargeRange(gigacageBasePtr(), gigacageSize(), 0));
         }
 #endif
     }
 
-    m_scavenger = PerProcess<Scavenger>::get();
+    m_scavenger = SafePerProcess<Scavenger>::get();
 }
 
 bool Heap::usingGigacage()
@@ -75,6 +75,11 @@ bool Heap::usingGigacage()
 void* Heap::gigacageBasePtr()
 {
     return Gigacage::basePtr(gigacageKind(m_kind));
+}
+
+size_t Heap::gigacageSize()
+{
+    return Gigacage::size(gigacageKind(m_kind));
 }
 
 void Heap::initializeLineMetadata()
@@ -172,6 +177,8 @@ void Heap::deallocateLineCache(std::lock_guard<StaticMutex>&, LineCache& lineCac
 
 void Heap::allocateSmallChunk(std::lock_guard<StaticMutex>& lock, size_t pageClass)
 {
+    RELEASE_BASSERT(isActiveHeapKind(m_kind));
+
     size_t pageSize = bmalloc::pageSize(pageClass);
 
     Chunk* chunk = [&]() {
@@ -216,6 +223,8 @@ void Heap::deallocateSmallChunk(Chunk* chunk, size_t pageClass)
 
 SmallPage* Heap::allocateSmallPage(std::lock_guard<StaticMutex>& lock, size_t sizeClass, LineCache& lineCache)
 {
+    RELEASE_BASSERT(isActiveHeapKind(m_kind));
+
     if (!lineCache[sizeClass].isEmpty())
         return lineCache[sizeClass].popFront();
 
@@ -295,6 +304,8 @@ void Heap::allocateSmallBumpRangesByMetadata(
     BumpAllocator& allocator, BumpRangeCache& rangeCache,
     LineCache& lineCache)
 {
+    RELEASE_BASSERT(isActiveHeapKind(m_kind));
+
     SmallPage* page = allocateSmallPage(lock, sizeClass, lineCache);
     SmallLine* lines = page->begin();
     BASSERT(page->hasFreeLines(lock));
@@ -357,6 +368,8 @@ void Heap::allocateSmallBumpRangesByObject(
     BumpAllocator& allocator, BumpRangeCache& rangeCache,
     LineCache& lineCache)
 {
+    RELEASE_BASSERT(isActiveHeapKind(m_kind));
+
     size_t size = allocator.size();
     SmallPage* page = allocateSmallPage(lock, sizeClass, lineCache);
     BASSERT(page->hasFreeLines(lock));
@@ -407,8 +420,10 @@ void Heap::allocateSmallBumpRangesByObject(
     }
 }
 
-LargeRange Heap::splitAndAllocate(LargeRange& range, size_t alignment, size_t size, AllocationKind allocationKind)
+LargeRange Heap::splitAndAllocate(LargeRange& range, size_t alignment, size_t size)
 {
+    RELEASE_BASSERT(isActiveHeapKind(m_kind));
+
     LargeRange prev;
     LargeRange next;
 
@@ -426,20 +441,10 @@ LargeRange Heap::splitAndAllocate(LargeRange& range, size_t alignment, size_t si
         next = pair.second;
     }
 
-    switch (allocationKind) {
-    case AllocationKind::Virtual:
-        if (range.physicalSize())
-            vmDeallocatePhysicalPagesSloppy(range.begin(), range.size());
-        break;
-
-    case AllocationKind::Physical:
-        if (range.physicalSize() < range.size()) {
-            m_scavenger->scheduleIfUnderMemoryPressure(range.size());
-
-            vmAllocatePhysicalPagesSloppy(range.begin() + range.physicalSize(), range.size() - range.physicalSize());
-            range.setPhysicalSize(range.size());
-        }
-        break;
+    if (range.physicalSize() < range.size()) {
+        m_scavenger->scheduleIfUnderMemoryPressure(range.size());
+        vmAllocatePhysicalPagesSloppy(range.begin() + range.physicalSize(), range.size() - range.physicalSize());
+        range.setPhysicalSize(range.size());
     }
 
     if (prev)
@@ -454,12 +459,14 @@ LargeRange Heap::splitAndAllocate(LargeRange& range, size_t alignment, size_t si
     return range;
 }
 
-void* Heap::tryAllocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, size_t size, AllocationKind allocationKind)
+void* Heap::tryAllocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, size_t size)
 {
+    RELEASE_BASSERT(isActiveHeapKind(m_kind));
+
     BASSERT(isPowerOfTwo(alignment));
 
     if (m_debugHeap)
-        return m_debugHeap->memalignLarge(alignment, size, allocationKind);
+        return m_debugHeap->memalignLarge(alignment, size);
 
     m_scavenger->didStartGrowing();
 
@@ -478,7 +485,7 @@ void* Heap::tryAllocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, si
         if (usingGigacage())
             return nullptr;
 
-        range = PerProcess<VMHeap>::get()->tryAllocateLargeChunk(alignment, size, allocationKind);
+        range = PerProcess<VMHeap>::get()->tryAllocateLargeChunk(alignment, size);
         if (!range)
             return nullptr;
 
@@ -487,12 +494,12 @@ void* Heap::tryAllocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, si
         range = m_largeFree.remove(alignment, size);
     }
 
-    return splitAndAllocate(range, alignment, size, allocationKind).begin();
+    return splitAndAllocate(range, alignment, size).begin();
 }
 
-void* Heap::allocateLarge(std::lock_guard<StaticMutex>& lock, size_t alignment, size_t size, AllocationKind allocationKind)
+void* Heap::allocateLarge(std::lock_guard<StaticMutex>& lock, size_t alignment, size_t size)
 {
-    void* result = tryAllocateLarge(lock, alignment, size, allocationKind);
+    void* result = tryAllocateLarge(lock, alignment, size);
     RELEASE_BASSERT(result);
     return result;
 }
@@ -513,18 +520,18 @@ void Heap::shrinkLarge(std::lock_guard<StaticMutex>&, const Range& object, size_
 
     size_t size = m_largeAllocated.remove(object.begin());
     LargeRange range = LargeRange(object, size);
-    splitAndAllocate(range, alignment, newSize, AllocationKind::Physical);
+    splitAndAllocate(range, alignment, newSize);
 
     m_scavenger->schedule(size);
 }
 
-void Heap::deallocateLarge(std::lock_guard<StaticMutex>&, void* object, AllocationKind allocationKind)
+void Heap::deallocateLarge(std::lock_guard<StaticMutex>&, void* object)
 {
     if (m_debugHeap)
-        return m_debugHeap->freeLarge(object, allocationKind);
+        return m_debugHeap->freeLarge(object);
 
     size_t size = m_largeAllocated.remove(object);
-    m_largeFree.add(LargeRange(object, size, allocationKind == AllocationKind::Physical ? size : 0));
+    m_largeFree.add(LargeRange(object, size, size));
     m_scavenger->schedule(size);
 }
 

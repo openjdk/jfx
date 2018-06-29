@@ -50,11 +50,11 @@ WheelEvent::WheelEvent(const AtomicString& type, const Init& initializer, IsTrus
 }
 
 WheelEvent::WheelEvent(const PlatformWheelEvent& event, DOMWindow* view)
-    : MouseEvent(eventNames().wheelEvent, true, true, event.timestamp(), view, 0, event.globalPosition(), event.position()
+    : MouseEvent(eventNames().wheelEvent, true, true, event.timestamp().approximateMonotonicTime(), view, 0, event.globalPosition(), event.position()
 #if ENABLE(POINTER_LOCK)
         , { }
 #endif
-        , event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey(), 0, 0, 0, 0, 0, false)
+        , event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey(), 0, 0, nullptr, 0, 0, nullptr, false)
     , m_wheelDelta(event.wheelTicksX() * TickMultiplier, event.wheelTicksY() * TickMultiplier)
     , m_deltaX(-event.deltaX())
     , m_deltaY(-event.deltaY())
@@ -66,16 +66,10 @@ WheelEvent::WheelEvent(const PlatformWheelEvent& event, DOMWindow* view)
 
 void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, DOMWindow* view, int screenX, int screenY, int pageX, int pageY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {
-    if (dispatched())
+    if (isBeingDispatched())
         return;
 
-    initUIEvent(eventNames().wheelEvent, true, true, view, 0);
-
-    m_screenLocation = { screenX, screenY };
-    m_ctrlKey = ctrlKey;
-    m_altKey = altKey;
-    m_shiftKey = shiftKey;
-    m_metaKey = metaKey;
+    initMouseEvent(eventNames().wheelEvent, true, true, view, 0, screenX, screenY, pageX, pageY, ctrlKey, altKey, shiftKey, metaKey, 0, nullptr);
 
     // Normalize to 120 multiple for compatibility with IE.
     m_wheelDelta = { rawDeltaX * TickMultiplier, rawDeltaY * TickMultiplier };
@@ -84,7 +78,8 @@ void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, DOMWindow* view, i
 
     m_deltaMode = DOM_DELTA_PIXEL;
 
-    initCoordinates({ pageX, pageY });
+    m_initializedWithPlatformWheelEvent = false;
+    m_wheelEvent = { };
 }
 
 EventInterface WheelEvent::eventInterface() const

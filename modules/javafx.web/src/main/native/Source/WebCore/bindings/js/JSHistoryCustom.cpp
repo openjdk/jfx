@@ -33,11 +33,10 @@
 #include "JSDOMConvertNullable.h"
 #include "JSDOMConvertStrings.h"
 #include "SerializedScriptValue.h"
-#include <runtime/JSFunction.h>
-
-using namespace JSC;
+#include <JavaScriptCore/JSFunction.h>
 
 namespace WebCore {
+using namespace JSC;
 
 JSValue JSHistory::state(ExecState& state) const
 {

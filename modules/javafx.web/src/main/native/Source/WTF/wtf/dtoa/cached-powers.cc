@@ -37,13 +37,13 @@
 namespace WTF {
 
 namespace double_conversion {
-
+    
     struct CachedPower {
         uint64_t significand;
         int16_t binary_exponent;
         int16_t decimal_exponent;
     };
-
+    
     constexpr static const double kD_1_LOG2_10 = 0.30102999566398114;  //  1 / lg(10)
     constexpr static const CachedPower kCachedPowers[] = {
         {UINT64_2PART_C(0xfa8fd5a0, 081c0288), -1220, -348},
@@ -140,7 +140,7 @@ namespace double_conversion {
     const int PowersOfTenCache::kDecimalExponentDistance { kCachedPowers[1].decimal_exponent - kCachedPowers[0].decimal_exponent };
     const int PowersOfTenCache::kMinDecimalExponent { kCachedPowers[0].decimal_exponent };
     const int PowersOfTenCache::kMaxDecimalExponent { kCachedPowers[kCachedPowersLength - 1].decimal_exponent };
-
+    
     void PowersOfTenCache::GetCachedPowerForBinaryExponentRange(
                                                                 int min_exponent,
                                                                 int max_exponent,
@@ -159,8 +159,8 @@ namespace double_conversion {
         *decimal_exponent = cached_power.decimal_exponent;
         *power = DiyFp(cached_power.significand, cached_power.binary_exponent);
     }
-
-
+    
+    
     void PowersOfTenCache::GetCachedPowerForDecimalExponent(int requested_exponent,
                                                             DiyFp* power,
                                                             int* found_exponent) {
@@ -174,7 +174,7 @@ namespace double_conversion {
         ASSERT(*found_exponent <= requested_exponent);
         ASSERT(requested_exponent < *found_exponent + kDecimalExponentDistance);
     }
-
+    
 }  // namespace double_conversion
 
 } // namespace WTF

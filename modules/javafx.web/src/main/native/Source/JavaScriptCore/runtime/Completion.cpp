@@ -46,8 +46,9 @@ namespace JSC {
 
 bool checkSyntax(ExecState* exec, const SourceCode& source, JSValue* returnedException)
 {
-    JSLockHolder lock(exec);
-    RELEASE_ASSERT(exec->vm().atomicStringTable() == Thread::current().atomicStringTable());
+    VM& vm = exec->vm();
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
 
     ProgramExecutable* program = ProgramExecutable::create(exec, source);
     JSObject* error = program->checkSyntax(exec);
@@ -99,7 +100,7 @@ JSValue evaluate(ExecState* exec, const SourceCode& source, JSValue thisValue, N
     if (!thisValue || thisValue.isUndefinedOrNull())
         thisValue = exec->vmEntryGlobalObject();
     JSObject* thisObj = jsCast<JSObject*>(thisValue.toThis(exec, NotStrictMode));
-    JSValue result = exec->interpreter()->executeProgram(source, exec, thisObj);
+    JSValue result = vm.interpreter->executeProgram(source, exec, thisObj);
 
     if (scope.exception()) {
         returnedException = scope.exception();
@@ -123,7 +124,7 @@ JSValue evaluateWithScopeExtension(ExecState* exec, const SourceCode& source, JS
 
     if (scopeExtensionObject) {
         JSScope* ignoredPreviousScope = globalObject->globalScope();
-        globalObject->setGlobalScopeExtension(JSWithScope::create(exec->vm(), globalObject, scopeExtensionObject, ignoredPreviousScope));
+        globalObject->setGlobalScopeExtension(JSWithScope::create(exec->vm(), globalObject, ignoredPreviousScope, scopeExtensionObject));
     }
 
     JSValue returnValue = JSC::evaluate(globalObject->globalExec(), source, globalObject, returnedException);
@@ -153,23 +154,14 @@ static JSInternalPromise* rejectPromise(ExecState* exec, JSGlobalObject* globalO
     return deferred->promise();
 }
 
-static JSInternalPromise* loadAndEvaluateModule(const JSLockHolder&, ExecState* exec, JSGlobalObject* globalObject, JSValue moduleName, JSValue referrer, JSValue scriptFetcher)
+JSInternalPromise* loadAndEvaluateModule(ExecState* exec, const String& moduleName, JSValue parameters, JSValue scriptFetcher)
 {
-    return globalObject->moduleLoader()->loadAndEvaluateModule(exec, moduleName, referrer, scriptFetcher);
-}
+    VM& vm = exec->vm();
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
+    RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
 
-static JSInternalPromise* loadAndEvaluateModule(const JSLockHolder& lock, ExecState* exec, JSGlobalObject* globalObject, const Identifier& moduleName, JSValue scriptFetcher)
-{
-    return loadAndEvaluateModule(lock, exec, globalObject, identifierToJSValue(exec->vm(), moduleName), jsUndefined(), scriptFetcher);
-}
-
-JSInternalPromise* loadAndEvaluateModule(ExecState* exec, const String& moduleName, JSValue scriptFetcher)
-{
-    JSLockHolder lock(exec);
-    RELEASE_ASSERT(exec->vm().atomicStringTable() == Thread::current().atomicStringTable());
-    RELEASE_ASSERT(!exec->vm().isCollectorBusyOnCurrentThread());
-
-    return loadAndEvaluateModule(lock, exec, exec->vmEntryGlobalObject(), Identifier::fromString(exec, moduleName), scriptFetcher);
+    return exec->vmEntryGlobalObject()->moduleLoader()->loadAndEvaluateModule(exec, identifierToJSValue(vm, Identifier::fromString(exec, moduleName)), parameters, scriptFetcher);
 }
 
 JSInternalPromise* loadAndEvaluateModule(ExecState* exec, const SourceCode& source, JSValue scriptFetcher)
@@ -185,29 +177,20 @@ JSInternalPromise* loadAndEvaluateModule(ExecState* exec, const SourceCode& sour
     JSGlobalObject* globalObject = exec->vmEntryGlobalObject();
 
     // Insert the given source code to the ModuleLoader registry as the fetched registry entry.
-    globalObject->moduleLoader()->provide(exec, key, JSModuleLoader::Status::Fetch, source);
+    globalObject->moduleLoader()->provideFetch(exec, key, source);
     RETURN_IF_EXCEPTION(scope, rejectPromise(exec, globalObject));
 
-    return loadAndEvaluateModule(lock, exec, globalObject, key, jsUndefined(), scriptFetcher);
+    return globalObject->moduleLoader()->loadAndEvaluateModule(exec, key, jsUndefined(), scriptFetcher);
 }
 
-static JSInternalPromise* loadModule(const JSLockHolder&, ExecState* exec, JSGlobalObject* globalObject, JSValue moduleName, JSValue referrer, JSValue scriptFetcher)
+JSInternalPromise* loadModule(ExecState* exec, const String& moduleName, JSValue parameters, JSValue scriptFetcher)
 {
-    return globalObject->moduleLoader()->loadModule(exec, moduleName, referrer, scriptFetcher);
-}
+    VM& vm = exec->vm();
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
+    RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
 
-static JSInternalPromise* loadModule(const JSLockHolder& lock, ExecState* exec, JSGlobalObject* globalObject, const Identifier& moduleName, JSValue scriptFetcher)
-{
-    return loadModule(lock, exec, globalObject, identifierToJSValue(exec->vm(), moduleName), jsUndefined(), scriptFetcher);
-}
-
-JSInternalPromise* loadModule(ExecState* exec, const String& moduleName, JSValue scriptFetcher)
-{
-    JSLockHolder lock(exec);
-    RELEASE_ASSERT(exec->vm().atomicStringTable() == Thread::current().atomicStringTable());
-    RELEASE_ASSERT(!exec->vm().isCollectorBusyOnCurrentThread());
-
-    return loadModule(lock, exec, exec->vmEntryGlobalObject(), Identifier::fromString(exec, moduleName), scriptFetcher);
+    return exec->vmEntryGlobalObject()->moduleLoader()->loadModule(exec, identifierToJSValue(vm, Identifier::fromString(exec, moduleName)), parameters, scriptFetcher);
 }
 
 JSInternalPromise* loadModule(ExecState* exec, const SourceCode& source, JSValue scriptFetcher)
@@ -224,29 +207,31 @@ JSInternalPromise* loadModule(ExecState* exec, const SourceCode& source, JSValue
 
     // Insert the given source code to the ModuleLoader registry as the fetched registry entry.
     // FIXME: Introduce JSSourceCode object to wrap around this source.
-    globalObject->moduleLoader()->provide(exec, key, JSModuleLoader::Status::Fetch, source);
+    globalObject->moduleLoader()->provideFetch(exec, key, source);
     RETURN_IF_EXCEPTION(scope, rejectPromise(exec, globalObject));
 
-    return loadModule(lock, exec, globalObject, key, jsUndefined(), scriptFetcher);
+    return globalObject->moduleLoader()->loadModule(exec, key, jsUndefined(), scriptFetcher);
 }
 
 JSValue linkAndEvaluateModule(ExecState* exec, const Identifier& moduleKey, JSValue scriptFetcher)
 {
-    JSLockHolder lock(exec);
-    RELEASE_ASSERT(exec->vm().atomicStringTable() == Thread::current().atomicStringTable());
-    RELEASE_ASSERT(!exec->vm().isCollectorBusyOnCurrentThread());
+    VM& vm = exec->vm();
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
+    RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
 
     JSGlobalObject* globalObject = exec->vmEntryGlobalObject();
-    return globalObject->moduleLoader()->linkAndEvaluateModule(exec, identifierToJSValue(exec->vm(), moduleKey), scriptFetcher);
+    return globalObject->moduleLoader()->linkAndEvaluateModule(exec, identifierToJSValue(vm, moduleKey), scriptFetcher);
 }
 
-JSInternalPromise* importModule(ExecState* exec, const Identifier& moduleKey, JSValue scriptFetcher)
+JSInternalPromise* importModule(ExecState* exec, const Identifier& moduleKey, JSValue parameters, JSValue scriptFetcher)
 {
-    JSLockHolder lock(exec);
-    RELEASE_ASSERT(exec->vm().atomicStringTable() == Thread::current().atomicStringTable());
-    RELEASE_ASSERT(!exec->vm().isCollectorBusyOnCurrentThread());
+    VM& vm = exec->vm();
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
+    RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
 
-    return exec->vmEntryGlobalObject()->moduleLoader()->requestImportModule(exec, moduleKey, scriptFetcher);
+    return exec->vmEntryGlobalObject()->moduleLoader()->requestImportModule(exec, moduleKey, parameters, scriptFetcher);
 }
 
 } // namespace JSC

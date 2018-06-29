@@ -33,11 +33,13 @@
 #include "IDBError.h"
 #include "IDBResourceIdentifier.h"
 #include "IndexedDB.h"
-#include <heap/Strong.h>
+#include <JavaScriptCore/Strong.h>
+#include <wtf/Function.h>
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
-class DOMError;
+class DOMException;
 class Event;
 class IDBCursor;
 class IDBDatabase;
@@ -47,7 +49,6 @@ class IDBObjectStore;
 class IDBResultData;
 class IDBTransaction;
 class IDBValue;
-class ScopeGuard;
 class ThreadSafeDataBuffer;
 
 namespace IDBClient {
@@ -73,7 +74,7 @@ public:
     using Source = Variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
     const std::optional<Source>& source() const { return m_source; }
 
-    ExceptionOr<DOMError*> error() const;
+    ExceptionOr<DOMException*> error() const;
 
     RefPtr<IDBTransaction> transaction() const;
 
@@ -117,7 +118,7 @@ protected:
     IDBRequest(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&);
 
     void enqueueEvent(Ref<Event>&&);
-    bool dispatchEvent(Event&) override;
+    void dispatchEvent(Event&) override;
 
     void setResult(Ref<IDBDatabase>&&);
 
@@ -128,7 +129,7 @@ protected:
     ReadyState m_readyState { ReadyState::Pending };
     RefPtr<IDBTransaction> m_transaction;
     bool m_shouldExposeTransactionToDOM { true };
-    RefPtr<DOMError> m_domError;
+    RefPtr<DOMException> m_domError;
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };
     bool m_contextStopped { false };
     Event* m_openDatabaseSuccessEvent { nullptr };
@@ -170,7 +171,7 @@ private:
 
     RefPtr<IDBCursor> m_pendingCursor;
 
-    std::unique_ptr<ScopeGuard> m_cursorRequestNotifier;
+    std::unique_ptr<WTF::ScopeExit<WTF::Function<void()>>> m_cursorRequestNotifier;
 
     Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,30 +30,35 @@
 #include "JSCJSValue.h"
 
 #if CPU(ARM_THUMB2)
+#define TARGET_ASSEMBLER ARMv7Assembler
+#define TARGET_MACROASSEMBLER MacroAssemblerARMv7
 #include "MacroAssemblerARMv7.h"
 namespace JSC { typedef MacroAssemblerARMv7 MacroAssemblerBase; };
 
 #elif CPU(ARM64)
+#define TARGET_ASSEMBLER ARM64Assembler
+#define TARGET_MACROASSEMBLER MacroAssemblerARM64
 #include "MacroAssemblerARM64.h"
-namespace JSC { typedef MacroAssemblerARM64 MacroAssemblerBase; };
 
 #elif CPU(ARM_TRADITIONAL)
+#define TARGET_ASSEMBLER ARMAssembler
+#define TARGET_MACROASSEMBLER MacroAssemblerARM
 #include "MacroAssemblerARM.h"
-namespace JSC { typedef MacroAssemblerARM MacroAssemblerBase; };
 
 #elif CPU(MIPS)
+#define TARGET_ASSEMBLER MIPSAssembler
+#define TARGET_MACROASSEMBLER MacroAssemblerMIPS
 #include "MacroAssemblerMIPS.h"
-namespace JSC {
-typedef MacroAssemblerMIPS MacroAssemblerBase;
-};
 
 #elif CPU(X86)
+#define TARGET_ASSEMBLER X86Assembler
+#define TARGET_MACROASSEMBLER MacroAssemblerX86
 #include "MacroAssemblerX86.h"
-namespace JSC { typedef MacroAssemblerX86 MacroAssemblerBase; };
 
 #elif CPU(X86_64)
+#define TARGET_ASSEMBLER X86Assembler
+#define TARGET_MACROASSEMBLER MacroAssemblerX86_64
 #include "MacroAssemblerX86_64.h"
-namespace JSC { typedef MacroAssemblerX86_64 MacroAssemblerBase; };
 
 #else
 #error "The MacroAssembler is not supported on this platform."
@@ -61,14 +66,32 @@ namespace JSC { typedef MacroAssemblerX86_64 MacroAssemblerBase; };
 
 #include "MacroAssemblerHelpers.h"
 
+namespace WTF {
+
+template<typename FunctionType>
+class ScopedLambda;
+
+} // namespace WTF
+
 namespace JSC {
+
+#if ENABLE(MASM_PROBE)
+namespace Probe {
+
+class Context;
+typedef void (*Function)(Context&);
+
+} // namespace Probe
+#endif // ENABLE(MASM_PROBE)
 
 namespace Printer {
 
 struct PrintRecord;
 typedef Vector<PrintRecord> PrintRecordList;
 
-}
+} // namespace Printer
+
+using MacroAssemblerBase = TARGET_MACROASSEMBLER;
 
 class MacroAssembler : public MacroAssemblerBase {
 public:
@@ -394,12 +417,12 @@ public:
     }
 
 #if !CPU(ARM_THUMB2) && !CPU(ARM64)
-    PatchableJump patchableBranchPtr(RelationalCondition cond, Address left, TrustedImmPtr right = TrustedImmPtr(0))
+    PatchableJump patchableBranchPtr(RelationalCondition cond, Address left, TrustedImmPtr right = TrustedImmPtr(nullptr))
     {
         return PatchableJump(branchPtr(cond, left, right));
     }
 
-    PatchableJump patchableBranchPtrWithPatch(RelationalCondition cond, Address left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(0))
+    PatchableJump patchableBranchPtrWithPatch(RelationalCondition cond, Address left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(nullptr))
     {
         return PatchableJump(branchPtrWithPatch(cond, left, dataLabel, initialRightValue));
     }
@@ -573,9 +596,19 @@ public:
         lshift32(trustedImm32ForShift(imm), srcDest);
     }
 
+    void lshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        lshift32(imm, srcDest);
+    }
+
     void rshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         rshift32(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void rshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        rshift32(imm, srcDest);
     }
 
     void urshiftPtr(Imm32 imm, RegisterID srcDest)
@@ -583,9 +616,19 @@ public:
         urshift32(trustedImm32ForShift(imm), srcDest);
     }
 
+    void urshiftPtr(RegisterID shiftAmmount, RegisterID srcDest)
+    {
+        urshift32(shiftAmmount, srcDest);
+    }
+
     void negPtr(RegisterID dest)
     {
         neg32(dest);
+    }
+
+    void negPtr(RegisterID src, RegisterID dest)
+    {
+        neg32(src, dest);
     }
 
     void orPtr(RegisterID src, RegisterID dest)
@@ -631,6 +674,11 @@ public:
     void xorPtr(TrustedImm32 imm, RegisterID srcDest)
     {
         xor32(imm, srcDest);
+    }
+
+    void xorPtr(TrustedImmPtr imm, RegisterID srcDest)
+    {
+        xor32(TrustedImm32(imm), srcDest);
     }
 
     void xorPtr(Address src, RegisterID dest)
@@ -882,9 +930,19 @@ public:
         lshift64(trustedImm32ForShift(imm), srcDest);
     }
 
+    void lshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        lshift64(imm, srcDest);
+    }
+
     void rshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         rshift64(trustedImm32ForShift(imm), srcDest);
+    }
+
+    void rshiftPtr(TrustedImm32 imm, RegisterID srcDest)
+    {
+        rshift64(imm, srcDest);
     }
 
     void urshiftPtr(Imm32 imm, RegisterID srcDest)
@@ -892,9 +950,19 @@ public:
         urshift64(trustedImm32ForShift(imm), srcDest);
     }
 
+    void urshiftPtr(RegisterID shiftAmmount, RegisterID srcDest)
+    {
+        urshift64(shiftAmmount, srcDest);
+    }
+
     void negPtr(RegisterID dest)
     {
         neg64(dest);
+    }
+
+    void negPtr(RegisterID src, RegisterID dest)
+    {
+        neg64(src, dest);
     }
 
     void orPtr(RegisterID src, RegisterID dest)
@@ -960,6 +1028,12 @@ public:
     void xorPtr(TrustedImm32 imm, RegisterID srcDest)
     {
         xor64(imm, srcDest);
+    }
+
+    // FIXME: Look into making the need for a scratch register explicit, or providing the option to specify a scratch register.
+    void xorPtr(TrustedImmPtr imm, RegisterID srcDest)
+    {
+        xor64(TrustedImm64(imm), srcDest);
     }
 
     void loadPtr(ImplicitAddress address, RegisterID dest)
@@ -1824,146 +1898,71 @@ public:
         urshift32(src, trustedImm32ForShift(amount), dest);
     }
 
-#if ENABLE(MASM_PROBE)
-    struct CPUState;
+    // If the result jump is taken that means the assert passed.
+    void jitAssert(const WTF::ScopedLambda<Jump(void)>&);
 
+#if ENABLE(MASM_PROBE)
     // This function emits code to preserve the CPUState (e.g. registers),
     // call a user supplied probe function, and restore the CPUState before
     // continuing with other JIT generated code.
     //
     // The user supplied probe function will be called with a single pointer to
-    // a ProbeContext struct (defined below) which contains, among other things,
+    // a Probe::State struct (defined below) which contains, among other things,
     // the preserved CPUState. This allows the user probe function to inspect
     // the CPUState at that point in the JIT generated code.
     //
-    // If the user probe function alters the register values in the ProbeContext,
+    // If the user probe function alters the register values in the Probe::State,
     // the altered values will be loaded into the CPU registers when the probe
     // returns.
     //
-    // The ProbeContext is stack allocated and is only valid for the duration
+    // The Probe::State is stack allocated and is only valid for the duration
     // of the call to the user probe function.
+    //
+    // The probe function may choose to move the stack pointer (in any direction).
+    // To do this, the probe function needs to set the new sp value in the CPUState.
+    //
+    // The probe function may also choose to fill stack space with some values.
+    // To do this, the probe function must first:
+    // 1. Set the new sp value in the Probe::State's CPUState.
+    // 2. Set the Probe::State's initializeStackFunction to a Probe::Function callback
+    //    which will do the work of filling in the stack values after the probe
+    //    trampoline has adjusted the machine stack pointer.
+    // 3. Set the Probe::State's initializeStackArgs to any value that the client wants
+    //    to pass to the initializeStackFunction callback.
+    // 4. Return from the probe function.
+    //
+    // Upon returning from the probe function, the probe trampoline will adjust the
+    // the stack pointer based on the sp value in CPUState. If initializeStackFunction
+    // is not set, the probe trampoline will restore registers and return to its caller.
+    //
+    // If initializeStackFunction is set, the trampoline will move the Probe::State
+    // beyond the range of the stack pointer i.e. it will place the new Probe::State at
+    // an address lower than where CPUState.sp() points. This ensures that the
+    // Probe::State will not be trashed by the initializeStackFunction when it writes to
+    // the stack. Then, the trampoline will call back to the initializeStackFunction
+    // Probe::Function to let it fill in the stack values as desired. The
+    // initializeStackFunction Probe::Function will be passed the moved Probe::State at
+    // the new location.
+    //
+    // initializeStackFunction may now write to the stack at addresses greater or
+    // equal to CPUState.sp(), but not below that. initializeStackFunction is also
+    // not allowed to change CPUState.sp(). If the initializeStackFunction does not
+    // abide by these rules, then behavior is undefined, and bad things may happen.
     //
     // Note: this version of probe() should be implemented by the target specific
     // MacroAssembler.
-    void probe(ProbeFunction, void* arg);
+    void probe(Probe::Function, void* arg);
 
-    JS_EXPORT_PRIVATE void probe(std::function<void(ProbeContext*)>);
-#endif // ENABLE(MASM_PROBE)
+    JS_EXPORT_PRIVATE void probe(std::function<void(Probe::Context&)>);
 
     // Let's you print from your JIT generated code.
-    // This only works if ENABLE(MASM_PROBE). Otherwise, print() is a no-op.
     // See comments in MacroAssemblerPrinter.h for examples of how to use this.
     template<typename... Arguments>
     void print(Arguments&&... args);
 
     void print(Printer::PrintRecordList*);
-};
-
-#if ENABLE(MASM_PROBE)
-
-struct MacroAssembler::CPUState {
-    static inline const char* gprName(RegisterID id) { return MacroAssembler::gprName(id); }
-    static inline const char* sprName(SPRegisterID id) { return MacroAssembler::sprName(id); }
-    static inline const char* fprName(FPRegisterID id) { return MacroAssembler::fprName(id); }
-    inline uintptr_t& gpr(RegisterID);
-    inline uintptr_t& spr(SPRegisterID);
-    inline double& fpr(FPRegisterID);
-
-    inline void*& pc();
-    inline void*& fp();
-    inline void*& sp();
-
-    uintptr_t gprs[MacroAssembler::numberOfRegisters()];
-    uintptr_t sprs[MacroAssembler::numberOfSPRegisters()];
-    double fprs[MacroAssembler::numberOfFPRegisters()];
-};
-
-inline uintptr_t& MacroAssembler::CPUState::gpr(RegisterID id)
-{
-    ASSERT(id >= MacroAssembler::firstRegister() && id <= MacroAssembler::lastRegister());
-    return gprs[id];
-}
-
-inline uintptr_t& MacroAssembler::CPUState::spr(SPRegisterID id)
-{
-    ASSERT(id >= MacroAssembler::firstSPRegister() && id <= MacroAssembler::lastSPRegister());
-    return sprs[id];
-}
-
-inline double& MacroAssembler::CPUState::fpr(FPRegisterID id)
-{
-    ASSERT(id >= MacroAssembler::firstFPRegister() && id <= MacroAssembler::lastFPRegister());
-    return fprs[id];
-}
-
-inline void*& MacroAssembler::CPUState::pc()
-{
-#if CPU(X86) || CPU(X86_64)
-    return *reinterpret_cast<void**>(&spr(X86Registers::eip));
-#elif CPU(ARM64)
-    return *reinterpret_cast<void**>(&spr(ARM64Registers::pc));
-#elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
-    return *reinterpret_cast<void**>(&gpr(ARMRegisters::pc));
-#elif CPU(MIPS)
-    RELEASE_ASSERT_NOT_REACHED();
-#else
-#error "Unsupported CPU"
-#endif
-}
-
-inline void*& MacroAssembler::CPUState::fp()
-{
-#if CPU(X86) || CPU(X86_64)
-    return *reinterpret_cast<void**>(&gpr(X86Registers::ebp));
-#elif CPU(ARM64)
-    return *reinterpret_cast<void**>(&gpr(ARM64Registers::fp));
-#elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
-    return *reinterpret_cast<void**>(&gpr(ARMRegisters::fp));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::fp));
-#else
-#error "Unsupported CPU"
-#endif
-}
-
-inline void*& MacroAssembler::CPUState::sp()
-{
-#if CPU(X86) || CPU(X86_64)
-    return *reinterpret_cast<void**>(&gpr(X86Registers::esp));
-#elif CPU(ARM64)
-    return *reinterpret_cast<void**>(&gpr(ARM64Registers::sp));
-#elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
-    return *reinterpret_cast<void**>(&gpr(ARMRegisters::sp));
-#elif CPU(MIPS)
-    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::sp));
-#else
-#error "Unsupported CPU"
-#endif
-}
-
-struct ProbeContext {
-    using CPUState = MacroAssembler::CPUState;
-    using RegisterID = MacroAssembler::RegisterID;
-    using SPRegisterID = MacroAssembler::SPRegisterID;
-    using FPRegisterID = MacroAssembler::FPRegisterID;
-
-    ProbeFunction probeFunction;
-    void* arg;
-    CPUState cpu;
-
-    // Convenience methods:
-    uintptr_t& gpr(RegisterID id) { return cpu.gpr(id); }
-    uintptr_t& spr(SPRegisterID id) { return cpu.spr(id); }
-    double& fpr(FPRegisterID id) { return cpu.fpr(id); }
-    const char* gprName(RegisterID id) { return cpu.gprName(id); }
-    const char* sprName(SPRegisterID id) { return cpu.sprName(id); }
-    const char* fprName(FPRegisterID id) { return cpu.fprName(id); }
-
-    void*& pc() { return cpu.pc(); }
-    void*& fp() { return cpu.fp(); }
-    void*& sp() { return cpu.sp(); }
-};
 #endif // ENABLE(MASM_PROBE)
+};
 
 } // namespace JSC
 

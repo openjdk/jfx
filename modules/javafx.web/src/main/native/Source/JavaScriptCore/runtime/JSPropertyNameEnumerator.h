@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSCell.h"
+#include "JSCast.h"
 #include "Operations.h"
 #include "PropertyNameArray.h"
 #include "Structure.h"
@@ -108,12 +108,12 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(ExecState* exec, JSObjec
     Structure* structure = base->structure(vm);
     if (!indexedLength
         && (enumerator = structure->cachedPropertyNameEnumerator())
-        && enumerator->cachedPrototypeChain() == structure->prototypeChain(exec))
+        && enumerator->cachedPrototypeChain() == structure->prototypeChain(exec, base))
         return enumerator;
 
     uint32_t numberStructureProperties = 0;
 
-    PropertyNameArray propertyNames(exec, PropertyNameMode::Strings);
+    PropertyNameArray propertyNames(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
 
     if (structure->canAccessPropertiesQuicklyForEnumeration() && indexedLength == base->getArrayLength()) {
         base->methodTable(vm)->getStructurePropertyNames(base, exec, propertyNames, EnumerationMode());
@@ -133,12 +133,15 @@ inline JSPropertyNameEnumerator* propertyNameEnumerator(ExecState* exec, JSObjec
 
     ASSERT(propertyNames.size() < UINT32_MAX);
 
-    normalizePrototypeChain(exec, structure);
+    bool sawPolyProto;
+    bool successfullyNormalizedChain = normalizePrototypeChain(exec, base, sawPolyProto) != InvalidPrototypeChain;
 
     enumerator = JSPropertyNameEnumerator::create(vm, structure, indexedLength, numberStructureProperties, WTFMove(propertyNames));
-    enumerator->setCachedPrototypeChain(vm, structure->prototypeChain(exec));
-    if (!indexedLength && structure->canCachePropertyNameEnumerator())
-        structure->setCachedPropertyNameEnumerator(vm, enumerator);
+    if (!indexedLength && successfullyNormalizedChain && base->structure(vm) == structure) {
+        enumerator->setCachedPrototypeChain(vm, structure->prototypeChain(exec, base));
+        if (structure->canCachePropertyNameEnumerator())
+            structure->setCachedPropertyNameEnumerator(vm, enumerator);
+    }
     return enumerator;
 }
 

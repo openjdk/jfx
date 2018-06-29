@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -7963,7 +7963,7 @@ void testBranch8WithLoad8ZIndex()
 
 void testComplex(unsigned numVars, unsigned numConstructs)
 {
-    double before = monotonicallyIncreasingTimeMS();
+    MonotonicTime before = MonotonicTime::now();
 
     Procedure proc;
     BasicBlock* current = proc.addBlock();
@@ -8092,8 +8092,8 @@ void testComplex(unsigned numVars, unsigned numConstructs)
 
     compileProc(proc);
 
-    double after = monotonicallyIncreasingTimeMS();
-    dataLog(toCString("    That took ", after - before, " ms.\n"));
+    MonotonicTime after = MonotonicTime::now();
+    dataLog(toCString("    That took ", (after - before).milliseconds(), " ms.\n"));
 }
 
 void testSimplePatchpoint()
@@ -13007,7 +13007,7 @@ void testInterpreter()
     polyJump->effects.terminal = true;
     polyJump->appendSomeRegister(opcode);
     polyJump->clobber(RegisterSet::macroScratchRegisters());
-    polyJump->numGPScratchRegisters++;
+    polyJump->numGPScratchRegisters = 2;
     dispatch->appendSuccessor(FrequentedBlock(addToDataPointer));
     dispatch->appendSuccessor(FrequentedBlock(addToCodePointer));
     dispatch->appendSuccessor(FrequentedBlock(addToData));
@@ -13029,8 +13029,14 @@ void testInterpreter()
             MacroAssemblerCodePtr* jumpTable = bitwise_cast<MacroAssemblerCodePtr*>(
                 params.proc().addDataSection(sizeof(MacroAssemblerCodePtr) * labels.size()));
 
-            jit.move(CCallHelpers::TrustedImmPtr(jumpTable), params.gpScratch(0));
-            jit.jump(CCallHelpers::BaseIndex(params.gpScratch(0), params[0].gpr(), CCallHelpers::timesPtr()));
+            GPRReg scratch = params.gpScratch(0);
+            GPRReg poisonScratch = params.gpScratch(1);
+
+            jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
+            jit.move(CCallHelpers::TrustedImm64(JITCodePoison::key()), poisonScratch);
+            jit.load64(CCallHelpers::BaseIndex(scratch, params[0].gpr(), CCallHelpers::timesPtr()), scratch);
+            jit.xor64(poisonScratch, scratch);
+            jit.jump(scratch);
 
             jit.addLinkTask(
                 [&, jumpTable, labels] (LinkBuffer& linkBuffer) {
@@ -13288,7 +13294,7 @@ void testEntrySwitchSimple()
     CodeLocationLabel labelTwo = linkBuffer.locationOf(proc.entrypointLabel(1));
     CodeLocationLabel labelThree = linkBuffer.locationOf(proc.entrypointLabel(2));
 
-    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, ("testb3 compilation"));
+    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, "testb3 compilation");
 
     CHECK(invoke<int>(labelOne, 1, 2) == 3);
     CHECK(invoke<int>(labelTwo, 1, 2) == -1);
@@ -13321,7 +13327,7 @@ void testEntrySwitchNoEntrySwitch()
     CodeLocationLabel labelTwo = linkBuffer.locationOf(proc.entrypointLabel(1));
     CodeLocationLabel labelThree = linkBuffer.locationOf(proc.entrypointLabel(2));
 
-    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, ("testb3 compilation"));
+    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, "testb3 compilation");
 
     CHECK_EQ(invoke<int>(labelOne, 1, 2), 3);
     CHECK_EQ(invoke<int>(labelTwo, 1, 2), 3);
@@ -13408,7 +13414,7 @@ void testEntrySwitchWithCommonPaths()
     CodeLocationLabel labelTwo = linkBuffer.locationOf(proc.entrypointLabel(1));
     CodeLocationLabel labelThree = linkBuffer.locationOf(proc.entrypointLabel(2));
 
-    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, ("testb3 compilation"));
+    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, "testb3 compilation");
 
     CHECK_EQ(invoke<int>(labelOne, 1, 2, 10), 3);
     CHECK_EQ(invoke<int>(labelTwo, 1, 2, 10), -1);
@@ -13525,7 +13531,7 @@ void testEntrySwitchWithCommonPathsAndNonTrivialEntrypoint()
     CodeLocationLabel labelTwo = linkBuffer.locationOf(proc.entrypointLabel(1));
     CodeLocationLabel labelThree = linkBuffer.locationOf(proc.entrypointLabel(2));
 
-    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, ("testb3 compilation"));
+    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, "testb3 compilation");
 
     CHECK_EQ(invoke<int>(labelOne, 1, 2, 10, false), 3);
     CHECK_EQ(invoke<int>(labelTwo, 1, 2, 10, false), -1);
@@ -13602,7 +13608,7 @@ void testEntrySwitchLoop()
     CodeLocationLabel labelOne = linkBuffer.locationOf(proc.entrypointLabel(0));
     CodeLocationLabel labelTwo = linkBuffer.locationOf(proc.entrypointLabel(1));
 
-    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, ("testb3 compilation"));
+    MacroAssemblerCodeRef codeRef = FINALIZE_CODE(linkBuffer, "testb3 compilation");
 
     CHECK(invoke<int>(labelOne, 0) == 1);
     CHECK(invoke<int>(labelOne, 42) == 43);
@@ -15859,11 +15865,18 @@ void testDepend64()
     CHECK_EQ(invoke<int64_t>(*code, values), 42 + 0xbeef);
 }
 
-void testWasmBoundsCheck(unsigned offset)
+enum class UseIndexingMaskGPR { No, Yes };
+void testWasmBoundsCheck(unsigned offset, UseIndexingMaskGPR useIndexingMask)
 {
     Procedure proc;
     GPRReg pinned = GPRInfo::argumentGPR1;
+    GPRReg indexingMask = InvalidGPRReg;
     proc.pinRegister(pinned);
+
+    if (useIndexingMask == UseIndexingMaskGPR::Yes) {
+        indexingMask = GPRInfo::argumentGPR2;
+        proc.pinRegister(indexingMask);
+    }
 
     proc.setWasmBoundsCheckGenerator([=] (CCallHelpers& jit, GPRReg pinnedGPR) {
         CHECK_EQ(pinnedGPR, pinned);
@@ -15879,14 +15892,20 @@ void testWasmBoundsCheck(unsigned offset)
     Value* left = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
     if (pointerType() != Int32)
         left = root->appendNew<Value>(proc, Trunc, Origin(), left);
-    root->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinned, left, offset);
+    root->appendNew<WasmBoundsCheckValue>(proc, Origin(), pinned, indexingMask, left, offset);
     Value* result = root->appendNew<Const32Value>(proc, Origin(), 0x42);
     root->appendNewControlValue(proc, Return, Origin(), result);
 
     auto code = compileProc(proc);
-    CHECK_EQ(invoke<int32_t>(*code, 1, 2 + offset), 0x42);
-    CHECK_EQ(invoke<int32_t>(*code, 3, 2 + offset), 42);
-    CHECK_EQ(invoke<int32_t>(*code, 2, 2 + offset), 42);
+    uint32_t bound = 2 + offset;
+    uint32_t mask = WTF::computeIndexingMask(bound);
+    auto computeResult = [&] (uint32_t input) {
+        return input + offset < bound ? 0x42 : 42;
+    };
+
+    CHECK_EQ(invoke<int32_t>(*code, 1, bound, mask), computeResult(1));
+    CHECK_EQ(invoke<int32_t>(*code, 3, bound, mask), computeResult(3));
+    CHECK_EQ(invoke<int32_t>(*code, 2, bound, mask), computeResult(2));
 }
 
 void testWasmAddress()
@@ -17739,10 +17758,15 @@ void run(const char* filter)
     RUN(testDepend32());
     RUN(testDepend64());
 
-    RUN(testWasmBoundsCheck(0));
-    RUN(testWasmBoundsCheck(100));
-    RUN(testWasmBoundsCheck(10000));
-    RUN(testWasmBoundsCheck(std::numeric_limits<unsigned>::max() - 5));
+    RUN(testWasmBoundsCheck(0, UseIndexingMaskGPR::No));
+    RUN(testWasmBoundsCheck(100, UseIndexingMaskGPR::No));
+    RUN(testWasmBoundsCheck(10000, UseIndexingMaskGPR::No));
+    RUN(testWasmBoundsCheck(std::numeric_limits<unsigned>::max() - 5, UseIndexingMaskGPR::No));
+    RUN(testWasmBoundsCheck(0, UseIndexingMaskGPR::Yes));
+    RUN(testWasmBoundsCheck(100, UseIndexingMaskGPR::Yes));
+    RUN(testWasmBoundsCheck(10000, UseIndexingMaskGPR::Yes));
+    RUN(testWasmBoundsCheck(std::numeric_limits<unsigned>::max() - 5, UseIndexingMaskGPR::Yes));
+
     RUN(testWasmAddress());
 
     RUN(testFastTLSLoad());
@@ -17788,7 +17812,7 @@ void run(const char* filter)
 
     Lock lock;
 
-    Vector<RefPtr<Thread>> threads;
+    Vector<Ref<Thread>> threads;
     for (unsigned i = filter ? 1 : WTF::numberOfProcessorCores(); i--;) {
         threads.append(
             Thread::create(
@@ -17808,7 +17832,7 @@ void run(const char* filter)
                 }));
     }
 
-    for (RefPtr<Thread> thread : threads)
+    for (auto& thread : threads)
         thread->waitForCompletion();
     crashLock.lock();
 }

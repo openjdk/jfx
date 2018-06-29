@@ -32,35 +32,9 @@
 
 namespace WebCore {
 
-ResourceHandleClient::ResourceHandleClient()
-{
-}
+ResourceHandleClient::ResourceHandleClient() = default;
 
-ResourceHandleClient::~ResourceHandleClient()
-{
-}
-
-ResourceRequest ResourceHandleClient::willSendRequest(ResourceHandle*, ResourceRequest&& request, ResourceResponse&&)
-{
-    return WTFMove(request);
-}
-
-void ResourceHandleClient::willSendRequestAsync(ResourceHandle* handle, ResourceRequest&& request, ResourceResponse&& /*redirectResponse*/)
-{
-    handle->continueWillSendRequest(WTFMove(request));
-}
-
-void ResourceHandleClient::didReceiveResponseAsync(ResourceHandle* handle, ResourceResponse&&)
-{
-    handle->continueDidReceiveResponse();
-}
-
-#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
-void ResourceHandleClient::canAuthenticateAgainstProtectionSpaceAsync(ResourceHandle* handle, const ProtectionSpace&)
-{
-    handle->continueCanAuthenticateAgainstProtectionSpace(false);
-}
-#endif
+ResourceHandleClient::~ResourceHandleClient() = default;
 
 #if USE(CFURLCONNECTION)
 void ResourceHandleClient::willCacheResponseAsync(ResourceHandle* handle, CFCachedURLResponseRef response)

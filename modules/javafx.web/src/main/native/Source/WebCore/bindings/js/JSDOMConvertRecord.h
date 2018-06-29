@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 
 #include "IDLTypes.h"
 #include "JSDOMConvertStrings.h"
-#include <runtime/ObjectConstructor.h>
+#include <JavaScriptCore/ObjectConstructor.h>
 
 namespace WebCore {
 
@@ -85,8 +85,8 @@ template<typename K, typename V> struct Converter<IDLRecord<K, V>> : DefaultConv
         ReturnType result;
 
         // 4. Let keys be ? O.[[OwnPropertyKeys]]().
-        JSC::PropertyNameArray keys(&vm, JSC::PropertyNameMode::Strings);
-        object->methodTable()->getOwnPropertyNames(object, &state, keys, JSC::EnumerationMode());
+        JSC::PropertyNameArray keys(&vm, JSC::PropertyNameMode::Strings, JSC::PrivateSymbolMode::Exclude);
+        object->methodTable(vm)->getOwnPropertyNames(object, &state, keys, JSC::EnumerationMode());
 
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -105,6 +105,7 @@ template<typename K, typename V> struct Converter<IDLRecord<K, V>> : DefaultConv
             if (didGetDescriptor && descriptor.enumerable()) {
                 // 1. Let typedKey be key converted to an IDL value of type K.
                 auto typedKey = Detail::IdentifierConverter<K>::convert(state, key);
+                RETURN_IF_EXCEPTION(scope, { });
 
                 // 2. Let value be ? Get(O, key).
                 auto subValue = object->get(&state, key);

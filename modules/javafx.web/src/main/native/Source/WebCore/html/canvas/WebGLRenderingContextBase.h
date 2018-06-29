@@ -28,6 +28,7 @@
 #if ENABLE(WEBGL)
 
 #include "ActivityStateChangeObserver.h"
+#include "ExceptionOr.h"
 #include "GPUBasedCanvasRenderingContext.h"
 #include "GraphicsContext3D.h"
 #include "ImageBuffer.h"
@@ -41,6 +42,7 @@
 #include "WebGLStateTracker.h"
 #include "WebGLTexture.h"
 #include "WebGLVertexArrayObjectOES.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <memory>
 
 #if ENABLE(WEBGL2)
@@ -65,6 +67,7 @@ class OESTextureHalfFloat;
 class OESTextureHalfFloatLinear;
 class OESVertexArrayObject;
 class OESElementIndexUint;
+class OffscreenCanvas;
 class WebGLActiveInfo;
 class WebGLContextGroup;
 class WebGLContextObject;
@@ -87,35 +90,14 @@ class WebGLUniformLocation;
 class HTMLVideoElement;
 #endif
 
-inline void clip1D(GC3Dint start, GC3Dsizei range, GC3Dsizei sourceRange, GC3Dint* clippedStart, GC3Dsizei* clippedRange)
-{
-    ASSERT(clippedStart && clippedRange);
-    if (start < 0) {
-        range += start;
-        start = 0;
-    }
-    GC3Dint end = start + range;
-    if (end > sourceRange)
-        range -= end - sourceRange;
-    *clippedStart = start;
-    *clippedRange = range;
-}
-
-// Returns false if no clipping is necessary, i.e., x, y, width, height stay the same.
-inline bool clip2D(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height,
-    GC3Dsizei sourceWidth, GC3Dsizei sourceHeight,
-    GC3Dint* clippedX, GC3Dint* clippedY, GC3Dsizei* clippedWidth, GC3Dsizei*clippedHeight)
-{
-    ASSERT(clippedX && clippedY && clippedWidth && clippedHeight);
-    clip1D(x, width, sourceWidth, clippedX, clippedWidth);
-    clip1D(y, height, sourceHeight, clippedY, clippedHeight);
-    return (*clippedX != x || *clippedY != y || *clippedWidth != width || *clippedHeight != height);
-}
+using WebGLCanvas = WTF::Variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
 
 class WebGLRenderingContextBase : public GPUBasedCanvasRenderingContext, private ActivityStateChangeObserver {
 public:
-    static std::unique_ptr<WebGLRenderingContextBase> create(HTMLCanvasElement&, WebGLContextAttributes&, const String&);
+    static std::unique_ptr<WebGLRenderingContextBase> create(CanvasBase&, WebGLContextAttributes&, const String&);
     virtual ~WebGLRenderingContextBase();
+
+    WebGLCanvas canvas();
 
     int drawingBufferWidth() const;
     int drawingBufferHeight() const;
@@ -210,6 +192,8 @@ public:
     WebGLAny getVertexAttrib(GC3Duint index, GC3Denum pname);
     long long getVertexAttribOffset(GC3Duint index, GC3Denum pname);
 
+    bool extensionIsEnabled(const String&);
+
     bool isPreservingDrawingBuffer() const { return m_attributes.preserveDrawingBuffer; }
     void setPreserveDrawingBuffer(bool value) { m_attributes.preserveDrawingBuffer = value; }
 
@@ -270,11 +254,11 @@ public:
         {
         }
 
-        DataType* data() const
+        const DataType* data() const
         {
             return WTF::switchOn(m_variant,
-                [] (const RefPtr<TypedArray>& typedArray) -> DataType* { return typedArray->data(); },
-                [] (const Vector<DataType>& vector) -> DataType* { return const_cast<Vector<DataType>&>(vector).data(); }
+                [] (const RefPtr<TypedArray>& typedArray) -> const DataType* { return typedArray->data(); },
+                [] (const Vector<DataType>& vector) -> const DataType* { return vector.data(); }
             );
         }
 
@@ -374,8 +358,8 @@ public:
     WEBCORE_EXPORT void setFailNextGPUStatusCheck();
 
 protected:
-    WebGLRenderingContextBase(HTMLCanvasElement&, WebGLContextAttributes);
-    WebGLRenderingContextBase(HTMLCanvasElement&, Ref<GraphicsContext3D>&&, WebGLContextAttributes);
+    WebGLRenderingContextBase(CanvasBase&, WebGLContextAttributes);
+    WebGLRenderingContextBase(CanvasBase&, Ref<GraphicsContext3D>&&, WebGLContextAttributes);
 
     friend class WebGLDrawBuffers;
     friend class WebGLFramebuffer;
@@ -671,7 +655,7 @@ protected:
     // Helper function to check target and texture bound to the target.
     // Generate GL errors and return 0 if target is invalid or texture bound is
     // null.  Otherwise, return the texture bound to the target.
-    WebGLTexture* validateTextureBinding(const char* functionName, GC3Denum target, bool useSixEnumsForCubeMap);
+    RefPtr<WebGLTexture> validateTextureBinding(const char* functionName, GC3Denum target, bool useSixEnumsForCubeMap);
 
     // Helper function to check input format/type for functions {copy}Tex{Sub}Image.
     // Generates GL error and returns false if parameters are invalid.
@@ -780,7 +764,7 @@ protected:
     bool validateUniformParameters(const char* functionName, const WebGLUniformLocation*, const Int32List&, GC3Dsizei mod);
     bool validateUniformParameters(const char* functionName, const WebGLUniformLocation*, void*, GC3Dsizei, GC3Dsizei mod);
     bool validateUniformMatrixParameters(const char* functionName, const WebGLUniformLocation*, GC3Dboolean transpose, const Float32List&, GC3Dsizei mod);
-    bool validateUniformMatrixParameters(const char* functionName, const WebGLUniformLocation*, GC3Dboolean transpose, void*, GC3Dsizei, GC3Dsizei mod);
+    bool validateUniformMatrixParameters(const char* functionName, const WebGLUniformLocation*, GC3Dboolean transpose, const void*, GC3Dsizei, GC3Dsizei mod);
 
     // Helper function to validate parameters for bufferData.
     // Return the current bound buffer to target, or 0 if parameters are invalid.
@@ -808,8 +792,8 @@ protected:
 
     // Helpers for simulating vertexAttrib0.
     void initVertexAttrib0();
-    bool simulateVertexAttrib0(GC3Dsizei numVertex);
-    bool validateSimulatedVertexAttrib0(GC3Dsizei numVertex);
+    std::optional<bool> simulateVertexAttrib0(GC3Duint numVertex);
+    bool validateSimulatedVertexAttrib0(GC3Duint numVertex);
     void restoreStatesAfterVertexAttrib0Simulation();
 
     void dispatchContextLostEvent();
@@ -842,6 +826,11 @@ protected:
     // Check if EXT_draw_buffers extension is supported and if it satisfies the WebGL requirements.
     bool supportsDrawBuffers();
 
+    HTMLCanvasElement* htmlCanvas();
+    OffscreenCanvas* offscreenCanvas();
+
+    template <typename T> inline std::optional<T> checkedAddAndMultiply(T value, T add, T multiply);
+
 private:
     bool validateArrayBufferType(const char* functionName, GC3Denum type, std::optional<JSC::TypedArrayType>);
     void registerWithWebGLStateTracker();
@@ -852,6 +841,18 @@ private:
     WebGLStateTracker::Token m_trackerToken;
     Timer m_checkForContextLossHandlingTimer;
 };
+
+template <typename T>
+inline std::optional<T> WebGLRenderingContextBase::checkedAddAndMultiply(T value, T add, T multiply)
+{
+    Checked<T, RecordOverflow> checkedResult = Checked<T>(value);
+    checkedResult += Checked<T>(add);
+    checkedResult *= Checked<T>(multiply);
+    if (checkedResult.hasOverflowed())
+        return std::nullopt;
+
+    return checkedResult.unsafeGet();
+}
 
 } // namespace WebCore
 

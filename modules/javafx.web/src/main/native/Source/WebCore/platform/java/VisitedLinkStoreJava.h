@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "LinkHash.h"
-#include "VisitedLinkStore.h"
+#include <WebCore/SharedStringHash.h>
+#include <WebCore/VisitedLinkStore.h>
 
 class VisitedLinkStoreJava final : public WebCore::VisitedLinkStore {
 public:
     static Ref<VisitedLinkStoreJava> create();
-    ~VisitedLinkStoreJava() override;
+    virtual ~VisitedLinkStoreJava();
 
     static void setShouldTrackVisitedLinks(bool);
     static void removeAllVisitedLinks();
@@ -41,14 +41,14 @@ public:
 private:
     VisitedLinkStoreJava();
 
-    bool isLinkVisited(WebCore::Page&, WebCore::LinkHash, const WebCore::URL& baseURL, const AtomicString& attributeURL) override;
-    void addVisitedLink(WebCore::Page&, WebCore::LinkHash) override;
+    bool isLinkVisited(WebCore::Page&, WebCore::SharedStringHash, const WebCore::URL& baseURL, const AtomicString& attributeURL) override;
+    void addVisitedLink(WebCore::Page&, WebCore::SharedStringHash) override;
 
     void populateVisitedLinksIfNeeded(WebCore::Page&);
-    void addVisitedLinkHash(WebCore::LinkHash);
+    void addVisitedLinkHash(WebCore::SharedStringHash);
     void removeVisitedLinkHashes();
 
-    HashSet<WebCore::LinkHash, WebCore::LinkHashHash> m_visitedLinkHashes;
+    HashSet<WebCore::SharedStringHash, WebCore::SharedStringHashHash> m_visitedLinkHashes;
     bool m_visitedLinksPopulated;
 };
 

@@ -32,7 +32,7 @@
     Constructor,
     EnabledAtRuntime=WritableStreamAPI,
     JSBuiltin
-] interface WritableStream { 
+] interface WritableStream {
     Promise<any> abort(optional any reason);
     Promise<any> close();
     Promise<any> write(any chunk);

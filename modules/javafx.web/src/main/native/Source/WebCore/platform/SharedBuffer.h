@@ -27,7 +27,7 @@
 #pragma once
 
 #include "FileSystem.h"
-#include <runtime/ArrayBuffer.h>
+#include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -60,6 +60,7 @@ public:
     static RefPtr<SharedBuffer> createWithContentsOfFile(const String& filePath);
 
     static Ref<SharedBuffer> create(Vector<char>&&);
+    static Ref<SharedBuffer> create(Vector<uint8_t>&&);
 
 #if USE(FOUNDATION)
     RetainPtr<NSData> createNSData() const;
@@ -102,8 +103,8 @@ public:
     // To modify or combine the data, allocate a new DataSegment.
     class DataSegment : public ThreadSafeRefCounted<DataSegment> {
     public:
-        const char* data() const;
-        size_t size() const;
+        WEBCORE_EXPORT const char* data() const;
+        WEBCORE_EXPORT size_t size() const;
 
         static Ref<DataSegment> create(Vector<char>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #if USE(CF)
@@ -112,7 +113,7 @@ public:
 #if USE(SOUP)
         static Ref<DataSegment> create(GUniquePtr<SoupBuffer>&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 #endif
-        static Ref<DataSegment> create(MappedFileData&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
+        static Ref<DataSegment> create(FileSystem::MappedFileData&& data) { return adoptRef(*new DataSegment(WTFMove(data))); }
 
     private:
         DataSegment(Vector<char>&& data)
@@ -125,7 +126,7 @@ public:
         DataSegment(GUniquePtr<SoupBuffer>&& data)
             : m_immutableData(WTFMove(data)) { }
 #endif
-        DataSegment(MappedFileData&& data)
+        DataSegment(FileSystem::MappedFileData&& data)
             : m_immutableData(WTFMove(data)) { }
 
         Variant<Vector<char>,
@@ -135,7 +136,7 @@ public:
 #if USE(SOUP)
             GUniquePtr<SoupBuffer>,
 #endif
-            MappedFileData> m_immutableData;
+            FileSystem::MappedFileData> m_immutableData;
         friend class SharedBuffer;
     };
 
@@ -157,7 +158,7 @@ private:
     explicit SharedBuffer(const char*, size_t);
     explicit SharedBuffer(const unsigned char*, size_t);
     explicit SharedBuffer(Vector<char>&&);
-    explicit SharedBuffer(MappedFileData&&);
+    explicit SharedBuffer(FileSystem::MappedFileData&&);
 #if USE(CF)
     explicit SharedBuffer(CFDataRef);
 #endif

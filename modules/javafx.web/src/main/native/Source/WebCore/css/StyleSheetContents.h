@@ -86,6 +86,7 @@ public:
     bool loadCompleted() const { return m_loadCompleted; }
 
     URL completeURL(const String& url) const;
+    bool traverseRules(const WTF::Function<bool (const StyleRuleBase&)>& handler) const;
     bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
 
     void setIsUserStyleSheet(bool b) { m_isUserStyleSheet = b; }
@@ -143,7 +144,7 @@ public:
 
     void shrinkToFit();
 
-    WeakPtr<StyleSheetContents> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+    WeakPtr<StyleSheetContents> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
 
 private:
     WEBCORE_EXPORT StyleSheetContents(StyleRuleImport* ownerRule, const String& originalURL, const CSSParserContext&);
@@ -175,7 +176,7 @@ private:
 
     Vector<CSSStyleSheet*> m_clients;
 
-    WeakPtrFactory<StyleSheetContents> m_weakPtrFactory { this };
+    WeakPtrFactory<StyleSheetContents> m_weakPtrFactory;
 };
 
 } // namespace WebCore

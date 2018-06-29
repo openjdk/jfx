@@ -26,7 +26,8 @@
 #pragma once
 
 #include "InspectorClient.h"
-#include "InspectorFrontendChannel.h"
+
+#include <JavaScriptCore/InspectorFrontendChannel.h>
 #include <wtf/java/JavaEnv.h>
 
 namespace WebCore {

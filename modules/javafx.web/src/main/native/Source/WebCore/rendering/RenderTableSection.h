@@ -53,6 +53,7 @@ public:
 };
 
 class RenderTableSection final : public RenderBox {
+    WTF_MAKE_ISO_ALLOCATED(RenderTableSection);
 public:
     RenderTableSection(Element&, RenderStyle&&);
     RenderTableSection(Document&, RenderStyle&&);
@@ -60,8 +61,6 @@ public:
 
     RenderTableRow* firstRow() const;
     RenderTableRow* lastRow() const;
-
-    void addChild(RenderObject* child, RenderObject* beforeChild = 0) override;
 
     std::optional<int> firstLineBaseline() const override;
 
@@ -126,6 +125,7 @@ public:
     unsigned numColumns() const;
     void recalcCells();
     void recalcCellsIfNeeded();
+    void removeRedundantColumns();
 
     bool needsCellRecalc() const { return m_needsCellRecalc; }
     void setNeedsCellRecalc();
@@ -142,16 +142,18 @@ public:
     // FIXME: We may want to introduce a structure holding the in-flux layout information.
     LayoutUnit distributeExtraLogicalHeightToRows(LayoutUnit extraLogicalHeight);
 
-    static std::unique_ptr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
-    std::unique_ptr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
+    static RenderPtr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
+    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
     void paint(PaintInfo&, const LayoutPoint&) override;
+
+    void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
 
 protected:
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
 private:
-    static std::unique_ptr<RenderTableSection> createTableSectionWithStyle(Document&, const RenderStyle&);
+    static RenderPtr<RenderTableSection> createTableSectionWithStyle(Document&, const RenderStyle&);
 
     enum ShouldIncludeAllIntersectingCells {
         IncludeAllIntersectingCells,
@@ -334,7 +336,7 @@ inline CellSpan RenderTableSection::fullTableRowSpan() const
     return CellSpan(0, m_grid.size());
 }
 
-inline std::unique_ptr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
+inline RenderPtr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
 {
     return RenderTableSection::createTableSectionWithStyle(renderer.document(), renderer.style());
 }

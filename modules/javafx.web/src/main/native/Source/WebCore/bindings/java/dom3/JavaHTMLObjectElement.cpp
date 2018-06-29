@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/Document.h>
@@ -135,13 +137,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setDataImpl
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::dataAttr, String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getDeclareImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getDeclareImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::declareAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setDeclareImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setDeclareImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::declareAttr, value);
@@ -159,13 +161,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setHeightIm
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::heightAttr, String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getHspaceImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getHspaceImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->getIntegralAttribute(WebCore::HTMLNames::hspaceAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setHspaceImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setHspaceImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setIntegralAttribute(WebCore::HTMLNames::hspaceAttr, value);
@@ -219,13 +221,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setUseMapIm
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::usemapAttr, String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getVspaceImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getVspaceImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->getIntegralAttribute(WebCore::HTMLNames::vspaceAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setVspaceImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setVspaceImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setIntegralAttribute(WebCore::HTMLNames::vspaceAttr, value);
@@ -243,7 +245,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_setWidthImp
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::widthAttr, String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getWillValidateImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getWillValidateImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->willValidate();
@@ -263,7 +265,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_getContent
 
 
 // Functions
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_checkValidityImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLObjectElementImpl_checkValidityImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->checkValidity();

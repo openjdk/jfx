@@ -25,7 +25,6 @@
 
 #include "Document.h"
 #include "Editor.h"
-#include "EventDispatcher.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "Frame.h"
@@ -95,7 +94,7 @@ KeyboardEvent::KeyboardEvent() = default;
 
 KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, DOMWindow* view)
     : UIEventWithKeyState(eventTypeForKeyboardEventType(key.type())
-        , true, true, key.timestamp(), view, 0, key.ctrlKey(), key.altKey(), key.shiftKey()
+        , true, true, key.timestamp().approximateMonotonicTime(), view, 0, key.ctrlKey(), key.altKey(), key.shiftKey()
         , key.metaKey(), false, key.modifiers().contains(PlatformEvent::Modifier::CapsLockKey))
     , m_keyEvent(std::make_unique<PlatformKeyboardEvent>(key))
 #if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
@@ -146,19 +145,18 @@ KeyboardEvent::KeyboardEvent(const AtomicString& eventType, const Init& initiali
 {
 }
 
-KeyboardEvent::~KeyboardEvent()
-{
-}
+KeyboardEvent::~KeyboardEvent() = default;
 
 void KeyboardEvent::initKeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, DOMWindow* view,
                                       const String &keyIdentifier, unsigned location,
                                       bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
 {
-    if (dispatched())
+    if (isBeingDispatched())
         return;
 
     initUIEvent(type, canBubble, cancelable, view, 0);
 
+    m_keyEvent = nullptr;
     m_keyIdentifier = keyIdentifier;
     m_location = location;
     m_ctrlKey = ctrlKey;
@@ -166,6 +164,11 @@ void KeyboardEvent::initKeyboardEvent(const AtomicString& type, bool canBubble, 
     m_altKey = altKey;
     m_metaKey = metaKey;
     m_altGraphKey = altGraphKey;
+
+#if PLATFORM(COCOA)
+    m_handledByInputMethod = false;
+    m_keypressCommands = { };
+#endif
 }
 
 bool KeyboardEvent::getModifierState(const String& keyIdentifier) const

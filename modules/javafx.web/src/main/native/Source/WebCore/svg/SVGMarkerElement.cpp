@@ -113,12 +113,12 @@ bool SVGMarkerElement::isSupportedAttribute(const QualifiedName& attrName)
         SVGExternalResourcesRequired::addSupportedAttributes(set);
         SVGFitToViewBox::addSupportedAttributes(set);
         set.add({
-            SVGNames::markerUnitsAttr,
-            SVGNames::refXAttr,
-            SVGNames::refYAttr,
-            SVGNames::markerWidthAttr,
-            SVGNames::markerHeightAttr,
-            SVGNames::orientAttr,
+            SVGNames::markerUnitsAttr.get(),
+            SVGNames::refXAttr.get(),
+            SVGNames::refYAttr.get(),
+            SVGNames::markerWidthAttr.get(),
+            SVGNames::markerHeightAttr.get(),
+            SVGNames::orientAttr.get(),
         });
         return set;
     }());
@@ -185,7 +185,7 @@ void SVGMarkerElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSourceParser)
+    if (change.source == ChildChangeSource::Parser)
         return;
 
     if (RenderObject* object = renderer())

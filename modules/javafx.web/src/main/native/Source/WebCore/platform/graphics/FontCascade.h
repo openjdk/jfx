@@ -85,7 +85,7 @@ public:
     virtual std::pair<float, float> extents() = 0;
     virtual GlyphUnderlineType underlineType() = 0;
     virtual void advance() = 0;
-    virtual ~GlyphToPathTranslator() { }
+    virtual ~GlyphToPathTranslator() = default;
 };
 GlyphToPathTranslator::GlyphUnderlineType computeUnderlineType(const TextRun&, const GlyphBuffer&, unsigned index);
 
@@ -189,13 +189,13 @@ public:
     WEBCORE_EXPORT static bool shouldUseSmoothing();
 
     enum CodePath { Auto, Simple, Complex, SimpleWithGlyphOverflow };
-    CodePath codePath(const TextRun&) const;
+    CodePath codePath(const TextRun&, std::optional<unsigned> from = std::nullopt, std::optional<unsigned> to = std::nullopt) const;
     static CodePath characterRangeCodePath(const LChar*, unsigned) { return Simple; }
     static CodePath characterRangeCodePath(const UChar*, unsigned len);
 
     bool primaryFontIsSystemFont() const;
 
-    WeakPtr<FontCascade> createWeakPtr() const { return m_weakPtrFactory.createWeakPtr(); }
+    WeakPtr<FontCascade> createWeakPtr() const { return m_weakPtrFactory.createWeakPtr(*const_cast<FontCascade*>(this)); }
 
 private:
     enum ForTextEmphasisOrNot { NotForTextEmphasis, ForTextEmphasis };
@@ -275,7 +275,7 @@ private:
             return true;
         if (textRenderingMode == OptimizeSpeed)
             return false;
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(FREETYPE)
         return true;
 #else
         return false;
@@ -294,7 +294,7 @@ private:
 
     bool computeRequiresShaping() const
     {
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || USE(FREETYPE)
         if (!m_fontDescription.variantSettings().isAllNormal())
             return true;
         if (m_fontDescription.featureSettings().size())

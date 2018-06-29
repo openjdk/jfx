@@ -47,11 +47,11 @@ namespace WebCore {
 
 class BeforeTextInsertedEvent;
 class Chrome;
+class DOMFormData;
 class DateComponents;
 class DragData;
 class Event;
 class FileList;
-class FormDataList;
 class HTMLElement;
 class HTMLFormElement;
 class HTMLInputElement;
@@ -60,8 +60,8 @@ class KeyboardEvent;
 class MouseEvent;
 class Node;
 class RenderStyle;
-class TouchEvent;
 class TextControlInnerTextElement;
+class TouchEvent;
 
 struct InputElementClickState;
 
@@ -120,7 +120,7 @@ public:
     virtual FormControlState saveFormControlState() const;
     virtual void restoreFormControlState(const FormControlState&);
     virtual bool isFormDataAppendable() const;
-    virtual bool appendFormData(FormDataList&, bool multipart) const;
+    virtual bool appendFormData(DOMFormData&, bool multipart) const;
 
     // DOM property functions.
 
@@ -177,7 +177,7 @@ public:
     virtual void handleClickEvent(MouseEvent&);
     virtual void handleMouseDownEvent(MouseEvent&);
     virtual void willDispatchClick(InputElementClickState&);
-    virtual void didDispatchClick(Event*, const InputElementClickState&);
+    virtual void didDispatchClick(Event&, const InputElementClickState&);
     virtual void handleDOMActivateEvent(Event&);
     virtual void handleKeydownEvent(KeyboardEvent&);
     virtual void handleKeypressEvent(KeyboardEvent&);
@@ -216,7 +216,7 @@ public:
 
     virtual HTMLElement* containerElement() const { return nullptr; }
     virtual HTMLElement* innerBlockElement() const { return nullptr; }
-    virtual TextControlInnerTextElement* innerTextElement() const { return nullptr; }
+    virtual RefPtr<TextControlInnerTextElement> innerTextElement() const;
     virtual HTMLElement* innerSpinButtonElement() const { return nullptr; }
     virtual HTMLElement* capsLockIndicatorElement() const { return nullptr; }
     virtual HTMLElement* autoFillButtonElement() const { return nullptr; }
@@ -268,7 +268,7 @@ public:
     virtual bool shouldAppearIndeterminate() const;
     virtual bool supportsSelectionAPI() const;
     virtual Color valueAsColor() const;
-    virtual void selectColor(const Color&);
+    virtual void selectColor(StringView);
 
     // Parses the specified string for the type, and return
     // the Decimal value for the parsing result if the parsing

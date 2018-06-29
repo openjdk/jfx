@@ -38,7 +38,7 @@ struct GreaterThanOrSameSizeAsStyleRareInheritedData : public RefCounted<Greater
     void* styleImage;
     Color firstColor;
     float firstFloat;
-    Color colors[7];
+    Color colors[9];
     void* ownPtrs[1];
     AtomicString atomicStrings[5];
     void* refPtrs[2];
@@ -86,7 +86,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , nbspMode(NBNORMAL)
     , lineBreak(LineBreakAuto)
     , userSelect(RenderStyle::initialUserSelect())
-    , speak(SpeakNormal)
+    , speakAs(SpeakNormal)
     , hyphens(HyphensManual)
     , textEmphasisFill(TextEmphasisFillFilled)
     , textEmphasisMark(TextEmphasisMarkNone)
@@ -160,6 +160,8 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , visitedLinkTextStrokeColor(o.visitedLinkTextStrokeColor)
     , visitedLinkTextFillColor(o.visitedLinkTextFillColor)
     , visitedLinkTextEmphasisColor(o.visitedLinkTextEmphasisColor)
+    , caretColor(o.caretColor)
+    , visitedLinkCaretColor(o.visitedLinkCaretColor)
     , textShadow(o.textShadow ? std::make_unique<ShadowData>(*o.textShadow) : nullptr)
     , cursorData(o.cursorData)
     , indent(o.indent)
@@ -176,7 +178,7 @@ inline StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedDa
     , nbspMode(o.nbspMode)
     , lineBreak(o.lineBreak)
     , userSelect(o.userSelect)
-    , speak(o.speak)
+    , speakAs(o.speakAs)
     , hyphens(o.hyphens)
     , textEmphasisFill(o.textEmphasisFill)
     , textEmphasisMark(o.textEmphasisMark)
@@ -248,9 +250,7 @@ Ref<StyleRareInheritedData> StyleRareInheritedData::copy() const
     return adoptRef(*new StyleRareInheritedData(*this));
 }
 
-StyleRareInheritedData::~StyleRareInheritedData()
-{
-}
+StyleRareInheritedData::~StyleRareInheritedData() = default;
 
 bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
 {
@@ -261,6 +261,8 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && visitedLinkTextStrokeColor == o.visitedLinkTextStrokeColor
         && visitedLinkTextFillColor == o.visitedLinkTextFillColor
         && visitedLinkTextEmphasisColor == o.visitedLinkTextEmphasisColor
+        && caretColor == o.caretColor
+        && visitedLinkCaretColor == o.visitedLinkCaretColor
 #if ENABLE(TOUCH_EVENTS)
         && tapHighlightColor == o.tapHighlightColor
 #endif
@@ -285,7 +287,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && textSizeAdjust == o.textSizeAdjust
 #endif
         && userSelect == o.userSelect
-        && speak == o.speak
+        && speakAs == o.speakAs
         && hyphens == o.hyphens
         && hyphenationLimitBefore == o.hyphenationLimitBefore
         && hyphenationLimitAfter == o.hyphenationLimitAfter

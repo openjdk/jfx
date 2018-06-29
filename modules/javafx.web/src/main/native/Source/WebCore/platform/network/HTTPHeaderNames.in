@@ -74,6 +74,7 @@ Ping-From
 Ping-To
 Purpose
 Pragma
+Proxy-Authorization
 Range
 Referer
 Refresh
@@ -83,6 +84,7 @@ Sec-WebSocket-Key
 Sec-WebSocket-Protocol
 Sec-WebSocket-Version
 Server
+Service-Worker-Allowed
 Set-Cookie
 Set-Cookie2
 TE

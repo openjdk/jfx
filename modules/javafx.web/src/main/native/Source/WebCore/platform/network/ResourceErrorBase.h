@@ -33,7 +33,7 @@ namespace WebCore {
 
 class ResourceError;
 
-extern const char* const errorDomainWebKitInternal; // Used for errors that won't be exposed to clients.
+WEBCORE_EXPORT extern const char* const errorDomainWebKitInternal; // Used for errors that won't be exposed to clients.
 
 class ResourceErrorBase {
 public:
@@ -60,7 +60,7 @@ public:
 
     static bool compare(const ResourceError&, const ResourceError&);
 
-    void setType(Type);
+    WEBCORE_EXPORT void setType(Type);
     Type type() const { return m_type; }
 
 protected:

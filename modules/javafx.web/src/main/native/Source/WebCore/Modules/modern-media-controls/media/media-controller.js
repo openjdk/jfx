@@ -57,6 +57,8 @@ class MediaController
         media.videoTracks.addEventListener("removetrack", this);
 
         media.addEventListener(this.fullscreenChangeEventType, this);
+
+        window.addEventListener("keydown", this);
     }
 
     // Public
@@ -100,7 +102,7 @@ class MediaController
     togglePlayback()
     {
         if (this.media.paused)
-            this.media.play();
+            this.media.play().catch(e => {});
         else
             this.media.pause();
     }
@@ -122,8 +124,14 @@ class MediaController
         this.controls.usesLTRUserInterfaceLayoutDirection = flag;
     }
 
+    mediaControlsVisibilityDidChange()
+    {
+        this._controlsUserVisibilityDidChange();
+    }
+
     mediaControlsFadedStateDidChange()
     {
+        this._controlsUserVisibilityDidChange();
         this._updateTextTracksClassList();
     }
 
@@ -156,8 +164,12 @@ class MediaController
             scheduler.flushScheduledLayoutCallbacks();
         } else if (event.currentTarget === this.media) {
             this._updateControlsIfNeeded();
+            this._updateiOSFullscreenProperties();
             if (event.type === "webkitpresentationmodechanged")
                 this._returnMediaLayerToInlineIfNeeded();
+        } else if (event.type === "keydown" && this.isFullscreen && event.key === " ") {
+            this.togglePlayback();
+            event.preventDefault();
         }
     }
 
@@ -174,18 +186,18 @@ class MediaController
             return;
         }
 
-        // Before we reset the .controls property, we need to destroy the previous
+        // Before we reset the .controls property, we need to disable the previous
         // supporting objects so we don't leak.
         if (this._supportingObjects) {
             for (let supportingObject of this._supportingObjects)
-                supportingObject.destroy();
+                supportingObject.disable();
         }
 
         this.controls = new ControlsClass;
         this.controls.delegate = this;
 
         if (this.shadowRoot.host && this.shadowRoot.host.dataset.autoHideDelay)
-            this.controls.bottomControlsBar.autoHideDelay = this.shadowRoot.host.dataset.autoHideDelay;
+            this.controls.autoHideController.autoHideDelay = this.shadowRoot.host.dataset.autoHideDelay;
 
         if (previousControls) {
             this.controls.fadeIn();
@@ -206,14 +218,51 @@ class MediaController
 
     _updateControlsSize()
     {
-        this.controls.width = this._controlsWidth();
-        this.controls.height = Math.round(this.container.getBoundingClientRect().height * this.controls.scaleFactor);
-        this.controls.shouldCenterControlsVertically = this.isAudio;
-    }
+        // To compute the bounds of the controls, we need to account for the computed transform applied
+        // to the media element, and apply the inverted transform to the bounds computed on the container
+        // element in the shadow root, which is naturally sized to match the metrics of its host,
+        // excluding borders.
 
-    _controlsWidth()
-    {
-        return Math.round(this.container.getBoundingClientRect().width * (this.controls ? this.controls.scaleFactor : 1));
+        // First, we traverse the node hierarchy up from the media element to compute the effective
+        // transform matrix applied to the media element.
+        let node = this.media;
+        let transform = new DOMMatrix;
+        while (node && node instanceof HTMLElement) {
+            transform = transform.multiply(new DOMMatrix(getComputedStyle(node).transform));
+            node = node.parentNode;
+        }
+
+        // Then, we take each corner of the container element in the shadow root and transform
+        // each with the inverted matrix we just computed so that we can compute the untransformed
+        // bounds of the media element.
+        const bounds = this.container.getBoundingClientRect();
+        const invertedTransform = transform.inverse();
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        [
+            new DOMPoint(bounds.left, bounds.top),
+            new DOMPoint(bounds.right, bounds.top),
+            new DOMPoint(bounds.right, bounds.bottom),
+            new DOMPoint(bounds.left, bounds.bottom)
+        ].forEach(corner => {
+            const point = corner.matrixTransform(invertedTransform);
+            if (point.x < minX)
+                minX = point.x;
+            if (point.x > maxX)
+                maxX = point.x;
+            if (point.y < minY)
+                minY = point.y;
+            if (point.y > maxY)
+                maxY = point.y;
+        });
+
+        // Finally, we factor in the scale factor of the controls themselves, which reflects the page's scale factor.
+        this.controls.width = Math.round((maxX - minX) * this.controls.scaleFactor);
+        this.controls.height = Math.round((maxY - minY) * this.controls.scaleFactor);
+
+        this.controls.shouldCenterControlsVertically = this.isAudio;
     }
 
     _returnMediaLayerToInlineIfNeeded()
@@ -241,6 +290,30 @@ class MediaController
             return;
 
         this.host.textTrackContainer.classList.toggle("visible-controls-bar", !this.controls.faded);
+    }
+
+    _controlsUserVisibilityDidChange()
+    {
+        if (!this.controls || !this._supportingObjects)
+            return;
+
+        this._supportingObjects.forEach(supportingObject => supportingObject.controlsUserVisibilityDidChange());
+    }
+
+    _updateiOSFullscreenProperties()
+    {
+        // On iOS, we want to make sure not to update controls when we're in fullscreen since the UI
+        // will be completely invisible.
+        if (!(this.layoutTraits & LayoutTraits.iOS))
+            return;
+
+        const isFullscreen = this.isFullscreen;
+        if (isFullscreen)
+            this._supportingObjects.forEach(supportingObject => supportingObject.disable());
+        else
+            this._supportingObjects.forEach(supportingObject => supportingObject.enable());
+
+        this.controls.visible = !isFullscreen;
     }
 
 }

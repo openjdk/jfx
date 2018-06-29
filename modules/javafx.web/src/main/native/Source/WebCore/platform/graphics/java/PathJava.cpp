@@ -94,11 +94,27 @@ Path::Path(const Path& p)
 Path::~Path()
 {}
 
-Path &Path::operator=(const Path &p)
+Path::Path(Path&& other)
+{
+    m_path = other.m_path;
+    other.m_path = nullptr;
+}
+
+Path& Path::operator=(const Path &p)
 {
     if (this != &p) {
         m_path = copyPath(p.platformPath());
     }
+    return *this;
+}
+
+Path& Path::operator=(Path&& other)
+{
+    if (this == &other)
+        return *this;
+
+    m_path = other.m_path;
+    other.m_path = nullptr;
     return *this;
 }
 

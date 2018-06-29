@@ -26,6 +26,8 @@
 #include "config.h"
 #include "Cursor.h"
 
+#if !PLATFORM(IOS)
+
 #include "Image.h"
 #include "IntRect.h"
 #include <wtf/Assertions.h>
@@ -450,6 +452,10 @@ const Cursor& grabbingCursor()
     return c;
 }
 
+
 #endif
 
 } // namespace WebCore
+
+#endif // !PLATFORM(IOS)
+

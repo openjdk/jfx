@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2008-2009 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -85,6 +85,7 @@ const int cMisspellingLinePatternGapWidth = 1;
 class AffineTransform;
 class FloatRoundedRect;
 class Gradient;
+class GraphicsContextImpl;
 class GraphicsContextPlatformPrivate;
 class ImageBuffer;
 class IntRect;
@@ -263,6 +264,10 @@ class GraphicsContext {
     WTF_MAKE_NONCOPYABLE(GraphicsContext); WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT GraphicsContext(PlatformGraphicsContext*);
+
+    using GraphicsContextImplFactory = WTF::Function<std::unique_ptr<GraphicsContextImpl>(GraphicsContext&)>;
+    WEBCORE_EXPORT GraphicsContext(const GraphicsContextImplFactory&);
+
     GraphicsContext() = default;
     WEBCORE_EXPORT ~GraphicsContext();
 
@@ -272,13 +277,11 @@ public:
     };
     GraphicsContext(NonPaintingReasons);
 
+    bool hasPlatformContext() const;
     WEBCORE_EXPORT PlatformGraphicsContext* platformContext() const;
 
-    bool paintingDisabled() const { return !m_data && !isRecording(); }
+    bool paintingDisabled() const { return !m_data && !m_impl; }
     bool updatingControlTints() const { return m_nonPaintingReasons == NonPaintingReasons::UpdatingControlTints; }
-
-    void setDisplayListRecorder(DisplayList::Recorder* recorder) { m_displayListRecorder = recorder; }
-    bool isRecording() const { return m_displayListRecorder; }
 
     void setStrokeThickness(float);
     float strokeThickness() const { return m_state.strokeThickness; }
@@ -293,7 +296,7 @@ public:
     Pattern* strokePattern() const { return m_state.strokePattern.get(); }
 
     void setStrokeGradient(Ref<Gradient>&&);
-    Gradient* strokeGradient() const { return m_state.strokeGradient.get(); }
+    RefPtr<Gradient> strokeGradient() const { return m_state.strokeGradient; }
 
     void setFillRule(WindRule);
     WindRule fillRule() const { return m_state.fillRule; }
@@ -305,7 +308,7 @@ public:
     Pattern* fillPattern() const { return m_state.fillPattern.get(); }
 
     WEBCORE_EXPORT void setFillGradient(Ref<Gradient>&&);
-    Gradient* fillGradient() const { return m_state.fillGradient.get(); }
+    RefPtr<Gradient> fillGradient() const { return m_state.fillGradient; }
 
     void setShadowsIgnoreTransforms(bool);
     bool shadowsIgnoreTransforms() const { return m_state.shadowsIgnoreTransforms; }
@@ -448,15 +451,12 @@ public:
     bool hasShadow() const { return hasVisibleShadow() && (m_state.shadowBlur || m_state.shadowOffset.width() || m_state.shadowOffset.height()); }
     bool hasBlurredShadow() const { return hasVisibleShadow() && m_state.shadowBlur; }
 
-#if USE(CAIRO)
-    bool mustUseShadowBlur() const;
-#endif
-
     void drawFocusRing(const Vector<FloatRect>&, float width, float offset, const Color&);
     void drawFocusRing(const Path&, float width, float offset, const Color&);
 #if PLATFORM(MAC)
     void drawFocusRing(const Path&, double timeOffset, bool& needsRedraw);
     void drawFocusRing(const Vector<FloatRect>&, double timeOffset, bool& needsRedraw);
+    static CGColorRef focusRingColor();
 #endif
 
     void setLineCap(LineCap);
@@ -487,6 +487,7 @@ public:
     WEBCORE_EXPORT void scale(const FloatSize&);
     void rotate(float angleInRadians);
     void translate(const FloatSize& size) { translate(size.width(), size.height()); }
+    void translate(const FloatPoint& p) { translate(p.x(), p.y()); }
     WEBCORE_EXPORT void translate(float x, float y);
 
     void setURLForRect(const URL&, const FloatRect&);
@@ -500,13 +501,6 @@ public:
     enum IncludeDeviceScale { DefinitelyIncludeDeviceScale, PossiblyIncludeDeviceScale };
     AffineTransform getCTM(IncludeDeviceScale includeScale = PossiblyIncludeDeviceScale) const;
 
-#if ENABLE(3D_TRANSFORMS) && USE(TEXTURE_MAPPER)
-    // This is needed when using accelerated-compositing in software mode, like in TextureMapper.
-    void concat3DTransform(const TransformationMatrix&);
-    void set3DTransform(const TransformationMatrix&);
-    TransformationMatrix get3DTransform() const;
-#endif
-
     // This function applies the device scale factor to the context, making the context capable of
     // acting as a base-level context for a HiDPI environment.
     WEBCORE_EXPORT void applyDeviceScaleFactor(float);
@@ -514,10 +508,9 @@ public:
     FloatSize scaleFactor() const;
     FloatSize scaleFactorForDrawing(const FloatRect& destRect, const FloatRect& srcRect) const;
 
-#if OS(WINDOWS)
-#if !PLATFORM(JAVA) // todo tav compiled somehow before
-    HDC getWindowsContext(const IntRect&, bool supportAlphaBlend, bool mayCreateBitmap); // The passed in rect is used to create a bitmap for compositing inside transparency layers.
-    void releaseWindowsContext(HDC, const IntRect&, bool supportAlphaBlend, bool mayCreateBitmap); // The passed in HDC should be the one handed back by getWindowsContext.
+#if OS(WINDOWS) && !PLATFORM(JAVA)
+    HDC getWindowsContext(const IntRect&, bool supportAlphaBlend); // The passed in rect is used to create a bitmap for compositing inside transparency layers.
+    void releaseWindowsContext(HDC, const IntRect&, bool supportAlphaBlend); // The passed in HDC should be the one handed back by getWindowsContext.
     HDC hdc() const;
 #endif
 #if PLATFORM(WIN)
@@ -594,11 +587,6 @@ public:
 #else // PLATFORM(WIN)
     bool shouldIncludeChildWindows() const { return false; }
 #endif // PLATFORM(WIN)
-#endif // OS(WINDOWS)
-
-#if USE(CAIRO)
-    GraphicsContext(cairo_t*);
-#endif
 
     static void adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2, float strokeWidth, StrokeStyle);
 
@@ -659,7 +647,7 @@ private:
     Vector<FloatPoint> centerLineAndCutOffCorners(bool isVerticalLine, float cornerWidth, FloatPoint point1, FloatPoint point2) const;
 
     GraphicsContextPlatformPrivate* m_data { nullptr };
-    DisplayList::Recorder* m_displayListRecorder { nullptr };
+    std::unique_ptr<GraphicsContextImpl> m_impl;
 
     GraphicsContextState m_state;
     Vector<GraphicsContextState, 1> m_stack;

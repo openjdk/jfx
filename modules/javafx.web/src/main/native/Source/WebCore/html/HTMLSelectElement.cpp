@@ -29,11 +29,11 @@
 #include "HTMLSelectElement.h"
 
 #include "AXObjectCache.h"
+#include "DOMFormData.h"
 #include "ElementTraversal.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "FormController.h"
-#include "FormDataList.h"
 #include "Frame.h"
 #include "GenericCachedHTMLCollection.h"
 #include "HTMLFormElement.h"
@@ -55,9 +55,9 @@
 #include "Settings.h"
 #include "SpatialNavigation.h"
 
-using namespace WTF::Unicode;
 
 namespace WebCore {
+using namespace WTF::Unicode;
 
 using namespace HTMLNames;
 
@@ -218,7 +218,7 @@ int HTMLSelectElement::activeSelectionEndListIndex() const
 
 ExceptionOr<void> HTMLSelectElement::add(const OptionOrOptGroupElement& element, const std::optional<HTMLElementOrInt>& before)
 {
-    HTMLElement* beforeElement = nullptr;
+    RefPtr<HTMLElement> beforeElement;
     if (before) {
         beforeElement = WTF::switchOn(before.value(),
             [](const RefPtr<HTMLElement>& element) -> HTMLElement* { return element.get(); },
@@ -230,7 +230,7 @@ ExceptionOr<void> HTMLSelectElement::add(const OptionOrOptGroupElement& element,
     );
 
 
-    return insertBefore(toInsert, beforeElement);
+    return insertBefore(toInsert, beforeElement.get());
 }
 
 void HTMLSelectElement::remove(int optionIndex)
@@ -767,9 +767,9 @@ void HTMLSelectElement::recalcListItems(bool updateSelectedStates) const
 
     m_shouldRecalcListItems = false;
 
-    HTMLOptionElement* foundSelected = 0;
-    HTMLOptionElement* firstOption = 0;
-    for (Element* currentElement = ElementTraversal::firstWithin(*this); currentElement; ) {
+    RefPtr<HTMLOptionElement> foundSelected;
+    RefPtr<HTMLOptionElement> firstOption;
+    for (RefPtr<Element> currentElement = ElementTraversal::firstWithin(*this); currentElement; ) {
         if (!is<HTMLElement>(*currentElement)) {
             currentElement = ElementTraversal::nextSkippingChildren(*currentElement, this);
             continue;
@@ -779,7 +779,7 @@ void HTMLSelectElement::recalcListItems(bool updateSelectedStates) const
         // Only consider optgroup elements that are direct children of the select element.
         if (is<HTMLOptGroupElement>(current) && current.parentNode() == this) {
             m_listItems.append(&current);
-            if (Element* nextElement = ElementTraversal::firstWithin(current)) {
+            if (RefPtr<Element> nextElement = ElementTraversal::firstWithin(current)) {
                 currentElement = nextElement;
                 continue;
             }
@@ -858,12 +858,12 @@ void HTMLSelectElement::selectOption(int optionIndex, SelectOptionFlags flags)
     auto& items = listItems();
     int listIndex = optionToListIndex(optionIndex);
 
-    HTMLElement* element = nullptr;
+    RefPtr<HTMLElement> element;
     if (listIndex >= 0)
         element = items[listIndex];
 
     if (shouldDeselect)
-        deselectItemsWithoutValidation(element);
+        deselectItemsWithoutValidation(element.get());
 
     if (is<HTMLOptionElement>(element)) {
         if (m_activeSelectionAnchorIndex < 0 || shouldDeselect)
@@ -959,13 +959,15 @@ void HTMLSelectElement::deselectItemsWithoutValidation(HTMLElement* excludeEleme
 FormControlState HTMLSelectElement::saveFormControlState() const
 {
     FormControlState state;
-    for (auto& element : listItems()) {
+    auto& items = listItems();
+    state.reserveInitialCapacity(items.size());
+    for (auto& element : items) {
         if (!is<HTMLOptionElement>(*element))
             continue;
-        HTMLOptionElement& option = downcast<HTMLOptionElement>(*element);
+        auto& option = downcast<HTMLOptionElement>(*element);
         if (!option.selected())
             continue;
-        state.append(option.value());
+        state.uncheckedAppend(option.value());
         if (!multiple())
             break;
     }
@@ -1006,8 +1008,7 @@ void HTMLSelectElement::restoreFormControlState(const FormControlState& state)
             downcast<HTMLOptionElement>(*items[foundIndex]).setSelectedState(true);
     } else {
         size_t startIndex = 0;
-        for (size_t i = 0; i < state.valueSize(); ++i) {
-            const String& value = state[i];
+        for (auto& value : state) {
             size_t foundIndex = searchOptionsForValue(value, startIndex, itemsSize);
             if (foundIndex == notFound)
                 foundIndex = searchOptionsForValue(value, 0, startIndex);
@@ -1031,7 +1032,7 @@ void HTMLSelectElement::parseMultipleAttribute(const AtomicString& value)
         invalidateStyleAndRenderersForSubtree();
 }
 
-bool HTMLSelectElement::appendFormData(FormDataList& list, bool)
+bool HTMLSelectElement::appendFormData(DOMFormData& formData, bool)
 {
     const AtomicString& name = this->name();
     if (name.isEmpty())
@@ -1040,7 +1041,7 @@ bool HTMLSelectElement::appendFormData(FormDataList& list, bool)
     bool successful = false;
     for (auto& element : listItems()) {
         if (is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected() && !downcast<HTMLOptionElement>(*element).isDisabledFormControl()) {
-            list.appendData(name, downcast<HTMLOptionElement>(*element).value());
+            formData.append(name, downcast<HTMLOptionElement>(*element).value());
             successful = true;
         }
     }
@@ -1053,8 +1054,8 @@ bool HTMLSelectElement::appendFormData(FormDataList& list, bool)
 
 void HTMLSelectElement::reset()
 {
-    HTMLOptionElement* firstOption = nullptr;
-    HTMLOptionElement* selectedOption = nullptr;
+    RefPtr<HTMLOptionElement> firstOption;
+    RefPtr<HTMLOptionElement> selectedOption;
 
     for (auto& element : listItems()) {
         if (!is<HTMLOptionElement>(*element))
@@ -1336,7 +1337,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event& event)
                 updateSelectedState(listIndex, mouseEvent.ctrlKey(), mouseEvent.shiftKey());
 #endif
             }
-            if (Frame* frame = document().frame())
+            if (RefPtr<Frame> frame = document().frame())
                 frame->eventHandler().setMouseDownMayStartAutoscroll();
 
             mouseEvent.setDefaultHandled();
@@ -1560,13 +1561,13 @@ void HTMLSelectElement::typeAheadFind(KeyboardEvent& event)
         listBoxOnChange();
 }
 
-Node::InsertionNotificationRequest HTMLSelectElement::insertedInto(ContainerNode& insertionPoint)
+Node::InsertedIntoAncestorResult HTMLSelectElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     // When the element is created during document parsing, it won't have any
     // items yet - but for innerHTML and related methods, this method is called
     // after the whole subtree is constructed.
     recalcListItems();
-    return HTMLFormControlElementWithState::insertedInto(insertionPoint);
+    return HTMLFormControlElementWithState::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 }
 
 void HTMLSelectElement::accessKeySetSelectedIndex(int index)

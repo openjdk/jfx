@@ -48,12 +48,10 @@ SecurityOriginData SecurityOriginData::fromSecurityOrigin(const SecurityOrigin& 
     return securityOriginData;
 }
 
-#if !LOG_DISABLED
-String SecurityOriginData::debugString() const
+String SecurityOriginData::toString() const
 {
     return makeString(protocol, "://", host, ":", String::number(port.value_or(0)));
 }
-#endif
 
 SecurityOriginData SecurityOriginData::fromFrame(Frame* frame)
 {
@@ -87,7 +85,7 @@ String SecurityOriginData::databaseIdentifier() const
     StringBuilder stringBuilder;
     stringBuilder.append(protocol);
     stringBuilder.append(separatorCharacter);
-    stringBuilder.append(encodeForFileName(host));
+    stringBuilder.append(FileSystem::encodeForFileName(host));
     stringBuilder.append(separatorCharacter);
     stringBuilder.appendNumber(port.value_or(0));
 

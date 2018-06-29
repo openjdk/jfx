@@ -33,7 +33,7 @@ class RenderTextControl;
 class TextControlInnerTextElement;
 class VisiblePosition;
 
-enum class AutoFillButtonType : uint8_t { None, Credentials, Contacts };
+enum class AutoFillButtonType : uint8_t { None, Credentials, Contacts, StrongConfirmationPassword, StrongPassword };
 enum TextFieldSelectionDirection { SelectionHasNoDirection, SelectionHasForwardDirection, SelectionHasBackwardDirection };
 enum TextFieldEventBehavior { DispatchNoEvent, DispatchChangeEvent, DispatchInputAndChangeEvent };
 
@@ -52,7 +52,7 @@ public:
     int minLength() const { return m_minLength; }
     ExceptionOr<void> setMinLength(int);
 
-    InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
 
     // The derived class should return true if placeholder processing is needed.
     bool isPlaceholderVisible() const { return m_isPlaceholderVisible; }
@@ -69,11 +69,11 @@ public:
     WEBCORE_EXPORT void setSelectionStart(int);
     WEBCORE_EXPORT void setSelectionEnd(int);
     WEBCORE_EXPORT void setSelectionDirection(const String&);
-    WEBCORE_EXPORT void select(const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    WEBCORE_EXPORT void select(SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     WEBCORE_EXPORT virtual ExceptionOr<void> setRangeText(const String& replacement);
     WEBCORE_EXPORT virtual ExceptionOr<void> setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode);
     void setSelectionRange(int start, int end, const String& direction, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
-    WEBCORE_EXPORT void setSelectionRange(int start, int end, TextFieldSelectionDirection = SelectionHasNoDirection, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    WEBCORE_EXPORT void setSelectionRange(int start, int end, TextFieldSelectionDirection = SelectionHasNoDirection, SelectionRevealMode = SelectionRevealMode::DoNotReveal, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     RefPtr<Range> selection() const;
     String selectedText() const;
 
@@ -81,8 +81,8 @@ public:
 
     virtual String value() const = 0;
 
-    virtual TextControlInnerTextElement* innerTextElement() const = 0;
-    virtual RenderStyle createInnerTextStyle(const RenderStyle&) const = 0;
+    virtual RefPtr<TextControlInnerTextElement> innerTextElement() const = 0;
+    virtual RenderStyle createInnerTextStyle(const RenderStyle&) = 0;
 
     void selectionChanged(bool shouldFireSelectEvent);
     WEBCORE_EXPORT bool lastChangeWasUserEdit() const;
@@ -106,6 +106,7 @@ protected:
 
     void disabledStateChanged() override;
     void readOnlyAttributeChanged() override;
+    virtual bool isInnerTextElementEditable() const;
     void updateInnerTextElementEditability();
 
     void cacheSelection(int start, int end, TextFieldSelectionDirection direction)
@@ -115,7 +116,7 @@ protected:
         m_cachedSelectionDirection = direction;
     }
 
-    void restoreCachedSelection(const AXTextStateChangeIntent& = AXTextStateChangeIntent());
+    void restoreCachedSelection(SelectionRevealMode, const AXTextStateChangeIntent& = AXTextStateChangeIntent());
     bool hasCachedSelection() const { return m_cachedSelectionStart >= 0; }
 
     virtual void subtreeHasChanged() = 0;
@@ -131,6 +132,8 @@ protected:
 
 private:
     TextFieldSelectionDirection cachedSelectionDirection() const { return static_cast<TextFieldSelectionDirection>(m_cachedSelectionDirection); }
+
+    bool isTextFormControlElement() const final { return true; }
 
     int computeSelectionStart() const;
     int computeSelectionEnd() const;
@@ -169,6 +172,7 @@ HTMLTextFormControlElement* enclosingTextFormControl(const Position&);
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLTextFormControlElement)
-    static bool isType(const WebCore::Element& element) { return element.isTextFormControl(); }
+    static bool isType(const WebCore::Element& element) { return element.isTextFormControlElement(); }
     static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+    static bool isType(const WebCore::EventTarget& target) { return is<WebCore::Node>(target) && isType(downcast<WebCore::Node>(target)); }
 SPECIALIZE_TYPE_TRAITS_END()

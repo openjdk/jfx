@@ -33,13 +33,17 @@ class Exception;
 
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
 
+#define EXCEPTION_ASSERT(assertion) RELEASE_ASSERT(assertion)
+#define EXCEPTION_ASSERT_UNUSED(variable, assertion) RELEASE_ASSERT(assertion)
+#define EXCEPTION_ASSERT_WITH_MESSAGE(assertion, message) RELEASE_ASSERT_WITH_MESSAGE(assertion, message)
+
 class ExceptionScope {
 public:
     VM& vm() const { return m_vm; }
     unsigned recursionDepth() const { return m_recursionDepth; }
     Exception* exception() { return m_vm.exception(); }
 
-    ALWAYS_INLINE void assertNoException() { ASSERT_WITH_MESSAGE(!exception(), "%s", unexpectedExceptionMessage().data()); }
+    ALWAYS_INLINE void assertNoException() { RELEASE_ASSERT_WITH_MESSAGE(!exception(), "%s", unexpectedExceptionMessage().data()); }
     ALWAYS_INLINE void releaseAssertNoException() { RELEASE_ASSERT_WITH_MESSAGE(!exception(), "%s", unexpectedExceptionMessage().data()); }
 
 protected:
@@ -57,6 +61,10 @@ protected:
 };
 
 #else // not ENABLE(EXCEPTION_SCOPE_VERIFICATION)
+
+#define EXCEPTION_ASSERT(x) ASSERT(x)
+#define EXCEPTION_ASSERT_UNUSED(variable, assertion) ASSERT_UNUSED(variable, assertion)
+#define EXCEPTION_ASSERT_WITH_MESSAGE(assertion, message) ASSERT_WITH_MESSAGE(assertion, message)
 
 class ExceptionScope {
 public:

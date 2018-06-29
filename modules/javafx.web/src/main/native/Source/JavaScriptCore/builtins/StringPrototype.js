@@ -231,7 +231,7 @@ function replace(search, replace)
     let searchString = @toString(search);
     return thisString.@replaceUsingStringSearch(searchString, replace);
 }
-
+    
 @globalPrivate
 function getDefaultCollator()
 {

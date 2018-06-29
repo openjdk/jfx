@@ -26,8 +26,13 @@
 #include "config.h"
 
 #include "DragClientJava.h"
+#include "WebPage.h"
+
+#include <WebCore/MainFrame.h>
+#include <WebCore/Page.h>
 #include "DataTransfer.h"
 #include "NotImplemented.h"
+
 
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -94,21 +99,22 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
     static JGClass clsString(env->FindClass("java/lang/String"));
     static JGClass clsObject(env->FindClass("java/lang/Object"));
 
-    Vector<String> mimeTypes(dataTransfer.typesPrivate());
+    Vector<String> mimeTypes(dataTransfer.types());
     JLObjectArray jmimeTypes(env->NewObjectArray(mimeTypes.size(), clsString, NULL));
     JLObjectArray jvalues(env->NewObjectArray(mimeTypes.size(), clsObject, NULL));
     CheckAndClearException(env); // OOME
 
-    {
+    auto document = WebPage::pageFromJObject(m_webPage)->mainFrame().document();
+    if (document) {
         // we are temporary changing dataTransfer security context
         // for transfer-to-Java purposes.
 
-        DataTransferAccessPolicy actualJSPolicy = dataTransfer.policy();
-        dataTransfer.setAccessPolicy(DataTransferAccessPolicy::Readable);
+        auto actualStoreMode = dataTransfer.storeMode();
+        dataTransfer.setStoreMode(DataTransfer::StoreMode::Readonly);
 
         int index = 0;
         for(const auto& mime : mimeTypes) {
-            String value = dataTransfer.getData(mime);
+            String value = dataTransfer.getData(*document, mime);
 
             env->SetObjectArrayElement(
                 jmimeTypes,
@@ -122,7 +128,7 @@ void DragClientJava::startDrag(DragItem item, DataTransfer& dataTransfer, Frame&
             index++;
         }
 
-        dataTransfer.setAccessPolicy(actualJSPolicy);
+        dataTransfer.setStoreMode(actualStoreMode);
     }
 
     // Attention! [jimage] can be the instance of WCImage or WCImageFrame class.

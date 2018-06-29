@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,14 @@
 #pragma once
 
 #include "AuxiliaryBarrier.h"
+#include <type_traits>
 #include <wtf/CagedPtr.h>
+
+namespace WTF {
+
+template<typename Poison, typename T> struct PoisonedPtrTraits;
+
+} // namespace WTF
 
 namespace JSC {
 
@@ -35,7 +42,7 @@ class VM;
 
 // This is a convenient combo of AuxiliaryBarrier and CagedPtr.
 
-template<Gigacage::Kind passedKind, typename T>
+template<Gigacage::Kind passedKind, typename T, typename PtrTraits = WTF::DumbPtrTraits<T>>
 class CagedBarrierPtr {
 public:
     static constexpr Gigacage::Kind kind = passedKind;
@@ -85,7 +92,57 @@ public:
     T& operator[](IndexType index) const { return get()[index]; }
 
 private:
-    AuxiliaryBarrier<CagedPtr<kind, T>> m_barrier;
+    AuxiliaryBarrier<CagedPtr<kind, T, PtrTraits>> m_barrier;
 };
+
+template<Gigacage::Kind passedKind, typename PtrTraits>
+class CagedBarrierPtr<passedKind, void, PtrTraits> {
+public:
+    static constexpr Gigacage::Kind kind = passedKind;
+    typedef void Type;
+
+    CagedBarrierPtr() { }
+
+    template<typename U>
+    CagedBarrierPtr(VM& vm, JSCell* cell, U&& value)
+    {
+        m_barrier.set(vm, cell, std::forward<U>(value));
+    }
+
+    void clear() { m_barrier.clear(); }
+
+    template<typename U>
+    void set(VM& vm, JSCell* cell, U&& value)
+    {
+        m_barrier.set(vm, cell, std::forward<U>(value));
+    }
+
+    void* get() const { return m_barrier.get().get(); }
+    void* getMayBeNull() const { return m_barrier.get().getMayBeNull(); }
+
+    bool operator==(const CagedBarrierPtr& other) const
+    {
+        return getMayBeNull() == other.getMayBeNull();
+    }
+
+    bool operator!=(const CagedBarrierPtr& other) const
+    {
+        return !(*this == other);
+    }
+
+    explicit operator bool() const
+    {
+        return *this != CagedBarrierPtr();
+    }
+
+    template<typename U>
+    void setWithoutBarrier(U&& value) { m_barrier.setWithoutBarrier(std::forward<U>(value)); }
+
+private:
+    AuxiliaryBarrier<CagedPtr<kind, void, PtrTraits>> m_barrier;
+};
+
+template<typename Poison, Gigacage::Kind passedKind, typename T>
+using PoisonedCagedBarrierPtr = CagedBarrierPtr<passedKind, T, WTF::PoisonedPtrTraits<Poison, T>>;
 
 } // namespace JSC

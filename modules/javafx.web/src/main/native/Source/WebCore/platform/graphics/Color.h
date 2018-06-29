@@ -27,7 +27,6 @@
 
 #include "ColorSpace.h"
 #include "ExtendedColor.h"
-#include "PlatformExportMacros.h"
 #include <algorithm>
 #include <cmath>
 #include <unicode/uchar.h>
@@ -434,8 +433,6 @@ inline void Color::setRGB(RGBA32 rgb)
     tagAsValid();
 }
 
-WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
-
 inline bool Color::isBlackColor(const Color& color)
 {
     if (color.isExtended()) {
@@ -455,5 +452,8 @@ inline bool Color::isWhiteColor(const Color& color)
 
     return color.isValid() && color.rgb() == Color::white;
 }
+
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const Color&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, ColorSpace);
 
 } // namespace WebCore

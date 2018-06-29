@@ -434,6 +434,9 @@ String CSSSelector::selectorText(const String& rightSide) const
             case CSSSelector::PseudoClassAutofill:
                 str.appendLiteral(":-webkit-autofill");
                 break;
+            case CSSSelector::PseudoClassAutofillStrongPassword:
+                str.appendLiteral(":-webkit-autofill-strong-password");
+                break;
             case CSSSelector::PseudoClassDrag:
                 str.appendLiteral(":-webkit-drag");
                 break;
@@ -733,10 +736,6 @@ String CSSSelector::selectorText(const String& rightSide) const
             return tagHistory->selectorText(" + " + str.toString() + rightSide);
         case CSSSelector::IndirectAdjacent:
             return tagHistory->selectorText(" ~ " + str.toString() + rightSide);
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-        case CSSSelector::DescendantDoubleChild:
-            return tagHistory->selectorText(" >> " + str.toString() + rightSide);
-#endif
         case CSSSelector::Subselector:
             ASSERT_NOT_REACHED();
 #if ASSERT_DISABLED
@@ -832,9 +831,7 @@ CSSSelector::RareData::RareData(AtomicString&& value)
 {
 }
 
-CSSSelector::RareData::~RareData()
-{
-}
+CSSSelector::RareData::~RareData() = default;
 
 // a helper function for parsing nth-arguments
 bool CSSSelector::RareData::parseNth()

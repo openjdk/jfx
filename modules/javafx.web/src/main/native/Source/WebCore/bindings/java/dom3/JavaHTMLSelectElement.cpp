@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -53,25 +55,25 @@ extern "C" {
 #define IMPL (static_cast<HTMLSelectElement*>(jlong_to_ptr(peer)))
 
 // Attributes
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getAutofocusImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getAutofocusImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::autofocusAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setAutofocusImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setAutofocusImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::autofocusAttr, value);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getDisabledImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getDisabledImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::disabledAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setDisabledImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setDisabledImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::disabledAttr, value);
@@ -83,13 +85,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getFormImp
     return JavaReturn<HTMLFormElement>(env, WTF::getPtr(IMPL->form()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getMultipleImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getMultipleImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->multiple();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setMultipleImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setMultipleImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setMultiple(value);
@@ -107,25 +109,25 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setNameImpl
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::nameAttr, String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getRequiredImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getRequiredImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::requiredAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setRequiredImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setRequiredImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::requiredAttr, value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getSizeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getSizeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->size();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setSizeImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setSizeImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setSize(value);
@@ -143,7 +145,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getOptions
     return JavaReturn<HTMLOptionsCollection>(env, WTF::getPtr(IMPL->options()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getLengthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->length();
@@ -155,13 +157,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getSelecte
     return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->selectedOptions()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getSelectedIndexImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getSelectedIndexImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->selectedIndex();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setSelectedIndexImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setSelectedIndexImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setSelectedIndex(value);
@@ -179,7 +181,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_setValueImp
     IMPL->setValue(String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getWillValidateImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_getWillValidateImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->willValidate();
@@ -251,7 +253,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_addImpl(JNI
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_removeImpl(JNIEnv* env, jclass, jlong peer
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_removeImpl(JNIEnv*, jclass, jlong peer
     , jint index)
 {
     WebCore::JSMainThreadNullState state;
@@ -259,7 +261,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_removeImpl(
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_checkValidityImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLSelectElementImpl_checkValidityImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->checkValidity();

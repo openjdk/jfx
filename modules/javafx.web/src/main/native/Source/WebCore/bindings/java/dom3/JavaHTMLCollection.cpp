@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/HTMLCollection.h>
@@ -42,12 +44,12 @@ extern "C" {
 
 #define IMPL (static_cast<HTMLCollection*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getCPPTypeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getCPPTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     if (IMPL->isHTMLOptionsCollection())
         return 1;
@@ -56,7 +58,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getCPPTypeImpl
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getLengthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLCollectionImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->length();

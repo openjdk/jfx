@@ -31,6 +31,9 @@
 
 namespace WebCore {
 
+class CryptoAlgorithmHkdfParams;
+class CryptoKeyRaw;
+
 class CryptoAlgorithmHKDF final : public CryptoAlgorithm {
 public:
     static constexpr const char* s_name = "HKDF";
@@ -42,10 +45,10 @@ private:
     CryptoAlgorithmIdentifier identifier() const final;
 
     void deriveBits(std::unique_ptr<CryptoAlgorithmParameters>&&, Ref<CryptoKey>&&, size_t length, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&) final;
-    void importKey(SubtleCrypto::KeyFormat, KeyData&&, const std::unique_ptr<CryptoAlgorithmParameters>&&, bool extractable, CryptoKeyUsageBitmap, KeyCallback&&, ExceptionCallback&&) final;
+    void importKey(CryptoKeyFormat, KeyData&&, const std::unique_ptr<CryptoAlgorithmParameters>&&, bool extractable, CryptoKeyUsageBitmap, KeyCallback&&, ExceptionCallback&&) final;
     ExceptionOr<size_t> getKeyLength(const CryptoAlgorithmParameters&) final;
 
-    void platformDeriveBits(std::unique_ptr<CryptoAlgorithmParameters>&&, Ref<CryptoKey>&&, size_t length, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
+    static ExceptionOr<Vector<uint8_t>> platformDeriveBits(CryptoAlgorithmHkdfParams&, const CryptoKeyRaw&, size_t);
 };
 
 } // namespace WebCore

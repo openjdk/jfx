@@ -34,7 +34,7 @@
 
 #include "SocketStreamHandle.h"
 
-#include "SessionID.h"
+#include <pal/SessionID.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/RefCounted.h>
 
@@ -45,7 +45,7 @@ class SocketStreamHandleClient;
 
 class SocketStreamHandleImpl : public SocketStreamHandle {
 public:
-    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, SessionID, Page* page, const String&, SourceApplicationAuditToken&&) {
+    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, PAL::SessionID, Page* page, const String&, SourceApplicationAuditToken&&) {
         return adoptRef(*new SocketStreamHandleImpl(url, page, client));
     }
 

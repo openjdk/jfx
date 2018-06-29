@@ -41,6 +41,7 @@
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
 #include "LoaderStrategy.h"
+#include "NetworkLoadMetrics.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "ProgressTracker.h"
@@ -75,7 +76,7 @@ static bool processContentExtensionRulesForLoad(const Frame& frame, ResourceRequ
     if (!page)
         return false;
     auto status = page->userContentProvider().processContentExtensionRulesForLoad(request.url(), resourceType, *documentLoader);
-    applyBlockedStatusToRequest(status, request);
+    applyBlockedStatusToRequest(status, page, request);
     return status.blockedLoad;
 }
 
@@ -98,12 +99,15 @@ void PingLoader::loadImage(Frame& frame, const URL& url)
     document.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(request, ContentSecurityPolicy::InsecureRequestType::Load);
 
     request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "max-age=0");
+
+    HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
+
     String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), request.url(), frame.loader().outgoingReferrer());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
     frame.loader().addExtraFieldsToSubresourceRequest(request);
 
-    startPingLoad(frame, request, document.securityOrigin(), ShouldFollowRedirects::Yes);
+    startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes);
 }
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/links.html#hyperlink-auditing
@@ -125,6 +129,9 @@ void PingLoader::sendPing(Frame& frame, const URL& pingURL, const URL& destinati
     request.setHTTPContentType("text/ping");
     request.setHTTPBody(FormData::create("PING"));
     request.setHTTPHeaderField(HTTPHeaderName::CacheControl, "max-age=0");
+
+    HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
+
     frame.loader().addExtraFieldsToSubresourceRequest(request);
 
     auto& sourceOrigin = document.securityOrigin();
@@ -139,7 +146,7 @@ void PingLoader::sendPing(Frame& frame, const URL& pingURL, const URL& destinati
         }
     }
 
-    startPingLoad(frame, request, sourceOrigin, ShouldFollowRedirects::Yes);
+    startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::Yes);
 }
 
 void PingLoader::sendViolationReport(Frame& frame, const URL& reportURL, Ref<FormData>&& report, ViolationReportType reportType)
@@ -170,20 +177,22 @@ void PingLoader::sendViolationReport(Frame& frame, const URL& reportURL, Ref<For
     if (removeCookies)
         request.setAllowCookies(false);
 
+    HTTPHeaderMap originalRequestHeader = request.httpHeaderFields();
+
     frame.loader().addExtraFieldsToSubresourceRequest(request);
 
     String referrer = SecurityPolicy::generateReferrerHeader(document.referrerPolicy(), reportURL, frame.loader().outgoingReferrer());
     if (!referrer.isEmpty())
         request.setHTTPReferrer(referrer);
 
-    startPingLoad(frame, request, document.securityOrigin(), ShouldFollowRedirects::No);
+    startPingLoad(frame, request, WTFMove(originalRequestHeader), ShouldFollowRedirects::No);
 }
 
-void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, SecurityOrigin& sourceOrigin, ShouldFollowRedirects shouldFollowRedirects)
+void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects shouldFollowRedirects)
 {
     unsigned long identifier = frame.page()->progress().createUniqueIdentifier();
     // FIXME: Why activeDocumentLoader? I would have expected documentLoader().
-    // Itseems like the PingLoader should be associated with the current
+    // It seems like the PingLoader should be associated with the current
     // Document in the Frame, but the activeDocumentLoader will be associated
     // with the provisional DocumentLoader if there is a provisional
     // DocumentLoader.
@@ -192,9 +201,18 @@ void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, SecurityO
     options.credentials = shouldUseCredentialStorage ? FetchOptions::Credentials::Include : FetchOptions::Credentials::Omit;
     options.redirect = shouldFollowRedirects == ShouldFollowRedirects::Yes ? FetchOptions::Redirect::Follow : FetchOptions::Redirect::Error;
 
-    InspectorInstrumentation::continueAfterPingLoader(frame, identifier, frame.loader().activeDocumentLoader(), request, ResourceResponse());
+    // FIXME: Move ping loads to normal subresource loading to get normal inspector request instrumentation hooks.
+    InspectorInstrumentation::willSendRequestOfType(&frame, identifier, frame.loader().activeDocumentLoader(), request, InspectorInstrumentation::LoadType::Ping);
 
-    platformStrategies()->loaderStrategy()->createPingHandle(frame.loader().networkingContext(), request, sourceOrigin, options);
+    platformStrategies()->loaderStrategy()->startPingLoad(frame, request, WTFMove(originalRequestHeaders), options, [protectedFrame = makeRef(frame), identifier] (const ResourceError& error, const ResourceResponse& response) {
+        if (!response.isNull())
+            InspectorInstrumentation::didReceiveResourceResponse(protectedFrame, identifier, protectedFrame->loader().activeDocumentLoader(), response, nullptr);
+        if (error.isNull()) {
+            NetworkLoadMetrics emptyMetrics;
+            InspectorInstrumentation::didFinishLoading(protectedFrame.ptr(), protectedFrame->loader().activeDocumentLoader(), identifier, emptyMetrics, nullptr);
+        } else
+            InspectorInstrumentation::didFailLoading(protectedFrame.ptr(), protectedFrame->loader().activeDocumentLoader(), identifier, error);
+    });
 }
 
 }

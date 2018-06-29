@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DisplayRefreshMonitorManager_h
-#define DisplayRefreshMonitorManager_h
+#pragma once
 
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
 
@@ -47,9 +46,10 @@ public:
     bool scheduleAnimation(DisplayRefreshMonitorClient&);
     void windowScreenDidChange(PlatformDisplayID, DisplayRefreshMonitorClient&);
 
+    void displayDidRefresh(DisplayRefreshMonitor&);
+
 private:
     friend class DisplayRefreshMonitor;
-    void displayDidRefresh(DisplayRefreshMonitor&);
 
     DisplayRefreshMonitorManager() { }
     virtual ~DisplayRefreshMonitorManager();
@@ -62,5 +62,3 @@ private:
 }
 
 #endif // USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-
-#endif

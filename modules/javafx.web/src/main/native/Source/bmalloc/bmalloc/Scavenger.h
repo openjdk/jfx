@@ -26,7 +26,10 @@
 #pragma once
 
 #include "BPlatform.h"
+#include "DeferredDecommit.h"
 #include "Mutex.h"
+#include "PerProcess.h"
+#include "Vector.h"
 #include <condition_variable>
 #include <mutex>
 
@@ -38,7 +41,7 @@ namespace bmalloc {
 
 class Scavenger {
 public:
-    Scavenger(std::lock_guard<StaticMutex>&);
+    BEXPORT Scavenger(std::lock_guard<StaticMutex>&);
 
     ~Scavenger() = delete;
 
@@ -55,9 +58,9 @@ public:
     bool willRunSoon() { return m_state > State::Sleep; }
     void runSoon();
 
-    void didStartGrowing();
-    void scheduleIfUnderMemoryPressure(size_t bytes);
-    void schedule(size_t bytes);
+    BEXPORT void didStartGrowing();
+    BEXPORT void scheduleIfUnderMemoryPressure(size_t bytes);
+    BEXPORT void schedule(size_t bytes);
 
 private:
     enum class State { Sleep, Run, RunSoon };
@@ -85,7 +88,12 @@ private:
     dispatch_source_t m_pressureHandlerDispatchSource;
     qos_class_t m_requestedScavengerThreadQOSClass { QOS_CLASS_USER_INITIATED };
 #endif
+
+    Mutex m_isoScavengeLock;
+    Vector<DeferredDecommit> m_deferredDecommits;
 };
+
+DECLARE_SAFE_PER_PROCESS_STORAGE(Scavenger);
 
 } // namespace bmalloc
 

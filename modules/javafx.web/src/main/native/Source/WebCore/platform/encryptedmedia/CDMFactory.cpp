@@ -32,6 +32,7 @@
 
 #include <mutex>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -56,8 +57,8 @@ void CDMFactory::unregisterFactory(CDMFactory& factory)
     registeredFactories().removeAll(&factory);
 }
 
-#if !USE(GSTREAMER)
-void CDMFactory::platformRegisterFactories()
+#if !USE(GSTREAMER) && !USE(AVFOUNDATION)
+void CDMFactory::platformRegisterFactories(Vector<CDMFactory*>&)
 {
 }
 #endif

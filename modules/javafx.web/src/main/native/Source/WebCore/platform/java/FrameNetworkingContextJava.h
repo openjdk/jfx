@@ -48,10 +48,16 @@ public:
         ASSERT(isMainThread());
 
         if (frame() && frame()->page()->usesEphemeralSession())
-            return *NetworkStorageSession::storageSession(SessionID::legacyPrivateSessionID());
+            return *NetworkStorageSession::storageSession(PAL::SessionID::legacyPrivateSessionID());
 
         return NetworkStorageSession::defaultStorageSession();
     }
+
+    static NetworkStorageSession& ensurePrivateBrowsingSession()
+    {
+        return *NetworkStorageSession::storageSession(PAL::SessionID::legacyPrivateSessionID());
+    }
+
 private:
     FrameNetworkingContextJava(Frame* frame)
         : FrameNetworkingContext(frame)

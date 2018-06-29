@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -13,6 +13,7 @@ static jmethodID waitUntilDoneMID;
 static jmethodID notifyDoneMID;
 static jmethodID overridePreferenceMID;
 static jmethodID getBackForwardItemCountMID;
+static jmethodID clearBackForwardListMID;
 static jmethodID resolveURLMID;
 static jmethodID loadURLMID;
 static jmethodID goBackForwardMID;
@@ -22,6 +23,7 @@ jmethodID getWaitUntillDoneMethodId() { return waitUntilDoneMID; }
 jmethodID getNotifyDoneMID() { return notifyDoneMID; }
 jmethodID getOverridePreferenceMID() { return overridePreferenceMID; }
 jmethodID getGetBackForwardItemCountMID() { return getBackForwardItemCountMID; }
+jmethodID getClearBackForwardListMID() { return clearBackForwardListMID; }
 jmethodID getResolveURLMID() { return resolveURLMID; }
 jmethodID getLoadURLMID() { return loadURLMID; }
 jmethodID getGoBackForward() { return goBackForwardMID; }
@@ -44,6 +46,8 @@ static void initRefs(JNIEnv* env) {
         ASSERT(overridePreferenceMID);
         getBackForwardItemCountMID = env->GetStaticMethodID(dumpRenderTreeClass, "getBackForwardItemCount", "()I");
         ASSERT(getBackForwardItemCountMID);
+        clearBackForwardListMID = env->GetStaticMethodID(dumpRenderTreeClass, "clearBackForwardList", "()V");
+        ASSERT(clearBackForwardListMID);
         resolveURLMID = env->GetStaticMethodID(dumpRenderTreeClass, "resolveURL", "(Ljava/lang/String;)Ljava/lang/String;");
         ASSERT(resolveURLMID);
         loadURLMID = env->GetStaticMethodID(dumpRenderTreeClass, "loadURL", "(Ljava/lang/String;)V");

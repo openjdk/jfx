@@ -38,7 +38,7 @@ void WorkQueue::dispatch(Function<void()>&& function)
 {
     dispatch_async(m_dispatchQueue, BlockPtr<void()>::fromCallable([protectedThis = makeRef(*this), function = WTFMove(function)] {
 #if PLATFORM(JAVA)
-        AutoAttachToJavaThread autoAttach;
+        AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
         function();
     }).get());
@@ -48,7 +48,7 @@ void WorkQueue::dispatchAfter(Seconds duration, Function<void()>&& function)
 {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration.nanosecondsAs<int64_t>()), m_dispatchQueue, BlockPtr<void()>::fromCallable([protectedThis = makeRef(*this), function = WTFMove(function)] {
 #if PLATFORM(JAVA)
-        AutoAttachToJavaThread autoAttach;
+        AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
         function();
     }).get());

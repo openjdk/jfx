@@ -22,9 +22,9 @@
 #include "cmakeconfig.h"
 #endif
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <WebCore/PlatformExportMacros.h>
 #include <pal/ExportMacros.h>
-#include <runtime/JSExportMacros.h>
 
 #ifdef __cplusplus
 #undef new
@@ -37,12 +37,10 @@
 #endif
 
 #if PLATFORM(WIN)
-#define USE_CF 1
 #if PLATFORM(WIN_CAIRO)
 #define USE_CURL 1
 #else
 #define USE_CG 1
-#define USE_CFURLCONNECTION 1
 #endif
 
 #undef _WINSOCKAPI_

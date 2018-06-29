@@ -35,8 +35,7 @@ inline JSFunction* JSFunction::createWithInvalidatedReallocationWatchpoint(
     VM& vm, FunctionExecutable* executable, JSScope* scope)
 {
     ASSERT(executable->singletonFunction()->hasBeenInvalidated());
-    Structure* structure = executable->isStrictMode() ? scope->globalObject(vm)->strictFunctionStructure() : scope->globalObject(vm)->sloppyFunctionStructure();
-    return createImpl(vm, executable, scope, structure);
+    return createImpl(vm, executable, scope, selectStructureForNewFuncExp(scope->globalObject(vm), executable));
 }
 
 inline JSFunction::JSFunction(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
@@ -106,6 +105,28 @@ inline bool JSFunction::hasReifiedLength() const
 inline bool JSFunction::hasReifiedName() const
 {
     return m_rareData ? m_rareData->hasReifiedName() : false;
+}
+
+inline bool JSFunction::canUseAllocationProfile()
+{
+    if (isHostFunction())
+        return false;
+
+    // If we don't have a prototype property, we're not guaranteed it's
+    // non-configurable. For example, user code can define the prototype
+    // as a getter. JS semantics require that the getter is called every
+    // time |construct| occurs with this function as new.target.
+    return jsExecutable()->hasPrototypeProperty();
+}
+
+inline FunctionRareData* JSFunction::ensureRareDataAndAllocationProfile(ExecState* exec, unsigned inlineCapacity)
+{
+    ASSERT(canUseAllocationProfile());
+    if (UNLIKELY(!m_rareData))
+        return allocateAndInitializeRareData(exec, inlineCapacity);
+    if (UNLIKELY(!m_rareData->isObjectAllocationProfileInitialized()))
+        return initializeRareData(exec, inlineCapacity);
+    return m_rareData.get();
 }
 
 } // namespace JSC

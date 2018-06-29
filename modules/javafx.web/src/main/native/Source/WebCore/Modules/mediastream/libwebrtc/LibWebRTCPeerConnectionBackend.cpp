@@ -54,9 +54,7 @@ CreatePeerConnectionBackend PeerConnectionBackend::create = createLibWebRTCPeerC
 
 static inline LibWebRTCProvider& libWebRTCProvider(RTCPeerConnection& peerConnection)
 {
-    ASSERT(peerConnection.scriptExecutionContext()->isDocument());
-    auto* page = static_cast<Document*>(peerConnection.scriptExecutionContext())->page();
-    return page->libWebRTCProvider();
+    return downcast<Document>(*peerConnection.scriptExecutionContext()).page()->libWebRTCProvider();
 }
 
 LibWebRTCPeerConnectionBackend::LibWebRTCPeerConnectionBackend(RTCPeerConnection& peerConnection)
@@ -65,9 +63,7 @@ LibWebRTCPeerConnectionBackend::LibWebRTCPeerConnectionBackend(RTCPeerConnection
 {
 }
 
-LibWebRTCPeerConnectionBackend::~LibWebRTCPeerConnectionBackend()
-{
-}
+LibWebRTCPeerConnectionBackend::~LibWebRTCPeerConnectionBackend() = default;
 
 static inline webrtc::PeerConnectionInterface::BundlePolicy bundlePolicyfromConfiguration(const MediaEndpointConfiguration& configuration)
 {
@@ -79,6 +75,9 @@ static inline webrtc::PeerConnectionInterface::BundlePolicy bundlePolicyfromConf
     case RTCBundlePolicy::Balanced:
         return webrtc::PeerConnectionInterface::kBundlePolicyBalanced;
     }
+
+    ASSERT_NOT_REACHED();
+    return webrtc::PeerConnectionInterface::kBundlePolicyMaxCompat;
 }
 
 static inline webrtc::PeerConnectionInterface::IceTransportsType iceTransportPolicyfromConfiguration(const MediaEndpointConfiguration& configuration)
@@ -89,6 +88,9 @@ static inline webrtc::PeerConnectionInterface::IceTransportsType iceTransportPol
     case RTCIceTransportPolicy::All:
         return webrtc::PeerConnectionInterface::kAll;
     }
+
+    ASSERT_NOT_REACHED();
+    return webrtc::PeerConnectionInterface::kNone;
 }
 
 static webrtc::PeerConnectionInterface::RTCConfiguration configurationFromMediaEndpointConfiguration(MediaEndpointConfiguration&& configuration)
@@ -190,6 +192,7 @@ void LibWebRTCPeerConnectionBackend::doStop()
 
     m_endpoint->stop();
 
+    m_statsPromises.clear();
     m_remoteStreams.clear();
     m_pendingReceivers.clear();
 }

@@ -226,8 +226,7 @@ public:
     {
         switch (mode) {
         case SourceParseMode::AsyncGeneratorBodyMode:
-            setIsAsyncFunctionBody();
-            setIsGenerator();
+            setIsAsyncGeneratorFunctionBody();
             break;
         case SourceParseMode::AsyncArrowFunctionBodyMode:
             setIsAsyncArrowFunctionBody();
@@ -248,8 +247,7 @@ public:
 
         case SourceParseMode::AsyncGeneratorWrapperMethodMode:
         case SourceParseMode::AsyncGeneratorWrapperFunctionMode:
-            setIsAsyncFunction();
-            setIsGeneratorFunction();
+            setIsAsyncGeneratorFunction();
             break;
 
         case SourceParseMode::NormalFunctionMode:
@@ -711,6 +709,8 @@ private:
         m_isGeneratorBoundary = false;
         m_isArrowFunctionBoundary = false;
         m_isArrowFunction = false;
+        m_isAsyncFunction = false;
+        m_isAsyncFunctionBoundary = false;
     }
 
     void setIsGeneratorFunction()
@@ -744,6 +744,23 @@ private:
     {
         setIsFunction();
         m_isAsyncFunction = true;
+    }
+
+    void setIsAsyncGeneratorFunction()
+    {
+        setIsFunction();
+        m_isAsyncFunction = true;
+        m_isGenerator = true;
+    }
+
+    void setIsAsyncGeneratorFunctionBody()
+    {
+        setIsFunction();
+        m_hasArguments = false;
+        m_isGenerator = true;
+        m_isGeneratorBoundary = true;
+        m_isAsyncFunction = true;
+        m_isAsyncFunctionBoundary = true;
     }
 
     void setIsAsyncFunctionBody()
@@ -1159,7 +1176,7 @@ private:
 
     void popScopeInternal(ScopeRef& scope, bool shouldTrackClosedVariables)
     {
-        ASSERT_UNUSED(scope, scope.index() == m_scopeStack.size() - 1);
+        EXCEPTION_ASSERT_UNUSED(scope, scope.index() == m_scopeStack.size() - 1);
         ASSERT(m_scopeStack.size() > 1);
         m_scopeStack[m_scopeStack.size() - 2].collectFreeVariables(&m_scopeStack.last(), shouldTrackClosedVariables);
 
@@ -1353,7 +1370,7 @@ private:
 
     ALWAYS_INLINE bool matchContextualKeyword(const Identifier& identifier)
     {
-        return m_token.m_type == IDENT && *m_token.m_data.ident == identifier;
+        return m_token.m_type == IDENT && *m_token.m_data.ident == identifier && !m_token.m_data.escaped;
     }
 
     ALWAYS_INLINE bool matchIdentifierOrKeyword()
@@ -1595,6 +1612,8 @@ private:
 
     template <class TreeBuilder> ALWAYS_INLINE bool shouldCheckPropertyForUnderscoreProtoDuplicate(TreeBuilder&, const TreeProperty&);
 
+    template <class TreeBuilder> NEVER_INLINE const char* metaPropertyName(TreeBuilder&, TreeExpression);
+
     ALWAYS_INLINE int isBinaryOperator(JSTokenType);
     bool allowAutomaticSemicolon();
 
@@ -1822,6 +1841,7 @@ private:
     RefPtr<ModuleScopeData> m_moduleScopeData;
     DebuggerParseData* m_debuggerParseData;
     CallOrApplyDepthScope* m_callOrApplyDepthScope { nullptr };
+    bool m_seenTaggedTemplate { false };
 };
 
 

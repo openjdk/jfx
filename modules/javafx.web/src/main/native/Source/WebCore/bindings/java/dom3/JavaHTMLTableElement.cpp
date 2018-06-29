@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -54,7 +56,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_getCaptionI
     return JavaReturn<HTMLTableCaptionElement>(env, WTF::getPtr(IMPL->caption()));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_setCaptionImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_setCaptionImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setCaption(static_cast<HTMLTableCaptionElement*>(jlong_to_ptr(value)));
@@ -66,7 +68,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_getTHeadImp
     return JavaReturn<HTMLTableSectionElement>(env, WTF::getPtr(IMPL->tHead()));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_setTHeadImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_setTHeadImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setTHead(static_cast<HTMLTableSectionElement*>(jlong_to_ptr(value)));
@@ -78,7 +80,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_getTFootImp
     return JavaReturn<HTMLTableSectionElement>(env, WTF::getPtr(IMPL->tFoot()));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_setTFootImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_setTFootImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setTFoot(static_cast<HTMLTableSectionElement*>(jlong_to_ptr(value)));
@@ -213,7 +215,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_createTHead
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_deleteTHeadImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_deleteTHeadImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->deleteTHead();
@@ -227,7 +229,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_createTFoot
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_deleteTFootImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_deleteTFootImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->deleteTFoot();
@@ -248,7 +250,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_createCapti
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_deleteCaptionImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableElementImpl_deleteCaptionImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->deleteCaption();

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ImageDecoder.h"
 #include "ImageSource.h"
 #include "IntSize.h"
 #include "SharedBuffer.h"
@@ -35,44 +36,46 @@
 
 namespace WebCore {
 
-class ImageDecoder : public RefCounted<ImageDecoder> {
+class ImageDecoderJava : public ImageDecoder {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ImageDecoder();
-    ~ImageDecoder();
+    ImageDecoderJava();
+    ~ImageDecoderJava();
+
+    static bool supportsMediaType(MediaType type) { return type == MediaType::Image; }
 
     static Ref<ImageDecoder> create(const SharedBuffer&, AlphaOption, GammaAndColorProfileOption)
     {
-        return adoptRef(*new ImageDecoder());
+        return adoptRef(*new ImageDecoderJava());
     }
 
-    static size_t bytesDecodedToDetermineProperties();
+    size_t bytesDecodedToDetermineProperties() const final;
 
-    String filenameExtension() const;
-    bool isSizeAvailable() const;
+    String filenameExtension() const final;
+    bool isSizeAvailable() const final;
 
-    EncodedDataStatus encodedDataStatus() const;
+    EncodedDataStatus encodedDataStatus() const final;
     // Always original size, without subsampling.
-    IntSize size() const;
-    size_t frameCount() const;
+    IntSize size() const final;
+    size_t frameCount() const final;
 
-    RepetitionCount repetitionCount() const;
-    std::optional<IntPoint> hotSpot() const;
+    RepetitionCount repetitionCount() const final;
+    std::optional<IntPoint> hotSpot() const final;
 
-    IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const;
-    bool frameIsCompleteAtIndex(size_t) const;
-    ImageOrientation frameOrientationAtIndex(size_t) const;
+    IntSize frameSizeAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const final;
+    bool frameIsCompleteAtIndex(size_t) const final;
+    ImageOrientation frameOrientationAtIndex(size_t) const final;
 
-    float frameDurationAtIndex(size_t) const;
-    bool frameHasAlphaAtIndex(size_t) const;
-    bool frameAllowSubsamplingAtIndex(size_t) const;
-    unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const;
+    WTF::Seconds frameDurationAtIndex(size_t) const final;
+    bool frameHasAlphaAtIndex(size_t) const final;
+    bool frameAllowSubsamplingAtIndex(size_t) const final;
+    unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const final;
 
-    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingMode::Synchronous);
+    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingOptions(DecodingMode::Synchronous)) final;
 
-    void setData(SharedBuffer&, bool allDataReceived);
-    bool isAllDataReceived() const { return m_isAllDataReceived; }
-    void clearFrameBufferCache(size_t) { }
+    void setData(SharedBuffer&, bool allDataReceived) final;
+    bool isAllDataReceived() const final { return m_isAllDataReceived;}
+    void clearFrameBufferCache(size_t) final {  }
 
     JLObject nativeDecoder() const { return m_nativeDecoder; }
 

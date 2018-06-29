@@ -423,7 +423,7 @@ __xmlGlobalInitMutexLock(void)
 #ifdef HAVE_PTHREAD_H
     /* The mutex is statically initialized, so we just lock it. */
     if (pthread_mutex_lock != NULL)
-        pthread_mutex_lock(&global_init_lock);
+    pthread_mutex_lock(&global_init_lock);
 #elif defined HAVE_WIN32_THREADS
     LPCRITICAL_SECTION cs;
 
@@ -493,7 +493,7 @@ __xmlGlobalInitMutexUnlock(void)
 {
 #ifdef HAVE_PTHREAD_H
     if (pthread_mutex_unlock != NULL)
-        pthread_mutex_unlock(&global_init_lock);
+    pthread_mutex_unlock(&global_init_lock);
 #elif defined HAVE_WIN32_THREADS
     if (global_init_lock != NULL) {
     LeaveCriticalSection(global_init_lock);

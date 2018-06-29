@@ -1,6 +1,8 @@
 list(APPEND PAL_SOURCES
-    text/KillRingNone.cpp
+    text/KillRing.cpp
+    system/ClockGeneric.cpp
     system/java/SoundJava.cpp
+    java/LoggingJava.cpp
 )
 
 list(APPEND PAL_INCLUDE_DIRECTORIES
@@ -12,9 +14,6 @@ if (APPLE)
         crypto/commoncrypto/CryptoDigestCommonCrypto.cpp
     )
 else ()
-    list(APPEND PAL_INCLUDE_DIRECTORIES
-        "${WEBCORE_DIR}/platform"
-    )
     list(APPEND PAL_SOURCES
         crypto/java/CryptoDigestJava.cpp
     )

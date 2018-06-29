@@ -31,8 +31,11 @@
 #include "CachedImage.h"
 #include "RenderElement.h"
 #include "StyleCachedImage.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderImageResourceStyleImage);
 
 RenderImageResourceStyleImage::RenderImageResourceStyleImage(StyleImage& styleImage)
     : m_styleImage(styleImage)
@@ -47,9 +50,9 @@ void RenderImageResourceStyleImage::initialize(RenderElement& renderer)
 
 void RenderImageResourceStyleImage::shutdown()
 {
-    ASSERT(renderer());
     RenderImageResource::shutdown();
-    m_styleImage->removeClient(renderer());
+    if (renderer())
+        m_styleImage->removeClient(renderer());
 }
 
 RefPtr<Image> RenderImageResourceStyleImage::image(const IntSize& size) const

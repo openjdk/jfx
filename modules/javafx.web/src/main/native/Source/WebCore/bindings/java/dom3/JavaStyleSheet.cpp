@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/CSSStyleSheet.h>
@@ -43,12 +45,12 @@ extern "C" {
 
 #define IMPL (static_cast<StyleSheet*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getCPPTypeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getCPPTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     if (IMPL->isCSSStyleSheet())
         return 1;
@@ -63,13 +65,13 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getTypeImpl(JNI
     return JavaReturn<String>(env, IMPL->type());
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getDisabledImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_getDisabledImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->disabled();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_setDisabledImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_StyleSheetImpl_setDisabledImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setDisabled(value);

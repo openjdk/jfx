@@ -105,9 +105,6 @@ public:
     WEBCORE_EXPORT URL absolutePDFURL() const;
     WEBCORE_EXPORT URL absoluteMediaURL() const;
     WEBCORE_EXPORT URL absoluteLinkURL() const;
-#if ENABLE(ATTACHMENT_ELEMENT)
-    WEBCORE_EXPORT URL absoluteAttachmentURL() const;
-#endif
     WEBCORE_EXPORT String textContent() const;
     bool isOverLink() const;
     WEBCORE_EXPORT bool isContentEditable() const;
@@ -131,7 +128,6 @@ public:
 
     WEBCORE_EXPORT bool isDownloadableMedia() const;
     WEBCORE_EXPORT bool isOverTextInsideFormControlElement() const;
-    WEBCORE_EXPORT bool allowsCopy() const;
 
     HitTestProgress addNodeToListBasedTestResult(Node*, const HitTestRequest&, const HitTestLocation& pointInContainer, const LayoutRect& = LayoutRect());
     HitTestProgress addNodeToListBasedTestResult(Node*, const HitTestRequest&, const HitTestLocation& pointInContainer, const FloatRect&);

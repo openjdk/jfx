@@ -42,7 +42,6 @@
 #include <time.h>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
-#include <wtf/StringExtras.h>
 
 #if HAVE(LANGINFO_H)
 #include <langinfo.h>
@@ -343,6 +342,9 @@ static EncodedJSValue formateDateInstance(ExecState* exec, DateTimeFormat format
 // Format of member function: f([hour,] [min,] [sec,] [ms])
 static bool fillStructuresUsingTimeArgs(ExecState* exec, int maxArgs, double* ms, GregorianDateTime* t)
 {
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     double milliseconds = 0;
     bool ok = true;
     int idx = 0;
@@ -356,6 +358,7 @@ static bool fillStructuresUsingTimeArgs(ExecState* exec, int maxArgs, double* ms
     if (maxArgs >= 4 && idx < numArgs) {
         t->setHour(0);
         double hours = exec->uncheckedArgument(idx++).toIntegerPreserveNaN(exec);
+        RETURN_IF_EXCEPTION(scope, false);
         ok = std::isfinite(hours);
         milliseconds += hours * msPerHour;
     }
@@ -364,6 +367,7 @@ static bool fillStructuresUsingTimeArgs(ExecState* exec, int maxArgs, double* ms
     if (maxArgs >= 3 && idx < numArgs && ok) {
         t->setMinute(0);
         double minutes = exec->uncheckedArgument(idx++).toIntegerPreserveNaN(exec);
+        RETURN_IF_EXCEPTION(scope, false);
         ok = std::isfinite(minutes);
         milliseconds += minutes * msPerMinute;
     }
@@ -372,6 +376,7 @@ static bool fillStructuresUsingTimeArgs(ExecState* exec, int maxArgs, double* ms
     if (maxArgs >= 2 && idx < numArgs && ok) {
         t->setSecond(0);
         double seconds = exec->uncheckedArgument(idx++).toIntegerPreserveNaN(exec);
+        RETURN_IF_EXCEPTION(scope, false);
         ok = std::isfinite(seconds);
         milliseconds += seconds * msPerSecond;
     }
@@ -382,6 +387,7 @@ static bool fillStructuresUsingTimeArgs(ExecState* exec, int maxArgs, double* ms
     // milliseconds
     if (idx < numArgs) {
         double millis = exec->uncheckedArgument(idx).toIntegerPreserveNaN(exec);
+        RETURN_IF_EXCEPTION(scope, false);
         ok = std::isfinite(millis);
         milliseconds += millis;
     } else
@@ -397,6 +403,9 @@ static bool fillStructuresUsingTimeArgs(ExecState* exec, int maxArgs, double* ms
 // Format of member function: f([years,] [months,] [days])
 static bool fillStructuresUsingDateArgs(ExecState *exec, int maxArgs, double *ms, GregorianDateTime *t)
 {
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     int idx = 0;
     bool ok = true;
     int numArgs = exec->argumentCount();
@@ -408,18 +417,21 @@ static bool fillStructuresUsingDateArgs(ExecState *exec, int maxArgs, double *ms
     // years
     if (maxArgs >= 3 && idx < numArgs) {
         double years = exec->uncheckedArgument(idx++).toIntegerPreserveNaN(exec);
+        RETURN_IF_EXCEPTION(scope, false);
         ok = std::isfinite(years);
         t->setYear(toInt32(years));
     }
     // months
     if (maxArgs >= 2 && idx < numArgs && ok) {
         double months = exec->uncheckedArgument(idx++).toIntegerPreserveNaN(exec);
+        RETURN_IF_EXCEPTION(scope, false);
         ok = std::isfinite(months);
         t->setMonth(toInt32(months));
     }
     // days
     if (idx < numArgs && ok) {
         double days = exec->uncheckedArgument(idx++).toIntegerPreserveNaN(exec);
+        RETURN_IF_EXCEPTION(scope, false);
         ok = std::isfinite(days);
         t->setMonthDay(0);
         *ms += days * msPerDay;
@@ -493,17 +505,17 @@ void DatePrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
     Identifier toUTCStringName = Identifier::fromString(&vm, ASCIILiteral("toUTCString"));
     JSFunction* toUTCStringFunction = JSFunction::create(vm, globalObject, 0, toUTCStringName.string(), dateProtoFuncToUTCString);
-    putDirectWithoutTransition(vm, toUTCStringName, toUTCStringFunction, DontEnum);
-    putDirectWithoutTransition(vm, Identifier::fromString(&vm, ASCIILiteral("toGMTString")), toUTCStringFunction, DontEnum);
+    putDirectWithoutTransition(vm, toUTCStringName, toUTCStringFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, Identifier::fromString(&vm, ASCIILiteral("toGMTString")), toUTCStringFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
 #if ENABLE(INTL)
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleString", datePrototypeToLocaleStringCodeGenerator, DontEnum);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleDateString", datePrototypeToLocaleDateStringCodeGenerator, DontEnum);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleTimeString", datePrototypeToLocaleTimeStringCodeGenerator, DontEnum);
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleString", datePrototypeToLocaleStringCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleDateString", datePrototypeToLocaleDateStringCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleTimeString", datePrototypeToLocaleTimeStringCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 #endif
 
     JSFunction* toPrimitiveFunction = JSFunction::create(vm, globalObject, 1, ASCIILiteral("[Symbol.toPrimitive]"), dateProtoFuncToPrimitiveSymbol, NoIntrinsic);
-    putDirectWithoutTransition(vm, vm.propertyNames->toPrimitiveSymbol, toPrimitiveFunction, DontEnum | ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->toPrimitiveSymbol, toPrimitiveFunction, PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 
     // The constructor will be added later, after DateConstructor has been built.
 }
@@ -927,6 +939,7 @@ EncodedJSValue JSC_HOST_CALL dateProtoFuncSetTime(ExecState* exec)
     DateInstance* thisDateObj = asDateInstance(thisValue);
 
     double milli = timeClip(exec->argument(0).toNumber(exec));
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
     JSValue result = jsNumber(milli);
     thisDateObj->setInternalValue(vm, result);
     return JSValue::encode(result);
@@ -960,7 +973,9 @@ static EncodedJSValue setNewValueFromTimeArgs(ExecState* exec, int numArgsToUse,
 
     GregorianDateTime gregorianDateTime;
     gregorianDateTime.copyFrom(*other);
-    if (!fillStructuresUsingTimeArgs(exec, numArgsToUse, &ms, &gregorianDateTime)) {
+    bool success = fillStructuresUsingTimeArgs(exec, numArgsToUse, &ms, &gregorianDateTime);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    if (!success) {
         JSValue result = jsNaN();
         thisDateObj->setInternalValue(vm, result);
         return JSValue::encode(result);
@@ -1003,7 +1018,9 @@ static EncodedJSValue setNewValueFromDateArgs(ExecState* exec, int numArgsToUse,
         gregorianDateTime.copyFrom(*other);
     }
 
-    if (!fillStructuresUsingDateArgs(exec, numArgsToUse, &ms, &gregorianDateTime)) {
+    bool success = fillStructuresUsingDateArgs(exec, numArgsToUse, &ms, &gregorianDateTime);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    if (!success) {
         JSValue result = jsNaN();
         thisDateObj->setInternalValue(vm, result);
         return JSValue::encode(result);
@@ -1116,6 +1133,7 @@ EncodedJSValue JSC_HOST_CALL dateProtoFuncSetYear(ExecState* exec)
     }
 
     double year = exec->argument(0).toIntegerPreserveNaN(exec);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (!std::isfinite(year)) {
         JSValue result = jsNaN();
         thisDateObj->setInternalValue(vm, result);
@@ -1168,7 +1186,7 @@ EncodedJSValue JSC_HOST_CALL dateProtoFuncToJSON(ExecState* exec)
     if (callType == CallType::None)
         return throwVMTypeError(exec, scope, ASCIILiteral("toISOString is not a function"));
 
-    JSValue result = call(exec, asObject(toISOValue), callType, callData, object, exec->emptyList());
+    JSValue result = call(exec, asObject(toISOValue), callType, callData, object, *vm.emptyList);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (result.isObject())
         return throwVMTypeError(exec, scope, ASCIILiteral("toISOString did not return a primitive value"));

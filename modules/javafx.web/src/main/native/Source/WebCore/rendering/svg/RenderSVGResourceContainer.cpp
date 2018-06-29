@@ -25,9 +25,12 @@
 #include "RenderView.h"
 #include "SVGRenderingContext.h"
 #include "SVGResourcesCache.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGResourceContainer);
 
 static inline SVGDocumentExtensions& svgExtensionsFromElement(SVGElement& element)
 {
@@ -40,9 +43,7 @@ RenderSVGResourceContainer::RenderSVGResourceContainer(SVGElement& element, Rend
 {
 }
 
-RenderSVGResourceContainer::~RenderSVGResourceContainer()
-{
-}
+RenderSVGResourceContainer::~RenderSVGResourceContainer() = default;
 
 void RenderSVGResourceContainer::layout()
 {

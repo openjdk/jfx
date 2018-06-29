@@ -32,6 +32,7 @@
 #include "Document.h"
 #include "FrameView.h"
 #include "GPUDevice.h"
+#include "InspectorInstrumentation.h"
 #include "WebGPUBuffer.h"
 #include "WebGPUCommandQueue.h"
 #include "WebGPUComputePipelineState.h"
@@ -46,10 +47,10 @@
 #include "WebGPUTexture.h"
 #include "WebGPUTextureDescriptor.h"
 
-#include <runtime/ArrayBuffer.h>
-#include <runtime/JSCInlines.h>
-#include <runtime/TypedArrayInlines.h>
-#include <runtime/Uint32Array.h>
+#include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/TypedArrayInlines.h>
+#include <JavaScriptCore/Uint32Array.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
@@ -71,7 +72,7 @@ namespace WebCore {
 static const int kMaxTextureSize = 4096;
 
 
-std::unique_ptr<WebGPURenderingContext> WebGPURenderingContext::create(HTMLCanvasElement& canvas)
+std::unique_ptr<WebGPURenderingContext> WebGPURenderingContext::create(CanvasBase& canvas)
 {
     RefPtr<GPUDevice> device(GPUDevice::create());
 
@@ -80,18 +81,27 @@ std::unique_ptr<WebGPURenderingContext> WebGPURenderingContext::create(HTMLCanva
         return nullptr;
     }
 
-    std::unique_ptr<WebGPURenderingContext> renderingContext = nullptr;
-    renderingContext = std::unique_ptr<WebGPURenderingContext>(new WebGPURenderingContext(canvas, device.releaseNonNull()));
+    auto renderingContext = std::unique_ptr<WebGPURenderingContext>(new WebGPURenderingContext(canvas, device.releaseNonNull()));
     renderingContext->suspendIfNeeded();
+
+    InspectorInstrumentation::didCreateCanvasRenderingContext(*renderingContext);
 
     return renderingContext;
 }
 
-WebGPURenderingContext::WebGPURenderingContext(HTMLCanvasElement& canvas, Ref<GPUDevice>&& device)
+WebGPURenderingContext::WebGPURenderingContext(CanvasBase& canvas, Ref<GPUDevice>&& device)
     : GPUBasedCanvasRenderingContext(canvas)
     , m_device(WTFMove(device))
 {
     initializeNewContext();
+}
+
+HTMLCanvasElement* WebGPURenderingContext::canvas() const
+{
+    auto& base = canvasBase();
+    if (!is<HTMLCanvasElement>(base))
+        return nullptr;
+    return &downcast<HTMLCanvasElement>(base);
 }
 
 void WebGPURenderingContext::initializeNewContext()
@@ -104,8 +114,8 @@ void WebGPURenderingContext::initializeNewContext()
 
 IntSize WebGPURenderingContext::clampedCanvasSize() const
 {
-    return IntSize(clamp(canvas().width(), 1, kMaxTextureSize),
-        clamp(canvas().height(), 1, kMaxTextureSize));
+    return IntSize(clamp(canvas()->width(), 1, kMaxTextureSize),
+        clamp(canvas()->height(), 1, kMaxTextureSize));
 }
 
 bool WebGPURenderingContext::hasPendingActivity() const

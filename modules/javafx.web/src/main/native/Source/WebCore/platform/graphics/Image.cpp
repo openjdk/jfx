@@ -52,9 +52,7 @@ Image::Image(ImageObserver* observer)
 {
 }
 
-Image::~Image()
-{
-}
+Image::~Image() = default;
 
 Image& Image::nullImage()
 {
@@ -84,6 +82,16 @@ URL Image::sourceURL() const
     return imageObserver() ? imageObserver()->sourceUrl() : URL();
 }
 
+String Image::mimeType() const
+{
+    return imageObserver() ? imageObserver()->mimeType() : emptyString();
+}
+
+long long Image::expectedContentLength() const
+{
+    return imageObserver() ? imageObserver()->expectedContentLength() : 0;
+}
+
 void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, const Color& color, CompositeOperator op)
 {
     if (!color.isVisible())
@@ -93,6 +101,18 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
     ctxt.setCompositeOperation(color.isOpaque() && op == CompositeSourceOver ? CompositeCopy : op);
     ctxt.fillRect(dstRect, color);
     ctxt.setCompositeOperation(previousOperator);
+}
+
+void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,
+    const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op, BlendMode blendMode)
+{
+    if (!nativeImageForCurrentFrame())
+        return;
+
+    ctxt.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, op, blendMode);
+
+    if (imageObserver())
+        imageObserver()->didDraw(*this);
 }
 
 ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, CompositeOperator op, BlendMode blendMode, DecodingMode decodingMode)
@@ -117,11 +137,10 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
     if (hasRelativeHeight())
         intrinsicTileSize.setHeight(scaledTileSize.height());
 
-    FloatSize scale(scaledTileSize.width() / intrinsicTileSize.width(),
-                    scaledTileSize.height() / intrinsicTileSize.height());
+    FloatSize scale(scaledTileSize / intrinsicTileSize);
 
     FloatRect oneTileRect;
-    FloatSize actualTileSize(scaledTileSize.width() + spacing.width(), scaledTileSize.height() + spacing.height());
+    FloatSize actualTileSize = scaledTileSize + spacing;
     oneTileRect.setX(destRect.x() + fmodf(fmodf(-srcPoint.x(), actualTileSize.width()) - actualTileSize.width(), actualTileSize.width()));
     oneTileRect.setY(destRect.y() + fmodf(fmodf(-srcPoint.y(), actualTileSize.height()) - actualTileSize.height(), actualTileSize.height()));
     oneTileRect.setSize(scaledTileSize);
@@ -283,23 +302,6 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
     startAnimation();
     return ImageDrawResult::DidDraw;
 }
-
-#if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
-FloatRect Image::adjustSourceRectForDownSampling(const FloatRect& srcRect, const IntSize& scaledSize) const
-{
-    const FloatSize unscaledSize = size();
-    if (unscaledSize == scaledSize)
-        return srcRect;
-
-    // Image has been down-sampled.
-    float xscale = static_cast<float>(scaledSize.width()) / unscaledSize.width();
-    float yscale = static_cast<float>(scaledSize.height()) / unscaledSize.height();
-    FloatRect scaledSrcRect = srcRect;
-    scaledSrcRect.scale(xscale, yscale);
-
-    return scaledSrcRect;
-}
-#endif
 
 void Image::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
 {

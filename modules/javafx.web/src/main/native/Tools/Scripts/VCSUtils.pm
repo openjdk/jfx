@@ -1245,7 +1245,7 @@ sub parseDiff($$;$)
             # all diffs in the patch are formatted the same (SVN or Git).
             $headerStartRegEx = $gitDiffStartRegEx;
         }
-
+        
         if (!$headerHashRef && ($line =~ $unifiedDiffStartRegEx)) {
             $headerStartRegEx = $unifiedDiffStartRegEx;
         }

@@ -46,25 +46,25 @@ UserGestureToken::~UserGestureToken()
         observer(*this);
 }
 
-UserGestureIndicator::UserGestureIndicator(std::optional<ProcessingUserGestureState> state, Document* document, UserGestureType gestureType)
-    : m_previousToken(currentToken())
+UserGestureIndicator::UserGestureIndicator(std::optional<ProcessingUserGestureState> state, Document* document, UserGestureType gestureType, ProcessInteractionStyle processInteractionStyle)
+    : m_previousToken { currentToken() }
 {
-    // Silently ignore UserGestureIndicators on non main threads.
-    if (!isMainThread())
-        return;
+    ASSERT(isMainThread());
 
     if (state)
         currentToken() = UserGestureToken::create(state.value(), gestureType);
 
     if (document && currentToken()->processingUserGesture()) {
         document->updateLastHandledUserGestureTimestamp(MonotonicTime::now());
-        ResourceLoadObserver::shared().logUserInteractionWithReducedTimeResolution(document->topDocument());
+        if (processInteractionStyle == ProcessInteractionStyle::Immediate)
+            ResourceLoadObserver::shared().logUserInteractionWithReducedTimeResolution(document->topDocument());
         document->topDocument().setUserDidInteractWithPage(true);
     }
 }
 
 UserGestureIndicator::UserGestureIndicator(RefPtr<UserGestureToken> token)
 {
+    // Silently ignore UserGestureIndicators on non main threads.
     if (!isMainThread())
         return;
 

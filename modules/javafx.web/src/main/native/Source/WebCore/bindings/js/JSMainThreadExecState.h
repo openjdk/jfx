@@ -28,9 +28,9 @@
 
 #include "CustomElementReactionQueue.h"
 #include "JSDOMBinding.h"
-#include <runtime/CatchScope.h>
-#include <runtime/Completion.h>
-#include <runtime/Microtask.h>
+#include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/Completion.h>
+#include <JavaScriptCore/Microtask.h>
 #include <wtf/MainThread.h>
 
 namespace WebCore {
@@ -90,10 +90,10 @@ public:
         task.run(exec);
     }
 
-    static JSC::JSInternalPromise& loadModule(JSC::ExecState& state, const String& moduleName, JSC::JSValue scriptFetcher)
+    static JSC::JSInternalPromise& loadModule(JSC::ExecState& state, const String& moduleName, JSC::JSValue parameters, JSC::JSValue scriptFetcher)
     {
         JSMainThreadExecState currentState(&state);
-        return *JSC::loadModule(&state, moduleName, scriptFetcher);
+        return *JSC::loadModule(&state, moduleName, parameters, scriptFetcher);
     }
 
     static JSC::JSInternalPromise& loadModule(JSC::ExecState& state, const JSC::SourceCode& sourceCode, JSC::JSValue scriptFetcher)

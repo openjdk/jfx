@@ -186,24 +186,20 @@ inline bool TimerHeapLessThanFunction::operator()(const TimerBase* a, const Time
 // ----------------
 
 TimerBase::TimerBase()
-#ifndef NDEBUG
-    : m_thread(currentThread())
-#endif
 {
 }
 
 TimerBase::~TimerBase()
 {
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(canAccessThreadLocalDataForThread(m_thread.get()));
     stop();
     ASSERT(!inHeap());
-#ifndef NDEBUG
     m_wasDeleted = true;
-#endif
 }
 
 void TimerBase::start(Seconds nextFireInterval, Seconds repeatInterval)
 {
-    ASSERT(canAccessThreadLocalDataForThread(m_thread));
+    ASSERT(canAccessThreadLocalDataForThread(m_thread.get()));
 
     m_repeatInterval = repeatInterval;
     setNextFireTime(MonotonicTime::now() + nextFireInterval);
@@ -211,7 +207,7 @@ void TimerBase::start(Seconds nextFireInterval, Seconds repeatInterval)
 
 void TimerBase::stop()
 {
-    ASSERT(canAccessThreadLocalDataForThread(m_thread));
+    ASSERT(canAccessThreadLocalDataForThread(m_thread.get()));
 
     m_repeatInterval = 0_s;
     setNextFireTime(MonotonicTime { });
@@ -362,8 +358,8 @@ void TimerBase::updateHeapIfNeeded(MonotonicTime oldTime)
 
 void TimerBase::setNextFireTime(MonotonicTime newTime)
 {
-    ASSERT(canAccessThreadLocalDataForThread(m_thread));
-    ASSERT(!m_wasDeleted);
+    ASSERT(canAccessThreadLocalDataForThread(m_thread.get()));
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!m_wasDeleted);
 
     if (m_unalignedNextFireTime != newTime)
         m_unalignedNextFireTime = newTime;

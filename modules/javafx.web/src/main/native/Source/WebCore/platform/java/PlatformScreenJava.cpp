@@ -32,10 +32,11 @@
 #include <wtf/java/JavaEnv.h>
 #include "PlatformScreen.h"
 #include "ScrollView.h"
-#include "WebPage.h"
 #include "Widget.h"
 
 #include "NotImplemented.h"
+
+namespace PlatformScreenJavaInternal {
 
 static JGClass rectangleCls;
 static JGClass widgetClass;
@@ -78,6 +79,7 @@ static void initRefs(JNIEnv* env)
         ASSERT(recthFID);
     }
 }
+}
 
 namespace WebCore
 {
@@ -96,6 +98,7 @@ int screenVerticalDPI(Widget*)
 
 int screenDepth(Widget* w)
 {
+    using namespace PlatformScreenJavaInternal;
     if (!w)
         return 24;
 
@@ -129,6 +132,7 @@ bool screenIsMonochrome(Widget*)
 
 FloatRect getScreenRect(Widget* w, bool available)
 {
+    using namespace PlatformScreenJavaInternal;
     if (!w)
         return IntRect(0, 0, 0, 0);
 

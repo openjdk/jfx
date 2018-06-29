@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -42,14 +44,14 @@ extern "C" {
 
 #define IMPL (static_cast<XPathResult*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_XPathResultImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_XPathResultImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
 
 
 // Attributes
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getResultTypeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getResultTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->resultType();
@@ -79,7 +81,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getSingleNodeVal
     return JavaReturn<Node>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->singleNodeValue())));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getInvalidIteratorStateImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_XPathResultImpl_getInvalidIteratorStateImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->invalidIteratorState();

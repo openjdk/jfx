@@ -135,30 +135,18 @@ namespace JSC  {
 
         VM& vm() const;
 
-        // Convenience functions for access to global data.
-        // It takes a few memory references to get from a call frame to the global data
-        // pointer, so these are inefficient, and should be used sparingly in new code.
-        // But they're used in many places in legacy code, so they're not going away any time soon.
-
-        AtomicStringTable* atomicStringTable() const { return vm().atomicStringTable(); }
-        const CommonIdentifiers& propertyNames() const { return *vm().propertyNames; }
-        const ArgList& emptyList() const { return *vm().emptyList; }
-        Interpreter* interpreter() { return vm().interpreter; }
-        Heap* heap() { return &vm().heap; }
-
-
         static CallFrame* create(Register* callFrameBase) { return static_cast<CallFrame*>(callFrameBase); }
         Register* registers() { return this; }
         const Register* registers() const { return this; }
 
         CallFrame& operator=(const Register& r) { *static_cast<Register*>(this) = r; return *this; }
 
-        CallFrame* callerFrame() const { return static_cast<CallFrame*>(callerFrameOrVMEntryFrame()); }
-        void* callerFrameOrVMEntryFrame() const { return callerFrameAndPC().callerFrame; }
-        SUPPRESS_ASAN void* unsafeCallerFrameOrVMEntryFrame() const { return unsafeCallerFrameAndPC().callerFrame; }
+        CallFrame* callerFrame() const { return static_cast<CallFrame*>(callerFrameOrEntryFrame()); }
+        void* callerFrameOrEntryFrame() const { return callerFrameAndPC().callerFrame; }
+        SUPPRESS_ASAN void* unsafeCallerFrameOrEntryFrame() const { return unsafeCallerFrameAndPC().callerFrame; }
 
-        CallFrame* unsafeCallerFrame(VMEntryFrame*&);
-        JS_EXPORT_PRIVATE CallFrame* callerFrame(VMEntryFrame*&);
+        CallFrame* unsafeCallerFrame(EntryFrame*&);
+        JS_EXPORT_PRIVATE CallFrame* callerFrame(EntryFrame*&);
 
         JS_EXPORT_PRIVATE SourceOrigin callerSourceOrigin();
 

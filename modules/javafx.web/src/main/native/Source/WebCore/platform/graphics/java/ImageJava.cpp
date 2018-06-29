@@ -44,43 +44,6 @@ class ImageBuffer;
 
 namespace WebCore {
 
-void Image::drawPattern(GraphicsContext& gc, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, const FloatSize&, CompositeOperator, BlendMode)
-{
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    if (gc.paintingDisabled() || srcRect.isEmpty()) {
-        return;
-    }
-
-    NativeImagePtr currFrame = nativeImageForCurrentFrame();
-    if (!currFrame) {
-        return;
-    }
-
-    TransformationMatrix tm = patternTransform.toTransformationMatrix();
-
-    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-                "createTransform",
-                "(DDDDDD)Lcom/sun/webkit/graphics/WCTransform;");
-    ASSERT(mid);
-    JLObject transform(env->CallObjectMethod(PL_GetGraphicsManager(env), mid,
-                tm.a(), tm.b(), tm.c(), tm.d(), tm.e(), tm.f()));
-    ASSERT(transform);
-    CheckAndClearException(env);
-
-    gc.platformContext()->rq().freeSpace(13 * 4)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
-    << currFrame
-    << srcRect.x() << srcRect.y() << srcRect.width() << srcRect.height()
-    << RQRef::create(transform)
-    << phase.x() << phase.y()
-    << destRect.x() << destRect.y() << destRect.width() << destRect.height();
-
-    if (imageObserver())
-        imageObserver()->didDraw(*this);
-}
-
 void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const FloatRect &srcRect,
                        CompositeOperator, BlendMode)
 {

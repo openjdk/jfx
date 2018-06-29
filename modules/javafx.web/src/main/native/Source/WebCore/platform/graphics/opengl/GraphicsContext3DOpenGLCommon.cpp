@@ -49,13 +49,13 @@
 #include "Logging.h"
 #include "TemporaryOpenGLSetting.h"
 #include "WebGLRenderingContextBase.h"
+#include <JavaScriptCore/RegularExpression.h>
 #include <cstring>
 #include <wtf/HexNumber.h>
 #include <wtf/MainThread.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
-#include <yarr/RegularExpression.h>
 
 #if PLATFORM(IOS)
 #import <OpenGLES/ES2/glext.h>
@@ -79,9 +79,9 @@
 #endif
 #endif
 
-using namespace WTF;
 
 namespace WebCore {
+using namespace WTF;
 
 static ThreadSpecific<ShaderNameHash*>& getCurrentNameHashMapForShader()
 {
@@ -132,19 +132,6 @@ static uint64_t nameHashForShader(const char* name, size_t length)
     return result;
 }
 
-RefPtr<GraphicsContext3D> GraphicsContext3D::createForCurrentGLContext()
-{
-    auto context = adoptRef(*new GraphicsContext3D({ }, 0, GraphicsContext3D::RenderToCurrentGLContext));
-#if USE(TEXTURE_MAPPER)
-    if (!context->m_texmapLayer)
-        return nullptr;
-#else
-    if (!context->m_private)
-        return nullptr;
-#endif
-    return WTFMove(context);
-}
-
 void GraphicsContext3D::validateDepthStencil(const char* packedDepthStencilExtension)
 {
     Extensions3D& extensions = getExtensions();
@@ -190,15 +177,10 @@ void GraphicsContext3D::paintRenderingResultsToCanvas(ImageBuffer* imageBuffer)
         }
     }
 
-#if USE(CG)
-    paintToCanvas(pixels.get(), m_currentWidth, m_currentHeight,
-                  imageBuffer->internalSize().width(), imageBuffer->internalSize().height(), imageBuffer->context());
-#else
-    paintToCanvas(pixels.get(), m_currentWidth, m_currentHeight, imageBuffer->internalSize().width(), imageBuffer->internalSize().height(), imageBuffer->context().platformContext());
-#endif
+    paintToCanvas(pixels.get(), IntSize(m_currentWidth, m_currentHeight), imageBuffer->internalSize(), imageBuffer->context());
 
 #if PLATFORM(IOS)
-    endPaint();
+    presentRenderbuffer();
 #endif
 }
 
@@ -261,8 +243,8 @@ void GraphicsContext3D::prepareTexture()
 #endif
 
     ::glActiveTexture(GL_TEXTURE0);
-    ::glBindTexture(GL_TEXTURE_2D, m_state.boundTexture0);
-    ::glActiveTexture(m_state.activeTexture);
+    ::glBindTexture(GL_TEXTURE_2D, m_state.boundTarget(GL_TEXTURE0) == GL_TEXTURE_2D ? m_state.boundTexture(GL_TEXTURE0) : 0);
+    ::glActiveTexture(m_state.activeTextureUnit);
     if (m_state.boundFBO != m_fbo)
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_state.boundFBO);
     ::glFlush();
@@ -410,7 +392,7 @@ bool GraphicsContext3D::checkVaryingsPacking(Platform3DObject vertexShader, Plat
         variables.push_back(varyingSymbol);
 
     GC3Dint maxVaryingVectors = 0;
-#if !PLATFORM(IOS) && !((PLATFORM(WIN) || PLATFORM(GTK) || PLATFORM(WPE)) && USE(OPENGL_ES_2))
+#if !PLATFORM(IOS) && !USE(OPENGL_ES_2)
     GC3Dint maxVaryingFloats = 0;
     ::glGetIntegerv(GL_MAX_VARYING_FLOATS, &maxVaryingFloats);
     maxVaryingVectors = maxVaryingFloats / 4;
@@ -452,7 +434,7 @@ IntSize GraphicsContext3D::getInternalFramebufferSize() const
 void GraphicsContext3D::activeTexture(GC3Denum texture)
 {
     makeContextCurrent();
-    m_state.activeTexture = texture;
+    m_state.activeTextureUnit = texture;
     ::glActiveTexture(texture);
 }
 
@@ -505,8 +487,7 @@ void GraphicsContext3D::bindRenderbuffer(GC3Denum target, Platform3DObject rende
 void GraphicsContext3D::bindTexture(GC3Denum target, Platform3DObject texture)
 {
     makeContextCurrent();
-    if (m_state.activeTexture == GL_TEXTURE0 && target == GL_TEXTURE_2D)
-        m_state.boundTexture0 = texture;
+    m_state.setBoundTexture(m_state.activeTextureUnit, texture, target);
     ::glBindTexture(target, texture);
 }
 
@@ -582,12 +563,22 @@ void GraphicsContext3D::texStorage2D(GC3Denum target, GC3Dsizei levels, GC3Denum
 {
     makeContextCurrent();
     ::glTexStorage2D(target, levels, internalformat, width, height);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
 }
 
 void GraphicsContext3D::texStorage3D(GC3Denum target, GC3Dsizei levels, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dsizei depth)
 {
     makeContextCurrent();
     ::glTexStorage3D(target, levels, internalformat, width, height, depth);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
+}
+
+void GraphicsContext3D::getActiveUniforms(Platform3DObject program, const Vector<GC3Duint>& uniformIndices, GC3Denum pname, Vector<GC3Dint>& params)
+{
+    ASSERT(program);
+    makeContextCurrent();
+
+    ::glGetActiveUniformsiv(program, uniformIndices.size(), uniformIndices.data(), pname, params.data());
 }
 #endif
 
@@ -658,9 +649,9 @@ void GraphicsContext3D::compileShader(Platform3DObject shader)
 
     ::glCompileShader(shader);
 
-    int GLCompileSuccess;
+    int compileStatus;
 
-    ::glGetShaderiv(shader, COMPILE_STATUS, &GLCompileSuccess);
+    ::glGetShaderiv(shader, COMPILE_STATUS, &compileStatus);
 
     ShaderSourceMap::iterator result = m_shaderSourceMap.find(shader);
     GraphicsContext3D::ShaderSourceEntry& entry = result->value;
@@ -678,9 +669,44 @@ void GraphicsContext3D::compileShader(Platform3DObject shader)
         entry.log = getUnmangledInfoLog(shaders, 1, String(info.get()));
     }
 
-    if (GLCompileSuccess != GL_TRUE) {
+    if (compileStatus != GL_TRUE) {
         entry.isValid = false;
         LOG(WebGL, "Error: shader translator produced a shader that OpenGL would not compile.");
+    }
+}
+
+void GraphicsContext3D::compileShaderDirect(Platform3DObject shader)
+{
+    ASSERT(shader);
+    makeContextCurrent();
+
+    HashMap<Platform3DObject, ShaderSourceEntry>::iterator result = m_shaderSourceMap.find(shader);
+
+    if (result == m_shaderSourceMap.end())
+        return;
+
+    ShaderSourceEntry& entry = result->value;
+
+    const CString& shaderSourceCString = entry.source.utf8();
+    const char* shaderSourcePtr = shaderSourceCString.data();
+    int shaderSourceLength = shaderSourceCString.length();
+
+    LOG(WebGL, "--- begin direct shader source ---\n%s\n--- end direct shader source ---\n", shaderSourcePtr);
+
+    ::glShaderSource(shader, 1, &shaderSourcePtr, &shaderSourceLength);
+
+    ::glCompileShader(shader);
+
+    int compileStatus;
+
+    ::glGetShaderiv(shader, COMPILE_STATUS, &compileStatus);
+
+    if (compileStatus == GL_TRUE) {
+        entry.isValid = true;
+        LOG(WebGL, "Direct compilation of shader succeeded.");
+    } else {
+        entry.isValid = false;
+        LOG(WebGL, "Error: direct compilation of shader failed.");
     }
 }
 
@@ -795,6 +821,7 @@ void GraphicsContext3D::framebufferTexture2D(GC3Denum target, GC3Denum attachmen
 {
     makeContextCurrent();
     ::glFramebufferTexture2DEXT(target, attachment, textarget, texture, level);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
 }
 
 void GraphicsContext3D::frontFace(GC3Denum mode)
@@ -1060,6 +1087,16 @@ int GraphicsContext3D::getAttribLocation(Platform3DObject program, const String&
     return ::glGetAttribLocation(program, mappedName.utf8().data());
 }
 
+int GraphicsContext3D::getAttribLocationDirect(Platform3DObject program, const String& name)
+{
+    if (!program)
+        return -1;
+
+    makeContextCurrent();
+
+    return ::glGetAttribLocation(program, name.utf8().data());
+}
+
 GraphicsContext3DAttributes GraphicsContext3D::getContextAttributes()
 {
     return m_attrs;
@@ -1282,7 +1319,7 @@ void GraphicsContext3D::uniform1f(GC3Dint location, GC3Dfloat v0)
     ::glUniform1f(location, v0);
 }
 
-void GraphicsContext3D::uniform1fv(GC3Dint location, GC3Dsizei size, GC3Dfloat* array)
+void GraphicsContext3D::uniform1fv(GC3Dint location, GC3Dsizei size, const GC3Dfloat* array)
 {
     makeContextCurrent();
     ::glUniform1fv(location, size, array);
@@ -1294,7 +1331,7 @@ void GraphicsContext3D::uniform2f(GC3Dint location, GC3Dfloat v0, GC3Dfloat v1)
     ::glUniform2f(location, v0, v1);
 }
 
-void GraphicsContext3D::uniform2fv(GC3Dint location, GC3Dsizei size, GC3Dfloat* array)
+void GraphicsContext3D::uniform2fv(GC3Dint location, GC3Dsizei size, const GC3Dfloat* array)
 {
     // FIXME: length needs to be a multiple of 2.
     makeContextCurrent();
@@ -1307,7 +1344,7 @@ void GraphicsContext3D::uniform3f(GC3Dint location, GC3Dfloat v0, GC3Dfloat v1, 
     ::glUniform3f(location, v0, v1, v2);
 }
 
-void GraphicsContext3D::uniform3fv(GC3Dint location, GC3Dsizei size, GC3Dfloat* array)
+void GraphicsContext3D::uniform3fv(GC3Dint location, GC3Dsizei size, const GC3Dfloat* array)
 {
     // FIXME: length needs to be a multiple of 3.
     makeContextCurrent();
@@ -1320,7 +1357,7 @@ void GraphicsContext3D::uniform4f(GC3Dint location, GC3Dfloat v0, GC3Dfloat v1, 
     ::glUniform4f(location, v0, v1, v2, v3);
 }
 
-void GraphicsContext3D::uniform4fv(GC3Dint location, GC3Dsizei size, GC3Dfloat* array)
+void GraphicsContext3D::uniform4fv(GC3Dint location, GC3Dsizei size, const GC3Dfloat* array)
 {
     // FIXME: length needs to be a multiple of 4.
     makeContextCurrent();
@@ -1333,7 +1370,7 @@ void GraphicsContext3D::uniform1i(GC3Dint location, GC3Dint v0)
     ::glUniform1i(location, v0);
 }
 
-void GraphicsContext3D::uniform1iv(GC3Dint location, GC3Dsizei size, GC3Dint* array)
+void GraphicsContext3D::uniform1iv(GC3Dint location, GC3Dsizei size, const GC3Dint* array)
 {
     makeContextCurrent();
     ::glUniform1iv(location, size, array);
@@ -1345,7 +1382,7 @@ void GraphicsContext3D::uniform2i(GC3Dint location, GC3Dint v0, GC3Dint v1)
     ::glUniform2i(location, v0, v1);
 }
 
-void GraphicsContext3D::uniform2iv(GC3Dint location, GC3Dsizei size, GC3Dint* array)
+void GraphicsContext3D::uniform2iv(GC3Dint location, GC3Dsizei size, const GC3Dint* array)
 {
     // FIXME: length needs to be a multiple of 2.
     makeContextCurrent();
@@ -1358,7 +1395,7 @@ void GraphicsContext3D::uniform3i(GC3Dint location, GC3Dint v0, GC3Dint v1, GC3D
     ::glUniform3i(location, v0, v1, v2);
 }
 
-void GraphicsContext3D::uniform3iv(GC3Dint location, GC3Dsizei size, GC3Dint* array)
+void GraphicsContext3D::uniform3iv(GC3Dint location, GC3Dsizei size, const GC3Dint* array)
 {
     // FIXME: length needs to be a multiple of 3.
     makeContextCurrent();
@@ -1371,28 +1408,28 @@ void GraphicsContext3D::uniform4i(GC3Dint location, GC3Dint v0, GC3Dint v1, GC3D
     ::glUniform4i(location, v0, v1, v2, v3);
 }
 
-void GraphicsContext3D::uniform4iv(GC3Dint location, GC3Dsizei size, GC3Dint* array)
+void GraphicsContext3D::uniform4iv(GC3Dint location, GC3Dsizei size, const GC3Dint* array)
 {
     // FIXME: length needs to be a multiple of 4.
     makeContextCurrent();
     ::glUniform4iv(location, size, array);
 }
 
-void GraphicsContext3D::uniformMatrix2fv(GC3Dint location, GC3Dsizei size, GC3Dboolean transpose, GC3Dfloat* array)
+void GraphicsContext3D::uniformMatrix2fv(GC3Dint location, GC3Dsizei size, GC3Dboolean transpose, const GC3Dfloat* array)
 {
     // FIXME: length needs to be a multiple of 4.
     makeContextCurrent();
     ::glUniformMatrix2fv(location, size, transpose, array);
 }
 
-void GraphicsContext3D::uniformMatrix3fv(GC3Dint location, GC3Dsizei size, GC3Dboolean transpose, GC3Dfloat* array)
+void GraphicsContext3D::uniformMatrix3fv(GC3Dint location, GC3Dsizei size, GC3Dboolean transpose, const GC3Dfloat* array)
 {
     // FIXME: length needs to be a multiple of 9.
     makeContextCurrent();
     ::glUniformMatrix3fv(location, size, transpose, array);
 }
 
-void GraphicsContext3D::uniformMatrix4fv(GC3Dint location, GC3Dsizei size, GC3Dboolean transpose, GC3Dfloat* array)
+void GraphicsContext3D::uniformMatrix4fv(GC3Dint location, GC3Dsizei size, GC3Dboolean transpose, const GC3Dfloat* array)
 {
     // FIXME: length needs to be a multiple of 16.
     makeContextCurrent();
@@ -1419,7 +1456,7 @@ void GraphicsContext3D::vertexAttrib1f(GC3Duint index, GC3Dfloat v0)
     ::glVertexAttrib1f(index, v0);
 }
 
-void GraphicsContext3D::vertexAttrib1fv(GC3Duint index, GC3Dfloat* array)
+void GraphicsContext3D::vertexAttrib1fv(GC3Duint index, const GC3Dfloat* array)
 {
     makeContextCurrent();
     ::glVertexAttrib1fv(index, array);
@@ -1431,7 +1468,7 @@ void GraphicsContext3D::vertexAttrib2f(GC3Duint index, GC3Dfloat v0, GC3Dfloat v
     ::glVertexAttrib2f(index, v0, v1);
 }
 
-void GraphicsContext3D::vertexAttrib2fv(GC3Duint index, GC3Dfloat* array)
+void GraphicsContext3D::vertexAttrib2fv(GC3Duint index, const GC3Dfloat* array)
 {
     makeContextCurrent();
     ::glVertexAttrib2fv(index, array);
@@ -1443,7 +1480,7 @@ void GraphicsContext3D::vertexAttrib3f(GC3Duint index, GC3Dfloat v0, GC3Dfloat v
     ::glVertexAttrib3f(index, v0, v1, v2);
 }
 
-void GraphicsContext3D::vertexAttrib3fv(GC3Duint index, GC3Dfloat* array)
+void GraphicsContext3D::vertexAttrib3fv(GC3Duint index, const GC3Dfloat* array)
 {
     makeContextCurrent();
     ::glVertexAttrib3fv(index, array);
@@ -1455,7 +1492,7 @@ void GraphicsContext3D::vertexAttrib4f(GC3Duint index, GC3Dfloat v0, GC3Dfloat v
     ::glVertexAttrib4f(index, v0, v1, v2, v3);
 }
 
-void GraphicsContext3D::vertexAttrib4fv(GC3Duint index, GC3Dfloat* array)
+void GraphicsContext3D::vertexAttrib4fv(GC3Duint index, const GC3Dfloat* array)
 {
     makeContextCurrent();
     ::glVertexAttrib4fv(index, array);
@@ -1611,14 +1648,20 @@ void GraphicsContext3D::getNonBuiltInActiveSymbolCount(Platform3DObject program,
 
 String GraphicsContext3D::getUnmangledInfoLog(Platform3DObject shaders[2], GC3Dsizei count, const String& log)
 {
-    LOG(WebGL, "Was: %s", log.utf8().data());
+    LOG(WebGL, "Original ShaderInfoLog:\n%s", log.utf8().data());
 
-    JSC::Yarr::RegularExpression regExp("webgl_[0123456789abcdefABCDEF]+", TextCaseSensitive);
+    JSC::Yarr::RegularExpression regExp("webgl_[0123456789abcdefABCDEF]+");
 
     StringBuilder processedLog;
 
-    int startFrom = 0;
+    // ANGLE inserts a "#extension" line into the shader source that
+    // causes a warning in some compilers. There is no point showing
+    // this warning to the user since they didn't write the code that
+    // is causing it.
+    static const NeverDestroyed<String> angleWarning = ASCIILiteral { "WARNING: 0:1: extension 'GL_ARB_gpu_shader5' is not supported\n" };
+    int startFrom = log.startsWith(angleWarning) ? angleWarning.get().length() : 0;
     int matchedLength = 0;
+
     do {
         int start = regExp.match(log, startFrom, &matchedLength);
         if (start == -1)
@@ -1635,7 +1678,7 @@ String GraphicsContext3D::getUnmangledInfoLog(Platform3DObject shaders[2], GC3Ds
 
     processedLog.append(log.substring(startFrom, log.length() - startFrom));
 
-    LOG(WebGL, "-->: %s", processedLog.toString().utf8().data());
+    LOG(WebGL, "Unmangled ShaderInfoLog:\n%s", processedLog.toString().utf8().data());
     return processedLog.toString();
 }
 
@@ -1826,18 +1869,21 @@ void GraphicsContext3D::texSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xo
 
     // FIXME: we will need to deal with PixelStore params when dealing with image buffers that differ from the subimage size.
     ::glTexSubImage2D(target, level, xoff, yoff, width, height, format, type, pixels);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
 }
 
 void GraphicsContext3D::compressedTexImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Dsizei imageSize, const void* data)
 {
     makeContextCurrent();
     ::glCompressedTexImage2D(target, level, internalformat, width, height, border, imageSize, data);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
 }
 
 void GraphicsContext3D::compressedTexSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Dsizei imageSize, const void* data)
 {
     makeContextCurrent();
     ::glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, imageSize, data);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
 }
 
 Platform3DObject GraphicsContext3D::createBuffer()
@@ -1881,6 +1927,7 @@ Platform3DObject GraphicsContext3D::createTexture()
     makeContextCurrent();
     GLuint o = 0;
     glGenTextures(1, &o);
+    m_state.textureSeedCount.add(o);
     return o;
 }
 
@@ -1923,9 +1970,11 @@ void GraphicsContext3D::deleteShader(Platform3DObject shader)
 void GraphicsContext3D::deleteTexture(Platform3DObject texture)
 {
     makeContextCurrent();
-    if (m_state.boundTexture0 == texture)
-        m_state.boundTexture0 = 0;
+    m_state.boundTextureMap.removeIf([texture] (auto& keyValue) {
+        return keyValue.value.first == texture;
+    });
     glDeleteTextures(1, &texture);
+    m_state.textureSeedCount.removeAll(texture);
 }
 
 void GraphicsContext3D::synthesizeGLError(GC3Denum error)
@@ -1980,6 +2029,7 @@ void GraphicsContext3D::texImage2DDirect(GC3Denum target, GC3Dint level, GC3Denu
 {
     makeContextCurrent();
     ::glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels);
+    m_state.textureSeedCount.add(m_state.currentBoundTexture());
 }
 
 void GraphicsContext3D::drawArraysInstanced(GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount)

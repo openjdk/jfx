@@ -29,9 +29,19 @@
 
 #include "WasmFormat.h"
 
+#include <wtf/Optional.h>
+
 namespace JSC { namespace Wasm {
 
 struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
+    ModuleInformation() = delete;
+    ModuleInformation(const ModuleInformation&) = delete;
+    ModuleInformation(ModuleInformation&&) = delete;
+
+    ModuleInformation(Vector<uint8_t>&& sourceBytes);
+
+    JS_EXPORT_PRIVATE ~ModuleInformation();
+
     size_t functionIndexSpaceSize() const { return importFunctionSignatureIndices.size() + internalFunctionSignatureIndices.size(); }
     bool isImportedFunctionFromFunctionIndexSpace(size_t functionIndex) const
     {
@@ -48,14 +58,8 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     uint32_t importFunctionCount() const { return importFunctionSignatureIndices.size(); }
     uint32_t internalFunctionCount() const { return internalFunctionSignatureIndices.size(); }
 
-    ModuleInformation(Vector<uint8_t>&& sourceBytes)
-        : source(WTFMove(sourceBytes))
-    {
-    }
-
-    JS_EXPORT_PRIVATE ~ModuleInformation();
-
     const Vector<uint8_t> source;
+    const std::optional<CString> hash;
 
     Vector<Import> imports;
     Vector<SignatureIndex> importFunctionSignatureIndices;
@@ -74,7 +78,7 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     Vector<Global> globals;
     unsigned firstInternalGlobal { 0 };
     Vector<CustomSection> customSections;
-    NameSection nameSection;
+    RefPtr<NameSection> nameSection;
 };
 
 

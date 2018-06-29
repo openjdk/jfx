@@ -39,7 +39,7 @@ JLString String::toJavaString(JNIEnv *env) const
             // Convert latin1 chars to unicode.
             Vector<jchar> jchars(len);
             for (unsigned i = 0; i < len; i++) {
-                jchars[i] = at(i);
+                jchars[i] = characterAt(i);
             }
             return env->NewString(jchars.data(), len);
         } else {

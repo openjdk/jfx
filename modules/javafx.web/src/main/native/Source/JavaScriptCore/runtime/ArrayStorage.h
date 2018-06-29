@@ -81,14 +81,6 @@ public:
 
     ContiguousJSValues vector() { return ContiguousJSValues(m_vector, vectorLength()); }
 
-    WriteBarrier<SparseArrayValueMap> m_sparseMap;
-    unsigned m_indexBias;
-    unsigned m_numValuesInVector;
-#if USE(JSVALUE32_64)
-    uintptr_t m_padding;
-#endif
-    WriteBarrier<Unknown> m_vector[1];
-
     static ptrdiff_t lengthOffset() { return Butterfly::offsetOfPublicLength(); }
     static ptrdiff_t vectorLengthOffset() { return Butterfly::offsetOfVectorLength(); }
     static ptrdiff_t numValuesInVectorOffset() { return OBJECT_OFFSETOF(ArrayStorage, m_numValuesInVector); }
@@ -160,6 +152,14 @@ public:
     {
         return optimalVectorLength(structure->outOfLineCapacity(), vectorLength);
     }
+
+    WriteBarrier<SparseArrayValueMap> m_sparseMap;
+    unsigned m_indexBias;
+    unsigned m_numValuesInVector;
+#if USE(JSVALUE32_64)
+    uintptr_t m_padding;
+#endif
+    WriteBarrier<Unknown> m_vector[1];
 };
 
 } // namespace JSC

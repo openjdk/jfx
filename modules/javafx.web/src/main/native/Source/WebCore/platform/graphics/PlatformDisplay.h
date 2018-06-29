@@ -41,7 +41,7 @@ class PlatformDisplay {
     WTF_MAKE_NONCOPYABLE(PlatformDisplay); WTF_MAKE_FAST_ALLOCATED;
 public:
     static PlatformDisplay& sharedDisplay();
-    static PlatformDisplay& sharedDisplayForCompositing();
+    WEBCORE_EXPORT static PlatformDisplay& sharedDisplayForCompositing();
     virtual ~PlatformDisplay();
 
     enum class Type {
@@ -73,7 +73,7 @@ public:
 
 protected:
     enum class NativeDisplayOwned { No, Yes };
-    explicit PlatformDisplay(NativeDisplayOwned = NativeDisplayOwned::No);
+    explicit PlatformDisplay(NativeDisplayOwned);
 
     static void setSharedDisplayForCompositing(PlatformDisplay&);
 

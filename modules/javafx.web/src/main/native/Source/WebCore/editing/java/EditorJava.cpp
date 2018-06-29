@@ -8,13 +8,16 @@
 #include "DataObjectJava.h"
 #include "DocumentFragment.h"
 #include "Frame.h"
+#include "HTMLEmbedElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLObjectElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "Pasteboard.h"
 #include "RenderImage.h"
 #include "SVGElement.h"
+#include "SVGImageElement.h"
 #include "XLinkNames.h"
 #include "markup.h"
 
@@ -37,6 +40,28 @@ RefPtr<DocumentFragment> Editor::webContentFromPasteboard(Pasteboard&, Range&, b
 {
     notImplemented();
     return RefPtr<DocumentFragment>();
+}
+
+void Editor::writeImageToPasteboard(Pasteboard&, Element&, const URL&, const String&)
+{
+    notImplemented();
+#if 0
+    PasteboardImage pasteboardImage;
+
+    if (!getImageForElement(imageElement, pasteboardImage.image))
+        return;
+    ASSERT(pasteboardImage.image);
+
+    pasteboardImage.url.url = imageElement.document().completeURL(stripLeadingAndTrailingHTMLSpaces(elementURL(imageElement)));
+    pasteboardImage.url.title = title;
+    pasteboardImage.url.markup = createMarkup(imageElement, IncludeNode, nullptr, ResolveAllURLs);
+    pasteboard.write(pasteboardImage);
+#endif
+}
+
+void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
+{
+    pasteboard.writeSelection(*selectedRange(), canSmartCopyOrDelete(), m_frame, DefaultSelectedTextType);
 }
 
 } // namespace WebCore

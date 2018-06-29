@@ -396,13 +396,13 @@ sub IsNumericType
     return 1 if $floatingPointTypeHash{$type->name};
     return 0;
 }
-    
+
 sub IsStringOrEnumType
 {
     my ($object, $type) = @_;
     
     assert("Not a type") if ref($type) ne "IDLType";
-    
+
     return 1 if $object->IsStringType($type);
     return 1 if $object->IsEnumType($type);
     return 0;
@@ -693,6 +693,7 @@ sub WK_ucfirst
     my $ret = ucfirst($param);
     $ret =~ s/Xml/XML/ if $ret =~ /^Xml[^a-z]/;
     $ret =~ s/Svg/SVG/ if $ret =~ /^Svg/;
+    $ret =~ s/Srgb/SRGB/ if $ret =~ /^Srgb/;
 
     return $ret;
 }

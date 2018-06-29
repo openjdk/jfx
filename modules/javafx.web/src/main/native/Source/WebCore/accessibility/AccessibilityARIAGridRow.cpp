@@ -40,9 +40,7 @@ AccessibilityARIAGridRow::AccessibilityARIAGridRow(RenderObject* renderer)
 {
 }
 
-AccessibilityARIAGridRow::~AccessibilityARIAGridRow()
-{
-}
+AccessibilityARIAGridRow::~AccessibilityARIAGridRow() = default;
 
 Ref<AccessibilityARIAGridRow> AccessibilityARIAGridRow::create(RenderObject* renderer)
 {
@@ -138,7 +136,7 @@ AccessibilityTable* AccessibilityARIAGridRow::parentTable() const
 AccessibilityObject* AccessibilityARIAGridRow::headerObject()
 {
     for (const auto& child : children()) {
-        if (child->ariaRoleAttribute() == RowHeaderRole)
+        if (child->ariaRoleAttribute() == AccessibilityRole::RowHeader)
             return child.get();
     }
 

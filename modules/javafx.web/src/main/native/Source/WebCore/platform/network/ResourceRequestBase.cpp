@@ -33,16 +33,12 @@
 
 namespace WebCore {
 
-#if !USE(SOUP) && (!PLATFORM(MAC) || USE(CFURLCONNECTION))
+#if PLATFORM(IOS) || USE(CFURLCONNECTION)
 double ResourceRequestBase::s_defaultTimeoutInterval = INT_MAX;
 #else
 // Will use NSURLRequest default timeout unless set to a non-zero value with setDefaultTimeoutInterval().
 // For libsoup the timeout enabled with integer milliseconds. We set 0 as the default value to avoid integer overflow.
 double ResourceRequestBase::s_defaultTimeoutInterval = 0;
-#endif
-
-#if PLATFORM(IOS)
-bool ResourceRequestBase::s_defaultAllowCookies = true;
 #endif
 
 inline const ResourceRequest& ResourceRequestBase::asResourceRequest() const
@@ -67,7 +63,7 @@ void ResourceRequestBase::setAsIsolatedCopy(const ResourceRequest& other)
     setPriority(other.priority());
     setRequester(other.requester());
     setInitiatorIdentifier(other.initiatorIdentifier().isolatedCopy());
-    setCachePartition(other.cachePartition());
+    setCachePartition(other.cachePartition().isolatedCopy());
 
     updateResourceRequest();
     m_httpHeaderFields = other.httpHeaderFields().isolatedCopy();
@@ -120,6 +116,42 @@ void ResourceRequestBase::setURL(const URL& url)
     m_platformRequestUpdated = false;
 }
 
+static bool shouldUseGet(const ResourceRequestBase& request, const ResourceResponse& redirectResponse)
+{
+    if (redirectResponse.httpStatusCode() == 301 || redirectResponse.httpStatusCode() == 302)
+        return equalLettersIgnoringASCIICase(request.httpMethod(), "post");
+    return redirectResponse.httpStatusCode() == 303;
+}
+
+ResourceRequest ResourceRequestBase::redirectedRequest(const ResourceResponse& redirectResponse, bool shouldClearReferrerOnHTTPSToHTTPRedirect) const
+{
+    ASSERT(redirectResponse.isRedirection());
+    // This method is based on https://fetch.spec.whatwg.org/#http-redirect-fetch.
+    // It also implements additional processing like done by CFNetwork layer.
+
+    auto request = asResourceRequest();
+    auto location = redirectResponse.httpHeaderField(HTTPHeaderName::Location);
+
+    request.setURL(location.isEmpty() ? URL { } : URL { redirectResponse.url(), location });
+
+    if (shouldUseGet(*this, redirectResponse)) {
+        request.setHTTPMethod(ASCIILiteral("GET"));
+        request.setHTTPBody(nullptr);
+        request.clearHTTPContentType();
+        request.m_httpHeaderFields.remove(HTTPHeaderName::ContentLength);
+    }
+
+    if (shouldClearReferrerOnHTTPSToHTTPRedirect && !request.url().protocolIs("https") && WebCore::protocolIs(request.httpReferrer(), "https"))
+        request.clearHTTPReferrer();
+
+    if (!protocolHostAndPortAreEqual(request.url(), redirectResponse.url()))
+        request.clearHTTPOrigin();
+    request.clearHTTPAuthorization();
+    request.m_httpHeaderFields.remove(HTTPHeaderName::ProxyAuthorization);
+
+    return request;
+}
+
 void ResourceRequestBase::removeCredentials()
 {
     updateResourceRequest();
@@ -149,8 +181,7 @@ void ResourceRequestBase::setCachePolicy(ResourceRequestCachePolicy cachePolicy)
 
     m_cachePolicy = cachePolicy;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 double ResourceRequestBase::timeoutInterval() const
@@ -169,8 +200,7 @@ void ResourceRequestBase::setTimeoutInterval(double timeoutInterval)
 
     m_timeoutInterval = timeoutInterval;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 const URL& ResourceRequestBase::firstPartyForCookies() const
@@ -208,8 +238,7 @@ void ResourceRequestBase::setHTTPMethod(const String& httpMethod)
 
     m_httpMethod = httpMethod;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 const HTTPHeaderMap& ResourceRequestBase::httpHeaderFields() const
@@ -239,8 +268,7 @@ void ResourceRequestBase::setHTTPHeaderField(const String& name, const String& v
 
     m_httpHeaderFields.set(name, value);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 void ResourceRequestBase::setHTTPHeaderField(HTTPHeaderName name, const String& value)
@@ -249,8 +277,7 @@ void ResourceRequestBase::setHTTPHeaderField(HTTPHeaderName name, const String& 
 
     m_httpHeaderFields.set(name, value);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 void ResourceRequestBase::clearHTTPAuthorization()
@@ -260,8 +287,7 @@ void ResourceRequestBase::clearHTTPAuthorization()
     if (!m_httpHeaderFields.remove(HTTPHeaderName::Authorization))
         return;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 String ResourceRequestBase::httpContentType() const
@@ -280,8 +306,7 @@ void ResourceRequestBase::clearHTTPContentType()
 
     m_httpHeaderFields.remove(HTTPHeaderName::ContentType);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 String ResourceRequestBase::httpReferrer() const
@@ -305,8 +330,7 @@ void ResourceRequestBase::clearHTTPReferrer()
 
     m_httpHeaderFields.remove(HTTPHeaderName::Referer);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 String ResourceRequestBase::httpOrigin() const
@@ -330,8 +354,7 @@ void ResourceRequestBase::clearHTTPOrigin()
 
     m_httpHeaderFields.remove(HTTPHeaderName::Origin);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 bool ResourceRequestBase::hasHTTPHeader(HTTPHeaderName name) const
@@ -355,8 +378,7 @@ void ResourceRequestBase::clearHTTPUserAgent()
 
     m_httpHeaderFields.remove(HTTPHeaderName::UserAgent);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 String ResourceRequestBase::httpAccept() const
@@ -375,8 +397,7 @@ void ResourceRequestBase::clearHTTPAccept()
 
     m_httpHeaderFields.remove(HTTPHeaderName::Accept);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 void ResourceRequestBase::clearHTTPAcceptEncoding()
@@ -385,8 +406,7 @@ void ResourceRequestBase::clearHTTPAcceptEncoding()
 
     m_httpHeaderFields.remove(HTTPHeaderName::AcceptEncoding);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 void ResourceRequestBase::setResponseContentDispositionEncodingFallbackArray(const String& encoding1, const String& encoding2, const String& encoding3)
@@ -402,8 +422,7 @@ void ResourceRequestBase::setResponseContentDispositionEncodingFallbackArray(con
     if (!encoding3.isNull())
         m_responseContentDispositionEncodingFallbackArray.uncheckedAppend(encoding3);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 FormData* ResourceRequestBase::httpBody() const
@@ -421,8 +440,7 @@ void ResourceRequestBase::setHTTPBody(RefPtr<FormData>&& httpBody)
 
     m_resourceRequestBodyUpdated = true;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestBodyUpdated = false;
+    m_platformRequestBodyUpdated = false;
 }
 
 bool ResourceRequestBase::allowCookies() const
@@ -441,8 +459,7 @@ void ResourceRequestBase::setAllowCookies(bool allowCookies)
 
     m_allowCookies = allowCookies;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 ResourceLoadPriority ResourceRequestBase::priority() const
@@ -461,8 +478,7 @@ void ResourceRequestBase::setPriority(ResourceLoadPriority priority)
 
     m_priority = priority;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 void ResourceRequestBase::addHTTPHeaderFieldIfNotPresent(HTTPHeaderName name, const String& value)
@@ -472,8 +488,7 @@ void ResourceRequestBase::addHTTPHeaderFieldIfNotPresent(HTTPHeaderName name, co
     if (!m_httpHeaderFields.addIfNotPresent(name, value))
         return;
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 void ResourceRequestBase::addHTTPHeaderField(HTTPHeaderName name, const String& value)
@@ -482,8 +497,7 @@ void ResourceRequestBase::addHTTPHeaderField(HTTPHeaderName name, const String& 
 
     m_httpHeaderFields.add(name, value);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 void ResourceRequestBase::addHTTPHeaderField(const String& name, const String& value)
@@ -492,8 +506,7 @@ void ResourceRequestBase::addHTTPHeaderField(const String& name, const String& v
 
     m_httpHeaderFields.add(name, value);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 bool ResourceRequestBase::hasHTTPHeaderField(HTTPHeaderName headerName) const
@@ -507,8 +520,7 @@ void ResourceRequestBase::setHTTPHeaderFields(HTTPHeaderMap headerFields)
 
     m_httpHeaderFields = WTFMove(headerFields);
 
-    if (url().protocolIsInHTTPFamily())
-        m_platformRequestUpdated = false;
+    m_platformRequestUpdated = false;
 }
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)
@@ -540,7 +552,7 @@ bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceReque
     return arePointingToEqualData(a.httpBody(), b.httpBody());
 }
 
-bool ResourceRequestBase::compare(const ResourceRequest& a, const ResourceRequest& b)
+bool ResourceRequestBase::equal(const ResourceRequest& a, const ResourceRequest& b)
 {
     if (!equalIgnoringHeaderFields(a, b))
         return false;
@@ -625,18 +637,6 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
     // This is used by the loader to control the number of issued parallel load requests.
     // Four seems to be a common default in HTTP frameworks.
     return 4;
-}
-#endif
-
-#if PLATFORM(IOS)
-void ResourceRequestBase::setDefaultAllowCookies(bool allowCookies)
-{
-    s_defaultAllowCookies = allowCookies;
-}
-
-bool ResourceRequestBase::defaultAllowCookies()
-{
-    return s_defaultAllowCookies;
 }
 #endif
 

@@ -65,6 +65,6 @@ if (UNIX)
 endif ()
 
 add_library(SqliteJava STATIC ${Sqlite_SOURCES})
+target_include_directories(SqliteJava PUBLIC ".")
 target_compile_definitions(SqliteJava PRIVATE ${Sqlite_DEFINES})
 target_compile_options(SqliteJava PRIVATE ${Sqlite_COMPILE_FLAGS})
-

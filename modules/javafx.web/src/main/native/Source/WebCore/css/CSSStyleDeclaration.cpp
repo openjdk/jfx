@@ -28,9 +28,9 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSPropertyParser.h"
+#include "DeprecatedGlobalSettings.h"
 #include "HashTools.h"
 #include "RuntimeEnabledFeatures.h"
-#include "Settings.h"
 
 namespace WebCore {
 
@@ -250,6 +250,11 @@ static CSSPropertyInfo parseJavaScriptCSSPropertyName(const AtomicString& proper
 
 }
 
+CSSPropertyID CSSStyleDeclaration::getCSSPropertyIDFromJavaScriptPropertyName(const AtomicString& propertyName)
+{
+    return parseJavaScriptCSSPropertyName(propertyName).propertyID;
+}
+
 std::optional<Variant<String, double>> CSSStyleDeclaration::namedItem(const AtomicString& propertyName)
 {
     auto propertyInfo = parseJavaScriptCSSPropertyName(propertyName);
@@ -286,7 +291,7 @@ ExceptionOr<void> CSSStyleDeclaration::setNamedItem(const AtomicString& property
         value.append("px");
 
     bool important = false;
-    if (Settings::shouldRespectPriorityInCSSAttributeSetters()) {
+    if (DeprecatedGlobalSettings::shouldRespectPriorityInCSSAttributeSetters()) {
         auto importantIndex = value.findIgnoringASCIICase("!important");
         if (importantIndex && importantIndex != notFound) {
             important = true;
@@ -321,6 +326,19 @@ Vector<AtomicString> CSSStyleDeclaration::supportedPropertyNames() const
         result.uncheckedAppend(cssPropertyNames[i]);
 
     return result;
+}
+
+String CSSStyleDeclaration::cssFloat()
+{
+    return getPropertyValueInternal(CSSPropertyFloat);
+}
+
+ExceptionOr<void> CSSStyleDeclaration::setCssFloat(const String& value)
+{
+    auto result = setPropertyInternal(CSSPropertyFloat, value, false /* important */);
+    if (result.hasException())
+        return result.releaseException();
+    return { };
 }
 
 }

@@ -43,7 +43,18 @@ public:
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
     {
-        return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, proto, TypeInfo(InternalFunctionType, StructureFlags), info());
+    }
+
+    static bool isIntegerImpl(JSValue value)
+    {
+        if (value.isInt32())
+            return true;
+        if (!value.isDouble())
+            return false;
+
+        double number = value.asDouble();
+        return std::isfinite(number) && trunc(number) == number;
     }
 
 protected:
@@ -51,8 +62,6 @@ protected:
 
 private:
     NumberConstructor(VM&, Structure*);
-    static ConstructType getConstructData(JSCell*, ConstructData&);
-    static CallType getCallData(JSCell*, CallData&);
 };
 
 } // namespace JSC

@@ -24,7 +24,7 @@
 #include "FrameLoaderTypes.h"
 #include "JSDOMWindowProxy.h"
 #include <JavaScriptCore/JSBase.h>
-#include <heap/Strong.h>
+#include <JavaScriptCore/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/TextPosition.h>
@@ -56,6 +56,7 @@ class Frame;
 class HTMLDocument;
 class HTMLPlugInElement;
 class LoadableModuleScript;
+class ModuleFetchParameters;
 class ScriptSourceCode;
 class SecurityOrigin;
 class URL;
@@ -63,6 +64,7 @@ class Widget;
 struct ExceptionDetails;
 
 enum ReasonForCallingCanExecuteScripts {
+    AboutToCreateEventListener,
     AboutToExecuteScript,
     NotAboutToExecuteScript
 };
@@ -115,8 +117,8 @@ public:
     JSC::JSValue evaluate(const ScriptSourceCode&, ExceptionDetails* = nullptr);
     JSC::JSValue evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&, ExceptionDetails* = nullptr);
 
-    void loadModuleScriptInWorld(LoadableModuleScript&, const String& moduleName, DOMWrapperWorld&);
-    void loadModuleScript(LoadableModuleScript&, const String& moduleName);
+    void loadModuleScriptInWorld(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&, DOMWrapperWorld&);
+    void loadModuleScript(LoadableModuleScript&, const String& moduleName, Ref<ModuleFetchParameters>&&);
     void loadModuleScriptInWorld(LoadableModuleScript&, const ScriptSourceCode&, DOMWrapperWorld&);
     void loadModuleScript(LoadableModuleScript&, const ScriptSourceCode&);
 
@@ -132,9 +134,6 @@ public:
     void enableWebAssembly();
     void disableEval(const String& errorMessage);
     void disableWebAssembly(const String& errorMessage);
-
-    WEBCORE_EXPORT static bool processingUserGesture();
-    WEBCORE_EXPORT static bool processingUserGestureForMedia();
 
     static bool canAccessFromCurrentOrigin(Frame*);
     WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);

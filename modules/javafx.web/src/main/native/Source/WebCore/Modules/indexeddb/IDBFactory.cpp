@@ -39,9 +39,9 @@
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 
-using namespace JSC;
 
 namespace WebCore {
+using namespace JSC;
 
 static bool shouldThrowSecurityException(ScriptExecutionContext& context)
 {
@@ -70,9 +70,7 @@ IDBFactory::IDBFactory(IDBClient::IDBConnectionProxy& connectionProxy)
 {
 }
 
-IDBFactory::~IDBFactory()
-{
-}
+IDBFactory::~IDBFactory() = default;
 
 ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::open(ScriptExecutionContext& context, const String& name, std::optional<uint64_t> version)
 {
@@ -93,7 +91,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::openInternal(ScriptExecutionConte
         return Exception { SecurityError, ASCIILiteral("IDBFactory.open() called in an invalid security context") };
 
     ASSERT(context.securityOrigin());
-    IDBDatabaseIdentifier databaseIdentifier(name, *context.securityOrigin(), context.topOrigin());
+    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData::fromSecurityOrigin(*context.securityOrigin()), SecurityOriginData::fromSecurityOrigin(context.topOrigin()));
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, ASCIILiteral("IDBFactory.open() called with an invalid security origin") };
 
@@ -113,7 +111,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::deleteDatabase(ScriptExecutionCon
         return Exception { SecurityError, ASCIILiteral("IDBFactory.deleteDatabase() called in an invalid security context") };
 
     ASSERT(context.securityOrigin());
-    IDBDatabaseIdentifier databaseIdentifier(name, *context.securityOrigin(), context.topOrigin());
+    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData::fromSecurityOrigin(*context.securityOrigin()), SecurityOriginData::fromSecurityOrigin(context.topOrigin()));
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, ASCIILiteral("IDBFactory.deleteDatabase() called with an invalid security origin") };
 

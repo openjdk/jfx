@@ -30,7 +30,7 @@
 #include "JSDOMWindowBase.h"
 #include "DOMWindow.h"
 
-#include <runtime/JSLock.h>
+#include <JavaScriptCore/JSLock.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/StringImpl.h>
 

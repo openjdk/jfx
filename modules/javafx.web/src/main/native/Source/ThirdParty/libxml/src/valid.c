@@ -701,9 +701,9 @@ xmlValidBuildAContentModel(xmlElementContentPtr content,
             break;
         case XML_ELEMENT_CONTENT_MULT:
             ctxt->state = xmlAutomataNewEpsilon(ctxt->am,
-                        ctxt->state, NULL);
+                            ctxt->state, NULL);
             xmlAutomataNewTransition(ctxt->am,
-                ctxt->state, ctxt->state, fullname, NULL);
+                    ctxt->state, ctxt->state, fullname, NULL);
             break;
         }
         if ((fullname != fn) && (fullname != content->name))
@@ -1181,7 +1181,7 @@ xmlDumpElementContent(xmlBufferPtr buf, xmlElementContentPtr content, int glob) 
             xmlBufferWriteChar(buf, " , ");
         if ((content->c2 != NULL) &&
             ((content->c2->type == XML_ELEMENT_CONTENT_OR) ||
-             ((content->c2->type == XML_ELEMENT_CONTENT_SEQ) &&
+            ((content->c2->type == XML_ELEMENT_CONTENT_SEQ) &&
           (content->c2->ocur != XML_ELEMENT_CONTENT_ONCE))))
         xmlDumpElementContent(buf, content->c2, 1);
         else
@@ -1197,7 +1197,7 @@ xmlDumpElementContent(xmlBufferPtr buf, xmlElementContentPtr content, int glob) 
             xmlBufferWriteChar(buf, " | ");
         if ((content->c2 != NULL) &&
             ((content->c2->type == XML_ELEMENT_CONTENT_SEQ) ||
-             ((content->c2->type == XML_ELEMENT_CONTENT_OR) &&
+            ((content->c2->type == XML_ELEMENT_CONTENT_OR) &&
           (content->c2->ocur != XML_ELEMENT_CONTENT_ONCE))))
         xmlDumpElementContent(buf, content->c2, 1);
         else
@@ -1272,8 +1272,8 @@ xmlSnprintfElementContent(char *buf, int size, xmlElementContentPtr content, int
         if (content->prefix != NULL)
                 qnameLen += xmlStrlen(content->prefix) + 1;
         if (size - len < qnameLen + 10) {
-        strcat(buf, " ...");
-        return;
+            strcat(buf, " ...");
+            return;
         }
         if (content->prefix != NULL) {
         strcat(buf, (char *) content->prefix);
@@ -2753,12 +2753,12 @@ xmlRemoveID(xmlDocPtr doc, xmlAttrPtr attr) {
 
     ID = xmlNodeListGetString(doc, attr->children, 1);
     if (ID == NULL)
-        return(-1);
+    return(-1);
 
     id = xmlHashLookup(table, ID);
     if (id == NULL || id->attr != attr) {
-        xmlFree(ID);
-        return(-1);
+    xmlFree(ID);
+    return(-1);
     }
 
     xmlHashRemoveEntry(table, ID, (xmlHashDeallocator) xmlFreeID);
@@ -6829,7 +6829,7 @@ xmlValidateDocument(xmlValidCtxtPtr ctxt, xmlDocPtr doc) {
     xmlChar *sysID;
     if (doc->intSubset->SystemID != NULL) {
         sysID = xmlBuildURI(doc->intSubset->SystemID,
-            doc->URL);
+                doc->URL);
         if (sysID == NULL) {
             xmlErrValid(ctxt, XML_DTD_LOAD_ERROR,
             "Could not build URI for external subset \"%s\"\n",

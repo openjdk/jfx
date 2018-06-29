@@ -41,11 +41,14 @@
 #include "LoadableModuleScript.h"
 #include "MainFrame.h"
 #include "ModuleFetchFailureKind.h"
+#include "ModuleFetchParameters.h"
 #include "NP_jsobject.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
 #include "PageGroup.h"
 #include "PluginViewBase.h"
+#include "RuntimeApplicationChecks.h"
+#include "ScriptDisallowedScope.h"
 #include "ScriptSourceCode.h"
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
@@ -53,24 +56,24 @@
 #include "WebCoreJSClientData.h"
 #include "npruntime_impl.h"
 #include "runtime_root.h"
-#include <debugger/Debugger.h>
-#include <heap/StrongInlines.h>
-#include <inspector/ScriptCallStack.h>
-#include <runtime/InitializeThreading.h>
-#include <runtime/JSFunction.h>
-#include <runtime/JSInternalPromise.h>
-#include <runtime/JSLock.h>
-#include <runtime/JSModuleRecord.h>
-#include <runtime/JSNativeStdFunction.h>
-#include <runtime/JSScriptFetcher.h>
+#include <JavaScriptCore/Debugger.h>
+#include <JavaScriptCore/InitializeThreading.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSInternalPromise.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/JSModuleRecord.h>
+#include <JavaScriptCore/JSNativeStdFunction.h>
+#include <JavaScriptCore/JSScriptFetchParameters.h>
+#include <JavaScriptCore/JSScriptFetcher.h>
+#include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/StrongInlines.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/SetForScope.h>
 #include <wtf/Threading.h>
 #include <wtf/text/TextPosition.h>
 
-using namespace JSC;
-
 namespace WebCore {
+using namespace JSC;
 
 static void collectGarbageAfterWindowProxyDestruction()
 {
@@ -190,20 +193,20 @@ JSValue ScriptController::evaluate(const ScriptSourceCode& sourceCode, Exception
     return evaluateInWorld(sourceCode, mainThreadNormalWorld(), exceptionDetails);
 }
 
-void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScript, const String& moduleName, DOMWrapperWorld& world)
+void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScript, const String& moduleName, Ref<ModuleFetchParameters>&& topLevelFetchParameters, DOMWrapperWorld& world)
 {
     JSLockHolder lock(world.vm());
 
     auto& proxy = *windowProxy(world);
     auto& state = *proxy.window()->globalExec();
 
-    auto& promise = JSMainThreadExecState::loadModule(state, moduleName, JSC::JSScriptFetcher::create(state.vm(), { &moduleScript }));
+    auto& promise = JSMainThreadExecState::loadModule(state, moduleName, JSC::JSScriptFetchParameters::create(state.vm(), WTFMove(topLevelFetchParameters)), JSC::JSScriptFetcher::create(state.vm(), { &moduleScript }));
     setupModuleScriptHandlers(moduleScript, promise, world);
 }
 
-void ScriptController::loadModuleScript(LoadableModuleScript& moduleScript, const String& moduleName)
+void ScriptController::loadModuleScript(LoadableModuleScript& moduleScript, const String& moduleName, Ref<ModuleFetchParameters>&& topLevelFetchParameters)
 {
-    loadModuleScriptInWorld(moduleScript, moduleName, mainThreadNormalWorld());
+    loadModuleScriptInWorld(moduleScript, moduleName, WTFMove(topLevelFetchParameters), mainThreadNormalWorld());
 }
 
 void ScriptController::loadModuleScriptInWorld(LoadableModuleScript& moduleScript, const ScriptSourceCode& sourceCode, DOMWrapperWorld& world)
@@ -281,9 +284,7 @@ Ref<DOMWrapperWorld> ScriptController::createWorld()
 
 Vector<JSC::Strong<JSDOMWindowProxy>> ScriptController::windowProxies()
 {
-    Vector<JSC::Strong<JSDOMWindowProxy>> windowProxies;
-    copyValuesToVector(m_windowProxies, windowProxies);
-    return windowProxies;
+    return copyToVector(m_windowProxies.values());
 }
 
 void ScriptController::getAllWorlds(Vector<Ref<DOMWrapperWorld>>& worlds)
@@ -469,16 +470,6 @@ void ScriptController::disableWebAssembly(const String& errorMessage)
     if (!windowProxy)
         return;
     windowProxy->window()->setWebAssemblyEnabled(false, errorMessage);
-}
-
-bool ScriptController::processingUserGesture()
-{
-    return UserGestureIndicator::processingUserGesture();
-}
-
-bool ScriptController::processingUserGestureForMedia()
-{
-    return UserGestureIndicator::processingUserGestureForMedia();
 }
 
 bool ScriptController::canAccessFromCurrentOrigin(Frame* frame)
@@ -676,9 +667,12 @@ JSValue ScriptController::executeScriptInWorld(DOMWrapperWorld& world, const Str
 
 bool ScriptController::canExecuteScripts(ReasonForCallingCanExecuteScripts reason)
 {
+    if (reason == AboutToExecuteScript)
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isScriptAllowed() || !isInWebProcess());
+
     if (m_frame.document() && m_frame.document()->isSandboxed(SandboxScripts)) {
         // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-        if (reason == AboutToExecuteScript)
+        if (reason == AboutToExecuteScript || reason == AboutToCreateEventListener)
             m_frame.document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked script execution in '" + m_frame.document()->url().stringCenterEllipsizedToLength() + "' because the document's frame is sandboxed and the 'allow-scripts' permission is not set.");
         return false;
     }

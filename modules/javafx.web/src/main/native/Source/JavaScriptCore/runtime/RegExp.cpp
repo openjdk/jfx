@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001, 2004 Harri Porten (porten@kde.org)
- *  Copyright (c) 2007, 2008, 2016 Apple Inc. All rights reserved.
+ *  Copyright (c) 2007, 2008, 2016-2017 Apple Inc. All rights reserved.
  *  Copyright (C) 2009 Torch Mobile, Inc.
  *  Copyright (C) 2010 Peter Varga (pvarga@inf.u-szeged.hu), University of Szeged
  *
@@ -59,6 +59,12 @@ RegExpFlags regExpFlags(const String& string)
             flags = static_cast<RegExpFlags>(flags | FlagMultiline);
             break;
 
+        case 's':
+            if (flags & FlagDotAll)
+                return InvalidFlags;
+            flags = static_cast<RegExpFlags>(flags | FlagDotAll);
+            break;
+
         case 'u':
             if (flags & FlagUnicode)
                 return InvalidFlags;
@@ -104,10 +110,12 @@ void RegExpFunctionalTestCollector::outputOneTest(RegExp* regExp, const String& 
             fputc('i', m_file);
         if (regExp->multiline())
             fputc('m', m_file);
-        if (regExp->sticky())
-            fputc('y', m_file);
+        if (regExp->dotAll())
+            fputc('s', m_file);
         if (regExp->unicode())
             fputc('u', m_file);
+        if (regExp->sticky())
+            fputc('y', m_file);
         fprintf(m_file, "\n");
     }
 
@@ -206,27 +214,20 @@ RegExp::RegExp(VM& vm, const String& patternString, RegExpFlags flags)
     , m_state(NotCompiled)
     , m_patternString(patternString)
     , m_flags(flags)
-    , m_constructionError(0)
-    , m_numSubpatterns(0)
-#if ENABLE(REGEXP_TRACING)
-    , m_rtMatchOnlyTotalSubjectStringLen(0.0)
-    , m_rtMatchTotalSubjectStringLen(0.0)
-    , m_rtMatchOnlyCallCount(0)
-    , m_rtMatchOnlyFoundCount(0)
-    , m_rtMatchCallCount(0)
-    , m_rtMatchFoundCount(0)
-#endif
 {
 }
 
 void RegExp::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    Yarr::YarrPattern pattern(m_patternString, m_flags, &m_constructionError, vm.stackLimit());
+    Yarr::YarrPattern pattern(m_patternString, m_flags, m_constructionErrorCode, vm.stackLimit());
     if (!isValid())
         m_state = ParseError;
-    else
+    else {
         m_numSubpatterns = pattern.m_numSubpatterns;
+        m_captureGroupNames.swap(pattern.m_captureGroupNames);
+        m_namedGroupToParenIndex.swap(pattern.m_namedGroupToParenIndex);
+    }
 }
 
 void RegExp::destroy(JSCell* cell)
@@ -260,12 +261,36 @@ RegExp* RegExp::create(VM& vm, const String& patternString, RegExpFlags flags)
     return vm.regExpCache()->lookupOrCreate(patternString, flags);
 }
 
+
+static std::unique_ptr<Yarr::BytecodePattern> byteCodeCompilePattern(VM* vm, Yarr::YarrPattern& pattern)
+{
+    return Yarr::byteCompile(pattern, &vm->m_regExpAllocator, &vm->m_regExpAllocatorLock);
+}
+
+void RegExp::byteCodeCompileIfNecessary(VM* vm)
+{
+    if (m_regExpBytecode)
+        return;
+
+    Yarr::YarrPattern pattern(m_patternString, m_flags, m_constructionErrorCode, vm->stackLimit());
+    if (hasError(m_constructionErrorCode)) {
+        RELEASE_ASSERT_NOT_REACHED();
+#if COMPILER_QUIRK(CONSIDERS_UNREACHABLE_CODE)
+        m_state = ParseError;
+        return;
+#endif
+    }
+    ASSERT(m_numSubpatterns == pattern.m_numSubpatterns);
+
+    m_regExpBytecode = byteCodeCompilePattern(vm, pattern);
+}
+
 void RegExp::compile(VM* vm, Yarr::YarrCharSize charSize)
 {
     ConcurrentJSLocker locker(m_lock);
 
-    Yarr::YarrPattern pattern(m_patternString, m_flags, &m_constructionError, vm->stackLimit());
-    if (m_constructionError) {
+    Yarr::YarrPattern pattern(m_patternString, m_flags, m_constructionErrorCode, vm->stackLimit());
+    if (hasError(m_constructionErrorCode)) {
         RELEASE_ASSERT_NOT_REACHED();
 #if COMPILER_QUIRK(CONSIDERS_UNREACHABLE_CODE)
         m_state = ParseError;
@@ -281,9 +306,9 @@ void RegExp::compile(VM* vm, Yarr::YarrCharSize charSize)
     }
 
 #if ENABLE(YARR_JIT)
-    if (!pattern.m_containsBackreferences && !pattern.containsUnsignedLengthPattern() && !unicode() && vm->canUseRegExpJIT()) {
+    if (!pattern.m_containsBackreferences && !pattern.containsUnsignedLengthPattern() && VM::canUseRegExpJIT()) {
         Yarr::jitCompile(pattern, charSize, vm, m_regExpJITCode);
-        if (!m_regExpJITCode.isFallBack()) {
+        if (!m_regExpJITCode.failureReason()) {
             m_state = JITCode;
             return;
         }
@@ -292,8 +317,11 @@ void RegExp::compile(VM* vm, Yarr::YarrCharSize charSize)
     UNUSED_PARAM(charSize);
 #endif
 
+    if (Options::dumpCompiledRegExpPatterns())
+        dataLog("Can't JIT this regular expression: \"", m_patternString, "\"\n");
+
     m_state = ByteCode;
-    m_regExpBytecode = Yarr::byteCompile(pattern, &vm->m_regExpAllocator, &vm->m_regExpAllocatorLock);
+    m_regExpBytecode = byteCodeCompilePattern(vm, pattern);
 }
 
 int RegExp::match(VM& vm, const String& s, unsigned startOffset, Vector<int>& ovector)
@@ -317,8 +345,8 @@ void RegExp::compileMatchOnly(VM* vm, Yarr::YarrCharSize charSize)
 {
     ConcurrentJSLocker locker(m_lock);
 
-    Yarr::YarrPattern pattern(m_patternString, m_flags, &m_constructionError, vm->stackLimit());
-    if (m_constructionError) {
+    Yarr::YarrPattern pattern(m_patternString, m_flags, m_constructionErrorCode, vm->stackLimit());
+    if (hasError(m_constructionErrorCode)) {
         RELEASE_ASSERT_NOT_REACHED();
 #if COMPILER_QUIRK(CONSIDERS_UNREACHABLE_CODE)
         m_state = ParseError;
@@ -334,9 +362,9 @@ void RegExp::compileMatchOnly(VM* vm, Yarr::YarrCharSize charSize)
     }
 
 #if ENABLE(YARR_JIT)
-    if (!pattern.m_containsBackreferences && !pattern.containsUnsignedLengthPattern() && !unicode() && vm->canUseRegExpJIT()) {
+    if (!pattern.m_containsBackreferences && !pattern.containsUnsignedLengthPattern() && VM::canUseRegExpJIT()) {
         Yarr::jitCompile(pattern, charSize, vm, m_regExpJITCode, Yarr::MatchOnly);
-        if (!m_regExpJITCode.isFallBack()) {
+        if (!m_regExpJITCode.failureReason()) {
             m_state = JITCode;
             return;
         }
@@ -345,8 +373,11 @@ void RegExp::compileMatchOnly(VM* vm, Yarr::YarrCharSize charSize)
     UNUSED_PARAM(charSize);
 #endif
 
+    if (Options::dumpCompiledRegExpPatterns())
+        dataLog("Can't JIT this regular expression: \"", m_patternString, "\"\n");
+
     m_state = ByteCode;
-    m_regExpBytecode = Yarr::byteCompile(pattern, &vm->m_regExpAllocator, &vm->m_regExpAllocatorLock);
+    m_regExpBytecode = byteCodeCompilePattern(vm, pattern);
 }
 
 MatchResult RegExp::match(VM& vm, const String& s, unsigned startOffset)

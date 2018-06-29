@@ -173,11 +173,14 @@ public:
     bool containsFiles() const {
         return containsURL();
     }
-    void asFilenames(Vector<String>& result) const {
+
+    Vector<String> asFilenames() const {
+        Vector<String> result {};
         if(m_url.isEmpty() && !m_filenames.isEmpty())
             result = m_filenames;
         else if(!m_url.isEmpty())
             result.append(m_url.string());
+        return result;
     }
 
     //Plain Text

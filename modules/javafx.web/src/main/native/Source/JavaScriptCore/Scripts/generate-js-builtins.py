@@ -114,7 +114,7 @@ def generate_bindings_for_builtins_files(builtins_files=[],
     if concatenate_output:
         filename = concatenated_output_filename(builtins_files, framework_name, generate_only_wrapper_files)
         output_filepath = os.path.join(output_path, filename)
-        log.debug("Writing file: %s" % output_filepath) 
+        log.debug("Writing file: %s" % output_filepath)
         output_file = LazyFileWriter(output_filepath, force_output)
         output_file.write('\n'.join(test_result_file_contents))
         output_file.close()

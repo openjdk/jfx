@@ -27,8 +27,8 @@
 
 #if ENABLE(GAMEPAD)
 
+#include <wtf/Forward.h>
 #include <wtf/HashSet.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -37,7 +37,7 @@ class PlatformGamepad;
 
 class WEBCORE_EXPORT GamepadProvider {
 public:
-    virtual ~GamepadProvider() { }
+    virtual ~GamepadProvider() = default;
 
     WEBCORE_EXPORT static GamepadProvider& singleton();
     WEBCORE_EXPORT static void setSharedProvider(GamepadProvider&);

@@ -56,9 +56,9 @@ Ref<Image> BitmapImage::createFromName(const char* name)
     ASSERT(midLoadFromResource);
 
     RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
-    img->m_source.ensureDecoderAvailable(dataBuffer.get());
+    img->m_source->ensureDecoderAvailable(dataBuffer.get());
     env->CallVoidMethod(
-        img->m_source.m_decoder->nativeDecoder(),
+        static_cast<ImageDecoderJava*>(img->m_source->m_decoder.get())->nativeDecoder(),
         midLoadFromResource,
         (jstring)String(name).toJavaString(env));
     CheckAndClearException(env);

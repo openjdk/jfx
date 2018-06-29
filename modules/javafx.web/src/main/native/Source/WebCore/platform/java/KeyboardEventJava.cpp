@@ -67,7 +67,7 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(
             ctrlKey,
             altKey,
             metaKey,
-            timestamp)
+            WallTime::fromRawSeconds(timestamp))
         , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
         , m_autoRepeat(false)
         , m_isKeypad(false)

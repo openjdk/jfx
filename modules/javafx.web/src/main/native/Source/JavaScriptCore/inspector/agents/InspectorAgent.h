@@ -29,9 +29,9 @@
 
 #pragma once
 
+#include "InspectorAgentBase.h"
 #include "InspectorBackendDispatchers.h"
 #include "InspectorFrontendDispatchers.h"
-#include "inspector/InspectorAgentBase.h"
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
@@ -72,7 +72,7 @@ private:
     Vector<String> m_pendingEvaluateTestCommands;
     std::pair<RefPtr<Protocol::Runtime::RemoteObject>, RefPtr<JSON::Object>> m_pendingInspectData;
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-    RefPtr<Inspector::Protocol::Array<String>> m_pendingExtraDomainsData;
+    RefPtr<JSON::ArrayOf<String>> m_pendingExtraDomainsData;
 #endif
     bool m_enabled { false };
 };

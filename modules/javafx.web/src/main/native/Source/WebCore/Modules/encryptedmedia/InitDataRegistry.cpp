@@ -34,7 +34,6 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/Base64.h>
 
-using namespace Inspector;
 
 namespace WebCore {
 

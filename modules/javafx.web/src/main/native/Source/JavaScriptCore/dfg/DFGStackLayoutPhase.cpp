@@ -73,15 +73,6 @@ public:
                     break;
                 }
 
-                case GetLocalUnlinked: {
-                    VirtualRegister operand = node->unlinkedLocal();
-                    if (operand.isArgument())
-                        break;
-                    usedLocals.set(operand.toLocal());
-                    hasNodesThatNeedFixup = true;
-                    break;
-                }
-
                 case LoadVarargs:
                 case ForwardVarargs: {
                     LoadVarargsData* data = node->loadVarargsData();
@@ -121,7 +112,7 @@ public:
                     CallFrameSlot::argumentCount + inlineCallFrame->stackOffset).toLocal());
             }
 
-            for (unsigned argument = inlineCallFrame->arguments.size(); argument-- > 1;) {
+            for (unsigned argument = inlineCallFrame->argumentsWithFixup.size(); argument--;) {
                 usedLocals.set(VirtualRegister(
                     virtualRegisterForArgument(argument).offset() +
                     inlineCallFrame->stackOffset).toLocal());
@@ -187,7 +178,7 @@ public:
                     allocation, VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCount));
             }
 
-            for (unsigned argument = inlineCallFrame->arguments.size(); argument-- > 1;) {
+            for (unsigned argument = inlineCallFrame->argumentsWithFixup.size(); argument--;) {
                 ArgumentPosition& position = m_graph.m_argumentPositions[
                     data.argumentPositionStart + argument];
                 VariableAccessData* variable = position.someVariable();
@@ -198,7 +189,7 @@ public:
                     source = ValueSource::forFlushFormat(
                         variable->machineLocal(), variable->flushFormat());
                 }
-                inlineCallFrame->arguments[argument] = source.valueRecovery();
+                inlineCallFrame->argumentsWithFixup[argument] = source.valueRecovery();
             }
 
             RELEASE_ASSERT(inlineCallFrame->isClosureCall == !!data.calleeVariable);
@@ -212,7 +203,7 @@ public:
                 RELEASE_ASSERT(inlineCallFrame->calleeRecovery.isConstant());
         }
 
-        // Fix GetLocalUnlinked's variable references.
+        // Fix Varargs' variable references.
         if (hasNodesThatNeedFixup) {
             for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
                 BasicBlock* block = m_graph.block(blockIndex);
@@ -221,11 +212,6 @@ public:
                 for (unsigned nodeIndex = block->size(); nodeIndex--;) {
                     Node* node = block->at(nodeIndex);
                     switch (node->op()) {
-                    case GetLocalUnlinked: {
-                        node->setUnlinkedMachineLocal(assign(allocation, node->unlinkedLocal()));
-                        break;
-                    }
-
                     case LoadVarargs:
                     case ForwardVarargs: {
                         LoadVarargsData* data = node->loadVarargsData();

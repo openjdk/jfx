@@ -47,9 +47,7 @@ ThreadableLoaderOptions::ThreadableLoaderOptions()
     mode = FetchOptions::Mode::SameOrigin;
 }
 
-ThreadableLoaderOptions::~ThreadableLoaderOptions()
-{
-}
+ThreadableLoaderOptions::~ThreadableLoaderOptions() = default;
 
 ThreadableLoaderOptions::ThreadableLoaderOptions(const ResourceLoaderOptions& baseOptions, PreflightPolicy preflightPolicy, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, String&& initiator, ResponseFilteringPolicy filteringPolicy)
     : ResourceLoaderOptions(baseOptions)
@@ -65,7 +63,6 @@ ThreadableLoaderOptions ThreadableLoaderOptions::isolatedCopy() const
     ThreadableLoaderOptions copy;
 
     // FetchOptions
-    copy.type = this->type;
     copy.destination = this->destination;
     copy.mode = this->mode;
     copy.credentials = this->credentials;
@@ -78,7 +75,7 @@ ThreadableLoaderOptions ThreadableLoaderOptions::isolatedCopy() const
     copy.sendLoadCallbacks = this->sendLoadCallbacks;
     copy.sniffContent = this->sniffContent;
     copy.dataBufferingPolicy = this->dataBufferingPolicy;
-    copy.allowCredentials = this->allowCredentials;
+    copy.storedCredentialsPolicy = this->storedCredentialsPolicy;
     copy.securityCheck = this->securityCheck;
     copy.certificateInfoPolicy = this->certificateInfoPolicy;
     copy.contentSecurityPolicyImposition = this->contentSecurityPolicyImposition;
@@ -105,7 +102,7 @@ ThreadableLoaderOptions ThreadableLoaderOptions::isolatedCopy() const
 RefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext& context, ThreadableLoaderClient& client, ResourceRequest&& request, const ThreadableLoaderOptions& options, String&& referrer)
 {
     if (is<WorkerGlobalScope>(context))
-        return WorkerThreadableLoader::create(downcast<WorkerGlobalScope>(context), client, WorkerRunLoop::defaultMode(), WTFMove(request), options, referrer);
+        return WorkerThreadableLoader::create(downcast<WorkerGlobalScope>(context), client, WorkerRunLoop::defaultMode(), WTFMove(request), options, WTFMove(referrer));
 
     return DocumentThreadableLoader::create(downcast<Document>(context), client, WTFMove(request), options, WTFMove(referrer));
 }

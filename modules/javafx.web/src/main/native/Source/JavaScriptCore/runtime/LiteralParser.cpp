@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Mathias Bynens (mathias@qiwi.be)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,28 +51,30 @@ static ALWAYS_INLINE bool isJSONWhiteSpace(const CharType& c)
 template <typename CharType>
 bool LiteralParser<CharType>::tryJSONPParse(Vector<JSONPData>& results, bool needsFullSourceInfo)
 {
+    VM& vm = m_exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
     if (m_lexer.next() != TokIdentifier)
         return false;
     do {
         Vector<JSONPPathEntry> path;
         // Unguarded next to start off the lexer
-        Identifier name = Identifier::fromString(&m_exec->vm(), m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
+        Identifier name = Identifier::fromString(&vm, m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
         JSONPPathEntry entry;
-        if (name == m_exec->vm().propertyNames->varKeyword) {
+        if (name == vm.propertyNames->varKeyword) {
             if (m_lexer.next() != TokIdentifier)
                 return false;
-            entry.m_type = JSONPPathEntryTypeDeclare;
-            entry.m_pathEntryName = Identifier::fromString(&m_exec->vm(), m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
+            entry.m_type = JSONPPathEntryTypeDeclareVar;
+            entry.m_pathEntryName = Identifier::fromString(&vm, m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
             path.append(entry);
         } else {
             entry.m_type = JSONPPathEntryTypeDot;
-            entry.m_pathEntryName = Identifier::fromString(&m_exec->vm(), m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
+            entry.m_pathEntryName = Identifier::fromString(&vm, m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
             path.append(entry);
         }
         if (isLexerKeyword(entry.m_pathEntryName))
             return false;
         TokenType tokenType = m_lexer.next();
-        if (entry.m_type == JSONPPathEntryTypeDeclare && tokenType != TokAssign)
+        if (entry.m_type == JSONPPathEntryTypeDeclareVar && tokenType != TokAssign)
             return false;
         while (tokenType != TokAssign) {
             switch (tokenType) {
@@ -93,7 +95,7 @@ bool LiteralParser<CharType>::tryJSONPParse(Vector<JSONPData>& results, bool nee
                 entry.m_type = JSONPPathEntryTypeDot;
                 if (m_lexer.next() != TokIdentifier)
                     return false;
-                entry.m_pathEntryName = Identifier::fromString(&m_exec->vm(), m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
+                entry.m_pathEntryName = Identifier::fromString(&vm, m_lexer.currentToken()->start, m_lexer.currentToken()->end - m_lexer.currentToken()->start);
                 break;
             }
             case TokLParen: {
@@ -112,7 +114,9 @@ bool LiteralParser<CharType>::tryJSONPParse(Vector<JSONPData>& results, bool nee
     startJSON:
         m_lexer.next();
         results.append(JSONPData());
-        results.last().m_value.set(m_exec->vm(), parse(StartParseExpression));
+        JSValue startParseExpressionValue = parse(StartParseExpression);
+        RETURN_IF_EXCEPTION(scope, false);
+        results.last().m_value.set(vm, startParseExpressionValue);
         if (!results.last().m_value)
             return false;
         results.last().m_path.swap(path);
@@ -589,7 +593,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
             case StartParseArray: {
                 JSArray* array = constructEmptyArray(m_exec, 0);
                 RETURN_IF_EXCEPTION(scope, JSValue());
-                objectStack.append(array);
+                objectStack.appendWithCrashOnOverflow(array);
             }
             doParseArrayStartExpression:
             FALLTHROUGH;
@@ -612,6 +616,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
             case DoParseArrayEndExpression: {
                 JSArray* array = asArray(objectStack.last());
                 array->putDirectIndex(m_exec, array->length(), lastValue);
+                RETURN_IF_EXCEPTION(scope, JSValue());
 
                 if (m_lexer.currentToken()->type == TokComma)
                     goto doParseArrayStartExpression;
@@ -629,7 +634,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
             startParseObject:
             case StartParseObject: {
                 JSObject* object = constructEmptyObject(m_exec);
-                objectStack.append(object);
+                objectStack.appendWithCrashOnOverflow(object);
 
                 TokenType type = m_lexer.next();
                 if (type == TokString || (m_mode != StrictJSON && type == TokIdentifier)) {
@@ -699,6 +704,7 @@ JSValue LiteralParser<CharType>::parse(ParserState initialState)
                     else
                         object->putDirect(vm, ident, lastValue);
                 }
+                RETURN_IF_EXCEPTION(scope, JSValue());
                 identifierStack.removeLast();
                 if (m_lexer.currentToken()->type == TokComma)
                     goto doParseObjectStartExpression;

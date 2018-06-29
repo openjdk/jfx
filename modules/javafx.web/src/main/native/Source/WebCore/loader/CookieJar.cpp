@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "Document.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "NetworkStorageSession.h"
 #include "NetworkingContext.h"
 #include "PlatformCookieJar.h"
@@ -54,31 +55,61 @@ inline NetworkStorageSession& storageSession(const Document& document)
     return context ? context->storageSession() : NetworkStorageSession::defaultStorageSession();
 }
 
-String cookies(const Document& document, const URL& url)
+String cookies(Document& document, const URL& url)
 {
     TraceScope scope(FetchCookiesStart, FetchCookiesEnd);
 
-    return platformStrategies()->cookiesStrategy()->cookiesForDOM(storageSession(document), document.firstPartyForCookies(), url);
+    auto includeSecureCookies = (url.protocolIs("https") && !document.foundMixedContent().contains(SecurityContext::MixedContentType::Active)) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No;
+    std::pair<String, bool> result;
+    auto frame = document.frame();
+    if (frame)
+        result = platformStrategies()->cookiesStrategy()->cookiesForDOM(storageSession(document), document.firstPartyForCookies(), url, frame->loader().client().frameID(), frame->loader().client().pageID(), includeSecureCookies);
+    else
+        result = platformStrategies()->cookiesStrategy()->cookiesForDOM(storageSession(document), document.firstPartyForCookies(), url, std::nullopt, std::nullopt, includeSecureCookies);
+
+    if (result.second)
+        document.setSecureCookiesAccessed();
+
+    return result.first;
 }
 
 void setCookies(Document& document, const URL& url, const String& cookieString)
 {
-    platformStrategies()->cookiesStrategy()->setCookiesFromDOM(storageSession(document), document.firstPartyForCookies(), url, cookieString);
+    auto frame = document.frame();
+    if (frame)
+        platformStrategies()->cookiesStrategy()->setCookiesFromDOM(storageSession(document), document.firstPartyForCookies(), url, frame->loader().client().frameID(), frame->loader().client().pageID(), cookieString);
+    else
+        platformStrategies()->cookiesStrategy()->setCookiesFromDOM(storageSession(document), document.firstPartyForCookies(), url, std::nullopt, std::nullopt, cookieString);
 }
 
 bool cookiesEnabled(const Document& document)
 {
-    return platformStrategies()->cookiesStrategy()->cookiesEnabled(storageSession(document), document.firstPartyForCookies(), document.cookieURL());
+    return platformStrategies()->cookiesStrategy()->cookiesEnabled(storageSession(document));
 }
 
-String cookieRequestHeaderFieldValue(const Document& document, const URL& url)
+String cookieRequestHeaderFieldValue(Document& document, const URL& url)
 {
-    return platformStrategies()->cookiesStrategy()->cookieRequestHeaderFieldValue(storageSession(document), document.firstPartyForCookies(), url);
+    auto includeSecureCookies = (url.protocolIs("https") && !document.foundMixedContent().contains(SecurityContext::MixedContentType::Active)) ? IncludeSecureCookies::Yes : IncludeSecureCookies::No;
+    std::pair<String, bool> result;
+    auto frame = document.frame();
+    if (frame)
+        result = platformStrategies()->cookiesStrategy()->cookieRequestHeaderFieldValue(storageSession(document), document.firstPartyForCookies(), url, frame->loader().client().frameID(), frame->loader().client().pageID(), includeSecureCookies);
+    else
+        result = platformStrategies()->cookiesStrategy()->cookieRequestHeaderFieldValue(storageSession(document), document.firstPartyForCookies(), url, std::nullopt, std::nullopt, includeSecureCookies);
+
+    if (result.second)
+        document.setSecureCookiesAccessed();
+
+    return result.first;
 }
 
 bool getRawCookies(const Document& document, const URL& url, Vector<Cookie>& cookies)
 {
-    return platformStrategies()->cookiesStrategy()->getRawCookies(storageSession(document), document.firstPartyForCookies(), url, cookies);
+    auto frame = document.frame();
+    if (frame)
+        return platformStrategies()->cookiesStrategy()->getRawCookies(storageSession(document), document.firstPartyForCookies(), url, frame->loader().client().frameID(), frame->loader().client().pageID(), cookies);
+
+    return platformStrategies()->cookiesStrategy()->getRawCookies(storageSession(document), document.firstPartyForCookies(), url, std::nullopt, std::nullopt, cookies);
 }
 
 void deleteCookie(const Document& document, const URL& url, const String& cookieName)

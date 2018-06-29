@@ -222,107 +222,107 @@ HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
     EventHandlerNameMap map;
 
     static const QualifiedName* const table[] = {
-        &onabortAttr,
-        &onanimationendAttr,
-        &onanimationiterationAttr,
-        &onanimationstartAttr,
-        &onautocompleteAttr,
-        &onautocompleteerrorAttr,
-        &onbeforecopyAttr,
-        &onbeforecutAttr,
-        &onbeforeinputAttr,
-        &onbeforeloadAttr,
-        &onbeforepasteAttr,
-        &onblurAttr,
-        &oncanplayAttr,
-        &oncanplaythroughAttr,
-        &onchangeAttr,
-        &onclickAttr,
-        &oncontextmenuAttr,
-        &oncopyAttr,
-        &oncutAttr,
-        &ondblclickAttr,
-        &ondragAttr,
-        &ondragendAttr,
-        &ondragenterAttr,
-        &ondragleaveAttr,
-        &ondragoverAttr,
-        &ondragstartAttr,
-        &ondropAttr,
-        &ondurationchangeAttr,
-        &onemptiedAttr,
-        &onendedAttr,
-        &onerrorAttr,
-        &onfocusAttr,
-        &onfocusinAttr,
-        &onfocusoutAttr,
-        &ongesturechangeAttr,
-        &ongestureendAttr,
-        &ongesturestartAttr,
-        &oninputAttr,
-        &oninvalidAttr,
-        &onkeydownAttr,
-        &onkeypressAttr,
-        &onkeyupAttr,
-        &onloadAttr,
-        &onloadeddataAttr,
-        &onloadedmetadataAttr,
-        &onloadstartAttr,
-        &onmousedownAttr,
-        &onmouseenterAttr,
-        &onmouseleaveAttr,
-        &onmousemoveAttr,
-        &onmouseoutAttr,
-        &onmouseoverAttr,
-        &onmouseupAttr,
-        &onmousewheelAttr,
-        &onpasteAttr,
-        &onpauseAttr,
-        &onplayAttr,
-        &onplayingAttr,
-        &onprogressAttr,
-        &onratechangeAttr,
-        &onresetAttr,
-        &onresizeAttr,
-        &onscrollAttr,
-        &onsearchAttr,
-        &onseekedAttr,
-        &onseekingAttr,
-        &onselectAttr,
-        &onselectstartAttr,
-        &onstalledAttr,
-        &onsubmitAttr,
-        &onsuspendAttr,
-        &ontimeupdateAttr,
-        &ontoggleAttr,
-        &ontouchcancelAttr,
-        &ontouchendAttr,
-        &ontouchforcechangeAttr,
-        &ontouchmoveAttr,
-        &ontouchstartAttr,
-        &ontransitionendAttr,
-        &onvolumechangeAttr,
-        &onwaitingAttr,
-        &onwebkitbeginfullscreenAttr,
-        &onwebkitcurrentplaybacktargetiswirelesschangedAttr,
-        &onwebkitendfullscreenAttr,
-        &onwebkitfullscreenchangeAttr,
-        &onwebkitfullscreenerrorAttr,
-        &onwebkitkeyaddedAttr,
-        &onwebkitkeyerrorAttr,
-        &onwebkitkeymessageAttr,
-        &onwebkitmouseforcechangedAttr,
-        &onwebkitmouseforcedownAttr,
-        &onwebkitmouseforcewillbeginAttr,
-        &onwebkitmouseforceupAttr,
-        &onwebkitneedkeyAttr,
-        &onwebkitplaybacktargetavailabilitychangedAttr,
-        &onwebkitpresentationmodechangedAttr,
-        &onwebkitwillrevealbottomAttr,
-        &onwebkitwillrevealleftAttr,
-        &onwebkitwillrevealrightAttr,
-        &onwebkitwillrevealtopAttr,
-        &onwheelAttr,
+        &onabortAttr.get(),
+        &onanimationendAttr.get(),
+        &onanimationiterationAttr.get(),
+        &onanimationstartAttr.get(),
+        &onautocompleteAttr.get(),
+        &onautocompleteerrorAttr.get(),
+        &onbeforecopyAttr.get(),
+        &onbeforecutAttr.get(),
+        &onbeforeinputAttr.get(),
+        &onbeforeloadAttr.get(),
+        &onbeforepasteAttr.get(),
+        &onblurAttr.get(),
+        &oncanplayAttr.get(),
+        &oncanplaythroughAttr.get(),
+        &onchangeAttr.get(),
+        &onclickAttr.get(),
+        &oncontextmenuAttr.get(),
+        &oncopyAttr.get(),
+        &oncutAttr.get(),
+        &ondblclickAttr.get(),
+        &ondragAttr.get(),
+        &ondragendAttr.get(),
+        &ondragenterAttr.get(),
+        &ondragleaveAttr.get(),
+        &ondragoverAttr.get(),
+        &ondragstartAttr.get(),
+        &ondropAttr.get(),
+        &ondurationchangeAttr.get(),
+        &onemptiedAttr.get(),
+        &onendedAttr.get(),
+        &onerrorAttr.get(),
+        &onfocusAttr.get(),
+        &onfocusinAttr.get(),
+        &onfocusoutAttr.get(),
+        &ongesturechangeAttr.get(),
+        &ongestureendAttr.get(),
+        &ongesturestartAttr.get(),
+        &oninputAttr.get(),
+        &oninvalidAttr.get(),
+        &onkeydownAttr.get(),
+        &onkeypressAttr.get(),
+        &onkeyupAttr.get(),
+        &onloadAttr.get(),
+        &onloadeddataAttr.get(),
+        &onloadedmetadataAttr.get(),
+        &onloadstartAttr.get(),
+        &onmousedownAttr.get(),
+        &onmouseenterAttr.get(),
+        &onmouseleaveAttr.get(),
+        &onmousemoveAttr.get(),
+        &onmouseoutAttr.get(),
+        &onmouseoverAttr.get(),
+        &onmouseupAttr.get(),
+        &onmousewheelAttr.get(),
+        &onpasteAttr.get(),
+        &onpauseAttr.get(),
+        &onplayAttr.get(),
+        &onplayingAttr.get(),
+        &onprogressAttr.get(),
+        &onratechangeAttr.get(),
+        &onresetAttr.get(),
+        &onresizeAttr.get(),
+        &onscrollAttr.get(),
+        &onsearchAttr.get(),
+        &onseekedAttr.get(),
+        &onseekingAttr.get(),
+        &onselectAttr.get(),
+        &onselectstartAttr.get(),
+        &onstalledAttr.get(),
+        &onsubmitAttr.get(),
+        &onsuspendAttr.get(),
+        &ontimeupdateAttr.get(),
+        &ontoggleAttr.get(),
+        &ontouchcancelAttr.get(),
+        &ontouchendAttr.get(),
+        &ontouchforcechangeAttr.get(),
+        &ontouchmoveAttr.get(),
+        &ontouchstartAttr.get(),
+        &ontransitionendAttr.get(),
+        &onvolumechangeAttr.get(),
+        &onwaitingAttr.get(),
+        &onwebkitbeginfullscreenAttr.get(),
+        &onwebkitcurrentplaybacktargetiswirelesschangedAttr.get(),
+        &onwebkitendfullscreenAttr.get(),
+        &onwebkitfullscreenchangeAttr.get(),
+        &onwebkitfullscreenerrorAttr.get(),
+        &onwebkitkeyaddedAttr.get(),
+        &onwebkitkeyerrorAttr.get(),
+        &onwebkitkeymessageAttr.get(),
+        &onwebkitmouseforcechangedAttr.get(),
+        &onwebkitmouseforcedownAttr.get(),
+        &onwebkitmouseforcewillbeginAttr.get(),
+        &onwebkitmouseforceupAttr.get(),
+        &onwebkitneedkeyAttr.get(),
+        &onwebkitplaybacktargetavailabilitychangedAttr.get(),
+        &onwebkitpresentationmodechangedAttr.get(),
+        &onwebkitwillrevealbottomAttr.get(),
+        &onwebkitwillrevealleftAttr.get(),
+        &onwebkitwillrevealrightAttr.get(),
+        &onwebkitwillrevealtopAttr.get(),
+        &onwheelAttr.get(),
     };
 
     populateEventHandlerNameMap(map, table);
@@ -402,7 +402,7 @@ Node::Editability HTMLElement::editabilityFromContentEditableAttr(const Node& no
         }
     }
 
-    auto* containingShadowRoot = node.containingShadowRoot();
+    auto containingShadowRoot = makeRefPtr(node.containingShadowRoot());
     if (containingShadowRoot && containingShadowRoot->mode() == ShadowRootMode::UserAgent)
         return Editability::ReadOnly;
 
@@ -443,7 +443,7 @@ static Ref<DocumentFragment> textToFragment(Document& document, const String& te
     auto fragment = DocumentFragment::create(document);
 
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
-    NoEventDispatchAssertion::EventAllowedScope allowedScope(fragment);
+    ScriptDisallowedScope::EventAllowedScope allowedScope(fragment);
 
     for (unsigned start = 0, length = text.length(); start < length; ) {
         // Find next line break.
@@ -533,7 +533,7 @@ ExceptionOr<void> HTMLElement::setInnerText(const String& text)
     auto fragment = textToFragment(document(), text);
     // FIXME: This should use replaceAllChildren() once it accepts DocumentFragments as input.
     // It's safe to dispatch events on the new fragment since author scripts have no access to it yet.
-    NoEventDispatchAssertion::EventAllowedScope allowedScope(fragment.get());
+    ScriptDisallowedScope::EventAllowedScope allowedScope(fragment.get());
     return replaceChildrenWithFragment(*this, WTFMove(fragment));
 }
 
@@ -561,12 +561,12 @@ ExceptionOr<void> HTMLElement::setOuterText(const String& text)
         return replaceResult.releaseException();
 
     RefPtr<Node> node = next ? next->previousSibling() : nullptr;
-    if (is<Text>(node.get())) {
+    if (is<Text>(node)) {
         auto result = mergeWithNextTextNode(downcast<Text>(*node));
         if (result.hasException())
             return result.releaseException();
     }
-    if (is<Text>(prev.get())) {
+    if (is<Text>(prev)) {
         auto result = mergeWithNextTextNode(downcast<Text>(*prev));
         if (result.hasException())
             return result.releaseException();
@@ -716,11 +716,11 @@ void HTMLElement::setTranslate(bool enable)
 bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
 {
     if (hasTagName(noscriptTag)) {
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (frame && frame->script().canExecuteScripts(NotAboutToExecuteScript))
             return false;
     } else if (hasTagName(noembedTag)) {
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (frame && frame->loader().subframeLoader().allowPlugins())
             return false;
     }
@@ -749,7 +749,7 @@ static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastN
 {
     firstNode->setSelfOrAncestorHasDirAutoAttribute(flag);
 
-    Node* node = firstNode->firstChild();
+    RefPtr<Node> node = firstNode->firstChild();
 
     while (node) {
         if (node->selfOrAncestorHasDirAutoAttribute() == flag)
@@ -793,7 +793,7 @@ TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) con
 
 TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) const
 {
-    if (is<HTMLTextFormControlElement>(*this)) {
+    if (isTextField()) {
         HTMLTextFormControlElement& textElement = downcast<HTMLTextFormControlElement>(const_cast<HTMLElement&>(*this));
         bool hasStrongDirectionality;
         UCharDirection textDirection = textElement.value().defaultWritingDirection(&hasStrongDirectionality);
@@ -802,11 +802,11 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
         return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
     }
 
-    Node* node = firstChild();
+    RefPtr<Node> node = firstChild();
     while (node) {
         // Skip bdi, script, style and text form controls.
         if (equalLettersIgnoringASCIICase(node->nodeName(), "bdi") || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
-            || (is<Element>(*node) && downcast<Element>(*node).isTextFormControl())) {
+            || (is<Element>(*node) && downcast<Element>(*node).isTextField())) {
             node = NodeTraversal::nextSkippingChildren(*node, this);
             continue;
         }
@@ -825,7 +825,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
             UCharDirection textDirection = node->textContent(true).defaultWritingDirection(&hasStrongDirectionality);
             if (hasStrongDirectionality) {
                 if (strongDirectionalityTextNode)
-                    *strongDirectionalityTextNode = node;
+                    *strongDirectionalityTextNode = node.get();
                 return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
             }
         }
@@ -838,7 +838,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
 
 void HTMLElement::dirAttributeChanged(const AtomicString& value)
 {
-    Element* parent = parentElement();
+    RefPtr<Element> parent = parentElement();
 
     if (is<HTMLElement>(parent) && parent->selfOrAncestorHasDirAutoAttribute())
         downcast<HTMLElement>(*parent).adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
@@ -879,14 +879,14 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
     if (!selfOrAncestorHasDirAutoAttribute())
         return;
 
-    Node* oldMarkedNode = nullptr;
+    RefPtr<Node> oldMarkedNode;
     if (beforeChange)
         oldMarkedNode = changeType == ElementInserted ? ElementTraversal::nextSibling(*beforeChange) : beforeChange->nextSibling();
 
     while (oldMarkedNode && elementAffectsDirectionality(*oldMarkedNode))
         oldMarkedNode = oldMarkedNode->nextSibling();
     if (oldMarkedNode)
-        setHasDirAutoFlagRecursively(oldMarkedNode, false);
+        setHasDirAutoFlagRecursively(oldMarkedNode.get(), false);
 
     for (auto& elementToAdjust : lineageOfType<HTMLElement>(*this)) {
         if (elementAffectsDirectionality(elementToAdjust)) {

@@ -72,13 +72,13 @@ MemoryCache::MemoryCache()
     static_assert(sizeof(long long) > sizeof(unsigned), "Numerical overflow can happen when adjusting the size of the cached memory.");
 }
 
-auto MemoryCache::sessionResourceMap(SessionID sessionID) const -> CachedResourceMap*
+auto MemoryCache::sessionResourceMap(PAL::SessionID sessionID) const -> CachedResourceMap*
 {
     ASSERT(sessionID.isValid());
     return m_sessionResources.get(sessionID);
 }
 
-auto MemoryCache::ensureSessionResourceMap(SessionID sessionID) -> CachedResourceMap&
+auto MemoryCache::ensureSessionResourceMap(PAL::SessionID sessionID) -> CachedResourceMap&
 {
     ASSERT(sessionID.isValid());
     auto& map = m_sessionResources.add(sessionID, nullptr).iterator->value;
@@ -167,7 +167,7 @@ void MemoryCache::revalidationFailed(CachedResource& revalidatingResource)
     revalidatingResource.clearResourceToRevalidate();
 }
 
-CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request, SessionID sessionID)
+CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request, PAL::SessionID sessionID)
 {
     // FIXME: Change all clients to make sure HTTP(s) URLs have no fragment identifiers before calling here.
     // CachedResourceLoader is now doing this. Add an assertion once all other clients are doing it too.
@@ -210,7 +210,7 @@ static CachedImageClient& dummyCachedImageClient()
 bool MemoryCache::addImageToCache(NativeImagePtr&& image, const URL& url, const String& domainForCachePartition)
 {
     ASSERT(image);
-    SessionID sessionID = SessionID::defaultSessionID();
+    PAL::SessionID sessionID = PAL::SessionID::defaultSessionID();
     removeImageFromCache(url, domainForCachePartition); // Remove cache entry if it already exists.
 
     RefPtr<BitmapImage> bitmapImage = BitmapImage::create(WTFMove(image), nullptr);
@@ -227,7 +227,7 @@ bool MemoryCache::addImageToCache(NativeImagePtr&& image, const URL& url, const 
 
 void MemoryCache::removeImageFromCache(const URL& url, const String& domainForCachePartition)
 {
-    auto* resources = sessionResourceMap(SessionID::defaultSessionID());
+    auto* resources = sessionResourceMap(PAL::SessionID::defaultSessionID());
     if (!resources)
         return;
 
@@ -265,23 +265,18 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
 void MemoryCache::forEachResource(const WTF::Function<void(CachedResource&)>& function)
 {
     for (auto& unprotectedLRUList : m_allResources) {
-        Vector<CachedResourceHandle<CachedResource>> lruList;
-        copyToVector(*unprotectedLRUList, lruList);
-        for (auto& resource : lruList)
+        for (auto& resource : copyToVector(*unprotectedLRUList))
             function(*resource);
     }
 }
 
-void MemoryCache::forEachSessionResource(SessionID sessionID, const WTF::Function<void (CachedResource&)>& function)
+void MemoryCache::forEachSessionResource(PAL::SessionID sessionID, const WTF::Function<void (CachedResource&)>& function)
 {
     auto it = m_sessionResources.find(sessionID);
     if (it == m_sessionResources.end())
         return;
 
-    Vector<CachedResourceHandle<CachedResource>> resourcesForSession;
-    copyValuesToVector(*it->value, resourcesForSession);
-
-    for (auto& resource : resourcesForSession)
+    for (auto& resource : copyToVector(it->value->values()))
         function(*resource);
 }
 
@@ -366,8 +361,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
     for (int i = m_allResources.size() - 1; i >= 0; i--) {
         // Make a copy of the LRUList first (and ref the resources) as calling
         // destroyDecodedData() can alter the LRUList.
-        Vector<CachedResourceHandle<CachedResource>> lruList;
-        copyToVector(*m_allResources[i], lruList);
+        auto lruList = copyToVector(*m_allResources[i]);
 
         // First flush all the decoded data in this queue.
         // Remove from the head, since this is the least frequently accessed of the objects.
@@ -531,7 +525,7 @@ void MemoryCache::removeResourcesWithOrigin(SecurityOrigin& origin)
         remove(*resource);
 }
 
-void MemoryCache::removeResourcesWithOrigins(SessionID sessionID, const HashSet<RefPtr<SecurityOrigin>>& origins)
+void MemoryCache::removeResourcesWithOrigins(PAL::SessionID sessionID, const HashSet<RefPtr<SecurityOrigin>>& origins)
 {
     auto* resourceMap = sessionResourceMap(sessionID);
     if (!resourceMap)
@@ -572,7 +566,7 @@ void MemoryCache::getOriginsWithCache(SecurityOriginSet& origins)
     }
 }
 
-HashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(SessionID sessionID) const
+HashSet<RefPtr<SecurityOrigin>> MemoryCache::originsWithCache(PAL::SessionID sessionID) const
 {
     HashSet<RefPtr<SecurityOrigin>> origins;
 
@@ -707,7 +701,7 @@ void MemoryCache::evictResources()
     setDisabled(false);
 }
 
-void MemoryCache::evictResources(SessionID sessionID)
+void MemoryCache::evictResources(PAL::SessionID sessionID)
 {
     if (disabled())
         return;

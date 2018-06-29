@@ -53,22 +53,19 @@ static const char failedToStartServiceErrorMessage[] = "Failed to start Geolocat
 static const char framelessDocumentErrorMessage[] = "Geolocation cannot be used in frameless documents";
 static const char originCannotRequestGeolocationErrorMessage[] = "Origin does not have permission to use Geolocation service";
 
-static RefPtr<Geoposition> createGeoposition(GeolocationPosition* position)
+static RefPtr<Geoposition> createGeoposition(std::optional<GeolocationPosition>&& position)
 {
     if (!position)
         return nullptr;
 
-    auto coordinates = Coordinates::create(position->latitude(), position->longitude(), position->canProvideAltitude(), position->altitude(),
-        position->accuracy(), position->canProvideAltitudeAccuracy(), position->altitudeAccuracy(),
-        position->canProvideHeading(), position->heading(), position->canProvideSpeed(), position->speed());
-
-    return Geoposition::create(WTFMove(coordinates), convertSecondsToDOMTimeStamp(position->timestamp()));
+    DOMTimeStamp timestamp = convertSecondsToDOMTimeStamp(position->timestamp);
+    return Geoposition::create(Coordinates::create(WTFMove(position.value())), timestamp);
 }
 
-static Ref<PositionError> createPositionError(GeolocationError* error)
+static Ref<PositionError> createPositionError(GeolocationError& error)
 {
     PositionError::ErrorCode code = PositionError::POSITION_UNAVAILABLE;
-    switch (error->code()) {
+    switch (error.code()) {
     case GeolocationError::PermissionDenied:
         code = PositionError::PERMISSION_DENIED;
         break;
@@ -77,7 +74,7 @@ static Ref<PositionError> createPositionError(GeolocationError* error)
         break;
     }
 
-    return PositionError::create(code, error->message());
+    return PositionError::create(code, error.message());
 }
 
 bool Geolocation::Watchers::add(int id, RefPtr<GeoNotifier>&& notifier)
@@ -127,7 +124,7 @@ bool Geolocation::Watchers::isEmpty() const
 
 void Geolocation::Watchers::getNotifiersVector(GeoNotifierVector& copy) const
 {
-    copyValuesToVector(m_idToNotifierMap, copy);
+    copy = copyToVector(m_idToNotifierMap.values());
 }
 
 Ref<Geolocation> Geolocation::create(ScriptExecutionContext* context)
@@ -247,7 +244,7 @@ void Geolocation::resetAllGeolocationPermission()
     if (m_allowGeolocation == InProgress) {
         Page* page = this->page();
         if (page)
-            GeolocationController::from(page)->cancelPermissionRequest(this);
+            GeolocationController::from(page)->cancelPermissionRequest(*this);
 
         // This return is not technically correct as GeolocationController::cancelPermissionRequest() should have cleared the active request.
         // Neither iOS nor OS X supports cancelPermissionRequest() (https://bugs.webkit.org/show_bug.cgi?id=89524), so we workaround that and let ongoing requests complete. :(
@@ -277,7 +274,7 @@ void Geolocation::stop()
 {
     Page* page = this->page();
     if (page && m_allowGeolocation == InProgress)
-        GeolocationController::from(page)->cancelPermissionRequest(this);
+        GeolocationController::from(page)->cancelPermissionRequest(*this);
     // The frame may be moving to a new page and we want to get the permissions from the new page's client.
     m_allowGeolocation = Unknown;
     cancelAllRequests();
@@ -296,7 +293,7 @@ Geoposition* Geolocation::lastPosition()
 {
     Page* page = this->page();
     if (!page)
-        return 0;
+        return nullptr;
 
     m_lastPosition = createGeoposition(GeolocationController::from(page)->lastPosition());
 
@@ -361,7 +358,7 @@ static bool isRequestFromIBooks()
 bool Geolocation::shouldBlockGeolocationRequests()
 {
     bool isSecure = SecurityOrigin::isSecure(document()->url());
-    bool hasMixedContent = document()->foundMixedContent();
+    bool hasMixedContent = !document()->foundMixedContent().isEmpty();
     bool isLocalOrigin = securityOrigin()->isLocal();
     if (securityOrigin()->canRequestGeolocation()) {
         if (isLocalOrigin || (isSecure && !hasMixedContent) || isRequestFromIBooks())
@@ -471,7 +468,7 @@ bool Geolocation::haveSuitableCachedPosition(const PositionOptions& options)
         return false;
     if (!options.maximumAge)
         return false;
-    DOMTimeStamp currentTimeMillis = convertSecondsToDOMTimeStamp(currentTime());
+    DOMTimeStamp currentTimeMillis = convertSecondsToDOMTimeStamp(WallTime::now().secondsSinceEpoch());
     return cachedPosition->timestamp() > currentTimeMillis - options.maximumAge;
 }
 
@@ -546,9 +543,7 @@ void Geolocation::stopTimer(GeoNotifierVector& notifiers)
 
 void Geolocation::stopTimersForOneShots()
 {
-    GeoNotifierVector copy;
-    copyToVector(m_oneShots, copy);
-
+    auto copy = copyToVector(m_oneShots);
     stopTimer(copy);
 }
 
@@ -574,8 +569,7 @@ void Geolocation::cancelRequests(GeoNotifierVector& notifiers)
 
 void Geolocation::cancelAllRequests()
 {
-    GeoNotifierVector copy;
-    copyToVector(m_oneShots, copy);
+    auto copy = copyToVector(m_oneShots);
     cancelRequests(copy);
     m_watchers.getNotifiersVector(copy);
     cancelRequests(copy);
@@ -602,8 +596,7 @@ void Geolocation::copyToSet(const GeoNotifierVector& src, GeoNotifierSet& dest)
 
 void Geolocation::handleError(PositionError& error)
 {
-    GeoNotifierVector oneShotsCopy;
-    copyToVector(m_oneShots, oneShotsCopy);
+    auto oneShotsCopy = copyToVector(m_oneShots);
 
     GeoNotifierVector watchersCopy;
     m_watchers.getNotifiersVector(watchersCopy);
@@ -646,7 +639,7 @@ void Geolocation::requestPermission()
     m_allowGeolocation = InProgress;
 
     // Ask the embedder: it maintains the geolocation challenge policy itself.
-    GeolocationController::from(page)->requestPermission(this);
+    GeolocationController::from(page)->requestPermission(*this);
 }
 
 void Geolocation::makeSuccessCallbacks(Geoposition& position)
@@ -654,8 +647,7 @@ void Geolocation::makeSuccessCallbacks(Geoposition& position)
     ASSERT(lastPosition());
     ASSERT(isAllowed());
 
-    GeoNotifierVector oneShotsCopy;
-    copyToVector(m_oneShots, oneShotsCopy);
+    auto oneShotsCopy = copyToVector(m_oneShots);
 
     GeoNotifierVector watchersCopy;
     m_watchers.getNotifiersVector(watchersCopy);
@@ -690,7 +682,7 @@ void Geolocation::positionChanged()
     makeSuccessCallbacks(*position);
 }
 
-void Geolocation::setError(GeolocationError* error)
+void Geolocation::setError(GeolocationError& error)
 {
     if (m_isSuspended) {
         m_errorWaitingForResume = createPositionError(error);
@@ -707,7 +699,7 @@ bool Geolocation::startUpdating(GeoNotifier* notifier)
     if (!page)
         return false;
 
-    GeolocationController::from(page)->addObserver(this, notifier->options().enableHighAccuracy);
+    GeolocationController::from(page)->addObserver(*this, notifier->options().enableHighAccuracy);
     return true;
 }
 
@@ -717,7 +709,7 @@ void Geolocation::stopUpdating()
     if (!page)
         return;
 
-    GeolocationController::from(page)->removeObserver(this);
+    GeolocationController::from(page)->removeObserver(*this);
 }
 
 void Geolocation::handlePendingPermissionNotifiers()

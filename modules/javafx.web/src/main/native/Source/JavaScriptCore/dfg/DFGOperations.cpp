@@ -52,12 +52,19 @@
 #include "JSCInlines.h"
 #include "JSFixedArray.h"
 #include "JSGenericTypedArrayViewConstructorInlines.h"
+#include "JSGlobalObjectFunctions.h"
 #include "JSLexicalEnvironment.h"
 #include "JSMap.h"
+#include "JSPropertyNameEnumerator.h"
 #include "JSSet.h"
+#include "JSWeakMap.h"
+#include "JSWeakSet.h"
+#include "NumberConstructor.h"
 #include "ObjectConstructor.h"
 #include "Operations.h"
 #include "ParseInt.h"
+#include "RegExpConstructor.h"
+#include "RegExpMatchesArray.h"
 #include "RegExpObject.h"
 #include "Repatch.h"
 #include "ScopedArguments.h"
@@ -75,10 +82,8 @@
 namespace JSC { namespace DFG {
 
 template<bool strict, bool direct>
-static inline void putByVal(ExecState* exec, JSValue baseValue, uint32_t index, JSValue value)
+static inline void putByVal(ExecState* exec, VM& vm, JSValue baseValue, uint32_t index, JSValue value)
 {
-    VM& vm = exec->vm();
-    NativeCallFrameTracer tracer(&vm, exec);
     ASSERT(isIndex(index));
     if (direct) {
         RELEASE_ASSERT(baseValue.isObject());
@@ -100,11 +105,9 @@ static inline void putByVal(ExecState* exec, JSValue baseValue, uint32_t index, 
 }
 
 template<bool strict, bool direct>
-ALWAYS_INLINE static void JIT_OPERATION operationPutByValInternal(ExecState* exec, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
+ALWAYS_INLINE static void putByValInternal(ExecState* exec, VM& vm, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    auto scope = DECLARE_THROW_SCOPE(*vm);
-    NativeCallFrameTracer tracer(vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue baseValue = JSValue::decode(encodedBase);
     JSValue property = JSValue::decode(encodedProperty);
@@ -114,7 +117,7 @@ ALWAYS_INLINE static void JIT_OPERATION operationPutByValInternal(ExecState* exe
         // Despite its name, JSValue::isUInt32 will return true only for positive boxed int32_t; all those values are valid array indices.
         ASSERT(isIndex(property.asUInt32()));
         scope.release();
-        putByVal<strict, direct>(exec, baseValue, property.asUInt32(), value);
+        putByVal<strict, direct>(exec, vm, baseValue, property.asUInt32(), value);
         return;
     }
 
@@ -123,7 +126,7 @@ ALWAYS_INLINE static void JIT_OPERATION operationPutByValInternal(ExecState* exe
         uint32_t propertyAsUInt32 = static_cast<uint32_t>(propertyAsDouble);
         if (propertyAsDouble == propertyAsUInt32 && isIndex(propertyAsUInt32)) {
             scope.release();
-            putByVal<strict, direct>(exec, baseValue, propertyAsUInt32, value);
+            putByVal<strict, direct>(exec, vm, baseValue, propertyAsUInt32, value);
             return;
         }
     }
@@ -140,11 +143,38 @@ ALWAYS_INLINE static void JIT_OPERATION operationPutByValInternal(ExecState* exe
             asObject(baseValue)->putDirectIndex(exec, index.value(), value, 0, strict ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
             return;
         }
-        asObject(baseValue)->putDirect(*vm, propertyName, value, slot);
+        asObject(baseValue)->putDirect(vm, propertyName, value, slot);
         return;
     }
     scope.release();
     baseValue.put(exec, propertyName, value, slot);
+}
+
+template<bool strict, bool direct>
+ALWAYS_INLINE static void putByValCellInternal(ExecState* exec, VM& vm, JSCell* base, PropertyName propertyName, JSValue value)
+{
+    PutPropertySlot slot(base, strict);
+    if (direct) {
+        RELEASE_ASSERT(base->isObject());
+        if (std::optional<uint32_t> index = parseIndex(propertyName))
+            asObject(base)->putDirectIndex(exec, index.value(), value, 0, strict ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
+        else
+            asObject(base)->putDirect(vm, propertyName, value, slot);
+        return;
+    }
+    base->putInline(exec, propertyName, value, slot);
+}
+
+template<bool strict, bool direct>
+ALWAYS_INLINE static void putByValCellStringInternal(ExecState* exec, VM& vm, JSCell* base, JSString* property, JSValue value)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto propertyName = property->toIdentifier(exec);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    scope.release();
+    putByValCellInternal<strict, direct>(exec, vm, base, propertyName, value);
 }
 
 template<typename ViewClass>
@@ -184,6 +214,16 @@ static ALWAYS_INLINE EncodedJSValue parseIntResult(double input)
     return JSValue::encode(jsNumber(input));
 }
 
+ALWAYS_INLINE static JSValue getByValObject(ExecState* exec, VM& vm, JSObject* base, PropertyName propertyName)
+{
+    Structure& structure = *base->structure(vm);
+    if (JSCell::canUseFastGetOwnProperty(structure)) {
+        if (JSValue result = base->fastGetOwnProperty(vm, structure, propertyName))
+            return result;
+    }
+    return base->get(exec, propertyName);
+}
+
 extern "C" {
 
 EncodedJSValue JIT_OPERATION operationToThis(ExecState* exec, EncodedJSValue encodedOp)
@@ -207,20 +247,28 @@ JSCell* JIT_OPERATION operationCreateThis(ExecState* exec, JSObject* constructor
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (constructor->type() == JSFunctionType) {
-        auto rareData = jsCast<JSFunction*>(constructor)->rareData(exec, inlineCapacity);
+    if (constructor->type() == JSFunctionType && jsCast<JSFunction*>(constructor)->canUseAllocationProfile()) {
+        auto rareData = jsCast<JSFunction*>(constructor)->ensureRareDataAndAllocationProfile(exec, inlineCapacity);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        return constructEmptyObject(exec, rareData->objectAllocationProfile()->structure());
+        Structure* structure = rareData->objectAllocationProfile()->structure();
+        JSObject* result = constructEmptyObject(exec, structure);
+        if (structure->hasPolyProto()) {
+            JSObject* prototype = jsCast<JSFunction*>(constructor)->prototypeForConstruction(vm, exec);
+            result->putDirect(vm, knownPolyProtoOffset, prototype);
+            prototype->didBecomePrototype();
+            ASSERT_WITH_MESSAGE(!hasIndexedProperties(result->indexingType()), "We rely on JSFinalObject not starting out with an indexing type otherwise we would potentially need to convert to slow put storage");
+        }
+        return result;
     }
 
-    JSValue proto = constructor->get(exec, exec->propertyNames().prototype);
+    JSValue proto = constructor->get(exec, vm.propertyNames->prototype);
     RETURN_IF_EXCEPTION(scope, nullptr);
     if (proto.isObject())
         return constructEmptyObject(exec, asObject(proto));
     return constructEmptyObject(exec);
 }
 
-JSCell* JIT_OPERATION operationObjectConstructor(ExecState* exec, JSGlobalObject* globalObject, EncodedJSValue encodedTarget)
+JSCell* JIT_OPERATION operationCallObjectConstructor(ExecState* exec, JSGlobalObject* globalObject, EncodedJSValue encodedTarget)
 {
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
@@ -230,6 +278,26 @@ JSCell* JIT_OPERATION operationObjectConstructor(ExecState* exec, JSGlobalObject
 
     if (value.isUndefinedOrNull())
         return constructEmptyObject(exec, globalObject->objectPrototype());
+    return value.toObject(exec, globalObject);
+}
+
+JSCell* JIT_OPERATION operationToObject(ExecState* exec, JSGlobalObject* globalObject, EncodedJSValue encodedTarget, UniquedStringImpl* errorMessage)
+{
+    VM* vm = &exec->vm();
+    NativeCallFrameTracer tracer(vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(*vm);
+
+    JSValue value = JSValue::decode(encodedTarget);
+    ASSERT(!value.isObject());
+
+    if (UNLIKELY(value.isUndefinedOrNull())) {
+        if (errorMessage->length()) {
+            throwVMTypeError(exec, scope, errorMessage);
+            return nullptr;
+        }
+    }
+
+    scope.release();
     return value.toObject(exec, globalObject);
 }
 
@@ -538,13 +606,17 @@ EncodedJSValue JIT_OPERATION operationGetByValCell(ExecState* exec, JSCell* base
 
     JSValue property = JSValue::decode(encodedProperty);
 
-    if (property.isUInt32())
+    if (property.isUInt32()) {
+        scope.release();
         return getByVal(exec, base, property.asUInt32());
+    }
     if (property.isDouble()) {
         double propertyAsDouble = property.asDouble();
         uint32_t propertyAsUInt32 = static_cast<uint32_t>(propertyAsDouble);
-        if (propertyAsUInt32 == propertyAsDouble)
+        if (propertyAsUInt32 == propertyAsDouble) {
+            scope.release();
             return getByVal(exec, base, propertyAsUInt32);
+        }
     } else if (property.isString()) {
         Structure& structure = *base->structure(vm);
         if (JSCell::canUseFastGetOwnProperty(structure)) {
@@ -557,6 +629,7 @@ EncodedJSValue JIT_OPERATION operationGetByValCell(ExecState* exec, JSCell* base
 
     auto propertyName = property.toPropertyKey(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    scope.release();
     return JSValue::encode(JSValue(base).get(exec, propertyName));
 }
 
@@ -566,7 +639,7 @@ ALWAYS_INLINE EncodedJSValue getByValCellInt(ExecState* exec, JSCell* base, int3
     NativeCallFrameTracer tracer(vm, exec);
 
     if (index < 0) {
-        // Go the slowest way possible becase negative indices don't use indexed storage.
+        // Go the slowest way possible because negative indices don't use indexed storage.
         return JSValue::encode(JSValue(base).get(exec, Identifier::from(exec, index)));
     }
 
@@ -584,86 +657,123 @@ EncodedJSValue JIT_OPERATION operationGetByValStringInt(ExecState* exec, JSStrin
     return getByValCellInt(exec, base, index);
 }
 
+EncodedJSValue JIT_OPERATION operationGetByValObjectString(ExecState* exec, JSCell* base, JSCell* string)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto propertyName = asString(string)->toIdentifier(exec);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    scope.release();
+    return JSValue::encode(getByValObject(exec, vm, asObject(base), propertyName));
+}
+
+EncodedJSValue JIT_OPERATION operationGetByValObjectSymbol(ExecState* exec, JSCell* base, JSCell* symbol)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    return JSValue::encode(getByValObject(exec, vm, asObject(base), asSymbol(symbol)->privateName()));
+}
+
 void JIT_OPERATION operationPutByValStrict(ExecState* exec, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<true, false>(exec, encodedBase, encodedProperty, encodedValue);
+    putByValInternal<true, false>(exec, vm, encodedBase, encodedProperty, encodedValue);
 }
 
 void JIT_OPERATION operationPutByValNonStrict(ExecState* exec, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<false, false>(exec, encodedBase, encodedProperty, encodedValue);
+    putByValInternal<false, false>(exec, vm, encodedBase, encodedProperty, encodedValue);
 }
 
 void JIT_OPERATION operationPutByValCellStrict(ExecState* exec, JSCell* cell, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<true, false>(exec, JSValue::encode(cell), encodedProperty, encodedValue);
+    putByValInternal<true, false>(exec, vm, JSValue::encode(cell), encodedProperty, encodedValue);
 }
 
 void JIT_OPERATION operationPutByValCellNonStrict(ExecState* exec, JSCell* cell, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<false, false>(exec, JSValue::encode(cell), encodedProperty, encodedValue);
+    putByValInternal<false, false>(exec, vm, JSValue::encode(cell), encodedProperty, encodedValue);
 }
 
-void JIT_OPERATION operationPutByValBeyondArrayBoundsStrict(ExecState* exec, JSObject* array, int32_t index, EncodedJSValue encodedValue)
+void JIT_OPERATION operationPutByValCellStringStrict(ExecState* exec, JSCell* cell, JSCell* string, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellStringInternal<true, false>(exec, vm, cell, asString(string), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValCellStringNonStrict(ExecState* exec, JSCell* cell, JSCell* string, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellStringInternal<false, false>(exec, vm, cell, asString(string), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValCellSymbolStrict(ExecState* exec, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellInternal<true, false>(exec, vm, cell, asSymbol(symbol)->privateName(), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValCellSymbolNonStrict(ExecState* exec, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellInternal<false, false>(exec, vm, cell, asSymbol(symbol)->privateName(), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValBeyondArrayBoundsStrict(ExecState* exec, JSObject* object, int32_t index, EncodedJSValue encodedValue)
 {
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
 
     if (index >= 0) {
-        array->putByIndexInline(exec, index, JSValue::decode(encodedValue), true);
+        object->putByIndexInline(exec, index, JSValue::decode(encodedValue), true);
         return;
     }
 
-    PutPropertySlot slot(array, true);
-    array->methodTable()->put(
-        array, exec, Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
+    PutPropertySlot slot(object, true);
+    object->methodTable(vm)->put(
+        object, exec, Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
 }
 
-void JIT_OPERATION operationPutByValBeyondArrayBoundsNonStrict(ExecState* exec, JSObject* array, int32_t index, EncodedJSValue encodedValue)
+void JIT_OPERATION operationPutByValBeyondArrayBoundsNonStrict(ExecState* exec, JSObject* object, int32_t index, EncodedJSValue encodedValue)
 {
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
 
     if (index >= 0) {
-        array->putByIndexInline(exec, index, JSValue::decode(encodedValue), false);
+        object->putByIndexInline(exec, index, JSValue::decode(encodedValue), false);
         return;
     }
 
-    PutPropertySlot slot(array, false);
-    array->methodTable()->put(
-        array, exec, Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
+    PutPropertySlot slot(object, false);
+    object->methodTable(*vm)->put(
+        object, exec, Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
 }
 
-void JIT_OPERATION operationPutDoubleByValBeyondArrayBoundsStrict(ExecState* exec, JSObject* array, int32_t index, double value)
-{
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
-
-    JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
-
-    if (index >= 0) {
-        array->putByIndexInline(exec, index, jsValue, true);
-        return;
-    }
-
-    PutPropertySlot slot(array, true);
-    array->methodTable()->put(
-        array, exec, Identifier::from(exec, index), jsValue, slot);
-}
-
-void JIT_OPERATION operationPutDoubleByValBeyondArrayBoundsNonStrict(ExecState* exec, JSObject* array, int32_t index, double value)
+void JIT_OPERATION operationPutDoubleByValBeyondArrayBoundsStrict(ExecState* exec, JSObject* object, int32_t index, double value)
 {
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
@@ -671,72 +781,153 @@ void JIT_OPERATION operationPutDoubleByValBeyondArrayBoundsNonStrict(ExecState* 
     JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
 
     if (index >= 0) {
-        array->putByIndexInline(exec, index, jsValue, false);
+        object->putByIndexInline(exec, index, jsValue, true);
         return;
     }
 
-    PutPropertySlot slot(array, false);
-    array->methodTable()->put(
-        array, exec, Identifier::from(exec, index), jsValue, slot);
+    PutPropertySlot slot(object, true);
+    object->methodTable(*vm)->put(
+        object, exec, Identifier::from(exec, index), jsValue, slot);
+}
+
+void JIT_OPERATION operationPutDoubleByValBeyondArrayBoundsNonStrict(ExecState* exec, JSObject* object, int32_t index, double value)
+{
+    VM* vm = &exec->vm();
+    NativeCallFrameTracer tracer(vm, exec);
+
+    JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
+
+    if (index >= 0) {
+        object->putByIndexInline(exec, index, jsValue, false);
+        return;
+    }
+
+    PutPropertySlot slot(object, false);
+    object->methodTable(*vm)->put(
+        object, exec, Identifier::from(exec, index), jsValue, slot);
+}
+
+void JIT_OPERATION operationPutDoubleByValDirectBeyondArrayBoundsStrict(ExecState* exec, JSObject* object, int32_t index, double value)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
+
+    if (index >= 0) {
+        object->putDirectIndex(exec, index, jsValue, 0, PutDirectIndexShouldThrow);
+        return;
+    }
+
+    PutPropertySlot slot(object, true);
+    object->putDirect(vm, Identifier::from(exec, index), jsValue, slot);
+}
+
+void JIT_OPERATION operationPutDoubleByValDirectBeyondArrayBoundsNonStrict(ExecState* exec, JSObject* object, int32_t index, double value)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    JSValue jsValue = JSValue(JSValue::EncodeAsDouble, value);
+
+    if (index >= 0) {
+        object->putDirectIndex(exec, index, jsValue);
+        return;
+    }
+
+    PutPropertySlot slot(object, false);
+    object->putDirect(vm, Identifier::from(exec, index), jsValue, slot);
 }
 
 void JIT_OPERATION operationPutByValDirectStrict(ExecState* exec, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<true, true>(exec, encodedBase, encodedProperty, encodedValue);
+    putByValInternal<true, true>(exec, vm, encodedBase, encodedProperty, encodedValue);
 }
 
 void JIT_OPERATION operationPutByValDirectNonStrict(ExecState* exec, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<false, true>(exec, encodedBase, encodedProperty, encodedValue);
+    putByValInternal<false, true>(exec, vm, encodedBase, encodedProperty, encodedValue);
 }
 
 void JIT_OPERATION operationPutByValDirectCellStrict(ExecState* exec, JSCell* cell, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<true, true>(exec, JSValue::encode(cell), encodedProperty, encodedValue);
+    putByValInternal<true, true>(exec, vm, JSValue::encode(cell), encodedProperty, encodedValue);
 }
 
 void JIT_OPERATION operationPutByValDirectCellNonStrict(ExecState* exec, JSCell* cell, EncodedJSValue encodedProperty, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
-    operationPutByValInternal<false, true>(exec, JSValue::encode(cell), encodedProperty, encodedValue);
+    putByValInternal<false, true>(exec, vm, JSValue::encode(cell), encodedProperty, encodedValue);
 }
 
-void JIT_OPERATION operationPutByValDirectBeyondArrayBoundsStrict(ExecState* exec, JSObject* array, int32_t index, EncodedJSValue encodedValue)
+void JIT_OPERATION operationPutByValDirectCellStringStrict(ExecState* exec, JSCell* cell, JSCell* string, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellStringInternal<true, true>(exec, vm, cell, asString(string), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValDirectCellStringNonStrict(ExecState* exec, JSCell* cell, JSCell* string, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellStringInternal<false, true>(exec, vm, cell, asString(string), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValDirectCellSymbolStrict(ExecState* exec, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellInternal<true, true>(exec, vm, cell, asSymbol(symbol)->privateName(), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValDirectCellSymbolNonStrict(ExecState* exec, JSCell* cell, JSCell* symbol, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    putByValCellInternal<false, true>(exec, vm, cell, asSymbol(symbol)->privateName(), JSValue::decode(encodedValue));
+}
+
+void JIT_OPERATION operationPutByValDirectBeyondArrayBoundsStrict(ExecState* exec, JSObject* object, int32_t index, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
     if (index >= 0) {
-        array->putDirectIndex(exec, index, JSValue::decode(encodedValue), 0, PutDirectIndexShouldThrow);
+        object->putDirectIndex(exec, index, JSValue::decode(encodedValue), 0, PutDirectIndexShouldThrow);
         return;
     }
 
-    PutPropertySlot slot(array, true);
-    array->putDirect(exec->vm(), Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
+    PutPropertySlot slot(object, true);
+    object->putDirect(vm, Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
 }
 
-void JIT_OPERATION operationPutByValDirectBeyondArrayBoundsNonStrict(ExecState* exec, JSObject* array, int32_t index, EncodedJSValue encodedValue)
+void JIT_OPERATION operationPutByValDirectBeyondArrayBoundsNonStrict(ExecState* exec, JSObject* object, int32_t index, EncodedJSValue encodedValue)
 {
-    VM* vm = &exec->vm();
-    NativeCallFrameTracer tracer(vm, exec);
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
 
     if (index >= 0) {
-        array->putDirectIndex(exec, index, JSValue::decode(encodedValue));
+        object->putDirectIndex(exec, index, JSValue::decode(encodedValue));
         return;
     }
 
-    PutPropertySlot slot(array, false);
-    array->putDirect(exec->vm(), Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
+    PutPropertySlot slot(object, false);
+    object->putDirect(vm, Identifier::from(exec, index), JSValue::decode(encodedValue), slot);
 }
 
 EncodedJSValue JIT_OPERATION operationArrayPush(ExecState* exec, EncodedJSValue encodedValue, JSArray* array)
@@ -744,7 +935,7 @@ EncodedJSValue JIT_OPERATION operationArrayPush(ExecState* exec, EncodedJSValue 
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
 
-    array->push(exec, JSValue::decode(encodedValue));
+    array->pushInline(exec, JSValue::decode(encodedValue));
     return JSValue::encode(jsNumber(array->length()));
 }
 
@@ -753,7 +944,51 @@ EncodedJSValue JIT_OPERATION operationArrayPushDouble(ExecState* exec, double va
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
 
-    array->push(exec, JSValue(JSValue::EncodeAsDouble, value));
+    array->pushInline(exec, JSValue(JSValue::EncodeAsDouble, value));
+    return JSValue::encode(jsNumber(array->length()));
+}
+
+EncodedJSValue JIT_OPERATION operationArrayPushMultiple(ExecState* exec, JSArray* array, void* buffer, int32_t elementCount)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    // We assume that multiple JSArray::push calls with ArrayWithInt32/ArrayWithContiguous do not cause JS traps.
+    // If it can cause any JS interactions, we can call the caller JS function of this function and overwrite the
+    // content of ScratchBuffer. If the IndexingType is now ArrayWithInt32/ArrayWithContiguous, we can ensure
+    // that there is no indexed accessors in this object and its prototype chain.
+    //
+    // ArrayWithArrayStorage is also OK. It can have indexed accessors. But if you define an indexed accessor, the array's length
+    // becomes larger than that index. So Array#push never overlaps with this accessor. So accessors are never called unless
+    // the IndexingType is ArrayWithSlowPutArrayStorage which could have an indexed accessor in a prototype chain.
+    RELEASE_ASSERT(!shouldUseSlowPut(array->indexingType()));
+
+    EncodedJSValue* values = static_cast<EncodedJSValue*>(buffer);
+    for (int32_t i = 0; i < elementCount; ++i) {
+        array->pushInline(exec, JSValue::decode(values[i]));
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    }
+    return JSValue::encode(jsNumber(array->length()));
+}
+
+EncodedJSValue JIT_OPERATION operationArrayPushDoubleMultiple(ExecState* exec, JSArray* array, void* buffer, int32_t elementCount)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    // We assume that multiple JSArray::push calls with ArrayWithDouble do not cause JS traps.
+    // If it can cause any JS interactions, we can call the caller JS function of this function and overwrite the
+    // content of ScratchBuffer. If the IndexingType is now ArrayWithDouble, we can ensure
+    // that there is no indexed accessors in this object and its prototype chain.
+    ASSERT(array->indexingType() == ArrayWithDouble);
+
+    double* values = static_cast<double*>(buffer);
+    for (int32_t i = 0; i < elementCount; ++i) {
+        array->pushInline(exec, JSValue(JSValue::EncodeAsDouble, values[i]));
+        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    }
     return JSValue::encode(jsNumber(array->length()));
 }
 
@@ -796,7 +1031,7 @@ EncodedJSValue JIT_OPERATION operationRegExpExec(ExecState* exec, JSGlobalObject
     JSValue argument = JSValue::decode(encodedArgument);
 
     JSString* input = argument.toStringOrNull(exec);
-    ASSERT(!!scope.exception() == !input);
+    EXCEPTION_ASSERT(!!scope.exception() == !input);
     if (!input)
         return encodedJSValue();
     scope.release();
@@ -818,11 +1053,49 @@ EncodedJSValue JIT_OPERATION operationRegExpExecGeneric(ExecState* exec, JSGloba
         return throwVMTypeError(exec, scope);
 
     JSString* input = argument.toStringOrNull(exec);
-    ASSERT(!!scope.exception() == !input);
+    EXCEPTION_ASSERT(!!scope.exception() == !input);
     if (!input)
         return JSValue::encode(jsUndefined());
     scope.release();
     return JSValue::encode(asRegExpObject(base)->exec(exec, globalObject, input));
+}
+
+EncodedJSValue JIT_OPERATION operationRegExpExecNonGlobalOrSticky(ExecState* exec, JSGlobalObject* globalObject, RegExp* regExp, JSString* string)
+{
+    SuperSamplerScope superSamplerScope(false);
+
+    VM& vm = globalObject->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    RegExpConstructor* regExpConstructor = globalObject->regExpConstructor();
+    String input = string->value(exec);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    unsigned lastIndex = 0;
+    MatchResult result;
+    JSArray* array = createRegExpMatchesArray(vm, globalObject, string, input, regExp, lastIndex, result);
+    if (!array) {
+        ASSERT(!scope.exception());
+        return JSValue::encode(jsNull());
+    }
+
+    RETURN_IF_EXCEPTION(scope, { });
+    regExpConstructor->recordMatch(vm, regExp, string, result);
+    return JSValue::encode(array);
+}
+
+EncodedJSValue JIT_OPERATION operationRegExpMatchFastString(ExecState* exec, JSGlobalObject* globalObject, RegExpObject* regExpObject, JSString* argument)
+{
+    SuperSamplerScope superSamplerScope(false);
+
+    VM& vm = globalObject->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    if (!regExpObject->regExp()->global())
+        return JSValue::encode(regExpObject->execInline(exec, globalObject, argument));
+    return JSValue::encode(regExpObject->matchGlobal(exec, globalObject, argument));
 }
 
 EncodedJSValue JIT_OPERATION operationParseIntNoRadixGeneric(ExecState* exec, EncodedJSValue value)
@@ -913,7 +1186,7 @@ size_t JIT_OPERATION operationRegExpTestGeneric(ExecState* exec, JSGlobalObject*
     }
 
     JSString* input = argument.toStringOrNull(exec);
-    ASSERT(!!scope.exception() == !input);
+    EXCEPTION_ASSERT(!!scope.exception() == !input);
     if (!input)
         return false;
     scope.release();
@@ -959,18 +1232,6 @@ EncodedJSValue JIT_OPERATION operationToNumber(ExecState* exec, EncodedJSValue v
     NativeCallFrameTracer tracer(vm, exec);
 
     return JSValue::encode(jsNumber(JSValue::decode(value).toNumber(exec)));
-}
-
-EncodedJSValue JIT_OPERATION operationGetByIdWithThis(ExecState* exec, EncodedJSValue encodedBase, EncodedJSValue encodedThis, UniquedStringImpl* impl)
-{
-    VM& vm = exec->vm();
-    NativeCallFrameTracer tracer(&vm, exec);
-
-    JSValue baseValue = JSValue::decode(encodedBase);
-    JSValue thisVal = JSValue::decode(encodedThis);
-    PropertySlot slot(thisVal, PropertySlot::PropertySlot::InternalMethodType::Get);
-    JSValue result = baseValue.get(exec, Identifier::fromUid(exec, impl), slot);
-    return JSValue::encode(result);
 }
 
 EncodedJSValue JIT_OPERATION operationGetByValWithThis(ExecState* exec, EncodedJSValue encodedBase, EncodedJSValue encodedThis, EncodedJSValue encodedSubscript)
@@ -1055,7 +1316,7 @@ void JIT_OPERATION operationPutByValWithThis(ExecState* exec, EncodedJSValue enc
 ALWAYS_INLINE static void defineDataProperty(ExecState* exec, VM& vm, JSObject* base, const Identifier& propertyName, JSValue value, int32_t attributes)
 {
     PropertyDescriptor descriptor = toPropertyDescriptor(value, jsUndefined(), jsUndefined(), DefinePropertyAttributes(attributes));
-    ASSERT((descriptor.attributes() & Accessor) || (!descriptor.isAccessorDescriptor()));
+    ASSERT((descriptor.attributes() & PropertyAttribute::Accessor) || (!descriptor.isAccessorDescriptor()));
     if (base->methodTable(vm)->defineOwnProperty == JSObject::defineOwnProperty)
         JSObject::defineOwnProperty(base, exec, propertyName, descriptor, true);
     else
@@ -1103,7 +1364,7 @@ void JIT_OPERATION operationDefineDataPropertySymbol(ExecState* exec, JSObject* 
 ALWAYS_INLINE static void defineAccessorProperty(ExecState* exec, VM& vm, JSObject* base, const Identifier& propertyName, JSObject* getter, JSObject* setter, int32_t attributes)
 {
     PropertyDescriptor descriptor = toPropertyDescriptor(jsUndefined(), getter, setter, DefinePropertyAttributes(attributes));
-    ASSERT((descriptor.attributes() & Accessor) || (!descriptor.isAccessorDescriptor()));
+    ASSERT((descriptor.attributes() & PropertyAttribute::Accessor) || (!descriptor.isAccessorDescriptor()));
     if (base->methodTable(vm)->defineOwnProperty == JSObject::defineOwnProperty)
         JSObject::defineOwnProperty(base, exec, propertyName, descriptor, true);
     else
@@ -1179,11 +1440,30 @@ char* JIT_OPERATION operationNewArrayWithSize(ExecState* exec, Structure* arrayS
     return bitwise_cast<char*>(result);
 }
 
-char* JIT_OPERATION operationNewArrayBuffer(ExecState* exec, Structure* arrayStructure, size_t start, size_t size)
+char* JIT_OPERATION operationNewArrayWithSizeAndHint(ExecState* exec, Structure* arrayStructure, int32_t size, int32_t vectorLengthHint, Butterfly* butterfly)
 {
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
-    return bitwise_cast<char*>(constructArray(exec, arrayStructure, exec->codeBlock()->constantBuffer(start), size));
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(size < 0))
+        return bitwise_cast<char*>(throwException(exec, scope, createRangeError(exec, ASCIILiteral("Array size is not a small enough positive integer."))));
+
+    JSArray* result;
+    if (butterfly)
+        result = JSArray::createWithButterfly(vm, nullptr, arrayStructure, butterfly);
+    else {
+        result = JSArray::tryCreate(vm, arrayStructure, size, vectorLengthHint);
+        ASSERT(result);
+    }
+    return bitwise_cast<char*>(result);
+}
+
+JSCell* JIT_OPERATION operationNewArrayBuffer(ExecState* exec, Structure* arrayStructure, JSCell* fixedArray, size_t size)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    return constructArray(exec, arrayStructure, jsCast<JSFixedArray*>(fixedArray)->values(), size);
 }
 
 char* JIT_OPERATION operationNewInt8ArrayWithSize(
@@ -1584,12 +1864,96 @@ char* JIT_OPERATION operationEnsureArrayStorage(ExecState* exec, JSCell* cell)
     return reinterpret_cast<char*>(asObject(cell)->ensureArrayStorage(vm));
 }
 
+EncodedJSValue JIT_OPERATION operationHasGenericProperty(ExecState* exec, EncodedJSValue encodedBaseValue, JSCell* propertyName)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    JSValue baseValue = JSValue::decode(encodedBaseValue);
+    if (baseValue.isUndefinedOrNull())
+        return JSValue::encode(jsBoolean(false));
+
+    JSObject* base = baseValue.toObject(exec);
+    if (!base)
+        return JSValue::encode(JSValue());
+    return JSValue::encode(jsBoolean(base->hasPropertyGeneric(exec, asString(propertyName)->toIdentifier(exec), PropertySlot::InternalMethodType::GetOwnProperty)));
+}
+
+EncodedJSValue JIT_OPERATION operationHasIndexedPropertyByInt(ExecState* exec, JSCell* baseCell, int32_t subscript, int32_t internalMethodType)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    JSObject* object = baseCell->toObject(exec, exec->lexicalGlobalObject());
+    if (UNLIKELY(subscript < 0)) {
+        // Go the slowest way possible because negative indices don't use indexed storage.
+        return JSValue::encode(jsBoolean(object->hasPropertyGeneric(exec, Identifier::from(exec, subscript), static_cast<PropertySlot::InternalMethodType>(internalMethodType))));
+    }
+    return JSValue::encode(jsBoolean(object->hasPropertyGeneric(exec, subscript, static_cast<PropertySlot::InternalMethodType>(internalMethodType))));
+}
+
+JSCell* JIT_OPERATION operationGetPropertyEnumerator(ExecState* exec, EncodedJSValue encodedBase)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue base = JSValue::decode(encodedBase);
+    if (base.isUndefinedOrNull())
+        return JSPropertyNameEnumerator::create(vm);
+
+    JSObject* baseObject = base.toObject(exec);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    scope.release();
+    return propertyNameEnumerator(exec, baseObject);
+}
+
+JSCell* JIT_OPERATION operationGetPropertyEnumeratorCell(ExecState* exec, JSCell* cell)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSObject* base = cell->toObject(exec, exec->lexicalGlobalObject());
+    RETURN_IF_EXCEPTION(scope, { });
+
+    scope.release();
+    return propertyNameEnumerator(exec, base);
+}
+
+JSCell* JIT_OPERATION operationToIndexString(ExecState* exec, int32_t index)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    return jsString(exec, Identifier::from(exec, index).string());
+}
+
+JSCell* JIT_OPERATION operationNewRegexpWithLastIndex(ExecState* exec, JSCell* regexpPtr, EncodedJSValue encodedLastIndex)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+
+    RegExp* regexp = static_cast<RegExp*>(regexpPtr);
+    ASSERT(regexp->isValid());
+    return RegExpObject::create(vm, exec->lexicalGlobalObject()->regExpStructure(), regexp, JSValue::decode(encodedLastIndex));
+}
+
 StringImpl* JIT_OPERATION operationResolveRope(ExecState* exec, JSString* string)
 {
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
 
     return string->value(exec).impl();
+}
+
+JSCell* JIT_OPERATION operationStringSubstr(ExecState* exec, JSCell* cell, int32_t from, int32_t span)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto string = jsCast<JSString*>(cell)->value(exec);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    return jsSubstring(exec, string, from, span);
 }
 
 JSString* JIT_OPERATION operationToLowerCase(ExecState* exec, JSString* string, uint32_t failingIndex)
@@ -1750,8 +2114,10 @@ JSCell* JIT_OPERATION operationStrCat2(ExecState* exec, EncodedJSValue a, Encode
     NativeCallFrameTracer tracer(&vm, exec);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    ASSERT(!JSValue::decode(a).isSymbol());
+    ASSERT(!JSValue::decode(b).isSymbol());
     JSString* str1 = JSValue::decode(a).toString(exec);
-    scope.assertNoException(); // Impossible, since we must have been given primitives.
+    scope.assertNoException(); // Impossible, since we must have been given non-Symbol primitives.
     JSString* str2 = JSValue::decode(b).toString(exec);
     scope.assertNoException();
 
@@ -1765,8 +2131,11 @@ JSCell* JIT_OPERATION operationStrCat3(ExecState* exec, EncodedJSValue a, Encode
     NativeCallFrameTracer tracer(&vm, exec);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
+    ASSERT(!JSValue::decode(a).isSymbol());
+    ASSERT(!JSValue::decode(b).isSymbol());
+    ASSERT(!JSValue::decode(c).isSymbol());
     JSString* str1 = JSValue::decode(a).toString(exec);
-    scope.assertNoException(); // Impossible, since we must have been given primitives.
+    scope.assertNoException(); // Impossible, since we must have been given non-Symbol primitives.
     JSString* str2 = JSValue::decode(b).toString(exec);
     scope.assertNoException();
     JSString* str3 = JSValue::decode(c).toString(exec);
@@ -1789,8 +2158,8 @@ char* JIT_OPERATION operationFindSwitchImmTargetForDouble(
     double asDouble = value.asDouble();
     int32_t asInt32 = static_cast<int32_t>(asDouble);
     if (asDouble == asInt32)
-        return static_cast<char*>(table.ctiForValue(asInt32).executableAddress());
-    return static_cast<char*>(table.ctiDefault.executableAddress());
+        return table.ctiForValue(asInt32).executableAddress<char*>();
+    return table.ctiDefault.executableAddress<char*>();
 }
 
 char* JIT_OPERATION operationSwitchString(ExecState* exec, size_t tableIndex, JSString* string)
@@ -1798,7 +2167,7 @@ char* JIT_OPERATION operationSwitchString(ExecState* exec, size_t tableIndex, JS
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
 
-    return static_cast<char*>(exec->codeBlock()->stringSwitchJumpTable(tableIndex).ctiForValue(string->value(exec).impl()).executableAddress());
+    return exec->codeBlock()->stringSwitchJumpTable(tableIndex).ctiForValue(string->value(exec).impl()).executableAddress<char*>();
 }
 
 int32_t JIT_OPERATION operationSwitchStringAndGetBranchOffset(ExecState* exec, size_t tableIndex, JSString* string)
@@ -1904,6 +2273,13 @@ int32_t JIT_OPERATION operationHasOwnProperty(ExecState* exec, JSObject* thisObj
     ASSERT(hasOwnPropertyCache);
     hasOwnPropertyCache->tryAdd(vm, slot, thisObject, propertyName.impl(), result);
     return result;
+}
+
+int32_t JIT_OPERATION operationNumberIsInteger(ExecState* exec, EncodedJSValue value)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    return NumberConstructor::isIntegerImpl(JSValue::decode(value));
 }
 
 int32_t JIT_OPERATION operationArrayIndexOfString(ExecState* exec, Butterfly* butterfly, JSString* searchElement, int32_t index)
@@ -2130,16 +2506,31 @@ JSCell* JIT_OPERATION operationNewArrayWithSpreadSlow(ExecState* exec, void* buf
             // We are spreading.
             for (unsigned i = 0; i < array->size(); i++) {
                 result->putDirectIndex(exec, index, array->get(i));
+                RETURN_IF_EXCEPTION(scope, nullptr);
                 ++index;
             }
         } else {
             // We are not spreading.
             result->putDirectIndex(exec, index, value);
+            RETURN_IF_EXCEPTION(scope, nullptr);
             ++index;
         }
     }
 
     return result;
+}
+
+JSCell* operationCreateFixedArray(ExecState* exec, unsigned length)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (JSFixedArray* result = JSFixedArray::tryCreate(vm, vm.fixedArrayStructure.get(), length))
+        return result;
+
+    throwOutOfMemoryError(exec, scope);
+    return nullptr;
 }
 
 JSCell* JIT_OPERATION operationSpreadGeneric(ExecState* exec, JSCell* iterable)
@@ -2170,6 +2561,7 @@ JSCell* JIT_OPERATION operationSpreadGeneric(ExecState* exec, JSCell* iterable)
 
         MarkedArgumentBuffer arguments;
         arguments.append(iterable);
+        ASSERT(!arguments.hasOverflowed());
         JSValue arrayResult = call(exec, iterationFunction, callType, callData, jsNull(), arguments);
         RETURN_IF_EXCEPTION(throwScope, nullptr);
         array = jsCast<JSArray*>(arrayResult);
@@ -2282,7 +2674,7 @@ void JIT_OPERATION operationPutDynamicVar(ExecState* exec, JSObject* scope, Enco
         strictMode = exec->codeBlock()->isStrictMode();
     PutPropertySlot slot(scope, strictMode, PutPropertySlot::UnknownContext, isInitialization(getPutInfo.initializationMode()));
     throwScope.release();
-    scope->methodTable()->put(scope, exec, ident, JSValue::decode(value), slot);
+    scope->methodTable(vm)->put(scope, exec, ident, JSValue::decode(value), slot);
 }
 
 int32_t JIT_OPERATION operationMapHash(ExecState* exec, EncodedJSValue input)
@@ -2290,16 +2682,16 @@ int32_t JIT_OPERATION operationMapHash(ExecState* exec, EncodedJSValue input)
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
 
-    return jsMapHash(exec, vm, normalizeMapKey(JSValue::decode(input)));
+    return jsMapHash(exec, vm, JSValue::decode(input));
 }
 
 JSCell* JIT_OPERATION operationJSMapFindBucket(ExecState* exec, JSCell* map, EncodedJSValue key, int32_t hash)
 {
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
-    JSMap::BucketType** bucket = jsCast<JSMap*>(map)->findBucket(exec, normalizeMapKey(JSValue::decode(key)), hash);
+    JSMap::BucketType** bucket = jsCast<JSMap*>(map)->findBucket(exec, JSValue::decode(key), hash);
     if (!bucket)
-        return nullptr;
+        return vm.sentinelMapBucket.get();
     return *bucket;
 }
 
@@ -2307,10 +2699,91 @@ JSCell* JIT_OPERATION operationJSSetFindBucket(ExecState* exec, JSCell* map, Enc
 {
     VM& vm = exec->vm();
     NativeCallFrameTracer tracer(&vm, exec);
-    JSSet::BucketType** bucket = jsCast<JSSet*>(map)->findBucket(exec, normalizeMapKey(JSValue::decode(key)), hash);
+    JSSet::BucketType** bucket = jsCast<JSSet*>(map)->findBucket(exec, JSValue::decode(key), hash);
     if (!bucket)
-        return nullptr;
+        return vm.sentinelSetBucket.get();
     return *bucket;
+}
+
+JSCell* JIT_OPERATION operationSetAdd(ExecState* exec, JSCell* set, EncodedJSValue key, int32_t hash)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto* bucket = jsCast<JSSet*>(set)->addNormalized(exec, JSValue::decode(key), JSValue(), hash);
+    if (!bucket)
+        return vm.sentinelSetBucket.get();
+    return bucket;
+}
+
+JSCell* JIT_OPERATION operationMapSet(ExecState* exec, JSCell* map, EncodedJSValue key, EncodedJSValue value, int32_t hash)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto* bucket = jsCast<JSMap*>(map)->addNormalized(exec, JSValue::decode(key), JSValue::decode(value), hash);
+    if (!bucket)
+        return vm.sentinelMapBucket.get();
+    return bucket;
+}
+
+void JIT_OPERATION operationWeakSetAdd(ExecState* exec, JSCell* set, JSCell* key, int32_t hash)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    jsCast<JSWeakSet*>(set)->add(vm, asObject(key), JSValue(), hash);
+}
+
+void JIT_OPERATION operationWeakMapSet(ExecState* exec, JSCell* map, JSCell* key, EncodedJSValue value, int32_t hash)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    jsCast<JSWeakMap*>(map)->add(vm, asObject(key), JSValue::decode(value), hash);
+}
+
+EncodedJSValue JIT_OPERATION operationGetPrototypeOfObject(ExecState* exec, JSObject* thisObject)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    return JSValue::encode(thisObject->getPrototype(vm, exec));
+}
+
+EncodedJSValue JIT_OPERATION operationGetPrototypeOf(ExecState* exec, EncodedJSValue encodedValue)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue thisValue = JSValue::decode(encodedValue).toThis(exec, StrictMode);
+    if (thisValue.isUndefinedOrNull())
+        return throwVMError(exec, scope, createNotAnObjectError(exec, thisValue));
+
+    JSObject* thisObject = jsDynamicCast<JSObject*>(vm, thisValue);
+    if (!thisObject) {
+        JSObject* prototype = thisValue.synthesizePrototype(exec);
+        EXCEPTION_ASSERT(!!scope.exception() == !prototype);
+        if (UNLIKELY(!prototype))
+            return JSValue::encode(JSValue());
+        return JSValue::encode(prototype);
+    }
+
+    scope.release();
+    return JSValue::encode(thisObject->getPrototype(vm, exec));
+}
+
+void JIT_OPERATION operationThrowDFG(ExecState* exec, EncodedJSValue valueToThrow)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    scope.throwException(exec, JSValue::decode(valueToThrow));
+}
+
+void JIT_OPERATION operationThrowStaticError(ExecState* exec, JSString* message, uint32_t errorType)
+{
+    VM& vm = exec->vm();
+    NativeCallFrameTracer tracer(&vm, exec);
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    String errorMessage = message->value(exec);
+    scope.throwException(exec, createError(exec, static_cast<ErrorType>(errorType), errorMessage));
 }
 
 extern "C" void JIT_OPERATION triggerReoptimizationNow(CodeBlock* codeBlock, OSRExitBase* exit)
@@ -2318,6 +2791,8 @@ extern "C" void JIT_OPERATION triggerReoptimizationNow(CodeBlock* codeBlock, OSR
     // It's sort of preferable that we don't GC while in here. Anyways, doing so wouldn't
     // really be profitable.
     DeferGCForAWhile deferGC(codeBlock->vm()->heap);
+
+    sanitizeStackForVM(codeBlock->vm());
 
     if (Options::verboseOSR())
         dataLog(*codeBlock, ": Entered reoptimize\n");
@@ -2443,6 +2918,8 @@ void JIT_OPERATION triggerTierUpNow(ExecState* exec)
     NativeCallFrameTracer tracer(vm, exec);
     DeferGCForAWhile deferGC(vm->heap);
     CodeBlock* codeBlock = exec->codeBlock();
+
+    sanitizeStackForVM(vm);
 
     if (codeBlock->jitType() != JITCode::DFGJIT) {
         dataLog("Unexpected code block in DFG->FTL tier-up: ", *codeBlock, "\n");
@@ -2678,6 +3155,8 @@ void JIT_OPERATION triggerTierUpNowInLoop(ExecState* exec, unsigned bytecodeInde
     DeferGCForAWhile deferGC(vm->heap);
     CodeBlock* codeBlock = exec->codeBlock();
 
+    sanitizeStackForVM(vm);
+
     if (codeBlock->jitType() != JITCode::DFGJIT) {
         dataLog("Unexpected code block in DFG->FTL tier-up: ", *codeBlock, "\n");
         RELEASE_ASSERT_NOT_REACHED();
@@ -2711,6 +3190,8 @@ char* JIT_OPERATION triggerOSREntryNow(ExecState* exec, unsigned bytecodeIndex)
     NativeCallFrameTracer tracer(vm, exec);
     DeferGCForAWhile deferGC(vm->heap);
     CodeBlock* codeBlock = exec->codeBlock();
+
+    sanitizeStackForVM(vm);
 
     if (codeBlock->jitType() != JITCode::DFGJIT) {
         dataLog("Unexpected code block in DFG->FTL tier-up: ", *codeBlock, "\n");

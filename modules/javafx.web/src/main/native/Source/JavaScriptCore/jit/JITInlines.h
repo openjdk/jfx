@@ -253,6 +253,12 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(C_JITOperation_ESt operati
     return appendCallWithExceptionCheck(operation);
 }
 
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(C_JITOperation_EC operation, JSCell* cell)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(cell));
+    return appendCallWithExceptionCheck(operation);
+}
+
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(C_JITOperation_EZ operation, int32_t arg)
 {
     setupArgumentsWithExecState(TrustedImm32(arg));
@@ -461,6 +467,13 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJJMic oper
     Call call = appendCallWithExceptionCheck(operation);
     setupResults(result);
     return call;
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(P_JITOperation_EUi operation, uint32_t arg1)
+{
+    setupArgumentsWithExecState(TrustedImm32(arg1));
+    updateTopCallFrame();
+    return appendCall(operation);
 }
 
 #if USE(JSVALUE64)
@@ -857,10 +870,8 @@ ALWAYS_INLINE void JIT::linkSlowCaseIfNotJSCell(Vector<SlowCaseEntry>::iterator&
 
 ALWAYS_INLINE void JIT::linkAllSlowCasesForBytecodeOffset(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator& iter, unsigned bytecodeOffset)
 {
-    while (iter != slowCases.end() && iter->to == bytecodeOffset) {
-        iter->from.link(this);
-        ++iter;
-    }
+    while (iter != slowCases.end() && iter->to == bytecodeOffset)
+        linkSlowCase(iter);
 }
 
 ALWAYS_INLINE void JIT::addSlowCase(Jump jump)

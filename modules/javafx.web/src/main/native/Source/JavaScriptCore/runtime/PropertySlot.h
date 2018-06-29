@@ -26,6 +26,7 @@
 #include "PropertyOffset.h"
 #include "ScopeOffset.h"
 #include <wtf/Assertions.h>
+#include <wtf/ForbidHeapAllocation.h>
 
 namespace JSC {
 class ExecState;
@@ -35,7 +36,7 @@ class JSModuleEnvironment;
 
 // ECMA 262-3 8.6.1
 // Property attributes
-enum Attribute : unsigned {
+enum class PropertyAttribute : unsigned {
     None              = 0,
     ReadOnly          = 1 << 1,  // property can be only read, not written
     DontEnum          = 1 << 2,  // property doesn't appear in (for .. in ..)
@@ -59,6 +60,15 @@ enum Attribute : unsigned {
     BuiltinOrFunctionOrAccessorOrLazyPropertyOrConstant = Builtin | Function | Accessor | CellProperty | ClassStructure | PropertyCallback | ConstantInteger // helper only used by static hashtables
 };
 
+static constexpr unsigned operator| (PropertyAttribute a, PropertyAttribute b) { return static_cast<unsigned>(a) | static_cast<unsigned>(b); }
+static constexpr unsigned operator| (unsigned a, PropertyAttribute b) { return a | static_cast<unsigned>(b); }
+static constexpr unsigned operator| (PropertyAttribute a, unsigned b) { return static_cast<unsigned>(a) | b; }
+static constexpr unsigned operator&(unsigned a, PropertyAttribute b) { return a & static_cast<unsigned>(b); }
+static constexpr bool operator<(PropertyAttribute a, PropertyAttribute b) { return static_cast<unsigned>(a) < static_cast<unsigned>(b); }
+static constexpr unsigned operator~(PropertyAttribute a) { return ~static_cast<unsigned>(a); }
+static constexpr bool operator<(PropertyAttribute a, unsigned b) { return static_cast<unsigned>(a) < b; }
+static inline unsigned& operator|=(unsigned& a, PropertyAttribute b) { return a |= static_cast<unsigned>(b); }
+
 enum CacheabilityType : uint8_t {
     CachingDisallowed,
     CachingAllowed
@@ -71,6 +81,12 @@ inline unsigned attributesForStructure(unsigned attributes)
 }
 
 class PropertySlot {
+
+    // We rely on PropertySlot being stack allocated when used. This is needed
+    // because we rely on some of its fields being a GC root. For example, it
+    // may be the only thing that points to the CustomGetterSetter property it has.
+    WTF_FORBID_HEAP_ALLOCATION;
+
     enum PropertyType : uint8_t {
         TypeUnset,
         TypeValue,
@@ -282,6 +298,8 @@ public:
     {
         ASSERT(attributes == attributesForStructure(attributes));
 
+        disableCaching();
+
         ASSERT(getterSetter);
         m_data.customAccessor.getterSetter = getterSetter;
         m_attributes = attributes;
@@ -333,7 +351,7 @@ public:
     void setUndefined()
     {
         m_data.value = JSValue::encode(jsUndefined());
-        m_attributes = ReadOnly | DontDelete | DontEnum;
+        m_attributes = PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete | PropertyAttribute::DontEnum;
 
         m_slotBase = 0;
         m_propertyType = TypeValue;

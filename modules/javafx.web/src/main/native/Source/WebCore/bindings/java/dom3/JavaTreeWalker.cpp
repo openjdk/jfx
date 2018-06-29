@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -43,7 +45,7 @@ extern "C" {
 
 #define IMPL (static_cast<TreeWalker*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
@@ -56,7 +58,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getRootImpl(JNIEn
     return JavaReturn<Node>(env, WTF::getPtr(IMPL->root()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getWhatToShowImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getWhatToShowImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->whatToShow();
@@ -68,7 +70,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getFilterImpl(JNI
     return JavaReturn<NodeFilter>(env, WTF::getPtr(IMPL->filter()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getExpandEntityReferencesImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_TreeWalkerImpl_getExpandEntityReferencesImpl(JNIEnv*, jclass, jlong)
 {
     WebCore::JSMainThreadNullState state;
     return JNI_FALSE;

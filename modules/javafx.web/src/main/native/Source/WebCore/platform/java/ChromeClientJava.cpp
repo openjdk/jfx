@@ -57,6 +57,7 @@
 #include "DragController.h"
 #include <wtf/text/StringBuilder.h>
 
+namespace ChromeClientJavaInternal {
 //MVM -ready initialization
 #define DECLARE_STATIC_CLASS(getFunctionName, sClassPath) \
 static jclass getFunctionName() { \
@@ -203,6 +204,7 @@ static void initRefs(JNIEnv* env)
         ASSERT(pointCTOR);
     }
 }
+}
 
 namespace WebCore {
 
@@ -225,6 +227,7 @@ std::unique_ptr<ColorChooser> ChromeClientJava::createColorChooser(ColorChooserC
 
 FloatRect ChromeClientJava::windowRect()
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -244,6 +247,7 @@ FloatRect ChromeClientJava::windowRect()
 
 void ChromeClientJava::setWindowRect(const FloatRect &r)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -254,6 +258,7 @@ void ChromeClientJava::setWindowRect(const FloatRect &r)
 
 FloatRect ChromeClientJava::pageRect()
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -275,6 +280,7 @@ FloatRect ChromeClientJava::pageRect()
 
 void ChromeClientJava::focus()
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -286,6 +292,7 @@ void ChromeClientJava::focus()
 
 void ChromeClientJava::unfocus()
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -302,6 +309,7 @@ bool ChromeClientJava::canTakeFocus(FocusDirection)
 
 void ChromeClientJava::takeFocus(FocusDirection direction)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -327,6 +335,7 @@ Page* ChromeClientJava::createWindow(
     const WindowFeatures& features,
     const NavigationAction& na)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -354,6 +363,7 @@ Page* ChromeClientJava::createWindow(
 
 void ChromeClientJava::closeWindowSoon()
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -363,6 +373,7 @@ void ChromeClientJava::closeWindowSoon()
 
 void ChromeClientJava::show()
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -410,6 +421,7 @@ bool ChromeClientJava::statusbarVisible()
 
 void ChromeClientJava::setScrollbarsVisible(bool v)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -421,11 +433,6 @@ bool ChromeClientJava::scrollbarsVisible()
 {
     notImplemented();
     return false;
-}
-
-void ChromeClientJava::scrollbarsModeDidChange() const
-{
-    notImplemented();
 }
 
 void ChromeClientJava::setMenubarVisible(bool)
@@ -441,6 +448,7 @@ bool ChromeClientJava::menubarVisible()
 
 void ChromeClientJava::setStatusbarText(const String& text)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -450,6 +458,7 @@ void ChromeClientJava::setStatusbarText(const String& text)
 
 void ChromeClientJava::setCursor(const Cursor& c)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -466,6 +475,7 @@ void ChromeClientJava::setCursorHiddenUntilMouseMoves(bool)
 
 void ChromeClientJava::runJavaScriptAlert(Frame&, const String& text)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -475,6 +485,7 @@ void ChromeClientJava::runJavaScriptAlert(Frame&, const String& text)
 
 bool ChromeClientJava::runJavaScriptConfirm(Frame&, const String& text)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -487,6 +498,7 @@ bool ChromeClientJava::runJavaScriptConfirm(Frame&, const String& text)
 bool ChromeClientJava::runJavaScriptPrompt(Frame&, const String& text,
                                            const String& defaultValue, String& result)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -508,6 +520,7 @@ bool ChromeClientJava::runJavaScriptPrompt(Frame&, const String& text,
 
 void ChromeClientJava::runOpenPanel(Frame&, FileChooser& fileChooser)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -550,6 +563,7 @@ void ChromeClientJava::loadIconForFiles(const Vector<String>& filenames, FileIco
 
 bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -560,6 +574,7 @@ bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
 
 bool ChromeClientJava::runBeforeUnloadConfirmPanel(const String& message, Frame&)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -571,6 +586,7 @@ bool ChromeClientJava::runBeforeUnloadConfirmPanel(const String& message, Frame&
 void ChromeClientJava::addMessageToConsole(MessageSource, MessageLevel, const String& message,
     unsigned lineNumber, unsigned, const String& sourceID)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -607,6 +623,7 @@ void ChromeClientJava::mouseDidMoveOverElement(const HitTestResult& htr, unsigne
 
 void ChromeClientJava::setToolTip(const String& tooltip, TextDirection)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -620,6 +637,7 @@ void ChromeClientJava::setToolTip(const String& tooltip, TextDirection)
 
 void ChromeClientJava::print(Frame&)
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -678,7 +696,9 @@ void ChromeClientJava::scroll(const IntSize& scrollDelta, const IntRect& rectToS
 
 IntPoint ChromeClientJava::screenToRootView(const IntPoint& p) const
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
+    initRefs(env);
     JLObject ptScreen(env->NewObject(
         getPointCls(),
         pointCTOR,
@@ -701,7 +721,9 @@ IntPoint ChromeClientJava::screenToRootView(const IntPoint& p) const
 
 IntRect ChromeClientJava::rootViewToScreen(const IntRect& r) const
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
+    initRefs(env);
     JLObject ptWindow(env->NewObject(
         getPointCls(),
         pointCTOR,
@@ -726,6 +748,7 @@ IntRect ChromeClientJava::rootViewToScreen(const IntRect& r) const
 
 PlatformPageClient ChromeClientJava::platformPageClient() const
 {
+    using namespace ChromeClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 

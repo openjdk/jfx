@@ -28,6 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "ClonedArguments.h"
 #include "DFGArgumentsUtilities.h"
 #include "DFGClobberize.h"
 #include "DFGForAllKills.h"
@@ -40,7 +41,9 @@ namespace JSC { namespace DFG {
 
 namespace {
 
-bool verbose = false;
+namespace DFGVarargsForwardingPhaseInternal {
+static const bool verbose = false;
+}
 
 class VarargsForwardingPhase : public Phase {
 public:
@@ -53,7 +56,7 @@ public:
     {
         DFG_ASSERT(m_graph, nullptr, m_graph.m_form != SSA);
 
-        if (verbose) {
+        if (DFGVarargsForwardingPhaseInternal::verbose) {
             dataLog("Graph before varargs forwarding:\n");
             m_graph.dump();
         }
@@ -85,8 +88,13 @@ private:
         // We expect calls into this function to be rare. So, this is written in a simple O(n) manner.
 
         Node* candidate = block->at(candidateNodeIndex);
-        if (verbose)
+        if (DFGVarargsForwardingPhaseInternal::verbose)
             dataLog("Handling candidate ", candidate, "\n");
+
+        // We eliminate GetButterfly over CreateClonedArguments if the butterfly is only
+        // used by a GetByOffset  that loads the CreateClonedArguments's length. We also
+        // eliminate it if the GetButterfly node is totally unused.
+        Vector<Node*, 1> candidateButterflies;
 
         // Find the index of the last node in this block to use the candidate, and look for escaping
         // sites.
@@ -95,6 +103,16 @@ private:
         for (unsigned nodeIndex = candidateNodeIndex + 1; nodeIndex < block->size(); ++nodeIndex) {
             Node* node = block->at(nodeIndex);
 
+            auto defaultEscape = [&] {
+                if (m_graph.uses(node, candidate)) {
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
+                        dataLog("    Escape at ", node, "\n");
+                    return true;
+                }
+                return false;
+            };
+
+            bool validGetByOffset = false;
             switch (node->op()) {
             case MovHint:
                 if (node->child1() != candidate)
@@ -104,6 +122,7 @@ private:
                     relevantLocals.append(node->unlinkedLocal());
                 break;
 
+            case CheckVarargs:
             case Check: {
                 bool sawEscape = false;
                 m_graph.doToChildren(
@@ -121,7 +140,7 @@ private:
                         sawEscape = true;
                     });
                 if (sawEscape) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Escape at ", node, "\n");
                     return;
                 }
@@ -138,7 +157,7 @@ private:
             case TailCallVarargs:
             case TailCallVarargsInlinedCaller:
                 if (node->child1() == candidate || node->child2() == candidate) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Escape at ", node, "\n");
                     return;
                 }
@@ -148,24 +167,70 @@ private:
 
             case SetLocal:
                 if (node->child1() == candidate && node->variableAccessData()->isLoadedFrom()) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Escape at ", node, "\n");
                     return;
                 }
                 break;
 
-            default:
-                if (m_graph.uses(node, candidate)) {
-                    if (verbose)
-                        dataLog("    Escape at ", node, "\n");
+            case GetArrayLength: {
+                if (node->arrayMode().type() == Array::DirectArguments && node->child1() == candidate && node->child1()->op() == CreateDirectArguments) {
+                    lastUserIndex = nodeIndex;
+                    break;
+                }
+                if (defaultEscape())
                     return;
+                break;
+            }
+
+            case GetButterfly: {
+                if (node->child1() == candidate && candidate->op() == CreateClonedArguments) {
+                    lastUserIndex = nodeIndex;
+                    candidateButterflies.append(node);
+                    break;
+                }
+                if (defaultEscape())
+                    return;
+                break;
+            }
+
+            case GetByOffset: {
+                if (node->child1()->op() == GetButterfly
+                    && candidateButterflies.contains(node->child1().node())
+                    && node->child2() == candidate
+                    && node->storageAccessData().offset == clonedArgumentsLengthPropertyOffset) {
+                    ASSERT(node->child1()->child1() == candidate);
+                    ASSERT(isOutOfLineOffset(clonedArgumentsLengthPropertyOffset));
+                    // We're good to go. This is getting the length of the arguments.
+                    lastUserIndex = nodeIndex;
+                    validGetByOffset = true;
+                    break;
+                }
+                if (defaultEscape())
+                    return;
+                break;
+            }
+
+            default:
+                if (defaultEscape())
+                    return;
+                break;
+            }
+
+            if (!validGetByOffset) {
+                for (Node* butterfly : candidateButterflies) {
+                    if (m_graph.uses(node, butterfly)) {
+                        if (DFGVarargsForwardingPhaseInternal::verbose)
+                            dataLog("    Butterfly escaped at ", node, "\n");
+                        return;
+                    }
                 }
             }
 
             forAllKilledOperands(
                 m_graph, node, block->tryAt(nodeIndex + 1),
                 [&] (VirtualRegister reg) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Killing ", reg, " while we are interested in ", listDump(relevantLocals), "\n");
                     for (unsigned i = 0; i < relevantLocals.size(); ++i) {
                         if (relevantLocals[i] == reg) {
@@ -176,7 +241,7 @@ private:
                     }
                 });
         }
-        if (verbose)
+        if (DFGVarargsForwardingPhaseInternal::verbose)
             dataLog("Selected lastUserIndex = ", lastUserIndex, ", ", block->at(lastUserIndex), "\n");
 
         // We're still in business. Determine if between the candidate and the last user there is any
@@ -193,7 +258,7 @@ private:
             case ZombieHint:
             case KillStack:
                 if (argumentsInvolveStackSlot(candidate, node->unlinkedLocal())) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Interference at ", node, "\n");
                     return;
                 }
@@ -201,7 +266,7 @@ private:
 
             case PutStack:
                 if (argumentsInvolveStackSlot(candidate, node->stackAccessData()->local)) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Interference at ", node, "\n");
                     return;
                 }
@@ -210,7 +275,7 @@ private:
             case SetLocal:
             case Flush:
                 if (argumentsInvolveStackSlot(candidate, node->local())) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Interference at ", node, "\n");
                     return;
                 }
@@ -232,7 +297,7 @@ private:
                     },
                     NoOpClobberize());
                 if (doesInterfere) {
-                    if (verbose)
+                    if (DFGVarargsForwardingPhaseInternal::verbose)
                         dataLog("    Interference at ", node, "\n");
                     return;
                 }
@@ -240,7 +305,7 @@ private:
         }
 
         // We can make this work.
-        if (verbose)
+        if (DFGVarargsForwardingPhaseInternal::verbose)
             dataLog("    Will do forwarding!\n");
         m_changed = true;
 
@@ -258,10 +323,13 @@ private:
             DFG_CRASH(m_graph, candidate, "bad node type");
             break;
         }
+
+        InsertionSet insertionSet(m_graph);
         for (unsigned nodeIndex = candidateNodeIndex + 1; nodeIndex <= lastUserIndex; ++nodeIndex) {
             Node* node = block->at(nodeIndex);
             switch (node->op()) {
             case Check:
+            case CheckVarargs:
             case MovHint:
             case PutHint:
                 // We don't need to change anything with these.
@@ -305,6 +373,32 @@ private:
                 // SSA conversion will kill it.
                 break;
 
+            case GetButterfly: {
+                if (node->child1().node() == candidate) {
+                    ASSERT(candidateButterflies.contains(node));
+                    node->child1() = Edge();
+                    node->remove(m_graph);
+                }
+                break;
+            }
+
+            case GetByOffset: {
+                if (node->child2() == candidate) {
+                    ASSERT(candidateButterflies.contains(node->child1().node())); // It's no longer a GetButterfly node, but it should've been a candidate butterfly.
+                    ASSERT(node->storageAccessData().offset == clonedArgumentsLengthPropertyOffset);
+                    node->convertToIdentityOn(
+                        emitCodeToGetArgumentsArrayLength(insertionSet, candidate, nodeIndex, node->origin));
+                }
+                break;
+            }
+
+            case GetArrayLength:
+                if (node->arrayMode().type() == Array::DirectArguments && node->child1() == candidate) {
+                    node->convertToIdentityOn(
+                        emitCodeToGetArgumentsArrayLength(insertionSet, candidate, nodeIndex, node->origin));
+                }
+                break;
+
             default:
                 if (ASSERT_DISABLED)
                     break;
@@ -316,6 +410,8 @@ private:
                 break;
             }
         }
+
+        insertionSet.execute(block);
     }
 
     bool m_changed;

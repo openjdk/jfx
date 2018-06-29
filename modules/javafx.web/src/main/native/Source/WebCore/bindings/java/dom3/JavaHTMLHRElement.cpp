@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/HTMLHRElement.h>
@@ -55,13 +57,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_setAlignImpl(JN
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::alignAttr, String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_getNoShadeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_getNoShadeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::noshadeAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_setNoShadeImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLHRElementImpl_setNoShadeImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::noshadeAttr, value);

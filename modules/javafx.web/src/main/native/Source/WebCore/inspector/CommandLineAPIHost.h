@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include <inspector/PerGlobalObjectWrapperWorld.h>
+#include <JavaScriptCore/PerGlobalObjectWrapperWorld.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -83,15 +83,17 @@ public:
         WTF_MAKE_FAST_ALLOCATED;
     public:
         virtual JSC::JSValue get(JSC::ExecState&);
-        virtual ~InspectableObject() { }
+        virtual ~InspectableObject() = default;
     };
     void addInspectedObject(std::unique_ptr<InspectableObject>);
     JSC::JSValue inspectedObject(JSC::ExecState&);
     void inspect(JSC::ExecState&, JSC::JSValue objectToInspect, JSC::JSValue hints);
 
     struct ListenerEntry {
-        JSC::Strong<JSC::JSObject> function;
+        JSC::Strong<JSC::JSObject> listener;
         bool useCapture;
+        bool passive;
+        bool once;
     };
 
     using EventListenersRecord = Vector<WTF::KeyValuePair<String, Vector<ListenerEntry>>>;
@@ -106,11 +108,11 @@ public:
 private:
     CommandLineAPIHost();
 
-    Inspector::InspectorAgent* m_inspectorAgent {nullptr};
-    Inspector::InspectorConsoleAgent* m_consoleAgent {nullptr};
-    InspectorDOMAgent* m_domAgent {nullptr};
-    InspectorDOMStorageAgent* m_domStorageAgent {nullptr};
-    InspectorDatabaseAgent* m_databaseAgent {nullptr};
+    Inspector::InspectorAgent* m_inspectorAgent { nullptr };
+    Inspector::InspectorConsoleAgent* m_consoleAgent { nullptr };
+    InspectorDOMAgent* m_domAgent { nullptr };
+    InspectorDOMStorageAgent* m_domStorageAgent { nullptr };
+    InspectorDatabaseAgent* m_databaseAgent { nullptr };
 
     std::unique_ptr<InspectableObject> m_inspectedObject; // $0
     Inspector::PerGlobalObjectWrapperWorld m_wrappers;

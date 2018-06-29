@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,14 +39,17 @@
 #include "CommonSlowPaths.h"
 #include "CustomGetterSetter.h"
 #include "DFGWorklist.h"
+#include "DirectEvalExecutable.h"
 #include "Disassembler.h"
 #include "ErrorInstance.h"
 #include "EvalCodeBlock.h"
 #include "Exception.h"
+#include "ExecutableToCodeBlockEdge.h"
 #include "FTLThunks.h"
 #include "FastMallocAlignedMemoryAllocator.h"
 #include "FunctionCodeBlock.h"
 #include "FunctionConstructor.h"
+#include "FunctionExecutable.h"
 #include "GCActivityCallback.h"
 #include "GetterSetter.h"
 #include "GigacageAlignedMemoryAllocator.h"
@@ -57,36 +60,55 @@
 #include "HostCallReturnValue.h"
 #include "Identifier.h"
 #include "IncrementalSweeper.h"
+#include "IndirectEvalExecutable.h"
 #include "InferredTypeTable.h"
+#include "InferredValue.h"
 #include "Interpreter.h"
 #include "JITCode.h"
 #include "JITWorklist.h"
 #include "JSAPIValueWrapper.h"
 #include "JSArray.h"
+#include "JSAsyncFunction.h"
+#include "JSBigInt.h"
+#include "JSBoundFunction.h"
 #include "JSCInlines.h"
+#include "JSCustomGetterSetterFunction.h"
+#include "JSDestructibleObjectHeapCellType.h"
 #include "JSFixedArray.h"
 #include "JSFunction.h"
 #include "JSGlobalObjectFunctions.h"
 #include "JSInternalPromiseDeferred.h"
 #include "JSLock.h"
 #include "JSMap.h"
+#include "JSMapIterator.h"
 #include "JSPromiseDeferred.h"
 #include "JSPropertyNameEnumerator.h"
+#include "JSSegmentedVariableObjectHeapCellType.h"
+#include "JSScriptFetchParameters.h"
 #include "JSScriptFetcher.h"
+#include "JSSet.h"
+#include "JSSetIterator.h"
 #include "JSSourceCode.h"
-#include "JSTemplateRegistryKey.h"
+#include "JSStringHeapCellType.h"
+#include "JSTemplateObjectDescriptor.h"
+#include "JSWeakMap.h"
+#include "JSWeakSet.h"
 #include "JSWebAssembly.h"
+#include "JSWebAssemblyCodeBlockHeapCellType.h"
 #include "JSWithScope.h"
 #include "LLIntData.h"
 #include "Lexer.h"
 #include "Lookup.h"
 #include "MinimumReservedZoneSize.h"
 #include "ModuleProgramCodeBlock.h"
+#include "ModuleProgramExecutable.h"
+#include "NativeExecutable.h"
 #include "NativeStdFunctionCell.h"
 #include "Nodes.h"
 #include "Parser.h"
 #include "ProfilerDatabase.h"
 #include "ProgramCodeBlock.h"
+#include "ProgramExecutable.h"
 #include "PromiseDeferredTimer.h"
 #include "PropertyMapHashTable.h"
 #include "RegExpCache.h"
@@ -102,6 +124,7 @@
 #include "StrongInlines.h"
 #include "StructureInlines.h"
 #include "TestRunnerUtils.h"
+#include "ThreadLocalCacheInlines.h"
 #include "ThunkGenerators.h"
 #include "TypeProfiler.h"
 #include "TypeProfilerLog.h"
@@ -111,6 +134,8 @@
 #include "WasmWorklist.h"
 #include "Watchdog.h"
 #include "WeakGCMapInlines.h"
+#include "WebAssemblyFunction.h"
+#include "WebAssemblyWrapperFunction.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/ProcessID.h>
 #include <wtf/ReadWriteLock.h>
@@ -158,6 +183,48 @@ static bool enableAssembler(ExecutableAllocator& executableAllocator)
 }
 #endif // ENABLE(!ASSEMBLER)
 
+bool VM::canUseAssembler()
+{
+#if ENABLE(ASSEMBLER)
+    static std::once_flag onceKey;
+    static bool enabled = false;
+    std::call_once(onceKey, [] {
+        enabled = enableAssembler(ExecutableAllocator::singleton());
+    });
+    return enabled;
+#else
+    return false; // interpreter only
+#endif
+}
+
+bool VM::canUseJIT()
+{
+#if ENABLE(JIT)
+    static std::once_flag onceKey;
+    static bool enabled = false;
+    std::call_once(onceKey, [] {
+        enabled = VM::canUseAssembler() && Options::useJIT();
+    });
+    return enabled;
+#else
+    return false; // interpreter only
+#endif
+}
+
+bool VM::canUseRegExpJIT()
+{
+#if ENABLE(YARR_JIT)
+    static std::once_flag onceKey;
+    static bool enabled = false;
+    std::call_once(onceKey, [] {
+        enabled = VM::canUseAssembler() && Options::useRegExpJIT();
+    });
+    return enabled;
+#else
+    return false; // interpreter only
+#endif
+}
+
 VM::VM(VMType vmType, HeapType heapType)
     : m_apiLock(adoptRef(new JSLock(this)))
 #if USE(CF)
@@ -167,20 +234,66 @@ VM::VM(VMType vmType, HeapType heapType)
     , fastMallocAllocator(std::make_unique<FastMallocAlignedMemoryAllocator>())
     , primitiveGigacageAllocator(std::make_unique<GigacageAlignedMemoryAllocator>(Gigacage::Primitive))
     , jsValueGigacageAllocator(std::make_unique<GigacageAlignedMemoryAllocator>(Gigacage::JSValue))
-    , primitiveGigacageAuxiliarySpace("Primitive Gigacage Auxiliary", heap, AllocatorAttributes(DoesNotNeedDestruction, HeapCell::Auxiliary), primitiveGigacageAllocator.get())
-    , jsValueGigacageAuxiliarySpace("JSValue Gigacage Auxiliary", heap, AllocatorAttributes(DoesNotNeedDestruction, HeapCell::Auxiliary), jsValueGigacageAllocator.get())
-    , cellSpace("JSCell", heap, AllocatorAttributes(DoesNotNeedDestruction, HeapCell::JSCell), fastMallocAllocator.get())
-    , destructibleCellSpace("Destructible JSCell", heap, AllocatorAttributes(NeedsDestruction, HeapCell::JSCell), fastMallocAllocator.get())
-    , stringSpace("JSString", heap, fastMallocAllocator.get())
-    , destructibleObjectSpace("JSDestructibleObject", heap, fastMallocAllocator.get())
-    , eagerlySweptDestructibleObjectSpace("Eagerly Swept JSDestructibleObject", heap, fastMallocAllocator.get())
-    , segmentedVariableObjectSpace("JSSegmentedVariableObjectSpace", heap, fastMallocAllocator.get())
+    , auxiliaryJSValueStrictHeapCellType(std::make_unique<HeapCellType>(CellAttributes(DoesNotNeedDestruction, HeapCell::Auxiliary, SecurityKind::JSValueStrict)))
+    , auxiliaryDangerousBitsHeapCellType(std::make_unique<HeapCellType>(CellAttributes(DoesNotNeedDestruction, HeapCell::Auxiliary, SecurityKind::DangerousBits)))
+    , cellJSValueOOBHeapCellType(std::make_unique<HeapCellType>(CellAttributes(DoesNotNeedDestruction, HeapCell::JSCell, SecurityKind::JSValueOOB)))
+    , cellDangerousBitsHeapCellType(std::make_unique<HeapCellType>(CellAttributes(DoesNotNeedDestruction, HeapCell::JSCell, SecurityKind::JSValueOOB)))
+    , destructibleCellHeapCellType(std::make_unique<HeapCellType>(CellAttributes(NeedsDestruction, HeapCell::JSCell, SecurityKind::DangerousBits)))
+    , stringHeapCellType(std::make_unique<JSStringHeapCellType>())
+    , destructibleObjectHeapCellType(std::make_unique<JSDestructibleObjectHeapCellType>())
+    , segmentedVariableObjectHeapCellType(std::make_unique<JSSegmentedVariableObjectHeapCellType>())
 #if ENABLE(WEBASSEMBLY)
-    , webAssemblyCodeBlockSpace("JSWebAssemblyCodeBlockSpace", heap, fastMallocAllocator.get())
+    , webAssemblyCodeBlockHeapCellType(std::make_unique<JSWebAssemblyCodeBlockHeapCellType>())
 #endif
+    , primitiveGigacageAuxiliarySpace("Primitive Gigacage Auxiliary", heap, auxiliaryDangerousBitsHeapCellType.get(), primitiveGigacageAllocator.get())
+    , jsValueGigacageAuxiliarySpace("JSValue Gigacage Auxiliary", heap, auxiliaryJSValueStrictHeapCellType.get(), jsValueGigacageAllocator.get())
+    , cellJSValueOOBSpace("JSCell JSValueOOB", heap, cellJSValueOOBHeapCellType.get(), fastMallocAllocator.get())
+    , cellDangerousBitsSpace("JSCell DangerousBits", heap, cellDangerousBitsHeapCellType.get(), fastMallocAllocator.get())
+    , jsValueGigacageCellSpace("JSValue Gigacage JSCell", heap, cellJSValueOOBHeapCellType.get(), jsValueGigacageAllocator.get())
+    , destructibleCellSpace("Destructible JSCell", heap, destructibleCellHeapCellType.get(), fastMallocAllocator.get())
+    , stringSpace("JSString", heap, stringHeapCellType.get(), fastMallocAllocator.get())
+    , destructibleObjectSpace("JSDestructibleObject", heap, destructibleObjectHeapCellType.get(), fastMallocAllocator.get())
+    , eagerlySweptDestructibleObjectSpace("Eagerly Swept JSDestructibleObject", heap, destructibleObjectHeapCellType.get(), fastMallocAllocator.get())
+    , segmentedVariableObjectSpace("JSSegmentedVariableObjectSpace", heap, segmentedVariableObjectHeapCellType.get(), fastMallocAllocator.get())
+#if ENABLE(WEBASSEMBLY)
+    , webAssemblyCodeBlockSpace("JSWebAssemblyCodeBlockSpace", heap, webAssemblyCodeBlockHeapCellType.get(), fastMallocAllocator.get())
+#endif
+    , asyncFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), JSAsyncFunction)
+    , asyncGeneratorFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), JSAsyncGeneratorFunction)
+    , boundFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), JSBoundFunction)
+    , customGetterSetterFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), JSCustomGetterSetterFunction)
+    , directEvalExecutableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), DirectEvalExecutable)
+    , executableToCodeBlockEdgeSpace ISO_SUBSPACE_INIT(heap, cellDangerousBitsHeapCellType.get(), ExecutableToCodeBlockEdge)
+    , functionExecutableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), FunctionExecutable)
+    , functionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), JSFunction)
+    , generatorFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), JSGeneratorFunction)
+    , indirectEvalExecutableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), IndirectEvalExecutable)
+    , inferredTypeSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), InferredType)
+    , inferredValueSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), InferredValue)
+    , moduleProgramExecutableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), ModuleProgramExecutable)
+    , nativeExecutableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), NativeExecutable)
+    , nativeStdFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), JSNativeStdFunction)
+    , programExecutableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), ProgramExecutable)
+    , propertyTableSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), PropertyTable)
+    , structureRareDataSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), StructureRareData)
+    , structureSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), Structure)
+    , weakSetSpace ISO_SUBSPACE_INIT(heap, destructibleObjectHeapCellType.get(), JSWeakSet)
+    , weakMapSpace ISO_SUBSPACE_INIT(heap, destructibleObjectHeapCellType.get(), JSWeakMap)
+#if ENABLE(WEBASSEMBLY)
+    , webAssemblyFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), WebAssemblyFunction)
+    , webAssemblyWrapperFunctionSpace ISO_SUBSPACE_INIT(heap, cellJSValueOOBHeapCellType.get(), WebAssemblyWrapperFunction)
+#endif
+    , executableToCodeBlockEdgesWithConstraints(executableToCodeBlockEdgeSpace)
+    , executableToCodeBlockEdgesWithFinalizers(executableToCodeBlockEdgeSpace)
+    , inferredTypesWithFinalizers(inferredTypeSpace)
+    , inferredValuesWithFinalizers(inferredValueSpace)
+    , evalCodeBlockSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), EvalCodeBlock)
+    , functionCodeBlockSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), FunctionCodeBlock)
+    , moduleProgramCodeBlockSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), ModuleProgramCodeBlock)
+    , programCodeBlockSpace ISO_SUBSPACE_INIT(heap, destructibleCellHeapCellType.get(), ProgramCodeBlock)
     , vmType(vmType)
     , clientData(0)
-    , topVMEntryFrame(nullptr)
+    , topEntryFrame(nullptr)
     , topCallFrame(CallFrame::noCaller())
     , promiseDeferredTimer(std::make_unique<PromiseDeferredTimer>(*this))
     , m_atomicStringTable(vmType == Default ? Thread::current().atomicStringTable() : new AtomicStringTable)
@@ -190,21 +303,12 @@ VM::VM(VMType vmType, HeapType heapType)
     , customGetterSetterFunctionMap(*this)
     , stringCache(*this)
     , symbolImplToSymbolMap(*this)
-    , prototypeMap(*this)
+    , structureCache(*this)
     , interpreter(0)
     , entryScope(0)
     , m_regExpCache(new RegExpCache(this))
 #if ENABLE(REGEXP_TRACING)
     , m_rtTraceList(new RTTraceList())
-#endif
-#if ENABLE(ASSEMBLER)
-    , m_canUseAssembler(enableAssembler(ExecutableAllocator::singleton()))
-#endif
-#if ENABLE(JIT)
-    , m_canUseJIT(m_canUseAssembler && Options::useJIT())
-#endif
-#if ENABLE(YARR_JIT)
-    , m_canUseRegExpJIT(m_canUseAssembler && Options::useRegExpJIT())
 #endif
 #if ENABLE(GC_VALIDATION)
     , m_initializingObjectClass(0)
@@ -221,6 +325,9 @@ VM::VM(VMType vmType, HeapType heapType)
     StackBounds stack = Thread::current().stack();
     updateSoftReservedZoneSize(Options::softReservedZoneSize());
     setLastStackTop(stack.origin());
+
+    defaultThreadLocalCache = ThreadLocalCache::create(heap);
+    defaultThreadLocalCache->install(*this);
 
     // Need to be careful to keep everything consistent here
     JSLockHolder lock(this);
@@ -249,9 +356,10 @@ VM::VM(VMType vmType, HeapType heapType)
     fixedArrayStructure.set(*this, JSFixedArray::createStructure(*this, 0, jsNull()));
     sourceCodeStructure.set(*this, JSSourceCode::createStructure(*this, 0, jsNull()));
     scriptFetcherStructure.set(*this, JSScriptFetcher::createStructure(*this, 0, jsNull()));
+    scriptFetchParametersStructure.set(*this, JSScriptFetchParameters::createStructure(*this, 0, jsNull()));
     structureChainStructure.set(*this, StructureChain::createStructure(*this, 0, jsNull()));
     sparseArrayValueMapStructure.set(*this, SparseArrayValueMap::createStructure(*this, 0, jsNull()));
-    templateRegistryKeyStructure.set(*this, JSTemplateRegistryKey::createStructure(*this, 0, jsNull()));
+    templateObjectDescriptorStructure.set(*this, JSTemplateObjectDescriptor::createStructure(*this, 0, jsNull()));
     arrayBufferNeuteringWatchpointStructure.set(*this, ArrayBufferNeuteringWatchpoint::createStructure(*this));
     unlinkedFunctionExecutableStructure.set(*this, UnlinkedFunctionExecutable::createStructure(*this, 0, jsNull()));
     unlinkedProgramCodeBlockStructure.set(*this, UnlinkedProgramCodeBlock::createStructure(*this, 0, jsNull()));
@@ -259,9 +367,9 @@ VM::VM(VMType vmType, HeapType heapType)
     unlinkedFunctionCodeBlockStructure.set(*this, UnlinkedFunctionCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedModuleProgramCodeBlockStructure.set(*this, UnlinkedModuleProgramCodeBlock::createStructure(*this, 0, jsNull()));
     propertyTableStructure.set(*this, PropertyTable::createStructure(*this, 0, jsNull()));
-    inferredValueStructure.set(*this, InferredValue::createStructure(*this, 0, jsNull()));
     inferredTypeStructure.set(*this, InferredType::createStructure(*this, 0, jsNull()));
     inferredTypeTableStructure.set(*this, InferredTypeTable::createStructure(*this, 0, jsNull()));
+    inferredValueStructure.set(*this, InferredValue::createStructure(*this, 0, jsNull()));
     functionRareDataStructure.set(*this, FunctionRareData::createStructure(*this, 0, jsNull()));
     exceptionStructure.set(*this, Exception::createStructure(*this, 0, jsNull()));
     promiseDeferredStructure.set(*this, JSPromiseDeferred::createStructure(*this, 0, jsNull()));
@@ -272,6 +380,13 @@ VM::VM(VMType vmType, HeapType heapType)
     functionCodeBlockStructure.set(*this, FunctionCodeBlock::createStructure(*this, 0, jsNull()));
     hashMapBucketSetStructure.set(*this, HashMapBucket<HashMapBucketDataKey>::createStructure(*this, 0, jsNull()));
     hashMapBucketMapStructure.set(*this, HashMapBucket<HashMapBucketDataKeyValue>::createStructure(*this, 0, jsNull()));
+    setIteratorStructure.set(*this, JSSetIterator::createStructure(*this, 0, jsNull()));
+    mapIteratorStructure.set(*this, JSMapIterator::createStructure(*this, 0, jsNull()));
+    bigIntStructure.set(*this, JSBigInt::createStructure(*this, 0, jsNull()));
+    executableToCodeBlockEdgeStructure.set(*this, ExecutableToCodeBlockEdge::createStructure(*this, nullptr, jsNull()));
+
+    sentinelSetBucket.set(*this, JSSet::BucketType::createSentinel(*this));
+    sentinelMapBucket.set(*this, JSMap::BucketType::createSentinel(*this));
 
     nativeStdFunctionCellStructure.set(*this, NativeStdFunctionCell::createStructure(*this, 0, jsNull()));
     smallStrings.initializeCommonStrings(*this);
@@ -281,7 +396,6 @@ VM::VM(VMType vmType, HeapType heapType)
 #if ENABLE(JIT)
     jitStubs = std::make_unique<JITThunks>();
 #endif
-    arityCheckData = std::make_unique<CommonSlowPaths::ArityCheckData>();
 
 #if ENABLE(FTL_JIT)
     ftlThunks = std::make_unique<FTL::Thunks>();
@@ -336,10 +450,17 @@ VM::VM(VMType vmType, HeapType heapType)
         setShouldBuildPCToCodeOriginMapping();
 
     if (Options::watchdog()) {
-        std::chrono::milliseconds timeoutMillis(Options::watchdog());
         Watchdog& watchdog = ensureWatchdog();
-        watchdog.setTimeLimit(timeoutMillis);
+        watchdog.setTimeLimit(Seconds::fromMilliseconds(Options::watchdog()));
     }
+
+#if ENABLE(JIT)
+    // Make sure that any stubs that the JIT is going to use are initialized in non-compilation threads.
+    if (canUseJIT()) {
+        getCTIInternalFunctionTrampolineFor(CodeForCall);
+        getCTIInternalFunctionTrampolineFor(CodeForConstruct);
+    }
+#endif
 
     VMInspector::instance().add(this);
 }
@@ -359,7 +480,7 @@ VM::~VM()
     promiseDeferredTimer->stopRunningTasks();
 #if ENABLE(WEBASSEMBLY)
     if (Wasm::existingWorklistOrNull())
-        Wasm::ensureWorklist().stopAllPlansForVM(*this);
+        Wasm::ensureWorklist().stopAllPlansForContext(wasmContext);
 #endif
     if (UNLIKELY(m_watchdog))
         m_watchdog->willDestroyVM(this);
@@ -401,6 +522,10 @@ VM::~VM()
     m_apiLock->willDestroyVM(this);
     heap.lastChanceToFinalize();
 
+#if !USE(FAST_TLS_FOR_TLC)
+    ThreadLocalCache::destructor(threadLocalCacheData);
+#endif
+
     delete interpreter;
 #ifndef NDEBUG
     interpreter = reinterpret_cast<Interpreter*>(0xbbadbeef);
@@ -414,6 +539,12 @@ VM::~VM()
 
     delete clientData;
     delete m_regExpCache;
+
+#if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
+    if (m_regExpPatternContexBuffer)
+        delete[] m_regExpPatternContexBuffer;
+#endif
+
 #if ENABLE(REGEXP_TRACING)
     delete m_rtTraceList;
 #endif
@@ -568,6 +699,20 @@ NativeExecutable* VM::getHostFunction(NativeFunction function, Intrinsic intrins
         NoIntrinsic, signature, name);
 }
 
+MacroAssemblerCodePtr VM::getCTIInternalFunctionTrampolineFor(CodeSpecializationKind kind)
+{
+#if ENABLE(JIT)
+    if (canUseJIT()) {
+        if (kind == CodeForCall)
+            return jitStubs->ctiInternalFunctionCall(this);
+        return jitStubs->ctiInternalFunctionConstruct(this);
+    }
+#endif
+    if (kind == CodeForCall)
+        return MacroAssemblerCodePtr::createLLIntCodePtr(llint_internal_function_call_trampoline);
+    return MacroAssemblerCodePtr::createLLIntCodePtr(llint_internal_function_construct_trampoline);
+}
+
 VM::ClientData::~ClientData()
 {
 }
@@ -637,7 +782,7 @@ void VM::throwException(ExecState* exec, Exception* exception)
 
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     m_nativeStackTraceOfLastThrow = StackTrace::captureStackTrace(Options::unexpectedExceptionStackTraceLimit());
-    m_throwingThread = currentThread();
+    m_throwingThread = &Thread::current();
 #endif
 }
 
@@ -756,13 +901,33 @@ void logSanitizeStack(VM* vm)
 {
     if (Options::verboseSanitizeStack() && vm->topCallFrame) {
         int dummy;
+        auto& stackBounds = Thread::current().stack();
         dataLog(
-            "Sanitizing stack with top call frame at ", RawPointer(vm->topCallFrame),
+            "Sanitizing stack for VM = ", RawPointer(vm), " with top call frame at ", RawPointer(vm->topCallFrame),
             ", current stack pointer at ", RawPointer(&dummy), ", in ",
-            pointerDump(vm->topCallFrame->codeBlock()), " and last code origin = ",
-            vm->topCallFrame->codeOrigin(), "\n");
+            pointerDump(vm->topCallFrame->codeBlock()), ", last code origin = ",
+            vm->topCallFrame->codeOrigin(), ", last stack top = ", RawPointer(vm->lastStackTop()), ", in stack range [", RawPointer(stackBounds.origin()), ", ", RawPointer(stackBounds.end()), "]\n");
     }
 }
+
+#if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
+char* VM::acquireRegExpPatternContexBuffer()
+{
+    ASSERT(!m_regExpPatternContextLock.isLocked());
+
+    m_regExpPatternContextLock.lock();
+    if (!m_regExpPatternContexBuffer)
+        m_regExpPatternContexBuffer = new char[VM::patternContextBufferSize];
+    return m_regExpPatternContexBuffer;
+}
+
+void VM::releaseRegExpPatternContexBuffer()
+{
+    ASSERT(m_regExpPatternContextLock.isLocked());
+
+    m_regExpPatternContextLock.unlock();
+}
+#endif
 
 #if ENABLE(REGEXP_TRACING)
 void VM::addRegExpToTrace(RegExp* regExp)
@@ -910,6 +1075,11 @@ void QueuedTask::run()
 void sanitizeStackForVM(VM* vm)
 {
     logSanitizeStack(vm);
+    if (vm->topCallFrame) {
+        auto& stackBounds = Thread::current().stack();
+        ASSERT(vm->currentThreadIsHoldingAPILock());
+        ASSERT_UNUSED(stackBounds, stackBounds.contains(vm->lastStackTop()));
+    }
 #if !ENABLE(JIT)
     vm->interpreter->cloopStack().sanitizeStack();
 #else
@@ -961,24 +1131,23 @@ void VM::verifyExceptionCheckNeedIsSatisfied(unsigned recursionDepth, ExceptionE
             "        (ExceptionScope::m_recursionDepth was ", recursionDepth, ")\n"
             "\n");
 
+        StringPrintStream out;
+        std::unique_ptr<StackTrace> currentTrace = StackTrace::captureStackTrace(Options::unexpectedExceptionStackTraceLimit());
+
+        if (Options::dumpSimulatedThrows()) {
+            out.println("The simulated exception was thrown at:");
+            m_nativeStackTraceOfLastSimulatedThrow->dump(out, "    ");
+            out.println();
+        }
+        out.println("Unchecked exception detected at:");
+        currentTrace->dump(out, "    ");
+        out.println();
+
+        dataLog(out.toCString());
         RELEASE_ASSERT(!m_needExceptionCheck);
     }
 }
 #endif
-
-#if ENABLE(JIT)
-RegisterAtOffsetList* VM::getAllCalleeSaveRegisterOffsets()
-{
-    static RegisterAtOffsetList* result;
-
-    static std::once_flag calleeSavesFlag;
-    std::call_once(calleeSavesFlag, [] () {
-        result = new RegisterAtOffsetList(RegisterSet::vmCalleeSaveRegisters(), RegisterAtOffsetList::ZeroBased);
-    });
-
-    return result;
-}
-#endif // ENABLE(JIT)
 
 #if USE(CF)
 void VM::registerRunLoopTimer(JSRunLoopTimer* timer)

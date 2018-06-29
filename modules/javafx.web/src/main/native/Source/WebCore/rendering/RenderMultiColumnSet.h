@@ -26,8 +26,8 @@
 #pragma once
 
 #include "LayerFragment.h"
-#include "RenderMultiColumnFlowThread.h"
-#include "RenderRegionSet.h"
+#include "RenderFragmentContainerSet.h"
+#include "RenderMultiColumnFlow.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -40,31 +40,32 @@ namespace WebCore {
 // for the 2nd to n-1 pages, and then one last column set that will hold the shorter columns on the final page (that may have to be balanced
 // as well).
 //
-// Column spans result in the creation of new column sets as well, since a spanning region has to be placed in between the column sets that
+// Column spans result in the creation of new column sets as well, since a spanning fragment has to be placed in between the column sets that
 // come before and after the span.
-class RenderMultiColumnSet final : public RenderRegionSet {
+class RenderMultiColumnSet : public RenderFragmentContainerSet {
+    WTF_MAKE_ISO_ALLOCATED(RenderMultiColumnSet);
 public:
-    RenderMultiColumnSet(RenderFlowThread&, RenderStyle&&);
+    RenderMultiColumnSet(RenderFragmentedFlow&, RenderStyle&&);
 
     RenderBlockFlow* multiColumnBlockFlow() const { return downcast<RenderBlockFlow>(parent()); }
-    RenderMultiColumnFlowThread* multiColumnFlowThread() const { return static_cast<RenderMultiColumnFlowThread*>(flowThread()); }
+    RenderMultiColumnFlow* multiColumnFlow() const { return static_cast<RenderMultiColumnFlow*>(fragmentedFlow()); }
 
     RenderMultiColumnSet* nextSiblingMultiColumnSet() const;
     RenderMultiColumnSet* previousSiblingMultiColumnSet() const;
 
     // Return the first object in the flow thread that's rendered inside this set.
-    RenderObject* firstRendererInFlowThread() const;
+    RenderObject* firstRendererInFragmentedFlow() const;
     // Return the last object in the flow thread that's rendered inside this set.
-    RenderObject* lastRendererInFlowThread() const;
+    RenderObject* lastRendererInFragmentedFlow() const;
 
     // Return true if the specified renderer (descendant of the flow thread) is inside this column set.
-    bool containsRendererInFlowThread(const RenderObject&) const;
+    bool containsRendererInFragmentedFlow(const RenderObject&) const;
 
-    void setLogicalTopInFlowThread(LayoutUnit);
-    LayoutUnit logicalTopInFlowThread() const { return isHorizontalWritingMode() ? flowThreadPortionRect().y() : flowThreadPortionRect().x(); }
-    void setLogicalBottomInFlowThread(LayoutUnit);
-    LayoutUnit logicalBottomInFlowThread() const { return isHorizontalWritingMode() ? flowThreadPortionRect().maxY() : flowThreadPortionRect().maxX(); }
-    LayoutUnit logicalHeightInFlowThread() const { return isHorizontalWritingMode() ? flowThreadPortionRect().height() : flowThreadPortionRect().width(); }
+    void setLogicalTopInFragmentedFlow(LayoutUnit);
+    LayoutUnit logicalTopInFragmentedFlow() const { return isHorizontalWritingMode() ? fragmentedFlowPortionRect().y() : fragmentedFlowPortionRect().x(); }
+    void setLogicalBottomInFragmentedFlow(LayoutUnit);
+    LayoutUnit logicalBottomInFragmentedFlow() const { return isHorizontalWritingMode() ? fragmentedFlowPortionRect().maxY() : fragmentedFlowPortionRect().maxX(); }
+    LayoutUnit logicalHeightInFragmentedFlow() const { return isHorizontalWritingMode() ? fragmentedFlowPortionRect().height() : fragmentedFlowPortionRect().width(); }
 
     unsigned computedColumnCount() const { return m_computedColumnCount; }
     LayoutUnit computedColumnWidth() const { return m_computedColumnWidth; }
@@ -91,7 +92,7 @@ public:
     // multicol container's height is constrained. If |initial| is set, and we are to balance, guess
     // an initial column height; otherwise, stretch the column height a tad. Return true if column
     // height changed and another layout pass is required.
-    bool recalculateColumnHeight(bool initial);
+    virtual bool recalculateColumnHeight(bool initial);
 
     // Record space shortage (the amount of space that would have been enough to prevent some
     // element from being moved to the next column) at a column break. The smallest amount of space
@@ -109,9 +110,9 @@ public:
     // when advancing to the next column set or spanner.
     void endFlow(RenderBlock* container, LayoutUnit bottomInContainer);
     // Has this set been flowed in this layout pass?
-    bool hasBeenFlowed() const { return logicalBottomInFlowThread() != RenderFlowThread::maxLogicalHeight(); }
+    bool hasBeenFlowed() const { return logicalBottomInFragmentedFlow() != RenderFragmentedFlow::maxLogicalHeight(); }
 
-    bool requiresBalancing() const;
+    virtual bool requiresBalancing() const;
 
     LayoutPoint columnTranslationForOffset(const LayoutUnit&) const;
 
@@ -121,21 +122,19 @@ public:
         ClampHitTestTranslationToColumns,
         DoNotClampHitTestTranslationToColumns
     };
-    LayoutPoint translateRegionPointToFlowThread(const LayoutPoint & logicalPoint, ColumnHitTestTranslationMode = DoNotClampHitTestTranslationToColumns) const;
+    LayoutPoint translateFragmentPointToFragmentedFlow(const LayoutPoint & logicalPoint, ColumnHitTestTranslationMode = DoNotClampHitTestTranslationToColumns) const;
 
     void updateHitTestResult(HitTestResult&, const LayoutPoint&) override;
 
-    LayoutRect columnRectAt(unsigned index) const;
-    unsigned columnCount() const;
+    virtual LayoutRect columnRectAt(unsigned index) const;
+    virtual unsigned columnCount() const;
 
 protected:
     void addOverflowFromChildren() override;
+    LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
-private:
     bool isRenderMultiColumnSet() const override { return true; }
     void layout() override;
-
-    LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
     void paintObject(PaintInfo&, const LayoutPoint&) override { }
 
@@ -143,35 +142,39 @@ private:
     LayoutUnit pageLogicalHeight() const override { return m_computedColumnHeight; }
 
     LayoutUnit pageLogicalTopForOffset(LayoutUnit offset) const override;
+    LayoutUnit pageLogicalHeightForOffset(LayoutUnit) const override { return m_computedColumnHeight; }
 
-    LayoutUnit logicalHeightOfAllFlowThreadContent() const override { return logicalHeightInFlowThread(); }
+    LayoutUnit logicalHeightOfAllFragmentedFlowContent() const override { return logicalHeightInFragmentedFlow(); }
 
-    void repaintFlowThreadContent(const LayoutRect& repaintRect) override;
+    void repaintFragmentedFlowContent(const LayoutRect& repaintRect) override;
 
     void collectLayerFragments(LayerFragments&, const LayoutRect& layerBoundingBox, const LayoutRect& dirtyRect) override;
 
-    void adjustRegionBoundsFromFlowThreadPortionRect(LayoutRect& regionBounds) const override;
+    void adjustFragmentBoundsFromFragmentedFlowPortionRect(LayoutRect& fragmentBounds) const override;
 
-    VisiblePosition positionForPoint(const LayoutPoint&, const RenderRegion*) override;
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) override;
 
     const char* renderName() const override;
 
     LayoutUnit calculateMaxColumnHeight() const;
-    LayoutUnit columnGap() const;
+    virtual LayoutUnit columnGap() const;
 
     LayoutUnit columnLogicalLeft(unsigned) const;
     LayoutUnit columnLogicalTop(unsigned) const;
 
-    LayoutRect flowThreadPortionRectAt(unsigned index) const;
-    LayoutRect flowThreadPortionOverflowRect(const LayoutRect& flowThreadPortion, unsigned index, unsigned colCount, LayoutUnit colGap);
+    virtual LayoutRect fragmentedFlowPortionRectAt(unsigned index) const;
+    virtual LayoutRect fragmentedFlowPortionOverflowRect(const LayoutRect& fragmentedFlowPortion, unsigned index, unsigned colCount, LayoutUnit colGap);
 
     LayoutUnit initialBlockOffsetForPainting() const;
+
+    virtual bool skipLayerFragmentCollectionForColumn(unsigned) const { return false; }
+    virtual LayoutUnit customBlockProgressionAdjustmentForColumn(unsigned) const { return 0; }
 
     enum ColumnIndexCalculationMode {
         ClampToExistingColumns, // Stay within the range of already existing columns.
         AssumeNewColumns // Allow column indices outside the range of already existing columns.
     };
-    unsigned columnIndexAtOffset(LayoutUnit, ColumnIndexCalculationMode = ClampToExistingColumns) const;
+    virtual unsigned columnIndexAtOffset(LayoutUnit, ColumnIndexCalculationMode = ClampToExistingColumns) const;
 
     void setAndConstrainColumnHeight(LayoutUnit);
 

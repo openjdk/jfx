@@ -28,7 +28,7 @@
 #if ENABLE(JAVA_BRIDGE)
 
 #include "JNIUtility.h"
-#include <runtime/JSCJSValue.h>
+#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/RefPtr.h>
 
 #define jlong_to_ptr(a) ((void*)(uintptr_t)(a))

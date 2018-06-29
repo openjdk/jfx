@@ -36,6 +36,7 @@
 #include "CachedResourceHandle.h"
 #include "CachedScript.h"
 #include "CachedStyleSheetClient.h"
+#include "CachedTextTrack.h"
 
 #include <wtf/WeakPtr.h>
 
@@ -45,7 +46,7 @@ class LinkLoader;
 
 class LinkPreloadResourceClient {
 public:
-    virtual ~LinkPreloadResourceClient() { }
+    virtual ~LinkPreloadResourceClient() = default;
 
     void triggerEvents(const CachedResource&);
 
@@ -76,14 +77,21 @@ private:
     CachedResourceHandle<CachedResource> m_resource;
 };
 
-class LinkPreloadScriptResourceClient: public LinkPreloadResourceClient, CachedResourceClient {
+class LinkPreloadDefaultResourceClient: public LinkPreloadResourceClient, CachedResourceClient {
 public:
-    static std::unique_ptr<LinkPreloadScriptResourceClient> create(LinkLoader& loader, CachedScript& resource)
+    static std::unique_ptr<LinkPreloadDefaultResourceClient> create(LinkLoader& loader, CachedScript& resource)
     {
-        return std::unique_ptr<LinkPreloadScriptResourceClient>(new LinkPreloadScriptResourceClient(loader, resource));
+        return std::unique_ptr<LinkPreloadDefaultResourceClient>(new LinkPreloadDefaultResourceClient(loader, resource));
     }
 
-    virtual ~LinkPreloadScriptResourceClient() { }
+#if ENABLE(VIDEO_TRACK)
+    static std::unique_ptr<LinkPreloadDefaultResourceClient> create(LinkLoader& loader, CachedTextTrack& resource)
+    {
+        return std::unique_ptr<LinkPreloadDefaultResourceClient>(new LinkPreloadDefaultResourceClient(loader, resource));
+    }
+#endif
+
+    virtual ~LinkPreloadDefaultResourceClient() = default;
 
 
     void notifyFinished(CachedResource& resource) override { triggerEvents(resource); }
@@ -92,7 +100,7 @@ public:
     bool shouldMarkAsReferenced() const override { return false; }
 
 private:
-    LinkPreloadScriptResourceClient(LinkLoader& loader, CachedScript& resource)
+    LinkPreloadDefaultResourceClient(LinkLoader& loader, CachedResource& resource)
         : LinkPreloadResourceClient(loader, resource)
     {
         addResource(*this);
@@ -106,7 +114,7 @@ public:
         return std::unique_ptr<LinkPreloadStyleResourceClient>(new LinkPreloadStyleResourceClient(loader, resource));
     }
 
-    virtual ~LinkPreloadStyleResourceClient() { }
+    virtual ~LinkPreloadStyleResourceClient() = default;
 
     void setCSSStyleSheet(const String&, const URL&, const String&, const CachedCSSStyleSheet* resource) override
     {
@@ -133,7 +141,7 @@ public:
         return std::unique_ptr<LinkPreloadImageResourceClient>(new LinkPreloadImageResourceClient(loader, resource));
     }
 
-    virtual ~LinkPreloadImageResourceClient() { }
+    virtual ~LinkPreloadImageResourceClient() = default;
 
     void notifyFinished(CachedResource& resource) override { triggerEvents(resource); }
 
@@ -155,7 +163,7 @@ public:
         return std::unique_ptr<LinkPreloadFontResourceClient>(new LinkPreloadFontResourceClient(loader, resource));
     }
 
-    virtual ~LinkPreloadFontResourceClient() { }
+    virtual ~LinkPreloadFontResourceClient() = default;
 
     void fontLoaded(CachedFont& resource) override
     {
@@ -181,7 +189,7 @@ public:
         return std::unique_ptr<LinkPreloadRawResourceClient>(new LinkPreloadRawResourceClient(loader, resource));
     }
 
-    virtual ~LinkPreloadRawResourceClient() { }
+    virtual ~LinkPreloadRawResourceClient() = default;
 
     void notifyFinished(CachedResource& resource) override { triggerEvents(resource); }
 

@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -50,12 +52,12 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getNameImpl(J
     return JavaReturn<String>(env, IMPL->name());
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getEntitiesImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getEntitiesImpl(JNIEnv*, jclass, jlong)
 {
     return 0;
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getNotationsImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getNotationsImpl(JNIEnv*, jclass, jlong)
 {
     WebCore::JSMainThreadNullState state;
     return 0;
@@ -73,7 +75,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getSystemIdIm
     return JavaReturn<String>(env, IMPL->systemId());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getInternalSubsetImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentTypeImpl_getInternalSubsetImpl(JNIEnv* env, jclass, jlong)
 {
     WebCore::JSMainThreadNullState state;
     return JavaReturn<String>(env, String());

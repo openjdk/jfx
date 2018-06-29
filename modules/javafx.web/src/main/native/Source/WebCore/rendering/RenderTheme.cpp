@@ -283,7 +283,7 @@ bool RenderTheme::paint(const RenderBox& box, ControlStates& controlStates, cons
     if (paintInfo.context().paintingDisabled())
         return false;
 
-    if (UNLIKELY(paintInfo.context().isRecording()))
+    if (UNLIKELY(!paintInfo.context().hasPlatformContext()))
         return false;
 
     ControlPart part = box.style().appearance();
@@ -819,7 +819,7 @@ bool RenderTheme::isFocused(const RenderObject& renderer) const
     if (!is<Element>(node))
         return false;
 
-    Element* focusDelegate = downcast<Element>(*node).focusDelegate();
+    auto focusDelegate = downcast<Element>(*node).focusDelegate();
     Document& document = focusDelegate->document();
     Frame* frame = document.frame();
     return focusDelegate == document.focusedElement() && frame && frame->selection().isFocusedAndActive();
@@ -1000,7 +1000,7 @@ void RenderTheme::paintSliderTicks(const RenderObject& o, const PaintInfo& paint
         return;
 
     auto& input = downcast<HTMLInputElement>(*o.node());
-    auto* dataList = downcast<HTMLDataListElement>(input.list());
+    auto* dataList = downcast<HTMLDataListElement>(input.list().get());
     if (!dataList)
         return;
 
@@ -1313,7 +1313,7 @@ Color RenderTheme::disabledTextColor(const Color& textColor, const Color& backgr
 
     // If there's not very much contrast between the disabled color and the background color,
     // just leave the text color alone. We don't want to change a good contrast color scheme so that it has really bad contrast.
-    // If the the contrast was already poor, then it doesn't do any good to change it to a different poor contrast color scheme.
+    // If the contrast was already poor, then it doesn't do any good to change it to a different poor contrast color scheme.
     if (differenceSquared(disabledColor, backgroundColor) < minColorContrastValue)
         return textColor;
 

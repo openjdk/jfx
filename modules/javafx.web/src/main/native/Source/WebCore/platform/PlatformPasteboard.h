@@ -49,7 +49,9 @@ class Color;
 class SelectionData;
 class SharedBuffer;
 class URL;
+struct PasteboardCustomData;
 struct PasteboardImage;
+struct PasteboardItemInfo;
 struct PasteboardURL;
 struct PasteboardWebContent;
 
@@ -58,16 +60,18 @@ public:
     WEBCORE_EXPORT explicit PlatformPasteboard(const String& pasteboardName);
 #if PLATFORM(IOS) || PLATFORM(WPE)
     WEBCORE_EXPORT PlatformPasteboard();
-    WEBCORE_EXPORT Vector<String> filenamesForDataInteraction();
+    WEBCORE_EXPORT PasteboardItemInfo informationForItemAtIndex(int index);
     WEBCORE_EXPORT void getTypesByFidelityForItemAtIndex(Vector<String>& types, int index);
     WEBCORE_EXPORT void updateSupportedTypeIdentifiers(const Vector<String>& types);
 #endif
     WEBCORE_EXPORT static String uniqueName();
 
+    WEBCORE_EXPORT static String platformPasteboardTypeForSafeTypeForDOMToReadAndWrite(const String& domType);
+
     WEBCORE_EXPORT void getTypes(Vector<String>& types);
     WEBCORE_EXPORT RefPtr<SharedBuffer> bufferForType(const String& pasteboardType);
-    WEBCORE_EXPORT void getPathnamesForType(Vector<String>& pathnames, const String& pasteboardType);
-    WEBCORE_EXPORT String stringForType(const String& pasteboardType);
+    WEBCORE_EXPORT void getPathnamesForType(Vector<String>& pathnames, const String& pasteboardType) const;
+    WEBCORE_EXPORT String stringForType(const String& pasteboardType) const;
     WEBCORE_EXPORT long changeCount() const;
     WEBCORE_EXPORT Color color();
     WEBCORE_EXPORT URL url();
@@ -89,7 +93,10 @@ public:
     WEBCORE_EXPORT String readString(int index, const String& pasteboardType);
     WEBCORE_EXPORT URL readURL(int index, const String& pasteboardType, String& title);
     WEBCORE_EXPORT int count();
-    WEBCORE_EXPORT int numberOfFiles();
+    WEBCORE_EXPORT int numberOfFiles() const;
+
+    WEBCORE_EXPORT long write(const PasteboardCustomData&);
+    WEBCORE_EXPORT Vector<String> typesSafeForDOMToReadAndWrite(const String& origin) const;
 
 #if PLATFORM(GTK)
     WEBCORE_EXPORT void writeToClipboard(const SelectionData&, WTF::Function<void()>&& primarySelectionCleared);
@@ -98,10 +105,6 @@ public:
 
 private:
 #if PLATFORM(IOS)
-    WEBCORE_EXPORT void writeObjectRepresentations(const PasteboardWebContent&);
-    WEBCORE_EXPORT void writeObjectRepresentations(const PasteboardImage&);
-    WEBCORE_EXPORT void writeObjectRepresentations(const String& pasteboardType, const String& text);
-    WEBCORE_EXPORT void writeObjectRepresentations(const PasteboardURL&);
     bool allowReadingURLAtIndex(const URL&, int index) const;
 #endif
 

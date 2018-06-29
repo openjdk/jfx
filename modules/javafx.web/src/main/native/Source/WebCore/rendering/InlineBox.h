@@ -23,6 +23,7 @@
 #include "RenderBoxModelObject.h"
 #include "RenderText.h"
 #include "TextFlags.h"
+#include <wtf/IsoMalloc.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
@@ -34,7 +35,7 @@ class RootInlineBox;
 // InlineBox represents a rectangle that occurs on a line.  It corresponds to
 // some RenderObject (i.e., it represents a portion of that RenderObject).
 class InlineBox {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(InlineBox);
 public:
     virtual ~InlineBox();
 
@@ -254,11 +255,11 @@ public:
         return nullptr;
     }
 
-    FloatPoint locationIncludingFlipping();
-    void flipForWritingMode(FloatRect&);
-    FloatPoint flipForWritingMode(const FloatPoint&);
-    void flipForWritingMode(LayoutRect&);
-    LayoutPoint flipForWritingMode(const LayoutPoint&);
+    FloatPoint locationIncludingFlipping() const;
+    void flipForWritingMode(FloatRect&) const;
+    FloatPoint flipForWritingMode(const FloatPoint&) const;
+    void flipForWritingMode(LayoutRect&) const;
+    LayoutPoint flipForWritingMode(const LayoutPoint&) const;
 
     bool knownToHaveNoOverflow() const { return m_bitfields.knownToHaveNoOverflow(); }
     void clearKnownToHaveNoOverflow();

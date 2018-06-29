@@ -24,9 +24,12 @@
 #include "HTMLProgressElement.h"
 #include "RenderTheme.h"
 #include <wtf/CurrentTime.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderProgress);
 
 RenderProgress::RenderProgress(HTMLElement& element, RenderStyle&& style)
     : RenderBlockFlow(element, WTFMove(style))
@@ -38,9 +41,7 @@ RenderProgress::RenderProgress(HTMLElement& element, RenderStyle&& style)
 {
 }
 
-RenderProgress::~RenderProgress()
-{
-}
+RenderProgress::~RenderProgress() = default;
 
 void RenderProgress::updateFromElement()
 {

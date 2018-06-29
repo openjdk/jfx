@@ -48,13 +48,9 @@ static const AtomicString& slotNameFromSlotAttribute(const Node& child)
     return slotNameFromAttributeValue(downcast<Element>(child).attributeWithoutSynchronization(slotAttr));
 }
 
-SlotAssignment::SlotAssignment()
-{
-}
+SlotAssignment::SlotAssignment() = default;
 
-SlotAssignment::~SlotAssignment()
-{
-}
+SlotAssignment::~SlotAssignment() = default;
 
 HTMLSlotElement* SlotAssignment::findAssignedSlot(const Node& node, ShadowRoot& shadowRoot)
 {
@@ -137,7 +133,7 @@ void SlotAssignment::didChangeSlot(const AtomicString& slotAttrValue, ShadowRoot
     it->value->assignedNodes.clear();
     m_slotAssignmentsIsValid = false;
 
-    HTMLSlotElement* slotElement = findFirstSlotElement(*it->value, shadowRoot);
+    RefPtr<HTMLSlotElement> slotElement = findFirstSlotElement(*it->value, shadowRoot);
     if (!slotElement)
         return;
 

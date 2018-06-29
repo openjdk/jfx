@@ -26,6 +26,7 @@
 namespace WebCore {
 
 class RenderReplaced : public RenderBox {
+    WTF_MAKE_ISO_ALLOCATED(RenderReplaced);
 public:
     virtual ~RenderReplaced();
 
@@ -81,7 +82,7 @@ private:
 
     LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
 
-    VisiblePosition positionForPoint(const LayoutPoint&, const RenderRegion*) final;
+    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
 
     bool canBeSelectionLeaf() const override { return true; }
 

@@ -33,8 +33,8 @@
 
 #include "InspectorOverlay.h"
 #include "PageScriptDebugServer.h"
-#include <inspector/InspectorAgentRegistry.h>
-#include <inspector/InspectorEnvironment.h>
+#include <JavaScriptCore/InspectorAgentRegistry.h>
+#include <JavaScriptCore/InspectorEnvironment.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/WTFString.h>
@@ -66,6 +66,7 @@ class InstrumentingAgents;
 class Node;
 class Page;
 class WebInjectedScriptManager;
+struct PageAgentContext;
 
 class InspectorController final : public Inspector::InspectorEnvironment {
     WTF_MAKE_NONCOPYABLE(InspectorController);
@@ -103,7 +104,7 @@ public:
 
     void setIndicating(bool);
 
-    WEBCORE_EXPORT Ref<Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::NodeHighlightData>> buildObjectForHighlightedNodes() const;
+    WEBCORE_EXPORT Ref<JSON::ArrayOf<Inspector::Protocol::OverlayTypes::NodeHighlightData>> buildObjectForHighlightedNodes() const;
 
     WEBCORE_EXPORT void didComposite(Frame&);
 
@@ -128,6 +129,9 @@ public:
 private:
     friend class InspectorInstrumentation;
 
+    PageAgentContext pageAgentContext();
+    void createLazyAgents();
+
     Ref<InstrumentingAgents> m_instrumentingAgents;
     std::unique_ptr<WebInjectedScriptManager> m_injectedScriptManager;
     Ref<Inspector::FrontendRouter> m_frontendRouter;
@@ -148,6 +152,7 @@ private:
     bool m_isUnderTest { false };
     bool m_isAutomaticInspection { false };
     bool m_pauseAfterInitialization = { false };
+    bool m_didCreateLazyAgents { false };
 };
 
 } // namespace WebCore

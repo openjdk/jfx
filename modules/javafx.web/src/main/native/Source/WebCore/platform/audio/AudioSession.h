@@ -26,8 +26,6 @@
 #ifndef AudioSession_h
 #define AudioSession_h
 
-#include "PlatformExportMacros.h"
-
 #if USE(AUDIO_SESSION)
 
 #include <memory>
@@ -70,7 +68,7 @@ public:
 
     class MutedStateObserver {
     public:
-        virtual ~MutedStateObserver() { }
+        virtual ~MutedStateObserver() = default;
 
         virtual void hardwareMutedStateDidChange(AudioSession*) = 0;
     };

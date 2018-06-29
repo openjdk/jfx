@@ -77,7 +77,7 @@ SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSObject* array, unsigne
     AddResult result;
     size_t capacity;
     {
-        auto locker = holdLock(*this);
+        auto locker = holdLock(cellLock());
         SparseArrayEntry entry;
         entry.setWithoutWriteBarrier(jsUndefined());
 
@@ -95,13 +95,13 @@ SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSObject* array, unsigne
 
 void SparseArrayValueMap::remove(iterator it)
 {
-    auto locker = holdLock(*this);
+    auto locker = holdLock(cellLock());
     m_map.remove(it);
 }
 
 void SparseArrayValueMap::remove(unsigned i)
 {
-    auto locker = holdLock(*this);
+    auto locker = holdLock(cellLock());
     m_map.remove(i);
 }
 
@@ -145,7 +145,7 @@ bool SparseArrayValueMap::putDirect(ExecState* exec, JSObject* array, unsigned i
         return typeError(exec, scope, shouldThrow, ASCIILiteral(NonExtensibleObjectPropertyDefineError));
     }
 
-    if (entry.attributes & ReadOnly)
+    if (entry.attributes & PropertyAttribute::ReadOnly)
         return typeError(exec, scope, shouldThrow, ASCIILiteral(ReadonlyPropertyWriteError));
 
     entry.attributes = attributes;
@@ -176,8 +176,8 @@ bool SparseArrayEntry::put(ExecState* exec, JSValue thisValue, SparseArrayValueM
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (!(attributes & Accessor)) {
-        if (attributes & ReadOnly)
+    if (!(attributes & PropertyAttribute::Accessor)) {
+        if (attributes & PropertyAttribute::ReadOnly)
             return typeError(exec, scope, shouldThrow, ASCIILiteral(ReadonlyPropertyWriteError));
 
         set(vm, map, value);
@@ -198,8 +198,8 @@ void SparseArrayValueMap::visitChildren(JSCell* thisObject, SlotVisitor& visitor
 {
     Base::visitChildren(thisObject, visitor);
 
+    auto locker = holdLock(thisObject->cellLock());
     SparseArrayValueMap* thisMap = jsCast<SparseArrayValueMap*>(thisObject);
-    auto locker = holdLock(*thisMap);
     iterator end = thisMap->m_map.end();
     for (iterator it = thisMap->m_map.begin(); it != end; ++it)
         visitor.append(it->value);

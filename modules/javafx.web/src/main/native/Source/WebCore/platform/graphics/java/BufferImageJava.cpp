@@ -25,6 +25,8 @@
 
 #include "config.h"
 
+#include <wtf/text/WTFString.h>
+
 #include "ImageObserver.h"
 #include "BufferImageJava.h"
 #include "PlatformContextJava.h"

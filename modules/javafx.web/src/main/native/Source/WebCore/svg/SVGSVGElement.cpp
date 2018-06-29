@@ -166,13 +166,13 @@ SVGViewSpec& SVGSVGElement::currentView()
     return *m_viewSpec;
 }
 
-Frame* SVGSVGElement::frameForCurrentScale() const
+RefPtr<Frame> SVGSVGElement::frameForCurrentScale() const
 {
     // The behavior of currentScale() is undefined when we're dealing with non-standalone SVG documents.
     // If the document is embedded, the scaling is handled by the host renderer.
     if (!isConnected() || !isOutermostSVGSVGElement())
         return nullptr;
-    Frame* frame = document().frame();
+    auto frame = makeRefPtr(document().frame());
     return frame && frame->isMainFrame() ? frame : nullptr;
 }
 
@@ -180,13 +180,13 @@ float SVGSVGElement::currentScale() const
 {
     // When asking from inside an embedded SVG document, a scale value of 1 seems reasonable, as it doesn't
     // know anything about the parent scale.
-    Frame* frame = frameForCurrentScale();
+    auto frame = frameForCurrentScale();
     return frame ? frame->pageZoomFactor() : 1;
 }
 
 void SVGSVGElement::setCurrentScale(float scale)
 {
-    if (Frame* frame = frameForCurrentScale())
+    if (auto frame = frameForCurrentScale())
         frame->setPageZoomFactor(scale);
 }
 
@@ -323,40 +323,57 @@ void SVGSVGElement::forceRedraw()
 {
 }
 
-Ref<NodeList> SVGSVGElement::collectIntersectionOrEnclosureList(SVGRect& rect, SVGElement* referenceElement, bool (*checkFunction)(const SVGElement*, SVGRect&))
+Ref<NodeList> SVGSVGElement::collectIntersectionOrEnclosureList(SVGRect& rect, SVGElement* referenceElement, bool (*checkFunction)(SVGElement&, SVGRect&))
 {
     Vector<Ref<Element>> elements;
     for (auto& element : descendantsOfType<SVGElement>(referenceElement ? *referenceElement : *this)) {
-        if (checkFunction(&element, rect))
+        if (checkFunction(element, rect))
             elements.append(element);
     }
     return StaticElementList::create(WTFMove(elements));
 }
 
+static bool checkIntersectionWithoutUpdatingLayout(SVGElement& element, SVGRect& rect)
+{
+    return RenderSVGModelObject::checkIntersection(element.renderer(), rect.propertyReference());
+}
+
+static bool checkEnclosureWithoutUpdatingLayout(SVGElement& element, SVGRect& rect)
+{
+    return RenderSVGModelObject::checkEnclosure(element.renderer(), rect.propertyReference());
+}
+
 Ref<NodeList> SVGSVGElement::getIntersectionList(SVGRect& rect, SVGElement* referenceElement)
 {
     document().updateLayoutIgnorePendingStylesheets();
-    return collectIntersectionOrEnclosureList(rect, referenceElement, checkIntersection);
+    return collectIntersectionOrEnclosureList(rect, referenceElement, checkIntersectionWithoutUpdatingLayout);
 }
 
 Ref<NodeList> SVGSVGElement::getEnclosureList(SVGRect& rect, SVGElement* referenceElement)
 {
-    return collectIntersectionOrEnclosureList(rect, referenceElement, checkEnclosure);
+    document().updateLayoutIgnorePendingStylesheets();
+    return collectIntersectionOrEnclosureList(rect, referenceElement, checkEnclosureWithoutUpdatingLayout);
 }
 
-bool SVGSVGElement::checkIntersection(const SVGElement* element, SVGRect& rect)
+bool SVGSVGElement::checkIntersection(RefPtr<SVGElement>&& element, SVGRect& rect)
 {
-    return element && RenderSVGModelObject::checkIntersection(element->renderer(), rect.propertyReference());
+    if (!element)
+        return false;
+    element->document().updateLayoutIgnorePendingStylesheets();
+    return checkIntersectionWithoutUpdatingLayout(*element, rect);
 }
 
-bool SVGSVGElement::checkEnclosure(const SVGElement* element, SVGRect& rect)
+bool SVGSVGElement::checkEnclosure(RefPtr<SVGElement>&& element, SVGRect& rect)
 {
-    return element && RenderSVGModelObject::checkEnclosure(element->renderer(), rect.propertyReference());
+    if (!element)
+        return false;
+    element->document().updateLayoutIgnorePendingStylesheets();
+    return checkEnclosureWithoutUpdatingLayout(*element, rect);
 }
 
 void SVGSVGElement::deselectAll()
 {
-    if (Frame* frame = document().frame())
+    if (auto frame = makeRefPtr(document().frame()))
         frame->selection().clear();
 }
 
@@ -436,10 +453,10 @@ AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMSc
             transform.translate(location.x() - viewBoxTransform.e(), location.y() - viewBoxTransform.f());
 
             // Respect scroll offset.
-            if (FrameView* view = document().view()) {
+            if (auto view = makeRefPtr(document().view())) {
                 LayoutPoint scrollPosition = view->scrollPosition();
                 scrollPosition.scale(zoomFactor);
-                transform.translate(-scrollPosition.x(), -scrollPosition.y());
+                transform.translate(-scrollPosition);
             }
         }
     }
@@ -467,9 +484,9 @@ RenderPtr<RenderElement> SVGSVGElement::createElementRenderer(RenderStyle&& styl
     return createRenderer<RenderSVGViewportContainer>(*this, WTFMove(style));
 }
 
-Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode& rootParent)
+Node::InsertedIntoAncestorResult SVGSVGElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    if (rootParent.isConnected()) {
+    if (insertionType.connectedToDocument) {
         document().accessSVGExtensions().addTimeContainer(this);
         if (!document().accessSVGExtensions().areAnimationsPaused())
             unpauseAnimations();
@@ -480,16 +497,16 @@ Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode& ro
         if (!document().parsing() && !document().processingLoadEvent() && document().loadEventFinished() && !m_timeContainer->isStarted())
             m_timeContainer->begin();
     }
-    return SVGGraphicsElement::insertedInto(rootParent);
+    return SVGGraphicsElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 }
 
-void SVGSVGElement::removedFrom(ContainerNode& rootParent)
+void SVGSVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
-    if (rootParent.isConnected()) {
+    if (removalType.disconnectedFromDocument) {
         document().accessSVGExtensions().removeTimeContainer(this);
         pauseAnimations();
     }
-    SVGGraphicsElement::removedFrom(rootParent);
+    SVGGraphicsElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 }
 
 void SVGSVGElement::pauseAnimations()
@@ -618,10 +635,29 @@ AffineTransform SVGSVGElement::viewBoxToViewTransform(float viewWidth, float vie
     return transform;
 }
 
-void SVGSVGElement::scrollToAnchor(const String& fragmentIdentifier, Element* anchorNode)
+SVGViewElement* SVGSVGElement::findViewAnchor(const String& fragmentIdentifier) const
+{
+    auto* anchorElement = document().findAnchor(fragmentIdentifier);
+    return is<SVGViewElement>(anchorElement) ? downcast<SVGViewElement>(anchorElement): nullptr;
+}
+
+SVGSVGElement* SVGSVGElement::findRootAnchor(const SVGViewElement* viewElement) const
+{
+    auto* viewportElement = SVGLocatable::nearestViewportElement(viewElement);
+    return is<SVGSVGElement>(viewportElement) ? downcast<SVGSVGElement>(viewportElement) : nullptr;
+}
+
+SVGSVGElement* SVGSVGElement::findRootAnchor(const String& fragmentIdentifier) const
+{
+    if (auto* viewElement = findViewAnchor(fragmentIdentifier))
+        return findRootAnchor(viewElement);
+    return nullptr;
+}
+
+bool SVGSVGElement::scrollToFragment(const String& fragmentIdentifier)
 {
     auto renderer = this->renderer();
-    SVGViewSpec* view = m_viewSpec.get();
+    auto view = m_viewSpec;
     if (view)
         view->reset();
 
@@ -632,7 +668,7 @@ void SVGSVGElement::scrollToAnchor(const String& fragmentIdentifier, Element* an
         // FIXME: XPointer references are ignored (https://bugs.webkit.org/show_bug.cgi?id=17491)
         if (renderer && hadUseCurrentView)
             RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        return;
+        return false;
     }
 
     if (fragmentIdentifier.startsWith("svgView(")) {
@@ -644,27 +680,49 @@ void SVGSVGElement::scrollToAnchor(const String& fragmentIdentifier, Element* an
             view->reset();
         if (renderer && (hadUseCurrentView || m_useCurrentView))
             RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
-        return;
+        return m_useCurrentView;
     }
 
     // Spec: If the SVG fragment identifier addresses a "view" element within an SVG document (e.g., MyDrawing.svg#MyView
     // or MyDrawing.svg#xpointer(id('MyView'))) then the closest ancestor "svg" element is displayed in the viewport.
     // Any view specification attributes included on the given "view" element override the corresponding view specification
     // attributes on the closest ancestor "svg" element.
-    if (is<SVGViewElement>(anchorNode)) {
-        auto& viewElement = downcast<SVGViewElement>(*anchorNode);
-        auto* viewportElement = SVGLocatable::nearestViewportElement(&viewElement);
-        if (is<SVGSVGElement>(viewportElement)) {
-            auto& element = downcast<SVGSVGElement>(*viewportElement);
-            element.inheritViewAttributes(viewElement);
-            if (auto* renderer = element.renderer())
+    if (auto* viewElement = findViewAnchor(fragmentIdentifier)) {
+        if (auto* rootElement = findRootAnchor(viewElement)) {
+            rootElement->inheritViewAttributes(*viewElement);
+            if (auto* renderer = rootElement->renderer())
                 RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer);
+            m_currentViewFragmentIdentifier = fragmentIdentifier;
+            return true;
         }
-        return;
     }
 
     // FIXME: We need to decide which <svg> to focus on, and zoom to it.
     // FIXME: We need to actually "highlight" the viewTarget(s).
+    return false;
+}
+
+void SVGSVGElement::resetScrollAnchor()
+{
+    if (!m_useCurrentView && m_currentViewFragmentIdentifier.isEmpty())
+        return;
+
+    if (m_viewSpec)
+        m_viewSpec->reset();
+
+    if (!m_currentViewFragmentIdentifier.isEmpty()) {
+        if (auto* rootElement = findRootAnchor(m_currentViewFragmentIdentifier)) {
+            SVGViewSpec& view = rootElement->currentView();
+            view.setViewBoxBaseValue(viewBox());
+            view.setPreserveAspectRatioBaseValue(preserveAspectRatioBaseValue());
+            view.setZoomAndPanBaseValue(zoomAndPan());
+            m_currentViewFragmentIdentifier = { };
+        }
+    }
+
+    m_useCurrentView = false;
+    if (renderer())
+        RenderSVGResource::markForLayoutAndParentResourceInvalidation(*renderer());
 }
 
 void SVGSVGElement::inheritViewAttributes(const SVGViewElement& viewElement)
@@ -705,9 +763,9 @@ Element* SVGSVGElement::getElementById(const AtomicString& id)
     if (id.isNull())
         return nullptr;
 
-    Element* element = treeScope().getElementById(id);
+    auto element = makeRefPtr(treeScope().getElementById(id));
     if (element && element->isDescendantOf(*this))
-        return element;
+        return element.get();
     if (treeScope().containsMultipleElementsWithId(id)) {
         for (auto* element : *treeScope().getAllElementsById(id)) {
             if (element->isDescendantOf(*this))

@@ -32,6 +32,7 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "CDM.h"
+#include "CDMClient.h"
 #include "CDMInstance.h"
 #include "MediaKeySession.h"
 #include "SharedBuffer.h"
@@ -66,7 +67,9 @@ ExceptionOr<Ref<MediaKeySession>> MediaKeys::createSession(ScriptExecutionContex
     // 3. Let session be a new MediaKeySession object, and initialize it as follows:
     // NOTE: Continued in MediaKeySession.
     // 4. Return session.
-    return MediaKeySession::create(context, sessionType, m_useDistinctiveIdentifier, m_implementation.copyRef(), m_instance.copyRef());
+    auto session = MediaKeySession::create(context, m_weakPtrFactory.createWeakPtr(*this), sessionType, m_useDistinctiveIdentifier, m_implementation.copyRef(), m_instance.copyRef());
+    m_sessions.append(session.copyRef());
+    return WTFMove(session);
 }
 
 void MediaKeys::setServerCertificate(const BufferSource& serverCertificate, Ref<DeferredPromise>&& promise)
@@ -107,6 +110,32 @@ void MediaKeys::setServerCertificate(const BufferSource& serverCertificate, Ref<
     });
 
     // 6. Return promise.
+}
+
+void MediaKeys::attachCDMClient(CDMClient& client)
+{
+    ASSERT(!m_cdmClients.contains(&client));
+    m_cdmClients.append(&client);
+}
+
+void MediaKeys::detachCDMClient(CDMClient& client)
+{
+    ASSERT(m_cdmClients.contains(&client));
+    m_cdmClients.removeFirst(&client);
+}
+
+void MediaKeys::attemptToResumePlaybackOnClients()
+{
+    for (auto* cdmClient : m_cdmClients)
+        cdmClient->cdmClientAttemptToResumePlaybackIfNecessary();
+}
+
+bool MediaKeys::hasOpenSessions() const
+{
+    return std::any_of(m_sessions.begin(), m_sessions.end(),
+        [](auto& session) {
+            return !session->isClosed();
+        });
 }
 
 } // namespace WebCore

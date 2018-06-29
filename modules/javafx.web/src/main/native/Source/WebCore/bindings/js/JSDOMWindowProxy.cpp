@@ -36,12 +36,11 @@
 #include "JSDOMWindowProperties.h"
 #include "JSEventTarget.h"
 #include "ScriptController.h"
-#include <heap/StrongInlines.h>
-#include <runtime/JSObject.h>
-
-using namespace JSC;
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/StrongInlines.h>
 
 namespace WebCore {
+using namespace JSC;
 
 const ClassInfo JSDOMWindowProxy::s_info = { "JSDOMWindowProxy", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMWindowProxy) };
 

@@ -34,6 +34,7 @@ static const Seconds updateStateSoonInterval { 2_s };
 
 NetworkStateNotifier& NetworkStateNotifier::singleton()
 {
+    RELEASE_ASSERT(isMainThread());
     static NeverDestroyed<NetworkStateNotifier> networkStateNotifier;
     return networkStateNotifier;
 }
@@ -74,17 +75,5 @@ void NetworkStateNotifier::updateStateSoon()
 {
     m_updateStateTimer.startOneShot(updateStateSoonInterval);
 }
-
-#if PLATFORM(JAVA)
-// Empty stubs for platforms where monitoring of network state is not yet implemented.
-
-void NetworkStateNotifier::updateStateWithoutNotifying()
-{
-}
-
-void NetworkStateNotifier::startObserving()
-{
-}
-#endif
 
 } // namespace WebCore

@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 # Copyright (C) 2006, 2007, 2009, 2010, 2013 Apple Inc. All rights reserved.
 #
@@ -43,6 +43,7 @@
 # The exceptions file has a list of strings in quotes, filenames, and filename/string pairs separated by :.
 
 use strict;
+use warnings;
 use File::Compare;
 use File::Copy;
 use FindBin;
@@ -154,7 +155,7 @@ for my $file (sort @files) {
         # Handle all the tokens in the line.
         while (s-^\s*([#\w]+|/\*|//|[^#\w/'"()\[\],]+|.)--) {
             my $token = $1;
-            
+
             if ($token eq "@" and $expected and $expected eq "a quoted string") {
                 next;
             }

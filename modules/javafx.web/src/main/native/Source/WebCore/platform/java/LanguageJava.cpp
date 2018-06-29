@@ -24,9 +24,9 @@
  */
 
 #include "config.h"
-#include "Language.h"
 
 #include "ChromiumBridge.h"
+#include <wtf/Language.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -34,9 +34,9 @@ namespace WebCore {
 
 static String platformLanguage()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, computedDefaultLanguage, ());
-    if (computedDefaultLanguage.isEmpty())
-        computedDefaultLanguage.append(ChromiumBridge::computedDefaultLanguage());
+    static NeverDestroyed<String> computedDefaultLanguage;
+    if (computedDefaultLanguage.get().isEmpty())
+        computedDefaultLanguage.get().append(ChromiumBridge::computedDefaultLanguage());
     return computedDefaultLanguage;
 }
 

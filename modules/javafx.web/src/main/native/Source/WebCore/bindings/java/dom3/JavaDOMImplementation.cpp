@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/CSSStyleSheet.h>
@@ -46,13 +48,13 @@ extern "C" {
 
 #define IMPL (static_cast<DOMImplementation*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_dispose(JNIEnv* env, jclass, jlong peer) {
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_dispose(JNIEnv*, jclass, jlong peer) {
     IMPL->deref();
 }
 
 
 // Functions
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_hasFeatureImpl(JNIEnv* env, jclass, jlong peer
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_DOMImplementationImpl_hasFeatureImpl(JNIEnv* env, jclass, jlong
     , jstring feature
     , jstring version)
 {

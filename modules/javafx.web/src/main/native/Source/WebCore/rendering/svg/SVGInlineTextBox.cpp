@@ -36,8 +36,11 @@
 #include "SVGResourcesCache.h"
 #include "SVGRootInlineBox.h"
 #include "TextPainter.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGInlineTextBox);
 
 struct ExpectedSVGInlineTextBoxSize : public InlineTextBox {
     float float1;
@@ -396,10 +399,6 @@ TextRun SVGInlineTextBox::constructTextRun(const RenderStyle& style, const SVGTe
 
     // We handle letter & word spacing ourselves.
     run.disableSpacing();
-
-    // Propagate the maximum length of the characters buffer to the TextRun, even when we're only processing a substring.
-    run.setCharactersLength(renderer().textLength() - fragment.characterOffset);
-    ASSERT(run.charactersLength() >= run.length());
     return run;
 }
 

@@ -152,7 +152,7 @@ static gint webkitAccessibleTableGetNColumns(AtkTable* table)
     if (!is<AccessibilityTable>(*accTable))
         return 0;
 
-    if (int columnCount = downcast<AccessibilityTable>(*accTable).ariaColumnCount())
+    if (int columnCount = downcast<AccessibilityTable>(*accTable).axColumnCount())
         return columnCount;
 
     return downcast<AccessibilityTable>(*accTable).columnCount();
@@ -167,7 +167,7 @@ static gint webkitAccessibleTableGetNRows(AtkTable* table)
     if (!is<AccessibilityTable>(*accTable))
         return 0;
 
-    if (int rowCount = downcast<AccessibilityTable>(*accTable).ariaRowCount())
+    if (int rowCount = downcast<AccessibilityTable>(*accTable).axRowCount())
         return rowCount;
 
     return downcast<AccessibilityTable>(*accTable).rowCount();
@@ -250,7 +250,7 @@ static AtkObject* webkitAccessibleTableGetCaption(AtkTable* table)
     if (accTable->isAccessibilityRenderObject()) {
         Node* node = accTable->node();
         if (is<HTMLTableElement>(node)) {
-            HTMLTableCaptionElement* caption = downcast<HTMLTableElement>(*node).caption();
+            auto caption = downcast<HTMLTableElement>(*node).caption();
             if (caption)
                 return AccessibilityObject::firstAccessibleObjectFromNode(caption->renderer()->element())->wrapper();
         }

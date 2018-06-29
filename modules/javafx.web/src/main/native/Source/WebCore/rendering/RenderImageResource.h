@@ -28,6 +28,8 @@
 #include "CachedImage.h"
 #include "CachedResourceHandle.h"
 #include "StyleImage.h"
+#include <wtf/IsoMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -35,7 +37,7 @@ class CachedImage;
 class RenderElement;
 
 class RenderImageResource {
-    WTF_MAKE_NONCOPYABLE(RenderImageResource); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(RenderImageResource); WTF_MAKE_ISO_ALLOCATED(RenderImageResource);
 public:
     RenderImageResource();
     virtual ~RenderImageResource() = default;
@@ -62,13 +64,13 @@ public:
     virtual WrappedImagePtr imagePtr() const { return m_cachedImage.get(); }
 
 protected:
-    RenderElement* renderer() const { return m_renderer; }
+    RenderElement* renderer() const { return m_renderer.get(); }
     void initialize(RenderElement&, CachedImage*);
 
 private:
     virtual LayoutSize imageSize(float multiplier, CachedImage::SizeType) const;
 
-    RenderElement* m_renderer { nullptr };
+    WeakPtr<RenderElement> m_renderer;
     CachedResourceHandle<CachedImage> m_cachedImage;
     bool m_cachedImageRemoveClientIsNeeded { true };
 };

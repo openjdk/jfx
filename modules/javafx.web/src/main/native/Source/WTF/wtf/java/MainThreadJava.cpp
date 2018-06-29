@@ -10,7 +10,7 @@
 namespace WTF {
 void scheduleDispatchFunctionsOnMainThread()
 {
-    AutoAttachToJavaThread autoAttach;
+    AttachThreadAsNonDaemonToJavaEnv autoAttach;
     JNIEnv* env = autoAttach.env();
     static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,10 +41,9 @@
 
 namespace JSC { namespace FTL {
 
-using namespace DFG;
-
 void link(State& state)
 {
+    using namespace DFG;
     Graph& graph = state.graph;
     CodeBlock* codeBlock = graph.m_codeBlock;
     VM& vm = graph.m_vm;
@@ -74,8 +73,8 @@ void link(State& state)
             Profiler::OriginStack(),
             toCString("Generated FTL JIT code for ", CodeBlockWithJITType(codeBlock, JITCode::FTLJIT), ", instruction count = ", graph.m_codeBlock->instructionCount(), ":\n"));
 
-        graph.ensureDominators();
-        graph.ensureNaturalLoops();
+        graph.ensureSSADominators();
+        graph.ensureSSANaturalLoops();
 
         const char* prefix = "    ";
 
@@ -144,7 +143,7 @@ void link(State& state)
             CCallHelpers::Call callArityCheck = jit.call();
 
             auto noException = jit.branch32(CCallHelpers::GreaterThanOrEqual, GPRInfo::returnValueGPR, CCallHelpers::TrustedImm32(0));
-            jit.copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(vm);
+            jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(vm.topEntryFrame);
             jit.move(CCallHelpers::TrustedImmPtr(&vm), GPRInfo::argumentGPR0);
             jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
             CCallHelpers::Call callLookupExceptionHandlerFromCallerFrame = jit.call();
@@ -171,7 +170,7 @@ void link(State& state)
             }
             linkBuffer->link(callArityCheck, codeBlock->m_isConstructor ? operationConstructArityCheck : operationCallArityCheck);
             linkBuffer->link(callLookupExceptionHandlerFromCallerFrame, lookupExceptionHandlerFromCallerFrame);
-            linkBuffer->link(callArityFixup, FunctionPtr((vm.getCTIStub(arityFixupGenerator)).code().executableAddress()));
+            linkBuffer->link(callArityFixup, FunctionPtr((vm.getCTIStub(arityFixupGenerator)).code()));
             linkBuffer->link(mainPathJumps, CodeLocationLabel(bitwise_cast<void*>(state.generatedFunction)));
         }
 

@@ -32,29 +32,31 @@
 
 #if defined(USE_SYSTEM_MALLOC) && USE_SYSTEM_MALLOC
 
-extern "C" {
-void* g_gigacageBasePtr;
-}
+alignas(void*) char g_gigacageBasePtrs[GIGACAGE_BASE_PTRS_SIZE];
 
 namespace Gigacage {
 
 void* tryMalloc(Kind, size_t size)
 {
-    auto result = tryFastMalloc(size);
-    void* realResult;
-    if (result.getValue(realResult))
-        return realResult;
-    return nullptr;
+    return FastMalloc::tryMalloc(size);
 }
 
-void* tryAllocateVirtualPages(Kind, size_t size)
+void* tryAllocateZeroedVirtualPages(Kind, size_t size)
 {
-    return OSAllocator::reserveUncommitted(size);
+    size = roundUpToMultipleOf(WTF::pageSize(), size);
+    void* result = OSAllocator::reserveAndCommit(size);
+#if !ASSERT_DISABLED
+    if (result) {
+        for (size_t i = 0; i < size / sizeof(uintptr_t); ++i)
+            ASSERT(static_cast<uintptr_t*>(result)[i] == 0);
+    }
+#endif
+    return result;
 }
 
 void freeVirtualPages(Kind, void* basePtr, size_t size)
 {
-    OSAllocator::releaseDecommitted(basePtr, size);
+    OSAllocator::decommitAndRelease(basePtr, size);
 }
 
 } // namespace Gigacage
@@ -99,9 +101,9 @@ void free(Kind kind, void* p)
     WTF::compilerFence();
 }
 
-void* tryAllocateVirtualPages(Kind kind, size_t size)
+void* tryAllocateZeroedVirtualPages(Kind kind, size_t size)
 {
-    void* result = bmalloc::api::tryLargeMemalignVirtual(WTF::pageSize(), size, bmalloc::heapKind(kind));
+    void* result = bmalloc::api::tryLargeZeroedMemalignVirtual(WTF::pageSize(), size, bmalloc::heapKind(kind));
     WTF::compilerFence();
     return result;
 }
@@ -117,4 +119,31 @@ void freeVirtualPages(Kind kind, void* basePtr, size_t)
 
 } // namespace Gigacage
 #endif
+
+namespace Gigacage {
+
+void* tryMallocArray(Kind kind, size_t numElements, size_t elementSize)
+{
+    Checked<size_t, RecordOverflow> checkedSize = elementSize;
+    checkedSize *= numElements;
+    if (checkedSize.hasOverflowed())
+        return nullptr;
+    return tryMalloc(kind, checkedSize.unsafeGet());
+}
+
+void* malloc(Kind kind, size_t size)
+{
+    void* result = tryMalloc(kind, size);
+    RELEASE_ASSERT(result);
+    return result;
+}
+
+void* mallocArray(Kind kind, size_t numElements, size_t elementSize)
+{
+    void* result = tryMallocArray(kind, numElements, elementSize);
+    RELEASE_ASSERT(result);
+    return result;
+}
+
+} // namespace Gigacage
 

@@ -155,7 +155,7 @@ static Ref<ImmutableStyleProperties> createStyleProperties(ParsedPropertyVector&
     return result;
 }
 
-Ref<ImmutableStyleProperties> CSSParserImpl::parseInlineStyleDeclaration(const String& string, Element* element)
+Ref<ImmutableStyleProperties> CSSParserImpl::parseInlineStyleDeclaration(const String& string, const Element* element)
 {
     CSSParserContext context(element->document());
     context.mode = strictToCSSParserMode(element->isHTMLElement() && !element->document().inQuirksMode());
@@ -452,10 +452,6 @@ RefPtr<StyleRuleBase> CSSParserImpl::consumeAtRule(CSSParserTokenRange& range, A
         return consumeKeyframesRule(false, prelude, block);
     case CSSAtRulePage:
         return consumePageRule(prelude, block);
-#if ENABLE(CSS_REGIONS)
-    case CSSAtRuleWebkitRegion:
-        return consumeRegionRule(prelude, block);
-#endif
     default:
         return nullptr; // Parse error, unrecognised at-rule with block
     }
@@ -677,32 +673,6 @@ RefPtr<StyleRulePage> CSSParserImpl::consumePageRule(CSSParserTokenRange prelude
     return page;
 }
 
-#if ENABLE(CSS_REGIONS)
-RefPtr<StyleRuleRegion> CSSParserImpl::consumeRegionRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
-{
-    CSSSelectorList selectorList = CSSSelectorParser::parseSelector(prelude, m_context, m_styleSheet.get());
-    if (!selectorList.isValid())
-        return nullptr; // Parse error, invalid selector list
-
-    if (m_observerWrapper) {
-        m_observerWrapper->observer().startRuleHeader(StyleRule::Region, m_observerWrapper->startOffset(prelude));
-        m_observerWrapper->observer().endRuleHeader(m_observerWrapper->endOffset(prelude));
-        m_observerWrapper->observer().startRuleBody(m_observerWrapper->previousTokenStartOffset(block));
-    }
-
-    Vector<RefPtr<StyleRuleBase>> rules;
-    consumeRuleList(block, RegularRuleList, [&rules](RefPtr<StyleRuleBase> rule) {
-        rules.append(rule);
-    });
-
-    if (m_observerWrapper)
-        m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
-
-    return StyleRuleRegion::create(selectorList, rules);
-
-}
-#endif
-
 // FIXME-NEWPARSER: Support "apply"
 /*void CSSParserImpl::consumeApplyRule(CSSParserTokenRange prelude)
 {
@@ -768,14 +738,14 @@ RefPtr<StyleRule> CSSParserImpl::consumeStyleRule(CSSParserTokenRange prelude, C
         CSSParserTokenRange blockCopy = block;
         blockCopy.consumeWhitespace();
         if (!blockCopy.atEnd()) {
-            rule = StyleRule::create(createDeferredStyleProperties(block));
+            rule = StyleRule::create(createDeferredStyleProperties(block), m_context.hasDocumentSecurityOrigin);
             rule->wrapperAdoptSelectorList(selectorList);
             return rule;
         }
     }
 
     consumeDeclarationList(block, StyleRule::Style);
-    rule = StyleRule::create(createStyleProperties(m_parsedProperties, m_context.mode));
+    rule = StyleRule::create(createStyleProperties(m_parsedProperties, m_context.mode), m_context.hasDocumentSecurityOrigin);
     rule->wrapperAdoptSelectorList(selectorList);
     return rule;
 }

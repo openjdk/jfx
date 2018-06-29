@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,9 @@
 
 namespace JSC {
 
+namespace PolymorphicAccessInternal {
 static const bool verbose = false;
+}
 
 void AccessGenerationResult::dump(PrintStream& out) const
 {
@@ -177,7 +179,7 @@ CallSiteIndex AccessGenerationState::originalCallSiteIndex() const { return stub
 void AccessGenerationState::emitExplicitExceptionHandler()
 {
     restoreScratch();
-    jit->copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(m_vm);
+    jit->copyCalleeSavesToEntryFrameCalleeSavesBuffer(m_vm.topEntryFrame);
     if (needsToRestoreRegistersIfException()) {
         // To the JIT that produces the original exception handling
         // call site, they will expect the OSR exit to be arrived
@@ -247,7 +249,7 @@ AccessGenerationResult PolymorphicAccess::addCases(
         casesToAdd.append(WTFMove(myCase));
     }
 
-    if (verbose)
+    if (PolymorphicAccessInternal::verbose)
         dataLog("casesToAdd: ", listDump(casesToAdd), "\n");
 
     // If there aren't any cases to add, then fail on the grounds that there's no point to generating a
@@ -256,6 +258,40 @@ AccessGenerationResult PolymorphicAccess::addCases(
     if (casesToAdd.isEmpty())
         return AccessGenerationResult::MadeNoChanges;
 
+    bool shouldReset = false;
+    AccessGenerationResult resetResult(AccessGenerationResult::ResetStubAndFireWatchpoints);
+    auto considerPolyProtoReset = [&] (Structure* a, Structure* b) {
+        if (Structure::shouldConvertToPolyProto(a, b)) {
+            // For now, we only reset if this is our first time invalidating this watchpoint.
+            // The reason we don't immediately fire this watchpoint is that we may be already
+            // watching the poly proto watchpoint, which if fired, would destroy us. We let
+            // the person handling the result to do a delayed fire.
+            ASSERT(a->rareData()->sharedPolyProtoWatchpoint().get() == b->rareData()->sharedPolyProtoWatchpoint().get());
+            if (a->rareData()->sharedPolyProtoWatchpoint()->isStillValid()) {
+                shouldReset = true;
+                resetResult.addWatchpointToFire(*a->rareData()->sharedPolyProtoWatchpoint(), StringFireDetail("Detected poly proto optimization opportunity."));
+            }
+        }
+    };
+
+    for (auto& caseToAdd : casesToAdd) {
+        for (auto& existingCase : m_list) {
+            Structure* a = caseToAdd->structure();
+            Structure* b = existingCase->structure();
+            considerPolyProtoReset(a, b);
+        }
+    }
+    for (unsigned i = 0; i < casesToAdd.size(); ++i) {
+        for (unsigned j = i + 1; j < casesToAdd.size(); ++j) {
+            Structure* a = casesToAdd[i]->structure();
+            Structure* b = casesToAdd[j]->structure();
+            considerPolyProtoReset(a, b);
+        }
+    }
+
+    if (shouldReset)
+        return resetResult;
+
     // Now add things to the new list. Note that at this point, we will still have old cases that
     // may be replaced by the new ones. That's fine. We will sort that out when we regenerate.
     for (auto& caseToAdd : casesToAdd) {
@@ -263,7 +299,7 @@ AccessGenerationResult PolymorphicAccess::addCases(
         m_list.append(WTFMove(caseToAdd));
     }
 
-    if (verbose)
+    if (PolymorphicAccessInternal::verbose)
         dataLog("After addCases: m_list: ", listDump(m_list), "\n");
 
     return AccessGenerationResult::Buffered;
@@ -334,10 +370,10 @@ AccessGenerationResult PolymorphicAccess::regenerate(
 {
     SuperSamplerScope superSamplerScope(false);
 
-    if (verbose)
+    if (PolymorphicAccessInternal::verbose)
         dataLog("Regenerate with m_list: ", listDump(m_list), "\n");
 
-    AccessGenerationState state(vm);
+    AccessGenerationState state(vm, codeBlock->globalObject());
 
     state.access = this;
     state.stubInfo = &stubInfo;
@@ -402,7 +438,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(
     }
     m_list.resize(dstIndex);
 
-    if (verbose)
+    if (PolymorphicAccessInternal::verbose)
         dataLog("Optimized cases: ", listDump(cases), "\n");
 
     // At this point we're convinced that 'cases' contains the cases that we want to JIT now and we
@@ -517,7 +553,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(
 
     LinkBuffer linkBuffer(jit, codeBlock, JITCompilationCanFail);
     if (linkBuffer.didFailToAllocate()) {
-        if (verbose)
+        if (PolymorphicAccessInternal::verbose)
             dataLog("Did fail to allocate.\n");
         return AccessGenerationResult::GaveUp;
     }
@@ -528,12 +564,12 @@ AccessGenerationResult PolymorphicAccess::regenerate(
 
     linkBuffer.link(failure, stubInfo.slowPathStartLocation());
 
-    if (verbose)
+    if (PolymorphicAccessInternal::verbose)
         dataLog(FullCodeOrigin(codeBlock, stubInfo.codeOrigin), ": Generating polymorphic access stub for ", listDump(cases), "\n");
 
     MacroAssemblerCodeRef code = FINALIZE_CODE_FOR(
         codeBlock, linkBuffer,
-        ("%s", toCString("Access stub for ", *codeBlock, " ", stubInfo.codeOrigin, " with return point ", successLabel, ": ", listDump(cases)).data()));
+        "%s", toCString("Access stub for ", *codeBlock, " ", stubInfo.codeOrigin, " with return point ", successLabel, ": ", listDump(cases)).data());
 
     bool doesCalls = false;
     Vector<JSCell*> cellsToMark;
@@ -544,7 +580,7 @@ AccessGenerationResult PolymorphicAccess::regenerate(
     m_watchpoints = WTFMove(state.watchpoints);
     if (!state.weakReferences.isEmpty())
         m_weakReferences = std::make_unique<Vector<WriteBarrier<JSCell>>>(WTFMove(state.weakReferences));
-    if (verbose)
+    if (PolymorphicAccessInternal::verbose)
         dataLog("Returning: ", code.code(), "\n");
 
     m_list = WTFMove(cases);
@@ -587,6 +623,9 @@ void printInternal(PrintStream& out, AccessGenerationResult::Kind kind)
         return;
     case AccessGenerationResult::GeneratedFinalCode:
         out.print("GeneratedFinalCode");
+        return;
+    case AccessGenerationResult::ResetStubAndFireWatchpoints:
+        out.print("ResetStubAndFireWatchpoints");
         return;
     }
 

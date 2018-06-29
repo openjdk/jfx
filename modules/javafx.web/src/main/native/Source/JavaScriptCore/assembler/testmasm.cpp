@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #include "GPRInfo.h"
 #include "InitializeThreading.h"
 #include "LinkBuffer.h"
+#include "ProbeContext.h"
+#include <limits>
 #include <wtf/Compiler.h>
 #include <wtf/DataLog.h>
 #include <wtf/Function.h>
@@ -50,9 +52,32 @@ static void usage()
 
 #if ENABLE(JIT)
 
+#if ENABLE(MASM_PROBE)
+namespace WTF {
+
+static void printInternal(PrintStream& out, void* value)
+{
+    out.printf("%p", value);
+}
+
+} // namespace WTF
+#endif // ENABLE(MASM_PROBE)
+
+namespace JSC {
+namespace Probe {
+
+JS_EXPORT_PRIVATE void* probeStateForContext(Probe::Context&);
+
+} // namespace Probe
+} // namespace JSC
+
 using namespace JSC;
 
 namespace {
+
+#if ENABLE(MASM_PROBE)
+using CPUState = Probe::CPUState;
+#endif
 
 StaticLock crashLock;
 
@@ -71,19 +96,16 @@ template<typename T> T nextID(T id) { return static_cast<T>(id + 1); }
 #else
 #define testWord(x) testWord32(x)
 #endif
-#define testDoubleWord(x) static_cast<double>(testWord(x))
 
 // Nothing fancy for now; we just use the existing WTF assertion machinery.
-#define CHECK(x) do {                                                   \
-        if (!!(x))                                                      \
+#define CHECK_EQ(_actual, _expected) do {                               \
+        if ((_actual) == (_expected))                                   \
             break;                                                      \
         crashLock.lock();                                               \
-        WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, #x); \
+        dataLog("FAILED while testing " #_actual ": expected: ", _expected, ", actual: ", _actual, "\n"); \
+        WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "CHECK_EQ("#_actual ", " #_expected ")"); \
         CRASH();                                                        \
     } while (false)
-
-#define CHECK_DOUBLE_BITWISE_EQ(a, b) \
-    CHECK(bitwise_cast<uint64_t>(a) == bitwise_cast<uint64_t>(a))
 
 #if ENABLE(MASM_PROBE)
 bool isPC(MacroAssembler::RegisterID id)
@@ -113,6 +135,9 @@ bool isSpecialGPR(MacroAssembler::RegisterID id)
 #if CPU(ARM64)
     if (id == ARM64Registers::x18)
         return true;
+#elif CPU(MIPS)
+    if (id == MIPSRegisters::zero || id == MIPSRegisters::k0 || id == MIPSRegisters::k1)
+        return true;
 #endif
     return false;
 }
@@ -123,7 +148,7 @@ MacroAssemblerCodeRef compile(Generator&& generate)
     CCallHelpers jit;
     generate(jit);
     LinkBuffer linkBuffer(jit, nullptr);
-    return FINALIZE_CODE(linkBuffer, ("testmasm compilation"));
+    return FINALIZE_CODE(linkBuffer, "testmasm compilation");
 }
 
 template<typename T, typename... Arguments>
@@ -141,13 +166,64 @@ T compileAndRun(Generator&& generator, Arguments... arguments)
 
 void testSimple()
 {
-    CHECK(compileAndRun<int>([] (CCallHelpers& jit) {
+    CHECK_EQ(compileAndRun<int>([] (CCallHelpers& jit) {
         jit.emitFunctionPrologue();
         jit.move(CCallHelpers::TrustedImm32(42), GPRInfo::returnValueGPR);
         jit.emitFunctionEpilogue();
         jit.ret();
-    }) == 42);
+    }), 42);
 }
+
+void testGetEffectiveAddress(size_t pointer, ptrdiff_t length, int32_t offset, CCallHelpers::Scale scale)
+{
+    CHECK_EQ(compileAndRun<size_t>([=] (CCallHelpers& jit) {
+        jit.emitFunctionPrologue();
+        jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(pointer)), GPRInfo::regT0);
+        jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(length)), GPRInfo::regT1);
+        jit.getEffectiveAddress(CCallHelpers::BaseIndex(GPRInfo::regT0, GPRInfo::regT1, scale, offset), GPRInfo::returnValueGPR);
+        jit.emitFunctionEpilogue();
+        jit.ret();
+    }), pointer + offset + (static_cast<size_t>(1) << static_cast<int>(scale)) * length);
+}
+
+// branchTruncateDoubleToInt32(), when encountering Infinity, -Infinity or a
+// Nan, should either yield 0 in dest or fail.
+void testBranchTruncateDoubleToInt32(double val, int32_t expected)
+{
+    const uint64_t valAsUInt = *reinterpret_cast<uint64_t*>(&val);
+#if CPU(BIG_ENDIAN)
+    const bool isBigEndian = true;
+#else
+    const bool isBigEndian = false;
+#endif
+    CHECK_EQ(compileAndRun<int>([&] (CCallHelpers& jit) {
+        jit.emitFunctionPrologue();
+        jit.subPtr(CCallHelpers::TrustedImm32(8), MacroAssembler::stackPointerRegister);
+        if (isBigEndian) {
+            jit.store32(CCallHelpers::TrustedImm32(valAsUInt >> 32),
+                MacroAssembler::stackPointerRegister);
+            jit.store32(CCallHelpers::TrustedImm32(valAsUInt & 0xffffffff),
+                MacroAssembler::Address(MacroAssembler::stackPointerRegister, 4));
+        } else {
+            jit.store32(CCallHelpers::TrustedImm32(valAsUInt & 0xffffffff),
+                MacroAssembler::stackPointerRegister);
+            jit.store32(CCallHelpers::TrustedImm32(valAsUInt >> 32),
+                MacroAssembler::Address(MacroAssembler::stackPointerRegister, 4));
+        }
+        jit.loadDouble(MacroAssembler::stackPointerRegister, FPRInfo::fpRegT0);
+
+        MacroAssembler::Jump done;
+        done = jit.branchTruncateDoubleToInt32(FPRInfo::fpRegT0, GPRInfo::returnValueGPR, MacroAssembler::BranchIfTruncateSuccessful);
+
+        jit.move(CCallHelpers::TrustedImm32(0), GPRInfo::returnValueGPR);
+
+        done.link(&jit);
+        jit.addPtr(CCallHelpers::TrustedImm32(8), MacroAssembler::stackPointerRegister);
+        jit.emitFunctionEpilogue();
+        jit.ret();
+    }), expected);
+}
+
 
 #if ENABLE(MASM_PROBE)
 void testProbeReadsArgumentRegisters()
@@ -155,6 +231,11 @@ void testProbeReadsArgumentRegisters()
     bool probeWasCalled = false;
     compileAndRun<void>([&] (CCallHelpers& jit) {
         jit.emitFunctionPrologue();
+
+        jit.push(GPRInfo::argumentGPR0);
+        jit.push(GPRInfo::argumentGPR1);
+        jit.push(GPRInfo::argumentGPR2);
+        jit.push(GPRInfo::argumentGPR3);
 
         jit.move(CCallHelpers::TrustedImm32(testWord32(0)), GPRInfo::argumentGPR0);
         jit.convertInt32ToDouble(GPRInfo::argumentGPR0, FPRInfo::fpRegT0);
@@ -172,20 +253,27 @@ void testProbeReadsArgumentRegisters()
         jit.move(CCallHelpers::TrustedImm32(testWord(3)), GPRInfo::argumentGPR3);
 #endif
 
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeWasCalled = true;
-            CHECK(context->gpr(GPRInfo::argumentGPR0) == testWord(0));
-            CHECK(context->gpr(GPRInfo::argumentGPR1) == testWord(1));
-            CHECK(context->gpr(GPRInfo::argumentGPR2) == testWord(2));
-            CHECK(context->gpr(GPRInfo::argumentGPR3) == testWord(3));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR0), testWord(0));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR1), testWord(1));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR2), testWord(2));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR3), testWord(3));
 
-            CHECK_DOUBLE_BITWISE_EQ(context->fpr(FPRInfo::fpRegT0), static_cast<double>(testWord32(0)));
-            CHECK_DOUBLE_BITWISE_EQ(context->fpr(FPRInfo::fpRegT1),  static_cast<double>(testWord32(1)));
+            CHECK_EQ(cpu.fpr(FPRInfo::fpRegT0), testWord32(0));
+            CHECK_EQ(cpu.fpr(FPRInfo::fpRegT1), testWord32(1));
         });
+
+        jit.pop(GPRInfo::argumentGPR3);
+        jit.pop(GPRInfo::argumentGPR2);
+        jit.pop(GPRInfo::argumentGPR1);
+        jit.pop(GPRInfo::argumentGPR0);
+
         jit.emitFunctionEpilogue();
         jit.ret();
     });
-    CHECK(probeWasCalled);
+    CHECK_EQ(probeWasCalled, true);
 }
 
 void testProbeWritesArgumentRegisters()
@@ -196,6 +284,11 @@ void testProbeWritesArgumentRegisters()
     unsigned probeCallCount = 0;
     compileAndRun<void>([&] (CCallHelpers& jit) {
         jit.emitFunctionPrologue();
+
+        jit.push(GPRInfo::argumentGPR0);
+        jit.push(GPRInfo::argumentGPR1);
+        jit.push(GPRInfo::argumentGPR2);
+        jit.push(GPRInfo::argumentGPR3);
 
         // Pre-initialize with non-expected values.
 #if USE(JSVALUE64)
@@ -213,33 +306,40 @@ void testProbeWritesArgumentRegisters()
         jit.convertInt32ToDouble(GPRInfo::argumentGPR0, FPRInfo::fpRegT1);
 
         // Write expected values.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
-            context->gpr(GPRInfo::argumentGPR0) = testWord(0);
-            context->gpr(GPRInfo::argumentGPR1) = testWord(1);
-            context->gpr(GPRInfo::argumentGPR2) = testWord(2);
-            context->gpr(GPRInfo::argumentGPR3) = testWord(3);
+            cpu.gpr(GPRInfo::argumentGPR0) = testWord(0);
+            cpu.gpr(GPRInfo::argumentGPR1) = testWord(1);
+            cpu.gpr(GPRInfo::argumentGPR2) = testWord(2);
+            cpu.gpr(GPRInfo::argumentGPR3) = testWord(3);
 
-            context->fpr(FPRInfo::fpRegT0) = testWord32(0);
-            context->fpr(FPRInfo::fpRegT1) = testWord32(1);
+            cpu.fpr(FPRInfo::fpRegT0) = bitwise_cast<double>(testWord64(0));
+            cpu.fpr(FPRInfo::fpRegT1) = bitwise_cast<double>(testWord64(1));
         });
 
         // Validate that expected values were written.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
-            CHECK(context->gpr(GPRInfo::argumentGPR0) == testWord(0));
-            CHECK(context->gpr(GPRInfo::argumentGPR1) == testWord(1));
-            CHECK(context->gpr(GPRInfo::argumentGPR2) == testWord(2));
-            CHECK(context->gpr(GPRInfo::argumentGPR3) == testWord(3));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR0), testWord(0));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR1), testWord(1));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR2), testWord(2));
+            CHECK_EQ(cpu.gpr(GPRInfo::argumentGPR3), testWord(3));
 
-            CHECK_DOUBLE_BITWISE_EQ(context->fpr(FPRInfo::fpRegT0), static_cast<double>(testWord32(0)));
-            CHECK_DOUBLE_BITWISE_EQ(context->fpr(FPRInfo::fpRegT1), static_cast<double>(testWord32(1)));
+            CHECK_EQ(cpu.fpr<uint64_t>(FPRInfo::fpRegT0), testWord64(0));
+            CHECK_EQ(cpu.fpr<uint64_t>(FPRInfo::fpRegT1), testWord64(1));
         });
+
+        jit.pop(GPRInfo::argumentGPR3);
+        jit.pop(GPRInfo::argumentGPR2);
+        jit.pop(GPRInfo::argumentGPR1);
+        jit.pop(GPRInfo::argumentGPR0);
 
         jit.emitFunctionEpilogue();
         jit.ret();
     });
-    CHECK(probeCallCount == 2);
+    CHECK_EQ(probeCallCount, 2);
 }
 
 static NEVER_INLINE NOT_TAIL_CALLED int testFunctionToTrashGPRs(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j)
@@ -261,93 +361,105 @@ void testProbePreservesGPRS()
     // having already validated that we can read and write from registers. We'll use these abilities
     // to validate that the probe preserves register values.
     unsigned probeCallCount = 0;
-    MacroAssembler::CPUState originalState;
+    CPUState originalState;
 
     compileAndRun<void>([&] (CCallHelpers& jit) {
         jit.emitFunctionPrologue();
 
         // Write expected values into the registers (except for sp, fp, and pc).
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
-                originalState.gpr(id) = context->gpr(id);
+                originalState.gpr(id) = cpu.gpr(id);
                 if (isSpecialGPR(id))
                     continue;
-                context->gpr(id) = testWord(static_cast<int>(id));
+                cpu.gpr(id) = testWord(static_cast<int>(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
-                originalState.fpr(id) = context->fpr(id);
-                context->fpr(id) = testDoubleWord(id);
+                originalState.fpr(id) = cpu.fpr(id);
+                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
             }
         });
 
         // Invoke the probe to call a lot of functions and trash register values.
-        jit.probe([&] (ProbeContext*) {
+        jit.probe([&] (Probe::Context&) {
             probeCallCount++;
-            CHECK(testFunctionToTrashGPRs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9) == 10);
-            CHECK(testFunctionToTrashFPRs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9) == 10);
+            CHECK_EQ(testFunctionToTrashGPRs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), 10);
+            CHECK_EQ(testFunctionToTrashFPRs(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), 10);
         });
 
         // Validate that the registers have the expected values.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
                 if (isSP(id) || isFP(id)) {
-                    CHECK(context->gpr(id) == originalState.gpr(id));
+                    CHECK_EQ(cpu.gpr(id), originalState.gpr(id));
                     continue;
                 }
                 if (isSpecialGPR(id))
                     continue;
-                CHECK(context->gpr(id) == testWord(id));
+                CHECK_EQ(cpu.gpr(id), testWord(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-                CHECK_DOUBLE_BITWISE_EQ(context->fpr(id), testDoubleWord(id));
+#if CPU(MIPS)
+                if (!(id & 1))
+#endif
+                CHECK_EQ(cpu.fpr<uint64_t>(id), testWord64(id));
         });
 
         // Restore the original state.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
                 if (isSpecialGPR(id))
                     continue;
-                context->gpr(id) = originalState.gpr(id);
+                cpu.gpr(id) = originalState.gpr(id);
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-                context->fpr(id) = originalState.fpr(id);
+                cpu.fpr(id) = originalState.fpr(id);
         });
 
         // Validate that the original state was restored.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
                 if (isSpecialGPR(id))
                     continue;
-                CHECK(context->gpr(id) == originalState.gpr(id));
+                CHECK_EQ(cpu.gpr(id), originalState.gpr(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-                CHECK_DOUBLE_BITWISE_EQ(context->fpr(id), originalState.fpr(id));
+#if CPU(MIPS)
+                if (!(id & 1))
+#endif
+                CHECK_EQ(cpu.fpr<uint64_t>(id), originalState.fpr<uint64_t>(id));
         });
 
         jit.emitFunctionEpilogue();
         jit.ret();
     });
-    CHECK(probeCallCount == 5);
+    CHECK_EQ(probeCallCount, 5);
 }
 
-void testProbeModifiesStackPointer(WTF::Function<void*(ProbeContext*)> computeModifiedStack)
+void testProbeModifiesStackPointer(WTF::Function<void*(Probe::Context&)> computeModifiedStackPointer)
 {
     unsigned probeCallCount = 0;
-    MacroAssembler::CPUState originalState;
-    uint8_t* originalSP { nullptr };
+    CPUState originalState;
+    void* originalSP { nullptr };
     void* modifiedSP { nullptr };
+#if !(CPU(MIPS))
     uintptr_t modifiedFlags { 0 };
+#endif
 
 #if CPU(X86) || CPU(X86_64)
     auto flagsSPR = X86Registers::eflags;
     uintptr_t flagsMask = 0xc5;
 #elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
     auto flagsSPR = ARMRegisters::apsr;
-    uintptr_t flagsMask = 0xf0000000;
+    uintptr_t flagsMask = 0xf8000000;
 #elif CPU(ARM64)
     auto flagsSPR = ARM64Registers::nzcv;
     uintptr_t flagsMask = 0xf0000000;
@@ -358,90 +470,109 @@ void testProbeModifiesStackPointer(WTF::Function<void*(ProbeContext*)> computeMo
 
         // Preserve original stack pointer and modify the sp, and
         // write expected values into other registers (except for fp, and pc).
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
-                originalState.gpr(id) = context->gpr(id);
+                originalState.gpr(id) = cpu.gpr(id);
                 if (isSpecialGPR(id))
                     continue;
-                context->gpr(id) = testWord(static_cast<int>(id));
+                cpu.gpr(id) = testWord(static_cast<int>(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
-                originalState.fpr(id) = context->fpr(id);
-                context->fpr(id) = testWord(id);
+                originalState.fpr(id) = cpu.fpr(id);
+                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
             }
 
-            originalState.spr(flagsSPR) = context->spr(flagsSPR);
+#if !(CPU(MIPS))
+            originalState.spr(flagsSPR) = cpu.spr(flagsSPR);
             modifiedFlags = originalState.spr(flagsSPR) ^ flagsMask;
-            context->spr(flagsSPR) = modifiedFlags;
+            cpu.spr(flagsSPR) = modifiedFlags;
+#endif
 
-            originalSP = reinterpret_cast<uint8_t*>(context->sp());
-            modifiedSP = computeModifiedStack(context);
-            context->sp() = modifiedSP;
+            originalSP = cpu.sp();
+            modifiedSP = computeModifiedStackPointer(context);
+            cpu.sp() = modifiedSP;
         });
 
         // Validate that the registers have the expected values.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
                 if (isFP(id)) {
-                    CHECK(context->gpr(id) == originalState.gpr(id));
+                    CHECK_EQ(cpu.gpr(id), originalState.gpr(id));
                     continue;
                 }
                 if (isSpecialGPR(id))
                     continue;
-                CHECK(context->gpr(id) == testWord(id));
+                CHECK_EQ(cpu.gpr(id), testWord(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-                CHECK_DOUBLE_BITWISE_EQ(context->fpr(id), testDoubleWord(id));
-            CHECK(context->spr(flagsSPR) == modifiedFlags);
-            CHECK(context->sp() == modifiedSP);
+#if CPU(MIPS)
+                if (!(id & 1))
+#endif
+                CHECK_EQ(cpu.fpr<uint64_t>(id), testWord64(id));
+#if !(CPU(MIPS))
+            CHECK_EQ(cpu.spr(flagsSPR) & flagsMask, modifiedFlags & flagsMask);
+#endif
+            CHECK_EQ(cpu.sp(), modifiedSP);
         });
 
         // Restore the original state.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
                 if (isSpecialGPR(id))
                     continue;
-                context->gpr(id) = originalState.gpr(id);
+                cpu.gpr(id) = originalState.gpr(id);
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-                context->fpr(id) = originalState.fpr(id);
-            context->spr(flagsSPR) = originalState.spr(flagsSPR);
-            context->sp() = originalSP;
+                cpu.fpr(id) = originalState.fpr(id);
+#if !(CPU(MIPS))
+            cpu.spr(flagsSPR) = originalState.spr(flagsSPR);
+#endif
+            cpu.sp() = originalSP;
         });
 
         // Validate that the original state was restored.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
             probeCallCount++;
             for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
                 if (isSpecialGPR(id))
                     continue;
-                CHECK(context->gpr(id) == originalState.gpr(id));
+                CHECK_EQ(cpu.gpr(id), originalState.gpr(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-                CHECK_DOUBLE_BITWISE_EQ(context->fpr(id),  originalState.fpr(id));
-            CHECK(context->spr(flagsSPR) == originalState.spr(flagsSPR));
-            CHECK(context->sp() == originalSP);
+#if CPU(MIPS)
+                if (!(id & 1))
+#endif
+                CHECK_EQ(cpu.fpr<uint64_t>(id), originalState.fpr<uint64_t>(id));
+#if !(CPU(MIPS))
+            CHECK_EQ(cpu.spr(flagsSPR) & flagsMask, originalState.spr(flagsSPR) & flagsMask);
+#endif
+            CHECK_EQ(cpu.sp(), originalSP);
         });
 
         jit.emitFunctionEpilogue();
         jit.ret();
     });
-    CHECK(probeCallCount == 4);
+    CHECK_EQ(probeCallCount, 4);
 }
 
-void testProbeModifiesStackPointerToInsideProbeContextOnStack()
+void testProbeModifiesStackPointerToInsideProbeStateOnStack()
 {
     size_t increment = sizeof(uintptr_t);
 #if CPU(ARM64)
     // The ARM64 probe uses ldp and stp which require 16 byte alignment.
     increment = 2 * sizeof(uintptr_t);
 #endif
-    for (size_t offset = 0; offset < sizeof(ProbeContext); offset += increment) {
-        testProbeModifiesStackPointer([=] (ProbeContext* context) -> void* {
-            return reinterpret_cast<uint8_t*>(context) + offset;
+    for (size_t offset = 0; offset < sizeof(Probe::State); offset += increment) {
+        testProbeModifiesStackPointer([=] (Probe::Context& context) -> void* {
+            return reinterpret_cast<uint8_t*>(probeStateForContext(context)) + offset;
+
         });
     }
 }
@@ -454,8 +585,8 @@ void testProbeModifiesStackPointerToNBytesBelowSP()
     increment = 2 * sizeof(uintptr_t);
 #endif
     for (size_t offset = 0; offset < 1 * KB; offset += increment) {
-        testProbeModifiesStackPointer([=] (ProbeContext* context) -> void* {
-            return reinterpret_cast<uint8_t*>(context->cpu.sp()) - offset;
+        testProbeModifiesStackPointer([=] (Probe::Context& context) -> void* {
+            return context.cpu.sp<uint8_t*>() - offset;
         });
     }
 }
@@ -470,7 +601,7 @@ void testProbeModifiesProgramCounter()
 
     MacroAssemblerCodeRef continuation = compile([&] (CCallHelpers& jit) {
         // Validate that we reached the continuation.
-        jit.probe([&] (ProbeContext*) {
+        jit.probe([&] (Probe::Context&) {
             probeCallCount++;
             continuationWasReached = true;
         });
@@ -483,21 +614,143 @@ void testProbeModifiesProgramCounter()
         jit.emitFunctionPrologue();
 
         // Write expected values into the registers.
-        jit.probe([&] (ProbeContext* context) {
+        jit.probe([&] (Probe::Context& context) {
             probeCallCount++;
-            context->pc() = continuation.code().executableAddress();
+            context.cpu.pc() = continuation.code().executableAddress();
         });
 
         jit.breakpoint(); // We should never get here.
     });
-    CHECK(probeCallCount == 2);
-    CHECK(continuationWasReached);
+    CHECK_EQ(probeCallCount, 2);
+    CHECK_EQ(continuationWasReached, true);
+}
+
+void testProbeModifiesStackValues()
+{
+    unsigned probeCallCount = 0;
+    CPUState originalState;
+    void* originalSP { nullptr };
+    void* newSP { nullptr };
+    uintptr_t modifiedFlags { 0 };
+    size_t numberOfExtraEntriesToWrite { 10 }; // ARM64 requires that this be 2 word aligned.
+
+#if CPU(X86) || CPU(X86_64)
+    MacroAssembler::SPRegisterID flagsSPR = X86Registers::eflags;
+    uintptr_t flagsMask = 0xc5;
+#elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
+    MacroAssembler::SPRegisterID flagsSPR = ARMRegisters::apsr;
+    uintptr_t flagsMask = 0xf8000000;
+#elif CPU(ARM64)
+    MacroAssembler::SPRegisterID flagsSPR = ARM64Registers::nzcv;
+    uintptr_t flagsMask = 0xf0000000;
+#endif
+
+    compileAndRun<void>([&] (CCallHelpers& jit) {
+        jit.emitFunctionPrologue();
+
+        // Write expected values into the registers.
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
+            auto& stack = context.stack();
+            probeCallCount++;
+
+            // Preserve the original CPU state.
+            for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
+                originalState.gpr(id) = cpu.gpr(id);
+                if (isSpecialGPR(id))
+                    continue;
+                cpu.gpr(id) = testWord(static_cast<int>(id));
+            }
+            for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
+                originalState.fpr(id) = cpu.fpr(id);
+                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
+            }
+#if !(CPU(MIPS))
+            originalState.spr(flagsSPR) = cpu.spr(flagsSPR);
+            modifiedFlags = originalState.spr(flagsSPR) ^ flagsMask;
+            cpu.spr(flagsSPR) = modifiedFlags;
+#endif
+
+            // Ensure that we'll be writing over the regions of the stack where the Probe::State is.
+            originalSP = cpu.sp();
+            newSP = reinterpret_cast<uintptr_t*>(probeStateForContext(context)) - numberOfExtraEntriesToWrite;
+            cpu.sp() = newSP;
+
+            // Fill the stack with values.
+            uintptr_t* p = reinterpret_cast<uintptr_t*>(newSP);
+            int count = 0;
+            stack.set<double>(p++, 1.234567);
+            if (is32Bit())
+                p++; // On 32-bit targets, a double takes up 2 uintptr_t.
+            while (p < reinterpret_cast<uintptr_t*>(originalSP))
+                stack.set<uintptr_t>(p++, testWord(count++));
+        });
+
+        // Validate that the registers and stack have the expected values.
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
+            auto& stack = context.stack();
+            probeCallCount++;
+
+            // Validate the register values.
+            for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
+                if (isFP(id)) {
+                    CHECK_EQ(cpu.gpr(id), originalState.gpr(id));
+                    continue;
+                }
+                if (isSpecialGPR(id))
+                    continue;
+                CHECK_EQ(cpu.gpr(id), testWord(id));
+            }
+            for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
+#if CPU(MIPS)
+                if (!(id & 1))
+#endif
+                CHECK_EQ(cpu.fpr<uint64_t>(id), testWord64(id));
+#if !(CPU(MIPS))
+            CHECK_EQ(cpu.spr(flagsSPR) & flagsMask, modifiedFlags & flagsMask);
+#endif
+            CHECK_EQ(cpu.sp(), newSP);
+
+            // Validate the stack values.
+            uintptr_t* p = reinterpret_cast<uintptr_t*>(newSP);
+            int count = 0;
+            CHECK_EQ(stack.get<double>(p++), 1.234567);
+            if (is32Bit())
+                p++; // On 32-bit targets, a double takes up 2 uintptr_t.
+            while (p < reinterpret_cast<uintptr_t*>(originalSP))
+                CHECK_EQ(stack.get<uintptr_t>(p++), testWord(count++));
+        });
+
+        // Restore the original state.
+        jit.probe([&] (Probe::Context& context) {
+            auto& cpu = context.cpu;
+            probeCallCount++;
+            for (auto id = CCallHelpers::firstRegister(); id <= CCallHelpers::lastRegister(); id = nextID(id)) {
+                if (isSpecialGPR(id))
+                    continue;
+                cpu.gpr(id) = originalState.gpr(id);
+            }
+            for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
+                cpu.fpr(id) = originalState.fpr(id);
+#if !(CPU(MIPS))
+            cpu.spr(flagsSPR) = originalState.spr(flagsSPR);
+#endif
+            cpu.sp() = originalSP;
+        });
+
+        jit.emitFunctionEpilogue();
+        jit.ret();
+    });
+
+    CHECK_EQ(probeCallCount, 3);
 }
 #endif // ENABLE(MASM_PROBE)
 
 #define RUN(test) do {                          \
         if (!shouldRun(#test))                  \
             break;                              \
+        numberOfTests++;                        \
         tasks.append(                           \
             createSharedTask<void()>(           \
                 [&] () {                        \
@@ -510,30 +763,52 @@ void testProbeModifiesProgramCounter()
 void run(const char* filter)
 {
     JSC::initializeThreading();
+    unsigned numberOfTests = 0;
 
     Deque<RefPtr<SharedTask<void()>>> tasks;
 
     auto shouldRun = [&] (const char* testName) -> bool {
+#if OS(UNIX)
         return !filter || !!strcasestr(testName, filter);
+#else
+        return !filter || !!strstr(testName, filter);
+#endif
     };
 
     RUN(testSimple());
+    RUN(testGetEffectiveAddress(0xff00, 42, 8, CCallHelpers::TimesEight));
+    RUN(testGetEffectiveAddress(0xff00, -200, -300, CCallHelpers::TimesEight));
+    RUN(testBranchTruncateDoubleToInt32(0, 0));
+    RUN(testBranchTruncateDoubleToInt32(42, 42));
+    RUN(testBranchTruncateDoubleToInt32(42.7, 42));
+    RUN(testBranchTruncateDoubleToInt32(-1234, -1234));
+    RUN(testBranchTruncateDoubleToInt32(-1234.56, -1234));
+    RUN(testBranchTruncateDoubleToInt32(std::numeric_limits<double>::infinity(), 0));
+    RUN(testBranchTruncateDoubleToInt32(-std::numeric_limits<double>::infinity(), 0));
+    RUN(testBranchTruncateDoubleToInt32(std::numeric_limits<double>::quiet_NaN(), 0));
+    RUN(testBranchTruncateDoubleToInt32(std::numeric_limits<double>::signaling_NaN(), 0));
+    RUN(testBranchTruncateDoubleToInt32(std::numeric_limits<double>::max(), 0));
+    RUN(testBranchTruncateDoubleToInt32(-std::numeric_limits<double>::max(), 0));
+    // We run this last one to make sure that we don't use flags that were not
+    // reset to check a conversion result
+    RUN(testBranchTruncateDoubleToInt32(123, 123));
 
 #if ENABLE(MASM_PROBE)
     RUN(testProbeReadsArgumentRegisters());
     RUN(testProbeWritesArgumentRegisters());
     RUN(testProbePreservesGPRS());
-    RUN(testProbeModifiesStackPointerToInsideProbeContextOnStack());
+    RUN(testProbeModifiesStackPointerToInsideProbeStateOnStack());
     RUN(testProbeModifiesStackPointerToNBytesBelowSP());
     RUN(testProbeModifiesProgramCounter());
-#endif
+    RUN(testProbeModifiesStackValues());
+#endif // ENABLE(MASM_PROBE)
 
     if (tasks.isEmpty())
         usage();
 
     Lock lock;
 
-    Vector<RefPtr<Thread>> threads;
+    Vector<Ref<Thread>> threads;
     for (unsigned i = filter ? 1 : WTF::numberOfProcessorCores(); i--;) {
         threads.append(
             Thread::create(
@@ -553,9 +828,10 @@ void run(const char* filter)
                 }));
     }
 
-    for (RefPtr<Thread> thread : threads)
+    for (auto& thread : threads)
         thread->waitForCompletion();
     crashLock.lock();
+    dataLog("Completed ", numberOfTests, " tests\n");
 }
 
 } // anonymous namespace
@@ -586,3 +862,10 @@ int main(int argc, char** argv)
     run(filter);
     return 0;
 }
+
+#if OS(WINDOWS)
+extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, const char* argv[])
+{
+    return main(argc, const_cast<char**>(argv));
+}
+#endif

@@ -2,6 +2,57 @@
 # exclusively needed in only one subdirectory of Source (e.g. only needed by
 # WebCore), then put it there instead.
 
+macro(WEBKIT_COMPUTE_SOURCES _framework)
+    foreach (_sourcesListFile IN LISTS ${_framework}_UNIFIED_SOURCE_LIST_FILES)
+      configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${_sourcesListFile}" "${DERIVED_SOURCES_DIR}/${_framework}/${_sourcesListFile}" COPYONLY)
+      message(STATUS "Using source list file: ${_sourcesListFile}")
+
+      list(APPEND _sourceListFileTruePaths "${CMAKE_CURRENT_SOURCE_DIR}/${_sourcesListFile}")
+    endforeach ()
+
+    if (WIN32 AND INTERNAL_BUILD)
+        set(WTF_SCRIPTS_DIR "${CMAKE_BINARY_DIR}/../include/private/WTF/Scripts")
+    else ()
+        set(WTF_SCRIPTS_DIR "${FORWARDING_HEADERS_DIR}/wtf/Scripts")
+    endif ()
+
+    execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+        "--derived-sources-path" "${DERIVED_SOURCES_DIR}/${_framework}"
+        "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
+        "--print-bundled-sources"
+        "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
+        ${_sourceListFileTruePaths}
+        RESULT_VARIABLE _resultTmp
+        OUTPUT_VARIABLE _outputTmp)
+
+    if (${_resultTmp})
+         message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
+    endif ()
+
+    foreach (_sourceFileTmp IN LISTS _outputTmp)
+        set_source_files_properties(${_sourceFileTmp} PROPERTIES HEADER_FILE_ONLY ON)
+        list(APPEND ${_framework}_HEADERS ${_sourceFileTmp})
+    endforeach ()
+    unset(_sourceFileTmp)
+
+    execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+        "--derived-sources-path" "${DERIVED_SOURCES_DIR}/${_framework}"
+        "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
+        "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
+        ${_sourceListFileTruePaths}
+        RESULT_VARIABLE  _resultTmp
+        OUTPUT_VARIABLE _outputTmp)
+
+    if (${_resultTmp})
+        message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
+    endif ()
+
+    list(APPEND ${_framework}_SOURCES ${_outputTmp})
+    unset(_platformSourcesFile)
+    unset(_resultTmp)
+    unset(_outputTmp)
+endmacro()
+
 macro(WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS)
     set(_file ${CMAKE_CURRENT_SOURCE_DIR}/Platform${PORT}.cmake)
     if (EXISTS ${_file})
@@ -78,18 +129,14 @@ macro(WEBKIT_FRAMEWORK_DECLARE _target)
 endmacro()
 
 macro(WEBKIT_FRAMEWORK _target)
-    include_directories(SYSTEM ${${_target}_SYSTEM_INCLUDE_DIRECTORIES})
     target_sources(${_target} PRIVATE
         ${${_target}_HEADERS}
         ${${_target}_SOURCES}
     )
     target_include_directories(${_target} PUBLIC "$<BUILD_INTERFACE:${${_target}_INCLUDE_DIRECTORIES}>")
+    target_include_directories(${_target} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_target}_SYSTEM_INCLUDE_DIRECTORIES}>")
     target_include_directories(${_target} PRIVATE "$<BUILD_INTERFACE:${${_target}_PRIVATE_INCLUDE_DIRECTORIES}>")
-    if (${${_target}_LIBRARY_TYPE} STREQUAL "SHARED")
-        target_link_libraries(${_target} PRIVATE ${${_target}_LIBRARIES})
-    else ()
         target_link_libraries(${_target} ${${_target}_LIBRARIES})
-    endif ()
     set_target_properties(${_target} PROPERTIES COMPILE_DEFINITIONS "BUILDING_${_target}")
 
     if (${_target}_OUTPUT_NAME)
@@ -168,6 +215,79 @@ macro(WEBKIT_CREATE_FORWARDING_HEADERS _framework)
     endif ()
 endmacro()
 
+function(WEBKIT_MAKE_FORWARDING_HEADERS framework)
+    set(options FLATTENED)
+    set(oneValueArgs DESTINATION)
+    set(multiValueArgs DIRECTORIES EXTRA_DIRECTORIES DERIVED_SOURCE_DIRECTORIES FILES)
+    cmake_parse_arguments(opt "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(headers ${opt_FILES})
+    if (opt_DESTINATION)
+        set(destination ${opt_DESTINATION})
+    else ()
+        set(destination ${FORWARDING_HEADERS_DIR}/${framework})
+    endif ()
+    file(MAKE_DIRECTORY ${destination})
+    foreach (dir IN LISTS opt_DIRECTORIES)
+        file(GLOB files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${dir}/*.h)
+        list(APPEND headers ${files})
+    endforeach ()
+    set(fwd_headers)
+    foreach (header IN LISTS headers)
+        if (opt_FLATTENED)
+            get_filename_component(header_filename ${header} NAME)
+            set(fwd_header ${destination}/${header_filename})
+        else ()
+            get_filename_component(header_dir ${header} DIRECTORY)
+            file(MAKE_DIRECTORY ${destination}/${header_dir})
+            set(fwd_header ${destination}/${header})
+        endif ()
+        add_custom_command(OUTPUT ${fwd_header}
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${header} ${fwd_header}
+            MAIN_DEPENDENCY ${header}
+            VERBATIM
+        )
+        list(APPEND fwd_headers ${fwd_header})
+    endforeach ()
+    foreach (dir IN LISTS opt_EXTRA_DIRECTORIES)
+        set(dir ${CMAKE_CURRENT_SOURCE_DIR}/${dir})
+        file(GLOB_RECURSE files RELATIVE ${dir} ${dir}/*.h)
+        foreach (header IN LISTS files)
+            get_filename_component(header_dir ${header} DIRECTORY)
+            file(MAKE_DIRECTORY ${destination}/${header_dir})
+            set(fwd_header ${destination}/${header})
+            add_custom_command(OUTPUT ${fwd_header}
+                COMMAND ${CMAKE_COMMAND} -E copy ${dir}/${header} ${fwd_header}
+                MAIN_DEPENDENCY ${dir}/${header}
+                VERBATIM
+            )
+            list(APPEND fwd_headers ${fwd_header})
+        endforeach ()
+    endforeach ()
+    add_custom_target(${framework}ForwardingHeaders DEPENDS ${fwd_headers})
+    add_dependencies(${framework} ${framework}ForwardingHeaders)
+    if (opt_DERIVED_SOURCE_DIRECTORIES)
+        set(script ${CMAKE_CURRENT_BINARY_DIR}/makeForwardingHeaders.cmake)
+        set(content "")
+        foreach (dir IN LISTS opt_DERIVED_SOURCE_DIRECTORIES)
+            string(CONCAT content ${content}
+                "file(GLOB headers \"${dir}/*.h\")\n"
+                "foreach (header IN LISTS headers)\n"
+                "    get_filename_component(header_filename \${header} NAME)\n"
+                "    execute_process(COMMAND \${CMAKE_COMMAND} -E copy_if_different \${header} ${destination}/\${header_filename} RESULT_VARIABLE result)\n"
+                "    if (NOT \${result} EQUAL 0)\n"
+                "        message(FATAL_ERROR \"Failed to copy \${header}: \${result}\")\n"
+                "    endif ()\n"
+                "endforeach ()\n"
+            )
+        endforeach ()
+        file(WRITE ${script} ${content})
+        add_custom_command(TARGET ${framework} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -P ${script}
+            VERBATIM
+        )
+    endif ()
+endfunction()
+
 # Helper macros for debugging CMake problems.
 macro(WEBKIT_DEBUG_DUMP_COMMANDS)
     set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -209,4 +329,11 @@ macro(WEBKIT_POPULATE_LIBRARY_VERSION library_name)
     if (NOT DEFINED ${library_name}_VERSION)
         set(${library_name}_VERSION ${PROJECT_VERSION})
     endif ()
+endmacro()
+
+macro(WEBKIT_CREATE_SYMLINK target src dest)
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ln -sf ${src} ${dest}
+        DEPENDS ${dest}
+        COMMENT "Create symlink from ${src} to ${dest}")
 endmacro()

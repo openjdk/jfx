@@ -33,6 +33,7 @@
 #pragma once
 
 #include "ContextDestructionObserver.h"
+#include "DOMHighResTimeStamp.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "GenericTaskQueue.h"
@@ -56,7 +57,7 @@ public:
     static Ref<Performance> create(ScriptExecutionContext& context, MonotonicTime timeOrigin) { return adoptRef(*new Performance(context, timeOrigin)); }
     ~Performance();
 
-    double now() const;
+    DOMHighResTimeStamp now() const;
 
     PerformanceNavigation* navigation();
     PerformanceTiming* timing();
@@ -82,6 +83,8 @@ public:
 
     static Seconds reduceTimeResolution(Seconds);
 
+    DOMHighResTimeStamp relativeTimeFromTimeOriginInReducedResolution(MonotonicTime) const;
+
     ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
     using RefCounted::ref;
@@ -98,6 +101,7 @@ private:
     void derefEventTarget() final { deref(); }
 
     bool isResourceTimingBufferFull() const;
+    void resourceTimingBufferFullTimerFired();
 
     void queueEntry(PerformanceEntry&);
 
@@ -107,6 +111,13 @@ private:
     // https://w3c.github.io/resource-timing/#extensions-performance-interface recommends size of 150.
     Vector<RefPtr<PerformanceEntry>> m_resourceTimingBuffer;
     unsigned m_resourceTimingBufferSize { 150 };
+
+    Timer m_resourceTimingBufferFullTimer;
+    Vector<RefPtr<PerformanceEntry>> m_backupResourceTimingBuffer;
+
+    // https://w3c.github.io/resource-timing/#dfn-resource-timing-buffer-full-flag
+    bool m_resourceTimingBufferFullFlag { false };
+    bool m_waitingForBackupBufferToBeProcessed { false };
 
     MonotonicTime m_timeOrigin;
 

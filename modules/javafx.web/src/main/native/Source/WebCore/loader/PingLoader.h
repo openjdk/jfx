@@ -39,9 +39,9 @@ namespace WebCore {
 
 class FormData;
 class Frame;
+class HTTPHeaderMap;
 class URL;
 class ResourceRequest;
-class SecurityOrigin;
 
 enum class ViolationReportType {
     ContentSecurityPolicy,
@@ -56,7 +56,7 @@ public:
 
 private:
     enum class ShouldFollowRedirects { No, Yes };
-    static void startPingLoad(Frame&, ResourceRequest&, SecurityOrigin& sourceOrigin, ShouldFollowRedirects);
+    static void startPingLoad(Frame&, ResourceRequest&, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects);
 };
 
 } // namespace WebCore

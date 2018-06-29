@@ -27,6 +27,7 @@
 
 #include "URL.h"
 #include <wtf/HashCountedSet.h>
+#include <wtf/HashSet.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
@@ -69,19 +70,30 @@ struct ResourceLoadStatistics {
     WallTime mostRecentUserInteractionTime { WallTime::fromRawSeconds(-1) };
     bool grandfathered { false };
 
+    // Storage access
+    HashSet<String> storageAccessUnderTopFrameOrigins;
+
+    // Top frame stats
+    HashCountedSet<String> topFrameUniqueRedirectsTo;
+    HashCountedSet<String> topFrameUniqueRedirectsFrom;
+
     // Subframe stats
     HashCountedSet<String> subframeUnderTopFrameOrigins;
 
     // Subresource stats
     HashCountedSet<String> subresourceUnderTopFrameOrigins;
     HashCountedSet<String> subresourceUniqueRedirectsTo;
+    HashCountedSet<String> subresourceUniqueRedirectsFrom;
 
     // Prevalent resource stats
     bool isPrevalentResource { false };
     unsigned dataRecordsRemoved { 0 };
+    unsigned timesAccessedAsFirstPartyDueToUserInteraction { 0 };
+    unsigned timesAccessedAsFirstPartyDueToStorageAccessAPI { 0 };
 
     // In-memory only
     bool isMarkedForCookiePartitioning { false };
+    bool isMarkedForCookieBlocking { false };
 };
 
 } // namespace WebCore

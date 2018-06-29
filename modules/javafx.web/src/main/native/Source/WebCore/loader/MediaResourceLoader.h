@@ -58,7 +58,7 @@ public:
     Vector<ResourceResponse> responsesForTesting() const { return m_responsesForTesting; }
     void addResponseForTesting(const ResourceResponse&);
 
-    WeakPtr<const MediaResourceLoader> createWeakPtr() const { return m_weakFactory.createWeakPtr(); }
+    WeakPtr<const MediaResourceLoader> createWeakPtr() { return m_weakFactory.createWeakPtr(*this); }
 
 private:
     void contextDestroyed() override;
@@ -83,14 +83,11 @@ public:
 
     // CachedRawResourceClient
     void responseReceived(CachedResource&, const ResourceResponse&) override;
-    void redirectReceived(CachedResource&, ResourceRequest&, const ResourceResponse&) override;
+    void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
     bool shouldCacheResponse(CachedResource&, const ResourceResponse&) override;
     void dataSent(CachedResource&, unsigned long long, unsigned long long) override;
     void dataReceived(CachedResource&, const char*, int) override;
     void notifyFinished(CachedResource&) override;
-#if USE(SOUP)
-    char* getOrCreateReadBuffer(CachedResource&, size_t /*requestedSize*/, size_t& /*actualSize*/) override;
-#endif
 
 private:
     MediaResource(MediaResourceLoader&, CachedResourceHandle<CachedRawResource>);

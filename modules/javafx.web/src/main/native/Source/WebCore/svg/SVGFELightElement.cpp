@@ -77,14 +77,6 @@ SVGFELightElement* SVGFELightElement::findLightElement(const SVGElement* svgElem
     return nullptr;
 }
 
-RefPtr<LightSource> SVGFELightElement::findLightSource(const SVGElement* svgElement)
-{
-    SVGFELightElement* lightNode = findLightElement(svgElement);
-    if (!lightNode)
-        return 0;
-    return lightNode->lightSource();
-}
-
 void SVGFELightElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == SVGNames::azimuthAttr) {
@@ -147,7 +139,7 @@ void SVGFELightElement::svgAttributeChanged(const QualifiedName& attrName)
         || attrName == SVGNames::pointsAtXAttr || attrName == SVGNames::pointsAtYAttr || attrName == SVGNames::pointsAtZAttr
         || attrName == SVGNames::specularExponentAttr || attrName == SVGNames::limitingConeAngleAttr) {
 
-        auto* parent = parentElement();
+        auto parent = makeRefPtr(parentElement());
         if (!parent)
             return;
 
@@ -173,9 +165,9 @@ void SVGFELightElement::childrenChanged(const ChildChange& change)
 {
     SVGElement::childrenChanged(change);
 
-    if (change.source == ChildChangeSourceParser)
+    if (change.source == ChildChangeSource::Parser)
         return;
-    ContainerNode* parent = parentNode();
+    auto parent = makeRefPtr(parentNode());
     if (!parent)
         return;
     RenderElement* renderer = parent->renderer();

@@ -335,7 +335,7 @@ static Ref<JSON::Object> buildObjectForBreakpointCookie(const String& url, int l
 static bool matches(const String& url, const String& pattern, bool isRegex)
 {
     if (isRegex) {
-        JSC::Yarr::RegularExpression regex(pattern, TextCaseSensitive);
+        JSC::Yarr::RegularExpression regex(pattern);
         return regex.match(url) != -1;
     }
     return url == pattern;
@@ -435,9 +435,9 @@ static bool parseLocation(ErrorString& errorString, const JSON::Object& location
     return true;
 }
 
-void InspectorDebuggerAgent::setBreakpointByUrl(ErrorString& errorString, int lineNumber, const String* const optionalURL, const String* const optionalURLRegex, const int* const optionalColumnNumber, const JSON::Object* options, Inspector::Protocol::Debugger::BreakpointId* outBreakpointIdentifier, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Debugger::Location>>& locations)
+void InspectorDebuggerAgent::setBreakpointByUrl(ErrorString& errorString, int lineNumber, const String* const optionalURL, const String* const optionalURLRegex, const int* const optionalColumnNumber, const JSON::Object* options, Inspector::Protocol::Debugger::BreakpointId* outBreakpointIdentifier, RefPtr<JSON::ArrayOf<Inspector::Protocol::Debugger::Location>>& locations)
 {
-    locations = Inspector::Protocol::Array<Inspector::Protocol::Debugger::Location>::create();
+    locations = JSON::ArrayOf<Inspector::Protocol::Debugger::Location>::create();
     if (!optionalURL == !optionalURLRegex) {
         errorString = ASCIILiteral("Either url or urlRegex must be specified.");
         return;
@@ -660,7 +660,7 @@ void InspectorDebuggerAgent::continueToLocation(ErrorString& errorString, const 
     m_scriptDebugServer.continueProgram();
 }
 
-void InspectorDebuggerAgent::searchInContent(ErrorString& error, const String& scriptIDStr, const String& query, const bool* optionalCaseSensitive, const bool* optionalIsRegex, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::GenericTypes::SearchMatch>>& results)
+void InspectorDebuggerAgent::searchInContent(ErrorString& error, const String& scriptIDStr, const String& query, const bool* optionalCaseSensitive, const bool* optionalIsRegex, RefPtr<JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>>& results)
 {
     JSC::SourceID sourceID = scriptIDStr.toIntPtr();
     auto it = m_scripts.find(sourceID);
@@ -692,7 +692,7 @@ void InspectorDebuggerAgent::getFunctionDetails(ErrorString& errorString, const 
         return;
     }
 
-    injectedScript.getFunctionDetails(errorString, functionId, &details);
+    injectedScript.getFunctionDetails(errorString, functionId, details);
 }
 
 void InspectorDebuggerAgent::schedulePauseOnNextStatement(DebuggerFrontendDispatcher::Reason breakReason, RefPtr<JSON::Object>&& data)
@@ -827,7 +827,7 @@ void InspectorDebuggerAgent::setPauseOnAssertions(ErrorString&, bool enabled)
     m_pauseOnAssertionFailures = enabled;
 }
 
-void InspectorDebuggerAgent::evaluateOnCallFrame(ErrorString& errorString, const String& callFrameId, const String& expression, const String* const objectGroup, const bool* const includeCommandLineAPI, const bool* const doNotPauseOnExceptionsAndMuteConsole, const bool* const returnByValue, const bool* generatePreview, const bool* saveResult, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Inspector::Protocol::OptOutput<bool>* wasThrown, Inspector::Protocol::OptOutput<int>* savedResultIndex)
+void InspectorDebuggerAgent::evaluateOnCallFrame(ErrorString& errorString, const String& callFrameId, const String& expression, const String* const objectGroup, const bool* const includeCommandLineAPI, const bool* const doNotPauseOnExceptionsAndMuteConsole, const bool* const returnByValue, const bool* generatePreview, const bool* saveResult, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result, Inspector::Protocol::OptOutput<bool>* out_wasThrown, Inspector::Protocol::OptOutput<int>* out_savedResultIndex)
 {
     if (m_currentCallStack.hasNoValue()) {
         errorString = ASCIILiteral("Not paused");
@@ -847,7 +847,15 @@ void InspectorDebuggerAgent::evaluateOnCallFrame(ErrorString& errorString, const
         muteConsole();
     }
 
-    injectedScript.evaluateOnCallFrame(errorString, m_currentCallStack, callFrameId, expression, objectGroup ? *objectGroup : "", includeCommandLineAPI ? *includeCommandLineAPI : false, returnByValue ? *returnByValue : false, generatePreview ? *generatePreview : false, saveResult ? *saveResult : false, &result, wasThrown, savedResultIndex);
+    // FIXME: remove this bridging code when generated protocol commands no longer use OptOutput<T>.
+    bool wasThrown;
+    std::optional<int> savedResultIndex;
+
+    injectedScript.evaluateOnCallFrame(errorString, m_currentCallStack, callFrameId, expression, objectGroup ? *objectGroup : "", includeCommandLineAPI ? *includeCommandLineAPI : false, returnByValue ? *returnByValue : false, generatePreview ? *generatePreview : false, saveResult ? *saveResult : false, result, wasThrown, savedResultIndex);
+
+    *out_wasThrown = wasThrown;
+    if (savedResultIndex.has_value())
+        *out_savedResultIndex = savedResultIndex.value();
 
     if (doNotPauseOnExceptionsAndMuteConsole ? *doNotPauseOnExceptionsAndMuteConsole : false) {
         unmuteConsole();
@@ -866,11 +874,11 @@ void InspectorDebuggerAgent::scriptExecutionBlockedByCSP(const String& directive
         breakProgram(DebuggerFrontendDispatcher::Reason::CSPViolation, buildCSPViolationPauseReason(directiveText));
 }
 
-Ref<Inspector::Protocol::Array<Inspector::Protocol::Debugger::CallFrame>> InspectorDebuggerAgent::currentCallFrames(const InjectedScript& injectedScript)
+Ref<JSON::ArrayOf<Inspector::Protocol::Debugger::CallFrame>> InspectorDebuggerAgent::currentCallFrames(const InjectedScript& injectedScript)
 {
     ASSERT(!injectedScript.hasNoValue());
     if (injectedScript.hasNoValue())
-        return Inspector::Protocol::Array<Inspector::Protocol::Debugger::CallFrame>::create();
+        return JSON::ArrayOf<Inspector::Protocol::Debugger::CallFrame>::create();
 
     return injectedScript.wrapCallFrames(m_currentCallStack);
 }
@@ -1071,9 +1079,7 @@ void InspectorDebuggerAgent::breakProgram(DebuggerFrontendDispatcher::Reason bre
 void InspectorDebuggerAgent::clearInspectorBreakpointState()
 {
     ErrorString dummyError;
-    Vector<String> breakpointIdentifiers;
-    copyKeysToVector(m_breakpointIdentifierToDebugServerBreakpointIDs, breakpointIdentifiers);
-    for (const String& identifier : breakpointIdentifiers)
+    for (const String& identifier : copyToVector(m_breakpointIdentifierToDebugServerBreakpointIDs.keys()))
         removeBreakpoint(dummyError, identifier);
 
     m_javaScriptBreakpoints.clear();

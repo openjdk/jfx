@@ -189,10 +189,6 @@ public:
     {
     }
 
-    ~GIFFrameContext()
-    {
-    }
-
     void addLzwBlock(size_t position, size_t size)
     {
         m_lzwBlocks.append(GIFLZWBlock(position, size));
@@ -238,10 +234,6 @@ public:
         , m_loopCount(cLoopCountNotSeen)
         , m_currentDecodingFrame(0)
         , m_parseCompleted(false)
-    {
-    }
-
-    ~GIFImageReader()
     {
     }
 

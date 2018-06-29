@@ -1,4 +1,4 @@
-# Copyright (C) 2012, 2014-2016 Apple Inc. All rights reserved.
+# Copyright (C) 2012-2018 Apple Inc. All rights reserved.
 # Copyright (C) 2013 Digia Plc. and/or its subsidiary(-ies)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -264,7 +264,7 @@ class RegisterID
             raise
         end
     end
-    
+
     def x86GPR
         if isX64
             case name
@@ -466,7 +466,12 @@ class LabelReference
         # FIXME: Implement this on platforms that aren't Mach-O.
         # https://bugs.webkit.org/show_bug.cgi?id=175104
         $asm.puts "movq #{asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
-        "(#{dst.x86Operand(kind)})"
+        "#{offset}(#{dst.x86Operand(kind)})"
+    end
+    def x86AddressOperand(addressKind)
+        # FIXME: Implement this on platforms that aren't Mach-O.
+        # https://bugs.webkit.org/show_bug.cgi?id=175104
+        "#{asmLabel}@GOTPCREL(%rip)"
     end
 end
 
@@ -535,7 +540,7 @@ class Instruction
         }
         result.join(", ")
     end
-
+    
     def x86LoadOperands(srcKind, dstKind)
         orderOperands(operands[0].x86LoadOperand(srcKind, operands[1]), operands[1].x86Operand(dstKind))
     end
@@ -581,7 +586,16 @@ class Instruction
             raise
         end
     end
-    
+
+    def emitX86Lea(src, dst, kind)
+        if src.is_a? LabelReference
+            $asm.puts "movq #{src.asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+            $asm.puts "mov#{x86Suffix(kind)} #{orderOperands(dst.x86Operand(kind), dst.x86Operand(kind))}"
+        else
+            $asm.puts "lea#{x86Suffix(kind)} #{orderOperands(src.x86AddressOperand(kind), dst.x86Operand(kind))}"
+        end
+    end
+
     def getImplicitOperandString
         isIntelSyntax ? "st(0), " : ""
     end
@@ -876,10 +890,6 @@ class Instruction
     end
 
     def lowerX86Common
-        $asm.codeOrigin codeOriginString if $enableCodeOriginComments
-        $asm.annotation annotation if $enableInstrAnnotations
-        $asm.debugAnnotation codeOrigin.debugDirective if $enableDebugAnnotations
-
         case opcode
         when "addi"
             handleX86Add(:int)
@@ -1542,9 +1552,9 @@ class Instruction
         when "bnz"
             $asm.puts "jnz #{operands[0].asmLabel}"
         when "leai"
-            $asm.puts "lea#{x86Suffix(:int)} #{orderOperands(operands[0].x86AddressOperand(:int), operands[1].x86Operand(:int))}"
+            emitX86Lea(operands[0], operands[1], :int)
         when "leap"
-            $asm.puts "lea#{x86Suffix(:ptr)} #{orderOperands(operands[0].x86AddressOperand(:ptr), operands[1].x86Operand(:ptr))}"
+            emitX86Lea(operands[0], operands[1], :ptr)
         when "memfence"
             sp = RegisterID.new(nil, "sp")
             if isIntelSyntax

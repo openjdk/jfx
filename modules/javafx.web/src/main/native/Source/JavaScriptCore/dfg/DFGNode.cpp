@@ -81,13 +81,27 @@ bool Node::hasVariableAccessData(Graph& graph)
     }
 }
 
-void Node::remove()
+void Node::remove(Graph& graph)
 {
-    ASSERT(!(flags() & NodeHasVarArgs));
-
-    children = children.justChecks();
-
-    setOpAndDefaultFlags(Check);
+    if (flags() & NodeHasVarArgs) {
+        unsigned targetIndex = 0;
+        for (unsigned i = 0; i < numChildren(); ++i) {
+            Edge& edge = graph.varArgChild(this, i);
+            if (!edge)
+                continue;
+            if (edge.willHaveCheck()) {
+                Edge& dst = graph.varArgChild(this, targetIndex++);
+                std::swap(dst, edge);
+                continue;
+            }
+            edge = Edge();
+        }
+        setOpAndDefaultFlags(CheckVarargs);
+        children.setNumChildren(targetIndex);
+    } else {
+        children = children.justChecks();
+        setOpAndDefaultFlags(Check);
+    }
 }
 
 void Node::convertToIdentity()
@@ -102,6 +116,7 @@ void Node::convertToIdentity()
 void Node::convertToIdentityOn(Node* child)
 {
     children.reset();
+    clearFlags(NodeHasVarArgs);
     child1() = child->defaultEdge();
     NodeFlags output = canonicalResultRepresentation(this->result());
     NodeFlags input = canonicalResultRepresentation(child->result());
@@ -164,39 +179,6 @@ void Node::convertToLazyJSConstant(Graph& graph, LazyJSValue value)
     children.reset();
 }
 
-void Node::convertToPutHint(const PromotedLocationDescriptor& descriptor, Node* base, Node* value)
-{
-    m_op = PutHint;
-    m_opInfo = descriptor.imm1();
-    m_opInfo2 = descriptor.imm2();
-    child1() = base->defaultEdge();
-    child2() = value->defaultEdge();
-    child3() = Edge();
-}
-
-void Node::convertToPutStructureHint(Node* structure)
-{
-    ASSERT(m_op == PutStructure);
-    ASSERT(structure->castConstant<Structure*>(*structure->asCell()->vm()) == transition()->next.get());
-    convertToPutHint(StructurePLoc, child1().node(), structure);
-}
-
-void Node::convertToPutByOffsetHint()
-{
-    ASSERT(m_op == PutByOffset);
-    convertToPutHint(
-        PromotedLocationDescriptor(NamedPropertyPLoc, storageAccessData().identifierNumber),
-        child2().node(), child3().node());
-}
-
-void Node::convertToPutClosureVarHint()
-{
-    ASSERT(m_op == PutClosureVar);
-    convertToPutHint(
-        PromotedLocationDescriptor(ClosureVarPLoc, scopeOffset().offset()),
-        child1().node(), child2().node());
-}
-
 void Node::convertToDirectCall(FrozenValue* executable)
 {
     NodeType newOp = LastNodeType;
@@ -240,6 +222,16 @@ void Node::convertToCallDOM(Graph& graph)
 
     if (!signature()->effect.mustGenerate())
         clearFlags(NodeMustGenerate);
+}
+
+void Node::convertToRegExpExecNonGlobalOrSticky(FrozenValue* regExp)
+{
+    ASSERT(op() == RegExpExec);
+    setOpAndDefaultFlags(RegExpExecNonGlobalOrSticky);
+    children.child1() = Edge(children.child1().node(), KnownCellUse);
+    children.child2() = Edge(children.child3().node(), StringUse);
+    children.child3() = Edge();
+    m_opInfo = regExp;
 }
 
 String Node::tryGetString(Graph& graph)

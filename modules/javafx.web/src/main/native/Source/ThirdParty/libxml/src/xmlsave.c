@@ -216,7 +216,7 @@ xmlEscapeEntities(unsigned char* out, int *outlen,
     inend = in + (*inlen);
 
     while ((in < inend) && (out < outend)) {
-    if (*in == '<') {
+        if (*in == '<') {
         if (outend - out < 4) break;
         *out++ = '&';
         *out++ = 'l';
@@ -420,7 +420,7 @@ xmlNewSaveCtxt(const char *encoding, int options)
 
 /************************************************************************
  *                                  *
- *      Dumping XML tree content to a simple buffer     *
+ *          Dumping XML tree content to a simple buffer     *
  *                                  *
  ************************************************************************/
 /**
@@ -441,7 +441,7 @@ xmlAttrSerializeContent(xmlOutputBufferPtr buf, xmlAttrPtr attr)
         switch (children->type) {
             case XML_TEXT_NODE:
             xmlBufAttrSerializeTxtContent(buf->buffer, attr->doc,
-                                      attr, children->content);
+                                   attr, children->content);
         break;
             case XML_ENTITY_REF_NODE:
                 xmlBufAdd(buf->buffer, BAD_CAST "&", 1);
@@ -549,7 +549,7 @@ xmlBufDumpEntityDecl(xmlBufPtr buf, xmlEntityPtr ent) {
 
 /************************************************************************
  *                                  *
- *      Dumping XML tree content to an I/O output buffer    *
+ *          Dumping XML tree content to an I/O output buffer    *
  *                                  *
  ************************************************************************/
 
@@ -770,7 +770,7 @@ xmlAttrDumpOutput(xmlSaveCtxtPtr ctxt, xmlAttrPtr cur) {
     if (ctxt->format == 2)
         xmlOutputBufferWriteWSNonSig(ctxt, 2);
     else
-        xmlOutputBufferWrite(buf, 1, " ");
+    xmlOutputBufferWrite(buf, 1, " ");
     if ((cur->ns != NULL) && (cur->ns->prefix != NULL)) {
         xmlOutputBufferWriteString(buf, (const char *)cur->ns->prefix);
     xmlOutputBufferWrite(buf, 1, ":");
@@ -969,7 +969,7 @@ xmlNodeDumpOutputInternal(xmlSaveCtxtPtr ctxt, xmlNodePtr cur) {
             if (ctxt->format == 2)
                 xmlOutputBufferWriteWSNonSig(ctxt, 0);
             else
-                xmlOutputBufferWrite(buf, 1, " ");
+        xmlOutputBufferWrite(buf, 1, " ");
         xmlOutputBufferWriteString(buf, (const char *)cur->content);
         }
         xmlOutputBufferWrite(buf, 2, "?>");
@@ -2047,7 +2047,7 @@ xmlSaveSetAttrEscape(xmlSaveCtxtPtr ctxt, xmlCharEncodingOutputFunc escape)
  */
 void
 xmlBufAttrSerializeTxtContent(xmlBufPtr buf, xmlDocPtr doc,
-                              xmlAttrPtr attr, const xmlChar * string)
+                           xmlAttrPtr attr, const xmlChar * string)
 {
     xmlChar *base, *cur;
 

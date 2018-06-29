@@ -10,6 +10,7 @@
 #include "URLLoader.h"
 #include "FrameNetworkingContextJava.h"
 #include "HTTPParsers.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/java/JavaEnv.h>
 #include "MIMETypeRegistry.h"
 #include "ResourceError.h"
@@ -24,6 +25,10 @@
 namespace WebCore {
 class Page;
 }
+
+namespace WebCore {
+
+namespace URLLoaderJavaInternal {
 
 static JGClass networkContextClass;
 static jmethodID loadMethod;
@@ -79,7 +84,26 @@ static void initRefs(JNIEnv* env)
     }
 }
 
-namespace WebCore {
+static bool shouldRedirectAsGET(const ResourceRequest& request, const ResourceResponse& response, bool crossOrigin)
+{
+    if (request.httpMethod() == "GET" || request.httpMethod() == "HEAD")
+        return false;
+
+    if (!request.url().protocolIsInHTTPFamily())
+        return true;
+
+    if (response.isSeeOther())
+        return true;
+
+    if ((response.isMovedPermanently() || response.isFound()) && (request.httpMethod() == "POST"))
+        return true;
+
+    if (crossOrigin && (request.httpMethod() == "DELETE"))
+        return true;
+
+    return false;
+}
+}
 
 URLLoader::URLLoader()
 {
@@ -100,11 +124,12 @@ std::unique_ptr<URLLoader> URLLoader::loadAsynchronously(NetworkingContext* cont
             context,
             handle->firstRequest(),
             result->m_target.get());
-    return result->m_ref ? std::move(result) : std::unique_ptr<URLLoader>(); //XXX: use WTF::move?
+    return result;
 }
 
 void URLLoader::cancel()
 {
+    using namespace URLLoaderJavaInternal;
     if (m_ref) {
         JNIEnv* env = WebCore_GetJavaEnv();
         initRefs(env);
@@ -131,15 +156,16 @@ JLObject URLLoader::load(bool asynchronous,
                          const ResourceRequest& request,
                          Target* target)
 {
+    using namespace URLLoaderJavaInternal;
     if (!context) {
-        return NULL;
+        return nullptr;
     }
 
     if (!context->isValid()) {
         // If NetworkingContext is invalid then we are no longer attached
         // to a Page. This must be an attempt to load from an unload handler,
         // so let's just block it.
-        return NULL;
+        return nullptr;
     }
 
     Page* page = static_cast<FrameNetworkingContextJava*>(context)->page();
@@ -181,14 +207,15 @@ JLObject URLLoader::load(bool asynchronous,
 
 JLObjectArray URLLoader::toJava(const FormData* formData)
 {
+    using namespace URLLoaderJavaInternal;
     if (!formData) {
-        return NULL;
+        return nullptr;
     }
 
     const Vector<FormDataElement>& elements = formData->elements();
     size_t size = elements.size();
     if (size == 0) {
-        return NULL;
+        return nullptr;
     }
 
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -197,7 +224,7 @@ JLObjectArray URLLoader::toJava(const FormData* formData)
     JLObjectArray result = env->NewObjectArray(
             size,
             formDataElementClass,
-            NULL);
+            nullptr);
     for (size_t i = 0; i < size; i++) {
         JLObject resultElement;
         if (elements[i].m_type == FormDataElement::Type::EncodedFile) {
@@ -245,17 +272,38 @@ void URLLoader::AsynchronousTarget::didSendData(long totalBytesSent,
     }
 }
 
+
 bool URLLoader::AsynchronousTarget::willSendRequest(
         const String& newUrl,
         const String& newMethod,
         const ResourceResponse& response)
 {
+    using namespace URLLoaderJavaInternal;
+    ASSERT(isMainThread());
     ResourceHandleClient* client = m_handle->client();
     if (client) {
         ResourceRequest request = m_handle->firstRequest();
-        request.setURL(URL(URL(), newUrl));
-        request.setHTTPMethod(newMethod);
-        client->willSendRequest(m_handle, WTFMove(request), ResourceResponse(response));
+        String location = response.httpHeaderField(HTTPHeaderName::Location);
+        URL newURL = URL(URL(), newUrl);
+        bool crossOrigin = !protocolHostAndPortAreEqual(request.url(), newURL);
+
+        ResourceRequest newRequest = request;
+        newRequest.setURL(newURL);
+
+        if (shouldRedirectAsGET(newRequest, response, crossOrigin)) {
+            newRequest.setHTTPMethod("GET");
+            newRequest.setHTTPBody(nullptr);
+            newRequest.clearHTTPContentType();
+        } else {
+            newRequest.setHTTPMethod(newMethod);
+        }
+
+        // Should not set Referer after a redirect from a secure resource to non-secure one.
+        if (!newURL.protocolIs("https") && protocolIs(newRequest.httpReferrer(), "https") && m_handle->context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
+            newRequest.clearHTTPReferrer();
+
+        client->willSendRequestAsync(m_handle, WTFMove(newRequest), ResourceResponse(response), [] (ResourceRequest&&) {
+        });
     }
     return true;
 }
@@ -265,7 +313,8 @@ void URLLoader::AsynchronousTarget::didReceiveResponse(
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didReceiveResponse(m_handle, ResourceResponse(response));
+        client->didReceiveResponseAsync(m_handle, ResourceResponse(response), [] () {
+        });
     }
 }
 

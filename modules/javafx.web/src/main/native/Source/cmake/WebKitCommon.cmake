@@ -18,6 +18,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
 
     # TODO Enforce version requirement for perl
     find_package(Perl 5.10.0 REQUIRED)
+    find_package(PerlModules COMPONENTS JSON::PP REQUIRED)
 
     find_package(PythonInterp 2.7.0 REQUIRED)
     if (PYTHON_VERSION_MAJOR GREATER 2)
@@ -52,6 +53,7 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     include(WebKitPackaging)
     include(WebKitMacros)
     include(WebKitFS)
+    include(WebKitCCache)
     include(WebKitCompilerFlags)
     include(WebKitFeatures)
 
@@ -63,16 +65,16 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     # -----------------------------------------------------------------------------
 
     if (ENABLE_WEBCORE)
+        file(MAKE_DIRECTORY ${DERIVED_SOURCES_PAL_DIR})
         file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBCORE_DIR})
     endif ()
 
     if (ENABLE_WEBKIT)
-        file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBKIT2_DIR})
+        file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBKIT_DIR})
     endif ()
 
     if (ENABLE_WEBKIT_LEGACY)
         file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBKITLEGACY_DIR})
-        file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBKIT_DIR})
     endif ()
 
     if (ENABLE_WEBDRIVER)
@@ -83,4 +85,6 @@ if (NOT HAS_RUN_WEBKIT_COMMON)
     # config.h
     # -----------------------------------------------------------------------------
     CREATE_CONFIGURATION_HEADER()
+
+    SET_CONFIGURATION_FOR_UNIFIED_SOURCE_LISTS()
 endif ()

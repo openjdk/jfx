@@ -79,20 +79,10 @@ function hasObservableSideEffectsForRegExpMatch(regexp) {
     return !@isRegExpObject(regexp);
 }
 
-function match(strArg)
+@globalPrivate
+function matchSlow(regexp, str)
 {
     "use strict";
-
-    if (!@isObject(this))
-        @throwTypeError("RegExp.prototype.@@match requires that |this| be an Object");
-
-    let regexp = this;
-
-    // Check for observable side effects and call the fast path if there aren't any.
-    if (!@hasObservableSideEffectsForRegExpMatch(regexp))
-        return @regExpMatchFast.@call(regexp, strArg);
-
-    let str = @toString(strArg);
 
     if (!regexp.global)
         return @regExpExec(regexp, str);
@@ -130,6 +120,23 @@ function match(strArg)
     }
 }
 
+@overriddenName="[Symbol.match]"
+function match(strArg)
+{
+    "use strict";
+
+    if (!@isObject(this))
+        @throwTypeError("RegExp.prototype.@@match requires that |this| be an Object");
+
+    let str = @toString(strArg);
+
+    // Check for observable side effects and call the fast path if there aren't any.
+    if (!@hasObservableSideEffectsForRegExpMatch(this))
+        return @regExpMatchFast.@call(this, str);
+    return @matchSlow(this, str);
+}
+
+@overriddenName="[Symbol.replace]"
 function replace(strArg, replace)
 {
     "use strict";
@@ -297,6 +304,7 @@ function replace(strArg, replace)
 }
 
 // 21.2.5.9 RegExp.prototype[@@search] (string)
+@overriddenName="[Symbol.search]"
 function search(strArg)
 {
     "use strict";
@@ -380,6 +388,7 @@ function hasObservableSideEffectsForRegExpSplit(regexp) {
 }
 
 // ES 21.2.5.11 RegExp.prototype[@@split](string, limit)
+@overriddenName="[Symbol.split]"
 function split(string, limit)
 {
     "use strict";

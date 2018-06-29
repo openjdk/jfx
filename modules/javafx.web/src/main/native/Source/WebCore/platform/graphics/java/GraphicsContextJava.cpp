@@ -69,8 +69,20 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     int nStops = stops.size();
 
     AffineTransform gt = gradient.gradientSpaceTransform();
-    FloatPoint p0(gt.mapPoint(gradient.p0()));
-    FloatPoint p1(gt.mapPoint(gradient.p1()));
+    FloatPoint p0, p1;
+    float startRadius, endRadius;
+    WTF::switchOn(gradient.data(),
+            [&] (const Gradient::LinearData& data) -> void {
+                p0 = data.point0;
+                p1 = data.point1;
+            },
+            [&] (const Gradient::RadialData& data) -> void {
+                p0 = data.point0;
+                p1 = data.point1;
+                startRadius = data.startRadius;
+                endRadius = data.endRadius;
+            }
+    );
 
     context->rq().freeSpace(4 * 11 + 8 * nStops)
     << id
@@ -78,12 +90,12 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     << (jfloat)p0.y()
     << (jfloat)p1.x()
     << (jfloat)p1.y()
-    << (jint)gradient.isRadial();
+    << (jint)(gradient.type() == Gradient::Type::Radial);
 
-    if (gradient.isRadial()) {
+    if (gradient.type() == Gradient::Type::Radial) {
         context->rq()
-        << (jfloat)(gt.xScale() * gradient.startRadius())
-        << (jfloat)(gt.xScale() * gradient.endRadius());
+        << (jfloat)(gt.xScale() * startRadius)
+        << (jfloat)(gt.xScale() * endRadius);
     }
     context->rq()
     << (jint)0 //is not proportional
@@ -742,22 +754,46 @@ void GraphicsContext::clipOut(const FloatRect& rect)
     path.addRoundedRect(rect, FloatSize());
     clipOut(path);
 }
+
 void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op,  BlendMode blendMode)
 {
     if (paintingDisabled())
         return;
 
-    if (isRecording()) {
-        m_displayListRecorder->drawPattern(image, destRect, srcRect, patternTransform, phase, spacing, op, blendMode);
+    if (m_impl) {
+        m_impl->drawPattern(image, destRect, srcRect, patternTransform, phase, spacing, op, blendMode);
         return;
     }
 
-    auto surface = image.nativeImageForCurrentFrame();
-    if (!surface) // If it's too early we won't have an image yet.
-        return;
+    JNIEnv* env = WebCore_GetJavaEnv();
 
-    image.drawPattern(*this, destRect, srcRect, patternTransform, phase, spacing,
-                       op, blendMode);
+    if (srcRect.isEmpty()) {
+        return;
+    }
+
+    NativeImagePtr currFrame = image.nativeImageForCurrentFrame();
+    if (!currFrame) {
+        return;
+    }
+
+    TransformationMatrix tm = patternTransform.toTransformationMatrix();
+
+    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
+                "createTransform",
+                "(DDDDDD)Lcom/sun/webkit/graphics/WCTransform;");
+    ASSERT(mid);
+    JLObject transform(env->CallObjectMethod(PL_GetGraphicsManager(env), mid,
+                tm.a(), tm.b(), tm.c(), tm.d(), tm.e(), tm.f()));
+    ASSERT(transform);
+    CheckAndClearException(env);
+
+    platformContext()->rq().freeSpace(13 * 4)
+        << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
+        << currFrame
+        << srcRect.x() << srcRect.y() << srcRect.width() << srcRect.height()
+        << RQRef::create(transform)
+        << phase.x() << phase.y()
+        << destRect.x() << destRect.y() << destRect.width() << destRect.height();
 }
 
 void GraphicsContext::fillPath(const Path& path)
@@ -905,10 +941,10 @@ void Gradient::platformDestroy()
 {
 }
 
-void Gradient::fill(GraphicsContext *gc, const FloatRect &rect)
+void Gradient::fill(GraphicsContext& gc, const FloatRect& rect)
 {
-    gc->setFillGradient(*this);
-    gc->fillRect(rect);
+    gc.setFillGradient(*this);
+    gc.fillRect(rect);
 }
 
 } // namespace WebCore

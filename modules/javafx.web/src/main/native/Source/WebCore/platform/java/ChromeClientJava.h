@@ -100,7 +100,6 @@ public:
     IntPoint screenToRootView(const IntPoint&) const override;
     IntRect rootViewToScreen(const IntRect&) const override;
     PlatformPageClient platformPageClient() const override;
-    void scrollbarsModeDidChange() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
     // End methods used by HostWindow.
@@ -169,8 +168,6 @@ public:
 
     bool selectItemWritingDirectionIsNatural() override;
     bool selectItemAlignmentFollowsMenuWritingDirection() override;
-    // Checks if there is an opened popup, called by RenderMenuList::showPopup().
-    bool hasOpenedPopup() const override { return false; }
     RefPtr<PopupMenu> createPopupMenu(PopupMenuClient&) const override;
     RefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient&) const override;
 

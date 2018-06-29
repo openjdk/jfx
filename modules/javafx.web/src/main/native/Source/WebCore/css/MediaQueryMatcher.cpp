@@ -23,6 +23,7 @@
 #include "Document.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "Logging.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
 #include "MediaQueryList.h"
@@ -31,6 +32,7 @@
 #include "RenderElement.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -39,9 +41,7 @@ MediaQueryMatcher::MediaQueryMatcher(Document& document)
 {
 }
 
-MediaQueryMatcher::~MediaQueryMatcher()
-{
-}
+MediaQueryMatcher::~MediaQueryMatcher() = default;
 
 void MediaQueryMatcher::documentDestroyed()
 {
@@ -117,6 +117,8 @@ void MediaQueryMatcher::styleResolverChanged()
     auto style = documentElementUserAgentStyle();
     if (!style)
         return;
+
+    LOG_WITH_STREAM(MediaQueries, stream << "MediaQueryMatcher::styleResolverChanged " << m_document->url());
 
     MediaQueryEvaluator evaluator { mediaType(), *m_document, style.get() };
     Vector<Listener> listeners;

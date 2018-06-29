@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <wtf/java/JavaEnv.h>
@@ -32,17 +34,17 @@ using namespace WebCore;
 extern "C" {
 
 // Attributes
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getPublicIdImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getPublicIdImpl(JNIEnv*, jclass, jlong)
 {
     return nullptr;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getSystemIdImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getSystemIdImpl(JNIEnv*, jclass, jlong)
 {
     return nullptr;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getNotationNameImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_EntityImpl_getNotationNameImpl(JNIEnv*, jclass, jlong)
 {
     return nullptr;
 }

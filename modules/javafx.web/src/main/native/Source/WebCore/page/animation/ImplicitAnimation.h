@@ -40,9 +40,9 @@ class RenderElement;
 // for a single RenderElement.
 class ImplicitAnimation : public AnimationBase {
 public:
-    static Ref<ImplicitAnimation> create(const Animation& animation, CSSPropertyID animatingProperty, RenderElement* renderer, CompositeAnimation* compositeAnimation, const RenderStyle* fromStyle)
+    static Ref<ImplicitAnimation> create(const Animation& animation, CSSPropertyID animatingProperty, Element& element, CompositeAnimation& compositeAnimation, const RenderStyle& fromStyle)
     {
-        return adoptRef(*new ImplicitAnimation(animation, animatingProperty, renderer, compositeAnimation, fromStyle));
+        return adoptRef(*new ImplicitAnimation(animation, animatingProperty, element, compositeAnimation, fromStyle));
     };
 
     CSSPropertyID transitionProperty() const { return m_transitionProperty; }
@@ -53,7 +53,7 @@ public:
     void pauseAnimation(double timeOffset) override;
     void endAnimation() override;
 
-    bool animate(CompositeAnimation&, RenderElement*, const RenderStyle* currentStyle, const RenderStyle& targetStyle, std::unique_ptr<RenderStyle>& animatedStyle, bool& didBlendStyle) override;
+    bool animate(CompositeAnimation&, const RenderStyle& targetStyle, std::unique_ptr<RenderStyle>& animatedStyle, bool& didBlendStyle);
     void getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyle) override;
     void reset(const RenderStyle& to, CompositeAnimation&);
 
@@ -75,6 +75,8 @@ public:
     bool active() const { return m_active; }
     void setActive(bool b) { m_active = b; }
 
+    const RenderStyle& unanimatedStyle() const override { return *m_fromStyle; }
+
 protected:
     bool shouldSendEventForListener(Document::ListenerType) const;
     bool sendTransitionEvent(const AtomicString&, double elapsedTime);
@@ -86,7 +88,7 @@ protected:
 #endif
 
 private:
-    ImplicitAnimation(const Animation&, CSSPropertyID, RenderElement*, CompositeAnimation*, const RenderStyle*);
+    ImplicitAnimation(const Animation&, CSSPropertyID, Element&, CompositeAnimation&, const RenderStyle&);
     virtual ~ImplicitAnimation();
 
     // The two styles that we are blending.

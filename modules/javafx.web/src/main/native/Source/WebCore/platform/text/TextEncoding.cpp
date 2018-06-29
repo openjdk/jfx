@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Alexey Proskuryakov <ap@nypop.com>
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  *
@@ -52,7 +52,7 @@ TextEncoding::TextEncoding(const char* name)
     , m_backslashAsCurrencySymbol(backslashAsCurrencySymbol())
 {
     // Aliases are valid, but not "replacement" itself.
-    if (m_name && isReplacementEncoding(name))
+    if (equalLettersIgnoringASCIICase(name, "replacement"))
         m_name = nullptr;
 }
 
@@ -61,7 +61,7 @@ TextEncoding::TextEncoding(const String& name)
     , m_backslashAsCurrencySymbol(backslashAsCurrencySymbol())
 {
     // Aliases are valid, but not "replacement" itself.
-    if (m_name && isReplacementEncoding(name))
+    if (equalLettersIgnoringASCIICase(name, "replacement"))
         m_name = nullptr;
 }
 
@@ -73,13 +73,18 @@ String TextEncoding::decode(const char* data, size_t length, bool stopOnError, b
     return newTextCodec(*this)->decode(data, length, true, stopOnError, sawError);
 }
 
-CString TextEncoding::encode(StringView text, UnencodableHandling handling) const
-{
-    if (!m_name)
-        return CString();
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+// NOTE: ICU's unorm_quickCheck and unorm_normalize functions are deprecated.
 
-    if (text.isEmpty())
-        return "";
+Vector<uint8_t> TextEncoding::encode(StringView text, UnencodableHandling handling) const
+{
+    if (!m_name || text.isEmpty())
+        return { };
+
+    // FIXME: Consider adding a fast case for ASCII.
 
 #if !USE(JAVA_UNICODE)
     // FIXME: What's the right place to do normalization?
@@ -89,7 +94,7 @@ CString TextEncoding::encode(StringView text, UnencodableHandling handling) cons
     auto upconvertedCharacters = text.upconvertedCharacters();
 
     const UChar* source = upconvertedCharacters;
-    size_t sourceLength = text.length();
+    unsigned sourceLength = text.length();
 
     Vector<UChar> normalizedCharacters;
 
@@ -109,12 +114,16 @@ CString TextEncoding::encode(StringView text, UnencodableHandling handling) cons
         sourceLength = normalizedLength;
     }
 
-    return newTextCodec(*this)->encode(source, sourceLength, handling);
+    return newTextCodec(*this)->encode(StringView { source, sourceLength }, handling);
 #else
     String normalized = TextNormalizer::normalize(text.upconvertedCharacters(), text.length(), TextNormalizer::NFC);
-    return newTextCodec(*this)->encode(normalized.characters16(), normalized.length(), handling);
+    return newTextCodec(*this)->encode(StringView { normalized.characters16(), normalized.length() }, handling);
 #endif
 }
+
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic pop
+#endif
 
 const char* TextEncoding::domName() const
 {
@@ -155,15 +164,7 @@ UChar TextEncoding::backslashAsCurrencySymbol() const
 
 bool TextEncoding::isNonByteBasedEncoding() const
 {
-    if (noExtendedTextEncodingNameUsed()) {
-        return *this == UTF16LittleEndianEncoding()
-            || *this == UTF16BigEndianEncoding();
-    }
-
-    return *this == UTF16LittleEndianEncoding()
-        || *this == UTF16BigEndianEncoding()
-        || *this == UTF32BigEndianEncoding()
-        || *this == UTF32LittleEndianEncoding();
+    return *this == UTF16LittleEndianEncoding() || *this == UTF16BigEndianEncoding();
 }
 
 bool TextEncoding::isUTF7Encoding() const
@@ -215,18 +216,6 @@ const TextEncoding& UTF16LittleEndianEncoding()
 {
     static TextEncoding globalUTF16LittleEndianEncoding("UTF-16LE");
     return globalUTF16LittleEndianEncoding;
-}
-
-const TextEncoding& UTF32BigEndianEncoding()
-{
-    static TextEncoding globalUTF32BigEndianEncoding("UTF-32BE");
-    return globalUTF32BigEndianEncoding;
-}
-
-const TextEncoding& UTF32LittleEndianEncoding()
-{
-    static TextEncoding globalUTF32LittleEndianEncoding("UTF-32LE");
-    return globalUTF32LittleEndianEncoding;
 }
 
 const TextEncoding& UTF8Encoding()

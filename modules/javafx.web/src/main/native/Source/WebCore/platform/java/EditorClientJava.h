@@ -64,12 +64,13 @@ public:
     void didBeginEditing() override;
     void respondToChangedContents() override;
     void respondToChangedSelection(Frame*) override;
-    void didChangeSelectionAndUpdateLayout() override;
+    void didEndUserTriggeredSelectionChanges() final { }
     void updateEditorStateAfterLayoutIfEditabilityChanged() override;
     void didEndEditing() override;
     void willWriteSelectionToPasteboard(Range*) override;
     void didWriteSelectionToPasteboard() override;
     void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
+    void didUpdateComposition() final { }
 
     void discardedComposition(Frame*) override;
     void canceledComposition() override;
@@ -150,6 +151,7 @@ public:
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(WebCore::DocumentFragment&, WebCore::Range&, bool) final { return false; }
+    String replacementURLForResource(Ref<WebCore::SharedBuffer>&&, const String&) override;
 protected:
     JGObject m_webPage;
 

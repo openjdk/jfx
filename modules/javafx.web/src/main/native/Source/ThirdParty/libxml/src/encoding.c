@@ -317,9 +317,9 @@ isolat1ToUTF8(unsigned char* out, int *outlen,
     instop = inend;
 
     while ((in < inend) && (out < outend - 1)) {
-    if (*in >= 0x80) {
+        if (*in >= 0x80) {
         *out++ = (((*in) >>  6) & 0x1F) | 0xC0;
-            *out++ = ((*in) & 0x3F) | 0x80;
+        *out++ = ((*in) & 0x3F) | 0x80;
         ++in;
     }
     if ((instop - in) > (outend - out)) instop = in + (outend - out);
@@ -1673,13 +1673,13 @@ xmlFindCharEncodingHandler(const char *name) {
 
     if (handlers != NULL) {
         for (i = 0;i < nbCharEncodingHandler; i++) {
-            if (!strcmp(upper, handlers[i]->name)) {
+        if (!strcmp(upper, handlers[i]->name)) {
 #ifdef DEBUG_ENCODING
-                xmlGenericError(xmlGenericErrorContext,
-                        "Found registered handler for encoding %s\n", name);
+            xmlGenericError(xmlGenericErrorContext,
+            "Found registered handler for encoding %s\n", name);
 #endif
-                return(handlers[i]);
-            }
+        return(handlers[i]);
+    }
         }
     }
 
@@ -2006,8 +2006,8 @@ xmlCharEncFirstLineInt(xmlCharEncodingHandler *handler, xmlBufferPtr out,
         if (toconv > len)
             toconv = len;
     } else {
-        if (toconv > 180)
-            toconv = 180;
+    if (toconv > 180)
+    toconv  = 180;
     }
     if (toconv * 2 >= written) {
         xmlBufferGrow(out, toconv * 2);
@@ -2015,7 +2015,7 @@ xmlCharEncFirstLineInt(xmlCharEncodingHandler *handler, xmlBufferPtr out,
     }
 
     ret = xmlEncInputChunk(handler, &out->content[out->use], &written,
-                           in->content, &toconv);
+                         in->content, &toconv);
     xmlBufferShrink(in, toconv);
     out->use += written;
     out->content[out->use] = 0;
@@ -2317,12 +2317,12 @@ xmlCharEncInFunc(xmlCharEncodingHandler * handler, xmlBufferPtr out,
         written = out->size - out->use - 1;
     }
     ret = xmlEncInputChunk(handler, &out->content[out->use], &written,
-                           in->content, &toconv);
-    xmlBufferShrink(in, toconv);
-    out->use += written;
-    out->content[out->use] = 0;
-    if (ret == -1)
-        ret = -3;
+                             in->content, &toconv);
+        xmlBufferShrink(in, toconv);
+        out->use += written;
+        out->content[out->use] = 0;
+        if (ret == -1)
+            ret = -3;
 
     switch (ret) {
         case 0:
@@ -2585,7 +2585,7 @@ retry:
         toconv = 0;
         /* TODO: Check return value. */
         xmlEncOutputChunk(handler, &out->content[out->use], &written,
-                          NULL, &toconv);
+                  NULL, &toconv);
         out->use += written;
         out->content[out->use] = 0;
 #ifdef DEBUG_ENCODING
@@ -2606,7 +2606,7 @@ retry:
     written = out->size - out->use - 1;
     }
     ret = xmlEncOutputChunk(handler, &out->content[out->use], &written,
-                            in->content, &toconv);
+                          in->content, &toconv);
     xmlBufferShrink(in, toconv);
     out->use += written;
     writtentot += written;
@@ -2614,7 +2614,7 @@ retry:
     if (ret == -1) {
         if (written > 0) {
             /* Can be a limitation of iconv or uconv */
-            goto retry;
+        goto retry;
         }
         ret = -3;
     }
@@ -2660,21 +2660,21 @@ retry:
                 break;
 
 #ifdef DEBUG_ENCODING
-            xmlGenericError(xmlGenericErrorContext,
-                    "handling output conversion error\n");
-            xmlGenericError(xmlGenericErrorContext,
-                    "Bytes: 0x%02X 0x%02X 0x%02X 0x%02X\n",
-                    in->content[0], in->content[1],
-                    in->content[2], in->content[3]);
+        xmlGenericError(xmlGenericErrorContext,
+            "handling output conversion error\n");
+        xmlGenericError(xmlGenericErrorContext,
+            "Bytes: 0x%02X 0x%02X 0x%02X 0x%02X\n",
+            in->content[0], in->content[1],
+            in->content[2], in->content[3]);
 #endif
-            /*
-             * Removes the UTF8 sequence, and replace it by a charref
-             * and continue the transcoding phase, hoping the error
-             * did not mangle the encoder state.
-             */
+        /*
+         * Removes the UTF8 sequence, and replace it by a charref
+         * and continue the transcoding phase, hoping the error
+         * did not mangle the encoder state.
+         */
             charrefLen = snprintf((char *) &charref[0], sizeof(charref),
                              "&#%d;", cur);
-            xmlBufferShrink(in, len);
+        xmlBufferShrink(in, len);
             xmlBufferGrow(out, charrefLen * 4);
         written = out->size - out->use - 1;
             toconv = charrefLen;
@@ -2693,8 +2693,8 @@ retry:
                    buf);
         if (in->alloc != XML_BUFFER_ALLOC_IMMUTABLE)
             in->content[0] = ' ';
-            break;
-        }
+        break;
+    }
 
             out->use += written;
             writtentot += written;
@@ -2819,19 +2819,19 @@ xmlByteConsumed(xmlParserCtxtPtr ctxt) {
         int ret;
 
             do {
-                toconv = in->end - cur;
-                written = 32000;
+            toconv = in->end - cur;
+            written = 32000;
                 ret = xmlEncOutputChunk(handler, &convbuf[0], &written,
-                                        cur, &toconv);
-                if (ret < 0) {
-                    if (written > 0)
-                        ret = -2;
-                    else
-                        return(-1);
-                }
-                unused += written;
-                cur += toconv;
-            } while (ret == -2);
+                      cur, &toconv);
+            if (ret < 0) {
+                if (written > 0)
+                ret = -2;
+            else
+                return(-1);
+            }
+            unused += written;
+            cur += toconv;
+        } while (ret == -2);
     }
     if (in->buf->rawconsumed < unused)
         return(-1);
@@ -2941,7 +2941,7 @@ UTF8ToISO8859x(unsigned char* out, int *outlen,
             c2 = c2 & 0x3F;
         d = d & 0x0F;
         d = xlattable [48 + c2 + xlattable [48 + c1 +
-            xlattable [32 + d] * 64] * 64];
+                xlattable [32 + d] * 64] * 64];
             if (d == 0) {
                 /* not in character set */
                 *outlen = out - outstart;

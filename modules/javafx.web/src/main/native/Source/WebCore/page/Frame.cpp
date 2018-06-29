@@ -108,10 +108,10 @@
 #include "markup.h"
 #include "npruntime_impl.h"
 #include "runtime_root.h"
+#include <JavaScriptCore/RegularExpression.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
-#include <yarr/RegularExpression.h>
 
 #if PLATFORM(IOS)
 #include "WKContentObservation.h"
@@ -255,7 +255,7 @@ void Frame::setView(RefPtr<FrameView>&& view)
         m_doc->prepareForDestruction();
 
     if (m_view)
-        m_view->unscheduleRelayout();
+        m_view->layoutContext().unscheduleLayout();
 
     m_eventHandler->clear();
 
@@ -284,6 +284,13 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
         m_loader->client().dispatchDidChangeMainDocument();
     }
 
+#if ENABLE(ATTACHMENT_ELEMENT)
+    if (m_doc) {
+        for (auto& attachment : m_doc->attachmentElementsByIdentifier().values())
+            editor().didRemoveAttachmentElement(attachment);
+    }
+#endif
+
     if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
         m_doc->prepareForDestruction();
 
@@ -295,6 +302,13 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
     // that the document is not destroyed during this function call.
     if (newDocument)
         newDocument->didBecomeCurrentDocumentInFrame();
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    if (m_doc) {
+        for (auto& attachment : m_doc->attachmentElementsByIdentifier().values())
+            editor().didInsertAttachmentElement(attachment);
+    }
+#endif
 
     InspectorInstrumentation::frameDocumentUpdated(*this);
 
@@ -328,7 +342,7 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
     // REVIEW- version of this call in FrameMac.mm caches based on the NSArray ptrs being
     // the same across calls.  We can't do that.
 
-    static NeverDestroyed<JSC::Yarr::RegularExpression> wordRegExp("\\w", TextCaseSensitive);
+    static NeverDestroyed<JSC::Yarr::RegularExpression> wordRegExp("\\w");
     StringBuilder pattern;
     pattern.append('(');
     unsigned int numLabels = labels.size();
@@ -355,7 +369,7 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
             pattern.appendLiteral("\\b");
     }
     pattern.append(')');
-    return JSC::Yarr::RegularExpression(pattern.toString(), TextCaseInsensitive);
+    return JSC::Yarr::RegularExpression(pattern.toString(), JSC::Yarr::TextCaseInsensitive);
 }
 
 String Frame::searchForLabelsAboveCell(const JSC::Yarr::RegularExpression& regExp, HTMLTableCellElement* cell, size_t* resultDistanceFromStartOfCell)
@@ -459,7 +473,7 @@ static String matchLabelsAgainstString(const Vector<String>& labels, const Strin
     String mutableStringToMatch = stringToMatch;
 
     // Make numbers and _'s in field names behave like word boundaries, e.g., "address2"
-    replace(mutableStringToMatch, JSC::Yarr::RegularExpression("\\d", TextCaseSensitive), " ");
+    replace(mutableStringToMatch, JSC::Yarr::RegularExpression("\\d"), " ");
     mutableStringToMatch.replace('_', ' ');
 
     JSC::Yarr::RegularExpression regExp = createRegExpForLabels(labels);
@@ -530,7 +544,7 @@ void Frame::scrollOverflowLayer(RenderLayer* layer, const IntRect& visibleRect, 
     else if (exposeBottom >= clientHeight)
         scrollOffset.setY(std::min(box->scrollHeight() - clientHeight, scrollOffset.y() + clientHeight / 2));
 
-    layer->scrollToOffset(scrollOffset);
+    layer->scrollToOffset(scrollOffset, ScrollClamping::Unclamped);
     selection().setCaretRectNeedsUpdate();
     selection().updateAppearance();
 }
@@ -626,7 +640,7 @@ int Frame::checkOverflowScroll(OverflowScrollAction action)
     Ref<Frame> protectedThis(*this);
 
     if (action == PerformOverflowScroll && (deltaX || deltaY)) {
-        layer->scrollToOffset(layer->scrollOffset() + IntSize(deltaX, deltaY));
+        layer->scrollToOffset(layer->scrollOffset() + IntSize(deltaX, deltaY), ScrollClamping::Unclamped);
 
         // Handle making selection.
         VisiblePosition visiblePosition(renderer->positionForPoint(selectionPosition, nullptr));
@@ -763,7 +777,7 @@ Frame* Frame::frameForWidget(const Widget& widget)
 void Frame::clearTimers(FrameView *view, Document *document)
 {
     if (view) {
-        view->unscheduleRelayout();
+        view->layoutContext().unscheduleLayout();
         view->frame().animation().suspendAnimationsForDocument(document);
         view->frame().eventHandler().stopAutoscrollTimer();
     }
@@ -992,7 +1006,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
 
     if (FrameView* view = this->view()) {
         if (document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
-            view->layout();
+            view->layoutContext().layout();
     }
 }
 
@@ -1041,7 +1055,7 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
     // Frame::clearTimers() suspended animations and pending relayouts.
     animation().resumeAnimationsForDocument(m_doc.get());
     if (m_view)
-        m_view->scheduleRelayout();
+        m_view->layoutContext().scheduleLayout();
 }
 
 void Frame::deviceOrPageScaleFactorChanged()

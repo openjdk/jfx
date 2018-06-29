@@ -41,9 +41,12 @@
 #include "RenderLayer.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderFrameSet);
 
 RenderFrameSet::RenderFrameSet(HTMLFrameSetElement& frameSet, RenderStyle&& style)
     : RenderBox(frameSet, WTFMove(style), 0)
@@ -53,9 +56,7 @@ RenderFrameSet::RenderFrameSet(HTMLFrameSetElement& frameSet, RenderStyle&& styl
     setInline(false);
 }
 
-RenderFrameSet::~RenderFrameSet()
-{
-}
+RenderFrameSet::~RenderFrameSet() = default;
 
 HTMLFrameSetElement& RenderFrameSet::frameSetElement() const
 {
@@ -651,7 +652,7 @@ void RenderFrameSet::positionFramesWithFlattening()
 
 bool RenderFrameSet::flattenFrameSet() const
 {
-    return settings().frameFlattening() != FrameFlatteningDisabled;
+    return view().frameView().effectiveFrameFlattening() != FrameFlattening::Disabled;
 }
 
 void RenderFrameSet::startResizing(GridAxis& axis, int position)

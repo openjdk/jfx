@@ -134,22 +134,24 @@ bool RangeInputType::isSteppable() const
 }
 
 #if !PLATFORM(IOS)
+
 void RangeInputType::handleMouseDownEvent(MouseEvent& event)
 {
     if (element().isDisabledFormControl())
         return;
 
-    Node* targetNode = event.target()->toNode();
-    if (event.button() != LeftButton || !targetNode)
+    if (event.button() != LeftButton || !is<Node>(event.target()))
         return;
     ASSERT(element().shadowRoot());
-    if (targetNode != &element() && !targetNode->isDescendantOf(element().userAgentShadowRoot()))
+    auto& targetNode = downcast<Node>(*event.target());
+    if (&targetNode != &element() && !targetNode.isDescendantOf(element().userAgentShadowRoot().get()))
         return;
-    SliderThumbElement& thumb = typedSliderThumbElement();
-    if (targetNode == &thumb)
+    auto& thumb = typedSliderThumbElement();
+    if (&targetNode == &thumb)
         return;
     thumb.dragFrom(event.absoluteLocation());
 }
+
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
@@ -166,7 +168,7 @@ void RangeInputType::handleTouchEvent(TouchEvent& event)
         return;
     }
 
-    TouchList* touches = event.targetTouches();
+    RefPtr<TouchList> touches = event.targetTouches();
     if (touches->length() == 1) {
         typedSliderThumbElement().setPositionFromPoint(touches->item(0)->absoluteLocation());
         event.setDefaultHandled();
@@ -266,7 +268,7 @@ HTMLElement* RangeInputType::sliderTrackElement() const
     ASSERT(element().userAgentShadowRoot()->firstChild()->isHTMLElement());
     ASSERT(element().userAgentShadowRoot()->firstChild()->firstChild()); // track
 
-    ShadowRoot* root = element().userAgentShadowRoot();
+    RefPtr<ShadowRoot> root = element().userAgentShadowRoot();
     if (!root)
         return nullptr;
 
@@ -360,7 +362,7 @@ bool RangeInputType::shouldRespectListAttribute()
 void RangeInputType::listAttributeTargetChanged()
 {
     m_tickMarkValuesDirty = true;
-    HTMLElement* sliderTrackElement = this->sliderTrackElement();
+    RefPtr<HTMLElement> sliderTrackElement = this->sliderTrackElement();
     if (sliderTrackElement->renderer())
         sliderTrackElement->renderer()->setNeedsLayout();
 }
@@ -371,13 +373,13 @@ void RangeInputType::updateTickMarkValues()
         return;
     m_tickMarkValues.clear();
     m_tickMarkValuesDirty = false;
-    HTMLDataListElement* dataList = element().dataList();
+    auto dataList = element().dataList();
     if (!dataList)
         return;
     Ref<HTMLCollection> options = dataList->options();
     m_tickMarkValues.reserveCapacity(options->length());
     for (unsigned i = 0; i < options->length(); ++i) {
-        Node* node = options->item(i);
+        RefPtr<Node> node = options->item(i);
         HTMLOptionElement& optionElement = downcast<HTMLOptionElement>(*node);
         String optionValue = optionElement.value();
         if (!element().isValidValue(optionValue))

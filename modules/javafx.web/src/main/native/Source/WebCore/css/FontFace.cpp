@@ -31,6 +31,7 @@
 #include "CSSFontFeatureValue.h"
 #include "CSSFontStyleValue.h"
 #include "CSSParser.h"
+#include "CSSPrimitiveValueMappings.h"
 #include "CSSUnicodeRangeValue.h"
 #include "CSSValueList.h"
 #include "CSSValuePool.h"
@@ -38,9 +39,9 @@
 #include "FontVariantBuilder.h"
 #include "JSFontFace.h"
 #include "StyleProperties.h"
-#include <runtime/ArrayBuffer.h>
-#include <runtime/ArrayBufferView.h>
-#include <runtime/JSCInlines.h>
+#include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/ArrayBufferView.h>
+#include <JavaScriptCore/JSCInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -65,7 +66,7 @@ ExceptionOr<Ref<FontFace>> FontFace::create(Document& document, const String& fa
     auto sourceConversionResult = WTF::switchOn(source,
         [&] (String& string) -> ExceptionOr<void> {
             auto value = FontFace::parseString(string, CSSPropertySrc);
-            if (!is<CSSValueList>(value.get()))
+            if (!is<CSSValueList>(value))
                 return Exception { SyntaxError };
             CSSFontFace::appendSources(result->backing(), downcast<CSSValueList>(*value), &document, false);
             return { };
@@ -104,6 +105,9 @@ ExceptionOr<Ref<FontFace>> FontFace::create(Document& document, const String& fa
     auto setFeatureSettingsResult = result->setFeatureSettings(descriptors.featureSettings.isEmpty() ? ASCIILiteral("normal") : descriptors.featureSettings);
     if (setFeatureSettingsResult.hasException())
         return setFeatureSettingsResult.releaseException();
+    auto setDisplayResult = result->setDisplay(descriptors.display.isEmpty() ? ASCIILiteral("auto") : descriptors.display);
+    if (setDisplayResult.hasException())
+        return setDisplayResult.releaseException();
 
     if (!dataRequiresAsynchronousLoading) {
         result->backing().load();
@@ -120,16 +124,14 @@ Ref<FontFace> FontFace::create(CSSFontFace& face)
 }
 
 FontFace::FontFace(CSSFontSelector& fontSelector)
-    : m_weakPtrFactory(this)
-    , m_backing(CSSFontFace::create(&fontSelector, nullptr, this))
+    : m_backing(CSSFontFace::create(&fontSelector, nullptr, this))
     , m_loadedPromise(*this, &FontFace::loadedPromiseResolve)
 {
     m_backing->addClient(*this);
 }
 
 FontFace::FontFace(CSSFontFace& face)
-    : m_weakPtrFactory(this)
-    , m_backing(face)
+    : m_backing(face)
     , m_loadedPromise(*this, &FontFace::loadedPromiseResolve)
 {
     m_backing->addClient(*this);
@@ -140,9 +142,9 @@ FontFace::~FontFace()
     m_backing->removeClient(*this);
 }
 
-WeakPtr<FontFace> FontFace::createWeakPtr() const
+WeakPtr<FontFace> FontFace::createWeakPtr()
 {
-    return m_weakPtrFactory.createWeakPtr();
+    return m_weakPtrFactory.createWeakPtr(*this);
 }
 
 RefPtr<CSSValue> FontFace::parseString(const String& string, CSSPropertyID propertyID)
@@ -280,6 +282,19 @@ ExceptionOr<void> FontFace::setFeatureSettings(const String& featureSettings)
     return { };
 }
 
+ExceptionOr<void> FontFace::setDisplay(const String& display)
+{
+    if (display.isEmpty())
+        return Exception { SyntaxError };
+
+    if (auto value = parseString(display, CSSPropertyFontDisplay)) {
+        m_backing->setLoadingBehavior(*value);
+        return { };
+    }
+
+    return Exception { SyntaxError };
+}
+
 String FontFace::family() const
 {
     m_backing->updateStyleIfNeeded();
@@ -384,6 +399,12 @@ String FontFace::featureSettings() const
     for (auto& feature : m_backing->featureSettings())
         list->append(CSSFontFeatureValue::create(FontTag(feature.tag()), feature.value()));
     return list->cssText();
+}
+
+String FontFace::display() const
+{
+    m_backing->updateStyleIfNeeded();
+    return CSSValuePool::singleton().createValue(m_backing->loadingBehavior())->cssText();
 }
 
 auto FontFace::status() const -> LoadStatus

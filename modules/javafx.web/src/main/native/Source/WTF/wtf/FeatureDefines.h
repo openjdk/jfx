@@ -139,17 +139,13 @@
 #endif
 
 /* FIXME: Remove the USE(APPLE_INTERNAL_SDK) conjunct once we support touch events when building against
-the public iOS SDK. We will also need to update the FeatureDefines.xcconfig files. */
+the public iOS SDK. See <https://webkit.org/b/179167>. */
 #if !defined(ENABLE_TOUCH_EVENTS) && USE(APPLE_INTERNAL_SDK)
 #define ENABLE_TOUCH_EVENTS 1
 #endif
 
 #if !defined(ENABLE_WEB_ARCHIVE)
 #define ENABLE_WEB_ARCHIVE 1
-#endif
-
-#if !defined(ENABLE_WEBASSEMBLY)
-#define ENABLE_WEBASSEMBLY (defined(ENABLE_B3_JIT) && ENABLE_B3_JIT)
 #endif
 
 #if !defined(ENABLE_WEBGL)
@@ -203,10 +199,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #endif
 #endif
 
-#if !defined(ENABLE_WEBASSEMBLY)
-#define ENABLE_WEBASSEMBLY (defined(ENABLE_B3_JIT) && ENABLE_B3_JIT)
-#endif
-
 #if !defined(ENABLE_WEB_ARCHIVE)
 #define ENABLE_WEB_ARCHIVE 1
 #endif
@@ -217,14 +209,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 
 #if !defined(ENABLE_CURSOR_VISIBILITY)
 #define ENABLE_CURSOR_VISIBILITY 1
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_COLOR)
-#define ENABLE_INPUT_TYPE_COLOR 1
-#endif
-
-#if !defined(ENABLE_INPUT_TYPE_COLOR_POPOVER)
-#define ENABLE_INPUT_TYPE_COLOR_POPOVER 1
 #endif
 
 #if !defined(ENABLE_PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
@@ -257,6 +241,10 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 
 #if !defined(ENABLE_KEYBOARD_CODE_ATTRIBUTE)
 #define ENABLE_KEYBOARD_CODE_ATTRIBUTE 1
+#endif
+
+#if !defined(ENABLE_PAYMENT_REQUEST)
+#define ENABLE_PAYMENT_REQUEST 1
 #endif
 
 #endif /* PLATFORM(COCOA) */
@@ -340,10 +328,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_APNG 1
 #endif
 
-#if !defined(ENABLE_CANVAS_PROXY)
-#define ENABLE_CANVAS_PROXY 0
-#endif
-
 #if !defined(ENABLE_CHANNEL_MESSAGING)
 #define ENABLE_CHANNEL_MESSAGING 1
 #endif
@@ -396,10 +380,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_DATALIST_ELEMENT 0
 #endif
 
-#if !defined(ENABLE_DATA_TRANSFER_ITEMS)
-#define ENABLE_DATA_TRANSFER_ITEMS 0
-#endif
-
 #if !defined(ENABLE_DEVICE_ORIENTATION)
 #define ENABLE_DEVICE_ORIENTATION 0
 #endif
@@ -432,20 +412,12 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_GAMEPAD 0
 #endif
 
-#if !defined(ENABLE_GAMEPAD_DEPRECATED)
-#define ENABLE_GAMEPAD_DEPRECATED 0
-#endif
-
 #if !defined(ENABLE_GEOLOCATION)
 #define ENABLE_GEOLOCATION 0
 #endif
 
 #if !defined(ENABLE_ICONDATABASE)
 #define ENABLE_ICONDATABASE 1
-#endif
-
-#if !defined(ENABLE_IMAGE_DECODER_DOWN_SAMPLING)
-#define ENABLE_IMAGE_DECODER_DOWN_SAMPLING 0
 #endif
 
 #if !defined(ENABLE_INDEXED_DATABASE)
@@ -508,10 +480,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 
 #if !defined(ENABLE_LEGACY_CSS_VENDOR_PREFIXES)
 #define ENABLE_LEGACY_CSS_VENDOR_PREFIXES 0
-#endif
-
-#if !defined(ENABLE_LEGACY_VENDOR_PREFIXES)
-#define ENABLE_LEGACY_VENDOR_PREFIXES 0
 #endif
 
 #if !defined(ENABLE_LETTERPRESS)
@@ -592,6 +560,10 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #endif
 #endif
 
+#if !defined(ENABLE_PAYMENT_REQUEST)
+#define ENABLE_PAYMENT_REQUEST 0
+#endif
+
 #if !defined(ENABLE_POINTER_LOCK)
 #define ENABLE_POINTER_LOCK 1
 #endif
@@ -644,10 +616,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_TOUCH_EVENTS 0
 #endif
 
-#if !defined(ENABLE_TOUCH_ICON_LOADING)
-#define ENABLE_TOUCH_ICON_LOADING 0
-#endif
-
 #if !defined(ENABLE_VIDEO)
 #define ENABLE_VIDEO 0
 #endif
@@ -666,10 +634,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 
 #if !defined(ENABLE_GRAPHICS_CONTEXT_3D)
 #define ENABLE_GRAPHICS_CONTEXT_3D ENABLE_WEBGL
-#endif
-
-#if !defined(ENABLE_WEB_ANIMATIONS)
-#define ENABLE_WEB_ANIMATIONS 1
 #endif
 
 #if !defined(ENABLE_WEB_ARCHIVE)

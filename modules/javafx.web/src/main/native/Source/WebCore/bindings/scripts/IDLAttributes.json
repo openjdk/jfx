@@ -85,6 +85,9 @@
         "ConstructorMayThrowException": {
             "contextsAllowed": ["interface"]
         },
+        "ContextHasServiceWorkerScheme": {
+            "contextsAllowed": ["attribute"]
+        },
         "Custom": {
             "contextsAllowed": ["attribute", "operation"]
         },
@@ -186,7 +189,7 @@
             }
         },
         "ExportMacro": {
-            "contextsAllowed": ["interface", "dictionary", "enum"],
+            "contextsAllowed": ["interface", "dictionary", "enum", "callback-function"],
             "values": ["WEBCORE_EXPORT", "WEBCORE_TESTSUPPORT_EXPORT"]
         },
         "ExportToWrappedFunction": {
@@ -205,9 +208,6 @@
         "GenerateIsReachable": {
             "contextsAllowed": ["interface"],
             "values": ["", "Impl", "ImplWebGLRenderingContext", "ImplDocument", "ImplElementRoot", "ImplFrame", "ImplOwnerNodeRoot", "ImplScriptExecutionContext"]
-        },
-        "GetterMayThrowException": {
-            "contextsAllowed": ["attribute"]
         },
         "Global": {
             "contextsAllowed": ["interface"],
@@ -416,9 +416,6 @@
         "SetterCallWith": {
             "contextsAllowed": ["attribute"],
             "values": ["ScriptExecutionContext", "ScriptState", "GlobalObject", "ActiveWindow", "FirstWindow"]
-        },
-        "SetterMayThrowException": {
-            "contextsAllowed": ["attribute"]
         },
         "SkipCallbackInvokeCheck": {
             "contextsAllowed": ["operation", "callback-function"]

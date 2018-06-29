@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Copyright (C) 2016 Sony Interactive Entertainment Inc.
 #
@@ -66,7 +66,7 @@ GetOptions('include=s@' => \@idlDirectories,
 $| = 1;
 my @idlFiles;
 open(my $fh, '<', $idlFilesList) or die "Cannot open $idlFilesList";
-@idlFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
+@idlFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$fh>;
 close($fh) or die;
 
 my %oldSupplements;
@@ -163,11 +163,15 @@ sub spawnGenerateBindingsIfNeeded
 {
     return if $abort;
     return unless @idlFilesToUpdate;
-    my $file = shift @idlFilesToUpdate;
-    $currentCount++;
-    my $basename = basename($file);
-    printProgress("[$currentCount/$totalCount] $basename");
-    my $pid = spawnCommand($perl, @args, $file);
+    my $batchCount = 30;
+    # my $batchCount = int(($totalCount - $currentCount) / $numOfJobs) || 1;
+    my @files = splice(@idlFilesToUpdate, 0, $batchCount);
+    for (@files) {
+        $currentCount++;
+        my $basename = basename($_);
+        printProgress("[$currentCount/$totalCount] $basename");
+    }
+    my $pid = spawnCommand($perl, @args, @files);
     $abort = 1 unless defined $pid;
 }
 
@@ -214,7 +218,8 @@ sub spawnCommand
 sub quoteCommand
 {
     return map {
-        '"' . s/([\\\"])/\\$1/gr . '"';
+        (my $qStr = $_) =~ s/([\\\"])/\\$1/g;
+        '"' . $qStr . '"';
     } @_;
 }
 

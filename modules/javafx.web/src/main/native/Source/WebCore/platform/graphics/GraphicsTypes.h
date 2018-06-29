@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GraphicsTypes_h
-#define GraphicsTypes_h
+#pragma once
 
 #include "WindRule.h"
 #include <wtf/Forward.h>
@@ -103,15 +102,14 @@ enum RenderingMode {
     Accelerated
 };
 
+enum class AlphaPremultiplication {
+    Premultiplied,
+    Unpremultiplied
+};
+
 String compositeOperatorName(CompositeOperator, BlendMode);
 bool parseBlendMode(const String&, BlendMode&);
 bool parseCompositeAndBlendOperator(const String&, CompositeOperator&, BlendMode&);
-
-String lineCapName(LineCap);
-bool parseLineCap(const String&, LineCap&);
-
-String lineJoinName(LineJoin);
-bool parseLineJoin(const String&, LineJoin&);
 
 String textAlignName(TextAlign);
 bool parseTextAlign(const String&, TextAlign&);
@@ -124,7 +122,7 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, CompositeOperator);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, WindRule);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, LineCap);
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, LineJoin);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, AlphaPremultiplication);
 
 } // namespace WebCore
 
-#endif

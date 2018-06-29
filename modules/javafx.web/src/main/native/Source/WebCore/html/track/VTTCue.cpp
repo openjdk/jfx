@@ -41,9 +41,9 @@
 #include "HTMLDivElement.h"
 #include "HTMLSpanElement.h"
 #include "Logging.h"
-#include "NoEventDispatchAssertion.h"
 #include "NodeTraversal.h"
 #include "RenderVTTCue.h"
+#include "ScriptDisallowedScope.h"
 #include "Text.h"
 #include "TextTrack.h"
 #include "TextTrackCueList.h"
@@ -498,7 +498,7 @@ void VTTCue::createWebVTTNodeTree()
 
 void VTTCue::copyWebVTTNodeToDOMTree(ContainerNode* webVTTNode, ContainerNode* parent)
 {
-    for (Node* node = webVTTNode->firstChild(); node; node = node->nextSibling()) {
+    for (RefPtr<Node> node = webVTTNode->firstChild(); node; node = node->nextSibling()) {
         RefPtr<Node> clonedNode;
         if (is<WebVTTElement>(*node))
             clonedNode = downcast<WebVTTElement>(*node).createEquivalentHTMLElement(ownerDocument());
@@ -506,7 +506,7 @@ void VTTCue::copyWebVTTNodeToDOMTree(ContainerNode* webVTTNode, ContainerNode* p
             clonedNode = node->cloneNode(false);
         parent->appendChild(*clonedNode);
         if (is<ContainerNode>(*node))
-            copyWebVTTNodeToDOMTree(downcast<ContainerNode>(node), downcast<ContainerNode>(clonedNode.get()));
+            copyWebVTTNodeToDOMTree(downcast<ContainerNode>(node.get()), downcast<ContainerNode>(clonedNode.get()));
     }
 }
 
@@ -530,7 +530,7 @@ RefPtr<DocumentFragment> VTTCue::createCueRenderingTree()
     auto clonedFragment = DocumentFragment::create(ownerDocument());
 
     // The cloned fragment is never exposed to author scripts so it's safe to dispatch events here.
-    NoEventDispatchAssertion::EventAllowedScope noEventDispatchAssertionDisabledForScope(clonedFragment);
+    ScriptDisallowedScope::EventAllowedScope allowedScope(clonedFragment);
 
     m_webVTTNodeTree->cloneChildNodes(clonedFragment);
     return WTFMove(clonedFragment);
@@ -618,7 +618,7 @@ void VTTCue::determineTextDirection()
     // pre-order, depth-first traversal, excluding WebVTT Ruby Text Objects and
     // their descendants.
     StringBuilder paragraphBuilder;
-    for (Node* node = m_webVTTNodeTree->firstChild(); node; node = NodeTraversal::next(*node, m_webVTTNodeTree.get())) {
+    for (RefPtr<Node> node = m_webVTTNodeTree->firstChild(); node; node = NodeTraversal::next(*node, m_webVTTNodeTree.get())) {
         // FIXME: The code does not match the comment above. This does not actually exclude Ruby Text Object descendant.
         if (!node->isTextNode() || node->localName() == rtTag)
             continue;
@@ -759,7 +759,7 @@ void VTTCue::markFutureAndPastNodes(ContainerNode* root, const MediaTime& previo
     if (currentTimestamp > movieTime)
         isPastNode = false;
 
-    for (Node* child = root->firstChild(); child; child = NodeTraversal::next(*child, root)) {
+    for (RefPtr<Node> child = root->firstChild(); child; child = NodeTraversal::next(*child, root)) {
         if (child->nodeName() == timestampTag) {
             MediaTime currentTimestamp;
             bool check = WebVTTParser::collectTimeStamp(child->nodeValue(), currentTimestamp);
@@ -788,7 +788,7 @@ void VTTCue::updateDisplayTree(const MediaTime& movieTime)
         return;
 
     // Mutating the VTT contents is safe because it's never exposed to author scripts.
-    NoEventDispatchAssertion::EventAllowedScope allowedScopeForCueHighlightBox(*m_cueHighlightBox);
+    ScriptDisallowedScope::EventAllowedScope allowedScopeForCueHighlightBox(*m_cueHighlightBox);
 
     // Clear the contents of the set.
     m_cueHighlightBox->removeChildren();
@@ -798,7 +798,7 @@ void VTTCue::updateDisplayTree(const MediaTime& movieTime)
     if (!referenceTree)
         return;
 
-    NoEventDispatchAssertion::EventAllowedScope allowedScopeForReferenceTree(*referenceTree);
+    ScriptDisallowedScope::EventAllowedScope allowedScopeForReferenceTree(*referenceTree);
 
     markFutureAndPastNodes(referenceTree.get(), startMediaTime(), movieTime);
     m_cueHighlightBox->appendChild(*referenceTree);
@@ -850,14 +850,18 @@ void VTTCue::removeDisplayTree()
     // The region needs to be informed about the cue removal.
     if (m_notifyRegion && track()) {
         if (VTTRegionList* regions = track()->regions()) {
-            if (VTTRegion* region = regions->getRegionById(m_regionId))
+            if (RefPtr<VTTRegion> region = regions->getRegionById(m_regionId)) {
                 if (hasDisplayTree())
                     region->willRemoveTextTrackCueBox(m_displayTree.get());
+            }
         }
     }
 
     if (!hasDisplayTree())
         return;
+
+    // The display tree is never exposed to author scripts so it's safe to dispatch events here.
+    ScriptDisallowedScope::EventAllowedScope allowedScope(displayTreeInternal());
     displayTreeInternal().remove();
 }
 
@@ -1116,7 +1120,7 @@ std::pair<double, double> VTTCue::getCSSPosition() const
 
 bool VTTCue::cueContentsMatch(const TextTrackCue& cue) const
 {
-    const VTTCue* vttCue = toVTTCue(&cue);
+    RefPtr<const VTTCue> vttCue = toVTTCue(&cue);
     if (text() != vttCue->text())
         return false;
     if (cueSettings() != vttCue->cueSettings())
@@ -1157,8 +1161,6 @@ void VTTCue::setFontSize(int fontSize, const IntSize&, bool important)
     if (!hasDisplayTree() || !fontSize)
         return;
 
-    LOG(Media, "TextTrackCue::setFontSize - setting cue font size to %i", fontSize);
-
     m_displayTreeShouldChange = true;
     displayTreeInternal().setInlineStyleProperty(CSSPropertyFontSize, fontSize, CSSPrimitiveValue::CSS_PX, important);
 }
@@ -1172,6 +1174,24 @@ const VTTCue* toVTTCue(const TextTrackCue* cue)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(cue->isRenderable());
     return static_cast<const VTTCue*>(cue);
+}
+
+String VTTCue::toJSONString() const
+{
+    auto object = JSON::Object::create();
+
+    TextTrackCue::toJSON(object.get());
+
+    object->setString(ASCIILiteral("vertical"), vertical());
+    object->setBoolean(ASCIILiteral("snapToLines"), snapToLines());
+    object->setDouble(ASCIILiteral("line"), m_linePosition);
+    object->setDouble(ASCIILiteral("position"), position());
+    object->setInteger(ASCIILiteral("size"), m_cueSize);
+    object->setString(ASCIILiteral("align"), align());
+    object->setString(ASCIILiteral("text"), text());
+    object->setString(ASCIILiteral("regionId"), regionId());
+
+    return object->toJSONString();
 }
 
 } // namespace WebCore

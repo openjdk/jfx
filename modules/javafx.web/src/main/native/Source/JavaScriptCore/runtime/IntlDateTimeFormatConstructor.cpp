@@ -66,19 +66,22 @@ IntlDateTimeFormatConstructor* IntlDateTimeFormatConstructor::create(VM& vm, Str
 
 Structure* IntlDateTimeFormatConstructor::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+    return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
 }
 
+static EncodedJSValue JSC_HOST_CALL callIntlDateTimeFormat(ExecState*);
+static EncodedJSValue JSC_HOST_CALL constructIntlDateTimeFormat(ExecState*);
+
 IntlDateTimeFormatConstructor::IntlDateTimeFormatConstructor(VM& vm, Structure* structure)
-    : InternalFunction(vm, structure)
+    : InternalFunction(vm, structure, callIntlDateTimeFormat, constructIntlDateTimeFormat)
 {
 }
 
 void IntlDateTimeFormatConstructor::finishCreation(VM& vm, IntlDateTimeFormatPrototype* dateTimeFormatPrototype, Structure* dateTimeFormatStructure)
 {
     Base::finishCreation(vm, ASCIILiteral("DateTimeFormat"));
-    putDirectWithoutTransition(vm, vm.propertyNames->prototype, dateTimeFormatPrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), ReadOnly | DontEnum | DontDelete);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, dateTimeFormatPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
     m_dateTimeFormatStructure.set(vm, this, dateTimeFormatStructure);
 }
 
@@ -121,18 +124,6 @@ static EncodedJSValue JSC_HOST_CALL callIntlDateTimeFormat(ExecState* state)
         dateTimeFormat->initializeDateTimeFormat(*state, state->argument(0), state->argument(1));
         return dateTimeFormat;
     }));
-}
-
-ConstructType IntlDateTimeFormatConstructor::getConstructData(JSCell*, ConstructData& constructData)
-{
-    constructData.native.function = constructIntlDateTimeFormat;
-    return ConstructType::Host;
-}
-
-CallType IntlDateTimeFormatConstructor::getCallData(JSCell*, CallData& callData)
-{
-    callData.native.function = callIntlDateTimeFormat;
-    return CallType::Host;
 }
 
 EncodedJSValue JSC_HOST_CALL IntlDateTimeFormatConstructorFuncSupportedLocalesOf(ExecState* state)

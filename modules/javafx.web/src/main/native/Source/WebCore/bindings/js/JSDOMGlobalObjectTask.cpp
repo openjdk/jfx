@@ -29,13 +29,12 @@
 #include "ActiveDOMCallback.h"
 #include "JSDOMGlobalObject.h"
 #include "JSMainThreadExecState.h"
-#include <heap/StrongInlines.h>
-#include <runtime/Microtask.h>
+#include <JavaScriptCore/Microtask.h>
+#include <JavaScriptCore/StrongInlines.h>
 #include <wtf/Ref.h>
 
-using namespace JSC;
-
 namespace WebCore {
+using namespace JSC;
 
 class JSGlobalObjectCallback final : public RefCounted<JSGlobalObjectCallback>, private ActiveDOMCallback {
 public:

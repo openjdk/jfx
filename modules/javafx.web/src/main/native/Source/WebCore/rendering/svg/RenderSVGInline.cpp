@@ -27,8 +27,11 @@
 #include "RenderSVGText.h"
 #include "SVGInlineFlowBox.h"
 #include "SVGResourcesCache.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGInline);
 
 RenderSVGInline::RenderSVGInline(SVGGraphicsElement& element, RenderStyle&& style)
     : RenderInline(element, WTFMove(style))
@@ -118,31 +121,6 @@ void RenderSVGInline::updateFromStyle()
 
     // SVG text layout code expects us to be an inline-level element.
     setInline(true);
-}
-
-void RenderSVGInline::addChild(RenderObject* child, RenderObject* beforeChild)
-{
-    RenderInline::addChild(child, beforeChild);
-    SVGResourcesCache::clientWasAddedToTree(*child);
-
-    if (auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this))
-        textAncestor->subtreeChildWasAdded(child);
-}
-
-void RenderSVGInline::removeChild(RenderObject& child)
-{
-    SVGResourcesCache::clientWillBeRemovedFromTree(child);
-
-    auto* textAncestor = RenderSVGText::locateRenderSVGTextAncestor(*this);
-    if (!textAncestor) {
-        RenderInline::removeChild(child);
-        return;
-    }
-
-    Vector<SVGTextLayoutAttributes*, 2> affectedAttributes;
-    textAncestor->subtreeChildWillBeRemoved(&child, affectedAttributes);
-    RenderInline::removeChild(child);
-    textAncestor->subtreeChildWasRemoved(affectedAttributes);
 }
 
 }

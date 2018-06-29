@@ -52,6 +52,7 @@
 namespace WebCore {
 
 #if !LOG_DISABLED
+namespace MediaSourceInternal {
 static const char* toString(MediaSource::ReadyState readyState)
 {
     switch (readyState) {
@@ -64,6 +65,7 @@ static const char* toString(MediaSource::ReadyState readyState)
     default:
         return "(unknown)";
     }
+}
 }
 #endif
 
@@ -195,7 +197,7 @@ std::unique_ptr<PlatformTimeRanges> MediaSource::buffered() const
         if (ended && sourceRanges.length())
             sourceRanges.add(sourceRanges.start(sourceRanges.length() - 1), highestEndTime);
 
-        // 5.3 Let new intersection ranges equal the the intersection between the intersection ranges and the source ranges.
+        // 5.3 Let new intersection ranges equal the intersection between the intersection ranges and the source ranges.
         // 5.4 Replace the ranges in intersection ranges with the new intersection ranges.
         m_buffered->intersectWith(sourceRanges);
     }
@@ -397,7 +399,7 @@ void MediaSource::monitorSourceBuffers()
         return;
     }
 
-    // ↳ If the the HTMLMediaElement.readyState attribute equals HAVE_NOTHING:
+    // ↳ If the HTMLMediaElement.readyState attribute equals HAVE_NOTHING:
     if (mediaElement()->readyState() == HTMLMediaElement::HAVE_NOTHING) {
         // 1. Abort these steps.
         return;
@@ -531,7 +533,7 @@ ExceptionOr<void> MediaSource::setDurationInternal(const MediaTime& duration)
 void MediaSource::setReadyState(ReadyState state)
 {
     auto oldState = readyState();
-    LOG(MediaSource, "MediaSource::setReadyState(%p) : %s -> %s", this, toString(oldState), toString(state));
+    LOG(MediaSource, "MediaSource::setReadyState(%p) : %s -> %s", this, MediaSourceInternal::toString(oldState), MediaSourceInternal::toString(state));
 
     if (oldState == state)
         return;
@@ -848,7 +850,7 @@ bool MediaSource::isTypeSupported(const String& type)
     MediaEngineSupportParameters parameters;
     parameters.type = contentType;
     parameters.isMediaSource = true;
-    MediaPlayer::SupportsType supported = MediaPlayer::supportsType(parameters, 0);
+    MediaPlayer::SupportsType supported = MediaPlayer::supportsType(parameters);
 
     if (codecs.isEmpty())
         return supported != MediaPlayer::IsNotSupported;

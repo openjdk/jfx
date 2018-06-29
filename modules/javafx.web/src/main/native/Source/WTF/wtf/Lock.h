@@ -48,14 +48,11 @@ typedef LockAlgorithm<uint8_t, 1, 2> DefaultLockAlgorithm;
 // at worst one call to unlock() per millisecond will do a direct hand-off to the thread that is at
 // the head of the queue. When there are collisions, each collision increases the fair unlock delay
 // by one millisecond in the worst case.
-
-// This is a struct without a constructor or destructor so that it can be statically initialized.
-// Use Lock in instance variables.
-struct LockBase {
-    void construct()
-    {
-        m_byte.store(0, std::memory_order_relaxed);
-    }
+class Lock {
+    WTF_MAKE_NONCOPYABLE(Lock);
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    Lock() = default;
 
     void lock()
     {
@@ -132,21 +129,11 @@ private:
         return !m_byte.load();
     }
 
-    Atomic<uint8_t> m_byte;
+    Atomic<uint8_t> m_byte { 0 };
 };
 
-class Lock : public LockBase {
-    WTF_MAKE_NONCOPYABLE(Lock);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    Lock()
-    {
-        construct();
-    }
-};
-
-typedef LockBase StaticLock;
-typedef Locker<LockBase> LockHolder;
+using StaticLock = Lock;
+using LockHolder = Locker<Lock>;
 
 } // namespace WTF
 

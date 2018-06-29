@@ -85,7 +85,7 @@ static String truncatedStringForLookupMenuItem(const String& original)
     unsigned maxNumberOfGraphemeClustersInLookupMenuItem = 24;
 
     String trimmed = original.stripWhiteSpace();
-    unsigned numberOfCharacters = numCharactersInGraphemeClusters(trimmed, maxNumberOfGraphemeClustersInLookupMenuItem);
+    unsigned numberOfCharacters = numCodeUnitsInGraphemeClusters(trimmed, maxNumberOfGraphemeClustersInLookupMenuItem);
     return numberOfCharacters == trimmed.length() ? trimmed : makeString(trimmed.left(numberOfCharacters), horizontalEllipsis);
 }
 
@@ -625,6 +625,21 @@ String AXAutoFillContactsLabel()
     return WEB_UI_STRING("contact info auto fill", "Label for the auto fill contacts button inside a text field.");
 }
 
+String AXAutoFillStrongPasswordLabel()
+{
+    return WEB_UI_STRING("strong password auto fill", "Label for the strong password auto fill button inside a text field.");
+}
+
+String AXAutoFillStrongConfirmationPasswordLabel()
+{
+    return WEB_UI_STRING("strong confirmation password auto fill", "Label for the strong confirmation password auto fill button inside a text field.");
+}
+
+String autoFillStrongPasswordLabel()
+{
+    return WEB_UI_STRING("strong password", "Label for strong password.");
+}
+
 String missingPluginText()
 {
     return WEB_UI_STRING("Missing Plug-in", "Label text to be used when a plugin is missing");
@@ -1010,6 +1025,40 @@ String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName)
 String webCryptoMasterKeyKeychainComment()
 {
     return WEB_UI_STRING("Used to encrypt WebCrypto keys in persistent storage, such as IndexedDB", "Description of WebCrypto master keys in Keychain");
+}
+
+#endif
+
+#if ENABLE(EXTRA_ZOOM_MODE)
+
+String formControlCancelButtonTitle()
+{
+    return WEB_UI_STRING("Cancel", "Title of the Cancel button for zoomed form controls.");
+}
+
+String formControlHideButtonTitle()
+{
+    return WEB_UI_STRING("Hide", "Title of the Hide button for zoomed form controls.");
+}
+
+String formControlGoButtonTitle()
+{
+    return WEB_UI_STRING("Go", "Title of the Go button for zoomed form controls.");
+}
+
+String formControlSearchButtonTitle()
+{
+    return WEB_UI_STRING("Search", "Title of the Search button for zoomed form controls.");
+}
+
+String textInputModeWriteButton()
+{
+    return WEB_UI_STRING("Write", "Title of the writing button for zoomed form controls.");
+}
+
+String textInputModeSpeechButton()
+{
+    return WEB_UI_STRING("Speak", "Title of the dictation button for zoomed form controls.");
 }
 
 #endif

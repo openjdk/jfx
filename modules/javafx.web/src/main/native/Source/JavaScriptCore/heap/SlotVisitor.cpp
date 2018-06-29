@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,7 @@
 #include "JSObject.h"
 #include "JSString.h"
 #include "JSCInlines.h"
+#include "MarkingConstraintSolver.h"
 #include "SlotVisitorInlines.h"
 #include "StopIfNecessaryTimer.h"
 #include "SuperSampler.h"
@@ -98,9 +99,7 @@ SlotVisitor::~SlotVisitor()
 
 void SlotVisitor::didStartMarking()
 {
-    if (heap()->collectionScope() == CollectionScope::Full)
-        RELEASE_ASSERT(m_opaqueRoots.isEmpty()); // Should have merged by now.
-    else
+    if (heap()->collectionScope() == CollectionScope::Eden)
         reset();
 
     if (HeapProfiler* heapProfiler = vm().heapProfiler())
@@ -111,7 +110,6 @@ void SlotVisitor::didStartMarking()
 
 void SlotVisitor::reset()
 {
-    RELEASE_ASSERT(!m_opaqueRoots.size());
     m_bytesVisited = 0;
     m_visitCount = 0;
     m_heapSnapshotBuilder = nullptr;
@@ -172,8 +170,8 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
                         out.print("Is marked raw: ", block.isMarkedRaw(jsCell), "\n");
                         out.print("Marking version: ", block.markingVersion(), "\n");
                         out.print("Heap marking version: ", heap()->objectSpace().markingVersion(), "\n");
-                        out.print("Is newly allocated raw: ", block.handle().isNewlyAllocated(jsCell), "\n");
-                        out.print("Newly allocated version: ", block.handle().newlyAllocatedVersion(), "\n");
+                        out.print("Is newly allocated raw: ", block.isNewlyAllocated(jsCell), "\n");
+                        out.print("Newly allocated version: ", block.newlyAllocatedVersion(), "\n");
                         out.print("Heap newly allocated version: ", heap()->objectSpace().newlyAllocatedVersion(), "\n");
                     }
                     UNREACHABLE_FOR_PLATFORM();
@@ -277,7 +275,7 @@ void SlotVisitor::appendToMarkStack(JSCell* cell)
 template<typename ContainerType>
 ALWAYS_INLINE void SlotVisitor::appendToMarkStack(ContainerType& container, JSCell* cell)
 {
-    ASSERT(Heap::isMarkedConcurrently(cell));
+    ASSERT(Heap::isMarked(cell));
     ASSERT(!cell->isZapped());
 
     container.noteMarked();
@@ -346,7 +344,7 @@ private:
 
 ALWAYS_INLINE void SlotVisitor::visitChildren(const JSCell* cell)
 {
-    ASSERT(Heap::isMarkedConcurrently(cell));
+    ASSERT(Heap::isMarked(cell));
 
     SetCurrentCellScope currentCellScope(*this, cell);
 
@@ -435,7 +433,7 @@ void SlotVisitor::donateKnownParallel()
 
 void SlotVisitor::updateMutatorIsStopped(const AbstractLocker&)
 {
-    m_mutatorIsStopped = (m_heap.collectorBelievesThatTheWorldIsStopped() & m_canOptimizeForStoppedMutator);
+    m_mutatorIsStopped = (m_heap.worldIsStopped() & m_canOptimizeForStoppedMutator);
 }
 
 void SlotVisitor::updateMutatorIsStopped()
@@ -452,7 +450,7 @@ bool SlotVisitor::hasAcknowledgedThatTheMutatorIsResumed() const
 
 bool SlotVisitor::mutatorIsStoppedIsUpToDate() const
 {
-    return m_mutatorIsStopped == (m_heap.collectorBelievesThatTheWorldIsStopped() & m_canOptimizeForStoppedMutator);
+    return m_mutatorIsStopped == (m_heap.worldIsStopped() & m_canOptimizeForStoppedMutator);
 }
 
 void SlotVisitor::optimizeForStoppedMutator()
@@ -490,8 +488,6 @@ NEVER_INLINE void SlotVisitor::drain(MonotonicTime timeout)
         m_rightToRun.safepoint();
         donateKnownParallel();
     }
-
-    mergeIfNecessary();
 }
 
 size_t SlotVisitor::performIncrementOfDraining(size_t bytesRequested)
@@ -550,7 +546,6 @@ size_t SlotVisitor::performIncrementOfDraining(size_t bytesRequested)
     }
 
     donateAll();
-    mergeIfNecessary();
 
     return bytesVisited();
 }
@@ -561,17 +556,16 @@ bool SlotVisitor::didReachTermination()
     return didReachTermination(locker);
 }
 
-bool SlotVisitor::didReachTermination(const AbstractLocker&)
+bool SlotVisitor::didReachTermination(const AbstractLocker& locker)
 {
-    return isEmpty()
-        && !m_heap.m_numberOfActiveParallelMarkers
-        && m_heap.m_sharedCollectorMarkStack->isEmpty()
-        && m_heap.m_sharedMutatorMarkStack->isEmpty();
+    return !m_heap.m_numberOfActiveParallelMarkers
+        && !hasWork(locker);
 }
 
 bool SlotVisitor::hasWork(const AbstractLocker&)
 {
-    return !m_heap.m_sharedCollectorMarkStack->isEmpty()
+    return !isEmpty()
+        || !m_heap.m_sharedCollectorMarkStack->isEmpty()
         || !m_heap.m_sharedMutatorMarkStack->isEmpty();
 }
 
@@ -583,8 +577,10 @@ NEVER_INLINE SlotVisitor::SharedDrainResult SlotVisitor::drainFromShared(SharedD
 
     bool isActive = false;
     while (true) {
+        RefPtr<SharedTask<void(SlotVisitor&)>> bonusTask;
+
         {
-            LockHolder locker(m_heap.m_markingMutex);
+            auto locker = holdLock(m_heap.m_markingMutex);
             if (isActive)
                 m_heap.m_numberOfActiveParallelMarkers--;
             m_heap.m_numberOfWaitingParallelMarkers++;
@@ -629,28 +625,51 @@ NEVER_INLINE SlotVisitor::SharedDrainResult SlotVisitor::drainFromShared(SharedD
 
                 auto isReady = [&] () -> bool {
                     return hasWork(locker)
+                        || m_heap.m_bonusVisitorTask
                         || m_heap.m_parallelMarkersShouldExit;
                 };
 
                 m_heap.m_markingConditionVariable.waitUntil(m_heap.m_markingMutex, timeout, isReady);
 
+                if (!hasWork(locker)
+                    && m_heap.m_bonusVisitorTask)
+                    bonusTask = m_heap.m_bonusVisitorTask;
+
                 if (m_heap.m_parallelMarkersShouldExit)
                     return SharedDrainResult::Done;
             }
 
-            forEachMarkStack(
-                [&] (MarkStackArray& stack) -> IterationStatus {
-                    stack.stealSomeCellsFrom(
-                        correspondingGlobalStack(stack),
-                        m_heap.m_numberOfWaitingParallelMarkers);
-                    return IterationStatus::Continue;
-                });
+            if (!bonusTask && isEmpty()) {
+                forEachMarkStack(
+                    [&] (MarkStackArray& stack) -> IterationStatus {
+                        stack.stealSomeCellsFrom(
+                            correspondingGlobalStack(stack),
+                            m_heap.m_numberOfWaitingParallelMarkers);
+                        return IterationStatus::Continue;
+                    });
+            }
 
             m_heap.m_numberOfActiveParallelMarkers++;
             m_heap.m_numberOfWaitingParallelMarkers--;
         }
 
-        drain(timeout);
+        if (bonusTask) {
+            bonusTask->run(*this);
+
+            // The main thread could still be running, and may run for a while. Unless we clear the task
+            // ourselves, we will keep looping around trying to run the task.
+            {
+                auto locker = holdLock(m_heap.m_markingMutex);
+                if (m_heap.m_bonusVisitorTask == bonusTask)
+                    m_heap.m_bonusVisitorTask = nullptr;
+                bonusTask = nullptr;
+                m_heap.m_markingConditionVariable.notifyAll();
+            }
+        } else {
+            RELEASE_ASSERT(!isEmpty());
+            drain(timeout);
+        }
+
         isActive = true;
     }
 }
@@ -670,15 +689,19 @@ SlotVisitor::SharedDrainResult SlotVisitor::drainInParallelPassively(MonotonicTi
     if (Options::numberOfGCMarkers() == 1
         || (m_heap.m_worldState.load() & Heap::mutatorWaitingBit)
         || !m_heap.hasHeapAccess()
-        || m_heap.collectorBelievesThatTheWorldIsStopped()) {
+        || m_heap.worldIsStopped()) {
         // This is an optimization over drainInParallel() when we have a concurrent mutator but
         // otherwise it is not profitable.
         return drainInParallel(timeout);
     }
 
-    LockHolder locker(m_heap.m_markingMutex);
-    donateAll(locker);
+    donateAll(holdLock(m_heap.m_markingMutex));
+    return waitForTermination(timeout);
+}
 
+SlotVisitor::SharedDrainResult SlotVisitor::waitForTermination(MonotonicTime timeout)
+{
+    auto locker = holdLock(m_heap.m_markingMutex);
     for (;;) {
         if (hasElapsed(timeout))
             return SharedDrainResult::TimedOut;
@@ -711,61 +734,6 @@ void SlotVisitor::donateAll(const AbstractLocker&)
     m_heap.m_markingConditionVariable.notifyAll();
 }
 
-void SlotVisitor::addOpaqueRoot(void* root)
-{
-    if (!root)
-        return;
-
-    if (m_ignoreNewOpaqueRoots)
-        return;
-
-    if (Options::numberOfGCMarkers() == 1) {
-        // Put directly into the shared HashSet.
-        m_heap.m_opaqueRoots.add(root);
-        return;
-    }
-    // Put into the local set, but merge with the shared one every once in
-    // a while to make sure that the local sets don't grow too large.
-    mergeOpaqueRootsIfProfitable();
-    m_opaqueRoots.add(root);
-}
-
-bool SlotVisitor::containsOpaqueRoot(void* root) const
-{
-    if (!root)
-        return false;
-
-    ASSERT(!m_isInParallelMode);
-    return m_heap.m_opaqueRoots.contains(root);
-}
-
-TriState SlotVisitor::containsOpaqueRootTriState(void* root) const
-{
-    if (!root)
-        return FalseTriState;
-
-    if (m_opaqueRoots.contains(root))
-        return TrueTriState;
-    std::lock_guard<Lock> lock(m_heap.m_opaqueRootsMutex);
-    if (m_heap.m_opaqueRoots.contains(root))
-        return TrueTriState;
-    return MixedTriState;
-}
-
-void SlotVisitor::mergeIfNecessary()
-{
-    if (m_opaqueRoots.isEmpty())
-        return;
-    mergeOpaqueRoots();
-}
-
-void SlotVisitor::mergeOpaqueRootsIfProfitable()
-{
-    if (static_cast<unsigned>(m_opaqueRoots.size()) < Options::opaqueRootMergeThreshold())
-        return;
-    mergeOpaqueRoots();
-}
-
 void SlotVisitor::donate()
 {
     if (!m_isInParallelMode) {
@@ -783,16 +751,6 @@ void SlotVisitor::donateAndDrain(MonotonicTime timeout)
 {
     donate();
     drain(timeout);
-}
-
-void SlotVisitor::mergeOpaqueRoots()
-{
-    {
-        std::lock_guard<Lock> lock(m_heap.m_opaqueRootsMutex);
-        for (auto* root : m_opaqueRoots)
-            m_heap.m_opaqueRoots.add(root);
-    }
-    m_opaqueRoots.clear();
 }
 
 void SlotVisitor::addWeakReferenceHarvester(WeakReferenceHarvester* weakReferenceHarvester)
@@ -827,6 +785,15 @@ MarkStackArray& SlotVisitor::correspondingGlobalStack(MarkStackArray& stack)
         return *m_heap.m_sharedCollectorMarkStack;
     RELEASE_ASSERT(&stack == &m_mutatorStack);
     return *m_heap.m_sharedMutatorMarkStack;
+}
+
+void SlotVisitor::addParallelConstraintTask(RefPtr<SharedTask<void(SlotVisitor&)>> task)
+{
+    RELEASE_ASSERT(m_currentSolver);
+    RELEASE_ASSERT(m_currentConstraint);
+    RELEASE_ASSERT(task);
+
+    m_currentSolver->addParallelTask(task, *m_currentConstraint);
 }
 
 } // namespace JSC

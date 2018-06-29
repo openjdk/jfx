@@ -7,6 +7,13 @@ list(APPEND WTF_INCLUDE_DIRECTORIES
     "${JAVA_INCLUDE_PATH2}"
 )
 
+list(APPEND WTF_HEADERS
+    java/JavaEnv.h
+    java/JavaRef.h
+    java/DbgUtils.h
+    unicode/java/UnicodeJava.h
+)
+
 list(APPEND WTF_SOURCES
     java/StringJava.cpp
     java/MainThreadJava.cpp
@@ -15,8 +22,6 @@ list(APPEND WTF_SOURCES
 )
 
 list(APPEND WTF_LIBRARIES
-    "${ICU_LIBRARIES}"
-    "${ICU_I18N_LIBRARIES}"
     "${JAVA_JVM_LIBRARY}"
 )
 
@@ -25,7 +30,6 @@ list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 if (APPLE)
-
     file(COPY mac/MachExceptions.defs DESTINATION ${DERIVED_SOURCES_WTF_DIR})
 
     add_custom_command(
@@ -39,16 +43,24 @@ if (APPLE)
         COMMAND mig -sheader MachExceptionsServer.h MachExceptions.defs
         VERBATIM)
 
-    list(APPEND WTF_INCLUDE_DIRECTORIES
-        ${DERIVED_SOURCES_WTF_DIR}
-    )
     list(APPEND WTF_SOURCES
         ${DERIVED_SOURCES_WTF_DIR}/mach_excServer.c
         ${DERIVED_SOURCES_WTF_DIR}/mach_excUser.c
     )
 
+    list(APPEND WTF_HEADERS
+        cf/TypeCastsCF.h
+    )
+
+    list(APPEND WTF_PRIVATE_INCLUDE_DIRECTORIES
+        # Check whether we can use WTF/icu
+        # "${WTF_DIR}/icu"
+        ${DERIVED_SOURCES_WTF_DIR}
+    )
+
     list(APPEND WTF_SOURCES
         cf/RunLoopCF.cpp
+        cf/LanguageCF.cpp
         cocoa/CPUTimeCocoa.mm
         cocoa/MemoryFootprintCocoa.cpp
         cocoa/MemoryPressureHandlerCocoa.mm
@@ -57,7 +69,6 @@ if (APPLE)
         text/cf/StringCF.cpp
         text/mac/StringMac.mm
         text/mac/StringImplMac.mm
-        PlatformUserPreferredLanguagesMac.mm
         BlockObjCExceptions.mm
     )
 
@@ -74,21 +85,24 @@ elseif (UNIX)
         linux/CurrentProcessMemoryStatus.cpp
         linux/MemoryFootprintLinux.cpp
         linux/MemoryPressureHandlerLinux.cpp
-        PlatformUserPreferredLanguagesUnix.cpp
         unix/CPUTimeUnix.cpp
-    )
-    list(APPEND WTF_INCLUDE_DIRECTORIES
-        "${WTF_DIR}/wtf/efl"
+        unix/LanguageUnix.cpp
     )
     list(APPEND WTF_LIBRARIES rt)
 elseif (WIN32)
     list(APPEND WTF_SOURCES
-        PlatformUserPreferredLanguagesWin.cpp
         win/CPUTimeWin.cpp
+        win/LanguageWin.cpp
         win/MemoryFootprintWin.cpp
         win/MemoryPressureHandlerWin.cpp
         win/RunLoopWin.cpp
         win/WorkQueueWin.cpp
+        win/WorkItemContext.cpp
+    )
+
+    list(APPEND WTF_HEADERS
+        text/win/WCharStringExtras.h
+        win/Win32Handle.h
     )
 
     list(APPEND WTF_LIBRARIES
@@ -99,3 +113,5 @@ endif ()
 if (DEFINED CMAKE_USE_PTHREADS_INIT)
     list(APPEND WTF_LIBRARIES pthread)
 endif()
+
+add_dependencies(WTF icudatagen)

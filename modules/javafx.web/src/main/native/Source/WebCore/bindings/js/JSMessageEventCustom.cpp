@@ -39,12 +39,11 @@
 #include "JSDOMWindow.h"
 #include "JSEventTarget.h"
 #include "JSMessagePort.h"
-#include <runtime/JSArray.h>
-#include <runtime/JSArrayBuffer.h>
-
-using namespace JSC;
+#include <JavaScriptCore/JSArray.h>
+#include <JavaScriptCore/JSArrayBuffer.h>
 
 namespace WebCore {
+using namespace JSC;
 
 JSValue JSMessageEvent::data(ExecState& state) const
 {
@@ -79,9 +78,8 @@ JSValue JSMessageEvent::data(ExecState& state) const
 
     case MessageEvent::DataTypeSerializedScriptValue:
         if (RefPtr<SerializedScriptValue> serializedValue = event.dataAsSerializedScriptValue()) {
-            Vector<RefPtr<MessagePort>> ports = wrapped().ports();
             // FIXME: Why does this suppress exceptions?
-            result = serializedValue->deserialize(state, globalObject(), ports, SerializationErrorMode::NonThrowing);
+            result = serializedValue->deserialize(state, globalObject(), wrapped().ports(), SerializationErrorMode::NonThrowing);
         } else
             result = jsNull();
         break;

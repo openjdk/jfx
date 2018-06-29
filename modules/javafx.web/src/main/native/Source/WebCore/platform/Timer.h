@@ -100,12 +100,10 @@ private:
     Seconds m_repeatInterval; // 0 if not repeating
     int m_heapIndex { -1 }; // -1 if not in heap
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
+    bool m_wasDeleted { false };
     Vector<TimerBase*>* m_cachedThreadGlobalTimerHeap { nullptr };
 
-#ifndef NDEBUG
-    ThreadIdentifier m_thread;
-    bool m_wasDeleted { false };
-#endif
+    Ref<Thread> m_thread { Thread::current() };
 
     friend class ThreadTimers;
     friend class TimerHeapLessThanFunction;
@@ -140,9 +138,9 @@ inline bool TimerBase::isActive() const
 {
     // FIXME: Write this in terms of USE(WEB_THREAD) instead of PLATFORM(IOS).
 #if !PLATFORM(IOS)
-    ASSERT(m_thread == currentThread());
+    ASSERT(m_thread.ptr() == &Thread::current());
 #else
-    ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread == currentThread());
+    ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread.ptr() == &Thread::current());
 #endif // PLATFORM(IOS)
     return static_cast<bool>(m_nextFireTime);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  *
@@ -65,28 +65,7 @@
 #endif
 
 /* ==== CPU() - the target CPU architecture ==== */
-
-/* This also defines CPU(BIG_ENDIAN) or CPU(MIDDLE_ENDIAN) or neither, as appropriate. */
-
-/* CPU(ALPHA) - DEC Alpha */
-#if defined(__alpha__)
-#define WTF_CPU_ALPHA 1
-#endif
-
-/* CPU(HPPA) - HP PA-RISC */
-#if defined(__hppa__) || defined(__hppa64__)
-#define WTF_CPU_HPPA 1
-#define WTF_CPU_BIG_ENDIAN 1
-#endif
-
-/* CPU(IA64) - Itanium / IA-64 */
-#if defined(__ia64__)
-#define WTF_CPU_IA64 1
-/* 32-bit mode on Itanium */
-#if !defined(__LP64__)
-#define WTF_CPU_IA64_32 1
-#endif
-#endif
+/* CPU(KNOWN) becomes true if we explicitly support a target CPU. */
 
 /* CPU(MIPS) - MIPS 32-bit and 64-bit */
 #if (defined(mips) || defined(__mips__) || defined(MIPS) || defined(_MIPS_) || defined(__mips64))
@@ -97,9 +76,7 @@
 #define WTF_CPU_MIPS 1
 #define WTF_MIPS_ARCH __mips
 #endif
-#if defined(__MIPSEB__)
-#define WTF_CPU_BIG_ENDIAN 1
-#endif
+#define WTF_CPU_KNOWN 1
 #define WTF_MIPS_PIC (defined __PIC__)
 #define WTF_MIPS_ISA(v) (defined WTF_MIPS_ARCH && WTF_MIPS_ARCH == v)
 #define WTF_MIPS_ISA_AT_LEAST(v) (defined WTF_MIPS_ARCH && WTF_MIPS_ARCH >= v)
@@ -117,7 +94,7 @@
     && defined(__BYTE_ORDER__) \
     && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
 #define WTF_CPU_PPC64 1
-#define WTF_CPU_BIG_ENDIAN 1
+#define WTF_CPU_KNOWN 1
 #endif
 
 /* CPU(PPC64) - PowerPC 64-bit Little Endian */
@@ -128,6 +105,7 @@
     && defined(__BYTE_ORDER__) \
     && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
 #define WTF_CPU_PPC64LE 1
+#define WTF_CPU_KNOWN 1
 #endif
 
 /* CPU(PPC) - PowerPC 32-bit */
@@ -139,28 +117,9 @@
     || defined(_M_PPC)         \
     || defined(__PPC))         \
     && !CPU(PPC64)             \
-    && defined(__BYTE_ORDER__) \
-    && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+    && CPU(BIG_ENDIAN)
 #define WTF_CPU_PPC 1
-#define WTF_CPU_BIG_ENDIAN 1
-#endif
-
-/* CPU(SH4) - SuperH SH-4 */
-#if defined(__SH4__)
-#define WTF_CPU_SH4 1
-#endif
-
-/* CPU(S390X) - S390 64-bit */
-#if defined(__s390x__)
-#define WTF_CPU_S390X 1
-#define WTF_CPU_BIG_ENDIAN 1
-#endif
-
-/* CPU(S390) - S390 32-bit */
-#if (  defined(__s390__)        \
-    && !CPU(S390X))
-#define WTF_CPU_S390 1
-#define WTF_CPU_BIG_ENDIAN 1
+#define WTF_CPU_KNOWN 1
 #endif
 
 /* CPU(X86) - i386 / x86 32-bit */
@@ -170,6 +129,7 @@
     || defined(_X86_)    \
     || defined(__THW_INTEL)
 #define WTF_CPU_X86 1
+#define WTF_CPU_KNOWN 1
 
 #if defined(__SSE2__) || (defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 #define WTF_CPU_X86_SSE2 1
@@ -182,11 +142,13 @@
     || defined(_M_X64)
 #define WTF_CPU_X86_64 1
 #define WTF_CPU_X86_SSE2 1
+#define WTF_CPU_KNOWN 1
 #endif
 
 /* CPU(ARM64) - Apple */
 #if (defined(__arm64__) && defined(__APPLE__)) || defined(__aarch64__)
 #define WTF_CPU_ARM64 1
+#define WTF_CPU_KNOWN 1
 
 #if defined(__arm64e__)
 #define WTF_CPU_ARM64E 1
@@ -201,20 +163,10 @@
     || defined(ARM) \
     || defined(_ARM_)
 #define WTF_CPU_ARM 1
+#define WTF_CPU_KNOWN 1
 
 #if defined(__ARM_PCS_VFP)
 #define WTF_CPU_ARM_HARDFP 1
-#endif
-
-#if defined(__ARMEB__)
-#define WTF_CPU_BIG_ENDIAN 1
-
-#elif !defined(__ARM_EABI__) \
-    && !defined(__EABI__) \
-    && !defined(__VFP_FP__) \
-    && !defined(_WIN32_WCE)
-#define WTF_CPU_MIDDLE_ENDIAN 1
-
 #endif
 
 /* Set WTF_ARM_ARCH_VERSION */
@@ -347,6 +299,19 @@
 #define WTF_CPU_ARM_VFP 1
 #endif
 
+/* If CPU(ARM_NEON) is not enabled, we'll conservatively assume only VFP2 or VFPv3D16
+   support is available. Hence, only the first 16 64-bit floating point registers
+   are available. See:
+   NEON registers: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0473c/CJACABEJ.html
+   VFP2 and VFP3 registers: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0473c/CIHDIBDG.html
+   NEON to VFP register mapping: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0473c/CJAIJHFC.html
+*/
+#if CPU(ARM_NEON)
+#define WTF_CPU_ARM_VFP_V3_D32 1
+#else
+#define WTF_CPU_ARM_VFP_V2 1
+#endif
+
 #if defined(__ARM_ARCH_7K__)
 #define WTF_CPU_APPLE_ARMV7K 1
 #endif
@@ -361,7 +326,11 @@
 
 #endif /* ARM */
 
-#if CPU(ARM) || CPU(MIPS) || CPU(SH4) || CPU(ALPHA) || CPU(HPPA)
+#if !CPU(KNOWN)
+#define WTF_CPU_UNKNOWN 1
+#endif
+
+#if CPU(ARM) || CPU(MIPS) || CPU(UNKNOWN)
 #define WTF_CPU_NEEDS_ALIGNED_ACCESS 1
 #endif
 
@@ -384,12 +353,12 @@
 
 /* OS(IOS) - iOS */
 /* OS(MAC_OS_X) - Mac OS X (not including iOS) */
-#if OS(DARWIN) && ((defined(TARGET_OS_EMBEDDED) && TARGET_OS_EMBEDDED) \
-    || (defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)                 \
-    || (defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR))
+#if OS(DARWIN)
+#if TARGET_OS_IPHONE
 #define WTF_OS_IOS 1
-#elif OS(DARWIN) && defined(TARGET_OS_MAC) && TARGET_OS_MAC
+#elif TARGET_OS_MAC
 #define WTF_OS_MAC_OS_X 1
+#endif
 #endif
 
 /* OS(FREEBSD) - FreeBSD */
@@ -417,11 +386,6 @@
 #define WTF_OS_OPENBSD 1
 #endif
 
-/* OS(SOLARIS) - Solaris */
-#if defined(sun) || defined(__sun)
-#define WTF_OS_SOLARIS 1
-#endif
-
 /* OS(WINDOWS) - Any version of Windows */
 #if defined(WIN32) || defined(_WIN32)
 #define WTF_OS_WINDOWS 1
@@ -438,7 +402,6 @@
     || OS(LINUX)            \
     || OS(NETBSD)           \
     || OS(OPENBSD)          \
-    || OS(SOLARIS)          \
     || defined(unix)        \
     || defined(__unix)      \
     || defined(__unix__)
@@ -446,6 +409,58 @@
 #endif
 
 /* Operating environments */
+
+/* CPU(BIG_ENDIAN) or CPU(MIDDLE_ENDIAN) or neither, as appropriate. */
+
+#if COMPILER(GCC_OR_CLANG)
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define WTF_CPU_BIG_ENDIAN 1
+#elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define WTF_CPU_LITTLE_ENDIAN 1
+#elif __BYTE_ORDER__ == __ORDER_PDP_ENDIAN__
+#define WTF_CPU_MIDDLE_ENDIAN 1
+#else
+#error "Unknown endian"
+#endif
+#else
+#if OS(WINDOWS)
+/* Windows only have little endian architecture. */
+#define WTF_CPU_LITTLE_ENDIAN 1
+#else
+#include <sys/types.h>
+#if __has_include(<endian.h>)
+#include <endian.h>
+#if __BYTE_ORDER == __BIG_ENDIAN
+#define WTF_CPU_BIG_ENDIAN 1
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#define WTF_CPU_LITTLE_ENDIAN 1
+#elif __BYTE_ORDER == __PDP_ENDIAN
+#define WTF_CPU_MIDDLE_ENDIAN 1
+#else
+#error "Unknown endian"
+#endif
+#else
+#if __has_include(<machine/endian.h>)
+#include <machine/endian.h>
+#else
+#include <sys/endian.h>
+#endif
+#if BYTE_ORDER == BIG_ENDIAN
+#define WTF_CPU_BIG_ENDIAN 1
+#elif BYTE_ORDER == LITTLE_ENDIAN
+#define WTF_CPU_LITTLE_ENDIAN 1
+#elif BYTE_ORDER == PDP_ENDIAN
+#define WTF_CPU_MIDDLE_ENDIAN 1
+#else
+#error "Unknown endian"
+#endif
+#endif
+#endif
+#endif
+
+#if !CPU(LITTLE_ENDIAN) && !CPU(BIG_ENDIAN)
+#error "Unsupported endian"
+#endif
 
 /* Export macro support. Detects the attributes available for shared library symbol export
    decorations. */
@@ -484,7 +499,7 @@
 #define WTF_PLATFORM_MAC 1
 #elif OS(IOS)
 #define WTF_PLATFORM_IOS 1
-#if defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR
+#if TARGET_OS_SIMULATOR
 #define WTF_PLATFORM_IOS_SIMULATOR 1
 #endif
 #elif OS(WINDOWS)
@@ -523,7 +538,6 @@
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
-#define USE_CAIRO 1
 #define USE_GLIB 1
 #define USE_FREETYPE 1
 #define USE_HARFBUZZ 1
@@ -554,7 +568,6 @@
 #define USE_CF 1
 #define USE_FOUNDATION 1
 #define USE_NETWORK_CFDATA_ARRAY_CALLBACK 1
-#define ENABLE_USER_MESSAGE_HANDLERS 1
 #define HAVE_OUT_OF_PROCESS_LAYER_HOSTING 1
 #define HAVE_DTRACE 0
 #define USE_FILE_LOCK 1
@@ -568,12 +581,6 @@
 #endif
 
 #if PLATFORM(MAC)
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < 101200
-#define USE_QTKIT 1
-#else
-#define USE_QTKIT 0
-#endif
 
 #define USE_APPKIT 1
 #define HAVE_RUNLOOP_TIMER 1
@@ -694,7 +701,7 @@
 #define HAVE_READLINE 1
 #define HAVE_SYS_TIMEB_H 1
 
-#if __has_include(<mach/mach_exc.defs>) && !(PLATFORM(WATCHOS) || PLATFORM(APPLETV))
+#if __has_include(<mach/mach_exc.defs>) && !PLATFORM(GTK)
 #define HAVE_MACH_EXCEPTIONS 1
 #endif
 
@@ -707,11 +714,11 @@
 
 #endif /* OS(DARWIN) */
 
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || PLATFORM(IOS)
+#if PLATFORM(COCOA)
 #define HAVE_CFNETWORK_STORAGE_PARTITIONING 1
 #endif
 
-#if OS(DARWIN) || ((OS(FREEBSD) || defined(__GLIBC__)) && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)))
+#if OS(DARWIN) || ((OS(FREEBSD) || defined(__GLIBC__) || defined(__BIONIC__)) && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)))
 #define HAVE_MACHINE_CONTEXT 1
 #endif
 
@@ -736,28 +743,45 @@
 /* Include feature macros */
 #include <wtf/FeatureDefines.h>
 
+#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/AdditionalFeatureDefines.h>)
+#include <WebKitAdditions/AdditionalFeatureDefines.h>
+#endif
+
 #if OS(WINDOWS)
 #define USE_SYSTEM_MALLOC 1
 #endif
 
 #if !defined(USE_JSVALUE64) && !defined(USE_JSVALUE32_64)
-#if (CPU(X86_64) && !defined(__ILP32__) && (OS(UNIX) || OS(WINDOWS))) \
-    || (CPU(IA64) && !CPU(IA64_32)) \
-    || CPU(ALPHA) \
-    || CPU(ARM64) \
-    || CPU(S390X) \
-    || CPU(MIPS64) \
-    || CPU(PPC64) \
-    || CPU(PPC64LE)
+#if COMPILER(GCC_OR_CLANG)
+/* __LP64__ is not defined on 64bit Windows since it uses LLP64. Using __SIZEOF_POINTER__ is simpler. */
+#if __SIZEOF_POINTER__ == 8
+#define USE_JSVALUE64 1
+#elif __SIZEOF_POINTER__ == 4
+#define USE_JSVALUE32_64 1
+#else
+#error "Unsupported pointer width"
+#endif
+#elif COMPILER(MSVC)
+#if defined(_WIN64)
 #define USE_JSVALUE64 1
 #else
 #define USE_JSVALUE32_64 1
+#endif
+#else
+/* This is the most generic way. But in OS(DARWIN), Platform.h can be included by sandbox definition file (.sb).
+ * At that time, we cannot include "stdint.h" header. So in the case of known compilers, we use predefined constants instead. */
+#include <stdint.h>
+#if UINTPTR_MAX > UINT32_MAX
+#define USE_JSVALUE64 1
+#else
+#define USE_JSVALUE32_64 1
+#endif
 #endif
 #endif /* !defined(USE_JSVALUE64) && !defined(USE_JSVALUE32_64) */
 
 /* The JIT is enabled by default on all x86, x86-64, ARM & MIPS platforms except ARMv7k. */
 #if !defined(ENABLE_JIT) \
-    && (CPU(X86) || CPU(X86_64) || CPU(ARM) || CPU(ARM64) || CPU(MIPS)) \
+    && (CPU(X86) || CPU(X86_64) || CPU(ARM) || (CPU(ARM64) && !defined(__ILP32__)) || CPU(MIPS)) \
     && !CPU(APPLE_ARMV7K) \
     && !CPU(ARM64E)
 #define ENABLE_JIT 1
@@ -806,15 +830,19 @@
 
 #if !defined(ENABLE_DFG_JIT) && ENABLE(JIT)
 /* Enable the DFG JIT on X86 and X86_64. */
-#if (CPU(X86) || CPU(X86_64)) && (OS(DARWIN) || OS(LINUX) || OS(FREEBSD) || OS(WINDOWS) || OS(HURD))
+#if (CPU(X86) || CPU(X86_64)) && (OS(DARWIN) || OS(LINUX) || OS(FREEBSD) || OS(HURD) || OS(WINDOWS))
 #define ENABLE_DFG_JIT 1
 #endif
-/* Enable the DFG JIT on ARMv7.  Only tested on iOS and Qt/GTK+ Linux. */
+/* Enable the DFG JIT on ARMv7.  Only tested on iOS and GTK+/WPE Linux. */
 #if (CPU(ARM_THUMB2) || CPU(ARM64)) && (PLATFORM(IOS) || PLATFORM(GTK) || PLATFORM(WPE))
 #define ENABLE_DFG_JIT 1
 #endif
-/* Enable the DFG JIT on ARM and MIPS. */
-#if CPU(ARM_TRADITIONAL) || CPU(MIPS)
+/* Enable the DFG JIT on ARM. */
+#if CPU(ARM_TRADITIONAL)
+#define ENABLE_DFG_JIT 1
+#endif
+/* Enable the DFG JIT on MIPS. */
+#if CPU(MIPS)
 #define ENABLE_DFG_JIT 1
 #endif
 #endif
@@ -835,19 +863,48 @@
 #define ENABLE_FAST_TLS_JIT 1
 #endif
 
+/* This feature is currently disabled because WebCore will context switch VMs without telling JSC.
+   FIXME: Re-enable this feature.
+   https://bugs.webkit.org/show_bug.cgi?id=182173 */
+#define USE_FAST_TLS_FOR_TLC 0
+
+#if CPU(X86) || CPU(X86_64) || CPU(ARM_THUMB2) || CPU(ARM64) || CPU(ARM_TRADITIONAL) || CPU(MIPS)
+#define ENABLE_MASM_PROBE 1
+#else
+#define ENABLE_MASM_PROBE 0
+#endif
+
+#if !ENABLE(JIT)
+#undef ENABLE_MASM_PROBE
+#define ENABLE_MASM_PROBE 0
+#endif
+
+/* If the baseline jit is not available, then disable upper tiers as well.
+   The MacroAssembler::probe() is also required for supporting the upper tiers. */
+#if !ENABLE(JIT) || !ENABLE(MASM_PROBE)
+#undef ENABLE_DFG_JIT
+#undef ENABLE_FTL_JIT
+#define ENABLE_DFG_JIT 0
+#define ENABLE_FTL_JIT 0
+#endif
+
+/* If the DFG jit is not available, then disable upper tiers as well: */
+#if !ENABLE(DFG_JIT)
+#undef ENABLE_FTL_JIT
+#define ENABLE_FTL_JIT 0
+#endif
+
 /* This controls whether B3 is built. B3 is needed for FTL JIT and WebAssembly */
-#if ENABLE(FTL_JIT) || ENABLE(WEBASSEMBLY)
+#if ENABLE(FTL_JIT)
 #define ENABLE_B3_JIT 1
 #endif
 
-/* If the baseline jit is not available, then disable upper tiers as well: */
-#if !ENABLE(JIT)
-#undef ENABLE_DFG_JIT
-#undef ENABLE_FTL_JIT
-#undef ENABLE_B3_JIT
-#define ENABLE_DFG_JIT 0
-#define ENABLE_FTL_JIT 0
-#define ENABLE_B3_JIT 0
+#if !defined(ENABLE_WEBASSEMBLY)
+#if ENABLE(B3_JIT) && PLATFORM(COCOA)
+#define ENABLE_WEBASSEMBLY 1
+#else
+#define ENABLE_WEBASSEMBLY 0
+#endif
 #endif
 
 /* The SamplingProfiler is the probabilistic and low-overhead profiler used by
@@ -963,6 +1020,13 @@
 #define ENABLE_YARR_JIT_DEBUG 0
 #endif
 
+#if ENABLE(YARR_JIT)
+#if CPU(ARM64) || (CPU(X86_64) && !OS(WINDOWS))
+/* Enable JIT'ing Regular Expressions that have nested parenthesis. */
+#define ENABLE_YARR_JIT_ALL_PARENS_EXPRESSIONS 1
+#endif
+#endif
+
 /* If either the JIT or the RegExp JIT is enabled, then the Assembler must be
    enabled as well: */
 #if ENABLE(JIT) || ENABLE(YARR_JIT)
@@ -984,14 +1048,6 @@
 #endif
 #endif
 
-/* Enable the following if you want to use the MacroAssembler::probe() facility
-   to do JIT debugging. */
-#if (CPU(X86) || CPU(X86_64) || CPU(ARM64) || (CPU(ARM_THUMB2) && PLATFORM(IOS))) && ENABLE(JIT) && OS(DARWIN)
-#define ENABLE_MASM_PROBE 1
-#else
-#define ENABLE_MASM_PROBE 0
-#endif
-
 #ifndef ENABLE_EXCEPTION_SCOPE_VERIFICATION
 #ifdef NDEBUG
 #define ENABLE_EXCEPTION_SCOPE_VERIFICATION 0
@@ -1000,8 +1056,15 @@
 #endif
 #endif
 
-#if ENABLE(JIT) && HAVE(MACHINE_CONTEXT) && (CPU(X86) || CPU(X86_64) || CPU(ARM64))
+#if ENABLE(DFG_JIT) && HAVE(MACHINE_CONTEXT) && (CPU(X86) || CPU(X86_64) || CPU(ARM64))
 #define ENABLE_SIGNAL_BASED_VM_TRAPS 1
+#endif
+
+#define ENABLE_POISON 1
+/* Not currently supported for 32-bit or OS(WINDOWS) builds (because of missing llint support). Make sure it's disabled. */
+#if USE(JSVALUE32_64) || OS(WINDOWS)
+#undef ENABLE_POISON
+#define ENABLE_POISON 0
 #endif
 
 /* CSS Selector JIT Compiler */
@@ -1063,16 +1126,8 @@
 #include <wtf/glib/GTypedefs.h>
 #endif
 
-/* FIXME: This define won't be needed once #27551 is fully landed. However,
-   since most ports try to support sub-project independence, adding new headers
-   to WTF causes many ports to break, and so this way we can address the build
-   breakages one port at a time. */
 #if !defined(USE_EXPORT_MACROS) && (PLATFORM(COCOA) || OS(WINDOWS))
 #define USE_EXPORT_MACROS 1
-#endif
-
-#if !defined(USE_EXPORT_MACROS_FOR_TESTING) && (PLATFORM(GTK) || OS(WINDOWS))
-#define USE_EXPORT_MACROS_FOR_TESTING 1
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
@@ -1095,21 +1150,6 @@
 #define USE_AVFOUNDATION 1
 #endif
 
-#if PLATFORM(WIN) && !USE(WINGDI)
-#include <wtf/AVFoundationHeaderDetection.h>
-#endif
-
-#if PLATFORM(WIN) && USE(CG) && HAVE(AVCF)
-#define USE_AVFOUNDATION 1
-
-#if HAVE(AVCF_LEGIBLE_OUTPUT)
-#define HAVE_AVFOUNDATION_MEDIA_SELECTION_GROUP 1
-#define HAVE_AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT 1
-#define HAVE_MEDIA_ACCESSIBILITY_FRAMEWORK 1
-#endif
-
-#endif
-
 #if !defined(ENABLE_TREE_DEBUGGING)
 #if !defined(NDEBUG)
 #define ENABLE_TREE_DEBUGGING 1
@@ -1121,6 +1161,7 @@
 #if PLATFORM(IOS) || PLATFORM(MAC)
 #define USE_COREMEDIA 1
 #define HAVE_AVFOUNDATION_VIDEO_OUTPUT 1
+#define USE_VIDEOTOOLBOX 1
 #endif
 
 #if PLATFORM(IOS) || PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))
@@ -1134,10 +1175,6 @@
 
 #if PLATFORM(IOS) || PLATFORM(MAC)
 #define HAVE_AVFOUNDATION_LOADER_DELEGATE 1
-#endif
-
-#if PLATFORM(MAC) || (PLATFORM(IOS) && ENABLE(WEB_RTC))
-#define USE_VIDEOTOOLBOX 1
 #endif
 
 #if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
@@ -1187,6 +1224,10 @@
 #define USE_INSERTION_UNDO_GROUPING 1
 #endif
 
+#if PLATFORM(MAC) || PLATFORM(IOS)
+#define HAVE_AVASSETREADER 1
+#endif
+
 #if PLATFORM(COCOA)
 #define HAVE_TIMINGDATAOPTIONS 1
 #endif
@@ -1207,10 +1248,6 @@
 #undef ENABLE_OPENTYPE_VERTICAL
 #define ENABLE_OPENTYPE_VERTICAL 1
 #define ENABLE_CSS3_TEXT_DECORATION_SKIP_INK 1
-#endif
-
-#if PLATFORM(GTK)
-#define USE_WOFF2 1
 #endif
 
 #if PLATFORM(COCOA)
@@ -1247,14 +1284,14 @@
 #endif
 
 /* FIXME: Enable USE_OS_LOG when building with the public iOS 10 SDK once we fix <rdar://problem/27758343>. */
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || (PLATFORM(IOS) && USE(APPLE_INTERNAL_SDK))
+#if PLATFORM(MAC) || (PLATFORM(IOS) && USE(APPLE_INTERNAL_SDK))
 #define USE_OS_LOG 1
 #if USE(APPLE_INTERNAL_SDK)
 #define USE_OS_STATE 1
 #endif
 #endif
 
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || PLATFORM(IOS)
+#if PLATFORM(COCOA)
 #define HAVE_SEC_TRUST_SERIALIZATION 1
 #endif
 
@@ -1282,7 +1319,7 @@
 #endif
 #endif
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
+#if PLATFORM(MAC)
 #define USE_MEDIAREMOTE 1
 #endif
 
@@ -1291,14 +1328,14 @@
 #pragma strict_gs_check(on)
 #endif
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101201 && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
+#if PLATFORM(MAC)
 #define HAVE_TOUCH_BAR 1
 #define HAVE_ADVANCED_SPELL_CHECKING 1
 
 #if defined(__LP64__)
 #define ENABLE_WEB_PLAYBACK_CONTROLS_MANAGER 1
 #endif
-#endif /* PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101201 && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200 */
+#endif /* PLATFORM(MAC) */
 
 #if PLATFORM(COCOA) && ENABLE(WEB_RTC)
 #define USE_LIBWEBRTC 1
@@ -1308,8 +1345,12 @@
 #define HAVE_RSA_PSS 1
 #endif
 
-#if !OS(WINDOWS) && !OS(SOLARIS)
+#if !OS(WINDOWS)
 #define HAVE_STACK_BOUNDS_FOR_NEW_THREAD 1
+#endif
+
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300)
+#define HAVE_AVCONTENTKEYSESSION 1
 #endif
 
 #endif /* WTF_Platform_h */

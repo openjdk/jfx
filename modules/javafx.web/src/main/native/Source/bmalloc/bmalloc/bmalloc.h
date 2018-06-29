@@ -23,12 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include "AvailableMemory.h"
 #include "Cache.h"
 #include "Gigacage.h"
 #include "Heap.h"
+#include "IsoTLS.h"
 #include "PerHeapKind.h"
-#include "PerProcess.h"
 #include "Scavenger.h"
 #include "StaticMutex.h"
 
@@ -46,6 +48,8 @@ inline void* malloc(size_t size, HeapKind kind = HeapKind::Primary)
 {
     return Cache::allocate(kind, size);
 }
+
+BEXPORT void* mallocOutOfLine(size_t size, HeapKind kind = HeapKind::Primary);
 
 // Returns null on failure.
 inline void* tryMemalign(size_t alignment, size_t size, HeapKind kind = HeapKind::Primary)
@@ -65,44 +69,31 @@ inline void* realloc(void* object, size_t newSize, HeapKind kind = HeapKind::Pri
     return Cache::reallocate(kind, object, newSize);
 }
 
-// Returns null for failure
-inline void* tryLargeMemalignVirtual(size_t alignment, size_t size, HeapKind kind = HeapKind::Primary)
-{
-    Heap& heap = PerProcess<PerHeapKind<Heap>>::get()->at(kind);
-    std::lock_guard<StaticMutex> lock(Heap::mutex());
-    return heap.tryAllocateLarge(lock, alignment, size, AllocationKind::Virtual);
-}
+// Returns null on failure.
+// This API will give you zeroed pages that are ready to be used. These pages
+// will page fault on first access. It returns to you memory that initially only
+// uses up virtual address space, not `size` bytes of physical memory.
+BEXPORT void* tryLargeZeroedMemalignVirtual(size_t alignment, size_t size, HeapKind kind = HeapKind::Primary);
 
 inline void free(void* object, HeapKind kind = HeapKind::Primary)
 {
     Cache::deallocate(kind, object);
 }
 
-inline void freeLargeVirtual(void* object, HeapKind kind = HeapKind::Primary)
-{
-    Heap& heap = PerProcess<PerHeapKind<Heap>>::get()->at(kind);
-    std::lock_guard<StaticMutex> lock(Heap::mutex());
-    heap.deallocateLarge(lock, object, AllocationKind::Virtual);
-}
+BEXPORT void freeOutOfLine(void* object, HeapKind kind = HeapKind::Primary);
+
+BEXPORT void freeLargeVirtual(void* object, HeapKind kind = HeapKind::Primary);
 
 inline void scavengeThisThread()
 {
     for (unsigned i = numHeaps; i--;)
         Cache::scavenge(static_cast<HeapKind>(i));
+    IsoTLS::scavenge();
 }
 
-inline void scavenge()
-{
-    scavengeThisThread();
+BEXPORT void scavenge();
 
-    PerProcess<Scavenger>::get()->scavenge();
-}
-
-inline bool isEnabled(HeapKind kind = HeapKind::Primary)
-{
-    std::unique_lock<StaticMutex> lock(Heap::mutex());
-    return !PerProcess<PerHeapKind<Heap>>::getFastCase()->at(kind).debugHeap();
-}
+BEXPORT bool isEnabled(HeapKind kind = HeapKind::Primary);
 
 inline size_t availableMemory()
 {
@@ -122,11 +113,7 @@ inline double percentAvailableMemoryInUse()
 #endif
 
 #if BOS(DARWIN)
-inline void setScavengerThreadQOSClass(qos_class_t overrideClass)
-{
-    std::unique_lock<StaticMutex> lock(Heap::mutex());
-    PerProcess<Scavenger>::get()->setScavengerThreadQOSClass(overrideClass);
-}
+BEXPORT void setScavengerThreadQOSClass(qos_class_t overrideClass);
 #endif
 
 } // namespace api

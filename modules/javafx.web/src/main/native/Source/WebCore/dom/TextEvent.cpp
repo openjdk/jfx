@@ -103,18 +103,24 @@ TextEvent::TextEvent(DOMWindow* view, const String& data, const Vector<Dictation
 {
 }
 
-TextEvent::~TextEvent()
-{
-}
+TextEvent::~TextEvent() = default;
 
 void TextEvent::initTextEvent(const AtomicString& type, bool canBubble, bool cancelable, DOMWindow* view, const String& data)
 {
-    if (dispatched())
+    if (isBeingDispatched())
         return;
 
     initUIEvent(type, canBubble, cancelable, view, 0);
 
+    m_inputType = TextEventInputKeyboard;
+
     m_data = data;
+
+    m_pastingFragment = nullptr;
+    m_shouldSmartReplace = false;
+    m_shouldMatchStyle = false;
+    m_mailBlockquoteHandling = MailBlockquoteHandling::RespectBlockquote;
+    m_dictationAlternatives = { };
 }
 
 EventInterface TextEvent::eventInterface() const

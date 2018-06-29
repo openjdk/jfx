@@ -230,6 +230,17 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetTarget(J
     }
 }
 
+JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflClearBackForwardListForDRT(JNIEnv*, jclass, jlong jpage)
+{
+    BackForwardList* bfl = getBfl(jpage);
+    HistoryItem* current = bfl->currentItem();
+    int capacity = bfl->capacity();
+    bfl->setCapacity(0);
+    bfl->setCapacity(capacity);
+    bfl->addItem(*current);
+    bfl->goToItem(current);
+}
+
 // entry.getChildren()
 JNIEXPORT jobjectArray JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetChildren(JNIEnv* env, jclass, jlong jitem, jlong jpage)
 {

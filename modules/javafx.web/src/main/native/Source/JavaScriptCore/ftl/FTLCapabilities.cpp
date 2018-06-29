@@ -65,12 +65,14 @@ inline CapabilityLevel canCompile(Node* node)
     case BitLShift:
     case BitURShift:
     case CheckStructure:
+    case CheckStructureOrEmpty:
     case DoubleAsInt32:
+    case Arrayify:
     case ArrayifyToStructure:
     case PutStructure:
     case GetButterfly:
-    case GetButterflyWithoutCaging:
     case NewObject:
+    case NewStringObject:
     case NewArray:
     case NewArrayWithSpread:
     case Spread:
@@ -111,13 +113,17 @@ inline CapabilityLevel canCompile(Node* node)
     case Phi:
     case Upsilon:
     case ExtractOSREntryLocal:
+    case ExtractCatchLocal:
     case LoopHint:
     case SkipScope:
     case GetGlobalObject:
+    case GetGlobalThis:
     case CreateActivation:
+    case PushWithScope:
     case NewFunction:
     case NewGeneratorFunction:
     case NewAsyncFunction:
+    case NewAsyncGeneratorFunction:
     case GetClosureVar:
     case PutClosureVar:
     case CreateDirectArguments:
@@ -131,6 +137,7 @@ inline CapabilityLevel canCompile(Node* node)
     case CheckCell:
     case CheckBadCell:
     case CheckNotEmpty:
+    case AssertNotEmpty:
     case CheckStringIdent:
     case CheckTraps:
     case StringCharCodeAt:
@@ -139,6 +146,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ReallocatePropertyStorage:
     case NukeStructureAndSetButterfly:
     case GetTypedArrayByteOffset:
+    case GetPrototypeOf:
     case NotifyWrite:
     case StoreBarrier:
     case FencedStoreBarrier:
@@ -166,13 +174,19 @@ inline CapabilityLevel canCompile(Node* node)
     case CheckInBounds:
     case ConstantStoragePointer:
     case Check:
+    case CheckVarargs:
     case CountExecution:
+    case SuperSamplerBegin:
+    case SuperSamplerEnd:
     case GetExecutable:
     case GetScope:
     case GetCallee:
+    case SetCallee:
     case GetArgumentCountIncludingThis:
+    case SetArgumentCountIncludingThis:
     case ToNumber:
     case ToString:
+    case ToObject:
     case CallObjectConstructor:
     case CallStringConstructor:
     case MakeRope:
@@ -181,6 +195,8 @@ inline CapabilityLevel canCompile(Node* node)
     case GetById:
     case GetByIdFlush:
     case GetByIdWithThis:
+    case GetByIdDirect:
+    case GetByIdDirectFlush:
     case ToThis:
     case MultiGetByOffset:
     case MultiPutByOffset:
@@ -192,13 +208,23 @@ inline CapabilityLevel canCompile(Node* node)
     case HasOwnProperty:
     case IsCellWithType:
     case MapHash:
+    case NormalizeMapKey:
     case GetMapBucket:
-    case LoadFromJSMapBucket:
-    case IsNonEmptyMapBucket:
+    case GetMapBucketHead:
+    case GetMapBucketNext:
+    case LoadKeyFromMapBucket:
+    case LoadValueFromMapBucket:
+    case ExtractValueFromWeakMapGet:
+    case SetAdd:
+    case MapSet:
+    case WeakMapGet:
+    case WeakSetAdd:
+    case WeakMapSet:
     case IsEmpty:
     case IsUndefined:
     case IsBoolean:
     case IsNumber:
+    case NumberIsInteger:
     case IsObject:
     case IsObjectOrNull:
     case IsFunction:
@@ -215,6 +241,7 @@ inline CapabilityLevel canCompile(Node* node)
     case BooleanToNumber:
     case HasGenericProperty:
     case HasStructureProperty:
+    case HasIndexedProperty:
     case GetDirectPname:
     case GetEnumerableLength:
     case GetIndexedPropertyStorage:
@@ -226,8 +253,10 @@ inline CapabilityLevel canCompile(Node* node)
     case PhantomNewObject:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
+    case PhantomNewAsyncGeneratorFunction:
     case PhantomNewAsyncFunction:
     case PhantomCreateActivation:
+    case PhantomNewRegexp:
     case PutHint:
     case CheckStructureImmediate:
     case MaterializeNewObject:
@@ -236,10 +265,12 @@ inline CapabilityLevel canCompile(Node* node)
     case PhantomCreateRest:
     case PhantomSpread:
     case PhantomNewArrayWithSpread:
+    case PhantomNewArrayBuffer:
     case PhantomClonedArguments:
     case GetMyArgumentByVal:
     case GetMyArgumentByValOutOfBounds:
     case ForwardVarargs:
+    case EntrySwitch:
     case Switch:
     case TypeOf:
     case PutById:
@@ -251,10 +282,14 @@ inline CapabilityLevel canCompile(Node* node)
     case PutGetterSetterById:
     case PutGetterByVal:
     case PutSetterByVal:
+    case DeleteById:
+    case DeleteByVal:
     case CreateRest:
     case GetRestLength:
     case RegExpExec:
+    case RegExpExecNonGlobalOrSticky:
     case RegExpTest:
+    case RegExpMatchFast:
     case NewRegexp:
     case StringReplace:
     case StringReplaceRegExp:
@@ -274,16 +309,22 @@ inline CapabilityLevel canCompile(Node* node)
     case CompareLessEq:
     case CompareGreater:
     case CompareGreaterEq:
+    case CompareBelow:
+    case CompareBelowEq:
     case CompareStrictEq:
     case DefineDataProperty:
     case DefineAccessorProperty:
+    case StringSlice:
     case ToLowerCase:
     case NumberToStringWithRadix:
+    case NumberToStringWithValidRadixConstant:
     case CheckSubClass:
     case CallDOM:
     case CallDOMGetter:
     case ArraySlice:
     case ArrayIndexOf:
+    case ArrayPop:
+    case ArrayPush:
     case ParseInt:
     case AtomicsAdd:
     case AtomicsAnd:
@@ -295,6 +336,9 @@ inline CapabilityLevel canCompile(Node* node)
     case AtomicsSub:
     case AtomicsXor:
     case AtomicsIsLockFree:
+    case InitializeEntrypointArguments:
+    case CPUIntrinsic:
+    case GetArrayMask:
         // These are OK.
         break;
 
@@ -304,21 +348,14 @@ inline CapabilityLevel canCompile(Node* node)
         // case because it would prevent us from catching bugs where the FTL backend
         // pipeline failed to optimize out an Identity.
         break;
-    case Arrayify:
-        switch (node->arrayMode().type()) {
-        case Array::Int32:
-        case Array::Double:
-        case Array::Contiguous:
-            break;
-        default:
-            return CannotCompile;
-        }
-        break;
     case CheckArray:
         switch (node->arrayMode().type()) {
         case Array::Int32:
         case Array::Double:
         case Array::Contiguous:
+        case Array::Undecided:
+        case Array::ArrayStorage:
+        case Array::SlowPutArrayStorage:
         case Array::DirectArguments:
         case Array::ScopedArguments:
             break;
@@ -334,6 +371,8 @@ inline CapabilityLevel canCompile(Node* node)
         case Array::Int32:
         case Array::Double:
         case Array::Contiguous:
+        case Array::ArrayStorage:
+        case Array::SlowPutArrayStorage:
         case Array::String:
         case Array::DirectArguments:
         case Array::ScopedArguments:
@@ -351,17 +390,6 @@ inline CapabilityLevel canCompile(Node* node)
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
-        }
-        break;
-    case HasIndexedProperty:
-        switch (node->arrayMode().type()) {
-        case Array::ForceExit:
-        case Array::Int32:
-        case Array::Double:
-        case Array::Contiguous:
-            break;
-        default:
-            return CannotCompile;
         }
         break;
     case GetByVal:
@@ -395,6 +423,8 @@ inline CapabilityLevel canCompile(Node* node)
         case Array::Int32:
         case Array::Double:
         case Array::Contiguous:
+        case Array::ArrayStorage:
+        case Array::SlowPutArrayStorage:
             break;
         default:
             if (isTypedView(node->arrayMode().typedArrayType()))
@@ -403,17 +433,6 @@ inline CapabilityLevel canCompile(Node* node)
         }
         break;
     case PutByValWithThis:
-        break;
-    case ArrayPush:
-    case ArrayPop:
-        switch (node->arrayMode().type()) {
-        case Array::Int32:
-        case Array::Contiguous:
-        case Array::Double:
-            break;
-        default:
-            return CannotCompile;
-        }
         break;
     default:
         // Don't know how to handle anything else.
@@ -481,6 +500,8 @@ CapabilityLevel canCompile(Graph& graph)
                 case SymbolUse:
                 case MapObjectUse:
                 case SetObjectUse:
+                case WeakMapObjectUse:
+                case WeakSetObjectUse:
                 case FinalObjectUse:
                 case RegExpObjectUse:
                 case ProxyObjectUse:
@@ -490,6 +511,7 @@ CapabilityLevel canCompile(Graph& graph)
                 case MiscUse:
                 case StringIdentUse:
                 case NotStringVarUse:
+                case NotSymbolUse:
                 case AnyIntUse:
                 case DoubleRepAnyIntUse:
                     // These are OK.

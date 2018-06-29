@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/HTMLNames.h>
@@ -43,7 +45,7 @@ extern "C" {
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getCellIndexImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getCellIndexImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->cellIndex();
@@ -109,25 +111,25 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setChOff
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getColSpanImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getColSpanImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->colSpan();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setColSpanImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setColSpanImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setColSpan(value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getRowSpanImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getRowSpanImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->rowSpanForBindings();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setRowSpanImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setRowSpanImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setRowSpanForBindings(value);
@@ -157,13 +159,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setHeigh
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::heightAttr, String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getNoWrapImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getNoWrapImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::nowrapAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setNoWrapImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setNoWrapImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::nowrapAttr, value);

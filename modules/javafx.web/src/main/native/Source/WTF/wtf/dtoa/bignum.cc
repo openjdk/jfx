@@ -34,38 +34,38 @@
 namespace WTF {
 
 namespace double_conversion {
-
+    
     Bignum::Bignum()
     : bigits_(bigits_buffer_, kBigitCapacity), used_digits_(0), exponent_(0) {
         for (int i = 0; i < kBigitCapacity; ++i) {
             bigits_[i] = 0;
         }
     }
-
-
+    
+    
     template<typename S>
     static int BitSize(S value) {
         return 8 * sizeof(value);
     }
-
+    
     // Guaranteed to lie in one Bigit.
     void Bignum::AssignUInt16(uint16_t value) {
         ASSERT(kBigitSize >= BitSize(value));
         Zero();
         if (value == 0) return;
-
+        
         EnsureCapacity(1);
         bigits_[0] = value;
         used_digits_ = 1;
     }
-
-
+    
+    
     void Bignum::AssignUInt64(uint64_t value) {
         const int kUInt64Size = 64;
-
+        
         Zero();
         if (value == 0) return;
-
+        
         int needed_bigits = kUInt64Size / kBigitSize + 1;
         EnsureCapacity(needed_bigits);
         for (int i = 0; i < needed_bigits; ++i) {
@@ -75,8 +75,8 @@ namespace double_conversion {
         used_digits_ = needed_bigits;
         Clamp();
     }
-
-
+    
+    
     void Bignum::AssignBignum(const Bignum& other) {
         exponent_ = other.exponent_;
         for (int i = 0; i < other.used_digits_; ++i) {
@@ -88,8 +88,8 @@ namespace double_conversion {
         }
         used_digits_ = other.used_digits_;
     }
-
-
+    
+    
     static uint64_t ReadUInt64(BufferReference<const char> buffer,
                                int from,
                                int digits_to_read) {
@@ -101,8 +101,8 @@ namespace double_conversion {
         }
         return result;
     }
-
-
+    
+    
     void Bignum::AssignDecimalString(BufferReference<const char> value) {
         // 2^64 = 18446744073709551616 > 10^19
         const int kMaxUint64DecimalDigits = 19;
@@ -122,12 +122,12 @@ namespace double_conversion {
         AddUInt64(digits);
         Clamp();
     }
-
-
+    
+    
     void Bignum::AssignHexString(BufferReference<const char> value) {
         Zero();
         int length = value.length();
-
+        
         int needed_bigits = length * 4 / kBigitSize + 1;
         EnsureCapacity(needed_bigits);
         int string_index = length - 1;
@@ -140,7 +140,7 @@ namespace double_conversion {
             bigits_[i] = current_bigit;
         }
         used_digits_ = needed_bigits - 1;
-
+        
         Chunk most_significant_bigit = 0;  // Could be = 0;
         for (int j = 0; j <= string_index; ++j) {
             most_significant_bigit <<= 4;
@@ -152,24 +152,24 @@ namespace double_conversion {
         }
         Clamp();
     }
-
-
+    
+    
     void Bignum::AddUInt64(uint64_t operand) {
         if (operand == 0) return;
         Bignum other;
         other.AssignUInt64(operand);
         AddBignum(other);
     }
-
-
+    
+    
     void Bignum::AddBignum(const Bignum& other) {
         ASSERT(IsClamped());
         ASSERT(other.IsClamped());
-
+        
         // If this has a greater exponent than other append zero-bigits to this.
         // After this call exponent_ <= other.exponent_.
         Align(other);
-
+        
         // There are two possibilities:
         //   aaaaaaaaaaa 0000  (where the 0s represent a's exponent)
         //     bbbbb 00000000
@@ -181,7 +181,7 @@ namespace double_conversion {
         //  -----------------
         //  cccccccccccc 0000
         // In both cases we might need a carry bigit.
-
+        
         EnsureCapacity(1 + Max(BigitLength(), other.BigitLength()) - exponent_);
         Chunk carry = 0;
         int bigit_pos = other.exponent_ - exponent_;
@@ -192,7 +192,7 @@ namespace double_conversion {
             carry = sum >> kBigitSize;
             bigit_pos++;
         }
-
+        
         while (carry != 0) {
             Chunk sum = bigits_[bigit_pos] + carry;
             bigits_[bigit_pos] = sum & kBigitMask;
@@ -202,16 +202,16 @@ namespace double_conversion {
         used_digits_ = Max(bigit_pos, used_digits_);
         ASSERT(IsClamped());
     }
-
-
+    
+    
     void Bignum::SubtractBignum(const Bignum& other) {
         ASSERT(IsClamped());
         ASSERT(other.IsClamped());
         // We require this to be bigger than other.
         ASSERT(LessEqual(other, *this));
-
+        
         Align(other);
-
+        
         int offset = other.exponent_ - exponent_;
         Chunk borrow = 0;
         int i;
@@ -229,8 +229,8 @@ namespace double_conversion {
         }
         Clamp();
     }
-
-
+    
+    
     void Bignum::ShiftLeft(int shift_amount) {
         if (used_digits_ == 0) return;
         exponent_ += shift_amount / kBigitSize;
@@ -238,8 +238,8 @@ namespace double_conversion {
         EnsureCapacity(used_digits_ + 1);
         BigitsShiftLeft(local_shift);
     }
-
-
+    
+    
     void Bignum::MultiplyByUInt32(uint32_t factor) {
         if (factor == 1) return;
         if (factor == 0) {
@@ -247,7 +247,7 @@ namespace double_conversion {
             return;
         }
         if (used_digits_ == 0) return;
-
+        
         // The product of a bigit with the factor is of size kBigitSize + 32.
         // Assert that this number + 1 (for the carry) fits into double chunk.
         ASSERT(kDoubleChunkSize >= kBigitSize + 32 + 1);
@@ -264,8 +264,8 @@ namespace double_conversion {
             carry >>= kBigitSize;
         }
     }
-
-
+    
+    
     void Bignum::MultiplyByUInt64(uint64_t factor) {
         if (factor == 1) return;
         if (factor == 0) {
@@ -291,8 +291,8 @@ namespace double_conversion {
             carry >>= kBigitSize;
         }
     }
-
-
+    
+    
     void Bignum::MultiplyByPowerOfTen(int exponent) {
         const uint64_t kFive27 = UINT64_2PART_C(0x6765c793, fa10079d);
         const uint16_t kFive1 = 5;
@@ -311,11 +311,11 @@ namespace double_conversion {
         const uint32_t kFive1_to_12[] =
         { kFive1, kFive2, kFive3, kFive4, kFive5, kFive6,
             kFive7, kFive8, kFive9, kFive10, kFive11, kFive12 };
-
+        
         ASSERT(exponent >= 0);
         if (exponent == 0) return;
         if (used_digits_ == 0) return;
-
+        
         // We shift by exponent at the end just before returning.
         int remaining_exponent = exponent;
         while (remaining_exponent >= 27) {
@@ -331,13 +331,13 @@ namespace double_conversion {
         }
         ShiftLeft(exponent);
     }
-
-
+    
+    
     void Bignum::Square() {
         ASSERT(IsClamped());
         int product_length = 2 * used_digits_;
         EnsureCapacity(product_length);
-
+        
         // Comba multiplication: compute each column separately.
         // Example: r = a2a1a0 * b2b1b0.
         //    r =  1    * a0b0 +
@@ -397,14 +397,14 @@ namespace double_conversion {
         // Since the result was guaranteed to lie inside the number the
         // accumulator must be 0 now.
         ASSERT(accumulator == 0);
-
+        
         // Don't forget to update the used_digits and the exponent.
         used_digits_ = product_length;
         exponent_ *= 2;
         Clamp();
     }
-
-
+    
+    
     void Bignum::AssignPowerUInt16(uint16_t base, int power_exponent) {
         ASSERT(base != 0);
         ASSERT(power_exponent >= 0);
@@ -430,17 +430,17 @@ namespace double_conversion {
         int final_size = bit_size * power_exponent;
         // 1 extra bigit for the shifting, and one for rounded final_size.
         EnsureCapacity(final_size / kBigitSize + 2);
-
+        
         // Left to Right exponentiation.
         int mask = 1;
         while (power_exponent >= mask) mask <<= 1;
-
+        
         // The mask is now pointing to the bit above the most significant 1-bit of
         // power_exponent.
         // Get rid of first 1-bit;
         mask >>= 2;
         uint64_t this_value = base;
-
+        
         bool delayed_multipliciation = false;
         const uint64_t max_32bits = 0xFFFFFFFF;
         while (mask != 0 && this_value <= max_32bits) {
@@ -463,7 +463,7 @@ namespace double_conversion {
         if (delayed_multipliciation) {
             MultiplyByUInt32(base);
         }
-
+        
         // Now do the same thing as a bignum.
         while (mask != 0) {
             Square();
@@ -472,28 +472,28 @@ namespace double_conversion {
             }
             mask >>= 1;
         }
-
+        
         // And finally add the saved shifts.
         ShiftLeft(shifts * power_exponent);
     }
-
-
+    
+    
     // Precondition: this/other < 16bit.
     uint16_t Bignum::DivideModuloIntBignum(const Bignum& other) {
         ASSERT(IsClamped());
         ASSERT(other.IsClamped());
         ASSERT(other.used_digits_ > 0);
-
+        
         // Easy case: if we have less digits than the divisor than the result is 0.
         // Note: this handles the case where this == 0, too.
         if (BigitLength() < other.BigitLength()) {
             return 0;
         }
-
+        
         Align(other);
-
+        
         uint16_t result = 0;
-
+        
         // Start by removing multiples of 'other' until both numbers have the same
         // number of digits.
         while (BigitLength() > other.BigitLength()) {
@@ -506,15 +506,15 @@ namespace double_conversion {
             result += bigits_[used_digits_ - 1];
             SubtractTimes(other, bigits_[used_digits_ - 1]);
         }
-
+        
         ASSERT(BigitLength() == other.BigitLength());
-
+        
         // Both bignums are at the same length now.
         // Since other has more than 0 digits we know that the access to
         // bigits_[used_digits_ - 1] is safe.
         Chunk this_bigit = bigits_[used_digits_ - 1];
         Chunk other_bigit = other.bigits_[other.used_digits_ - 1];
-
+        
         if (other.used_digits_ == 1) {
             // Shortcut for easy (and common) case.
             int quotient = this_bigit / other_bigit;
@@ -523,25 +523,25 @@ namespace double_conversion {
             Clamp();
             return result;
         }
-
+        
         int division_estimate = this_bigit / (other_bigit + 1);
         result += division_estimate;
         SubtractTimes(other, division_estimate);
-
+        
         if (other_bigit * (division_estimate + 1) > this_bigit) {
             // No need to even try to subtract. Even if other's remaining digits were 0
             // another subtraction would be too much.
             return result;
         }
-
+        
         while (LessEqual(other, *this)) {
             SubtractBignum(other);
             result++;
         }
         return result;
     }
-
-
+    
+    
     template<typename S>
     static int SizeInHexChars(S number) {
         ASSERT(number > 0);
@@ -552,21 +552,21 @@ namespace double_conversion {
         }
         return result;
     }
-
-
+    
+    
     static char HexCharOfValue(int value) {
         ASSERT(0 <= value && value <= 16);
         if (value < 10) return value + '0';
         return value - 10 + 'A';
     }
-
-
+    
+    
     bool Bignum::ToHexString(char* buffer, int buffer_size) const {
         ASSERT(IsClamped());
         // Each bigit must be printable as separate hex-character.
         ASSERT(kBigitSize % 4 == 0);
         const int kHexCharsPerBigit = kBigitSize / 4;
-
+        
         if (used_digits_ == 0) {
             if (buffer_size < 2) return false;
             buffer[0] = '0';
@@ -599,15 +599,15 @@ namespace double_conversion {
         }
         return true;
     }
-
-
+    
+    
     Bignum::Chunk Bignum::BigitAt(int index) const {
         if (index >= BigitLength()) return 0;
         if (index < exponent_) return 0;
         return bigits_[index - exponent_];
     }
-
-
+    
+    
     int Bignum::Compare(const Bignum& a, const Bignum& b) {
         ASSERT(a.IsClamped());
         ASSERT(b.IsClamped());
@@ -624,8 +624,8 @@ namespace double_conversion {
         }
         return 0;
     }
-
-
+    
+    
     int Bignum::PlusCompare(const Bignum& a, const Bignum& b, const Bignum& c) {
         ASSERT(a.IsClamped());
         ASSERT(b.IsClamped());
@@ -641,7 +641,7 @@ namespace double_conversion {
         if (a.exponent_ >= b.BigitLength() && a.BigitLength() < c.BigitLength()) {
             return -1;
         }
-
+        
         Chunk borrow = 0;
         // Starting at min_exponent all digits are == 0. So no need to compare them.
         int min_exponent = Min(Min(a.exponent_, b.exponent_), c.exponent_);
@@ -661,8 +661,8 @@ namespace double_conversion {
         if (borrow == 0) return 0;
         return -1;
     }
-
-
+    
+    
     void Bignum::Clamp() {
         while (used_digits_ > 0 && bigits_[used_digits_ - 1] == 0) {
             used_digits_--;
@@ -672,13 +672,13 @@ namespace double_conversion {
             exponent_ = 0;
         }
     }
-
-
+    
+    
     bool Bignum::IsClamped() const {
         return used_digits_ == 0 || bigits_[used_digits_ - 1] != 0;
     }
-
-
+    
+    
     void Bignum::Zero() {
         for (int i = 0; i < used_digits_; ++i) {
             bigits_[i] = 0;
@@ -686,8 +686,8 @@ namespace double_conversion {
         used_digits_ = 0;
         exponent_ = 0;
     }
-
-
+    
+    
     void Bignum::Align(const Bignum& other) {
         if (exponent_ > other.exponent_) {
             // If "X" represents a "hidden" digit (by the exponent) then we are in the
@@ -710,8 +710,8 @@ namespace double_conversion {
             ASSERT(exponent_ >= 0);
         }
     }
-
-
+    
+    
     void Bignum::BigitsShiftLeft(int shift_amount) {
         ASSERT(shift_amount < kBigitSize);
         ASSERT(shift_amount >= 0);
@@ -726,8 +726,8 @@ namespace double_conversion {
             used_digits_++;
         }
     }
-
-
+    
+    
     void Bignum::SubtractTimes(const Bignum& other, int factor) {
 #ifndef NDEBUG
         Bignum a, b;
@@ -763,8 +763,8 @@ namespace double_conversion {
         Clamp();
         ASSERT(Bignum::Equal(a, *this));
     }
-
-
+    
+    
 }  // namespace double_conversion
 
 } // namespace WTF

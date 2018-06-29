@@ -1,26 +1,3 @@
-list(APPEND WebCore_INCLUDE_DIRECTORIES
-    "${WEBCORE_DIR}/platform/mediastream/openwebrtc"
-)
-
-if (ENABLE_MEDIA_STREAM)
-    list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-        ${OPENWEBRTC_INCLUDE_DIRS}
-    )
-
-    list(APPEND WebCore_LIBRARIES
-        ${OPENWEBRTC_LIBRARIES}
-    )
-
-    list(APPEND WebCore_SOURCES
-        platform/graphics/gstreamer/MediaPlayerPrivateGStreamerOwr.cpp
-
-        platform/mediastream/openwebrtc/MediaEndpointOwr.cpp
-        platform/mediastream/openwebrtc/OpenWebRTCUtilities.cpp
-        platform/mediastream/openwebrtc/RealtimeMediaSourceOwr.cpp
-        platform/mediastream/openwebrtc/RealtimeMediaSourceCenterOwr.cpp
-    )
-endif ()
-
 if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
     list(APPEND WebCore_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/platform/graphics/gstreamer"
@@ -32,9 +9,11 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/AudioTrackPrivateGStreamer.cpp
         platform/graphics/gstreamer/GRefPtrGStreamer.cpp
         platform/graphics/gstreamer/GStreamerUtilities.cpp
+        platform/graphics/gstreamer/GstAllocatorFastMalloc.cpp
         platform/graphics/gstreamer/InbandTextTrackPrivateGStreamer.cpp
         platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
         platform/graphics/gstreamer/MediaPlayerPrivateGStreamerBase.cpp
+        platform/graphics/gstreamer/MediaSampleGStreamer.cpp
         platform/graphics/gstreamer/TextCombinerGStreamer.cpp
         platform/graphics/gstreamer/TextSinkGStreamer.cpp
         platform/graphics/gstreamer/TrackPrivateBaseGStreamer.cpp
@@ -42,12 +21,12 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/VideoTrackPrivateGStreamer.cpp
         platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp
 
+        platform/graphics/gstreamer/eme/GStreamerEMEUtilities.cpp
         platform/graphics/gstreamer/eme/WebKitClearKeyDecryptorGStreamer.cpp
         platform/graphics/gstreamer/eme/WebKitCommonEncryptionDecryptorGStreamer.cpp
 
         platform/graphics/gstreamer/mse/AppendPipeline.cpp
         platform/graphics/gstreamer/mse/GStreamerMediaDescription.cpp
-        platform/graphics/gstreamer/mse/GStreamerMediaSample.cpp
         platform/graphics/gstreamer/mse/MediaPlayerPrivateGStreamerMSE.cpp
         platform/graphics/gstreamer/mse/MediaSourceClientGStreamerMSE.cpp
         platform/graphics/gstreamer/mse/MediaSourceGStreamer.cpp

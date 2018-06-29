@@ -66,7 +66,7 @@
     [MayThrowException] WebKitCSSMatrix inverse();
     
     // Return this matrix translated by the passed values.
-    // Passing a NaN will use a value of 0. This allows the 3D form to used for 2D operations    
+    // Passing a NaN will use a value of 0. This allows the 3D form to used for 2D operations
     WebKitCSSMatrix translate(optional unrestricted double x = NaN, optional unrestricted double y = NaN, optional unrestricted double z = NaN);
     
     // Returns this matrix scaled by the passed values.

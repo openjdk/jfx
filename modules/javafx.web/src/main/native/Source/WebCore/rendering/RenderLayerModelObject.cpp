@@ -30,8 +30,11 @@
 #include "RenderView.h"
 #include "Settings.h"
 #include "StyleScrollSnapPoints.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderLayerModelObject);
 
 bool RenderLayerModelObject::s_wasFloating = false;
 bool RenderLayerModelObject::s_hadLayer = false;
@@ -69,18 +72,19 @@ void RenderLayerModelObject::willBeDestroyed()
             view().frameView().removeViewportConstrainedObject(this);
     }
 
+    if (hasLayer()) {
+        setHasLayer(false);
+        destroyLayer();
+    }
+
     RenderElement::willBeDestroyed();
 
     clearRepaintLayoutRects();
-
-    // Our layer should have been destroyed and cleared by now
-    ASSERT(!hasLayer());
-    ASSERT(!m_layer);
 }
 
 void RenderLayerModelObject::destroyLayer()
 {
-    ASSERT(!hasLayer()); // Callers should have already called setHasLayer(false)
+    ASSERT(!hasLayer());
     ASSERT(m_layer);
     if (m_layer->isSelfPaintingLayer())
         clearRepaintLayoutRects();
@@ -234,7 +238,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
 bool RenderLayerModelObject::shouldPlaceBlockDirectionScrollbarOnLeft() const
 {
 // RTL Scrollbars require some system support, and this system support does not exist on certain versions of OS X. iOS uses a separate mechanism.
-#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
+#if PLATFORM(IOS)
     return false;
 #else
     switch (settings().userInterfaceDirectionPolicy()) {

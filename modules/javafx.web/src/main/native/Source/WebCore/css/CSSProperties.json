@@ -89,7 +89,7 @@
         "StyleResolver::applyPropertyToRegularStyle() returns true.",
         "",
         "* no-default-color:",
-        "Should only with used with \"VisitedLinkColorSupport\". It indicates that for",
+        "Should only be used with \"VisitedLinkColorSupport\". It indicates that when",
         "setting the inherited value, it will not fallback to using the parent's",
         "\"color\" property if the inherited color is invalid.",
         "",
@@ -170,6 +170,17 @@
         "to true is chosen for code generation."
     ],
     "properties": {
+        "caret-color" : {
+            "inherited": true,
+            "codegen-properties": {
+                "initial": "invalidColor",
+                "visited-link-color-support": true
+            },
+            "specification": {
+                "category": "css-ui",
+                "url": "https://drafts.csswg.org/css-ui-3/#propdef-caret-color"
+            }
+        },
         "color": {
             "inherited": true,
             "codegen-properties": {
@@ -396,8 +407,8 @@
                 "enable-if": "ENABLE_VARIATION_FONTS"
             },
             "specification": {
-                "category": "css-fonts",
-                "url": "https://drafts.csswg.org/css-fonts-4/#low-level-font-variation-settings-control-the-font-variation-settings-property"
+                "category": "css-fonts-4",
+                "url": "https://drafts.csswg.org/css-fonts-4/#font-variation-settings-def"
             }
         },
         "-webkit-font-kerning": {
@@ -556,8 +567,8 @@
                 "enable-if": "ENABLE_VARIATION_FONTS"
             },
             "specification": {
-                "category": "css-fonts",
-                "url": "https://drafts.csswg.org/css-fonts-4/#optical-sizing-control-the-font-optical-sizing-property"
+                "category": "css-fonts-4",
+                "url": "https://drafts.csswg.org/css-fonts-4/#font-optical-sizing-def"
             }
         },
         "font": {
@@ -1628,10 +1639,8 @@
                 "verso",
                 "column",
                 "page",
-                "region",
                 "avoid-column",
-                "avoid-page",
-                "avoid-region"
+                "avoid-page"
             ],
             "codegen-properties": {
                 "initial": "initialBreakBetween"
@@ -1651,10 +1660,8 @@
                 "verso",
                 "column",
                 "page",
-                "region",
                 "avoid-column",
-                "avoid-page",
-                "avoid-region"
+                "avoid-page"
             ],
             "codegen-properties": {
                 "initial": "initialBreakBetween"
@@ -1669,8 +1676,7 @@
                 "auto",
                 "avoid",
                 "avoid-column",
-                "avoid-page",
-                "avoid-region"
+                "avoid-page"
             ],
             "codegen-properties": {
                 "initial": "initialBreakInside"
@@ -3079,19 +3085,14 @@
                 "obsolete-url": "https://www.w3.org/TR/SVG11/painting.html#StrokeWidthProperty"
             }
         },
-        "speak": {
+        "speak-as": {
             "inherited": true,
-            "values": [
-                "none",
-                "normal",
-                "spell-out",
-                "digits",
-                "literal-punctuation",
-                "no-punctuation"
-            ],
+            "codegen-properties": {
+                "converter": "SpeakAs"
+            },
             "specification": {
                 "category": "css-speech",
-                "url": "https://www.w3.org/TR/css3-speech/#speak"
+                "url": "https://www.w3.org/TR/css3-speech/#speak-as"
             }
         },
         "table-layout": {
@@ -3539,6 +3540,22 @@
                 "category": "css-fonts",
                 "url": "https://www.w3.org/TR/css-fonts-3/#descdef-unicode-range"
             }
+        },
+        "font-display": {
+            "codegen-properties": {
+                "skip-builder": true
+            },
+            "specification": {
+                "category": "css-fonts-4",
+                "url": "https://drafts.csswg.org/css-fonts-4/#font-display-desc"
+            },
+            "values": [
+                "auto",
+                "block",
+                "swap",
+                "fallback",
+                "optional"
+            ]
         },
         "vector-effect": {
             "values": [
@@ -4287,13 +4304,41 @@
         "column-gap": {
             "codegen-properties": {
                 "aliases": [
+                    "grid-column-gap",
                     "-webkit-column-gap"
                 ],
-                "custom": "All"
+                "converter": "GapLength"
             },
             "specification":  {
-                "category": "css-multicol",
-                "url": ""
+                "category": "css-align",
+                "url": "https://drafts.csswg.org/css-align/#column-row-gap"
+            }
+        },
+        "row-gap": {
+            "codegen-properties": {
+                "aliases": [
+                    "grid-row-gap"
+                ],
+                "converter": "GapLength"
+            },
+            "specification": {
+                "category": "css-align",
+                "url": "https://drafts.csswg.org/css-align/#column-row-gap"
+            }
+        },
+        "gap": {
+            "codegen-properties": {
+                "aliases": [
+                    "grid-gap"
+                ],
+                "longhands": [
+                    "row-gap",
+                    "column-gap"
+                ]
+            },
+            "specification": {
+                "category": "css-align",
+                "url": "https://drafts.csswg.org/css-align/#gap-shorthand"
             }
         },
         "-webkit-column-progression": {
@@ -4693,7 +4738,6 @@
                 "aliases": [
                     "-webkit-justify-items"
                 ],
-                "initial": "initialSelfAlignment",
                 "converter": "SelfOrDefaultAlignmentData"
             },
             "specification": {
@@ -4795,16 +4839,6 @@
                 "url": "https://www.w3.org/TR/css-grid-1/#propdef-grid-column-end"
             }
         },
-        "grid-column-gap": {
-            "codegen-properties": {
-                "initial": "initialZeroLength",
-                "converter": "Length"
-            },
-            "specification": {
-                "category": "css-grid",
-                "url": "https://www.w3.org/TR/css-grid-1/#propdef-grid-column-gap"
-            }
-        },
         "grid-column-start": {
             "codegen-properties": {
                 "name-for-methods": "GridItemColumnStart",
@@ -4856,16 +4890,6 @@
                 "url": "https://www.w3.org/TR/css-grid-1/#propdef-grid-row-end"
             }
         },
-        "grid-row-gap": {
-            "codegen-properties": {
-                "initial": "initialZeroLength",
-                "converter": "Length"
-            },
-            "specification": {
-                "category": "css-grid",
-                "url": "https://www.w3.org/TR/css-grid-1/#propdef-grid-row-gap"
-            }
-        },
         "grid-row-start": {
             "codegen-properties": {
                 "name-for-methods": "GridItemRowStart",
@@ -4886,18 +4910,6 @@
             "specification": {
                 "category": "css-grid",
                 "url": "https://www.w3.org/TR/css-grid-1/#propdef-grid-column"
-            }
-        },
-        "grid-gap": {
-            "codegen-properties": {
-                "longhands": [
-                    "grid-row-gap",
-                    "grid-column-gap"
-                ]
-            },
-            "specification": {
-                "category": "css-grid",
-                "url": "https://www.w3.org/TR/css-grid-1/#propdef-grid-gap"
             }
         },
         "grid-row": {
@@ -5065,6 +5077,12 @@
         },
         "-webkit-line-clamp": {
             "status": "non-standard"
+        },
+        "-webkit-lines-clamp": {
+            "status": "non-standard",
+            "codegen-properties": {
+                "custom": "Value"
+            }
         },
         "-webkit-line-grid": {
             "inherited": true,
@@ -6068,95 +6086,6 @@
                 "url": "https://www.w3.org/TR/css-ui-4/#propdef-user-select"
             }
         },
-        "-webkit-flow-into": {
-            "codegen-properties": {
-                "name-for-methods": "FlowThread",
-                "converter": "StringOrNone",
-                "enable-if": "ENABLE_CSS_REGIONS"
-            },
-            "specification": {
-                "category": "css-regions",
-                "url": "https://www.w3.org/TR/css-regions-1/#propdef-flow-into"
-            }
-        },
-        "-webkit-flow-from": {
-            "codegen-properties": {
-                "name-for-methods": "RegionThread",
-                "converter": "StringOrNone",
-                "enable-if": "ENABLE_CSS_REGIONS"
-            },
-            "specification": {
-                "category": "css-regions",
-                "url": "https://www.w3.org/TR/css-regions-1/#propdef-flow-from"
-            }
-        },
-        "-webkit-region-fragment": {
-            "values": [
-                "auto",
-                "break"
-            ],
-            "codegen-properties": {
-                "enable-if": "ENABLE_CSS_REGIONS"
-            },
-            "specification": {
-                "category": "css-regions",
-                "url": "https://www.w3.org/TR/css-regions-1/#propdef-region-fragment"
-            }
-        },
-        "-webkit-region-break-after": {
-            "values": [
-                "auto",
-                "always",
-                "avoid",
-                "left",
-                "right"
-            ],
-            "codegen-properties": {
-                "initial": "initialBreakBetween",
-                "name-for-methods": "BreakAfter",
-                "converter": "RegionBreakBetween",
-                "enable-if": "ENABLE_CSS_REGIONS"
-            },
-            "specification": {
-                "category": "css-regions",
-                "url": "https://www.w3.org/TR/css-regions-1/#propdef-break-after"
-            }
-        },
-        "-webkit-region-break-before": {
-            "values": [
-                "auto",
-                "always",
-                "avoid",
-                "left",
-                "right"
-            ],
-            "codegen-properties": {
-                "initial": "initialBreakBetween",
-                "name-for-methods": "BreakBefore",
-                "converter": "RegionBreakBetween",
-                "enable-if": "ENABLE_CSS_REGIONS"
-            },
-            "specification": {
-                "category": "css-regions",
-                "url": "https://www.w3.org/TR/css-regions-1/#propdef-break-before"
-            }
-        },
-        "-webkit-region-break-inside": {
-            "values": [
-                "auto",
-                "avoid"
-            ],
-            "codegen-properties": {
-                "initial": "initialBreakInside",
-                "name-for-methods": "BreakInside",
-                "converter": "RegionBreakInside",
-                "enable-if": "ENABLE_CSS_REGIONS"
-            },
-            "specification": {
-                "category": "css-regions",
-                "url": "https://www.w3.org/TR/css-regions-1/#propdef-break-inside"
-            }
-        },
         "scroll-padding": {
             "codegen-properties": {
                 "enable-if": "ENABLE_CSS_SCROLL_SNAP",
@@ -6739,6 +6668,11 @@
             "longname": "CSS Fonts Module",
             "url": "https://www.w3.org/TR/css-fonts-3/"
         },
+        "css-fonts-4": {
+            "shortname": "CSS Fonts Level 4",
+            "longname": "CSS Fonts Module Level 4",
+            "url": "https://drafts.csswg.org/css-fonts-4"
+        },
         "css-grid": {
             "shortname": "CSS Grid Layout",
             "longname": "CSS Grid Layout Module",
@@ -6789,12 +6723,6 @@
             "shortname": "CSS Paged Media",
             "longname": "CSS Paged Media Module",
             "url": "https://www.w3.org/TR/css3-page/"
-        },
-        "css-regions": {
-            "shortname": "CSS Regions",
-            "longname": "CSS Regions Module",
-            "url": "https://www.w3.org/TR/css-regions-1/",
-            "status": "experimental"
         },
         "css-round-display": {
             "shortname": "CSS Round Display",

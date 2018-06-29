@@ -34,10 +34,10 @@
 #if ENABLE(STREAMS_API)
 
 #include "WebCoreJSClientData.h"
-#include <heap/HeapInlines.h>
-#include <runtime/CatchScope.h>
-#include <runtime/IdentifierInlines.h>
-#include <runtime/JSObjectInlines.h>
+#include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/IdentifierInlines.h>
+#include <JavaScriptCore/JSObjectInlines.h>
 
 namespace WebCore {
 
@@ -65,31 +65,9 @@ JSC::JSValue ReadableStreamDefaultController::invoke(JSC::ExecState& state, JSC:
 
     JSC::MarkedArgumentBuffer arguments;
     arguments.append(parameter);
+    ASSERT(!arguments.hasOverflowed());
 
     return callFunction(state, function, &object, arguments);
-}
-
-bool ReadableStreamDefaultController::isControlledReadableStreamLocked() const
-{
-    auto& globalObject = this->globalObject();
-    JSC::VM& vm = globalObject.vm();
-    JSC::JSLockHolder lock(vm);
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-    auto& state = globalExec();
-
-    auto& clientData = *static_cast<JSVMClientData*>(vm.clientData);
-    auto readableStream = m_jsController->get(&state, clientData.builtinNames().controlledReadableStreamPrivateName());
-    scope.assertNoException();
-
-    auto* isLocked = globalObject.builtinInternalFunctions().readableStreamInternals().m_isReadableStreamLockedFunction.get();
-    ASSERT(isLocked);
-
-    JSC::MarkedArgumentBuffer arguments;
-    arguments.append(readableStream);
-    auto result = callFunction(state, isLocked, JSC::jsUndefined(), arguments);
-    scope.assertNoException();
-
-    return result.isTrue();
 }
 
 } // namespace WebCore

@@ -30,7 +30,7 @@
 
 #include "Blob.h"
 #include "EventNames.h"
-#include <runtime/JSCInlines.h>
+#include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
 
@@ -131,13 +131,11 @@ Ref<MessageEvent> MessageEvent::create(ExecState& state, const AtomicString& typ
     return adoptRef(*new MessageEvent(state, type, WTFMove(initializer), isTrusted));
 }
 
-MessageEvent::~MessageEvent()
-{
-}
+MessageEvent::~MessageEvent() = default;
 
 void MessageEvent::initMessageEvent(ExecState& state, const AtomicString& type, bool canBubble, bool cancelable, JSValue data, const String& origin, const String& lastEventId, std::optional<MessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
 {
-    if (dispatched())
+    if (isBeingDispatched())
         return;
 
     initEvent(type, canBubble, cancelable);
@@ -146,21 +144,13 @@ void MessageEvent::initMessageEvent(ExecState& state, const AtomicString& type, 
     m_dataAsScriptValue = Deprecated::ScriptValue(state.vm(), data);
     m_dataAsSerializedScriptValue = nullptr;
     m_triedToSerialize = false;
+    m_dataAsString = { };
+    m_dataAsBlob = nullptr;
+    m_dataAsArrayBuffer = nullptr;
     m_origin = origin;
     m_lastEventId = lastEventId;
     m_source = WTFMove(source);
     m_ports = WTFMove(ports);
-}
-
-EventTarget* MessageEvent::source() const
-{
-    if (!m_source)
-        return nullptr;
-
-    return WTF::switchOn(m_source.value(),
-        [] (const RefPtr<DOMWindow>& window) -> EventTarget* { return const_cast<DOMWindow*>(window.get()); },
-        [] (const RefPtr<MessagePort>& messagePort) -> EventTarget* { return const_cast<MessagePort*>(messagePort.get()); }
-    );
 }
 
 RefPtr<SerializedScriptValue> MessageEvent::trySerializeData(ExecState* exec)

@@ -260,6 +260,7 @@ private:
         OP_GROUP1A_Ev                   = 0x8F,
         OP_NOP                          = 0x90,
         OP_XCHG_EAX                     = 0x90,
+        OP_PAUSE                        = 0x90,
         OP_CDQ                          = 0x99,
         OP_MOV_EAXOv                    = 0xA1,
         OP_MOV_OvEAX                    = 0xA3,
@@ -300,6 +301,7 @@ private:
         OP2_CVTTSD2SI_GdWsd = 0x2C,
         OP2_CVTTSS2SI_GdWsd = 0x2C,
         OP2_UCOMISD_VsdWsd  = 0x2E,
+        OP2_RDTSC           = 0x31,
         OP2_3BYTE_ESCAPE_3A = 0x3A,
         OP2_CMOVCC          = 0x40,
         OP2_ADDSD_VsdWsd    = 0x58,
@@ -318,6 +320,7 @@ private:
         OP2_MOVD_EdVd       = 0x7E,
         OP2_JCC_rel32       = 0x80,
         OP_SETCC            = 0x90,
+        OP2_CPUID           = 0xA2,
         OP2_3BYTE_ESCAPE_AE = 0xAE,
         OP2_IMUL_GvEv       = 0xAF,
         OP2_CMPXCHGb        = 0xB0,
@@ -341,7 +344,9 @@ private:
     typedef enum {
         OP3_ROUNDSS_VssWssIb = 0x0A,
         OP3_ROUNDSD_VsdWsdIb = 0x0B,
+        OP3_LFENCE           = 0xE8,
         OP3_MFENCE           = 0xF0,
+        OP3_SFENCE           = 0xF8,
     } ThreeByteOpcodeID;
 
     struct VexPrefix {
@@ -3539,9 +3544,35 @@ public:
     }
 #endif // CPU(X86_64)
 
+    void lfence()
+    {
+        m_formatter.threeByteOp(OP2_3BYTE_ESCAPE_AE, OP3_LFENCE);
+    }
+
     void mfence()
     {
         m_formatter.threeByteOp(OP2_3BYTE_ESCAPE_AE, OP3_MFENCE);
+    }
+
+    void sfence()
+    {
+        m_formatter.threeByteOp(OP2_3BYTE_ESCAPE_AE, OP3_SFENCE);
+    }
+
+    void rdtsc()
+    {
+        m_formatter.twoByteOp(OP2_RDTSC);
+    }
+
+    void pause()
+    {
+        m_formatter.prefix(PRE_SSE_F3);
+        m_formatter.oneByteOp(OP_PAUSE);
+    }
+
+    void cpuid()
+    {
+        m_formatter.twoByteOp(OP2_CPUID);
     }
 
     // Assembler admin methods:

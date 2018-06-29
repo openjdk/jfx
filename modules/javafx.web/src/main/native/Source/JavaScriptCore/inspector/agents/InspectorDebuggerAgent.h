@@ -29,13 +29,13 @@
 
 #pragma once
 
+#include "Debugger.h"
+#include "InspectorAgentBase.h"
 #include "InspectorBackendDispatchers.h"
 #include "InspectorFrontendDispatchers.h"
-#include "bindings/ScriptValue.h"
-#include "debugger/Debugger.h"
-#include "inspector/InspectorAgentBase.h"
-#include "inspector/ScriptBreakpoint.h"
-#include "inspector/ScriptDebugListener.h"
+#include "ScriptBreakpoint.h"
+#include "ScriptDebugListener.h"
+#include "ScriptValue.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
@@ -64,12 +64,12 @@ public:
     void disable(ErrorString&) final;
     void setAsyncStackTraceDepth(ErrorString&, int depth) final;
     void setBreakpointsActive(ErrorString&, bool active) final;
-    void setBreakpointByUrl(ErrorString&, int lineNumber, const String* const optionalURL, const String* const optionalURLRegex, const int* const optionalColumnNumber, const JSON::Object* options, Inspector::Protocol::Debugger::BreakpointId*, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Debugger::Location>>& locations) final;
+    void setBreakpointByUrl(ErrorString&, int lineNumber, const String* const optionalURL, const String* const optionalURLRegex, const int* const optionalColumnNumber, const JSON::Object* options, Inspector::Protocol::Debugger::BreakpointId*, RefPtr<JSON::ArrayOf<Inspector::Protocol::Debugger::Location>>& locations) final;
     void setBreakpoint(ErrorString&, const JSON::Object& location, const JSON::Object* options, Inspector::Protocol::Debugger::BreakpointId*, RefPtr<Inspector::Protocol::Debugger::Location>& actualLocation) final;
     void removeBreakpoint(ErrorString&, const String& breakpointIdentifier) final;
     void continueUntilNextRunLoop(ErrorString&) final;
     void continueToLocation(ErrorString&, const JSON::Object& location) final;
-    void searchInContent(ErrorString&, const String& scriptID, const String& query, const bool* const optionalCaseSensitive, const bool* const optionalIsRegex, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::GenericTypes::SearchMatch>>&) final;
+    void searchInContent(ErrorString&, const String& scriptID, const String& query, const bool* const optionalCaseSensitive, const bool* const optionalIsRegex, RefPtr<JSON::ArrayOf<Inspector::Protocol::GenericTypes::SearchMatch>>&) final;
     void getScriptSource(ErrorString&, const String& scriptID, String* scriptSource) final;
     void getFunctionDetails(ErrorString&, const String& functionId, RefPtr<Inspector::Protocol::Debugger::FunctionDetails>&) final;
     void pause(ErrorString&) final;
@@ -92,6 +92,7 @@ public:
     enum class AsyncCallType {
         DOMTimer,
         EventListener,
+        PostMessage,
         RequestAnimationFrame,
     };
 
@@ -137,7 +138,7 @@ protected:
     virtual void didClearAsyncStackTraceData() { }
 
 private:
-    Ref<Inspector::Protocol::Array<Inspector::Protocol::Debugger::CallFrame>> currentCallFrames(const InjectedScript&);
+    Ref<JSON::ArrayOf<Inspector::Protocol::Debugger::CallFrame>> currentCallFrames(const InjectedScript&);
 
     void didParseSource(JSC::SourceID, const Script&) final;
     void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage) final;

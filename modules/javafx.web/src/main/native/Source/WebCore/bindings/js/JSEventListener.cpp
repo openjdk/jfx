@@ -33,15 +33,15 @@
 #include "JSMainThreadExecStateInstrumentation.h"
 #include "ScriptController.h"
 #include "WorkerGlobalScope.h"
-#include <runtime/ExceptionHelpers.h>
-#include <runtime/JSLock.h>
-#include <runtime/VMEntryScope.h>
-#include <runtime/Watchdog.h>
+#include <JavaScriptCore/ExceptionHelpers.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/VMEntryScope.h>
+#include <JavaScriptCore/Watchdog.h>
 #include <wtf/Ref.h>
 
-using namespace JSC;
 
 namespace WebCore {
+using namespace JSC;
 
 JSEventListener::JSEventListener(JSObject* function, JSObject* wrapper, bool isAttribute, DOMWrapperWorld& isolatedWorld)
     : EventListener(JSEventListenerType)
@@ -56,9 +56,7 @@ JSEventListener::JSEventListener(JSObject* function, JSObject* wrapper, bool isA
         ASSERT(!function);
 }
 
-JSEventListener::~JSEventListener()
-{
-}
+JSEventListener::~JSEventListener() = default;
 
 JSObject* JSEventListener::initializeJSFunction(ScriptExecutionContext&) const
 {
@@ -140,6 +138,7 @@ void JSEventListener::handleEvent(ScriptExecutionContext& scriptExecutionContext
 
         MarkedArgumentBuffer args;
         args.append(toJS(exec, globalObject, &event));
+        ASSERT(!args.hasOverflowed());
 
         Event* savedEvent = globalObject->currentEvent();
         globalObject->setCurrentEvent(&event);

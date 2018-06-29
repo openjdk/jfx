@@ -102,9 +102,9 @@ struct EntryJavaLogger
 } // namespace WebCore
 
 namespace WTF {
-class AutoAttachToJavaThread {
+template<bool daemon> class AttachThreadToJavaEnv {
 public:
-    AutoAttachToJavaThread(bool daemon = false)
+    AttachThreadToJavaEnv()
     {
         m_status = jvm->GetEnv((void **)&m_env, JNI_VERSION_1_2);
         if (m_status == JNI_EDETACHED) {
@@ -116,7 +116,7 @@ public:
         }
     }
 
-    ~AutoAttachToJavaThread()
+    ~AttachThreadToJavaEnv()
     {
         if (m_status == JNI_EDETACHED) {
             jvm->DetachCurrentThread();
@@ -129,6 +129,9 @@ private:
     int m_status;
 
 };
+
+using AttachThreadAsDaemonToJavaEnv = AttachThreadToJavaEnv<true>;
+using AttachThreadAsNonDaemonToJavaEnv = AttachThreadToJavaEnv<false>;
 } // namespace
 
 //example: LOG_PERF_RECORD(env, "XXXX", "setUpIterator")

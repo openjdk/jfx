@@ -1,6 +1,6 @@
 set(ICU_STUBDATA_SOURCES
 	../../source/stubdata/stubdata.c
-	)
+)
 
 set(ICU_STUBDATA_INCLUDE_DIRECTORIES
 	  ../../source/common

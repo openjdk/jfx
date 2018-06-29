@@ -52,6 +52,6 @@ private:
     JGObject m_data;
 };
 
-std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&);
+std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&, unsigned);
 
 } // namespace WebCore

@@ -47,10 +47,11 @@
 #include "InlineElementBox.h"
 #include "Page.h"
 #include "PaintInfo.h"
-#include "RenderFlowThread.h"
+#include "RenderFragmentedFlow.h"
 #include "RenderImageResourceStyleImage.h"
 #include "RenderView.h"
 #include "SVGImage.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
 #if PLATFORM(IOS)
@@ -64,6 +65,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderImage);
 
 #if PLATFORM(IOS)
 // FIXME: This doesn't behave correctly for floating or positioned images, but WebCore doesn't handle those well
@@ -696,6 +699,12 @@ bool RenderImage::canHaveChildren() const
 
 void RenderImage::layout()
 {
+    // Recomputing overflow is required only when child content is present.
+    if (needsSimplifiedNormalFlowLayoutOnly() && !m_hasShadowControls) {
+        clearNeedsLayout();
+        return;
+    }
+
     StackStats::LayoutCheckPoint layoutCheckPoint;
 
     LayoutSize oldSize = contentBoxRect().size();
@@ -719,9 +728,9 @@ void RenderImage::layoutShadowControls(const LayoutSize& oldSize)
     bool controlsNeedLayout = controlsRenderer->needsLayout();
     // If the region chain has changed we also need to relayout the controls to update the region box info.
     // FIXME: We can do better once we compute region box info for RenderReplaced, not only for RenderBlock.
-    const RenderFlowThread* flowThread = flowThreadContainingBlock();
-    if (flowThread && !controlsNeedLayout) {
-        if (flowThread->pageLogicalSizeChanged())
+    const RenderFragmentedFlow* fragmentedFlow = enclosingFragmentedFlow();
+    if (fragmentedFlow && !controlsNeedLayout) {
+        if (fragmentedFlow->pageLogicalSizeChanged())
             controlsNeedLayout = true;
     }
 
@@ -732,7 +741,7 @@ void RenderImage::layoutShadowControls(const LayoutSize& oldSize)
     // When calling layout() on a child node, a parent must either push a LayoutStateMaintainter, or
     // instantiate LayoutStateDisabler. Since using a LayoutStateMaintainer is slightly more efficient,
     // and this method might be called many times per second during video playback, use a LayoutStateMaintainer:
-    LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
 
     if (shadowControlsNeedCustomLayoutMetrics()) {
         controlsRenderer->setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
@@ -743,8 +752,6 @@ void RenderImage::layoutShadowControls(const LayoutSize& oldSize)
     controlsRenderer->setNeedsLayout(MarkOnlyThis);
     controlsRenderer->layout();
     clearChildNeedsLayout();
-
-    statePusher.pop();
 }
 
 void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, double& intrinsicRatio) const

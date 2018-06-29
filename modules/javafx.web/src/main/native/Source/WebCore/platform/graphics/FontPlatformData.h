@@ -41,6 +41,7 @@
 #if USE(FREETYPE)
 #include "FcUniquePtr.h"
 #include "HarfBuzzFace.h"
+#include <memory>
 #endif
 
 #if PLATFORM(JAVA)
@@ -90,7 +91,7 @@ public:
     static FontPlatformData cloneWithSyntheticOblique(const FontPlatformData&, bool);
     static FontPlatformData cloneWithSize(const FontPlatformData&, float);
 
-#if USE(CG) && (PLATFORM(WIN) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200))
+#if USE(CG) && PLATFORM(WIN)
     FontPlatformData(CGFontRef, float size, bool syntheticBold, bool syntheticOblique, FontOrientation, FontWidthVariant, TextRenderingMode);
 #endif
 
@@ -148,7 +149,7 @@ public:
 
     bool hasVariations() const { return m_hasVariations; }
 
-#if USE(CG) && (PLATFORM(WIN) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200))
+#if USE(CG) && PLATFORM(WIN)
     CGFontRef cgFont() const { return m_cgFont.get(); }
 #endif
 
@@ -172,9 +173,8 @@ public:
 #endif
 
 #if USE(FREETYPE)
-    HarfBuzzFace* harfBuzzFace() const;
+    HarfBuzzFace& harfBuzzFace() const;
     bool hasCompatibleCharmap() const;
-    FcFontSet* fallbacks() const;
 #endif
 
 #if PLATFORM(JAVA)
@@ -241,7 +241,7 @@ private:
     RefPtr<SharedGDIObject<HFONT>> m_font;
 #endif
 
-#if USE(CG) && (PLATFORM(WIN) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200))
+#if USE(CG) && PLATFORM(WIN)
     RetainPtr<CGFontRef> m_cgFont;
 #endif
 
@@ -256,8 +256,7 @@ private:
 
 #if USE(FREETYPE)
     RefPtr<FcPattern> m_pattern;
-    mutable FcUniquePtr<FcFontSet> m_fallbacks;
-    mutable RefPtr<HarfBuzzFace> m_harfBuzzFace;
+    mutable std::unique_ptr<HarfBuzzFace> m_harfBuzzFace;
 #endif
 
 #if PLATFORM(JAVA)
@@ -293,7 +292,7 @@ private:
 #endif
 };
 
-#if USE(APPKIT)
+#if USE(APPKIT) && defined(__OBJC__)
 
 // NSFonts and CTFontRefs are toll-free-bridged.
 inline CTFontRef toCTFont(NSFont *font)

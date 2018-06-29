@@ -69,7 +69,7 @@ void TextTrackCueGenericBoxElement::applyCSSProperties(const IntSize& videoSize)
     setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
     setInlineStyleProperty(CSSPropertyUnicodeBidi, CSSValuePlaintext);
 
-    TextTrackCueGeneric* cue = static_cast<TextTrackCueGeneric*>(getCue());
+    RefPtr<TextTrackCueGeneric> cue = static_cast<TextTrackCueGeneric*>(getCue());
     Ref<HTMLSpanElement> cueElement = cue->element();
 
     CSSValueID alignment = cue->getCSSAlignment();
@@ -189,8 +189,6 @@ void TextTrackCueGeneric::setFontSize(int fontSize, const IntSize& videoSize, bo
     if (fontSizeMultiplier())
         size *= fontSizeMultiplier() / 100;
     displayTreeInternal().setInlineStyleProperty(CSSPropertyFontSize, lround(size), CSSPrimitiveValue::CSS_PX);
-
-    LOG(Media, "TextTrackCueGeneric::setFontSize - setting cue font size to %li", lround(size));
 }
 
 bool TextTrackCueGeneric::cueContentsMatch(const TextTrackCue& cue) const
@@ -266,6 +264,28 @@ bool TextTrackCueGeneric::isPositionedAbove(const TextTrackCue* that) const
         return startTime() > that->startTime();
 
     return VTTCue::isOrderedBefore(that);
+}
+
+String TextTrackCueGeneric::toJSONString() const
+{
+    auto object = JSON::Object::create();
+
+    VTTCue::toJSON(object.get());
+
+    if (m_foregroundColor.isValid())
+        object->setString(ASCIILiteral("foregroundColor"), m_foregroundColor.serialized());
+    if (m_backgroundColor.isValid())
+        object->setString(ASCIILiteral("backgroundColor"), m_backgroundColor.serialized());
+    if (m_highlightColor.isValid())
+        object->setString(ASCIILiteral("highlightColor"), m_highlightColor.serialized());
+    if (m_baseFontSizeRelativeToVideoHeight)
+        object->setDouble(ASCIILiteral("relativeFontSize"), m_baseFontSizeRelativeToVideoHeight);
+    if (m_fontSizeMultiplier)
+        object->setDouble(ASCIILiteral("fontSizeMultiplier"), m_fontSizeMultiplier);
+    if (!m_fontName.isEmpty())
+        object->setString(ASCIILiteral("font"), m_fontName);
+
+    return object->toJSONString();
 }
 
 } // namespace WebCore

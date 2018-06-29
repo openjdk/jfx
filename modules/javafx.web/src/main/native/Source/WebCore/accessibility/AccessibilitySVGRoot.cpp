@@ -38,9 +38,7 @@ AccessibilitySVGRoot::AccessibilitySVGRoot(RenderObject* renderer)
 {
 }
 
-AccessibilitySVGRoot::~AccessibilitySVGRoot()
-{
-}
+AccessibilitySVGRoot::~AccessibilitySVGRoot() = default;
 
 Ref<AccessibilitySVGRoot> AccessibilitySVGRoot::create(RenderObject* renderer)
 {
@@ -65,5 +63,13 @@ AccessibilityObject* AccessibilitySVGRoot::parentObject() const
     return AccessibilitySVGElement::parentObject();
 }
 
+AccessibilityRole AccessibilitySVGRoot::roleValue() const
+{
+    AccessibilityRole ariaRole = ariaRoleAttribute();
+    if (ariaRole != AccessibilityRole::Unknown)
+        return ariaRole;
+
+    return AccessibilityRole::Group;
+}
 
 } // namespace WebCore

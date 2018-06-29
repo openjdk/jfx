@@ -43,7 +43,6 @@
 #include "HTMLUListElement.h"
 #include "HTMLVideoElement.h"
 #include "ImageBuffer.h"
-#include "Language.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MediaControls.h"
@@ -60,6 +59,7 @@
 #include "ShadowRoot.h"
 #include "TextTrackList.h"
 #include "VTTRegionList.h"
+#include <wtf/Language.h>
 
 namespace WebCore {
 
@@ -96,7 +96,7 @@ void MediaControlPanelElement::startDrag(const LayoutPoint& eventLocation)
     if (!renderer || !renderer->isBox())
         return;
 
-    Frame* frame = document().frame();
+    RefPtr<Frame> frame = document().frame();
     if (!frame)
         return;
 
@@ -125,7 +125,7 @@ void MediaControlPanelElement::endDrag()
 
     m_isBeingDragged = false;
 
-    Frame* frame = document().frame();
+    RefPtr<Frame> frame = document().frame();
     if (!frame)
         return;
 
@@ -337,16 +337,15 @@ RenderPtr<RenderElement> MediaControlVolumeSliderContainerElement::createElement
 
 void MediaControlVolumeSliderContainerElement::defaultEventHandler(Event& event)
 {
+    // Poor man's mouseleave event detection.
+
     if (!is<MouseEvent>(event) || event.type() != eventNames().mouseoutEvent)
         return;
 
-    // Poor man's mouseleave event detection.
-    MouseEvent& mouseEvent = downcast<MouseEvent>(event);
-    EventTarget* relatedTarget = mouseEvent.relatedTarget();
-    if (!relatedTarget || !relatedTarget->toNode())
+    if (!is<Node>(downcast<MouseEvent>(event).relatedTarget()))
         return;
 
-    if (this->containsIncludingShadowDOM(relatedTarget->toNode()))
+    if (containsIncludingShadowDOM(&downcast<Node>(*downcast<MouseEvent>(event).relatedTarget())))
         return;
 
     hide();
@@ -688,8 +687,7 @@ void MediaControlClosedCaptionsTrackListElement::defaultEventHandler(Event& even
 {
 #if ENABLE(VIDEO_TRACK)
     if (event.type() == eventNames().clickEvent) {
-        Node* target = event.target()->toNode();
-        if (!is<Element>(target))
+        if (!is<Element>(event.target()))
             return;
 
         // When we created the elements in the track list, we gave them a custom
@@ -697,16 +695,13 @@ void MediaControlClosedCaptionsTrackListElement::defaultEventHandler(Event& even
         // Check if the event target has such a custom element and, if so,
         // tell the HTMLMediaElement to enable that track.
 
-        RefPtr<TextTrack> textTrack;
-        MenuItemToTrackMap::iterator iter = m_menuToTrackMap.find(downcast<Element>(target));
-        if (iter != m_menuToTrackMap.end())
-            textTrack = iter->value;
+        auto textTrack = makeRefPtr(m_menuToTrackMap.get(&downcast<Element>(*event.target())));
         m_menuToTrackMap.clear();
         m_controls->toggleClosedCaptionTrackList();
         if (!textTrack)
             return;
 
-        HTMLMediaElement* mediaElement = parentMediaElement(this);
+        auto mediaElement = parentMediaElement(this);
         if (!mediaElement)
             return;
 
@@ -733,7 +728,7 @@ void MediaControlClosedCaptionsTrackListElement::updateDisplay()
         return;
     CaptionUserPreferences::CaptionDisplayMode displayMode = document().page()->group().captionPreferences().captionDisplayMode();
 
-    HTMLMediaElement* mediaElement = parentMediaElement(this);
+    auto mediaElement = parentMediaElement(this);
     if (!mediaElement)
         return;
 
@@ -794,7 +789,7 @@ void MediaControlClosedCaptionsTrackListElement::rebuildTrackListMenu()
     if (!mediaController()->hasClosedCaptions())
         return;
 
-    HTMLMediaElement* mediaElement = parentMediaElement(this);
+    auto mediaElement = parentMediaElement(this);
     if (!mediaElement)
         return;
 
@@ -885,12 +880,12 @@ bool MediaControlTimelineElement::willRespondToMouseClickEvents()
 
 void MediaControlTimelineElement::setPosition(double currentTime)
 {
-    setValue(String::number(currentTime));
+    setValue(String::numberToStringECMAScript(currentTime));
 }
 
 void MediaControlTimelineElement::setDuration(double duration)
 {
-    setAttribute(maxAttr, AtomicString::number(std::isfinite(duration) ? duration : 0));
+    setAttribute(maxAttr, AtomicString::number(duration));
 }
 
 // ----------------------------
@@ -959,7 +954,7 @@ void MediaControlFullscreenButtonElement::defaultEventHandler(Event& event)
             if (document().webkitIsFullScreen() && document().webkitCurrentFullScreenElement() == parentMediaElement(this))
                 document().webkitCancelFullScreen();
             else
-                document().requestFullScreenForElement(parentMediaElement(this), Document::ExemptIFrameAllowFullScreenRequirement);
+                document().requestFullScreenForElement(parentMediaElement(this).get(), Document::ExemptIFrameAllowFullScreenRequirement);
         } else
 #endif
             mediaController()->enterFullscreen();
@@ -1097,7 +1092,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
     if (!mediaController()->closedCaptionsVisible())
         removeChildren();
 
-    HTMLMediaElement* mediaElement = parentMediaElement(this);
+    auto mediaElement = parentMediaElement(this);
     // 1. If the media element is an audio element, or is another playback
     // mechanism with no rendering area, abort these steps. There is nothing to
     // render.
@@ -1160,11 +1155,11 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         if (!mediaController()->closedCaptionsVisible())
             continue;
 
-        TextTrackCue* textTrackCue = activeCues[i].data();
+        RefPtr<TextTrackCue> textTrackCue = activeCues[i].data();
         if (!textTrackCue->isRenderable())
             continue;
 
-        VTTCue* cue = toVTTCue(textTrackCue);
+        RefPtr<VTTCue> cue = toVTTCue(textTrackCue.get());
 
         ASSERT(cue->isActive());
         if (!cue->track() || !cue->track()->isRendered() || !cue->isActive() || cue->text().isEmpty())
@@ -1176,7 +1171,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         if (cue->track()->mode() == TextTrack::Mode::Disabled)
             continue;
 
-        VTTRegion* region = cue->track()->regions()->getRegionById(cue->regionId());
+        RefPtr<VTTRegion> region = cue->track()->regions()->getRegionById(cue->regionId());
         if (!region) {
             // If cue has an empty text track cue region identifier or there is no
             // WebVTT region whose region identifier is identical to cue's text
@@ -1214,7 +1209,7 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
     if (!document().page())
         return;
 
-    HTMLMediaElement* mediaElement = parentMediaElement(this);
+    auto mediaElement = parentMediaElement(this);
     if (!mediaElement)
         return;
 
@@ -1223,11 +1218,11 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
     m_fontSize = lroundf(smallestDimension * fontScale);
 
     for (auto& activeCue : mediaElement->currentlyActiveCues()) {
-        TextTrackCue* cue = activeCue.data();
+        RefPtr<TextTrackCue> cue = activeCue.data();
         if (!cue->isRenderable())
             continue;
 
-        toVTTCue(cue)->setFontSize(m_fontSize, m_videoDisplaySize.size(), m_fontSizeIsImportant);
+        toVTTCue(cue.get())->setFontSize(m_fontSize, m_videoDisplaySize.size(), m_fontSizeIsImportant);
     }
 
 }
@@ -1237,7 +1232,7 @@ void MediaControlTextTrackContainerElement::updateTextStrokeStyle()
     if (!document().page())
         return;
 
-    HTMLMediaElement* mediaElement = parentMediaElement(this);
+    auto mediaElement = parentMediaElement(this);
     if (!mediaElement)
         return;
 
@@ -1278,7 +1273,7 @@ void MediaControlTextTrackContainerElement::updateTimerFired()
 
 void MediaControlTextTrackContainerElement::updateTextTrackRepresentation()
 {
-    HTMLMediaElement* mediaElement = parentMediaElement(this);
+    auto mediaElement = parentMediaElement(this);
     if (!mediaElement)
         return;
 
@@ -1292,6 +1287,8 @@ void MediaControlTextTrackContainerElement::updateTextTrackRepresentation()
 
     if (!m_textTrackRepresentation) {
         m_textTrackRepresentation = TextTrackRepresentation::create(*this);
+        if (document().page())
+            m_textTrackRepresentation->setContentScale(document().page()->deviceScaleFactor());
         m_updateTextTrackRepresentationStyle = true;
         mediaElement->setTextTrackRepresentation(m_textTrackRepresentation.get());
     }
@@ -1307,7 +1304,7 @@ void MediaControlTextTrackContainerElement::clearTextTrackRepresentation()
 
     m_textTrackRepresentation = nullptr;
     m_updateTextTrackRepresentationStyle = true;
-    if (HTMLMediaElement* mediaElement = parentMediaElement(this))
+    if (auto mediaElement = parentMediaElement(this))
         mediaElement->setTextTrackRepresentation(nullptr);
     updateStyleForTextTrackRepresentation();
     updateActiveCuesFontSize();
@@ -1350,7 +1347,7 @@ void MediaControlTextTrackContainerElement::exitedFullscreen()
 
 void MediaControlTextTrackContainerElement::updateSizes(bool forceUpdate)
 {
-    HTMLMediaElement* mediaElement = parentMediaElement(this);
+    auto mediaElement = parentMediaElement(this);
     if (!mediaElement)
         return;
 
@@ -1360,9 +1357,12 @@ void MediaControlTextTrackContainerElement::updateSizes(bool forceUpdate)
     mediaElement->syncTextTrackBounds();
 
     IntRect videoBox;
-    if (m_textTrackRepresentation)
+    if (m_textTrackRepresentation) {
         videoBox = m_textTrackRepresentation->bounds();
-    else {
+        float deviceScaleFactor = document().page()->deviceScaleFactor();
+        videoBox.setWidth(videoBox.width() * deviceScaleFactor);
+        videoBox.setHeight(videoBox.height() * deviceScaleFactor);
+    } else {
         if (!is<RenderVideo>(mediaElement->renderer()))
             return;
         videoBox = downcast<RenderVideo>(*mediaElement->renderer()).videoBox();
@@ -1383,7 +1383,7 @@ RefPtr<Image> MediaControlTextTrackContainerElement::createTextTrackRepresentati
     if (!hasChildNodes())
         return nullptr;
 
-    Frame* frame = document().frame();
+    RefPtr<Frame> frame = document().frame();
     if (!frame)
         return nullptr;
 

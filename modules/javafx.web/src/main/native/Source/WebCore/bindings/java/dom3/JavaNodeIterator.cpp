@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/Node.h>
@@ -42,7 +44,7 @@ extern "C" {
 
 #define IMPL (static_cast<NodeIterator*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_dispose(JNIEnv* env, jclass, jlong peer) {
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_dispose(JNIEnv*, jclass, jlong peer) {
     IMPL->deref();
 }
 
@@ -54,7 +56,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getRootImpl(JNI
     return JavaReturn<Node>(env, WTF::getPtr(IMPL->root()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getWhatToShowImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getWhatToShowImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->whatToShow();
@@ -66,7 +68,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getFilterImpl(J
     return JavaReturn<NodeFilter>(env, WTF::getPtr(IMPL->filter()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getExpandEntityReferencesImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getExpandEntityReferencesImpl(JNIEnv*, jclass, jlong)
 {
     return JNI_FALSE;
 }
@@ -77,7 +79,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getReferenceNod
     return JavaReturn<Node>(env, WTF::getPtr(IMPL->referenceNode()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getPointerBeforeReferenceNodeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getPointerBeforeReferenceNodeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->pointerBeforeReferenceNode();
@@ -108,7 +110,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_previousNodeImp
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_detachImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_detachImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->detach();

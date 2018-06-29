@@ -562,6 +562,24 @@ String AXSearchFieldCancelButtonText() {
     return String(); // UNSUPPORTED: getLocalizedProperty("AXSearchFieldCancelButtonText");
 }
 
+String AXAutoFillStrongPasswordLabel()
+{
+    // return WEB_UI_STRING("strong password auto fill", "Label for the strong password auto fill button inside a text field.");
+    return getLocalizedProperty("AXAutoFillStrongPasswordLabel");
+}
+
+String AXAutoFillStrongConfirmationPasswordLabel()
+{
+    // return WEB_UI_STRING("strong confirmation password auto fill", "Label for the strong confirmation password auto fill button inside a text field.");
+    return getLocalizedProperty("AXAutoFillStrongConfirmationPasswordLabel");
+}
+
+String autoFillStrongPasswordLabel()
+{
+    // return WEB_UI_STRING("strong password", "Label for strong password.");
+    return getLocalizedProperty("autoFillStrongPasswordLabel");
+}
+
 String validationMessageValueMissingText()
 {
     return getLocalizedProperty("validationMessageValueMissingText");

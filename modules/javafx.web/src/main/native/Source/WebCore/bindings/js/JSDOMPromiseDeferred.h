@@ -25,10 +25,11 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include "JSDOMConvert.h"
 #include "JSDOMGuardedObject.h"
-#include <runtime/CatchScope.h>
-#include <runtime/JSPromiseDeferred.h>
+#include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/JSPromiseDeferred.h>
 
 namespace WebCore {
 
@@ -211,6 +212,15 @@ public:
     {
         m_promiseDeferred->resolve<IDLType>(std::forward<typename IDLType::ParameterType>(value));
     }
+
+    void settle(ExceptionOr<typename IDLType::ParameterType>&& result)
+    {
+        if (result.hasException()) {
+            reject(result.releaseException());
+            return;
+        }
+        resolve(result.releaseReturnValue());
+    }
 };
 
 template<> class DOMPromiseDeferred<void> : public DOMPromiseDeferredBase {
@@ -223,6 +233,15 @@ public:
     void resolve()
     {
         m_promiseDeferred->resolve();
+    }
+
+    void settle(ExceptionOr<void>&& result)
+    {
+        if (result.hasException()) {
+            reject(result.releaseException());
+            return;
+        }
+        resolve();
     }
 };
 
@@ -245,7 +264,7 @@ inline JSC::JSValue callPromiseFunction(JSC::ExecState& state)
     JSC::VM& vm = state.vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    JSDOMGlobalObject& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject());
+    auto& globalObject = callerGlobalObject(state);
     JSC::JSPromiseDeferred* promiseDeferred = JSC::JSPromiseDeferred::create(&state, &globalObject);
 
     // promiseDeferred can be null when terminating a Worker abruptly.
@@ -255,7 +274,7 @@ inline JSC::JSValue callPromiseFunction(JSC::ExecState& state)
     promiseFunction(state, DeferredPromise::create(globalObject, *promiseDeferred));
 
     rejectPromiseWithExceptionIfAny(state, globalObject, *promiseDeferred);
-    ASSERT_UNUSED(scope, !scope.exception());
+    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
     return promiseDeferred->promise();
 }
 
@@ -265,7 +284,7 @@ inline JSC::JSValue callPromiseFunction(JSC::ExecState& state, PromiseFunctor fu
     JSC::VM& vm = state.vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    JSDOMGlobalObject& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject());
+    auto& globalObject = callerGlobalObject(state);
     JSC::JSPromiseDeferred* promiseDeferred = JSC::JSPromiseDeferred::create(&state, &globalObject);
 
     // promiseDeferred can be null when terminating a Worker abruptly.
@@ -275,7 +294,7 @@ inline JSC::JSValue callPromiseFunction(JSC::ExecState& state, PromiseFunctor fu
     functor(state, DeferredPromise::create(globalObject, *promiseDeferred));
 
     rejectPromiseWithExceptionIfAny(state, globalObject, *promiseDeferred);
-    ASSERT_UNUSED(scope, !scope.exception());
+    EXCEPTION_ASSERT_UNUSED(scope, !scope.exception());
     return promiseDeferred->promise();
 }
 

@@ -76,7 +76,7 @@ private:
 
 class VertexPair {
 public:
-    virtual ~VertexPair() { }
+    virtual ~VertexPair() = default;
 
     virtual const FloatPoint& vertex1() const = 0;
     virtual const FloatPoint& vertex2() const = 0;
@@ -124,7 +124,7 @@ public:
 
 private:
     // Edge vertex index1 is less than index2, except the last edge, where index2 is 0. When a polygon edge
-    // is defined by 3 or more colinear vertices, index2 can be the the index of the last colinear vertex.
+    // is defined by 3 or more colinear vertices, index2 can be the index of the last colinear vertex.
     unsigned m_vertexIndex1;
     unsigned m_vertexIndex2;
     unsigned m_edgeIndex;

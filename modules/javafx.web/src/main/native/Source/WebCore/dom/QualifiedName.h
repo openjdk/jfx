@@ -136,9 +136,6 @@ struct QualifiedNameHash {
     static const bool safeToCompareToEmptyOrDeleted = false;
 };
 
-void createQualifiedName(void* targetAddress, StringImpl* name);
-void createQualifiedName(void* targetAddress, StringImpl* name, const AtomicString& nameNamespace);
-
 inline String QualifiedName::toString() const
 {
     if (!hasPrefix())

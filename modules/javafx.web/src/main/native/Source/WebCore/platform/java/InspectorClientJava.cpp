@@ -32,6 +32,8 @@
 #include "RenderObject.h"
 #include "WebPage.h"
 
+namespace InspectorClientJavaInternal {
+
 static JGClass webPageClass;
 static jmethodID repaintAllMethod;
 static jmethodID sendInspectorMessageToFrontendMethod;
@@ -55,6 +57,7 @@ static void initRefs(JNIEnv* env)
                 "(Ljava/lang/String;)Z");
         ASSERT(sendInspectorMessageToFrontendMethod);
     }
+}
 }
 
 namespace WebCore {
@@ -83,6 +86,7 @@ void InspectorClientJava::bringFrontendToFront()
 
 void InspectorClientJava::highlight()
 {
+    using namespace InspectorClientJavaInternal;
     // InspectorController::drawHighlight() may want to draw outside any
     // node boundary so our only option here is invalidate the entire page.
     // See also WebPage_twkDrawHighlight.
@@ -101,6 +105,7 @@ void InspectorClientJava::hideHighlight()
 
 void InspectorClientJava::sendMessageToFrontend(const String& message)
 {
+    using namespace InspectorClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 

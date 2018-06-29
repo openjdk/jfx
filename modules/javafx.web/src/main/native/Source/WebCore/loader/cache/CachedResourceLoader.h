@@ -30,8 +30,10 @@
 #include "CachedResourceHandle.h"
 #include "CachedResourceRequest.h"
 #include "ContentSecurityPolicy.h"
+#include "KeepaliveRequestTracker.h"
 #include "ResourceTimingInformation.h"
 #include "Timer.h"
+#include <wtf/Expected.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
@@ -39,6 +41,9 @@
 
 namespace WebCore {
 
+#if ENABLE(APPLICATION_MANIFEST)
+class CachedApplicationManifest;
+#endif
 class CachedCSSStyleSheet;
 class CachedSVGDocument;
 class CachedFont;
@@ -53,6 +58,9 @@ class Frame;
 class ImageLoader;
 class Settings;
 class URL;
+
+template <typename T>
+using ResourceErrorOr = Expected<T, ResourceError>;
 
 // The CachedResourceLoader provides a per-context interface to the MemoryCache
 // and enforces a bunch of security checks and rules for resource revalidation.
@@ -71,25 +79,28 @@ public:
     static Ref<CachedResourceLoader> create(DocumentLoader* documentLoader) { return adoptRef(*new CachedResourceLoader(documentLoader)); }
     ~CachedResourceLoader();
 
-    CachedResourceHandle<CachedImage> requestImage(CachedResourceRequest&&);
-    CachedResourceHandle<CachedCSSStyleSheet> requestCSSStyleSheet(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedImage>> requestImage(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedCSSStyleSheet>> requestCSSStyleSheet(CachedResourceRequest&&);
     CachedResourceHandle<CachedCSSStyleSheet> requestUserCSSStyleSheet(CachedResourceRequest&&);
-    CachedResourceHandle<CachedScript> requestScript(CachedResourceRequest&&);
-    CachedResourceHandle<CachedFont> requestFont(CachedResourceRequest&&, bool isSVG);
-    CachedResourceHandle<CachedRawResource> requestMedia(CachedResourceRequest&&);
-    CachedResourceHandle<CachedRawResource> requestIcon(CachedResourceRequest&&);
-    CachedResourceHandle<CachedResource> requestBeaconResource(CachedResourceRequest&&);
-    CachedResourceHandle<CachedRawResource> requestRawResource(CachedResourceRequest&&);
-    CachedResourceHandle<CachedRawResource> requestMainResource(CachedResourceRequest&&);
-    CachedResourceHandle<CachedSVGDocument> requestSVGDocument(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedScript>> requestScript(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedFont>> requestFont(CachedResourceRequest&&, bool isSVG);
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestMedia(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestIcon(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestBeaconResource(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestRawResource(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedRawResource>> requestMainResource(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedSVGDocument>> requestSVGDocument(CachedResourceRequest&&);
 #if ENABLE(XSLT)
-    CachedResourceHandle<CachedXSLStyleSheet> requestXSLStyleSheet(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedXSLStyleSheet>> requestXSLStyleSheet(CachedResourceRequest&&);
 #endif
 #if ENABLE(LINK_PREFETCH)
-    CachedResourceHandle<CachedResource> requestLinkResource(CachedResource::Type, CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedResource>> requestLinkResource(CachedResource::Type, CachedResourceRequest&&);
 #endif
 #if ENABLE(VIDEO_TRACK)
-    CachedResourceHandle<CachedTextTrack> requestTextTrack(CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedTextTrack>> requestTextTrack(CachedResourceRequest&&);
+#endif
+#if ENABLE(APPLICATION_MANIFEST)
+    ResourceErrorOr<CachedResourceHandle<CachedApplicationManifest>> requestApplicationManifest(CachedResourceRequest&&);
 #endif
 
     // Logs an access denied message to the console for the specified URL.
@@ -118,7 +129,7 @@ public:
 
     DocumentLoader* documentLoader() const { return m_documentLoader; }
     void clearDocumentLoader() { m_documentLoader = nullptr; }
-    SessionID sessionID() const;
+    PAL::SessionID sessionID() const;
 
     void removeCachedResource(CachedResource&);
 
@@ -133,12 +144,13 @@ public:
     WEBCORE_EXPORT bool isPreloaded(const String& urlString) const;
     enum class ClearPreloadsMode { ClearSpeculativePreloads, ClearAllPreloads };
     void clearPreloads(ClearPreloadsMode);
-    CachedResourceHandle<CachedResource> preload(CachedResource::Type, CachedResourceRequest&&);
+    ResourceErrorOr<CachedResourceHandle<CachedResource>> preload(CachedResource::Type, CachedResourceRequest&&);
     void printPreloadStats();
     void warnUnusedPreloads();
     void stopUnusedPreloadsTimer();
 
     bool updateRequestAfterRedirection(CachedResource::Type, ResourceRequest&, const ResourceLoaderOptions&);
+    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived) const;
 
     static const ResourceLoaderOptions& defaultCachedResourceOptions();
 
@@ -148,19 +160,20 @@ public:
 
     bool isAlwaysOnLoggingAllowed() const;
 
+    KeepaliveRequestTracker& keepaliveRequestTracker() { return m_keepaliveRequestTracker; }
+
 private:
     explicit CachedResourceLoader(DocumentLoader*);
 
     enum class ForPreload { Yes, No };
     enum class DeferOption { NoDefer, DeferredByClient };
 
-    CachedResourceHandle<CachedResource> requestResource(CachedResource::Type, CachedResourceRequest&&, ForPreload = ForPreload::No, DeferOption = DeferOption::NoDefer);
+    ResourceErrorOr<CachedResourceHandle<CachedResource>> requestResource(CachedResource::Type, CachedResourceRequest&&, ForPreload = ForPreload::No, DeferOption = DeferOption::NoDefer);
     CachedResourceHandle<CachedResource> revalidateResource(CachedResourceRequest&&, CachedResource&);
     CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, CachedResourceRequest&&);
 
     void prepareFetch(CachedResource::Type, CachedResourceRequest&);
     void updateHTTPRequestHeaders(CachedResource::Type, CachedResourceRequest&);
-    void updateReferrerOriginAndUserAgentHeaders(CachedResourceRequest&);
 
     bool canRequest(CachedResource::Type, const URL&, const CachedResourceRequest&, ForPreload);
 
@@ -170,9 +183,8 @@ private:
     bool shouldUpdateCachedResourceWithCurrentRequest(const CachedResource&, const CachedResourceRequest&);
     CachedResourceHandle<CachedResource> updateCachedResourceWithCurrentRequest(const CachedResource&, CachedResourceRequest&&);
 
-    bool shouldContinueAfterNotifyingLoadedFromMemoryCache(const CachedResourceRequest&, CachedResource*);
+    bool shouldContinueAfterNotifyingLoadedFromMemoryCache(const CachedResourceRequest&, CachedResource&, ResourceError&);
     bool checkInsecureContent(CachedResource::Type, const URL&) const;
-    bool allowedByContentSecurityPolicy(CachedResource::Type, const URL&, const ResourceLoaderOptions&, ContentSecurityPolicy::RedirectResponseReceived) const;
 
     void performPostLoadActions();
 
@@ -195,6 +207,7 @@ private:
     Timer m_garbageCollectDocumentResourcesTimer;
 
     ResourceTimingInformation m_resourceTimingInfo;
+    KeepaliveRequestTracker m_keepaliveRequestTracker;
 
     // 29 bits left
     bool m_autoLoadImages : 1;

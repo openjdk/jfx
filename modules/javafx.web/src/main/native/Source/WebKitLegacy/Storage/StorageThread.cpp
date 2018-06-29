@@ -23,10 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
-#include "config.h"
-#endif //_WIN32
-
 #include "StorageThread.h"
 
 #include <wtf/AutodrainedPool.h>
@@ -58,7 +54,7 @@ StorageThread::~StorageThread()
     ASSERT(!m_thread);
 }
 
-bool StorageThread::start()
+void StorageThread::start()
 {
     ASSERT(isMainThread());
     if (!m_thread) {
@@ -67,13 +63,12 @@ bool StorageThread::start()
         });
     }
     activeStorageThreads().add(this);
-    return m_thread;
 }
 
 void StorageThread::threadEntryPoint()
 {
 #if PLATFORM(JAVA)
-    WTF::AutoAttachToJavaThread autoAttach(true);
+    WTF::AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
     ASSERT(!isMainThread());
 

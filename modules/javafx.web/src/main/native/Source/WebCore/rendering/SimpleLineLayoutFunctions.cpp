@@ -117,10 +117,10 @@ void paintFlow(const RenderBlockFlow& flow, const Layout& layout, PaintInfo& pai
         if (run.hasHyphen())
             textWithHyphen = run.textWithHyphen();
         // x position indicates the line offset from the rootbox. It's always 0 in case of simple line layout.
-        TextRun textRun(run.hasHyphen() ? textWithHyphen : run.text(), 0, run.expansion(), run.expansionBehavior());
+        TextRun textRun { run.hasHyphen() ? textWithHyphen : run.text(), 0, run.expansion(), run.expansionBehavior() };
         textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
-        FloatPoint textOrigin = FloatPoint(rect.x() + paintOffset.x(), roundToDevicePixel(run.baselinePosition() + paintOffset.y(), deviceScaleFactor));
-        textPainter.paint(textRun, textRun.length(), rect, textOrigin);
+        FloatPoint textOrigin { rect.x() + paintOffset.x(), roundToDevicePixel(run.baselinePosition() + paintOffset.y(), deviceScaleFactor) };
+        textPainter.paint(textRun, rect, textOrigin);
         if (textDecorationPainter) {
             textDecorationPainter->setWidth(rect.width());
             textDecorationPainter->paintTextDecoration(textRun, textOrigin, rect.location() + paintOffset);
@@ -217,7 +217,7 @@ unsigned textOffsetForPoint(const LayoutPoint& point, const RenderText& renderer
     auto resolver = runResolver(flow, layout);
     auto it = resolver.runForPoint(point);
     if (it == resolver.end())
-        return renderer.textLength();
+        return renderer.text().length();
     auto run = *it;
     auto& style = flow.style();
     TextRun textRun(run.text(), run.logicalLeft(), run.expansion(), run.expansionBehavior());

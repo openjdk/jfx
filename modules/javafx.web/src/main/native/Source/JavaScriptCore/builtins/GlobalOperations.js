@@ -57,9 +57,9 @@ function isDictionary(object)
     return object == null || typeof object === "object";
 }
 
-// FIXME: this needs to have it's name changed to "get [Symbol.species]".
-// see: https://bugs.webkit.org/show_bug.cgi?id=151363
 @globalPrivate
+@getter
+@overriddenName="get [Symbol.species]"
 function speciesGetter()
 {
     return this;
@@ -90,7 +90,7 @@ function copyDataProperties(target, source, excludedSet)
     if (source == null) 
         return target;
 
-    let from = @Object(source); 
+    let from = @toObject(source);
     let keys = @Reflect.@ownKeys(from); 
     let keysLength = keys.length;
     for (let i = 0; i < keysLength; i++) {
@@ -115,7 +115,7 @@ function copyDataPropertiesNoExclusions(target, source)
     if (source == null) 
         return target;
 
-    let from = @Object(source); 
+    let from = @toObject(source);
     let keys = @Reflect.@ownKeys(from); 
     let keysLength = keys.length;
     for (let i = 0; i < keysLength; i++) {

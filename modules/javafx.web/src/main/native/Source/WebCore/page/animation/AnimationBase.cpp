@@ -40,50 +40,49 @@
 #include "RenderBox.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
-#include "SpringSolver.h"
-#include "UnitBezier.h"
 #include <algorithm>
 #include <wtf/CurrentTime.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
-// The epsilon value we pass to UnitBezier::solve given that the animation is going to run over |dur| seconds. The longer the
-// animation, the more precision we need in the timing function result to avoid ugly discontinuities.
-static inline double solveEpsilon(double duration)
-{
-    return 1.0 / (200.0 * duration);
-}
-
-static inline double solveCubicBezierFunction(double p1x, double p1y, double p2x, double p2y, double t, double duration)
-{
-    // Convert from input time to parametric value in curve, then from
-    // that to output time.
-    UnitBezier bezier(p1x, p1y, p2x, p2y);
-    return bezier.solve(t, solveEpsilon(duration));
-}
-
-static inline double solveStepsFunction(int numSteps, bool stepAtStart, double t)
-{
-    if (stepAtStart)
-        return std::min(1.0, (floor(numSteps * t) + 1) / numSteps);
-    return floor(numSteps * t) / numSteps;
-}
-
-static inline double solveSpringFunction(double mass, double stiffness, double damping, double initialVelocity, double t, double duration)
-{
-    SpringSolver solver(mass, stiffness, damping, initialVelocity);
-    return solver.solve(t * duration);
-}
-
-AnimationBase::AnimationBase(const Animation& animation, RenderElement* renderer, CompositeAnimation* compositeAnimation)
-    : m_object(renderer)
-    , m_compositeAnimation(compositeAnimation)
+AnimationBase::AnimationBase(const Animation& animation, Element& element, CompositeAnimation& compositeAnimation)
+    : m_element(&element)
+    , m_compositeAnimation(&compositeAnimation)
     , m_animation(const_cast<Animation&>(animation))
 {
     // Compute the total duration
     if (m_animation->iterationCount() > 0)
         m_totalDuration = m_animation->duration() * m_animation->iterationCount();
+}
+
+AnimationBase::~AnimationBase() = default;
+
+const RenderStyle& AnimationBase::currentStyle() const
+{
+    if (auto* renderer = this->renderer())
+        return renderer->style();
+    return unanimatedStyle();
+}
+
+RenderElement* AnimationBase::renderer() const
+{
+    return m_element ? m_element->renderer() : nullptr;
+}
+
+RenderBoxModelObject* AnimationBase::compositedRenderer() const
+{
+    auto* renderer = this->renderer();
+    if (!renderer || !renderer->isComposited())
+        return nullptr;
+    return downcast<RenderBoxModelObject>(renderer);
+}
+
+void AnimationBase::clear()
+{
+    endAnimation();
+    m_element = nullptr;
+    m_compositeAnimation = nullptr;
 }
 
 void AnimationBase::setNeedsStyleRecalc(Element* element)
@@ -246,8 +245,8 @@ void AnimationBase::updateStateMachine(AnimationStateInput input, double param)
                 m_compositeAnimation->animationController().addToAnimationsWaitingForStyle(this);
 
                 // Trigger a render so we can start the animation
-                if (m_object && m_object->element())
-                    m_compositeAnimation->animationController().addElementChangeToDispatch(*m_object->element());
+                if (m_element)
+                    m_compositeAnimation->animationController().addElementChangeToDispatch(*m_element);
             } else {
                 ASSERT(!paused());
                 // We're waiting for the start timer to fire and we got a pause. Cancel the timer, pause and wait
@@ -313,8 +312,8 @@ void AnimationBase::updateStateMachine(AnimationStateInput input, double param)
                 goIntoEndingOrLoopingState();
 
                 // Dispatch updateStyleIfNeeded so we can start the animation
-                if (m_object && m_object->element())
-                    m_compositeAnimation->animationController().addElementChangeToDispatch(*m_object->element());
+                if (m_element)
+                    m_compositeAnimation->animationController().addElementChangeToDispatch(*m_element);
             } else {
                 // We are pausing while waiting for a start response. Cancel the animation and wait. When
                 // we unpause, we will act as though the start timer just fired
@@ -357,7 +356,7 @@ void AnimationBase::updateStateMachine(AnimationStateInput input, double param)
                 LOG(Animations, "%p AnimationState %s -> Done (time is %f)", this, nameForState(m_animationState), param);
                 m_animationState = AnimationState::Done;
 
-                if (m_object) {
+                if (m_element) {
                     if (m_animation->fillsForwards()) {
                         LOG(Animations, "%p AnimationState %s -> FillingForwards", this, nameForState(m_animationState));
                         m_animationState = AnimationState::FillingForwards;
@@ -365,8 +364,8 @@ void AnimationBase::updateStateMachine(AnimationStateInput input, double param)
                         resumeOverriddenAnimations();
 
                     // Fire off another style change so we can set the final value
-                    if (m_object->element())
-                        m_compositeAnimation->animationController().addElementChangeToDispatch(*m_object->element());
+                    if (m_element)
+                        m_compositeAnimation->animationController().addElementChangeToDispatch(*m_element);
                 }
             } else {
                 // We are pausing while running. Cancel the animation and wait
@@ -491,7 +490,7 @@ void AnimationBase::fireAnimationEventsIfNeeded()
     if (m_animationState == AnimationState::StartWaitTimer) {
 #if ENABLE(CSS_ANIMATIONS_LEVEL_2)
         if (m_animation->trigger() && m_animation->trigger()->isScrollAnimationTrigger()) {
-            if (m_object) {
+            if (m_element) {
                 float offset = m_compositeAnimation->animationController().scrollPosition();
                 auto& scrollTrigger = downcast<ScrollAnimationTrigger>(*m_animation->trigger());
                 if (offset > scrollTrigger.startValue().value())
@@ -574,8 +573,8 @@ std::optional<Seconds> AnimationBase::timeToNextService()
     if (m_animationState == AnimationState::StartWaitTimer) {
 #if ENABLE(CSS_ANIMATIONS_LEVEL_2)
         if (m_animation->trigger()->isScrollAnimationTrigger()) {
-            if (m_object) {
-                float currentScrollPosition = m_object->view().frameView().scrollPositionForFixedPosition().y().toFloat();
+            if (m_element) {
+                float currentScrollPosition = m_element->document().view()->scrollPositionForFixedPosition().y().toFloat();
                 auto& scrollTrigger = downcast<ScrollAnimationTrigger>(*m_animation->trigger());
                 if (currentScrollPosition >= scrollTrigger.startValue().value() && (!scrollTrigger.hasEndValue() || currentScrollPosition <= scrollTrigger.endValue().value()))
                     return 0_s;
@@ -654,25 +653,7 @@ double AnimationBase::progress(double scale, double offset, const TimingFunction
     if (!timingFunction)
         timingFunction = m_animation->timingFunction();
 
-    switch (timingFunction->type()) {
-    case TimingFunction::CubicBezierFunction: {
-        auto& function = *static_cast<const CubicBezierTimingFunction*>(timingFunction);
-        return solveCubicBezierFunction(function.x1(), function.y1(), function.x2(), function.y2(), fractionalTime, m_animation->duration());
-    }
-    case TimingFunction::StepsFunction: {
-        auto& function = *static_cast<const StepsTimingFunction*>(timingFunction);
-        return solveStepsFunction(function.numberOfSteps(), function.stepAtStart(), fractionalTime);
-    }
-    case TimingFunction::SpringFunction: {
-        auto& function = *static_cast<const SpringTimingFunction*>(timingFunction);
-        return solveSpringFunction(function.mass(), function.stiffness(), function.damping(), function.initialVelocity(), fractionalTime, m_animation->duration());
-    }
-    case TimingFunction::LinearFunction:
-        return fractionalTime;
-    }
-
-    ASSERT_NOT_REACHED();
-    return 0;
+    return timingFunction->transformTime(fractionalTime, m_animation->duration());
 }
 
 void AnimationBase::getTimeToNextEvent(Seconds& time, bool& isLooping) const
@@ -726,8 +707,8 @@ void AnimationBase::freezeAtTime(double t)
     else
         m_pauseTime = m_startTime.value_or(0) + t - m_animation->delay();
 
-    if (m_object && m_object->isComposited())
-        downcast<RenderBoxModelObject>(*m_object).suspendAnimations(m_pauseTime.value());
+    if (auto* renderer = compositedRenderer())
+        renderer->suspendAnimations(m_pauseTime.value());
 }
 
 double AnimationBase::beginAnimationUpdateTime() const
@@ -743,7 +724,7 @@ double AnimationBase::getElapsedTime() const
 #if ENABLE(CSS_ANIMATIONS_LEVEL_2)
     if (m_animation->trigger() && m_animation->trigger()->isScrollAnimationTrigger()) {
         auto& scrollTrigger = downcast<ScrollAnimationTrigger>(*m_animation->trigger());
-        if (scrollTrigger.hasEndValue() && m_object) {
+        if (scrollTrigger.hasEndValue() && m_element) {
             float offset = m_compositeAnimation->animationController().scrollPosition();
             float startValue = scrollTrigger.startValue().value();
             if (offset < startValue)

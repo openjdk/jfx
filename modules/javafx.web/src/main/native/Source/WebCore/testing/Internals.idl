@@ -58,11 +58,12 @@ enum ResourceLoadPriority {
     "previous-track"
 };
 
-// FIXME: Strings in an enum should not have the name of the enum as a prefix.
 enum AutoFillButtonType {
-    "AutoFillButtonTypeNone",
-    "AutoFillButtonTypeContacts",
-    "AutoFillButtonTypeCredentials"
+    "None",
+    "Contacts",
+    "Credentials",
+    "StrongPassword",
+    "StrongConfirmationPassword"
 };
 
 enum UserInterfaceLayoutDirection {
@@ -93,9 +94,14 @@ enum EventThrottlingBehavior {
     // Animated image pausing testing.
     boolean hasPausedImageAnimations(Element element);
 
+    // Must be called on an element whose enclosingLayer() is self-painting.
+    boolean isPaintingFrequently(Element element);
+    void incrementFrequentPaintCounter(Element element);
+
     [MayThrowException] DOMString elementRenderTreeAsText(Element element);
     boolean isPreloaded(DOMString url);
     boolean isLoadingFromMemoryCache(DOMString url);
+    DOMString fetchResponseSource(FetchResponse response);
     DOMString xhrResponseSource(XMLHttpRequest xhr);
     boolean isSharingStyleSheetContents(HTMLLinkElement a, HTMLLinkElement b);
     boolean isStyleSheetLoadingSubresources(HTMLLinkElement link);
@@ -166,6 +172,9 @@ enum EventThrottlingBehavior {
 
     [MayThrowException] void setScrollViewPosition(long x, long y);
 
+    // Like Element.scrollTo(), but without constaints, for testing rubber-banding.
+    [MayThrowException] void unconstrainedScrollTo(Element element, unrestricted double x, unrestricted double y);
+
     [MayThrowException] DOMRect layoutViewportRect();
     [MayThrowException] DOMRect visualViewportRect();
 
@@ -181,6 +190,8 @@ enum EventThrottlingBehavior {
     void setEditingValue(HTMLInputElement inputElement, DOMString value);
     void setAutofilled(HTMLInputElement inputElement, boolean enabled);
     void setShowAutoFillButton(HTMLInputElement inputElement, AutoFillButtonType autoFillButtonType);
+    AutoFillButtonType autoFillButtonType(HTMLInputElement inputElement);
+    AutoFillButtonType lastAutoFillButtonType(HTMLInputElement inputElement);
 
     [MayThrowException] Range? rangeOfString(DOMString text, Range? referenceRange, sequence<DOMString> findOptions);
     [MayThrowException] unsigned long countMatchesForText(DOMString text, sequence<DOMString> findOptions, DOMString markMatches);
@@ -251,7 +262,9 @@ enum EventThrottlingBehavior {
     boolean isImageAnimating(HTMLImageElement element);
     void setClearDecoderAfterAsyncFrameRequestForTesting(HTMLImageElement element, boolean enabled);
     unsigned long imageDecodeCount(HTMLImageElement element);
+    unsigned long pdfDocumentCachingCount(HTMLImageElement element);
     void setLargeImageAsyncDecodingEnabledForTesting(HTMLImageElement element, boolean enabled);
+    void setForceUpdateImageDataEnabledForTesting(HTMLImageElement element, boolean enabled);
 
     void setGridMaxTracksLimit(unsigned long maxTracksLimit);
 
@@ -461,7 +474,7 @@ enum EventThrottlingBehavior {
     [Conditional=WEB_RTC] void setICECandidateFiltering(boolean enabled);
     [Conditional=WEB_RTC] void setEnumeratingAllNetworkInterfacesEnabled(boolean enabled);
     [Conditional=WEB_RTC] void stopPeerConnection(RTCPeerConnection connection);
-    
+
     [Conditional=VIDEO] void simulateSystemSleep();
     [Conditional=VIDEO] void simulateSystemWake();
     [Conditional=VIDEO] boolean elementIsBlockingDisplaySleep(HTMLMediaElement element);
@@ -471,8 +484,9 @@ enum EventThrottlingBehavior {
 
     void setPageMuted(DOMString mutedState);
     DOMString pageMediaState();
-    
+
     void setPageDefersLoading(boolean defersLoading);
+    [MayThrowException] boolean pageDefersLoading();
 
     File? createFile(DOMString url);
     void queueMicroTask(long testNumber);
@@ -496,6 +510,7 @@ enum EventThrottlingBehavior {
 
     DOMString resourceLoadStatisticsForOrigin(DOMString domain);
     void setResourceLoadStatisticsEnabled(boolean enable);
+    [EnabledBySetting=StorageAccessAPI] void setUserGrantsStorageAccess(boolean value);
 
     [MayThrowException] void setCanShowModalDialogOverride(boolean allow);
 
@@ -503,6 +518,8 @@ enum EventThrottlingBehavior {
 
     boolean isProcessingUserGesture();
     double lastHandledUserGestureTimestamp();
+
+    void withUserGesture(VoidCallback callback);
 
     GCObservation? observeGC(any observed);
 
@@ -544,5 +561,23 @@ enum EventThrottlingBehavior {
     [Conditional=MEDIA_STREAM] void removeMediaStreamTrack(MediaStream stream, MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] void simulateMediaStreamTrackCaptureSourceFailure(MediaStreamTrack track);
 
+    Promise<void> clearCacheStorageMemoryRepresentation();
+    Promise<DOMString> cacheStorageEngineRepresentation();
+    void setResponseSizeWithPadding(FetchResponse response, unsigned long long size);
+    unsigned long long responseSizeWithPadding(FetchResponse response);
+
+    void setConsoleMessageListener(StringCallback callback);
+
     DOMString audioSessionCategory();
+
+    [Conditional=SERVICE_WORKER] Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
+    [Conditional=SERVICE_WORKER] void terminateServiceWorker(ServiceWorker worker);
+    [Conditional=SERVICE_WORKER] boolean hasServiceWorkerConnection();
+
+    void testIncomingSyncIPCMessageWhileWaitingForSyncReply();
+
+    [EnabledAtRuntime=WebAnimations] DOMString timelineDescription(AnimationTimeline timeline);
+    [EnabledAtRuntime=WebAnimations] void pauseTimeline(AnimationTimeline timeline);
+    [EnabledAtRuntime=WebAnimations] void setTimelineCurrentTime(AnimationTimeline timeline, double currentTime);
+    [Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
 };

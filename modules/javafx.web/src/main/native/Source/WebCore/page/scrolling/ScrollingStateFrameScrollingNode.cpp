@@ -80,9 +80,7 @@ ScrollingStateFrameScrollingNode::ScrollingStateFrameScrollingNode(const Scrolli
         setFooterLayer(stateNode.footerLayer().toRepresentation(adoptiveTree.preferredLayerRepresentation()));
 }
 
-ScrollingStateFrameScrollingNode::~ScrollingStateFrameScrollingNode()
-{
-}
+ScrollingStateFrameScrollingNode::~ScrollingStateFrameScrollingNode() = default;
 
 Ref<ScrollingStateNode> ScrollingStateFrameScrollingNode::clone(ScrollingStateTree& adoptiveTree)
 {
@@ -288,8 +286,7 @@ void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingS
         ts << "asynchronous event dispatch region";
         for (auto rect : m_eventTrackingRegions.asynchronousDispatchRegion.rects()) {
             ts << "\n";
-            ts.writeIndent();
-            ts << rect;
+            ts << indent << rect;
         }
     }
 
@@ -299,8 +296,7 @@ void ScrollingStateFrameScrollingNode::dumpProperties(TextStream& ts, ScrollingS
             ts << "synchronous event dispatch region for event " << synchronousEventRegion.key;
             for (auto rect : synchronousEventRegion.value.rects()) {
                 ts << "\n";
-                ts.writeIndent();
-                ts << rect;
+                ts << indent << rect;
             }
         }
     }

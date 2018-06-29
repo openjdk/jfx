@@ -217,6 +217,19 @@ protected:
         return value->asInteger(output);
     }
 
+    template<class T> std::optional<T> getNumber(const String& name) const
+    {
+        RefPtr<Value> value;
+        if (!getValue(name, value))
+            return std::nullopt;
+
+        T result;
+        if (!value->asDouble(result))
+            return std::nullopt;
+
+        return result;
+    }
+
     bool getString(const String& name, String& output) const;
     bool getObject(const String& name, RefPtr<Object>&) const;
     bool getArray(const String& name, RefPtr<Array>&) const;
@@ -260,6 +273,7 @@ public:
     using ObjectBase::getBoolean;
     using ObjectBase::getInteger;
     using ObjectBase::getDouble;
+    using ObjectBase::getNumber;
     using ObjectBase::getString;
     using ObjectBase::getObject;
     using ObjectBase::getArray;
@@ -423,6 +437,48 @@ inline void ArrayBase::pushArray(RefPtr<ArrayBase>&& value)
     m_map.append(WTFMove(value));
 }
 
+template<typename T>
+class ArrayOf : public ArrayBase {
+private:
+    ArrayOf() { }
+
+    Array& castedArray()
+    {
+        COMPILE_ASSERT(sizeof(Array) == sizeof(ArrayOf<T>), cannot_cast);
+        return *static_cast<Array*>(static_cast<ArrayBase*>(this));
+    }
+
+public:
+    void addItem(RefPtr<T>&& value)
+    {
+        castedArray().pushValue(WTFMove(value));
+    }
+
+    void addItem(const String& value)
+    {
+        castedArray().pushString(value);
+    }
+
+    void addItem(int value)
+    {
+        castedArray().pushInteger(value);
+    }
+
+    void addItem(double value)
+    {
+        castedArray().pushDouble(value);
+    }
+
+    static Ref<ArrayOf<T>> create()
+    {
+        return adoptRef(*new ArrayOf<T>());
+    }
+
+    using ArrayBase::get;
+    using ArrayBase::begin;
+    using ArrayBase::end;
+};
+
 } // namespace JSONImpl
 
 } // namespace WTF
@@ -430,3 +486,4 @@ inline void ArrayBase::pushArray(RefPtr<ArrayBase>&& value)
 namespace JSON {
 using namespace WTF::JSONImpl;
 }
+

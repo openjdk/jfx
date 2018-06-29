@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/CSSRule.h>
@@ -43,7 +45,7 @@ extern "C" {
 
 #define IMPL (static_cast<CSSStyleDeclaration*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
@@ -62,7 +64,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_setCssTex
     IMPL->setCssText(String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getLengthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_CSSStyleDeclarationImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->length();

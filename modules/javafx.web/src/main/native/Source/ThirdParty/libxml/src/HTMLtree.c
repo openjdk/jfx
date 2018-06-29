@@ -34,7 +34,7 @@
 
 /************************************************************************
  *                                  *
- *      Getting/Setting encoding meta tags          *
+ *          Getting/Setting encoding meta tags          *
  *                                  *
  ************************************************************************/
 
@@ -211,7 +211,7 @@ htmlSetMetaEncoding(htmlDocPtr doc, const xmlChar *encoding) {
         if (xmlStrcasecmp(cur->name, BAD_CAST"meta") == 0) {
                 head = cur->parent;
         goto found_meta;
-            }
+    }
     }
     cur = cur->next;
     }
@@ -248,8 +248,8 @@ found_meta:
             else
                         {
                            if ((value != NULL) &&
-                               (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
-                   content = value;
+                (!xmlStrcasecmp(attr->name, BAD_CAST"content")))
+                  content = value;
                         }
                 if ((http != 0) && (content != NULL))
                 break;
@@ -389,7 +389,7 @@ htmlSaveErr(int code, xmlNodePtr node, const char *extra)
 
 /************************************************************************
  *                                  *
- *      Dumping HTML tree content to a simple buffer        *
+ *          Dumping HTML tree content to a simple buffer        *
  *                                  *
  ************************************************************************/
 
@@ -634,7 +634,7 @@ htmlDocDumpMemory(xmlDocPtr cur, xmlChar**mem, int *size) {
 
 /************************************************************************
  *                                  *
- *      Dumping HTML tree content to an I/O output buffer   *
+ *          Dumping HTML tree content to an I/O output buffer   *
  *                                  *
  ************************************************************************/
 
@@ -692,8 +692,8 @@ htmlAttrDumpOutput(xmlOutputBufferPtr buf, xmlDocPtr doc, xmlAttrPtr cur,
 
     /*
      * The html output method should not escape a & character
-     * occurring in an attribute value immediately followed by
-     * a { character (see Section B.7.1 of the HTML 4.0 Recommendation).
+     *       occurring in an attribute value immediately followed by
+     *       a { character (see Section B.7.1 of the HTML 4.0 Recommendation).
      * This is implemented in xmlEncodeEntitiesReentrant
      */
 
@@ -737,13 +737,13 @@ htmlAttrDumpOutput(xmlOutputBufferPtr buf, xmlDocPtr doc, xmlAttrPtr cur,
             }
 
             /* Escape the whole string, or until start (set to '\0'). */
-            escaped = xmlURIEscapeStr(tmp, BAD_CAST"@/:=?;#%&,+");
-            if (escaped != NULL) {
+        escaped = xmlURIEscapeStr(tmp, BAD_CAST"@/:=?;#%&,+");
+        if (escaped != NULL) {
                 xmlBufCat(buf->buffer, escaped);
-                xmlFree(escaped);
-            } else {
+            xmlFree(escaped);
+        } else {
                 xmlBufCat(buf->buffer, tmp);
-            }
+        }
 
             if (end == NULL) { /* Everything has been written. */
             break;

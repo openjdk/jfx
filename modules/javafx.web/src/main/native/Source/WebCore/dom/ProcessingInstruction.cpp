@@ -89,30 +89,25 @@ void ProcessingInstruction::checkStyleSheet()
         // see http://www.w3.org/TR/xml-stylesheet/
         // ### support stylesheet included in a fragment of this (or another) document
         // ### make sure this gets called when adding from javascript
-        bool attrsOk;
-        const HashMap<String, String> attrs = parseAttributes(data(), attrsOk);
-        if (!attrsOk)
+        auto attributes = parseAttributes(data());
+        if (!attributes)
             return;
-        HashMap<String, String>::const_iterator i = attrs.find("type");
-        String type;
-        if (i != attrs.end())
-            type = i->value;
+        String type = attributes->get("type");
 
         m_isCSS = type.isEmpty() || type == "text/css";
 #if ENABLE(XSLT)
-        m_isXSL = (type == "text/xml" || type == "text/xsl" || type == "application/xml" ||
-                   type == "application/xhtml+xml" || type == "application/rss+xml" || type == "application/atom+xml");
+        m_isXSL = type == "text/xml" || type == "text/xsl" || type == "application/xml" || type == "application/xhtml+xml" || type == "application/rss+xml" || type == "application/atom+xml";
         if (!m_isCSS && !m_isXSL)
 #else
         if (!m_isCSS)
 #endif
             return;
 
-        String href = attrs.get("href");
-        String alternate = attrs.get("alternate");
+        String href = attributes->get("href");
+        String alternate = attributes->get("alternate");
         m_alternate = alternate == "yes";
-        m_title = attrs.get("title");
-        m_media = attrs.get("media");
+        m_title = attributes->get("title");
+        m_media = attributes->get("media");
 
         if (m_alternate && m_title.isEmpty())
             return;
@@ -163,14 +158,14 @@ void ProcessingInstruction::checkStyleSheet()
             if (m_isXSL) {
                 auto options = CachedResourceLoader::defaultCachedResourceOptions();
                 options.mode = FetchOptions::Mode::SameOrigin;
-                m_cachedSheet = document().cachedResourceLoader().requestXSLStyleSheet({ResourceRequest(document().completeURL(href)), options});
+                m_cachedSheet = document().cachedResourceLoader().requestXSLStyleSheet({ResourceRequest(document().completeURL(href)), options}).value_or(nullptr);
             } else
 #endif
             {
-                String charset = attrs.get("charset");
+                String charset = attributes->get("charset");
                 CachedResourceRequest request(document().completeURL(href), CachedResourceLoader::defaultCachedResourceOptions(), std::nullopt, charset.isEmpty() ? document().charset() : WTFMove(charset));
 
-                m_cachedSheet = document().cachedResourceLoader().requestCSSStyleSheet(WTFMove(request));
+                m_cachedSheet = document().cachedResourceLoader().requestCSSStyleSheet(WTFMove(request)).value_or(nullptr);
             }
             if (m_cachedSheet)
                 m_cachedSheet->addClient(*this);
@@ -275,20 +270,24 @@ void ProcessingInstruction::addSubresourceAttributeURLs(ListHashSet<URL>& urls) 
     addSubresourceURL(urls, sheet()->baseURL());
 }
 
-Node::InsertionNotificationRequest ProcessingInstruction::insertedInto(ContainerNode& insertionPoint)
+Node::InsertedIntoAncestorResult ProcessingInstruction::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    CharacterData::insertedInto(insertionPoint);
-    if (!insertionPoint.isConnected())
-        return InsertionDone;
+    CharacterData::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (!insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::Done;
     document().styleScope().addStyleSheetCandidateNode(*this, m_createdByParser);
-    checkStyleSheet();
-    return InsertionDone;
+    return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 }
 
-void ProcessingInstruction::removedFrom(ContainerNode& insertionPoint)
+void ProcessingInstruction::didFinishInsertingNode()
 {
-    CharacterData::removedFrom(insertionPoint);
-    if (!insertionPoint.isConnected())
+    checkStyleSheet();
+}
+
+void ProcessingInstruction::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
+{
+    CharacterData::removedFromAncestor(removalType, oldParentOfRemovedTree);
+    if (!removalType.disconnectedFromDocument)
         return;
 
     document().styleScope().removeStyleSheetCandidateNode(*this);

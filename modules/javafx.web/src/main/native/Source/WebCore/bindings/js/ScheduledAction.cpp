@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
- *  Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009 Apple Inc. All rights reseved.
+ *  Copyright (C) 2003-2017 Apple Inc. All rights reseved.
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
  *  Copyright (C) 2009 Google Inc. All rights reseved.
  *
@@ -40,11 +40,10 @@
 #include "ScriptSourceCode.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
-#include <runtime/JSLock.h>
-
-using namespace JSC;
+#include <JavaScriptCore/JSLock.h>
 
 namespace WebCore {
+using namespace JSC;
 
 std::unique_ptr<ScheduledAction> ScheduledAction::create(DOMWrapperWorld& isolatedWorld, JSC::Strong<JSC::Unknown>&& function)
 {
@@ -69,9 +68,7 @@ ScheduledAction::ScheduledAction(DOMWrapperWorld& isolatedWorld, String&& code)
 {
 }
 
-ScheduledAction::~ScheduledAction()
-{
-}
+ScheduledAction::~ScheduledAction() = default;
 
 void ScheduledAction::addArguments(Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
@@ -94,7 +91,9 @@ void ScheduledAction::execute(ScriptExecutionContext& context)
 void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSValue thisValue, ScriptExecutionContext& context)
 {
     ASSERT(m_function);
-    JSLockHolder lock(context.vm());
+    VM& vm = context.vm();
+    JSLockHolder lock(vm);
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     CallData callData;
     CallType callType = getCallData(m_function.get(), callData);
@@ -106,6 +105,12 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     MarkedArgumentBuffer arguments;
     for (auto& argument : m_arguments)
         arguments.append(argument.get());
+    if (UNLIKELY(arguments.hasOverflowed())) {
+        throwOutOfMemoryError(exec, scope);
+        NakedPtr<JSC::Exception> exception = scope.exception();
+        reportException(exec, exception);
+        return;
+    }
 
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(&context, callType, callData);
 
@@ -140,7 +145,7 @@ void ScheduledAction::execute(Document& document)
 void ScheduledAction::execute(WorkerGlobalScope& workerGlobalScope)
 {
     // In a Worker, the execution should always happen on a worker thread.
-    ASSERT(workerGlobalScope.thread().threadID() == currentThread());
+    ASSERT(workerGlobalScope.thread().thread() == &Thread::current());
 
     WorkerScriptController* scriptController = workerGlobalScope.script();
 

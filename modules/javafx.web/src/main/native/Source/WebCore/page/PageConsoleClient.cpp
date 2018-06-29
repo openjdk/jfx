@@ -29,34 +29,46 @@
 #include "config.h"
 #include "PageConsoleClient.h"
 
+#include "CanvasRenderingContext2D.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
 #include "Frame.h"
+#include "HTMLCanvasElement.h"
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
+#include "JSCanvasRenderingContext2D.h"
+#include "JSHTMLCanvasElement.h"
 #include "JSMainThreadExecState.h"
+#include "JSOffscreenCanvas.h"
 #include "MainFrame.h"
+#include "OffscreenCanvas.h"
 #include "Page.h"
 #include "ScriptableDocumentParser.h"
 #include "Settings.h"
-#include <inspector/ConsoleMessage.h>
-#include <inspector/ScriptArguments.h>
-#include <inspector/ScriptCallStack.h>
-#include <inspector/ScriptCallStackFactory.h>
+#include <JavaScriptCore/ConsoleMessage.h>
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/ScriptArguments.h>
+#include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/ScriptCallStackFactory.h>
+#include <JavaScriptCore/ScriptValue.h>
+#include <wtf/text/WTFString.h>
 
-using namespace Inspector;
+#if ENABLE(WEBGL)
+#include "JSWebGLRenderingContext.h"
+#include "WebGLRenderingContext.h"
+#endif
+
 
 namespace WebCore {
+using namespace Inspector;
 
 PageConsoleClient::PageConsoleClient(Page& page)
     : m_page(page)
 {
 }
 
-PageConsoleClient::~PageConsoleClient()
-{
-}
+PageConsoleClient::~PageConsoleClient() = default;
 
 static int muteCount = 0;
 static bool printExceptions = false;
@@ -206,6 +218,56 @@ void PageConsoleClient::timeEnd(JSC::ExecState* exec, const String& title)
 void PageConsoleClient::timeStamp(JSC::ExecState*, Ref<ScriptArguments>&& arguments)
 {
     InspectorInstrumentation::consoleTimeStamp(m_page.mainFrame(), WTFMove(arguments));
+}
+
+void PageConsoleClient::record(JSC::ExecState* exec, Ref<ScriptArguments>&& arguments)
+{
+    if (arguments->argumentCount() < 1)
+        return;
+
+    JSC::JSObject* target = arguments->argumentAt(0).jsValue().getObject();
+    if (!target)
+        return;
+
+    JSC::JSObject* options = nullptr;
+    if (arguments->argumentCount() >= 2)
+        options = arguments->argumentAt(1).jsValue().getObject();
+
+    if (HTMLCanvasElement* canvasElement = JSHTMLCanvasElement::toWrapped(*target->vm(), target)) {
+        if (CanvasRenderingContext* context = canvasElement->renderingContext())
+            InspectorInstrumentation::consoleStartRecordingCanvas(*context, *exec, options);
+    } else if (OffscreenCanvas* offscreenCanvas = JSOffscreenCanvas::toWrapped(*target->vm(), target)) {
+        if (CanvasRenderingContext* context = offscreenCanvas->renderingContext())
+            InspectorInstrumentation::consoleStartRecordingCanvas(*context, *exec, options);
+    } else if (CanvasRenderingContext2D* context2d = JSCanvasRenderingContext2D::toWrapped(*target->vm(), target))
+        InspectorInstrumentation::consoleStartRecordingCanvas(*context2d, *exec, options);
+#if ENABLE(WEBGL)
+    else if (WebGLRenderingContext* contextWebGL = JSWebGLRenderingContext::toWrapped(*target->vm(), target))
+        InspectorInstrumentation::consoleStartRecordingCanvas(*contextWebGL, *exec, options);
+#endif
+}
+
+void PageConsoleClient::recordEnd(JSC::ExecState*, Ref<ScriptArguments>&& arguments)
+{
+    if (arguments->argumentCount() < 1)
+        return;
+
+    JSC::JSObject* target = arguments->argumentAt(0).jsValue().getObject();
+    if (!target)
+        return;
+
+    if (HTMLCanvasElement* canvasElement = JSHTMLCanvasElement::toWrapped(*target->vm(), target)) {
+        if (CanvasRenderingContext* context = canvasElement->renderingContext())
+            InspectorInstrumentation::didFinishRecordingCanvasFrame(*context, true);
+    } else if (OffscreenCanvas* offscreenCanvas = JSOffscreenCanvas::toWrapped(*target->vm(), target)) {
+        if (CanvasRenderingContext* context = offscreenCanvas->renderingContext())
+            InspectorInstrumentation::didFinishRecordingCanvasFrame(*context, true);
+    } else if (CanvasRenderingContext2D* context2d = JSCanvasRenderingContext2D::toWrapped(*target->vm(), target))
+        InspectorInstrumentation::didFinishRecordingCanvasFrame(*context2d, true);
+#if ENABLE(WEBGL)
+    else if (WebGLRenderingContext* contextWebGL = JSWebGLRenderingContext::toWrapped(*target->vm(), target))
+        InspectorInstrumentation::didFinishRecordingCanvasFrame(*contextWebGL, true);
+#endif
 }
 
 } // namespace WebCore

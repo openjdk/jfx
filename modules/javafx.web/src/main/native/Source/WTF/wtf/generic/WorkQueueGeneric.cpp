@@ -30,7 +30,9 @@
 #include "config.h"
 #include "WorkQueue.h"
 
+#include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/threads/BinarySemaphore.h>
 
 #if PLATFORM(JAVA)
 #include <wtf/java/JavaEnv.h>
@@ -38,25 +40,23 @@
 
 void WorkQueue::platformInitialize(const char* name, Type, QOS)
 {
-    LockHolder locker(m_initializeRunLoopConditionMutex);
-    m_workQueueThread = Thread::create(name, [this] {
-        {
-            LockHolder locker(m_initializeRunLoopConditionMutex);
-            m_runLoop = &RunLoop::current();
-            m_initializeRunLoopCondition.notifyOne();
-        }
+    BinarySemaphore semaphore;
+    Thread::create(name, [&] {
+        m_runLoop = &RunLoop::current();
+        semaphore.signal();
         m_runLoop->run();
-    });
-    m_initializeRunLoopCondition.wait(m_initializeRunLoopConditionMutex);
+    })->detach();
+    semaphore.wait(WallTime::infinity());
 }
 
 void WorkQueue::platformInvalidate()
 {
-    if (m_runLoop)
-        m_runLoop->stop();
-    if (m_workQueueThread) {
-        m_workQueueThread->detach();
-        m_workQueueThread = nullptr;
+    if (m_runLoop) {
+        Ref<RunLoop> protector(*m_runLoop);
+        protector->stop();
+        protector->dispatch([] {
+            RunLoop::current().stop();
+        });
     }
 }
 
@@ -65,7 +65,7 @@ void WorkQueue::dispatch(Function<void()>&& function)
     RefPtr<WorkQueue> protect(this);
     m_runLoop->dispatch([protect, function = WTFMove(function)] {
 #if PLATFORM(JAVA)
-        AutoAttachToJavaThread autoAttach;
+        AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
         function();
     });
@@ -76,7 +76,7 @@ void WorkQueue::dispatchAfter(Seconds delay, Function<void()>&& function)
     RefPtr<WorkQueue> protect(this);
     m_runLoop->dispatchAfter(delay, [protect, function = WTFMove(function)] {
 #if PLATFORM(JAVA)
-        AutoAttachToJavaThread autoAttach;
+        AttachThreadAsDaemonToJavaEnv autoAttach;
 #endif
         function();
     });

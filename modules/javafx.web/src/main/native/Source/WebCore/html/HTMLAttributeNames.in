@@ -10,6 +10,7 @@ accesskey
 action
 align
 alink
+allow
 allowfullscreen
 alt
 archive
@@ -105,6 +106,7 @@ crossorigin
 data
 datetime
 declare
+decoding
 default
 defer
 dir
@@ -381,7 +383,10 @@ version
 vlink
 vspace
 webkitallowfullscreen
+webkitattachmentid
 webkitattachmentpath
+webkitattachmentbloburl
+webkitdirectory
 width
 wrap
 

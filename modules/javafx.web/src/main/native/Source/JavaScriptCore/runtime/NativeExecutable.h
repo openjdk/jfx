@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2010, 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "ExecutableBase.h"
+#include "JSCPoison.h"
 
 namespace JSC {
 namespace DOMJIT {
@@ -43,10 +44,16 @@ public:
 
     static void destroy(JSCell*);
 
+    template<typename CellType>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.nativeExecutableSpace;
+    }
+
     CodeBlockHash hashFor(CodeSpecializationKind) const;
 
-    NativeFunction function() { return m_function; }
-    NativeFunction constructor() { return m_constructor; }
+    NativeFunction function() { return m_function.unpoisoned(); }
+    NativeFunction constructor() { return m_constructor.unpoisoned(); }
 
     NativeFunction nativeFunctionFor(CodeSpecializationKind kind)
     {
@@ -83,11 +90,12 @@ protected:
 
 private:
     friend class ExecutableBase;
+    using PoisonedNativeFunction = Poisoned<NativeCodePoison, NativeFunction>;
 
     NativeExecutable(VM&, NativeFunction function, NativeFunction constructor, Intrinsic, const DOMJIT::Signature*);
 
-    NativeFunction m_function;
-    NativeFunction m_constructor;
+    PoisonedNativeFunction m_function;
+    PoisonedNativeFunction m_constructor;
     const DOMJIT::Signature* m_signature;
 
     String m_name;

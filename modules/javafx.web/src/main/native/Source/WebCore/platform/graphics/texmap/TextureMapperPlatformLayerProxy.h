@@ -66,10 +66,10 @@ public:
     void pushNextBuffer(std::unique_ptr<TextureMapperPlatformLayerBuffer>);
     bool isActive();
 
-    void activateOnCompositingThread(Compositor*, TextureMapperLayer*);
-    void invalidate();
+    WEBCORE_EXPORT void activateOnCompositingThread(Compositor*, TextureMapperLayer*);
+    WEBCORE_EXPORT void invalidate();
 
-    void swapBuffer();
+    WEBCORE_EXPORT void swapBuffer();
     void dropCurrentBufferWhilePreservingTexture();
 
     bool scheduleUpdateOnCompositorThread(Function<void()>&&);
@@ -91,7 +91,7 @@ private:
     std::unique_ptr<RunLoop::Timer<TextureMapperPlatformLayerProxy>> m_releaseUnusedBuffersTimer;
 
 #ifndef NDEBUG
-    ThreadIdentifier m_compositorThreadID { 0 };
+    RefPtr<Thread> m_compositorThread;
 #endif
 
     void compositorThreadUpdateTimerFired();

@@ -28,7 +28,7 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include "DOMError.h"
+#include "DOMException.h"
 #include "EventNames.h"
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServer.h"
@@ -63,20 +63,20 @@ IDBOpenDBRequest::IDBOpenDBRequest(ScriptExecutionContext& context, IDBClient::I
 
 IDBOpenDBRequest::~IDBOpenDBRequest()
 {
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 }
 
 void IDBOpenDBRequest::onError(const IDBResultData& data)
 {
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
-    m_domError = DOMError::create(data.error().name(), data.error().message());
+    m_domError = data.error().toDOMException();
     enqueueEvent(IDBRequestCompletionEvent::create(eventNames().errorEvent, true, true, *this));
 }
 
 void IDBOpenDBRequest::versionChangeTransactionDidFinish()
 {
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
     // 3.3.7 "versionchange" transaction steps
     // When the transaction is finished, after firing complete/abort on the transaction, immediately set request's transaction property to null.
@@ -87,7 +87,7 @@ void IDBOpenDBRequest::fireSuccessAfterVersionChangeCommit()
 {
     LOG(IndexedDB, "IDBOpenDBRequest::fireSuccessAfterVersionChangeCommit() - %s", resourceIdentifier().loggingString().utf8().data());
 
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
     ASSERT(hasPendingActivity());
     m_transaction->addRequest(*this);
 
@@ -101,11 +101,11 @@ void IDBOpenDBRequest::fireErrorAfterVersionChangeCompletion()
 {
     LOG(IndexedDB, "IDBOpenDBRequest::fireErrorAfterVersionChangeCompletion() - %s", resourceIdentifier().loggingString().utf8().data());
 
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
     ASSERT(hasPendingActivity());
 
     IDBError idbError(AbortError);
-    m_domError = DOMError::create(idbError.name(), idbError.message());
+    m_domError = DOMException::create(AbortError);
     setResultToUndefined();
 
     m_transaction->addRequest(*this);
@@ -117,23 +117,23 @@ void IDBOpenDBRequest::cancelForStop()
     connectionProxy().openDBRequestCancelled({ connectionProxy(), *this });
 }
 
-bool IDBOpenDBRequest::dispatchEvent(Event& event)
+void IDBOpenDBRequest::dispatchEvent(Event& event)
 {
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
-    bool result = IDBRequest::dispatchEvent(event);
+    auto protectedThis = makeRef(*this);
+
+    IDBRequest::dispatchEvent(event);
 
     if (m_transaction && m_transaction->isVersionChange() && (event.type() == eventNames().errorEvent || event.type() == eventNames().successEvent))
         m_transaction->database().connectionProxy().didFinishHandlingVersionChangeTransaction(m_transaction->database().databaseConnectionIdentifier(), *m_transaction);
-
-    return result;
 }
 
 void IDBOpenDBRequest::onSuccess(const IDBResultData& resultData)
 {
     LOG(IndexedDB, "IDBOpenDBRequest::onSuccess()");
 
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
     setResult(IDBDatabase::create(*scriptExecutionContext(), connectionProxy(), resultData));
     m_readyState = ReadyState::Done;
@@ -143,7 +143,7 @@ void IDBOpenDBRequest::onSuccess(const IDBResultData& resultData)
 
 void IDBOpenDBRequest::onUpgradeNeeded(const IDBResultData& resultData)
 {
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
     Ref<IDBDatabase> database = IDBDatabase::create(*scriptExecutionContext(), connectionProxy(), resultData);
     Ref<IDBTransaction> transaction = database->startVersionChangeTransaction(resultData.transactionInfo(), *this);
@@ -166,7 +166,7 @@ void IDBOpenDBRequest::onUpgradeNeeded(const IDBResultData& resultData)
 
 void IDBOpenDBRequest::onDeleteDatabaseSuccess(const IDBResultData& resultData)
 {
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
     uint64_t oldVersion = resultData.databaseInfo().version();
 
@@ -182,7 +182,7 @@ void IDBOpenDBRequest::requestCompleted(const IDBResultData& data)
 {
     LOG(IndexedDB, "IDBOpenDBRequest::requestCompleted");
 
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
     // If an Open request was completed after the page has navigated, leaving this request
     // with a stopped script execution context, we need to message back to the server so it
@@ -222,7 +222,7 @@ void IDBOpenDBRequest::requestCompleted(const IDBResultData& data)
 
 void IDBOpenDBRequest::requestBlocked(uint64_t oldVersion, uint64_t newVersion)
 {
-    ASSERT(currentThread() == originThreadID());
+    ASSERT(&originThread() == &Thread::current());
 
     LOG(IndexedDB, "IDBOpenDBRequest::requestBlocked");
     enqueueEvent(IDBVersionChangeEvent::create(oldVersion, newVersion, eventNames().blockedEvent));

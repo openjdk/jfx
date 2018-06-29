@@ -39,11 +39,8 @@ IncludeFile.processIncludeOptions()
 inputFlnm = ARGV.shift
 outputFlnm = ARGV.shift
 
-validBackends = ARGV.shift
-if validBackends
-    $stderr.puts "Only dealing with backends: #{validBackends}"
-    includeOnlyBackends(validBackends.split(","))
-end
+validBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
+includeOnlyBackends(validBackends)
 
 def emitMagicNumber
     OFFSET_MAGIC_NUMBERS.each {
@@ -150,7 +147,7 @@ File.open(outputFlnm, "w") {
         offsetsList = ast.filter(StructOffset).uniq.sort
         sizesList = ast.filter(Sizeof).uniq.sort
         constsList = ast.filter(ConstExpr).uniq.sort
-        
+
         emitMagicNumber
         outp.puts "#{index},"
         offsetsList.each {

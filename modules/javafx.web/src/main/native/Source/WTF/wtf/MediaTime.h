@@ -30,6 +30,7 @@
 #define WTF_MediaTime_h
 
 #include <wtf/FastMalloc.h>
+#include <wtf/text/WTFString.h>
 
 #include <cmath>
 #include <limits>
@@ -108,6 +109,8 @@ public:
     const uint32_t& timeScale() const { return m_timeScale; }
 
     void dump(PrintStream& out) const;
+    String toString() const;
+    String toJSONString() const;
 
     // Make the following casts errors:
     operator double() const = delete;

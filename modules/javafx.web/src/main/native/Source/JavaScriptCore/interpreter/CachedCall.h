@@ -41,8 +41,8 @@ namespace JSC {
     public:
         CachedCall(CallFrame* callFrame, JSFunction* function, int argumentCount)
             : m_valid(false)
-            , m_interpreter(callFrame->interpreter())
             , m_vm(callFrame->vm())
+            , m_interpreter(m_vm.interpreter)
             , m_entryScope(m_vm, function->scope()->globalObject(m_vm))
         {
             VM& vm = m_entryScope.vm();
@@ -51,7 +51,10 @@ namespace JSC {
             ASSERT(!function->isHostFunctionNonInline());
             if (UNLIKELY(vm.isSafeToRecurseSoft())) {
                 m_arguments.ensureCapacity(argumentCount);
-                m_closure = m_interpreter->prepareForRepeatCall(function->jsExecutable(), callFrame, &m_protoCallFrame, function, argumentCount + 1, function->scope(), m_arguments);
+                if (LIKELY(!m_arguments.hasOverflowed()))
+                    m_closure = m_interpreter->prepareForRepeatCall(function->jsExecutable(), callFrame, &m_protoCallFrame, function, argumentCount + 1, function->scope(), m_arguments);
+                else
+                    throwOutOfMemoryError(callFrame, scope);
             } else
                 throwStackOverflowError(callFrame, scope);
             m_valid = !scope.exception();
@@ -67,11 +70,12 @@ namespace JSC {
 
         void clearArguments() { m_arguments.clear(); }
         void appendArgument(JSValue v) { m_arguments.append(v); }
+        bool hasOverflowedArguments() { return m_arguments.hasOverflowed(); }
 
     private:
         bool m_valid;
-        Interpreter* m_interpreter;
         VM& m_vm;
+        Interpreter* m_interpreter;
         VMEntryScope m_entryScope;
         ProtoCallFrame m_protoCallFrame;
         MarkedArgumentBuffer m_arguments;

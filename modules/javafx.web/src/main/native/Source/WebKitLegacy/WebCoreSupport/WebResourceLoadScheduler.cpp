@@ -22,10 +22,6 @@
     Boston, MA 02110-1301, USA.
  */
 
-#ifdef _WIN32
-#include "config.h"
-#endif //_WIN32
-
 #include "WebResourceLoadScheduler.h"
 
 #include <WebCore/Document.h>
@@ -36,7 +32,6 @@
 #include <WebCore/NetscapePlugInStreamLoader.h>
 #include <WebCore/PingHandle.h>
 #include <WebCore/PlatformStrategies.h>
-#include <WebCore/ResourceHandle.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/SubresourceLoader.h>
 #include <WebCore/URL.h>
@@ -92,34 +87,36 @@ WebResourceLoadScheduler::~WebResourceLoadScheduler()
 {
 }
 
-RefPtr<SubresourceLoader> WebResourceLoadScheduler::loadResource(DocumentLoader& documentLoader, CachedResource& resource, const ResourceRequest& request, const ResourceLoaderOptions& options)
+void WebResourceLoadScheduler::loadResource(DocumentLoader& documentLoader, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<WebCore::SubresourceLoader>&&)>&& completionHandler)
 {
-    RefPtr<SubresourceLoader> loader = SubresourceLoader::create(documentLoader, resource, request, options);
+    SubresourceLoader::create(documentLoader, resource, WTFMove(request), options, [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::SubresourceLoader>&& loader) mutable {
     if (loader)
         scheduleLoad(loader.get());
 #if PLATFORM(IOS)
-    // Since we defer loader initialization until scheduling on iOS, the frame
-    // load delegate that would be called in SubresourceLoader::create() on
-    // other ports might be called in scheduleLoad() instead. Our contract to
-    // callers of this method is that a null loader is returned if the load was
-    // cancelled by a frame load delegate.
-    if (!loader || loader->reachedTerminalState())
-        return nullptr;
+        // Since we defer loader initialization until scheduling on iOS, the frame
+        // load delegate that would be called in SubresourceLoader::create() on
+        // other ports might be called in scheduleLoad() instead. Our contract to
+        // callers of this method is that a null loader is returned if the load was
+        // cancelled by a frame load delegate.
+        if (!loader || loader->reachedTerminalState())
+            return completionHandler(nullptr);
 #endif
-    return loader;
+        completionHandler(WTFMove(loader));
+    });
 }
 
-void WebResourceLoadScheduler::loadResourceSynchronously(NetworkingContext* context, unsigned long, const ResourceRequest& request, StoredCredentials storedCredentials, ClientCredentialPolicy, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void WebResourceLoadScheduler::loadResourceSynchronously(NetworkingContext* context, unsigned long, const ResourceRequest& request, StoredCredentialsPolicy storedCredentialsPolicy, ClientCredentialPolicy, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
-    ResourceHandle::loadResourceSynchronously(context, request, storedCredentials, error, response, data);
+    ResourceHandle::loadResourceSynchronously(context, request, storedCredentialsPolicy, error, response, data);
 }
 
-RefPtr<NetscapePlugInStreamLoader> WebResourceLoadScheduler::schedulePluginStreamLoad(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client, const ResourceRequest& request)
+void WebResourceLoadScheduler::schedulePluginStreamLoad(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<WebCore::NetscapePlugInStreamLoader>&&)>&& completionHandler)
 {
-    RefPtr<NetscapePlugInStreamLoader> loader = NetscapePlugInStreamLoader::create(documentLoader, client, request);
-    if (loader)
-        scheduleLoad(loader.get());
-    return loader;
+    NetscapePlugInStreamLoader::create(documentLoader, client, WTFMove(request), [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::NetscapePlugInStreamLoader>&& loader) mutable {
+        if (loader)
+            scheduleLoad(loader.get());
+        completionHandler(WTFMove(loader));
+    });
 }
 
 void WebResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader)
@@ -150,7 +147,7 @@ void WebResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader)
     bool hadRequests = host->hasRequests();
     host->schedule(resourceLoader, priority);
 
-#if PLATFORM(COCOA) || USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     if (ResourceRequest::resourcePrioritiesEnabled() && !isSuspendingPendingRequests()) {
         // Serve all requests at once to keep the pipeline full at the network layer.
         // FIXME: Does this code do anything useful, given that we also set maxRequestsInFlightPerHost to effectively unlimited on these platforms?
@@ -226,10 +223,7 @@ void WebResourceLoadScheduler::servePendingRequests(ResourceLoadPriority minimum
 
     servePendingRequests(m_nonHTTPProtocolHost, minimumPriority);
 
-    Vector<HostInformation*> hostsToServe;
-    copyValuesToVector(m_hosts, hostsToServe);
-
-    for (auto* host : hostsToServe) {
+    for (auto* host : copyToVector(m_hosts.values())) {
         if (host->hasRequests())
             servePendingRequests(host, minimumPriority);
         else
@@ -367,9 +361,13 @@ bool WebResourceLoadScheduler::HostInformation::limitRequests(ResourceLoadPriori
     return m_requestsLoading.size() >= (webResourceLoadScheduler().isSerialLoadingEnabled() ? 1 : m_maxRequestsInFlight);
 }
 
-void WebResourceLoadScheduler::createPingHandle(NetworkingContext* networkingContext, ResourceRequest& request, Ref<SecurityOrigin>&&, const FetchOptions& options)
+void WebResourceLoadScheduler::startPingLoad(Frame& frame, ResourceRequest& request, const HTTPHeaderMap&, const FetchOptions& options, PingLoadCompletionHandler&& completionHandler)
 {
     // PingHandle manages its own lifetime, deleting itself when its purpose has been fulfilled.
-    new PingHandle(networkingContext, request, options.credentials != FetchOptions::Credentials::Omit, PingHandle::UsesAsyncCallbacks::No, options.redirect == FetchOptions::Redirect::Follow);
+    new PingHandle(frame.loader().networkingContext(), request, options.credentials != FetchOptions::Credentials::Omit, options.redirect == FetchOptions::Redirect::Follow, WTFMove(completionHandler));
+}
+
+void WebResourceLoadScheduler::preconnectTo(NetworkingContext&, const URL&, StoredCredentialsPolicy, PreconnectCompletionHandler&&)
+{
 }
 

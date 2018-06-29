@@ -1,34 +1,3 @@
-# Helper macro for using all-in-one builds
-# This macro removes the sources included in the _all_in_one_file from the input _file_list.
-# _file_list is a list of source files
-# _all_in_one_file is an all-in-one cpp file includes other cpp files
-# _result_file_list is the output file list
-macro(PROCESS_ALLINONE_FILE _file_list _all_in_one_file _result_file_list _no_compile)
-    file(STRINGS ${_all_in_one_file} _all_in_one_file_content)
-    set(${_result_file_list} ${_file_list})
-    set(_allins "")
-    foreach (_line ${_all_in_one_file_content})
-        string(REGEX MATCH "^#include [\"<](.*)[\">]" _found ${_line})
-        if (_found)
-            list(APPEND _allins ${CMAKE_MATCH_1})
-        endif ()
-    endforeach ()
-
-    foreach (_allin ${_allins})
-        if (${_no_compile})
-            # For DerivedSources.cpp, we still need the derived sources to be generated, but we do not want them to be compiled
-            # individually. We add the header to the result file list so that CMake knows to keep generating the files.
-            string(REGEX REPLACE "(.*)\\.cpp" "\\1" _allin_no_ext ${_allin})
-            string(REGEX REPLACE ";([^;]*/)${_allin_no_ext}\\.cpp;" ";\\1${_allin_no_ext}.h;" _new_result "${${_result_file_list}};")
-        else ()
-            string(REGEX REPLACE ";[^;]*/${_allin};" ";" _new_result "${${_result_file_list}};")
-        endif ()
-        set(${_result_file_list} ${_new_result})
-    endforeach ()
-
-endmacro()
-
-
 macro(MAKE_HASH_TOOLS _source)
     get_filename_component(_name ${_source} NAME_WE)
 
@@ -203,22 +172,32 @@ endmacro()
 
 
 macro(GENERATE_SETTINGS_MACROS _infile _outfile)
-    set(NAMES_GENERATOR ${WEBCORE_DIR}/page/make_settings.pl)
+    set(NAMES_GENERATOR ${WEBCORE_DIR}/Scripts/GenerateSettings.rb)
 
     # Do not list the output in more than one independent target that may
     # build in parallel or the two instances of the rule may conflict.
     # <https://cmake.org/cmake/help/v3.0/command/add_custom_command.html>
     set(_extra_output
+        ${DERIVED_SOURCES_WEBCORE_DIR}/Settings.cpp
         ${DERIVED_SOURCES_WEBCORE_DIR}/InternalSettingsGenerated.h
         ${DERIVED_SOURCES_WEBCORE_DIR}/InternalSettingsGenerated.cpp
         ${DERIVED_SOURCES_WEBCORE_DIR}/InternalSettingsGenerated.idl
     )
+
+    set(GENERATE_SETTINGS_SCRIPTS
+        ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.cpp.erb
+        ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.idl.erb
+        ${WEBCORE_DIR}/Scripts/SettingsTemplates/InternalSettingsGenerated.h.erb
+        ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.cpp.erb
+        ${WEBCORE_DIR}/Scripts/SettingsTemplates/Settings.h.erb
+    )
+
     set(_args BYPRODUCTS ${_extra_output})
     add_custom_command(
         OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/${_outfile}
         MAIN_DEPENDENCY ${_infile}
-        DEPENDS ${NAMES_GENERATOR} ${SCRIPTS_BINDINGS}
-        COMMAND ${PERL_EXECUTABLE} ${NAMES_GENERATOR} --input ${_infile} --outputDir ${DERIVED_SOURCES_WEBCORE_DIR}
+        DEPENDS ${NAMES_GENERATOR} ${GENERATE_SETTINGS_SCRIPTS} ${SCRIPTS_BINDINGS}
+        COMMAND ${RUBY_EXECUTABLE} ${NAMES_GENERATOR} --input ${_infile} --outputDir ${DERIVED_SOURCES_WEBCORE_DIR}
         VERBATIM ${_args})
 endmacro()
 

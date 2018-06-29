@@ -27,44 +27,15 @@
 
 #if ENABLE(CSS_SELECTOR_JIT)
 
+#include "CompiledSelector.h"
 #include "SelectorChecker.h"
-#include <JavaScriptCore/MacroAssemblerCodeRef.h>
 
 #define CSS_SELECTOR_JIT_PROFILING 0
-
-namespace JSC {
-class MacroAssemblerCodeRef;
-class VM;
-}
 
 namespace WebCore {
 
 class CSSSelector;
 class Element;
-class RenderStyle;
-
-class SelectorCompilationStatus {
-public:
-    enum Status {
-        NotCompiled,
-        CannotCompile,
-        SimpleSelectorChecker,
-        SelectorCheckerWithCheckingContext
-    };
-
-    SelectorCompilationStatus()
-        : m_status(NotCompiled)
-    { }
-
-    SelectorCompilationStatus(Status status)
-        : m_status(status)
-    { }
-
-    operator Status() const { return m_status; }
-
-private:
-    Status m_status;
-};
 
 namespace SelectorCompiler {
 
@@ -82,7 +53,7 @@ typedef unsigned (*QuerySelectorSimpleSelectorChecker)(const Element*);
 typedef unsigned (*RuleCollectorSelectorCheckerWithCheckingContext)(const Element*, SelectorChecker::CheckingContext*, unsigned*);
 typedef unsigned (*QuerySelectorSelectorCheckerWithCheckingContext)(const Element*, const SelectorChecker::CheckingContext*);
 
-SelectorCompilationStatus compileSelector(const CSSSelector*, JSC::VM*, SelectorContext, JSC::MacroAssemblerCodeRef& outputCodeRef);
+SelectorCompilationStatus compileSelector(const CSSSelector*, SelectorContext, JSC::MacroAssemblerCodeRef& outputCodeRef);
 
 inline RuleCollectorSimpleSelectorChecker ruleCollectorSimpleSelectorCheckerFunction(void* executableAddress, SelectorCompilationStatus compilationStatus)
 {

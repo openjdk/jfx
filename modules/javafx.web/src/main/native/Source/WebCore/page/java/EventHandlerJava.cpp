@@ -17,19 +17,14 @@
 
 namespace WebCore {
 
-double const EventHandler::TextDragDelay = 0;
+#if ENABLE(DRAG_SUPPORT)
+const Seconds EventHandler::TextDragDelay { 0_s };
+#endif
 
 OptionSet<PlatformEvent::Modifier> EventHandler::accessKeyModifiers()
 {
     return PlatformEvent::Modifier::AltKey;
 }
-
-#if ENABLE(DRAG_SUPPORT)
-Ref<DataTransfer> EventHandler::createDraggingDataTransfer() const
-{
-    return DataTransfer::createForDrag();
-}
-#endif
 
 void EventHandler::focusDocumentView()
 {

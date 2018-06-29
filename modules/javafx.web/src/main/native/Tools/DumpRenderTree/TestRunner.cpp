@@ -48,12 +48,12 @@
 #include <locale.h>
 #include <stdio.h>
 #include <wtf/Assertions.h>
-#include <wtf/CurrentTime.h>
 #include <wtf/LoggingAccumulator.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS)
@@ -1021,8 +1021,15 @@ static JSValueRef setMockGeolocationPositionCallback(JSContextRef context, JSObj
         speed = JSValueToNumber(context, arguments[6], 0);
     }
 
+    bool canProvideFloorLevel = false;
+    double floorLevel = 0.;
+    if (argumentCount > 7 && !JSValueIsUndefined(context, arguments[7])) {
+        canProvideFloorLevel = true;
+        floorLevel = JSValueToNumber(context, arguments[7], 0);
+    }
+
     TestRunner* controller = reinterpret_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->setMockGeolocationPosition(latitude, longitude, accuracy, canProvideAltitude, altitude, canProvideAltitudeAccuracy, altitudeAccuracy, canProvideHeading, heading, canProvideSpeed, speed);
+    controller->setMockGeolocationPosition(latitude, longitude, accuracy, canProvideAltitude, altitude, canProvideAltitudeAccuracy, altitudeAccuracy, canProvideHeading, heading, canProvideSpeed, speed, canProvideFloorLevel, floorLevel);
 
     return JSValueMakeUndefined(context);
 }
@@ -1763,7 +1770,7 @@ static JSValueRef setBackingScaleFactorCallback(JSContextRef context, JSObjectRe
 
 static JSValueRef preciseTimeCallback(JSContextRef context, JSObjectRef, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
-    return JSValueMakeNumber(context, WTF::currentTime());
+    return JSValueMakeNumber(context, WallTime::now().secondsSinceEpoch().seconds());
 }
 
 static JSValueRef imageCountInGeneralPasteboardCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
@@ -1978,6 +1985,13 @@ static JSValueRef simulateWebNotificationClickCallback(JSContextRef context, JSO
 
     controller->simulateWebNotificationClick(arguments[0]);
 
+    return JSValueMakeUndefined(context);
+}
+
+static JSValueRef forceImmediateCompletionCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->forceImmediateCompletion();
     return JSValueMakeUndefined(context);
 }
 
@@ -2237,6 +2251,7 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "imageCountInGeneralPasteboard", imageCountInGeneralPasteboardCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSpellCheckerLoggingEnabled", setSpellCheckerLoggingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setOpenPanelFiles", setOpenPanelFilesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "forceImmediateCompletion", forceImmediateCompletionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { 0, 0, 0 }
     };
 

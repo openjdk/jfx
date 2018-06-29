@@ -34,7 +34,7 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
 WEBKIT_WRAP_SOURCELIST(${JSC_SOURCES})
 WEBKIT_WRAP_SOURCELIST(${TESTAPI_SOURCES})
-include_directories(./ ${JavaScriptCore_INCLUDE_DIRECTORIES})
+include_directories(./ ${JavaScriptCore_INCLUDE_DIRECTORIES} ${JavaScriptCore_PRIVATE_INCLUDE_DIRECTORIES})
 include_directories(SYSTEM ${JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES})
 add_executable(jsc ${JSC_SOURCES})
 target_link_libraries(jsc ${JSC_LIBRARIES})
@@ -55,19 +55,19 @@ if (TARGET jscLib)
     add_dependencies(jsc jscLib)
 endif ()
 
-if (NOT WIN32)
-    set(TESTMASM_SOURCES
-        ../assembler/testmasm.cpp
-    )
+set(TESTMASM_SOURCES
+    ../assembler/testmasm.cpp
+)
 
-    set(TESTB3_SOURCES
-        ../b3/testb3.cpp
-    )
+set(TESTB3_SOURCES
+    ../b3/testb3.cpp
+)
 
-    set(TESTAIR_SOURCES
-        ../b3/air/testair.cpp
-    )
+set(TESTAIR_SOURCES
+    ../b3/air/testair.cpp
+)
 
+if (DEVELOPER_MODE AND NOT WIN32)
     add_executable(testmasm ${TESTMASM_SOURCES})
     target_link_libraries(testmasm ${JSC_LIBRARIES})
 

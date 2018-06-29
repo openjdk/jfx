@@ -62,9 +62,9 @@ private:
     bool isPresentationAttribute(const QualifiedName&) const final;
     void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
 
-    InsertionNotificationRequest insertedInto(ContainerNode&) final;
-    void finishedInsertingSubtree() final;
-    void removedFrom(ContainerNode&) final;
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
+    void didFinishInsertingNode() final;
+    void removedFromAncestor(RemovalType, ContainerNode&) final;
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
@@ -97,7 +97,7 @@ private:
     bool isFormControlElement() const final { return false; }
 
     bool isEnumeratable() const final { return true; }
-    bool appendFormData(FormDataList&, bool) final;
+    bool appendFormData(DOMFormData&, bool) final;
 
     bool canContainRangeEndPoint() const final;
 

@@ -102,8 +102,11 @@ public:
     WEBCORE_EXPORT void setMethod(const String&);
 
     String target() const final;
+    String effectiveTarget(const Event*) const;
 
     bool wasUserSubmitted() const;
+
+    HTMLFormControlElement* findSubmitButton(const Event*) const;
 
     HTMLFormControlElement* defaultButton() const;
     void resetDefaultButton();
@@ -113,7 +116,8 @@ public:
 
     RadioButtonGroups& radioButtonGroups() { return m_radioButtonGroups; }
 
-    const Vector<FormAssociatedElement*>& associatedElements() const { return m_associatedElements; }
+    WEBCORE_EXPORT const Vector<FormAssociatedElement*>& unsafeAssociatedElements() const;
+    Vector<Ref<FormAssociatedElement>> copyAssociatedElementsVector() const;
     const Vector<HTMLImageElement*>& imageElements() const { return m_imageElements; }
 
     StringPairVector textFieldValues() const;
@@ -124,8 +128,8 @@ private:
     HTMLFormElement(const QualifiedName&, Document&);
 
     bool rendererIsNeeded(const RenderStyle&) final;
-    InsertionNotificationRequest insertedInto(ContainerNode&) final;
-    void removedFrom(ContainerNode&) final;
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
+    void removedFromAncestor(RemovalType, ContainerNode&) final;
     void finishParsingChildren() final;
 
     void handleLocalEvents(Event&) final;
@@ -151,7 +155,7 @@ private:
     // are any invalid controls in this form.
     bool checkInvalidControlsAndCollectUnhandled(Vector<RefPtr<HTMLFormControlElement>>&);
 
-    HTMLElement* elementFromPastNamesMap(const AtomicString&) const;
+    RefPtr<HTMLElement> elementFromPastNamesMap(const AtomicString&) const;
     void addToPastNamesMap(FormNamedItem*, const AtomicString& pastName);
     void assertItemCanBeInPastNamesMap(FormNamedItem*) const;
     void removeFromPastNamesMap(FormNamedItem*);

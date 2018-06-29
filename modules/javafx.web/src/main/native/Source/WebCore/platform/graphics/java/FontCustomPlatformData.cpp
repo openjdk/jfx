@@ -65,7 +65,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(
     return FontPlatformData(RQRef::create(font), size);
 }
 
-std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer)
+std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, unsigned /* index */)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 

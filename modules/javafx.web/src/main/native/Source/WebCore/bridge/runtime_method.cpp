@@ -30,8 +30,8 @@
 #include "JSHTMLElement.h"
 #include "JSPluginElementFunctions.h"
 #include "runtime_object.h"
-#include <runtime/Error.h>
-#include <runtime/FunctionPrototype.h>
+#include <JavaScriptCore/Error.h>
+#include <JavaScriptCore/FunctionPrototype.h>
 
 using namespace WebCore;
 
@@ -41,9 +41,11 @@ using namespace Bindings;
 
 WEBCORE_EXPORT const ClassInfo RuntimeMethod::s_info = { "RuntimeMethod", &InternalFunction::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RuntimeMethod) };
 
+static EncodedJSValue JSC_HOST_CALL callRuntimeMethod(ExecState*);
+
 RuntimeMethod::RuntimeMethod(JSGlobalObject* globalObject, Structure* structure, Method* method)
     // Callers will need to pass in the right global object corresponding to this native object "method".
-    : InternalFunction(globalObject->vm(), structure)
+    : InternalFunction(globalObject->vm(), structure, callRuntimeMethod, nullptr)
     , m_method(method)
 {
 }
@@ -67,9 +69,10 @@ EncodedJSValue RuntimeMethod::lengthGetter(ExecState* exec, EncodedJSValue thisV
 
 bool RuntimeMethod::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
+    VM& vm = exec->vm();
     RuntimeMethod* thisObject = jsCast<RuntimeMethod*>(object);
-    if (propertyName == exec->propertyNames().length) {
-        slot.setCacheableCustom(thisObject, DontDelete | ReadOnly | DontEnum, thisObject->lengthGetter);
+    if (propertyName == vm.propertyNames->length) {
+        slot.setCacheableCustom(thisObject, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum, thisObject->lengthGetter);
         return true;
     }
 
@@ -107,12 +110,6 @@ static EncodedJSValue JSC_HOST_CALL callRuntimeMethod(ExecState* exec)
     JSValue result = instance->invokeMethod(exec, method);
     instance->end();
     return JSValue::encode(result);
-}
-
-CallType RuntimeMethod::getCallData(JSCell*, CallData& callData)
-{
-    callData.native.function = callRuntimeMethod;
-    return CallType::Host;
 }
 
 }

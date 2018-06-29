@@ -2933,7 +2933,7 @@
             <opc>d9 /mod=11 /x87=10</opc>
         </def>
     </instruction>
-
+	
     <instruction>
         <mnemonic>fndisi</mnemonic>
         <cpuid>X87</cpuid>
@@ -3007,7 +3007,7 @@
             <opr>M</opr>
         </def>
     </instruction>
-
+	
     <instruction>
         <mnemonic>frstpm</mnemonic>
         <cpuid>X87</cpuid>

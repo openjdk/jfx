@@ -23,10 +23,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
-#include "config.h"
-#endif //_WIN32
-
 #include "WebStorageNamespaceProvider.h"
 
 #include "StorageNamespaceImpl.h"

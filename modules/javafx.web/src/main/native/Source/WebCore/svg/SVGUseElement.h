@@ -50,6 +50,8 @@ public:
     virtual ~SVGUseElement();
 
     void invalidateShadowTree();
+    bool shadowTreeNeedsUpdate() const { return m_shadowTreeNeedsUpdate; }
+    void updateShadowTree();
 
     RenderElement* rendererClipChild() const;
 
@@ -57,14 +59,13 @@ private:
     SVGUseElement(const QualifiedName&, Document&);
 
     bool isValid() const override;
-    InsertionNotificationRequest insertedInto(ContainerNode&) override;
-    void removedFrom(ContainerNode&) override;
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
+    void removedFromAncestor(RemovalType, ContainerNode&) override;
     void buildPendingResource() override;
     void parseAttribute(const QualifiedName&, const AtomicString&) override;
     void svgAttributeChanged(const QualifiedName&) override;
-    void willRecalcStyle(Style::Change) override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
-    void toClipPath(Path&) override;
+    Path toClipPath() override;
     bool haveLoadedRequiredResources() override;
     void finishParsingChildren() override;
     bool selfHasRelativeLengths() const override;
@@ -79,9 +80,8 @@ private:
     SVGElement* findTarget(String* targetID = nullptr) const;
 
     void cloneTarget(ContainerNode&, SVGElement& target) const;
-    SVGElement* targetClone() const;
+    RefPtr<SVGElement> targetClone() const;
 
-    void updateShadowTree();
     void expandUseElementsInShadowTree() const;
     void expandSymbolElementsInShadowTree() const;
     void transferEventListenersToShadowTree() const;

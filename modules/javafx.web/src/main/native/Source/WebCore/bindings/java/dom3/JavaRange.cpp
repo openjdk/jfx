@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -43,7 +45,7 @@ extern "C" {
 
 #define IMPL (static_cast<Range*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
@@ -56,7 +58,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RangeImpl_getStartContainerImpl(
     return JavaReturn<Node>(env, WTF::getPtr(IMPL->startContainer()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_RangeImpl_getStartOffsetImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_RangeImpl_getStartOffsetImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->startOffset();
@@ -68,13 +70,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RangeImpl_getEndContainerImpl(JN
     return JavaReturn<Node>(env, WTF::getPtr(IMPL->endContainer()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_RangeImpl_getEndOffsetImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_RangeImpl_getEndOffsetImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->endOffset();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_RangeImpl_getCollapsedImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_RangeImpl_getCollapsedImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->collapsed();
@@ -169,7 +171,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_setEndAfterImpl(JNIEnv*
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_collapseImpl(JNIEnv* env, jclass, jlong peer
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_collapseImpl(JNIEnv*, jclass, jlong peer
     , jboolean toStart)
 {
     WebCore::JSMainThreadNullState state;
@@ -273,7 +275,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_RangeImpl_toStringImpl(JNIEnv*
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_detachImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_detachImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->detach();

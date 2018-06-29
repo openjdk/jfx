@@ -35,8 +35,8 @@
 #include "Settings.h"
 
 #include "JSDOMWindowBase.h"
-#include <runtime/JSCInlines.h>
-#include <runtime/JSLock.h>
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/JSLock.h>
 
 namespace WebCore {
 
@@ -45,9 +45,7 @@ HTMLImageLoader::HTMLImageLoader(Element& element)
 {
 }
 
-HTMLImageLoader::~HTMLImageLoader()
-{
-}
+HTMLImageLoader::~HTMLImageLoader() = default;
 
 void HTMLImageLoader::dispatchLoadEvent()
 {

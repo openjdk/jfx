@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/DOMWindow.h>
@@ -51,13 +53,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_UIEventImpl_getViewImpl(JNIEnv* 
     return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->view()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getDetailImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getDetailImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->detail();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getKeyCodeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getKeyCodeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     if (is<WebCore::KeyboardEvent>(*IMPL))
@@ -65,7 +67,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getKeyCodeImpl(JNIEnv
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getCharCodeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getCharCodeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     if (is<WebCore::KeyboardEvent>(*IMPL))
@@ -73,31 +75,31 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getCharCodeImpl(JNIEn
     return 0;
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getLayerXImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getLayerXImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->layerX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getLayerYImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getLayerYImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->layerY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getPageXImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getPageXImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->pageX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getPageYImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getPageYImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->pageY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getWhichImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getWhichImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->which();

@@ -69,9 +69,11 @@ static const IndexingType NumberOfIndexingShapes          = 7;
 // masked off unless you ask for them directly.
 static const IndexingType MayHaveIndexedAccessors         = 0x10;
 
-// The IndexingType field of JSCells is stolen for locks.
+// The IndexingType field of JSCells is stolen for locks and remembering if the object has been a
+// prototype.
 static const IndexingType IndexingTypeLockIsHeld          = 0x20;
 static const IndexingType IndexingTypeLockHasParked       = 0x40;
+static const IndexingType IndexingTypeMayBePrototype      = 0x80;
 
 // List of acceptable array types.
 static const IndexingType NonArray                        = 0x0;
@@ -151,9 +153,14 @@ static inline bool hasAnyArrayStorage(IndexingType indexingType)
     return static_cast<uint8_t>(indexingType & IndexingShapeMask) >= ArrayStorageShape;
 }
 
-static inline bool shouldUseSlowPut(IndexingType indexingType)
+static inline bool hasSlowPutArrayStorage(IndexingType indexingType)
 {
     return (indexingType & IndexingShapeMask) == SlowPutArrayStorageShape;
+}
+
+static inline bool shouldUseSlowPut(IndexingType indexingType)
+{
+    return hasSlowPutArrayStorage(indexingType);
 }
 
 inline IndexingType indexingTypeForValue(JSValue value)

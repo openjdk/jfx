@@ -26,8 +26,12 @@
 #include "config.h"
 #include "DOMWindowCaches.h"
 
-#include "CacheStorage.h"
+#include "CacheStorageProvider.h"
+#include "DOMCacheStorage.h"
 #include "DOMWindow.h"
+#include "Document.h"
+#include "Frame.h"
+#include "Page.h"
 
 namespace WebCore {
 
@@ -52,15 +56,23 @@ DOMWindowCaches* DOMWindowCaches::from(DOMWindow* window)
     return supplement;
 }
 
-CacheStorage* DOMWindowCaches::caches(DOMWindow& window)
+ExceptionOr<DOMCacheStorage*> DOMWindowCaches::caches(ScriptExecutionContext& context, DOMWindow& window)
 {
+    if (downcast<Document>(context).isSandboxed(SandboxOrigin))
+        return Exception { SecurityError, "Cache storage is disabled because the context is sandboxed and lacks the 'allow-same-origin' flag" };
+
+    if (!window.isCurrentlyDisplayedInFrame())
+        return nullptr;
+
     return DOMWindowCaches::from(&window)->caches();
 }
 
-CacheStorage* DOMWindowCaches::caches() const
+DOMCacheStorage* DOMWindowCaches::caches() const
 {
-    if (!m_caches && frame())
-        m_caches = CacheStorage::create();
+    ASSERT(frame());
+    ASSERT(frame()->document());
+    if (!m_caches && frame()->page())
+        m_caches = DOMCacheStorage::create(*frame()->document(), frame()->page()->cacheStorageProvider().createCacheStorageConnection(frame()->page()->sessionID()));
     return m_caches.get();
 }
 

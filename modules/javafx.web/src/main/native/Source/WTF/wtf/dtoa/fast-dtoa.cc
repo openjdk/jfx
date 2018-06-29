@@ -36,7 +36,7 @@
 namespace WTF {
 
 namespace double_conversion {
-
+    
     // The minimal and maximal target exponent define the range of w's binary
     // exponent, where 'w' is the result of multiplying the input by a cached power
     // of ten.
@@ -45,8 +45,8 @@ namespace double_conversion {
     // generation, but a smaller range requires more powers of ten to be cached.
     static const int kMinimalTargetExponent = -60;
     static const int kMaximalTargetExponent = -32;
-
-
+    
+    
     // Adjusts the last digit of the generated number, and screens out generated
     // solutions that may be inaccurate. A solution may be inaccurate if it is
     // outside the safe interval, or if we cannot prove that it is closer to the
@@ -77,7 +77,7 @@ namespace double_conversion {
         //
         // The real w (* unit) must lie somewhere inside the interval
         // ]w_low; w_high[ (often written as "(w_low; w_high)")
-
+        
         // Basically the buffer currently contains a number in the unsafe interval
         // ]too_low; too_high[ with too_low < w < too_high
         //
@@ -150,7 +150,7 @@ namespace double_conversion {
                    buffer[length - 1]--;
                    rest += ten_kappa;
                }
-
+        
         // We have approached w+ as much as possible. We now test if approaching w-
         // would require changing the buffer. If yes, then we have two possible
         // representations close to w, but we cannot decide which one is closer.
@@ -160,7 +160,7 @@ namespace double_conversion {
              big_distance - rest > rest + ten_kappa - big_distance)) {
                 return false;
             }
-
+        
         // Weeding test.
         //   The safe interval is [too_low + 2 ulp; too_high - 2 ulp]
         //   Since too_low = too_high - unsafe_interval this is equivalent to
@@ -168,8 +168,8 @@ namespace double_conversion {
         //   Conceptually we have: rest ~= too_high - buffer
         return (2 * unit <= rest) && (rest <= unsafe_interval - 4 * unit);
     }
-
-
+    
+    
     // Rounds the buffer upwards if the result is closer to v by possibly adding
     // 1 to the buffer. If the precision of the calculation is not sufficient to
     // round correctly, return false.
@@ -225,15 +225,15 @@ namespace double_conversion {
         }
         return false;
     }
-
-
+    
+    
     static const uint32_t kTen4 = 10000;
     static const uint32_t kTen5 = 100000;
     static const uint32_t kTen6 = 1000000;
     static const uint32_t kTen7 = 10000000;
     static const uint32_t kTen8 = 100000000;
     static const uint32_t kTen9 = 1000000000;
-
+    
     // Returns the biggest power of ten that is less than or equal to the given
     // number. We furthermore receive the maximum number of bits 'number' has.
     // If number_bits == 0 then 0^-1 is returned
@@ -244,7 +244,7 @@ namespace double_conversion {
                                 uint32_t* power,
                                 int* exponent) {
         ASSERT(number < (uint32_t)(1 << (number_bits + 1)));
-
+        
         switch (number_bits) {
             case 32:
             case 31:
@@ -349,8 +349,8 @@ namespace double_conversion {
                 UNREACHABLE();
         }
     }
-
-
+    
+    
     // Generates the digits of input number w.
     // w is a floating-point number (DiyFp), consisting of a significand and an
     // exponent. Its exponent is bounded by kMinimalTargetExponent and
@@ -462,7 +462,7 @@ namespace double_conversion {
             }
             divisor /= 10;
         }
-
+        
         // The integrals have been generated. We are at the point of the decimal
         // separator. In the following loop we simply multiply the remaining digits by
         // 10 and divide by one. We just need to pay attention to multiply associated
@@ -488,9 +488,9 @@ namespace double_conversion {
             }
         }
     }
-
-
-
+    
+    
+    
     // Generates (at most) requested_digits digits of input number w.
     // w is a floating-point number (DiyFp), consisting of a significand and an
     // exponent. Its exponent is bounded by kMinimalTargetExponent and
@@ -545,7 +545,7 @@ namespace double_conversion {
                         &divisor, &divisor_exponent);
         *kappa = divisor_exponent + 1;
         *length = 0;
-
+        
         // Loop invariant: buffer = w / 10^kappa  (integer division)
         // The invariant holds for the first iteration: kappa has been initialized
         // with the divisor exponent + 1. And the divisor is the biggest power of ten
@@ -562,7 +562,7 @@ namespace double_conversion {
             if (requested_digits == 0) break;
             divisor /= 10;
         }
-
+        
         if (requested_digits == 0) {
             uint64_t rest =
             (static_cast<uint64_t>(integrals) << -one.e()) + fractionals;
@@ -570,7 +570,7 @@ namespace double_conversion {
                                     static_cast<uint64_t>(divisor) << -one.e(), w_error,
                                     kappa);
         }
-
+        
         // The integrals have been generated. We are at the point of the decimal
         // separator. In the following loop we simply multiply the remaining digits by
         // 10 and divide by one. We just need to pay attention to multiply associated
@@ -595,8 +595,8 @@ namespace double_conversion {
         return RoundWeedCounted(buffer, *length, fractionals, one.f(), w_error,
                                 kappa);
     }
-
-
+    
+    
     // Provides a decimal representation of v.
     // Returns true if it succeeds, otherwise the result cannot be trusted.
     // There will be *length digits inside the buffer (not null-terminated).
@@ -636,7 +636,7 @@ namespace double_conversion {
                 DiyFp::kSignificandSize));
         // Note that ten_mk is only an approximation of 10^-k. A DiyFp only contains a
         // 64 bit significand and ten_mk is thus only precise up to 64 bits.
-
+        
         // The DiyFp::Times procedure rounds its result, and ten_mk is approximated
         // too. The variable scaled_w (as well as scaled_boundary_minus/plus) are now
         // off by a small amount.
@@ -653,7 +653,7 @@ namespace double_conversion {
         // enhancements are not terriffic.
         DiyFp scaled_boundary_minus = DiyFp::Times(boundary_minus, ten_mk);
         DiyFp scaled_boundary_plus  = DiyFp::Times(boundary_plus,  ten_mk);
-
+        
         // DigitGen will generate the digits of scaled_w. Therefore we have
         // v == (double) (scaled_w * 10^-mk).
         // Set decimal_exponent == -mk and pass it to DigitGen. If scaled_w is not an
@@ -666,8 +666,8 @@ namespace double_conversion {
         *decimal_exponent = -mk + kappa;
         return result;
     }
-
-
+    
+    
     // The "counted" version of grisu3 (see above) only generates requested_digits
     // number of digits. This version does not generate the shortest representation,
     // and with enough requested digits 0.1 will at some point print as 0.9999999...
@@ -695,7 +695,7 @@ namespace double_conversion {
                 DiyFp::kSignificandSize));
         // Note that ten_mk is only an approximation of 10^-k. A DiyFp only contains a
         // 64 bit significand and ten_mk is thus only precise up to 64 bits.
-
+        
         // The DiyFp::Times procedure rounds its result, and ten_mk is approximated
         // too. The variable scaled_w (as well as scaled_boundary_minus/plus) are now
         // off by a small amount.
@@ -703,7 +703,7 @@ namespace double_conversion {
         // In other words: let f = scaled_w.f() and e = scaled_w.e(), then
         //           (f-1) * 2^e < w*10^k < (f+1) * 2^e
         DiyFp scaled_w = DiyFp::Times(w, ten_mk);
-
+        
         // We now have (double) (scaled_w * 10^-mk).
         // DigitGen will generate the first requested_digits digits of scaled_w and
         // return together with a kappa such that scaled_w ~= buffer * 10^kappa. (It
@@ -715,8 +715,8 @@ namespace double_conversion {
         *decimal_exponent = -mk + kappa;
         return result;
     }
-
-
+    
+    
     bool FastDtoa(double v,
                   FastDtoaMode mode,
                   int requested_digits,
@@ -725,7 +725,7 @@ namespace double_conversion {
                   int* decimal_point) {
         ASSERT(v > 0);
         ASSERT(!Double(v).IsSpecial());
-
+        
         bool result = false;
         int decimal_exponent = 0;
         switch (mode) {
@@ -745,7 +745,7 @@ namespace double_conversion {
         }
         return result;
     }
-
+    
 }  // namespace double_conversion
 
 } // namespace WTF

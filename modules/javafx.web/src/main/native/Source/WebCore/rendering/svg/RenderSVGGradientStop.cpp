@@ -25,20 +25,21 @@
 #include "SVGNames.h"
 #include "SVGResourcesCache.h"
 #include "SVGStopElement.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
 namespace WebCore {
 
 using namespace SVGNames;
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGGradientStop);
+
 RenderSVGGradientStop::RenderSVGGradientStop(SVGStopElement& element, RenderStyle&& style)
     : RenderElement(element, WTFMove(style), 0)
 {
 }
 
-RenderSVGGradientStop::~RenderSVGGradientStop()
-{
-}
+RenderSVGGradientStop::~RenderSVGGradientStop() = default;
 
 void RenderSVGGradientStop::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {

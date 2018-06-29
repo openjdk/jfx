@@ -35,14 +35,14 @@
 #include "Event.h"
 #include "FloatQuad.h"
 #include "JSMainThreadExecState.h"
-#include <inspector/InspectorProtocolObjects.h>
-#include <inspector/ScriptBreakpoint.h>
-#include <inspector/ScriptCallStack.h>
-#include <inspector/ScriptCallStackFactory.h>
-
-using namespace Inspector;
+#include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <JavaScriptCore/ScriptBreakpoint.h>
+#include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/ScriptCallStackFactory.h>
 
 namespace WebCore {
+
+using namespace Inspector;
 
 Ref<JSON::Object> TimelineRecordFactory::createGenericRecord(double startTime, int maxCallStackDepth)
 {

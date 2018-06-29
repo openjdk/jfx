@@ -32,7 +32,7 @@ function of(/* items... */)
 {
     "use strict";
     let len = arguments.length;
-    let constructFunction = this.@allocateTypedArray;
+    let constructFunction = @getByIdDirectPrivate(this, "allocateTypedArray");
     if (constructFunction === @undefined)
         @throwTypeError("TypedArray.of requires its this argument to subclass a TypedArray constructor");
 
@@ -59,8 +59,7 @@ function from(items /* [ , mapfn [ , thisArg ] ] */)
         thisArg = @argument(2);
     }
 
-    if (items == null)
-        @throwTypeError("TypedArray.from requires an array-like object - not null or undefined");
+    let arrayLike = @toObject(items, "TypedArray.from requires an array-like object - not null or undefined");
 
     let iteratorMethod = items.@iteratorSymbol;
     if (iteratorMethod != null) {
@@ -86,7 +85,7 @@ function from(items /* [ , mapfn [ , thisArg ] ] */)
             k++;
         }
 
-        let constructFunction = this.@allocateTypedArray;
+        let constructFunction = @getByIdDirectPrivate(this, "allocateTypedArray");
         if (constructFunction === @undefined)
             @throwTypeError("TypedArray.from requires its this argument subclass a TypedArray constructor");
 
@@ -99,10 +98,9 @@ function from(items /* [ , mapfn [ , thisArg ] ] */)
         return result;
     }
 
-    let arrayLike = @Object(items);
     let arrayLikeLength = @toLength(arrayLike.length);
 
-    let constructFunction = this.@allocateTypedArray;
+    let constructFunction = @getByIdDirectPrivate(this, "allocateTypedArray");
     if (constructFunction === @undefined)
         @throwTypeError("this does not subclass a TypedArray constructor");
 
@@ -128,12 +126,12 @@ function allocateInt8Array(length)
 
 function allocateInt16Array(length)
 {
-    return new @Int16Array(length);
+    return new @Int16Array(length);    
 }
 
 function allocateInt32Array(length)
 {
-    return new @Int32Array(length);
+    return new @Int32Array(length);   
 }
 
 function allocateUint32Array(length)
@@ -143,12 +141,12 @@ function allocateUint32Array(length)
 
 function allocateUint16Array(length)
 {
-    return new @Uint16Array(length);
+    return new @Uint16Array(length);   
 }
 
 function allocateUint8Array(length)
 {
-    return new @Uint8Array(length);
+    return new @Uint8Array(length);   
 }
 
 function allocateUint8ClampedArray(length)

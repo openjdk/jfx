@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/DOMWindow.h>
@@ -45,55 +47,55 @@ extern "C" {
 
 
 // Attributes
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getScreenXImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getScreenXImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->screenX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getScreenYImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getScreenYImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->screenY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getClientXImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getClientXImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->clientX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getClientYImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getClientYImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->clientY();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getCtrlKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getCtrlKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->ctrlKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getShiftKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getShiftKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->shiftKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getAltKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getAltKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->altKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getMetaKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getMetaKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->metaKey();
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getButtonImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getButtonImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->button();
@@ -105,25 +107,25 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getRelatedTargetI
     return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->relatedTarget()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getOffsetXImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getOffsetXImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetX();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getOffsetYImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getOffsetYImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetY();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getXImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getXImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->x();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getYImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MouseEventImpl_getYImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->y();

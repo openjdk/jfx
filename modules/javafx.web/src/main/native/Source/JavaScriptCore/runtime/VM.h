@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 #pragma once
 
 #include "CallData.h"
+#include "CodeSpecializationKind.h"
+#include "CompleteSubspace.h"
 #include "ConcurrentJSLock.h"
 #include "ControlFlowProfiler.h"
 #include "DateInstanceCache.h"
@@ -38,23 +40,21 @@
 #include "FunctionHasExecutedCache.h"
 #include "Heap.h"
 #include "Intrinsic.h"
+#include "IsoCellSet.h"
+#include "IsoSubspace.h"
 #include "JITThunks.h"
 #include "JSCJSValue.h"
-#include "JSDestructibleObjectSubspace.h"
 #include "JSLock.h"
-#include "JSSegmentedVariableObjectSubspace.h"
-#include "JSStringSubspace.h"
-#include "JSWebAssemblyCodeBlockSubspace.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Microtask.h"
 #include "NumericStrings.h"
-#include "PrototypeMap.h"
 #include "SmallStrings.h"
 #include "Strong.h"
-#include "Subspace.h"
-#include "TemplateRegistryKeyTable.h"
+#include "StructureCache.h"
 #include "VMEntryRecord.h"
 #include "VMTraps.h"
+#include "ThreadLocalCache.h"
+#include "WasmContext.h"
 #include "Watchpoint.h"
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/CheckedArithmetic.h>
@@ -106,9 +106,13 @@ class HeapProfiler;
 class Identifier;
 class Interpreter;
 class JSCustomGetterSetterFunction;
+class JSDestructibleObjectHeapCellType;
 class JSGlobalObject;
 class JSObject;
 class JSRunLoopTimer;
+class JSSegmentedVariableObjectHeapCellType;
+class JSStringHeapCellType;
+class JSWebAssemblyCodeBlockHeapCellType;
 class JSWebAssemblyInstance;
 class LLIntOffsetsExtractor;
 class NativeExecutable;
@@ -146,9 +150,6 @@ namespace FTL {
 class Thunks;
 }
 #endif // ENABLE(FTL_JIT)
-namespace CommonSlowPaths {
-struct ArityCheckData;
-}
 namespace Profiler {
 class Database;
 }
@@ -231,7 +232,7 @@ struct ScratchBuffer {
         double pad; // Make sure m_buffer is double aligned.
     } u;
 #if CPU(MIPS) && (defined WTF_MIPS_ARCH_REV && WTF_MIPS_ARCH_REV == 2)
-    void* m_buffer[0] __attribute__((aligned(8)));
+    alignas(8) void* m_buffer[0];
 #else
     void* m_buffer[0];
 #endif
@@ -292,8 +293,20 @@ public:
     std::unique_ptr<GigacageAlignedMemoryAllocator> primitiveGigacageAllocator;
     std::unique_ptr<GigacageAlignedMemoryAllocator> jsValueGigacageAllocator;
 
-    Subspace primitiveGigacageAuxiliarySpace; // Typed arrays, strings, bitvectors, etc go here.
-    Subspace jsValueGigacageAuxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
+    std::unique_ptr<HeapCellType> auxiliaryJSValueStrictHeapCellType;
+    std::unique_ptr<HeapCellType> auxiliaryDangerousBitsHeapCellType;
+    std::unique_ptr<HeapCellType> cellJSValueOOBHeapCellType;
+    std::unique_ptr<HeapCellType> cellDangerousBitsHeapCellType;
+    std::unique_ptr<HeapCellType> destructibleCellHeapCellType;
+    std::unique_ptr<JSStringHeapCellType> stringHeapCellType;
+    std::unique_ptr<JSDestructibleObjectHeapCellType> destructibleObjectHeapCellType;
+    std::unique_ptr<JSSegmentedVariableObjectHeapCellType> segmentedVariableObjectHeapCellType;
+#if ENABLE(WEBASSEMBLY)
+    std::unique_ptr<JSWebAssemblyCodeBlockHeapCellType> webAssemblyCodeBlockHeapCellType;
+#endif
+
+    CompleteSubspace primitiveGigacageAuxiliarySpace; // Typed arrays, strings, bitvectors, etc go here.
+    CompleteSubspace jsValueGigacageAuxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
 
     // We make cross-cutting assumptions about typed arrays being in the primitive Gigacage and butterflies
     // being in the JSValue gigacage. For some types, it's super obvious where they should go, and so we
@@ -301,39 +314,111 @@ public:
     // constant somewhere.
     // FIXME: Maybe it would be better if everyone abstracted this?
     // https://bugs.webkit.org/show_bug.cgi?id=175248
-    ALWAYS_INLINE Subspace& gigacageAuxiliarySpace(Gigacage::Kind kind)
+    ALWAYS_INLINE CompleteSubspace& gigacageAuxiliarySpace(Gigacage::Kind kind)
     {
         switch (kind) {
         case Gigacage::Primitive:
             return primitiveGigacageAuxiliarySpace;
         case Gigacage::JSValue:
             return jsValueGigacageAuxiliarySpace;
+        case Gigacage::String:
+            break;
         }
         RELEASE_ASSERT_NOT_REACHED();
         return primitiveGigacageAuxiliarySpace;
     }
 
     // Whenever possible, use subspaceFor<CellType>(vm) to get one of these subspaces.
-    Subspace cellSpace;
-    Subspace destructibleCellSpace;
-    JSStringSubspace stringSpace;
-    JSDestructibleObjectSubspace destructibleObjectSpace;
-    JSDestructibleObjectSubspace eagerlySweptDestructibleObjectSpace;
-    JSSegmentedVariableObjectSubspace segmentedVariableObjectSpace;
+    CompleteSubspace cellJSValueOOBSpace;
+    CompleteSubspace cellDangerousBitsSpace;
+    CompleteSubspace jsValueGigacageCellSpace; // FIXME: This space is problematic because we have things in here like DirectArguments and ScopedArguments; those should be split into JSValueOOB cells and JSValueStrict auxiliaries. https://bugs.webkit.org/show_bug.cgi?id=182858
+    CompleteSubspace destructibleCellSpace;
+    CompleteSubspace stringSpace;
+    CompleteSubspace destructibleObjectSpace;
+    CompleteSubspace eagerlySweptDestructibleObjectSpace;
+    CompleteSubspace segmentedVariableObjectSpace;
 #if ENABLE(WEBASSEMBLY)
-    JSWebAssemblyCodeBlockSubspace webAssemblyCodeBlockSpace;
+    CompleteSubspace webAssemblyCodeBlockSpace;
 #endif
+
+    IsoSubspace asyncFunctionSpace;
+    IsoSubspace asyncGeneratorFunctionSpace;
+    IsoSubspace boundFunctionSpace;
+    IsoSubspace customGetterSetterFunctionSpace;
+    IsoSubspace directEvalExecutableSpace;
+    IsoSubspace executableToCodeBlockEdgeSpace;
+    IsoSubspace functionExecutableSpace;
+    IsoSubspace functionSpace;
+    IsoSubspace generatorFunctionSpace;
+    IsoSubspace indirectEvalExecutableSpace;
+    IsoSubspace inferredTypeSpace;
+    IsoSubspace inferredValueSpace;
+    IsoSubspace moduleProgramExecutableSpace;
+    IsoSubspace nativeExecutableSpace;
+    IsoSubspace nativeStdFunctionSpace;
+    IsoSubspace programExecutableSpace;
+    IsoSubspace propertyTableSpace;
+    IsoSubspace structureRareDataSpace;
+    IsoSubspace structureSpace;
+    IsoSubspace weakSetSpace;
+    IsoSubspace weakMapSpace;
+#if ENABLE(WEBASSEMBLY)
+    IsoSubspace webAssemblyFunctionSpace;
+    IsoSubspace webAssemblyWrapperFunctionSpace;
+#endif
+
+    IsoCellSet executableToCodeBlockEdgesWithConstraints;
+    IsoCellSet executableToCodeBlockEdgesWithFinalizers;
+    IsoCellSet inferredTypesWithFinalizers;
+    IsoCellSet inferredValuesWithFinalizers;
+
+    struct SpaceAndFinalizerSet {
+        IsoSubspace space;
+        IsoCellSet finalizerSet;
+
+        template<typename... Arguments>
+        SpaceAndFinalizerSet(Arguments&&... arguments)
+            : space(std::forward<Arguments>(arguments)...)
+            , finalizerSet(space)
+        {
+        }
+
+        static IsoCellSet& finalizerSetFor(Subspace& space)
+        {
+            return *bitwise_cast<IsoCellSet*>(
+                bitwise_cast<char*>(&space) -
+                OBJECT_OFFSETOF(SpaceAndFinalizerSet, space) +
+                OBJECT_OFFSETOF(SpaceAndFinalizerSet, finalizerSet));
+        }
+    };
+
+    SpaceAndFinalizerSet evalCodeBlockSpace;
+    SpaceAndFinalizerSet functionCodeBlockSpace;
+    SpaceAndFinalizerSet moduleProgramCodeBlockSpace;
+    SpaceAndFinalizerSet programCodeBlockSpace;
+
+    template<typename Func>
+    void forEachCodeBlockSpace(const Func& func)
+    {
+        // This should not include webAssemblyCodeBlockSpace because this is about subsclasses of
+        // JSC::CodeBlock.
+        func(evalCodeBlockSpace);
+        func(functionCodeBlockSpace);
+        func(moduleProgramCodeBlockSpace);
+        func(programCodeBlockSpace);
+    }
 
     VMType vmType;
     ClientData* clientData;
-    VMEntryFrame* topVMEntryFrame;
+    EntryFrame* topEntryFrame;
     // NOTE: When throwing an exception while rolling back the call frame, this may be equal to
-    // topVMEntryFrame.
+    // topEntryFrame.
     // FIXME: This should be a void*, because it might not point to a CallFrame.
     // https://bugs.webkit.org/show_bug.cgi?id=160441
     ExecState* topCallFrame { nullptr };
-    // FIXME: Save this state elsewhere to allow PIC. https://bugs.webkit.org/show_bug.cgi?id=169773
-    JSWebAssemblyInstance* wasmContext { nullptr };
+#if ENABLE(WEBASSEMBLY)
+    Wasm::Context wasmContext;
+#endif
     Strong<Structure> structureStructure;
     Strong<Structure> structureRareDataStructure;
     Strong<Structure> terminatedExecutionErrorStructure;
@@ -358,9 +443,10 @@ public:
     Strong<Structure> fixedArrayStructure;
     Strong<Structure> sourceCodeStructure;
     Strong<Structure> scriptFetcherStructure;
+    Strong<Structure> scriptFetchParametersStructure;
     Strong<Structure> structureChainStructure;
     Strong<Structure> sparseArrayValueMapStructure;
-    Strong<Structure> templateRegistryKeyStructure;
+    Strong<Structure> templateObjectDescriptorStructure;
     Strong<Structure> arrayBufferNeuteringWatchpointStructure;
     Strong<Structure> unlinkedFunctionExecutableStructure;
     Strong<Structure> unlinkedProgramCodeBlockStructure;
@@ -368,9 +454,9 @@ public:
     Strong<Structure> unlinkedFunctionCodeBlockStructure;
     Strong<Structure> unlinkedModuleProgramCodeBlockStructure;
     Strong<Structure> propertyTableStructure;
-    Strong<Structure> inferredValueStructure;
     Strong<Structure> inferredTypeStructure;
     Strong<Structure> inferredTypeTableStructure;
+    Strong<Structure> inferredValueStructure;
     Strong<Structure> functionRareDataStructure;
     Strong<Structure> exceptionStructure;
     Strong<Structure> promiseDeferredStructure;
@@ -382,17 +468,22 @@ public:
     Strong<Structure> functionCodeBlockStructure;
     Strong<Structure> hashMapBucketSetStructure;
     Strong<Structure> hashMapBucketMapStructure;
+    Strong<Structure> setIteratorStructure;
+    Strong<Structure> mapIteratorStructure;
+    Strong<Structure> bigIntStructure;
+    Strong<Structure> executableToCodeBlockEdgeStructure;
 
     Strong<JSCell> emptyPropertyNameEnumerator;
+    Strong<JSCell> sentinelSetBucket;
+    Strong<JSCell> sentinelMapBucket;
 
     std::unique_ptr<PromiseDeferredTimer> promiseDeferredTimer;
 
     JSCell* currentlyDestructingCallbackObject;
-    const ClassInfo* currentlyDestructingCallbackObjectClassInfo;
+    PoisonedClassInfoPtr currentlyDestructingCallbackObjectClassInfo;
 
     AtomicStringTable* m_atomicStringTable;
     WTF::SymbolRegistry m_symbolRegistry;
-    TemplateRegistryKeyTable m_templateRegistryKeytable;
     CommonIdentifiers* propertyNames;
     const ArgList* emptyList;
     SmallStrings smallStrings;
@@ -405,8 +496,6 @@ public:
 
     AtomicStringTable* atomicStringTable() const { return m_atomicStringTable; }
     WTF::SymbolRegistry& symbolRegistry() { return m_symbolRegistry; }
-
-    TemplateRegistryKeyTable& templateRegistryKeyTable() { return m_templateRegistryKeytable; }
 
     WeakGCMap<SymbolImpl*, Symbol, PtrHash<SymbolImpl*>> symbolImplToSymbolMap;
 
@@ -442,22 +531,14 @@ public:
         DeletePropertyMode m_previousMode;
     };
 
-#if ENABLE(JIT)
-    bool canUseJIT() { return m_canUseJIT; }
-#else
-    bool canUseJIT() { return false; } // interpreter only
-#endif
-
-#if ENABLE(YARR_JIT)
-    bool canUseRegExpJIT() { return m_canUseRegExpJIT; }
-#else
-    bool canUseRegExpJIT() { return false; } // interpreter only
-#endif
+    static JS_EXPORT_PRIVATE bool canUseAssembler();
+    static JS_EXPORT_PRIVATE bool canUseJIT();
+    static JS_EXPORT_PRIVATE bool canUseRegExpJIT();
 
     SourceProviderCache* addSourceProviderCache(SourceProvider*);
     void clearSourceProviderCaches();
 
-    PrototypeMap prototypeMap;
+    StructureCache structureCache;
 
     typedef HashMap<RefPtr<SourceProvider>, RefPtr<SourceProviderCache>> SourceProviderCacheMap;
     SourceProviderCacheMap sourceProviderCacheMap;
@@ -469,15 +550,14 @@ public:
         return jitStubs->ctiStub(this, generator);
     }
 
-    static RegisterAtOffsetList* getAllCalleeSaveRegisterOffsets();
-
 #endif // ENABLE(JIT)
-    std::unique_ptr<CommonSlowPaths::ArityCheckData> arityCheckData;
 #if ENABLE(FTL_JIT)
     std::unique_ptr<FTL::Thunks> ftlThunks;
 #endif
     NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor, const String& name);
     NativeExecutable* getHostFunction(NativeFunction, Intrinsic, NativeFunction constructor, const DOMJIT::Signature*, const String& name);
+
+    MacroAssemblerCodePtr getCTIInternalFunctionTrampolineFor(CodeSpecializationKind);
 
     static ptrdiff_t exceptionOffset()
     {
@@ -494,9 +574,9 @@ public:
         return OBJECT_OFFSETOF(VM, targetMachinePCForThrow);
     }
 
-    static ptrdiff_t topVMEntryFrameOffset()
+    static ptrdiff_t topEntryFrameOffset()
     {
-        return OBJECT_OFFSETOF(VM, topVMEntryFrame);
+        return OBJECT_OFFSETOF(VM, topEntryFrame);
     }
 
     void restorePreviousException(Exception* exception) { setException(exception); }
@@ -546,6 +626,7 @@ public:
         return isSafeToRecurse(m_stackLimit);
     }
 
+    void** addressOfLastStackTop() { return &m_lastStackTop; }
     void* lastStackTop() { return m_lastStackTop; }
     void setLastStackTop(void*);
 
@@ -587,6 +668,11 @@ public:
     JSObject* stringRecursionCheckFirstObject { nullptr };
     HashSet<JSObject*> stringRecursionCheckVisitedObjects;
 
+#if !USE(FAST_TLS_FOR_TLC)
+    ThreadLocalCache::Data* threadLocalCacheData { nullptr };
+#endif
+    RefPtr<ThreadLocalCache> defaultThreadLocalCache;
+
     LocalTimeOffsetCache localTimeOffsetCache;
 
     String cachedDateString;
@@ -597,6 +683,15 @@ public:
     RegExpCache* m_regExpCache;
     BumpPointerAllocator m_regExpAllocator;
     ConcurrentJSLock m_regExpAllocatorLock;
+
+#if ENABLE(YARR_JIT_ALL_PARENS_EXPRESSIONS)
+    static constexpr size_t patternContextBufferSize = 8192; // Space allocated to save nested parenthesis context
+    char* m_regExpPatternContexBuffer { nullptr };
+    Lock m_regExpPatternContextLock;
+    char* acquireRegExpPatternContexBuffer();
+    void releaseRegExpPatternContexBuffer();
+#endif
+
 
     std::unique_ptr<HasOwnPropertyCache> m_hasOwnPropertyCache;
     ALWAYS_INLINE HasOwnPropertyCache* hasOwnPropertyCache() { return m_hasOwnPropertyCache.get(); }
@@ -685,7 +780,7 @@ public:
 
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     StackTrace* nativeStackTraceOfLastThrow() const { return m_nativeStackTraceOfLastThrow.get(); }
-    ThreadIdentifier throwingThread() const { return m_throwingThread; }
+    Thread* throwingThread() const { return m_throwingThread.get(); }
 #endif
 
 #if USE(CF)
@@ -728,7 +823,7 @@ private:
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
         m_needExceptionCheck = false;
         m_nativeStackTraceOfLastThrow = nullptr;
-        m_throwingThread = 0;
+        m_throwingThread = nullptr;
 #endif
         m_exception = nullptr;
     }
@@ -749,15 +844,6 @@ private:
     static void primitiveGigacageDisabledCallback(void*);
     void primitiveGigacageDisabled();
 
-#if ENABLE(ASSEMBLER)
-    bool m_canUseAssembler;
-#endif
-#if ENABLE(JIT)
-    bool m_canUseJIT;
-#endif
-#if ENABLE(YARR_JIT)
-    bool m_canUseRegExpJIT;
-#endif
 #if ENABLE(GC_VALIDATION)
     const ClassInfo* m_initializingObjectClass;
 #endif
@@ -769,7 +855,7 @@ private:
 #if !ENABLE(JIT)
     void* m_cloopStackLimit { nullptr };
 #endif
-    void* m_lastStackTop;
+    void* m_lastStackTop { nullptr };
 
     Exception* m_exception { nullptr };
     Exception* m_lastException { nullptr };
@@ -779,7 +865,8 @@ private:
     unsigned m_simulatedThrowPointRecursionDepth { 0 };
     mutable bool m_needExceptionCheck { false };
     std::unique_ptr<StackTrace> m_nativeStackTraceOfLastThrow;
-    ThreadIdentifier m_throwingThread;
+    std::unique_ptr<StackTrace> m_nativeStackTraceOfLastSimulatedThrow;
+    RefPtr<Thread> m_throwingThread;
 #endif
 
     bool m_failNextNewCodeBlock { false };

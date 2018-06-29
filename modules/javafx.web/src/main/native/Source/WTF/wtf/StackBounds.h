@@ -41,6 +41,8 @@ class StackBounds {
     const static size_t s_defaultAvailabilityDelta = 64 * 1024;
 
 public:
+    enum class StackDirection { Upward, Downward };
+
     static constexpr StackBounds emptyBounds() { return StackBounds(); }
 
 #if HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
@@ -126,7 +128,7 @@ public:
 #else
         ASSERT(m_origin && m_bound);
 #endif
-        return true;
+        return m_bound <= m_origin;
     }
 
 private:
@@ -141,6 +143,8 @@ private:
         , m_bound(nullptr)
     {
     }
+
+    static StackDirection stackDirection();
 
     WTF_EXPORT_PRIVATE static StackBounds currentThreadStackBoundsInternal();
 

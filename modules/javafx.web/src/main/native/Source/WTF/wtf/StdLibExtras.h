@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
  * Copyright (C) 2013 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,20 +27,13 @@
 #ifndef WTF_StdLibExtras_h
 #define WTF_StdLibExtras_h
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <type_traits>
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Compiler.h>
-
-// This was used to declare and define a static local variable (static T;) so that
-//  it was leaked so that its destructors were not called at exit.
-// Newly written code should use static NeverDestroyed<T> instead.
-#ifndef DEPRECATED_DEFINE_STATIC_LOCAL
-#define DEPRECATED_DEFINE_STATIC_LOCAL(type, name, arguments) \
-    static type& name = *new type arguments
-#endif
 
 // Use this macro to declare and define a debug-only global variable that may have a
 // non-trivial constructor and destructor. When building with clang, this will suppress
@@ -149,7 +142,7 @@ inline ToType bitwise_cast(FromType from)
     static_assert(__is_trivially_copyable(FromType), "bitwise_cast of non-trivially-copyable type!");
 #endif
     typename std::remove_const<ToType>::type to { };
-    std::memcpy(&to, &from, sizeof(to));
+    std::memcpy(static_cast<void*>(&to), static_cast<void*>(&from), sizeof(to));
     return to;
 }
 
@@ -202,6 +195,12 @@ template<size_t divisor> inline constexpr size_t roundUpToMultipleOf(size_t x)
 {
     static_assert(divisor && !(divisor & (divisor - 1)), "divisor must be a power of two!");
     return roundUpToMultipleOfImpl(divisor, x);
+}
+
+template<size_t divisor, typename T> inline T* roundUpToMultipleOf(T* x)
+{
+    static_assert(sizeof(T*) == sizeof(size_t), "");
+    return reinterpret_cast<T*>(roundUpToMultipleOf<divisor>(reinterpret_cast<size_t>(x)));
 }
 
 enum BinarySearchMode {
@@ -447,6 +446,31 @@ IteratorTypeDst mergeDeduplicatedSorted(IteratorTypeLeft leftBegin, IteratorType
     return dstIter;
 }
 
+// libstdc++5 does not have constexpr std::tie. Since we cannot redefine std::tie with constexpr, we define WTF::tie instead.
+// This workaround can be removed after 2019-04 and all users of WTF::tie can be converted to std::tie
+// For more info see: https://bugs.webkit.org/show_bug.cgi?id=180692 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65978
+template <class ...Args>
+inline constexpr std::tuple<Args&...> tie(Args&... values)
+{
+    return std::tuple<Args&...>(values...);
+}
+
+// libstdc++4 does not have constexpr std::min or std::max.
+// As a workaround this defines WTF::min and WTF::max with constexpr, to be used when a constexpr result is expected.
+// This workaround can be removed after 2018-06 and all users of WTF::min and WTF::max can be converted to std::min and std::max.
+// For more info see: https://bugs.webkit.org/show_bug.cgi?id=181160
+template <class T>
+inline constexpr const T& min(const T& a, const T& b)
+{
+    return std::min(a, b);
+}
+
+template <class T>
+inline constexpr const T& max(const T& a, const T& b)
+{
+    return std::max(a, b);
+}
+
 } // namespace WTF
 
 // This version of placement new omits a 0 check.
@@ -459,7 +483,7 @@ inline void* operator new(size_t, NotNullTag, void* location)
 
 // This adds various C++14 features for versions of the STL that may not yet have them.
 namespace std {
-#if COMPILER(CLANG) && __cplusplus < 201305L
+#if COMPILER(CLANG) && __cplusplus < 201400L
 template<class T> struct _Unique_if {
     typedef unique_ptr<T> _Single_object;
 };
@@ -519,16 +543,47 @@ template<class B0, class B1, class B2, class... Bn> struct wtf_conjunction_impl<
 template<class... _Args> struct conjunction : wtf_conjunction_impl<_Args...> { };
 #endif
 
-} // namespace std
+#if __cplusplus < 201703L
 
-#if COMPILER(GCC) && GCC_VERSION < 40902
-namespace std {
-    template<class T>
-        struct is_final
-        : public std::integral_constant<bool, __is_final(T)>
-        { };
-}
+// These are inline variable for C++17 and later.
+#define __IN_PLACE_INLINE_VARIABLE static const
+
+struct in_place_t {
+    explicit in_place_t() = default;
+};
+__IN_PLACE_INLINE_VARIABLE constexpr in_place_t in_place { };
+
+template <class T> struct in_place_type_t {
+    explicit in_place_type_t() = default;
+};
+template <class T>
+__IN_PLACE_INLINE_VARIABLE constexpr in_place_type_t<T> in_place_type { };
+
+template <size_t I> struct in_place_index_t {
+    explicit in_place_index_t() = default;
+};
+template <size_t I>
+__IN_PLACE_INLINE_VARIABLE constexpr in_place_index_t<I> in_place_index { };
+#endif // __cplusplus < 201703L
+
+enum class ZeroStatus {
+    MayBeZero,
+    NonZero
+};
+
+constexpr size_t clz(uint32_t value, ZeroStatus mightBeZero = ZeroStatus::MayBeZero)
+{
+    if (mightBeZero == ZeroStatus::MayBeZero && value) {
+#if COMPILER(MSVC)
+        return __lzcnt(value);
+#else
+        return __builtin_clz(value);
 #endif
+    }
+    return 32;
+}
+
+} // namespace std
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
 

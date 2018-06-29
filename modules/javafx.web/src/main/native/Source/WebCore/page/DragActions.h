@@ -63,4 +63,7 @@ namespace WebCore {
         DragOperationEvery   = UINT_MAX
     } DragOperation;
 
+    enum class MayExtendDragSession { No, Yes };
+    enum class HasNonDefaultPasteboardData { No, Yes };
+
 } // namespace WebCore

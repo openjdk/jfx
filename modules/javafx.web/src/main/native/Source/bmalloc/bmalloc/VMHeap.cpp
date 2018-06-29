@@ -33,7 +33,7 @@ VMHeap::VMHeap(std::lock_guard<StaticMutex>&)
 {
 }
 
-LargeRange VMHeap::tryAllocateLargeChunk(size_t alignment, size_t size, AllocationKind allocationKind)
+LargeRange VMHeap::tryAllocateLargeChunk(size_t alignment, size_t size)
 {
     // We allocate VM in aligned multiples to increase the chances that
     // the OS will provide contiguous ranges that we can merge.
@@ -50,9 +50,6 @@ LargeRange VMHeap::tryAllocateLargeChunk(size_t alignment, size_t size, Allocati
     void* memory = tryVMAllocate(alignment, size);
     if (!memory)
         return LargeRange();
-
-    if (allocationKind == AllocationKind::Virtual)
-        vmDeallocatePhysicalPagesSloppy(memory, size);
 
     Chunk* chunk = static_cast<Chunk*>(memory);
 

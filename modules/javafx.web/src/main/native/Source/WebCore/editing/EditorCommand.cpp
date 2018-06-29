@@ -39,6 +39,7 @@
 #include "EventHandler.h"
 #include "FormatBlockCommand.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameView.h"
 #include "HTMLFontElement.h"
 #include "HTMLHRElement.h"
@@ -46,6 +47,7 @@
 #include "HTMLNames.h"
 #include "IndentOutdentCommand.h"
 #include "InsertListCommand.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "Pasteboard.h"
 #include "RenderBox.h"
@@ -74,7 +76,7 @@ public:
     TriState (*state)(Frame&, Event*);
     String (*value)(Frame&, Event*);
     bool isTextInsertion;
-    bool (*allowExecutionWhenDisabled)(EditorCommandSource);
+    bool (*allowExecutionWhenDisabled)(Frame&, EditorCommandSource);
 };
 
 typedef HashMap<String, const EditorInternalCommand*, ASCIICaseInsensitiveHash> CommandMap;
@@ -89,10 +91,9 @@ static Frame* targetFrame(Frame& frame, Event* event)
 {
     if (!event)
         return &frame;
-    Node* node = event->target()->toNode();
-    if (!node)
+    if (!is<Node>(event->target()))
         return &frame;
-    return node->document().frame();
+    return downcast<Node>(*event->target()).document().frame();
 }
 
 static bool applyCommandToFrame(Frame& frame, EditorCommandSource source, EditAction action, Ref<EditingStyle>&& style)
@@ -377,7 +378,7 @@ static bool executeDeleteWordForward(Frame& frame, Event*, EditorCommandSource, 
 
 static bool executeFindString(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    return frame.editor().findString(value, CaseInsensitive | WrapAround | DoNotTraverseFlatTree);
+    return frame.editor().findString(value, { CaseInsensitive, WrapAround, DoNotTraverseFlatTree });
 }
 
 static bool executeFontName(Frame& frame, Event*, EditorCommandSource source, const String& value)
@@ -930,8 +931,7 @@ static bool executePrint(Frame& frame, Event*, EditorCommandSource, const String
     Page* page = frame.page();
     if (!page)
         return false;
-    page->chrome().print(frame);
-    return true;
+    return page->chrome().print(frame);
 }
 
 static bool executeRedo(Frame& frame, Event*, EditorCommandSource, const String&)
@@ -1449,9 +1449,9 @@ static String valueDefaultParagraphSeparator(Frame& frame, Event*)
 {
     switch (frame.editor().defaultParagraphSeparator()) {
     case EditorParagraphSeparatorIsDiv:
-        return divTag.localName();
+        return divTag->localName();
     case EditorParagraphSeparatorIsP:
-        return pTag.localName();
+        return pTag->localName();
     }
 
     ASSERT_NOT_REACHED();
@@ -1491,17 +1491,17 @@ static String valueFormatBlock(Frame& frame, Event*)
 
 // allowExecutionWhenDisabled functions
 
-static bool allowExecutionWhenDisabled(EditorCommandSource)
+static bool allowExecutionWhenDisabled(Frame&, EditorCommandSource)
 {
     return true;
 }
 
-static bool doNotAllowExecutionWhenDisabled(EditorCommandSource)
+static bool doNotAllowExecutionWhenDisabled(Frame&, EditorCommandSource)
 {
     return false;
 }
 
-static bool allowExecutionWhenDisabledCopyCut(EditorCommandSource source)
+static bool allowExecutionWhenDisabledCopyCut(Frame&, EditorCommandSource source)
 {
     switch (source) {
     case CommandFromMenuOrKeyBinding:
@@ -1513,6 +1513,13 @@ static bool allowExecutionWhenDisabledCopyCut(EditorCommandSource source)
 
     ASSERT_NOT_REACHED();
     return false;
+}
+
+static bool allowExecutionWhenDisabledPaste(Frame& frame, EditorCommandSource)
+{
+    if (frame.mainFrame().loader().shouldSuppressTextInputFromEditing())
+        return false;
+    return true;
 }
 
 // Map of functions
@@ -1626,9 +1633,9 @@ static const CommandMap& createCommandMap()
         { "MoveWordRightAndModifySelection", { executeMoveWordRightAndModifySelection, supportedFromMenuOrKeyBinding, enabledVisibleSelectionOrCaretBrowsing, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Outdent", { executeOutdent, supported, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "OverWrite", { executeToggleOverwrite, supportedFromMenuOrKeyBinding, enabledInRichlyEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
-        { "Paste", { executePaste, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabled } },
-        { "PasteAndMatchStyle", { executePasteAndMatchStyle, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabled } },
-        { "PasteAsPlainText", { executePasteAsPlainText, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabled } },
+        { "Paste", { executePaste, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledPaste } },
+        { "PasteAndMatchStyle", { executePasteAndMatchStyle, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledPaste } },
+        { "PasteAsPlainText", { executePasteAsPlainText, supportedPaste, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabledPaste } },
         { "Print", { executePrint, supported, enabled, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "Redo", { executeRedo, supported, enabledRedo, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "RemoveFormat", { executeRemoveFormat, supported, enabledRangeInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
@@ -1828,7 +1835,7 @@ bool Editor::Command::allowExecutionWhenDisabled() const
 {
     if (!isSupported() || !m_frame)
         return false;
-    return m_command->allowExecutionWhenDisabled(m_source);
+    return m_command->allowExecutionWhenDisabled(*m_frame, m_source);
 }
 
 } // namespace WebCore

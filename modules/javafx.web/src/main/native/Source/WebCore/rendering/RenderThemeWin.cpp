@@ -40,6 +40,7 @@
 #include "WebCoreBundleWin.h"
 #include <wtf/SoftLinking.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/win/WCharStringExtras.h>
 #include <wtf/win/GDIObject.h>
 
 #if ENABLE(VIDEO)
@@ -157,9 +158,9 @@ static bool haveTheme;
 
 static const unsigned vistaMenuListButtonOutset = 1;
 
-using namespace std;
 
 namespace WebCore {
+using namespace std;
 
 // This is the fixed width IE and Firefox use for buttons on dropdown menus
 static const int dropDownButtonWidth = 17;
@@ -318,7 +319,7 @@ Color RenderThemeWin::platformInactiveSelectionForegroundColor() const
 static void fillFontDescription(FontCascadeDescription& fontDescription, LOGFONT& logFont, float fontSize)
 {
     fontDescription.setIsAbsoluteSize(true);
-    fontDescription.setOneFamily(String(logFont.lfFaceName));
+    fontDescription.setOneFamily(nullTerminatedWCharToString(logFont.lfFaceName));
     fontDescription.setSpecifiedSize(fontSize);
     fontDescription.setWeight(logFont.lfWeight >= 700 ? boldWeightValue() : normalWeightValue()); // FIXME: Use real weight.
     fontDescription.setIsItalic(logFont.lfItalic);
@@ -1024,7 +1025,7 @@ Color RenderThemeWin::systemColor(CSSValueID cssValueId) const
 #if ENABLE(VIDEO)
 static const size_t maximumReasonableBufferSize = 32768;
 
-static void fillBufferWithContentsOfFile(PlatformFileHandle file, long long filesize, Vector<char>& buffer)
+static void fillBufferWithContentsOfFile(FileSystem::PlatformFileHandle file, long long filesize, Vector<char>& buffer)
 {
     // Load the file content into buffer
     buffer.resize(filesize + 1);
@@ -1036,7 +1037,7 @@ static void fillBufferWithContentsOfFile(PlatformFileHandle file, long long file
         if (filesize - bufferPosition < bufferReadSize)
             bufferReadSize = filesize - bufferPosition;
 
-        bytesRead = readFromFile(file, buffer.data() + bufferPosition, bufferReadSize);
+        bytesRead = FileSystem::readFromFile(file, buffer.data() + bufferPosition, bufferReadSize);
         if (bytesRead != bufferReadSize) {
             buffer.clear();
             return;
@@ -1058,19 +1059,19 @@ String RenderThemeWin::stringWithContentsOfFile(CFStringRef name, CFStringRef ty
     if (!CFURLGetFileSystemRepresentation(requestedURLRef.get(), false, requestedFilePath, MAX_PATH))
         return String();
 
-    PlatformFileHandle requestedFileHandle = openFile(requestedFilePath, OpenForRead);
-    if (!isHandleValid(requestedFileHandle))
+    FileSystem::PlatformFileHandle requestedFileHandle = FileSystem::openFile(requestedFilePath, FileSystem::FileOpenMode::Read);
+    if (!FileSystem::isHandleValid(requestedFileHandle))
         return String();
 
     long long filesize = -1;
-    if (!getFileSize(requestedFileHandle, filesize)) {
-        closeFile(requestedFileHandle);
+    if (!FileSystem::getFileSize(requestedFileHandle, filesize)) {
+        FileSystem::closeFile(requestedFileHandle);
         return String();
     }
 
     Vector<char> fileContents;
     fillBufferWithContentsOfFile(requestedFileHandle, filesize, fileContents);
-    closeFile(requestedFileHandle);
+    FileSystem::closeFile(requestedFileHandle);
 
     return String(fileContents.data(), static_cast<size_t>(filesize));
 }

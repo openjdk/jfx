@@ -34,12 +34,11 @@
 
 #include "DOMWrapperWorld.h"
 #include "EventNames.h"
-#include <heap/HeapInlines.h>
-#include <heap/StrongInlines.h>
-
-using namespace JSC;
+#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/StrongInlines.h>
 
 namespace WebCore {
+using namespace JSC;
 
 ErrorEvent::ErrorEvent(ExecState& state, const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
@@ -61,9 +60,7 @@ ErrorEvent::ErrorEvent(const String& message, const String& fileName, unsigned l
 {
 }
 
-ErrorEvent::~ErrorEvent()
-{
-}
+ErrorEvent::~ErrorEvent() = default;
 
 EventInterface ErrorEvent::eventInterface() const
 {

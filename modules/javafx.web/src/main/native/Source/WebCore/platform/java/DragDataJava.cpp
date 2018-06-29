@@ -66,9 +66,9 @@ bool DragData::containsFiles() const
     return m_platformDragData->containsFiles();
 }
 
-void DragData::asFilenames(Vector<String>& result) const
+Vector<String> DragData::asFilenames() const
 {
-    return m_platformDragData->asFilenames(result);
+    return m_platformDragData->asFilenames();
 }
 
 bool DragData::containsPlainText() const

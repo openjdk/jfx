@@ -48,8 +48,8 @@
 #include <unicode/uloc.h>
 #include <unicode/unumsys.h>
 #include <wtf/Assertions.h>
+#include <wtf/Language.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/PlatformUserPreferredLanguages.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -104,13 +104,13 @@ void IntlObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
     // Constructor Properties of the Intl Object
     // https://tc39.github.io/ecma402/#sec-constructor-properties-of-the-intl-object
-    putDirectWithoutTransition(vm, vm.propertyNames->Collator, collatorConstructor, DontEnum);
-    putDirectWithoutTransition(vm, vm.propertyNames->NumberFormat, numberFormatConstructor, DontEnum);
-    putDirectWithoutTransition(vm, vm.propertyNames->DateTimeFormat, dateTimeFormatConstructor, DontEnum);
+    putDirectWithoutTransition(vm, vm.propertyNames->Collator, collatorConstructor, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, vm.propertyNames->NumberFormat, numberFormatConstructor, static_cast<unsigned>(PropertyAttribute::DontEnum));
+    putDirectWithoutTransition(vm, vm.propertyNames->DateTimeFormat, dateTimeFormatConstructor, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
     // Function Properties of the Intl Object
     // https://tc39.github.io/ecma402/#sec-function-properties-of-the-intl-object
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(&vm, "getCanonicalLocales"), 1, intlObjectFuncGetCanonicalLocales, NoIntrinsic, DontEnum);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(&vm, "getCanonicalLocales"), 1, intlObjectFuncGetCanonicalLocales, NoIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 Structure* IntlObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -576,16 +576,14 @@ String defaultLocale(ExecState& state)
 
     // WebCore's global objects will have their own ideas of how to determine the language. It may
     // be determined by WebCore-specific logic like some WK settings. Usually this will return the
-    // same thing as platformUserPreferredLanguages()[0].
+    // same thing as userPreferredLanguages()[0].
     if (auto defaultLanguage = state.jsCallee()->globalObject()->globalObjectMethodTable()->defaultLanguage) {
         String locale = defaultLanguage();
         if (!locale.isEmpty())
             return canonicalizeLanguageTag(locale);
     }
 
-    // If WebCore isn't around to tell us how to get the language then fall back to our own way of
-    // doing it, which mostly follows what WebCore would have done.
-    Vector<String> languages = platformUserPreferredLanguages();
+    Vector<String> languages = userPreferredLanguages();
     if (!languages.isEmpty() && !languages[0].isEmpty())
         return canonicalizeLanguageTag(languages[0]);
 
@@ -832,7 +830,7 @@ JSValue supportedLocales(ExecState& state, const HashSet<String>& availableLocal
         : lookupSupportedLocales(state, availableLocales, requestedLocales);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    PropertyNameArray keys(&state, PropertyNameMode::Strings);
+    PropertyNameArray keys(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     supportedLocales->getOwnPropertyNames(supportedLocales, &state, keys, EnumerationMode());
     RETURN_IF_EXCEPTION(scope, JSValue());
 

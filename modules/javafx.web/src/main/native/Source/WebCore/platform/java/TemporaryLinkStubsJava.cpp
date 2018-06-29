@@ -25,12 +25,6 @@
 
 #include "config.h"
 
-#if USE(JAVA_UNICODE)
-#include <wtf/unicode/java/UnicodeJava.h>
-#elif USE(ICU_UNICODE)
-#include <wtf/unicode/icu/UnicodeIcu.h>
-#endif
-
 #include "CookieStorage.h"
 #include "Color.h"
 #include "ChromiumBridge.h"
@@ -44,14 +38,12 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-#include "Language.h"
 #include "NotImplemented.h"
 #include "RenderObject.h"
 #include "ResourceHandle.h"
 #include "SSLKeyGenerator.h"
 #include "SearchPopupMenuJava.h"
 #include "SmartReplace.h"
-#include "JSCTestRunnerUtils.h"
 
 namespace WebCore
 {
@@ -87,17 +79,6 @@ bool isCharacterSmartReplaceExempt(UChar32 c, bool isPreviousCharacter)
     }
 
     return false;
-}
-#endif
-
-#if OS(WINDOWS) || OS(LINUX)
-// Reference these functions to make the linker include
-// JSCTestRunnerUtils.obj into jfxwebkit.dll
-// The functions are called from DumpRenderTreeJava.dll
-void referenceJSCTestRunnerUtils()
-{
-    JSC::numberOfDFGCompiles(0, 0);
-    JSC::setNeverInline(0, 0);
 }
 #endif
 

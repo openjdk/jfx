@@ -33,6 +33,8 @@
 #include "CDMFactory.h"
 #include "CDMInstance.h"
 #include "CDMPrivate.h"
+#include "SharedBuffer.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -42,10 +44,11 @@ public:
 
     virtual ~CDMFactoryClearKey();
 
-    std::unique_ptr<CDMPrivate> createCDM() override;
+    std::unique_ptr<CDMPrivate> createCDM(const String&) override;
     bool supportsKeySystem(const String&) override;
 
 private:
+    friend class NeverDestroyed<CDMFactoryClearKey>;
     CDMFactoryClearKey();
 };
 
@@ -76,12 +79,13 @@ public:
     CDMInstanceClearKey();
     virtual ~CDMInstanceClearKey();
 
-    ImplementationType implementationType() const { return ImplementationType::ClearKey; }
+    ImplementationType implementationType() const final { return ImplementationType::ClearKey; }
 
     SuccessValue initializeWithConfiguration(const CDMKeySystemConfiguration&) override;
     SuccessValue setDistinctiveIdentifiersAllowed(bool) override;
     SuccessValue setPersistentStateAllowed(bool) override;
     SuccessValue setServerCertificate(Ref<SharedBuffer>&&) override;
+    SuccessValue setStorageDirectory(const String&) override;
 
     void requestLicense(LicenseType, const AtomicString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback) override;
     void updateLicense(const String&, LicenseType, const SharedBuffer&, LicenseUpdateCallback) override;
@@ -89,6 +93,19 @@ public:
     void closeSession(const String&, CloseSessionCallback) override;
     void removeSessionData(const String&, LicenseType, RemoveSessionDataCallback) override;
     void storeRecordOfKeyUsage(const String&) override;
+
+    const String& keySystem() const final;
+
+    struct Key {
+        KeyStatus status;
+        RefPtr<SharedBuffer> keyIDData;
+        RefPtr<SharedBuffer> keyValueData;
+    };
+
+    const Vector<Key> keys() const;
+
+private:
+    WeakPtrFactory<CDMInstanceClearKey> m_weakPtrFactory;
 };
 
 } // namespace WebCore

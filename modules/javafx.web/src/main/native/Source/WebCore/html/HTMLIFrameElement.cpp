@@ -51,7 +51,7 @@ Ref<HTMLIFrameElement> HTMLIFrameElement::create(const QualifiedName& tagName, D
 DOMTokenList& HTMLIFrameElement::sandbox()
 {
     if (!m_sandbox)
-        m_sandbox = std::make_unique<DOMTokenList>(*this, sandboxAttr, [](StringView token) {
+        m_sandbox = std::make_unique<DOMTokenList>(*this, sandboxAttr, [](Document&, StringView token) {
             return SecurityContext::isSupportedSandboxPolicy(token);
         });
     return *m_sandbox;
@@ -93,7 +93,9 @@ void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicSt
         setSandboxFlags(value.isNull() ? SandboxNone : SecurityContext::parseSandboxPolicy(value, invalidTokens));
         if (!invalidTokens.isNull())
             document().addConsoleMessage(MessageSource::Other, MessageLevel::Error, "Error while parsing the 'sandbox' attribute: " + invalidTokens);
-    } else
+    } else if (name == allowAttr)
+        m_allow = value;
+    else
         HTMLFrameElementBase::parseAttribute(name, value);
 }
 

@@ -179,7 +179,10 @@ bool ApplicationCacheHost::maybeLoadResource(ResourceLoader& loader, const Resou
     if (!shouldLoadResourceFromApplicationCache(request, resource))
         return false;
 
-    m_documentLoader.scheduleSubstituteResourceLoad(loader, *resource);
+    if (resource)
+        m_documentLoader.scheduleSubstituteResourceLoad(loader, *resource);
+    else
+        m_documentLoader.scheduleCannotShowURLError(loader);
     return true;
 }
 
@@ -215,11 +218,6 @@ bool ApplicationCacheHost::maybeLoadFallbackForError(ResourceLoader* resourceLoa
 URL ApplicationCacheHost::createFileURL(const String& path)
 {
     // FIXME: Can we just use fileURLWithFileSystemPath instead?
-
-    // fileURLWithFileSystemPath function is not suitable because URL::setPath uses encodeWithURLEscapeSequences, which it notes
-    // does not correctly escape '#' and '?'. This function works for our purposes because
-    // app cache media files are always created with encodeForFileName(createCanonicalUUIDString()).
-
 #if USE(CF) && PLATFORM(WIN)
     URL url(adoptCF(CFURLCreateWithFileSystemPath(0, path.createCFString().get(), kCFURLWindowsPathStyle, false)).get());
 #else
@@ -327,15 +325,11 @@ void ApplicationCacheHost::stopDeferringEvents()
 
 Vector<ApplicationCacheHost::ResourceInfo> ApplicationCacheHost::resourceList()
 {
-    Vector<ResourceInfo> result;
-
     auto* cache = applicationCache();
     if (!cache || !cache->isComplete())
-        return result;
+        return { };
 
-    result.reserveInitialCapacity(cache->resources().size());
-
-    for (auto& urlAndResource : cache->resources()) {
+    return WTF::map(cache->resources(), [] (auto& urlAndResource) -> ApplicationCacheHost::ResourceInfo {
         ASSERT(urlAndResource.value);
         auto& resource = *urlAndResource.value;
 
@@ -346,10 +340,8 @@ Vector<ApplicationCacheHost::ResourceInfo> ApplicationCacheHost::resourceList()
         bool isForeign = type & ApplicationCacheResource::Foreign;
         bool isFallback = type & ApplicationCacheResource::Fallback;
 
-        result.uncheckedAppend({ resource.url(), isMaster, isManifest, isFallback, isForeign, isExplicit, resource.estimatedSizeInStorage() });
-    }
-
-    return result;
+        return { resource.url(), isMaster, isManifest, isFallback, isForeign, isExplicit, resource.estimatedSizeInStorage() };
+    });
 }
 
 ApplicationCacheHost::CacheInfo ApplicationCacheHost::applicationCacheInfo()

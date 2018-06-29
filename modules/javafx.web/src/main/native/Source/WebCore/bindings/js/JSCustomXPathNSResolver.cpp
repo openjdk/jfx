@@ -35,7 +35,7 @@
 #include "JSMainThreadExecState.h"
 #include "Page.h"
 #include "PageConsoleClient.h"
-#include <runtime/JSLock.h>
+#include <JavaScriptCore/JSLock.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -60,9 +60,7 @@ JSCustomXPathNSResolver::JSCustomXPathNSResolver(VM& vm, JSObject* customResolve
 {
 }
 
-JSCustomXPathNSResolver::~JSCustomXPathNSResolver()
-{
-}
+JSCustomXPathNSResolver::~JSCustomXPathNSResolver() = default;
 
 String JSCustomXPathNSResolver::lookupNamespaceURI(const String& prefix)
 {
@@ -89,6 +87,7 @@ String JSCustomXPathNSResolver::lookupNamespaceURI(const String& prefix)
 
     MarkedArgumentBuffer args;
     args.append(jsStringWithCache(exec, prefix));
+    ASSERT(!args.hasOverflowed());
 
     NakedPtr<JSC::Exception> exception;
     JSValue retval = JSMainThreadExecState::call(exec, function, callType, callData, m_customResolver.get(), args, exception);

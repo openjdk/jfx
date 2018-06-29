@@ -38,7 +38,7 @@
     void importStylesheet(optional Node? stylesheet = null);
     DocumentFragment transformToFragment(optional Node? source = null, optional Document? docVal = null);
     Document transformToDocument(optional Node? source = null);
-    
+
     void setParameter(DOMString? namespaceURI, DOMString? localName, DOMString? value);
     DOMString? getParameter(DOMString? namespaceURI, DOMString? localName);
     void removeParameter(DOMString? namespaceURI, DOMString? localName);

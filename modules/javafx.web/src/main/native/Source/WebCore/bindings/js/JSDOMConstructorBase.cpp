@@ -22,11 +22,10 @@
 #include "config.h"
 #include "JSDOMConstructor.h"
 
-#include <runtime/JSCInlines.h>
-
-using namespace JSC;
+#include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
+using namespace JSC;
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSDOMConstructorBase);
 

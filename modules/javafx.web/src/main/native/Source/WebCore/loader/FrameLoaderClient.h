@@ -34,8 +34,12 @@
 #include "LinkIcon.h"
 #include <functional>
 #include <wtf/Forward.h>
-#include <wtf/Vector.h>
+#include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
+
+#if ENABLE(APPLICATION_MANIFEST)
+#include "ApplicationManifest.h"
+#endif
 
 #if ENABLE(CONTENT_FILTERING)
 #include "ContentFilterUnblockHandler.h"
@@ -56,6 +60,10 @@ OBJC_CLASS NSCachedURLResponse;
 OBJC_CLASS NSDictionary;
 OBJC_CLASS NSView;
 #endif
+
+namespace PAL {
+class SessionID;
+}
 
 namespace WebCore {
 
@@ -81,7 +89,6 @@ class MessageEvent;
 class NavigationAction;
 class Page;
 class PluginViewBase;
-class PolicyChecker;
 class PreviewLoaderClient;
 class ProtectionSpace;
 class RTCPeerConnectionHandler;
@@ -90,7 +97,6 @@ class ResourceHandle;
 class ResourceRequest;
 class ResourceResponse;
 class SecurityOrigin;
-class SessionID;
 class SharedBuffer;
 class SubstituteData;
 class URL;
@@ -108,13 +114,17 @@ public:
     // don't want to do it in WebKit.
     virtual bool hasHTMLView() const;
 
-    virtual ~FrameLoaderClient() { }
+    virtual ~FrameLoaderClient() = default;
 
     virtual void frameLoaderDestroyed() = 0;
 
     virtual bool hasWebView() const = 0; // mainly for assertions
 
     virtual void makeRepresentation(DocumentLoader*) = 0;
+
+    virtual std::optional<uint64_t> pageID() const = 0;
+    virtual std::optional<uint64_t> frameID() const = 0;
+    virtual PAL::SessionID sessionID() const = 0;
 
 #if PLATFORM(IOS)
     // Returns true if the client forced the layout.
@@ -150,9 +160,9 @@ public:
     virtual void dispatchDidReceiveServerRedirectForProvisionalLoad() = 0;
     virtual void dispatchDidChangeProvisionalURL() { }
     virtual void dispatchDidCancelClientRedirect() = 0;
-    virtual void dispatchWillPerformClientRedirect(const URL&, double interval, double fireDate) = 0;
-    virtual void dispatchDidPerformClientRedirect() { }
+    virtual void dispatchWillPerformClientRedirect(const URL&, double interval, WallTime fireDate) = 0;
     virtual void dispatchDidChangeMainDocument() { }
+    virtual void dispatchWillChangeDocument() { }
     virtual void dispatchDidNavigateWithinPage() { }
     virtual void dispatchDidChangeLocationWithinPage() = 0;
     virtual void dispatchDidPushStateWithinPage() = 0;
@@ -179,7 +189,7 @@ public:
 
     virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction&&) = 0;
     virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, FramePolicyFunction&&) = 0;
-    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, FormState*, FramePolicyFunction&&) = 0;
+    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, bool didReceiveRedirectResponse, FormState*, FramePolicyFunction&&) = 0;
     virtual void cancelPolicyCheck() = 0;
 
     virtual void dispatchUnableToImplementPolicy(const ResourceError&) = 0;
@@ -273,7 +283,7 @@ public:
     virtual void dispatchDidBecomeFrameset(bool) = 0; // Can change due to navigation or DOM modification.
 
     virtual bool canCachePage() const = 0;
-    virtual void convertMainResourceLoadToDownload(DocumentLoader*, SessionID, const ResourceRequest&, const ResourceResponse&) = 0;
+    virtual void convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&) = 0;
 
     virtual RefPtr<Frame> createFrame(const URL&, const String& name, HTMLFrameOwnerElement&, const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) = 0;
     virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
@@ -296,7 +306,7 @@ public:
     virtual NSDictionary *dataDetectionContext() { return nullptr; }
 #endif
 
-#if PLATFORM(WIN) && USE(CFURLCONNECTION)
+#if USE(CFURLCONNECTION)
     // FIXME: Windows should use willCacheResponse - <https://bugs.webkit.org/show_bug.cgi?id=57257>.
     virtual bool shouldCacheResponse(DocumentLoader*, unsigned long identifier, const ResourceResponse&, const unsigned char* data, unsigned long long length) = 0;
 #endif
@@ -329,8 +339,8 @@ public:
     // Informs the embedder that a WebGL canvas inside this frame received a lost context
     // notification with the given GL_ARB_robustness guilt/innocence code (see Extensions3D.h).
     virtual void didLoseWebGLContext(int) { }
-    virtual WebGLLoadPolicy webGLPolicyForURL(const String&) const { return WebGLAllowCreation; }
-    virtual WebGLLoadPolicy resolveWebGLPolicyForURL(const String&) const { return WebGLAllowCreation; }
+    virtual WebGLLoadPolicy webGLPolicyForURL(const URL&) const { return WebGLAllowCreation; }
+    virtual WebGLLoadPolicy resolveWebGLPolicyForURL(const URL&) const { return WebGLAllowCreation; }
 #endif
 
     virtual void forcePageTransitionIfNeeded() { }
@@ -355,6 +365,15 @@ public:
 
     virtual void getLoadDecisionForIcons(const Vector<std::pair<WebCore::LinkIcon&, uint64_t>>&) { }
     virtual void finishedLoadingIcon(uint64_t, SharedBuffer*) { }
+
+#if ENABLE(APPLICATION_MANIFEST)
+    virtual void finishedLoadingApplicationManifest(uint64_t, const std::optional<ApplicationManifest>&) { }
+#endif
+
+#if HAVE(CFNETWORK_STORAGE_PARTITIONING)
+    virtual bool hasFrameSpecificStorageAccess() { return false; }
+    virtual void setHasFrameSpecificStorageAccess(bool) { }
+#endif
 };
 
 } // namespace WebCore

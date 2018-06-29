@@ -93,9 +93,9 @@ extern "C" {
 void neonDrawLighting(FELightingPaintingDataForNeon*);
 }
 
-inline void FELighting::platformApplyNeon(LightingData& data, LightSource::PaintingData& paintingData)
+inline void FELighting::platformApplyNeon(const LightingData& data, const LightSource::PaintingData& paintingData)
 {
-    FELightingFloatArgumentsForNeon floatArguments __attribute__((__aligned__(16)));
+    alignas(16) FELightingFloatArgumentsForNeon floatArguments;
     FELightingPaintingDataForNeon neonData = {
         data.pixels->data(),
         1,

@@ -29,16 +29,16 @@
 #include "JSNode.h"
 #include "QualifiedName.h"
 #include "ScriptController.h"
-#include <runtime/CatchScope.h>
-#include <runtime/FunctionConstructor.h>
-#include <runtime/IdentifierInlines.h>
+#include <JavaScriptCore/CatchScope.h>
+#include <JavaScriptCore/FunctionConstructor.h>
+#include <JavaScriptCore/IdentifierInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 
-using namespace JSC;
 
 namespace WebCore {
+using namespace JSC;
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, eventListenerCounter, ("JSLazyEventListener"));
 
@@ -97,7 +97,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
         return nullptr;
 
     ScriptController& script = document.frame()->script();
-    if (!script.canExecuteScripts(AboutToExecuteScript) || script.isPaused())
+    if (!script.canExecuteScripts(AboutToCreateEventListener) || script.isPaused())
         return nullptr;
 
     JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(&executionContext, isolatedWorld());
@@ -112,6 +112,7 @@ JSObject* JSLazyEventListener::initializeJSFunction(ScriptExecutionContext& exec
     MarkedArgumentBuffer args;
     args.append(jsNontrivialString(exec, m_eventParameterName));
     args.append(jsStringWithCache(exec, m_code));
+    ASSERT(!args.hasOverflowed());
 
     // We want all errors to refer back to the line on which our attribute was
     // declared, regardless of any newlines in our JavaScript source text.
@@ -168,7 +169,7 @@ RefPtr<JSLazyEventListener> JSLazyEventListener::create(const CreationArguments&
     TextPosition position;
     String sourceURL;
     if (Frame* frame = arguments.document.frame()) {
-        if (!frame->script().canExecuteScripts(AboutToExecuteScript))
+        if (!frame->script().canExecuteScripts(AboutToCreateEventListener))
             return nullptr;
         position = frame->script().eventHandlerPosition();
         sourceURL = arguments.document.url().string();

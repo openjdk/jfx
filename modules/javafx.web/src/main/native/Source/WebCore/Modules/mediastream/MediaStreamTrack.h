@@ -55,7 +55,7 @@ class MediaStreamTrack :
 public:
     class Observer {
     public:
-        virtual ~Observer() { }
+        virtual ~Observer() = default;
         virtual void trackDidEnd() = 0;
     };
 
@@ -78,7 +78,7 @@ public:
 
     bool ended() const;
 
-    Ref<MediaStreamTrack> clone();
+    virtual RefPtr<MediaStreamTrack> clone();
 
     enum class StopMode { Silently, PostEvent };
     void stopTrack(StopMode = StopMode::Silently);
@@ -95,10 +95,12 @@ public:
         std::optional<int> sampleRate;
         std::optional<int> sampleSize;
         std::optional<bool> echoCancellation;
+        std::optional<bool> displaySurface;
+        String logicalSurface;
         String deviceId;
         String groupId;
     };
-    WEBCORE_EXPORT TrackSettings getSettings() const;
+    TrackSettings getSettings(Document&) const;
 
     struct TrackCapabilities {
         std::optional<LongRange> width;
@@ -139,6 +141,8 @@ public:
 protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
 
+    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+
 private:
     explicit MediaStreamTrack(MediaStreamTrack&);
 
@@ -155,7 +159,6 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     EventTargetInterface eventTargetInterface() const final { return MediaStreamTrackEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
     // MediaStreamTrackPrivate::Observer
     void trackStarted(MediaStreamTrackPrivate&) final;
@@ -164,7 +167,7 @@ private:
     void trackSettingsChanged(MediaStreamTrackPrivate&) final;
     void trackEnabledChanged(MediaStreamTrackPrivate&) final;
 
-    WeakPtr<MediaStreamTrack> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+    WeakPtr<MediaStreamTrack> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
 
     Vector<Observer*> m_observers;
     Ref<MediaStreamTrackPrivate> m_private;

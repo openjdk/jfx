@@ -51,7 +51,7 @@ class Arg
         @bank = bank
         @width = width
     end
-
+    
     def self.widthCode(width)
         if width == "Ptr"
             "POINTER_WIDTH"

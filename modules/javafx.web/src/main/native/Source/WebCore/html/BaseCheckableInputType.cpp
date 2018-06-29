@@ -32,8 +32,8 @@
 #include "config.h"
 #include "BaseCheckableInputType.h"
 
+#include "DOMFormData.h"
 #include "FormController.h"
-#include "FormDataList.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
@@ -45,7 +45,7 @@ using namespace HTMLNames;
 
 FormControlState BaseCheckableInputType::saveFormControlState() const
 {
-    return FormControlState(element().checked() ? ASCIILiteral("on") : ASCIILiteral("off"));
+    return { element().checked() ? ASCIILiteral("on") : ASCIILiteral("off") };
 }
 
 void BaseCheckableInputType::restoreFormControlState(const FormControlState& state)
@@ -53,11 +53,11 @@ void BaseCheckableInputType::restoreFormControlState(const FormControlState& sta
     element().setChecked(state[0] == "on");
 }
 
-bool BaseCheckableInputType::appendFormData(FormDataList& encoding, bool) const
+bool BaseCheckableInputType::appendFormData(DOMFormData& formData, bool) const
 {
     if (!element().checked())
         return false;
-    encoding.appendData(element().name(), element().value());
+    formData.append(element().name(), element().value());
     return true;
 }
 

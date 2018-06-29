@@ -28,17 +28,34 @@
 #if USE(LIBWEBRTC) && PLATFORM(COCOA)
 
 #include "LibWebRTCMacros.h"
+#include <webrtc/sdk/objc/Framework/Classes/VideoProcessing/encoder_vcp.h>
 #include <webrtc/sdk/objc/Framework/Classes/VideoToolbox/videocodecfactory.h>
+#include <wtf/Vector.h>
+
+namespace webrtc {
+class H264VideoToolboxEncoderVCP;
+}
 
 namespace WebCore {
+
+class H264VideoToolboxEncoder;
 
 class VideoToolboxVideoEncoderFactory final : public webrtc::VideoToolboxVideoEncoderFactory {
 public:
     VideoToolboxVideoEncoderFactory() = default;
 
+    void setActive(bool isActive);
+
 private:
     webrtc::VideoEncoder* CreateSupportedVideoEncoder(const cricket::VideoCodec&) final;
     void DestroyVideoEncoder(webrtc::VideoEncoder*) final;
+
+#if ENABLE_VCP_ENCODER
+    Vector<std::reference_wrapper<webrtc::H264VideoToolboxEncoderVCP>> m_encoders;
+#else
+    Vector<std::reference_wrapper<H264VideoToolboxEncoder>> m_encoders;
+#endif
+    bool m_isActive { true };
 };
 
 }

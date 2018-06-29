@@ -36,10 +36,12 @@
 #include "MediaKeySessionType.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class CDM;
+class CDMClient;
 class CDMInstance;
 class BufferSource;
 class MediaKeySession;
@@ -56,8 +58,15 @@ public:
     ~MediaKeys();
 
     ExceptionOr<Ref<MediaKeySession>> createSession(ScriptExecutionContext&, MediaKeySessionType);
-
     void setServerCertificate(const BufferSource&, Ref<DeferredPromise>&&);
+
+    void attachCDMClient(CDMClient&);
+    void detachCDMClient(CDMClient&);
+    void attemptToResumePlaybackOnClients();
+
+    bool hasOpenSessions() const;
+    CDMInstance& cdmInstance() { return m_instance; }
+    const CDMInstance& cdmInstance() const { return m_instance; }
 
 protected:
     MediaKeys(bool useDistinctiveIdentifier, bool persistentStateAllowed, const Vector<MediaKeySessionType>&, Ref<CDM>&&, Ref<CDMInstance>&&);
@@ -67,6 +76,10 @@ protected:
     Vector<MediaKeySessionType> m_supportedSessionTypes;
     Ref<CDM> m_implementation;
     Ref<CDMInstance> m_instance;
+
+    WeakPtrFactory<MediaKeys> m_weakPtrFactory;
+    Vector<Ref<MediaKeySession>> m_sessions;
+    Vector<CDMClient*> m_cdmClients;
     GenericTaskQueue<Timer> m_taskQueue;
 };
 

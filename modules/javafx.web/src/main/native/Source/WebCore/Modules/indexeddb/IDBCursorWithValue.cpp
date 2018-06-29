@@ -28,7 +28,7 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include <heap/HeapInlines.h>
+#include <JavaScriptCore/HeapInlines.h>
 
 namespace WebCore {
 
@@ -52,9 +52,7 @@ IDBCursorWithValue::IDBCursorWithValue(IDBTransaction& transaction, IDBIndex& in
 {
 }
 
-IDBCursorWithValue::~IDBCursorWithValue()
-{
-}
+IDBCursorWithValue::~IDBCursorWithValue() = default;
 
 } // namespace WebCore
 

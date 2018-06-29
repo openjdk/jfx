@@ -73,6 +73,10 @@ public:
 
     WEBCORE_EXPORT DOMTokenList& relList();
 
+#if ENABLE(APPLICATION_MANIFEST)
+    bool isApplicationManifest() const { return m_relAttribute.isApplicationManifest; }
+#endif
+
 private:
     void parseAttribute(const QualifiedName&, const AtomicString&) final;
 
@@ -81,9 +85,9 @@ private:
     static void processCallback(Node*);
     void clearSheet();
 
-    InsertionNotificationRequest insertedInto(ContainerNode&) final;
-    void finishedInsertingSubtree() final;
-    void removedFrom(ContainerNode&) final;
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
+    void didFinishInsertingNode() final;
+    void removedFromAncestor(RemovalType, ContainerNode&) final;
 
     void initializeStyleSheet(Ref<StyleSheetContents>&&, const CachedCSSStyleSheet&);
 

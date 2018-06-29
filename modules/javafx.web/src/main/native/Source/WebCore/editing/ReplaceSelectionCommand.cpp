@@ -568,54 +568,54 @@ static bool isProhibitedParagraphChild(const AtomicString& name)
     // https://dvcs.w3.org/hg/editing/raw-file/57abe6d3cb60/editing.html#prohibited-paragraph-child
     static const auto localNames = makeNeverDestroyed([] {
         static const HTMLQualifiedName* const tags[] = {
-            &addressTag,
-            &articleTag,
-            &asideTag,
-            &blockquoteTag,
-            &captionTag,
-            &centerTag,
-            &colTag,
-            &colgroupTag,
-            &ddTag,
-            &detailsTag,
-            &dirTag,
-            &divTag,
-            &dlTag,
-            &dtTag,
-            &fieldsetTag,
-            &figcaptionTag,
-            &figureTag,
-            &footerTag,
-            &formTag,
-            &h1Tag,
-            &h2Tag,
-            &h3Tag,
-            &h4Tag,
-            &h5Tag,
-            &h6Tag,
-            &headerTag,
-            &hgroupTag,
-            &hrTag,
-            &liTag,
-            &listingTag,
-            &mainTag, // Missing in the specification.
-            &menuTag,
-            &navTag,
-            &olTag,
-            &pTag,
-            &plaintextTag,
-            &preTag,
-            &sectionTag,
-            &summaryTag,
-            &tableTag,
-            &tbodyTag,
-            &tdTag,
-            &tfootTag,
-            &thTag,
-            &theadTag,
-            &trTag,
-            &ulTag,
-            &xmpTag,
+            &addressTag.get(),
+            &articleTag.get(),
+            &asideTag.get(),
+            &blockquoteTag.get(),
+            &captionTag.get(),
+            &centerTag.get(),
+            &colTag.get(),
+            &colgroupTag.get(),
+            &ddTag.get(),
+            &detailsTag.get(),
+            &dirTag.get(),
+            &divTag.get(),
+            &dlTag.get(),
+            &dtTag.get(),
+            &fieldsetTag.get(),
+            &figcaptionTag.get(),
+            &figureTag.get(),
+            &footerTag.get(),
+            &formTag.get(),
+            &h1Tag.get(),
+            &h2Tag.get(),
+            &h3Tag.get(),
+            &h4Tag.get(),
+            &h5Tag.get(),
+            &h6Tag.get(),
+            &headerTag.get(),
+            &hgroupTag.get(),
+            &hrTag.get(),
+            &liTag.get(),
+            &listingTag.get(),
+            &mainTag.get(), // Missing in the specification.
+            &menuTag.get(),
+            &navTag.get(),
+            &olTag.get(),
+            &pTag.get(),
+            &plaintextTag.get(),
+            &preTag.get(),
+            &sectionTag.get(),
+            &summaryTag.get(),
+            &tableTag.get(),
+            &tbodyTag.get(),
+            &tdTag.get(),
+            &tfootTag.get(),
+            &thTag.get(),
+            &theadTag.get(),
+            &trTag.get(),
+            &ulTag.get(),
+            &xmpTag.get(),
         };
         HashSet<AtomicString> set;
         for (auto& tag : tags)
@@ -1141,13 +1141,17 @@ void ReplaceSelectionCommand::doApply()
         node = next;
     }
 
+    if (insertedNodes.isEmpty())
+        return;
     removeUnrenderedTextNodesAtEnds(insertedNodes);
 
     if (!handledStyleSpans)
         handleStyleSpans(insertedNodes);
 
     // Mutation events (bug 20161) may have already removed the inserted content
-    if (!insertedNodes.firstNodeInserted() || !insertedNodes.firstNodeInserted()->isConnected())
+    if (insertedNodes.isEmpty())
+        return;
+    if (!insertedNodes.firstNodeInserted()->isConnected())
         return;
 
     VisiblePosition startOfInsertedContent = firstPositionInOrBeforeNode(insertedNodes.firstNodeInserted());
@@ -1168,8 +1172,12 @@ void ReplaceSelectionCommand::doApply()
     }
 
     makeInsertedContentRoundTrippableWithHTMLTreeBuilder(insertedNodes);
+    if (insertedNodes.isEmpty())
+        return;
 
     removeRedundantStylesAndKeepStyleSpanInline(insertedNodes);
+    if (insertedNodes.isEmpty())
+        return;
 
     if (m_sanitizeFragment)
         applyCommandToComposite(SimplifyMarkupCommand::create(document(), insertedNodes.firstNodeInserted(), insertedNodes.pastLastLeaf()));
@@ -1192,7 +1200,7 @@ void ReplaceSelectionCommand::doApply()
         if (m_shouldMergeEnd && destinationNode != enclosingInline(destinationNode) && enclosingInline(destinationNode)->nextSibling())
             insertNodeBefore(HTMLBRElement::create(document()), *refNode);
 
-        // Merging the the first paragraph of inserted content with the content that came
+        // Merging the first paragraph of inserted content with the content that came
         // before the selection that was pasted into would also move content after
         // the selection that was pasted into if: only one paragraph was being pasted,
         // and it was not wrapped in a block, the selection that was pasted into ended

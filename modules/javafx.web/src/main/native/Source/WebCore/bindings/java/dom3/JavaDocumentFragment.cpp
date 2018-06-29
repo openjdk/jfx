@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -64,7 +66,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getLastElem
     return JavaReturn<Element>(env, WTF::getPtr(IMPL->lastElementChild()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getChildElementCountImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_DocumentFragmentImpl_getChildElementCountImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->childElementCount();

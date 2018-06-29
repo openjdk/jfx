@@ -46,6 +46,16 @@ static void encodeHashCountedSet(KeyedEncoder& encoder, const String& label, con
     });
 }
 
+static void encodeHashSet(KeyedEncoder& encoder, const String& label, const HashSet<String>& hashSet)
+{
+    if (hashSet.isEmpty())
+        return;
+
+    encoder.encodeObjects(label, hashSet.begin(), hashSet.end(), [](KeyedEncoder& encoderInner, const String& origin) {
+        encoderInner.encodeString("origin", origin);
+    });
+}
+
 void ResourceLoadStatistics::encode(KeyedEncoder& encoder) const
 {
     encoder.encodeString("PrevalentResourceOrigin", highLevelDomain);
@@ -57,16 +67,27 @@ void ResourceLoadStatistics::encode(KeyedEncoder& encoder) const
     encoder.encodeDouble("mostRecentUserInteraction", mostRecentUserInteractionTime.secondsSinceEpoch().value());
     encoder.encodeBool("grandfathered", grandfathered);
 
+    // Storage access
+    encodeHashSet(encoder, "storageAccessUnderTopFrameOrigins", storageAccessUnderTopFrameOrigins);
+
+    // Top frame stats
+    encodeHashCountedSet(encoder, "topFrameUniqueRedirectsTo", topFrameUniqueRedirectsTo);
+    encodeHashCountedSet(encoder, "topFrameUniqueRedirectsFrom", topFrameUniqueRedirectsFrom);
+
     // Subframe stats
     encodeHashCountedSet(encoder, "subframeUnderTopFrameOrigins", subframeUnderTopFrameOrigins);
 
     // Subresource stats
     encodeHashCountedSet(encoder, "subresourceUnderTopFrameOrigins", subresourceUnderTopFrameOrigins);
     encodeHashCountedSet(encoder, "subresourceUniqueRedirectsTo", subresourceUniqueRedirectsTo);
+    encodeHashCountedSet(encoder, "subresourceUniqueRedirectsFrom", subresourceUniqueRedirectsFrom);
 
     // Prevalent Resource
     encoder.encodeBool("isPrevalentResource", isPrevalentResource);
     encoder.encodeUInt32("dataRecordsRemoved", dataRecordsRemoved);
+
+    encoder.encodeUInt32("timesAccessedAsFirstPartyDueToUserInteraction", timesAccessedAsFirstPartyDueToUserInteraction);
+    encoder.encodeUInt32("timesAccessedAsFirstPartyDueToStorageAccessAPI", timesAccessedAsFirstPartyDueToStorageAccessAPI);
 }
 
 static void decodeHashCountedSet(KeyedDecoder& decoder, const String& label, HashCountedSet<String>& hashCountedSet)
@@ -85,6 +106,18 @@ static void decodeHashCountedSet(KeyedDecoder& decoder, const String& label, Has
     });
 }
 
+static void decodeHashSet(KeyedDecoder& decoder, const String& label, HashSet<String>& hashSet)
+{
+    Vector<String> ignore;
+    decoder.decodeObjects(label, ignore, [&hashSet](KeyedDecoder& decoderInner, String& origin) {
+        if (!decoderInner.decodeString("origin", origin))
+            return false;
+
+        hashSet.add(origin);
+        return true;
+    });
+}
+
 bool ResourceLoadStatistics::decode(KeyedDecoder& decoder)
 {
     if (!decoder.decodeString("PrevalentResourceOrigin", highLevelDomain))
@@ -94,12 +127,20 @@ bool ResourceLoadStatistics::decode(KeyedDecoder& decoder)
     if (!decoder.decodeBool("hadUserInteraction", hadUserInteraction))
         return false;
 
+    // Storage access
+    decodeHashSet(decoder, "storageAccessUnderTopFrameOrigins", storageAccessUnderTopFrameOrigins);
+
+    // Top frame stats
+    decodeHashCountedSet(decoder, "topFrameUniqueRedirectsTo", topFrameUniqueRedirectsTo);
+    decodeHashCountedSet(decoder, "topFrameUniqueRedirectsFrom", topFrameUniqueRedirectsFrom);
+
     // Subframe stats
     decodeHashCountedSet(decoder, "subframeUnderTopFrameOrigins", subframeUnderTopFrameOrigins);
 
     // Subresource stats
     decodeHashCountedSet(decoder, "subresourceUnderTopFrameOrigins", subresourceUnderTopFrameOrigins);
     decodeHashCountedSet(decoder, "subresourceUniqueRedirectsTo", subresourceUniqueRedirectsTo);
+    decodeHashCountedSet(decoder, "subresourceUniqueRedirectsFrom", subresourceUniqueRedirectsFrom);
 
     // Prevalent Resource
     if (!decoder.decodeBool("isPrevalentResource", isPrevalentResource))
@@ -120,6 +161,11 @@ bool ResourceLoadStatistics::decode(KeyedDecoder& decoder)
     if (!decoder.decodeDouble("lastSeen", lastSeenTimeAsDouble))
         return false;
     lastSeen = WallTime::fromRawSeconds(lastSeenTimeAsDouble);
+
+    if (!decoder.decodeUInt32("timesAccessedAsFirstPartyDueToUserInteraction", timesAccessedAsFirstPartyDueToUserInteraction))
+        timesAccessedAsFirstPartyDueToUserInteraction = 0;
+    if (!decoder.decodeUInt32("timesAccessedAsFirstPartyDueToStorageAccessAPI", timesAccessedAsFirstPartyDueToStorageAccessAPI))
+        timesAccessedAsFirstPartyDueToStorageAccessAPI = 0;
 
     return true;
 }
@@ -150,6 +196,22 @@ static void appendHashCountedSet(StringBuilder& builder, const String& label, co
     }
 }
 
+static void appendHashSet(StringBuilder& builder, const String& label, const HashSet<String>& hashSet)
+{
+    if (hashSet.isEmpty())
+        return;
+
+    builder.appendLiteral("    ");
+    builder.append(label);
+    builder.appendLiteral(":\n");
+
+    for (auto& entry : hashSet) {
+        builder.appendLiteral("        ");
+        builder.append(entry);
+        builder.append('\n');
+    }
+}
+
 String ResourceLoadStatistics::toString() const
 {
     StringBuilder builder;
@@ -167,12 +229,20 @@ String ResourceLoadStatistics::toString() const
     appendBoolean(builder, "    grandfathered", grandfathered);
     builder.append('\n');
 
+    // Storage access
+    appendHashSet(builder, "storageAccessUnderTopFrameOrigins", storageAccessUnderTopFrameOrigins);
+
+    // Top frame stats
+    appendHashCountedSet(builder, "topFrameUniqueRedirectsTo", topFrameUniqueRedirectsTo);
+    appendHashCountedSet(builder, "topFrameUniqueRedirectsFrom", topFrameUniqueRedirectsFrom);
+
     // Subframe stats
     appendHashCountedSet(builder, "subframeUnderTopFrameOrigins", subframeUnderTopFrameOrigins);
 
     // Subresource stats
     appendHashCountedSet(builder, "subresourceUnderTopFrameOrigins", subresourceUnderTopFrameOrigins);
     appendHashCountedSet(builder, "subresourceUniqueRedirectsTo", subresourceUniqueRedirectsTo);
+    appendHashCountedSet(builder, "subresourceUniqueRedirectsFrom", subresourceUniqueRedirectsFrom);
 
     // Prevalent Resource
     appendBoolean(builder, "isPrevalentResource", isPrevalentResource);
@@ -182,6 +252,7 @@ String ResourceLoadStatistics::toString() const
 
     // In-memory only
     appendBoolean(builder, "isMarkedForCookiePartitioning", isMarkedForCookiePartitioning);
+    appendBoolean(builder, "isMarkedForCookieBlocking", isMarkedForCookieBlocking);
     builder.append('\n');
 
     builder.append('\n');
@@ -194,6 +265,13 @@ static void mergeHashCountedSet(HashCountedSet<T>& to, const HashCountedSet<T>& 
 {
     for (auto& entry : from)
         to.add(entry.key, entry.value);
+}
+
+template <typename T>
+static void mergeHashSet(HashSet<T>& to, const HashSet<T>& from)
+{
+    for (auto& entry : from)
+        to.add(entry);
 }
 
 void ResourceLoadStatistics::merge(const ResourceLoadStatistics& other)
@@ -217,12 +295,20 @@ void ResourceLoadStatistics::merge(const ResourceLoadStatistics& other)
     }
     grandfathered |= other.grandfathered;
 
+    // Storage access
+    mergeHashSet(storageAccessUnderTopFrameOrigins, other.storageAccessUnderTopFrameOrigins);
+
+    // Top frame stats
+    mergeHashCountedSet(topFrameUniqueRedirectsTo, other.topFrameUniqueRedirectsTo);
+    mergeHashCountedSet(topFrameUniqueRedirectsFrom, other.topFrameUniqueRedirectsFrom);
+
     // Subframe stats
     mergeHashCountedSet(subframeUnderTopFrameOrigins, other.subframeUnderTopFrameOrigins);
 
     // Subresource stats
     mergeHashCountedSet(subresourceUnderTopFrameOrigins, other.subresourceUnderTopFrameOrigins);
     mergeHashCountedSet(subresourceUniqueRedirectsTo, other.subresourceUniqueRedirectsTo);
+    mergeHashCountedSet(subresourceUniqueRedirectsFrom, other.subresourceUniqueRedirectsFrom);
 
     // Prevalent resource stats
     isPrevalentResource |= other.isPrevalentResource;
@@ -230,6 +316,7 @@ void ResourceLoadStatistics::merge(const ResourceLoadStatistics& other)
 
     // In-memory only
     isMarkedForCookiePartitioning |= other.isMarkedForCookiePartitioning;
+    isMarkedForCookieBlocking |= other.isMarkedForCookieBlocking;
 }
 
 String ResourceLoadStatistics::primaryDomain(const URL& url)

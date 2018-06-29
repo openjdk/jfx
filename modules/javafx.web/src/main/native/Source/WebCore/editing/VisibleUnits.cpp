@@ -1193,7 +1193,7 @@ Node* findStartOfParagraph(Node* startNode, Node* highestRoot, Node* startBlock,
             ASSERT_WITH_SECURITY_IMPLICATION(is<Text>(*n));
             type = Position::PositionIsOffsetInAnchor;
             if (style.preserveNewline()) {
-                StringImpl& text = *downcast<RenderText>(*r).text();
+                StringImpl& text = downcast<RenderText>(*r).text();
                 int i = text.length();
                 int o = offset;
                 if (n == startNode && o < i)
@@ -1257,7 +1257,7 @@ Node* findEndOfParagraph(Node* startNode, Node* highestRoot, Node* stayInsideBlo
             ASSERT_WITH_SECURITY_IMPLICATION(is<Text>(*n));
             type = Position::PositionIsOffsetInAnchor;
             if (style.preserveNewline()) {
-                StringImpl& text = *downcast<RenderText>(*r).text();
+                StringImpl& text = downcast<RenderText>(*r).text();
                 int o = n == startNode ? offset : 0;
                 int length = text.length();
                 for (int i = o; i < length; ++i) {
@@ -1892,7 +1892,7 @@ int distanceBetweenPositions(const VisiblePosition& vp, const VisiblePosition& o
 void charactersAroundPosition(const VisiblePosition& position, UChar32& oneAfter, UChar32& oneBefore, UChar32& twoBefore)
 {
     const int maxCharacters = 3;
-    Vector<UChar32> characters(maxCharacters);
+    UChar32 characters[maxCharacters] = { 0 };
 
     if (position.isNull() || isStartOfDocument(position))
         return;
@@ -1971,7 +1971,7 @@ VisiblePosition closestWordBoundaryForPosition(const VisiblePosition& position)
 {
     VisiblePosition result;
 
-    // move the the position at the end of the word
+    // move the position at the end of the word
     if (atBoundaryOfGranularity(position, LineGranularity, DirectionForward)) {
         // Don't cross line boundaries.
         result = position;

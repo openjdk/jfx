@@ -28,10 +28,10 @@
 #include "InternalSettings.h"
 
 #include "CaptionUserPreferences.h"
+#include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "FontCache.h"
 #include "FrameView.h"
-#include "Language.h"
 #include "LocaleToScriptMapping.h"
 #include "MainFrame.h"
 #include "Page.h"
@@ -40,7 +40,7 @@
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include "Supplementable.h"
-#include "TextRun.h"
+#include <wtf/Language.h>
 
 #if ENABLE(INPUT_TYPE_COLOR)
 #include "ColorChooser.h"
@@ -60,7 +60,7 @@ InternalSettings::Backup::Backup(Settings& settings)
 #endif
     , m_originalMediaTypeOverride(settings.mediaTypeOverride())
     , m_originalCanvasUsesAcceleratedDrawing(settings.canvasUsesAcceleratedDrawing())
-    , m_originalMockScrollbarsEnabled(settings.mockScrollbarsEnabled())
+    , m_originalMockScrollbarsEnabled(DeprecatedGlobalSettings::mockScrollbarsEnabled())
     , m_imagesEnabled(settings.areImagesEnabled())
     , m_preferMIMETypeForImages(settings.preferMIMETypeForImages())
     , m_minimumDOMTimerInterval(settings.minimumDOMTimerInterval())
@@ -78,7 +78,7 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_youTubeFlashPluginReplacementEnabled(settings.youTubeFlashPluginReplacementEnabled())
     , m_shouldConvertPositionStyleOnCopy(settings.shouldConvertPositionStyleOnCopy())
     , m_fontFallbackPrefersPictographs(settings.fontFallbackPrefersPictographs())
-    , m_webFontsAlwaysFallBack(settings.webFontsAlwaysFallBack())
+    , m_shouldIgnoreFontLoadCompletions(settings.shouldIgnoreFontLoadCompletions())
     , m_backgroundShouldExtendBeyondPage(settings.backgroundShouldExtendBeyondPage())
     , m_storageBlockingPolicy(settings.storageBlockingPolicy())
     , m_scrollingTreeIncludesFrames(settings.scrollingTreeIncludesFrames())
@@ -99,6 +99,7 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_forcedColorsAreInvertedAccessibilityValue(settings.forcedColorsAreInvertedAccessibilityValue())
     , m_forcedDisplayIsMonochromeAccessibilityValue(settings.forcedDisplayIsMonochromeAccessibilityValue())
     , m_forcedPrefersReducedMotionAccessibilityValue(settings.forcedPrefersReducedMotionAccessibilityValue())
+    , m_fontLoadTimingOverride(settings.fontLoadTimingOverride())
     , m_frameFlattening(settings.frameFlattening())
 #if ENABLE(INDEXED_DATABASE_IN_WORKERS)
     , m_indexedDBWorkersEnabled(RuntimeEnabledFeatures::sharedFeatures().indexedDBWorkersEnabled())
@@ -110,10 +111,15 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(WEBGPU)
     , m_webGPUEnabled(RuntimeEnabledFeatures::sharedFeatures().webGPUEnabled())
 #endif
+    , m_webVREnabled(RuntimeEnabledFeatures::sharedFeatures().webVREnabled())
+#if ENABLE(MEDIA_STREAM)
+    , m_setScreenCaptureEnabled(RuntimeEnabledFeatures::sharedFeatures().screenCaptureEnabled())
+#endif
     , m_shouldMockBoldSystemFontForAccessibility(RenderTheme::singleton().shouldMockBoldSystemFontForAccessibility())
 #if USE(AUDIO_SESSION)
-    , m_shouldManageAudioSessionCategory(Settings::shouldManageAudioSessionCategory())
+    , m_shouldManageAudioSessionCategory(DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
 #endif
+    , m_customPasteboardDataEnabled(RuntimeEnabledFeatures::sharedFeatures().customPasteboardDataEnabled())
 {
 }
 
@@ -170,7 +176,7 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     settings.setAutoscrollForDragAndDropEnabled(m_autoscrollForDragAndDropEnabled);
     settings.setShouldConvertPositionStyleOnCopy(m_shouldConvertPositionStyleOnCopy);
     settings.setFontFallbackPrefersPictographs(m_fontFallbackPrefersPictographs);
-    settings.setWebFontsAlwaysFallBack(m_webFontsAlwaysFallBack);
+    settings.setShouldIgnoreFontLoadCompletions(m_shouldIgnoreFontLoadCompletions);
     settings.setBackgroundShouldExtendBeyondPage(m_backgroundShouldExtendBeyondPage);
     settings.setStorageBlockingPolicy(m_storageBlockingPolicy);
     settings.setScrollingTreeIncludesFrames(m_scrollingTreeIncludesFrames);
@@ -190,7 +196,8 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     settings.setForcedColorsAreInvertedAccessibilityValue(m_forcedColorsAreInvertedAccessibilityValue);
     settings.setForcedDisplayIsMonochromeAccessibilityValue(m_forcedDisplayIsMonochromeAccessibilityValue);
     settings.setForcedPrefersReducedMotionAccessibilityValue(m_forcedPrefersReducedMotionAccessibilityValue);
-    Settings::setAllowsAnySSLCertificate(false);
+    settings.setFontLoadTimingOverride(m_fontLoadTimingOverride);
+    DeprecatedGlobalSettings::setAllowsAnySSLCertificate(false);
     RenderTheme::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
     FontCache::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
     settings.setFrameFlattening(m_frameFlattening);
@@ -205,9 +212,14 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #if ENABLE(WEBGPU)
     RuntimeEnabledFeatures::sharedFeatures().setWebGPUEnabled(m_webGPUEnabled);
 #endif
+    RuntimeEnabledFeatures::sharedFeatures().setWebVREnabled(m_webVREnabled);
+#if ENABLE(MEDIA_STREAM)
+    RuntimeEnabledFeatures::sharedFeatures().setScreenCaptureEnabled(m_setScreenCaptureEnabled);
+#endif
+    RuntimeEnabledFeatures::sharedFeatures().setCustomPasteboardDataEnabled(m_customPasteboardDataEnabled);
 
 #if USE(AUDIO_SESSION)
-    Settings::setShouldManageAudioSessionCategory(m_shouldManageAudioSessionCategory);
+    DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(m_shouldManageAudioSessionCategory);
 #endif
 }
 
@@ -440,7 +452,7 @@ ExceptionOr<void> InternalSettings::setMediaCaptureRequiresSecureConnection(bool
     if (!m_page)
         return Exception { InvalidAccessError };
 #if ENABLE(MEDIA_STREAM)
-    settings().setMediaCaptureRequiresSecureConnection(requires);
+    DeprecatedGlobalSettings::setMediaCaptureRequiresSecureConnection(requires);
 #else
     UNUSED_PARAM(requires);
 #endif
@@ -609,11 +621,31 @@ ExceptionOr<void> InternalSettings::setFontFallbackPrefersPictographs(bool prefe
     return { };
 }
 
-ExceptionOr<void> InternalSettings::setWebFontsAlwaysFallBack(bool enable)
+ExceptionOr<void> InternalSettings::setFontLoadTimingOverride(const FontLoadTimingOverride& fontLoadTimingOverride)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    settings().setWebFontsAlwaysFallBack(enable);
+    auto policy = Settings::FontLoadTimingOverride::None;
+    switch (fontLoadTimingOverride) {
+    case FontLoadTimingOverride::Block:
+        policy = Settings::FontLoadTimingOverride::Block;
+        break;
+    case FontLoadTimingOverride::Swap:
+        policy = Settings::FontLoadTimingOverride::Swap;
+        break;
+    case FontLoadTimingOverride::Failure:
+        policy = Settings::FontLoadTimingOverride::Failure;
+        break;
+    }
+    settings().setFontLoadTimingOverride(policy);
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setShouldIgnoreFontLoadCompletions(bool ignore)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    settings().setShouldIgnoreFontLoadCompletions(ignore);
     return { };
 }
 
@@ -731,6 +763,20 @@ void InternalSettings::setWebGPUEnabled(bool enabled)
 #endif
 }
 
+void InternalSettings::setWebVREnabled(bool enabled)
+{
+    RuntimeEnabledFeatures::sharedFeatures().setWebVREnabled(enabled);
+}
+
+void InternalSettings::setScreenCaptureEnabled(bool enabled)
+{
+#if ENABLE(MEDIA_STREAM)
+    RuntimeEnabledFeatures::sharedFeatures().setScreenCaptureEnabled(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+}
+
 ExceptionOr<String> InternalSettings::userInterfaceDirectionPolicy()
 {
     if (!m_page)
@@ -789,32 +835,17 @@ ExceptionOr<void> InternalSettings::setSystemLayoutDirection(const String& direc
     return Exception { InvalidAccessError };
 }
 
-static FrameFlattening internalSettingsToWebCoreValue(InternalSettings::FrameFlatteningValue value)
-{
-    switch (value) {
-    case InternalSettings::FrameFlatteningValue::Disabled:
-        return FrameFlatteningDisabled;
-    case InternalSettings::FrameFlatteningValue::EnabledForNonFullScreenIFrames:
-        return FrameFlatteningEnabledForNonFullScreenIFrames;
-    case InternalSettings::FrameFlatteningValue::FullyEnabled:
-        return FrameFlatteningFullyEnabled;
-    }
-
-    ASSERT_NOT_REACHED();
-    return FrameFlatteningDisabled;
-}
-
-ExceptionOr<void> InternalSettings::setFrameFlattening(const FrameFlatteningValue& frameFlattening)
+ExceptionOr<void> InternalSettings::setFrameFlattening(FrameFlatteningValue frameFlattening)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    settings().setFrameFlattening(internalSettingsToWebCoreValue(frameFlattening));
+    settings().setFrameFlattening(frameFlattening);
     return { };
 }
 
 void InternalSettings::setAllowsAnySSLCertificate(bool allowsAnyCertificate)
 {
-    Settings::setAllowsAnySSLCertificate(allowsAnyCertificate);
+    DeprecatedGlobalSettings::setAllowsAnySSLCertificate(allowsAnyCertificate);
 #if USE(SOUP)
     SoupNetworkSession::setShouldIgnoreTLSErrors(allowsAnyCertificate);
 #endif
@@ -838,12 +869,18 @@ ExceptionOr<void> InternalSettings::setDeferredCSSParserEnabled(bool enabled)
 ExceptionOr<void> InternalSettings::setShouldManageAudioSessionCategory(bool should)
 {
 #if USE(AUDIO_SESSION)
-    Settings::setShouldManageAudioSessionCategory(should);
+    DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(should);
     return { };
 #else
     UNUSED_PARAM(should);
     return Exception { InvalidAccessError };
 #endif
+}
+
+ExceptionOr<void> InternalSettings::setCustomPasteboardDataEnabled(bool enabled)
+{
+    RuntimeEnabledFeatures::sharedFeatures().setCustomPasteboardDataEnabled(enabled);
+    return { };
 }
 
 static InternalSettings::ForcedAccessibilityValue settingsToInternalSettingsValue(Settings::ForcedAccessibilityValue value)

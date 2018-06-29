@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WorkerGlobalScopeCaches.h"
 
-#include "CacheStorage.h"
+#include "DOMCacheStorage.h"
 #include "WorkerGlobalScope.h"
 
 namespace WebCore {
@@ -40,22 +40,22 @@ WorkerGlobalScopeCaches* WorkerGlobalScopeCaches::from(WorkerGlobalScope& scope)
 {
     auto* supplement = static_cast<WorkerGlobalScopeCaches*>(Supplement<WorkerGlobalScope>::from(&scope, supplementName()));
     if (!supplement) {
-        auto newSupplement = std::make_unique<WorkerGlobalScopeCaches>();
+        auto newSupplement = std::make_unique<WorkerGlobalScopeCaches>(scope);
         supplement = newSupplement.get();
         provideTo(&scope, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
 
-CacheStorage* WorkerGlobalScopeCaches::caches(WorkerGlobalScope& scope)
+DOMCacheStorage* WorkerGlobalScopeCaches::caches(WorkerGlobalScope& scope)
 {
     return WorkerGlobalScopeCaches::from(scope)->caches();
 }
 
-CacheStorage* WorkerGlobalScopeCaches::caches() const
+DOMCacheStorage* WorkerGlobalScopeCaches::caches() const
 {
     if (!m_caches)
-        m_caches = CacheStorage::create();
+        m_caches = DOMCacheStorage::create(m_scope, m_scope.cacheStorageConnection());
     return m_caches.get();
 }
 

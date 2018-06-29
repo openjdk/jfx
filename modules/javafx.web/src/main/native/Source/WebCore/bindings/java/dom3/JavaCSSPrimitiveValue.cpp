@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/DeprecatedCSSOMPrimitiveValue.h>
@@ -46,7 +48,7 @@ extern "C" {
 
 
 // Attributes
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getPrimitiveTypeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSPrimitiveValueImpl_getPrimitiveTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->primitiveType();

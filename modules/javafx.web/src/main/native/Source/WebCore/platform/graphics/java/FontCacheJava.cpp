@@ -72,7 +72,7 @@ const AtomicString& FontCache::platformAlternateFamilyName(const AtomicString&)
     return nullAtom();
 }
 
-Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomicString&)
+Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomicString&, AllowUserInstalledFonts)
 {
     notImplemented();
     return { };

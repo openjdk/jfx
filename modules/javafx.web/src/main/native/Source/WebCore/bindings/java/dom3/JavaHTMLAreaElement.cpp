@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/HTMLAreaElement.h>
@@ -67,13 +69,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setCoordsImpl
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::coordsAttr, String(env, value));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getNoHrefImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_getNoHrefImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttribute(WebCore::HTMLNames::nohrefAttr);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setNoHrefImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLAreaElementImpl_setNoHrefImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setBooleanAttribute(WebCore::HTMLNames::nohrefAttr, value);

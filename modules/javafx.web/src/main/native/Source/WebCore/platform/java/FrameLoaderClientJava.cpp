@@ -58,7 +58,7 @@
 
 namespace WebCore {
 
-namespace {
+namespace FrameLoaderClientJavaInternal {
 
 static JGClass webPageClass;
 static JGClass networkContextClass;
@@ -214,6 +214,7 @@ void FrameLoaderClientJava::dispatchDidNavigateWithinPage()
 
 void FrameLoaderClientJava::frameLoaderDestroyed()
 {
+    using namespace FrameLoaderClientJavaInternal;
     WC_GETJAVAENV_CHKRET(env);
     initRefs(env);
 
@@ -250,6 +251,7 @@ void FrameLoaderClientJava::setFrame(Frame* frame)
 
 void FrameLoaderClientJava::setRequestURL(Frame* f, int identifier, String url)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -260,6 +262,7 @@ void FrameLoaderClientJava::setRequestURL(Frame* f, int identifier, String url)
 
 void FrameLoaderClientJava::removeRequestURL(Frame* f, int identifier)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -271,6 +274,7 @@ void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
                                           String url, String contentType,
                                           double progress, int errorCode)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -300,6 +304,7 @@ void FrameLoaderClientJava::postResourceLoadEvent(Frame* f, int state,
                                                   int id, String contentType,
                                                   double progress, int errorCode)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -362,23 +367,24 @@ void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const char* da
 
 void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, FramePolicyFunction&& policyFunction)
 {
+    using namespace FrameLoaderClientJavaInternal;
     PolicyAction action;
 
     int statusCode = response.httpStatusCode();
     if (statusCode == 204 || statusCode == 205) {
         // The server does not want us to replace the page contents.
-        action = PolicyIgnore;
+        action = PolicyAction::Ignore;
     } else if (contentDispositionType(response.httpHeaderField(HTTPHeaderName::ContentDisposition)) == ContentDispositionAttachment) {
         // The server wants us to download instead of replacing the page contents.
         // Downloading is handled by the embedder, but we still get the initial
         // response so that we can ignore it and clean up properly.
-        action = PolicyIgnore;
+        action = PolicyAction::Ignore;
     } else if (!canShowMIMEType(response.mimeType())) {
         // Make sure that we can actually handle this type internally.
-        action = PolicyIgnore;
+        action = PolicyAction::Ignore;
     } else {
         // OK, we will render this page.
-        action = PolicyUse;
+        action = PolicyAction::Use;
     }
 
     // NOTE: PolicyChangeError will be generated when action is not PolicyUse.
@@ -405,6 +411,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
                                                                    const String&,
                                                                    FramePolicyFunction&& policyFunction)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -420,14 +427,16 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
 
     // FIXME: I think Qt version marshals this to another thread so when we
     // have multi-threaded download, we might need to do the same
-    policyFunction(permit ? PolicyUse : PolicyIgnore);
+    policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore);
 }
 
 void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const NavigationAction& action,
                                                                     const ResourceRequest& req,
+                                                                    bool /*didReceiveRedirectResponse*/,
                                                                     FormState*,
                                                                     FramePolicyFunction&& policyFunction)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -463,7 +472,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
         CheckAndClearException(env);
     }
 
-    policyFunction(permit ? PolicyUse : PolicyIgnore);
+    policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore);
 }
 
 RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLPlugInElement& element, const URL& url,
@@ -483,7 +492,9 @@ RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLP
 RefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement& ownerElement,
                                         const String& referrer, bool, int, int)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
+    initRefs(env);
 
     FrameLoaderClientJava* frameLoaderClient = new FrameLoaderClientJava(m_webPage);
     RefPtr<Frame> childFrame(Frame::create(page(), &ownerElement, frameLoaderClient));
@@ -607,6 +618,7 @@ void FrameLoaderClientJava::dispatchDidStartProvisionalLoad()
 
 void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, unsigned long identifier, ResourceRequest& req, const ResourceResponse& res)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -697,7 +709,7 @@ void FrameLoaderClientJava::dispatchDidFailLoad(const ResourceError& error)
 }
 
 // client-side redirection
-void FrameLoaderClientJava::dispatchWillPerformClientRedirect(const URL&, double, double)
+void FrameLoaderClientJava::dispatchWillPerformClientRedirect(const URL&, double, WallTime)
 {
 }
 
@@ -900,6 +912,7 @@ void FrameLoaderClientJava::didChangeTitle(DocumentLoader *l) { setTitle(l->titl
 
 bool FrameLoaderClientJava::canHandleRequest(const ResourceRequest& req) const
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -988,12 +1001,14 @@ ResourceError FrameLoaderClientJava::cancelledError(const ResourceRequest& reque
 
 ResourceError FrameLoaderClientJava::blockedError(const ResourceRequest& request)
 {
+    using namespace FrameLoaderClientJavaInternal;
     return ResourceError("Error", WebKitErrorCannotUseRestrictedPort, request.url(),
                          "Request blocked");
 }
 
 ResourceError FrameLoaderClientJava::blockedByContentBlockerError(const ResourceRequest& request)
 {
+    using namespace FrameLoaderClientJavaInternal;
     RELEASE_ASSERT_NOT_REACHED(); // Content Blockers are not enabled for WK1.
     return ResourceError("Error", WebKitErrorCannotShowURL, request.url(),
                          "Cannot show URL");
@@ -1001,18 +1016,21 @@ ResourceError FrameLoaderClientJava::blockedByContentBlockerError(const Resource
 
 ResourceError FrameLoaderClientJava::cannotShowURLError(const ResourceRequest& request)
 {
+    using namespace FrameLoaderClientJavaInternal;
     return ResourceError("Error", WebKitErrorCannotShowURL, request.url(),
                          "Cannot show URL");
 }
 
 ResourceError FrameLoaderClientJava::interruptedForPolicyChangeError(const ResourceRequest& request)
 {
+    using namespace FrameLoaderClientJavaInternal;
     return ResourceError("Error", WebKitErrorFrameLoadInterruptedByPolicyChange,
                          request.url(), "Frame load interrupted by policy change");
 }
 
 ResourceError FrameLoaderClientJava::cannotShowMIMETypeError(const ResourceResponse& response)
 {
+    using namespace FrameLoaderClientJavaInternal;
     return ResourceError("Error", WebKitErrorCannotShowMIMEType, response.url(),
                          "Cannot show mimetype");
 }
@@ -1025,11 +1043,13 @@ ResourceError FrameLoaderClientJava::fileDoesNotExistError(const ResourceRespons
 
 ResourceError FrameLoaderClientJava::pluginWillHandleLoadError(const ResourceResponse& response)
 {
+    using namespace FrameLoaderClientJavaInternal;
     return ResourceError("Error", WebKitErrorPluginWillHandleLoad, response.url(), "Loading is handled by the media engine");
 }
 
 bool FrameLoaderClientJava::shouldFallBack(const ResourceError& error)
 {
+    using namespace FrameLoaderClientJavaInternal;
     //Font fallback supported by Java Fonts internaly
     return !(error.isCancellation() || (error.errorCode() == WebKitErrorFrameLoadInterruptedByPolicyChange));
 }
@@ -1086,6 +1106,7 @@ void FrameLoaderClientJava::updateGlobalHistoryRedirectLinks()
 void FrameLoaderClientJava::dispatchDidClearWindowObjectInWorld(
     DOMWrapperWorld& world)
 {
+    using namespace FrameLoaderClientJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -1107,7 +1128,7 @@ void FrameLoaderClientJava::registerForIconNotification()
     //notImplemented();
 }
 
-void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, SessionID, const ResourceRequest&, const ResourceResponse&)
+void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&)
 {
     //notImplemented();
 }
@@ -1138,5 +1159,22 @@ void FrameLoaderClientJava::prefetchDNS(const String& hostname)
 {
     WebCore::prefetchDNS(hostname);
 }
+
+std::optional<uint64_t> FrameLoaderClientJava::pageID() const
+{
+    return std::nullopt;
+}
+
+std::optional<uint64_t> FrameLoaderClientJava::frameID() const
+{
+    return std::nullopt;
+}
+
+PAL::SessionID FrameLoaderClientJava::sessionID() const
+{
+    RELEASE_ASSERT_NOT_REACHED();
+    return PAL::SessionID::defaultSessionID();
+}
+
 
 }

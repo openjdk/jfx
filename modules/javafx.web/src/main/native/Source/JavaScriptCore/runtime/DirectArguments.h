@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,6 +46,13 @@ private:
     DirectArguments(VM&, Structure*, unsigned length, unsigned capacity);
 
 public:
+    template<typename CellType>
+    static CompleteSubspace* subspaceFor(VM& vm)
+    {
+        RELEASE_ASSERT(!CellType::needsDestruction);
+        return &vm.jsValueGigacageCellSpace;
+    }
+
     // Creates an arguments object but leaves it uninitialized. This is dangerous if we GC right
     // after allocation.
     static DirectArguments* createUninitialized(VM&, Structure*, unsigned length, unsigned capacity);
@@ -67,8 +74,14 @@ public:
 
     uint32_t length(ExecState* exec) const
     {
-        if (UNLIKELY(m_mappedArguments))
-            return get(exec, exec->propertyNames().length).toUInt32(exec);
+        if (UNLIKELY(m_mappedArguments)) {
+            VM& vm = exec->vm();
+            auto scope = DECLARE_THROW_SCOPE(vm);
+            JSValue value = get(exec, vm.propertyNames->length);
+            RETURN_IF_EXCEPTION(scope, 0);
+            scope.release();
+            return value.toUInt32(exec);
+        }
         return m_length;
     }
 
@@ -85,13 +98,15 @@ public:
     JSValue getIndexQuickly(uint32_t i) const
     {
         ASSERT_WITH_SECURITY_IMPLICATION(isMappedArgument(i));
-        return const_cast<DirectArguments*>(this)->storage()[i].get();
+        auto* ptr = &const_cast<DirectArguments*>(this)->storage()[i];
+        return preciseIndexMaskPtr(i, m_length, dynamicPoison(type(), DirectArgumentsType, ptr))->get();
     }
 
     void setIndexQuickly(VM& vm, uint32_t i, JSValue value)
     {
         ASSERT_WITH_SECURITY_IMPLICATION(isMappedArgument(i));
-        storage()[i].set(vm, this, value);
+        auto* ptr = &storage()[i];
+        preciseIndexMaskPtr(i, m_length, dynamicPoison(type(), DirectArgumentsType, ptr))->set(vm, this, value);
     }
 
     WriteBarrier<JSFunction>& callee()
@@ -103,7 +118,8 @@ public:
     {
         ASSERT(offset);
         ASSERT_WITH_SECURITY_IMPLICATION(offset.offset() < std::max(m_length, m_minCapacity));
-        return storage()[offset.offset()];
+        auto* ptr = &storage()[offset.offset()];
+        return *preciseIndexMaskPtr(offset.offset(), std::max(m_length, m_minCapacity), dynamicPoison(type(), DirectArgumentsType, ptr));
     }
 
     // Methods intended for use by the GenericArguments mixin.

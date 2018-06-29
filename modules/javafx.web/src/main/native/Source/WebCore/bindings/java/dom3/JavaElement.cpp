@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/Attr.h>
@@ -50,7 +52,7 @@ extern "C" {
 
 #define IMPL (static_cast<Element*>(jlong_to_ptr(peer)))
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_ElementImpl_isHTMLElementImpl(JNIEnv* env, jclass, jlong peer) {
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_ElementImpl_isHTMLElementImpl(JNIEnv*, jclass, jlong peer) {
     return IMPL->isHTMLElement();
 }
 
@@ -87,85 +89,85 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setIdImpl(JNIEnv* env
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::idAttr, String(env, value));
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetLeftImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetLeftImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetLeft();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetTopImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetTopImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetTop();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetWidthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetWidthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetWidth();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetHeightImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getOffsetHeightImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->offsetHeight();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientLeftImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientLeftImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->clientLeft();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientTopImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientTopImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->clientTop();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientWidthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientWidthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->clientWidth();
 }
 
-JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientHeightImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jdouble JNICALL Java_com_sun_webkit_dom_ElementImpl_getClientHeightImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->clientHeight();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollLeftImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollLeftImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->scrollLeft();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setScrollLeftImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setScrollLeftImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setScrollLeft(value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollTopImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollTopImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->scrollTop();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setScrollTopImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setScrollTopImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setScrollTop(value);
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollWidthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollWidthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->scrollWidth();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollHeightImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getScrollHeightImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->scrollHeight();
@@ -219,7 +221,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnbeforecopyImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().beforecopyEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforecopyImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforecopyImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().beforecopyEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -231,7 +233,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnbeforecutImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().beforecutEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforecutImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforecutImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().beforecutEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -243,7 +245,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnbeforepasteImpl
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().beforepasteEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforepasteImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforepasteImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().beforepasteEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -255,7 +257,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOncopyImpl(JNIEnv
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().copyEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncopyImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncopyImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().copyEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -267,7 +269,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOncutImpl(JNIEnv*
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().cutEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncutImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncutImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().cutEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -279,7 +281,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnpasteImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().pasteEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnpasteImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnpasteImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().pasteEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -291,7 +293,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnselectstartImpl
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().selectstartEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnselectstartImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnselectstartImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().selectstartEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -303,7 +305,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnanimationendImp
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().animationendEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnanimationendImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnanimationendImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().animationendEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -315,7 +317,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnanimationiterat
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().animationiterationEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnanimationiterationImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnanimationiterationImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().animationiterationEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -327,7 +329,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnanimationstartI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().animationstartEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnanimationstartImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnanimationstartImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().animationstartEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -339,7 +341,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOntransitionendIm
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().transitionendEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOntransitionendImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOntransitionendImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().transitionendEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -351,7 +353,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnwebkitanimation
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().webkitAnimationEndEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkitanimationendImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkitanimationendImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().webkitAnimationEndEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -363,7 +365,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnwebkitanimation
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().webkitAnimationIterationEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkitanimationiterationImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkitanimationiterationImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().webkitAnimationIterationEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -375,7 +377,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnwebkitanimation
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().webkitAnimationStartEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkitanimationstartImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkitanimationstartImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().webkitAnimationStartEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -387,7 +389,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnwebkittransitio
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().webkitTransitionEndEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkittransitionendImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwebkittransitionendImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().webkitTransitionEndEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -399,7 +401,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnfocusinImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().focusinEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnfocusinImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnfocusinImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().focusinEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -411,7 +413,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnfocusoutImpl(JN
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().focusoutEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnfocusoutImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnfocusoutImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().focusoutEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -423,7 +425,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnbeforeloadImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().beforeloadEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforeloadImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnbeforeloadImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().beforeloadEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -435,7 +437,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnabortImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().abortEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnabortImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnabortImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().abortEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -447,7 +449,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnblurImpl(JNIEnv
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().blurEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnblurImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnblurImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().blurEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -459,7 +461,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOncanplayImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().canplayEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncanplayImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncanplayImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().canplayEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -471,7 +473,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOncanplaythroughI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().canplaythroughEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncanplaythroughImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncanplaythroughImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().canplaythroughEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -483,7 +485,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnchangeImpl(JNIE
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().changeEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnchangeImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnchangeImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().changeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -495,7 +497,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnclickImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().clickEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnclickImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnclickImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().clickEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -507,7 +509,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOncontextmenuImpl
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().contextmenuEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncontextmenuImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOncontextmenuImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().contextmenuEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -519,7 +521,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndblclickImpl(JN
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dblclickEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndblclickImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndblclickImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dblclickEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -531,7 +533,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndragImpl(JNIEnv
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dragEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dragEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -543,7 +545,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndragendImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dragendEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragendImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragendImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dragendEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -555,7 +557,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndragenterImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dragenterEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragenterImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragenterImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dragenterEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -567,7 +569,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndragleaveImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dragleaveEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragleaveImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragleaveImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dragleaveEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -579,7 +581,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndragoverImpl(JN
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dragoverEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragoverImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragoverImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dragoverEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -591,7 +593,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndragstartImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dragstartEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragstartImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndragstartImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dragstartEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -603,7 +605,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndropImpl(JNIEnv
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().dropEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndropImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndropImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().dropEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -615,7 +617,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOndurationchangeI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().durationchangeEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndurationchangeImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOndurationchangeImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().durationchangeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -627,7 +629,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnemptiedImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().emptiedEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnemptiedImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnemptiedImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().emptiedEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -639,7 +641,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnendedImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().endedEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnendedImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnendedImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().endedEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -651,7 +653,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnerrorImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().errorEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnerrorImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnerrorImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().errorEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -663,7 +665,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnfocusImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().focusEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnfocusImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnfocusImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().focusEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -675,7 +677,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOninputImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().inputEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOninputImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOninputImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().inputEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -687,7 +689,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOninvalidImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().invalidEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOninvalidImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOninvalidImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().invalidEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -699,7 +701,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnkeydownImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().keydownEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnkeydownImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnkeydownImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().keydownEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -711,7 +713,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnkeypressImpl(JN
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().keypressEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnkeypressImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnkeypressImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().keypressEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -723,7 +725,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnkeyupImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().keyupEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnkeyupImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnkeyupImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().keyupEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -735,7 +737,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnloadImpl(JNIEnv
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().loadEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().loadEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -747,7 +749,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnloadeddataImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().loadeddataEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadeddataImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadeddataImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().loadeddataEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -759,7 +761,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnloadedmetadataI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().loadedmetadataEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadedmetadataImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadedmetadataImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().loadedmetadataEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -771,7 +773,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnloadstartImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().loadstartEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadstartImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnloadstartImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().loadstartEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -783,7 +785,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmousedownImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mousedownEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmousedownImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmousedownImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mousedownEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -795,7 +797,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmouseenterImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mouseenterEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseenterImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseenterImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mouseenterEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -807,7 +809,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmouseleaveImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mouseleaveEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseleaveImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseleaveImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mouseleaveEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -819,7 +821,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmousemoveImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mousemoveEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmousemoveImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmousemoveImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mousemoveEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -831,7 +833,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmouseoutImpl(JN
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mouseoutEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseoutImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseoutImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mouseoutEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -843,7 +845,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmouseoverImpl(J
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mouseoverEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseoverImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseoverImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mouseoverEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -855,7 +857,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmouseupImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mouseupEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseupImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmouseupImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mouseupEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -867,7 +869,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnmousewheelImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().mousewheelEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmousewheelImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnmousewheelImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().mousewheelEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -879,7 +881,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnpauseImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().pauseEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnpauseImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnpauseImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().pauseEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -891,7 +893,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnplayImpl(JNIEnv
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().playEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnplayImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnplayImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().playEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -903,7 +905,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnplayingImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().playingEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnplayingImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnplayingImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().playingEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -915,7 +917,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnprogressImpl(JN
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().progressEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnprogressImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnprogressImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().progressEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -927,7 +929,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnratechangeImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().ratechangeEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnratechangeImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnratechangeImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().ratechangeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -939,7 +941,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnresetImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().resetEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnresetImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnresetImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().resetEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -951,7 +953,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnresizeImpl(JNIE
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().resizeEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnresizeImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnresizeImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().resizeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -963,7 +965,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnscrollImpl(JNIE
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().scrollEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnscrollImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnscrollImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().scrollEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -975,7 +977,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnseekedImpl(JNIE
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().seekedEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnseekedImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnseekedImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().seekedEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -987,7 +989,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnseekingImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().seekingEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnseekingImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnseekingImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().seekingEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -999,7 +1001,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnselectImpl(JNIE
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().selectEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnselectImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnselectImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().selectEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1011,7 +1013,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnstalledImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().stalledEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnstalledImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnstalledImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().stalledEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1023,7 +1025,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnsubmitImpl(JNIE
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().submitEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnsubmitImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnsubmitImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().submitEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1035,7 +1037,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnsuspendImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().suspendEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnsuspendImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnsuspendImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().suspendEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1047,7 +1049,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOntimeupdateImpl(
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().timeupdateEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOntimeupdateImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOntimeupdateImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().timeupdateEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1059,7 +1061,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnvolumechangeImp
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().volumechangeEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnvolumechangeImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnvolumechangeImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().volumechangeEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1071,7 +1073,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnwaitingImpl(JNI
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().waitingEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwaitingImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwaitingImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().waitingEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1083,7 +1085,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnsearchImpl(JNIE
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().searchEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnsearchImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnsearchImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().searchEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1095,7 +1097,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getOnwheelImpl(JNIEn
     return JavaReturn<EventListener>(env, WTF::getPtr(IMPL->attributeEventListener(eventNames().wheelEvent, mainThreadNormalWorld())));
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwheelImpl(JNIEnv* env, jclass, jlong peer, jlong value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_setOnwheelImpl(JNIEnv*, jclass, jlong peer, jlong value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeEventListener(eventNames().wheelEvent, static_cast<EventListener*>(jlong_to_ptr(value)), mainThreadNormalWorld());
@@ -1131,7 +1133,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getLastElementChildI
     return JavaReturn<Element>(env, WTF::getPtr(IMPL->lastElementChild()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getChildElementCountImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_ElementImpl_getChildElementCountImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->childElementCount();
@@ -1209,7 +1211,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getElementsByTagName
 }
 
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_ElementImpl_hasAttributesImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_ElementImpl_hasAttributesImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->hasAttributes();
@@ -1300,21 +1302,21 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_ElementImpl_hasAttributeNSImp
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_focusImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_focusImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->focus();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_blurImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_blurImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->blur();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewImpl(JNIEnv* env, jclass, jlong peer
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewImpl(JNIEnv*, jclass, jlong peer
     , jboolean alignWithTop)
 {
     WebCore::JSMainThreadNullState state;
@@ -1322,7 +1324,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewImpl(JN
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewIfNeededImpl(JNIEnv* env, jclass, jlong peer
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewIfNeededImpl(JNIEnv*, jclass, jlong peer
     , jboolean centerIfNeeded)
 {
     WebCore::JSMainThreadNullState state;
@@ -1330,7 +1332,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollIntoViewIfNeede
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByLinesImpl(JNIEnv* env, jclass, jlong peer
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByLinesImpl(JNIEnv*, jclass, jlong peer
     , jint lines)
 {
     WebCore::JSMainThreadNullState state;
@@ -1338,7 +1340,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByLinesImpl(JNI
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByPagesImpl(JNIEnv* env, jclass, jlong peer
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_scrollByPagesImpl(JNIEnv*, jclass, jlong peer
     , jint pages)
 {
     WebCore::JSMainThreadNullState state;
@@ -1378,15 +1380,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_ElementImpl_webkitMatchesSele
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_webkitRequestFullScreenImpl(JNIEnv* env, jclass, jlong peer
-    , jshort flags)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_webkitRequestFullScreenImpl(JNIEnv*, jclass, jlong peer
+    , jshort)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->webkitRequestFullscreen();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_webkitRequestFullscreenImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_ElementImpl_webkitRequestFullscreenImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->webkitRequestFullscreen();

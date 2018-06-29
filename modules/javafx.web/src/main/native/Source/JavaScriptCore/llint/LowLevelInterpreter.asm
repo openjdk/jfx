@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -163,7 +163,7 @@ else
 end
 const SlotSize = 8
 
-const JSEnvironmentRecord_variables = (sizeof JSEnvironmentRecord + SlotSize - 1) & ~(SlotSize - 1)
+const JSLexicalEnvironment_variables = (sizeof JSLexicalEnvironment + SlotSize - 1) & ~(SlotSize - 1)
 const DirectArguments_storage = (sizeof DirectArguments + SlotSize - 1) & ~(SlotSize - 1)
 
 const StackAlignment = 16
@@ -253,12 +253,12 @@ const IsInvalidated = constexpr IsInvalidated
 const ShadowChickenTailMarker = constexpr ShadowChicken::Packet::tailMarkerValue
 
 # ArithProfile data
-const ArithProfileInt = 0x100000
-const ArithProfileIntInt = 0x120000
-const ArithProfileNumber = 0x200000
-const ArithProfileNumberInt = 0x220000
-const ArithProfileNumberNumber = 0x240000
-const ArithProfileIntNumber = 0x140000
+const ArithProfileInt = 0x400000
+const ArithProfileIntInt = 0x480000
+const ArithProfileNumber = 0x800000
+const ArithProfileNumberInt = 0x880000
+const ArithProfileNumberNumber = 0x900000
+const ArithProfileIntNumber = 0x500000
 
 # Some register conventions.
 if JSVALUE64
@@ -285,7 +285,7 @@ if JSVALUE64
         const tagTypeNumber = csr1
         const tagMask = csr2
     end
-    
+
     macro loadisFromInstruction(offset, dest)
         loadis offset * 8[PB, PC, 8], dest
     end
@@ -293,13 +293,29 @@ if JSVALUE64
     macro loadpFromInstruction(offset, dest)
         loadp offset * 8[PB, PC, 8], dest
     end
-    
+
+    macro loadisFromStruct(offset, dest)
+        loadis offset[PB, PC, 8], dest
+    end
+
+    macro loadpFromStruct(offset, dest)
+        loadp offset[PB, PC, 8], dest
+    end
+
     macro storeisToInstruction(value, offset)
         storei value, offset * 8[PB, PC, 8]
     end
 
     macro storepToInstruction(value, offset)
         storep value, offset * 8[PB, PC, 8]
+    end
+
+    macro storeisFromStruct(value, offset)
+        storei value, offset[PB, PC, 8]
+    end
+
+    macro storepFromStruct(value, offset)
+        storep value, offset[PB, PC, 8]
     end
 
 else
@@ -314,6 +330,18 @@ else
 
     macro storeisToInstruction(value, offset)
         storei value, offset * 4[PC]
+    end
+
+    macro loadisFromStruct(offset, dest)
+        loadis offset[PC], dest
+    end
+
+    macro loadpFromStruct(offset, dest)
+        loadp offset[PC], dest
+    end
+
+    macro storeisToStruct(value, offset)
+        storei value, offset[PC]
     end
 end
 
@@ -355,17 +383,18 @@ const ProxyObjectType = constexpr ProxyObjectType
 # The typed array types need to be numbered in a particular order because of the manually written
 # switch statement in get_by_val and put_by_val.
 const Int8ArrayType = constexpr Int8ArrayType
-const Int16ArrayType = constexpr Int16ArrayType
-const Int32ArrayType = constexpr Int32ArrayType
 const Uint8ArrayType = constexpr Uint8ArrayType
 const Uint8ClampedArrayType = constexpr Uint8ClampedArrayType
+const Int16ArrayType = constexpr Int16ArrayType
 const Uint16ArrayType = constexpr Uint16ArrayType
+const Int32ArrayType = constexpr Int32ArrayType
 const Uint32ArrayType = constexpr Uint32ArrayType
 const Float32ArrayType = constexpr Float32ArrayType
 const Float64ArrayType = constexpr Float64ArrayType
 
-const FirstArrayType = Int8ArrayType
-const LastArrayType = Float64ArrayType
+const FirstArrayType = constexpr FirstTypedArrayType
+const NumberOfTypedArrayTypesExcludingDataView = constexpr NumberOfTypedArrayTypesExcludingDataView
+const TypedArrayPoisonIndexMask = constexpr TypedArrayPoisonIndexMask
 
 # Type flags constants.
 const MasqueradesAsUndefined = constexpr MasqueradesAsUndefined
@@ -408,6 +437,7 @@ const NotInitialization = constexpr InitializationMode::NotInitialization
 
 const MarkedBlockSize = constexpr MarkedBlock::blockSize
 const MarkedBlockMask = ~(MarkedBlockSize - 1)
+const MarkedBlockFooterOffset = constexpr MarkedBlock::offsetOfFooter
 
 const BlackThreshold = constexpr blackThreshold
 
@@ -631,7 +661,7 @@ end
 
 macro copyCalleeSavesToVMEntryFrameCalleeSavesBuffer(vm, temp)
     if ARM64 or X86_64 or X86_64_WIN
-        loadp VM::topVMEntryFrame[vm], temp
+        loadp VM::topEntryFrame[vm], temp
         vmEntryRecord(temp, temp)
         leap VMEntryRecord::calleeSaveRegistersBuffer[temp], temp
         if ARM64
@@ -673,7 +703,7 @@ end
 
 macro restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(vm, temp)
     if ARM64 or X86_64 or X86_64_WIN
-        loadp VM::topVMEntryFrame[vm], temp
+        loadp VM::topEntryFrame[vm], temp
         vmEntryRecord(temp, temp)
         leap VMEntryRecord::calleeSaveRegistersBuffer[temp], temp
         if ARM64
@@ -721,6 +751,13 @@ macro preserveReturnAddressAfterCall(destinationRegister)
         pop destinationRegister
     else
         error
+    end
+end
+
+macro unpoison(poison, field, scratch)
+    if POISON
+        loadp poison, scratch
+        xorp scratch, field
     end
 end
 
@@ -903,27 +940,31 @@ macro assertNotConstant(index)
     assert(macro (ok) bilt index, FirstConstantRegisterIndex, ok end)
 end
 
-macro functionForCallCodeBlockGetter(targetRegister)
+macro functionForCallCodeBlockGetter(targetRegister, scratch)
     if JSVALUE64
         loadp Callee[cfr], targetRegister
     else
         loadp Callee + PayloadOffset[cfr], targetRegister
     end
     loadp JSFunction::m_executable[targetRegister], targetRegister
+    unpoison(_g_JSFunctionPoison, targetRegister, scratch)
     loadp FunctionExecutable::m_codeBlockForCall[targetRegister], targetRegister
+    loadp ExecutableToCodeBlockEdge::m_codeBlock[targetRegister], targetRegister
 end
 
-macro functionForConstructCodeBlockGetter(targetRegister)
+macro functionForConstructCodeBlockGetter(targetRegister, scratch)
     if JSVALUE64
         loadp Callee[cfr], targetRegister
     else
         loadp Callee + PayloadOffset[cfr], targetRegister
     end
     loadp JSFunction::m_executable[targetRegister], targetRegister
+    unpoison(_g_JSFunctionPoison, targetRegister, scratch)
     loadp FunctionExecutable::m_codeBlockForConstruct[targetRegister], targetRegister
+    loadp ExecutableToCodeBlockEdge::m_codeBlock[targetRegister], targetRegister
 end
 
-macro notFunctionCodeBlockGetter(targetRegister)
+macro notFunctionCodeBlockGetter(targetRegister, ignored)
     loadp CodeBlock[cfr], targetRegister
 end
 
@@ -946,7 +987,7 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
         callSlowPath(traceSlowPath)
         addp maxFrameExtentForSlowPathCall, sp
     end
-    codeBlockGetter(t1)
+    codeBlockGetter(t1, t2)
     if not C_LOOP
         baddis 5, CodeBlock::m_llintExecuteCounter + BaselineExecutionCounter::m_counter[t1], .continue
         if JSVALUE64
@@ -975,7 +1016,7 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
         end
         jmp r0
     .recover:
-        codeBlockGetter(t1)
+        codeBlockGetter(t1, t2)
     .continue:
     end
 
@@ -986,6 +1027,7 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
     # Set up the PC.
     if JSVALUE64
         loadp CodeBlock::m_instructions[t1], PB
+        unpoison(_g_CodeBlockPoison, PB, t3)
         move 0, PC
     else
         loadp CodeBlock::m_instructions[t1], PC
@@ -995,7 +1037,8 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
     getFrameRegisterSizeForCodeBlock(t1, t0)
     subp cfr, t0, t0
     bpa t0, cfr, .needStackCheck
-    loadp CodeBlock::m_vm[t1], t2
+    loadp CodeBlock::m_poisonedVM[t1], t2
+    unpoison(_g_CodeBlockPoison, t2, t3)
     if C_LOOP
         bpbeq VM::m_cloopStackLimit[t2], t0, .stackHeightOK
     else
@@ -1014,7 +1057,7 @@ macro prologue(codeBlockGetter, codeBlockSetter, osrSlowPath, traceSlowPath)
 .stackHeightOKGetCodeBlock:
     # Stack check slow path returned that the stack was ok.
     # Since they were clobbered, need to get CodeBlock and new sp
-    codeBlockGetter(t1)
+    codeBlockGetter(t1, t2)
     getFrameRegisterSizeForCodeBlock(t1, t0)
     subp cfr, t0, t0
 
@@ -1116,13 +1159,13 @@ if not C_LOOP
         storep address, VM::m_lastStackTop[vm]
         ret
     
-    # VMEntryRecord* vmEntryRecord(const VMEntryFrame* entryFrame)
+    # VMEntryRecord* vmEntryRecord(const EntryFrame* entryFrame)
     global _vmEntryRecord
     _vmEntryRecord:
         if X86 or X86_WIN
             loadp 4[sp], a0
         end
-    
+
         vmEntryRecord(a0, r0)
         ret
 end
@@ -1294,6 +1337,15 @@ _llint_op_new_generator_func:
     callOpcodeSlowPath(_llint_slow_path_new_generator_func)
     dispatch(constexpr op_new_generator_func_length)
 
+_llint_op_new_async_generator_func:
+    traceExecution()
+    callSlowPath(_llint_slow_path_new_async_generator_func)
+    dispatch(constexpr op_new_async_generator_func_length)
+
+_llint_op_new_async_generator_func_exp:
+    traceExecution()
+    callSlowPath(_llint_slow_path_new_async_generator_func_exp)
+    dispatch(constexpr op_new_async_generator_func_exp_length)
 
 _llint_op_new_async_func:
     traceExecution()
@@ -1327,7 +1379,7 @@ _llint_op_new_array_with_size:
 
 _llint_op_new_array_buffer:
     traceExecution()
-    callOpcodeSlowPath(_llint_slow_path_new_array_buffer)
+    callOpcodeSlowPath(_slow_path_new_array_buffer)
     dispatch(constexpr op_new_array_buffer_length)
 
 
@@ -1359,6 +1411,18 @@ _llint_op_greatereq:
     traceExecution()
     callOpcodeSlowPath(_slow_path_greatereq)
     dispatch(constexpr op_greatereq_length)
+
+
+_llint_op_below:
+    traceExecution()
+    compareUnsigned(
+        macro (left, right, result) cib left, right, result end)
+
+
+_llint_op_beloweq:
+    traceExecution()
+    compareUnsigned(
+        macro (left, right, result) cibeq left, right, result end)
 
 
 _llint_op_mod:
@@ -1540,6 +1604,18 @@ _llint_op_jngreatereq:
         _llint_slow_path_jngreatereq)
 
 
+_llint_op_jbelow:
+    traceExecution()
+    compareUnsignedJump(
+        macro (left, right, target) bib left, right, target end)
+
+
+_llint_op_jbeloweq:
+    traceExecution()
+    compareUnsignedJump(
+        macro (left, right, target) bibeq left, right, target end)
+
+
 _llint_op_loop_hint:
     traceExecution()
     checkSwitchToJITForLoop()
@@ -1549,7 +1625,8 @@ _llint_op_loop_hint:
 _llint_op_check_traps:
     traceExecution()
     loadp CodeBlock[cfr], t1
-    loadp CodeBlock::m_vm[t1], t1
+    loadp CodeBlock::m_poisonedVM[t1], t1
+    unpoison(_g_CodeBlockPoison, t1, t2)
     loadb VM::m_traps+VMTraps::m_needTrapHandling[t1], t0
     btpnz t0, .handleTraps
 .afterHandlingTraps:
@@ -1564,7 +1641,8 @@ _llint_op_check_traps:
 # Returns the packet pointer in t0.
 macro acquireShadowChickenPacket(slow)
     loadp CodeBlock[cfr], t1
-    loadp CodeBlock::m_vm[t1], t1
+    loadp CodeBlock::m_poisonedVM[t1], t1
+    unpoison(_g_CodeBlockPoison, t1, t2)
     loadp VM::m_shadowChicken[t1], t2
     loadp ShadowChicken::m_logCursor[t2], t0
     bpaeq t0, ShadowChicken::m_logEnd[t2], slow
@@ -1575,6 +1653,17 @@ end
 
 _llint_op_nop:
     dispatch(constexpr op_nop_length)
+
+
+_llint_op_super_sampler_begin:
+    callOpcodeSlowPath(_llint_slow_path_super_sampler_begin)
+    dispatch(constexpr op_super_sampler_begin_length)
+
+
+_llint_op_super_sampler_end:
+    traceExecution()
+    callOpcodeSlowPath(_llint_slow_path_super_sampler_end)
+    dispatch(constexpr op_super_sampler_end_length)
 
 
 _llint_op_switch_string:
@@ -1717,10 +1806,9 @@ _llint_op_push_with_scope:
     dispatch(constexpr op_push_with_scope_length)
 
 
-_llint_op_assert:
+_llint_op_identity_with_profile:
     traceExecution()
-    callOpcodeSlowPath(_slow_path_assert)
-    dispatch(constexpr op_assert_length)
+    dispatch(constexpr op_identity_with_profile_length)
 
 
 _llint_op_unreachable:
@@ -1767,6 +1855,15 @@ _llint_native_call_trampoline:
 
 _llint_native_construct_trampoline:
     nativeCallTrampoline(NativeExecutable::m_constructor)
+
+
+_llint_internal_function_call_trampoline:
+    internalFunctionCallTrampoline(InternalFunction::m_functionForCall)
+
+
+_llint_internal_function_construct_trampoline:
+    internalFunctionCallTrampoline(InternalFunction::m_functionForConstruct)
+
 
 _llint_op_get_enumerable_length:
     traceExecution()

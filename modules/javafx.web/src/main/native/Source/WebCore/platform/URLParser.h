@@ -49,6 +49,7 @@ public:
     static String serialize(const URLEncodedForm&);
 
     static const UIDNA& internationalDomainNameTranscoder();
+    static bool isInUserInfoEncodeSet(UChar);
 
     WEBCORE_EXPORT static bool isSpecialScheme(const String& scheme);
     WEBCORE_EXPORT static std::optional<String> maybeCanonicalizeScheme(const String& scheme);
@@ -58,7 +59,7 @@ private:
     friend std::optional<uint16_t> defaultPortForProtocol(StringView);
 
     URL m_url;
-    Vector<LChar> m_asciiBuffer;
+    StringVector<LChar> m_asciiBuffer;
     bool m_urlIsSpecial { false };
     bool m_urlIsFile { false };
     bool m_hostHasPercentOrNonASCII { false };
@@ -96,7 +97,7 @@ private:
     template<typename UnsignedIntegerType> void appendNumberToASCIIBuffer(UnsignedIntegerType);
     template<bool(*isInCodeSet)(UChar32), typename CharacterType> void utf8PercentEncode(const CodePointIterator<CharacterType>&);
     template<typename CharacterType> void utf8QueryEncode(const CodePointIterator<CharacterType>&);
-    template<typename CharacterType> std::optional<Vector<LChar, defaultInlineBufferSize>> domainToASCII(const String&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
+    template<typename CharacterType> std::optional<Vector<LChar, defaultInlineBufferSize>> domainToASCII(StringImpl&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     template<typename CharacterType> Vector<LChar, defaultInlineBufferSize> percentDecode(const LChar*, size_t, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
     static Vector<LChar, defaultInlineBufferSize> percentDecode(const LChar*, size_t);
     static std::optional<String> formURLDecode(StringView input);

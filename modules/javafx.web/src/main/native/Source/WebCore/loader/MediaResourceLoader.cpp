@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Igalia S.L
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,7 +45,6 @@ MediaResourceLoader::MediaResourceLoader(Document& document, HTMLMediaElement& m
     , m_document(&document)
     , m_mediaElement(mediaElement.createWeakPtr())
     , m_crossOriginMode(crossOriginMode)
-    , m_weakFactory(this)
 {
 }
 
@@ -77,12 +76,12 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
 #endif
 
     ContentSecurityPolicyImposition contentSecurityPolicyImposition = m_mediaElement && m_mediaElement->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
-    CachedResourceRequest cacheRequest(WTFMove(request), ResourceLoaderOptions(SendCallbacks, DoNotSniffContent, bufferingPolicy, AllowStoredCredentials, ClientCredentialPolicy::MayAskClientForCredentials, FetchOptions::Credentials::Include, DoSecurityCheck, FetchOptions::Mode::NoCors, DoNotIncludeCertificateInfo, contentSecurityPolicyImposition, DefersLoadingPolicy::AllowDefersLoading, cachingPolicy));
+    CachedResourceRequest cacheRequest(WTFMove(request), ResourceLoaderOptions(SendCallbacks, DoNotSniffContent, bufferingPolicy, StoredCredentialsPolicy::Use, ClientCredentialPolicy::MayAskClientForCredentials, FetchOptions::Credentials::Include, DoSecurityCheck, FetchOptions::Mode::NoCors, DoNotIncludeCertificateInfo, contentSecurityPolicyImposition, DefersLoadingPolicy::AllowDefersLoading, cachingPolicy));
     cacheRequest.setAsPotentiallyCrossOrigin(m_crossOriginMode, *m_document);
     if (m_mediaElement)
         cacheRequest.setInitiator(*m_mediaElement.get());
 
-    CachedResourceHandle<CachedRawResource> resource = m_document->cachedResourceLoader().requestMedia(WTFMove(cacheRequest));
+    auto resource = m_document->cachedResourceLoader().requestMedia(WTFMove(cacheRequest)).value_or(nullptr);
     if (!resource)
         return nullptr;
 
@@ -175,13 +174,15 @@ bool MediaResource::shouldCacheResponse(CachedResource& resource, const Resource
     return true;
 }
 
-void MediaResource::redirectReceived(CachedResource& resource, ResourceRequest& request, const ResourceResponse& response)
+void MediaResource::redirectReceived(CachedResource& resource, ResourceRequest&& request, const ResourceResponse& response, CompletionHandler<void(ResourceRequest&&)>&& completionHandler)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
 
     RefPtr<MediaResource> protectedThis(this);
     if (m_client)
-        m_client->redirectReceived(*this, request, response);
+        m_client->redirectReceived(*this, WTFMove(request), response, WTFMove(completionHandler));
+    else
+        completionHandler(WTFMove(request));
 }
 
 void MediaResource::dataSent(CachedResource& resource, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
@@ -215,14 +216,6 @@ void MediaResource::notifyFinished(CachedResource& resource)
     }
     stop();
 }
-
-#if USE(SOUP)
-char* MediaResource::getOrCreateReadBuffer(CachedResource& resource, size_t requestedSize, size_t& actualSize)
-{
-    ASSERT_UNUSED(resource, &resource == m_resource);
-    return m_client ? m_client->getOrCreateReadBuffer(*this, requestedSize, actualSize) : nullptr;
-}
-#endif
 
 } // namespace WebCore
 

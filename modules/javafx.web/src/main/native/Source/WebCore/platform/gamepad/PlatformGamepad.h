@@ -27,14 +27,14 @@
 
 #if ENABLE(GAMEPAD)
 
-#include <wtf/Vector.h>
+#include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class PlatformGamepad {
 public:
-    virtual ~PlatformGamepad() { }
+    virtual ~PlatformGamepad() = default;
 
     const String& id() const { return m_id; }
     unsigned index() const { return m_index; }

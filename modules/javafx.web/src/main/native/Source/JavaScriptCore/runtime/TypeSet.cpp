@@ -41,14 +41,17 @@ TypeSet::TypeSet()
 {
 }
 
-void TypeSet::addTypeInformation(RuntimeType type, RefPtr<StructureShape>&& passedNewShape, Structure* structure)
+void TypeSet::addTypeInformation(RuntimeType type, RefPtr<StructureShape>&& passedNewShape, Structure* structure, bool sawPolyProtoStructure)
 {
     m_seenTypes = m_seenTypes | type;
 
     if (structure && passedNewShape && !runtimeTypeIsPrimitive(type)) {
         Ref<StructureShape> newShape = passedNewShape.releaseNonNull();
-        if (!m_structureSet.contains(structure)) {
-            {
+        // FIXME: TypeSet should be able to cache poly proto chains
+        // just by caching the prototype chain:
+        // https://bugs.webkit.org/show_bug.cgi?id=177627
+        if (sawPolyProtoStructure || !m_structureSet.contains(structure)) {
+            if (!sawPolyProtoStructure) {
                 ConcurrentJSLocker locker(m_lock);
                 m_structureSet.add(structure);
             }
@@ -214,9 +217,9 @@ String TypeSet::leastCommonAncestor() const
     return StructureShape::leastCommonAncestor(m_structureHistory);
 }
 
-Ref<Inspector::Protocol::Array<Inspector::Protocol::Runtime::StructureDescription>> TypeSet::allStructureRepresentations() const
+Ref<JSON::ArrayOf<Inspector::Protocol::Runtime::StructureDescription>> TypeSet::allStructureRepresentations() const
 {
-    auto description = Inspector::Protocol::Array<Inspector::Protocol::Runtime::StructureDescription>::create();
+    auto description = JSON::ArrayOf<Inspector::Protocol::Runtime::StructureDescription>::create();
 
     for (auto& shape : m_structureHistory)
         description->addItem(shape->inspectorRepresentation());
@@ -501,8 +504,8 @@ Ref<Inspector::Protocol::Runtime::StructureDescription> StructureShape::inspecto
     RefPtr<StructureShape> currentShape(this);
 
     while (currentShape) {
-        auto fields = Inspector::Protocol::Array<String>::create();
-        auto optionalFields = Inspector::Protocol::Array<String>::create();
+        auto fields = JSON::ArrayOf<String>::create();
+        auto optionalFields = JSON::ArrayOf<String>::create();
         for (auto field : currentShape->m_fields)
             fields->addItem(field.get());
         for (auto field : currentShape->m_optionalFields)

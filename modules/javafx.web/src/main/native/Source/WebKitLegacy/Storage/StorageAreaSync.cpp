@@ -23,10 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
-#include "config.h"
-#endif //_WIN32
-
 #include "StorageAreaSync.h"
 
 #include "StorageAreaImpl.h"
@@ -243,7 +239,7 @@ void StorageAreaSync::openDatabase(OpenDatabaseParamType openingStrategy)
 
     String databaseFilename = m_syncManager->fullDatabaseFilename(m_databaseIdentifier);
 
-    if (!fileExists(databaseFilename) && openingStrategy == SkipIfNonExistent)
+    if (!FileSystem::fileExists(databaseFilename) && openingStrategy == SkipIfNonExistent)
         return;
 
     if (databaseFilename.isEmpty()) {
@@ -525,7 +521,7 @@ void StorageAreaSync::deleteEmptyDatabase()
             });
         } else {
             String databaseFilename = m_syncManager->fullDatabaseFilename(m_databaseIdentifier);
-            if (!deleteFile(databaseFilename))
+            if (!FileSystem::deleteFile(databaseFilename))
                 LOG_ERROR("Failed to delete database file %s\n", databaseFilename.utf8().data());
         }
     }

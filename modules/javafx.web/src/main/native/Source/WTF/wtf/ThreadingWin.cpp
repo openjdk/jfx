@@ -185,7 +185,7 @@ int Thread::waitForCompletion()
 
     DWORD joinResult = WaitForSingleObject(handle, INFINITE);
     if (joinResult == WAIT_FAILED)
-        LOG_ERROR("ThreadIdentifier %u was found to be deadlocked trying to quit", m_id);
+        LOG_ERROR("Thread %p was found to be deadlocked trying to quit", this);
 
     std::lock_guard<std::mutex> locker(m_mutex);
     ASSERT(joinableState() == Joinable);
@@ -216,7 +216,7 @@ void Thread::detach()
 
 auto Thread::suspend() -> Expected<void, PlatformSuspendError>
 {
-    RELEASE_ASSERT_WITH_MESSAGE(id() != currentThread(), "We do not support suspending the current thread itself.");
+    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::current(), "We do not support suspending the current thread itself.");
     LockHolder locker(globalSuspendLock);
     DWORD result = SuspendThread(m_handle);
     if (result != (DWORD)-1)
@@ -267,7 +267,7 @@ void Thread::establishPlatformSpecificHandle(HANDLE handle, ThreadIdentifier thr
     m_id = threadID;
 }
 
-#define InvalidThread ((Thread*)(0xbbadbeef))
+#define InvalidThread reinterpret_cast<Thread*>(static_cast<uintptr_t>(0xbbadbeef))
 
 static std::mutex& threadMapMutex()
 {
@@ -293,7 +293,7 @@ Thread* Thread::currentDying()
     ASSERT(s_key != InvalidThreadSpecificKey);
     // After FLS is destroyed, this map offers the value until the second thread exit callback is called.
     std::lock_guard<std::mutex> locker(threadMapMutex());
-    return threadMap().get(currentThread());
+    return threadMap().get(currentID());
 }
 
 // FIXME: Remove this workaround code once <rdar://problem/31793213> is fixed.
@@ -552,7 +552,7 @@ void ThreadCondition::wait(Mutex& mutex)
     m_condition.timedWait(mutex.impl(), INFINITE);
 }
 
-bool ThreadCondition::timedWait(Mutex& mutex, double absoluteTime)
+bool ThreadCondition::timedWait(Mutex& mutex, WallTime absoluteTime)
 {
     DWORD interval = absoluteTimeToWaitTimeoutInterval(absoluteTime);
 
@@ -575,19 +575,19 @@ void ThreadCondition::broadcast()
     m_condition.signal(true); // Unblock all threads.
 }
 
-DWORD absoluteTimeToWaitTimeoutInterval(double absoluteTime)
+DWORD absoluteTimeToWaitTimeoutInterval(WallTime absoluteTime)
 {
-    double currentTime = WTF::currentTime();
+    WallTime currentTime = WallTime::now();
 
     // Time is in the past - return immediately.
     if (absoluteTime < currentTime)
         return 0;
 
     // Time is too far in the future (and would overflow unsigned long) - wait forever.
-    if (absoluteTime - currentTime > static_cast<double>(INT_MAX) / 1000.0)
+    if ((absoluteTime - currentTime) > Seconds::fromMilliseconds(INT_MAX))
         return INFINITE;
 
-    return static_cast<DWORD>((absoluteTime - currentTime) * 1000.0);
+    return static_cast<DWORD>((absoluteTime - currentTime).milliseconds());
 }
 
 // Remove this workaround code when <rdar://problem/31793213> is fixed.

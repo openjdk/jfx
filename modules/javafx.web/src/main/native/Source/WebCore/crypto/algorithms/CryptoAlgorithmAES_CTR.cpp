@@ -34,10 +34,12 @@
 
 namespace WebCore {
 
+namespace CryptoAlgorithmAES_CTRInternal {
 static const char* const ALG128 = "A128CTR";
 static const char* const ALG192 = "A192CTR";
 static const char* const ALG256 = "A256CTR";
 static const size_t CounterSize = 16;
+}
 
 static inline bool usagesAreInvalidForCryptoAlgorithmAES_CTR(CryptoKeyUsageBitmap usages)
 {
@@ -46,6 +48,7 @@ static inline bool usagesAreInvalidForCryptoAlgorithmAES_CTR(CryptoKeyUsageBitma
 
 static bool parametersAreValid(CryptoAlgorithmAesCtrParams& parameters)
 {
+    using namespace CryptoAlgorithmAES_CTRInternal;
     if (parameters.counterVector().size() != CounterSize)
         return false;
     if (!parameters.length || parameters.length > 128)
@@ -71,7 +74,11 @@ void CryptoAlgorithmAES_CTR::encrypt(std::unique_ptr<CryptoAlgorithmParameters>&
         exceptionCallback(OperationError);
         return;
     }
-    platformEncrypt(WTFMove(parameters), WTFMove(key), WTFMove(plainText), WTFMove(callback), WTFMove(exceptionCallback), context, workQueue);
+
+    dispatchOperation(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
+        [parameters = WTFMove(parameters), key = WTFMove(key), plainText = WTFMove(plainText)] {
+            return platformEncrypt(downcast<CryptoAlgorithmAesCtrParams>(*parameters), downcast<CryptoKeyAES>(key.get()), plainText);
+        });
 }
 
 void CryptoAlgorithmAES_CTR::decrypt(std::unique_ptr<CryptoAlgorithmParameters>&& parameters, Ref<CryptoKey>&& key, Vector<uint8_t>&& cipherText, VectorCallback&& callback, ExceptionCallback&& exceptionCallback, ScriptExecutionContext& context, WorkQueue& workQueue)
@@ -82,7 +89,11 @@ void CryptoAlgorithmAES_CTR::decrypt(std::unique_ptr<CryptoAlgorithmParameters>&
         exceptionCallback(OperationError);
         return;
     }
-    platformDecrypt(WTFMove(parameters), WTFMove(key), WTFMove(cipherText), WTFMove(callback), WTFMove(exceptionCallback), context, workQueue);
+
+    dispatchOperation(workQueue, context, WTFMove(callback), WTFMove(exceptionCallback),
+        [parameters = WTFMove(parameters), key = WTFMove(key), cipherText = WTFMove(cipherText)] {
+            return platformDecrypt(downcast<CryptoAlgorithmAesCtrParams>(*parameters), downcast<CryptoKeyAES>(key.get()), cipherText);
+        });
 }
 
 void CryptoAlgorithmAES_CTR::generateKey(const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyOrKeyPairCallback&& callback, ExceptionCallback&& exceptionCallback, ScriptExecutionContext&)
@@ -103,8 +114,9 @@ void CryptoAlgorithmAES_CTR::generateKey(const CryptoAlgorithmParameters& parame
     callback(WTFMove(result));
 }
 
-void CryptoAlgorithmAES_CTR::importKey(SubtleCrypto::KeyFormat format, KeyData&& data, const std::unique_ptr<CryptoAlgorithmParameters>&& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmAES_CTR::importKey(CryptoKeyFormat format, KeyData&& data, const std::unique_ptr<CryptoAlgorithmParameters>&& parameters, bool extractable, CryptoKeyUsageBitmap usages, KeyCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
+    using namespace CryptoAlgorithmAES_CTRInternal;
     ASSERT(parameters);
     if (usagesAreInvalidForCryptoAlgorithmAES_CTR(usages)) {
         exceptionCallback(SyntaxError);
@@ -113,10 +125,10 @@ void CryptoAlgorithmAES_CTR::importKey(SubtleCrypto::KeyFormat format, KeyData&&
 
     RefPtr<CryptoKeyAES> result;
     switch (format) {
-    case SubtleCrypto::KeyFormat::Raw:
+    case CryptoKeyFormat::Raw:
         result = CryptoKeyAES::importRaw(parameters->identifier, WTFMove(WTF::get<Vector<uint8_t>>(data)), extractable, usages);
         break;
-    case SubtleCrypto::KeyFormat::Jwk: {
+    case CryptoKeyFormat::Jwk: {
         auto checkAlgCallback = [](size_t length, const String& alg) -> bool {
             switch (length) {
             case CryptoKeyAES::s_length128:
@@ -143,8 +155,9 @@ void CryptoAlgorithmAES_CTR::importKey(SubtleCrypto::KeyFormat format, KeyData&&
     callback(*result);
 }
 
-void CryptoAlgorithmAES_CTR::exportKey(SubtleCrypto::KeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback)
+void CryptoAlgorithmAES_CTR::exportKey(CryptoKeyFormat format, Ref<CryptoKey>&& key, KeyDataCallback&& callback, ExceptionCallback&& exceptionCallback)
 {
+    using namespace CryptoAlgorithmAES_CTRInternal;
     const auto& aesKey = downcast<CryptoKeyAES>(key.get());
 
     if (aesKey.key().isEmpty()) {
@@ -154,10 +167,10 @@ void CryptoAlgorithmAES_CTR::exportKey(SubtleCrypto::KeyFormat format, Ref<Crypt
 
     KeyData result;
     switch (format) {
-    case SubtleCrypto::KeyFormat::Raw:
+    case CryptoKeyFormat::Raw:
         result = Vector<uint8_t>(aesKey.key());
         break;
-    case SubtleCrypto::KeyFormat::Jwk: {
+    case CryptoKeyFormat::Jwk: {
         JsonWebKey jwk = aesKey.exportJwk();
         switch (aesKey.key().size() * 8) {
         case CryptoKeyAES::s_length128:

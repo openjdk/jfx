@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,12 +39,11 @@
 #include "JSMainThreadExecState.h"
 #include "JSMainThreadExecStateInstrumentation.h"
 #include "ScriptExecutionContext.h"
-#include <heap/WeakInlines.h>
-#include <runtime/JSLock.h>
-
-using namespace JSC;
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/WeakInlines.h>
 
 namespace WebCore {
+using namespace JSC;
 
 JSCustomElementInterface::JSCustomElementInterface(const QualifiedName& name, JSObject* constructor, JSDOMGlobalObject* globalObject)
     : ActiveDOMCallback(globalObject->scriptExecutionContext())
@@ -54,9 +53,7 @@ JSCustomElementInterface::JSCustomElementInterface(const QualifiedName& name, JS
 {
 }
 
-JSCustomElementInterface::~JSCustomElementInterface()
-{
-}
+JSCustomElementInterface::~JSCustomElementInterface() = default;
 
 static RefPtr<Element> constructCustomElementSynchronously(Document&, VM&, ExecState&, JSObject* constructor, const AtomicString& localName);
 
@@ -104,7 +101,7 @@ RefPtr<Element> JSCustomElementInterface::tryToConstructCustomElement(Document& 
     ASSERT(&document == scriptExecutionContext());
     auto& state = *document.execState();
     auto element = constructCustomElementSynchronously(document, vm, state, m_constructor.get(), localName);
-    ASSERT(!!scope.exception() == !element);
+    EXCEPTION_ASSERT(!!scope.exception() == !element);
     if (!element) {
         auto* exception = scope.exception();
         scope.clearException();
@@ -121,7 +118,7 @@ static RefPtr<Element> constructCustomElementSynchronously(Document& document, V
 {
     auto scope = DECLARE_THROW_SCOPE(vm);
     ConstructData constructData;
-    ConstructType constructType = constructor->methodTable()->getConstructData(constructor, constructData);
+    ConstructType constructType = constructor->methodTable(vm)->getConstructData(constructor, constructData);
     if (constructType == ConstructType::None) {
         ASSERT_NOT_REACHED();
         return nullptr;
@@ -129,6 +126,7 @@ static RefPtr<Element> constructCustomElementSynchronously(Document& document, V
 
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionConstruct(&document, constructType, constructData);
     MarkedArgumentBuffer args;
+    ASSERT(!args.hasOverflowed());
     JSValue newElement = construct(&state, constructor, constructType, constructData, args);
     InspectorInstrumentation::didCallFunction(cookie, &document);
     RETURN_IF_EXCEPTION(scope, nullptr);
@@ -189,7 +187,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     RETURN_IF_EXCEPTION(scope, void());
 
     ConstructData constructData;
-    ConstructType constructType = m_constructor->methodTable()->getConstructData(m_constructor.get(), constructData);
+    ConstructType constructType = m_constructor->methodTable(vm)->getConstructData(m_constructor.get(), constructData);
     if (constructType == ConstructType::None) {
         ASSERT_NOT_REACHED();
         return;
@@ -200,6 +198,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     m_constructionStack.append(&element);
 
     MarkedArgumentBuffer args;
+    ASSERT(!args.hasOverflowed());
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionConstruct(context, constructType, constructData);
     JSValue returnedElement = construct(state, m_constructor.get(), constructType, constructData, args);
     InspectorInstrumentation::didCallFunction(cookie, context);
@@ -231,7 +230,8 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
         return;
 
     Ref<JSCustomElementInterface> protectedThis(*this);
-    JSLockHolder lock(m_isolatedWorld->vm());
+    VM& vm = m_isolatedWorld->vm();
+    JSLockHolder lock(vm);
 
     ASSERT(context);
     ASSERT(context->isDocument());
@@ -241,11 +241,12 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
     JSObject* jsElement = asObject(toJS(state, globalObject, element));
 
     CallData callData;
-    CallType callType = callback->methodTable()->getCallData(callback, callData);
+    CallType callType = callback->methodTable(vm)->getCallData(callback, callData);
     ASSERT(callType != CallType::None);
 
     MarkedArgumentBuffer args;
     addArguments(state, globalObject, args);
+    RELEASE_ASSERT(!args.hasOverflowed());
 
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(context, callType, callData);
 

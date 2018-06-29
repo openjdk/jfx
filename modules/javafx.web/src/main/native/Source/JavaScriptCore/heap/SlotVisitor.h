@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,10 @@
 #include "HandleTypes.h"
 #include "IterationStatus.h"
 #include "MarkStack.h"
-#include "OpaqueRootSet.h"
 #include "VisitRaceKey.h"
+#include <wtf/Forward.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/SharedTask.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
@@ -41,10 +42,12 @@ class Heap;
 class HeapCell;
 class HeapSnapshotBuilder;
 class MarkedBlock;
+class MarkingConstraint;
+class MarkingConstraintSolver;
 class UnconditionalFinalizer;
 template<typename T> class Weak;
 class WeakReferenceHarvester;
-template<typename T> class WriteBarrierBase;
+template<typename T, typename Traits> class WriteBarrierBase;
 
 typedef uint32_t HeapVersion;
 
@@ -70,11 +73,11 @@ public:
 
     void append(ConservativeRoots&);
 
-    template<typename T> void append(const WriteBarrierBase<T>&);
-    template<typename T> void appendHidden(const WriteBarrierBase<T>&);
+    template<typename T, typename Traits> void append(const WriteBarrierBase<T, Traits>&);
+    template<typename T, typename Traits> void appendHidden(const WriteBarrierBase<T, Traits>&);
     template<typename Iterator> void append(Iterator begin , Iterator end);
-    void appendValues(const WriteBarrierBase<Unknown>*, size_t count);
-    void appendValuesHidden(const WriteBarrierBase<Unknown>*, size_t count);
+    void appendValues(const WriteBarrierBase<Unknown, DumbValueTraits<Unknown>>*, size_t count);
+    void appendValuesHidden(const WriteBarrierBase<Unknown, DumbValueTraits<Unknown>>*, size_t count);
 
     // These don't require you to prove that you have a WriteBarrier<>. That makes sense
     // for:
@@ -95,10 +98,9 @@ public:
     void appendHiddenUnbarriered(JSValue);
     void appendHiddenUnbarriered(JSCell*);
 
-    JS_EXPORT_PRIVATE void addOpaqueRoot(void*);
+    bool addOpaqueRoot(void*); // Returns true if the root was new.
 
-    JS_EXPORT_PRIVATE bool containsOpaqueRoot(void*) const;
-    TriState containsOpaqueRootTriState(void*) const;
+    bool containsOpaqueRoot(void*) const;
 
     bool isEmpty() { return m_collectorStack.isEmpty() && m_mutatorStack.isEmpty(); }
 
@@ -122,13 +124,13 @@ public:
     SharedDrainResult drainInParallel(MonotonicTime timeout = MonotonicTime::infinity());
     SharedDrainResult drainInParallelPassively(MonotonicTime timeout = MonotonicTime::infinity());
 
+    SharedDrainResult waitForTermination(MonotonicTime timeout = MonotonicTime::infinity());
+
     // Attempts to perform an increment of draining that involves only walking `bytes` worth of data. This
     // is likely to accidentally walk more or less than that. It will usually mark more than bytes. It may
     // mark less than bytes if we're reaching termination or if the global worklist is empty (which may in
     // rare cases happen temporarily even if we're not reaching termination).
     size_t performIncrementOfDraining(size_t bytes);
-
-    JS_EXPORT_PRIVATE void mergeIfNecessary();
 
     // This informs the GC about auxiliary of some size that we are keeping alive. If you don't do
     // this then the space will be freed at end of GC.
@@ -173,8 +175,11 @@ public:
 
     const char* codeName() const { return m_codeName.data(); }
 
+    JS_EXPORT_PRIVATE void addParallelConstraintTask(RefPtr<SharedTask<void(SlotVisitor&)>>);
+
 private:
     friend class ParallelModeEnabler;
+    friend class MarkingConstraintSolver;
 
     void appendJSCellOrAuxiliary(HeapCell*);
 
@@ -194,10 +199,6 @@ private:
 
     void noteLiveAuxiliaryCell(HeapCell*);
 
-    void mergeOpaqueRoots();
-
-    void mergeOpaqueRootsIfProfitable();
-
     void visitChildren(const JSCell*);
 
     void donateKnownParallel();
@@ -215,7 +216,6 @@ private:
 
     MarkStackArray m_collectorStack;
     MarkStackArray m_mutatorStack;
-    OpaqueRootSet m_opaqueRoots; // Handle-owning data structures not visible to the garbage collector.
     bool m_ignoreNewOpaqueRoots { false }; // Useful as a debugging mode.
 
     size_t m_bytesVisited;
@@ -236,6 +236,11 @@ private:
 
     CString m_codeName;
 
+    MarkingConstraint* m_currentConstraint { nullptr };
+    MarkingConstraintSolver* m_currentSolver { nullptr };
+
+    // Put padding here to mitigate false sharing between multiple SlotVisitors.
+    char padding[64];
 public:
 #if !ASSERT_DISABLED
     bool m_isCheckingForDefaultMarkViolation;

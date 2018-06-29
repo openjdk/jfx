@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,10 +33,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <wtf/StdLibExtras.h>
-
-#if OS(SOLARIS)
-#include <ieeefp.h>
-#endif
 
 #if OS(OPENBSD)
 #include <sys/types.h>
@@ -73,24 +69,6 @@ const float sqrtOfTwoFloat = 1.41421356237309504880f;
 #else
 const double sqrtOfTwoDouble = M_SQRT2;
 const float sqrtOfTwoFloat = static_cast<float>(M_SQRT2);
-#endif
-
-#if OS(SOLARIS)
-
-namespace std {
-
-#ifndef isfinite
-inline bool isfinite(double x) { return finite(x) && !isnand(x); }
-#endif
-#ifndef signbit
-inline bool signbit(double x) { return copysign(1.0, x) < 0; }
-#endif
-#ifndef isinf
-inline bool isinf(double x) { return !finite(x) && !isnand(x); }
-#endif
-
-} // namespace std
-
 #endif
 
 #if COMPILER(MSVC)
@@ -356,7 +334,7 @@ inline void doubleToInteger(double d, unsigned long long& value)
 namespace WTF {
 
 // From http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-inline uint32_t roundUpToPowerOfTwo(uint32_t v)
+inline constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
 {
     v--;
     v |= v >> 1;
@@ -366,6 +344,13 @@ inline uint32_t roundUpToPowerOfTwo(uint32_t v)
     v |= v >> 16;
     v++;
     return v;
+}
+
+inline constexpr unsigned maskForSize(unsigned size)
+{
+    if (!size)
+        return 0;
+    return roundUpToPowerOfTwo(size) - 1;
 }
 
 inline unsigned fastLog2(unsigned i)
@@ -488,6 +473,65 @@ inline bool rangesOverlap(T leftMin, T leftMax, T rightMin, T rightMax)
     return nonEmptyRangesOverlap(leftMin, leftMax, rightMin, rightMax);
 }
 
+// This mask is not necessarily the minimal mask, specifically if size is
+// a power of 2. It has the advantage that it's fast to compute, however.
+inline uint32_t computeIndexingMask(uint32_t size)
+{
+    return static_cast<uint64_t>(static_cast<uint32_t>(-1)) >> std::clz(size);
+}
+
+constexpr unsigned preciseIndexMaskShiftForSize(unsigned size)
+{
+    return size * 8 - 1;
+}
+
+template<typename T>
+constexpr unsigned preciseIndexMaskShift()
+{
+    return preciseIndexMaskShiftForSize(sizeof(T));
+}
+
+template<typename T>
+T opaque(T pointer)
+{
+#if !OS(WINDOWS)
+    asm("" : "+r"(pointer));
+#endif
+    return pointer;
+}
+
+template<typename T>
+inline T* preciseIndexMaskPtr(uintptr_t index, uintptr_t length, T* value)
+{
+    uintptr_t result = bitwise_cast<uintptr_t>(value) & static_cast<uintptr_t>(
+        static_cast<intptr_t>(index - opaque(length)) >>
+        static_cast<intptr_t>(preciseIndexMaskShift<T*>()));
+    return bitwise_cast<T*>(result);
+}
+
+constexpr unsigned bytePoisonShift = 40;
+
+template<typename T, typename U>
+inline T* dynamicPoison(U actual, U expected, T* pointer)
+{
+    static_assert(sizeof(U) == 1, "Poisoning only works for bytes at the moment");
+#if CPU(X86_64) || (CPU(ARM64) && !defined(__ILP32__))
+    return bitwise_cast<T*>(
+        bitwise_cast<char*>(pointer) +
+        (static_cast<uintptr_t>(opaque(actual) ^ expected) << bytePoisonShift));
+#else
+    UNUSED_PARAM(actual);
+    UNUSED_PARAM(expected);
+    return pointer;
+#endif
+}
+
 } // namespace WTF
+
+using WTF::dynamicPoison;
+using WTF::opaque;
+using WTF::preciseIndexMaskPtr;
+using WTF::preciseIndexMaskShift;
+using WTF::preciseIndexMaskShiftForSize;
 
 #endif // #ifndef WTF_MathExtras_h

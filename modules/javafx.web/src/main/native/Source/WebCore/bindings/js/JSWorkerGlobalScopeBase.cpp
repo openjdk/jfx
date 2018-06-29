@@ -33,20 +33,20 @@
 #include "JSDedicatedWorkerGlobalScope.h"
 #include "JSDynamicDowncast.h"
 #include "JSWorkerGlobalScope.h"
-#include "Language.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
-#include <runtime/JSCInlines.h>
-#include <runtime/JSCJSValueInlines.h>
-#include <runtime/Microtask.h>
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/Microtask.h>
+#include <wtf/Language.h>
 
 #if ENABLE(SERVICE_WORKER)
 #include "JSServiceWorkerGlobalScope.h"
 #endif
 
-using namespace JSC;
 
 namespace WebCore {
+using namespace JSC;
 
 const ClassInfo JSWorkerGlobalScopeBase::s_info = { "WorkerGlobalScope", &JSDOMGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWorkerGlobalScopeBase) };
 
@@ -59,7 +59,7 @@ const GlobalObjectMethodTable JSWorkerGlobalScopeBase::s_globalObjectMethodTable
     nullptr, // moduleLoaderImportModule
     nullptr, // moduleLoaderResolve
     nullptr, // moduleLoaderFetch
-    nullptr, // moduleLoaderInstantiate
+    nullptr, // moduleLoaderCreateImportMetaProperties
     nullptr, // moduleLoaderEvaluate
     nullptr, // promiseRejectionTracker
     &defaultLanguage
@@ -77,6 +77,13 @@ void JSWorkerGlobalScopeBase::finishCreation(VM& vm, JSProxy* proxy)
 
     Base::finishCreation(vm, m_proxy.get());
     ASSERT(inherits(vm, info()));
+}
+
+void JSWorkerGlobalScopeBase::clearDOMGuardedObjects()
+{
+    auto guardedObjects = m_guardedObjects;
+    for (auto& guarded : guardedObjects)
+        guarded->clear();
 }
 
 void JSWorkerGlobalScopeBase::visitChildren(JSCell* cell, SlotVisitor& visitor)

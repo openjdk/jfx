@@ -25,6 +25,7 @@
 
 #include "ArrayBufferView.h"
 #include "JSCInlines.h"
+#include "JSCast.h"
 #include "JSFunction.h"
 #include "JSString.h"
 #include "JSObject.h"
@@ -61,6 +62,11 @@ size_t JSCell::estimatedSizeInBytes() const
 size_t JSCell::estimatedSize(JSCell* cell)
 {
     return cell->cellSize();
+}
+
+PropertyReificationResult JSCell::reifyPropertyNameIfNeeded(JSCell*, ExecState*, PropertyName&)
+{
+    return PropertyReificationResult::Nothing;
 }
 
 void JSCell::heapSnapshot(JSCell*, HeapSnapshotBuilder&)
@@ -108,7 +114,7 @@ ConstructType JSCell::getConstructData(JSCell*, ConstructData& constructData)
 
 bool JSCell::put(JSCell* cell, ExecState* exec, PropertyName identifier, JSValue value, PutPropertySlot& slot)
 {
-    if (cell->isString() || cell->isSymbol())
+    if (cell->isString() || cell->isSymbol() || cell->isBigInt())
         return JSValue(cell).putToPrimitive(exec, identifier, value, slot);
 
     JSObject* thisObject = cell->toObject(exec, exec->lexicalGlobalObject());
@@ -117,7 +123,7 @@ bool JSCell::put(JSCell* cell, ExecState* exec, PropertyName identifier, JSValue
 
 bool JSCell::putByIndex(JSCell* cell, ExecState* exec, unsigned identifier, JSValue value, bool shouldThrow)
 {
-    if (cell->isString() || cell->isSymbol()) {
+    if (cell->isString() || cell->isSymbol() || cell->isBigInt()) {
         PutPropertySlot slot(cell, shouldThrow);
         return JSValue(cell).putToPrimitive(exec, Identifier::from(exec, identifier), value, slot);
     }
@@ -150,6 +156,8 @@ JSValue JSCell::toPrimitive(ExecState* exec, PreferredPrimitiveType preferredTyp
         return static_cast<const JSString*>(this)->toPrimitive(exec, preferredType);
     if (isSymbol())
         return static_cast<const Symbol*>(this)->toPrimitive(exec, preferredType);
+    if (isBigInt())
+        return static_cast<const JSBigInt*>(this)->toPrimitive(exec, preferredType);
     return static_cast<const JSObject*>(this)->toPrimitive(exec, preferredType);
 }
 
@@ -159,6 +167,8 @@ bool JSCell::getPrimitiveNumber(ExecState* exec, double& number, JSValue& value)
         return static_cast<const JSString*>(this)->getPrimitiveNumber(exec, number, value);
     if (isSymbol())
         return static_cast<const Symbol*>(this)->getPrimitiveNumber(exec, number, value);
+    if (isBigInt())
+        return static_cast<const JSBigInt*>(this)->getPrimitiveNumber(exec, number, value);
     return static_cast<const JSObject*>(this)->getPrimitiveNumber(exec, number, value);
 }
 
@@ -168,6 +178,8 @@ double JSCell::toNumber(ExecState* exec) const
         return static_cast<const JSString*>(this)->toNumber(exec);
     if (isSymbol())
         return static_cast<const Symbol*>(this)->toNumber(exec);
+    if (isBigInt())
+        return static_cast<const JSBigInt*>(this)->toNumber(exec);
     return static_cast<const JSObject*>(this)->toNumber(exec);
 }
 
@@ -176,6 +188,8 @@ JSObject* JSCell::toObjectSlow(ExecState* exec, JSGlobalObject* globalObject) co
     ASSERT(!isObject());
     if (isString())
         return static_cast<const JSString*>(this)->toObject(exec, globalObject);
+    if (isBigInt())
+        return static_cast<const JSBigInt*>(this)->toObject(exec, globalObject);
     ASSERT(isSymbol());
     return static_cast<const Symbol*>(this)->toObject(exec, globalObject);
 }
@@ -295,13 +309,13 @@ JSValue JSCell::getPrototype(JSObject*, ExecState*)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-void JSCell::lockSlow()
+void JSCellLock::lockSlow()
 {
     Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     IndexingTypeLockAlgorithm::lockSlow(*lock);
 }
 
-void JSCell::unlockSlow()
+void JSCellLock::unlockSlow()
 {
     Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     IndexingTypeLockAlgorithm::unlockSlow(*lock);

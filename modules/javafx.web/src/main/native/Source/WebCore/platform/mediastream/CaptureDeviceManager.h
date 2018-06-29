@@ -39,15 +39,14 @@ public:
     virtual ObserverToken addCaptureDeviceChangedObserver(CaptureDeviceChangedCallback&&);
     virtual void removeCaptureDeviceChangedObserver(ObserverToken);
 
-    virtual Vector<CaptureDevice>& captureDevices() = 0;
+    virtual const Vector<CaptureDevice>& captureDevices() = 0;
+    virtual std::optional<CaptureDevice> captureDeviceWithPersistentID(CaptureDevice::DeviceType, const String&) { return std::nullopt; }
+
     virtual void refreshCaptureDevices() { }
-    virtual Vector<CaptureDevice> getAudioSourcesInfo();
-    virtual Vector<CaptureDevice> getVideoSourcesInfo();
-    virtual std::optional<CaptureDevice> deviceWithUID(const String&, RealtimeMediaSource::Type);
 
 protected:
     virtual ~CaptureDeviceManager();
-    std::optional<CaptureDevice> captureDeviceFromPersistentID(const String& captureDeviceID);
+    CaptureDevice captureDeviceFromPersistentID(const String& captureDeviceID);
     HashMap<ObserverToken, CaptureDeviceChangedCallback> m_observers;
 };
 

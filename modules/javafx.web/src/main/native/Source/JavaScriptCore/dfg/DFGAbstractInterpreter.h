@@ -182,17 +182,13 @@ private:
     ALWAYS_INLINE void filterByType(Edge& edge, SpeculatedType type)
     {
         AbstractValue& value = forNode(edge);
-        if (!value.isType(type))
-            edge.setProofStatus(NeedsCheck);
-        else
-            edge.setProofStatus(IsProved);
-
+        m_state.setProofStatus(edge, value.isType(type) ? IsProved : NeedsCheck);
         filter(value, type);
     }
 
     void verifyEdge(Node*, Edge);
     void verifyEdges(Node*);
-    void executeDoubleUnaryOpEffects(Node*, double(*equivalentFunction)(double));
+    void executeDoubleUnaryOpEffects(Node*, unsigned clobberLimit, double(*equivalentFunction)(double));
 
     CodeBlock* m_codeBlock;
     Graph& m_graph;

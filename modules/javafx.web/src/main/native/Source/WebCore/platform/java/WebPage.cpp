@@ -35,9 +35,11 @@
 #include <WebCore/SocketProvider.h>
 #include <WebCore/EmptyClients.h>
 #include <WebCore/AdjustViewSizeOrNot.h>
+#include <WebCore/CacheStorageProvider.h>
 #include <WebCore/CharacterData.h>
 #include <WebCore/Chrome.h>
 #include <WebCore/ContextMenuController.h>
+#include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/Document.h>
 #include <WebCore/DragController.h>
 #include <WebCore/Editor.h>
@@ -92,6 +94,7 @@
 #include "FontPlatformData.h"
 #include "FrameLoaderClientJava.h"
 #include "EditorClientJava.h"
+#include "GeolocationClientMock.h"
 #include "GraphicsContext.h"
 #include "InspectorClientJava.h"
 #include "PlatformContextJava.h"
@@ -103,10 +106,11 @@
 #include "ProgressTrackerClientJava.h"
 #include "RenderThemeJava.h"
 #include "ResourceRequest.h"
+#include "RuntimeEnabledFeatures.h"
 #include "java/WebKitLogging.h"
 #include "java/BackForwardList.h"
-#include "Storage/WebDatabaseProvider.h"
-#include "Storage/StorageNamespaceImpl.h"
+#include "WebKitLegacy/Storage/WebDatabaseProvider.h"
+#include "WebKitLegacy/Storage/StorageNamespaceImpl.h"
 #include "StorageNamespaceProvider.h"
 #include "VisitedLinkStoreJava.h"
 #include "WebKitVersion.h" //generated
@@ -120,13 +124,13 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/Ref.h>
 #include <wtf/java/JavaEnv.h>
-#include <runtime/InitializeThreading.h>
-#include <runtime/JSObject.h>
-#include <runtime/JSCJSValue.h>
-#include <runtime/Options.h>
-#include <JSLock.h>
-#include <API/APICast.h>
-#include <API/JSStringRef.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/InitializeThreading.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/JSStringRef.h>
+#include <JavaScriptCore/Options.h>
 
 #include <WebCore/runtime_root.h>
 #if OS(UNIX)
@@ -210,7 +214,7 @@ void WebPage::setSize(const IntSize& size)
     }
 
     frameView->resize(size);
-    frameView->scheduleRelayout();
+    frameView->layoutContext().scheduleLayout();
 
 #if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
@@ -760,14 +764,12 @@ static String agentOS()
 
 static String defaultUserAgent()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, userAgentString, ());
-    if (userAgentString.isNull()) {
-        String wkVersion = String::format("%d.%d (KHTML, like Gecko) JavaFX/%d Safari/%d.%d",
-                                          WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, JAVAFX_VERSION,
+    static const auto userAgentString = makeNeverDestroyed([] {
+        String wkVersion = String::format("%d.%d (KHTML, like Gecko) JavaFX/%s Safari/%d.%d",
+                                          WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, JAVAFX_RELEASE_VERSION,
                                           WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION);
-        userAgentString = makeString("Mozilla/5.0 (", agentOS(),
-                                     ") AppleWebKit/", wkVersion);
-    }
+        return makeString("Mozilla/5.0 (", agentOS(), ") AppleWebKit/", wkVersion);
+    }());
     return userAgentString;
 }
 
@@ -932,9 +934,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     PageConfiguration pc {
         makeUniqueRef<EditorClientJava>(jlself),
         SocketProvider::create(),
-        makeUniqueRef<LibWebRTCProvider>()
+        makeUniqueRef<LibWebRTCProvider>(),
+        WebCore::CacheStorageProvider::create()
     };
+
     fillWithEmptyClients(pc);
+
     pc.chromeClient = new ChromeClientJava(jlself);
     pc.contextMenuClient = new ContextMenuClientJava(jlself);
     pc.dragClient = new DragClientJava(jlself);
@@ -948,7 +953,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 
     pc.backForwardClient = BackForwardList::create();
 
-    return ptr_to_jlong(new WebPage(std::unique_ptr<Page>(new Page(WTFMove(pc)))));
+    auto page = new Page(WTFMove(pc));
+#if ENABLE(GEOLOCATION)
+    WebCore::provideGeolocationTo(page, *new GeolocationClientMock());
+#endif
+    return ptr_to_jlong(new WebPage(std::unique_ptr<Page>(page)));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
@@ -979,7 +988,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setSerifFontFamily("Serif");
     settings.setSansSerifFontFamily("SansSerif");
     settings.setFixedFontFamily("Monospaced");
-//    settings->setShowsURLsInToolTips(true);
+//    settings.setShowsURLsInToolTips(true);
     page->setDeviceScaleFactor(devicePixelScale);
 
     // dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
@@ -1105,8 +1114,8 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetInnerText
     }
 
     FrameView* frameView = frame->view();
-    if (frameView && frameView->layoutPending()) {
-        frameView->layout();
+    if (frameView && frameView->layoutContext().isLayoutPending()) {
+        frameView->layoutContext().layout();
     }
 
     return documentElement->innerText().toJavaString(env).releaseLocal();
@@ -1121,8 +1130,8 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetRenderTree
     }
 
     FrameView* frameView = frame->view();
-    if (frameView && frameView->layoutPending()) {
-        frameView->layout();
+    if (frameView && frameView->layoutContext().isLayoutPending()) {
+        frameView->layoutContext().layout();
     }
 
     return externalRepresentation(frame).toJavaString(env).releaseLocal();
@@ -1287,9 +1296,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInPage
 {
     Page* page = WebPage::pageFromJLong(pPage);
     if (page) {
-        unsigned opts = matchCase ? 0 : CaseInsensitive;
-    opts = forward ? opts : opts | Backwards;
-    opts = wrap ? opts | WrapAround : opts;
+        FindOptions opts;
+        if (!matchCase)
+            opts |= CaseInsensitive;
+        if (!forward)
+            opts |= Backwards;
+        if (wrap)
+            opts |= WrapAround;
         return bool_to_jbool(page->findString(String(env, toFind), opts));
     }
     return JNI_FALSE;
@@ -1302,12 +1315,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInFrame
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(pFrame));
     if (frame) {
         //utatodo: support for the rest of FindOptionFlag
+        FindOptions opts;
+        if (!matchCase)
+            opts |= CaseInsensitive;
+        if (!forward)
+            opts |= Backwards;
+        if (wrap)
+            opts |= WrapAround;
         return bool_to_jbool(frame->page()->findString(
-            String(env, toFind),
-            (forward ? 0 : Backwards)
-            || (wrap ? WrapAround : 0)
-            || (matchCase ? 0 : CaseInsensitive)
-            || ( true ? StartInSelection : 0)));
+            String(env, toFind), opts | StartInSelection));
     }
     return JNI_FALSE;
 }
@@ -1358,6 +1374,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setFixedFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
         settings.setShowsURLsInToolTips(nativePropertyValue.toInt());
+    } else if (nativePropertyName == "WebKitUsesPageCachePreferenceKey") {
+        settings.setUsesPageCache(nativePropertyValue.toInt() != 0);
+    } else if (nativePropertyName == "WebKitJavaScriptCanAccessClipboardPreferenceKey") {
+        settings.setJavaScriptCanAccessClipboard(nativePropertyValue.toInt() != 0);
     }
 }
 
@@ -1369,11 +1389,71 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
         return;
     }
 
+    Settings& settings = page->settings();
+
+    settings.setAllowUniversalAccessFromFileURLs(true);
+    settings.setAllowFileAccessFromFileURLs(true);
+    // settings.setStandardFontFamily(standardFamily);
+    // settings.setFixedFontFamily(fixedFamily);
+    // settings.setSerifFontFamily(standardFamily);
+    // settings.setSansSerifFontFamily(sansSerifFamily);
+    // settings.setCursiveFontFamily(cursiveFamily);
+    // settings.setFantasyFontFamily(fantasyFamily);
+    // settings.setPictographFontFamily(pictographFamily);
+    settings.setDefaultFontSize(16);
+    settings.setDefaultFixedFontSize(13);
+    settings.setMinimumFontSize(0);
+    settings.setDefaultTextEncodingName("ISO-8859-1");
+    settings.setJavaEnabled(false);
+    settings.setScriptEnabled(true);
+    settings.setEditableLinkBehavior(EditableLinkOnlyLiveWithShiftKey);
+    // settings.setTabsToLinks(false);
+    settings.setDOMPasteAllowed(true);
+    settings.setShouldPrintBackgrounds(true);
+    // settings.setCacheModel(WebCacheModelDocumentBrowser);
+    settings.setXSSAuditorEnabled(false);
+    settings.setExperimentalNotificationsEnabled(false);
+    settings.setPluginsEnabled(true);
+    settings.setTextAreasAreResizable(true);
+    settings.setUsesPageCache(false);
+
+    // settings.setPrivateBrowsingEnabled(false);
+    settings.setAuthorAndUserStylesEnabled(true);
+    // Shrinks standalone images to fit: YES
+    settings.setJavaScriptCanOpenWindowsAutomatically(true);
+    settings.setJavaScriptCanAccessClipboard(true);
+    settings.setOfflineWebApplicationCacheEnabled(true);
+    // settings.setDeveloperExtrasEnabled(false);
+    settings.setJavaScriptRuntimeFlags(JSC::RuntimeFlags(0));
+    // Set JS experiments enabled: YES
+    settings.setLoadsImagesAutomatically(true);
+    settings.setLoadsSiteIconsIgnoringImageLoadingSetting(false);
+    settings.setFrameFlattening(FrameFlattening::Disabled);
+    settings.setFontRenderingMode(FontRenderingMode::Normal);
+    // Doesn't work well with DRT
+    settings.setScrollAnimatorEnabled(false);
+    // Set spatial navigation enabled: NO
+
+    // Set WebGL Enabled: NO
+    // settings.setCSSRegionsEnabled(true);
+    // Set uses HTML5 parser quirks: NO
+    // Async spellcheck: NO
+    DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
+
+
+    RuntimeEnabledFeatures::sharedFeatures().setFetchAPIEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setShadowDOMEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setCustomElementsEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
+    RuntimeEnabledFeatures::sharedFeatures().setResourceTimingEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setUserTimingEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setDataTransferItemsEnabled(true);
+    RuntimeEnabledFeatures::sharedFeatures().setInspectorAdditionsEnabled(true);
+    // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
+
     Frame& coreFrame = page->mainFrame();
     auto globalContext = toGlobalRef(coreFrame.script().globalObject(mainThreadNormalWorld())->globalExec());
     WebCoreTestSupport::resetInternalsObject(globalContext);
-    // FIXME-java: Reset remaining module state like windows/osx DumpRenderTree
-    // refer Tools/DumpRenderTree/win/DumpRenderTree.cpp#resetWebViewToConsistentStateBeforeTesting
 }
 
 JNIEXPORT jfloat JNICALL Java_com_sun_webkit_WebPage_twkGetZoomFactor
@@ -1714,7 +1794,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
-                                                       timestamp, ForceAtClick, NoTap); // TODO-java: handle force?
+                                                       WallTime::fromRawSeconds(timestamp), ForceAtClick, NoTap); // TODO-java: handle force?
     switch (id) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
@@ -2119,7 +2199,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
                 : NoButton,
             PlatformEvent::MouseMoved,
             0,
-            false, false, false, false, 0.0, ForceAtClick, NoTap); // TODO-java: handle force?
+            false, false, false, false, WallTime {}, ForceAtClick, NoTap); // TODO-java: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:

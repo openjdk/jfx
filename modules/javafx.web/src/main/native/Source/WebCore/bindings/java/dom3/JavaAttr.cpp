@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/Attr.h>
@@ -50,7 +52,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_AttrImpl_getNameImpl(JNIEnv* e
     return JavaReturn<String>(env, IMPL->name());
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->specified();
@@ -74,7 +76,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl(JNI
     return JavaReturn<Element>(env, WTF::getPtr(IMPL->ownerElement()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_AttrImpl_isIdImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_AttrImpl_isIdImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->qualifiedName().matches(WebCore::HTMLNames::idAttr);

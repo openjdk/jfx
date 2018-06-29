@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  * Copyright (C) 2010 MIPS Technologies, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,9 @@
 
 namespace JSC {
 
-class MacroAssemblerMIPS : public AbstractMacroAssembler<MIPSAssembler> {
+using Assembler = TARGET_ASSEMBLER;
+
+class MacroAssemblerMIPS : public AbstractMacroAssembler<Assembler> {
 public:
     typedef MIPSRegisters::FPRegisterID FPRegisterID;
     static const unsigned numGPRs = 32;
@@ -270,6 +272,14 @@ public:
         m_assembler.sw(dataTempRegister, addrTempRegister, 4);
     }
 
+    void getEffectiveAddress(BaseIndex address, RegisterID dest)
+    {
+        m_assembler.sll(addrTempRegister, address.index, address.scale);
+        m_assembler.addu(dest, addrTempRegister, address.base);
+        if (address.offset)
+            add32(TrustedImm32(address.offset), dest);
+    }
+
     void and32(Address src, RegisterID dest)
     {
         load32(src, dataTempRegister);
@@ -374,6 +384,11 @@ public:
     void neg32(RegisterID srcDest)
     {
         m_assembler.subu(srcDest, MIPSRegisters::zero, srcDest);
+    }
+
+    void neg32(RegisterID src, RegisterID dest)
+    {
+        m_assembler.subu(dest, MIPSRegisters::zero, src);
     }
 
     void or32(RegisterID src, RegisterID dest)
@@ -2362,7 +2377,7 @@ public:
         return label;
     }
 
-    Jump branchPtrWithPatch(RelationalCondition cond, RegisterID left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(0))
+    Jump branchPtrWithPatch(RelationalCondition cond, RegisterID left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(nullptr))
     {
         m_fixedWidth = true;
         dataLabel = moveWithPatch(initialRightValue, immTempRegister);
@@ -2371,7 +2386,7 @@ public:
         return temp;
     }
 
-    Jump branchPtrWithPatch(RelationalCondition cond, Address left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(0))
+    Jump branchPtrWithPatch(RelationalCondition cond, Address left, DataLabelPtr& dataLabel, TrustedImmPtr initialRightValue = TrustedImmPtr(nullptr))
     {
         m_fixedWidth = true;
         load32(left, dataTempRegister);
@@ -2402,7 +2417,7 @@ public:
 
     DataLabelPtr storePtrWithPatch(ImplicitAddress address)
     {
-        return storePtrWithPatch(TrustedImmPtr(0), address);
+        return storePtrWithPatch(TrustedImmPtr(nullptr), address);
     }
 
     Call tailRecursiveCall()
@@ -2952,21 +2967,15 @@ public:
 
     // Truncates 'src' to an integer, and places the resulting 'dest'.
     // If the result is not representable as a 32 bit value, branch.
-    // May also branch for some values that are representable in 32 bits
-    // (specifically, in this case, INT_MAX 0x7fffffff).
     enum BranchTruncateType { BranchIfTruncateFailed, BranchIfTruncateSuccessful };
+
     Jump branchTruncateDoubleToInt32(FPRegisterID src, RegisterID dest, BranchTruncateType branchType = BranchIfTruncateFailed)
     {
         m_assembler.truncwd(fpTempRegister, src);
+        m_assembler.cfc1(dataTempRegister, MIPSRegisters::fcsr);
         m_assembler.mfc1(dest, fpTempRegister);
-        return branch32(branchType == BranchIfTruncateFailed ? Equal : NotEqual, dest, TrustedImm32(0x7fffffff));
-    }
-
-    Jump branchTruncateDoubleToUint32(FPRegisterID src, RegisterID dest, BranchTruncateType branchType = BranchIfTruncateFailed)
-    {
-        m_assembler.truncwd(fpTempRegister, src);
-        m_assembler.mfc1(dest, fpTempRegister);
-        return branch32(branchType == BranchIfTruncateFailed ? Equal : NotEqual, dest, TrustedImm32(0x7fffffff));
+        and32(TrustedImm32(MIPSAssembler::FP_CAUSE_INVALID_OPERATION), dataTempRegister);
+        return branch32(branchType == BranchIfTruncateFailed ? NotEqual : Equal, dataTempRegister, MIPSRegisters::zero);
     }
 
     // Result is undefined if the value is outside of the integer range.

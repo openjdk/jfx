@@ -1744,10 +1744,10 @@ saxParseTest(const char *filename, const char *result,
 #endif
     {
         xmlParserCtxtPtr ctxt = xmlCreateFileParserCtxt(filename);
-        if (options & XML_PARSE_SAX1) {
+    if (options & XML_PARSE_SAX1) {
             memcpy(ctxt->sax, debugSAXHandler, sizeof(xmlSAXHandler));
             options -= XML_PARSE_SAX1;
-        } else {
+    } else {
             memcpy(ctxt->sax, debugSAX2Handler, sizeof(xmlSAXHandler));
         }
         xmlCtxtUseOptions(ctxt, options);
@@ -1768,8 +1768,8 @@ saxParseTest(const char *filename, const char *result,
 
 done:
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
 
     /* switch back to structured error handling */
@@ -1843,8 +1843,8 @@ oldParseTest(const char *filename, const char *result,
     xmlFreeDoc(doc);
 
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
     return(res);
 }
@@ -2051,8 +2051,8 @@ noentParseTest(const char *filename, const char *result,
     xmlFreeDoc(doc);
 
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
     return(res);
 }
@@ -2194,8 +2194,8 @@ streamProcessTest(const char *filename, const char *result, const char *err,
                          rng);
         fclose(t);
             if (temp != NULL) {
-                unlink(temp);
-                free(temp);
+        unlink(temp);
+        free(temp);
             }
         return(0);
     }
@@ -2223,8 +2223,8 @@ streamProcessTest(const char *filename, const char *result, const char *err,
         fclose(t);
     ret = compareFiles(temp, result);
         if (temp != NULL) {
-            unlink(temp);
-            free(temp);
+    unlink(temp);
+    free(temp);
         }
     if (ret) {
         fprintf(stderr, "Result for %s failed in %s\n", filename, result);
@@ -2447,8 +2447,8 @@ xpathCommonTest(const char *filename, const char *result,
     }
 
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
     return(ret);
 }
@@ -2619,8 +2619,8 @@ xmlidDocTest(const char *filename,
     }
 
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
     xmlFreeDoc(xpathDocument);
 
@@ -2708,8 +2708,8 @@ uriCommonTest(const char *filename,
     fprintf(stderr, "failed to open input file %s\n", filename);
     fclose(o);
         if (temp != NULL) {
-            unlink(temp);
-            free(temp);
+    unlink(temp);
+        free(temp);
         }
     return(-1);
     }
@@ -2754,8 +2754,8 @@ uriCommonTest(const char *filename,
     }
 
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
     return(res);
 }
@@ -3031,8 +3031,8 @@ schemasOneTest(const char *sch,
     }
     }
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
 
     if ((validResult != 0) && (err != NULL)) {
@@ -3207,8 +3207,8 @@ rngOneTest(const char *sch,
     }
     }
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
 
     if (err != NULL) {
@@ -3617,8 +3617,8 @@ patternTest(const char *filename,
     ret = 1;
     }
     if (temp != NULL) {
-        unlink(temp);
-        free(temp);
+    unlink(temp);
+    free(temp);
     }
     return(ret);
 }

@@ -63,4 +63,6 @@ TEST_SUPPORT_EXPORT void setMockGamepadDetails(unsigned index, const WTF::String
 TEST_SUPPORT_EXPORT void setMockGamepadAxisValue(unsigned index, unsigned axisIndex, double value);
 TEST_SUPPORT_EXPORT void setMockGamepadButtonValue(unsigned index, unsigned buttonIndex, double value);
 
+TEST_SUPPORT_EXPORT void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier);
+
 } // namespace WebCoreTestSupport

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,8 @@
 
 namespace WTF {
 
+using CodeUnitMatchFunction = bool (*)(UChar);
+
 template<typename CharacterTypeA, typename CharacterTypeB> bool equalIgnoringASCIICase(const CharacterTypeA*, const CharacterTypeB*, unsigned length);
 template<typename CharacterTypeA, typename CharacterTypeB> bool equalIgnoringASCIICase(const CharacterTypeA*, unsigned lengthA, const CharacterTypeB*, unsigned lengthB);
 
@@ -42,6 +44,9 @@ template<typename CharacterType> bool equalLettersIgnoringASCIICase(const Charac
 template<typename CharacterType, unsigned lowercaseLettersLength> bool equalLettersIgnoringASCIICase(const CharacterType*, unsigned charactersLength, const char (&lowercaseLetters)[lowercaseLettersLength]);
 
 template<typename StringClass, unsigned length> bool equalLettersIgnoringASCIICaseCommon(const StringClass&, const char (&lowercaseLetters)[length]);
+
+bool equalIgnoringASCIICase(const char*, const char*);
+template<unsigned lowercaseLettersLength> bool equalLettersIgnoringASCIICase(const char*, const char (&lowercaseLetters)[lowercaseLettersLength]);
 
 template<typename T>
 inline T loadUnaligned(const char* s)
@@ -650,9 +655,21 @@ template<typename StringClass, unsigned length> inline bool startsWithLettersIgn
     return startsWithLettersIgnoringASCIICaseCommonWithoutLength(string, pointer);
 }
 
+inline bool equalIgnoringASCIICase(const char* a, const char* b)
+{
+    auto length = strlen(a);
+    return length == strlen(b) && equalIgnoringASCIICase(a, b, length);
+}
+
+template<unsigned lowercaseLettersLength> inline bool equalLettersIgnoringASCIICase(const char* string, const char (&lowercaseLetters)[lowercaseLettersLength])
+{
+    auto length = strlen(lowercaseLetters);
+    return strlen(string) == length && equalLettersIgnoringASCIICase(string, lowercaseLetters, length);
+}
+
 }
 
 using WTF::equalIgnoringASCIICase;
 using WTF::equalLettersIgnoringASCIICase;
 
-#endif // StringCommon_h
+#endif

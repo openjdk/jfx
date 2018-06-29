@@ -32,19 +32,19 @@
 #include "SVGRenderingContext.h"
 #include "SVGResourcesCache.h"
 #include "TransformState.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGForeignObject);
+
 RenderSVGForeignObject::RenderSVGForeignObject(SVGForeignObjectElement& element, RenderStyle&& style)
     : RenderSVGBlock(element, WTFMove(style))
-    , m_needsTransformUpdate(true)
 {
 }
 
-RenderSVGForeignObject::~RenderSVGForeignObject()
-{
-}
+RenderSVGForeignObject::~RenderSVGForeignObject() = default;
 
 SVGForeignObjectElement& RenderSVGForeignObject::foreignObjectElement() const
 {
@@ -111,7 +111,7 @@ LayoutRect RenderSVGForeignObject::computeRectForRepaint(const LayoutRect& repai
 const AffineTransform& RenderSVGForeignObject::localToParentTransform() const
 {
     m_localToParentTransform = localTransform();
-    m_localToParentTransform.translate(m_viewport.x(), m_viewport.y());
+    m_localToParentTransform.translate(m_viewport.location());
     return m_localToParentTransform;
 }
 
@@ -134,7 +134,7 @@ void RenderSVGForeignObject::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
-    ASSERT(!view().layoutStateEnabled()); // RenderSVGRoot disables layoutState for the SVG rendering tree.
+    ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled()); // RenderSVGRoot disables paint offset cache for the SVG rendering tree.
 
     LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(*this));
 

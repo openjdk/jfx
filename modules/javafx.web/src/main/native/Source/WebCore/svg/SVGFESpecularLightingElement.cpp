@@ -183,14 +183,16 @@ void SVGFESpecularLightingElement::lightElementAttributeChanged(const SVGFELight
 
 RefPtr<FilterEffect> SVGFESpecularLightingElement::build(SVGFilterBuilder* filterBuilder, Filter& filter)
 {
-    FilterEffect* input1 = filterBuilder->getEffectById(in1());
+    auto input1 = filterBuilder->getEffectById(in1());
 
     if (!input1)
         return nullptr;
 
-    auto lightSource = SVGFELightElement::findLightSource(this);
-    if (!lightSource)
+    auto lightElement = makeRefPtr(SVGFELightElement::findLightElement(this));
+    if (!lightElement)
         return nullptr;
+
+    auto lightSource = lightElement->lightSource(*filterBuilder);
 
     RenderObject* renderer = this->renderer();
     if (!renderer)
@@ -198,7 +200,7 @@ RefPtr<FilterEffect> SVGFESpecularLightingElement::build(SVGFilterBuilder* filte
 
     const Color& color = renderer->style().svgStyle().lightingColor();
 
-    RefPtr<FilterEffect> effect = FESpecularLighting::create(filter, color, surfaceScale(), specularConstant(), specularExponent(), kernelUnitLengthX(), kernelUnitLengthY(), lightSource.releaseNonNull());
+    RefPtr<FilterEffect> effect = FESpecularLighting::create(filter, color, surfaceScale(), specularConstant(), specularExponent(), kernelUnitLengthX(), kernelUnitLengthY(), WTFMove(lightSource));
     effect->inputEffects().append(input1);
     return effect;
 }

@@ -65,7 +65,7 @@ const double ForceAtForceClick = 2;
         }
 
         PlatformMouseEvent(const IntPoint& position, const IntPoint& globalPosition, MouseButton button, PlatformEvent::Type type,
-                           int clickCount, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, double timestamp, double force, SyntheticClickType syntheticClickType)
+                           int clickCount, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, WallTime timestamp, double force, SyntheticClickType syntheticClickType)
             : PlatformEvent(type, shiftKey, ctrlKey, altKey, metaKey, timestamp)
             , m_position(position)
             , m_globalPosition(globalPosition)
@@ -90,6 +90,7 @@ const double ForceAtForceClick = 2;
 #endif
 
         MouseButton button() const { return m_button; }
+        unsigned short buttons() const { return m_buttons; }
         int clickCount() const { return m_clickCount; }
         unsigned modifierFlags() const { return m_modifierFlags; }
         double force() const { return m_force; }
@@ -119,6 +120,7 @@ const double ForceAtForceClick = 2;
         IntPoint m_movementDelta;
 #endif
         MouseButton m_button;
+        unsigned short m_buttons { 0 };
         int m_clickCount;
         unsigned m_modifierFlags;
         double m_force { 0 };

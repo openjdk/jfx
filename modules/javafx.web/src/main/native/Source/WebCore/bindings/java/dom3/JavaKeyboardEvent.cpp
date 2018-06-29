@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/DOMWindow.h>
@@ -49,55 +51,55 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyIdenti
     return JavaReturn<String>(env, IMPL->keyIdentifier());
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getLocationImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getLocationImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->location();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyLocationImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyLocationImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->location();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getCtrlKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getCtrlKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->ctrlKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getShiftKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getShiftKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->shiftKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getAltKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getAltKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->altKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getMetaKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getMetaKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->metaKey();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getAltGraphKeyImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getAltGraphKeyImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->altGraphKey();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyCodeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getKeyCodeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->keyCode();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getCharCodeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_KeyboardEventImpl_getCharCodeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->charCode();

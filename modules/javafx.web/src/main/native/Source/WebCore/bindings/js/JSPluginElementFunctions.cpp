@@ -26,9 +26,9 @@
 #include "JSHTMLElement.h"
 #include "PluginViewBase.h"
 
-using namespace JSC;
 
 namespace WebCore {
+using namespace JSC;
 
 using namespace Bindings;
 using namespace HTMLNames;
@@ -112,7 +112,7 @@ static EncodedJSValue pluginElementPropertyGetter(ExecState* exec, EncodedJSValu
 bool pluginElementCustomGetOwnPropertySlot(JSHTMLElement* element, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     if (!element->globalObject()->world().isNormal()) {
-        JSC::JSValue proto = element->getPrototypeDirect();
+        JSC::JSValue proto = element->getPrototypeDirect(exec->vm());
         if (proto.isObject() && JSC::jsCast<JSC::JSObject*>(asObject(proto))->hasProperty(exec, propertyName))
             return false;
     }
@@ -124,7 +124,7 @@ bool pluginElementCustomGetOwnPropertySlot(JSHTMLElement* element, ExecState* ex
     if (!scriptObject->hasProperty(exec, propertyName))
         return false;
 
-    slot.setCustom(element, DontDelete | DontEnum, pluginElementPropertyGetter);
+    slot.setCustom(element, JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::DontEnum, pluginElementPropertyGetter);
     return true;
 }
 
@@ -151,6 +151,7 @@ static EncodedJSValue JSC_HOST_CALL callPlugin(ExecState* exec)
     MarkedArgumentBuffer argumentList;
     for (size_t i = 0; i < argumentCount; i++)
         argumentList.append(exec->argument(i));
+    ASSERT(!argumentList.hasOverflowed());
 
     CallData callData;
     CallType callType = getCallData(scriptObject, callData);

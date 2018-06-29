@@ -50,6 +50,7 @@
 #include "Logging.h"
 #include "NavigationDisabler.h"
 #include "Page.h"
+#include "PolicyChecker.h"
 #include "ScriptController.h"
 #include "UserGestureIndicator.h"
 #include <wtf/CurrentTime.h>
@@ -85,7 +86,7 @@ public:
                 m_initiatedByMainFrame = InitiatedByMainFrame::Yes;
         }
     }
-    virtual ~ScheduledNavigation() { }
+    virtual ~ScheduledNavigation() = default;
 
     virtual void fire(Frame&) = 0;
 
@@ -134,7 +135,7 @@ protected:
         m_haveToldClient = true;
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
-        frame.loader().clientRedirected(m_url, delay(), currentTime() + timer.nextFireInterval().value(), lockBackForwardList());
+        frame.loader().clientRedirected(m_url, delay(), WallTime::now() + timer.nextFireInterval(), lockBackForwardList());
     }
 
     void didStopTimer(Frame& frame, bool newLoadInProgress) override
@@ -185,7 +186,7 @@ public:
         ResourceRequest resourceRequest { url(), referrer(), refresh ? ReloadIgnoringCacheData : UseProtocolCachePolicy };
         FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), resourceRequest, "_self", lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::No, NewFrameOpenerPolicy::Allow, shouldOpenExternalURLs(), initiatedByMainFrame() };
 
-        frame.loader().performClientRedirect(WTFMove(frameLoadRequest));
+        frame.loader().changeLocation(WTFMove(frameLoadRequest));
     }
 };
 
@@ -201,7 +202,7 @@ public:
         ResourceRequest resourceRequest { url(), referrer(), UseProtocolCachePolicy };
         FrameLoadRequest frameLoadRequest { initiatingDocument(), *securityOrigin(), resourceRequest, "_self", lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::No, NewFrameOpenerPolicy::Allow, shouldOpenExternalURLs(), initiatedByMainFrame() };
 
-        frame.loader().performClientRedirect(WTFMove(frameLoadRequest));
+        frame.loader().changeLocation(WTFMove(frameLoadRequest));
     }
 };
 
@@ -282,7 +283,7 @@ public:
         m_haveToldClient = true;
 
         UserGestureIndicator gestureIndicator(userGestureToForward());
-        frame.loader().clientRedirected(m_submission->requestURL(), delay(), currentTime() + timer.nextFireInterval().value(), lockBackForwardList());
+        frame.loader().clientRedirected(m_submission->requestURL(), delay(), WallTime::now() + timer.nextFireInterval(), lockBackForwardList());
     }
 
     void didStopTimer(Frame& frame, bool newLoadInProgress) override
@@ -335,9 +336,7 @@ NavigationScheduler::NavigationScheduler(Frame& frame)
 {
 }
 
-NavigationScheduler::~NavigationScheduler()
-{
-}
+NavigationScheduler::~NavigationScheduler() = default;
 
 bool NavigationScheduler::redirectScheduledDuringLoad()
 {
@@ -522,6 +521,7 @@ void NavigationScheduler::schedule(std::unique_ptr<ScheduledNavigation> redirect
     if (redirect->wasDuringLoad()) {
         if (DocumentLoader* provisionalDocumentLoader = m_frame.loader().provisionalDocumentLoader())
             provisionalDocumentLoader->stopLoading();
+        m_frame.loader().policyChecker().stopCheck();
         m_frame.loader().stopLoading(UnloadEventPolicyUnloadAndPageHide);
     }
 

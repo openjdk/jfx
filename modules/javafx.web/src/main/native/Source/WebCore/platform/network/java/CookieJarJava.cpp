@@ -13,6 +13,10 @@
 #include <wtf/java/JavaEnv.h>
 #include "NotImplemented.h"
 
+
+namespace WebCore {
+
+namespace CookieJarJavaInternal {
 static JGClass cookieJarClass;
 static jmethodID getMethod;
 static jmethodID putMethod;
@@ -38,10 +42,9 @@ static void initRefs(JNIEnv* env)
     }
 }
 
-namespace WebCore {
-
 static String getCookies(const URL& url, bool includeHttpOnlyCookies)
 {
+    using namespace CookieJarJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -54,9 +57,11 @@ static String getCookies(const URL& url, bool includeHttpOnlyCookies)
 
     return result ? String(env, result) : emptyString();
 }
+}
 
-void setCookiesFromDOM(const NetworkStorageSession&, const URL&, const URL& url, const String& value)
+void setCookiesFromDOM(const NetworkStorageSession&, const URL&, const URL& url, std::optional<uint64_t>, std::optional<uint64_t>, const String& value)
 {
+    using namespace CookieJarJavaInternal;
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
@@ -68,23 +73,25 @@ void setCookiesFromDOM(const NetworkStorageSession&, const URL&, const URL& url,
     CheckAndClearException(env);
 }
 
-String cookiesForDOM(const NetworkStorageSession&, const URL&, const URL& url)
+std::pair<String, bool> cookiesForDOM(const NetworkStorageSession&, const URL&, const URL& url, std::optional<uint64_t>, std::optional<uint64_t>, IncludeSecureCookies)
 {
+    using namespace CookieJarJavaInternal;
     // 'HttpOnly' cookies should no be accessible from scripts, so we filter them out here.
-    return getCookies(url, false);
+    return { getCookies(url, false), false };
 }
 
-String cookieRequestHeaderFieldValue(const NetworkStorageSession&, const URL&, const URL& url)
+std::pair<String, bool> cookieRequestHeaderFieldValue(const NetworkStorageSession&, const URL& /*firstParty*/, const URL& url, std::optional<uint64_t>, std::optional<uint64_t>, IncludeSecureCookies)
 {
-    return getCookies(url, true);
+    using namespace CookieJarJavaInternal;
+    return { getCookies(url, true), true };
 }
 
-bool cookiesEnabled(const NetworkStorageSession&, const URL&, const URL&)
+bool cookiesEnabled(const NetworkStorageSession&)
 {
     return true;
 }
 
-bool getRawCookies(const NetworkStorageSession&, const URL&, const URL&, Vector<Cookie>&)
+bool getRawCookies(const NetworkStorageSession&, const URL&, const URL&, std::optional<uint64_t>, std::optional<uint64_t>, Vector<Cookie>&)
 {
     notImplemented();
     return false;

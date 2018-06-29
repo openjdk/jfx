@@ -22,6 +22,7 @@
 #define WTF_HashFunctions_h
 
 #include <stdint.h>
+#include <tuple>
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
 
@@ -217,6 +218,7 @@ namespace WTF {
     // make IntHash the default hash function for many integer types
 
     template<> struct DefaultHash<bool> { typedef IntHash<uint8_t> Hash; };
+    template<> struct DefaultHash<uint8_t> { typedef IntHash<uint8_t> Hash; };
     template<> struct DefaultHash<short> { typedef IntHash<unsigned> Hash; };
     template<> struct DefaultHash<unsigned short> { typedef IntHash<unsigned> Hash; };
     template<> struct DefaultHash<int> { typedef IntHash<unsigned> Hash; };

@@ -33,6 +33,7 @@
 namespace WebCore {
 
 class RenderAttachment final : public RenderReplaced {
+    WTF_MAKE_ISO_ALLOCATED(RenderAttachment);
 public:
     RenderAttachment(HTMLAttachmentElement&, RenderStyle&&);
 
@@ -57,11 +58,6 @@ private:
     LayoutUnit m_minimumIntrinsicWidth;
     bool m_shouldDrawBorder { true };
 };
-
-inline RenderAttachment* HTMLAttachmentElement::renderer() const
-{
-    return downcast<RenderAttachment>(HTMLElement::renderer());
-}
 
 } // namespace WebCore
 

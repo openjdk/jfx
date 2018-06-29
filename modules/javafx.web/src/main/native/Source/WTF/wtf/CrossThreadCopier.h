@@ -95,14 +95,6 @@ template<typename T> struct CrossThreadCopierBase<false, true, T> {
     }
 };
 
-template<> struct CrossThreadCopierBase<false, false, std::chrono::system_clock::time_point> {
-    typedef std::chrono::system_clock::time_point Type;
-    static Type copy(const Type& source)
-    {
-        return source;
-    }
-};
-
 template<> struct CrossThreadCopierBase<false, false, WTF::ASCIILiteral> {
     typedef WTF::ASCIILiteral Type;
     static Type copy(const Type& source)
@@ -140,8 +132,25 @@ template<typename T> struct CrossThreadCopierBase<false, false, HashSet<T> > {
     }
 };
 
+// Default specialization for std::optional of CrossThreadCopyable class.
+template<typename T> struct CrossThreadCopierBase<false, false, std::optional<T>> {
+    typedef std::optional<T> Type;
+    static Type copy(const Type& source)
+    {
+        if (!source)
+            return std::nullopt;
+        return CrossThreadCopier<T>::copy(*source);
+    }
+};
+
+template<typename T> T crossThreadCopy(const T& source)
+{
+    return CrossThreadCopier<T>::copy(source);
+}
+
 } // namespace WTF
 
 using WTF::CrossThreadCopierBaseHelper;
 using WTF::CrossThreadCopierBase;
 using WTF::CrossThreadCopier;
+using WTF::crossThreadCopy;

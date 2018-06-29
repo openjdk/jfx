@@ -40,9 +40,7 @@
 
 namespace WebCore {
 
-class DOMWindow;
 class DOMWrapperWorld;
-class Node;
 
 struct EventTargetData {
     WTF_MAKE_NONCOPYABLE(EventTargetData); WTF_MAKE_FAST_ALLOCATED;
@@ -68,27 +66,25 @@ public:
     virtual EventTargetInterface eventTargetInterface() const = 0;
     virtual ScriptExecutionContext* scriptExecutionContext() const = 0;
 
-    virtual Node* toNode();
-    virtual DOMWindow* toDOMWindow();
-    virtual bool isMessagePort() const;
+    virtual bool isNode() const;
 
     struct ListenerOptions {
         ListenerOptions(bool capture = false)
             : capture(capture)
         { }
 
-        bool capture;
+        bool capture { false };
     };
 
     struct AddEventListenerOptions : ListenerOptions {
-        AddEventListenerOptions(bool capture = false, bool passive = false, bool once = false)
+        AddEventListenerOptions(bool capture = false, std::optional<bool> passive = std::nullopt, bool once = false)
             : ListenerOptions(capture)
             , passive(passive)
             , once(once)
         { }
 
-        bool passive;
-        bool once;
+        std::optional<bool> passive;
+        bool once { false };
     };
 
     using AddEventListenerOptionsOrBoolean = Variant<AddEventListenerOptions, bool>;
@@ -101,7 +97,7 @@ public:
     virtual bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&);
 
     virtual void removeAllEventListeners();
-    virtual bool dispatchEvent(Event&);
+    virtual void dispatchEvent(Event&);
     virtual void uncaughtExceptionInEventHandler();
 
     // Used for legacy "onevent" attributes.
@@ -114,7 +110,7 @@ public:
     bool hasActiveEventListeners(const AtomicString& eventType) const;
     const EventListenerVector& eventListeners(const AtomicString& eventType);
 
-    bool fireEventListeners(Event&);
+    void fireEventListeners(Event&);
     bool isFiringEventListeners() const;
 
     void visitJSEventListeners(JSC::SlotVisitor&);

@@ -28,7 +28,7 @@
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
-#include <runtime/Uint8Array.h>
+#include <JavaScriptCore/Uint8Array.h>
 
 namespace WebCore {
 
@@ -47,9 +47,7 @@ WebKitMediaKeyMessageEvent::WebKitMediaKeyMessageEvent(const AtomicString& type,
 {
 }
 
-WebKitMediaKeyMessageEvent::~WebKitMediaKeyMessageEvent()
-{
-}
+WebKitMediaKeyMessageEvent::~WebKitMediaKeyMessageEvent() = default;
 
 EventInterface WebKitMediaKeyMessageEvent::eventInterface() const
 {

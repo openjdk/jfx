@@ -52,7 +52,9 @@ void TestRunner::clearAllDatabases()
 
 void TestRunner::clearBackForwardList()
 {
-    // FIXME: implement
+    JNIEnv* env = DumpRenderTree_GetJavaEnv();
+    env->CallStaticVoidMethod(getDumpRenderTreeClass(), getClearBackForwardListMID());
+    CheckAndClearException(env);
 }
 
 void TestRunner::clearPersistentUserStyleSheet()
@@ -193,10 +195,7 @@ void TestRunner::setMainFrameIsFirstResponder(bool enabled)
     // FIXME: implement
 }
 
-void TestRunner::setMockGeolocationPosition(double latitude, double longitude, double accuracy,
-    bool canProvideAltitude, double altitude, bool canProvideAltitudeAccuracy,
-    double altitudeAccuracy, bool canProvideHeading, double heading,
-    bool canProvideSpeed, double speed)
+void TestRunner::setMockGeolocationPosition(double latitude, double longitude, double accuracy, bool providesAltitude, double altitude, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed, bool providesFloorLevel, double floorLevel)
 {
     // FIXME: implement
 }
@@ -388,8 +387,12 @@ void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool,JSStringRef) {
     //FIXME: implement
 }
 
-void TestRunner::setJavaScriptCanAccessClipboard(bool) {
-    //FIXME: implement
+void TestRunner::setJavaScriptCanAccessClipboard(bool enable) {
+    JSStringRef webkitJavaScriptCanAccessClipboard = JSStringCreateWithUTF8CString("WebKitJavaScriptCanAccessClipboardPreferenceKey");
+    JSStringRef value = JSStringCreateWithUTF8CString(enable ? "1" : "0");
+    overridePreference(webkitJavaScriptCanAccessClipboard, value);
+    JSStringRelease(webkitJavaScriptCanAccessClipboard);
+    JSStringRelease(value);
 }
 
 void TestRunner::setPluginsEnabled(bool) {
@@ -569,4 +572,9 @@ unsigned TestRunner::imageCountInGeneralPasteboard() const
 {
     fprintf(testResult, "ERROR: TestRunner::imageCountInGeneralPasteboard() not implemented\n");
     return 0;
+}
+
+void TestRunner::forceImmediateCompletion()
+{
+    fprintf(testResult, "ERROR: TestRunner::forceImmediateCompletion() not implemented\n");
 }

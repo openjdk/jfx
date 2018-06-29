@@ -23,7 +23,7 @@
 
 #include "JSDOMGlobalObject.h"
 #include "NodeConstants.h"
-#include <runtime/JSDestructibleObject.h>
+#include <JavaScriptCore/JSDestructibleObject.h>
 
 namespace WebCore {
 
@@ -73,8 +73,8 @@ protected:
     }
 };
 
-WEBCORE_EXPORT JSC::Subspace* outputConstraintSubspaceFor(JSC::VM&);
-WEBCORE_EXPORT JSC::Subspace* globalObjectOutputConstraintSubspaceFor(JSC::VM&);
+WEBCORE_EXPORT JSC::CompleteSubspace* outputConstraintSubspaceFor(JSC::VM&);
+WEBCORE_EXPORT JSC::CompleteSubspace* globalObjectOutputConstraintSubspaceFor(JSC::VM&);
 
 template<typename ImplementationClass> class JSDOMWrapper : public JSDOMObject {
 public:

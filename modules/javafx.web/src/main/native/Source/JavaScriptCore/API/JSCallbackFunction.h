@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #define JSCallbackFunction_h
 
 #include "InternalFunction.h"
+#include "JSCPoison.h"
 #include "JSObjectRef.h"
 
 namespace JSC {
@@ -44,18 +45,16 @@ public:
     // refactor the code so this override isn't necessary
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
     {
-        return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, proto, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
 private:
     JSCallbackFunction(VM&, Structure*, JSObjectCallAsFunctionCallback);
     void finishCreation(VM&, const String& name);
 
-    static CallType getCallData(JSCell*, CallData&);
+    JSObjectCallAsFunctionCallback functionCallback() { return m_callback.unpoisoned(); }
 
-    JSObjectCallAsFunctionCallback functionCallback() { return m_callback; }
-
-    JSObjectCallAsFunctionCallback m_callback;
+    Poisoned<NativeCodePoison, JSObjectCallAsFunctionCallback> m_callback;
 };
 
 } // namespace JSC

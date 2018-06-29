@@ -41,10 +41,11 @@
 #include "LoadableClassicScript.h"
 #include "LoadableModuleScript.h"
 #include "MIMETypeRegistry.h"
-#include "NoEventDispatchAssertion.h"
 #include "PendingScript.h"
+#include "RuntimeApplicationChecks.h"
 #include "SVGScriptElement.h"
 #include "ScriptController.h"
+#include "ScriptDisallowedScope.h"
 #include "ScriptRunner.h"
 #include "ScriptSourceCode.h"
 #include "ScriptableDocumentParser.h"
@@ -78,12 +79,7 @@ ScriptElement::ScriptElement(Element& element, bool parserInserted, bool already
         m_startLineNumber = m_element.document().scriptableDocumentParser()->textPosition().m_line;
 }
 
-bool ScriptElement::shouldCallFinishedInsertingSubtree(ContainerNode& insertionPoint)
-{
-    return insertionPoint.isConnected() && !m_parserInserted;
-}
-
-void ScriptElement::finishedInsertingSubtree()
+void ScriptElement::didFinishInsertingNode()
 {
     ASSERT(!m_parserInserted);
     prepareScript(); // FIXME: Provide a real starting line number here.
@@ -336,13 +332,19 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
         }
 
         m_isExternalScript = true;
-        auto script = LoadableModuleScript::create(nonce, crossOriginMode, scriptCharset(), m_element.localName(), m_element.isInUserAgentShadowTree());
+        auto script = LoadableModuleScript::create(
+            nonce,
+            m_element.document().settings().subresourceIntegrityEnabled() ? m_element.attributeWithoutSynchronization(HTMLNames::integrityAttr).string() : emptyString(),
+            crossOriginMode,
+            scriptCharset(),
+            m_element.localName(),
+            m_element.isInUserAgentShadowTree());
         script->load(m_element.document(), moduleScriptRootURL);
         m_loadableScript = WTFMove(script);
         return true;
     }
 
-    auto script = LoadableModuleScript::create(nonce, crossOriginMode, scriptCharset(), m_element.localName(), m_element.isInUserAgentShadowTree());
+    auto script = LoadableModuleScript::create(nonce, emptyString(), crossOriginMode, scriptCharset(), m_element.localName(), m_element.isInUserAgentShadowTree());
 
     TextPosition position = m_element.document().isInDocumentWrite() ? TextPosition() : scriptStartPosition;
     ScriptSourceCode sourceCode(scriptContent(), m_element.document().url(), position, JSC::SourceProviderSourceType::Module, script.copyRef());
@@ -360,7 +362,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
 
 void ScriptElement::executeClassicScript(const ScriptSourceCode& sourceCode)
 {
-    ASSERT_WITH_SECURITY_IMPLICATION(NoEventDispatchAssertion::isEventAllowedInMainThread());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isScriptAllowed() || !isInWebProcess());
     ASSERT(m_alreadyStarted);
 
     if (sourceCode.isEmpty())

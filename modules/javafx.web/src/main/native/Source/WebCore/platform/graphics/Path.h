@@ -33,7 +33,6 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/Function.h>
 #include <wtf/Forward.h>
-#include <wtf/Vector.h>
 
 #if USE(CG)
 
@@ -68,9 +67,6 @@ typedef WebCore::PlatformPath PlatformPath;
 #elif PLATFORM(JAVA)
 #include <wtf/RefPtr.h>
 #include "RQRef.h"
-namespace WebCore {
-    class RQRef;
-}
 typedef RefPtr<WebCore::RQRef> PlatformPath;
 
 #else
@@ -128,7 +124,9 @@ namespace WebCore {
         WEBCORE_EXPORT ~Path();
 
         WEBCORE_EXPORT Path(const Path&);
+        WEBCORE_EXPORT Path(Path&&);
         WEBCORE_EXPORT Path& operator=(const Path&);
+        WEBCORE_EXPORT Path& operator=(Path&&);
 
         static Path polygonPathFromPoints(const Vector<FloatPoint>&);
 

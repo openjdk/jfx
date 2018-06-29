@@ -23,10 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef _WIN32
-#include "config.h"
-#endif //_WIN32
-
 #include "StorageNamespaceImpl.h"
 
 #include "StorageAreaImpl.h"

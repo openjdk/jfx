@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "DecodingOptions.h"
 #include "FormNamedItem.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
@@ -79,6 +80,10 @@ public:
 
     WEBCORE_EXPORT bool complete() const;
 
+    DecodingMode decodingMode() const;
+
+    WEBCORE_EXPORT void decode(Ref<DeferredPromise>&&);
+
 #if PLATFORM(IOS)
     bool willRespondToMouseClickEvents() override;
 #endif
@@ -118,8 +123,8 @@ private:
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
-    InsertionNotificationRequest insertedInto(ContainerNode&) override;
-    void removedFrom(ContainerNode&) override;
+    InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
+    void removedFromAncestor(RemovalType, ContainerNode&) override;
 
     bool isFormAssociatedElement() const final { return false; }
     FormNamedItem* asFormNamedItem() final { return this; }

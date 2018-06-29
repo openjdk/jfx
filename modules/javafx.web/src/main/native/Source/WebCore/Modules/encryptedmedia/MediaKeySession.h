@@ -54,11 +54,13 @@ class SharedBuffer;
 
 class MediaKeySession final : public RefCounted<MediaKeySession>, public EventTargetWithInlineData, public ActiveDOMObject {
 public:
-    static Ref<MediaKeySession> create(ScriptExecutionContext&, MediaKeySessionType, bool useDistinctiveIdentifier, Ref<CDM>&&, Ref<CDMInstance>&&);
+    static Ref<MediaKeySession> create(ScriptExecutionContext&, WeakPtr<MediaKeys>&&, MediaKeySessionType, bool useDistinctiveIdentifier, Ref<CDM>&&, Ref<CDMInstance>&&);
     virtual ~MediaKeySession();
 
     using RefCounted<MediaKeySession>::ref;
     using RefCounted<MediaKeySession>::deref;
+
+    bool isClosed() const { return m_closed; }
 
     const String& sessionId() const;
     double expiration() const;
@@ -76,11 +78,12 @@ public:
     const Vector<std::pair<Ref<SharedBuffer>, MediaKeyStatus>>& statuses() const { return m_statuses; }
 
 private:
-    MediaKeySession(ScriptExecutionContext&, MediaKeySessionType, bool useDistinctiveIdentifier, Ref<CDM>&&, Ref<CDMInstance>&&);
+    MediaKeySession(ScriptExecutionContext&, WeakPtr<MediaKeys>&&, MediaKeySessionType, bool useDistinctiveIdentifier, Ref<CDM>&&, Ref<CDMInstance>&&);
     void enqueueMessage(MediaKeyMessageType, const SharedBuffer&);
     void updateKeyStatuses(CDMInstance::KeyStatusVector&&);
     void updateExpiration(double);
     void sessionClosed();
+    String mediaKeysStorageDirectory() const;
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const override { return MediaKeySessionEventTargetInterfaceType; }
@@ -94,6 +97,7 @@ private:
     bool canSuspendForDocumentSuspension() const override;
     void stop() override;
 
+    WeakPtr<MediaKeys> m_keys;
     String m_sessionId;
     double m_expiration;
     ClosedPromise m_closedPromise;

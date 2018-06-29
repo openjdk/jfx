@@ -5,18 +5,17 @@
                _WTFCrashWithSecurityImplication
                _WTFReportArgumentAssertionFailure
                _WTFCrash
-               __ZN3WTF8LockBase10unlockSlowEv
-               __ZN3WTF8LockBase8lockSlowEv
-               __ZN3WTF8fastFreeEPv
                __ZN3WTF10fastMallocEm
-               __ZN3WTF11currentTimeEv
+               __ZN3WTF10stringFreeEPv
                __ZN3WTF6StringC1EPKc
                __ZN3WTF6StringC1EPKtj
                __ZN3WTF7RunLoop4mainEv
                __ZN3WTF8fastFreeEPv
+               __ZN3WTF4Lock10unlockSlowEv
+               __ZN3WTF4Lock8lockSlowEv
+               __ZN3WTF8WallTime3nowEv
                __ZN3WTF10fastMallocEm
                __ZN3WTF10StringImpl7destroyEPS0_
-               __ZN3WTF11currentTimeEv
                __ZN3WTF16fastZeroedMallocEm
                __ZN3WTF26getAndResetAccumulatedLogsEv
                __ZNK3WTF6String4utf8Ev
@@ -118,6 +117,7 @@
                __ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue
                __ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue
                __ZN3JSC20failNextNewCodeBlockEPK15OpaqueJSContext
+               __ZN3JSC20waitForVMDestructionEv
                __ZN3JSC17JSArrayBufferView6s_infoE
                __ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext
                __ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE
@@ -1635,6 +1635,7 @@
                _Java_com_sun_webkit_dom_XPathResultImpl_getStringValueImpl
                _Java_com_sun_webkit_dom_XPathResultImpl_iterateNextImpl
                _Java_com_sun_webkit_dom_XPathResultImpl_snapshotItemImpl
+               _Java_com_sun_webkit_BackForwardList_bflClearBackForwardListForDRT
                _Java_com_sun_webkit_BackForwardList_bflGet
                _Java_com_sun_webkit_BackForwardList_bflGetCurrentIndex
                _Java_com_sun_webkit_BackForwardList_bflGetMaximumSize

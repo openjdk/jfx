@@ -70,7 +70,7 @@ public:
     }
 
     PlatformWheelEvent(IntPoint position, IntPoint globalPosition, float deltaX, float deltaY, float wheelTicksX, float wheelTicksY, PlatformWheelEventGranularity granularity, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey)
-        : PlatformEvent(PlatformEvent::Wheel, shiftKey, ctrlKey, altKey, metaKey, 0)
+        : PlatformEvent(PlatformEvent::Wheel, shiftKey, ctrlKey, altKey, metaKey, { })
         , m_position(position)
         , m_globalPosition(globalPosition)
         , m_deltaX(deltaX)
@@ -81,13 +81,11 @@ public:
     {
     }
 
-    PlatformWheelEvent copyTurningVerticalTicksIntoHorizontalTicks() const
+    PlatformWheelEvent copySwappingDirection() const
     {
         PlatformWheelEvent copy = *this;
-        copy.m_deltaX = copy.m_deltaY;
-        copy.m_deltaY = 0;
-        copy.m_wheelTicksX = copy.m_wheelTicksY;
-        copy.m_wheelTicksY = 0;
+        std::swap(copy.m_deltaX, copy.m_deltaY);
+        std::swap(copy.m_wheelTicksX, copy.m_wheelTicksY);
         return copy;
     }
 

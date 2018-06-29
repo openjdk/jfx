@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/HTMLNames.h>
@@ -79,13 +81,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableColElementImpl_setChOffI
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::charoffAttr, String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableColElementImpl_getSpanImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableColElementImpl_getSpanImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->span();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableColElementImpl_setSpanImpl(JNIEnv* env, jclass, jlong peer, jint value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableColElementImpl_setSpanImpl(JNIEnv*, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setSpan(value);

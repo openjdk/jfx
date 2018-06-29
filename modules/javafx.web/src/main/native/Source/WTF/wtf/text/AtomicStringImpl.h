@@ -53,6 +53,7 @@ public:
             return static_cast<AtomicStringImpl*>(string);
         return add(*string);
     }
+    WTF_EXPORT_STRING_API static RefPtr<AtomicStringImpl> add(const StaticStringImpl*);
     WTF_EXPORT_STRING_API static Ref<AtomicStringImpl> addLiteral(const char* characters, unsigned length);
 
     // Returns null if the input data contains an invalid UTF-8 sequence.
@@ -103,7 +104,7 @@ private:
 #if !ASSERT_DISABLED
 // AtomicStringImpls created from StaticStringImpl will ASSERT
 // in the generic ValueCheck<T>::checkConsistency
-// as they are not allocated by fastMalloc.
+// as they are not allocated by StringMalloc.
 // We don't currently have any way to detect that case
 // so we ignore the consistency check for all AtomicStringImpls*.
 template<> struct

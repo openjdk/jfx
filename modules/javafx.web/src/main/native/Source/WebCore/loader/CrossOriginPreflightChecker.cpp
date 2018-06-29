@@ -61,7 +61,7 @@ CrossOriginPreflightChecker::~CrossOriginPreflightChecker()
 void CrossOriginPreflightChecker::validatePreflightResponse(DocumentThreadableLoader& loader, ResourceRequest&& request, unsigned long identifier, const ResourceResponse& response)
 {
     String errorDescription;
-    if (!WebCore::validatePreflightResponse(request, response, loader.options().allowCredentials, loader.securityOrigin(), errorDescription)) {
+    if (!WebCore::validatePreflightResponse(request, response, loader.options().storedCredentialsPolicy, loader.securityOrigin(), errorDescription)) {
         loader.preflightFailure(identifier, ResourceError(errorDomainWebKitInternal, 0, request.url(), errorDescription, ResourceError::Type::AccessControl));
         return;
     }
@@ -95,19 +95,27 @@ void CrossOriginPreflightChecker::notifyFinished(CachedResource& resource)
     validatePreflightResponse(m_loader, WTFMove(m_request), m_resource->identifier(), m_resource->response());
 }
 
+void CrossOriginPreflightChecker::redirectReceived(CachedResource& resource, ResourceRequest&&, const ResourceResponse& response, CompletionHandler<void(ResourceRequest&&)>&& completionHandler)
+{
+    ASSERT_UNUSED(resource, &resource == m_resource);
+    validatePreflightResponse(m_loader, WTFMove(m_request), m_resource->identifier(), response);
+    completionHandler(ResourceRequest { });
+}
+
 void CrossOriginPreflightChecker::startPreflight()
 {
     ResourceLoaderOptions options;
     options.referrerPolicy = m_loader.options().referrerPolicy;
-    options.redirect = FetchOptions::Redirect::Manual;
     options.contentSecurityPolicyImposition = ContentSecurityPolicyImposition::SkipPolicyCheck;
+    options.serviceWorkersMode = ServiceWorkersMode::None;
+    options.initiatorContext = m_loader.options().initiatorContext;
 
     CachedResourceRequest preflightRequest(createAccessControlPreflightRequest(m_request, m_loader.securityOrigin(), m_loader.referrer()), options);
     if (RuntimeEnabledFeatures::sharedFeatures().resourceTimingEnabled())
         preflightRequest.setInitiator(m_loader.options().initiator);
 
     ASSERT(!m_resource);
-    m_resource = m_loader.document().cachedResourceLoader().requestRawResource(WTFMove(preflightRequest));
+    m_resource = m_loader.document().cachedResourceLoader().requestRawResource(WTFMove(preflightRequest)).value_or(nullptr);
     if (m_resource)
         m_resource->addClient(*this);
 }
@@ -122,7 +130,7 @@ void CrossOriginPreflightChecker::doPreflight(DocumentThreadableLoader& loader, 
     ResourceResponse response;
     RefPtr<SharedBuffer> data;
 
-    unsigned identifier = loader.document().frame()->loader().loadResourceSynchronously(preflightRequest, DoNotAllowStoredCredentials, ClientCredentialPolicy::CannotAskClientForCredentials, error, response, data);
+    unsigned identifier = loader.document().frame()->loader().loadResourceSynchronously(preflightRequest, StoredCredentialsPolicy::DoNotUse, ClientCredentialPolicy::CannotAskClientForCredentials, error, response, data);
 
     if (!error.isNull()) {
         // If the preflight was cancelled by underlying code, it probably means the request was blocked due to some access control policy.

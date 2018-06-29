@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,18 +44,18 @@ StackVisitor::StackVisitor(CallFrame* startFrame, VM* vm)
     CallFrame* topFrame;
     if (startFrame) {
         ASSERT(vm);
-        m_frame.m_VMEntryFrame = vm->topVMEntryFrame;
+        m_frame.m_entryFrame = vm->topEntryFrame;
         topFrame = vm->topCallFrame;
 
-        if (topFrame && static_cast<void*>(m_frame.m_VMEntryFrame) == static_cast<void*>(topFrame)) {
-            topFrame = vmEntryRecord(m_frame.m_VMEntryFrame)->m_prevTopCallFrame;
-            m_frame.m_VMEntryFrame = vmEntryRecord(m_frame.m_VMEntryFrame)->m_prevTopVMEntryFrame;
+        if (topFrame && static_cast<void*>(m_frame.m_entryFrame) == static_cast<void*>(topFrame)) {
+            topFrame = vmEntryRecord(m_frame.m_entryFrame)->m_prevTopCallFrame;
+            m_frame.m_entryFrame = vmEntryRecord(m_frame.m_entryFrame)->m_prevTopEntryFrame;
         }
     } else {
-        m_frame.m_VMEntryFrame = 0;
+        m_frame.m_entryFrame = 0;
         topFrame = 0;
     }
-    m_frame.m_callerIsVMEntryFrame = false;
+    m_frame.m_callerIsEntryFrame = false;
     readFrame(topFrame);
 
     // Find the frame the caller wants to start unwinding from.
@@ -75,14 +75,14 @@ void StackVisitor::gotoNextFrame()
                 readInlinedFrame(m_frame.callFrame(), &inlineCallFrame->directCaller);
                 inlineCallFrame = m_frame.inlineCallFrame();
             }
-            m_frame.m_VMEntryFrame = m_frame.m_CallerVMEntryFrame;
+            m_frame.m_entryFrame = m_frame.m_callerEntryFrame;
             readFrame(m_frame.callerFrame());
         } else
             readInlinedFrame(m_frame.callFrame(), callerCodeOrigin);
         return;
     }
 #endif // ENABLE(DFG_JIT)
-    m_frame.m_VMEntryFrame = m_frame.m_CallerVMEntryFrame;
+    m_frame.m_entryFrame = m_frame.m_callerEntryFrame;
     readFrame(m_frame.callerFrame());
 }
 
@@ -152,9 +152,9 @@ void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOri
 {
     m_frame.m_callFrame = callFrame;
     m_frame.m_argumentCountIncludingThis = callFrame->argumentCountIncludingThis();
-    m_frame.m_CallerVMEntryFrame = m_frame.m_VMEntryFrame;
-    m_frame.m_callerFrame = callFrame->callerFrame(m_frame.m_CallerVMEntryFrame);
-    m_frame.m_callerIsVMEntryFrame = m_frame.m_CallerVMEntryFrame != m_frame.m_VMEntryFrame;
+    m_frame.m_callerEntryFrame = m_frame.m_entryFrame;
+    m_frame.m_callerFrame = callFrame->callerFrame(m_frame.m_callerEntryFrame);
+    m_frame.m_callerIsEntryFrame = m_frame.m_callerEntryFrame != m_frame.m_entryFrame;
     m_frame.m_isWasmFrame = false;
 
     CalleeBits callee = callFrame->callee();
@@ -205,7 +205,7 @@ void StackVisitor::readInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOrigin
         if (inlineCallFrame->argumentCountRegister.isValid())
             m_frame.m_argumentCountIncludingThis = callFrame->r(inlineCallFrame->argumentCountRegister.offset()).unboxedInt32();
         else
-            m_frame.m_argumentCountIncludingThis = inlineCallFrame->arguments.size();
+            m_frame.m_argumentCountIncludingThis = inlineCallFrame->argumentCountIncludingThis;
         m_frame.m_codeBlock = inlineCallFrame->baselineCodeBlock.get();
         m_frame.m_bytecodeOffset = codeOrigin->bytecodeIndex;
 
@@ -279,10 +279,7 @@ String StackVisitor::Frame::functionName() const
 
     switch (codeType()) {
     case CodeType::Wasm:
-        if (m_wasmFunctionIndexOrName.isEmpty())
-            traceLine = makeString("wasm function");
-        else
-            traceLine = makeString("wasm function: ", makeString(m_wasmFunctionIndexOrName));
+        traceLine = makeString(m_wasmFunctionIndexOrName);
         break;
     case CodeType::Eval:
         traceLine = ASCIILiteral("eval code");
@@ -462,8 +459,8 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, std::function<
         out.print(indent, "callee: ", RawPointer(callee().rawPtr()), "\n");
         out.print(indent, "returnPC: ", RawPointer(returnPC), "\n");
         out.print(indent, "callerFrame: ", RawPointer(callerFrame), "\n");
-        unsigned locationRawBits = callFrame->callSiteAsRawBits();
-        out.print(indent, "rawLocationBits: ", static_cast<uintptr_t>(locationRawBits),
+        uintptr_t locationRawBits = callFrame->callSiteAsRawBits();
+        out.print(indent, "rawLocationBits: ", locationRawBits,
             " ", RawPointer(reinterpret_cast<void*>(locationRawBits)), "\n");
         out.print(indent, "codeBlock: ", RawPointer(codeBlock));
         if (codeBlock)
@@ -500,7 +497,7 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, std::function<
 
             indent--;
         }
-        out.print(indent, "vmEntryFrame: ", RawPointer(vmEntryFrame()), "\n");
+        out.print(indent, "EntryFrame: ", RawPointer(m_entryFrame), "\n");
         indent--;
     }
     out.print(indent, "}\n");

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,7 +66,7 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
         void* temp;
         size_t size = sizeOf(length, elementSize);
         if (size) {
-            temp = vm.primitiveGigacageAuxiliarySpace.tryAllocate(nullptr, size);
+            temp = vm.primitiveGigacageAuxiliarySpace.allocateNonVirtual(vm, size, nullptr, AllocationFailureMode::ReturnNull);
             if (!temp)
                 return;
         } else
@@ -77,7 +77,7 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
         m_mode = FastTypedArray;
 
         if (mode == ZeroFill) {
-            uint64_t* asWords = static_cast<uint64_t*>(m_vector);
+            uint64_t* asWords = static_cast<uint64_t*>(m_vector.getMayBeNull());
             for (unsigned i = size / sizeof(uint64_t); i--;)
                 asWords[i] = 0;
         }
@@ -94,7 +94,7 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
     if (!m_vector)
         return;
     if (mode == ZeroFill)
-        memset(m_vector, 0, size);
+        memset(m_vector.get(), 0, size);
 
     vm.heap.reportExtraMemoryAllocated(static_cast<size_t>(length) * elementSize);
 
@@ -127,16 +127,18 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
 }
 
 JSArrayBufferView::JSArrayBufferView(VM& vm, ConstructionContext& context)
-    : Base(vm, context.structure(), context.butterfly())
+    : Base(vm, context.structure(), nullptr)
     , m_length(context.length())
     , m_mode(context.mode())
 {
-    m_vector.setWithoutBarrier(context.vector());
+    setButterflyWithIndexingMask(vm, context.butterfly(), WTF::computeIndexingMask(length()));
+    m_poisonedVector.setWithoutBarrier(context.vector());
 }
 
 void JSArrayBufferView::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
+    ASSERT(jsDynamicCast<JSArrayBufferView*>(vm, this));
     switch (m_mode) {
     case FastTypedArray:
         return;
@@ -192,7 +194,7 @@ void JSArrayBufferView::finalize(JSCell* cell)
     JSArrayBufferView* thisObject = static_cast<JSArrayBufferView*>(cell);
     ASSERT(thisObject->m_mode == OversizeTypedArray || thisObject->m_mode == WastefulTypedArray);
     if (thisObject->m_mode == OversizeTypedArray)
-        Gigacage::free(Gigacage::Primitive, thisObject->m_vector.get());
+        Gigacage::free(Gigacage::Primitive, thisObject->m_poisonedVector.get());
 }
 
 JSArrayBuffer* JSArrayBufferView::unsharedJSBuffer(ExecState* exec)
@@ -210,7 +212,7 @@ void JSArrayBufferView::neuter()
     RELEASE_ASSERT(hasArrayBuffer());
     RELEASE_ASSERT(!isShared());
     m_length = 0;
-    m_vector.clear();
+    m_poisonedVector.clear();
 }
 
 } // namespace JSC

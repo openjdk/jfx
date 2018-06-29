@@ -52,9 +52,7 @@ DocumentMarkerController::DocumentMarkerController(Document& document)
 {
 }
 
-DocumentMarkerController::~DocumentMarkerController()
-{
-}
+DocumentMarkerController::~DocumentMarkerController() = default;
 
 void DocumentMarkerController::detach()
 {
@@ -255,7 +253,7 @@ Vector<FloatRect> DocumentMarkerController::renderedRectsForMarkers(DocumentMark
         return result;
     ASSERT(!(m_markers.isEmpty()));
 
-    Frame* frame = m_document.frame();
+    RefPtr<Frame> frame = m_document.frame();
     if (!frame)
         return result;
     FrameView* frameView = frame->view();
@@ -572,7 +570,7 @@ void DocumentMarkerController::removeMarkers(Node* node, OptionSet<DocumentMarke
         return;
     ASSERT(!m_markers.isEmpty());
 
-    MarkerMap::iterator iterator = m_markers.find(node);
+    auto iterator = m_markers.find(node);
     if (iterator != m_markers.end())
         removeMarkersFromList(iterator, markerTypes);
 }
@@ -583,9 +581,7 @@ void DocumentMarkerController::removeMarkers(OptionSet<DocumentMarker::MarkerTyp
         return;
     ASSERT(!m_markers.isEmpty());
 
-    Vector<RefPtr<Node>> nodesWithMarkers;
-    copyKeysToVector(m_markers, nodesWithMarkers);
-    for (auto& node : nodesWithMarkers) {
+    for (auto& node : copyToVector(m_markers.keys())) {
         auto iterator = m_markers.find(node);
         if (iterator != m_markers.end())
             removeMarkersFromList(iterator, markerTypes);

@@ -34,8 +34,8 @@
 #include "JSDOMConstructorBase.h"
 #include "JSNodeCustom.h"
 #include "ScriptExecutionContext.h"
-#include <runtime/InternalFunction.h>
-#include <runtime/JSWithScope.h>
+#include <JavaScriptCore/InternalFunction.h>
+#include <JavaScriptCore/JSWithScope.h>
 
 namespace WebCore {
 
@@ -89,7 +89,7 @@ EncodedJSValue JSC_HOST_CALL constructJSHTMLElement(ExecState& exec)
 
     Element* elementToUpgrade = elementInterface->lastElementInConstructionStack();
     if (!elementToUpgrade) {
-        throwInvalidStateError(exec, scope, ASCIILiteral("Cannot instantiate a custom element inside its own constrcutor during upgrades"));
+        throwInvalidStateError(exec, scope, ASCIILiteral("Cannot instantiate a custom element inside its own constructor during upgrades"));
         return JSValue::encode(jsUndefined());
     }
 
@@ -120,14 +120,14 @@ JSScope* JSHTMLElement::pushEventHandlerScope(ExecState* exec, JSScope* scope) c
     VM& vm = exec->vm();
     JSGlobalObject* lexicalGlobalObject = exec->lexicalGlobalObject();
 
-    scope = JSWithScope::create(vm, lexicalGlobalObject, asObject(toJS(exec, globalObject(), element.document())), scope);
+    scope = JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(exec, globalObject(), element.document())));
 
     // The form is next, searched before the document, but after the element itself.
     if (HTMLFormElement* form = element.form())
-        scope = JSWithScope::create(vm, lexicalGlobalObject, asObject(toJS(exec, globalObject(), *form)), scope);
+        scope = JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(exec, globalObject(), *form)));
 
     // The element is on top, searched first.
-    return JSWithScope::create(vm, lexicalGlobalObject, asObject(toJS(exec, globalObject(), element)), scope);
+    return JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(exec, globalObject(), element)));
 }
 
 } // namespace WebCore

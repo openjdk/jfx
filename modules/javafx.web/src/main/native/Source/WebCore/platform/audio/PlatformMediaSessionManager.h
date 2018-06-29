@@ -29,8 +29,8 @@
 #include "AudioHardwareListener.h"
 #include "PlatformMediaSession.h"
 #include "RemoteCommandListener.h"
-#include "SystemSleepListener.h"
 #include <map>
+#include <pal/system/SystemSleepListener.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -40,7 +40,7 @@ class HTMLMediaElement;
 class PlatformMediaSession;
 class RemoteCommandListener;
 
-class PlatformMediaSessionManager : private RemoteCommandListenerClient, private SystemSleepListener::Client, private AudioHardwareListener::Client {
+class PlatformMediaSessionManager : private RemoteCommandListenerClient, private PAL::SystemSleepListener::Client, private AudioHardwareListener::Client {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT static PlatformMediaSessionManager* sharedManagerIfExists();
@@ -48,7 +48,7 @@ public:
 
     static void updateNowPlayingInfoIfNecessary();
 
-    virtual ~PlatformMediaSessionManager() { }
+    virtual ~PlatformMediaSessionManager() = default;
 
     virtual void scheduleUpdateNowPlayingInfo() { }
     bool has(PlatformMediaSession::MediaType) const;
@@ -60,6 +60,8 @@ public:
     WEBCORE_EXPORT virtual String lastUpdatedNowPlayingTitle() const { return emptyString(); }
     WEBCORE_EXPORT virtual double lastUpdatedNowPlayingDuration() const { return NAN; }
     WEBCORE_EXPORT virtual double lastUpdatedNowPlayingElapsedTime() const { return NAN; }
+    WEBCORE_EXPORT virtual uint64_t lastUpdatedNowPlayingInfoUniqueIdentifier() const { return 0; }
+    WEBCORE_EXPORT virtual bool registeredAsNowPlayingApplication() const { return false; }
 
     bool willIgnoreSystemInterruptions() const { return m_willIgnoreSystemInterruptions; }
     void setWillIgnoreSystemInterruptions(bool ignore) { m_willIgnoreSystemInterruptions = ignore; }
@@ -135,14 +137,14 @@ private:
     void audioHardwareDidBecomeInactive() override { }
     void audioOutputDeviceChanged() override;
 
-    // SystemSleepListener
+    // PAL::SystemSleepListener
     void systemWillSleep() override;
     void systemDidWake() override;
 
     SessionRestrictions m_restrictions[PlatformMediaSession::MediaStreamCapturingAudio + 1];
     mutable Vector<PlatformMediaSession*> m_sessions;
     std::unique_ptr<RemoteCommandListener> m_remoteCommandListener;
-    std::unique_ptr<SystemSleepListener> m_systemSleepListener;
+    std::unique_ptr<PAL::SystemSleepListener> m_systemSleepListener;
     RefPtr<AudioHardwareListener> m_audioHardwareListener;
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)

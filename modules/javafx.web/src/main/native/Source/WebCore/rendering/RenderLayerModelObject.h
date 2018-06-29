@@ -37,10 +37,10 @@ struct RepaintLayoutRects {
 };
 
 class RenderLayerModelObject : public RenderElement {
+    WTF_MAKE_ISO_ALLOCATED(RenderLayerModelObject);
 public:
     virtual ~RenderLayerModelObject();
 
-    // Called by RenderObject::willBeDestroyed() and is the only way layers should ever be destroyed
     void destroyLayer();
 
     bool hasSelfPaintingLayer() const;

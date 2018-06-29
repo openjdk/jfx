@@ -31,7 +31,10 @@
 #pragma once
 
 #include "FetchOptions.h"
-#include "ResourceHandleTypes.h"
+#include "HTTPHeaderNames.h"
+#include "ServiceWorkerTypes.h"
+#include "StoredCredentialsPolicy.h"
+#include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -92,16 +95,27 @@ enum class InitiatorContext {
     Worker,
 };
 
+enum class ServiceWorkersMode {
+    All,
+    None,
+    Only // An error will happen if service worker is not handling the fetch. Used to bypass preflight safely.
+};
+
+enum class ContentEncodingSniffingPolicy {
+    Sniff,
+    DoNotSniff,
+};
+
 struct ResourceLoaderOptions : public FetchOptions {
     ResourceLoaderOptions() { }
 
     ResourceLoaderOptions(const FetchOptions& options) : FetchOptions(options) { }
 
-    ResourceLoaderOptions(SendCallbackPolicy sendLoadCallbacks, ContentSniffingPolicy sniffContent, DataBufferingPolicy dataBufferingPolicy, StoredCredentials allowCredentials, ClientCredentialPolicy credentialPolicy, FetchOptions::Credentials credentials, SecurityCheckPolicy securityCheck, FetchOptions::Mode mode, CertificateInfoPolicy certificateInfoPolicy, ContentSecurityPolicyImposition contentSecurityPolicyImposition, DefersLoadingPolicy defersLoadingPolicy, CachingPolicy cachingPolicy)
+    ResourceLoaderOptions(SendCallbackPolicy sendLoadCallbacks, ContentSniffingPolicy sniffContent, DataBufferingPolicy dataBufferingPolicy, StoredCredentialsPolicy storedCredentialsPolicy, ClientCredentialPolicy credentialPolicy, FetchOptions::Credentials credentials, SecurityCheckPolicy securityCheck, FetchOptions::Mode mode, CertificateInfoPolicy certificateInfoPolicy, ContentSecurityPolicyImposition contentSecurityPolicyImposition, DefersLoadingPolicy defersLoadingPolicy, CachingPolicy cachingPolicy)
         : sendLoadCallbacks(sendLoadCallbacks)
         , sniffContent(sniffContent)
         , dataBufferingPolicy(dataBufferingPolicy)
-        , allowCredentials(allowCredentials)
+        , storedCredentialsPolicy(storedCredentialsPolicy)
         , securityCheck(securityCheck)
         , certificateInfoPolicy(certificateInfoPolicy)
         , contentSecurityPolicyImposition(contentSecurityPolicyImposition)
@@ -115,8 +129,9 @@ struct ResourceLoaderOptions : public FetchOptions {
 
     SendCallbackPolicy sendLoadCallbacks { DoNotSendCallbacks };
     ContentSniffingPolicy sniffContent { DoNotSniffContent };
+    ContentEncodingSniffingPolicy sniffContentEncoding { ContentEncodingSniffingPolicy::Sniff };
     DataBufferingPolicy dataBufferingPolicy { BufferData };
-    StoredCredentials allowCredentials { DoNotAllowStoredCredentials };
+    StoredCredentialsPolicy storedCredentialsPolicy { StoredCredentialsPolicy::DoNotUse };
     SecurityCheckPolicy securityCheck { DoSecurityCheck };
     CertificateInfoPolicy certificateInfoPolicy { DoNotIncludeCertificateInfo };
     ContentSecurityPolicyImposition contentSecurityPolicyImposition { ContentSecurityPolicyImposition::DoPolicyCheck };
@@ -124,6 +139,14 @@ struct ResourceLoaderOptions : public FetchOptions {
     CachingPolicy cachingPolicy { CachingPolicy::AllowCaching };
     SameOriginDataURLFlag sameOriginDataURLFlag { SameOriginDataURLFlag::Unset };
     InitiatorContext initiatorContext { InitiatorContext::Document };
+    ServiceWorkersMode serviceWorkersMode { ServiceWorkersMode::All };
+#if ENABLE(SERVICE_WORKER)
+    std::optional<ServiceWorkerRegistrationIdentifier> serviceWorkerRegistrationIdentifier;
+    // WebKit loading code is adding some HTTP headers between the application and the time service worker intercepts the fetch.
+    // We keep a list of these headers so that we only remove the ones that are set by the loading code and not by the application.
+    // FIXME: Remove this when service worker fetch interception happens before the setting of these headers in the loading code.
+    HashSet<HTTPHeaderName, WTF::IntHash<HTTPHeaderName>, WTF::StrongEnumHashTraits<HTTPHeaderName>> httpHeadersToKeep;
+#endif
 
     ClientCredentialPolicy clientCredentialPolicy { ClientCredentialPolicy::CannotAskClientForCredentials };
     unsigned maxRedirectCount { 20 };

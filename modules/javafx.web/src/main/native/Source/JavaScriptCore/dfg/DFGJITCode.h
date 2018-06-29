@@ -70,6 +70,8 @@ public:
             getOSREntryDataBytecodeIndex);
     }
 
+    void finalizeOSREntrypoints();
+
     unsigned appendOSRExit(const OSRExit& exit)
     {
         unsigned result = osrExit.size();
@@ -136,6 +138,7 @@ public:
     Vector<DFG::SpeculationRecovery> speculationRecovery;
     DFG::VariableEventStream variableEventStream;
     DFG::MinifiedGraph minifiedDFG;
+
 #if ENABLE(FTL_JIT)
     uint8_t neverExecutedEntry { 1 };
 

@@ -31,7 +31,7 @@
 #include "HeapProfiler.h"
 #include "HeapSnapshot.h"
 #include "JSCInlines.h"
-#include "JSCell.h"
+#include "JSCast.h"
 #include "PreventCollectionScope.h"
 #include "VM.h"
 #include <wtf/text/StringBuilder.h>
@@ -69,7 +69,7 @@ void HeapSnapshotBuilder::buildSnapshot()
 void HeapSnapshotBuilder::appendNode(JSCell* cell)
 {
     ASSERT(m_profiler.activeSnapshotBuilder() == this);
-    ASSERT(Heap::isMarkedConcurrently(cell));
+    ASSERT(Heap::isMarked(cell));
 
     if (hasExistingNodeForCell(cell))
         return;

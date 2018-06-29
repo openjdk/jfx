@@ -28,13 +28,12 @@
 
 #include "CustomEvent.h"
 #include "DOMWrapperWorld.h"
-#include <runtime/JSCInlines.h>
-#include <runtime/JSCJSValue.h>
-#include <runtime/Structure.h>
-
-using namespace JSC;
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/Structure.h>
 
 namespace WebCore {
+using namespace JSC;
 
 JSValue JSCustomEvent::detail(ExecState& state) const
 {

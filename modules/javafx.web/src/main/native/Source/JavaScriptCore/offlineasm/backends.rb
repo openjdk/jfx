@@ -1,4 +1,4 @@
-# Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2018 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -72,6 +72,21 @@ BACKENDS.each {
     $allBackends[backend] = true
 }
 
+def canonicalizeBackendNames(backendNames)
+    newBackendNames = []
+    backendNames.each {
+        | backendName |
+        backendName = backendName.upcase
+        if backendName =~ /ARM.*/
+            backendName.sub!(/ARMV7(S?)(.*)/) { | _ | 'ARMv7' + $1.downcase + $2 }
+        end
+        backendName = "X86" if backendName == "I386"
+        newBackendNames << backendName
+        newBackendNames << "ARMv7" if backendName == "ARMv7s"
+    }
+    newBackendNames.uniq
+end
+
 def includeOnlyBackends(list)
     newValidBackends = {}
     list.each {
@@ -109,7 +124,8 @@ class Node
     def lower(name)
         begin
             $activeBackend = name
-            send("lower" + name)
+            send("prepareToLower", name)
+            send("lower#{name}")
         rescue => e
             raise LoweringError.new(e, codeOriginString)
         end

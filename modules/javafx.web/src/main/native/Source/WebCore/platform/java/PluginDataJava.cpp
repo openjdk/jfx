@@ -218,13 +218,13 @@ private:
     bool m_refresh;
 };
 
+/*
 static PluginCache& pluginCache()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(PluginCache, cache, ());
-    return cache;
+    LazyNeverDestroyed<PluginCache> cache;
+    return cache.get();
 }
 
-/*
 void PluginData::initPlugins(const Page*)
 {
     const Vector<PluginInfo>& plugins = pluginCache().plugins();

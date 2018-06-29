@@ -55,10 +55,10 @@ class CSSCalcExpressionNode : public RefCounted<CSSCalcExpressionNode> {
 public:
     enum Type {
         CssCalcPrimitiveValue = 1,
-        CssCalcBinaryOperation
+        CssCalcOperation
     };
 
-    virtual ~CSSCalcExpressionNode() { }
+    virtual ~CSSCalcExpressionNode() = default;
     virtual bool isZero() const = 0;
     virtual std::unique_ptr<CalcExpressionNode> createCalcExpression(const CSSToLengthConversionData&) const = 0;
     virtual double doubleValue() const = 0;
@@ -85,7 +85,7 @@ private:
 
 class CSSCalcValue final : public CSSValue {
 public:
-    static RefPtr<CSSCalcValue> create(const CSSParserTokenRange&, ValueRange);
+    static RefPtr<CSSCalcValue> create(CSSValueID function, const CSSParserTokenRange&, CalculationCategory destinationCategory, ValueRange);
 
     static RefPtr<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
 

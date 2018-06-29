@@ -85,9 +85,6 @@ namespace WebCore {
             Child,
             DirectAdjacent,
             IndirectAdjacent,
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-            DescendantDoubleChild,
-#endif
             ShadowDescendant
         };
 
@@ -110,6 +107,7 @@ namespace WebCore {
             PseudoClassAnyLink,
             PseudoClassAnyLinkDeprecated,
             PseudoClassAutofill,
+            PseudoClassAutofillStrongPassword,
             PseudoClassHover,
             PseudoClassDrag,
             PseudoClassFocus,
@@ -257,11 +255,7 @@ namespace WebCore {
         int nthA() const;
         int nthB() const;
 
-#if ENABLE(CSS_SELECTORS_LEVEL4)
-        bool hasDescendantRelation() const { return relation() == DescendantSpace || relation() == DescendantDoubleChild; }
-#else
         bool hasDescendantRelation() const { return relation() == DescendantSpace; }
-#endif
 
         bool hasDescendantOrChildRelation() const { return relation() == Child || hasDescendantRelation(); }
 

@@ -33,15 +33,14 @@
 #include "MainFrame.h"
 #include "Page.h"
 #include "Settings.h"
-#include <inspector/InspectorAgentBase.h>
-
-using namespace Inspector;
+#include <JavaScriptCore/InspectorAgentBase.h>
 
 namespace WebCore {
 
+using namespace Inspector;
+
 PageDebuggable::PageDebuggable(Page& page)
     : m_page(page)
-    , m_forcedDeveloperExtrasEnabled(false)
 {
 }
 

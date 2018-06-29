@@ -32,8 +32,8 @@
 #include "JavaFieldJSC.h"
 #include "JavaMethodJSC.h"
 #include "JNIUtilityPrivate.h"
-#include <runtime/Identifier.h>
-#include <runtime/JSLock.h>
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/JSLock.h>
 
 using namespace JSC;
 using namespace JSC::Bindings;
@@ -46,7 +46,7 @@ JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessC
     if (!jlinstance) {
         LOG_ERROR("Could not get javaInstance for %p in JavaClass Constructor", (jobject)jlinstance);
         anInstance = createDummyObject();
-        if (anInstance == NULL) {
+        if (anInstance == nullptr) {
             LOG_ERROR("Could not createDummyObject for %p in JavaClass Constructor", anInstance);
             m_name = fastStrDup("<Unknown>");
             return;
@@ -76,7 +76,7 @@ JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessC
     jobject args[1];
     jmethodID methodId = getMethodID(aClass, "getFields", "()[Ljava/lang/reflect/Field;");
     if (dispatchJNICall(0, rootObject, aClass, false, JavaTypeArray, methodId,
-                        args, result, accessControlContext) == NULL) {
+                        args, result, accessControlContext) == nullptr) {
         jarray fields = (jarray) result.l;
         int numFields = env->GetArrayLength(fields);
         for (i = 0; i < numFields; i++) {
@@ -94,7 +94,7 @@ JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessC
     // Get the methods
     methodId = getMethodID(aClass, "getMethods", "()[Ljava/lang/reflect/Method;");
     if (dispatchJNICall(0, rootObject, aClass, false, JavaTypeArray, methodId,
-                        args, result, accessControlContext) == NULL) {
+                        args, result, accessControlContext) == nullptr) {
         jarray methods = (jarray) result.l;
         int numMethods = env->GetArrayLength(methods);
         for (i = 0; i < numMethods; i++) {
@@ -143,19 +143,19 @@ jobject JavaClass::createDummyObject()
     jclass objectCls = env->FindClass("java/lang/Object");
     if (!objectCls) {
         LOG_ERROR("Unable to FindClass for java/lang/Object in JavaClass::createDummyObject");
-        return NULL;
+        return nullptr;
     }
 
     jmethodID methodId = env->GetMethodID(objectCls, "<init>", "()V");
     if (!methodId) {
         LOG_ERROR("Unable to Get MethodID in JavaClass::createDummyObject");
-        return NULL;
+        return nullptr;
     }
 
     jobject instance = env->NewObject(objectCls, methodId);
     if (!instance) {
         LOG_ERROR("Unable to create NewObject in JavaClass::createDummyObject");
-        return NULL;
+        return nullptr;
     }
     return instance;
 }
@@ -167,14 +167,14 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
         return nullptr;
     unsigned nameLength = name.length();
     MethodList* methodList;
-    int i;
+    size_t i;
     if (nameLength >= 3 && name[nameLength-1] == ')'
         && (i = name.find('(', 1)) != WTF::notFound) {
         Vector<String> pnames;
-        int pstart = i+1;
+        size_t pstart = i + 1;
         if (pstart < nameLength-1) {
             do {
-                int pnext = name.find(',', pstart);
+                size_t pnext = name.find(',', pstart);
                 if (pnext == WTF::notFound)
                     pnext = nameLength-1;
                 String pname = name.substringSharingImpl(pstart, pnext-pstart);
@@ -185,15 +185,15 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
         size_t plen = pnames.size();
         MethodList* allMethods
             = m_methods.get(name.substringSharingImpl(0, i).impl());
-        methodList = NULL;
-        size_t numMethods = allMethods == NULL ? 0 : allMethods->size();
+        methodList = nullptr;
+        size_t numMethods = allMethods == nullptr ? 0 : allMethods->size();
         for (size_t methodIndex = 0; methodIndex < numMethods; methodIndex++) {
             JavaMethod* jMethod = static_cast<JavaMethod*>(allMethods->at(methodIndex));
-            if (jMethod->numParameters() == plen) {
+            if (size_t(jMethod->numParameters()) == plen) {
                 // Iterate over parameters.
-                for (int i = 0;  ;  i++) {
+                for (size_t i = 0;  ;  i++) {
                     if (i == plen) {
-                        if (methodList == NULL)
+                        if (methodList == nullptr)
                             methodList = new MethodList();
                         methodList->append(jMethod);
                         break;
@@ -218,7 +218,7 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
                           case 'D': prim = "double[]"; break;
                           case 'C': prim = "char[]"; break;
                           case 'Z': prim = "boolean[]"; break;
-                          default: prim = NULL;
+                          default: prim = nullptr;
                           }
                           if (pname == prim) {
                               methodParamLength = 0;
@@ -245,7 +245,7 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
                         methodParamLength = pnameLength;
                     }
                     if (methodParamLength == pnameLength) {
-                        int k = 0;
+                        size_t k = 0;
                         for (; k < methodParamLength;  k++) {
                             if (methodParam[k] != pname[k]) {
                                 break;
@@ -263,7 +263,7 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
     }
     if (methodList)
         return methodList->at(0);
-    return NULL;
+    return nullptr;
 }
 
 Field* JavaClass::fieldNamed(PropertyName propertyName, Instance*) const

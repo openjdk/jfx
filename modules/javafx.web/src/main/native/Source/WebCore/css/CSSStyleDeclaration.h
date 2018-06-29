@@ -41,7 +41,7 @@ class StyledElement;
 class CSSStyleDeclaration : public ScriptWrappable {
     WTF_MAKE_NONCOPYABLE(CSSStyleDeclaration); WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual ~CSSStyleDeclaration() { }
+    virtual ~CSSStyleDeclaration() = default;
 
     virtual void ref() = 0;
     virtual void deref() = 0;
@@ -60,6 +60,9 @@ public:
     virtual ExceptionOr<void> setProperty(const String& propertyName, const String& value, const String& priority) = 0;
     virtual ExceptionOr<String> removeProperty(const String& propertyName) = 0;
 
+    String cssFloat();
+    ExceptionOr<void> setCssFloat(const String&);
+
     // CSSPropertyID versions of the CSSOM functions to support bindings and editing.
     // Use the non-virtual methods in the concrete subclasses when possible.
     // The CSSValue returned by this function should not be exposed to the web as it may be used by multiple documents at the same time.
@@ -76,8 +79,9 @@ public:
     ExceptionOr<void> setNamedItem(const AtomicString& name, String value, bool& propertySupported);
     Vector<AtomicString> supportedPropertyNames() const;
 
+    static CSSPropertyID getCSSPropertyIDFromJavaScriptPropertyName(const AtomicString&);
 protected:
-    CSSStyleDeclaration() { }
+    CSSStyleDeclaration() = default;
 };
 
 } // namespace WebCore

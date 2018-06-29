@@ -32,14 +32,17 @@
 #include "RenderLayer.h"
 #include "RenderListItem.h"
 #include "RenderView.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
+
+namespace WebCore {
 using namespace WTF;
 using namespace Unicode;
 
-namespace WebCore {
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderListMarker);
 
 const int cMarkerPadding = 7;
 
@@ -1133,10 +1136,8 @@ RenderListMarker::~RenderListMarker()
 
 void RenderListMarker::willBeDestroyed()
 {
-    m_listItem.setMarkerRenderer(nullptr);
     if (m_image)
         m_image->removeClient(this);
-
     RenderBox::willBeDestroyed();
 }
 

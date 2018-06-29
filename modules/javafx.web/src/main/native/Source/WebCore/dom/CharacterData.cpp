@@ -30,7 +30,6 @@
 #include "MutationEvent.h"
 #include "MutationObserverInterestGroup.h"
 #include "MutationRecord.h"
-#include "NoEventDispatchAssertion.h"
 #include "ProcessingInstruction.h"
 #include "RenderText.h"
 #include "StyleInheritedData.h"
@@ -103,7 +102,7 @@ unsigned CharacterData::parserAppendData(const String& string, unsigned offset, 
     if (is<Text>(*this) && parentNode())
         downcast<Text>(*this).updateRendererAfterContentChange(oldLength, 0);
 
-    notifyParentAfterChange(ContainerNode::ChildChangeSourceParser);
+    notifyParentAfterChange(ContainerNode::ChildChangeSource::Parser);
 
     return characterLengthLimit;
 }
@@ -175,11 +174,6 @@ String CharacterData::nodeValue() const
     return m_data;
 }
 
-bool CharacterData::containsOnlyWhitespace() const
-{
-    return m_data.containsOnlyWhitespace();
-}
-
 ExceptionOr<void> CharacterData::setNodeValue(const String& nodeValue)
 {
     setData(nodeValue);
@@ -201,7 +195,7 @@ void CharacterData::setDataAndUpdate(const String& newData, unsigned offsetOfRep
     if (document().frame())
         document().frame()->selection().textWasReplaced(this, offsetOfReplacedData, oldLength, newLength);
 
-    notifyParentAfterChange(ContainerNode::ChildChangeSourceAPI);
+    notifyParentAfterChange(ContainerNode::ChildChangeSource::API);
 
     dispatchModifiedEvent(oldData);
 }

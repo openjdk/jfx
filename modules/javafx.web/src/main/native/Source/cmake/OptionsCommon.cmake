@@ -36,7 +36,7 @@ if (WTF_CPU_ARM64_CORTEXA53)
     if (NOT WTF_CPU_ARM64)
         message(FATAL_ERROR "WTF_CPU_ARM64_CORTEXA53 set without WTF_CPU_ARM64")
     endif ()
-    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAG(-mfix-cortex-a53-835769)
+    WEBKIT_PREPEND_GLOBAL_COMPILER_FLAGS(-mfix-cortex-a53-835769)
 endif ()
 
 EXPOSE_VARIABLE_TO_BUILD(WTF_CPU_ARM64_CORTEXA53)
@@ -107,8 +107,8 @@ if (USE_OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif ()
 
-# GTK uses the GNU installation directories as defaults.
-if (NOT PORT STREQUAL "GTK")
+# GTK and WPE use the GNU installation directories as defaults.
+if (NOT PORT STREQUAL "GTK" AND NOT PORT STREQUAL "WPE")
     set(LIB_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Absolute path to library installation directory")
     set(EXEC_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Absolute path to executable installation directory")
     set(LIBEXEC_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Absolute path to install executables executed by the library")

@@ -31,19 +31,16 @@
 #include "TouchEvent.h"
 
 #include "EventDispatcher.h"
-#include <wtf/CurrentTime.h>
 
 namespace WebCore {
 
-TouchEvent::TouchEvent()
-{
-}
+TouchEvent::TouchEvent() = default;
 
 TouchEvent::TouchEvent(TouchList* touches, TouchList* targetTouches,
         TouchList* changedTouches, const AtomicString& type,
         DOMWindow* view, int screenX, int screenY, int pageX, int pageY,
         bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
-    : MouseRelatedEvent(type, true, true, currentTime(), view, 0, IntPoint(screenX, screenY),
+    : MouseRelatedEvent(type, true, true, MonotonicTime::now(), view, 0, IntPoint(screenX, screenY),
                         IntPoint(pageX, pageY),
 #if ENABLE(POINTER_LOCK)
                         IntPoint(0, 0),
@@ -63,16 +60,14 @@ TouchEvent::TouchEvent(const AtomicString& type, const Init& initializer, IsTrus
 {
 }
 
-TouchEvent::~TouchEvent()
-{
-}
+TouchEvent::~TouchEvent() = default;
 
 void TouchEvent::initTouchEvent(TouchList* touches, TouchList* targetTouches,
         TouchList* changedTouches, const AtomicString& type,
         DOMWindow* view, int screenX, int screenY, int clientX, int clientY,
         bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
 {
-    if (dispatched())
+    if (isBeingDispatched())
         return;
 
     initUIEvent(type, true, true, view, 0);

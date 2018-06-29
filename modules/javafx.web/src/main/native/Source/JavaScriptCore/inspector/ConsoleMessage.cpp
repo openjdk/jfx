@@ -95,6 +95,43 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     autogenerateMetadata(state);
 }
 
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, Vector<JSONLogValue>&& messages, JSC::ExecState* state, unsigned long requestIdentifier)
+    : m_source(source)
+    , m_type(type)
+    , m_level(level)
+    , m_url()
+    , m_scriptState(state)
+    , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
+{
+    if (!messages.size())
+        return;
+
+    m_jsonLogValues.reserveInitialCapacity(messages.size());
+
+    StringBuilder builder;
+    for (auto& message : messages) {
+        switch (message.type) {
+        case JSONLogValue::Type::String:
+            builder.append(message.value);
+            break;
+        case JSONLogValue::Type::JSON:
+            if (builder.length()) {
+                m_jsonLogValues.append({ JSONLogValue::Type::String, JSON::Value::create(builder.toString())->toJSONString() });
+                builder.resize(0);
+            }
+
+            m_jsonLogValues.append(message);
+            break;
+        }
+    }
+
+    if (builder.length())
+        m_jsonLogValues.append({ JSONLogValue::Type::String, JSON::Value::create(builder.toString())->toJSONString() });
+
+    if (m_jsonLogValues.size())
+        m_message = m_jsonLogValues[0].value;
+}
+
 ConsoleMessage::~ConsoleMessage()
 {
 }
@@ -108,7 +145,7 @@ void ConsoleMessage::autogenerateMetadata(JSC::ExecState* state)
         return;
 
     // FIXME: Should this really be using "for console" in the generic ConsoleMessage autogeneration? This can skip the first frame.
-    m_callStack = createScriptCallStackForConsole(state, ScriptCallStack::maxCallStackSizeToCapture);
+    m_callStack = createScriptCallStackForConsole(state);
 
     if (const ScriptCallFrame* frame = m_callStack->firstNonNativeCallFrame()) {
         m_url = frame->sourceURL();
@@ -118,22 +155,24 @@ void ConsoleMessage::autogenerateMetadata(JSC::ExecState* state)
     }
 }
 
-static Inspector::Protocol::Console::ConsoleMessage::Source messageSourceValue(MessageSource source)
+static Inspector::Protocol::Console::ChannelSource messageSourceValue(MessageSource source)
 {
     switch (source) {
-    case MessageSource::XML: return Inspector::Protocol::Console::ConsoleMessage::Source::XML;
-    case MessageSource::JS: return Inspector::Protocol::Console::ConsoleMessage::Source::Javascript;
-    case MessageSource::Network: return Inspector::Protocol::Console::ConsoleMessage::Source::Network;
-    case MessageSource::ConsoleAPI: return Inspector::Protocol::Console::ConsoleMessage::Source::ConsoleAPI;
-    case MessageSource::Storage: return Inspector::Protocol::Console::ConsoleMessage::Source::Storage;
-    case MessageSource::AppCache: return Inspector::Protocol::Console::ConsoleMessage::Source::Appcache;
-    case MessageSource::Rendering: return Inspector::Protocol::Console::ConsoleMessage::Source::Rendering;
-    case MessageSource::CSS: return Inspector::Protocol::Console::ConsoleMessage::Source::CSS;
-    case MessageSource::Security: return Inspector::Protocol::Console::ConsoleMessage::Source::Security;
-    case MessageSource::ContentBlocker: return Inspector::Protocol::Console::ConsoleMessage::Source::ContentBlocker;
-    case MessageSource::Other: return Inspector::Protocol::Console::ConsoleMessage::Source::Other;
+    case MessageSource::XML: return Inspector::Protocol::Console::ChannelSource::XML;
+    case MessageSource::JS: return Inspector::Protocol::Console::ChannelSource::Javascript;
+    case MessageSource::Network: return Inspector::Protocol::Console::ChannelSource::Network;
+    case MessageSource::ConsoleAPI: return Inspector::Protocol::Console::ChannelSource::ConsoleAPI;
+    case MessageSource::Storage: return Inspector::Protocol::Console::ChannelSource::Storage;
+    case MessageSource::AppCache: return Inspector::Protocol::Console::ChannelSource::Appcache;
+    case MessageSource::Rendering: return Inspector::Protocol::Console::ChannelSource::Rendering;
+    case MessageSource::CSS: return Inspector::Protocol::Console::ChannelSource::CSS;
+    case MessageSource::Security: return Inspector::Protocol::Console::ChannelSource::Security;
+    case MessageSource::ContentBlocker: return Inspector::Protocol::Console::ChannelSource::ContentBlocker;
+    case MessageSource::Other: return Inspector::Protocol::Console::ChannelSource::Other;
+    case MessageSource::Media: return Inspector::Protocol::Console::ChannelSource::Media;
+    case MessageSource::WebRTC: return Inspector::Protocol::Console::ChannelSource::WebRTC;
     }
-    return Inspector::Protocol::Console::ConsoleMessage::Source::Other;
+    return Inspector::Protocol::Console::ChannelSource::Other;
 }
 
 static Inspector::Protocol::Console::ConsoleMessage::Type messageTypeValue(MessageType type)
@@ -170,55 +209,71 @@ static Inspector::Protocol::Console::ConsoleMessage::Level messageLevelValue(Mes
 
 void ConsoleMessage::addToFrontend(ConsoleFrontendDispatcher& consoleFrontendDispatcher, InjectedScriptManager& injectedScriptManager, bool generatePreview)
 {
-    Ref<Inspector::Protocol::Console::ConsoleMessage> jsonObj = Inspector::Protocol::Console::ConsoleMessage::create()
+    auto messageObject = Inspector::Protocol::Console::ConsoleMessage::create()
         .setSource(messageSourceValue(m_source))
         .setLevel(messageLevelValue(m_level))
         .setText(m_message)
         .release();
 
     // FIXME: only send out type for ConsoleAPI source messages.
-    jsonObj->setType(messageTypeValue(m_type));
-    jsonObj->setLine(static_cast<int>(m_line));
-    jsonObj->setColumn(static_cast<int>(m_column));
-    jsonObj->setUrl(m_url);
-    jsonObj->setRepeatCount(static_cast<int>(m_repeatCount));
+    messageObject->setType(messageTypeValue(m_type));
+    messageObject->setLine(static_cast<int>(m_line));
+    messageObject->setColumn(static_cast<int>(m_column));
+    messageObject->setUrl(m_url);
+    messageObject->setRepeatCount(static_cast<int>(m_repeatCount));
 
     if (m_source == MessageSource::Network && !m_requestId.isEmpty())
-        jsonObj->setNetworkRequestId(m_requestId);
+        messageObject->setNetworkRequestId(m_requestId);
 
-    if (m_arguments && m_arguments->argumentCount()) {
-        InjectedScript injectedScript = injectedScriptManager.injectedScriptFor(m_arguments->globalState());
+    if ((m_arguments && m_arguments->argumentCount()) || m_jsonLogValues.size()) {
+        InjectedScript injectedScript = injectedScriptManager.injectedScriptFor(scriptState());
         if (!injectedScript.hasNoValue()) {
-            Ref<Inspector::Protocol::Array<Inspector::Protocol::Runtime::RemoteObject>> jsonArgs = Inspector::Protocol::Array<Inspector::Protocol::Runtime::RemoteObject>::create();
-            if (m_type == MessageType::Table && generatePreview && m_arguments->argumentCount()) {
-                Deprecated::ScriptValue table = m_arguments->argumentAt(0);
-                Deprecated::ScriptValue columns = m_arguments->argumentCount() > 1 ? m_arguments->argumentAt(1) : Deprecated::ScriptValue();
-                RefPtr<Inspector::Protocol::Runtime::RemoteObject> inspectorValue = injectedScript.wrapTable(table, columns);
-                if (!inspectorValue) {
-                    ASSERT_NOT_REACHED();
-                    return;
-                }
-                jsonArgs->addItem(inspectorValue.copyRef());
-                if (m_arguments->argumentCount() > 1)
-                    jsonArgs->addItem(injectedScript.wrapObject(columns, ASCIILiteral("console"), true));
-            } else {
-                for (unsigned i = 0; i < m_arguments->argumentCount(); ++i) {
-                    RefPtr<Inspector::Protocol::Runtime::RemoteObject> inspectorValue = injectedScript.wrapObject(m_arguments->argumentAt(i), ASCIILiteral("console"), generatePreview);
+            auto argumentsObject = JSON::ArrayOf<Inspector::Protocol::Runtime::RemoteObject>::create();
+            if (m_arguments && m_arguments->argumentCount()) {
+                if (m_type == MessageType::Table && generatePreview && m_arguments->argumentCount()) {
+                    Deprecated::ScriptValue table = m_arguments->argumentAt(0);
+                    Deprecated::ScriptValue columns = m_arguments->argumentCount() > 1 ? m_arguments->argumentAt(1) : Deprecated::ScriptValue();
+                    auto inspectorValue = injectedScript.wrapTable(table, columns);
                     if (!inspectorValue) {
                         ASSERT_NOT_REACHED();
                         return;
                     }
-                    jsonArgs->addItem(inspectorValue.copyRef());
+                    argumentsObject->addItem(WTFMove(inspectorValue));
+                    if (m_arguments->argumentCount() > 1)
+                        argumentsObject->addItem(injectedScript.wrapObject(columns, ASCIILiteral("console"), true));
+                } else {
+                    for (unsigned i = 0; i < m_arguments->argumentCount(); ++i) {
+                        auto inspectorValue = injectedScript.wrapObject(m_arguments->argumentAt(i), ASCIILiteral("console"), generatePreview);
+                        if (!inspectorValue) {
+                            ASSERT_NOT_REACHED();
+                            return;
+                        }
+                        argumentsObject->addItem(WTFMove(inspectorValue));
+                    }
                 }
             }
-            jsonObj->setParameters(WTFMove(jsonArgs));
+
+            if (m_jsonLogValues.size()) {
+                for (auto& message : m_jsonLogValues) {
+                    if (message.value.isEmpty())
+                        continue;
+                    auto inspectorValue = injectedScript.wrapJSONString(message.value, ASCIILiteral("console"), generatePreview);
+                    if (!inspectorValue)
+                        continue;
+
+                    argumentsObject->addItem(WTFMove(inspectorValue));
+                }
+            }
+
+            if (argumentsObject->length())
+                messageObject->setParameters(WTFMove(argumentsObject));
         }
     }
 
     if (m_callStack)
-        jsonObj->setStackTrace(m_callStack->buildInspectorArray());
+        messageObject->setStackTrace(m_callStack->buildInspectorArray());
 
-    consoleFrontendDispatcher.messageAdded(WTFMove(jsonObj));
+    consoleFrontendDispatcher.messageAdded(WTFMove(messageObject));
 }
 
 void ConsoleMessage::updateRepeatCountInConsole(ConsoleFrontendDispatcher& consoleFrontendDispatcher)
@@ -269,6 +324,9 @@ JSC::ExecState* ConsoleMessage::scriptState() const
 {
     if (m_arguments)
         return m_arguments->globalState();
+
+    if (m_scriptState)
+        return m_scriptState;
 
     return nullptr;
 }

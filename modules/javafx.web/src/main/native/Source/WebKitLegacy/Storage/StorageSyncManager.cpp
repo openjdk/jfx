@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #include "StorageSyncManager.h"
 
 #include "StorageThread.h"
@@ -56,12 +55,12 @@ StorageSyncManager::~StorageSyncManager()
 // Called on a background thread.
 String StorageSyncManager::fullDatabaseFilename(const String& databaseIdentifier)
 {
-    if (!makeAllDirectories(m_path)) {
+    if (!FileSystem::makeAllDirectories(m_path)) {
         LOG_ERROR("Unabled to create LocalStorage database path %s", m_path.utf8().data());
         return String();
     }
 
-    return pathByAppendingComponent(m_path, databaseIdentifier + ".localstorage");
+    return FileSystem::pathByAppendingComponent(m_path, databaseIdentifier + ".localstorage");
 }
 
 void StorageSyncManager::dispatch(Function<void ()>&& function)

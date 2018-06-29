@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -31,6 +31,8 @@ namespace JSC {
 class JSArray;
 class LLIntOffsetsExtractor;
 
+extern const char* const LengthExceededTheMaximumArrayLengthError;
+
 class JSArray : public JSNonFinalObject {
     friend class LLIntOffsetsExtractor;
     friend class Walker;
@@ -54,6 +56,7 @@ protected:
 
 public:
     static JSArray* tryCreate(VM&, Structure*, unsigned initialLength = 0);
+    static JSArray* tryCreate(VM&, Structure*, unsigned initialLength, unsigned vectorLengthHint);
     static JSArray* create(VM&, Structure*, unsigned initialLength = 0);
     static JSArray* createWithButterfly(VM&, GCDeferralContext*, Structure*, Butterfly*);
 
@@ -89,6 +92,7 @@ public:
     // OK to use on new arrays, but not if it might be a RegExpMatchArray or RuntimeArray.
     JS_EXPORT_PRIVATE bool setLength(ExecState*, unsigned, bool throwException = false);
 
+    void pushInline(ExecState*, JSValue);
     JS_EXPORT_PRIVATE void push(ExecState*, JSValue);
     JS_EXPORT_PRIVATE JSValue pop(ExecState*);
 
@@ -112,7 +116,8 @@ public:
 
     bool shiftCountForShift(ExecState* exec, unsigned startIndex, unsigned count)
     {
-        return shiftCountWithArrayStorage(exec->vm(), startIndex, count, ensureArrayStorage(exec->vm()));
+        VM& vm = exec->vm();
+        return shiftCountWithArrayStorage(vm, startIndex, count, ensureArrayStorage(vm));
     }
     bool shiftCountForSplice(ExecState* exec, unsigned& startIndex, unsigned count)
     {
@@ -168,6 +173,7 @@ protected:
     void finishCreation(VM& vm)
     {
         Base::finishCreation(vm);
+        ASSERT(jsDynamicCast<JSArray*>(vm, this));
         ASSERT_WITH_MESSAGE(type() == ArrayType || type() == DerivedArrayType, "Instance inheriting JSArray should have either ArrayType or DerivedArrayType");
     }
 
@@ -214,8 +220,9 @@ inline Butterfly* tryCreateArrayButterfly(VM& vm, JSCell* intendedOwner, unsigne
 Butterfly* createArrayButterflyInDictionaryIndexingMode(
     VM&, JSCell* intendedOwner, unsigned initialLength);
 
-inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initialLength)
+inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initialLength, unsigned vectorLengthHint)
 {
+    ASSERT(vectorLengthHint >= initialLength);
     unsigned outOfLineStorage = structure->outOfLineCapacity();
 
     Butterfly* butterfly;
@@ -227,11 +234,14 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
             || hasDouble(indexingType)
             || hasContiguous(indexingType));
 
-        if (UNLIKELY(initialLength > MAX_STORAGE_VECTOR_LENGTH))
+        if (UNLIKELY(vectorLengthHint > MAX_STORAGE_VECTOR_LENGTH))
             return nullptr;
 
-        unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, initialLength);
-        void* temp = vm.jsValueGigacageAuxiliarySpace.tryAllocate(nullptr, Butterfly::totalSize(0, outOfLineStorage, true, vectorLength * sizeof(EncodedJSValue)));
+        unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, vectorLengthHint);
+        void* temp = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(
+            vm,
+            Butterfly::totalSize(0, outOfLineStorage, true, vectorLength * sizeof(EncodedJSValue)),
+            nullptr, AllocationFailureMode::ReturnNull);
         if (!temp)
             return nullptr;
         butterfly = Butterfly::fromBase(temp, 0, outOfLineStorage);
@@ -239,7 +249,7 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
         butterfly->setPublicLength(initialLength);
         if (hasDouble(indexingType))
             clearArray(butterfly->contiguousDouble().data(), vectorLength);
-        else if (LIKELY(!hasUndecided(indexingType)))
+        else
             clearArray(butterfly->contiguous().data(), vectorLength);
     } else {
         ASSERT(
@@ -253,6 +263,11 @@ inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initia
     }
 
     return createWithButterfly(vm, nullptr, structure, butterfly);
+}
+
+inline JSArray* JSArray::tryCreate(VM& vm, Structure* structure, unsigned initialLength)
+{
+    return tryCreate(vm, structure, initialLength, initialLength);
 }
 
 inline JSArray* JSArray::create(VM& vm, Structure* structure, unsigned initialLength)

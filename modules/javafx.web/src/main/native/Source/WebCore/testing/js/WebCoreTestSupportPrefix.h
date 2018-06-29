@@ -101,11 +101,11 @@
 #include <sys/time.h>
 #endif
 
-#if !PLATFORM(JAVA)
+#if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
+
 #if PLATFORM(WIN_CAIRO)
-#include <ConditionalMacros.h>
 #include <windows.h>
 #else
 

@@ -70,6 +70,7 @@ static bool callerIsStrict(ExecState* exec)
     return iter.callerIsStrict();
 }
 
+namespace NullSetterFunctionInternal {
 static EncodedJSValue JSC_HOST_CALL callReturnUndefined(ExecState* exec)
 {
     VM& vm = exec->vm();
@@ -79,16 +80,11 @@ static EncodedJSValue JSC_HOST_CALL callReturnUndefined(ExecState* exec)
         return JSValue::encode(throwTypeError(exec, scope, ASCIILiteral("Setting a property that has only a getter")));
     return JSValue::encode(jsUndefined());
 }
-
-CallType NullSetterFunction::getCallData(JSCell*, CallData& callData)
-{
-    callData.native.function = callReturnUndefined;
-    return CallType::Host;
 }
 
-ConstructType NullSetterFunction::getConstructData(JSCell*, ConstructData&)
+NullSetterFunction::NullSetterFunction(VM& vm, Structure* structure)
+    : Base(vm, structure, NullSetterFunctionInternal::callReturnUndefined, nullptr)
 {
-    return ConstructType::None;
 }
 
 }

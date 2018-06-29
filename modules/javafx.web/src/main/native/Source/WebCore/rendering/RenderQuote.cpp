@@ -25,12 +25,15 @@
 
 #include "QuotesData.h"
 #include "RenderTextFragment.h"
+#include "RenderTreeBuilder.h"
 #include "RenderView.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/unicode/CharacterNames.h>
 
+namespace WebCore {
 using namespace WTF::Unicode;
 
-namespace WebCore {
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderQuote);
 
 RenderQuote::RenderQuote(Document& document, RenderStyle&& style, QuoteType quote)
     : RenderInline(document, WTFMove(style))
@@ -347,11 +350,9 @@ static RenderTextFragment* quoteTextRenderer(RenderObject* lastChild)
     return downcast<RenderTextFragment>(lastChild);
 }
 
-void RenderQuote::updateTextRenderer()
+void RenderQuote::updateTextRenderer(RenderTreeBuilder& builder)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(document().inRenderTreeUpdate());
-    ASSERT_WITH_SECURITY_IMPLICATION(!view().renderTreeIsBeingMutatedInternally());
-
     String text = computeText();
     if (m_text == text)
         return;
@@ -361,7 +362,7 @@ void RenderQuote::updateTextRenderer()
         renderText->dirtyLineBoxes(false);
         return;
     }
-    addChild(new RenderTextFragment(document(), m_text));
+    builder.attach(*this, createRenderer<RenderTextFragment>(document(), m_text));
 }
 
 String RenderQuote::computeText() const
@@ -402,12 +403,9 @@ bool RenderQuote::isOpen() const
     return false;
 }
 
-void RenderQuote::updateRenderer(RenderQuote* previousQuote)
+void RenderQuote::updateRenderer(RenderTreeBuilder& builder, RenderQuote* previousQuote)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(document().inRenderTreeUpdate());
-    ASSERT_WITH_SECURITY_IMPLICATION(!view().renderTreeIsBeingMutatedInternally());
-    ASSERT_WITH_SECURITY_IMPLICATION(!view().layoutState());
-
     int depth = -1;
     if (previousQuote) {
         depth = previousQuote->m_depth;
@@ -425,7 +423,7 @@ void RenderQuote::updateRenderer(RenderQuote* previousQuote)
 
     m_depth = depth;
     m_needsTextUpdate = false;
-    updateTextRenderer();
+    updateTextRenderer(builder);
 }
 
 } // namespace WebCore

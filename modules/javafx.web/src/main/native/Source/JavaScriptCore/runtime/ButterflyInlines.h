@@ -27,10 +27,27 @@
 
 #include "ArrayStorage.h"
 #include "Butterfly.h"
+#include "JSObject.h"
 #include "VM.h"
 #include "Structure.h"
 
 namespace JSC {
+
+template<typename T>
+const T& ContiguousData<T>::at(const JSObject* base, size_t index) const
+{
+    ASSERT(index < m_length);
+    ASSERT(base->butterflyIndexingMask() >= length());
+    return m_data[index & base->butterflyIndexingMask()];
+}
+
+template<typename T>
+T& ContiguousData<T>::at(const JSObject* base, size_t index)
+{
+    ASSERT(index < m_length);
+    ASSERT(base->butterflyIndexingMask() >= length());
+    return m_data[index & base->butterflyIndexingMask()];
+}
 
 ALWAYS_INLINE unsigned Butterfly::availableContiguousVectorLength(size_t propertyCapacity, unsigned vectorLength)
 {
@@ -62,7 +79,7 @@ ALWAYS_INLINE unsigned Butterfly::optimalContiguousVectorLength(Structure* struc
 inline Butterfly* Butterfly::createUninitialized(VM& vm, JSCell*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace.allocate(size);
+    void* base = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, size, nullptr, AllocationFailureMode::Assert);
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
     return result;
 }
@@ -70,7 +87,7 @@ inline Butterfly* Butterfly::createUninitialized(VM& vm, JSCell*, size_t preCapa
 inline Butterfly* Butterfly::tryCreate(VM& vm, JSCell*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, const IndexingHeader& indexingHeader, size_t indexingPayloadSizeInBytes)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace.tryAllocate(size);
+    void* base = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, size, nullptr, AllocationFailureMode::ReturnNull);
     if (!base)
         return nullptr;
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
@@ -148,7 +165,7 @@ inline Butterfly* Butterfly::growArrayRight(
     void* theBase = base(0, propertyCapacity);
     size_t oldSize = totalSize(0, propertyCapacity, hadIndexingHeader, oldIndexingPayloadSizeInBytes);
     size_t newSize = totalSize(0, propertyCapacity, true, newIndexingPayloadSizeInBytes);
-    void* newBase = vm.jsValueGigacageAuxiliarySpace.tryAllocate(newSize);
+    void* newBase = vm.jsValueGigacageAuxiliarySpace.allocateNonVirtual(vm, newSize, nullptr, AllocationFailureMode::ReturnNull);
     if (!newBase)
         return nullptr;
     // FIXME: This probably shouldn't be a memcpy.

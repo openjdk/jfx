@@ -32,8 +32,10 @@
 #include <algorithm>
 #include <cstdlib>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/JSONValues.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PrintStream.h>
+#include <wtf/text/StringBuilder.h>
 
 namespace WTF {
 
@@ -389,11 +391,19 @@ MediaTime::ComparisonFlags MediaTime::compare(const MediaTime& rhs) const
     if (m_timeValue == rhs.m_timeValue)
         return m_timeScale < rhs.m_timeScale ? GreaterThan : LessThan;
 
-    if (m_timeValue < rhs.m_timeValue && m_timeScale > rhs.m_timeScale)
-        return LessThan;
+    if (m_timeValue >= 0) {
+        if (m_timeValue < rhs.m_timeValue && m_timeScale > rhs.m_timeScale)
+            return LessThan;
 
-    if (m_timeValue > rhs.m_timeValue && m_timeScale < rhs.m_timeScale)
-        return GreaterThan;
+        if (m_timeValue > rhs.m_timeValue && m_timeScale < rhs.m_timeScale)
+            return GreaterThan;
+    } else {
+        if (m_timeValue < rhs.m_timeValue && m_timeScale < rhs.m_timeScale)
+            return LessThan;
+
+        if (m_timeValue > rhs.m_timeValue && m_timeScale > rhs.m_timeScale)
+            return GreaterThan;
+    }
 
     int64_t lhsFactor;
     int64_t rhsFactor;
@@ -549,6 +559,46 @@ void MediaTime::dump(PrintStream& out) const
     if (!hasDoubleValue())
         out.print(m_timeValue, "/", m_timeScale, " = ");
     out.print(toDouble(), "}");
+}
+
+String MediaTime::toString() const
+{
+    StringBuilder builder;
+
+    builder.append('{');
+    if (!hasDoubleValue()) {
+        builder.appendNumber(m_timeValue);
+        builder.append('/');
+        builder.appendNumber(m_timeScale);
+        builder.appendLiteral(" = ");
+    }
+    builder.appendNumber(toDouble());
+    builder.append('}');
+    return builder.toString();
+}
+
+String MediaTime::toJSONString() const
+{
+    auto object = JSON::Object::create();
+
+    if (hasDoubleValue())
+        object->setDouble(ASCIILiteral("value"), toDouble());
+    else {
+        if (isInvalid() || isIndefinite())
+            object->setString(ASCIILiteral("value"), ASCIILiteral("NaN"));
+        else if (isPositiveInfinite())
+            object->setString(ASCIILiteral("value"), ASCIILiteral("POSITIVE_INFINITY"));
+        else if (isNegativeInfinite())
+            object->setString(ASCIILiteral("value"), ASCIILiteral("NEGATIVE_INFINITY"));
+        else
+            object->setDouble(ASCIILiteral("value"), toDouble());
+
+        object->setInteger(ASCIILiteral("numerator"), static_cast<int>(m_timeValue));
+        object->setInteger(ASCIILiteral("denominator"), m_timeScale);
+        object->setInteger(ASCIILiteral("flags"), m_timeFlags);
+    }
+
+    return object->toJSONString();
 }
 
 MediaTime abs(const MediaTime& rhs)

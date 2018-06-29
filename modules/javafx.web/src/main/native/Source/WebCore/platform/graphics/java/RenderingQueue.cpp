@@ -31,6 +31,7 @@
 
 #include <wtf/java/JavaRef.h>
 #include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 
 #include "com_sun_webkit_graphics_WCRenderQueue.h"
 
@@ -40,8 +41,8 @@ typedef HashMap<char*, RefPtr<ByteBuffer> > Addr2ByteBuffer;
 
 static Addr2ByteBuffer& getAddr2ByteBuffer()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(Addr2ByteBuffer, container, ());
-    return container;
+    static NeverDestroyed<Addr2ByteBuffer> container;
+    return container.get();
 }
 
 /*static*/

@@ -3795,10 +3795,12 @@ project(":web") {
             }
         }
 
+        // Cmake places Windows DLL in bin directory
+        def dllDir = IS_WINDOWS ? "bin" : "lib"
         def copyDumpTreeNativeTask = task("copyDumpTreeNative${t.capital}", type: Copy,
                 dependsOn: [ compileNativeTask]) {
             def library = rootProject.ext[t.upper].library
-            from "$webkitOutputDir/$webkitConfig/lib/${library('DumpRenderTreeJava')}"
+            from "$webkitOutputDir/$webkitConfig/$dllDir/${library('DumpRenderTreeJava')}"
             into "$buildDir/test/${t.name}"
         }
 
@@ -3806,7 +3808,7 @@ project(":web") {
                 dependsOn: [compileNativeTask, , copyDumpTreeNativeTask]) {
             enabled =  (IS_COMPILE_WEBKIT)
             def library = rootProject.ext[t.upper].library
-            from "$webkitOutputDir/$webkitConfig/lib/${library('jfxwebkit')}"
+            from "$webkitOutputDir/$webkitConfig/$dllDir/${library('jfxwebkit')}"
             into "$buildDir/libs/${t.name}"
         }
 

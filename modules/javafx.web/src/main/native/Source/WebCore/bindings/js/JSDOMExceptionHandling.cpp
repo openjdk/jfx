@@ -30,16 +30,15 @@
 #include "JSDOMWindow.h"
 #include "JSDynamicDowncast.h"
 #include "ScriptExecutionContext.h"
-#include <inspector/ScriptCallStack.h>
-#include <inspector/ScriptCallStackFactory.h>
-#include <runtime/ErrorHandlingScope.h>
-#include <runtime/Exception.h>
-#include <runtime/ExceptionHelpers.h>
+#include <JavaScriptCore/ErrorHandlingScope.h>
+#include <JavaScriptCore/Exception.h>
+#include <JavaScriptCore/ExceptionHelpers.h>
+#include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/ScriptCallStackFactory.h>
 #include <wtf/text/StringBuilder.h>
 
-using namespace JSC;
-
 namespace WebCore {
+using namespace JSC;
 
 void reportException(ExecState* exec, JSValue exceptionValue, CachedScript* cachedScript)
 {
@@ -83,7 +82,7 @@ void reportException(ExecState* exec, JSC::Exception* exception, CachedScript* c
 
     ErrorHandlingScope errorScope(exec->vm());
 
-    auto callStack = Inspector::createScriptCallStackFromException(exec, exception, Inspector::ScriptCallStack::maxCallStackSizeToCapture);
+    auto callStack = Inspector::createScriptCallStackFromException(exec, exception);
     scope.clearException();
     vm.clearLastException();
 
@@ -122,22 +121,22 @@ void reportCurrentException(ExecState* exec)
     reportException(exec, exception);
 }
 
-static JSValue createDOMException(ExecState* exec, ExceptionCode ec, const String* message = nullptr)
+JSValue createDOMException(ExecState* exec, ExceptionCode ec, const String& message)
 {
     if (ec == ExistingExceptionError)
         return jsUndefined();
 
     // FIXME: Handle other WebIDL exception types.
     if (ec == TypeError) {
-        if (!message || message->isEmpty())
+        if (message.isEmpty())
             return createTypeError(exec);
-        return createTypeError(exec, *message);
+        return createTypeError(exec, message);
     }
 
     if (ec == RangeError) {
-        if (!message || message->isEmpty())
+        if (message.isEmpty())
             return createRangeError(exec, ASCIILiteral("Bad value"));
-        return createRangeError(exec, *message);
+        return createRangeError(exec, message);
     }
 
     if (ec == StackOverflowError)
@@ -152,11 +151,6 @@ static JSValue createDOMException(ExecState* exec, ExceptionCode ec, const Strin
     ASSERT(errorObject);
     addErrorInfo(exec, asObject(errorObject), true);
     return errorObject;
-}
-
-JSValue createDOMException(ExecState* exec, ExceptionCode ec, const String& message)
-{
-    return createDOMException(exec, ec, &message);
 }
 
 JSValue createDOMException(ExecState& state, Exception&& exception)
@@ -194,37 +188,16 @@ static void appendArgumentMustBe(StringBuilder& builder, unsigned argumentIndex,
     builder.appendLiteral(" must be ");
 }
 
-JSC::EncodedJSValue reportDeprecatedGetterError(JSC::ExecState& state, const char* interfaceName, const char* attributeName)
-{
-    auto& context = *jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject())->scriptExecutionContext();
-    context.addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("Deprecated attempt to access property '", attributeName, "' on a non-", interfaceName, " object."));
-    return JSValue::encode(jsUndefined());
-}
-
-void reportDeprecatedSetterError(JSC::ExecState& state, const char* interfaceName, const char* attributeName)
-{
-    auto& context = *jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject())->scriptExecutionContext();
-    context.addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString("Deprecated attempt to set property '", attributeName, "' on a non-", interfaceName, " object."));
-}
-
-void throwNotSupportedError(JSC::ExecState& state, JSC::ThrowScope& scope)
+void throwNotSupportedError(JSC::ExecState& state, JSC::ThrowScope& scope, ASCIILiteral message)
 {
     scope.assertNoException();
-    throwException(&state, scope, createDOMException(&state, NotSupportedError));
+    throwException(&state, scope, createDOMException(&state, NotSupportedError, message));
 }
 
-void throwNotSupportedError(JSC::ExecState& state, JSC::ThrowScope& scope, const char* message)
+void throwInvalidStateError(JSC::ExecState& state, JSC::ThrowScope& scope, ASCIILiteral message)
 {
     scope.assertNoException();
-    String messageString(message);
-    throwException(&state, scope, createDOMException(&state, NotSupportedError, &messageString));
-}
-
-void throwInvalidStateError(JSC::ExecState& state, JSC::ThrowScope& scope, const char* message)
-{
-    scope.assertNoException();
-    String messageString(message);
-    throwException(&state, scope, createDOMException(&state, InvalidStateError, &messageString));
+    throwException(&state, scope, createDOMException(&state, InvalidStateError, message));
 }
 
 void throwSecurityError(JSC::ExecState& state, JSC::ThrowScope& scope, const String& message)
@@ -257,11 +230,6 @@ JSC::EncodedJSValue throwArgumentTypeError(JSC::ExecState& state, JSC::ThrowScop
     builder.appendLiteral("an instance of ");
     builder.append(expectedType);
     return throwVMTypeError(&state, scope, builder.toString());
-}
-
-void throwArrayElementTypeError(JSC::ExecState& state, JSC::ThrowScope& scope)
-{
-    throwTypeError(state, scope, ASCIILiteral("Invalid Array element type"));
 }
 
 void throwAttributeTypeError(JSC::ExecState& state, JSC::ThrowScope& scope, const char* interfaceName, const char* attributeName, const char* expectedType)
@@ -338,28 +306,16 @@ JSC::EncodedJSValue rejectPromiseWithThisTypeError(JSC::ExecState& state, const 
     return createRejectedPromiseWithTypeError(state, makeThisTypeErrorMessage(interfaceName, methodName));
 }
 
-void throwDOMSyntaxError(JSC::ExecState& state, JSC::ThrowScope& scope)
+void throwDOMSyntaxError(JSC::ExecState& state, JSC::ThrowScope& scope, ASCIILiteral message)
 {
     scope.assertNoException();
-    throwException(&state, scope, createDOMException(&state, SyntaxError));
+    throwException(&state, scope, createDOMException(&state, SyntaxError, message));
 }
 
 void throwDataCloneError(JSC::ExecState& state, JSC::ThrowScope& scope)
 {
     scope.assertNoException();
     throwException(&state, scope, createDOMException(&state, DataCloneError));
-}
-
-void throwIndexSizeError(JSC::ExecState& state, JSC::ThrowScope& scope)
-{
-    scope.assertNoException();
-    throwException(&state, scope, createDOMException(&state, IndexSizeError));
-}
-
-void throwTypeMismatchError(JSC::ExecState& state, JSC::ThrowScope& scope)
-{
-    scope.assertNoException();
-    throwException(&state, scope, createDOMException(&state, TypeMismatchError));
 }
 
 } // namespace WebCore

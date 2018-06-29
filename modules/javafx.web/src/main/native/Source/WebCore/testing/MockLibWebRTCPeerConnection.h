@@ -37,11 +37,11 @@ class LibWebRTCProvider;
 class MockRtpSender;
 
 void useMockRTCPeerConnectionFactory(LibWebRTCProvider*, const String&);
-void useRealRTCPeerConnectionFactory();
+void useRealRTCPeerConnectionFactory(LibWebRTCProvider&);
 
 class MockLibWebRTCPeerConnection : public webrtc::PeerConnectionInterface {
 public:
-    virtual ~MockLibWebRTCPeerConnection() { }
+    virtual ~MockLibWebRTCPeerConnection() = default;
 
 protected:
     explicit MockLibWebRTCPeerConnection(webrtc::PeerConnectionObserver& observer) : m_observer(observer) { }

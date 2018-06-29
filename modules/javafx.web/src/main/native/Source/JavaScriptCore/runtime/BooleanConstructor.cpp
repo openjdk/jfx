@@ -31,16 +31,10 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(BooleanConstructor);
 
 const ClassInfo BooleanConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(BooleanConstructor) };
 
-BooleanConstructor::BooleanConstructor(VM& vm, Structure* structure)
-    : InternalFunction(vm, structure)
+// ECMA 15.6.1
+static EncodedJSValue JSC_HOST_CALL callBooleanConstructor(ExecState* exec)
 {
-}
-
-void BooleanConstructor::finishCreation(VM& vm, BooleanPrototype* booleanPrototype)
-{
-    Base::finishCreation(vm, booleanPrototype->classInfo()->className);
-    putDirectWithoutTransition(vm, vm.propertyNames->prototype, booleanPrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum);
+    return JSValue::encode(jsBoolean(exec->argument(0).toBoolean(exec)));
 }
 
 // ECMA 15.6.2
@@ -56,28 +50,23 @@ static EncodedJSValue JSC_HOST_CALL constructWithBooleanConstructor(ExecState* e
     return JSValue::encode(obj);
 }
 
-ConstructType BooleanConstructor::getConstructData(JSCell*, ConstructData& constructData)
+BooleanConstructor::BooleanConstructor(VM& vm, Structure* structure)
+    : InternalFunction(vm, structure, callBooleanConstructor, constructWithBooleanConstructor)
 {
-    constructData.native.function = constructWithBooleanConstructor;
-    return ConstructType::Host;
 }
 
-// ECMA 15.6.1
-static EncodedJSValue JSC_HOST_CALL callBooleanConstructor(ExecState* exec)
+void BooleanConstructor::finishCreation(VM& vm, BooleanPrototype* booleanPrototype)
 {
-    return JSValue::encode(jsBoolean(exec->argument(0).toBoolean(exec)));
-}
-
-CallType BooleanConstructor::getCallData(JSCell*, CallData& callData)
-{
-    callData.native.function = callBooleanConstructor;
-    return CallType::Host;
+    Base::finishCreation(vm, booleanPrototype->classInfo()->className);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, booleanPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 JSObject* constructBooleanFromImmediateBoolean(ExecState* exec, JSGlobalObject* globalObject, JSValue immediateBooleanValue)
 {
-    BooleanObject* obj = BooleanObject::create(exec->vm(), globalObject->booleanObjectStructure());
-    obj->setInternalValue(exec->vm(), immediateBooleanValue);
+    VM& vm = exec->vm();
+    BooleanObject* obj = BooleanObject::create(vm, globalObject->booleanObjectStructure());
+    obj->setInternalValue(vm, immediateBooleanValue);
     return obj;
 }
 

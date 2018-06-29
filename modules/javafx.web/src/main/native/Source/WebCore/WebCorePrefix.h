@@ -97,6 +97,7 @@
 #endif
 
 #if !PLATFORM(JAVA)
+#if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
@@ -109,8 +110,9 @@
 #define CF_IMPLICIT_BRIDGING_DISABLED
 #endif
 
-#if !PLATFORM(JAVA)
+#if USE(CF)
 #include <CoreFoundation/CFBase.h>
+#endif
 
 #ifndef CF_ENUM
 #define CF_ENUM(_type, _name) _type _name; enum
@@ -128,7 +130,6 @@
 #endif
 
 #if PLATFORM(WIN_CAIRO)
-#include <ConditionalMacros.h>
 #include <windows.h>
 #else
 
@@ -171,6 +172,17 @@
 #endif
 
 #ifdef __cplusplus
+
+#ifdef __OBJC__
+#if !PLATFORM(WIN) && (!PLATFORM(MAC) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 101300)
+#import <wtf/FastMalloc.h>
+#import <wtf/Optional.h>
+#import <wtf/StdLibExtras.h>
+#import <wtf/text/AtomicString.h>
+#import <wtf/text/WTFString.h>
+#endif
+#endif
+
 #define new ("if you use new/delete make sure to include config.h at the top of the file"())
 #define delete ("if you use new/delete make sure to include config.h at the top of the file"())
 #endif

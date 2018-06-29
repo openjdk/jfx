@@ -56,9 +56,7 @@ ScrollAnimatorSmooth::ScrollAnimatorSmooth(ScrollableArea& scrollableArea)
 {
 }
 
-ScrollAnimatorSmooth::~ScrollAnimatorSmooth()
-{
-}
+ScrollAnimatorSmooth::~ScrollAnimatorSmooth() = default;
 
 bool ScrollAnimatorSmooth::scroll(ScrollbarOrientation orientation, ScrollGranularity granularity, float step, float multiplier)
 {
@@ -68,7 +66,7 @@ bool ScrollAnimatorSmooth::scroll(ScrollbarOrientation orientation, ScrollGranul
     return m_animation->scroll(orientation, granularity, step, multiplier);
 }
 
-void ScrollAnimatorSmooth::scrollToOffsetWithoutAnimation(const FloatPoint& offset)
+void ScrollAnimatorSmooth::scrollToOffsetWithoutAnimation(const FloatPoint& offset, ScrollClamping)
 {
     FloatPoint position = ScrollableArea::scrollPositionFromOffset(offset, toFloatSize(m_scrollableArea.scrollOrigin()));
     m_animation->setCurrentPosition(position);

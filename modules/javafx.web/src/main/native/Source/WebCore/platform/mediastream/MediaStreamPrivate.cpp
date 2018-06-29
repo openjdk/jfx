@@ -59,8 +59,7 @@ Ref<MediaStreamPrivate> MediaStreamPrivate::create(const Vector<Ref<RealtimeMedi
 }
 
 MediaStreamPrivate::MediaStreamPrivate(const MediaStreamTrackPrivateVector& tracks, String&& id)
-    : m_weakPtrFactory(this)
-    , m_id(WTFMove(id))
+    : m_id(WTFMove(id))
 {
     ASSERT(!m_id.isEmpty());
 
@@ -92,11 +91,7 @@ void MediaStreamPrivate::removeObserver(MediaStreamPrivate::Observer& observer)
 
 MediaStreamTrackPrivateVector MediaStreamPrivate::tracks() const
 {
-    MediaStreamTrackPrivateVector tracks;
-    tracks.reserveCapacity(m_trackSet.size());
-    copyValuesToVector(m_trackSet, tracks);
-
-    return tracks;
+    return copyToVector(m_trackSet.values());
 }
 
 void MediaStreamPrivate::updateActiveState(NotifyClientOption notifyClientOption)

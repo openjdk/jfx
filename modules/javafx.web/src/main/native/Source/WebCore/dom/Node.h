@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -433,36 +433,37 @@ public:
 
     virtual const RenderStyle* computedStyle(PseudoId pseudoElementSpecifier = NOPSEUDO);
 
-    // -----------------------------------------------------------------------------
-    // Notification of document structure changes (see ContainerNode.h for more notification methods)
-    //
-    // At first, WebKit notifies the node that it has been inserted into the document. This is called during document parsing, and also
-    // when a node is added through the DOM methods insertBefore(), appendChild() or replaceChild(). The call happens _after_ the node has been added to the tree.
-    // This is similar to the DOMNodeInsertedIntoDocument DOM event, but does not require the overhead of event
-    // dispatching.
-    //
-    // WebKit notifies this callback regardless if the subtree of the node is a document tree or a floating subtree.
-    // Implementation can determine the type of subtree by seeing insertionPoint->isConnected().
-    // For a performance reason, notifications are delivered only to ContainerNode subclasses if the insertionPoint is out of document.
-    //
-    // There is another callback named finishedInsertingSubtree(), which is called after all descendants are notified.
-    // Only a few subclasses actually need this. To utilize this, the node should return InsertionShouldCallFinishedInsertingSubtree
-    // from insrtedInto().
-    //
-    enum InsertionNotificationRequest {
-        InsertionDone,
-        InsertionShouldCallFinishedInsertingSubtree
+    enum class InsertedIntoAncestorResult {
+        Done,
+        NeedsPostInsertionCallback,
     };
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode& insertionPoint);
-    virtual void finishedInsertingSubtree() { }
+    struct InsertionType {
+#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
+        InsertionType(bool connectedToDocument, bool treeScopeChanged)
+            : connectedToDocument(connectedToDocument)
+            , treeScopeChanged(treeScopeChanged)
+        { }
+#endif
+        bool connectedToDocument { false };
+        bool treeScopeChanged { false };
+    };
+    // Called *after* this node or its ancestor is inserted into a new parent (may or may not be a part of document) by scripts or parser.
+    // insertedInto **MUST NOT** invoke scripts. Return NeedsPostInsertionCallback and implement didFinishInsertingNode instead to run scripts.
+    virtual InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode& parentOfInsertedTree);
+    virtual void didFinishInsertingNode() { }
 
-    // Notifies the node that it is no longer part of the tree.
-    //
-    // This is a dual of insertedInto(), and is similar to the DOMNodeRemovedFromDocument DOM event, but does not require the overhead of event
-    // dispatching, and is called _after_ the node is removed from the tree.
-    //
-    virtual void removedFrom(ContainerNode& insertionPoint);
+    struct RemovalType {
+#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
+        RemovalType(bool disconnectedFromDocument, bool treeScopeChanged)
+            : disconnectedFromDocument(disconnectedFromDocument)
+            , treeScopeChanged(treeScopeChanged)
+        { }
+#endif
+        bool disconnectedFromDocument { false };
+        bool treeScopeChanged { false };
+    };
+    virtual void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree);
 
 #if ENABLE(TREE_DEBUGGING)
     virtual void formatForDebugger(char* buffer, unsigned length) const;
@@ -485,33 +486,26 @@ public:
 
     WEBCORE_EXPORT unsigned short compareDocumentPosition(Node&);
 
-    Node* toNode() override;
-
     EventTargetInterface eventTargetInterface() const override;
     ScriptExecutionContext* scriptExecutionContext() const final; // Implemented in Document.h
-
-    virtual void didMoveToNewDocument(Document& oldDocument, Document& newDocument);
 
     bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
     bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) override;
 
     using EventTarget::dispatchEvent;
-    bool dispatchEvent(Event&) override;
+    void dispatchEvent(Event&) override;
 
     void dispatchScopedEvent(Event&);
 
     virtual void handleLocalEvents(Event&);
 
     void dispatchSubtreeModifiedEvent();
-    bool dispatchDOMActivateEvent(int detail, Event& underlyingEvent);
+    void dispatchDOMActivateEvent(Event& underlyingClickEvent);
 
 #if ENABLE(TOUCH_EVENTS)
     virtual bool allowsDoubleTapGesture() const { return true; }
 #endif
 
-#if ENABLE(TOUCH_EVENTS) && !PLATFORM(IOS)
-    bool dispatchTouchEvent(TouchEvent&);
-#endif
     bool dispatchBeforeLoadEvent(const String& sourceURL);
 
     void dispatchInputEvent();
@@ -665,8 +659,9 @@ private:
 
     WEBCORE_EXPORT void removedLastRef();
 
-    void refEventTarget() override;
-    void derefEventTarget() override;
+    void refEventTarget() final;
+    void derefEventTarget() final;
+    bool isNode() const final;
 
     void trackForDebugging();
     void materializeRareData();
@@ -678,7 +673,9 @@ private:
 
     void* opaqueRootSlow() const;
 
+    static void moveShadowTreeToNewDocument(ShadowRoot&, Document& oldDocument, Document& newDocument);
     static void moveTreeToNewScope(Node&, TreeScope& oldScope, TreeScope& newScope);
+    void moveNodeToNewDocument(Document& oldDocument, Document& newDocument);
 
     int m_refCount;
     mutable uint32_t m_nodeFlags;
@@ -806,3 +803,7 @@ inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
 void showTree(const WebCore::Node*);
 void showNodePath(const WebCore::Node*);
 #endif
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::Node)
+    static bool isType(const WebCore::EventTarget& target) { return target.isNode(); }
+SPECIALIZE_TYPE_TRAITS_END()

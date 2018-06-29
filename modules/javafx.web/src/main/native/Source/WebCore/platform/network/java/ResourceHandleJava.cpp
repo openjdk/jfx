@@ -22,7 +22,7 @@ bool ResourceHandle::start()
 {
     ASSERT(!d->m_loader);
     d->m_loader = URLLoader::loadAsynchronously(context(), this);
-    return d->m_loader ? true : false; //XXX: recheck
+    return d->m_loader != nullptr;
 }
 
 void ResourceHandle::cancel()
@@ -35,7 +35,7 @@ void ResourceHandle::cancel()
 //utatodo: merge artifact
 void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context,
                                                const ResourceRequest& request,
-                                               StoredCredentials,
+                                               StoredCredentialsPolicy,
                                                ResourceError& error,
                                                ResourceResponse& response,
                                                Vector<char>& data)

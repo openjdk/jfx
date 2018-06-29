@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/Event.h>
@@ -46,12 +48,12 @@ extern "C" {
 
 #define IMPL (static_cast<Event*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_EventImpl_getCPPTypeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_EventImpl_getCPPTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     if (IMPL->isWheelEvent())
         return 1;
@@ -86,37 +88,37 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getCurrentTargetImpl(J
     return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->currentTarget()));
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_EventImpl_getEventPhaseImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_EventImpl_getEventPhaseImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->eventPhase();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getBubblesImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getBubblesImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->bubbles();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getCancelableImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getCancelableImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->cancelable();
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getTimeStampImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getTimeStampImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->timeStamp();
+    return IMPL->timeStamp().approximateWallTime().secondsSinceEpoch().milliseconds();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getDefaultPreventedImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getDefaultPreventedImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->defaultPrevented();
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getIsTrustedImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getIsTrustedImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->isTrusted();
@@ -125,28 +127,28 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getIsTrustedImpl(JN
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventImpl_getSrcElementImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->srcElement()));
+    return JavaReturn<EventTarget>(env, WTF::getPtr(IMPL->target()));
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getReturnValueImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getReturnValueImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->legacyReturnValue();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_setReturnValueImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_setReturnValueImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setLegacyReturnValue(value);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getCancelBubbleImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_EventImpl_getCancelBubbleImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->cancelBubble();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_setCancelBubbleImpl(JNIEnv* env, jclass, jlong peer, jboolean value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_setCancelBubbleImpl(JNIEnv*, jclass, jlong peer, jboolean value)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setCancelBubble(value);
@@ -154,14 +156,14 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_setCancelBubbleImpl(JNI
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_stopPropagationImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_stopPropagationImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->stopPropagation();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_preventDefaultImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_preventDefaultImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->preventDefault();
@@ -180,7 +182,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_initEventImpl(JNIEnv* e
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_stopImmediatePropagationImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventImpl_stopImmediatePropagationImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->stopImmediatePropagation();

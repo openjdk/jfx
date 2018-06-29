@@ -28,10 +28,10 @@
 #if ENABLE(VIDEO)
 #include "MediaController.h"
 
-#include "Clock.h"
 #include "EventNames.h"
 #include "HTMLMediaElement.h"
 #include "TimeRanges.h"
+#include <pal/system/Clock.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
@@ -55,15 +55,13 @@ MediaController::MediaController(ScriptExecutionContext& context)
     , m_asyncEventTimer(*this, &MediaController::asyncEventTimerFired)
     , m_clearPositionTimer(*this, &MediaController::clearPositionTimerFired)
     , m_closedCaptionsVisible(false)
-    , m_clock(Clock::create())
+    , m_clock(PAL::Clock::create())
     , m_scriptExecutionContext(context)
     , m_timeupdateTimer(*this, &MediaController::scheduleTimeupdateEvent)
 {
 }
 
-MediaController::~MediaController()
-{
-}
+MediaController::~MediaController() = default;
 
 void MediaController::addMediaElement(HTMLMediaElement& element)
 {

@@ -33,13 +33,12 @@
 #include "DOMJITHelpers.h"
 #include "JSDOMWrapper.h"
 #include "Node.h"
-#include <interpreter/FrameTracers.h>
-#include <jit/Snippet.h>
-#include <jit/SnippetParams.h>
-
-using namespace JSC;
+#include <JavaScriptCore/FrameTracers.h>
+#include <JavaScriptCore/Snippet.h>
+#include <JavaScriptCore/SnippetParams.h>
 
 namespace WebCore {
+using namespace JSC;
 
 Ref<JSC::Snippet> checkSubClassSnippetForJSNode()
 {

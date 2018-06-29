@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ViewportConfiguration.h"
 
+#include "Logging.h"
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/CString.h>
@@ -62,6 +63,9 @@ void ViewportConfiguration::setDefaultConfiguration(const ViewportConfiguration:
     ASSERT(defaultConfiguration.minimumScale > 0);
     ASSERT(defaultConfiguration.maximumScale >= defaultConfiguration.minimumScale);
 
+    if (m_defaultConfiguration == defaultConfiguration)
+        return;
+
     m_defaultConfiguration = defaultConfiguration;
     updateConfiguration();
 }
@@ -70,6 +74,8 @@ bool ViewportConfiguration::setContentsSize(const IntSize& contentSize)
 {
     if (m_contentSize == contentSize)
         return false;
+
+    LOG_WITH_STREAM(Viewports, stream << "ViewportConfiguration::setContentsSize " << contentSize << " (was " << m_contentSize << ")");
 
     m_contentSize = contentSize;
     updateConfiguration();
@@ -91,6 +97,7 @@ bool ViewportConfiguration::setViewportArguments(const ViewportArguments& viewpo
     if (m_viewportArguments == viewportArguments)
         return false;
 
+    LOG_WITH_STREAM(Viewports, stream << "ViewportConfiguration::setViewportArguments " << viewportArguments);
     m_viewportArguments = viewportArguments;
     updateConfiguration();
     return true;
@@ -338,6 +345,8 @@ void ViewportConfiguration::updateConfiguration()
         m_configuration.allowsShrinkToFit = m_viewportArguments.shrinkToFit != 0.;
 
     m_configuration.avoidsUnsafeArea = m_viewportArguments.viewportFit != ViewportFit::Cover;
+
+    LOG_WITH_STREAM(Viewports, stream << "ViewportConfiguration " << this << " updateConfiguration " << *this << " gives initial scale " << initialScale() << " based on contentSize " << m_contentSize << " and layout size " << layoutWidth() << "x" << layoutHeight());
 }
 
 double ViewportConfiguration::viewportArgumentsLength(double length) const
@@ -360,7 +369,7 @@ int ViewportConfiguration::layoutWidth() const
             double maximumScale = this->maximumScale();
             double maximumContentWidthInViewportCoordinate = maximumScale * m_configuration.width;
             if (maximumContentWidthInViewportCoordinate < minimumLayoutSize.width()) {
-                // The content zoomed to maxScale does not fit the the view. Return the minimum width
+                // The content zoomed to maxScale does not fit the view. Return the minimum width
                 // satisfying the constraint maximumScale.
                 return std::round(minimumLayoutSize.width() / maximumScale);
             }
@@ -396,7 +405,7 @@ int ViewportConfiguration::layoutHeight() const
             double maximumScale = this->maximumScale();
             double maximumContentHeightInViewportCoordinate = maximumScale * m_configuration.height;
             if (maximumContentHeightInViewportCoordinate < minimumLayoutSize.height()) {
-                // The content zoomed to maxScale does not fit the the view. Return the minimum height that
+                // The content zoomed to maxScale does not fit the view. Return the minimum height that
                 // satisfy the constraint maximumScale.
                 return std::round(minimumLayoutSize.height() / maximumScale);
             }
@@ -446,7 +455,12 @@ TextStream& operator<<(TextStream& ts, const ViewportConfiguration::Parameters& 
     return ts;
 }
 
-CString ViewportConfiguration::description() const
+TextStream& operator<<(TextStream& ts, const ViewportConfiguration& config)
+{
+    return ts << config.description();
+}
+
+String ViewportConfiguration::description() const
 {
     TextStream ts;
 
@@ -479,12 +493,12 @@ CString ViewportConfiguration::description() const
 
     ts.endGroup();
 
-    return ts.release().utf8();
+    return ts.release();
 }
 
 void ViewportConfiguration::dump() const
 {
-    WTFLogAlways("%s", description().data());
+    WTFLogAlways("%s", description().utf8().data());
 }
 
 #endif

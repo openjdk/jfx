@@ -38,7 +38,6 @@
 #include "DocumentLoader.h"
 #include "EventNames.h"
 #include "FormData.h"
-#include "FormDataList.h"
 #include "Frame.h"
 #include "HTMLParserIdioms.h"
 #include "InspectorInstrumentation.h"
@@ -53,17 +52,17 @@
 #include "SecurityPolicyViolationEvent.h"
 #include "Settings.h"
 #include "TextEncoding.h"
-#include <inspector/ScriptCallStack.h>
-#include <inspector/ScriptCallStackFactory.h>
+#include <JavaScriptCore/ScriptCallStack.h>
+#include <JavaScriptCore/ScriptCallStackFactory.h>
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/JSONValues.h>
 #include <wtf/SetForScope.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
-using namespace Inspector;
 
 namespace WebCore {
+using namespace Inspector;
 
 static String consoleMessageForViolation(const char* effectiveViolatedDirective, const ContentSecurityPolicyDirective& violatedDirective, const URL& blockedURL, const char* prefix, const char* subject = "it")
 {
@@ -104,9 +103,7 @@ ContentSecurityPolicy::ContentSecurityPolicy(const SecurityOrigin& securityOrigi
     updateSourceSelf(securityOrigin);
 }
 
-ContentSecurityPolicy::~ContentSecurityPolicy()
-{
-}
+ContentSecurityPolicy::~ContentSecurityPolicy() = default;
 
 void ContentSecurityPolicy::copyStateFrom(const ContentSecurityPolicy* other)
 {
@@ -164,11 +161,14 @@ void ContentSecurityPolicy::didCreateWindowProxy(JSDOMWindowProxy& windowProxy) 
 
 ContentSecurityPolicyResponseHeaders ContentSecurityPolicy::responseHeaders() const
 {
-    ContentSecurityPolicyResponseHeaders result;
-    result.m_headers.reserveInitialCapacity(m_policies.size());
-    for (auto& policy : m_policies)
-        result.m_headers.uncheckedAppend({ policy->header(), policy->headerType() });
-    return result;
+    if (!m_cachedResponseHeaders) {
+        ContentSecurityPolicyResponseHeaders result;
+        result.m_headers.reserveInitialCapacity(m_policies.size());
+        for (auto& policy : m_policies)
+            result.m_headers.uncheckedAppend({ policy->header(), policy->headerType() });
+        m_cachedResponseHeaders = WTFMove(result);
+    }
+    return *m_cachedResponseHeaders;
 }
 
 void ContentSecurityPolicy::didReceiveHeaders(const ContentSecurityPolicyResponseHeaders& headers, ReportParsingErrors reportParsingErrors)
@@ -187,6 +187,8 @@ void ContentSecurityPolicy::didReceiveHeader(const String& header, ContentSecuri
         ASSERT(m_policies.isEmpty());
         m_hasAPIPolicy = true;
     }
+
+    m_cachedResponseHeaders = std::nullopt;
 
     // RFC2616, section 4.2 specifies that headers appearing multiple times can
     // be combined with a comma. Walk the header string, and parse each comma
@@ -330,11 +332,11 @@ ContentSecurityPolicy::HashInEnforcedAndReportOnlyPoliciesPair ContentSecurityPo
 
     // FIXME: Compute the digest with respect to the raw bytes received from the page.
     // See <https://bugs.webkit.org/show_bug.cgi?id=155184>.
-    CString contentCString = encodingToUse.encode(content, EntitiesForUnencodables);
+    auto encodedContent = encodingToUse.encode(content, UnencodableHandling::Entities);
     bool foundHashInEnforcedPolicies = false;
     bool foundHashInReportOnlyPolicies = false;
     for (auto algorithm : algorithms) {
-        ContentSecurityPolicyHash hash = cryptographicDigestForBytes(algorithm, contentCString.data(), contentCString.length());
+        ContentSecurityPolicyHash hash = cryptographicDigestForBytes(algorithm, encodedContent.data(), encodedContent.size());
         if (!foundHashInEnforcedPolicies && allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, std::forward<Predicate>(predicate), hash))
             foundHashInEnforcedPolicies = true;
         if (!foundHashInReportOnlyPolicies && allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::ReportOnly, std::forward<Predicate>(predicate), hash))
@@ -546,6 +548,13 @@ bool ContentSecurityPolicy::allowFontFromSource(const URL& url, RedirectResponse
 {
     return allowResourceFromSource(url, redirectResponseReceived, ContentSecurityPolicyDirectiveNames::fontSrc, &ContentSecurityPolicyDirectiveList::violatedDirectiveForFont);
 }
+
+#if ENABLE(APPLICATION_MANIFEST)
+bool ContentSecurityPolicy::allowManifestFromSource(const URL& url, RedirectResponseReceived redirectResponseReceived) const
+{
+    return allowResourceFromSource(url, redirectResponseReceived, ContentSecurityPolicyDirectiveNames::manifestSrc, &ContentSecurityPolicyDirectiveList::violatedDirectiveForManifest);
+}
+#endif // ENABLE(APPLICATION_MANIFEST)
 
 bool ContentSecurityPolicy::allowMediaFromSource(const URL& url, RedirectResponseReceived redirectResponseReceived) const
 {

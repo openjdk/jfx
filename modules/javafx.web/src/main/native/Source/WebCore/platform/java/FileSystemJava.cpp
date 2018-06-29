@@ -30,14 +30,17 @@
 #include <wtf/java/JavaEnv.h>
 #include <wtf/text/CString.h>
 
+
+namespace WebCore {
+
+namespace FileSystem {
+
 static jclass GetFileSystemClass(JNIEnv* env)
 {
     static JGClass clazz(env->FindClass("com/sun/webkit/FileSystem"));
     ASSERT(clazz);
     return clazz;
 }
-
-namespace WebCore {
 
 bool fileExists(const String& path)
 {
@@ -96,9 +99,9 @@ bool getFileSize(const String& path, long long& result)
 
 bool getFileModificationTime(const String& path, time_t& result)
 {
-    FileMetadata metadata;
-    if (getFileMetadata(path, metadata)) {
-        result = metadata.modificationTime;
+  std::optional<FileMetadata> metadata = fileMetadata(path);
+    if (metadata) {
+        result = metadata->modificationTime;
         return true;
     } else {
         return false;
@@ -109,6 +112,17 @@ bool getFileCreationTime(const String&, time_t&)
 {
     notImplemented(); // todo tav
     return false;
+}
+
+String pathByAppendingComponents(StringView path, const Vector<StringView>& components)
+{
+    String result = path.toString();
+    // FIXME-java: Use nio.file.Paths.get(...)
+    for (const auto& component : components) {
+        result = pathByAppendingComponent(result, component.toString());
+    }
+
+    return result;
 }
 
 String pathByAppendingComponent(const String& path, const String& component)
@@ -162,7 +176,7 @@ String directoryName(String const &)
     return String();
 }
 
-bool getFileMetadata(const String& path, FileMetadata& metadata)
+std::optional<FileMetadata> fileMetadata(const String& path)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -182,13 +196,20 @@ bool getFileMetadata(const String& path, FileMetadata& metadata)
 
     if (result) {
         jlong* metadataResults = env->GetLongArrayElements(lArray, 0);
+        FileMetadata metadata {};
         metadata.modificationTime = metadataResults[0] / 1000.0;
         metadata.length = metadataResults[1];
         metadata.type = static_cast<FileMetadata::Type>(metadataResults[2]);
         env->ReleaseLongArrayElements(lArray, metadataResults, 0);
-        return true;
+        return metadata;
     }
-    return false;
+    return {};
+}
+
+std::optional<FileMetadata> fileMetadataFollowingSymlinks(const String& path)
+{
+    // TODO-java: Use nio Files to avoid sym link traversal
+    return fileMetadata(path);
 }
 
 Vector<String> listDirectory(const String&, const String&)
@@ -264,5 +285,7 @@ std::optional<int32_t> getFileDeviceId(const CString&)
     notImplemented();
     return {};
 }
+
+} // namespace FileSystem
 
 } // namespace WebCore

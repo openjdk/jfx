@@ -30,7 +30,7 @@
 
 #include "GPUBuffer.h"
 #include "WebGPURenderingContext.h"
-#include <runtime/ArrayBuffer.h>
+#include <JavaScriptCore/ArrayBuffer.h>
 
 namespace WebCore {
 
@@ -45,9 +45,7 @@ WebGPUBuffer::WebGPUBuffer(WebGPURenderingContext* context, ArrayBufferView* dat
     m_buffer = context->device()->createBufferFromData(data);
 }
 
-WebGPUBuffer::~WebGPUBuffer()
-{
-}
+WebGPUBuffer::~WebGPUBuffer() = default;
 
 unsigned long WebGPUBuffer::length() const
 {

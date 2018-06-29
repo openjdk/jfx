@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/XPathNSResolver.h>
@@ -40,7 +42,7 @@ extern "C" {
 
 #define IMPL (static_cast<XPathNSResolver*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_XPathNSResolverImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_XPathNSResolverImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }

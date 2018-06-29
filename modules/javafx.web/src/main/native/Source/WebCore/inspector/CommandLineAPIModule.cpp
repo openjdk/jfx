@@ -29,13 +29,13 @@
 #include "CommandLineAPIModuleSource.h"
 #include "JSDOMGlobalObject.h"
 #include "WebInjectedScriptManager.h"
-#include <heap/HeapInlines.h>
-#include <inspector/InjectedScript.h>
+#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/InjectedScript.h>
+
+namespace WebCore {
 
 using namespace JSC;
 using namespace Inspector;
-
-namespace WebCore {
 
 void CommandLineAPIModule::injectIfNeeded(InjectedScriptManager* injectedScriptManager, const InjectedScript& injectedScript)
 {

@@ -35,7 +35,7 @@
 #include "Page.h"
 #include "RenderTheme.h"
 #include "ResourceUsageThread.h"
-#include <runtime/VM.h>
+#include <JavaScriptCore/VM.h>
 
 namespace WebCore {
 
@@ -80,9 +80,7 @@ public:
         m_textFont.update(nullptr);
     }
 
-    ~ResourceUsageOverlayPainter()
-    {
-    }
+    ~ResourceUsageOverlayPainter() = default;
 
 private:
     void paintContents(const GraphicsLayer*, GraphicsContext& context, GraphicsLayerPaintingPhase, const FloatRect& clip, GraphicsLayerPaintBehavior) override

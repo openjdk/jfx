@@ -28,19 +28,15 @@
 
 #include "JSDOMConvertBufferSource.h"
 #include "JSDOMGlobalObject.h"
-#include <runtime/ArrayBuffer.h>
-#include <runtime/JSArrayBuffer.h>
-#include <runtime/JSCInlines.h>
+#include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/JSArrayBuffer.h>
+#include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
 
-WebCoreTypedArrayController::WebCoreTypedArrayController()
-{
-}
+WebCoreTypedArrayController::WebCoreTypedArrayController() = default;
 
-WebCoreTypedArrayController::~WebCoreTypedArrayController()
-{
-}
+WebCoreTypedArrayController::~WebCoreTypedArrayController() = default;
 
 JSC::JSArrayBuffer* WebCoreTypedArrayController::toJS(JSC::ExecState* state, JSC::JSGlobalObject* globalObject, JSC::ArrayBuffer* buffer)
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009, 2015, 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -121,7 +121,7 @@ public:
             reservationSize = Options::jitMemoryReservationSize();
         else
             reservationSize = fixedExecutableMemoryPoolSize;
-        reservationSize = roundUpToMultipleOf(pageSize(), reservationSize);
+        reservationSize = std::max(roundUpToMultipleOf(pageSize(), reservationSize), pageSize() * 2);
         m_reservation = PageReservation::reserveWithGuardPages(reservationSize, OSAllocator::JSJITCodePages, EXECUTABLE_POOL_WRITABLE, true);
         if (m_reservation) {
             ASSERT(m_reservation.size() == reservationSize);

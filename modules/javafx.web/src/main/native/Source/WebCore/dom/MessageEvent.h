@@ -31,14 +31,19 @@
 #include "Event.h"
 #include "MessagePort.h"
 #include "SerializedScriptValue.h"
-#include <bindings/ScriptValue.h>
+#include "ServiceWorker.h"
+#include <JavaScriptCore/ScriptValue.h>
 #include <wtf/Variant.h>
 
 namespace WebCore {
 
 class Blob;
 
+#if ENABLE(SERVICE_WORKER)
+using MessageEventSource = Variant<RefPtr<DOMWindow>, RefPtr<MessagePort>, RefPtr<ServiceWorker>>;
+#else
 using MessageEventSource = Variant<RefPtr<DOMWindow>, RefPtr<MessagePort>>;
+#endif
 
 class MessageEvent final : public Event {
 public:
@@ -64,7 +69,7 @@ public:
 
     const String& origin() const { return m_origin; }
     const String& lastEventId() const { return m_lastEventId; }
-    EventTarget* source() const;
+    const std::optional<MessageEventSource>& source() const { return m_source; }
     const Vector<RefPtr<MessagePort>>& ports() const { return m_ports; }
 
     // FIXME: Remove this when we have custom ObjC binding support.

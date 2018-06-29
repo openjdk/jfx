@@ -28,6 +28,7 @@
 
 #include "ElementChildIterator.h"
 #include "HTMLImageElement.h"
+#include "Logging.h"
 
 namespace WebCore {
 
@@ -61,9 +62,10 @@ void HTMLPictureElement::sourcesChanged()
 
 bool HTMLPictureElement::viewportChangeAffectedPicture() const
 {
-    auto* documentElement = document().documentElement();
+    auto documentElement = makeRefPtr(document().documentElement());
     MediaQueryEvaluator evaluator { document().printing() ? "print" : "screen", document(), documentElement ? documentElement->computedStyle() : nullptr };
     for (auto& result : m_viewportDependentMediaQueryResults) {
+        LOG(MediaQueries, "HTMLPictureElement %p viewportChangeAffectedPicture evaluating media queries", this);
         if (evaluator.evaluate(result.expression) != result.result)
             return true;
     }

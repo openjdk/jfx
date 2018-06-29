@@ -337,7 +337,7 @@ void PluginWidgetJava::handleEvent(Event& event)
             (jboolean)me->metaKey(),
             (jboolean)me->ctrlKey(),
             (jboolean)me->shiftKey(),
-            (jlong)me->timeStamp() );
+            (jlong)me->timeStamp().approximateWallTime().secondsSinceEpoch().milliseconds());
     }
 
     if(cancelBubble) {

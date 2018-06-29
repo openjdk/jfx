@@ -67,9 +67,12 @@ enum UseKind {
     SymbolUse,
     MapObjectUse,
     SetObjectUse,
+    WeakMapObjectUse,
+    WeakSetObjectUse,
     StringObjectUse,
     StringOrStringObjectUse,
     NotStringVarUse,
+    NotSymbolUse,
     NotCellUse,
     OtherUse,
     MiscUse,
@@ -149,12 +152,18 @@ inline SpeculatedType typeFilterFor(UseKind useKind)
         return SpecMapObject;
     case SetObjectUse:
         return SpecSetObject;
+    case WeakMapObjectUse:
+        return SpecWeakMapObject;
+    case WeakSetObjectUse:
+        return SpecWeakSetObject;
     case StringObjectUse:
         return SpecStringObject;
     case StringOrStringObjectUse:
         return SpecString | SpecStringObject;
     case NotStringVarUse:
         return ~SpecStringVar;
+    case NotSymbolUse:
+        return ~SpecSymbol;
     case NotCellUse:
         return ~SpecCellCheck;
     case OtherUse:
@@ -241,6 +250,8 @@ inline bool isCell(UseKind kind)
     case StringOrStringObjectUse:
     case MapObjectUse:
     case SetObjectUse:
+    case WeakMapObjectUse:
+    case WeakSetObjectUse:
         return true;
     default:
         return false;

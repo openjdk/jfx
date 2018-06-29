@@ -27,11 +27,33 @@
 
 #include "IDLTypes.h"
 #include "JSDOMConvertBase.h"
-#include <runtime/Error.h>
+#include <JavaScriptCore/Error.h>
 
 namespace WebCore {
 
 template<typename ImplementationClass> struct JSDOMWrapperConverterTraits;
+
+template<typename T, typename Enable = void>
+struct JSToWrappedOverloader {
+    using ReturnType = typename JSDOMWrapperConverterTraits<T>::ToWrappedReturnType;
+    using WrapperType = typename JSDOMWrapperConverterTraits<T>::WrapperClass;
+
+    static ReturnType toWrapped(JSC::ExecState& state, JSC::JSValue value)
+    {
+        return WrapperType::toWrapped(state.vm(), value);
+    }
+};
+
+template<typename T>
+struct JSToWrappedOverloader<T, typename std::enable_if<JSDOMWrapperConverterTraits<T>::needsState>::type> {
+    using ReturnType = typename JSDOMWrapperConverterTraits<T>::ToWrappedReturnType;
+    using WrapperType = typename JSDOMWrapperConverterTraits<T>::WrapperClass;
+
+    static ReturnType toWrapped(JSC::ExecState& state, JSC::JSValue value)
+    {
+        return WrapperType::toWrapped(state, value);
+    }
+};
 
 template<typename T> struct Converter<IDLInterface<T>> : DefaultConverter<IDLInterface<T>> {
     using ReturnType = typename JSDOMWrapperConverterTraits<T>::ToWrappedReturnType;
@@ -42,7 +64,7 @@ template<typename T> struct Converter<IDLInterface<T>> : DefaultConverter<IDLInt
     {
         auto& vm = state.vm();
         auto scope = DECLARE_THROW_SCOPE(vm);
-        ReturnType object = WrapperType::toWrapped(vm, value);
+        ReturnType object = JSToWrappedOverloader<T>::toWrapped(state, value);
         if (UNLIKELY(!object))
             exceptionThrower(state, scope);
         return object;

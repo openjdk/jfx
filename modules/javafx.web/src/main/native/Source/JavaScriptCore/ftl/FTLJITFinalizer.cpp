@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,7 @@
 
 namespace JSC { namespace FTL {
 
-using namespace DFG;
-
-JITFinalizer::JITFinalizer(Plan& plan)
+JITFinalizer::JITFinalizer(DFG::Plan& plan)
     : Finalizer(plan)
 {
 }
@@ -78,13 +76,13 @@ bool JITFinalizer::finalizeCommon()
     jitCode->initializeB3Code(
         FINALIZE_CODE_IF(
             dumpDisassembly, *b3CodeLinkBuffer,
-            ("FTL B3 code for %s", toCString(CodeBlockWithJITType(m_plan.codeBlock, JITCode::FTLJIT)).data())));
+            "FTL B3 code for %s", toCString(CodeBlockWithJITType(m_plan.codeBlock, JITCode::FTLJIT)).data()));
 
     if (entrypointLinkBuffer) {
         jitCode->initializeArityCheckEntrypoint(
             FINALIZE_CODE_IF(
                 dumpDisassembly, *entrypointLinkBuffer,
-                ("FTL entrypoint thunk for %s with B3 generated code at %p", toCString(CodeBlockWithJITType(m_plan.codeBlock, JITCode::FTLJIT)).data(), function)));
+                "FTL entrypoint thunk for %s with B3 generated code at %p", toCString(CodeBlockWithJITType(m_plan.codeBlock, JITCode::FTLJIT)).data(), function));
     }
 
     m_plan.codeBlock->setJITCode(*jitCode);

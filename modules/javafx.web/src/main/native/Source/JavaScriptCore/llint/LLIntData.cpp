@@ -167,7 +167,7 @@ void Data::performAssertions(VM& vm)
     ASSERT(StringImpl::s_hashFlag8BitBuffer == 8);
 
     {
-        uint32_t bits = 0x120000;
+        uint32_t bits = 0x480000;
         UNUSED_PARAM(bits);
         ArithProfile arithProfile;
         arithProfile.lhsSawInt32();
@@ -177,7 +177,7 @@ void Data::performAssertions(VM& vm)
         ASSERT(ArithProfile::fromInt(bits).rhsObservedType().isOnlyInt32());
     }
     {
-        uint32_t bits = 0x220000;
+        uint32_t bits = 0x880000;
         UNUSED_PARAM(bits);
         ArithProfile arithProfile;
         arithProfile.lhsSawNumber();
@@ -187,7 +187,7 @@ void Data::performAssertions(VM& vm)
         ASSERT(ArithProfile::fromInt(bits).rhsObservedType().isOnlyInt32());
     }
     {
-        uint32_t bits = 0x240000;
+        uint32_t bits = 0x900000;
         UNUSED_PARAM(bits);
         ArithProfile arithProfile;
         arithProfile.lhsSawNumber();
@@ -197,7 +197,7 @@ void Data::performAssertions(VM& vm)
         ASSERT(ArithProfile::fromInt(bits).rhsObservedType().isOnlyNumber());
     }
     {
-        uint32_t bits = 0x140000;
+        uint32_t bits = 0x500000;
         UNUSED_PARAM(bits);
         ArithProfile arithProfile;
         arithProfile.lhsSawInt32();
@@ -225,7 +225,9 @@ void Data::finalizeStats()
 }
 
 #if ENABLE(LLINT_STATS)
+namespace LLIntDataInternal {
 static const bool verboseStats = false;
+}
 
 static bool compareStats(const OpcodeStats& a, const OpcodeStats& b)
 {
@@ -283,7 +285,7 @@ void Data::loadStats()
     unsigned index;
     char opcodeName[100];
     while (fscanf(file, "[%u]: fast:%zu slow:%zu id:%u %s\n", &index, &loaded.count, &loaded.slowPathCount, &loaded.id, opcodeName) != EOF) {
-        if (verboseStats)
+        if (LLIntDataInternal::verboseStats)
             dataLogF("loaded [%u]: fast %zu slow %zu id:%u %s\n", index, loaded.count, loaded.slowPathCount, loaded.id, opcodeName);
 
         OpcodeStats& stats = opcodeStats(loaded.id);
@@ -291,7 +293,7 @@ void Data::loadStats()
         stats.slowPathCount = loaded.slowPathCount;
     }
 
-    if (verboseStats) {
+    if (LLIntDataInternal::verboseStats) {
         dataLogF("After loading from %s, ", filename);
         dumpStats();
     }
@@ -330,7 +332,7 @@ void Data::saveStats()
         if (!stats.count && !stats.slowPathCount)
             break; // stats are sorted. If we encountered 0 counts, then there are no more non-zero counts.
 
-        if (verboseStats)
+        if (LLIntDataInternal::verboseStats)
             dataLogF("saved [%u]: fast:%zu slow:%zu id:%u %s\n", index, stats.count, stats.slowPathCount, stats.id, opcodeNames[stats.id]);
 
         fprintf(file, "[%u]: fast:%zu slow:%zu id:%u %s\n", index, stats.count, stats.slowPathCount, stats.id, opcodeNames[stats.id]);

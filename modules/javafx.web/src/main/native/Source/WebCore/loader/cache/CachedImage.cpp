@@ -34,6 +34,7 @@
 #include "FrameLoaderClient.h"
 #include "FrameLoaderTypes.h"
 #include "FrameView.h"
+#include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "RenderElement.h"
 #include "SVGImage.h"
@@ -55,19 +56,19 @@
 
 namespace WebCore {
 
-CachedImage::CachedImage(CachedResourceRequest&& request, SessionID sessionID)
+CachedImage::CachedImage(CachedResourceRequest&& request, PAL::SessionID sessionID)
     : CachedResource(WTFMove(request), ImageResource, sessionID)
 {
     setStatus(Unknown);
 }
 
-CachedImage::CachedImage(Image* image, SessionID sessionID)
+CachedImage::CachedImage(Image* image, PAL::SessionID sessionID)
     : CachedResource(URL(), ImageResource, sessionID)
     , m_image(image)
 {
 }
 
-CachedImage::CachedImage(const URL& url, Image* image, SessionID sessionID, const String& domainForCachePartition)
+CachedImage::CachedImage(const URL& url, Image* image, PAL::SessionID sessionID, const String& domainForCachePartition)
     : CachedResource(url, ImageResource, sessionID)
     , m_image(image)
     , m_isManuallyCached(true)
@@ -308,6 +309,20 @@ void CachedImage::checkShouldPaintBrokenImage()
     m_shouldPaintBrokenImage = m_loader->frameLoader()->client().shouldPaintBrokenImage(url());
 }
 
+bool CachedImage::isPDFResource() const
+{
+    if (m_response.mimeType().isEmpty())
+        return url().path().endsWithIgnoringASCIICase(".pdf");
+    return MIMETypeRegistry::isPDFMIMEType(m_response.mimeType());
+}
+
+bool CachedImage::isPostScriptResource() const
+{
+    if (m_response.mimeType().isEmpty())
+        return url().path().endsWithIgnoringASCIICase(".ps");
+    return MIMETypeRegistry::isPostScriptMIMEType(m_response.mimeType());
+}
+
 void CachedImage::clear()
 {
     destroyDecodedData();
@@ -329,8 +344,8 @@ inline void CachedImage::createImage()
         auto svgImage = SVGImage::create(*m_imageObserver);
         m_svgImageCache = std::make_unique<SVGImageCache>(svgImage.ptr());
         m_image = WTFMove(svgImage);
+    } else if (isPDFResource() || isPostScriptResource()) {
 #if USE(CG) && !USE(WEBKIT_IMAGE_DECODERS)
-    } else if (m_response.mimeType() == "application/pdf") {
         m_image = PDFDocumentImage::create(m_imageObserver.get());
 #endif
     } else
@@ -404,18 +419,39 @@ inline void CachedImage::clearImage()
     }
 
     m_image = nullptr;
+    m_lastUpdateImageDataTime = { };
+    m_updateImageDataCount = 0;
 }
 
-void CachedImage::addIncrementalDataBuffer(SharedBuffer& data)
+void CachedImage::updateBufferInternal(SharedBuffer& data)
 {
     m_data = &data;
-
+    setEncodedSize(m_data->size());
     createImage();
 
-    // Have the image update its data from its internal buffer.
-    // It will not do anything now, but will delay decoding until
-    // queried for info (like size or specific image frames).
-    EncodedDataStatus encodedDataStatus = setImageDataBuffer(&data, false);
+    // Don't update the image with the new buffer very often. Changing the decoder
+    // internal data and repainting the observers sometimes are very expensive operations.
+    if (!m_forceUpdateImageDataEnabledForTesting && shouldDeferUpdateImageData())
+        return;
+
+    EncodedDataStatus encodedDataStatus = EncodedDataStatus::Unknown;
+
+    if (isPostScriptResource()) {
+#if PLATFORM(MAC) && !USE(WEBKIT_IMAGE_DECODERS)
+        // Delay updating the image with the PostScript data till all the data
+        // is received so it can be converted to PDF data.
+        return;
+#else
+        // Set the encodedDataStatus to Error so loading this image will be canceled.
+        encodedDataStatus = EncodedDataStatus::Error;
+#endif
+    } else {
+        // Have the image update its data from its internal buffer. Decoding the image data
+        // will be delayed until info (like size or specific image frames) are queried which
+        // usually happens when the observers are repainted.
+        encodedDataStatus = updateImageData(false);
+    }
+
     if (encodedDataStatus > EncodedDataStatus::Error && encodedDataStatus < EncodedDataStatus::SizeAvailable)
         return;
 
@@ -430,40 +466,70 @@ void CachedImage::addIncrementalDataBuffer(SharedBuffer& data)
     }
 
     // Tell our observers to try to draw.
-    // Each chunk from the network causes observers to repaint, which will force that chunk to decode.
-    // It would be nice to only redraw the decoded band of the image, but with the current design
-    // (decoding delayed until painting) that seems hard.
     notifyObservers();
-
-    setEncodedSize(m_image->data() ? m_image->data()->size() : 0);
 }
 
-EncodedDataStatus CachedImage::setImageDataBuffer(SharedBuffer* data, bool allDataReceived)
+bool CachedImage::shouldDeferUpdateImageData() const
 {
-    return m_image ? m_image->setData(data, allDataReceived) : EncodedDataStatus::Error;
+    static const double updateImageDataBackoffIntervals[] = { 0, 1, 3, 6, 15 };
+    unsigned interval = std::min<unsigned>(m_updateImageDataCount, 4);
+
+    // The first time through, the chunk time will be 0 and the image will get an update.
+    return (MonotonicTime::now() - m_lastUpdateImageDataTime).seconds() < updateImageDataBackoffIntervals[interval];
 }
 
-void CachedImage::addDataBuffer(SharedBuffer& data)
+RefPtr<SharedBuffer> CachedImage::convertedDataIfNeeded(SharedBuffer* data) const
+{
+    if (!data || !isPostScriptResource())
+        return data;
+#if PLATFORM(MAC) && !USE(WEBKIT_IMAGE_DECODERS)
+    return SharedBuffer::create(PDFDocumentImage::convertPostScriptDataToPDF(data->createCFData()).get());
+#else
+    // Loading the image should have been canceled if the system does not support converting PostScript to PDF.
+    ASSERT_NOT_REACHED();
+    return nullptr;
+#endif
+}
+
+void CachedImage::didUpdateImageData()
+{
+    m_lastUpdateImageDataTime = MonotonicTime::now();
+    ASSERT(m_updateImageDataCount < std::numeric_limits<unsigned>::max());
+    ++m_updateImageDataCount;
+}
+
+EncodedDataStatus CachedImage::updateImageData(bool allDataReceived)
+{
+    if (!m_image || !m_data)
+        return EncodedDataStatus::Error;
+    EncodedDataStatus result = m_image->setData(m_data.get(), allDataReceived);
+    didUpdateImageData();
+    return result;
+}
+
+void CachedImage::updateBuffer(SharedBuffer& data)
 {
     ASSERT(dataBufferingPolicy() == BufferData);
-    addIncrementalDataBuffer(data);
-    CachedResource::addDataBuffer(data);
+    updateBufferInternal(data);
+    CachedResource::updateBuffer(data);
 }
 
-void CachedImage::addData(const char* data, unsigned length)
+void CachedImage::updateData(const char* data, unsigned length)
 {
     ASSERT(dataBufferingPolicy() == DoNotBufferData);
-    addIncrementalDataBuffer(SharedBuffer::create(data, length));
-    CachedResource::addData(data, length);
+    updateBufferInternal(SharedBuffer::create(data, length));
+    CachedResource::updateData(data, length);
 }
 
 void CachedImage::finishLoading(SharedBuffer* data)
 {
-    m_data = data;
-    if (!m_image && data)
+    m_data = convertedDataIfNeeded(data);
+    if (m_data) {
+        setEncodedSize(m_data->size());
         createImage();
+    }
 
-    EncodedDataStatus encodedDataStatus = setImageDataBuffer(data, true);
+    EncodedDataStatus encodedDataStatus = updateImageData(true);
 
     if (encodedDataStatus == EncodedDataStatus::Error || m_image->isNull()) {
         // Image decoding failed; the image data is malformed.
@@ -474,8 +540,6 @@ void CachedImage::finishLoading(SharedBuffer* data)
     }
 
     notifyObservers();
-    if (m_image)
-        setEncodedSize(m_image->data() ? m_image->data()->size() : 0);
     CachedResource::finishLoading(data);
 }
 

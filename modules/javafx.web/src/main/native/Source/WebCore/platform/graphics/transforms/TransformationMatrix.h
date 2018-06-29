@@ -37,10 +37,6 @@ typedef struct CATransform3D CATransform3D;
 #endif
 #if USE(CG)
 typedef struct CGAffineTransform CGAffineTransform;
-#elif PLATFORM(JAVA)
-#include <jni.h>
-const int MCOUNT = 6;
-typedef double* PlatformTransformationMatrix;
 #endif
 
 #if PLATFORM(WIN) || (PLATFORM(GTK) && OS(WINDOWS))
@@ -49,6 +45,12 @@ typedef struct _XFORM XFORM;
 #else
 typedef struct tagXFORM XFORM;
 #endif
+#endif
+
+#if PLATFORM(JAVA)
+#include <jni.h>
+const int MCOUNT = 6;
+typedef double* PlatformTransformationMatrix;
 #endif
 
 #if PLATFORM(WIN)

@@ -35,10 +35,10 @@
 #include "runtime_method.h"
 #include "runtime_object.h"
 #include "runtime_root.h"
-#include <runtime/ArgList.h>
-#include <runtime/Error.h>
-#include <runtime/FunctionPrototype.h>
-#include <runtime/JSLock.h>
+#include <JavaScriptCore/ArgList.h>
+#include <JavaScriptCore/Error.h>
+#include <JavaScriptCore/FunctionPrototype.h>
+#include <JavaScriptCore/JSLock.h>
 
 #include "JavaArrayJSC.h"
 #include "JavaClassJSC.h"
@@ -46,7 +46,7 @@
 #include "JavaStringJSC.h"
 #include "Logging.h"
 
-#include <APICast.h>
+#include <JavaScriptCore/APICast.h>
 
 using namespace JSC::Bindings;
 using namespace JSC;
@@ -203,10 +203,11 @@ public:
 
     static JavaRuntimeMethod* create(ExecState* exec, JSGlobalObject* globalObject, const String& name, Bindings::Method *method)
     {
+        VM& vm = globalObject->vm();
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         // We need to pass in the right global object for "i".
         Structure* domStructure = WebCore::deprecatedGetDOMStructure<JavaRuntimeMethod>(exec);
-        JavaRuntimeMethod* _method = new (NotNull, allocateCell<JavaRuntimeMethod>(*exec->heap())) JavaRuntimeMethod(globalObject, domStructure, method);
+        JavaRuntimeMethod* _method = new (NotNull, allocateCell<JavaRuntimeMethod>(vm.heap)) JavaRuntimeMethod(globalObject, domStructure, method);
         _method->finishCreation(exec->vm(), name);
         return _method;
     }

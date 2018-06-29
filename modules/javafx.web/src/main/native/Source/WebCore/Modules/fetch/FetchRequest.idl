@@ -26,13 +26,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-enum FetchRequestType { "", "audio", "font", "image", "script", "style", "track", "video" };
-enum FetchRequestDestination { "", "document", "sharedworker", "subresource", "unknown", "worker" };
+enum FetchRequestDestination { "", "audio", "document", "embed", "font", "image", "manifest", "object", "report", "script", "serviceworker", "sharedworker", "style", "track", "video", "worker", "xslt" };
 
 typedef (FetchRequest or USVString) RequestInfo;
 
-// FIXME: Should include ReadableStream
-typedef (Blob or BufferSource or DOMFormData or URLSearchParams or USVString) BodyInit;
+typedef (Blob or BufferSource or DOMFormData or URLSearchParams or ReadableStream or USVString) BodyInit;
 
 [
     ActiveDOMObject,
@@ -41,13 +39,13 @@ typedef (Blob or BufferSource or DOMFormData or URLSearchParams or USVString) Bo
     ConstructorCallWith=ScriptExecutionContext,
     EnabledAtRuntime=FetchAPI,
     Exposed=(Window,Worker),
+    GenerateIsReachable=Impl,
     InterfaceName=Request,
 ] interface FetchRequest {
     readonly attribute ByteString method;
-    readonly attribute USVString url;
+    [ImplementedAs=urlString] readonly attribute USVString url;
     readonly attribute FetchHeaders headers; // FIXME: Should be [SameObject].
 
-    readonly attribute FetchRequestType type;
     readonly attribute FetchRequestDestination destination;
     readonly attribute USVString referrer;
     readonly attribute FetchReferrerPolicy referrerPolicy;
@@ -56,7 +54,7 @@ typedef (Blob or BufferSource or DOMFormData or URLSearchParams or USVString) Bo
     readonly attribute FetchRequestCache cache;
     readonly attribute FetchRequestRedirect redirect;
     readonly attribute DOMString integrity;
-    readonly attribute boolean keepalive;
+    [EnabledAtRuntime=FetchAPIKeepAlive] readonly attribute boolean keepalive;
 
     [CallWith=ScriptExecutionContext, MayThrowException, NewObject] FetchRequest clone();
 };

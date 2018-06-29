@@ -1,7 +1,7 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2009, 2010, 2011, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -28,16 +28,18 @@
 
 namespace WebCore {
 
-struct CompositionUnderline;
 class RenderCombineText;
 class RenderedDocumentMarker;
 class TextPainter;
+struct CompositionUnderline;
+struct MarkedText;
 struct TextPaintStyle;
 
 const unsigned short cNoTruncation = USHRT_MAX;
 const unsigned short cFullTruncation = USHRT_MAX - 1;
 
 class InlineTextBox : public InlineBox {
+    WTF_MAKE_ISO_ALLOCATED(InlineTextBox);
 public:
     explicit InlineTextBox(RenderText& renderer)
         : InlineBox(renderer)
@@ -106,21 +108,18 @@ private:
     LayoutUnit selectionBottom() const;
     LayoutUnit selectionHeight() const;
 
-    StringView substringToRender(std::optional<unsigned> overridingLength = { }) const;
-    String hyphenatedStringForTextRun(const RenderStyle&, std::optional<unsigned> alternateLength = { }) const;
-    TextRun constructTextRun(const RenderStyle&, StringView alternateStringToRender = { }, std::optional<unsigned> alternateLength = { }) const;
-    TextRun constructTextRun(const RenderStyle&, StringView, unsigned maximumLength) const;
-
 public:
     FloatRect calculateBoundaries() const override { return FloatRect(x(), y(), width(), height()); }
 
     virtual LayoutRect localSelectionRect(unsigned startPos, unsigned endPos) const;
-    bool isSelected(unsigned startPos, unsigned endPos) const;
+    bool isSelected(unsigned startPosition, unsigned endPosition) const;
     std::pair<unsigned, unsigned> selectionStartEnd() const;
 
 protected:
     void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) override;
+
+    unsigned clampedOffset(unsigned) const;
 
 private:
     void deleteLine() final;
@@ -151,18 +150,42 @@ public:
     virtual int offsetForPosition(float x, bool includePartialGlyphs = true) const;
     virtual float positionForOffset(unsigned offset) const;
 
-protected:
-    void paintCompositionBackground(GraphicsContext&, const FloatPoint& boxOrigin, const RenderStyle&, const FontCascade&, unsigned startPos, unsigned endPos);
-    void paintDocumentMarkers(GraphicsContext&, const FloatPoint& boxOrigin, const RenderStyle&, const FontCascade&, bool background);
-    void paintCompositionUnderline(GraphicsContext&, const FloatPoint& boxOrigin, const CompositionUnderline&);
-    unsigned clampedOffset(unsigned) const;
-
 private:
-    void paintDecoration(GraphicsContext&, const FontCascade&, RenderCombineText*, const TextRun&, const FloatPoint& textOrigin, const FloatRect& boxRect,
-        TextDecoration, TextPaintStyle, const ShadowData*, const FloatRect& clipOutRect);
-    void paintSelection(GraphicsContext&, const FloatPoint& boxOrigin, const RenderStyle&, const FontCascade&, const Color& textColor);
-    void paintDocumentMarker(GraphicsContext&, const FloatPoint& boxOrigin, RenderedDocumentMarker&, const RenderStyle&, const FontCascade&);
-    void paintTextMatchMarker(GraphicsContext&, const FloatPoint& boxOrigin, RenderedDocumentMarker&, const RenderStyle&, const FontCascade&);
+    struct MarkedTextStyle;
+    struct StyledMarkedText;
+
+    enum class TextPaintPhase { Background, Foreground, Decoration };
+
+    Vector<MarkedText> collectMarkedTextsForDraggedContent();
+    Vector<MarkedText> collectMarkedTextsForDocumentMarkers(TextPaintPhase);
+
+    MarkedTextStyle computeStyleForUnmarkedMarkedText(const PaintInfo&) const;
+    StyledMarkedText resolveStyleForMarkedText(const MarkedText&, const MarkedTextStyle& baseStyle, const PaintInfo&);
+    Vector<StyledMarkedText> subdivideAndResolveStyle(const Vector<MarkedText>&, const MarkedTextStyle& baseStyle, const PaintInfo&);
+
+    using MarkedTextStylesEqualityFunction = bool (*)(const MarkedTextStyle&, const MarkedTextStyle&);
+    Vector<StyledMarkedText> coalesceAdjacentMarkedTexts(const Vector<StyledMarkedText>&, MarkedTextStylesEqualityFunction);
+
+    FloatPoint textOriginFromBoxRect(const FloatRect&) const;
+
+    void paintMarkedTexts(GraphicsContext&, TextPaintPhase, const FloatRect& boxRect, const Vector<StyledMarkedText>&, const FloatRect& decorationClipOutRect = { });
+
+    void paintPlatformDocumentMarker(GraphicsContext&, const FloatPoint& boxOrigin, const MarkedText&);
+    void paintPlatformDocumentMarkers(GraphicsContext&, const FloatPoint& boxOrigin);
+
+    void paintCompositionBackground(GraphicsContext&, const FloatPoint& boxOrigin);
+    void paintCompositionUnderlines(GraphicsContext&, const FloatPoint& boxOrigin) const;
+    void paintCompositionUnderline(GraphicsContext&, const FloatPoint& boxOrigin, const CompositionUnderline&) const;
+
+    void paintMarkedTextBackground(GraphicsContext&, const FloatPoint& boxOrigin, const Color&, unsigned clampedStartOffset, unsigned clampedEndOffset);
+    void paintMarkedTextForeground(GraphicsContext&, const FloatRect& boxRect, const StyledMarkedText&);
+    void paintMarkedTextDecoration(GraphicsContext&, const FloatRect& boxRect, const FloatRect& clipOutRect, const StyledMarkedText&);
+
+    const RenderCombineText* combinedText() const;
+    const FontCascade& lineFont() const;
+
+    String text(bool ignoreCombinedText = false, bool ignoreHyphen = false) const; // The effective text for the run.
+    TextRun createTextRun(String&) const;
 
     ExpansionBehavior expansionBehavior() const;
 

@@ -91,7 +91,7 @@ static void callOnFileThread(Function<void ()>&& function)
                 // This can bever be null because we never queue a function that is null.
                 ASSERT(*function);
 #if PLATFORM(JAVA)
-                WTF::AutoAttachToJavaThread autoAttach;
+                WTF::AttachThreadAsNonDaemonToJavaEnv autoAttach;
 #endif
                 (*function)();
             }

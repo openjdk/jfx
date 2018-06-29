@@ -6,6 +6,8 @@
 
 #include <wtf/java/JavaEnv.h>
 
+namespace ResourceRequestJavaInternal {
+
 static JGClass networkContextClass;
 static jmethodID getMaximumHTTPConnectionCountPerHostMethod;
 
@@ -23,11 +25,13 @@ static void initRefs(JNIEnv* env)
         ASSERT(getMaximumHTTPConnectionCountPerHostMethod);
     }
 }
+}
 
 namespace WebCore {
 
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
+    using namespace ResourceRequestJavaInternal;
     // This is used by the loader to control the number of parallel load
     // requests. Our java framework employs HttpURLConnection for all
     // HTTP exchanges, so we delegate this call to java to return

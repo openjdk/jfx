@@ -33,6 +33,7 @@
 
 namespace WebCore {
 
+#define Unknown Mode_Unknown
 enum Mode { Explicit, Fallback, OnlineWhitelist, Unknown };
 
 static String manifestPath(const URL& manifestURL)

@@ -34,7 +34,7 @@
 
 #if USE(CFURLCONNECTION)
 #include "ResourceHandleCFURLConnectionDelegate.h"
-#include <CFNetwork/CFURLConnectionPriv.h>
+#include <pal/spi/cf/CFNetworkSPI.h>
 #endif
 
 #if USE(CURL) && PLATFORM(WIN)
@@ -43,11 +43,7 @@
 #endif
 
 #if USE(CURL)
-#include "CurlContext.h"
-#include "CurlJobManager.h"
-#include "FormDataStreamCurl.h"
-#include "MultipartHandle.h"
-#include <wtf/Lock.h>
+#include "ResourceHandleCurlDelegate.h"
 #endif
 
 #if USE(SOUP)
@@ -80,7 +76,7 @@ namespace WebCore {
 class ResourceHandleInternal {
     WTF_MAKE_NONCOPYABLE(ResourceHandleInternal); WTF_MAKE_FAST_ALLOCATED;
 public:
-    ResourceHandleInternal(ResourceHandle* loader, NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff)
+    ResourceHandleInternal(ResourceHandle* loader, NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff)
         : m_context(context)
         , m_client(client)
         , m_firstRequest(request)
@@ -88,13 +84,9 @@ public:
         , m_partition(request.cachePartition())
         , m_defersLoading(defersLoading)
         , m_shouldContentSniff(shouldContentSniff)
-        , m_usesAsyncCallbacks(client && client->usesAsyncCallbacks())
+        , m_shouldContentEncodingSniff(shouldContentEncodingSniff)
 #if USE(CFURLCONNECTION)
         , m_currentRequest(request)
-#endif
-#if USE(CURL)
-        , m_handle { loader }
-        , m_formDataStream { loader }
 #endif
 #if USE(SOUP)
         , m_timeoutSource(RunLoop::main(), loader, &ResourceHandle::timeoutFired)
@@ -127,13 +119,13 @@ public:
 
     bool m_defersLoading;
     bool m_shouldContentSniff;
-    bool m_usesAsyncCallbacks;
+    bool m_shouldContentEncodingSniff;
 #if USE(CFURLCONNECTION)
     RetainPtr<CFURLConnectionRef> m_connection;
     ResourceRequest m_currentRequest;
     RefPtr<ResourceHandleCFURLConnectionDelegate> m_connectionDelegate;
 #endif
-#if PLATFORM(COCOA) && !USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     RetainPtr<NSURLConnection> m_connection;
     RetainPtr<id> m_delegate;
 #endif
@@ -144,49 +136,8 @@ public:
     RetainPtr<CFURLStorageSessionRef> m_storageSession;
 #endif
 #if USE(CURL)
-    ResourceHandle* m_handle;
-    CurlHandle m_curlHandle;
-
+    RefPtr<ResourceHandleCurlDelegate> m_delegate;
     ResourceResponse m_response;
-    bool m_cancelled { false };
-    unsigned short m_authFailureCount { 0 };
-
-    FormDataStream m_formDataStream;
-    unsigned m_sslErrors { 0 };
-    Vector<char> m_postBytes;
-
-    std::unique_ptr<MultipartHandle> m_multipartHandle;
-    bool m_addedCacheValidationHeaders { false };
-    CurlJobTicket m_job { nullptr };
-
-    Vector<char> m_receivedBuffer;
-    Lock m_receivedBufferMutex;
-
-    void initialize();
-    void applyAuthentication();
-    void setupPOST();
-    void setupPUT();
-    void setupFormData(bool isPostRequest);
-
-    void didFinish();
-    void didFail();
-
-    size_t willPrepareSendData(char* ptr, size_t blockSize, size_t numberOfBlocks);
-    void didReceiveHeaderLine(const String& header);
-    void didReceiveAllHeaders(long httpCode, long long contentLength);
-    void didReceiveContentData();
-
-    void handleLocalReceiveResponse();
-
-    static size_t readCallback(char* ptr, size_t blockSize, size_t numberOfBlocks, void* data);
-    static size_t headerCallback(char* ptr, size_t blockSize, size_t numberOfBlocks, void* data);
-    static size_t writeCallback(char* ptr, size_t blockSize, size_t numberOfBlocks, void* data);
-
-    void dispatchSynchronousJob();
-    void handleDataURL();
-
-    void calculateWebTimingInformations();
-
 #endif
 
 #if USE(SOUP)

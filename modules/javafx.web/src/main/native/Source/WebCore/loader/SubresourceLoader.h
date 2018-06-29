@@ -43,7 +43,7 @@ class SecurityOrigin;
 
 class SubresourceLoader final : public ResourceLoader {
 public:
-    WEBCORE_EXPORT static RefPtr<SubresourceLoader> create(DocumentLoader&, CachedResource&, const ResourceRequest&, const ResourceLoaderOptions&);
+    WEBCORE_EXPORT static void create(DocumentLoader&, CachedResource&, ResourceRequest&&, const ResourceLoaderOptions&, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&&);
 
     virtual ~SubresourceLoader();
 
@@ -53,7 +53,7 @@ public:
 
     SecurityOrigin* origin() { return m_origin.get(); }
 #if PLATFORM(IOS)
-    bool startLoading() override;
+    void startLoading() override;
 
     // FIXME: What is an "iOS" original request? Why is it necessary?
     const ResourceRequest& iOSOriginalRequest() const override { return m_iOSOriginalRequest; }
@@ -64,9 +64,9 @@ public:
 private:
     SubresourceLoader(DocumentLoader&, CachedResource&, const ResourceLoaderOptions&);
 
-    bool init(const ResourceRequest&) override;
+    void init(ResourceRequest&&, CompletionHandler<void(bool)>&&) override;
 
-    void willSendRequestInternal(ResourceRequest&, const ResourceResponse& redirectResponse) override;
+    void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&) override;
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
     void didReceiveResponse(const ResourceResponse&) override;
     void didReceiveData(const char*, unsigned, long long encodedDataLength, DataPayloadType) override;
@@ -77,18 +77,11 @@ private:
     void didCancel(const ResourceError&) override;
     void didRetrieveDerivedDataFromCache(const String& type, SharedBuffer&) override;
 
-#if PLATFORM(COCOA) && !USE(CFURLCONNECTION)
+#if PLATFORM(COCOA)
     NSCachedURLResponse *willCacheResponse(ResourceHandle*, NSCachedURLResponse*) override;
-#endif
-#if PLATFORM(COCOA) && USE(CFURLCONNECTION)
-    CFCachedURLResponseRef willCacheResponse(ResourceHandle*, CFCachedURLResponseRef) override;
 #endif
 
     void releaseResources() override;
-
-#if USE(SOUP)
-    char* getOrCreateReadBuffer(size_t requestedSize, size_t& actualSize) override;
-#endif
 
     bool checkForHTTPStatusCodeError();
     bool checkResponseCrossOriginAccessControl(const ResourceResponse&, String&);

@@ -25,10 +25,6 @@
 
 #include "config.h"
 
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 #include "GraphicsContext.h"
 #include <wtf/java/JavaEnv.h>
 #include "MediaPlayerPrivateJava.h"
@@ -198,7 +194,8 @@ void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String, ASCIICaseInse
 
 MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const MediaEngineSupportParameters& parameters)
 {
-    for(auto& codecValue: parameters.type.codecs()) {
+    for (const auto& codecValue: parameters.type.codecs()) {
+        UNUSED_PARAM(codecValue);
         LOG_TRACE2(">>MediaEngineSupportsType, type=%s, codecs=%s\n", parameters.type.raw().utf8().data(), codecValue.utf8().data());
     }
 

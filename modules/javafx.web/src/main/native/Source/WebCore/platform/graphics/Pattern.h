@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Pattern_h
-#define Pattern_h
+#pragma once
 
 #include "AffineTransform.h"
 
@@ -63,8 +62,6 @@ public:
 
     Image& tileImage() const { return m_tileImage.get(); }
 
-    void platformDestroy();
-
     // Pattern space is an abstract space that maps to the default user space by the transformation 'userSpaceTransformation'
 #if !USE(DIRECT2D)
     PlatformPatternPtr createPlatformPattern(const AffineTransform& userSpaceTransformation) const;
@@ -72,9 +69,7 @@ public:
     PlatformPatternPtr createPlatformPattern(const GraphicsContext&, float alpha, const AffineTransform& userSpaceTransformation) const;
 #endif
     void setPatternSpaceTransform(const AffineTransform& patternSpaceTransformation);
-    const AffineTransform& getPatternSpaceTransform() { return m_patternSpaceTransformation; };
-    void setPlatformPatternSpaceTransform();
-
+    const AffineTransform& patternSpaceTransform() { return m_patternSpaceTransformation; };
     bool repeatX() const { return m_repeatX; }
     bool repeatY() const { return m_repeatY; }
 
@@ -86,12 +81,10 @@ private:
     Pattern(Ref<Image>&&, bool repeatX, bool repeatY);
 
     Ref<Image> m_tileImage;
+    AffineTransform m_patternSpaceTransformation;
     bool m_repeatX;
     bool m_repeatY;
-    AffineTransform m_patternSpaceTransformation;
-    PlatformPatternPtr m_pattern;
 };
 
 } //namespace
 
-#endif

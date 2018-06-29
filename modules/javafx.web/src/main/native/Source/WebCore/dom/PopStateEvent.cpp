@@ -29,7 +29,7 @@
 
 #include "EventNames.h"
 #include "History.h"
-#include <runtime/JSCInlines.h>
+#include <JavaScriptCore/JSCInlines.h>
 
 namespace WebCore {
 
@@ -46,9 +46,7 @@ PopStateEvent::PopStateEvent(RefPtr<SerializedScriptValue>&& serializedState, Hi
 {
 }
 
-PopStateEvent::~PopStateEvent()
-{
-}
+PopStateEvent::~PopStateEvent() = default;
 
 Ref<PopStateEvent> PopStateEvent::create(RefPtr<SerializedScriptValue>&& serializedState, History* history)
 {

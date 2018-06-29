@@ -286,8 +286,8 @@ xmlHashGrow(xmlHashTablePtr table, int size) {
         table->table[key].next = NULL;
         xmlFree(iter);
         } else {
-        iter->next = table->table[key].next;
-        table->table[key].next = iter;
+            iter->next = table->table[key].next;
+            table->table[key].next = iter;
         }
 
 #ifdef DEBUG_GROW

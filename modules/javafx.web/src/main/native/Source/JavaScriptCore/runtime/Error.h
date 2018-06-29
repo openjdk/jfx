@@ -74,9 +74,10 @@ JS_EXPORT_PRIVATE JSObject* createOutOfMemoryError(ExecState*);
 
 JS_EXPORT_PRIVATE JSObject* createError(ExecState*, ErrorType, const String&);
 
-
-bool addErrorInfoAndGetBytecodeOffset(ExecState*, VM&, JSObject*, bool, CallFrame*&, unsigned* = nullptr);
-
+std::unique_ptr<Vector<StackFrame>> getStackTrace(ExecState*, VM&, JSObject*, bool useCurrentFrame);
+void getBytecodeOffset(ExecState*, VM&, Vector<StackFrame>*, CallFrame*&, unsigned& bytecodeOffset);
+bool getLineColumnAndSource(Vector<StackFrame>* stackTrace, unsigned& line, unsigned& column, String& sourceURL);
+bool addErrorInfo(VM&, Vector<StackFrame>*, JSObject*);
 JS_EXPORT_PRIVATE void addErrorInfo(ExecState*, JSObject*, bool);
 JSObject* addErrorInfo(ExecState*, JSObject* error, int line, const SourceCode&);
 
@@ -105,7 +106,7 @@ inline EncodedJSValue throwVMDOMAttributeGetterTypeError(ExecState* state, Throw
 class StrictModeTypeErrorFunction : public InternalFunction {
 private:
     StrictModeTypeErrorFunction(VM& vm, Structure* structure, const String& message)
-        : InternalFunction(vm, structure)
+        : InternalFunction(vm, structure, callThrowTypeError, constructThrowTypeError)
         , m_message(message)
     {
     }
@@ -130,12 +131,6 @@ public:
         return JSValue::encode(jsNull());
     }
 
-    static ConstructType getConstructData(JSCell*, ConstructData& constructData)
-    {
-        constructData.native.function = constructThrowTypeError;
-        return ConstructType::Host;
-    }
-
     static EncodedJSValue JSC_HOST_CALL callThrowTypeError(ExecState* exec)
     {
         VM& vm = exec->vm();
@@ -144,17 +139,11 @@ public:
         return JSValue::encode(jsNull());
     }
 
-    static CallType getCallData(JSCell*, CallData& callData)
-    {
-        callData.native.function = callThrowTypeError;
-        return CallType::Host;
-    }
-
     DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
     }
 
 private:

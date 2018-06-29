@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +29,7 @@
 
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -52,6 +54,8 @@ enum SandboxFlag {
     SandboxPropagatesToAuxiliaryBrowsingContexts = 1 << 9,
     SandboxTopNavigationByUserActivation = 1 << 10,
     SandboxDocumentDomain       = 1 << 11,
+    SandboxModals               = 1 << 12,
+    SandboxStorageAccessByUserActivation = 1 << 13,
     SandboxAll                  = -1 // Mask with all bits set to 1.
 };
 
@@ -79,10 +83,17 @@ public:
     static SandboxFlags parseSandboxPolicy(const String& policy, String& invalidTokensErrorMessage);
     static bool isSupportedSandboxPolicy(StringView);
 
-    bool foundMixedContent() const { return m_foundMixedContent; }
-    void setFoundMixedContent() { m_foundMixedContent = true; }
+    enum MixedContentType {
+        Inactive = 1 << 0,
+        Active = 1 << 1,
+    };
+
+    const OptionSet<MixedContentType>& foundMixedContent() const { return m_mixedContentTypes; }
+    void setFoundMixedContent(MixedContentType type) { m_mixedContentTypes |= type; }
     bool geolocationAccessed() const { return m_geolocationAccessed; }
     void setGeolocationAccessed() { m_geolocationAccessed = true; }
+    bool secureCookiesAccessed() const { return m_secureCookiesAccessed; }
+    void setSecureCookiesAccessed() { m_secureCookiesAccessed = true; }
 
     bool isStrictMixedContentMode() const { return m_isStrictMixedContentMode; }
     void setStrictMixedContentMode(bool strictMixedContentMode) { m_isStrictMixedContentMode = strictMixedContentMode; }
@@ -108,9 +119,10 @@ private:
     RefPtr<SecurityOriginPolicy> m_securityOriginPolicy;
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
     SandboxFlags m_sandboxFlags { SandboxNone };
+    OptionSet<MixedContentType> m_mixedContentTypes;
     bool m_haveInitializedSecurityOrigin { false };
-    bool m_foundMixedContent { false };
     bool m_geolocationAccessed { false };
+    bool m_secureCookiesAccessed { false };
     bool m_isStrictMixedContentMode { false };
 };
 

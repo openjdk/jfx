@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/DeprecatedCSSOMValue.h>
@@ -41,7 +43,7 @@ extern "C" {
 
 #define IMPL (static_cast<DeprecatedCSSOMValue*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSValueImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSValueImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
@@ -60,7 +62,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSValueImpl_setCssTextImpl(JNIEn
     IMPL->setCssText(String(env, value));
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSValueImpl_getCssValueTypeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_CSSValueImpl_getCssValueTypeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->cssValueType();

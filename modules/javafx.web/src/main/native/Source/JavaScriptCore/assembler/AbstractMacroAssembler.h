@@ -43,11 +43,6 @@ namespace JSC {
 
 #if ENABLE(ASSEMBLER)
 
-#if ENABLE(MASM_PROBE)
-struct ProbeContext;
-typedef void (*ProbeFunction)(struct ProbeContext*);
-#endif
-
 class AllowMacroScratchRegisterUsage;
 class DisallowMacroScratchRegisterUsage;
 class LinkBuffer;
@@ -258,12 +253,9 @@ public:
         {
         }
 
-        // This is only here so that TrustedImmPtr(0) does not confuse the C++
-        // overload handling rules.
-        explicit TrustedImmPtr(int value)
-            : m_value(0)
+        explicit TrustedImmPtr(std::nullptr_t)
+            : m_value(nullptr)
         {
-            ASSERT_UNUSED(value, !value);
         }
 
         explicit TrustedImmPtr(size_t value)
@@ -835,7 +827,7 @@ public:
 
     static ptrdiff_t differenceBetweenCodePtr(const MacroAssemblerCodePtr& a, const MacroAssemblerCodePtr& b)
     {
-        return reinterpret_cast<ptrdiff_t>(b.executableAddress()) - reinterpret_cast<ptrdiff_t>(a.executableAddress());
+        return b.executableAddress<ptrdiff_t>() - a.executableAddress<ptrdiff_t>();
     }
 
     unsigned debugOffset() { return m_assembler.debugOffset(); }
@@ -855,6 +847,11 @@ public:
     static void linkPointer(void* code, AssemblerLabel label, void* value)
     {
         AssemblerType::linkPointer(code, label, value);
+    }
+
+    static void linkPointer(void* code, AssemblerLabel label, MacroAssemblerCodePtr value)
+    {
+        AssemblerType::linkPointer(code, label, value.executableAddress());
     }
 
     static void* getLinkerAddress(void* code, AssemblerLabel label)

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2011, 2015-2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2018 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -23,41 +23,40 @@
 namespace JSC {
 
 enum JSType : uint8_t {
-    UnspecifiedType,
-    UndefinedType,
-    BooleanType,
-    NumberType,
-    NullType,
-
     // The CellType value must come before any JSType that is a JSCell.
     CellType,
     StringType,
     SymbolType,
+    BigIntType,
 
     CustomGetterSetterType,
     APIValueWrapperType,
 
-    EvalExecutableType,
     ProgramExecutableType,
     ModuleProgramExecutableType,
+    EvalExecutableType,
     FunctionExecutableType,
-    WebAssemblyExecutableType,
 
     UnlinkedFunctionExecutableType,
+
     UnlinkedProgramCodeBlockType,
     UnlinkedModuleProgramCodeBlockType,
     UnlinkedEvalCodeBlockType,
     UnlinkedFunctionCodeBlockType,
 
+    CodeBlockType,
+
     JSFixedArrayType,
     JSSourceCodeType,
     JSScriptFetcherType,
+    JSScriptFetchParametersType,
 
     // The ObjectType value must come before any JSType that is a subclass of JSObject.
     ObjectType,
     FinalObjectType,
     JSCalleeType,
     JSFunctionType,
+    InternalFunctionType,
     NumberObjectType,
     ErrorInstanceType,
     PureForwardingProxyType,
@@ -65,20 +64,25 @@ enum JSType : uint8_t {
     WithScopeType,
     DirectArgumentsType,
     ScopedArgumentsType,
+    ClonedArgumentsType,
 
+    // Start JSArray types.
     ArrayType,
     DerivedArrayType,
+    // End JSArray types.
 
+    // Start JSArrayBufferView types.
     Int8ArrayType,
-    Int16ArrayType,
-    Int32ArrayType,
     Uint8ArrayType,
     Uint8ClampedArrayType,
+    Int16ArrayType,
     Uint16ArrayType,
+    Int32ArrayType,
     Uint32ArrayType,
     Float32ArrayType,
     Float64ArrayType,
     DataViewType,
+    // End JSArrayBufferView types.
 
     GetterSetterType,
 
@@ -94,16 +98,20 @@ enum JSType : uint8_t {
     ProxyObjectType,
     JSMapType,
     JSSetType,
+    JSWeakMapType,
+    JSWeakSetType,
 
     WebAssemblyFunctionType,
-
-    ClonedArgumentsType,
-
     WebAssemblyToJSCalleeType,
 
     LastJSCObjectType = WebAssemblyToJSCalleeType,
     MaxJSType = 0b11111111,
 };
+
+static const uint32_t FirstTypedArrayType = Int8ArrayType;
+static const uint32_t LastTypedArrayType = DataViewType;
+static constexpr uint32_t NumberOfTypedArrayTypes = LastTypedArrayType - FirstTypedArrayType + 1;
+static constexpr uint32_t NumberOfTypedArrayTypesExcludingDataView = NumberOfTypedArrayTypes - 1;
 
 static_assert(sizeof(JSType) == sizeof(uint8_t), "sizeof(JSType) is one byte.");
 static_assert(LastJSCObjectType < 128, "The highest bit is reserved for embedder's extension.");

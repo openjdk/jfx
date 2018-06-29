@@ -33,8 +33,8 @@
 #include "runtime_array.h"
 #include "runtime_object.h"
 #include "runtime_root.h"
-#include <runtime/JSArray.h>
-#include <runtime/JSLock.h>
+#include <JavaScriptCore/JSArray.h>
+#include <JavaScriptCore/JSLock.h>
 
 #include "JavaArrayJSC.h"
 #include "JavaInstanceJSC.h"

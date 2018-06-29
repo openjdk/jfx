@@ -32,6 +32,7 @@
 #include "IntRect.h"
 #include "PlatformLayer.h"
 #include <memory>
+#include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
@@ -59,7 +60,8 @@
 #include <wtf/RetainPtr.h>
 OBJC_CLASS CALayer;
 OBJC_CLASS WebGLLayer;
-#elif PLATFORM(GTK) || PLATFORM(WIN_CAIRO) || PLATFORM(WPE)
+typedef struct __IOSurface* IOSurfaceRef;
+#else
 typedef unsigned int GLuint;
 #endif
 
@@ -92,14 +94,10 @@ class Extensions3DOpenGL;
 class HostWindow;
 class Image;
 class ImageBuffer;
-class ImageSource;
 class ImageData;
 class IntRect;
 class IntSize;
 class WebGLRenderingContextBase;
-#if USE(CAIRO)
-class PlatformContextCairo;
-#endif
 #if USE(TEXTURE_MAPPER)
 class TextureMapperGC3DPlatformLayer;
 #endif
@@ -723,31 +721,33 @@ public:
     enum RenderStyle {
         RenderOffscreen,
         RenderDirectlyToHostWindow,
-        RenderToCurrentGLContext
     };
 
     class ContextLostCallback {
     public:
         virtual void onContextLost() = 0;
-        virtual ~ContextLostCallback() {}
+        virtual ~ContextLostCallback() = default;
     };
 
     class ErrorMessageCallback {
     public:
         virtual void onErrorMessage(const String& message, GC3Dint id) = 0;
-        virtual ~ErrorMessageCallback() { }
+        virtual ~ErrorMessageCallback() = default;
     };
 
     void setContextLostCallback(std::unique_ptr<ContextLostCallback>);
     void setErrorMessageCallback(std::unique_ptr<ErrorMessageCallback>);
 
     static RefPtr<GraphicsContext3D> create(GraphicsContext3DAttributes, HostWindow*, RenderStyle = RenderOffscreen);
-    static RefPtr<GraphicsContext3D> createForCurrentGLContext();
     ~GraphicsContext3D();
 
 #if PLATFORM(COCOA)
+    static Ref<GraphicsContext3D> createShared(GraphicsContext3D& sharedContext);
+#endif
+
+#if PLATFORM(COCOA)
     PlatformGraphicsContext3D platformGraphicsContext3D() const { return m_contextObj; }
-    Platform3DObject platformTexture() const { return m_fbo; }
+    Platform3DObject platformTexture() const { return m_texture; }
     CALayer* platformLayer() const { return reinterpret_cast<CALayer*>(m_webGLLayer.get()); }
 #else
     PlatformGraphicsContext3D platformGraphicsContext3D();
@@ -763,6 +763,12 @@ public:
 
     // Equivalent to ::glTexImage2D(). Allows pixels==0 with no allocation.
     void texImage2DDirect(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, const void* pixels);
+
+    // Get an attribute location without checking the name -> mangledname mapping.
+    int getAttribLocationDirect(Platform3DObject program, const String& name);
+
+    // Compile a shader without going through ANGLE.
+    void compileShaderDirect(Platform3DObject);
 
     // Helper to texImage2D with pixel==0 case: pixels are initialized to 0.
     // Return true if no GL error is synthesized.
@@ -972,6 +978,8 @@ public:
     void texStorage2D(GC3Denum target, GC3Dsizei levels, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height);
     void texStorage3D(GC3Denum target, GC3Dsizei levels, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dsizei depth);
 
+    void getActiveUniforms(Platform3DObject program, const Vector<GC3Duint>& uniformIndices, GC3Denum pname, Vector<GC3Dint>& params);
+
     GC3Denum checkFramebufferStatus(GC3Denum target);
     void clear(GC3Dbitfield mask);
     void clearColor(GC3Dclampf red, GC3Dclampf green, GC3Dclampf blue, GC3Dclampf alpha);
@@ -1070,24 +1078,24 @@ public:
     void texSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, const void* pixels);
 
     void uniform1f(GC3Dint location, GC3Dfloat x);
-    void uniform1fv(GC3Dint location, GC3Dsizei, GC3Dfloat* v);
+    void uniform1fv(GC3Dint location, GC3Dsizei, const GC3Dfloat* v);
     void uniform1i(GC3Dint location, GC3Dint x);
-    void uniform1iv(GC3Dint location, GC3Dsizei, GC3Dint* v);
+    void uniform1iv(GC3Dint location, GC3Dsizei, const GC3Dint* v);
     void uniform2f(GC3Dint location, GC3Dfloat x, GC3Dfloat y);
-    void uniform2fv(GC3Dint location, GC3Dsizei, GC3Dfloat* v);
+    void uniform2fv(GC3Dint location, GC3Dsizei, const GC3Dfloat* v);
     void uniform2i(GC3Dint location, GC3Dint x, GC3Dint y);
-    void uniform2iv(GC3Dint location, GC3Dsizei, GC3Dint* v);
+    void uniform2iv(GC3Dint location, GC3Dsizei, const GC3Dint* v);
     void uniform3f(GC3Dint location, GC3Dfloat x, GC3Dfloat y, GC3Dfloat z);
-    void uniform3fv(GC3Dint location, GC3Dsizei, GC3Dfloat* v);
+    void uniform3fv(GC3Dint location, GC3Dsizei, const GC3Dfloat* v);
     void uniform3i(GC3Dint location, GC3Dint x, GC3Dint y, GC3Dint z);
-    void uniform3iv(GC3Dint location, GC3Dsizei, GC3Dint* v);
+    void uniform3iv(GC3Dint location, GC3Dsizei, const GC3Dint* v);
     void uniform4f(GC3Dint location, GC3Dfloat x, GC3Dfloat y, GC3Dfloat z, GC3Dfloat w);
-    void uniform4fv(GC3Dint location, GC3Dsizei, GC3Dfloat* v);
+    void uniform4fv(GC3Dint location, GC3Dsizei, const GC3Dfloat* v);
     void uniform4i(GC3Dint location, GC3Dint x, GC3Dint y, GC3Dint z, GC3Dint w);
-    void uniform4iv(GC3Dint location, GC3Dsizei, GC3Dint* v);
-    void uniformMatrix2fv(GC3Dint location, GC3Dsizei, GC3Dboolean transpose, GC3Dfloat* value);
-    void uniformMatrix3fv(GC3Dint location, GC3Dsizei, GC3Dboolean transpose, GC3Dfloat* value);
-    void uniformMatrix4fv(GC3Dint location, GC3Dsizei, GC3Dboolean transpose, GC3Dfloat* value);
+    void uniform4iv(GC3Dint location, GC3Dsizei, const GC3Dint* v);
+    void uniformMatrix2fv(GC3Dint location, GC3Dsizei, GC3Dboolean transpose, const GC3Dfloat* value);
+    void uniformMatrix3fv(GC3Dint location, GC3Dsizei, GC3Dboolean transpose, const GC3Dfloat* value);
+    void uniformMatrix4fv(GC3Dint location, GC3Dsizei, GC3Dboolean transpose, const GC3Dfloat* value);
 
     void useProgram(Platform3DObject);
     void validateProgram(Platform3DObject);
@@ -1095,13 +1103,13 @@ public:
     bool precisionsMatch(Platform3DObject vertexShader, Platform3DObject fragmentShader) const;
 
     void vertexAttrib1f(GC3Duint index, GC3Dfloat x);
-    void vertexAttrib1fv(GC3Duint index, GC3Dfloat* values);
+    void vertexAttrib1fv(GC3Duint index, const GC3Dfloat* values);
     void vertexAttrib2f(GC3Duint index, GC3Dfloat x, GC3Dfloat y);
-    void vertexAttrib2fv(GC3Duint index, GC3Dfloat* values);
+    void vertexAttrib2fv(GC3Duint index, const GC3Dfloat* values);
     void vertexAttrib3f(GC3Duint index, GC3Dfloat x, GC3Dfloat y, GC3Dfloat z);
-    void vertexAttrib3fv(GC3Duint index, GC3Dfloat* values);
+    void vertexAttrib3fv(GC3Duint index, const GC3Dfloat* values);
     void vertexAttrib4f(GC3Duint index, GC3Dfloat x, GC3Dfloat y, GC3Dfloat z, GC3Dfloat w);
-    void vertexAttrib4fv(GC3Duint index, GC3Dfloat* values);
+    void vertexAttrib4fv(GC3Duint index, const GC3Dfloat* values);
     void vertexAttribPointer(GC3Duint index, GC3Dint size, GC3Denum type, GC3Dboolean normalized,
                              GC3Dsizei stride, GC3Dintptr offset);
 
@@ -1119,12 +1127,7 @@ public:
     GC3Dboolean isVertexArray(Platform3DObject);
     void bindVertexArray(Platform3DObject);
 
-#if PLATFORM(GTK) || USE(CAIRO)
-    void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
-                       int canvasWidth, int canvasHeight, PlatformContextCairo* context);
-#elif USE(CG)
-    void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight, int canvasWidth, int canvasHeight, GraphicsContext&);
-#endif
+    void paintToCanvas(const unsigned char* imagePixels, const IntSize& imageSize, const IntSize& canvasSize, GraphicsContext&);
 
     void markContextChanged();
     void markLayerComposited();
@@ -1139,12 +1142,20 @@ public:
     RefPtr<ImageData> paintRenderingResultsToImageData();
     bool paintCompositedResultsToCanvas(ImageBuffer*);
 
-#if PLATFORM(IOS)
-    void endPaint();
+#if PLATFORM(COCOA)
+    bool texImageIOSurface2D(GC3Denum target, GC3Denum internalFormat, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, IOSurfaceRef, GC3Duint plane);
 #endif
+
+#if PLATFORM(IOS)
+    void presentRenderbuffer();
+#endif
+
 #if PLATFORM(MAC)
+    void allocateIOSurfaceBackingStore(IntSize);
+    void updateFramebufferTextureBackingStoreFromLayer();
     void updateCGLContext();
 #endif
+
     void setContextVisibility(bool);
 
     GraphicsContext3DPowerPreference powerPreferenceUsedForCreation() const { return m_powerPreferenceUsedForCreation; }
@@ -1246,7 +1257,6 @@ public:
         bool extractImage(bool premultiplyAlpha, bool ignoreGammaAndColorProfile);
 
 #if USE(CAIRO)
-        ImageSource* m_decoder;
         RefPtr<cairo_surface_t> m_imageSurface;
 #elif USE(CG)
         RetainPtr<CGImageRef> m_cgImage;
@@ -1267,8 +1277,13 @@ public:
 
     void setFailNextGPUStatusCheck() { m_failNextStatusCheck = true; }
 
+    GC3Denum activeTextureUnit() const { return m_state.activeTextureUnit; }
+    GC3Denum currentBoundTexture() const { return m_state.currentBoundTexture(); }
+    GC3Denum currentBoundTarget() const { return m_state.currentBoundTarget(); }
+    unsigned textureSeed(GC3Duint texture) { return m_state.textureSeedCount.count(texture); }
+
 private:
-    GraphicsContext3D(GraphicsContext3DAttributes, HostWindow*, RenderStyle = RenderOffscreen);
+    GraphicsContext3D(GraphicsContext3DAttributes, HostWindow*, RenderStyle = RenderOffscreen, GraphicsContext3D* sharedContext = nullptr);
 
     // Helper for packImageData/extractImageData/extractTextureData which implement packing of pixel
     // data into the specified OpenGL destination format and type.
@@ -1379,7 +1394,7 @@ private:
 
     std::unique_ptr<ShaderNameHash> nameHashMapForShaders;
 
-#if ((PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(WPE)) && USE(OPENGL_ES_2))
+#if USE(OPENGL_ES_2)
     friend class Extensions3DOpenGLES;
     std::unique_ptr<Extensions3DOpenGLES> m_extensions;
 #else
@@ -1411,8 +1426,40 @@ private:
 
     struct GraphicsContext3DState {
         GC3Duint boundFBO { 0 };
-        GC3Denum activeTexture { GraphicsContext3D::TEXTURE0 };
-        GC3Duint boundTexture0 { 0 };
+        GC3Denum activeTextureUnit { GraphicsContext3D::TEXTURE0 };
+
+        using BoundTextureMap = HashMap<GC3Denum,
+            std::pair<GC3Duint, GC3Denum>,
+            WTF::IntHash<GC3Denum>,
+            WTF::UnsignedWithZeroKeyHashTraits<GC3Duint>,
+            WTF::PairHashTraits<WTF::UnsignedWithZeroKeyHashTraits<GC3Duint>, WTF::UnsignedWithZeroKeyHashTraits<GC3Duint>>
+        >;
+        BoundTextureMap boundTextureMap;
+        GC3Duint currentBoundTexture() const { return boundTexture(activeTextureUnit); }
+        GC3Duint boundTexture(GC3Denum textureUnit) const
+        {
+            auto iterator = boundTextureMap.find(textureUnit);
+            if (iterator != boundTextureMap.end())
+                return iterator->value.first;
+            return 0;
+        }
+
+        GC3Duint currentBoundTarget() const { return boundTarget(activeTextureUnit); }
+        GC3Denum boundTarget(GC3Denum textureUnit) const
+        {
+            auto iterator = boundTextureMap.find(textureUnit);
+            if (iterator != boundTextureMap.end())
+                return iterator->value.second;
+            return 0;
+        }
+
+        void setBoundTexture(GC3Denum textureUnit, GC3Duint texture, GC3Denum target)
+        {
+            boundTextureMap.set(textureUnit, std::make_pair(texture, target));
+        }
+
+        using TextureSeedCount = HashCountedSet<GC3Duint, WTF::IntHash<GC3Duint>, WTF::UnsignedWithZeroKeyHashTraits<GC3Duint>>;
+        TextureSeedCount textureSeedCount;
     };
 
     GraphicsContext3DState m_state;

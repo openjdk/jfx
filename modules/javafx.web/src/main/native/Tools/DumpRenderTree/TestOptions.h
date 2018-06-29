@@ -29,14 +29,18 @@
 @class NSURL;
 
 struct TestOptions {
+    bool enableAttachmentElement { false };
+    bool useAcceleratedDrawing { false };
     bool enableIntersectionObserver { false };
+    bool enableMenuItemElement { false };
     bool enableModernMediaControls { true };
     bool enablePointerLock { false };
-    bool enableCredentialManagement { false };
+    bool enableWebAuthentication { true };
     bool enableDragDestinationActionLoad { false };
     bool layerBackedWebView { false };
     bool enableIsSecureContextAttribute { true };
     bool enableInspectorAdditions { false };
+    bool dumpJSConsoleLogInStdErr { false };
 
     TestOptions(NSURL*, const TestCommand&);
     bool webViewIsCompatibleWithOptions(const TestOptions&) const;

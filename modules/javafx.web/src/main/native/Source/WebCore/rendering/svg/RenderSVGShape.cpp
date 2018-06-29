@@ -43,9 +43,12 @@
 #include "SVGResourcesCache.h"
 #include "SVGURIReference.h"
 #include "StrokeStyleApplier.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StackStats.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGShape);
 
 class BoundingRectStrokeStyleApplier final : public StrokeStyleApplier {
 public:
@@ -71,16 +74,11 @@ RenderSVGShape::RenderSVGShape(SVGGraphicsElement& element, RenderStyle&& style)
 {
 }
 
-RenderSVGShape::~RenderSVGShape()
-{
-}
+RenderSVGShape::~RenderSVGShape() = default;
 
 void RenderSVGShape::updateShapeFromElement()
 {
-    m_path = std::make_unique<Path>();
-    ASSERT(RenderSVGShape::isEmpty());
-
-    updatePathFromGraphicsElement(&graphicsElement(), path());
+    m_path = std::make_unique<Path>(pathFromGraphicsElement(&graphicsElement()));
     processMarkerPositions();
 
     m_fillBoundingBox = calculateObjectBoundingBox();

@@ -65,7 +65,7 @@ struct SecurityOriginData {
     WEBCORE_EXPORT static std::optional<SecurityOriginData> fromDatabaseIdentifier(const String&);
 
     template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static bool decode(Decoder&, SecurityOriginData&);
+    template<class Decoder> static std::optional<SecurityOriginData> decode(Decoder&);
 
     bool isEmpty() const
     {
@@ -77,12 +77,15 @@ struct SecurityOriginData {
         return protocol.isHashTableDeletedValue();
     }
 
+    WEBCORE_EXPORT String toString() const;
+
 #if !LOG_DISABLED
-    WEBCORE_EXPORT String debugString() const;
+    String debugString() const { return toString(); }
 #endif
 };
 
 WEBCORE_EXPORT bool operator==(const SecurityOriginData&, const SecurityOriginData&);
+inline bool operator!=(const SecurityOriginData& first, const SecurityOriginData& second) { return !(first == second); }
 
 template<class Encoder>
 void SecurityOriginData::encode(Encoder& encoder) const
@@ -93,16 +96,23 @@ void SecurityOriginData::encode(Encoder& encoder) const
 }
 
 template<class Decoder>
-bool SecurityOriginData::decode(Decoder& decoder, SecurityOriginData& securityOriginData)
+std::optional<SecurityOriginData> SecurityOriginData::decode(Decoder& decoder)
 {
-    if (!decoder.decode(securityOriginData.protocol))
-        return false;
-    if (!decoder.decode(securityOriginData.host))
-        return false;
-    if (!decoder.decode(securityOriginData.port))
-        return false;
+    std::optional<String> protocol;
+    decoder >> protocol;
+    if (!protocol)
+        return std::nullopt;
 
-    return true;
+    std::optional<String> host;
+    decoder >> host;
+    if (!host)
+        return std::nullopt;
+
+    std::optional<uint16_t> port;
+    if (!decoder.decode(port))
+        return std::nullopt;
+
+    return {{ WTFMove(*protocol), WTFMove(*host), WTFMove(port) }};
 }
 
 struct SecurityOriginDataHashTraits : WTF::SimpleClassHashTraits<SecurityOriginData> {

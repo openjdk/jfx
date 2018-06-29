@@ -29,6 +29,7 @@
 
 #include "NotImplemented.h"
 #include "SharedBuffer.h"
+#include "SharedBuffer.h"
 #include <wtf/java/JavaEnv.h>
 #include "Logging.h"
 
@@ -51,7 +52,7 @@ namespace WebCore {
   static ImageDecoderCounter sourceCounter;
 #endif
 
-ImageDecoder::ImageDecoder()
+ImageDecoderJava::ImageDecoderJava()
 {
 #ifndef NDEBUG
     ++ImageDecoderCounter::created;
@@ -71,7 +72,7 @@ ImageDecoder::ImageDecoder()
     CheckAndClearException(env);
 }
 
-ImageDecoder::~ImageDecoder()
+ImageDecoderJava::~ImageDecoderJava()
 {
 #ifndef NDEBUG
     ++ImageDecoderCounter::deleted;
@@ -91,7 +92,7 @@ ImageDecoder::~ImageDecoder()
     CheckAndClearException(env);
 }
 
-void ImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
+void ImageDecoderJava::setData(SharedBuffer& data, bool allDataReceived)
 {
     ASSERT(m_nativeDecoder);
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -122,7 +123,7 @@ void ImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
     }
 }
 
-bool ImageDecoder::isSizeAvailable() const
+bool ImageDecoderJava::isSizeAvailable() const
 {
     ASSERT(m_nativeDecoder);
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -145,7 +146,7 @@ bool ImageDecoder::isSizeAvailable() const
     return m_size.width();
 }
 
-size_t ImageDecoder::frameCount() const
+size_t ImageDecoderJava::frameCount() const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_nativeDecoder);
@@ -164,7 +165,7 @@ size_t ImageDecoder::frameCount() const
         : count;
 }
 
-NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
+NativeImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_nativeDecoder);
@@ -184,7 +185,7 @@ NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLeve
     return RQRef::create(frame);
 }
 
-float ImageDecoder::frameDurationAtIndex(size_t idx) const
+WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID midGetDuration = env->GetMethodID(
@@ -196,10 +197,10 @@ float ImageDecoder::frameDurationAtIndex(size_t idx) const
                         m_nativeDecoder,
                         midGetDuration,
                         idx);
-    return duration / 1000.0f;
+    return WTF::Seconds::fromMilliseconds(duration);
 }
 
-EncodedDataStatus ImageDecoder::encodedDataStatus() const
+EncodedDataStatus ImageDecoderJava::encodedDataStatus() const
 {
     if (isSizeAvailable())
         m_encodedDataStatus = EncodedDataStatus::SizeAvailable;
@@ -207,12 +208,12 @@ EncodedDataStatus ImageDecoder::encodedDataStatus() const
     return m_encodedDataStatus;
 }
 
-IntSize ImageDecoder::size() const
+IntSize ImageDecoderJava::size() const
 {
     return m_size;
 }
 
-IntSize ImageDecoder::frameSizeAtIndex(size_t idx, SubsamplingLevel) const
+IntSize ImageDecoderJava::frameSizeAtIndex(size_t idx, SubsamplingLevel) const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID midGetFrameSize = env->GetMethodID(
@@ -235,19 +236,19 @@ IntSize ImageDecoder::frameSizeAtIndex(size_t idx, SubsamplingLevel) const
     return frameSize;
 }
 
-bool ImageDecoder::frameAllowSubsamplingAtIndex(size_t) const
+bool ImageDecoderJava::frameAllowSubsamplingAtIndex(size_t) const
 {
     notImplemented();
     return true;
 }
 
-bool ImageDecoder::frameHasAlphaAtIndex(size_t) const
+bool ImageDecoderJava::frameHasAlphaAtIndex(size_t) const
 {
     // FIXME-java: Read it from ImageMetadata
     return true;
 }
 
-bool ImageDecoder::frameIsCompleteAtIndex(size_t idx) const
+bool ImageDecoderJava::frameIsCompleteAtIndex(size_t idx) const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID midGetFrameIsComplete = env->GetMethodID(
@@ -260,18 +261,18 @@ bool ImageDecoder::frameIsCompleteAtIndex(size_t idx) const
             idx);
 }
 
-unsigned ImageDecoder::frameBytesAtIndex(size_t idx, SubsamplingLevel samplingLevel) const
+unsigned ImageDecoderJava::frameBytesAtIndex(size_t idx, SubsamplingLevel samplingLevel) const
 {
     auto frameSize = frameSizeAtIndex(idx, samplingLevel);
     return (frameSize.area() * 4).unsafeGet();
 }
 
-RepetitionCount ImageDecoder::repetitionCount() const
+RepetitionCount ImageDecoderJava::repetitionCount() const
 {
     return RepetitionCountInfinite;
 }
 
-String ImageDecoder::filenameExtension() const
+String ImageDecoderJava::filenameExtension() const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_nativeDecoder);
@@ -290,19 +291,19 @@ String ImageDecoder::filenameExtension() const
     return String(env, ext);
 }
 
-std::optional<IntPoint> ImageDecoder::hotSpot() const
+std::optional<IntPoint> ImageDecoderJava::hotSpot() const
 {
     notImplemented();
     return {};
 }
 
-ImageOrientation ImageDecoder::frameOrientationAtIndex(size_t) const
+ImageOrientation ImageDecoderJava::frameOrientationAtIndex(size_t) const
 {
     notImplemented();
     return ImageOrientation(DefaultImageOrientation);
 }
 
-size_t ImageDecoder::bytesDecodedToDetermineProperties()
+size_t ImageDecoderJava::bytesDecodedToDetermineProperties() const
 {
     // Set to match value used for CoreGraphics.
     return 13088;

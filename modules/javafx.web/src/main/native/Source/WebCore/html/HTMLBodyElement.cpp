@@ -66,9 +66,7 @@ Ref<HTMLBodyElement> HTMLBodyElement::create(const QualifiedName& tagName, Docum
     return adoptRef(*new HTMLBodyElement(tagName, document));
 }
 
-HTMLBodyElement::~HTMLBodyElement()
-{
-}
+HTMLBodyElement::~HTMLBodyElement() = default;
 
 bool HTMLBodyElement::isPresentationAttribute(const QualifiedName& name) const
 {
@@ -106,34 +104,34 @@ void HTMLBodyElement::collectStyleForPresentationAttribute(const QualifiedName& 
 HTMLElement::EventHandlerNameMap HTMLBodyElement::createWindowEventHandlerNameMap()
 {
     static const QualifiedName* const table[] = {
-        &onbeforeunloadAttr,
-        &onblurAttr,
-        &onerrorAttr,
-        &onfocusAttr,
-        &onfocusinAttr,
-        &onfocusoutAttr,
-        &onhashchangeAttr,
-        &onlanguagechangeAttr,
-        &onloadAttr,
-        &onmessageAttr,
-        &onofflineAttr,
-        &ononlineAttr,
-        &onorientationchangeAttr,
-        &onpagehideAttr,
-        &onpageshowAttr,
-        &onpopstateAttr,
-        &onresizeAttr,
-        &onscrollAttr,
-        &onstorageAttr,
-        &onunloadAttr,
-        &onwebkitmouseforcechangedAttr,
-        &onwebkitmouseforcedownAttr,
-        &onwebkitmouseforceupAttr,
-        &onwebkitmouseforcewillbeginAttr,
-        &onwebkitwillrevealbottomAttr,
-        &onwebkitwillrevealleftAttr,
-        &onwebkitwillrevealrightAttr,
-        &onwebkitwillrevealtopAttr,
+        &onbeforeunloadAttr.get(),
+        &onblurAttr.get(),
+        &onerrorAttr.get(),
+        &onfocusAttr.get(),
+        &onfocusinAttr.get(),
+        &onfocusoutAttr.get(),
+        &onhashchangeAttr.get(),
+        &onlanguagechangeAttr.get(),
+        &onloadAttr.get(),
+        &onmessageAttr.get(),
+        &onofflineAttr.get(),
+        &ononlineAttr.get(),
+        &onorientationchangeAttr.get(),
+        &onpagehideAttr.get(),
+        &onpageshowAttr.get(),
+        &onpopstateAttr.get(),
+        &onresizeAttr.get(),
+        &onscrollAttr.get(),
+        &onstorageAttr.get(),
+        &onunloadAttr.get(),
+        &onwebkitmouseforcechangedAttr.get(),
+        &onwebkitmouseforcedownAttr.get(),
+        &onwebkitmouseforceupAttr.get(),
+        &onwebkitmouseforcewillbeginAttr.get(),
+        &onwebkitwillrevealbottomAttr.get(),
+        &onwebkitwillrevealleftAttr.get(),
+        &onwebkitwillrevealrightAttr.get(),
+        &onwebkitwillrevealtopAttr.get(),
     };
 
     EventHandlerNameMap map;
@@ -187,19 +185,26 @@ void HTMLBodyElement::parseAttribute(const QualifiedName& name, const AtomicStri
     HTMLElement::parseAttribute(name, value);
 }
 
-Node::InsertionNotificationRequest HTMLBodyElement::insertedInto(ContainerNode& insertionPoint)
+Node::InsertedIntoAncestorResult HTMLBodyElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
-    HTMLElement::insertedInto(insertionPoint);
-    if (!insertionPoint.isConnected())
-        return InsertionDone;
+    HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
+    if (!insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::Done;
 
     // FIXME: It's surprising this is web compatible since it means a marginwidth and marginheight attribute can
     // magically appear on the <body> of all documents embedded through <iframe> or <frame>.
     // FIXME: Perhaps this code should be in attach() instead of here.
-    auto* ownerElement = document().ownerElement();
+    auto ownerElement = makeRefPtr(document().ownerElement());
     if (!is<HTMLFrameElementBase>(ownerElement))
-        return InsertionDone;
+        return InsertedIntoAncestorResult::Done;
 
+    return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
+}
+
+void HTMLBodyElement::didFinishInsertingNode()
+{
+    auto ownerElement = makeRefPtr(document().ownerElement());
+    RELEASE_ASSERT(is<HTMLFrameElementBase>(ownerElement));
     auto& ownerFrameElement = downcast<HTMLFrameElementBase>(*ownerElement);
 
     // Read values from the owner before setting any attributes, since setting an attribute can run arbitrary
@@ -211,8 +216,6 @@ Node::InsertionNotificationRequest HTMLBodyElement::insertedInto(ContainerNode& 
         setIntegralAttribute(marginwidthAttr, marginWidth);
     if (marginHeight != -1)
         setIntegralAttribute(marginheightAttr, marginHeight);
-
-    return InsertionDone;
 }
 
 bool HTMLBodyElement::isURLAttribute(const Attribute& attribute) const
@@ -240,10 +243,10 @@ int HTMLBodyElement::scrollLeft()
 {
     if (isFirstBodyElementOfDocument()) {
         document().updateLayoutIgnorePendingStylesheets();
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (!frame)
             return 0;
-        FrameView* view = frame->view();
+        RefPtr<FrameView> view = frame->view();
         if (!view)
             return 0;
         return adjustForZoom(view->contentsScrollPosition().x(), *frame);
@@ -255,10 +258,10 @@ void HTMLBodyElement::setScrollLeft(int scrollLeft)
 {
     if (isFirstBodyElementOfDocument()) {
         document().updateLayoutIgnorePendingStylesheets();
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (!frame)
             return;
-        FrameView* view = frame->view();
+        RefPtr<FrameView> view = frame->view();
         if (!view)
             return;
         view->setScrollPosition(IntPoint(static_cast<int>(scrollLeft * frame->pageZoomFactor() * frame->frameScaleFactor()), view->scrollY()));
@@ -270,10 +273,10 @@ int HTMLBodyElement::scrollTop()
 {
     if (isFirstBodyElementOfDocument()) {
         document().updateLayoutIgnorePendingStylesheets();
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (!frame)
             return 0;
-        FrameView* view = frame->view();
+        RefPtr<FrameView> view = frame->view();
         if (!view)
             return 0;
         return adjustForZoom(view->contentsScrollPosition().y(), *frame);
@@ -285,10 +288,10 @@ void HTMLBodyElement::setScrollTop(int scrollTop)
 {
     if (isFirstBodyElementOfDocument()) {
         document().updateLayoutIgnorePendingStylesheets();
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (!frame)
             return;
-        FrameView* view = frame->view();
+        RefPtr<FrameView> view = frame->view();
         if (!view)
             return;
         view->setScrollPosition(IntPoint(view->scrollX(), static_cast<int>(scrollTop * frame->pageZoomFactor() * frame->frameScaleFactor())));
@@ -296,21 +299,21 @@ void HTMLBodyElement::setScrollTop(int scrollTop)
     return HTMLElement::setScrollTop(scrollTop);
 }
 
-void HTMLBodyElement::scrollTo(const ScrollToOptions& options)
+void HTMLBodyElement::scrollTo(const ScrollToOptions& options, ScrollClamping clamping)
 {
     if (isFirstBodyElementOfDocument()) {
         // If the element is the HTML body element, document is in quirks mode, and the element is not potentially scrollable,
         // invoke scroll() on window with options as the only argument, and terminate these steps.
         // Note that WebKit always uses quirks mode document scrolling behavior. See Document::scrollingElement().
         // FIXME: Scrolling an independently scrollable body is broken: webkit.org/b/161612.
-        auto* window = document().domWindow();
+        auto window = makeRefPtr(document().domWindow());
         if (!window)
             return;
 
         window->scrollTo(options);
         return;
     }
-    return HTMLElement::scrollTo(options);
+    return HTMLElement::scrollTo(options, clamping);
 }
 
 int HTMLBodyElement::scrollHeight()
@@ -318,10 +321,10 @@ int HTMLBodyElement::scrollHeight()
     if (isFirstBodyElementOfDocument()) {
         // Update the document's layout.
         document().updateLayoutIgnorePendingStylesheets();
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (!frame)
             return 0;
-        FrameView* view = frame->view();
+        RefPtr<FrameView> view = frame->view();
         if (!view)
             return 0;
         return adjustForZoom(view->contentsHeight(), *frame);
@@ -334,10 +337,10 @@ int HTMLBodyElement::scrollWidth()
     if (isFirstBodyElementOfDocument()) {
         // Update the document's layout.
         document().updateLayoutIgnorePendingStylesheets();
-        Frame* frame = document().frame();
+        RefPtr<Frame> frame = document().frame();
         if (!frame)
             return 0;
-        FrameView* view = frame->view();
+        RefPtr<FrameView> view = frame->view();
         if (!view)
             return 0;
         return adjustForZoom(view->contentsWidth(), *frame);

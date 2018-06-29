@@ -209,6 +209,11 @@ public:
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 
+    Seconds isolatedCopy() const
+    {
+        return *this;
+    }
+
 private:
     double m_value { 0 };
 };
@@ -276,8 +281,6 @@ constexpr Seconds operator"" _ns(unsigned long long nanoseconds)
 }
 
 } // inline seconds_literals
-
-WTF_EXPORT_PRIVATE void sleep(Seconds);
 
 } // namespace WTF
 

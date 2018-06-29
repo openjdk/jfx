@@ -94,8 +94,8 @@ RenderStyle resolveForDocument(const Document& document)
     const Pagination& pagination = renderView.frameView().pagination();
     if (pagination.mode != Pagination::Unpaginated) {
         documentStyle.setColumnStylesFromPaginationMode(pagination.mode);
-        documentStyle.setColumnGap(pagination.gap);
-        if (renderView.multiColumnFlowThread())
+        documentStyle.setColumnGap(GapLength(Length((int) pagination.gap, Fixed)));
+        if (renderView.multiColumnFlow())
             renderView.updateColumnProgressionFromStyle(documentStyle);
         if (renderView.page().paginationLineGridEnabled()) {
             documentStyle.setLineGrid("-webkit-default-pagination-grid");
@@ -109,6 +109,7 @@ RenderStyle resolveForDocument(const Document& document)
     fontDescription.setLocale(document.contentLanguage());
     fontDescription.setRenderingMode(settings.fontRenderingMode());
     fontDescription.setOneFamily(standardFamily);
+    fontDescription.setShouldAllowUserInstalledFonts(settings.shouldAllowUserInstalledFonts() ? AllowUserInstalledFonts::Yes : AllowUserInstalledFonts::No);
 
     fontDescription.setKeywordSizeFromIdentifier(CSSValueMedium);
     int size = fontSizeForKeyword(CSSValueMedium, false, document);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "CodeBlock.h"
 #include "ComplexGetStatus.h"
 #include "GetterSetterAccessCase.h"
+#include "InterpreterInlines.h"
 #include "IntrinsicGetterAccessCase.h"
 #include "JSCInlines.h"
 #include "JSScope.h"
@@ -65,49 +66,57 @@ bool GetByIdStatus::appendVariant(const GetByIdVariant& variant)
 }
 
 #if ENABLE(DFG_JIT)
-bool GetByIdStatus::hasExitSite(const ConcurrentJSLocker& locker, CodeBlock* profiledBlock, unsigned bytecodeIndex)
+bool GetByIdStatus::hasExitSite(CodeBlock* profiledBlock, unsigned bytecodeIndex)
 {
-    return profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadCache))
-        || profiledBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadConstantCache));
+    UnlinkedCodeBlock* unlinkedCodeBlock = profiledBlock->unlinkedCodeBlock();
+    ConcurrentJSLocker locker(unlinkedCodeBlock->m_lock);
+    return unlinkedCodeBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadCache))
+        || unlinkedCodeBlock->hasExitSite(locker, DFG::FrequentExitSite(bytecodeIndex, BadConstantCache));
 }
 #endif
 
 GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned bytecodeIndex, UniquedStringImpl* uid)
 {
-    UNUSED_PARAM(profiledBlock);
-    UNUSED_PARAM(bytecodeIndex);
-    UNUSED_PARAM(uid);
-
     VM& vm = *profiledBlock->vm();
 
     Instruction* instruction = profiledBlock->instructions().begin() + bytecodeIndex;
 
-    Opcode opcode = instruction[0].u.opcode;
+    switch (Interpreter::getOpcodeID(instruction[0].u.opcode)) {
+    case op_get_by_id:
+    case op_get_by_id_direct: {
+        StructureID structureID = instruction[4].u.structureID;
+        if (!structureID)
+            return GetByIdStatus(NoInformation, false);
 
-    ASSERT(opcode == LLInt::getOpcode(op_get_array_length) || opcode == LLInt::getOpcode(op_try_get_by_id) || opcode == LLInt::getOpcode(op_get_by_id_proto_load) || opcode == LLInt::getOpcode(op_get_by_id) || opcode == LLInt::getOpcode(op_get_by_id_unset));
+        Structure* structure = vm.heap.structureIDTable().get(structureID);
 
-    // FIXME: We should not just bail if we see a try_get_by_id or a get_by_id_proto_load.
-    // https://bugs.webkit.org/show_bug.cgi?id=158039
-    if (opcode != LLInt::getOpcode(op_get_by_id))
+        if (structure->takesSlowPathInDFGForImpureProperty())
+            return GetByIdStatus(NoInformation, false);
+
+        unsigned attributes;
+        PropertyOffset offset = structure->getConcurrently(uid, attributes);
+        if (!isValidOffset(offset))
+            return GetByIdStatus(NoInformation, false);
+        if (attributes & PropertyAttribute::CustomAccessor)
+            return GetByIdStatus(NoInformation, false);
+
+        return GetByIdStatus(Simple, false, GetByIdVariant(StructureSet(structure), offset));
+    }
+
+    case op_get_array_length:
+    case op_try_get_by_id:
+    case op_get_by_id_proto_load:
+    case op_get_by_id_unset: {
+        // FIXME: We should not just bail if we see a try_get_by_id or a get_by_id_proto_load.
+        // https://bugs.webkit.org/show_bug.cgi?id=158039
         return GetByIdStatus(NoInformation, false);
+    }
 
-    StructureID structureID = instruction[4].u.structureID;
-    if (!structureID)
+    default: {
+        ASSERT_NOT_REACHED();
         return GetByIdStatus(NoInformation, false);
-
-    Structure* structure = vm.heap.structureIDTable().get(structureID);
-
-    if (structure->takesSlowPathInDFGForImpureProperty())
-        return GetByIdStatus(NoInformation, false);
-
-    unsigned attributes;
-    PropertyOffset offset = structure->getConcurrently(uid, attributes);
-    if (!isValidOffset(offset))
-        return GetByIdStatus(NoInformation, false);
-    if (attributes & CustomAccessor)
-        return GetByIdStatus(NoInformation, false);
-
-    return GetByIdStatus(Simple, false, GetByIdVariant(StructureSet(structure), offset));
+    }
+    }
 }
 
 GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& map, unsigned bytecodeIndex, UniquedStringImpl* uid)
@@ -119,10 +128,10 @@ GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, StubInfoMap& m
 #if ENABLE(DFG_JIT)
     result = computeForStubInfoWithoutExitSiteFeedback(
         locker, profiledBlock, map.get(CodeOrigin(bytecodeIndex)), uid,
-        CallLinkStatus::computeExitSiteData(locker, profiledBlock, bytecodeIndex));
+        CallLinkStatus::computeExitSiteData(profiledBlock, bytecodeIndex));
 
     if (!result.takesSlowPath()
-        && hasExitSite(locker, profiledBlock, bytecodeIndex))
+        && hasExitSite(profiledBlock, bytecodeIndex))
         return GetByIdStatus(result.makesCalls() ? MakesCalls : TakesSlowPath, true);
 #else
     UNUSED_PARAM(map);
@@ -139,9 +148,9 @@ GetByIdStatus GetByIdStatus::computeForStubInfo(const ConcurrentJSLocker& locker
 {
     GetByIdStatus result = GetByIdStatus::computeForStubInfoWithoutExitSiteFeedback(
         locker, profiledBlock, stubInfo, uid,
-        CallLinkStatus::computeExitSiteData(locker, profiledBlock, codeOrigin.bytecodeIndex));
+        CallLinkStatus::computeExitSiteData(profiledBlock, codeOrigin.bytecodeIndex));
 
-    if (!result.takesSlowPath() && GetByIdStatus::hasExitSite(locker, profiledBlock, codeOrigin.bytecodeIndex))
+    if (!result.takesSlowPath() && GetByIdStatus::hasExitSite(profiledBlock, codeOrigin.bytecodeIndex))
         return GetByIdStatus(result.makesCalls() ? GetByIdStatus::MakesCalls : GetByIdStatus::TakesSlowPath, true);
     return result;
 }
@@ -195,7 +204,7 @@ GetByIdStatus GetByIdStatus::computeForStubInfoWithoutExitSiteFeedback(
         variant.m_offset = structure->getConcurrently(uid, attributes);
         if (!isValidOffset(variant.m_offset))
             return GetByIdStatus(slowPathState, true);
-        if (attributes & CustomAccessor)
+        if (attributes & PropertyAttribute::CustomAccessor)
             return GetByIdStatus(slowPathState, true);
 
         variant.m_structureSet.add(structure);
@@ -218,6 +227,9 @@ GetByIdStatus GetByIdStatus::computeForStubInfoWithoutExitSiteFeedback(
         for (unsigned listIndex = 0; listIndex < list->size(); ++listIndex) {
             const AccessCase& access = list->at(listIndex);
             if (access.viaProxy())
+                return GetByIdStatus(slowPathState, true);
+
+            if (access.usesPolyProto())
                 return GetByIdStatus(slowPathState, true);
 
             Structure* structure = access.structure();
@@ -325,7 +337,7 @@ GetByIdStatus GetByIdStatus::computeFor(
         {
             ConcurrentJSLocker locker(profiledBlock->m_lock);
             exitSiteData = CallLinkStatus::computeExitSiteData(
-                locker, profiledBlock, codeOrigin.bytecodeIndex);
+                profiledBlock, codeOrigin.bytecodeIndex);
         }
 
         GetByIdStatus result;
@@ -338,11 +350,8 @@ GetByIdStatus GetByIdStatus::computeFor(
         if (result.takesSlowPath())
             return result;
 
-        {
-            ConcurrentJSLocker locker(profiledBlock->m_lock);
-            if (hasExitSite(locker, profiledBlock, codeOrigin.bytecodeIndex))
-                return GetByIdStatus(TakesSlowPath, true);
-        }
+        if (hasExitSite(profiledBlock, codeOrigin.bytecodeIndex))
+            return GetByIdStatus(TakesSlowPath, true);
 
         if (result.isSet())
             return result;
@@ -359,6 +368,10 @@ GetByIdStatus GetByIdStatus::computeFor(const StructureSet& set, UniquedStringIm
 {
     // For now we only handle the super simple self access case. We could handle the
     // prototype case in the future.
+    //
+    // Note that this code is also used for GetByIdDirect since this function only looks
+    // into direct properties. When supporting prototype chains, we should split this for
+    // GetById and GetByIdDirect.
 
     if (set.isEmpty())
         return GetByIdStatus();
@@ -381,9 +394,9 @@ GetByIdStatus GetByIdStatus::computeFor(const StructureSet& set, UniquedStringIm
         PropertyOffset offset = structure->getConcurrently(uid, attributes);
         if (!isValidOffset(offset))
             return GetByIdStatus(TakesSlowPath); // It's probably a prototype lookup. Give up on life for now, even though we could totally be way smarter about it.
-        if (attributes & Accessor)
+        if (attributes & PropertyAttribute::Accessor)
             return GetByIdStatus(MakesCalls); // We could be smarter here, like strength-reducing this to a Call.
-        if (attributes & CustomAccessor)
+        if (attributes & PropertyAttribute::CustomAccessor)
             return GetByIdStatus(TakesSlowPath);
 
         if (!result.appendVariant(GetByIdVariant(structure, offset)))

@@ -31,6 +31,7 @@
 #include "config.h"
 #include "DocumentOrderedMap.h"
 
+#include "ContainerNodeAlgorithms.h"
 #include "ElementIterator.h"
 #include "HTMLImageElement.h"
 #include "HTMLLabelElement.h"
@@ -48,8 +49,7 @@ void DocumentOrderedMap::clear()
 
 void DocumentOrderedMap::add(const AtomicStringImpl& key, Element& element, const TreeScope& treeScope)
 {
-    UNUSED_PARAM(treeScope);
-    ASSERT_WITH_SECURITY_IMPLICATION(element.isInTreeScope());
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&element.treeScope() == &treeScope);
     ASSERT_WITH_SECURITY_IMPLICATION(treeScope.rootNode().containsIncludingShadowDOM(&element));
 
     if (!element.isInTreeScope())
@@ -67,7 +67,7 @@ void DocumentOrderedMap::add(const AtomicStringImpl& key, Element& element, cons
     if (addResult.isNewEntry)
         return;
 
-    ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
     entry.element = nullptr;
     entry.count++;
     entry.orderedList.clear();
@@ -78,15 +78,13 @@ void DocumentOrderedMap::remove(const AtomicStringImpl& key, Element& element)
     m_map.checkConsistency();
     auto it = m_map.find(&key);
 
-    ASSERT_WITH_SECURITY_IMPLICATION(it != m_map.end());
-    if (it == m_map.end())
-        return;
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(it != m_map.end());
 
     MapEntry& entry = it->value;
     ASSERT_WITH_SECURITY_IMPLICATION(entry.registeredElements.remove(&element));
-    ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
     if (entry.count == 1) {
-        ASSERT_WITH_SECURITY_IMPLICATION(!entry.element || entry.element == &element);
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!entry.element || entry.element == &element);
         m_map.remove(it);
     } else {
         if (entry.element == &element)
@@ -108,10 +106,10 @@ inline Element* DocumentOrderedMap::get(const AtomicStringImpl& key, const TreeS
     MapEntry& entry = it->value;
     ASSERT(entry.count);
     if (entry.element) {
-        ASSERT_WITH_SECURITY_IMPLICATION(entry.element->isInTreeScope());
-        ASSERT_WITH_SECURITY_IMPLICATION(&entry.element->treeScope() == &scope);
-        ASSERT_WITH_SECURITY_IMPLICATION(entry.registeredElements.contains(entry.element));
-        return entry.element;
+        auto& element = *entry.element;
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&element.treeScope() == &scope);
+        ASSERT_WITH_SECURITY_IMPLICATION(entry.registeredElements.contains(&element));
+        return &element;
     }
 
     // We know there's at least one node that matches; iterate to find the first one.
@@ -119,12 +117,28 @@ inline Element* DocumentOrderedMap::get(const AtomicStringImpl& key, const TreeS
         if (!keyMatches(key, element))
             continue;
         entry.element = &element;
-        ASSERT_WITH_SECURITY_IMPLICATION(element.isInTreeScope());
-        ASSERT_WITH_SECURITY_IMPLICATION(&element.treeScope() == &scope);
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&element.treeScope() == &scope);
         ASSERT_WITH_SECURITY_IMPLICATION(entry.registeredElements.contains(entry.element));
         return &element;
     }
+
+#if !ASSERT_DISABLED
+    // FormAssociatedElement may call getElementById to find its owner form in the middle of a tree removal.
+    if (auto* currentScope = ContainerChildRemovalScope::currentScope()) {
+        ASSERT(&scope.rootNode() == &currentScope->parentOfRemovedTree().rootNode());
+        Node& removedTree = currentScope->removedChild();
+        ASSERT(is<ContainerNode>(removedTree));
+        for (auto& element : descendantsOfType<Element>(downcast<ContainerNode>(removedTree))) {
+            if (!keyMatches(key, element))
+                continue;
+            bool removedFromAncestorHasNotBeenCalledYet = element.isConnected();
+            ASSERT(removedFromAncestorHasNotBeenCalledYet);
+            return nullptr;
+        }
+    }
     ASSERT_NOT_REACHED();
+#endif
+
     return nullptr;
 }
 
@@ -187,9 +201,7 @@ const Vector<Element*>* DocumentOrderedMap::getAllElementsById(const AtomicStrin
         return nullptr;
 
     MapEntry& entry = it->value;
-    ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
-    if (!entry.count)
-        return nullptr;
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.count);
 
     if (entry.orderedList.isEmpty()) {
         entry.orderedList.reserveCapacity(entry.count);
@@ -202,7 +214,7 @@ const Vector<Element*>* DocumentOrderedMap::getAllElementsById(const AtomicStrin
                 continue;
             entry.orderedList.append(&element);
         }
-        ASSERT(entry.orderedList.size() == entry.count);
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(entry.orderedList.size() == entry.count);
     }
 
     return &entry.orderedList;

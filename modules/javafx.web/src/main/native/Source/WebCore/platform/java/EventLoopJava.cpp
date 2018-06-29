@@ -28,6 +28,8 @@
 
 #include <wtf/java/JavaEnv.h>
 
+namespace EventLoopJava {
+
 static JGClass eventLoopClass;
 static jmethodID cycleMethod;
 
@@ -42,11 +44,13 @@ static void initRefs(JNIEnv* env)
         ASSERT(cycleMethod);
     }
 }
+}
 
 namespace WebCore {
 
 void EventLoop::cycle()
 {
+    using namespace EventLoopJava;
     WC_GETJAVAENV_CHKRET(env);
     initRefs(env);
 

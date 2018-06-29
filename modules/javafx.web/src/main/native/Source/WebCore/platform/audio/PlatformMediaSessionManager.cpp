@@ -33,12 +33,6 @@
 
 namespace WebCore {
 
-#if !PLATFORM(MAC)
-void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
-{
-}
-#endif
-
 #if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
 
 #if !PLATFORM(COCOA)
@@ -57,8 +51,14 @@ PlatformMediaSessionManager* PlatformMediaSessionManager::sharedManagerIfExists(
 }
 #endif // !PLATFORM(COCOA)
 
+void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
+{
+    if (auto existingManager = PlatformMediaSessionManager::sharedManagerIfExists())
+        existingManager->scheduleUpdateNowPlayingInfo();
+}
+
 PlatformMediaSessionManager::PlatformMediaSessionManager()
-    : m_systemSleepListener(SystemSleepListener::create(*this))
+    : m_systemSleepListener(PAL::SystemSleepListener::create(*this))
 {
     resetRestrictions();
 }
@@ -460,6 +460,13 @@ PlatformMediaSession* PlatformMediaSessionManager::findSession(const Function<bo
         m_sessions.removeAll(nullptr);
 
     return foundSession;
+}
+
+#else // ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
+
+void PlatformMediaSessionManager::updateNowPlayingInfoIfNecessary()
+{
+
 }
 
 #endif // ENABLE(VIDEO) || ENABLE(WEB_AUDIO)

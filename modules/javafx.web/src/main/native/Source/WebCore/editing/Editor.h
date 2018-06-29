@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CompositionUnderline.h"
-#include "DataTransferAccessPolicy.h"
 #include "DictationAlternative.h"
 #include "DocumentMarker.h"
 #include "EditAction.h"
@@ -64,6 +63,7 @@ class EditCommand;
 class EditCommandComposition;
 class EditorClient;
 class EditorInternalCommand;
+class File;
 class Frame;
 class HTMLElement;
 class HitTestResult;
@@ -93,13 +93,9 @@ enum class MailBlockquoteHandling {
     IgnoreBlockquote,
 };
 
-#if PLATFORM(COCOA)
-
-struct FragmentAndResources {
-    RefPtr<DocumentFragment> fragment;
-    Vector<Ref<ArchiveResource>> resources;
-};
-
+#if ENABLE(ATTACHMENT_ELEMENT)
+class HTMLAttachmentElement;
+struct AttachmentDisplayOptions;
 #endif
 
 enum TemporarySelectionOption : uint8_t {
@@ -156,7 +152,6 @@ public:
     WEBCORE_EXPORT bool canDHTMLPaste();
     bool tryDHTMLCopy();
     bool tryDHTMLCut();
-    WEBCORE_EXPORT bool tryDHTMLPaste();
 
     WEBCORE_EXPORT bool canCut() const;
     WEBCORE_EXPORT bool canCopy() const;
@@ -219,8 +214,6 @@ public:
 #if PLATFORM(IOS)
     WEBCORE_EXPORT void removeUnchangeableStyles();
 #endif
-
-    bool dispatchCPPEvent(const AtomicString&, DataTransferAccessPolicy);
 
     WEBCORE_EXPORT void applyStyle(StyleProperties*, EditAction = EditActionUnspecified);
     void applyStyle(RefPtr<EditingStyle>&&, EditAction);
@@ -316,9 +309,9 @@ public:
     bool shouldEndEditing(Range*);
 
     void clearUndoRedoOperations();
-    bool canUndo();
+    bool canUndo() const;
     void undo();
-    bool canRedo();
+    bool canRedo() const;
     void redo();
 
     void didBeginEditing();
@@ -491,7 +484,9 @@ public:
     WEBCORE_EXPORT void replaceSelectionWithAttributedString(NSAttributedString *, MailBlockquoteHandling = MailBlockquoteHandling::RespectBlockquote);
 #endif
 
-#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
+    String clientReplacementURLForResource(Ref<SharedBuffer>&& resourceData, const String& mimeType);
+
+#if !PLATFORM(WIN)
     WEBCORE_EXPORT void writeSelectionToPasteboard(Pasteboard&);
     WEBCORE_EXPORT void writeImageToPasteboard(Pasteboard&, Element& imageElement, const URL&, const String& title);
     void writeSelection(PasteboardWriterData&);
@@ -511,12 +506,23 @@ public:
     void setIsGettingDictionaryPopupInfo(bool b) { m_isGettingDictionaryPopupInfo = b; }
     bool isGettingDictionaryPopupInfo() const { return m_isGettingDictionaryPopupInfo; }
 
-    Ref<DocumentFragment> createFragmentForImageAndURL(const String&);
+#if ENABLE(ATTACHMENT_ELEMENT)
+    WEBCORE_EXPORT void insertAttachment(const String& identifier, const AttachmentDisplayOptions&, const String& filename, const String& filepath, std::optional<String> contentType = std::nullopt);
+    WEBCORE_EXPORT void insertAttachment(const String& identifier, const AttachmentDisplayOptions&, const String& filename, Ref<SharedBuffer>&& data, std::optional<String> contentType = std::nullopt);
+    void didInsertAttachmentElement(HTMLAttachmentElement&);
+    void didRemoveAttachmentElement(HTMLAttachmentElement&);
+
+#if PLATFORM(COCOA)
+    void getPasteboardTypesAndDataForAttachment(HTMLAttachmentElement&, Vector<String>& outTypes, Vector<RefPtr<SharedBuffer>>& outData);
+#endif
+#endif
 
 private:
-    class WebContentReader;
-
     Document& document() const;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    void insertAttachmentFromFile(const String& identifier, const AttachmentDisplayOptions&, const String& filename, const String& contentType, Ref<File>&&);
+#endif
 
     bool canDeleteRange(Range*) const;
     bool canSmartReplaceWithPasteboard(Pasteboard&);
@@ -551,13 +557,15 @@ private:
     RefPtr<SharedBuffer> selectionInWebArchiveFormat();
     String selectionInHTMLFormat();
     RefPtr<SharedBuffer> imageInWebArchiveFormat(Element&);
-    RefPtr<DocumentFragment> createFragmentForImageResourceAndAddResource(RefPtr<ArchiveResource>&&);
-    RefPtr<DocumentFragment> createFragmentAndAddResources(NSAttributedString *);
-    FragmentAndResources createFragment(NSAttributedString *);
-    String userVisibleString(const URL&);
-
+    static String userVisibleString(const URL&);
     static RefPtr<SharedBuffer> dataInRTFDFormat(NSAttributedString *);
     static RefPtr<SharedBuffer> dataInRTFFormat(NSAttributedString *);
+#endif
+
+    void scheduleEditorUIUpdate();
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    void notifyClientOfAttachmentUpdates();
 #endif
 
     void postTextStateChangeNotificationForCut(const String&, const VisibleSelection&);
@@ -578,6 +586,11 @@ private:
     bool m_areMarkedTextMatchesHighlighted { false };
     EditorParagraphSeparator m_defaultParagraphSeparator { EditorParagraphSeparatorIsDiv };
     bool m_overwriteModeEnabled { false };
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    HashSet<String> m_insertedAttachmentIdentifiers;
+    HashSet<String> m_removedAttachmentIdentifiers;
+#endif
 
     VisibleSelection m_oldSelectionForEditorUIUpdate;
     Timer m_editorUIUpdateTimer;

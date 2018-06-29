@@ -17,9 +17,8 @@ if (ENABLE_API_TESTS)
     add_subdirectory(ThirdParty/gtest)
 endif ()
 
-if (USE_WOFF2)
-    add_subdirectory(ThirdParty/brotli)
-    add_subdirectory(ThirdParty/woff2)
+if (USE_OPENVR)
+    add_subdirectory(ThirdParty/openvr)
 endif ()
 
 if (USE_XDGMIME)

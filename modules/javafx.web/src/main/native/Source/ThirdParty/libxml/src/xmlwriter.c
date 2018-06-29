@@ -42,7 +42,7 @@
       #define VA_COPY(dest,src) __va_copy(dest, src)
     #else
       #ifndef VA_LIST_IS_ARRAY
-        #define VA_COPY(dest,src) (dest) = (src)
+      #define VA_COPY(dest,src) (dest) = (src)
       #else
         #include <string.h>
         #define VA_COPY(dest,src) memcpy((char *)(dest),(char *)(src),sizeof(va_list))
@@ -378,7 +378,7 @@ xmlNewTextWriterDoc(xmlDocPtr * doc, int compression)
     ctxt = xmlCreatePushParserCtxt(&saxHandler, NULL, NULL, 0, NULL);
     if (ctxt == NULL) {
         xmlWriterErrMsg(NULL, XML_ERR_INTERNAL_ERROR,
-                "xmlNewTextWriterDoc : error at xmlCreatePushParserCtxt!\n");
+                        "xmlNewTextWriterDoc : error at xmlCreatePushParserCtxt!\n");
         return NULL;
     }
     /*
@@ -400,7 +400,7 @@ xmlNewTextWriterDoc(xmlDocPtr * doc, int compression)
         xmlFreeDoc(ctxt->myDoc);
         xmlFreeParserCtxt(ctxt);
         xmlWriterErrMsg(NULL, XML_ERR_INTERNAL_ERROR,
-                "xmlNewTextWriterDoc : error at xmlNewTextWriterPushParser!\n");
+                        "xmlNewTextWriterDoc : error at xmlNewTextWriterPushParser!\n");
         return NULL;
     }
 
@@ -1681,7 +1681,7 @@ xmlOutputBufferWriteBinHex(xmlOutputBufferPtr out,
     int count;
     int sum;
     static char hex[16] =
-    {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+        {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
     int i;
 
     if ((out == NULL) || (data == NULL) || (len < 0)) {
@@ -2506,8 +2506,8 @@ xmlTextWriterEndPI(xmlTextWriterPtr writer)
 
     if (writer->indent) {
         count = xmlOutputBufferWriteString(writer->out, "\n");
-    if (count < 0)
-    return -1;
+        if (count < 0)
+        return -1;
         sum += count;
     }
 

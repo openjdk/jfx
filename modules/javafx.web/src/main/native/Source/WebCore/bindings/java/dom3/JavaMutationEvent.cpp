@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/MutationEvent.h>
@@ -67,7 +69,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getAttrNameI
     return JavaReturn<String>(env, IMPL->attrName());
 }
 
-JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getAttrChangeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_MutationEventImpl_getAttrChangeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->attrChange();

@@ -39,6 +39,13 @@ public:
         return object;
     }
 
+    static RegExpObject* create(VM& vm, Structure* structure, RegExp* regExp, JSValue lastIndex)
+    {
+        auto* object = create(vm, structure, regExp);
+        object->m_lastIndex.set(vm, object, lastIndex);
+        return object;
+    }
+
     void setRegExp(VM& vm, RegExp* r) { m_regExp.set(vm, this, r); }
     RegExp* regExp() const { return m_regExp.get(); }
 
@@ -88,6 +95,11 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(RegExpObjectType, StructureFlags), info());
     }
 
+    static ptrdiff_t offsetOfRegExp()
+    {
+        return OBJECT_OFFSETOF(RegExpObject, m_regExp);
+    }
+
     static ptrdiff_t offsetOfLastIndex()
     {
         return OBJECT_OFFSETOF(RegExpObject, m_lastIndex);
@@ -96,6 +108,12 @@ public:
     static ptrdiff_t offsetOfLastIndexIsWritable()
     {
         return OBJECT_OFFSETOF(RegExpObject, m_lastIndexIsWritable);
+    }
+
+    static size_t allocationSize(Checked<size_t> inlineCapacity)
+    {
+        ASSERT_UNUSED(inlineCapacity, !inlineCapacity);
+        return sizeof(RegExpObject);
     }
 
     static unsigned advanceStringUnicode(String, unsigned length, unsigned currentIndex);
@@ -117,7 +135,7 @@ private:
 
     WriteBarrier<RegExp> m_regExp;
     WriteBarrier<Unknown> m_lastIndex;
-    bool m_lastIndexIsWritable;
+    uint8_t m_lastIndexIsWritable;
 };
 
 RegExpObject* asRegExpObject(JSValue);

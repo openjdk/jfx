@@ -26,6 +26,7 @@
 #include "TextureMapper.h"
 #include "TextureMapperAnimation.h"
 #include "TextureMapperBackingStore.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -34,7 +35,7 @@ class Region;
 class TextureMapperPaintOptions;
 class TextureMapperPlatformLayer;
 
-class TextureMapperLayer : public TextureMapperAnimation::Client {
+class WEBCORE_EXPORT TextureMapperLayer : public TextureMapperAnimation::Client {
     WTF_MAKE_NONCOPYABLE(TextureMapperLayer);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -59,6 +60,7 @@ public:
     { }
 
     virtual ~TextureMapperLayer();
+    WeakPtr<TextureMapperLayer> createWeakPtr() { return m_weakFactory.createWeakPtr(*this); }
 
     void setID(uint32_t id) { m_id = id; }
     uint32_t id() { return m_id; }
@@ -115,6 +117,7 @@ public:
     void setRepaintCount(int);
     void setContentsLayer(TextureMapperPlatformLayer*);
     void setAnimations(const TextureMapperAnimations&);
+    const TextureMapperAnimations& animations() const { return m_animations; }
     void setFixedToViewport(bool);
     bool fixedToViewport() const { return m_fixedToViewport; }
     void setBackingStore(RefPtr<TextureMapperBackingStore>&&);
@@ -188,9 +191,10 @@ private:
         return FloatRect(FloatPoint::zero(), m_state.size);
     }
 
+    WeakPtrFactory<TextureMapperLayer> m_weakFactory;
     Vector<TextureMapperLayer*> m_children;
     TextureMapperLayer* m_parent;
-    TextureMapperLayer* m_effectTarget;
+    WeakPtr<TextureMapperLayer> m_effectTarget;
     RefPtr<TextureMapperBackingStore> m_backingStore;
     TextureMapperPlatformLayer* m_contentsLayer;
     GraphicsLayerTransform m_currentTransform;
@@ -214,8 +218,8 @@ private:
         FloatRect contentsRect;
         FloatSize contentsTileSize;
         FloatSize contentsTilePhase;
-        TextureMapperLayer* maskLayer;
-        TextureMapperLayer* replicaLayer;
+        WeakPtr<TextureMapperLayer> maskLayer;
+        WeakPtr<TextureMapperLayer> replicaLayer;
         Color solidColor;
         FilterOperations filters;
         Color debugBorderColor;
@@ -234,8 +238,6 @@ private:
 
         State()
             : opacity(1)
-            , maskLayer(0)
-            , replicaLayer(0)
             , debugBorderWidth(0)
             , repaintCount(0)
             , preserves3D(false)

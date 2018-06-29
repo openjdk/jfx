@@ -25,6 +25,7 @@
 #include "ExceptionHelpers.h"
 #include "FunctionPrototype.h"
 #include "JSAsyncFunction.h"
+#include "JSAsyncGeneratorFunction.h"
 #include "JSFunction.h"
 #include "JSGeneratorFunction.h"
 #include "JSGlobalObject.h"
@@ -37,41 +38,29 @@ STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(FunctionConstructor);
 
 const ClassInfo FunctionConstructor::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionConstructor) };
 
-FunctionConstructor::FunctionConstructor(VM& vm, Structure* structure)
-    : InternalFunction(vm, structure)
-{
-}
-
-void FunctionConstructor::finishCreation(VM& vm, FunctionPrototype* functionPrototype)
-{
-    Base::finishCreation(vm, functionPrototype->classInfo()->className);
-    putDirectWithoutTransition(vm, vm.propertyNames->prototype, functionPrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum);
-}
-
 static EncodedJSValue JSC_HOST_CALL constructWithFunctionConstructor(ExecState* exec)
 {
     ArgList args(exec);
     return JSValue::encode(constructFunction(exec, asInternalFunction(exec->jsCallee())->globalObject(), args, FunctionConstructionMode::Function, exec->newTarget()));
 }
 
-ConstructType FunctionConstructor::getConstructData(JSCell*, ConstructData& constructData)
-{
-    constructData.native.function = constructWithFunctionConstructor;
-    return ConstructType::Host;
-}
-
+// ECMA 15.3.1 The Function Constructor Called as a Function
 static EncodedJSValue JSC_HOST_CALL callFunctionConstructor(ExecState* exec)
 {
     ArgList args(exec);
     return JSValue::encode(constructFunction(exec, asInternalFunction(exec->jsCallee())->globalObject(), args));
 }
 
-// ECMA 15.3.1 The Function Constructor Called as a Function
-CallType FunctionConstructor::getCallData(JSCell*, CallData& callData)
+FunctionConstructor::FunctionConstructor(VM& vm, Structure* structure)
+    : InternalFunction(vm, structure, callFunctionConstructor, constructWithFunctionConstructor)
 {
-    callData.native.function = callFunctionConstructor;
-    return CallType::Host;
+}
+
+void FunctionConstructor::finishCreation(VM& vm, FunctionPrototype* functionPrototype)
+{
+    Base::finishCreation(vm, functionPrototype->classInfo()->className);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, functionPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 // ECMA 15.3.2 The Function Constructor
@@ -104,6 +93,9 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
         break;
     case FunctionConstructionMode::Async:
         prefix = "async function ";
+        break;
+    case FunctionConstructionMode::AsyncGenerator:
+        prefix = "{async function*";
         break;
     }
 
@@ -183,16 +175,16 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
     Structure* structure = nullptr;
     switch (functionConstructionMode) {
     case FunctionConstructionMode::Function:
-        if (function->isStrictMode())
-            structure = globalObject->strictFunctionStructure();
-        else
-            structure = globalObject->sloppyFunctionStructure();
+        structure = JSFunction::selectStructureForNewFuncExp(globalObject, function);
         break;
     case FunctionConstructionMode::Generator:
         structure = globalObject->generatorFunctionStructure();
         break;
     case FunctionConstructionMode::Async:
         structure = globalObject->asyncFunctionStructure();
+        break;
+    case FunctionConstructionMode::AsyncGenerator:
+        structure = globalObject->asyncGeneratorFunctionStructure();
         break;
     }
 
@@ -206,6 +198,8 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
         return JSGeneratorFunction::create(vm, function, globalObject->globalScope(), subclassStructure);
     case FunctionConstructionMode::Async:
         return JSAsyncFunction::create(vm, function, globalObject->globalScope(), subclassStructure);
+    case FunctionConstructionMode::AsyncGenerator:
+        return JSAsyncGeneratorFunction::create(vm, function, globalObject->globalScope(), subclassStructure);
     }
 
     ASSERT_NOT_REACHED();
@@ -215,7 +209,8 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
 // ECMA 15.3.2 The Function Constructor
 JSObject* constructFunction(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args, FunctionConstructionMode functionConstructionMode, JSValue newTarget)
 {
-    return constructFunction(exec, globalObject, args, exec->propertyNames().anonymous, exec->callerSourceOrigin(), String(), TextPosition(), functionConstructionMode, newTarget);
+    VM& vm = exec->vm();
+    return constructFunction(exec, globalObject, args, vm.propertyNames->anonymous, exec->callerSourceOrigin(), String(), TextPosition(), functionConstructionMode, newTarget);
 }
 
 } // namespace JSC

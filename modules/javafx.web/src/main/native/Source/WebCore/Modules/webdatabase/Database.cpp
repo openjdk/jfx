@@ -287,7 +287,7 @@ void Database::close()
 
 void Database::performClose()
 {
-    ASSERT(currentThread() == databaseThread().getThreadID());
+    ASSERT(databaseThread().getThread() == &Thread::current());
 
     {
         LockHolder locker(m_transactionInProgressMutex);
@@ -341,7 +341,7 @@ ExceptionOr<void> Database::performOpenAndVerify(bool shouldSetVersionInNewDatab
 #if PLATFORM(IOS)
     {
         // Make sure we wait till the background removal of the empty database files finished before trying to open any database.
-        LockHolder locker(DatabaseTracker::openDatabaseMutex());
+        auto locker = holdLock(DatabaseTracker::openDatabaseMutex());
     }
 #endif
 
@@ -768,7 +768,7 @@ SecurityOriginData Database::securityOrigin()
 {
     if (m_scriptExecutionContext->isContextThread())
         return SecurityOriginData::fromSecurityOrigin(m_contextThreadSecurityOrigin.get());
-    if (currentThread() == databaseThread().getThreadID())
+    if (databaseThread().getThread() == &Thread::current())
         return SecurityOriginData::fromSecurityOrigin(m_databaseThreadSecurityOrigin.get());
     RELEASE_ASSERT_NOT_REACHED();
 }

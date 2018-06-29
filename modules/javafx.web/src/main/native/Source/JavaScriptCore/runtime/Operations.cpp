@@ -82,6 +82,8 @@ JSValue jsTypeStringForValue(VM& vm, JSGlobalObject* globalObject, JSValue v)
         return vm.smallStrings.stringString();
     if (v.isSymbol())
         return vm.smallStrings.symbolString();
+    if (v.isBigInt())
+        return vm.smallStrings.bigintString();
     if (v.isObject()) {
         JSObject* object = asObject(v);
         // Return "undefined" for objects that should be treated
@@ -112,7 +114,7 @@ bool jsIsObjectTypeOrNull(CallFrame* callFrame, JSValue v)
         return v.isNull();
 
     JSType type = v.asCell()->type();
-    if (type == StringType || type == SymbolType)
+    if (type == StringType || type == SymbolType || type == BigIntType)
         return false;
     if (type >= ObjectType) {
         if (asObject(v)->structure(vm)->masqueradesAsUndefined(callFrame->lexicalGlobalObject()))
@@ -136,23 +138,30 @@ bool jsIsFunctionType(JSValue v)
     return false;
 }
 
-size_t normalizePrototypeChain(CallFrame* callFrame, Structure* structure)
+size_t normalizePrototypeChain(CallFrame* callFrame, JSCell* base, bool& sawPolyProto)
 {
     VM& vm = callFrame->vm();
     size_t count = 0;
+    sawPolyProto = false;
+    JSCell* current = base;
+    JSGlobalObject* globalObject = callFrame->lexicalGlobalObject();
     while (1) {
+        Structure* structure = current->structure(vm);
         if (structure->isProxy())
             return InvalidPrototypeChain;
-        JSValue v = structure->prototypeForLookup(callFrame);
-        if (v.isNull())
+
+        sawPolyProto |= structure->hasPolyProto();
+
+        JSValue prototype = structure->prototypeForLookup(globalObject, current);
+        if (prototype.isNull())
             return count;
 
-        JSCell* base = v.asCell();
-        structure = base->structure(vm);
+        current = prototype.asCell();
+        structure = current->structure(vm);
         if (structure->isDictionary()) {
             if (structure->hasBeenFlattenedBefore())
                 return InvalidPrototypeChain;
-            structure->flattenDictionaryStructure(vm, asObject(base));
+            structure->flattenDictionaryStructure(vm, asObject(current));
         }
 
         ++count;

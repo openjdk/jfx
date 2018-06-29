@@ -106,6 +106,33 @@ function readableStreamDefaultControllerError(controller, error)
     @readableStreamError(stream, error);
 }
 
+function readableStreamPipeTo(stream, sink)
+{
+    "use strict";
+    @assert(@isReadableStream(stream));
+
+    const reader = new @ReadableStreamDefaultReader(stream);
+
+    reader.@closedPromiseCapability.@promise.@then(() => { }, (e) => { sink.error(e); });
+
+    function doPipe() {
+        @readableStreamDefaultReaderRead(reader).@then(function(result) {
+            if (result.done) {
+                sink.close();
+                return;
+            }
+            try {
+                sink.enqueue(result.value);
+            } catch (e) {
+                sink.error("ReadableStream chunk enqueueing in the sink failed");
+                return;
+            }
+            doPipe();
+        });
+    }
+    doPipe();
+}
+
 function readableStreamTee(stream, shouldClone)
 {
     "use strict";
@@ -292,15 +319,13 @@ function readableStreamDefaultControllerCallPullIfNeeded(controller)
 
     const stream = controller.@controlledReadableStream;
 
-    if (stream.@state === @streamClosed || stream.@state === @streamErrored)
-        return;
-    if (controller.@closeRequested)
+    if (!@readableStreamDefaultControllerCanCloseOrEnqueue(controller))
         return;
     if (!controller.@started)
         return;
     if ((!@isReadableStreamLocked(stream) || !stream.@reader.@readRequests.length) && @readableStreamDefaultControllerGetDesiredSize(controller) <= 0)
         return;
- 
+
     if (controller.@pulling) {
         controller.@pullAgain = true;
         return;
@@ -396,12 +421,10 @@ function readableStreamDefaultControllerClose(controller)
 {
     "use strict";
 
-    const stream = controller.@controlledReadableStream;
-    @assert(!controller.@closeRequested);
-    @assert(stream.@state === @streamReadable);
+    @assert(@readableStreamDefaultControllerCanCloseOrEnqueue(controller));
     controller.@closeRequested = true;
     if (controller.@queue.content.length === 0)
-        @readableStreamClose(stream);
+        @readableStreamClose(controller.@controlledReadableStream);
 }
 
 function readableStreamClose(stream)
@@ -437,8 +460,7 @@ function readableStreamDefaultControllerEnqueue(controller, chunk)
     "use strict";
 
     const stream = controller.@controlledReadableStream;
-    @assert(!controller.@closeRequested);
-    @assert(stream.@state === @streamReadable);
+    @assert(@readableStreamDefaultControllerCanCloseOrEnqueue(controller));
 
     if (@isReadableStreamLocked(stream) && stream.@reader.@readRequests.length) {
         @readableStreamFulfillReadRequest(stream, chunk, false);
@@ -513,4 +535,11 @@ function readableStreamReaderGenericRelease(reader)
     reader.@closedPromiseCapability.@promise.@promiseIsHandled = true;
     reader.@ownerReadableStream.@reader = @undefined;
     reader.@ownerReadableStream = @undefined;
+}
+
+function readableStreamDefaultControllerCanCloseOrEnqueue(controller)
+{
+    "use strict";
+
+    return !controller.@closeRequested && controller.@controlledReadableStream.@state === @streamReadable;
 }

@@ -29,10 +29,13 @@
 #include "LayoutRepainter.h"
 #include "RenderLayer.h"
 #include "RenderView.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(RenderDeprecatedFlexibleBox);
 
 class FlexBoxIterator {
 public:
@@ -83,7 +86,7 @@ public:
 
                     // Only copy+sort the values once per layout even if the iterator is reset.
                     if (static_cast<size_t>(m_ordinalValues.size()) != m_sortedOrdinalValues.size()) {
-                        copyToVector(m_ordinalValues, m_sortedOrdinalValues);
+                        m_sortedOrdinalValues = copyToVector(m_ordinalValues);
                         std::sort(m_sortedOrdinalValues.begin(), m_sortedOrdinalValues.end());
                     }
                     m_currentOrdinal = m_forward ? m_sortedOrdinalValues[m_ordinalIteration - 1] : m_sortedOrdinalValues[m_sortedOrdinalValues.size() - m_ordinalIteration];
@@ -124,9 +127,7 @@ RenderDeprecatedFlexibleBox::RenderDeprecatedFlexibleBox(Element& element, Rende
     m_stretchingChildren = false;
 }
 
-RenderDeprecatedFlexibleBox::~RenderDeprecatedFlexibleBox()
-{
-}
+RenderDeprecatedFlexibleBox::~RenderDeprecatedFlexibleBox() = default;
 
 static LayoutUnit marginWidthForChild(RenderBox* child)
 {
@@ -280,60 +281,61 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
         return;
 
     LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
-    LayoutStateMaintainer statePusher(view(), *this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
+    {
+        LayoutStateMaintainer statePusher(*this, locationOffset(), hasTransform() || hasReflection() || style().isFlippedBlocksWritingMode());
 
-    preparePaginationBeforeBlockLayout(relayoutChildren);
+        preparePaginationBeforeBlockLayout(relayoutChildren);
 
-    LayoutSize previousSize = size();
+        LayoutSize previousSize = size();
 
-    updateLogicalWidth();
-    updateLogicalHeight();
+        updateLogicalWidth();
+        updateLogicalHeight();
 
-    if (previousSize != size()
-        || (parent()->isDeprecatedFlexibleBox() && parent()->style().boxOrient() == HORIZONTAL
-        && parent()->style().boxAlign() == BSTRETCH))
-        relayoutChildren = true;
+        if (previousSize != size()
+            || (parent()->isDeprecatedFlexibleBox() && parent()->style().boxOrient() == HORIZONTAL
+                && parent()->style().boxAlign() == BSTRETCH))
+            relayoutChildren = true;
 
-    setHeight(0);
+        setHeight(0);
 
-    m_stretchingChildren = false;
+        m_stretchingChildren = false;
 
 #if !ASSERT_DISABLED
-    LayoutSize oldLayoutDelta = view().layoutDelta();
+        LayoutSize oldLayoutDelta = view().frameView().layoutContext().layoutDelta();
 #endif
 
-    // Fieldsets need to find their legend and position it inside the border of the object.
-    // The legend then gets skipped during normal layout. The same is true for ruby text.
-    // It doesn't get included in the normal layout process but is instead skipped.
-    layoutExcludedChildren(relayoutChildren);
+        // Fieldsets need to find their legend and position it inside the border of the object.
+        // The legend then gets skipped during normal layout. The same is true for ruby text.
+        // It doesn't get included in the normal layout process but is instead skipped.
+        layoutExcludedChildren(relayoutChildren);
 
-    ChildFrameRects oldChildRects;
-    appendChildFrameRects(this, oldChildRects);
+        ChildFrameRects oldChildRects;
+        appendChildFrameRects(this, oldChildRects);
 
-    if (isHorizontal())
-        layoutHorizontalBox(relayoutChildren);
-    else
-        layoutVerticalBox(relayoutChildren);
+        if (isHorizontal())
+            layoutHorizontalBox(relayoutChildren);
+        else
+            layoutVerticalBox(relayoutChildren);
 
-    repaintChildrenDuringLayoutIfMoved(this, oldChildRects);
-    ASSERT(view().layoutDeltaMatches(oldLayoutDelta));
+        repaintChildrenDuringLayoutIfMoved(this, oldChildRects);
+        ASSERT(view().frameView().layoutContext().layoutDeltaMatches(oldLayoutDelta));
 
-    LayoutUnit oldClientAfterEdge = clientLogicalBottom();
-    updateLogicalHeight();
+        LayoutUnit oldClientAfterEdge = clientLogicalBottom();
+        updateLogicalHeight();
 
-    if (previousSize.height() != height())
-        relayoutChildren = true;
+        if (previousSize.height() != height())
+            relayoutChildren = true;
 
-    layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
+        layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
 
-    computeOverflow(oldClientAfterEdge);
-
-    statePusher.pop();
+        computeOverflow(oldClientAfterEdge);
+    }
 
     updateLayerTransform();
 
-    if (view().layoutState()->pageLogicalHeight())
-        setPageLogicalOffset(view().layoutState()->pageLogicalOffset(this, logicalTop()));
+    auto* layoutState = view().frameView().layoutContext().layoutState();
+    if (layoutState && layoutState->pageLogicalHeight())
+        setPageLogicalOffset(layoutState->pageLogicalOffset(this, logicalTop()));
 
     // Update our scrollbars if we're overflow:auto/scroll/hidden now that we know if
     // we overflow or not.
@@ -373,9 +375,9 @@ static void layoutChildIfNeededApplyingDelta(RenderBox* child, const LayoutSize&
     if (!child->needsLayout())
         return;
 
-    child->view().addLayoutDelta(layoutDelta);
+    child->view().frameView().layoutContext().addLayoutDelta(layoutDelta);
     child->layoutIfNeeded();
-    child->view().addLayoutDelta(-layoutDelta);
+    child->view().frameView().layoutContext().addLayoutDelta(-layoutDelta);
 }
 
 void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
@@ -965,7 +967,7 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
         if (lineCount <= numVisibleLines)
             continue;
 
-        LayoutUnit newHeight = blockChild.heightForLineCount(numVisibleLines);
+        LayoutUnit newHeight = blockChild.logicalHeightForLineCount(numVisibleLines);
         if (newHeight == child->height())
             continue;
 
@@ -1124,7 +1126,7 @@ const char* RenderDeprecatedFlexibleBox::renderName() const
         return "RenderDeprecatedFlexibleBox (generated)";
     if (isAnonymous())
         return "RenderDeprecatedFlexibleBox (generated)";
-    if (isRelPositioned())
+    if (isRelativelyPositioned())
         return "RenderDeprecatedFlexibleBox (relative positioned)";
     return "RenderDeprecatedFlexibleBox";
 }

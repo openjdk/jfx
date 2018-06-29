@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,9 @@
 #include "config.h"
 #include "AlignedMemoryAllocator.h"
 
+#include "BlockDirectory.h"
+#include "Subspace.h"
+
 namespace JSC {
 
 AlignedMemoryAllocator::AlignedMemoryAllocator()
@@ -34,6 +37,24 @@ AlignedMemoryAllocator::AlignedMemoryAllocator()
 
 AlignedMemoryAllocator::~AlignedMemoryAllocator()
 {
+}
+
+void AlignedMemoryAllocator::registerDirectory(BlockDirectory* directory)
+{
+    RELEASE_ASSERT(!directory->nextDirectoryInAlignedMemoryAllocator());
+
+    if (m_directories.isEmpty()) {
+        for (Subspace* subspace = m_subspaces.first(); subspace; subspace = subspace->nextSubspaceInAlignedMemoryAllocator())
+            subspace->didCreateFirstDirectory(directory);
+    }
+
+    m_directories.append(std::mem_fn(&BlockDirectory::setNextDirectoryInAlignedMemoryAllocator), directory);
+}
+
+void AlignedMemoryAllocator::registerSubspace(Subspace* subspace)
+{
+    RELEASE_ASSERT(!subspace->nextSubspaceInAlignedMemoryAllocator());
+    m_subspaces.append(std::mem_fn(&Subspace::setNextSubspaceInAlignedMemoryAllocator), subspace);
 }
 
 } // namespace JSC

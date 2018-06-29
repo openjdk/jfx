@@ -80,11 +80,10 @@ PerformanceResourceTiming::PerformanceResourceTiming(MonotonicTime timeOrigin, R
     , m_networkLoadMetrics(resourceTiming.networkLoadMetrics())
     , m_shouldReportDetails(resourceTiming.allowTimingDetails())
 {
+    m_networkLoadMetrics.clearNonTimingData();
 }
 
-PerformanceResourceTiming::~PerformanceResourceTiming()
-{
-}
+PerformanceResourceTiming::~PerformanceResourceTiming() = default;
 
 String PerformanceResourceTiming::nextHopProtocol() const
 {
@@ -93,6 +92,7 @@ String PerformanceResourceTiming::nextHopProtocol() const
 
 double PerformanceResourceTiming::workerStart() const
 {
+    // FIXME: <https://webkit.org/b/179377> Implement PerformanceResourceTiming.workerStart in ServiceWorkers
     return 0.0;
 }
 

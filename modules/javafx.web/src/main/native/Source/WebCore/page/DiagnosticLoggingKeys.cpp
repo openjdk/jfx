@@ -343,6 +343,11 @@ String DiagnosticLoggingKeys::documentLoaderStoppingKey()
     return ASCIILiteral("documentLoaderStopping");
 }
 
+String DiagnosticLoggingKeys::domainCausingCrashKey()
+{
+    return ASCIILiteral("DomainCausingCrash");
+}
+
 String DiagnosticLoggingKeys::domainCausingEnergyDrainKey()
 {
     return ASCIILiteral("DomainCausingEnergyDrain");
@@ -407,6 +412,13 @@ String DiagnosticLoggingKeys::applicationCacheKey()
 {
     return ASCIILiteral("applicationCache");
 }
+
+#if ENABLE(APPLICATION_MANIFEST)
+String DiagnosticLoggingKeys::applicationManifestKey()
+{
+    return ASCIILiteral("applicationManifest");
+}
+#endif
 
 String DiagnosticLoggingKeys::audioKey()
 {
@@ -516,6 +528,11 @@ String DiagnosticLoggingKeys::sameLoadKey()
 String DiagnosticLoggingKeys::scriptKey()
 {
     return ASCIILiteral("script");
+}
+
+String DiagnosticLoggingKeys::serviceWorkerKey()
+{
+    return ASCIILiteral("serviceWorker");
 }
 
 String DiagnosticLoggingKeys::streamingMedia()

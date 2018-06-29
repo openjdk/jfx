@@ -371,9 +371,9 @@ class UdOpcodeTables(object):
                 table = self.walk(self.root, ('c4', '/vex=' + vex))
                 self.map(self.root, ('c5', '/vex=' + vex), table)
 
-           
+
     def addInsn(self, **insnDef):
-            
+
         # Canonicalize opcode list
         opcexts = insnDef['opcexts']
         opcodes = list(insnDef['opcodes'])

@@ -40,20 +40,20 @@ public:
     Ref<ListPropertyTearOff> baseVal() final
     {
         if (m_baseVal)
-            return *m_baseVal;
+            return *static_cast<ListPropertyTearOff*>(m_baseVal.get());
 
         auto property = SVGPathSegList::create(*this, BaseValRole, PathSegUnalteredRole, m_values, m_wrappers);
-        m_baseVal = property.ptr();
+        m_baseVal = property->createWeakPtr();
         return property;
     }
 
     Ref<ListPropertyTearOff> animVal() final
     {
         if (m_animVal)
-            return *m_animVal;
+            return *static_cast<ListPropertyTearOff*>(m_animVal.get());
 
         auto property = SVGPathSegList::create(*this, AnimValRole, PathSegUnalteredRole, m_values, m_wrappers);
-        m_animVal = property.ptr();
+        m_animVal = property->createWeakPtr();
         return property;
     }
 
@@ -90,7 +90,7 @@ public:
     void animValDidChange()
     {
         ASSERT(m_animatedPathByteStream);
-        SVGPathElement* pathElement = downcast<SVGPathElement>(contextElement());
+        auto pathElement = makeRefPtr(downcast<SVGPathElement>(contextElement()));
 
         // If the animVal is observed from JS, we have to update it on each animation step.
         // This is an expensive operation and only done, if someone actually observes the animatedPathSegList() while an animation is running.

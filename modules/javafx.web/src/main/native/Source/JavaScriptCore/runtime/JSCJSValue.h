@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2012, 2015 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -68,8 +68,13 @@ struct ClassInfo;
 struct DumpContext;
 struct Instruction;
 struct MethodTable;
+enum class Unknown { };
 
-template <class T> class WriteBarrierBase;
+template <class T, typename Traits> class WriteBarrierBase;
+template<class T>
+using WriteBarrierTraitsSelect = typename std::conditional<std::is_same<T, Unknown>::value,
+    DumbValueTraits<T>, DumbPtrTraits<T>
+>::type;
 
 enum PreferredPrimitiveType { NoPreference, PreferNumber, PreferString };
 enum ECMAMode { StrictMode, NotStrictMode };
@@ -222,6 +227,7 @@ public:
     bool isAnyInt() const;
     bool isNumber() const;
     bool isString() const;
+    bool isBigInt() const;
     bool isSymbol() const;
     bool isPrimitive() const;
     bool isGetterSetter() const;
@@ -281,6 +287,8 @@ public:
     bool getPropertySlot(ExecState*, PropertyName, PropertySlot&) const;
     template<typename CallbackWhenNoException> typename std::result_of<CallbackWhenNoException(bool, PropertySlot&)>::type getPropertySlot(ExecState*, PropertyName, CallbackWhenNoException) const;
     template<typename CallbackWhenNoException> typename std::result_of<CallbackWhenNoException(bool, PropertySlot&)>::type getPropertySlot(ExecState*, PropertyName, PropertySlot&, CallbackWhenNoException) const;
+
+    bool getOwnPropertySlot(ExecState*, PropertyName, PropertySlot&) const;
 
     bool put(ExecState*, PropertyName, JSValue, PutPropertySlot&);
     bool putInline(ExecState*, PropertyName, JSValue, PutPropertySlot&);
@@ -344,12 +352,9 @@ public:
     uint32_t tag() const;
     int32_t payload() const;
 
-#if !ENABLE(JIT)
-    // This should only be used by the LLInt C Loop interpreter who needs
-    // synthesize JSValue from its "register"s holding tag and payload
-    // values.
+    // This should only be used by the LLInt C Loop interpreter and OSRExit code who needs
+    // synthesize JSValue from its "register"s holding tag and payload values.
     explicit JSValue(int32_t tag, int32_t payload);
-#endif
 
 #elif USE(JSVALUE64)
     /*
@@ -455,7 +460,7 @@ public:
 #endif
 
 private:
-    template <class T> JSValue(WriteBarrierBase<T>);
+    template <class T> JSValue(WriteBarrierBase<T, WriteBarrierTraitsSelect<T>>);
 
     enum HashTableDeletedValueTag { HashTableDeletedValue };
     JSValue(HashTableDeletedValueTag);

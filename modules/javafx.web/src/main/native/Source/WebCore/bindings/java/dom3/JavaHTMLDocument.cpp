@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/HTMLCollection.h>
@@ -61,13 +63,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getScriptsImpl(
     return JavaReturn<HTMLCollection>(env, WTF::getPtr(IMPL->scripts()));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getWidthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getWidthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->width();
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getHeightImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getHeightImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->height();
@@ -165,14 +167,14 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setVlinkColorImp
 
 
 // Functions
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_openImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_openImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->open();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_closeImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_closeImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->close();
@@ -195,21 +197,21 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writelnImpl(JNIE
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_clearImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_clearImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->clear();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_captureEventsImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_captureEventsImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->captureEvents();
 }
 
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_releaseEventsImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_releaseEventsImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     IMPL->releaseEvents();

@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include "DOMException.h"
@@ -41,7 +43,7 @@ extern "C" {
 
 #define IMPL (static_cast<MediaList*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
@@ -60,7 +62,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_setMediaTextImpl(JN
     IMPL->setMediaText(String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MediaListImpl_getLengthImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_MediaListImpl_getLengthImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->length();

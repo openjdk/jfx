@@ -38,16 +38,12 @@ namespace WebCore {
 
 class RealtimeMediaSourceSettings {
 public:
-    enum SourceType { None, Camera, Microphone };
     enum VideoFacingMode { Unknown, User, Environment, Left, Right };
 
-    static const AtomicString& facingMode(RealtimeMediaSourceSettings::VideoFacingMode);
-
+    static String facingMode(RealtimeMediaSourceSettings::VideoFacingMode);
     static RealtimeMediaSourceSettings::VideoFacingMode videoFacingModeEnum(const String&);
 
-    explicit RealtimeMediaSourceSettings()
-    {
-    }
+    explicit RealtimeMediaSourceSettings() = default;
 
     bool supportsWidth() const { return m_supportedConstraints.supportsWidth(); }
     uint32_t width() const { return m_width; }
@@ -93,8 +89,27 @@ public:
     const AtomicString& groupId() const { return m_groupId; }
     void setGroupId(const AtomicString& groupId) { m_groupId = groupId; }
 
+    enum class DisplaySurfaceType {
+        Monitor,
+        Window,
+        Application,
+        Browser,
+        Invalid,
+    };
+
+    bool supportsDisplaySurface() const { return m_supportedConstraints.supportsDisplaySurface(); }
+    DisplaySurfaceType displaySurface() const { return m_displaySurface; }
+    void setDisplaySurface(DisplaySurfaceType displaySurface) { m_displaySurface = displaySurface; }
+
+    bool supportsLogicalSurface() const { return m_supportedConstraints.supportsLogicalSurface(); }
+    bool logicalSurface() const { return m_logicalSurface; }
+    void setLogicalSurface(bool logicalSurface) { m_logicalSurface = logicalSurface; }
+
     const RealtimeMediaSourceSupportedConstraints& supportedConstraints() const { return m_supportedConstraints; }
     void setSupportedConstraints(const RealtimeMediaSourceSupportedConstraints& supportedConstraints) { m_supportedConstraints = supportedConstraints; }
+
+    const AtomicString& label() const { return m_label; }
+    void setLabel(const AtomicString& label) { m_label = label; }
 
     template<class Encoder> void encode(Encoder&) const;
     template<class Decoder> static bool decode(Decoder&, RealtimeMediaSourceSettings&);
@@ -112,6 +127,10 @@ private:
 
     AtomicString m_deviceId;
     AtomicString m_groupId;
+    AtomicString m_label;
+
+    DisplaySurfaceType m_displaySurface { DisplaySurfaceType::Invalid };
+    bool m_logicalSurface { 0 };
 
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
 };
@@ -129,6 +148,7 @@ void RealtimeMediaSourceSettings::encode(Encoder& encoder) const
         << m_echoCancellation
         << m_deviceId
         << m_groupId
+        << m_label
         << m_supportedConstraints;
     encoder.encodeEnum(m_facingMode);
 }
@@ -146,6 +166,7 @@ bool RealtimeMediaSourceSettings::decode(Decoder& decoder, RealtimeMediaSourceSe
         && decoder.decode(settings.m_echoCancellation)
         && decoder.decode(settings.m_deviceId)
         && decoder.decode(settings.m_groupId)
+        && decoder.decode(settings.m_label)
         && decoder.decode(settings.m_supportedConstraints)
         && decoder.decodeEnum(settings.m_facingMode);
 }

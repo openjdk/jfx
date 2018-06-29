@@ -105,8 +105,12 @@ public:
     bool useLegacyBackgroundSizeShorthandBehavior { false };
     bool springTimingFunctionEnabled { false };
     bool constantPropertiesEnabled { false };
-
+    bool conicGradientsEnabled { false };
     bool deferredCSSParserEnabled { false };
+    bool allowNewLinesClamp { false };
+
+    // This is only needed to support getMatchedCSSRules.
+    bool hasDocumentSecurityOrigin { false };
 
     URL completeURL(const String& url) const
     {
@@ -139,8 +143,11 @@ struct CSSParserContextHash {
             & key.enforcesCSSMIMETypeInNoQuirksMode         << 5
             & key.useLegacyBackgroundSizeShorthandBehavior  << 6
             & key.springTimingFunctionEnabled               << 7
-            & key.deferredCSSParserEnabled                  << 8
-            & key.mode                                      << 9;
+            & key.conicGradientsEnabled                     << 8
+            & key.deferredCSSParserEnabled                  << 9
+            & key.hasDocumentSecurityOrigin                 << 10
+            & key.mode                                      << 11
+            & key.allowNewLinesClamp                        << 12;
         hash ^= WTF::intHash(bits);
         return hash;
     }

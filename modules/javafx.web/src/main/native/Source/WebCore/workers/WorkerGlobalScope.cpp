@@ -31,12 +31,15 @@
 #include "ContentSecurityPolicy.h"
 #include "Crypto.h"
 #include "IDBConnectionProxy.h"
+#include "ImageBitmapOptions.h"
 #include "InspectorInstrumentation.h"
+#include "MIMETypeRegistry.h"
 #include "Performance.h"
 #include "ScheduledAction.h"
 #include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
+#include "ServiceWorkerGlobalScope.h"
 #include "SocketProvider.h"
 #include "WorkerInspectorController.h"
 #include "WorkerLoaderProxy.h"
@@ -45,20 +48,20 @@
 #include "WorkerReportingProxy.h"
 #include "WorkerScriptLoader.h"
 #include "WorkerThread.h"
-#include <inspector/ScriptArguments.h>
-#include <inspector/ScriptCallStack.h>
-
-using namespace Inspector;
+#include <JavaScriptCore/ScriptArguments.h>
+#include <JavaScriptCore/ScriptCallStack.h>
 
 namespace WebCore {
+using namespace Inspector;
 
-WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& identifier, const String& userAgent, WorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider)
+WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& identifier, const String& userAgent, bool isOnline, WorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
     : m_url(url)
     , m_identifier(identifier)
     , m_userAgent(userAgent)
     , m_thread(thread)
     , m_script(std::make_unique<WorkerScriptController>(this))
     , m_inspectorController(std::make_unique<WorkerInspectorController>(*this))
+    , m_isOnline(isOnline)
     , m_shouldBypassMainWorldContentSecurityPolicy(shouldBypassMainWorldContentSecurityPolicy)
     , m_eventQueue(*this)
     , m_topOrigin(WTFMove(topOrigin))
@@ -67,6 +70,7 @@ WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& identifier, c
 #endif
     , m_socketProvider(socketProvider)
     , m_performance(Performance::create(*this, timeOrigin))
+    , m_sessionID(sessionID)
 {
 #if !ENABLE(INDEXED_DATABASE)
     UNUSED_PARAM(connectionProxy);
@@ -84,7 +88,7 @@ WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& identifier, c
 
 WorkerGlobalScope::~WorkerGlobalScope()
 {
-    ASSERT(currentThread() == thread().threadID());
+    ASSERT(thread().thread() == &Thread::current());
 
     m_performance = nullptr;
     m_crypto = nullptr;
@@ -108,7 +112,7 @@ void WorkerGlobalScope::removeAllEventListeners()
 
 bool WorkerGlobalScope::isSecureContext() const
 {
-    return securityOrigin() && securityOrigin()->isPotentionallyTrustworthy();
+    return securityOrigin() && securityOrigin()->isPotentiallyTrustworthy();
 }
 
 void WorkerGlobalScope::applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders)
@@ -160,8 +164,8 @@ IDBClient::IDBConnectionProxy* WorkerGlobalScope::idbConnectionProxy()
 void WorkerGlobalScope::stopIndexedDatabase()
 {
 #if ENABLE(INDEXED_DATABASE_IN_WORKERS)
-    ASSERT(m_connectionProxy);
-    m_connectionProxy->forgetActivityForCurrentThread();
+    if (m_connectionProxy)
+        m_connectionProxy->forgetActivityForCurrentThread();
 #endif
 }
 
@@ -194,8 +198,15 @@ void WorkerGlobalScope::close()
 WorkerNavigator& WorkerGlobalScope::navigator()
 {
     if (!m_navigator)
-        m_navigator = WorkerNavigator::create(*this, m_userAgent);
+        m_navigator = WorkerNavigator::create(*this, m_userAgent, m_isOnline);
     return *m_navigator;
+}
+
+void WorkerGlobalScope::setIsOnline(bool isOnline)
+{
+    m_isOnline = isOnline;
+    if (m_navigator)
+        m_navigator->setIsOnline(isOnline);
 }
 
 void WorkerGlobalScope::postTask(Task&& task)
@@ -252,6 +263,20 @@ ExceptionOr<void> WorkerGlobalScope::importScripts(const Vector<String>& urls)
         completedURLs.uncheckedAppend(WTFMove(url));
     }
 
+    FetchOptions::Cache cachePolicy = FetchOptions::Cache::Default;
+
+#if ENABLE(SERVICE_WORKER)
+    bool isServiceWorkerGlobalScope = is<ServiceWorkerGlobalScope>(*this);
+    if (isServiceWorkerGlobalScope) {
+        // FIXME: We need to add support for the 'imported scripts updated' flag as per:
+        // https://w3c.github.io/ServiceWorker/#importscripts
+        auto& serviceWorkerGlobalScope = downcast<ServiceWorkerGlobalScope>(*this);
+        auto& registration = serviceWorkerGlobalScope.registration();
+        if (registration.updateViaCache() == ServiceWorkerUpdateViaCache::None || registration.needsUpdate())
+            cachePolicy = FetchOptions::Cache::NoCache;
+    }
+#endif
+
     for (auto& url : completedURLs) {
         // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
         bool shouldBypassMainWorldContentSecurityPolicy = this->shouldBypassMainWorldContentSecurityPolicy();
@@ -259,11 +284,16 @@ ExceptionOr<void> WorkerGlobalScope::importScripts(const Vector<String>& urls)
             return Exception { NetworkError };
 
         auto scriptLoader = WorkerScriptLoader::create();
-        scriptLoader->loadSynchronously(this, url, FetchOptions::Mode::NoCors, shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceScriptSrcDirective, resourceRequestIdentifier());
+        scriptLoader->loadSynchronously(this, url, FetchOptions::Mode::NoCors, cachePolicy, shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceScriptSrcDirective, resourceRequestIdentifier());
 
         // If the fetching attempt failed, throw a NetworkError exception and abort all these steps.
         if (scriptLoader->failed())
             return Exception { NetworkError };
+
+#if ENABLE(SERVICE_WORKER)
+        if (isServiceWorkerGlobalScope && !MIMETypeRegistry::isSupportedJavaScriptMIMEType(scriptLoader->responseMIMEType()))
+            return Exception { NetworkError };
+#endif
 
         InspectorInstrumentation::scriptImported(*this, scriptLoader->identifier(), scriptLoader->script());
 
@@ -320,7 +350,7 @@ void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, con
 
 bool WorkerGlobalScope::isContextThread() const
 {
-    return currentThread() == thread().threadID();
+    return thread().thread() == &Thread::current();
 }
 
 bool WorkerGlobalScope::isJSExecutionForbidden() const
@@ -384,6 +414,23 @@ Crypto& WorkerGlobalScope::crypto()
 Performance& WorkerGlobalScope::performance() const
 {
     return *m_performance;
+}
+
+WorkerCacheStorageConnection& WorkerGlobalScope::cacheStorageConnection()
+{
+    if (!m_cacheStorageConnection)
+        m_cacheStorageConnection = WorkerCacheStorageConnection::create(*this);
+    return *m_cacheStorageConnection;
+}
+
+void WorkerGlobalScope::createImageBitmap(ImageBitmap::Source&& source, ImageBitmapOptions&& options, ImageBitmap::Promise&& promise)
+{
+    ImageBitmap::createPromise(*this, WTFMove(source), WTFMove(options), WTFMove(promise));
+}
+
+void WorkerGlobalScope::createImageBitmap(ImageBitmap::Source&& source, int sx, int sy, int sw, int sh, ImageBitmapOptions&& options, ImageBitmap::Promise&& promise)
+{
+    ImageBitmap::createPromise(*this, WTFMove(source), WTFMove(options), sx, sy, sw, sh, WTFMove(promise));
 }
 
 } // namespace WebCore

@@ -29,6 +29,7 @@
 #include "config.h"
 #include "InspectorOverlay.h"
 
+#include "CacheStorageProvider.h"
 #include "DocumentLoader.h"
 #include "EditorClient.h"
 #include "Element.h"
@@ -48,24 +49,20 @@
 #include "RectangleShape.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
-#include "RenderFlowThread.h"
 #include "RenderInline.h"
-#include "RenderNamedFlowFragment.h"
-#include "RenderNamedFlowThread.h"
-#include "RenderRegion.h"
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "Settings.h"
 #include "SocketProvider.h"
 #include "StyledElement.h"
-#include <inspector/InspectorProtocolObjects.h>
+#include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/JSONValues.h>
 
-using namespace Inspector;
-using namespace std::literals::chrono_literals;
 
 namespace WebCore {
+
+using namespace Inspector;
 
 static void contentsQuadToCoordinateSystem(const FrameView* mainView, const FrameView* view, FloatQuad& quad, InspectorOverlay::CoordinateSystem coordinateSystem)
 {
@@ -83,7 +80,7 @@ static void contentsQuadToPage(const FrameView* mainView, const FrameView* view,
     contentsQuadToCoordinateSystem(mainView, view, quad, InspectorOverlay::CoordinateSystem::View);
 }
 
-static void buildRendererHighlight(RenderObject* renderer, RenderRegion* region, const HighlightConfig& highlightConfig, Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem)
+static void buildRendererHighlight(RenderObject* renderer, const HighlightConfig& highlightConfig, Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem)
 {
     Frame* containingFrame = renderer->document().frame();
     if (!containingFrame)
@@ -111,15 +108,7 @@ static void buildRendererHighlight(RenderObject* renderer, RenderRegion* region,
             auto& renderBox = downcast<RenderBox>(*renderer);
 
             LayoutBoxExtent margins(renderBox.marginTop(), renderBox.marginRight(), renderBox.marginBottom(), renderBox.marginLeft());
-
-            if (!renderBox.isOutOfFlowPositioned() && region) {
-                RenderBox::LogicalExtentComputedValues computedValues;
-                renderBox.computeLogicalWidthInRegion(computedValues, region);
-                margins.start(renderBox.style().writingMode()) = computedValues.m_margins.m_start;
-                margins.end(renderBox.style().writingMode()) = computedValues.m_margins.m_end;
-            }
-
-            paddingBox = renderBox.clientBoxRectInRegion(region);
+            paddingBox = renderBox.clientBoxRect();
             contentBox = LayoutRect(paddingBox.x() + renderBox.paddingLeft(), paddingBox.y() + renderBox.paddingTop(),
                 paddingBox.width() - renderBox.paddingLeft() - renderBox.paddingRight(), paddingBox.height() - renderBox.paddingTop() - renderBox.paddingBottom());
             borderBox = LayoutRect(paddingBox.x() - renderBox.borderLeft(), paddingBox.y() - renderBox.borderTop(),
@@ -140,41 +129,10 @@ static void buildRendererHighlight(RenderObject* renderer, RenderRegion* region,
                 borderBox.width() + renderInline.horizontalMarginExtent(), borderBox.height());
         }
 
-        FloatQuad absContentQuad;
-        FloatQuad absPaddingQuad;
-        FloatQuad absBorderQuad;
-        FloatQuad absMarginQuad;
-
-        if (region) {
-            RenderFlowThread* flowThread = region->flowThread();
-
-            // Figure out the quads in the space of the RenderFlowThread.
-            absContentQuad = renderer->localToContainerQuad(FloatRect(contentBox), flowThread);
-            absPaddingQuad = renderer->localToContainerQuad(FloatRect(paddingBox), flowThread);
-            absBorderQuad = renderer->localToContainerQuad(FloatRect(borderBox), flowThread);
-            absMarginQuad = renderer->localToContainerQuad(FloatRect(marginBox), flowThread);
-
-            // Move the quad relative to the space of the current region.
-            LayoutRect flippedRegionRect(region->flowThreadPortionRect());
-            flowThread->flipForWritingMode(flippedRegionRect);
-
-            FloatSize delta = region->contentBoxRect().location() - flippedRegionRect.location();
-            absContentQuad.move(delta);
-            absPaddingQuad.move(delta);
-            absBorderQuad.move(delta);
-            absMarginQuad.move(delta);
-
-            // Resolve the absolute quads starting from the current region.
-            absContentQuad = region->localToAbsoluteQuad(absContentQuad);
-            absPaddingQuad = region->localToAbsoluteQuad(absPaddingQuad);
-            absBorderQuad = region->localToAbsoluteQuad(absBorderQuad);
-            absMarginQuad = region->localToAbsoluteQuad(absMarginQuad);
-        } else {
-            absContentQuad = renderer->localToAbsoluteQuad(FloatRect(contentBox));
-            absPaddingQuad = renderer->localToAbsoluteQuad(FloatRect(paddingBox));
-            absBorderQuad = renderer->localToAbsoluteQuad(FloatRect(borderBox));
-            absMarginQuad = renderer->localToAbsoluteQuad(FloatRect(marginBox));
-        }
+        FloatQuad absContentQuad = renderer->localToAbsoluteQuad(FloatRect(contentBox));
+        FloatQuad absPaddingQuad = renderer->localToAbsoluteQuad(FloatRect(paddingBox));
+        FloatQuad absBorderQuad = renderer->localToAbsoluteQuad(FloatRect(borderBox));
+        FloatQuad absMarginQuad = renderer->localToAbsoluteQuad(FloatRect(marginBox));
 
         contentsQuadToCoordinateSystem(mainView, containingView, absContentQuad, coordinateSystem);
         contentsQuadToCoordinateSystem(mainView, containingView, absPaddingQuad, coordinateSystem);
@@ -189,13 +147,13 @@ static void buildRendererHighlight(RenderObject* renderer, RenderRegion* region,
     }
 }
 
-static void buildNodeHighlight(Node& node, RenderRegion* region, const HighlightConfig& highlightConfig, Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem)
+static void buildNodeHighlight(Node& node, const HighlightConfig& highlightConfig, Highlight& highlight, InspectorOverlay::CoordinateSystem coordinateSystem)
 {
     RenderObject* renderer = node.renderer();
     if (!renderer)
         return;
 
-    buildRendererHighlight(renderer, region, highlightConfig, highlight, coordinateSystem);
+    buildRendererHighlight(renderer, highlightConfig, highlight, coordinateSystem);
 }
 
 static void buildQuadHighlight(const FloatQuad& quad, const HighlightConfig& highlightConfig, Highlight& highlight)
@@ -212,9 +170,7 @@ InspectorOverlay::InspectorOverlay(Page& page, InspectorClient* client)
 {
 }
 
-InspectorOverlay::~InspectorOverlay()
-{
-}
+InspectorOverlay::~InspectorOverlay() = default;
 
 void InspectorOverlay::paint(GraphicsContext& context)
 {
@@ -234,12 +190,12 @@ void InspectorOverlay::getHighlight(Highlight& highlight, InspectorOverlay::Coor
 
     highlight.type = HighlightType::Rects;
     if (m_highlightNode)
-        buildNodeHighlight(*m_highlightNode, nullptr, m_nodeHighlightConfig, highlight, coordinateSystem);
+        buildNodeHighlight(*m_highlightNode, m_nodeHighlightConfig, highlight, coordinateSystem);
     else if (m_highlightNodeList) {
         highlight.setDataFromConfig(m_nodeHighlightConfig);
         for (unsigned i = 0; i < m_highlightNodeList->length(); ++i) {
             Highlight nodeHighlight;
-            buildNodeHighlight(*(m_highlightNodeList->item(i)), nullptr, m_nodeHighlightConfig, nodeHighlight, coordinateSystem);
+            buildNodeHighlight(*(m_highlightNodeList->item(i)), m_nodeHighlightConfig, nodeHighlight, coordinateSystem);
             if (nodeHighlight.type == HighlightType::Node)
                 highlight.quads.appendVector(nodeHighlight.quads);
         }
@@ -345,7 +301,7 @@ void InspectorOverlay::update()
     // Position DOM elements.
     overlayPage()->mainFrame().document()->resolveStyle(Document::ResolveStyleType::Rebuild);
     if (overlayView->needsLayout())
-        overlayView->layout();
+        overlayView->layoutContext().layout();
 
     forcePaint();
 }
@@ -380,7 +336,7 @@ static Ref<Inspector::Protocol::OverlayTypes::Quad> buildArrayForQuad(const Floa
 
 static Ref<Inspector::Protocol::OverlayTypes::FragmentHighlightData> buildObjectForHighlight(const Highlight& highlight)
 {
-    auto arrayOfQuads = Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::Quad>::create();
+    auto arrayOfQuads = JSON::ArrayOf<Inspector::Protocol::OverlayTypes::Quad>::create();
     for (auto& quad : highlight.quads)
         arrayOfQuads->addItem(buildArrayForQuad(quad));
 
@@ -394,97 +350,12 @@ static Ref<Inspector::Protocol::OverlayTypes::FragmentHighlightData> buildObject
         .release();
 }
 
-static RefPtr<Inspector::Protocol::OverlayTypes::Region> buildObjectForRegion(FrameView* mainView, RenderRegion* region)
-{
-    FrameView* containingView = region->frame().view();
-    if (!containingView)
-        return nullptr;
-
-    RenderBlockFlow& regionContainer = downcast<RenderBlockFlow>(*region->parent());
-    LayoutRect borderBox = regionContainer.borderBoxRect();
-    borderBox.setWidth(borderBox.width() + regionContainer.verticalScrollbarWidth());
-    borderBox.setHeight(borderBox.height() + regionContainer.horizontalScrollbarHeight());
-
-    // Create incoming and outgoing boxes that we use to chain the regions toghether.
-    const LayoutSize linkBoxSize(10, 10);
-    const LayoutSize linkBoxMidpoint(linkBoxSize.width() / 2, linkBoxSize.height() / 2);
-
-    LayoutRect incomingRectBox = LayoutRect(borderBox.location() - linkBoxMidpoint, linkBoxSize);
-    LayoutRect outgoingRectBox = LayoutRect(borderBox.location() - linkBoxMidpoint + borderBox.size(), linkBoxSize);
-
-    // Move the link boxes slightly inside the region border box.
-    LayoutUnit maxUsableHeight = std::max(LayoutUnit(), borderBox.height() - linkBoxMidpoint.height());
-    LayoutUnit linkBoxVerticalOffset = std::min(LayoutUnit::fromPixel(15), maxUsableHeight);
-    incomingRectBox.move(0, linkBoxVerticalOffset);
-    outgoingRectBox.move(0, -linkBoxVerticalOffset);
-
-    FloatQuad borderRectQuad = regionContainer.localToAbsoluteQuad(FloatRect(borderBox));
-    FloatQuad incomingRectQuad = regionContainer.localToAbsoluteQuad(FloatRect(incomingRectBox));
-    FloatQuad outgoingRectQuad = regionContainer.localToAbsoluteQuad(FloatRect(outgoingRectBox));
-
-    contentsQuadToPage(mainView, containingView, borderRectQuad);
-    contentsQuadToPage(mainView, containingView, incomingRectQuad);
-    contentsQuadToPage(mainView, containingView, outgoingRectQuad);
-
-    return Inspector::Protocol::OverlayTypes::Region::create()
-        .setBorderQuad(buildArrayForQuad(borderRectQuad))
-        .setIncomingQuad(buildArrayForQuad(incomingRectQuad))
-        .setOutgoingQuad(buildArrayForQuad(outgoingRectQuad))
-        .release();
-}
-
-static Ref<Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::Region>> buildObjectForFlowRegions(RenderRegion* region, RenderFlowThread* flowThread)
-{
-    FrameView* mainFrameView = region->document().page()->mainFrame().view();
-
-    auto arrayOfRegions = Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::Region>::create();
-
-    const RenderRegionList& regionList = flowThread->renderRegionList();
-    for (auto& iterRegion : regionList) {
-        if (!iterRegion->isValid())
-            continue;
-        RefPtr<Inspector::Protocol::OverlayTypes::Region> regionObject = buildObjectForRegion(mainFrameView, iterRegion);
-        if (!regionObject)
-            continue;
-        if (region == iterRegion) {
-            // Let the script know that this is the currently highlighted node.
-            regionObject->setIsHighlighted(true);
-        }
-        arrayOfRegions->addItem(WTFMove(regionObject));
-    }
-
-    return arrayOfRegions;
-}
-
 static Ref<Inspector::Protocol::OverlayTypes::Size> buildObjectForSize(const IntSize& size)
 {
     return Inspector::Protocol::OverlayTypes::Size::create()
         .setWidth(size.width())
         .setHeight(size.height())
         .release();
-}
-
-static RefPtr<Inspector::Protocol::OverlayTypes::Quad> buildQuadObjectForCSSRegionContentClip(RenderRegion* region)
-{
-    Frame* containingFrame = region->document().frame();
-    if (!containingFrame)
-        return nullptr;
-
-    FrameView* containingView = containingFrame->view();
-    FrameView* mainView = containingFrame->page()->mainFrame().view();
-    RenderFlowThread* flowThread = region->flowThread();
-
-    // Get the clip box of the current region and covert it into an absolute quad.
-    LayoutRect flippedRegionRect(region->flowThreadPortionOverflowRect());
-    flowThread->flipForWritingMode(flippedRegionRect);
-
-    // Apply any border or padding of the region.
-    flippedRegionRect.setLocation(region->contentBoxRect().location());
-
-    FloatQuad clipQuad = region->localToAbsoluteQuad(FloatRect(flippedRegionRect));
-    contentsQuadToPage(mainView, containingView, clipQuad);
-
-    return buildArrayForQuad(clipQuad);
 }
 
 void InspectorOverlay::setShowingPaintRects(bool showingPaintRects)
@@ -508,9 +379,9 @@ void InspectorOverlay::showPaintRect(const FloatRect& rect)
 
     IntRect rootRect = m_page.mainFrame().view()->contentsToRootView(enclosingIntRect(rect));
 
-    const auto removeDelay = 250ms;
+    const auto removeDelay = 250_ms;
 
-    std::chrono::steady_clock::time_point removeTime = std::chrono::steady_clock::now() + removeDelay;
+    MonotonicTime removeTime = MonotonicTime::now() + removeDelay;
     m_paintRects.append(TimeRectPair(removeTime, rootRect));
 
     if (!m_paintRectUpdateTimer.isActive()) {
@@ -524,7 +395,7 @@ void InspectorOverlay::showPaintRect(const FloatRect& rect)
 
 void InspectorOverlay::updatePaintRectsTimerFired()
 {
-    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    MonotonicTime now = MonotonicTime::now();
     bool rectsChanged = false;
     while (!m_paintRects.isEmpty() && m_paintRects.first().first < now) {
         m_paintRects.removeFirst();
@@ -542,7 +413,7 @@ void InspectorOverlay::updatePaintRectsTimerFired()
 
 void InspectorOverlay::drawPaintRects()
 {
-    auto arrayOfRects = Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::Rect>::create();
+    auto arrayOfRects = JSON::ArrayOf<Inspector::Protocol::OverlayTypes::Rect>::create();
     for (const auto& pair : m_paintRects)
         arrayOfRects->addItem(buildObjectForRect(pair.second));
 
@@ -554,40 +425,13 @@ void InspectorOverlay::drawGutter()
     evaluateInOverlay(ASCIILiteral("drawGutter"));
 }
 
-static RefPtr<Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::FragmentHighlightData>> buildArrayForRendererFragments(RenderObject* renderer, const HighlightConfig& config)
+static RefPtr<JSON::ArrayOf<Inspector::Protocol::OverlayTypes::FragmentHighlightData>> buildArrayForRendererFragments(RenderObject* renderer, const HighlightConfig& config)
 {
-    auto arrayOfFragments = Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::FragmentHighlightData>::create();
+    auto arrayOfFragments = JSON::ArrayOf<Inspector::Protocol::OverlayTypes::FragmentHighlightData>::create();
 
-    RenderFlowThread* containingFlowThread = renderer->flowThreadContainingBlock();
-    if (!containingFlowThread) {
-        Highlight highlight;
-        buildRendererHighlight(renderer, nullptr, config, highlight, InspectorOverlay::CoordinateSystem::View);
-        arrayOfFragments->addItem(buildObjectForHighlight(highlight));
-    } else {
-        RenderRegion* startRegion = nullptr;
-        RenderRegion* endRegion = nullptr;
-        if (!containingFlowThread->getRegionRangeForBox(&renderer->enclosingBox(), startRegion, endRegion)) {
-            // The flow has no visible regions. The renderer is not visible on screen.
-            return nullptr;
-        }
-
-        const RenderRegionList& regionList = containingFlowThread->renderRegionList();
-        for (RenderRegionList::const_iterator iter = regionList.find(startRegion); iter != regionList.end(); ++iter) {
-            RenderRegion* region = *iter;
-            if (region->isValid()) {
-                // Compute the highlight of the fragment inside the current region.
-                Highlight highlight;
-                buildRendererHighlight(renderer, region, config, highlight, InspectorOverlay::CoordinateSystem::View);
-                Ref<Inspector::Protocol::OverlayTypes::FragmentHighlightData> fragmentHighlight = buildObjectForHighlight(highlight);
-
-                // Compute the clipping area of the region.
-                fragmentHighlight->setRegionClippingArea(buildQuadObjectForCSSRegionContentClip(region));
-                arrayOfFragments->addItem(WTFMove(fragmentHighlight));
-            }
-            if (region == endRegion)
-                break;
-        }
-    }
+    Highlight highlight;
+    buildRendererHighlight(renderer, config, highlight, InspectorOverlay::CoordinateSystem::View);
+    arrayOfFragments->addItem(buildObjectForHighlight(highlight));
 
     return WTFMove(arrayOfFragments);
 }
@@ -694,7 +538,7 @@ static RefPtr<Inspector::Protocol::OverlayTypes::ShapeOutsideData> buildObjectFo
     return WTFMove(shapeObject);
 }
 
-static RefPtr<Inspector::Protocol::OverlayTypes::ElementData> buildObjectForElementData(Node* node, HighlightType type)
+static RefPtr<Inspector::Protocol::OverlayTypes::ElementData> buildObjectForElementData(Node* node, HighlightType)
 {
     if (!is<Element>(node) || !node->document().frame())
         return nullptr;
@@ -715,7 +559,7 @@ static RefPtr<Inspector::Protocol::OverlayTypes::ElementData> buildObjectForElem
         .release();
 
     if (element.hasClass() && is<StyledElement>(element)) {
-        auto classes = Inspector::Protocol::Array<String>::create();
+        auto classes = JSON::ArrayOf<String>::create();
         HashSet<AtomicString> usedClassNames;
         const SpaceSplitString& classNamesString = downcast<StyledElement>(element).classNames();
         for (size_t i = 0; i < classNamesString.size(); ++i) {
@@ -750,27 +594,6 @@ static RefPtr<Inspector::Protocol::OverlayTypes::ElementData> buildObjectForElem
         .release();
     elementData->setSize(WTFMove(sizeObject));
 
-    if (type != HighlightType::NodeList && renderer->isRenderNamedFlowFragmentContainer()) {
-        RenderNamedFlowFragment& region = *downcast<RenderBlockFlow>(*renderer).renderNamedFlowFragment();
-        if (region.isValid()) {
-            RenderFlowThread* flowThread = region.flowThread();
-            auto regionFlowData = Inspector::Protocol::OverlayTypes::RegionFlowData::create()
-                .setName(downcast<RenderNamedFlowThread>(*flowThread).flowThreadName())
-                .setRegions(buildObjectForFlowRegions(&region, flowThread))
-                .release();
-            elementData->setRegionFlowData(WTFMove(regionFlowData));
-        }
-    }
-
-    RenderFlowThread* containingFlowThread = renderer->flowThreadContainingBlock();
-    if (is<RenderNamedFlowThread>(containingFlowThread)) {
-        auto contentFlowData = Inspector::Protocol::OverlayTypes::ContentFlowData::create()
-            .setName(downcast<RenderNamedFlowThread>(*containingFlowThread).flowThreadName())
-            .release();
-
-        elementData->setContentFlowData(WTFMove(contentFlowData));
-    }
-
     if (is<RenderBox>(*renderer)) {
         auto& renderBox = downcast<RenderBox>(*renderer);
         if (RefPtr<Inspector::Protocol::OverlayTypes::ShapeOutsideData> shapeObject = buildObjectForShapeOutside(containingFrame, &renderBox))
@@ -798,7 +621,7 @@ RefPtr<Inspector::Protocol::OverlayTypes::NodeHighlightData> InspectorOverlay::b
     if (!renderer)
         return nullptr;
 
-    RefPtr<Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::FragmentHighlightData>> arrayOfFragmentHighlights = buildArrayForRendererFragments(renderer, m_nodeHighlightConfig);
+    RefPtr<JSON::ArrayOf<Inspector::Protocol::OverlayTypes::FragmentHighlightData>> arrayOfFragmentHighlights = buildArrayForRendererFragments(renderer, m_nodeHighlightConfig);
     if (!arrayOfFragmentHighlights)
         return nullptr;
 
@@ -818,9 +641,9 @@ RefPtr<Inspector::Protocol::OverlayTypes::NodeHighlightData> InspectorOverlay::b
     return WTFMove(nodeHighlightObject);
 }
 
-Ref<Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::NodeHighlightData>> InspectorOverlay::buildObjectForHighlightedNodes() const
+Ref<JSON::ArrayOf<Inspector::Protocol::OverlayTypes::NodeHighlightData>> InspectorOverlay::buildObjectForHighlightedNodes() const
 {
-    auto highlights = Inspector::Protocol::Array<Inspector::Protocol::OverlayTypes::NodeHighlightData>::create();
+    auto highlights = JSON::ArrayOf<Inspector::Protocol::OverlayTypes::NodeHighlightData>::create();
 
     if (m_highlightNode) {
         if (RefPtr<Inspector::Protocol::OverlayTypes::NodeHighlightData> nodeHighlightData = buildHighlightObjectForNode(m_highlightNode.get(), HighlightType::Node))
@@ -865,7 +688,8 @@ Page* InspectorOverlay::overlayPage()
     PageConfiguration pageConfiguration(
         createEmptyEditorClient(),
         SocketProvider::create(),
-        makeUniqueRef<LibWebRTCProvider>()
+        LibWebRTCProvider::create(),
+        CacheStorageProvider::create()
     );
     fillWithEmptyClients(pageConfiguration);
     m_overlayPage = std::make_unique<Page>(WTFMove(pageConfiguration));

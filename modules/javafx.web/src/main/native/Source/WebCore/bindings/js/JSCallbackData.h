@@ -31,9 +31,9 @@
 #include "JSDOMBinding.h"
 #include "JSDOMGlobalObject.h"
 #include "ScriptExecutionContext.h"
-#include <heap/Strong.h>
-#include <heap/StrongInlines.h>
-#include <runtime/JSObject.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Strong.h>
+#include <JavaScriptCore/StrongInlines.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
@@ -51,16 +51,13 @@ public:
 protected:
     explicit JSCallbackData(JSDOMGlobalObject* globalObject)
         : m_globalObject(globalObject)
-#ifndef NDEBUG
-        , m_thread(currentThread())
-#endif
     {
     }
 
     ~JSCallbackData()
     {
 #if !PLATFORM(IOS)
-        ASSERT(m_thread == currentThread());
+        ASSERT(m_thread.ptr() == &Thread::current());
 #endif
     }
 
@@ -69,7 +66,7 @@ protected:
 private:
     JSC::Weak<JSDOMGlobalObject> m_globalObject;
 #ifndef NDEBUG
-    ThreadIdentifier m_thread;
+    Ref<Thread> m_thread { Thread::current() };
 #endif
 };
 

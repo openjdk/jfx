@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,8 +41,16 @@ const ClassInfo WeakMapConstructor::s_info = { "Function", &Base::s_info, nullpt
 void WeakMapConstructor::finishCreation(VM& vm, WeakMapPrototype* prototype)
 {
     Base::finishCreation(vm, prototype->classInfo(vm)->className);
-    putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), DontEnum | ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+}
+
+static EncodedJSValue JSC_HOST_CALL callWeakMap(ExecState*);
+static EncodedJSValue JSC_HOST_CALL constructWeakMap(ExecState*);
+
+WeakMapConstructor::WeakMapConstructor(VM& vm, Structure* structure)
+    : Base(vm, structure, callWeakMap, constructWeakMap)
+{
 }
 
 static EncodedJSValue JSC_HOST_CALL callWeakMap(ExecState* exec)
@@ -60,7 +68,7 @@ static EncodedJSValue JSC_HOST_CALL constructWeakMap(ExecState* exec)
     JSGlobalObject* globalObject = asInternalFunction(exec->jsCallee())->globalObject();
     Structure* weakMapStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), globalObject->weakMapStructure());
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    JSWeakMap* weakMap = JSWeakMap::create(exec, weakMapStructure);
+    JSWeakMap* weakMap = JSWeakMap::create(vm, weakMapStructure);
     JSValue iterable = exec->argument(0);
     if (iterable.isUndefinedOrNull())
         return JSValue::encode(weakMap);
@@ -90,23 +98,12 @@ static EncodedJSValue JSC_HOST_CALL constructWeakMap(ExecState* exec)
         MarkedArgumentBuffer arguments;
         arguments.append(key);
         arguments.append(value);
+        ASSERT(!arguments.hasOverflowed());
         scope.release();
         call(exec, adderFunction, adderFunctionCallType, adderFunctionCallData, weakMap, arguments);
     });
 
     return JSValue::encode(weakMap);
-}
-
-ConstructType WeakMapConstructor::getConstructData(JSCell*, ConstructData& constructData)
-{
-    constructData.native.function = constructWeakMap;
-    return ConstructType::Host;
-}
-
-CallType WeakMapConstructor::getCallData(JSCell*, CallData& callData)
-{
-    callData.native.function = callWeakMap;
-    return CallType::Host;
 }
 
 }

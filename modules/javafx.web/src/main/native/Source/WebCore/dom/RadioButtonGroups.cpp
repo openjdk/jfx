@@ -66,15 +66,14 @@ inline bool RadioButtonGroup::isValid() const
 
 Vector<HTMLInputElement*> RadioButtonGroup::members() const
 {
-    Vector<HTMLInputElement*> members;
-    copyToVector(m_members, members);
+    auto members = copyToVector(m_members);
     std::sort(members.begin(), members.end(), documentOrderComparator);
     return members;
 }
 
 void RadioButtonGroup::setCheckedButton(HTMLInputElement* button)
 {
-    HTMLInputElement* oldCheckedButton = m_checkedButton;
+    RefPtr<HTMLInputElement> oldCheckedButton = m_checkedButton;
     if (oldCheckedButton == button)
         return;
 
@@ -198,13 +197,9 @@ bool RadioButtonGroup::contains(HTMLInputElement* button) const
 // Explicity define empty constructor and destructor in order to prevent the
 // compiler from generating them as inlines. So we don't need to to define
 // RadioButtonGroup in the header.
-RadioButtonGroups::RadioButtonGroups()
-{
-}
+RadioButtonGroups::RadioButtonGroups() = default;
 
-RadioButtonGroups::~RadioButtonGroups()
-{
-}
+RadioButtonGroups::~RadioButtonGroups() = default;
 
 void RadioButtonGroups::addButton(HTMLInputElement* element)
 {

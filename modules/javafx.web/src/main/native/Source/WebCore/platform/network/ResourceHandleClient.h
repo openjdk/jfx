@@ -25,12 +25,11 @@
 
 #pragma once
 
-#include "PlatformExportMacros.h"
+#include <wtf/Forward.h>
 #include <wtf/Ref.h>
 
 #if USE(CFURLCONNECTION)
-#include <CFNetwork/CFURLCachePriv.h>
-#include <CFNetwork/CFURLResponsePriv.h>
+#include <pal/spi/cf/CFNetworkSPI.h>
 #endif
 
 #if PLATFORM(IOS) || USE(CFURLCONNECTION)
@@ -63,10 +62,7 @@ public:
     WEBCORE_EXPORT ResourceHandleClient();
     WEBCORE_EXPORT virtual ~ResourceHandleClient();
 
-    WEBCORE_EXPORT virtual ResourceRequest willSendRequest(ResourceHandle*, ResourceRequest&&, ResourceResponse&&);
     virtual void didSendData(ResourceHandle*, unsigned long long /*bytesSent*/, unsigned long long /*totalBytesToBeSent*/) { }
-
-    virtual void didReceiveResponse(ResourceHandle*, ResourceResponse&&) { }
 
     virtual void didReceiveData(ResourceHandle*, const char*, unsigned, int /*encodedDataLength*/) { }
     WEBCORE_EXPORT virtual void didReceiveBuffer(ResourceHandle*, Ref<SharedBuffer>&&, int encodedDataLength);
@@ -76,19 +72,15 @@ public:
     virtual void wasBlocked(ResourceHandle*) { }
     virtual void cannotShowURL(ResourceHandle*) { }
 
-    virtual bool usesAsyncCallbacks() { return false; }
-
     virtual bool loadingSynchronousXHR() { return false; }
 
-    // Client will pass an updated request using ResourceHandle::continueWillSendRequest() when ready.
-    WEBCORE_EXPORT virtual void willSendRequestAsync(ResourceHandle*, ResourceRequest&&, ResourceResponse&&);
+    WEBCORE_EXPORT virtual void willSendRequestAsync(ResourceHandle*, ResourceRequest&&, ResourceResponse&&, CompletionHandler<void(ResourceRequest&&)>&&) = 0;
 
-    // Client will call ResourceHandle::continueDidReceiveResponse() when ready.
-    WEBCORE_EXPORT virtual void didReceiveResponseAsync(ResourceHandle*, ResourceResponse&&);
+    WEBCORE_EXPORT virtual void didReceiveResponseAsync(ResourceHandle*, ResourceResponse&&, CompletionHandler<void()>&&) = 0;
 
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
     // Client will pass an updated request using ResourceHandle::continueCanAuthenticateAgainstProtectionSpace() when ready.
-    WEBCORE_EXPORT virtual void canAuthenticateAgainstProtectionSpaceAsync(ResourceHandle*, const ProtectionSpace&);
+    WEBCORE_EXPORT virtual void canAuthenticateAgainstProtectionSpaceAsync(ResourceHandle*, const ProtectionSpace&) = 0;
 #endif
     // Client will pass an updated request using ResourceHandle::continueWillCacheResponse() when ready.
 #if USE(CFURLCONNECTION)
@@ -97,15 +89,8 @@ public:
     WEBCORE_EXPORT virtual void willCacheResponseAsync(ResourceHandle*, NSCachedURLResponse *);
 #endif
 
-#if USE(SOUP)
-    virtual char* getOrCreateReadBuffer(size_t /*requestedLength*/, size_t& /*actualLength*/) { return 0; }
-#endif
-
     virtual bool shouldUseCredentialStorage(ResourceHandle*) { return false; }
     virtual void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge&) { }
-#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
-    virtual bool canAuthenticateAgainstProtectionSpace(ResourceHandle*, const ProtectionSpace&) { return false; }
-#endif
     virtual void receivedCancellation(ResourceHandle*, const AuthenticationChallenge&) { }
 
 #if PLATFORM(IOS) || USE(CFURLCONNECTION)

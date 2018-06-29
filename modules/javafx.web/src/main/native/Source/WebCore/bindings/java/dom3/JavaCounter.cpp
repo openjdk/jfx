@@ -23,6 +23,8 @@
  * questions.
  */
 
+#undef IMPL
+
 #include "config.h"
 
 #include <WebCore/DeprecatedCSSOMCounter.h>
@@ -40,7 +42,7 @@ extern "C" {
 
 #define IMPL (static_cast<DeprecatedCSSOMCounter*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CounterImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CounterImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }

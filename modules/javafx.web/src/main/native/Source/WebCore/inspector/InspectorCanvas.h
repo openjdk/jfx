@@ -26,8 +26,8 @@
 #pragma once
 
 #include "CallTracerTypes.h"
-#include <inspector/InspectorProtocolObjects.h>
-#include <inspector/ScriptCallFrame.h>
+#include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <JavaScriptCore/ScriptCallFrame.h>
 #include <wtf/HashMap.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
@@ -39,9 +39,11 @@ namespace WebCore {
 
 class CanvasGradient;
 class CanvasPattern;
+class CanvasRenderingContext;
 class HTMLCanvasElement;
 class HTMLImageElement;
 class HTMLVideoElement;
+class ImageBitmap;
 class ImageData;
 class InstrumentingAgents;
 
@@ -49,35 +51,41 @@ typedef String ErrorString;
 
 class InspectorCanvas final : public RefCounted<InspectorCanvas> {
 public:
-    static Ref<InspectorCanvas> create(HTMLCanvasElement&, const String& cssCanvasName);
+    static Ref<InspectorCanvas> create(CanvasRenderingContext&);
 
     const String& identifier() { return m_identifier; }
-    HTMLCanvasElement& canvas() { return m_canvas; }
-    const String& cssCanvasName() { return m_cssCanvasName; }
+    CanvasRenderingContext& context() { return m_context; }
+
+    HTMLCanvasElement* canvasElement();
 
     void resetRecordingData();
     bool hasRecordingData() const;
+    bool currentFrameHasData() const;
     void recordAction(const String&, Vector<RecordCanvasActionVariant>&& = { });
 
-    RefPtr<Inspector::Protocol::Recording::InitialState>&& releaseInitialState() { return WTFMove(m_initialState); }
-    RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Recording::Frame>>&& releaseFrames() { return WTFMove(m_frames); }
-    RefPtr<Inspector::Protocol::Array<JSON::Value>>&& releaseData();
+    RefPtr<Inspector::Protocol::Recording::InitialState>&& releaseInitialState();
+    RefPtr<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>>&& releaseFrames();
+    RefPtr<JSON::ArrayOf<JSON::Value>>&& releaseData();
 
-    void markNewFrame();
+    void finalizeFrame();
     void markCurrentFrameIncomplete();
+
+    const String& recordingName() const { return m_recordingName; }
+    void setRecordingName(const String& name) { m_recordingName = name; }
 
     void setBufferLimit(long);
     bool hasBufferSpace() const;
+    long bufferUsed() const { return m_bufferUsed; }
 
     bool singleFrame() const { return m_singleFrame; }
     void setSingleFrame(bool singleFrame) { m_singleFrame = singleFrame; }
 
-    Ref<Inspector::Protocol::Canvas::Canvas> buildObjectForCanvas(InstrumentingAgents&);
-
-    ~InspectorCanvas();
+    Ref<Inspector::Protocol::Canvas::Canvas> buildObjectForCanvas(InstrumentingAgents&, bool captureBacktrace);
 
 private:
-    InspectorCanvas(HTMLCanvasElement&, const String& cssCanvasName);
+    InspectorCanvas(CanvasRenderingContext&);
+    void appendActionSnapshotIfNeeded();
+    String getCanvasContentAsDataURL();
 
     typedef Variant<
         CanvasGradient*,
@@ -88,26 +96,30 @@ private:
         HTMLVideoElement*,
 #endif
         ImageData*,
+        ImageBitmap*,
         Inspector::ScriptCallFrame,
         String
     > DuplicateDataVariant;
 
     int indexForData(DuplicateDataVariant);
     RefPtr<Inspector::Protocol::Recording::InitialState> buildInitialState();
-    RefPtr<Inspector::Protocol::Array<JSON::Value>> buildAction(const String&, Vector<RecordCanvasActionVariant>&& = { });
-    RefPtr<Inspector::Protocol::Array<JSON::Value>> buildArrayForCanvasGradient(const CanvasGradient&);
-    RefPtr<Inspector::Protocol::Array<JSON::Value>> buildArrayForCanvasPattern(const CanvasPattern&);
-    RefPtr<Inspector::Protocol::Array<JSON::Value>> buildArrayForImageData(const ImageData&);
+    RefPtr<JSON::ArrayOf<JSON::Value>> buildAction(const String&, Vector<RecordCanvasActionVariant>&& = { });
+    RefPtr<JSON::ArrayOf<JSON::Value>> buildArrayForCanvasGradient(const CanvasGradient&);
+    RefPtr<JSON::ArrayOf<JSON::Value>> buildArrayForCanvasPattern(const CanvasPattern&);
+    RefPtr<JSON::ArrayOf<JSON::Value>> buildArrayForImageData(const ImageData&);
 
     String m_identifier;
-    HTMLCanvasElement& m_canvas;
-    String m_cssCanvasName;
+    CanvasRenderingContext& m_context;
 
     RefPtr<Inspector::Protocol::Recording::InitialState> m_initialState;
-    RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Recording::Frame>> m_frames;
-    RefPtr<Inspector::Protocol::Array<JSON::Value>> m_currentActions;
-    RefPtr<Inspector::Protocol::Array<JSON::Value>> m_serializedDuplicateData;
+    RefPtr<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>> m_frames;
+    RefPtr<JSON::ArrayOf<JSON::Value>> m_currentActions;
+    RefPtr<JSON::ArrayOf<JSON::Value>> m_actionNeedingSnapshot;
+    RefPtr<JSON::ArrayOf<JSON::Value>> m_serializedDuplicateData;
     Vector<DuplicateDataVariant> m_indexedDuplicateData;
+
+    String m_recordingName;
+    double m_currentFrameStartTime { NAN };
     size_t m_bufferLimit { 100 * 1024 * 1024 };
     size_t m_bufferUsed { 0 };
     bool m_singleFrame { true };

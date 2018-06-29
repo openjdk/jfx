@@ -56,6 +56,11 @@
     attribute [EnforceRange] unsigned long long testEnforceRangeUnsignedLongLong;
     attribute [Clamp] unsigned long long testClampUnsignedLongLong;
 
+    readonly attribute unrestricted double testImpureNaNUnrestrictedDouble;
+    readonly attribute unrestricted double testImpureNaN2UnrestrictedDouble;
+    readonly attribute unrestricted double testQuietNaNUnrestrictedDouble;
+    readonly attribute unrestricted double testPureNaNUnrestrictedDouble;
+
     attribute DOMString testString;
     attribute ByteString testByteString;
     attribute USVString testUSVString;
@@ -71,7 +76,7 @@
     record<ByteString, sequence<DOMString>> testSequenceRecord();
 
     attribute (DOMString or long or boolean or Node or sequence<long>) testUnion;
-    
+
     attribute TypeConversionsDictionary testDictionary;
 
     attribute (DOMString or [Clamp] long or sequence<[Clamp] long>) testClampUnion;

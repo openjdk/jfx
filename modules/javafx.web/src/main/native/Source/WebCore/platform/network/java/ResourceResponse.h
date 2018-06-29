@@ -22,6 +22,31 @@ public:
     {
     }
 
+    bool isMovedPermanently() const
+    {
+        return httpStatusCode() == 301;
+    }
+
+    bool isFound() const
+    {
+        return httpStatusCode() == 302;
+    }
+
+    bool isSeeOther() const
+    {
+        return httpStatusCode() == 303;
+    }
+
+    bool isNotModified() const
+    {
+        return httpStatusCode() == 304;
+    }
+
+    bool isUnauthorized() const
+    {
+        return httpStatusCode() == 401;
+    }
+
 private:
     friend class ResourceResponseBase;
 

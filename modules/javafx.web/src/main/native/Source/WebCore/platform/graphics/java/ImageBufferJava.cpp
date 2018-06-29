@@ -168,7 +168,7 @@ GraphicsContext& ImageBuffer::context() const
     return *m_data.m_context.get();
 }
 
-RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy, ScaleBehavior) const
+RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy, PreserveResolution) const
 {
     //utatodo: seems [copyBehavior] is the rest of [drawsUsingCopy]
     return BufferImage::create(
@@ -209,19 +209,26 @@ void ImageBuffer::platformTransformColorSpace(const std::array<uint8_t, 256>&)
 }
 
 RefPtr<Uint8ClampedArray> getImageData(
-    const Multiply multiplied,
-    const ImageBufferData &idata,
+    const AlphaPremultiplication multiplied,
+    const ImageBufferData& idata,
     const IntRect& rect,
     const IntSize& size)
 {
     // This code was adapted from the CG implementation
 
-    float area = 4.0f * rect.width() * rect.height();
-    if (area > static_cast<float>(std::numeric_limits<int>::max()))
-        return 0;
+    if (!idata.data())
+        return nullptr;
 
-    RefPtr<Uint8ClampedArray> result = Uint8ClampedArray::createUninitialized(rect.width() * rect.height() * 4);
-    unsigned char* data = result->data();
+    Checked<unsigned, RecordOverflow> area = 4;
+    area *= rect.width();
+    area *= rect.height();
+    if (area.hasOverflowed())
+        return nullptr;
+
+    auto result = Uint8ClampedArray::createUninitialized(area.unsafeGet());
+    uint8_t* resultData = result ? result->data() : nullptr;
+    if (!resultData)
+        return nullptr;
 
     if (rect.x() < 0 || rect.y() < 0
             || rect.maxX() > size.width() || rect.maxY() > size.height())
@@ -253,7 +260,7 @@ RefPtr<Uint8ClampedArray> getImageData(
         return result;
 
     unsigned dstBytesPerRow = 4 * rect.width();
-    unsigned char* dstRows = data + desty * dstBytesPerRow + destx * 4;
+    unsigned char* dstRows = resultData + desty * dstBytesPerRow + destx * 4;
 
     unsigned srcBytesPerRow = 4 * size.width();
     unsigned char* srcRows =
@@ -264,7 +271,7 @@ RefPtr<Uint8ClampedArray> getImageData(
         unsigned char *ps = srcRows;
         for (int x = 0; x < width; x++) {
             unsigned char alpha = ps[3];
-            if (multiplied == Unmultiplied && alpha && alpha!=255) {
+            if (multiplied == AlphaPremultiplication::Unpremultiplied && alpha && alpha!=255) {
                 // Unmultiply and convert BGRA to RGBA
                 pd[0] = (ps[2] * 255) / alpha;
                 pd[1] = (ps[1] * 255) / alpha;
@@ -297,7 +304,7 @@ RefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRect& r
     if (pixelArrayDimensions)
         *pixelArrayDimensions = srcRect.size();
 
-    return getImageData(Unmultiplied, m_data, srcRect, m_size);
+    return getImageData(AlphaPremultiplication::Unpremultiplied, m_data, srcRect, m_size);
 }
 
 RefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, IntSize* pixelArrayDimensions, CoordinateSystem coordinateSystem) const
@@ -309,12 +316,12 @@ RefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& 
     if (pixelArrayDimensions)
         *pixelArrayDimensions = srcRect.size();
 
-    return getImageData(Premultiplied, m_data, srcRect, m_size);
+    return getImageData(AlphaPremultiplication::Premultiplied, m_data, srcRect, m_size);
 }
 
 void ImageBuffer::putByteArray(
-    Multiply multiplied,
-    Uint8ClampedArray* source,
+    const Uint8ClampedArray& source,
+    AlphaPremultiplication multiplied,
     const IntSize& sourceSize,
     const IntRect& sourceRect,
     const IntPoint& destPoint,
@@ -359,7 +366,7 @@ void ImageBuffer::putByteArray(
 
     unsigned srcBytesPerRow = 4 * scaledSourceSize.width();
     unsigned char* srcRows =
-            source->data() + originy * srcBytesPerRow + originx * 4;
+            source.data() + originy * srcBytesPerRow + originx * 4;
     unsigned dstBytesPerRow = 4 * m_size.width();
     unsigned char* dstRows =
             m_data.data() + desty * dstBytesPerRow + destx * 4;
@@ -369,7 +376,7 @@ void ImageBuffer::putByteArray(
         unsigned char *ps = srcRows;
         for (int x = 0; x < width; x++) {
             int alpha = ps[3]; //have to be [int] for right multiply casting
-            if (multiplied == Unmultiplied && alpha != 255) {
+            if (multiplied == AlphaPremultiplication::Unpremultiplied && alpha != 255) {
                 // Premultiply and convert RGBA to BGRA
                 pd[0] = static_cast<unsigned char>((ps[2] * alpha + 254) / 255);
                 pd[1] = static_cast<unsigned char>((ps[1] * alpha + 254) / 255);
@@ -439,12 +446,12 @@ void ImageBuffer::drawPattern(
         bm);
 }
 
-RefPtr<Image> ImageBuffer::sinkIntoImage(std::unique_ptr<ImageBuffer> imageBuffer, ScaleBehavior scaleBehavior)
+RefPtr<Image> ImageBuffer::sinkIntoImage(std::unique_ptr<ImageBuffer> imageBuffer, PreserveResolution preserveResolution)
 {
-    return imageBuffer->copyImage(DontCopyBackingStore, scaleBehavior);
+    return imageBuffer->copyImage(DontCopyBackingStore, preserveResolution);
 }
 
-String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, CoordinateSystem) const
+String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, PreserveResolution) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         // RenderQueue need to be processed before pixel buffer extraction.

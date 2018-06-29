@@ -327,12 +327,6 @@ public:
 
             m_decoder->setOrientation(readImageOrientation(info()));
 
-#if ENABLE(IMAGE_DECODER_DOWN_SAMPLING) && defined(TURBO_JPEG_RGB_SWIZZLE)
-            // There's no point swizzle decoding if image down sampling will
-            // be applied. Revert to using JSC_RGB in that case.
-            if (m_decoder->willDownSample() && turboSwizzled(m_info.out_color_space))
-                m_info.out_color_space = JCS_RGB;
-#endif
             // Don't allocate a giant and superfluous memory buffer when the
             // image is a sequential JPEG.
             m_info.buffered_image = jpeg_has_multiple_scans(&m_info);
@@ -502,17 +496,15 @@ void term_source(j_decompress_ptr jd)
 }
 
 JPEGImageDecoder::JPEGImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
-    : ImageDecoder(alphaOption, gammaAndColorProfileOption)
+    : ScalableImageDecoder(alphaOption, gammaAndColorProfileOption)
 {
 }
 
-JPEGImageDecoder::~JPEGImageDecoder()
-{
-}
+JPEGImageDecoder::~JPEGImageDecoder() = default;
 
 bool JPEGImageDecoder::setSize(const IntSize& size)
 {
-    if (!ImageDecoder::setSize(size))
+    if (!ScalableImageDecoder::setSize(size))
         return false;
 
     prepareScaleDataIfNecessary();
@@ -536,7 +528,7 @@ ImageFrame* JPEGImageDecoder::frameBufferAtIndex(size_t index)
 bool JPEGImageDecoder::setFailed()
 {
     m_reader = nullptr;
-    return ImageDecoder::setFailed();
+    return ScalableImageDecoder::setFailed();
 }
 
 template <J_COLOR_SPACE colorSpace>

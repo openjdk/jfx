@@ -74,14 +74,14 @@ struct SameSizeAsRenderStyle {
     } m_inheritedFlags;
 
     struct NonInheritedFlags {
-        uint64_t m_bitfields;
+        unsigned m_bitfields[2];
     } m_nonInheritedFlags;
 #if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
     bool deletionCheck;
 #endif
 };
 
-static_assert(sizeof(RenderStyle) <= sizeof(SameSizeAsRenderStyle), "RenderStyle should stay small");
+static_assert(sizeof(RenderStyle) == sizeof(SameSizeAsRenderStyle), "RenderStyle should stay small");
 
 RenderStyle& RenderStyle::defaultStyle()
 {
@@ -242,7 +242,7 @@ bool RenderStyle::isCSSGridLayoutEnabled()
 
 static StyleSelfAlignmentData resolvedSelfAlignment(const StyleSelfAlignmentData& value, ItemPosition normalValueBehavior)
 {
-    if (value.position() == ItemPositionNormal || value.position() == ItemPositionAuto)
+    if (value.position() == ItemPositionLegacy || value.position() == ItemPositionNormal || value.position() == ItemPositionAuto)
         return { normalValueBehavior, OverflowAlignmentDefault };
     return value;
 }
@@ -263,11 +263,6 @@ StyleSelfAlignmentData RenderStyle::resolvedAlignSelf(const RenderStyle* parentS
 
 StyleSelfAlignmentData RenderStyle::resolvedJustifyItems(ItemPosition normalValueBehaviour) const
 {
-    // FIXME: justify-items 'auto' value is allowed only to provide the 'legacy' keyword's behavior, which it's still not implemented for layout.
-    // "If the inherited value of justify-items includes the legacy keyword, auto computes to the inherited value."
-    // https://drafts.csswg.org/css-align/#justify-items-property
-    if (justifyItems().position() == ItemPositionAuto)
-        return { normalValueBehaviour, OverflowAlignmentDefault };
     return resolvedSelfAlignment(justifyItems(), normalValueBehaviour);
 }
 
@@ -350,6 +345,13 @@ void RenderStyle::copyNonInheritedFrom(const RenderStyle& other)
         m_svgStyle.access().copyNonInheritedFrom(other.m_svgStyle.get());
 
     ASSERT(zoom() == initialZoom());
+}
+
+void RenderStyle::copyContentFrom(const RenderStyle& other)
+{
+    if (!other.m_rareNonInheritedData->content)
+        return;
+    m_rareNonInheritedData.access().content = other.m_rareNonInheritedData->content->clone();
 }
 
 bool RenderStyle::operator==(const RenderStyle& other) const
@@ -586,9 +588,6 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle& other, unsigned& chang
             || m_rareNonInheritedData->lineClamp != other.m_rareNonInheritedData->lineClamp
             || m_rareNonInheritedData->initialLetter != other.m_rareNonInheritedData->initialLetter
             || m_rareNonInheritedData->textOverflow != other.m_rareNonInheritedData->textOverflow)
-            return true;
-
-        if (m_rareNonInheritedData->regionFragment != other.m_rareNonInheritedData->regionFragment)
             return true;
 
         if (m_rareNonInheritedData->shapeMargin != other.m_rareNonInheritedData->shapeMargin)
@@ -945,7 +944,8 @@ bool RenderStyle::changeRequiresRepaintIfTextOrBorderOrOutline(const RenderStyle
         || m_rareInheritedData->textStrokeColor != other.m_rareInheritedData->textStrokeColor
         || m_rareInheritedData->textEmphasisColor != other.m_rareInheritedData->textEmphasisColor
         || m_rareInheritedData->textEmphasisFill != other.m_rareInheritedData->textEmphasisFill
-        || m_rareInheritedData->strokeColor != other.m_rareInheritedData->strokeColor)
+        || m_rareInheritedData->strokeColor != other.m_rareInheritedData->strokeColor
+        || m_rareInheritedData->caretColor != other.m_rareInheritedData->caretColor)
         return true;
 
     return false;
@@ -1351,13 +1351,6 @@ CounterDirectiveMap& RenderStyle::accessCounterDirectives()
     return *map;
 }
 
-const CounterDirectives RenderStyle::getCounterDirectives(const AtomicString& identifier) const
-{
-    if (const CounterDirectiveMap* directives = counterDirectives())
-        return directives->get(identifier);
-    return CounterDirectives();
-}
-
 const AtomicString& RenderStyle::hyphenString() const
 {
     ASSERT(hyphens() != HyphensNone);
@@ -1736,7 +1729,7 @@ LayoutBoxExtent RenderStyle::getShadowInsetExtent(const ShadowData* shadow) cons
         left = std::max<LayoutUnit>(left, shadow->x() + extentAndSpread);
     }
 
-    return LayoutBoxExtent(top, right, bottom, left);
+    return LayoutBoxExtent(WTFMove(top), WTFMove(right), WTFMove(bottom), WTFMove(left));
 }
 
 void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit &left, LayoutUnit &right) const
@@ -1791,6 +1784,9 @@ Color RenderStyle::colorIncludingFallback(int colorProperty, bool visitedLink) c
     case CSSPropertyBorderBottomColor:
         result = visitedLink ? visitedLinkBorderBottomColor() : borderBottomColor();
         borderStyle = borderBottomStyle();
+        break;
+    case CSSPropertyCaretColor:
+        result = visitedLink ? visitedLinkCaretColor() : caretColor();
         break;
     case CSSPropertyColor:
         result = visitedLink ? visitedLinkColor() : color();
@@ -2353,7 +2349,10 @@ Vector<PaintType, 3> RenderStyle::paintTypesForPaintOrder(PaintOrder order)
 
 float RenderStyle::computedStrokeWidth(const IntSize& viewportSize) const
 {
-    if (!hasExplicitlySetStrokeWidth())
+    // Use the stroke-width and stroke-color value combination only if stroke-color has been explicitly specified.
+    // Since there will be no visible stroke when stroke-color is not specified (transparent by default), we fall
+    // back to the legacy Webkit text stroke combination in that case.
+    if (!hasExplicitlySetStrokeColor())
         return textStrokeWidth();
 
     const Length& length = strokeWidth();
@@ -2379,6 +2378,14 @@ bool RenderStyle::hasPositiveStrokeWidth() const
         return textStrokeWidth() > 0;
 
     return strokeWidth().isPositive();
+}
+
+Color RenderStyle::computedStrokeColor() const
+{
+    CSSPropertyID propertyID = CSSPropertyStrokeColor;
+    if (!hasExplicitlySetStrokeColor())
+        propertyID = CSSPropertyWebkitTextStrokeColor;
+    return visitedDependentColor(propertyID);
 }
 
 } // namespace WebCore
