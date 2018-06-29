@@ -2064,6 +2064,14 @@ iterate_adapter:
   if (desired >= wav->blockalign && wav->blockalign > 0)
     desired -= (desired % wav->blockalign);
 
+#ifdef GSTREAMER_LITE
+  if (desired == 0) {
+    GST_ELEMENT_ERROR (wav, STREAM, DEMUX, (NULL),
+              ("Invalid stream"));
+    return GST_FLOW_ERROR;
+  }
+#endif // GSTREAMER_LITE
+
   GST_LOG_OBJECT (wav, "Fetching %" G_GINT64_FORMAT " bytes of data "
       "from the sinkpad", desired);
 
