@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1361,7 +1361,8 @@ final public class WebEngine {
                     break;
                 case PAGE_REPLACED:
                     message.set("Replaced " + url);
-                    updateLocation(url);
+                    // Update only the location, don't change title or document.
+                    WebEngine.this.location.set(url);
                     break;
                 case PAGE_FINISHED:
                     message.set("Loading complete");

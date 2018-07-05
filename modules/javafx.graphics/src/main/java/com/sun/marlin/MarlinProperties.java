@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,35 +54,68 @@ public final class MarlinProperties {
     }
 
     /**
-     * Return the initial pixel size used to define initial arrays
-     * (tile AA chunk, alpha line, buckets)
+     * Return the initial pixel width used to define initial arrays
+     * (tile AA chunk, alpha line)
      *
-     * @return 64 < initial pixel size < 32768 (2048 by default)
+     * @return 64 < initial pixel size < 32768 (4096 by default)
      */
-    public static int getInitialImageSize() {
+    public static int getInitialPixelWidth() {
         return align(
-            getInteger("prism.marlin.pixelsize", 2048, 64, 32 * 1024),
+            getInteger("prism.marlin.pixelWidth", 4096, 64, 32 * 1024),
             64);
     }
 
     /**
-     * Return the log(2) corresponding to subpixel on x-axis (
+     * Return the initial pixel height used to define initial arrays
+     * (buckets)
      *
-     * @return 0 (1 subpixels) < initial pixel size < 8 (256 subpixels)
-     * (3 by default ie 8 subpixels)
+     * @return 64 < initial pixel size < 32768 (2176 by default)
      */
-    public static int getSubPixel_Log2_X() {
-        return getInteger("prism.marlin.subPixel_log2_X", 3, 0, 8);
+    public static int getInitialPixelHeight() {
+        return align(
+            getInteger("prism.marlin.pixelHeight", 2176, 64, 32 * 1024),
+            64);
     }
 
     /**
-     * Return the log(2) corresponding to subpixel on y-axis (
+     * Return true if the profile is 'quality' (default) over 'speed'
+     *
+     * @return true if the profile is 'quality' (default), false otherwise
+     */
+    public static boolean isProfileQuality() {
+        final String key = "prism.marlin.profile";
+        final String profile = getString(key, "quality");
+        if ("quality".equals(profile)) {
+            return true;
+        }
+        if ("speed".equals(profile)) {
+            return false;
+        }
+        logInfo("Invalid value for " + key + " = " + profile
+                    + "; expect value in [quality, speed] !");
+        return true;
+    }
+
+    /**
+     * Return the log(2) corresponding to subpixel on x-axis
      *
      * @return 0 (1 subpixels) < initial pixel size < 8 (256 subpixels)
-     * (3 by default ie 8 subpixels)
+     * (8 by default ie 256 subpixels)
+     */
+    public static int getSubPixel_Log2_X() {
+        return getInteger("prism.marlin.subPixel_log2_X", 8, 0, 8);
+    }
+
+    /**
+     * Return the log(2) corresponding to subpixel on y-axis
+     *
+     * @return 0 (1 subpixels) < initial pixel size < 8 (256 subpixels)
+     * (3 by default ie 8 subpixels for the quality profile)
+     * (2 by default ie 4 subpixels for the speed profile)
      */
     public static int getSubPixel_Log2_Y() {
-        return getInteger("prism.marlin.subPixel_log2_Y", 3, 0, 8);
+        final int def = isProfileQuality() ? 3 : 2;
+        return getInteger("prism.marlin.subPixel_log2_Y", def, 0, 8);
     }
 
     /**
@@ -124,6 +157,18 @@ public final class MarlinProperties {
         return getBoolean("prism.marlin.useSimplifier", "false");
     }
 
+    public static boolean isUsePathSimplifier() {
+        return getBoolean("prism.marlin.usePathSimplifier", "false");
+    }
+
+    public static float getPathSimplifierPixelTolerance() {
+        // default: MIN_PEN_SIZE or less ?
+        return getFloat("prism.marlin.pathSimplifier.pixTol",
+                (1.0f / MarlinConst.MIN_SUBPIXELS),
+                1e-3f,
+                10.0f);
+    }
+
     public static boolean isDoClip() {
         return getBoolean("prism.marlin.clip", "true");
     }
@@ -134,6 +179,14 @@ public final class MarlinProperties {
 
     public static boolean isDoClipAtRuntime() {
         return getBoolean("prism.marlin.clip.runtime", "true");
+    }
+
+    public static boolean isDoClipSubdivider() {
+        return getBoolean("prism.marlin.clip.subdivider", "true");
+    }
+
+    public static float getSubdividerMinLength() {
+        return getFloat("prism.marlin.clip.subdivider.minLength", 100.0f, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
     }
 
     // debugging parameters
@@ -169,20 +222,34 @@ public final class MarlinProperties {
     }
 
     // quality settings
+    public static float getCurveLengthError() {
+        return getFloat("prism.marlin.curve_len_err", 0.01f, 1e-6f, 1.0f);
+    }
 
     public static float getCubicDecD2() {
-        return getFloat("prism.marlin.cubic_dec_d2", 1.0f, 0.01f, 4.0f);
+        final float def = isProfileQuality() ? 1.0f : 2.5f;
+        return getFloat("prism.marlin.cubic_dec_d2", def, 1e-5f, 4.0f);
     }
 
     public static float getCubicIncD1() {
-        return getFloat("prism.marlin.cubic_inc_d1", 0.4f, 0.01f, 2.0f);
+        final float def = isProfileQuality() ? 0.2f : 0.5f;
+        return getFloat("prism.marlin.cubic_inc_d1", def, 1e-6f, 1.0f);
     }
 
     public static float getQuadDecD2() {
-        return getFloat("prism.marlin.quad_dec_d2", 0.5f, 0.01f, 4.0f);
+        final float def = isProfileQuality() ? 0.5f : 1.0f;
+        return getFloat("prism.marlin.quad_dec_d2", def, 1e-5f, 4.0f);
     }
 
     // system property utilities
+    static String getString(final String key, final String def) {
+        return AccessController.doPrivileged(
+            (PrivilegedAction<String>) () -> {
+                String value = System.getProperty(key);
+                return (value == null) ? def : value;
+            });
+    }
+
     static boolean getBoolean(final String key, final String def) {
         return Boolean.valueOf(AccessController.doPrivileged(
             (PrivilegedAction<String>) () -> {

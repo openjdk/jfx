@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,14 @@
 
 package com.sun.marlin;
 
-import com.sun.javafx.geom.Path2D;
+import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicInteger;
-import com.sun.util.reentrant.ReentrantContext;
+import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.marlin.ArrayCacheConst.CacheStats;
-import java.lang.ref.WeakReference;
+import com.sun.marlin.DTransformingPathConsumer2D.CurveBasicMonotonizer;
+import com.sun.marlin.DTransformingPathConsumer2D.CurveClipSplitter;
+import com.sun.util.reentrant.ReentrantContext;
 
 /**
  * This class is a renderer context dedicated to a single thread
@@ -62,13 +64,12 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
     public final DTransformingPathConsumer2D transformerPC2D;
     // recycled Path2D instance (weak)
     private WeakReference<Path2D> refPath2D = null;
-    // shared memory between renderer instances:
-    final DRendererSharedMemory rdrMem;
     public final DRenderer renderer;
-    private DRendererNoAA rendererNoAA = null;
     public final DStroker stroker;
     // Simplifies out collinear lines
     public final DCollinearSimplifier simplifier = new DCollinearSimplifier();
+    // Simplifies path
+    public final DPathSimplifier pathSimplifier = new DPathSimplifier();
     public final DDasher dasher;
     // flag indicating the shape is stroked (1) or filled (0)
     int stroking = 0;
@@ -78,8 +79,15 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
     boolean closedPath = false;
     // clip rectangle (ymin, ymax, xmin, xmax):
     public final double[] clipRect = new double[4];
+    // CurveBasicMonotonizer instance
+    public final CurveBasicMonotonizer monotonizer;
+    // CurveClipSplitter instance
+    final CurveClipSplitter curveClipSplitter;
 
 // MarlinFX specific:
+    // shared memory between renderer instances:
+    final DRendererSharedMemory rdrMem;
+    private DRendererNoAA rendererNoAA = null;
     // dirty bbox rectangle
     public final Rectangle clip = new Rectangle();
     // dirty MaskMarlinAlphaConsumer
@@ -119,6 +127,10 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
         } else {
             stats = null;
         }
+
+        // curve monotonizer & clip subdivider (before transformerPC2D init)
+        monotonizer = new CurveBasicMonotonizer(this);
+        curveClipSplitter = new CurveClipSplitter(this);
 
         // MarlinRenderingEngine.TransformingPathConsumer2D
         transformerPC2D = new DTransformingPathConsumer2D(this);
@@ -241,8 +253,8 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
             edgeBuckets_ref      = rdrCtx.newCleanIntArrayRef(INITIAL_BUCKET_ARRAY); // 64K
             edgeBucketCounts_ref = rdrCtx.newCleanIntArrayRef(INITIAL_BUCKET_ARRAY); // 64K
 
-            // 2048 (pixelsize) pixel large
-            alphaLine_ref = rdrCtx.newCleanIntArrayRef(INITIAL_AA_ARRAY); // 8K
+            // 4096 pixels large
+            alphaLine_ref = rdrCtx.newCleanIntArrayRef(INITIAL_AA_ARRAY); // 16K
 
             crossings_ref     = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
             aux_crossings_ref = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K

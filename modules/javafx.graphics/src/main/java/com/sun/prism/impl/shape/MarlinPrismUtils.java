@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,15 +44,17 @@ public final class MarlinPrismUtils {
 
     private static final boolean FORCE_NO_AA = false;
 
-    static final float UPPER_BND = Float.MAX_VALUE / 2.0f;
-    static final float LOWER_BND = -UPPER_BND;
-
-    static final boolean DO_CLIP = MarlinProperties.isDoClip();
-    static final boolean DO_CLIP_FILL = true;
+    // slightly slower ~2% if enabled stroker clipping (lines) but skipping cap / join handling is few percents faster in specific cases
+    static final boolean DISABLE_2ND_STROKER_CLIPPING = true;
 
     static final boolean DO_TRACE_PATH = false;
 
+    static final boolean DO_CLIP = MarlinProperties.isDoClip();
+    static final boolean DO_CLIP_FILL = true;
     static final boolean DO_CLIP_RUNTIME_ENABLE = MarlinProperties.isDoClipRuntimeFlag();
+
+    static final float UPPER_BND = Float.MAX_VALUE / 2.0f;
+    static final float LOWER_BND = -UPPER_BND;
 
     /**
      * Private constructor to prevent instantiation.
@@ -60,15 +62,11 @@ public final class MarlinPrismUtils {
     private MarlinPrismUtils() {
     }
 
-    private static boolean nearZero(final double num) {
-        return Math.abs(num) < 2.0d * Math.ulp(num);
-    }
-
     private static PathConsumer2D initStroker(
             final RendererContext rdrCtx,
             final BasicStroke stroke,
             final float lineWidth,
-            final BaseTransform tx,
+            BaseTransform tx,
             final PathConsumer2D out)
     {
         // We use strokerat so that in Stroker and Dasher we can work only
@@ -138,6 +136,10 @@ public final class MarlinPrismUtils {
                 // input will be violated. After all this, A will be applied
                 // to stroker's output.
             }
+        } else {
+            // either tx is null or it's the identity. In either case
+            // we don't transform the path.
+            tx = null;
         }
 
         // Get renderer offsets:
@@ -171,13 +173,26 @@ public final class MarlinPrismUtils {
         // stroker will adjust the clip rectangle (width / miter limit):
         pc = rdrCtx.stroker.init(pc, width, stroke.getEndCap(),
                 stroke.getLineJoin(), stroke.getMiterLimit(),
-                scale, rdrOffX, rdrOffY);
+                scale, rdrOffX, rdrOffY, (dashes == null));
+
+        // Curve Monotizer:
+        rdrCtx.monotonizer.init(width);
 
         if (dashes != null) {
             if (!recycleDashes) {
                 dashLen = dashes.length;
             }
-            pc = rdrCtx.dasher.init(pc, dashes, dashLen, dashphase, recycleDashes);
+            if (DO_TRACE_PATH) {
+                pc = transformerPC2D.traceDasher(pc);
+            }
+            pc = rdrCtx.dasher.init(pc, dashes, dashLen, dashphase,
+                                    recycleDashes);
+
+            if (DISABLE_2ND_STROKER_CLIPPING) {
+                // disable stoker clipping:
+                rdrCtx.stroker.disableClipping();
+            }
+
         } else if (rdrCtx.doClip && (stroke.getEndCap() != Stroker.CAP_BUTT)) {
             if (DO_TRACE_PATH) {
                 pc = transformerPC2D.traceClosedPathDetector(pc);
@@ -206,6 +221,10 @@ public final class MarlinPrismUtils {
          * -> pc2d = Renderer (bounding box)
          */
         return pc;
+    }
+
+    private static boolean nearZero(final double num) {
+        return Math.abs(num) < 2.0d * Math.ulp(num);
     }
 
     private static PathConsumer2D initRenderer(
@@ -307,8 +326,14 @@ public final class MarlinPrismUtils {
     }
 
     private static void feedConsumer(final RendererContext rdrCtx, final PathIterator pi,
-                                     final PathConsumer2D pc2d)
+                                     PathConsumer2D pc2d)
     {
+        if (MarlinConst.USE_PATH_SIMPLIFIER) {
+            // Use path simplifier at the first step
+            // to remove useless points
+            pc2d = rdrCtx.pathSimplifier.init(pc2d);
+        }
+
         // mark context as DIRTY:
         rdrCtx.dirty = true;
 
@@ -428,8 +453,14 @@ public final class MarlinPrismUtils {
     private static void feedConsumer(final RendererContext rdrCtx,
                                      final Path2D p2d,
                                      final BaseTransform xform,
-                                     final PathConsumer2D pc2d)
+                                     PathConsumer2D pc2d)
     {
+        if (MarlinConst.USE_PATH_SIMPLIFIER) {
+            // Use path simplifier at the first step
+            // to remove useless points
+            pc2d = rdrCtx.pathSimplifier.init(pc2d);
+        }
+
         // mark context as DIRTY:
         rdrCtx.dirty = true;
 

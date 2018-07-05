@@ -99,7 +99,7 @@ public final class FloatArrayCache implements MarlinConst {
         Reference(final FloatArrayCache cache, final int initialSize) {
             this.cache = cache;
             this.clean = cache.clean;
-            this.initial = createArray(initialSize, clean);
+            this.initial = createArray(initialSize);
             if (DO_STATS) {
                 cache.stats.totalInitial += initialSize;
             }
@@ -116,7 +116,7 @@ public final class FloatArrayCache implements MarlinConst {
                 logInfo(getLogPrefix(clean) + "FloatArrayCache: "
                         + "getArray[oversize]: length=\t" + length);
             }
-            return createArray(length, clean);
+            return createArray(length);
         }
 
         float[] widenArray(final float[] array, final int usedSize,
@@ -202,7 +202,7 @@ public final class FloatArrayCache implements MarlinConst {
             if (DO_STATS) {
                 stats.createOp++;
             }
-            return createArray(arraySize, clean);
+            return createArray(arraySize);
         }
 
         void putArray(final float[] array)
@@ -229,7 +229,7 @@ public final class FloatArrayCache implements MarlinConst {
         }
     }
 
-    static float[] createArray(final int length, final boolean clean) {
+    static float[] createArray(final int length) {
         return new float[length];
     }
 
