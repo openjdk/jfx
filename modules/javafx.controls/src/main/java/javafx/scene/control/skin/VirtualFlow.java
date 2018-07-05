@@ -2538,6 +2538,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     private void releaseAllPrivateCells() {
         sheetChildren.removeAll(privateCells);
+        privateCells.clear();
     }
 
     /**
