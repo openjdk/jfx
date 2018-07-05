@@ -86,9 +86,4 @@ public final class MarlinUtils {
     static java.lang.ref.Cleaner getCleaner() {
         return cleaner;
     }
-/*
-    static jdk.internal.ref.Cleaner getCleaner() {
-        return jdk.internal.ref.CleanerFactory.cleaner();
-    }
-*/
 }

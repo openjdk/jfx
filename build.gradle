@@ -4043,6 +4043,10 @@ project(":systemTests") {
         systemProperties 'worker.patch.policy': cygpath(testJavaPolicyFile.path)
         systemProperties 'worker.java.cmd': JAVA
 
+        if (rootProject.hasProperty("ClipShapeTest.numTests")) {
+            systemProperty "ClipShapeTest.numTests", rootProject.getProperty("ClipShapeTest.numTests")
+        }
+
         if (!IS_USE_ROBOT) {
             // Disable all robot-based visual tests
             exclude("test/robot/**");

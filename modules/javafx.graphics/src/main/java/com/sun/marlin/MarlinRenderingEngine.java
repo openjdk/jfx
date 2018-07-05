@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -151,8 +151,14 @@ public final class MarlinRenderingEngine implements MarlinConst
 
         logInfo("prism.marlin.edges            = "
                 + MarlinConst.INITIAL_EDGES_COUNT);
-        logInfo("prism.marlin.pixelsize        = "
-                + MarlinConst.INITIAL_PIXEL_DIM);
+        logInfo("prism.marlin.pixelWidth       = "
+                + MarlinConst.INITIAL_PIXEL_WIDTH);
+        logInfo("prism.marlin.pixelHeight      = "
+                + MarlinConst.INITIAL_PIXEL_HEIGHT);
+
+        logInfo("prism.marlin.profile          = "
+                + (MarlinProperties.isProfileQuality() ?
+                    "quality" : "speed"));
 
         logInfo("prism.marlin.subPixel_log2_X  = "
                 + MarlinConst.SUBPIXEL_LG_POSITIONS_X);
@@ -178,10 +184,20 @@ public final class MarlinRenderingEngine implements MarlinConst
         // optimisation parameters
         logInfo("prism.marlin.useSimplifier    = "
                 + MarlinConst.USE_SIMPLIFIER);
+        logInfo("prism.marlin.usePathSimplifier= "
+                + MarlinConst.USE_PATH_SIMPLIFIER);
+        logInfo("prism.marlin.pathSimplifier.pixTol = "
+                + MarlinProperties.getPathSimplifierPixelTolerance());
+
         logInfo("prism.marlin.clip             = "
                 + MarlinProperties.isDoClip());
         logInfo("prism.marlin.clip.runtime.enable = "
                 + MarlinProperties.isDoClipRuntimeFlag());
+
+        logInfo("prism.marlin.clip.subdivider  = "
+                + MarlinProperties.isDoClipSubdivider());
+        logInfo("prism.marlin.clip.subdivider.minLength = "
+                + MarlinProperties.getSubdividerMinLength());
 
         // debugging parameters
         logInfo("prism.marlin.doStats          = "
@@ -202,6 +218,8 @@ public final class MarlinRenderingEngine implements MarlinConst
                 + MarlinConst.LOG_UNSAFE_MALLOC);
 
         // quality settings
+        logInfo("prism.marlin.curve_len_err    = "
+                + MarlinProperties.getCurveLengthError());
         logInfo("prism.marlin.cubic_dec_d2     = "
                 + MarlinProperties.getCubicDecD2());
         logInfo("prism.marlin.cubic_inc_d1     = "
