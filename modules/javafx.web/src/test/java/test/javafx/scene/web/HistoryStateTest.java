@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,8 @@ import org.junit.Before;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import javafx.collections.ObservableList;
+import javafx.scene.web.WebHistory;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -160,6 +162,38 @@ public class HistoryStateTest extends TestBase {
         } finally {
             assertEquals("history navigation using javascript failed", 2, historyListenerIndex.get());
         }
+    }
+
+    // JDK-8204856
+    @Test
+    public void testDocumentExistenceAfterPushState() {
+        final ObservableList<WebHistory.Entry> history = getEngine().getHistory().getEntries();
+        final int initialHistorySize = history.size();
+
+        load(HistoryStateTest.class.getClassLoader().getResource(
+                resourcePath + initialLoadUrl).toExternalForm());
+        assertNotNull(getEngine().getDocument());
+
+        executeScript("history.pushState('push', 'title', 'pushState.html')");
+        assertNotNull("Document shouldn't be null after history.pushState", getEngine().getDocument());
+        assertTrue("location must end with pushState.html", getEngine().getLocation().endsWith("pushState.html"));
+        assertEquals("history count should be incremented", initialHistorySize + 1, history.size());
+    }
+
+    // JDK-8204856
+    @Test
+    public void testDocumentExistenceAfterReplaceState() {
+        final ObservableList<WebHistory.Entry> history = getEngine().getHistory().getEntries();
+        final int initialHistorySize = history.size();
+
+        load(HistoryStateTest.class.getClassLoader().getResource(
+                resourcePath + initialLoadUrl).toExternalForm());
+        assertNotNull(getEngine().getDocument());
+
+        executeScript("history.replaceState('push', 'title', 'replaceState.html')");
+        assertNotNull("Document shouldn't be null after history.replaceState", getEngine().getDocument());
+        assertTrue("location must end with replaceState.html", getEngine().getLocation().endsWith("replaceState.html"));
+        assertEquals("history count shouldn't be incremented", initialHistorySize, history.size());
     }
 }
 
