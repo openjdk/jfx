@@ -30,6 +30,7 @@
 package test.com.sun.javafx.pgstub;
 
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.glass.ui.GlassRobot;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
@@ -923,6 +924,10 @@ public class StubToolkit extends Toolkit {
         public List<MenuBase> getMenus() {
             return menus;
         }
+    }
 
+    @Override
+    public GlassRobot createRobot() {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

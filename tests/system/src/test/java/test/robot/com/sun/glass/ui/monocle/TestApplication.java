@@ -26,7 +26,6 @@
 package test.robot.com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.monocle.TestLogShim;
-import com.sun.glass.ui.Robot;
 import com.sun.glass.ui.monocle.TouchInputShim;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
@@ -38,6 +37,7 @@ import javafx.scene.Scene;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.input.TouchPoint;
 import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -360,17 +360,13 @@ public class TestApplication extends Application {
         try {
             Assert.assertTrue(released.tryAcquire(3, TimeUnit.SECONDS));
             TestRunnable.invokeAndWait(() -> {
-                Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
-                try {
-                    TestLogShim.log("x = " + robot.getMouseX());
-                    TestLogShim.log("y = " + robot.getMouseY());
-                    TestLogShim.log("targetX = " + targetX);
-                    TestLogShim.log("targetY = " + targetY);
-                    Assert.assertEquals(targetX, robot.getMouseX());
-                    Assert.assertEquals(targetY, robot.getMouseY());
-                } finally {
-                    robot.destroy();
-                }
+                Robot robot = new Robot();
+                TestLogShim.log("x = " + robot.getMouseX());
+                TestLogShim.log("y = " + robot.getMouseY());
+                TestLogShim.log("targetX = " + targetX);
+                TestLogShim.log("targetY = " + targetY);
+                Assert.assertEquals(targetX, robot.getMouseX());
+                Assert.assertEquals(targetY, robot.getMouseY());
             });
             frameWait(1);
         } finally {

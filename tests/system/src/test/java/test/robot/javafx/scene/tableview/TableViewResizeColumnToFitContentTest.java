@@ -25,12 +25,13 @@
 
 package test.robot.javafx.scene.tableview;
 
-import com.sun.glass.ui.Robot;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -80,10 +81,10 @@ public class TableViewResizeColumnToFitContentTest {
         CountDownLatch latch = new CountDownLatch(1);
         Platform.runLater(() -> {
             robot.mouseMove((int) posX, (int) posY);
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
             latch.countDown();
         });
         waitForLatch(latch, 5, "Timeout while waiting for mouse double click");
@@ -133,7 +134,7 @@ public class TableViewResizeColumnToFitContentTest {
 
         @Override
         public void start(Stage primaryStage) {
-            robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            robot = new Robot();
             stage = primaryStage;
 
             table = new TableView<>();

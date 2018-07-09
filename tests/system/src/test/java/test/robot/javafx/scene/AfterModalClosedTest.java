@@ -24,12 +24,13 @@
  */
 package test.robot.javafx.scene;
 
-import com.sun.glass.ui.Robot;
 import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
+import javafx.scene.robot.Robot;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
@@ -107,17 +108,17 @@ public class AfterModalClosedTest {
                     resizeLatch.countDown();
                 }
             });
-            robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            robot = new Robot();
             x = (int) (stage.getX() + stage.getWidth());
             y = (int) (stage.getY() + stage.getHeight());
             int d = PlatformUtil.isLinux() ? -1 : 2;
             robot.mouseMove(x - d, y - d);
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
         });
         Thread.sleep(100);
         Platform.runLater(() -> {
             robot.mouseMove(x + 20, y + 20);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mouseRelease(MouseButton.PRIMARY);
         });
         resizeLatch.await(5, TimeUnit.SECONDS);
         Assert.assertTrue("Window is not resized", w && h);

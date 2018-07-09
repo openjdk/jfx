@@ -79,6 +79,7 @@ import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.CommonDialogs;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.EventLoop;
+import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
@@ -1593,5 +1594,10 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public String getThemeName() {
         return Application.GetApplication().getHighContrastTheme();
+    }
+
+    @Override
+    public GlassRobot createRobot() {
+        return com.sun.glass.ui.Application.GetApplication().createRobot();
     }
 }

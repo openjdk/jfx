@@ -28,9 +28,9 @@ import com.sun.glass.ui.Application;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.Cursor;
+import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.ui.InvokeLaterDispatcher;
 import com.sun.glass.ui.Pixels;
-import com.sun.glass.ui.Robot;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Size;
 import com.sun.glass.ui.Timer;
@@ -419,7 +419,7 @@ final class GtkApplication extends Application implements
     }
 
     @Override
-    public Robot createRobot() {
+    public GlassRobot createRobot() {
         return new GtkRobot();
     }
 

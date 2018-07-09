@@ -25,12 +25,13 @@
 
 package test.robot.javafx.scene;
 
-import com.sun.glass.ui.Robot;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -97,8 +98,8 @@ public class SceneChangeEventsTest {
         Platform.runLater(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + button.getLayoutX() + button.getLayoutBounds().getWidth() / 2),
                     (int)(scene.getWindow().getY() + scene.getY() +  button.getLayoutY() + button.getLayoutBounds().getHeight() / 2));
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
         });
         waitForLatch(onActionLatch, 5, "Timeout while waiting for button.onAction().");
 
@@ -113,7 +114,7 @@ public class SceneChangeEventsTest {
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) {
-            robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            robot = new Robot();
             stage = primaryStage;
             stage.initStyle(StageStyle.UNDECORATED);
             stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->

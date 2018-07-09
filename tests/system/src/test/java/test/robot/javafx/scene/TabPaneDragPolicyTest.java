@@ -24,13 +24,14 @@
  */
 package test.robot.javafx.scene;
 
-import com.sun.glass.ui.Robot;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Scene;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.input.MouseButton;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -252,14 +253,14 @@ public class TabPaneDragPolicyTest {
         Platform.runLater(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + dX),
                 (int)(scene.getWindow().getY() + scene.getY() + dY));
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
         });
         waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
 
         CountDownLatch pressLatch = new CountDownLatch(1);
         Platform.runLater(() -> {
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
             pressLatch.countDown();
         });
         waitForLatch(pressLatch, 5, "Timeout waiting for robot.mousePress(Robot.MOUSE_LEFT_BTN).");
@@ -283,7 +284,7 @@ public class TabPaneDragPolicyTest {
 
         CountDownLatch releaseLatch = new CountDownLatch(1);
         Platform.runLater(() -> {
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mouseRelease(MouseButton.PRIMARY);
             releaseLatch.countDown();
         });
         waitForLatch(releaseLatch, 5, "Timeout waiting for robot.mouseRelease(Robot.MOUSE_LEFT_BTN).");
@@ -297,8 +298,8 @@ public class TabPaneDragPolicyTest {
         Platform.runLater(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + dX),
                 (int)(scene.getWindow().getY() + scene.getY() + dY));
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
         });
 
         if (isFixed) {
@@ -319,7 +320,7 @@ public class TabPaneDragPolicyTest {
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) {
-            robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            robot = new Robot();
             stage = primaryStage;
             tabPane = new TabPane();
             tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);

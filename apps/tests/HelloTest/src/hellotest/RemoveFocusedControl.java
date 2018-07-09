@@ -30,9 +30,10 @@ import javafx.event.ActionEvent;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
-import com.sun.glass.events.KeyEvent;
-import com.sun.glass.ui.Robot;
 
 public class RemoveFocusedControl extends Application {
 
@@ -57,19 +58,18 @@ public class RemoveFocusedControl extends Application {
         button1.setLayoutX(25);
         button1.setLayoutY(40);
 
-        final Robot robot = com.sun.glass.ui.Application.GetApplication().
-                createRobot();
+        final Robot robot = new Robot();
 
         button1.setOnAction((ActionEvent e) -> {
             root.getChildren().remove(button1);
-            robot.keyPress(KeyEvent.VK_T);
-            robot.keyRelease(KeyEvent.VK_T);
-            robot.keyPress(KeyEvent.VK_E);
-            robot.keyRelease(KeyEvent.VK_E);
-            robot.keyPress(KeyEvent.VK_S);
-            robot.keyRelease(KeyEvent.VK_S);
-            robot.keyPress(KeyEvent.VK_T);
-            robot.keyRelease(KeyEvent.VK_T);
+            robot.keyPress(KeyCode.T);
+            robot.keyRelease(KeyCode.T);
+            robot.keyPress(KeyCode.E);
+            robot.keyRelease(KeyCode.E);
+            robot.keyPress(KeyCode.S);
+            robot.keyRelease(KeyCode.S);
+            robot.keyPress(KeyCode.T);
+            robot.keyRelease(KeyCode.T);
         });
 
         root.getChildren().add(button1);

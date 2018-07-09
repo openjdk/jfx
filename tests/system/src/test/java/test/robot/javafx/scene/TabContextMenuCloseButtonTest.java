@@ -24,7 +24,6 @@
  */
 package test.robot.javafx.scene;
 
-import com.sun.glass.ui.Robot;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -32,6 +31,8 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
+import javafx.scene.input.MouseButton;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
@@ -70,7 +71,7 @@ public class TabContextMenuCloseButtonTest {
     @Test
     public void testCloseButton() {
         Util.sleep(1000); // Wait for tabPane to layout
-        int mouseButtons[] = { Robot.MOUSE_MIDDLE_BTN, Robot.MOUSE_RIGHT_BTN, Robot.MOUSE_LEFT_BTN };
+        MouseButton mouseButtons[] = { MouseButton.MIDDLE, MouseButton.SECONDARY, MouseButton.PRIMARY };
         int expectedTabCount[] = {NUM_TABS - 1, NUM_TABS - 1, NUM_TABS - 2};
         for (int i = 0; i < mouseButtons.length; ++i) {
             final int ic = i;
@@ -99,8 +100,8 @@ public class TabContextMenuCloseButtonTest {
         Util.runAndWait(() -> {
             robot.mouseMove((int)(scene.getWindow().getX() + scene.getX() + DX),
                     (int)(scene.getWindow().getY() + scene.getY() + DY));
-            robot.mousePress(Robot.MOUSE_RIGHT_BTN);
-            robot.mouseRelease(Robot.MOUSE_RIGHT_BTN);
+            robot.mousePress(MouseButton.SECONDARY);
+            robot.mouseRelease(MouseButton.SECONDARY);
         });
         waitForLatch(cmlatch, 5, "Timeout waiting for ContextMenu to be shown.");
     }
@@ -139,7 +140,7 @@ public class TabContextMenuCloseButtonTest {
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) {
-            robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            robot = new Robot();
             stage = primaryStage;
             tabPane = new TabPane();
             tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);

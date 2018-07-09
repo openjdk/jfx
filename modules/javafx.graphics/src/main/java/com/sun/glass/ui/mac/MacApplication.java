@@ -24,10 +24,10 @@
  */
 package com.sun.glass.ui.mac;
 
+import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.glass.events.KeyEvent;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -236,7 +236,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return MacPixels.getNativeFormat_impl();
     }
 
-    @Override public Robot createRobot() {
+    @Override public GlassRobot createRobot() {
         return new MacRobot();
     }
 

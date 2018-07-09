@@ -71,6 +71,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.glass.ui.GlassRobot;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
@@ -952,4 +953,6 @@ public abstract class Toolkit {
     public String getThemeName() {
         return null;
     }
+
+    public abstract GlassRobot createRobot();
 }

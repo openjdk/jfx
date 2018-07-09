@@ -24,8 +24,6 @@
  */
 package robottest;
 
-import com.sun.glass.events.KeyEvent;
-import com.sun.glass.ui.Robot;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -44,19 +42,23 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
+import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 
-
 public class RobotBuilder {
-
     //Variable used by "RobotTest" section
     private final Rectangle rec1 = new Rectangle(50, 50, 40, 160);
     private Popup screenShot;
@@ -78,8 +80,7 @@ public class RobotBuilder {
      * @param robotStage the Robot Stage
      */
     void robotTest(final Scene globalScene, final VBox mainBox,
-                          final Stage robotStage){
-
+                   final Stage robotStage) {
         Label l = new Label("Robot features Demo");
         Group lGroup = new Group(l);
         lGroup.setLayoutX(400);
@@ -210,16 +211,15 @@ public class RobotBuilder {
                     field.setText("Failed");
                 } else if (field.isFocused()) {
                     stop();
-                    Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
-                    robot.keyPress(KeyEvent.VK_T);
-                    robot.keyRelease(KeyEvent.VK_T);
-                    robot.keyPress(KeyEvent.VK_E);
-                    robot.keyRelease(KeyEvent.VK_E);
-                    robot.keyPress(KeyEvent.VK_S);
-                    robot.keyRelease(KeyEvent.VK_S);
-                    robot.keyPress(KeyEvent.VK_T);
-                    robot.keyRelease(KeyEvent.VK_T);
-                    robot.destroy();
+                    final Robot robot = new Robot();
+                    robot.keyPress(KeyCode.T);
+                    robot.keyRelease(KeyCode.T);
+                    robot.keyPress(KeyCode.E);
+                    robot.keyRelease(KeyCode.E);
+                    robot.keyPress(KeyCode.S);
+                    robot.keyRelease(KeyCode.S);
+                    robot.keyPress(KeyCode.T);
+                    robot.keyRelease(KeyCode.T);
                     new AnimationTimer() {
                         long startTime = System.nanoTime();
                         @Override
@@ -239,8 +239,7 @@ public class RobotBuilder {
     }
 
     public void robotWheelTest(final ListView<String> lv, final TextField result,
-                                                            Stage currentStage){
-
+                               Stage currentStage) {
         //Caclulation of ListView minimal coordinates
         Bounds bounds = lv.localToScreen(new BoundingBox(0, 0,
             lv.getBoundsInParent().getWidth(),
@@ -248,11 +247,10 @@ public class RobotBuilder {
         int x = 10 + (int) bounds.getMinX();
         int y = 10 + (int) bounds.getMinY();
 
-        final Robot robot =
-                    com.sun.glass.ui.Application.GetApplication().createRobot();
+        final Robot robot = new Robot();
         robot.mouseMove(x, y);
-        robot.mousePress(Robot.MOUSE_LEFT_BTN);
-        robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+        robot.mousePress(MouseButton.PRIMARY);
+        robot.mouseRelease(MouseButton.PRIMARY);
 
         new AnimationTimer() {
             long startTime = System.nanoTime();
@@ -264,9 +262,8 @@ public class RobotBuilder {
                 } else if (lv.isFocused()) {
                     stop();
                     robot.mouseWheel(-5);
-                    robot.mousePress(Robot.MOUSE_LEFT_BTN);
-                    robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
-                    robot.destroy();
+                    robot.mousePress(MouseButton.PRIMARY);
+                    robot.mouseRelease(MouseButton.PRIMARY);
                     new AnimationTimer() {
                         long startTime = System.nanoTime();
                         @Override
@@ -287,8 +284,7 @@ public class RobotBuilder {
         }.start();
     }
 
-    public void robotPixelTest(final TextField result, Stage currentStage){
-
+    public void robotPixelTest(final TextField result, Stage currentStage) {
         Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
                         rec1.getBoundsInParent().getWidth(),
                         rec1.getBoundsInParent().getHeight()));
@@ -313,11 +309,9 @@ public class RobotBuilder {
         return 0xff000000 | (r << 16) | (g << 8) | b;
     }
 
-    public int assertPixelEquals(int x, int y, Color expected){
-
-        Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
-        int pixel = robot.getPixelColor(x, y);
-        robot.destroy();
+    public int assertPixelEquals(int x, int y, Color expected) {
+        final Robot robot = new Robot();
+        int pixel = colorToRGB(robot.getPixelColor(x, y));
         int expectedPixel = colorToRGB(expected);
         if (checkColor(pixel, expected)) {
             return 1;
@@ -329,7 +323,6 @@ public class RobotBuilder {
     }
 
     private boolean checkColor(int value, Color expected) {
-
         double tolerance = 0.07;
         double ered = expected.getRed();
         double egrn = expected.getGreen();
@@ -350,24 +343,21 @@ public class RobotBuilder {
         return false;
     }
 
-    public Popup robotScreenTest(final TextField result, Stage stage){
-
+    public Popup robotScreenTest(final TextField result, Stage stage) {
         Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0,
                 rec1.getBoundsInParent().getWidth(),
                 rec1.getBoundsInParent().getHeight()));
 
         int x = 50 + (int) bounds.getMinX();
         int y = 50 + (int) bounds.getMinY();
-        int[] intArr = null;
         boolean correct = true;
-        Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+        final Robot robot = new Robot();
         int width = 160;
         int height = 160;
-        final Buffer buff = robot.getScreenCapture(x, y, width, height).getPixels();
-        if ((buff instanceof IntBuffer)&&(buff.hasArray())) {
-            intArr =((IntBuffer) buff).array();
-        }
-
+        int[] intArr = new int[width * height];
+        PixelReader pixelReader = robot.getScreenCapture(null, x, y, width, height).getPixelReader();
+        WritablePixelFormat<IntBuffer> format = WritablePixelFormat.getIntArgbInstance();
+        pixelReader.getPixels(0, 0, width, height, format, intArr, 0, width);
         String filename= "scrCapture.bmp";
         File file = new File(filename);
         try {
@@ -412,7 +402,6 @@ public class RobotBuilder {
                 }
             }
         }
-        robot.destroy();
         if (correct) {
             result.setText("Passed");
         } else {
@@ -422,7 +411,6 @@ public class RobotBuilder {
     }
 
     private Popup showImage(Stage stage, int width, int height, TextField tf) {
-
         int frame = 70;
         Rectangle rec = new Rectangle(width + frame, height + frame);
         FileInputStream os = null;

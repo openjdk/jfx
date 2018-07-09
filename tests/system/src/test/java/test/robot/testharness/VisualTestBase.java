@@ -29,13 +29,14 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import com.sun.glass.ui.Robot;
 import junit.framework.AssertionFailedError;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -106,7 +107,7 @@ public abstract class VisualTestBase {
 
     @Before
     public void doSetup() {
-        runAndWait(() -> robot = com.sun.glass.ui.Application.GetApplication().createRobot());
+        runAndWait(() -> robot = new Robot());
     }
 
     @After
@@ -161,14 +162,7 @@ public abstract class VisualTestBase {
 
     // This must be called on the FX app thread
     protected Color getColor(int x, int y) {
-        int pixColor = robot.getPixelColor(x, y);
-        int a = (pixColor >> 24) & 0xff;
-        int r = (pixColor >> 16) & 0xff;
-        int g = (pixColor >>  8) & 0xff;
-        int b =  pixColor        & 0xff;
-
-        Color color = Color.rgb(r, g, b, (double)a / 255.0);
-        return color;
+        return robot.getPixelColor(x, y);
     }
 
     private static String colorToString(Color c) {

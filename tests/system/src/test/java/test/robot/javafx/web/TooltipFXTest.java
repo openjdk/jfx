@@ -25,7 +25,6 @@
 
 package test.robot.javafx.web;
 
-import com.sun.glass.ui.Robot;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +34,7 @@ import javafx.concurrent.Worker;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.scene.Scene;
+import javafx.scene.robot.Robot;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import junit.framework.AssertionFailedError;
@@ -81,7 +81,7 @@ public class TooltipFXTest {
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) throws Exception {
-            robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            robot = new Robot();
             primaryStage.setTitle("Primary Stage");
             BorderPane root = new BorderPane();
             Scene scene = new Scene(root);

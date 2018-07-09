@@ -25,10 +25,8 @@
 
 package test.robot.javafx.embed.swing;
 
-import com.sun.glass.ui.Robot;
 import static com.sun.javafx.application.PlatformImpl.runAndWait;
 import com.sun.javafx.tk.TKPulseListener;
-import java.awt.AWTException;
 import java.awt.Color;
 import javafx.animation.AnimationTimer;
 import javafx.scene.Scene;
@@ -42,6 +40,7 @@ import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javax.swing.JPanel;
 
@@ -112,17 +111,17 @@ public class RT30650GUI extends Application {
         int x = (int)stage.getX();
         int y = (int)stage.getY();
 
-        final int rgb[] = new int[1];
+        final javafx.scene.paint.Color rgb[] = new javafx.scene.paint.Color[1];
         runAndWait(() -> {
-            Robot r = com.sun.glass.ui.Application.GetApplication().createRobot();
+            Robot r = new Robot();
             rgb[0] = r.getPixelColor(x + SIZE/2, y + SIZE/2);
         });
 
-        System.out.println("detected color: " + Integer.toHexString(rgb[0]));
+        System.out.println("detected color: " + rgb[0].toString());
 
         // On MacOSX the robot returns the color affected by the color profile.
         // And so the resulting color may differ from the requested one.
-        // Here we have to check that the color is close to red rather than to green.
-        return ((rgb[0] >> 16) & 0xff) > 200 && ((rgb[0] >> 8) & 0xff) < 100;
+        // Here we have to check that the color is closer to red rather than to green.
+        return rgb[0].getRed() * 255d > 200 && rgb[0].getGreen() * 255d < 100;
     }
 }

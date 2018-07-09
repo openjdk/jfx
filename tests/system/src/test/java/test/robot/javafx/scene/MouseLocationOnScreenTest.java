@@ -25,12 +25,12 @@
 
 package test.robot.javafx.scene;
 
-import com.sun.glass.ui.Robot;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.junit.AfterClass;
@@ -48,7 +48,7 @@ public class MouseLocationOnScreenTest {
 
         @Override
         public void start(Stage primaryStage) throws Exception {
-            robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            robot = new Robot();
             startupLatch.countDown();
         }
     }
@@ -112,8 +112,8 @@ public class MouseLocationOnScreenTest {
      * returned by robot are same
      */
     static void validate(Robot robot, int x, int y) {
-        Assert.assertEquals(x, robot.getMouseX());
-        Assert.assertEquals(y, robot.getMouseY());
+        Assert.assertEquals(x, (int) robot.getMouseX());
+        Assert.assertEquals(y, (int) robot.getMouseY());
     }
 
     private static void edge(Robot robot, int x1, int y1, int x2, int y2) {

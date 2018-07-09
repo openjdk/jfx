@@ -262,10 +262,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1keyRelease
 /*
  * Class:     com_sun_glass_ui_mac_MacRobot
  * Method:    _mouseMove
- * Signature: (JII)V
+ * Signature: (JFF)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseMove
-(JNIEnv *env, jobject jrobot, jlong ptr, jint x, jint y)
+(JNIEnv *env, jobject jrobot, jlong ptr, jfloat x, jfloat y)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1mouseMove");
 
@@ -273,7 +273,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseMove
     GLASS_POOL_ENTER
     {
         GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
-        [robot mouseMove:NSMakePoint((float)x, (float)y)];
+        [robot mouseMove:NSMakePoint(x, y)];
     }
     GLASS_POOL_EXIT;
 }
@@ -281,20 +281,20 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseMove
 /*
  * Class:     com_sun_glass_ui_mac_MacRobot
  * Method:    _getMouseX
- * Signature: (J)I
+ * Signature: (J)F
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseX
+JNIEXPORT jfloat JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseX
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseX");
 
-    jint x = 0;
+    jfloat x = 0.0;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
         GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
-        x = (jint)[robot getMousePosFlipped].x;
+        x = (jfloat)[robot getMousePosFlipped].x;
     }
     GLASS_POOL_EXIT;
 
@@ -304,20 +304,20 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseX
 /*
  * Class:     com_sun_glass_ui_mac_MacRobot
  * Method:    _getMouseY
- * Signature: (J)I
+ * Signature: (J)F
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseY
+JNIEXPORT jfloat JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getMouseY
 (JNIEnv *env, jobject jrobot, jlong ptr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getMouseY");
 
-    jint y = 0;
+    jfloat y = 0.0;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
         GlassRobot * robot = (GlassRobot*)jlong_to_ptr(ptr);
-        y = (jint)[robot getMousePosFlipped].y;
+        y = (jfloat)[robot getMousePosFlipped].y;
     }
     GLASS_POOL_EXIT;
 
@@ -385,10 +385,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseWheel
 /*
  * Class:     com_sun_glass_ui_mac_MacRobot
  * Method:    _getPixelColor
- * Signature: (II)I
+ * Signature: (DD)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
-(JNIEnv *env, jobject jrobot, jint x, jint y)
+(JNIEnv *env, jobject jrobot, jdouble x, jdouble y)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor");
 
@@ -430,7 +430,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
  * Signature: (IIIIZ)Lcom/sun/glass/ui/Pixels;
  */
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
-(JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jboolean isHiDPI)
+(JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jboolean scaleToFit)
 {
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture");
 
@@ -445,15 +445,14 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
         {
             jint pixWidth, pixHeight;
 
-            if (isHiDPI) {
+            if (!scaleToFit) {
                 pixWidth = (jint)CGImageGetWidth(screenImage);
                 pixHeight = (jint)CGImageGetHeight(screenImage);
             } else {
                 pixWidth = width;
                 pixHeight = height;
             }
-
-            jintArray pixelArray = (*env)->NewIntArray(env, (jsize)pixWidth*pixHeight);
+            jintArray pixelArray = (*env)->NewIntArray(env, (jsize)pixWidth * pixHeight);
             if (pixelArray)
             {
                 jint *javaPixels = (jint*)(*env)->GetIntArrayElements(env, pixelArray, 0);
@@ -506,3 +505,4 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
 
     return pixels;
 }
+

@@ -27,7 +27,6 @@ package com.sun.glass.ui.win;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
 
@@ -261,7 +260,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return WinPixels.getNativeFormat_impl();
     }
 
-    @Override public Robot createRobot() {
+    @Override public GlassRobot createRobot() {
         return new WinRobot();
     }
 

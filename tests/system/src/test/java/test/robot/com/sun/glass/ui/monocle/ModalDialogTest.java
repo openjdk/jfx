@@ -30,9 +30,10 @@ import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.input.MouseButton;
+import javafx.scene.robot.Robot;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import com.sun.glass.ui.Robot;
 import junit.framework.AssertionFailedError;
 import org.junit.*;
 import org.junit.rules.TestName;
@@ -72,13 +73,13 @@ public class ModalDialogTest {
         });
         TestLogShim.clear();
         Platform.runLater(() -> {
-            Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+            Robot robot = new Robot();
             robot.mouseMove(300, 400);
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
             robot.mouseMove(100, 100);
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
         });
         TestLogShim.waitForLog("Clicked at 100, 100");
         if (TestLogShim.countLog("Clicked at 300, 400") != 0) {

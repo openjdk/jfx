@@ -28,12 +28,12 @@ package com.sun.glass.ui.ios;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.List;
 
 public final class IosApplication extends Application {
 
@@ -149,7 +149,7 @@ public final class IosApplication extends Application {
      * @inheritDoc
      */
     @Override
-    public Robot createRobot() {
+    public GlassRobot createRobot() {
         return new IosRobot();
     }
 

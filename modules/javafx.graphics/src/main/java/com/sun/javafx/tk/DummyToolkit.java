@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.glass.ui.GlassRobot;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Shape;
@@ -404,4 +405,8 @@ final public class DummyToolkit extends Toolkit {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public GlassRobot createRobot() {
+        throw new UnsupportedOperationException("not implemented");
     }
+}

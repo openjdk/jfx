@@ -57,7 +57,6 @@ public class SwingNodeBase {
     public static final int WAIT_TIME = 300;
     public static final int LONG_WAIT_TIME = 2500;
 
-
     protected static Robot robot;
 
     // Used to launch the application before running any test
@@ -65,7 +64,6 @@ public class SwingNodeBase {
 
     // Singleton Application instance
     static MyApp myApp;
-
 
     @BeforeClass
     public static void setupOnce() throws AWTException, InvocationTargetException, InterruptedException {
@@ -206,7 +204,7 @@ public class SwingNodeBase {
         }
     }
 
-    public void testAbove(boolean above) throws InterruptedException, InvocationTargetException {
+    public void testAbove(boolean above) {
         int checkLoc = BASE_LOCATION + 3 * BASE_SIZE /4;
         int clickLoc = BASE_LOCATION + BASE_SIZE / 4;
 

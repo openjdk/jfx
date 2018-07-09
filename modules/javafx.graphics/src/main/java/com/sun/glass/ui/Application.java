@@ -33,8 +33,6 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
@@ -648,7 +646,7 @@ public abstract class Application {
     }
 
 
-    public abstract Robot createRobot();
+    public abstract GlassRobot createRobot();
 
     protected abstract double staticScreen_getVideoRefreshPeriod();
     protected abstract Screen[] staticScreen_getScreens();

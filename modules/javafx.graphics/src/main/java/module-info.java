@@ -54,6 +54,7 @@ module javafx.graphics {
     exports javafx.scene.input;
     exports javafx.scene.layout;
     exports javafx.scene.paint;
+    exports javafx.scene.robot;
     exports javafx.scene.shape;
     exports javafx.scene.text;
     exports javafx.scene.transform;

@@ -26,14 +26,18 @@
 package test.robot.com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.monocle.TestLogShim;
-import com.sun.glass.events.KeyEvent;
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Robot;
 import javafx.application.Platform;
+import javafx.geometry.Point2D;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.robot.Robot;
+
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * This is a generic test for Glass robot. It is in the monocle.input package
@@ -56,10 +60,23 @@ public class RobotTest {
                 (e) -> TestLogShim.format("Clicked at %.0f, %.0f",
                                       e.getScreenX(), e.getScreenY()));
         Platform.runLater(() -> {
-            Robot robot = Application.GetApplication().createRobot();
+            Robot robot = new Robot();
             robot.mouseMove(300, 400);
-            robot.mousePress(Robot.MOUSE_LEFT_BTN);
-            robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
+            assertEquals(new Point2D(300, 400), robot.getMousePosition());
+            assertEquals(300, (int) robot.getMouseX());
+            assertEquals(400, (int) robot.getMouseY());
+        });
+        TestLogShim.waitForLog("Clicked at 300, 400");
+
+        Platform.runLater(() -> {
+            Robot robot = new Robot();
+            robot.mouseMove(new Point2D(300, 400));
+            robot.mouseClick(MouseButton.PRIMARY);
+            assertEquals(new Point2D(300, 400), robot.getMousePosition());
+            assertEquals(300, (int) robot.getMouseX());
+            assertEquals(400, (int) robot.getMouseY());
         });
         TestLogShim.waitForLog("Clicked at 300, 400");
     }
@@ -69,17 +86,22 @@ public class RobotTest {
         TestApplication.getStage().getScene().setOnKeyTyped(
                 (e) ->TestLogShim.format("Typed '%s'", e.getCharacter()));
         Platform.runLater(() -> {
-            Robot robot = Application.GetApplication().createRobot();
-            robot.keyPress(KeyEvent.VK_A);
-            robot.keyRelease(KeyEvent.VK_A);
+            Robot robot = new Robot();
+            robot.keyPress(KeyCode.A);
+            robot.keyRelease(KeyCode.A);
         });
         TestLogShim.waitForLog("Typed 'a'");
         Platform.runLater(() -> {
-            Robot robot = Application.GetApplication().createRobot();
-            robot.keyPress(KeyEvent.VK_SHIFT);
-            robot.keyPress(KeyEvent.VK_B);
-            robot.keyRelease(KeyEvent.VK_B);
-            robot.keyRelease(KeyEvent.VK_SHIFT);
+           Robot robot = new Robot();
+           robot.keyType(KeyCode.E);
+        });
+        TestLogShim.waitForLog("Typed 'e'");
+        Platform.runLater(() -> {
+            Robot robot = new Robot();
+            robot.keyPress(KeyCode.SHIFT);
+            robot.keyPress(KeyCode.B);
+            robot.keyRelease(KeyCode.B);
+            robot.keyRelease(KeyCode.SHIFT);
         });
         TestLogShim.waitForLog("Typed 'B'");
     }
@@ -92,17 +114,16 @@ public class RobotTest {
                                       e.getScreenX(),
                                       e.getScreenY()));
         Platform.runLater(() -> {
-            Robot robot = Application.GetApplication().createRobot();
+            Robot robot = new Robot();
             robot.mouseMove(300, 300);
             robot.mouseWheel(10);
         });
         TestLogShim.waitForLog("Scroll: 1 at 300, 300");
         Platform.runLater(() -> {
-            Robot robot = Application.GetApplication().createRobot();
+            Robot robot = new Robot();
             robot.mouseMove(310, 320);
             robot.mouseWheel(-10);
         });
         TestLogShim.waitForLog("Scroll: -1 at 310, 320");
     }
-
 }

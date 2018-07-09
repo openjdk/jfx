@@ -26,7 +26,6 @@
 package test.robot.helloworld;
 
 import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Robot;
 import com.sun.javafx.PlatformUtil;
 import java.awt.AWTPermission;
 import java.security.AllPermission;
@@ -36,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
+import javafx.scene.robot.Robot;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -211,7 +211,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         try {
             runAndWait(() -> {
                 try {
-                    robot.set(Application.GetApplication().createRobot());
+                    robot.set(new Robot());
                 } catch (SecurityException ex) {
                     robot.set(null);
                 }

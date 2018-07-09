@@ -28,7 +28,6 @@
 
 #include "KeyTable.h"
 
-#include "com_sun_glass_ui_Robot.h"
 #include "com_sun_glass_ui_win_WinRobot.h"
 #include "GlassScreen.h"
 
@@ -117,9 +116,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseMove
 /*
  * Class:     com_sun_glass_ui_win_WinRobot
  * Method:    _getMouseX
- * Signature: ()I
+ * Signature: ()F
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseX
+JNIEXPORT jfloat JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseX
     (JNIEnv *env, jobject jrobot)
 {
     POINT curPos;
@@ -127,15 +126,15 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseX
     jfloat fx = (jfloat) curPos.x + 0.5f;
     jfloat fy = (jfloat) curPos.y + 0.5f;
     GlassScreen::Win2FX(&fx, &fy);
-    return (jint) fx;
+    return fx;
 }
 
 /*
  * Class:     com_sun_glass_ui_win_WinRobot
  * Method:    _getMouseY
- * Signature: ()I
+ * Signature: ()F
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseY
+JNIEXPORT jfloat JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseY
     (JNIEnv *env, jobject jrobot)
 {
     POINT curPos;
@@ -143,7 +142,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getMouseY
     jfloat fx = (jfloat) curPos.x + 0.5f;
     jfloat fy = (jfloat) curPos.y + 0.5f;
     GlassScreen::Win2FX(&fx, &fy);
-    return (jint) fy;
+    return fy;
 }
 
 /*
