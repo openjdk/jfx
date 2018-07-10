@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import javafx.beans.value.WritableValue;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
@@ -82,6 +83,12 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+enum TestEnum {
+    LEFT,
+    CENTER,
+    RIGHT,
+    JUSTIFY
+}
 
 public class CssMetaDataTest {
 
@@ -1286,6 +1293,22 @@ public class CssMetaDataTest {
 
         assertEquals(3, list.size(), 0);
 
+    }
+
+    @Test
+    public void testStyleConverterReturnType() {
+        final CssMetaData<Pane, TestEnum> TEST_ENUM =
+                new CssMetaData<Pane, TestEnum>("-test-enum", StyleConverter.getEnumConverter(TestEnum.class), TestEnum.LEFT, false) {
+                    @Override
+                    public boolean isSettable(Pane styleable) {
+                        return false;
+                    }
+
+                    @Override
+                    public StyleableProperty<TestEnum> getStyleableProperty(Pane styleable) {
+                        return null;
+                    }
+                };
     }
 
 }

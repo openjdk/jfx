@@ -153,7 +153,7 @@ public class StyleConverter<F, T> {
      * of an {@code Enum} to an {@code Enum}
      * @see Enum#valueOf(java.lang.Class, java.lang.String)
      */
-    public static <E extends Enum<E>> StyleConverter<String, ? extends Enum<?>> getEnumConverter(Class<E> enumClass) {
+    public static <E extends Enum<E>> StyleConverter<String, E> getEnumConverter(Class<E> enumClass) {
         // TODO: reuse EnumConverter instances
         EnumConverter<E> converter;
         converter = new EnumConverter<>(enumClass);
