@@ -886,10 +886,12 @@ class WindowStage extends GlassStage {
     @Override
     protected void setPlatformEnabled(boolean enabled) {
         super.setPlatformEnabled(enabled);
-        platformWindow.setEnabled(enabled);
+        if (platformWindow != null) {
+            platformWindow.setEnabled(enabled);
+        }
         if (enabled) {
             // Check if window is really enabled - to handle nested case
-            if (platformWindow.isEnabled()) {
+            if (platformWindow != null && platformWindow.isEnabled()) {
                 requestToFront();
             }
         } else {
