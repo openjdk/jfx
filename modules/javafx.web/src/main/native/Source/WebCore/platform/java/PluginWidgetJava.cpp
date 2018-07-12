@@ -214,12 +214,12 @@ void PluginWidgetJava::paint(
     if (context.paintingDisabled())
         return;
 
-    jobject obj = platformWidget();
+    JLObject obj = platformWidget();
     if (obj){
         JNIEnv *env = WebCore_GetJavaEnv();
         context.save();
         env->CallVoidMethod(
-            obj,
+            jobject(obj),
             pluginWidgetPaintMID,
             context.platformContext(),
             rc.x(), rc.y(), rc.width(), rc.height());
@@ -268,11 +268,11 @@ void PluginWidgetJava::updatePluginWidget()
 
     FrameView* frameView = static_cast<FrameView*>(parent());
     IntRect windowRect(frameView->contentsToWindow(frameRect().location()), frameRect().size());
-    jobject obj = platformWidget();
-    if( NULL!=obj ){
+    JLObject obj = platformWidget();
+    if(obj){
         JNIEnv *env = WebCore_GetJavaEnv();
         env->CallVoidMethod(
-            obj,
+            jobject(obj),
             pluginWidgetFWKSetNativeContainerBoundsMID,
             (jint)windowRect.x(),
             (jint)windowRect.y(),
@@ -315,7 +315,7 @@ void PluginWidgetJava::focusPluginElement(bool)
 void PluginWidgetJava::handleEvent(Event& event)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
-    jobject obj = platformWidget();
+    JLObject obj = platformWidget();
     jboolean cancelBubble = false;
     if (obj && event.isMouseEvent()) {
         MouseEvent* me = static_cast<MouseEvent*>(&event);
@@ -324,7 +324,7 @@ void PluginWidgetJava::handleEvent(Event& event)
         IntPoint p = static_cast<FrameView*>(parent())->contentsToWindow(
             IntPoint(me->pageX(), me->pageY()));
         cancelBubble = env->CallBooleanMethod(
-            obj,
+            jobject(obj),
             pluginWidgetFWKHandleMouseEventMID,
             (jstring)me->type().string().toJavaString(env),
             (jint)p.x(),
