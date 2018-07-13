@@ -36,6 +36,7 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -104,15 +105,35 @@ public class NativeMediaManager {
          */
         try {
             AccessController.doPrivileged((PrivilegedExceptionAction) () -> {
+                ArrayList<String> dependencies = new ArrayList<>();
                 if (HostUtils.isWindows() || HostUtils.isMacOSX()) {
                     NativeLibLoader.loadLibrary("glib-lite");
                 }
 
                 if (!HostUtils.isLinux() && !HostUtils.isIOS()) {
                     NativeLibLoader.loadLibrary("gstreamer-lite");
+                } else {
+                    dependencies.add("gstreamer-lite");
                 }
-
-                NativeLibLoader.loadLibrary("jfxmedia");
+                if (HostUtils.isLinux()) {
+                    dependencies.add("fxplugins");
+                    dependencies.add("avplugin");
+                    dependencies.add("avplugin-54");
+                    dependencies.add("avplugin-56");
+                    dependencies.add("avplugin-57");
+                    dependencies.add("avplugin-ffmpeg-56");
+                    dependencies.add("avplugin-ffmpeg-57");
+                }
+                if (HostUtils.isMacOSX()) {
+                    dependencies.add("fxplugins");
+                    dependencies.add("glib-lite");
+                    dependencies.add("jfxmedia_avf");
+                }
+                if (HostUtils.isWindows()) {
+                    dependencies.add("fxplugins");
+                    dependencies.add("glib-lite");
+                }
+                NativeLibLoader.loadLibrary("jfxmedia", dependencies);
                 return null;
             });
         } catch (PrivilegedActionException pae) {

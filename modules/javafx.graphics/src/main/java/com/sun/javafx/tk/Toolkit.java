@@ -200,17 +200,17 @@ public abstract class Toolkit {
             return TOOLKIT;
         }
 
-        // This loading of msvcp140.dll and vcruntime140.dll (VS2017) is required on Windows platforms
-        if (PlatformUtil.isWindows()) {
-            loadMSWindowsLibraries();
-        }
-
         AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
             // Get the javafx.version and javafx.runtime.version from a preconstructed
             // java class, VersionInfo, created at build time.
             VersionInfo.setupSystemProperties();
             return null;
         });
+
+        // This loading of msvcp140.dll and vcruntime140.dll (VS2017) is required on Windows platforms
+        if (PlatformUtil.isWindows()) {
+            loadMSWindowsLibraries();
+        }
 
         boolean userSpecifiedToolkit = true;
 
