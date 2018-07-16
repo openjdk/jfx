@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,23 +23,23 @@
  * questions.
  */
 
-package javafx.embed.swing;
+package com.sun.javafx.embed.swing;
 
+import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.cursor.ImageCursorFrame;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
-
-import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.cursor.ImageCursorFrame;
+import javafx.embed.swing.SwingFXUtils;
 
 /**
  * An utility class to translate cursor types between embedded
  * application and Swing.
  *
  */
-class SwingCursors {
+public class SwingCursors {
 
     private static Cursor createCustomCursor(ImageCursorFrame cursorFrame) {
         Toolkit awtToolkit = Toolkit.getDefaultToolkit();
@@ -57,7 +57,7 @@ class SwingCursors {
         return awtToolkit.createCustomCursor(awtImage, hotspot, null);
     }
 
-    static Cursor embedCursorToCursor(CursorFrame cursorFrame) {
+    public static Cursor embedCursorToCursor(CursorFrame cursorFrame) {
         switch (cursorFrame.getCursorType()) {
             case DEFAULT:
                 return Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR);
@@ -103,7 +103,7 @@ class SwingCursors {
        return Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR);
     }
 
-    static javafx.scene.Cursor embedCursorToCursor(Cursor cursor) {
+    public static javafx.scene.Cursor embedCursorToCursor(Cursor cursor) {
         if (cursor == null) {
             return javafx.scene.Cursor.DEFAULT;
         }

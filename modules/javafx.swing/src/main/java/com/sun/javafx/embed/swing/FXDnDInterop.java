@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,36 +25,32 @@
 
 package com.sun.javafx.embed.swing;
 
-import java.awt.EventQueue;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.awt.Component;
+import java.awt.dnd.DragGestureEvent;
+import java.awt.dnd.DragGestureListener;
+import java.awt.dnd.DragGestureRecognizer;
+import java.awt.dnd.DragSource;
+import java.awt.dnd.DropTarget;
+import javafx.embed.swing.SwingNode;
 
-public class SwingFXUtilsImpl {
+public abstract class FXDnDInterop {
+    public abstract Component findComponentAt(Object frame, int x, int y,
+                                      boolean ignoreEnabled);
 
-    private static SwingFXUtilsImplInterop swFXUtilIOP;
+    public abstract boolean isCompEqual(Component c, Object frame);
 
-    static {
-        InteropFactory iopFactoryInstance = null;
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-        swFXUtilIOP = iopFactoryInstance.createSwingFXUtilsImpl();
-    }
+    public abstract int convertModifiersToDropAction(int modifiers,
+                                             int supportedActions);
 
-    private static EventQueue getEventQueue() {
-        return AccessController.doPrivileged(
-                (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());
-    }
+    public abstract Object createDragSourceContext(DragGestureEvent dge);
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
-    }
+    public abstract <T extends DragGestureRecognizer> T
+        createDragGestureRecognizer(DragSource ds, Component c, int srcActions,
+                DragGestureListener dgl);
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
-    }
+    public abstract void addDropTarget(DropTarget dt, SwingNode node);
+
+    public abstract void removeDropTarget(DropTarget dt, SwingNode node);
+
+    public abstract void setNode(SwingNode node);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,14 +23,13 @@
  * questions.
  */
 
-package javafx.embed.swing;
+package com.sun.javafx.embed.swing;
 
+import com.sun.javafx.embed.AbstractEvents;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
-
-import com.sun.javafx.embed.AbstractEvents;
 import javafx.event.EventType;
 import javafx.scene.input.ScrollEvent;
 
@@ -38,9 +37,9 @@ import javafx.scene.input.ScrollEvent;
  * A utility class to translate event types and data between embedded
  * application and Swing.
  */
-class SwingEvents {
+public class SwingEvents {
 
-    static int mouseIDToEmbedMouseType(int id) {
+    public static int mouseIDToEmbedMouseType(int id) {
         switch (id) {
             case MouseEvent.MOUSE_PRESSED:
                 return AbstractEvents.MOUSEEVENT_PRESSED;
@@ -60,7 +59,7 @@ class SwingEvents {
         return 0;
     }
 
-    static int mouseButtonToEmbedMouseButton(int button, int extModifiers) {
+    public static int mouseButtonToEmbedMouseButton(int button, int extModifiers) {
         int abstractButton = AbstractEvents.MOUSEEVENT_NONE_BUTTON;
         switch (button) {
             case MouseEvent.BUTTON1:
@@ -86,14 +85,14 @@ class SwingEvents {
         return abstractButton;
     }
 
-    static int getWheelRotation(MouseEvent e) {
+    public static int getWheelRotation(MouseEvent e) {
         if (e instanceof MouseWheelEvent) {
             return ((MouseWheelEvent)e).getWheelRotation();
         }
         return 0;
     }
 
-    static int keyIDToEmbedKeyType(int id) {
+    public static int keyIDToEmbedKeyType(int id) {
         switch (id) {
             case KeyEvent.KEY_PRESSED:
                 return AbstractEvents.KEYEVENT_PRESSED;
@@ -105,7 +104,7 @@ class SwingEvents {
         return 0;
     }
 
-    static int keyModifiersToEmbedKeyModifiers(int extModifiers) {
+    public static int keyModifiersToEmbedKeyModifiers(int extModifiers) {
         int embedModifiers = 0;
         if ((extModifiers & InputEvent.SHIFT_DOWN_MASK) != 0) {
             embedModifiers |= AbstractEvents.MODIFIER_SHIFT;
@@ -122,14 +121,14 @@ class SwingEvents {
         return embedModifiers;
     }
 
-    static char keyCharToEmbedKeyChar(char ch) {
+    public static char keyCharToEmbedKeyChar(char ch) {
         // Convert Swing LF character to Fx CR character.
         return ch == '\n' ? '\r' : ch;
     }
 
     // FX -> Swing conversion methods
 
-    static int fxMouseEventTypeToMouseID(javafx.scene.input.MouseEvent event) {
+    public static int fxMouseEventTypeToMouseID(javafx.scene.input.MouseEvent event) {
         EventType<?> type = event.getEventType();
         if (type == javafx.scene.input.MouseEvent.MOUSE_MOVED) {
             return MouseEvent.MOUSE_MOVED;
@@ -158,7 +157,7 @@ class SwingEvents {
         throw new RuntimeException("Unknown MouseEvent type: " + type);
     }
 
-    static int fxMouseModsToMouseMods(javafx.scene.input.MouseEvent event) {
+    public static int fxMouseModsToMouseMods(javafx.scene.input.MouseEvent event) {
         int mods = 0;
         if (event.isAltDown()) {
             mods |= InputEvent.ALT_DOWN_MASK;
@@ -184,7 +183,7 @@ class SwingEvents {
         return mods;
     }
 
-    static int fxMouseButtonToMouseButton(javafx.scene.input.MouseEvent event) {
+    public static int fxMouseButtonToMouseButton(javafx.scene.input.MouseEvent event) {
         switch (event.getButton()) {
             case PRIMARY:
                 return MouseEvent.BUTTON1;
@@ -196,7 +195,7 @@ class SwingEvents {
         return 0;
     }
 
-    static int fxKeyEventTypeToKeyID(javafx.scene.input.KeyEvent event) {
+    public static int fxKeyEventTypeToKeyID(javafx.scene.input.KeyEvent event) {
         EventType<?> eventType = event.getEventType();
         if (eventType == javafx.scene.input.KeyEvent.KEY_PRESSED) {
             return KeyEvent.KEY_PRESSED;
@@ -210,7 +209,7 @@ class SwingEvents {
         throw new RuntimeException("Unknown KeyEvent type: " + eventType);
     }
 
-    static int fxKeyModsToKeyMods(javafx.scene.input.KeyEvent event) {
+    public static int fxKeyModsToKeyMods(javafx.scene.input.KeyEvent event) {
         int mods = 0;
         if (event.isAltDown()) {
             mods |= InputEvent.ALT_DOWN_MASK;
@@ -227,7 +226,7 @@ class SwingEvents {
         return mods;
     }
 
-    static int fxScrollModsToMouseWheelMods(ScrollEvent event) {
+    public static int fxScrollModsToMouseWheelMods(ScrollEvent event) {
         int mods = 0;
         if (event.isAltDown()) {
             mods |= InputEvent.ALT_DOWN_MASK;

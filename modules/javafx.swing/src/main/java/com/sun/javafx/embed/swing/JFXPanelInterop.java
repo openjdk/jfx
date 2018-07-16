@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,36 +25,19 @@
 
 package com.sun.javafx.embed.swing;
 
-import java.awt.EventQueue;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.awt.AWTEvent;
+import java.awt.Toolkit;
+import java.awt.Window;
+import javafx.embed.swing.JFXPanel;
 
-public class SwingFXUtilsImpl {
+public abstract class JFXPanelInterop {
+    public abstract void postEvent(JFXPanel panel, AWTEvent e);
 
-    private static SwingFXUtilsImplInterop swFXUtilIOP;
+    public abstract boolean isUngrabEvent(AWTEvent event);
 
-    static {
-        InteropFactory iopFactoryInstance = null;
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-        swFXUtilIOP = iopFactoryInstance.createSwingFXUtilsImpl();
-    }
+    public abstract long getMask();
 
-    private static EventQueue getEventQueue() {
-        return AccessController.doPrivileged(
-                (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());
-    }
+    public abstract void grab(Toolkit toolkit, Window w);
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
-    }
-
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
-    }
+    public abstract void ungrab(Toolkit toolkit, Window w);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,35 +26,8 @@
 package com.sun.javafx.embed.swing;
 
 import java.awt.EventQueue;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
-public class SwingFXUtilsImpl {
-
-    private static SwingFXUtilsImplInterop swFXUtilIOP;
-
-    static {
-        InteropFactory iopFactoryInstance = null;
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-        swFXUtilIOP = iopFactoryInstance.createSwingFXUtilsImpl();
-    }
-
-    private static EventQueue getEventQueue() {
-        return AccessController.doPrivileged(
-                (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());
-    }
-
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
-    }
-
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
-    }
+public abstract class SwingFXUtilsImplInterop {
+    public abstract void setFwDispatcher(EventQueue eventQueue);
 }
+

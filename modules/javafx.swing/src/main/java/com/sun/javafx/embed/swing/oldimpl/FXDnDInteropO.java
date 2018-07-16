@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,8 +23,14 @@
  * questions.
  */
 
-package javafx.embed.swing;
+package com.sun.javafx.embed.swing.oldimpl;
 
+import com.sun.javafx.embed.swing.CachingTransferable;
+import com.sun.javafx.embed.swing.FXDnD;
+import com.sun.javafx.embed.swing.FXDnDInterop;
+import com.sun.javafx.embed.swing.SwingDnD;
+import com.sun.javafx.embed.swing.SwingEvents;
+import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.tk.Toolkit;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -46,11 +52,10 @@ import java.awt.dnd.InvalidDnDOperationException;
 import java.awt.dnd.MouseDragGestureRecognizer;
 import java.awt.dnd.peer.DragSourceContextPeer;
 import java.awt.dnd.peer.DropTargetContextPeer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.application.Platform;
+import javafx.embed.swing.SwingNode;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.input.DataFormat;
@@ -62,29 +67,54 @@ import sun.awt.AWTAccessor;
 import sun.awt.dnd.SunDragSourceContextPeer;
 import sun.swing.JLightweightFrame;
 
+public class FXDnDInteropO extends FXDnDInterop {
 
-/**
- * A utility class to connect DnD mechanism of Swing and FX.
- * It allows Swing content to use the FX machinery for performing DnD.
- */
-final class FXDnD {
-    private final SwingNode node;
-    private static boolean fxAppThreadIsDispatchThread;
-    private SwingNode getNode() { return node; }
-
-    static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            public Object run() {
-                fxAppThreadIsDispatchThread =
-                        "true".equals(System.getProperty("javafx.embed.singleThread"));
-                return null;
-            }
-        });
+    public Component findComponentAt(Object frame, int x, int y,
+                                              boolean ignoreEnabled) {
+        JLightweightFrame lwFrame = (JLightweightFrame) frame;
+        return AWTAccessor.getContainerAccessor().findComponentAt(lwFrame,
+                        x, y, false);
     }
 
-    FXDnD(SwingNode node) {
-        this.node = node;
+    public boolean isCompEqual(Component c, Object frame) {
+        JLightweightFrame lwFrame = (JLightweightFrame) frame;
+        return c != lwFrame;
     }
+
+    public int convertModifiersToDropAction(int modifiers,
+                                                     int supportedActions) {
+        return SunDragSourceContextPeer.convertModifiersToDropAction(modifiers,
+                        supportedActions);
+    }
+
+    public <T extends DragGestureRecognizer> T createDragGestureRecognizer(
+                        DragSource ds, Component c, int srcActions,
+                           DragGestureListener dgl) {
+        return (T) new FXDragGestureRecognizer(ds, c, srcActions, dgl);
+    }
+
+    public DragSourceContextPeer createDragSourceContext(DragGestureEvent dge)
+            throws InvalidDnDOperationException {
+        return new FXDragSourceContextPeer(dge);
+    }
+
+    private void runOnFxThread(Runnable runnable) {
+        if (Platform.isFxApplicationThread()) {
+            runnable.run();
+        } else {
+            Platform.runLater(runnable);
+        }
+    }
+
+    private SwingNode getNode() {
+        return node;
+    }
+
+    public void setNode(SwingNode swnode) {
+        node = swnode;
+    }
+
+    private SwingNode node = null;
 
     /**
      * Utility class that operates on Maps with Components as keys.
@@ -92,16 +122,15 @@ final class FXDnD {
      * based on the component located at the given coordinates.
      */
     private class ComponentMapper<T> {
-        private int x, y;
-        private T object = null;
+        public int x, y;
+        public T object = null;
 
         private ComponentMapper(Map<Component, T> map, int xArg, int yArg) {
             this.x = xArg;
             this.y = yArg;
 
-            final JLightweightFrame lwFrame = node.getLightweightFrame();
-            Component c = AWTAccessor.getContainerAccessor().findComponentAt(
-                    lwFrame, x, y, false);
+            final JLightweightFrame lwFrame = (JLightweightFrame)SwingNodeHelper.getLightweightFrame(node);
+            Component c = AWTAccessor.getContainerAccessor().findComponentAt(lwFrame, x, y, false);
             if (c == null) return;
 
             synchronized (c.getTreeLock()) {
@@ -123,13 +152,10 @@ final class FXDnD {
             }
         }
     }
+
     public <T> ComponentMapper<T> mapComponent(Map<Component, T> map, int x, int y) {
         return new ComponentMapper<T>(map, x, y);
     }
-
-
-
-
 
     ///////////////////////////////////////////////////////////////////////////
     //     DRAG SOURCE IMPLEMENTATION
@@ -166,7 +192,7 @@ final class FXDnD {
         }
 
         protected void registerListeners() {
-            SwingFXUtils.runOnFxThread(() -> {
+            runOnFxThread(() -> {
                 if (!isDragSourceListenerInstalled) {
                     node.addEventHandler(MouseEvent.MOUSE_PRESSED, onMousePressHandler);
                     node.addEventHandler(MouseEvent.DRAG_DETECTED, onDragStartHandler);
@@ -178,7 +204,7 @@ final class FXDnD {
         }
 
         protected void unregisterListeners() {
-            SwingFXUtils.runOnFxThread(() -> {
+            runOnFxThread(() -> {
                 if (isDragSourceListenerInstalled) {
                     node.removeEventHandler(MouseEvent.MOUSE_PRESSED, onMousePressHandler);
                     node.removeEventHandler(MouseEvent.DRAG_DETECTED, onDragStartHandler);
@@ -213,7 +239,7 @@ final class FXDnD {
             r.fireEvent(mapper.x, mapper.y, evTime, modifiers);
         } else {
             // No recognizer, no DnD, no startDrag, so release the FX loop now
-            SwingFXUtils.leaveFXNestedLoop(FXDnD.this);
+            SwingNodeHelper.leaveFXNestedLoop(this);
         }
     }
 
@@ -236,7 +262,7 @@ final class FXDnD {
         // Call to AWT and determine the active DragSourceContextPeer
         activeDSContextPeer = null;
         final MouseEvent firstEv = getInitialGestureEvent();
-        SwingFXUtils.runOnEDTAndWait(FXDnD.this, () -> fireEvent(
+        SwingNodeHelper.runOnEDTAndWait(FXDnDInteropO.this, () -> fireEvent(
                     (int)firstEv.getX(), (int)firstEv.getY(), pressTime,
                     SwingEvents.fxMouseModsToMouseMods(firstEv)));
         if (activeDSContextPeer == null) return;
@@ -258,7 +284,7 @@ final class FXDnD {
         final boolean hasContent = db.setContent(fxData);
         if (!hasContent) {
             // No data, no DnD, no onDragDoneHandler, so release the AWT loop now
-            if (!fxAppThreadIsDispatchThread) {
+            if (!FXDnD.fxAppThreadIsDispatchThread) {
                 loop.exit();
             }
         }
@@ -268,7 +294,7 @@ final class FXDnD {
         event.consume();
 
         // Release FXDragSourceContextPeer.startDrag()
-        if (!fxAppThreadIsDispatchThread) {
+        if (!FXDnD.fxAppThreadIsDispatchThread) {
             loop.exit();
         }
 
@@ -327,32 +353,15 @@ final class FXDnD {
 
             // Release the FX nested loop to allow onDragDetected to start the actual DnD operation,
             // and then start an AWT nested loop to wait until DnD finishes.
-            if (!fxAppThreadIsDispatchThread) {
+            if (!FXDnD.fxAppThreadIsDispatchThread) {
                 loop = java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
-                SwingFXUtils.leaveFXNestedLoop(FXDnD.this);
+                SwingNodeHelper.leaveFXNestedLoop(FXDnDInteropO.this);
                 if (!loop.enter()) {
                     // An error occured, but there's little we can do here...
                 }
             }
         }
     };
-
-    public <T extends DragGestureRecognizer> T createDragGestureRecognizer(
-            Class<T> abstractRecognizerClass,
-            DragSource ds, Component c, int srcActions,
-            DragGestureListener dgl)
-    {
-        return (T) new FXDragGestureRecognizer(ds, c, srcActions, dgl);
-    }
-
-    public DragSourceContextPeer createDragSourceContextPeer(DragGestureEvent dge) throws InvalidDnDOperationException
-    {
-        return new FXDragSourceContextPeer(dge);
-    }
-
-
-
-
 
     ///////////////////////////////////////////////////////////////////////////
     //     DROP TARGET IMPLEMENTATION
@@ -466,7 +475,7 @@ final class FXDnD {
             // A target for the AWT DnD event
             DropTarget target = mapper.object != null ? mapper.object : dt;
 
-            SwingFXUtils.runOnEDTAndWait(FXDnD.this, () -> {
+            SwingNodeHelper.runOnEDTAndWait(FXDnDInteropO.this, () -> {
                 if (target != dt) {
                     if (ctx != null) {
                         AWTAccessor.getDropTargetContextAccessor().reset(ctx);
@@ -479,8 +488,8 @@ final class FXDnD {
                 if (target != null) {
                     if (ctx == null) {
                         ctx = target.getDropTargetContext();
-                        AWTAccessor.getDropTargetContextAccessor()
-                                .setDropTargetContextPeer(ctx, FXDropTargetContextPeer.this);
+            AWTAccessor.getDropTargetContextAccessor()
+                            .setDropTargetContextPeer(ctx, FXDropTargetContextPeer.this);
                     }
 
                     DropTargetListener dtl = (DropTargetListener)target;
@@ -525,7 +534,7 @@ final class FXDnD {
                     ctx = null;
                 }
 
-                SwingFXUtils.leaveFXNestedLoop(FXDnD.this);
+                SwingNodeHelper.leaveFXNestedLoop(FXDnDInteropO.this);
             });
 
             if (DragEvent.DRAG_DROPPED.equals(fxEvType)) return dropAction;
@@ -534,7 +543,7 @@ final class FXDnD {
         }
     }
 
-    public void addDropTarget(DropTarget dt) {
+    public void addDropTarget(DropTarget dt, SwingNode node) {
         dropTargets.put(dt.getComponent(), dt);
         Platform.runLater(() -> {
             if (!isDropTargetListenerInstalled) {
@@ -548,7 +557,7 @@ final class FXDnD {
         });
     }
 
-    public void removeDropTarget(DropTarget dt) {
+    public void removeDropTarget(DropTarget dt, SwingNode node) {
         dropTargets.remove(dt.getComponent());
         Platform.runLater(() -> {
             if (isDropTargetListenerInstalled && dropTargets.isEmpty()) {

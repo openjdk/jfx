@@ -618,14 +618,18 @@ if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to de
 
 
 // Determine whether the javafx.* modules are present in the JDK. To do this,
-// we will execute "java --list-modules" and search for javafx.base
+// we will execute "java --list-modules" and search for javafx.base.
+// Also, check if jdk.unsupported.desktop module is present in JDK to ensure 
+// javafx.swing do not use internal JDK classes directly.
 ext.HAS_JAVAFX_MODULES = false;
+ext.HAS_UNSUPPORTED_DESKTOP = false;
 def inStream2 = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "--list-modules").start().getInputStream()));
 try {
     String v;
     while ((v = inStream2.readLine()) != null) {
         v = v.trim();
         if (v.startsWith("javafx.base")) ext.HAS_JAVAFX_MODULES = true;
+        if (v.startsWith("jdk.unsupported.desktop")) ext.HAS_UNSUPPORTED_DESKTOP = true;
     }
 } finally {
     inStream2.close();
@@ -1301,6 +1305,7 @@ logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("HAS_JAVAFX_MODULES: $HAS_JAVAFX_MODULES")
+logger.quiet("HAS_UNSUPPORTED_DESKTOP: $HAS_UNSUPPORTED_DESKTOP")
 logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
@@ -2430,6 +2435,21 @@ project(":swing") {
             jvmArgs += qualExportsSwing
         }
     }
+
+    sourceSets.main.java.srcDirs += "$buildDir/gensrc/java"
+    sourceSets.main.java {
+        if (!HAS_UNSUPPORTED_DESKTOP) {
+            exclude("com/sun/javafx/embed/swing/newimpl/**")
+        }
+    }
+    task copyModuleInfo(type: Copy, description: "copy module-info file to gensrc") {
+        from "src/main/module-info/module-info.java"
+        into "$buildDir/gensrc/java/"
+        filter { line->
+            !HAS_UNSUPPORTED_DESKTOP && line.contains('jdk.unsupported.desktop') ? null : line
+        }
+    }
+    compileJava.dependsOn copyModuleInfo
 
     compileJava.options.compilerArgs.addAll(qualExportsSwing)
 
@@ -4894,7 +4914,7 @@ compileTargets { t ->
         def copySourceFilesTask = project.task("copySourceFiles$t.capital", type: Copy, dependsOn: copyLibFilesTask) {
             if (copySources) {
                 from "${project.projectDir}/src/main/java"
-                if (project.name.equals("base")) {
+                if (project.name.equals("base") || project.name.equals("swing")) {
                     from "${project.projectDir}/build/gensrc/java"
                 }
                 if (project.name.equals("web")) {
@@ -4905,6 +4925,10 @@ compileTargets { t ->
             }
             into "${modulesSrcDir}/${moduleName}"
             include "**/*.java"
+            if (!HAS_UNSUPPORTED_DESKTOP) {
+                exclude("com/sun/javafx/embed/swing/newimpl/**")
+            }  
+
             if (project.hasProperty("sourceFilter")) {
                 filter(project.sourceFilter)
             }

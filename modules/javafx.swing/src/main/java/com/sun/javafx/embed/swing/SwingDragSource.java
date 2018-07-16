@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,17 +23,12 @@
  * questions.
  */
 
-package javafx.embed.swing;
+package com.sun.javafx.embed.swing;
 
 import com.sun.javafx.embed.EmbeddedSceneDSInterface;
 import com.sun.javafx.tk.Toolkit;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
 import javafx.scene.input.TransferMode;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,10 @@ package javafx.embed.swing;
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
+import java.awt.image.SampleModel;
+import java.awt.image.SinglePixelPackedSampleModel;
 import java.nio.IntBuffer;
-import java.util.Set;
-import java.util.HashSet;
-import javafx.application.Platform;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
@@ -39,9 +39,6 @@ import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.paint.Color;
-import com.sun.javafx.tk.Toolkit;
-import javax.swing.SwingUtilities;
-import sun.awt.image.IntegerComponentRaster;
 
 /**
  * This class provides utility methods for converting data types between
@@ -111,10 +108,15 @@ public class SwingFXUtils {
             wimg = new WritableImage(bw, bh);
         }
         PixelWriter pw = wimg.getPixelWriter();
-        IntegerComponentRaster icr = (IntegerComponentRaster) bimg.getRaster();
-        int data[] = icr.getDataStorage();
-        int offset = icr.getDataOffset(0);
-        int scan = icr.getScanlineStride();
+        DataBufferInt db = (DataBufferInt)bimg.getRaster().getDataBuffer();
+        int data[] = db.getData();
+        int offset = bimg.getRaster().getDataBuffer().getOffset();
+        int scan =  0;
+        SampleModel sm = bimg.getRaster().getSampleModel();
+        if (sm instanceof SinglePixelPackedSampleModel) {
+            scan = ((SinglePixelPackedSampleModel)sm).getScanlineStride();
+        }
+
         PixelFormat<IntBuffer> pf = (bimg.isAlphaPremultiplied() ?
                                      PixelFormat.getIntArgbPreInstance() :
                                      PixelFormat.getIntArgbInstance());
@@ -281,72 +283,17 @@ public class SwingFXUtils {
         if (bimg == null) {
             bimg = new BufferedImage(iw, ih, prefBimgType);
         }
-        IntegerComponentRaster icr = (IntegerComponentRaster) bimg.getRaster();
-        int offset = icr.getDataOffset(0);
-        int scan = icr.getScanlineStride();
-        int data[] = icr.getDataStorage();
+        DataBufferInt db = (DataBufferInt)bimg.getRaster().getDataBuffer();
+        int data[] = db.getData();
+        int offset = bimg.getRaster().getDataBuffer().getOffset();
+        int scan =  0;
+        SampleModel sm = bimg.getRaster().getSampleModel();
+        if (sm instanceof SinglePixelPackedSampleModel) {
+            scan = ((SinglePixelPackedSampleModel)sm).getScanlineStride();
+        }
+
         WritablePixelFormat<IntBuffer> pf = getAssociatedPixelFormat(bimg);
         pr.getPixels(0, 0, iw, ih, pf, data, offset, scan);
         return bimg;
     }
-
-    /**
-     * If called from the FX Application Thread
-     * invokes a runnable directly blocking the calling code
-     * Otherwise
-     * uses Platform.runLater without blocking
-     */
-    static void runOnFxThread(Runnable runnable) {
-        if (Platform.isFxApplicationThread()) {
-            runnable.run();
-        } else {
-            Platform.runLater(runnable);
-        }
-    }
-
-    /**
-     * If called from the event dispatch thread
-     * invokes a runnable directly blocking the calling code
-     * Otherwise
-     * uses SwingUtilities.invokeLater without blocking
-     */
-    static void runOnEDT(final Runnable r) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            r.run();
-        } else {
-            SwingUtilities.invokeLater(r);
-        }
-    }
-
-    private static final Set<Object> eventLoopKeys = new HashSet<>();
-
-    /**
-     * The runnable is responsible for leaving the nested event loop.
-     */
-    static void runOnEDTAndWait(Object nestedLoopKey, Runnable r) {
-        Toolkit.getToolkit().checkFxUserThread();
-
-        if (SwingUtilities.isEventDispatchThread()) {
-            r.run();
-        } else {
-            eventLoopKeys.add(nestedLoopKey);
-            SwingUtilities.invokeLater(r);
-            Toolkit.getToolkit().enterNestedEventLoop(nestedLoopKey);
-        }
-    }
-
-    static void leaveFXNestedLoop(Object nestedLoopKey) {
-        if (!eventLoopKeys.contains(nestedLoopKey)) return;
-
-        if (Platform.isFxApplicationThread()) {
-            Toolkit.getToolkit().exitNestedEventLoop(nestedLoopKey, null);
-        } else {
-            Platform.runLater(() -> {
-                Toolkit.getToolkit().exitNestedEventLoop(nestedLoopKey, null);
-            });
-        }
-
-        eventLoopKeys.remove(nestedLoopKey);
-    }
-
 }

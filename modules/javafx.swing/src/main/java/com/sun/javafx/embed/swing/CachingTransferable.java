@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,21 +23,15 @@
  * questions.
  */
 
-package javafx.embed.swing;
+package com.sun.javafx.embed.swing;
 
-import com.sun.javafx.embed.EmbeddedSceneDSInterface;
-import com.sun.javafx.tk.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.dnd.DropTargetDragEvent;
-import java.awt.dnd.DropTargetDropEvent;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import javafx.scene.input.TransferMode;
-import java.io.UnsupportedEncodingException;
+import java.util.Map;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.DataFormat;
 
@@ -46,7 +40,7 @@ import javafx.scene.input.DataFormat;
  * The data can be populated either from AWT Transferable
  * or from FX Clipboard.
  */
-class CachingTransferable implements Transferable {
+public class CachingTransferable implements Transferable {
 
     @Override
     public Object getTransferData(final DataFlavor flavor) throws UnsupportedEncodingException
@@ -70,7 +64,7 @@ class CachingTransferable implements Transferable {
 
     private Map<String, Object> mimeType2Data = Collections.EMPTY_MAP;
 
-    void updateData(Transferable t, boolean fetchData) {
+    public void updateData(Transferable t, boolean fetchData) {
         final Map<String, DataFlavor> mimeType2DataFlavor =
                 DataFlavorUtils.adjustSwingDataFlavors(
                 t.getTransferDataFlavors());
@@ -106,7 +100,7 @@ class CachingTransferable implements Transferable {
         }
     }
 
-    void updateData(Clipboard cb, boolean fetchData) {
+    public void updateData(Clipboard cb, boolean fetchData) {
         mimeType2Data = new HashMap<>();
         for (DataFormat f : cb.getContentTypes()) {
             mimeType2Data.put(DataFlavorUtils.getMimeType(f),

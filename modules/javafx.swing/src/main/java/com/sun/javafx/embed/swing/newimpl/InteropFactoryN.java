@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,38 +23,37 @@
  * questions.
  */
 
-package com.sun.javafx.embed.swing;
+package com.sun.javafx.embed.swing.newimpl;
 
-import java.awt.EventQueue;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import com.sun.javafx.embed.swing.FXDnDInterop;
+import com.sun.javafx.embed.swing.InteropFactory;
+import com.sun.javafx.embed.swing.JFXPanelInterop;
+import com.sun.javafx.embed.swing.SwingFXUtilsImplInterop;
+import com.sun.javafx.embed.swing.SwingNodeInterop;
 
-public class SwingFXUtilsImpl {
+public class InteropFactoryN extends InteropFactory {
 
-    private static SwingFXUtilsImplInterop swFXUtilIOP;
-
-    static {
-        InteropFactory iopFactoryInstance = null;
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-        swFXUtilIOP = iopFactoryInstance.createSwingFXUtilsImpl();
+    public InteropFactoryN() throws Exception {
+        Class swiopClass = Class.forName("jdk.swing.interop.LightweightFrameWrapper");
     }
 
-    private static EventQueue getEventQueue() {
-        return AccessController.doPrivileged(
-                (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());
+    @Override
+    public SwingNodeInterop createSwingNodeImpl() {
+        return new SwingNodeInteropN();
     }
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
+    @Override
+    public JFXPanelInterop createJFXPanelImpl() {
+        return new JFXPanelInteropN();
     }
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
+    @Override
+    public FXDnDInterop createFXDnDImpl() {
+        return new FXDnDInteropN();
+    }
+
+    @Override
+    public SwingFXUtilsImplInterop createSwingFXUtilsImpl() {
+        return new SwingFXUtilsImplInteropN();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,37 @@
  * questions.
  */
 
-/**
- * Defines APIs for the JavaFX / Swing interop support included with the
- * JavaFX UI toolkit, including {@link javafx.embed.swing.SwingNode} (for
- * embedding Swing inside a JavaFX application) and
- * {@link javafx.embed.swing.JFXPanel} (for embedding JavaFX inside a Swing
- * application).
- *
- * @moduleGraph
- * @since 9
- */
-module javafx.swing {
-    requires java.datatransfer;
-    requires javafx.base;
+package com.sun.javafx.embed.swing.oldimpl;
 
-    requires transitive java.desktop;
-    requires transitive javafx.graphics;
+import com.sun.javafx.embed.swing.FXDnDInterop;
+import com.sun.javafx.embed.swing.InteropFactory;
+import com.sun.javafx.embed.swing.JFXPanelInterop;
+import com.sun.javafx.embed.swing.SwingFXUtilsImplInterop;
+import com.sun.javafx.embed.swing.SwingNodeInterop;
 
-    exports javafx.embed.swing;
+public class InteropFactoryO extends InteropFactory {
 
-    exports com.sun.javafx.embed.swing to
-        javafx.graphics;
+    public InteropFactoryO() throws Exception {
+        Class qeSwingClass = Class.forName("sun.swing.JLightweightFrame");
+    }
+
+    @Override
+    public SwingNodeInterop createSwingNodeImpl() {
+        return new SwingNodeInteropO();
+    }
+
+    @Override
+    public JFXPanelInterop createJFXPanelImpl() {
+        return new JFXPanelInteropO();
+    }
+
+    @Override
+    public FXDnDInterop createFXDnDImpl() {
+        return new FXDnDInteropO();
+    }
+
+    @Override
+    public SwingFXUtilsImplInterop createSwingFXUtilsImpl() {
+        return new SwingFXUtilsImplInteropO();
+    }
 }

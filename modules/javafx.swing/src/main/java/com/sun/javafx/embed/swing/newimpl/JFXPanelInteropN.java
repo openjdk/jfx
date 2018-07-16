@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,38 +23,33 @@
  * questions.
  */
 
-package com.sun.javafx.embed.swing;
+package com.sun.javafx.embed.swing.newimpl;
 
-import java.awt.EventQueue;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import com.sun.javafx.embed.swing.JFXPanelInterop;
+import java.awt.AWTEvent;
+import java.awt.Toolkit;
+import java.awt.Window;
+import javafx.embed.swing.JFXPanel;
+import jdk.swing.interop.SwingInterOpUtils;
 
-public class SwingFXUtilsImpl {
-
-    private static SwingFXUtilsImplInterop swFXUtilIOP;
-
-    static {
-        InteropFactory iopFactoryInstance = null;
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-        swFXUtilIOP = iopFactoryInstance.createSwingFXUtilsImpl();
+public class JFXPanelInteropN extends JFXPanelInterop {
+    public void postEvent(JFXPanel panel, AWTEvent e) {
+        SwingInterOpUtils.postEvent(panel, e);
     }
 
-    private static EventQueue getEventQueue() {
-        return AccessController.doPrivileged(
-                (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());
+    public boolean isUngrabEvent(AWTEvent event) {
+        return SwingInterOpUtils.isUngrabEvent(event);
     }
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
+    public long getMask() {
+        return SwingInterOpUtils.GRAB_EVENT_MASK | AWTEvent.MOUSE_EVENT_MASK;
     }
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
+    public void grab(Toolkit toolkit, Window w) {
+        SwingInterOpUtils.grab(toolkit, w);
+    }
+
+    public void ungrab(Toolkit toolkit, Window w) {
+        SwingInterOpUtils.ungrab(toolkit, w);
     }
 }

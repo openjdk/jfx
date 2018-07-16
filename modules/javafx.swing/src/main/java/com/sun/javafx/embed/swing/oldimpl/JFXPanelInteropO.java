@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,38 +23,41 @@
  * questions.
  */
 
-package com.sun.javafx.embed.swing;
+package com.sun.javafx.embed.swing.oldimpl;
 
-import java.awt.EventQueue;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import com.sun.javafx.embed.swing.JFXPanelInterop;
+import java.awt.AWTEvent;
+import java.awt.Toolkit;
+import java.awt.Window;
+import javafx.embed.swing.JFXPanel;
+import sun.awt.AppContext;
+import sun.awt.SunToolkit;
 
-public class SwingFXUtilsImpl {
-
-    private static SwingFXUtilsImplInterop swFXUtilIOP;
-
-    static {
-        InteropFactory iopFactoryInstance = null;
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
+public class JFXPanelInteropO extends JFXPanelInterop {
+    public void postEvent(JFXPanel panel, AWTEvent e) {
+        AppContext context = SunToolkit.targetToAppContext(panel);
+        if (context != null) {
+            SunToolkit.postEvent(context, e);
         }
-        swFXUtilIOP = iopFactoryInstance.createSwingFXUtilsImpl();
     }
 
-    private static EventQueue getEventQueue() {
-        return AccessController.doPrivileged(
-                (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());
+    public boolean isUngrabEvent(AWTEvent event) {
+        return event instanceof sun.awt.UngrabEvent;
     }
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
+    public long getMask() {
+        return SunToolkit.GRAB_EVENT_MASK | AWTEvent.MOUSE_EVENT_MASK;
     }
 
-    //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
-        swFXUtilIOP.setFwDispatcher(getEventQueue());
+    public void grab(Toolkit toolkit, Window w) {
+        if (toolkit instanceof SunToolkit) {
+            ((SunToolkit)toolkit).grab(w);
+        }
+    }
+
+    public void ungrab(Toolkit toolkit, Window w) {
+        if (toolkit instanceof SunToolkit) {
+            ((SunToolkit)toolkit).ungrab(w);
+        }
     }
 }

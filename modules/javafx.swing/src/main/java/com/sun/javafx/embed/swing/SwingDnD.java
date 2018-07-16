@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,14 @@
  * questions.
  */
 
-package javafx.embed.swing;
-
-import java.io.UnsupportedEncodingException;
-
-import java.util.Collections;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+package com.sun.javafx.embed.swing;
 
 import com.sun.javafx.embed.EmbeddedSceneDSInterface;
-import com.sun.javafx.embed.HostDragStartListener;
-import javafx.scene.input.TransferMode;
-
-import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.EmbeddedSceneDTInterface;
+import com.sun.javafx.embed.EmbeddedSceneInterface;
+import com.sun.javafx.embed.HostDragStartListener;
 import com.sun.javafx.tk.Toolkit;
-
-import javax.swing.JComponent;
-import javax.swing.SwingUtilities;
-
 import java.awt.Point;
-
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DnDConstants;
@@ -54,8 +38,8 @@ import java.awt.dnd.DragGestureEvent;
 import java.awt.dnd.DragGestureRecognizer;
 import java.awt.dnd.DragSource;
 import java.awt.dnd.DragSourceAdapter;
-import java.awt.dnd.DragSourceListener;
 import java.awt.dnd.DragSourceDropEvent;
+import java.awt.dnd.DragSourceListener;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetAdapter;
 import java.awt.dnd.DropTargetDragEvent;
@@ -63,16 +47,25 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
 import java.awt.dnd.InvalidDnDOperationException;
-
 import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Set;
+import javafx.scene.input.TransferMode;
+import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 
 /**
  * An utility class to connect DnD mechanism of Swing and FX.
  * It allows FX content to use the AWT machinery for performing DnD.
  */
-final class SwingDnD {
+final public class SwingDnD {
 
     private final Transferable dndTransferable = new DnDTransferable();
 
@@ -90,7 +83,7 @@ final class SwingDnD {
 
     private MouseEvent me;
 
-    SwingDnD(final JComponent comp, final EmbeddedSceneInterface embeddedScene) {
+    public SwingDnD(final JComponent comp, final EmbeddedSceneInterface embeddedScene) {
 
         comp.addMouseListener(new MouseAdapter() {
             @Override
@@ -220,17 +213,17 @@ final class SwingDnD {
 
     }
 
-    void addNotify() {
+    public void addNotify() {
         dragSource.addDragSourceListener(dragSourceListener);
     }
 
-    void removeNotify() {
+    public void removeNotify() {
         // RT-22049: Multi-JFrame/JFXPanel app leaks JFXPanels
         // Don't forget to unregister drag source listener!
         dragSource.removeDragSourceListener(dragSourceListener);
     }
 
-    HostDragStartListener getDragStartListener() {
+    public HostDragStartListener getDragStartListener() {
         return (dragSource, dragAction) -> {
             assert Toolkit.getToolkit().isFxUserThread();
             assert dragSource != null;
@@ -311,7 +304,7 @@ final class SwingDnD {
         }
     }
 
-    static TransferMode dropActionToTransferMode(final int dropAction) {
+    public static TransferMode dropActionToTransferMode(final int dropAction) {
         switch (dropAction) {
             case DnDConstants.ACTION_COPY:
                 return TransferMode.COPY;
@@ -326,7 +319,7 @@ final class SwingDnD {
         }
     }
 
-    static int transferModeToDropAction(final TransferMode tm) {
+    public static int transferModeToDropAction(final TransferMode tm) {
         switch (tm) {
             case COPY:
                 return DnDConstants.ACTION_COPY;
@@ -339,7 +332,7 @@ final class SwingDnD {
         }
     }
 
-    static Set<TransferMode> dropActionsToTransferModes(
+    public static Set<TransferMode> dropActionsToTransferModes(
             final int dropActions)
     {
         final Set<TransferMode> tms = EnumSet.noneOf(TransferMode.class);
@@ -355,7 +348,7 @@ final class SwingDnD {
         return Collections.unmodifiableSet(tms);
     }
 
-    static int transferModesToDropActions(final Set<TransferMode> tms) {
+    public static int transferModesToDropActions(final Set<TransferMode> tms) {
         int dropActions = DnDConstants.ACTION_NONE;
         for (TransferMode tm : tms) {
             dropActions |= transferModeToDropAction(tm);

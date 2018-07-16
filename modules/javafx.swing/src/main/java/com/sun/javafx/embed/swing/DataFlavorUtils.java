@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,31 +23,26 @@
  * questions.
  */
 
-package javafx.embed.swing;
-
-import javafx.scene.input.DataFormat;
-
-import java.io.ByteArrayOutputStream;
-import java.util.Set;
-import java.util.Map;
-import java.util.List;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Collections;
-import java.util.ArrayList;
+package com.sun.javafx.embed.swing;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
-
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-
 import java.nio.ByteBuffer;
-
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import javafx.scene.input.DataFormat;
 
 final class DataFlavorUtils {
 

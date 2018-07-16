@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,8 @@ import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import com.sun.glass.utils.NativeLibLoader;
+import com.sun.prism.impl.PrismSettings;
 
 /**
  * Some basic utilities which need to be in java (for shifting operations or
@@ -960,5 +962,20 @@ public class Utils {
         }
 
         return new String(dst, 0, dstIndex);
+    }
+
+    public static synchronized void loadNativeSwingLibrary() {
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            String libName = "prism_common";
+
+            if (PrismSettings.verbose) {
+                System.out.println("Loading Prism common native library ...");
+            }
+            NativeLibLoader.loadLibrary(libName);
+            if (PrismSettings.verbose) {
+                System.out.println("\tsucceeded.");
+            }
+            return null;
+        });
     }
 }
