@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -187,7 +187,7 @@ bool RenderThemeJava::paintWidget(
     JNIEnv* env = WebCore_GetJavaEnv();
 
     WTF::Vector<jbyte> extParams;
-    if (JNI_EXPAND(SLIDER) == widgetIndex) {
+    if (JNI_EXPAND(SLIDER) == widgetIndex && is<RenderSlider>(object)) {
         HTMLInputElement& input = downcast<RenderSlider>(object).element();
 
         extParams.grow(sizeof(jint) + 3 * sizeof(jfloat));
@@ -210,24 +210,26 @@ bool RenderThemeJava::paintWidget(
         memcpy(data, &valueAsNumber, sizeof(valueAsNumber));
     } else if (JNI_EXPAND(PROGRESS_BAR) == widgetIndex) {
 #if ENABLE(PROGRESS_ELEMENT)
-        RenderProgress& renderProgress = downcast<RenderProgress>(object);
+        if (is<RenderProgress>(object)) {
+            RenderProgress& renderProgress = downcast<RenderProgress>(object);
 
-        extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
-        jbyte *data = extParams.data();
-        auto isDeterminate = jint(renderProgress.isDeterminate() ? 1 : 0);
-        memcpy(data, &isDeterminate, sizeof(isDeterminate));
-        data += sizeof(jint);
+            extParams.grow(sizeof(jint) + 3*sizeof(jfloat));
+            jbyte *data = extParams.data();
+            auto isDeterminate = jint(renderProgress.isDeterminate() ? 1 : 0);
+            memcpy(data, &isDeterminate, sizeof(isDeterminate));
+            data += sizeof(jint);
 
-        auto position = jfloat(renderProgress.position());
-        memcpy(data, &position, sizeof(position));
-        data += sizeof(jfloat);
+            auto position = jfloat(renderProgress.position());
+            memcpy(data, &position, sizeof(position));
+            data += sizeof(jfloat);
 
-        auto animationProgress = jfloat(renderProgress.animationProgress());
-        memcpy(data, &animationProgress, sizeof(animationProgress));
-        data += sizeof(jfloat);
+            auto animationProgress = jfloat(renderProgress.animationProgress());
+            memcpy(data, &animationProgress, sizeof(animationProgress));
+            data += sizeof(jfloat);
 
-        auto animationStartTime = jfloat(renderProgress.animationStartTime());
-        memcpy(data, &animationStartTime, sizeof(animationStartTime));
+            auto animationStartTime = jfloat(renderProgress.animationStartTime());
+            memcpy(data, &animationStartTime, sizeof(animationStartTime));
+        }
 #endif
 #if ENABLE(METER_ELEMENT)
     } else if (JNI_EXPAND(METER) == widgetIndex) {
@@ -238,7 +240,7 @@ bool RenderThemeJava::paintWidget(
             value = meter->valueRatio();
             region = meter->gaugeRegion();
 #if ENABLE(PROGRESS_ELEMENT)
-        } else if (object.isProgress()) {
+        } else if (is<RenderProgress>(object>)) {
             RenderProgress& renderProgress = downcast<RenderProgress>(object);
             value = jfloat(renderProgress.position());
 #endif
