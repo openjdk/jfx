@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,29 +23,11 @@
  * questions.
  */
 
-package com.sun.webkit;
+package com.sun.javafx.webkit.prism;
 
-import com.sun.javafx.webkit.prism.PrismInvokerShim;
-import com.sun.webkit.WebPage;
-import com.sun.webkit.graphics.WCRectangle;
-
-public class WebPageShim {
-
-    public static int getFramesCount(WebPage page) {
-        return page.test_getFramesCount();
-    }
-
-    public static void renderContent(WebPage page, int x, int y, int w, int h) {
-        page.setBounds(x, y, w, h);
-        //  WebPage.updateContent will render WebPage into RenderQueue.
-        page.updateContent(new WCRectangle(x, y, w, h));
-        //  WebPage.paint will render RenderQueue into WCGraphicsContext in RenderThread.
-        PrismInvokerShim.runOnRenderThread(() -> {
-            // NullPointerException is expected because we are passing
-            // front buffer WCGraphicsContext as null.
-            try {
-                page.paint(null, x, y, w, h);
-            } catch (NullPointerException e) {}
-        });
+public final class PrismInvokerShim {
+    public static void runOnRenderThread(final Runnable r) {
+        PrismInvoker.runOnRenderThread(r);
     }
 }
+
