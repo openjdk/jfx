@@ -63,6 +63,9 @@
     // deafult bounds (which are also zeros - see a comment in _createWindowCommon().)
     BOOL                isSizeAssigned;
     BOOL                isLocationAssigned;
+
+@private
+    BOOL                isWindowResizable;
 }
 
 - (void)setFullscreenWindow:(NSWindow *)fsWindow;
