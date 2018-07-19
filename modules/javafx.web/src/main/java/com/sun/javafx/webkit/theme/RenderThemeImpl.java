@@ -261,9 +261,6 @@ public final class RenderThemeImpl extends RenderTheme {
     {
         ensureNotDefault();
 
-        if (extParams == null) {
-            return null;
-        }
         FormControl fc = pool.get(id);
         WidgetType type = WidgetType.convert(widgetIndex);
 
@@ -317,26 +314,29 @@ public final class RenderThemeImpl extends RenderTheme {
         if (ctrl.isManaged()) {
             ctrl.setManaged(false);
         }
-        if (type == WidgetType.SLIDER) {
-            Slider slider = (Slider)ctrl;
-            extParams.order(ByteOrder.nativeOrder());
-            slider.setOrientation(extParams.getInt()==0
-                ? Orientation.HORIZONTAL
-                : Orientation.VERTICAL);
-            slider.setMax(extParams.getFloat());
-            slider.setMin(extParams.getFloat());
-            slider.setValue(extParams.getFloat());
-        } else if (type == WidgetType.PROGRESSBAR) {
-            ProgressBar progress = (ProgressBar)ctrl;
-            extParams.order(ByteOrder.nativeOrder());
-            progress.setProgress(extParams.getInt() == 1
-                    ? extParams.getFloat()
-                    : progress.INDETERMINATE_PROGRESS);
-        } else if (type == WidgetType.METER) {
-            ProgressBar progress = (ProgressBar) ctrl;
-            extParams.order(ByteOrder.nativeOrder());
-            progress.setProgress(extParams.getFloat());
-            progress.setStyle(getMeterStyle(extParams.getInt()));
+
+        if (extParams != null) {
+            if (type == WidgetType.SLIDER) {
+                Slider slider = (Slider)ctrl;
+                extParams.order(ByteOrder.nativeOrder());
+                slider.setOrientation(extParams.getInt()==0
+                    ? Orientation.HORIZONTAL
+                    : Orientation.VERTICAL);
+                slider.setMax(extParams.getFloat());
+                slider.setMin(extParams.getFloat());
+                slider.setValue(extParams.getFloat());
+            } else if (type == WidgetType.PROGRESSBAR) {
+                ProgressBar progress = (ProgressBar)ctrl;
+                extParams.order(ByteOrder.nativeOrder());
+                progress.setProgress(extParams.getInt() == 1
+                        ? extParams.getFloat()
+                        : progress.INDETERMINATE_PROGRESS);
+            } else if (type == WidgetType.METER) {
+                ProgressBar progress = (ProgressBar) ctrl;
+                extParams.order(ByteOrder.nativeOrder());
+                progress.setProgress(extParams.getFloat());
+                progress.setStyle(getMeterStyle(extParams.getInt()));
+            }
         }
         return new FormControlRef(fc);
     }
