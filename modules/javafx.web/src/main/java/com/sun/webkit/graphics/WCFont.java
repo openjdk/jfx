@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,8 @@ public abstract class WCFont extends Ref {
     public abstract float getXHeight();
 
     public abstract double getGlyphWidth(int glyph);
+
+    public abstract float[] getGlyphBoundingBox(int glyph);
 
     public abstract double[] getStringBounds(String str, int from, int to,
                                              boolean rtl);

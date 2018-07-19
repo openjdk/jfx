@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,9 +140,24 @@ float Font::platformWidthForGlyph(Glyph c) const
     return res;
 }
 
-FloatRect Font::platformBoundsForGlyph(Glyph) const
+FloatRect Font::platformBoundsForGlyph(Glyph c) const
 {
-    return FloatRect(); //That is OK! platformWidthForGlyph impl is enough.
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    RefPtr<RQRef> jFont = m_platformData.nativeFontData();
+    if (!jFont) {
+        return {};
+    }
+
+    static jmethodID getGlyphBoundingBox_mID = env->GetMethodID(PG_GetFontClass(env), "getGlyphBoundingBox", "(I)[F");
+    ASSERT(getGlyphBoundingBox_mID);
+
+    jfloatArray boundingBox = (jfloatArray)env->CallObjectMethod(*jFont, getGlyphBoundingBox_mID, (jint)c);
+    jfloat *bBox = env->GetFloatArrayElements(boundingBox,0);
+    auto bb = FloatRect { bBox[0], bBox[1], bBox[2], bBox[3] };
+    env->ReleaseFloatArrayElements(boundingBox, bBox, 0);
+    CheckAndClearException(env);
+    return bb;
 }
 
 }

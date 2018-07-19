@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -158,6 +158,12 @@ final class WCFontImpl extends WCFont {
 
     @Override public double getGlyphWidth(int glyph) {
         return getFontStrike().getFontResource().getAdvance(glyph, font.getSize());
+    }
+
+    @Override public float[] getGlyphBoundingBox(int glyph) {
+        float[] bb = new float[4];
+        bb = getFontStrike().getFontResource().getGlyphBoundingBox(glyph, font.getSize(), bb);
+        return new float[]{bb[0], -bb[3], bb[2], bb[3] - bb[1]};
     }
 
     @Override public float getXHeight() {
