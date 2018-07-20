@@ -29,6 +29,7 @@ import com.sun.javafx.PlatformUtil;
 import java.util.ArrayList;
 import junit.framework.AssertionFailedError;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
@@ -109,11 +110,13 @@ public class SandboxAppTest {
         runSandboxedApp("FXNonApp");
     }
 
+    @Ignore("JDK-8202451")
     @Test (timeout = 15000)
     public void testJFXPanelApp() throws Exception {
         runSandboxedApp("JFXPanelApp");
     }
 
+    @Ignore("JDK-8202451")
     @Test (timeout = 15000)
     public void testJFXPanelImplicitExitApp() throws Exception {
         runSandboxedApp("JFXPanelImplicitExitApp", 0);
