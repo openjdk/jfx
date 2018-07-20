@@ -450,7 +450,7 @@ public class JFXPanel extends JComponent {
     protected void processMouseEvent(MouseEvent e) {
         if ((e.getID() == MouseEvent.MOUSE_PRESSED) &&
             (e.getButton() == MouseEvent.BUTTON1)) {
-            if (!hasFocus()) {
+            if (isFocusable() && !hasFocus()) {
                 requestFocus();
                 // this focus request event goes to eventqueue and will be
                 // asynchronously handled so MOUSE_PRESSED event will not be
