@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,16 +140,15 @@ public final class GeneralTransform3D implements CanTransformVec3d {
             pointOut = new Point2D();
         }
 
-        double w = (float) (mat[12] * point.x + mat[13] * point.y
-                 + mat[15]);
+        double w = mat[12] * point.x + mat[13] * point.y + mat[15];
+        float outX = (float) (mat[0] * point.x + mat[1] * point.y + mat[3]);
+        pointOut.y = (float) (mat[4] * point.x + mat[5] * point.y + mat[7]);
 
-        pointOut.x = (float) (mat[0] * point.x + mat[1] * point.y
-                + mat[3]);
-        pointOut.y = (float) (mat[4] * point.x + mat[5] * point.y
-                + mat[7]);
-
-        pointOut.x /= w;
-        pointOut.y /= w;
+        pointOut.x = outX;
+        if (w != 0.0) {
+            pointOut.x /= w;
+            pointOut.y /= w;
+        }
 
         return pointOut;
     }
@@ -157,7 +156,7 @@ public final class GeneralTransform3D implements CanTransformVec3d {
     /**
      * Transforms the point parameter with this transform and
      * places the result into pointOut.  The fourth element of the
-     * point input paramter is assumed to be one.
+     * point input parameter is assumed to be one.
      *
      * @param point the input point to be transformed
      *
@@ -170,19 +169,18 @@ public final class GeneralTransform3D implements CanTransformVec3d {
             pointOut = new Vec3d();
         }
 
-        // compute here as point.x, point.y and point.z may change
-        // in case (point == pointOut), and mat[14] is usually != 0
-        double w = (float) (mat[12] * point.x + mat[13] * point.y
-                + mat[14] * point.z + mat[15]);
+        double w = mat[12] * point.x + mat[13] * point.y
+                + mat[14] * point.z + mat[15];
+        double outX = mat[0] * point.x + mat[1] * point.y
+                + mat[2] * point.z + mat[3];
+        double outY = mat[4] * point.x + mat[5] * point.y
+                + mat[6] * point.z + mat[7];
+        pointOut.z = mat[8] * point.x + mat[9] * point.y
+                + mat[10] * point.z + mat[11];
 
-        pointOut.x = (float) (mat[0] * point.x + mat[1] * point.y
-                + mat[2] * point.z + mat[3]);
-        pointOut.y = (float) (mat[4] * point.x + mat[5] * point.y
-                + mat[6] * point.z + mat[7]);
-        pointOut.z = (float) (mat[8] * point.x + mat[9] * point.y
-                + mat[10] * point.z + mat[11]);
-
-        if (w != 0.0f) {
+        pointOut.x = outX;
+        pointOut.y = outY;
+        if (w != 0.0) {
             pointOut.x /= w;
             pointOut.y /= w;
             pointOut.z /= w;
@@ -195,7 +193,7 @@ public final class GeneralTransform3D implements CanTransformVec3d {
     /**
      * Transforms the point parameter with this transform and
      * places the result back into point.  The fourth element of the
-     * point input paramter is assumed to be one.
+     * point input parameter is assumed to be one.
      *
      * @param point the input point to be transformed
      *
@@ -220,12 +218,19 @@ public final class GeneralTransform3D implements CanTransformVec3d {
      * @return the transformed normal
      */
     public Vec3f transformNormal(Vec3f normal, Vec3f normalOut) {
-        normal.x =  (float) (mat[0]*normal.x + mat[1]*normal.y +
-                            mat[2]*normal.z);
-        normal.y =  (float) (mat[4]*normal.x + mat[5]*normal.y +
-                            mat[6]*normal.z);
-        normal.z =  (float) (mat[8]*normal.x + mat[9]*normal.y +
-                             mat[10]*normal.z);
+        if (normalOut == null) {
+            normalOut = new Vec3f();
+        }
+
+        float outX = (float) (mat[0] * normal.x + mat[1] * normal.y +
+                            mat[2] * normal.z);
+        float outY = (float) (mat[4] * normal.x + mat[5] * normal.y +
+                            mat[6] * normal.z);
+        normalOut.z = (float) (mat[8] * normal.x + mat[9] * normal.y +
+                            mat[10] * normal.z);
+
+        normalOut.x = outX;
+        normalOut.y = outY;
         return normalOut;
     }
 
