@@ -5589,6 +5589,13 @@ compileTargets { t ->
         def standaloneSdkDir = "${rootProject.buildDir}/${standaloneSdkDirName}"
         def standaloneLegalDir = "${standaloneSdkDir}/legal"
 
+        def excludeNativeLibs = []
+        if (IS_WINDOWS) {
+            // List of duplicate Microsoft DLLs to exclude
+            excludeNativeLibs += targetProperties.VS2017DLLNames
+            excludeNativeLibs += targetProperties.WinSDKDLLNames
+        }
+
         moduleProjList.each { project ->
             def moduleName = project.ext.moduleName
             def buildDir = project.buildDir
@@ -5612,6 +5619,13 @@ compileTargets { t ->
                         if (file(srcLibDir).isDirectory()) {
                             args("--libs")
                             args(srcLibDir)
+                        }
+                        // Exclude duplicate native libs from javafx.graphics.jmod
+                        if (moduleName == "javafx.graphics") {
+                            excludeNativeLibs.each { name ->
+                                args("--exclude")
+                                args(name)
+                            }
                         }
                         args("--legal-notices")
                         args(srcLegalDir)

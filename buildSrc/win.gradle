@@ -196,24 +196,26 @@ if (WINDOWS_VS_VER == "150") {
 
 def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
 if (file(vs2017DllPath).exists()) {
-    def VS2017DLLs = [
+    ext.WIN.VS2017DLLNames = [
         "concrt140.dll",
         "msvcp140.dll",
         "vcruntime140.dll"
     ];
     ext.WIN.VS2017DLLs = []
-        VS2017DLLs.each { vsdll->
-            ext.WIN.VS2017DLLs += "$vs2017DllPath/$vsdll"
-        }
+    ext.WIN.VS2017DLLNames.each { vsdll->
+        ext.WIN.VS2017DLLs += "$vs2017DllPath/$vsdll"
+    }
 }
 else {
+    ext.WIN.VS2017DLLNames = [
+	];
     ext.WIN.VS2017DLLs = [
 	];
 }
 
 def WinSDKDLLsPath = cygpath("${winSdkDllDir}")
 if (file(WinSDKDLLsPath).exists()) {
-    def WinSDKDLLs = [
+    ext.WIN.WinSDKDLLNames = [
         "api-ms-win-core-console-l1-1-0.dll",
         "api-ms-win-core-datetime-l1-1-0.dll",
         "api-ms-win-core-debug-l1-1-0.dll",
@@ -257,11 +259,13 @@ if (file(WinSDKDLLsPath).exists()) {
         "ucrtbase.dll"
     ];
     ext.WIN.WinSDKDLLs = []
-        WinSDKDLLs.each { winsdkdll->
-            ext.WIN.WinSDKDLLs += "$WinSDKDLLsPath/$winsdkdll"
-        }
+    ext.WIN.WinSDKDLLNames.each { winsdkdll->
+        ext.WIN.WinSDKDLLs += "$WinSDKDLLsPath/$winsdkdll"
+    }
 }
 else {
+    ext.WIN.WinSDKDLLNames = [
+    ];
     ext.WIN.WinSDKDLLs = [
     ];
 }
