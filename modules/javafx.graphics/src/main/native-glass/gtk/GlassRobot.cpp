@@ -196,7 +196,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseWheel
 
     Display *xdisplay = gdk_x11_get_default_xdisplay();
     int repeat = abs(amt);
-    int button = amt < 0 ? 5 : 4;
+    int button = amt < 0 ? 4 : 5;
     int i;
 
     checkXTest(env);

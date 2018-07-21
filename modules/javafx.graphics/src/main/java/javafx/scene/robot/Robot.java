@@ -224,8 +224,9 @@ public final class Robot {
     }
 
     /**
-     * Scrolls the mouse wheel by the specified amount of wheel clicks. Positive
-     * {@code wheelAmt} scrolls up whereas negative scrolls down.
+     * Scrolls the mouse wheel by the specified amount of wheel clicks. A positive
+     * {@code wheelAmt} scrolls the wheel towards the user (down) whereas negative
+     * amounts scrolls the wheel away from the user (up).
      *
      * @param wheelAmt the (signed) amount of clicks to scroll the wheel
      * @throws IllegalStateException if this method is called on a thread

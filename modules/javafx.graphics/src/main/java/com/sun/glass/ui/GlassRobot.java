@@ -108,10 +108,11 @@ public abstract class GlassRobot {
     public abstract void mouseRelease(MouseButton... buttons);
 
     /**
-     * Scrolls the mouse wheel by the specified amount. Positive {@code wheelAmt}s
-     * scroll up whereas negative scroll down.
+     * Scrolls the mouse wheel by the specified amount of wheel clicks. A positive
+     * {@code wheelAmt} scrolls the wheel towards the user (down) whereas negative
+     * amounts scrolls the wheel away from the user (up).
      *
-     * @param wheelAmt the (signed) amount to scroll the wheel
+     * @param wheelAmt the (signed) amount of clicks to scroll the wheel
      */
     public abstract void mouseWheel(int wheelAmt);
 

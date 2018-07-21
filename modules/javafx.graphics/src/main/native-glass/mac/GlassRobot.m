@@ -375,7 +375,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacRobot__1mouseWheel
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
     {
-        CGEventRef newEvent = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitPixel, 1, (int32_t)wheelAmt);
+        CGEventRef newEvent = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, 1, (int32_t)wheelAmt);
         CGEventPost(kCGHIDEventTap, newEvent);
         CFRelease(newEvent);
     }
