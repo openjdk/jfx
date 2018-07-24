@@ -365,8 +365,8 @@ public class TestApplication extends Application {
                 TestLogShim.log("y = " + robot.getMouseY());
                 TestLogShim.log("targetX = " + targetX);
                 TestLogShim.log("targetY = " + targetY);
-                Assert.assertEquals(targetX, robot.getMouseX());
-                Assert.assertEquals(targetY, robot.getMouseY());
+                Assert.assertEquals(targetX, (int) robot.getMouseX());
+                Assert.assertEquals(targetY, (int) robot.getMouseY());
             });
             frameWait(1);
         } finally {
