@@ -117,8 +117,13 @@ public abstract class GlassRobot {
     public abstract void mouseWheel(int wheelAmt);
 
     /**
-     * Returns the {@link Color} of the pixel at the specified screen coordinates
-     * relative to the primary screen.
+     * Returns the {@link Color} of the pixel at the screen coordinates relative to the
+     * primary screen specified by {@code location}. Regardless of the scale of the screen
+     * ({@link Screen#getOutputScaleX()}, {@link Screen#getOutputScaleY()}), this method only
+     * samples a single pixel. For example, on a HiDPI screen with output scale 2, the screen
+     * unit at the point (x,y) may have 4 pixels. In this case the color returned is the color
+     * of the top, left pixel. Color values are <em>not</em> averaged when a screen unit is
+     * made up of more than one pixel.
      *
      * @param x the x coordinate to get the pixel color from
      * @param y the y coordinate to get the pixel color from

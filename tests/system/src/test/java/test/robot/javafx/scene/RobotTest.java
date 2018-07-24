@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -82,6 +83,7 @@ public class RobotTest {
         test.testMouseClick();
         test.testMouseWheel();
         test.testPixelCapture();
+        test.testPixelCaptureAverage();
         test.testScreenCapture();
         exit();
     }
@@ -226,6 +228,36 @@ public class RobotTest {
             captureColor.set(robot.getPixelColor(x + SIZE / 2, y + SIZE / 2));
         });
         assertColorEquals(Color.CORNFLOWERBLUE, captureColor.get(), TOLERANCE);
+    }
+
+    @Test
+    public void testPixelCaptureAverage() throws Exception {
+        CountDownLatch setSceneLatch = new CountDownLatch(1);
+        Pane pane = new StackPane();
+        InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
+        Util.runAndWait(() -> {
+            pane.setBackground(new Background(new BackgroundFill(Color.RED, null, new Insets(0, 0, 0, 0)),
+                    new BackgroundFill(Color.BLUE, null, new Insets(0, 0, 0, SIZE / 2))));
+            scene = new Scene(pane, SIZE, SIZE);
+            stage.sceneProperty().addListener(observable -> {
+                setSceneLatch.countDown();
+                stage.sceneProperty().removeListener(invalidationListener);
+            });
+            stage.setScene(scene);
+        });
+        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        AtomicReference<Color> captureColor = new AtomicReference<>();
+        Thread.sleep(1000);
+        Util.runAndWait(() -> {
+            int x = (int) stage.getX();
+            int y = (int) stage.getY();
+            // Subtracting one pixel from x makes the result RED, so we are on the border.
+            // If the implementation of getPixelColor is ever chaged to interpolate the
+            // colors on HiDPI screens, this test will fail and the resulting color will
+            // be some combination of RED and BLUE (purple?).
+            captureColor.set(robot.getPixelColor(x + SIZE / 2, y + SIZE / 2));
+        });
+        assertColorEquals(Color.BLUE, captureColor.get(), TOLERANCE);
     }
 
     @Test
