@@ -237,8 +237,13 @@ public final class Robot {
     }
 
     /**
-     * Returns the {@link Color} of the pixel at the specified screen coordinates
-     * relative to the primary screen.
+     * Returns the {@link Color} of the pixel at the screen coordinates relative to the
+     * primary screen specified by {@code location}. Regardless of the scale of the screen
+     * ({@link javafx.stage.Screen#getOutputScaleX()}, {@link javafx.stage.Screen#getOutputScaleY()}),
+     * this method only samples a single pixel. For example, on a HiDPI screen with output
+     * scale 2, the screen unit at the point (x,y) may have 4 pixels. In this case the color
+     * returned is the color of the top, left pixel. Color values are <em>not</em>
+     * averaged when a screen unit is made up of more than one pixel.
      *
      * @param x the x coordinate to get the pixel color from
      * @param y the y coordinate to get the pixel color from
@@ -252,7 +257,12 @@ public final class Robot {
 
     /**
      * Returns the {@link Color} of the pixel at the screen coordinates relative to the
-     * primary screen specified by {@code location}.
+     * primary screen specified by {@code location}. Regardless of the scale of the screen
+     * ({@link javafx.stage.Screen#getOutputScaleX()}, {@link javafx.stage.Screen#getOutputScaleY()}),
+     * this method only samples a single pixel. For example, on a HiDPI screen with output
+     * scale 2, the screen unit at the point (x,y) may have 4 pixels. In this case the color
+     * returned is the color of the top, left pixel. Color values are <em>not</em>
+     * averaged when a screen unit is made up of more than one pixel.
      *
      * @param location the (x,y) coordinates to get the pixel color from
      * @return the pixel color at the specified screen coordinates
