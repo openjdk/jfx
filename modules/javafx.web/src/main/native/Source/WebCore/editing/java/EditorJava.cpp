@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -42,21 +42,9 @@ RefPtr<DocumentFragment> Editor::webContentFromPasteboard(Pasteboard&, Range&, b
     return RefPtr<DocumentFragment>();
 }
 
-void Editor::writeImageToPasteboard(Pasteboard&, Element&, const URL&, const String&)
+void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& element, const URL& url, const String& title)
 {
-    notImplemented();
-#if 0
-    PasteboardImage pasteboardImage;
-
-    if (!getImageForElement(imageElement, pasteboardImage.image))
-        return;
-    ASSERT(pasteboardImage.image);
-
-    pasteboardImage.url.url = imageElement.document().completeURL(stripLeadingAndTrailingHTMLSpaces(elementURL(imageElement)));
-    pasteboardImage.url.title = title;
-    pasteboardImage.url.markup = createMarkup(imageElement, IncludeNode, nullptr, ResolveAllURLs);
-    pasteboard.write(pasteboardImage);
-#endif
+    pasteboard.writeImage(element, url, title);
 }
 
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
