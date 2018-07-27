@@ -91,6 +91,7 @@ public class PlatformImpl {
     private static boolean isThreadMerged = false;
     private static String applicationType = "";
     private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
+    private static CountDownLatch allNestedLoopsExitedLatch = new CountDownLatch(1);
 
     private static final boolean verbose
             = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
@@ -257,6 +258,9 @@ public class PlatformImpl {
 
             @Override
             public void exitedLastNestedLoop() {
+                if (platformExit.get()) {
+                    allNestedLoopsExitedLatch.countDown();
+                }
                 checkIdle();
             }
         };
@@ -568,6 +572,22 @@ public class PlatformImpl {
         }
 
         if (initialized.get()) {
+            if (platformExit.get()) {
+                PlatformImpl.runAndWait(() -> {
+                    if (Toolkit.getToolkit().isNestedLoopRunning()) {
+                        Toolkit.getToolkit().exitAllNestedEventLoops();
+                    } else {
+                        allNestedLoopsExitedLatch.countDown();
+                    }
+                }, true);
+
+                try {
+                    allNestedLoopsExitedLatch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Could not exit all nested event loops");
+                }
+            }
+
             // Always call toolkit exit on FX app thread
 //            System.err.println("PlatformImpl.tkExit: scheduling Toolkit.exit");
             PlatformImpl.runAndWait(() -> {

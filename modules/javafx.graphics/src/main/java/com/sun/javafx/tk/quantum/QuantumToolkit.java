@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -610,6 +610,15 @@ public final class QuantumToolkit extends Toolkit {
         EventLoop eventLoop = eventLoopMap.get(key);
         eventLoopMap.remove(key);
         eventLoop.leave(rval);
+    }
+
+    @Override public void exitAllNestedEventLoops() {
+        checkFxUserThread();
+        for (EventLoop eventLoop : eventLoopMap.values()) {
+            eventLoop.leave(null);
+        }
+        eventLoopMap.clear();
+        eventLoopMap = null;
     }
 
     @Override public TKStage createTKPopupStage(Window peerWindow,
