@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -491,7 +491,7 @@ Vector<uint8_t> ImageBuffer::toData(const String& mimeType, std::optional<double
         static jmethodID midToData = env->GetMethodID(
                 PG_GetImageClass(env),
                 "toData",
-                "(Ljava/lang/String;)Ljava/lang/String;");
+                "(Ljava/lang/String;)[B");
         ASSERT(midToData);
 
         JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
