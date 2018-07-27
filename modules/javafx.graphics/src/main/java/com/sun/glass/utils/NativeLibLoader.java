@@ -197,7 +197,7 @@ public class NativeLibLoader {
                     boolean hasdep = installLibraryFromResource(dep, null, caller, false);
                 }
             }
-            String reallib = "/"+libPrefix+libraryName+libSuffix;
+            String reallib = "/"+System.mapLibraryName(libraryName);
             InputStream is = caller.getResourceAsStream(reallib);
             if (is != null) {
                 String fp = cacheLibrary(is, reallib, caller);
