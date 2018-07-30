@@ -368,6 +368,21 @@ public class FXCanvas extends Canvas {
         Platform.runLater(()-> Application.GetApplication().setName(name));
     }
 
+    // Work around because SWT does not send reparent events but Control#setParent
+    // calls reskin(SWT.ALL) so this implementation detail can be used to update
+    // the current x/y position of the embedded stage
+    //
+    // There are other situations where reskin() is called but they are not frequent
+    // and the only harm is that we potentially recompute the location although it did
+    // not change in reality
+    @Override
+    public void reskin(int flags) {
+        super.reskin(flags);
+        if (flags == SWT.ALL) {
+            sendMoveEventToFX();
+        }
+    }
+
     static ArrayList<DropTarget> targets = new ArrayList<>();
 
     DropTarget getDropTarget() {
