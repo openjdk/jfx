@@ -129,6 +129,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
         pickerColorBox.getChildren().add(colorRect);
         displayNode.setGraphic(pickerColorBox);
+
+        if (control.isShowing()) {
+            show();
+        }
     }
 
 
