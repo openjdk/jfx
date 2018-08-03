@@ -715,7 +715,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @param hueShift the hue shift
      * @param saturationFactor the saturation factor
      * @param brightnessFactor the brightness factor
-     * @param opacityFactor the brightness factor
+     * @param opacityFactor the opacity factor
      * @return a {@code Color} based based on this {@code Color} with hue,
      * saturation, brightness and opacity values altered.
      */

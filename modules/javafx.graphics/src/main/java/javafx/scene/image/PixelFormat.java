@@ -209,7 +209,7 @@ public abstract class PixelFormat<T extends Buffer> {
      * <p>
      * Pixels in this format can be decoded using the following sample code:
      * <pre>{@code
-     *     int pixel = array[rowstart + x] &amp; 0xff;
+     *     int pixel = array[rowstart + x] & 0xff;
      *     int argb  = colors[pixel];
      *
      *     int alpha = ((argb >> 24) & 0xff);
@@ -237,7 +237,7 @@ public abstract class PixelFormat<T extends Buffer> {
      * <p>
      * Pixels in this format can be decoded using the following sample code:
      * <pre>{@code
-     *     int pixel = array[rowstart + x] &amp; 0xff;
+     *     int pixel = array[rowstart + x] & 0xff;
      *     int argb  = colors[pixel];
      *
      *     int alpha = ((argb >> 24) & 0xff);

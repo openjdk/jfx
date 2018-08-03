@@ -29,18 +29,18 @@ import java.lang.ref.WeakReference;
 import javafx.beans.NamedArg;
 
 /**
- * A {@code WeakInvalidationListener} can be used, if an {@link Observable}
+ * A {@code WeakInvalidationListener} can be used if an {@link Observable}
  * should only maintain a weak reference to the listener. This helps to avoid
- * memory leaks, that can occur if observers are not unregistered from observed
+ * memory leaks that can occur if observers are not unregistered from observed
  * objects after use.
  * <p>
- * {@code WeakInvalidationListener} are created by passing in the original
+ * A {@code WeakInvalidationListener} is created by passing in the original
  * {@link InvalidationListener}. The {@code WeakInvalidationListener} should
  * then be registered to listen for changes of the observed object.
  * <p>
- * Note: You have to keep a reference to the {@code InvalidationListener}, that
- * was passed in as long as it is in use, otherwise it will be garbage collected
- * to soon.
+ * Note: You have to keep a reference to the {@code InvalidationListener} that
+ * was passed in as long as it is in use, otherwise it can be garbage collected
+ * too soon.
  *
  * @see InvalidationListener
  * @see Observable

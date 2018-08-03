@@ -31,7 +31,7 @@ import javafx.beans.value.ObservableValue;
  * An {@code InvalidationListener} is notified whenever an
  * {@link Observable} becomes invalid. It can be registered and
  * unregistered with {@link Observable#addListener(InvalidationListener)}
- * respectively {@link Observable#removeListener(InvalidationListener)}
+ * respectively {@link Observable#removeListener(InvalidationListener)}.
  * <p>
  * For an in-depth explanation of invalidation events and how they differ from
  * change events, see the documentation of {@code ObservableValue}.

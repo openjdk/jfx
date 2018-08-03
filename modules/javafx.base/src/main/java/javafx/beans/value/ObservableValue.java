@@ -44,8 +44,8 @@ import javafx.beans.Observable;
  * <p>
  * An {@code ObservableValue} generates two types of events: change events and
  * invalidation events. A change event indicates that the value has changed. An
- * invalidation event is generated, if the current value is not valid anymore.
- * This distinction becomes important, if the {@code ObservableValue} supports
+ * invalidation event is generated if the current value is not valid anymore.
+ * This distinction becomes important if the {@code ObservableValue} supports
  * lazy evaluation, because for a lazily evaluated value one does not know if an
  * invalid value really has changed until it is recomputed. For this reason,
  * generating change events requires eager evaluation while invalidation events
@@ -108,7 +108,7 @@ public interface ObservableValue<T> extends Observable {
     void addListener(ChangeListener<? super T> listener);
 
     /**
-     * Removes the given listener from the list of listeners, that are notified
+     * Removes the given listener from the list of listeners that are notified
      * whenever the value of the {@code ObservableValue} changes.
      * <p>
      * If the given listener has not been previously registered (i.e. it was

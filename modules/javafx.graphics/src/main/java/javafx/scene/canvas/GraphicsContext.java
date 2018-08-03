@@ -706,7 +706,7 @@ public final class GraphicsContext {
         }
         buf.putByte(NGCanvas.PATHEND);
         // Transform needs to be updated for rendering attributes even though
-        // we have already trasnformed the points as we sent them.
+        // we have already transformed the points as we sent them.
         updateTransform();
         buf.putByte(command);
         // Now that we have changed the PG layer path, we need to mark our path dirty.
@@ -793,7 +793,7 @@ public final class GraphicsContext {
     private void reset() {
         GrowableDataBuffer buf = getBuffer();
         // Only reset if we have a significant amount of data to omit,
-        // this prevents a common occurence of "setFill(bg); fillRect();"
+        // this prevents a common occurrence of "setFill(bg); fillRect();"
         // at the start of a session from invoking a reset.
         // But, do a reset anyway if the rendering layer has been falling
         // behind because that lets the synchronization step throw out the
@@ -2609,7 +2609,7 @@ public final class GraphicsContext {
 
     /**
      * Draws an image into the given destination rectangle of the canvas. The
-     * Image is scaled to fit into the destination rectagnle.
+     * Image is scaled to fit into the destination rectangle.
      * A {@code null} image value or an image still in progress will be ignored.
      * <p>
      * This method will be affected by any of the

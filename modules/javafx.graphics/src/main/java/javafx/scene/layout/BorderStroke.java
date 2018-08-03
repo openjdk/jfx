@@ -32,16 +32,17 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.StrokeType;
 
 /**
- * Defines the stroke to use on a Border for styling a Region. The
- * stroke is a vector-based rendering that outlines the border area.
- * It can be inset (or outset) from the Region's edge, and the values
- * of the stroke are taken into account when computing the Region's
- * insets (for defining the content area). The stroke visuals are
- * not used when any BorderImages are in use.
+ * Defines the stroke to use on a {@link Border} for styling a {@code Region}.
+ * The stroke is a vector-based rendering that outlines the border area.
+ * It can be inset (or outset) from the {@code Region}'s edge, and the values
+ * of the stroke are taken into account when computing the {@code Region}'s
+ * insets (for defining the content area). The stroke visuals are not used when
+ * any {@link BorderImage}s are in use.
  * <p>
- * When applied to a Region with a defined shape, the border width
- * and stroking information for the {@code top} is used, while the
- * other attributes are ignored.
+ * When applied to a {@code Region} with a defined shape, the border width
+ * and stroking information for the {@code top} is used, while the other
+ * attributes are ignored.
+ *
  * @since JavaFX 8.0
  */
 public class BorderStroke {
@@ -70,7 +71,7 @@ public class BorderStroke {
      * Defines the fill of top side of this border.
      *
      * @return the fill of top side of this border
-     * @defaultValue black
+     * @defaultValue {@code Color.BLACK}
      */
     public final Paint getTopStroke() { return topStroke; }
     final Paint topStroke;
@@ -79,31 +80,31 @@ public class BorderStroke {
     // we use inherit. But first I'd like a performance analysis.
 
     /**
-     * Defines the fill of right side of this border. If {@code null} then the
-     * topFill is used.
+     * Defines the fill of right side of this border. If {@code null}, then the
+     * {@code topFill} is used.
      *
      * @return the fill of right side of this border
-     * @defaultValue null = same as topFill
+     * @defaultValue {@code null} (same as {@code topFill})
      */
     public final Paint getRightStroke() { return rightStroke; }
     final Paint rightStroke;
 
     /**
-     * Defines the fill of bottom side of this border. If {@code null} then the
-     * topFill is used.
+     * Defines the fill of bottom side of this border. If {@code null}, then the
+     * {@code topFill} is used.
      *
      * @return the fill of bottom side of this border
-     * @defaultValue null = same as topFill
+     * @defaultValue {@code null} (same as {@code topFill})
      */
     public final Paint getBottomStroke() { return bottomStroke; }
     final Paint bottomStroke;
 
     /**
-     * Defines the fill of left side of this border. If {@code null} then the
-     * rightFill is used.
+     * Defines the fill of left side of this border. If {@code null}, then the
+     * {@code rightFill} is used.
      *
      * @return the fill of left side of this border
-     * @defaultValue null = same sa rightFill
+     * @defaultValue {@code null} (same as {@code rightFill})
      */
     public final Paint getLeftStroke() { return leftStroke; }
     final Paint leftStroke;
@@ -112,55 +113,55 @@ public class BorderStroke {
      * Defines the style of top side of this border.
      *
      * @return the style of top side of this border
-     * @defaultValue none
+     * @defaultValue {@code BorderStrokeStyle.NONE}
      */
     public final BorderStrokeStyle getTopStyle() { return topStyle; }
     final BorderStrokeStyle topStyle;
 
     /**
-     * Defines the style of right side of this border. If {@code null} then
-     * topStyle is used;
+     * Defines the style of right side of this border. If {@code null}, then
+     * {@code topStyle} is used;
      *
      * @return the style of right side of this border
-     * @defaultValue null = same as topStyle
+     * @defaultValue {@code null} (same as {@code topStyle})
      */
     public final BorderStrokeStyle getRightStyle() { return rightStyle; }
     final BorderStrokeStyle rightStyle;
 
     /**
-     * Defines the style of bottom side of this border. If {@code null} then
-     * topStyle is used;  Use BorderStyle.NONE to set the border to
+     * Defines the style of bottom side of this border. If {@code null}, then
+     * {@code topStyle} is used;  Use {@code BorderStyle.NONE} to set the border to
      * have no border style.
      *
      * @return the style of bottom side of this border
-     * @defaultValue null = same as topStyle
+     * @defaultValue {@code null} (same as {@code topStyle})
      */
     public final BorderStrokeStyle getBottomStyle() { return bottomStyle; }
     final BorderStrokeStyle bottomStyle;
 
     /**
-     * Defines the style of left side of this border. If {@code null} then
-     * rightStyle is used. Use BorderStyle.NONE to set the border to
+     * Defines the style of left side of this border. If {@code null}, then
+     * {@code rightStyle} is used. Use {@code BorderStyle.NONE} to set the border to
      * have no border style.
      *
      * @return the style of left side of this border
-     * @defaultValue null = same as rightStyle
+     * @defaultValue {@code null} (same as {@code rightStyle})
      */
     public final BorderStrokeStyle getLeftStyle() { return leftStyle; }
     final BorderStrokeStyle leftStyle;
 
     /**
-     * Defines the thickness of each side of the BorderStroke. This will never
-     * be null, and defaults to DEFAULT_WIDTHS.
-     * @return the thickness of each side of the BorderStroke
+     * Defines the thickness of each side of the {@code BorderStroke}. This will never
+     * be {@code null}, and defaults to {@code DEFAULT_WIDTHS}.
+     * @return the thickness of each side of the {@code BorderStroke}
      */
     public final BorderWidths getWidths() { return widths; }
     final BorderWidths widths;
 
     /**
-     * Defines the insets of each side of the BorderStroke. This will never
-     * be null, and defaults to EMPTY.
-     * @return the insets of each side of the BorderStroke
+     * Defines the insets of each side of the {@code BorderStroke}. This will never
+     * be {@code null}, and defaults to {@code Insets.EMPTY}.
+     * @return the insets of each side of the {@code BorderStroke}
      */
     public final Insets getInsets() { return insets; }
     final Insets insets;
@@ -170,9 +171,9 @@ public class BorderStroke {
     final Insets outerEdge;
 
     /**
-     * Defines the radii for each corner of this BorderStroke. This will never
-     * be null, and defaults to CornerRadii.EMPTY.
-     * @return the radii for each corner of this BorderStroke
+     * Defines the radii for each corner of this {@code BorderStroke}. This will never
+     * be {@code null}, and defaults to {@code CornerRadii.EMPTY}.
+     * @return the radii for each corner of this {@code BorderStroke}
      */
     public final CornerRadii getRadii() { return radii; }
      /* TODO I should change CornerRadii to be 4 properties, one for each corner,
@@ -181,9 +182,9 @@ public class BorderStroke {
     private final CornerRadii radii;
 
     /**
-     * An uniform stroke has all (top, bottom, left, right) strokes of
-     * same color, width and style
-     * @return true if border stroke is uniform as defined above
+     * Checks if the stroke of this region is uniform. A uniform stroke has all its side
+     * strokes (top, bottom, left, right) of same color, width and style.
+     * @return {@code true} if border stroke is uniform
      */
     public final boolean isStrokeUniform() { return strokeUniform; }
     private final boolean strokeUniform;
@@ -194,12 +195,12 @@ public class BorderStroke {
     private final int hash;
 
     /**
-     * Creates a new BorderStroke.
+     * Creates a new {@code BorderStroke}.
      *
-     * @param stroke    The stroke to use for all sides. If null, we default to Color.BLACK.
-     * @param style     The style to use for all sides. If null, we default to BorderStrokeStyle.NONE
-     * @param radii     The radii to use. If null, we default to CornerRadii.EMPTY
-     * @param widths    The widths to use. If null, we default to DEFAULT_WIDTHS
+     * @param stroke    The stroke to use for all sides. If {@code null}, defaults to {@code Color.BLACK}.
+     * @param style     The style to use for all sides. If {@code null}, defaults to {@code BorderStrokeStyle.NONE}.
+     * @param radii     The radii to use. If {@code null}, defaults to {@code CornerRadii.EMPTY}.
+     * @param widths    The widths to use. If {@code null}, defaults to {@code DEFAULT_WIDTHS}.
      */
     public BorderStroke(@NamedArg("stroke") Paint stroke, @NamedArg("style") BorderStrokeStyle style, @NamedArg("radii") CornerRadii radii, @NamedArg("widths") BorderWidths widths) {
         // TODO: Note that we default to THIN, not to MEDIUM as the CSS spec says. So it will be
@@ -236,32 +237,34 @@ public class BorderStroke {
     }
 
     /**
-     * Creates a new BorderStroke.
+     * Creates a new {@code BorderStroke}.
      *
-     * @param stroke    The stroke to use for all sides. If null, we default to Color.BLACK.
-     * @param style     The style to use for all sides. If null, we default to BorderStrokeStyle.NONE
-     * @param radii     The radii to use. If null, we default to CornerRadii.EMPTY
-     * @param widths    The widths to use. If null, we default to DEFAULT_WIDTHS
+     * @param stroke    The stroke to use for all sides. If {@code null}, defaults to {@code Color.BLACK}.
+     * @param style     The style to use for all sides. If {@code null}, defaults to {@code BorderStrokeStyle.NONE}.
+     * @param radii     The radii to use. If {@code null}, defaults to {@code CornerRadii.EMPTY}.
+     * @param widths    The widths to use. If {@code null}, defaults to {@code DEFAULT_WIDTHS}.
      * @param insets    The insets indicating where to draw the border relative to the region edges.
+     *                  If {@code null}, defaults to {@code Insets.EMPTY}.
      */
     public BorderStroke(@NamedArg("stroke") Paint stroke, @NamedArg("style") BorderStrokeStyle style, @NamedArg("radii") CornerRadii radii, @NamedArg("widths") BorderWidths widths, @NamedArg("insets") Insets insets) {
         this(stroke, stroke, stroke, stroke, style, style, style, style, radii, widths, insets);
     }
 
     /**
-     * Create a new BorderStroke, specifying all construction parameters.
+     * Creates a new {@code BorderStroke}, specifying all construction parameters.
      *
-     * @param topStroke       The fill to use on the top. If null, defaults to BLACK.
-     * @param rightStroke     The fill to use on the right. If null, defaults to the same value as topStroke
-     * @param bottomStroke    The fill to use on the bottom. If null, defaults to the same value as bottomStroke
-     * @param leftStroke      The fill to use on the left. If null, defaults to the same value as rightStroke
-     * @param topStyle        The style to use on the top. If null, defaults to BorderStrokeStyle.NONE
-     * @param rightStyle      The style to use on the right. If null, defaults to the same value as topStyle
-     * @param bottomStyle     The style to use on the bottom. If null, defaults to the same value as topStyle
-     * @param leftStyle       The style to use on the left. If null, defaults to the same value as rightStyle
-     * @param radii           The radii. If null, we default to square corners by using CornerRadii.EMPTY
-     * @param widths          The thickness of each side. If null, we default to DEFAULT_WIDTHS.
-     * @param insets    The insets indicating where to draw the border relative to the region edges.
+     * @param topStroke       The fill to use on the top. If {@code null}, defaults to {@code Color.BLACK}.
+     * @param rightStroke     The fill to use on the right. If {@code null}, defaults to the same value as {@code topStroke}.
+     * @param bottomStroke    The fill to use on the bottom. If {@code null}, defaults to the same value as {@code topStroke}.
+     * @param leftStroke      The fill to use on the left. If {@code null}, defaults to the same value as {@code rightStroke}.
+     * @param topStyle        The style to use on the top. If {@code null}, defaults to {@code BorderStrokeStyle.NONE}.
+     * @param rightStyle      The style to use on the right. If {@code null}, defaults to the same value as {@code topStyle}.
+     * @param bottomStyle     The style to use on the bottom. If {@code null}, defaults to the same value as {@code topStyle}.
+     * @param leftStyle       The style to use on the left. If {@code null}, defaults to the same value as {@code rightStyle}.
+     * @param radii           The radii. If {@code null}, defaults to square corners by using {@code CornerRadii.EMPTY}.
+     * @param widths          The thickness of each side. If {@code null}, defaults to {@code DEFAULT_WIDTHS}.
+     * @param insets          The insets indicating where to draw the border relative to the region edges.
+     *                        If {@code null}, defaults to {@code Insets.EMPTY}.
      */
     public BorderStroke(
             @NamedArg("topStroke") Paint topStroke, @NamedArg("rightStroke") Paint rightStroke, @NamedArg("bottomStroke") Paint bottomStroke, @NamedArg("leftStroke") Paint leftStroke,
