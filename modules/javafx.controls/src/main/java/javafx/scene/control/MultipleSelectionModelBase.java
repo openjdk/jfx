@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -751,7 +751,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 } else if (size == 1) {
                     _beginChange();
                     int _index = sortedNewIndices.get(0);
-                    _nextAdd(_index, _index + 1);
+                    int indicesIndex = indexOf(_index);
+                    _nextAdd(indicesIndex, indicesIndex + 1);
                     _endChange();
                 } else {
                     _beginChange();
