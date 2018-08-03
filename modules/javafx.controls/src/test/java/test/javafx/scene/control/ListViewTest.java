@@ -1947,4 +1947,32 @@ public class ListViewTest {
 
         sl.dispose();
     }
+
+    @Test
+    public void testEventIndicesOnSelectRange() {
+        ObservableList<String> listItems = FXCollections.observableArrayList("zero", "one", "two", "three");
+        final ListView<String> lv = new ListView<>();
+        lv.setItems(listItems);
+        MultipleSelectionModel<String> sm = lv.getSelectionModel();
+
+        int selected = 1;
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.select(selected);
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) ch -> {
+            if (ch.next()) {
+                assertEquals("Two items should be selected.", 2, ch.getList().size());
+                assertEquals("Selection range should be from index 1 ", 1, ch.getFrom());
+                assertEquals("Selection range should be till index 2 ", 2, ch.getTo());
+            } else {
+                fail("Change event is expected when selection is changed.");
+            }
+        });
+        int focus = lv.getFocusModel().getFocusedIndex();
+        assertEquals("Selected item should be focused.", selected, focus);
+        // Select the next element
+        sm.selectRange(selected, focus + 2);
+        assertEquals("Two items should be selected.", 2, sm.getSelectedIndices().size());
+        assertEquals("List item at index 1 should be selected", 1, (int) sm.getSelectedIndices().get(0));
+        assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
+    }
 }

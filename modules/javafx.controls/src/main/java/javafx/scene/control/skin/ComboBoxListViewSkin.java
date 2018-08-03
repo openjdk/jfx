@@ -34,6 +34,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -190,6 +191,11 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (comboBox.isShowing()) {
             show();
         }
+        comboBox.sceneProperty().addListener(o -> {
+            if (((ObservableValue)o).getValue() == null) {
+                comboBox.hide();
+            }
+        });
     }
 
 

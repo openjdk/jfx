@@ -501,6 +501,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         getSkinnable().sceneProperty().addListener(o -> {
             if (((ObservableValue)o).getValue() == null) {
                 hide();
+            } else if (getSkinnable().isShowing()) {
+                show();
             }
         });
 
