@@ -25,12 +25,12 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.Invoker;
 import com.sun.webkit.WebPage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import static java.lang.String.format;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -45,17 +45,12 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLException;
@@ -64,7 +59,7 @@ import javax.net.ssl.SSLSocket;
 final class SocketStreamHandle {
     private static final Pattern FIRST_LINE_PATTERN = Pattern.compile(
             "^HTTP/1.[01]\\s+(\\d{3})(?:\\s.*)?$");
-    private static final Logger logger = Logger.getLogger(
+    private static final PlatformLogger logger = PlatformLogger.getLogger(
             SocketStreamHandle.class.getName());
     private static final ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
             0, Integer.MAX_VALUE,
@@ -99,7 +94,7 @@ final class SocketStreamHandle {
     {
         final SocketStreamHandle ssh =
                 new SocketStreamHandle(host, port, ssl, webPage, data);
-        logger.log(Level.FINEST, "Starting {0}", ssh);
+        logger.finest("Starting {0}", ssh);
         threadPool.submit(() -> {
             ssh.run();
         });
@@ -108,7 +103,7 @@ final class SocketStreamHandle {
 
     private void run() {
         if (webPage == null) {
-            logger.log(Level.FINEST, "{0} is not associated with any web "
+            logger.finest("{0} is not associated with any web "
                     + "page, aborted", this);
             // In theory we could pump this error through the doRun()'s
             // error handling code but in that case that error handling
@@ -128,10 +123,10 @@ final class SocketStreamHandle {
         Throwable error = null;
         String errorDescription = null;
         try {
-            logger.log(Level.FINEST, "{0} started", this);
+            logger.finest("{0} started", this);
             connect();
             connected = true;
-            logger.log(Level.FINEST, "{0} connected", this);
+            logger.finest("{0} connected", this);
             didOpen();
             InputStream is = socket.getInputStream();
             while (true) {
@@ -139,13 +134,12 @@ final class SocketStreamHandle {
                 int n = is.read(buffer);
                 if(n > 0) {
                     if (logger.isLoggable(Level.FINEST)) {
-                        logger.log(Level.FINEST, format("%s received len: [%d],"
-                                + " data:%s", this, n, dump(buffer, n)));
+                        logger.finest(format("%s received len: [%d], data:%s",
+                                this, n, dump(buffer, n)));
                     }
                     didReceiveData(buffer, n);
                 } else {
-                    logger.log(Level.FINEST, "{0} connection closed by "
-                            + "remote host", this);
+                    logger.finest("{0} connection closed by remote host", this);
                     break;
                 }
             }
@@ -164,7 +158,7 @@ final class SocketStreamHandle {
         } catch (SocketException ex) {
             if (state != State.ACTIVE) {
                 if (logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, format("%s exception (most "
+                    logger.finest(format("%s exception (most "
                             + "likely caused by local close)", this), ex);
                 }
             } else {
@@ -187,10 +181,9 @@ final class SocketStreamHandle {
         if (error != null) {
             if (errorDescription == null) {
                 errorDescription = "Unknown error";
-                logger.log(Level.WARNING, format("%s unexpected error", this),
-                           error);
+                logger.warning(format("%s unexpected error", this), error);
             } else {
-                logger.log(Level.FINEST, format("%s exception", this), error);
+                logger.finest(format("%s exception", this), error);
             }
             didFail(0, errorDescription);
         }
@@ -200,7 +193,7 @@ final class SocketStreamHandle {
         } catch (IOException ignore) {}
         didClose();
 
-        logger.log(Level.FINEST, "{0} finished", this);
+        logger.finest("{0} finished", this);
     }
 
     private void connect() throws IOException {
@@ -224,18 +217,15 @@ final class SocketStreamHandle {
                 throw new IOException(ex);
             }
             if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, format("%s selecting proxies "
-                        + "for: [%s]", this, uri));
+                logger.finest(format("%s selecting proxies for: [%s]", this, uri));
             }
             List<Proxy> proxies = proxySelector.select(uri);
             if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, format("%s selected proxies: %s",
-                        this, proxies));
+                logger.finest(format("%s selected proxies: %s", this, proxies));
             }
             for (Proxy proxy : proxies) {
                 if (logger.isLoggable(Level.FINEST)) {
-                    logger.log(Level.FINEST, format("%s trying proxy: [%s]",
-                            this, proxy));
+                    logger.finest(format("%s trying proxy: [%s]", this, proxy));
                 }
                 if (proxy.type() == Proxy.Type.DIRECT) {
                     triedDirectConnection = true;
@@ -245,7 +235,7 @@ final class SocketStreamHandle {
                     success = true;
                     break;
                 } catch (IOException ex) {
-                    logger.log(Level.FINEST, format("%s exception", this), ex);
+                    logger.finest(format("%s exception", this), ex);
                     lastException = ex;
                     if (proxy.address() != null) {
                         proxySelector.connectFailed(uri, proxy.address(), ex);
@@ -255,7 +245,7 @@ final class SocketStreamHandle {
             }
         }
         if (!success && !triedDirectConnection) {
-            logger.log(Level.FINEST, "{0} trying direct connection", this);
+            logger.finest("{0} trying direct connection", this);
             connect(Proxy.NO_PROXY);
             success = true;
         }
@@ -272,12 +262,12 @@ final class SocketStreamHandle {
             socket = new Socket(proxy);
         }
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, format("%s connecting to: [%s:%d]",
+            logger.finest(format("%s connecting to: [%s:%d]",
                     this, host, port));
         }
         socket.connect(new InetSocketAddress(host, port));
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, format("%s connected to: [%s:%d]",
+            logger.finest(format("%s connected to: [%s:%d]",
                     this, host, port));
         }
         if (ssl) {
@@ -285,7 +275,7 @@ final class SocketStreamHandle {
                 if (state != State.ACTIVE) {
                     throw new SocketException("Close requested");
                 }
-                logger.log(Level.FINEST, "{0} starting SSL handshake", this);
+                logger.finest("{0} starting SSL handshake", this);
                 socket = HttpsURLConnection.getDefaultSSLSocketFactory()
                         .createSocket(socket, host, port, true);
             }
@@ -295,7 +285,7 @@ final class SocketStreamHandle {
 
     private int fwkSend(byte[] buffer) {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, format("%s sending len: [%d], data:%s",
+            logger.finest(format("%s sending len: [%d], data:%s",
                     this, buffer.length, dump(buffer, buffer.length)));
         }
         if (connected) {
@@ -303,12 +293,12 @@ final class SocketStreamHandle {
                 socket.getOutputStream().write(buffer);
                 return buffer.length;
             } catch (IOException ex) {
-                logger.log(Level.FINEST, format("%s exception", this), ex);
+                logger.finest(format("%s exception", this), ex);
                 didFail(0, "I/O error");
                 return 0;
             }
         } else {
-            logger.log(Level.FINEST, "{0} not connected", this);
+            logger.finest("{0} not connected", this);
             didFail(0, "Not connected");
             return 0;
         }
@@ -316,7 +306,7 @@ final class SocketStreamHandle {
 
     private void fwkClose() {
         synchronized (this) {
-            logger.log(Level.FINEST, "{0}", this);
+            logger.finest("{0}", this);
             state = State.CLOSE_REQUESTED;
             try {
                 if (socket != null) {
@@ -327,7 +317,7 @@ final class SocketStreamHandle {
     }
 
     private void fwkNotifyDisposed() {
-        logger.log(Level.FINEST, "{0}", this);
+        logger.finest("{0}", this);
         state = State.DISPOSED;
     }
 
@@ -364,13 +354,13 @@ final class SocketStreamHandle {
     }
 
     private void notifyDidOpen() {
-        logger.log(Level.FINEST, "{0}", this);
+        logger.finest("{0}", this);
         twkDidOpen(data);
     }
 
     private void notifyDidReceiveData(byte[] buffer, int len) {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, format("%s, len: [%d], data:%s",
+            logger.finest(format("%s, len: [%d], data:%s",
                     this, len, dump(buffer, len)));
         }
         twkDidReceiveData(buffer, len, data);
@@ -378,7 +368,7 @@ final class SocketStreamHandle {
 
     private void notifyDidFail(int errorCode, String errorDescription) {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, format("%s, errorCode: %d, "
+            logger.finest(format("%s, errorCode: %d, "
                     + "errorDescription: %s",
                     this, errorCode, errorDescription));
         }
@@ -386,7 +376,7 @@ final class SocketStreamHandle {
     }
 
     private void notifyDidClose() {
-        logger.log(Level.FINEST, "{0}", this);
+        logger.finest("{0}", this);
         twkDidClose(data);
     }
 

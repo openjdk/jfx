@@ -27,15 +27,11 @@ package com.sun.webkit.plugin;
 
 import java.io.IOError;
 import java.net.URL;
-import java.util.logging.Logger;
 
 import com.sun.webkit.graphics.WCGraphicsContext;
 
 
 final class DefaultPlugin implements Plugin {
-
-    private final static Logger log =
-        Logger.getLogger("com.sun.browser.plugin.DefaultPlugin");
 
     //private JLabel nullComp;
 

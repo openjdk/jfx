@@ -25,6 +25,7 @@
 
 package com.sun.webkit.graphics;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.webkit.SharedBuffer;
 import com.sun.webkit.SimpleSharedBufferInputStream;
 import java.io.IOException;
@@ -34,13 +35,11 @@ import java.util.HashMap;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public abstract class WCGraphicsManager {
 
-    private static final Logger logger =
-            Logger.getLogger(WCGraphicsManager.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(WCGraphicsManager.class.getName());
 
     private final AtomicInteger idCount = new AtomicInteger(0);
 
@@ -79,9 +78,7 @@ public abstract class WCGraphicsManager {
             return createFontCustomPlatformData(
                     new SimpleSharedBufferInputStream(sharedBuffer));
         } catch (IOException ex) {
-            logger.log(Level.FINEST,
-                       "Error creating font custom platform data",
-                       ex);
+            logger.finest("Error creating font custom platform data", ex);
             return null;
         }
     }

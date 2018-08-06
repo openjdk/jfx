@@ -31,6 +31,7 @@ import com.sun.javafx.fxml.builder.JavaFXSceneBuilder;
 import com.sun.javafx.fxml.builder.ProxyBuilder;
 import com.sun.javafx.fxml.builder.TriangleMeshBuilder;
 import com.sun.javafx.fxml.builder.URLBuilder;
+import com.sun.javafx.logging.PlatformLogger;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -48,8 +49,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
@@ -310,15 +309,15 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
 
                         m.invoke(builder, new Object[] { BeanAdapter.coerce(value, type) });
                     } catch (Exception e) {
-                        Logger.getLogger(ObjectBuilderWrapper.class.getName()).log(Level.WARNING,
-                                "Method " + m.getName() + " failed", e);
+                        String msg = "Method " + m.getName() + " failed";
+                        PlatformLogger.getLogger(ObjectBuilderWrapper.class.getName()).warning(msg, e);
                     }
                     //TODO Is it OK to return null here?
                     return null;
                 } catch (Exception e) {
                     //TODO Should be reported
-                    Logger.getLogger(ObjectBuilderWrapper.class.getName()).log(Level.WARNING,
-                            "Failed to set "+getTargetClass()+"."+key+" using "+builderClass, e);
+                    String msg = "Failed to set " + getTargetClass()+"." + key + " using " + builderClass;
+                    PlatformLogger.getLogger(ObjectBuilderWrapper.class.getName()).warning(msg, e);
                     return null;
                 }
             }

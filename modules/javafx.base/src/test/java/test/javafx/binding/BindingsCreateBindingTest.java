@@ -40,7 +40,6 @@ import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -56,8 +55,6 @@ public class BindingsCreateBindingTest<T> {
     private static final float EPSILON_FLOAT = 1e-5f;
     private static final double EPSILON_DOUBLE = 1e-10;
 
-    private static final ErrorLoggingUtiltity log = new ErrorLoggingUtiltity();
-
     private static interface Functions<S> {
         public Binding<S> create(Callable<S> func, Observable... dependencies);
         public void check(S value0, S value1);
@@ -72,12 +69,7 @@ public class BindingsCreateBindingTest<T> {
 
     @BeforeClass
     public static void setUpClass() {
-        log.start();
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        log.stop();
+        ErrorLoggingUtiltity.reset();
     }
 
     public BindingsCreateBindingTest(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
@@ -114,7 +106,7 @@ public class BindingsCreateBindingTest<T> {
         final Binding<T> binding2 = f.create(func2, new Observable [0]);
 
         f.check(defaultValue, binding2.getValue());
-        log.check(java.util.logging.Level.WARNING, Exception.class);
+        ErrorLoggingUtiltity.checkWarning(Exception.class);
         assertTrue(binding2.getDependencies().isEmpty());
         binding2.dispose();
     }

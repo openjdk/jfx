@@ -25,6 +25,7 @@
 
 package javafx.scene.web;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.web.Debugger;
 import com.sun.javafx.scene.web.Printable;
 import com.sun.javafx.tk.TKPulseListener;
@@ -69,8 +70,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static com.sun.webkit.LoadListenerClient.*;
 
@@ -346,8 +345,8 @@ final public class WebEngine {
         Utilities.setUtilities(new UtilitiesImpl());
     }
 
-    private static final Logger logger =
-            Logger.getLogger(WebEngine.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(WebEngine.class.getName());
 
     /**
      * The number of instances of this class.
@@ -1006,8 +1005,7 @@ final public class WebEngine {
                 userDataDir = nominalUserDataDir;
                 displayString = userDataDir.toString();
             }
-            logger.log(Level.FINE, "Trying to apply user data "
-                    + "directory [{0}]", displayString);
+            logger.fine("Trying to apply user data directory [{0}]", displayString);
             String errorMessage;
             EventType<WebErrorEvent> errorType;
             Throwable error;
@@ -1032,7 +1030,7 @@ final public class WebEngine {
                 page.setLocalStorageDatabasePath(localStorageDir.getPath());
                 page.setLocalStorageEnabled(true);
 
-                logger.log(Level.FINE, "User data directory [{0}] has "
+                logger.fine("User data directory [{0}] has "
                         + "been applied successfully", displayString);
                 return;
 
@@ -1053,18 +1051,16 @@ final public class WebEngine {
             }
 
             errorMessage = format(errorMessage, displayString);
-            logger.log(Level.FINE, "{0}, calling error handler", errorMessage);
+            logger.fine("{0}, calling error handler", errorMessage);
             File oldNominalUserDataDir = nominalUserDataDir;
             fireError(errorType, errorMessage, error);
             nominalUserDataDir = getUserDataDirectory();
             if (Objects.equals(nominalUserDataDir, oldNominalUserDataDir)) {
-                logger.log(Level.FINE, "Error handler did not "
-                        + "modify user data directory, continuing "
-                        + "without user data directory");
+                logger.fine("Error handler did not modify user data directory, "
+                        + "continuing without user data directory");
                 return;
             } else {
-                logger.log(Level.FINE, "Error handler has set "
-                        + "user data directory to [{0}], "
+                logger.fine("Error handler has set user data directory to [{0}], "
                         + "retrying", nominalUserDataDir);
                 continue;
             }

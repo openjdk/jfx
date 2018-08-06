@@ -25,12 +25,12 @@
 
 package com.sun.webkit;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.graphics.WCRectangle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 class WCWidget {
-    private final static Logger log = Logger.getLogger(WCWidget.class.getName());
+    private final static PlatformLogger log = PlatformLogger.getLogger(WCWidget.class.getName());
 
     static {
         initIDs();
@@ -70,39 +70,39 @@ class WCWidget {
     protected void setVisible(boolean visible) {}
 
     private void fwkDestroy() {
-        log.log(Level.FINER, "destroy");
+        log.finer("destroy");
         destroy();
     }
 
     private void fwkSetBounds(int x, int y, int w, int h) {
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "setBounds({0}, {1}, {2}, {3})",
+            log.finer("setBounds({0}, {1}, {2}, {3})",
                     new Object[] { x, y, w, h });
         }
         setBounds(x, y, w, h);
     }
 
     private void fwkRequestFocus() {
-        log.log(Level.FINER, "requestFocus");
+        log.finer("requestFocus");
         requestFocus();
     }
 
     private void fwkSetCursor(long cursorID) {
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "setCursor({0})", cursorID);
+            log.finer("setCursor({0})", cursorID);
         }
         setCursor(cursorID);
     }
 
     private void fwkSetVisible(boolean visible) {
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "setVisible({0})", visible);
+            log.finer("setVisible({0})", visible);
         }
         setVisible(visible);
     }
 
     protected int fwkGetScreenDepth() {
-        log.log(Level.FINER, "getScreenDepth");
+        log.finer("getScreenDepth");
         WebPageClient pageClient = page.getPageClient();
         return pageClient != null
                 ? pageClient.getScreenDepth()
@@ -111,7 +111,7 @@ class WCWidget {
 
     protected WCRectangle fwkGetScreenRect(boolean available) {
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "getScreenRect({0})", available);
+            log.finer("getScreenRect({0})", available);
         }
         WebPageClient pageClient = page.getPageClient();
         return pageClient != null

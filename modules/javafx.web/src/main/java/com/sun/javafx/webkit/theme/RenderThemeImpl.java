@@ -44,13 +44,12 @@ import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.LinkedHashMap;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.webkit.Accessor;
 import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.graphics.Ref;
@@ -60,7 +59,7 @@ import com.sun.webkit.graphics.WCSize;
 import javafx.application.Application;
 
 public final class RenderThemeImpl extends RenderTheme {
-    private final static Logger log = Logger.getLogger(RenderThemeImpl.class.getName());
+    private final static PlatformLogger log = PlatformLogger.getLogger(RenderThemeImpl.class.getName());
 
     enum WidgetType {
         TEXTFIELD      (0),
@@ -128,7 +127,7 @@ public final class RenderThemeImpl extends RenderTheme {
 
         T get(long id) {
             if (log.isLoggable(Level.FINE)) {
-                log.log(Level.FINE, "type: {0}, size: {1}, id: 0x{2}",
+                log.fine("type: {0}, size: {1}, id: 0x{2}",
                         new Object[] {type, pool.size(), Long.toHexString(id)});
             }
             assert ids.size() == pool.size();
@@ -152,7 +151,7 @@ public final class RenderThemeImpl extends RenderTheme {
 
         void put(long id, T control, int updateContentCycleID) {
             if (log.isLoggable(Level.FINEST)) {
-                log.log(Level.FINEST, "size: {0}, id: 0x{1}, control: {2}",
+                log.finest("size: {0}, id: 0x{1}, control: {2}",
                         new Object[] {pool.size(), Long.toHexString(id), control.getType()});
             }
             if (ids.size() >= capacity) {
@@ -298,7 +297,7 @@ public final class RenderThemeImpl extends RenderTheme {
                     fc = new FormProgressBar(WidgetType.METER);
                     break;
                 default:
-                    log.log(Level.ALL, "unknown widget index: {0}", widgetIndex);
+                    log.severe("unknown widget index: {0}", widgetIndex);
                     return null;
             }
             fc.asControl().setFocusTraversable(false);

@@ -33,6 +33,8 @@ import com.sun.javafx.geom.*;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.sg.prism.*;
@@ -54,8 +56,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static com.sun.scenario.effect.Blend.Mode.*;
 import com.sun.scenario.effect.impl.Renderer;
@@ -78,8 +78,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         DEDICATED
     }
 
-    private final static Logger log =
-        Logger.getLogger(WCGraphicsPrismContext.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(WCGraphicsPrismContext.class.getName());
     private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
             AccessController.doPrivileged((PrivilegedAction<String>) () ->
             System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));
@@ -385,7 +385,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             //Fast & easy!
             state.clip(transformClip(shape));
             if (log.isLoggable(Level.FINE)) {
-                log.log(Level.FINE, "setClip({0})", shape);
+                log.fine("setClip({0})", shape);
             }
             if (DEBUG_DRAW_CLIP_SHAPE) {
                 //Draw clip shape
@@ -456,7 +456,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     public void translate(float x, float y) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "translate({0},{1})", new Object[] {x, y});
+            log.fine("translate({0},{1})", new Object[] {x, y});
         }
         state.translate(x, y);
         if (cachedGraphics != null) {
@@ -584,7 +584,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void setFillColor(int rgba) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, String.format("setFillColor(0x%x)", rgba));
+            log.fine(String.format("setFillColor(0x%x)", rgba));
         }
         state.setPaint(createColor(rgba));
     }
@@ -618,7 +618,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void setStrokeStyle(int style) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "setStrokeStyle({0})", style);
+            log.fine("setStrokeStyle({0})", style);
         }
         state.getStrokeNoClone().setStyle(style);
     }
@@ -626,7 +626,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void setStrokeColor(int rgba) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, String.format("setStrokeColor(0x%x)", rgba));
+            log.fine(String.format("setStrokeColor(0x%x)", rgba));
         }
         state.getStrokeNoClone().setPaint(createColor(rgba));
     }
@@ -634,7 +634,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void setStrokeWidth(float width) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "setStrokeWidth({0})", new Object[] { width });
+            log.fine("setStrokeWidth({0})", new Object[] { width });
         }
         state.getStrokeNoClone().setThickness(width);
     }
@@ -655,7 +655,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 s.append(sizes[i]).append(',');
             }
             s.append(']');
-            log.log(Level.FINE, "setLineDash({0},{1}", new Object[] {offset, s});
+            log.fine("setLineDash({0},{1}", new Object[] {offset, s});
         }
         state.getStrokeNoClone().setDashOffset(offset);
         if (sizes != null) {
@@ -709,7 +709,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void drawPolygon(final WCPath path, final boolean shouldAntialias) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "drawPolygon({0})",
+            log.fine("drawPolygon({0})",
                     new Object[] {shouldAntialias});
         }
         if (!shouldRenderShape(((WCPathImpl)path).getPlatformPath(), null,
@@ -732,7 +732,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void drawLine(final int x0, final int y0, final int x1, final int y1) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "drawLine({0}, {1}, {2}, {3})",
+            log.fine("drawLine({0}, {1}, {2}, {3})",
                     new Object[] {x0, y0, x1, y1});
         }
         Line2D line = new Line2D(x0, y0, x1, y1);
@@ -757,7 +757,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         final WCRectangle destRect)
     {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "drawPattern({0}, {1}, {2}, {3})",
+            log.fine("drawPattern({0}, {1}, {2}, {3})",
                     new Object[] {destRect.getIntX(), destRect.getIntY(),
                                   destRect.getIntWidth(),
                                   destRect.getIntHeight()});
@@ -810,7 +810,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                           final float srcx, final float srcy, final float srcw, final float srch)
     {
         if (log.isLoggable(Level.FINE)){
-            log.log(Level.FINE, "drawImage(img, dst({0},{1},{2},{3}), " +
+            log.fine("drawImage(img, dst({0},{1},{2},{3}), " +
                     "src({4},{5},{6},{7}))",
                     new Object[] {dstx, dsty, dstw, dsth,
                                   srcx, srcy, srcw, srch});
@@ -863,7 +863,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void drawIcon(WCIcon icon, int x, int y) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "UNIMPLEMENTED drawIcon ({0}, {1})",
+            log.fine("UNIMPLEMENTED drawIcon ({0}, {1})",
                     new Object[] {x, y});
         }
     }
@@ -871,7 +871,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void drawRect(final int x, final int y, final int w, final int h) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "drawRect({0}, {1}, {2}, {3})",
+            log.fine("drawRect({0}, {1}, {2}, {3})",
                     new Object[]{x, y, w, h});
         }
         if (!shouldRenderRect(x, y, w, h,
@@ -988,14 +988,14 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     @Override
     public void setComposite(int composite) {
-        log.log(Level.FINE, "setComposite({0})", composite);
+        log.fine("setComposite({0})", composite);
         state.setCompositeOperation(composite);
     }
 
     @Override
     public void drawEllipse(final int x, final int y, final int w, final int h) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "drawEllipse({0}, {1}, {2}, {3})",
+            log.fine("drawEllipse({0}, {1}, {2}, {3})",
                     new Object[] { x, y, w, h});
         }
         if (!shouldRenderRect(x, y, w, h,
@@ -1022,9 +1022,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     @Override
     public void drawFocusRing(final int x, final int y, final int w, final int h, final int rgba) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE,
-                    String.format("drawFocusRing: %d, %d, %d, %d, 0x%x",
-                                  x, y, w, h, rgba));
+            log.fine(String.format("drawFocusRing: %d, %d, %d, %d, 0x%x", x, y, w, h, rgba));
         }
         if (!shouldRenderRect(x, y, w, h, null, focusRingStroke)) {
             return;
@@ -1041,7 +1039,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     public void setAlpha(float alpha) {
-        log.log(Level.FINE, "setAlpha({0})", alpha);
+        log.fine("setAlpha({0})", alpha);
 
         state.setAlpha(alpha);
 

@@ -25,72 +25,45 @@
 
 package test.com.sun.javafx.binding;
 
-import com.sun.javafx.binding.Logging;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-
 import static org.junit.Assert.*;
+
+import com.sun.javafx.logging.PlatformLogger.Level;
+
+import com.sun.javafx.binding.Logging;
+import com.sun.javafx.binding.Logging.ErrorLogger.ErrorLogRecord;
+import com.sun.javafx.binding.Logging.ErrorLogger;
 
 public class ErrorLoggingUtiltity {
 
-    static {
-        // initialize PlatformLogger
-        Logging.getLogger();
+    private static ErrorLogger errorLogger = Logging.getLogger();
+
+    public static void reset() {
+        errorLogger.setErrorLogRecord(null);
     }
 
-    // getLogManager will redirect existing PlatformLogger to the Logger
-    private static final Logger logger = LogManager.getLogManager().getLogger("javafx.beans");
-
-    Level level;
-    LogRecord lastRecord;
-
-    Handler handler = new Handler() {
-
-        @Override
-        public void publish(LogRecord record) {
-            lastRecord = record;
-        }
-
-        @Override
-        public void flush() {
-        }
-
-        @Override
-        public void close() throws SecurityException {
-        }
-    };
-
-    public void start() {
-        reset();
-        level = logger.getLevel();
-        logger.setLevel(Level.ALL);
-        logger.addHandler(handler);
+    public static boolean isEmpty() {
+        return errorLogger.getErrorLogRecord() == null;
     }
 
-    public void stop() {
-        logger.setLevel(level);
-        logger.removeHandler(handler);
-    }
-
-    public void reset() {
-        lastRecord = null;
-    }
-
-    public void checkFine(Class expectedException) {
+    /**
+     * Convenience method for check(Level.FINE, expectedException)
+     */
+    public static void checkFine(Class<?> expectedException) {
         check(Level.FINE, expectedException);
     }
 
-    public void check(Level expectedLevel, Class expectedException) {
-        assertNotNull(lastRecord);
-        assertEquals(expectedLevel, lastRecord.getLevel());
-        assertTrue(expectedException.isAssignableFrom(lastRecord.getThrown().getClass()));
-        reset();
+    /**
+     * Convenience method for check(Level.WARNING, expectedException)
+     */
+    public static void checkWarning(Class<?> expectedException) {
+        check(Level.WARNING, expectedException);
     }
 
-    public boolean isEmpty() {
-        return lastRecord == null;
+    public static void check(Level expectedLevel, Class<?> expectedException) {
+        ErrorLogRecord errorLogRecord = errorLogger.getErrorLogRecord();
+        assertNotNull(errorLogRecord);
+        assertEquals(expectedLevel, errorLogRecord.getLevel());
+        assertTrue(expectedException.isAssignableFrom(errorLogRecord.getThrown().getClass()));
+        reset();
     }
 }

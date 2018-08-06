@@ -25,6 +25,9 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
+
 import java.util.LinkedHashMap;
 import java.util.Comparator;
 import java.util.Collections;
@@ -35,16 +38,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * A cookie store.
  */
 final class CookieStore {
 
-    private static final Logger logger =
-        Logger.getLogger(CookieStore.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(CookieStore.class.getName());
 
     private static final int MAX_BUCKET_SIZE = 50;
     private static final int TOTAL_COUNT_LOWER_THRESHOLD = 3000;
@@ -104,7 +105,7 @@ final class CookieStore {
             boolean httpApi)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "hostname: [{0}], path: [{1}], "
+            logger.finest("hostname: [{0}], path: [{1}], "
                     + "secureProtocol: [{2}], httpApi: [{3}]", new Object[] {
                     hostname, path, secureProtocol, httpApi});
         }
@@ -132,7 +133,7 @@ final class CookieStore {
             cookie.setLastAccessTime(currentTime);
         }
 
-        logger.log(Level.FINEST, "result: {0}", result);
+        logger.finest("result: {0}", result);
         return result;
     }
 
@@ -226,7 +227,7 @@ final class CookieStore {
      * Removes excess cookies from a given bucket.
      */
     private void purge(Map<Cookie,Cookie> bucket) {
-        logger.log(Level.FINEST, "Purging bucket: {0}", bucket.values());
+        logger.finest("Purging bucket: {0}", bucket.values());
 
         Cookie earliestCookie = null;
         Iterator<Cookie> it = bucket.values().iterator();
@@ -255,7 +256,7 @@ final class CookieStore {
      * Removes excess cookies globally.
      */
     private void purge() {
-        logger.log(Level.FINEST, "Purging store");
+        logger.finest("Purging store");
 
         Queue<Cookie> removalQueue = new PriorityQueue<Cookie>(totalCount / 2,
                 new RemovalComparator());
@@ -300,8 +301,7 @@ final class CookieStore {
             Map<Cookie,Cookie> bucket)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "{0}: {1}, bucket size: {2}, "
-                    + "total count: {3}",
+            logger.finest("{0}: {1}, bucket size: {2}, total count: {3}",
                     new Object[] {message, cookie, bucket.size(), totalCount});
         }
     }

@@ -26,6 +26,8 @@
 package com.sun.javafx.webkit.prism;
 
 import com.sun.javafx.iio.ImageFrame;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.prism.Graphics;
 import com.sun.prism.Image;
 import com.sun.prism.PrinterGraphics;
@@ -36,16 +38,14 @@ import com.sun.prism.image.CompoundTexture;
 import com.sun.prism.image.Coords;
 import com.sun.prism.image.ViewPort;
 import java.nio.ByteBuffer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.scene.image.PixelFormat;
 
 /**
  * @author Alexey.Ushakov
  */
 final class WCImageImpl extends PrismImage {
-    private final static Logger log =
-        Logger.getLogger(WCImageImpl.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(WCImageImpl.class.getName());
 
     private final Image img;
     private Texture texture;
@@ -54,7 +54,7 @@ final class WCImageImpl extends PrismImage {
 
     WCImageImpl(int w, int h) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "Creating empty image({0},{1})",
+            log.fine("Creating empty image({0},{1})",
                     new Object[] {w, h});
         }
         img = Image.fromIntArgbPreData(new int[w*h], w, h);
@@ -62,7 +62,7 @@ final class WCImageImpl extends PrismImage {
 
     WCImageImpl(int[] buffer, int w, int h) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "Creating image({0},{1}) from buffer",
+            log.fine("Creating image({0},{1}) from buffer",
                     new Object[] {w, h});
         }
         img = Image.fromIntArgbPreData(buffer, w, h);
@@ -70,7 +70,7 @@ final class WCImageImpl extends PrismImage {
 
     WCImageImpl(ImageFrame frame) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "Creating image {0}x{1} of type {2} from buffer",
+            log.fine("Creating image {0}x{1} of type {2} from buffer",
                     new Object[]{frame.getWidth(), frame.getHeight(), frame.getImageType()});
         }
         img = Image.convertImageFrame(frame);

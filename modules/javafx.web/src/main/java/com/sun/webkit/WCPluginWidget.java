@@ -25,12 +25,11 @@
 
 package com.sun.webkit;
 
+import com.sun.javafx.logging.PlatformLogger;
 import static com.sun.webkit.network.URLs.newURL;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import com.sun.webkit.plugin.Plugin;
 import com.sun.webkit.plugin.PluginListener;
@@ -40,8 +39,8 @@ import com.sun.webkit.graphics.WCRectangle;
 
 final class WCPluginWidget extends WCWidget implements PluginListener {
 
-    private final static Logger log =
-        Logger.getLogger(WCPluginWidget.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(WCPluginWidget.class.getName());
 
     private final Plugin plugin;
     private long pData = 0L;//for native code
@@ -84,7 +83,7 @@ final class WCPluginWidget extends WCWidget implements PluginListener {
         try {
             url = newURL(urlString);
         } catch (MalformedURLException ex) {
-            log.log(Level.FINE, null, ex);
+            log.fine(null, ex);
         }
         return new WCPluginWidget(
                 webPage,

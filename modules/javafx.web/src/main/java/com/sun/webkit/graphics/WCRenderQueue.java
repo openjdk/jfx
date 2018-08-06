@@ -26,18 +26,18 @@
 package com.sun.webkit.graphics;
 
 import java.lang.annotation.Native;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.Invoker;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public abstract class WCRenderQueue extends Ref {
     private final static AtomicInteger idCountObj = new AtomicInteger(0);
-    private final static Logger log =
-        Logger.getLogger(WCRenderQueue.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(WCRenderQueue.class.getName());
     @Native public final static int MAX_QUEUE_SIZE = 0x80000;
 
     private final LinkedList<BufferData> buffers = new LinkedList<BufferData>();
@@ -67,7 +67,7 @@ public abstract class WCRenderQueue extends Ref {
 
     public synchronized void addBuffer(ByteBuffer buffer) {
         if (log.isLoggable(Level.FINE) && buffers.isEmpty()) {
-            log.log(Level.FINE, "'{'WCRenderQueue{0}[{1}]",
+            log.fine("'{'WCRenderQueue{0}[{1}]",
                     new Object[]{hashCode(), idCountObj.incrementAndGet()});
         }
         currentBuffer.setBuffer(buffer);
@@ -138,7 +138,7 @@ public abstract class WCRenderQueue extends Ref {
             });
             size = 0;
             if (log.isLoggable(Level.FINE)) {
-                log.log(Level.FINE, "'}'WCRenderQueue{0}[{1}]",
+                log.fine("'}'WCRenderQueue{0}[{1}]",
                         new Object[]{hashCode(), idCountObj.decrementAndGet()});
             }
         }

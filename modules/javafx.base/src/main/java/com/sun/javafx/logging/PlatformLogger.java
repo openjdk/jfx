@@ -26,7 +26,6 @@
 package com.sun.javafx.logging;
 
 import java.lang.ref.WeakReference;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -105,7 +104,7 @@ public class PlatformLogger implements System.Logger {
 
 
     private final System.Logger loggerProxy;
-    private PlatformLogger(System.Logger loggerProxy) {
+    protected PlatformLogger(System.Logger loggerProxy) {
         this.loggerProxy = loggerProxy;
     }
 

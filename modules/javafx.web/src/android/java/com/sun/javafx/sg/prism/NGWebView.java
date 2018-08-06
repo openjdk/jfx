@@ -27,15 +27,15 @@ package com.sun.javafx.sg.prism;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
-import java.util.logging.Logger;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.prism.Graphics;
 import com.sun.prism.paint.Color;
 import com.sun.webkit.WebPage;
 
 public final class NGWebView extends NGGroup {
 
-    private final static Logger log =
-        Logger.getLogger(NGWebView.class.getName());
+    private final static PlatformLogger log =
+        PlatformLogger.getLogger(NGWebView.class.getName());
     private volatile WebPage page;
     private volatile float width, height;
     private static final Color VERY_LIGHT_RED = new Color(1, 0, 0, .3f);

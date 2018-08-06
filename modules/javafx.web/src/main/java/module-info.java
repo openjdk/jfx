@@ -32,7 +32,6 @@
  */
 module javafx.web {
     requires java.desktop;
-    requires java.logging;
     requires javafx.media;
     requires jdk.xml.dom;
     requires jdk.jsobject;

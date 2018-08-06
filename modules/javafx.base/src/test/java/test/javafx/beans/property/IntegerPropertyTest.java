@@ -25,7 +25,6 @@
 
 package test.javafx.beans.property;
 
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -34,7 +33,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -49,16 +47,9 @@ public class IntegerPropertyTest {
     private static final int VALUE_2 = -13;
     private static final int DEFAULT = 0;
 
-    private static final ErrorLoggingUtiltity log = new ErrorLoggingUtiltity();
-
     @BeforeClass
     public static void setUpClass() {
-        log.start();
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        log.stop();
+        ErrorLoggingUtiltity.reset();
     }
 
     @Test
@@ -66,7 +57,7 @@ public class IntegerPropertyTest {
         final IntegerProperty p = new SimpleIntegerProperty(VALUE_1);
         p.setValue(null);
         assertEquals(DEFAULT, p.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test

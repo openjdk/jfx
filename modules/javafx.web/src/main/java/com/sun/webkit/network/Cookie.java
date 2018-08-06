@@ -25,10 +25,10 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.logging.PlatformLogger;
+
 import java.net.URI;
 import java.text.ParseException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,8 +37,8 @@ import java.util.regex.Pattern;
  */
 final class Cookie {
 
-    private static final Logger logger =
-            Logger.getLogger(Cookie.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(Cookie.class.getName());
     private static final Pattern IP_ADDRESS_PATTERN = Pattern.compile(
             "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})");
 
@@ -83,20 +83,20 @@ final class Cookie {
      * object.
      */
     static Cookie parse(String setCookieString, ExtendedTime currentTime) {
-        logger.log(Level.FINEST, "setCookieString: [{0}]", setCookieString);
+        logger.finest("setCookieString: [{0}]", setCookieString);
 
         String[] items = setCookieString.split(";", -1);
 
         String[] nameValuePair = items[0].split("=", 2);
         if (nameValuePair.length != 2) {
-            logger.log(Level.FINEST, "Name-value pair string lacks '=', "
+            logger.finest("Name-value pair string lacks '=', "
                     + "ignoring cookie");
             return null;
         }
         String name = nameValuePair[0].trim();
         String value = nameValuePair[1].trim();
         if (name.length() == 0) {
-            logger.log(Level.FINEST, "Name string is empty, ignoring cookie");
+            logger.finest("Name string is empty, ignoring cookie");
             return null;
         }
 
@@ -126,11 +126,11 @@ final class Cookie {
                 } else if ("HttpOnly".equalsIgnoreCase(attrName)) {
                     httpOnly = true;
                 } else {
-                    logger.log(Level.FINEST, "Unknown attribute: [{0}], "
+                    logger.finest("Unknown attribute: [{0}], "
                             + "ignoring", attrName);
                 }
             } catch (ParseException ex) {
-                logger.log(Level.FINEST, "{0}, ignoring", ex.getMessage());
+                logger.finest("{0}, ignoring", ex.getMessage());
             }
         }
 
@@ -154,7 +154,7 @@ final class Cookie {
         Cookie result = new Cookie(name, value, expiryTime, domain, path,
                 currentTime, currentTime.baseTime(), persistent, false,
                 secure, httpOnly);
-        logger.log(Level.FINEST, "result: {0}", result);
+        logger.finest("result: {0}", result);
         return result;
     }
 

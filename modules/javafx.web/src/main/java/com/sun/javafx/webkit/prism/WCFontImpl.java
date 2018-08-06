@@ -32,6 +32,8 @@ import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.text.TextRun;
@@ -41,12 +43,10 @@ import com.sun.prism.GraphicsPipeline;
 import com.sun.webkit.graphics.WCFont;
 import com.sun.webkit.graphics.WCGlyphBuffer;
 import java.util.HashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 final class WCFontImpl extends WCFont {
-    private final static Logger log =
-        Logger.getLogger(WCFontImpl.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(WCFontImpl.class.getName());
 
     private static final HashMap<String, String> FONT_MAP = new HashMap<String, String>();
 
@@ -212,7 +212,7 @@ final class WCFontImpl extends WCFont {
         // REMIND: This method needs to require a render context.
         float res = - getFontStrike().getMetrics().getAscent();
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "getAscent({0}, {1}) = {2}",
+            log.finer("getAscent({0}, {1}) = {2}",
                     new Object[] {font.getName(), font.getSize(),
                     res});
         }
@@ -223,7 +223,7 @@ final class WCFontImpl extends WCFont {
         // REMIND: This method needs to require a render context.
         float res = getFontStrike().getMetrics().getDescent();
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "getDescent({0}, {1}) = {2}",
+            log.finer("getDescent({0}, {1}) = {2}",
                     new Object[] {font.getName(), font.getSize(),
                     res});
         }
@@ -234,7 +234,7 @@ final class WCFontImpl extends WCFont {
         // REMIND: This method needs to require a render context.
         float res = getFontStrike().getMetrics().getLineHeight();
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "getLineSpacing({0}, {1}) = {2}",
+            log.finer("getLineSpacing({0}, {1}) = {2}",
                     new Object[] {font.getName(), font.getSize(),
                     res});
         }
@@ -245,7 +245,7 @@ final class WCFontImpl extends WCFont {
         // REMIND: This method needs to require a render context.
         float res = getFontStrike().getMetrics().getLineGap();
         if (log.isLoggable(Level.FINER)) {
-            log.log(Level.FINER, "getLineGap({0}, {1}) = {2}",
+            log.finer("getLineGap({0}, {1}) = {2}",
                     new Object[] {font.getName(), font.getSize(),
                     res });
         }

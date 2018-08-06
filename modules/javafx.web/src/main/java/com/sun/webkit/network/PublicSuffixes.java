@@ -25,6 +25,9 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,16 +36,14 @@ import java.net.IDN;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * A collection of static utility methods dealing with "public suffixes".
  */
 final class PublicSuffixes {
 
-    private static final Logger logger =
-            Logger.getLogger(PublicSuffixes.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(PublicSuffixes.class.getName());
 
 
     /**
@@ -96,7 +97,7 @@ final class PublicSuffixes {
      * Loads the public suffix list from a given resource.
      */
     private static Map<String,Rule> loadRules(String resourceName) {
-        logger.log(Level.FINEST, "resourceName: [{0}]", resourceName);
+        logger.finest("resourceName: [{0}]", resourceName);
         Map<String,Rule> result = null;
 
         InputStream is = PublicSuffixes.class.getResourceAsStream(resourceName);
@@ -106,18 +107,18 @@ final class PublicSuffixes {
                 reader = new BufferedReader(new InputStreamReader(is, "UTF-8"));
                 result = loadRules(reader);
             } catch (IOException ex) {
-                logger.log(Level.WARNING, "Unexpected error", ex);
+                logger.warning("Unexpected error", ex);
             } finally {
                 try {
                     if (reader != null) {
                         reader.close();
                     }
                 } catch (IOException ex) {
-                    logger.log(Level.WARNING, "Unexpected error", ex);
+                    logger.warning("Unexpected error", ex);
                 }
             }
         } else {
-            logger.log(Level.WARNING, "Resource not found: [{0}]",
+            logger.warning("Resource not found: [{0}]",
                     resourceName);
         }
 
@@ -125,7 +126,7 @@ final class PublicSuffixes {
                 ? Collections.unmodifiableMap(result)
                 : Collections.<String,Rule>emptyMap();
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "result: {0}", toLogString(result));
+            logger.finest("result: {0}", toLogString(result));
         }
         return result;
     }
@@ -159,8 +160,7 @@ final class PublicSuffixes {
             try {
                 line = IDN.toASCII(line, IDN.ALLOW_UNASSIGNED);
             } catch (Exception ex) {
-                logger.log(Level.WARNING, String.format(
-                        "Error parsing rule: [%s]", line), ex);
+                logger.warning(String.format("Error parsing rule: [%s]", line), ex);
                 continue;
             }
             result.put(line, rule);

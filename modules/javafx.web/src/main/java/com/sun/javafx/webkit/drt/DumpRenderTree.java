@@ -26,8 +26,8 @@
 package com.sun.javafx.webkit.drt;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.webkit.Accessor;
-import com.sun.javafx.webkit.ThemeClientImpl;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.*;
 import com.sun.webkit.graphics.*;
 
@@ -45,15 +45,10 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
 import javafx.scene.web.WebEngine;
 
 public final class DumpRenderTree {
-    private final static Logger log = Logger.getLogger("DumpRenderTree");
+    private final static PlatformLogger log = PlatformLogger.getLogger("DumpRenderTree");
     private final static long PID = (new Date()).getTime() & 0xFFFF;
     private final static String fileSep = System.getProperty("file.separator");
     private static boolean forceDumpAsText = false;
@@ -162,15 +157,15 @@ public final class DumpRenderTree {
         return testString;
     }
 
-
+/*
     private static boolean isDebug()
     {
         return log.isLoggable(Level.FINE);
     }
+*/
 
-    private static void mlog(String msg)
-    {
-        if (isDebug()) {
+    private static void mlog(String msg) {
+        if (log.isLoggable(Level.FINE)) {
             log.fine("PID:" + Long.toHexString(PID)
                     + " TID:" + Thread.currentThread().getId()
                         + "(" + Thread.currentThread().getName() + ") "
@@ -372,7 +367,9 @@ public final class DumpRenderTree {
 
 
     public static void main(final String[] args) throws Exception {
+/*
         if ( isDebug() ) {
+            // 'log' here is from java.util.logging
             log.setLevel(Level.FINEST);
             FileHandler handler = new FileHandler("drt.log", true);
             handler.setFormatter(new Formatter() {
@@ -383,7 +380,7 @@ public final class DumpRenderTree {
             });
             log.addHandler(handler);
         }
-
+*/
         mlog("{main");
         initPlatform();
         assert drt != null;
@@ -410,7 +407,7 @@ public final class DumpRenderTree {
 
     // called from native
     private static int getWorkerThreadCount() {
-        return drt.webPage.getWorkerThreadCount();
+        return WebPage.getWorkerThreadCount();
     }
 
     // called from native

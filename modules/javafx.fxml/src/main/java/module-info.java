@@ -30,7 +30,6 @@
  * @since 9
  */
 module javafx.fxml {
-    requires java.logging;
     requires java.scripting;
     requires java.xml;
     requires javafx.graphics;
@@ -38,5 +37,4 @@ module javafx.fxml {
     requires transitive javafx.base;
 
     exports javafx.fxml;
-
 }

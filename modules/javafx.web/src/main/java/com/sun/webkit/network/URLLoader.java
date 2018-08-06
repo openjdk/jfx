@@ -25,6 +25,8 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.Invoker;
 import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.WebPage;
@@ -56,8 +58,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
 import javax.net.ssl.SSLHandshakeException;
@@ -69,8 +69,8 @@ final class URLLoader implements Runnable {
 
     @Native public static final int ALLOW_UNASSIGNED = java.net.IDN.ALLOW_UNASSIGNED;
 
-    private static final Logger logger =
-            Logger.getLogger(URLLoader.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(URLLoader.class.getName());
     private static final int MAX_REDIRECTS = 10;
     private static final int MAX_BUF_COUNT = 3;
     private static final String GET = "GET";
@@ -117,7 +117,7 @@ final class URLLoader implements Runnable {
      */
     private void fwkCancel() {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format("data: [0x%016X]", data));
+            logger.finest(String.format("data: [0x%016X]", data));
         }
         canceled = true;
     }
@@ -245,9 +245,9 @@ final class URLLoader implements Runnable {
 
         if (error != null) {
             if (errorCode == LoadListenerClient.UNKNOWN_ERROR) {
-                logger.log(Level.WARNING, "Unexpected error", error);
+                logger.warning("Unexpected error", error);
             } else {
-                logger.log(Level.FINEST, "Load error", error);
+                logger.finest("Load error", error);
             }
             didFail(errorCode, error.getMessage());
         }
@@ -523,7 +523,7 @@ final class URLLoader implements Runnable {
             throw ex;
         } catch (IOException e) {
             if (logger.isLoggable(Level.FINE)) {
-                logger.log(Level.FINE, String.format("Exception caught: [%s], %s",
+                logger.fine(String.format("Exception caught: [%s], %s",
                     e.getClass().getSimpleName(),
                     e.getMessage()));
             }
@@ -539,7 +539,7 @@ final class URLLoader implements Runnable {
                 }
             } catch (IOException e) {
                 if (logger.isLoggable(Level.FINE)) {
-                    logger.log(Level.FINE, String.format("Exception caught: [%s], %s",
+                    logger.fine(String.format("Exception caught: [%s], %s",
                         e.getClass().getSimpleName(),
                         e.getMessage()));
                 }
@@ -672,7 +672,7 @@ final class URLLoader implements Runnable {
                                    long totalBytesToBeSent)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format(
+            logger.finest(String.format(
                     "totalBytesSent: [%d], "
                     + "totalBytesToBeSent: [%d], "
                     + "data: [0x%016X]",
@@ -733,7 +733,7 @@ final class URLLoader implements Runnable {
                                           String url)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format(
+            logger.finest(String.format(
                     "newUrl: [%s], "
                     + "newMethod: [%s], "
                     + "status: [%d], "
@@ -764,7 +764,7 @@ final class URLLoader implements Runnable {
                 url,
                 data);
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format("result: [%s]", result));
+            logger.finest(String.format("result: [%s]", result));
         }
         return result;
     }
@@ -797,7 +797,7 @@ final class URLLoader implements Runnable {
                                           String url)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format(
+            logger.finest(String.format(
                     "status: [%d], "
                     + "contentType: [%s], "
                     + "contentEncoding: [%s], "
@@ -843,7 +843,7 @@ final class URLLoader implements Runnable {
                                       int remaining)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format(
+            logger.finest(String.format(
                     "byteBuffer: [%s], "
                     + "position: [%s], "
                     + "remaining: [%s], "
@@ -866,7 +866,7 @@ final class URLLoader implements Runnable {
 
     private void notifyDidFinishLoading() {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format("data: [0x%016X]", data));
+            logger.finest(String.format("data: [0x%016X]", data));
         }
         twkDidFinishLoading(data);
     }
@@ -882,7 +882,7 @@ final class URLLoader implements Runnable {
 
     private void notifyDidFail(int errorCode, String url, String message) {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format(
+            logger.finest(String.format(
                     "errorCode: [%d], "
                     + "url: [%s], "
                     + "message: [%s], "

@@ -25,11 +25,8 @@
 
 package com.sun.javafx.webkit.theme;
 
-import java.util.logging.Logger;
-import java.util.logging.Level;
-
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 import javafx.scene.control.Separator;
 import javafx.scene.control.ContextMenu;
@@ -44,20 +41,20 @@ import com.sun.webkit.ContextMenuItem;
 
 public final class ContextMenuImpl extends com.sun.webkit.ContextMenu {
 
-    private final static Logger log = Logger.getLogger(ContextMenuImpl.class.getName());
+    private final static PlatformLogger log = PlatformLogger.getLogger(ContextMenuImpl.class.getName());
 
     private final ObservableList<ContextMenuItem> items =
             FXCollections.observableArrayList();
 
     @Override protected void show(final ShowContext showContext, int x, int y) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "show at [{0}, {1}]", new Object[] {x, y});
+            log.fine("show at [{0}, {1}]", new Object[] {x, y});
         }
         final ContextMenu popupMenu = new ContextMenu();
 
         popupMenu.setOnAction(t -> {
             MenuItem item = (MenuItem) t.getTarget();
-            log.log(Level.FINE, "onAction: item={0}", item);
+            log.fine("onAction: item={0}", item);
             showContext.notifyItemSelected(((MenuItemPeer)item).getItemPeer().getAction());
         });
 
@@ -71,7 +68,7 @@ public final class ContextMenuImpl extends com.sun.webkit.ContextMenu {
 
     @Override protected void insertItem(ContextMenuItem item, int index) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "item={0}, index={1}", new Object[] {item, index});
+            log.fine("item={0}, index={1}", new Object[] {item, index});
         }
         if (item == null) {
             return;
@@ -90,7 +87,7 @@ public final class ContextMenuImpl extends com.sun.webkit.ContextMenu {
     }
 
     private MenuItem createMenuItem(ContextMenuItem item) {
-        log.log(Level.FINE, "item={0}", item);
+        log.fine("item={0}", item);
 
         if (item.getType() == ContextMenuItem.SUBMENU_TYPE) {
             MenuImpl menu = new MenuImpl(item.getTitle());

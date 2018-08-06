@@ -31,6 +31,8 @@ import com.sun.javafx.iio.ImageLoader;
 import com.sun.javafx.iio.ImageMetadata;
 import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.iio.ImageStorageException;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCImage;
 import com.sun.webkit.graphics.WCImageDecoder;
@@ -39,14 +41,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
 final class WCImageDecoderImpl extends WCImageDecoder {
 
-    private final static Logger log;
+    private final static PlatformLogger log;
 
     private Service<ImageFrame[]> loader;
 
@@ -62,7 +62,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     private String fileNameExtension;
 
     static {
-        log = Logger.getLogger(WCImageDecoderImpl.class.getName());
+        log = PlatformLogger.getLogger(WCImageDecoderImpl.class.getName());
     }
 
     /*

@@ -29,9 +29,6 @@ import com.sun.javafx.scene.control.CustomColorDialog;
 import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public final class ColorChooser {
     /**
      * Color conversion from double (0.0 to 1.0) to uchar (0 to 255)

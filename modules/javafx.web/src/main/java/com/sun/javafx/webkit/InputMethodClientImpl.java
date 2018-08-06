@@ -31,15 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.webkit.Invoker;
 import javafx.geometry.Point2D;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
-import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.web.WebView;
 
@@ -51,8 +49,8 @@ import com.sun.webkit.graphics.WCPoint;
 public final class InputMethodClientImpl
     implements InputMethodClient, ExtendedInputMethodRequests
 {
-    private static final Logger log =
-            Logger.getLogger(InputMethodClientImpl.class.getName());
+    private static final PlatformLogger log =
+            PlatformLogger.getLogger(InputMethodClientImpl.class.getName());
     private final WeakReference<WebView> wvRef;
     private final WebPage webPage;
 
@@ -138,9 +136,9 @@ public final class InputMethodClientImpl
         try {
             result = f.get();
         } catch (ExecutionException ex) {
-            log.log(Level.SEVERE, "InputMethodClientImpl.getTextLocation " + ex);
+            log.severe("InputMethodClientImpl.getTextLocation " + ex);
         } catch (InterruptedException ex) {
-            log.log(Level.SEVERE, "InputMethodClientImpl.getTextLocation InterruptedException" + ex);
+            log.severe("InputMethodClientImpl.getTextLocation InterruptedException" + ex);
         }
         return result;
     }
@@ -156,9 +154,9 @@ public final class InputMethodClientImpl
         try {
             location = f.get();
         } catch (ExecutionException ex) {
-            log.log(Level.SEVERE, "InputMethodClientImpl.getLocationOffset " + ex);
+            log.severe("InputMethodClientImpl.getLocationOffset " + ex);
         } catch (InterruptedException ex) {
-            log.log(Level.SEVERE, "InputMethodClientImpl.getTextLocation InterruptedException" + ex);
+            log.severe("InputMethodClientImpl.getTextLocation InterruptedException" + ex);
         }
         return location;
     }

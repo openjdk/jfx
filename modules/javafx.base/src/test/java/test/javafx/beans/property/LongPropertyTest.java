@@ -25,7 +25,6 @@
 
 package test.javafx.beans.property;
 
-
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.LongProperty;
 import javafx.beans.property.ObjectProperty;
@@ -34,7 +33,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -49,16 +47,9 @@ public class LongPropertyTest {
     private static final long VALUE_2 = -987654321L;
     private static final long DEFAULT = 0L;
 
-    private static final ErrorLoggingUtiltity log = new ErrorLoggingUtiltity();
-
     @BeforeClass
     public static void setUpClass() {
-        log.start();
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        log.stop();
+        ErrorLoggingUtiltity.reset();
     }
 
     @Test
@@ -66,7 +57,7 @@ public class LongPropertyTest {
         final LongProperty p = new SimpleLongProperty(VALUE_1);
         p.setValue(null);
         assertEquals(DEFAULT, p.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test

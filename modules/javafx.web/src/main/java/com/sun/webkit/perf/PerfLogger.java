@@ -25,21 +25,21 @@
 
 package com.sun.webkit.perf;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public final class PerfLogger {
     private static Thread shutdownHook;
-    private static Map<Logger, PerfLogger> loggers;
+    private static Map<PlatformLogger, PerfLogger> loggers;
 
     private final HashMap<String, ProbeStat> probes =
             new HashMap<String, ProbeStat>();
-    private final Logger log;
+    private final PlatformLogger log;
     private final boolean isEnabled; // needed at shutdown time
 
     /**
@@ -48,9 +48,9 @@ public final class PerfLogger {
      *
      * @param log associated {@code Logger}
      */
-    public synchronized static PerfLogger getLogger(Logger log) {
+    public synchronized static PerfLogger getLogger(PlatformLogger log) {
         if (loggers == null) {
-            loggers = new HashMap<Logger, PerfLogger>();
+            loggers = new HashMap<PlatformLogger, PerfLogger>();
         }
         PerfLogger l = loggers.get(log);
         if (l == null) {
@@ -81,10 +81,10 @@ public final class PerfLogger {
      * @param name the {@code PerfLogger} short name
      */
     public synchronized static PerfLogger getLogger(String name) {
-        return getLogger(Logger.getLogger("com.sun.webkit.perf." + name));
+        return getLogger(PlatformLogger.getLogger("com.sun.webkit.perf." + name));
     }
 
-    private PerfLogger(Logger log) {
+    private PerfLogger(PlatformLogger log) {
         this.log = log;
         this.isEnabled = log.isLoggable(Level.FINE);
         startCount("TOTALTIME");

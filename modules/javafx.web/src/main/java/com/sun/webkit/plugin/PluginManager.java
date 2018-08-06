@@ -25,6 +25,7 @@
 
 package com.sun.webkit.plugin;
 
+import com.sun.javafx.logging.PlatformLogger;
 import java.net.URL;
 import java.util.Collection;
 import java.util.HashSet;
@@ -33,12 +34,10 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.TreeMap;
 import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public final class PluginManager {
-    private final static Logger log =
-        Logger.getLogger("com.sun.browser.plugin.PluginManager");
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger("com.sun.browser.plugin.PluginManager");
 
     private static final ServiceLoader<PluginHandler> pHandlers =
         ServiceLoader.load(PluginHandler.class);
@@ -101,7 +100,7 @@ public final class PluginManager {
                 }
             }
         } catch (Throwable ex) {
-            log.log(Level.FINE, "Cannot create plugin" , ex);
+            log.fine("Cannot create plugin" , ex);
             return new DefaultPlugin(url, type, pNames, pValues);
         }
     }

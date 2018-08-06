@@ -25,8 +25,7 @@
 
 package com.sun.javafx.sg.prism.web;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -45,8 +44,8 @@ import com.sun.webkit.graphics.WCRectangle;
  */
 public final class NGWebView extends NGGroup {
 
-    private final static Logger log =
-        Logger.getLogger(NGWebView.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(NGWebView.class.getName());
     private volatile WebPage page;
     private volatile float width, height;
 
@@ -70,7 +69,7 @@ public final class NGWebView extends NGGroup {
         if (page != null) {
             BaseBounds clip = getClippedBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
             if (!clip.isEmpty()) {
-                log.log(Level.FINEST, "updating rectangle: {0}", clip);
+                log.finest("updating rectangle: {0}", clip);
                 page.updateContent(new WCRectangle(clip.getMinX(), clip.getMinY(),
                                                    clip.getWidth(), clip.getHeight()));
             }
@@ -83,7 +82,7 @@ public final class NGWebView extends NGGroup {
 
     // Invoked on Render Thread.
     @Override protected void renderContent(Graphics g) {
-        log.log(Level.FINEST, "rendering into {0}", g);
+        log.finest("rendering into {0}", g);
         if (g == null || page == null || width <= 0 || height <= 0)
             return;
 
