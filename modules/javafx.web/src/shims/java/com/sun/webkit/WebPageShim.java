@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,38 @@
 package com.sun.webkit;
 
 import com.sun.webkit.WebPage;
+import com.sun.webkit.graphics.WCGraphicsContext;
+import com.sun.webkit.graphics.WCGraphicsManager;
+import com.sun.webkit.graphics.WCPageBackBuffer;
+import com.sun.webkit.graphics.WCRectangle;
 
 public class WebPageShim {
 
     public static int getFramesCount(WebPage page) {
         return page.test_getFramesCount();
+    }
+
+    private static WCGraphicsContext setupPageWithGraphics(WebPage page, int x, int y, int w, int h) {
+        page.setBounds(x, y, w, h);
+        // forces layout and renders the page into RenderQueue.
+        page.updateContent(new WCRectangle(x, y, w, h));
+
+        final WCPageBackBuffer buffer = WCGraphicsManager.getGraphicsManager().createPageBackBuffer();
+        buffer.validate(w, h);
+        return buffer.createGraphics();
+    }
+
+    public static void mockPrint(WebPage page, int x, int y, int w, int h) {
+        final WCGraphicsContext gc = setupPageWithGraphics(page, x, y, w, h);
+        // almost equivalent to `PrinterJob.printPage(webview)`
+        page.print(gc, x, y, w, h);
+    }
+
+    public static void mockPrintByPage(WebPage page, int pageNo, int x, int y, int w, int h) {
+        final WCGraphicsContext gc = setupPageWithGraphics(page, x, y, w, h);
+        // almost equivalent to `WebEngine.print(printerJob) `
+        page.beginPrinting(w, h);
+        page.print(gc, pageNo, w);
+        page.endPrinting();
     }
 }

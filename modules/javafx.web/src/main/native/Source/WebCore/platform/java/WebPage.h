@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,6 +107,8 @@ public:
     void enableWatchdog();
     void disableWatchdog();
 
+    RefPtr<RQRef> jRenderTheme();
+
 private:
     void requestJavaRepaint(const IntRect&);
 #if USE(ACCELERATED_COMPOSITING)
@@ -140,7 +142,7 @@ private:
 
     std::unique_ptr<Page> m_page;
     std::unique_ptr<PrintContext> m_printContext;
-    RefPtr<RQRef> m_jTheme;
+    RefPtr<RQRef> m_jRenderTheme;
 
 #if USE(ACCELERATED_COMPOSITING)
     std::unique_ptr<GraphicsLayer> m_rootLayer;

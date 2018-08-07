@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,9 +67,6 @@
 
 namespace WebCore {
 
-static RefPtr<RQRef> s_jTheme;
-
-
 RenderTheme& RenderTheme::singleton()
 {
     static RenderTheme& sm_defaultInstance = *new RenderThemeJava();
@@ -121,19 +118,8 @@ RefPtr<RQRef> RenderThemeJava::themeForPage(JLObject page)
     return RQRef::create(getJRenderTheme(page));
 }
 
-void RenderThemeJava::setTheme(RefPtr<RQRef> theme)
-{
-    if (theme) {
-        s_jTheme = theme;
-    } else {
-        static auto jTheme = themeForPage(nullptr);
-        s_jTheme = jTheme;
-    }
-}
-
 RenderThemeJava::RenderThemeJava()
 {
-    setTheme(nullptr);
 }
 
 int RenderThemeJava::createWidgetState(const RenderObject& o)
@@ -176,7 +162,11 @@ bool RenderThemeJava::paintWidget(
         return false;
     }
 
-    ASSERT(s_jTheme);
+    auto jRenderTheme = paintInfo.context().platformContext()->jRenderTheme();
+    if (!jRenderTheme) {
+        return false;
+    }
+
     int state = createWidgetState(object);
     RGBA32 bgColor = object.style().visitedDependentColor(
         widgetIndex == JNI_EXPAND(MENU_LIST_BUTTON)
@@ -258,7 +248,7 @@ bool RenderThemeJava::paintWidget(
     ASSERT(mid);
 
     RefPtr<RQRef> widgetRef = RQRef::create(
-        env->CallObjectMethod((jobject)*s_jTheme, mid,
+        env->CallObjectMethod(jobject(*jRenderTheme), mid,
             ptr_to_jlong(&object),
             (jint)widgetIndex,
             (jint)state,
@@ -279,7 +269,7 @@ bool RenderThemeJava::paintWidget(
     // widgetRef will go into rq's inner refs vector.
     paintInfo.context().platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWWIDGET
-    << (jint)*s_jTheme
+    << (jint)*jRenderTheme
     << widgetRef
     << (jint)rect.x() << (jint)rect.y();
 
@@ -347,14 +337,13 @@ void RenderThemeJava::setRadioSize(RenderStyle& style) const
         return;
     }
 
-    ASSERT(s_jTheme);
-
     JNIEnv* env = WebCore_GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(getJRenderThemeClass(), "getRadioButtonSize", "()I");
     ASSERT(mid);
 
-    int radioRadius = env->CallIntMethod((jobject)*s_jTheme, mid);
+    // Get from default theme object.
+    int radioRadius = env->CallIntMethod((jobject)getJRenderTheme(nullptr), mid);
     CheckAndClearException(env);
 
     if (style.width().isIntrinsicOrAuto()) {
@@ -606,12 +595,12 @@ Color RenderThemeJava::getSelectionColor(int index) const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(env);
-    ASSERT(s_jTheme);
 
     static jmethodID mid = env->GetMethodID(getJRenderThemeClass(), "getSelectionColor", "(I)I");
     ASSERT(mid);
 
-    jint c = env->CallIntMethod((jobject)*s_jTheme, mid, index);
+    // Get from default theme object.
+    jint c = env->CallIntMethod((jobject)getJRenderTheme(nullptr), mid, index);
     CheckAndClearException(env);
 
     return Color(c);
