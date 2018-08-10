@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,11 +37,11 @@ import javafx.geometry.Point3D;
 /**
  * This class represents an {@code Affine} object that translates coordinates
  * by the specified factors. The matrix representing the translating
- * transformation is as follows:
+ * transformation by distances {@code x}, {@code y} and {@code z} is as follows:
  * <pre>
- *              [   1    0    0    x  ]
- *              [   0    1    0    y  ]
- *              [   0    0    1    z  ]
+ *              [   1   0   0   x   ]
+ *              [   0   1   0   y   ]
+ *              [   0   0   1   z   ]
  * </pre>
  * @since JavaFX 2.0
  */

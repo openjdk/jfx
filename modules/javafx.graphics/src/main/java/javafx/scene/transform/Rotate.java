@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,14 +44,12 @@ import javafx.geometry.Point2D;
  * intermediate origin is restored to the coordinates of the original
  * anchor point (S3).
  * <p>
- * For example, the matrix representing the returned transform of
- *    new Rotate (theta, x, y, z) around the Z-axis
- *
- * is :
+ * The matrix representing the rotation transformation around an axis {@code (x,y,z)}
+ * by an angle {@code t} is as follows:
  * <pre>
- *              [   cos(theta)    -sin(theta)   0    x-x*cos+y*sin  ]
- *              [   sin(theta)     cos(theta)   0    y-x*sin-y*cos  ]
- *              [      0               0        1          z        ]
+ *              [   cos(t)   -sin(t)   0   x-x*cos(t)+y*sin(t)   ]
+ *              [   sin(t)    cos(t)   0   y-x*sin(t)-y*cos(t)   ]
+ *              [     0         0      1           z             ]
  * </pre>
  * <p>
  * For example, to rotate a text 30 degrees around the Z-axis at

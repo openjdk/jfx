@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,12 +36,13 @@ import javafx.geometry.Point3D;
 
 /**
  * This class represents an {@code Affine} object that shears coordinates
- * by the specified multipliers. The matrix representing the shearing
- * transformation is as follows:
+ * by the specified multipliers. The matrix representing the shearing transformation
+ * around a pivot point {@code (pivotX, pivotY)} with multiplication factors {@code x}
+ * and {@code y} is as follows:
  * <pre>
- *      [   1   x   0   -x*pivotY ]
- *      [   y   1   0   -y*pivotX ]
- *      [   0   0   1   0   ]
+ *              [   1   x   0   -x*pivotY   ]
+ *              [   y   1   0   -y*pivotX   ]
+ *              [   0   0   1       0       ]
  * </pre>
  *
  * <p>

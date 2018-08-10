@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,34 +32,30 @@ import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.RoundRectangle2D;
-import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.webkit.graphics.WCPath;
 import com.sun.webkit.graphics.WCPathIterator;
 import com.sun.webkit.graphics.WCRectangle;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 final class WCPathImpl extends WCPath<Path2D> {
     private final Path2D path;
     private boolean hasCP = false;
 
-    private final static Logger log =
-        Logger.getLogger(WCPathImpl.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(WCPathImpl.class.getName());
 
     WCPathImpl() {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "Create empty WCPathImpl({0})", getID());
+            log.fine("Create empty WCPathImpl({0})", getID());
         }
         path = new Path2D();
     }
 
     WCPathImpl(WCPathImpl wcp) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "Create WCPathImpl({0}) from WCPathImpl({1})",
+            log.fine("Create WCPathImpl({0}) from WCPathImpl({1})",
                     new Object[] { getID(), wcp.getID()});
         }
         path = new Path2D(wcp.path);
@@ -68,7 +64,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public void addRect(double x, double y, double w, double h) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addRect({1},{2},{3},{4})",
+            log.fine("WCPathImpl({0}).addRect({1},{2},{3},{4})",
                         new Object[] {getID(), x, y, w, h});
         }
         hasCP = true;
@@ -79,7 +75,7 @@ final class WCPathImpl extends WCPath<Path2D> {
     public void addEllipse(double x, double y, double w, double h)
     {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addEllipse({1},{2},{3},{4})",
+            log.fine("WCPathImpl({0}).addEllipse({1},{2},{3},{4})",
                     new Object[] {getID(), x, y, w, h});
         }
         hasCP = true;
@@ -89,7 +85,7 @@ final class WCPathImpl extends WCPath<Path2D> {
     public void addArcTo(double x1, double y1, double x2, double y2, double r)
     {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addArcTo({1},{2},{3},{4})",
+            log.fine("WCPathImpl({0}).addArcTo({1},{2},{3},{4})",
                     new Object[] {getID(), x1, y1, x2, y2});
         }
 
@@ -113,7 +109,7 @@ final class WCPathImpl extends WCPath<Path2D> {
         float endAngle = (float) ea;
 
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addArc(x={1},y={2},r={3},sa=|{4}|,ea=|{5}|,aclock={6})",
+            log.fine("WCPathImpl({0}).addArc(x={1},y={2},r={3},sa=|{4}|,ea=|{5}|,aclock={6})",
                     new Object[] {getID(), x, y, r, startAngle, endAngle, aclockwise});
         }
 
@@ -162,7 +158,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public boolean contains(int rule, double x, double y) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).contains({1},{2},{3})",
+            log.fine("WCPathImpl({0}).contains({1},{2},{3})",
                     new Object[] {getID(), rule, x, y});
         }
         final int savedRule = path.getWindingRule();
@@ -181,7 +177,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public void clear() {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).clear()", getID());
+            log.fine("WCPathImpl({0}).clear()", getID());
         }
         hasCP = false;
         path.reset();
@@ -189,7 +185,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public void moveTo(double x, double y) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).moveTo({1},{2})",
+            log.fine("WCPathImpl({0}).moveTo({1},{2})",
                     new Object[] {getID(), x, y});
         }
         hasCP = true;
@@ -198,7 +194,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public void addLineTo(double x, double y) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addLineTo({1},{2})",
+            log.fine("WCPathImpl({0}).addLineTo({1},{2})",
                     new Object[] {getID(), x, y});
         }
         hasCP = true;
@@ -207,7 +203,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public void addQuadCurveTo(double x0, double y0, double x1, double y1) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addQuadCurveTo({1},{2},{3},{4})",
+            log.fine("WCPathImpl({0}).addQuadCurveTo({1},{2},{3},{4})",
                     new Object[] {getID(), x0, y0, x1, y1});
         }
         hasCP = true;
@@ -217,7 +213,7 @@ final class WCPathImpl extends WCPath<Path2D> {
     public void addBezierCurveTo(double x0, double y0, double x1, double y1,
                                  double x2, double y2) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addBezierCurveTo({1},{2},{3},{4},{5},{6})",
+            log.fine("WCPathImpl({0}).addBezierCurveTo({1},{2},{3},{4},{5},{6})",
                     new Object[] {getID(), x0, y0, x1, y1, x2, y2});
         }
         hasCP = true;
@@ -227,7 +223,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public void addPath(WCPath p) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addPath({1})",
+            log.fine("WCPathImpl({0}).addPath({1})",
                     new Object[] {getID(), p.getID()});
         }
         hasCP = hasCP || ((WCPathImpl)p).hasCP;
@@ -236,7 +232,7 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public void closeSubpath() {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).closeSubpath()", getID());
+            log.fine("WCPathImpl({0}).closeSubpath()", getID());
         }
         path.closePath();
     }
@@ -270,25 +266,25 @@ final class WCPathImpl extends WCPath<Path2D> {
 
     public Path2D getPlatformPath() {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).getPath() BEGIN=====", getID());
+            log.fine("WCPathImpl({0}).getPath() BEGIN=====", getID());
             PathIterator pi = path.getPathIterator(null);
             float [] coords = new float[6];
             while(!pi.isDone()) {
                 switch(pi.currentSegment(coords)) {
                     case PathIterator.SEG_MOVETO:
-                        log.log(Level.FINE, "SEG_MOVETO ({0},{1})",
+                        log.fine("SEG_MOVETO ({0},{1})",
                                 new Object[] {coords[0], coords[1]});
                         break;
                     case PathIterator.SEG_LINETO:
-                        log.log(Level.FINE, "SEG_LINETO ({0},{1})",
+                        log.fine("SEG_LINETO ({0},{1})",
                                 new Object[] {coords[0], coords[1]});
                         break;
                     case PathIterator.SEG_QUADTO:
-                        log.log(Level.FINE, "SEG_QUADTO ({0},{1},{2},{3})",
+                        log.fine("SEG_QUADTO ({0},{1},{2},{3})",
                                 new Object[] {coords[0], coords[1], coords[2], coords[3]});
                         break;
                     case PathIterator.SEG_CUBICTO:
-                        log.log(Level.FINE, "SEG_CUBICTO ({0},{1},{2},{3},{4},{5})",
+                        log.fine("SEG_CUBICTO ({0},{1},{2},{3},{4},{5})",
                                 new Object[] {coords[0], coords[1], coords[2], coords[3],
                                               coords[4], coords[5]});
                         break;
@@ -332,7 +328,7 @@ final class WCPathImpl extends WCPath<Path2D> {
     public void translate(double x, double y)
     {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).translate({1}, {2})",
+            log.fine("WCPathImpl({0}).translate({1}, {2})",
                     new Object[] {getID(), x, y});
         }
         path.transform(BaseTransform.getTranslateInstance(x, y));
@@ -343,7 +339,7 @@ final class WCPathImpl extends WCPath<Path2D> {
                           double mxt, double myt)
     {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).transform({1},{2},{3},{4},{5},{6})",
+            log.fine("WCPathImpl({0}).transform({1},{2},{3},{4},{5},{6})",
                     new Object[] {getID(), mxx, myx, mxy, myy, mxt, myt});
         }
         path.transform(BaseTransform.getInstance(mxx, myx, mxy, myy, mxt, myt));

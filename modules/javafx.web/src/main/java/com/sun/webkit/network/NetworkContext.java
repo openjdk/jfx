@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,16 +36,16 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.WebPage;
 import java.security.Permission;
 
 final class NetworkContext {
 
-    private static final Logger logger =
-            Logger.getLogger(NetworkContext.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(NetworkContext.class.getName());
 
     /**
      * The size of the thread pool for asynchronous loaders.
@@ -126,7 +126,7 @@ final class NetworkContext {
                                      long data)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, String.format(
+            logger.finest(String.format(
                     "webPage: [%s], " +
                     "asynchronous: [%s], " +
                     "url: [%s], " +
@@ -155,7 +155,7 @@ final class NetworkContext {
         if (asynchronous) {
             threadPool.submit(loader);
             if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST,
+                logger.finest(
                         "active count: [{0}], " +
                         "pool size: [{1}], " +
                         "max pool size: [{2}], " +

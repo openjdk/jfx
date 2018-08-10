@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,9 @@
 package com.sun.javafx.webkit.theme;
 
 import java.lang.ref.WeakReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import com.sun.javafx.util.Utils;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import javafx.beans.Observable;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -47,7 +46,7 @@ import com.sun.webkit.graphics.WCSize;
 
 public final class ScrollBarThemeImpl extends ScrollBarTheme {
 
-    private final static Logger log = Logger.getLogger(ScrollBarThemeImpl.class.getName());
+    private final static PlatformLogger log = PlatformLogger.getLogger(ScrollBarThemeImpl.class.getName());
 
     private WeakReference<ScrollBar> testSBRef = // used for scrollbar thickness calculation
             new WeakReference<ScrollBar>(null);
@@ -174,7 +173,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         }
 
         if (log.isLoggable(Level.FINEST)) {
-            log.log(Level.FINEST, "[{0}, {1} {2}x{3}], {4}",
+            log.finest("[{0}, {1} {2}x{3}], {4}",
                     new Object[] {x, y, sb.getWidth(), sb.getHeight(),
                     sb.getOrientation() == Orientation.VERTICAL ? "VERTICAL" : "HORIZONTAL"});
         }
@@ -217,7 +216,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         } else {
             rect[0] = rect[1] = rect[2] = rect[3] = 0;
         }
-        log.log(Level.FINEST, "id {0} part {1} bounds {2},{3} {4}x{5}",
+        log.finest("id {0} part {1} bounds {2},{3} {4}x{5}",
                 new Object[] {String.valueOf(id), String.valueOf(part), rect[0], rect[1], rect[2], rect[3]});
     }
 

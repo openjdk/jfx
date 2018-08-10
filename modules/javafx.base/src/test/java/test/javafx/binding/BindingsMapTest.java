@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
 import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,8 +51,6 @@ public class BindingsMapTest {
     private static final Object data1 = new Object();
     private static final Object data2 = new Object();
 
-    private static final ErrorLoggingUtiltity log = new ErrorLoggingUtiltity();
-
     private MapProperty<String, Object> property;
     private ObservableMap<String, Object> map1;
     private ObservableMap<String, Object> map2;
@@ -61,12 +58,7 @@ public class BindingsMapTest {
 
     @BeforeClass
     public static void setUpClass() {
-        log.start();
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        log.stop();
+        ErrorLoggingUtiltity.reset();
     }
 
     @Before
@@ -275,47 +267,47 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -339,61 +331,61 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -425,47 +417,47 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get(), EPSILON_DOUBLE);
         assertEquals(localData2, binding1.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get(), EPSILON_DOUBLE);
         assertEquals(localData2, binding1.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -489,61 +481,61 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(key2);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -575,47 +567,47 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get(), EPSILON_FLOAT);
         assertEquals(localData2, binding1.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get(), EPSILON_FLOAT);
         assertEquals(localData2, binding1.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -639,61 +631,61 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(key2);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -725,47 +717,47 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -789,61 +781,61 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -875,47 +867,47 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)
@@ -939,61 +931,61 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        log.checkFine(NullPointerException.class);
+        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
     @Test(expected = NullPointerException.class)

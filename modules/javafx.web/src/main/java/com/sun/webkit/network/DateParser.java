@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
+
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Collections;
@@ -33,8 +36,6 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,8 +44,8 @@ import java.util.regex.Pattern;
  */
 final class DateParser {
 
-    private static final Logger logger =
-            Logger.getLogger(DateParser.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(DateParser.class.getName());
 
     private static final Pattern DELIMITER_PATTERN = Pattern.compile(
             "[\\x09\\x20-\\x2F\\x3B-\\x40\\x5B-\\x60\\x7B-\\x7E]+");
@@ -89,7 +90,7 @@ final class DateParser {
      * @throws ParseException if {@code date} cannot be parsed
      */
     static long parse(String date) throws ParseException {
-        logger.log(Level.FINEST, "date: [{0}]", date);
+        logger.finest("date: [{0}]", date);
 
         Time time = null;
         Integer dayOfMonth = null;
@@ -156,8 +157,7 @@ final class DateParser {
         try {
             long result = calendar.getTimeInMillis();
             if (logger.isLoggable(Level.FINEST)) {
-                logger.log(Level.FINEST, "result: [{0}]",
-                        new Date(result).toString());
+                logger.finest("result: [{0}]", new Date(result).toString());
             }
             return result;
         } catch (Exception ex) {

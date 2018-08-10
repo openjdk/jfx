@@ -1857,11 +1857,15 @@ public abstract class Node implements EventTarget, Styleable {
      * Defines how the picking computation is done for this node when
      * triggered by a {@code MouseEvent} or a {@code contains} function call.
      *
-     * If {@code pickOnBounds} is true, then picking is computed by
+     * If {@code pickOnBounds} is {@code true}, then picking is computed by
      * intersecting with the bounds of this node, else picking is computed
      * by intersecting with the geometric shape of this node.
      *
-     * @defaultValue false
+     * The default value of this property is {@code false} unless
+     * overridden by a subclass. The default value is {@code true}
+     * for {@link javafx.scene.layout.Region}.
+     *
+     * @defaultValue false; true for {@code Region}
      */
     private BooleanProperty pickOnBounds;
 
@@ -10079,4 +10083,3 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
 }
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,12 @@
 
 package com.sun.webkit.graphics;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.webkit.Invoker;
 
 public abstract class WCMediaPlayer extends Ref {
 
-    protected final static Logger log;
-    protected final static boolean verbose;
-
-    static {
-        log = Logger.getLogger("webkit.mediaplayer");
-        if (log.getLevel() == null) {
-            // disable logging if webkit.mediaplayer.level
-            // is not specified (explicitly) in log config file
-            verbose = false;
-            log.setLevel(Level.OFF);
-        } else {
-            verbose = true;
-            log.log(Level.CONFIG, "webkit.mediaplayer logging is ON, level: {0}", log.getLevel());
-        }
-    }
+    protected final static PlatformLogger log = PlatformLogger.getLogger("webkit.mediaplayer");
 
     // pointer to native Player object;
     // read the value only on FX event thread, check that it has non-zero value;
@@ -169,7 +154,7 @@ public abstract class WCMediaPlayer extends Ref {
     }
 
     protected void notifyPaused(boolean paused) {
-        if (verbose) log.log(Level.FINE, "notifyPaused, {0} => {1}",
+        log.fine("notifyPaused, {0} => {1}",
                 new Object[]{Boolean.valueOf(this.paused), Boolean.valueOf(paused)});
         if (this.paused != paused) {
             this.paused = paused;
@@ -184,7 +169,7 @@ public abstract class WCMediaPlayer extends Ref {
 
     // pass -1 as readyState value if the state is not changed
     protected void notifySeeking(boolean seeking, int readyState) {
-        if (verbose) log.log(Level.FINE, "notifySeeking, {0} => {1}",
+        log.fine("notifySeeking, {0} => {1}",
                 new Object[]{Boolean.valueOf(this.seeking), Boolean.valueOf(seeking)});
         if (this.seeking != seeking || this.readyState != readyState) {
             this.seeking = seeking;
@@ -267,72 +252,72 @@ public abstract class WCMediaPlayer extends Ref {
     /* ======================================= */
 
     private void fwkLoad(String url, String userAgent) {
-        if (verbose) log.log(Level.FINE, "fwkLoad, url={0}, userAgent={1}", new Object[] {url, userAgent});
+        log.fine("fwkLoad, url={0}, userAgent={1}", new Object[] {url, userAgent});
         load(url, userAgent);
     }
 
     private void fwkCancelLoad() {
-        if (verbose) log.log(Level.FINE, "fwkCancelLoad");
+        log.fine("fwkCancelLoad");
         cancelLoad();
     }
 
     private void fwkPrepareToPlay() {
-        if (verbose) log.log(Level.FINE, "fwkPrepareToPlay");
+        log.fine("fwkPrepareToPlay");
         prepareToPlay();
     }
 
     private void fwkDispose() {
-        if (verbose) log.log(Level.FINE, "fwkDispose");
+        log.fine("fwkDispose");
         nPtr = 0;
         cancelLoad();
         disposePlayer();
     }
 
     private void fwkPlay() {
-        if (verbose) log.log(Level.FINE, "fwkPlay");
+        log.fine("fwkPlay");
         play();
     }
 
     private void fwkPause() {
-        if (verbose) log.log(Level.FINE, "fwkPause");
+        log.fine("fwkPause");
         pause();
     }
 
     private float fwkGetCurrentTime() {
         float res = getCurrentTime();
-        if (verbose) log.log(Level.FINER, "fwkGetCurrentTime(), return {0}", res);
+        log.finer("fwkGetCurrentTime(), return {0}", res);
         return res;
     }
 
     private void fwkSeek(float time) {
-        if (verbose) log.log(Level.FINE, "fwkSeek({0})", time);
+        log.fine("fwkSeek({0})", time);
         seek(time);
     }
 
     private void fwkSetRate(float rate) {
-        if (verbose) log.log(Level.FINE, "fwkSetRate({0})", rate);
+        log.fine("fwkSetRate({0})", rate);
         setRate(rate);
     }
 
     private void fwkSetVolume(float volume) {
-        if (verbose) log.log(Level.FINE, "fwkSetVolume({0})", volume);
+        log.fine("fwkSetVolume({0})", volume);
         setVolume(volume);
     }
 
     private void fwkSetMute(boolean mute) {
-        if (verbose) log.log(Level.FINE, "fwkSetMute({0})", mute);
+        log.fine("fwkSetMute({0})", mute);
         setMute(mute);
     }
 
     private void fwkSetSize(int w, int h) {
-        //if (verbose) log.log(Level.FINE, "setSize({0} x {1})", new Object[]{w, h});
+        //log.fine("setSize({0} x {1})", new Object[]{w, h});
         setSize(w, h);
     }
 
     private boolean preserve = true;
 
     private void fwkSetPreservesPitch(boolean preserve) {
-        if (verbose) log.log(Level.FINE, "setPreservesPitch({0})", preserve);
+        log.fine("setPreservesPitch({0})", preserve);
 //        synchronized(renderLock) {
             this.preserve = preserve;
             setPreservesPitch(preserve);
@@ -340,22 +325,17 @@ public abstract class WCMediaPlayer extends Ref {
     }
 
     private void fwkSetPreload(int preload) {
-        if (verbose) {
-            log.log(Level.FINE, "fwkSetPreload({0})",
-                    preload == PRELOAD_NONE ? "PRELOAD_NONE"
-                    : preload == PRELOAD_METADATA ? "PRELOAD_METADATA"
-                    : preload == PRELOAD_AUTO ? "PRELOAD_AUTO"
-                    : ("INVALID VALUE: " + preload));
-        }
+        log.fine("fwkSetPreload({0})",
+                preload == PRELOAD_NONE ? "PRELOAD_NONE"
+                : preload == PRELOAD_METADATA ? "PRELOAD_METADATA"
+                : preload == PRELOAD_AUTO ? "PRELOAD_AUTO"
+                : ("INVALID VALUE: " + preload));
         this.preload = preload;
     }
 
     /* called from GraphicsDecoder */
     void render(WCGraphicsContext gc, int x, int y, int w, int h) {
-        if (verbose) {
-            log.log(Level.FINER, "render(x={0}, y={1}, w={2}, h={3}",
-                    new Object[]{x, y, w, h});
-        }
+        log.finer("render(x={0}, y={1}, w={2}, h={3}", new Object[]{x, y, w, h});
         renderCurrentFrame(gc, x, y, w, h);
     }
 

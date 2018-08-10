@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,8 @@
 package com.sun.webkit.perf;
 
 import java.nio.ByteBuffer;
-import java.util.logging.Logger;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.webkit.graphics.Ref;
 import com.sun.webkit.graphics.RenderTheme;
 import com.sun.webkit.graphics.ScrollBarTheme;
@@ -42,7 +42,7 @@ import com.sun.webkit.graphics.WCRectangle;
 import com.sun.webkit.graphics.WCTransform;
 
 public final class WCGraphicsPerfLogger extends WCGraphicsContext {
-    private static final Logger log = Logger.getLogger(WCGraphicsPerfLogger.class.getName());
+    private static final PlatformLogger log = PlatformLogger.getLogger(WCGraphicsPerfLogger.class.getName());
 
     private static final PerfLogger logger = PerfLogger.getLogger(log);
 

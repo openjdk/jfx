@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -209,7 +209,7 @@ public abstract class PixelFormat<T extends Buffer> {
      * <p>
      * Pixels in this format can be decoded using the following sample code:
      * <pre>{@code
-     *     int pixel = array[rowstart + x] &amp; 0xff;
+     *     int pixel = array[rowstart + x] & 0xff;
      *     int argb  = colors[pixel];
      *
      *     int alpha = ((argb >> 24) & 0xff);
@@ -237,7 +237,7 @@ public abstract class PixelFormat<T extends Buffer> {
      * <p>
      * Pixels in this format can be decoded using the following sample code:
      * <pre>{@code
-     *     int pixel = array[rowstart + x] &amp; 0xff;
+     *     int pixel = array[rowstart + x] & 0xff;
      *     int argb  = colors[pixel];
      *
      *     int alpha = ((argb >> 24) & 0xff);
