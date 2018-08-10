@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -715,7 +715,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @param hueShift the hue shift
      * @param saturationFactor the saturation factor
      * @param brightnessFactor the brightness factor
-     * @param opacityFactor the brightness factor
+     * @param opacityFactor the opacity factor
      * @return a {@code Color} based based on this {@code Color} with hue,
      * saturation, brightness and opacity values altered.
      */

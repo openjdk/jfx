@@ -25,14 +25,13 @@
 
 package com.sun.webkit.perf;
 
-import java.util.logging.Logger;
-
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.webkit.graphics.WCFont;
 import com.sun.webkit.graphics.WCGlyphBuffer;
 
 public final class WCFontPerfLogger extends WCFont {
-    private static final Logger log =
-            Logger.getLogger(WCFontPerfLogger.class.getName());
+    private static final PlatformLogger log =
+            PlatformLogger.getLogger(WCFontPerfLogger.class.getName());
 
     private static final PerfLogger logger = PerfLogger.getLogger(log);
 

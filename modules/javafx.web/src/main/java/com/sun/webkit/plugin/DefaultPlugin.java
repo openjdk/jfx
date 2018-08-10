@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,15 +27,11 @@ package com.sun.webkit.plugin;
 
 import java.io.IOError;
 import java.net.URL;
-import java.util.logging.Logger;
 
 import com.sun.webkit.graphics.WCGraphicsContext;
 
 
 final class DefaultPlugin implements Plugin {
-
-    private final static Logger log =
-        Logger.getLogger("com.sun.browser.plugin.DefaultPlugin");
 
     //private JLabel nullComp;
 

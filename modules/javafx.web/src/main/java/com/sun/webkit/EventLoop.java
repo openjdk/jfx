@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,12 @@
 
 package com.sun.webkit;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.sun.javafx.logging.PlatformLogger;
 
 public abstract class EventLoop {
 
-    private static final Logger logger =
-            Logger.getLogger(EventLoop.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(EventLoop.class.getName());
 
     private static EventLoop instance;
 
@@ -41,7 +40,7 @@ public abstract class EventLoop {
     }
 
     private static void fwkCycle() {
-        logger.log(Level.FINE, "Executing event loop cycle");
+        logger.fine("Executing event loop cycle");
         instance.cycle();
     }
 

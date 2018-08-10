@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,11 @@
 
 package com.sun.webkit.graphics;
 
+import com.sun.javafx.logging.PlatformLogger;
+
 import java.lang.annotation.Native;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.logging.Logger;
 
 public final class GraphicsDecoder  {
     @Native public final static int FILLRECT_FFFFI         = 0;
@@ -84,8 +85,8 @@ public final class GraphicsDecoder  {
     @Native public final static int SET_MITER_LIMIT        = 54;
     @Native public final static int SET_TEXT_MODE          = 55;
 
-    private final static Logger log =
-        Logger.getLogger(GraphicsDecoder.class.getName());
+    private final static PlatformLogger log =
+            PlatformLogger.getLogger(GraphicsDecoder.class.getName());
 
     static void decode(WCGraphicsManager gm, WCGraphicsContext gc, BufferData bdata) {
         if (gc == null) {

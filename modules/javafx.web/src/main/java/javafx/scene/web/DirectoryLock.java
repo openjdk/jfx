@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.web;
 
+import com.sun.javafx.logging.PlatformLogger;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -33,13 +34,11 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 final class DirectoryLock {
 
-    private static final Logger logger =
-            Logger.getLogger(DirectoryLock.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(DirectoryLock.class.getName());
     private static final Map<File,Descriptor> descriptors = new HashMap<>();
 
 
@@ -70,7 +69,7 @@ final class DirectoryLock {
                     try {
                         lockRaf.close();
                     } catch (IOException ex) {
-                        logger.log(Level.WARNING, format("Error closing [%s]",
+                        logger.warning(format("Error closing [%s]",
                                 lockFile), ex);
                     }
                 }
@@ -89,13 +88,13 @@ final class DirectoryLock {
             try {
                 descriptor.lock.release();
             } catch (IOException ex) {
-                logger.log(Level.WARNING, format("Error releasing "
-                        + "lock on [%s]", lockFile(descriptor.directory)), ex);
+                logger.warning(format("Error releasing lock on [%s]",
+                        lockFile(descriptor.directory)), ex);
             }
             try {
                 descriptor.lockRaf.close();
             } catch (IOException ex) {
-                logger.log(Level.WARNING, format("Error closing [%s]",
+                logger.warning(format("Error closing [%s]",
                         lockFile(descriptor.directory)), ex);
             }
             descriptors.remove(descriptor.directory);

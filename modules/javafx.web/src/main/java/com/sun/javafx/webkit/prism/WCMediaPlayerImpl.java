@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package com.sun.javafx.webkit.prism;
 
 import java.net.URI;
 import java.util.List;
-import java.util.logging.Level;
+
 import com.sun.javafx.media.PrismMediaFrameHandler;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaManager;
@@ -107,7 +107,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
 
         @Override
         public void run() {
-            if (verbose) log.log(Level.FINE, "CreateThread: started, url={0}", url);
+            log.fine("CreateThread: started, url={0}", url);
 
             notifyNetworkStateChanged(NETWORK_STATE_LOADING);
             notifyReadyStateChanged(READY_STATE_HAVE_NOTHING);
@@ -120,30 +120,26 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     locator.setConnectionProperty("User-Agent", userAgent);
                 }
                 locator.init();
-                if (verbose) {
                     log.fine("CreateThread: locator created");
-                }
 
                 p = MediaManager.getPlayer(locator);
             } catch (Exception ex) {
-                if (verbose) {
-                    log.log(Level.WARNING, "CreateThread ERROR: {0}", ex.toString());
-                    ex.printStackTrace(System.out);
-                }
+                log.warning("CreateThread ERROR: {0}", ex.toString());
+                ex.printStackTrace(System.out);
                 onError(this, 0, ex.getMessage());
                 return;
             }
 
             synchronized (lock) {
                 if (cancelled) {
-                    if (verbose) log.log(Level.FINE, "CreateThread: cancelled");
+                    log.fine("CreateThread: cancelled");
                     p.dispose();
                     return;
                 }
                 createThread = null;
                 setPlayer(p);
             }
-            if (verbose) log.log(Level.FINE, "CreateThread: completed");
+            log.fine("CreateThread: completed");
         }
 
         private void cancel() {
@@ -340,7 +336,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
 
 
     private void renderImpl(WCGraphicsContext gc, int x, int y, int w, int h) {
-        if (verbose) log.log(Level.FINER, ">>(Prism)renderImpl");
+        log.finer(">>(Prism)renderImpl");
         Graphics g = (Graphics)gc.getPlatformGraphics();
 
         Texture texture = null;
@@ -359,42 +355,39 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                     0f, 0f, texture.getContentWidth(), texture.getContentHeight());
             texture.unlock();
         } else {
-            if (verbose) log.log(Level.FINEST, "  (Prism)renderImpl, texture is null, draw black rect");
+            log.finest("  (Prism)renderImpl, texture is null, draw black rect");
             gc.fillRect(x, y, w, h, 0xFF000000);
         }
-        if (verbose) log.log(Level.FINER, "<<(Prism)renderImpl");
+        log.finer("<<(Prism)renderImpl");
     }
 
     // PlayerStateListener
     @Override
     public void onReady(PlayerStateEvent pse) {
         MediaPlayer p = getPlayer();
-        if (verbose) log.log(Level.FINE, "onReady");
+        log.fine("onReady");
         Media media = p.getMedia();
         boolean hasVideo = false;
         boolean hasAudio = false;
         if (media != null) {
             List<Track> tracks = media.getTracks();
             if (tracks != null) {
-                if (verbose) log.log(Level.INFO, "{0} track(s) detected:", tracks.size());
+                log.fine("{0} track(s) detected:", tracks.size());
                 for (Track track : tracks) {
                     if (track instanceof VideoTrack) {
                         hasVideo = true;
                     } else if (track instanceof AudioTrack) {
                         hasAudio = true;
                     }
-                    if (verbose) log.log(Level.INFO, "track: {0}", track);
+                    log.fine("track: {0}", track);
                 }
             } else {
-                if (verbose) log.log(Level.WARNING, "onReady, tracks IS NULL");
+                log.warning("onReady, tracks IS NULL");
             }
         } else {
-            if (verbose) log.log(Level.WARNING, "onReady, media IS NULL");
+            log.warning("onReady, media IS NULL");
         }
-        if (verbose) {
-            log.log(Level.FINE, "onReady, hasVideo:{0}, hasAudio: {1}",
-                    new Object[]{hasVideo, hasAudio});
-        }
+        log.fine("onReady, hasVideo:{0}, hasAudio: {1}", new Object[]{hasVideo, hasAudio});
         notifyReady(hasVideo, hasAudio, (float)p.getDuration());
 
         // if we have no video, report READY_STATE_HAVE_ENOUGH_DATA right now
@@ -413,25 +406,25 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
 
     @Override
     public void onPlaying(PlayerStateEvent pse) {
-        if (verbose) log.log(Level.FINE, "onPlaying");
+        log.fine("onPlaying");
         notifyPaused(false);
     }
 
     @Override
     public void onPause(PlayerStateEvent pse) {
-        if (verbose) log.log(Level.FINE, "onPause, time: {0}", pse.getTime());
+        log.fine("onPause, time: {0}", pse.getTime());
         notifyPaused(true);
     }
 
     @Override
     public void onStop(PlayerStateEvent pse) {
-        if (verbose) log.log(Level.FINE, "onStop");
+        log.fine("onStop");
         notifyPaused(true);
     }
 
     @Override
     public void onStall(PlayerStateEvent pse) {
-        if (verbose) log.log(Level.FINE, "onStall");
+        log.fine("onStall");
     }
 
     @Override
@@ -439,24 +432,21 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
         MediaPlayer p = getPlayer();
         if (p != null) {
             finished = p.getRate() > 0 ? 1 : -1;
-            if (verbose) log.log(Level.FINE, "onFinish, time: {0}", pse.getTime());
+            log.fine("onFinish, time: {0}", pse.getTime());
             notifyFinished();
         }
     }
 
     @Override
     public void onHalt(PlayerStateEvent pse) {
-        if (verbose) log.log(Level.FINE, "onHalt");
+        log.fine("onHalt");
     }
 
     // MediaErrorListener
     @Override
     public void onError(Object source, int errCode, String message) {
         //MediaPlayer p = getPlayer();
-        if (verbose) {
-            log.log(Level.WARNING, "onError, errCode={0}, msg={1}",
-                    new Object[]{errCode, message});
-        }
+        log.warning("onError, errCode={0}, msg={1}", new Object[]{errCode, message});
         // TODO: parse errCode to detect NETWORK_STATE_FORMAT_ERROR/
         // NETWORK_STATE_NETWORK_ERROR/NETWORK_STATE_DECODE_ERROR
         notifyNetworkStateChanged(NETWORK_STATE_NETWORK_ERROR);
@@ -466,7 +456,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
     //PlayerTimeListener
     @Override
     public void onDurationChanged(double duration) {
-        if (verbose) log.log(Level.FINE, "onDurationChanged, duration={0}", duration);
+        log.fine("onDurationChanged, duration={0}", duration);
         notifyDurationChanged((float)duration);
     }
 
@@ -474,10 +464,7 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
     @Override
     public void onSizeChanged(int width, int height) {
         //MediaPlayer p = getPlayer();
-        if (verbose) {
-            log.log(Level.FINE, "onSizeChanged, new size = {0} x {1}",
-                    new Object[]{width, height});
-        }
+        log.fine("onSizeChanged, new size = {0} x {1}", new Object[]{width, height});
         notifySizeChanged(width, height);
     }
 
@@ -490,8 +477,8 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
             }
             gotFirstFrame = true;
         }
-        if (verbose && finished != 0) {
-            log.log(Level.FINE, "notifyFrameArrived (after finished) time: {0}", getPlayer().getPresentationTime());
+        if (finished != 0) {
+            log.fine("notifyFrameArrived (after finished) time: {0}", getPlayer().getPresentationTime());
         }
         notifyNewFrame();
     }
@@ -504,10 +491,8 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
         int newNetworkState =
                 buffering ? NETWORK_STATE_LOADING
                 : bufferedStart > 0 ? NETWORK_STATE_IDLE : NETWORK_STATE_LOADED;
-        if (verbose) {
-            log.log(Level.FINE, "updateBufferingStatus, buffered: [{0} - {1}], buffering = {2}",
-                new Object[]{bufferedStart, bufferedEnd, buffering});
-        }
+        log.fine("updateBufferingStatus, buffered: [{0} - {1}], buffering = {2}",
+            new Object[]{bufferedStart, bufferedEnd, buffering});
         notifyNetworkStateChanged(newNetworkState);
     }
 
@@ -533,14 +518,12 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
         ranges[0] = bufferedStart;
         ranges[1] = bufferedEnd;
         int bytesLoaded = (int)(event.getBufferPosition() - event.getBufferStart());
-        if (verbose) {
-            log.log(Level.FINER, "onBufferProgress, "
-                    + "bufferStart={0}, bufferStop={1}, bufferPos={2}, duration={3}; "
-                    + "notify range [{4},[5]], bytesLoaded: {6}",
-                    new Object[]{event.getBufferStart(), event.getBufferStop(),
-                                 event.getBufferPosition(), event.getDuration(),
-                                 ranges[0], ranges[1], bytesLoaded});
-        }
+        log.finer("onBufferProgress, "
+                + "bufferStart={0}, bufferStop={1}, bufferPos={2}, duration={3}; "
+                + "notify range [{4},[5]], bytesLoaded: {6}",
+                new Object[]{event.getBufferStart(), event.getBufferStop(),
+                             event.getBufferPosition(), event.getDuration(),
+                             ranges[0], ranges[1], bytesLoaded});
         notifyBufferChanged(ranges, bytesLoaded);
         updateBufferingStatus();
     }

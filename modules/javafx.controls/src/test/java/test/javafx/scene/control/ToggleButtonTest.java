@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,12 @@
 
 package test.javafx.scene.control;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.tk.Toolkit;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -42,7 +38,6 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.shape.Rectangle;
 import static org.junit.Assert.*;
-
 
 import org.junit.Before;
 import org.junit.Test;
@@ -188,9 +183,9 @@ public class ToggleButtonTest {
         });
         toggle.fire();
         try {
-            Thread.currentThread().sleep(2000);
+            Thread.sleep(2000);
         } catch (InterruptedException ex) {
-            Logger.getLogger(ToggleButtonTest.class.getName()).log(Level.SEVERE, null, ex);
+            PlatformLogger.getLogger(ToggleButtonTest.class.getName()).severe(null, ex);
         }
         assertTrue("fire() doesnt emit ActionEvent!", flag[0]);
     }

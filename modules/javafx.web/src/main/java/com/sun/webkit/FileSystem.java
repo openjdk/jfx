@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,13 @@
 
 package com.sun.webkit;
 
+import com.sun.javafx.logging.PlatformLogger;
 import java.io.File;
 import java.io.IOException;
 import static java.lang.String.format;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 final class FileSystem {
 
@@ -41,8 +40,8 @@ final class FileSystem {
     private static final int TYPE_FILE = 1;
     private static final int TYPE_DIRECTORY = 2;
 
-    private final static Logger logger =
-            Logger.getLogger(FileSystem.class.getName());
+    private final static PlatformLogger logger =
+            PlatformLogger.getLogger(FileSystem.class.getName());
 
 
     private FileSystem() {
@@ -60,8 +59,7 @@ final class FileSystem {
                 return file.length();
             }
         } catch (SecurityException ex) {
-            logger.log(Level.FINE, format("Error determining "
-                    + "size of file [%s]", path), ex);
+            logger.fine(format("Error determining size of file [%s]", path), ex);
         }
         return -1;
     }
@@ -82,8 +80,7 @@ final class FileSystem {
                 return true;
             }
         } catch (SecurityException ex) {
-            logger.log(Level.FINE, format("Error determining "
-                    + "Metadata for file [%s]", path), ex);
+            logger.fine(format("Error determining Metadata for file [%s]", path), ex);
         }
         return false;
     }
@@ -99,8 +96,7 @@ final class FileSystem {
             Files.createDirectories(Paths.get(path));
             return true;
         } catch (InvalidPathException|IOException ex) {
-            logger.log(Level.FINE, format("Error creating "
-                    + "directory [%s]", path), ex);
+            logger.fine(format("Error creating directory [%s]", path), ex);
             return false;
         }
     }

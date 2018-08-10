@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import javafx.beans.value.ObservableValue;
  * An {@code InvalidationListener} is notified whenever an
  * {@link Observable} becomes invalid. It can be registered and
  * unregistered with {@link Observable#addListener(InvalidationListener)}
- * respectively {@link Observable#removeListener(InvalidationListener)}
+ * respectively {@link Observable#removeListener(InvalidationListener)}.
  * <p>
  * For an in-depth explanation of invalidation events and how they differ from
  * change events, see the documentation of {@code ObservableValue}.

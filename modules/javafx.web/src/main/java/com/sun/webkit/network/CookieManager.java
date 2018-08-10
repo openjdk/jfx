@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package com.sun.webkit.network;
 
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
+
 import java.net.CookieHandler;
 import java.net.URI;
 import java.util.Arrays;
@@ -33,16 +36,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * An RFC 6265-compliant cookie handler.
  */
 public final class CookieManager extends CookieHandler {
 
-    private static final Logger logger =
-        Logger.getLogger(CookieManager.class.getName());
+    private static final PlatformLogger logger =
+            PlatformLogger.getLogger(CookieManager.class.getName());
 
 
     private final CookieStore store = new CookieStore();
@@ -63,7 +64,7 @@ public final class CookieManager extends CookieHandler {
             Map<String,List<String>> requestHeaders)
     {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "uri: [{0}], requestHeaders: {1}",
+            logger.finest("uri: [{0}], requestHeaders: {1}",
                     new Object[] {uri, toLogString(requestHeaders)});
         }
 
@@ -84,7 +85,7 @@ public final class CookieManager extends CookieHandler {
             result = Collections.emptyMap();
         }
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "result: {0}", toLogString(result));
+            logger.finest("result: {0}", toLogString(result));
         }
         return result;
     }
@@ -95,7 +96,7 @@ public final class CookieManager extends CookieHandler {
     private String get(URI uri) {
         String host = uri.getHost();
         if (host == null || host.length() == 0) {
-            logger.log(Level.FINEST, "Null or empty URI host, returning null");
+            logger.finest("Null or empty URI host, returning null");
             return null;
         }
         host = canonicalize(host);
@@ -131,7 +132,7 @@ public final class CookieManager extends CookieHandler {
     @Override
     public void put(URI uri, Map<String,List<String>> responseHeaders) {
         if (logger.isLoggable(Level.FINEST)) {
-            logger.log(Level.FINEST, "uri: [{0}], responseHeaders: {1}",
+            logger.finest("uri: [{0}], responseHeaders: {1}",
                     new Object[] {uri, toLogString(responseHeaders)});
         }
 
@@ -169,11 +170,11 @@ public final class CookieManager extends CookieHandler {
      * Puts an individual cookie.
      */
     private void put(URI uri, Cookie cookie) {
-        logger.log(Level.FINEST, "cookie: {0}", cookie);
+        logger.finest("cookie: {0}", cookie);
 
         String host = uri.getHost();
         if (host == null || host.length() == 0) {
-            logger.log(Level.FINEST, "Null or empty URI host, ignoring cookie");
+            logger.finest("Null or empty URI host, ignoring cookie");
             return;
         }
         host = canonicalize(host);
@@ -182,7 +183,7 @@ public final class CookieManager extends CookieHandler {
             if (cookie.getDomain().equals(host)) {
                 cookie.setDomain("");
             } else {
-                logger.log(Level.FINEST, "Domain is public suffix, "
+                logger.finest("Domain is public suffix, "
                         + "ignoring cookie");
                 return;
             }
@@ -190,7 +191,7 @@ public final class CookieManager extends CookieHandler {
 
         if (cookie.getDomain().length() > 0) {
             if (!Cookie.domainMatches(host, cookie.getDomain())) {
-                logger.log(Level.FINEST, "Hostname does not match domain, "
+                logger.finest("Hostname does not match domain, "
                         + "ignoring cookie");
                 return;
             } else {
@@ -208,7 +209,7 @@ public final class CookieManager extends CookieHandler {
         boolean httpApi = "http".equalsIgnoreCase(uri.getScheme())
                 || "https".equalsIgnoreCase(uri.getScheme());
         if (cookie.getHttpOnly() && !httpApi) {
-            logger.log(Level.FINEST, "HttpOnly cookie received from non-HTTP "
+            logger.finest("HttpOnly cookie received from non-HTTP "
                     + "API, ignoring cookie");
             return;
         }
@@ -217,7 +218,7 @@ public final class CookieManager extends CookieHandler {
             Cookie oldCookie = store.get(cookie);
             if (oldCookie != null) {
                 if (oldCookie.getHttpOnly() && !httpApi) {
-                    logger.log(Level.FINEST, "Non-HTTP API attempts to "
+                    logger.finest("Non-HTTP API attempts to "
                             + "overwrite HttpOnly cookie, blocked");
                     return;
                 }
@@ -227,7 +228,7 @@ public final class CookieManager extends CookieHandler {
             store.put(cookie);
         }
 
-        logger.log(Level.FINEST, "Stored: {0}", cookie);
+        logger.finest("Stored: {0}", cookie);
     }
 
     /**

@@ -67,6 +67,9 @@ public abstract class Mesh {
         });
     }
 
+    /**
+     * A constructor that is called by any {@code Mesh} implementation.
+     */
     protected Mesh() {
         if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
             String logname = Mesh.class.getName();

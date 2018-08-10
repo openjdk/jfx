@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,11 +37,12 @@ import javafx.geometry.Point3D;
 /**
  * This class represents an {@code Affine} object that scales coordinates
  * by the specified factors. The matrix representing the scaling transformation
- * is as follows:
+ * around a pivot point {@code (pivotX, pivotY, pivotZ)} with scaling factors
+ * {@code x}, {@code y} and {@code z} is as follows:
  * <pre>
- *              [ x   0   0   (1-x)*pivotX ]
- *              [ 0   y   0   (1-y)*pivotY ]
- *              [ 0   0   z   (1-z)*pivotZ ]
+ *              [   x   0   0   (1-x)*pivotX   ]
+ *              [   0   y   0   (1-y)*pivotY   ]
+ *              [   0   0   z   (1-z)*pivotZ   ]
  * </pre>
  * @since JavaFX 2.0
  */

@@ -114,11 +114,9 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * By default a Region appears as a Rectangle. A BackgroundFill radii might cause the Rectangle to appear rounded.
  * This affects not only making the visuals look like a rounded rectangle, but it also causes the picking behavior
  * of the Region to act like a rounded rectangle, such that locations outside the corner radii are ignored. A
- * Region can be made to use any shape, however, by specifing the {@code shape} property. If a shape is specified,
+ * Region can be made to use any shape, however, by specifying the {@code shape} property. If a shape is specified,
  * then all BackgroundFills, BackgroundImages, and BorderStrokes will be applied to the shape. BorderImages are
  * not used for Regions which have a shape specified.
- * <p>
- * A Region with a shape
  * <p>
  * Although the layout bounds of a Region are not influenced by any Border or Background, the content area
  * insets and the picking area of the Region are. The {@code insets} of the Region define the distance
@@ -571,7 +569,7 @@ public class Region extends Parent {
     };
 
     {
-        // To initialize the class helper at the begining each constructor of this class
+        // To initialize the class helper at the beginning each constructor of this class
         RegionHelper.initHelper(this);
     }
 

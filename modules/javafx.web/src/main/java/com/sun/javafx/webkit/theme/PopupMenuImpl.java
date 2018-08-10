@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,12 @@
 
 package com.sun.javafx.webkit.theme;
 
-import java.util.logging.Logger;
-import java.util.logging.Level;
-
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.web.WebView;
-import javafx.stage.WindowEvent;
 
 import com.sun.webkit.Invoker;
 import com.sun.webkit.graphics.WCFont;
@@ -44,7 +40,7 @@ import com.sun.webkit.WebPageClient;
 
 public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
 
-    private final static Logger log = Logger.getLogger(PopupMenuImpl.class.getName());
+    private final static PlatformLogger log = PlatformLogger.getLogger(PopupMenuImpl.class.getName());
 
     private final ContextMenu popupMenu;
 
@@ -65,14 +61,14 @@ public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
         });
         popupMenu.setOnAction(t -> {
             MenuItem item = (MenuItem) t.getTarget();
-            log.log(Level.FINE, "onAction: item={0}", item);
+            log.fine("onAction: item={0}", item);
             notifySelectionCommited(popupMenu.getItems().indexOf(item));
         });
     }
 
     @Override protected void show(WebPage page, final int x, final int y, final int width) {
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "show at [{0}, {1}], width={2}", new Object[] {x, y, width});
+            log.fine("show at [{0}, {1}], width={2}", new Object[] {x, y, width});
         }
         // TODO: doesn't work
         popupMenu.setPrefWidth(width);
@@ -90,7 +86,7 @@ public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
                                         int bgColor, int fgColor, WCFont font)
     {
         if (log.isLoggable(Level.FINEST)) {
-            log.log(Level.FINEST, "itemText={0}, isLabel={1}, isSeparator={2}, isEnabled={3}, " +
+            log.finest("itemText={0}, isLabel={1}, isSeparator={2}, isEnabled={3}, " +
                     "bgColor={4}, fgColor={5}, font={6}", new Object[] {itemText, isLabel,
                     isSeparator, isEnabled, bgColor, fgColor, font});
         }
@@ -109,7 +105,7 @@ public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
     }
 
     @Override protected void setSelectedItem(int index) {
-        log.log(Level.FINEST, "index={0}", index);
+        log.finest("index={0}", index);
         // TODO requestFocus is not supported currently
         //popupMenu.getItems().get(index).requestFocus();
     }
