@@ -673,11 +673,26 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetPositions)
 {
     CTRunRef run = (CTRunRef)runRef;
     const CGPoint* positions = CTRunGetPositionsPtr(run);
+    CFIndex count = CTRunGetGlyphCount(run);
+    if (count == 0) {
+        return 0;
+    }
+
+    CGPoint* tempPositions = NULL;
+    if (!positions) {
+        tempPositions = (CGPoint*) malloc(count * sizeof(CGPoint));
+        if (!tempPositions) {
+            return 0;
+        }
+
+        CTRunGetPositions(run, CFRangeMake(0, 0), tempPositions);
+        positions = tempPositions;
+    }
+
     int j = 0;
     if (positions) {
         jfloat* buffer = (*env)->GetPrimitiveArrayCritical(env, bufferRef, NULL);
         if (buffer) {
-            CFIndex count = CTRunGetGlyphCount(run);
             int i = 0;
             while (i < count) {
                 CGPoint pos = positions[i++];
@@ -686,6 +701,10 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetPositions)
             }
             (*env)->ReleasePrimitiveArrayCritical(env, bufferRef, buffer, 0);
         }
+    }
+
+    if (tempPositions) {
+        free(tempPositions);
     }
     return j;
 }
