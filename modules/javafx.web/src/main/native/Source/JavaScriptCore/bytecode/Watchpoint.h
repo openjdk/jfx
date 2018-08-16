@@ -68,9 +68,7 @@ class Watchpoint : public BasicRawSentinelNode<Watchpoint> {
     WTF_MAKE_NONCOPYABLE(Watchpoint);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Watchpoint()
-    {
-    }
+    Watchpoint() = default;
 
     virtual ~Watchpoint();
 
@@ -89,10 +87,12 @@ enum WatchpointState {
 };
 
 class InlineWatchpointSet;
+class DeferredWatchpointFire;
 class VM;
 
 class WatchpointSet : public ThreadSafeRefCounted<WatchpointSet> {
     friend class LLIntOffsetsExtractor;
+    friend class DeferredWatchpointFire;
 public:
     JS_EXPORT_PRIVATE WatchpointSet(WatchpointState);
 
@@ -159,6 +159,13 @@ public:
         fireAllSlow(vm, detail);
     }
 
+    void fireAll(VM& vm, DeferredWatchpointFire* deferredWatchpoints)
+    {
+        if (LIKELY(m_state != IsWatched))
+            return;
+        fireAllSlow(vm, deferredWatchpoints);
+    }
+
     void fireAll(VM& vm, const char* reason)
     {
         if (LIKELY(m_state != IsWatched))
@@ -201,10 +208,12 @@ public:
     int8_t* addressOfSetIsNotEmpty() { return &m_setIsNotEmpty; }
 
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const FireDetail&); // Call only if you've checked isWatched.
+    JS_EXPORT_PRIVATE void fireAllSlow(VM&, DeferredWatchpointFire* deferredWatchpoints);
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const char* reason); // Ditto.
 
 private:
     void fireAllWatchpoints(VM&, const FireDetail&);
+    void take(WatchpointSet* other);
 
     friend class InlineWatchpointSet;
 
@@ -300,6 +309,18 @@ public:
     {
         if (isFat()) {
             fat()->fireAll(vm, detail);
+            return;
+        }
+        if (decodeState(m_data) == ClearWatchpoint)
+            return;
+        m_data = encodeState(IsInvalidated);
+        WTF::storeStoreFence();
+    }
+
+    void fireAll(VM& vm, DeferredWatchpointFire* deferred)
+    {
+        if (isFat()) {
+            fat()->fireAll(vm, deferred);
             return;
         }
         if (decodeState(m_data) == ClearWatchpoint)
@@ -433,6 +454,21 @@ private:
     JS_EXPORT_PRIVATE void freeFat();
 
     uintptr_t m_data;
+};
+
+class DeferredWatchpointFire : public FireDetail {
+    WTF_MAKE_NONCOPYABLE(DeferredWatchpointFire);
+public:
+    JS_EXPORT_PRIVATE DeferredWatchpointFire(VM&);
+    JS_EXPORT_PRIVATE ~DeferredWatchpointFire();
+
+    JS_EXPORT_PRIVATE void takeWatchpointsToFire(WatchpointSet*);
+    JS_EXPORT_PRIVATE void fireAll();
+
+    void dump(PrintStream& out) const override = 0;
+private:
+    VM& m_vm;
+    WatchpointSet m_watchpointsToFire;
 };
 
 } // namespace JSC

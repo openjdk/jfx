@@ -28,6 +28,7 @@
 #include "HTMLTextFormControlElement.h"
 #include "StepRange.h"
 #include <memory>
+#include <wtf/WeakPtr.h>
 
 #if PLATFORM(IOS)
 #include "DateComponents.h"
@@ -341,6 +342,8 @@ public:
 
     ExceptionOr<void> setSelectionRangeForBindings(int start, int end, const String& direction);
 
+    auto& weakPtrFactory() const { return m_weakFactory; }
+
 protected:
     HTMLInputElement(const QualifiedName&, Document&, HTMLFormElement*, bool createdByParser);
 
@@ -446,7 +449,7 @@ private:
     AtomicString m_name;
     String m_valueIfDirty;
     unsigned m_size;
-    short m_maxResults;
+    short m_maxResults { -1 };
     bool m_isChecked : 1;
     bool m_reflectsCheckedAttribute : 1;
     bool m_isIndeterminate : 1;
@@ -469,7 +472,7 @@ private:
     bool m_hasTouchEventHandler : 1;
 #endif
     bool m_isSpellcheckDisabledExceptTextReplacement : 1;
-    std::unique_ptr<InputType> m_inputType;
+    RefPtr<InputType> m_inputType;
     // The ImageLoader must be owned by this element because the loader code assumes
     // that it lives as long as its owning element lives. If we move the loader into
     // the ImageInput object we may delete the loader while this element lives on.
@@ -477,6 +480,7 @@ private:
 #if ENABLE(DATALIST_ELEMENT)
     std::unique_ptr<ListAttributeTargetObserver> m_listAttributeTargetObserver;
 #endif
+    WeakPtrFactory<HTMLInputElement> m_weakFactory;
 };
 
 }

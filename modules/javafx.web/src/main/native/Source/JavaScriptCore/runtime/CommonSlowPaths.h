@@ -158,7 +158,7 @@ inline void tryCachePutToScopeGlobal(
         scope->structure()->didCachePropertyReplacement(vm, slot.cachedOffset());
 
         ConcurrentJSLocker locker(codeBlock->m_lock);
-        pc[5].u.structure.set(vm, codeBlock, scope->structure());
+        pc[5].u.structure.set(vm, codeBlock, scope->structure(vm));
         pc[6].u.operand = slot.cachedOffset();
     }
 }

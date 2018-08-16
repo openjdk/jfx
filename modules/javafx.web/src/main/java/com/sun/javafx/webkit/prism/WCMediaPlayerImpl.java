@@ -28,6 +28,7 @@ package com.sun.javafx.webkit.prism;
 import java.net.URI;
 import java.util.List;
 
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.media.PrismMediaFrameHandler;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaManager;
@@ -125,7 +126,9 @@ final class WCMediaPlayerImpl extends WCMediaPlayer
                 p = MediaManager.getPlayer(locator);
             } catch (Exception ex) {
                 log.warning("CreateThread ERROR: {0}", ex.toString());
-                ex.printStackTrace(System.out);
+                if (log.isLoggable(PlatformLogger.Level.FINE)) {
+                    ex.printStackTrace(System.out);
+                }
                 onError(this, 0, ex.getMessage());
                 return;
             }

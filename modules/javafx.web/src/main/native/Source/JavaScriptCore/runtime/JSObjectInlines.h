@@ -287,12 +287,13 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
 
             putDirect(vm, offset, value);
             structure->didReplaceProperty(offset);
-            slot.setExistingProperty(this, offset);
 
             if ((attributes & PropertyAttribute::Accessor) != (currentAttributes & PropertyAttribute::Accessor) || (attributes & PropertyAttribute::CustomAccessor) != (currentAttributes & PropertyAttribute::CustomAccessor)) {
                 ASSERT(!(attributes & PropertyAttribute::ReadOnly));
                 setStructure(vm, Structure::attributeChangeTransition(vm, structure, propertyName, attributes));
-            }
+            } else
+                slot.setExistingProperty(this, offset);
+
             return true;
         }
 
@@ -344,13 +345,14 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
                 vm, propertyName, value, slot.context() == PutPropertySlot::PutById);
         }
 
-        slot.setExistingProperty(this, offset);
         putDirect(vm, offset, value);
 
         if ((attributes & PropertyAttribute::Accessor) != (currentAttributes & PropertyAttribute::Accessor) || (attributes & PropertyAttribute::CustomAccessor) != (currentAttributes & PropertyAttribute::CustomAccessor)) {
             ASSERT(!(attributes & PropertyAttribute::ReadOnly));
             setStructure(vm, Structure::attributeChangeTransition(vm, structure, propertyName, attributes));
-        }
+        } else
+            slot.setExistingProperty(this, offset);
+
         return true;
     }
 
@@ -360,7 +362,7 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
     // We want the structure transition watchpoint to fire after this object has switched
     // structure. This allows adaptive watchpoints to observe if the new structure is the one
     // we want.
-    DeferredStructureTransitionWatchpointFire deferredWatchpointFire;
+    DeferredStructureTransitionWatchpointFire deferredWatchpointFire(vm, structure);
 
     newStructure = Structure::addNewPropertyTransition(
         vm, structure, propertyName, attributes, offset, slot.context(), &deferredWatchpointFire);

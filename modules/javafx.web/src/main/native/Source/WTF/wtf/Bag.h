@@ -139,12 +139,20 @@ public:
         return result;
     }
 
-    iterator end() { return iterator(); }
+    const iterator begin() const
+    {
+        iterator result;
+        result.m_node = unwrappedHead();
+        return result;
+    }
+
+
+    iterator end() const { return iterator(); }
 
     bool isEmpty() const { return !m_head; }
 
 private:
-    Node* unwrappedHead() { return PtrTraits::unwrap(m_head); }
+    Node* unwrappedHead() const { return PtrTraits::unwrap(m_head); }
 
     typename PtrTraits::StorageType m_head { nullptr };
 };
