@@ -25,7 +25,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/buildSrc.iml" filepath="$PROJECT_DIR$/.idea/buildSrc.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/controls.iml" filepath="$PROJECT_DIR$/.idea/controls.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/fxml.iml" filepath="$PROJECT_DIR$/.idea/fxml.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/fxpackager.iml" filepath="$PROJECT_DIR$/.idea/fxpackager.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/graphics.iml" filepath="$PROJECT_DIR$/.idea/graphics.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/media.iml" filepath="$PROJECT_DIR$/.idea/media.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/rt.iml" filepath="$PROJECT_DIR$/.idea/rt.iml" />

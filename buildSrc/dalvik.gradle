@@ -100,7 +100,6 @@ def armArchs = ["armeabi", "armeabiv-7a"]
 ext.DALVIK = [:]
 DALVIK.compileSwing = false;
 DALVIK.compileSWT = false;
-DALVIK.compileFXPackager = false;
 DALVIK.compileDesignTime = false;
 DALVIK.glassPlatform = "android"
 DALVIK.armArch = armArchs[0]

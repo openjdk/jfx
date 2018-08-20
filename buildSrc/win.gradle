@@ -30,7 +30,6 @@ if (!WIN.canBuild) return;
 
 WIN.compileSwing = true;
 WIN.compileSWT = true;
-WIN.compileFXPackager = true;
 
 WIN.includeNull3d = true
 
@@ -104,7 +103,7 @@ if (winVsVer >= 120) {
 }
 
 
-// Common set of flags for all modules except fxpackager
+// Common set of flags for all modules
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
         "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
@@ -364,45 +363,6 @@ WIN.prismD3D.lib = "prism_d3d"
 WIN.prismD3D.rcCompiler = rcCompiler;
 WIN.prismD3D.rcSource = defaultRcSource
 WIN.prismD3D.rcFlags = ["/d", "JFX_FNAME=prism_d3d.dll", "/d", "JFX_INTERNAL_NAME=prismD3D", rcFlags].flatten();
-
-WIN.launcher = [:]
-WIN.launcher.compiler = compiler
-WIN.launcher.ccFlags = ["/nologo", "/W3", "/MT", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
-        "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        ccDebugFlags].flatten();
-WIN.launcher.linker = linker
-WIN.launcher.linkFlags = ["/link", "/nologo", "/WX", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
-if (IS_DEBUG_NATIVE) WIN.launcher.linkFlags.add("/debug");
-
-WIN.launcherlibrary = [:]
-WIN.launcherlibrary.compiler = compiler
-WIN.launcherlibrary.ccFlags = ["/nologo", "/W3",
-        // "/WX",
-        "/EHsc", "/c", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
-        "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        ccDebugFlags].flatten();
-WIN.launcherlibrary.linker = linker
-WIN.launcherlibrary.linkFlags = ["/nologo", "/WX", "/DLL", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib", "ole32.lib"]
-if (IS_DEBUG_NATIVE) WIN.launcherlibrary.linkFlags.add("/debug");
-
-WIN.fxpackager = [:]
-WIN.fxpackager.nativeSource = [
-    file("${project("fxpackager").projectDir}/src/main/native/javapackager/win")]
-WIN.fxpackager.compiler = compiler
-WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",  "/DUNICODE", "/D_UNICODE",
-                    "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
-                    "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
-                    "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-                    "/O2", "-c"]
-WIN.fxpackager.linker = linker
-WIN.fxpackager.linkFlags = ["/nologo", "/SUBSYSTEM:CONSOLE", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib"];
-WIN.fxpackager.rcSource = file("${project("fxpackager").projectDir}/src/main/native/javapackager/win/javapackager.rc")
-WIN.fxpackager.rcCompiler = rcCompiler
-WIN.fxpackager.rcFlags = [
-    "/l", "0x409",
-    "/d", "JFX_FNAME=javapackager.exe",
-    "/d", "JFX_INTERNAL_NAME=javapackager",
-    rcFlags].flatten();
 
 WIN.iio = [:]
 WIN.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
