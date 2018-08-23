@@ -150,6 +150,5 @@ checkhashjar() {
 
 checkhashdir "modular-sdk" "build/modular-sdk"
 
-checkhashjar "ant-javafx.jar" "build/modular-sdk/modules_libs/jdk.packager/ant-javafx.jar"
 checkhashjar "javafx-swt.jar" "build/modular-sdk/modules_libs/javafx.graphics/javafx-swt.jar"
 

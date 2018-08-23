@@ -14,8 +14,6 @@ esac
 if [ "X$platform" = "Xmacosx" ]
 then
 sed  -E \
- -e '/^(diff |--- |\+\+\+ )/s,modules/jdk.packager/,modules/fxpackager/,g' \
- -e '/^(diff |--- |\+\+\+ )/s,modules/jdk.packager.services/,modules/fxpackagerservices/,g' \
  -e '/^(diff |--- |\+\+\+ )/s,extensions/,modules/extensions/,g' \
  \
  -e '/^(diff |--- |\+\+\+ )/s,modules/javafx.([a-z]*)/src/test/java/test/,modules/\1/src/test/java/,g' \
@@ -25,8 +23,6 @@ sed  -E \
 
 else
 sed \
- -e '/^\(diff \|--- \|+++ \)/s,modules/jdk.packager/,modules/fxpackager/,g' \
- -e '/^\(diff \|--- \|+++ \)/s,modules/jdk.packager.services/,modules/fxpackagerservices/,g' \
  -e '/^\(diff \|--- \|+++ \)/s,extensions/,modules/extensions/,g' \
  \
  -e '/^\(diff \|--- \|+++ \)/s,modules/javafx.\(base\|graphics\|controls\|swing\|media\|web\|fxml\|swt\)/src/test/java/test/,modules/\1/src/test/java/,g' \
