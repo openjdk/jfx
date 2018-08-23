@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ if (!MAC.canBuild) return;
 // All desktop related packages should be built
 MAC.compileSwing = true;
 MAC.compileSWT = true;
-MAC.compileFXPackager = true;
 
 MAC.includeNull3d = true
 
@@ -167,28 +166,6 @@ MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
 MAC.prismSW.linker = linker
 MAC.prismSW.linkFlags = [MAC.prism.linkFlags].flatten()
 MAC.prismSW.lib = "prism_sw"
-
-MAC.launcher = [:]
-MAC.launcher.compiler = compiler
-MAC.launcher.ccFlags = [
-        "-std=c99",
-        ccBaseFlags,
-        "-framework", "Cocoa",
-        IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
-MAC.launcher.linker = linker
-MAC.launcher.linkFlags = ["-ldl"]
-
-MAC.launcherlibrary = [:]
-MAC.launcherlibrary.compiler = compiler
-MAC.launcherlibrary.ccFlags = [
-        "-c",
-        ccBaseFlags,
-        IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
-    MAC.launcherlibrary.ccFlags += "-stdlib=libstdc++"
-MAC.launcherlibrary.linker = linker
-MAC.launcherlibrary.linkFlags = ["-ldl", "-dynamiclib",
-        "-framework", "Cocoa",
-        "-stdlib=libstdc++"]
 
 MAC.iio = [:]
 MAC.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
