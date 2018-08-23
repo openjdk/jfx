@@ -98,7 +98,6 @@ def armArchs = ["armeabi", "armeabiv-7a"]
 ANDROID = [:]
 ANDROID.compileSwing = false;
 ANDROID.compileSWT = false;
-ANDROID.compileFXPackager = false;
 ANDROID.glassPlatform = "android"
 ANDROID.armArch = armArchs[0]
 ANDROID.libDest = "lib"

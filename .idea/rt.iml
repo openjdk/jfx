@@ -8,7 +8,6 @@
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="fxml" exported="" />
-    <orderEntry type="module" module-name="fxpackager" exported="" />
     <orderEntry type="module" module-name="swt" exported="" />
     <orderEntry type="module" module-name="swing" exported="" />
     <orderEntry type="module" module-name="media" exported="" />

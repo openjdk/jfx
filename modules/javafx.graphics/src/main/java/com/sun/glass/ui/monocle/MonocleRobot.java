@@ -214,7 +214,7 @@ class MonocleRobot extends GlassRobot {
             int colStop = Math.min(x + width, scrWidth);
             for (int row = y; row < rowStop; row++) {
                 for (int col = x; col < colStop; col++) {
-                    data[row * scrWidth + col] = buffer.get(row * scrWidth + col);
+                    data[(row - y) * (colStop - x) + (col - x)] = buffer.get(row * scrWidth + col);
                 }
             }
         }

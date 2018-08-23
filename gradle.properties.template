@@ -102,17 +102,6 @@
 
 #SWT_TEST = false
 
-# Specifies whether or not the results of the packager tests should be
-# retained.  If not they will be automatically deleted.
-
-#RETAIN_PACKAGER_TESTS = false
-
-# Specifies whether or not Packager DMG tests should be run.
-# Mac OSX 10.7 tends to hang on automated builds with hdiutil is run,
-# hence the default is false.
-
-#TEST_PACKAGER_DMG = false
-
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
 # to build for Apple iOS, you would specify ios as one of the COMPILE_TARGETS.
@@ -266,7 +255,6 @@
 #   Decora          DECORA_CC_FLAGS, DECORA_LINK_FLAGS
 #   Prism           PRISM_CC_FLAGS, PRISM_LINK_FLAGS
 #   Prism SW        PRISM_SW_CC_FLAGS, PRISM_SW_LINK_FLAGS
-#   Launcher        LAUNCHER_CC_FLAGS, LAUNCHER_LINK_FLAGS
 #
 # Other projects may use CC_FLAGS and LINK_FLAGS, or may not be fully abstracted out yet.
 # As such, the set of flags a COMPILE_FLAGS_FILES must support will change as time goes on.
