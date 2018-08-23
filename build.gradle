@@ -5093,6 +5093,11 @@ compileTargets { t ->
         def modularEmptyPublicationJarTask = project.task("moduleEmptyPublicationJar${t.capital}", type: Jar) {
             destinationDir = file("${dstModularJarDir}")
             archiveName = modularEmptyPublicationJarName
+            manifest {
+                attributes(
+                    'Automatic-Module-Name':"${moduleName}Empty"
+                )
+            }
         }
 
         def modularPublicationJarName = "${moduleName}-${t.name}.jar"
