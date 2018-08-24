@@ -1,7 +1,9 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2011, International Business Machines
+*   Copyright (C) 1997-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -36,7 +38,7 @@
 
 /**
  * Platform utilities isolates the platform dependencies of the
- * libarary.  For each platform which this code is ported to, these
+ * library.  For each platform which this code is ported to, these
  * functions may have to be re-implemented.
  */
 
@@ -51,7 +53,7 @@
  * The data directory is determined as follows:
  *    If u_setDataDirectory() has been called, that is it, otherwise
  *    if the ICU_DATA environment variable is set, use that, otherwise
- *    If a data directory was specifed at ICU build time
+ *    If a data directory was specified at ICU build time
  *      <code>
  * \code
  *        #define ICU_DATA_DIR "path"
@@ -65,6 +67,7 @@
  * @stable ICU 2.0
  */
 U_STABLE const char* U_EXPORT2 u_getDataDirectory(void);
+
 
 /**
  * Set the ICU data directory.
@@ -87,20 +90,36 @@ U_STABLE const char* U_EXPORT2 u_getDataDirectory(void);
  */
 U_STABLE void U_EXPORT2 u_setDataDirectory(const char *directory);
 
+#ifndef U_HIDE_INTERNAL_API
+/**
+  * Return the time zone files override directory, or an empty string if
+  * no directory was specified. Certain time zone resources will be preferentially
+  * loaded from individual files in this directory.
+  *
+  * @return the time zone data override directory.
+  * @internal
+  */
+U_INTERNAL const char * U_EXPORT2 u_getTimeZoneFilesDirectory(UErrorCode *status);
+
+/**
+  * Set the time zone files override directory.
+  * This function is not thread safe; it must not be called concurrently with
+  *   u_getTimeZoneFilesDirectory() or any other use of ICU time zone functions.
+  * This function should only be called before using any ICU service that
+  *   will access the time zone data.
+  * @internal
+  */
+U_INTERNAL void U_EXPORT2 u_setTimeZoneFilesDirectory(const char *path, UErrorCode *status);
+#endif  /* U_HIDE_INTERNAL_API */
+
+
 /**
  * @{
  * Filesystem file and path separator characters.
  * Example: '/' and ':' on Unix, '\\' and ';' on Windows.
  * @stable ICU 2.0
  */
-#if U_PLATFORM == U_PF_CLASSIC_MACOS
-#   define U_FILE_SEP_CHAR ':'
-#   define U_FILE_ALT_SEP_CHAR ':'
-#   define U_PATH_SEP_CHAR ';'
-#   define U_FILE_SEP_STRING ":"
-#   define U_FILE_ALT_SEP_STRING ":"
-#   define U_PATH_SEP_STRING ";"
-#elif U_PLATFORM_USES_ONLY_WIN32_API
+#if U_PLATFORM_USES_ONLY_WIN32_API
 #   define U_FILE_SEP_CHAR '\\'
 #   define U_FILE_ALT_SEP_CHAR '/'
 #   define U_PATH_SEP_CHAR ';'

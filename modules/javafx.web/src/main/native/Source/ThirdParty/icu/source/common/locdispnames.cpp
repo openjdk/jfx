@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1997-2012, International Business Machines
+*   Copyright (C) 1997-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
 *   file name:  locdispnames.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -465,8 +467,7 @@ uloc_getDisplayName(const char *locale,
                     UChar *dest, int32_t destCapacity,
                     UErrorCode *pErrorCode)
 {
-    static const UChar defaultSeparator[3] = { 0x002c, 0x0020, 0x0000 }; /* comma + space */
-    static const int32_t defaultSepLen = 2;
+    static const UChar defaultSeparator[9] = { 0x007b, 0x0030, 0x007d, 0x002c, 0x0020, 0x007b, 0x0031, 0x007d, 0x0000 }; /* "{0}, {1}" */
     static const UChar sub0[4] = { 0x007b, 0x0030, 0x007d , 0x0000 } ; /* {0} */
     static const UChar sub1[4] = { 0x007b, 0x0031, 0x007d , 0x0000 } ; /* {1} */
     static const int32_t subLen = 3;
@@ -484,6 +485,11 @@ uloc_getDisplayName(const char *locale,
     const UChar *pattern;
     int32_t patLen = 0;
     int32_t sub0Pos, sub1Pos;
+
+    UChar formatOpenParen         = 0x0028; // (
+    UChar formatReplaceOpenParen  = 0x005B; // [
+    UChar formatCloseParen        = 0x0029; // )
+    UChar formatReplaceCloseParen = 0x005D; // ]
 
     UBool haveLang = TRUE; /* assume true, set false if we find we don't have
                               a lang component in the locale */
@@ -518,7 +524,25 @@ uloc_getDisplayName(const char *locale,
     /* If we couldn't find any data, then use the defaults */
     if(sepLen == 0) {
        separator = defaultSeparator;
-       sepLen = defaultSepLen;
+    }
+    /* #10244: Even though separator is now a pattern, it is awkward to handle it as such
+     * here since we are trying to build the display string in place in the dest buffer,
+     * and to handle it as a pattern would entail having separate storage for the
+     * substrings that need to be combined (the first of which may be the result of
+     * previous such combinations). So for now we continue to treat the portion between
+     * {0} and {1} as a string to be appended when joining substrings, ignoring anything
+     * that is before {0} or after {1} (no existing separator pattern has any such thing).
+     * This is similar to how pattern is handled below.
+     */
+    {
+        UChar *p0=u_strstr(separator, sub0);
+        UChar *p1=u_strstr(separator, sub1);
+        if (p0==NULL || p1==NULL || p1<p0) {
+            *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
+            return 0;
+        }
+        separator = (const UChar *)p0 + subLen;
+        sepLen = static_cast<int32_t>(p1 - separator);
     }
 
     if(patLen==0 || (patLen==defaultPatLen && !u_strncmp(pattern, defaultPattern, patLen))) {
@@ -526,6 +550,7 @@ uloc_getDisplayName(const char *locale,
         patLen=defaultPatLen;
         sub0Pos=defaultSub0Pos;
         sub1Pos=defaultSub1Pos;
+        // use default formatOpenParen etc. set above
     } else { /* non-default pattern */
         UChar *p0=u_strstr(pattern, sub0);
         UChar *p1=u_strstr(pattern, sub1);
@@ -533,11 +558,17 @@ uloc_getDisplayName(const char *locale,
             *pErrorCode=U_ILLEGAL_ARGUMENT_ERROR;
             return 0;
         }
-        sub0Pos=p0-pattern;
-        sub1Pos=p1-pattern;
+        sub0Pos = static_cast<int32_t>(p0-pattern);
+        sub1Pos = static_cast<int32_t>(p1-pattern);
         if (sub1Pos < sub0Pos) { /* a very odd pattern */
             int32_t t=sub0Pos; sub0Pos=sub1Pos; sub1Pos=t;
             langi=1;
+        }
+        if (u_strchr(pattern, 0xFF08) != NULL) {
+            formatOpenParen         = 0xFF08; // fullwidth (
+            formatReplaceOpenParen  = 0xFF3B; // fullwidth [
+            formatCloseParen        = 0xFF09; // fullwidth )
+            formatReplaceCloseParen = 0xFF3D; // fullwidth ]
         }
     }
 
@@ -609,7 +640,7 @@ uloc_getDisplayName(const char *locale,
                             break;
                         case 3:
                             kenum = uloc_openKeywords(locale, pErrorCode);
-                            /* fall through */
+                            U_FALLTHROUGH;
                         default: {
                             const char* kw=uenum_next(kenum, &len, pErrorCode);
                             if (kw == NULL) {
@@ -660,7 +691,14 @@ uloc_getDisplayName(const char *locale,
                     if (len>0) {
                         /* we addeed a component, so add separator and write it if there's room. */
                         if(len+sepLen<=cap) {
-                            p+=len;
+                            const UChar * plimit = p + len;
+                            for (; p < plimit; p++) {
+                                if (*p == formatOpenParen) {
+                                    *p = formatReplaceOpenParen;
+                                } else if (*p == formatCloseParen) {
+                                    *p = formatReplaceCloseParen;
+                                }
+                            }
                             for(int32_t i=0;i<sepLen;++i) {
                                 *p++=separator[i];
                             }
@@ -783,6 +821,8 @@ uloc_getDisplayKeywordValue(   const char* locale,
     /* get the keyword value */
     keywordValue[0]=0;
     keywordValueLen = uloc_getKeywordValue(locale, keyword, keywordValue, capacity, status);
+    if (*status == U_STRING_NOT_TERMINATED_WARNING)
+      *status = U_BUFFER_OVERFLOW_ERROR;
 
     /*
      * if the keyword is equal to currency .. then to get the display name
@@ -816,7 +856,7 @@ uloc_getDisplayKeywordValue(   const char* locale,
         /* now copy the dispName over if not NULL */
         if(dispName != NULL){
             if(dispNameLen <= destCapacity){
-                uprv_memcpy(dest, dispName, dispNameLen * U_SIZEOF_UCHAR);
+                u_memcpy(dest, dispName, dispNameLen);
                 return u_terminateUChars(dest, destCapacity, dispNameLen, status);
             }else{
                 *status = U_BUFFER_OVERFLOW_ERROR;

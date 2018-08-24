@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1999-2012, International Business Machines
+*   Copyright (C) 1999-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
 *   file name:  udata.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -29,7 +31,9 @@ might have to #include some other header
 #include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "mutex.h"
 #include "putilimp.h"
+#include "uassert.h"
 #include "ucln_cmn.h"
 #include "ucmndata.h"
 #include "udatamem.h"
@@ -70,14 +74,12 @@ might have to #include some other header
 #   include <stdio.h>
 #endif
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_USE
 
 /*
  *  Forward declarations
  */
-static UDataMemory *udata_findCachedData(const char *path);
+static UDataMemory *udata_findCachedData(const char *path, UErrorCode &err);
 
 /***********************************************************************
 *
@@ -101,13 +103,19 @@ static UDataMemory *udata_findCachedData(const char *path);
  * that they really need, reducing the size of binaries that take advantage
  * of this.
  */
-static UDataMemory *gCommonICUDataArray[10] = { NULL };
+static UDataMemory *gCommonICUDataArray[10] = { NULL };   // Access protected by icu global mutex.
 
-static UBool gHaveTriedToLoadCommonData = FALSE;  /* See extendICUData(). */
+static u_atomic_int32_t gHaveTriedToLoadCommonData = ATOMIC_INT32_T_INITIALIZER(0);  //  See extendICUData().
 
 static UHashtable  *gCommonDataCache = NULL;  /* Global hash table of opened ICU data files.  */
+static icu::UInitOnce gCommonDataCacheInitOnce = U_INITONCE_INITIALIZER;
 
-static UDataFileAccess  gDataFileAccess = UDATA_DEFAULT_ACCESS;
+#if U_PLATFORM_HAS_WINUWP_API == 0
+static UDataFileAccess  gDataFileAccess = UDATA_DEFAULT_ACCESS;  // Access not synchronized.
+                                                                 // Modifying is documented as thread-unsafe.
+#else
+static UDataFileAccess  gDataFileAccess = UDATA_NO_FILES;        // Windows UWP looks in one spot explicitly
+#endif
 
 static UBool U_CALLCONV
 udata_cleanup(void)
@@ -118,34 +126,37 @@ udata_cleanup(void)
         uhash_close(gCommonDataCache);  /*   Table owns the contents, and will delete them. */
         gCommonDataCache = NULL;        /*   Cleanup is not thread safe.                */
     }
+    gCommonDataCacheInitOnce.reset();
 
-    for (i = 0; i < LENGTHOF(gCommonICUDataArray) && gCommonICUDataArray[i] != NULL; ++i) {
+    for (i = 0; i < UPRV_LENGTHOF(gCommonICUDataArray) && gCommonICUDataArray[i] != NULL; ++i) {
         udata_close(gCommonICUDataArray[i]);
         gCommonICUDataArray[i] = NULL;
     }
-    gHaveTriedToLoadCommonData = FALSE;
+    gHaveTriedToLoadCommonData = 0;
 
     return TRUE;                   /* Everything was cleaned up */
 }
 
 static UBool U_CALLCONV
-findCommonICUDataByName(const char *inBasename)
+findCommonICUDataByName(const char *inBasename, UErrorCode &err)
 {
     UBool found = FALSE;
     int32_t i;
 
-    UDataMemory  *pData = udata_findCachedData(inBasename);
-    if (pData == NULL)
+    UDataMemory  *pData = udata_findCachedData(inBasename, err);
+    if (U_FAILURE(err) || pData == NULL)
         return FALSE;
 
-    for (i = 0; i < LENGTHOF(gCommonICUDataArray); ++i) {
-        if ((gCommonICUDataArray[i] != NULL) && (gCommonICUDataArray[i]->pHeader == pData->pHeader)) {
-            /* The data pointer is already in the array. */
-            found = TRUE;
-            break;
+    {
+        Mutex lock;
+        for (i = 0; i < UPRV_LENGTHOF(gCommonICUDataArray); ++i) {
+            if ((gCommonICUDataArray[i] != NULL) && (gCommonICUDataArray[i]->pHeader == pData->pHeader)) {
+                /* The data pointer is already in the array. */
+                found = TRUE;
+                break;
+            }
         }
     }
-
     return found;
 }
 
@@ -172,10 +183,9 @@ setCommonICUData(UDataMemory *pData,     /*  The new common data.  Belongs to ca
     /*    their locals.                                                              */
     UDatamemory_assign(newCommonData, pData);
     umtx_lock(NULL);
-    for (i = 0; i < LENGTHOF(gCommonICUDataArray); ++i) {
+    for (i = 0; i < UPRV_LENGTHOF(gCommonICUDataArray); ++i) {
         if (gCommonICUDataArray[i] == NULL) {
             gCommonICUDataArray[i] = newCommonData;
-            ucln_common_registerCleanup(UCLN_COMMON_UDATA, udata_cleanup);
             didUpdate = TRUE;
             break;
         } else if (gCommonICUDataArray[i]->pHeader == pData->pHeader) {
@@ -185,23 +195,29 @@ setCommonICUData(UDataMemory *pData,     /*  The new common data.  Belongs to ca
     }
     umtx_unlock(NULL);
 
-    if (i == LENGTHOF(gCommonICUDataArray) && warn) {
+    if (i == UPRV_LENGTHOF(gCommonICUDataArray) && warn) {
         *pErr = U_USING_DEFAULT_WARNING;
     }
-    if (!didUpdate) {
+    if (didUpdate) {
+        ucln_common_registerCleanup(UCLN_COMMON_UDATA, udata_cleanup);
+    } else {
         uprv_free(newCommonData);
     }
     return didUpdate;
 }
 
+#if U_PLATFORM_HAS_WINUWP_API == 0
+
 static UBool
 setCommonICUDataPointer(const void *pData, UBool /*warn*/, UErrorCode *pErrorCode) {
     UDataMemory tData;
     UDataMemory_init(&tData);
-    tData.pHeader = (const DataHeader *)pData;
+    UDataMemory_setData(&tData, pData);
     udata_checkCommonData(&tData, pErrorCode);
     return setCommonICUData(&tData, FALSE, pErrorCode);
 }
+
+#endif
 
 static const char *
 findBasename(const char *path) {
@@ -262,56 +278,41 @@ static void U_CALLCONV DataCacheElement_deleter(void *pDCEl) {
     uprv_free(pDCEl);                  /* delete 'this'          */
 }
 
- /*   udata_getCacheHashTable()
- *     Get the hash table used to store the data cache entries.
- *     Lazy create it if it doesn't yet exist.
- */
-static UHashtable *udata_getHashTable() {
-    UErrorCode   err = U_ZERO_ERROR;
-    UBool        cacheIsInitialized;
-    UHashtable  *tHT = NULL;
-
-    UMTX_CHECK(NULL, (gCommonDataCache != NULL), cacheIsInitialized);
-
-    if (cacheIsInitialized) {
-        return gCommonDataCache;
-    }
-
-    tHT = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &err);
-    /* Check for null pointer. */
-    if (tHT == NULL) {
-        return NULL; /* TODO:  Handle this error better. */
-    }
-    uhash_setValueDeleter(tHT, DataCacheElement_deleter);
-
-    umtx_lock(NULL);
-    if (gCommonDataCache == NULL) {
-        gCommonDataCache = tHT;
-        tHT = NULL;
-        ucln_common_registerCleanup(UCLN_COMMON_UDATA, udata_cleanup);
-    }
-    umtx_unlock(NULL);
-    if (tHT != NULL) {
-        uhash_close(tHT);
-    }
-
+static void U_CALLCONV udata_initHashTable(UErrorCode &err) {
+    U_ASSERT(gCommonDataCache == NULL);
+    gCommonDataCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &err);
     if (U_FAILURE(err)) {
-        return NULL;      /* TODO:  handle this error better.  */
+       return;
     }
+    U_ASSERT(gCommonDataCache != NULL);
+    uhash_setValueDeleter(gCommonDataCache, DataCacheElement_deleter);
+    ucln_common_registerCleanup(UCLN_COMMON_UDATA, udata_cleanup);
+}
+
+ /*   udata_getCacheHashTable()
+  *     Get the hash table used to store the data cache entries.
+  *     Lazy create it if it doesn't yet exist.
+  */
+static UHashtable *udata_getHashTable(UErrorCode &err) {
+    umtx_initOnce(gCommonDataCacheInitOnce, &udata_initHashTable, err);
     return gCommonDataCache;
 }
 
 
 
-static UDataMemory *udata_findCachedData(const char *path)
+static UDataMemory *udata_findCachedData(const char *path, UErrorCode &err)
 {
     UHashtable        *htable;
     UDataMemory       *retVal = NULL;
     DataCacheElement  *el;
     const char        *baseName;
 
+    htable = udata_getHashTable(err);
+    if (U_FAILURE(err)) {
+        return NULL;
+    }
+
     baseName = findBasename(path);   /* Cache remembers only the base name, not the full path. */
-    htable = udata_getHashTable();
     umtx_lock(NULL);
     el = (DataCacheElement *)uhash_get(htable, baseName);
     umtx_unlock(NULL);
@@ -333,6 +334,7 @@ static UDataMemory *udata_cacheDataItem(const char *path, UDataMemory *item, UEr
     DataCacheElement *oldValue = NULL;
     UErrorCode        subErr = U_ZERO_ERROR;
 
+    htable = udata_getHashTable(*pErr);
     if (U_FAILURE(*pErr)) {
         return NULL;
     }
@@ -365,7 +367,6 @@ static UDataMemory *udata_cacheDataItem(const char *path, UDataMemory *item, UEr
 
     /* Stick the new DataCacheElement into the hash table.
     */
-    htable = udata_getHashTable();
     umtx_lock(NULL);
     oldValue = (DataCacheElement *)uhash_get(htable, path);
     if (oldValue != NULL) {
@@ -402,9 +403,6 @@ static UDataMemory *udata_cacheDataItem(const char *path, UDataMemory *item, UEr
  * later on.                                                            *
  *                                                                      *
  *----------------------------------------------------------------------*/
-
-#define U_DATA_PATHITER_BUFSIZ  128        /* Size of local buffer for paths         */
-                                           /*   Overflow causes malloc of larger buf */
 
 U_NAMESPACE_BEGIN
 
@@ -629,12 +627,14 @@ U_NAMESPACE_END
 
 /*----------------------------------------------------------------------*
  *                                                                      *
- *  Add a static reference to the common data  library                  *
+ *  Add a static reference to the common data library                   *
  *   Unless overridden by an explicit udata_setCommonData, this will be *
  *      our common data.                                                *
  *                                                                      *
  *----------------------------------------------------------------------*/
+#if U_PLATFORM_HAS_WINUWP_API == 0 // Windows UWP Platform does not support dll icu data at this time
 extern "C" const DataHeader U_DATA_API U_ICUDATA_ENTRY_POINT;
+#endif
 
 /*
  * This would be a good place for weak-linkage declarations of
@@ -674,10 +674,15 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
     /* ??????? TODO revisit this */
     if (commonDataIndex >= 0) {
         /* "mini-cache" for common ICU data */
-        if(commonDataIndex >= LENGTHOF(gCommonICUDataArray)) {
+        if(commonDataIndex >= UPRV_LENGTHOF(gCommonICUDataArray)) {
             return NULL;
         }
-        if(gCommonICUDataArray[commonDataIndex] == NULL) {
+        {
+            Mutex lock;
+            if(gCommonICUDataArray[commonDataIndex] != NULL) {
+                return gCommonICUDataArray[commonDataIndex];
+            }
+#if U_PLATFORM_HAS_WINUWP_API == 0 // Windows UWP Platform does not support dll icu data at this time
             int32_t i;
             for(i = 0; i < commonDataIndex; ++i) {
                 if(gCommonICUDataArray[i]->pHeader == &U_ICUDATA_ENTRY_POINT) {
@@ -685,23 +690,29 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
                     return NULL;
                 }
             }
-
-            /* Add the linked-in data to the list. */
-            /*
-             * This is where we would check and call weakly linked partial-data-library
-             * access functions.
-             */
-            /*
-            if (uprv_getICUData_collation) {
-                setCommonICUDataPointer(uprv_getICUData_collation(), FALSE, pErrorCode);
-            }
-            if (uprv_getICUData_conversion) {
-                setCommonICUDataPointer(uprv_getICUData_conversion(), FALSE, pErrorCode);
-            }
-            */
-            setCommonICUDataPointer(&U_ICUDATA_ENTRY_POINT, FALSE, pErrorCode);
+#endif
         }
-        return gCommonICUDataArray[commonDataIndex];
+
+        /* Add the linked-in data to the list. */
+        /*
+         * This is where we would check and call weakly linked partial-data-library
+         * access functions.
+         */
+        /*
+        if (uprv_getICUData_collation) {
+            setCommonICUDataPointer(uprv_getICUData_collation(), FALSE, pErrorCode);
+        }
+        if (uprv_getICUData_conversion) {
+            setCommonICUDataPointer(uprv_getICUData_conversion(), FALSE, pErrorCode);
+        }
+        */
+#if U_PLATFORM_HAS_WINUWP_API == 0 // Windows UWP Platform does not support dll icu data at this time
+        setCommonICUDataPointer(&U_ICUDATA_ENTRY_POINT, FALSE, pErrorCode);
+        {
+            Mutex lock;
+            return gCommonICUDataArray[commonDataIndex];
+        }
+#endif
     }
 
 
@@ -720,18 +731,18 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
 #ifdef UDATA_DEBUG
         fprintf(stderr, "ocd: no basename in %s, bailing.\n", path);
 #endif
-        *pErrorCode=U_FILE_ACCESS_ERROR;
+        if (U_SUCCESS(*pErrorCode)) {
+            *pErrorCode=U_FILE_ACCESS_ERROR;
+        }
         return NULL;
     }
 
    /* Is the requested common data file already open and cached?                     */
    /*   Note that the cache is keyed by the base name only.  The rest of the path,   */
    /*     if any, is not considered.                                                 */
-   {
-        UDataMemory  *dataToReturn = udata_findCachedData(inBasename);
-        if (dataToReturn != NULL) {
-            return dataToReturn;
-        }
+    UDataMemory  *dataToReturn = udata_findCachedData(inBasename, *pErrorCode);
+    if (dataToReturn != NULL || U_FAILURE(*pErrorCode)) {
+        return dataToReturn;
     }
 
     /* Requested item is not in the cache.
@@ -762,6 +773,9 @@ openCommonData(const char *path,          /*  Path from OpenChoice?          */
     }
 #endif
 
+    if (U_FAILURE(*pErrorCode)) {
+        return NULL;
+    }
     if (!UDataMemory_isLoaded(&tData)) {
         /* no common data */
         *pErrorCode=U_FILE_ACCESS_ERROR;
@@ -809,7 +823,7 @@ static UBool extendICUData(UErrorCode *pErr)
     static UMutex extendICUDataMutex = U_MUTEX_INITIALIZER;
     umtx_lock(&extendICUDataMutex);
 #endif
-    if(!gHaveTriedToLoadCommonData) {
+    if(!umtx_loadAcquire(gHaveTriedToLoadCommonData)) {
         /* See if we can explicitly open a .dat file for the ICUData. */
         pData = openCommonData(
                    U_ICUDATA_NAME,            /*  "icudt20l" , for example.          */
@@ -834,10 +848,10 @@ static UBool extendICUData(UErrorCode *pErr)
                        pErr);             /*  setCommonICUData honors errors; NOP if error set    */
         }
 
-        gHaveTriedToLoadCommonData = TRUE;
+        umtx_storeRelease(gHaveTriedToLoadCommonData, 1);
     }
 
-    didUpdate = findCommonICUDataByName(U_ICUDATA_NAME);  /* Return 'true' when a racing writes out the extended                        */
+    didUpdate = findCommonICUDataByName(U_ICUDATA_NAME, *pErr);  /* Return 'true' when a racing writes out the extended                 */
                                                           /* data after another thread has failed to see it (in openCommonData), so     */
                                                           /* extended data can be examined.                                             */
                                                           /* Also handles a race through here before gHaveTriedToLoadCommonData is set. */
@@ -972,7 +986,7 @@ static UDataMemory *doLoadFromIndividualFiles(const char *pkgName,
     /* init path iterator for individual files */
     UDataPathIterator iter(dataPath, pkgName, path, tocEntryPathSuffix, FALSE, pErrorCode);
 
-    while((pathBuffer = iter.next(pErrorCode)))
+    while((pathBuffer = iter.next(pErrorCode)) != NULL)
     {
 #ifdef UDATA_DEBUG
         fprintf(stderr, "UDATA: trying individual file %s\n", pathBuffer);
@@ -1079,6 +1093,17 @@ static UDataMemory *doLoadFromCommonData(UBool isICUData, const char * /*pkgName
 }
 
 /*
+ * Identify the Time Zone resources that are subject to special override data loading.
+ */
+static UBool isTimeZoneFile(const char *name, const char *type) {
+    return ((uprv_strcmp(type, "res") == 0) &&
+            (uprv_strcmp(name, "zoneinfo64") == 0 ||
+             uprv_strcmp(name, "timezoneTypes") == 0 ||
+             uprv_strcmp(name, "windowsZones") == 0 ||
+             uprv_strcmp(name, "metaZones") == 0));
+}
+
+/*
  *  A note on the ownership of Mapped Memory
  *
  *  For common format files, ownership resides with the UDataMemory object
@@ -1144,7 +1169,7 @@ doOpenChoice(const char *path, const char *type, const char *name,
         if(uprv_strchr(path,U_FILE_ALT_SEP_CHAR) != NULL) {
             altSepPath.append(path, *pErrorCode);
             char *p;
-            while((p=uprv_strchr(altSepPath.data(), U_FILE_ALT_SEP_CHAR))) {
+            while ((p = uprv_strchr(altSepPath.data(), U_FILE_ALT_SEP_CHAR)) != NULL) {
                 *p = U_FILE_SEP_CHAR;
             }
 #if defined (UDATA_DEBUG)
@@ -1234,9 +1259,14 @@ doOpenChoice(const char *path, const char *type, const char *name,
     fprintf(stderr, " tocEntryPath = %s\n", tocEntryName.data());
 #endif
 
+#if U_PLATFORM_HAS_WINUWP_API == 0 // Windows UWP Platform does not support dll icu data at this time
     if(path == NULL) {
         path = COMMON_DATA_NAME; /* "icudt26e" */
     }
+#else
+    // Windows UWP expects only a single data file.
+    path = COMMON_DATA_NAME; /* "icudt26e" */
+#endif
 
     /************************ Begin loop looking for ind. files ***************/
 #ifdef UDATA_DEBUG
@@ -1245,6 +1275,21 @@ doOpenChoice(const char *path, const char *type, const char *name,
 
     /* End of dealing with a null basename */
     dataPath = u_getDataDirectory();
+
+    /****    Time zone individual files override  */
+    if (isICUData && isTimeZoneFile(name, type)) {
+        const char *tzFilesDir = u_getTimeZoneFilesDirectory(pErrorCode);
+        if (tzFilesDir[0] != 0) {
+#ifdef UDATA_DEBUG
+            fprintf(stderr, "Trying Time Zone Files directory = %s\n", tzFilesDir);
+#endif
+            retVal = doLoadFromIndividualFiles(/* pkgName.data() */ "", tzFilesDir, tocEntryPathSuffix,
+                            /* path */ "", type, name, isAcceptable, context, &subErrorCode, pErrorCode);
+            if((retVal != NULL) || U_FAILURE(*pErrorCode)) {
+                return retVal;
+            }
+        }
+    }
 
     /****    COMMON PACKAGE  - only if packages are first. */
     if(gDataFileAccess == UDATA_PACKAGES_FIRST) {
@@ -1386,5 +1431,6 @@ udata_getInfo(UDataMemory *pData, UDataInfo *pInfo) {
 
 U_CAPI void U_EXPORT2 udata_setFileAccess(UDataFileAccess access, UErrorCode * /*status*/)
 {
+    // Note: this function is documented as not thread safe.
     gDataFileAccess = access;
 }

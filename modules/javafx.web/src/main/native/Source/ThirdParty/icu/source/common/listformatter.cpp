@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2012, International Business Machines
+*   Copyright (C) 2013-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
 *   file name:  listformatter.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -15,6 +17,7 @@
 */
 
 #include "unicode/listformatter.h"
+#include "unicode/simpleformatter.h"
 #include "mutex.h"
 #include "hash.h"
 #include "cstring.h"
@@ -22,13 +25,45 @@
 #include "charstr.h"
 #include "ucln_cmn.h"
 #include "uresimp.h"
+#include "resource.h"
 
 U_NAMESPACE_BEGIN
 
+struct ListFormatInternal : public UMemory {
+    SimpleFormatter twoPattern;
+    SimpleFormatter startPattern;
+    SimpleFormatter middlePattern;
+    SimpleFormatter endPattern;
+
+ListFormatInternal(
+        const UnicodeString& two,
+        const UnicodeString& start,
+        const UnicodeString& middle,
+        const UnicodeString& end,
+        UErrorCode &errorCode) :
+        twoPattern(two, 2, 2, errorCode),
+        startPattern(start, 2, 2, errorCode),
+        middlePattern(middle, 2, 2, errorCode),
+        endPattern(end, 2, 2, errorCode) {}
+
+ListFormatInternal(const ListFormatData &data, UErrorCode &errorCode) :
+        twoPattern(data.twoPattern, errorCode),
+        startPattern(data.startPattern, errorCode),
+        middlePattern(data.middlePattern, errorCode),
+        endPattern(data.endPattern, errorCode) { }
+
+ListFormatInternal(const ListFormatInternal &other) :
+    twoPattern(other.twoPattern),
+    startPattern(other.startPattern),
+    middlePattern(other.middlePattern),
+    endPattern(other.endPattern) { }
+};
+
+
+
 static Hashtable* listPatternHash = NULL;
 static UMutex listFormatterMutex = U_MUTEX_INITIALIZER;
-static UChar FIRST_PARAMETER[] = { 0x7b, 0x30, 0x7d };  // "{0}"
-static UChar SECOND_PARAMETER[] = { 0x7b, 0x31, 0x7d };  // "{0}"
+static const char STANDARD_STYLE[] = "standard";
 
 U_CDECL_BEGIN
 static UBool U_CALLCONV uprv_listformatter_cleanup() {
@@ -38,14 +73,34 @@ static UBool U_CALLCONV uprv_listformatter_cleanup() {
 }
 
 static void U_CALLCONV
-uprv_deleteListFormatData(void *obj) {
-    delete static_cast<ListFormatData *>(obj);
+uprv_deleteListFormatInternal(void *obj) {
+    delete static_cast<ListFormatInternal *>(obj);
 }
 
 U_CDECL_END
 
-static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& errorCode);
-static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString& result, UErrorCode& errorCode);
+ListFormatter::ListFormatter(const ListFormatter& other) :
+        owned(other.owned), data(other.data) {
+    if (other.owned != NULL) {
+        owned = new ListFormatInternal(*other.owned);
+        data = owned;
+    }
+}
+
+ListFormatter& ListFormatter::operator=(const ListFormatter& other) {
+    if (this == &other) {
+        return *this;
+    }
+    delete owned;
+    if (other.owned) {
+        owned = new ListFormatInternal(*other.owned);
+        data = owned;
+    } else {
+        owned = NULL;
+        data = other.data;
+    }
+    return *this;
+}
 
 void ListFormatter::initializeHash(UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
@@ -58,18 +113,20 @@ void ListFormatter::initializeHash(UErrorCode& errorCode) {
         return;
     }
 
-    listPatternHash->setValueDeleter(uprv_deleteListFormatData);
+    listPatternHash->setValueDeleter(uprv_deleteListFormatInternal);
     ucln_common_registerCleanup(UCLN_COMMON_LIST_FORMATTER, uprv_listformatter_cleanup);
 
 }
 
-const ListFormatData* ListFormatter::getListFormatData(
-        const Locale& locale, UErrorCode& errorCode) {
+const ListFormatInternal* ListFormatter::getListFormatInternal(
+        const Locale& locale, const char *style, UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
-    UnicodeString key(locale.getName(), -1, US_INV);
-    ListFormatData* result = NULL;
+    CharString keyBuffer(locale.getName(), errorCode);
+    keyBuffer.append(':', errorCode).append(style, errorCode);
+    UnicodeString key(keyBuffer.data(), -1, US_INV);
+    ListFormatInternal* result = NULL;
     {
         Mutex m(&listFormatterMutex);
         if (listPatternHash == NULL) {
@@ -78,19 +135,19 @@ const ListFormatData* ListFormatter::getListFormatData(
                 return NULL;
             }
         }
-        result = static_cast<ListFormatData*>(listPatternHash->get(key));
+        result = static_cast<ListFormatInternal*>(listPatternHash->get(key));
     }
     if (result != NULL) {
         return result;
     }
-    result = loadListFormatData(locale, errorCode);
+    result = loadListFormatInternal(locale, style, errorCode);
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
 
     {
         Mutex m(&listFormatterMutex);
-        ListFormatData* temp = static_cast<ListFormatData*>(listPatternHash->get(key));
+        ListFormatInternal* temp = static_cast<ListFormatInternal*>(listPatternHash->get(key));
         if (temp != NULL) {
             delete result;
             result = temp;
@@ -104,42 +161,116 @@ const ListFormatData* ListFormatter::getListFormatData(
     return result;
 }
 
-static ListFormatData* loadListFormatData(const Locale& locale, UErrorCode& errorCode) {
-    UResourceBundle* rb = ures_open(NULL, locale.getName(), &errorCode);
-    if (U_FAILURE(errorCode)) {
-        ures_close(rb);
-        return NULL;
-    }
-    rb = ures_getByKeyWithFallback(rb, "listPattern", rb, &errorCode);
-    rb = ures_getByKeyWithFallback(rb, "standard", rb, &errorCode);
-    if (U_FAILURE(errorCode)) {
-        ures_close(rb);
-        return NULL;
-    }
+static const UChar solidus = 0x2F;
+static const UChar aliasPrefix[] = { 0x6C,0x69,0x73,0x74,0x50,0x61,0x74,0x74,0x65,0x72,0x6E,0x2F }; // "listPattern/"
+enum {
+    kAliasPrefixLen = UPRV_LENGTHOF(aliasPrefix),
+    kStyleLenMax = 24 // longest currently is 14
+};
+
+struct ListFormatter::ListPatternsSink : public ResourceSink {
     UnicodeString two, start, middle, end;
-    getStringByKey(rb, "2", two, errorCode);
-    getStringByKey(rb, "start", start, errorCode);
-    getStringByKey(rb, "middle", middle, errorCode);
-    getStringByKey(rb, "end", end, errorCode);
+#if ((U_PLATFORM == U_PF_AIX) || (U_PLATFORM == U_PF_OS390)) && (U_CPLUSPLUS_VERSION < 11)
+    char aliasedStyle[kStyleLenMax+1];
+    ListPatternsSink() {
+      uprv_memset(aliasedStyle, 0, kStyleLenMax+1);
+    }
+#else
+    char aliasedStyle[kStyleLenMax+1] = {0};
+
+    ListPatternsSink() {}
+#endif
+    virtual ~ListPatternsSink();
+
+    void setAliasedStyle(UnicodeString alias) {
+        int32_t startIndex = alias.indexOf(aliasPrefix, kAliasPrefixLen, 0);
+        if (startIndex < 0) {
+            return;
+        }
+        startIndex += kAliasPrefixLen;
+        int32_t endIndex = alias.indexOf(solidus, startIndex);
+        if (endIndex < 0) {
+            endIndex = alias.length();
+        }
+        alias.extract(startIndex, endIndex-startIndex, aliasedStyle, kStyleLenMax+1, US_INV);
+        aliasedStyle[kStyleLenMax] = 0;
+    }
+
+    void handleValueForPattern(ResourceValue &value, UnicodeString &pattern, UErrorCode &errorCode) {
+        if (pattern.isEmpty()) {
+            if (value.getType() == URES_ALIAS) {
+                if (aliasedStyle[0] == 0) {
+                    setAliasedStyle(value.getAliasUnicodeString(errorCode));
+                }
+            } else {
+                pattern = value.getUnicodeString(errorCode);
+            }
+        }
+    }
+
+    virtual void put(const char *key, ResourceValue &value, UBool /*noFallback*/,
+            UErrorCode &errorCode) {
+        aliasedStyle[0] = 0;
+        if (value.getType() == URES_ALIAS) {
+            setAliasedStyle(value.getAliasUnicodeString(errorCode));
+            return;
+        }
+        ResourceTable listPatterns = value.getTable(errorCode);
+        for (int i = 0; U_SUCCESS(errorCode) && listPatterns.getKeyAndValue(i, key, value); ++i) {
+            if (uprv_strcmp(key, "2") == 0) {
+                handleValueForPattern(value, two, errorCode);
+            } else if (uprv_strcmp(key, "end") == 0) {
+                handleValueForPattern(value, end, errorCode);
+            } else if (uprv_strcmp(key, "middle") == 0) {
+                handleValueForPattern(value, middle, errorCode);
+            } else if (uprv_strcmp(key, "start") == 0) {
+                handleValueForPattern(value, start, errorCode);
+            }
+        }
+    }
+};
+
+// Virtual destructors must be defined out of line.
+ListFormatter::ListPatternsSink::~ListPatternsSink() {}
+
+ListFormatInternal* ListFormatter::loadListFormatInternal(
+        const Locale& locale, const char * style, UErrorCode& errorCode) {
+    UResourceBundle* rb = ures_open(NULL, locale.getName(), &errorCode);
+    rb = ures_getByKeyWithFallback(rb, "listPattern", rb, &errorCode);
+    if (U_FAILURE(errorCode)) {
+        ures_close(rb);
+        return NULL;
+    }
+    ListFormatter::ListPatternsSink sink;
+    char currentStyle[kStyleLenMax+1];
+    uprv_strncpy(currentStyle, style, kStyleLenMax);
+    currentStyle[kStyleLenMax] = 0;
+
+    for (;;) {
+        ures_getAllItemsWithFallback(rb, currentStyle, sink, errorCode);
+        if (U_FAILURE(errorCode) || sink.aliasedStyle[0] == 0 || uprv_strcmp(currentStyle, sink.aliasedStyle) == 0) {
+            break;
+        }
+        uprv_strcpy(currentStyle, sink.aliasedStyle);
+    }
     ures_close(rb);
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
-    ListFormatData* result = new ListFormatData(two, start, middle, end);
+    if (sink.two.isEmpty() || sink.start.isEmpty() || sink.middle.isEmpty() || sink.end.isEmpty()) {
+        errorCode = U_MISSING_RESOURCE_ERROR;
+        return NULL;
+    }
+    ListFormatInternal* result = new ListFormatInternal(sink.two, sink.start, sink.middle, sink.end, errorCode);
     if (result == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
     }
-    return result;
-}
-
-static void getStringByKey(const UResourceBundle* rb, const char* key, UnicodeString& result, UErrorCode& errorCode) {
-    int32_t len;
-    const UChar* ustr = ures_getStringByKeyWithFallback(rb, key, &len, &errorCode);
     if (U_FAILURE(errorCode)) {
-      return;
+        delete result;
+        return NULL;
     }
-    result.setTo(ustr, len);
+    return result;
 }
 
 ListFormatter* ListFormatter::createInstance(UErrorCode& errorCode) {
@@ -148,12 +279,16 @@ ListFormatter* ListFormatter::createInstance(UErrorCode& errorCode) {
 }
 
 ListFormatter* ListFormatter::createInstance(const Locale& locale, UErrorCode& errorCode) {
+    return createInstance(locale, STANDARD_STYLE, errorCode);
+}
+
+ListFormatter* ListFormatter::createInstance(const Locale& locale, const char *style, UErrorCode& errorCode) {
     Locale tempLocale = locale;
-    const ListFormatData* listFormatData = getListFormatData(tempLocale, errorCode);
+    const ListFormatInternal* listFormatInternal = getListFormatInternal(tempLocale, style, errorCode);
     if (U_FAILURE(errorCode)) {
         return NULL;
     }
-    ListFormatter* p = new ListFormatter(*listFormatData);
+    ListFormatter* p = new ListFormatter(listFormatInternal);
     if (p == NULL) {
         errorCode = U_MEMORY_ALLOCATION_ERROR;
         return NULL;
@@ -161,78 +296,134 @@ ListFormatter* ListFormatter::createInstance(const Locale& locale, UErrorCode& e
     return p;
 }
 
-ListFormatter::ListFormatter(const ListFormatData& listFormatterData) : data(listFormatterData) {
+ListFormatter::ListFormatter(const ListFormatData& listFormatData, UErrorCode &errorCode) {
+    owned = new ListFormatInternal(listFormatData, errorCode);
+    data = owned;
 }
 
-ListFormatter::~ListFormatter() {}
+ListFormatter::ListFormatter(const ListFormatInternal* listFormatterInternal) : owned(NULL), data(listFormatterInternal) {
+}
 
-UnicodeString& ListFormatter::format(const UnicodeString items[], int32_t nItems,
-                      UnicodeString& appendTo, UErrorCode& errorCode) const {
-    if (U_FAILURE(errorCode)) {
-        return appendTo;
-    }
-
-    if (nItems > 0) {
-        UnicodeString newString = items[0];
-        if (nItems == 2) {
-            addNewString(data.twoPattern, newString, items[1], errorCode);
-        } else if (nItems > 2) {
-            addNewString(data.startPattern, newString, items[1], errorCode);
-            int32_t i;
-            for (i = 2; i < nItems - 1; ++i) {
-                addNewString(data.middlePattern, newString, items[i], errorCode);
-            }
-            addNewString(data.endPattern, newString, items[nItems - 1], errorCode);
-        }
-        if (U_SUCCESS(errorCode)) {
-            appendTo += newString;
-        }
-    }
-    return appendTo;
+ListFormatter::~ListFormatter() {
+    delete owned;
 }
 
 /**
- * Joins originalString and nextString using the pattern pat and puts the result in
- * originalString.
+ * Joins first and second using the pattern pat.
+ * On entry offset is an offset into first or -1 if offset unspecified.
+ * On exit offset is offset of second in result if recordOffset was set
+ * Otherwise if it was >=0 it is set to point into result where it used
+ * to point into first. On exit, result is the join of first and second
+ * according to pat. Any previous value of result gets replaced.
  */
-void ListFormatter::addNewString(const UnicodeString& pat, UnicodeString& originalString,
-                                 const UnicodeString& nextString, UErrorCode& errorCode) const {
+static void joinStringsAndReplace(
+        const SimpleFormatter& pat,
+        const UnicodeString& first,
+        const UnicodeString& second,
+        UnicodeString &result,
+        UBool recordOffset,
+        int32_t &offset,
+        UErrorCode& errorCode) {
     if (U_FAILURE(errorCode)) {
         return;
     }
-
-    int32_t p0Offset = pat.indexOf(FIRST_PARAMETER, 3, 0);
-    if (p0Offset < 0) {
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+    const UnicodeString *params[2] = {&first, &second};
+    int32_t offsets[2];
+    pat.formatAndReplace(
+            params,
+            UPRV_LENGTHOF(params),
+            result,
+            offsets,
+            UPRV_LENGTHOF(offsets),
+            errorCode);
+    if (U_FAILURE(errorCode)) {
         return;
     }
-    int32_t p1Offset = pat.indexOf(SECOND_PARAMETER, 3, 0);
-    if (p1Offset < 0) {
-        errorCode = U_ILLEGAL_ARGUMENT_ERROR;
+    if (offsets[0] == -1 || offsets[1] == -1) {
+        errorCode = U_INVALID_FORMAT_ERROR;
         return;
     }
+    if (recordOffset) {
+        offset = offsets[1];
+    } else if (offset >= 0) {
+        offset += offsets[0];
+    }
+}
 
-    int32_t i, j;
+UnicodeString& ListFormatter::format(
+        const UnicodeString items[],
+        int32_t nItems,
+        UnicodeString& appendTo,
+        UErrorCode& errorCode) const {
+    int32_t offset;
+    return format(items, nItems, appendTo, -1, offset, errorCode);
+}
 
-    const UnicodeString* firstString;
-    const UnicodeString* secondString;
-    if (p0Offset < p1Offset) {
-        i = p0Offset;
-        j = p1Offset;
-        firstString = &originalString;
-        secondString = &nextString;
-    } else {
-        i = p1Offset;
-        j = p0Offset;
-        firstString = &nextString;
-        secondString = &originalString;
+UnicodeString& ListFormatter::format(
+        const UnicodeString items[],
+        int32_t nItems,
+        UnicodeString& appendTo,
+        int32_t index,
+        int32_t &offset,
+        UErrorCode& errorCode) const {
+    offset = -1;
+    if (U_FAILURE(errorCode)) {
+        return appendTo;
+    }
+    if (data == NULL) {
+        errorCode = U_INVALID_STATE_ERROR;
+        return appendTo;
     }
 
-    UnicodeString result = UnicodeString(pat, 0, i) + *firstString;
-    result += UnicodeString(pat, i+3, j-i-3);
-    result += *secondString;
-    result += UnicodeString(pat, j+3);
-    originalString = result;
+    if (nItems <= 0) {
+        return appendTo;
+    }
+    if (nItems == 1) {
+        if (index == 0) {
+            offset = appendTo.length();
+        }
+        appendTo.append(items[0]);
+        return appendTo;
+    }
+    UnicodeString result(items[0]);
+    if (index == 0) {
+        offset = 0;
+    }
+    joinStringsAndReplace(
+            nItems == 2 ? data->twoPattern : data->startPattern,
+            result,
+            items[1],
+            result,
+            index == 1,
+            offset,
+            errorCode);
+    if (nItems > 2) {
+        for (int32_t i = 2; i < nItems - 1; ++i) {
+             joinStringsAndReplace(
+                     data->middlePattern,
+                     result,
+                     items[i],
+                     result,
+                     index == i,
+                     offset,
+                     errorCode);
+        }
+        joinStringsAndReplace(
+                data->endPattern,
+                result,
+                items[nItems - 1],
+                result,
+                index == nItems - 1,
+                offset,
+                errorCode);
+    }
+    if (U_SUCCESS(errorCode)) {
+        if (offset >= 0) {
+            offset += appendTo.length();
+        }
+        appendTo += result;
+    }
+    return appendTo;
 }
 
 U_NAMESPACE_END

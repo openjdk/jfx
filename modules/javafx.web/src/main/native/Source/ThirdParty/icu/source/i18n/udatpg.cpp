@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2009-2012, International Business Machines
+*   Copyright (C) 2009-2015, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
 *   file name:  udatpg.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -82,7 +84,7 @@ udatpg_getBestPatternWithOptions(UDateTimePatternGenerator *dtpg,
 }
 
 U_CAPI int32_t U_EXPORT2
-udatpg_getSkeleton(UDateTimePatternGenerator *dtpg,
+udatpg_getSkeleton(UDateTimePatternGenerator * /* dtpg */,
                    const UChar *pattern, int32_t length,
                    UChar *skeleton, int32_t capacity,
                    UErrorCode *pErrorCode) {
@@ -94,12 +96,13 @@ udatpg_getSkeleton(UDateTimePatternGenerator *dtpg,
         return 0;
     }
     UnicodeString patternString((UBool)(length<0), pattern, length);
-    UnicodeString result=((DateTimePatternGenerator *)dtpg)->getSkeleton(patternString, *pErrorCode);
+    UnicodeString result=DateTimePatternGenerator::staticGetSkeleton(
+            patternString, *pErrorCode);
     return result.extract(skeleton, capacity, *pErrorCode);
 }
 
 U_CAPI int32_t U_EXPORT2
-udatpg_getBaseSkeleton(UDateTimePatternGenerator *dtpg,
+udatpg_getBaseSkeleton(UDateTimePatternGenerator * /* dtpg */,
                        const UChar *pattern, int32_t length,
                        UChar *skeleton, int32_t capacity,
                        UErrorCode *pErrorCode) {
@@ -111,7 +114,8 @@ udatpg_getBaseSkeleton(UDateTimePatternGenerator *dtpg,
         return 0;
     }
     UnicodeString patternString((UBool)(length<0), pattern, length);
-    UnicodeString result=((DateTimePatternGenerator *)dtpg)->getBaseSkeleton(patternString, *pErrorCode);
+    UnicodeString result=DateTimePatternGenerator::staticGetBaseSkeleton(
+            patternString, *pErrorCode);
     return result.extract(skeleton, capacity, *pErrorCode);
 }
 
@@ -175,6 +179,25 @@ udatpg_getAppendItemName(const UDateTimePatternGenerator *dtpg,
         *pLength=result.length();
     }
     return result.getBuffer();
+}
+
+U_CAPI int32_t U_EXPORT2
+udatpg_getFieldDisplayName(const UDateTimePatternGenerator *dtpg,
+                           UDateTimePatternField field,
+                           UDateTimePGDisplayWidth width,
+                           UChar *fieldName, int32_t capacity,
+                           UErrorCode *pErrorCode) {
+    if (U_FAILURE(*pErrorCode))
+        return -1;
+    if (fieldName == NULL ? capacity != 0 : capacity < 0) {
+        *pErrorCode = U_ILLEGAL_ARGUMENT_ERROR;
+        return -1;
+    }
+    UnicodeString result = ((const DateTimePatternGenerator *)dtpg)->getFieldDisplayName(field,width);
+    if (fieldName == NULL) {
+        return result.length();
+    }
+    return result.extract(fieldName, capacity, *pErrorCode);
 }
 
 U_CAPI void U_EXPORT2

@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-*   Copyright (C) 1996-2013, International Business Machines
+*   Copyright (C) 1996-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 */
@@ -25,6 +27,7 @@
 #include "ustrenum.h"
 #include "uenumimp.h"
 #include "ulist.h"
+#include "ulocimp.h"
 
 U_NAMESPACE_USE
 
@@ -658,21 +661,19 @@ static const char * const CAL_TYPES[] = {
         "coptic",
         "ethiopic",
         "ethiopic-amete-alem",
+        "iso8601",
+        "dangi",
+        "islamic-umalqura",
+        "islamic-tbla",
+        "islamic-rgsa",
         NULL
 };
 
 U_CAPI UEnumeration* U_EXPORT2
 ucal_getKeywordValuesForLocale(const char * /* key */, const char* locale, UBool commonlyUsed, UErrorCode *status) {
     // Resolve region
-    char prefRegion[ULOC_FULLNAME_CAPACITY] = "";
-    int32_t prefRegionLength = 0;
-    prefRegionLength = uloc_getCountry(locale, prefRegion, sizeof(prefRegion), status);
-    if (prefRegionLength == 0) {
-        char loc[ULOC_FULLNAME_CAPACITY] = "";
-        uloc_addLikelySubtags(locale, loc, sizeof(loc), status);
-
-        prefRegionLength = uloc_getCountry(loc, prefRegion, sizeof(prefRegion), status);
-    }
+    char prefRegion[ULOC_COUNTRY_CAPACITY];
+    (void)ulocimp_getRegionForSupplementalData(locale, TRUE, prefRegion, sizeof(prefRegion), status);
 
     // Read preferred calendar values from supplementalData calendarPreference
     UResourceBundle *rb = ures_openDirect(NULL, "supplementalData", status);
@@ -765,6 +766,42 @@ ucal_getTimeZoneTransitionDate(const UCalendar* cal, UTimeZoneTransitionType typ
         }
     }
     return FALSE;
+}
+
+U_CAPI int32_t U_EXPORT2
+ucal_getWindowsTimeZoneID(const UChar* id, int32_t len, UChar* winid, int32_t winidCapacity, UErrorCode* status) {
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+
+    int32_t resultLen = 0;
+    UnicodeString resultWinID;
+
+    TimeZone::getWindowsID(UnicodeString(id, len), resultWinID, *status);
+    if (U_SUCCESS(*status) && resultWinID.length() > 0) {
+        resultLen = resultWinID.length();
+        resultWinID.extract(winid, winidCapacity, *status);
+    }
+
+    return resultLen;
+}
+
+U_CAPI int32_t U_EXPORT2
+ucal_getTimeZoneIDForWindowsID(const UChar* winid, int32_t len, const char* region, UChar* id, int32_t idCapacity, UErrorCode* status) {
+    if (U_FAILURE(*status)) {
+        return 0;
+    }
+
+    int32_t resultLen = 0;
+    UnicodeString resultID;
+
+    TimeZone::getIDForWindowsID(UnicodeString(winid, len), region, resultID, *status);
+    if (U_SUCCESS(*status) && resultID.length() > 0) {
+        resultLen = resultID.length();
+        resultID.extract(id, idCapacity, *status);
+    }
+
+    return resultLen;
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

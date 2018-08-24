@@ -1,5 +1,7 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
-* Copyright (C) 1997-2013, International Business Machines Corporation and
+* Copyright (C) 1997-2016, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -35,6 +37,8 @@
 
 #include "unicode/datefmt.h"
 #include "unicode/udisplaycontext.h"
+#include "unicode/tzfmt.h"  /* for UTimeZoneFormatTimeType */
+#include "unicode/brkiter.h"
 
 U_NAMESPACE_BEGIN
 
@@ -43,6 +47,12 @@ class DateFormat;
 class MessageFormat;
 class FieldPositionHandler;
 class TimeZoneFormat;
+class SharedNumberFormat;
+class SimpleDateFormatMutableNFs;
+
+namespace number {
+class LocalizedNumberFormatter;
+}
 
 /**
  *
@@ -65,9 +75,12 @@ class TimeZoneFormat;
  * <p>Date and time formats are specified by <em>date and time pattern</em> strings.
  * Within date and time pattern strings, all unquoted ASCII letters [A-Za-z] are reserved
  * as pattern letters representing calendar fields. <code>SimpleDateFormat</code> supports
- * the date and time formatting algorithm and pattern letters defined by <a href="http://www.unicode.org/reports/tr35/">UTS#35
- * Unicode Locale Data Markup Language (LDML)</a>. The following pattern letters are
- * currently available:</p>
+ * the date and time formatting algorithm and pattern letters defined by
+ * <a href="http://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table">UTS#35
+ * Unicode Locale Data Markup Language (LDML)</a> and further documented for ICU in the
+ * <a href="https://sites.google.com/site/icuprojectuserguide/formatparse/datetime?pli=1#TOC-Date-Field-Symbol-Table">ICU
+ * User Guide</a>. The following pattern letters are currently available (note that the actual
+ * values depend on CLDR and may change from the examples shown here):</p>
  *
  * <table border="1">
  *     <tr>
@@ -83,7 +96,7 @@ class TimeZoneFormat;
  *         <td style="text-align: center">1..3</td>
  *         <td>AD</td>
  *         <td rowspan="3">Era - Replaced with the Era string for the current date. One to three letters for the
- *         abbreviated form, four letters for the long form, five for the narrow form.</td>
+ *         abbreviated form, four letters for the long (wide) form, five for the narrow form.</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">4</td>
@@ -178,7 +191,7 @@ class TimeZoneFormat;
  *         <td>&#30002;&#23376;</td>
  *         <td rowspan="3">Cyclic year name. Calendars such as the Chinese lunar calendar (and related calendars)
  *         and the Hindu calendars use 60-year cycles of year names. Use one through three letters for the abbreviated
- *         name, four for the full name, or five for the narrow name (currently the data only provides abbreviated names,
+ *         name, four for the full (wide) name, or five for the narrow name (currently the data only provides abbreviated names,
  *         which will be used for all requested name widths). If the calendar does not provide cyclic year name data,
  *         or if the year value to be formatted is out of the range of years for which cyclic name data is provided,
  *         then numeric formatting is used (behaves like 'y').</td>
@@ -196,8 +209,8 @@ class TimeZoneFormat;
  *         <td rowspan="3" style="text-align: center">Q</td>
  *         <td style="text-align: center">1..2</td>
  *         <td>02</td>
- *         <td rowspan="3">Quarter - Use one or two for the numerical quarter, three for the abbreviation, or four
- *         for the full name.</td>
+ *         <td rowspan="3">Quarter - Use one or two for the numerical quarter, three for the abbreviation, or four for the
+ *         full (wide) name (five for the narrow name is not yet supported).</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">3</td>
@@ -212,7 +225,7 @@ class TimeZoneFormat;
  *         <td style="text-align: center">1..2</td>
  *         <td>02</td>
  *         <td rowspan="3"><b>Stand-Alone</b> Quarter - Use one or two for the numerical quarter, three for the abbreviation,
- *         or four for the full name.</td>
+ *         or four for the full name (five for the narrow name is not yet supported).</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">3</td>
@@ -228,11 +241,12 @@ class TimeZoneFormat;
  *         <td style="text-align: center">1..2</td>
  *         <td>09</td>
  *         <td rowspan="4">Month - Use one or two for the numerical month, three for the abbreviation, four for
- *         the full name, or five for the narrow name.</td>
+ *         the full (wide) name, or five for the narrow name. With two ("MM"), the month number is zero-padded
+ *         if necessary (e.g. "08")</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">3</td>
- *         <td>Sept</td>
+ *         <td>Sep</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">4</td>
@@ -247,11 +261,12 @@ class TimeZoneFormat;
  *         <td style="text-align: center">1..2</td>
  *         <td>09</td>
  *         <td rowspan="4"><b>Stand-Alone</b> Month - Use one or two for the numerical month, three for the abbreviation,
- *         or four for the full name, or 5 for the narrow name.</td>
+ *         four for the full (wide) name, or 5 for the narrow name. With two ("LL"), the month number is zero-padded if
+ *         necessary (e.g. "08")</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">3</td>
- *         <td>Sept</td>
+ *         <td>Sep</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">4</td>
@@ -266,7 +281,8 @@ class TimeZoneFormat;
  *         <td style="text-align: center">w</td>
  *         <td style="text-align: center">1..2</td>
  *         <td>27</td>
- *         <td>Week of Year.</td>
+ *         <td>Week of Year. Use "w" to show the minimum number of digits, or "ww" to always show two digits
+ *         (zero-padding if necessary, e.g. "08").</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">W</td>
@@ -279,7 +295,8 @@ class TimeZoneFormat;
  *         <td style="text-align: center">d</td>
  *         <td style="text-align: center">1..2</td>
  *         <td>1</td>
- *         <td>Date - Day of the month</td>
+ *         <td>Date - Day of the month. Use "d" to show the minimum number of digits, or "dd" to always show
+ *         two digits (zero-padding if necessary, e.g. "08").</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">D</td>
@@ -307,8 +324,8 @@ class TimeZoneFormat;
  *         day</th>
  *         <td rowspan="4" style="text-align: center">E</td>
  *         <td style="text-align: center">1..3</td>
- *         <td>Tues</td>
- *         <td rowspan="4">Day of week - Use one through three letters for the short day, or four for the full name,
+ *         <td>Tue</td>
+ *         <td rowspan="4">Day of week - Use one through three letters for the short day, four for the full (wide) name,
  *         five for the narrow name, or six for the short name.</td>
  *     </tr>
  *     <tr>
@@ -332,7 +349,7 @@ class TimeZoneFormat;
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">3</td>
- *         <td>Tues</td>
+ *         <td>Tue</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">4</td>
@@ -351,12 +368,12 @@ class TimeZoneFormat;
  *         <td style="text-align: center">1</td>
  *         <td>2</td>
  *         <td rowspan="5"><b>Stand-Alone</b> local day of week - Use one letter for the local numeric value (same
- *         as 'e'), three for the short day, four for the full name, five for the narrow name, or six for
+ *         as 'e'), three for the short day, four for the full (wide) name, five for the narrow name, or six for
  *         the short name.</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">3</td>
- *         <td>Tues</td>
+ *         <td>Tue</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">4</td>
@@ -411,20 +428,23 @@ class TimeZoneFormat;
  *         <td style="text-align: center">m</td>
  *         <td style="text-align: center">1..2</td>
  *         <td>59</td>
- *         <td>Minute. Use one or two for zero padding.</td>
+ *         <td>Minute. Use "m" to show the minimum number of digits, or "mm" to always show two digits
+ *         (zero-padding if necessary, e.g. "08").</td>
  *     </tr>
  *     <tr>
  *         <th rowspan="3">second</th>
  *         <td style="text-align: center">s</td>
  *         <td style="text-align: center">1..2</td>
  *         <td>12</td>
- *         <td>Second. Use one or two for zero padding.</td>
+ *         <td>Second. Use "s" to show the minimum number of digits, or "ss" to always show two digits
+ *         (zero-padding if necessary, e.g. "08").</td>
  *     </tr>
  *     <tr>
  *         <td style="text-align: center">S</td>
  *         <td style="text-align: center">1..n</td>
- *         <td>3456</td>
- *         <td>Fractional Second - truncates (like other time fields) to the count of letters.
+ *         <td>3450</td>
+ *         <td>Fractional Second - truncates (like other time fields) to the count of letters when formatting.
+ *         Appends zeros if more than 3 letters specified. Truncates at three significant digits when parsing.
  *         (example shows display using pattern SSSS for seconds value 12.34567)</td>
  *     </tr>
  *     <tr>
@@ -637,7 +657,7 @@ class TimeZoneFormat;
  *         = new SimpleDateFormat ("yyyy.MM.dd G 'at' hh:mm:ss a zzz", success );
  *     GregorianCalendar cal(success);
  *     UDate currentTime_1 = cal.getTime(success);
- *     FieldPosition fp(0);
+ *     FieldPosition fp(FieldPosition::DONT_CARE);
  *     UnicodeString dateString;
  *     formatter->format( currentTime_1, dateString, fp );
  *     cout << "result: " << dateString << endl;
@@ -901,108 +921,7 @@ public:
                                     FieldPositionIterator* posIter,
                                     UErrorCode& status) const;
 
-    /**
-     * Format a date or time, which is the standard millis since 24:00 GMT, Jan
-     * 1, 1970. Overrides DateFormat pure virtual method.
-     * <P>
-     * Example: using the US locale: "yyyy.MM.dd e 'at' HH:mm:ss zzz" ->>
-     * 1996.07.10 AD at 15:08:56 PDT
-     *
-     * @param obj       A Formattable containing the date-time value to be formatted
-     *                  into a date-time string.  If the type of the Formattable
-     *                  is a numeric type, it is treated as if it were an
-     *                  instance of Date.
-     * @param appendTo  Output parameter to receive result.
-     *                  Result is appended to existing contents.
-     * @param pos       The formatting position. On input: an alignment field,
-     *                  if desired. On output: the offsets of the alignment field.
-     * @param status    Input/output param set to success/failure code.
-     * @return          Reference to 'appendTo' parameter.
-     * @stable ICU 2.0
-     */
-    virtual UnicodeString& format(  const Formattable& obj,
-                                    UnicodeString& appendTo,
-                                    FieldPosition& pos,
-                                    UErrorCode& status) const;
-
-    /**
-     * Format a date or time, which is the standard millis since 24:00 GMT, Jan
-     * 1, 1970. Overrides DateFormat pure virtual method.
-     * <P>
-     * Example: using the US locale: "yyyy.MM.dd e 'at' HH:mm:ss zzz" ->>
-     * 1996.07.10 AD at 15:08:56 PDT
-     *
-     * @param obj       A Formattable containing the date-time value to be formatted
-     *                  into a date-time string.  If the type of the Formattable
-     *                  is a numeric type, it is treated as if it were an
-     *                  instance of Date.
-     * @param appendTo  Output parameter to receive result.
-     *                  Result is appended to existing contents.
-     * @param posIter   On return, can be used to iterate over positions
-     *                  of fields generated by this format call.  Field values
-     *                  are defined in UDateFormatField.
-     * @param status    Input/output param set to success/failure code.
-     * @return          Reference to 'appendTo' parameter.
-     * @stable ICU 4.4
-     */
-    virtual UnicodeString& format(  const Formattable& obj,
-                                    UnicodeString& appendTo,
-                                    FieldPositionIterator* posIter,
-                                    UErrorCode& status) const;
-
-    /**
-     * Redeclared DateFormat method.
-     * @param date          the Date value to be formatted.
-     * @param appendTo      Output parameter to receive result.
-     *                      Result is appended to existing contents.
-     * @param fieldPosition The formatting position. On input: an alignment field,
-     *                      if desired. On output: the offsets of the alignment field.
-     * @return              Reference to 'appendTo' parameter.
-     * @stable ICU 2.1
-     */
-    UnicodeString& format(UDate date,
-                          UnicodeString& appendTo,
-                          FieldPosition& fieldPosition) const;
-
-    /**
-     * Redeclared DateFormat method.
-     * @param date          the Date value to be formatted.
-     * @param appendTo      Output parameter to receive result.
-     *                      Result is appended to existing contents.
-     * @param posIter       On return, can be used to iterate over positions
-     *                      of fields generated by this format call.  Field values
-     *                      are defined in UDateFormatField.
-     * @param status        Input/output param set to success/failure code.
-     * @return              Reference to 'appendTo' parameter.
-     * @stable ICU 4.4
-     */
-    UnicodeString& format(UDate date,
-                          UnicodeString& appendTo,
-                          FieldPositionIterator* posIter,
-                          UErrorCode& status) const;
-
-    /**
-     * Redeclared DateFormat method.
-     * @param obj       Object to be formatted.
-     * @param appendTo  Output parameter to receive result.
-     *                  Result is appended to existing contents.
-     * @param status    Input/output success/failure code.
-     * @return          Reference to 'appendTo' parameter.
-     * @stable ICU 2.0
-     */
-    UnicodeString& format(const Formattable& obj,
-                          UnicodeString& appendTo,
-                          UErrorCode& status) const;
-
-    /**
-     * Redeclared DateFormat method.
-     * @param date      Date value to be formatted.
-     * @param appendTo  Output parameter to receive result.
-     *                  Result is appended to existing contents.
-     * @return          Reference to 'appendTo' parameter.
-     * @stable ICU 2.0
-     */
-    UnicodeString& format(UDate date, UnicodeString& appendTo) const;
+    using DateFormat::parse;
 
     /**
      * Parse a date/time string beginning at the given parse position. For
@@ -1034,75 +953,6 @@ public:
                         Calendar& cal,
                         ParsePosition& pos) const;
 
-    /**
-     * Parse a date/time string starting at the given parse position. For
-     * example, a time text "07/10/96 4:5 PM, PDT" will be parsed into a Date
-     * that is equivalent to Date(837039928046).
-     * <P>
-     * By default, parsing is lenient: If the input is not in the form used by
-     * this object's format method but can still be parsed as a date, then the
-     * parse succeeds. Clients may insist on strict adherence to the format by
-     * calling setLenient(false).
-     * @see DateFormat::setLenient(boolean)
-     * <P>
-     * Note that the normal date formats associated with some calendars - such
-     * as the Chinese lunar calendar - do not specify enough fields to enable
-     * dates to be parsed unambiguously. In the case of the Chinese lunar
-     * calendar, while the year within the current 60-year cycle is specified,
-     * the number of such cycles since the start date of the calendar (in the
-     * ERA field of the Calendar object) is not normally part of the format,
-     * and parsing may assume the wrong era. For cases such as this it is
-     * recommended that clients parse using the method
-     * parse(const UnicodeString&, Calendar& cal, ParsePosition&)
-     * with the Calendar passed in set to the current date, or to a date
-     * within the era/cycle that should be assumed if absent in the format.
-     *
-     * @param text  The date/time string to be parsed
-     * @param pos   On input, the position at which to start parsing; on
-     *              output, the position at which parsing terminated, or the
-     *              start position if the parse failed.
-     * @return      A valid UDate if the input could be parsed.
-     * @stable ICU 2.0
-     */
-    UDate parse( const UnicodeString& text,
-                 ParsePosition& pos) const;
-
-
-    /**
-     * Parse a date/time string. For example, a time text "07/10/96 4:5 PM, PDT"
-     * will be parsed into a UDate that is equivalent to Date(837039928046).
-     * Parsing begins at the beginning of the string and proceeds as far as
-     * possible.  Assuming no parse errors were encountered, this function
-     * doesn't return any information about how much of the string was consumed
-     * by the parsing.  If you need that information, use the version of
-     * parse() that takes a ParsePosition.
-     * <P>
-     * By default, parsing is lenient: If the input is not in the form used by
-     * this object's format method but can still be parsed as a date, then the
-     * parse succeeds. Clients may insist on strict adherence to the format by
-     * calling setLenient(false).
-     * @see DateFormat::setLenient(boolean)
-     * <P>
-     * Note that the normal date formats associated with some calendars - such
-     * as the Chinese lunar calendar - do not specify enough fields to enable
-     * dates to be parsed unambiguously. In the case of the Chinese lunar
-     * calendar, while the year within the current 60-year cycle is specified,
-     * the number of such cycles since the start date of the calendar (in the
-     * ERA field of the Calendar object) is not normally part of the format,
-     * and parsing may assume the wrong era. For cases such as this it is
-     * recommended that clients parse using the method
-     * parse(const UnicodeString&, Calendar& cal, ParsePosition&)
-     * with the Calendar passed in set to the current date, or to a date
-     * within the era/cycle that should be assumed if absent in the format.
-     *
-     * @param text  The date/time string to be parsed into a UDate value.
-     * @param status Filled in with U_ZERO_ERROR if the parse was successful, and with
-     *              an error value if there was a parse error.
-     * @return      A valid UDate if the input could be parsed.
-     * @stable ICU 2.0
-     */
-    virtual UDate parse( const UnicodeString& text,
-                        UErrorCode& status) const;
 
     /**
      * Set the start UDate used to interpret two-digit year strings.
@@ -1155,6 +1005,12 @@ public:
      * (Presumably, letters that would be more mnemonic in that locale's
      * language.)  This function would produce a pattern using those
      * letters.
+     * <p>
+     * <b>Note:</b> This implementation depends on DateFormatSymbols::getLocalPatternChars()
+     * to get localized format pattern characters. ICU does not include
+     * localized pattern character data, therefore, unless user sets localized
+     * pattern characters manually, this method returns the same result as
+     * toPattern().
      *
      * @param result    Receives the localized pattern.
      * @param status    Output param set to success/failure code on
@@ -1251,31 +1107,6 @@ public:
      */
     virtual void adoptCalendar(Calendar* calendarToAdopt);
 
-    /* Cannot use #ifndef U_HIDE_DRAFT_API for the following draft method since it is virtual */
-    /**
-     * Set a particular UDisplayContext value in the formatter, such as
-     * UDISPCTX_CAPITALIZATION_FOR_STANDALONE.
-     * @param value The UDisplayContext value to set.
-     * @param status Input/output status. If at entry this indicates a failure
-     *               status, the function will do nothing; otherwise this will be
-     *               updated with any new status from the function.
-     * @draft ICU 51
-     */
-    virtual void setContext(UDisplayContext value, UErrorCode& status);
-
-    /* Cannot use #ifndef U_HIDE_DRAFT_API for the following draft method since it is virtual */
-    /**
-     * Get the formatter's UDisplayContext value for the specified UDisplayContextType,
-     * such as UDISPCTX_TYPE_CAPITALIZATION.
-     * @param type The UDisplayContextType whose value to return
-     * @param status Input/output status. If at entry this indicates a failure
-     *               status, the function will do nothing; otherwise this will be
-     *               updated with any new status from the function.
-     * @return The UDisplayContextValue for the specified type.
-     * @draft ICU 51
-     */
-    virtual UDisplayContext getContext(UDisplayContextType type, UErrorCode& status) const;
-
     /* Cannot use #ifndef U_HIDE_INTERNAL_API for the following methods since they are virtual */
     /**
      * Sets the TimeZoneFormat to be used by this date/time formatter.
@@ -1299,6 +1130,51 @@ public:
      * @internal ICU 49 technology preview
      */
     virtual const TimeZoneFormat* getTimeZoneFormat(void) const;
+
+    /**
+     * Set a particular UDisplayContext value in the formatter, such as
+     * UDISPCTX_CAPITALIZATION_FOR_STANDALONE. Note: For getContext, see
+     * DateFormat.
+     * @param value The UDisplayContext value to set.
+     * @param status Input/output status. If at entry this indicates a failure
+     *               status, the function will do nothing; otherwise this will be
+     *               updated with any new status from the function.
+     * @stable ICU 53
+     */
+    virtual void setContext(UDisplayContext value, UErrorCode& status);
+
+    /**
+     * Overrides base class method and
+     * This method clears per field NumberFormat instances
+     * previously set by {@see adoptNumberFormat(const UnicodeString&, NumberFormat*, UErrorCode)}
+     * @param adoptNF the NumbeferFormat used
+     * @stable ICU 54
+     */
+    void adoptNumberFormat(NumberFormat *formatToAdopt);
+
+    /**
+     * Allow the user to set the NumberFormat for several fields
+     * It can be a single field like: "y"(year) or "M"(month)
+     * It can be several field combined together: "yM"(year and month)
+     * Note:
+     * 1 symbol field is enough for multiple symbol field (so "y" will override "yy", "yyy")
+     * If the field is not numeric, then override has no effect (like "MMM" will use abbreviation, not numerical field)
+     * Per field NumberFormat can also be cleared in {@see DateFormat::setNumberFormat(const NumberFormat& newNumberFormat)}
+     *
+     * @param fields  the fields to override(like y)
+     * @param adoptNF the NumbeferFormat used
+     * @param status  Receives a status code, which will be U_ZERO_ERROR
+     *                if the operation succeeds.
+     * @stable ICU 54
+     */
+    void adoptNumberFormat(const UnicodeString& fields, NumberFormat *formatToAdopt, UErrorCode &status);
+
+    /**
+     * Get the numbering system to be used for a particular field.
+     * @param field The UDateFormatField to get
+     * @stable ICU 54
+     */
+    const NumberFormat * getNumberFormatForField(char16_t field) const;
 
 #ifndef U_HIDE_INTERNAL_API
     /**
@@ -1344,6 +1220,8 @@ private:
 
     void initializeDefaultCentury(void);
 
+    void initializeBooleanAttributes(void);
+
     SimpleDateFormat(); // default constructor not implemented
 
     /**
@@ -1388,7 +1266,7 @@ private:
      *                  succeeds.
      */
     void subFormat(UnicodeString &appendTo,
-                   UChar ch,
+                   char16_t ch,
                    int32_t count,
                    UDisplayContext capitalizationContext,
                    int32_t fieldNum,
@@ -1409,7 +1287,7 @@ private:
      * @param minDigits Minimum number of digits the result should have
      * @param maxDigits Maximum number of digits the result should have
      */
-    void zeroPaddingNumber(NumberFormat *currentNumberFormat,
+    void zeroPaddingNumber(const NumberFormat *currentNumberFormat,
                            UnicodeString &appendTo,
                            int32_t value,
                            int32_t minDigits,
@@ -1419,7 +1297,7 @@ private:
      * Return true if the given format character, occuring count
      * times, represents a numeric field.
      */
-    static UBool isNumeric(UChar formatChar, int32_t count);
+    static UBool isNumeric(char16_t formatChar, int32_t count);
 
     /**
      * Returns TRUE if the patternOffset is at the start of a numeric field.
@@ -1439,14 +1317,6 @@ private:
      * @return the newly constructed fCalendar
      */
     Calendar *initializeCalendar(TimeZone* adoptZone, const Locale& locale, UErrorCode& status);
-
-    /**
-     * initializes fSymbols from parameters.
-     * @param locale Locale of the symbols
-     * @param calendar Alias to Calendar that will be used.
-     * @param status Error code
-     */
-    void initializeSymbols(const Locale& locale, Calendar* calendar, UErrorCode& status);
 
     /**
      * Called by several of the constructors to load pattern data and formatting symbols
@@ -1500,6 +1370,13 @@ private:
                                const UnicodeString* stringArray, int32_t stringArrayCount, Calendar& cal) const;
 
     /**
+     * Used by subParse() to match localized day period strings.
+     */
+    int32_t matchDayPeriodStrings(const UnicodeString& text, int32_t start,
+                                  const UnicodeString* stringArray, int32_t stringArrayCount,
+                                  int32_t &dayPeriod) const;
+
+    /**
      * Private function used by subParse to match literal pattern text.
      *
      * @param pattern the pattern string
@@ -1508,12 +1385,15 @@ private:
      * @param text the text being parsed
      * @param textOffset the starting offset into the text. On output
      *                   will be set to the offset of the character after the match
-     * @param lenient <code>TRUE</code> if the parse is lenient, <code>FALSE</code> otherwise.
+     * @param whitespaceLenient <code>TRUE</code> if whitespace parse is lenient, <code>FALSE</code> otherwise.
+     * @param partialMatchLenient <code>TRUE</code> if partial match parse is lenient, <code>FALSE</code> otherwise.
+     * @param oldLeniency <code>TRUE</code> if old leniency control is lenient, <code>FALSE</code> otherwise.
      *
      * @return <code>TRUE</code> if the literal text could be matched, <code>FALSE</code> otherwise.
      */
     static UBool matchLiterals(const UnicodeString &pattern, int32_t &patternOffset,
-                               const UnicodeString &text, int32_t &textOffset, UBool lenient);
+                               const UnicodeString &text, int32_t &textOffset,
+                               UBool whitespaceLenient, UBool partialMatchLenient, UBool oldLeniency);
 
     /**
      * Private member function that converts the parsed date strings into
@@ -1530,28 +1410,41 @@ private:
      *            into a date/time string.
      * @param patLoc
      * @param numericLeapMonthFormatter If non-null, used to parse numeric leap months.
+     * @param tzTimeType the type of parsed time zone - standard, daylight or unknown (output).
+     *      This parameter can be NULL if caller does not need the information.
      * @return the new start position if matching succeeded; a negative number
      * indicating matching failure, otherwise.
      */
-    int32_t subParse(const UnicodeString& text, int32_t& start, UChar ch, int32_t count,
+    int32_t subParse(const UnicodeString& text, int32_t& start, char16_t ch, int32_t count,
                      UBool obeyCount, UBool allowNegative, UBool ambiguousYear[], int32_t& saveHebrewMonth, Calendar& cal,
-                     int32_t patLoc, MessageFormat * numericLeapMonthFormatter) const;
+                     int32_t patLoc, MessageFormat * numericLeapMonthFormatter, UTimeZoneFormatTimeType *tzTimeType,
+                     int32_t *dayPeriod=NULL) const;
 
     void parseInt(const UnicodeString& text,
                   Formattable& number,
                   ParsePosition& pos,
                   UBool allowNegative,
-                  NumberFormat *fmt) const;
+                  const NumberFormat *fmt) const;
 
     void parseInt(const UnicodeString& text,
                   Formattable& number,
                   int32_t maxDigits,
                   ParsePosition& pos,
                   UBool allowNegative,
-                  NumberFormat *fmt) const;
+                  const NumberFormat *fmt) const;
 
     int32_t checkIntSuffix(const UnicodeString& text, int32_t start,
                            int32_t patLoc, UBool isNegative) const;
+
+    /**
+     * Counts number of digit code points in the specified text.
+     *
+     * @param text  input text
+     * @param start start index, inclusive
+     * @param end   end index, exclusive
+     * @return  number of digits found in the text in the specified range.
+    */
+    int32_t countDigits(const UnicodeString& text, int32_t start, int32_t end) const;
 
     /**
      * Translate a pattern, mapping each character in the from string to the
@@ -1606,14 +1499,19 @@ private:
     int32_t skipUWhiteSpace(const UnicodeString& text, int32_t pos) const;
 
     /**
+     * Initialize LocalizedNumberFormatter instances used for speedup.
+     */
+    void initFastNumberFormatters(UErrorCode& status);
+
+    /**
+     * Delete the LocalizedNumberFormatter instances used for speedup.
+     */
+    void freeFastNumberFormatters();
+
+    /**
      * Initialize NumberFormat instances used for numbering system overrides.
      */
     void initNumberFormatters(const Locale &locale,UErrorCode &status);
-
-    /**
-     * Get the numbering system to be used for a particular field.
-     */
-     NumberFormat * getNumberFormatByIndex(UDateFormatField index) const;
 
     /**
      * Parse the given override string and set up structures for number formats
@@ -1633,7 +1531,9 @@ private:
     /**
      * Lazy TimeZoneFormat instantiation, semantically const
      */
-    TimeZoneFormat *tzFormat() const;
+    TimeZoneFormat *tzFormat(UErrorCode &status) const;
+
+    const NumberFormat* getNumberFormatByIndex(UDateFormatField index) const;
 
     /**
      * Used to map Calendar field to field level.
@@ -1642,7 +1542,16 @@ private:
      * UCAL_MONTH level is 20.
      */
     static const int32_t fgCalendarFieldToLevel[];
-    static const int32_t fgPatternCharToLevel[];
+
+    /**
+     * Map calendar field letter into calendar field level.
+     */
+    static int32_t getLevelFromChar(char16_t ch);
+
+    /**
+     * Tell if a character can be used to define a field in a format string.
+     */
+    static UBool isSyntaxChar(char16_t ch);
 
     /**
      * The formatting pattern for this formatter.
@@ -1686,87 +1595,58 @@ private:
      */
     UDate                fDefaultCenturyStart;
 
+    UBool                fHasMinute;
+    UBool                fHasSecond;
+
+    /**
+     * Sets fHasMinutes and fHasSeconds.
+     */
+    void                 parsePattern();
+
     /**
      * See documentation for defaultCenturyStart.
      */
     /*transient*/ int32_t   fDefaultCenturyStartYear;
 
-    int32_t tztype; // here to avoid api change
-
-    typedef struct NSOverride {
-        NumberFormat *nf;
+    struct NSOverride : public UMemory {
+        const SharedNumberFormat *snf;
         int32_t hash;
         NSOverride *next;
-    } NSOverride;
+        void free();
+        NSOverride() : snf(NULL), hash(0), next(NULL) {
+        }
+        ~NSOverride();
+    };
 
-    NumberFormat    **fNumberFormatters;
+    /**
+     * The number format in use for each date field. NULL means fall back
+     * to fNumberFormat in DateFormat.
+     */
+    const SharedNumberFormat    **fSharedNumberFormatters;
 
-    NSOverride      *fOverrideList;
+    enum NumberFormatterKey {
+        SMPDTFMT_NF_1x10,
+        SMPDTFMT_NF_2x10,
+        SMPDTFMT_NF_3x10,
+        SMPDTFMT_NF_4x10,
+        SMPDTFMT_NF_2x2,
+        SMPDTFMT_NF_COUNT
+    };
+
+    /**
+     * Number formatters pre-allocated for fast performance on the most common integer lengths.
+     */
+    const number::LocalizedNumberFormatter* fFastNumberFormatters[SMPDTFMT_NF_COUNT] = {};
 
     UBool fHaveDefaultCentury;
 
-    UDisplayContext fCapitalizationContext;
+    BreakIterator* fCapitalizationBrkIter;
 };
 
 inline UDate
 SimpleDateFormat::get2DigitYearStart(UErrorCode& /*status*/) const
 {
     return fDefaultCenturyStart;
-}
-
-inline UnicodeString&
-SimpleDateFormat::format(const Formattable& obj,
-                         UnicodeString& appendTo,
-                         UErrorCode& status) const {
-    // Don't use Format:: - use immediate base class only,
-    // in case immediate base modifies behavior later.
-    return DateFormat::format(obj, appendTo, status);
-}
-
-inline UnicodeString&
-SimpleDateFormat::format(const Formattable& obj,
-                         UnicodeString& appendTo,
-                         FieldPosition& pos,
-                         UErrorCode& status) const
-{
-    // Don't use Format:: - use immediate base class only,
-    // in case immediate base modifies behavior later.
-    return DateFormat::format(obj, appendTo, pos, status);
-}
-
-inline UnicodeString&
-SimpleDateFormat::format(const Formattable& obj,
-                         UnicodeString& appendTo,
-                         FieldPositionIterator* posIter,
-                         UErrorCode& status) const
-{
-    // Don't use Format:: - use immediate base class only,
-    // in case immediate base modifies behavior later.
-    return DateFormat::format(obj, appendTo, posIter, status);
-}
-
-inline UnicodeString&
-SimpleDateFormat::format(UDate date,
-                         UnicodeString& appendTo,
-                         FieldPosition& fieldPosition) const {
-    // Don't use Format:: - use immediate base class only,
-    // in case immediate base modifies behavior later.
-    return DateFormat::format(date, appendTo, fieldPosition);
-}
-
-inline UnicodeString&
-SimpleDateFormat::format(UDate date,
-                         UnicodeString& appendTo,
-                         FieldPositionIterator* posIter,
-                         UErrorCode& status) const {
-    // Don't use Format:: - use immediate base class only,
-    // in case immediate base modifies behavior later.
-    return DateFormat::format(date, appendTo, posIter, status);
-}
-
-inline UnicodeString&
-SimpleDateFormat::format(UDate date, UnicodeString& appendTo) const {
-    return DateFormat::format(date, appendTo);
 }
 
 U_NAMESPACE_END

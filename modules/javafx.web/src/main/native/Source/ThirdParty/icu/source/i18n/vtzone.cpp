@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2007-2013, International Business Machines Corporation and
+* Copyright (C) 2007-2016, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 */
@@ -18,6 +20,7 @@
 #include "cmemory.h"
 #include "uvector.h"
 #include "gregoimp.h"
+#include "uassert.h"
 
 U_NAMESPACE_BEGIN
 
@@ -355,7 +358,7 @@ static void millisToOffset(int32_t millis, UnicodeString& str) {
 /*
  * Create a default TZNAME from TZID
  */
-static void getDefaultTZName(const UnicodeString tzid, UBool isDST, UnicodeString& zonename) {
+static void getDefaultTZName(const UnicodeString &tzid, UBool isDST, UnicodeString& zonename) {
     zonename = tzid;
     if (isDST) {
         zonename += UNICODE_STRING_SIMPLE("(DST)");
@@ -537,7 +540,7 @@ static TimeZoneRule* createRuleByRRULE(const UnicodeString& zonename, int rawOff
     UnicodeString rrule = *((UnicodeString*)dates->elementAt(0));
     int32_t month, dayOfWeek, nthDayOfWeek, dayOfMonth = 0;
     int32_t days[7];
-    int32_t daysCount = sizeof(days)/sizeof(days[0]);
+    int32_t daysCount = UPRV_LENGTHOF(days);
     UDate until;
 
     parseRRULE(rrule, month, dayOfWeek, nthDayOfWeek, days, daysCount, until, status);
@@ -614,7 +617,7 @@ static TimeZoneRule* createRuleByRRULE(const UnicodeString& zonename, int rawOff
             UDate tmp_until;
             int32_t tmp_month, tmp_dayOfWeek, tmp_nthDayOfWeek;
             int32_t tmp_days[7];
-            int32_t tmp_daysCount = sizeof(tmp_days)/sizeof(tmp_days[0]);
+            int32_t tmp_daysCount = UPRV_LENGTHOF(tmp_days);
             parseRRULE(rrule, tmp_month, tmp_dayOfWeek, tmp_nthDayOfWeek, tmp_days, tmp_daysCount, tmp_until, status);
             if (U_FAILURE(status)) {
                 return NULL;
@@ -1744,26 +1747,16 @@ VTimeZone::write(VTZWriter& writer, UErrorCode& status) const {
             }
         }
     } else {
-        UVector *customProps = NULL;
+        UnicodeString icutzprop;
+        UVector customProps(nullptr, uhash_compareUnicodeString, status);
         if (olsonzid.length() > 0 && icutzver.length() > 0) {
-            customProps = new UVector(uprv_deleteUObject, uhash_compareUnicodeString, status);
-            if (U_FAILURE(status)) {
-                return;
-            }
-            UnicodeString *icutzprop = new UnicodeString(ICU_TZINFO_PROP);
-            icutzprop->append(olsonzid);
-            icutzprop->append((UChar)0x005B/*'['*/);
-            icutzprop->append(icutzver);
-            icutzprop->append((UChar)0x005D/*']'*/);
-            customProps->addElement(icutzprop, status);
-            if (U_FAILURE(status)) {
-                delete icutzprop;
-                delete customProps;
-                return;
-            }
+            icutzprop.append(olsonzid);
+            icutzprop.append(u'[');
+            icutzprop.append(icutzver);
+            icutzprop.append(u']');
+            customProps.addElement(&icutzprop, status);
         }
-        writeZone(writer, *tz, customProps, status);
-        delete customProps;
+        writeZone(writer, *tz, &customProps, status);
     }
 }
 
@@ -2109,8 +2102,13 @@ VTimeZone::writeZone(VTZWriter& w, BasicTimeZone& basictz,
                         if (U_FAILURE(status)) {
                             goto cleanupWriteZone;
                         }
-                        writeFinalRule(w, TRUE, finalDstRule,
-                                dstFromOffset - dstFromDSTSavings, dstFromDSTSavings, dstStartTime, status);
+                        UDate nextStart;
+                        UBool nextStartAvail = finalDstRule->getNextStart(dstUntilTime, dstFromOffset - dstFromDSTSavings, dstFromDSTSavings, false, nextStart);
+                        U_ASSERT(nextStartAvail);
+                        if (nextStartAvail) {
+                            writeFinalRule(w, TRUE, finalDstRule,
+                                    dstFromOffset - dstFromDSTSavings, dstFromDSTSavings, nextStart, status);
+                        }
                     }
                 }
                 if (U_FAILURE(status)) {
@@ -2146,8 +2144,13 @@ VTimeZone::writeZone(VTZWriter& w, BasicTimeZone& basictz,
                         if (U_FAILURE(status)) {
                             goto cleanupWriteZone;
                         }
-                        writeFinalRule(w, FALSE, finalStdRule,
-                                stdFromOffset - stdFromDSTSavings, stdFromDSTSavings, stdStartTime, status);
+                        UDate nextStart;
+                        UBool nextStartAvail = finalStdRule->getNextStart(stdUntilTime, stdFromOffset - stdFromDSTSavings, stdFromDSTSavings, false, nextStart);
+                        U_ASSERT(nextStartAvail);
+                        if (nextStartAvail) {
+                            writeFinalRule(w, FALSE, finalStdRule,
+                                    stdFromOffset - stdFromDSTSavings, stdFromDSTSavings, nextStart, status);
+                        }
                     }
                 }
                 if (U_FAILURE(status)) {

@@ -1,7 +1,9 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2011-2013, International Business Machines Corporation and    *
-* others. All Rights Reserved.                                                *
+* Copyright (C) 2011-2016, International Business Machines Corporation and
+* others. All Rights Reserved.
 *******************************************************************************
 */
 #ifndef __TZNAMES_H
@@ -14,7 +16,6 @@
 #include "unicode/utypes.h"
 
 #if !UCONFIG_NO_FORMATTING
-#ifndef U_HIDE_DRAFT_API
 
 #include "unicode/uloc.h"
 #include "unicode/unistr.h"
@@ -23,51 +24,49 @@ U_CDECL_BEGIN
 
 /**
  * Constants for time zone display name types.
- * @draft ICU 50
+ * @stable ICU 50
  */
 typedef enum UTimeZoneNameType {
     /**
      * Unknown display name type.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UTZNM_UNKNOWN           = 0x00,
     /**
      * Long display name, such as "Eastern Time".
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UTZNM_LONG_GENERIC      = 0x01,
     /**
      * Long display name for standard time, such as "Eastern Standard Time".
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UTZNM_LONG_STANDARD     = 0x02,
     /**
      * Long display name for daylight saving time, such as "Eastern Daylight Time".
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UTZNM_LONG_DAYLIGHT     = 0x04,
     /**
      * Short display name, such as "ET".
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UTZNM_SHORT_GENERIC     = 0x08,
     /**
      * Short display name for standard time, such as "EST".
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UTZNM_SHORT_STANDARD    = 0x10,
     /**
      * Short display name for daylight saving time, such as "EDT".
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UTZNM_SHORT_DAYLIGHT    = 0x20,
-#ifndef U_HIDE_DRAFT_API
     /**
      * Exemplar location name, such as "Los Angeles".
-     * @draft ICU 51
+     * @stable ICU 51
      */
     UTZNM_EXEMPLAR_LOCATION = 0x40
-#endif /* U_HIDE_DRAFT_API */
 } UTimeZoneNameType;
 
 U_CDECL_END
@@ -125,21 +124,21 @@ struct MatchInfo;
  * {@link #getMetaZoneID}, and {@link #getReferenceZoneID} won't be changed no matter
  * what locale is used for getting an instance of <code>TimeZoneNames</code>.
  *
- * @draft ICU 50
+ * @stable ICU 50
  */
 class U_I18N_API TimeZoneNames : public UObject {
 public:
     /**
      * Destructor.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual ~TimeZoneNames();
 
     /**
-     * Return true if the given TimeZoneNames objects are emantically equal.
+     * Return true if the given TimeZoneNames objects are semantically equal.
      * @param other the object to be compared with.
      * @return Return TRUE if the given Format objects are semantically equal.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual UBool operator==(const TimeZoneNames& other) const = 0;
 
@@ -148,7 +147,7 @@ public:
      * equal.
      * @param other the object to be compared with.
      * @return Return TRUE if the given Format objects are not semantically equal.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     UBool operator!=(const TimeZoneNames& other) const { return !operator==(other); }
 
@@ -156,34 +155,46 @@ public:
      * Clone this object polymorphically.  The caller is responsible
      * for deleting the result when done.
      * @return A copy of the object
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual TimeZoneNames* clone() const = 0;
 
     /**
-     * Returns an instance of <code>TimeZoneDisplayNames</code> for the specified locale.
+     * Returns an instance of <code>TimeZoneNames</code> for the specified locale.
      *
      * @param locale The locale.
-     * @param status Recevies the status.
-     * @return An instance of <code>TimeZoneDisplayNames</code>
-     * @draft ICU 50
+     * @param status Receives the status.
+     * @return An instance of <code>TimeZoneNames</code>
+     * @stable ICU 50
      */
     static TimeZoneNames* U_EXPORT2 createInstance(const Locale& locale, UErrorCode& status);
 
     /**
+     * Returns an instance of <code>TimeZoneNames</code> containing only short specific
+     * zone names (SHORT_STANDARD and SHORT_DAYLIGHT),
+     * compatible with the IANA tz database's zone abbreviations (not localized).
+     * <br>
+     * Note: The input locale is used for resolving ambiguous names (e.g. "IST" is parsed
+     * as Israel Standard Time for Israel, while it is parsed as India Standard Time for
+     * all other regions). The zone names returned by this instance are not localized.
+     * @stable ICU 54
+     */
+     static TimeZoneNames* U_EXPORT2 createTZDBInstance(const Locale& locale, UErrorCode& status);
+
+    /**
      * Returns an enumeration of all available meta zone IDs.
-     * @param status Recevies the status.
+     * @param status Receives the status.
      * @return an enumeration object, owned by the caller.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual StringEnumeration* getAvailableMetaZoneIDs(UErrorCode& status) const = 0;
 
     /**
      * Returns an enumeration of all available meta zone IDs used by the given time zone.
      * @param tzID The canoical tiem zone ID.
-     * @param status Recevies the status.
+     * @param status Receives the status.
      * @return an enumeration object, owned by the caller.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual StringEnumeration* getAvailableMetaZoneIDs(const UnicodeString& tzID, UErrorCode& status) const = 0;
 
@@ -195,7 +206,7 @@ public:
      *          corresponding meta zone at the given date or the implementation does not support meta zones, "bogus" state
      *          is set.
      * @return A reference to the result.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual UnicodeString& getMetaZoneID(const UnicodeString& tzID, UDate date, UnicodeString& mzID) const = 0;
 
@@ -213,7 +224,7 @@ public:
      *          region. If the meta zone is unknown or the implementation does not support meta zones, "bogus" state
      *          is set.
      * @return A reference to the result.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual UnicodeString& getReferenceZoneID(const UnicodeString& mzID, const char* region, UnicodeString& tzID) const = 0;
 
@@ -225,7 +236,7 @@ public:
      *         meta zone with the specified type or the implementation does not provide any display names associated
      *         with meta zones, "bogus" state is set.
      * @return A reference to the result.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual UnicodeString& getMetaZoneDisplayName(const UnicodeString& mzID, UTimeZoneNameType type, UnicodeString& name) const = 0;
 
@@ -237,7 +248,7 @@ public:
      * @param name Receives the display name for the time zone. When this object does not have a localized display name for the given
      *         time zone with the specified type, "bogus" state is set.
      * @return A reference to the result.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual UnicodeString& getTimeZoneDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UnicodeString& name) const = 0;
 
@@ -258,7 +269,7 @@ public:
      * @param name Receives the exemplar location name for the given time zone, or "bogus" state is set when a localized
      *          location name is not available and the fallback logic described above cannot extract location from the ID.
      * @return A reference to the result.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
 
@@ -275,9 +286,19 @@ public:
      * @param name Receives the display name for the time zone at the given date. When this object does not have a localized display
      *          name for the time zone with the specified type and date, "bogus" state is set.
      * @return A reference to the result.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     virtual UnicodeString& getDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UDate date, UnicodeString& name) const;
+
+    /**
+     * @internal ICU internal only, for specific users only until proposed publicly.
+     */
+    virtual void loadAllDisplayNames(UErrorCode& status);
+
+    /**
+     * @internal ICU internal only, for specific users only until proposed publicly.
+     */
+    virtual void getDisplayNames(const UnicodeString& tzID, const UTimeZoneNameType types[], int32_t numTypes, UDate date, UnicodeString dest[], UErrorCode& status) const;
 
     /**
      * <code>MatchInfoCollection</code> represents a collection of time zone name matches used by
@@ -389,6 +410,5 @@ public:
 
 U_NAMESPACE_END
 
-#endif /* U_HIDE_DRAFT_API */
 #endif
 #endif

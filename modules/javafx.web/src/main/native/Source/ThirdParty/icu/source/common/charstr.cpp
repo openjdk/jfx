@@ -1,10 +1,12 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-*   Copyright (C) 2010-2011, International Business Machines
+*   Copyright (C) 2010-2015, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  charstr.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -13,11 +15,25 @@
 */
 
 #include "unicode/utypes.h"
+#include "unicode/putil.h"
 #include "charstr.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "uinvchar.h"
 
 U_NAMESPACE_BEGIN
+
+CharString::CharString(CharString&& src) U_NOEXCEPT
+        : buffer(std::move(src.buffer)), len(src.len) {
+    src.len = 0;  // not strictly necessary because we make no guarantees on the source string
+}
+
+CharString& CharString::operator=(CharString&& src) U_NOEXCEPT {
+    buffer = std::move(src.buffer);
+    len = src.len;
+    src.len = 0;  // not strictly necessary because we make no guarantees on the source string
+    return *this;
+}
 
 CharString &CharString::copyFrom(const CharString &s, UErrorCode &errorCode) {
     if(U_SUCCESS(errorCode) && this!=&s && ensureCapacity(s.len+1, 0, errorCode)) {
@@ -25,6 +41,15 @@ CharString &CharString::copyFrom(const CharString &s, UErrorCode &errorCode) {
         uprv_memcpy(buffer.getAlias(), s.buffer.getAlias(), len+1);
     }
     return *this;
+}
+
+int32_t CharString::lastIndexOf(char c) const {
+    for(int32_t i=len; i>0;) {
+        if(buffer[--i]==c) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 CharString &CharString::truncate(int32_t newLength) {
@@ -101,6 +126,13 @@ char *CharString::getAppendBuffer(int32_t minCapacity,
 }
 
 CharString &CharString::appendInvariantChars(const UnicodeString &s, UErrorCode &errorCode) {
+    if(U_FAILURE(errorCode)) {
+        return *this;
+    }
+    if (!uprv_isInvariantUnicodeString(s)) {
+        errorCode = U_INVARIANT_CONVERSION_ERROR;
+        return *this;
+    }
     if(ensureCapacity(len+s.length()+1, 0, errorCode)) {
         len+=s.extract(0, 0x7fffffff, buffer.getAlias()+len, buffer.getCapacity()-len, US_INV);
     }
@@ -127,7 +159,7 @@ UBool CharString::ensureCapacity(int32_t capacity,
     return TRUE;
 }
 
-CharString &CharString::appendPathPart(const StringPiece &s, UErrorCode &errorCode) {
+CharString &CharString::appendPathPart(StringPiece s, UErrorCode &errorCode) {
     if(U_FAILURE(errorCode)) {
         return *this;
     }
@@ -139,6 +171,15 @@ CharString &CharString::appendPathPart(const StringPiece &s, UErrorCode &errorCo
         append(U_FILE_SEP_CHAR, errorCode);
     }
     append(s, errorCode);
+    return *this;
+}
+
+CharString &CharString::ensureEndsWithFileSeparator(UErrorCode &errorCode) {
+    char c;
+    if(U_SUCCESS(errorCode) && len>0 &&
+            (c=buffer[len-1])!=U_FILE_SEP_CHAR && c!=U_FILE_ALT_SEP_CHAR) {
+        append(U_FILE_SEP_CHAR, errorCode);
+    }
     return *this;
 }
 

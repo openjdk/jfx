@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 * Copyright (C) 2007-2013, International Business Machines Corporation and
@@ -151,16 +153,12 @@ RuleBasedTimeZone::completeConst(UErrorCode& status) const {
     if (U_FAILURE(status)) {
         return;
     }
-    UBool updated;
-    UMTX_CHECK(&gLock, fUpToDate, updated);
-    if (!updated) {
-        umtx_lock(&gLock);
-        if (!fUpToDate) {
-            RuleBasedTimeZone *ncThis = const_cast<RuleBasedTimeZone*>(this);
-            ncThis->complete(status);
-        }
-        umtx_unlock(&gLock);
+    umtx_lock(&gLock);
+    if (!fUpToDate) {
+        RuleBasedTimeZone *ncThis = const_cast<RuleBasedTimeZone*>(this);
+        ncThis->complete(status);
     }
+    umtx_unlock(&gLock);
 }
 
 void

@@ -113,5 +113,3 @@ endif ()
 if (DEFINED CMAKE_USE_PTHREADS_INIT)
     list(APPEND WTF_LIBRARIES pthread)
 endif()
-
-add_dependencies(WTF icudatagen)

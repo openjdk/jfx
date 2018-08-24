@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 **********************************************************************
-*   Copyright (C) 1998-2012, International Business Machines
+*   Copyright (C) 1998-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
 *
@@ -401,7 +403,7 @@ u_strspn(const UChar *string, const UChar *matchSet);
  * @param saveState The current pointer within the original string,
  *              which is set by this function. The saveState
  *              parameter should the address of a local variable of type
- *              UChar *. (i.e. defined "Uhar *myLocalSaveState" and use
+ *              UChar *. (i.e. defined "UChar *myLocalSaveState" and use
  *              &myLocalSaveState for this parameter).
  * @return A pointer to the next token found in src, or NULL
  *         when there are no more tokens.
@@ -494,16 +496,6 @@ u_strCompare(const UChar *s1, int32_t length1,
  */
 U_STABLE int32_t U_EXPORT2
 u_strCompareIter(UCharIterator *iter1, UCharIterator *iter2, UBool codePointOrder);
-
-#ifndef U_COMPARE_CODE_POINT_ORDER
-/* see also unistr.h and unorm.h */
-/**
- * Option bit for u_strCaseCompare, u_strcasecmp, unorm_compare, etc:
- * Compare strings in code point order instead of code unit order.
- * @stable ICU 2.2
- */
-#define U_COMPARE_CODE_POINT_ORDER  0x8000
-#endif
 
 /**
  * Compare two strings case-insensitively using full case folding.
@@ -892,7 +884,7 @@ u_memrchr32(const UChar *s, UChar32 c, int32_t count);
  * Unicode String literals in C.
  * We need one macro to declare a variable for the string
  * and to statically preinitialize it if possible,
- * and a second macro to dynamically intialize such a string variable if necessary.
+ * and a second macro to dynamically initialize such a string variable if necessary.
  *
  * The macros are defined for maximum performance.
  * They work only for strings that contain "invariant characters", i.e.,
@@ -1311,7 +1303,6 @@ u_strFromUTF8(UChar *dest,
 
 /**
  * Convert a UTF-16 string to UTF-8.
- * If the input string is not well-formed, then the U_INVALID_CHAR_FOUND error code is set.
  *
  * Same as u_strToUTF8() except for the additional subchar which is output for
  * illegal input sequences, instead of stopping with the U_INVALID_CHAR_FOUND error code.
@@ -1356,7 +1347,6 @@ u_strToUTF8WithSub(char *dest,
 
 /**
  * Convert a UTF-8 string to UTF-16.
- * If the input string is not well-formed, then the U_INVALID_CHAR_FOUND error code is set.
  *
  * Same as u_strFromUTF8() except for the additional subchar which is output for
  * illegal input sequences, instead of stopping with the U_INVALID_CHAR_FOUND error code.
@@ -1521,7 +1511,6 @@ u_strFromUTF32(UChar   *dest,
 
 /**
  * Convert a UTF-16 string to UTF-32.
- * If the input string is not well-formed, then the U_INVALID_CHAR_FOUND error code is set.
  *
  * Same as u_strToUTF32() except for the additional subchar which is output for
  * illegal input sequences, instead of stopping with the U_INVALID_CHAR_FOUND error code.
@@ -1566,7 +1555,6 @@ u_strToUTF32WithSub(UChar32 *dest,
 
 /**
  * Convert a UTF-32 string to UTF-16.
- * If the input string is not well-formed, then the U_INVALID_CHAR_FOUND error code is set.
  *
  * Same as u_strFromUTF32() except for the additional subchar which is output for
  * illegal input sequences, instead of stopping with the U_INVALID_CHAR_FOUND error code.
@@ -1652,7 +1640,8 @@ u_strToJavaModifiedUTF8(
 
 /**
  * Convert a Java Modified UTF-8 string to a 16-bit Unicode string.
- * If the input string is not well-formed, then the U_INVALID_CHAR_FOUND error code is set.
+ * If the input string is not well-formed and no substitution char is specified,
+ * then the U_INVALID_CHAR_FOUND error code is set.
  *
  * This function behaves according to the documentation for Java DataInput.readUTF()
  * except that it takes a length parameter rather than

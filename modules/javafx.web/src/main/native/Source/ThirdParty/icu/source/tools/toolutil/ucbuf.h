@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 *
-*   Copyright (C) 1998-2008, International Business Machines
+*   Copyright (C) 1998-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
 *
-* File ucbuf.c
+* File ucbuf.h
 *
 * Modification History:
 *
@@ -17,6 +19,7 @@
 *******************************************************************************
 */
 
+#include "unicode/localpointer.h"
 #include "unicode/ucnv.h"
 #include "filestrm.h"
 
@@ -95,7 +98,7 @@ ucbuf_getcx32(UCHARBUF* buf,UErrorCode* err);
 
 /**
  * Gets a pointer to the current position in the internal buffer and length of the line.
- * It imperative to make a copy of the returned buffere before performing operations on it.
+ * It imperative to make a copy of the returned buffer before performing operations on it.
  * @param buf Pointer to UCHARBUF structure
  * @param len Output param to receive the len of the buffer returned till end of the line
  * @param err is a pointer to a valid <code>UErrorCode</code> value. If this value
@@ -136,6 +139,24 @@ ucbuf_getBuffer(UCHARBUF* buf,int32_t* len,UErrorCode* err);
  */
 U_CAPI void U_EXPORT2
 ucbuf_close(UCHARBUF* buf);
+
+#if U_SHOW_CPLUSPLUS_API
+
+U_NAMESPACE_BEGIN
+
+/**
+ * \class LocalUCHARBUFPointer
+ * "Smart pointer" class, closes a UCHARBUF via ucbuf_close().
+ * For most methods see the LocalPointerBase base class.
+ *
+ * @see LocalPointerBase
+ * @see LocalPointer
+ */
+U_DEFINE_LOCAL_OPEN_POINTER(LocalUCHARBUFPointer, UCHARBUF, ucbuf_close);
+
+U_NAMESPACE_END
+
+#endif
 
 /**
  * Rewinds the buffer by one codepoint. Does not rewind over escaped characters.
