@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,8 +66,10 @@ public class Stylesheet {
     final static int BINARY_CSS_VERSION = 6;
 
     private final String url;
-    /** The URL from which the stylesheet was loaded.
-     * @return The URL from which the stylesheet was loaded, or null if
+    /**
+     *  The URL from which this {@code Stylesheet} was loaded.
+     *
+     * @return A {@code String} representation of the URL from which the stylesheet was loaded, or {@code null} if
      *         the stylesheet was created from an inline style.
      */
     public String getUrl() {
@@ -75,11 +77,17 @@ public class Stylesheet {
     }
 
     /**
-     * True if this style came from user stylesheet, we need to know this so
+     * Specifies the origin of this {@code Stylesheet}. We need to know this so
      * that we can make user important styles have higher priority than
-     * author styles
+     * author styles.
      */
     private StyleOrigin origin = StyleOrigin.AUTHOR;
+
+    /**
+     * Returns the origin of this {@code Stylesheet}.
+     *
+     * @return the origin of this {@code Stylesheet}
+     */
     public StyleOrigin getOrigin() {
         return origin;
     }
@@ -133,7 +141,8 @@ public class Stylesheet {
     /**
      * Constructs a Stylesheet using the given URL as the base URI. The
      * parameter may not be null.
-     * @param url
+     *
+     * @param url the base URI for this stylesheet
      */
     Stylesheet(String url) {
 
@@ -141,10 +150,20 @@ public class Stylesheet {
 
     }
 
+    /**
+     * Returns the rules that are defined in this {@code Stylesheet}.
+     *
+     * @return a list of rules used by this {@code Stylesheet}
+     */
     public List<Rule> getRules() {
         return rules;
     }
 
+    /**
+     * Returns the font faces used by this {@code Stylesheet}.
+     *
+     * @return a list of font faces used by this {@code Stylesheet}
+     */
     public List<FontFace> getFontFaces() {
         return fontFaces;
     }
@@ -238,10 +257,13 @@ public class Stylesheet {
     private String[] stringStore;
     final String[] getStringStore() { return stringStore; }
 
-    /** Load a binary stylesheet file from a input stream.
-     * @param url the URL from which the stylesheet will be loaded
-     * @return the constructed stylesheet
-     * @throws java.io.IOException the exception
+    /**
+     * Loads a binary stylesheet from a {@code URL}.
+     *
+     * @param url the {@code URL} from which the {@code Stylesheet} will be loaded
+     * @return the loaded {@code Stylesheet}
+     * @throws IOException if the binary stream corresponds to a more recent binary
+     * css version or if an I/O error occurs while reading from the stream
      */
     public static Stylesheet loadBinary(URL url) throws IOException {
 
@@ -293,12 +315,14 @@ public class Stylesheet {
     }
 
     /**
-     * Convert the .css file referenced by urlIn to binary format and write to urlOut.
-     * @param source is the JavaFX .css file to convert
-     * @param destination is the file to which the binary conversion is written
-     * @throws IOException the exception
-     * @throws IllegalArgumentException if either parameter is null, if source and destination are the same,
-     * if source cannot be read, or if destination cannot be written.
+     * Converts the css file referenced by {@code source} to binary format and writes it to {@code destination}.
+     *
+     * @param source the JavaFX compliant css file to convert
+     * @param destination the file to which the binary formatted data is written
+     * @throws IOException if the destination file can not be created or if an I/O error occurs
+     * @throws IllegalArgumentException if either parameter is {@code null}, if {@code source} and
+     * {@code destination} are the same, if {@code source} cannot be read, or if {@code destination}
+     * cannot be written
      */
     public static void convertToBinary(File source, File destination) throws IOException {
 
