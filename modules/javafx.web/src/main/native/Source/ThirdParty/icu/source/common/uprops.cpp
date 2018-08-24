@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2002-2011, International Business Machines
+*   Copyright (C) 2002-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
 *   file name:  uprops.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -28,18 +30,13 @@
 #include "unicode/ustring.h"
 #include "cstring.h"
 #include "normalizer2impl.h"
-#include "ucln_cmn.h"
 #include "umutex.h"
 #include "ubidi_props.h"
 #include "uprops.h"
 #include "ucase.h"
 #include "ustr_imp.h"
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
-
 U_NAMESPACE_USE
-
-#define GET_BIDI_PROPS() ubidi_getSingleton()
 
 /* general properties API functions ----------------------------------------- */
 
@@ -63,15 +60,15 @@ static UBool caseBinaryPropertyContains(const BinaryProperty &/*prop*/, UChar32 
 }
 
 static UBool isBidiControl(const BinaryProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
-    return ubidi_isBidiControl(GET_BIDI_PROPS(), c);
+    return ubidi_isBidiControl(c);
 }
 
 static UBool isMirrored(const BinaryProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
-    return ubidi_isMirrored(GET_BIDI_PROPS(), c);
+    return ubidi_isMirrored(c);
 }
 
 static UBool isJoinControl(const BinaryProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
-    return ubidi_isJoinControl(GET_BIDI_PROPS(), c);
+    return ubidi_isJoinControl(c);
 }
 
 #if UCONFIG_NO_NORMALIZATION
@@ -109,7 +106,7 @@ static UBool changesWhenCasefolded(const BinaryProperty &, UChar32, UProperty) {
 static UBool changesWhenCasefolded(const BinaryProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
     UnicodeString nfd;
     UErrorCode errorCode=U_ZERO_ERROR;
-    const Normalizer2 *nfcNorm2=Normalizer2Factory::getNFCInstance(errorCode);
+    const Normalizer2 *nfcNorm2=Normalizer2::getNFCInstance(errorCode);
     if(U_FAILURE(errorCode)) {
         return FALSE;
     }
@@ -129,14 +126,13 @@ static UBool changesWhenCasefolded(const BinaryProperty &/*prop*/, UChar32 c, UP
     }
     if(c>=0) {
         /* single code point */
-        const UCaseProps *csp=ucase_getSingleton();
         const UChar *resultString;
-        return (UBool)(ucase_toFullFolding(csp, c, &resultString, U_FOLD_CASE_DEFAULT)>=0);
+        return (UBool)(ucase_toFullFolding(c, &resultString, U_FOLD_CASE_DEFAULT)>=0);
     } else {
         /* guess some large but stack-friendly capacity */
         UChar dest[2*UCASE_MAX_STRING_LENGTH];
         int32_t destLength;
-        destLength=u_strFoldCase(dest, LENGTHOF(dest),
+        destLength=u_strFoldCase(dest, UPRV_LENGTHOF(dest),
                                   nfd.getBuffer(), nfd.length(),
                                   U_FOLD_CASE_DEFAULT, &errorCode);
         return (UBool)(U_SUCCESS(errorCode) &&
@@ -208,6 +204,11 @@ static UBool isPOSIX_xdigit(const BinaryProperty &/*prop*/, UChar32 c, UProperty
     return u_isxdigit(c);
 }
 
+static UBool isRegionalIndicator(const BinaryProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
+    // Property starts are a subset of lb=RI etc.
+    return 0x1F1E6<=c && c<=0x1F1FF;
+}
+
 static const BinaryProperty binProps[UCHAR_BINARY_LIMIT]={
     /*
      * column and mask values for binary properties from u_getUnicodeProperties().
@@ -273,7 +274,15 @@ static const BinaryProperty binProps[UCHAR_BINARY_LIMIT]={
     { UPROPS_SRC_CASE,  0, caseBinaryPropertyContains },  // UCHAR_CHANGES_WHEN_TITLECASED
     { UPROPS_SRC_CASE_AND_NORM,  0, changesWhenCasefolded },
     { UPROPS_SRC_CASE,  0, caseBinaryPropertyContains },  // UCHAR_CHANGES_WHEN_CASEMAPPED
-    { UPROPS_SRC_NFKC_CF, 0, changesWhenNFKC_Casefolded }
+    { UPROPS_SRC_NFKC_CF, 0, changesWhenNFKC_Casefolded },
+    { 2,                U_MASK(UPROPS_2_EMOJI), defaultContains },
+    { 2,                U_MASK(UPROPS_2_EMOJI_PRESENTATION), defaultContains },
+    { 2,                U_MASK(UPROPS_2_EMOJI_MODIFIER), defaultContains },
+    { 2,                U_MASK(UPROPS_2_EMOJI_MODIFIER_BASE), defaultContains },
+    { 2,                U_MASK(UPROPS_2_EMOJI_COMPONENT), defaultContains },
+    { 2,                0, isRegionalIndicator },
+    { 1,                U_MASK(UPROPS_PREPENDED_CONCATENATION_MARK), defaultContains },
+    { 2,                U_MASK(UPROPS_2_EXTENDED_PICTOGRAPHIC), defaultContains },
 };
 
 U_CAPI UBool U_EXPORT2
@@ -318,8 +327,12 @@ static int32_t getBiDiClass(const IntProperty &/*prop*/, UChar32 c, UProperty /*
     return (int32_t)u_charDirection(c);
 }
 
+static int32_t getBiDiPairedBracketType(const IntProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
+    return (int32_t)ubidi_getPairedBracketType(c);
+}
+
 static int32_t biDiGetMaxValue(const IntProperty &/*prop*/, UProperty which) {
-    return ubidi_getMaxValue(GET_BIDI_PROPS(), which);
+    return ubidi_getMaxValue(which);
 }
 
 #if UCONFIG_NO_NORMALIZATION
@@ -337,11 +350,11 @@ static int32_t getGeneralCategory(const IntProperty &/*prop*/, UChar32 c, UPrope
 }
 
 static int32_t getJoiningGroup(const IntProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
-    return ubidi_getJoiningGroup(GET_BIDI_PROPS(), c);
+    return ubidi_getJoiningGroup(c);
 }
 
 static int32_t getJoiningType(const IntProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
-    return ubidi_getJoiningType(GET_BIDI_PROPS(), c);
+    return ubidi_getJoiningType(c);
 }
 
 static int32_t getNumericType(const IntProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
@@ -378,7 +391,7 @@ static const UHangulSyllableType gcbToHst[]={
 static int32_t getHangulSyllableType(const IntProperty &/*prop*/, UChar32 c, UProperty /*which*/) {
     /* see comments on gcbToHst[] above */
     int32_t gcb=(int32_t)(u_getUnicodeProperties(c, 2)&UPROPS_GCB_MASK)>>UPROPS_GCB_SHIFT;
-    if(gcb<LENGTHOF(gcbToHst)) {
+    if(gcb<UPRV_LENGTHOF(gcbToHst)) {
         return gcbToHst[gcb];
     } else {
         return U_HST_NOT_APPLICABLE;
@@ -448,7 +461,8 @@ static const IntProperty intProps[UCHAR_INT_LIMIT-UCHAR_INT_START]={
     { UPROPS_SRC_NFC,   0, 0xff,                            getTrailCombiningClass, getMaxValueFromShift },
     { 2,                UPROPS_GCB_MASK, UPROPS_GCB_SHIFT,  defaultGetValue, defaultGetMaxValue },
     { 2,                UPROPS_SB_MASK, UPROPS_SB_SHIFT,    defaultGetValue, defaultGetMaxValue },
-    { 2,                UPROPS_WB_MASK, UPROPS_WB_SHIFT,    defaultGetValue, defaultGetMaxValue }
+    { 2,                UPROPS_WB_MASK, UPROPS_WB_SHIFT,    defaultGetValue, defaultGetMaxValue },
+    { UPROPS_SRC_BIDI,  0, 0,                               getBiDiPairedBracketType, biDiGetMaxValue },
 };
 
 U_CAPI int32_t U_EXPORT2
@@ -567,15 +581,14 @@ u_getFC_NFKC_Closure(UChar32 c, UChar *dest, int32_t destCapacity, UErrorCode *p
     // (What could be useful is a custom normalization table that combines
     // case folding and NFKC.)
     // For the derivation, see Unicode's DerivedNormalizationProps.txt.
-    const Normalizer2 *nfkc=Normalizer2Factory::getNFKCInstance(*pErrorCode);
-    const UCaseProps *csp=ucase_getSingleton();
+    const Normalizer2 *nfkc=Normalizer2::getNFKCInstance(*pErrorCode);
     if(U_FAILURE(*pErrorCode)) {
         return 0;
     }
     // first: b = NFKC(Fold(a))
     UnicodeString folded1String;
     const UChar *folded1;
-    int32_t folded1Length=ucase_toFullFolding(csp, c, &folded1, U_FOLD_CASE_DEFAULT);
+    int32_t folded1Length=ucase_toFullFolding(c, &folded1, U_FOLD_CASE_DEFAULT);
     if(folded1Length<0) {
         const Normalizer2Impl *nfkcImpl=Normalizer2Factory::getImpl(nfkc);
         if(nfkcImpl->getCompQuickCheck(nfkcImpl->getNorm16(c))!=UNORM_NO) {

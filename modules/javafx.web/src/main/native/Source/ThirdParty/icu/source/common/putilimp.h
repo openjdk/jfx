@@ -1,7 +1,9 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1997-2012, International Business Machines
+*   Copyright (C) 1997-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
@@ -70,22 +72,13 @@
 typedef size_t uintptr_t;
 #endif
 
-/**
- * \def U_HAVE_MSVC_2003_OR_EARLIER
- * Flag for workaround of MSVC 2003 optimization bugs
- * @internal
- */
-#if !defined(U_HAVE_MSVC_2003_OR_EARLIER) && defined(_MSC_VER) && (_MSC_VER < 1400)
-#define U_HAVE_MSVC_2003_OR_EARLIER
-#endif
-
 /*===========================================================================*/
 /** @{ Information about POSIX support                                       */
 /*===========================================================================*/
 
 #ifdef U_HAVE_NL_LANGINFO_CODESET
     /* Use the predefined value. */
-#elif U_PLATFORM_HAS_WIN32_API
+#elif U_PLATFORM_USES_ONLY_WIN32_API || U_PLATFORM == U_PF_ANDROID || U_PLATFORM == U_PF_QNX
 #   define U_HAVE_NL_LANGINFO_CODESET 0
 #else
 #   define U_HAVE_NL_LANGINFO_CODESET 1
@@ -104,27 +97,36 @@ typedef size_t uintptr_t;
 #ifdef U_TZSET
     /* Use the predefined value. */
 #elif U_PLATFORM_USES_ONLY_WIN32_API
+    // UWP doesn't support tzset or environment variables for tz
+#if U_PLATFORM_HAS_WINUWP_API == 0
 #   define U_TZSET _tzset
+#endif
 #elif U_PLATFORM == U_PF_OS400
    /* not defined */
 #else
 #   define U_TZSET tzset
 #endif
 
-#ifdef U_TIMEZONE
+#if defined(U_TIMEZONE) || defined(U_HAVE_TIMEZONE)
     /* Use the predefined value. */
 #elif U_PLATFORM == U_PF_ANDROID
 #   define U_TIMEZONE timezone
+#elif defined(__UCLIBC__)
+    // uClibc does not have __timezone or _timezone.
+#elif defined(_NEWLIB_VERSION)
+#   define U_TIMEZONE _timezone
+#elif defined(__GLIBC__)
+    // glibc
+#   define U_TIMEZONE __timezone
 #elif U_PLATFORM_IS_LINUX_BASED
-#   if !defined(__UCLIBC__)
-    /* __timezone is only available in glibc */
-#       define U_TIMEZONE __timezone
-#   endif
+    // not defined
 #elif U_PLATFORM_USES_ONLY_WIN32_API
 #   define U_TIMEZONE _timezone
 #elif U_PLATFORM == U_PF_BSD && !defined(__NetBSD__)
    /* not defined */
 #elif U_PLATFORM == U_PF_OS400
+   /* not defined */
+#elif U_PLATFORM == U_PF_IPHONE
    /* not defined */
 #else
 #   define U_TIMEZONE timezone
@@ -133,7 +135,10 @@ typedef size_t uintptr_t;
 #ifdef U_TZNAME
     /* Use the predefined value. */
 #elif U_PLATFORM_USES_ONLY_WIN32_API
+    /* not usable on all windows platforms */
+#if U_PLATFORM_HAS_WINUWP_API == 0
 #   define U_TZNAME _tzname
+#endif
 #elif U_PLATFORM == U_PF_OS400
    /* not defined */
 #else
@@ -142,7 +147,7 @@ typedef size_t uintptr_t;
 
 #ifdef U_HAVE_MMAP
     /* Use the predefined value. */
-#elif U_PLATFORM_HAS_WIN32_API
+#elif U_PLATFORM_USES_ONLY_WIN32_API
 #   define U_HAVE_MMAP 0
 #else
 #   define U_HAVE_MMAP 1
@@ -165,7 +170,7 @@ typedef size_t uintptr_t;
  */
 #ifdef U_HAVE_DIRENT_H
     /* Use the predefined value. */
-#elif U_PLATFORM_HAS_WIN32_API
+#elif U_PLATFORM_USES_ONLY_WIN32_API
 #   define U_HAVE_DIRENT_H 0
 #else
 #   define U_HAVE_DIRENT_H 1
@@ -183,7 +188,13 @@ typedef size_t uintptr_t;
  */
 #ifdef U_HAVE_GCC_ATOMICS
     /* Use the predefined value. */
-#elif U_GCC_MAJOR_MINOR >= 404
+#elif U_PLATFORM == U_PF_MINGW
+    #define U_HAVE_GCC_ATOMICS 0
+#elif U_GCC_MAJOR_MINOR >= 404 || defined(__clang__)
+    /* TODO: Intel icc and IBM xlc on AIX also support gcc atomics.  (Intel originated them.)
+     *       Add them for these compilers.
+     * Note: Clang sets __GNUC__ defines for version 4.2, so misses the 4.4 test here.
+     */
 #   define U_HAVE_GCC_ATOMICS 1
 #else
 #   define U_HAVE_GCC_ATOMICS 0
@@ -191,25 +202,47 @@ typedef size_t uintptr_t;
 
 /** @} */
 
-/*===========================================================================*/
-/** @{ Code alignment                                                        */
-/*===========================================================================*/
-
 /**
- * \def U_ALIGN_CODE
- * This is used to align code fragments to a specific byte boundary.
- * This is useful for getting consistent performance test results.
+ * \def U_HAVE_STD_ATOMICS
+ * Defines whether the standard C++11 <atomic> is available.
+ * ICU will use this when available,
+ * otherwise will fall back to compiler or platform specific alternatives.
  * @internal
  */
-#ifdef U_ALIGN_CODE
+#ifdef U_HAVE_STD_ATOMICS
     /* Use the predefined value. */
-#elif defined(_MSC_VER) && defined(_M_IX86) && !defined(_MANAGED)
-#   define U_ALIGN_CODE(boundarySize) __asm  align boundarySize
+#elif U_CPLUSPLUS_VERSION < 11
+    /* Not C++11, disable use of atomics */
+#   define U_HAVE_STD_ATOMICS 0
+#elif __clang__ && __clang_major__==3 && __clang_minor__<=1
+    /* Clang 3.1, has atomic variable initializer bug. */
+#   define U_HAVE_STD_ATOMICS 0
 #else
-#   define U_ALIGN_CODE(boundarySize)
+    /* U_HAVE_ATOMIC is typically set by an autoconf test of #include <atomic>  */
+    /*   Can be set manually, or left undefined, on platforms without autoconf. */
+#   if defined(U_HAVE_ATOMIC) &&  U_HAVE_ATOMIC
+#      define U_HAVE_STD_ATOMICS 1
+#   else
+#      define U_HAVE_STD_ATOMICS 0
+#   endif
 #endif
 
-/** @} */
+
+/**
+ *  \def U_HAVE_CLANG_ATOMICS
+ *  Defines whether Clang c11 style built-in atomics are available.
+ *  These are used in preference to gcc atomics when both are available.
+ */
+#ifdef U_HAVE_CLANG_ATOMICS
+    /* Use the predefined value. */
+#elif __has_builtin(__c11_atomic_load) && \
+    __has_builtin(__c11_atomic_store) && \
+    __has_builtin(__c11_atomic_fetch_add) && \
+    __has_builtin(__c11_atomic_fetch_sub)
+#    define U_HAVE_CLANG_ATOMICS 1
+#else
+#    define U_HAVE_CLANG_ATOMICS 0
+#endif
 
 /*===========================================================================*/
 /** @{ Programs used by ICU code                                             */
@@ -235,7 +268,7 @@ typedef size_t uintptr_t;
 
 /**
  * Platform utilities isolates the platform dependencies of the
- * libarary.  For each platform which this code is ported to, these
+ * library.  For each platform which this code is ported to, these
  * functions may have to be re-implemented.
  */
 
@@ -358,6 +391,32 @@ U_INTERNAL double  U_EXPORT2 uprv_log(double d);
  */
 U_INTERNAL double  U_EXPORT2 uprv_round(double x);
 
+/**
+ * Adds the signed integers a and b, storing the result in res.
+ * Checks for signed integer overflow.
+ * Similar to the GCC/Clang extension __builtin_add_overflow
+ *
+ * @param a The first operand.
+ * @param b The second operand.
+ * @param res a + b
+ * @return true if overflow occurred; false if no overflow occurred.
+ * @internal
+ */
+U_INTERNAL UBool U_EXPORT2 uprv_add32_overflow(int32_t a, int32_t b, int32_t* res);
+
+/**
+ * Multiplies the signed integers a and b, storing the result in res.
+ * Checks for signed integer overflow.
+ * Similar to the GCC/Clang extension __builtin_mul_overflow
+ *
+ * @param a The first multiplicand.
+ * @param b The second multiplicand.
+ * @param res a * b
+ * @return true if overflow occurred; false if no overflow occurred.
+ * @internal
+ */
+U_INTERNAL UBool U_EXPORT2 uprv_mul32_overflow(int32_t a, int32_t b, int32_t* res);
+
 #if 0
 /**
  * Returns the number of digits after the decimal point in a double number x.
@@ -383,7 +442,7 @@ U_INTERNAL const char*  U_EXPORT2 uprv_getDefaultCodepage(void);
 
 /**
  * Please use uloc_getDefault() instead.
- * Return the default locale ID string by querying ths system, or
+ * Return the default locale ID string by querying the system, or
  *     zero if one cannot be found.
  * This function can call setlocale() on Unix platforms. Please read the
  * platform documentation on setlocale() before calling this function.
@@ -443,6 +502,12 @@ U_INTERNAL int32_t  U_EXPORT2 uprv_timezone(void);
  * @internal
  */
 U_INTERNAL const char* U_EXPORT2 uprv_tzname(int n);
+
+/**
+ * Reset the global tzname cache.
+ * @internal
+ */
+U_INTERNAL void uprv_tzname_clear_cache();
 
 /**
  * Get UTC (GMT) time measured in milliseconds since 0:00 on 1/1/1970.

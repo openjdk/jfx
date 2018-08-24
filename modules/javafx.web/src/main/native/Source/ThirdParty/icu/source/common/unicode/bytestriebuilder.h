@@ -1,10 +1,12 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-*   Copyright (C) 2010-2012, International Business Machines
+*   Copyright (C) 2010-2016, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *******************************************************************************
 *   file name:  bytestriebuilder.h
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -29,7 +31,6 @@ U_NAMESPACE_BEGIN
 
 class BytesTrieElement;
 class CharString;
-
 /**
  * Builder class for BytesTrie.
  *
@@ -65,11 +66,14 @@ public:
      * @return *this
      * @stable ICU 4.8
      */
-    BytesTrieBuilder &add(const StringPiece &s, int32_t value, UErrorCode &errorCode);
+    BytesTrieBuilder &add(StringPiece s, int32_t value, UErrorCode &errorCode);
 
     /**
      * Builds a BytesTrie for the add()ed data.
      * Once built, no further data can be add()ed until clear() is called.
+     *
+     * A BytesTrie cannot be empty. At least one (byte sequence, value) pair
+     * must have been add()ed.
      *
      * This method passes ownership of the builder's internal result array to the new trie object.
      * Another call to any build() variant will re-serialize the trie.
@@ -87,6 +91,9 @@ public:
     /**
      * Builds a BytesTrie for the add()ed data and byte-serializes it.
      * Once built, no further data can be add()ed until clear() is called.
+     *
+     * A BytesTrie cannot be empty. At least one (byte sequence, value) pair
+     * must have been add()ed.
      *
      * Multiple calls to buildStringPiece() return StringPieces referring to the
      * builder's same byte array, without rebuilding.
@@ -120,14 +127,14 @@ private:
     void buildBytes(UStringTrieBuildOption buildOption, UErrorCode &errorCode);
 
     virtual int32_t getElementStringLength(int32_t i) const;
-    virtual UChar getElementUnit(int32_t i, int32_t byteIndex) const;
+    virtual char16_t getElementUnit(int32_t i, int32_t byteIndex) const;
     virtual int32_t getElementValue(int32_t i) const;
 
     virtual int32_t getLimitOfLinearMatch(int32_t first, int32_t last, int32_t byteIndex) const;
 
     virtual int32_t countElementUnits(int32_t start, int32_t limit, int32_t byteIndex) const;
     virtual int32_t skipElementsBySomeUnits(int32_t i, int32_t byteIndex, int32_t count) const;
-    virtual int32_t indexOfElementWithNextUnit(int32_t i, int32_t byteIndex, UChar byte) const;
+    virtual int32_t indexOfElementWithNextUnit(int32_t i, int32_t byteIndex, char16_t byte) const;
 
     virtual UBool matchNodesCanHaveValues() const { return FALSE; }
 
@@ -135,9 +142,8 @@ private:
     virtual int32_t getMinLinearMatch() const { return BytesTrie::kMinLinearMatch; }
     virtual int32_t getMaxLinearMatchLength() const { return BytesTrie::kMaxLinearMatchLength; }
 
-#ifndef U_HIDE_INTERNAL_API
     /**
-     * @internal
+     * @internal (private)
      */
     class BTLinearMatchNode : public LinearMatchNode {
     public:
@@ -147,7 +153,6 @@ private:
     private:
         const char *s;
     };
-#endif  /* U_HIDE_INTERNAL_API */
 
     virtual Node *createLinearMatchNode(int32_t i, int32_t byteIndex, int32_t length,
                                         Node *nextNode) const;

@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
  ********************************************************************************
- *   Copyright (C) 2005-2007, International Business Machines
+ *   Copyright (C) 2005-2016, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  ********************************************************************************
  */
@@ -11,12 +13,15 @@
 #include "unicode/ucsdet.h"
 #include "csdetect.h"
 #include "csmatch.h"
+#include "csrsbcs.h"
+#include "csrmbcs.h"
+#include "csrutf8.h"
+#include "csrucode.h"
+#include "csr2022.h"
 
 #include "cmemory.h"
 
 U_NAMESPACE_USE
-
-#define ARRAY_SIZE(array) (sizeof array / sizeof array[0])
 
 #define NEW_ARRAY(type,count) (type *) uprv_malloc((count) * sizeof(type))
 #define DELETE_ARRAY(array) uprv_free((void *) (array))
@@ -175,6 +180,26 @@ ucsdet_getUChars(const UCharsetMatch *ucsm,
 
     return ((CharsetMatch *) ucsm)->getUChars(buf, cap, status);
 }
+
+U_CAPI void U_EXPORT2
+ucsdet_setDetectableCharset(UCharsetDetector *ucsd, const char *encoding, UBool enabled, UErrorCode *status)
+{
+    ((CharsetDetector *)ucsd)->setDetectableCharset(encoding, enabled, *status);
+}
+
+U_CAPI  UEnumeration * U_EXPORT2
+ucsdet_getAllDetectableCharsets(const UCharsetDetector * /*ucsd*/, UErrorCode *status)
+{
+    return CharsetDetector::getAllDetectableCharsets(*status);
+}
+
+U_DRAFT UEnumeration * U_EXPORT2
+ucsdet_getDetectableCharsets(const UCharsetDetector *ucsd,  UErrorCode *status)
+{
+    return ((CharsetDetector *)ucsd)->getDetectableCharsets(*status);
+}
+
 U_CDECL_END
+
 
 #endif

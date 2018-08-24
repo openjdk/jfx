@@ -1,10 +1,12 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ******************************************************************************
-*   Copyright (C) 1997-2007, International Business Machines
+*   Copyright (C) 1997-2015, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ******************************************************************************
 *   file name:  nfsubs.h
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -32,12 +34,11 @@ U_NAMESPACE_BEGIN
 class NFSubstitution : public UObject {
     int32_t pos;
     const NFRuleSet* ruleSet;
-    const DecimalFormat* numberFormat;
+    DecimalFormat* numberFormat;
 
 protected:
     NFSubstitution(int32_t pos,
         const NFRuleSet* ruleSet,
-        const RuleBasedNumberFormat* rbnf,
         const UnicodeString& description,
         UErrorCode& status);
 
@@ -90,13 +91,15 @@ public:
      * @param radix The radix of the divisor
      * @param exponent The exponent of the divisor
      */
-    virtual void setDivisor(int32_t radix, int32_t exponent, UErrorCode& status);
+    virtual void setDivisor(int32_t radix, int16_t exponent, UErrorCode& status);
 
     /**
      * Replaces result with the string describing the substitution.
      * @param result    Output param which will receive the string.
      */
     virtual void toString(UnicodeString& result) const;
+
+    void setDecimalFormatSymbols(const DecimalFormatSymbols &newSymbols, UErrorCode& status);
 
     //-----------------------------------------------------------------------
     // formatting
@@ -112,7 +115,7 @@ public:
      * rule text begins (this value is added to this substitution's
      * position to determine exactly where to insert the new text)
      */
-    virtual void doSubstitution(int64_t number, UnicodeString& toInsertInto, int32_t pos) const;
+    virtual void doSubstitution(int64_t number, UnicodeString& toInsertInto, int32_t pos, int32_t recursionCount, UErrorCode& status) const;
 
     /**
      * Performs a mathematical operation on the number, formats it using
@@ -124,7 +127,7 @@ public:
      * rule text begins (this value is added to this substitution's
      * position to determine exactly where to insert the new text)
      */
-    virtual void doSubstitution(double number, UnicodeString& toInsertInto, int32_t pos) const;
+    virtual void doSubstitution(double number, UnicodeString& toInsertInto, int32_t pos, int32_t recursionCount, UErrorCode& status) const;
 
 protected:
     /**
@@ -188,6 +191,7 @@ public:
         double baseValue,
         double upperBound,
         UBool lenientParse,
+        uint32_t nonNumericalExecutedRuleMask,
         Formattable& result) const;
 
     /**
@@ -231,14 +235,6 @@ public:
      * @return This substitution's token character.
      */
     virtual UChar tokenChar() const = 0;
-
-    /**
-     * Returns true if this is a null substitution.  (We didn't do this
-     * with instanceof partially because it causes source files to
-     * proliferate and partially because we have to port this to C++.)
-     * @return true if this object is an instance of NullSubstitution
-     */
-    virtual UBool isNullSubstitution() const;
 
     /**
      * Returns true if this is a modulus substitution.  (We didn't do this

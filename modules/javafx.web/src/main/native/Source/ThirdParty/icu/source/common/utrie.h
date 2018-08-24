@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ******************************************************************************
 *
@@ -6,7 +8,7 @@
 *
 ******************************************************************************
 *   file name:  utrie.h
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -554,7 +556,7 @@ struct UNewTrie {
      * Index values at build-time are 32 bits wide for easier processing.
      * Bit 31 is set if the data block is used by multiple index values (from utrie_setRange()).
      */
-    int32_t index[UTRIE_MAX_INDEX_LENGTH];
+    int32_t index[UTRIE_MAX_INDEX_LENGTH+UTRIE_SURROGATE_BLOCK_COUNT];
     uint32_t *data;
 
     uint32_t leadUnitValue;

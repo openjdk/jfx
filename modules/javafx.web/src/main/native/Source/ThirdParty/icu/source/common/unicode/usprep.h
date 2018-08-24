@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
  *******************************************************************************
  *
- *   Copyright (C) 2003-2010, International Business Machines
+ *   Copyright (C) 2003-2014, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  *
  *******************************************************************************
  *   file name:  usprep.h
- *   encoding:   US-ASCII
+ *   encoding:   UTF-8
  *   tab size:   8 (not used)
  *   indentation:4
  *
@@ -31,14 +33,14 @@
  * StringPrep prepares Unicode strings for use in network protocols.
  * Profiles of StingPrep are set of rules and data according to with the
  * Unicode Strings are prepared. Each profiles contains tables which describe
- * how a code point should be treated. The tables are broadly classied into
+ * how a code point should be treated. The tables are broadly classified into
  * <ul>
- *     <li> Unassinged Table: Contains code points that are unassigned
+ *     <li> Unassigned Table: Contains code points that are unassigned
  *          in the Unicode Version supported by StringPrep. Currently
  *          RFC 3454 supports Unicode 3.2. </li>
- *     <li> Prohibited Table: Contains code points that are prohibted from
+ *     <li> Prohibited Table: Contains code points that are prohibited from
  *          the output of the StringPrep processing function. </li>
- *     <li> Mapping Table: Contains code ponts that are deleted from the output or case mapped. </li>
+ *     <li> Mapping Table: Contains code points that are deleted from the output or case mapped. </li>
  * </ul>
  *
  * The procedure for preparing Unicode strings:
@@ -228,7 +230,7 @@ U_NAMESPACE_END
 
 /**
  * Prepare the input buffer for use in applications with the given profile. This operation maps, normalizes(NFKC),
- * checks for prohited and BiDi characters in the order defined by RFC 3454
+ * checks for prohibited and BiDi characters in the order defined by RFC 3454
  * depending on the options specified in the profile.
  *
  * @param prep          The profile to use
@@ -238,7 +240,7 @@ U_NAMESPACE_END
  * @param destCapacity  The capacity of destination array
  * @param options       A bit set of options:
  *
- *  - USPREP_NONE               Prohibit processing of unassigned code points in the input
+ *  - USPREP_DEFAULT            Prohibit processing of unassigned code points in the input
  *
  *  - USPREP_ALLOW_UNASSIGNED   Treat the unassigned code points are in the input
  *                              as normal Unicode code points.

@@ -30,48 +30,23 @@ set(SQLITE_LIBRARIES SqliteJava)
 set(LIBXML2_LIBRARIES XMLJava)
 set(LIBXSLT_LIBRARIES XSLTJava)
 
-if (WIN32)
-    #### ICU ####
-    set (ICU_JAVA_COMMON_LIB sicuuc)
-    set (ICU_JAVA_I18N_LIBRARIES sicuin)
-    set (ICU_JAVA_DATA_LIB ${CMAKE_BINARY_DIR}/lib/sicudt.lib)
-    #### ICU-END ####
-elseif (APPLE)
-    # set(USE_CF 1)
+set(ICU_LIBRARIES icuuc icudata)
+set(ICU_I18N_LIBRARIES icui18n icuuc icudata)
+set(ICU_DATA_LIBRARIES icudata)
+
+find_package(JNI REQUIRED)
+find_package(Threads REQUIRED)
+
+if (APPLE)
     add_definitions(-DUSE_CF=1)
     add_definitions(-DJSC_OBJC_API_ENABLED=0)
-
-    #### ICU ####
-    set(ICU_JAVA_COMMON_LIB icuuc)
-    set(ICU_JAVA_I18N_LIBRARIES icui18n)
-    set(ICU_JAVA_DATA_LIB ${CMAKE_BINARY_DIR}/lib/libicudata.a)
-    #### ICU-END ####
 
     set(CMAKE_MACOSX_RPATH TRUE)
     set(CMAKE_INSTALL_RPATH "@loader_path/.")
     set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 elseif (UNIX)
-    #### ICU ####
-    set(ICU_JAVA_COMMON_LIB icuuc)
-    set(ICU_JAVA_I18N_LIBRARIES icui18n)
-    set(ICU_JAVA_DATA_LIB ${CMAKE_BINARY_DIR}/lib/libicudata.a)
-    #### ICU-END ####
-
     set(CMAKE_SKIP_RPATH TRUE)
-else ()
-    message(FATAL_ERROR "Configure icu library path")
 endif ()
-
-set(ICU_INCLUDE_DIRS
-    "${THIRDPARTY_DIR}/icu/source/common"
-    "${THIRDPARTY_DIR}/icu/source/i18n"
-)
-set(ICU_LIBRARIES ${ICU_JAVA_COMMON_LIB} ${ICU_JAVA_DATA_LIB})
-set(ICU_I18N_LIBRARIES ${ICU_JAVA_I18N_LIBRARIES} ${ICU_JAVA_COMMON_LIB} ${ICU_JAVA_DATA_LIB})
-set(ICU_DATA_LIBRARIES ${ICU_JAVA_DATA_LIB})
-
-find_package(JNI REQUIRED)
-find_package(Threads REQUIRED)
 
 if (WIN32)
     # Second, for multi-config builds (e.g. msvc)

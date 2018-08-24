@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
  *******************************************************************************
- * Copyright (C) 2008-2011, International Business Machines Corporation and
+ * Copyright (C) 2008-2016, International Business Machines Corporation and
  * others. All Rights Reserved.
  *******************************************************************************
  *
@@ -148,9 +150,8 @@ U_NAMESPACE_BEGIN
  * @stable ICU 4.0
 **/
 
-class U_I18N_API DateIntervalInfo : public UObject {
+class U_I18N_API DateIntervalInfo U_FINAL : public UObject {
 public:
-#ifndef U_HIDE_INTERNAL_API
     /**
      * Default constructor.
      * It does not initialize any interval patterns except
@@ -165,7 +166,6 @@ public:
      * @internal ICU 4.0
      */
     DateIntervalInfo(UErrorCode& status);
-#endif  /* U_HIDE_INTERNAL_API */
 
 
     /**
@@ -340,6 +340,11 @@ private:
     friend class DateIntervalFormat;
 
     /**
+     * Internal struct used to load resource bundle data.
+     */
+    struct DateIntervalSink;
+
+    /**
      * Following is for saving the interval patterns.
      * We only support interval patterns on
      * ERA, YEAR, MONTH, DAY, AM_PM, HOUR, and MINUTE
@@ -353,6 +358,7 @@ private:
         kIPI_AM_PM,
         kIPI_HOUR,
         kIPI_MINUTE,
+        kIPI_SECOND,
         kIPI_MAX_INDEX
     };
 public:
@@ -372,7 +378,6 @@ private:
      * Initialize the DateIntervalInfo from locale
      * @param locale   the given locale.
      * @param status   output param set to success/failure code on exit
-     * @internal ICU 4.0
      */
     void initializeData(const Locale& locale, UErrorCode& status);
 
@@ -386,7 +391,6 @@ private:
      * @param intervalPattern  the interval pattern on the largest different
      *                         calendar unit.
      * @param status           output param set to success/failure code on exit
-     * @internal ICU 4.0
      */
     void setIntervalPatternInternally(const UnicodeString& skeleton,
                                       UCalendarDateFields lrgDiffCalUnit,
@@ -411,7 +415,6 @@ private:
      *        -1, if there is calendar field difference between
      *            the best match and the input skeleton
      * @return                        best match skeleton
-     * @internal ICU 4.0
      */
     const UnicodeString* getBestSkeleton(const UnicodeString& skeleton,
                                          int8_t& bestMatchDistanceInfo) const;
@@ -423,7 +426,6 @@ private:
      * and adjust pattern field width.
      * @param skeleton            skeleton to be parsed
      * @param skeletonFieldWidth  parsed skeleton field width
-     * @internal ICU 4.0
      */
     static void U_EXPORT2 parseSkeleton(const UnicodeString& skeleton,
                                         int32_t* skeletonFieldWidth);
@@ -439,7 +441,6 @@ private:
      * @param patternLetter       pattern letter char
      * @return true if one field width is numeric and the other is string,
      *         false otherwise.
-     * @internal ICU 4.0
      */
     static UBool U_EXPORT2 stringNumeric(int32_t fieldWidth,
                                          int32_t anotherFieldWidth,
@@ -458,7 +459,6 @@ private:
      * @param field    calendar field
      * @param status   output param set to success/failure code on exit
      * @return  interval pattern index in hash table
-     * @internal ICU 4.0
      */
     static IntervalPatternIndex U_EXPORT2 calendarFieldToIntervalIndex(
                                                       UCalendarDateFields field,
@@ -469,7 +469,6 @@ private:
      * delete hash table (of type fIntervalPatterns).
      *
      * @param hTable  hash table to be deleted
-     * @internal ICU 4.0
      */
     void deleteHash(Hashtable* hTable);
 
@@ -479,7 +478,6 @@ private:
      *
      * @param status   output param set to success/failure code on exit
      * @return         hash table initialized
-     * @internal ICU 4.0
      */
     Hashtable* initHash(UErrorCode& status);
 
@@ -491,7 +489,6 @@ private:
      * @param source   the source to copy from
      * @param target   the target to copy to
      * @param status   output param set to success/failure code on exit
-     * @internal ICU 4.0
      */
     void copyHash(const Hashtable* source, Hashtable* target, UErrorCode& status);
 

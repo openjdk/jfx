@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2011-2013, International Business Machines Corporation and    *
+* Copyright (C) 2011-2015, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 */
@@ -14,6 +16,7 @@
 #include "unicode/uenum.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "mutex.h"
 #include "putilimp.h"
 #include "tznames_impl.h"
 #include "uassert.h"
@@ -80,7 +83,7 @@ U_CDECL_END
  * block.
  */
 static void sweepCache() {
-    int32_t pos = -1;
+    int32_t pos = UHASH_FIRST;
     const UHashElement* elem;
     double now = (double)uprv_getUTCtime();
 
@@ -115,6 +118,9 @@ public:
 
     UnicodeString& getExemplarLocationName(const UnicodeString& tzID, UnicodeString& name) const;
 
+    void loadAllDisplayNames(UErrorCode& status);
+    void getDisplayNames(const UnicodeString& tzID, const UTimeZoneNameType types[], int32_t numTypes, UDate date, UnicodeString dest[], UErrorCode& status) const;
+
     MatchInfoCollection* find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const;
 private:
     TimeZoneNamesDelegate();
@@ -126,89 +132,78 @@ TimeZoneNamesDelegate::TimeZoneNamesDelegate()
 }
 
 TimeZoneNamesDelegate::TimeZoneNamesDelegate(const Locale& locale, UErrorCode& status) {
-    UBool initialized;
-    UMTX_CHECK(&gTimeZoneNamesLock, gTimeZoneNamesCacheInitialized, initialized);
-    if (!initialized) {
-        // Create empty hashtable
-        umtx_lock(&gTimeZoneNamesLock);
-        {
-            if (!gTimeZoneNamesCacheInitialized) {
-                gTimeZoneNamesCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
-                if (U_SUCCESS(status)) {
-                    uhash_setKeyDeleter(gTimeZoneNamesCache, uprv_free);
-                    uhash_setValueDeleter(gTimeZoneNamesCache, deleteTimeZoneNamesCacheEntry);
-                    gTimeZoneNamesCacheInitialized = TRUE;
-                    ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONENAMES, timeZoneNames_cleanup);
-                }
-            }
+    Mutex lock(&gTimeZoneNamesLock);
+    if (!gTimeZoneNamesCacheInitialized) {
+        // Create empty hashtable if it is not already initialized.
+        gTimeZoneNamesCache = uhash_open(uhash_hashChars, uhash_compareChars, NULL, &status);
+        if (U_SUCCESS(status)) {
+            uhash_setKeyDeleter(gTimeZoneNamesCache, uprv_free);
+            uhash_setValueDeleter(gTimeZoneNamesCache, deleteTimeZoneNamesCacheEntry);
+            gTimeZoneNamesCacheInitialized = TRUE;
+            ucln_i18n_registerCleanup(UCLN_I18N_TIMEZONENAMES, timeZoneNames_cleanup);
         }
-        umtx_unlock(&gTimeZoneNamesLock);
+    }
 
-        if (U_FAILURE(status)) {
-            return;
-        }
+    if (U_FAILURE(status)) {
+        return;
     }
 
     // Check the cache, if not available, create new one and cache
     TimeZoneNamesCacheEntry *cacheEntry = NULL;
-    umtx_lock(&gTimeZoneNamesLock);
-    {
-        const char *key = locale.getName();
-        cacheEntry = (TimeZoneNamesCacheEntry *)uhash_get(gTimeZoneNamesCache, key);
-        if (cacheEntry == NULL) {
-            TimeZoneNames *tznames = NULL;
-            char *newKey = NULL;
 
-            tznames = new TimeZoneNamesImpl(locale, status);
-            if (tznames == NULL) {
+    const char *key = locale.getName();
+    cacheEntry = (TimeZoneNamesCacheEntry *)uhash_get(gTimeZoneNamesCache, key);
+    if (cacheEntry == NULL) {
+        TimeZoneNames *tznames = NULL;
+        char *newKey = NULL;
+
+        tznames = new TimeZoneNamesImpl(locale, status);
+        if (tznames == NULL) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+        if (U_SUCCESS(status)) {
+            newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
+            if (newKey == NULL) {
                 status = U_MEMORY_ALLOCATION_ERROR;
+            } else {
+                uprv_strcpy(newKey, key);
             }
-            if (U_SUCCESS(status)) {
-                newKey = (char *)uprv_malloc(uprv_strlen(key) + 1);
-                if (newKey == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                } else {
-                    uprv_strcpy(newKey, key);
-                }
-            }
-            if (U_SUCCESS(status)) {
-                cacheEntry = (TimeZoneNamesCacheEntry *)uprv_malloc(sizeof(TimeZoneNamesCacheEntry));
-                if (cacheEntry == NULL) {
-                    status = U_MEMORY_ALLOCATION_ERROR;
-                } else {
-                    cacheEntry->names = tznames;
-                    cacheEntry->refCount = 1;
-                    cacheEntry->lastAccess = (double)uprv_getUTCtime();
+        }
+        if (U_SUCCESS(status)) {
+            cacheEntry = (TimeZoneNamesCacheEntry *)uprv_malloc(sizeof(TimeZoneNamesCacheEntry));
+            if (cacheEntry == NULL) {
+                status = U_MEMORY_ALLOCATION_ERROR;
+            } else {
+                cacheEntry->names = tznames;
+                cacheEntry->refCount = 1;
+                cacheEntry->lastAccess = (double)uprv_getUTCtime();
 
-                    uhash_put(gTimeZoneNamesCache, newKey, cacheEntry, &status);
-                }
+                uhash_put(gTimeZoneNamesCache, newKey, cacheEntry, &status);
             }
-            if (U_FAILURE(status)) {
-                if (tznames != NULL) {
-                    delete tznames;
-                }
-                if (newKey != NULL) {
-                    uprv_free(newKey);
-                }
-                if (cacheEntry != NULL) {
-                    uprv_free(cacheEntry);
-                }
-                cacheEntry = NULL;
+        }
+        if (U_FAILURE(status)) {
+            if (tznames != NULL) {
+                delete tznames;
             }
-        } else {
-            // Update the reference count
-            cacheEntry->refCount++;
-            cacheEntry->lastAccess = (double)uprv_getUTCtime();
+            if (newKey != NULL) {
+                uprv_free(newKey);
+            }
+            if (cacheEntry != NULL) {
+                uprv_free(cacheEntry);
+            }
+            cacheEntry = NULL;
         }
-        gAccessCount++;
-        if (gAccessCount >= SWEEP_INTERVAL) {
-            // sweep
-            sweepCache();
-            gAccessCount = 0;
-        }
+    } else {
+        // Update the reference count
+        cacheEntry->refCount++;
+        cacheEntry->lastAccess = (double)uprv_getUTCtime();
     }
-    umtx_unlock(&gTimeZoneNamesLock);
-
+    gAccessCount++;
+    if (gAccessCount >= SWEEP_INTERVAL) {
+        // sweep
+        sweepCache();
+        gAccessCount = 0;
+    }
     fTZnamesCacheEntry = cacheEntry;
 }
 
@@ -288,6 +283,16 @@ TimeZoneNamesDelegate::getExemplarLocationName(const UnicodeString& tzID, Unicod
     return fTZnamesCacheEntry->names->getExemplarLocationName(tzID, name);
 }
 
+void
+TimeZoneNamesDelegate::loadAllDisplayNames(UErrorCode& status) {
+    fTZnamesCacheEntry->names->loadAllDisplayNames(status);
+}
+
+void
+TimeZoneNamesDelegate::getDisplayNames(const UnicodeString& tzID, const UTimeZoneNameType types[], int32_t numTypes, UDate date, UnicodeString dest[], UErrorCode& status) const {
+    fTZnamesCacheEntry->names->getDisplayNames(tzID, types, numTypes, date, dest, status);
+}
+
 TimeZoneNames::MatchInfoCollection*
 TimeZoneNamesDelegate::find(const UnicodeString& text, int32_t start, uint32_t types, UErrorCode& status) const {
     return fTZnamesCacheEntry->names->find(text, start, types, status);
@@ -301,7 +306,26 @@ TimeZoneNames::~TimeZoneNames() {
 
 TimeZoneNames*
 TimeZoneNames::createInstance(const Locale& locale, UErrorCode& status) {
-    return new TimeZoneNamesDelegate(locale, status);
+    TimeZoneNames *instance = NULL;
+    if (U_SUCCESS(status)) {
+        instance = new TimeZoneNamesDelegate(locale, status);
+        if (instance == NULL && U_SUCCESS(status)) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+    }
+    return instance;
+}
+
+TimeZoneNames*
+TimeZoneNames::createTZDBInstance(const Locale& locale, UErrorCode& status) {
+    TimeZoneNames *instance = NULL;
+    if (U_SUCCESS(status)) {
+        instance = new TZDBTimeZoneNames(locale);
+        if (instance == NULL && U_SUCCESS(status)) {
+            status = U_MEMORY_ALLOCATION_ERROR;
+        }
+    }
+    return instance;
 }
 
 UnicodeString&
@@ -313,11 +337,35 @@ UnicodeString&
 TimeZoneNames::getDisplayName(const UnicodeString& tzID, UTimeZoneNameType type, UDate date, UnicodeString& name) const {
     getTimeZoneDisplayName(tzID, type, name);
     if (name.isEmpty()) {
-        UnicodeString mzID;
+        UChar mzIDBuf[32];
+        UnicodeString mzID(mzIDBuf, 0, UPRV_LENGTHOF(mzIDBuf));
         getMetaZoneID(tzID, date, mzID);
         getMetaZoneDisplayName(mzID, type, name);
     }
     return name;
+}
+
+// Empty default implementation, to be overriden in tznames_impl.cpp.
+void
+TimeZoneNames::loadAllDisplayNames(UErrorCode& /*status*/) {
+}
+
+// A default, lightweight implementation of getDisplayNames.
+// Overridden in tznames_impl.cpp.
+void
+TimeZoneNames::getDisplayNames(const UnicodeString& tzID, const UTimeZoneNameType types[], int32_t numTypes, UDate date, UnicodeString dest[], UErrorCode& status) const {
+    if (U_FAILURE(status)) { return; }
+    if (tzID.isEmpty()) { return; }
+    UnicodeString mzID;
+    for (int i = 0; i < numTypes; i++) {
+        getTimeZoneDisplayName(tzID, types[i], dest[i]);
+        if (dest[i].isEmpty()) {
+            if (mzID.isEmpty()) {
+                getMetaZoneID(tzID, date, mzID);
+            }
+            getMetaZoneDisplayName(mzID, types[i], dest[i]);
+        }
+    }
 }
 
 

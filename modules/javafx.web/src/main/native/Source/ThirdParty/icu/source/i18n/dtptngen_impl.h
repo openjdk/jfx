@@ -1,7 +1,9 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2007-2012, International Business Machines Corporation and
-* others. All Rights Reserved.                                                *
+* Copyright (C) 2007-2016, International Business Machines Corporation and
+* others. All Rights Reserved.
 *******************************************************************************
 *
 * File DTPTNGEN.H
@@ -9,10 +11,14 @@
 *******************************************************************************
 */
 
-#include "uvector.h"
-
 #ifndef __DTPTNGEN_IMPL_H__
 #define __DTPTNGEN_IMPL_H__
+
+#include "unicode/udatpg.h"
+
+#include "unicode/strenum.h"
+#include "unicode/unistr.h"
+#include "uvector.h"
 
 // TODO(claireho): Split off Builder class.
 // TODO(claireho): If splitting off Builder class: As subclass or independent?
@@ -38,12 +44,14 @@
 #define DOT               ((UChar)0x002E)
 #define COLON             ((UChar)0x003A)
 #define CAP_A             ((UChar)0x0041)
+#define CAP_B             ((UChar)0x0042)
 #define CAP_C             ((UChar)0x0043)
 #define CAP_D             ((UChar)0x0044)
 #define CAP_E             ((UChar)0x0045)
 #define CAP_F             ((UChar)0x0046)
 #define CAP_G             ((UChar)0x0047)
 #define CAP_H             ((UChar)0x0048)
+#define CAP_J             ((UChar)0x004A)
 #define CAP_K             ((UChar)0x004B)
 #define CAP_L             ((UChar)0x004C)
 #define CAP_M             ((UChar)0x004D)
@@ -54,10 +62,12 @@
 #define CAP_U             ((UChar)0x0055)
 #define CAP_V             ((UChar)0x0056)
 #define CAP_W             ((UChar)0x0057)
+#define CAP_X             ((UChar)0x0058)
 #define CAP_Y             ((UChar)0x0059)
 #define CAP_Z             ((UChar)0x005A)
 #define LOWLINE           ((UChar)0x005F)
 #define LOW_A             ((UChar)0x0061)
+#define LOW_B             ((UChar)0x0062)
 #define LOW_C             ((UChar)0x0063)
 #define LOW_D             ((UChar)0x0064)
 #define LOW_E             ((UChar)0x0065)
@@ -79,12 +89,14 @@
 #define LOW_U             ((UChar)0x0075)
 #define LOW_V             ((UChar)0x0076)
 #define LOW_W             ((UChar)0x0077)
+#define LOW_X             ((UChar)0x0078)
 #define LOW_Y             ((UChar)0x0079)
 #define LOW_Z             ((UChar)0x007A)
-#define DT_SHORT          -0x102
-#define DT_LONG           -0x103
-#define DT_NUMERIC         0x100
 #define DT_NARROW         -0x101
+#define DT_SHORTER        -0x102
+#define DT_SHORT          -0x103
+#define DT_LONG           -0x104
+#define DT_NUMERIC         0x100
 #define DT_DELTA           0x10
 
 U_NAMESPACE_BEGIN
@@ -106,17 +118,57 @@ typedef struct dtTypeElem {
     int16_t                weight;
 }dtTypeElem;
 
+// A compact storage mechanism for skeleton field strings.  Several dozen of these will be created
+// for a typical DateTimePatternGenerator instance.
+class SkeletonFields : public UMemory {
+public:
+    SkeletonFields();
+    void clear();
+    void copyFrom(const SkeletonFields& other);
+    void clearField(int32_t field);
+    UChar getFieldChar(int32_t field) const;
+    int32_t getFieldLength(int32_t field) const;
+    void populate(int32_t field, const UnicodeString& value);
+    void populate(int32_t field, UChar repeatChar, int32_t repeatCount);
+    UBool isFieldEmpty(int32_t field) const;
+    UnicodeString& appendTo(UnicodeString& string) const;
+    UnicodeString& appendFieldTo(int32_t field, UnicodeString& string) const;
+    UChar getFirstChar() const;
+    inline UBool operator==(const SkeletonFields& other) const;
+    inline UBool operator!=(const SkeletonFields& other) const;
+
+private:
+    int8_t chars[UDATPG_FIELD_COUNT];
+    int8_t lengths[UDATPG_FIELD_COUNT];
+};
+
+inline UBool SkeletonFields::operator==(const SkeletonFields& other) const {
+    return (uprv_memcmp(chars, other.chars, sizeof(chars)) == 0
+        && uprv_memcmp(lengths, other.lengths, sizeof(lengths)) == 0);
+}
+
+inline UBool SkeletonFields::operator!=(const SkeletonFields& other) const {
+    return (! operator==(other));
+}
+
 class PtnSkeleton : public UMemory {
 public:
     int32_t type[UDATPG_FIELD_COUNT];
-    UnicodeString original[UDATPG_FIELD_COUNT];
-    UnicodeString baseOriginal[UDATPG_FIELD_COUNT];
+    SkeletonFields original;
+    SkeletonFields baseOriginal;
+    UBool addedDefaultDayPeriod;
 
     PtnSkeleton();
     PtnSkeleton(const PtnSkeleton& other);
-    UBool equals(const PtnSkeleton& other);
-    UnicodeString getSkeleton();
-    UnicodeString getBaseSkeleton();
+    void copyFrom(const PtnSkeleton& other);
+    void clear();
+    UBool equals(const PtnSkeleton& other) const;
+    UnicodeString getSkeleton() const;
+    UnicodeString getBaseSkeleton() const;
+    UChar getFirstChar() const;
+
+    // TODO: Why is this virtual, as well as the other destructors in this file? We don't want
+    // vtables when we don't use class objects polymorphically.
     virtual ~PtnSkeleton();
 };
 
@@ -142,12 +194,11 @@ public:
     FormatParser();
     virtual ~FormatParser();
     void set(const UnicodeString& patternString);
-    UBool isQuoteLiteral(const UnicodeString& s) const;
     void getQuoteLiteral(UnicodeString& quote, int32_t *itemIndex);
-    int32_t getCanonicalIndex(const UnicodeString& s) { return getCanonicalIndex(s, TRUE); }
-    int32_t getCanonicalIndex(const UnicodeString& s, UBool strict);
     UBool isPatternSeparator(UnicodeString& field);
-    void setFilter(UErrorCode &status);
+    static UBool isQuoteLiteral(const UnicodeString& s);
+    static int32_t getCanonicalIndex(const UnicodeString& s) { return getCanonicalIndex(s, TRUE); }
+    static int32_t getCanonicalIndex(const UnicodeString& s, UBool strict);
 
 private:
    typedef enum TokenStatus {
@@ -178,7 +229,7 @@ class DateTimeMatcher: public UMemory {
 public:
     PtnSkeleton skeleton;
 
-    void getBasePattern(UnicodeString &basePattern);
+    void getBasePattern(UnicodeString& basePattern);
     UnicodeString getPattern();
     void set(const UnicodeString& pattern, FormatParser* fp);
     void set(const UnicodeString& pattern, FormatParser* fp, PtnSkeleton& skeleton);

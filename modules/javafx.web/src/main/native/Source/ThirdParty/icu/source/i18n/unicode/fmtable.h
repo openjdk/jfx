@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ********************************************************************************
-*   Copyright (C) 1997-2013, International Business Machines
+*   Copyright (C) 1997-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -16,32 +18,26 @@
 #define FMTABLE_H
 
 #include "unicode/utypes.h"
-#include "unicode/unistr.h"
-#include "unicode/stringpiece.h"
 
 /**
  * \file
- * \brief C++ API: Formattable is a thin wrapper for primitive numeric types.
+ * \brief C++ API: Formattable is a thin wrapper for primitive types used for formatting and parsing
  */
 
 #if !UCONFIG_NO_FORMATTING
 
+#include "unicode/unistr.h"
+#include "unicode/stringpiece.h"
+#include "unicode/uformattable.h"
+
 U_NAMESPACE_BEGIN
 
 class CharString;
-class DigitList;
-
-#ifndef U_HIDE_INTERNAL_API
-/**
- * \def UNUM_INTERNAL_STACKARRAY_SIZE
- * @internal
- */
-#if U_PLATFORM == U_PF_OS400
-#define UNUM_INTERNAL_STACKARRAY_SIZE 144
-#else
-#define UNUM_INTERNAL_STACKARRAY_SIZE 128
-#endif
-#endif  /* U_HIDE_INTERNAL_API */
+namespace number {
+namespace impl {
+class DecimalQuantity;
+}
+}
 
 /**
  * Formattable objects can be passed to the Format class or
@@ -60,6 +56,8 @@ class DigitList;
  * within a Formattable.
  *
  * <p>The Formattable class is not suitable for subclassing.
+ *
+ * <p>See UFormattable for a C wrapper.
  */
 class U_I18N_API Formattable : public UObject {
 public:
@@ -123,7 +121,7 @@ public:
      * Creates a Formattable object of an appropriate numeric type from a
      * a decimal number in string form.  The Formattable will retain the
      * full precision of the input in decimal format, even when it exceeds
-     * what can be represented by a double of int64_t.
+     * what can be represented by a double or int64_t.
      *
      * @param number  the unformatted (not localized) string representation
      *                     of the Decimal number.
@@ -132,7 +130,7 @@ public:
      *                decimal number.
      * @stable ICU 4.4
      */
-    Formattable(const StringPiece &number, UErrorCode &status);
+    Formattable(StringPiece number, UErrorCode &status);
 
     /**
      * Creates a Formattable object with a UnicodeString object to copy from.
@@ -278,7 +276,7 @@ public:
 
     /**
      * Returns TRUE if the data type of this Formattable object
-     * is kDouble, kLong, kInt64 or kDecimalNumber.
+     * is kDouble, kLong, or kInt64
      * @return TRUE if this is a pure numeric object
      * @stable ICU 3.0
      */
@@ -320,7 +318,7 @@ public:
      * as appropriate, is returned and the status is set to
      * U_INVALID_FORMAT_ERROR.  If this object is of type kInt64 and
      * it fits within a long, then no precision is lost.  If it is of
-     * type kDouble or kDecimalNumber, then a conversion is peformed, with
+     * type kDouble, then a conversion is peformed, with
      * truncation of any fractional part.  If the type is kObject and
      * the object is a Measure, then the result of
      * getNumber().getLong(status) is returned.  If this object is
@@ -579,7 +577,7 @@ public:
      *                      incoming string is not a valid decimal number.
      * @stable ICU 4.4
      */
-    void             setDecimalNumber(const StringPiece &numberString,
+    void             setDecimalNumber(StringPiece numberString,
                                       UErrorCode &status);
 
     /**
@@ -596,6 +594,40 @@ public:
      */
     static UClassID U_EXPORT2 getStaticClassID();
 
+    /**
+     * Convert the UFormattable to a Formattable.  Internally, this is a reinterpret_cast.
+     * @param fmt a valid UFormattable
+     * @return the UFormattable as a Formattable object pointer.  This is an alias to the original
+     * UFormattable, and so is only valid while the original argument remains in scope.
+     * @stable ICU 52
+     */
+    static inline Formattable *fromUFormattable(UFormattable *fmt);
+
+    /**
+     * Convert the const UFormattable to a const Formattable.  Internally, this is a reinterpret_cast.
+     * @param fmt a valid UFormattable
+     * @return the UFormattable as a Formattable object pointer.  This is an alias to the original
+     * UFormattable, and so is only valid while the original argument remains in scope.
+     * @stable ICU 52
+     */
+    static inline const Formattable *fromUFormattable(const UFormattable *fmt);
+
+    /**
+     * Convert this object pointer to a UFormattable.
+     * @return this object as a UFormattable pointer.   This is an alias to this object,
+     * and so is only valid while this object remains in scope.
+     * @stable ICU 52
+     */
+    inline UFormattable *toUFormattable();
+
+    /**
+     * Convert this object pointer to a UFormattable.
+     * @return this object as a UFormattable pointer.   This is an alias to this object,
+     * and so is only valid while this object remains in scope.
+     * @stable ICU 52
+     */
+    inline const UFormattable *toUFormattable() const;
+
 #ifndef U_HIDE_DEPRECATED_API
     /**
      * Deprecated variant of getLong(UErrorCode&).
@@ -611,24 +643,34 @@ public:
      * Internal function, do not use.
      * TODO:  figure out how to make this be non-public.
      *        NumberFormat::format(Formattable, ...
-     *        needs to get at the DigitList, if it exists, for
+     *        needs to get at the DecimalQuantity, if it exists, for
      *        big decimal formatting.
      *  @internal
      */
-    DigitList *getDigitList() const { return fDecimalNum;}
+    number::impl::DecimalQuantity *getDecimalQuantity() const { return fDecimalQuantity;}
 
     /**
-     *  @internal
+     * Export the value of this Formattable to a DecimalQuantity.
+     * @internal
      */
-    DigitList *getInternalDigitList();
+    void populateDecimalQuantity(number::impl::DecimalQuantity& output, UErrorCode& status) const;
 
     /**
-     *  Adopt, and set value from, a DigitList
+     *  Adopt, and set value from, a DecimalQuantity
      *     Internal Function, do not use.
-     *  @param dl the Digit List to be adopted
+     *  @param dl the DecimalQuantity to be adopted
      *  @internal
      */
-    void adoptDigitList(DigitList *dl);
+    void adoptDecimalQuantity(number::impl::DecimalQuantity *dq);
+
+    /**
+     * Internal function to return the CharString pointer.
+     * @param status error code
+     * @return pointer to the CharString - may become invalid if the object is modified
+     * @internal
+     */
+    CharString *internalGetCharString(UErrorCode &status);
+
 #endif  /* U_HIDE_INTERNAL_API */
 
 private:
@@ -659,9 +701,7 @@ private:
 
     CharString           *fDecimalStr;
 
-    DigitList            *fDecimalNum;
-
-    char                fStackData[UNUM_INTERNAL_STACKARRAY_SIZE]; // must be big enough for DigitList
+    number::impl::DecimalQuantity *fDecimalQuantity;
 
     Type                fType;
     UnicodeString       fBogus; // Bogus string when it's needed.
@@ -685,10 +725,27 @@ inline UnicodeString& Formattable::getString(void) {
     return *fValue.fString;
 }
 
+#ifndef U_HIDE_DEPRECATED_API
 inline int32_t Formattable::getLong(UErrorCode* status) const {
     return getLong(*status);
 }
+#endif  /* U_HIDE_DEPRECATED_API */
 
+inline UFormattable* Formattable::toUFormattable() {
+  return reinterpret_cast<UFormattable*>(this);
+}
+
+inline const UFormattable* Formattable::toUFormattable() const {
+  return reinterpret_cast<const UFormattable*>(this);
+}
+
+inline Formattable* Formattable::fromUFormattable(UFormattable *fmt) {
+  return reinterpret_cast<Formattable *>(fmt);
+}
+
+inline const Formattable* Formattable::fromUFormattable(const UFormattable *fmt) {
+  return reinterpret_cast<const Formattable *>(fmt);
+}
 
 U_NAMESPACE_END
 

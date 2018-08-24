@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
  **********************************************************************
- *   Copyright (C) 2005-2012, International Business Machines
+ *   Copyright (C) 2005-2015, International Business Machines
  *   Corporation and others.  All Rights Reserved.
  **********************************************************************
  */
@@ -19,17 +21,21 @@ U_NAMESPACE_BEGIN
 class NGramParser : public UMemory
 {
 private:
-    int32_t byteIndex;
     int32_t ngram;
-
     const int32_t *ngramList;
-    const uint8_t *charMap;
 
     int32_t ngramCount;
     int32_t hitCount;
 
+protected:
+    int32_t byteIndex;
+    const uint8_t *charMap;
+
+    void addByte(int32_t b);
+
 public:
     NGramParser(const int32_t *theNgramList, const uint8_t *theCharMap);
+    virtual ~NGramParser();
 
 private:
     /*
@@ -38,13 +44,29 @@ private:
     int32_t search(const int32_t *table, int32_t value);
 
     void lookup(int32_t thisNgram);
-    void addByte(int32_t b);
-    int32_t nextByte(InputText *det);
+
+    virtual int32_t nextByte(InputText *det);
+    virtual void parseCharacters(InputText *det);
 
 public:
     int32_t parse(InputText *det);
 
 };
+
+#if !UCONFIG_ONLY_HTML_CONVERSION
+class NGramParser_IBM420 : public NGramParser
+{
+public:
+    NGramParser_IBM420(const int32_t *theNgramList, const uint8_t *theCharMap);
+    ~NGramParser_IBM420();
+
+private:
+    int32_t alef;
+    int32_t isLamAlef(int32_t b);
+    int32_t nextByte(InputText *det);
+    void parseCharacters(InputText *det);
+};
+#endif
 
 
 class CharsetRecog_sbcs : public CharsetRecognizer
@@ -213,6 +235,7 @@ public:
     virtual UBool match(InputText *det, CharsetMatch *results) const;
 };
 
+#if !UCONFIG_ONLY_HTML_CONVERSION
 class CharsetRecog_IBM424_he : public CharsetRecog_sbcs
 {
 public:
@@ -244,19 +267,8 @@ public:
     virtual ~CharsetRecog_IBM420_ar();
 
     const char *getLanguage() const;
+    int32_t match_sbcs(InputText *det, const int32_t ngrams[], const uint8_t charMap[]) const;
 
-protected:
-    void matchInit(InputText *textIn);
-    void matchFinish(InputText *textIn);
-
-private:
-    uint8_t *prev_fInputBytes;
-    int32_t prev_fInputBytesLength;
-    UBool deleteBuffer;
-
-    UBool isLamAlef(uint8_t b);
-    uint8_t *unshapeLamAlef(const uint8_t *inputBytes, int32_t inputBytesLength, int32_t &length);
-    uint8_t *unshape(const uint8_t *inputBytes, int32_t inputBytesLength, int32_t &length);
 };
 
 class CharsetRecog_IBM420_ar_rtl : public CharsetRecog_IBM420_ar {
@@ -275,6 +287,7 @@ class CharsetRecog_IBM420_ar_ltr : public CharsetRecog_IBM420_ar {
 
     virtual UBool match(InputText *det, CharsetMatch *results) const;
 };
+#endif
 
 U_NAMESPACE_END
 
