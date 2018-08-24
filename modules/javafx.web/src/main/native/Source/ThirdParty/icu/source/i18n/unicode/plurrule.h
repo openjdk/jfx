@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2008-2013, International Business Machines Corporation and
+* Copyright (C) 2008-2015, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -27,6 +29,9 @@
 
 #include "unicode/format.h"
 #include "unicode/upluralrules.h"
+#ifndef U_HIDE_INTERNAL_API
+#include "unicode/numfmt.h"
+#endif  /* U_HIDE_INTERNAL_API */
 
 /**
  * Value returned by PluralRules::getUniqueKeywordValue() when there is no
@@ -38,9 +43,12 @@
 U_NAMESPACE_BEGIN
 
 class Hashtable;
+class IFixedDecimal;
 class RuleChain;
-class RuleParser;
+class PluralRuleParser;
 class PluralKeywordEnumeration;
+class AndConstraint;
+class SharedPluralRules;
 
 /**
  * Defines rules for mapping non-negative numeric values onto a small set of
@@ -89,19 +97,80 @@ class PluralKeywordEnumeration;
  * is_relation   = expr 'is' ('not')? value
  * in_relation   = expr ('not')? 'in' range_list
  * within_relation = expr ('not')? 'within' range
- * expr          = 'n' ('mod' value)?
+ * expr          = ('n' | 'i' | 'f' | 'v' | 'j') ('mod' value)?
  * range_list    = (range | value) (',' range_list)*
- * value         = digit+
+ * value         = digit+  ('.' digit+)?
  * digit         = 0|1|2|3|4|5|6|7|8|9
  * range         = value'..'value
  * \endcode
  * </pre></p>
  * <p>
+ * <p>
+ * The i, f, and v values are defined as follows:
+ * </p>
+ * <ul>
+ * <li>i to be the integer digits.</li>
+ * <li>f to be the visible fractional digits, as an integer.</li>
+ * <li>v to be the number of visible fraction digits.</li>
+ * <li>j is defined to only match integers. That is j is 3 fails if v != 0 (eg for 3.1 or 3.0).</li>
+ * </ul>
+ * <p>
+ * Examples are in the following table:
+ * </p>
+ * <table border='1' style="border-collapse:collapse">
+ * <tbody>
+ * <tr>
+ * <th>n</th>
+ * <th>i</th>
+ * <th>f</th>
+ * <th>v</th>
+ * </tr>
+ * <tr>
+ * <td>1.0</td>
+ * <td>1</td>
+ * <td align="right">0</td>
+ * <td>1</td>
+ * </tr>
+ * <tr>
+ * <td>1.00</td>
+ * <td>1</td>
+ * <td align="right">0</td>
+ * <td>2</td>
+ * </tr>
+ * <tr>
+ * <td>1.3</td>
+ * <td>1</td>
+ * <td align="right">3</td>
+ * <td>1</td>
+ * </tr>
+ * <tr>
+ * <td>1.03</td>
+ * <td>1</td>
+ * <td align="right">3</td>
+ * <td>2</td>
+ * </tr>
+ * <tr>
+ * <td>1.23</td>
+ * <td>1</td>
+ * <td align="right">23</td>
+ * <td>2</td>
+ * </tr>
+ * </tbody>
+ * </table>
+ * <p>
+ * The difference between 'in' and 'within' is that 'in' only includes integers in the specified range, while 'within'
+ * includes all values. Using 'within' with a range_list consisting entirely of values is the same as using 'in' (it's
+ * not an error).
+ * </p>
+
  * An "identifier" is a sequence of characters that do not have the
  * Unicode Pattern_Syntax or Pattern_White_Space properties.
  * <p>
  * The difference between 'in' and 'within' is that 'in' only includes
- * integers in the specified range, while 'within' includes all values.</p>
+ * integers in the specified range, while 'within' includes all values.
+ * Using 'within' with a range_list consisting entirely of values is the
+ * same as using 'in' (it's not an error).
+ *</p>
  * <p>
  * Keywords
  * could be defined by users or from ICU locale data. There are 6
@@ -201,7 +270,6 @@ public:
      */
     static PluralRules* U_EXPORT2 forLocale(const Locale& locale, UErrorCode& status);
 
-#ifndef U_HIDE_DRAFT_API
     /**
      * Provides access to the predefined <code>PluralRules</code> for a given
      * locale and the plural type.
@@ -216,10 +284,45 @@ public:
      *                the rules for the closest parent in the locale hierarchy
      *                that has one will  be returned.  The final fallback always
      *                returns the default 'other' rules.
-     * @draft ICU 50
+     * @stable ICU 50
      */
     static PluralRules* U_EXPORT2 forLocale(const Locale& locale, UPluralType type, UErrorCode& status);
-#endif /* U_HIDE_DRAFT_API */
+
+#ifndef U_HIDE_INTERNAL_API
+    /**
+     * Return a StringEnumeration over the locales for which there is plurals data.
+     * @return a StringEnumeration over the locales available.
+     * @internal
+     */
+    static StringEnumeration* U_EXPORT2 getAvailableLocales(UErrorCode &status);
+
+    /**
+     * Returns whether or not there are overrides.
+     * @param locale       the locale to check.
+     * @return
+     * @internal
+     */
+    static UBool hasOverride(const Locale &locale);
+
+    /**
+     * For ICU use only.
+     * creates a  SharedPluralRules object
+     * @internal
+     */
+    static PluralRules* U_EXPORT2 internalForLocale(const Locale& locale, UPluralType type, UErrorCode& status);
+
+    /**
+     * For ICU use only.
+     * Returns handle to the shared, cached PluralRules instance.
+     * Caller must call removeRef() on returned value once it is done with
+     * the shared instance.
+     * @internal
+     */
+    static const SharedPluralRules* U_EXPORT2 createSharedInstance(
+            const Locale& locale, UPluralType type, UErrorCode& status);
+
+
+#endif  /* U_HIDE_INTERNAL_API */
 
     /**
      * Given a number, returns the keyword of the first rule that applies to
@@ -243,6 +346,13 @@ public:
      */
     UnicodeString select(double number) const;
 
+#ifndef U_HIDE_INTERNAL_API
+    /**
+      * @internal
+      */
+    UnicodeString select(const IFixedDecimal &number) const;
+#endif  /* U_HIDE_INTERNAL_API */
+
     /**
      * Returns a list of all rule keywords used in this <code>PluralRules</code>
      * object.  The rule 'other' is always present by default.
@@ -255,21 +365,24 @@ public:
      */
     StringEnumeration* getKeywords(UErrorCode& status) const;
 
+#ifndef U_HIDE_DEPRECATED_API
     /**
-     * Returns a unique value for this keyword if it exists, else the constant
-     * UPLRULES_NO_UNIQUE_VALUE.
+     * Deprecated Function, does not return useful results.
+     *
+     * Originally intended to return a unique value for this keyword if it exists,
+     * else the constant UPLRULES_NO_UNIQUE_VALUE.
      *
      * @param keyword The keyword.
-     * @return        The unique value that generates the keyword, or
-     *                UPLRULES_NO_UNIQUE_VALUE if the keyword is undefined or there is no
-     *                unique value that generates this keyword.
-     * @stable ICU 4.8
+     * @return        Stub deprecated function returns UPLRULES_NO_UNIQUE_VALUE always.
+     * @deprecated ICU 55
      */
     double getUniqueKeywordValue(const UnicodeString& keyword);
 
     /**
-     * Returns all the values for which select() would return the keyword.  If
-     * the keyword is unknown, returns no values, but this is not an error.  If
+     * Deprecated Function, does not produce useful results.
+     *
+     * Originally intended to return all the values for which select() would return the keyword.
+     * If the keyword is unknown, returns no values, but this is not an error.  If
      * the number of values is unlimited, returns no values and -1 as the
      * count.
      *
@@ -279,15 +392,16 @@ public:
      * @param dest         Array into which to put the returned values.  May
      *                     be NULL if destCapacity is 0.
      * @param destCapacity The capacity of the array, must be at least 0.
-     * @param status       The error code.
+     * @param status       The error code. Deprecated function, always sets U_UNSUPPORTED_ERROR.
      * @return             The count of values available, or -1.  This count
      *                     can be larger than destCapacity, but no more than
      *                     destCapacity values will be written.
-     * @stable ICU 4.8
+     * @deprecated ICU 55
      */
     int32_t getAllKeywordValues(const UnicodeString &keyword,
                                 double *dest, int32_t destCapacity,
                                 UErrorCode& status);
+#endif  /* U_HIDE_DEPRECATED_API */
 
     /**
      * Returns sample values for which select() would return the keyword.  If
@@ -331,6 +445,14 @@ public:
      */
     UnicodeString getKeywordOther() const;
 
+#ifndef U_HIDE_INTERNAL_API
+    /**
+     *
+     * @internal
+     */
+     UnicodeString getRules() const;
+#endif  /* U_HIDE_INTERNAL_API */
+
     /**
      * Compares the equality of two PluralRules objects.
      *
@@ -370,28 +492,14 @@ public:
 
 private:
     RuleChain  *mRules;
-    RuleParser *mParser;
-    double     *mSamples;
-    int32_t    *mSampleInfo;
-    int32_t    mSampleInfoCount;
 
     PluralRules();   // default constructor not implemented
-    int32_t getRepeatLimit() const;
-    void parseDescription(UnicodeString& ruleData, RuleChain& rules, UErrorCode &status);
-    void getNextLocale(const UnicodeString& localeData, int32_t* curIndex, UnicodeString& localeName);
-    void addRules(RuleChain& rules);
-    int32_t getNumberValue(const UnicodeString& token) const;
-    UnicodeString getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& status);
+    void            parseDescription(const UnicodeString& ruleData, UErrorCode &status);
+    int32_t         getNumberValue(const UnicodeString& token) const;
+    UnicodeString   getRuleFromResource(const Locale& locale, UPluralType type, UErrorCode& status);
+    RuleChain      *rulesForKeyword(const UnicodeString &keyword) const;
 
-    static const int32_t MAX_SAMPLES = 3;
-
-    int32_t getSamplesInternal(const UnicodeString &keyword, double *dest,
-                               int32_t destCapacity, UBool includeUnlimited,
-                               UErrorCode& status);
-    int32_t getKeywordIndex(const UnicodeString& keyword,
-                            UErrorCode& status) const;
-    void initSamples(UErrorCode& status);
-
+    friend class PluralRuleParser;
 };
 
 U_NAMESPACE_END

@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2010-2013, International Business Machines Corporation and
+* Copyright (C) 2010-2014, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
@@ -18,14 +20,12 @@
 
 #include "unicode/utypes.h"
 
-#ifndef U_HIDE_INTERNAL_API
 /**
  * \def NUMSYS_NAME_CAPACITY
  * Size of a numbering system name.
  * @internal
  */
 #define NUMSYS_NAME_CAPACITY 8
-#endif  /* U_HIDE_INTERNAL_API */
 
 
 /**
@@ -45,7 +45,8 @@ U_NAMESPACE_BEGIN
  * Defines numbering systems. A numbering system describes the scheme by which
  * numbers are to be presented to the end user.  In its simplest form, a numbering
  * system describes the set of digit characters that are to be used to display
- * numbers, such as Western digits, Thai digits, Arabic-Indic digits, etc.
+ * numbers, such as Western digits, Thai digits, Arabic-Indic digits, etc., in a
+ * positional numbering system with a specified radix (typically 10).
  * More complicated numbering systems are algorithmic in nature, and require use
  * of an RBNF formatter ( rule based number formatter ), in order to calculate
  * the characters to be displayed for a given number.  Examples of algorithmic
@@ -111,7 +112,13 @@ public:
      static StringEnumeration * U_EXPORT2 getAvailableNames(UErrorCode& status);
 
     /**
-     * Create a numbering system from one of the predefined numbering systems known to ICU.
+     * Create a numbering system from one of the predefined numbering systems specified
+     * by CLDR and known to ICU, such as "latn", "arabext", or "hanidec"; the full list
+     * is returned by unumsys_openAvailableNames. Note that some of the names listed at
+     * http://unicode.org/repos/cldr/tags/latest/common/bcp47/number.xml - e.g.
+     * default, native, traditional, finance - do not identify specific numbering systems,
+     * but rather key values that may only be used as part of a locale, which in turn
+     * defines how they are mapped to a specific numbering system such as "latn" or "hant".
      * @param name   The name of the numbering system.
      * @param status ICU status
      * @stable ICU 4.2
@@ -120,25 +127,34 @@ public:
 
 
     /**
-     * Returns the radix of this numbering system.
+     * Returns the radix of this numbering system. Simple positional numbering systems
+     * typically have radix 10, but might have a radix of e.g. 16 for hexadecimal. The
+     * radix is less well-defined for non-positional algorithmic systems.
      * @stable ICU 4.2
      */
-    int32_t getRadix();
+    int32_t getRadix() const;
 
     /**
      * Returns the name of this numbering system if it was created using one of the predefined names
      * known to ICU.  Otherwise, returns NULL.
+     * The predefined names are identical to the numbering system names as defined by
+     * the BCP47 definition in Unicode CLDR.
+     * See also, http://www.unicode.org/repos/cldr/tags/latest/common/bcp47/number.xml
      * @stable ICU 4.6
      */
-    const char * getName();
+    const char * getName() const;
 
     /**
-     * Returns the description string of this numbering system, which is either
-     * the string of digits in the case of simple systems, or the ruleset name
-     * in the case of algorithmic systems.
+     * Returns the description string of this numbering system. For simple
+     * positional systems this is the ordered string of digits (with length matching
+     * the radix), e.g. "\u3007\u4E00\u4E8C\u4E09\u56DB\u4E94\u516D\u4E03\u516B\u4E5D"
+     * for "hanidec"; it would be "0123456789ABCDEF" for hexadecimal. For
+     * algorithmic systems this is the name of the RBNF ruleset used for formatting,
+     * e.g. "zh/SpelloutRules/%spellout-cardinal" for "hans" or "%greek-upper" for
+     * "grek".
      * @stable ICU 4.2
      */
-    virtual UnicodeString getDescription();
+    virtual UnicodeString getDescription() const;
 
 
 
@@ -177,7 +193,7 @@ private:
 
     void setAlgorithmic(UBool algorithmic);
 
-    void setDesc(UnicodeString desc);
+    void setDesc(const UnicodeString &desc);
 
     void setName(const char* name);
 

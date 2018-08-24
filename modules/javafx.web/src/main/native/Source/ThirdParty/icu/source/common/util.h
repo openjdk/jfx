@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
  **********************************************************************
  *   Copyright (c) 2001-2011, International Business Machines
@@ -43,6 +45,13 @@ class U_COMMON_API ICU_Utility /* not : public UObject because all methods are s
     static UnicodeString& appendNumber(UnicodeString& result, int32_t n,
                                        int32_t radix = 10,
                                        int32_t minDigits = 1);
+
+    /** Returns a bogus UnicodeString by value. */
+    static inline UnicodeString makeBogusString() {
+        UnicodeString result;
+        result.setToBogus();
+        return result;
+    }
 
     /**
      * Return true if the character is NOT printable ASCII.

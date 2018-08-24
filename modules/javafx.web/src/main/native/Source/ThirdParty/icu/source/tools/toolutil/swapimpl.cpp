@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
 *
-*   Copyright (C) 2005-2012, International Business Machines
+*   Copyright (C) 2005-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 *******************************************************************************
 *   file name:  swapimpl.cpp
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -54,6 +56,7 @@
 #include "sprpimpl.h"
 #include "propname.h"
 #include "rbbidata.h"
+#include "utrie.h"
 #include "utrie2.h"
 #include "dictionarydata.h"
 
@@ -66,8 +69,6 @@
 U_NAMESPACE_USE
 
 /* definitions */
-
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
 
 /* Unicode property (value) aliases data swapping --------------------------- */
 
@@ -232,7 +233,7 @@ uprops_swap(const UDataSwapper *ds,
 
         /* copy everything for inaccessible data (padding) */
         if(inData32!=outData32) {
-            uprv_memcpy(outData32, inData32, 4*dataTop);
+            uprv_memcpy(outData32, inData32, 4*(size_t)dataTop);
         }
 
         /* swap the indexes[16] */
@@ -335,7 +336,7 @@ ucase_swap(const UDataSwapper *ds,
         ((pInfo->formatVersion[0]==1 &&
           pInfo->formatVersion[2]==UTRIE_SHIFT &&
           pInfo->formatVersion[3]==UTRIE_INDEX_SHIFT) ||
-         pInfo->formatVersion[0]==2 || pInfo->formatVersion[0]==3)
+         2<=pInfo->formatVersion[0] || pInfo->formatVersion[0]<=4)
     )) {
         udata_printError(ds, "ucase_swap(): data format %02x.%02x.%02x.%02x (format version %02x) is not recognized as case mapping data\n",
                          pInfo->dataFormat[0], pInfo->dataFormat[1],
@@ -500,8 +501,10 @@ ubidi_swap(const UDataSwapper *ds,
         ds->swapArray32(ds, inBytes+offset, count, outBytes+offset, pErrorCode);
         offset+=count;
 
-        /* just skip the uint8_t jgArray[] */
+        /* just skip the uint8_t jgArray[] and jgArray2[] */
         count=indexes[UBIDI_IX_JG_LIMIT]-indexes[UBIDI_IX_JG_START];
+        offset+=count;
+        count=indexes[UBIDI_IX_JG_LIMIT2]-indexes[UBIDI_IX_JG_START2];
         offset+=count;
 
         U_ASSERT(offset==size);
@@ -790,7 +793,7 @@ udata_swap(const UDataSwapper *ds,
     }
 
     /* dispatch to the swap function for the dataFormat */
-    for(i=0; i<LENGTHOF(swapFns); ++i) {
+    for(i=0; i<UPRV_LENGTHOF(swapFns); ++i) {
         if(0==memcmp(swapFns[i].dataFormat, pInfo->dataFormat, 4)) {
             swappedLength=swapFns[i].swapFn(ds, inData, length, outData, pErrorCode);
 

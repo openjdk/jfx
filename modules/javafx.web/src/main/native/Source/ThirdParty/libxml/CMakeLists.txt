@@ -133,10 +133,10 @@ endif ()
 
 target_compile_definitions(XMLJava PUBLIC "LIBXML_STATIC")
 target_compile_options(XMLJava PRIVATE ${XML_COMPILE_OPTIONS})
+target_link_libraries(XMLJava PUBLIC icuuc)
 # Export to other moduels who uses libxml
 target_include_directories(XMLJava
     PUBLIC "src/include"
     PUBLIC "${XML_PLATFORM_INCLUDE_DIRECTORY}/include"
-    PUBLIC "${ICU_INCLUDE_DIRS}"
     PRIVATE "${XML_PLATFORM_INCLUDE_DIRECTORY}"
 )

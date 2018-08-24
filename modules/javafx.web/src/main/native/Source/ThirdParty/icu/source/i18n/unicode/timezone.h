@@ -1,5 +1,7 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*************************************************************************
-* Copyright (c) 1997-2013, International Business Machines Corporation
+* Copyright (c) 1997-2016, International Business Machines Corporation
 * and others. All Rights Reserved.
 **************************************************************************
 *
@@ -66,8 +68,8 @@ class StringEnumeration;
  * TimeZone *tz = TimeZone::createTimeZone("America/Los_Angeles");
  * </pre>
  * \htmlonly</blockquote>\endhtmlonly
- * You can use <code>getAvailableIDs</code> method to iterate through
- * all the supported time zone IDs, or getCanonicalID method to check
+ * You can use the <code>createEnumeration</code> method to iterate through
+ * all the supported time zone IDs, or the <code>getCanonicalID</code> method to check
  * if a time zone ID is supported or not.  You can then choose a
  * supported ID to get a <code>TimeZone</code>.
  * If the time zone you want is not represented by one of the
@@ -274,6 +276,23 @@ public:
                                                int32_t index);
 
     /**
+     * Creates an instance of TimeZone detected from the current host
+     * system configuration. Note that ICU4C does not change the default
+     * time zone unless TimeZone::adoptDefault(TimeZone*) or
+     * TimeZone::setDefault(const TimeZone&) is explicitly called by a
+     * user. This method does not update the current ICU's default,
+     * and may return a different TimeZone from the one returned by
+     * TimeZone::createDefault().
+     *
+     * <p>This function is not thread safe.</p>
+     *
+     * @return  A new instance of TimeZone detected from the current host system
+     *          configuration.
+     * @stable ICU 55
+     */
+    static TimeZone* U_EXPORT2 detectHostTimeZone();
+
+    /**
      * Creates a new copy of the default TimeZone for this host. Unless the default time
      * zone has already been set using adoptDefault() or setDefault(), the default is
      * determined by querying the system using methods in TPlatformUtilities. If the
@@ -291,7 +310,11 @@ public:
      * Sets the default time zone (i.e., what's returned by createDefault()) to be the
      * specified time zone.  If NULL is specified for the time zone, the default time
      * zone is set to the default host time zone.  This call adopts the TimeZone object
-     * passed in; the clent is no longer responsible for deleting it.
+     * passed in; the client is no longer responsible for deleting it.
+     *
+     * <p>This function is not thread safe. It is an error for multiple threads
+     * to concurrently attempt to set the default time zone, or for any thread
+     * to attempt to reference the default zone while another thread is setting it.
      *
      * @param zone  A pointer to the new TimeZone object to use as the default.
      * @stable ICU 2.0
@@ -302,6 +325,8 @@ public:
     /**
      * Same as adoptDefault(), except that the TimeZone object passed in is NOT adopted;
      * the caller remains responsible for deleting it.
+     *
+     * <p>See the thread safety note under adoptDefault().
      *
      * @param zone  The given timezone.
      * @system
@@ -324,7 +349,7 @@ public:
      * @param id            The input time zone ID to be canonicalized.
      * @param canonicalID   Receives the canonical system time zone ID
      *                      or the custom time zone ID in normalized format.
-     * @param status        Recevies the status.  When the given time zone ID
+     * @param status        Receives the status.  When the given time zone ID
      *                      is neither a known system time zone ID nor a
      *                      valid custom time zone ID, U_ILLEGAL_ARGUMENT_ERROR
      *                      is set.
@@ -342,7 +367,7 @@ public:
      *                      or the custom time zone ID in normalized format.
      * @param isSystemID    Receives if the given ID is a known system
      *                      time zone ID.
-     * @param status        Recevies the status.  When the given time zone ID
+     * @param status        Receives the status.  When the given time zone ID
      *                      is neither a known system time zone ID nor a
      *                      valid custom time zone ID, U_ILLEGAL_ARGUMENT_ERROR
      *                      is set.
@@ -351,6 +376,60 @@ public:
      */
     static UnicodeString& U_EXPORT2 getCanonicalID(const UnicodeString& id,
         UnicodeString& canonicalID, UBool& isSystemID, UErrorCode& status);
+
+    /**
+    * Converts a system time zone ID to an equivalent Windows time zone ID. For example,
+    * Windows time zone ID "Pacific Standard Time" is returned for input "America/Los_Angeles".
+    *
+    * <p>There are system time zones that cannot be mapped to Windows zones. When the input
+    * system time zone ID is unknown or unmappable to a Windows time zone, then the result will be
+    * empty, but the operation itself remains successful (no error status set on return).
+    *
+    * <p>This implementation utilizes <a href="http://unicode.org/cldr/charts/supplemental/zone_tzid.html">
+    * Zone-Tzid mapping data</a>. The mapping data is updated time to time. To get the latest changes,
+    * please read the ICU user guide section <a href="http://userguide.icu-project.org/datetime/timezone#TOC-Updating-the-Time-Zone-Data">
+    * Updating the Time Zone Data</a>.
+    *
+    * @param id        A system time zone ID.
+    * @param winid     Receives a Windows time zone ID. When the input system time zone ID is unknown
+    *                  or unmappable to a Windows time zone ID, then an empty string is set on return.
+    * @param status    Receives the status.
+    * @return          A reference to the result (<code>winid</code>).
+    * @see getIDForWindowsID
+    *
+    * @stable ICU 52
+    */
+    static UnicodeString& U_EXPORT2 getWindowsID(const UnicodeString& id,
+        UnicodeString& winid, UErrorCode& status);
+
+    /**
+    * Converts a Windows time zone ID to an equivalent system time zone ID
+    * for a region. For example, system time zone ID "America/Los_Angeles" is returned
+    * for input Windows ID "Pacific Standard Time" and region "US" (or <code>null</code>),
+    * "America/Vancouver" is returned for the same Windows ID "Pacific Standard Time" and
+    * region "CA".
+    *
+    * <p>Not all Windows time zones can be mapped to system time zones. When the input
+    * Windows time zone ID is unknown or unmappable to a system time zone, then the result
+    * will be empty, but the operation itself remains successful (no error status set on return).
+    *
+    * <p>This implementation utilizes <a href="http://unicode.org/cldr/charts/supplemental/zone_tzid.html">
+    * Zone-Tzid mapping data</a>. The mapping data is updated time to time. To get the latest changes,
+    * please read the ICU user guide section <a href="http://userguide.icu-project.org/datetime/timezone#TOC-Updating-the-Time-Zone-Data">
+    * Updating the Time Zone Data</a>.
+    *
+    * @param winid     A Windows time zone ID.
+    * @param region    A null-terminated region code, or <code>NULL</code> if no regional preference.
+    * @param id        Receives a system time zone ID. When the input Windows time zone ID is unknown
+    *                  or unmappable to a system time zone ID, then an empty string is set on return.
+    * @param status    Receives the status.
+    * @return          A reference to the result (<code>id</code>).
+    * @see getWindowsID
+    *
+    * @stable ICU 52
+    */
+    static UnicodeString& U_EXPORT2 getIDForWindowsID(const UnicodeString& winid, const char* region,
+        UnicodeString& id, UErrorCode& status);
 
     /**
      * Returns true if the two TimeZones are equal.  (The TimeZone version only compares
@@ -549,8 +628,8 @@ public:
      * in the default locale.
      * This method returns the long name, not including daylight savings.
      * If the display name is not available for the locale,
-     * then this method returns a string in the format
-     * <code>GMT[+-]hh:mm</code>.
+     * then this method returns a string in the localized GMT offset format
+     * such as <code>GMT[+-]HH:mm</code>.
      * @param result the human-readable name of this time zone in the default locale.
      * @return       A reference to 'result'.
      * @stable ICU 2.0
@@ -562,8 +641,8 @@ public:
      * in the specified locale.
      * This method returns the long name, not including daylight savings.
      * If the display name is not available for the locale,
-     * then this method returns a string in the format
-     * <code>GMT[+-]hh:mm</code>.
+     * then this method returns a string in the localized GMT offset format
+     * such as <code>GMT[+-]HH:mm</code>.
      * @param locale the locale in which to supply the display name.
      * @param result the human-readable name of this time zone in the given locale
      *               or in the default locale if the given locale is not recognized.
@@ -576,8 +655,8 @@ public:
      * Returns a name of this time zone suitable for presentation to the user
      * in the default locale.
      * If the display name is not available for the locale,
-     * then this method returns a string in the format
-     * <code>GMT[+-]hh:mm</code>.
+     * then this method returns a string in the localized GMT offset format
+     * such as <code>GMT[+-]HH:mm</code>.
      * @param daylight if true, return the daylight savings name.
      * @param style
      * @param result the human-readable name of this time zone in the default locale.
@@ -590,8 +669,8 @@ public:
      * Returns a name of this time zone suitable for presentation to the user
      * in the specified locale.
      * If the display name is not available for the locale,
-     * then this method returns a string in the format
-     * <code>GMT[+-]hh:mm</code>.
+     * then this method returns a string in the localized GMT offset format
+     * such as <code>GMT[+-]HH:mm</code>.
      * @param daylight if true, return the daylight savings name.
      * @param style
      * @param locale the locale in which to supply the display name.
@@ -786,7 +865,7 @@ private:
      * @param id zone id string
      * @return the pointer of the ID resource, or NULL.
      */
-    static const UChar* findID(const UnicodeString& id);
+    static const char16_t* findID(const UnicodeString& id);
 
     /**
      * Resolve a link in Olson tzdata.  When the given id is known and it's not a link,
@@ -796,7 +875,7 @@ private:
      * @param id zone id string
      * @return the dereferenced zone or NULL
      */
-    static const UChar* dereferOlsonLink(const UnicodeString& id);
+    static const char16_t* dereferOlsonLink(const UnicodeString& id);
 
     /**
      * Returns the region code associated with the given zone,
@@ -804,17 +883,22 @@ private:
      * @param id zone id string
      * @return the region associated with the given zone
      */
-    static const UChar* getRegion(const UnicodeString& id);
+    static const char16_t* getRegion(const UnicodeString& id);
 
+  public:
+#ifndef U_HIDE_INTERNAL_API
     /**
      * Returns the region code associated with the given zone,
      * or NULL if the zone is not known.
      * @param id zone id string
      * @param status Status parameter
      * @return the region associated with the given zone
+     * @internal
      */
-    static const UChar* getRegion(const UnicodeString& id, UErrorCode& status);
+    static const char16_t* getRegion(const UnicodeString& id, UErrorCode& status);
+#endif  /* U_HIDE_INTERNAL_API */
 
+  private:
     /**
      * Parses the given custom time zone identifier
      * @param id id A string of the form GMT[+-]hh:mm, GMT[+-]hhmm, or
@@ -852,24 +936,6 @@ private:
      */
     static UnicodeString& formatCustomID(int32_t hour, int32_t min, int32_t sec,
         UBool negative, UnicodeString& id);
-
-    /**
-     * Responsible for setting up DEFAULT_ZONE.  Uses routines in TPlatformUtilities
-     * (i.e., platform-specific calls) to get the current system time zone.  Failing
-     * that, uses the platform-specific default time zone.  Failing that, uses GMT.
-     */
-    static void             initDefault(void);
-
-    // See source file for documentation
-    /**
-     * Lookup the given name in our system zone table.  If found,
-     * instantiate a new zone of that name and return it.  If not
-     * found, return 0.
-     * @param name tthe given name of a system time zone.
-     * @return the TimeZone indicated by the 'name'.
-     */
-    static TimeZone*        createSystemTimeZone(const UnicodeString& name);
-    static TimeZone*        createSystemTimeZone(const UnicodeString& name, UErrorCode& ec);
 
     UnicodeString           fID;    // this time zone's ID
 

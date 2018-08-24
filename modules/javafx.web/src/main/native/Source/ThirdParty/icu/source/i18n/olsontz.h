@@ -1,3 +1,5 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 **********************************************************************
 * Copyright (c) 2003-2013, International Business Machines
@@ -16,6 +18,7 @@
 #if !UCONFIG_NO_FORMATTING
 
 #include "unicode/basictz.h"
+#include "umutex.h"
 
 struct UResourceBundle;
 
@@ -383,7 +386,10 @@ private:
     void clearTransitionRules(void);
     void deleteTransitionRules(void);
     void checkTransitionRules(UErrorCode& status) const;
+
+  public:    // Internal, for access from plain C code
     void initTransitionRules(UErrorCode& status);
+  private:
 
     InitialTimeZoneRule *initialRule;
     TimeZoneTransition  *firstTZTransition;
@@ -392,7 +398,7 @@ private:
     TimeArrayTimeZoneRule   **historicRules;
     int16_t             historicRuleCount;
     SimpleTimeZone      *finalZoneWithStartYear; // hack
-    UBool               transitionRulesInitialized;
+    UInitOnce           transitionRulesInitOnce;
 };
 
 inline int16_t

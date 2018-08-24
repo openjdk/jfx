@@ -1,30 +1,35 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 2009-2012, International Business Machines Corporation and
+* Copyright (C) 2009-2015, International Business Machines Corporation and
 * others. All Rights Reserved.
 *******************************************************************************
 *
 * File PLURFMT.CPP
-*
-* Modification History:
-*
-*   Date        Name        Description
 *******************************************************************************
 */
 
+#include "unicode/decimfmt.h"
 #include "unicode/messagepattern.h"
 #include "unicode/plurfmt.h"
 #include "unicode/plurrule.h"
 #include "unicode/utypes.h"
 #include "cmemory.h"
 #include "messageimpl.h"
+#include "nfrule.h"
 #include "plurrule_impl.h"
 #include "uassert.h"
 #include "uhash.h"
+#include "number_decimalquantity.h"
+#include "number_utils.h"
+#include "number_utypes.h"
 
 #if !UCONFIG_NO_FORMATTING
 
 U_NAMESPACE_BEGIN
+
+using number::impl::DecimalQuantity;
 
 static const UChar OTHER_STRING[] = {
     0x6F, 0x74, 0x68, 0x65, 0x72, 0  // "other"
@@ -207,7 +212,7 @@ PluralFormat::format(const Formattable& obj,
     if (U_FAILURE(status)) return appendTo;
 
     if (obj.isNumeric()) {
-        return format(obj.getDouble(), appendTo, pos, status);
+        return format(obj, obj.getDouble(), appendTo, pos, status);
     } else {
         status = U_ILLEGAL_ARGUMENT_ERROR;
         return appendTo;
@@ -216,16 +221,16 @@ PluralFormat::format(const Formattable& obj,
 
 UnicodeString
 PluralFormat::format(int32_t number, UErrorCode& status) const {
-    FieldPosition fpos(0);
+    FieldPosition fpos(FieldPosition::DONT_CARE);
     UnicodeString result;
-    return format(number, result, fpos, status);
+    return format(Formattable(number), number, result, fpos, status);
 }
 
 UnicodeString
 PluralFormat::format(double number, UErrorCode& status) const {
-    FieldPosition fpos(0);
+    FieldPosition fpos(FieldPosition::DONT_CARE);
     UnicodeString result;
-    return format(number, result, fpos, status);
+    return format(Formattable(number), number, result, fpos, status);
 }
 
 
@@ -234,7 +239,7 @@ PluralFormat::format(int32_t number,
                      UnicodeString& appendTo,
                      FieldPosition& pos,
                      UErrorCode& status) const {
-    return format((double)number, appendTo, pos, status);
+    return format(Formattable(number), (double)number, appendTo, pos, status);
 }
 
 UnicodeString&
@@ -242,18 +247,51 @@ PluralFormat::format(double number,
                      UnicodeString& appendTo,
                      FieldPosition& pos,
                      UErrorCode& status) const {
+    return format(Formattable(number), (double)number, appendTo, pos, status);
+}
+
+UnicodeString&
+PluralFormat::format(const Formattable& numberObject, double number,
+                     UnicodeString& appendTo,
+                     FieldPosition& pos,
+                     UErrorCode& status) const {
     if (U_FAILURE(status)) {
         return appendTo;
     }
     if (msgPattern.countParts() == 0) {
-        return numberFormat->format(number, appendTo, pos);
+        return numberFormat->format(numberObject, appendTo, pos, status);
     }
+
     // Get the appropriate sub-message.
-    int32_t partIndex = findSubMessage(msgPattern, 0, pluralRulesWrapper, number, status);
+    // Select it based on the formatted number-offset.
+    double numberMinusOffset = number - offset;
+    // Call NumberFormatter to get both the DecimalQuantity and the string.
+    // This call site needs to use more internal APIs than the Java equivalent.
+    number::impl::UFormattedNumberData data;
+    if (offset == 0) {
+        // could be BigDecimal etc.
+        numberObject.populateDecimalQuantity(data.quantity, status);
+    } else {
+        data.quantity.setToDouble(numberMinusOffset);
+    }
+    UnicodeString numberString;
+    auto *decFmt = dynamic_cast<DecimalFormat *>(numberFormat);
+    if(decFmt != nullptr) {
+        decFmt->toNumberFormatter().formatImpl(&data, status); // mutates &data
+        numberString = data.string.toUnicodeString();
+    } else {
+        if (offset == 0) {
+            numberFormat->format(numberObject, numberString, status);
+        } else {
+            numberFormat->format(numberMinusOffset, numberString, status);
+        }
+    }
+
+    int32_t partIndex = findSubMessage(msgPattern, 0, pluralRulesWrapper, &data.quantity, number, status);
+    if (U_FAILURE(status)) { return appendTo; }
     // Replace syntactic # signs in the top level of this sub-message
     // (not in nested arguments) with the formatted number-offset.
     const UnicodeString& pattern = msgPattern.getPatternString();
-    number -= offset;
     int32_t prevIndex = msgPattern.getPart(partIndex).getLimit();
     for (;;) {
         const MessagePattern::Part& part = msgPattern.getPart(++partIndex);
@@ -265,7 +303,7 @@ PluralFormat::format(double number,
             (type == UMSGPAT_PART_TYPE_SKIP_SYNTAX && MessageImpl::jdkAposMode(msgPattern))) {
             appendTo.append(pattern, prevIndex, index - prevIndex);
             if (type == UMSGPAT_PART_TYPE_REPLACE_NUMBER) {
-                numberFormat->format(number, appendTo);
+                appendTo.append(numberString);
             }
             prevIndex = part.getLimit();
         } else if (type == UMSGPAT_PART_TYPE_ARG_START) {
@@ -370,7 +408,8 @@ PluralFormat::parseObject(const UnicodeString& /*source*/,
 }
 
 int32_t PluralFormat::findSubMessage(const MessagePattern& pattern, int32_t partIndex,
-                                     const PluralSelector& selector, double number, UErrorCode& ec) {
+                                     const PluralSelector& selector, void *context,
+                                     double number, UErrorCode& ec) {
     if (U_FAILURE(ec)) {
         return 0;
     }
@@ -383,7 +422,7 @@ int32_t PluralFormat::findSubMessage(const MessagePattern& pattern, int32_t part
     } else {
         offset=0;
     }
-    // The keyword is empty until we need to match against non-explicit, not-"other" value.
+    // The keyword is empty until we need to match against a non-explicit, not-"other" value.
     // Then we get the keyword from the selector.
     // (In other words, we never call the selector if we match against an explicit value,
     // or if the only non-explicit keyword is "other".)
@@ -436,7 +475,7 @@ int32_t PluralFormat::findSubMessage(const MessagePattern& pattern, int32_t part
                 }
             } else {
                 if(keyword.isEmpty()) {
-                    keyword=selector.select(number-offset, ec);
+                    keyword=selector.select(context, number-offset, ec);
                     if(msgStart!=0 && (0 == keyword.compare(other))) {
                         // We have already seen an "other" sub-message.
                         // Do not match "other" again.
@@ -457,15 +496,88 @@ int32_t PluralFormat::findSubMessage(const MessagePattern& pattern, int32_t part
     return msgStart;
 }
 
+void PluralFormat::parseType(const UnicodeString& source, const NFRule *rbnfLenientScanner, Formattable& result, FieldPosition& pos) const {
+    // If no pattern was applied, return null.
+    if (msgPattern.countParts() == 0) {
+        pos.setBeginIndex(-1);
+        pos.setEndIndex(-1);
+        return;
+    }
+    int partIndex = 0;
+    int currMatchIndex;
+    int count=msgPattern.countParts();
+    int startingAt = pos.getBeginIndex();
+    if (startingAt < 0) {
+        startingAt = 0;
+    }
+
+    // The keyword is null until we need to match against a non-explicit, not-"other" value.
+    // Then we get the keyword from the selector.
+    // (In other words, we never call the selector if we match against an explicit value,
+    // or if the only non-explicit keyword is "other".)
+    UnicodeString keyword;
+    UnicodeString matchedWord;
+    const UnicodeString& pattern = msgPattern.getPatternString();
+    int matchedIndex = -1;
+    // Iterate over (ARG_SELECTOR ARG_START message ARG_LIMIT) tuples
+    // until the end of the plural-only pattern.
+    while (partIndex < count) {
+        const MessagePattern::Part* partSelector = &msgPattern.getPart(partIndex++);
+        if (partSelector->getType() != UMSGPAT_PART_TYPE_ARG_SELECTOR) {
+            // Bad format
+            continue;
+        }
+
+        const MessagePattern::Part* partStart = &msgPattern.getPart(partIndex++);
+        if (partStart->getType() != UMSGPAT_PART_TYPE_MSG_START) {
+            // Bad format
+            continue;
+        }
+
+        const MessagePattern::Part* partLimit = &msgPattern.getPart(partIndex++);
+        if (partLimit->getType() != UMSGPAT_PART_TYPE_MSG_LIMIT) {
+            // Bad format
+            continue;
+        }
+
+        UnicodeString currArg = pattern.tempSubString(partStart->getLimit(), partLimit->getIndex() - partStart->getLimit());
+        if (rbnfLenientScanner != NULL) {
+            // If lenient parsing is turned ON, we've got some time consuming parsing ahead of us.
+            int32_t length = -1;
+            currMatchIndex = rbnfLenientScanner->findTextLenient(source, currArg, startingAt, &length);
+        }
+        else {
+            currMatchIndex = source.indexOf(currArg, startingAt);
+        }
+        if (currMatchIndex >= 0 && currMatchIndex >= matchedIndex && currArg.length() > matchedWord.length()) {
+            matchedIndex = currMatchIndex;
+            matchedWord = currArg;
+            keyword = pattern.tempSubString(partStart->getLimit(), partLimit->getIndex() - partStart->getLimit());
+        }
+    }
+    if (matchedIndex >= 0) {
+        pos.setBeginIndex(matchedIndex);
+        pos.setEndIndex(matchedIndex + matchedWord.length());
+        result.setString(keyword);
+        return;
+    }
+
+    // Not found!
+    pos.setBeginIndex(-1);
+    pos.setEndIndex(-1);
+}
+
 PluralFormat::PluralSelector::~PluralSelector() {}
 
 PluralFormat::PluralSelectorAdapter::~PluralSelectorAdapter() {
     delete pluralRules;
 }
 
-UnicodeString PluralFormat::PluralSelectorAdapter::select(double number,
+UnicodeString PluralFormat::PluralSelectorAdapter::select(void *context, double number,
                                                           UErrorCode& /*ec*/) const {
-    return pluralRules->select(number);
+    (void)number;  // unused except in the assertion
+    IFixedDecimal *dec=static_cast<IFixedDecimal *>(context);
+    return pluralRules->select(*dec);
 }
 
 void PluralFormat::PluralSelectorAdapter::reset() {

@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 *******************************************************************************
-* Copyright (C) 1997-2012, International Business Machines Corporation and    *
+* Copyright (C) 1997-2013, International Business Machines Corporation and    *
 * others. All Rights Reserved.                                                *
 *******************************************************************************
 *
@@ -491,18 +493,6 @@ ChoiceFormat::format(const Formattable* objs,
 }
 
 // -------------------------------------
-// Formats an array of objects. Checks if the data type of the objects
-// to get the right value for formatting.
-
-UnicodeString&
-ChoiceFormat::format(const Formattable& obj,
-                     UnicodeString& appendTo,
-                     FieldPosition& pos,
-                     UErrorCode& status) const
-{
-    return NumberFormat::format(obj, appendTo, pos, status);
-}
-// -------------------------------------
 
 void
 ChoiceFormat::parse(const UnicodeString& text,
@@ -569,17 +559,6 @@ ChoiceFormat::matchStringUntilLimitPart(
             prevIndex = part.getLimit();  // SKIP_SYNTAX
         }
     }
-}
-
-// -------------------------------------
-// Parses the text and return the Formattable object.
-
-void
-ChoiceFormat::parse(const UnicodeString& text,
-                    Formattable& result,
-                    UErrorCode& status) const
-{
-    NumberFormat::parse(text, result, status);
 }
 
 // -------------------------------------

@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ************************************************************************
-* Copyright (c) 2008-2011, International Business Machines
+* Copyright (c) 2008-2015, International Business Machines
 * Corporation and others.  All Rights Reserved.
 ************************************************************************
 */
@@ -20,8 +22,10 @@ enum UDebugEnumType {
     UDBG_UCalendarMonths, /* UCalendarMonths. Count= (UCAL_UNDECIMBER+1) */
     UDBG_UDateFormatStyle, /* Count = UDAT_SHORT=1 */
 #endif
+#if UCONFIG_ENABLE_PLUGINS
     UDBG_UPlugReason,   /* Count = UPLUG_REASON_COUNT */
     UDBG_UPlugLevel,    /* COUNT = UPLUG_LEVEL_COUNT */
+#endif
     UDBG_UAcceptResult, /* Count = ULOC_ACCEPT_FALLBACK+1=3 */
 
     /* All following enums may be discontiguous. */
@@ -102,5 +106,50 @@ U_CAPI int32_t udbg_getSystemParameterValueByIndex(int32_t i, char *buffer, int3
  * Write ICU info as XML
  */
 U_CAPI void udbg_writeIcuInfo(FILE *f);
+
+/**
+ * \def UDBG_KNOWNISSUE_LEN
+ * Length of output buffer for udbg_knownIssueURLFrom
+ */
+#define UDBG_KNOWNISSUE_LEN 255
+
+/**
+ * Convert a "known issue" string into a URL
+ * @param ticket ticket string such as "10245" or "cldrbug:5013"
+ * @param buf output buffer - must be UDBG_KNOWNISSUE_LEN in size
+ * @return pointer to output buffer, or NULL on err
+ */
+U_CAPI char *udbg_knownIssueURLFrom(const char *ticket, char *buf);
+
+/**
+ * Open (or reopen) a 'known issue' table.
+ * @param ptr pointer to 'table'. Opaque.
+ * @return new or existing ptr
+ */
+U_CAPI void *udbg_knownIssue_openU(void *ptr, const char *ticket, char *where, const UChar *msg, UBool *firstForTicket,
+                                   UBool *firstForWhere);
+
+
+/**
+ * Open (or reopen) a 'known issue' table.
+ * @param ptr pointer to 'table'. Opaque.
+ * @return new or existing ptr
+ */
+U_CAPI void *udbg_knownIssue_open(void *ptr, const char *ticket, char *where, const char *msg, UBool *firstForTicket,
+                                   UBool *firstForWhere);
+
+/**
+ * Print 'known issue' table, to std::cout.
+ * @param ptr pointer from udbg_knownIssue
+ * @return TRUE if there were any issues.
+ */
+U_CAPI UBool udbg_knownIssue_print(void *ptr);
+
+/**
+ * Close 'known issue' table.
+ * @param ptr
+ */
+U_CAPI void udbg_knownIssue_close(void *ptr);
+
 
 #endif

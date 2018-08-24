@@ -1,10 +1,12 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
  ***************************************************************************
- * Copyright (C) 2008-2009, International Business Machines Corporation
+ * Copyright (C) 2008-2015, International Business Machines Corporation
  * and others. All Rights Reserved.
  ***************************************************************************
  *   file name:  uspoof_build.cpp
- *   encoding:   US-ASCII
+ *   encoding:   UTF-8
  *   tab size:   8 (not used)
  *   indentation:4
  *
@@ -35,20 +37,21 @@
 #include "uassert.h"
 #include "uarrsort.h"
 #include "uspoof_conf.h"
-#include "uspoof_wsconf.h"
 
 #if !UCONFIG_NO_NORMALIZATION
 
 U_NAMESPACE_USE
 
+// Defined in uspoof.cpp, initializes file-static variables.
+U_CFUNC void uspoof_internalInitStatics(UErrorCode *status);
 
 // The main data building function
 
 U_CAPI USpoofChecker * U_EXPORT2
 uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
-                      const char *confusablesWholeScript, int32_t confusablesWholeScriptLen,
+                      const char* /*confusablesWholeScript*/, int32_t /*confusablesWholeScriptLen*/,
                       int32_t *errorType, UParseError *pe, UErrorCode *status) {
-
+    uspoof_internalInitStatics(status);
     if (U_FAILURE(*status)) {
         return NULL;
     }
@@ -68,11 +71,31 @@ uspoof_openFromSource(const char *confusables,  int32_t confusablesLen,
 
     // Set up a shell of a spoof detector, with empty data.
     SpoofData *newSpoofData = new SpoofData(*status);
+
+    if (newSpoofData == NULL) {
+        *status = U_MEMORY_ALLOCATION_ERROR;
+        return NULL;
+    }
+
+    if (U_FAILURE(*status)) {
+        delete newSpoofData;
+        return NULL;
+    }
     SpoofImpl *This = new SpoofImpl(newSpoofData, *status);
+
+    if (This == NULL) {
+        *status = U_MEMORY_ALLOCATION_ERROR;
+        delete newSpoofData; // explicit delete as the destructor for SpoofImpl won't be called.
+        return NULL;
+    }
+
+    if (U_FAILURE(*status)) {
+        delete This; // no delete for newSpoofData, as the SpoofImpl destructor will delete it.
+        return NULL;
+    }
 
     // Compile the binary data from the source (text) format.
     ConfusabledataBuilder::buildConfusableData(This, confusables, confusablesLen, errorType, pe, *status);
-    buildWSConfusableData(This, confusablesWholeScript, confusablesWholeScriptLen, pe, *status);
 
     if (U_FAILURE(*status)) {
         delete This;

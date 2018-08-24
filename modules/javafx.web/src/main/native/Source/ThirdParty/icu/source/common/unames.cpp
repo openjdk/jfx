@@ -1,12 +1,14 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ******************************************************************************
 *
-*   Copyright (C) 1999-2011, International Business Machines
+*   Copyright (C) 1999-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 *
 ******************************************************************************
 *   file name:  unames.c
-*   encoding:   US-ASCII
+*   encoding:   UTF-8
 *   tab size:   8 (not used)
 *   indentation:4
 *
@@ -20,6 +22,7 @@
 #include "unicode/udata.h"
 #include "unicode/utf.h"
 #include "unicode/utf16.h"
+#include "uassert.h"
 #include "ustr_imp.h"
 #include "umutex.h"
 #include "cmemory.h"
@@ -28,9 +31,9 @@
 #include "udataswp.h"
 #include "uprops.h"
 
-/* prototypes ------------------------------------------------------------- */
+U_NAMESPACE_BEGIN
 
-#define LENGTHOF(array) (int32_t)(sizeof(array)/sizeof((array)[0]))
+/* prototypes ------------------------------------------------------------- */
 
 static const char DATA_NAME[] = "unames";
 static const char DATA_TYPE[] = "icu";
@@ -102,7 +105,7 @@ typedef struct {
 
 static UDataMemory *uCharNamesData=NULL;
 static UCharNames *uCharNames=NULL;
-static UErrorCode gLoadErrorCode=U_ZERO_ERROR;
+static icu::UInitOnce gCharNamesInitOnce = U_INITONCE_INITIALIZER;
 
 /*
  * Maximum length of character names (regular & 1.0).
@@ -168,6 +171,7 @@ static UBool U_CALLCONV unames_cleanup(void)
     if(uCharNames) {
         uCharNames = NULL;
     }
+    gCharNamesInitOnce.reset();
     gMaxNameLength=0;
     return TRUE;
 }
@@ -187,52 +191,25 @@ isAcceptable(void * /*context*/,
         pInfo->formatVersion[0]==1);
 }
 
+static void U_CALLCONV
+loadCharNames(UErrorCode &status) {
+    U_ASSERT(uCharNamesData == NULL);
+    U_ASSERT(uCharNames == NULL);
+
+    uCharNamesData = udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, &status);
+    if(U_FAILURE(status)) {
+        uCharNamesData = NULL;
+    } else {
+        uCharNames = (UCharNames *)udata_getMemory(uCharNamesData);
+    }
+    ucln_common_registerCleanup(UCLN_COMMON_UNAMES, unames_cleanup);
+}
+
+
 static UBool
 isDataLoaded(UErrorCode *pErrorCode) {
-    /* load UCharNames from file if necessary */
-    UBool isCached;
-
-    /* do this because double-checked locking is broken */
-    UMTX_CHECK(NULL, (uCharNames!=NULL), isCached);
-
-    if(!isCached) {
-        UCharNames *names;
-        UDataMemory *data;
-
-        /* check error code from previous attempt */
-        if(U_FAILURE(gLoadErrorCode)) {
-            *pErrorCode=gLoadErrorCode;
-            return FALSE;
-        }
-
-        /* open the data outside the mutex block */
-        data=udata_openChoice(NULL, DATA_TYPE, DATA_NAME, isAcceptable, NULL, pErrorCode);
-        if(U_FAILURE(*pErrorCode)) {
-            gLoadErrorCode=*pErrorCode;
-            return FALSE;
-        }
-
-        names=(UCharNames *)udata_getMemory(data);
-
-        /* in the mutex block, set the data for this process */
-        {
-            umtx_lock(NULL);
-            if(uCharNames==NULL) {
-                uCharNamesData=data;
-                uCharNames=names;
-                data=NULL;
-                names=NULL;
-                ucln_common_registerCleanup(UCLN_COMMON_UNAMES, unames_cleanup);
-            }
-            umtx_unlock(NULL);
-        }
-
-        /* if a different thread set it first, then close the extra data */
-        if(data!=NULL) {
-            udata_close(data); /* NULL if it was set correctly */
-        }
-    }
-    return TRUE;
+    umtx_initOnce(gCharNamesInitOnce, &loadCharNames, *pErrorCode);
+    return U_SUCCESS(*pErrorCode);
 }
 
 #define WRITE_CHAR(buffer, bufferLength, bufferPos, c) { \
@@ -461,7 +438,7 @@ static const char *getCharCatName(UChar32 cp) {
     /* Return unknown if the table of names above is not up to
        date. */
 
-    if (cat >= LENGTHOF(charCatNames)) {
+    if (cat >= UPRV_LENGTHOF(charCatNames)) {
         return "unknown";
     } else {
         return charCatNames[cat];
@@ -1300,7 +1277,7 @@ static int32_t
 calcExtNameSetsLengths(int32_t maxNameLength) {
     int32_t i, length;
 
-    for(i=0; i<LENGTHOF(charCatNames); ++i) {
+    for(i=0; i<UPRV_LENGTHOF(charCatNames); ++i) {
         /*
          * for each category, count the length of the category name
          * plus 9=
@@ -1463,13 +1440,17 @@ calcNameSetsLengths(UErrorCode *pErrorCode) {
     return TRUE;
 }
 
+U_NAMESPACE_END
+
 /* public API --------------------------------------------------------------- */
+
+U_NAMESPACE_USE
 
 U_CAPI int32_t U_EXPORT2
 u_charName(UChar32 code, UCharNameChoice nameChoice,
            char *buffer, int32_t bufferLength,
            UErrorCode *pErrorCode) {
-    AlgorithmicRange *algRange;
+     AlgorithmicRange *algRange;
     uint32_t *p;
     uint32_t i;
     int32_t length;
@@ -1575,15 +1556,16 @@ u_charFromName(UCharNameChoice nameChoice,
         *pErrorCode = U_ILLEGAL_CHAR_FOUND;
         return error;
     }
+    // i==strlen(name)==strlen(lower)==strlen(upper)
 
     /* try extended names first */
     if (lower[0] == '<') {
         if (nameChoice == U_EXTENDED_CHAR_NAME) {
-            if (lower[--i] == '>') {
-                for (--i; lower[i] && lower[i] != '-'; --i) {
-                }
+            // Parse a string like "<category-HHHH>" where HHHH is a hex code point.
+            if (lower[--i] == '>' && i >= 3 && lower[--i] != '-') {
+                while (i >= 3 && lower[--i] != '-') {}
 
-                if (lower[i] == '-') { /* We've got a category. */
+                if (i >= 2 && lower[i] == '-') {
                     uint32_t cIdx;
 
                     lower[i] = 0;
@@ -1603,7 +1585,7 @@ u_charFromName(UCharNameChoice nameChoice,
                        We could use a binary search, or a trie, if
                        we really wanted to. */
 
-                    for (lower[i] = 0, cIdx = 0; cIdx < LENGTHOF(charCatNames); ++cIdx) {
+                    for (lower[i] = 0, cIdx = 0; cIdx < UPRV_LENGTHOF(charCatNames); ++cIdx) {
 
                         if (!uprv_strcmp(lower + 1, charCatNames[cIdx])) {
                             if (getCharCat(cp) == cIdx) {

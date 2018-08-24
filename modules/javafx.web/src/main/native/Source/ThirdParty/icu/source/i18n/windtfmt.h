@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ********************************************************************************
-*   Copyright (C) 2005-2013, International Business Machines
+*   Copyright (C) 2005-2015, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -14,7 +16,7 @@
 
 #include "unicode/utypes.h"
 
-#if U_PLATFORM_HAS_WIN32_API
+#if U_PLATFORM_USES_ONLY_WIN32_API
 
 #if !UCONFIG_NO_FORMATTING
 
@@ -52,7 +54,7 @@ public:
 
     UnicodeString &format(Calendar &cal, UnicodeString &appendTo, FieldPosition &pos) const;
 
-    UnicodeString& format(UDate date, UnicodeString& appendTo) const;
+    using DateFormat::format;
 
     void parse(const UnicodeString& text, Calendar& cal, ParsePosition& pos) const;
 
@@ -93,7 +95,7 @@ public:
      * <pre>
      * .   Base* polymorphic_pointer = createPolymorphicObject();
      * .   if (polymorphic_pointer->getDynamicClassID() ==
-     * .       erived::getStaticClassID()) ...
+     * .       derived::getStaticClassID()) ...
      * </pre>
      * @return          The class ID for all objects of this class.
      */
@@ -122,19 +124,16 @@ private:
     DateFormat::EStyle fTimeStyle;
     DateFormat::EStyle fDateStyle;
     Locale fLocale;
-    int32_t fLCID;
     UnicodeString fZoneID;
     TIME_ZONE_INFORMATION *fTZI;
-};
 
-inline UnicodeString &Win32DateFormat::format(UDate date, UnicodeString& appendTo) const {
-    return DateFormat::format(date, appendTo);
-}
+    UnicodeString* fWindowsLocaleName; // Stores the equivalent Windows locale name.
+};
 
 U_NAMESPACE_END
 
 #endif /* #if !UCONFIG_NO_FORMATTING */
 
-#endif // U_PLATFORM_HAS_WIN32_API
+#endif // U_PLATFORM_USES_ONLY_WIN32_API
 
 #endif // __WINDTFMT

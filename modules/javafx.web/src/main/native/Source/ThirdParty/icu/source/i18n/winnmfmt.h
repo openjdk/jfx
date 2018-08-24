@@ -1,6 +1,8 @@
+// © 2016 and later: Unicode, Inc. and others.
+// License & terms of use: http://www.unicode.org/copyright.html
 /*
 ********************************************************************************
-*   Copyright (C) 2005-2013, International Business Machines
+*   Copyright (C) 2005-2015, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 ********************************************************************************
 *
@@ -89,6 +91,8 @@ public:
                                   UnicodeString& appendTo,
                                   FieldPosition& pos) const;
 
+    using NumberFormat::format;
+
 // Use the default behavior for the following.
 //    virtual UnicodeString &format(double number, UnicodeString &appendTo) const;
 //    virtual UnicodeString &format(int32_t number, UnicodeString &appendTo) const;
@@ -124,7 +128,7 @@ public:
      * <pre>
      * .   Base* polymorphic_pointer = createPolymorphicObject();
      * .   if (polymorphic_pointer->getDynamicClassID() ==
-     * .       erived::getStaticClassID()) ...
+     * .       derived::getStaticClassID()) ...
      * </pre>
      * @return          The class ID for all objects of this class.
      */
@@ -143,7 +147,7 @@ public:
     virtual UClassID getDynamicClassID(void) const;
 
 private:
-    UnicodeString &format(int32_t numDigits, UnicodeString &appendTo, wchar_t *format, ...) const;
+    UnicodeString &format(int32_t numDigits, UnicodeString &appendTo, const wchar_t *format, ...) const;
 
     UBool fCurrency;
     Locale fLocale;
@@ -151,6 +155,7 @@ private:
     FormatInfo *fFormatInfo;
     UBool fFractionDigitsSet;
 
+    UnicodeString* fWindowsLocaleName; // Stores the equivalent Windows locale name.
 };
 
 U_NAMESPACE_END
