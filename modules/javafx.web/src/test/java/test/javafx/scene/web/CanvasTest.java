@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,17 @@
 
 package test.javafx.scene.web;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.Base64;
+import javax.imageio.ImageIO;
+
 import netscape.javascript.JSObject;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -38,61 +48,10 @@ import static org.junit.Assert.*;
  */
 public class CanvasTest extends TestBase {
 
-    private static final String expectedURL = "data:image/png;base64," +
-        "iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAACPklEQVR42u3T" +
-        "MSsGAByE8b9BDJIiJSnpLTGIQZSkJCW9JQYxiJKUpCQlBjaTzWazmWw2m81m" +
-        "stlsNps6PsRluJ6nfh/ghquflhLgVil9t5YAt5iDfLWXALeYg3x2lAC3mIN8" +
-        "dJUAt5iDvHeXALeYg7z1lgC3mIO89pUAt5iDvAyUALeYgzwPlgC3mIM8NUqA" +
-        "W8xBHodLgFvMQR5GS4BbzEHux0qAW8xB7iZKgFvMQW4nS4BbzEFupkuAW8xB" +
-        "rmdKgFvMQa7mSoBbzEHO50uAW8xBThZLgFvMQQ6XSoBbzEH2miXALeYg2ysl" +
-        "wC3mIBtrJcAt5iCr6yXALeYgy5slwC3mIAtbJcAt5iCzOyXALeYgU7slwC3m" +
-        "IOP7JcAt5iAjByXALeYgQ0clwC3mIP3HJcAt5iA9pyXALeYgnWclwC3mIG0X" +
-        "JcAt5iB1+TcGcIvpok2AXUxnnQLsYjrtEWAX03G/ALuYjoYE2MV0MCLALqb9" +
-        "cQF2Me1OCbCLaWdWgF1MWwsC7GLaXBZgF9P6qgC7mNY2BNjFtLItwC6m5p4A" +
-        "u5iWDgXYxbR4IsAupvlzAXYxzV0JsItp5lqAXUzTNwLsYpq8FWAX08SdALuY" +
-        "xu4F2MU0+iDALqbhRwF2MTWeBNjFNPgswC6mgRcBdjH1vQqwi6n3TYBdTN3v" +
-        "Auxi6voQYBdTx6cAu5javwTYxdT6LcAuppYfAXZERERERERERERERERERERE" +
-        "RERERERERERERERERERERERERERERET/0S/+VJ8zeU9ECwAAAABJRU5ErkJg" +
-        "gg==";
-
-    private static final String htmlContent = "\n"
-        + "<!DOCTYPE html>\n"
-        + "<html>\n"
-        + "<body>\n"
-        + "<canvas id=\"theCanvas\" width=\"200\" height=\"100\">\n"
-        + "</canvas>\n"
-        + "<p id = \"encodedText\">\n"
-        + "</p>\n"
-        + "<script>\n"
-        + "var c = document.getElementById(\"theCanvas\");\n"
-        + "var ctx = c.getContext(\"2d\");\n"
-        + "var my_gradient=ctx.createLinearGradient(0,0,0,75);\n"
-        + "my_gradient.addColorStop(0,\"red\");\n"
-        + "my_gradient.addColorStop(0.5,\"green\");\n"
-        + "my_gradient.addColorStop(1,\"blue\");\n"
-        + "ctx.fillStyle=my_gradient;\n"
-        + "ctx.fillRect(0,0,150,75);\n"
-        + "var dataURL = c.toDataURL();\n"
-        + "document.getElementById(\"encodedText\").innerHTML=dataURL;\n"
-        + "</script>\n"
-        + "</body>\n"
-        + "</html>\n";
-
-    @Ignore("RT-40092")
-    @Test public void testImageToDataURL() {
-        loadContent(htmlContent);
-        submit(() -> {
-            final Document doc = getEngine().getDocument();
-            Element elem = doc.getElementById("encodedText");
-            String textContent = elem.getTextContent();
-            textContent = textContent.replaceAll("\\s", "");
-            assertEquals("Data URL not encoded correctly", expectedURL, textContent);
-        });
-    }
+    private static final PrintStream ERR = System.err;
 
     // JDK-8162922
     @Test public void testCanvasStrokeRect() {
-
         final String htmlCanvasContent = "\n"
             + "<!DOCTYPE html>\n"
             + "<html>\n"
@@ -165,5 +124,117 @@ public class CanvasTest extends TestBase {
             assertEquals("Arc endAngle", redColor,
                     (int) getEngine().executeScript("document.getElementById('canvas').getContext('2d').getImageData(300,75,1,1).data[0]"));
         });
+    }
+
+    // Color comparison algorithm is based on WebKit's Tools/ImageDiff/PlaformImage.cpp#PlatformImage::difference implemenation.
+    // https://trac.webkit.org/browser/webkit/trunk/Tools/ImageDiff/PlatformImage.cpp
+    private static float getColorDifference(final Color base, final Color c) {
+        final float red = (c.getRed() - base.getRed()) / Math.max(255.0f - base.getRed(), base.getRed());
+        final float green = (c.getGreen() - base.getGreen()) / Math.max(255.0f - base.getGreen(), base.getGreen());
+        final float blue = (c.getBlue() - base.getBlue()) / Math.max(255.0f - base.getBlue(), base.getBlue());
+        final float alpha = (c.getAlpha() - base.getAlpha()) / Math.max(255.0f - base.getAlpha(), base.getAlpha());
+        final float distance = ((float) Math.sqrt(red * red + green * green + blue * blue + alpha * alpha)) / 2.0f;
+        return distance >= (1 / 255.0f) ? distance * 100.0f : 0;
+    }
+
+    private static boolean isColorsSimilar(final Color base, final Color c, float toleranceInPercentage) {
+        return toleranceInPercentage >= getColorDifference(base, c);
+    }
+
+    private BufferedImage htmlCanvasToBufferedImage(final String mime) throws Exception {
+        ByteArrayOutputStream errStream = new ByteArrayOutputStream();
+        System.setErr(new PrintStream(errStream));
+
+        final String html = String.format(""
+            + "<body>"
+            + "<script>"
+            + "canvas = document.createElement('canvas');"
+            + "canvas.width = canvas.height = 100;"
+            + "var ctx = canvas.getContext('2d');"
+            + "ctx.fillStyle = 'red';"
+            + "ctx.fillRect(0, 0, 50, 100);"
+            + "data = canvas.toDataURL('%s');"
+            + "</script>"
+            + "</body>"
+         , mime);
+
+        loadContent(html);
+        System.setErr(ERR);
+
+        // Check whether any exception thrown
+        final String exMessage = errStream.toString();
+        assertFalse(String.format("Test failed with exception:\n%s", exMessage),
+            exMessage.contains("Exception") || exMessage.contains("Error"));
+
+        String img = (String) executeScript("window.data");
+        assertNotNull("window.data must have base64 encoded image", img);
+        // get rid of mime type
+        img = img.split(",")[1];
+        assertNotNull(img);
+
+        final byte[] imgBytes = Base64.getMimeDecoder().decode(img);
+        assertNotNull("Base64 decoded image data must be valid", imgBytes);
+        final ByteArrayInputStream inputStream = new ByteArrayInputStream(imgBytes);
+        final BufferedImage decodedImg = ImageIO.read(inputStream);
+        assertNotNull(decodedImg);
+        return decodedImg;
+    }
+
+    @Test
+    public void testColorSimilarityAlgorithm() {
+        assertTrue("Two Color.WHITE must be 100% equal", isColorsSimilar(Color.WHITE, Color.WHITE, 0));
+        assertTrue("Color.BLACK & Color.WHITE must be 100% different", isColorsSimilar(Color.WHITE, Color.BLACK, 100));
+
+        assertFalse("Color.BLACK & Color.WHITE must be different by at least 80%", isColorsSimilar(Color.WHITE, Color.BLACK, 80));
+        assertFalse("(0, 0, 0, 0) & Color.WHITE must be at least 99.99% different", isColorsSimilar(Color.WHITE, new Color(0, true), 99.99f));
+
+        assertTrue("Color.RED must be 100% equal to (255, 0, 0, 255)", isColorsSimilar(Color.RED, new Color(255, 0, 0, 255), 0));
+        assertTrue("Color.RED must be at least 99% similar to (255, 0, 0, 250)", isColorsSimilar(Color.RED, new Color(255, 0, 0, 250), 1));
+        assertTrue("Color.RED must be at least 95% similar to (250, 5, 5, 250)", isColorsSimilar(Color.RED, new Color(250, 5, 5, 250), 5));
+
+        assertTrue("Color.GREEN must be 100% equal to (0, 255, 0, 255)", isColorsSimilar(Color.GREEN, new Color(0, 255, 0, 255), 0));
+        assertTrue("Color.GREEN must be at least 99% similar to (0, 255, 0, 250)", isColorsSimilar(Color.GREEN, new Color(0, 255, 0, 250), 1));
+        assertTrue("Color.GREEN must be at least 95% similar to (5, 250, 5, 250)", isColorsSimilar(Color.GREEN, new Color(5, 250, 5, 250), 5));
+
+        assertTrue("Color.BLUE must be 100% equal to (0, 255, 0, 255)", isColorsSimilar(Color.BLUE, new Color(0, 0, 255, 255), 0));
+        assertTrue("Color.BLUE must be at least 99% similar to (0, 0, 255, 250)", isColorsSimilar(Color.BLUE, new Color(0, 0, 255, 250), 1));
+        assertTrue("Color.BLUE must be at least 95% similar to (5, 5, 250, 250)", isColorsSimilar(Color.BLUE, new Color(5, 5, 250, 250), 5));
+
+        assertTrue("(0, 0, 0, 0) must be at least 95% similar to (5, 5, 5, 5)", isColorsSimilar(new Color(0, true), new Color(5, 5, 5, 5), 5));
+        assertFalse("(0, 0, 0, 0) and (5, 5, 5, 5) must be different by at least 1%", isColorsSimilar(new Color(0, true), new Color(5, 5, 5, 5), 1));
+
+        assertTrue("Color.RED must be at least 25% similar to Color.GREEN", isColorsSimilar(Color.RED, Color.GREEN, 75));
+        assertFalse("Color.RED and Color.GREEN must be different by at least 70%", isColorsSimilar(Color.RED, Color.GREEN, 70));
+    }
+
+    @Test
+    public void testToDataURLWithPNGMimeType() throws Exception {
+        final BufferedImage decodedImg = htmlCanvasToBufferedImage("image/png");
+
+        // Pixel at (25 x 25) must be red
+        final Color pixelAt25x25 = new Color(decodedImg.getRGB(25, 25), true);
+        assertTrue("Color should be opaque red:" + pixelAt25x25, isColorsSimilar(Color.RED, pixelAt25x25, 1));
+
+        // PNG supports transparency, Pixel at (75 x 25) must be transparent black
+        final Color pixelAt75x25 = new Color(decodedImg.getRGB(75, 25), true);
+        assertTrue("Color should be transparent black:" + pixelAt75x25, isColorsSimilar(new Color(0, true), pixelAt75x25, 1));
+    }
+
+    @Test
+    public void testToDataURLWithJPEGMimeType() throws Exception {
+        final BufferedImage decodedImg = htmlCanvasToBufferedImage("image/jpeg");
+
+        // Pixel at (25 x 25) must be red
+        final Color pixelAt25x25 = new Color(decodedImg.getRGB(25, 25), true);
+        assertTrue("Color should be opaque red:" + pixelAt25x25, isColorsSimilar(Color.RED, pixelAt25x25, 1));
+
+        // JPEG doesn't supports transparency, Pixel at (75 x 25) must be opaque black
+        final Color pixelAt75x25 = new Color(decodedImg.getRGB(75, 25), true);
+        assertTrue("Color should be transparent black:" + pixelAt75x25, isColorsSimilar(Color.BLACK, pixelAt75x25, 1));
+    }
+
+    @After
+    public void resetSystemErr() {
+        System.setErr(ERR);
     }
 }

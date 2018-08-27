@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.webkit.graphics;
 
+import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 
 public abstract class WCImage extends Ref {
@@ -84,5 +85,10 @@ public abstract class WCImage extends Ref {
         return img;
     }
 
+    public boolean isNull() {
+        return getWidth() <= 0 || getHeight() <= 0 || getPlatformImage() == null;
+    }
+
     public abstract float getPixelScale();
+    public abstract BufferedImage toBufferedImage();
 }
