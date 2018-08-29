@@ -3947,18 +3947,19 @@ project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
     // Download the Lucene libraries needed for the Ensemble8 app
+    def luceneVersion = "7.4.0"
     getConfigurations().create("lucene");
     dependencies {
-        lucene group: "org.apache.lucene", name: "lucene-core", version: "7.1.0"
-        lucene group: "org.apache.lucene", name: "lucene-grouping", version: "7.1.0"
-        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: "7.1.0"
+        lucene group: "org.apache.lucene", name: "lucene-core", version: luceneVersion
+        lucene group: "org.apache.lucene", name: "lucene-grouping", version: luceneVersion
+        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: luceneVersion
     }
 
     // Copy Lucene libraries into the Ensemble8/lib directory
     File ensembleLibDir = rootProject.file("apps/samples/Ensemble8/lib");
-    def libNames = [ "lucene-core-7.1.0.jar",
-                     "lucene-grouping-7.1.0.jar",
-                     "lucene-queryparser-7.1.0.jar" ]
+    def libNames = [ "lucene-core-${luceneVersion}.jar",
+                     "lucene-grouping-${luceneVersion}.jar",
+                     "lucene-queryparser-${luceneVersion}.jar" ]
 
 
     task getLucene(type: Copy) {
