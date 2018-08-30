@@ -31,7 +31,7 @@
  * Method: getAlwaysOnTop
  * Signature (Ljava/lang/Class;J)Ljavax.print.attribute.standard.DialogOwner;
  */
-JNIEXPORT jobject
+JNIEXPORT jobject JNICALL
 Java_com_sun_prism_j2d_print_J2DPrinterJob_getAlwaysOnTop(
  JNIEnv *env, jclass cls, jclass ownerClass, jlong id) {
 

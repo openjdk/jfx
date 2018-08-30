@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,8 @@
 package com.sun.javafx.webkit;
 
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.webkit.UIClientImpl;
 import com.sun.webkit.Pasteboard;
-import com.sun.webkit.graphics.WCGraphicsManager;
+import com.sun.webkit.graphics.WCImage;
 import com.sun.webkit.graphics.WCImageFrame;
 import java.io.File;
 import java.io.IOException;
@@ -66,20 +65,17 @@ final class PasteboardImpl implements Pasteboard {
         clipboard.setContent(content);
     }
 
-    @Override public void writeImage(WCImageFrame wcImage) {
-        Object platformImage = WCGraphicsManager.getGraphicsManager().
-                toPlatformImage(wcImage.getFrame());
-        Image fxImage = Toolkit.getImageAccessor().fromPlatformImage(platformImage);
+    @Override public void writeImage(WCImageFrame frame) {
+        final WCImage img = frame.getFrame();
+        final Image fxImage = img != null && !img.isNull() ? Toolkit.getImageAccessor().fromPlatformImage(img.getPlatformImage()) : null;
         if (fxImage != null) {
             ClipboardContent content = new ClipboardContent();
             content.putImage(fxImage);
-            String fileExtension = wcImage.getFrame().getFileExtension();
+            String fileExtension = img.getFileExtension();
             try {
                 File imageDump = File.createTempFile("jfx", "." + fileExtension);
                 imageDump.deleteOnExit();
-                ImageIO.write(UIClientImpl.toBufferedImage(fxImage),
-                    fileExtension,
-                    imageDump);
+                ImageIO.write(img.toBufferedImage(), fileExtension, imageDump);
                 content.putFiles(Arrays.asList(imageDump));
             } catch (IOException | SecurityException e) {
                 // Nothing specific to be done as of now

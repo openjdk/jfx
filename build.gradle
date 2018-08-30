@@ -537,7 +537,7 @@ if (HUDSON_JOB_NAME == "not_hudson") {
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
 defineProperty("RELEASE_VERSION_LONG", "${RELEASE_VERSION_SHORT}+${PROMOTED_BUILD_NUMBER}${relOpt}")
-defineProperty("MAVEN_VERSION", "$RELEASE_VERSION_LONG")
+defineProperty("MAVEN_VERSION", IS_MILESTONE_FCS ? "${RELEASE_VERSION_SHORT}" : "${RELEASE_VERSION_LONG}")
 
 // Check whether the COMPILE_TARGETS property has been specified (if so, it was done by
 // the user and not by this script). If it has not been defined then default
@@ -1212,14 +1212,14 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check for Gradle 4.8, error if < 4.3.
+// Check for Gradle 4.8, error if < 4.8.
 if (gradle.gradleVersion != "4.8") {
     def ver = gradle.gradleVersion.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1].split("[^0-9]")[0]);
     def err = "";
-    if (gradleMajor < 4 || (gradleMajor == 4 && gradleMinor < 3)) {
-        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 4.3"
+    if (gradleMajor < 4 || (gradleMajor == 4 && gradleMinor < 8)) {
+        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 4.8"
     }
 
     if (IS_GRADLE_VERSION_CHECK && err != "") {
@@ -3947,18 +3947,19 @@ project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
     // Download the Lucene libraries needed for the Ensemble8 app
+    def luceneVersion = "7.4.0"
     getConfigurations().create("lucene");
     dependencies {
-        lucene group: "org.apache.lucene", name: "lucene-core", version: "7.1.0"
-        lucene group: "org.apache.lucene", name: "lucene-grouping", version: "7.1.0"
-        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: "7.1.0"
+        lucene group: "org.apache.lucene", name: "lucene-core", version: luceneVersion
+        lucene group: "org.apache.lucene", name: "lucene-grouping", version: luceneVersion
+        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: luceneVersion
     }
 
     // Copy Lucene libraries into the Ensemble8/lib directory
     File ensembleLibDir = rootProject.file("apps/samples/Ensemble8/lib");
-    def libNames = [ "lucene-core-7.1.0.jar",
-                     "lucene-grouping-7.1.0.jar",
-                     "lucene-queryparser-7.1.0.jar" ]
+    def libNames = [ "lucene-core-${luceneVersion}.jar",
+                     "lucene-grouping-${luceneVersion}.jar",
+                     "lucene-queryparser-${luceneVersion}.jar" ]
 
 
     task getLucene(type: Copy) {
