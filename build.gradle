@@ -2437,7 +2437,9 @@ project(":swing") {
 
     compileJava.options.compilerArgs.addAll(qualExportsSwing)
 
-    addMavenPublication(project, [ 'graphics' ])
+    if (COMPILE_SWING) {
+        addMavenPublication(project, [ 'graphics' ])
+    }
 }
 
 project(":swt") {
