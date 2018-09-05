@@ -665,31 +665,8 @@ void TextureMapperLayer::applyAnimationsRecursively()
         child->applyAnimationsRecursively();
 }
 
-#if 0 && PLATFORM(JAVA)
-void TextureMapperLayer::syncAnimationsRecursive()
-{
-    syncAnimations();
-    if (m_state.maskLayer) {
-        m_state.maskLayer->syncAnimationsRecursive();
-    }
-    if (m_state.replicaLayer) {
-        m_state.replicaLayer->syncAnimationsRecursive();
-    }
-    for (size_t i = 0; i < m_children.size(); ++i) {
-        m_children[i]->syncAnimationsRecursive();
-    }
-}
-#endif
-
 void TextureMapperLayer::syncAnimations()
 {
-//JAVAMERGE
-#if 0 && PLATFORM(JAVA)
-    // m_state.transform and m_state.opacity represent the layer state upon
-    // the last layer sync so it makes little sense to apply them at the
-    // end of animation. We better rely on GraphicsLayerAnimation::apply()
-    // to correctly apply the end state.
-#else
     m_animations.apply(*this);
     if (!m_animations.hasActiveAnimationsOfType(AnimatedPropertyTransform))
         m_currentTransform.setLocalTransform(m_state.transform);
@@ -698,7 +675,6 @@ void TextureMapperLayer::syncAnimations()
 
     if (!m_animations.hasActiveAnimationsOfType(AnimatedPropertyFilter))
         m_currentFilters = m_state.filters;
-#endif
 }
 
 bool TextureMapperLayer::isAncestorFixedToViewport() const

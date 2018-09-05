@@ -2817,7 +2817,12 @@ void RenderLayerCompositor::resetTrackedRepaintRects()
 
 float RenderLayerCompositor::deviceScaleFactor() const
 {
+#if PLATFORM(JAVA)
+    // Java port does device scale factor in the lower level.
+    return GraphicsLayerClient::deviceScaleFactor();
+#else
     return m_renderView.document().deviceScaleFactor();
+#endif
 }
 
 float RenderLayerCompositor::pageScaleFactor() const

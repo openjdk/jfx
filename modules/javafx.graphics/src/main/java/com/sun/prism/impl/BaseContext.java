@@ -34,6 +34,7 @@ import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.image.ByteToBytePixelConverter;
 import com.sun.javafx.image.impl.ByteGray;
 import com.sun.javafx.sg.prism.NGCamera;
@@ -69,6 +70,8 @@ public abstract class BaseContext {
     private int rectTexMax;
     private Texture wrapRectTex;
     private Texture ovalTex;
+
+    private final GeneralTransform3D perspectiveTransform = new GeneralTransform3D();
 
     // TODO: need to dispose these when the context is disposed... (RT-27421)
     private final Map<FontStrike, GlyphCache>
@@ -117,6 +120,18 @@ public abstract class BaseContext {
     public void drawQuads(float coordArray[], byte colorArray[], int numVertices) {
         flushMask();
         renderQuads(coordArray, colorArray, numVertices);
+    }
+
+    protected GeneralTransform3D getPerspectiveTransformNoClone() {
+        return perspectiveTransform;
+    }
+
+    protected void setPerspectiveTransform(GeneralTransform3D transform) {
+        if (transform == null) {
+            perspectiveTransform.setIdentity();
+        } else {
+            perspectiveTransform.set(transform);
+        }
     }
 
     protected abstract void renderQuads(float coordArray[], byte colorArray[], int numVertices);

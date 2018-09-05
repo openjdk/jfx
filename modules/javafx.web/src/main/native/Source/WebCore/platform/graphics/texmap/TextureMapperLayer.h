@@ -124,10 +124,6 @@ public:
     void syncAnimations();
     bool descendantsOrSelfHaveRunningAnimations() const;
 
-#if 0 && PLATFORM(JAVA)
-    void syncAnimationsRecursive();
-#endif
-
     void paint();
 
     void setScrollPositionDeltaIfNeeded(const FloatSize&);

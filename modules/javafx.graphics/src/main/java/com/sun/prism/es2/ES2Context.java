@@ -271,7 +271,12 @@ class ES2Context extends BaseShaderContext {
         }
 
         scratchTx.set(projViewTx);
-        updateRawMatrix(scratchTx.mul(xform));
+        final GeneralTransform3D perspectiveTransform = getPerspectiveTransformNoClone();
+        if (perspectiveTransform.isIdentity()) {
+            updateRawMatrix(scratchTx.mul(xform));
+        } else {
+            updateRawMatrix(scratchTx.mul(xform).mul(perspectiveTransform));
+        }
 
         ES2Shader es2shader = (ES2Shader) shader;
         es2shader.setMatrix("mvpMatrix", rawMatrix);
