@@ -24,12 +24,6 @@
 			<attribute name="optional" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="src" path="src/main/native/WebKitBuild/Release/WebCore/generated/java">
-		<attributes>
-			<attribute name="ignore_optional_problems" value="true"/>
-			<attribute name="optional" value="true"/>
-		</attributes>
-	</classpathentry>
 	<classpathentry combineaccessrules="false" kind="src" path="/media">
 		<attributes>
 			<attribute name="module" value="true"/>
@@ -51,7 +45,7 @@
 			<attribute name="add-exports" value="javafx.base/com.sun.javafx=javafx.web"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">
 		<attributes>
 			<attribute name="test" value="true"/>
 		</attributes>
@@ -59,8 +53,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="java.management/java.lang.management=javafx.web"/>
-			<attribute name="limit-modules" value="java.se,jdk.accessibility,jdk.attach,jdk.compiler,jdk.httpserver,jdk.jartool,jdk.javadoc,jdk.jconsole,jdk.jdi,jdk.management,jdk.sctp,jdk.security.auth,jdk.security.jgss,jdk.unsupported,jdk.dynalink,jdk.incubator.httpclient,jdk.jshell,jdk.jsobject,jdk.net,jdk.scripting.nashorn,jdk.xml.dom"/>
+			<attribute name="add-reads" value="javafx.web=java.management"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
