@@ -87,6 +87,7 @@ public abstract class WCGraphicsContext {
     public abstract void scale(float sx, float sy);
     public abstract void rotate(float radians);
 
+    public abstract void setPerspectiveTransform(WCTransform t);
     public abstract void setTransform(WCTransform t);
     public abstract WCTransform getTransform();
     public abstract void concatTransform(WCTransform t);

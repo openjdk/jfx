@@ -33,6 +33,7 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 import com.sun.prism.paint.Color;
+import com.sun.webkit.graphics.WCCamera;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCPageBackBuffer;
@@ -54,6 +55,8 @@ final class WCPageBackBufferImpl extends WCPageBackBuffer implements ResourceFac
 
     public WCGraphicsContext createGraphics() {
         Graphics g = texture.createGraphics();
+        // Make use of custom camera created for WebKit.
+        g.setCamera(WCCamera.INSTANCE);
         g.scale(pixelScale, pixelScale);
         return WCGraphicsManager.getGraphicsManager().createGraphicsContext(g);
     }

@@ -666,8 +666,7 @@ void ChromeClientJava::reachedApplicationCacheOriginQuota(SecurityOrigin&, int64
     notImplemented();
 }
 
-#if USE(ACCELERATED_COMPOSITING)
-void ChromeClientJava::attachRootGraphicsLayer(Frame*, GraphicsLayer* layer)
+void ChromeClientJava::attachRootGraphicsLayer(Frame&, GraphicsLayer* layer)
 {
     WebPage::webPageFromJObject(m_webPage)->setRootChildLayer(layer);
 }
@@ -682,9 +681,9 @@ void ChromeClientJava::scheduleCompositingLayerFlush()
 {
     WebPage::webPageFromJObject(m_webPage)->scheduleCompositingLayerSync();
 }
-#endif // USE(ACCELERATED_COMPOSITING)
 
-void ChromeClientJava::attachViewOverlayGraphicsLayer(Frame&, GraphicsLayer*) {
+void ChromeClientJava::attachViewOverlayGraphicsLayer(Frame&, GraphicsLayer*)
+{
     notImplemented();
 }
 

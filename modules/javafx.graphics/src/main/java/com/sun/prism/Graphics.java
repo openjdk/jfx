@@ -31,6 +31,7 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
@@ -57,6 +58,7 @@ public interface Graphics {
     public void scale(float sx, float sy);
     public void scale(float sx, float sy, float sz);
 
+    public void setPerspectiveTransform(GeneralTransform3D perspectiveTransform);
     public void setCamera(NGCamera camera);
     public NGCamera getCameraNoClone();
     public void setDepthTest(boolean depthTest);

@@ -112,7 +112,7 @@ final class MonocleWindow extends Window {
         if (h > 0) {
             //window height surpass window content height(ch)
             height = h;
-        } else if (cw > 0) {
+        } else if (ch > 0) {
             //content height changed
             height = ch;
         } else {

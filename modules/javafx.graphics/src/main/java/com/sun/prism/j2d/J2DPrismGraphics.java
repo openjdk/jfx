@@ -45,6 +45,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
@@ -1271,6 +1272,10 @@ public class J2DPrismGraphics
     public NGCamera getCameraNoClone() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    public void setPerspectiveTransform(GeneralTransform3D transform) {
+    }
+
 
     public boolean isDepthBuffer() {
         return false;

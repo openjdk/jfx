@@ -901,24 +901,6 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& frect, const Floa
     setFillColor(oldFillColor);
 }
 
-#if ENABLE(3D_RENDERING) && USE(TEXTURE_MAPPER)
-TransformationMatrix GraphicsContext::get3DTransform() const
-{
-    // FIXME: Can we approximate the transformation better than this?
-    return getCTM().toTransformationMatrix();
-}
-
-void GraphicsContext::concat3DTransform(const TransformationMatrix& transform)
-{
-    concatCTM(transform.toAffineTransform());
-}
-
-void GraphicsContext::set3DTransform(const TransformationMatrix& transform)
-{
-    setCTM(transform.toAffineTransform());
-}
-#endif
-
 //utatodo: do we need the Java-only m_state.transform?
 AffineTransform GraphicsContext::getCTM(IncludeDeviceScale) const
 {

@@ -440,6 +440,13 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     }
 
     @Override
+    public void setPerspectiveTransform(WCTransform t) {
+        logger.resumeCount("SETPERSPECTIVETRANSFORM");
+        gc.setPerspectiveTransform(t);
+        logger.suspendCount("SETPERSPECTIVETRANSFORM");
+    }
+
+    @Override
     public void setTransform(WCTransform t) {
         logger.resumeCount("SETTRANSFORM");
         gc.setTransform(t);

@@ -33,6 +33,7 @@ import com.sun.javafx.geom.*;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.text.GlyphList;
@@ -516,7 +517,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             @Override void doPaint(Graphics g) {
                 Paint paint = (rgba != null) ? createColor(rgba) : state.getPaintNoClone();
                 DropShadow shadow = state.getShadowNoClone();
-                if (shadow != null) {
+                // TextureMapperJava::drawSolidColor calls fillRect with perspective
+                // projection.
+                if (shadow != null || !state.getPerspectiveTransformNoClone().isIdentity()) {
                     final NGRectangle node = new NGRectangle();
                     node.updateRectangle(x, y, w, h, 0, 0);
                     render(g, shadow, paint, null, node);
@@ -1181,6 +1184,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
         private DropShadow shadow;
         private Affine3D xform;
+        private GeneralTransform3D perspectiveTransform;
         private Layer layer;
         private int compositeOperation;
 
@@ -1190,6 +1194,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             stroke.setPaint(Color.BLACK);
             alpha = 1.0f;
             xform = new Affine3D();
+            perspectiveTransform = new GeneralTransform3D();
             compositeOperation = COMPOSITE_SOURCE_OVER;
         }
 
@@ -1201,6 +1206,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                 clip = new Rectangle(clip);
             }
             xform = new Affine3D(state.getTransformNoClone());
+            perspectiveTransform = new GeneralTransform3D().set(state.getPerspectiveTransformNoClone());
             setShadow(state.getShadowNoClone());
             setLayer(state.getLayerNoClone());
             setAlpha(state.getAlpha());
@@ -1214,8 +1220,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
 
         private void apply(Graphics g) {
-            //TODO: Verify if we need to apply more properties from state
             g.setTransform(getTransformNoClone());
+            g.setPerspectiveTransform(getPerspectiveTransformNoClone());
             g.setClipRect(getClipNoClone());
             g.setExtraAlpha(getAlpha());
         }
@@ -1310,8 +1316,16 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             return xform;
         }
 
+        private GeneralTransform3D getPerspectiveTransformNoClone() {
+            return perspectiveTransform;
+        }
+
         private void setTransform(final Affine3D at) {
             this.xform.setTransform(at);
+        }
+
+        private void setPerspectiveTransform(final GeneralTransform3D gt) {
+            this.perspectiveTransform.set(gt);
         }
 
         private void concatTransform(Affine3D at) {
@@ -1790,9 +1804,15 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         }
     }
 
+    public void setPerspectiveTransform(WCTransform tm) {
+        final GeneralTransform3D at = new GeneralTransform3D().set(tm.getMatrix());
+        state.setPerspectiveTransform(at);
+        resetCachedGraphics();
+    }
+
     public void setTransform(WCTransform tm) {
-        double m[] = tm.getMatrix();
-        Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));
+        final double m[] = tm.getMatrix();
+        final Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));
         if (state.getLayerNoClone() == null) {
             at.preConcatenate(baseTransform);
         }

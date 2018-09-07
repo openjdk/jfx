@@ -101,7 +101,7 @@ protected:
     const TransformationMatrix& patternTransform() const { return m_patternTransform; }
 
 private:
-#if USE(TEXTURE_MAPPER_GL)
+#if USE(TEXTURE_MAPPER_GL) || PLATFORM(JAVA)
     static std::unique_ptr<TextureMapper> platformCreateAccelerated();
 #else
     static std::unique_ptr<TextureMapper> platformCreateAccelerated()
