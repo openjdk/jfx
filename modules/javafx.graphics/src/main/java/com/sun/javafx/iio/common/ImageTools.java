@@ -662,13 +662,13 @@ public class ImageTools {
             if (preserveAspectRatio) {
                 // compute the final dimensions
                 if (finalWidth == 0) {
-                    finalWidth = (int) ((float) sourceWidth * finalHeight / sourceHeight);
+                    finalWidth = Math.round((float) sourceWidth * finalHeight / sourceHeight);
                 } else if (finalHeight == 0) {
-                    finalHeight = (int) ((float) sourceHeight * finalWidth / sourceWidth);
+                    finalHeight = Math.round((float) sourceHeight * finalWidth / sourceWidth);
                 } else {
                     float scale = Math.min((float) finalWidth / sourceWidth, (float) finalHeight / sourceHeight);
-                    finalWidth = (int) (sourceWidth * scale);
-                    finalHeight = (int) (sourceHeight * scale);
+                    finalWidth = Math.round(sourceWidth * scale);
+                    finalHeight = Math.round(sourceHeight * scale);
                 }
             } else {
                 // set final dimensions to default if zero

@@ -29,6 +29,12 @@
 #include <hash_map>
 #include <hash_set>
 
+// The following is derived from _HASH_SEED, which is an internal constant from
+// include/xhash; since this is an internal constant we define our own rather
+// than relying on something that Microsoft could remove (and apparently has in
+// newer versions of Visual C++)
+#define GLASS_HASH_SEED (size_t)0xdeadbeef
+
 #include "GlassApplication.h"
 #include "GlassClipboard.h"
 #include "GlassDnD.h"
@@ -83,7 +89,7 @@ size_t hash_value(const FORMATETC &fr)
     _Val += size_t(fr.ptd);
     _Val >>= 13;
     _Val += size_t(fr.tymed);
-    return _Val ^ _HASH_SEED;
+    return _Val ^ GLASS_HASH_SEED;
 }
 
 //NB! There are two suffixes for mimes:

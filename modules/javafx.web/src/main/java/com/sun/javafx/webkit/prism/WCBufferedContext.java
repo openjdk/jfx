@@ -37,6 +37,7 @@ import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
 import com.sun.scenario.effect.DropShadow;
 import com.sun.webkit.graphics.WCImage;
+import com.sun.webkit.graphics.WCTransform;
 
 final class WCBufferedContext extends WCGraphicsPrismContext {
 
@@ -201,6 +202,11 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
     @Override public void saveState() {
         init();
         super.saveState();
+    }
+
+    @Override public void setTransform(WCTransform tm) {
+        init();
+        super.setTransform(tm);
     }
 
     private void init() {

@@ -25,6 +25,8 @@
 
 package com.sun.webkit;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
@@ -145,8 +147,13 @@ public final class WebPage {
             final boolean useDFGJIT = Boolean.valueOf(System.getProperty(
                     "com.sun.webkit.useDFGJIT", "true"));
 
+            // TODO: Enable CSS3D by default once it is stabilized.
+            boolean useCSS3D = Boolean.valueOf(System.getProperty(
+                    "com.sun.webkit.useCSS3D", "false"));
+            useCSS3D = useCSS3D && Platform.isSupported(ConditionalFeature.SCENE3D);
+
             // Initialize WTF, WebCore and JavaScriptCore.
-            twkInitWebCore(useJIT, useDFGJIT);
+            twkInitWebCore(useJIT, useDFGJIT, useCSS3D);
             return null;
         });
 
@@ -2529,7 +2536,7 @@ public final class WebPage {
     // Native methods
     // *************************************************************************
 
-    private static native void twkInitWebCore(boolean useJIT, boolean useDFGJIT);
+    private static native void twkInitWebCore(boolean useJIT, boolean useDFGJIT, boolean useCSS3D);
     private native long twkCreatePage(boolean editable);
     private native void twkInit(long pPage, boolean usePlugins, float devicePixelScale);
     private native void twkDestroyPage(long pPage);

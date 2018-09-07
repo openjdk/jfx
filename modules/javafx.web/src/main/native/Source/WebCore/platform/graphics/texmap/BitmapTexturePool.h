@@ -42,6 +42,8 @@ class BitmapTexturePool {
 public:
 #if USE(TEXTURE_MAPPER_GL)
     explicit BitmapTexturePool(const TextureMapperContextAttributes&);
+#else
+    BitmapTexturePool();
 #endif
 
     RefPtr<BitmapTexture> acquireTexture(const IntSize&, const BitmapTexture::Flags);

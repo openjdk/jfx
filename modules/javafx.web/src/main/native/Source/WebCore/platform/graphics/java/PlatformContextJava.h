@@ -60,6 +60,10 @@ namespace WebCore {
             return m_jRenderTheme;
         }
 
+        void setJRenderTheme(RefPtr<RQRef> jTheme) {
+            m_jRenderTheme = jTheme;
+        }
+
         void beginPath() {
             m_path.clear();
         }

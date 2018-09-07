@@ -25,10 +25,7 @@
 
 #pragma once
 
-#if USE(ACCELERATED_COMPOSITING)
-#include <UnicodeJava.h>
 #include "GraphicsLayerClient.h"
-#endif
 #include "IntRect.h"
 #include "PrintContext.h"
 #include "RQRef.h"
@@ -51,9 +48,7 @@ class PlatformKeyboardEvent;
 class TextureMapper;
 
 class WebPage
-#if USE(ACCELERATED_COMPOSITING)
     : GraphicsLayerClient
-#endif
 {
 public:
     WebPage(std::unique_ptr<Page> page);
@@ -97,11 +92,9 @@ public:
     int beginPrinting(float width, float height);
     void print(GraphicsContext& gc, int pageIndex, float pageWidth);
     void endPrinting();
-#if USE(ACCELERATED_COMPOSITING)
     void setRootChildLayer(GraphicsLayer*);
     void setNeedsOneShotDrawingSynchronization();
     void scheduleCompositingLayerSync();
-#endif
     void debugStarted();
     void debugEnded();
     void enableWatchdog();
@@ -111,22 +104,19 @@ public:
 
 private:
     void requestJavaRepaint(const IntRect&);
-#if USE(ACCELERATED_COMPOSITING)
     void markForSync();
     void syncLayers();
     IntRect pageRect();
     void renderCompositedLayers(GraphicsContext&, const IntRect&);
 
     // GraphicsLayerClient
-    virtual void notifyAnimationStarted(const GraphicsLayer*, double);
-    virtual void notifyFlushRequired(const GraphicsLayer*);
-    virtual void paintContents(const GraphicsLayer*,
-                               GraphicsContext&,
-                               GraphicsLayerPaintingPhase,
-                               const FloatRect&);
-    virtual bool showDebugBorders(const GraphicsLayer*) const;
-    virtual bool showRepaintCounter(const GraphicsLayer*) const;
-#endif
+    void notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, double /*time*/) override;
+    void notifyFlushRequired(const GraphicsLayer*) override;
+    void paintContents(const GraphicsLayer*,
+                       GraphicsContext&,
+                       GraphicsLayerPaintingPhase,
+                       const FloatRect&,
+                       GraphicsLayerPaintBehavior) override;
 
     bool keyEvent(const PlatformKeyboardEvent& event);
     bool charEvent(const PlatformKeyboardEvent& event);
@@ -144,19 +134,17 @@ private:
     std::unique_ptr<PrintContext> m_printContext;
     RefPtr<RQRef> m_jRenderTheme;
 
-#if USE(ACCELERATED_COMPOSITING)
     std::unique_ptr<GraphicsLayer> m_rootLayer;
     std::unique_ptr<TextureMapper> m_textureMapper;
-    bool m_syncLayers;
-#endif
+    bool m_syncLayers { false };
 
     // Webkit expects keyPress events to be suppressed if the associated keyDown
     // event was handled. Safari implements this behavior by peeking out the
     // associated WM_CHAR event if the keydown was handled. We emulate
     // this behavior by setting this flag if the keyDown was handled.
-    bool m_suppressNextKeypressEvent;
+    bool m_suppressNextKeypressEvent { false };
 
-    bool m_isDebugging;
+    bool m_isDebugging { false };
     static int globalDebugSessionCounter;
 };
 

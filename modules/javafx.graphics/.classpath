@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="src" path="build/hlsl/Prism">
+		<attributes>
+			<attribute name="ignore_optional_problems" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="build/gensrc/jsl-prism"/>
+	<classpathentry kind="src" path="build/hlsl/Decora">
+		<attributes>
+			<attribute name="ignore_optional_problems" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="build/gensrc/jsl-decora"/>
 	<classpathentry kind="src" output="testbin" path="src/shims/java">
 		<attributes>
 			<attribute name="test" value="true"/>
@@ -29,7 +41,7 @@
 			<attribute name="add-exports" value="javafx.base/com.sun.javafx.property=javafx.graphics"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">
 		<attributes>
 			<attribute name="test" value="true"/>
 		</attributes>
@@ -37,8 +49,7 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="java.desktop/sun.font=javafx.graphics:java.base/sun.security.util=javafx.graphics:java.desktop/sun.awt=javafx.graphics:java.xml/com.sun.org.apache.xerces.internal.util=javafx.graphics"/>
-			<attribute name="limit-modules" value="java.se,jdk.accessibility,jdk.attach,jdk.compiler,jdk.httpserver,jdk.jartool,jdk.javadoc,jdk.jconsole,jdk.jdi,jdk.management,jdk.sctp,jdk.security.auth,jdk.security.jgss,jdk.unsupported,jdk.dynalink,jdk.incubator.httpclient,jdk.jshell,jdk.jsobject,jdk.net,jdk.scripting.nashorn,jdk.xml.dom,java.desktop"/>
+			<attribute name="add-exports" value="java.base/sun.security.util=javafx.graphics"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="output" path="bin"/>

@@ -78,11 +78,9 @@
 #include <wtf/java/JavaRef.h>
 #include <wtf/RunLoop.h>
 
-#if USE(ACCELERATED_COMPOSITING)
-#include "TextureMapper.h"
+#include "TextureMapperJava.h"
 #include "TextureMapperLayer.h"
 #include "GraphicsLayerTextureMapper.h"
-#endif
 
 #include "Logging.h"
 #include "ContextMenu.h"
@@ -155,16 +153,8 @@
 namespace WebCore {
 
 WebPage::WebPage(std::unique_ptr<Page> page)
-    :
-    // m_page(page)
-    // ,
-     m_suppressNextKeypressEvent(false)
-    , m_isDebugging(false)
-#if USE(ACCELERATED_COMPOSITING)
-    , m_syncLayers(false)
-#endif
+    : m_page(WTFMove(page))
 {
-    m_page = std::move(page);
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     if(!NotificationController::from(m_page.get())) {
         provideNotification(m_page.get(), NotificationClientJava::instance());
@@ -215,12 +205,10 @@ void WebPage::setSize(const IntSize& size)
     frameView->resize(size);
     frameView->layoutContext().scheduleLayout();
 
-#if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
         m_rootLayer->setSize(size);
         m_rootLayer->setNeedsDisplay();
     }
-#endif
 }
 
 static void drawDebugLed(GraphicsContext& context,
@@ -237,7 +225,6 @@ static void drawDebugLed(GraphicsContext& context,
     context.fillRect(ledRect, color);
 }
 
-#if USE(ACCELERATED_COMPOSITING)
 static void drawDebugBorder(GraphicsContext& context,
                             const IntRect& rect,
                             const Color& color,
@@ -252,10 +239,8 @@ static void drawDebugBorder(GraphicsContext& context,
     context.fillRect(FloatRect(x, y, width, h), color);
     context.fillRect(FloatRect(x + w - width, y, width, h), color);
 }
-#endif
 
 void WebPage::prePaint() {
-#if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
         if (m_syncLayers) {
             m_syncLayers = false;
@@ -263,7 +248,6 @@ void WebPage::prePaint() {
         }
         return;
     }
-#endif
 
     Frame* mainFrame = (Frame*)&m_page->mainFrame();
     FrameView* frameView = mainFrame->view();
@@ -283,11 +267,9 @@ RefPtr<RQRef> WebPage::jRenderTheme()
 
 void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 {
-#if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
         return;
     }
-#endif
 
     DBG_CHECKPOINTEX("twkUpdateContent", 15, 100);
 
@@ -316,9 +298,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
 {
     if (!m_page->inspectorController().highlightedNode()
-#if USE(ACCELERATED_COMPOSITING)
             && !m_rootLayer
-#endif
     ) {
         return;
     }
@@ -327,8 +307,11 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
     PlatformContextJava* ppgc = new PlatformContextJava(rq, jRenderTheme());
     GraphicsContext gc(ppgc);
 
-#if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
+        if (m_syncLayers) {
+            m_syncLayers = false;
+            syncLayers();
+        }
         renderCompositedLayers(gc, IntRect(x, y, w, h));
         if (m_page->settings().showDebugBorders()) {
             drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 192, 0, 128));
@@ -337,7 +320,6 @@ void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
             requestJavaRepaint(pageRect());
         }
     }
-#endif
 
     if (m_page->inspectorController().highlightedNode()) {
         m_page->inspectorController().drawHighlight(gc);
@@ -350,12 +332,10 @@ void WebPage::scroll(const IntSize& scrollDelta,
                      const IntRect& rectToScroll,
                      const IntRect& clipRect)
 {
-#if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
         m_rootLayer->setNeedsDisplayInRect(rectToScroll);
         return;
     }
-#endif
 
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -379,11 +359,9 @@ void WebPage::scroll(const IntSize& scrollDelta,
 
 void WebPage::repaint(const IntRect& rect)
 {
-#if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
         m_rootLayer->setNeedsDisplayInRect(rect);
     }
-#endif
     requestJavaRepaint(rect);
 }
 
@@ -407,11 +385,10 @@ void WebPage::requestJavaRepaint(const IntRect& rect)
     CheckAndClearException(env);
 }
 
-#if USE(ACCELERATED_COMPOSITING)
 void WebPage::setRootChildLayer(GraphicsLayer* layer)
 {
     if (layer) {
-        m_rootLayer = adoptPtr(GraphicsLayer::create(nullptr, this).release());
+        m_rootLayer = GraphicsLayer::create(nullptr, *this);
         m_rootLayer->setDrawsContent(true);
         m_rootLayer->setContentsOpaque(true);
         m_rootLayer->setSize(pageRect().size());
@@ -451,16 +428,18 @@ void WebPage::syncLayers()
         return;
     }
 
-    ((Frame*)&m_page->mainFrame())->view()->updateLayoutAndStyleIfNeededRecursive();
+    FrameView* frameView = m_page->mainFrame().view();
+    if (!m_page->mainFrame().contentRenderer() || !frameView)
+        return;
 
+    frameView->updateLayoutAndStyleIfNeededRecursive();
     // Updating layout might have taken us out of compositing mode
     if (m_rootLayer) {
         m_rootLayer->flushCompositingStateForThisLayerOnly();
-                    //syncCompositingStateForThisLayerOnly();
     }
 
-    ((Frame*)&m_page->mainFrame())->view()->flushCompositingStateIncludingSubframes();
-                                //syncCompositingStateIncludingSubframes();
+    if (!frameView->flushCompositingStateIncludingSubframes())
+        return;
 }
 
 IntRect WebPage::pageRect()
@@ -474,23 +453,20 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
     ASSERT(m_rootLayer);
     ASSERT(m_textureMapper);
 
-    TextureMapperLayer rootTextureMapperLayer = downcast<GraphicsLayerTextureMapper>(m_rootLayer.get())->layer();
+    TextureMapperLayer& rootTextureMapperLayer = downcast<GraphicsLayerTextureMapper>(*m_rootLayer).layer();
 
-    m_textureMapper.setGraphicsContext(&context);
-    m_textureMapper.setImageInterpolationQuality(context.imageInterpolationQuality());
-    m_textureMapper.setTextDrawingMode(context.textDrawingMode());
+    downcast<TextureMapperJava>(*m_textureMapper).setGraphicsContext(&context);
     TransformationMatrix matrix;
-    rootTextureMapperLayer.setTransform(matrix);
-    m_textureMapper.beginPainting();
-    m_textureMapper.beginClip(matrix, clip);
-    //rootTextureMapperLayer.syncAnimationsRecursive();
+    m_textureMapper->beginPainting();
+    m_textureMapper->beginClip(matrix, clip);
     rootTextureMapperLayer.applyAnimationsRecursively();
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers();
     rootTextureMapperLayer.paint();
-    m_textureMapper.endClip();
-    m_textureMapper.endPainting();
+    m_textureMapper->endClip();
+    m_textureMapper->endPainting();
 }
 
-void WebPage::notifyAnimationStarted(const GraphicsLayer*, double)
+void WebPage::notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, double /*time*/)
 {
     ASSERT_NOT_REACHED();
 }
@@ -503,28 +479,17 @@ void WebPage::notifyFlushRequired(const GraphicsLayer*)
 void WebPage::paintContents(const GraphicsLayer*,
                             GraphicsContext& context,
                             GraphicsLayerPaintingPhase,
-                            const FloatRect& inClip)
+                            const FloatRect& inClip,
+                            GraphicsLayerPaintBehavior)
 {
     context.save();
     context.clip(inClip);
-    ((Frame*)&m_page->mainFrame())->view()->paint(&context, roundedIntRect(inClip));
+    m_page->mainFrame().view()->paint(context, enclosingIntRect(inClip));
     if (m_page->settings().showDebugBorders()) {
         drawDebugBorder(context, roundedIntRect(inClip), Color(0, 192, 0), 20);
     }
     context.restore();
 }
-
-bool WebPage::showDebugBorders(const GraphicsLayer*) const
-{
-    return m_page->settings().showDebugBorders();
-}
-
-bool WebPage::showRepaintCounter(const GraphicsLayer*) const
-{
-    return m_page->settings().showRepaintCounter();
-}
-
-#endif // USE(ACCELERATED_COMPOSITING)
 
 bool WebPage::processKeyEvent(const PlatformKeyboardEvent& event)
 {
@@ -886,6 +851,7 @@ namespace {
 
 bool s_useJIT;
 bool s_useDFGJIT;
+bool s_useCSS3D;
 
 }  // namespace
 
@@ -894,9 +860,10 @@ extern "C" {
 #endif
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInitWebCore
-    (JNIEnv* env, jclass self, jboolean useJIT, jboolean useDFGJIT) {
+    (JNIEnv* env, jclass self, jboolean useJIT, jboolean useDFGJIT, jboolean useCSS3D) {
     s_useJIT = useJIT;
     s_useDFGJIT = useDFGJIT;
+    s_useCSS3D = useCSS3D;
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
@@ -973,8 +940,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setLoadsImagesAutomatically(true);
     settings.setMinimumFontSize(0);
     settings.setMinimumLogicalFontSize(5);
-    // FIXME(arunprsad): Will be addressed in JDK-8148129.
-    settings.setAcceleratedCompositingEnabled(false);
+    settings.setAcceleratedCompositingEnabled(s_useCSS3D);
     settings.setScriptEnabled(true);
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
     settings.setPluginsEnabled(usePlugins);

@@ -85,6 +85,8 @@ platform/graphics/java/NativeImageJava.cpp
 platform/graphics/java/PathJava.cpp
 platform/graphics/java/RenderingQueue.cpp
 platform/graphics/java/RQRef.cpp
+platform/graphics/texmap/TextureMapperJava.cpp
+platform/graphics/texmap/BitmapTextureJava.cpp
 
 platform/ScrollAnimatorSmooth.cpp
 platform/ScrollAnimationSmooth.cpp

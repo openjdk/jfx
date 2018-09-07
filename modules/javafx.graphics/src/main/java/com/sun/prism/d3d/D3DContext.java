@@ -283,15 +283,27 @@ class D3DContext extends BaseShaderContext {
 
     @Override
     protected void updateShaderTransform(Shader shader, BaseTransform xform) {
+        if (xform == null) {
+            xform = BaseTransform.IDENTITY_TRANSFORM;
+        }
+
+        final GeneralTransform3D perspectiveTransform = getPerspectiveTransformNoClone();
         int res;
-        if (xform == null || xform.isIdentity()) {
+        if (xform.isIdentity() && perspectiveTransform.isIdentity()) {
             res = nResetTransform(pContext);
-        } else {
+        } else if (perspectiveTransform.isIdentity()) {
             res = nSetTransform(pContext,
                 xform.getMxx(), xform.getMxy(), xform.getMxz(), xform.getMxt(),
                 xform.getMyx(), xform.getMyy(), xform.getMyz(), xform.getMyt(),
                 xform.getMzx(), xform.getMzy(), xform.getMzz(), xform.getMzt(),
                 0.0, 0.0, 0.0, 1.0);
+        } else {
+            scratchTx.setIdentity().mul(xform).mul(perspectiveTransform);
+            res = nSetTransform(pContext,
+                scratchTx.get(0), scratchTx.get(1), scratchTx.get(2), scratchTx.get(3),
+                scratchTx.get(4), scratchTx.get(5), scratchTx.get(6), scratchTx.get(7),
+                scratchTx.get(8), scratchTx.get(9), scratchTx.get(10), scratchTx.get(11),
+                scratchTx.get(12), scratchTx.get(13), scratchTx.get(14), scratchTx.get(15));
         }
         validate(res);
     }
