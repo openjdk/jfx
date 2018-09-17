@@ -8,6 +8,11 @@ As of JDK 11 the JavaFX modules are delivered separately from the JDK. These rel
 
 ## Important Changes
 
+### Running JavaFX applications
+
+Now that the JDK no longer includes JavaFX, it is necessary to explicitly include the JavaFX modules that your application uses. Please refer to the [Getting Started with JavaFX 11](http://docs.gluonhq.com/javafx11/index.html#introduction) page for instructions.
+
+
 ### Add APIs to customize step repeat timing for Spinner control
 
 The default duration that the mouse has to be pressed on a Spinner control arrow button before the value steps is modified in JavaFX 11. Two new properties, "initialDelay" and "repeatDelay", have been added to configure this behavior. 
@@ -51,7 +56,9 @@ FX Media support for libavcodec 53 and 55 was removed. These libraries are not p
 
 JavaFX crashes on Ubuntu 18.04 Linux machines when the XWayland window server is enabled. This happens whenever the FX window toolkit code uses GTK 3 on Linux, which is the default as of JavaFX 11.
 
-Workaround: explicitly force GTK 2 by passing the following system property on the command line:
+The recommended workaround is to use the Xorg server instead of the Wayland server when running JavaFX applications. Note that Wayland is not supported by JDK 10 or JDK 11.
+
+An alternative workaround is to explicitly force GTK 2 by passing the following system property on the command line:
 
 ```
     java -Djdk.gtk.version=2 ...
@@ -59,9 +66,9 @@ Workaround: explicitly force GTK 2 by passing the following system property on t
 
 See [JDK-8210411](https://bugs.openjdk.java.net/browse/JDK-8210411) for more information.
 
-### FX / Swing interop requires qualified exports when run with JDK 10
+### Swing interop requires qualified exports when run with JDK 10
 
-When running JavaFX 11 with an OpenJDK 10 release, the following four qualified exports must be added to the `java` command line, or in an args file referred to with an `@` argument passed to the `java` command line.
+To run FX / Swing interop applications using JavaFX 11 with an OpenJDK 10 release, the following four qualified exports must be added to the `java` command line.
 
 ```
 --add-exports=java.desktop/java.awt.dnd.peer=javafx.swing
@@ -75,8 +82,32 @@ See [JDK-8210615](https://bugs.openjdk.java.net/browse/JDK-8210615) for more inf
 
 ### Swing interop fails when run with a security manager with standalone SDK
 
-FX / Swing interop application will fail when run with a security manager enabled. An application that uses either JFXPanel or SwingNode must run without a security manager enabled.
+FX / Swing interop applications will fail when run with a security manager enabled. An application that uses either JFXPanel or SwingNode must run without a security manager enabled.
 See [JDK-8202451](https://bugs.openjdk.java.net/browse/JDK-8202451) for more information.
+
+
+### Swing interop fails when using a minimal jdk image created with jlink
+
+A minimal Java image created using jlink that includes the javafx.swing module from the JavaFX 11 jmods bundle will fail to run FX / Swing interop applications. For example, an image created as follows will not work:
+
+```
+    jlink --output myjdk --module-path javafx-jmods-11 \
+        --add-modules java.desktop,javafx.swing,javafx.controls
+```
+
+The javafx.swing module depends on a new jdk.unsupported.desktop module in JDK 11 that must either be explicitly added or included via the `--bind-services` option.
+
+Workaround: create your image using one of the following two methods:
+
+```
+    jlink --output myjdk --module-path javafx-jmods-11 \
+        --add-modules java.desktop,javafx.swing,javafx.controls,jdk.unsupported.desktop
+
+    jlink --output myjdk --bind-services --module-path javafx-jmods-11 \
+        --add-modules java.desktop,javafx.swing,javafx.controls
+```
+
+See [JDK-8210759](https://bugs.openjdk.java.net/browse/JDK-8210759) for more information.
 
 
 ## List of Fixed Bugs
