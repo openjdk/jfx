@@ -10,7 +10,7 @@ As of JDK 11 the JavaFX modules are delivered separately from the JDK. These rel
 
 ### Running JavaFX applications
 
-Now that the JDK no longer includes JavaFX, it is necessary to explicitly include the JavaFX modules that your application uses. Please refer to the [Getting Started with JavaFX 11](http://docs.gluonhq.com/javafx11/index.html#introduction) page for instructions.
+Now that the JDK no longer includes JavaFX, it is necessary to explicitly include the JavaFX modules that your application uses. Please refer to the [Getting Started with JavaFX 11](https://openjfx.io/openjfx-docs/) page for instructions.
 
 
 ### Add APIs to customize step repeat timing for Spinner control
