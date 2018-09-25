@@ -3795,10 +3795,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         ]);
 
     doLast {
-        // FIXME: remove JDK 10 logic once minimum JDK is bumped to 11
-        def isBootJdk10 = jdkVersion.startsWith("10")
         projectsToDocument.each { p ->
-            def destDir = isBootJdk10 ? "$buildDir/javadoc" : "$buildDir/javadoc/${p.ext.moduleName}"
+            def destDir = "$buildDir/javadoc/${p.ext.moduleName}"
             copy {
                 from("$p.projectDir/src/main/docs") {
                     include "**/*.html"
