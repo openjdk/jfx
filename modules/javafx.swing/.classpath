@@ -20,7 +20,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="java.desktop/java.awt.dnd.peer=javafx.swing:java.desktop/sun.awt=javafx.swing:java.desktop/sun.awt.dnd=javafx.swing:java.desktop/sun.swing=javafx.swing"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>

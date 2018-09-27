@@ -25,45 +25,16 @@
 
 package com.sun.javafx.embed.swing;
 
-import java.lang.reflect.Constructor;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import com.sun.javafx.embed.swing.newimpl.InteropFactoryN;
 
 public abstract class InteropFactory {
     private static InteropFactory instance = null;
-    private static boolean verbose = false;
-
-    static {
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            verbose = Boolean.valueOf(
-                          System.getProperty("javafx.embed.swing.verbose"));
-            return null;
-        });
-    }
-
-    private static final String[] factoryNames = {
-        "com.sun.javafx.embed.swing.newimpl.InteropFactoryN",
-    "com.sun.javafx.embed.swing.oldimpl.InteropFactoryO"
-    };
 
     public synchronized static InteropFactory getInstance() throws Exception {
-        if (instance != null) return instance;
-
-    Class factoryClass = null;
-        for (String factoryName : factoryNames) {
-        try {
-                factoryClass = Class.forName(factoryName);
-                Constructor<InteropFactory> cons = factoryClass.getConstructor();
-                instance = cons.newInstance();
-                return instance;
-        } catch (Exception e) {
-                System.err.println("InteropFactory: cannot load " + factoryName);
-                if (verbose) {
-                    e.printStackTrace();
-                }
+        if (instance == null) {
+            instance = new InteropFactoryN();
         }
-        }
-    throw new Exception("No swing interop factory can be loaded");
+        return instance;
     }
 
     public abstract SwingNodeInterop createSwingNodeImpl();
@@ -71,4 +42,3 @@ public abstract class InteropFactory {
     public abstract FXDnDInterop createFXDnDImpl();
     public abstract SwingFXUtilsImplInterop createSwingFXUtilsImpl();
 }
-
