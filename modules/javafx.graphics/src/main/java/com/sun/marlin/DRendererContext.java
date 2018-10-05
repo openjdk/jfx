@@ -79,6 +79,8 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
     boolean closedPath = false;
     // clip rectangle (ymin, ymax, xmin, xmax):
     public final double[] clipRect = new double[4];
+    // clip inverse scale (mean) to adjust length checks
+    public double clipInvScale = 0.0d;
     // CurveBasicMonotonizer instance
     public final CurveBasicMonotonizer monotonizer;
     // CurveClipSplitter instance
@@ -159,6 +161,7 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
         stroking   = 0;
         doClip     = false;
         closedPath = false;
+        clipInvScale = 0.0d;
 
         // if context is maked as DIRTY:
         if (dirty) {
