@@ -389,21 +389,10 @@ JNIEXPORT void JNICALL OS_NATIVE(FT_1Set_1Transform)
     }
 }
 
-#define LIB_FREETYPE "libfreetype.so"
 JNIEXPORT jint JNICALL OS_NATIVE(FT_1Library_1SetLcdFilter)
     (JNIEnv *env, jclass that, jlong arg0, jint arg1)
 {
-//  return (jint)FT_Library_SetLcdFilter((FT_Library)arg0, (FT_LcdFilter)arg1);
-    static void *fp = NULL;
-    if (!fp) {
-        void* handle = dlopen(LIB_FREETYPE, RTLD_LAZY);
-        if (handle) fp = dlsym(handle, "FT_Library_SetLcdFilter");
-    }
-    jint rc = 0;
-    if (fp) {
-        rc = (jint)((jint (*)(jlong, jint))fp)(arg0, arg1);
-    }
-    return rc;
+    return (jint)FT_Library_SetLcdFilter((FT_Library)arg0, (FT_LcdFilter)arg1);
 }
 
 JNIEXPORT jint JNICALL OS_NATIVE(FT_1Done_1Face)
