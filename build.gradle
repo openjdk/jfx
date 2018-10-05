@@ -605,17 +605,13 @@ if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to de
 
 // Determine whether the javafx.* modules are present in the JDK. To do this,
 // we will execute "java --list-modules" and search for javafx.base.
-// Also, check if jdk.unsupported.desktop module is present in JDK to ensure 
-// javafx.swing do not use internal JDK classes directly.
 ext.HAS_JAVAFX_MODULES = false;
-ext.HAS_UNSUPPORTED_DESKTOP = false;
 def inStream2 = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "--list-modules").start().getInputStream()));
 try {
     String v;
     while ((v = inStream2.readLine()) != null) {
         v = v.trim();
         if (v.startsWith("javafx.base")) ext.HAS_JAVAFX_MODULES = true;
-        if (v.startsWith("jdk.unsupported.desktop")) ext.HAS_UNSUPPORTED_DESKTOP = true;
     }
 } finally {
     inStream2.close();
@@ -997,13 +993,6 @@ void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath, Lis
     }
 }
 
-void appendQualExports(File dest, List<String> qualExports) {
-    qualExports.each { exp ->
-        dest << exp
-        dest << "\n"
-    }
-}
-
 // perform common project manipulation for modules
 void commonModuleSetup(Project p, List<String> moduleChain) {
 
@@ -1289,7 +1278,6 @@ logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
 logger.quiet("HAS_JAVAFX_MODULES: $HAS_JAVAFX_MODULES")
-logger.quiet("HAS_UNSUPPORTED_DESKTOP: $HAS_UNSUPPORTED_DESKTOP")
 logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
@@ -1765,7 +1753,7 @@ allprojects {
     // All of our projects are java projects
 
     apply plugin: "java"
-    sourceCompatibility = 10
+    sourceCompatibility = 11
 
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
@@ -1809,16 +1797,6 @@ allprojects {
     compileTestJava {
     }
 }
-
-// Qualified exports needed by javafx.swing
-def qualExportsSwing = [
-        "--add-exports=java.desktop/java.awt.dnd.peer=javafx.swing",
-        "--add-exports=java.desktop/sun.awt=javafx.swing",
-        "--add-exports=java.desktop/sun.awt.dnd=javafx.swing",
-        "--add-exports=java.desktop/sun.awt.image=javafx.swing",
-        "--add-exports=java.desktop/sun.java2d=javafx.swing",
-        "--add-exports=java.desktop/sun.swing=javafx.swing",
-]
 
 // These strings define the module-source-path to be used in compilation.
 // They need to contain the full paths to the sources and the * will be
@@ -2414,28 +2392,7 @@ project(":swing") {
 
     test {
         enabled = IS_FULL_TEST && IS_AWT_TEST
-
-        if (!HAS_JAVAFX_MODULES) {
-            jvmArgs += qualExportsSwing
-        }
     }
-
-    sourceSets.main.java.srcDirs += "$buildDir/gensrc/java"
-    sourceSets.main.java {
-        if (!HAS_UNSUPPORTED_DESKTOP) {
-            exclude("com/sun/javafx/embed/swing/newimpl/**")
-        }
-    }
-    task copyModuleInfo(type: Copy, description: "copy module-info file to gensrc") {
-        from "src/main/module-info/module-info.java"
-        into "$buildDir/gensrc/java/"
-        filter { line->
-            !HAS_UNSUPPORTED_DESKTOP && line.contains('jdk.unsupported.desktop') ? null : line
-        }
-    }
-    compileJava.dependsOn copyModuleInfo
-
-    compileJava.options.compilerArgs.addAll(qualExportsSwing)
 
     if (COMPILE_SWING) {
         addMavenPublication(project, [ 'graphics' ])
@@ -3565,10 +3522,6 @@ project(":systemTests") {
             exclude("**/com/sun/javafx/application/Swing*.*");
         }
 
-        if (!HAS_JAVAFX_MODULES) {
-            jvmArgs += qualExportsSwing
-        }
-
         forkEvery = 1
     }
 }
@@ -3741,10 +3694,6 @@ task createMSPfile() {
         mspFile << "--module-source-path\n"
         mspFile << defaultModuleSourcePath
         mspFile << "\n"
-
-        if (!HAS_JAVAFX_MODULES) {
-            appendQualExports(mspFile, qualExportsSwing)
-        }
     }
 }
 
@@ -3795,10 +3744,8 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         ]);
 
     doLast {
-        // FIXME: remove JDK 10 logic once minimum JDK is bumped to 11
-        def isBootJdk10 = jdkVersion.startsWith("10")
         projectsToDocument.each { p ->
-            def destDir = isBootJdk10 ? "$buildDir/javadoc" : "$buildDir/javadoc/${p.ext.moduleName}"
+            def destDir = "$buildDir/javadoc/${p.ext.moduleName}"
             copy {
                 from("$p.projectDir/src/main/docs") {
                     include "**/*.html"
@@ -4290,7 +4237,7 @@ compileTargets { t ->
         def copySourceFilesTask = project.task("copySourceFiles$t.capital", type: Copy, dependsOn: copyLibFilesTask) {
             if (copySources) {
                 from "${project.projectDir}/src/main/java"
-                if (project.name.equals("base") || project.name.equals("swing")) {
+                if (project.name.equals("base")) {
                     from "${project.projectDir}/build/gensrc/java"
                 }
                 if (project.name.equals("web")) {
@@ -4301,9 +4248,6 @@ compileTargets { t ->
             }
             into "${modulesSrcDir}/${moduleName}"
             include "**/*.java"
-            if (!HAS_UNSUPPORTED_DESKTOP) {
-                exclude("com/sun/javafx/embed/swing/newimpl/**")
-            }  
 
             if (project.hasProperty("sourceFilter")) {
                 filter(project.sourceFilter)
@@ -4915,8 +4859,6 @@ compileTargets { t ->
                 writeRunArgsFile(testCompileArgsFile, null, modpath, modnames)
                 writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath, modnames)
 
-                appendQualExports(testCompileArgsFile, qualExportsSwing)
-                appendQualExports(testRunArgsFile, qualExportsSwing)
             }
         }
     }
