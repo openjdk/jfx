@@ -21,58 +21,58 @@
           <itemPath>../../modules/javafx.graphics/src/main/native-iio/ios/jni_utils.c</itemPath>
           <itemPath>../../modules/javafx.graphics/src/main/native-iio/ios/jni_utils.h</itemPath>
         </logicalFolder>
-        <logicalFolder name="libjpeg7" displayName="libjpeg7" projectFiles="true">
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/README</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcapimin.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcapistd.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jccoefct.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jccolor.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcdctmgr.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jchuff.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcinit.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmainct.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmarker.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmaster.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcomapi.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jconfig.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcparam.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcprepct.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcsample.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jctrans.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdapimin.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdapistd.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdcoefct.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdcolor.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdct.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jddctmgr.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdhuff.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdinput.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmainct.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmarker.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmaster.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmerge.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdpostct.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdsample.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdtrans.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jerror.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jerror.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctflt.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctfst.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctint.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctflt.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctfst.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctint.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jinclude.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemmgr.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemnobs.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemsys.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmorecfg.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jpegint.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jpeglib.h</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jquant1.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jquant2.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jutils.c</itemPath>
-          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jversion.h</itemPath>
+        <logicalFolder name="libjpeg" displayName="libjpeg" projectFiles="true">
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/README</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcapimin.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcapistd.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jccoefct.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jccolor.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcdctmgr.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jchuff.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcinit.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmainct.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmarker.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmaster.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcomapi.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jconfig.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcparam.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcprepct.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcsample.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jctrans.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdapimin.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdapistd.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdcoefct.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdcolor.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdct.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jddctmgr.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdhuff.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdinput.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmainct.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmarker.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmaster.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmerge.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdpostct.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdsample.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdtrans.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jerror.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jerror.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctflt.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctfst.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctint.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctflt.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctfst.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctint.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jinclude.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemmgr.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemnobs.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemsys.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmorecfg.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jpegint.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jpeglib.h</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jquant1.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jquant2.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jutils.c</itemPath>
+          <itemPath>../../modules/javafx.graphics/src/main/native-iio/libjpeg/jversion.h</itemPath>
         </logicalFolder>
         <itemPath>../../modules/javafx.graphics/src/main/native-iio/jpegloader.c</itemPath>
       </logicalFolder>
@@ -143,257 +143,257 @@
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/README"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/README"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcapimin.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcapimin.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcapistd.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcapistd.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jccoefct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jccoefct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jccolor.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jccolor.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcdctmgr.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcdctmgr.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jchuff.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jchuff.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcinit.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcinit.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmainct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmainct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmarker.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmarker.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmaster.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmaster.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcomapi.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcomapi.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jconfig.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jconfig.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcparam.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcparam.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcprepct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcprepct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcsample.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcsample.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jctrans.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jctrans.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdapimin.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdapimin.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdapistd.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdapistd.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdcoefct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdcoefct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdcolor.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdcolor.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdct.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdct.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jddctmgr.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jddctmgr.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdhuff.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdhuff.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdinput.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdinput.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmainct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmainct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmarker.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmarker.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmaster.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmaster.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmerge.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmerge.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdpostct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdpostct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdsample.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdsample.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdtrans.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdtrans.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jerror.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jerror.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jerror.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jerror.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctflt.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctflt.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctfst.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctfst.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctint.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctint.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctflt.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctflt.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctfst.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctfst.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctint.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctint.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jinclude.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jinclude.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemmgr.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemmgr.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemnobs.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemnobs.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemsys.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemsys.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmorecfg.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmorecfg.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jpegint.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jpegint.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jpeglib.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jpeglib.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jquant1.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jquant1.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jquant2.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jquant2.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jutils.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jutils.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jversion.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jversion.h"
             ex="false"
             tool="3"
             flavor2="0">
@@ -455,257 +455,257 @@
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/README"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/README"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcapimin.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcapimin.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcapistd.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcapistd.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jccoefct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jccoefct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jccolor.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jccolor.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcdctmgr.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcdctmgr.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jchuff.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jchuff.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcinit.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcinit.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmainct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmainct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmarker.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmarker.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcmaster.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcmaster.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcomapi.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcomapi.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jconfig.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jconfig.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcparam.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcparam.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcprepct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcprepct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jcsample.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jcsample.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jctrans.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jctrans.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdapimin.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdapimin.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdapistd.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdapistd.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdcoefct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdcoefct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdcolor.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdcolor.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdct.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdct.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jddctmgr.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jddctmgr.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdhuff.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdhuff.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdinput.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdinput.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmainct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmainct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmarker.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmarker.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmaster.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmaster.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdmerge.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdmerge.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdpostct.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdpostct.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdsample.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdsample.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jdtrans.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jdtrans.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jerror.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jerror.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jerror.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jerror.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctflt.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctflt.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctfst.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctfst.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jfdctint.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jfdctint.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctflt.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctflt.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctfst.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctfst.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jidctint.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jidctint.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jinclude.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jinclude.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemmgr.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemmgr.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemnobs.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemnobs.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmemsys.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmemsys.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jmorecfg.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jmorecfg.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jpegint.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jpegint.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jpeglib.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jpeglib.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jquant1.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jquant1.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jquant2.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jquant2.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jutils.c"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jutils.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg7/jversion.h"
+      <item path="../../modules/javafx.graphics/src/main/native-iio/libjpeg/jversion.h"
             ex="false"
             tool="3"
             flavor2="0">
