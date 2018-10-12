@@ -38,7 +38,9 @@ import com.sun.marlin.DPathConsumer2D;
 import com.sun.marlin.DRendererContext;
 import com.sun.marlin.DStroker;
 import com.sun.marlin.DTransformingPathConsumer2D;
+import com.sun.marlin.MarlinUtils;
 import com.sun.prism.BasicStroke;
+import java.util.Arrays;
 
 public final class DMarlinPrismUtils {
 
@@ -86,7 +88,6 @@ public final class DMarlinPrismUtils {
 
         int dashLen = -1;
         boolean recycleDashes = false;
-        double scale = 1.0d;
         double width = lineWidth;
         float[] dashes = stroke.getDashArray();
         double[] dashesD = null;
@@ -112,7 +113,7 @@ public final class DMarlinPrismUtils {
             // a*b == -c*d && a*a+c*c == b*b+d*d. In the actual check below, we
             // leave a bit of room for error.
             if (nearZero(a*b + c*d) && nearZero(a*a + c*c - (b*b + d*d))) {
-                scale = Math.sqrt(a*a + c*c);
+                final double scale = Math.sqrt(a*a + c*c);
 
                 if (dashesD != null) {
                     for (int i = 0; i < dashLen; i++) {
@@ -147,15 +148,6 @@ public final class DMarlinPrismUtils {
             tx = null;
         }
 
-        // Get renderer offsets:
-        double rdrOffX = 0.0d, rdrOffY = 0.0d;
-
-        if (rdrCtx.doClip && (tx != null)) {
-            final DMarlinRenderer renderer = (DMarlinRenderer)out;
-            rdrOffX = renderer.getOffsetX();
-            rdrOffY = renderer.getOffsetY();
-        }
-
         // Prepare the pipeline:
         DPathConsumer2D pc = out;
 
@@ -173,12 +165,12 @@ public final class DMarlinPrismUtils {
         }
 
         // deltaTransformConsumer may adjust the clip rectangle:
-        pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx, rdrOffX, rdrOffY);
+        pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx);
 
         // stroker will adjust the clip rectangle (width / miter limit):
         pc = rdrCtx.stroker.init(pc, width, stroke.getEndCap(),
                 stroke.getLineJoin(), stroke.getMiterLimit(),
-                scale, rdrOffX, rdrOffY, (dashesD == null));
+                (dashesD == null));
 
         // Curve Monotizer:
         rdrCtx.monotonizer.init(width);
@@ -241,10 +233,26 @@ public final class DMarlinPrismUtils {
             // Define the initial clip bounds:
             final double[] clipRect = rdrCtx.clipRect;
 
-            clipRect[0] = clip.y;
-            clipRect[1] = clip.y + clip.height;
-            clipRect[2] = clip.x;
-            clipRect[3] = clip.x + clip.width;
+            // Adjust the clipping rectangle with the renderer offsets
+            final double rdrOffX = renderer.getOffsetX();
+            final double rdrOffY = renderer.getOffsetY();
+
+            // add a small rounding error:
+            final double margin = 1e-3d;
+
+            clipRect[0] = clip.y
+                            - margin + rdrOffY;
+            clipRect[1] = clip.y + clip.height
+                            + margin + rdrOffY;
+            clipRect[2] = clip.x
+                            - margin + rdrOffX;
+            clipRect[3] = clip.x + clip.width
+                            + margin + rdrOffX;
+
+            if (MarlinConst.DO_LOG_CLIP) {
+                MarlinUtils.logInfo("clipRect (clip): "
+                                    + Arrays.toString(rdrCtx.clipRect));
+            }
 
             // Enable clipping:
             rdrCtx.doClip = true;
@@ -267,14 +275,11 @@ public final class DMarlinPrismUtils {
             final DTransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
 
             if (DO_CLIP_FILL && rdrCtx.doClip) {
-                double rdrOffX = renderer.getOffsetX();
-                double rdrOffY = renderer.getOffsetY();
-
                 if (DO_TRACE_PATH) {
                     // trace Filler:
                     pc = rdrCtx.transformerPC2D.traceFiller(pc);
                 }
-                pc = rdrCtx.transformerPC2D.pathClipper(pc, rdrOffX, rdrOffY);
+                pc = rdrCtx.transformerPC2D.pathClipper(pc);
             }
 
             if (DO_TRACE_PATH) {

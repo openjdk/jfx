@@ -139,9 +139,6 @@ public final class DStroker implements DPathConsumer2D, MarlinConst {
      * <code>JOIN_MITER</code>, <code>JOIN_ROUND</code> or
      * <code>JOIN_BEVEL</code>.
      * @param miterLimit the desired miter limit
-     * @param scale scaling factor applied to clip boundaries
-     * @param rdrOffX renderer's coordinate offset on X axis
-     * @param rdrOffY renderer's coordinate offset on Y axis
      * @param subdivideCurves true to indicate to subdivide curves, false if dasher does
      * @return this instance
      */
@@ -150,9 +147,6 @@ public final class DStroker implements DPathConsumer2D, MarlinConst {
                          final int capStyle,
                          final int joinStyle,
                          final double miterLimit,
-                         final double scale,
-                         double rdrOffX,
-                         double rdrOffY,
                          final boolean subdivideCurves)
     {
         this.out = pc2d;
@@ -181,22 +175,20 @@ public final class DStroker implements DPathConsumer2D, MarlinConst {
             if ((joinStyle == JOIN_MITER) && (margin < limit)) {
                 margin = limit;
             }
-            if (scale != 1.0d) {
-                margin  *= scale;
-                rdrOffX *= scale;
-                rdrOffY *= scale;
-            }
-            // add a small rounding error:
-            margin += 1e-3d;
 
             // bounds as half-open intervals: minX <= x < maxX and minY <= y < maxY
             // adjust clip rectangle (ymin, ymax, xmin, xmax):
             final double[] _clipRect = rdrCtx.clipRect;
-            _clipRect[0] -= margin - rdrOffY;
-            _clipRect[1] += margin + rdrOffY;
-            _clipRect[2] -= margin - rdrOffX;
-            _clipRect[3] += margin + rdrOffX;
+            _clipRect[0] -= margin;
+            _clipRect[1] += margin;
+            _clipRect[2] -= margin;
+            _clipRect[3] += margin;
             this.clipRect = _clipRect;
+
+            if (MarlinConst.DO_LOG_CLIP) {
+                MarlinUtils.logInfo("clipRect (stroker): "
+                                    + Arrays.toString(rdrCtx.clipRect));
+            }
 
             // initialize curve splitter here for stroker & dasher:
             if (DO_CLIP_SUBDIVIDER) {
