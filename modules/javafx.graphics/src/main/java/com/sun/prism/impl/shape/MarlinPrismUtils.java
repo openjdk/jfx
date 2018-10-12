@@ -35,10 +35,12 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.marlin.MarlinConst;
 import com.sun.marlin.MarlinProperties;
 import com.sun.marlin.MarlinRenderer;
+import com.sun.marlin.MarlinUtils;
 import com.sun.marlin.RendererContext;
 import com.sun.marlin.Stroker;
 import com.sun.marlin.TransformingPathConsumer2D;
 import com.sun.prism.BasicStroke;
+import java.util.Arrays;
 
 public final class MarlinPrismUtils {
 
@@ -86,7 +88,6 @@ public final class MarlinPrismUtils {
 
         int dashLen = -1;
         boolean recycleDashes = false;
-        float scale = 1.0f;
         float width = lineWidth;
         float[] dashes = stroke.getDashArray();
         float dashphase = stroke.getDashPhase();
@@ -104,7 +105,7 @@ public final class MarlinPrismUtils {
             // a*b == -c*d && a*a+c*c == b*b+d*d. In the actual check below, we
             // leave a bit of room for error.
             if (nearZero(a*b + c*d) && nearZero(a*a + c*c - (b*b + d*d))) {
-                scale = (float) Math.sqrt(a*a + c*c);
+                final float scale = (float) Math.sqrt(a*a + c*c);
 
                 if (dashes != null) {
                     recycleDashes = true;
@@ -142,15 +143,6 @@ public final class MarlinPrismUtils {
             tx = null;
         }
 
-        // Get renderer offsets:
-        float rdrOffX = 0.0f, rdrOffY = 0.0f;
-
-        if (rdrCtx.doClip && (tx != null)) {
-            final MarlinRenderer renderer = (MarlinRenderer)out;
-            rdrOffX = renderer.getOffsetX();
-            rdrOffY = renderer.getOffsetY();
-        }
-
         // Prepare the pipeline:
         PathConsumer2D pc = out;
 
@@ -168,12 +160,12 @@ public final class MarlinPrismUtils {
         }
 
         // deltaTransformConsumer may adjust the clip rectangle:
-        pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx, rdrOffX, rdrOffY);
+        pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx);
 
         // stroker will adjust the clip rectangle (width / miter limit):
         pc = rdrCtx.stroker.init(pc, width, stroke.getEndCap(),
                 stroke.getLineJoin(), stroke.getMiterLimit(),
-                scale, rdrOffX, rdrOffY, (dashes == null));
+                (dashes == null));
 
         // Curve Monotizer:
         rdrCtx.monotonizer.init(width);
@@ -239,10 +231,26 @@ public final class MarlinPrismUtils {
             // Define the initial clip bounds:
             final float[] clipRect = rdrCtx.clipRect;
 
-            clipRect[0] = clip.y;
-            clipRect[1] = clip.y + clip.height;
-            clipRect[2] = clip.x;
-            clipRect[3] = clip.x + clip.width;
+            // Adjust the clipping rectangle with the renderer offsets
+            final float rdrOffX = renderer.getOffsetX();
+            final float rdrOffY = renderer.getOffsetY();
+
+            // add a small rounding error:
+            final float margin = 1e-3f;
+
+            clipRect[0] = clip.y
+                            - margin + rdrOffY;
+            clipRect[1] = clip.y + clip.height
+                            + margin + rdrOffY;
+            clipRect[2] = clip.x
+                            - margin + rdrOffX;
+            clipRect[3] = clip.x + clip.width
+                            + margin + rdrOffX;
+
+            if (MarlinConst.DO_LOG_CLIP) {
+                MarlinUtils.logInfo("clipRect (clip): "
+                                    + Arrays.toString(rdrCtx.clipRect));
+            }
 
             // Enable clipping:
             rdrCtx.doClip = true;
@@ -265,14 +273,11 @@ public final class MarlinPrismUtils {
             final TransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
 
             if (DO_CLIP_FILL && rdrCtx.doClip) {
-                float rdrOffX = renderer.getOffsetX();
-                float rdrOffY = renderer.getOffsetY();
-
                 if (DO_TRACE_PATH) {
                     // trace Filler:
                     pc = rdrCtx.transformerPC2D.traceFiller(pc);
                 }
-                pc = rdrCtx.transformerPC2D.pathClipper(pc, rdrOffX, rdrOffY);
+                pc = rdrCtx.transformerPC2D.pathClipper(pc);
             }
 
             if (DO_TRACE_PATH) {

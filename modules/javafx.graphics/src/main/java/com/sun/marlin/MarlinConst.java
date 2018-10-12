@@ -82,8 +82,11 @@ public interface MarlinConst {
 
     static final boolean DO_CLIP_SUBDIVIDER = MarlinProperties.isDoClipSubdivider();
 
-    // flag to enable logs related bounds checks
+    // flag to enable logs related to bounds checks
     static final boolean DO_LOG_BOUNDS = ENABLE_LOGS && false;
+
+    // flag to enable logs related to clip rect
+    static final boolean DO_LOG_CLIP = ENABLE_LOGS && false;
 
     // Initial Array sizing (initial context capacity) ~ 450K
 

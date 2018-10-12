@@ -529,7 +529,7 @@ ANDROID.iio = [:]
 ANDROID.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 ANDROID.iio.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-iio"),
-    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
+    file("${project("graphics").projectDir}/src/main/native-iio/libjpeg")]
 ANDROID.iio.compiler = compiler
 ANDROID.iio.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags].flatten()
