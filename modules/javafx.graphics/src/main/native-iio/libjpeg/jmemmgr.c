@@ -403,6 +403,10 @@ alloc_sarray (j_common_ptr cinfo, int pool_id,
   JDIMENSION rowsperchunk, currow, i;
   long ltemp;
 
+  if (samplesperrow == 0) {
+    ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+  }
+
   /* Calculate max # of rows allowed in one allocation chunk */
   ltemp = (MAX_ALLOC_CHUNK-SIZEOF(large_pool_hdr)) /
       ((long) samplesperrow * SIZEOF(JSAMPLE));
@@ -450,6 +454,10 @@ alloc_barray (j_common_ptr cinfo, int pool_id,
   JBLOCKROW workspace;
   JDIMENSION rowsperchunk, currow, i;
   long ltemp;
+
+  if (blocksperrow == 0) {
+    ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
+  }
 
   /* Calculate max # of rows allowed in one allocation chunk */
   ltemp = (MAX_ALLOC_CHUNK-SIZEOF(large_pool_hdr)) /
