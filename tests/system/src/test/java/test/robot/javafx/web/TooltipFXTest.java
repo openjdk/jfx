@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Worker;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.scene.Scene;
@@ -144,7 +145,11 @@ public class TooltipFXTest {
         }
 
         Util.runAndWait(() -> {
-            robot.mouseMove(0, 0);
+            // Note that we need to click somewhere in the Stage to make sure
+            // we will get focus on the Windows platform.
+            robot.mouseMove((int)(scene.getWindow().getX() + scene.getX()),
+                (int)(scene.getWindow().getY() + scene.getY()));
+            robot.mouseClick(MouseButton.PRIMARY);
         });
 
         Util.sleep(SLEEP_TIME);
