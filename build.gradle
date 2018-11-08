@@ -3160,7 +3160,6 @@ project(":web") {
         dependsOn webArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
-
     }
 
     task compileJavaDOMBinding()
@@ -3477,9 +3476,6 @@ project(":systemTests") {
     test {
         enabled = IS_FULL_TEST
 
-        testLogging {
-           showStandardStreams = true
-        }
         // Parse testPatchModuleArgs looking for "--module-path".
         // Save path if found so we can pass it to the module launcher tests
         def pendingModulePath = false
