@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2018, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -60,7 +60,7 @@ public class OverlayMediaPlayerApp extends Application {
 
     public Parent createContent() {
         final String MEDIA_URL =
-            "http://download.oracle.com/otndocs/javafx/" +
+            "https://download.oracle.com/otndocs/javafx/" +
             "JavaRap_ProRes_H264_768kbit_Widescreen.mp4";
         final String overlayMediaPlayerCss =
             getClass().getResource("OverlayMediaPlayer.css").toExternalForm();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2018, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -55,7 +55,7 @@ import javafx.stage.Stage;
 public class AdvancedMediaApp extends Application {
 
     private static final String MEDIA_URL =
-        "http://download.oracle.com/otndocs/products/javafx/oow2010-2.mp4";
+        "https://download.oracle.com/otndocs/products/javafx/oow2010-2.mp4";
 
     private MediaPlayer mediaPlayer;
     private MediaControl mediaControl;
