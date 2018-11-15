@@ -419,12 +419,11 @@ static void setupResponse(ResourceResponse& response,
         response.setHTTPStatusCode(status);
     }
 
-    // Fix for RT-13802: If the mime type is not specified
-    // and the expected content length is 0 or not specified,
+    // Fix for RT-13802: If the mime type is not specified,
     // set the mime type to "text/html" as e.g. the CF port
     // does
     String contentTypeString(env, contentType);
-    if (contentTypeString.isEmpty() && contentLength <= 0) {
+    if (contentTypeString.isEmpty()) {
         contentTypeString = "text/html";
     }
     if (!contentTypeString.isEmpty()) {
