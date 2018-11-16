@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.BooleanProperty;
@@ -135,7 +136,75 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
 
     }
 
+    @Override
+    protected void resizeColumnToFitContent(TableColumn<T, ?> tc, int maxRows) {
+        List<?> items = getSkinnable().getItems();
+        if (items == null || items.isEmpty()) return;
 
+        Callback/*<TableColumn<T, ?>, TableCell<T,?>>*/ cellFactory = tc.getCellFactory();
+        if (cellFactory == null) return;
+
+        TableCell<T,?> cell = (TableCell<T, ?>) cellFactory.call(tc);
+        if (cell == null) return;
+
+        // set this property to tell the TableCell we want to know its actual
+        // preferred width, not the width of the associated TableColumnBase
+        cell.getProperties().put(Properties.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
+
+        // determine cell padding
+        double padding = 10;
+        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
+        if (n instanceof Region) {
+            Region r = (Region) n;
+            padding = r.snappedLeftInset() + r.snappedRightInset();
+        }
+
+        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
+        double maxWidth = 0;
+        for (int row = 0; row < rows; row++) {
+            cell.updateTableColumn(tc);
+            cell.updateTableView(getSkinnable());
+            cell.updateIndex(row);
+
+            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
+                getChildren().add(cell);
+                cell.applyCss();
+                maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
+                getChildren().remove(cell);
+            }
+        }
+
+        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        cell.updateIndex(-1);
+
+        // RT-36855 - take into account the column header text / graphic widths.
+        // Magic 10 is to allow for sort arrow to appear without text truncation.
+        TableColumnHeader header = getTableHeaderRow().getColumnHeaderFor(tc);
+        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
+        Node graphic = header.label.getGraphic();
+        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
+        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
+        maxWidth = Math.max(maxWidth, headerWidth);
+
+        // RT-23486
+        maxWidth += padding;
+        if (getSkinnable().getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && getSkinnable().getWidth() > 0) {
+
+            if (maxWidth > tc.getMaxWidth()) {
+                maxWidth = tc.getMaxWidth();
+            }
+
+            int size = tc.getColumns().size();
+            if (size > 0) {
+                resizeColumnToFitContent(tc.getColumns().get(size - 1), maxRows);
+                return;
+            }
+
+            TableSkinUtils.resizeColumn(this, tc, Math.round(maxWidth - tc.getWidth()));
+        } else {
+            TableColumnBaseHelper.setWidth(tc, maxWidth);
+        }
+    }
 
     /***************************************************************************
      *                                                                         *

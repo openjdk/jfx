@@ -586,8 +586,8 @@ public class TableColumnHeader extends Region {
 
         // if the prefWidth has been set, we do _not_ autosize columns
         if (prefWidth == DEFAULT_COLUMN_WIDTH) {
-            TableSkinUtils.resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
-//            getTableViewSkin().resizeColumnToFitContent(column, cellsToMeasure);
+//            TableSkinUtils.resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
+            getTableSkin().resizeColumnToFitContent(column, cellsToMeasure);
         }
     }
 
