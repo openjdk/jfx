@@ -25,7 +25,7 @@
 
 package test.javafx.scene.web;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
@@ -38,17 +38,16 @@ import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import test.util.Util;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
-import static junit.framework.TestCase.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static test.util.Util.TIMEOUT;
 
 public class HTMLEditorTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -85,19 +84,28 @@ public class HTMLEditorTest {
         new Thread(() -> Application.launch(HTMLEditorTestApp.class,
             (String[]) null)).start();
 
-        try {
-            if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException exception) {
-            fail("Unexpected exception: " + exception);
-        }
-
+        assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
     }
 
     @AfterClass
     public static void tearDownOnce() {
         Platform.exit();
+    }
+
+    @Before
+    public void setupTestObjects() {
+        Platform.runLater(() -> {
+            htmlEditor = new HTMLEditor();
+            Scene scene = new Scene(htmlEditor);
+            htmlEditorTestApp.primaryStage.setScene(scene);
+            htmlEditorTestApp.primaryStage.show();
+
+            webView = (WebView) htmlEditor.lookup(".web-view");
+            assertNotNull(webView);
+            // Cancel the existing load to make our stateProperty listener
+            // usable
+            webView.getEngine().getLoadWorker().cancel();
+        });
     }
 
     /**
@@ -110,14 +118,21 @@ public class HTMLEditorTest {
     // re-enabling this test case.
     @Test @Ignore("JDK-8202542")
     public void checkFocusChange() throws Exception {
-        final CountDownLatch editorStateLatch = new CountDownLatch(2);
-        final AtomicBoolean result = new AtomicBoolean(false);
+        final CountDownLatch editorStateLatch = new CountDownLatch(1);
+        final AtomicReference<String> result = new AtomicReference<>();
         Platform.runLater(() -> {
-            HTMLEditor htmlEditor = new HTMLEditor();
-            Scene scene = new Scene(htmlEditor);
-            htmlEditorTestApp.primaryStage.setScene(scene);
-            WebView webView = (WebView)htmlEditor.lookup(".web-view");
-            assertNotNull(webView);
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    webView.getEngine().executeScript(
+                        "document.body.style.backgroundColor='red';" +
+                        "document.body.onfocusout = function() {" +
+                        "document.body.style.backgroundColor = 'yellow';" +
+                        "}");
+                    htmlEditor.requestFocus();
+                }
+            });
+            htmlEditor.setHtmlText(htmlEditor.getHtmlText());
 
             KeyEvent tabKeyEvent = new KeyEvent(null, webView,
                                 KeyEvent.KEY_PRESSED, "", "",
@@ -132,36 +147,18 @@ public class HTMLEditorTest {
                     for (int i = 0; i < 10; ++i) {
                         Event.fireEvent(webView, tabKeyEvent);
                     }
-                    result.set("red".equals(webView.getEngine().
+                    result.set(webView.getEngine().
                         executeScript("document.body.style.backgroundColor").
-                        toString()));
+                        toString());
                     htmlEditorTestApp.primaryStage.hide();
                     editorStateLatch.countDown();
                 }
             });
 
-            webView.getEngine().getLoadWorker().stateProperty().
-                addListener((observable, oldValue, newValue) -> {
-                if (newValue == SUCCEEDED) {
-                    webView.getEngine().executeScript(
-                        "document.body.style.backgroundColor='red';" +
-                        "document.body.onfocusout = function() {" +
-                        "document.body.style.backgroundColor = 'yellow';" +
-                        "}");
-                    htmlEditor.requestFocus();
-                    editorStateLatch.countDown();
-                }
-            });
-            htmlEditorTestApp.primaryStage.show();
         });
 
-        try {
-            editorStateLatch.await(TIMEOUT, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException ex) {
-            throw new AssertionError(ex);
-        } finally {
-            assertTrue("Focus Change with design mode enabled ", result.get());
-        }
+        assertTrue("Timeout when waiting for focus change ", Util.await(editorStateLatch));
+        assertEquals("Focus Change with design mode enabled ", "red", result.get());
     }
 
     /**
@@ -171,7 +168,7 @@ public class HTMLEditorTest {
      */
     @Test
     public void checkStyleWithCSS() throws Exception {
-        final CountDownLatch editorStateLatch = new CountDownLatch(2);
+        final CountDownLatch editorStateLatch = new CountDownLatch(1);
         final String editorCommand1 =
             "document.execCommand('bold', false, 'true');" +
             "document.execCommand('italic', false, 'true');" +
@@ -192,10 +189,13 @@ public class HTMLEditorTest {
             "font-style: italic;\">Hello World</span></body></html>";
 
         Util.runAndWait(() -> {
-            htmlEditor = new HTMLEditor();
-            Scene scene = new Scene(htmlEditor);
-            htmlEditorTestApp.primaryStage.setScene(scene);
-            webView = (WebView)htmlEditor.lookup(".web-view");
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    htmlEditor.requestFocus();
+                }
+            });
+            htmlEditor.setHtmlText(htmlEditor.getHtmlText());
             assertNotNull(webView);
 
             webView.focusedProperty().
@@ -205,23 +205,9 @@ public class HTMLEditorTest {
                 }
             });
 
-            webView.getEngine().getLoadWorker().stateProperty().
-                addListener((observable, oldValue, newValue) -> {
-                if (newValue == SUCCEEDED) {
-                    htmlEditor.requestFocus();
-                    editorStateLatch.countDown();
-                }
-            });
-            htmlEditorTestApp.primaryStage.show();
         });
 
-        try {
-            if (!editorStateLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionError("Timeout waiting for callbacks");
-            }
-        } catch (InterruptedException ex) {
-            throw new AssertionError(ex);
-        }
+        assertTrue("Timeout when waiting for focus change ", Util.await(editorStateLatch));
 
         Util.runAndWait(() -> {
             webView.getEngine().executeScript("document.body.focus();");
@@ -274,23 +260,17 @@ public class HTMLEditorTest {
      */
     @Test
     public void checkStyleProperty() throws Exception {
-        final CountDownLatch editorStateLatch = new CountDownLatch(2);
-        final AtomicBoolean result = new AtomicBoolean(false);
-        Platform.runLater(() -> {
-            HTMLEditor htmlEditor = new HTMLEditor();
-            Scene scene = new Scene(htmlEditor);
-            htmlEditorTestApp.primaryStage.setScene(scene);
-            htmlEditor.setHtmlText("<html>" +
-                "<head>" +
-                "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">" +
-                "</head>" +
-                "<body style=\"font-weight: bold\">" +
-                "<p>Test</p>" +
-                "</body>" +
-                "</html>");
+        final CountDownLatch editorStateLatch = new CountDownLatch(1);
+        final AtomicReference<String> result = new AtomicReference<>();
+        Util.runAndWait(() -> {
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    htmlEditor.requestFocus();
+                }
+            });
 
-            WebView webView = (WebView)htmlEditor.lookup(".web-view");
-            assertNotNull(webView);
+            htmlEditor.setHtmlText("<body style='font-weight: bold'> <p> Test </p> </body>");
 
             webView.focusedProperty().
                 addListener((observable, oldValue, newValue) -> {
@@ -301,30 +281,17 @@ public class HTMLEditorTest {
                         executeScript("document.execCommand('selectAll', false, 'true');");
                     webView.getEngine().
                         executeScript("document.execCommand('removeFormat', false, null);");
-                    result.set("bold".equals(webView.getEngine().
+                    result.set(webView.getEngine().
                         executeScript("document.body.style.fontWeight").
-                        toString()));
-                    htmlEditorTestApp.primaryStage.hide();
+                        toString());
                     editorStateLatch.countDown();
                 }
             });
 
-            webView.getEngine().getLoadWorker().stateProperty().
-                addListener((observable, oldValue, newValue) -> {
-                if (newValue == SUCCEEDED) {
-                    htmlEditor.requestFocus();
-                    editorStateLatch.countDown();
-                }
-            });
-            htmlEditorTestApp.primaryStage.show();
         });
 
-        try {
-            editorStateLatch.await(TIMEOUT, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException ex) {
-            throw new AssertionError(ex);
-        } finally {
-            assertTrue("check Style Property with removeFormat ", result.get());
-        }
+        assertTrue("Timeout when waiting for focus change ", Util.await(editorStateLatch));
+        assertNotNull("result must have a valid reference ", result.get());
+        assertEquals("document.body.style.fontWeight must be bold ", "bold", result.get());
     }
 }

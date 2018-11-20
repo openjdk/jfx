@@ -76,6 +76,14 @@ public class Util {
         } catch (InterruptedException ex) {}
     }
 
+    public static boolean await(final CountDownLatch latch) {
+        try {
+            return latch.await(TIMEOUT, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ex) {
+            throw new AssertionError(ex);
+        }
+    }
+
     private static Future submit(final Runnable r, final CountDownLatch delayLatch) {
         final Throwable[] testError = new Throwable[1];
         final CountDownLatch latch = new CountDownLatch(1);

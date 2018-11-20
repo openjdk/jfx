@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2018, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -67,7 +67,7 @@ public class AudioAreaChartApp extends Application {
     private XYChart.Data<Number, Number>[] series1Data;
     private AudioSpectrumListener audioSpectrumListener;
     private static final String AUDIO_URI = System.getProperty("demo.audio.url",
-            "http://download.oracle.com/otndocs/javafx/JavaRap_Audio.mp4");
+            "https://download.oracle.com/otndocs/javafx/JavaRap_Audio.mp4");
     private MediaPlayer audioMediaPlayer;
     private static final boolean PLAY_AUDIO = Boolean.parseBoolean(
             System.getProperty("demo.play.audio", "true"));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2018, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -72,7 +72,7 @@ public class AudioBarChartApp extends Application {
     private AudioSpectrumListener audioSpectrumListener;
     private static final String AUDIO_URI =
         System.getProperty("demo.audio.url",
-            "http://download.oracle.com/otndocs/products/javafx/oow2010-2.mp4");
+            "https://download.oracle.com/otndocs/products/javafx/oow2010-2.mp4");
     private MediaPlayer audioMediaPlayer;
     private static final boolean PLAY_AUDIO = Boolean.parseBoolean(
             System.getProperty("demo.play.audio", "true"));

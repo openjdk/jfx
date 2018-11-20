@@ -425,8 +425,8 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     jdouble rotationY = 0.0;
     if (type == com_sun_glass_events_MouseEvent_WHEEL)
     {
-        rotationX = (jdouble)[theEvent deltaX];
-        rotationY = (jdouble)[theEvent deltaY];
+        rotationX = (jdouble)[theEvent scrollingDeltaX] * 0.1;
+        rotationY = (jdouble)[theEvent scrollingDeltaY] * 0.1;
 
         //XXX: check for equality for doubles???
         if (rotationX == 0.0 && rotationY == 0.0)
