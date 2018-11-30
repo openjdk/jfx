@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,8 +98,9 @@ public class NGCanvas extends NGNode {
     public static final byte DASH_ARRAY    = ATTR_BASE + 17;
     public static final byte DASH_OFFSET   = ATTR_BASE + 18;
     public static final byte FONT_SMOOTH   = ATTR_BASE + 19;
+    public static final byte IMAGE_SMOOTH  = ATTR_BASE + 20;
 
-    public static final byte                     OP_BASE = 20;
+    public static final byte                     OP_BASE = 25;
     public static final byte FILL_RECT         = OP_BASE + 0;
     public static final byte STROKE_RECT       = OP_BASE + 1;
     public static final byte CLEAR_RECT        = OP_BASE + 2;
@@ -334,6 +335,7 @@ public class NGCanvas extends NGNode {
     private PrismTextLayout textLayout;
     private PGFont pgfont;
     private int smoothing;
+    private boolean imageSmoothing;
     private int align;
     private int baseline;
     private Affine2D transform;
@@ -389,6 +391,7 @@ public class NGCanvas extends NGNode {
         // textLayout stores no state between render operations
         pgfont = (PGFont) FontHelper.getNativeFont(Font.getDefault());
         smoothing = SMOOTH_GRAY;
+        imageSmoothing = true;
         align = ALIGN_LEFT;
         baseline = VPos.BASELINE.ordinal();
         transform.setToScale(highestPixelScale, highestPixelScale);
@@ -1003,6 +1006,9 @@ public class NGCanvas extends NGNode {
                 case FONT_SMOOTH:
                     smoothing = buf.getUByte();
                     break;
+                case IMAGE_SMOOTH:
+                    imageSmoothing = buf.getBoolean();
+                    break;
                 case TEXT_ALIGN:
                     align = buf.getUByte();
                     break;
@@ -1345,9 +1351,16 @@ public class NGCanvas extends NGNode {
                     ResourceFactory factory = gr.getResourceFactory();
                     Texture tex =
                         factory.getCachedTexture(img, Texture.WrapMode.CLAMP_TO_EDGE);
+                    boolean isSmooth = tex.getLinearFiltering();
+                    if (imageSmoothing != isSmooth) {
+                        tex.setLinearFiltering(imageSmoothing);
+                    }
                     gr.drawTexture(tex,
                                    dx, dy, dx+dw, dy+dh,
                                    sx, sy, sx+sw, sy+sh);
+                    if (imageSmoothing != isSmooth) {
+                        tex.setLinearFiltering(isSmooth);
+                    }
                     tex.unlock();
                 }
                 break;
