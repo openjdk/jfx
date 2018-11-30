@@ -6,39 +6,22 @@
        Gradle namespace, so lets use long names...
     -->
 
-    <target name="sampleAppsJar">
+    <target name="appsJar">
         <ant dir="samples" target="jar" inheritAll="true"/>
         <ant dir="performance" target="jar" inheritAll="true"/>
         <ant dir="toys" target="jar" inheritAll="true"/>
         <ant dir="tests" target="jar" inheritAll="true"/>
     </target>
 
-    <target name="sampleAppsClean">
+    <target name="appsClean">
         <ant dir="samples" target="clean" inheritAll="true"/>
         <ant dir="performance" target="clean" inheritAll="true"/>
         <ant dir="toys" target="clean" inheritAll="true"/>
         <ant dir="tests" target="clean" inheritAll="true"/>
     </target>
 
-    <target name="scenebuilderSampleAppsJar">
-        <ant dir="scenebuilder" target="jar-sb-samples" inheritAll="true"/>
-    </target>
 
-    <target name="scenebuilderSampleAppsClean">
-        <ant dir="scenebuilder" target="clean-sb-samples" inheritAll="true"/>
-    </target>
-
-    <target name="scenebuilderAppJar">
-        <ant dir="scenebuilder" target="jar-sb" inheritAll="true"/>
-    </target>
-
-    <target name="scenebuilderAppClean">
-        <ant dir="scenebuilder" target="clean-sb" inheritAll="true"/>
-    </target>
-
-    <target name="appsJar" depends="sampleAppsJar,scenebuilderAppJar,scenebuilderSampleAppsJar"/>
-
-    <target name="clean" depends="sampleAppsClean,scenebuilderAppClean,scenebuilderSampleAppsClean"/>
+    <target name="clean" depends="appsClean"/>
 
 </project>
 
