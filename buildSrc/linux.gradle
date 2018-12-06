@@ -42,6 +42,7 @@ LINUX.library = { name -> return "lib${name}.so" as String }
 // A set of common parameters to use for both compiling and linking
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
+        "-fstack-protector",
         "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
 
 if (!IS_64) {
@@ -56,6 +57,7 @@ def ccFlags = [
 def ccFlagsGTK3 = ccFlags
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-static-libgcc", "-static-libstdc++", "-shared", commonFlags,
+                 "-z", "relro",
                  "-Wl,--gc-sections"].flatten()
 
 if (IS_DEBUG_NATIVE) {
