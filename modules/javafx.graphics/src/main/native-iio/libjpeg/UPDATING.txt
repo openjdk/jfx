@@ -1,0 +1,45 @@
+Updating libjpeg in OpenJFX:
+
+1) Update the modules/javafx.graphics/src/main/legal/jpeg_fx.md file.
+It would need updating the version at top, getting file header from
+jcapimin.c (or consider using jversion.h), and part of the 'In legalese'
+section from README.
+
+2) Copy README file from the new version into OpenJFX's libjpeg source directory.
+
+3) OpenJFX imports only the JPEG library source with some exceptions.
+OpenJFX does not need any other applications or tools provided by IJG libjpeg.
+Copy only the same 41 .c and 9 .h files as are already there.
+
+4) The following files contain local modifications of libjpeg for JavaFX:
+* jchuff.c
+* jcinit.c
+* jcmaster.c
+* jctrans.c
+* jdcolor.c
+* jdhuff.c
+* jdmaster.c
+* jdtrans.c
+* jerror.h
+* jmorecfg.h
+
+** The modifications are,
+4.1) Remove arithmetic encoding/decoding.
+Files: jcinit.c, jctrans.c, jdmaster.c, jdtrans.c, jerror.h, jmorecfg.h
+
+4.2) Initialize arrays.
+Files: jchuff.c, jcmaster.c, jdhuff.c
+
+4.3) Add support for CMYK & YCCK jpeg color space.
+Files: jdcolor.c
+Two functions are added to jdcolor.c,
+a) ycck_rgb_convert(): converts YCCK to RGB color space.
+b) cmyk_rgb_convert(): converts CMYK to RGB color space.
+Pointer to these functions is used while initializing decompressor.
+
+4.4) Improve image filling.
+Files: jdhuff.c
+
+5) Expand tabs and remove trailing white spaces from source files.
+
+6) Verification: FX sdk build and all test run, on all supported platforms.

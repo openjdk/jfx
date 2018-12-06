@@ -331,6 +331,8 @@ jpeg_make_d_derived_tbl (j_decompress_ptr cinfo, boolean isDC, int tblno,
   unsigned int huffcode[257];
   unsigned int code;
 
+  MEMZERO(huffsize, SIZEOF(huffsize));
+  MEMZERO(huffcode, SIZEOF(huffcode));
   /* Note that huffsize[] and huffcode[] are filled in code-length order,
    * paralleling the order of the symbols themselves in htbl->huffval[].
    */
@@ -619,7 +621,9 @@ jpeg_huff_decode (bitread_working_state * state,
   /* With garbage input we may reach the sentinel value l = 17. */
 
   if (l > 16) {
+    int br_offset = state->next_input_byte - state->cinfo->src->next_input_byte;
     WARNMS(state->cinfo, JWRN_HUFF_BAD_CODE);
+    state->next_input_byte = state->cinfo->src->next_input_byte + br_offset;
     return 0;            /* fake a zero as the safest result */
   }
 
