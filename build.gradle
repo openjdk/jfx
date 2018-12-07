@@ -396,6 +396,10 @@ ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
+// BUILD_TOOLS_DOWNLOAD_SCRIPT specifies a path of a gradle script which downloads
+// required build tools.
+defineProperty("BUILD_TOOLS_DOWNLOAD_SCRIPT", "")
+
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
 ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.105.3.v20170228-0512" :
@@ -687,7 +691,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                 def String basename = pkgname.substring(0,pkgname.lastIndexOf("."))
                 def File pkgdir = file("$destdir/$basename")
 
-                if (pkgname.endsWith(".tgz")) {
+                if (pkgname.endsWith(".tgz") || pkgname.endsWith("tar.gz")) {
                     if (IS_LINUX || IS_MAC) {
                         // use native tar to support symlinks
                         pkgdir.mkdirs()
@@ -709,7 +713,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                 } else {
                     throw new GradleException("Unhandled package type for compile package ${pkgname}")
                 }
-                srcball.deleteOnExit();
+                srcball.delete();
             }
         } else {
             logger.quiet "all tool packages are present $packages"
@@ -759,7 +763,8 @@ void ant(String conf,   // platform configuration
                     "INCLUDE"              : WINDOWS_VS_INCLUDE,
                     "LIB"                  : WINDOWS_VS_LIB,
                     "LIBPATH"              : WINDOWS_VS_LIBPATH,
-                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
+                    "DXSDK_DIR"            : WINDOWS_DXSDK_DIR,
+                    "PATH"                 : WINDOWS_VS_PATH
             ]);
             commandLine "cmd", "/c", ant, "-Dbuild.compiler=javac1.7"
         } else {
@@ -1078,6 +1083,11 @@ void commonModuleSetup(Project p, List<String> moduleChain) {
             }
         }
     }
+}
+
+if (BUILD_TOOLS_DOWNLOAD_SCRIPT != "") {
+    println "Include build tools download script:${BUILD_TOOLS_DOWNLOAD_SCRIPT}"
+    apply from: BUILD_TOOLS_DOWNLOAD_SCRIPT
 }
 
 // Now we need to define the native compilation tasks. The set of parameters to
@@ -3190,26 +3200,14 @@ project(":web") {
                 exec {
                     workingDir("$webkitOutputDir")
                     def cmakeArgs = "-DENABLE_TOOLS=1"
+                    cmakeArgs = " $cmakeArgs -DCMAKE_C_COMPILER='${webkitProperties.compiler}'"
                     if (t.name == "win") {
-                        String parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
-                        Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        environmentSettings["PATH"] = parfaitPath + "$WINDOWS_VS_PATH"
-                        /* To build with ICU:
-                        1. Download http://javaweb.us.oracle.com/jcg/fx-webrevs/RT-17164/WebKitLibrariesICU.zip
-                        and unzip it to WebKitLibraries folder.
-                        2. Copy DLLs from
-                        WebKitLibrariesICU.zip\WebKitLibraries\import\runtime
-                        to %windir%\system32
-                        3. Uncomment the line below
-                         */
-                        // args("--icu-unicode")
-
                         // To enable ninja build on Windows
-                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT + ['CC' : 'cl', 'CXX' : 'cl'])
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                     } else if (t.name == "mac") {
-                        cmakeArgs = "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
+                        cmakeArgs = " $cmakeArgs -DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
-                        cmakeArgs = "-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_C_COMPILER=${webkitProperties.compiler}"
+                        cmakeArgs = " $cmakeArgs -DCMAKE_SYSTEM_NAME=Linux"
                         if (IS_64) {
                             cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86_64"
                         } else {
@@ -3230,7 +3228,12 @@ project(":web") {
                         environment([
                             "COMPILE_PARFAIT" : "true"
                         ])
+                        environment "PATH", System.env.PARFAIT_PATH + File.pathSeparator + environment.PATH
                         cmakeArgs = "-DCMAKE_C_COMPILER=parfait-gcc -DCMAKE_CXX_COMPILER=parfait-g++"
+                    }
+
+                    if (project.hasProperty('toolsPath')) {
+                        environment "PATH", toolsPath + File.pathSeparator + environment.PATH
                     }
 
                     environment([

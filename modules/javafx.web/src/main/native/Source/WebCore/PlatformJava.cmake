@@ -45,7 +45,7 @@ elseif (APPLE)
         platform/cf/CFURLExtras.cpp
     )
 # find_library(OPENGL_LIBRARY OpenGL)
-    find_library(ACCELERATE_LIBRARY accelerate)
+    find_library(ACCELERATE_LIBRARY Accelerate)
     list(APPEND WebCore_LIBRARIES
         ${ACCELERATE_LIBRARY}
         # ${OPENGL_LIBRARY}

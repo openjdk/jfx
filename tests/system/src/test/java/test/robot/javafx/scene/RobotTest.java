@@ -28,9 +28,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
@@ -39,6 +41,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.HBox;
@@ -52,9 +55,10 @@ import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Assert;
 import junit.framework.AssertionFailedError;
 import test.util.Util;
 
@@ -78,24 +82,71 @@ public class RobotTest {
 
     public static void main(String[] args) throws Exception {
         RobotTest test = new RobotTest();
-        test.testKeyboard();
-        test.testMouseMove();
-        test.testMouseClick();
-        test.testMouseWheel();
-        test.testPixelCapture();
+        test.testKeyPress();
+        test.testKeyType();
+        test.testKeyPressThrowsISEOnWrongThread();
+        test.testKeyPressThrowsNPEForNullArgument();
+        test.testKeyReleaseThrowsISEOnWrongThread();
+        test.testKeyReleaseThrowsNPEForNullArgument();
+        test.testMouseMoveDouble();
+        test.testMouseMovePoint2D();
+        test.testMouseMoveThrowsISEOnWrongThread();
+        test.testMouseMoveThrowsNPEForNullArgument();
+        test.testMousePressPrimary();
+        test.testMousePressSecondary();
+        test.testMousePressMiddle();
+        test.testMouseClickPrimary();
+        test.testMouseClickSecondary();
+        test.testMouseClickMiddle();
+        test.testMousePressThrowsISEOnWrongThread();
+        test.testMousePressThrowsNPEForNullArgument();
+        test.testMouseReleaseThrowsISEOnWrongThread();
+        test.testMouseReleaseThrowsNPEForNullArgument();
+        test.testMouseClickThrowsISEOnWrongThread();
+        test.testMouseClickThrowsNPEForNullArgument();
+        test.testMouseWheelPositiveAmount();
+        test.testMouseWheelNegativeAmount();
+        test.testMouseWheelThrowsISEOnWrongThread();
+        test.testPixelCaptureDouble();
+        test.testPixelCapturePoint2D();
         test.testPixelCaptureAverage();
+        test.testPixelCaptureThrowsISEOnWrongThread();
+        test.testPixelCaptureThrowsNPEForNullArgument();
         test.testScreenCapture();
+        test.testScreenCaptureThrowsISEOnWrongThread();
+        test.testScreenCaptureThrowsNPEForNullArgument();
         exit();
     }
 
+    private enum KeyAction {
+        PRESSED,
+        TYPED
+    }
+
     @Test
-    public void testKeyboard() {
-        CountDownLatch onKeyTypedLatch = new CountDownLatch(1);
+    public void testKeyPress() {
+        testKeyboard(KeyAction.PRESSED);
+    }
+
+    @Test
+    public void testKeyType() {
+        testKeyboard(KeyAction.TYPED);
+    }
+
+    private static void testKeyboard(KeyAction keyAction) {
+        CountDownLatch keyActionLatch = new CountDownLatch(1);
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         TextField textField = new TextField();
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
         Util.runAndWait(() -> {
-            textField.setOnKeyTyped(event -> onKeyTypedLatch.countDown());
+            switch (keyAction) {
+                case PRESSED:
+                    textField.setOnKeyPressed(event -> keyActionLatch.countDown());
+                    break;
+                case TYPED:
+                    textField.setOnKeyTyped(event -> keyActionLatch.countDown());
+                    break;
+            }
             scene = new Scene(new HBox(textField));
             stage.sceneProperty().addListener(observable -> {
                 setSceneLatch.countDown();
@@ -111,15 +162,80 @@ public class RobotTest {
                     textField.getLayoutY() + textField.getLayoutBounds().getHeight() / 2);
             robot.mouseMove(mouseX, mouseY);
             robot.mouseClick(MouseButton.PRIMARY);
-            robot.keyPress(KeyCode.A);
-            robot.keyRelease(KeyCode.A);
+            switch (keyAction) {
+                case PRESSED:
+                    robot.keyPress(KeyCode.A);
+                    break;
+                case TYPED:
+                    robot.keyPress(KeyCode.A);
+                    robot.keyRelease(KeyCode.A);
+                    break;
+            }
         });
-        waitForLatch(onKeyTypedLatch, 5, "Timeout while waiting for textField.onKeyTyped().");
-        Assert.assertEquals("letter 'a' should be typed by Robot", "a", textField.getText());
+        waitForLatch(keyActionLatch, 5, "Timeout while waiting for textField.onKey" +
+                capFirst(keyAction.name()) + "().");
+        Assert.assertEquals("letter 'a' should be " + keyAction.name().toLowerCase() +
+                " by Robot", "a", textField.getText());
+        if (keyAction == KeyAction.PRESSED) {
+            Util.runAndWait(() -> robot.keyRelease(KeyCode.A));
+        }
     }
 
     @Test
-    public void testMouseMove() {
+    public void testKeyPressThrowsISEOnWrongThread() {
+        try {
+            robot.keyPress(KeyCode.A);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testKeyPressThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.keyPress(null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
+    }
+
+    @Test
+    public void testKeyReleaseThrowsISEOnWrongThread() {
+        try {
+            robot.keyRelease(KeyCode.A);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testKeyReleaseThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.keyRelease(null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
+    }
+
+    @Test
+    public void testMouseMoveDouble() {
+        testMouseMove(50, 50, true);
+    }
+
+    @Test
+    public void testMouseMovePoint2D() {
+        testMouseMove(30, 30, false);
+    }
+
+    private static void testMouseMove(int x, int y, boolean primitiveArg) {
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
         Util.runAndWait(() -> {
@@ -133,26 +249,117 @@ public class RobotTest {
         waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
         AtomicReference<Point2D> mousePosition = new AtomicReference<>();
         Util.runAndWait(() -> {
-            robot.mouseMove(50, 50);
+            if (primitiveArg) {
+                robot.mouseMove(x, y);
+            } else {
+                robot.mouseMove(new Point2D(x, y));
+            }
             mousePosition.set(robot.getMousePosition());
         });
-        Assert.assertEquals(50, (int) mousePosition.get().getX());
-        Assert.assertEquals(50, (int) mousePosition.get().getY());
+        Assert.assertEquals(x, (int) mousePosition.get().getX());
+        Assert.assertEquals(y, (int) mousePosition.get().getY());
     }
 
     @Test
-    public void testMouseClick() {
+    public void testMouseMoveThrowsISEOnWrongThread() {
+        try {
+            robot.mouseMove(0, 0);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testMouseMoveThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.mouseMove(null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
+    }
+
+    @Test
+    public void testMousePressPrimary() {
+        testMouseAction(MouseAction.PRESSED, MouseButton.PRIMARY);
+    }
+
+    @Test
+    public void testMousePressSecondary() {
+        testMouseAction(MouseAction.PRESSED, MouseButton.SECONDARY);
+    }
+
+    @Test
+    public void testMousePressMiddle() {
+        testMouseAction(MouseAction.PRESSED, MouseButton.MIDDLE);
+    }
+
+    @Test
+    public void testMouseClickPrimary() {
+        testMouseAction(MouseAction.CLICKED, MouseButton.PRIMARY);
+    }
+
+    @Test
+    public void testMouseClickSecondary() {
+        testMouseAction(MouseAction.CLICKED, MouseButton.SECONDARY);
+    }
+
+    @Test
+    public void testMouseClickMiddle() {
+        testMouseAction(MouseAction.CLICKED, MouseButton.MIDDLE);
+    }
+
+    private enum MouseAction {
+        PRESSED,
+        CLICKED
+    }
+
+    private static class MouseActionHandler implements EventHandler<MouseEvent> {
+        private final Button button;
+        private final MouseAction mouseAction;
+        private final MouseButton mouseButton;
+        private final CountDownLatch onClickLatch;
+
+        MouseActionHandler(Button button, MouseAction mouseAction,
+                           MouseButton mouseButton, CountDownLatch onClickLatch) {
+            this.button = button;
+            this.mouseAction = mouseAction;
+            this.mouseButton = mouseButton;
+            this.onClickLatch = onClickLatch;
+        }
+
+        @Override
+        public void handle(MouseEvent event) {
+            String expectedText = mouseAction + " " + mouseButton;
+            if (event.getButton() == mouseButton) {
+                button.setText(expectedText);
+            } else {
+                button.setText(String.format(mouseAction + " wrong button (expected \"%s\" but got \"%s\")",
+                        mouseButton, event.getButton()));
+            }
+            onClickLatch.countDown();
+        }
+    }
+
+    private static void testMouseAction(MouseAction mouseAction, MouseButton mouseButton) {
         CountDownLatch onClickLatch = new CountDownLatch(1);
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         Button button = new Button("Click me");
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
+        String expectedText = mouseAction + " " + mouseButton;
         Util.runAndWait(() -> {
-            button.setOnMouseClicked(event -> {
-                if (event.getButton() == MouseButton.PRIMARY) {
-                    button.setText("Clicked");
-                    onClickLatch.countDown();
-                }
-            });
+            MouseActionHandler mouseActionHandler = new MouseActionHandler(button, mouseAction, mouseButton, onClickLatch);
+            switch (mouseAction) {
+                case PRESSED:
+                    button.setOnMousePressed(mouseActionHandler);
+                    break;
+                case CLICKED:
+                    button.setOnMouseClicked(mouseActionHandler);
+                    break;
+            }
             scene = new Scene(new HBox(button), SIZE, SIZE);
             stage.sceneProperty().addListener(observable -> {
                 setSceneLatch.countDown();
@@ -167,23 +374,128 @@ public class RobotTest {
                 button.getLayoutY() + button.getLayoutBounds().getHeight() / 2);
         Util.runAndWait(() -> {
             robot.mouseMove(mouseX, mouseY);
-            robot.mousePress(MouseButton.PRIMARY);
-            robot.mouseRelease(MouseButton.PRIMARY);
+            switch (mouseAction) {
+                case PRESSED:
+                    robot.mousePress(mouseButton);
+                    break;
+                case CLICKED:
+                    robot.mousePress(mouseButton);
+                    robot.mouseRelease(mouseButton);
+                    break;
+            }
         });
-        waitForLatch(onClickLatch, 5, "Timeout while waiting for button.onMouseClicked().");
-        Assert.assertEquals("primary mouse button should be clicked by Robot", "Clicked", button.getText());
+        waitForLatch(onClickLatch, 5, "Timeout while waiting for button.onMouse" +
+                capFirst(mouseAction.name()) + "().");
+        Assert.assertEquals(mouseButton + " mouse button should be " + mouseAction.name().toLowerCase() + " by Robot",
+                expectedText, button.getText());
+        if (mouseAction == MouseAction.PRESSED) {
+            Util.runAndWait(() -> robot.mouseRelease(MouseButton.PRIMARY, MouseButton.SECONDARY, MouseButton.MIDDLE));
+        }
     }
 
     @Test
-    public void testMouseWheel() {
+    public void testMousePressThrowsISEOnWrongThread() {
+        try {
+            robot.mousePress(MouseButton.PRIMARY);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testMousePressThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.mousePress(null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
+    }
+
+    @Test
+    public void testMouseReleaseThrowsISEOnWrongThread() {
+        try {
+            robot.mouseRelease(MouseButton.PRIMARY);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testMouseReleaseThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.mouseRelease(null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
+    }
+
+    @Test
+    public void testMouseClickThrowsISEOnWrongThread() {
+        try {
+            robot.mouseClick(MouseButton.PRIMARY);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testMouseClickThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.mouseClick(null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
+    }
+
+    @Test
+    public void testMouseWheelPositiveAmount() {
+        testMouseWheel(5);
+    }
+
+    @Test
+    public void testMouseWheelNegativeAmount() {
+        testMouseWheel(-5);
+    }
+
+    private static void testMouseWheel(int amount) {
+        Assume.assumeTrue(!PlatformUtil.isMac()); // See JDK-8214580
         CountDownLatch onScrollLatch = new CountDownLatch(1);
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         Button button = new Button("Scroll me");
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
+        int[] totalScroll = new int[]{0};
+        long[] firstScrollMillis = new long[]{0};
+        // The scroll wheel amount is multiplied by 40 on Linux and Windows, but not on macOS. The
+        // directions are also reversed. This difference in behavior is unexplained and might be a bug.
+        // See JDK-8214580.
+        int scrollMultiplier = PlatformUtil.isMac() ? -1 : 40;
         Util.runAndWait(() -> {
             button.setOnScroll(event -> {
-                button.setText("Scrolled");
-                onScrollLatch.countDown();
+                totalScroll[0] += event.getDeltaY() * Screen.getPrimary().getOutputScaleY();
+                if (firstScrollMillis[0] == 0) {
+                    firstScrollMillis[0] = System.currentTimeMillis();
+                } else {
+                    if (System.currentTimeMillis() - firstScrollMillis[0] > 1000) {
+                        button.setText("Scrolled " + totalScroll[0]);
+                        onScrollLatch.countDown();
+                    }
+                }
+                if (Math.abs(totalScroll[0] / scrollMultiplier) >= Math.abs(amount)) {
+                    button.setText("Scrolled " + -(totalScroll[0] / scrollMultiplier));
+                    onScrollLatch.countDown();
+                }
             });
             scene = new Scene(new HBox(button), SIZE, SIZE);
             stage.sceneProperty().addListener(observable -> {
@@ -199,14 +511,35 @@ public class RobotTest {
             int mouseY = (int) (scene.getWindow().getY() + scene.getY() +
                     button.getLayoutY() + button.getLayoutBounds().getHeight() / 2);
             robot.mouseMove(mouseX, mouseY);
-            robot.mouseWheel(5);
+            robot.mouseWheel(amount);
         });
         waitForLatch(onScrollLatch, 5, "Timeout while waiting for button.onScroll().");
-        Assert.assertEquals("mouse wheel should be scrolled 5 vertical units by Robot", "Scrolled", button.getText());
+        Assert.assertEquals("mouse wheel should be scrolled " + amount + " vertical units by Robot",
+                "Scrolled " + amount, button.getText());
     }
 
     @Test
-    public void testPixelCapture() throws Exception {
+    public void testMouseWheelThrowsISEOnWrongThread() {
+        try {
+            robot.mouseWheel(1);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testPixelCaptureDouble() throws Exception {
+        testPixelCapture(true);
+    }
+
+    @Test
+    public void testPixelCapturePoint2D() throws Exception {
+        testPixelCapture(false);
+    }
+
+    private static void testPixelCapture(boolean primitiveArg)
+            throws InterruptedException {
         CountDownLatch setSceneLatch = new CountDownLatch(1);
         Pane pane = new StackPane();
         InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
@@ -225,7 +558,11 @@ public class RobotTest {
         Util.runAndWait(() -> {
             int x = (int) stage.getX();
             int y = (int) stage.getY();
-            captureColor.set(robot.getPixelColor(x + SIZE / 2, y + SIZE / 2));
+            if (primitiveArg) {
+                captureColor.set(robot.getPixelColor(x + SIZE / 2, y + SIZE / 2));
+            } else {
+                captureColor.set(robot.getPixelColor(new Point2D(x + SIZE / 2, y + SIZE / 2)));
+            }
         });
         assertColorEquals(Color.CORNFLOWERBLUE, captureColor.get(), TOLERANCE);
     }
@@ -258,6 +595,28 @@ public class RobotTest {
             captureColor.set(robot.getPixelColor(x + SIZE / 2, y + SIZE / 2));
         });
         assertColorEquals(Color.BLUE, captureColor.get(), TOLERANCE);
+    }
+
+    @Test
+    public void testPixelCaptureThrowsISEOnWrongThread() {
+        try {
+            robot.getPixelColor(20, 20);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testPixelCaptureThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.getPixelColor(null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
     }
 
     @Test
@@ -308,6 +667,28 @@ public class RobotTest {
         }
     }
 
+    @Test
+    public void testScreenCaptureThrowsISEOnWrongThread() {
+        try {
+            robot.getScreenCapture(null, 0, 0, 10, 10);
+        } catch (IllegalStateException e) {
+            return;
+        }
+        Assert.fail("Expected IllegalStateException");
+    }
+
+    @Test
+    public void testScreenCaptureThrowsNPEForNullArgument() {
+        Util.runAndWait(() -> {
+            try {
+                robot.getScreenCapture(null, null);
+            } catch (NullPointerException e) {
+                return;
+            }
+            Assert.fail("Expected NullPointerException");
+        });
+    }
+
     public static class TestApp extends Application {
         @Override
         public void start(Stage primaryStage) {
@@ -333,7 +714,7 @@ public class RobotTest {
         Platform.exit();
     }
 
-    public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
+    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
         try {
             if (!latch.await(seconds, TimeUnit.SECONDS)) {
                 fail(msg);
@@ -364,5 +745,9 @@ public class RobotTest {
         int b = (int)(c.getBlue() * 255.0);
         int a = (int)(c.getOpacity() * 255.0);
         return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+    }
+
+    private static String capFirst(String str) {
+        return Character.toUpperCase(str.charAt(0)) + str.substring(1).toLowerCase();
     }
 }

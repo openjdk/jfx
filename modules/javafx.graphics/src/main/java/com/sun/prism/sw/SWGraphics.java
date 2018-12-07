@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -444,6 +444,7 @@ final class SWGraphics implements ReadbackGraphics {
                             tex.getOffset(), tex.getPhysicalWidth(),
                             piscesTx,
                             tex.getWrapMode() == Texture.WrapMode.REPEAT,
+                            tex.getLinearFiltering(),
                             (int)(Math.min(p1.x, p2.x) * SWUtils.TO_PISCES), (int)(Math.min(p1.y, p2.y) * SWUtils.TO_PISCES),
                             (int)(Math.abs(p2.x - p1.x) * SWUtils.TO_PISCES), (int)(Math.abs(p2.y - p1.y) * SWUtils.TO_PISCES),
                             RendererBase.IMAGE_FRAC_EDGE_KEEP, RendererBase.IMAGE_FRAC_EDGE_KEEP,
@@ -739,6 +740,7 @@ final class SWGraphics implements ReadbackGraphics {
                 swTex.getOffset(), tex.getPhysicalWidth(),
                 piscesTx,
                 tex.getWrapMode() == Texture.WrapMode.REPEAT,
+                tex.getLinearFiltering(),
                 (int)(SWUtils.TO_PISCES * dstBBox.getMinX()), (int)(SWUtils.TO_PISCES * dstBBox.getMinY()),
                 (int)(SWUtils.TO_PISCES * dstBBox.getWidth()), (int)(SWUtils.TO_PISCES * dstBBox.getHeight()),
                 lEdge, rEdge, tEdge, bEdge,

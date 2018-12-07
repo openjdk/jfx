@@ -64,6 +64,7 @@ function(GENERATE_BINDINGS target)
     set(binding_generator ${WEBCORE_DIR}/bindings/scripts/generate-bindings-all.pl)
     set(idl_attributes_file ${WEBCORE_DIR}/bindings/scripts/IDLAttributes.json)
     set(idl_files_list ${CMAKE_CURRENT_BINARY_DIR}/idl_files_${target}.tmp)
+    set(idl_include_list ${CMAKE_CURRENT_BINARY_DIR}/idl_include_${target}.tmp)
     set(_supplemental_dependency)
 
     set(content)
@@ -80,6 +81,7 @@ function(GENERATE_BINDINGS target)
         --generator ${arg_GENERATOR}
         --outputDir ${arg_DESTINATION}
         --idlFilesList ${idl_files_list}
+        --includeDirsList ${idl_include_list}
         --preprocessor "${CODE_GENERATOR_PREPROCESSOR}"
         --idlAttributesFile ${idl_attributes_file}
     )
@@ -90,13 +92,17 @@ function(GENERATE_BINDINGS target)
     if (PROCESSOR_COUNT)
         list(APPEND args --numOfJobs ${PROCESSOR_COUNT})
     endif ()
+    set(include_dir)
     foreach (i IN LISTS arg_IDL_INCLUDES)
         if (IS_ABSOLUTE ${i})
-            list(APPEND args --include ${i})
+            set(f ${i})
         else ()
-            list(APPEND args --include ${CMAKE_CURRENT_SOURCE_DIR}/${i})
+            set(f ${CMAKE_CURRENT_SOURCE_DIR}/${i})
         endif ()
+        set(include_dir "${include_dir}${f}\n")
     endforeach ()
+    file(WRITE ${idl_include_list} ${include_dir})
+
     foreach (i IN LISTS arg_PP_EXTRA_OUTPUT)
         list(APPEND args --ppExtraOutput ${i})
     endforeach ()

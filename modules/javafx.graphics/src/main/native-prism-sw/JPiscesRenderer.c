@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -246,7 +246,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setRadialGradientImpl(
 JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTextureImpl
   (JNIEnv *env, jobject this, jint imageType, jintArray dataArray,
       jint width, jint height, jint stride,
-      jobject jTransform, jboolean repeat, jboolean hasAlpha)
+      jobject jTransform, jboolean repeat, jboolean linearFiltering, jboolean hasAlpha)
 {
     Renderer* rdr;
     Transform6 textureTransform;
@@ -269,7 +269,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_setTextureImpl
                 }
             }
             renderer_setTexture(rdr, IMAGE_MODE_NORMAL,
-                alloc_data, width, height, width, repeat, JNI_TRUE,
+                alloc_data, width, height, width, repeat, linearFiltering,
                 &textureTransform, JNI_TRUE, hasAlpha,
                 0, 0, width-1, height-1);
         } else {
@@ -657,7 +657,8 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRowIm
 JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
 (JNIEnv *env, jobject this, jint imageType, jint imageMode,
     jintArray dataArray, jint width, jint height, jint offset, jint stride,
-    jobject jTransform, jboolean repeat, jint bboxX, jint bboxY, jint bboxW, jint bboxH,
+    jobject jTransform, jboolean repeat, jboolean linearFiltering,
+    jint bboxX, jint bboxY, jint bboxW, jint bboxH,
     jint lEdge, jint rEdge, jint tEdge, jint bEdge,
     jint txMin, jint tyMin, jint txMax, jint tyMax,
     jboolean hasAlpha)
@@ -672,7 +673,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_drawImageImpl
 
         transform_get6(&textureTransform, env, jTransform);
         renderer_setTexture(rdr, imageMode, data + offset, width, height, stride,
-            repeat, JNI_TRUE, &textureTransform, JNI_FALSE, hasAlpha,
+            repeat, linearFiltering, &textureTransform, JNI_FALSE, hasAlpha,
             txMin, tyMin, txMax, tyMax);
 
         fillRect(env, this, rdr,

@@ -57,8 +57,9 @@ my $verbose;
 my $supplementalDependencyFile;
 my $additionalIdlFiles;
 my $idlAttributesFile;
+my $includeDirsList;
 
-GetOptions('include=s@' => \@idlDirectories,
+GetOptions('includeDirsList=s' => \$includeDirsList,
            'outputDir=s' => \$outputDirectory,
            'outputHeadersDir=s' => \$outputHeadersDirectory,
            'generator=s' => \$generator,
@@ -71,6 +72,10 @@ GetOptions('include=s@' => \@idlDirectories,
            'supplementalDependencyFile=s' => \$supplementalDependencyFile,
            'additionalIdlFiles=s' => \$additionalIdlFiles,
            'idlAttributesFile=s' => \$idlAttributesFile);
+
+open(my $dh, '<', $includeDirsList) or die "Cannot open $includeDirsList";
+@idlDirectories = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$dh>;
+close($dh) or die;
 
 die('Must specify input file.') unless @ARGV;
 die('Must specify generator') unless defined($generator);
@@ -262,4 +267,11 @@ sub generateEmptyHeaderAndCpp
     open FH, "> ${outputDirectory}/${cppName}" or die "Cannot open $cppName\n";
     print FH $contents;
     close FH;
+}
+
+sub CygwinPathIfNeeded
+{
+    my $path = shift;
+    return Cygwin::win_to_posix_path($path) if ($^O eq 'cygwin');
+    return $path;
 }

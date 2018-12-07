@@ -56,7 +56,9 @@ defineProperty("MACOSX_MIN_VERSION", "10.10");
 setupTools("mac_tools",
     { propFile ->
         propFile << ""
-        if (!file(defaultSdkPath).isDirectory()) {
+        if (project.hasProperty('setupMacTools')) {
+            setupMacTools(propFile)
+        } else if (!file(defaultSdkPath).isDirectory()) {
             // Get list of all macosx sdks
             ByteArrayOutputStream results = new ByteArrayOutputStream();
             exec {
@@ -126,9 +128,15 @@ def linkFlags = [
         "-framework", "Security",
         "-dynamiclib", "-lobjc"].flatten();
 
+def toolchainDir
+if (hasProperty('toolchainDir')) {
+    toolchainDir = ext.toolchainDir + "/"
+} else {
+    toolchainDir = ""
+}
 
-def compiler = IS_COMPILE_PARFAIT ? "parfait-clang" : "clang";
-def linker = IS_COMPILE_PARFAIT ? "parfait-clang++" : "clang++";
+def compiler = IS_COMPILE_PARFAIT ? "parfait-clang" : "${toolchainDir}clang";
+def linker = IS_COMPILE_PARFAIT ? "parfait-clang++" : "${toolchainDir}clang++";
 
 MAC.glass = [:]
 MAC.glass.javahInclude = [
@@ -208,4 +216,8 @@ MAC.media.compiler = "${compiler} ${ccBaseFlags.join(" ")}"
 //MAC.media.ccFlags = ccBaseFlags
 MAC.media.linker = "${linker} ${commonParams.join(" ")}"
 //MAC.media.linkFlags = commonParams
-MAC.media.ar = "libtool"
+MAC.media.ar = "${toolchainDir}libtool"
+
+MAC.webkit = [:]
+MAC.webkit.compiler = compiler
+MAC.webkit.linker = linker

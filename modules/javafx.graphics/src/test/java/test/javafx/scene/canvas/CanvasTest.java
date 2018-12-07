@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 public class CanvasTest {
 
@@ -461,6 +463,16 @@ public class CanvasTest {
         assertEquals(BlendMode.ADD, gc.getGlobalBlendMode());
         gc.setGlobalBlendMode(null);
         assertEquals(BlendMode.ADD, gc.getGlobalBlendMode());
+    }
+
+    @Test public void testGCState_ImageSmoothing() {
+        assertTrue("Image smoothing should be enabled by default.", gc.isImageSmoothing());
+        // Disable image smoothing.
+        gc.setImageSmoothing(false);
+        assertFalse("Image smoothing should be disabled.", gc.isImageSmoothing());
+        // Reset image smoothing to true.
+        gc.setImageSmoothing(true);
+        assertTrue("Image smoothing should be enabled.", gc.isImageSmoothing());
     }
 
     @Test public void testGCappendSVGPath_Null() {

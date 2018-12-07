@@ -222,15 +222,39 @@ public class NativeLibLoader {
 
     private static String cacheLibrary(InputStream is, String name, Class caller) throws IOException {
         String jfxVersion = System.getProperty("javafx.version", "versionless");
-        String userCache = System.getProperty("user.home") + "/.openjfx/cache/" + jfxVersion;
+        String userCache = System.getProperty("javafx.cachedir", "");
+        if (userCache.isEmpty()) {
+            userCache = System.getProperty("user.home") + "/.openjfx/cache/" + jfxVersion;
+        }
         File cacheDir = new File(userCache);
+        boolean cacheDirOk = true;
         if (cacheDir.exists()) {
             if (!cacheDir.isDirectory()) {
-                throw new IOException ("Cache exists but is not a directory: "+cacheDir);
+                System.err.println("Cache exists but is not a directory: "+cacheDir);
+                cacheDirOk = false;
             }
         } else {
             if (!cacheDir.mkdirs()) {
-                throw new IOException ("Can not create cache at "+cacheDir);
+                System.err.println("Can not create cache at "+cacheDir);
+                cacheDirOk = false;
+            }
+        }
+        if (!cacheDir.canRead()) {
+            // on some systems, directories in user.home can be written but not read.
+            cacheDirOk = false;
+        }
+        if (!cacheDirOk) {
+            String username = System.getProperty("user.name", "anonymous");
+            String tmpCache = System.getProperty("java.io.tmpdir") + "/.openjfx_" + username + "/cache/" + jfxVersion;
+            cacheDir = new File(tmpCache);
+            if (cacheDir.exists()) {
+                if (!cacheDir.isDirectory()) {
+                    throw new IOException("Cache exists but is not a directory: "+cacheDir);
+                }
+            } else {
+                if (!cacheDir.mkdirs()) {
+                    throw new IOException("Can not create cache at "+cacheDir);
+                }
             }
         }
         // we have a cache directory. Add the file here

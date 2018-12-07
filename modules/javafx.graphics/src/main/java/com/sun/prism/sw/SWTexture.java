@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ abstract class SWTexture implements Texture {
     private SWResourceFactory factory;
     private int lastImageSerial;
     private final WrapMode wrapMode;
+    private boolean linearFiltering = true;
 
     SWTexture(SWResourceFactory factory, WrapMode wrapMode, int w, int h) {
         this.factory = factory;
@@ -66,6 +67,7 @@ abstract class SWTexture implements Texture {
         this.factory = sharedTex.factory;
         // REMIND: Use indirection to share the serial number?
         this.lastImageSerial = sharedTex.lastImageSerial;
+        this.linearFiltering = sharedTex.linearFiltering;
         this.wrapMode = altMode;
         lock();
     }
@@ -252,11 +254,13 @@ abstract class SWTexture implements Texture {
 
     @Override
     public boolean getLinearFiltering() {
-        return false;
+        return linearFiltering;
     }
 
     @Override
-    public void setLinearFiltering(boolean linear) { }
+    public void setLinearFiltering(boolean linear) {
+        linearFiltering = linear;
+    }
 
     void allocate() {
         if (allocated) {

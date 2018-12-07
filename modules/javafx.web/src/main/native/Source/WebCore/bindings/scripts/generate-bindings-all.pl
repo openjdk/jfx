@@ -48,8 +48,9 @@ my @ppExtraArgs;
 my $numOfJobs = 1;
 my $idlAttributesFile;
 my $showProgress;
+my $includeDirsList;
 
-GetOptions('include=s@' => \@idlDirectories,
+GetOptions('includeDirsList=s' => \$includeDirsList,
            'outputDir=s' => \$outputDirectory,
            'idlFilesList=s' => \$idlFilesList,
            'generator=s' => \$generator,
@@ -68,6 +69,10 @@ my @idlFiles;
 open(my $fh, '<', $idlFilesList) or die "Cannot open $idlFilesList";
 @idlFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$fh>;
 close($fh) or die;
+
+open(my $dh, '<', $includeDirsList) or die "Cannot open $includeDirsList";
+@idlDirectories = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$dh>;
+close($dh) or die;
 
 my %oldSupplements;
 my %newSupplements;
@@ -94,7 +99,7 @@ my @args = (File::Spec->catfile($scriptDir, 'generate-bindings.pl'),
             '--preprocessor', $preprocessor,
             '--idlAttributesFile', $idlAttributesFile,
             '--write-dependencies');
-push @args, map { ('--include', $_) } @idlDirectories;
+push @args, map { ('--includeDirsList', $_) } $includeDirsList;
 push @args, '--supplementalDependencyFile', $supplementalDependencyFile if $supplementalDependencyFile;
 
 my %directoryCache;
