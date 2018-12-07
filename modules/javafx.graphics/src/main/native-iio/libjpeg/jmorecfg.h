@@ -349,7 +349,7 @@ typedef enum { FALSE = 0, TRUE = 1 } boolean;
 
 /* Encoder capability options: */
 
-#define C_ARITH_CODING_SUPPORTED    /* Arithmetic coding back end? */
+#undef C_ARITH_CODING_SUPPORTED    /* Arithmetic coding back end? */
 #define C_MULTISCAN_FILES_SUPPORTED /* Multiple-scan JPEG files? */
 #define C_PROGRESSIVE_SUPPORTED        /* Progressive JPEG? (Requires MULTISCAN)*/
 #define DCT_SCALING_SUPPORTED        /* Input rescaling via DCT? (Requires DCT_ISLOW)*/
@@ -367,7 +367,7 @@ typedef enum { FALSE = 0, TRUE = 1 } boolean;
 
 /* Decoder capability options: */
 
-#define D_ARITH_CODING_SUPPORTED    /* Arithmetic coding back end? */
+#undef D_ARITH_CODING_SUPPORTED    /* Arithmetic coding back end? */
 #define D_MULTISCAN_FILES_SUPPORTED /* Multiple-scan JPEG files? */
 #define D_PROGRESSIVE_SUPPORTED        /* Progressive JPEG? (Requires MULTISCAN)*/
 #define IDCT_SCALING_SUPPORTED        /* Output rescaling via IDCT? (Requires DCT_ISLOW)*/

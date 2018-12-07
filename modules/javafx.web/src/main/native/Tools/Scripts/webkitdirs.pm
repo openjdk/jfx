@@ -2173,9 +2173,10 @@ sub generateBuildSystemFromCMakeProject
     } elsif (isJava() && isAnyWindows()) {
         push @args, "-G";
         if (isWin64()) {
-            push @args, "'Visual Studio 15 2017 Win64'";
+            push @args, '"Visual Studio 15 2017 Win64"';
+            push @args, '-DCMAKE_GENERATOR_TOOLSET="host=x64"';
         } else {
-            push @args, "'Visual Studio 15 2017'";
+            push @args, '"Visual Studio 15 2017"';
         }
     } elsif (isAnyWindows() && isWin64()) {
         push @args, '-G "Visual Studio 15 2017 Win64"';

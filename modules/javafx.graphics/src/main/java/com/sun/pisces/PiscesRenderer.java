@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -281,14 +281,14 @@ public final class PiscesRenderer {
     }
 
     public void setTexture(int imageType, int data[], int width, int height, int stride,
-        Transform6 textureTransform, boolean repeat, boolean hasAlpha)
+        Transform6 textureTransform, boolean repeat, boolean linearFiltering, boolean hasAlpha)
     {
         this.inputImageCheck(width, height, 0, stride, data.length);
-        this.setTextureImpl(imageType, data, width, height, stride, textureTransform, repeat, hasAlpha);
+        this.setTextureImpl(imageType, data, width, height, stride, textureTransform, repeat, linearFiltering, hasAlpha);
     }
 
     private native void setTextureImpl(int imageType, int data[], int width, int height, int stride,
-        Transform6 textureTransform, boolean repeat, boolean hasAlpha);
+        Transform6 textureTransform, boolean repeat, boolean linearFiltering, boolean hasAlpha);
 
     /**
      * Sets a clip rectangle for all primitives.  Each primitive will be
@@ -389,7 +389,7 @@ public final class PiscesRenderer {
     private native void fillLCDAlphaMaskImpl(byte[] mask, int x, int y, int width, int height, int offset, int stride);
 
     public void drawImage(int imageType, int imageMode, int data[],  int width, int height, int offset, int stride,
-        Transform6 textureTransform, boolean repeat,
+        Transform6 textureTransform, boolean repeat, boolean linearFiltering,
         int bboxX, int bboxY, int bboxW, int bboxH,
         int lEdge, int rEdge, int tEdge, int bEdge,
         int txMin, int tyMin, int txMax, int tyMax,
@@ -397,7 +397,7 @@ public final class PiscesRenderer {
     {
         this.inputImageCheck(width, height, offset, stride, data.length);
         this.drawImageImpl(imageType, imageMode, data, width, height, offset, stride,
-            textureTransform, repeat,
+            textureTransform, repeat, linearFiltering,
             bboxX, bboxY, bboxW, bboxH,
             lEdge, rEdge, tEdge, bEdge,
             txMin, tyMin, txMax, tyMax,
@@ -405,7 +405,7 @@ public final class PiscesRenderer {
     }
 
     private native void drawImageImpl(int imageType, int imageMode, int data[], int width, int height, int offset, int stride,
-        Transform6 textureTransform, boolean repeat,
+        Transform6 textureTransform, boolean repeat, boolean linearFiltering,
         int bboxX, int bboxY, int bboxW, int bboxH,
         int lEdge, int rEdge, int tEdge, int bEdge,
         int txMin, int tyMin, int txMax, int tyMax,

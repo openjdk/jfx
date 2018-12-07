@@ -64,6 +64,13 @@ if (IS_DEBUG_NATIVE) {
     linkFlags += "-g"
 }
 
+def toolchainDir
+if (hasProperty('toolchainDir')) {
+    toolchainDir = ext.toolchainDir + "/"
+} else {
+    toolchainDir = ""
+}
+
 def gtk2CCFlags = [  ];
 def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk2LinkFlags = [ ];
@@ -75,14 +82,14 @@ setupTools("linux_gtk2",
     { propFile ->
         ByteArrayOutputStream results1 = new ByteArrayOutputStream();
         exec {
-            commandLine("pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst")
+            commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst")
             setStandardOutput(results1);
         }
         propFile << "cflagsGTK2=" << results1.toString().trim() << "\n";
 
         ByteArrayOutputStream results3 = new ByteArrayOutputStream();
         exec {
-            commandLine("pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst")
+            commandLine("${toolchainDir}pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst")
             setStandardOutput(results3);
         }
         propFile << "libsGTK2=" << results3.toString().trim()  << "\n";
@@ -103,7 +110,7 @@ setupTools("linux_gtk3",
     { propFile ->
         ByteArrayOutputStream results2 = new ByteArrayOutputStream();
         exec {
-            commandLine("pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst")
+            commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst")
             setStandardOutput(results2);
             ignoreExitValue(true)
         }
@@ -111,7 +118,7 @@ setupTools("linux_gtk3",
 
         ByteArrayOutputStream results4 = new ByteArrayOutputStream();
         exec {
-            commandLine("pkg-config", "--libs", "gtk+-3.0", "gthread-2.0", "xtst")
+            commandLine("${toolchainDir}pkg-config", "--libs", "gtk+-3.0", "gthread-2.0", "xtst")
             setStandardOutput(results4);
             ignoreExitValue(true)
         }
@@ -137,14 +144,14 @@ setupTools("linux_pango_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--cflags", "pangoft2"
+            commandLine "${toolchainDir}pkg-config", "--cflags", "pangoft2"
             standardOutput = results
         }
         propFile << "cflags=" << results.toString().trim() << "\n";
 
         results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--libs", "pangoft2"
+            commandLine "${toolchainDir}pkg-config", "--libs", "pangoft2"
             standardOutput = results
         }
         propFile << "libs=" << results.toString().trim();
@@ -168,14 +175,14 @@ setupTools("linux_freetype_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--cflags", "freetype2"
+            commandLine "${toolchainDir}pkg-config", "--cflags", "freetype2"
             standardOutput = results
         }
         propFile << "cflags=" << results.toString().trim() << "\n";
 
         results = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--libs", "freetype2"
+            commandLine "${toolchainDir}pkg-config", "--libs", "freetype2"
             standardOutput = results
         }
         propFile << "libs=" << results.toString().trim();
@@ -192,8 +199,8 @@ setupTools("linux_freetype_tools",
     }
 )
 
-def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
-def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "g++";
+def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "${toolchainDir}gcc";
+def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "${toolchainDir}g++";
 
 LINUX.glass = [:]
 LINUX.glass.variants = ["glass", "glassgtk2"]
@@ -309,7 +316,7 @@ LINUX.fontPango.lib = "javafx_font_pango"
 LINUX.media = [:]
 LINUX.media.compiler = compiler
 LINUX.media.linker = linker
-LINUX.media.ar = "ar"
+LINUX.media.ar = "${toolchainDir}ar"
 
 LINUX.webkit = [:]
 LINUX.webkit.compiler = compiler
