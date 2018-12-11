@@ -1,0 +1,38 @@
+<html>
+<head>
+<title>Title of the document</title>
+
+<script type="text/javascript">
+var result = null;
+var file;
+window.addEventListener('click', (e) => {
+	document.getElementById('file').click();
+	test.print("onclick.." + e);
+
+});
+function ReadFile() {
+  file = event.target.files[0];
+  test.print("file.." + file);
+  var reader = new FileReader();
+     reader.onload = function () { 
+      document.getElementById('results').innerText='loaded:' + reader.result;
+	  result = reader.result;
+	  test.print("result..." + result);
+	  latch.countDown();
+     };
+  reader.onerror = function () { 
+    document.getElementById('results').innerText='Error:' + reader.result;
+	result = reader.result;
+	latch.countDown();
+  };
+  reader.readAsText(file);
+}
+</script>
+</head>
+
+<body>
+<input type="file" id="file" name="file" onchange="ReadFile()" multiple />
+<div>File Contents</div><div id='results'><div>
+<br/>
+</body>
+</html>

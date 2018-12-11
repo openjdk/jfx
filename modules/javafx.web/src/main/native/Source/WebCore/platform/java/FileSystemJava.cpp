@@ -232,21 +232,68 @@ String openTemporaryFile(const String&, PlatformFileHandle& handle)
     return String();
 }
 
-PlatformFileHandle openFile(const String&, FileOpenMode)
+PlatformFileHandle openFile(const String& path, FileOpenMode mode)
 {
-    notImplemented();
-    return invalidPlatformFileHandle;
+    if (mode != FileOpenMode::Read) {
+        return invalidPlatformFileHandle;
+    }
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkOpenFile",
+            "(Ljava/lang/String;Ljava/lang/String;)Ljava/io/RandomAccessFile;");
+    ASSERT(mid);
+
+    PlatformFileHandle result = env->CallStaticObjectMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jstring)path.toJavaString(env), (jstring)(env->NewStringUTF("r")));
+
+    CheckAndClearException(env);
+    return result ? result : invalidPlatformFileHandle;
 }
 
-void closeFile(PlatformFileHandle&)
+void closeFile(PlatformFileHandle& handle)
 {
-    notImplemented();
+    if (isHandleValid(handle)) {
+        JNIEnv* env = WebCore_GetJavaEnv();
+        static jmethodID mid = env->GetStaticMethodID(
+                GetFileSystemClass(env),
+                "fwkCloseFile",
+                "(Ljava/io/RandomAccessFile;)V");
+        ASSERT(mid);
+
+        env->CallStaticVoidMethod(
+                GetFileSystemClass(env),
+                mid, (jobject)handle);
+        CheckAndClearException(env);
+        handle = invalidPlatformFileHandle;
+    }
 }
 
-int readFromFile(PlatformFileHandle, char*, int)
+int readFromFile(PlatformFileHandle handle, char* data, int length)
 {
-    notImplemented();
-    return -1;
+    if (length < 0 || !isHandleValid(handle) || data == nullptr) {
+        return -1;
+    }
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkReadFromFile",
+            "(Ljava/io/RandomAccessFile;Ljava/nio/ByteBuffer;)I");
+    ASSERT(mid);
+
+    int result = env->CallStaticIntMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jobject)handle,
+            (jobject)(env->NewDirectByteBuffer(data, length)));
+    CheckAndClearException(env);
+
+    if (result < 0) {
+        return -1;
+    }
+    return result;
 }
 
 int writeToFile(PlatformFileHandle, const char*, int)
@@ -274,10 +321,28 @@ String pathGetFileName(const String& path)
     return String(env, result);
 }
 
-long long seekFile(PlatformFileHandle, long long, FileSeekOrigin)
+long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin)
 {
-    notImplemented();
-    return (long long)(-1);
+    // we always get positive value for offset from webkit.
+    // Below check for offset < 0 might be redundant?
+    if (offset < 0 || !isHandleValid(handle)) {
+        return -1;
+    }
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID mid = env->GetStaticMethodID(
+            GetFileSystemClass(env),
+            "fwkSeekFile",
+            "(Ljava/io/RandomAccessFile;J)V");
+    ASSERT(mid);
+
+    env->CallStaticVoidMethod(
+            GetFileSystemClass(env),
+            mid,
+            (jobject)handle, (jlong)offset);
+    if (CheckAndClearException(env)) {
+        offset = -1;
+    }
+    return offset;
 }
 
 std::optional<int32_t> getFileDeviceId(const CString&)

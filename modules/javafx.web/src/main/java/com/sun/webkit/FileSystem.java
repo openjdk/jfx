@@ -27,8 +27,12 @@ package com.sun.webkit;
 
 import com.sun.javafx.logging.PlatformLogger;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import static java.lang.String.format;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
@@ -50,6 +54,41 @@ final class FileSystem {
 
     private static boolean fwkFileExists(String path) {
         return new File(path).exists();
+    }
+
+    private static RandomAccessFile fwkOpenFile(String path, String mode) {
+        try {
+            return new RandomAccessFile(path, mode);
+        } catch (FileNotFoundException | SecurityException ex) {
+            logger.fine(format("Error while creating RandomAccessFile for file [%s]", path), ex);
+        }
+        return null;
+    }
+
+    private static void fwkCloseFile(RandomAccessFile raf) {
+        try {
+            raf.close();
+        } catch (IOException ex) {
+            logger.fine(format("Error while closing RandomAccessFile for file [%s]", raf), ex);
+        }
+    }
+
+    private static int fwkReadFromFile(RandomAccessFile raf, ByteBuffer byteBuffer) {
+        try {
+            FileChannel fc = raf.getChannel();
+            return fc.read(byteBuffer);
+        } catch (IOException ex) {
+            logger.fine(format("Error while reading RandomAccessFile for file [%s]", raf), ex);
+        }
+        return -1;
+    }
+
+    private static void fwkSeekFile(RandomAccessFile raf, long pos) {
+        try {
+            raf.seek(pos);
+        } catch (IOException ex) {
+            logger.fine(format("Error while seek RandomAccessFile for file [%s]", raf), ex);
+        }
     }
 
     private static long fwkGetFileSize(String path) {

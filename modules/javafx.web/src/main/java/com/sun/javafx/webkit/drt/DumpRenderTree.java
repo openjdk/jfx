@@ -157,6 +157,10 @@ public final class DumpRenderTree {
         return testString;
     }
 
+    protected String getTestURL() {
+        return testPath;
+    }
+
 /*
     private static boolean isDebug()
     {
@@ -323,6 +327,7 @@ public final class DumpRenderTree {
     private static native boolean dumpChildFramesAsText();
     private static native boolean dumpBackForwardList();
     protected static native boolean shouldStayOnPageAfterHandlingBeforeUnload();
+    protected static native String[] openPanelFiles();
 
     private final class DRTLoadListener implements LoadListenerClient {
         @Override
