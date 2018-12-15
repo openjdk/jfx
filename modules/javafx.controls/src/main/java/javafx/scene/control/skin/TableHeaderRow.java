@@ -48,6 +48,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
+import javafx.scene.layout.Border;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -276,7 +277,16 @@ public class TableHeaderRow extends StackPane {
      *                                                                         *
      **************************************************************************/
 
-    // --- reordering
+
+    /**
+     * Indicates if a reordering operation of a column is in progress. The value is {@code true} during a column
+     * reordering operation, and {@code false} otherwise. When a column is reordered (for example, by dragging its
+     * header), this property is updated automatically. Setting the value manually should be done when a subclass
+     * overrides the default reordering behavior. Calling {@link #setReorderingRegion(TableColumnHeader)} before setting
+     * this property is required as well.
+     *
+     * @since 12
+     */
     private BooleanProperty reordering = new SimpleBooleanProperty(this, "reordering", false) {
         @Override protected void invalidated() {
             TableColumnHeader r = getReorderingRegion();
@@ -291,13 +301,16 @@ public class TableHeaderRow extends StackPane {
             dragHeader.setVisible(isReordering());
         }
     };
-    final void setReordering(boolean value) {
+
+    public final void setReordering(boolean value) {
         this.reordering.set(value);
     }
-    final boolean isReordering() {
+
+    public final boolean isReordering() {
         return reordering.get();
     }
-    final BooleanProperty reorderingProperty() {
+
+    public final BooleanProperty reorderingProperty() {
         return reordering;
     }
 
@@ -314,9 +327,22 @@ public class TableHeaderRow extends StackPane {
     private final ReadOnlyObjectProperty<NestedTableColumnHeader> rootHeaderProperty() {
         return rootHeader.getReadOnlyProperty();
     }
-    final NestedTableColumnHeader getRootHeader() {
+
+    /**
+     * Returns the root header for all columns. The root header is a {@link NestedTableColumnHeader} that contains the
+     * {@code NestedTableColumnHeader}s that represent each column. It spans the entire width of the {@code TableView}.
+     * This allows any developer overriding a {@code TableColumnHeader} to easily access the root header and all others
+     * {@code TableColumnHeader}s.
+     *
+     * @return the root header
+     * @implNote This design enforces that column reordering occurs only within a single {@code NestedTableColumnHeader}
+     * and only at that level.
+     * @since 12
+     */
+    public final NestedTableColumnHeader getRootHeader() {
         return rootHeader.get();
     }
+
     private final void setRootHeader(NestedTableColumnHeader value) {
         rootHeader.set(value);
     }
@@ -378,9 +404,17 @@ public class TableHeaderRow extends StackPane {
         return snappedTopInset() + headerPrefHeight + snappedBottomInset();
     }
 
-    // used to be protected to allow subclasses to modify the horizontal scrolling,
-    // but made private again for JDK 9
-    void updateScrollX() {
+    /**
+     * Called whenever the value of the horizontal scrollbar changes in order to request layout changes, shifting the
+     * {@code TableColumnHeader}s.
+     * <p>
+     * For example, if custom components are added around a {@code TableColumnHeader} (such as icons above), they will
+     * also need to be shifted. When overriding, calling {@code super()} is required to shift the {@code
+     * TableColumnHeader}s, and it's up to the developer to notify its own custom components of this change.
+     *
+     * @since 12
+     */
+    protected void updateScrollX() {
         scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
         requestLayout();
 
@@ -390,9 +424,21 @@ public class TableHeaderRow extends StackPane {
         layout();
     }
 
-    // used to be protected to allow subclass to customise the width, to allow for features
-    // such as row headers, but made private again for JDK 9
-    private void updateTableWidth() {
+
+    /**
+     * Updates the table width when a resize operation occurs. This method is called continuously when the control width
+     * is resizing in order to properly clip this {@code TableHeaderRow}. Overriding this method allows a subclass to
+     * customize the resizing behavior.
+     * <p>
+     * Normally, the {@code TableHeaderRow} is using the full space ({@code TableView} width), but in some cases that
+     * space may be reduced. For example, if a vertical header that will display the row number is introduced, the
+     * {@code TableHeaderRow} would need to be clipped a bit shorter in order not to overlap that vertical header.
+     * Calling {@code super()} first when overriding this method allows {@link #getClip()} to compute the right width in
+     * order apply a transformation.
+     *
+     * @since 12
+     */
+    protected void updateTableWidth() {
         // snapping added for RT-19428
         final Control c = tableSkin.getSkinnable();
         if (c == null) {
@@ -424,7 +470,13 @@ public class TableHeaderRow extends StackPane {
      *                                                                         *
      **************************************************************************/
 
-    TableColumnHeader getReorderingRegion() {
+    /**
+     * Returns the current {@link TableColumnHeader} being moved during reordering.
+     *
+     * @return the current {@code TableColumnHeader} being moved
+     * @since 12
+     */
+    protected TableColumnHeader getReorderingRegion() {
         return reorderingRegion;
     }
 
@@ -432,7 +484,15 @@ public class TableHeaderRow extends StackPane {
         dragHeaderLabel.setText(rc == null ? "" : rc.getText());
     }
 
-    void setReorderingRegion(TableColumnHeader reorderingRegion) {
+    /**
+     * Sets the {@code TableColumnHeader} that is being moved during a reordering operation. This is automatically set
+     * by the {@code TableColumnHeader} when reordering starts. This method should only be called manually if the
+     * default reordering behavior is overridden. Calling {@link #setReordering(boolean)} after the call is required.
+     *
+     * @param reorderingRegion the {@code TableColumnHeader} being reordered
+     * @since 12
+     */
+    protected void setReorderingRegion(TableColumnHeader reorderingRegion) {
         this.reorderingRegion = reorderingRegion;
 
         if (reorderingRegion != null) {

@@ -1690,7 +1690,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
         setCellIndex(accumCell, index);
-        resizeCellSize(accumCell);
+        resizeCell(accumCell);
         return accumCell;
     }
 
@@ -1735,10 +1735,27 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      *                                                                         *
      **************************************************************************/
 
-    final VirtualScrollBar getHbar() {
+    /**
+     * Returns the scroll bar used for scrolling horizontally. A developer who needs to be notified when a scroll is
+     * happening could attach a listener to the {@link ScrollBar#valueProperty()}.
+     *
+     * @return the scroll bar used for scrolling horizontally
+     * @since 12
+     */
+    protected final ScrollBar getHbar() {
         return hbar;
     }
-    final VirtualScrollBar getVbar() {
+
+    /**
+     * Returns the scroll bar used for scrolling vertically. A developer who needs to be notified when a scroll is
+     * happening could attach a listener to the {@link ScrollBar#valueProperty()}. The {@link ScrollBar#getWidth()} is
+     * also useful when adding a component over the {@code TableView} in order to clip it so that it doesn't overlap the
+     * {@code ScrollBar}.
+     *
+     * @return the scroll bar used for scrolling vertically
+     * @since 12
+     */
+    protected final ScrollBar getVbar() {
         return vbar;
     }
 
@@ -1855,7 +1872,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
     }
 
-    private void resizeCellSize(T cell) {
+    /**
+     * Resizes the given cell. If {@link #isVertical()} is set to {@code true}, the cell width will be the maximum
+     * between the viewport width and the sum of all the cells' {@code prefWidth}. The cell height will be computed by
+     * the cell itself unless {@code fixedCellSizeEnabled} is set to {@code true}, then {@link #getFixedCellSize()} is
+     * used. If {@link #isVertical()} is set to {@code false}, the width and height calculations are reversed.
+     *
+     * @param cell the cell to resize
+     * @since 12
+     */
+    protected void resizeCell(T cell) {
         if (cell == null) return;
 
         if (isVertical()) {
@@ -1867,12 +1893,28 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
     }
 
-    private List<T> getCells() {
+    /**
+     * Returns the list of cells displayed in the current viewport.
+     * <p>
+     * The cells are ordered such that the first cell in this list is the first in the view, and the last cell is the
+     * last in the view. When pixel scrolling, the list is simply shifted and items drop off the beginning or the end,
+     * depending on the order of scrolling.
+     *
+     * @return the cells displayed in the current viewport
+     * @since 12
+     */
+    protected List<T> getCells() {
         return cells;
     }
 
-    // Returns last visible cell whose bounds are entirely within the viewport
-    T getLastVisibleCellWithinViewPort() {
+    /**
+     * Returns the last visible cell whose bounds are entirely within the viewport. When manually inserting rows, one
+     * may need to know which cell indices are visible in the viewport.
+     *
+     * @return last visible cell whose bounds are entirely within the viewport
+     * @since 12
+     */
+    protected T getLastVisibleCellWithinViewport() {
         if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
         T cell;
@@ -1894,8 +1936,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return null;
     }
 
-    // Returns first visible cell whose bounds are entirely within the viewport
-    T getFirstVisibleCellWithinViewPort() {
+    /**
+     * Returns the first visible cell whose bounds are entirely within the viewport. When manually inserting rows, one
+     * may need to know which cell indices are visible in the viewport.
+     *
+     * @return first visible cell whose bounds are entirely within the viewport
+     * @since 12
+     */
+    protected T getFirstVisibleCellWithinViewport() {
         if (cells.isEmpty() || getViewportLength() <= 0) return null;
 
         T cell;
@@ -1945,7 +1993,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         while (index >= 0 && (offset > 0 || first)) {
             cell = getAvailableCell(index);
             setCellIndex(cell, index);
-            resizeCellSize(cell); // resize must be after config
+            resizeCell(cell); // resize must be after config
             cells.addFirst(cell);
 
             // A little gross but better than alternatives because it reduces
@@ -2040,7 +2088,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
             T cell = getAvailableCell(index);
             setCellIndex(cell, index);
-            resizeCellSize(cell); // resize happens after config!
+            resizeCell(cell); // resize happens after config!
             cells.addLast(cell);
 
             // Position the cell and update the max pref
@@ -2073,7 +2121,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 index--;
                 T cell = getAvailableCell(index);
                 setCellIndex(cell, index);
-                resizeCellSize(cell); // resize must be after config
+                resizeCell(cell); // resize must be after config
                 cells.addFirst(cell);
                 double cellLength = getCellLength(cell);
                 start -= cellLength;
@@ -2110,22 +2158,46 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return filledWithNonEmpty;
     }
 
-    void reconfigureCells() {
+    /**
+     * Informs the {@code VirtualFlow} that a layout pass should be done, and the cell contents have not changed. For
+     * example, this might be called from a {@code TableView} or {@code ListView} when a layout is needed and no cells
+     * have been added or removed.
+     *
+     * @since 12
+     */
+    protected void reconfigureCells() {
         needsReconfigureCells = true;
         requestLayout();
     }
 
-    void recreateCells() {
+    /**
+     * Informs the {@code VirtualFlow} that a layout pass should be done, and that the cell factory has changed. All
+     * cells in the viewport are recreated with the new cell factory.
+     *
+     * @since 12
+     */
+    protected void recreateCells() {
         needsRecreateCells = true;
         requestLayout();
     }
 
-    void rebuildCells() {
+    /**
+     * Informs the {@code VirtualFlow} that a layout pass should be done, and cell contents have changed. All cells are
+     * removed and then added properly in the viewport.
+     *
+     * @since 12
+     */
+    protected void rebuildCells() {
         needsRebuildCells = true;
         requestLayout();
     }
 
-    void requestCellLayout() {
+    /**
+     * Informs the {@code VirtualFlow} that a layout pass should be done and only the cell layout will be requested.
+     *
+     * @since 12
+     */
+    protected void requestCellLayout() {
         needsCellsLayout = true;
         requestLayout();
     }
@@ -2485,13 +2557,23 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
     }
 
+
     /**
-     * This method is an experts-only method - if the requested index is not
-     * already an existing visible cell, it will create a cell for the
-     * given index and insert it into the sheet. From that point on it will be
-     * unmanaged, and is up to the caller of this method to manage it.
+     * Creates and returns a new cell for the given index.
+     * <p>
+     * If the requested index is not already an existing visible cell, it will create a cell for the given index and
+     * insert it into the {@code VirtualFlow} container. If the index exists, simply returns the visible cell. From that
+     * point on, it will be unmanaged, and is up to the caller of this method to manage it.
+     * <p>
+     * This is useful if a row that should not be visible must be accessed (a row that always stick to the top for
+     * example). It can then be easily created, correctly initialized and inserted in the {@code VirtualFlow}
+     * container.
+     *
+     * @param index the cell index
+     * @return a cell for the given index inserted in the VirtualFlow container
+     * @since 12
      */
-    T getPrivateCell(int index)  {
+    protected T getPrivateCell(int index)  {
         T cell = null;
 
         // If there are cells, then we will attempt to get an existing cell
@@ -2525,7 +2607,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (cell != null) {
             setCellIndex(cell, index);
-            resizeCellSize(cell);
+            resizeCell(cell);
             cell.setVisible(false);
             sheetChildren.add(cell);
             privateCells.add(cell);
