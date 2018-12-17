@@ -26,7 +26,6 @@
 package com.sun.javafx.embed.swing.newimpl;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.embed.swing.SwingFXUtilsImplInterop;
 import com.sun.javafx.tk.Toolkit;
 import java.awt.EventQueue;
 import java.awt.SecondaryLoop;
@@ -34,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.Platform;
 import jdk.swing.interop.DispatcherWrapper;
 
-public class SwingFXUtilsImplInteropN extends SwingFXUtilsImplInterop {
+public class SwingFXUtilsImplInteropN {
 
     private static class FwSecondaryLoop implements SecondaryLoop {
 

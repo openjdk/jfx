@@ -73,8 +73,7 @@ import static javafx.stage.WindowEvent.WINDOW_HIDDEN;
 
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.embed.swing.SwingEvents;
-import com.sun.javafx.embed.swing.InteropFactory;
-import com.sun.javafx.embed.swing.SwingNodeInterop;
+import com.sun.javafx.embed.swing.newimpl.SwingNodeInteropN;
 
 /**
  * This class is used to embed a Swing content into a JavaFX application.
@@ -119,16 +118,8 @@ import com.sun.javafx.embed.swing.SwingNodeInterop;
  */
 public class SwingNode extends Node {
     private static boolean isThreadMerged;
-    private SwingNodeInterop swNodeIOP;
-    private static InteropFactory iopFactoryInstance = null;
 
     static {
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 isThreadMerged = Boolean.valueOf(
@@ -258,6 +249,7 @@ public class SwingNode extends Node {
     private boolean skipBackwardUnrgabNotification;
     private boolean grabbed; // lwframe initiated grab
     private Timer deactivate; // lwFrame deactivate delay for Linux
+    private SwingNodeInteropN swNodeIOP;
 
     {
         // To initialize the class helper at the begining each constructor of this class
@@ -268,7 +260,7 @@ public class SwingNode extends Node {
      * Constructs a new instance of {@code SwingNode}.
      */
     public SwingNode() {
-        swNodeIOP = iopFactoryInstance.createSwingNodeImpl();
+        swNodeIOP = new SwingNodeInteropN();
         setFocusTraversable(true);
         setEventHandler(MouseEvent.ANY, new SwingMouseEventHandler());
         setEventHandler(KeyEvent.ANY, new SwingKeyEventHandler());
