@@ -28,6 +28,8 @@ package javafx.scene.control.skin;
 import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.TableColumnBaseHelper;
+import com.sun.javafx.scene.control.TreeTableViewBackingList;
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -48,10 +50,7 @@ import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.*;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
@@ -65,6 +64,8 @@ import java.util.List;
 import java.util.Locale;
 
 import javafx.css.converter.SizeConverter;
+
+import javafx.util.Callback;
 
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeName;
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeProperty;
@@ -587,7 +588,183 @@ public class TableColumnHeader extends Region {
         // if the prefWidth has been set, we do _not_ autosize columns
         if (prefWidth == DEFAULT_COLUMN_WIDTH) {
 //            TableSkinUtils.resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
-            getTableSkin().resizeColumnToFitContent(column, cellsToMeasure);
+            resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
+        }
+    }
+
+    /**
+     * Resizes the given column based on the pref width of all items contained in this column. This can be potentially
+     * very expensive if the number of rows is large.
+     *
+     * @param tableSkin the {@code TableViewSkinBase} used to determine if we are dealing with a {@link TableView} or a
+     *                  {@link TreeTableView}
+     * @param tc        the column to resize
+     * @param maxRows   the number of rows considered when resizing. If -1 is given, all rows are considered.
+     * @since 12
+     */
+    protected static void resizeColumnToFitContent(TableViewSkinBase<?,?,?,?,?> tableSkin, TableColumnBase<?,?> tc, int maxRows) {
+        if (!tc.isResizable()) return;
+
+        Object control = tableSkin.getSkinnable();
+        if (control instanceof TableView) {
+            resizeColumnToFitContent((TableView)control, (TableColumn)tc, tableSkin, maxRows);
+        } else if (control instanceof TreeTableView) {
+            resizeColumnToFitContent((TreeTableView)control, (TreeTableColumn)tc, tableSkin, maxRows);
+        }
+    }
+
+    private static <T,S> void resizeColumnToFitContent(TableView<T> tv, TableColumn<T, S> tc, TableViewSkinBase tableSkin, int maxRows) {
+        List<?> items = tv.getItems();
+        if (items == null || items.isEmpty()) return;
+
+        Callback/*<TableColumn<T, ?>, TableCell<T,?>>*/ cellFactory = tc.getCellFactory();
+        if (cellFactory == null) return;
+
+        TableCell<T,?> cell = (TableCell<T, ?>) cellFactory.call(tc);
+        if (cell == null) return;
+
+        // set this property to tell the TableCell we want to know its actual
+        // preferred width, not the width of the associated TableColumnBase
+        cell.getProperties().put(Properties.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
+
+        // determine cell padding
+        double padding = 10;
+        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
+        if (n instanceof Region) {
+            Region r = (Region) n;
+            padding = r.snappedLeftInset() + r.snappedRightInset();
+        }
+
+        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
+        double maxWidth = 0;
+        for (int row = 0; row < rows; row++) {
+            cell.updateTableColumn(tc);
+            cell.updateTableView(tv);
+            cell.updateIndex(row);
+
+            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
+                tableSkin.getChildren().add(cell);
+                cell.applyCss();
+                maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
+                tableSkin.getChildren().remove(cell);
+            }
+        }
+
+        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        cell.updateIndex(-1);
+
+        // RT-36855 - take into account the column header text / graphic widths.
+        // Magic 10 is to allow for sort arrow to appear without text truncation.
+        TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
+        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
+        Node graphic = header.label.getGraphic();
+        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
+        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
+        maxWidth = Math.max(maxWidth, headerWidth);
+
+        // RT-23486
+        maxWidth += padding;
+        if (tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && tv.getWidth() > 0) {
+
+            if (maxWidth > tc.getMaxWidth()) {
+                maxWidth = tc.getMaxWidth();
+            }
+
+            int size = tc.getColumns().size();
+            if (size > 0) {
+                resizeColumnToFitContent(tableSkin, tc.getColumns().get(size - 1), maxRows);
+                return;
+            }
+
+            TableSkinUtils.resizeColumn(tableSkin, tc, Math.round(maxWidth - tc.getWidth()));
+        } else {
+            TableColumnBaseHelper.setWidth(tc, maxWidth);
+        }
+    }
+
+
+    /*
+     * FIXME: Naive implementation ahead
+     * Attempts to resize column based on the pref width of all items contained
+     * in this column. This can be potentially very expensive if the number of
+     * rows is large.
+     */
+    private static <T,S> void resizeColumnToFitContent(TreeTableView<T> ttv, TreeTableColumn<T,S> tc, TableViewSkinBase tableSkin, int maxRows) {
+        List<?> items = new TreeTableViewBackingList(ttv);
+        if (items == null || items.isEmpty()) return;
+
+        Callback cellFactory = tc.getCellFactory();
+        if (cellFactory == null) return;
+
+        TreeTableCell<T,S> cell = (TreeTableCell) cellFactory.call(tc);
+        if (cell == null) return;
+
+        // set this property to tell the TableCell we want to know its actual
+        // preferred width, not the width of the associated TableColumnBase
+        cell.getProperties().put(Properties.DEFER_TO_PARENT_PREF_WIDTH, Boolean.TRUE);
+
+        // determine cell padding
+        double padding = 10;
+        Node n = cell.getSkin() == null ? null : cell.getSkin().getNode();
+        if (n instanceof Region) {
+            Region r = (Region) n;
+            padding = r.snappedLeftInset() + r.snappedRightInset();
+        }
+
+        TreeTableRow<T> treeTableRow = new TreeTableRow<>();
+        treeTableRow.updateTreeTableView(ttv);
+
+        int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
+        double maxWidth = 0;
+        for (int row = 0; row < rows; row++) {
+            treeTableRow.updateIndex(row);
+            treeTableRow.updateTreeItem(ttv.getTreeItem(row));
+
+            cell.updateTreeTableColumn(tc);
+            cell.updateTreeTableView(ttv);
+            cell.updateTreeTableRow(treeTableRow);
+            cell.updateIndex(row);
+
+            if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
+                tableSkin.getChildren().add(cell);
+                cell.applyCss();
+
+                double w = cell.prefWidth(-1);
+
+                maxWidth = Math.max(maxWidth, w);
+                tableSkin.getChildren().remove(cell);
+            }
+        }
+
+        // dispose of the cell to prevent it retaining listeners (see RT-31015)
+        cell.updateIndex(-1);
+
+        // RT-36855 - take into account the column header text / graphic widths.
+        // Magic 10 is to allow for sort arrow to appear without text truncation.
+        TableColumnHeader header = tableSkin.getTableHeaderRow().getColumnHeaderFor(tc);
+        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
+        Node graphic = header.label.getGraphic();
+        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
+        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
+        maxWidth = Math.max(maxWidth, headerWidth);
+
+        // RT-23486
+        maxWidth += padding;
+        if (ttv.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY && ttv.getWidth() > 0) {
+
+            if (maxWidth > tc.getMaxWidth()) {
+                maxWidth = tc.getMaxWidth();
+            }
+
+            int size = tc.getColumns().size();
+            if (size > 0) {
+                resizeColumnToFitContent(tableSkin, tc.getColumns().get(size - 1), maxRows);
+                return;
+            }
+
+            TableSkinUtils.resizeColumn(tableSkin, tc, Math.round(maxWidth - tc.getWidth()));
+        } else {
+            TableColumnBaseHelper.setWidth(tc, maxWidth);
         }
     }
 
