@@ -602,7 +602,7 @@ public class TableColumnHeader extends Region {
      * @param maxRows   the number of rows considered when resizing. If -1 is given, all rows are considered.
      * @since 12
      */
-    protected static void resizeColumnToFitContent(TableViewSkinBase<?,?,?,?,?> tableSkin, TableColumnBase<?,?> tc, int maxRows) {
+    protected void resizeColumnToFitContent(TableViewSkinBase<?,?,?,?,?> tableSkin, TableColumnBase<?,?> tc, int maxRows) {
         if (!tc.isResizable()) return;
 
         Object control = tableSkin.getSkinnable();
@@ -613,7 +613,7 @@ public class TableColumnHeader extends Region {
         }
     }
 
-    private static <T,S> void resizeColumnToFitContent(TableView<T> tv, TableColumn<T, S> tc, TableViewSkinBase tableSkin, int maxRows) {
+    private <T,S> void resizeColumnToFitContent(TableView<T> tv, TableColumn<T, S> tc, TableViewSkinBase tableSkin, int maxRows) {
         List<?> items = tv.getItems();
         if (items == null || items.isEmpty()) return;
 
@@ -682,14 +682,7 @@ public class TableColumnHeader extends Region {
         }
     }
 
-
-    /*
-     * FIXME: Naive implementation ahead
-     * Attempts to resize column based on the pref width of all items contained
-     * in this column. This can be potentially very expensive if the number of
-     * rows is large.
-     */
-    private static <T,S> void resizeColumnToFitContent(TreeTableView<T> ttv, TreeTableColumn<T,S> tc, TableViewSkinBase tableSkin, int maxRows) {
+    private <T,S> void resizeColumnToFitContent(TreeTableView<T> ttv, TreeTableColumn<T,S> tc, TableViewSkinBase tableSkin, int maxRows) {
         List<?> items = new TreeTableViewBackingList(ttv);
         if (items == null || items.isEmpty()) return;
 
