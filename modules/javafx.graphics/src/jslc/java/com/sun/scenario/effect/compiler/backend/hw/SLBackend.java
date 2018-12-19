@@ -81,7 +81,8 @@ public abstract class SLBackend extends TreeScanner {
         sb.append(s);
     }
 
-    public final String getShader() {
+
+    public String getShader() {
         return getHeader() + sb.toString();
     }
 
