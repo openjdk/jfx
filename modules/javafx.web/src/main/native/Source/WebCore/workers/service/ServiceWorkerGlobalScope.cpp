@@ -38,15 +38,15 @@
 
 namespace WebCore {
 
-Ref<ServiceWorkerGlobalScope> ServiceWorkerGlobalScope::create(const ServiceWorkerContextData& data, const URL& url, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread& thread, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicy, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
+Ref<ServiceWorkerGlobalScope> ServiceWorkerGlobalScope::create(const ServiceWorkerContextData& data, const URL& url, Ref<SecurityOrigin>&& origin, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread& thread, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicy, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
 {
-    auto scope = adoptRef(*new ServiceWorkerGlobalScope { data, url, identifier, userAgent, isOnline, thread, shouldBypassMainWorldContentSecurityPolicy, WTFMove(topOrigin), timeOrigin, connectionProxy, socketProvider, sessionID });
+    auto scope = adoptRef(*new ServiceWorkerGlobalScope { data, url, WTFMove(origin), identifier, userAgent, isOnline, thread, shouldBypassMainWorldContentSecurityPolicy, WTFMove(topOrigin), timeOrigin, connectionProxy, socketProvider, sessionID });
     scope->applyContentSecurityPolicyResponseHeaders(contentSecurityPolicy);
     return scope;
 }
 
-ServiceWorkerGlobalScope::ServiceWorkerGlobalScope(const ServiceWorkerContextData& data, const URL& url, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
-    : WorkerGlobalScope(url, identifier, userAgent, isOnline, thread, shouldBypassMainWorldContentSecurityPolicy, WTFMove(topOrigin), timeOrigin, connectionProxy, socketProvider, sessionID)
+ServiceWorkerGlobalScope::ServiceWorkerGlobalScope(const ServiceWorkerContextData& data, const URL& url, Ref<SecurityOrigin>&& origin, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
+    : WorkerGlobalScope(url, WTFMove(origin), identifier, userAgent, isOnline, thread, shouldBypassMainWorldContentSecurityPolicy, WTFMove(topOrigin), timeOrigin, connectionProxy, socketProvider, sessionID)
     , m_contextData(crossThreadCopy(data))
     , m_registration(ServiceWorkerRegistration::getOrCreate(*this, navigator().serviceWorker(), WTFMove(m_contextData.registration)))
     , m_clients(ServiceWorkerClients::create())
@@ -113,7 +113,7 @@ void ServiceWorkerGlobalScope::updateExtendedEventsSet(ExtendableEvent* newEvent
     if (newEvent && newEvent->pendingPromiseCount()) {
         m_extendedEvents.append(*newEvent);
         newEvent->whenAllExtendLifetimePromisesAreSettled([this](auto&&) {
-            updateExtendedEventsSet();
+            this->updateExtendedEventsSet();
         });
         // Clear out the event's target as it is the WorkerGlobalScope and we do not want to keep it
         // alive unnecessarily.
@@ -128,6 +128,22 @@ void ServiceWorkerGlobalScope::updateExtendedEventsSet(ExtendableEvent* newEvent
         if (auto* connection = SWContextManager::singleton().connection())
             connection->setServiceWorkerHasPendingEvents(threadIdentifier, hasPendingEvents);
     });
+}
+
+const ServiceWorkerContextData::ImportedScript* ServiceWorkerGlobalScope::scriptResource(const URL& url) const
+{
+    auto iterator = m_contextData.scriptResourceMap.find(url);
+    return iterator == m_contextData.scriptResourceMap.end() ? nullptr : &iterator->value;
+}
+
+void ServiceWorkerGlobalScope::setScriptResource(const URL& url, ServiceWorkerContextData::ImportedScript&& script)
+{
+    callOnMainThread([threadIdentifier = thread().identifier(), url = url.isolatedCopy(), script = script.isolatedCopy()] {
+        if (auto* connection = SWContextManager::singleton().connection())
+            connection->setScriptResource(threadIdentifier, url, script);
+    });
+
+    m_contextData.scriptResourceMap.set(url, WTFMove(script));
 }
 
 } // namespace WebCore

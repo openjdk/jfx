@@ -43,10 +43,10 @@ using namespace JSC;
 
 void JSXMLHttpRequest::visitAdditionalChildren(SlotVisitor& visitor)
 {
-    if (XMLHttpRequestUpload* upload = wrapped().optionalUpload())
+    if (auto* upload = wrapped().optionalUpload())
         visitor.addOpaqueRoot(upload);
 
-    if (Document* responseDocument = wrapped().optionalResponseXML())
+    if (auto* responseDocument = wrapped().optionalResponseXML())
         visitor.addOpaqueRoot(responseDocument);
 }
 
@@ -84,7 +84,7 @@ JSValue JSXMLHttpRequest::response(ExecState& state) const
         return jsUndefined();
 
     case XMLHttpRequest::ResponseType::Json:
-        value = toJS<IDLJSON>(state, wrapped().responseTextIgnoringResponseType());
+        value = toJS<IDLJSON>(*globalObject()->globalExec(), wrapped().responseTextIgnoringResponseType());
         if (!value)
             value = jsNull();
         break;

@@ -399,6 +399,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     private Runnable onSelectLeftCell;
     public void setOnSelectLeftCell(Runnable r) { onSelectLeftCell = r; }
 
+    private Runnable onFocusRightCell;
+    public void setOnFocusRightCell(Runnable r) { onFocusRightCell = r; }
+
+    private Runnable onFocusLeftCell;
+    public void setOnFocusLeftCell(Runnable r) { onFocusLeftCell = r; }
+
     public void mousePressed(MouseEvent e) {
 //        // FIXME can't assume (yet) cells.get(0) is necessarily the lead cell
 //        ObservableList<? extends TablePositionBase> cells = getSelectedCells();
@@ -522,7 +528,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (fm == null) return;
 
         fm.focusLeftCell();
-        if (onFocusPreviousRow != null) onFocusPreviousRow.run();
+        if (onFocusLeftCell != null) onFocusLeftCell.run();
     }
 
     protected void focusRightCell() {
@@ -533,7 +539,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (fm == null) return;
 
         fm.focusRightCell();
-        if (onFocusNextRow != null) onFocusNextRow.run();
+        if (onFocusRightCell != null) onFocusRightCell.run();
     }
 
     protected void focusPageUp() {

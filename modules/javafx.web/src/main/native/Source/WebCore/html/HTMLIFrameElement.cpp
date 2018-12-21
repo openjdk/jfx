@@ -32,8 +32,11 @@
 #include "HTMLNames.h"
 #include "RenderIFrame.h"
 #include "ScriptableDocumentParser.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLIFrameElement);
 
 using namespace HTMLNames;
 
@@ -101,7 +104,7 @@ void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicSt
 
 bool HTMLIFrameElement::rendererIsNeeded(const RenderStyle& style)
 {
-    return isURLAllowed() && style.display() != NONE;
+    return isURLAllowed() && style.display() != DisplayType::None;
 }
 
 RenderPtr<RenderElement> HTMLIFrameElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)

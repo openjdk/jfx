@@ -29,7 +29,6 @@
 #if ENABLE(CONTENT_EXTENSIONS)
 
 #include "CSSParser.h"
-#include "CSSParserMode.h"
 #include "CSSSelectorList.h"
 #include "ContentExtensionError.h"
 #include "ContentExtensionRule.h"
@@ -39,7 +38,6 @@
 #include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/VM.h>
-#include <wtf/CurrentTime.h>
 #include <wtf/Expected.h>
 #include <wtf/text/WTFString.h>
 
@@ -232,6 +230,7 @@ static Expected<Trigger, std::error_code> loadTrigger(ExecState& exec, const JSO
 
 bool isValidCSSSelector(const String& selector)
 {
+    ASSERT(isMainThread());
     AtomicString::init();
     QualifiedName::init();
     CSSParserContext context(HTMLQuirksMode);
@@ -301,7 +300,7 @@ static Expected<std::optional<ContentExtensionRule>, std::error_code> loadRule(E
     return { std::nullopt };
 }
 
-static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(ExecState& exec, String&& ruleJSON)
+static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(ExecState& exec, const String& ruleJSON)
 {
     VM& vm = exec.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
@@ -349,10 +348,10 @@ static Expected<Vector<ContentExtensionRule>, std::error_code> loadEncodedRules(
     return WTFMove(ruleList);
 }
 
-Expected<Vector<ContentExtensionRule>, std::error_code> parseRuleList(String&& ruleJSON)
+Expected<Vector<ContentExtensionRule>, std::error_code> parseRuleList(const String& ruleJSON)
 {
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double loadExtensionStartTime = monotonicallyIncreasingTime();
+    MonotonicTime loadExtensionStartTime = MonotonicTime::now();
 #endif
     RefPtr<VM> vm = VM::create();
 
@@ -360,7 +359,7 @@ Expected<Vector<ContentExtensionRule>, std::error_code> parseRuleList(String&& r
     JSGlobalObject* globalObject = JSGlobalObject::create(*vm, JSGlobalObject::createStructure(*vm, jsNull()));
 
     ExecState* exec = globalObject->globalExec();
-    auto ruleList = loadEncodedRules(*exec, WTFMove(ruleJSON));
+    auto ruleList = loadEncodedRules(*exec, ruleJSON);
 
     vm = nullptr;
 
@@ -371,8 +370,8 @@ Expected<Vector<ContentExtensionRule>, std::error_code> parseRuleList(String&& r
         return makeUnexpected(ContentExtensionError::JSONContainsNoRules);
 
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double loadExtensionEndTime = monotonicallyIncreasingTime();
-    dataLogF("Time spent loading extension %f\n", (loadExtensionEndTime - loadExtensionStartTime));
+    MonotonicTime loadExtensionEndTime = MonotonicTime::now();
+    dataLogF("Time spent loading extension %f\n", (loadExtensionEndTime - loadExtensionStartTime).seconds());
 #endif
 
     return WTFMove(*ruleList);

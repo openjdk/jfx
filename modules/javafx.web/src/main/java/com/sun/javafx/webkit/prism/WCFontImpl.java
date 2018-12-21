@@ -41,7 +41,9 @@ import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
 import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutBounds;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.webkit.graphics.WCFont;
-import com.sun.webkit.graphics.WCGlyphBuffer;
+import com.sun.webkit.graphics.WCTextRun;
+import com.sun.webkit.graphics.WCTextRunImpl;
+import java.util.Arrays;
 import java.util.HashMap;
 
 final class WCFontImpl extends WCFont {
@@ -61,6 +63,8 @@ final class WCFontImpl extends WCFont {
                 FONT_MAP.put("sans-serif", "SansSerif");
                 FONT_MAP.put("monospace", "Monospaced");
                 FONT_MAP.put("monospaced", "Monospaced");
+                FONT_MAP.put("times", "Times New Roman");
+                FONT_MAP.put("courier", "Courier New");
                 for (String family : factory.getFontFamilyNames()) {
                     FONT_MAP.put(family.toLowerCase(), family);
                 }
@@ -98,55 +102,6 @@ final class WCFontImpl extends WCFont {
                                    size));
     }
 
-    @Override public int getOffsetForPosition(String str, float x) {
-        TextLayout layout = TextUtilities.createLayout(str, font);
-        GlyphList[] runs = layout.getRuns();
-        TextRun run = (TextRun) runs[0];
-        int offset = run.getOffsetAtX(x, null);
-        if (log.isLoggable(Level.FINE)) {
-            log.fine(String.format("str='%s' (length=%d), x=%.2f => %d",
-                    str, str.length(), x, offset));
-        }
-        return offset;
-    }
-
-    @Override public WCGlyphBuffer getGlyphsAndAdvances(String str, int from, int to, boolean rtl) {
-        if (log.isLoggable(Level.FINE)) {
-            log.fine(String.format(
-                    "str='%s' (length=%d), from=%d, to=%d, rtl=%b",
-                    str, str.length(), from, to, rtl));
-        }
-        TextLayout layout = TextUtilities.createLayout(
-                str.substring(from, to), getPlatformFont());
-        int count = 0;
-        GlyphList[] runs = layout.getRuns();
-        for (GlyphList run: runs) {
-            count += run.getGlyphCount();
-        }
-
-        int[] glyphs = new int[count];
-        float[] adv = new float[count];
-        count = 0;
-        for (GlyphList run: layout.getRuns()) {
-            int gc = run.getGlyphCount();
-            for (int i = 0; i < gc; i++) {
-                glyphs[count] = run.getGlyphCode(i);
-                adv[count] = run.getPosX(i + 1) - run.getPosX(i);
-                count++;
-            }
-        }
-
-        // inital advance (see RT-29908)
-        float x = 0;
-        if (rtl) {
-            x += (TextUtilities.getLayoutWidth(str.substring(from), getPlatformFont()) -
-                  layout.getBounds().getWidth());
-        } else {
-            x += TextUtilities.getLayoutWidth(str.substring(0, from), getPlatformFont());
-        }
-        return new WCGlyphBuffer(glyphs, adv, x);
-    }
-
     private FontStrike strike;
     private FontStrike getFontStrike()
     {
@@ -175,37 +130,6 @@ final class WCFontImpl extends WCFont {
         CharToGlyphMapper mapper = getFontStrike().getFontResource().getGlyphMapper();
         mapper.charsToGlyphs(chars.length, chars, glyphs);
         return glyphs;
-    }
-
-    @Override public double getStringWidth(String str) {
-        double result = getLayoutWidth(str, font);
-        if (log.isLoggable(Level.FINE)) {
-            log.fine(String.format("str='%s' (length=%d) => %.1f",
-                                    str, str.length(), result));
-        }
-        return result;
-    }
-
-    @Override public double[] getStringBounds(String str, int from, int to, boolean rtl) {
-        float beforeWidth = getLayoutWidth(str.substring(0, from), font);
-        BaseBounds bounds = getLayoutBounds(str.substring(0, to), font);
-        double[] result = new double[] {
-            beforeWidth,                    // see RTL case below
-            0,                              // not really used
-            bounds.getWidth() - beforeWidth,
-            bounds.getHeight(),             // not really used
-        };
-        if (rtl) {
-            float totalWidth = getLayoutWidth(str, font);
-            result[0] = totalWidth - bounds.getWidth();
-        }
-        if (log.isLoggable(Level.FINE)) {
-            log.fine(String.format(
-                    "str='%s' (length=%d) [%d, %d], rtl=%b => [%.1f, %.1f + %.1f x %.1f]",
-                    str, str.length(), from, to, rtl,
-                    result[0], result[1], result[2], result[3]));
-        }
-        return result;
     }
 
     public float getAscent() {
@@ -262,5 +186,17 @@ final class WCFontImpl extends WCFont {
 
     @Override public float getCapHeight() {
         return getFontStrike().getMetrics().getCapHeight();
+    }
+
+    @Override
+    public WCTextRun[] getTextRuns(final String str) {
+        if (log.isLoggable(Level.FINE)) {
+            log.fine(String.format("str='%s' length=%d", str, str.length()));
+        }
+
+        final TextLayout layout = TextUtilities.createLayout(str, getPlatformFont());
+        return Arrays.stream(layout.getRuns())
+                     .map(WCTextRunImpl::new)
+                     .toArray(WCTextRunImpl[]::new);
     }
 }

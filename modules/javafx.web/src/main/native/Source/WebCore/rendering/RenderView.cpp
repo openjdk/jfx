@@ -100,7 +100,7 @@ RenderView::RenderView(Document& document, RenderStyle&& style)
 
     setPreferredLogicalWidthsDirty(true, MarkOnlyThis);
 
-    setPositionState(AbsolutePosition); // to 0,0 :)
+    setPositionState(PositionType::Absolute); // to 0,0 :)
 }
 
 RenderView::~RenderView()
@@ -248,7 +248,7 @@ void RenderView::layout()
 
 LayoutUnit RenderView::pageOrViewLogicalHeight() const
 {
-    if (document().printing())
+    if (shouldUsePrintingLayout())
         return m_pageLogicalSize->height();
 
     if (multiColumnFlow() && !style().hasInlineColumnAxis()) {
@@ -394,7 +394,7 @@ RenderElement* RenderView::rendererForRootBackground() const
 static inline bool rendererObscuresBackground(const RenderElement& rootElement)
 {
     auto& style = rootElement.style();
-    if (style.visibility() != VISIBLE || style.opacity() != 1 || style.hasTransform())
+    if (style.visibility() != Visibility::Visible || style.opacity() != 1 || style.hasTransform())
         return false;
 
     if (style.hasBorderRadius())
@@ -407,7 +407,7 @@ static inline bool rendererObscuresBackground(const RenderElement& rootElement)
     if (!rendererForBackground)
         return false;
 
-    if (rendererForBackground->style().backgroundClip() == TextFillBox)
+    if (rendererForBackground->style().backgroundClip() == FillBox::Text)
         return false;
 
     return true;
@@ -454,8 +454,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         rootObscuresBackground = rendererObscuresBackground(*rootRenderer);
     }
 
-    bool backgroundShouldExtendBeyondPage = settings().backgroundShouldExtendBeyondPage();
-    compositor().setRootExtendedBackgroundColor(backgroundShouldExtendBeyondPage ? frameView().documentBackgroundColor() : Color());
+    compositor().rootBackgroundColorOrTransparencyChanged();
 
     Page* page = document().page();
     float pageScaleFactor = page ? page->pageScaleFactor() : 1;
@@ -474,7 +473,7 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
         frameView().setCannotBlitToWindow(); // The parent must show behind the child.
     else {
         const Color& documentBackgroundColor = frameView().documentBackgroundColor();
-        const Color& backgroundColor = (backgroundShouldExtendBeyondPage && documentBackgroundColor.isValid()) ? documentBackgroundColor : frameView().baseBackgroundColor();
+        const Color& backgroundColor = (settings().backgroundShouldExtendBeyondPage() && documentBackgroundColor.isValid()) ? documentBackgroundColor : frameView().baseBackgroundColor();
         if (backgroundColor.isVisible()) {
             CompositeOperator previousOperator = paintInfo.context().compositeOperation();
             paintInfo.context().setCompositeOperation(CompositeCopy);

@@ -35,7 +35,6 @@
 #if USE(PTHREADS)
 
 #include <errno.h>
-#include <wtf/CurrentTime.h>
 #include <wtf/DataLog.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RawPointer.h>
@@ -69,7 +68,7 @@
 
 namespace WTF {
 
-static StaticLock globalSuspendLock;
+static Lock globalSuspendLock;
 
 Thread::~Thread()
 {
@@ -120,10 +119,11 @@ static std::atomic<Thread*> targetThread { nullptr };
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #endif // COMPILER(CLANG)
 
-static UNUSED_FUNCTION NEVER_INLINE void* getApproximateStackPointer()
+static NEVER_INLINE void* getApproximateStackPointer()
 {
-    volatile void* stackLocation = nullptr;
-    return &stackLocation;
+    volatile uintptr_t stackLocation;
+    stackLocation = bitwise_cast<uintptr_t>(&stackLocation);
+    return bitwise_cast<void*>(stackLocation);
 }
 
 #if COMPILER(GCC)
@@ -133,14 +133,6 @@ static UNUSED_FUNCTION NEVER_INLINE void* getApproximateStackPointer()
 #if COMPILER(CLANG)
 #pragma clang diagnostic pop
 #endif // COMPILER(CLANG)
-
-static UNUSED_FUNCTION bool isOnAlternativeSignalStack()
-{
-    stack_t stack { };
-    int ret = sigaltstack(nullptr, &stack);
-    RELEASE_ASSERT(!ret);
-    return stack.ss_flags == SS_ONSTACK;
-}
 
 void Thread::signalHandlerSuspendResume(int, siginfo_t*, void* ucontext)
 {
@@ -157,13 +149,25 @@ void Thread::signalHandlerSuspendResume(int, siginfo_t*, void* ucontext)
         return;
     }
 
-    ucontext_t* userContext = static_cast<ucontext_t*>(ucontext);
-    ASSERT_WITH_MESSAGE(!isOnAlternativeSignalStack(), "Using an alternative signal stack is not supported. Consider disabling the concurrent GC.");
+    void* approximateStackPointer = getApproximateStackPointer();
+    if (!thread->m_stack.contains(approximateStackPointer)) {
+        // This happens if we use an alternative signal stack.
+        // 1. A user-defined signal handler is invoked with an alternative signal stack.
+        // 2. In the middle of the execution of the handler, we attempt to suspend the target thread.
+        // 3. A nested signal handler is executed.
+        // 4. The stack pointer saved in the machine context will be pointing to the alternative signal stack.
+        // In this case, we back off the suspension and retry a bit later.
+        thread->m_platformRegisters = nullptr;
+        globalSemaphoreForSuspendResume->post();
+        return;
+    }
 
 #if HAVE(MACHINE_CONTEXT)
+    ucontext_t* userContext = static_cast<ucontext_t*>(ucontext);
     thread->m_platformRegisters = &registersFromUContext(userContext);
 #else
-    PlatformRegisters platformRegisters { getApproximateStackPointer() };
+    UNUSED_PARAM(ucontext);
+    PlatformRegisters platformRegisters { approximateStackPointer };
     thread->m_platformRegisters = &platformRegisters;
 #endif
 
@@ -256,7 +260,8 @@ void Thread::initializeCurrentThreadInternal(const char* threadName)
 
 void Thread::changePriority(int delta)
 {
-    std::lock_guard<std::mutex> locker(m_mutex);
+#if HAVE(PTHREAD_SETSCHEDPARAM)
+    auto locker = holdLock(m_mutex);
 
     int policy;
     struct sched_param param;
@@ -267,13 +272,14 @@ void Thread::changePriority(int delta)
     param.sched_priority += delta;
 
     pthread_setschedparam(m_handle, policy, &param);
+#endif
 }
 
 int Thread::waitForCompletion()
 {
     pthread_t handle;
     {
-        std::lock_guard<std::mutex> locker(m_mutex);
+        auto locker = holdLock(m_mutex);
         handle = m_handle;
     }
 
@@ -284,7 +290,7 @@ int Thread::waitForCompletion()
     else if (joinResult)
         LOG_ERROR("Thread %p was unable to be joined.\n", this);
 
-    std::lock_guard<std::mutex> locker(m_mutex);
+    auto locker = holdLock(m_mutex);
     ASSERT(joinableState() == Joinable);
 
     // If the thread has already exited, then do nothing. If the thread hasn't exited yet, then just signal that we've already joined on it.
@@ -297,7 +303,7 @@ int Thread::waitForCompletion()
 
 void Thread::detach()
 {
-    std::lock_guard<std::mutex> locker(m_mutex);
+    auto locker = holdLock(m_mutex);
     int detachResult = pthread_detach(m_handle);
     if (detachResult)
         LOG_ERROR("Thread %p was unable to be detached\n", this);
@@ -319,7 +325,7 @@ Thread& Thread::initializeCurrentTLS()
 
 bool Thread::signal(int signalNumber)
 {
-    std::lock_guard<std::mutex> locker(m_mutex);
+    auto locker = holdLock(m_mutex);
     if (hasExited())
         return false;
     int errNo = pthread_kill(m_handle, signalNumber);
@@ -352,10 +358,18 @@ auto Thread::suspend() -> Expected<void, PlatformSuspendError>
         // But it can be used in a few platforms, like Linux.
         // Instead, we use Thread* stored in a global variable to pass it to the signal handler.
         targetThread.store(this);
-        int result = pthread_kill(m_handle, SigThreadSuspendResume);
-        if (result)
-            return makeUnexpected(result);
-        globalSemaphoreForSuspendResume->wait();
+
+        while (true) {
+            int result = pthread_kill(m_handle, SigThreadSuspendResume);
+            if (result)
+                return makeUnexpected(result);
+            globalSemaphoreForSuspendResume->wait();
+            if (m_platformRegisters)
+                break;
+            // Because of an alternative signal stack, we failed to suspend this thread.
+            // Retry suspension again after yielding.
+            Thread::yield();
+        }
     }
     ++m_suspendCount;
     return { };
@@ -440,7 +454,7 @@ size_t Thread::getRegisters(PlatformRegisters& registers)
 
 void Thread::establishPlatformSpecificHandle(pthread_t handle)
 {
-    std::lock_guard<std::mutex> locker(m_mutex);
+    auto locker = holdLock(m_mutex);
     m_handle = handle;
 #if OS(DARWIN)
     m_platformThread = pthread_mach_thread_np(handle);
@@ -490,18 +504,6 @@ void Thread::destructTLS(void* data)
 #endif
 }
 
-Mutex::Mutex()
-{
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
-
-    int result = pthread_mutex_init(&m_mutex, &attr);
-    ASSERT_UNUSED(result, !result);
-
-    pthread_mutexattr_destroy(&attr);
-}
-
 Mutex::~Mutex()
 {
     int result = pthread_mutex_destroy(&m_mutex);
@@ -531,11 +533,6 @@ void Mutex::unlock()
 {
     int result = pthread_mutex_unlock(&m_mutex);
     ASSERT_UNUSED(result, !result);
-}
-
-ThreadCondition::ThreadCondition()
-{
-    pthread_cond_init(&m_condition, NULL);
 }
 
 ThreadCondition::~ThreadCondition()

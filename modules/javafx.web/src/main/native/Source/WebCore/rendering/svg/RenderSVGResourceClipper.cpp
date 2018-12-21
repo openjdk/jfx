@@ -78,7 +78,7 @@ bool RenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, const 
     // If the current clip-path gets clipped itself, we have to fallback to masking.
     if (!style().svgStyle().clipperResource().isEmpty())
         return false;
-    WindRule clipRule = RULE_NONZERO;
+    WindRule clipRule = WindRule::NonZero;
     Path clipPath = Path();
 
     // If clip-path only contains one visible shape or path, we can use path-based clipping. Invisible
@@ -97,7 +97,7 @@ bool RenderSVGResourceClipper::pathOnlyClipping(GraphicsContext& context, const 
             continue;
         SVGGraphicsElement& styled = downcast<SVGGraphicsElement>(*childNode);
         const RenderStyle& style = renderer->style();
-        if (style.display() == NONE || style.visibility() != VISIBLE)
+        if (style.display() == DisplayType::None || style.visibility() != Visibility::Visible)
              continue;
         const SVGRenderStyle& svgStyle = style.svgStyle();
         // Current shape in clip-path gets clipped too. Fallback to masking.
@@ -193,8 +193,8 @@ bool RenderSVGResourceClipper::drawContentIntoMaskImage(const ClipperMaskImage& 
     // - masker/filter not applied when rendering the children
     // - fill is set to the initial fill paint server (solid, black)
     // - stroke is set to the initial stroke paint server (none)
-    PaintBehavior oldBehavior = view().frameView().paintBehavior();
-    view().frameView().setPaintBehavior(oldBehavior | PaintBehaviorRenderingSVGMask);
+    auto oldBehavior = view().frameView().paintBehavior();
+    view().frameView().setPaintBehavior(oldBehavior | PaintBehavior::RenderingSVGMask);
 
     // Draw all clipPath children into a global mask.
     for (auto& child : childrenOfType<SVGElement>(clipPathElement())) {
@@ -206,7 +206,7 @@ bool RenderSVGResourceClipper::drawContentIntoMaskImage(const ClipperMaskImage& 
             return false;
         }
         const RenderStyle& style = renderer->style();
-        if (style.display() == NONE || style.visibility() != VISIBLE)
+        if (style.display() == DisplayType::None || style.visibility() != Visibility::Visible)
             continue;
 
         WindRule newClipRule = style.svgStyle().clipRule();
@@ -228,7 +228,7 @@ bool RenderSVGResourceClipper::drawContentIntoMaskImage(const ClipperMaskImage& 
 
         // In the case of a <use> element, we obtained its renderere above, to retrieve its clipRule.
         // We have to pass the <use> renderer itself to renderSubtreeToImageBuffer() to apply it's x/y/transform/etc. values when rendering.
-        // So if isUseElement is true, refetch the childNode->renderer(), as renderer got overriden above.
+        // So if isUseElement is true, refetch the childNode->renderer(), as renderer got overridden above.
         SVGRenderingContext::renderSubtreeToImageBuffer(clipperMaskImage.get(), isUseElement ? *child.renderer() : *renderer, maskContentTransformation);
     }
 
@@ -246,7 +246,7 @@ void RenderSVGResourceClipper::calculateClipContentRepaintRect()
         if (!renderer->isSVGShape() && !renderer->isSVGText() && !childNode->hasTagName(SVGNames::useTag))
             continue;
         const RenderStyle& style = renderer->style();
-        if (style.display() == NONE || style.visibility() != VISIBLE)
+        if (style.display() == DisplayType::None || style.visibility() != Visibility::Visible)
              continue;
         m_clipBoundaries.unite(renderer->localToParentTransform().mapRect(renderer->repaintRectInLocalCoordinates()));
     }

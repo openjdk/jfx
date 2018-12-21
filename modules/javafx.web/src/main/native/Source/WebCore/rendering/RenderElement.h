@@ -49,10 +49,10 @@ public:
 
     void initializeStyle();
 
-    // Calling with minimalStyleDifference > StyleDifferenceEqual indicates that
+    // Calling with minimalStyleDifference > StyleDifference::Equal indicates that
     // out-of-band state (e.g. animations) requires that styleDidChange processing
     // continue even if the style isn't different from the current style.
-    void setStyle(RenderStyle&&, StyleDifference minimalStyleDifference = StyleDifferenceEqual);
+    void setStyle(RenderStyle&&, StyleDifference minimalStyleDifference = StyleDifference::Equal);
 
     // The pseudo element style can be cached or uncached.  Use the cached method if the pseudo element doesn't respect
     // any pseudo classes (and therefore has no concept of changing state).
@@ -70,7 +70,7 @@ public:
     bool canContainFixedPositionObjects() const;
     bool canContainAbsolutelyPositionedObjects() const;
 
-    Color selectionColor(int colorProperty) const;
+    Color selectionColor(CSSPropertyID) const;
     std::unique_ptr<RenderStyle> selectionPseudoStyle() const;
 
     // Obtains the selection colors that should be used when painting a selection.
@@ -140,14 +140,14 @@ public:
     bool isTransparent() const { return style().opacity() < 1.0f; }
     float opacity() const { return style().opacity(); }
 
-    bool visibleToHitTesting() const { return style().visibility() == VISIBLE && style().pointerEvents() != PE_NONE; }
+    bool visibleToHitTesting() const { return style().visibility() == Visibility::Visible && style().pointerEvents() != PointerEvents::None; }
 
     bool hasBackground() const { return style().hasBackground(); }
     bool hasMask() const { return style().hasMask(); }
     bool hasClip() const { return isOutOfFlowPositioned() && style().hasClip(); }
     bool hasClipOrOverflowClip() const { return hasClip() || hasOverflowClip(); }
     bool hasClipPath() const { return style().clipPath(); }
-    bool hasHiddenBackface() const { return style().backfaceVisibility() == BackfaceVisibilityHidden; }
+    bool hasHiddenBackface() const { return style().backfaceVisibility() == BackfaceVisibility::Hidden; }
     bool hasOutlineAnnotation() const;
     bool hasOutline() const { return style().hasOutline() || hasOutlineAnnotation(); }
     bool hasSelfPaintingLayer() const;
@@ -195,8 +195,8 @@ public:
     bool hasCounterNodeMap() const { return m_hasCounterNodeMap; }
     void setHasCounterNodeMap(bool f) { m_hasCounterNodeMap = f; }
 
-    const RenderElement* enclosingRendererWithTextDecoration(TextDecoration, bool firstLine) const;
-    void drawLineForBoxSide(GraphicsContext&, const FloatRect&, BoxSide, Color, EBorderStyle, float adjacentWidth1, float adjacentWidth2, bool antialias = false) const;
+    const RenderElement* enclosingRendererWithTextDecoration(OptionSet<TextDecoration>, bool firstLine) const;
+    void drawLineForBoxSide(GraphicsContext&, const FloatRect&, BoxSide, Color, BorderStyle, float adjacentWidth1, float adjacentWidth2, bool antialias = false) const;
 
 #if ENABLE(TEXT_AUTOSIZING)
     void adjustComputedFontSizesOnBlocks(float size, float visibleWidth);
@@ -305,7 +305,7 @@ private:
     void updateImage(StyleImage*, StyleImage*);
     void updateShapeImage(const ShapeValue*, const ShapeValue*);
 
-    StyleDifference adjustStyleDifference(StyleDifference, unsigned contextSensitiveProperties) const;
+    StyleDifference adjustStyleDifference(StyleDifference, OptionSet<StyleDifferenceContextSensitiveProperty>) const;
     std::unique_ptr<RenderStyle> computeFirstLineStyle() const;
     void invalidateCachedFirstLineStyle();
 
@@ -421,7 +421,7 @@ inline bool RenderElement::canContainFixedPositionObjects() const
 
 inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
 {
-    return style().position() != StaticPosition
+    return style().position() != PositionType::Static
         || (isRenderBlock() && hasTransformRelatedProperty())
         || isSVGForeignObject()
         || isRenderView();

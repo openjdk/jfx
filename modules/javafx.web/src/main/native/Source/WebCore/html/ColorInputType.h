@@ -51,7 +51,10 @@ private:
     Color currentColor() final;
     bool shouldShowSuggestions() const final;
     Vector<Color> suggestions() const final;
+    bool isMouseFocusable() const final;
+    bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isColorControl() const final;
+    bool isPresentingAttachedView() const final;
     const AtomicString& formControlType() const final;
     bool supportsRequired() const final;
     String fallbackValue() const final;
@@ -60,6 +63,7 @@ private:
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior) final;
     void handleDOMActivateEvent(Event&) final;
     void detach() final;
+    void elementDidBlur() final;
     bool shouldRespectListAttribute() final;
     bool typeMismatchFor(const String&) const final;
     bool shouldResetOnDocumentActivation() final;

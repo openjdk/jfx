@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VideoTextureCopierCV_h
-#define VideoTextureCopierCV_h
+#pragma once
+
+#if HAVE(CORE_VIDEO)
 
 #import "GraphicsContext3D.h"
 #import <wtf/UnsafePointer.h>
@@ -60,7 +61,7 @@ private:
     bool initializeContextObjects();
     bool initializeUVContextObjects();
 
-#if USE(IOSURFACE)
+#if HAVE(IOSURFACE)
     unsigned lastTextureSeed(GC3Duint texture)
     {
         auto iterator = m_lastTextureSeed.find(texture);
@@ -90,7 +91,7 @@ private:
     GC3Dint m_yTextureSizeUniformLocation { -1 };
     GC3Dint m_uvTextureSizeUniformLocation { -1 };
 
-#if USE(IOSURFACE)
+#if HAVE(IOSURFACE)
     bool m_lastFlipY { false };
     UnsafePointer<IOSurfaceRef> m_lastSurface;
     uint32_t m_lastSurfaceSeed { 0 };
@@ -102,4 +103,4 @@ private:
 
 }
 
-#endif // VideoTextureCopierCV_h
+#endif // HAVE(CORE_VIDEO)

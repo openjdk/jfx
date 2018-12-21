@@ -30,7 +30,7 @@
 #include <WebCore/CSSFontFaceRule.h>
 #include <WebCore/CSSStyleDeclaration.h>
 #include <WebCore/DeprecatedCSSOMValue.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

@@ -45,7 +45,7 @@ public:
     Allocator allocatorForNonVirtual(size_t, AllocatorForMode);
 
     void* allocate(VM&, size_t, GCDeferralContext*, AllocationFailureMode) override;
-    JS_EXPORT_PRIVATE void* allocateNonVirtual(VM&, size_t, GCDeferralContext*, AllocationFailureMode);
+    void* allocateNonVirtual(VM&, size_t, GCDeferralContext*, AllocationFailureMode);
 
 private:
     friend class IsoCellSet;
@@ -56,15 +56,15 @@ private:
 
     size_t m_size;
     BlockDirectory m_directory;
-    Allocator m_allocator;
+    LocalAllocator m_localAllocator;
     std::unique_ptr<IsoAlignedMemoryAllocator> m_isoAlignedMemoryAllocator;
     SentinelLinkedList<IsoCellSet, BasicRawSentinelNode<IsoCellSet>> m_cellSets;
 };
 
-inline Allocator IsoSubspace::allocatorForNonVirtual(size_t size, AllocatorForMode)
+ALWAYS_INLINE Allocator IsoSubspace::allocatorForNonVirtual(size_t size, AllocatorForMode)
 {
     RELEASE_ASSERT(size == this->size());
-    return m_allocator;
+    return Allocator(&m_localAllocator);
 }
 
 #define ISO_SUBSPACE_INIT(heap, heapCellType, type) ("Isolated " #type " Space", (heap), (heapCellType), sizeof(type))

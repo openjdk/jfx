@@ -34,7 +34,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
-import javafx.geometry.Insets;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -49,7 +48,6 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.WeakInvalidationListener;
-import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
@@ -508,7 +506,13 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
      *                                                                         *
      **************************************************************************/
 
-    final TableHeaderRow getTableHeaderRow() {
+    /**
+     * Returns the {@code TableHeaderRow} created using {@link #createTableHeaderRow()}.
+     *
+     * @return the {@code TableHeaderRow} for this {@code TableViewSkinBase}
+     * @since 12
+     */
+    protected TableHeaderRow getTableHeaderRow() {
         return tableHeaderRow;
     }
 
@@ -573,48 +577,116 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         tableHeaderRow.updateScrollX();
     }
 
-    void onFocusPreviousCell() {
-        TableFocusModel<M,?> fm = getFocusModel();
+    /**
+     * Called when the focus is set on the cell above the current focused cell in order to scroll to it to make it
+     * visible.
+     *
+     * @since 12
+     */
+    protected void onFocusAboveCell() {
+        TableFocusModel<M, ?> fm = getFocusModel();
         if (fm == null) return;
 
         flow.scrollTo(fm.getFocusedIndex());
     }
 
-    void onFocusNextCell() {
-        TableFocusModel<M,?> fm = getFocusModel();
+    /**
+     * Called when the focus is set on the cell below the current focused cell in order to scroll to it to make it
+     * visible.
+     *
+     * @since 12
+     */
+    protected void onFocusBelowCell() {
+        TableFocusModel<M, ?> fm = getFocusModel();
         if (fm == null) return;
 
         flow.scrollTo(fm.getFocusedIndex());
     }
 
-    void onSelectPreviousCell() {
+    /**
+     * Called when the selection is set on the the cell above the current focused cell in order to scroll to it to make
+     * it visible.
+     *
+     * @since 12
+     */
+    protected void onSelectAboveCell() {
         SelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;
 
         flow.scrollTo(sm.getSelectedIndex());
     }
 
-    void onSelectNextCell() {
+    /**
+     * Called when the selection is set on the cell below the current focused cell in order to scroll to it to make it
+     * visible.
+     *
+     * @since 12
+     */
+    protected void onSelectBelowCell() {
         SelectionModel<S> sm = getSelectionModel();
         if (sm == null) return;
 
         flow.scrollTo(sm.getSelectedIndex());
     }
 
-    void onSelectLeftCell() {
+    /**
+     * Called when the selection is set on the left cell of the current selected one in order to horizontally scroll to
+     * it to make it visible.
+     *
+     * @since 12
+     */
+    protected void onSelectLeftCell() {
         scrollHorizontally();
     }
 
-    void onSelectRightCell() {
+    /**
+     * Called when the selection is set on the right cell of the current selected one in order to horizontally scroll to
+     * it to make it visible.
+     *
+     * @since 12
+     */
+    protected void onSelectRightCell() {
         scrollHorizontally();
     }
 
-    void onMoveToFirstCell() {
+    /**
+     * Called when the focus is set on the left cell of the current selected one in order to horizontally scroll to it
+     * to make it visible.
+     *
+     * @since 12
+     */
+    protected void onFocusLeftCell() {
+        scrollHorizontally();
+    }
+
+    /**
+     * Called when the focus is set on the right cell of the current selected one in order to horizontally scroll to it
+     * to make it visible.
+     *
+     * @since 12
+     */
+    protected void onFocusRightCell() {
+        scrollHorizontally();
+    }
+
+    /**
+     * Called when the selection is set on the first cell of the table (first row and first column) in order to scroll
+     * to it to make it visible.
+     *
+     * @since 12
+     */
+    protected void onMoveToFirstCell() {
         flow.scrollTo(0);
         flow.setPosition(0);
     }
 
-    void onMoveToLastCell() {
+    /**
+     * Called when the selection is set on the last cell of the table (last row and last column) in order to scroll to
+     * it to make it visible.
+     *
+     * @since 12
+     */
+    protected void onMoveToLastCell() {
         int endPos = getItemCount();
         flow.scrollTo(endPos);
         flow.setPosition(1);
@@ -638,16 +710,22 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     }
 
     /**
-     * Function used to scroll the container down by one 'page', although
-     * if this is a horizontal container, then the scrolling will be to the right.
+     * Returns the index of the selected (or focused, if {@code isFocusDriven} is {@code true}) cell after a page scroll
+     * operation. If the selected/focused cell is not the last fully visible cell, then the last fully visible cell is
+     * selected/focused. Otherwise, the content is scrolled such that the cell is made visible at the top of the
+     * viewport (and the new last fully visible cell is selected/focused instead).
+     *
+     * @param isFocusDriven {@code true} if focused cell should be considered over selection
+     * @return the new index to select, or to focus if {@code isFocusDriven} is {@code true}
+     * @since 12
      */
-    int onScrollPageDown(boolean isFocusDriven) {
+    protected int onScrollPageDown(boolean isFocusDriven) {
         TableSelectionModel<S> sm = getSelectionModel();
         if (sm == null) return -1;
 
         final int itemCount = getItemCount();
 
-        I lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+        I lastVisibleCell = flow.getLastVisibleCellWithinViewport();
         if (lastVisibleCell == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
@@ -673,7 +751,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 // to be the top-most cell, or at least as far to the top as we can go.
                 flow.scrollToTop(lastVisibleCell);
 
-                I newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+                I newLastVisibleCell = flow.getLastVisibleCellWithinViewport();
                 lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
             }
         }
@@ -685,11 +763,17 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     }
 
     /**
-     * Function used to scroll the container up by one 'page', although
-     * if this is a horizontal container, then the scrolling will be to the left.
+     * Returns the index of the selected (or focused, if {@code isFocusDriven} is {@code true}) cell after a page scroll
+     * operation. If the selected/focused cell is not the first fully visible cell, then the first fully visible cell is
+     * selected/focused. Otherwise, the content is scrolled such that the cell is made visible at the bottom of the
+     * viewport (and the new first fully visible cell is selected/focused instead).
+     *
+     * @param isFocusDriven {@code true} if focused cell should be considered over selection
+     * @return the new index to select, or to focus if {@code isFocusDriven} is {@code true}
+     * @since 12
      */
-    int onScrollPageUp(boolean isFocusDriven) {
-        I firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+    protected int onScrollPageUp(boolean isFocusDriven) {
+        I firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
         if (firstVisibleCell == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
@@ -710,7 +794,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 // to be the bottom-most cell, or at least as far to the bottom as we can go.
                 flow.scrollToBottom(firstVisibleCell);
 
-                I newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+                I newFirstVisibleCell = flow.getFirstVisibleCellWithinViewport();
                 firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
             }
         }
@@ -816,18 +900,30 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         }
     }
 
-    // Handles the horizontal scrolling when the selection mode is cell-based
-    // and the newly selected cell belongs to a column which is not totally
-    // visible.
-    void scrollHorizontally() {
-        TableFocusModel<M,?> fm = getFocusModel();
+    /**
+     * Scrolls to the column containing the current focused cell.
+     * <p>
+     * Handles the horizontal scrolling when the selection mode is cell-based and the newly selected cell belongs to a
+     * column which is not completely visible.
+     *
+     * @since 12
+     */
+    public void scrollHorizontally() {
+        TableFocusModel<M, ?> fm = getFocusModel();
         if (fm == null) return;
 
         TC col = getFocusedCell().getTableColumn();
         scrollHorizontally(col);
     }
 
-    void scrollHorizontally(TC col) {
+    /**
+     * Programmatically scrolls to the given column. This call will ensure that the column is aligned on the left edge
+     * of the {@code TableView} and also that the columns don't become detached from the right edge of the table.
+     *
+     * @param col the column to scroll to
+     * @since 12
+     */
+    protected void scrollHorizontally(TC col) {
         if (col == null || !col.isVisible()) return;
 
         final Control control = getSkinnable();

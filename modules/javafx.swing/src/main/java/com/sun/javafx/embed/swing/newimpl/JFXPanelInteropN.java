@@ -25,14 +25,13 @@
 
 package com.sun.javafx.embed.swing.newimpl;
 
-import com.sun.javafx.embed.swing.JFXPanelInterop;
 import java.awt.AWTEvent;
 import java.awt.Toolkit;
 import java.awt.Window;
 import javafx.embed.swing.JFXPanel;
 import jdk.swing.interop.SwingInterOpUtils;
 
-public class JFXPanelInteropN extends JFXPanelInterop {
+public class JFXPanelInteropN {
     public void postEvent(JFXPanel panel, AWTEvent e) {
         SwingInterOpUtils.postEvent(panel, e);
     }

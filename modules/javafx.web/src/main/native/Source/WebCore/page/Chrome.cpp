@@ -30,6 +30,7 @@
 #include "FileIconLoader.h"
 #include "FileList.h"
 #include "FloatRect.h"
+#include "Frame.h"
 #include "FrameLoaderClient.h"
 #include "FrameTree.h"
 #include "Geolocation.h"
@@ -39,7 +40,6 @@
 #include "HitTestResult.h"
 #include "Icon.h"
 #include "InspectorInstrumentation.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "PageGroupLoadDeferrer.h"
 #include "PopupOpeningObserver.h"
@@ -54,6 +54,14 @@
 
 #if ENABLE(INPUT_TYPE_COLOR)
 #include "ColorChooser.h"
+#endif
+
+#if ENABLE(DATALIST_ELEMENT)
+#include "DataListSuggestionPicker.h"
+#endif
+
+#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_3D)
+#include "GraphicsContext3DManager.h"
 #endif
 
 namespace WebCore {
@@ -91,13 +99,6 @@ void Chrome::scroll(const IntSize& scrollDelta, const IntRect& rectToScroll, con
     m_client.scroll(scrollDelta, rectToScroll, clipRect);
     InspectorInstrumentation::didScroll(m_page);
 }
-
-#if USE(COORDINATED_GRAPHICS)
-void Chrome::delegatedScrollRequested(const IntPoint& scrollPoint)
-{
-    m_client.delegatedScrollRequested(scrollPoint);
-}
-#endif
 
 IntPoint Chrome::screenToRootView(const IntPoint& point) const
 {
@@ -331,7 +332,7 @@ void Chrome::setStatusbarText(Frame& frame, const String& status)
 void Chrome::mouseDidMoveOverElement(const HitTestResult& result, unsigned modifierFlags)
 {
     if (result.innerNode() && result.innerNode()->document().isDNSPrefetchEnabled())
-        m_page.mainFrame().loader().client().prefetchDNS(result.absoluteLinkURL().host());
+        m_page.mainFrame().loader().client().prefetchDNS(result.absoluteLinkURL().host().toString());
     m_client.mouseDidMoveOverElement(result, modifierFlags);
 
     InspectorInstrumentation::mouseDidMoveOverElement(m_page, result, modifierFlags);
@@ -355,7 +356,7 @@ void Chrome::setToolTip(const HitTestResult& result)
                         if (form->renderer())
                             toolTipDirection = form->renderer()->style().direction();
                         else
-                            toolTipDirection = LTR;
+                            toolTipDirection = TextDirection::LTR;
                     }
                 }
             }
@@ -366,7 +367,7 @@ void Chrome::setToolTip(const HitTestResult& result)
             // FIXME: Need to pass this URL through userVisibleString once that's in WebCore
             toolTip = result.absoluteLinkURL().string();
             // URL always display as LTR.
-            toolTipDirection = LTR;
+            toolTipDirection = TextDirection::LTR;
         }
     }
 
@@ -388,7 +389,7 @@ void Chrome::setToolTip(const HitTestResult& result)
                 // implementations don't use text direction information for
                 // ChromeClient::setToolTip. We'll work on tooltip text
                 // direction during bidi cleanup in form inputs.
-                toolTipDirection = LTR;
+                toolTipDirection = TextDirection::LTR;
             }
         }
     }
@@ -423,8 +424,21 @@ void Chrome::disableSuddenTermination()
 
 std::unique_ptr<ColorChooser> Chrome::createColorChooser(ColorChooserClient& client, const Color& initialColor)
 {
+#if PLATFORM(IOS)
+    return nullptr;
+#endif
     notifyPopupOpeningObservers();
     return m_client.createColorChooser(client, initialColor);
+}
+
+#endif
+
+#if ENABLE(DATALIST_ELEMENT)
+
+std::unique_ptr<DataListSuggestionPicker> Chrome::createDataListSuggestionPicker(DataListSuggestionsClient& client)
+{
+    notifyPopupOpeningObservers();
+    return m_client.createDataListSuggestionPicker(client);
 }
 
 #endif
@@ -448,6 +462,16 @@ FloatSize Chrome::screenSize() const
 FloatSize Chrome::availableScreenSize() const
 {
     return m_client.availableScreenSize();
+}
+
+FloatSize Chrome::overrideScreenSize() const
+{
+    return m_client.overrideScreenSize();
+}
+
+void Chrome::dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>& disabledAdaptations) const
+{
+    m_client.dispatchDisabledAdaptationsDidChange(disabledAdaptations);
 }
 
 void Chrome::dispatchViewportPropertiesDidChange(const ViewportArguments& arguments) const
@@ -493,6 +517,11 @@ void Chrome::windowScreenDidChange(PlatformDisplayID displayID)
         if (frame->document())
             frame->document()->windowScreenDidChange(displayID);
     }
+
+#if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_3D)
+    GraphicsContext3DManager::sharedManager().screenDidChange(displayID, this);
+#endif
+
 }
 
 // --------

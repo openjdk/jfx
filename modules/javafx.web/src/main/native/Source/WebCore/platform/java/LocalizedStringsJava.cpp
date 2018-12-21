@@ -701,4 +701,9 @@ String AXAutoFillContactsLabel()
     return String::fromUTF8("contact info auto fill");
 }
 
+String unsupportedPluginText()
+{
+    notImplemented();
+    return String::fromUTF8("Unsupported Plug-in");
+}
 } // namespace WebCore

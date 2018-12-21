@@ -36,6 +36,7 @@ class IceCandidateInterface;
 namespace WebCore {
 
 class LibWebRTCMediaEndpoint;
+class LibWebRTCProvider;
 class RTCRtpReceiver;
 class RTCSessionDescription;
 class RTCStatsReport;
@@ -45,8 +46,9 @@ class RealtimeOutgoingAudioSource;
 class RealtimeOutgoingVideoSource;
 
 class LibWebRTCPeerConnectionBackend final : public PeerConnectionBackend {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit LibWebRTCPeerConnectionBackend(RTCPeerConnection&);
+    LibWebRTCPeerConnectionBackend(RTCPeerConnection&, LibWebRTCProvider&);
     ~LibWebRTCPeerConnectionBackend();
 
     bool hasAudioSources() const { return m_audioSources.size(); }
@@ -72,7 +74,7 @@ private:
     RefPtr<RTCSessionDescription> currentRemoteDescription() const final;
     RefPtr<RTCSessionDescription> pendingRemoteDescription() const final;
 
-    void replaceTrack(RTCRtpSender&, Ref<MediaStreamTrack>&&, DOMPromiseDeferred<void>&&) final;
+    void replaceTrack(RTCRtpSender&, RefPtr<MediaStreamTrack>&&, DOMPromiseDeferred<void>&&) final;
     RTCRtpParameters getParameters(RTCRtpSender&) const final;
 
     void emulatePlatformEvent(const String&) final { }
@@ -105,6 +107,8 @@ private:
     AudioReceiver audioReceiver(String&& trackId);
 
 private:
+    bool isLocalDescriptionSet() const final { return m_isLocalDescriptionSet; }
+
     Ref<LibWebRTCMediaEndpoint> m_endpoint;
     bool m_isLocalDescriptionSet { false };
     bool m_isRemoteDescriptionSet { false };

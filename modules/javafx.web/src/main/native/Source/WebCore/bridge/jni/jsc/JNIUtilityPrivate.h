@@ -29,6 +29,7 @@
 #if ENABLE(JAVA_BRIDGE)
 
 #include "JNIUtility.h"
+#include <JavaScriptCore/JSCJSValue.h>
 
 namespace JSC {
 

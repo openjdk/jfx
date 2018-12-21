@@ -30,7 +30,7 @@
 #include <WebCore/HTMLLinkElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/StyleSheet.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

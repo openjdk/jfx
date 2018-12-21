@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Igalia S.L. All rights reserved.
+ * Copyright (C) 2017-2018 Igalia S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,20 +31,19 @@ namespace WebCore {
 
 VRDisplayEvent::VRDisplayEvent(const AtomicString& type, const Init& initializer, IsTrusted isTrusted)
     : Event(type, initializer, isTrusted)
+    , m_display(initializer.display)
+    , m_reason(initializer.reason)
+{
+}
+
+VRDisplayEvent::VRDisplayEvent(const AtomicString& name, const RefPtr<VRDisplay>& display, std::optional<VRDisplayEventReason>&& reason)
+    : Event(name, CanBubble::No, IsCancelable::No)
+    , m_display(display)
+    , m_reason(WTFMove(reason))
 {
 }
 
 VRDisplayEvent::~VRDisplayEvent() = default;
-
-RefPtr<VRDisplay> VRDisplayEvent::display() const
-{
-    return nullptr;
-}
-
-VRDisplayEventReason VRDisplayEvent::reason() const
-{
-    return VRDisplayEventReason::Mounted;
-}
 
 EventInterface VRDisplayEvent::eventInterface() const
 {

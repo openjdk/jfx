@@ -44,8 +44,6 @@ WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGContainer);
 
 RenderSVGContainer::RenderSVGContainer(SVGElement& element, RenderStyle&& style)
     : RenderSVGModelObject(element, WTFMove(style))
-    , m_objectBoundingBoxValid(false)
-    , m_needsBoundariesUpdate(true)
 {
 }
 
@@ -120,7 +118,7 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint&)
 
         SVGRenderingContext renderingContext;
         bool continueRendering = true;
-        if (childPaintInfo.phase == PaintPhaseForeground) {
+        if (childPaintInfo.phase == PaintPhase::Foreground) {
             renderingContext.prepareToRenderSVGContent(*this, childPaintInfo);
             continueRendering = renderingContext.isRenderingPrepared();
         }
@@ -136,8 +134,8 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint&)
     // to avoid our clip killing our outline rect. Thus we translate our
     // outline rect into parent coords before drawing.
     // FIXME: This means our focus ring won't share our rotation like it should.
-    // We should instead disable our clip during PaintPhaseOutline
-    if (paintInfo.phase == PaintPhaseSelfOutline && style().outlineWidth() && style().visibility() == VISIBLE) {
+    // We should instead disable our clip during PaintPhase::Outline
+    if (paintInfo.phase == PaintPhase::SelfOutline && style().outlineWidth() && style().visibility() == Visibility::Visible) {
         IntRect paintRectInParent = enclosingIntRect(localToParentTransform().mapRect(repaintRect));
         paintOutline(paintInfo, paintRectInParent);
     }

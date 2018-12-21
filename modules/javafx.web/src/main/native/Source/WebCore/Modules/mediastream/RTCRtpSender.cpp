@@ -62,6 +62,13 @@ void RTCRtpSender::setTrackToNull()
     m_track = nullptr;
 }
 
+void RTCRtpSender::stop()
+{
+    m_trackId = { };
+    m_track = nullptr;
+    m_backend = nullptr;
+}
+
 void RTCRtpSender::setTrack(Ref<MediaStreamTrack>&& track)
 {
     ASSERT(!isStopped());
@@ -81,9 +88,6 @@ void RTCRtpSender::replaceTrack(RefPtr<MediaStreamTrack>&& withTrack, DOMPromise
         promise.reject(TypeError);
         return;
     }
-
-    if (!withTrack && m_track)
-        m_track->stopTrack();
 
     m_backend->replaceTrack(*this, WTFMove(withTrack), WTFMove(promise));
 }

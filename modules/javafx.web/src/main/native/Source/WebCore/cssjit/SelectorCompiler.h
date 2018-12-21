@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -53,30 +53,30 @@ typedef unsigned (*QuerySelectorSimpleSelectorChecker)(const Element*);
 typedef unsigned (*RuleCollectorSelectorCheckerWithCheckingContext)(const Element*, SelectorChecker::CheckingContext*, unsigned*);
 typedef unsigned (*QuerySelectorSelectorCheckerWithCheckingContext)(const Element*, const SelectorChecker::CheckingContext*);
 
-SelectorCompilationStatus compileSelector(const CSSSelector*, SelectorContext, JSC::MacroAssemblerCodeRef& outputCodeRef);
+SelectorCompilationStatus compileSelector(const CSSSelector*, SelectorContext, JSC::MacroAssemblerCodeRef<CSSSelectorPtrTag>& outputCodeRef);
 
 inline RuleCollectorSimpleSelectorChecker ruleCollectorSimpleSelectorCheckerFunction(void* executableAddress, SelectorCompilationStatus compilationStatus)
 {
     ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker);
-    return reinterpret_cast<RuleCollectorSimpleSelectorChecker>(executableAddress);
+    return WTF::untagCFunctionPtr<RuleCollectorSimpleSelectorChecker, CSSSelectorPtrTag>(executableAddress);
 }
 
 inline QuerySelectorSimpleSelectorChecker querySelectorSimpleSelectorCheckerFunction(void* executableAddress, SelectorCompilationStatus compilationStatus)
 {
     ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker);
-    return reinterpret_cast<QuerySelectorSimpleSelectorChecker>(executableAddress);
+    return WTF::untagCFunctionPtr<QuerySelectorSimpleSelectorChecker, CSSSelectorPtrTag>(executableAddress);
 }
 
 inline RuleCollectorSelectorCheckerWithCheckingContext ruleCollectorSelectorCheckerFunctionWithCheckingContext(void* executableAddress, SelectorCompilationStatus compilationStatus)
 {
     ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
-    return reinterpret_cast<RuleCollectorSelectorCheckerWithCheckingContext>(executableAddress);
+    return WTF::untagCFunctionPtr<RuleCollectorSelectorCheckerWithCheckingContext, CSSSelectorPtrTag>(executableAddress);
 }
 
 inline QuerySelectorSelectorCheckerWithCheckingContext querySelectorSelectorCheckerFunctionWithCheckingContext(void* executableAddress, SelectorCompilationStatus compilationStatus)
 {
     ASSERT_UNUSED(compilationStatus, compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
-    return reinterpret_cast<QuerySelectorSelectorCheckerWithCheckingContext>(executableAddress);
+    return WTF::untagCFunctionPtr<QuerySelectorSelectorCheckerWithCheckingContext, CSSSelectorPtrTag>(executableAddress);
 }
 
 } // namespace SelectorCompiler

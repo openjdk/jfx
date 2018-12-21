@@ -25,30 +25,54 @@
 
 #import "ProcessCheck.h"
 
-#if !BPLATFORM(WATCHOS)
-
 #import <Foundation/Foundation.h>
+#import <mutex>
 
 namespace bmalloc {
 
+#if !BPLATFORM(WATCHOS)
 bool gigacageEnabledForProcess()
 {
-    static NSString *appName = [[NSBundle mainBundle] bundleIdentifier];
+    // Note that this function is only called once.
+    // If we wanted to make it efficient to call more than once, we could memoize the result in a global boolean.
+
+    NSString *appName = [[NSBundle mainBundle] bundleIdentifier];
     if (appName) {
-        static bool isWebProcess = [appName isEqualToString:@"com.apple.WebKit.WebContent.Development"]
+        bool isWebProcess = [appName isEqualToString:@"com.apple.WebKit.WebContent.Development"]
             || [appName isEqualToString:@"com.apple.WebKit.WebContent"]
             || [appName isEqualToString:@"com.apple.WebProcess"];
         return isWebProcess;
     }
 
-    static NSString *processName = [[NSProcessInfo processInfo] processName];
-    static bool isOptInBinary = [processName isEqualToString:@"jsc"]
+    NSString *processName = [[NSProcessInfo processInfo] processName];
+    bool isOptInBinary = [processName isEqualToString:@"jsc"]
+        || [processName isEqualToString:@"DumpRenderTree"]
         || [processName isEqualToString:@"wasm"]
         || [processName hasPrefix:@"test"];
 
     return isOptInBinary;
 }
+#endif // !BPLATFORM(WATCHOS)
+
+#if BUSE(CHECK_NANO_MALLOC)
+bool shouldProcessUnconditionallyUseBmalloc()
+{
+    static bool result;
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [&] () {
+        if (NSString *appName = [[NSBundle mainBundle] bundleIdentifier]) {
+            auto contains = [&] (NSString *string) {
+                return [appName rangeOfString:string options:NSCaseInsensitiveSearch].location != NSNotFound;
+            };
+            result = contains(@"com.apple.WebKit") || contains(@"safari");
+        } else {
+            NSString *processName = [[NSProcessInfo processInfo] processName];
+            result = [processName isEqualToString:@"jsc"] || [processName isEqualToString:@"wasm"];
+        }
+    });
+
+    return result;
+}
+#endif // BUSE(CHECK_NANO_MALLOC)
 
 }
-
-#endif

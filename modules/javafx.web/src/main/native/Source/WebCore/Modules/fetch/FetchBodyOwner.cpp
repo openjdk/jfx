@@ -45,6 +45,12 @@ FetchBodyOwner::FetchBodyOwner(ScriptExecutionContext& context, std::optional<Fe
     suspendIfNeeded();
 }
 
+FetchBodyOwner::~FetchBodyOwner()
+{
+    if (m_readableStreamSource)
+        m_readableStreamSource->detach();
+}
+
 void FetchBodyOwner::stop()
 {
     if (m_body)
@@ -98,7 +104,7 @@ void FetchBodyOwner::arrayBuffer(Ref<DeferredPromise>&& promise)
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(TypeError);
+        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -112,7 +118,7 @@ void FetchBodyOwner::blob(Ref<DeferredPromise>&& promise)
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(TypeError);
+        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -146,7 +152,7 @@ void FetchBodyOwner::updateContentType()
 void FetchBodyOwner::consumeOnceLoadingFinished(FetchBodyConsumer::Type type, Ref<DeferredPromise>&& promise)
 {
     if (isDisturbedOrLocked()) {
-        promise->reject(TypeError);
+        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -160,7 +166,7 @@ void FetchBodyOwner::formData(Ref<DeferredPromise>&& promise)
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(TypeError);
+        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -174,7 +180,7 @@ void FetchBodyOwner::json(Ref<DeferredPromise>&& promise)
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(TypeError);
+        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -188,7 +194,7 @@ void FetchBodyOwner::text(Ref<DeferredPromise>&& promise)
         return;
     }
     if (isDisturbedOrLocked()) {
-        promise->reject(TypeError);
+        promise->reject(Exception { TypeError, "Body is disturbed or locked"_s });
         return;
     }
     m_isDisturbed = true;
@@ -245,7 +251,7 @@ void FetchBodyOwner::blobLoadingFailed()
 #if ENABLE(STREAMS_API)
     if (m_readableStreamSource) {
         if (!m_readableStreamSource->isCancelling())
-            m_readableStreamSource->error(ASCIILiteral("Blob loading failed"));
+            m_readableStreamSource->error("Blob loading failed"_s);
         m_readableStreamSource = nullptr;
     } else
 #endif
@@ -311,6 +317,12 @@ void FetchBodyOwner::createReadableStream(JSC::ExecState& state)
 void FetchBodyOwner::consumeBodyAsStream()
 {
     ASSERT(m_readableStreamSource);
+
+    if (m_loadingError) {
+        auto errorMessage = m_loadingError->localizedDescription();
+        m_readableStreamSource->error(errorMessage.isEmpty() ? "Loading failed"_s : errorMessage);
+        return;
+    }
 
     body().consumeAsStream(*this, *m_readableStreamSource);
     if (!m_readableStreamSource->isPulling())

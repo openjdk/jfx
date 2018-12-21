@@ -165,7 +165,7 @@ public:
     void rootOrBodyStyleChanged(RenderElement&, const RenderStyle* oldStyle);
 
     // Called after the view transparency, or the document or base background color change.
-    void rootBackgroundTransparencyChanged();
+    void rootBackgroundColorOrTransparencyChanged();
 
     // Repaint the appropriate layers when the given RenderLayer starts or stops being composited.
     void repaintOnCompositingChange(RenderLayer&);
@@ -313,7 +313,6 @@ public:
 
     void didPaintBacking(RenderLayerBacking*);
 
-    void setRootExtendedBackgroundColor(const Color&);
     const Color& rootExtendedBackgroundColor() const { return m_rootExtendedBackgroundColor; }
 
     void updateRootContentLayerClipping();
@@ -333,6 +332,9 @@ private:
     class OverlapMap;
     struct CompositingState;
     struct OverlapExtent;
+
+    // Returns true if the policy changed.
+    bool updateCompositingPolicy();
 
     // GraphicsLayerClient implementation
     void notifyFlushRequired(const GraphicsLayer*) override;
@@ -443,8 +445,8 @@ private:
 
     void updateScrollCoordinationForThisFrame(ScrollingNodeID);
     ScrollingNodeID attachScrollingNode(RenderLayer&, ScrollingNodeType, ScrollingNodeID parentNodeID);
-    void updateScrollCoordinatedLayer(RenderLayer&, LayerScrollCoordinationRoles, OptionSet<ScrollingNodeChangeFlags>);
-    void detachScrollCoordinatedLayer(RenderLayer&, LayerScrollCoordinationRoles);
+    void updateScrollCoordinatedLayer(RenderLayer&, OptionSet<LayerScrollCoordinationRole>, OptionSet<ScrollingNodeChangeFlags>);
+    void detachScrollCoordinatedLayer(RenderLayer&, OptionSet<LayerScrollCoordinationRole>);
     void reattachSubframeScrollLayers();
 
     FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer&) const;
@@ -482,6 +484,8 @@ private:
     bool documentUsesTiledBacking() const;
     bool isMainFrameCompositor() const;
 
+    void setRootLayerConfigurationNeedsUpdate() { m_rootLayerConfigurationNeedsUpdate = true; }
+
 private:
     RenderView& m_renderView;
     std::unique_ptr<GraphicsLayer> m_rootContentLayer;
@@ -489,6 +493,8 @@ private:
 
     ChromeClient::CompositingTriggerFlags m_compositingTriggers { static_cast<ChromeClient::CompositingTriggerFlags>(ChromeClient::AllTriggers) };
     bool m_hasAcceleratedCompositing { true };
+
+    CompositingPolicy m_compositingPolicy { CompositingPolicy::Normal };
 
     bool m_showDebugBorders { false };
     bool m_showRepaintCounter { false };
@@ -501,6 +507,7 @@ private:
 
     bool m_compositing { false };
     bool m_compositingLayersNeedRebuild { false };
+    bool m_rootLayerConfigurationNeedsUpdate { false };
     bool m_flushingLayers { false };
     bool m_shouldFlushOnReattach { false };
     bool m_forceCompositingMode { false };
@@ -561,6 +568,7 @@ private:
     double m_secondaryBackingStoreBytes { 0 };
 #endif
 
+    Color m_viewBackgroundColor;
     Color m_rootExtendedBackgroundColor;
 
     HashMap<ScrollingNodeID, RenderLayer*> m_scrollingNodeToLayerMap;
@@ -569,5 +577,6 @@ private:
 void paintScrollbar(Scrollbar*, GraphicsContext&, const IntRect& clip);
 
 WTF::TextStream& operator<<(WTF::TextStream&, CompositingUpdateType);
+WTF::TextStream& operator<<(WTF::TextStream&, CompositingPolicy);
 
 } // namespace WebCore

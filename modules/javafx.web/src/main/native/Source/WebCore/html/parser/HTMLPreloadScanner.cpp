@@ -39,7 +39,9 @@
 #include "MIMETypeRegistry.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
+#include "MediaQueryParser.h"
 #include "RenderView.h"
+#include "RuntimeEnabledFeatures.h"
 #include "SizesAttributeParser.h"
 #include <wtf/MainThread.h>
 
@@ -78,13 +80,13 @@ String TokenPreloadScanner::initiatorFor(TagId tagId)
     switch (tagId) {
     case TagId::Source:
     case TagId::Img:
-        return ASCIILiteral("img");
+        return "img"_s;
     case TagId::Input:
-        return ASCIILiteral("input");
+        return "input"_s;
     case TagId::Link:
-        return ASCIILiteral("link");
+        return "link"_s;
     case TagId::Script:
-        return ASCIILiteral("script");
+        return "script"_s;
     case TagId::Unknown:
     case TagId::Style:
     case TagId::Base:
@@ -92,10 +94,10 @@ String TokenPreloadScanner::initiatorFor(TagId tagId)
     case TagId::Meta:
     case TagId::Picture:
         ASSERT_NOT_REACHED();
-        return ASCIILiteral("unknown");
+        return "unknown"_s;
     }
     ASSERT_NOT_REACHED();
-    return ASCIILiteral("unknown");
+    return "unknown"_s;
 }
 
 class TokenPreloadScanner::StartTagScanner {
@@ -105,6 +107,7 @@ public:
         , m_linkIsStyleSheet(false)
         , m_linkIsPreload(false)
         , m_metaIsViewport(false)
+        , m_metaIsDisabledAdaptations(false)
         , m_inputIsImage(false)
         , m_deviceScaleFactor(deviceScaleFactor)
     {
@@ -141,6 +144,9 @@ public:
 
         if (m_metaIsViewport && !m_metaContent.isNull())
             document.processViewport(m_metaContent, ViewportArguments::ViewportMeta);
+
+        if (m_metaIsDisabledAdaptations && !m_metaContent.isNull())
+            document.processDisabledAdaptations(m_metaContent);
     }
 
     std::unique_ptr<PreloadRequest> createPreloadRequest(const URL& predictedBaseURL)
@@ -215,7 +221,7 @@ private:
             }
             if (match(attributeName, mediaAttr) && m_mediaAttribute.isNull()) {
                 m_mediaAttribute = attributeValue;
-                auto mediaSet = MediaQuerySet::create(attributeValue);
+                auto mediaSet = MediaQuerySet::create(attributeValue, MediaQueryParserContext(document));
                 auto documentElement = makeRefPtr(document.documentElement());
                 LOG(MediaQueries, "HTMLPreloadScanner %p processAttribute evaluating media queries", this);
                 m_mediaMatched = MediaQueryEvaluator { document.printing() ? "print" : "screen", document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaSet.get());
@@ -265,6 +271,8 @@ private:
                 m_metaContent = attributeValue;
             else if (match(attributeName, nameAttr))
                 m_metaIsViewport = equalLettersIgnoringASCIICase(attributeValue, "viewport");
+            else if (RuntimeEnabledFeatures::sharedFeatures().disabledAdaptationsMetaTagEnabled() && match(attributeName, nameAttr))
+                m_metaIsDisabledAdaptations = equalLettersIgnoringASCIICase(attributeValue, "disabled-adaptations");
             break;
         case TagId::Base:
         case TagId::Style:
@@ -301,15 +309,15 @@ private:
     {
         switch (m_tagId) {
         case TagId::Script:
-            return CachedResource::Script;
+            return CachedResource::Type::Script;
         case TagId::Img:
         case TagId::Input:
         case TagId::Source:
             ASSERT(m_tagId != TagId::Input || m_inputIsImage);
-            return CachedResource::ImageResource;
+            return CachedResource::Type::ImageResource;
         case TagId::Link:
             if (m_linkIsStyleSheet)
-                return CachedResource::CSSStyleSheet;
+                return CachedResource::Type::CSSStyleSheet;
             if (m_linkIsPreload)
                 return LinkLoader::resourceTypeFromAsAttribute(m_asAttribute);
             break;
@@ -322,7 +330,7 @@ private:
             break;
         }
         ASSERT_NOT_REACHED();
-        return CachedResource::RawResource;
+        return CachedResource::Type::RawResource;
     }
 
     bool shouldPreload()
@@ -358,6 +366,7 @@ private:
     String m_asAttribute;
     String m_typeAttribute;
     bool m_metaIsViewport;
+    bool m_metaIsDisabledAdaptations;
     bool m_inputIsImage;
     float m_deviceScaleFactor;
     PreloadRequest::ModuleScript m_moduleScript { PreloadRequest::ModuleScript::No };

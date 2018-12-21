@@ -71,6 +71,9 @@ typedef HANDLE PlatformFileHandle;
 // FIXME: -1 is INVALID_HANDLE_VALUE, defined in <winbase.h>. Chromium tries to
 // avoid using Windows headers in headers.  We'd rather move this into the .cpp.
 const PlatformFileHandle invalidPlatformFileHandle = reinterpret_cast<HANDLE>(-1);
+#elif PLATFORM(JAVA)
+typedef JGObject PlatformFileHandle;
+const PlatformFileHandle invalidPlatformFileHandle { nullptr };
 #else
 typedef int PlatformFileHandle;
 const PlatformFileHandle invalidPlatformFileHandle = -1;
@@ -175,8 +178,6 @@ RetainPtr<CFURLRef> pathAsURL(const String&);
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
 String filenameForDisplay(const String&);
-CString applicationDirectoryPath();
-CString sharedResourcesPath();
 #endif
 
 #if PLATFORM(WIN)
@@ -186,7 +187,10 @@ String roamingUserSpecificStorageDirectory();
 
 #if PLATFORM(COCOA)
 WEBCORE_EXPORT NSString *createTemporaryDirectory(NSString *directoryPrefix);
+WEBCORE_EXPORT bool deleteNonEmptyDirectory(const String&);
 #endif
+
+WEBCORE_EXPORT String realPath(const String&);
 
 class MappedFileData {
 public:

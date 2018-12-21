@@ -27,7 +27,6 @@
 #ifndef WTF_StdLibExtras_h
 #define WTF_StdLibExtras_h
 
-#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <type_traits>
@@ -455,22 +454,6 @@ inline constexpr std::tuple<Args&...> tie(Args&... values)
     return std::tuple<Args&...>(values...);
 }
 
-// libstdc++4 does not have constexpr std::min or std::max.
-// As a workaround this defines WTF::min and WTF::max with constexpr, to be used when a constexpr result is expected.
-// This workaround can be removed after 2018-06 and all users of WTF::min and WTF::max can be converted to std::min and std::max.
-// For more info see: https://bugs.webkit.org/show_bug.cgi?id=181160
-template <class T>
-inline constexpr const T& min(const T& a, const T& b)
-{
-    return std::min(a, b);
-}
-
-template <class T>
-inline constexpr const T& max(const T& a, const T& b)
-{
-    return std::max(a, b);
-}
-
 } // namespace WTF
 
 // This version of placement new omits a 0 check.
@@ -534,7 +517,7 @@ ALWAYS_INLINE constexpr typename remove_reference<T>::type&& move(T&& value)
     return move(forward<T>(value));
 }
 
-#if __cplusplus < 201703L && (!defined(_MSC_FULL_VER) || _MSC_FULL_VER < 190023918)
+#if __cplusplus < 201703L && (!defined(_MSC_FULL_VER) || _MSC_FULL_VER < 190023918) && !defined(__cpp_lib_logical_traits)
 template<class...> struct wtf_conjunction_impl;
 template<> struct wtf_conjunction_impl<> : true_type { };
 template<class B0> struct wtf_conjunction_impl<B0> : B0 { };
@@ -543,7 +526,9 @@ template<class B0, class B1, class B2, class... Bn> struct wtf_conjunction_impl<
 template<class... _Args> struct conjunction : wtf_conjunction_impl<_Args...> { };
 #endif
 
-#if __cplusplus < 201703L
+// Provide in_place_t when not building with -std=c++17, or when building with libstdc++ 6
+// (which doesn't define the _GLIBCXX_RELEASE macro that's been introduced in libstdc++ 7).
+#if (__cplusplus < 201703L || (defined(__GLIBCXX__) && !defined(_GLIBCXX_RELEASE))) && (!defined(_MSC_FULL_VER) || _MSC_FULL_VER < 190023918)
 
 // These are inline variable for C++17 and later.
 #define __IN_PLACE_INLINE_VARIABLE static const

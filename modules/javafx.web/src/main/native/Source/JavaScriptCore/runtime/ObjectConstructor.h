@@ -34,7 +34,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorKeys(ExecState*);
 
 class ObjectPrototype;
 
-class ObjectConstructor : public InternalFunction {
+class ObjectConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
     static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
@@ -60,12 +60,12 @@ private:
     ObjectConstructor(VM&, Structure*);
 };
 
-inline JSObject* constructEmptyObject(ExecState* exec, Structure* structure)
+inline JSFinalObject* constructEmptyObject(ExecState* exec, Structure* structure)
 {
     return JSFinalObject::create(exec, structure);
 }
 
-inline JSObject* constructEmptyObject(ExecState* exec, JSObject* prototype, unsigned inlineCapacity)
+inline JSFinalObject* constructEmptyObject(ExecState* exec, JSObject* prototype, unsigned inlineCapacity)
 {
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
     StructureCache& structureCache = globalObject->vm().structureCache;
@@ -73,12 +73,12 @@ inline JSObject* constructEmptyObject(ExecState* exec, JSObject* prototype, unsi
     return constructEmptyObject(exec, structure);
 }
 
-inline JSObject* constructEmptyObject(ExecState* exec, JSObject* prototype)
+inline JSFinalObject* constructEmptyObject(ExecState* exec, JSObject* prototype)
 {
     return constructEmptyObject(exec, prototype, JSFinalObject::defaultInlineCapacity());
 }
 
-inline JSObject* constructEmptyObject(ExecState* exec)
+inline JSFinalObject* constructEmptyObject(ExecState* exec)
 {
     return constructEmptyObject(exec, exec->lexicalGlobalObject()->objectStructureForObjectConstructor());
 }

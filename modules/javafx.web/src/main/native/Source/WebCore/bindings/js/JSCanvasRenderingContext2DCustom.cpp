@@ -18,6 +18,7 @@
  */
 
 #include "config.h"
+#include "JSNodeCustom.h"
 #include "JSCanvasRenderingContext2D.h"
 
 namespace WebCore {

@@ -34,7 +34,7 @@
 #include <WebCore/DocumentType.h>
 #include <WebCore/HTMLDocument.h>
 #include <WebCore/SVGTests.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

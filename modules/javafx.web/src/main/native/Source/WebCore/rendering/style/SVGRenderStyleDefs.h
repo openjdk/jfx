@@ -35,267 +35,305 @@
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
-    enum SVGPaintType {
-        SVG_PAINTTYPE_RGBCOLOR,
-        SVG_PAINTTYPE_NONE,
-        SVG_PAINTTYPE_CURRENTCOLOR,
-        SVG_PAINTTYPE_URI_NONE,
-        SVG_PAINTTYPE_URI_CURRENTCOLOR,
-        SVG_PAINTTYPE_URI_RGBCOLOR,
-        SVG_PAINTTYPE_URI
-    };
 
-    enum EBaselineShift {
-        BS_BASELINE, BS_SUB, BS_SUPER, BS_LENGTH
-    };
+class CSSValue;
+class CSSValueList;
+class SVGPaint;
 
-    enum ETextAnchor {
-        TA_START, TA_MIDDLE, TA_END
-    };
+enum class SVGPaintType : uint8_t {
+    RGBColor,
+    None,
+    CurrentColor,
+    URINone,
+    URICurrentColor,
+    URIRGBColor,
+    URI
+};
 
-    enum EColorInterpolation {
-        CI_AUTO, CI_SRGB, CI_LINEARRGB
-    };
+enum class BaselineShift : uint8_t {
+    Baseline,
+    Sub,
+    Super,
+    Length
+};
 
-    enum EColorRendering {
-        CR_AUTO, CR_OPTIMIZESPEED, CR_OPTIMIZEQUALITY
-    };
-    enum EShapeRendering {
-        SR_AUTO, SR_OPTIMIZESPEED, SR_CRISPEDGES, SR_GEOMETRICPRECISION
-    };
+enum class TextAnchor : uint8_t {
+    Start,
+    Middle,
+    End
+};
 
-    enum EGlyphOrientation {
-        GO_0DEG, GO_90DEG, GO_180DEG, GO_270DEG, GO_AUTO
-    };
+enum class ColorInterpolation : uint8_t {
+    Auto,
+    SRGB,
+    LinearRGB
+};
 
-    enum EAlignmentBaseline {
-        AB_AUTO, AB_BASELINE, AB_BEFORE_EDGE, AB_TEXT_BEFORE_EDGE,
-        AB_MIDDLE, AB_CENTRAL, AB_AFTER_EDGE, AB_TEXT_AFTER_EDGE,
-        AB_IDEOGRAPHIC, AB_ALPHABETIC, AB_HANGING, AB_MATHEMATICAL
-    };
+enum class ColorRendering : uint8_t {
+    Auto,
+    OptimizeSpeed,
+    OptimizeQuality
+};
 
-    enum EDominantBaseline {
-        DB_AUTO, DB_USE_SCRIPT, DB_NO_CHANGE, DB_RESET_SIZE,
-        DB_IDEOGRAPHIC, DB_ALPHABETIC, DB_HANGING, DB_MATHEMATICAL,
-        DB_CENTRAL, DB_MIDDLE, DB_TEXT_AFTER_EDGE, DB_TEXT_BEFORE_EDGE
-    };
+enum class ShapeRendering : uint8_t {
+    Auto,
+    OptimizeSpeed,
+    CrispEdges,
+    GeometricPrecision
+};
 
-    enum EVectorEffect {
-        VE_NONE,
-        VE_NON_SCALING_STROKE
-    };
+enum class GlyphOrientation : uint8_t {
+    Degrees0,
+    Degrees90,
+    Degrees180,
+    Degrees270,
+    Auto
+};
 
-    enum EBufferedRendering {
-        BR_AUTO,
-        BR_DYNAMIC,
-        BR_STATIC
-    };
+enum class AlignmentBaseline : uint8_t {
+    Auto,
+    Baseline,
+    BeforeEdge,
+    TextBeforeEdge,
+    Middle,
+    Central,
+    AfterEdge,
+    TextAfterEdge,
+    Ideographic,
+    Alphabetic,
+    Hanging,
+    Mathematical
+};
 
-    enum EMaskType {
-        MT_LUMINANCE,
-        MT_ALPHA
-    };
+enum class DominantBaseline : uint8_t {
+    Auto,
+    UseScript,
+    NoChange,
+    ResetSize,
+    Ideographic,
+    Alphabetic,
+    Hanging,
+    Mathematical,
+    Central,
+    Middle,
+    TextAfterEdge,
+    TextBeforeEdge
+};
 
-    class CSSValue;
-    class CSSValueList;
-    class SVGPaint;
+enum class VectorEffect : uint8_t {
+    None,
+    NonScalingStroke
+};
 
-    // Inherited/Non-Inherited Style Datastructures
-    class StyleFillData : public RefCounted<StyleFillData> {
-    public:
-        static Ref<StyleFillData> create() { return adoptRef(*new StyleFillData); }
-        Ref<StyleFillData> copy() const;
+enum class BufferedRendering : uint8_t {
+    Auto,
+    Dynamic,
+    Static
+};
 
-        bool operator==(const StyleFillData&) const;
-        bool operator!=(const StyleFillData& other) const
-        {
-            return !(*this == other);
-        }
+enum class MaskType : uint8_t {
+    Luminance,
+    Alpha
+};
 
-        float opacity;
-        SVGPaintType paintType;
-        Color paintColor;
-        String paintUri;
-        SVGPaintType visitedLinkPaintType;
-        Color visitedLinkPaintColor;
-        String visitedLinkPaintUri;
+// Inherited/Non-Inherited Style Datastructures
+class StyleFillData : public RefCounted<StyleFillData> {
+public:
+    static Ref<StyleFillData> create() { return adoptRef(*new StyleFillData); }
+    Ref<StyleFillData> copy() const;
 
-    private:
-        StyleFillData();
-        StyleFillData(const StyleFillData&);
-    };
+    bool operator==(const StyleFillData&) const;
+    bool operator!=(const StyleFillData& other) const
+    {
+        return !(*this == other);
+    }
 
-    class StyleStrokeData : public RefCounted<StyleStrokeData> {
-    public:
-        static Ref<StyleStrokeData> create() { return adoptRef(*new StyleStrokeData); }
-        Ref<StyleStrokeData> copy() const;
+    float opacity;
+    Color paintColor;
+    Color visitedLinkPaintColor;
+    String paintUri;
+    String visitedLinkPaintUri;
+    SVGPaintType paintType;
+    SVGPaintType visitedLinkPaintType;
 
-        bool operator==(const StyleStrokeData&) const;
-        bool operator!=(const StyleStrokeData& other) const
-        {
-            return !(*this == other);
-        }
+private:
+    StyleFillData();
+    StyleFillData(const StyleFillData&);
+};
 
-        float opacity;
+class StyleStrokeData : public RefCounted<StyleStrokeData> {
+public:
+    static Ref<StyleStrokeData> create() { return adoptRef(*new StyleStrokeData); }
+    Ref<StyleStrokeData> copy() const;
 
-        Length dashOffset;
-        Vector<SVGLengthValue> dashArray;
+    bool operator==(const StyleStrokeData&) const;
+    bool operator!=(const StyleStrokeData& other) const
+    {
+        return !(*this == other);
+    }
 
-        SVGPaintType paintType;
-        Color paintColor;
-        String paintUri;
-        SVGPaintType visitedLinkPaintType;
-        Color visitedLinkPaintColor;
-        String visitedLinkPaintUri;
+    float opacity;
 
-    private:
-        StyleStrokeData();
-        StyleStrokeData(const StyleStrokeData&);
-    };
+    Color paintColor;
+    Color visitedLinkPaintColor;
 
-    class StyleStopData : public RefCounted<StyleStopData> {
-    public:
-        static Ref<StyleStopData> create() { return adoptRef(*new StyleStopData); }
-        Ref<StyleStopData> copy() const;
+    String paintUri;
+    String visitedLinkPaintUri;
 
-        bool operator==(const StyleStopData&) const;
-        bool operator!=(const StyleStopData& other) const
-        {
-            return !(*this == other);
-        }
+    Length dashOffset;
+    Vector<SVGLengthValue> dashArray;
 
-        float opacity;
-        Color color;
+    SVGPaintType paintType;
+    SVGPaintType visitedLinkPaintType;
 
-    private:
-        StyleStopData();
-        StyleStopData(const StyleStopData&);
-    };
+private:
+    StyleStrokeData();
+    StyleStrokeData(const StyleStrokeData&);
+};
 
-    class StyleTextData : public RefCounted<StyleTextData> {
-    public:
-        static Ref<StyleTextData> create() { return adoptRef(*new StyleTextData); }
-        Ref<StyleTextData> copy() const;
+class StyleStopData : public RefCounted<StyleStopData> {
+public:
+    static Ref<StyleStopData> create() { return adoptRef(*new StyleStopData); }
+    Ref<StyleStopData> copy() const;
 
-        bool operator==(const StyleTextData& other) const;
-        bool operator!=(const StyleTextData& other) const
-        {
-            return !(*this == other);
-        }
+    bool operator==(const StyleStopData&) const;
+    bool operator!=(const StyleStopData& other) const
+    {
+        return !(*this == other);
+    }
 
-        SVGLengthValue kerning;
+    float opacity;
+    Color color;
 
-    private:
-        StyleTextData();
-        StyleTextData(const StyleTextData&);
-    };
+private:
+    StyleStopData();
+    StyleStopData(const StyleStopData&);
+};
 
-    // Note: the rule for this class is, *no inheritance* of these props
-    class StyleMiscData : public RefCounted<StyleMiscData> {
-    public:
-        static Ref<StyleMiscData> create() { return adoptRef(*new StyleMiscData); }
-        Ref<StyleMiscData> copy() const;
+class StyleTextData : public RefCounted<StyleTextData> {
+public:
+    static Ref<StyleTextData> create() { return adoptRef(*new StyleTextData); }
+    Ref<StyleTextData> copy() const;
 
-        bool operator==(const StyleMiscData&) const;
-        bool operator!=(const StyleMiscData& other) const
-        {
-            return !(*this == other);
-        }
+    bool operator==(const StyleTextData& other) const;
+    bool operator!=(const StyleTextData& other) const
+    {
+        return !(*this == other);
+    }
 
-        Color floodColor;
-        float floodOpacity;
-        Color lightingColor;
+    SVGLengthValue kerning;
 
-        // non-inherited text stuff lives here not in StyleTextData.
-        SVGLengthValue baselineShiftValue;
+private:
+    StyleTextData();
+    StyleTextData(const StyleTextData&);
+};
 
-    private:
-        StyleMiscData();
-        StyleMiscData(const StyleMiscData&);
-    };
+// Note: the rule for this class is, *no inheritance* of these props
+class StyleMiscData : public RefCounted<StyleMiscData> {
+public:
+    static Ref<StyleMiscData> create() { return adoptRef(*new StyleMiscData); }
+    Ref<StyleMiscData> copy() const;
 
-    class StyleShadowSVGData : public RefCounted<StyleShadowSVGData> {
-    public:
-        static Ref<StyleShadowSVGData> create() { return adoptRef(*new StyleShadowSVGData); }
-        Ref<StyleShadowSVGData> copy() const;
+    bool operator==(const StyleMiscData&) const;
+    bool operator!=(const StyleMiscData& other) const
+    {
+        return !(*this == other);
+    }
 
-        bool operator==(const StyleShadowSVGData&) const;
-        bool operator!=(const StyleShadowSVGData& other) const
-        {
-            return !(*this == other);
-        }
+    float floodOpacity;
+    Color floodColor;
+    Color lightingColor;
 
-        std::unique_ptr<ShadowData> shadow;
+    // non-inherited text stuff lives here not in StyleTextData.
+    SVGLengthValue baselineShiftValue;
 
-    private:
-        StyleShadowSVGData();
-        StyleShadowSVGData(const StyleShadowSVGData&);
-    };
+private:
+    StyleMiscData();
+    StyleMiscData(const StyleMiscData&);
+};
 
-    // Non-inherited resources
-    class StyleResourceData : public RefCounted<StyleResourceData> {
-    public:
-        static Ref<StyleResourceData> create() { return adoptRef(*new StyleResourceData); }
-        Ref<StyleResourceData> copy() const;
+class StyleShadowSVGData : public RefCounted<StyleShadowSVGData> {
+public:
+    static Ref<StyleShadowSVGData> create() { return adoptRef(*new StyleShadowSVGData); }
+    Ref<StyleShadowSVGData> copy() const;
 
-        bool operator==(const StyleResourceData&) const;
-        bool operator!=(const StyleResourceData& other) const
-        {
-            return !(*this == other);
-        }
+    bool operator==(const StyleShadowSVGData&) const;
+    bool operator!=(const StyleShadowSVGData& other) const
+    {
+        return !(*this == other);
+    }
 
-        String clipper;
-        String masker;
+    std::unique_ptr<ShadowData> shadow;
 
-    private:
-        StyleResourceData();
-        StyleResourceData(const StyleResourceData&);
-    };
+private:
+    StyleShadowSVGData();
+    StyleShadowSVGData(const StyleShadowSVGData&);
+};
 
-    // Inherited resources
-    class StyleInheritedResourceData : public RefCounted<StyleInheritedResourceData> {
-    public:
-        static Ref<StyleInheritedResourceData> create() { return adoptRef(*new StyleInheritedResourceData); }
-        Ref<StyleInheritedResourceData> copy() const;
+// Non-inherited resources
+class StyleResourceData : public RefCounted<StyleResourceData> {
+public:
+    static Ref<StyleResourceData> create() { return adoptRef(*new StyleResourceData); }
+    Ref<StyleResourceData> copy() const;
 
-        bool operator==(const StyleInheritedResourceData&) const;
-        bool operator!=(const StyleInheritedResourceData& other) const
-        {
-            return !(*this == other);
-        }
+    bool operator==(const StyleResourceData&) const;
+    bool operator!=(const StyleResourceData& other) const
+    {
+        return !(*this == other);
+    }
 
-        String markerStart;
-        String markerMid;
-        String markerEnd;
+    String clipper;
+    String masker;
 
-    private:
-        StyleInheritedResourceData();
-        StyleInheritedResourceData(const StyleInheritedResourceData&);
-    };
+private:
+    StyleResourceData();
+    StyleResourceData(const StyleResourceData&);
+};
 
-    // Positioning and sizing properties.
-    class StyleLayoutData : public RefCounted<StyleLayoutData> {
-    public:
-        static Ref<StyleLayoutData> create() { return adoptRef(*new StyleLayoutData); }
-        Ref<StyleLayoutData> copy() const;
+// Inherited resources
+class StyleInheritedResourceData : public RefCounted<StyleInheritedResourceData> {
+public:
+    static Ref<StyleInheritedResourceData> create() { return adoptRef(*new StyleInheritedResourceData); }
+    Ref<StyleInheritedResourceData> copy() const;
 
-        bool operator==(const StyleLayoutData&) const;
-        bool operator!=(const StyleLayoutData& other) const
-        {
-            return !(*this == other);
-        }
+    bool operator==(const StyleInheritedResourceData&) const;
+    bool operator!=(const StyleInheritedResourceData& other) const
+    {
+        return !(*this == other);
+    }
 
-        Length cx;
-        Length cy;
-        Length r;
-        Length rx;
-        Length ry;
-        Length x;
-        Length y;
+    String markerStart;
+    String markerMid;
+    String markerEnd;
 
-    private:
-        StyleLayoutData();
-        StyleLayoutData(const StyleLayoutData&);
-    };
+private:
+    StyleInheritedResourceData();
+    StyleInheritedResourceData(const StyleInheritedResourceData&);
+};
+
+// Positioning and sizing properties.
+class StyleLayoutData : public RefCounted<StyleLayoutData> {
+public:
+    static Ref<StyleLayoutData> create() { return adoptRef(*new StyleLayoutData); }
+    Ref<StyleLayoutData> copy() const;
+
+    bool operator==(const StyleLayoutData&) const;
+    bool operator!=(const StyleLayoutData& other) const
+    {
+        return !(*this == other);
+    }
+
+    Length cx;
+    Length cy;
+    Length r;
+    Length rx;
+    Length ry;
+    Length x;
+    Length y;
+
+private:
+    StyleLayoutData();
+    StyleLayoutData(const StyleLayoutData&);
+};
 
 } // namespace WebCore

@@ -52,7 +52,7 @@ class Lock {
     WTF_MAKE_NONCOPYABLE(Lock);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    Lock() = default;
+    constexpr Lock() = default;
 
     void lock()
     {
@@ -132,14 +132,12 @@ private:
     Atomic<uint8_t> m_byte { 0 };
 };
 
-using StaticLock = Lock;
 using LockHolder = Locker<Lock>;
 
 } // namespace WTF
 
 using WTF::Lock;
 using WTF::LockHolder;
-using WTF::StaticLock;
 
 #endif // WTF_Lock_h
 

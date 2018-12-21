@@ -47,7 +47,7 @@
 namespace WebCore {
 
 CachedSVGFont::CachedSVGFont(CachedResourceRequest&& request, PAL::SessionID sessionID)
-    : CachedFont(WTFMove(request), sessionID, SVGFontResource)
+    : CachedFont(WTFMove(request), sessionID, Type::SVGFontResource)
     , m_externalSVGFontElement(nullptr)
 {
 }
@@ -75,7 +75,7 @@ bool CachedSVGFont::ensureCustomFontData(const AtomicString& remoteURI)
             m_externalSVGDocument = SVGDocument::create(nullptr, URL());
             auto decoder = TextResourceDecoder::create("application/xml");
 
-            ScriptDisallowedScope::EventAllowedScope allowedScope(*m_externalSVGDocument);
+            ScriptDisallowedScope::DisableAssertionsInScope disabledScope;
 
             m_externalSVGDocument->setContent(decoder->decodeAndFlush(m_data->data(), m_data->size()));
             sawError = decoder->sawError();

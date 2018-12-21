@@ -32,9 +32,12 @@
 #include "RenderMenuList.h"
 #include "NodeRenderStyle.h"
 #include "StyleResolver.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLOptGroupElement);
 
 using namespace HTMLNames;
 
@@ -60,7 +63,7 @@ bool HTMLOptGroupElement::isFocusable() const
         return false;
     // Optgroup elements do not have a renderer.
     auto* style = const_cast<HTMLOptGroupElement&>(*this).computedStyle();
-    return style && style->display() != NONE;
+    return style && style->display() != DisplayType::None;
 }
 
 const AtomicString& HTMLOptGroupElement::formControlType() const

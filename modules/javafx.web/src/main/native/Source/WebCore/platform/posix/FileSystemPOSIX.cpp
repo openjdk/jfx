@@ -58,10 +58,7 @@ bool fileExists(const String& path)
     if (!fsRep.data() || fsRep.data()[0] == '\0')
         return false;
 
-    struct stat fileInfo;
-
-    // stat(...) returns 0 on successful stat'ing of the file, and non-zero in any case where the file doesn't exist or cannot be accessed
-    return !stat(fsRep.data(), &fileInfo);
+    return access(fsRep.data(), F_OK) != -1;
 }
 
 bool deleteFile(const String& path)
@@ -351,7 +348,7 @@ String directoryName(const String& path)
     if (!fsRep.data() || fsRep.data()[0] == '\0')
         return String();
 
-    return dirname(fsRep.mutableData());
+    return String::fromUTF8(dirname(fsRep.mutableData()));
 }
 
 Vector<String> listDirectory(const String& path, const String& filter)
@@ -446,6 +443,14 @@ std::optional<int32_t> getFileDeviceId(const CString& fsFile)
         return std::nullopt;
 
     return fileStat.st_dev;
+}
+
+String realPath(const String& filePath)
+{
+    CString fsRep = fileSystemRepresentation(filePath);
+    char resolvedName[PATH_MAX];
+    const char* result = realpath(fsRep.data(), resolvedName);
+    return result ? String::fromUTF8(result) : filePath;
 }
 
 } // namespace FileSystem

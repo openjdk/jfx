@@ -26,10 +26,12 @@
 
 #pragma once
 
+#include "CSSValue.h"
+#include "RenderStyle.h"
 #include "WebAnimation.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
+#include <wtf/ListHashSet.h>
 #include <wtf/Optional.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -37,9 +39,10 @@
 
 namespace WebCore {
 
-class AnimationEffect;
+class CSSAnimation;
+class CSSTransition;
+class DeclarativeAnimation;
 class Element;
-class WebAnimation;
 
 class AnimationTimeline : public RefCounted<AnimationTimeline> {
 public:
@@ -50,14 +53,21 @@ public:
     virtual std::optional<Seconds> currentTime() { return m_currentTime; }
     WEBCORE_EXPORT void setCurrentTime(Seconds);
     WEBCORE_EXPORT String description();
-    WEBCORE_EXPORT virtual void pause() { };
+    virtual void pause() { };
 
-    virtual void animationTimingModelDidChange() { };
+    virtual void timingModelDidChange() { };
 
-    const HashSet<RefPtr<WebAnimation>>& animations() const { return m_animations; }
-    Vector<RefPtr<WebAnimation>> animationsForElement(Element&);
+    enum class Ordering { Sorted, Unsorted };
+    const ListHashSet<RefPtr<WebAnimation>>& animations() const { return m_animations; }
+    Vector<RefPtr<WebAnimation>> animationsForElement(Element&, Ordering ordering = Ordering::Unsorted) const;
+    void elementWasRemoved(Element&);
+    void removeAnimationsForElement(Element&);
+    void cancelDeclarativeAnimationsForElement(Element&);
     void animationWasAddedToElement(WebAnimation&, Element&);
     void animationWasRemovedFromElement(WebAnimation&, Element&);
+
+    void updateCSSAnimationsForElement(Element&, const RenderStyle* currentStyle, const RenderStyle& afterChangeStyle);
+    void updateCSSTransitionsForElement(Element&, const RenderStyle& currentStyle, const RenderStyle& afterChangeStyle);
 
     virtual ~AnimationTimeline();
 
@@ -70,13 +80,29 @@ protected:
 
     explicit AnimationTimeline(ClassType);
 
-    const HashMap<RefPtr<Element>, Vector<RefPtr<WebAnimation>>>& elementToAnimationsMap() { return m_elementToAnimationsMap; }
+    bool hasElementAnimations() const { return !m_elementToAnimationsMap.isEmpty() || !m_elementToCSSAnimationsMap.isEmpty() || !m_elementToCSSTransitionsMap.isEmpty(); }
+
+    const ListHashSet<WebAnimation*>& animationsWithoutTarget() const { return m_animationsWithoutTarget; }
+    const HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>>& elementToAnimationsMap() { return m_elementToAnimationsMap; }
+    const HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>>& elementToCSSAnimationsMap() { return m_elementToCSSAnimationsMap; }
+    const HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>>& elementToCSSTransitionsMap() { return m_elementToCSSTransitionsMap; }
 
 private:
+    HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>>& relevantMapForAnimation(WebAnimation&);
+    void cancelOrRemoveDeclarativeAnimation(RefPtr<DeclarativeAnimation>);
+    RefPtr<WebAnimation> cssAnimationForElementAndProperty(Element&, CSSPropertyID);
+
     ClassType m_classType;
     std::optional<Seconds> m_currentTime;
-    HashMap<RefPtr<Element>, Vector<RefPtr<WebAnimation>>> m_elementToAnimationsMap;
-    HashSet<RefPtr<WebAnimation>> m_animations;
+    HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>> m_elementToAnimationsMap;
+    HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>> m_elementToCSSAnimationsMap;
+    HashMap<Element*, ListHashSet<RefPtr<WebAnimation>>> m_elementToCSSTransitionsMap;
+    ListHashSet<RefPtr<WebAnimation>> m_animations;
+
+    ListHashSet<WebAnimation*> m_animationsWithoutTarget;
+    HashMap<Element*, HashMap<String, RefPtr<CSSAnimation>>> m_elementToCSSAnimationByName;
+    HashMap<Element*, HashMap<CSSPropertyID, RefPtr<CSSTransition>>> m_elementToRunningCSSTransitionByCSSPropertyID;
+    HashMap<Element*, HashMap<CSSPropertyID, RefPtr<CSSTransition>>> m_elementToCompletedCSSTransitionByCSSPropertyID;
 };
 
 } // namespace WebCore

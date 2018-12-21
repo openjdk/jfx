@@ -32,10 +32,13 @@
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "RenderButton.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLButtonElement);
 
 using namespace HTMLNames;
 
@@ -127,14 +130,14 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
                 if (m_type == SUBMIT) {
                     SetForScope<bool> activatedSubmitState(m_isActivatedSubmit, true);
                     currentForm->prepareForSubmission(event);
-        }
+                }
 
                 if (m_type == RESET)
                     currentForm->reset();
             }
 
             if (m_type == SUBMIT || m_type == RESET)
-            event.setDefaultHandled();
+                event.setDefaultHandled();
         }
     }
 

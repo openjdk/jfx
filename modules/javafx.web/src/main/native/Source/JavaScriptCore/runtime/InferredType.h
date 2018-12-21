@@ -69,6 +69,7 @@ public:
         Number,
         String,
         Symbol,
+        BigInt,
         ObjectWithStructure,
         ObjectWithStructureOrOther,
         Object,
@@ -136,6 +137,8 @@ public:
                 return value.isString();
             case Symbol:
                 return value.isSymbol();
+            case BigInt:
+                return value.isBigInt();
             case ObjectWithStructure:
                 return value.isCell() && value.asCell()->structure() == m_structure;
             case ObjectWithStructureOrOther:
@@ -244,7 +247,7 @@ private:
     // watchpoint set.
     bool set(const ConcurrentJSLocker&, VM&, Descriptor);
 
-    void removeStructure();
+    void removeStructure(VM&);
 
     friend class InferredStructure;
     friend class InferredStructureWatchpoint;

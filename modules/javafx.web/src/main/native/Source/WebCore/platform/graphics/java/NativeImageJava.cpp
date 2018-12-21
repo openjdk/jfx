@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,7 @@ void drawNativeImage(const NativeImagePtr& image, GraphicsContext& context, cons
     context.save();
 
     // Set the compositing operation.
-    if (op == CompositeSourceOver && mode == BlendModeNormal && !nativeImageHasAlpha(image))
+    if (op == CompositeSourceOver && mode == BlendMode::Normal && !nativeImageHasAlpha(image))
         context.setCompositeOperation(CompositeCopy);
     else
         context.setCompositeOperation(op, mode);

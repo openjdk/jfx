@@ -26,6 +26,7 @@
 #include "config.h"
 #include "FilterOperations.h"
 
+#include "ColorUtilities.h"
 #include "FEGaussianBlur.h"
 #include "IntSize.h"
 #include "LengthFunctions.h"
@@ -117,6 +118,46 @@ FilterOutsets FilterOperations::outsets() const
         }
     }
     return totalOutsets;
+}
+
+bool FilterOperations::transformColor(Color& color) const
+{
+    if (isEmpty() || !color.isValid())
+        return false;
+    // Color filter does not apply to semantic CSS colors (like "Windowframe").
+    if (color.isSemantic())
+        return false;
+
+    FloatComponents components;
+    color.getRGBA(components.components[0], components.components[1], components.components[2], components.components[3]);
+
+    for (auto& operation : m_operations) {
+        if (!operation->transformColor(components))
+            return false;
+    }
+
+    color = Color(components.components[0], components.components[1], components.components[2], components.components[3]);
+    return true;
+}
+
+bool FilterOperations::inverseTransformColor(Color& color) const
+{
+    if (isEmpty() || !color.isValid())
+        return false;
+    // Color filter does not apply to semantic CSS colors (like "Windowframe").
+    if (color.isSemantic())
+        return false;
+
+    FloatComponents components;
+    color.getRGBA(components.components[0], components.components[1], components.components[2], components.components[3]);
+
+    for (auto& operation : m_operations) {
+        if (!operation->inverseTransformColor(components))
+            return false;
+    }
+
+    color = Color(components.components[0], components.components[1], components.components[2], components.components[3]);
+    return true;
 }
 
 bool FilterOperations::hasFilterThatAffectsOpacity() const

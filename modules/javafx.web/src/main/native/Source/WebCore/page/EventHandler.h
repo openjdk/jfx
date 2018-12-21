@@ -129,6 +129,8 @@ public:
     void clear();
     void nodeWillBeRemoved(Node&);
 
+    WEBCORE_EXPORT VisiblePosition selectionExtentRespectingEditingBoundary(const VisibleSelection&, const LayoutPoint&, Node*);
+
 #if ENABLE(DRAG_SUPPORT)
     void updateSelectionForMouseDrag();
 #endif
@@ -158,14 +160,6 @@ public:
 
 #if ENABLE(DRAG_SUPPORT)
     struct DragTargetResponse {
-#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
-        DragTargetResponse() = default;
-        DragTargetResponse(bool accept, std::optional<DragOperation> operation)
-            : accept(accept)
-            , operation(operation)
-        {
-        }
-#endif
         bool accept { false };
         std::optional<DragOperation> operation;
     };
@@ -199,8 +193,8 @@ public:
     WEBCORE_EXPORT bool scrollRecursively(ScrollDirection, ScrollGranularity, Node* startingNode = nullptr);
     WEBCORE_EXPORT bool logicalScrollRecursively(ScrollLogicalDirection, ScrollGranularity, Node* startingNode = nullptr);
 
-    bool tabsToLinks(KeyboardEvent&) const;
-    bool tabsToAllFormControls(KeyboardEvent&) const;
+    bool tabsToLinks(KeyboardEvent*) const;
+    bool tabsToAllFormControls(KeyboardEvent*) const;
 
     WEBCORE_EXPORT bool mouseMoved(const PlatformMouseEvent&);
     WEBCORE_EXPORT bool passMouseMovedEventToScrollbars(const PlatformMouseEvent&);
@@ -338,8 +332,8 @@ public:
 #endif
 
 #if PLATFORM(IOS)
-    WEBCORE_EXPORT void startTextAutoscroll(RenderObject* renderer, const FloatPoint& positionInWindow);
-    WEBCORE_EXPORT void cancelTextAutoscroll();
+    WEBCORE_EXPORT void startSelectionAutoscroll(RenderObject* renderer, const FloatPoint& positionInWindow);
+    WEBCORE_EXPORT void cancelSelectionAutoscroll();
     IntPoint m_targetAutoscrollPositionInWindow;
     bool m_isAutoscrolling { false };
 #endif

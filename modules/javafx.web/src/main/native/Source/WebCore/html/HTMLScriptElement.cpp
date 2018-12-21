@@ -29,9 +29,12 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "Text.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLScriptElement);
 
 using namespace HTMLNames;
 
@@ -173,7 +176,7 @@ void HTMLScriptElement::dispatchLoadEvent()
     ASSERT(!haveFiredLoadEvent());
     setHaveFiredLoadEvent(true);
 
-    dispatchEvent(Event::create(eventNames().loadEvent, false, false));
+    dispatchEvent(Event::create(eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 Ref<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)

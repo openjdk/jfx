@@ -85,7 +85,7 @@ public:
     // FIXME: Callers of these methods are dangerous and should be whitelisted explicitly or removed.
     RootInlineBox* originatingLine() const { return m_originatingLine.get(); }
     void clearOriginatingLine() { m_originatingLine = nullptr; }
-    void setOriginatingLine(RootInlineBox& line) { m_originatingLine = line.createWeakPtr(); }
+    void setOriginatingLine(RootInlineBox& line) { m_originatingLine = makeWeakPtr(line); }
 
     LayoutSize locationOffsetOfBorderBox() const
     {
@@ -161,7 +161,7 @@ public:
     LayoutUnit findNextFloatLogicalBottomBelowForBlock(LayoutUnit logicalHeight);
 
 private:
-    RenderBlockFlow& renderer() const { return *m_renderer; }
+    const RenderBlockFlow& renderer() const { return *m_renderer; }
     void computePlacedFloatsTree();
     const FloatingObjectTree* placedFloatsTree();
     void increaseObjectsCount(FloatingObject::Type);
@@ -173,7 +173,7 @@ private:
     unsigned m_leftObjectsCount;
     unsigned m_rightObjectsCount;
     bool m_horizontalWritingMode;
-    WeakPtr<RenderBlockFlow> m_renderer;
+    WeakPtr<const RenderBlockFlow> m_renderer;
 };
 
 } // namespace WebCore

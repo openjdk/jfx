@@ -48,6 +48,7 @@
 #include "Element.h"
 #include "MediaList.h"
 #include "MediaQueryParser.h"
+#include "MediaQueryParserContext.h"
 #include "StyleProperties.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
@@ -184,6 +185,7 @@ void CSSParserImpl::parseDeferredRuleList(CSSParserTokenRange tokenRange, CSSDef
     parser.consumeRuleList(tokenRange, RegularRuleList, [&childRules](const RefPtr<StyleRuleBase>& rule) {
         childRules.append(rule);
     });
+    childRules.shrinkToFit();
 }
 
 void CSSParserImpl::parseDeferredKeyframeList(CSSParserTokenRange tokenRange, CSSDeferredParser& deferredParser, StyleRuleKeyframes& keyframeRule)
@@ -280,9 +282,9 @@ CSSSelectorList CSSParserImpl::parsePageSelector(CSSParserTokenRange range, Styl
 
     std::unique_ptr<CSSParserSelector> selector;
     if (!typeSelector.isNull() && pseudo.isNull())
-        selector = std::unique_ptr<CSSParserSelector>(new CSSParserSelector(QualifiedName(nullAtom(), typeSelector, styleSheet->defaultNamespace())));
+        selector = std::make_unique<CSSParserSelector>(QualifiedName(nullAtom(), typeSelector, styleSheet->defaultNamespace()));
     else {
-        selector = std::unique_ptr<CSSParserSelector>(new CSSParserSelector);
+        selector = std::make_unique<CSSParserSelector>();
         if (!pseudo.isNull()) {
             selector = std::unique_ptr<CSSParserSelector>(CSSParserSelector::parsePagePseudoSelector(pseudo));
             if (!selector || selector->match() != CSSSelector::PagePseudoClass)
@@ -293,11 +295,7 @@ CSSSelectorList CSSParserImpl::parsePageSelector(CSSParserTokenRange range, Styl
     }
 
     selector->setForPage();
-    Vector<std::unique_ptr<CSSParserSelector>> selectorVector;
-    selectorVector.append(WTFMove(selector));
-    CSSSelectorList selectorList;
-    selectorList.adoptSelectorVector(selectorVector);
-    return selectorList;
+    return CSSSelectorList { Vector<std::unique_ptr<CSSParserSelector>>::from(WTFMove(selector)) };
 }
 
 std::unique_ptr<Vector<double>> CSSParserImpl::parseKeyframeKeyList(const String& keyList)
@@ -518,7 +516,7 @@ RefPtr<StyleRuleImport> CSSParserImpl::consumeImportRule(CSSParserTokenRange pre
         m_observerWrapper->observer().endRuleBody(endOffset);
     }
 
-    return StyleRuleImport::create(uri, MediaQueryParser::parseMediaQuerySet(prelude).releaseNonNull());
+    return StyleRuleImport::create(uri, MediaQueryParser::parseMediaQuerySet(prelude, MediaQueryParserContext(m_context)).releaseNonNull());
 }
 
 RefPtr<StyleRuleNamespace> CSSParserImpl::consumeNamespaceRule(CSSParserTokenRange prelude)
@@ -537,7 +535,7 @@ RefPtr<StyleRuleNamespace> CSSParserImpl::consumeNamespaceRule(CSSParserTokenRan
 RefPtr<StyleRuleMedia> CSSParserImpl::consumeMediaRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
 {
     if (m_deferredParser)
-        return StyleRuleMedia::create(MediaQueryParser::parseMediaQuerySet(prelude).releaseNonNull(),  std::make_unique<DeferredStyleGroupRuleList>(block, *m_deferredParser));
+        return StyleRuleMedia::create(MediaQueryParser::parseMediaQuerySet(prelude, MediaQueryParserContext(m_context)).releaseNonNull(),  std::make_unique<DeferredStyleGroupRuleList>(block, *m_deferredParser));
 
     Vector<RefPtr<StyleRuleBase>> rules;
 
@@ -550,11 +548,12 @@ RefPtr<StyleRuleMedia> CSSParserImpl::consumeMediaRule(CSSParserTokenRange prelu
     consumeRuleList(block, RegularRuleList, [&rules](RefPtr<StyleRuleBase> rule) {
         rules.append(rule);
     });
+    rules.shrinkToFit();
 
     if (m_observerWrapper)
         m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
 
-    return StyleRuleMedia::create(MediaQueryParser::parseMediaQuerySet(prelude).releaseNonNull(), rules);
+    return StyleRuleMedia::create(MediaQueryParser::parseMediaQuerySet(prelude, MediaQueryParserContext(m_context)).releaseNonNull(), rules);
 }
 
 RefPtr<StyleRuleSupports> CSSParserImpl::consumeSupportsRule(CSSParserTokenRange prelude, CSSParserTokenRange block)
@@ -576,6 +575,7 @@ RefPtr<StyleRuleSupports> CSSParserImpl::consumeSupportsRule(CSSParserTokenRange
     consumeRuleList(block, RegularRuleList, [&rules](RefPtr<StyleRuleBase> rule) {
         rules.append(rule);
     });
+    rules.shrinkToFit();
 
     if (m_observerWrapper)
         m_observerWrapper->observer().endRuleBody(m_observerWrapper->endOffset(block));
@@ -668,9 +668,7 @@ RefPtr<StyleRulePage> CSSParserImpl::consumePageRule(CSSParserTokenRange prelude
 
     consumeDeclarationList(block, StyleRule::Style);
 
-    RefPtr<StyleRulePage> page = StyleRulePage::create(createStyleProperties(m_parsedProperties, m_context.mode));
-    page->wrapperAdoptSelectorList(selectorList);
-    return page;
+    return StyleRulePage::create(createStyleProperties(m_parsedProperties, m_context.mode), WTFMove(selectorList));
 }
 
 // FIXME-NEWPARSER: Support "apply"
@@ -726,7 +724,6 @@ RefPtr<StyleRule> CSSParserImpl::consumeStyleRule(CSSParserTokenRange prelude, C
     if (!selectorList.isValid())
         return nullptr; // Parse error, invalid selector list
 
-    RefPtr<StyleRule> rule;
     if (m_observerWrapper)
         observeSelectors(*m_observerWrapper, prelude);
 
@@ -738,16 +735,12 @@ RefPtr<StyleRule> CSSParserImpl::consumeStyleRule(CSSParserTokenRange prelude, C
         CSSParserTokenRange blockCopy = block;
         blockCopy.consumeWhitespace();
         if (!blockCopy.atEnd()) {
-            rule = StyleRule::create(createDeferredStyleProperties(block), m_context.hasDocumentSecurityOrigin);
-            rule->wrapperAdoptSelectorList(selectorList);
-            return rule;
+            return StyleRule::create(createDeferredStyleProperties(block), m_context.hasDocumentSecurityOrigin, WTFMove(selectorList));
         }
     }
 
     consumeDeclarationList(block, StyleRule::Style);
-    rule = StyleRule::create(createStyleProperties(m_parsedProperties, m_context.mode), m_context.hasDocumentSecurityOrigin);
-    rule->wrapperAdoptSelectorList(selectorList);
-    return rule;
+    return StyleRule::create(createStyleProperties(m_parsedProperties, m_context.mode), m_context.hasDocumentSecurityOrigin, WTFMove(selectorList));
 }
 
 void CSSParserImpl::consumeDeclarationList(CSSParserTokenRange range, StyleRule::Type ruleType)

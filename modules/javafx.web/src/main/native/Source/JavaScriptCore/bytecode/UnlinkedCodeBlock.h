@@ -47,6 +47,7 @@
 
 namespace JSC {
 
+class BytecodeGenerator;
 class BytecodeLivenessAnalysis;
 class BytecodeRewriter;
 class CodeBlock;
@@ -157,23 +158,6 @@ public:
     void addParameter() { m_numParameters++; }
     unsigned numParameters() const { return m_numParameters; }
 
-    unsigned addRegExp(RegExp* r)
-    {
-        createRareDataIfNecessary();
-        VM& vm = *this->vm();
-        auto locker = lockDuringMarking(vm.heap, cellLock());
-        unsigned size = m_rareData->m_regexps.size();
-        m_rareData->m_regexps.append(WriteBarrier<RegExp>(vm, this, r));
-        return size;
-    }
-    unsigned numberOfRegExps() const
-    {
-        if (!m_rareData)
-            return 0;
-        return m_rareData->m_regexps.size();
-    }
-    RegExp* regexp(int index) const { ASSERT(m_rareData); return m_rareData->m_regexps[index].get(); }
-
     // Constant Pools
 
     size_t numberOfIdentifiers() const { return m_identifiers.size(); }
@@ -257,10 +241,7 @@ public:
     const UnlinkedInstructionStream& instructions() const;
 
     int numCalleeLocals() const { return m_numCalleeLocals; }
-
-    int m_numVars;
-    int m_numCapturedVars;
-    int m_numCalleeLocals;
+    int numVars() const { return m_numVars; }
 
     // Jump Tables
 
@@ -302,9 +283,16 @@ public:
 
     UnlinkedArrayProfile addArrayProfile() { return m_arrayProfileCount++; }
     unsigned numberOfArrayProfiles() { return m_arrayProfileCount; }
-    UnlinkedArrayAllocationProfile addArrayAllocationProfile() { return m_arrayAllocationProfileCount++; }
+    UnlinkedArrayAllocationProfile addArrayAllocationProfile(IndexingType recommendedIndexingType) { return (m_arrayAllocationProfileCount++) | recommendedIndexingType << 24; }
     unsigned numberOfArrayAllocationProfiles() { return m_arrayAllocationProfileCount; }
     UnlinkedObjectAllocationProfile addObjectAllocationProfile() { return m_objectAllocationProfileCount++; }
+    static std::tuple<unsigned, IndexingType> decompressArrayAllocationProfile(UnlinkedArrayAllocationProfile compressedProfile)
+    {
+        unsigned profile = (compressedProfile << 8) >> 8;
+        IndexingType recommendedIndexingType = compressedProfile >> 24;
+        return std::make_tuple<unsigned, IndexingType>(WTFMove(profile), WTFMove(recommendedIndexingType));
+
+    }
     unsigned numberOfObjectAllocationProfiles() { return m_objectAllocationProfileCount; }
     UnlinkedValueProfile addValueProfile() { return m_valueProfileCount++; }
     unsigned numberOfValueProfiles() { return m_valueProfileCount; }
@@ -411,6 +399,8 @@ protected:
 
 private:
     friend class BytecodeRewriter;
+    friend class BytecodeGenerator;
+
     void applyModification(BytecodeRewriter&, UnpackedInstructions&);
 
     void createRareDataIfNecessary()
@@ -423,8 +413,6 @@ private:
 
     void getLineAndColumn(const ExpressionRangeInfo&, unsigned& line, unsigned& column) const;
     BytecodeLivenessAnalysis& livenessAnalysisSlow(CodeBlock*);
-
-    int m_numParameters;
 
     std::unique_ptr<UnlinkedInstructionStream> m_unlinkedInstructions;
     std::unique_ptr<BytecodeLivenessAnalysis> m_liveness;
@@ -454,15 +442,20 @@ private:
     unsigned m_derivedContextType : 2;
     unsigned m_evalContextType : 2;
     unsigned m_hasTailCalls : 1;
-    unsigned m_lineCount;
-    unsigned m_endColumn;
+
+    unsigned m_lineCount { 0 };
+    unsigned m_endColumn { UINT_MAX };
+
+    int m_numVars { 0 };
+    int m_numCalleeLocals { 0 };
+    int m_numParameters { 0 };
 
 public:
     ConcurrentJSLock m_lock;
 private:
+    CodeFeatures m_features { 0 };
     TriState m_didOptimize;
     SourceParseMode m_parseMode;
-    CodeFeatures m_features;
     CodeType m_codeType;
 
     Vector<unsigned> m_jumpTargets;
@@ -480,20 +473,17 @@ private:
     FunctionExpressionVector m_functionExprs;
     std::array<unsigned, LinkTimeConstantCount> m_linkTimeConstants;
 
-    unsigned m_arrayProfileCount;
-    unsigned m_arrayAllocationProfileCount;
-    unsigned m_objectAllocationProfileCount;
-    unsigned m_valueProfileCount;
-    unsigned m_llintCallLinkInfoCount;
+    unsigned m_arrayProfileCount { 0 };
+    unsigned m_arrayAllocationProfileCount { 0 };
+    unsigned m_objectAllocationProfileCount { 0 };
+    unsigned m_valueProfileCount { 0 };
+    unsigned m_llintCallLinkInfoCount { 0 };
 
 public:
     struct RareData {
         WTF_MAKE_FAST_ALLOCATED;
     public:
         Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
-
-        // Rare Constants
-        Vector<WriteBarrier<RegExp>> m_regexps;
 
         // Jump Tables
         Vector<UnlinkedSimpleJumpTable> m_switchJumpTables;
@@ -515,7 +505,7 @@ private:
 
 protected:
     static void visitChildren(JSCell*, SlotVisitor&);
-    static size_t estimatedSize(JSCell*);
+    static size_t estimatedSize(JSCell*, VM&);
 
 public:
     DECLARE_INFO;

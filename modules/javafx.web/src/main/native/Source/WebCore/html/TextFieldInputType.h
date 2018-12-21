@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,6 +32,9 @@
 #pragma once
 
 #include "AutoFillButtonElement.h"
+#include "DataListButtonElement.h"
+#include "DataListSuggestionPicker.h"
+#include "DataListSuggestionsClient.h"
 #include "InputType.h"
 #include "SpinButtonElement.h"
 
@@ -41,12 +45,19 @@ class TextControlInnerTextElement;
 
 // The class represents types of which UI contain text fields.
 // It supports not only the types for BaseTextInputType but also type=number.
-class TextFieldInputType : public InputType, protected SpinButtonElement::SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner {
+class TextFieldInputType : public InputType, protected SpinButtonElement::SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner
+#if ENABLE(DATALIST_ELEMENT)
+    , private DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
+#endif
+{
 protected:
     explicit TextFieldInputType(HTMLInputElement&);
     virtual ~TextFieldInputType();
     void handleKeydownEvent(KeyboardEvent&) override;
     void handleKeydownEventForSpinButton(KeyboardEvent&);
+#if ENABLE(DATALIST_ELEMENT)
+    void handleClickEvent(MouseEvent&) final;
+#endif
 
     HTMLElement* containerElement() const final;
     HTMLElement* innerBlockElement() const final;
@@ -54,14 +65,16 @@ protected:
     HTMLElement* innerSpinButtonElement() const final;
     HTMLElement* capsLockIndicatorElement() const final;
     HTMLElement* autoFillButtonElement() const final;
+#if ENABLE(DATALIST_ELEMENT)
+    HTMLElement* dataListButtonElement() const final;
+#endif
 
-protected:
     virtual bool needsContainer() const;
     void createShadowSubtree() override;
     void destroyShadowSubtree() override;
-    void attributeChanged(const QualifiedName&) final;
-    void disabledAttributeChanged() final;
-    void readonlyAttributeChanged() final;
+    void attributeChanged(const QualifiedName&) override;
+    void disabledStateChanged() final;
+    void readOnlyStateChanged() final;
     bool supportsReadOnly() const final;
     void handleFocusEvent(Node* oldFocusedNode, FocusDirection) final;
     void handleBlurEvent() final;
@@ -73,7 +86,7 @@ protected:
     virtual void didSetValueByUserEdit();
 
 private:
-    bool isKeyboardFocusable(KeyboardEvent&) const final;
+    bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isMouseFocusable() const final;
     bool isTextField() const final;
     bool isEmptyValue() const final;
@@ -109,6 +122,24 @@ private:
 
     void createContainer();
     void createAutoFillButton(AutoFillButtonType);
+
+#if ENABLE(DATALIST_ELEMENT)
+    bool isPresentingAttachedView() const final;
+    void listAttributeTargetChanged() final;
+    void displaySuggestions(DataListSuggestionActivationType);
+    void closeSuggestions();
+
+    // DataListSuggestionsClient
+    IntRect elementRectInRootViewCoordinates() const final;
+    Vector<String> suggestions() const final;
+    void didSelectDataListOption(const String&) final;
+    void didCloseSuggestions() final;
+
+    void dataListButtonElementWasClicked() final;
+    RefPtr<DataListButtonElement> m_dataListDropdownIndicator;
+
+    std::unique_ptr<DataListSuggestionPicker> m_suggestionPicker;
+#endif
 
     RefPtr<HTMLElement> m_container;
     RefPtr<HTMLElement> m_innerBlock;

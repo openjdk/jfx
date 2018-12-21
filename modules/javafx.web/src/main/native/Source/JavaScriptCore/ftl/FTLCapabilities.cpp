@@ -86,6 +86,7 @@ inline CapabilityLevel canCompile(Node* node)
     case GetGlobalVar:
     case GetGlobalLexicalVariable:
     case PutGlobalVariable:
+    case ValueNegate:
     case ValueAdd:
     case StrCat:
     case ArithAdd:
@@ -114,6 +115,7 @@ inline CapabilityLevel canCompile(Node* node)
     case Upsilon:
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
+    case ClearCatchLocals:
     case LoopHint:
     case SkipScope:
     case GetGlobalObject:
@@ -175,6 +177,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ConstantStoragePointer:
     case Check:
     case CheckVarargs:
+    case CheckArray:
     case CountExecution:
     case SuperSamplerBegin:
     case SuperSamplerEnd:
@@ -189,6 +192,7 @@ inline CapabilityLevel canCompile(Node* node)
     case ToObject:
     case CallObjectConstructor:
     case CallStringConstructor:
+    case ObjectCreate:
     case MakeRope:
     case NewArrayWithSize:
     case TryGetById:
@@ -204,7 +208,8 @@ inline CapabilityLevel canCompile(Node* node)
     case Throw:
     case ThrowStaticError:
     case Unreachable:
-    case In:
+    case InByVal:
+    case InById:
     case HasOwnProperty:
     case IsCellWithType:
     case MapHash:
@@ -290,6 +295,7 @@ inline CapabilityLevel canCompile(Node* node)
     case RegExpExecNonGlobalOrSticky:
     case RegExpTest:
     case RegExpMatchFast:
+    case RegExpMatchFastGlobal:
     case NewRegexp:
     case StringReplace:
     case StringReplaceRegExp:
@@ -312,8 +318,10 @@ inline CapabilityLevel canCompile(Node* node)
     case CompareBelow:
     case CompareBelowEq:
     case CompareStrictEq:
+    case SameValue:
     case DefineDataProperty:
     case DefineAccessorProperty:
+    case StringValueOf:
     case StringSlice:
     case ToLowerCase:
     case NumberToStringWithRadix:
@@ -338,7 +346,23 @@ inline CapabilityLevel canCompile(Node* node)
     case AtomicsIsLockFree:
     case InitializeEntrypointArguments:
     case CPUIntrinsic:
-    case GetArrayMask:
+    case GetArrayLength:
+    case GetVectorLength:
+    case GetByVal:
+    case GetByValWithThis:
+    case PutByVal:
+    case PutByValAlias:
+    case PutByValDirect:
+    case PutByValWithThis:
+    case MatchStructure:
+    case FilterCallLinkStatus:
+    case FilterGetByIdStatus:
+    case FilterPutByIdStatus:
+    case FilterInByIdStatus:
+    case CreateThis:
+    case DataViewGetInt:
+    case DataViewGetFloat:
+    case DataViewSet:
         // These are OK.
         break;
 
@@ -348,94 +372,16 @@ inline CapabilityLevel canCompile(Node* node)
         // case because it would prevent us from catching bugs where the FTL backend
         // pipeline failed to optimize out an Identity.
         break;
-    case CheckArray:
-        switch (node->arrayMode().type()) {
-        case Array::Int32:
-        case Array::Double:
-        case Array::Contiguous:
-        case Array::Undecided:
-        case Array::ArrayStorage:
-        case Array::SlowPutArrayStorage:
-        case Array::DirectArguments:
-        case Array::ScopedArguments:
-            break;
-        default:
-            if (isTypedView(node->arrayMode().typedArrayType()))
-                break;
-            return CannotCompile;
-        }
-        break;
-    case GetArrayLength:
-        switch (node->arrayMode().type()) {
-        case Array::Undecided:
-        case Array::Int32:
-        case Array::Double:
-        case Array::Contiguous:
-        case Array::ArrayStorage:
-        case Array::SlowPutArrayStorage:
-        case Array::String:
-        case Array::DirectArguments:
-        case Array::ScopedArguments:
-            break;
-        default:
-            if (node->arrayMode().isSomeTypedArrayView())
-                break;
-            return CannotCompile;
-        }
-        break;
-    case GetVectorLength:
-        switch (node->arrayMode().type()) {
-        case Array::ArrayStorage:
-        case Array::SlowPutArrayStorage:
-            break;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-        }
-        break;
-    case GetByVal:
-        switch (node->arrayMode().type()) {
-        case Array::ForceExit:
-        case Array::Generic:
-        case Array::String:
-        case Array::Int32:
-        case Array::Double:
-        case Array::Contiguous:
-        case Array::Undecided:
-        case Array::DirectArguments:
-        case Array::ScopedArguments:
-        case Array::ArrayStorage:
-        case Array::SlowPutArrayStorage:
-            break;
-        default:
-            if (isTypedView(node->arrayMode().typedArrayType()))
-                return CanCompileAndOSREnter;
-            return CannotCompile;
-        }
-        break;
-    case GetByValWithThis:
-        break;
-    case PutByVal:
-    case PutByValAlias:
-    case PutByValDirect:
-        switch (node->arrayMode().type()) {
-        case Array::ForceExit:
-        case Array::Generic:
-        case Array::Int32:
-        case Array::Double:
-        case Array::Contiguous:
-        case Array::ArrayStorage:
-        case Array::SlowPutArrayStorage:
-            break;
-        default:
-            if (isTypedView(node->arrayMode().typedArrayType()))
-                return CanCompileAndOSREnter;
-            return CannotCompile;
-        }
-        break;
-    case PutByValWithThis:
-        break;
-    default:
-        // Don't know how to handle anything else.
+
+    case IdentityWithProfile:
+    case CheckTierUpInLoop:
+    case CheckTierUpAndOSREnter:
+    case CheckTierUpAtReturn:
+    case FiatInt52:
+    case ArithIMul:
+    case ProfileType:
+    case ProfileControlFlow:
+    case LastNodeType:
         return CannotCompile;
     }
     return CanCompileAndOSREnter;
@@ -498,16 +444,19 @@ CapabilityLevel canCompile(Graph& graph)
                 case StringObjectUse:
                 case StringOrStringObjectUse:
                 case SymbolUse:
+                case BigIntUse:
                 case MapObjectUse:
                 case SetObjectUse:
                 case WeakMapObjectUse:
                 case WeakSetObjectUse:
+                case DataViewObjectUse:
                 case FinalObjectUse:
                 case RegExpObjectUse:
                 case ProxyObjectUse:
                 case DerivedArrayUse:
                 case NotCellUse:
                 case OtherUse:
+                case KnownOtherUse:
                 case MiscUse:
                 case StringIdentUse:
                 case NotStringVarUse:

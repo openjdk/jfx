@@ -72,12 +72,13 @@ public:
     void requestNode(ErrorString&, const String& canvasId, int* nodeId) override;
     void requestContent(ErrorString&, const String& canvasId, String* content) override;
     void requestCSSCanvasClientNodes(ErrorString&, const String& canvasId, RefPtr<JSON::ArrayOf<int>>&) override;
-    void resolveCanvasContext(ErrorString&, const String& canvasId, const String* const objectGroup, RefPtr<Inspector::Protocol::Runtime::RemoteObject>&) override;
-    void startRecording(ErrorString&, const String& canvasId, const bool* const singleFrame, const int* const memoryLimit) override;
+    void resolveCanvasContext(ErrorString&, const String& canvasId, const String* objectGroup, RefPtr<Inspector::Protocol::Runtime::RemoteObject>&) override;
+    void startRecording(ErrorString&, const String& canvasId, const bool* singleFrame, const int* memoryLimit) override;
     void stopRecording(ErrorString&, const String& canvasId) override;
     void requestShaderSource(ErrorString&, const String& programId, const String& shaderType, String*) override;
     void updateShader(ErrorString&, const String& programId, const String& shaderType, const String& source) override;
     void setShaderProgramDisabled(ErrorString&, const String& programId, bool disabled) override;
+    void setShaderProgramHighlighted(ErrorString&, const String& programId, bool highlighted) override;
 
     // InspectorInstrumentation
     void frameNavigated(Frame&);
@@ -93,6 +94,7 @@ public:
     void didCreateProgram(WebGLRenderingContextBase&, WebGLProgram&);
     void willDeleteProgram(WebGLProgram&);
     bool isShaderProgramDisabled(WebGLProgram&);
+    bool isShaderProgramHighlighted(WebGLProgram&);
 #endif
 
     // CanvasObserver

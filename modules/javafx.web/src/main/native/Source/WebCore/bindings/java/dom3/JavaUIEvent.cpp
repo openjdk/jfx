@@ -28,7 +28,7 @@
 #include "config.h"
 
 #include <WebCore/DOMWindow.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/ThreadCheck.h>
 #include <WebCore/UIEvent.h>
@@ -36,6 +36,7 @@
 
 #include <wtf/GetPtr.h>
 
+#include "AbstractViewInternal.h"
 #include "JavaDOMUtils.h"
 #include <wtf/java/JavaEnv.h>
 
@@ -50,7 +51,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_UIEventImpl_getViewImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->view()));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(toDOMWindow(IMPL->view())));
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_UIEventImpl_getDetailImpl(JNIEnv*, jclass, jlong peer)
@@ -118,7 +119,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_UIEventImpl_initUIEventImpl(JNIEn
     IMPL->initUIEvent(String(env, type)
             , canBubble
             , cancelable
-            , static_cast<DOMWindow*>(jlong_to_ptr(view))
+            , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
             , detail);
 }
 

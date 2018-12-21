@@ -31,7 +31,8 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "InspectorInstrumentation.h"
-#include "NetworkStateNotifier.h"
+#include "LoaderStrategy.h"
+#include "PlatformStrategies.h"
 #include "ResourceResponse.h"
 #include "SecurityOrigin.h"
 #include "WorkerGlobalScopeProxy.h"
@@ -64,7 +65,7 @@ inline Worker::Worker(ScriptExecutionContext& context, JSC::RuntimeFlags runtime
 {
     static bool addedListener;
     if (!addedListener) {
-        NetworkStateNotifier::singleton().addListener(&networkStateChanged);
+        platformStrategies()->loaderStrategy()->addOnlineStateChangeListener(&networkStateChanged);
         addedListener = true;
     }
 
@@ -101,7 +102,13 @@ ExceptionOr<Ref<Worker>> Worker::create(ScriptExecutionContext& context, JSC::Ru
 
     ResourceRequest request { scriptURL.releaseReturnValue() };
     request.setInitiatorIdentifier(worker->m_identifier);
-    worker->m_scriptLoader->loadAsynchronously(context, WTFMove(request), FetchOptions::Mode::SameOrigin, FetchOptions::Cache::Default, FetchOptions::Redirect::Follow, contentSecurityPolicyEnforcement, worker);
+
+    FetchOptions options;
+    options.mode = FetchOptions::Mode::SameOrigin;
+    options.cache = FetchOptions::Cache::Default;
+    options.redirect = FetchOptions::Redirect::Follow;
+    options.destination = FetchOptions::Destination::Worker;
+    worker->m_scriptLoader->loadAsynchronously(context, WTFMove(request), WTFMove(options), contentSecurityPolicyEnforcement, ServiceWorkersMode::All, worker);
     return WTFMove(worker);
 }
 
@@ -174,9 +181,9 @@ void Worker::notifyFinished()
     PAL::SessionID sessionID = context ? context->sessionID() : PAL::SessionID();
 
     if (m_scriptLoader->failed() || !sessionID.isValid())
-        dispatchEvent(Event::create(eventNames().errorEvent, false, true));
+        dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::Yes));
     else {
-        bool isOnline = NetworkStateNotifier::singleton().onLine();
+        bool isOnline = platformStrategies()->loaderStrategy()->isOnLine();
         const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : scriptExecutionContext()->contentSecurityPolicy()->responseHeaders();
         m_contextProxy.startWorkerGlobalScope(m_scriptLoader->url(), scriptExecutionContext()->userAgent(m_scriptLoader->url()), isOnline, m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, m_workerCreationTime, m_runtimeFlags, sessionID);
         InspectorInstrumentation::scriptImported(*scriptExecutionContext(), m_scriptLoader->identifier(), m_scriptLoader->script());

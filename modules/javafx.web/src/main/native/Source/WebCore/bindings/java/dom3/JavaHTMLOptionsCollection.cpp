@@ -33,7 +33,7 @@
 #include <WebCore/HTMLOptGroupElement.h>
 #include <WebCore/HTMLOptionElement.h>
 #include <WebCore/HTMLOptionsCollection.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 #include <WebCore/Node.h>
 #include <WebCore/ThreadCheck.h>
 #include <WebCore/URL.h>

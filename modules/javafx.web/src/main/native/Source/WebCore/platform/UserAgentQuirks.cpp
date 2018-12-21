@@ -36,7 +36,7 @@ namespace WebCore {
 
 static bool isGoogle(const URL& url)
 {
-    String baseDomain = topPrivatelyControlledDomain(url.host());
+    String baseDomain = topPrivatelyControlledDomain(url.host().toString());
 
     // Our Google UA is *very* complicated to get right. Read
     // https://webkit.org/b/142074 carefully before changing. Test that Earth
@@ -60,7 +60,7 @@ static bool isGoogle(const URL& url)
 // that works in Chrome that WebKit cannot handle. Prefer other quirks instead.
 static bool urlRequiresChromeBrowser(const URL& url)
 {
-    String baseDomain = topPrivatelyControlledDomain(url.host());
+    String baseDomain = topPrivatelyControlledDomain(url.host().toString());
 
     // Needed for fonts on many sites to work with WebKit.
     // https://bugs.webkit.org/show_bug.cgi?id=147296
@@ -78,7 +78,7 @@ static bool urlRequiresChromeBrowser(const URL& url)
 
 static bool urlRequiresMacintoshPlatform(const URL& url)
 {
-    String domain = url.host();
+    String domain = url.host().toString();
     String baseDomain = topPrivatelyControlledDomain(domain);
 
     // At least finance.yahoo.com displays a mobile version with WebKitGTK+'s standard user agent.
@@ -105,17 +105,21 @@ static bool urlRequiresMacintoshPlatform(const URL& url)
     // Microsoft Outlook Web App forces users with WebKitGTK+'s standard user
     // agent to use the light version. Earlier versions even blocks users from
     // accessing the calendar.
-    if (domain == "outlook.live.com"
-        || domain == "mail.ntu.edu.tw") {
+    if (domain == "mail.ntu.edu.tw")
         return true;
-    }
+
+    // Google Docs shows a scary unsupported browser warning with WebKitGTK+'s
+    // standard user agent.
+    if (domain == "docs.google.com")
+        return true;
 
     return false;
 }
 
 static bool urlRequiresLinuxDesktopPlatform(const URL& url)
 {
-    return isGoogle(url);
+    // docs.google.com requires the macOS platform quirk.
+    return isGoogle(url) && url.host() != "docs.google.com";
 }
 
 UserAgentQuirks UserAgentQuirks::quirksForURL(const URL& url)
@@ -140,16 +144,16 @@ String UserAgentQuirks::stringForQuirk(UserAgentQuirk quirk)
     switch (quirk) {
     case NeedsChromeBrowser:
         // Get versions from https://chromium.googlesource.com/chromium/src.git
-        return ASCIILiteral("Chrome/58.0.3029.81");
+        return "Chrome/58.0.3029.81"_s;
     case NeedsMacintoshPlatform:
-        return ASCIILiteral("Macintosh; Intel Mac OS X 10_13_4");
+        return "Macintosh; Intel Mac OS X 10_13_4"_s;
     case NeedsLinuxDesktopPlatform:
-        return ASCIILiteral("X11; Linux x86_64");
+        return "X11; Linux x86_64"_s;
     case NumUserAgentQuirks:
     default:
         ASSERT_NOT_REACHED();
     }
-    return ASCIILiteral("");
+    return ""_s;
 }
 
 }

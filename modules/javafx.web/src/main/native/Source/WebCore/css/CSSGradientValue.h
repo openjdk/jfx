@@ -69,6 +69,7 @@ public:
     void setSecondY(RefPtr<CSSPrimitiveValue>&& val) { m_secondY = WTFMove(val); }
 
     void addStop(const CSSGradientColorStop& stop) { m_stops.append(stop); }
+    void doneAddingStops() { m_stops.shrinkToFit(); }
 
     unsigned stopCount() const { return m_stops.size(); }
 
@@ -82,7 +83,7 @@ public:
     FloatSize fixedSize(const RenderElement&) const { return FloatSize(); }
 
     bool isPending() const { return false; }
-    bool knownToBeOpaque() const;
+    bool knownToBeOpaque(const RenderElement&) const;
 
     void loadSubimages(CachedResourceLoader&, const ResourceLoaderOptions&) { }
     Ref<CSSGradientValue> gradientWithStylesResolved(const StyleResolver&);
@@ -110,7 +111,7 @@ protected:
     }
 
     template<typename GradientAdapter>
-    Gradient::ColorStopVector computeStops(GradientAdapter&, const CSSToLengthConversionData&, float maxLengthForRepeat);
+    Gradient::ColorStopVector computeStops(GradientAdapter&, const CSSToLengthConversionData&, const RenderStyle&, float maxLengthForRepeat);
 
     // Resolve points/radii to front end values.
     FloatPoint computeEndPoint(CSSPrimitiveValue*, CSSPrimitiveValue*, const CSSToLengthConversionData&, const FloatSize&);

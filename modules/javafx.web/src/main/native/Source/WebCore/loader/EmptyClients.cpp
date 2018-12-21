@@ -32,6 +32,7 @@
 #include "BackForwardClient.h"
 #include "ColorChooser.h"
 #include "ContextMenuClient.h"
+#include "DataListSuggestionPicker.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
 #include "DocumentFragment.h"
@@ -263,7 +264,7 @@ private:
         void checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*) final { }
 
 #if USE(UNIFIED_TEXT_CHECKING)
-        Vector<TextCheckingResult> checkTextOfParagraph(StringView, TextCheckingTypeMask, const VisibleSelection&) final { return Vector<TextCheckingResult>(); }
+        Vector<TextCheckingResult> checkTextOfParagraph(StringView, OptionSet<TextCheckingType>, const VisibleSelection&) final { return Vector<TextCheckingResult>(); }
 #endif
 
         void getGuessesForWord(const String&, const String&, const VisibleSelection&, Vector<String>&) final { }
@@ -325,8 +326,8 @@ class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient {
 
 class EmptyPluginInfoProvider final : public PluginInfoProvider {
     void refreshPlugins() final { };
-    void getPluginInfo(Page&, Vector<PluginInfo>&) final { }
-    void getWebVisiblePluginInfo(Page&, Vector<PluginInfo>&) final { }
+    Vector<PluginInfo> pluginInfo(Page&, std::optional<Vector<SupportedPluginIdentifier>>&) final { return { }; }
+    Vector<PluginInfo> webVisiblePluginInfo(Page&, const URL&) final { return { }; }
 };
 
 class EmptyPopupMenu : public PopupMenu {
@@ -374,7 +375,7 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
         bool contains(const String&) final { return false; }
         StorageType storageType() const final { return StorageType::Local; }
         size_t memoryBytesUsedByCache() final { return 0; }
-        SecurityOriginData securityOrigin() const final { return { }; }
+        const SecurityOriginData& securityOrigin() const final { static NeverDestroyed<SecurityOriginData> origin; return origin.get(); }
     };
 
     struct EmptyStorageNamespace final : public StorageNamespace {
@@ -423,6 +424,15 @@ std::unique_ptr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooser
 
 #endif
 
+#if ENABLE(DATALIST_ELEMENT)
+
+std::unique_ptr<DataListSuggestionPicker> EmptyChromeClient::createDataListSuggestionPicker(DataListSuggestionsClient&)
+{
+    return nullptr;
+}
+
+#endif
+
 void EmptyChromeClient::runOpenPanel(Frame&, FileChooser&)
 {
 }
@@ -436,7 +446,7 @@ void EmptyFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const Naviga
 {
 }
 
-void EmptyFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, bool, FormState*, FramePolicyFunction&&)
+void EmptyFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse&, FormState*, PolicyDecisionMode, FramePolicyFunction&&)
 {
 }
 
@@ -444,8 +454,9 @@ void EmptyFrameLoaderClient::dispatchWillSendSubmitEvent(Ref<FormState>&&)
 {
 }
 
-void EmptyFrameLoaderClient::dispatchWillSubmitForm(FormState&, WTF::Function<void(void)>&&)
+void EmptyFrameLoaderClient::dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&& completionHandler)
 {
+    completionHandler();
 }
 
 Ref<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(const ResourceRequest& request, const SubstituteData& substituteData)

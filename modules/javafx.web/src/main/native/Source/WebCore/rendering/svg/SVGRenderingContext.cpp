@@ -5,6 +5,7 @@
  * Copyright (C) 2009 Google, Inc.  All rights reserved.
  * Copyright (C) 2009 Dirk Schulze <krit@webkit.org>
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
+ * Copyright (C) 2018 Adobe Systems Incorporated. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -42,7 +43,7 @@ namespace WebCore {
 
 static inline bool isRenderingMaskImage(const RenderObject& object)
 {
-    return object.view().frameView().paintBehavior() & PaintBehaviorRenderingSVGMask;
+    return object.view().frameView().paintBehavior().contains(PaintBehavior::RenderingSVGMask);
 }
 
 SVGRenderingContext::~SVGRenderingContext()
@@ -121,7 +122,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
             m_paintInfo->context().beginTransparencyLayer(opacity);
 
             if (hasBlendMode)
-                m_paintInfo->context().setCompositeOperation(m_paintInfo->context().compositeOperation(), BlendModeNormal);
+                m_paintInfo->context().setCompositeOperation(m_paintInfo->context().compositeOperation(), BlendMode::Normal);
 
             m_renderingFlags |= EndOpacityLayer;
         }
@@ -134,21 +135,9 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     }
 
     ClipPathOperation* clipPathOperation = style.clipPath();
-    if (is<ShapeClipPathOperation>(clipPathOperation)) {
-        auto& clipPath = downcast<ShapeClipPathOperation>(*clipPathOperation);
-        FloatRect referenceBox;
-        if (clipPath.referenceBox() == Stroke)
-            // FIXME: strokeBoundingBox() takes dasharray into account but shouldn't.
-            referenceBox = renderer.strokeBoundingBox();
-        else if (clipPath.referenceBox() == ViewBox && renderer.element()) {
-            FloatSize viewportSize;
-            SVGLengthContext(downcast<SVGElement>(renderer.element())).determineViewport(viewportSize);
-            referenceBox.setWidth(viewportSize.width());
-            referenceBox.setHeight(viewportSize.height());
-        } else
-            referenceBox = renderer.objectBoundingBox();
-        m_paintInfo->context().clipPath(clipPath.pathForReferenceRect(referenceBox), clipPath.windRule());
-    }
+    bool hasCSSClipping = is<ShapeClipPathOperation>(clipPathOperation) || is<BoxClipPathOperation>(clipPathOperation);
+    if (hasCSSClipping)
+        SVGRenderSupport::clipContextToCSSClippingArea(m_paintInfo->context(), renderer);
 
     auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*m_renderer);
     if (!resources) {
@@ -170,7 +159,7 @@ void SVGRenderingContext::prepareToRenderSVGContent(RenderElement& renderer, Pai
     }
 
     RenderSVGResourceClipper* clipper = resources->clipper();
-    if (!clipPathOperation && clipper) {
+    if (!hasCSSClipping && clipper) {
         GraphicsContext* contextPtr = &m_paintInfo->context();
         bool result = clipper->applyResource(*m_renderer, style, contextPtr, RenderSVGResourceMode::ApplyToDefault);
         m_paintInfo->setContext(*contextPtr);
@@ -296,7 +285,7 @@ void SVGRenderingContext::renderSubtreeToImageBuffer(ImageBuffer* image, RenderE
 
     // Rendering into a buffer implies we're being used for masking, clipping, patterns or filters. In each of these
     // cases we don't want to paint the selection.
-    PaintInfo info(image->context(), LayoutRect::infiniteRect(), PaintPhaseForeground, PaintBehaviorSkipSelectionHighlight);
+    PaintInfo info(image->context(), LayoutRect::infiniteRect(), PaintPhase::Foreground, PaintBehavior::SkipSelectionHighlight);
 
     AffineTransform& contentTransformation = currentContentTransformation();
     AffineTransform savedContentTransformation = contentTransformation;

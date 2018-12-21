@@ -65,12 +65,10 @@ namespace JSC {
             m_failures.append(emitLoadJSCell(src, dst));
         }
 
-        void loadJSStringArgument(VM& vm, int argument, RegisterID dst)
+        void loadJSStringArgument(int argument, RegisterID dst)
         {
             loadCellArgument(argument, dst);
-            m_failures.append(branchStructure(NotEqual,
-                Address(dst, JSCell::structureIDOffset()),
-                vm.stringStructure.get()));
+            m_failures.append(branchIfNotString(dst));
         }
 
         void loadArgumentWithSpecificClass(const ClassInfo* classInfo, int argument, RegisterID dst, RegisterID scratch)
@@ -135,7 +133,7 @@ namespace JSC {
             Jump lowNonZero = branchTestPtr(NonZero, regT1);
             Jump highNonZero = branchTestPtr(NonZero, regT0);
             move(TrustedImm32(0), regT0);
-            move(TrustedImm32(Int32Tag), regT1);
+            move(TrustedImm32(JSValue::Int32Tag), regT1);
             lowNonZero.link(this);
             highNonZero.link(this);
 #endif
@@ -164,23 +162,23 @@ namespace JSC {
             ret();
         }
 
-        MacroAssemblerCodeRef finalize(MacroAssemblerCodePtr fallback, const char* thunkKind)
+        MacroAssemblerCodeRef<JITThunkPtrTag> finalize(MacroAssemblerCodePtr<JITThunkPtrTag> fallback, const char* thunkKind)
         {
             LinkBuffer patchBuffer(*this, GLOBAL_THUNK_ID);
-            patchBuffer.link(m_failures, CodeLocationLabel(fallback));
+            patchBuffer.link(m_failures, CodeLocationLabel<JITThunkPtrTag>(fallback));
             for (unsigned i = 0; i < m_calls.size(); i++)
                 patchBuffer.link(m_calls[i].first, m_calls[i].second);
-            return FINALIZE_CODE(patchBuffer, "Specialized thunk for %s", thunkKind);
+            return FINALIZE_CODE(patchBuffer, JITThunkPtrTag, "Specialized thunk for %s", thunkKind);
         }
 
         // Assumes that the target function uses fpRegister0 as the first argument
         // and return value. Like any sensible architecture would.
-        void callDoubleToDouble(FunctionPtr function)
+        void callDoubleToDouble(FunctionPtr<CFunctionPtrTag> function)
         {
-            m_calls.append(std::make_pair(call(), function));
+            m_calls.append(std::make_pair(call(JITThunkPtrTag), function.retagged<JITThunkPtrTag>()));
         }
 
-        void callDoubleToDoublePreservingReturn(FunctionPtr function)
+        void callDoubleToDoublePreservingReturn(FunctionPtr<CFunctionPtrTag> function)
         {
             if (!isX86())
                 preserveReturnAddressAfterCall(regT3);
@@ -207,7 +205,7 @@ namespace JSC {
         }
 
         MacroAssembler::JumpList m_failures;
-        Vector<std::pair<Call, FunctionPtr>> m_calls;
+        Vector<std::pair<Call, FunctionPtr<JITThunkPtrTag>>> m_calls;
     };
 
 }

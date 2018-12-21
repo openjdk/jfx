@@ -34,12 +34,12 @@
 #include "EditorClient.h"
 #include "Element.h"
 #include "EmptyClients.h"
+#include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "InspectorClient.h"
 #include "InspectorOverlayPage.h"
 #include "LibWebRTCProvider.h"
-#include "MainFrame.h"
 #include "Node.h"
 #include "Page.h"
 #include "PageConfiguration.h"
@@ -59,6 +59,9 @@
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <wtf/JSONValues.h>
 
+#if PLATFORM(MAC)
+#include "LocalDefaultSystemAppearance.h"
+#endif
 
 namespace WebCore {
 
@@ -177,6 +180,10 @@ void InspectorOverlay::paint(GraphicsContext& context)
     if (!shouldShowOverlay())
         return;
 
+#if PLATFORM(MAC)
+    LocalDefaultSystemAppearance localAppearance(m_page.useSystemAppearance(), m_page.useDarkAppearance());
+#endif
+
     GraphicsContextStateSaver stateSaver(context);
     FrameView* view = overlayPage()->mainFrame().view();
     view->updateLayoutAndStyleIfNeededRecursive();
@@ -259,16 +266,16 @@ void InspectorOverlay::setIndicating(bool indicating)
     m_indicating = indicating;
 
     if (m_indicating)
-        evaluateInOverlay(ASCIILiteral("showPageIndication"));
+        evaluateInOverlay("showPageIndication"_s);
     else
-        evaluateInOverlay(ASCIILiteral("hidePageIndication"));
+        evaluateInOverlay("hidePageIndication"_s);
 
     update();
 }
 
 bool InspectorOverlay::shouldShowOverlay() const
 {
-    return m_highlightNode || m_highlightNodeList || m_highlightQuad || m_indicating || m_showingPaintRects || !m_pausedInDebuggerMessage.isNull();
+    return m_highlightNode || m_highlightNodeList || m_highlightQuad || m_indicating || m_showingPaintRects || m_showRulers || !m_pausedInDebuggerMessage.isNull();
 }
 
 void InspectorOverlay::update()
@@ -283,20 +290,22 @@ void InspectorOverlay::update()
         return;
 
     FrameView* overlayView = overlayPage()->mainFrame().view();
-    IntSize viewportSize = view->sizeForVisibleContent();
     IntSize frameViewFullSize = view->sizeForVisibleContent(ScrollableArea::IncludeScrollbars);
     overlayView->resize(frameViewFullSize);
 
     // Clear canvas and paint things.
-    // FIXME: Remove extra parameter?
-    reset(viewportSize, IntSize());
+    IntSize viewportSize = view->sizeForVisibleContent();
+    IntPoint scrollOffset = view->scrollPosition();
+    reset(viewportSize, scrollOffset);
 
     // Include scrollbars to avoid masking them by the gutter.
-    drawGutter();
     drawNodeHighlight();
     drawQuadHighlight();
     drawPausedInDebuggerMessage();
     drawPaintRects();
+
+    if (m_showRulers)
+        drawRulers();
 
     // Position DOM elements.
     overlayPage()->mainFrame().document()->resolveStyle(Document::ResolveStyleType::Rebuild);
@@ -393,6 +402,16 @@ void InspectorOverlay::showPaintRect(const FloatRect& rect)
     forcePaint();
 }
 
+void InspectorOverlay::setShowRulers(bool showRulers)
+{
+    if (m_showRulers == showRulers)
+        return;
+
+    m_showRulers = showRulers;
+
+    update();
+}
+
 void InspectorOverlay::updatePaintRectsTimerFired()
 {
     MonotonicTime now = MonotonicTime::now();
@@ -417,12 +436,12 @@ void InspectorOverlay::drawPaintRects()
     for (const auto& pair : m_paintRects)
         arrayOfRects->addItem(buildObjectForRect(pair.second));
 
-    evaluateInOverlay(ASCIILiteral("updatePaintRects"), WTFMove(arrayOfRects));
+    evaluateInOverlay("updatePaintRects"_s, WTFMove(arrayOfRects));
 }
 
-void InspectorOverlay::drawGutter()
+void InspectorOverlay::drawRulers()
 {
-    evaluateInOverlay(ASCIILiteral("drawGutter"));
+    evaluateInOverlay("drawRulers"_s);
 }
 
 static RefPtr<JSON::ArrayOf<Inspector::Protocol::OverlayTypes::FragmentHighlightData>> buildArrayForRendererFragments(RenderObject* renderer, const HighlightConfig& config)
@@ -470,23 +489,23 @@ static void appendPathSegment(PathApplyInfo& pathApplyInfo, const PathElement& p
     switch (pathElement.type) {
     // The points member will contain 1 value.
     case PathElementMoveToPoint:
-        appendPathCommandAndPoints(pathApplyInfo, ASCIILiteral("M"), pathElement.points, 1);
+        appendPathCommandAndPoints(pathApplyInfo, "M"_s, pathElement.points, 1);
         break;
     // The points member will contain 1 value.
     case PathElementAddLineToPoint:
-        appendPathCommandAndPoints(pathApplyInfo, ASCIILiteral("L"), pathElement.points, 1);
+        appendPathCommandAndPoints(pathApplyInfo, "L"_s, pathElement.points, 1);
         break;
     // The points member will contain 3 values.
     case PathElementAddCurveToPoint:
-        appendPathCommandAndPoints(pathApplyInfo, ASCIILiteral("C"), pathElement.points, 3);
+        appendPathCommandAndPoints(pathApplyInfo, "C"_s, pathElement.points, 3);
         break;
     // The points member will contain 2 values.
     case PathElementAddQuadCurveToPoint:
-        appendPathCommandAndPoints(pathApplyInfo, ASCIILiteral("Q"), pathElement.points, 2);
+        appendPathCommandAndPoints(pathApplyInfo, "Q"_s, pathElement.points, 2);
         break;
     // The points member will contain no values.
     case PathElementCloseSubpath:
-        appendPathCommandAndPoints(pathApplyInfo, ASCIILiteral("Z"), nullptr, 0);
+        appendPathCommandAndPoints(pathApplyInfo, "Z"_s, nullptr, 0);
         break;
     }
 }
@@ -574,9 +593,9 @@ static RefPtr<Inspector::Protocol::OverlayTypes::ElementData> buildObjectForElem
     }
 
     if (node->isPseudoElement()) {
-        if (node->pseudoId() == BEFORE)
+        if (node->pseudoId() == PseudoId::Before)
             elementData->setPseudoElement("before");
-        else if (node->pseudoId() == AFTER)
+        else if (node->pseudoId() == PseudoId::After)
             elementData->setPseudoElement("after");
     }
 
@@ -717,10 +736,11 @@ Page* InspectorOverlay::overlayPage()
     frame.view()->setCanHaveScrollbars(false);
     frame.view()->setTransparent(true);
     ASSERT(loader.activeDocumentLoader());
-    loader.activeDocumentLoader()->writer().setMIMEType("text/html");
-    loader.activeDocumentLoader()->writer().begin();
-    loader.activeDocumentLoader()->writer().addData(reinterpret_cast<const char*>(InspectorOverlayPage_html), sizeof(InspectorOverlayPage_html));
-    loader.activeDocumentLoader()->writer().end();
+    auto& writer = loader.activeDocumentLoader()->writer();
+    writer.setMIMEType("text/html");
+    writer.begin();
+    writer.insertDataSynchronously(String(reinterpret_cast<const char*>(InspectorOverlayPage_html), sizeof(InspectorOverlayPage_html)));
+    writer.end();
 
 #if OS(WINDOWS)
     evaluateInOverlay("setPlatform", "windows");
@@ -739,12 +759,16 @@ void InspectorOverlay::forcePaint()
     m_client->highlight();
 }
 
-void InspectorOverlay::reset(const IntSize& viewportSize, const IntSize& frameViewFullSize)
+void InspectorOverlay::reset(const IntSize& viewportSize, const IntPoint& scrollOffset)
 {
     auto configObject = Inspector::Protocol::OverlayTypes::OverlayConfiguration::create()
         .setDeviceScaleFactor(m_page.deviceScaleFactor())
         .setViewportSize(buildObjectForSize(viewportSize))
-        .setFrameViewFullSize(buildObjectForSize(frameViewFullSize))
+        .setPageScaleFactor(m_page.pageScaleFactor())
+        .setPageZoomFactor(m_page.mainFrame().pageZoomFactor())
+        .setScrollOffset(buildObjectForPoint(scrollOffset))
+        .setContentInset(buildObjectForSize(IntSize(0, m_page.mainFrame().view()->topContentInset(ScrollView::TopContentInsetType::WebCoreOrPlatformContentInset))))
+        .setShowRulers(m_showRulers)
         .release();
     evaluateInOverlay("reset", WTFMove(configObject));
 }

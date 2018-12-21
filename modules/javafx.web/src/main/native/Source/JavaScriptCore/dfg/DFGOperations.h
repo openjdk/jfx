@@ -43,7 +43,9 @@ EncodedJSValue JIT_OPERATION operationStringFromCharCodeUntyped(ExecState*, Enco
 // These routines provide callbacks out to C++ implementations of operations too complex to JIT.
 JSCell* JIT_OPERATION operationCallObjectConstructor(ExecState*, JSGlobalObject*, EncodedJSValue encodedTarget) WTF_INTERNAL;
 JSCell* JIT_OPERATION operationToObject(ExecState*, JSGlobalObject*, EncodedJSValue encodedTarget, UniquedStringImpl*) WTF_INTERNAL;
-JSCell* JIT_OPERATION operationCreateThis(ExecState*, JSObject* constructor, int32_t inlineCapacity) WTF_INTERNAL;
+JSCell* JIT_OPERATION operationObjectCreate(ExecState*, EncodedJSValue) WTF_INTERNAL;
+JSCell* JIT_OPERATION operationObjectCreateObject(ExecState*, JSObject*) WTF_INTERNAL;
+JSCell* JIT_OPERATION operationCreateThis(ExecState*, JSObject* constructor, uint32_t inlineCapacity) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationToThis(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationToThisStrict(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationValueBitAnd(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
@@ -55,7 +57,7 @@ EncodedJSValue JIT_OPERATION operationValueBitURShift(ExecState*, EncodedJSValue
 EncodedJSValue JIT_OPERATION operationValueAddNotNumber(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationValueDiv(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
 double JIT_OPERATION operationArithAbs(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
-int32_t JIT_OPERATION operationArithClz32(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
+uint32_t JIT_OPERATION operationArithClz32(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
 double JIT_OPERATION operationArithFRound(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
 double JIT_OPERATION operationArithSqrt(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
 
@@ -80,7 +82,7 @@ EncodedJSValue JIT_OPERATION operationGetByValWithThis(ExecState*, EncodedJSValu
 EncodedJSValue JIT_OPERATION operationGetPrototypeOf(ExecState*, EncodedJSValue) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationGetPrototypeOfObject(ExecState*, JSObject*) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationHasGenericProperty(ExecState*, EncodedJSValue, JSCell*);
-EncodedJSValue JIT_OPERATION operationHasIndexedPropertyByInt(ExecState*, JSCell*, int32_t, int32_t);
+size_t JIT_OPERATION operationHasIndexedPropertyByInt(ExecState*, JSCell*, int32_t, int32_t);
 JSCell* JIT_OPERATION operationGetPropertyEnumerator(ExecState*, EncodedJSValue);
 JSCell* JIT_OPERATION operationGetPropertyEnumeratorCell(ExecState*, JSCell*);
 JSCell* JIT_OPERATION operationToIndexString(ExecState*, int32_t);
@@ -154,21 +156,22 @@ EncodedJSValue JIT_OPERATION operationRegExpExecString(ExecState*, JSGlobalObjec
 EncodedJSValue JIT_OPERATION operationRegExpExec(ExecState*, JSGlobalObject*, RegExpObject*, EncodedJSValue) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationRegExpExecGeneric(ExecState*, JSGlobalObject*, EncodedJSValue, EncodedJSValue) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationRegExpExecNonGlobalOrSticky(ExecState*, JSGlobalObject*, RegExp*, JSString*) WTF_INTERNAL;
+EncodedJSValue JIT_OPERATION operationRegExpMatchFastGlobalString(ExecState*, JSGlobalObject*, RegExp*, JSString*) WTF_INTERNAL;
 EncodedJSValue JIT_OPERATION operationRegExpMatchFastString(ExecState*, JSGlobalObject*, RegExpObject*, JSString*) WTF_INTERNAL;
 // These comparisons return a boolean within a size_t such that the value is zero extended to fill the register.
 size_t JIT_OPERATION operationRegExpTestString(ExecState*, JSGlobalObject*, RegExpObject*, JSString*) WTF_INTERNAL;
 size_t JIT_OPERATION operationRegExpTest(ExecState*, JSGlobalObject*, RegExpObject*, EncodedJSValue) WTF_INTERNAL;
 size_t JIT_OPERATION operationRegExpTestGeneric(ExecState*, JSGlobalObject*, EncodedJSValue, EncodedJSValue) WTF_INTERNAL;
-size_t JIT_OPERATION operationCompareStrictEqCell(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
-size_t JIT_OPERATION operationCompareStrictEq(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
+size_t JIT_OPERATION operationCompareStrictEqCell(ExecState*, JSCell* op1, JSCell* op2) WTF_INTERNAL;
+size_t JIT_OPERATION operationSameValue(ExecState*, EncodedJSValue, EncodedJSValue) WTF_INTERNAL;
 JSCell* JIT_OPERATION operationCreateActivationDirect(ExecState*, Structure*, JSScope*, SymbolTable*, EncodedJSValue);
-JSCell* JIT_OPERATION operationCreateDirectArguments(ExecState*, Structure*, int32_t length, int32_t minCapacity);
-JSCell* JIT_OPERATION operationCreateDirectArgumentsDuringExit(ExecState*, InlineCallFrame*, JSFunction*, int32_t argumentCount);
-JSCell* JIT_OPERATION operationCreateScopedArguments(ExecState*, Structure*, Register* argumentStart, int32_t length, JSFunction* callee, JSLexicalEnvironment*);
-JSCell* JIT_OPERATION operationCreateClonedArgumentsDuringExit(ExecState*, InlineCallFrame*, JSFunction*, int32_t argumentCount);
-JSCell* JIT_OPERATION operationCreateClonedArguments(ExecState*, Structure*, Register* argumentStart, int32_t length, JSFunction* callee);
+JSCell* JIT_OPERATION operationCreateDirectArguments(ExecState*, Structure*, uint32_t length, uint32_t minCapacity);
+JSCell* JIT_OPERATION operationCreateDirectArgumentsDuringExit(ExecState*, InlineCallFrame*, JSFunction*, uint32_t argumentCount);
+JSCell* JIT_OPERATION operationCreateScopedArguments(ExecState*, Structure*, Register* argumentStart, uint32_t length, JSFunction* callee, JSLexicalEnvironment*);
+JSCell* JIT_OPERATION operationCreateClonedArgumentsDuringExit(ExecState*, InlineCallFrame*, JSFunction*, uint32_t argumentCount);
+JSCell* JIT_OPERATION operationCreateClonedArguments(ExecState*, Structure*, Register* argumentStart, uint32_t length, JSFunction* callee);
 JSCell* JIT_OPERATION operationCreateRest(ExecState*, Register* argumentStart, unsigned numberOfArgumentsToSkip, unsigned arraySize);
-JSCell* JIT_OPERATION operationNewArrayBuffer(ExecState*, Structure*, JSCell*, size_t) WTF_INTERNAL;
+JSCell* JIT_OPERATION operationNewArrayBuffer(ExecState*, Structure*, JSCell*) WTF_INTERNAL;
 JSCell* JIT_OPERATION operationSetAdd(ExecState*, JSCell*, EncodedJSValue, int32_t) WTF_INTERNAL;
 JSCell* JIT_OPERATION operationMapSet(ExecState*, JSCell*, EncodedJSValue, EncodedJSValue, int32_t) WTF_INTERNAL;
 void JIT_OPERATION operationWeakSetAdd(ExecState*, JSCell*, JSCell*, int32_t) WTF_INTERNAL;
@@ -190,6 +193,7 @@ StringImpl* JIT_OPERATION operationResolveRope(ExecState*, JSString*);
 JSString* JIT_OPERATION operationSingleCharacterString(ExecState*, int32_t);
 
 JSCell* JIT_OPERATION operationStringSubstr(ExecState*, JSCell*, int32_t, int32_t);
+JSString* JIT_OPERATION operationStringValueOf(ExecState*, EncodedJSValue);
 JSString* JIT_OPERATION operationToLowerCase(ExecState*, JSString*, uint32_t);
 
 char* JIT_OPERATION operationInt32ToString(ExecState*, int32_t, int32_t);
@@ -209,14 +213,14 @@ EncodedJSValue JIT_OPERATION operationParseIntString(ExecState*, JSString*, int3
 EncodedJSValue JIT_OPERATION operationParseIntGeneric(ExecState*, EncodedJSValue, int32_t);
 
 JSCell* JIT_OPERATION operationNewStringObject(ExecState*, JSString*, Structure*);
-JSCell* JIT_OPERATION operationToStringOnCell(ExecState*, JSCell*);
-JSCell* JIT_OPERATION operationToString(ExecState*, EncodedJSValue);
-JSCell* JIT_OPERATION operationCallStringConstructorOnCell(ExecState*, JSCell*);
-JSCell* JIT_OPERATION operationCallStringConstructor(ExecState*, EncodedJSValue);
-JSCell* JIT_OPERATION operationMakeRope2(ExecState*, JSString*, JSString*);
-JSCell* JIT_OPERATION operationMakeRope3(ExecState*, JSString*, JSString*, JSString*);
-JSCell* JIT_OPERATION operationStrCat2(ExecState*, EncodedJSValue, EncodedJSValue);
-JSCell* JIT_OPERATION operationStrCat3(ExecState*, EncodedJSValue, EncodedJSValue, EncodedJSValue);
+JSString* JIT_OPERATION operationToStringOnCell(ExecState*, JSCell*);
+JSString* JIT_OPERATION operationToString(ExecState*, EncodedJSValue);
+JSString* JIT_OPERATION operationCallStringConstructorOnCell(ExecState*, JSCell*);
+JSString* JIT_OPERATION operationCallStringConstructor(ExecState*, EncodedJSValue);
+JSString* JIT_OPERATION operationMakeRope2(ExecState*, JSString*, JSString*);
+JSString* JIT_OPERATION operationMakeRope3(ExecState*, JSString*, JSString*, JSString*);
+JSString* JIT_OPERATION operationStrCat2(ExecState*, EncodedJSValue, EncodedJSValue);
+JSString* JIT_OPERATION operationStrCat3(ExecState*, EncodedJSValue, EncodedJSValue, EncodedJSValue);
 char* JIT_OPERATION operationFindSwitchImmTargetForDouble(ExecState*, EncodedJSValue, size_t tableIndex);
 char* JIT_OPERATION operationSwitchString(ExecState*, size_t tableIndex, JSString*);
 int32_t JIT_OPERATION operationSwitchStringAndGetBranchOffset(ExecState*, size_t tableIndex, JSString*);
@@ -230,8 +234,8 @@ uintptr_t JIT_OPERATION operationCompareStringGreater(ExecState*, JSString*, JSS
 uintptr_t JIT_OPERATION operationCompareStringGreaterEq(ExecState*, JSString*, JSString*);
 void JIT_OPERATION operationNotifyWrite(ExecState*, WatchpointSet*);
 void JIT_OPERATION operationThrowStackOverflowForVarargs(ExecState*) WTF_INTERNAL;
-int32_t JIT_OPERATION operationSizeOfVarargs(ExecState*, EncodedJSValue arguments, int32_t firstVarArgOffset);
-void JIT_OPERATION operationLoadVarargs(ExecState*, int32_t firstElementDest, EncodedJSValue arguments, int32_t offset, int32_t length, int32_t mandatoryMinimum);
+int32_t JIT_OPERATION operationSizeOfVarargs(ExecState*, EncodedJSValue arguments, uint32_t firstVarArgOffset);
+void JIT_OPERATION operationLoadVarargs(ExecState*, int32_t firstElementDest, EncodedJSValue arguments, uint32_t offset, uint32_t length, uint32_t mandatoryMinimum);
 void JIT_OPERATION operationThrowDFG(ExecState*, EncodedJSValue);
 void JIT_OPERATION operationThrowStaticError(ExecState*, JSString*, uint32_t);
 
@@ -265,7 +269,7 @@ JSCell* JIT_OPERATION operationNewObjectWithButterflyWithIndexingHeaderAndVector
 
 void JIT_OPERATION operationProcessTypeProfilerLogDFG(ExecState*) WTF_INTERNAL;
 
-void JIT_OPERATION triggerReoptimizationNow(CodeBlock*, OSRExitBase*) WTF_INTERNAL;
+void JIT_OPERATION triggerReoptimizationNow(CodeBlock* baselineCodeBlock, CodeBlock* optiimzedCodeBlock, OSRExitBase*) WTF_INTERNAL;
 
 #if USE(JSVALUE32_64)
 double JIT_OPERATION operationRandom(JSGlobalObject*);

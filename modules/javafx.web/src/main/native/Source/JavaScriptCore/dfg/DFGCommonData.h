@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "InlineCallFrameSet.h"
 #include "JSCast.h"
 #include "ProfilerCompilation.h"
+#include "RecordedStatuses.h"
 #include <wtf/Bag.h>
 #include <wtf/Noncopyable.h>
 
@@ -47,7 +48,7 @@ class TrackedReferences;
 namespace DFG {
 
 struct Node;
-struct Plan;
+class Plan;
 
 // CommonData holds the set of data that both DFG and FTL code blocks need to know
 // about themselves.
@@ -98,7 +99,7 @@ public:
             [] (const CatchEntrypointData* item) { return item->bytecodeIndex; });
     }
 
-    void appendCatchEntrypoint(unsigned bytecodeIndex, void* machineCode, Vector<FlushFormat>&& argumentFormats)
+    void appendCatchEntrypoint(unsigned bytecodeIndex, MacroAssemblerCodePtr<ExceptionHandlerPtrTag> machineCode, Vector<FlushFormat>&& argumentFormats)
     {
         catchEntrypoints.append(CatchEntrypointData { machineCode,  WTFMove(argumentFormats), bytecodeIndex });
     }
@@ -125,6 +126,7 @@ public:
     Bag<CodeBlockJettisoningWatchpoint> watchpoints;
     Bag<AdaptiveStructureWatchpoint> adaptiveStructureWatchpoints;
     Bag<AdaptiveInferredPropertyValueWatchpoint> adaptiveInferredPropertyValueWatchpoints;
+    RecordedStatuses recordedStatuses;
     Vector<JumpReplacement> jumpReplacements;
 
     ScratchBuffer* catchOSREntryBuffer;

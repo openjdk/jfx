@@ -53,6 +53,7 @@
     macro(Number) \
     macro(NumberFormat) \
     macro(Object) \
+    macro(PluralRules) \
     macro(Promise) \
     macro(Proxy) \
     macro(RangeError) \
@@ -137,6 +138,7 @@
     macro(hash) \
     macro(header) \
     macro(hour) \
+    macro(hourCycle) \
     macro(hour12) \
     macro(href) \
     macro(id) \

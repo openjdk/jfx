@@ -213,31 +213,33 @@ static bool shouldBufferResourceData(const NetworkResourcesData::ResourceData& r
         return true;
 
     // Buffer data for Web Inspector when the rest of the system would not normally buffer.
-    if (resourceData.cachedResource() && resourceData.cachedResource()->dataBufferingPolicy() == DoNotBufferData)
+    if (resourceData.cachedResource() && resourceData.cachedResource()->dataBufferingPolicy() == DataBufferingPolicy::DoNotBufferData)
         return true;
 
     return false;
 }
 
-void NetworkResourcesData::maybeAddResourceData(const String& requestId, const char* data, size_t dataLength)
+NetworkResourcesData::ResourceData const* NetworkResourcesData::maybeAddResourceData(const String& requestId, const char* data, size_t dataLength)
 {
     ResourceData* resourceData = resourceDataForRequestId(requestId);
     if (!resourceData)
-        return;
+        return nullptr;
 
     if (!shouldBufferResourceData(*resourceData))
-        return;
+        return resourceData;
 
     if (resourceData->dataLength() + dataLength > m_maximumSingleResourceContentSize)
         m_contentSize -= resourceData->evictContent();
     if (resourceData->isContentEvicted())
-        return;
+        return resourceData;
 
     if (ensureFreeSpace(dataLength) && !resourceData->isContentEvicted()) {
         m_requestIdsDeque.append(requestId);
         resourceData->appendData(data, dataLength);
         m_contentSize += dataLength;
     }
+
+    return resourceData;
 }
 
 void NetworkResourcesData::maybeDecodeDataToContent(const String& requestId)

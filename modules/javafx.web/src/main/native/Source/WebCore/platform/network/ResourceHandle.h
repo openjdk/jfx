@@ -36,10 +36,8 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if USE(SOUP)
-typedef struct _GTlsCertificate GTlsCertificate;
-typedef struct _SoupSession SoupSession;
-typedef struct _SoupRequest SoupRequest;
+#if USE(CURL)
+#include "CurlResourceHandleDelegate.h"
 #endif
 
 #if USE(CF)
@@ -88,19 +86,18 @@ class ResourceHandleInternal;
 class NetworkLoadMetrics;
 class ResourceRequest;
 class ResourceResponse;
-class SoupNetworkSession;
 class SharedBuffer;
 class Timer;
+
+#if USE(CURL)
+class CurlRequest;
+class CurlResourceHandleDelegate;
+#endif
 
 class ResourceHandle : public RefCounted<ResourceHandle>, public AuthenticationClient {
 public:
     WEBCORE_EXPORT static RefPtr<ResourceHandle> create(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff);
     WEBCORE_EXPORT static void loadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentialsPolicy, ResourceError&, ResourceResponse&, Vector<char>& data);
-
-#if USE(SOUP)
-    static RefPtr<ResourceHandle> create(SoupNetworkSession&, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff);
-#endif
-
     WEBCORE_EXPORT virtual ~ResourceHandle();
 
 #if PLATFORM(COCOA) || USE(CFURLCONNECTION)
@@ -122,7 +119,7 @@ public:
 #endif
 
 #if PLATFORM(COCOA) && USE(PROTECTION_SPACE_AUTH_CALLBACK)
-    bool canAuthenticateAgainstProtectionSpace(const ProtectionSpace&);
+    void canAuthenticateAgainstProtectionSpace(const ProtectionSpace&, CompletionHandler<void(bool)>&&);
 #endif
 
 #if PLATFORM(COCOA)
@@ -170,19 +167,17 @@ public:
 
     WEBCORE_EXPORT static void forceContentSniffing();
 
-#if USE(CURL) || USE(SOUP)
+#if USE(CURL)
     ResourceHandleInternal* getInternal() { return d.get(); }
 #endif
 
-#if USE(SOUP)
-    RefPtr<ResourceHandle> releaseForDownload(ResourceHandleClient*);
-    void continueDidReceiveAuthenticationChallenge(const Credential& credentialFromPersistentStorage);
-    void sendPendingRequest();
+#if USE(CURL)
     bool cancelledOrClientless();
-    void ensureReadBuffer();
-    size_t currentStreamPosition() const;
-    void didStartRequest();
-    MonotonicTime m_requestTime;
+    CurlResourceHandleDelegate* delegate();
+
+    void continueAfterDidReceiveResponse();
+    void willSendRequest();
+    void continueAfterWillSendRequest(ResourceRequest&&);
 #endif
 
     bool hasAuthenticationChallenge() const;
@@ -192,19 +187,6 @@ public:
     // The client may be 0, in which case no callbacks will be made.
     WEBCORE_EXPORT ResourceHandleClient* client() const;
     WEBCORE_EXPORT void clearClient();
-
-#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
-    // Called in response to ResourceHandleClient::canAuthenticateAgainstProtectionSpaceAsync().
-    WEBCORE_EXPORT void continueCanAuthenticateAgainstProtectionSpace(bool);
-#endif
-
-    // Called in response to ResourceHandleClient::willCacheResponseAsync().
-#if USE(CFURLCONNECTION)
-    WEBCORE_EXPORT void continueWillCacheResponse(CFCachedURLResponseRef);
-#endif
-#if PLATFORM(COCOA)
-    WEBCORE_EXPORT void continueWillCacheResponse(NSCachedURLResponse *);
-#endif
 
     WEBCORE_EXPORT void setDefersLoading(bool);
 
@@ -238,10 +220,6 @@ private:
         InvalidURLFailure
     };
 
-#if USE(SOUP)
-    ResourceHandle(SoupNetworkSession&, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff, bool shouldContentEncodingSniff);
-#endif
-
     void platformSetDefersLoading(bool);
 
     void platformContinueSynchronousDidReceiveResponse();
@@ -271,11 +249,24 @@ private:
 #endif
 
 #if PLATFORM(COCOA)
-    void applySniffingPoliciesAndStoragePartitionIfNeeded(NSURLRequest*&, bool shouldContentSniff, bool shouldContentEncodingSniff);
+    NSURLRequest *applySniffingPoliciesIfNeeded(NSURLRequest *, bool shouldContentSniff, bool shouldContentEncodingSniff);
 #endif
 
-#if USE(SOUP)
-    void timeoutFired();
+#if USE(CURL)
+    enum class RequestStatus {
+        NewRequest,
+        ReusedRequest
+    };
+
+    void addCacheValidationHeaders(ResourceRequest&);
+    Ref<CurlRequest> createCurlRequest(ResourceRequest&, RequestStatus = RequestStatus::NewRequest);
+
+    bool shouldRedirectAsGET(const ResourceRequest&, bool crossOrigin);
+
+    std::optional<std::pair<String, String>> getCredential(ResourceRequest&, bool);
+    void restartRequestWithCredential(const String& user, const String& password);
+
+    void handleDataURL();
 #endif
 
     friend class ResourceHandleInternal;

@@ -33,6 +33,7 @@
 #include "config.h"
 #include "EventSource.h"
 
+#include "CachedResourceRequestInitiators.h"
 #include "ContentSecurityPolicy.h"
 #include "EventNames.h"
 #include "MessageEvent.h"
@@ -52,7 +53,7 @@ inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url,
     : ActiveDOMObject(&context)
     , m_url(url)
     , m_withCredentials(eventSourceInit.withCredentials)
-    , m_decoder(TextResourceDecoder::create(ASCIILiteral("text/plain"), "UTF-8"))
+    , m_decoder(TextResourceDecoder::create("text/plain"_s, "UTF-8"))
     , m_connectTimer(*this, &EventSource::connect)
 {
 }
@@ -98,13 +99,14 @@ void EventSource::connect()
         request.setHTTPHeaderField(HTTPHeaderName::LastEventID, m_lastEventId);
 
     ThreadableLoaderOptions options;
-    options.sendLoadCallbacks = SendCallbacks;
+    options.sendLoadCallbacks = SendCallbackPolicy::SendCallbacks;
     options.credentials = m_withCredentials ? FetchOptions::Credentials::Include : FetchOptions::Credentials::SameOrigin;
-    options.preflightPolicy = PreventPreflight;
+    options.preflightPolicy = PreflightPolicy::Prevent;
     options.mode = FetchOptions::Mode::Cors;
     options.cache = FetchOptions::Cache::NoStore;
-    options.dataBufferingPolicy = DoNotBufferData;
+    options.dataBufferingPolicy = DataBufferingPolicy::DoNotBufferData;
     options.contentSecurityPolicyEnforcement = scriptExecutionContext()->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective;
+    options.initiator = cachedResourceRequestInitiators().eventsource;
 
     ASSERT(scriptExecutionContext());
     m_loader = ThreadableLoader::create(*scriptExecutionContext(), *this, WTFMove(request), options);
@@ -138,7 +140,7 @@ void EventSource::scheduleReconnect()
 {
     m_state = CONNECTING;
     m_connectTimer.startOneShot(1_ms * m_reconnectDelay);
-    dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+    dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void EventSource::close()
@@ -194,13 +196,13 @@ void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& resp
 
     if (!responseIsValid(response)) {
         m_loader->cancel();
-        dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+        dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
         return;
     }
 
-    m_eventStreamOrigin = SecurityOrigin::create(response.url())->toString();
+    m_eventStreamOrigin = SecurityOriginData::fromURL(response.url()).toString();
     m_state = OPEN;
-    dispatchEvent(Event::create(eventNames().openEvent, false, false));
+    dispatchEvent(Event::create(eventNames().openEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void EventSource::didReceiveData(const char* data, int length)
@@ -236,9 +238,6 @@ void EventSource::didFail(const ResourceError& error)
     ASSERT(m_state != CLOSED);
 
     if (error.isAccessControl()) {
-        String message = makeString("EventSource cannot load ", error.failingURL().string(), ". ", error.localizedDescription());
-        scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
-
         abortConnectionAttempt();
         return;
     }
@@ -265,7 +264,7 @@ void EventSource::abortConnectionAttempt()
     }
 
     ASSERT(m_state == CLOSED);
-    dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+    dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void EventSource::parseEventStream()
@@ -390,9 +389,10 @@ void EventSource::dispatchMessageEvent()
     ASSERT(!m_data.isEmpty());
     unsigned size = m_data.size() - 1;
     auto data = SerializedScriptValue::create({ m_data.data(), size });
+    RELEASE_ASSERT(data);
     m_data = { };
 
-    dispatchEvent(MessageEvent::create(name, WTFMove(data), m_eventStreamOrigin, m_lastEventId));
+    dispatchEvent(MessageEvent::create(name, data.releaseNonNull(), m_eventStreamOrigin, m_lastEventId));
 }
 
 } // namespace WebCore

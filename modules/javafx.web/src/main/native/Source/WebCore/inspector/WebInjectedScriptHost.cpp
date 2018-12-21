@@ -47,14 +47,14 @@ using namespace JSC;
 JSValue WebInjectedScriptHost::subtype(ExecState* exec, JSValue value)
 {
     VM& vm = exec->vm();
-    if (value.inherits(vm, JSNode::info()))
-        return jsNontrivialString(exec, ASCIILiteral("node"));
-    if (value.inherits(vm, JSNodeList::info()))
-        return jsNontrivialString(exec, ASCIILiteral("array"));
-    if (value.inherits(vm, JSHTMLCollection::info()))
-        return jsNontrivialString(exec, ASCIILiteral("array"));
-    if (value.inherits(vm, JSDOMException::info()))
-        return jsNontrivialString(exec, ASCIILiteral("error"));
+    if (value.inherits<JSNode>(vm))
+        return jsNontrivialString(exec, "node"_s);
+    if (value.inherits<JSNodeList>(vm))
+        return jsNontrivialString(exec, "array"_s);
+    if (value.inherits<JSHTMLCollection>(vm))
+        return jsNontrivialString(exec, "array"_s);
+    if (value.inherits<JSDOMException>(vm))
+        return jsNontrivialString(exec, "error"_s);
 
     return jsUndefined();
 }
@@ -84,7 +84,6 @@ static JSObject* objectForPaymentCurrencyAmount(VM& vm, ExecState* exec, const P
     auto* object = constructEmptyObject(exec);
     object->putDirect(vm, Identifier::fromString(exec, "currency"), jsString(exec, paymentCurrencyAmount.currency));
     object->putDirect(vm, Identifier::fromString(exec, "value"), jsString(exec, paymentCurrencyAmount.value));
-    object->putDirect(vm, Identifier::fromString(exec, "currencySystem"), jsString(exec, paymentCurrencyAmount.currencySystem));
     return object;
 }
 
@@ -148,11 +147,11 @@ static JSString* jsStringForPaymentRequestState(VM& vm, ExecState* exec, Payment
 {
     switch (state) {
     case PaymentRequest::State::Created:
-        return jsNontrivialString(exec, ASCIILiteral("created"));
+        return jsNontrivialString(exec, "created"_s);
     case PaymentRequest::State::Interactive:
-        return jsNontrivialString(exec, ASCIILiteral("interactive"));
+        return jsNontrivialString(exec, "interactive"_s);
     case PaymentRequest::State::Closed:
-        return jsNontrivialString(exec, ASCIILiteral("closed"));
+        return jsNontrivialString(exec, "closed"_s);
     }
 
     ASSERT_NOT_REACHED();
@@ -168,9 +167,9 @@ JSValue WebInjectedScriptHost::getInternalProperties(VM& vm, ExecState* exec, JS
     if (PaymentRequest* paymentRequest = JSPaymentRequest::toWrapped(vm, value)) {
         unsigned index = 0;
         auto* array = constructEmptyArray(exec, nullptr);
-        array->putDirectIndex(exec, index++, constructInternalProperty(vm, exec, ASCIILiteral("options"), objectForPaymentOptions(vm, exec, paymentRequest->paymentOptions())));
-        array->putDirectIndex(exec, index++, constructInternalProperty(vm, exec, ASCIILiteral("details"), objectForPaymentDetails(vm, exec, paymentRequest->paymentDetails())));
-        array->putDirectIndex(exec, index++, constructInternalProperty(vm, exec, ASCIILiteral("state"), jsStringForPaymentRequestState(vm, exec, paymentRequest->state())));
+        array->putDirectIndex(exec, index++, constructInternalProperty(vm, exec, "options"_s, objectForPaymentOptions(vm, exec, paymentRequest->paymentOptions())));
+        array->putDirectIndex(exec, index++, constructInternalProperty(vm, exec, "details"_s, objectForPaymentDetails(vm, exec, paymentRequest->paymentDetails())));
+        array->putDirectIndex(exec, index++, constructInternalProperty(vm, exec, "state"_s, jsStringForPaymentRequestState(vm, exec, paymentRequest->state())));
         RETURN_IF_EXCEPTION(scope, { });
         return array;
     }
@@ -185,7 +184,7 @@ JSValue WebInjectedScriptHost::getInternalProperties(VM& vm, ExecState* exec, JS
 
 bool WebInjectedScriptHost::isHTMLAllCollection(JSC::VM& vm, JSC::JSValue value)
 {
-    return value.inherits(vm, JSHTMLAllCollection::info());
+    return value.inherits<JSHTMLAllCollection>(vm);
 }
 
 } // namespace WebCore

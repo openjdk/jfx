@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2004-2005 Allan Sandfeld Jensen (kde@carewolf.com)
  * Copyright (C) 2006, 2007 Nicholas Shanks (webkit@nickshanks.com)
- * Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2018 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  * Copyright (C) 2007, 2008 Eric Seidel <eric@webkit.org>
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
@@ -140,7 +140,7 @@ inline void ElementRuleCollector::addElementStyleProperties(const StylePropertie
 void ElementRuleCollector::collectMatchingRules(const MatchRequest& matchRequest, StyleResolver::RuleRange& ruleRange)
 {
     ASSERT(matchRequest.ruleSet);
-    ASSERT_WITH_MESSAGE(!(m_mode == SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements && m_pseudoStyleRequest.pseudoId != NOPSEUDO), "When in StyleInvalidation or SharingRules, SelectorChecker does not try to match the pseudo ID. While ElementRuleCollector supports matching a particular pseudoId in this case, this would indicate a error at the call site since matching a particular element should be unnecessary.");
+    ASSERT_WITH_MESSAGE(!(m_mode == SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements && m_pseudoStyleRequest.pseudoId != PseudoId::None), "When in StyleInvalidation or SharingRules, SelectorChecker does not try to match the pseudo ID. While ElementRuleCollector supports matching a particular pseudoId in this case, this would indicate a error at the call site since matching a particular element should be unnecessary.");
 
     auto* shadowRoot = m_element.containingShadowRoot();
     if (shadowRoot && shadowRoot->mode() == ShadowRootMode::UserAgent)
@@ -360,7 +360,7 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, unsigned
     // This is limited to HTML only so we don't need to check the namespace (because of tag name match).
     MatchBasedOnRuleHash matchBasedOnRuleHash = ruleData.matchBasedOnRuleHash();
     if (matchBasedOnRuleHash != MatchBasedOnRuleHash::None && m_element.isHTMLElement()) {
-        ASSERT_WITH_MESSAGE(m_pseudoStyleRequest.pseudoId == NOPSEUDO, "If we match based on the rule hash while collecting for a particular pseudo element ID, we would add incorrect rules for that pseudo element ID. We should never end in ruleMatches() with a pseudo element if the ruleData cannot match any pseudo element.");
+        ASSERT_WITH_MESSAGE(m_pseudoStyleRequest.pseudoId == PseudoId::None, "If we match based on the rule hash while collecting for a particular pseudo element ID, we would add incorrect rules for that pseudo element ID. We should never end in ruleMatches() with a pseudo element if the ruleData cannot match any pseudo element.");
 
         switch (matchBasedOnRuleHash) {
         case MatchBasedOnRuleHash::None:
@@ -395,7 +395,7 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, unsigned
         auto selectorChecker = SelectorCompiler::ruleCollectorSimpleSelectorCheckerFunction(compiledSelectorChecker, compiledSelector.status);
 #if !ASSERT_MSG_DISABLED
         unsigned ignoreSpecificity;
-        ASSERT_WITH_MESSAGE(!selectorChecker(&m_element, &ignoreSpecificity) || m_pseudoStyleRequest.pseudoId == NOPSEUDO, "When matching pseudo elements, we should never compile a selector checker without context unless it cannot match anything.");
+        ASSERT_WITH_MESSAGE(!selectorChecker(&m_element, &ignoreSpecificity) || m_pseudoStyleRequest.pseudoId == PseudoId::None, "When matching pseudo elements, we should never compile a selector checker without context unless it cannot match anything.");
 #endif
 #if CSS_SELECTOR_JIT_PROFILING
         ruleData.compiledSelectorUsed();
@@ -458,7 +458,7 @@ void ElementRuleCollector::collectMatchingRulesForList(const RuleSet::RuleDataVe
     for (unsigned i = 0, size = rules->size(); i < size; ++i) {
         const RuleData& ruleData = rules->data()[i];
 
-        if (!ruleData.canMatchPseudoElement() && m_pseudoStyleRequest.pseudoId != NOPSEUDO)
+        if (!ruleData.canMatchPseudoElement() && m_pseudoStyleRequest.pseudoId != PseudoId::None)
             continue;
 
         if (m_selectorFilter && m_selectorFilter->fastRejectSelector(ruleData.descendantSelectorIdentifierHashes()))
@@ -518,7 +518,7 @@ void ElementRuleCollector::matchAllRules(bool matchAuthorAndUserStyles, bool inc
             bool isAuto;
             TextDirection textDirection = downcast<HTMLElement>(styledElement).directionalityIfhasDirAutoAttribute(isAuto);
             if (isAuto)
-                m_result.addMatchedProperties(textDirection == LTR ? leftToRightDeclaration() : rightToLeftDeclaration());
+                m_result.addMatchedProperties(textDirection == TextDirection::LTR ? leftToRightDeclaration() : rightToLeftDeclaration());
         }
     }
 

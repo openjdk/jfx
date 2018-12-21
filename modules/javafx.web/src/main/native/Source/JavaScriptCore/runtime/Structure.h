@@ -178,7 +178,7 @@ public:
     bool isProxy() const
     {
         JSType type = m_blob.type();
-        return type == ImpureProxyType || type == PureForwardingProxyType;
+        return type == ImpureProxyType || type == PureForwardingProxyType || type == ProxyObjectType;
     }
 
     static void dumpStatistics();
@@ -195,7 +195,8 @@ public:
     JS_EXPORT_PRIVATE static Structure* sealTransition(VM&, Structure*);
     JS_EXPORT_PRIVATE static Structure* freezeTransition(VM&, Structure*);
     static Structure* preventExtensionsTransition(VM&, Structure*);
-    JS_EXPORT_PRIVATE static Structure* nonPropertyTransition(VM&, Structure*, NonPropertyTransition);
+    static Structure* nonPropertyTransition(VM&, Structure*, NonPropertyTransition);
+    JS_EXPORT_PRIVATE static Structure* nonPropertyTransitionSlow(VM&, Structure*, NonPropertyTransition);
 
     JS_EXPORT_PRIVATE bool isSealed(VM&);
     JS_EXPORT_PRIVATE bool isFrozen(VM&);
@@ -218,10 +219,15 @@ public:
     bool isDictionary() const { return dictionaryKind() != NoneDictionaryKind; }
     bool isUncacheableDictionary() const { return dictionaryKind() == UncachedDictionaryKind; }
 
+    bool prototypeQueriesAreCacheable()
+    {
+        return !typeInfo().prohibitsPropertyCaching();
+    }
+
     bool propertyAccessesAreCacheable()
     {
         return dictionaryKind() != UncachedDictionaryKind
-            && !typeInfo().prohibitsPropertyCaching()
+            && prototypeQueriesAreCacheable()
             && !(typeInfo().getOwnPropertySlotIsImpure() && !typeInfo().newImpurePropertyFiresWatchpoints());
     }
 
@@ -250,16 +256,14 @@ public:
     }
 
     // Type accessors.
-    TypeInfo typeInfo() const { ASSERT(structure()->classInfo() == info()); return m_blob.typeInfo(m_outOfLineTypeFlags); }
+    TypeInfo typeInfo() const { return m_blob.typeInfo(m_outOfLineTypeFlags); }
     bool isObject() const { return typeInfo().isObject(); }
 
-    IndexingType indexingType() const { return m_blob.indexingTypeIncludingHistory() & AllArrayTypes; }
-    IndexingType indexingTypeIncludingHistory() const { return m_blob.indexingTypeIncludingHistory(); }
+    IndexingType indexingType() const { return m_blob.indexingModeIncludingHistory() & AllWritableArrayTypes; }
+    IndexingType indexingMode() const  { return m_blob.indexingModeIncludingHistory() & AllArrayTypes; }
+    IndexingType indexingModeIncludingHistory() const { return m_blob.indexingModeIncludingHistory(); }
 
-    bool mayInterceptIndexedAccesses() const
-    {
-        return !!(indexingTypeIncludingHistory() & MayHaveIndexedAccessors);
-    }
+    inline bool mayInterceptIndexedAccesses() const;
 
     bool holesMustForwardToPrototype(VM&, JSObject*) const;
 
@@ -433,6 +437,9 @@ public:
     template<typename Functor>
     void forEachPropertyConcurrently(const Functor&);
 
+    template<typename Functor>
+    void forEachProperty(VM&, const Functor&);
+
     PropertyOffset getConcurrently(UniquedStringImpl* uid);
     PropertyOffset getConcurrently(UniquedStringImpl* uid, unsigned& attributes);
 
@@ -498,9 +505,9 @@ public:
         return OBJECT_OFFSETOF(Structure, m_classInfo);
     }
 
-    static ptrdiff_t indexingTypeIncludingHistoryOffset()
+    static ptrdiff_t indexingModeIncludingHistoryOffset()
     {
-        return OBJECT_OFFSETOF(Structure, m_blob) + StructureIDBlob::indexingTypeIncludingHistoryOffset();
+        return OBJECT_OFFSETOF(Structure, m_blob) + StructureIDBlob::indexingModeIncludingHistoryOffset();
     }
 
     static ptrdiff_t propertyTableUnsafeOffset()
@@ -605,9 +612,9 @@ public:
     ALWAYS_INLINE void willStoreValueForNewTransition(
         VM& vm, PropertyName propertyName, JSValue value, bool shouldOptimize)
     {
-        if (hasBeenDictionary() || (!shouldOptimize && !m_inferredTypeTable))
+        if (hasBeenDictionary() || (!shouldOptimize && !m_inferredTypeTable) || !VM::canUseJIT())
             return;
-        willStoreValueSlow(vm, propertyName, value, shouldOptimize, InferredTypeTable::NewProperty);
+        willStoreValueSlow(vm, propertyName, value, shouldOptimize, InferredTypeTable::StoredPropertyAge::NewProperty);
     }
 
     // Call this when we know that this is a new property for the object, but not new for the
@@ -616,18 +623,18 @@ public:
     ALWAYS_INLINE void willStoreValueForExistingTransition(
         VM& vm, PropertyName propertyName, JSValue value, bool shouldOptimize)
     {
-        if (hasBeenDictionary() || !m_inferredTypeTable)
+        if (hasBeenDictionary() || !m_inferredTypeTable || !VM::canUseJIT())
             return;
-        willStoreValueSlow(vm, propertyName, value, shouldOptimize, InferredTypeTable::NewProperty);
+        willStoreValueSlow(vm, propertyName, value, shouldOptimize, InferredTypeTable::StoredPropertyAge::NewProperty);
     }
 
     // Call this when we know that the inferred type table exists and has an entry for this property.
     ALWAYS_INLINE void willStoreValueForReplace(
         VM& vm, PropertyName propertyName, JSValue value, bool shouldOptimize)
     {
-        if (hasBeenDictionary())
+        if (hasBeenDictionary() || !VM::canUseJIT())
             return;
-        willStoreValueSlow(vm, propertyName, value, shouldOptimize, InferredTypeTable::OldProperty);
+        willStoreValueSlow(vm, propertyName, value, shouldOptimize, InferredTypeTable::StoredPropertyAge::OldProperty);
     }
 
     Ref<StructureShape> toStructureShape(JSValue, bool& sawPolyProtoStructure);
@@ -679,6 +686,7 @@ public:
     DEFINE_BITFIELD(bool, transitionWatchpointIsLikelyToBeFired, TransitionWatchpointIsLikelyToBeFired, 1, 26);
     DEFINE_BITFIELD(bool, hasBeenDictionary, HasBeenDictionary, 1, 27);
     DEFINE_BITFIELD(bool, isAddingPropertyForTransition, IsAddingPropertyForTransition, 1, 28);
+    DEFINE_BITFIELD(bool, hasUnderscoreProtoPropertyExcludingOriginalProto, HasUnderscoreProtoPropertyExcludingOriginalProto, 1, 29);
 
 private:
     friend class LLIntOffsetsExtractor;

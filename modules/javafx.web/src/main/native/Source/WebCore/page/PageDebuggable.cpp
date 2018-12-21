@@ -29,8 +29,8 @@
 #if ENABLE(REMOTE_INSPECTOR)
 
 #include "Document.h"
+#include "Frame.h"
 #include "InspectorController.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "Settings.h"
 #include <JavaScriptCore/InspectorAgentBase.h>
@@ -61,7 +61,7 @@ String PageDebuggable::url() const
         return String();
 
     String url = m_page.mainFrame().document()->url().string();
-    return url.isEmpty() ? ASCIILiteral("about:blank") : url;
+    return url.isEmpty() ? "about:blank"_s : url;
 }
 
 bool PageDebuggable::hasLocalDebugger() const

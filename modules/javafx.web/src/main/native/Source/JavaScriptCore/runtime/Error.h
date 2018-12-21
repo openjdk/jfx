@@ -71,6 +71,7 @@ JS_EXPORT_PRIVATE JSObject* createTypeError(ExecState*, const String&);
 JS_EXPORT_PRIVATE JSObject* createNotEnoughArgumentsError(ExecState*);
 JS_EXPORT_PRIVATE JSObject* createURIError(ExecState*, const String&);
 JS_EXPORT_PRIVATE JSObject* createOutOfMemoryError(ExecState*);
+JS_EXPORT_PRIVATE JSObject* createOutOfMemoryError(ExecState*, const String&);
 
 JS_EXPORT_PRIVATE JSObject* createError(ExecState*, ErrorType, const String&);
 
@@ -96,14 +97,14 @@ JS_EXPORT_PRIVATE JSValue throwDOMAttributeGetterTypeError(ExecState*, ThrowScop
 // Convenience wrappers, wrap result as an EncodedJSValue.
 inline void throwVMError(ExecState* exec, ThrowScope& scope, Exception* exception) { throwException(exec, scope, exception); }
 inline EncodedJSValue throwVMError(ExecState* exec, ThrowScope& scope, JSValue error) { return JSValue::encode(throwException(exec, scope, error)); }
-inline EncodedJSValue throwVMError(ExecState* exec, ThrowScope& scope, const char* errorMessage) { return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral(errorMessage)))); }
+inline EncodedJSValue throwVMError(ExecState* exec, ThrowScope& scope, const char* errorMessage) { return JSValue::encode(throwException(exec, scope, createError(exec, errorMessage))); }
 inline EncodedJSValue throwVMTypeError(ExecState* exec, ThrowScope& scope) { return JSValue::encode(throwTypeError(exec, scope)); }
 inline EncodedJSValue throwVMTypeError(ExecState* exec, ThrowScope& scope, ASCIILiteral errorMessage) { return JSValue::encode(throwTypeError(exec, scope, errorMessage)); }
 inline EncodedJSValue throwVMTypeError(ExecState* exec, ThrowScope& scope, const String& errorMessage) { return JSValue::encode(throwTypeError(exec, scope, errorMessage)); }
 inline EncodedJSValue throwVMRangeError(ExecState* state, ThrowScope& scope, const String& errorMessage) { return JSValue::encode(throwRangeError(state, scope, errorMessage)); }
 inline EncodedJSValue throwVMDOMAttributeGetterTypeError(ExecState* state, ThrowScope& scope, const ClassInfo* classInfo, PropertyName propertyName) { return JSValue::encode(throwDOMAttributeGetterTypeError(state, scope, classInfo, propertyName)); }
 
-class StrictModeTypeErrorFunction : public InternalFunction {
+class StrictModeTypeErrorFunction final : public InternalFunction {
 private:
     StrictModeTypeErrorFunction(VM& vm, Structure* structure, const String& message)
         : InternalFunction(vm, structure, callThrowTypeError, constructThrowTypeError)
@@ -115,6 +116,12 @@ private:
 
 public:
     typedef InternalFunction Base;
+
+    template<typename CellType>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.strictModeTypeErrorFunctionSpace;
+    }
 
     static StrictModeTypeErrorFunction* create(VM& vm, Structure* structure, const String& message)
     {

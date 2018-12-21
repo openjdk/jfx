@@ -305,7 +305,7 @@ void Pasteboard::write(const PasteboardURL& pasteboardURL)
     if (title.isEmpty()) {
         title = pasteboardURL.url.lastPathComponent();
         if (title.isEmpty()) {
-            title = pasteboardURL.url.host();
+            title = pasteboardURL.url.host().toString();
         }
     }
     String markup(urlToMarkup(pasteboardURL.url, title));
@@ -444,12 +444,12 @@ String Pasteboard::readStringInCustomData(const String&)
     return { };
 }
 
-bool Pasteboard::containsFiles()
+Pasteboard::FileContentState Pasteboard::fileContentState()
 {
     // FIXME: This implementation can be slightly more efficient by avoiding calls to DragQueryFileW.
     PasteboardFileCounter reader;
     read(reader);
-    return reader.count;
+    return reader.count ? FileContentState::MayContainFilePaths : FileContentState::NoFileOrImageData;
 }
 
 void Pasteboard::read(PasteboardPlainText& text)
@@ -515,7 +515,7 @@ RefPtr<DocumentFragment> Pasteboard::documentFragment(
     return nullptr;
 }
 
-void Pasteboard::read(PasteboardWebContentReader&)
+void Pasteboard::read(PasteboardWebContentReader&, WebContentReadingPolicy)
 {
 }
 

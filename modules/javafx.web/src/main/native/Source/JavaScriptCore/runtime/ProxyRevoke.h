@@ -31,10 +31,16 @@ namespace JSC {
 
 class ProxyObject;
 
-class ProxyRevoke : public InternalFunction {
+class ProxyRevoke final : public InternalFunction {
 public:
     typedef InternalFunction Base;
     static const unsigned StructureFlags = Base::StructureFlags;
+
+    template<typename CellType>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.proxyRevokeSpace;
+    }
 
     static ProxyRevoke* create(VM&, Structure*, ProxyObject*);
 

@@ -45,13 +45,13 @@ namespace WebCore {
         virtual ~PNGImageDecoder();
 
         // ScalableImageDecoder
-        String filenameExtension() const override { return ASCIILiteral("png"); }
+        String filenameExtension() const override { return "png"_s; }
 #if ENABLE(APNG)
         size_t frameCount() const override { return m_frameCount; }
         RepetitionCount repetitionCount() const override;
 #endif
         bool setSize(const IntSize&) override;
-        ImageFrame* frameBufferAtIndex(size_t index) override;
+        ScalableImageDecoderFrame* frameBufferAtIndex(size_t index) override;
         // CAUTION: setFailed() deletes |m_reader|.  Be careful to avoid
         // accessing deleted memory, especially when calling this from inside
         // PNGImageReader!

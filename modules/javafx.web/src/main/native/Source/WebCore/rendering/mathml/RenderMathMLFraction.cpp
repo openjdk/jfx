@@ -255,7 +255,7 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLBlock::paint(info, paintOffset);
     LayoutUnit thickness = lineThickness();
-    if (info.context().paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE || !isValid() || !thickness)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible || !isValid() || !thickness)
         return;
 
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location() + LayoutPoint(0, ascentOverHorizontalAxis()));
@@ -264,7 +264,7 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
 
     info.context().setStrokeThickness(thickness);
     info.context().setStrokeStyle(SolidStroke);
-    info.context().setStrokeColor(style().visitedDependentColor(CSSPropertyColor));
+    info.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
     info.context().drawLine(adjustedPaintOffset, roundedIntPoint(LayoutPoint(adjustedPaintOffset.x() + logicalWidth(), adjustedPaintOffset.y())));
 }
 

@@ -326,8 +326,8 @@ TextStream& operator<<(TextStream& ts, const GraphicsContextStateChange& stateCh
     return ts;
 }
 
-GraphicsContext::GraphicsContext(NonPaintingReasons nonPaintingReasons)
-    : m_nonPaintingReasons(nonPaintingReasons)
+GraphicsContext::GraphicsContext(PaintInvalidationReasons paintInvalidationReasons)
+    : m_paintInvalidationReasons(paintInvalidationReasons)
 {
 }
 
@@ -640,17 +640,17 @@ float GraphicsContext::drawText(const FontCascade& font, const TextRun& run, con
     return font.drawText(*this, run, point, from, to);
 }
 
-void GraphicsContext::drawGlyphs(const FontCascade& fontCascade, const Font& font, const GlyphBuffer& buffer, unsigned from, unsigned numGlyphs, const FloatPoint& point)
+void GraphicsContext::drawGlyphs(const Font& font, const GlyphBuffer& buffer, unsigned from, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode fontSmoothingMode)
 {
     if (paintingDisabled())
         return;
 
     if (m_impl) {
-        m_impl->drawGlyphs(font, buffer, from, numGlyphs, point, fontCascade.fontDescription().fontSmoothing());
+        m_impl->drawGlyphs(font, buffer, from, numGlyphs, point, fontSmoothingMode);
         return;
     }
 
-    fontCascade.drawGlyphs(*this, font, buffer, from, numGlyphs, point, fontCascade.fontDescription().fontSmoothing());
+    FontCascade::drawGlyphs(*this, font, buffer, from, numGlyphs, point, fontSmoothingMode);
 }
 
 void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomicString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
@@ -683,7 +683,7 @@ void GraphicsContext::drawBidiText(const FontCascade& font, const TextRun& run, 
     while (bidiRun) {
         TextRun subrun = run.subRun(bidiRun->start(), bidiRun->stop() - bidiRun->start());
         bool isRTL = bidiRun->level() % 2;
-        subrun.setDirection(isRTL ? RTL : LTR);
+        subrun.setDirection(isRTL ? TextDirection::RTL : TextDirection::LTR);
         subrun.setDirectionalOverride(bidiRun->dirOverride(false));
 
         float width = font.drawText(*this, subrun, currPoint, 0, std::nullopt, customFontNotReadyAction);
@@ -909,7 +909,7 @@ void GraphicsContext::fillRectWithRoundedHole(const IntRect& rect, const FloatRo
     WindRule oldFillRule = fillRule();
     Color oldFillColor = fillColor();
 
-    setFillRule(RULE_EVENODD);
+    setFillRule(WindRule::EvenOdd);
     setFillColor(color);
 
     fillPath(path);

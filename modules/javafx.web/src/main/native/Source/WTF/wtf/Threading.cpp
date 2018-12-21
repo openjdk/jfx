@@ -102,8 +102,15 @@ void Thread::initializeInThread()
     if (m_stack.isEmpty())
         m_stack = StackBounds::currentThreadStackBounds();
     m_savedLastStackTop = stack().origin();
-    AtomicStringTable::create(*this);
-    m_currentAtomicStringTable = m_defaultAtomicStringTable;
+
+    m_currentAtomicStringTable = &m_defaultAtomicStringTable;
+#if USE(WEB_THREAD)
+    // On iOS, one AtomicStringTable is shared between the main UI thread and the WebThread.
+    if (isWebThread() || isUIThread()) {
+        static NeverDestroyed<AtomicStringTable> sharedStringTable;
+        m_currentAtomicStringTable = &sharedStringTable.get();
+    }
+#endif
 }
 
 void Thread::entryPoint(NewThreadContext* newThreadContext)
@@ -184,7 +191,7 @@ void Thread::didExit()
     if (shouldRemoveThreadFromThreadGroup()) {
         Vector<std::shared_ptr<ThreadGroup>> threadGroups;
         {
-            std::lock_guard<std::mutex> locker(m_mutex);
+            auto locker = holdLock(m_mutex);
             for (auto& threadGroup : m_threadGroups) {
                 // If ThreadGroup is just being destroyed,
                 // we do not need to perform unregistering.
@@ -194,24 +201,22 @@ void Thread::didExit()
             m_isShuttingDown = true;
         }
         for (auto& threadGroup : threadGroups) {
-            std::lock_guard<std::mutex> threadGroupLocker(threadGroup->getLock());
-            std::lock_guard<std::mutex> locker(m_mutex);
+            auto threadGroupLocker = holdLock(threadGroup->getLock());
+            auto locker = holdLock(m_mutex);
             threadGroup->m_threads.remove(*this);
         }
     }
 
-    AtomicStringTable::destroy(m_defaultAtomicStringTable);
-
     // We would like to say "thread is exited" after unregistering threads from thread groups.
     // So we need to separate m_isShuttingDown from m_didExit.
-    std::lock_guard<std::mutex> locker(m_mutex);
+    auto locker = holdLock(m_mutex);
     m_didExit = true;
 }
 
 ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
 {
     UNUSED_PARAM(threadGroupLocker);
-    std::lock_guard<std::mutex> locker(m_mutex);
+    auto locker = holdLock(m_mutex);
     if (m_isShuttingDown)
         return ThreadGroupAddResult::NotAdded;
     if (threadGroup.m_threads.add(*this).isNewEntry) {
@@ -224,7 +229,7 @@ ThreadGroupAddResult Thread::addToThreadGroup(const AbstractLocker& threadGroupL
 void Thread::removeFromThreadGroup(const AbstractLocker& threadGroupLocker, ThreadGroup& threadGroup)
 {
     UNUSED_PARAM(threadGroupLocker);
-    std::lock_guard<std::mutex> locker(m_mutex);
+    auto locker = holdLock(m_mutex);
     if (m_isShuttingDown)
         return;
     m_threadGroups.removeFirstMatching([&] (auto weakPtr) {

@@ -50,7 +50,7 @@ class DrawingItem;
 class Recorder : public GraphicsContextImpl {
     WTF_MAKE_NONCOPYABLE(Recorder);
 public:
-    Recorder(GraphicsContext&, DisplayList&, const FloatRect& initialClip, const AffineTransform&);
+    Recorder(GraphicsContext&, DisplayList&, const GraphicsContextState&, const FloatRect& initialClip, const AffineTransform&);
     virtual ~Recorder();
 
     size_t itemCount() const { return m_displayList.itemCount(); }
@@ -93,12 +93,12 @@ private:
 #if USE(CG) || USE(CAIRO)
     void drawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator, BlendMode, ImageOrientation) override;
 #endif
-    void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendModeNormal) override;
+    void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal) override;
 
     void drawRect(const FloatRect&, float borderThickness) override;
     void drawLine(const FloatPoint&, const FloatPoint&) override;
     void drawLinesForText(const FloatPoint&, const DashArray& widths, bool printing, bool doubleLines, float strokeThickness) override;
-    void drawLineForDocumentMarker(const FloatPoint&, float width, GraphicsContext::DocumentMarkerLineStyle) override;
+    void drawLineForDocumentMarker(const FloatPoint&, float width, DocumentMarkerLineStyle) override;
     void drawEllipse(const FloatRect&) override;
     void drawPath(const Path&) override;
 
@@ -123,6 +123,7 @@ private:
     void clipOut(const Path&) override;
     void clipPath(const Path&, WindRule) override;
     IntRect clipBounds() override;
+    void clipToImageBuffer(ImageBuffer&, const FloatRect&) override;
 
     void applyDeviceScaleFactor(float) override;
 
@@ -145,17 +146,17 @@ private:
         bool wasUsedForDrawing { false };
         size_t saveItemIndex { 0 };
 
-        ContextState(const AffineTransform& transform, const FloatRect& clip)
+        ContextState(const GraphicsContextState& state, const AffineTransform& transform, const FloatRect& clip)
             : ctm(transform)
             , clipBounds(clip)
+            , lastDrawingState(state)
         {
         }
 
         ContextState cloneForSave(size_t saveIndex) const
         {
-            ContextState state(ctm, clipBounds);
+            ContextState state(lastDrawingState, ctm, clipBounds);
             state.stateChange = stateChange;
-            state.lastDrawingState = lastDrawingState;
             state.saveItemIndex = saveIndex;
             return state;
         }

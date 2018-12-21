@@ -99,9 +99,6 @@ struct AttachmentDisplayOptions;
 #endif
 
 enum TemporarySelectionOption : uint8_t {
-    // By default, no additional options are enabled.
-    TemporarySelectionOptionDefault = 0,
-
     // Scroll to reveal the selection.
     TemporarySelectionOptionRevealSelection = 1 << 0,
 
@@ -112,16 +109,14 @@ enum TemporarySelectionOption : uint8_t {
     TemporarySelectionOptionEnableAppearanceUpdates = 1 << 2
 };
 
-using TemporarySelectionOptions = uint8_t;
-
 class TemporarySelectionChange {
 public:
-    TemporarySelectionChange(Frame&, std::optional<VisibleSelection> = std::nullopt, TemporarySelectionOptions = TemporarySelectionOptionDefault);
+    TemporarySelectionChange(Frame&, std::optional<VisibleSelection> = std::nullopt, OptionSet<TemporarySelectionOption> = { });
     ~TemporarySelectionChange();
 
 private:
     Ref<Frame> m_frame;
-    TemporarySelectionOptions m_options;
+    OptionSet<TemporarySelectionOption> m_options;
     bool m_wasIgnoringSelectionChanges;
 #if PLATFORM(IOS)
     bool m_appearanceUpdatesWereEnabled;
@@ -216,10 +211,11 @@ public:
 #endif
 
     WEBCORE_EXPORT void applyStyle(StyleProperties*, EditAction = EditActionUnspecified);
-    void applyStyle(RefPtr<EditingStyle>&&, EditAction);
+    enum class ColorFilterMode { InvertColor, UseOriginalColor };
+    void applyStyle(RefPtr<EditingStyle>&&, EditAction, ColorFilterMode);
     void applyParagraphStyle(StyleProperties*, EditAction = EditActionUnspecified);
     WEBCORE_EXPORT void applyStyleToSelection(StyleProperties*, EditAction);
-    WEBCORE_EXPORT void applyStyleToSelection(Ref<EditingStyle>&&, EditAction);
+    WEBCORE_EXPORT void applyStyleToSelection(Ref<EditingStyle>&&, EditAction, ColorFilterMode);
     void applyParagraphStyleToSelection(StyleProperties*, EditAction);
 
     // Returns whether or not we should proceed with editing.
@@ -293,7 +289,7 @@ public:
     bool isOverwriteModeEnabled() const { return m_overwriteModeEnabled; }
     WEBCORE_EXPORT void toggleOverwriteModeEnabled();
 
-    void markAllMisspellingsAndBadGrammarInRanges(TextCheckingTypeMask, Range* spellingRange, Range* grammarRange);
+    void markAllMisspellingsAndBadGrammarInRanges(OptionSet<TextCheckingType>, RefPtr<Range>&& spellingRange, RefPtr<Range>&& automaticReplacementRange, RefPtr<Range>&& grammarRange);
 #if PLATFORM(IOS)
     NO_RETURN_DUE_TO_ASSERT
 #endif
@@ -413,7 +409,7 @@ public:
     WEBCORE_EXPORT IntRect firstRectForRange(Range*) const;
 
     void selectionWillChange();
-    void respondToChangedSelection(const VisibleSelection& oldSelection, FrameSelection::SetSelectionOptions);
+    void respondToChangedSelection(const VisibleSelection& oldSelection, OptionSet<FrameSelection::SetSelectionOption>);
     WEBCORE_EXPORT void updateEditorUINowIfScheduled();
     bool shouldChangeSelection(const VisibleSelection& oldSelection, const VisibleSelection& newSelection, EAffinity, bool stillSelecting) const;
     WEBCORE_EXPORT unsigned countMatchesForText(const String&, Range*, FindOptions, unsigned limit, bool markMatches, Vector<RefPtr<Range>>*);
@@ -532,7 +528,7 @@ private:
 
     void revealSelectionAfterEditingOperation(const ScrollAlignment& = ScrollAlignment::alignCenterIfNeeded, RevealExtentOption = DoNotRevealExtent);
     void markMisspellingsOrBadGrammar(const VisibleSelection&, bool checkSpelling, RefPtr<Range>& firstMisspellingRange);
-    TextCheckingTypeMask resolveTextCheckingTypeMask(const Node& rootEditableElement, TextCheckingTypeMask);
+    OptionSet<TextCheckingType> resolveTextCheckingTypeMask(const Node& rootEditableElement, OptionSet<TextCheckingType>);
 
     WEBCORE_EXPORT String selectedText(TextIteratorBehavior) const;
 
@@ -540,7 +536,7 @@ private:
     enum SetCompositionMode { ConfirmComposition, CancelComposition };
     void setComposition(const String&, SetCompositionMode);
 
-    void changeSelectionAfterCommand(const VisibleSelection& newSelection, FrameSelection::SetSelectionOptions);
+    void changeSelectionAfterCommand(const VisibleSelection& newSelection, OptionSet<FrameSelection::SetSelectionOption>);
 
     enum EditorActionSpecifier { CutAction, CopyAction };
     void performCutOrCopy(EditorActionSpecifier);
@@ -582,8 +578,6 @@ private:
     const std::unique_ptr<PAL::KillRing> m_killRing;
     const std::unique_ptr<SpellChecker> m_spellChecker;
     const std::unique_ptr<AlternativeTextController> m_alternativeTextController;
-    VisibleSelection m_mark;
-    bool m_areMarkedTextMatchesHighlighted { false };
     EditorParagraphSeparator m_defaultParagraphSeparator { EditorParagraphSeparatorIsDiv };
     bool m_overwriteModeEnabled { false };
 
@@ -591,6 +585,9 @@ private:
     HashSet<String> m_insertedAttachmentIdentifiers;
     HashSet<String> m_removedAttachmentIdentifiers;
 #endif
+
+    VisibleSelection m_mark;
+    bool m_areMarkedTextMatchesHighlighted { false };
 
     VisibleSelection m_oldSelectionForEditorUIUpdate;
     Timer m_editorUIUpdateTimer;

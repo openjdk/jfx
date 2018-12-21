@@ -35,7 +35,7 @@ public:
 };
 
 template<typename T>
-class SVGPropertyTearOff : public SVGPropertyTearOffBase {
+class SVGPropertyTearOff : public SVGPropertyTearOffBase, public CanMakeWeakPtr<SVGPropertyTearOff<T>> {
 public:
     using PropertyType = T;
     using Self = SVGPropertyTearOff<PropertyType>;
@@ -49,11 +49,6 @@ public:
 
     // Used for non-animated POD types (for example: SVGSVGElement::createSVGLength()).
     static Ref<Self> create(const PropertyType& initialValue)
-    {
-        return adoptRef(*new Self(initialValue));
-    }
-
-    static Ref<Self> create(const PropertyType* initialValue)
     {
         return adoptRef(*new Self(initialValue));
     }
@@ -130,11 +125,6 @@ public:
         return false;
     }
 
-    WeakPtr<SVGPropertyTearOff> createWeakPtr() const
-    {
-        return m_weakPtrFactory.createWeakPtr(*const_cast<SVGPropertyTearOff*>(this));
-    }
-
 protected:
     SVGPropertyTearOff(SVGAnimatedProperty* animatedProperty, SVGPropertyRole role, PropertyType& value)
         : m_animatedProperty(animatedProperty)
@@ -178,7 +168,6 @@ protected:
     SVGPropertyRole m_role;
     PropertyType* m_value;
     Vector<WeakPtr<SVGPropertyTearOffBase>> m_childTearOffs;
-    WeakPtrFactory<SVGPropertyTearOff> m_weakPtrFactory;
     bool m_valueIsCopy;
 };
 

@@ -34,7 +34,7 @@
 #include <WebCore/MutationEvent.h>
 #include <WebCore/UIEvent.h>
 #include <WebCore/WheelEvent.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

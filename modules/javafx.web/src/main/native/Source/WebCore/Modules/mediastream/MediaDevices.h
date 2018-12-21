@@ -33,6 +33,8 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "ActiveDOMObject.h"
+#include "EventNames.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
 #include "JSDOMPromiseDeferred.h"
@@ -49,7 +51,7 @@ class MediaStream;
 
 struct MediaTrackSupportedConstraints;
 
-class MediaDevices : public RefCounted<MediaDevices>, public ContextDestructionObserver, public EventTargetWithInlineData {
+class MediaDevices : public RefCounted<MediaDevices>, public ActiveDOMObject, public EventTargetWithInlineData, public CanMakeWeakPtr<MediaDevices> {
 public:
     static Ref<MediaDevices> create(Document&);
 
@@ -84,17 +86,23 @@ private:
 
     void scheduledEventTimerFired();
 
-    // EventTargetWithInlineData.
-    EventTargetInterface eventTargetInterface() const override { return MediaDevicesEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return m_scriptExecutionContext; }
-    void refEventTarget() override { ref(); }
-    void derefEventTarget() override { deref(); }
+    friend class JSMediaDevicesOwner;
 
-    WeakPtr<MediaDevices> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
+    // ActiveDOMObject
+    const char* activeDOMObjectName() const final;
+    bool canSuspendForDocumentSuspension() const final;
+    void stop() final;
+    bool hasPendingActivity() const final;
+
+    // EventTargetWithInlineData.
+    EventTargetInterface eventTargetInterface() const final { return MediaDevicesEventTargetInterfaceType; }
+    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
 
     Timer m_scheduledEventTimer;
-    std::optional<RealtimeMediaSourceCenter::DevicesChangedObserverToken> m_deviceChangedToken;
-    WeakPtrFactory<MediaDevices> m_weakPtrFactory;
+    RealtimeMediaSourceCenter::DevicesChangedObserverToken m_deviceChangedToken;
+    const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
 };
 
 } // namespace WebCore

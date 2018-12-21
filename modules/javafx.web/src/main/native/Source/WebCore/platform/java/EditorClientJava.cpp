@@ -250,7 +250,7 @@ static const KeyPressEntry keyPressEntries[] = {
 
 const char* EditorClientJava::interpretKeyEvent(const KeyboardEvent* evt)
 {
-    const PlatformKeyboardEvent* keyEvent = evt->keyEvent();
+    const PlatformKeyboardEvent* keyEvent = evt->underlyingPlatformEvent();
     if (!keyEvent)
         return "";
 
@@ -293,7 +293,7 @@ const char* EditorClientJava::interpretKeyEvent(const KeyboardEvent* evt)
 
 bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
 {
-    const PlatformKeyboardEvent* keyEvent = evt->keyEvent();
+    const PlatformKeyboardEvent* keyEvent = evt->underlyingPlatformEvent();
     if (!keyEvent)
         return false;
 
@@ -336,8 +336,8 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     // which may be configured to do it so by user.
     // See also http://en.wikipedia.org/wiki/Keyboard_Layout
     // FIXME(ukai): investigate more detail for various keyboard layout.
-    if (evt->keyEvent()->text().length() == 1) {
-        UChar ch = evt->keyEvent()->text()[0U];
+    if (evt->underlyingPlatformEvent()->text().length() == 1) {
+        UChar ch = evt->underlyingPlatformEvent()->text()[0U];
 
         // Don't insert null or control characters as they can result in
         // unexpected behaviour
@@ -347,10 +347,10 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
         // Don't insert ASCII character if ctrl w/o alt or meta is on.
         // On Mac, we should ignore events when meta is on (Command-<x>).
         if (ch < 0x80) {
-            if (evt->keyEvent()->ctrlKey() && !evt->keyEvent()->altKey())
+            if (evt->underlyingPlatformEvent()->ctrlKey() && !evt->underlyingPlatformEvent()->altKey())
                 return false;
 #if OS(DARWIN)
-            if (evt->keyEvent()->metaKey())
+            if (evt->underlyingPlatformEvent()->metaKey())
                 return false;
 #endif
         }
@@ -360,7 +360,7 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     if (!frame->editor().canEdit())
         return false;
 
-    return frame->editor().insertText(evt->keyEvent()->text(), evt);
+    return frame->editor().insertText(evt->underlyingPlatformEvent()->text(), evt);
 }
 
 void EditorClientJava::handleKeyboardEvent(KeyboardEvent* evt)

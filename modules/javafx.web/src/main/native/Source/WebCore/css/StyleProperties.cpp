@@ -157,6 +157,14 @@ String StyleProperties::getPropertyValue(CSSPropertyID propertyID) const
         return getShorthandValue(borderBottomShorthand());
     case CSSPropertyBorderLeft:
         return getShorthandValue(borderLeftShorthand());
+    case CSSPropertyBorderBlockStart:
+        return getShorthandValue(borderBlockStartShorthand());
+    case CSSPropertyBorderBlockEnd:
+        return getShorthandValue(borderBlockEndShorthand());
+    case CSSPropertyBorderInlineStart:
+        return getShorthandValue(borderInlineStartShorthand());
+    case CSSPropertyBorderInlineEnd:
+        return getShorthandValue(borderInlineEndShorthand());
     case CSSPropertyOutline:
         return getShorthandValue(outlineShorthand());
     case CSSPropertyBorderColor:
@@ -1227,8 +1235,7 @@ bool MutableStyleProperties::removePropertiesInSet(const CSSPropertyID* set, uns
         toRemove.add(set[i]);
 
     return m_propertyVector.removeAllMatching([&toRemove] (const CSSProperty& property) {
-        // Not quite sure if the isImportant test is needed but it matches the existing behavior.
-        return !property.isImportant() && toRemove.contains(property.id());
+        return toRemove.contains(property.id());
     }) > 0;
 }
 

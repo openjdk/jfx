@@ -32,6 +32,7 @@
 #include "FileSystem.h"
 #include "FormDataBuilder.h"
 #include "Page.h"
+#include "SharedBuffer.h"
 #include "TextEncoding.h"
 #include "ThreadableBlobRegistry.h"
 #include <wtf/text/LineEnding.h>
@@ -213,7 +214,7 @@ void FormData::appendMultiPartFileValue(const File& file, Vector<char>& header, 
     // Add the content type if available, or "application/octet-stream" otherwise (RFC 1867).
     auto contentType = file.type();
     if (contentType.isEmpty())
-        contentType = ASCIILiteral("application/octet-stream");
+        contentType = "application/octet-stream"_s;
     ASSERT(Blob::isNormalizedContentType(contentType));
 
     FormDataBuilder::addContentTypeToMultiPartHeader(header, contentType.ascii());

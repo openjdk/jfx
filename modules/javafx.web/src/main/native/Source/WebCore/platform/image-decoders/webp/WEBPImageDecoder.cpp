@@ -28,6 +28,7 @@
 
 #include "config.h"
 #include "WEBPImageDecoder.h"
+#include <wtf/UniqueArray.h>
 
 #if USE(WEBP)
 
@@ -69,7 +70,7 @@ RepetitionCount WEBPImageDecoder::repetitionCount() const
     return m_repetitionCount ? m_repetitionCount : RepetitionCountInfinite;
 }
 
-ImageFrame* WEBPImageDecoder::frameBufferAtIndex(size_t index)
+ScalableImageDecoderFrame* WEBPImageDecoder::frameBufferAtIndex(size_t index)
 {
     if (index >= frameCount())
         return 0;
@@ -116,7 +117,7 @@ size_t WEBPImageDecoder::findFirstRequiredFrameToDecode(size_t frameIndex, WebPD
         // This frame covers the whole area and its disposalMethod is RestoreToBackground, which means
         // that the next frame will be rendered on top of a transparent background, and can be decoded
         // without dependencies. This can only be checked for frames prior to frameIndex.
-        if (firstIndependentFrame < frameIndex && m_frameBufferCache[firstIndependentFrame].disposalMethod() == ImageFrame::DisposalMethod::RestoreToBackground)
+        if (firstIndependentFrame < frameIndex && m_frameBufferCache[firstIndependentFrame].disposalMethod() == ScalableImageDecoderFrame::DisposalMethod::RestoreToBackground)
             return firstIndependentFrame + 1;
     }
 
@@ -169,9 +170,9 @@ void WEBPImageDecoder::decodeFrame(size_t frameIndex, WebPDemuxer* demuxer)
     bool blend = webpFrame.blend_method == WEBP_MUX_BLEND ? true : false;
 
     ASSERT(m_frameBufferCache.size() > frameIndex);
-    ImageFrame& buffer = m_frameBufferCache[frameIndex];
+    auto& buffer = m_frameBufferCache[frameIndex];
     buffer.setDuration(Seconds::fromMilliseconds(webpFrame.duration));
-    buffer.setDisposalMethod(webpFrame.dispose_method == WEBP_MUX_DISPOSE_BACKGROUND ? ImageFrame::DisposalMethod::RestoreToBackground : ImageFrame::DisposalMethod::DoNotDispose);
+    buffer.setDisposalMethod(webpFrame.dispose_method == WEBP_MUX_DISPOSE_BACKGROUND ? ScalableImageDecoderFrame::DisposalMethod::RestoreToBackground : ScalableImageDecoderFrame::DisposalMethod::DoNotDispose);
     ASSERT(!buffer.isComplete());
 
     if (buffer.isInvalid() && !initFrameBuffer(frameIndex, &webpFrame)) {
@@ -182,10 +183,10 @@ void WEBPImageDecoder::decodeFrame(size_t frameIndex, WebPDemuxer* demuxer)
     WebPDecBuffer decoderBuffer;
     WebPInitDecBuffer(&decoderBuffer);
     decoderBuffer.colorspace = MODE_RGBA;
-    decoderBuffer.u.RGBA.stride = webpFrame.width * sizeof(RGBA32);
+    decoderBuffer.u.RGBA.stride = webpFrame.width * sizeof(uint32_t);
     decoderBuffer.u.RGBA.size = decoderBuffer.u.RGBA.stride * webpFrame.height;
     decoderBuffer.is_external_memory = 1;
-    std::unique_ptr<unsigned char[]> p(new uint8_t[decoderBuffer.u.RGBA.size]());
+    auto p = makeUniqueArray<uint8_t>(decoderBuffer.u.RGBA.size);
     decoderBuffer.u.RGBA.rgba = p.get();
     if (!decoderBuffer.u.RGBA.rgba) {
         setFailed();
@@ -222,7 +223,7 @@ bool WEBPImageDecoder::initFrameBuffer(size_t frameIndex, const WebPIterator* we
     if (frameIndex >= frameCount())
         return false;
 
-    ImageFrame& buffer = m_frameBufferCache[frameIndex];
+    auto& buffer = m_frameBufferCache[frameIndex];
 
     // Initialize the frame rect in our buffer.
     IntRect frameRect(webpFrame->x_offset, webpFrame->y_offset, webpFrame->width, webpFrame->height);
@@ -235,14 +236,14 @@ bool WEBPImageDecoder::initFrameBuffer(size_t frameIndex, const WebPIterator* we
         if (!buffer.initialize(size(), m_premultiplyAlpha))
             return false;
     } else {
-        const ImageFrame& prevBuffer = m_frameBufferCache[frameIndex - 1];
+        const auto& prevBuffer = m_frameBufferCache[frameIndex - 1];
         ASSERT(prevBuffer.isComplete());
 
         // Preserve the last frame as the starting state for this frame.
         if (!prevBuffer.backingStore() || !buffer.initialize(*prevBuffer.backingStore()))
             return false;
 
-        if (prevBuffer.disposalMethod() == ImageFrame::DisposalMethod::RestoreToBackground) {
+        if (prevBuffer.disposalMethod() == ScalableImageDecoderFrame::DisposalMethod::RestoreToBackground) {
             // We want to clear the previous frame to transparent, without
             // affecting pixels in the image outside of the frame.
             const IntRect& prevRect = prevBuffer.backingStore()->frameRect();
@@ -258,7 +259,7 @@ bool WEBPImageDecoder::initFrameBuffer(size_t frameIndex, const WebPIterator* we
 
 void WEBPImageDecoder::applyPostProcessing(size_t frameIndex, WebPIDecoder* decoder, WebPDecBuffer& decoderBuffer, bool blend)
 {
-    ImageFrame& buffer = m_frameBufferCache[frameIndex];
+    auto& buffer = m_frameBufferCache[frameIndex];
     int decodedWidth = 0;
     int decodedHeight = 0;
     if (!WebPIDecGetRGB(decoder, &decodedHeight, &decodedWidth, 0, 0))
@@ -276,8 +277,8 @@ void WEBPImageDecoder::applyPostProcessing(size_t frameIndex, WebPIDecoder* deco
         const int canvasY = top + y;
         for (int x = 0; x < decodedWidth; x++) {
             const int canvasX = left + x;
-            RGBA32* address = buffer.backingStore()->pixelAt(canvasX, canvasY);
-            uint8_t* pixel = decoderBuffer.u.RGBA.rgba + (y * frameRect.width() + x) * sizeof(RGBA32);
+            auto* address = buffer.backingStore()->pixelAt(canvasX, canvasY);
+            uint8_t* pixel = decoderBuffer.u.RGBA.rgba + (y * frameRect.width() + x) * sizeof(uint32_t);
             if (blend && (pixel[3] < 255))
                 buffer.backingStore()->blendPixel(address, pixel[0], pixel[1], pixel[2], pixel[3]);
             else
@@ -351,7 +352,7 @@ void WEBPImageDecoder::clearFrameBufferCache(size_t clearBeforeFrame)
     // In WEBP every frame depends on the previous one or none. That means that frames after clearBeforeFrame
     // won't need any frame before them to render, so we can clear them all.
     for (int i = clearBeforeFrame - 1; i >= 0; i--) {
-        ImageFrame& buffer = m_frameBufferCache[i];
+        auto& buffer = m_frameBufferCache[i];
         if (!buffer.isInvalid())
             buffer.clear();
     }

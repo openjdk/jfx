@@ -229,9 +229,10 @@ public:
 
     bool startAnimation(double timeOffset, const Animation*, const KeyframeList& keyframes);
     void animationPaused(double timeOffset, const String& name);
+    void animationSeeked(double timeOffset, const String& name);
     void animationFinished(const String& name);
 
-    void suspendAnimations(double time = 0);
+    void suspendAnimations(MonotonicTime = MonotonicTime());
 
     RenderBoxModelObject* continuation() const;
     WEBCORE_EXPORT RenderInline* inlineContinuation() const;
@@ -270,7 +271,7 @@ protected:
     DecodingMode decodingModeForImageDraw(const Image&, const PaintInfo&) const;
 
 public:
-    // For RenderBlocks and RenderInlines with m_style->styleType() == FIRST_LETTER, this tracks their remaining text fragments
+    // For RenderBlocks and RenderInlines with m_style->styleType() == PseudoId::FirstLetter, this tracks their remaining text fragments
     RenderTextFragment* firstLetterRemainingText() const;
     void setFirstLetterRemainingText(RenderTextFragment&);
     void clearFirstLetterRemainingText();
@@ -295,10 +296,11 @@ public:
 
     ContinuationChainNode* continuationChainNode() const;
 
+protected:
+    LayoutUnit computedCSSPadding(const Length&) const;
+
 private:
     ContinuationChainNode& ensureContinuationChainNode();
-
-    LayoutUnit computedCSSPadding(const Length&) const;
 
     virtual LayoutRect frameRectForStickyPositioning() const = 0;
 
@@ -322,7 +324,7 @@ private:
         bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias = false, const Color* overrideColor = nullptr);
     void drawBoxSideFromPath(GraphicsContext&, const LayoutRect&, const Path&, const BorderEdge[],
         float thickness, float drawThickness, BoxSide, const RenderStyle&,
-        Color, EBorderStyle, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
+        Color, BorderStyle, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
     void paintMaskForTextFillBox(ImageBuffer*, const IntRect&, InlineFlowBox*, const LayoutRect&);
 };
 

@@ -98,13 +98,13 @@ public:
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, FramePolicyFunction&&) override;
-    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, bool didReceiveRedirectResponse, FormState*, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
 
     void dispatchUnableToImplementPolicy(const ResourceError&) override;
 
     void dispatchWillSendSubmitEvent(Ref<FormState>&&) override {}
-    void dispatchWillSubmitForm(FormState&, WTF::Function<void(void)>&&) override;
+    void dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&&) override;
 
     void dispatchDidLoadMainResource(DocumentLoader*);
 

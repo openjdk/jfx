@@ -44,7 +44,8 @@ public:
     void attach(RenderTreePosition&, RenderPtr<RenderObject>);
     void attach(RenderElement& parent, RenderPtr<RenderObject>, RenderObject* beforeChild = nullptr);
 
-    RenderPtr<RenderObject> detach(RenderElement&, RenderObject&) WARN_UNUSED_RETURN;
+    enum class CanCollapseAnonymousBlock { No, Yes };
+    RenderPtr<RenderObject> detach(RenderElement&, RenderObject&, CanCollapseAnonymousBlock = CanCollapseAnonymousBlock::Yes) WARN_UNUSED_RETURN;
 
     void destroy(RenderObject& renderer);
 
@@ -80,7 +81,7 @@ private:
     void moveAllChildren(RenderBoxModelObject& from, RenderBoxModelObject& to, NormalizeAfterInsertion);
     void moveAllChildren(RenderBoxModelObject& from, RenderBoxModelObject& to, RenderObject* beforeChild, NormalizeAfterInsertion);
 
-    RenderObject* splitAnonymousBoxesAroundChild(RenderBox& parent, RenderObject* beforeChild);
+    RenderObject* splitAnonymousBoxesAroundChild(RenderBox& parent, RenderObject& originalBeforeChild);
     void makeChildrenNonInline(RenderBlock& parent, RenderObject* insertionPoint = nullptr);
     void removeAnonymousWrappersForInlineChildrenIfNeeded(RenderElement& parent);
 
@@ -94,7 +95,9 @@ private:
     class BlockFlow;
     class Inline;
     class SVG;
+#if ENABLE(MATHML)
     class MathML;
+#endif
     class Continuation;
 #if ENABLE(FULLSCREEN_API)
     class FullScreen;
@@ -110,7 +113,9 @@ private:
     BlockFlow& blockFlowBuilder() { return *m_blockFlowBuilder; }
     Inline& inlineBuilder() { return *m_inlineBuilder; }
     SVG& svgBuilder() { return *m_svgBuilder; }
+#if ENABLE(MATHML)
     MathML& mathMLBuilder() { return *m_mathMLBuilder; }
+#endif
     Continuation& continuationBuilder() { return *m_continuationBuilder; }
 #if ENABLE(FULLSCREEN_API)
     FullScreen& fullScreenBuilder() { return *m_fullScreenBuilder; }
@@ -130,7 +135,9 @@ private:
     std::unique_ptr<BlockFlow> m_blockFlowBuilder;
     std::unique_ptr<Inline> m_inlineBuilder;
     std::unique_ptr<SVG> m_svgBuilder;
+#if ENABLE(MATHML)
     std::unique_ptr<MathML> m_mathMLBuilder;
+#endif
     std::unique_ptr<Continuation> m_continuationBuilder;
 #if ENABLE(FULLSCREEN_API)
     std::unique_ptr<FullScreen> m_fullScreenBuilder;

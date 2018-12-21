@@ -143,7 +143,7 @@
 #define HAVE_VSPRINTF 1
 
 /* Define to 1 if you have the <xlocale.h> header file. */
-#define HAVE_XLOCALE_H 1
+/* #undef HAVE_XLOCALE_H */
 
 /* Define to 1 if you have the `_stat' function. */
 /* #undef HAVE__STAT */

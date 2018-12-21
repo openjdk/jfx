@@ -28,7 +28,7 @@
 
 #include "JavaInstanceJSC.h"
 #include "JSDOMBinding.h"
-#include <JavaScriptCore/ObjectPrototype.h>
+#include "JavaScriptCore/ObjectPrototype.h"
 
 namespace JSC {
 namespace Bindings {

@@ -33,6 +33,7 @@
 #include "Document.h"
 #include "ElementIterator.h"
 #include "FontCascade.h"
+#include "Logging.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGFontElement.h"
 #include "SVGFontFaceSrcElement.h"
@@ -43,8 +44,11 @@
 #include "StyleRule.h"
 #include "StyleScope.h"
 #include <math.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFontFaceElement);
 
 using namespace SVGNames;
 
@@ -53,7 +57,13 @@ inline SVGFontFaceElement::SVGFontFaceElement(const QualifiedName& tagName, Docu
     , m_fontFaceRule(StyleRuleFontFace::create(MutableStyleProperties::create(HTMLStandardMode)))
     , m_fontElement(nullptr)
 {
+    LOG(Fonts, "SVGFontFaceElement %p ctor", this);
     ASSERT(hasTagName(font_faceTag));
+}
+
+SVGFontFaceElement::~SVGFontFaceElement()
+{
+    LOG(Fonts, "SVGFontFaceElement %p dtor", this);
 }
 
 Ref<SVGFontFaceElement> SVGFontFaceElement::create(const QualifiedName& tagName, Document& document)

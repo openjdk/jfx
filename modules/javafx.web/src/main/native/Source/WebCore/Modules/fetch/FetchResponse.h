@@ -51,7 +51,7 @@ public:
 
     struct Init {
         unsigned short status { 200 };
-        String statusText { ASCIILiteral("OK") };
+        String statusText { "OK"_s };
         std::optional<FetchHeaders::Init> headers;
     };
 
@@ -93,6 +93,8 @@ public:
 
     bool isLoading() const { return !!m_bodyLoader; }
     bool isBodyReceivedByChunk() const { return isLoading() || hasReadableStreamBody(); }
+    bool isBlobBody() const { return !isBodyNull() && body().isBlob(); }
+    bool isBlobFormData() const { return !isBodyNull() && body().isFormData(); }
 
     using ConsumeDataByChunkCallback = WTF::Function<void(ExceptionOr<ReadableStreamChunk*>&&)>;
     void consumeBodyReceivedByChunk(ConsumeDataByChunkCallback&&);
@@ -104,6 +106,10 @@ public:
     uint64_t opaqueLoadIdentifier() const { return m_opaqueLoadIdentifier; }
 
     void initializeOpaqueLoadIdentifierForTesting() { m_opaqueLoadIdentifier = 1; }
+
+    const std::optional<ResourceError>& loadingError() const { return m_loadingError; }
+
+    const HTTPHeaderMap& internalResponseHeaders() const { return m_internalResponse.httpHeaderFields(); }
 
 private:
     FetchResponse(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);

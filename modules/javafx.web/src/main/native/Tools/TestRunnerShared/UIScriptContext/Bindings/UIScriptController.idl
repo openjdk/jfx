@@ -58,11 +58,10 @@ interface UIScriptController {
     void stylusUpAtPoint(long x, long y, object callback);
     void stylusTapAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
 
+    void enterText(DOMString text);
     void typeCharacterUsingHardwareKeyboard(DOMString character, object callback);
     void keyDownUsingHardwareKeyboard(DOMString character, object callback);
     void keyUpUsingHardwareKeyboard(DOMString character, object callback);
-
-    void selectTextCandidateAtIndex(long index, object callback);
 
     // eventsJSON describes a series of user events in JSON form. For the keys, see HIDEventGenerator.mm.
     // For example, this JSON describes a touch down followed by a touch up (i.e. a single tap).
@@ -177,6 +176,8 @@ interface UIScriptController {
     // Equivalent of pressing the Done button in the form accessory bar.
     void dismissFormAccessoryView();
 
+    readonly attribute DOMString textContentType;
+
     // Form control handling
     attribute object didStartFormControlInteractionCallback;
     attribute object didEndFormControlInteractionCallback;
@@ -187,6 +188,13 @@ interface UIScriptController {
 
     // <select> picker
     void selectFormAccessoryPickerRow(long rowIndex);
+    readonly attribute DOMString selectFormPopoverTitle;
+    readonly attribute DOMString formInputLabel;
+
+    void setTimePickerValue(long hour, long minute);
+
+    // <datalist>
+    readonly attribute boolean isShowingDataListSuggestions;
 
     void keyboardAccessoryBarNext();
     void keyboardAccessoryBarPrevious();
@@ -224,6 +232,9 @@ interface UIScriptController {
 
     readonly attribute object selectionRangeViewRects; // An array of objects with 'left', 'top', 'width', and 'height' properties.
     readonly attribute object textSelectionCaretRect; // An object with 'left', 'top', 'width', 'height' properties.
+    readonly attribute object selectionStartGrabberViewRect;
+    readonly attribute object selectionEndGrabberViewRect;
+
     readonly attribute object inputViewBounds;
 
     void replaceTextAtRange(DOMString text, long location, long length);
@@ -248,4 +259,8 @@ interface UIScriptController {
     void overridePreference(DOMString preference, DOMString value);
 
     void setSafeAreaInsets(double top, double right, double bottom, double left);
+
+    void firstResponderSuppressionForWebView(boolean shouldSuppress);
+    void makeWindowContentViewFirstResponder();
+    readonly attribute boolean isWindowContentViewFirstResponder;
 };

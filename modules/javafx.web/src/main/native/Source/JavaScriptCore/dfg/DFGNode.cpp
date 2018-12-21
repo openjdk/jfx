@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -83,25 +83,69 @@ bool Node::hasVariableAccessData(Graph& graph)
 
 void Node::remove(Graph& graph)
 {
-    if (flags() & NodeHasVarArgs) {
-        unsigned targetIndex = 0;
-        for (unsigned i = 0; i < numChildren(); ++i) {
-            Edge& edge = graph.varArgChild(this, i);
-            if (!edge)
-                continue;
-            if (edge.willHaveCheck()) {
-                Edge& dst = graph.varArgChild(this, targetIndex++);
-                std::swap(dst, edge);
-                continue;
-            }
-            edge = Edge();
+    switch (op()) {
+    case MultiGetByOffset: {
+        MultiGetByOffsetData& data = multiGetByOffsetData();
+        StructureSet set;
+        for (MultiGetByOffsetCase& getCase : data.cases) {
+            getCase.set().forEach(
+                [&] (RegisteredStructure structure) {
+                    set.add(structure.get());
+                });
         }
-        setOpAndDefaultFlags(CheckVarargs);
-        children.setNumChildren(targetIndex);
-    } else {
-        children = children.justChecks();
-        setOpAndDefaultFlags(Check);
+        convertToCheckStructure(graph.addStructureSet(set));
+        return;
     }
+
+    case MatchStructure: {
+        MatchStructureData& data = matchStructureData();
+        RegisteredStructureSet set;
+        for (MatchStructureVariant& variant : data.variants)
+            set.add(variant.structure);
+        convertToCheckStructure(graph.addStructureSet(set));
+        return;
+    }
+
+    default:
+        if (flags() & NodeHasVarArgs) {
+            unsigned targetIndex = 0;
+            for (unsigned i = 0; i < numChildren(); ++i) {
+                Edge& edge = graph.varArgChild(this, i);
+                if (!edge)
+                    continue;
+                if (edge.willHaveCheck()) {
+                    Edge& dst = graph.varArgChild(this, targetIndex++);
+                    std::swap(dst, edge);
+                    continue;
+                }
+                edge = Edge();
+            }
+            setOpAndDefaultFlags(CheckVarargs);
+            children.setNumChildren(targetIndex);
+        } else {
+            children = children.justChecks();
+            setOpAndDefaultFlags(Check);
+        }
+        return;
+    }
+}
+
+void Node::removeWithoutChecks()
+{
+    children = AdjacencyList();
+    setOpAndDefaultFlags(Check);
+}
+
+void Node::replaceWith(Graph& graph, Node* other)
+{
+    remove(graph);
+    setReplacement(other);
+}
+
+void Node::replaceWithWithoutChecks(Node* other)
+{
+    removeWithoutChecks();
+    setReplacement(other);
 }
 
 void Node::convertToIdentity()
@@ -224,12 +268,22 @@ void Node::convertToCallDOM(Graph& graph)
         clearFlags(NodeMustGenerate);
 }
 
-void Node::convertToRegExpExecNonGlobalOrSticky(FrozenValue* regExp)
+void Node::convertToRegExpExecNonGlobalOrStickyWithoutChecks(FrozenValue* regExp)
 {
     ASSERT(op() == RegExpExec);
     setOpAndDefaultFlags(RegExpExecNonGlobalOrSticky);
     children.child1() = Edge(children.child1().node(), KnownCellUse);
-    children.child2() = Edge(children.child3().node(), StringUse);
+    children.child2() = Edge(children.child3().node(), KnownStringUse);
+    children.child3() = Edge();
+    m_opInfo = regExp;
+}
+
+void Node::convertToRegExpMatchFastGlobalWithoutChecks(FrozenValue* regExp)
+{
+    ASSERT(op() == RegExpMatchFast);
+    setOpAndDefaultFlags(RegExpMatchFastGlobal);
+    children.child1() = Edge(children.child1().node(), KnownCellUse);
+    children.child2() = Edge(children.child3().node(), KnownStringUse);
     children.child3() = Edge();
     m_opInfo = regExp;
 }

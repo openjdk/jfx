@@ -29,6 +29,7 @@
 
 #include "JSArrayBuffer.h"
 #include "JSCJSValue.h"
+#include "JSSourceCode.h"
 #include "WebAssemblyFunction.h"
 #include "WebAssemblyWrapperFunction.h"
 
@@ -42,29 +43,35 @@ ALWAYS_INLINE uint32_t toNonWrappingUint32(ExecState* exec, JSValue value)
     RETURN_IF_EXCEPTION(throwScope, { });
     if (doubleValue < 0 || doubleValue > UINT_MAX) {
         throwException(exec, throwScope,
-            createRangeError(exec, ASCIILiteral("Expect an integer argument in the range: [0, 2^32 - 1]")));
+            createRangeError(exec, "Expect an integer argument in the range: [0, 2^32 - 1]"_s));
         return { };
     }
 
     return static_cast<uint32_t>(doubleValue);
 }
 
-ALWAYS_INLINE std::pair<uint8_t*, size_t> getWasmBufferFromValue(ExecState* exec, JSValue value)
+ALWAYS_INLINE std::pair<const uint8_t*, size_t> getWasmBufferFromValue(ExecState* exec, JSValue value)
 {
     VM& vm = exec->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    if (auto* source = jsDynamicCast<JSSourceCode*>(vm, value)) {
+        auto* provider = static_cast<WebAssemblySourceProvider*>(source->sourceCode().provider());
+        return { provider->data().data(), provider->data().size() };
+    }
+
     // If the given bytes argument is not a BufferSource, a TypeError exception is thrown.
     JSArrayBuffer* arrayBuffer = value.getObject() ? jsDynamicCast<JSArrayBuffer*>(vm, value.getObject()) : nullptr;
     JSArrayBufferView* arrayBufferView = value.getObject() ? jsDynamicCast<JSArrayBufferView*>(vm, value.getObject()) : nullptr;
     if (!(arrayBuffer || arrayBufferView)) {
         throwException(exec, throwScope, createTypeError(exec,
-            ASCIILiteral("first argument must be an ArrayBufferView or an ArrayBuffer"), defaultSourceAppender, runtimeTypeForValue(value)));
+            "first argument must be an ArrayBufferView or an ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(vm, value)));
         return { nullptr, 0 };
     }
 
     if (arrayBufferView ? arrayBufferView->isNeutered() : arrayBuffer->impl()->isNeutered()) {
         throwException(exec, throwScope, createTypeError(exec,
-            ASCIILiteral("underlying TypedArray has been detatched from the ArrayBuffer"), defaultSourceAppender, runtimeTypeForValue(value)));
+            "underlying TypedArray has been detatched from the ArrayBuffer"_s, defaultSourceAppender, runtimeTypeForValue(vm, value)));
         return { nullptr, 0 };
     }
 
@@ -76,7 +83,7 @@ ALWAYS_INLINE std::pair<uint8_t*, size_t> getWasmBufferFromValue(ExecState* exec
 ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, ExecState* exec, JSValue value)
 {
     auto throwScope = DECLARE_THROW_SCOPE(vm);
-    uint8_t* data;
+    const uint8_t* data;
     size_t byteSize;
     std::tie(data, byteSize) = getWasmBufferFromValue(exec, value);
     RETURN_IF_EXCEPTION(throwScope, Vector<uint8_t>());
@@ -94,12 +101,12 @@ ALWAYS_INLINE Vector<uint8_t> createSourceBufferFromValue(VM& vm, ExecState* exe
 
 ALWAYS_INLINE bool isWebAssemblyHostFunction(VM& vm, JSObject* object, WebAssemblyFunction*& wasmFunction, WebAssemblyWrapperFunction*& wasmWrapperFunction)
 {
-    if (object->inherits(vm, WebAssemblyFunction::info())) {
+    if (object->inherits<WebAssemblyFunction>(vm)) {
         wasmFunction = jsCast<WebAssemblyFunction*>(object);
         wasmWrapperFunction = nullptr;
         return true;
     }
-    if (object->inherits(vm, WebAssemblyWrapperFunction::info())) {
+    if (object->inherits<WebAssemblyWrapperFunction>(vm)) {
         wasmWrapperFunction = jsCast<WebAssemblyWrapperFunction*>(object);
         wasmFunction = nullptr;
         return true;

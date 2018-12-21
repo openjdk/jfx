@@ -44,9 +44,7 @@ class HeapSnapshotBuilder;
 class MarkedBlock;
 class MarkingConstraint;
 class MarkingConstraintSolver;
-class UnconditionalFinalizer;
 template<typename T> class Weak;
-class WeakReferenceHarvester;
 template<typename T, typename Traits> class WriteBarrierBase;
 
 typedef uint32_t HeapVersion;
@@ -140,9 +138,6 @@ public:
 #if ENABLE(RESOURCE_USAGE)
     void reportExternalMemoryVisited(size_t);
 #endif
-
-    void addWeakReferenceHarvester(WeakReferenceHarvester*);
-    void addUnconditionalFinalizer(UnconditionalFinalizer*);
 
     void dump(PrintStream&) const;
 

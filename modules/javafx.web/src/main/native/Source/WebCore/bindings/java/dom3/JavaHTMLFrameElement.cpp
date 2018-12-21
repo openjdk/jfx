@@ -31,11 +31,12 @@
 #include <WebCore/Document.h>
 #include <WebCore/HTMLFrameElement.h>
 #include <WebCore/HTMLNames.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
+#include "AbstractViewInternal.h"
 #include "JavaDOMUtils.h"
 #include <wtf/java/JavaEnv.h>
 
@@ -152,7 +153,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getContentD
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getContentWindowImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->contentWindow()));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(toDOMWindow(IMPL->contentWindow())));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLFrameElementImpl_getLocationImpl(JNIEnv* env, jclass, jlong peer)

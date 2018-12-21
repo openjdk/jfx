@@ -31,7 +31,7 @@
 #include <WebCore/CSSRuleList.h>
 #include "DOMException.h"
 #include <WebCore/MediaList.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

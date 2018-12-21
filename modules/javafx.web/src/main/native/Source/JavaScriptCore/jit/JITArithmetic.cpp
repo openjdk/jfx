@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -241,7 +241,7 @@ void JIT::emit_op_unsigned(Instruction* currentInstruction)
     emitGetVirtualRegister(op1, regT0);
     emitJumpSlowCaseIfNotInt(regT0);
     addSlowCase(branch32(LessThan, regT0, TrustedImm32(0)));
-    emitTagInt(regT0, regT0);
+    boxInt32(regT0, JSValueRegs { regT0 });
     emitPutVirtualRegister(result, regT0);
 }
 
@@ -254,7 +254,7 @@ void JIT::emit_compareAndJump(OpcodeID, int op1, int op2, unsigned target, Relat
 
     if (isOperandConstantChar(op1)) {
         emitGetVirtualRegister(op2, regT0);
-        addSlowCase(emitJumpIfNotJSCell(regT0));
+        addSlowCase(branchIfNotCell(regT0));
         JumpList failures;
         emitLoadCharacterString(regT0, regT0, failures);
         addSlowCase(failures);
@@ -263,7 +263,7 @@ void JIT::emit_compareAndJump(OpcodeID, int op1, int op2, unsigned target, Relat
     }
     if (isOperandConstantChar(op2)) {
         emitGetVirtualRegister(op1, regT0);
-        addSlowCase(emitJumpIfNotJSCell(regT0));
+        addSlowCase(branchIfNotCell(regT0));
         JumpList failures;
         emitLoadCharacterString(regT0, regT0, failures);
         addSlowCase(failures);
@@ -322,7 +322,7 @@ void JIT::emit_compareUnsigned(int dst, int op1, int op2, RelationalCondition co
         emitGetVirtualRegisters(op1, regT0, op2, regT1);
         compare32(condition, regT0, regT1, regT0);
     }
-    emitTagBool(regT0);
+    boxBoolean(regT0, JSValueRegs { regT0 });
     emitPutVirtualRegister(dst);
 }
 
@@ -354,7 +354,7 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
         linkAllSlowCases(iter);
 
         if (supportsFloatingPoint()) {
-            Jump fail1 = emitJumpIfNotNumber(regT0);
+            Jump fail1 = branchIfNotNumber(regT0);
             add64(tagTypeNumberRegister, regT0);
             move64ToDouble(regT0, fpRegT0);
 
@@ -380,7 +380,7 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
         linkAllSlowCases(iter);
 
         if (supportsFloatingPoint()) {
-            Jump fail1 = emitJumpIfNotNumber(regT1);
+            Jump fail1 = branchIfNotNumber(regT1);
             add64(tagTypeNumberRegister, regT1);
             move64ToDouble(regT1, fpRegT1);
 
@@ -405,9 +405,9 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
     linkSlowCase(iter); // LHS is not Int.
 
     if (supportsFloatingPoint()) {
-        Jump fail1 = emitJumpIfNotNumber(regT0);
-        Jump fail2 = emitJumpIfNotNumber(regT1);
-        Jump fail3 = emitJumpIfInt(regT1);
+        Jump fail1 = branchIfNotNumber(regT0);
+        Jump fail2 = branchIfNotNumber(regT1);
+        Jump fail3 = branchIfInt32(regT1);
         add64(tagTypeNumberRegister, regT0);
         add64(tagTypeNumberRegister, regT1);
         move64ToDouble(regT0, fpRegT0);
@@ -434,7 +434,7 @@ void JIT::emit_op_inc(Instruction* currentInstruction)
     emitGetVirtualRegister(srcDst, regT0);
     emitJumpSlowCaseIfNotInt(regT0);
     addSlowCase(branchAdd32(Overflow, TrustedImm32(1), regT0));
-    emitTagInt(regT0, regT0);
+    boxInt32(regT0, JSValueRegs { regT0 });
     emitPutVirtualRegister(srcDst);
 }
 
@@ -445,7 +445,7 @@ void JIT::emit_op_dec(Instruction* currentInstruction)
     emitGetVirtualRegister(srcDst, regT0);
     emitJumpSlowCaseIfNotInt(regT0);
     addSlowCase(branchSub32(Overflow, TrustedImm32(1), regT0));
-    emitTagInt(regT0, regT0);
+    boxInt32(regT0, JSValueRegs { regT0 });
     emitPutVirtualRegister(srcDst);
 }
 
@@ -480,7 +480,7 @@ void JIT::emit_op_mod(Instruction* currentInstruction)
     Jump numeratorPositive = branch32(GreaterThanOrEqual, regT4, TrustedImm32(0));
     addSlowCase(branchTest32(Zero, edx));
     numeratorPositive.link(this);
-    emitTagInt(edx, regT0);
+    boxInt32(edx, JSValueRegs { regT0 });
     emitPutVirtualRegister(result);
 }
 
@@ -514,7 +514,7 @@ void JIT::emitSlow_op_mod(Instruction*, Vector<SlowCaseEntry>::iterator&)
 void JIT::emit_op_negate(Instruction* currentInstruction)
 {
     ArithProfile* arithProfile = m_codeBlock->arithProfileForPC(currentInstruction);
-    JITNegIC* negateIC = m_codeBlock->addJITNegIC(arithProfile);
+    JITNegIC* negateIC = m_codeBlock->addJITNegIC(arithProfile, currentInstruction);
     m_instructionToMathIC.add(currentInstruction, negateIC);
     emitMathICFast(negateIC, currentInstruction, operationArithNegateProfiled, operationArithNegate);
 }
@@ -662,7 +662,7 @@ ALWAYS_INLINE static OperandTypes getOperandTypes(Instruction* instruction)
 void JIT::emit_op_add(Instruction* currentInstruction)
 {
     ArithProfile* arithProfile = m_codeBlock->arithProfileForPC(currentInstruction);
-    JITAddIC* addIC = m_codeBlock->addJITAddIC(arithProfile);
+    JITAddIC* addIC = m_codeBlock->addJITAddIC(arithProfile, currentInstruction);
     m_instructionToMathIC.add(currentInstruction, addIC);
     emitMathICFast(addIC, currentInstruction, operationValueAddProfiled, operationValueAdd);
 }
@@ -707,9 +707,9 @@ void JIT::emitMathICFast(JITUnaryMathIC<Generator>* mathIC, Instruction* current
     if (!generatedInlineCode) {
         ArithProfile* arithProfile = mathIC->arithProfile();
         if (arithProfile && shouldEmitProfiling())
-            callOperation(profiledFunction, resultRegs, srcRegs, arithProfile);
+            callOperationWithResult(profiledFunction, resultRegs, srcRegs, arithProfile);
         else
-            callOperation(nonProfiledFunction, resultRegs, srcRegs);
+            callOperationWithResult(nonProfiledFunction, resultRegs, srcRegs);
     } else
         addSlowCase(mathICGenerationState.slowPathJumps);
 
@@ -780,9 +780,9 @@ void JIT::emitMathICFast(JITBinaryMathIC<Generator>* mathIC, Instruction* curren
             emitGetVirtualRegister(op2, rightRegs);
         ArithProfile* arithProfile = mathIC->arithProfile();
         if (arithProfile && shouldEmitProfiling())
-            callOperation(profiledFunction, resultRegs, leftRegs, rightRegs, arithProfile);
+            callOperationWithResult(profiledFunction, resultRegs, leftRegs, rightRegs, arithProfile);
         else
-            callOperation(nonProfiledFunction, resultRegs, leftRegs, rightRegs);
+            callOperationWithResult(nonProfiledFunction, resultRegs, leftRegs, rightRegs);
     } else
         addSlowCase(mathICGenerationState.slowPathJumps);
 
@@ -820,11 +820,11 @@ void JIT::emitMathICSlow(JITUnaryMathIC<Generator>* mathIC, Instruction* current
     ArithProfile* arithProfile = mathIC->arithProfile();
     if (arithProfile && shouldEmitProfiling()) {
         if (mathICGenerationState.shouldSlowPathRepatch)
-            mathICGenerationState.slowPathCall = callOperation(reinterpret_cast<J_JITOperation_EJMic>(profiledRepatchFunction), resultRegs, srcRegs, TrustedImmPtr(mathIC));
+            mathICGenerationState.slowPathCall = callOperationWithResult(reinterpret_cast<J_JITOperation_EJMic>(profiledRepatchFunction), resultRegs, srcRegs, TrustedImmPtr(mathIC));
         else
-            mathICGenerationState.slowPathCall = callOperation(profiledFunction, resultRegs, srcRegs, arithProfile);
+            mathICGenerationState.slowPathCall = callOperationWithResult(profiledFunction, resultRegs, srcRegs, arithProfile);
     } else
-        mathICGenerationState.slowPathCall = callOperation(reinterpret_cast<J_JITOperation_EJMic>(repatchFunction), resultRegs, srcRegs, TrustedImmPtr(mathIC));
+        mathICGenerationState.slowPathCall = callOperationWithResult(reinterpret_cast<J_JITOperation_EJMic>(repatchFunction), resultRegs, srcRegs, TrustedImmPtr(mathIC));
 
 #if ENABLE(MATH_IC_STATS)
     auto slowPathEnd = label();
@@ -886,11 +886,11 @@ void JIT::emitMathICSlow(JITBinaryMathIC<Generator>* mathIC, Instruction* curren
     ArithProfile* arithProfile = mathIC->arithProfile();
     if (arithProfile && shouldEmitProfiling()) {
         if (mathICGenerationState.shouldSlowPathRepatch)
-            mathICGenerationState.slowPathCall = callOperation(bitwise_cast<J_JITOperation_EJJMic>(profiledRepatchFunction), resultRegs, leftRegs, rightRegs, TrustedImmPtr(mathIC));
+            mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_EJJMic>(profiledRepatchFunction), resultRegs, leftRegs, rightRegs, TrustedImmPtr(mathIC));
         else
-            mathICGenerationState.slowPathCall = callOperation(profiledFunction, resultRegs, leftRegs, rightRegs, arithProfile);
+            mathICGenerationState.slowPathCall = callOperationWithResult(profiledFunction, resultRegs, leftRegs, rightRegs, arithProfile);
     } else
-        mathICGenerationState.slowPathCall = callOperation(bitwise_cast<J_JITOperation_EJJMic>(repatchFunction), resultRegs, leftRegs, rightRegs, TrustedImmPtr(mathIC));
+        mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_EJJMic>(repatchFunction), resultRegs, leftRegs, rightRegs, TrustedImmPtr(mathIC));
 
 #if ENABLE(MATH_IC_STATS)
     auto slowPathEnd = label();
@@ -977,7 +977,7 @@ void JIT::emit_op_div(Instruction* currentInstruction)
 void JIT::emit_op_mul(Instruction* currentInstruction)
 {
     ArithProfile* arithProfile = m_codeBlock->arithProfileForPC(currentInstruction);
-    JITMulIC* mulIC = m_codeBlock->addJITMulIC(arithProfile);
+    JITMulIC* mulIC = m_codeBlock->addJITMulIC(arithProfile, currentInstruction);
     m_instructionToMathIC.add(currentInstruction, mulIC);
     emitMathICFast(mulIC, currentInstruction, operationValueMulProfiled, operationValueMul);
 }
@@ -993,7 +993,7 @@ void JIT::emitSlow_op_mul(Instruction* currentInstruction, Vector<SlowCaseEntry>
 void JIT::emit_op_sub(Instruction* currentInstruction)
 {
     ArithProfile* arithProfile = m_codeBlock->arithProfileForPC(currentInstruction);
-    JITSubIC* subIC = m_codeBlock->addJITSubIC(arithProfile);
+    JITSubIC* subIC = m_codeBlock->addJITSubIC(arithProfile, currentInstruction);
     m_instructionToMathIC.add(currentInstruction, subIC);
     emitMathICFast(subIC, currentInstruction, operationValueSubProfiled, operationValueSub);
 }

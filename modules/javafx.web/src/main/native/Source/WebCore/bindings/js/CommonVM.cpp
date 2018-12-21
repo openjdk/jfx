@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CommonVM.h"
 
+#include "DOMWindow.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Frame.h"
 #include "ScriptController.h"
@@ -40,43 +41,45 @@
 #include "WebCoreThreadInternal.h"
 #endif
 
-
 namespace WebCore {
-using namespace JSC;
 
-VM* g_commonVMOrNull;
+JSC::VM* g_commonVMOrNull;
 
-VM& commonVMSlow()
+JSC::VM& commonVMSlow()
 {
     ASSERT(isMainThread());
     ASSERT(!g_commonVMOrNull);
 
     ScriptController::initializeThreading();
-    g_commonVMOrNull = &VM::createLeaked(LargeHeap).leakRef();
-    g_commonVMOrNull->heap.acquireAccess(); // At any time, we may do things that affect the GC.
+
+    auto& vm = JSC::VM::create(JSC::LargeHeap).leakRef();
+
+    g_commonVMOrNull = &vm;
+
+    vm.heap.acquireAccess(); // At any time, we may do things that affect the GC.
+
 #if PLATFORM(IOS)
-    g_commonVMOrNull->setRunLoop(WebThreadRunLoop());
-    g_commonVMOrNull->heap.machineThreads().addCurrentThread();
+    vm.setRunLoop(WebThreadRunLoop());
+    vm.heap.machineThreads().addCurrentThread();
 #endif
 
-    g_commonVMOrNull->setGlobalConstRedeclarationShouldThrow(DeprecatedGlobalSettings::globalConstRedeclarationShouldThrow());
+    vm.setGlobalConstRedeclarationShouldThrow(DeprecatedGlobalSettings::globalConstRedeclarationShouldThrow());
 
-    JSVMClientData::initNormalWorld(g_commonVMOrNull);
+    JSVMClientData::initNormalWorld(&vm);
 
-    return *g_commonVMOrNull;
+    return vm;
 }
 
 Frame* lexicalFrameFromCommonVM()
 {
     if (auto* topCallFrame = commonVM().topCallFrame) {
         if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject())) {
-            if (auto* window = jsDynamicDowncast<JSDOMWindow*>(commonVM(), globalObject)) {
+            if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(commonVM(), globalObject)) {
                 if (auto* frame = window->wrapped().frame())
                     return frame;
             }
         }
     }
-
     return nullptr;
 }
 

@@ -25,7 +25,6 @@
 
 enum AnimationPlayState {
     "idle",
-    "pending",
     "running",
     "paused",
     "finished"
@@ -35,23 +34,24 @@ enum AnimationPlayState {
     ActiveDOMObject,
     EnabledAtRuntime=WebAnimations,
     InterfaceName=Animation,
-    CustomConstructor()
+    CustomConstructor(),
+    CustomToJSObject
 ] interface WebAnimation : EventTarget {
     attribute DOMString id;
-    attribute AnimationEffect? effect;
+    attribute AnimationEffectReadOnly? effect;
     attribute AnimationTimeline? timeline;
     [ImplementedAs=bindingsStartTime] attribute double? startTime;
     [MayThrowException, ImplementedAs=bindingsCurrentTime] attribute double? currentTime;
     attribute double playbackRate;
-    readonly attribute AnimationPlayState playState;
-    readonly attribute boolean pending;
+    [ImplementedAs=bindingsPlayState] readonly attribute AnimationPlayState playState;
+    [ImplementedAs=bindingsPending] readonly attribute boolean pending;
     attribute EventHandler onfinish;
     attribute EventHandler oncancel;
-    readonly attribute Promise<WebAnimation> ready;
-    readonly attribute Promise<WebAnimation> finished;
+    [ImplementedAs=bindingsReady] readonly attribute Promise<WebAnimation> ready;
+    [ImplementedAs=bindingsFinished] readonly attribute Promise<WebAnimation> finished;
     void cancel();
     [MayThrowException] void finish();
-    [MayThrowException] void play();
-    [MayThrowException] void pause();
+    [MayThrowException, ImplementedAs=bindingsPlay] void play();
+    [MayThrowException, ImplementedAs=bindingsPause] void pause();
     [MayThrowException] void reverse();
 };

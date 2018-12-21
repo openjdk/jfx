@@ -475,6 +475,11 @@ ext.IS_INCLUDE_ES2 = Boolean.parseBoolean(INCLUDE_ES2)
 defineProperty("JCOV", "false")
 ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 
+// Specifies whether to use Cygwin when building OpenJFX. This should only ever
+// be set to false for development builds (that skip building media and webkit).
+defineProperty("USE_CYGWIN", "true")
+ext.IS_USE_CYGWIN = Boolean.parseBoolean(USE_CYGWIN)
+
 // Define the number of threads to use when compiling (specifically for native compilation)
 // On Mac we limit it to 1 by default due to problems running gcc in parallel
 if (IS_MAC) {
@@ -4007,7 +4012,7 @@ compileTargets { t ->
         // Need to modify file permissions Windows to make sure that the
         // execute bit is set, and that the files are world readable
         def chmodArtifactsSdkTask = task("chmodArtifactsSdk$t.capital", dependsOn: copyArtifactsSdkTask) {
-            if (IS_WINDOWS) {
+            if (IS_WINDOWS && IS_USE_CYGWIN) {
                 doLast {
                     exec {
                         workingDir(sdkArtifactsDir)

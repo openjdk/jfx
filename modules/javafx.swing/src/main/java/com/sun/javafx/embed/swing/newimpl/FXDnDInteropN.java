@@ -27,7 +27,6 @@ package com.sun.javafx.embed.swing.newimpl;
 
 import com.sun.javafx.embed.swing.CachingTransferable;
 import com.sun.javafx.embed.swing.FXDnD;
-import com.sun.javafx.embed.swing.FXDnDInterop;
 import com.sun.javafx.embed.swing.SwingDnD;
 import com.sun.javafx.embed.swing.SwingEvents;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
@@ -65,7 +64,7 @@ import jdk.swing.interop.DragSourceContextWrapper;
 import jdk.swing.interop.DropTargetContextWrapper;
 import jdk.swing.interop.LightweightFrameWrapper;
 
-public class FXDnDInteropN extends FXDnDInterop {
+public class FXDnDInteropN {
 
     public Component findComponentAt(Object frame, int x, int y,
                                               boolean ignoreEnabled) {

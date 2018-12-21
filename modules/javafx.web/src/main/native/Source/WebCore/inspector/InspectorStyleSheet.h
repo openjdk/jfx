@@ -53,10 +53,10 @@ public:
 
     explicit InspectorCSSId(const JSON::Object& value)
     {
-        if (!value.getString(ASCIILiteral("styleSheetId"), m_styleSheetId))
+        if (!value.getString("styleSheetId"_s, m_styleSheetId))
             return;
 
-        if (!value.getInteger(ASCIILiteral("ordinal"), m_ordinal))
+        if (!value.getInteger("ordinal"_s, m_ordinal))
             m_styleSheetId = String();
     }
 
@@ -198,7 +198,7 @@ protected:
 
     // Also accessed by friend class InspectorStyle.
     virtual ExceptionOr<void> setStyleText(CSSStyleDeclaration*, const String&);
-    virtual std::unique_ptr<Vector<size_t>> lineEndings() const;
+    virtual Vector<size_t> lineEndings() const;
 
 private:
     typedef Vector<RefPtr<CSSStyleRule>> CSSStyleRuleVector;
@@ -246,7 +246,7 @@ protected:
 
     // Also accessed by friend class InspectorStyle.
     ExceptionOr<void> setStyleText(CSSStyleDeclaration*, const String&) final;
-    std::unique_ptr<Vector<size_t>> lineEndings() const final;
+    Vector<size_t> lineEndings() const final;
 
 private:
     CSSStyleDeclaration& inlineStyle() const;

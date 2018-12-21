@@ -63,12 +63,16 @@ void initializeThreading()
         WTF::initializeThreading();
         Options::initialize();
         initializePoison();
+
 #if ENABLE(WRITE_BARRIER_PROFILING)
         WriteBarrierCounters::initialize();
 #endif
+
 #if ENABLE(ASSEMBLER)
         ExecutableAllocator::initializeAllocator();
 #endif
+        VM::computeCanUseJIT();
+
         LLInt::initialize();
 #ifndef NDEBUG
         DisallowGC::initialize();
@@ -81,6 +85,9 @@ void initializeThreading()
 #if ENABLE(WEBASSEMBLY)
         Wasm::Thunks::initialize();
 #endif
+
+        if (VM::isInMiniMode())
+            WTF::fastEnableMiniMode();
     });
 }
 

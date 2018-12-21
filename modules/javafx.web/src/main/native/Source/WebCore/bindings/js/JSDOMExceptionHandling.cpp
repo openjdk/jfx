@@ -28,7 +28,6 @@
 #include "JSDOMException.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSDOMWindow.h"
-#include "JSDynamicDowncast.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/ErrorHandlingScope.h>
 #include <JavaScriptCore/Exception.h>
@@ -44,7 +43,7 @@ void reportException(ExecState* exec, JSValue exceptionValue, CachedScript* cach
 {
     VM& vm = exec->vm();
     RELEASE_ASSERT(vm.currentThreadIsHoldingAPILock());
-    auto* exception = jsDynamicDowncast<JSC::Exception*>(vm, exceptionValue);
+    auto* exception = jsDynamicCast<JSC::Exception*>(vm, exceptionValue);
     if (!exception) {
         exception = vm.lastException();
         if (!exception)
@@ -59,7 +58,7 @@ String retrieveErrorMessage(ExecState& state, VM& vm, JSValue exception, CatchSc
     // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions
     // If this is a custom exception object, call toString on it to try and get a nice string representation for the exception.
     String errorMessage;
-    if (auto* error = jsDynamicDowncast<ErrorInstance*>(vm, exception))
+    if (auto* error = jsDynamicCast<ErrorInstance*>(vm, exception))
         errorMessage = error->sanitizedToString(&state);
     else
         errorMessage = exception.toWTFString(&state);
@@ -87,7 +86,7 @@ void reportException(ExecState* exec, JSC::Exception* exception, CachedScript* c
     vm.clearLastException();
 
     auto* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
-    if (auto* window = jsDynamicDowncast<JSDOMWindow*>(vm, globalObject)) {
+    if (auto* window = jsDynamicCast<JSDOMWindow*>(vm, globalObject)) {
         if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
     }
@@ -135,7 +134,7 @@ JSValue createDOMException(ExecState* exec, ExceptionCode ec, const String& mess
 
     if (ec == RangeError) {
         if (message.isEmpty())
-            return createRangeError(exec, ASCIILiteral("Bad value"));
+            return createRangeError(exec, "Bad value"_s);
         return createRangeError(exec, message);
     }
 
@@ -256,12 +255,12 @@ JSC::EncodedJSValue throwConstructorScriptExecutionContextUnavailableError(JSC::
 
 void throwSequenceTypeError(JSC::ExecState& state, JSC::ThrowScope& scope)
 {
-    throwTypeError(state, scope, ASCIILiteral("Value is not a sequence"));
+    throwTypeError(state, scope, "Value is not a sequence"_s);
 }
 
 void throwNonFiniteTypeError(ExecState& state, JSC::ThrowScope& scope)
 {
-    throwTypeError(&state, scope, ASCIILiteral("The provided value is non-finite"));
+    throwTypeError(&state, scope, "The provided value is non-finite"_s);
 }
 
 String makeGetterTypeErrorMessage(const char* interfaceName, const char* attributeName)

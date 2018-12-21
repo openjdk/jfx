@@ -110,6 +110,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/iso"
     "${WEBCORE_DIR}/platform/graphics/opentype"
     "${WEBCORE_DIR}/platform/graphics/transforms"
+    "${WEBCORE_DIR}/platform/mediacapabilities"
     "${WEBCORE_DIR}/platform/mediastream"
     "${WEBCORE_DIR}/platform/mediastream/libwebrtc"
     "${WEBCORE_DIR}/platform/mock"
@@ -118,6 +119,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/sql"
     "${WEBCORE_DIR}/platform/text"
     "${WEBCORE_DIR}/platform/text/icu"
+    "${WEBCORE_DIR}/platform/vr"
     "${WEBCORE_DIR}/plugins"
     "${WEBCORE_DIR}/rendering"
     "${WEBCORE_DIR}/rendering/line"
@@ -142,14 +144,13 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/xml"
     "${WEBCORE_DIR}/xml/parser"
     "${DERIVED_SOURCES_WEBCORE_DIR}"
-    "${PAL_DIR}"
 )
 
 set(WebCore_SYSTEM_INCLUDE_DIRECTORIES
     ${ICU_INCLUDE_DIRS}
     ${LIBXML2_INCLUDE_DIR}
     ${LIBXSLT_INCLUDE_DIR}
-    ${SQLITE_INCLUDE_DIRS}
+    ${SQLITE_INCLUDE_DIR}
     ${ZLIB_INCLUDE_DIRS}
 )
 
@@ -439,21 +440,30 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/webvr/VRPose.idl
     Modules/webvr/VRStageParameters.idl
 
+    accessibility/AccessibilityRole.idl
+    accessibility/AccessibleSetValueEvent.idl
+    accessibility/AriaAttributes.idl
+
     animation/Animatable.idl
-    animation/AnimationEffect.idl
+    animation/AnimationEffectReadOnly.idl
     animation/AnimationEffectTiming.idl
     animation/AnimationEffectTimingProperties.idl
+    animation/AnimationEffectTimingReadOnly.idl
     animation/AnimationPlaybackEvent.idl
     animation/AnimationPlaybackEventInit.idl
     animation/AnimationTimeline.idl
+    animation/CSSAnimation.idl
+    animation/CSSTransition.idl
     animation/CompositeOperation.idl
     animation/ComputedTimingProperties.idl
     animation/DocumentTimeline.idl
+    animation/DocumentTimelineOptions.idl
     animation/FillMode.idl
     animation/IterationCompositeOperation.idl
     animation/KeyframeAnimationOptions.idl
     animation/KeyframeEffect.idl
     animation/KeyframeEffectOptions.idl
+    animation/KeyframeEffectReadOnly.idl
     animation/PlaybackDirection.idl
     animation/WebAnimation.idl
 
@@ -813,7 +823,9 @@ set(WebCore_NON_SVG_IDL_FILES
     page/PerformanceObserverEntryList.idl
     page/PerformanceNavigation.idl
     page/PerformanceResourceTiming.idl
+    page/PerformanceServerTiming.idl
     page/PerformanceTiming.idl
+    page/RemoteDOMWindow.idl
     page/Screen.idl
     page/ScrollToOptions.idl
     page/VisualViewport.idl
@@ -933,6 +945,7 @@ set(WebCore_SVG_IDL_FILES
     svg/SVGFontFaceUriElement.idl
     svg/SVGForeignObjectElement.idl
     svg/SVGGElement.idl
+    svg/SVGGeometryElement.idl
     svg/SVGGlyphElement.idl
     svg/SVGGlyphRefElement.idl
     svg/SVGGradientElement.idl
@@ -1161,6 +1174,7 @@ if (ENABLE_WEBGL)
         html/canvas/OESVertexArrayObject.cpp
         html/canvas/WebGL2RenderingContext.cpp
         html/canvas/WebGLBuffer.cpp
+        html/canvas/WebGLCompressedTextureASTC.cpp
         html/canvas/WebGLCompressedTextureATC.cpp
         html/canvas/WebGLCompressedTexturePVRTC.cpp
         html/canvas/WebGLCompressedTextureS3TC.cpp
@@ -1209,6 +1223,7 @@ if (ENABLE_WEBGL)
         html/canvas/WebGL2RenderingContext.idl
         html/canvas/WebGLActiveInfo.idl
         html/canvas/WebGLBuffer.idl
+        html/canvas/WebGLCompressedTextureASTC.idl
         html/canvas/WebGLCompressedTextureATC.idl
         html/canvas/WebGLCompressedTexturePVRTC.idl
         html/canvas/WebGLCompressedTextureS3TC.idl
@@ -1340,7 +1355,7 @@ if (ENABLE_GRAPHICS_CONTEXT_3D)
                 ${OPENGL_LIBRARIES}
             )
             add_definitions(${OPENGL_DEFINITIONS})
-        elseif (USE_OPENGL_ES_2)
+        elseif (USE_OPENGL_ES)
             list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
                 ${OPENGLES2_INCLUDE_DIRS}
             )
@@ -1524,6 +1539,7 @@ endif ()
 
 if (USE_OPENVR)
   list(APPEND WebCore_INCLUDE_DIRECTORIES "${THIRDPARTY_DIR}/openvr/headers")
+  list(APPEND WebCore_INCLUDE_DIRECTORIES "${WEBCORE_DIR}/platform/vr/openvr")
   list(APPEND WebCore_LIBRARIES openvr_api)
 endif ()
 
@@ -1535,6 +1551,17 @@ endif ()
 if (USE_XDGMIME)
     list(APPEND WebCore_INCLUDE_DIRECTORIES "${THIRDPARTY_DIR}/xdgmime/src")
     list(APPEND WebCore_LIBRARIES xdgmime)
+endif ()
+
+if (USE_LIBWEBRTC)
+  list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES "${THIRDPARTY_DIR}/libwebrtc/Source/"
+      "${THIRDPARTY_DIR}/libwebrtc/Source/webrtc")
+  list(APPEND WebCore_LIBRARIES webrtc)
+  list(APPEND WebCore_SOURCES
+      Modules/mediastream/libwebrtc/LibWebRTCDataChannelHandler.cpp
+      Modules/mediastream/libwebrtc/LibWebRTCMediaEndpoint.cpp
+      Modules/mediastream/libwebrtc/LibWebRTCPeerConnectionBackend.cpp
+      )
 endif ()
 
 set(WebCoreTestSupport_INCLUDE_DIRECTORIES
@@ -1575,6 +1602,7 @@ list(APPEND WebCoreTestSupport_SOURCES
     testing/MockCDMFactory.cpp
     testing/MockGamepad.cpp
     testing/MockGamepadProvider.cpp
+    testing/MockLibWebRTCPeerConnection.cpp
     testing/MockPageOverlay.cpp
     testing/MockPageOverlayClient.cpp
     testing/ServiceWorkerInternals.cpp
@@ -1707,7 +1735,7 @@ add_custom_command(
     DEPENDS ${WebCore_CSS_VALUE_KEYWORDS}
     WORKING_DIRECTORY ${DERIVED_SOURCES_WEBCORE_DIR}
     COMMAND ${PERL_EXECUTABLE} -ne "print" ${WebCore_CSS_VALUE_KEYWORDS} > ${DERIVED_SOURCES_WEBCORE_DIR}/CSSValueKeywords.in
-    COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/css/makevalues.pl --defines "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}"
+    COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/css/makevalues.pl --defines "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --gperf-executable "${GPERF_EXECUTABLE}"
     VERBATIM)
 list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/CSSValueKeywords.cpp)
 ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES(${WEBCORE_DIR}/css/CSSParser.cpp CSSValueKeywords.h)
@@ -1716,14 +1744,16 @@ ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES(${WEBCORE_DIR}/css/CSSPrimitiveValueMapp
 # Generate CSS Selector pseudo type name to value maps.
 add_custom_command(
     OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/SelectorPseudoClassAndCompatibilityElementMap.gperf ${DERIVED_SOURCES_WEBCORE_DIR}/SelectorPseudoClassAndCompatibilityElementMap.cpp
-    MAIN_DEPENDENCY ${WEBCORE_DIR}/css/makeSelectorPseudoClassAndCompatibilityElementMap.py
+    MAIN_DEPENDENCY ${WEBCORE_DIR}/css/SelectorPseudoClassAndCompatibilityElementMap.in
+    DEPENDS ${WEBCORE_DIR}/css/makeSelectorPseudoClassAndCompatibilityElementMap.py
     WORKING_DIRECTORY ${DERIVED_SOURCES_WEBCORE_DIR}
     COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/css/makeSelectorPseudoClassAndCompatibilityElementMap.py ${WEBCORE_DIR}/css/SelectorPseudoClassAndCompatibilityElementMap.in "${GPERF_EXECUTABLE}" "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}"
     VERBATIM)
 list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/SelectorPseudoClassAndCompatibilityElementMap.cpp)
 add_custom_command(
     OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/SelectorPseudoElementTypeMap.gperf ${DERIVED_SOURCES_WEBCORE_DIR}/SelectorPseudoElementTypeMap.cpp
-    MAIN_DEPENDENCY ${WEBCORE_DIR}/css/makeSelectorPseudoElementsMap.py
+    MAIN_DEPENDENCY ${WEBCORE_DIR}/css/SelectorPseudoElementTypeMap.in
+    DEPENDS ${WEBCORE_DIR}/css/makeSelectorPseudoElementsMap.py
     WORKING_DIRECTORY ${DERIVED_SOURCES_WEBCORE_DIR}
     COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/css/makeSelectorPseudoElementsMap.py ${WEBCORE_DIR}/css/SelectorPseudoElementTypeMap.in "${GPERF_EXECUTABLE}" "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}"
     VERBATIM)
@@ -1870,12 +1900,14 @@ GENERATE_DOM_NAMES(HTML ${WEBCORE_DIR}/html/HTMLAttributeNames.in ${WEBCORE_DIR}
 list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/HTMLNames.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/HTMLElementFactory.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/JSHTMLElementWrapperFactory.cpp)
 
 
-GENERATE_EVENT_FACTORY(${WEBCORE_DIR}/dom/EventNames.in EventInterfaces.h)
+GENERATE_EVENT_FACTORY(${WEBCORE_DIR}/dom/EventNames.in Event)
 list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/EventInterfaces.h)
+list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/EventFactory.cpp)
 
 
-GENERATE_EVENT_FACTORY(${WEBCORE_DIR}/dom/EventTargetFactory.in EventTargetInterfaces.h)
+GENERATE_EVENT_FACTORY(${WEBCORE_DIR}/dom/EventTargetFactory.in EventTarget)
 list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/EventTargetInterfaces.h)
+list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/EventTargetFactory.cpp)
 
 
 GENERATE_SETTINGS_MACROS(${WEBCORE_DIR}/page/Settings.yaml Settings.h)
@@ -1942,6 +1974,15 @@ if (CMAKE_COMPILER_IS_GNUCXX AND "${LOWERCASE_CMAKE_HOST_SYSTEM_PROCESSOR}" MATC
     WEBKIT_ADD_TARGET_CXX_FLAGS(WebCore -fno-tree-sra)
 endif ()
 
+# Include paths of WebCore doesn't propagate to targets using WebKit
+# because WebCore is linked to WebKit as a PRIVATE library. Forwarding
+# headers generated by generate-forwarding-headers.pl needs include
+# paths of WebCore.
+add_library(WebCoreHeaderInterface INTERFACE)
+target_include_directories(WebCoreHeaderInterface INTERFACE ${WebCore_INCLUDE_DIRECTORIES})
+target_include_directories(WebCoreHeaderInterface SYSTEM INTERFACE ${WebCore_SYSTEM_INCLUDE_DIRECTORIES})
+target_link_libraries(WebCoreHeaderInterface INTERFACE ${WebCore_LIBRARIES})
+
 if (MSVC)
     WEBKIT_ADD_PRECOMPILED_HEADER("WebCoreTestSupportPrefix.h" "testing/js/WebCoreTestSupportPrefix.cpp" WebCoreTestSupport_SOURCES)
 endif ()
@@ -1976,7 +2017,7 @@ if (ENABLE_GRAPHICS_CONTEXT_3D AND NOT WIN32)
         "${THIRDPARTY_DIR}/ANGLE/src"
         "${THIRDPARTY_DIR}/ANGLE/src/common/third_party/base"
     )
-    list(APPEND WebCore_LIBRARIES ANGLESupport)
+    target_link_libraries(WebCore ANGLESupport)
 
     if (COMPILER_IS_GCC_OR_CLANG)
         WEBKIT_ADD_TARGET_CXX_FLAGS(ANGLESupport -Wno-implicit-fallthrough
@@ -1988,7 +2029,6 @@ if (ENABLE_GRAPHICS_CONTEXT_3D AND NOT WIN32)
     endif ()
 endif ()
 
-target_link_libraries(WebCore ${WebCore_LIBRARIES})
 
 if (${WebCore_LIBRARY_TYPE} MATCHES "SHARED")
     set_target_properties(WebCore PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})

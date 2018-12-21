@@ -47,12 +47,12 @@ private:
     PasteboardStrategy* createPasteboardStrategy() override;
 
     // CookiesStrategy
-    std::pair<String, bool> cookiesForDOM(const NetworkStorageSession&, const URL& firstParty, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, IncludeSecureCookies) override;
-    void setCookiesFromDOM(const NetworkStorageSession&, const URL& firstParty, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, const String& cookieString) override;
+    std::pair<String, bool> cookiesForDOM(const NetworkStorageSession&, const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, IncludeSecureCookies) override;
+    void setCookiesFromDOM(const NetworkStorageSession&, const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, const String& cookieString) override;
     bool cookiesEnabled(const WebCore::NetworkStorageSession&) override;
-    std::pair<String, bool> cookieRequestHeaderFieldValue(const NetworkStorageSession&, const URL& firstParty, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, IncludeSecureCookies) override;
-    std::pair<String, bool> cookieRequestHeaderFieldValue(PAL::SessionID, const URL& firstParty, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, IncludeSecureCookies) override;
-    bool getRawCookies(const NetworkStorageSession&, const URL& firstParty, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, Vector<Cookie>&) override;
+    std::pair<String, bool> cookieRequestHeaderFieldValue(const NetworkStorageSession&, const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, IncludeSecureCookies) override;
+    std::pair<String, bool> cookieRequestHeaderFieldValue(PAL::SessionID, const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, IncludeSecureCookies) override;
+    bool getRawCookies(const NetworkStorageSession&, const URL& firstParty, const SameSiteInfo&, const URL&, std::optional<uint64_t> frameID, std::optional<uint64_t> pageID, Vector<Cookie>&) override;
     void deleteCookie(const WebCore::NetworkStorageSession&, const WebCore::URL&, const String&) override;
 
     BlobRegistry* createBlobRegistry() override;

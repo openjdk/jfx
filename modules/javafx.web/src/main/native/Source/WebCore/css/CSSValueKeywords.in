@@ -11,7 +11,7 @@ revert
 // CSS_PROP_BORDER_TOP_STYLE
 // CSS_PROP_BORDER_BOTTOM_STYLE
 // CSS_PROP_BORDER_LEFT_STYLE
-// The order here must match the order of the EBorderStyle enum in RenderStyleConstants.h.
+// The order here must match the order of the BorderStyle enum in RenderStyleConstants.h.
 none
 hidden
 inset
@@ -222,6 +222,29 @@ threedshadow
 window
 windowframe
 windowtext
+#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+-apple-system-header-text
+-apple-system-text-background
+-apple-system-control-background
+-apple-system-alternate-selected-text
+-apple-system-control-accent
+-apple-system-even-alternating-content-background
+-apple-system-odd-alternating-content-background
+-apple-system-selected-content-background
+-apple-system-unemphasized-selected-content-background
+-apple-system-selected-text
+-apple-system-unemphasized-selected-text
+-apple-system-selected-text-background
+-apple-system-unemphasized-selected-text-background
+-apple-system-placeholder-text
+-apple-system-find-highlight-background
+-apple-system-label
+-apple-system-secondary-label
+-apple-system-tertiary-label
+-apple-system-quaternary-label
+-apple-system-grid
+-apple-system-separator
+#endif
 -apple-wireless-playback-target-active
 -apple-system-blue
 -apple-system-brown
@@ -279,7 +302,7 @@ bottom
 -webkit-baseline-middle
 //
 // CSS_PROP_TEXT_ALIGN:
-// The order here must match the order of the ETextAlign enum in RenderStyleConstants.h.
+// The order here must match the order of the TextAlignMode enum in RenderStyleConstants.h.
 //
 -webkit-auto
 left
@@ -304,7 +327,7 @@ outside
 inside
 //
 // CSS_PROP_LIST_STYLE_TYPE:
-// The order here must match the order of the EListStyleType enum in RenderStyleConstants.h.
+// The order here must match the order of the ListStyleType enum in RenderStyleConstants.h.
 //
 disc
 circle
@@ -389,7 +412,7 @@ katakana-iroha
 //none
 //
 // CSS_PROP_DISPLAY:
-// The order here must match the order of the EDisplay enum in RenderStyleConstants.h.
+// The order here must match the order of the DisplayType enum in RenderStyleConstants.h.
 //
 inline
 block
@@ -418,7 +441,7 @@ inline-grid
 //none
 //
 // CSS_PROP_CURSOR:
-// The order here must match the order of the ECursor enum in RenderStyleConstants.h.
+// The order here must match the order of the CursorType enum in RenderStyleConstants.h.
 //
 auto
 default
@@ -813,6 +836,12 @@ image-controls-button
 #if defined(ENABLE_APPLE_PAY) && ENABLE_APPLE_PAY
 -apple-pay-button
 #endif
+#if defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
+color-well
+#endif
+#if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
+list-button
+#endif
 textarea
 #if defined(ENABLE_ATTACHMENT_ELEMENT) && ENABLE_ATTACHMENT_ELEMENT
 attachment
@@ -865,6 +894,7 @@ verso
 margin-box
 
 // clip-path
+stroke-box
 view-box
 
 //
@@ -1208,6 +1238,7 @@ cubic-bezier
 spring
 steps
 frames
+apple-invert-lightness
 
 // colors
 rgb
@@ -1332,6 +1363,10 @@ rec2020
 // color() function
 sRGB
 display-p3
+
+// prefers-default-appearance
+prefers
+// no-preference
 
 // prefers-reduced-motion
 reduce

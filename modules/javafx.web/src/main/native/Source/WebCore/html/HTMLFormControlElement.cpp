@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -42,10 +42,13 @@
 #include "RenderTheme.h"
 #include "StyleTreeResolver.h"
 #include "ValidationMessage.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFormControlElement);
 
 using namespace HTMLNames;
 
@@ -156,12 +159,12 @@ void HTMLFormControlElement::parseAttribute(const QualifiedName& name, const Ato
         bool wasReadOnly = m_isReadOnly;
         m_isReadOnly = !value.isNull();
         if (wasReadOnly != m_isReadOnly)
-            readOnlyAttributeChanged();
+            readOnlyStateChanged();
     } else if (name == requiredAttr) {
         bool wasRequired = m_isRequired;
         m_isRequired = !value.isNull();
         if (wasRequired != m_isRequired)
-            requiredAttributeChanged();
+            requiredStateChanged();
     } else
         HTMLElement::parseAttribute(name, value);
 }
@@ -179,13 +182,13 @@ void HTMLFormControlElement::disabledStateChanged()
         renderer()->theme().stateChanged(*renderer(), ControlStates::EnabledState);
 }
 
-void HTMLFormControlElement::readOnlyAttributeChanged()
+void HTMLFormControlElement::readOnlyStateChanged()
 {
     setNeedsWillValidateCheck();
     invalidateStyleForSubtree();
 }
 
-void HTMLFormControlElement::requiredAttributeChanged()
+void HTMLFormControlElement::requiredStateChanged()
 {
     updateValidity();
     // Style recalculation is needed because style selectors may include
@@ -203,7 +206,7 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
         return false;
     if (element->document().isSandboxed(SandboxAutomaticFeatures)) {
         // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-        element->document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, ASCIILiteral("Blocked autofocusing on a form control because the form's frame is sandboxed and the 'allow-scripts' permission is not set."));
+        element->document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked autofocusing on a form control because the form's frame is sandboxed and the 'allow-scripts' permission is not set."_s);
         return false;
     }
     if (element->hasAutofocused())
@@ -314,7 +317,7 @@ void HTMLFormControlElement::setChangedSinceLastFormControlChangeEvent(bool chan
 
 void HTMLFormControlElement::dispatchChangeEvent()
 {
-    dispatchScopedEvent(Event::create(eventNames().changeEvent, true, false));
+    dispatchScopedEvent(Event::create(eventNames().changeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
 
 void HTMLFormControlElement::dispatchFormControlChangeEvent()
@@ -357,7 +360,7 @@ bool HTMLFormControlElement::supportsFocus() const
     return !isDisabledFormControl();
 }
 
-bool HTMLFormControlElement::isKeyboardFocusable(KeyboardEvent& event) const
+bool HTMLFormControlElement::isKeyboardFocusable(KeyboardEvent* event) const
 {
     return isFocusable()
         && document().frame()
@@ -471,7 +474,7 @@ bool HTMLFormControlElement::checkValidity(Vector<RefPtr<HTMLFormControlElement>
     // An event handler can deref this object.
     Ref<HTMLFormControlElement> protectedThis(*this);
     Ref<Document> originalDocument(document());
-    auto event = Event::create(eventNames().invalidEvent, false, true);
+    auto event = Event::create(eventNames().invalidEvent, Event::CanBubble::No, Event::IsCancelable::Yes);
     dispatchEvent(event);
     if (!event->defaultPrevented() && unhandledInvalidControls && isConnected() && originalDocument.ptr() == &document())
         unhandledInvalidControls->append(this);

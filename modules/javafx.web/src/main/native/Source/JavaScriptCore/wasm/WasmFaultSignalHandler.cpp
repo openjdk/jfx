@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,7 +47,7 @@ static const bool verbose = false;
 }
 }
 
-static StaticLock codeLocationsLock;
+static Lock codeLocationsLock;
 static LazyNeverDestroyed<HashSet<std::tuple<void*, void*>>> codeLocations; // (start, end)
 
 #if ENABLE(WEBASSEMBLY_FAST_MEMORY)
@@ -56,12 +56,16 @@ static bool fastHandlerInstalled { false };
 
 static SignalAction trapHandler(Signal, SigInfo& sigInfo, PlatformRegisters& context)
 {
-    void* faultingInstruction = MachineContext::instructionPointer(context);
+    auto instructionPointer = MachineContext::instructionPointer(context);
+    if (!instructionPointer)
+        return SignalAction::NotHandled;
+    void* faultingInstruction = instructionPointer->untaggedExecutableAddress();
     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "starting handler for fault at: ", RawPointer(faultingInstruction));
 
-    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "JIT memory start: ", RawPointer(reinterpret_cast<void*>(startOfFixedExecutableMemoryPool)), " end: ", RawPointer(reinterpret_cast<void*>(endOfFixedExecutableMemoryPool)));
+    dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "JIT memory start: ", RawPointer(startOfFixedExecutableMemoryPool()), " end: ", RawPointer(endOfFixedExecutableMemoryPool()));
     // First we need to make sure we are in JIT code before we can aquire any locks. Otherwise,
     // we might have crashed in code that is already holding one of the locks we want to aquire.
+    assertIsNotTagged(faultingInstruction);
     if (isJITPC(faultingInstruction)) {
         bool faultedInActiveFastMemory = false;
         {
@@ -79,13 +83,13 @@ static SignalAction trapHandler(Signal, SigInfo& sigInfo, PlatformRegisters& con
                 dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "function start: ", RawPointer(start), " end: ", RawPointer(end));
                 if (start <= faultingInstruction && faultingInstruction < end) {
                     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found match");
-                    MacroAssemblerCodeRef exceptionStub = Thunks::singleton().existingStub(throwExceptionFromWasmThunkGenerator);
+                    MacroAssemblerCodeRef<JITThunkPtrTag> exceptionStub = Thunks::singleton().existingStub(throwExceptionFromWasmThunkGenerator);
                     // If for whatever reason we don't have a stub then we should just treat this like a regular crash.
                     if (!exceptionStub)
                         break;
                     dataLogLnIf(WasmFaultSignalHandlerInternal::verbose, "found stub: ", RawPointer(exceptionStub.code().executableAddress()));
                     MachineContext::argumentPointer<1>(context) = reinterpret_cast<void*>(ExceptionType::OutOfBoundsMemoryAccess);
-                    MachineContext::instructionPointer(context) = exceptionStub.code().executableAddress();
+                    MachineContext::setInstructionPointer(context, exceptionStub.code().retagged<CFunctionPtrTag>());
                     return SignalAction::Handled;
                 }
             }

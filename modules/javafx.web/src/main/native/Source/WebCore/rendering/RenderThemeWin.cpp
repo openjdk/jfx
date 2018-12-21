@@ -293,27 +293,27 @@ bool RenderThemeWin::supportsHover(const RenderStyle&) const
     return haveTheme;
 }
 
-Color RenderThemeWin::platformActiveSelectionBackgroundColor() const
+Color RenderThemeWin::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     COLORREF color = GetSysColor(COLOR_HIGHLIGHT);
     return Color(GetRValue(color), GetGValue(color), GetBValue(color));
 }
 
-Color RenderThemeWin::platformInactiveSelectionBackgroundColor() const
+Color RenderThemeWin::platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     // This color matches Firefox.
     return Color(176, 176, 176);
 }
 
-Color RenderThemeWin::platformActiveSelectionForegroundColor() const
+Color RenderThemeWin::platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
 {
     COLORREF color = GetSysColor(COLOR_HIGHLIGHTTEXT);
     return Color(GetRValue(color), GetGValue(color), GetBValue(color));
 }
 
-Color RenderThemeWin::platformInactiveSelectionForegroundColor() const
+Color RenderThemeWin::platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options> options) const
 {
-    return platformActiveSelectionForegroundColor();
+    return platformActiveSelectionForegroundColor(options);
 }
 
 static void fillFontDescription(FontCascadeDescription& fontDescription, LOGFONT& logFont, float fontSize)
@@ -758,9 +758,9 @@ void RenderThemeWin::adjustMenuListButtonStyle(StyleResolver& styleResolver, Ren
 {
     // These are the paddings needed to place the text correctly in the <select> box
     const int dropDownBoxPaddingTop    = 2;
-    const int dropDownBoxPaddingRight  = style.direction() == LTR ? 4 + dropDownButtonWidth : 4;
+    const int dropDownBoxPaddingRight  = style.direction() == TextDirection::LTR ? 4 + dropDownButtonWidth : 4;
     const int dropDownBoxPaddingBottom = 2;
-    const int dropDownBoxPaddingLeft   = style.direction() == LTR ? 4 : 4 + dropDownButtonWidth;
+    const int dropDownBoxPaddingLeft   = style.direction() == TextDirection::LTR ? 4 : 4 + dropDownButtonWidth;
     // The <select> box must be at least 12px high for the button to render nicely on Windows
     const int dropDownBoxMinHeight = 12;
 
@@ -782,7 +782,7 @@ void RenderThemeWin::adjustMenuListButtonStyle(StyleResolver& styleResolver, Ren
     style.setLineHeight(RenderStyle::initialLineHeight());
 
     // White-space is locked to pre
-    style.setWhiteSpace(PRE);
+    style.setWhiteSpace(WhiteSpace::Pre);
 }
 
 bool RenderThemeWin::paintMenuListButtonDecorations(const RenderBox& renderer, const PaintInfo& paintInfo, const FloatRect& rect)
@@ -794,7 +794,7 @@ bool RenderThemeWin::paintMenuListButtonDecorations(const RenderBox& renderer, c
     // leaving space for the text field's 1px border
     IntRect buttonRect(rect);
     buttonRect.inflate(-borderThickness);
-    if (renderer.style().direction() == LTR)
+    if (renderer.style().direction() == TextDirection::LTR)
         buttonRect.setX(buttonRect.maxX() - dropDownButtonWidth);
     buttonRect.setWidth(dropDownButtonWidth);
 
@@ -1012,11 +1012,11 @@ static int cssValueIdToSysColorIndex(CSSValueID cssValueId)
     }
 }
 
-Color RenderThemeWin::systemColor(CSSValueID cssValueId) const
+Color RenderThemeWin::systemColor(CSSValueID cssValueId, OptionSet<StyleColor::Options> options) const
 {
     int sysColorIndex = cssValueIdToSysColorIndex(cssValueId);
     if (sysColorIndex == -1)
-        return RenderTheme::systemColor(cssValueId);
+        return RenderTheme::systemColor(cssValueId, options);
 
     COLORREF color = GetSysColor(sysColorIndex);
     return Color(GetRValue(color), GetGValue(color), GetBValue(color));

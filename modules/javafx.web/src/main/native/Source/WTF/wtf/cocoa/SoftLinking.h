@@ -63,6 +63,13 @@
         return frameworkLibrary; \
     }
 
+#define SOFT_LINK_FRAMEWORK_OPTIONAL_PREFLIGHT(framework) \
+    static bool framework##LibraryIsAvailable() \
+    { \
+        static bool frameworkLibraryIsAvailable = dlopen_preflight("/System/Library/Frameworks/" #framework ".framework/" #framework); \
+        return frameworkLibraryIsAvailable; \
+    }
+
 #define SOFT_LINK_FRAMEWORK_OPTIONAL(framework) \
     static void* framework##Library() \
     { \
@@ -115,7 +122,7 @@
         return softLink##functionName parameterNames; \
     } \
     \
-    inline resultType functionName parameterDeclarations \
+    inline __attribute__((__always_inline__)) resultType functionName parameterDeclarations \
     { \
         return softLink##functionName parameterNames; \
     }
@@ -139,7 +146,7 @@
         return loaded; \
     } \
     \
-    __attribute__((visibility("hidden"))) resultType functionName parameterDeclarations \
+    inline __attribute__((__always_inline__)) __attribute__((visibility("hidden"))) resultType functionName parameterDeclarations \
     { \
         ASSERT(softLink##functionName); \
         return softLink##functionName parameterNames; \
@@ -263,7 +270,7 @@
     { \
         void* constant = dlsym(framework##Library(), #name); \
         RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
-        constant##name = *static_cast<type*>(constant); \
+        constant##name = *static_cast<type const *>(constant); \
         get##name = name##Function; \
         return constant##name; \
     }
@@ -290,7 +297,7 @@
         void* constant = dlsym(framework##Library(), #name); \
         if (!constant) \
             return false; \
-        constant##name = *static_cast<type*>(constant); \
+        constant##name = *static_cast<type const *>(constant); \
         get##name = name##Function; \
         return true; \
     }
@@ -422,7 +429,7 @@
         dispatch_once(&once, ^{ \
             void* constant = dlsym(framework##Library(), #variableName); \
             RELEASE_ASSERT_WITH_MESSAGE(constant, "%s", dlerror()); \
-            constant##framework##variableName = *static_cast<variableType*>(constant); \
+            constant##framework##variableName = *static_cast<variableType const *>(constant); \
         }); \
         return constant##framework##variableName; \
     } \
@@ -450,7 +457,7 @@
         void* constant = dlsym(framework##Library(), #variableName); \
         if (!constant) \
             return false; \
-        constant##framework##variableName = *static_cast<variableType*>(constant); \
+        constant##framework##variableName = *static_cast<variableType const *>(constant); \
         return true; \
     } \
     bool canLoad_##framework##_##variableName(); \
@@ -477,7 +484,7 @@
         return softLink##framework##functionName parameterNames; \
     } \
     } \
-    ALWAYS_INLINE resultType functionName parameterDeclarations \
+    inline __attribute__((__always_inline__)) resultType functionName parameterDeclarations \
     {\
         return functionNamespace::softLink##framework##functionName parameterNames; \
     }

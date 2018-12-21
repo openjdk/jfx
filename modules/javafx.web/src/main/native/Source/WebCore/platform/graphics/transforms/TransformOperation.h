@@ -88,6 +88,8 @@ public:
                opType == PERSPECTIVE;
     }
 
+    virtual bool isRepresentableIn2D() const { return true; }
+
     bool isRotateTransformOperationType() const
     {
         return type() == ROTATE_X || type() == ROTATE_Y || type() == ROTATE_Z || type() == ROTATE || type() == ROTATE_3D;

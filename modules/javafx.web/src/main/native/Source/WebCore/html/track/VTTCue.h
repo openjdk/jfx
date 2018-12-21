@@ -49,6 +49,7 @@ class WebVTTCueData;
 // ----------------------------
 
 class VTTCueBox : public HTMLElement {
+    WTF_MAKE_ISO_ALLOCATED(VTTCueBox);
 public:
     static Ref<VTTCueBox> create(Document&, VTTCue&);
 
@@ -175,6 +176,8 @@ protected:
 
     virtual Ref<VTTCueBox> createDisplayTree();
     VTTCueBox& displayTreeInternal();
+
+    void toJSON(JSON::Object&) const final;
 
 private:
     void initialize(ScriptExecutionContext&);

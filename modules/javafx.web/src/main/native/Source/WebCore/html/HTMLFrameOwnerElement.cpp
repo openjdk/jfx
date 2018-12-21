@@ -28,9 +28,12 @@
 #include "ShadowRoot.h"
 #include "SVGDocument.h"
 #include "StyleTreeResolver.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameOwnerElement);
 
 HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
@@ -74,10 +77,6 @@ void HTMLFrameOwnerElement::clearContentFrame()
 
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
-    // FIXME: Currently we don't do this in removedFrom because this causes an
-    // unload event in the subframe which could execute script that could then
-    // reach up into this document and then attempt to look back down. We should
-    // see if this behavior is really needed as Gecko does not allow this.
     if (RefPtr<Frame> frame = contentFrame()) {
         Ref<Frame> protect(*frame);
         frame->loader().frameDetached();
@@ -96,9 +95,9 @@ Document* HTMLFrameOwnerElement::contentDocument() const
     return m_contentFrame ? m_contentFrame->document() : nullptr;
 }
 
-DOMWindow* HTMLFrameOwnerElement::contentWindow() const
+WindowProxy* HTMLFrameOwnerElement::contentWindow() const
 {
-    return m_contentFrame ? m_contentFrame->document()->domWindow() : nullptr;
+    return m_contentFrame ? &m_contentFrame->windowProxy() : nullptr;
 }
 
 void HTMLFrameOwnerElement::setSandboxFlags(SandboxFlags flags)
@@ -106,7 +105,7 @@ void HTMLFrameOwnerElement::setSandboxFlags(SandboxFlags flags)
     m_sandboxFlags = flags;
 }
 
-bool HTMLFrameOwnerElement::isKeyboardFocusable(KeyboardEvent& event) const
+bool HTMLFrameOwnerElement::isKeyboardFocusable(KeyboardEvent* event) const
 {
     return m_contentFrame && HTMLElement::isKeyboardFocusable(event);
 }

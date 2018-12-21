@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "JSDOMBinding.h"
 #include "JSHTMLElement.h"
 #include "JSPluginElementFunctions.h"
+#include "WebCoreJSClientData.h"
 #include "runtime_object.h"
 #include <JavaScriptCore/Error.h>
 #include <JavaScriptCore/FunctionPrototype.h>
@@ -61,7 +62,7 @@ EncodedJSValue RuntimeMethod::lengthGetter(ExecState* exec, EncodedJSValue thisV
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    RuntimeMethod* thisObject = jsDynamicDowncast<RuntimeMethod*>(vm, JSValue::decode(thisValue));
+    RuntimeMethod* thisObject = jsDynamicCast<RuntimeMethod*>(vm, JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(exec, scope);
     return JSValue::encode(jsNumber(thisObject->m_method->numParameters()));
@@ -79,6 +80,11 @@ bool RuntimeMethod::getOwnPropertySlot(JSObject* object, ExecState* exec, Proper
     return InternalFunction::getOwnPropertySlot(thisObject, exec, propertyName, slot);
 }
 
+IsoSubspace* RuntimeMethod::subspaceForImpl(VM& vm)
+{
+    return &static_cast<JSVMClientData*>(vm.clientData)->runtimeMethodSpace();
+}
+
 static EncodedJSValue JSC_HOST_CALL callRuntimeMethod(ExecState* exec)
 {
     VM& vm = exec->vm();
@@ -92,14 +98,14 @@ static EncodedJSValue JSC_HOST_CALL callRuntimeMethod(ExecState* exec)
     RefPtr<Instance> instance;
 
     JSValue thisValue = exec->thisValue();
-    if (thisValue.inherits(vm, RuntimeObject::info())) {
+    if (thisValue.inherits<RuntimeObject>(vm)) {
         RuntimeObject* runtimeObject = static_cast<RuntimeObject*>(asObject(thisValue));
         instance = runtimeObject->getInternalInstance();
         if (!instance)
             return JSValue::encode(RuntimeObject::throwInvalidAccessError(exec, scope));
     } else {
         // Calling a runtime object of a plugin element?
-        if (thisValue.inherits(vm, JSHTMLElement::info()))
+        if (thisValue.inherits<JSHTMLElement>(vm))
             instance = pluginInstance(jsCast<JSHTMLElement*>(asObject(thisValue))->wrapped());
         if (!instance)
             return throwVMTypeError(exec, scope);

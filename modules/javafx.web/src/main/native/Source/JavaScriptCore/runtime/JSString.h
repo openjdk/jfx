@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -80,7 +80,6 @@ public:
     friend class JSRopeString;
     friend class MarkStack;
     friend class SlotVisitor;
-    friend struct ThunkHelpers;
 
     typedef JSCell Base;
     static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | StructureIsImmortal | OverridesToThis;
@@ -96,23 +95,25 @@ public:
         return &vm.stringSpace;
     }
 
-    static const unsigned MaxLength = std::numeric_limits<int32_t>::max();
+    // We employ overflow checks in many places with the assumption that MaxLength
+    // is INT_MAX. Hence, it cannot be changed into another length value without
+    // breaking all the bounds and overflow checks that assume this.
+    static constexpr unsigned MaxLength = std::numeric_limits<int32_t>::max();
+    static_assert(MaxLength == String::MaxLength, "");
 
 private:
     JSString(VM& vm, Ref<StringImpl>&& value)
         : JSCell(vm, vm.stringStructure.get())
-        , m_flags(0)
         , m_value(WTFMove(value))
     {
     }
 
     JSString(VM& vm)
         : JSCell(vm, vm.stringStructure.get())
-        , m_flags(0)
     {
     }
 
-    void finishCreation(VM& vm, size_t length)
+    void finishCreation(VM& vm, unsigned length)
     {
         ASSERT(!m_value.isNull());
         Base::finishCreation(vm);
@@ -120,7 +121,7 @@ private:
         setIs8Bit(m_value.impl()->is8Bit());
     }
 
-    void finishCreation(VM& vm, size_t length, size_t cost)
+    void finishCreation(VM& vm, unsigned length, size_t cost)
     {
         ASSERT(!m_value.isNull());
         Base::finishCreation(vm);
@@ -140,7 +141,6 @@ protected:
 public:
     static JSString* create(VM& vm, Ref<StringImpl>&& value)
     {
-        value->assertCaged();
         unsigned length = value->length();
         size_t cost = value->cost();
         JSString* newString = new (NotNull, allocateCell<JSString>(vm.heap)) JSString(vm, WTFMove(value));
@@ -149,8 +149,7 @@ public:
     }
     static JSString* createHasOtherOwner(VM& vm, Ref<StringImpl>&& value)
     {
-        value->assertCaged();
-        size_t length = value->length();
+        unsigned length = value->length();
         JSString* newString = new (NotNull, allocateCell<JSString>(vm.heap)) JSString(vm, WTFMove(value));
         newString->finishCreation(vm, length);
         return newString;
@@ -190,7 +189,7 @@ public:
     DECLARE_EXPORT_INFO;
 
     static void dumpToStream(const JSCell*, PrintStream&);
-    static size_t estimatedSize(JSCell*);
+    static size_t estimatedSize(JSCell*, VM&);
     static void visitChildren(JSCell*, SlotVisitor&);
 
     enum {
@@ -214,14 +213,17 @@ protected:
 
     ALWAYS_INLINE void setLength(unsigned length)
     {
+        ASSERT(length <= MaxLength);
         m_length = length;
     }
 
 private:
-    mutable unsigned m_flags;
-
     // A string is represented either by a String or a rope of fibers.
-    unsigned m_length;
+    unsigned m_length { 0 };
+    mutable uint16_t m_flags { 0 };
+    // The poison is strategically placed and holds a value such that the first
+    // 64 bits of JSString look like a double JSValue.
+    uint16_t m_poison { 1 };
     mutable String m_value;
 
     friend class LLIntOffsetsExtractor;
@@ -259,10 +261,14 @@ public:
                 return false;
             if (m_index == JSRopeString::s_maxInternalRopeLength)
                 expand();
-            if (static_cast<int32_t>(m_jsString->length() + jsString->length()) < 0) {
+
+            static_assert(JSString::MaxLength == std::numeric_limits<int32_t>::max(), "");
+            auto sum = checkedSum<int32_t>(m_jsString->length(), jsString->length());
+            if (sum.hasOverflowed()) {
                 this->overflowed();
                 return false;
             }
+            ASSERT(static_cast<unsigned>(sum.unsafeGet()) <= MaxLength);
             m_jsString->append(m_vm, m_index++, jsString);
             return true;
         }

@@ -31,7 +31,6 @@
 namespace JSC {
 
 class JSGlobalObject;
-class ThreadLocalCache;
 class VM;
 
 class VMEntryScope {
@@ -42,13 +41,12 @@ public:
     VM& vm() const { return m_vm; }
     JSGlobalObject* globalObject() const { return m_globalObject; }
 
-    void addDidPopListener(std::function<void ()>);
+    void addDidPopListener(Function<void ()>&&);
 
 private:
     VM& m_vm;
     JSGlobalObject* m_globalObject;
-    Vector<std::function<void ()>> m_didPopListeners;
-    RefPtr<ThreadLocalCache> m_previousTLC;
+    Vector<Function<void ()>> m_didPopListeners;
 };
 
 } // namespace JSC

@@ -76,10 +76,11 @@ static RefPtr<JSON::Value> jsToInspectorValue(ExecState& scriptState, JSValue va
             }
             return WTFMove(inspectorArray);
         }
+        VM& vm = scriptState.vm();
         auto inspectorObject = JSON::Object::create();
         auto& object = *value.getObject();
-        PropertyNameArray propertyNames(&scriptState.vm(), PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
-        object.methodTable()->getOwnPropertyNames(&object, &scriptState, propertyNames, EnumerationMode());
+        PropertyNameArray propertyNames(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+        object.methodTable(vm)->getOwnPropertyNames(&object, &scriptState, propertyNames, EnumerationMode());
         for (auto& name : propertyNames) {
             auto inspectorValue = jsToInspectorValue(scriptState, object.get(&scriptState, name), maxDepth);
             if (!inspectorValue)
@@ -102,73 +103,3 @@ RefPtr<JSON::Value> toInspectorValue(ExecState& state, JSValue value)
 }
 
 } // namespace Inspector
-
-namespace Deprecated {
-
-ScriptValue::~ScriptValue()
-{
-}
-
-bool ScriptValue::getString(ExecState* scriptState, String& result) const
-{
-    if (!m_value)
-        return false;
-    JSLockHolder lock(scriptState);
-    if (!m_value.get().getString(scriptState, result))
-        return false;
-    return true;
-}
-
-String ScriptValue::toString(ExecState* scriptState) const
-{
-    VM& vm = scriptState->vm();
-    auto scope = DECLARE_CATCH_SCOPE(vm);
-
-    String result = m_value.get().toWTFString(scriptState);
-    // Handle the case where an exception is thrown as part of invoking toString on the object.
-    if (UNLIKELY(scope.exception()))
-        scope.clearException();
-    return result;
-}
-
-bool ScriptValue::isEqual(ExecState* scriptState, const ScriptValue& anotherValue) const
-{
-    if (hasNoValue())
-        return anotherValue.hasNoValue();
-    return JSValueIsStrictEqual(toRef(scriptState), toRef(scriptState, jsValue()), toRef(scriptState, anotherValue.jsValue()));
-}
-
-bool ScriptValue::isNull() const
-{
-    if (!m_value)
-        return false;
-    return m_value.get().isNull();
-}
-
-bool ScriptValue::isUndefined() const
-{
-    if (!m_value)
-        return false;
-    return m_value.get().isUndefined();
-}
-
-bool ScriptValue::isObject() const
-{
-    if (!m_value)
-        return false;
-    return m_value.get().isObject();
-}
-
-bool ScriptValue::isFunction() const
-{
-    CallData callData;
-    return getCallData(m_value.get(), callData) != CallType::None;
-}
-
-RefPtr<JSON::Value> ScriptValue::toInspectorValue(ExecState* scriptState) const
-{
-    JSLockHolder holder(scriptState);
-    return jsToInspectorValue(*scriptState, m_value.get(), JSON::Value::maxDepth);
-}
-
-} // namespace Deprecated

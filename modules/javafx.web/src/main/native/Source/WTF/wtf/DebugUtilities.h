@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,17 +23,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WTF_DebugUtilities_h
-#define WTF_DebugUtilities_h
+#pragma once
 
 #include <wtf/Assertions.h>
-#include <wtf/CurrentTime.h>
+#include <wtf/MainThread.h>
 #include <wtf/ProcessID.h>
+#include <wtf/text/StringConcatenate.h>
 
 #define SLEEP_THREAD_FOR_DEBUGGER() \
 do { \
     do { \
-        sleep(1_s); \
+        sleep(1); \
         if (WTFIsDebuggerAttached()) \
             break; \
     } while (1); \
@@ -41,4 +41,30 @@ do { \
     WTFBreakpointTrap(); \
 } while (0)
 
-#endif /* WTF_DebugUtilities_h */
+namespace WTF {
+
+template<typename StringType>
+const char* debugString(StringType string)
+{
+    return debugString(string, "");
+}
+
+template<typename... StringTypes>
+const char* debugString(StringTypes... strings)
+{
+    String result = tryMakeString(strings...);
+    if (!result)
+        CRASH();
+
+    auto cString = result.utf8();
+    const char* cStringData = cString.data();
+
+    callOnMainThread([cString = WTFMove(cString)] {
+    });
+
+    return cStringData;
+}
+
+} // namespace WTF
+
+using WTF::debugString;

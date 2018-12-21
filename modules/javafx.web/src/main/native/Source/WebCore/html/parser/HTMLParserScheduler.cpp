@@ -69,7 +69,6 @@ PumpSession::PumpSession(unsigned& nestingLevel, Document* document)
     // after any token during any parse where yielding is allowed.
     // At that time we'll initialize startTime.
     , processedTokens(INT_MAX)
-    , startTime(0)
     , didSeeScript(false)
 {
 }
@@ -78,7 +77,7 @@ PumpSession::~PumpSession() = default;
 
 HTMLParserScheduler::HTMLParserScheduler(HTMLDocumentParser& parser)
     : m_parser(parser)
-    , m_parserTimeLimit(parserTimeLimit(m_parser.document()->page()))
+    , m_parserTimeLimit(Seconds(parserTimeLimit(m_parser.document()->page())))
     , m_continueNextChunkTimer(*this, &HTMLParserScheduler::continueNextChunkTimerFired)
     , m_isSuspendedWithActiveTimer(false)
 #if !ASSERT_DISABLED
@@ -112,6 +111,10 @@ bool HTMLParserScheduler::shouldYieldBeforeExecutingScript(PumpSession& session)
     RefPtr<Document> document = m_parser.document();
     bool needsFirstPaint = document->view() && !document->view()->hasEverPainted();
     session.didSeeScript = true;
+
+    if (UNLIKELY(m_documentHasActiveParserYieldTokens))
+        return true;
+
     return needsFirstPaint && document->isLayoutTimerActive();
 }
 

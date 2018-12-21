@@ -45,11 +45,21 @@ namespace WebCore {
     macro(DOMNodeRemovedFromDocument) \
     macro(DOMSubtreeModified) \
     macro(abort) \
+    macro(accessiblecontextmenu) \
+    macro(accessibleclick) \
+    macro(accessibledecrement) \
+    macro(accessibledismiss) \
+    macro(accessiblefocus) \
+    macro(accessibleincrement) \
+    macro(accessiblescrollintoview) \
+    macro(accessiblesetvalue) \
+    macro(accessibleselect) \
     macro(activate) \
     macro(active) \
     macro(addsourcebuffer) \
     macro(addstream) \
     macro(addtrack) \
+    macro(animationcancel) \
     macro(animationend) \
     macro(animationiteration) \
     macro(animationstart) \
@@ -240,7 +250,10 @@ namespace WebCore {
     macro(touchmove) \
     macro(touchstart) \
     macro(track) \
+    macro(transitioncancel) \
     macro(transitionend) \
+    macro(transitionrun) \
+    macro(transitionstart) \
     macro(unhandledrejection) \
     macro(unload) \
     macro(unmute) \

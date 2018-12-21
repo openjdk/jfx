@@ -30,11 +30,11 @@
 namespace WebCore {
 
 struct TextureMapperContextAttributes {
-    void initialize();
+    static const TextureMapperContextAttributes& get();
 
+    bool initialized { false };
     bool isGLES2Compliant { false };
     bool supportsNPOTTextures { false };
-    bool supportsBGRA8888 { false };
     bool supportsUnpackSubimage { false };
 };
 

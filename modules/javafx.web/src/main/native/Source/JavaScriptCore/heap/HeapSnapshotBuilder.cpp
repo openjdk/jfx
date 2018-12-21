@@ -199,7 +199,7 @@ String HeapSnapshotBuilder::json()
     return json([] (const HeapSnapshotNode&) { return true; });
 }
 
-String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> allowNodeCallback)
+String HeapSnapshotBuilder::json(Function<bool (const HeapSnapshotNode&)> allowNodeCallback)
 {
     VM& vm = m_profiler.vm();
     DeferGCForAWhile deferGC(vm.heap);
@@ -240,7 +240,7 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
         json.append(',');
         json.appendNumber(node.identifier);
         json.append(',');
-        json.appendNumber(node.cell->estimatedSizeInBytes());
+        json.appendNumber(node.cell->estimatedSizeInBytes(vm));
         json.append(',');
         json.appendNumber(classNameIndex);
         json.append(',');

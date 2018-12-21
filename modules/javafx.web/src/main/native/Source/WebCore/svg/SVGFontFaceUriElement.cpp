@@ -31,8 +31,11 @@
 #include "SVGFontFaceElement.h"
 #include "SVGNames.h"
 #include "XLinkNames.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFontFaceUriElement);
 
 using namespace SVGNames;
 
@@ -55,7 +58,7 @@ SVGFontFaceUriElement::~SVGFontFaceUriElement()
 
 Ref<CSSFontFaceSrcValue> SVGFontFaceUriElement::srcValue() const
 {
-    auto src = CSSFontFaceSrcValue::create(getAttribute(XLinkNames::hrefAttr));
+    auto src = CSSFontFaceSrcValue::create(getAttribute(SVGNames::hrefAttr, XLinkNames::hrefAttr));
     AtomicString value(attributeWithoutSynchronization(formatAttr));
     src.get().setFormat(value.isEmpty() ? "svg" : value); // Default format
     return src;
@@ -63,7 +66,7 @@ Ref<CSSFontFaceSrcValue> SVGFontFaceUriElement::srcValue() const
 
 void SVGFontFaceUriElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (name == XLinkNames::hrefAttr)
+    if (name == SVGNames::hrefAttr || name == XLinkNames::hrefAttr)
         loadFont();
     else
         SVGElement::parseAttribute(name, value);
@@ -98,7 +101,7 @@ void SVGFontFaceUriElement::loadFont()
     if (m_cachedFont)
         m_cachedFont->removeClient(*this);
 
-    const AtomicString& href = getAttribute(XLinkNames::hrefAttr);
+    const AtomicString& href = getAttribute(SVGNames::hrefAttr, XLinkNames::hrefAttr);
     if (!href.isNull()) {
         ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
         options.contentSecurityPolicyImposition = isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;

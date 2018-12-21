@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Igalia S.L. All rights reserved.
+ * Copyright (C) 2017-2018 Igalia S.L. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,21 +29,25 @@
 #include "EventTarget.h"
 #include "JSDOMPromiseDeferred.h"
 #include "VREye.h"
+#include "VRLayerInit.h"
+#include "VRPlatformDisplayClient.h"
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
 
+enum ExceptionCode;
 class RequestAnimationFrameCallback;
+class ScriptedAnimationController;
 class VRDisplayCapabilities;
 class VREyeParameters;
 class VRFrameData;
+class VRPlatformDisplay;
 class VRPose;
 class VRStageParameters;
-struct VRLayerInit;
 
-class VRDisplay : public RefCounted<VRDisplay>, public EventTargetWithInlineData, public ActiveDOMObject {
+class VRDisplay : public RefCounted<VRDisplay>, public VRPlatformDisplayClient, public EventTargetWithInlineData, public ActiveDOMObject {
 public:
-    static Ref<VRDisplay> create(ScriptExecutionContext&);
+    static Ref<VRDisplay> create(ScriptExecutionContext&, WeakPtr<VRPlatformDisplay>&&);
 
     virtual ~VRDisplay();
 
@@ -51,38 +55,44 @@ public:
     using RefCounted<VRDisplay>::deref;
 
     bool isConnected() const;
-    bool isPresenting() const;
+    bool isPresenting() const { return !!m_presentingLayer; };
 
     const VRDisplayCapabilities& capabilities() const;
-    VRStageParameters* stageParameters() const;
+    RefPtr<VRStageParameters> stageParameters() const;
 
     const VREyeParameters& getEyeParameters(VREye) const;
 
-    unsigned displayId() const;
-    const String& displayName() const;
+    const String& displayName() const { return m_displayName; }
+    uint32_t displayId() const { return m_displayId; }
 
     bool getFrameData(VRFrameData&) const;
 
     Ref<VRPose> getPose() const;
     void resetPose();
 
-    double depthNear() const;
-    void setDepthNear(double);
-    double depthFar() const;
-    void setDepthFar(double);
+    double depthNear() const { return m_depthNear; }
+    void setDepthNear(double depthNear) { m_depthNear = depthNear; }
+    double depthFar() const { return m_depthFar; }
+    void setDepthFar(double depthFar) { m_depthFar = depthFar; }
 
-    long requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
-    void cancelAnimationFrame(unsigned);
+    uint32_t requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
+    void cancelAnimationFrame(uint32_t);
 
     void requestPresent(const Vector<VRLayerInit>&, Ref<DeferredPromise>&&);
     void exitPresent(Ref<DeferredPromise>&&);
 
-    const Vector<VRLayerInit>& getLayers() const;
+    Vector<VRLayerInit> getLayers() const;
 
     void submitFrame();
 
+    // VRPlatformDisplayClient
+    void platformDisplayConnected() override;
+    void platformDisplayDisconnected() override;
+    void platformDisplayMounted() override;
+    void platformDisplayUnmounted() override;
+
 private:
-    VRDisplay(ScriptExecutionContext&);
+    VRDisplay(ScriptExecutionContext&, WeakPtr<VRPlatformDisplay>&&);
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const override { return VRDisplayEventTargetInterfaceType; }
@@ -96,8 +106,28 @@ private:
     bool canSuspendForDocumentSuspension() const override;
     void stop() override;
 
-    Ref<VRDisplayCapabilities> m_capabilities;
-    Ref<VREyeParameters> m_eyeParameters;
+    void stopPresenting();
+
+    Document* document() { return downcast<Document>(scriptExecutionContext()); }
+
+    WeakPtr<VRPlatformDisplay> m_display;
+
+    RefPtr<VRDisplayCapabilities> m_capabilities;
+    // We could likely store just one of the two following ones as the values should be identical
+    // (except the sign of the eye to head transform offset).
+    RefPtr<VREyeParameters> m_leftEyeParameters;
+    RefPtr<VREyeParameters> m_rightEyeParameters;
+    RefPtr<VRStageParameters> m_stageParameters;
+
+    String m_displayName;
+    uint32_t m_displayId;
+
+    double m_depthNear { 0.01 }; // Default value from the specs.
+    double m_depthFar { 10000 }; // Default value from the specs.
+
+    RefPtr<ScriptedAnimationController> m_scriptedAnimationController;
+
+    std::optional<VRLayerInit> m_presentingLayer;
 };
 
 } // namespace WebCore

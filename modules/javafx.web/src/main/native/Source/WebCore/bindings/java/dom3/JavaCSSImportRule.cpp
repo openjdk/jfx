@@ -30,7 +30,7 @@
 #include <WebCore/CSSImportRule.h>
 #include <WebCore/CSSStyleSheet.h>
 #include <WebCore/MediaList.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

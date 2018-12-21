@@ -185,7 +185,7 @@ void MediaControlsHost::updateCaptionDisplaySizes()
 
 bool MediaControlsHost::allowsInlineMediaPlayback() const
 {
-    return !m_mediaElement->mediaSession().requiresFullscreenForVideoPlayback(*m_mediaElement);
+    return !m_mediaElement->mediaSession().requiresFullscreenForVideoPlayback();
 }
 
 bool MediaControlsHost::supportsFullscreen() const
@@ -210,7 +210,7 @@ void MediaControlsHost::setPreparedToReturnVideoLayerToInline(bool value)
 
 bool MediaControlsHost::userGestureRequired() const
 {
-    return !m_mediaElement->mediaSession().playbackPermitted(*m_mediaElement);
+    return !m_mediaElement->mediaSession().playbackPermitted();
 }
 
 bool MediaControlsHost::shouldForceControlsDisplay() const
@@ -283,13 +283,24 @@ String MediaControlsHost::shadowRootCSSText() const
 
 String MediaControlsHost::base64StringForIconNameAndType(const String& iconName, const String& iconType) const
 {
-
     return RenderTheme::singleton().mediaControlsBase64StringForIconNameAndType(iconName, iconType);
 }
 
 String MediaControlsHost::formattedStringForDuration(double durationInSeconds) const
 {
     return RenderTheme::singleton().mediaControlsFormattedStringForDuration(durationInSeconds);
+}
+
+bool MediaControlsHost::compactMode() const
+{
+    if (m_simulateCompactMode)
+        return true;
+
+#if PLATFORM(WATCHOS)
+    return true;
+#else
+    return false;
+#endif
 }
 
 }

@@ -30,13 +30,18 @@
 
 #include "CSSAnimationController.h"
 #include "ContentData.h"
+#include "DocumentTimeline.h"
 #include "InspectorInstrumentation.h"
 #include "RenderElement.h"
 #include "RenderImage.h"
 #include "RenderQuote.h"
+#include "RuntimeEnabledFeatures.h"
 #include "StyleResolver.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(PseudoElement);
 
 const QualifiedName& pseudoElementTagName()
 {
@@ -49,9 +54,9 @@ String PseudoElement::pseudoElementNameForEvents(PseudoId pseudoId)
     static NeverDestroyed<const String> after(MAKE_STATIC_STRING_IMPL("::after"));
     static NeverDestroyed<const String> before(MAKE_STATIC_STRING_IMPL("::before"));
     switch (pseudoId) {
-    case AFTER:
+    case PseudoId::After:
         return after;
-    case BEFORE:
+    case PseudoId::Before:
         return before;
     default:
         return emptyString();
@@ -63,7 +68,7 @@ PseudoElement::PseudoElement(Element& host, PseudoId pseudoId)
     , m_hostElement(&host)
     , m_pseudoId(pseudoId)
 {
-    ASSERT(pseudoId == BEFORE || pseudoId == AFTER);
+    ASSERT(pseudoId == PseudoId::Before || pseudoId == PseudoId::After);
     setHasCustomStyleResolveCallbacks();
 }
 
@@ -85,7 +90,10 @@ void PseudoElement::clearHostElement()
 {
     InspectorInstrumentation::pseudoElementDestroyed(document().page(), *this);
 
-    if (auto* frame = document().frame())
+    if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
+        if (auto* timeline = document().existingTimeline())
+            timeline->removeAnimationsForElement(*this);
+    } else if (auto* frame = document().frame())
         frame->animation().cancelAnimations(*this);
 
     m_hostElement = nullptr;

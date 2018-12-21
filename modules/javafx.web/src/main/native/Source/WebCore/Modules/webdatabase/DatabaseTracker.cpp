@@ -649,7 +649,7 @@ unsigned long long DatabaseTracker::usage(const SecurityOriginData& origin)
 {
     String originPath = this->originPath(origin);
     unsigned long long diskUsage = 0;
-    for (auto& fileName : FileSystem::listDirectory(originPath, ASCIILiteral("*.db"))) {
+    for (auto& fileName : FileSystem::listDirectory(originPath, "*.db"_s)) {
         long long size;
         FileSystem::getFileSize(fileName, size);
         diskUsage += size;
@@ -1275,8 +1275,8 @@ bool DatabaseTracker::deleteDatabaseFileIfEmpty(const String& path)
     return SQLiteFileSystem::deleteDatabaseFile(path);
 }
 
-static StaticLock openDatabaseLock;
-StaticLock& DatabaseTracker::openDatabaseMutex()
+static Lock openDatabaseLock;
+Lock& DatabaseTracker::openDatabaseMutex()
 {
     return openDatabaseLock;
 }
@@ -1300,7 +1300,7 @@ void DatabaseTracker::setClient(DatabaseManagerClient* client)
     m_client = client;
 }
 
-static StaticLock notificationLock;
+static Lock notificationLock;
 
 using NotificationQueue = Vector<std::pair<SecurityOriginData, String>>;
 

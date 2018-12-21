@@ -35,7 +35,6 @@
 #include "HTTPHeaderValues.h"
 #include "ImageDecoder.h"
 #include "MemoryCache.h"
-#include "SecurityPolicy.h"
 #include "ServiceWorkerRegistrationData.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -102,7 +101,7 @@ void CachedResourceRequest::setAsPotentiallyCrossOrigin(const String& mode, Docu
         ? FetchOptions::Credentials::Include : FetchOptions::Credentials::SameOrigin;
     m_options.credentials = credentials;
     m_options.storedCredentialsPolicy = credentials == FetchOptions::Credentials::Include ? StoredCredentialsPolicy::Use : StoredCredentialsPolicy::DoNotUse;
-    WebCore::updateRequestForAccessControl(m_resourceRequest, document.securityOrigin(), m_options.storedCredentialsPolicy);
+    updateRequestForAccessControl(m_resourceRequest, document.securityOrigin(), m_options.storedCredentialsPolicy);
 }
 
 void CachedResourceRequest::updateForAccessControl(Document& document)
@@ -110,7 +109,7 @@ void CachedResourceRequest::updateForAccessControl(Document& document)
     ASSERT(m_options.mode == FetchOptions::Mode::Cors);
 
     m_origin = &document.securityOrigin();
-    WebCore::updateRequestForAccessControl(m_resourceRequest, *m_origin, m_options.storedCredentialsPolicy);
+    updateRequestForAccessControl(m_resourceRequest, *m_origin, m_options.storedCredentialsPolicy);
 }
 
 void upgradeInsecureResourceRequestIfNeeded(ResourceRequest& request, Document& document)
@@ -145,22 +144,22 @@ static inline String acceptHeaderValueFromType(CachedResource::Type type)
 {
     switch (type) {
     case CachedResource::Type::MainResource:
-        return ASCIILiteral("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        return "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"_s;
     case CachedResource::Type::ImageResource:
         if (ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video))
-            return ASCIILiteral("image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5");
-        return ASCIILiteral("image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5");
+            return "image/png,image/svg+xml,image/*;q=0.8,video/*;q=0.8,*/*;q=0.5"_s;
+        return "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
     case CachedResource::Type::CSSStyleSheet:
-        return ASCIILiteral("text/css,*/*;q=0.1");
+        return "text/css,*/*;q=0.1"_s;
     case CachedResource::Type::SVGDocumentResource:
-        return ASCIILiteral("image/svg+xml");
+        return "image/svg+xml"_s;
 #if ENABLE(XSLT)
     case CachedResource::Type::XSLStyleSheet:
         // FIXME: This should accept more general xml formats */*+xml, image/svg+xml for example.
-        return ASCIILiteral("text/xml,application/xml,application/xhtml+xml,text/xsl,application/rss+xml,application/atom+xml");
+        return "text/xml,application/xml,application/xhtml+xml,text/xsl,application/rss+xml,application/atom+xml"_s;
 #endif
     default:
-        return ASCIILiteral("*/*");
+        return "*/*"_s;
     }
 }
 
@@ -182,29 +181,40 @@ void CachedResourceRequest::updateAccordingCacheMode()
 
     switch (m_options.cache) {
     case FetchOptions::Cache::NoCache:
-        m_resourceRequest.setCachePolicy(RefreshAnyCacheData);
+        m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::RefreshAnyCacheData);
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::CacheControl, HTTPHeaderValues::maxAge0());
         break;
     case FetchOptions::Cache::NoStore:
         m_options.cachingPolicy = CachingPolicy::DisallowCaching;
-        m_resourceRequest.setCachePolicy(DoNotUseAnyCache);
+        m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::DoNotUseAnyCache);
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::Pragma, HTTPHeaderValues::noCache());
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::CacheControl, HTTPHeaderValues::noCache());
         break;
     case FetchOptions::Cache::Reload:
-        m_resourceRequest.setCachePolicy(ReloadIgnoringCacheData);
+        m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::ReloadIgnoringCacheData);
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::Pragma, HTTPHeaderValues::noCache());
         m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::CacheControl, HTTPHeaderValues::noCache());
         break;
     case FetchOptions::Cache::Default:
         break;
     case FetchOptions::Cache::ForceCache:
-        m_resourceRequest.setCachePolicy(ReturnCacheDataElseLoad);
+        m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::ReturnCacheDataElseLoad);
         break;
     case FetchOptions::Cache::OnlyIfCached:
-        m_resourceRequest.setCachePolicy(ReturnCacheDataDontLoad);
+        m_resourceRequest.setCachePolicy(ResourceRequestCachePolicy::ReturnCacheDataDontLoad);
         break;
     }
+}
+
+void CachedResourceRequest::updateAcceptEncodingHeader()
+{
+    if (!m_resourceRequest.hasHTTPHeaderField(HTTPHeaderName::Range))
+        return;
+
+    // FIXME: rdar://problem/40879225. Media engines triggering the load should not set this Accept-Encoding header.
+    ASSERT(!m_resourceRequest.hasHTTPHeaderField(HTTPHeaderName::AcceptEncoding) || m_options.destination == FetchOptions::Destination::Audio || m_options.destination == FetchOptions::Destination::Video);
+
+    m_resourceRequest.addHTTPHeaderFieldIfNotPresent(HTTPHeaderName::AcceptEncoding, "identity"_s);
 }
 
 void CachedResourceRequest::removeFragmentIdentifierIfNeeded()
@@ -231,22 +241,15 @@ void CachedResourceRequest::updateReferrerPolicy(ReferrerPolicy defaultPolicy)
 
 void CachedResourceRequest::updateReferrerOriginAndUserAgentHeaders(FrameLoader& frameLoader)
 {
-    // Implementing step 7 to 9 of https://fetch.spec.whatwg.org/#http-network-or-cache-fetch
-
-    String outgoingOrigin;
-    String outgoingReferrer = m_resourceRequest.httpReferrer();
-    if (!outgoingReferrer.isNull())
+    // Implementing step 9 to 11 of https://fetch.spec.whatwg.org/#http-network-or-cache-fetch as of 16 March 2018
+    String outgoingReferrer = frameLoader.outgoingReferrer();
+    String outgoingOrigin = frameLoader.outgoingOrigin();
+    if (m_resourceRequest.hasHTTPReferrer()) {
+        outgoingReferrer = m_resourceRequest.httpReferrer();
         outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
-    else {
-        outgoingReferrer = frameLoader.outgoingReferrer();
-        outgoingOrigin = frameLoader.outgoingOrigin();
     }
+    updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrer);
 
-    outgoingReferrer = SecurityPolicy::generateReferrerHeader(m_options.referrerPolicy, m_resourceRequest.url(), outgoingReferrer);
-    if (outgoingReferrer.isEmpty())
-        m_resourceRequest.clearHTTPReferrer();
-    else
-        m_resourceRequest.setHTTPReferrer(outgoingReferrer);
     FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
 
     frameLoader.applyUserAgentIfNeeded(m_resourceRequest);

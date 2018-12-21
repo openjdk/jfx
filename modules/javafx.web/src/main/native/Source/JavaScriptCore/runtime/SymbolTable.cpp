@@ -101,6 +101,7 @@ void SymbolTable::finishCreation(VM& vm)
 void SymbolTable::visitChildren(JSCell* thisCell, SlotVisitor& visitor)
 {
     SymbolTable* thisSymbolTable = jsCast<SymbolTable*>(thisCell);
+    Base::visitChildren(thisSymbolTable, visitor);
 
     visitor.append(thisSymbolTable->m_arguments);
     visitor.append(thisSymbolTable->m_singletonScope);

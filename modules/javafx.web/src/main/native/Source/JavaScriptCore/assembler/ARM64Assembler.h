@@ -29,10 +29,15 @@
 
 #include "AssemblerBuffer.h"
 #include "AssemblerCommon.h"
+#include "JSCPtrTag.h"
 #include <limits.h>
 #include <wtf/Assertions.h>
 #include <wtf/Vector.h>
 #include <stdint.h>
+
+#if OS(FUCHSIA)
+#include <zircon/syscalls.h>
+#endif
 
 #define CHECK_DATASIZE_OF(datasize) ASSERT(datasize == 32 || datasize == 64)
 #define CHECK_MEMOPSIZE_OF(size) ASSERT(size == 8 || size == 16 || size == 32 || size == 64 || size == 128);
@@ -157,7 +162,7 @@ inline uint16_t getHalfword(uint64_t value, int which)
 
 namespace ARM64Registers {
 
-typedef enum {
+typedef enum : int8_t {
     // Parameter/result registers.
     x0,
     x1,
@@ -203,9 +208,10 @@ typedef enum {
     x29 = fp,
     x30 = lr,
     zr = 0x3f,
+    InvalidGPRReg = -1,
 } RegisterID;
 
-typedef enum {
+typedef enum : int8_t {
     pc,
     nzcv,
     fpsr
@@ -214,7 +220,7 @@ typedef enum {
 // ARM64 always has 32 FPU registers 128-bits each. See http://llvm.org/devmtg/2012-11/Northover-AArch64.pdf
 // and Section 5.1.2 in http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055b/IHI0055B_aapcs64.pdf.
 // However, we only use them for 64-bit doubles.
-typedef enum {
+typedef enum : int8_t {
     // Parameter/result registers.
     q0,
     q1,
@@ -250,6 +256,7 @@ typedef enum {
     q29,
     q30,
     q31,
+    InvalidFPRReg = -1,
 } FPRegisterID;
 
 static constexpr bool isSp(RegisterID reg) { return reg == sp; }
@@ -2856,6 +2863,8 @@ public:
     {
 #if OS(IOS)
         sys_cache_control(kCacheFunctionPrepareForExecution, code, size);
+#elif OS(FUCHSIA)
+        zx_cache_flush(code, size, ZX_CACHE_FLUSH_INSN);
 #elif OS(LINUX)
         size_t page = pageSize();
         uintptr_t current = reinterpret_cast<uintptr_t>(code);
@@ -3033,6 +3042,8 @@ protected:
         ASSERT_UNUSED(isCall, (link == isCall) || disassembleNop(from));
         ASSERT(!(reinterpret_cast<intptr_t>(from) & 3));
         ASSERT(!(reinterpret_cast<intptr_t>(to) & 3));
+        assertIsNotTagged(to);
+        assertIsNotTagged(fromInstruction);
         intptr_t offset = (reinterpret_cast<intptr_t>(to) - reinterpret_cast<intptr_t>(fromInstruction)) >> 2;
         ASSERT(static_cast<int>(offset) == offset);
 

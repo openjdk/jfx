@@ -32,7 +32,6 @@
 #include "JSCast.h"
 #include "PromiseDeferredTimer.h"
 #include "Structure.h"
-#include "UnconditionalFinalizer.h"
 #include "WasmCallee.h"
 #include "WasmFormat.h"
 #include "WasmModule.h"
@@ -61,14 +60,14 @@ public:
     }
 
     template<typename CellType>
-    static CompleteSubspace* subspaceFor(VM& vm)
+    static IsoSubspace* subspaceFor(VM& vm)
     {
         return &vm.webAssemblyCodeBlockSpace;
     }
 
     Wasm::CodeBlock& codeBlock() { return m_codeBlock.get(); }
 
-    void* wasmToEmbedderStubExecutableAddress(size_t importFunctionNum) { return m_wasmToJSExitStubs[importFunctionNum].code().executableAddress(); }
+    MacroAssemblerCodePtr<WasmEntryPtrTag> wasmToEmbedderStub(size_t importFunctionNum) { return m_wasmToJSExitStubs[importFunctionNum].code(); }
 
     void finishCreation(VM&);
 
@@ -82,6 +81,8 @@ public:
         return m_errorMessage;
     }
 
+    void finalizeUnconditionally(VM&);
+
 private:
     JSWebAssemblyCodeBlock(VM&, Ref<Wasm::CodeBlock>&&, const Wasm::ModuleInformation&);
     DECLARE_EXPORT_INFO;
@@ -89,17 +90,8 @@ private:
     static void destroy(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
 
-    struct UnconditionalFinalizer : public JSC::UnconditionalFinalizer {
-        UnconditionalFinalizer(JSWebAssemblyCodeBlock& codeBlock)
-            : codeBlock(codeBlock)
-        { }
-        void finalizeUnconditionally() override;
-        JSWebAssemblyCodeBlock& codeBlock;
-    };
-
     PoisonedRef<JSWebAssemblyCodeBlockPoison, Wasm::CodeBlock> m_codeBlock;
-    Vector<MacroAssemblerCodeRef> m_wasmToJSExitStubs;
-    PoisonedUniquePtr<JSWebAssemblyCodeBlockPoison, UnconditionalFinalizer> m_unconditionalFinalizer;
+    Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToJSExitStubs;
     Bag<CallLinkInfo> m_callLinkInfos;
     String m_errorMessage;
 };

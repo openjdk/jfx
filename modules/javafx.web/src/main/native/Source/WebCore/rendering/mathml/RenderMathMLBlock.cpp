@@ -89,7 +89,7 @@ LayoutUnit RenderMathMLBlock::mathAxisHeight() const
 
 LayoutUnit RenderMathMLBlock::mirrorIfNeeded(LayoutUnit horizontalOffset, LayoutUnit boxWidth) const
 {
-    if (style().direction() == RTL)
+    if (style().direction() == TextDirection::RTL)
         return logicalWidth() - boxWidth - horizontalOffset;
 
     return horizontalOffset;
@@ -110,7 +110,7 @@ void RenderMathMLBlock::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     RenderBlock::paint(info, paintOffset);
 
-    if (info.context().paintingDisabled() || info.phase != PaintPhaseForeground)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground)
         return;
 
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location());

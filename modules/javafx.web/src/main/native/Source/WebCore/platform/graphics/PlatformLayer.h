@@ -35,6 +35,11 @@ namespace WebCore {
 class TextureMapperPlatformLayer;
 typedef TextureMapperPlatformLayer PlatformLayer;
 };
+#elif USE(NICOSIA)
+namespace Nicosia {
+class PlatformLayer;
+}
+typedef Nicosia::PlatformLayer PlatformLayer;
 #elif USE(COORDINATED_GRAPHICS_THREADED)
 namespace WebCore {
 class TextureMapperPlatformLayerProxyProvider;

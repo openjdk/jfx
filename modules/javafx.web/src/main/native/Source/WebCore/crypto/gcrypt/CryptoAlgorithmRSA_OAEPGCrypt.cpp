@@ -35,7 +35,7 @@
 
 namespace WebCore {
 
-static std::optional<Vector<uint8_t>> gcryptEncrypt(CryptoAlgorithmIdentifier hashAlgorithmIdentifier, gcry_sexp_t keySexp, const Vector<uint8_t>& labelVector, const Vector<uint8_t>& plainText)
+static std::optional<Vector<uint8_t>> gcryptEncrypt(CryptoAlgorithmIdentifier hashAlgorithmIdentifier, gcry_sexp_t keySexp, const Vector<uint8_t>& labelVector, const Vector<uint8_t>& plainText, size_t keySizeInBytes)
 {
     // Embed the plain-text data in a data s-expression using OAEP padding.
     // Empty label data is properly handled by gcry_sexp_build().
@@ -70,7 +70,7 @@ static std::optional<Vector<uint8_t>> gcryptEncrypt(CryptoAlgorithmIdentifier ha
     if (!aSexp)
         return std::nullopt;
 
-    return mpiData(aSexp);
+    return mpiZeroPrefixedData(aSexp, keySizeInBytes);
 }
 
 static std::optional<Vector<uint8_t>> gcryptDecrypt(CryptoAlgorithmIdentifier hashAlgorithmIdentifier, gcry_sexp_t keySexp, const Vector<uint8_t>& labelVector, const Vector<uint8_t>& cipherText)
@@ -110,15 +110,16 @@ static std::optional<Vector<uint8_t>> gcryptDecrypt(CryptoAlgorithmIdentifier ha
     return mpiData(valueSexp);
 }
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformEncrypt(CryptoAlgorithmRsaOaepParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& plainText)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformEncrypt(const CryptoAlgorithmRsaOaepParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& plainText)
 {
-    auto output = gcryptEncrypt(key.hashAlgorithmIdentifier(), key.platformKey(), parameters.labelVector(), plainText);
+    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!(key.keySizeInBits() % 8));
+    auto output = gcryptEncrypt(key.hashAlgorithmIdentifier(), key.platformKey(), parameters.labelVector(), plainText, key.keySizeInBits() / 8);
     if (!output)
         return Exception { OperationError };
     return WTFMove(*output);
 }
 
-ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformDecrypt(CryptoAlgorithmRsaOaepParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& cipherText)
+ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformDecrypt(const CryptoAlgorithmRsaOaepParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& cipherText)
 {
     auto output = gcryptDecrypt(key.hashAlgorithmIdentifier(), key.platformKey(), parameters.labelVector(), cipherText);
     if (!output)

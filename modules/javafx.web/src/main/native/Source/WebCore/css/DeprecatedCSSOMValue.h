@@ -31,11 +31,12 @@
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class DeprecatedCSSOMValue : public RefCounted<DeprecatedCSSOMValue> {
+class DeprecatedCSSOMValue : public RefCounted<DeprecatedCSSOMValue>, public CanMakeWeakPtr<DeprecatedCSSOMValue> {
 public:
     // Exactly match the IDL. No reason to add anything if it's not in the IDL.
     enum Type {

@@ -39,7 +39,6 @@
 #include "ExtensionStyleSheets.h"
 #include "Frame.h"
 #include "FrameLoaderClient.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "ResourceLoadInfo.h"
 #include "URL.h"
@@ -51,13 +50,13 @@ namespace WebCore {
 
 namespace ContentExtensions {
 
-void ContentExtensionsBackend::addContentExtension(const String& identifier, Ref<CompiledContentExtension> compiledContentExtension)
+void ContentExtensionsBackend::addContentExtension(const String& identifier, Ref<CompiledContentExtension> compiledContentExtension, ContentExtension::ShouldCompileCSS shouldCompileCSS)
 {
     ASSERT(!identifier.isEmpty());
     if (identifier.isEmpty())
         return;
 
-    auto contentExtension = ContentExtension::create(identifier, WTFMove(compiledContentExtension));
+    auto contentExtension = ContentExtension::create(identifier, WTFMove(compiledContentExtension), shouldCompileCSS);
     m_contentExtensions.set(identifier, WTFMove(contentExtension));
 }
 
@@ -74,7 +73,7 @@ void ContentExtensionsBackend::removeAllContentExtensions()
 std::pair<Vector<Action>, Vector<String>> ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& resourceLoadInfo) const
 {
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double addedTimeStart = monotonicallyIncreasingTime();
+    MonotonicTime addedTimeStart = MonotonicTime::now();
 #endif
     if (m_contentExtensions.isEmpty()
         || !resourceLoadInfo.resourceURL.isValid()
@@ -132,8 +131,8 @@ std::pair<Vector<Action>, Vector<String>> ContentExtensionsBackend::actionsForRe
             stylesheetIdentifiers.append(contentExtension->identifier());
     }
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double addedTimeEnd = monotonicallyIncreasingTime();
-    dataLogF("Time added: %f microseconds %s \n", (addedTimeEnd - addedTimeStart) * 1.0e6, resourceLoadInfo.resourceURL.string().utf8().data());
+    MonotonicTime addedTimeEnd = MonotonicTime::now();
+    dataLogF("Time added: %f microseconds %s \n", (addedTimeEnd - addedTimeStart).microseconds(), resourceLoadInfo.resourceURL.string().utf8().data());
 #endif
     return { WTFMove(finalActions), WTFMove(stylesheetIdentifiers) };
 }
@@ -216,7 +215,7 @@ BlockedStatus ContentExtensionsBackend::processContentExtensionRulesForLoad(cons
     if (currentDocument) {
         if (willMakeHTTPS) {
             ASSERT(url.protocolIs("http") || url.protocolIs("ws"));
-            String newProtocol = url.protocolIs("http") ? ASCIILiteral("https") : ASCIILiteral("wss");
+            String newProtocol = url.protocolIs("http") ? "https"_s : "wss"_s;
             currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Content blocker promoted URL from ", url.string(), " to ", newProtocol));
         }
         if (willBlockLoad)

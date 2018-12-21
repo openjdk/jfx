@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SVGResources.h"
 
+#include "ClipPathOperation.h"
 #include "FilterOperation.h"
 #include "RenderSVGResourceClipper.h"
 #include "RenderSVGResourceFilter.h"
@@ -170,7 +171,7 @@ static inline bool isChainableResource(const SVGElement& element, const SVGEleme
 
 static inline RenderSVGResourceContainer* paintingResourceFromSVGPaint(Document& document, const SVGPaintType& paintType, const String& paintUri, AtomicString& id, bool& hasPendingResource)
 {
-    if (paintType != SVG_PAINTTYPE_URI && paintType != SVG_PAINTTYPE_URI_RGBCOLOR && paintType != SVG_PAINTTYPE_URI_CURRENTCOLOR)
+    if (paintType != SVGPaintType::URI && paintType != SVGPaintType::URIRGBColor && paintType != SVGPaintType::URICurrentColor)
         return nullptr;
 
     id = SVGURIReference::fragmentIdentifierFromIRIString(paintUri, document);
@@ -216,6 +217,15 @@ bool SVGResources::buildCachedResources(const RenderElement& renderer, const Ren
     if (clipperFilterMaskerTags().contains(tagName)) {
         if (svgStyle.hasClipper()) {
             AtomicString id(svgStyle.clipperResource());
+            if (setClipper(getRenderSVGResourceById<RenderSVGResourceClipper>(document, id)))
+                foundResources = true;
+            else
+                registerPendingResource(extensions, id, element);
+        } else if (is<ReferenceClipPathOperation>(style.clipPath())) {
+            // FIXME: -webkit-clip-path should support external resources
+            // https://bugs.webkit.org/show_bug.cgi?id=127032
+            auto& clipPath = downcast<ReferenceClipPathOperation>(*style.clipPath());
+            AtomicString id(clipPath.fragment());
             if (setClipper(getRenderSVGResourceById<RenderSVGResourceClipper>(document, id)))
                 foundResources = true;
             else

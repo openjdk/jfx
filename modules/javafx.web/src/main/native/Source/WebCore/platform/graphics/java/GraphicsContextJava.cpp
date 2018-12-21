@@ -256,7 +256,11 @@ void GraphicsContext::clipToImageBuffer(ImageBuffer&, const FloatRect&)
 IntRect GraphicsContext::clipBounds() const
 {
     // Transformation has inverse effect on clip bounds.
-    return enclosingIntRect(m_state.transform.inverse()->mapRect(m_state.clipBounds));
+    return enclosingIntRect(m_state
+                                .transform
+                                .inverse()
+                                .value_or(AffineTransform())
+                                .mapRect(m_state.clipBounds));
 }
 
 void GraphicsContext::drawFocusRing(const Path&, float, float, const Color&)
@@ -419,13 +423,13 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& origin, float 
 {
     savePlatformState(); //fake stroke
     switch (style) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
-    case DocumentMarkerSpellingLineStyle:
+        case DocumentMarkerLineStyle::Spelling:
         {
             static Color red(255, 0, 0);
             setStrokeColor(red);
         }
         break;
-    case DocumentMarkerGrammarLineStyle:
+        case DocumentMarkerLineStyle::Grammar:
         {
             static Color green(0, 255, 0);
             setStrokeColor(green);
@@ -550,7 +554,7 @@ void GraphicsContext::concatCTM(const AffineTransform& at)
 //    path.addEllipse(rect);
 //    rect.inflate(-thickness);
 //    path.addEllipse(rect);
-//    clipPath(path, RULE_EVENODD);
+//    clipPath(path, WindRule::EvenOdd);
 //}
 
 void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Color& color)
@@ -727,7 +731,7 @@ static void setClipPath(
     gc.platformContext()->rq().freeSpace(16)
     << jint(com_sun_webkit_graphics_GraphicsDecoder_CLIP_PATH)
     << copyPath(path.platformPath())
-    << jint(wrule == RULE_EVENODD
+    << jint(wrule == WindRule::EvenOdd
        ? com_sun_webkit_graphics_WCPath_RULE_EVENODD
        : com_sun_webkit_graphics_WCPath_RULE_NONZERO)
     << jint(isOut);
@@ -745,7 +749,7 @@ void GraphicsContext::clipPath(const Path &path, WindRule wrule)
 
 void GraphicsContext::clipOut(const Path& path)
 {
-    setClipPath(*this, m_state, path, RULE_EVENODD, true);
+    setClipPath(*this, m_state, path, WindRule::EvenOdd, true);
 }
 
 void GraphicsContext::clipOut(const FloatRect& rect)
@@ -892,7 +896,7 @@ void GraphicsContext::fillRectWithRoundedHole(const FloatRect& frect, const Floa
     WindRule oldFillRule = fillRule();
     Color oldFillColor = fillColor();
 
-    setFillRule(RULE_EVENODD);
+    setFillRule(WindRule::EvenOdd);
     setFillColor(color);
 
     fillPath(path);

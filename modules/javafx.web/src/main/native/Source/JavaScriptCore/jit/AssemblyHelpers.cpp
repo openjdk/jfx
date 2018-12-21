@@ -50,20 +50,6 @@ ExecutableBase* AssemblyHelpers::executableFor(const CodeOrigin& codeOrigin)
     return codeOrigin.inlineCallFrame->baselineCodeBlock->ownerExecutable();
 }
 
-Vector<BytecodeAndMachineOffset>& AssemblyHelpers::decodedCodeMapFor(CodeBlock* codeBlock)
-{
-    ASSERT(codeBlock == codeBlock->baselineVersion());
-    ASSERT(codeBlock->jitType() == JITCode::BaselineJIT);
-    ASSERT(codeBlock->jitCodeMap());
-
-    HashMap<CodeBlock*, Vector<BytecodeAndMachineOffset>>::AddResult result = m_decodedCodeMaps.add(codeBlock, Vector<BytecodeAndMachineOffset>());
-
-    if (result.isNewEntry)
-        codeBlock->jitCodeMap()->decode(result.iterator->value);
-
-    return result.iterator->value;
-}
-
 AssemblyHelpers::JumpList AssemblyHelpers::branchIfNotType(
     JSValueRegs regs, GPRReg tempGPR, const InferredType::Descriptor& descriptor, TagRegistersMode mode)
 {
@@ -98,6 +84,11 @@ AssemblyHelpers::JumpList AssemblyHelpers::branchIfNotType(
     case InferredType::Symbol:
         result.append(branchIfNotCell(regs, mode));
         result.append(branchIfNotSymbol(regs.payloadGPR()));
+        break;
+
+    case InferredType::BigInt:
+        result.append(branchIfNotCell(regs, mode));
+        result.append(branchIfNotBigInt(regs.payloadGPR()));
         break;
 
     case InferredType::ObjectWithStructure:
@@ -346,8 +337,8 @@ void AssemblyHelpers::callExceptionFuzz(VM& vm)
 #else
     move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
 #endif
-    move(TrustedImmPtr(bitwise_cast<void*>(operationExceptionFuzz)), GPRInfo::nonPreservedNonReturnGPR);
-    call(GPRInfo::nonPreservedNonReturnGPR);
+    move(TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationExceptionFuzz)), GPRInfo::nonPreservedNonReturnGPR);
+    call(GPRInfo::nonPreservedNonReturnGPR, OperationPtrTag);
 
     for (unsigned i = 0; i < FPRInfo::numberOfRegisters; ++i) {
         move(TrustedImmPtr(buffer + GPRInfo::numberOfRegisters + i), GPRInfo::regT0);
@@ -406,7 +397,7 @@ AssemblyHelpers::Jump AssemblyHelpers::emitNonPatchableExceptionCheck(VM& vm)
 
 void AssemblyHelpers::emitStoreStructureWithTypeInfo(AssemblyHelpers& jit, TrustedImmPtr structure, RegisterID dest)
 {
-    const Structure* structurePtr = static_cast<const Structure*>(structure.m_value);
+    const Structure* structurePtr = reinterpret_cast<const Structure*>(structure.m_value);
 #if USE(JSVALUE64)
     jit.store64(TrustedImm64(structurePtr->idBlob()), MacroAssembler::Address(dest, JSCell::structureIDOffset()));
     if (!ASSERT_DISABLED) {
@@ -414,7 +405,7 @@ void AssemblyHelpers::emitStoreStructureWithTypeInfo(AssemblyHelpers& jit, Trust
         jit.abortWithReason(AHStructureIDIsValid);
         correctStructure.link(&jit);
 
-        Jump correctIndexingType = jit.branch8(Equal, MacroAssembler::Address(dest, JSCell::indexingTypeAndMiscOffset()), TrustedImm32(structurePtr->indexingTypeIncludingHistory()));
+        Jump correctIndexingType = jit.branch8(Equal, MacroAssembler::Address(dest, JSCell::indexingTypeAndMiscOffset()), TrustedImm32(structurePtr->indexingModeIncludingHistory()));
         jit.abortWithReason(AHIndexingTypeIsValid);
         correctIndexingType.link(&jit);
 
@@ -597,24 +588,13 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
     Jump popPath;
     Jump done;
 
-#if USE(FAST_TLS_FOR_TLC)
-    loadFromTLSPtr(fastTLSOffsetForKey(WTF_GC_TLC_KEY), scratchGPR);
-#else
-    loadPtr(&vm().threadLocalCacheData, scratchGPR);
-#endif
-    if (allocator.isConstant()) {
-        slowPath.append(branch32(BelowOrEqual, Address(scratchGPR, ThreadLocalCache::offsetOfSizeInData()), TrustedImm32(allocator.allocator().offset())));
-        addPtr(TrustedImm32(ThreadLocalCache::offsetOfFirstAllocatorInData() + allocator.allocator().offset()), scratchGPR, allocatorGPR);
-    } else {
-        slowPath.append(branch32(BelowOrEqual, Address(scratchGPR, ThreadLocalCache::offsetOfSizeInData()), allocatorGPR));
-        addPtr(TrustedImm32(ThreadLocalCache::offsetOfFirstAllocatorInData()), allocatorGPR);
-        addPtr(scratchGPR, allocatorGPR);
-    }
+    if (allocator.isConstant())
+        move(TrustedImmPtr(allocator.allocator().localAllocator()), allocatorGPR);
 
     load32(Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfRemaining()), resultGPR);
     popPath = branchTest32(Zero, resultGPR);
     if (allocator.isConstant())
-        add32(TrustedImm32(-allocator.allocator().cellSize(vm().heap)), resultGPR, scratchGPR);
+        add32(TrustedImm32(-allocator.allocator().cellSize()), resultGPR, scratchGPR);
     else {
         move(resultGPR, scratchGPR);
         sub32(Address(allocatorGPR, LocalAllocator::offsetOfCellSize()), scratchGPR);
@@ -647,7 +627,8 @@ void AssemblyHelpers::emitAllocate(GPRReg resultGPR, const JITAllocator& allocat
             slowPath.append(jump());
             return;
         }
-    }
+    } else
+        slowPath.append(branchTestPtr(Zero, allocatorGPR));
     emitAllocateWithNonNullAllocator(resultGPR, allocator, allocatorGPR, scratchGPR, slowPath);
 }
 
@@ -660,8 +641,8 @@ void AssemblyHelpers::emitAllocateVariableSized(GPRReg resultGPR, CompleteSubspa
     add32(TrustedImm32(MarkedSpace::sizeStep - 1), allocationSize, scratchGPR1);
     urshift32(TrustedImm32(stepShift), scratchGPR1);
     slowPath.append(branch32(Above, scratchGPR1, TrustedImm32(MarkedSpace::largeCutoff >> stepShift)));
-    move(TrustedImmPtr(subspace.allocatorForSizeStep() - 1), scratchGPR2);
-    load32(BaseIndex(scratchGPR2, scratchGPR1, TimesFour), scratchGPR1);
+    move(TrustedImmPtr(subspace.allocatorForSizeStep()), scratchGPR2);
+    loadPtr(BaseIndex(scratchGPR2, scratchGPR1, timesPtr()), scratchGPR1);
 
     emitAllocate(resultGPR, JITAllocator::variable(), scratchGPR1, scratchGPR2, slowPath);
 }
@@ -721,9 +702,9 @@ void AssemblyHelpers::emitDumbVirtualCall(VM& vm, CallLinkInfo* info)
     Call call = nearCall();
     addLinkTask(
         [=, &vm] (LinkBuffer& linkBuffer) {
-            MacroAssemblerCodeRef virtualThunk = virtualThunkFor(&vm, *info);
+            MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunk = virtualThunkFor(&vm, *info);
             info->setSlowStub(createJITStubRoutine(virtualThunk, vm, nullptr, true));
-            linkBuffer.link(call, CodeLocationLabel(virtualThunk.code()));
+            linkBuffer.link(call, CodeLocationLabel<JITStubRoutinePtrTag>(virtualThunk.code()));
         });
 }
 
@@ -773,92 +754,166 @@ void AssemblyHelpers::wangsInt64Hash(GPRReg inputAndResult, GPRReg scratch)
 }
 #endif // USE(JSVALUE64)
 
-void AssemblyHelpers::emitConvertValueToBoolean(VM& vm, JSValueRegs value, GPRReg result, GPRReg scratch, FPRReg valueAsFPR, FPRReg tempFPR, bool shouldCheckMasqueradesAsUndefined, JSGlobalObject* globalObject, bool negateResult)
+void AssemblyHelpers::emitConvertValueToBoolean(VM& vm, JSValueRegs value, GPRReg result, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg valueAsFPR, FPRReg tempFPR, bool shouldCheckMasqueradesAsUndefined, JSGlobalObject* globalObject, bool invert)
 {
     // Implements the following control flow structure:
-    // if (value is boolean) {
-    //     result = value === true
-    // } else if (value is integer) {
-    //     result = value !== 0
-    // } else if (value is double) {
-    //     result = value !== 0.0 && !isNaN(value);
-    // } else if (value is cell) {
-    //     if (value is string) {
-    //          result = value.length() !== 0;
-    //     } else {
-    //          do crazy things for masquerades as undefined
+    // if (value is cell) {
+    //     if (value is string)
+    //         result = !!value->length
+    //     else {
+    //         do evil things for masquerades-as-undefined
+    //         result = true
     //     }
+    // } else if (value is int32) {
+    //     result = !!unboxInt32(value)
+    // } else if (value is number) {
+    //     result = !!unboxDouble(value)
     // } else {
-    //     result = false;
+    //     result = value == jsTrue
     // }
-    //
-    // if (negateResult)
-    //     result = !result;
 
     JumpList done;
-    auto notBoolean = branchIfNotBoolean(value, result);
-#if USE(JSVALUE64)
-    compare32(negateResult ? NotEqual : Equal, value.gpr(), TrustedImm32(ValueTrue), result);
-#else
-    compare32(negateResult ? Equal : NotEqual, value.payloadGPR(), TrustedImm32(0), result);
-#endif
+
+    auto notCell = branchIfNotCell(value);
+    auto isCellButNotString = branchIfNotString(value.payloadGPR());
+    load32(Address(value.payloadGPR(), JSString::offsetOfLength()), result);
+    compare32(invert ? Equal : NotEqual, result, TrustedImm32(0), result);
     done.append(jump());
 
-    notBoolean.link(this);
-#if USE(JSVALUE64)
-    auto isNotNumber = branchIfNotNumber(value.gpr());
-#else
-    ASSERT(scratch != InvalidGPRReg);
-    auto isNotNumber = branchIfNotNumber(value, scratch);
-#endif
-    auto isDouble = branchIfNotInt32(value);
+    isCellButNotString.link(this);
+    if (shouldCheckMasqueradesAsUndefined) {
+        ASSERT(scratchIfShouldCheckMasqueradesAsUndefined != InvalidGPRReg);
+        JumpList isNotMasqueradesAsUndefined;
+        isNotMasqueradesAsUndefined.append(branchTest8(Zero, Address(value.payloadGPR(), JSCell::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined)));
+        emitLoadStructure(vm, value.payloadGPR(), result, scratchIfShouldCheckMasqueradesAsUndefined);
+        move(TrustedImmPtr(globalObject), scratchIfShouldCheckMasqueradesAsUndefined);
+        isNotMasqueradesAsUndefined.append(branchPtr(NotEqual, Address(result, Structure::globalObjectOffset()), scratchIfShouldCheckMasqueradesAsUndefined));
 
-    // It's an int32.
-    compare32(negateResult ? Equal : NotEqual, value.payloadGPR(), TrustedImm32(0), result);
+        // We act like we are "undefined" here.
+        move(invert ? TrustedImm32(1) : TrustedImm32(0), result);
+        done.append(jump());
+        isNotMasqueradesAsUndefined.link(this);
+    }
+    move(invert ? TrustedImm32(0) : TrustedImm32(1), result);
     done.append(jump());
 
-    isDouble.link(this);
+    notCell.link(this);
+    auto notInt32 = branchIfNotInt32(value);
+    compare32(invert ? Equal : NotEqual, value.payloadGPR(), TrustedImm32(0), result);
+    done.append(jump());
+
+    notInt32.link(this);
+    auto notDouble = branchIfNotDoubleKnownNotInt32(value);
 #if USE(JSVALUE64)
     unboxDouble(value.gpr(), result, valueAsFPR);
 #else
     unboxDouble(value, valueAsFPR, tempFPR);
 #endif
-    auto isZeroOrNaN = branchDoubleZeroOrNaN(valueAsFPR, tempFPR);
-    move(negateResult ? TrustedImm32(0) : TrustedImm32(1), result);
-    done.append(jump());
-    isZeroOrNaN.link(this);
-    move(negateResult ? TrustedImm32(1) : TrustedImm32(0), result);
+    move(invert ? TrustedImm32(1) : TrustedImm32(0), result);
+    done.append(branchDoubleZeroOrNaN(valueAsFPR, tempFPR));
+    move(invert ? TrustedImm32(0) : TrustedImm32(1), result);
     done.append(jump());
 
-    isNotNumber.link(this);
-    auto isNotCellAndIsNotNumberAndIsNotBoolean = branchIfNotCell(value);
-    auto isCellButNotString = branch8(NotEqual,
-        Address(value.payloadGPR(), JSCell::typeInfoTypeOffset()), TrustedImm32(StringType));
-    load32(Address(value.payloadGPR(), JSString::offsetOfLength()), result);
-    compare32(negateResult ? Equal : NotEqual, result, TrustedImm32(0), result);
-    done.append(jump());
-
-    isCellButNotString.link(this);
-    if (shouldCheckMasqueradesAsUndefined) {
-        ASSERT(scratch != InvalidGPRReg);
-        JumpList isNotMasqueradesAsUndefined;
-        isNotMasqueradesAsUndefined.append(branchTest8(Zero, Address(value.payloadGPR(), JSCell::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined)));
-        emitLoadStructure(vm, value.payloadGPR(), result, scratch);
-        move(TrustedImmPtr(globalObject), scratch);
-        isNotMasqueradesAsUndefined.append(branchPtr(NotEqual, Address(result, Structure::globalObjectOffset()), scratch));
-        // We act like we are "undefined" here.
-        move(negateResult ? TrustedImm32(1) : TrustedImm32(0), result);
-        done.append(jump());
-        isNotMasqueradesAsUndefined.link(this);
-    }
-    move(negateResult ? TrustedImm32(0) : TrustedImm32(1), result);
-    done.append(jump());
-
-    // null or undefined.
-    isNotCellAndIsNotNumberAndIsNotBoolean.link(this);
-    move(negateResult ? TrustedImm32(1) : TrustedImm32(0), result);
+    notDouble.link(this);
+#if USE(JSVALUE64)
+    static_assert(static_cast<int32_t>(ValueTrue) == ValueTrue, "");
+    compare64(invert ? NotEqual : Equal, value.gpr(), TrustedImm32(ValueTrue), result);
+#else
+    move(invert ? TrustedImm32(1) : TrustedImm32(0), result);
+    done.append(branchIfNotBoolean(value, InvalidGPRReg));
+    compare32(invert ? Equal : NotEqual, value.payloadGPR(), TrustedImm32(0), result);
+#endif
 
     done.link(this);
+}
+
+AssemblyHelpers::JumpList AssemblyHelpers::branchIfValue(VM& vm, JSValueRegs value, GPRReg scratch, GPRReg scratchIfShouldCheckMasqueradesAsUndefined, FPRReg valueAsFPR, FPRReg tempFPR, bool shouldCheckMasqueradesAsUndefined, JSGlobalObject* globalObject, bool invert)
+{
+    // Implements the following control flow structure:
+    // if (value is cell) {
+    //     if (value is string)
+    //         result = !!value->length
+    //     else {
+    //         do evil things for masquerades-as-undefined
+    //         result = true
+    //     }
+    // } else if (value is int32) {
+    //     result = !!unboxInt32(value)
+    // } else if (value is number) {
+    //     result = !!unboxDouble(value)
+    // } else {
+    //     result = value == jsTrue
+    // }
+
+    JumpList done;
+    JumpList truthy;
+
+    auto notCell = branchIfNotCell(value);
+    auto isCellButNotString = branchIfNotString(value.payloadGPR());
+    truthy.append(branchTest32(invert ? Zero : NonZero, Address(value.payloadGPR(), JSString::offsetOfLength())));
+    done.append(jump());
+
+    if (shouldCheckMasqueradesAsUndefined) {
+        isCellButNotString.link(this);
+        ASSERT(scratchIfShouldCheckMasqueradesAsUndefined != InvalidGPRReg);
+        JumpList isNotMasqueradesAsUndefined;
+        isNotMasqueradesAsUndefined.append(branchTest8(Zero, Address(value.payloadGPR(), JSCell::typeInfoFlagsOffset()), TrustedImm32(MasqueradesAsUndefined)));
+        emitLoadStructure(vm, value.payloadGPR(), scratch, scratchIfShouldCheckMasqueradesAsUndefined);
+        move(TrustedImmPtr(globalObject), scratchIfShouldCheckMasqueradesAsUndefined);
+        isNotMasqueradesAsUndefined.append(branchPtr(NotEqual, Address(scratch, Structure::globalObjectOffset()), scratchIfShouldCheckMasqueradesAsUndefined));
+
+        // We act like we are "undefined" here.
+        if (invert)
+            truthy.append(jump());
+        else
+            done.append(jump());
+
+        if (invert)
+            done.append(isNotMasqueradesAsUndefined);
+        else
+            truthy.append(isNotMasqueradesAsUndefined);
+    } else {
+        if (invert)
+            done.append(isCellButNotString);
+        else
+            truthy.append(isCellButNotString);
+    }
+
+    notCell.link(this);
+    auto notInt32 = branchIfNotInt32(value);
+    truthy.append(branchTest32(invert ? Zero : NonZero, value.payloadGPR()));
+    done.append(jump());
+
+    notInt32.link(this);
+    auto notDouble = branchIfNotDoubleKnownNotInt32(value);
+#if USE(JSVALUE64)
+    unboxDouble(value.gpr(), scratch, valueAsFPR);
+#else
+    unboxDouble(value, valueAsFPR, tempFPR);
+#endif
+    if (invert) {
+        truthy.append(branchDoubleZeroOrNaN(valueAsFPR, tempFPR));
+        done.append(jump());
+    } else {
+        done.append(branchDoubleZeroOrNaN(valueAsFPR, tempFPR));
+        truthy.append(jump());
+    }
+
+    notDouble.link(this);
+#if USE(JSVALUE64)
+    truthy.append(branch64(invert ? NotEqual : Equal, value.gpr(), TrustedImm64(JSValue::encode(jsBoolean(true)))));
+#else
+    auto notBoolean = branchIfNotBoolean(value, InvalidGPRReg);
+    if (invert)
+        truthy.append(notBoolean);
+    else
+        done.append(notBoolean);
+    truthy.append(branch32(invert ? Equal : NotEqual, value.payloadGPR(), TrustedImm32(0)));
+#endif
+
+    done.link(this);
+
+    return truthy;
 }
 
 #if ENABLE(WEBASSEMBLY)
@@ -940,8 +995,8 @@ void AssemblyHelpers::debugCall(VM& vm, V_DebugOperation_EPP function, void* arg
 #else
 #error "JIT not supported on this platform."
 #endif
-    move(TrustedImmPtr(reinterpret_cast<void*>(function)), scratch);
-    call(scratch);
+    move(TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(function)), scratch);
+    call(scratch, OperationPtrTag);
 
     move(TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
     storePtr(TrustedImmPtr(nullptr), GPRInfo::regT0);

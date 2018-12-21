@@ -43,14 +43,18 @@
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
-#elif !USE(OPENGL_ES_2)
+#elif !USE(OPENGL_ES)
 #include "OpenGLShims.h"
 #endif
 
-#if USE(OPENGL_ES_2)
+#if USE(OPENGL_ES)
 #include "Extensions3DOpenGLES.h"
 #else
 #include "Extensions3DOpenGL.h"
+#endif
+
+#if USE(NICOSIA)
+#include "NicosiaGC3DLayer.h"
 #endif
 
 namespace WebCore {
@@ -71,7 +75,7 @@ RefPtr<GraphicsContext3D> GraphicsContext3D::create(GraphicsContext3DAttributes 
     static bool initialized = false;
     static bool success = true;
     if (!initialized) {
-#if !USE(OPENGL_ES_2) && !USE(LIBEPOXY)
+#if !USE(OPENGL_ES) && !USE(LIBEPOXY)
         success = initializeOpenGLShims();
 #endif
         initialized = true;
@@ -91,9 +95,9 @@ RefPtr<GraphicsContext3D> GraphicsContext3D::create(GraphicsContext3DAttributes 
     // Create the GraphicsContext3D object first in order to establist a current context on this thread.
     auto context = adoptRef(new GraphicsContext3D(attributes, hostWindow, renderStyle));
 
-#if USE(LIBEPOXY) && USE(OPENGL_ES_2)
+#if USE(LIBEPOXY) && USE(OPENGL_ES)
     // Bail if GLES3 was requested but cannot be provided.
-    if (attributes.useGLES3 && !epoxy_is_desktop_gl() && epoxy_gl_version() < 30)
+    if (attributes.isWebGL2 && !epoxy_is_desktop_gl() && epoxy_gl_version() < 30)
         return nullptr;
 #endif
 
@@ -105,7 +109,11 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attributes, Hos
     : m_attrs(attributes)
 {
     ASSERT_UNUSED(sharedContext, !sharedContext);
+#if USE(NICOSIA)
+    m_nicosiaLayer = std::make_unique<Nicosia::GC3DLayer>(*this, renderStyle);
+#else
     m_texmapLayer = std::make_unique<TextureMapperGC3DPlatformLayer>(*this, renderStyle);
+#endif
 
     makeContextCurrent();
 
@@ -156,7 +164,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attributes, Hos
             // Bind canvas FBO.
             glBindFramebuffer(GraphicsContext3D::FRAMEBUFFER, m_fbo);
             m_state.boundFBO = m_fbo;
-#if USE(OPENGL_ES_2)
+#if USE(OPENGL_ES)
             if (m_attrs.depth)
                 glGenRenderbuffers(1, &m_depthBuffer);
             if (m_attrs.stencil)
@@ -167,7 +175,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attributes, Hos
         }
     }
 
-#if !USE(OPENGL_ES_2)
+#if !USE(OPENGL_ES)
     ::glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
     if (GLContext::current()->version() >= 320) {
@@ -195,7 +203,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attributes, Hos
     }
 #else
     // Adjust the shader specification depending on whether GLES3 (i.e. WebGL2 support) was requested.
-    m_compiler = ANGLEWebKitBridge(SH_ESSL_OUTPUT, m_attrs.useGLES3 ? SH_WEBGL2_SPEC : SH_WEBGL_SPEC);
+    m_compiler = ANGLEWebKitBridge(SH_ESSL_OUTPUT, m_attrs.isWebGL2 ? SH_WEBGL2_SPEC : SH_WEBGL_SPEC);
 #endif
 
     // ANGLE initialization.
@@ -238,7 +246,7 @@ GraphicsContext3D::~GraphicsContext3D()
             ::glDeleteRenderbuffers(1, &m_multisampleDepthStencilBuffer);
         ::glDeleteFramebuffers(1, &m_multisampleFBO);
     } else if (m_attrs.stencil || m_attrs.depth) {
-#if USE(OPENGL_ES_2)
+#if USE(OPENGL_ES)
         if (m_depthBuffer)
             glDeleteRenderbuffers(1, &m_depthBuffer);
 
@@ -270,7 +278,11 @@ void GraphicsContext3D::setErrorMessageCallback(std::unique_ptr<ErrorMessageCall
 
 bool GraphicsContext3D::makeContextCurrent()
 {
+#if USE(NICOSIA)
+    return m_nicosiaLayer->makeContextCurrent();
+#else
     return m_texmapLayer->makeContextCurrent();
+#endif
 }
 
 void GraphicsContext3D::checkGPUStatus()
@@ -279,7 +291,11 @@ void GraphicsContext3D::checkGPUStatus()
 
 PlatformGraphicsContext3D GraphicsContext3D::platformGraphicsContext3D()
 {
+#if USE(NICOSIA)
+    return m_nicosiaLayer->platformContext();
+#else
     return m_texmapLayer->platformContext();
+#endif
 }
 
 Platform3DObject GraphicsContext3D::platformTexture() const
@@ -289,7 +305,7 @@ Platform3DObject GraphicsContext3D::platformTexture() const
 
 bool GraphicsContext3D::isGLES2Compliant() const
 {
-#if USE(OPENGL_ES_2)
+#if USE(OPENGL_ES)
     return true;
 #else
     return false;
@@ -298,14 +314,18 @@ bool GraphicsContext3D::isGLES2Compliant() const
 
 PlatformLayer* GraphicsContext3D::platformLayer() const
 {
+#if USE(NICOSIA)
+    return &m_nicosiaLayer->contentLayer();
+#else
     return m_texmapLayer.get();
+#endif
 }
 
 #if PLATFORM(GTK)
 Extensions3D& GraphicsContext3D::getExtensions()
 {
     if (!m_extensions) {
-#if USE(OPENGL_ES_2)
+#if USE(OPENGL_ES)
         // glGetStringi is not available on GLES2.
         m_extensions = std::make_unique<Extensions3DOpenGLES>(this,  false);
 #else

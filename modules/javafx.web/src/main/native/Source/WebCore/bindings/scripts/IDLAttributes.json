@@ -161,6 +161,10 @@
         "DoNotCheckSecurity": {
             "contextsAllowed": ["attribute", "operation"]
         },
+        "DoNotCheckSecurityIf": {
+            "contextsAllowed": ["attribute", "operation"],
+            "values": ["CrossOriginWindowPolicyAllow", "CrossOriginWindowPolicyAllowPostMessage"]
+        },
         "DoNotCheckSecurityOnGetter": {
             "contextsAllowed": ["attribute"]
         },

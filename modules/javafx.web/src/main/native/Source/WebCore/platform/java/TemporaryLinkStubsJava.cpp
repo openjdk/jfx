@@ -132,30 +132,6 @@ void SearchPopupMenuJava::loadRecentSearches(const AtomicString&, Vector<RecentS
 
 // ---- Frame.h ---- //
 
-struct ScopedState {
-    ScopedState(Frame* theFrame, RenderObject* theRenderer)
-        : frame(theFrame)
-        , renderer(theRenderer)
-        , paintBehavior(frame->view()->paintBehavior())
-        , backgroundColor(frame->view()->baseBackgroundColor())
-    {
-    }
-
-    ~ScopedState()
-    {
-        if (renderer)
-            renderer->updateDragState(false);
-        frame->view()->setPaintBehavior(paintBehavior);
-        frame->view()->setBaseBackgroundColor(backgroundColor);
-        frame->view()->setNodeToDraw(0);
-    }
-
-    Frame* frame;
-    RenderObject* renderer;
-    PaintBehavior paintBehavior;
-    Color backgroundColor;
-};
-
 // ---- WebCore/platform/graphics stubs ---- //
 
 // ---- Color.h ---- //

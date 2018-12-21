@@ -84,12 +84,8 @@ public:
     void invalidateFragments(MarkingBehavior = MarkContainingBlockChain);
     bool hasValidFragmentInfo() const { return !m_fragmentsInvalidated && !m_fragmentList.isEmpty(); }
 
-    virtual bool singleFragmentHasUniformLogicalHeight() const { return true; }
-
     // Called when a descendant box's layout is finished and it has been positioned within its container.
     virtual void fragmentedFlowDescendantBoxLaidOut(RenderBox*) { }
-
-    virtual void layoutFlowExcludedObjects(bool) { }
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
@@ -234,14 +230,13 @@ protected:
         bool m_rangeInvalidated;
     };
 
-    typedef PODInterval<LayoutUnit, RenderFragmentContainer*> FragmentInterval;
-    typedef PODIntervalTree<LayoutUnit, RenderFragmentContainer*> FragmentIntervalTree;
+    typedef PODInterval<LayoutUnit, WeakPtr<RenderFragmentContainer>> FragmentInterval;
+    typedef PODIntervalTree<LayoutUnit, WeakPtr<RenderFragmentContainer>> FragmentIntervalTree;
 
     class FragmentSearchAdapter {
     public:
         FragmentSearchAdapter(LayoutUnit offset)
             : m_offset(offset)
-            , m_result(nullptr)
         {
         }
 
@@ -249,11 +244,11 @@ protected:
         const LayoutUnit& highValue() const { return m_offset; }
         void collectIfNeeded(const FragmentInterval&);
 
-        RenderFragmentContainer* result() const { return m_result; }
+        RenderFragmentContainer* result() const { return m_result.get(); }
 
     private:
         LayoutUnit m_offset;
-        RenderFragmentContainer* m_result;
+        WeakPtr<RenderFragmentContainer> m_result;
     };
 
     // Map a line to its containing fragment.
@@ -286,6 +281,10 @@ namespace WTF {
 
 template <> struct ValueToString<WebCore::RenderFragmentContainer*> {
     static String string(const WebCore::RenderFragmentContainer* value) { return String::format("%p", value); }
+};
+
+template <> struct ValueToString<WeakPtr<WebCore::RenderFragmentContainer>> {
+    static String string(const WeakPtr<WebCore::RenderFragmentContainer> value) { return value.get() ? ValueToString<WebCore::RenderFragmentContainer*>::string(value.get()) : String(); }
 };
 
 } // namespace WTF

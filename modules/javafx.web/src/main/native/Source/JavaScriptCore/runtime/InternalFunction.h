@@ -36,7 +36,14 @@ class InternalFunction : public JSDestructibleObject {
     friend class LLIntOffsetsExtractor;
 public:
     typedef JSDestructibleObject Base;
-    static const unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | ImplementsDefaultHasInstance | TypeOfShouldCallGetCallData;
+    static const unsigned StructureFlags = Base::StructureFlags | ImplementsHasInstance | ImplementsDefaultHasInstance | OverridesGetCallData;
+
+    template<typename CellType>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        static_assert(sizeof(CellType) == sizeof(InternalFunction), "InternalFunction subclasses that add fields need to override subspaceFor<>()");
+        return &vm.internalFunctionSpace;
+    }
 
     DECLARE_EXPORT_INFO;
 
@@ -53,7 +60,7 @@ public:
 
     static Structure* createSubclassStructure(ExecState*, JSValue newTarget, Structure*);
 
-    NativeFunction nativeFunctionFor(CodeSpecializationKind kind)
+    TaggedNativeFunction nativeFunctionFor(CodeSpecializationKind kind)
     {
         if (kind == CodeForCall)
             return m_functionForCall.unpoisoned();
@@ -70,7 +77,7 @@ public:
     }
 
 protected:
-    using PoisonedNativeFunction = Poisoned<NativeCodePoison, NativeFunction>;
+    using PoisonedTaggedNativeFunction = Poisoned<NativeCodePoison, TaggedNativeFunction>;
 
     JS_EXPORT_PRIVATE InternalFunction(VM&, Structure*, NativeFunction functionForCall, NativeFunction functionForConstruct);
 
@@ -82,24 +89,16 @@ protected:
     JS_EXPORT_PRIVATE static ConstructType getConstructData(JSCell*, ConstructData&);
     JS_EXPORT_PRIVATE static CallType getCallData(JSCell*, CallData&);
 
-    PoisonedNativeFunction m_functionForCall;
-    PoisonedNativeFunction m_functionForConstruct;
+    PoisonedTaggedNativeFunction m_functionForCall;
+    PoisonedTaggedNativeFunction m_functionForConstruct;
     WriteBarrier<JSString> m_originalName;
 };
-
-InternalFunction* asInternalFunction(JSValue);
-
-inline InternalFunction* asInternalFunction(JSValue value)
-{
-    ASSERT(asObject(value)->inherits(*value.getObject()->vm(), InternalFunction::info()));
-    return static_cast<InternalFunction*>(asObject(value));
-}
 
 ALWAYS_INLINE Structure* InternalFunction::createSubclassStructure(ExecState* exec, JSValue newTarget, Structure* baseClass)
 {
     // We allow newTarget == JSValue() because the API needs to be able to create classes without having a real JS frame.
     // Since we don't allow subclassing in the API we just treat newTarget == JSValue() as newTarget == exec->jsCallee()
-    ASSERT(!newTarget || newTarget.isConstructor());
+    ASSERT(!newTarget || newTarget.isConstructor(exec->vm()));
 
     if (newTarget && newTarget != exec->jsCallee())
         return createSubclassStructureSlow(exec, newTarget, baseClass);

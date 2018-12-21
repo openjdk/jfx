@@ -52,7 +52,7 @@
 #define BOS_WINDOWS 1
 #endif
 
-#if BOS(DARWIN)
+#if BOS(DARWIN) && !defined(BUILDING_WITH_CMAKE)
 #if TARGET_OS_IPHONE
 #define BPLATFORM_IOS 1
 #if TARGET_OS_SIMULATOR
@@ -71,6 +71,10 @@
 #define BPLATFORM_WATCHOS 1
 #endif
 
+#if defined(TARGET_OS_TV) && TARGET_OS_TV
+#define BPLATFORM_APPLETV 1
+#endif
+
 /* ==== Policy decision macros: these define policy choices for a particular port. ==== */
 
 /* BUSE() - use a particular third-party library or optional OS service */
@@ -80,11 +84,6 @@
 
 /* BCOMPILER_SUPPORTS() - check for a compiler feature */
 #define BCOMPILER_SUPPORTS(FEATURE) (defined BCOMPILER_SUPPORTS_##FEATURE && BCOMPILER_SUPPORTS_##FEATURE)
-
-/* BCOMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES) - compiler supports non-static data member initializers for aggregates */
-#if defined(__cpp_aggregate_nsdmi) && __cpp_aggregate_nsdmi >= 201304
-#define BCOMPILER_SUPPORTS_NSDMI_FOR_AGGREGATES 1
-#endif
 
 /* ==== Platform adaptation macros: these describe properties of the target environment. ==== */
 
@@ -235,3 +234,14 @@
 #if !defined(BUNUSED_PARAM)
 #define BUNUSED_PARAM(variable) (void)variable
 #endif
+
+/* This is used for debugging when hacking on how bmalloc calculates its physical footprint. */
+#define ENABLE_PHYSICAL_PAGE_MAP 0
+
+#if ((BPLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 120000) || (BPLATFORM(WATCHOS) && __WATCH_OS_VERSION_MIN_REQUIRED >= 50000) || (BPLATFORM(APPLETV) && __TV_OS_VERSION_MIN_REQUIRED >= 120000)) \
+    && (BCPU(ARM64) || BCPU(ARM))
+#define BUSE_CHECK_NANO_MALLOC 1
+#else
+#define BUSE_CHECK_NANO_MALLOC 0
+#endif
+

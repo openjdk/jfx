@@ -63,6 +63,7 @@ public:
     explicit RefCountedArray(size_t size)
     {
         if (!size) {
+            // NOTE: JSC's LowLevelInterpreter relies on this being nullptr when the size is zero.
             PtrTraits::exchange(m_data, nullptr);
             return;
         }
@@ -72,7 +73,7 @@ public:
         Header::fromPayload(data)->refCount = 1;
         Header::fromPayload(data)->length = size;
         ASSERT(Header::fromPayload(data)->length == size);
-        VectorTypeOperations<T>::initialize(begin(), end());
+        VectorTypeOperations<T>::initializeIfNonPOD(begin(), end());
     }
 
     template<typename OtherTraits = PtrTraits>

@@ -278,6 +278,7 @@ static void compileStub(
                 jit.load32(MacroAssembler::Address(GPRInfo::regT0, JSCell::structureIDOffset()), GPRInfo::regT1);
                 jit.store32(GPRInfo::regT1, arrayProfile->addressOfLastSeenStructureID());
                 jit.load8(MacroAssembler::Address(GPRInfo::regT0, JSCell::indexingTypeAndMiscOffset()), GPRInfo::regT1);
+                jit.and32(MacroAssembler::TrustedImm32(IndexingModeMask), GPRInfo::regT1);
                 jit.move(MacroAssembler::TrustedImm32(1), GPRInfo::regT2);
                 jit.lshift32(GPRInfo::regT1, GPRInfo::regT2);
                 jit.or32(GPRInfo::regT2, MacroAssembler::AbsoluteAddress(arrayProfile->addressOfArrayModes()));
@@ -334,12 +335,12 @@ static void compileStub(
                 jit.storePtr(GPRInfo::regT0, materializationArguments + propertyIndex);
             }
 
-            // This call assumes that we don't pass arguments on the stack.
-            jit.setupArgumentsWithExecState(
+            static_assert(FunctionTraits<decltype(operationMaterializeObjectInOSR)>::arity < GPRInfo::numberOfArgumentRegisters, "This call assumes that we don't pass arguments on the stack.");
+            jit.setupArguments<decltype(operationMaterializeObjectInOSR)>(
                 CCallHelpers::TrustedImmPtr(materialization),
                 CCallHelpers::TrustedImmPtr(materializationArguments));
-            jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(operationMaterializeObjectInOSR)), GPRInfo::nonArgGPR0);
-            jit.call(GPRInfo::nonArgGPR0);
+            jit.move(CCallHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationMaterializeObjectInOSR)), GPRInfo::nonArgGPR0);
+            jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
             jit.storePtr(GPRInfo::returnValueGPR, materializationToPointer.get(materialization));
 
             // Let everyone know that we're done.
@@ -361,13 +362,13 @@ static void compileStub(
             jit.storePtr(GPRInfo::regT0, materializationArguments + propertyIndex);
         }
 
-        // This call assumes that we don't pass arguments on the stack
-        jit.setupArgumentsWithExecState(
+        static_assert(FunctionTraits<decltype(operationPopulateObjectInOSR)>::arity < GPRInfo::numberOfArgumentRegisters, "This call assumes that we don't pass arguments on the stack.");
+        jit.setupArguments<decltype(operationPopulateObjectInOSR)>(
             CCallHelpers::TrustedImmPtr(materialization),
             CCallHelpers::TrustedImmPtr(materializationToPointer.get(materialization)),
             CCallHelpers::TrustedImmPtr(materializationArguments));
-        jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(operationPopulateObjectInOSR)), GPRInfo::nonArgGPR0);
-        jit.call(GPRInfo::nonArgGPR0);
+        jit.move(CCallHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationPopulateObjectInOSR)), GPRInfo::nonArgGPR0);
+        jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
     }
 
     // Save all state from wherever the exit data tells us it was, into the appropriate place in
@@ -494,7 +495,7 @@ static void compileStub(
     LinkBuffer patchBuffer(jit, codeBlock);
     exit.m_code = FINALIZE_CODE_IF(
         shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit(),
-        patchBuffer,
+        patchBuffer, OSRExitPtrTag,
         "FTL OSR exit #%u (%s, %s) from %s, with operands = %s",
             exitID, toCString(exit.m_codeOrigin).data(),
             exitKindToString(exit.m_kind), toCString(*codeBlock).data(),
@@ -545,7 +546,7 @@ extern "C" void* compileFTLOSRExit(ExecState* exec, unsigned exitID)
     compileStub(exitID, jitCode, exit, &vm, codeBlock);
 
     MacroAssembler::repatchJump(
-        exit.codeLocationForRepatch(codeBlock), CodeLocationLabel(exit.m_code.code()));
+        exit.codeLocationForRepatch(codeBlock), CodeLocationLabel<OSRExitPtrTag>(exit.m_code.code()));
 
     return exit.m_code.code().executableAddress();
 }

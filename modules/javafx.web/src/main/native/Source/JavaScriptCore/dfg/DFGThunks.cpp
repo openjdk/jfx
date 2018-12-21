@@ -40,15 +40,15 @@
 
 namespace JSC { namespace DFG {
 
-MacroAssemblerCodeRef osrExitThunkGenerator(VM* vm)
+MacroAssemblerCodeRef<JITThunkPtrTag> osrExitThunkGenerator(VM* vm)
 {
     MacroAssembler jit;
     jit.probe(OSRExit::executeOSRExit, vm);
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID);
-    return FINALIZE_CODE(patchBuffer, "DFG OSR exit thunk");
+    return FINALIZE_CODE(patchBuffer, JITThunkPtrTag, "DFG OSR exit thunk");
 }
 
-MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
+MacroAssemblerCodeRef<JITThunkPtrTag> osrExitGenerationThunkGenerator(VM* vm)
 {
     MacroAssembler jit;
 
@@ -82,7 +82,7 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
     jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
 #endif
 
-    MacroAssembler::Call functionCall = jit.call();
+    MacroAssembler::Call functionCall = jit.call(OperationPtrTag);
 
     jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
     jit.storePtr(MacroAssembler::TrustedImmPtr(nullptr), MacroAssembler::Address(GPRInfo::regT0));
@@ -99,22 +99,23 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
 #endif
     }
 
-    jit.jump(MacroAssembler::AbsoluteAddress(&vm->osrExitJumpDestination));
+    jit.jump(MacroAssembler::AbsoluteAddress(&vm->osrExitJumpDestination), OSRExitPtrTag);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID);
 
-    patchBuffer.link(functionCall, OSRExit::compileOSRExit);
+    patchBuffer.link(functionCall, FunctionPtr<OperationPtrTag>(OSRExit::compileOSRExit));
 
-    return FINALIZE_CODE(patchBuffer, "DFG OSR exit generation thunk");
+    return FINALIZE_CODE(patchBuffer, JITThunkPtrTag, "DFG OSR exit generation thunk");
 }
 
-MacroAssemblerCodeRef osrEntryThunkGenerator(VM* vm)
+MacroAssemblerCodeRef<JITThunkPtrTag> osrEntryThunkGenerator(VM* vm)
 {
     AssemblyHelpers jit(nullptr);
 
-    // We get passed the address of a scratch buffer. The first 8-byte slot of the buffer
-    // is the frame size. The second 8-byte slot is the pointer to where we are supposed to
-    // jump. The remaining bytes are the new call frame header followed by the locals.
+    // We get passed the address of a scratch buffer in GPRInfo::returnValueGPR2.
+    // The first 8-byte slot of the buffer is the frame size. The second 8-byte slot
+    // is the pointer to where we are supposed to jump. The remaining bytes are
+    // the new call frame header followed by the locals.
 
     ptrdiff_t offsetOfFrameSize = 0; // This is the DFG frame count.
     ptrdiff_t offsetOfTargetPC = offsetOfFrameSize + sizeof(EncodedJSValue);
@@ -143,10 +144,10 @@ MacroAssemblerCodeRef osrEntryThunkGenerator(VM* vm)
     jit.restoreCalleeSavesFromEntryFrameCalleeSavesBuffer(vm->topEntryFrame);
     jit.emitMaterializeTagCheckRegisters();
 
-    jit.jump(GPRInfo::regT1);
+    jit.jump(GPRInfo::regT1, GPRInfo::callFrameRegister);
 
     LinkBuffer patchBuffer(jit, GLOBAL_THUNK_ID);
-    return FINALIZE_CODE(patchBuffer, "DFG OSR entry thunk");
+    return FINALIZE_CODE(patchBuffer, JITThunkPtrTag, "DFG OSR entry thunk");
 }
 
 } } // namespace JSC::DFG

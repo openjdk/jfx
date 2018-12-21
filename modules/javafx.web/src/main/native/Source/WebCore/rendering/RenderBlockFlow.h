@@ -347,9 +347,7 @@ public:
     // Helper methods for computing line counts and heights for line counts.
     RootInlineBox* lineAtIndex(int) const;
     int lineCount(const RootInlineBox* = nullptr, bool* = nullptr) const;
-    int logicalHeightForLineCount(int);
-    int logicalHeightExcludingLineCount(int);
-
+    int heightForLineCount(int);
     void clearTruncation();
 
     void setHasMarkupTruncation(bool b) { setRenderBlockFlowHasMarkupTruncation(b); }
@@ -360,6 +358,7 @@ public:
     const SimpleLineLayout::Layout* simpleLineLayout() const;
     void deleteLineBoxesBeforeSimpleLineLayout();
     void ensureLineBoxes();
+    void generateLineBoxTree();
 
 #if ENABLE(TREE_DEBUGGING)
     void outputLineTreeAndMark(WTF::TextStream&, const InlineBox* markedBox, int depth) const;
@@ -390,8 +389,6 @@ public:
     // unbreakable content, between orphans and widows, etc.). This will be used as a hint to the
     // column balancer to help set a good minimum column height.
     void updateMinimumPageHeight(LayoutUnit offset, LayoutUnit minHeight);
-
-    void determineLogicalLeftPositionForChild(RenderBox& child, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
 
     void addFloatsToNewParent(RenderBlockFlow& toBlockFlow) const;
 
@@ -458,6 +455,7 @@ protected:
 
     virtual void cachePriorCharactersIfNeeded(const LazyLineBreakIterator&) {};
 
+protected:
     // Called to lay out the legend for a fieldset or the ruby text of a ruby run. Also used by multi-column layout to handle
     // the flow thread child.
     void layoutExcludedChildren(bool relayoutChildren) override;
@@ -486,7 +484,7 @@ private:
     // Returns true if and only if it has positioned any floats.
     bool positionNewFloats();
 
-    void clearFloats(EClear);
+    void clearFloats(Clear);
 
     LayoutUnit logicalRightFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
     LayoutUnit logicalLeftFloatOffsetForLine(LayoutUnit logicalTop, LayoutUnit fixedOffset, LayoutUnit logicalHeight) const override;
@@ -504,6 +502,8 @@ private:
     void addIntrudingFloats(RenderBlockFlow* prev, RenderBlockFlow* container, LayoutUnit xoffset, LayoutUnit yoffset);
     bool hasOverhangingFloats() { return parent() && containsFloats() && lowestFloatLogicalBottom() > logicalHeight(); }
     LayoutUnit getClearDelta(RenderBox& child, LayoutUnit yPos);
+
+    void determineLogicalLeftPositionForChild(RenderBox& child, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
 
     bool hitTestFloats(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset) override;
     bool hitTestInlineChildren(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
@@ -531,8 +531,9 @@ public:
     RootInlineBox* createAndAppendRootInlineBox();
 
     LayoutUnit startAlignedOffsetForLine(LayoutUnit position, IndentTextOrNot shouldIndentText);
-    virtual ETextAlign textAlignmentForLine(bool endsWithSoftBreak) const;
+    virtual TextAlignMode textAlignmentForLine(bool endsWithSoftBreak) const;
     virtual void adjustInlineDirectionLineBounds(int /* expansionOpportunityCount */, float& /* logicalLeft */, float& /* logicalWidth */) const { }
+    RootInlineBox* constructLine(BidiRunList<BidiRun>&, const LineInfo&);
 
 private:
     void adjustIntrinsicLogicalWidthsForColumns(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
@@ -542,12 +543,11 @@ private:
 
     virtual std::unique_ptr<RootInlineBox> createRootInlineBox(); // Subclassed by RenderSVGText.
     InlineFlowBox* createLineBoxes(RenderObject*, const LineInfo&, InlineBox* childBox);
-    RootInlineBox* constructLine(BidiRunList<BidiRun>&, const LineInfo&);
     void setMarginsForRubyRun(BidiRun*, RenderRubyRun&, RenderObject*, const LineInfo&);
     void computeInlineDirectionPositionsForLine(RootInlineBox*, const LineInfo&, BidiRun* firstRun, BidiRun* trailingSpaceRun, bool reachedEnd, GlyphOverflowAndFallbackFontsMap&, VerticalPositionCache&, WordMeasurements&);
     void updateRubyForJustifiedText(RenderRubyRun&, BidiRun&, const Vector<unsigned, 16>& expansionOpportunities, unsigned& expansionOpportunityCount, float& totalLogicalWidth, float availableLogicalWidth, size_t& expansionIndex);
     void computeExpansionForJustifiedText(BidiRun* firstRun, BidiRun* trailingSpaceRun, const Vector<unsigned, 16>& expansionOpportunities, unsigned expansionOpportunityCount, float totalLogicalWidth, float availableLogicalWidth);
-    BidiRun* computeInlineDirectionPositionsForSegment(RootInlineBox*, const LineInfo&, ETextAlign, float& logicalLeft,
+    BidiRun* computeInlineDirectionPositionsForSegment(RootInlineBox*, const LineInfo&, TextAlignMode, float& logicalLeft,
         float& availableLogicalWidth, BidiRun* firstRun, BidiRun* trailingSpaceRun, GlyphOverflowAndFallbackFontsMap& textBoxDataMap, VerticalPositionCache&, WordMeasurements&);
     void computeBlockDirectionPositionsForLine(RootInlineBox*, BidiRun*, GlyphOverflowAndFallbackFontsMap&, VerticalPositionCache&);
     BidiRun* handleTrailingSpaces(BidiRunList<BidiRun>&, BidiContext*);
@@ -574,7 +574,7 @@ private:
     // page/column that has a different available line width than the old one. Used to know when you have to dirty a
     // line, i.e., that it can't be re-used.
     bool lineWidthForPaginatedLineChanged(RootInlineBox*, LayoutUnit lineDelta, RenderFragmentedFlow*) const;
-    void updateLogicalWidthForAlignment(const ETextAlign&, const RootInlineBox*, BidiRun* trailingSpaceRun, float& logicalLeft, float& totalLogicalWidth, float& availableLogicalWidth, int expansionOpportunityCount);
+    void updateLogicalWidthForAlignment(const TextAlignMode&, const RootInlineBox*, BidiRun* trailingSpaceRun, float& logicalLeft, float& totalLogicalWidth, float& availableLogicalWidth, int expansionOpportunityCount);
 // END METHODS DEFINED IN RenderBlockLineLayout
 
     void computeInlinePreferredLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;

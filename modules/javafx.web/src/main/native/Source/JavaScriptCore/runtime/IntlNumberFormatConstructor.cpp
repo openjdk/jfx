@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Andy VanWagoner (thetalecrafter@gmail.com)
+ * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2016 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,9 +79,10 @@ IntlNumberFormatConstructor::IntlNumberFormatConstructor(VM& vm, Structure* stru
 
 void IntlNumberFormatConstructor::finishCreation(VM& vm, IntlNumberFormatPrototype* numberFormatPrototype, Structure* numberFormatStructure)
 {
-    Base::finishCreation(vm, ASCIILiteral("NumberFormat"));
+    Base::finishCreation(vm, "NumberFormat"_s);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, numberFormatPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+    numberFormatPrototype->putDirectWithoutTransition(vm, vm.propertyNames->constructor, this, static_cast<unsigned>(PropertyAttribute::DontEnum));
     m_numberFormatStructure.set(vm, this, numberFormatStructure);
 }
 
@@ -133,7 +134,7 @@ EncodedJSValue JSC_HOST_CALL IntlNumberFormatConstructorFuncSupportedLocalesOf(E
     // 11.2.2 Intl.NumberFormat.supportedLocalesOf(locales [, options]) (ECMA-402 2.0)
 
     // 1. Let availableLocales be %NumberFormat%.[[availableLocales]].
-    JSGlobalObject* globalObject = state->jsCallee()->globalObject();
+    JSGlobalObject* globalObject = state->jsCallee()->globalObject(vm);
     const HashSet<String> availableLocales = globalObject->intlNumberFormatAvailableLocales();
 
     // 2. Let requestedLocales be CanonicalizeLocaleList(locales).

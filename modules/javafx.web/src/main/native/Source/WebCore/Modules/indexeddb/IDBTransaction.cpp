@@ -149,7 +149,7 @@ ExceptionOr<Ref<IDBObjectStore>> IDBTransaction::objectStore(const String& objec
         return Exception { InvalidStateError };
 
     if (isFinishedOrFinishing())
-        return Exception { InvalidStateError, ASCIILiteral("Failed to execute 'objectStore' on 'IDBTransaction': The transaction finished.") };
+        return Exception { InvalidStateError, "Failed to execute 'objectStore' on 'IDBTransaction': The transaction finished."_s };
 
     Locker<Lock> locker(m_referencedObjectStoreLock);
 
@@ -166,11 +166,11 @@ ExceptionOr<Ref<IDBObjectStore>> IDBTransaction::objectStore(const String& objec
 
     auto* info = m_database->info().infoForExistingObjectStore(objectStoreName);
     if (!info)
-        return Exception { NotFoundError, ASCIILiteral("Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found.") };
+        return Exception { NotFoundError, "Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found."_s };
 
     // Version change transactions are scoped to every object store in the database.
     if (!info || (!found && !isVersionChange()))
-        return Exception { NotFoundError, ASCIILiteral("Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found.") };
+        return Exception { NotFoundError, "Failed to execute 'objectStore' on 'IDBTransaction': The specified object store was not found."_s };
 
     auto objectStore = std::make_unique<IDBObjectStore>(*scriptExecutionContext(), *info, *this);
     auto* rawObjectStore = objectStore.get();
@@ -207,7 +207,7 @@ ExceptionOr<void> IDBTransaction::abort()
     ASSERT(&m_database->originThread() == &Thread::current());
 
     if (isFinishedOrFinishing())
-        return Exception { InvalidStateError, ASCIILiteral("Failed to execute 'abort' on 'IDBTransaction': The transaction is inactive or finished.") };
+        return Exception { InvalidStateError, "Failed to execute 'abort' on 'IDBTransaction': The transaction is inactive or finished."_s };
 
     internalAbort();
 
@@ -551,7 +551,7 @@ void IDBTransaction::notifyDidAbort(const IDBError& error)
     m_idbError = error;
     fireOnAbort();
 
-    if (isVersionChange()) {
+    if (isVersionChange() && !m_contextStopped) {
         ASSERT(m_openDBRequest);
         m_openDBRequest->fireErrorAfterVersionChangeCompletion();
     }
@@ -591,14 +591,14 @@ void IDBTransaction::fireOnComplete()
 {
     LOG(IndexedDB, "IDBTransaction::fireOnComplete");
     ASSERT(&m_database->originThread() == &Thread::current());
-    enqueueEvent(Event::create(eventNames().completeEvent, false, false));
+    enqueueEvent(Event::create(eventNames().completeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void IDBTransaction::fireOnAbort()
 {
     LOG(IndexedDB, "IDBTransaction::fireOnAbort");
     ASSERT(&m_database->originThread() == &Thread::current());
-    enqueueEvent(Event::create(eventNames().abortEvent, true, false));
+    enqueueEvent(Event::create(eventNames().abortEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
 
 void IDBTransaction::enqueueEvent(Ref<Event>&& event)
@@ -800,9 +800,9 @@ Ref<IDBRequest> IDBTransaction::requestOpenCursor(ExecState& state, IDBObjectSto
     ASSERT(&m_database->originThread() == &Thread::current());
 
     if (info.cursorType() == IndexedDB::CursorType::KeyOnly)
-        return doRequestOpenCursor(state, IDBCursor::create(*this, objectStore, info));
+        return doRequestOpenCursor(state, IDBCursor::create(objectStore, info));
 
-    return doRequestOpenCursor(state, IDBCursorWithValue::create(*this, objectStore, info));
+    return doRequestOpenCursor(state, IDBCursorWithValue::create(objectStore, info));
 }
 
 Ref<IDBRequest> IDBTransaction::requestOpenCursor(ExecState& state, IDBIndex& index, const IDBCursorInfo& info)
@@ -811,9 +811,9 @@ Ref<IDBRequest> IDBTransaction::requestOpenCursor(ExecState& state, IDBIndex& in
     ASSERT(&m_database->originThread() == &Thread::current());
 
     if (info.cursorType() == IndexedDB::CursorType::KeyOnly)
-        return doRequestOpenCursor(state, IDBCursor::create(*this, index, info));
+        return doRequestOpenCursor(state, IDBCursor::create(index, info));
 
-    return doRequestOpenCursor(state, IDBCursorWithValue::create(*this, index, info));
+    return doRequestOpenCursor(state, IDBCursorWithValue::create(index, info));
 }
 
 Ref<IDBRequest> IDBTransaction::doRequestOpenCursor(ExecState& state, Ref<IDBCursor>&& cursor)
@@ -1211,7 +1211,7 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
             // If the IDBValue doesn't have any data, then something went wrong writing the blobs to disk.
             // In that case, we cannot successfully store this record, so we callback with an error.
             RefPtr<IDBClient::TransactionOperation> protectedOperation(&operation);
-            auto result = IDBResultData::error(operation.identifier(), IDBError { UnknownError, ASCIILiteral("Error preparing Blob/File data to be stored in object store") });
+            auto result = IDBResultData::error(operation.identifier(), IDBError { UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
             scriptExecutionContext()->postTask([protectedOperation = WTFMove(protectedOperation), result = WTFMove(result)](ScriptExecutionContext&) {
                 protectedOperation->doComplete(result);
             });
@@ -1233,7 +1233,7 @@ void IDBTransaction::putOrAddOnServer(IDBClient::TransactionOperation& operation
 
         // If the IDBValue doesn't have any data, then something went wrong writing the blobs to disk.
         // In that case, we cannot successfully store this record, so we callback with an error.
-        auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { UnknownError, ASCIILiteral("Error preparing Blob/File data to be stored in object store") });
+        auto result = IDBResultData::error(protectedOperation->identifier(), IDBError { UnknownError, "Error preparing Blob/File data to be stored in object store"_s });
         callOnMainThread([protectedThis = WTFMove(protectedThis), protectedOperation = WTFMove(protectedOperation), result = WTFMove(result)]() mutable {
             protectedOperation->doComplete(result);
         });

@@ -28,12 +28,21 @@
 #include "BigIntObject.h"
 
 #include "JSCInlines.h"
+#include "JSGlobalObject.h"
 
 namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(BigIntObject);
 
 const ClassInfo BigIntObject::s_info = { "BigInt", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(BigIntObject) };
+
+
+BigIntObject* BigIntObject::create(VM& vm, JSGlobalObject* globalObject, JSBigInt* bigInt)
+{
+    BigIntObject* object = new (NotNull, allocateCell<BigIntObject>(vm.heap)) BigIntObject(vm, globalObject->bigIntObjectStructure());
+    object->finishCreation(vm, bigInt);
+    return object;
+}
 
 BigIntObject::BigIntObject(VM& vm, Structure* structure)
     : JSWrapperObject(vm, structure)
@@ -49,7 +58,7 @@ void BigIntObject::finishCreation(VM& vm, JSBigInt* bigInt)
 
 String BigIntObject::toStringName(const JSObject*, ExecState*)
 {
-    return ASCIILiteral("Object");
+    return "Object"_s;
 }
 
 JSValue BigIntObject::defaultValue(const JSObject* object, ExecState*, PreferredPrimitiveType)

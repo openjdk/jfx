@@ -32,8 +32,8 @@
 #include "FrameLoader.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
-#include "MainFrame.h"
-#include "NetworkStateNotifier.h"
+#include "LoaderStrategy.h"
+#include "PlatformStrategies.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -41,7 +41,7 @@ namespace WebCore {
 using namespace Inspector;
 
 InspectorApplicationCacheAgent::InspectorApplicationCacheAgent(WebAgentContext& context, InspectorPageAgent* pageAgent)
-    : InspectorAgentBase(ASCIILiteral("ApplicationCache"), context)
+    : InspectorAgentBase("ApplicationCache"_s, context)
     , m_frontendDispatcher(std::make_unique<Inspector::ApplicationCacheFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::ApplicationCacheBackendDispatcher::create(context.backendDispatcher, this))
     , m_pageAgent(pageAgent)
@@ -82,7 +82,7 @@ void InspectorApplicationCacheAgent::updateApplicationCacheStatus(Frame* frame)
 
 void InspectorApplicationCacheAgent::networkStateChanged()
 {
-    m_frontendDispatcher->networkStateUpdated(NetworkStateNotifier::singleton().onLine());
+    m_frontendDispatcher->networkStateUpdated(platformStrategies()->loaderStrategy()->isOnLine());
 }
 
 void InspectorApplicationCacheAgent::getFramesWithManifests(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::ApplicationCache::FrameWithManifest>>& result)

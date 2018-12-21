@@ -318,8 +318,7 @@ void XSSAuditor::init(Document* document, XSSAuditorDelegate* auditorDelegate)
 
     String httpBodyAsString;
     if (RefPtr<DocumentLoader> documentLoader = document->frame()->loader().documentLoader()) {
-        static NeverDestroyed<String> XSSProtectionHeader(MAKE_STATIC_STRING_IMPL("X-XSS-Protection"));
-        String headerValue = documentLoader->response().httpHeaderField(XSSProtectionHeader);
+        String headerValue = documentLoader->response().httpHeaderField(HTTPHeaderName::XXSSProtection);
         String errorDetails;
         unsigned errorPosition = 0;
         String parsedReportURL;
@@ -448,6 +447,7 @@ bool XSSAuditor::filterScriptToken(const FilterTokenRequest& request)
     bool didBlockScript = false;
     if (m_wasScriptTagFoundInRequest) {
         didBlockScript |= eraseAttributeIfInjected(request, srcAttr, blankURL().string(), TruncationStyle::SrcLikeAttribute);
+        didBlockScript |= eraseAttributeIfInjected(request, SVGNames::hrefAttr, blankURL().string(), TruncationStyle::SrcLikeAttribute);
         didBlockScript |= eraseAttributeIfInjected(request, XLinkNames::hrefAttr, blankURL().string(), TruncationStyle::SrcLikeAttribute);
     }
 

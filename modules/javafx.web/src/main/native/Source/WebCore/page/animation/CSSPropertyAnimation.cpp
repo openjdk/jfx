@@ -42,6 +42,7 @@
 #include "CalculationValue.h"
 #include "ClipPathOperation.h"
 #include "FloatConversion.h"
+#include "FontCascade.h"
 #include "FontSelectionAlgorithm.h"
 #include "FontTaggedSettings.h"
 #include "GapLength.h"
@@ -200,18 +201,30 @@ static inline FilterOperations blendFilterOperations(const CSSPropertyBlendingCl
     return result;
 }
 
-static inline FilterOperations blendFunc(const CSSPropertyBlendingClient* anim, const FilterOperations& from, const FilterOperations& to, double progress, bool animatingBackdropFilter = false)
+static inline FilterOperations blendFunc(const CSSPropertyBlendingClient* anim, const FilterOperations& from, const FilterOperations& to, double progress, CSSPropertyID propertyID = CSSPropertyFilter)
 {
     FilterOperations result;
 
     // If we have a filter function list, use that to do a per-function animation.
-#if ENABLE(FILTERS_LEVEL_2)
-    if ((!animatingBackdropFilter && anim->filterFunctionListsMatch()) || (animatingBackdropFilter && anim->backdropFilterFunctionListsMatch()))
-#else
-    UNUSED_PARAM(animatingBackdropFilter);
-    if (anim->filterFunctionListsMatch())
-#endif
 
+    bool listsMatch = false;
+    switch (propertyID) {
+    case CSSPropertyFilter:
+        listsMatch = anim->filterFunctionListsMatch();
+        break;
+#if ENABLE(FILTERS_LEVEL_2)
+    case CSSPropertyWebkitBackdropFilter:
+        listsMatch = anim->backdropFilterFunctionListsMatch();
+        break;
+#endif
+    case CSSPropertyAppleColorFilter:
+        listsMatch = anim->colorFilterFunctionListsMatch();
+        break;
+    default:
+        break;
+    }
+
+    if (listsMatch)
         result = blendFilterOperations(anim, from, to, progress);
     else {
         // If the filter function lists don't match, we could try to cross-fade, but don't yet have a way to represent that in CSS.
@@ -235,16 +248,16 @@ static inline RefPtr<StyleImage> blendFilter(const CSSPropertyBlendingClient* an
     return StyleGeneratedImage::create(WTFMove(result));
 }
 
-static inline EVisibility blendFunc(const CSSPropertyBlendingClient* anim, EVisibility from, EVisibility to, double progress)
+static inline Visibility blendFunc(const CSSPropertyBlendingClient* anim, Visibility from, Visibility to, double progress)
 {
     // Any non-zero result means we consider the object to be visible. Only at 0 do we consider the object to be
-    // invisible. The invisible value we use (HIDDEN vs. COLLAPSE) depends on the specified from/to values.
-    double fromVal = from == VISIBLE ? 1. : 0.;
-    double toVal = to == VISIBLE ? 1. : 0.;
+    // invisible. The invisible value we use (Visibility::Hidden vs. Visibility::Collapse) depends on the specified from/to values.
+    double fromVal = from == Visibility::Visible ? 1. : 0.;
+    double toVal = to == Visibility::Visible ? 1. : 0.;
     if (fromVal == toVal)
         return to;
     double result = blendFunc(anim, fromVal, toVal, progress);
-    return result > 0. ? VISIBLE : (to != VISIBLE ? to : from);
+    return result > 0. ? Visibility::Visible : (to != Visibility::Visible ? to : from);
 }
 
 static inline LengthBox blendFunc(const CSSPropertyBlendingClient* anim, const LengthBox& from, const LengthBox& to, double progress)
@@ -402,6 +415,11 @@ static inline FontSelectionValue blendFunc(const CSSPropertyBlendingClient* anim
     return FontSelectionValue(blendFunc(anim, static_cast<float>(from), static_cast<float>(to), progress));
 }
 
+static inline std::optional<FontSelectionValue> blendFunc(const CSSPropertyBlendingClient* anim, std::optional<FontSelectionValue> from, std::optional<FontSelectionValue> to, double progress)
+{
+    return FontSelectionValue(blendFunc(anim, static_cast<float>(from.value()), static_cast<float>(to.value()), progress));
+}
+
 class AnimationPropertyWrapperBase {
     WTF_MAKE_NONCOPYABLE(AnimationPropertyWrapperBase);
     WTF_MAKE_FAST_ALLOCATED;
@@ -414,6 +432,7 @@ public:
 
     virtual bool isShorthandWrapper() const { return false; }
     virtual bool equals(const RenderStyle* a, const RenderStyle* b) const = 0;
+    virtual bool canInterpolate(const RenderStyle*, const RenderStyle*) const { return true; }
     virtual void blend(const CSSPropertyBlendingClient*, RenderStyle*, const RenderStyle*, const RenderStyle*, double) const = 0;
 
 #if !LOG_DISABLED
@@ -501,11 +520,34 @@ protected:
     void (RenderStyle::*m_setter)(RefPtr<T>&&);
 };
 
-template <typename T>
-class LengthPropertyWrapper : public PropertyWrapperGetter<const T&> {
+class LengthPropertyWrapper : public PropertyWrapperGetter<const Length&> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    LengthPropertyWrapper(CSSPropertyID prop, const T& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T&&))
+    LengthPropertyWrapper(CSSPropertyID prop, const Length& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(Length&&))
+        : PropertyWrapperGetter<const Length&>(prop, getter)
+        , m_setter(setter)
+    {
+    }
+
+    bool canInterpolate(const RenderStyle* a, const RenderStyle* b) const override
+    {
+        return !(a->*PropertyWrapperGetter<const Length&>::m_getter)().isAuto() && !(b->*PropertyWrapperGetter<const Length&>::m_getter)().isAuto();
+    }
+
+    void blend(const CSSPropertyBlendingClient* anim, RenderStyle* dst, const RenderStyle* a, const RenderStyle* b, double progress) const override
+    {
+        (dst->*m_setter)(blendFunc(anim, (a->*PropertyWrapperGetter<const Length&>::m_getter)(), (b->*PropertyWrapperGetter<const Length&>::m_getter)(), progress));
+    }
+
+protected:
+    void (RenderStyle::*m_setter)(Length&&);
+};
+
+template <typename T>
+class LengthVariantPropertyWrapper : public PropertyWrapperGetter<const T&> {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    LengthVariantPropertyWrapper(CSSPropertyID prop, const T& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(T&&))
         : PropertyWrapperGetter<const T&>(prop, getter)
         , m_setter(setter)
     {
@@ -670,39 +712,28 @@ public:
     }
 };
 
-class PropertyWrapperAcceleratedFilter : public PropertyWrapper<const FilterOperations&> {
+class PropertyWrapperFilter : public PropertyWrapper<const FilterOperations&> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PropertyWrapperAcceleratedFilter()
-        : PropertyWrapper<const FilterOperations&>(CSSPropertyFilter, &RenderStyle::filter, &RenderStyle::setFilter)
+    PropertyWrapperFilter(CSSPropertyID propertyID, const FilterOperations& (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const FilterOperations&))
+        : PropertyWrapper<const FilterOperations&>(propertyID, getter, setter)
     {
     }
 
-    bool animationIsAccelerated() const override { return true; }
+    bool animationIsAccelerated() const override
+    {
+        return property() == CSSPropertyFilter
+#if ENABLE(FILTERS_LEVEL_2)
+            || property() == CSSPropertyWebkitBackdropFilter
+#endif
+            ;
+    }
 
     void blend(const CSSPropertyBlendingClient* anim, RenderStyle* dst, const RenderStyle* a, const RenderStyle* b, double progress) const override
     {
-        dst->setFilter(blendFunc(anim, a->filter(), b->filter(), progress));
+        (dst->*m_setter)(blendFunc(anim, (a->*PropertyWrapperGetter<const FilterOperations&>::m_getter)(), (b->*PropertyWrapperGetter<const FilterOperations&>::m_getter)(), progress, property()));
     }
 };
-
-#if ENABLE(FILTERS_LEVEL_2)
-class PropertyWrapperAcceleratedBackdropFilter : public PropertyWrapper<const FilterOperations&> {
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    PropertyWrapperAcceleratedBackdropFilter()
-        : PropertyWrapper<const FilterOperations&>(CSSPropertyWebkitBackdropFilter, &RenderStyle::backdropFilter, &RenderStyle::setBackdropFilter)
-    {
-    }
-
-    virtual bool animationIsAccelerated() const { return true; }
-
-    virtual void blend(const CSSPropertyBlendingClient* anim, RenderStyle* dst, const RenderStyle* a, const RenderStyle* b, double progress) const
-    {
-        dst->setBackdropFilter(blendFunc(anim, a->backdropFilter(), b->backdropFilter(), progress, true));
-    }
-};
-#endif
 
 static inline size_t shadowListLength(const ShadowData* shadow)
 {
@@ -1343,7 +1374,7 @@ public:
 class PropertyWrapperSVGPaint : public AnimationPropertyWrapperBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PropertyWrapperSVGPaint(CSSPropertyID prop, const SVGPaintType& (RenderStyle::*paintTypeGetter)() const, Color (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Color&))
+    PropertyWrapperSVGPaint(CSSPropertyID prop, SVGPaintType (RenderStyle::*paintTypeGetter)() const, Color (RenderStyle::*getter)() const, void (RenderStyle::*setter)(const Color&))
         : AnimationPropertyWrapperBase(prop)
         , m_paintTypeGetter(paintTypeGetter)
         , m_getter(getter)
@@ -1364,7 +1395,7 @@ public:
         // We only support animations between SVGPaints that are pure Color values.
         // For everything else we must return true for this method, otherwise
         // we will try to animate between values forever.
-        if ((a->*m_paintTypeGetter)() == SVG_PAINTTYPE_RGBCOLOR) {
+        if ((a->*m_paintTypeGetter)() == SVGPaintType::RGBColor) {
             Color fromColor = (a->*m_getter)();
             Color toColor = (b->*m_getter)();
 
@@ -1383,8 +1414,8 @@ public:
 
     void blend(const CSSPropertyBlendingClient* anim, RenderStyle* dst, const RenderStyle* a, const RenderStyle* b, double progress) const override
     {
-        if ((a->*m_paintTypeGetter)() != SVG_PAINTTYPE_RGBCOLOR
-            || (b->*m_paintTypeGetter)() != SVG_PAINTTYPE_RGBCOLOR)
+        if ((a->*m_paintTypeGetter)() != SVGPaintType::RGBColor
+            || (b->*m_paintTypeGetter)() != SVGPaintType::RGBColor)
             return;
 
         Color fromColor = (a->*m_getter)();
@@ -1409,9 +1440,45 @@ public:
 #endif
 
 private:
-    const SVGPaintType& (RenderStyle::*m_paintTypeGetter)() const;
+    SVGPaintType (RenderStyle::*m_paintTypeGetter)() const;
     Color (RenderStyle::*m_getter)() const;
     void (RenderStyle::*m_setter)(const Color&);
+};
+
+class PropertyWrapperFontStyle : public PropertyWrapper<std::optional<FontSelectionValue>> {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    PropertyWrapperFontStyle()
+        : PropertyWrapper<std::optional<FontSelectionValue>>(CSSPropertyFontStyle, &RenderStyle::fontItalic, &RenderStyle::setFontItalic)
+    {
+    }
+
+    bool canInterpolate(const RenderStyle* from, const RenderStyle* to) const override
+    {
+        return from->fontItalic() && to->fontItalic() && from->fontDescription().fontStyleAxis() == FontStyleAxis::slnt && to->fontDescription().fontStyleAxis() == FontStyleAxis::slnt;
+    }
+
+    void blend(const CSSPropertyBlendingClient* anim, RenderStyle* dst, const RenderStyle* from, const RenderStyle* to, double progress) const override
+    {
+        auto discrete = !canInterpolate(from, to);
+
+        auto blendedStyleAxis = FontStyleAxis::slnt;
+        if (discrete)
+            blendedStyleAxis = (progress < 0.5 ? from : to)->fontDescription().fontStyleAxis();
+
+        auto fromFontItalic = from->fontItalic();
+        auto toFontItalic = to->fontItalic();
+        auto blendedFontItalic = progress < 0.5 ? fromFontItalic : toFontItalic;
+        if (!discrete)
+            blendedFontItalic = blendFunc(anim, fromFontItalic, toFontItalic, progress);
+
+        FontSelector* currentFontSelector = dst->fontCascade().fontSelector();
+        auto description = dst->fontDescription();
+        description.setItalic(blendedFontItalic);
+        description.setFontStyleAxis(blendedStyleAxis);
+        dst->setFontDescription(WTFMove(description));
+        dst->fontCascade().update(currentFontSelector);
+    }
 };
 
 class CSSPropertyAnimationWrapperMap {
@@ -1468,18 +1535,18 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 {
     // build the list of property wrappers to do the comparisons and blends
     AnimationPropertyWrapperBase* animatableLonghandPropertyWrappers[] = {
-        new LengthPropertyWrapper<Length>(CSSPropertyLeft, &RenderStyle::left, &RenderStyle::setLeft),
-        new LengthPropertyWrapper<Length>(CSSPropertyRight, &RenderStyle::right, &RenderStyle::setRight),
-        new LengthPropertyWrapper<Length>(CSSPropertyTop, &RenderStyle::top, &RenderStyle::setTop),
-        new LengthPropertyWrapper<Length>(CSSPropertyBottom, &RenderStyle::bottom, &RenderStyle::setBottom),
+        new LengthPropertyWrapper(CSSPropertyLeft, &RenderStyle::left, &RenderStyle::setLeft),
+        new LengthPropertyWrapper(CSSPropertyRight, &RenderStyle::right, &RenderStyle::setRight),
+        new LengthPropertyWrapper(CSSPropertyTop, &RenderStyle::top, &RenderStyle::setTop),
+        new LengthPropertyWrapper(CSSPropertyBottom, &RenderStyle::bottom, &RenderStyle::setBottom),
 
-        new LengthPropertyWrapper<Length>(CSSPropertyWidth, &RenderStyle::width, &RenderStyle::setWidth),
-        new LengthPropertyWrapper<Length>(CSSPropertyMinWidth, &RenderStyle::minWidth, &RenderStyle::setMinWidth),
-        new LengthPropertyWrapper<Length>(CSSPropertyMaxWidth, &RenderStyle::maxWidth, &RenderStyle::setMaxWidth),
+        new LengthPropertyWrapper(CSSPropertyWidth, &RenderStyle::width, &RenderStyle::setWidth),
+        new LengthPropertyWrapper(CSSPropertyMinWidth, &RenderStyle::minWidth, &RenderStyle::setMinWidth),
+        new LengthPropertyWrapper(CSSPropertyMaxWidth, &RenderStyle::maxWidth, &RenderStyle::setMaxWidth),
 
-        new LengthPropertyWrapper<Length>(CSSPropertyHeight, &RenderStyle::height, &RenderStyle::setHeight),
-        new LengthPropertyWrapper<Length>(CSSPropertyMinHeight, &RenderStyle::minHeight, &RenderStyle::setMinHeight),
-        new LengthPropertyWrapper<Length>(CSSPropertyMaxHeight, &RenderStyle::maxHeight, &RenderStyle::setMaxHeight),
+        new LengthPropertyWrapper(CSSPropertyHeight, &RenderStyle::height, &RenderStyle::setHeight),
+        new LengthPropertyWrapper(CSSPropertyMinHeight, &RenderStyle::minHeight, &RenderStyle::setMinHeight),
+        new LengthPropertyWrapper(CSSPropertyMaxHeight, &RenderStyle::maxHeight, &RenderStyle::setMaxHeight),
 
         new PropertyWrapperFlex(),
 
@@ -1487,14 +1554,14 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new PropertyWrapper<float>(CSSPropertyBorderRightWidth, &RenderStyle::borderRightWidth, &RenderStyle::setBorderRightWidth),
         new PropertyWrapper<float>(CSSPropertyBorderTopWidth, &RenderStyle::borderTopWidth, &RenderStyle::setBorderTopWidth),
         new PropertyWrapper<float>(CSSPropertyBorderBottomWidth, &RenderStyle::borderBottomWidth, &RenderStyle::setBorderBottomWidth),
-        new LengthPropertyWrapper<Length>(CSSPropertyMarginLeft, &RenderStyle::marginLeft, &RenderStyle::setMarginLeft),
-        new LengthPropertyWrapper<Length>(CSSPropertyMarginRight, &RenderStyle::marginRight, &RenderStyle::setMarginRight),
-        new LengthPropertyWrapper<Length>(CSSPropertyMarginTop, &RenderStyle::marginTop, &RenderStyle::setMarginTop),
-        new LengthPropertyWrapper<Length>(CSSPropertyMarginBottom, &RenderStyle::marginBottom, &RenderStyle::setMarginBottom),
-        new LengthPropertyWrapper<Length>(CSSPropertyPaddingLeft, &RenderStyle::paddingLeft, &RenderStyle::setPaddingLeft),
-        new LengthPropertyWrapper<Length>(CSSPropertyPaddingRight, &RenderStyle::paddingRight, &RenderStyle::setPaddingRight),
-        new LengthPropertyWrapper<Length>(CSSPropertyPaddingTop, &RenderStyle::paddingTop, &RenderStyle::setPaddingTop),
-        new LengthPropertyWrapper<Length>(CSSPropertyPaddingBottom, &RenderStyle::paddingBottom, &RenderStyle::setPaddingBottom),
+        new LengthPropertyWrapper(CSSPropertyMarginLeft, &RenderStyle::marginLeft, &RenderStyle::setMarginLeft),
+        new LengthPropertyWrapper(CSSPropertyMarginRight, &RenderStyle::marginRight, &RenderStyle::setMarginRight),
+        new LengthPropertyWrapper(CSSPropertyMarginTop, &RenderStyle::marginTop, &RenderStyle::setMarginTop),
+        new LengthPropertyWrapper(CSSPropertyMarginBottom, &RenderStyle::marginBottom, &RenderStyle::setMarginBottom),
+        new LengthPropertyWrapper(CSSPropertyPaddingLeft, &RenderStyle::paddingLeft, &RenderStyle::setPaddingLeft),
+        new LengthPropertyWrapper(CSSPropertyPaddingRight, &RenderStyle::paddingRight, &RenderStyle::setPaddingRight),
+        new LengthPropertyWrapper(CSSPropertyPaddingTop, &RenderStyle::paddingTop, &RenderStyle::setPaddingTop),
+        new LengthPropertyWrapper(CSSPropertyPaddingBottom, &RenderStyle::paddingBottom, &RenderStyle::setPaddingBottom),
 
         new PropertyWrapperVisitedAffectedColor(CSSPropertyCaretColor, &RenderStyle::caretColor, &RenderStyle::setCaretColor, &RenderStyle::visitedLinkCaretColor, &RenderStyle::setVisitedLinkCaretColor),
 
@@ -1507,9 +1574,9 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new StyleImagePropertyWrapper(CSSPropertyWebkitMaskImage, &RenderStyle::maskImage, &RenderStyle::setMaskImage),
 
         new StyleImagePropertyWrapper(CSSPropertyBorderImageSource, &RenderStyle::borderImageSource, &RenderStyle::setBorderImageSource),
-        new LengthPropertyWrapper<LengthBox>(CSSPropertyBorderImageSlice, &RenderStyle::borderImageSlices, &RenderStyle::setBorderImageSlices),
-        new LengthPropertyWrapper<LengthBox>(CSSPropertyBorderImageWidth, &RenderStyle::borderImageWidth, &RenderStyle::setBorderImageWidth),
-        new LengthPropertyWrapper<LengthBox>(CSSPropertyBorderImageOutset, &RenderStyle::borderImageOutset, &RenderStyle::setBorderImageOutset),
+        new LengthVariantPropertyWrapper<LengthBox>(CSSPropertyBorderImageSlice, &RenderStyle::borderImageSlices, &RenderStyle::setBorderImageSlices),
+        new LengthVariantPropertyWrapper<LengthBox>(CSSPropertyBorderImageWidth, &RenderStyle::borderImageWidth, &RenderStyle::setBorderImageWidth),
+        new LengthVariantPropertyWrapper<LengthBox>(CSSPropertyBorderImageOutset, &RenderStyle::borderImageOutset, &RenderStyle::setBorderImageOutset),
 
         new StyleImagePropertyWrapper(CSSPropertyWebkitMaskBoxImageSource, &RenderStyle::maskBoxImageSource, &RenderStyle::setMaskBoxImageSource),
         new PropertyWrapper<const NinePieceImage&>(CSSPropertyWebkitMaskBoxImage, &RenderStyle::maskBoxImage, &RenderStyle::setMaskBoxImage),
@@ -1525,8 +1592,8 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 
         new PropertyWrapper<float>(CSSPropertyFontSize, &RenderStyle::computedFontSize, &RenderStyle::setFontSize),
         new PropertyWrapper<unsigned short>(CSSPropertyColumnRuleWidth, &RenderStyle::columnRuleWidth, &RenderStyle::setColumnRuleWidth),
-        new LengthPropertyWrapper<GapLength>(CSSPropertyColumnGap, &RenderStyle::columnGap, &RenderStyle::setColumnGap),
-        new LengthPropertyWrapper<GapLength>(CSSPropertyRowGap, &RenderStyle::rowGap, &RenderStyle::setRowGap),
+        new LengthVariantPropertyWrapper<GapLength>(CSSPropertyColumnGap, &RenderStyle::columnGap, &RenderStyle::setColumnGap),
+        new LengthVariantPropertyWrapper<GapLength>(CSSPropertyRowGap, &RenderStyle::rowGap, &RenderStyle::setRowGap),
         new PropertyWrapper<unsigned short>(CSSPropertyColumnCount, &RenderStyle::columnCount, &RenderStyle::setColumnCount),
         new PropertyWrapper<float>(CSSPropertyColumnWidth, &RenderStyle::columnWidth, &RenderStyle::setColumnWidth),
         new PropertyWrapper<float>(CSSPropertyWebkitBorderHorizontalSpacing, &RenderStyle::horizontalBorderSpacing, &RenderStyle::setHorizontalBorderSpacing),
@@ -1534,38 +1601,41 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new PropertyWrapper<int>(CSSPropertyZIndex, &RenderStyle::zIndex, &RenderStyle::setZIndex),
         new PropertyWrapper<short>(CSSPropertyOrphans, &RenderStyle::orphans, &RenderStyle::setOrphans),
         new PropertyWrapper<short>(CSSPropertyWidows, &RenderStyle::widows, &RenderStyle::setWidows),
-        new LengthPropertyWrapper<Length>(CSSPropertyLineHeight, &RenderStyle::specifiedLineHeight, &RenderStyle::setLineHeight),
+        new LengthPropertyWrapper(CSSPropertyLineHeight, &RenderStyle::specifiedLineHeight, &RenderStyle::setLineHeight),
         new PropertyWrapper<float>(CSSPropertyOutlineOffset, &RenderStyle::outlineOffset, &RenderStyle::setOutlineOffset),
         new PropertyWrapper<float>(CSSPropertyOutlineWidth, &RenderStyle::outlineWidth, &RenderStyle::setOutlineWidth),
         new PropertyWrapper<float>(CSSPropertyLetterSpacing, &RenderStyle::letterSpacing, &RenderStyle::setLetterSpacing),
-        new LengthPropertyWrapper<Length>(CSSPropertyWordSpacing, &RenderStyle::wordSpacing, &RenderStyle::setWordSpacing),
-        new LengthPropertyWrapper<Length>(CSSPropertyTextIndent, &RenderStyle::textIndent, &RenderStyle::setTextIndent),
+        new LengthPropertyWrapper(CSSPropertyWordSpacing, &RenderStyle::wordSpacing, &RenderStyle::setWordSpacing),
+        new LengthPropertyWrapper(CSSPropertyTextIndent, &RenderStyle::textIndent, &RenderStyle::setTextIndent),
 
         new PropertyWrapper<float>(CSSPropertyPerspective, &RenderStyle::perspective, &RenderStyle::setPerspective),
-        new LengthPropertyWrapper<Length>(CSSPropertyPerspectiveOriginX, &RenderStyle::perspectiveOriginX, &RenderStyle::setPerspectiveOriginX),
-        new LengthPropertyWrapper<Length>(CSSPropertyPerspectiveOriginY, &RenderStyle::perspectiveOriginY, &RenderStyle::setPerspectiveOriginY),
-        new LengthPropertyWrapper<Length>(CSSPropertyTransformOriginX, &RenderStyle::transformOriginX, &RenderStyle::setTransformOriginX),
-        new LengthPropertyWrapper<Length>(CSSPropertyTransformOriginY, &RenderStyle::transformOriginY, &RenderStyle::setTransformOriginY),
+        new LengthPropertyWrapper(CSSPropertyPerspectiveOriginX, &RenderStyle::perspectiveOriginX, &RenderStyle::setPerspectiveOriginX),
+        new LengthPropertyWrapper(CSSPropertyPerspectiveOriginY, &RenderStyle::perspectiveOriginY, &RenderStyle::setPerspectiveOriginY),
+        new LengthPropertyWrapper(CSSPropertyTransformOriginX, &RenderStyle::transformOriginX, &RenderStyle::setTransformOriginX),
+        new LengthPropertyWrapper(CSSPropertyTransformOriginY, &RenderStyle::transformOriginY, &RenderStyle::setTransformOriginY),
         new PropertyWrapper<float>(CSSPropertyTransformOriginZ, &RenderStyle::transformOriginZ, &RenderStyle::setTransformOriginZ),
-        new LengthPropertyWrapper<LengthSize>(CSSPropertyBorderTopLeftRadius, &RenderStyle::borderTopLeftRadius, &RenderStyle::setBorderTopLeftRadius),
-        new LengthPropertyWrapper<LengthSize>(CSSPropertyBorderTopRightRadius, &RenderStyle::borderTopRightRadius, &RenderStyle::setBorderTopRightRadius),
-        new LengthPropertyWrapper<LengthSize>(CSSPropertyBorderBottomLeftRadius, &RenderStyle::borderBottomLeftRadius, &RenderStyle::setBorderBottomLeftRadius),
-        new LengthPropertyWrapper<LengthSize>(CSSPropertyBorderBottomRightRadius, &RenderStyle::borderBottomRightRadius, &RenderStyle::setBorderBottomRightRadius),
-        new PropertyWrapper<EVisibility>(CSSPropertyVisibility, &RenderStyle::visibility, &RenderStyle::setVisibility),
+        new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderTopLeftRadius, &RenderStyle::borderTopLeftRadius, &RenderStyle::setBorderTopLeftRadius),
+        new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderTopRightRadius, &RenderStyle::borderTopRightRadius, &RenderStyle::setBorderTopRightRadius),
+        new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderBottomLeftRadius, &RenderStyle::borderBottomLeftRadius, &RenderStyle::setBorderBottomLeftRadius),
+        new LengthVariantPropertyWrapper<LengthSize>(CSSPropertyBorderBottomRightRadius, &RenderStyle::borderBottomRightRadius, &RenderStyle::setBorderBottomRightRadius),
+        new PropertyWrapper<Visibility>(CSSPropertyVisibility, &RenderStyle::visibility, &RenderStyle::setVisibility),
         new PropertyWrapper<float>(CSSPropertyZoom, &RenderStyle::zoom, &RenderStyle::setZoomWithoutReturnValue),
 
-        new LengthPropertyWrapper<LengthBox>(CSSPropertyClip, &RenderStyle::clip, &RenderStyle::setClip),
+        new LengthVariantPropertyWrapper<LengthBox>(CSSPropertyClip, &RenderStyle::clip, &RenderStyle::setClip),
 
         new PropertyWrapperAcceleratedOpacity(),
         new PropertyWrapperAcceleratedTransform(),
-        new PropertyWrapperAcceleratedFilter(),
+
+        new PropertyWrapperFilter(CSSPropertyFilter, &RenderStyle::filter, &RenderStyle::setFilter),
 #if ENABLE(FILTERS_LEVEL_2)
-        new PropertyWrapperAcceleratedBackdropFilter(),
+        new PropertyWrapperFilter(CSSPropertyWebkitBackdropFilter, &RenderStyle::backdropFilter, &RenderStyle::setBackdropFilter),
 #endif
+        new PropertyWrapperFilter(CSSPropertyAppleColorFilter, &RenderStyle::appleColorFilter, &RenderStyle::setAppleColorFilter),
+
         new PropertyWrapperClipPath(CSSPropertyWebkitClipPath, &RenderStyle::clipPath, &RenderStyle::setClipPath),
 
         new PropertyWrapperShape(CSSPropertyShapeOutside, &RenderStyle::shapeOutside, &RenderStyle::setShapeOutside),
-        new LengthPropertyWrapper<Length>(CSSPropertyShapeMargin, &RenderStyle::shapeMargin, &RenderStyle::setShapeMargin),
+        new LengthPropertyWrapper(CSSPropertyShapeMargin, &RenderStyle::shapeMargin, &RenderStyle::setShapeMargin),
         new PropertyWrapper<float>(CSSPropertyShapeImageThreshold, &RenderStyle::shapeImageThreshold, &RenderStyle::setShapeImageThreshold),
 
         new PropertyWrapperVisitedAffectedColor(CSSPropertyColumnRuleColor, MaybeInvalidColor, &RenderStyle::columnRuleColor, &RenderStyle::setColumnRuleColor, &RenderStyle::visitedLinkColumnRuleColor, &RenderStyle::setVisitedLinkColumnRuleColor),
@@ -1589,15 +1659,15 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
         new PropertyWrapper<Vector<SVGLengthValue>>(CSSPropertyStrokeDasharray, &RenderStyle::strokeDashArray, &RenderStyle::setStrokeDashArray),
         new PropertyWrapper<float>(CSSPropertyStrokeMiterlimit, &RenderStyle::strokeMiterLimit, &RenderStyle::setStrokeMiterLimit),
 
-        new LengthPropertyWrapper<Length>(CSSPropertyCx, &RenderStyle::cx, &RenderStyle::setCx),
-        new LengthPropertyWrapper<Length>(CSSPropertyCy, &RenderStyle::cy, &RenderStyle::setCy),
-        new LengthPropertyWrapper<Length>(CSSPropertyR, &RenderStyle::r, &RenderStyle::setR),
-        new LengthPropertyWrapper<Length>(CSSPropertyRx, &RenderStyle::rx, &RenderStyle::setRx),
-        new LengthPropertyWrapper<Length>(CSSPropertyRy, &RenderStyle::ry, &RenderStyle::setRy),
-        new LengthPropertyWrapper<Length>(CSSPropertyStrokeDashoffset, &RenderStyle::strokeDashOffset, &RenderStyle::setStrokeDashOffset),
-        new LengthPropertyWrapper<Length>(CSSPropertyStrokeWidth, &RenderStyle::strokeWidth, &RenderStyle::setStrokeWidth),
-        new LengthPropertyWrapper<Length>(CSSPropertyX, &RenderStyle::x, &RenderStyle::setX),
-        new LengthPropertyWrapper<Length>(CSSPropertyY, &RenderStyle::y, &RenderStyle::setY),
+        new LengthPropertyWrapper(CSSPropertyCx, &RenderStyle::cx, &RenderStyle::setCx),
+        new LengthPropertyWrapper(CSSPropertyCy, &RenderStyle::cy, &RenderStyle::setCy),
+        new LengthPropertyWrapper(CSSPropertyR, &RenderStyle::r, &RenderStyle::setR),
+        new LengthPropertyWrapper(CSSPropertyRx, &RenderStyle::rx, &RenderStyle::setRx),
+        new LengthPropertyWrapper(CSSPropertyRy, &RenderStyle::ry, &RenderStyle::setRy),
+        new LengthPropertyWrapper(CSSPropertyStrokeDashoffset, &RenderStyle::strokeDashOffset, &RenderStyle::setStrokeDashOffset),
+        new LengthPropertyWrapper(CSSPropertyStrokeWidth, &RenderStyle::strokeWidth, &RenderStyle::setStrokeWidth),
+        new LengthPropertyWrapper(CSSPropertyX, &RenderStyle::x, &RenderStyle::setX),
+        new LengthPropertyWrapper(CSSPropertyY, &RenderStyle::y, &RenderStyle::setY),
 
         new PropertyWrapper<float>(CSSPropertyFloodOpacity, &RenderStyle::floodOpacity, &RenderStyle::setFloodOpacity),
         new PropertyWrapperMaybeInvalidColor(CSSPropertyFloodColor, &RenderStyle::floodColor, &RenderStyle::setFloodColor),
@@ -1614,7 +1684,7 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 #endif
         new PropertyWrapper<FontSelectionValue>(CSSPropertyFontWeight, &RenderStyle::fontWeight, &RenderStyle::setFontWeight),
         new PropertyWrapper<FontSelectionValue>(CSSPropertyFontStretch, &RenderStyle::fontStretch, &RenderStyle::setFontStretch),
-        new PropertyWrapper<FontSelectionValue>(CSSPropertyFontStyle, &RenderStyle::fontItalic, &RenderStyle::setFontItalic),
+        new PropertyWrapperFontStyle(),
     };
     const unsigned animatableLonghandPropertiesCount = WTF_ARRAY_LENGTH(animatableLonghandPropertyWrappers);
 
@@ -1754,7 +1824,15 @@ bool CSSPropertyAnimation::propertiesEqual(CSSPropertyID prop, const RenderStyle
     return true;
 }
 
-CSSPropertyID CSSPropertyAnimation::getPropertyAtIndex(int i, bool& isShorthand)
+bool CSSPropertyAnimation::canPropertyBeInterpolated(CSSPropertyID prop, const RenderStyle* a, const RenderStyle* b)
+{
+    AnimationPropertyWrapperBase* wrapper = CSSPropertyAnimationWrapperMap::singleton().wrapperForProperty(prop);
+    if (wrapper)
+        return wrapper->canInterpolate(a, b);
+    return false;
+}
+
+CSSPropertyID CSSPropertyAnimation::getPropertyAtIndex(int i, std::optional<bool>& isShorthand)
 {
     CSSPropertyAnimationWrapperMap& map = CSSPropertyAnimationWrapperMap::singleton();
 

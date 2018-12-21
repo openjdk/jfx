@@ -144,9 +144,11 @@ public:
 
     LayoutRect marginBoxRect() const
     {
-        LayoutRect box = borderBoxRect();
-        box.expand(m_marginBox);
-        return box;
+        auto marginLeft = computedCSSPadding(style().marginLeft());
+        auto marginRight = computedCSSPadding(style().marginRight());
+        auto marginTop = computedCSSPadding(style().marginTop());
+        auto marginBottom = computedCSSPadding(style().marginBottom());
+        return LayoutRect(-marginLeft, -marginTop, size().width() + marginLeft + marginRight, size().height() + marginTop + marginBottom);
     }
     LayoutRect borderBoxRect() const { return LayoutRect(LayoutPoint(), size()); }
     LayoutRect paddingBoxRect() const { return LayoutRect(borderLeft(), borderTop(), contentWidth() + paddingLeft() + paddingRight(), contentHeight() + paddingTop() + paddingBottom()); }
@@ -302,23 +304,23 @@ public:
     // the border-box height/width like the regular height/width accessors on RenderBox.
     // Right now, these are different than contentHeight/contentWidth because they still
     // include the scrollbar height/width.
-    LayoutUnit overrideLogicalContentWidth() const;
-    LayoutUnit overrideLogicalContentHeight() const;
-    bool hasOverrideLogicalContentHeight() const;
-    bool hasOverrideLogicalContentWidth() const;
-    void setOverrideLogicalContentHeight(LayoutUnit);
-    void setOverrideLogicalContentWidth(LayoutUnit);
-    void clearOverrideSize();
-    void clearOverrideLogicalContentHeight();
-    void clearOverrideLogicalContentWidth();
+    LayoutUnit overrideContentLogicalWidth() const;
+    LayoutUnit overrideContentLogicalHeight() const;
+    bool hasOverrideContentLogicalHeight() const;
+    bool hasOverrideContentLogicalWidth() const;
+    void setOverrideContentLogicalHeight(LayoutUnit);
+    void setOverrideContentLogicalWidth(LayoutUnit);
+    void clearOverrideContentSize();
+    void clearOverrideContentLogicalHeight();
+    void clearOverrideContentLogicalWidth();
 
     std::optional<LayoutUnit> overrideContainingBlockContentLogicalWidth() const;
     std::optional<LayoutUnit> overrideContainingBlockContentLogicalHeight() const;
-    bool hasOverrideContainingBlockLogicalWidth() const;
-    bool hasOverrideContainingBlockLogicalHeight() const;
+    bool hasOverrideContainingBlockContentLogicalWidth() const;
+    bool hasOverrideContainingBlockContentLogicalHeight() const;
     void setOverrideContainingBlockContentLogicalWidth(std::optional<LayoutUnit>);
     void setOverrideContainingBlockContentLogicalHeight(std::optional<LayoutUnit>);
-    void clearContainingBlockOverrideSize();
+    void clearOverrideContainingBlockContentSize();
     void clearOverrideContainingBlockContentLogicalHeight();
 
     LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
@@ -459,8 +461,8 @@ public:
     bool hasHorizontalScrollbarWithAutoBehavior() const;
 
     bool scrollsOverflow() const { return scrollsOverflowX() || scrollsOverflowY(); }
-    bool scrollsOverflowX() const { return hasOverflowClip() && (style().overflowX() == OSCROLL || hasHorizontalScrollbarWithAutoBehavior()); }
-    bool scrollsOverflowY() const { return hasOverflowClip() && (style().overflowY() == OSCROLL || hasVerticalScrollbarWithAutoBehavior()); }
+    bool scrollsOverflowX() const { return hasOverflowClip() && (style().overflowX() == Overflow::Scroll || hasHorizontalScrollbarWithAutoBehavior()); }
+    bool scrollsOverflowY() const { return hasOverflowClip() && (style().overflowY() == Overflow::Scroll || hasVerticalScrollbarWithAutoBehavior()); }
 
     bool hasHorizontalOverflow() const { return scrollWidth() != roundToInt(clientWidth()); }
     bool hasVerticalOverflow() const { return scrollHeight() != roundToInt(clientHeight()); }
@@ -478,7 +480,7 @@ public:
 
     LayoutRect localCaretRect(InlineBox*, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine = nullptr) override;
 
-    virtual LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhaseBlockBackground);
+    virtual LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground);
     virtual LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) { return overflowClipRect(location, fragment, relevancy); }
     LayoutRect clipRect(const LayoutPoint& location, RenderFragmentContainer*);
     virtual bool hasControlClip() const { return false; }
@@ -633,7 +635,7 @@ protected:
 
     bool createsNewFormattingContext() const;
 
-    virtual ItemPosition selfAlignmentNormalBehavior(const RenderBox* = nullptr) const { return ItemPositionStretch; }
+    virtual ItemPosition selfAlignmentNormalBehavior(const RenderBox* = nullptr) const { return ItemPosition::Stretch; }
 
     // Returns false if it could not cheaply compute the extent (e.g. fixed background), in which case the returned rect may be incorrect.
     bool getBackgroundPaintedExtent(const LayoutPoint& paintOffset, LayoutRect&) const;

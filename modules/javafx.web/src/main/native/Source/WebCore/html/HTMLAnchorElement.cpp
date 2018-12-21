@@ -36,6 +36,7 @@
 #include "HTMLCanvasElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLPictureElement.h"
 #include "KeyboardEvent.h"
 #include "MouseEvent.h"
 #include "PingLoader.h"
@@ -49,9 +50,16 @@
 #include "SecurityPolicy.h"
 #include "Settings.h"
 #include "URLUtils.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
+#if USE(SYSTEM_PREVIEW) && USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/SystemPreviewDetection.cpp>
+#endif
+
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLAnchorElement);
 
 using namespace HTMLNames;
 
@@ -118,7 +126,7 @@ static bool hasNonEmptyBox(RenderBoxModelObject* renderer)
     return false;
 }
 
-bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent& event) const
+bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent* event) const
 {
     if (!isLink())
         return HTMLElement::isKeyboardFocusable(event);
@@ -236,7 +244,7 @@ void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomicSt
             String parsedURL = stripLeadingAndTrailingHTMLSpaces(value);
             if (document().isDNSPrefetchEnabled() && document().frame()) {
                 if (protocolIsInHTTPFamily(parsedURL) || parsedURL.startsWith("//"))
-                    document().frame()->loader().client().prefetchDNS(document().completeURL(parsedURL).host());
+                    document().frame()->loader().client().prefetchDNS(document().completeURL(parsedURL).host().toString());
             }
         }
         invalidateCachedVisitedLinkHash();
@@ -301,12 +309,22 @@ bool HTMLAnchorElement::hasRel(Relation relation) const
     return m_linkRelations.contains(relation);
 }
 
-DOMTokenList& HTMLAnchorElement::relList()
+DOMTokenList& HTMLAnchorElement::relList() const
 {
-    if (!m_relList)
-        m_relList = std::make_unique<DOMTokenList>(*this, HTMLNames::relAttr, [](Document&, StringView token) {
+    if (!m_relList) {
+        m_relList = std::make_unique<DOMTokenList>(const_cast<HTMLAnchorElement&>(*this), HTMLNames::relAttr, [](Document&, StringView token) {
+#if USE(SYSTEM_PREVIEW)
+#if USE(APPLE_INTERNAL_SDK)
+            auto systemPreviewRelValue = getSystemPreviewRelValue();
+#else
+            auto systemPreviewRelValue = "system-preview"_s;
+#endif
+            return equalIgnoringASCIICase(token, "noreferrer") || equalIgnoringASCIICase(token, "noopener") || equalIgnoringASCIICase(token, systemPreviewRelValue);
+#else
             return equalIgnoringASCIICase(token, "noreferrer") || equalIgnoringASCIICase(token, "noopener");
+#endif
         });
+    }
     return *m_relList;
 }
 
@@ -359,6 +377,33 @@ void HTMLAnchorElement::sendPings(const URL& destinationURL)
         PingLoader::sendPing(*document().frame(), document().completeURL(pingURLs[i]), destinationURL);
 }
 
+#if USE(SYSTEM_PREVIEW)
+bool HTMLAnchorElement::isSystemPreviewLink() const
+{
+    if (!RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled())
+        return false;
+
+#if USE(APPLE_INTERNAL_SDK)
+    auto systemPreviewRelValue = getSystemPreviewRelValue();
+#else
+    auto systemPreviewRelValue = String { "system-preview"_s };
+#endif
+
+    if (!relList().contains(systemPreviewRelValue))
+        return false;
+
+    if (auto* child = firstElementChild()) {
+        if (is<HTMLImageElement>(child) || is<HTMLPictureElement>(child)) {
+            auto numChildren = childElementCount();
+            // FIXME: Should only be 1.
+            return numChildren == 1 || numChildren == 2;
+        }
+    }
+
+    return false;
+}
+#endif
+
 void HTMLAnchorElement::handleClick(Event& event)
 {
     event.setDefaultHandled();
@@ -384,9 +429,19 @@ void HTMLAnchorElement::handleClick(Event& event)
     }
 #endif
 
+    SystemPreviewInfo systemPreviewInfo;
+#if USE(SYSTEM_PREVIEW)
+    systemPreviewInfo.isSystemPreview = isSystemPreviewLink() && RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled();
+
+    if (systemPreviewInfo.isSystemPreview) {
+        if (auto* child = firstElementChild())
+            systemPreviewInfo.systemPreviewRect = child->boundsInRootViewSpace();
+    }
+#endif
+
     ShouldSendReferrer shouldSendReferrer = hasRel(Relation::NoReferrer) ? NeverSendReferrer : MaybeSendReferrer;
     auto newFrameOpenerPolicy = hasRel(Relation::NoOpener) ? std::make_optional(NewFrameOpenerPolicy::Suppress) : std::nullopt;
-    frame->loader().urlSelected(completedURL, target(), &event, LockHistory::No, LockBackForwardList::No, shouldSendReferrer, document().shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute);
+    frame->loader().urlSelected(completedURL, target(), &event, LockHistory::No, LockBackForwardList::No, shouldSendReferrer, document().shouldOpenExternalURLsPolicyToPropagate(), newFrameOpenerPolicy, downloadAttribute, systemPreviewInfo);
 
     sendPings(completedURL);
 }

@@ -31,8 +31,9 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "Geolocation.h"
-#include "NetworkStateNotifier.h"
+#include "LoaderStrategy.h"
 #include "Page.h"
+#include "PlatformStrategies.h"
 #include "PluginData.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
@@ -76,22 +77,21 @@ String Navigator::appVersion() const
     return appVersion;
 }
 
-String Navigator::userAgent() const
+const String& Navigator::userAgent() const
 {
-    if (!m_frame)
-        return String();
+    if (m_userAgent.isNull() && m_frame && m_frame->page())
+        m_userAgent = m_frame->loader().userAgent(m_frame->document()->url());
+    return m_userAgent;
+}
 
-    // If the frame is already detached, FrameLoader::userAgent may malfunction, because it calls a client method
-    // that uses frame's WebView (at least, in Mac WebKit).
-    if (!m_frame->page())
-        return String();
-
-    return m_frame->loader().userAgent(m_frame->document()->url());
+void Navigator::userAgentChanged()
+{
+    m_userAgent = String();
 }
 
 bool Navigator::onLine() const
 {
-    return NetworkStateNotifier::singleton().onLine();
+    return platformStrategies()->loaderStrategy()->isOnLine();
 }
 
 DOMPluginArray& Navigator::plugins()

@@ -49,6 +49,7 @@ namespace WebCore {
     M(Events) \
     M(FileAPI) \
     M(Filters) \
+    M(Fonts) \
     M(Frames) \
     M(FTP) \
     M(Fullscreen) \
@@ -62,6 +63,7 @@ namespace WebCore {
     M(IndexedDBOperations) \
     M(Layers) \
     M(Layout) \
+    M(FormattingContextLayout) \
     M(Loading) \
     M(Media) \
     M(MediaCaptureSamples) \

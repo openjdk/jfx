@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,7 +46,6 @@ class BBQPlan;
 class OMGPlan;
 struct ModuleInformation;
 struct UnlinkedWasmToWasmCall;
-typedef void** WasmEntrypointLoadLocation;
 enum class MemoryMode : uint8_t;
 
 class CodeBlock : public ThreadSafeRefCounted<CodeBlock> {
@@ -97,7 +96,7 @@ public:
         return *m_callees[calleeIndex].get();
     }
 
-    WasmEntrypointLoadLocation wasmEntrypointLoadLocationFromFunctionIndexSpace(unsigned functionIndexSpace)
+    MacroAssemblerCodePtr<WasmEntryPtrTag>* entrypointLoadLocationFromFunctionIndexSpace(unsigned functionIndexSpace)
     {
         RELEASE_ASSERT(functionIndexSpace >= functionImportCount());
         unsigned calleeIndex = functionIndexSpace - functionImportCount();
@@ -124,10 +123,10 @@ private:
     Vector<RefPtr<Callee>> m_callees;
     Vector<RefPtr<Callee>> m_optimizedCallees;
     HashMap<uint32_t, RefPtr<Callee>, typename DefaultHash<uint32_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> m_embedderCallees;
-    Vector<void*> m_wasmIndirectCallEntryPoints;
+    Vector<MacroAssemblerCodePtr<WasmEntryPtrTag>> m_wasmIndirectCallEntryPoints;
     Vector<TierUpCount> m_tierUpCounts;
     Vector<Vector<UnlinkedWasmToWasmCall>> m_wasmToWasmCallsites;
-    Vector<MacroAssemblerCodeRef> m_wasmToWasmExitStubs;
+    Vector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToWasmExitStubs;
     RefPtr<BBQPlan> m_plan;
     std::atomic<bool> m_compilationFinished { false };
     String m_errorMessage;

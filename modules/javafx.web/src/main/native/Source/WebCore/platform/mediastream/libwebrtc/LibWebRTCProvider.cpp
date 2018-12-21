@@ -26,42 +26,80 @@
 #include "config.h"
 #include "LibWebRTCProvider.h"
 
-#if PLATFORM(COCOA)
-#include "LibWebRTCProviderCocoa.h"
-#endif
-
 #if USE(LIBWEBRTC)
 #include "LibWebRTCAudioModule.h"
 #include "Logging.h"
-#include "VideoToolBoxDecoderFactory.h"
-#include "VideoToolBoxEncoderFactory.h"
 #include <dlfcn.h>
+#include <webrtc/api/audio_codecs/builtin_audio_decoder_factory.h>
+#include <webrtc/api/audio_codecs/builtin_audio_encoder_factory.h>
 #include <webrtc/api/peerconnectionfactoryproxy.h>
-#include <webrtc/base/physicalsocketserver.h>
+#include <webrtc/modules/audio_processing/include/audio_processing.h>
+#include <webrtc/p2p/base/basicpacketsocketfactory.h>
 #include <webrtc/p2p/client/basicportallocator.h>
 #include <webrtc/pc/peerconnectionfactory.h>
+#include <webrtc/rtc_base/physicalsocketserver.h>
 #include <wtf/Function.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/darwin/WeakLinking.h>
 #endif
 
 namespace WebCore {
 
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WPE)
 UniqueRef<LibWebRTCProvider> LibWebRTCProvider::create()
 {
-#if USE(LIBWEBRTC) && PLATFORM(COCOA)
-    return makeUniqueRef<LibWebRTCProviderCocoa>();
-#else
     return makeUniqueRef<LibWebRTCProvider>();
+}
 #endif
+
+void LibWebRTCProvider::setActive(bool)
+{
 }
 
 #if USE(LIBWEBRTC)
+static inline rtc::SocketAddress prepareSocketAddress(const rtc::SocketAddress& address, bool disableNonLocalhostConnections)
+{
+    auto result = address;
+    if (disableNonLocalhostConnections)
+        result.SetIP("127.0.0.1");
+    return result;
+}
+
+class BasicPacketSocketFactory : public rtc::BasicPacketSocketFactory {
+public:
+    explicit BasicPacketSocketFactory(rtc::Thread& networkThread)
+        : m_socketFactory(makeUniqueRef<rtc::BasicPacketSocketFactory>(&networkThread))
+    {
+    }
+
+    void setDisableNonLocalhostConnections(bool disableNonLocalhostConnections) { m_disableNonLocalhostConnections = disableNonLocalhostConnections; }
+
+    rtc::AsyncPacketSocket* CreateUdpSocket(const rtc::SocketAddress& address, uint16_t minPort, uint16_t maxPort) final
+    {
+        return m_socketFactory->CreateUdpSocket(prepareSocketAddress(address, m_disableNonLocalhostConnections), minPort, maxPort);
+    }
+
+    rtc::AsyncPacketSocket* CreateServerTcpSocket(const rtc::SocketAddress& address, uint16_t minPort, uint16_t maxPort, int options) final
+    {
+        return m_socketFactory->CreateServerTcpSocket(prepareSocketAddress(address, m_disableNonLocalhostConnections), minPort, maxPort, options);
+    }
+
+    rtc::AsyncPacketSocket* CreateClientTcpSocket(const rtc::SocketAddress& localAddress, const rtc::SocketAddress& remoteAddress, const rtc::ProxyInfo& info, const std::string& name, int options)
+    {
+        return m_socketFactory->CreateClientTcpSocket(prepareSocketAddress(localAddress, m_disableNonLocalhostConnections), remoteAddress, info, name, options);
+    }
+
+private:
+    bool m_disableNonLocalhostConnections { false };
+    UniqueRef<rtc::BasicPacketSocketFactory> m_socketFactory;
+};
+
 struct PeerConnectionFactoryAndThreads : public rtc::MessageHandler {
     std::unique_ptr<rtc::Thread> networkThread;
     std::unique_ptr<rtc::Thread> signalingThread;
     bool networkThreadWithSocketServer { false };
     std::unique_ptr<LibWebRTCAudioModule> audioDeviceModule;
+    std::unique_ptr<rtc::NetworkManager> networkManager;
+    std::unique_ptr<BasicPacketSocketFactory> packetSocketFactory;
 
 private:
     void OnMessage(rtc::Message*);
@@ -158,7 +196,17 @@ webrtc::PeerConnectionFactoryInterface* LibWebRTCProvider::factory()
 
 rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> LibWebRTCProvider::createPeerConnectionFactory(rtc::Thread* networkThread, rtc::Thread* signalingThread, LibWebRTCAudioModule* audioModule)
 {
-    return webrtc::CreatePeerConnectionFactory(networkThread, networkThread, signalingThread, audioModule, createEncoderFactory().release(), createDecoderFactory().release());
+    return webrtc::CreatePeerConnectionFactory(networkThread, networkThread, signalingThread, audioModule, webrtc::CreateBuiltinAudioEncoderFactory(), webrtc::CreateBuiltinAudioDecoderFactory(), createEncoderFactory(), createDecoderFactory(), nullptr, nullptr);
+}
+
+std::unique_ptr<webrtc::VideoDecoderFactory> LibWebRTCProvider::createDecoderFactory()
+{
+    return nullptr;
+}
+
+std::unique_ptr<webrtc::VideoEncoderFactory> LibWebRTCProvider::createEncoderFactory()
+{
+    return nullptr;
 }
 
 void LibWebRTCProvider::setPeerConnectionFactory(rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>&& factory)
@@ -166,21 +214,34 @@ void LibWebRTCProvider::setPeerConnectionFactory(rtc::scoped_refptr<webrtc::Peer
     m_factory = webrtc::PeerConnectionFactoryProxy::Create(getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer).signalingThread.get(), WTFMove(factory));
 }
 
+void LibWebRTCProvider::disableEnumeratingAllNetworkInterfaces()
+{
+    m_enableEnumeratingAllNetworkInterfaces = false;
+}
+
+void LibWebRTCProvider::enableEnumeratingAllNetworkInterfaces()
+{
+    m_enableEnumeratingAllNetworkInterfaces = true;
+}
+
 rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPeerConnection(webrtc::PeerConnectionObserver& observer, webrtc::PeerConnectionInterface::RTCConfiguration&& configuration)
 {
     // Default WK1 implementation.
     ASSERT(m_useNetworkThreadWithSocketServer);
-    auto* factory = this->factory();
-    if (!factory)
-        return nullptr;
+    auto& factoryAndThreads = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer);
 
-    return m_factory->CreatePeerConnection(configuration, nullptr, nullptr, &observer);
+    if (!factoryAndThreads.networkManager)
+        factoryAndThreads.networkManager = std::make_unique<rtc::BasicNetworkManager>();
+
+    if (!factoryAndThreads.packetSocketFactory)
+        factoryAndThreads.packetSocketFactory = std::make_unique<BasicPacketSocketFactory>(*factoryAndThreads.networkThread);
+    factoryAndThreads.packetSocketFactory->setDisableNonLocalhostConnections(m_disableNonLocalhostConnections);
+
+    return createPeerConnection(observer, *factoryAndThreads.networkManager, *factoryAndThreads.packetSocketFactory, WTFMove(configuration));
 }
 
 rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPeerConnection(webrtc::PeerConnectionObserver& observer, rtc::NetworkManager& networkManager, rtc::PacketSocketFactory& packetSocketFactory, webrtc::PeerConnectionInterface::RTCConfiguration&& configuration)
 {
-    ASSERT(!m_useNetworkThreadWithSocketServer);
-
     auto& factoryAndThreads = getStaticFactoryAndThreads(m_useNetworkThreadWithSocketServer);
 
     std::unique_ptr<cricket::BasicPortAllocator> portAllocator;
@@ -199,14 +260,5 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> LibWebRTCProvider::createPee
 }
 
 #endif // USE(LIBWEBRTC)
-
-bool LibWebRTCProvider::webRTCAvailable()
-{
-#if USE(LIBWEBRTC)
-    return !isNullFunctionPointer(rtc::LogMessage::LogToDebug);
-#else
-    return true;
-#endif
-}
 
 } // namespace WebCore

@@ -43,7 +43,7 @@ class ServiceWorkerThread;
 
 class ServiceWorkerGlobalScope final : public WorkerGlobalScope {
 public:
-    static Ref<ServiceWorkerGlobalScope> create(const ServiceWorkerContextData&, const URL&, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread&, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, PAL::SessionID);
+    static Ref<ServiceWorkerGlobalScope> create(const ServiceWorkerContextData&, const URL&, Ref<SecurityOrigin>&&, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread&, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, PAL::SessionID);
 
     ~ServiceWorkerGlobalScope();
 
@@ -64,8 +64,11 @@ public:
 
     void updateExtendedEventsSet(ExtendableEvent* newEvent = nullptr);
 
+    const ServiceWorkerContextData::ImportedScript* scriptResource(const URL&) const;
+    void setScriptResource(const URL&, ServiceWorkerContextData::ImportedScript&&);
+
 private:
-    ServiceWorkerGlobalScope(const ServiceWorkerContextData&, const URL&, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, PAL::SessionID);
+    ServiceWorkerGlobalScope(const ServiceWorkerContextData&, const URL&, Ref<SecurityOrigin>&&, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread&, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy*, SocketProvider*, PAL::SessionID);
 
     bool hasPendingEvents() const { return !m_extendedEvents.isEmpty(); }
 

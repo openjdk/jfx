@@ -47,7 +47,7 @@ namespace WebCore {
 
 Ref<MediaStream> MediaStream::create(ScriptExecutionContext& context)
 {
-    return MediaStream::create(context, MediaStreamPrivate::create(Vector<RefPtr<MediaStreamTrackPrivate>>()));
+    return MediaStream::create(context, MediaStreamPrivate::create({ }));
 }
 
 Ref<MediaStream> MediaStream::create(ScriptExecutionContext& context, MediaStream& stream)
@@ -227,7 +227,7 @@ bool MediaStream::internalAddTrack(Ref<MediaStreamTrack>&& trackToAdd, StreamMod
     if (streamModifier == StreamModifier::DomAPI)
         m_private->addTrack(&track.privateTrack(), MediaStreamPrivate::NotifyClientOption::DontNotify);
     else
-        dispatchEvent(MediaStreamTrackEvent::create(eventNames().addtrackEvent, false, false, &track));
+        dispatchEvent(MediaStreamTrackEvent::create(eventNames().addtrackEvent, Event::CanBubble::No, Event::IsCancelable::No, &track));
 
     return true;
 }
@@ -245,7 +245,7 @@ bool MediaStream::internalRemoveTrack(const String& trackId, StreamModifier stre
     if (streamModifier == StreamModifier::DomAPI)
         m_private->removeTrack(track->privateTrack(), MediaStreamPrivate::NotifyClientOption::DontNotify);
     else
-        dispatchEvent(MediaStreamTrackEvent::create(eventNames().removetrackEvent, false, false, WTFMove(track)));
+        dispatchEvent(MediaStreamTrackEvent::create(eventNames().removetrackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(track)));
 
     return true;
 }
@@ -336,7 +336,6 @@ void MediaStream::statusDidChange()
     if (Document* document = this->document()) {
         if (!m_isActive)
             return;
-        document->setHasActiveMediaStreamTrack();
         document->updateIsPlayingMedia();
     }
 }
