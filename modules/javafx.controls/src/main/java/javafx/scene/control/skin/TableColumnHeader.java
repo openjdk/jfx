@@ -37,11 +37,8 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.Styleable;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableProperty;
+import javafx.css.*;
+import javafx.css.converter.SizeConverter;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -50,22 +47,28 @@ import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.util.Callback;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
-import javafx.css.converter.SizeConverter;
-
-import javafx.util.Callback;
 
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeName;
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeProperty;
@@ -587,14 +590,13 @@ public class TableColumnHeader extends Region {
 
         // if the prefWidth has been set, we do _not_ autosize columns
         if (prefWidth == DEFAULT_COLUMN_WIDTH) {
-//            TableSkinUtils.resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
             resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
         }
     }
 
     /**
-     * Resizes the given column based on the pref width of all items contained in this column. This can be potentially
-     * very expensive if the number of rows is large.
+     * Resizes the given column based on the preferred width of all items contained in it. This can be potentially very
+     * expensive if the number of rows is large.
      *
      * @param tableSkin the {@code TableViewSkinBase} used to determine if we are dealing with a {@link TableView} or a
      *                  {@link TreeTableView}
@@ -602,7 +604,7 @@ public class TableColumnHeader extends Region {
      * @param maxRows   the number of rows considered when resizing. If -1 is given, all rows are considered.
      * @since 12
      */
-    protected void resizeColumnToFitContent(TableViewSkinBase<?,?,?,?,?> tableSkin, TableColumnBase<?,?> tc, int maxRows) {
+    protected void resizeColumnToFitContent(TableViewSkinBase<?,?,?,?,?> tableSkin, TableColumnBase<?, ?> tc, int maxRows) {
         if (!tc.isResizable()) return;
 
         Object control = tableSkin.getSkinnable();
@@ -665,7 +667,6 @@ public class TableColumnHeader extends Region {
         // RT-23486
         maxWidth += padding;
         if (tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && tv.getWidth() > 0) {
-
             if (maxWidth > tc.getMaxWidth()) {
                 maxWidth = tc.getMaxWidth();
             }
@@ -682,7 +683,7 @@ public class TableColumnHeader extends Region {
         }
     }
 
-    private <T,S> void resizeColumnToFitContent(TreeTableView<T> ttv, TreeTableColumn<T,S> tc, TableViewSkinBase tableSkin, int maxRows) {
+    private <T,S> void resizeColumnToFitContent(TreeTableView<T> ttv, TreeTableColumn<T, S> tc, TableViewSkinBase tableSkin, int maxRows) {
         List<?> items = new TreeTableViewBackingList(ttv);
         if (items == null || items.isEmpty()) return;
 
