@@ -30,9 +30,9 @@
 #include "Gigacage.h"
 #include "Heap.h"
 #include "IsoTLS.h"
+#include "Mutex.h"
 #include "PerHeapKind.h"
 #include "Scavenger.h"
-#include "StaticMutex.h"
 
 namespace bmalloc {
 namespace api {
@@ -82,7 +82,7 @@ inline void free(void* object, HeapKind kind = HeapKind::Primary)
 
 BEXPORT void freeOutOfLine(void* object, HeapKind kind = HeapKind::Primary);
 
-BEXPORT void freeLargeVirtual(void* object, HeapKind kind = HeapKind::Primary);
+BEXPORT void freeLargeVirtual(void* object, size_t, HeapKind kind = HeapKind::Primary);
 
 inline void scavengeThisThread()
 {
@@ -94,6 +94,11 @@ inline void scavengeThisThread()
 BEXPORT void scavenge();
 
 BEXPORT bool isEnabled(HeapKind kind = HeapKind::Primary);
+
+// ptr must be aligned to vmPageSizePhysical and size must be divisible
+// by vmPageSizePhysical.
+BEXPORT void decommitAlignedPhysical(void* object, size_t, HeapKind = HeapKind::Primary);
+BEXPORT void commitAlignedPhysical(void* object, size_t, HeapKind = HeapKind::Primary);
 
 inline size_t availableMemory()
 {
@@ -115,6 +120,8 @@ inline double percentAvailableMemoryInUse()
 #if BOS(DARWIN)
 BEXPORT void setScavengerThreadQOSClass(qos_class_t overrideClass);
 #endif
+
+BEXPORT void enableMiniMode();
 
 } // namespace api
 } // namespace bmalloc

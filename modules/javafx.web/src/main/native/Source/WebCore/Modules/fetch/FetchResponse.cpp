@@ -36,6 +36,7 @@
 #include "ReadableStreamSink.h"
 #include "ResourceError.h"
 #include "ScriptExecutionContext.h"
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -63,11 +64,11 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
 {
     // 1. If init’s status member is not in the range 200 to 599, inclusive, then throw a RangeError.
     if (init.status < 200  || init.status > 599)
-        return Exception { RangeError, ASCIILiteral("Status must be between 200 and 599") };
+        return Exception { RangeError, "Status must be between 200 and 599"_s };
 
     // 2. If init’s statusText member does not match the reason-phrase token production, then throw a TypeError.
     if (!isValidReasonPhrase(init.statusText))
-        return Exception { TypeError, ASCIILiteral("Status text must be a valid reason-phrase.") };
+        return Exception { TypeError, "Status text must be a valid reason-phrase."_s };
 
     // 3. Let r be a new Response object associated with a new response.
     // NOTE: Creation of the Response object is delayed until all potential exceptional cases are handled.
@@ -95,7 +96,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::create(ScriptExecutionContext& co
         // 8.1 If init’s status member is a null body status, then throw a TypeError.
         //     (NOTE: 101 is included in null body status due to its use elsewhere. It does not affect this step.)
         if (isNullBodyStatus(init.status))
-            return Exception { TypeError, ASCIILiteral("Response cannot have a body with the given status.") };
+            return Exception { TypeError, "Response cannot have a body with the given status."_s };
 
         // 8.2 Let Content-Type be null.
         String contentType;
@@ -143,10 +144,12 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::redirect(ScriptExecutionContext& 
 {
     // FIXME: Tighten the URL parsing algorithm according https://url.spec.whatwg.org/#concept-url-parser.
     URL requestURL = context.completeURL(url);
-    if (!requestURL.isValid() || !requestURL.user().isEmpty() || !requestURL.pass().isEmpty())
-        return Exception { TypeError };
+    if (!requestURL.isValid())
+        return Exception { TypeError, makeString("Redirection URL '", requestURL.string(), "' is invalid") };
+    if (!requestURL.user().isEmpty() || !requestURL.pass().isEmpty())
+        return Exception { TypeError, "Redirection URL contains credentials"_s };
     if (!ResourceResponse::isRedirectionStatusCode(status))
-        return Exception { RangeError };
+        return Exception { RangeError, makeString("Status code ", status, "is not a redirection status code") };
     auto redirectResponse = adoptRef(*new FetchResponse(context, { }, FetchHeaders::create(FetchHeaders::Guard::Immutable), { }));
     redirectResponse->m_internalResponse.setHTTPStatusCode(status);
     redirectResponse->m_internalResponse.setHTTPHeaderField(HTTPHeaderName::Location, requestURL.string());
@@ -163,7 +166,7 @@ FetchResponse::FetchResponse(ScriptExecutionContext& context, std::optional<Fetc
 ExceptionOr<Ref<FetchResponse>> FetchResponse::clone(ScriptExecutionContext& context)
 {
     if (isDisturbedOrLocked())
-        return Exception { TypeError };
+        return Exception { TypeError, "Body is disturbed or locked"_s };
 
     ASSERT(scriptExecutionContext());
 
@@ -176,6 +179,7 @@ ExceptionOr<Ref<FetchResponse>> FetchResponse::clone(ScriptExecutionContext& con
         m_internalResponse.setHTTPHeaderFields(HTTPHeaderMap { headers().internalHeaders() });
 
     auto clone = FetchResponse::create(context, std::nullopt, headers().guard(), ResourceResponse { m_internalResponse });
+    clone->m_loadingError = m_loadingError;
     clone->cloneBody(*this);
     clone->m_opaqueLoadIdentifier = m_opaqueLoadIdentifier;
     clone->m_bodySizeWithPadding = m_bodySizeWithPadding;
@@ -221,8 +225,12 @@ void FetchResponse::BodyLoader::didSucceed()
     m_response.m_body->loadingSucceeded();
 
 #if ENABLE(STREAMS_API)
-    if (m_response.m_readableStreamSource && !m_response.body().consumer().hasData())
+    if (m_response.m_readableStreamSource) {
+        if (m_response.body().consumer().hasData())
+            m_response.m_readableStreamSource->enqueue(m_response.body().consumer().takeAsArrayBuffer());
+
         m_response.closeStream();
+    }
 #endif
     if (auto consumeDataCallback = WTFMove(m_consumeDataCallback))
         consumeDataCallback(nullptr);
@@ -236,16 +244,19 @@ void FetchResponse::BodyLoader::didSucceed()
 void FetchResponse::BodyLoader::didFail(const ResourceError& error)
 {
     ASSERT(m_response.hasPendingActivity());
+
+    m_response.m_loadingError = error;
+
     if (auto responseCallback = WTFMove(m_responseCallback))
-        responseCallback(Exception { TypeError, String(error.localizedDescription()) });
+        responseCallback(Exception { TypeError, error.localizedDescription() });
 
     if (auto consumeDataCallback = WTFMove(m_consumeDataCallback))
-        consumeDataCallback(Exception { TypeError, String(error.localizedDescription()) });
+        consumeDataCallback(Exception { TypeError, error.localizedDescription() });
 
 #if ENABLE(STREAMS_API)
     if (m_response.m_readableStreamSource) {
         if (!m_response.m_readableStreamSource->isCancelling())
-            m_response.m_readableStreamSource->error(ASCIILiteral("Loading failed"));
+            m_response.m_readableStreamSource->error(makeString("Loading failed: "_s, error.localizedDescription()));
         m_response.m_readableStreamSource = nullptr;
     }
 #endif

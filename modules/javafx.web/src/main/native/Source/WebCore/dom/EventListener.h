@@ -52,7 +52,7 @@ public:
 
     virtual void visitJSFunction(JSC::SlotVisitor&) { }
 
-    bool isAttribute() const { return virtualisAttribute(); }
+    virtual bool isAttribute() const { return false; }
     Type type() const { return m_type; }
 
 #if PLATFORM(JAVA)
@@ -66,8 +66,6 @@ protected:
     }
 
 private:
-    virtual bool virtualisAttribute() const { return false; }
-
     Type m_type;
 };
 

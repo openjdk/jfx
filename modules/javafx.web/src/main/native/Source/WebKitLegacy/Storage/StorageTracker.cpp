@@ -250,7 +250,7 @@ void StorageTracker::syncFileSystemAndTrackerDatabase()
 
     // Add missing StorageTracker records.
     OriginSet foundOrigins;
-    String fileExtension = ASCIILiteral(".localstorage");
+    String fileExtension = ".localstorage"_s;
 
     for (Vector<String>::const_iterator it = paths.begin(), end = paths.end(); it != end; ++it) {
         const String& path = *it;
@@ -637,7 +637,7 @@ long long StorageTracker::diskUsageForOrigin(SecurityOrigin* origin)
 
     LockHolder locker(m_databaseMutex);
 
-    String path = databasePathForOrigin(SecurityOriginData::fromSecurityOrigin(*origin).databaseIdentifier());
+    String path = databasePathForOrigin(origin->data().databaseIdentifier());
     if (path.isEmpty())
         return 0;
 

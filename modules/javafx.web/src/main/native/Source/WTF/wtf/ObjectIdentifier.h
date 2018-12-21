@@ -66,6 +66,7 @@ public:
     }
 
     uint64_t toUInt64() const { return m_identifier; }
+    explicit operator bool() const { return m_identifier; }
 
     String loggingString() const
     {

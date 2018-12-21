@@ -35,6 +35,11 @@
 #include "MacroAssemblerARMv7.h"
 namespace JSC { typedef MacroAssemblerARMv7 MacroAssemblerBase; };
 
+#elif CPU(ARM64E) && __has_include(<WebKitAdditions/MacroAssemblerARM64E.h>)
+#define TARGET_ASSEMBLER ARM64EAssembler
+#define TARGET_MACROASSEMBLER MacroAssemblerARM64E
+#include <WebKitAdditions/MacroAssemblerARM64E.h>
+
 #elif CPU(ARM64)
 #define TARGET_ASSEMBLER ARM64Assembler
 #define TARGET_MACROASSEMBLER MacroAssemblerARM64
@@ -302,6 +307,11 @@ public:
         storePtr(imm, addressForPoke(index));
     }
 
+    void poke(FPRegisterID src, int index = 0)
+    {
+        storeDouble(src, addressForPoke(index));
+    }
+
 #if !CPU(ARM64)
     void pushToSave(RegisterID src)
     {
@@ -343,14 +353,6 @@ public:
     void poke64(RegisterID src, int index = 0)
     {
         store64(src, addressForPoke(index));
-    }
-#endif
-
-#if CPU(MIPS)
-    void poke(FPRegisterID src, int index = 0)
-    {
-        ASSERT(!(index & 1));
-        storeDouble(src, addressForPoke(index));
     }
 #endif
 
@@ -448,6 +450,11 @@ public:
         return PatchableJump(branch32(cond, reg, imm));
     }
 
+    PatchableJump patchableBranch8(RelationalCondition cond, Address address, TrustedImm32 imm)
+    {
+        return PatchableJump(branch8(cond, address, imm));
+    }
+
     PatchableJump patchableBranch32(RelationalCondition cond, Address address, TrustedImm32 imm)
     {
         return PatchableJump(branch32(cond, address, imm));
@@ -524,6 +531,12 @@ public:
     {
         loadFloat(src, scratch);
         storeFloat(scratch, dest);
+    }
+
+    // Overload mostly for use in templates.
+    void move(FPRegisterID src, FPRegisterID dest)
+    {
+        moveDouble(src, dest);
     }
 
     void moveDouble(Address src, Address dest, FPRegisterID scratch)
@@ -1283,6 +1296,13 @@ public:
         return shouldBlindPointerForSpecificArch(value);
     }
 
+    uint8_t generateRotationSeed(size_t widthInBits)
+    {
+        // Generate the seed in [1, widthInBits - 1]. We should not generate widthInBits or 0
+        // since it leads to `<< widthInBits` or `>> widthInBits`, which cause undefined behaviors.
+        return (random() % (widthInBits - 1)) + 1;
+    }
+
     struct RotatedImmPtr {
         RotatedImmPtr(uintptr_t v1, uint8_t v2)
             : value(v1)
@@ -1295,7 +1315,7 @@ public:
 
     RotatedImmPtr rotationBlindConstant(ImmPtr imm)
     {
-        uint8_t rotation = random() % (sizeof(void*) * 8);
+        uint8_t rotation = generateRotationSeed(sizeof(void*) * 8);
         uintptr_t value = imm.asTrustedImmPtr().asIntptr();
         value = (value << rotation) | (value >> (sizeof(void*) * 8 - rotation));
         return RotatedImmPtr(value, rotation);
@@ -1363,7 +1383,7 @@ public:
 
     RotatedImm64 rotationBlindConstant(Imm64 imm)
     {
-        uint8_t rotation = random() % (sizeof(int64_t) * 8);
+        uint8_t rotation = generateRotationSeed(sizeof(int64_t) * 8);
         uint64_t value = imm.asTrustedImm64().m_value;
         value = (value << rotation) | (value >> (sizeof(int64_t) * 8 - rotation));
         return RotatedImm64(value, rotation);
@@ -1451,20 +1471,13 @@ public:
 
 #endif // !CPU(X86_64)
 
-#if ENABLE(B3_JIT)
+#if !CPU(X86) && !CPU(X86_64) && !CPU(ARM64)
     // We should implement this the right way eventually, but for now, it's fine because it arises so
     // infrequently.
     void compareDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
     {
         move(TrustedImm32(0), dest);
         Jump falseCase = branchDouble(invert(cond), left, right);
-        move(TrustedImm32(1), dest);
-        falseCase.link(this);
-    }
-    void compareFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
-    {
-        move(TrustedImm32(0), dest);
-        Jump falseCase = branchFloat(invert(cond), left, right);
         move(TrustedImm32(1), dest);
         falseCase.link(this);
     }
@@ -1953,7 +1966,7 @@ public:
     // MacroAssembler.
     void probe(Probe::Function, void* arg);
 
-    JS_EXPORT_PRIVATE void probe(std::function<void(Probe::Context&)>);
+    JS_EXPORT_PRIVATE void probe(Function<void(Probe::Context&)>);
 
     // Let's you print from your JIT generated code.
     // See comments in MacroAssemblerPrinter.h for examples of how to use this.
@@ -1989,8 +2002,8 @@ private:
 
 public:
 
-    enum RegisterID { NoRegister };
-    enum FPRegisterID { NoFPRegister };
+    enum RegisterID : int8_t { NoRegister, InvalidGPRReg = -1 };
+    enum FPRegisterID : int8_t { NoFPRegister, InvalidFPRReg = -1 };
 };
 
 } // namespace JSC

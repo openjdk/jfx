@@ -180,7 +180,7 @@ private:
                 break;
             }
 
-            if (isPhantomNode && isFTL(m_graph.m_plan.mode))
+            if (isPhantomNode && m_graph.m_plan.isFTL())
                 break;
 
             if (isForwardingNode && m_node->hasArgumentsChild() && m_node->argumentsChild()

@@ -28,11 +28,9 @@
 #include "AtomicString.h"
 #include "StringBuffer.h"
 #include "StringHash.h"
-#include <wtf/Gigacage.h>
 #include <wtf/ProcessID.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringMalloc.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/SymbolImpl.h>
 #include <wtf/text/SymbolRegistry.h>
@@ -48,7 +46,7 @@ namespace WTF {
 
 using namespace Unicode;
 
-static_assert(sizeof(StringImpl) == 2 * sizeof(int) + sizeof(void*) + 2 * sizeof(int), "StringImpl should stay small");
+static_assert(sizeof(StringImpl) == 2 * sizeof(int) + 2 * sizeof(void*), "StringImpl should stay small");
 
 #if STRING_STATS
 StringStats StringImpl::m_stringStats;
@@ -131,7 +129,7 @@ StringImpl::~StringImpl()
     if (ownership == BufferOwned) {
         // We use m_data8, but since it is a union with m_data16 this works either way.
         ASSERT(m_data8);
-        stringFree(const_cast<LChar*>(m_data8));
+        fastFree(const_cast<LChar*>(m_data8));
         return;
     }
 
@@ -143,7 +141,7 @@ StringImpl::~StringImpl()
 void StringImpl::destroy(StringImpl* stringImpl)
 {
     stringImpl->~StringImpl();
-    stringFree(stringImpl);
+    fastFree(stringImpl);
 }
 
 Ref<StringImpl> StringImpl::createFromLiteral(const char* characters, unsigned length)
@@ -190,7 +188,7 @@ template<typename CharacterType> inline Ref<StringImpl> StringImpl::createUninit
     // heap allocation from this call.
     if (length > ((std::numeric_limits<unsigned>::max() - sizeof(StringImpl)) / sizeof(CharacterType)))
         CRASH();
-    StringImpl* string = static_cast<StringImpl*>(stringMalloc(allocationSize<CharacterType>(length)));
+    StringImpl* string = static_cast<StringImpl*>(fastMalloc(allocationSize<CharacterType>(length)));
 
     data = string->tailPointer<CharacterType>();
     return constructInternal<CharacterType>(*string, length);
@@ -216,12 +214,12 @@ template<typename CharacterType> inline Ref<StringImpl> StringImpl::reallocateIn
         return *empty();
     }
 
-    // Same as createUninitialized() except here we use stringRealloc.
+    // Same as createUninitialized() except here we use fastRealloc.
     if (length > ((std::numeric_limits<unsigned>::max() - sizeof(StringImpl)) / sizeof(CharacterType)))
         CRASH();
 
     originalString->~StringImpl();
-    auto* string = static_cast<StringImpl*>(stringRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)));
+    auto* string = static_cast<StringImpl*>(fastRealloc(&originalString.leakRef(), allocationSize<CharacterType>(length)));
 
     data = string->tailPointer<CharacterType>();
     return constructInternal<CharacterType>(*string, length);
@@ -1728,7 +1726,7 @@ static inline void putUTF8Triple(char*& buffer, UChar character)
     *buffer++ = static_cast<char>((character & 0x3F) | 0x80);
 }
 
-bool StringImpl::utf8Impl(const UChar* characters, unsigned length, char*& buffer, size_t bufferSize, ConversionMode mode)
+UTF8ConversionError StringImpl::utf8Impl(const UChar* characters, unsigned length, char*& buffer, size_t bufferSize, ConversionMode mode)
 {
     if (mode == StrictConversionReplacingUnpairedSurrogatesWithFFFD) {
         const UChar* charactersEnd = characters + length;
@@ -1756,13 +1754,13 @@ bool StringImpl::utf8Impl(const UChar* characters, unsigned length, char*& buffe
         // Only produced from strict conversion.
         if (result == sourceIllegal) {
             ASSERT(strict);
-            return false;
+            return UTF8ConversionError::IllegalSource;
         }
 
         // Check for an unconverted high surrogate.
         if (result == sourceExhausted) {
             if (strict)
-                return false;
+                return UTF8ConversionError::SourceExhausted;
             // This should be one unpaired high surrogate. Treat it the same
             // was as an unpaired high surrogate would have been handled in
             // the middle of a string with non-strict conversion - which is
@@ -1776,15 +1774,15 @@ bool StringImpl::utf8Impl(const UChar* characters, unsigned length, char*& buffe
         }
     }
 
-    return true;
+    return UTF8ConversionError::None;
 }
 
-CString StringImpl::utf8ForCharacters(const LChar* characters, unsigned length)
+Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const LChar* characters, unsigned length)
 {
     if (!length)
         return CString("", 0);
     if (length > std::numeric_limits<unsigned>::max() / 3)
-        return CString();
+        return makeUnexpected(UTF8ConversionError::OutOfMemory);
     Vector<char, 1024> bufferVector(length * 3);
     char* buffer = bufferVector.data();
     const LChar* source = characters;
@@ -1793,20 +1791,21 @@ CString StringImpl::utf8ForCharacters(const LChar* characters, unsigned length)
     return CString(bufferVector.data(), buffer - bufferVector.data());
 }
 
-CString StringImpl::utf8ForCharacters(const UChar* characters, unsigned length, ConversionMode mode)
+Expected<CString, UTF8ConversionError> StringImpl::utf8ForCharacters(const UChar* characters, unsigned length, ConversionMode mode)
 {
     if (!length)
         return CString("", 0);
     if (length > std::numeric_limits<unsigned>::max() / 3)
-        return CString();
+        return makeUnexpected(UTF8ConversionError::OutOfMemory);
     Vector<char, 1024> bufferVector(length * 3);
     char* buffer = bufferVector.data();
-    if (!utf8Impl(characters, length, buffer, bufferVector.size(), mode))
-        return CString();
+    UTF8ConversionError error = utf8Impl(characters, length, buffer, bufferVector.size(), mode);
+    if (error != UTF8ConversionError::None)
+        return makeUnexpected(error);
     return CString(bufferVector.data(), buffer - bufferVector.data());
 }
 
-CString StringImpl::utf8ForRange(unsigned offset, unsigned length, ConversionMode mode) const
+Expected<CString, UTF8ConversionError> StringImpl::tryGetUtf8ForRange(unsigned offset, unsigned length, ConversionMode mode) const
 {
     ASSERT(offset <= this->length());
     ASSERT(offset + length <= this->length());
@@ -1825,7 +1824,7 @@ CString StringImpl::utf8ForRange(unsigned offset, unsigned length, ConversionMod
     //    have a good chance of being able to write the string into the
     //    buffer without reallocing (say, 1.5 x length).
     if (length > std::numeric_limits<unsigned>::max() / 3)
-        return CString();
+        return makeUnexpected(UTF8ConversionError::OutOfMemory);
     Vector<char, 1024> bufferVector(length * 3);
 
     char* buffer = bufferVector.data();
@@ -1836,16 +1835,24 @@ CString StringImpl::utf8ForRange(unsigned offset, unsigned length, ConversionMod
         ConversionResult result = convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
         ASSERT_UNUSED(result, result != targetExhausted); // (length * 3) should be sufficient for any conversion
     } else {
-        if (!utf8Impl(this->characters16() + offset, length, buffer, bufferVector.size(), mode))
-            return CString();
+        UTF8ConversionError error = utf8Impl(this->characters16() + offset, length, buffer, bufferVector.size(), mode);
+        if (error != UTF8ConversionError::None)
+            return makeUnexpected(error);
     }
 
     return CString(bufferVector.data(), buffer - bufferVector.data());
 }
 
+Expected<CString, UTF8ConversionError> StringImpl::tryGetUtf8(ConversionMode mode) const
+{
+    return tryGetUtf8ForRange(0, length(), mode);
+}
+
 CString StringImpl::utf8(ConversionMode mode) const
 {
-    return utf8ForRange(0, length(), mode);
+    auto expectedString = tryGetUtf8ForRange(0, length(), mode);
+    RELEASE_ASSERT(expectedString);
+    return expectedString.value();
 }
 
 NEVER_INLINE unsigned StringImpl::hashSlowCase() const
@@ -1883,16 +1890,6 @@ bool equalIgnoringNullity(const UChar* a, size_t aLength, StringImpl* b)
         return true;
     }
     return !memcmp(a, b->characters16(), b->length() * sizeof(UChar));
-}
-
-void StringImpl::releaseAssertCaged() const
-{
-    if (isStatic())
-        return;
-    RELEASE_ASSERT(!GIGACAGE_ENABLED || Gigacage::isCaged(Gigacage::String, this));
-    if (bufferOwnership() != BufferOwned)
-        return;
-    RELEASE_ASSERT(!GIGACAGE_ENABLED || Gigacage::isCaged(Gigacage::String, m_data8));
 }
 
 } // namespace WTF

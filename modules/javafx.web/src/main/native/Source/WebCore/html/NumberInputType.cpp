@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -294,23 +294,22 @@ bool NumberInputType::isNumberField() const
     return true;
 }
 
-void NumberInputType::minOrMaxAttributeChanged()
+void NumberInputType::attributeChanged(const QualifiedName& name)
 {
-    if (auto* element = this->element()) {
-        element->invalidateStyleForSubtree();
-        if (auto* renderer = element->renderer())
-        renderer->setNeedsLayoutAndPrefWidthsRecalc();
+    ASSERT(element());
+    if (name == maxAttr || name == minAttr) {
+        if (auto* element = this->element()) {
+            element->invalidateStyleForSubtree();
+            if (auto* renderer = element->renderer())
+                renderer->setNeedsLayoutAndPrefWidthsRecalc();
+        }
+    } else if (name == stepAttr) {
+        if (auto* element = this->element()) {
+            if (auto* renderer = element->renderer())
+                renderer->setNeedsLayoutAndPrefWidthsRecalc();
+        }
     }
-}
-
-void NumberInputType::stepAttributeChanged()
-{
-    InputType::stepAttributeChanged();
-
-    if (auto* element = this->element()) {
-        if (auto* renderer = element->renderer())
-            renderer->setNeedsLayoutAndPrefWidthsRecalc();
-    }
+    TextFieldInputType::attributeChanged(name);
 }
 
 } // namespace WebCore

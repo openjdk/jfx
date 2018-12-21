@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,8 +79,7 @@ void raiseDOMErrorException(JNIEnv* env, Exception&& ec)
 
 namespace WebCore {
 extern "C" {
-namespace {
-jobject makeObjectFromNode(
+static jobject makeObjectFromNode(
     JNIEnv* env,
     Frame*,
     Node* peer)
@@ -95,7 +94,6 @@ jobject makeObjectFromNode(
         midGetImpl,
         ptr_to_jlong(peer));
 }
-} // namespace
 
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkGetDocument
     (JNIEnv* env, jclass, jlong jframe)

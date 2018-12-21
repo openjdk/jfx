@@ -36,7 +36,7 @@
 #include <WebCore/NamedNodeMap.h>
 #include <WebCore/Node.h>
 #include <WebCore/NodeList.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 #include <WebCore/SVGTests.h>
 #include <JavaScriptCore/APICast.h>
 

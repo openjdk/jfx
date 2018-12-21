@@ -156,7 +156,7 @@ IDBRequest::~IDBRequest()
 ExceptionOr<std::optional<IDBRequest::Result>> IDBRequest::result() const
 {
     if (!isDone())
-        return Exception { InvalidStateError, ASCIILiteral("Failed to read the 'result' property from 'IDBRequest': The request has not finished.") };
+        return Exception { InvalidStateError, "Failed to read the 'result' property from 'IDBRequest': The request has not finished."_s };
 
     return std::optional<IDBRequest::Result> { m_result };
 }
@@ -166,7 +166,7 @@ ExceptionOr<DOMException*> IDBRequest::error() const
     ASSERT(&originThread() == &Thread::current());
 
     if (!isDone())
-        return Exception { InvalidStateError, ASCIILiteral("Failed to read the 'error' property from 'IDBRequest': The request has not finished.") };
+        return Exception { InvalidStateError, "Failed to read the 'error' property from 'IDBRequest': The request has not finished."_s };
 
     return m_domError.get();
 }
@@ -174,13 +174,8 @@ ExceptionOr<DOMException*> IDBRequest::error() const
 void IDBRequest::setSource(IDBCursor& cursor)
 {
     ASSERT(&originThread() == &Thread::current());
-    ASSERT(!m_cursorRequestNotifier);
 
     m_source = Source { &cursor };
-    m_cursorRequestNotifier = std::make_unique<WTF::ScopeExit<WTF::Function<void()>>>([this]() {
-        ASSERT(WTF::holds_alternative<RefPtr<IDBCursor>>(m_source.value()));
-        WTF::get<RefPtr<IDBCursor>>(m_source.value())->decrementOutstandingRequestCount();
-    });
 }
 
 void IDBRequest::setVersionChangeTransaction(IDBTransaction& transaction)
@@ -266,7 +261,7 @@ bool IDBRequest::canSuspendForDocumentSuspension() const
 bool IDBRequest::hasPendingActivity() const
 {
     ASSERT(&originThread() == &Thread::current() || mayBeGCThread());
-    return m_hasPendingActivity;
+    return !m_contextStopped && m_hasPendingActivity;
 }
 
 void IDBRequest::stop()
@@ -289,7 +284,7 @@ void IDBRequest::cancelForStop()
 void IDBRequest::enqueueEvent(Ref<Event>&& event)
 {
     ASSERT(&originThread() == &Thread::current());
-    if (!scriptExecutionContext() || m_contextStopped)
+    if (m_contextStopped)
         return;
 
     event->setTarget(this);
@@ -317,8 +312,6 @@ void IDBRequest::dispatchEvent(Event& event)
         targets = { this, m_transaction.get(), &m_transaction->database() };
 
     m_hasPendingActivity = false;
-
-    m_cursorRequestNotifier = nullptr;
 
     {
         TransactionActivator activator(m_transaction.get());
@@ -350,7 +343,7 @@ void IDBRequest::uncaughtExceptionInEventHandler()
     ASSERT(&originThread() == &Thread::current());
 
     if (m_transaction && m_idbError.code() != AbortError)
-        m_transaction->abortDueToFailedRequest(DOMException::create(AbortError, ASCIILiteral("IDBTransaction will abort due to uncaught exception in an event handler")));
+        m_transaction->abortDueToFailedRequest(DOMException::create(AbortError, "IDBTransaction will abort due to uncaught exception in an event handler"_s));
 }
 
 void IDBRequest::setResult(const IDBKeyData& keyData)
@@ -474,7 +467,6 @@ void IDBRequest::willIterateCursor(IDBCursor& cursor)
     ASSERT(m_transaction);
     ASSERT(!m_pendingCursor);
     ASSERT(&cursor == resultCursor());
-    ASSERT(!m_cursorRequestNotifier);
 
     m_pendingCursor = &cursor;
     m_hasPendingActivity = true;
@@ -482,10 +474,6 @@ void IDBRequest::willIterateCursor(IDBCursor& cursor)
     m_readyState = ReadyState::Pending;
     m_domError = nullptr;
     m_idbError = IDBError { };
-
-    m_cursorRequestNotifier = std::make_unique<WTF::ScopeExit<WTF::Function<void()>>>([this]() {
-        m_pendingCursor->decrementOutstandingRequestCount();
-    });
 }
 
 void IDBRequest::didOpenOrIterateCursor(const IDBResultData& resultData)
@@ -501,7 +489,6 @@ void IDBRequest::didOpenOrIterateCursor(const IDBResultData& resultData)
             m_result = Result { m_pendingCursor };
     }
 
-    m_cursorRequestNotifier = nullptr;
     m_pendingCursor = nullptr;
 
     completeRequestAndDispatchEvent(resultData);
@@ -528,15 +515,14 @@ void IDBRequest::onError()
     ASSERT(!m_idbError.isNull());
 
     m_domError = m_idbError.toDOMException();
-    enqueueEvent(Event::create(eventNames().errorEvent, true, true));
+    enqueueEvent(Event::create(eventNames().errorEvent, Event::CanBubble::Yes, Event::IsCancelable::Yes));
 }
 
 void IDBRequest::onSuccess()
 {
     LOG(IndexedDB, "IDBRequest::onSuccess");
     ASSERT(&originThread() == &Thread::current());
-
-    enqueueEvent(Event::create(eventNames().successEvent, false, false));
+    enqueueEvent(Event::create(eventNames().successEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 void IDBRequest::setResult(Ref<IDBDatabase>&& database)

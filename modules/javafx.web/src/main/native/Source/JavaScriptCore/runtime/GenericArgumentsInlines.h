@@ -35,6 +35,7 @@ void GenericArguments<Type>::visitChildren(JSCell* thisCell, SlotVisitor& visito
 {
     Type* thisObject = static_cast<Type*>(thisCell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(thisCell, visitor);
 
     if (thisObject->m_modifiedArgumentsDescriptor)
         visitor.markAuxiliary(thisObject->m_modifiedArgumentsDescriptor.get());
@@ -52,11 +53,11 @@ bool GenericArguments<Type>::getOwnPropertySlot(JSObject* object, ExecState* exe
             return true;
         }
         if (ident == vm.propertyNames->callee) {
-            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->callee().get());
+            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->callee());
             return true;
         }
         if (ident == vm.propertyNames->iteratorSymbol) {
-            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->globalObject()->arrayProtoValuesFunction());
+            slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), thisObject->globalObject(vm)->arrayProtoValuesFunction());
             return true;
         }
     }

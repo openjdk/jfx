@@ -31,8 +31,11 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "HTMLNames.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLHtmlElement);
 
 using namespace HTMLNames;
 
@@ -74,7 +77,7 @@ void HTMLHtmlElement::insertedByParser()
     if (manifest.isEmpty())
         documentLoader->applicationCacheHost().selectCacheWithoutManifest();
     else {
-        document().addConsoleMessage(MessageSource::AppCache, MessageLevel::Warning, ASCIILiteral("ApplicationCache is deprecated. Please use ServiceWorkers instead."));
+        document().addConsoleMessage(MessageSource::AppCache, MessageLevel::Warning, "ApplicationCache is deprecated. Please use ServiceWorkers instead."_s);
         documentLoader->applicationCacheHost().selectCacheWithManifest(document().completeURL(manifest));
     }
 }

@@ -33,7 +33,6 @@
 #include "MIMETypeRegistry.h"
 #include "ParsedContentRange.h"
 #include "ResourceResponse.h"
-#include <wtf/CurrentTime.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringView.h>
@@ -48,21 +47,15 @@ bool isScriptAllowedByNosniff(const ResourceResponse& response)
     return MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType);
 }
 
-ResourceResponseBase::ResourceResponseBase()
-    : m_isNull(true)
-    , m_expectedContentLength(0)
-    , m_httpStatusCode(0)
-{
-}
+ResourceResponseBase::ResourceResponseBase() = default;
 
 ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
-    : m_isNull(false)
-    , m_url(url)
+    : m_url(url)
     , m_mimeType(mimeType)
     , m_expectedContentLength(expectedLength)
     , m_textEncodingName(textEncodingName)
     , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
-    , m_httpStatusCode(0)
+    , m_isNull(false)
 {
 }
 
@@ -143,10 +136,10 @@ ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response)
 
     HTTPHeaderSet accessControlExposeHeaderSet;
     parseAccessControlExposeHeadersAllowList(response.httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders), accessControlExposeHeaderSet);
-    filteredResponse.m_httpHeaderFields.uncommonHeaders().removeIf([&](auto& entry) {
+    filteredResponse.m_httpHeaderFields.uncommonHeaders().removeAllMatching([&](auto& entry) {
         return !isCrossOriginSafeHeader(entry.key, accessControlExposeHeaderSet);
     });
-    filteredResponse.m_httpHeaderFields.commonHeaders().removeIf([&](auto& entry) {
+    filteredResponse.m_httpHeaderFields.commonHeaders().removeAllMatching([&](auto& entry) {
         return !isCrossOriginSafeHeader(entry.key, accessControlExposeHeaderSet);
     });
 
@@ -316,6 +309,145 @@ void ResourceResponseBase::setHTTPVersion(const String& versionText)
     m_httpVersion = versionText;
 
     // FIXME: Should invalidate or update platform response if present.
+}
+
+static bool isSafeRedirectionResponseHeader(HTTPHeaderName name)
+{
+    // WebCore needs to keep location and cache related headers as it does caching.
+    // We also keep CORS/ReferrerPolicy headers until CORS checks/Referrer computation are done in NetworkProcess.
+    return name == HTTPHeaderName::Location
+        || name == HTTPHeaderName::ReferrerPolicy
+        || name == HTTPHeaderName::CacheControl
+        || name == HTTPHeaderName::Date
+        || name == HTTPHeaderName::Expires
+        || name == HTTPHeaderName::ETag
+        || name == HTTPHeaderName::LastModified
+        || name == HTTPHeaderName::Age
+        || name == HTTPHeaderName::Pragma
+        || name == HTTPHeaderName::ReferrerPolicy
+        || name == HTTPHeaderName::Refresh
+        || name == HTTPHeaderName::Vary
+        || name == HTTPHeaderName::AccessControlAllowCredentials
+        || name == HTTPHeaderName::AccessControlAllowHeaders
+        || name == HTTPHeaderName::AccessControlAllowMethods
+        || name == HTTPHeaderName::AccessControlAllowOrigin
+        || name == HTTPHeaderName::AccessControlExposeHeaders
+        || name == HTTPHeaderName::AccessControlMaxAge
+        || name == HTTPHeaderName::CrossOriginResourcePolicy
+        || name == HTTPHeaderName::TimingAllowOrigin;
+}
+
+static bool isSafeCrossOriginResponseHeader(HTTPHeaderName name)
+{
+    // All known response headers used in WebProcesses.
+    return name == HTTPHeaderName::AcceptRanges
+        || name == HTTPHeaderName::AccessControlAllowCredentials
+        || name == HTTPHeaderName::AccessControlAllowHeaders
+        || name == HTTPHeaderName::AccessControlAllowMethods
+        || name == HTTPHeaderName::AccessControlAllowOrigin
+        || name == HTTPHeaderName::AccessControlExposeHeaders
+        || name == HTTPHeaderName::AccessControlMaxAge
+        || name == HTTPHeaderName::AccessControlRequestHeaders
+        || name == HTTPHeaderName::AccessControlRequestMethod
+        || name == HTTPHeaderName::Age
+        || name == HTTPHeaderName::CacheControl
+        || name == HTTPHeaderName::ContentDisposition
+        || name == HTTPHeaderName::ContentEncoding
+        || name == HTTPHeaderName::ContentLanguage
+        || name == HTTPHeaderName::ContentLength
+        || name == HTTPHeaderName::ContentRange
+        || name == HTTPHeaderName::ContentSecurityPolicy
+        || name == HTTPHeaderName::ContentSecurityPolicyReportOnly
+        || name == HTTPHeaderName::ContentType
+        || name == HTTPHeaderName::CrossOriginResourcePolicy
+        || name == HTTPHeaderName::Date
+        || name == HTTPHeaderName::ETag
+        || name == HTTPHeaderName::Expires
+        || name == HTTPHeaderName::IcyMetaInt
+        || name == HTTPHeaderName::IcyMetadata
+        || name == HTTPHeaderName::LastEventID
+        || name == HTTPHeaderName::LastModified
+        || name == HTTPHeaderName::Link
+        || name == HTTPHeaderName::Pragma
+        || name == HTTPHeaderName::Range
+        || name == HTTPHeaderName::ReferrerPolicy
+        || name == HTTPHeaderName::Refresh
+        || name == HTTPHeaderName::ServerTiming
+        || name == HTTPHeaderName::SourceMap
+        || name == HTTPHeaderName::XSourceMap
+        || name == HTTPHeaderName::TimingAllowOrigin
+        || name == HTTPHeaderName::Trailer
+        || name == HTTPHeaderName::Vary
+        || name == HTTPHeaderName::XContentTypeOptions
+        || name == HTTPHeaderName::XDNSPrefetchControl
+        || name == HTTPHeaderName::XFrameOptions
+        || name == HTTPHeaderName::XWebKitCSP
+        || name == HTTPHeaderName::XWebKitCSPReportOnly
+        || name == HTTPHeaderName::XXSSProtection;
+}
+
+void ResourceResponseBase::sanitizeHTTPHeaderFieldsAccordingToTainting()
+{
+    switch (m_tainting) {
+    case ResourceResponse::Tainting::Basic:
+        return;
+    case ResourceResponse::Tainting::Cors: {
+        HTTPHeaderMap filteredHeaders;
+        for (auto& header : m_httpHeaderFields.commonHeaders()) {
+            if (isSafeCrossOriginResponseHeader(header.key))
+                filteredHeaders.add(header.key, WTFMove(header.value));
+        }
+        if (auto corsSafeHeaderSet = parseAccessControlAllowList(httpHeaderField(HTTPHeaderName::AccessControlExposeHeaders))) {
+            for (auto& headerName : *corsSafeHeaderSet) {
+                if (!filteredHeaders.contains(headerName)) {
+                    auto value = m_httpHeaderFields.get(headerName);
+                    if (!value.isNull())
+                        filteredHeaders.add(headerName, value);
+                }
+            }
+        }
+        m_httpHeaderFields = WTFMove(filteredHeaders);
+        return;
+    }
+    case ResourceResponse::Tainting::Opaque: {
+        HTTPHeaderMap filteredHeaders;
+        for (auto& header : m_httpHeaderFields.commonHeaders()) {
+            if (isSafeCrossOriginResponseHeader(header.key))
+                filteredHeaders.add(header.key, WTFMove(header.value));
+        }
+        m_httpHeaderFields = WTFMove(filteredHeaders);
+        return;
+    }
+    case ResourceResponse::Tainting::Opaqueredirect: {
+        auto location = httpHeaderField(HTTPHeaderName::Location);
+        m_httpHeaderFields.clear();
+        m_httpHeaderFields.add(HTTPHeaderName::Location, WTFMove(location));
+    }
+    }
+}
+
+void ResourceResponseBase::sanitizeHTTPHeaderFields(SanitizationType type)
+{
+    lazyInit(AllFields);
+
+    m_httpHeaderFields.remove(HTTPHeaderName::SetCookie);
+    m_httpHeaderFields.remove(HTTPHeaderName::SetCookie2);
+
+    switch (type) {
+    case SanitizationType::RemoveCookies:
+        return;
+    case SanitizationType::Redirection: {
+        auto commonHeaders = WTFMove(m_httpHeaderFields.commonHeaders());
+        for (auto& header : commonHeaders) {
+            if (isSafeRedirectionResponseHeader(header.key))
+                m_httpHeaderFields.add(header.key, WTFMove(header.value));
+        }
+        m_httpHeaderFields.uncommonHeaders().clear();
+        return;
+    }
+    case SanitizationType::CrossOriginSafe:
+        sanitizeHTTPHeaderFieldsAccordingToTainting();
+    }
 }
 
 bool ResourceResponseBase::isHTTP09() const

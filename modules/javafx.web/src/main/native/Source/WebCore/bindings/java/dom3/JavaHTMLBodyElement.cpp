@@ -31,7 +31,7 @@
 #include <WebCore/HTMLBodyElement.h>
 #include <WebCore/HTMLNames.h>
 #include <WebCore/EventNames.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

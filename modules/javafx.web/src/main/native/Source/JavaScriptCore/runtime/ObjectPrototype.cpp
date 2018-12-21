@@ -154,8 +154,8 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncDefineGetter(ExecState* exec)
 
     JSValue get = exec->argument(1);
     CallData callData;
-    if (getCallData(get, callData) == CallType::None)
-        return throwVMTypeError(exec, scope, ASCIILiteral("invalid getter usage"));
+    if (getCallData(vm, get, callData) == CallType::None)
+        return throwVMTypeError(exec, scope, "invalid getter usage"_s);
 
     auto propertyName = exec->argument(0).toPropertyKey(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -182,8 +182,8 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncDefineSetter(ExecState* exec)
 
     JSValue set = exec->argument(1);
     CallData callData;
-    if (getCallData(set, callData) == CallType::None)
-        return throwVMTypeError(exec, scope, ASCIILiteral("invalid setter usage"));
+    if (getCallData(vm, set, callData) == CallType::None)
+        return throwVMTypeError(exec, scope, "invalid setter usage"_s);
 
     auto propertyName = exec->argument(0).toPropertyKey(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -301,7 +301,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncToLocaleString(ExecState* exec)
 
     // If IsCallable(toString) is false, throw a TypeError exception.
     CallData callData;
-    CallType callType = getCallData(toString, callData);
+    CallType callType = getCallData(vm, toString, callData);
     if (callType == CallType::None)
         return throwVMTypeError(exec, scope);
 

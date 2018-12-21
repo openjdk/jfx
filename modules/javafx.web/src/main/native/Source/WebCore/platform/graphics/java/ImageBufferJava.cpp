@@ -112,6 +112,7 @@ ImageBuffer::ImageBuffer(
     float resolutionScale,
     ColorSpace,
     RenderingMode,
+    const HostWindow*,
     bool& success
 )
     : m_data(size, *this, resolutionScale)

@@ -192,17 +192,17 @@ inline float normalizedFloat(float value)
     return value;
 }
 
-template<typename T> inline bool hasOneBitSet(T value)
+template<typename T> constexpr bool hasOneBitSet(T value)
 {
     return !((value - 1) & value) && value;
 }
 
-template<typename T> inline bool hasZeroOrOneBitsSet(T value)
+template<typename T> constexpr bool hasZeroOrOneBitsSet(T value)
 {
     return !((value - 1) & value);
 }
 
-template<typename T> inline bool hasTwoOrMoreBitsSet(T value)
+template<typename T> constexpr bool hasTwoOrMoreBitsSet(T value)
 {
     return !hasZeroOrOneBitsSet(value);
 }
@@ -500,6 +500,8 @@ T opaque(T pointer)
     return pointer;
 }
 
+// This masks the given pointer with 0xffffffffffffffff (ptrwidth) if `index <
+// length`. Otherwise, it masks the pointer with 0. Similar to Linux kernel's array_ptr.
 template<typename T>
 inline T* preciseIndexMaskPtr(uintptr_t index, uintptr_t length, T* value)
 {
@@ -509,29 +511,78 @@ inline T* preciseIndexMaskPtr(uintptr_t index, uintptr_t length, T* value)
     return bitwise_cast<T*>(result);
 }
 
-constexpr unsigned bytePoisonShift = 40;
-
-template<typename T, typename U>
-inline T* dynamicPoison(U actual, U expected, T* pointer)
+template<typename VectorType, typename RandomFunc>
+void shuffleVector(VectorType& vector, size_t size, const RandomFunc& randomFunc)
 {
-    static_assert(sizeof(U) == 1, "Poisoning only works for bytes at the moment");
-#if CPU(X86_64) || (CPU(ARM64) && !defined(__ILP32__))
-    return bitwise_cast<T*>(
-        bitwise_cast<char*>(pointer) +
-        (static_cast<uintptr_t>(opaque(actual) ^ expected) << bytePoisonShift));
+    for (size_t i = 0; i + 1 < size; ++i)
+        std::swap(vector[i], vector[i + randomFunc(size - i)]);
+}
+
+template<typename VectorType, typename RandomFunc>
+void shuffleVector(VectorType& vector, const RandomFunc& randomFunc)
+{
+    shuffleVector(vector, vector.size(), randomFunc);
+}
+
+inline unsigned clz32(uint32_t number)
+{
+#if COMPILER(GCC_OR_CLANG)
+    if (number)
+        return __builtin_clz(number);
+    return 32;
+#elif COMPILER(MSVC)
+    // Visual Studio 2008 or upper have __lzcnt, but we can't detect Intel AVX at compile time.
+    // So we use bit-scan-reverse operation to calculate clz.
+    unsigned long ret = 0;
+    if (_BitScanReverse(&ret, number))
+        return 31 - ret;
+    return 32;
 #else
-    UNUSED_PARAM(actual);
-    UNUSED_PARAM(expected);
-    return pointer;
+    unsigned zeroCount = 0;
+    for (int i = 31; i >= 0; i--) {
+        if (!(number >> i))
+            zeroCount++;
+        else
+            break;
+    }
+    return zeroCount;
+#endif
+}
+
+inline unsigned clz64(uint64_t number)
+{
+#if COMPILER(GCC_OR_CLANG)
+    if (number)
+        return __builtin_clzll(number);
+    return 64;
+#elif COMPILER(MSVC) && !CPU(X86)
+    // Visual Studio 2008 or upper have __lzcnt, but we can't detect Intel AVX at compile time.
+    // So we use bit-scan-reverse operation to calculate clz.
+    // _BitScanReverse64 is defined in X86_64 and ARM in MSVC supported environments.
+    unsigned long ret = 0;
+    if (_BitScanReverse64(&ret, number))
+        return 63 - ret;
+    return 64;
+#else
+    unsigned zeroCount = 0;
+    for (int i = 63; i >= 0; i--) {
+        if (!(number >> i))
+            zeroCount++;
+        else
+            break;
+    }
+    return zeroCount;
 #endif
 }
 
 } // namespace WTF
 
-using WTF::dynamicPoison;
 using WTF::opaque;
 using WTF::preciseIndexMaskPtr;
 using WTF::preciseIndexMaskShift;
 using WTF::preciseIndexMaskShiftForSize;
+using WTF::shuffleVector;
+using WTF::clz32;
+using WTF::clz64;
 
 #endif // #ifndef WTF_MathExtras_h

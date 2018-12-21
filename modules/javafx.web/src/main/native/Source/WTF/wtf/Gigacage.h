@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 #define GIGACAGE_BASE_PTRS_SIZE 8192
 
 extern "C" {
-alignas(void*) extern WTF_EXPORTDATA char g_gigacageBasePtrs[GIGACAGE_BASE_PTRS_SIZE];
+alignas(void*) extern WTF_EXPORT_PRIVATE char g_gigacageBasePtrs[GIGACAGE_BASE_PTRS_SIZE];
 }
 
 namespace Gigacage {
@@ -42,13 +42,11 @@ namespace Gigacage {
 struct BasePtrs {
     void* primitive;
     void* jsValue;
-    void* string;
 };
 
 enum Kind {
     Primitive,
     JSValue,
-    String
 };
 
 inline void ensureGigacage() { }
@@ -71,8 +69,6 @@ ALWAYS_INLINE const char* name(Kind kind)
         return "Primitive";
     case JSValue:
         return "JSValue";
-    case String:
-        return "String";
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
@@ -85,8 +81,6 @@ ALWAYS_INLINE void*& basePtr(BasePtrs& basePtrs, Kind kind)
         return basePtrs.primitive;
     case JSValue:
         return basePtrs.jsValue;
-    case String:
-        return basePtrs.string;
     }
     RELEASE_ASSERT_NOT_REACHED();
     return basePtrs.primitive;

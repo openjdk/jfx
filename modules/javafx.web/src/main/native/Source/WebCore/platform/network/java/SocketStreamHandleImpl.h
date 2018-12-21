@@ -57,7 +57,8 @@ public:
     void didClose();
 
 protected:
-    void platformSend(const char* data, size_t length, Function<void(bool)>&&) final;
+    void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&&) final;
+    void platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
     void platformClose() final;
     size_t bufferedAmount() final { return 0; }
 

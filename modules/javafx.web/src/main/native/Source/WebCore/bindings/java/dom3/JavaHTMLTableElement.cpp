@@ -34,7 +34,7 @@
 #include <WebCore/HTMLTableCaptionElement.h>
 #include <WebCore/HTMLTableElement.h>
 #include <WebCore/HTMLTableSectionElement.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

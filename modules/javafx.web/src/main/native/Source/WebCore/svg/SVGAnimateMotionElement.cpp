@@ -33,11 +33,14 @@
 #include "SVGPathData.h"
 #include "SVGPathElement.h"
 #include "SVGPathUtilities.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimateMotionElement);
 
 using namespace SVGNames;
 
@@ -134,31 +137,6 @@ void SVGAnimateMotionElement::updateAnimationPath()
         m_animationPath = m_path;
 
     updateAnimationMode();
-}
-
-static bool parsePoint(const String& s, FloatPoint& point)
-{
-    if (s.isEmpty())
-        return false;
-    auto upconvertedCharacters = StringView(s).upconvertedCharacters();
-    const UChar* cur = upconvertedCharacters;
-    const UChar* end = cur + s.length();
-
-    if (!skipOptionalSVGSpaces(cur, end))
-        return false;
-
-    float x = 0;
-    if (!parseNumber(cur, end, x))
-        return false;
-
-    float y = 0;
-    if (!parseNumber(cur, end, y))
-        return false;
-
-    point = FloatPoint(x, y);
-
-    // disallow anything except spaces at the end
-    return !skipOptionalSVGSpaces(cur, end);
 }
 
 void SVGAnimateMotionElement::resetAnimatedType()

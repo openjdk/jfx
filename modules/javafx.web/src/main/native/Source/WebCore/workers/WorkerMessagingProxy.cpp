@@ -104,7 +104,7 @@ void WorkerMessagingProxy::postMessageToWorkerObject(MessageWithMessagePorts&& m
             return;
 
         auto ports = MessagePort::entanglePorts(context, WTFMove(message.transferredPorts));
-        workerObject->dispatchEvent(MessageEvent::create(WTFMove(ports), WTFMove(message.message)));
+        workerObject->dispatchEvent(MessageEvent::create(WTFMove(ports), message.message.releaseNonNull()));
     });
 }
 
@@ -117,7 +117,7 @@ void WorkerMessagingProxy::postMessageToWorkerGlobalScope(MessageWithMessagePort
         ASSERT_WITH_SECURITY_IMPLICATION(scriptContext.isWorkerGlobalScope());
         auto& context = static_cast<DedicatedWorkerGlobalScope&>(scriptContext);
         auto ports = MessagePort::entanglePorts(scriptContext, WTFMove(message.transferredPorts));
-        context.dispatchEvent(MessageEvent::create(WTFMove(ports), WTFMove(message.message)));
+        context.dispatchEvent(MessageEvent::create(WTFMove(ports), message.message.releaseNonNull()));
         context.thread().workerObjectProxy().confirmMessageFromWorkerObject(context.hasPendingActivity());
     });
 
@@ -227,7 +227,7 @@ void WorkerMessagingProxy::notifyNetworkStateChange(bool isOnline)
     m_workerThread->runLoop().postTask([isOnline] (ScriptExecutionContext& context) {
         auto& globalScope = downcast<WorkerGlobalScope>(context);
         globalScope.setIsOnline(isOnline);
-        globalScope.dispatchEvent(Event::create(isOnline ? eventNames().onlineEvent : eventNames().offlineEvent, false, false));
+        globalScope.dispatchEvent(Event::create(isOnline ? eventNames().onlineEvent : eventNames().offlineEvent, Event::CanBubble::No, Event::IsCancelable::No));
     });
 }
 

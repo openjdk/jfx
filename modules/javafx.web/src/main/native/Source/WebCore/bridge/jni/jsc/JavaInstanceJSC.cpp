@@ -35,11 +35,6 @@
 #include "runtime_method.h"
 #include "runtime_object.h"
 #include "runtime_root.h"
-#include <JavaScriptCore/ArgList.h>
-#include <JavaScriptCore/Error.h>
-#include <JavaScriptCore/FunctionPrototype.h>
-#include <JavaScriptCore/JSLock.h>
-
 #include "JavaArrayJSC.h"
 #include "JavaClassJSC.h"
 #include "JavaMethodJSC.h"
@@ -47,6 +42,11 @@
 #include "Logging.h"
 
 #include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/ArgList.h>
+#include <JavaScriptCore/Error.h>
+#include <JavaScriptCore/FunctionPrototype.h>
+#include <JavaScriptCore/JSLock.h>
+
 
 using namespace JSC::Bindings;
 using namespace JSC;

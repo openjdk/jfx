@@ -34,6 +34,7 @@ namespace WebCore {
 class ResourceError;
 
 WEBCORE_EXPORT extern const char* const errorDomainWebKitInternal; // Used for errors that won't be exposed to clients.
+WEBCORE_EXPORT extern const char* const errorDomainWebKitServiceWorker; // Used for errors that happen when loading a resource from a service worker.
 
 class ResourceErrorBase {
 public:
@@ -44,7 +45,7 @@ public:
     const URL& failingURL() const { lazyInit(); return m_failingURL; }
     const String& localizedDescription() const { lazyInit(); return m_localizedDescription; }
 
-    enum class Type {
+    enum class Type : uint8_t {
         Null,
         General,
         AccessControl,

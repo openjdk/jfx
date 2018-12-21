@@ -34,12 +34,14 @@
 #include "FetchHeaders.h"
 #include "FetchLoader.h"
 #include "FetchLoaderClient.h"
+#include "ResourceError.h"
 
 namespace WebCore {
 
 class FetchBodyOwner : public RefCounted<FetchBodyOwner>, public ActiveDOMObject {
 public:
     FetchBodyOwner(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&);
+    ~FetchBodyOwner();
 
     bool bodyUsed() const { return isDisturbed(); }
     void arrayBuffer(Ref<DeferredPromise>&&);
@@ -114,6 +116,7 @@ protected:
     RefPtr<FetchBodySource> m_readableStreamSource;
 #endif
     Ref<FetchHeaders> m_headers;
+    std::optional<ResourceError> m_loadingError;
 
 private:
     std::optional<BlobLoader> m_blobLoader;

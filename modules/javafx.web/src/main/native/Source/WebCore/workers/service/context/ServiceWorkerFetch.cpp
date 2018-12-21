@@ -43,20 +43,25 @@ namespace WebCore {
 
 namespace ServiceWorkerFetch {
 
-static void processResponse(Ref<Client>&& client, FetchResponse* response)
+static void processResponse(Ref<Client>&& client, Expected<Ref<FetchResponse>, ResourceError>&& result)
 {
-    if (!response) {
-        client->didFail();
+    if (!result.has_value()) {
+        client->didFail(result.error());
         return;
     }
-    auto protectedResponse = makeRef(*response);
+    auto response = WTFMove(result.value());
 
     client->didReceiveResponse(response->resourceResponse());
+
+    if (response->loadingError()) {
+        client->didFail(*response->loadingError());
+        return;
+    }
 
     if (response->isBodyReceivedByChunk()) {
         response->consumeBodyReceivedByChunk([client = WTFMove(client)] (auto&& result) mutable {
             if (result.hasException()) {
-                client->didFail();
+                client->didFail(FetchEvent::createResponseError(URL { }, result.exception().message()));
                 return;
             }
 
@@ -103,6 +108,7 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
     if (isNavigation)
         options.redirect = FetchOptions::Redirect::Manual;
 
+    URL requestURL = request.url();
     auto fetchRequest = FetchRequest::create(globalScope, WTFMove(body), WTFMove(requestHeaders),  WTFMove(request), WTFMove(options), WTFMove(referrer));
 
     FetchEvent::Init init;
@@ -116,15 +122,15 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
     init.cancelable = true;
     auto event = FetchEvent::create(eventNames().fetchEvent, WTFMove(init), Event::IsTrusted::Yes);
 
-    event->onResponse([client = client.copyRef()] (FetchResponse* response) mutable {
-        processResponse(WTFMove(client), response);
+    event->onResponse([client = client.copyRef()] (auto&& result) mutable {
+        processResponse(WTFMove(client), WTFMove(result));
     });
 
     globalScope.dispatchEvent(event);
 
     if (!event->respondWithEntered()) {
         if (event->defaultPrevented()) {
-            client->didFail();
+            client->didFail(ResourceError { errorDomainWebKitInternal, 0, requestURL, "Fetch event was canceled"_s });
             return;
         }
         client->didNotHandle();
@@ -134,7 +140,7 @@ void dispatchFetchEvent(Ref<Client>&& client, ServiceWorkerGlobalScope& globalSc
 
     auto& registration = globalScope.registration();
     if (isNonSubresourceRequest || registration.needsUpdate())
-        registration.softUpdate();
+        registration.scheduleSoftUpdate();
 }
 
 } // namespace ServiceWorkerFetch

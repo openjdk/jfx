@@ -54,7 +54,6 @@
 #include "JSTypedArrays.h"
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyMemory.h"
-#include "LLIntData.h"
 #include "LLIntThunks.h"
 #include "ObjectConstructor.h"
 #include "ParserError.h"
@@ -83,6 +82,7 @@
 #include <type_traits>
 #include <wtf/CommaPrinter.h>
 #include <wtf/MainThread.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/WallTime.h>
@@ -187,7 +187,8 @@ static unsigned asyncTestExpectedPasses { 0 };
 
 }
 
-static bool fillBufferWithContentsOfFile(const String& fileName, Vector<char>& buffer);
+template<typename Vector>
+static bool fillBufferWithContentsOfFile(const String& fileName, Vector& buffer);
 static RefPtr<Uint8Array> fillBufferWithContentsOfFile(const String& fileName);
 
 class CommandLine;
@@ -196,7 +197,7 @@ class Workers;
 
 template<typename Func>
 int runJSC(CommandLine, bool isWorker, const Func&);
-static void checkException(GlobalObject*, bool isLastFile, bool hasException, JSValue, CommandLine&, bool& success);
+static void checkException(ExecState*, GlobalObject*, bool isLastFile, bool hasException, JSValue, CommandLine&, bool& success);
 
 class Message : public ThreadSafeRefCounted<Message> {
 public:
@@ -294,6 +295,7 @@ static EncodedJSValue JSC_HOST_CALL functionFalse(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionUndefined1(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionUndefined2(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionIsInt32(ExecState*);
+static EncodedJSValue JSC_HOST_CALL functionIsPureNaN(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionEffectful42(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionIdentity(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionMakeMasquerader(ExecState*);
@@ -339,11 +341,13 @@ static EncodedJSValue JSC_HOST_CALL functionDollarAgentSleep(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionDollarAgentBroadcast(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionDollarAgentGetReport(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionDollarAgentLeaving(ExecState*);
+static EncodedJSValue JSC_HOST_CALL functionDollarAgentMonotonicNow(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionWaitForReport(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionHeapCapacity(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionFlashHeapAccess(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionDisableRichSourceInfo(ExecState*);
 static EncodedJSValue JSC_HOST_CALL functionMallocInALoop(ExecState*);
+static EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(ExecState*);
 
 struct Script {
     enum class StrictMode {
@@ -520,6 +524,7 @@ protected:
         putDirectNativeFunction(vm, this, Identifier::fromString(&vm, "isFinalTier"), 0, functionFalse, IsFinalTierIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
         putDirectNativeFunction(vm, this, Identifier::fromString(&vm, "predictInt32"), 0, functionUndefined2, SetInt32HeapPredictionIntrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
         putDirectNativeFunction(vm, this, Identifier::fromString(&vm, "isInt32"), 0, functionIsInt32, CheckInt32Intrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
+        putDirectNativeFunction(vm, this, Identifier::fromString(&vm, "isPureNaN"), 0, functionIsPureNaN, CheckInt32Intrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
         putDirectNativeFunction(vm, this, Identifier::fromString(&vm, "fiatInt52"), 0, functionIdentity, FiatInt52Intrinsic, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
         addFunction(vm, "effectful42", functionEffectful42, 0);
@@ -593,6 +598,7 @@ protected:
         addFunction(vm, agent, "broadcast", functionDollarAgentBroadcast, 1);
         addFunction(vm, agent, "getReport", functionDollarAgentGetReport, 0);
         addFunction(vm, agent, "leaving", functionDollarAgentLeaving, 0);
+        addFunction(vm, agent, "monotonicNow", functionDollarAgentMonotonicNow, 0);
 
         addFunction(vm, "waitForReport", functionWaitForReport, 0);
 
@@ -601,6 +607,7 @@ protected:
 
         addFunction(vm, "disableRichSourceInfo", functionDisableRichSourceInfo, 0);
         addFunction(vm, "mallocInALoop", functionMallocInALoop, 0);
+        addFunction(vm, "totalCompileTime", functionTotalCompileTime, 0);
     }
 
     void addFunction(VM& vm, JSObject* object, const char* name, NativeFunction function, unsigned arguments)
@@ -640,6 +647,8 @@ const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = {
     nullptr, // moduleLoaderEvaluate
     nullptr, // promiseRejectionTracker
     nullptr, // defaultLanguage
+    nullptr, // compileStreaming
+    nullptr, // instantinateStreaming
 };
 
 GlobalObject::GlobalObject(VM& vm, Structure* structure)
@@ -678,7 +687,7 @@ struct ModuleName {
 ModuleName::ModuleName(const String& moduleName)
 {
     // A module name given from code is represented as the UNIX style path. Like, `./A/B.js`.
-    moduleName.split('/', true, queries);
+    queries = moduleName.splitAllowingEmptyEntries('/');
 }
 
 static std::optional<DirectoryName> extractDirectoryName(const String& absolutePathToFile)
@@ -718,17 +727,17 @@ static std::optional<DirectoryName> currentWorkingDirectory()
     // In Windows, wchar_t is the UTF-16LE.
     // https://msdn.microsoft.com/en-us/library/dd374081.aspx
     // https://msdn.microsoft.com/en-us/library/windows/desktop/ff381407.aspx
-    auto buffer = std::make_unique<wchar_t[]>(bufferLength);
-    DWORD lengthNotIncludingNull = ::GetCurrentDirectoryW(bufferLength, buffer.get());
-    String directoryString = wcharToString(buffer.get(), lengthNotIncludingNull);
+    Vector<wchar_t> buffer(bufferLength);
+    DWORD lengthNotIncludingNull = ::GetCurrentDirectoryW(bufferLength, buffer.data());
+    String directoryString = wcharToString(buffer.data(), lengthNotIncludingNull);
     // We don't support network path like \\host\share\<path name>.
     if (directoryString.startsWith("\\\\"))
         return std::nullopt;
 #else
-    auto buffer = std::make_unique<char[]>(PATH_MAX);
-    if (!getcwd(buffer.get(), PATH_MAX))
+    Vector<char> buffer(PATH_MAX);
+    if (!getcwd(buffer.data(), PATH_MAX))
         return std::nullopt;
-    String directoryString = String::fromUTF8(buffer.get());
+    String directoryString = String::fromUTF8(buffer.data());
 #endif
     if (directoryString.isEmpty())
         return std::nullopt;
@@ -741,18 +750,17 @@ static std::optional<DirectoryName> currentWorkingDirectory()
 
 static String resolvePath(const DirectoryName& directoryName, const ModuleName& moduleName)
 {
-    Vector<String> directoryPieces;
-    directoryName.queryName.split(pathSeparator(), false, directoryPieces);
+    Vector<String> directoryPieces = directoryName.queryName.split(pathSeparator());
 
     // Only first '/' is recognized as the path from the root.
     if (moduleName.startsWithRoot())
         directoryPieces.clear();
 
     for (const auto& query : moduleName.queries) {
-        if (query == String(ASCIILiteral(".."))) {
+        if (query == String(".."_s)) {
             if (!directoryPieces.isEmpty())
                 directoryPieces.removeLast();
-        } else if (!query.isEmpty() && query != String(ASCIILiteral(".")))
+        } else if (!query.isEmpty() && query != String("."_s))
             directoryPieces.append(query);
     }
 
@@ -784,7 +792,7 @@ JSInternalPromise* GlobalObject::moduleLoaderImportModule(JSGlobalObject* global
     };
 
     if (sourceOrigin.isNull())
-        return rejectPromise(createError(exec, ASCIILiteral("Could not resolve the module specifier.")));
+        return rejectPromise(createError(exec, "Could not resolve the module specifier."_s));
 
     auto referrer = sourceOrigin.string();
     auto moduleName = moduleNameValue->value(exec);
@@ -818,7 +826,7 @@ Identifier GlobalObject::moduleLoaderResolve(JSGlobalObject* globalObject, ExecS
     if (referrerValue.isUndefined()) {
         auto directoryName = currentWorkingDirectory();
         if (!directoryName) {
-            throwException(exec, scope, createError(exec, ASCIILiteral("Could not resolve the current working directory.")));
+            throwException(exec, scope, createError(exec, "Could not resolve the current working directory."_s));
             return { };
         }
         return Identifier::fromString(&vm, resolvePath(directoryName.value(), ModuleName(key.impl())));
@@ -830,7 +838,7 @@ Identifier GlobalObject::moduleLoaderResolve(JSGlobalObject* globalObject, ExecS
     if (referrer.isSymbol()) {
         auto directoryName = currentWorkingDirectory();
         if (!directoryName) {
-            throwException(exec, scope, createError(exec, ASCIILiteral("Could not resolve the current working directory.")));
+            throwException(exec, scope, createError(exec, "Could not resolve the current working directory."_s));
             return { };
         }
         return Identifier::fromString(&vm, resolvePath(directoryName.value(), ModuleName(key.impl())));
@@ -845,7 +853,8 @@ Identifier GlobalObject::moduleLoaderResolve(JSGlobalObject* globalObject, ExecS
     return Identifier::fromString(&vm, resolvePath(directoryName.value(), ModuleName(key.impl())));
 }
 
-static void convertShebangToJSComment(Vector<char>& buffer)
+template<typename Vector>
+static void convertShebangToJSComment(Vector& buffer)
 {
     if (buffer.size() >= 2) {
         if (buffer[0] == '#' && buffer[1] == '!')
@@ -883,7 +892,8 @@ static RefPtr<Uint8Array> fillBufferWithContentsOfFile(const String& fileName)
     return result;
 }
 
-static bool fillBufferWithContentsOfFile(FILE* file, Vector<char>& buffer)
+template<typename Vector>
+static bool fillBufferWithContentsOfFile(FILE* file, Vector& buffer)
 {
     // We might have injected "use strict"; at the top.
     size_t initialSize = buffer.size();
@@ -921,7 +931,8 @@ static bool fetchScriptFromLocalFileSystem(const String& fileName, Vector<char>&
     return true;
 }
 
-static bool fetchModuleFromLocalFileSystem(const String& fileName, Vector<char>& buffer)
+template<typename Vector>
+static bool fetchModuleFromLocalFileSystem(const String& fileName, Vector& buffer)
 {
     // We assume that fileName is always an absolute path.
 #if OS(WINDOWS)
@@ -972,14 +983,25 @@ JSInternalPromise* GlobalObject::moduleLoaderFetch(JSGlobalObject* globalObject,
     }
 
     // Here, now we consider moduleKey as the fileName.
-    Vector<char> utf8;
-    if (!fetchModuleFromLocalFileSystem(moduleKey, utf8)) {
+    Vector<uint8_t> buffer;
+    if (!fetchModuleFromLocalFileSystem(moduleKey, buffer)) {
         auto result = deferred->reject(exec, createError(exec, makeString("Could not open file '", moduleKey, "'.")));
         scope.releaseAssertNoException();
         return result;
     }
 
-    auto result = deferred->resolve(exec, JSSourceCode::create(vm, makeSource(stringFromUTF(utf8), SourceOrigin { moduleKey }, moduleKey, TextPosition(), SourceProviderSourceType::Module)));
+#if ENABLE(WEBASSEMBLY)
+    // FileSystem does not have mime-type header. The JSC shell recognizes WebAssembly's magic header.
+    if (buffer.size() >= 4) {
+        if (buffer[0] == '\0' && buffer[1] == 'a' && buffer[2] == 's' && buffer[3] == 'm') {
+            auto result = deferred->resolve(exec, JSSourceCode::create(vm, SourceCode(WebAssemblySourceProvider::create(WTFMove(buffer), SourceOrigin { moduleKey }, moduleKey))));
+            scope.releaseAssertNoException();
+            return result;
+        }
+    }
+#endif
+
+    auto result = deferred->resolve(exec, JSSourceCode::create(vm, makeSource(stringFromUTF(buffer), SourceOrigin { moduleKey }, moduleKey, TextPosition(), SourceProviderSourceType::Module)));
     scope.releaseAssertNoException();
     return result;
 }
@@ -1067,7 +1089,7 @@ EncodedJSValue JSC_HOST_CALL functionDescribeArray(ExecState* exec)
     VM& vm = exec->vm();
     JSObject* object = jsDynamicCast<JSObject*>(vm, exec->argument(0));
     if (!object)
-        return JSValue::encode(jsNontrivialString(exec, ASCIILiteral("<not object>")));
+        return JSValue::encode(jsNontrivialString(exec, "<not object>"_s));
     return JSValue::encode(jsNontrivialString(exec, toString("<Butterfly: ", RawPointer(object->butterfly()), "; public length: ", object->getArrayLength(), "; vector length: ", object->getVectorLength(), ">")));
 }
 
@@ -1182,7 +1204,7 @@ EncodedJSValue JSC_HOST_CALL functionRun(ExecState* exec)
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     Vector<char> script;
     if (!fetchScriptFromLocalFileSystem(fileName, script))
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Could not open file."))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Could not open file."_s)));
 
     GlobalObject* globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), Vector<String>());
 
@@ -1248,7 +1270,7 @@ EncodedJSValue JSC_HOST_CALL functionLoad(ExecState* exec)
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     Vector<char> script;
     if (!fetchScriptFromLocalFileSystem(fileName, script))
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Could not open file."))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Could not open file."_s)));
 
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
 
@@ -1315,7 +1337,7 @@ EncodedJSValue JSC_HOST_CALL functionCheckSyntax(ExecState* exec)
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     Vector<char> script;
     if (!fetchScriptFromLocalFileSystem(fileName, script))
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Could not open file."))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Could not open file."_s)));
 
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
 
@@ -1417,12 +1439,11 @@ EncodedJSValue JSC_HOST_CALL functionNoDFG(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL functionNoFTL(ExecState* exec)
 {
-    VM& vm = exec->vm();
-    if (JSFunction* function = jsDynamicCast<JSFunction*>(vm, exec->argument(0))) {
-        FunctionExecutable* executable = function->jsExecutable();
-        executable->setNeverFTLOptimize(true);
+    if (exec->argumentCount()) {
+        FunctionExecutable* executable = getExecutableForFunction(exec->argument(0));
+        if (executable)
+            executable->setNeverFTLOptimize(true);
     }
-
     return JSValue::encode(jsUndefined());
 }
 
@@ -1576,7 +1597,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarEvalScript(ExecState* exec)
         exec->thisValue().get(exec, Identifier::fromString(exec, "global")));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     if (!globalObject)
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Expected global to point to a global object"))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Expected global to point to a global object"_s)));
 
     NakedPtr<Exception> evaluationException;
     JSValue result = evaluate(globalObject->globalExec(), makeSource(sourceCode, exec->callerSourceOrigin()), JSValue(), evaluationException);
@@ -1604,7 +1625,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(ExecState* exec)
             commandLine.m_interactive = false;
             runJSC(
                 commandLine, true,
-                [&] (VM&, GlobalObject* globalObject) {
+                [&] (VM&, GlobalObject* globalObject, bool& success) {
                     // Notify the thread that started us that we have registered a worker.
                     {
                         auto locker = holdLock(didStartLock);
@@ -1613,15 +1634,13 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentStart(ExecState* exec)
                     }
 
                     NakedPtr<Exception> evaluationException;
-                    bool success = true;
                     JSValue result;
-                    result = evaluate(globalObject->globalExec(), makeSource(sourceCode, SourceOrigin(ASCIILiteral("worker"))), JSValue(), evaluationException);
+                    result = evaluate(globalObject->globalExec(), makeSource(sourceCode, SourceOrigin("worker"_s)), JSValue(), evaluationException);
                     if (evaluationException)
                         result = evaluationException->value();
-                    checkException(globalObject, true, evaluationException, result, commandLine, success);
+                    checkException(globalObject->globalExec(), globalObject, true, evaluationException, result, commandLine, success);
                     if (!success)
                         exit(1);
-                    return success;
                 });
         })->detach();
 
@@ -1641,9 +1660,9 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentReceiveBroadcast(ExecState* exec
 
     JSValue callback = exec->argument(0);
     CallData callData;
-    CallType callType = getCallData(callback, callData);
+    CallType callType = getCallData(vm, callback, callData);
     if (callType == CallType::None)
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Expected callback"))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Expected callback"_s)));
 
     RefPtr<Message> message;
     {
@@ -1697,7 +1716,7 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentBroadcast(ExecState* exec)
 
     JSArrayBuffer* jsBuffer = jsDynamicCast<JSArrayBuffer*>(vm, exec->argument(0));
     if (!jsBuffer || !jsBuffer->isShared())
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Expected SharedArrayBuffer"))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Expected SharedArrayBuffer"_s)));
 
     int32_t index = exec->argument(1).toInt32(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1728,6 +1747,11 @@ EncodedJSValue JSC_HOST_CALL functionDollarAgentGetReport(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL functionDollarAgentLeaving(ExecState*)
 {
     return JSValue::encode(jsUndefined());
+}
+
+EncodedJSValue JSC_HOST_CALL functionDollarAgentMonotonicNow(ExecState*)
+{
+    return JSValue::encode(jsNumber(MonotonicTime::now().secondsSinceEpoch().milliseconds()));
 }
 
 EncodedJSValue JSC_HOST_CALL functionWaitForReport(ExecState* exec)
@@ -1785,6 +1809,15 @@ EncodedJSValue JSC_HOST_CALL functionMallocInALoop(ExecState*)
     return JSValue::encode(jsUndefined());
 }
 
+EncodedJSValue JSC_HOST_CALL functionTotalCompileTime(ExecState*)
+{
+#if ENABLE(JIT)
+    return JSValue::encode(jsNumber(JIT::totalCompileTime().milliseconds()));
+#else
+    return JSValue::encode(jsNumber(0));
+#endif
+}
+
 template<typename ValueType>
 typename std::enable_if<!std::is_fundamental<ValueType>::value>::type addOption(VM&, JSObject*, Identifier, ValueType) { }
 
@@ -1823,11 +1856,11 @@ EncodedJSValue JSC_HOST_CALL functionTransferArrayBuffer(ExecState* exec)
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (exec->argumentCount() < 1)
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Not enough arguments"))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Not enough arguments"_s)));
 
     JSArrayBuffer* buffer = jsDynamicCast<JSArrayBuffer*>(vm, exec->argument(0));
     if (!buffer)
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Expected an array buffer"))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Expected an array buffer"_s)));
 
     ArrayBufferContents dummyContents;
     buffer->impl()->transferTo(vm, dummyContents);
@@ -1865,6 +1898,21 @@ EncodedJSValue JSC_HOST_CALL functionIsInt32(ExecState* exec)
     return JSValue::encode(jsBoolean(true));
 }
 
+EncodedJSValue JSC_HOST_CALL functionIsPureNaN(ExecState* exec)
+{
+    for (size_t i = 0; i < exec->argumentCount(); ++i) {
+        JSValue value = exec->argument(i);
+        if (!value.isNumber())
+            return JSValue::encode(jsBoolean(false));
+        double number = value.asNumber();
+        if (!std::isnan(number))
+            return JSValue::encode(jsBoolean(false));
+        if (isImpureNaN(number))
+            return JSValue::encode(jsBoolean(false));
+    }
+    return JSValue::encode(jsBoolean(true));
+}
+
 EncodedJSValue JSC_HOST_CALL functionIdentity(ExecState* exec) { return JSValue::encode(exec->argument(0)); }
 
 EncodedJSValue JSC_HOST_CALL functionEffectful42(ExecState*)
@@ -1882,7 +1930,7 @@ EncodedJSValue JSC_HOST_CALL functionHasCustomProperties(ExecState* exec)
 {
     JSValue value = exec->argument(0);
     if (value.isObject())
-        return JSValue::encode(jsBoolean(asObject(value)->hasCustomProperties()));
+        return JSValue::encode(jsBoolean(asObject(value)->hasCustomProperties(exec->vm())));
     return JSValue::encode(jsBoolean(false));
 }
 
@@ -1918,7 +1966,7 @@ EncodedJSValue JSC_HOST_CALL functionLoadModule(ExecState* exec)
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     Vector<char> script;
     if (!fetchScriptFromLocalFileSystem(fileName, script))
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Could not open file."))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Could not open file."_s)));
 
     JSInternalPromise* promise = loadAndEvaluateModule(exec, fileName, jsUndefined(), jsUndefined());
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
@@ -1998,7 +2046,7 @@ EncodedJSValue JSC_HOST_CALL functionEnsureArrayStorage(ExecState* exec)
 {
     VM& vm = exec->vm();
     for (unsigned i = 0; i < exec->argumentCount(); ++i) {
-        if (JSObject* object = jsDynamicCast<JSObject*>(vm, exec->argument(0)))
+        if (JSObject* object = jsDynamicCast<JSObject*>(vm, exec->argument(i)))
             object->ensureArrayStorage(vm);
     }
     return JSValue::encode(jsUndefined());
@@ -2020,7 +2068,7 @@ EncodedJSValue JSC_HOST_CALL functionSamplingProfilerStackTraces(ExecState* exec
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!vm.samplingProfiler())
-        return JSValue::encode(throwException(exec, scope, createError(exec, ASCIILiteral("Sampling profiler was never started"))));
+        return JSValue::encode(throwException(exec, scope, createError(exec, "Sampling profiler was never started"_s)));
 
     String jsonString = vm.samplingProfiler()->stackTracesAsJSON();
     EncodedJSValue result = JSValue::encode(JSONParse(exec, jsonString));
@@ -2041,7 +2089,7 @@ EncodedJSValue JSC_HOST_CALL functionAsyncTestStart(ExecState* exec)
 
     JSValue numberOfAsyncPasses = exec->argument(0);
     if (!numberOfAsyncPasses.isUInt32())
-        return throwVMError(exec, scope, ASCIILiteral("Expected first argument to a uint32"));
+        return throwVMError(exec, scope, "Expected first argument to a uint32"_s);
 
     asyncTestExpectedPasses += numberOfAsyncPasses.asUInt32();
     return encodedJSUndefined();
@@ -2061,7 +2109,7 @@ static EncodedJSValue JSC_HOST_CALL functionWebAssemblyMemoryMode(ExecState* exe
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     if (!Options::useWebAssembly())
-        return throwVMTypeError(exec, scope, ASCIILiteral("WebAssemblyMemoryMode should only be called if the useWebAssembly option is set"));
+        return throwVMTypeError(exec, scope, "WebAssemblyMemoryMode should only be called if the useWebAssembly option is set"_s);
 
     if (JSObject* object = exec->argument(0).getObject()) {
         if (auto* memory = jsDynamicCast<JSWebAssemblyMemory*>(vm, object))
@@ -2070,7 +2118,7 @@ static EncodedJSValue JSC_HOST_CALL functionWebAssemblyMemoryMode(ExecState* exe
             return JSValue::encode(jsString(&vm, makeString(instance->memoryMode())));
     }
 
-    return throwVMTypeError(exec, scope, ASCIILiteral("WebAssemblyMemoryMode expects either a WebAssembly.Memory or WebAssembly.Instance"));
+    return throwVMTypeError(exec, scope, "WebAssemblyMemoryMode expects either a WebAssembly.Memory or WebAssembly.Instance"_s);
 }
 
 #endif // ENABLE(WEBASSEBLY)
@@ -2245,11 +2293,11 @@ static bool checkUncaughtException(VM& vm, GlobalObject* globalObject, JSValue e
     return false;
 }
 
-static void checkException(GlobalObject* globalObject, bool isLastFile, bool hasException, JSValue value, CommandLine& options, bool& success)
+static void checkException(ExecState* exec, GlobalObject* globalObject, bool isLastFile, bool hasException, JSValue value, CommandLine& options, bool& success)
 {
     VM& vm = globalObject->vm();
 
-    if (options.m_treatWatchdogExceptionAsSuccess && value.inherits(vm, TerminatedExecutionError::info())) {
+    if (options.m_treatWatchdogExceptionAsSuccess && value.inherits<TerminatedExecutionError>(vm)) {
         ASSERT(hasException);
         return;
     }
@@ -2257,14 +2305,14 @@ static void checkException(GlobalObject* globalObject, bool isLastFile, bool has
     if (!options.m_uncaughtExceptionName || !isLastFile) {
         success = success && !hasException;
         if (options.m_dump && !hasException)
-            printf("End: %s\n", value.toWTFString(globalObject->globalExec()).utf8().data());
+            printf("End: %s\n", value.toWTFString(exec).utf8().data());
         if (hasException)
             dumpException(globalObject, value);
     } else
         success = success && checkUncaughtException(vm, globalObject, (hasException) ? value : JSValue(), options);
 }
 
-static bool runWithOptions(GlobalObject* globalObject, CommandLine& options)
+static void runWithOptions(GlobalObject* globalObject, CommandLine& options, bool& success)
 {
     Vector<Script>& scripts = options.m_scripts;
     String fileName;
@@ -2275,7 +2323,6 @@ static bool runWithOptions(GlobalObject* globalObject, CommandLine& options)
 
     VM& vm = globalObject->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
-    bool success = true;
 
 #if ENABLE(SAMPLING_FLAGS)
     SamplingFlags::start();
@@ -2293,14 +2340,16 @@ static bool runWithOptions(GlobalObject* globalObject, CommandLine& options)
                 promise = loadAndEvaluateModule(globalObject->globalExec(), fileName, jsUndefined(), jsUndefined());
                 scope.releaseAssertNoException();
             } else {
-                if (!fetchScriptFromLocalFileSystem(fileName, scriptBuffer))
-                    return false; // fail early so we can catch missing files
+                if (!fetchScriptFromLocalFileSystem(fileName, scriptBuffer)) {
+                    success = false; // fail early so we can catch missing files
+                    return;
+                }
             }
         } else {
             size_t commandLineLength = strlen(scripts[i].argument);
             scriptBuffer.resize(commandLineLength);
             std::copy(scripts[i].argument, scripts[i].argument + commandLineLength, scriptBuffer.begin());
-            fileName = ASCIILiteral("[Command Line]");
+            fileName = "[Command Line]"_s;
         }
 
         bool isLastFile = i == scripts.size() - 1;
@@ -2309,13 +2358,13 @@ static bool runWithOptions(GlobalObject* globalObject, CommandLine& options)
                 promise = loadAndEvaluateModule(globalObject->globalExec(), makeSource(stringFromUTF(scriptBuffer), SourceOrigin { absolutePath(fileName) }, fileName, TextPosition(), SourceProviderSourceType::Module), jsUndefined());
             scope.clearException();
 
-            JSFunction* fulfillHandler = JSNativeStdFunction::create(vm, globalObject, 1, String(), [&, isLastFile](ExecState* exec) {
-                checkException(globalObject, isLastFile, false, exec->argument(0), options, success);
+            JSFunction* fulfillHandler = JSNativeStdFunction::create(vm, globalObject, 1, String(), [&success, &options, isLastFile](ExecState* exec) {
+                checkException(exec, jsCast<GlobalObject*>(exec->lexicalGlobalObject()), isLastFile, false, exec->argument(0), options, success);
                 return JSValue::encode(jsUndefined());
             });
 
-            JSFunction* rejectHandler = JSNativeStdFunction::create(vm, globalObject, 1, String(), [&, isLastFile](ExecState* exec) {
-                checkException(globalObject, isLastFile, true, exec->argument(0), options, success);
+            JSFunction* rejectHandler = JSNativeStdFunction::create(vm, globalObject, 1, String(), [&success, &options, isLastFile](ExecState* exec) {
+                checkException(exec, jsCast<GlobalObject*>(exec->lexicalGlobalObject()), isLastFile, true, exec->argument(0), options, success);
                 return JSValue::encode(jsUndefined());
             });
 
@@ -2328,7 +2377,7 @@ static bool runWithOptions(GlobalObject* globalObject, CommandLine& options)
             scope.assertNoException();
             if (evaluationException)
                 returnValue = evaluationException->value();
-            checkException(globalObject, isLastFile, evaluationException, returnValue, options, success);
+            checkException(globalObject->globalExec(), globalObject, isLastFile, evaluationException, returnValue, options, success);
         }
 
         scriptBuffer.clear();
@@ -2338,7 +2387,6 @@ static bool runWithOptions(GlobalObject* globalObject, CommandLine& options)
 #if ENABLE(REGEXP_TRACING)
     vm.dumpRegExpTrace();
 #endif
-    return success;
 }
 
 #define RUNNING_FROM_XCODE 0
@@ -2620,22 +2668,25 @@ int runJSC(CommandLine options, bool isWorker, const Func& func)
 
     VM& vm = VM::create(LargeHeap).leakRef();
     int result;
-    bool success;
+    bool success = true;
+    GlobalObject* globalObject = nullptr;
     {
         JSLockHolder locker(vm);
 
         if (options.m_profile && !vm.m_perBytecodeProfiler)
             vm.m_perBytecodeProfiler = std::make_unique<Profiler::Database>(vm);
 
-        GlobalObject* globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
+        globalObject = GlobalObject::create(vm, GlobalObject::createStructure(vm, jsNull()), options.m_arguments);
         globalObject->setRemoteDebuggingEnabled(options.m_enableRemoteDebugging);
-        success = func(vm, globalObject);
-        if (options.m_interactive && success)
-            runInteractive(globalObject);
-
+        func(vm, globalObject, success);
         vm.drainMicrotasks();
     }
     vm.promiseDeferredTimer->runRunLoop();
+    {
+        JSLockHolder locker(vm);
+        if (options.m_interactive && success)
+            runInteractive(globalObject);
+    }
 
     result = success && (asyncTestExpectedPasses == asyncTestPasses) ? 0 : 3;
 
@@ -2723,11 +2774,10 @@ int jscmain(int argc, char** argv)
 #endif
     Gigacage::disableDisablingPrimitiveGigacageIfShouldBeEnabled();
 
-    int result;
-    result = runJSC(
+    int result = runJSC(
         options, false,
-        [&] (VM&, GlobalObject* globalObject) {
-            return runWithOptions(globalObject, options);
+        [&] (VM&, GlobalObject* globalObject, bool& success) {
+            runWithOptions(globalObject, options, success);
         });
 
     printSuperSamplerState();

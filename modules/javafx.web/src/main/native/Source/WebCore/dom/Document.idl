@@ -107,13 +107,13 @@ typedef (
     // that the caller document matches those semantics. It is possible we should replace it with
     // the existing 'incumbent document' concept.
     [CEReactions, CallWith=ResponsibleDocument, ImplementedAs=openForBindings, MayThrowException] Document open(optional DOMString type = "text/html", optional DOMString replace = "");
-    [CallWith=ActiveWindow&FirstWindow, ImplementedAs=openForBindings, MayThrowException] DOMWindow open(USVString url, DOMString name, DOMString features);
+    [CallWith=ActiveWindow&FirstWindow, ImplementedAs=openForBindings, MayThrowException] WindowProxy open(USVString url, DOMString name, DOMString features);
     [CEReactions, ImplementedAs=closeForBindings, MayThrowException] void close();
     [CEReactions, CallWith=ResponsibleDocument, MayThrowException] void write(DOMString... text);
     [CEReactions, CallWith=ResponsibleDocument, MayThrowException] void writeln(DOMString... text);
 
     // User interaction.
-    readonly attribute DOMWindow? defaultView;
+    [ImplementedAs=windowProxy] readonly attribute WindowProxy? defaultView;
     boolean hasFocus();
     [CEReactions] attribute DOMString designMode;
     [CEReactions] boolean execCommand(DOMString commandId, optional boolean showUI = false, optional DOMString? value = null); // FIXME: value should not be nullable.
@@ -144,15 +144,15 @@ typedef (
 
     // Extensions from FullScreen API (https://fullscreen.spec.whatwg.org/#api).
     // FIXME: Should probably be unprefixed.
-    [Conditional=FULLSCREEN_API] readonly attribute boolean webkitFullscreenEnabled;
-    [Conditional=FULLSCREEN_API, ImplementedAs=webkitFullscreenElementForBindings] readonly attribute Element? webkitFullscreenElement;
-    [Conditional=FULLSCREEN_API] void webkitExitFullscreen();
-    [Conditional=FULLSCREEN_API] readonly attribute boolean webkitIsFullScreen; // Mozilla version.
-    [Conditional=FULLSCREEN_API] readonly attribute boolean webkitFullScreenKeyboardInputAllowed; // Mozilla version.
-    [Conditional=FULLSCREEN_API, ImplementedAs=webkitCurrentFullScreenElementForBindings] readonly attribute Element webkitCurrentFullScreenElement; // Mozilla version.
-    [Conditional=FULLSCREEN_API] void webkitCancelFullScreen(); // Mozilla version.
-    [NotEnumerable, Conditional=FULLSCREEN_API] attribute EventHandler onwebkitfullscreenchange;
-    [NotEnumerable, Conditional=FULLSCREEN_API] attribute EventHandler onwebkitfullscreenerror;
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] readonly attribute boolean webkitFullscreenEnabled;
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, ImplementedAs=webkitFullscreenElementForBindings] readonly attribute Element? webkitFullscreenElement;
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] void webkitExitFullscreen();
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] readonly attribute boolean webkitIsFullScreen; // Mozilla version.
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] readonly attribute boolean webkitFullScreenKeyboardInputAllowed; // Mozilla version.
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, ImplementedAs=webkitCurrentFullScreenElementForBindings] readonly attribute Element webkitCurrentFullScreenElement; // Mozilla version.
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] void webkitCancelFullScreen(); // Mozilla version.
+    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] attribute EventHandler onwebkitfullscreenchange;
+    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] attribute EventHandler onwebkitfullscreenerror;
 
     // Extensions from Pointer Lock API (https://www.w3.org/TR/pointerlock/#extensions-to-the-document-interface).
     [NotEnumerable, Conditional=POINTER_LOCK] attribute EventHandler onpointerlockchange; // FIXME: Should be enumerable.
@@ -167,10 +167,6 @@ typedef (
     readonly attribute boolean hidden;
     readonly attribute VisibilityState visibilityState;
     attribute EventHandler onvisibilitychange;
-
-    // FIXME: Those were dropped from the CSSOM specification.
-    readonly attribute DOMString? preferredStylesheetSet;
-    attribute DOMString? selectedStylesheetSet;
 
     // FIXME: Those have been dropped from the DOM specification.
     readonly attribute DOMString? xmlEncoding;

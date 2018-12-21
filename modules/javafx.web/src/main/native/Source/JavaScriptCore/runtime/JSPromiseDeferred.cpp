@@ -43,7 +43,7 @@ JSValue newPromiseCapability(ExecState* exec, JSGlobalObject* globalObject, JSPr
 {
     JSFunction* newPromiseCapabilityFunction = globalObject->newPromiseCapabilityFunction();
     CallData callData;
-    CallType callType = JSC::getCallData(newPromiseCapabilityFunction, callData);
+    CallType callType = JSC::getCallData(exec->vm(), newPromiseCapabilityFunction, callData);
     ASSERT(callType != CallType::None);
 
     MarkedArgumentBuffer arguments;
@@ -63,7 +63,7 @@ JSPromiseDeferred* JSPromiseDeferred::create(ExecState* exec, JSGlobalObject* gl
 
     JSValue promise = deferred.get(exec, vm.propertyNames->builtinNames().promisePrivateName());
     RETURN_IF_EXCEPTION(scope, nullptr);
-    ASSERT(promise.inherits(vm, JSPromise::info()));
+    ASSERT(promise.inherits<JSPromise>(vm));
     JSValue resolve = deferred.get(exec, vm.propertyNames->builtinNames().resolvePrivateName());
     RETURN_IF_EXCEPTION(scope, nullptr);
     JSValue reject = deferred.get(exec, vm.propertyNames->builtinNames().rejectPrivateName());
@@ -92,7 +92,7 @@ JSPromiseDeferred::JSPromiseDeferred(VM& vm, Structure* structure)
 static inline void callFunction(ExecState* exec, JSValue function, JSValue value)
 {
     CallData callData;
-    CallType callType = getCallData(function, callData);
+    CallType callType = getCallData(exec->vm(), function, callData);
     ASSERT(callType != CallType::None);
 
     MarkedArgumentBuffer arguments;

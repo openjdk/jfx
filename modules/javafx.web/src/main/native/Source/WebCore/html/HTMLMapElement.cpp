@@ -31,8 +31,11 @@
 #include "HitTestResult.h"
 #include "IntSize.h"
 #include "NodeRareData.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLMapElement);
 
 using namespace HTMLNames;
 
@@ -77,7 +80,7 @@ HTMLImageElement* HTMLMapElement::imageElement()
 {
     if (m_name.isEmpty())
         return nullptr;
-    return document().imageElementByUsemap(*m_name.impl());
+    return treeScope().imageElementByUsemap(*m_name.impl());
 }
 
 void HTMLMapElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -123,7 +126,7 @@ Node::InsertedIntoAncestorResult HTMLMapElement::insertedIntoAncestor(InsertionT
 void HTMLMapElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (removalType.disconnectedFromDocument)
-        treeScope().removeImageMap(*this);
+        oldParentOfRemovedTree.treeScope().removeImageMap(*this);
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 }
 

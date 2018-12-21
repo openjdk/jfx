@@ -28,7 +28,7 @@
 
 #include "CommandLineAPIHost.h"
 #include "InstrumentingAgents.h"
-#include "JSMainThreadExecState.h"
+#include "JSExecState.h"
 #include "WebHeapAgent.h"
 #include "WebInjectedScriptHost.h"
 #include "WebInjectedScriptManager.h"
@@ -110,7 +110,9 @@ void WorkerInspectorController::connectFrontend()
 
     createLazyAgents();
 
-    InspectorInstrumentation::frontendCreated();
+    callOnMainThread([] {
+        InspectorInstrumentation::frontendCreated();
+    });
 
     m_executionStopwatch->reset();
     m_executionStopwatch->start();
@@ -127,7 +129,9 @@ void WorkerInspectorController::disconnectFrontend(Inspector::DisconnectReason r
 
     ASSERT(m_forwardingChannel);
 
-    InspectorInstrumentation::frontendDeleted();
+    callOnMainThread([] {
+        InspectorInstrumentation::frontendDeleted();
+    });
 
     m_agents.willDestroyFrontendAndBackend(reason);
     m_frontendRouter->disconnectFrontend(m_forwardingChannel.get());

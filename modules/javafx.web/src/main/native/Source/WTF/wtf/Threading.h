@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2018 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Justin Haygood <jhaygood@reaktix.com>
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
  *
@@ -45,6 +45,8 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Vector.h>
+#include <wtf/WordLock.h>
+#include <wtf/text/AtomicStringTable.h>
 
 #if USE(PTHREADS) && !OS(DARWIN)
 #include <signal.h>
@@ -53,7 +55,6 @@
 namespace WTF {
 
 class AbstractLocker;
-class AtomicStringTable;
 class ThreadMessageData;
 
 enum class ThreadGroupAddResult;
@@ -76,7 +77,6 @@ WTF_EXPORT_PRIVATE int waitForThreadCompletion(ThreadIdentifier);
 class Thread : public ThreadSafeRefCounted<Thread> {
 public:
     friend class ThreadGroup;
-    friend class AtomicStringTable;
     friend WTF_EXPORT_PRIVATE void initializeThreading();
 #if OS(WINDOWS)
     friend WTF_EXPORT_PRIVATE int waitForThreadCompletion(ThreadIdentifier);
@@ -243,7 +243,7 @@ protected:
     // types don't use multiple-pass destruction.
 
 #if !HAVE(FAST_TLS)
-    static WTF_EXPORTDATA ThreadSpecificKey s_key;
+    static WTF_EXPORT_PRIVATE ThreadSpecificKey s_key;
     // One time initialization for this class as a whole.
     // This method must be called before initializeTLS() and it is not thread-safe.
     static void initializeTLSKey();
@@ -273,22 +273,23 @@ protected:
     bool m_didExit { false };
     bool m_isDestroyedOnce { false };
 
-    // WordLock & Lock rely on ThreadSpecific. But Thread object can be destroyed even after ThreadSpecific things are destroyed.
-    std::mutex m_mutex;
+    // Lock & ParkingLot rely on ThreadSpecific. But Thread object can be destroyed even after ThreadSpecific things are destroyed.
+    // Use WordLock since WordLock does not depend on ThreadSpecific and this "Thread".
+    WordLock m_mutex;
     StackBounds m_stack { StackBounds::emptyBounds() };
     Vector<std::weak_ptr<ThreadGroup>> m_threadGroups;
     PlatformThreadHandle m_handle;
 #if OS(WINDOWS)
     ThreadIdentifier m_id { 0 };
 #elif OS(DARWIN)
-    mach_port_t m_platformThread;
+    mach_port_t m_platformThread { MACH_PORT_NULL };
 #elif USE(PTHREADS)
     PlatformRegisters* m_platformRegisters { nullptr };
     unsigned m_suspendCount { 0 };
 #endif
 
     AtomicStringTable* m_currentAtomicStringTable { nullptr };
-    AtomicStringTable* m_defaultAtomicStringTable { nullptr };
+    AtomicStringTable m_defaultAtomicStringTable;
 
 #if ENABLE(STACK_STATS)
     StackStats::PerThreadStats m_stackStats;

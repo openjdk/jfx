@@ -44,6 +44,7 @@
     [CEReactions, MayThrowException] void setAttributeNS(DOMString? namespaceURI, DOMString qualifiedName, DOMString value);
     [CEReactions] void removeAttribute(DOMString qualifiedName);
     [CEReactions] void removeAttributeNS(DOMString? namespaceURI, DOMString localName);
+    [CEReactions, MayThrowException] boolean toggleAttribute(DOMString qualifiedName, optional boolean force);
     boolean hasAttribute(DOMString qualifiedName);
     boolean hasAttributeNS(DOMString? namespaceURI, DOMString localName);
 
@@ -70,15 +71,15 @@
     // CSSOM-view extensions (https://drafts.csswg.org/cssom-view/#extension-to-the-element-interface).
     DOMRectList getClientRects();
     [NewObject] DOMRect getBoundingClientRect();
-    void scrollIntoView(optional boolean alignWithTop = true); // FIXME: Parameter type should be (boolean or object).
+    void scrollIntoView(optional boolean alignWithTop = true); // FIXME(webkit.org/b/161611): Parameter type should be (boolean or object).
     [ImplementedAs=scrollTo] void scroll(optional ScrollToOptions options);
     [ImplementedAs=scrollTo] void scroll(unrestricted double x, unrestricted double y);
     void scrollTo(optional ScrollToOptions options);
     void scrollTo(unrestricted double x, unrestricted double y);
     void scrollBy(optional ScrollToOptions option);
     void scrollBy(unrestricted double x, unrestricted double y);
-    attribute long scrollTop; // FIXME: should be unrestricted double.
-    attribute long scrollLeft; // FIXME: should be unrestricted double.
+    attribute long scrollTop; // FIXME(webkit.org/b/188045): should be unrestricted double.
+    attribute long scrollLeft; // FIXME(webkit.org/b/188045): should be unrestricted double.
     readonly attribute long scrollWidth;
     readonly attribute long scrollHeight;
     readonly attribute double clientTop; // FIXME: Should be of type long.
@@ -94,8 +95,8 @@
 
     // Extensions from Full Screen API (https://fullscreen.spec.whatwg.org/#api).
     // FIXME: Should we add unprefixed versions?
-    [Conditional=FULLSCREEN_API, ImplementedAs=webkitRequestFullscreen] void webkitRequestFullScreen(); // Prefixed Mozilla version.
-    [Conditional=FULLSCREEN_API] void webkitRequestFullscreen(); // Prefixed W3C version.
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen, ImplementedAs=webkitRequestFullscreen] void webkitRequestFullScreen(); // Prefixed Mozilla version.
+    [Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] void webkitRequestFullscreen(); // Prefixed W3C version.
 
     // Extensions from Pointer Lock API (https://w3c.github.io/pointerlock/#extensions-to-the-element-interface).
     [Conditional=POINTER_LOCK] void requestPointerLock();
@@ -119,8 +120,8 @@
     [NotEnumerable, ImplementedAs=onwebkitTransitionEnd] attribute EventHandler onwebkittransitionend;
 
     // FIXME: These event handlers should only be on Document (https://fullscreen.spec.whatwg.org/#api).
-    [NotEnumerable, Conditional=FULLSCREEN_API] attribute EventHandler onwebkitfullscreenchange;
-    [NotEnumerable, Conditional=FULLSCREEN_API] attribute EventHandler onwebkitfullscreenerror;
+    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] attribute EventHandler onwebkitfullscreenchange;
+    [NotEnumerable, Conditional=FULLSCREEN_API, EnabledBySetting=FullScreen] attribute EventHandler onwebkitfullscreenerror;
 
     // FIXME: Cannot find those EventHandlers in the latest specification (https://w3c.github.io/uievents/#events-focus-types).
     [NotEnumerable] attribute EventHandler onfocusin;
@@ -140,12 +141,25 @@
 
     // Non standard event handler (https://developer.apple.com/reference/webkitjs/element/1629580-onwebkitplaybacktargetavailabili).
     [NotEnumerable, Conditional=WIRELESS_PLAYBACK_TARGET] attribute EventHandler onwebkitplaybacktargetavailabilitychanged;
+
+    // Accessibility events.
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessiblecontextmenu;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessibleclick;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessibledecrement;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessibledismiss;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessiblefocus;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessibleincrement;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessiblescrollintoview;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessiblesetvalue;
+    [EnabledAtRuntime=AccessibilityObjectModel] attribute EventHandler onaccessibleselect;
 };
 
 dictionary ShadowRootInit {
     required ShadowRootMode mode;
 };
 
+Element implements AccessibilityRole;
+Element implements AriaAttributes;
 Element implements Animatable;
 Element implements ChildNode;
 Element implements DocumentAndElementEventHandlers;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,8 +41,7 @@
 #include "DFGSSACalculator.h"
 #include "DFGValidate.h"
 #include "JSCInlines.h"
-
-#include <list>
+#include <wtf/StdList.h>
 
 namespace JSC { namespace DFG {
 
@@ -757,6 +756,7 @@ private:
         }
 
         promoteLocalHeap();
+        removeICStatusFilters();
 
         if (Options::validateGraphAtEachPhase())
             DFG::validate(m_graph, DumpGraph, graphBeforeSinking);
@@ -961,7 +961,7 @@ private:
                 PromotedHeapLocation location(NamedPropertyPLoc, allocation->identifier(), identifierNumber);
                 if (Node* value = heapResolve(location)) {
                     if (allocation->structures().isSubsetOf(validStructures))
-                        node->replaceWith(m_graph, value);
+                        node->replaceWithWithoutChecks(value);
                     else {
                         Node* structure = heapResolve(PromotedHeapLocation(allocation->identifier(), StructurePLoc));
                         ASSERT(structure);
@@ -1088,6 +1088,12 @@ private:
         case MovHint:
         case PutHint:
             // Handled by OSR availability analysis
+            break;
+
+        case FilterCallLinkStatus:
+        case FilterGetByIdStatus:
+        case FilterPutByIdStatus:
+        case FilterInByIdStatus:
             break;
 
         default:
@@ -1384,7 +1390,7 @@ private:
         // Nodes without remaining unmaterialized fields will be
         // materialized first - amongst the remaining unmaterialized
         // nodes
-        std::list<Allocation, FastAllocator<Allocation>> toMaterialize;
+        StdList<Allocation> toMaterialize;
         auto firstPos = toMaterialize.begin();
         auto materializeFirst = [&] (Allocation&& allocation) {
             materialize(allocation.identifier());
@@ -2331,6 +2337,25 @@ private:
         }
 
         RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    void removeICStatusFilters()
+    {
+        for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
+            for (Node* node : *block) {
+                switch (node->op()) {
+                case FilterCallLinkStatus:
+                case FilterGetByIdStatus:
+                case FilterPutByIdStatus:
+                case FilterInByIdStatus:
+                    if (node->child1()->isPhantomAllocation())
+                        node->removeWithoutChecks();
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
     }
 
     // This is a great way of asking value->isStillValid() without having to worry about getting

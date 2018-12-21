@@ -37,7 +37,6 @@
 #include <mutex>
 #include <wtf/ASCIICType.h>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/CurrentTime.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
@@ -95,7 +94,7 @@ struct TextEncodingNameHash {
 using TextEncodingNameMap = HashMap<const char*, const char*, TextEncodingNameHash>;
 using TextCodecMap = HashMap<const char*, NewTextCodecFunction>;
 
-static StaticLock encodingRegistryMutex;
+static Lock encodingRegistryMutex;
 
 static TextEncodingNameMap* textEncodingNameMap;
 static TextCodecMap* textCodecMap;
@@ -161,7 +160,7 @@ static void pruneBlacklistedCodecs()
     }
 }
 
-static void buildBaseTextCodecMaps(const std::lock_guard<StaticLock>&)
+static void buildBaseTextCodecMaps(const std::lock_guard<Lock>&)
 {
     ASSERT(!textCodecMap);
     ASSERT(!textEncodingNameMap);
@@ -254,7 +253,7 @@ static void extendTextCodecMaps()
 
 std::unique_ptr<TextCodec> newTextCodec(const TextEncoding& encoding)
 {
-    std::lock_guard<StaticLock> lock(encodingRegistryMutex);
+    std::lock_guard<Lock> lock(encodingRegistryMutex);
 
     ASSERT(textCodecMap);
     auto result = textCodecMap->find(encoding.name());
@@ -267,7 +266,7 @@ const char* atomicCanonicalTextEncodingName(const char* name)
     if (!name || !name[0])
         return nullptr;
 
-    std::lock_guard<StaticLock> lock(encodingRegistryMutex);
+    std::lock_guard<Lock> lock(encodingRegistryMutex);
 
     if (!textEncodingNameMap)
         buildBaseTextCodecMaps(lock);
@@ -322,17 +321,17 @@ String defaultTextEncodingNameForSystemLanguage()
     // In addition, this value must match what is used in Safari, see <rdar://problem/5579292>.
     // On some OS versions, the result is CP949 (uppercase).
     if (equalLettersIgnoringASCIICase(systemEncodingName, "cp949"))
-        systemEncodingName = ASCIILiteral("ks_c_5601-1987");
+        systemEncodingName = "ks_c_5601-1987"_s;
 
     // CFStringConvertEncodingToIANACharSetName() returns cp874 for kTextEncodingDOSThai, AKA windows-874.
     // Since "cp874" alias is not standard (https://encoding.spec.whatwg.org/#names-and-labels), map to
     // "dos-874" instead.
     if (equalLettersIgnoringASCIICase(systemEncodingName, "cp874"))
-        systemEncodingName = ASCIILiteral("dos-874");
+        systemEncodingName = "dos-874"_s;
 
     return systemEncodingName;
 #else
-    return ASCIILiteral("ISO-8859-1");
+    return "ISO-8859-1"_s;
 #endif
 }
 

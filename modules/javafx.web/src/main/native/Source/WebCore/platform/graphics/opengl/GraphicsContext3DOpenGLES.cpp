@@ -28,7 +28,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#if ENABLE(GRAPHICS_CONTEXT_3D) && !PLATFORM(IOS)
 
 #include "GraphicsContext3D.h"
 
@@ -263,7 +263,7 @@ RefPtr<GraphicsContext3D> GraphicsContext3D::create(GraphicsContext3DAttributes 
     static bool initialized = false;
     static bool success = true;
     if (!initialized) {
-#if !USE(OPENGL_ES_2)
+#if !USE(OPENGL_ES)
         success = initializeOpenGLShims();
 #endif
         initialized = true;
@@ -334,7 +334,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attributes, Hos
 
     m_compiler.setResources(ANGLEResources);
 
-#if !USE(OPENGL_ES_2)
+#if !USE(OPENGL_ES)
     ::glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
     ::glEnable(GL_POINT_SPRITE);
 #endif
@@ -389,7 +389,7 @@ Platform3DObject GraphicsContext3D::platformTexture() const
 
 bool GraphicsContext3D::isGLES2Compliant() const
 {
-#if USE(OPENGL_ES_2)
+#if USE(OPENGL_ES)
     return true;
 #else
     return false;
@@ -404,4 +404,4 @@ PlatformLayer* GraphicsContext3D::platformLayer() const
 
 }
 
-#endif // ENABLE(GRAPHICS_CONTEXT_3D)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D) && !PLATFORM(IOS)

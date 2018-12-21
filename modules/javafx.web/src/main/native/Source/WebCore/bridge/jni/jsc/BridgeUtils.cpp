@@ -38,7 +38,7 @@
 #include "JNIUtilityPrivate.h"
 #include "JSDOMBinding.h"
 #include "JSDOMGlobalObject.h"
-#include "JSMainThreadExecState.h"
+#include "JSExecState.h"
 #include "JSNode.h"
 #include "ScriptController.h"
 #include "runtime_array.h"
@@ -46,9 +46,9 @@
 #include "runtime_root.h"
 #include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
-#include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSArray.h>
 #include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/OpaqueJSString.h>
 #include <JavaScriptCore/JSBase.h>
 #include <JavaScriptCore/JSStringRef.h>
@@ -160,9 +160,9 @@ JSValueRef Java_Object_to_JSValue(
             {
                 JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(
                     ((peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
-                        ? static_cast<DOMWindow*>(jlong_to_ptr(peer))->document()
-                        : &static_cast<Node*>(jlong_to_ptr(peer))->document()),
-                    exec);
+                        ? *static_cast<DOMWindow*>(jlong_to_ptr(peer))->document()
+                        : static_cast<Node*>(jlong_to_ptr(peer))->document()),
+                    normalWorld(exec->vm()));
                 return toRef(exec,
                     (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
                         ? WebCore::toJS(exec, globalObject, static_cast<DOMWindow*>(jlong_to_ptr(peer)))

@@ -234,7 +234,7 @@ static Vector<bool> capabilityBooleanVector(RealtimeMediaSourceCapabilities::Ech
     return result;
 }
 
-MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities() const
+MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities(Document& document) const
 {
     auto capabilities = m_private->capabilities();
     TrackCapabilities result;
@@ -257,9 +257,9 @@ MediaStreamTrack::TrackCapabilities MediaStreamTrack::getCapabilities() const
     if (capabilities.supportsEchoCancellation())
         result.echoCancellation = capabilityBooleanVector(capabilities.echoCancellation());
     if (capabilities.supportsDeviceId())
-        result.deviceId = capabilities.deviceId();
+        result.deviceId = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(capabilities.deviceId(), document.deviceIDHashSalt());
     if (capabilities.supportsGroupId())
-        result.groupId = capabilities.groupId();
+        result.groupId = RealtimeMediaSourceCenter::singleton().hashStringWithSalt(capabilities.groupId(), document.deviceIDHashSalt());
     return result;
 }
 
@@ -277,7 +277,7 @@ void MediaStreamTrack::applyConstraints(const std::optional<MediaTrackConstraint
 {
     m_promise = WTFMove(promise);
 
-    auto weakThis = createWeakPtr();
+    auto weakThis = makeWeakPtr(*this);
     auto failureHandler = [weakThis] (const String& failedConstraint, const String& message) {
         if (!weakThis || !weakThis->m_promise)
             return;
@@ -365,7 +365,7 @@ void MediaStreamTrack::trackEnded(MediaStreamTrackPrivate&)
 
     // 3. Notify track's source that track is ended so that the source may be stopped, unless other MediaStreamTrack objects depend on it.
     // 4. Fire a simple event named ended at the object.
-    dispatchEvent(Event::create(eventNames().endedEvent, false, false));
+    dispatchEvent(Event::create(eventNames().endedEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
     for (auto& observer : m_observers)
         observer->trackDidEnd();
@@ -379,7 +379,7 @@ void MediaStreamTrack::trackMutedChanged(MediaStreamTrackPrivate&)
         return;
 
     AtomicString eventType = muted() ? eventNames().muteEvent : eventNames().unmuteEvent;
-    dispatchEvent(Event::create(eventType, false, false));
+    dispatchEvent(Event::create(eventType, Event::CanBubble::No, Event::IsCancelable::No));
 
     configureTrackRendering();
 }

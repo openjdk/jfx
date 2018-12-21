@@ -35,7 +35,7 @@ namespace WebCore {
 
 class DOMPromise;
 
-class ExtendableEvent : public Event {
+class ExtendableEvent : public Event, public CanMakeWeakPtr<ExtendableEvent> {
 public:
     static Ref<ExtendableEvent> create(const AtomicString& type, const ExtendableEventInit& initializer, IsTrusted isTrusted = IsTrusted::No)
     {
@@ -53,16 +53,13 @@ public:
 
 protected:
     WEBCORE_EXPORT ExtendableEvent(const AtomicString&, const ExtendableEventInit&, IsTrusted);
-    ExtendableEvent(const AtomicString&, bool bubbles, bool cancelable);
-
-    WeakPtr<ExtendableEvent> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
+    ExtendableEvent(const AtomicString&, CanBubble, IsCancelable);
 
     void addExtendLifetimePromise(Ref<DOMPromise>&&);
 
 private:
     unsigned m_pendingPromiseCount { 0 };
     HashSet<Ref<DOMPromise>> m_extendLifetimePromises;
-    WeakPtrFactory<ExtendableEvent> m_weakPtrFactory;
     WTF::Function<void(HashSet<Ref<DOMPromise>>&&)> m_whenAllExtendLifetimePromisesAreSettledHandler;
 };
 

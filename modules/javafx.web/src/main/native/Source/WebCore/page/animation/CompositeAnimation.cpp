@@ -109,9 +109,9 @@ void CompositeAnimation::updateTransitions(Element& element, const RenderStyle* 
             for (int propertyIndex = 0; propertyIndex < CSSPropertyAnimation::getNumProperties(); ++propertyIndex) {
                 if (all) {
                     // Get the next property which is not a shorthand.
-                    bool isShorthand;
+                    std::optional<bool> isShorthand;
                     prop = CSSPropertyAnimation::getPropertyAtIndex(propertyIndex, isShorthand);
-                    if (isShorthand)
+                    if (isShorthand && *isShorthand)
                         continue;
                 }
 
@@ -159,7 +159,7 @@ void CompositeAnimation::updateTransitions(Element& element, const RenderStyle* 
                     }
                 } else {
                     // We need to start a transition if it is active and the properties don't match
-                    equal = !isActiveTransition || CSSPropertyAnimation::propertiesEqual(prop, fromStyle, &targetStyle);
+                    equal = !isActiveTransition || CSSPropertyAnimation::propertiesEqual(prop, fromStyle, &targetStyle) || !CSSPropertyAnimation::canPropertyBeInterpolated(prop, fromStyle, &targetStyle);
                 }
 
                 // We can be in this loop with an inactive transition (!isActiveTransition). We need
@@ -170,7 +170,7 @@ void CompositeAnimation::updateTransitions(Element& element, const RenderStyle* 
                     // Add the new transition
                     auto implicitAnimation = ImplicitAnimation::create(animation, prop, element, *this, modifiedCurrentStyle ? *modifiedCurrentStyle : *fromStyle);
                     if (m_suspended && implicitAnimation->hasStyle())
-                        implicitAnimation->updatePlayState(AnimPlayStatePaused);
+                        implicitAnimation->updatePlayState(AnimationPlayState::Paused);
 
                     LOG(Animations, "Created ImplicitAnimation %p on element %p for property %s duration %.2f delay %.2f", implicitAnimation.ptr(), &element, getPropertyName(prop), animation.duration(), animation.delay());
                     m_transitions.set(prop, WTFMove(implicitAnimation));
@@ -253,7 +253,7 @@ void CompositeAnimation::updateKeyframeAnimations(Element& element, const Render
                 LOG(Animations, "Creating KeyframeAnimation %p on element %p with keyframes %s, duration %.2f, delay %.2f, iterations %.2f", keyframeAnim.get(), &element, animation.name().utf8().data(), animation.duration(), animation.delay(), animation.iterationCount());
 
                 if (m_suspended) {
-                    keyframeAnim->updatePlayState(AnimPlayStatePaused);
+                    keyframeAnim->updatePlayState(AnimationPlayState::Paused);
                     LOG(Animations, "  (created in suspended/paused state)");
                 }
 #if !LOG_DISABLED
@@ -464,13 +464,13 @@ void CompositeAnimation::suspendAnimations()
     if (!m_keyframeAnimations.isEmpty()) {
         m_keyframeAnimations.checkConsistency();
         for (auto& animation : m_keyframeAnimations.values())
-            animation->updatePlayState(AnimPlayStatePaused);
+            animation->updatePlayState(AnimationPlayState::Paused);
     }
 
     if (!m_transitions.isEmpty()) {
         for (auto& transition : m_transitions.values()) {
             if (transition->hasStyle())
-                transition->updatePlayState(AnimPlayStatePaused);
+                transition->updatePlayState(AnimationPlayState::Paused);
         }
     }
 }
@@ -486,14 +486,14 @@ void CompositeAnimation::resumeAnimations()
         m_keyframeAnimations.checkConsistency();
         for (auto& animation : m_keyframeAnimations.values()) {
             if (animation->playStatePlaying())
-                animation->updatePlayState(AnimPlayStatePlaying);
+                animation->updatePlayState(AnimationPlayState::Playing);
         }
     }
 
     if (!m_transitions.isEmpty()) {
         for (auto& transition : m_transitions.values()) {
             if (transition->hasStyle())
-                transition->updatePlayState(AnimPlayStatePlaying);
+                transition->updatePlayState(AnimationPlayState::Playing);
         }
     }
 }

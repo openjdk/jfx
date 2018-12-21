@@ -48,7 +48,7 @@ enum PlatformWheelEventGranularity : uint8_t {
     ScrollByPixelWheelEvent,
 };
 
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if ENABLE(ASYNC_SCROLLING)
 
 enum PlatformWheelEventPhase : uint8_t {
     PlatformWheelEventPhaseNone = 0,
@@ -60,6 +60,17 @@ enum PlatformWheelEventPhase : uint8_t {
     PlatformWheelEventPhaseMayBegin = 1 << 5,
 };
 
+#endif
+
+#if PLATFORM(WIN)
+// How many pixels should we scroll per line? Gecko uses the height of the
+// current line, which means scroll distance changes as you go through the
+// page or go to different pages. IE 7 is ~50 px/line, although the value
+// seems to vary slightly by page and zoom level. Since IE 7 has a
+// smoothing algorithm on scrolling, it can get away with slightly larger
+// scroll values without feeling jerky. Here we use 100 px per three lines
+// (the default scroll amount on Windows is three lines per wheel tick).
+const float cScrollbarPixelsPerLine = 100.0f / 3.0f;
 #endif
 
 class PlatformWheelEvent : public PlatformEvent {
@@ -124,6 +135,9 @@ public:
     unsigned scrollCount() const { return m_scrollCount; }
     float unacceleratedScrollingDeltaX() const { return m_unacceleratedScrollingDeltaX; }
     float unacceleratedScrollingDeltaY() const { return m_unacceleratedScrollingDeltaY; }
+#endif
+
+#if ENABLE(ASYNC_SCROLLING)
     bool useLatchedEventElement() const;
     bool shouldConsiderLatching() const;
     bool shouldResetLatching() const;
@@ -132,7 +146,7 @@ public:
     bool useLatchedEventElement() const { return false; }
 #endif
 
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if ENABLE(ASYNC_SCROLLING)
     PlatformWheelEventPhase phase() const { return m_phase; }
     PlatformWheelEventPhase momentumPhase() const { return m_momentumPhase; }
     bool isEndOfNonMomentumScroll() const;
@@ -163,7 +177,7 @@ protected:
     // Scrolling velocity in pixels per second.
     FloatSize m_scrollingVelocity;
 
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if ENABLE(ASYNC_SCROLLING)
     PlatformWheelEventPhase m_phase { PlatformWheelEventPhaseNone };
     PlatformWheelEventPhase m_momentumPhase { PlatformWheelEventPhaseNone };
 #endif
@@ -175,7 +189,7 @@ protected:
 #endif
 };
 
-#if PLATFORM(COCOA)
+#if ENABLE(ASYNC_SCROLLING)
 
 inline bool PlatformWheelEvent::useLatchedEventElement() const
 {

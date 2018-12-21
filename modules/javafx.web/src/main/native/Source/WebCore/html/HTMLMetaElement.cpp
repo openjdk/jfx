@@ -27,8 +27,12 @@
 #include "Document.h"
 #include "HTMLHeadElement.h"
 #include "HTMLNames.h"
+#include "RuntimeEnabledFeatures.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLMetaElement);
 
 using namespace HTMLNames;
 
@@ -85,6 +89,8 @@ void HTMLMetaElement::process()
 
     if (equalLettersIgnoringASCIICase(name(), "viewport"))
         document().processViewport(contentValue, ViewportArguments::ViewportMeta);
+    else if (RuntimeEnabledFeatures::sharedFeatures().disabledAdaptationsMetaTagEnabled() && equalLettersIgnoringASCIICase(name(), "disabled-adaptations"))
+        document().processDisabledAdaptations(contentValue);
 #if PLATFORM(IOS)
     else if (equalLettersIgnoringASCIICase(name(), "format-detection"))
         document().processFormatDetection(contentValue);
@@ -92,7 +98,7 @@ void HTMLMetaElement::process()
         document().processWebAppOrientations();
 #endif
     else if (equalLettersIgnoringASCIICase(name(), "referrer"))
-        document().processReferrerPolicy(contentValue);
+        document().processReferrerPolicy(contentValue, ReferrerPolicySource::MetaTag);
 
     const AtomicString& httpEquivValue = attributeWithoutSynchronization(http_equivAttr);
     if (!httpEquivValue.isNull())

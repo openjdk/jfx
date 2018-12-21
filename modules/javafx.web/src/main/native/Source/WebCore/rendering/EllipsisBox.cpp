@@ -39,7 +39,6 @@ EllipsisBox::EllipsisBox(RenderBlockFlow& renderer, const AtomicString& ellipsis
     , m_shouldPaintMarkupBox(markupBox)
     , m_height(height)
     , m_str(ellipsisStr)
-    , m_selectionState(RenderObject::SelectionNone)
 {
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     m_isEverInChildList = false;
@@ -50,13 +49,13 @@ void EllipsisBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, La
 {
     GraphicsContext& context = paintInfo.context();
     const RenderStyle& lineStyle = this->lineStyle();
-    Color textColor = lineStyle.visitedDependentColor(CSSPropertyWebkitTextFillColor);
+    Color textColor = lineStyle.visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor);
     if (textColor != context.fillColor())
         context.setFillColor(textColor);
     bool setShadow = false;
     if (lineStyle.textShadow()) {
-        context.setShadow(LayoutSize(lineStyle.textShadow()->x(), lineStyle.textShadow()->y()),
-            lineStyle.textShadow()->radius(), lineStyle.textShadow()->color());
+        Color shadowColor = lineStyle.colorByApplyingColorFilter(lineStyle.textShadow()->color());
+        context.setShadow(LayoutSize(lineStyle.textShadow()->x(), lineStyle.textShadow()->y()), lineStyle.textShadow()->radius(), shadowColor);
         setShadow = true;
     }
 
@@ -108,7 +107,7 @@ void EllipsisBox::paintMarkupBox(PaintInfo& paintInfo, const LayoutPoint& paintO
         return;
 
     LayoutPoint adjustedPaintOffset = paintOffset;
-    adjustedPaintOffset.move(x() + m_logicalWidth - markupBox->x(),
+    adjustedPaintOffset.move(x() + logicalWidth() - markupBox->x(),
         y() + style.fontMetrics().ascent() - (markupBox->y() + markupBox->lineStyle().fontMetrics().ascent()));
     markupBox->paint(paintInfo, adjustedPaintOffset, lineTop, lineBottom);
 }
@@ -127,9 +126,9 @@ IntRect EllipsisBox::selectionRect()
 
 void EllipsisBox::paintSelection(GraphicsContext& context, const LayoutPoint& paintOffset, const RenderStyle& style, const FontCascade& font)
 {
-    Color textColor = style.visitedDependentColor(CSSPropertyColor);
+    Color textColor = style.visitedDependentColorWithColorFilter(CSSPropertyColor);
     Color c = blockFlow().selectionBackgroundColor();
-    if (!c.isValid() || !c.alpha())
+    if (!c.isVisible())
         return;
 
     // If the text color ends up being the same as the selection background, invert the selection
@@ -153,7 +152,7 @@ bool EllipsisBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     // Hit test the markup box.
     if (InlineBox* markupBox = this->markupBox()) {
         const RenderStyle& lineStyle = this->lineStyle();
-        LayoutUnit mtx = adjustedLocation.x() + m_logicalWidth - markupBox->x();
+        LayoutUnit mtx = adjustedLocation.x() + logicalWidth() - markupBox->x();
         LayoutUnit mty = adjustedLocation.y() + lineStyle.fontMetrics().ascent() - (markupBox->y() + markupBox->lineStyle().fontMetrics().ascent());
         if (markupBox->nodeAtPoint(request, result, locationInContainer, LayoutPoint(mtx, mty), lineTop, lineBottom, hitTestAction)) {
             blockFlow().updateHitTestResult(result, locationInContainer.point() - LayoutSize(mtx, mty));
@@ -161,7 +160,7 @@ bool EllipsisBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
         }
     }
 
-    LayoutRect boundsRect(adjustedLocation, LayoutSize(m_logicalWidth, m_height));
+    LayoutRect boundsRect(adjustedLocation, LayoutSize(logicalWidth(), m_height));
     if (visibleToHitTesting() && boundsRect.intersects(HitTestLocation::rectForPoint(locationInContainer.point(), 0, 0, 0, 0))) {
         blockFlow().updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
         if (result.addNodeToListBasedTestResult(blockFlow().element(), request, locationInContainer, boundsRect) == HitTestProgress::Stop)

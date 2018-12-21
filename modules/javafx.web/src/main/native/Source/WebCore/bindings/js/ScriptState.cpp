@@ -32,9 +32,9 @@
 #include "ScriptState.h"
 
 #include "Document.h"
+#include "Frame.h"
 #include "JSDOMWindowBase.h"
 #include "JSWorkerGlobalScope.h"
-#include "MainFrame.h"
 #include "Node.h"
 #include "Page.h"
 #include "ScriptController.h"
@@ -50,7 +50,7 @@ DOMWindow* domWindowFromExecState(JSC::ExecState* scriptState)
 {
     JSC::JSGlobalObject* globalObject = scriptState->lexicalGlobalObject();
     JSC::VM& vm = globalObject->vm();
-    if (!globalObject->inherits(vm, JSDOMWindowBase::info()))
+    if (!globalObject->inherits<JSDOMWindowBase>(vm))
         return nullptr;
     return &JSC::jsCast<JSDOMWindowBase*>(globalObject)->wrapped();
 }
@@ -66,7 +66,7 @@ ScriptExecutionContext* scriptExecutionContextFromExecState(JSC::ExecState* scri
 {
     JSC::JSGlobalObject* globalObject = scriptState->lexicalGlobalObject();
     JSC::VM& vm = globalObject->vm();
-    if (!globalObject->inherits(vm, JSDOMGlobalObject::info()))
+    if (!globalObject->inherits<JSDOMGlobalObject>(vm))
         return nullptr;
     return JSC::jsCast<JSDOMGlobalObject*>(globalObject)->scriptExecutionContext();
 }
@@ -75,7 +75,7 @@ JSC::ExecState* mainWorldExecState(Frame* frame)
 {
     if (!frame)
         return nullptr;
-    return frame->script().windowProxy(mainThreadNormalWorld())->window()->globalExec();
+    return frame->windowProxy().jsWindowProxy(mainThreadNormalWorld())->window()->globalExec();
 }
 
 JSC::ExecState* execStateFromNode(DOMWrapperWorld& world, Node* node)

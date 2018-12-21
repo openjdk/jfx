@@ -178,8 +178,6 @@ RetainPtr<CFURLRef> pathAsURL(const String&);
 
 #if PLATFORM(GTK) || PLATFORM(WPE)
 String filenameForDisplay(const String&);
-CString applicationDirectoryPath();
-CString sharedResourcesPath();
 #endif
 
 #if PLATFORM(WIN)
@@ -189,7 +187,10 @@ String roamingUserSpecificStorageDirectory();
 
 #if PLATFORM(COCOA)
 WEBCORE_EXPORT NSString *createTemporaryDirectory(NSString *directoryPrefix);
+WEBCORE_EXPORT bool deleteNonEmptyDirectory(const String&);
 #endif
+
+WEBCORE_EXPORT String realPath(const String&);
 
 class MappedFileData {
 public:

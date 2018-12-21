@@ -164,7 +164,7 @@ void RenderSVGRoot::layout()
         // Invalidate resource clients, which may mark some nodes for layout.
         for (auto& resource :  m_resourcesNeedingToInvalidateClients) {
             resource->removeAllClientsFromCache();
-            SVGResourcesCache::clientStyleChanged(*resource, StyleDifferenceLayout, resource->style());
+            SVGResourcesCache::clientStyleChanged(*resource, StyleDifference::Layout, resource->style());
         }
 
         m_isLayoutSizeChanged = false;
@@ -199,9 +199,9 @@ bool RenderSVGRoot::shouldApplyViewportClip() const
     // the outermost svg is clipped if auto, and svg document roots are always clipped
     // When the svg is stand-alone (isDocumentElement() == true) the viewport clipping should always
     // be applied, noting that the window scrollbars should be hidden if overflow=hidden.
-    return style().overflowX() == OHIDDEN
-        || style().overflowX() == OAUTO
-        || style().overflowX() == OSCROLL
+    return style().overflowX() == Overflow::Hidden
+        || style().overflowX() == Overflow::Auto
+        || style().overflowX() == Overflow::Scroll
         || this->isDocumentElementRenderer();
 }
 
@@ -215,8 +215,8 @@ void RenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paint
     if (paintInfo.context().paintingDisabled())
         return;
 
-    // SVG outlines are painted during PaintPhaseForeground.
-    if (paintInfo.phase == PaintPhaseOutline || paintInfo.phase == PaintPhaseSelfOutline)
+    // SVG outlines are painted during PaintPhase::Foreground.
+    if (paintInfo.phase == PaintPhase::Outline || paintInfo.phase == PaintPhase::SelfOutline)
         return;
 
     // An empty viewBox also disables rendering.
@@ -228,13 +228,13 @@ void RenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paint
     if (!firstChild()) {
         auto* resources = SVGResourcesCache::cachedResourcesForRenderer(*this);
         if (!resources || !resources->filter()) {
-            if (paintInfo.phase == PaintPhaseForeground)
+            if (paintInfo.phase == PaintPhase::Foreground)
                 page().addRelevantUnpaintedObject(this, visualOverflowRect());
             return;
         }
     }
 
-    if (paintInfo.phase == PaintPhaseForeground)
+    if (paintInfo.phase == PaintPhase::Foreground)
         page().addRelevantRepaintedObject(this, visualOverflowRect());
 
     // Make a copy of the PaintInfo because applyTransform will modify the damage rect.
@@ -255,7 +255,7 @@ void RenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paint
     {
         SVGRenderingContext renderingContext;
         bool continueRendering = true;
-        if (childPaintInfo.phase == PaintPhaseForeground) {
+        if (childPaintInfo.phase == PaintPhase::Foreground) {
             renderingContext.prepareToRenderSVGContent(*this, childPaintInfo);
             continueRendering = renderingContext.isRenderingPrepared();
         }
@@ -292,11 +292,11 @@ void RenderSVGRoot::willBeRemovedFromTree()
 
 void RenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    if (diff == StyleDifferenceLayout)
+    if (diff == StyleDifference::Layout)
         setNeedsBoundariesUpdate();
 
     // Box decorations may have appeared/disappeared - recompute status.
-    if (diff == StyleDifferenceRepaint)
+    if (diff == StyleDifference::Repaint)
         m_hasBoxDecorations = hasVisibleBoxDecorationStyle();
 
     RenderReplaced::styleDidChange(diff, oldStyle);
@@ -329,7 +329,7 @@ const AffineTransform& RenderSVGRoot::localToParentTransform() const
 
 LayoutRect RenderSVGRoot::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
 {
-    if (style().visibility() != VISIBLE && !enclosingLayer()->hasVisibleContent())
+    if (style().visibility() != Visibility::Visible && !enclosingLayer()->hasVisibleContent())
         return LayoutRect();
 
     FloatRect contentRepaintRect = m_localToBorderBoxTransform.mapRect(repaintRectInLocalCoordinates());

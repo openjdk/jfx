@@ -36,6 +36,7 @@
 namespace WebCore {
 
 class MathMLElement : public StyledElement {
+    WTF_MAKE_ISO_ALLOCATED(MathMLElement);
 public:
     static Ref<MathMLElement> create(const QualifiedName& tagName, Document&);
 
@@ -105,7 +106,7 @@ protected:
 
 private:
     bool canStartSelection() const final;
-    bool isKeyboardFocusable(KeyboardEvent&) const final;
+    bool isKeyboardFocusable(KeyboardEvent*) const final;
     bool isMouseFocusable() const final;
     bool isURLAttribute(const Attribute&) const final;
     bool supportsFocus() const final;

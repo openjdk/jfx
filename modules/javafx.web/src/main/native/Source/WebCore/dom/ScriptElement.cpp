@@ -125,7 +125,7 @@ static bool isLegacySupportedJavaScriptLanguage(const String& language)
 
 void ScriptElement::dispatchErrorEvent()
 {
-    m_element.dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+    m_element.dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
 std::optional<ScriptElement::ScriptType> ScriptElement::determineScriptType(LegacyTypeSupport supportLegacyTypes) const
@@ -308,7 +308,7 @@ bool ScriptElement::requestModuleScript(const TextPosition& scriptStartPosition)
     String nonce = m_element.attributeWithoutSynchronization(HTMLNames::nonceAttr);
     String crossOriginMode = m_element.attributeWithoutSynchronization(HTMLNames::crossoriginAttr);
     if (crossOriginMode.isNull())
-        crossOriginMode = ASCIILiteral("omit");
+        crossOriginMode = "omit"_s;
 
     if (hasSourceAttribute()) {
         String sourceURL = sourceAttributeValue();

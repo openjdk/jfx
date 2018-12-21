@@ -497,7 +497,7 @@
     {
         "name": "Service Workers",
         "status": {
-            "status": "Supported In Preview"
+            "status": "Supported"
         },
         "url": "https://w3c.github.io/ServiceWorker/",
         "webkit-url": "https://webkit.org/b/174541",
@@ -549,7 +549,7 @@
     {
         "name": "Web Animations",
         "status": {
-            "status": "Under Consideration"
+            "status": "Supported In Preview"
         },
         "url": "https://www.w3.org/TR/web-animations-1/",
         "keywords": ["web animations"],
@@ -982,11 +982,11 @@
     {
         "name": "Payment Request",
         "status": {
-            "status": "Supported In Preview"
+            "status": "Supported"
         },
         "url": "https://www.w3.org/TR/payment-request/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=174796",
-        "keywords": ["web payments", "payment request"],
+        "keywords": ["web payments", "payment request", "apple pay"],
         "description": "An API for merchants to request payments from users."
     },
     {

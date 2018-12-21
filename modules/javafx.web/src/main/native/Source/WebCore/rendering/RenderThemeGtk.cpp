@@ -28,6 +28,7 @@
 #include "CSSValueKeywords.h"
 #include "FileList.h"
 #include "FileSystem.h"
+#include "FloatRoundedRect.h"
 #include "FontDescription.h"
 #include "GRefPtrGtk.h"
 #include "GUniquePtrGtk.h"
@@ -294,6 +295,7 @@ static GRefPtr<GdkPixbuf> loadThemedIcon(GtkStyleContext* context, const char* i
 }
 #endif // !GTK_CHECK_VERSION(3, 20, 0)
 
+#if ENABLE(VIDEO)
 static bool nodeHasPseudo(Node& node, const char* pseudo)
 {
     return is<Element>(node) && downcast<Element>(node).pseudo() == pseudo;
@@ -311,6 +313,7 @@ static bool nodeHasClass(Node* node, const char* className)
 
     return element.classNames().contains(className);
 }
+#endif // ENABLE(VIDEO)
 
 RenderThemeGtk::~RenderThemeGtk() = default;
 
@@ -359,10 +362,10 @@ static GtkStateFlags themePartStateFlags(const RenderThemeGtk& theme, RenderThem
 {
     unsigned stateFlags = 0;
     switch (renderObject.style().direction()) {
-    case RTL:
+    case TextDirection::RTL:
         stateFlags |= GTK_STATE_FLAG_DIR_RTL;
         break;
-    case LTR:
+    case TextDirection::LTR:
         stateFlags |= GTK_STATE_FLAG_DIR_LTR;
         break;
     }
@@ -419,9 +422,9 @@ static GtkStateFlags themePartStateFlags(const RenderThemeGtk& theme, RenderThem
 static GtkTextDirection gtkTextDirection(TextDirection direction)
 {
     switch (direction) {
-    case RTL:
+    case TextDirection::RTL:
         return GTK_TEXT_DIR_RTL;
-    case LTR:
+    case TextDirection::LTR:
         return GTK_TEXT_DIR_LTR;
     default:
         return GTK_TEXT_DIR_NONE;
@@ -803,8 +806,8 @@ LengthBox RenderThemeGtk::popupInternalPaddingBox(const RenderStyle& style) cons
     padding.bottom = comboContentsBox.bottom + boxContentsBox.bottom + buttonContentsBox.bottom + buttonBoxContentsBox.bottom;
 
     auto arrowSize = comboWidget.arrow().preferredSize();
-    return LengthBox(padding.top, padding.right + (style.direction() == LTR ? arrowSize.width() : 0),
-        padding.bottom, padding.left + (style.direction() == RTL ? arrowSize.width() : 0));
+    return LengthBox(padding.top, padding.right + (style.direction() == TextDirection::LTR ? arrowSize.width() : 0),
+        padding.bottom, padding.left + (style.direction() == TextDirection::RTL ? arrowSize.width() : 0));
 }
 
 bool RenderThemeGtk::paintMenuList(const RenderObject& renderObject, const PaintInfo& paintInfo, const FloatRect& rect)
@@ -845,8 +848,8 @@ LengthBox RenderThemeGtk::popupInternalPaddingBox(const RenderStyle& style) cons
     gtk_style_context_get_style(context.get(), "interior-focus", &interiorFocus, "focus-line-width", &focusWidth, "focus-padding", &focusPad, nullptr);
     focusWidth = interiorFocus ? focusWidth + focusPad : 0;
 
-    return { borderWidth.top + focusWidth, borderWidth.right + focusWidth + (style.direction() == LTR ? minArrowSize : 0),
-        borderWidth.bottom + focusWidth, borderWidth.left + focusWidth + (style.direction() == RTL ? minArrowSize : 0) };
+    return { borderWidth.top + focusWidth, borderWidth.right + focusWidth + (style.direction() == TextDirection::LTR ? minArrowSize : 0),
+        borderWidth.bottom + focusWidth, borderWidth.left + focusWidth + (style.direction() == TextDirection::RTL ? minArrowSize : 0) };
 }
 
 bool RenderThemeGtk::paintMenuList(const RenderObject& renderObject, const PaintInfo& paintInfo, const FloatRect& r)
@@ -921,6 +924,15 @@ bool RenderThemeGtk::paintMenuList(const RenderObject& renderObject, const Paint
 bool RenderThemeGtk::paintMenuListButtonDecorations(const RenderBox& object, const PaintInfo& info, const FloatRect& rect)
 {
     return paintMenuList(object, info, rect);
+}
+
+bool RenderThemeGtk::isControlStyled(const RenderStyle& style, const BorderData& border, const FillLayer& background, const Color& backgroundColor) const
+{
+    // To avoid rendering issues with dark themes, if text input elements have color styling, we don't style them with GTK.
+    if ((style.appearance() == TextFieldPart || style.appearance() == TextAreaPart || style.appearance() == SearchFieldPart) && style.color() != RenderStyle::initialColor())
+        return true;
+
+    return RenderTheme::isControlStyled(style, border, background, backgroundColor);
 }
 
 #if GTK_CHECK_VERSION(3, 20, 0)
@@ -1286,7 +1298,7 @@ bool RenderThemeGtk::paintSliderTrack(const RenderObject& renderObject, const Pa
     }
 
     if (part == SliderHorizontalPart) {
-        if (renderObject.style().direction() == RTL) {
+        if (renderObject.style().direction() == TextDirection::RTL) {
             contentsRect.move(thumbLocation.x(), 0);
             contentsRect.setWidth(contentsRect.width() - thumbLocation.x());
         } else
@@ -1304,7 +1316,7 @@ void RenderThemeGtk::adjustSliderThumbSize(RenderStyle& style, const Element*) c
     if (part != SliderThumbHorizontalPart && part != SliderThumbVerticalPart)
         return;
 
-    auto& sliderWidget = static_cast<RenderThemeSlider&>(RenderThemeWidget::getOrCreate(part == SliderHorizontalPart ? RenderThemeWidget::Type::HorizontalSlider : RenderThemeWidget::Type::VerticalSlider));
+    auto& sliderWidget = static_cast<RenderThemeSlider&>(RenderThemeWidget::getOrCreate(part == SliderThumbHorizontalPart ? RenderThemeWidget::Type::HorizontalSlider : RenderThemeWidget::Type::VerticalSlider));
     sliderWidget.scale().setState(GTK_STATE_FLAG_NORMAL);
     sliderWidget.trough().setState(GTK_STATE_FLAG_NORMAL);
 
@@ -1514,7 +1526,7 @@ bool RenderThemeGtk::paintProgressBar(const RenderObject& renderObject, const Pa
 #if GTK_CHECK_VERSION(3, 20, 0)
 RenderTheme::InnerSpinButtonLayout RenderThemeGtk::innerSpinButtonLayout(const RenderObject& renderObject) const
 {
-    return renderObject.style().direction() == RTL ? InnerSpinButtonLayout::HorizontalUpLeft : InnerSpinButtonLayout::HorizontalUpRight;
+    return renderObject.style().direction() == TextDirection::RTL ? InnerSpinButtonLayout::HorizontalUpLeft : InnerSpinButtonLayout::HorizontalUpRight;
 }
 
 void RenderThemeGtk::adjustInnerSpinButtonStyle(StyleResolver&, RenderStyle& style, const Element*) const
@@ -1536,12 +1548,12 @@ bool RenderThemeGtk::paintInnerSpinButton(const RenderObject& renderObject, cons
 
     IntRect iconRect = rect;
     iconRect.setWidth(iconRect.width() / 2);
-    if (renderObject.style().direction() == RTL)
+    if (renderObject.style().direction() == TextDirection::RTL)
         up.render(paintInfo.context().platformContext()->cr(), iconRect);
     else
         down.render(paintInfo.context().platformContext()->cr(), iconRect);
     iconRect.move(iconRect.width(), 0);
-    if (renderObject.style().direction() == RTL)
+    if (renderObject.style().direction() == TextDirection::RTL)
         down.render(paintInfo.context().platformContext()->cr(), iconRect);
     else
         up.render(paintInfo.context().platformContext()->cr(), iconRect);
@@ -1715,47 +1727,47 @@ static Color styleColor(RenderThemePart themePart, GtkStateFlags state, StyleCol
 }
 #endif // GTK_CHECK_VERSION(3, 20, 0)
 
-Color RenderThemeGtk::platformActiveSelectionBackgroundColor() const
+Color RenderThemeGtk::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(EntrySelection, static_cast<GtkStateFlags>(GTK_STATE_FLAG_SELECTED | GTK_STATE_FLAG_FOCUSED), StyleColorBackground);
 }
 
-Color RenderThemeGtk::platformInactiveSelectionBackgroundColor() const
+Color RenderThemeGtk::platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(EntrySelection, GTK_STATE_FLAG_SELECTED, StyleColorBackground);
 }
 
-Color RenderThemeGtk::platformActiveSelectionForegroundColor() const
+Color RenderThemeGtk::platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(EntrySelection, static_cast<GtkStateFlags>(GTK_STATE_FLAG_SELECTED | GTK_STATE_FLAG_FOCUSED), StyleColorForeground);
 }
 
-Color RenderThemeGtk::platformInactiveSelectionForegroundColor() const
+Color RenderThemeGtk::platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(EntrySelection, GTK_STATE_FLAG_SELECTED, StyleColorForeground);
 }
 
-Color RenderThemeGtk::platformActiveListBoxSelectionBackgroundColor() const
+Color RenderThemeGtk::platformActiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(ListBox, static_cast<GtkStateFlags>(GTK_STATE_FLAG_SELECTED | GTK_STATE_FLAG_FOCUSED), StyleColorBackground);
 }
 
-Color RenderThemeGtk::platformInactiveListBoxSelectionBackgroundColor() const
+Color RenderThemeGtk::platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(ListBox, GTK_STATE_FLAG_SELECTED, StyleColorBackground);
 }
 
-Color RenderThemeGtk::platformActiveListBoxSelectionForegroundColor() const
+Color RenderThemeGtk::platformActiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(ListBox, static_cast<GtkStateFlags>(GTK_STATE_FLAG_SELECTED | GTK_STATE_FLAG_FOCUSED), StyleColorForeground);
 }
 
-Color RenderThemeGtk::platformInactiveListBoxSelectionForegroundColor() const
+Color RenderThemeGtk::platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const
 {
     return styleColor(ListBox, GTK_STATE_FLAG_SELECTED, StyleColorForeground);
 }
 
-Color RenderThemeGtk::systemColor(CSSValueID cssValueId) const
+Color RenderThemeGtk::systemColor(CSSValueID cssValueId, OptionSet<StyleColor::Options> options) const
 {
     switch (cssValueId) {
     case CSSValueButtontext:
@@ -1763,7 +1775,7 @@ Color RenderThemeGtk::systemColor(CSSValueID cssValueId) const
     case CSSValueCaptiontext:
         return styleColor(Entry, GTK_STATE_FLAG_ACTIVE, StyleColorForeground);
     default:
-        return RenderTheme::systemColor(cssValueId);
+        return RenderTheme::systemColor(cssValueId, options);
     }
 }
 
@@ -1964,9 +1976,9 @@ Seconds RenderThemeGtk::animationRepeatIntervalForProgressBar(RenderProgress&) c
     return progressAnimationInterval;
 }
 
-double RenderThemeGtk::animationDurationForProgressBar(RenderProgress&) const
+Seconds RenderThemeGtk::animationDurationForProgressBar(RenderProgress&) const
 {
-    return progressAnimationInterval.value() * progressAnimationFrames * 2; // "2" for back and forth;
+    return progressAnimationInterval * progressAnimationFrames * 2; // "2" for back and forth;
 }
 
 IntRect RenderThemeGtk::calculateProgressRect(const RenderObject& renderObject, const IntRect& fullBarRect)
@@ -1975,7 +1987,7 @@ IntRect RenderThemeGtk::calculateProgressRect(const RenderObject& renderObject, 
     const auto& renderProgress = downcast<RenderProgress>(renderObject);
     if (renderProgress.isDeterminate()) {
         int progressWidth = progressRect.width() * renderProgress.position();
-        if (renderObject.style().direction() == RTL)
+        if (renderObject.style().direction() == TextDirection::RTL)
             progressRect.setX(progressRect.x() + progressRect.width() - progressWidth);
         progressRect.setWidth(progressWidth);
         return progressRect;

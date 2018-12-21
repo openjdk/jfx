@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -250,31 +250,6 @@ const Identifier& BytecodeDumper<Block>::identifier(int index) const
     return block()->identifier(index);
 }
 
-static CString regexpToSourceString(RegExp* regExp)
-{
-    char postfix[7] = { '/', 0, 0, 0, 0, 0, 0 };
-    int index = 1;
-    if (regExp->global())
-        postfix[index++] = 'g';
-    if (regExp->ignoreCase())
-        postfix[index++] = 'i';
-    if (regExp->multiline())
-        postfix[index] = 'm';
-    if (regExp->dotAll())
-        postfix[index++] = 's';
-    if (regExp->unicode())
-        postfix[index++] = 'u';
-    if (regExp->sticky())
-        postfix[index++] = 'y';
-
-    return toCString("/", regExp->pattern().impl(), postfix);
-}
-
-static CString regexpName(int re, RegExp* regexp)
-{
-    return toCString(regexpToSourceString(regexp), "(@re", re, ")");
-}
-
 template<class Instruction>
 static void printLocationAndOp(PrintStream& out, int location, const Instruction*&, const char* op)
 {
@@ -427,7 +402,7 @@ static void dumpChain(PrintStream& out, StructureChain* chain, const Identifier&
 }
 
 template<class Block>
-void BytecodeDumper<Block>::printGetByIdCacheStatus(PrintStream& out, int location, const StubInfoMap& map)
+void BytecodeDumper<Block>::printGetByIdCacheStatus(PrintStream& out, int location, const ICStatusMap& statusMap)
 {
     const auto* instruction = instructionsBegin() + location;
 
@@ -447,7 +422,7 @@ void BytecodeDumper<Block>::printGetByIdCacheStatus(PrintStream& out, int locati
     }
 
 #if ENABLE(JIT)
-    if (StructureStubInfo* stubPtr = map.get(CodeOrigin(location))) {
+    if (StructureStubInfo* stubPtr = statusMap.get(CodeOrigin(location)).stubInfo) {
         StructureStubInfo& stubInfo = *stubPtr;
         if (stubInfo.resetByGC)
             out.print(" (Reset By GC)");
@@ -472,6 +447,9 @@ void BytecodeDumper<Block>::printGetByIdCacheStatus(PrintStream& out, int locati
         case CacheType::ArrayLength:
             out.printf("ArrayLength");
             break;
+        case CacheType::StringLength:
+            out.printf("StringLength");
+            break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
             break;
@@ -488,12 +466,12 @@ void BytecodeDumper<Block>::printGetByIdCacheStatus(PrintStream& out, int locati
         out.printf(")");
     }
 #else
-    UNUSED_PARAM(map);
+    UNUSED_PARAM(statusMap);
 #endif
 }
 
 template<class Block>
-void BytecodeDumper<Block>::printPutByIdCacheStatus(PrintStream& out, int location, const StubInfoMap& map)
+void BytecodeDumper<Block>::printPutByIdCacheStatus(PrintStream& out, int location, const ICStatusMap& statusMap)
 {
     const auto* instruction = instructionsBegin() + location;
 
@@ -521,7 +499,7 @@ void BytecodeDumper<Block>::printPutByIdCacheStatus(PrintStream& out, int locati
     }
 
 #if ENABLE(JIT)
-    if (StructureStubInfo* stubPtr = map.get(CodeOrigin(location))) {
+    if (StructureStubInfo* stubPtr = statusMap.get(CodeOrigin(location)).stubInfo) {
         StructureStubInfo& stubInfo = *stubPtr;
         if (stubInfo.resetByGC)
             out.print(" (Reset By GC)");
@@ -547,26 +525,79 @@ void BytecodeDumper<Block>::printPutByIdCacheStatus(PrintStream& out, int locati
         out.printf(")");
     }
 #else
-    UNUSED_PARAM(map);
+    UNUSED_PARAM(statusMap);
+#endif
+}
+
+template<class Block>
+void BytecodeDumper<Block>::printInByIdCacheStatus(PrintStream& out, int location, const ICStatusMap& statusMap)
+{
+    const auto* instruction = instructionsBegin() + location;
+
+    const Identifier& ident = identifier(instruction[3].u.operand);
+
+    UNUSED_PARAM(ident); // tell the compiler to shut up in certain platform configurations.
+
+#if ENABLE(JIT)
+    if (StructureStubInfo* stubPtr = statusMap.get(CodeOrigin(location)).stubInfo) {
+        StructureStubInfo& stubInfo = *stubPtr;
+        if (stubInfo.resetByGC)
+            out.print(" (Reset By GC)");
+
+        out.printf(" jit(");
+
+        Structure* baseStructure = nullptr;
+        PolymorphicAccess* stub = nullptr;
+
+        switch (stubInfo.cacheType) {
+        case CacheType::InByIdSelf:
+            out.printf("self");
+            baseStructure = stubInfo.u.byIdSelf.baseObjectStructure.get();
+            break;
+        case CacheType::Stub:
+            out.printf("stub");
+            stub = stubInfo.u.stub;
+            break;
+        case CacheType::Unset:
+            out.printf("unset");
+            break;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
+
+        if (baseStructure) {
+            out.printf(", ");
+            dumpStructure(out, "struct", baseStructure, ident);
+        }
+
+        if (stub)
+            out.print(", ", *stub);
+
+        out.printf(")");
+    }
+#else
+    UNUSED_PARAM(out);
+    UNUSED_PARAM(statusMap);
 #endif
 }
 
 #if ENABLE(JIT)
 template<typename Block>
-void BytecodeDumper<Block>::dumpCallLinkStatus(PrintStream&, unsigned, const CallLinkInfoMap&)
+void BytecodeDumper<Block>::dumpCallLinkStatus(PrintStream&, unsigned, const ICStatusMap&)
 {
 }
 
 template<>
-void BytecodeDumper<CodeBlock>::dumpCallLinkStatus(PrintStream& out, unsigned location, const CallLinkInfoMap& map)
+void BytecodeDumper<CodeBlock>::dumpCallLinkStatus(PrintStream& out, unsigned location, const ICStatusMap& statusMap)
 {
     if (block()->jitType() != JITCode::FTLJIT)
-        out.print(" status(", CallLinkStatus::computeFor(block(), location, map), ")");
+        out.print(" status(", CallLinkStatus::computeFor(block(), location, statusMap), ")");
 }
 #endif
 
 template<class Block>
-void BytecodeDumper<Block>::printCallOp(PrintStream& out, int location, const typename Block::Instruction*& it, const char* op, CacheDumpMode cacheDumpMode, bool& hasPrintedProfiling, const CallLinkInfoMap& map)
+void BytecodeDumper<Block>::printCallOp(PrintStream& out, int location, const typename Block::Instruction*& it, const char* op, CacheDumpMode cacheDumpMode, bool& hasPrintedProfiling, const ICStatusMap& statusMap)
 {
     int dst = (++it)->u.operand;
     int func = (++it)->u.operand;
@@ -585,7 +616,7 @@ void BytecodeDumper<Block>::printCallOp(PrintStream& out, int location, const ty
                 out.printf(" llint(%p)", object);
         }
 #if ENABLE(JIT)
-        if (CallLinkInfo* info = map.get(CodeOrigin(location))) {
+        if (CallLinkInfo* info = statusMap.get(CodeOrigin(location)).callLinkInfo) {
             if (info->haveLastSeenCallee()) {
                 JSObject* object = info->lastSeenCallee();
                 if (auto* function = jsDynamicCast<JSFunction*>(*vm(), object))
@@ -595,9 +626,9 @@ void BytecodeDumper<Block>::printCallOp(PrintStream& out, int location, const ty
             }
         }
 
-        dumpCallLinkStatus(out, location, map);
+        dumpCallLinkStatus(out, location, statusMap);
 #else
-        UNUSED_PARAM(map);
+        UNUSED_PARAM(statusMap);
 #endif
     }
     ++it;
@@ -625,7 +656,7 @@ void BytecodeDumper<Block>::printLocationOpAndRegisterOperand(PrintStream& out, 
 }
 
 template<class Block>
-void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block::Instruction* begin, const typename Block::Instruction*& it, const StubInfoMap& stubInfos, const CallLinkInfoMap& callLinkInfos)
+void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block::Instruction* begin, const typename Block::Instruction*& it, const ICStatusMap& statusMap)
 {
     int location = it - begin;
     bool hasPrintedProfiling = false;
@@ -774,11 +805,7 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
         int r0 = (++it)->u.operand;
         int re0 = (++it)->u.operand;
         printLocationAndOp(out, location, it, "new_regexp");
-        out.printf("%s, ", registerName(r0).data());
-        if (r0 >=0 && r0 < (int)block()->numberOfRegExps())
-            out.printf("%s", regexpName(re0, block()->regexp(re0)).data());
-        else
-            out.printf("bad_regexp(%d)", re0);
+        out.printf("%s, %s", registerName(r0).data(), registerName(re0).data());
         break;
     }
     case op_mov: {
@@ -1012,8 +1039,17 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
         printUnaryOp(out, location, it, "is_function");
         break;
     }
-    case op_in: {
-        printBinaryOp(out, location, it, "in");
+    case op_in_by_id: {
+        int r0 = (++it)->u.operand;
+        int r1 = (++it)->u.operand;
+        int id0 = (++it)->u.operand;
+        printLocationAndOp(out, location, it, "in_by_id");
+        out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
+        printInByIdCacheStatus(out, location, statusMap);
+        break;
+    }
+    case op_in_by_val: {
+        printBinaryOp(out, location, it, "in_by_val");
         dumpArrayProfiling(out, it, hasPrintedProfiling);
         break;
     }
@@ -1033,7 +1069,7 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
         printLocationAndOp(out, location, it, "get_by_id_direct");
         out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
         it += 2; // Increment up to the value profiler.
-        printGetByIdCacheStatus(out, location, stubInfos);
+        printGetByIdCacheStatus(out, location, statusMap);
         dumpValueProfiling(out, it, hasPrintedProfiling);
         break;
     }
@@ -1042,7 +1078,7 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
     case op_get_by_id_unset:
     case op_get_array_length: {
         printGetByIdOp(out, location, it);
-        printGetByIdCacheStatus(out, location, stubInfos);
+        printGetByIdCacheStatus(out, location, statusMap);
         dumpValueProfiling(out, it, hasPrintedProfiling);
         break;
     }
@@ -1068,7 +1104,7 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
     }
     case op_put_by_id: {
         printPutByIdOp(out, location, it, "put_by_id");
-        printPutByIdCacheStatus(out, location, stubInfos);
+        printPutByIdCacheStatus(out, location, statusMap);
         break;
     }
     case op_put_by_id_with_this: {
@@ -1198,14 +1234,6 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
         out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
         break;
     }
-    case op_put_by_index: {
-        int r0 = (++it)->u.operand;
-        unsigned n0 = (++it)->u.operand;
-        int r1 = (++it)->u.operand;
-        printLocationAndOp(out, location, it, "put_by_index");
-        out.printf("%s, %u, %s", registerName(r0).data(), n0, registerName(r1).data());
-        break;
-    }
     case op_jmp: {
         int offset = (++it)->u.operand;
         printLocationAndOp(out, location, it, "jmp");
@@ -1267,6 +1295,22 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
     }
     case op_jngreatereq: {
         printCompareJump(out, begin, it, location, "jngreatereq");
+        break;
+    }
+    case op_jeq: {
+        printCompareJump(out, begin, it, location, "jeq");
+        break;
+    }
+    case op_jneq: {
+        printCompareJump(out, begin, it, location, "jneq");
+        break;
+    }
+    case op_jstricteq: {
+        printCompareJump(out, begin, it, location, "jstricteq");
+        break;
+    }
+    case op_jnstricteq: {
+        printCompareJump(out, begin, it, location, "jnstricteq");
         break;
     }
     case op_jbelow: {
@@ -1406,15 +1450,15 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
         break;
     }
     case op_call: {
-        printCallOp(out, location, it, "call", DumpCaches, hasPrintedProfiling, callLinkInfos);
+        printCallOp(out, location, it, "call", DumpCaches, hasPrintedProfiling, statusMap);
         break;
     }
     case op_tail_call: {
-        printCallOp(out, location, it, "tail_call", DumpCaches, hasPrintedProfiling, callLinkInfos);
+        printCallOp(out, location, it, "tail_call", DumpCaches, hasPrintedProfiling, statusMap);
         break;
     }
     case op_call_eval: {
-        printCallOp(out, location, it, "call_eval", DontDumpCaches, hasPrintedProfiling, callLinkInfos);
+        printCallOp(out, location, it, "call_eval", DontDumpCaches, hasPrintedProfiling, statusMap);
         break;
     }
 
@@ -1453,7 +1497,7 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
         break;
     }
     case op_construct: {
-        printCallOp(out, location, it, "construct", DumpCaches, hasPrintedProfiling, callLinkInfos);
+        printCallOp(out, location, it, "construct", DumpCaches, hasPrintedProfiling, statusMap);
         break;
     }
     case op_strcat: {
@@ -1708,10 +1752,10 @@ void BytecodeDumper<Block>::dumpBytecode(PrintStream& out, const typename Block:
 }
 
 template<class Block>
-void BytecodeDumper<Block>::dumpBytecode(Block* block, PrintStream& out, const typename Block::Instruction* begin, const typename Block::Instruction*& it, const StubInfoMap& stubInfos, const CallLinkInfoMap& callLinkInfos)
+void BytecodeDumper<Block>::dumpBytecode(Block* block, PrintStream& out, const typename Block::Instruction* begin, const typename Block::Instruction*& it, const ICStatusMap& statusMap)
 {
     BytecodeDumper dumper(block, begin);
-    dumper.dumpBytecode(out, begin, it, stubInfos, callLinkInfos);
+    dumper.dumpBytecode(out, begin, it, statusMap);
 }
 
 template<class Block>
@@ -1749,19 +1793,6 @@ void BytecodeDumper<Block>::dumpConstants(PrintStream& out)
             out.printf("   k%u = %s%s\n", static_cast<unsigned>(i), toCString(constant.get()).data(), sourceCodeRepresentationDescription);
             ++i;
         }
-    }
-}
-
-template<class Block>
-void BytecodeDumper<Block>::dumpRegExps(PrintStream& out)
-{
-    if (size_t count = block()->numberOfRegExps()) {
-        out.printf("\nm_regexps:\n");
-        size_t i = 0;
-        do {
-            out.printf("  re%u = %s\n", static_cast<unsigned>(i), regexpToSourceString(block()->regexp(i)).data());
-            ++i;
-        } while (i < count);
     }
 }
 
@@ -1820,7 +1851,7 @@ void BytecodeDumper<Block>::dumpStringSwitchJumpTables(PrintStream& out)
 }
 
 template<class Block>
-void BytecodeDumper<Block>::dumpBlock(Block* block, const typename Block::UnpackedInstructions& instructions, PrintStream& out, const StubInfoMap& stubInfos, const CallLinkInfoMap& callLinkInfos)
+void BytecodeDumper<Block>::dumpBlock(Block* block, const typename Block::UnpackedInstructions& instructions, PrintStream& out, const ICStatusMap& statusMap)
 {
     size_t instructionCount = 0;
 
@@ -1832,7 +1863,7 @@ void BytecodeDumper<Block>::dumpBlock(Block* block, const typename Block::Unpack
         ": %lu m_instructions; %lu bytes; %d parameter(s); %d callee register(s); %d variable(s)",
         static_cast<unsigned long>(instructions.size()),
         static_cast<unsigned long>(instructions.size() * sizeof(Instruction)),
-        block->numParameters(), block->numCalleeLocals(), block->m_numVars);
+        block->numParameters(), block->numCalleeLocals(), block->numVars());
     out.print("; scope at ", block->scopeRegister());
     out.printf("\n");
 
@@ -1840,11 +1871,10 @@ void BytecodeDumper<Block>::dumpBlock(Block* block, const typename Block::Unpack
     const auto* end = instructions.end();
     BytecodeDumper<Block> dumper(block, begin);
     for (const auto* it = begin; it != end; ++it)
-        dumper.dumpBytecode(out, begin, it, stubInfos, callLinkInfos);
+        dumper.dumpBytecode(out, begin, it, statusMap);
 
     dumper.dumpIdentifiers(out);
     dumper.dumpConstants(out);
-    dumper.dumpRegExps(out);
     dumper.dumpExceptionHandlers(out);
     dumper.dumpSwitchJumpTables(out);
     dumper.dumpStringSwitchJumpTables(out);

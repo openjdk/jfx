@@ -96,13 +96,6 @@ set(WebCore_FORWARDING_HEADERS_FILES
     platform/SuddenTermination.h
     platform/URL.h
 
-    platform/network/BlobRegistryImpl.h
-    platform/network/NetworkStorageSession.h
-    platform/network/PlatformCookieJar.h
-    platform/network/PingHandle.h
-    platform/network/ResourceLoadPriority.h
-    platform/network/java/ResourceRequest.h
-
     svg/SVGTests.h
 )
 
@@ -134,6 +127,8 @@ set(WebCore_FORWARDING_HEADERS_DIRECTORIES
     rendering
     platform/mediastream/libwebrtc
     platform/graphics
+    platform/network
+    platform/network/java
     platform/sql
     platform/text
     storage
@@ -151,11 +146,115 @@ list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
     "SourcesPlatformJava.txt"
 )
 
-list(APPEND JFXWebKit_UNIFIED_SOURCE_LIST_FILES
-    "SourcesJava.txt"
-)
-
 set(JFXWebKit_SOURCES
+    # bindings/java/dom3/JavaDOMSelection.cpp
+    # bindings/java/dom3/JavaWheelEvent.cpp
+    bindings/java/dom3/JavaAttr.cpp
+    bindings/java/dom3/JavaCDATASection.cpp
+    bindings/java/dom3/JavaCSSCharsetRule.cpp
+    bindings/java/dom3/JavaCSSFontFaceRule.cpp
+    bindings/java/dom3/JavaCSSImportRule.cpp
+    bindings/java/dom3/JavaCSSMediaRule.cpp
+    bindings/java/dom3/JavaCSSPageRule.cpp
+    bindings/java/dom3/JavaCSSPrimitiveValue.cpp
+    bindings/java/dom3/JavaCSSRule.cpp
+    bindings/java/dom3/JavaCSSRuleList.cpp
+    bindings/java/dom3/JavaCSSStyleDeclaration.cpp
+    bindings/java/dom3/JavaCSSStyleRule.cpp
+    bindings/java/dom3/JavaCSSStyleSheet.cpp
+    bindings/java/dom3/JavaCSSUnknownRule.cpp
+    bindings/java/dom3/JavaCSSValue.cpp
+    bindings/java/dom3/JavaCSSValueList.cpp
+    bindings/java/dom3/JavaCharacterData.cpp
+    bindings/java/dom3/JavaComment.cpp
+    bindings/java/dom3/JavaCounter.cpp
+    bindings/java/dom3/JavaDOMImplementation.cpp
+    bindings/java/dom3/JavaDOMStringList.cpp
+    bindings/java/dom3/JavaDOMWindow.cpp
+    bindings/java/dom3/JavaDocument.cpp
+    bindings/java/dom3/JavaDocumentFragment.cpp
+    bindings/java/dom3/JavaDocumentType.cpp
+    bindings/java/dom3/JavaElement.cpp
+    bindings/java/dom3/JavaEntity.cpp
+    bindings/java/dom3/JavaEntityReference.cpp
+    bindings/java/dom3/JavaEvent.cpp
+    bindings/java/dom3/JavaEventTarget.cpp
+    bindings/java/dom3/JavaHTMLAnchorElement.cpp
+    bindings/java/dom3/JavaHTMLAppletElement.cpp
+    bindings/java/dom3/JavaHTMLAreaElement.cpp
+    bindings/java/dom3/JavaHTMLBRElement.cpp
+    bindings/java/dom3/JavaHTMLBaseElement.cpp
+    bindings/java/dom3/JavaHTMLBaseFontElement.cpp
+    bindings/java/dom3/JavaHTMLBodyElement.cpp
+    bindings/java/dom3/JavaHTMLButtonElement.cpp
+    bindings/java/dom3/JavaHTMLCollection.cpp
+    bindings/java/dom3/JavaHTMLDListElement.cpp
+    bindings/java/dom3/JavaHTMLDirectoryElement.cpp
+    bindings/java/dom3/JavaHTMLDivElement.cpp
+    bindings/java/dom3/JavaHTMLDocument.cpp
+    bindings/java/dom3/JavaHTMLElement.cpp
+    bindings/java/dom3/JavaHTMLFieldSetElement.cpp
+    bindings/java/dom3/JavaHTMLFontElement.cpp
+    bindings/java/dom3/JavaHTMLFormElement.cpp
+    bindings/java/dom3/JavaHTMLFrameElement.cpp
+    bindings/java/dom3/JavaHTMLFrameSetElement.cpp
+    bindings/java/dom3/JavaHTMLHRElement.cpp
+    bindings/java/dom3/JavaHTMLHeadElement.cpp
+    bindings/java/dom3/JavaHTMLHeadingElement.cpp
+    bindings/java/dom3/JavaHTMLHtmlElement.cpp
+    bindings/java/dom3/JavaHTMLIFrameElement.cpp
+    bindings/java/dom3/JavaHTMLImageElement.cpp
+    bindings/java/dom3/JavaHTMLInputElement.cpp
+    bindings/java/dom3/JavaHTMLLIElement.cpp
+    bindings/java/dom3/JavaHTMLLabelElement.cpp
+    bindings/java/dom3/JavaHTMLLegendElement.cpp
+    bindings/java/dom3/JavaHTMLLinkElement.cpp
+    bindings/java/dom3/JavaHTMLMapElement.cpp
+    bindings/java/dom3/JavaHTMLMenuElement.cpp
+    bindings/java/dom3/JavaHTMLMetaElement.cpp
+    bindings/java/dom3/JavaHTMLModElement.cpp
+    bindings/java/dom3/JavaHTMLOListElement.cpp
+    bindings/java/dom3/JavaHTMLObjectElement.cpp
+    bindings/java/dom3/JavaHTMLOptGroupElement.cpp
+    bindings/java/dom3/JavaHTMLOptionElement.cpp
+    bindings/java/dom3/JavaHTMLOptionsCollection.cpp
+    bindings/java/dom3/JavaHTMLParagraphElement.cpp
+    bindings/java/dom3/JavaHTMLParamElement.cpp
+    bindings/java/dom3/JavaHTMLPreElement.cpp
+    bindings/java/dom3/JavaHTMLQuoteElement.cpp
+    bindings/java/dom3/JavaHTMLScriptElement.cpp
+    bindings/java/dom3/JavaHTMLSelectElement.cpp
+    bindings/java/dom3/JavaHTMLStyleElement.cpp
+    bindings/java/dom3/JavaHTMLTableCaptionElement.cpp
+    bindings/java/dom3/JavaHTMLTableCellElement.cpp
+    bindings/java/dom3/JavaHTMLTableColElement.cpp
+    bindings/java/dom3/JavaHTMLTableElement.cpp
+    bindings/java/dom3/JavaHTMLTableRowElement.cpp
+    bindings/java/dom3/JavaHTMLTableSectionElement.cpp
+    bindings/java/dom3/JavaHTMLTextAreaElement.cpp
+    bindings/java/dom3/JavaHTMLTitleElement.cpp
+    bindings/java/dom3/JavaHTMLUListElement.cpp
+    bindings/java/dom3/JavaKeyboardEvent.cpp
+    bindings/java/dom3/JavaMediaList.cpp
+    bindings/java/dom3/JavaMouseEvent.cpp
+    bindings/java/dom3/JavaMutationEvent.cpp
+    bindings/java/dom3/JavaNamedNodeMap.cpp
+    bindings/java/dom3/JavaNode.cpp
+    bindings/java/dom3/JavaNodeFilter.cpp
+    bindings/java/dom3/JavaNodeIterator.cpp
+    bindings/java/dom3/JavaNodeList.cpp
+    bindings/java/dom3/JavaProcessingInstruction.cpp
+    bindings/java/dom3/JavaRGBColor.cpp
+    bindings/java/dom3/JavaRange.cpp
+    bindings/java/dom3/JavaRect.cpp
+    bindings/java/dom3/JavaStyleSheet.cpp
+    bindings/java/dom3/JavaStyleSheetList.cpp
+    bindings/java/dom3/JavaText.cpp
+    bindings/java/dom3/JavaTreeWalker.cpp
+    bindings/java/dom3/JavaUIEvent.cpp
+    bindings/java/dom3/JavaXPathExpression.cpp
+    bindings/java/dom3/JavaXPathNSResolver.cpp
+    bindings/java/dom3/JavaXPathResult.cpp
     platform/java/ColorChooserJava.cpp
     platform/java/ContextMenuClientJava.cpp
     platform/java/ContextMenuJava.cpp
@@ -204,7 +303,6 @@ else ()
 endif()
 
 
-WEBKIT_COMPUTE_SOURCES(JFXWebKit)
 WEBKIT_WRAP_SOURCELIST(${JFXWebKit_SOURCES})
 WEBKIT_FRAMEWORK_DECLARE(JFXWebKit)
 

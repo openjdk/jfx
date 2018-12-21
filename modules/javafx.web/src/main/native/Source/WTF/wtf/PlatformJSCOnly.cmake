@@ -10,15 +10,27 @@ if (WIN32)
         win/CPUTimeWin.cpp
         win/LanguageWin.cpp
     )
+    list(APPEND WTF_PUBLIC_HEADERS
+        text/win/WCharStringExtras.h
+    )
 else ()
     list(APPEND WTF_SOURCES
         UniStdExtras.cpp
 
         text/unix/TextBreakIteratorInternalICUUnix.cpp
 
-        unix/CPUTimeUnix.cpp
         unix/LanguageUnix.cpp
     )
+    if (WTF_OS_FUCHSIA)
+        list(APPEND WTF_SOURCES
+            fuchsia/CPUTimeFuchsia.cpp
+        )
+    else ()
+        list(APPEND WTF_SOURCES
+            unix/CPUTimeUnix.cpp
+        )
+    endif ()
+
 endif ()
 
 if (WIN32)

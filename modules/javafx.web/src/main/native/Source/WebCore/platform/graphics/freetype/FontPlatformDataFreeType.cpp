@@ -265,7 +265,7 @@ bool FontPlatformData::platformIsEqual(const FontPlatformData& other) const
     return m_scaledFont == other.m_scaledFont;
 }
 
-#ifndef NDEBUG
+#if !LOG_DISABLED
 String FontPlatformData::description() const
 {
     return String();
@@ -303,10 +303,10 @@ void FontPlatformData::buildScaledFont(cairo_font_face_t* fontFace)
         static const float syntheticObliqueSkew = -tanf(14 * acosf(0) / 90);
         static const cairo_matrix_t skew = {1, 0, syntheticObliqueSkew, 1, 0, 0};
         static const cairo_matrix_t verticalSkew = {1, -syntheticObliqueSkew, 0, 1, 0, 0};
-        cairo_matrix_multiply(&fontMatrix, m_orientation == Vertical ? &verticalSkew : &skew, &fontMatrix);
+        cairo_matrix_multiply(&fontMatrix, m_orientation == FontOrientation::Vertical ? &verticalSkew : &skew, &fontMatrix);
     }
 
-    if (m_orientation == Vertical) {
+    if (m_orientation == FontOrientation::Vertical) {
         // The resulting transformation matrix for vertical glyphs (V) is a
         // combination of rotation (R) and translation (T) applied on the
         // horizontal matrix (H). V = H . R . T, where R rotates by -90 degrees

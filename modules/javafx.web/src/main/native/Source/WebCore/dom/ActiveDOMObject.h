@@ -30,8 +30,16 @@
 #include <wtf/Assertions.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
+#include <wtf/Threading.h>
 
 namespace WebCore {
+
+enum class ReasonForSuspension {
+    JavaScriptDebuggerPaused,
+    WillDeferLoading,
+    PageCache,
+    PageWillBeSuspended,
+};
 
 class ActiveDOMObject : public ContextDestructionObserver {
 public:
@@ -49,13 +57,6 @@ public:
     // However, the suspend function will sometimes be called even if canSuspendForDocumentSuspension() returns false.
     // That happens in step-by-step JS debugging for example - in this case it would be incorrect
     // to stop the object. Exact semantics of suspend is up to the object in cases like that.
-
-    enum ReasonForSuspension {
-        JavaScriptDebuggerPaused,
-        WillDeferLoading,
-        PageCache,
-        PageWillBeSuspended,
-    };
 
     virtual const char* activeDOMObjectName() const = 0;
 
@@ -109,6 +110,8 @@ public:
         return adoptRef(*new PendingActivity<T>(thisObject));
     }
 
+    bool isContextStopped() const;
+
 protected:
     explicit ActiveDOMObject(ScriptExecutionContext*);
     virtual ~ActiveDOMObject();
@@ -117,6 +120,7 @@ private:
     unsigned m_pendingActivityCount;
 #if !ASSERT_DISABLED
     bool m_suspendIfNeededWasCalled;
+    Ref<Thread> m_creationThread { Thread::current() };
 #endif
 };
 

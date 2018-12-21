@@ -36,33 +36,18 @@
 #include "CSSFontSelector.h"
 #include "CSSParser.h"
 #include "CSSPropertyNames.h"
-#include "FloatQuad.h"
-#include "HTMLImageElement.h"
-#include "HTMLVideoElement.h"
-#include "ImageBitmap.h"
 #include "ImageBuffer.h"
 #include "ImageData.h"
 #include "InspectorInstrumentation.h"
 #include "Path2D.h"
-#include "RenderElement.h"
-#include "RenderImage.h"
-#include "RenderLayer.h"
 #include "RenderTheme.h"
-#include "SecurityOrigin.h"
-#include "StrokeStyleApplier.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
 #include "TextMetrics.h"
 #include "TextRun.h"
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/MathExtras.h>
-#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/TextStream.h>
-
-#if USE(CG) && !PLATFORM(IOS)
-#include <ApplicationServices/ApplicationServices.h>
-#endif
 
 namespace WebCore {
 
@@ -99,7 +84,7 @@ void CanvasRenderingContext2D::drawFocusIfNeededInternal(const Path& path, Eleme
     auto* context = drawingContext();
     if (!element.focused() || !state().hasInvertibleTransform || path.isEmpty() || !element.isDescendantOf(canvas()) || !context)
         return;
-    context->drawFocusRing(path, 1, 1, RenderTheme::focusRingColor());
+    context->drawFocusRing(path, 1, 1, RenderTheme::focusRingColor(element.document().styleColorOptions()));
 }
 
 String CanvasRenderingContext2D::font() const
@@ -165,14 +150,14 @@ void CanvasRenderingContext2D::setFont(const String& newFont)
     document.updateStyleIfNeeded();
 
     if (auto* computedStyle = canvas().computedStyle())
-        newStyle->setFontDescription(computedStyle->fontDescription());
+        newStyle->setFontDescription(FontCascadeDescription { computedStyle->fontDescription() });
     else {
         FontCascadeDescription defaultFontDescription;
         defaultFontDescription.setOneFamily(DefaultFontFamily);
         defaultFontDescription.setSpecifiedSize(DefaultFontSize);
         defaultFontDescription.setComputedSize(DefaultFontSize);
 
-        newStyle->setFontDescription(defaultFontDescription);
+        newStyle->setFontDescription(WTFMove(defaultFontDescription));
     }
 
     newStyle->fontCascade().update(&document.fontSelector());
@@ -310,21 +295,21 @@ inline TextDirection CanvasRenderingContext2D::toTextDirection(Direction directi
         *computedStyle = style;
     switch (direction) {
     case Direction::Inherit:
-        return style ? style->direction() : LTR;
+        return style ? style->direction() : TextDirection::LTR;
     case Direction::Rtl:
-        return RTL;
+        return TextDirection::RTL;
     case Direction::Ltr:
-        return LTR;
+        return TextDirection::LTR;
     }
     ASSERT_NOT_REACHED();
-    return LTR;
+    return TextDirection::LTR;
 }
 
 CanvasDirection CanvasRenderingContext2D::direction() const
 {
     if (state().direction == Direction::Inherit)
         canvas().document().updateStyleIfNeeded();
-    return toTextDirection(state().direction) == RTL ? CanvasDirection::Rtl : CanvasDirection::Ltr;
+    return toTextDirection(state().direction) == TextDirection::RTL ? CanvasDirection::Rtl : CanvasDirection::Ltr;
 }
 
 void CanvasRenderingContext2D::setDirection(CanvasDirection direction)
@@ -364,7 +349,7 @@ static void normalizeSpaces(String& text)
         return;
 
     unsigned textLength = text.length();
-    StringVector<UChar> charVector(textLength);
+    Vector<UChar> charVector(textLength);
     StringView(text).getCharactersWithUpconvert(charVector.data());
 
     charVector[i++] = ' ';
@@ -444,7 +429,7 @@ FloatPoint CanvasRenderingContext2D::textOffset(float width, TextDirection direc
         break;
     }
 
-    bool isRTL = direction == RTL;
+    bool isRTL = direction == TextDirection::RTL;
     auto align = state().textAlign;
     if (align == StartTextAlign)
         align = isRTL ? RightTextAlign : LeftTextAlign;

@@ -61,19 +61,22 @@ void CachedRawResource::updateBuffer(SharedBuffer& data)
         return;
 
     CachedResourceHandle<CachedRawResource> protectedThis(this);
-    ASSERT(dataBufferingPolicy() == BufferData);
+    ASSERT(dataBufferingPolicy() == DataBufferingPolicy::BufferData);
     m_data = &data;
 
-    auto incrementalData = calculateIncrementalDataChunk(&data);
-    setEncodedSize(data.size());
-    if (incrementalData) {
-        SetForScope<bool> notifyScope(m_inIncrementalDataNotify, true);
-        notifyClientsDataWasReceived(incrementalData->data(), incrementalData->size());
-    }
+    auto previousDataSize = encodedSize();
+    while (data.size() > previousDataSize) {
+        auto incrementalData = data.getSomeData(previousDataSize);
+        previousDataSize += incrementalData.size();
 
-    if (dataBufferingPolicy() == DoNotBufferData) {
+        SetForScope<bool> notifyScope(m_inIncrementalDataNotify, true);
+        notifyClientsDataWasReceived(incrementalData.data(), incrementalData.size());
+    }
+    setEncodedSize(data.size());
+
+    if (dataBufferingPolicy() == DataBufferingPolicy::DoNotBufferData) {
         if (m_loader)
-            m_loader->setDataBufferingPolicy(DoNotBufferData);
+            m_loader->setDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
         clear();
     } else
         CachedResource::updateBuffer(data);
@@ -86,7 +89,7 @@ void CachedRawResource::updateBuffer(SharedBuffer& data)
 
 void CachedRawResource::updateData(const char* data, unsigned length)
 {
-    ASSERT(dataBufferingPolicy() == DoNotBufferData);
+    ASSERT(dataBufferingPolicy() == DataBufferingPolicy::DoNotBufferData);
     notifyClientsDataWasReceived(data, length);
     CachedResource::updateData(data, length);
 }
@@ -101,7 +104,7 @@ void CachedRawResource::finishLoading(SharedBuffer* data)
     };
     CachedResourceHandle<CachedRawResource> protectedThis(this);
     DataBufferingPolicy dataBufferingPolicy = this->dataBufferingPolicy();
-    if (dataBufferingPolicy == BufferData) {
+    if (dataBufferingPolicy == DataBufferingPolicy::BufferData) {
         m_data = data;
 
         if (auto incrementalData = calculateIncrementalDataChunk(data)) {
@@ -115,9 +118,9 @@ void CachedRawResource::finishLoading(SharedBuffer* data)
 #endif
 
     CachedResource::finishLoading(data);
-    if (dataBufferingPolicy == BufferData && this->dataBufferingPolicy() == DoNotBufferData) {
+    if (dataBufferingPolicy == DataBufferingPolicy::BufferData && this->dataBufferingPolicy() == DataBufferingPolicy::DoNotBufferData) {
         if (m_loader)
-            m_loader->setDataBufferingPolicy(DoNotBufferData);
+            m_loader->setDataBufferingPolicy(DataBufferingPolicy::DoNotBufferData);
         clear();
     }
 }
@@ -158,6 +161,16 @@ void CachedRawResource::didAddClient(CachedResourceClient& c)
     iterateRedirects(CachedResourceHandle<CachedRawResource>(this), client, WTFMove(redirectsInReverseOrder), [this, protectedThis = CachedResourceHandle<CachedRawResource>(this), client = &client] (ResourceRequest&&) mutable {
         if (!hasClient(*client))
             return;
+        auto responseProcessedHandler = [this, protectedThis = WTFMove(protectedThis), client] {
+            if (!hasClient(*client))
+                return;
+            if (m_data)
+                client->dataReceived(*this, m_data->data(), m_data->size());
+            if (!hasClient(*client))
+                return;
+            CachedResource::didAddClient(*client);
+        };
+
         if (!m_response.isNull()) {
             ResourceResponse response(m_response);
             if (validationCompleting())
@@ -166,15 +179,9 @@ void CachedRawResource::didAddClient(CachedResourceClient& c)
                 ASSERT(!validationInProgress());
                 response.setSource(ResourceResponse::Source::MemoryCache);
             }
-            client->responseReceived(*this, response);
-        }
-        if (!hasClient(*client))
-            return;
-        if (m_data)
-            client->dataReceived(*this, m_data->data(), m_data->size());
-        if (!hasClient(*client))
-            return;
-        CachedResource::didAddClient(*client);
+            client->responseReceived(*this, response, WTFMove(responseProcessedHandler));
+        } else
+            responseProcessedHandler();
     });
 }
 
@@ -215,7 +222,7 @@ void CachedRawResource::responseReceived(const ResourceResponse& response)
     CachedResource::responseReceived(response);
     CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
     while (CachedRawResourceClient* c = w.next())
-        c->responseReceived(*this, m_response);
+        c->responseReceived(*this, m_response, nullptr);
 }
 
 bool CachedRawResource::shouldCacheResponse(const ResourceResponse& response)
@@ -281,7 +288,7 @@ static bool shouldIgnoreHeaderForCacheReuse(HTTPHeaderName name)
 
 bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
 {
-    if (dataBufferingPolicy() == DoNotBufferData)
+    if (dataBufferingPolicy() == DataBufferingPolicy::DoNotBufferData)
         return false;
 
     if (m_resourceRequest.httpMethod() != newRequest.httpMethod())
@@ -306,9 +313,9 @@ bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
     for (const auto& header : newHeaders) {
         if (header.keyAsHTTPHeaderName) {
             if (!shouldIgnoreHeaderForCacheReuse(header.keyAsHTTPHeaderName.value())
-                && header.value != oldHeaders.commonHeaders().get(header.keyAsHTTPHeaderName.value()))
+                && header.value != oldHeaders.get(header.keyAsHTTPHeaderName.value()))
                 return false;
-        } else if (header.value != oldHeaders.uncommonHeaders().get(header.key))
+        } else if (header.value != oldHeaders.get(header.key))
             return false;
     }
 
@@ -317,9 +324,9 @@ bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
     for (const auto& header : oldHeaders) {
         if (header.keyAsHTTPHeaderName) {
             if (!shouldIgnoreHeaderForCacheReuse(header.keyAsHTTPHeaderName.value())
-                && !newHeaders.commonHeaders().contains(header.keyAsHTTPHeaderName.value()))
+                && !newHeaders.contains(header.keyAsHTTPHeaderName.value()))
                 return false;
-        } else if (!newHeaders.uncommonHeaders().contains(header.key))
+        } else if (!newHeaders.contains(header.key))
             return false;
     }
 

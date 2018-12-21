@@ -26,10 +26,14 @@
 #include "config.h"
 #include "JSArrayBufferView.h"
 
+#include "GenericTypedArrayViewInlines.h"
 #include "JSArrayBuffer.h"
 #include "JSCInlines.h"
+#include "JSGenericTypedArrayViewInlines.h"
+#include "JSTypedArrays.h"
 #include "TypeError.h"
 #include "TypedArrayController.h"
+#include "TypedArrays.h"
 #include <wtf/Gigacage.h>
 
 namespace JSC {
@@ -40,7 +44,7 @@ const ClassInfo JSArrayBufferView::s_info = {
 
 String JSArrayBufferView::toStringName(const JSObject*, ExecState*)
 {
-    return ASCIILiteral("Object");
+    return "Object"_s;
 }
 
 JSArrayBufferView::ConstructionContext::ConstructionContext(
@@ -65,12 +69,9 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
         // Attempt GC allocation.
         void* temp;
         size_t size = sizeOf(length, elementSize);
-        if (size) {
-            temp = vm.primitiveGigacageAuxiliarySpace.allocateNonVirtual(vm, size, nullptr, AllocationFailureMode::ReturnNull);
-            if (!temp)
-                return;
-        } else
-            temp = nullptr;
+        temp = vm.primitiveGigacageAuxiliarySpace.allocateNonVirtual(vm, size, nullptr, AllocationFailureMode::ReturnNull);
+        if (!temp)
+            return;
 
         m_structure = structure;
         m_vector = temp;
@@ -131,8 +132,8 @@ JSArrayBufferView::JSArrayBufferView(VM& vm, ConstructionContext& context)
     , m_length(context.length())
     , m_mode(context.mode())
 {
-    setButterflyWithIndexingMask(vm, context.butterfly(), WTF::computeIndexingMask(length()));
-    m_poisonedVector.setWithoutBarrier(context.vector());
+    setButterfly(vm, context.butterfly());
+    m_vector.setWithoutBarrier(context.vector());
 }
 
 void JSArrayBufferView::finishCreation(VM& vm)
@@ -159,6 +160,7 @@ void JSArrayBufferView::finishCreation(VM& vm)
 void JSArrayBufferView::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(cell);
+    Base::visitChildren(cell, visitor);
 
     if (thisObject->hasArrayBuffer()) {
         WTF::loadLoadFence();
@@ -166,8 +168,6 @@ void JSArrayBufferView::visitChildren(JSCell* cell, SlotVisitor& visitor)
         RELEASE_ASSERT(buffer);
         visitor.addOpaqueRoot(buffer);
     }
-
-    Base::visitChildren(thisObject, visitor);
 }
 
 bool JSArrayBufferView::put(
@@ -194,25 +194,123 @@ void JSArrayBufferView::finalize(JSCell* cell)
     JSArrayBufferView* thisObject = static_cast<JSArrayBufferView*>(cell);
     ASSERT(thisObject->m_mode == OversizeTypedArray || thisObject->m_mode == WastefulTypedArray);
     if (thisObject->m_mode == OversizeTypedArray)
-        Gigacage::free(Gigacage::Primitive, thisObject->m_poisonedVector.get());
+        Gigacage::free(Gigacage::Primitive, thisObject->m_vector.get());
 }
 
 JSArrayBuffer* JSArrayBufferView::unsharedJSBuffer(ExecState* exec)
 {
-    return exec->vm().m_typedArrayController->toJS(exec, globalObject(), unsharedBuffer());
+    VM& vm = exec->vm();
+    return vm.m_typedArrayController->toJS(exec, globalObject(vm), unsharedBuffer());
 }
 
 JSArrayBuffer* JSArrayBufferView::possiblySharedJSBuffer(ExecState* exec)
 {
-    return exec->vm().m_typedArrayController->toJS(exec, globalObject(), possiblySharedBuffer());
+    VM& vm = exec->vm();
+    return vm.m_typedArrayController->toJS(exec, globalObject(vm), possiblySharedBuffer());
 }
 
 void JSArrayBufferView::neuter()
 {
+    auto locker = holdLock(cellLock());
     RELEASE_ASSERT(hasArrayBuffer());
     RELEASE_ASSERT(!isShared());
     m_length = 0;
-    m_poisonedVector.clear();
+    m_vector.clear();
+}
+
+static const constexpr size_t ElementSizeData[] = {
+#define FACTORY(type) sizeof(typename type ## Adaptor::Type),
+    FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
+#undef FACTORY
+};
+
+#define FACTORY(type) static_assert(std::is_final<JS ## type ## Array>::value, "");
+FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
+#undef FACTORY
+
+static inline size_t elementSize(JSType type)
+{
+    ASSERT(type >= Int8ArrayType && type <= Float64ArrayType);
+    return ElementSizeData[type - Int8ArrayType];
+}
+
+ArrayBuffer* JSArrayBufferView::slowDownAndWasteMemory()
+{
+    ASSERT(m_mode == FastTypedArray || m_mode == OversizeTypedArray);
+
+    // We play this game because we want this to be callable even from places that
+    // don't have access to ExecState* or the VM, and we only allocate so little
+    // memory here that it's not necessary to trigger a GC - just accounting what
+    // we have done is good enough. The sort of bizarre exception to the "allocating
+    // little memory" is when we transfer a backing buffer into the C heap; this
+    // will temporarily get counted towards heap footprint (incorrectly, in the case
+    // of adopting an oversize typed array) but we don't GC here anyway. That's
+    // almost certainly fine. The worst case is if you created a ton of fast typed
+    // arrays, and did nothing but caused all of them to slow down and waste memory.
+    // In that case, your memory footprint will double before the GC realizes what's
+    // up. But if you do *anything* to trigger a GC watermark check, it will know
+    // that you *had* done those allocations and it will GC appropriately.
+    Heap* heap = Heap::heap(this);
+    VM& vm = *heap->vm();
+    DeferGCForAWhile deferGC(*heap);
+
+    RELEASE_ASSERT(!hasIndexingHeader(vm));
+    Structure* structure = this->structure(vm);
+    setButterfly(vm, Butterfly::createOrGrowArrayRight(
+        butterfly(), vm, this, structure,
+        structure->outOfLineCapacity(), false, 0, 0));
+
+    RefPtr<ArrayBuffer> buffer;
+    unsigned byteLength = m_length * elementSize(type());
+
+    switch (m_mode) {
+    case FastTypedArray:
+        buffer = ArrayBuffer::create(vector(), byteLength);
+        break;
+
+    case OversizeTypedArray:
+        // FIXME: consider doing something like "subtracting" from extra memory
+        // cost, since right now this case will cause the GC to think that we reallocated
+        // the whole buffer.
+        buffer = ArrayBuffer::createAdopted(vector(), byteLength);
+        break;
+
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
+
+    {
+        auto locker = holdLock(cellLock());
+        butterfly()->indexingHeader()->setArrayBuffer(buffer.get());
+        m_vector.setWithoutBarrier(buffer->data());
+        WTF::storeStoreFence();
+        m_mode = WastefulTypedArray;
+    }
+    heap->addReference(this, buffer.get());
+
+    return buffer.get();
+}
+
+// Allocates the full-on native buffer and moves data into the C heap if
+// necessary. Note that this never allocates in the GC heap.
+RefPtr<ArrayBufferView> JSArrayBufferView::possiblySharedImpl()
+{
+    ArrayBuffer* buffer = possiblySharedBuffer();
+    unsigned byteOffset = this->byteOffset();
+    unsigned length = this->length();
+    switch (type()) {
+#define FACTORY(type) \
+    case type ## ArrayType: \
+        return type ## Array::create(buffer, byteOffset, length);
+    FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(FACTORY)
+#undef FACTORY
+    case DataViewType:
+        return DataView::create(buffer, byteOffset, length);
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return nullptr;
+    }
 }
 
 } // namespace JSC

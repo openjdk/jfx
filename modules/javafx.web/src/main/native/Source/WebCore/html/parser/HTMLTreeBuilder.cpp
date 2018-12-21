@@ -32,6 +32,7 @@
 #include "HTMLDocumentParser.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
+#include "HTMLInputElement.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
@@ -203,7 +204,7 @@ public:
     String takeRemainingWhitespace()
     {
         ASSERT(!isEmpty());
-        StringVector<LChar, 8> whitespace;
+        Vector<LChar, 8> whitespace;
         do {
             UChar character = m_text[0];
             if (isHTMLSpace(character))
@@ -873,7 +874,7 @@ inline void HTMLTreeBuilder::insertGenericHTMLElement(AtomicHTMLToken&& token)
     m_customElementToConstruct = m_tree.insertHTMLElementOrFindCustomElementInterface(WTFMove(token));
 }
 
-void HTMLTreeBuilder::didCreateCustomOrCallbackElement(Ref<Element>&& element, CustomElementConstructionData& data)
+void HTMLTreeBuilder::didCreateCustomOrFallbackElement(Ref<Element>&& element, CustomElementConstructionData& data)
 {
     m_tree.insertCustomElement(WTFMove(element), data.name, WTFMove(data.attributes));
 }
@@ -2197,7 +2198,7 @@ void HTMLTreeBuilder::processCharacter(AtomicHTMLToken&& token)
 void HTMLTreeBuilder::insertPhoneNumberLink(const String& string)
 {
     Vector<Attribute> attributes;
-    attributes.append(Attribute(HTMLNames::hrefAttr, ASCIILiteral("tel:") + string));
+    attributes.append(Attribute(HTMLNames::hrefAttr, makeString("tel:"_s, string)));
 
     const AtomicString& aTagLocalName = aTag->localName();
     AtomicHTMLToken aStartToken(HTMLToken::StartTag, aTagLocalName, WTFMove(attributes));

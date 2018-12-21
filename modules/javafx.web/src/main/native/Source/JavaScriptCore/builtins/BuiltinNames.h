@@ -132,6 +132,7 @@ namespace JSC {
     macro(Collator) \
     macro(DateTimeFormat) \
     macro(NumberFormat) \
+    macro(PluralRules) \
     macro(intlSubstituteValue) \
     macro(thisTimeValue) \
     macro(thisNumberValue) \
@@ -189,6 +190,8 @@ namespace JSC {
     macro(LinkError) \
     macro(RuntimeError) \
     macro(meta) \
+    macro(webAssemblyCompileStreamingInternal) \
+    macro(webAssemblyInstantiateStreamingInternal) \
 
 namespace Symbols {
 #define DECLARE_BUILTIN_STATIC_SYMBOLS(name) extern SymbolImpl::StaticSymbolImpl name##Symbol;
@@ -201,7 +204,7 @@ JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(DECLARE_BUILTIN_PRIVATE_NAMES)
 #undef DECLARE_BUILTIN_PRIVATE_NAMES
 
 extern SymbolImpl::StaticSymbolImpl dollarVMPrivateName;
-extern SymbolImpl::StaticSymbolImpl underscoreProtoPrivateName;
+extern SymbolImpl::StaticSymbolImpl polyProtoPrivateName;
 }
 
 #define INITIALIZE_PRIVATE_TO_PUBLIC_ENTRY(name) m_privateToPublicMap.add(m_##name##PrivateName.impl(), &m_##name);
@@ -216,28 +219,7 @@ class BuiltinNames {
     WTF_MAKE_NONCOPYABLE(BuiltinNames); WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    // We treat the dollarVM name as a special case below for $vm (because CommonIdentifiers does not
-    // yet support the $ character).
-
-    BuiltinNames(VM* vm, CommonIdentifiers* commonIdentifiers)
-        : m_emptyIdentifier(commonIdentifiers->emptyIdentifier)
-        JSC_FOREACH_BUILTIN_FUNCTION_NAME(INITIALIZE_BUILTIN_NAMES_IN_JSC)
-        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_BUILTIN_NAMES_IN_JSC)
-        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(INITIALIZE_BUILTIN_SYMBOLS)
-        , m_dollarVMName(Identifier::fromString(vm, "$vm"))
-        , m_dollarVMPrivateName(Identifier::fromUid(vm, &static_cast<SymbolImpl&>(Symbols::dollarVMPrivateName)))
-        , m_underscoreProtoPrivateName(Identifier::fromUid(vm, &static_cast<SymbolImpl&>(Symbols::underscoreProtoPrivateName)))
-    {
-        JSC_FOREACH_BUILTIN_FUNCTION_NAME(INITIALIZE_PRIVATE_TO_PUBLIC_ENTRY)
-        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_PRIVATE_TO_PUBLIC_ENTRY)
-        JSC_FOREACH_BUILTIN_FUNCTION_NAME(INITIALIZE_PUBLIC_TO_PRIVATE_ENTRY)
-        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_PUBLIC_TO_PRIVATE_ENTRY)
-        JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(INITIALIZE_SYMBOL_PUBLIC_TO_PRIVATE_ENTRY)
-        m_privateToPublicMap.add(m_dollarVMPrivateName.impl(), &m_dollarVMName);
-        m_publicToPrivateMap.add(m_dollarVMName.impl(), &m_dollarVMPrivateName);
-        m_privateToPublicMap.add(m_underscoreProtoPrivateName.impl(), &commonIdentifiers->underscoreProto);
-        m_publicToPrivateMap.add(commonIdentifiers->underscoreProto.impl(), &m_underscoreProtoPrivateName);
-    }
+    BuiltinNames(VM*, CommonIdentifiers*);
 
     const Identifier* lookUpPrivateName(const Identifier&) const;
     const Identifier& lookUpPublicName(const Identifier&) const;
@@ -249,7 +231,7 @@ public:
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(DECLARE_BUILTIN_SYMBOL_ACCESSOR)
     const JSC::Identifier& dollarVMPublicName() const { return m_dollarVMName; }
     const JSC::Identifier& dollarVMPrivateName() const { return m_dollarVMPrivateName; }
-    const JSC::Identifier& underscoreProtoPrivateName() const { return m_underscoreProtoPrivateName; }
+    const JSC::Identifier& polyProtoName() const { return m_polyProtoPrivateName; }
 
 private:
     Identifier m_emptyIdentifier;
@@ -258,7 +240,7 @@ private:
     JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(DECLARE_BUILTIN_SYMBOLS)
     const JSC::Identifier m_dollarVMName;
     const JSC::Identifier m_dollarVMPrivateName;
-    const JSC::Identifier m_underscoreProtoPrivateName;
+    const JSC::Identifier m_polyProtoPrivateName;
     typedef HashMap<RefPtr<UniquedStringImpl>, const Identifier*, IdentifierRepHash> BuiltinNamesMap;
     BuiltinNamesMap m_publicToPrivateMap;
     BuiltinNamesMap m_privateToPublicMap;

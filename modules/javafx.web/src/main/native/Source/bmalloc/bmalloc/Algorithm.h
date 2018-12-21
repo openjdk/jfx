@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <limits>
+#include <string.h>
 #include <type_traits>
 #include <chrono>
 

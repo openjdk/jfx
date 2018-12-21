@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,6 +60,8 @@
 
 namespace JSC { namespace DFG {
 
+static constexpr bool dumpOSRAvailabilityData = false;
+
 // Creates an array of stringized names.
 static const char* dfgOpNames[] = {
 #define STRINGIZE_DFG_OP_ENUM(opcode, flags) #opcode ,
@@ -70,7 +72,7 @@ static const char* dfgOpNames[] = {
 Graph::Graph(VM& vm, Plan& plan)
     : m_vm(vm)
     , m_plan(plan)
-    , m_codeBlock(m_plan.codeBlock)
+    , m_codeBlock(m_plan.codeBlock())
     , m_profiledBlock(m_codeBlock->alternative())
     , m_ssaCFG(std::make_unique<SSACFG>(*this))
     , m_nextMachineLocal(0)
@@ -293,6 +295,10 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         for (unsigned i = 0; i < data.variants.size(); ++i)
             out.print(comma, inContext(data.variants[i], context));
     }
+    if (node->hasMatchStructureData()) {
+        for (MatchStructureVariant& variant : node->matchStructureData().variants)
+            out.print(comma, inContext(*variant.structure.get(), context), "=>", variant.result);
+    }
     ASSERT(node->hasVariableAccessData(*this) == node->accessesStack(*this));
     if (node->hasVariableAccessData(*this)) {
         VariableAccessData* variableAccessData = node->tryGetVariableAccessData();
@@ -318,7 +324,7 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
     if (node->hasLazyJSValue())
         out.print(comma, node->lazyJSValue());
     if (node->hasIndexingType())
-        out.print(comma, IndexingTypeDump(node->indexingType()));
+        out.print(comma, IndexingTypeDump(node->indexingMode()));
     if (node->hasTypedArrayType())
         out.print(comma, node->typedArrayType());
     if (node->hasPhi())
@@ -352,6 +358,14 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         out.print(comma, "ignoreLastIndexIsWritable = ", node->ignoreLastIndexIsWritable());
     if (node->isConstant())
         out.print(comma, pointerDumpInContext(node->constant(), context));
+    if (node->hasCallLinkStatus())
+        out.print(comma, *node->callLinkStatus());
+    if (node->hasGetByIdStatus())
+        out.print(comma, *node->getByIdStatus());
+    if (node->hasInByIdStatus())
+        out.print(comma, *node->inByIdStatus());
+    if (node->hasPutByIdStatus())
+        out.print(comma, *node->putByIdStatus());
     if (node->isJump())
         out.print(comma, "T:", *node->targetBlock());
     if (node->isBranch())
@@ -557,7 +571,8 @@ void Graph::dump(PrintStream& out, DumpContext* context)
 
         case SSA: {
             RELEASE_ASSERT(block->ssa);
-            out.print("  Availability: ", block->ssa->availabilityAtHead, "\n");
+            if (dumpOSRAvailabilityData)
+                out.print("  Availability: ", block->ssa->availabilityAtHead, "\n");
             out.print("  Live: ", nodeListDump(block->ssa->liveAtHead), "\n");
             out.print("  Values: ", nodeValuePairListDump(block->ssa->valuesAtHead, context), "\n");
             break;
@@ -585,7 +600,8 @@ void Graph::dump(PrintStream& out, DumpContext* context)
 
         case SSA: {
             RELEASE_ASSERT(block->ssa);
-            out.print("  Availability: ", block->ssa->availabilityAtTail, "\n");
+            if (dumpOSRAvailabilityData)
+                out.print("  Availability: ", block->ssa->availabilityAtTail, "\n");
             out.print("  Live: ", nodeListDump(block->ssa->liveAtTail), "\n");
             out.print("  Values: ", nodeValuePairListDump(block->ssa->valuesAtTail, context), "\n");
             break;
@@ -652,7 +668,8 @@ void Graph::handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock* block
         worklist.append(successor);
     }
 
-    successor->predecessors.append(block);
+    if (!successor->predecessors.contains(block))
+        successor->predecessors.append(block);
 }
 
 void Graph::determineReachability()
@@ -907,7 +924,7 @@ BlockList Graph::blocksInPreOrder()
     return result;
 }
 
-BlockList Graph::blocksInPostOrder()
+BlockList Graph::blocksInPostOrder(bool isSafeToValidate)
 {
     BlockList result;
     PostOrderBlockWorklist worklist;
@@ -926,7 +943,7 @@ BlockList Graph::blocksInPostOrder()
         }
     }
 
-    if (validationEnabled()) {
+    if (isSafeToValidate && validationEnabled()) { // There are users of this where we haven't yet built of the CFG enough to be able to run dominators.
         auto validateResults = [&] (auto& dominators) {
             // When iterating over reverse post order, we should see dominators
             // before things they dominate.
@@ -1010,13 +1027,14 @@ bool Graph::watchCondition(const ObjectPropertyCondition& key)
     if (!key.isWatchable())
         return false;
 
-    m_plan.weakReferences.addLazily(key.object());
+    DesiredWeakReferences& weakReferences = m_plan.weakReferences();
+    weakReferences.addLazily(key.object());
     if (key.hasPrototype())
-        m_plan.weakReferences.addLazily(key.prototype());
+        weakReferences.addLazily(key.prototype());
     if (key.hasRequiredValue())
-        m_plan.weakReferences.addLazily(key.requiredValue());
+        weakReferences.addLazily(key.requiredValue());
 
-    m_plan.watchpoints.addLazily(key);
+    m_plan.watchpoints().addLazily(key);
 
     if (key.kind() == PropertyCondition::Presence)
         m_safeToLoad.add(std::make_pair(key.object(), key.offset()));
@@ -1063,12 +1081,12 @@ InferredType::Descriptor Graph::inferredTypeFor(const PropertyTypeKey& key)
 
     m_inferredTypes.add(key, typeDescriptor);
 
-    m_plan.weakReferences.addLazily(typeObject);
+    m_plan.weakReferences().addLazily(typeObject);
     registerInferredType(typeDescriptor);
 
     // Note that we may already be watching this desired inferred type, because multiple structures may
     // point to the same InferredType instance.
-    m_plan.watchpoints.addLazily(DesiredInferredType(typeObject, typeDescriptor));
+    m_plan.watchpoints().addLazily(DesiredInferredType(typeObject, typeDescriptor));
 
     return typeDescriptor;
 }
@@ -1213,7 +1231,7 @@ unsigned Graph::stackPointerOffset()
 unsigned Graph::requiredRegisterCountForExit()
 {
     unsigned count = JIT::frameRegisterCountFor(m_profiledBlock);
-    for (InlineCallFrameSet::iterator iter = m_plan.inlineCallFrames->begin(); !!iter; ++iter) {
+    for (InlineCallFrameSet::iterator iter = m_plan.inlineCallFrames()->begin(); !!iter; ++iter) {
         InlineCallFrame* inlineCallFrame = *iter;
         CodeBlock* codeBlock = baselineCodeBlockForInlineCallFrame(inlineCallFrame);
         unsigned requiredCount = VirtualRegister(inlineCallFrame->stackOffset).toLocal() + 1 + JIT::frameRegisterCountFor(codeBlock);
@@ -1258,22 +1276,24 @@ JSValue Graph::tryGetConstantProperty(
     //
     // One argument in favor of this code is that it should definitely work because the butterfly
     // is always set before the structure. However, we don't currently have a fence between those
-    // stores. It's not clear if this matters, however. We don't ever shrink the property storage.
-    // So, for this to fail, you'd need an access on a constant object pointer such that the inline
-    // caches told us that the object had a structure that it did not *yet* have, and then later,
-    // the object transitioned to that structure that the inline caches had alraedy seen. And then
-    // the processor reordered the stores. Seems unlikely and difficult to test. I believe that
-    // this is worth revisiting but it isn't worth losing sleep over. Filed:
+    // stores. It's not clear if this matters, however. We only shrink the propertyStorage while
+    // holding the Structure's lock. So, for this to fail, you'd need an access on a constant
+    // object pointer such that the inline caches told us that the object had a structure that it
+    // did not *yet* have, and then later,the object transitioned to that structure that the inline
+    // caches had already seen. And then the processor reordered the stores. Seems unlikely and
+    // difficult to test. I believe that this is worth revisiting but it isn't worth losing sleep
+    // over. Filed:
     // https://bugs.webkit.org/show_bug.cgi?id=134641
     //
     // For now, we just do the minimal thing: defend against the structure right now being
     // incompatible with the getDirect we're trying to do. The easiest way to do that is to
     // determine if the structure belongs to the proven set.
 
-    if (!structureSet.toStructureSet().contains(object->structure()))
+    Structure* structure = object->structure(m_vm);
+    if (!structureSet.toStructureSet().contains(structure))
         return JSValue();
 
-    return object->getDirect(offset);
+    return object->getDirectConcurrently(structure, offset);
 }
 
 JSValue Graph::tryGetConstantProperty(JSValue base, Structure* structure, PropertyOffset offset)
@@ -1411,11 +1431,11 @@ void Graph::registerFrozenValues()
             continue;
 
         ASSERT(value->structure());
-        ASSERT(m_plan.weakReferences.contains(value->structure()));
+        ASSERT(m_plan.weakReferences().contains(value->structure()));
 
         switch (value->strength()) {
         case WeakValue: {
-            m_plan.weakReferences.addLazily(value->value().asCell());
+            m_plan.weakReferences().addLazily(value->value().asCell());
             break;
         }
         case StrongValue: {
@@ -1488,8 +1508,8 @@ void Graph::convertToStrongConstant(Node* node, JSValue value)
 
 RegisteredStructure Graph::registerStructure(Structure* structure, StructureRegistrationResult& result)
 {
-    m_plan.weakReferences.addLazily(structure);
-    if (m_plan.watchpoints.consider(structure))
+    m_plan.weakReferences().addLazily(structure);
+    if (m_plan.watchpoints().consider(structure))
         result = StructureRegisteredAndWatched;
     else
         result = StructureRegisteredNormally;
@@ -1498,8 +1518,8 @@ RegisteredStructure Graph::registerStructure(Structure* structure, StructureRegi
 
 void Graph::registerAndWatchStructureTransition(Structure* structure)
 {
-    m_plan.weakReferences.addLazily(structure);
-    m_plan.watchpoints.addLazily(structure->transitionWatchpointSet());
+    m_plan.weakReferences().addLazily(structure);
+    m_plan.watchpoints().addLazily(structure->transitionWatchpointSet());
 }
 
 void Graph::assertIsRegistered(Structure* structure)
@@ -1508,7 +1528,7 @@ void Graph::assertIsRegistered(Structure* structure)
     if (!structure)
         return;
 
-    DFG_ASSERT(*this, nullptr, m_plan.weakReferences.contains(structure));
+    DFG_ASSERT(*this, nullptr, m_plan.weakReferences().contains(structure));
 
     if (!structure->dfgShouldWatch())
         return;

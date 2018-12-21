@@ -608,24 +608,24 @@ Color RenderThemeJava::getSelectionColor(int index) const
     return Color(c);
 }
 
-Color RenderThemeJava::platformActiveSelectionBackgroundColor() const
+Color RenderThemeJava::platformActiveSelectionBackgroundColor(OptionSet<StyleColor::Options>) const
 {
     return getSelectionColor(JNI_EXPAND(BACKGROUND));
 }
 
-Color RenderThemeJava::platformInactiveSelectionBackgroundColor() const
+Color RenderThemeJava::platformInactiveSelectionBackgroundColor(OptionSet<StyleColor::Options> opt) const
 {
-    return platformActiveSelectionBackgroundColor();
+    return platformActiveSelectionBackgroundColor(opt);
 }
 
-Color RenderThemeJava::platformActiveSelectionForegroundColor() const
+Color RenderThemeJava::platformActiveSelectionForegroundColor(OptionSet<StyleColor::Options>) const
 {
     return getSelectionColor(JNI_EXPAND(FOREGROUND));
 }
 
-Color RenderThemeJava::platformInactiveSelectionForegroundColor() const
+Color RenderThemeJava::platformInactiveSelectionForegroundColor(OptionSet<StyleColor::Options> opt) const
 {
-    return platformActiveSelectionForegroundColor();
+    return platformActiveSelectionForegroundColor(opt);
 }
 
 #if ENABLE(VIDEO)

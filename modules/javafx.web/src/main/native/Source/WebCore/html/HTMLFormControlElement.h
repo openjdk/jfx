@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -43,6 +43,7 @@ class ValidationMessage;
 // and form-associated element implementations should use HTMLFormControlElement
 // unless there is a special reason.
 class HTMLFormControlElement : public LabelableElement, public FormAssociatedElement {
+    WTF_MAKE_ISO_ALLOCATED(HTMLFormControlElement);
 public:
     virtual ~HTMLFormControlElement();
 
@@ -132,8 +133,8 @@ protected:
     void parseAttribute(const QualifiedName&, const AtomicString&) override;
     virtual void disabledAttributeChanged();
     virtual void disabledStateChanged();
-    virtual void readOnlyAttributeChanged();
-    virtual void requiredAttributeChanged();
+    virtual void readOnlyStateChanged();
+    virtual void requiredStateChanged();
     void didAttachRenderers() override;
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void didFinishInsertingNode() override;
@@ -141,7 +142,7 @@ protected:
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
 
     bool supportsFocus() const override;
-    bool isKeyboardFocusable(KeyboardEvent&) const override;
+    bool isKeyboardFocusable(KeyboardEvent*) const override;
     bool isMouseFocusable() const override;
 
     void didRecalcStyle(Style::Change) override;

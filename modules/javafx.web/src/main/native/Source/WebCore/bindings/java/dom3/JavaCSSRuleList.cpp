@@ -29,7 +29,7 @@
 
 #include <WebCore/CSSRule.h>
 #include <WebCore/CSSRuleList.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

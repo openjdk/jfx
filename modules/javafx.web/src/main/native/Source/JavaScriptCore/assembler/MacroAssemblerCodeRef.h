@@ -27,6 +27,7 @@
 
 #include "ExecutableAllocator.h"
 #include "JSCPoison.h"
+#include "JSCPtrTag.h"
 #include <wtf/DataLog.h>
 #include <wtf/PrintStream.h>
 #include <wtf/RefPtr.h>
@@ -39,11 +40,14 @@
 // into the processor are decorated with the bottom bit set, while traditional ARM has
 // the lower bit clear. Since we don't know what kind of pointer, we check for both
 // decorated and undecorated null.
+#define ASSERT_NULL_OR_VALID_CODE_POINTER(ptr) \
+    ASSERT(!ptr || reinterpret_cast<intptr_t>(ptr) & ~1)
 #define ASSERT_VALID_CODE_POINTER(ptr) \
     ASSERT(reinterpret_cast<intptr_t>(ptr) & ~1)
 #define ASSERT_VALID_CODE_OFFSET(offset) \
     ASSERT(!(offset & 1)) // Must be multiple of 2.
 #else
+#define ASSERT_NULL_OR_VALID_CODE_POINTER(ptr) // Anything goes!
 #define ASSERT_VALID_CODE_POINTER(ptr) \
     ASSERT(ptr)
 #define ASSERT_VALID_CODE_OFFSET(offset) // Anything goes!
@@ -51,7 +55,7 @@
 
 namespace JSC {
 
-class MacroAssemblerCodePtr;
+template<PtrTag> class MacroAssemblerCodePtr;
 
 enum OpcodeID : unsigned;
 
@@ -59,180 +63,108 @@ enum OpcodeID : unsigned;
 //
 // FunctionPtr should be used to wrap pointers to C/C++ functions in JSC
 // (particularly, the stub functions).
+template<PtrTag tag = CFunctionPtrTag>
 class FunctionPtr {
 public:
     FunctionPtr() { }
+    FunctionPtr(std::nullptr_t) { }
 
-    template<typename returnType>
-    FunctionPtr(returnType(*value)())
-        : m_value((void*)value)
+    template<typename ReturnType, typename... Arguments>
+    FunctionPtr(ReturnType(*value)(Arguments...))
+        : m_value(tagCFunctionPtr<void*, tag>(value))
     {
+        assertIsNullOrCFunctionPtr(value);
         PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
+        ASSERT_NULL_OR_VALID_CODE_POINTER(m_value);
     }
 
-    template<typename returnType, typename argType1>
-    FunctionPtr(returnType(*value)(argType1))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2>
-    FunctionPtr(returnType(*value)(argType1, argType2))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3>
-    FunctionPtr(returnType(*value)(argType1, argType2, argType3))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3, typename argType4>
-    FunctionPtr(returnType(*value)(argType1, argType2, argType3, argType4))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3, typename argType4, typename argType5>
-    FunctionPtr(returnType(*value)(argType1, argType2, argType3, argType4, argType5))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3, typename argType4, typename argType5, typename argType6>
-    FunctionPtr(returnType(*value)(argType1, argType2, argType3, argType4, argType5, argType6))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
 // MSVC doesn't seem to treat functions with different calling conventions as
 // different types; these methods already defined for fastcall, below.
 #if CALLING_CONVENTION_IS_STDCALL && !OS(WINDOWS)
 
-    template<typename returnType>
-    FunctionPtr(returnType (CDECL *value)())
-        : m_value((void*)value)
+    template<typename ReturnType, typename... Arguments>
+    FunctionPtr(ReturnType(CDECL *value)(Arguments...))
+        : m_value(tagCFunctionPtr<void*, tag>(value))
     {
+        assertIsNullOrCFunctionPtr(value);
         PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
+        ASSERT_NULL_OR_VALID_CODE_POINTER(m_value);
     }
 
-    template<typename returnType, typename argType1>
-    FunctionPtr(returnType (CDECL *value)(argType1))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2>
-    FunctionPtr(returnType (CDECL *value)(argType1, argType2))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3>
-    FunctionPtr(returnType (CDECL *value)(argType1, argType2, argType3))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3, typename argType4>
-    FunctionPtr(returnType (CDECL *value)(argType1, argType2, argType3, argType4))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-#endif
+#endif // CALLING_CONVENTION_IS_STDCALL && !OS(WINDOWS)
 
 #if COMPILER_SUPPORTS(FASTCALL_CALLING_CONVENTION)
 
-    template<typename returnType>
-    FunctionPtr(returnType (FASTCALL *value)())
-        : m_value((void*)value)
+    template<typename ReturnType, typename... Arguments>
+    FunctionPtr(ReturnType(FASTCALL *value)(Arguments...))
+        : m_value(tagCFunctionPtr<void*, tag>(value))
     {
+        assertIsNullOrCFunctionPtr(value);
         PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
+        ASSERT_NULL_OR_VALID_CODE_POINTER(m_value);
     }
 
-    template<typename returnType, typename argType1>
-    FunctionPtr(returnType (FASTCALL *value)(argType1))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
+#endif // COMPILER_SUPPORTS(FASTCALL_CALLING_CONVENTION)
 
-    template<typename returnType, typename argType1, typename argType2>
-    FunctionPtr(returnType (FASTCALL *value)(argType1, argType2))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3>
-    FunctionPtr(returnType (FASTCALL *value)(argType1, argType2, argType3))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-
-    template<typename returnType, typename argType1, typename argType2, typename argType3, typename argType4>
-    FunctionPtr(returnType (FASTCALL *value)(argType1, argType2, argType3, argType4))
-        : m_value((void*)value)
-    {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
-    }
-#endif
-
-    template<typename FunctionType>
-    explicit FunctionPtr(FunctionType* value)
+    template<typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value && !std::is_function<typename std::remove_pointer<PtrType>::type>::value>>
+    explicit FunctionPtr(PtrType value)
         // Using a C-ctyle cast here to avoid compiler error on RVTC:
         // Error:  #694: reinterpret_cast cannot cast away const or other type qualifiers
         // (I guess on RVTC function pointers have a different constness to GCC/MSVC?)
-        : m_value((void*)value)
+        : m_value(tagCFunctionPtr<void*, tag>(value))
     {
+        assertIsNullOrCFunctionPtr(value);
         PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        ASSERT_VALID_CODE_POINTER(m_value);
+        ASSERT_NULL_OR_VALID_CODE_POINTER(m_value);
     }
 
-    explicit FunctionPtr(MacroAssemblerCodePtr);
+    explicit FunctionPtr(MacroAssemblerCodePtr<tag>);
 
-    void* value() const
+    template<PtrTag otherTag>
+    FunctionPtr<otherTag> retagged() const
     {
-        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-        return m_value;
+        if (!m_value)
+            return FunctionPtr<otherTag>();
+        return FunctionPtr<otherTag>(*this);
     }
+
     void* executableAddress() const
     {
         PoisonedMasmPtr::assertIsNotPoisoned(m_value);
         return m_value;
     }
 
+    template<PtrTag newTag>
+    void* retaggedExecutableAddress() const
+    {
+        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
+        return retagCodePtr<tag, newTag>(m_value);
+    }
+
+    explicit operator bool() const { return !!m_value; }
+    bool operator!() const { return !m_value; }
+
+    bool operator==(const FunctionPtr& other) const { return m_value == other.m_value; }
+    bool operator!=(const FunctionPtr& other) const { return m_value != other.m_value; }
+
 private:
+    template<PtrTag otherTag>
+    explicit FunctionPtr(const FunctionPtr<otherTag>& other)
+        : m_value(retagCodePtr<otherTag, tag>(other.executableAddress()))
+    {
+        PoisonedMasmPtr::assertIsNotPoisoned(m_value);
+        ASSERT_NULL_OR_VALID_CODE_POINTER(m_value);
+    }
+
     void* m_value { nullptr };
+
+    template<PtrTag> friend class FunctionPtr;
 };
+
+static_assert(sizeof(FunctionPtr<CFunctionPtrTag>) == sizeof(void*), "");
+#if COMPILER_SUPPORTS(BUILTIN_IS_TRIVIALLY_COPYABLE)
+static_assert(__is_trivially_copyable(FunctionPtr<CFunctionPtrTag>), "");
+#endif
 
 // ReturnAddressPtr:
 //
@@ -251,8 +183,9 @@ public:
         ASSERT_VALID_CODE_POINTER(m_value);
     }
 
-    explicit ReturnAddressPtr(FunctionPtr function)
-        : m_value(function.value())
+    template<PtrTag tag>
+    explicit ReturnAddressPtr(FunctionPtr<tag> function)
+        : m_value(untagCodePtr<tag>(function.executableAddress()))
     {
         PoisonedMasmPtr::assertIsNotPoisoned(m_value);
         ASSERT_VALID_CODE_POINTER(m_value);
@@ -276,9 +209,18 @@ private:
 // MacroAssemblerCodePtr:
 //
 // MacroAssemblerCodePtr should be used to wrap pointers to JIT generated code.
-class MacroAssemblerCodePtr {
+class MacroAssemblerCodePtrBase {
+protected:
+    static void dumpWithName(void* executableAddress, void* dataLocation, const char* name, PrintStream& out);
+};
+
+// FIXME: Make JSC MacroAssemblerCodePtr injerit from MetaAllocatorPtr.
+// https://bugs.webkit.org/show_bug.cgi?id=185145
+template<PtrTag tag>
+class MacroAssemblerCodePtr : private MacroAssemblerCodePtrBase {
 public:
-    MacroAssemblerCodePtr() { }
+    MacroAssemblerCodePtr() = default;
+    MacroAssemblerCodePtr(std::nullptr_t) : m_value(nullptr) { }
 
     explicit MacroAssemblerCodePtr(void* value)
 #if CPU(ARM_THUMB2)
@@ -288,8 +230,12 @@ public:
         : m_value(value)
 #endif
     {
+        assertIsTaggedWith(value, tag);
         m_value.assertIsPoisoned();
         ASSERT(value);
+#if CPU(ARM_THUMB2)
+        ASSERT(!(reinterpret_cast<uintptr_t>(value) & 1));
+#endif
         ASSERT_VALID_CODE_POINTER(m_value.unpoisoned());
     }
 
@@ -297,17 +243,17 @@ public:
     {
         ASSERT(value);
         ASSERT_VALID_CODE_POINTER(value);
+        assertIsTaggedWith(value, tag);
         MacroAssemblerCodePtr result;
         result.m_value = PoisonedMasmPtr(value);
         result.m_value.assertIsPoisoned();
         return result;
     }
 
-    static MacroAssemblerCodePtr createLLIntCodePtr(OpcodeID codeId);
-
     explicit MacroAssemblerCodePtr(ReturnAddressPtr ra)
-        : m_value(ra.value())
+        : m_value(tagCodePtr<tag>(ra.value()))
     {
+        assertIsNotTagged(ra.value());
         ASSERT(ra.value());
         m_value.assertIsPoisoned();
         ASSERT_VALID_CODE_POINTER(m_value.unpoisoned());
@@ -315,12 +261,35 @@ public:
 
     PoisonedMasmPtr poisonedPtr() const { return m_value; }
 
+    template<PtrTag newTag>
+    MacroAssemblerCodePtr<newTag> retagged() const
+    {
+        if (!m_value)
+            return MacroAssemblerCodePtr<newTag>();
+        return MacroAssemblerCodePtr<newTag>::createFromExecutableAddress(retaggedExecutableAddress<newTag>());
+    }
+
     template<typename T = void*>
     T executableAddress() const
     {
         m_value.assertIsPoisoned();
         return m_value.unpoisoned<T>();
     }
+
+    template<typename T = void*>
+    T untaggedExecutableAddress() const
+    {
+        m_value.assertIsPoisoned();
+        return untagCodePtr<T, tag>(m_value.unpoisoned());
+    }
+
+    template<PtrTag newTag, typename T = void*>
+    T retaggedExecutableAddress() const
+    {
+        m_value.assertIsPoisoned();
+        return retagCodePtr<T, tag, newTag>(m_value.unpoisoned());
+    }
+
 #if CPU(ARM_THUMB2)
     // To use this pointer as a data address remove the decoration.
     template<typename T = void*>
@@ -336,7 +305,7 @@ public:
     {
         m_value.assertIsPoisoned();
         ASSERT_VALID_CODE_POINTER(m_value);
-        return m_value.unpoisoned<T>();
+        return untagCodePtr<T, tag>(m_value.unpoisoned());
     }
 #endif
 
@@ -366,9 +335,12 @@ public:
     template<typename T, typename = std::enable_if_t<!std::is_same<T, bool>::value>>
     operator T() = delete;
 
-    void dumpWithName(const char* name, PrintStream& out) const;
+    void dumpWithName(const char* name, PrintStream& out) const
+    {
+        MacroAssemblerCodePtrBase::dumpWithName(executableAddress(), dataLocation(), name, out);
+    }
 
-    void dump(PrintStream& out) const;
+    void dump(PrintStream& out) const { dumpWithName("CodePtr", out); }
 
     enum EmptyValueTag { EmptyValue };
     enum DeletedValueTag { DeletedValue };
@@ -395,9 +367,10 @@ private:
     PoisonedMasmPtr m_value;
 };
 
+template<PtrTag tag>
 struct MacroAssemblerCodePtrHash {
-    static unsigned hash(const MacroAssemblerCodePtr& ptr) { return ptr.hash(); }
-    static bool equal(const MacroAssemblerCodePtr& a, const MacroAssemblerCodePtr& b)
+    static unsigned hash(const MacroAssemblerCodePtr<tag>& ptr) { return ptr.hash(); }
+    static bool equal(const MacroAssemblerCodePtr<tag>& a, const MacroAssemblerCodePtr<tag>& b)
     {
         return a == b;
     }
@@ -409,23 +382,29 @@ struct MacroAssemblerCodePtrHash {
 // A reference to a section of JIT generated code.  A CodeRef consists of a
 // pointer to the code, and a ref pointer to the pool from within which it
 // was allocated.
-class MacroAssemblerCodeRef {
+class MacroAssemblerCodeRefBase {
+protected:
+    static bool tryToDisassemble(MacroAssemblerCodePtr<DisassemblyPtrTag>, size_t, const char* prefix, PrintStream& out);
+    static bool tryToDisassemble(MacroAssemblerCodePtr<DisassemblyPtrTag>, size_t, const char* prefix);
+    JS_EXPORT_PRIVATE static CString disassembly(MacroAssemblerCodePtr<DisassemblyPtrTag>, size_t);
+};
+
+template<PtrTag tag>
+class MacroAssemblerCodeRef : private MacroAssemblerCodeRefBase {
 private:
     // This is private because it's dangerous enough that we want uses of it
     // to be easy to find - hence the static create method below.
-    explicit MacroAssemblerCodeRef(MacroAssemblerCodePtr codePtr)
+    explicit MacroAssemblerCodeRef(MacroAssemblerCodePtr<tag> codePtr)
         : m_codePtr(codePtr)
     {
         ASSERT(m_codePtr);
     }
 
 public:
-    MacroAssemblerCodeRef()
-    {
-    }
+    MacroAssemblerCodeRef() = default;
 
     MacroAssemblerCodeRef(Ref<ExecutableMemoryHandle>&& executableMemory)
-        : m_codePtr(executableMemory->start())
+        : m_codePtr(executableMemory->start().retaggedPtr<tag>())
         , m_executableMemory(WTFMove(executableMemory))
     {
         ASSERT(m_executableMemory->isManaged());
@@ -436,22 +415,31 @@ public:
     // Use this only when you know that the codePtr refers to code that is
     // already being kept alive through some other means. Typically this means
     // that codePtr is immortal.
-    static MacroAssemblerCodeRef createSelfManagedCodeRef(MacroAssemblerCodePtr codePtr)
+    static MacroAssemblerCodeRef createSelfManagedCodeRef(MacroAssemblerCodePtr<tag> codePtr)
     {
         return MacroAssemblerCodeRef(codePtr);
     }
-
-    // Helper for creating self-managed code refs from LLInt.
-    static MacroAssemblerCodeRef createLLIntCodeRef(OpcodeID codeId);
 
     ExecutableMemoryHandle* executableMemory() const
     {
         return m_executableMemory.get();
     }
 
-    MacroAssemblerCodePtr code() const
+    MacroAssemblerCodePtr<tag> code() const
     {
         return m_codePtr;
+    }
+
+    template<PtrTag newTag>
+    MacroAssemblerCodePtr<newTag> retaggedCode() const
+    {
+        return m_codePtr.template retagged<newTag>();
+    }
+
+    template<PtrTag newTag>
+    MacroAssemblerCodeRef<newTag> retagged() const
+    {
+        return MacroAssemblerCodeRef<newTag>(*this);
     }
 
     size_t size() const
@@ -461,26 +449,46 @@ public:
         return m_executableMemory->sizeInBytes();
     }
 
-    bool tryToDisassemble(PrintStream& out, const char* prefix = "") const;
+    bool tryToDisassemble(PrintStream& out, const char* prefix = "") const
+    {
+        return tryToDisassemble(retaggedCode<DisassemblyPtrTag>(), size(), prefix, out);
+    }
 
-    bool tryToDisassemble(const char* prefix = "") const;
+    bool tryToDisassemble(const char* prefix = "") const
+    {
+        return tryToDisassemble(retaggedCode<DisassemblyPtrTag>(), size(), prefix);
+    }
 
-    JS_EXPORT_PRIVATE CString disassembly() const;
+    CString disassembly() const
+    {
+        return MacroAssemblerCodeRefBase::disassembly(retaggedCode<DisassemblyPtrTag>(), size());
+    }
 
     explicit operator bool() const { return !!m_codePtr; }
 
-    void dump(PrintStream& out) const;
+    void dump(PrintStream& out) const
+    {
+        m_codePtr.dumpWithName("CodeRef", out);
+    }
 
 private:
-    MacroAssemblerCodePtr m_codePtr;
+    template<PtrTag otherTag>
+    MacroAssemblerCodeRef(const MacroAssemblerCodeRef<otherTag>& otherCodeRef)
+        : m_codePtr(MacroAssemblerCodePtr<tag>::createFromExecutableAddress(otherCodeRef.code().template retaggedExecutableAddress<tag>()))
+        , m_executableMemory(otherCodeRef.m_executableMemory)
+    { }
+
+    MacroAssemblerCodePtr<tag> m_codePtr;
     RefPtr<ExecutableMemoryHandle> m_executableMemory;
+
+    template<PtrTag> friend class MacroAssemblerCodeRef;
 };
 
-inline FunctionPtr::FunctionPtr(MacroAssemblerCodePtr ptr)
+template<PtrTag tag>
+inline FunctionPtr<tag>::FunctionPtr(MacroAssemblerCodePtr<tag> ptr)
     : m_value(ptr.executableAddress())
 {
     PoisonedMasmPtr::assertIsNotPoisoned(m_value);
-    ASSERT_VALID_CODE_POINTER(m_value);
 }
 
 } // namespace JSC
@@ -488,11 +496,11 @@ inline FunctionPtr::FunctionPtr(MacroAssemblerCodePtr ptr)
 namespace WTF {
 
 template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::MacroAssemblerCodePtr> {
-    typedef JSC::MacroAssemblerCodePtrHash Hash;
+template<JSC::PtrTag tag> struct DefaultHash<JSC::MacroAssemblerCodePtr<tag>> {
+    typedef JSC::MacroAssemblerCodePtrHash<tag> Hash;
 };
 
 template<typename T> struct HashTraits;
-template<> struct HashTraits<JSC::MacroAssemblerCodePtr> : public CustomHashTraits<JSC::MacroAssemblerCodePtr> { };
+template<JSC::PtrTag tag> struct HashTraits<JSC::MacroAssemblerCodePtr<tag>> : public CustomHashTraits<JSC::MacroAssemblerCodePtr<tag>> { };
 
 } // namespace WTF

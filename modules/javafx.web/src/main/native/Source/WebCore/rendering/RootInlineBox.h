@@ -36,12 +36,11 @@ class RenderFragmentContainer;
 struct BidiStatus;
 struct GapRects;
 
-class RootInlineBox : public InlineFlowBox {
+class RootInlineBox : public InlineFlowBox, public CanMakeWeakPtr<RootInlineBox> {
     WTF_MAKE_ISO_ALLOCATED(RootInlineBox);
 public:
     explicit RootInlineBox(RenderBlockFlow&);
     virtual ~RootInlineBox();
-    WeakPtr<RootInlineBox> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
 
     RenderBlockFlow& blockFlow() const;
 
@@ -212,9 +211,6 @@ private:
 
     LayoutUnit beforeAnnotationsAdjustment() const;
 
-    // This folds into the padding at the end of InlineFlowBox on 64-bit.
-    unsigned m_lineBreakPos;
-
     // Where this line ended.  The exact object and the position within that object are stored so that
     // we can create an InlineIterator beginning just after the end of this line.
     WeakPtr<RenderObject> m_lineBreakObj;
@@ -232,7 +228,8 @@ private:
     // Floats hanging off the line are pushed into this vector during layout. It is only
     // good for as long as the line has not been marked dirty.
     std::unique_ptr<CleanLineFloatList> m_floats;
-    WeakPtrFactory<RootInlineBox> m_weakPtrFactory;
+
+    unsigned m_lineBreakPos { 0 };
 };
 
 inline RootInlineBox* RootInlineBox::nextRootBox() const

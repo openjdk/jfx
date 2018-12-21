@@ -39,7 +39,6 @@
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/PromiseDeferredTimer.h>
-#include <wtf/CurrentTime.h>
 
 #if USE(GLIB)
 #include <glib.h>
@@ -105,7 +104,7 @@ String WorkerRunLoop::defaultMode()
 
 String WorkerRunLoop::debuggerMode()
 {
-    return ASCIILiteral("debugger");
+    return "debugger"_s;
 }
 
 class RunLoopSetup {

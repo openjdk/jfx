@@ -108,7 +108,7 @@ void RenderFragmentedFlow::validateFragments()
     if (m_fragmentsInvalidated) {
         m_fragmentsInvalidated = false;
         m_fragmentsHaveUniformLogicalWidth = true;
-        m_fragmentsHaveUniformLogicalHeight = singleFragmentHasUniformLogicalHeight();
+        m_fragmentsHaveUniformLogicalHeight = true;
 
         if (hasFragments()) {
             LayoutUnit previousFragmentLogicalWidth = 0;
@@ -168,7 +168,7 @@ void RenderFragmentedFlow::updateLogicalWidth()
     // If the fragments have non-uniform logical widths, then insert inset information for the RenderFragmentedFlow.
     for (auto& fragment : m_fragmentList) {
         LayoutUnit fragmentLogicalWidth = fragment->pageLogicalWidth();
-        LayoutUnit logicalLeft = style().direction() == LTR ? LayoutUnit() : logicalWidth - fragmentLogicalWidth;
+        LayoutUnit logicalLeft = style().direction() == TextDirection::LTR ? LayoutUnit() : logicalWidth - fragmentLogicalWidth;
         fragment->setRenderBoxFragmentInfo(this, logicalLeft, fragmentLogicalWidth, false);
     }
 }
@@ -311,7 +311,7 @@ LayoutPoint RenderFragmentedFlow::adjustedPositionRelativeToOffsetParent(const R
             LayoutUnit topRelativeToFragment = top - fragmentLogicalTop;
             referencePoint.setY(startFragmentBox->offsetTop() + topRelativeToFragment);
 
-            // Since the top has been overriden, check if the
+            // Since the top has been overridden, check if the
             // relative/sticky positioning must be reconsidered.
             if (boxModelObject.isRelativelyPositioned())
                 referencePoint.move(0, boxModelObject.relativePositionOffset().height());
@@ -345,7 +345,7 @@ LayoutUnit RenderFragmentedFlow::pageLogicalHeightForOffset(LayoutUnit offset) c
     if (!fragment)
         return 0;
 
-    return fragment->pageLogicalHeightForOffset(offset);
+    return fragment->pageLogicalHeight();
 }
 
 LayoutUnit RenderFragmentedFlow::pageRemainingLogicalHeightForOffset(LayoutUnit offset, PageBoundaryRule pageBoundaryRule) const
@@ -355,7 +355,7 @@ LayoutUnit RenderFragmentedFlow::pageRemainingLogicalHeightForOffset(LayoutUnit 
         return 0;
 
     LayoutUnit pageLogicalTop = fragment->pageLogicalTopForOffset(offset);
-    LayoutUnit pageLogicalHeight = fragment->pageLogicalHeightForOffset(offset);
+    LayoutUnit pageLogicalHeight = fragment->pageLogicalHeight();
     LayoutUnit pageLogicalBottom = pageLogicalTop + pageLogicalHeight;
     LayoutUnit remainingHeight = pageLogicalBottom - offset;
     if (pageBoundaryRule == IncludePageBoundary) {
@@ -787,11 +787,11 @@ void RenderFragmentedFlow::updateFragmentsFragmentedFlowPortionRect()
         LayoutUnit fragmentLogicalWidth = fragment->pageLogicalWidth();
         LayoutUnit fragmentLogicalHeight = std::min<LayoutUnit>(RenderFragmentedFlow::maxLogicalHeight() - logicalHeight, fragment->logicalHeightOfAllFragmentedFlowContent());
 
-        LayoutRect fragmentRect(style().direction() == LTR ? LayoutUnit() : logicalWidth() - fragmentLogicalWidth, logicalHeight, fragmentLogicalWidth, fragmentLogicalHeight);
+        LayoutRect fragmentRect(style().direction() == TextDirection::LTR ? LayoutUnit() : logicalWidth() - fragmentLogicalWidth, logicalHeight, fragmentLogicalWidth, fragmentLogicalHeight);
 
         fragment->setFragmentedFlowPortionRect(isHorizontalWritingMode() ? fragmentRect : fragmentRect.transposedRect());
 
-        m_fragmentIntervalTree.add(FragmentIntervalTree::createInterval(logicalHeight, logicalHeight + fragmentLogicalHeight, fragment));
+        m_fragmentIntervalTree.add(FragmentIntervalTree::createInterval(logicalHeight, logicalHeight + fragmentLogicalHeight, makeWeakPtr(fragment)));
 
         logicalHeight += fragmentLogicalHeight;
     }

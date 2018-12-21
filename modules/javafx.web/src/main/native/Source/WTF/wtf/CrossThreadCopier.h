@@ -108,8 +108,8 @@ struct CrossThreadCopier : public CrossThreadCopierBase<CrossThreadCopierBaseHel
 };
 
 // Default specialization for Vectors of CrossThreadCopyable classes.
-template<typename T> struct CrossThreadCopierBase<false, false, Vector<T>> {
-    typedef Vector<T> Type;
+template<typename T, size_t inlineCapacity, typename OverflowHandler, size_t minCapacity> struct CrossThreadCopierBase<false, false, Vector<T, inlineCapacity, OverflowHandler, minCapacity>> {
+    using Type = Vector<T, inlineCapacity, OverflowHandler, minCapacity>;
     static Type copy(const Type& source)
     {
         Type destination;
@@ -128,6 +128,18 @@ template<typename T> struct CrossThreadCopierBase<false, false, HashSet<T> > {
         Type destination;
         for (auto& object : source)
             destination.add(CrossThreadCopier<T>::copy(object));
+        return destination;
+    }
+};
+
+// Default specialization for HashMaps of CrossThreadCopyable classes
+template<typename K, typename V> struct CrossThreadCopierBase<false, false, HashMap<K, V> > {
+    typedef HashMap<K, V> Type;
+    static Type copy(const Type& source)
+    {
+        Type destination;
+        for (auto& keyValue : source)
+            destination.add(CrossThreadCopier<K>::copy(keyValue.key), CrossThreadCopier<V>::copy(keyValue.value));
         return destination;
     }
 };

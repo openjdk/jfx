@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@ final class EventSender {
     private static final int META = 4;
     private static final int SHIFT = 8;
     private static final int PRESSED = 16;
+    private static final int CAPS_LOCK = 32;
 
     private static final float ZOOM = 1.2f;
     private static final float SCROLL = 40f;
@@ -109,6 +110,13 @@ final class EventSender {
     private int modifiers;
 
     /**
+     * Following states are used to send double click
+     */
+    private long lastClickTime;
+    private int lastMouseClickPositionX, lastMouseClickPositionY;
+    private int clickCount = 1;
+
+    /**
      * Creates a new {@code EventSender}.
      */
     EventSender(WebPage webPage) {
@@ -145,16 +153,35 @@ final class EventSender {
         }
     }
 
+    private void updateClickCountForButton(int buttonNumber) {
+        if ((getEventTime() - lastClickTime >= 1000) ||
+            !(mousePositionX == lastMouseClickPositionX && mousePositionY == lastMouseClickPositionY) ||
+            mouseButton != buttonNumber) {
+            clickCount = 1;
+        } else {
+            clickCount++;
+        }
+    }
+
     /**
      * Implements the {@code mouseUp} and {@code mouseDown}
      * methods of the DRT event sender object.
      */
     private void mouseUpDown(int button, int modifiers) {
-        mouseButton = button;
         mousePressed = isSet(modifiers, PRESSED);
+        if (mousePressed) {
+            updateClickCountForButton(button);
+        }
+        mouseButton = button;
         dispatchMouseEvent(mousePressed
                 ? WCMouseEvent.MOUSE_PRESSED
-                : WCMouseEvent.MOUSE_RELEASED, button, 1, modifiers);
+                : WCMouseEvent.MOUSE_RELEASED, button, clickCount, modifiers);
+
+        if (mousePressed) {
+            lastClickTime = getEventTime();
+            lastMouseClickPositionX = mousePositionX;
+            lastMouseClickPositionY = mousePositionY;
+        }
     }
 
     /**

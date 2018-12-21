@@ -29,8 +29,10 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "CacheStorageProvider.h"
+#include "Frame.h"
 #include "FrameLoader.h"
-#include "MainFrame.h"
+#include "LoaderStrategy.h"
+#include "PlatformStrategies.h"
 #include "Settings.h"
 #include <pal/SessionID.h>
 #include <wtf/MainThread.h>
@@ -48,9 +50,11 @@ URL static inline topOriginURL(const SecurityOrigin& origin)
     return url;
 }
 
-static inline UniqueRef<Page> createPageForServiceWorker(PageConfiguration&& configuration, const ServiceWorkerContextData& data, SecurityOrigin::StorageBlockingPolicy storageBlockingPolicy)
+static inline UniqueRef<Page> createPageForServiceWorker(PageConfiguration&& configuration, const ServiceWorkerContextData& data, SecurityOrigin::StorageBlockingPolicy storageBlockingPolicy, PAL::SessionID sessionID)
 {
     auto page = makeUniqueRef<Page>(WTFMove(configuration));
+    page->setSessionID(sessionID);
+
     auto& mainFrame = page->mainFrame();
     mainFrame.loader().initForSynthesizedDocument({ });
     auto document = Document::createNonRenderedPlaceholder(&mainFrame, data.scriptURL);
@@ -62,7 +66,8 @@ static inline UniqueRef<Page> createPageForServiceWorker(PageConfiguration&& con
     auto origin = data.registration.key.topOrigin().securityOrigin();
     origin->setStorageBlockingPolicy(storageBlockingPolicy);
 
-    document->setFirstPartyForCookies(topOriginURL(origin));
+    document->setSiteForCookies(topOriginURL(origin));
+    document->setFirstPartyForCookies(data.scriptURL);
     document->setDomainForCachePartition(origin->domainForCachePartition());
     mainFrame.setDocument(WTFMove(document));
     return page;
@@ -84,7 +89,7 @@ static HashSet<ServiceWorkerThreadProxy*>& allServiceWorkerThreadProxies()
 }
 
 ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfiguration, const ServiceWorkerContextData& data, PAL::SessionID sessionID, String&& userAgent, CacheStorageProvider& cacheStorageProvider, SecurityOrigin::StorageBlockingPolicy storageBlockingPolicy)
-    : m_page(createPageForServiceWorker(WTFMove(pageConfiguration), data, storageBlockingPolicy))
+    : m_page(createPageForServiceWorker(WTFMove(pageConfiguration), data, storageBlockingPolicy, data.sessionID))
     , m_document(*m_page->mainFrame().document())
     , m_serviceWorkerThread(ServiceWorkerThread::create(data, sessionID, WTFMove(userAgent), *this, *this, idbConnectionProxy(m_document), m_document->socketProvider()))
     , m_cacheStorageProvider(cacheStorageProvider)
@@ -93,7 +98,7 @@ ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfi
 {
     static bool addedListener;
     if (!addedListener) {
-        NetworkStateNotifier::singleton().addListener(&networkStateChanged);
+        platformStrategies()->loaderStrategy()->addOnlineStateChangeListener(&networkStateChanged);
         addedListener = true;
     }
 
@@ -176,8 +181,28 @@ void ServiceWorkerThreadProxy::notifyNetworkStateChange(bool isOnline)
     postTaskForModeToWorkerGlobalScope([isOnline] (ScriptExecutionContext& context) {
         auto& globalScope = downcast<WorkerGlobalScope>(context);
         globalScope.setIsOnline(isOnline);
-        globalScope.dispatchEvent(Event::create(isOnline ? eventNames().onlineEvent : eventNames().offlineEvent, false, false));
+        globalScope.dispatchEvent(Event::create(isOnline ? eventNames().onlineEvent : eventNames().offlineEvent, Event::CanBubble::No, Event::IsCancelable::No));
     }, WorkerRunLoop::defaultMode());
+}
+
+void ServiceWorkerThreadProxy::startFetch(SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier, Ref<ServiceWorkerFetch::Client>&& client, std::optional<ServiceWorkerClientIdentifier>&& clientId, ResourceRequest&& request, String&& referrer, FetchOptions&& options)
+{
+    auto key = std::make_pair(connectionIdentifier, fetchIdentifier);
+
+    ASSERT(!m_ongoingFetchTasks.contains(key));
+    m_ongoingFetchTasks.add(key, client.copyRef());
+    thread().postFetchTask(WTFMove(client), WTFMove(clientId), WTFMove(request), WTFMove(referrer), WTFMove(options));
+}
+
+void ServiceWorkerThreadProxy::cancelFetch(SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier)
+{
+    if (auto client = m_ongoingFetchTasks.take(std::make_pair(connectionIdentifier, fetchIdentifier)))
+        client.value()->cancel();
+}
+
+void ServiceWorkerThreadProxy::removeFetch(SWServerConnectionIdentifier connectionIdentifier, FetchIdentifier fetchIdentifier)
+{
+    m_ongoingFetchTasks.remove(std::make_pair(connectionIdentifier, fetchIdentifier));
 }
 
 } // namespace WebCore

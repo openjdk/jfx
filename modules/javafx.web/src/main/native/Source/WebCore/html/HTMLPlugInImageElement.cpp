@@ -26,6 +26,7 @@
 #include "CommonVM.h"
 #include "ContentSecurityPolicy.h"
 #include "EventNames.h"
+#include "Frame.h"
 #include "FrameLoaderClient.h"
 #include "HTMLImageLoader.h"
 #include "JSDOMConvertBoolean.h"
@@ -34,7 +35,6 @@
 #include "JSShadowRoot.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "MouseEvent.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
@@ -53,8 +53,11 @@
 #include "TypedElementDescendantIterator.h"
 #include "UserGestureIndicator.h"
 #include <JavaScriptCore/CatchScope.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPlugInImageElement);
 
 static const int sizingTinyDimensionThreshold = 40;
 static const float sizingFullPageAreaRatioThreshold = 0.96;
@@ -69,6 +72,9 @@ static const Seconds removeSnapshotTimerDelay { 1500_ms };
 
 static const String titleText(Page& page, const String& mimeType)
 {
+    if (mimeType.isEmpty())
+        return snapshottedPlugInLabelTitle();
+
     // FIXME: It's not consistent to get a string from the page's chrome client, but then cache it globally.
     // If it's global, it should come from elsewhere. If it's per-page then it should be cached per page.
     static NeverDestroyed<HashMap<String, String>> mimeTypeToLabelTitleMap;
@@ -82,6 +88,9 @@ static const String titleText(Page& page, const String& mimeType)
 
 static const String subtitleText(Page& page, const String& mimeType)
 {
+    if (mimeType.isEmpty())
+        return snapshottedPlugInLabelSubtitle();
+
     // FIXME: It's not consistent to get a string from the page's chrome client, but then cache it globally.
     // If it's global, it should come from elsewhere. If it's per-page then it should be cached per page.
     static NeverDestroyed<HashMap<String, String>> mimeTypeToLabelSubtitleMap;
@@ -225,6 +234,13 @@ void HTMLPlugInImageElement::didAttachRenderers()
 {
     m_needsWidgetUpdate = true;
     scheduleUpdateForAfterStyleResolution();
+
+    // Update the RenderImageResource of the associated RenderImage.
+    if (m_imageLoader && is<RenderImage>(renderer())) {
+        auto& renderImageResource = downcast<RenderImage>(*renderer()).imageResource();
+        if (!renderImageResource.cachedImage())
+            renderImageResource.setCachedImage(m_imageLoader->image());
+    }
 
     HTMLPlugInElement::didAttachRenderers();
 }
@@ -425,7 +441,7 @@ void HTMLPlugInImageElement::restartSimilarPlugIns()
     // Restart any other snapshotted plugins in the page with the same origin. Note that they
     // may be in different frames, so traverse from the top of the document.
 
-    String plugInOrigin = m_loadedUrl.host();
+    auto plugInOrigin = m_loadedUrl.host();
     String mimeType = serviceType();
     Vector<Ref<HTMLPlugInImageElement>> similarPlugins;
 
@@ -459,9 +475,9 @@ void HTMLPlugInImageElement::userDidClickSnapshot(MouseEvent& event, bool forwar
     if (forwardEvent)
         m_pendingClickEventFromSnapshot = &event;
 
-    String plugInOrigin = m_loadedUrl.host();
+    auto plugInOrigin = m_loadedUrl.host();
     if (document().page() && !SchemeRegistry::shouldTreatURLSchemeAsLocal(document().page()->mainFrame().document()->baseURL().protocol().toStringWithoutCopying()) && document().page()->settings().autostartOriginPlugInSnapshottingEnabled())
-        document().page()->plugInClient()->didStartFromOrigin(document().page()->mainFrame().document()->baseURL().host(), plugInOrigin, serviceType(), document().page()->sessionID());
+        document().page()->plugInClient()->didStartFromOrigin(document().page()->mainFrame().document()->baseURL().host().toString(), plugInOrigin.toString(), serviceType(), document().page()->sessionID());
 
     LOG(Plugins, "%p User clicked on snapshotted plug-in. Restart.", this);
     restartSnapshottedPlugIn();
@@ -596,7 +612,7 @@ void HTMLPlugInImageElement::checkSnapshotStatus()
     }
 
     // Notify the shadow root that the size changed so that we may update the overlay layout.
-    ensureUserAgentShadowRoot().dispatchEvent(Event::create(eventNames().resizeEvent, true, false));
+    ensureUserAgentShadowRoot().dispatchEvent(Event::create(eventNames().resizeEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
 
 void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const URL& url)
@@ -665,7 +681,7 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const URL& url)
         return;
     }
 
-    if (document().page()->settings().autostartOriginPlugInSnapshottingEnabled() && document().page()->plugInClient() && document().page()->plugInClient()->shouldAutoStartFromOrigin(document().page()->mainFrame().document()->baseURL().host(), url.host(), serviceType())) {
+    if (document().page()->settings().autostartOriginPlugInSnapshottingEnabled() && document().page()->plugInClient() && document().page()->plugInClient()->shouldAutoStartFromOrigin(document().page()->mainFrame().document()->baseURL().host().toString(), url.host().toString(), serviceType())) {
         LOG(Plugins, "%p Plug-in from (%s, %s) is marked to auto-start, set to play", this, document().page()->mainFrame().document()->baseURL().host().utf8().data(), url.host().utf8().data());
         m_snapshotDecision = NeverSnapshot;
         return;

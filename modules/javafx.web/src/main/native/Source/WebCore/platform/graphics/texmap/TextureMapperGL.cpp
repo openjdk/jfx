@@ -126,7 +126,7 @@ TextureMapperGLData::~TextureMapperGLData()
     for (auto& entry : m_vbos)
         glDeleteBuffers(1, &entry.value);
 
-#if !USE(OPENGL_ES_2)
+#if !USE(OPENGL_ES)
     if (GLContext::current()->version() >= 320 && m_vao)
         glDeleteVertexArrays(1, &m_vao);
 #endif
@@ -162,7 +162,7 @@ GLuint TextureMapperGLData::getStaticVBO(GLenum target, GLsizeiptr size, const v
 
 GLuint TextureMapperGLData::getVAO()
 {
-#if !USE(OPENGL_ES_2)
+#if !USE(OPENGL_ES)
     if (GLContext::current()->version() >= 320 && !m_vao)
         glGenVertexArrays(1, &m_vao);
 #endif
@@ -178,10 +178,9 @@ Ref<TextureMapperShaderProgram> TextureMapperGLData::getShaderProgram(TextureMap
 }
 
 TextureMapperGL::TextureMapperGL()
-    : m_enableEdgeDistanceAntialiasing(false)
+    : m_contextAttributes(TextureMapperContextAttributes::get())
+    , m_enableEdgeDistanceAntialiasing(false)
 {
-    m_contextAttributes.initialize();
-
     void* platformContext = GLContext::current()->platformContext();
     ASSERT(platformContext);
 
@@ -212,7 +211,7 @@ void TextureMapperGL::beginPainting(PaintFlags flags)
     data().PaintFlags = flags;
     bindSurface(0);
 
-#if !USE(OPENGL_ES_2)
+#if !USE(OPENGL_ES)
     if (GLContext::current()->version() >= 320) {
         glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &data().previousVAO);
         glBindVertexArray(data().getVAO());
@@ -240,7 +239,7 @@ void TextureMapperGL::endPainting()
     else
         glDisable(GL_DEPTH_TEST);
 
-#if !USE(OPENGL_ES_2)
+#if !USE(OPENGL_ES)
     if (GLContext::current()->version() >= 320)
         glBindVertexArray(data().previousVAO);
 #endif
@@ -301,7 +300,7 @@ void TextureMapperGL::drawNumber(int number, const Color& color, const FloatPoin
     RefPtr<BitmapTexture> texture = acquireTextureFromPool(size);
     const unsigned char* bits = cairo_image_surface_get_data(surface);
     int stride = cairo_image_surface_get_stride(surface);
-    static_cast<BitmapTextureGL*>(texture.get())->updateContentsNoSwizzle(bits, sourceRect, IntPoint::zero(), stride);
+    static_cast<BitmapTextureGL*>(texture.get())->updateContents(bits, sourceRect, IntPoint::zero(), stride);
     drawTexture(*texture, targetRect, modelViewMatrix, 1.0f, AllEdges);
 
     cairo_surface_destroy(surface);
@@ -461,7 +460,7 @@ void TextureMapperGL::drawTexture(const BitmapTexture& texture, const FloatRect&
     const BitmapTextureGL& textureGL = static_cast<const BitmapTextureGL&>(texture);
     SetForScope<const BitmapTextureGL::FilterInfo*> filterInfo(data().filterInfo, textureGL.filterInfo());
 
-    drawTexture(textureGL.id(), textureGL.isOpaque() ? 0 : ShouldBlend, textureGL.size(), targetRect, matrix, opacity, exposedEdges);
+    drawTexture(textureGL.id(), textureGL.colorConvertFlags() | (textureGL.isOpaque() ? 0 : ShouldBlend), textureGL.size(), targetRect, matrix, opacity, exposedEdges);
 }
 
 void TextureMapperGL::drawTexture(GLuint texture, Flags flags, const IntSize& textureSize, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity, unsigned exposedEdges)

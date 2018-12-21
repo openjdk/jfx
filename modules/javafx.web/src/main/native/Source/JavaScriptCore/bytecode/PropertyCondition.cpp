@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,17 +43,19 @@ void PropertyCondition::dumpInContext(PrintStream& out, DumpContext* context) co
         return;
     }
 
-    out.print(m_kind, " of ", m_uid);
-    switch (m_kind) {
+    switch (m_header.type()) {
     case Presence:
-        out.print(" at ", offset(), " with attributes ", attributes());
+        out.print(m_header.type(), " of ", m_header.pointer(), " at ", offset(), " with attributes ", attributes());
         return;
     case Absence:
     case AbsenceOfSetEffect:
-        out.print(" with prototype ", inContext(JSValue(prototype()), context));
+        out.print(m_header.type(), " of ", m_header.pointer(), " with prototype ", inContext(JSValue(prototype()), context));
         return;
     case Equivalence:
-        out.print(" with ", inContext(requiredValue(), context));
+        out.print(m_header.type(), " of ", m_header.pointer(), " with ", inContext(requiredValue(), context));
+        return;
+    case HasPrototype:
+        out.print(m_header.type(), " with prototype ", inContext(JSValue(prototype()), context));
         return;
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -79,13 +81,28 @@ bool PropertyCondition::isStillValidAssumingImpurePropertyWatchpoint(
         return false;
     }
 
-    if (!structure->propertyAccessesAreCacheable()) {
-        if (PropertyConditionInternal::verbose)
-            dataLog("Invalid because accesses are not cacheable.\n");
-        return false;
+    switch (m_header.type()) {
+    case Presence:
+    case Absence:
+    case AbsenceOfSetEffect:
+    case Equivalence:
+        if (!structure->propertyAccessesAreCacheable()) {
+            if (PropertyConditionInternal::verbose)
+                dataLog("Invalid because property accesses are not cacheable.\n");
+            return false;
+        }
+        break;
+
+    case HasPrototype:
+        if (!structure->prototypeQueriesAreCacheable()) {
+            if (PropertyConditionInternal::verbose)
+                dataLog("Invalid because prototype queries are not cacheable.\n");
+            return false;
+        }
+        break;
     }
 
-    switch (m_kind) {
+    switch (m_header.type()) {
     case Presence: {
         unsigned currentAttributes;
         PropertyOffset currentOffset = structure->getConcurrently(uid(), currentAttributes);
@@ -174,6 +191,27 @@ bool PropertyCondition::isStillValidAssumingImpurePropertyWatchpoint(
         return true;
     }
 
+    case HasPrototype: {
+        if (structure->hasPolyProto()) {
+            // FIXME: I think this is too conservative. We can probably prove this if
+            // we have the base. Anyways, we should make this work when integrating
+            // OPC and poly proto.
+            // https://bugs.webkit.org/show_bug.cgi?id=177339
+            return false;
+        }
+
+        if (structure->storedPrototypeObject() != prototype()) {
+            if (PropertyConditionInternal::verbose) {
+                dataLog(
+                    "Invalid because the prototype is ", structure->storedPrototype(), " even though "
+                    "it should have been ", JSValue(prototype()), "\n");
+            }
+            return false;
+        }
+
+        return true;
+    }
+
     case Equivalence: {
         if (!base || base->structure() != structure) {
             // Conservatively return false, since we cannot verify this one without having the
@@ -199,7 +237,7 @@ bool PropertyCondition::isStillValidAssumingImpurePropertyWatchpoint(
             return false;
         }
 
-        JSValue currentValue = base->getDirect(currentOffset);
+        JSValue currentValue = base->getDirectConcurrently(structure, currentOffset);
         if (currentValue != requiredValue()) {
             if (PropertyConditionInternal::verbose) {
                 dataLog(
@@ -221,14 +259,18 @@ bool PropertyCondition::validityRequiresImpurePropertyWatchpoint(Structure* stru
     if (!*this)
         return false;
 
-    switch (m_kind) {
+    switch (m_header.type()) {
     case Presence:
     case Absence:
     case Equivalence:
         return structure->needImpurePropertyWatchpoint();
-    default:
+    case AbsenceOfSetEffect:
+    case HasPrototype:
         return false;
     }
+
+    RELEASE_ASSERT_NOT_REACHED();
+    return false;
 }
 
 bool PropertyCondition::isStillValid(Structure* structure, JSObject* base) const
@@ -239,7 +281,7 @@ bool PropertyCondition::isStillValid(Structure* structure, JSObject* base) const
     // Currently we assume that an impure property can cause a property to appear, and can also
     // "shadow" an existing JS property on the same object. Hence it affects both presence and
     // absence. It doesn't affect AbsenceOfSetEffect because impure properties aren't ever setters.
-    switch (m_kind) {
+    switch (m_header.type()) {
     case Absence:
         if (structure->typeInfo().getOwnPropertySlotIsImpure() || structure->typeInfo().getOwnPropertySlotIsImpureForPropertyAbsence())
             return false;
@@ -262,7 +304,7 @@ bool PropertyCondition::isWatchableWhenValid(
     if (structure->transitionWatchpointSetHasBeenInvalidated())
         return false;
 
-    switch (m_kind) {
+    switch (m_header.type()) {
     case Equivalence: {
         PropertyOffset offset = structure->getConcurrently(uid());
 
@@ -279,7 +321,7 @@ bool PropertyCondition::isWatchableWhenValid(
             break;
         case EnsureWatchability:
             set = structure->ensurePropertyReplacementWatchpointSet(
-                *Heap::heap(structure)->vm(), offset);
+                *structure->vm(), offset);
             break;
         }
 
@@ -335,6 +377,8 @@ void PropertyCondition::validateReferences(const TrackedReferences& tracked) con
 
 bool PropertyCondition::isValidValueForAttributes(VM& vm, JSValue value, unsigned attributes)
 {
+    if (!value)
+        return false;
     bool attributesClaimAccessor = !!(attributes & PropertyAttribute::Accessor);
     bool valueClaimsAccessor = !!jsDynamicCast<GetterSetter*>(vm, value);
     return attributesClaimAccessor == valueClaimsAccessor;
@@ -347,10 +391,9 @@ bool PropertyCondition::isValidValueForPresence(VM& vm, JSValue value) const
 
 PropertyCondition PropertyCondition::attemptToMakeEquivalenceWithoutBarrier(VM& vm, JSObject* base) const
 {
-    Structure* structure = base->structure();
-    if (!structure->isValidOffset(offset()))
-        return PropertyCondition();
-    JSValue value = base->getDirect(offset());
+    Structure* structure = base->structure(vm);
+
+    JSValue value = base->getDirectConcurrently(structure, offset());
     if (!isValidValueForPresence(vm, value))
         return PropertyCondition();
     return equivalenceWithoutBarrier(uid(), value);
@@ -374,6 +417,9 @@ void printInternal(PrintStream& out, JSC::PropertyCondition::Kind condition)
         return;
     case JSC::PropertyCondition::Equivalence:
         out.print("Equivalence");
+        return;
+    case JSC::PropertyCondition::HasPrototype:
+        out.print("HasPrototype");
         return;
     }
     RELEASE_ASSERT_NOT_REACHED();

@@ -45,6 +45,7 @@
 #include "FontSelectorClient.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include "Logging.h"
 #include "Settings.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
@@ -68,10 +69,13 @@ CSSFontSelector::CSSFontSelector(Document& document)
     ASSERT(m_document);
     FontCache::singleton().addClient(*this);
     m_cssFontFaceSet->addClient(*this);
+    LOG(Fonts, "CSSFontSelector %p ctor", this);
 }
 
 CSSFontSelector::~CSSFontSelector()
 {
+    LOG(Fonts, "CSSFontSelector %p dtor", this);
+
     clearDocument();
     m_cssFontFaceSet->removeClient(*this);
     FontCache::singleton().removeClient(*this);
@@ -365,11 +369,11 @@ void CSSFontSelector::beginLoadTimerFired()
         cachedResourceLoader.decrementRequestCount(*fontHandle);
     }
     // Ensure that if the request count reaches zero, the frame loader will know about it.
-    cachedResourceLoader.loadDone();
     // New font loads may be triggered by layout after the document load is complete but before we have dispatched
     // didFinishLoading for the frame. Make sure the delegate is always dispatched by checking explicitly.
     if (m_document && m_document->frame())
         m_document->frame()->loader().checkLoadComplete();
+    cachedResourceLoader.loadDone(LoadCompletionType::Finish);
 }
 
 

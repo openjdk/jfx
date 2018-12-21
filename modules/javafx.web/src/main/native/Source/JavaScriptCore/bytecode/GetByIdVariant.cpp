@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,7 +37,7 @@ GetByIdVariant::GetByIdVariant(
     const ObjectPropertyConditionSet& conditionSet,
     std::unique_ptr<CallLinkStatus> callLinkStatus,
     JSFunction* intrinsicFunction,
-    PropertySlot::GetValueFunc customAccessorGetter,
+    FunctionPtr<OperationPtrTag> customAccessorGetter,
     std::optional<DOMAttributeAnnotation> domAttribute)
     : m_structureSet(structureSet)
     , m_conditionSet(conditionSet)
@@ -103,8 +103,11 @@ bool GetByIdVariant::attemptToMerge(const GetByIdVariant& other)
 {
     if (m_offset != other.m_offset)
         return false;
-    if (m_callLinkStatus || other.m_callLinkStatus)
-        return false;
+
+    if (m_callLinkStatus || other.m_callLinkStatus) {
+        if (!(m_callLinkStatus && other.m_callLinkStatus))
+            return false;
+    }
 
     if (!canMergeIntrinsicStructures(other))
         return false;
@@ -125,13 +128,37 @@ bool GetByIdVariant::attemptToMerge(const GetByIdVariant& other)
     ObjectPropertyConditionSet mergedConditionSet;
     if (!m_conditionSet.isEmpty()) {
         mergedConditionSet = m_conditionSet.mergedWith(other.m_conditionSet);
-        if (!mergedConditionSet.isValid() || !mergedConditionSet.hasOneSlotBaseCondition())
+        if (!mergedConditionSet.isValid())
+            return false;
+        // If this is a hit variant, one slot base should exist. If this is not a hit variant, the slot base is not necessary.
+        if (!isPropertyUnset() && !mergedConditionSet.hasOneSlotBaseCondition())
             return false;
     }
     m_conditionSet = mergedConditionSet;
 
     m_structureSet.merge(other.m_structureSet);
 
+    if (m_callLinkStatus)
+        m_callLinkStatus->merge(*other.m_callLinkStatus);
+
+    return true;
+}
+
+void GetByIdVariant::markIfCheap(SlotVisitor& visitor)
+{
+    m_structureSet.markIfCheap(visitor);
+}
+
+bool GetByIdVariant::finalize()
+{
+    if (!m_structureSet.isStillAlive())
+        return false;
+    if (!m_conditionSet.areStillLive())
+        return false;
+    if (m_callLinkStatus && !m_callLinkStatus->finalize())
+        return false;
+    if (m_intrinsicFunction && !Heap::isMarked(m_intrinsicFunction))
+        return false;
     return true;
 }
 
@@ -155,7 +182,7 @@ void GetByIdVariant::dumpInContext(PrintStream& out, DumpContext* context) const
     if (m_intrinsicFunction)
         out.print(", intrinsic = ", *m_intrinsicFunction);
     if (m_customAccessorGetter)
-        out.print(", customaccessorgetter = ", RawPointer(bitwise_cast<const void*>(m_customAccessorGetter)));
+        out.print(", customaccessorgetter = ", RawPointer(m_customAccessorGetter.executableAddress()));
     if (m_domAttribute) {
         out.print(", domclass = ", RawPointer(m_domAttribute->classInfo));
         if (m_domAttribute->domJIT)

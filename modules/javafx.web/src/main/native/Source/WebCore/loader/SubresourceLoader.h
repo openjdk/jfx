@@ -30,6 +30,7 @@
 
 #include "FrameLoaderTypes.h"
 #include "ResourceLoader.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -48,8 +49,9 @@ public:
     virtual ~SubresourceLoader();
 
     void cancelIfNotFinishing();
-    bool isSubresourceLoader() override;
+    bool isSubresourceLoader() const override;
     CachedResource* cachedResource();
+    WEBCORE_EXPORT const HTTPHeaderMap* originalHeaders() const;
 
     SecurityOrigin* origin() { return m_origin.get(); }
 #if PLATFORM(IOS)
@@ -61,6 +63,9 @@ public:
 
     unsigned redirectCount() const { return m_redirectCount; }
 
+    void markInAsyncResponsePolicyCheck() { m_inAsyncResponsePolicyCheck = true; }
+    void didReceiveResponsePolicy();
+
 private:
     SubresourceLoader(DocumentLoader&, CachedResource&, const ResourceLoaderOptions&);
 
@@ -68,7 +73,7 @@ private:
 
     void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&) override;
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
-    void didReceiveResponse(const ResourceResponse&) override;
+    void didReceiveResponse(const ResourceResponse&, CompletionHandler<void()>&& policyCompletionHandler) override;
     void didReceiveData(const char*, unsigned, long long encodedDataLength, DataPayloadType) override;
     void didReceiveBuffer(Ref<SharedBuffer>&&, long long encodedDataLength, DataPayloadType) override;
     void didFinishLoading(const NetworkLoadMetrics&) override;
@@ -77,8 +82,10 @@ private:
     void didCancel(const ResourceError&) override;
     void didRetrieveDerivedDataFromCache(const String& type, SharedBuffer&) override;
 
+    void updateReferrerPolicy(const String&);
+
 #if PLATFORM(COCOA)
-    NSCachedURLResponse *willCacheResponse(ResourceHandle*, NSCachedURLResponse*) override;
+    void willCacheResponseAsync(ResourceHandle*, NSCachedURLResponse*, CompletionHandler<void(NSCachedURLResponse *)>&&) override;
 #endif
 
     void releaseResources() override;
@@ -89,7 +96,7 @@ private:
 
     void didReceiveDataOrBuffer(const char*, int, RefPtr<SharedBuffer>&&, long long encodedDataLength, DataPayloadType);
 
-    void notifyDone();
+    void notifyDone(LoadCompletionType);
 
     void reportResourceTiming(const NetworkLoadMetrics&);
 
@@ -125,8 +132,10 @@ private:
     SubresourceLoaderState m_state;
     std::optional<RequestCountTracker> m_requestCountTracker;
     RefPtr<SecurityOrigin> m_origin;
+    CompletionHandler<void()> m_policyForResponseCompletionHandler;
     unsigned m_redirectCount { 0 };
     bool m_loadingMultipartContent { false };
+    bool m_inAsyncResponsePolicyCheck { false };
 };
 
 }

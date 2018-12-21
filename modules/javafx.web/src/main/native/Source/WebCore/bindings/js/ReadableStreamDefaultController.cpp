@@ -44,7 +44,7 @@ namespace WebCore {
 static inline JSC::JSValue callFunction(JSC::ExecState& state, JSC::JSValue jsFunction, JSC::JSValue thisValue, const JSC::ArgList& arguments)
 {
     JSC::CallData callData;
-    auto callType = JSC::getCallData(jsFunction, callData);
+    auto callType = JSC::getCallData(state.vm(), jsFunction, callData);
     return call(&state, jsFunction, callType, callData, thisValue, arguments);
 }
 
@@ -57,9 +57,9 @@ JSC::JSValue ReadableStreamDefaultController::invoke(JSC::ExecState& state, JSC:
     auto function = object.get(&state, JSC::Identifier::fromString(&state, propertyName));
     RETURN_IF_EXCEPTION(scope, JSC::JSValue());
 
-    if (!function.isFunction()) {
+    if (!function.isFunction(vm)) {
         if (!function.isUndefined())
-            throwTypeError(&state, scope, ASCIILiteral("ReadableStream trying to call a property that is not callable"));
+            throwTypeError(&state, scope, "ReadableStream trying to call a property that is not callable"_s);
         return JSC::jsUndefined();
     }
 

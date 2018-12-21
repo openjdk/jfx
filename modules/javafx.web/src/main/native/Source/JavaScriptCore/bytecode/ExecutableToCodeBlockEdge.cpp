@@ -48,7 +48,16 @@ void ExecutableToCodeBlockEdge::visitChildren(JSCell* cell, SlotVisitor& visitor
 {
     VM& vm = visitor.vm();
     ExecutableToCodeBlockEdge* edge = jsCast<ExecutableToCodeBlockEdge*>(cell);
+    Base::visitChildren(cell, visitor);
+
     CodeBlock* codeBlock = edge->m_codeBlock.get();
+
+    // It's possible for someone to hold a pointer to the edge after the edge has cleared its weak
+    // reference to the codeBlock. In a conservative GC like ours, that could happen at random for
+    // no good reason and it's Totally OK (TM). See finalizeUnconditionally() for where we clear
+    // m_codeBlock.
+    if (!codeBlock)
+        return;
 
     if (!edge->m_isActive) {
         visitor.appendUnbarriered(codeBlock);

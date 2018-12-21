@@ -28,7 +28,7 @@
 
 #include "Extensions3DOpenGLCommon.h"
 
-#if USE(OPENGL_ES_2)
+#if USE(OPENGL_ES)
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
@@ -70,6 +70,8 @@ public:
     // This class only needs to be instantiated by GraphicsContext3D implementations.
     Extensions3DOpenGLES(GraphicsContext3D*, bool useIndexedGetString);
     virtual ~Extensions3DOpenGLES();
+
+    bool isEnabled(const String&) override;
 
     virtual void framebufferTexture2DMultisampleIMG(unsigned long target, unsigned long attachment, unsigned long textarget, unsigned int texture, int level, unsigned long samples);
     virtual void renderbufferStorageMultisampleIMG(unsigned long target, unsigned long samples, unsigned long internalformat, unsigned long width, unsigned long height);
@@ -129,4 +131,4 @@ protected:
 
 } // namespace WebCore
 
-#endif // USE(OPENGL_ES_2)
+#endif // USE(OPENGL_ES)

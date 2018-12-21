@@ -30,7 +30,7 @@
 #include "DOMException.h"
 #include <WebCore/Node.h>
 #include <WebCore/XPathResult.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

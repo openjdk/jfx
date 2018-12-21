@@ -26,6 +26,7 @@
 #include "Logging.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
+#include "MediaQueryParser.h"
 #include "ScriptableDocumentParser.h"
 #include "ShadowRoot.h"
 #include "StyleScope.h"
@@ -171,10 +172,10 @@ void InlineStyleSheetOwner::createSheet(Element& element, const String& text)
     if (!contentSecurityPolicy.allowInlineStyle(document.url(), m_startTextPosition.m_line, text, hasKnownNonce))
         return;
 
-    RefPtr<MediaQuerySet> mediaQueries = MediaQuerySet::create(m_media);
+    RefPtr<MediaQuerySet> mediaQueries = MediaQuerySet::create(m_media, MediaQueryParserContext(document));
 
-    MediaQueryEvaluator screenEval(ASCIILiteral("screen"), true);
-    MediaQueryEvaluator printEval(ASCIILiteral("print"), true);
+    MediaQueryEvaluator screenEval("screen"_s, true);
+    MediaQueryEvaluator printEval("print"_s, true);
     LOG(MediaQueries, "InlineStyleSheetOwner::createSheet evaluating queries");
     if (!screenEval.evaluate(*mediaQueries) && !printEval.evaluate(*mediaQueries))
         return;

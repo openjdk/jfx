@@ -108,7 +108,7 @@ public:
     WEBCORE_EXPORT String stringCenterEllipsizedToLength(unsigned length = 1024) const;
 
     WEBCORE_EXPORT StringView protocol() const;
-    WEBCORE_EXPORT String host() const;
+    WEBCORE_EXPORT StringView host() const;
     WEBCORE_EXPORT std::optional<uint16_t> port() const;
     WEBCORE_EXPORT String hostAndPort() const;
     WEBCORE_EXPORT String protocolHostAndPort() const;
@@ -124,6 +124,7 @@ public:
     bool hasPassword() const;
     bool hasQuery() const;
     bool hasFragment() const;
+    bool hasPath() const;
 
     // Unlike user() and pass(), these functions don't decode escape sequences.
     // This is necessary for accurate round-tripping, because encoding doesn't encode '%' characters.
@@ -144,6 +145,8 @@ public:
     WEBCORE_EXPORT bool isLocalFile() const;
     WEBCORE_EXPORT bool isBlankURL() const;
     bool cannotBeABaseURL() const { return m_cannotBeABaseURL; }
+
+    WEBCORE_EXPORT bool isMatchingDomain(const String&) const;
 
     WEBCORE_EXPORT bool setProtocol(const String&);
     void setHost(const String&);
@@ -178,7 +181,7 @@ public:
     unsigned hostStart() const;
     unsigned hostEnd() const;
 
-    WEBCORE_EXPORT static bool hostIsIPAddress(const String&);
+    WEBCORE_EXPORT static bool hostIsIPAddress(StringView);
 
     unsigned pathStart() const;
     unsigned pathEnd() const;
@@ -205,7 +208,6 @@ public:
 #endif
 
 #if PLATFORM(JAVA)
-    bool isJarFile() const { return m_protocolIsInJar; }
     URL(JNIEnv* env, jstring url) : URL(URL(), String(env, url)) {}
 #endif
 
@@ -224,44 +226,33 @@ private:
     void init(const URL&, const String&, const TextEncoding&);
     void copyToBuffer(Vector<char, 512>& buffer) const;
 
-    bool hasPath() const;
-
     String m_string;
-    bool m_isValid : 1;
-    bool m_protocolIsInHTTPFamily : 1;
-#if PLATFORM(JAVA)
-    bool m_protocolIsInJar : 1;
-#endif
-    bool m_cannotBeABaseURL : 1;
 
-    unsigned m_schemeEnd;
+    unsigned m_isValid : 1;
+    unsigned m_protocolIsInHTTPFamily : 1;
+    unsigned m_cannotBeABaseURL : 1;
+
+    // This is out of order to align the bits better. The port is after the host.
+    unsigned m_portLength : 3;
+    static constexpr unsigned maxPortLength = (1 << 3) - 1;
+
+    static constexpr unsigned maxSchemeLength = (1 << 26) - 1;
+    unsigned m_schemeEnd : 26;
     unsigned m_userStart;
     unsigned m_userEnd;
     unsigned m_passwordEnd;
     unsigned m_hostEnd;
-    unsigned m_portEnd;
     unsigned m_pathAfterLastSlash;
     unsigned m_pathEnd;
     unsigned m_queryEnd;
 };
 
+static_assert(sizeof(URL) == sizeof(String) + 8 * sizeof(unsigned), "URL should stay small");
+
 template <class Encoder>
 void URL::encode(Encoder& encoder) const
 {
     encoder << m_string;
-    encoder << static_cast<bool>(m_isValid);
-    if (!m_isValid)
-        return;
-    encoder << static_cast<bool>(m_protocolIsInHTTPFamily);
-    encoder << m_schemeEnd;
-    encoder << m_userStart;
-    encoder << m_userEnd;
-    encoder << m_passwordEnd;
-    encoder << m_hostEnd;
-    encoder << m_portEnd;
-    encoder << m_pathAfterLastSlash;
-    encoder << m_pathEnd;
-    encoder << m_queryEnd;
 }
 
 template <class Decoder>
@@ -277,38 +268,10 @@ bool URL::decode(Decoder& decoder, URL& url)
 template <class Decoder>
 std::optional<URL> URL::decode(Decoder& decoder)
 {
-    URL url;
-    if (!decoder.decode(url.m_string))
+    String string;
+    if (!decoder.decode(string))
         return std::nullopt;
-    bool isValid;
-    if (!decoder.decode(isValid))
-        return std::nullopt;
-    url.m_isValid = isValid;
-    if (!isValid)
-        return WTFMove(url);
-    bool protocolIsInHTTPFamily;
-    if (!decoder.decode(protocolIsInHTTPFamily))
-        return std::nullopt;
-    url.m_protocolIsInHTTPFamily = protocolIsInHTTPFamily;
-    if (!decoder.decode(url.m_schemeEnd))
-        return std::nullopt;
-    if (!decoder.decode(url.m_userStart))
-        return std::nullopt;
-    if (!decoder.decode(url.m_userEnd))
-        return std::nullopt;
-    if (!decoder.decode(url.m_passwordEnd))
-        return std::nullopt;
-    if (!decoder.decode(url.m_hostEnd))
-        return std::nullopt;
-    if (!decoder.decode(url.m_portEnd))
-        return std::nullopt;
-    if (!decoder.decode(url.m_pathAfterLastSlash))
-        return std::nullopt;
-    if (!decoder.decode(url.m_pathEnd))
-        return std::nullopt;
-    if (!decoder.decode(url.m_queryEnd))
-        return std::nullopt;
-    return WTFMove(url);
+    return URL(URL(), string);
 }
 
 bool operator==(const URL&, const URL&);
@@ -411,7 +374,7 @@ inline bool URL::isValid() const
 
 inline bool URL::hasPath() const
 {
-    return m_pathEnd != m_portEnd;
+    return m_pathEnd != m_hostEnd + m_portLength;
 }
 
 inline bool URL::hasUsername() const
@@ -451,7 +414,7 @@ inline unsigned URL::hostEnd() const
 
 inline unsigned URL::pathStart() const
 {
-    return m_portEnd;
+    return m_hostEnd + m_portLength;
 }
 
 inline unsigned URL::pathEnd() const

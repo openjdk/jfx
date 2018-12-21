@@ -89,7 +89,7 @@ JSPromiseConstructor::JSPromiseConstructor(VM& vm, Structure* structure, NativeF
 
 void JSPromiseConstructor::finishCreation(VM& vm, JSPromisePrototype* promisePrototype, GetterSetter* speciesSymbol)
 {
-    Base::finishCreation(vm, ASCIILiteral("Promise"));
+    Base::finishCreation(vm, "Promise"_s);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, promisePrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
     putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, PropertyAttribute::Accessor | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
@@ -105,7 +105,7 @@ static EncodedJSValue JSC_HOST_CALL constructPromise(ExecState* exec)
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    JSGlobalObject* globalObject = exec->jsCallee()->globalObject();
+    JSGlobalObject* globalObject = exec->jsCallee()->globalObject(vm);
 
     JSValue newTarget = exec->newTarget();
     if (newTarget.isUndefined())

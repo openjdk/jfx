@@ -31,6 +31,7 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ComposedTreeIterator.h"
 #include "Document.h"
+#include "DocumentTimeline.h"
 #include "Element.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
@@ -40,7 +41,10 @@
 #include "RenderDescendantIterator.h"
 #include "RenderFullScreen.h"
 #include "RenderInline.h"
+#include "RenderMultiColumnFlow.h"
+#include "RenderMultiColumnSet.h"
 #include "RenderTreeUpdaterGeneratedContent.h"
+#include "RuntimeEnabledFeatures.h"
 #include "StyleResolver.h"
 #include "StyleTreeResolver.h"
 #include <wtf/SystemTracing.h>
@@ -60,9 +64,9 @@ public:
 
 private:
     const Element& m_element;
-    EDisplay m_previousDisplay;
-    EVisibility m_previousVisibility;
-    EVisibility m_previousImplicitVisibility;
+    DisplayType m_previousDisplay;
+    Visibility m_previousVisibility;
+    Visibility m_previousImplicitVisibility;
 };
 #endif // PLATFORM(IOS)
 
@@ -255,13 +259,13 @@ void RenderTreeUpdater::popParentsToDepth(unsigned depth)
 void RenderTreeUpdater::updateBeforeDescendants(Element& element, const Style::ElementUpdates* updates)
 {
     if (updates)
-        generatedContent().updatePseudoElement(element, updates->beforePseudoElementUpdate, BEFORE);
+        generatedContent().updatePseudoElement(element, updates->beforePseudoElementUpdate, PseudoId::Before);
 }
 
 void RenderTreeUpdater::updateAfterDescendants(Element& element, const Style::ElementUpdates* updates)
 {
     if (updates)
-        generatedContent().updatePseudoElement(element, updates->afterPseudoElementUpdate, AFTER);
+        generatedContent().updatePseudoElement(element, updates->afterPseudoElementUpdate, PseudoId::After);
 
     auto* renderer = element.renderer();
     if (!renderer)
@@ -315,13 +319,13 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
         }
 
         // display:none cancels animations.
-        auto teardownType = update.style->display() == NONE ? TeardownType::RendererUpdateCancelingAnimations : TeardownType::RendererUpdate;
-        tearDownRenderers(element, teardownType);
+        auto teardownType = update.style->display() == DisplayType::None ? TeardownType::RendererUpdateCancelingAnimations : TeardownType::RendererUpdate;
+        tearDownRenderers(element, teardownType, m_builder);
 
         renderingParent().didCreateOrDestroyChildRenderer = true;
     }
 
-    bool hasDisplayContents = update.style->display() == CONTENTS;
+    bool hasDisplayContents = update.style->display() == DisplayType::Contents;
     if (hasDisplayContents)
         element.storeDisplayContentsStyle(RenderStyle::clonePtr(*update.style));
     else
@@ -342,19 +346,19 @@ void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::Ele
     auto& renderer = *element.renderer();
 
     if (update.recompositeLayer) {
-        updateRendererStyle(renderer, RenderStyle::clone(*update.style), StyleDifferenceRecompositeLayer);
+        updateRendererStyle(renderer, RenderStyle::clone(*update.style), StyleDifference::RecompositeLayer);
         return;
     }
 
     if (update.change == Style::NoChange) {
         if (pseudoStyleCacheIsInvalid(&renderer, update.style.get())) {
-            updateRendererStyle(renderer, RenderStyle::clone(*update.style), StyleDifferenceEqual);
+            updateRendererStyle(renderer, RenderStyle::clone(*update.style), StyleDifference::Equal);
             return;
         }
         return;
     }
 
-    updateRendererStyle(renderer, RenderStyle::clone(*update.style), StyleDifferenceEqual);
+    updateRendererStyle(renderer, RenderStyle::clone(*update.style), StyleDifference::Equal);
 }
 
 void RenderTreeUpdater::createRenderer(Element& element, RenderStyle&& style)
@@ -482,7 +486,7 @@ void RenderTreeUpdater::updateTextRenderer(Text& text, const Style::TextUpdate* 
     if (existingRenderer && textUpdate && textUpdate->inheritedDisplayContentsStyle) {
         if (existingRenderer->inlineWrapperForDisplayContents() || *textUpdate->inheritedDisplayContentsStyle) {
             // FIXME: We could update without teardown.
-            tearDownTextRenderer(text);
+            tearDownTextRenderer(text, m_builder);
             existingRenderer = nullptr;
         }
     }
@@ -493,7 +497,7 @@ void RenderTreeUpdater::updateTextRenderer(Text& text, const Style::TextUpdate* 
                 existingRenderer->setTextWithOffset(text.data(), textUpdate->offset, textUpdate->length);
             return;
         }
-        tearDownTextRenderer(text);
+        tearDownTextRenderer(text, m_builder);
         renderingParent().didCreateOrDestroyChildRenderer = true;
         return;
     }
@@ -518,7 +522,7 @@ void RenderTreeUpdater::tearDownRenderers(Element& root)
     if (!view)
         return;
     RenderTreeBuilder builder(*view);
-    tearDownRenderers(root, TeardownType::Full);
+    tearDownRenderers(root, TeardownType::Full, builder);
 }
 
 void RenderTreeUpdater::tearDownRenderer(Text& text)
@@ -527,10 +531,10 @@ void RenderTreeUpdater::tearDownRenderer(Text& text)
     if (!view)
         return;
     RenderTreeBuilder builder(*view);
-    tearDownTextRenderer(text);
+    tearDownTextRenderer(text, builder);
 }
 
-void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownType)
+void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownType, RenderTreeBuilder& builder)
 {
     WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
 
@@ -542,29 +546,40 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
         teardownStack.append(&element);
     };
 
-    auto& animationController = root.document().frame()->animation();
+    auto& document = root.document();
+    auto* timeline = document.existingTimeline();
+    auto& animationController = document.frame()->animation();
 
     auto pop = [&] (unsigned depth) {
         while (teardownStack.size() > depth) {
             auto& element = *teardownStack.takeLast();
 
-            if (teardownType == TeardownType::Full || teardownType == TeardownType::RendererUpdateCancelingAnimations)
-                animationController.cancelAnimations(element);
+            if (teardownType == TeardownType::Full || teardownType == TeardownType::RendererUpdateCancelingAnimations) {
+                if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
+                    if (timeline) {
+                        if (document.renderTreeBeingDestroyed())
+                            timeline->elementWasRemoved(element);
+                        else if (teardownType == TeardownType::RendererUpdateCancelingAnimations)
+                            timeline->cancelDeclarativeAnimationsForElement(element);
+                    }
+                } else
+                    animationController.cancelAnimations(element);
+            }
 
             if (teardownType == TeardownType::Full)
                 element.clearHoverAndActiveStatusBeforeDetachingRenderer();
 
-            GeneratedContent::removeBeforePseudoElement(element);
-            GeneratedContent::removeAfterPseudoElement(element);
+            GeneratedContent::removeBeforePseudoElement(element, builder);
+            GeneratedContent::removeAfterPseudoElement(element, builder);
 
             if (auto* renderer = element.renderer()) {
-                RenderTreeBuilder::current()->destroyAndCleanUpAnonymousWrappers(*renderer);
+                builder.destroyAndCleanUpAnonymousWrappers(*renderer);
                 element.setRenderer(nullptr);
             }
 
             // Make sure we don't leave any renderers behind in nodes outside the composed tree.
             if (element.shadowRoot())
-                tearDownLeftoverShadowHostChildren(element);
+                tearDownLeftoverShadowHostChildren(element, builder);
 
             if (element.hasCustomStyleResolveCallbacks())
                 element.didDetachRenderers();
@@ -578,7 +593,7 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
         pop(it.depth());
 
         if (is<Text>(*it)) {
-            tearDownTextRenderer(downcast<Text>(*it));
+            tearDownTextRenderer(downcast<Text>(*it), builder);
             continue;
         }
 
@@ -587,41 +602,41 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
 
     pop(0);
 
-    tearDownLeftoverPaginationRenderersIfNeeded(root);
+    tearDownLeftoverPaginationRenderersIfNeeded(root, builder);
 }
 
-void RenderTreeUpdater::tearDownTextRenderer(Text& text)
+void RenderTreeUpdater::tearDownTextRenderer(Text& text, RenderTreeBuilder& builder)
 {
     auto* renderer = text.renderer();
     if (!renderer)
         return;
-    RenderTreeBuilder::current()->destroyAndCleanUpAnonymousWrappers(*renderer);
+    builder.destroyAndCleanUpAnonymousWrappers(*renderer);
     text.setRenderer(nullptr);
 }
 
-void RenderTreeUpdater::tearDownLeftoverPaginationRenderersIfNeeded(Element& root)
+void RenderTreeUpdater::tearDownLeftoverPaginationRenderersIfNeeded(Element& root, RenderTreeBuilder& builder)
 {
     if (&root != root.document().documentElement())
         return;
     for (auto* child = root.document().renderView()->firstChild(); child;) {
         auto* nextSibling = child->nextSibling();
         if (is<RenderMultiColumnFlow>(*child) || is<RenderMultiColumnSet>(*child))
-            RenderTreeBuilder::current()->destroyAndCleanUpAnonymousWrappers(*child);
+            builder.destroyAndCleanUpAnonymousWrappers(*child);
         child = nextSibling;
     }
 }
 
-void RenderTreeUpdater::tearDownLeftoverShadowHostChildren(Element& host)
+void RenderTreeUpdater::tearDownLeftoverShadowHostChildren(Element& host, RenderTreeBuilder& builder)
 {
     for (auto* hostChild = host.firstChild(); hostChild; hostChild = hostChild->nextSibling()) {
         if (!hostChild->renderer())
             continue;
         if (is<Text>(*hostChild)) {
-            tearDownTextRenderer(downcast<Text>(*hostChild));
+            tearDownTextRenderer(downcast<Text>(*hostChild), builder);
             continue;
         }
         if (is<Element>(*hostChild))
-            tearDownRenderers(downcast<Element>(*hostChild), TeardownType::Full);
+            tearDownRenderers(downcast<Element>(*hostChild), TeardownType::Full, builder);
     }
 }
 
@@ -631,34 +646,34 @@ RenderView& RenderTreeUpdater::renderView()
 }
 
 #if PLATFORM(IOS)
-static EVisibility elementImplicitVisibility(const Element& element)
+static Visibility elementImplicitVisibility(const Element& element)
 {
     auto* renderer = element.renderer();
     if (!renderer)
-        return VISIBLE;
+        return Visibility::Visible;
 
     auto& style = renderer->style();
 
     auto width = style.width();
     auto height = style.height();
     if ((width.isFixed() && width.value() <= 0) || (height.isFixed() && height.value() <= 0))
-        return HIDDEN;
+        return Visibility::Hidden;
 
     auto top = style.top();
     auto left = style.left();
     if (left.isFixed() && width.isFixed() && -left.value() >= width.value())
-        return HIDDEN;
+        return Visibility::Hidden;
 
     if (top.isFixed() && height.isFixed() && -top.value() >= height.value())
-        return HIDDEN;
-    return VISIBLE;
+        return Visibility::Hidden;
+    return Visibility::Visible;
 }
 
 CheckForVisibilityChange::CheckForVisibilityChange(const Element& element)
     : m_element(element)
-    , m_previousDisplay(element.renderStyle() ? element.renderStyle()->display() : NONE)
-    , m_previousVisibility(element.renderStyle() ? element.renderStyle()->visibility() : HIDDEN)
-    , m_previousImplicitVisibility(WKObservingContentChanges() && WKObservedContentChange() != WKContentVisibilityChange ? elementImplicitVisibility(element) : VISIBLE)
+    , m_previousDisplay(element.renderStyle() ? element.renderStyle()->display() : DisplayType::None)
+    , m_previousVisibility(element.renderStyle() ? element.renderStyle()->visibility() : Visibility::Hidden)
+    , m_previousImplicitVisibility(WKObservingContentChanges() && WKObservedContentChange() != WKContentVisibilityChange ? elementImplicitVisibility(element) : Visibility::Visible)
 {
 }
 
@@ -671,8 +686,8 @@ CheckForVisibilityChange::~CheckForVisibilityChange()
     auto* style = m_element.renderStyle();
     if (!style)
         return;
-    if ((m_previousDisplay == NONE && style->display() != NONE) || (m_previousVisibility == HIDDEN && style->visibility() != HIDDEN)
-        || (m_previousImplicitVisibility == HIDDEN && elementImplicitVisibility(m_element) == VISIBLE))
+    if ((m_previousDisplay == DisplayType::None && style->display() != DisplayType::None) || (m_previousVisibility == Visibility::Hidden && style->visibility() != Visibility::Hidden)
+        || (m_previousImplicitVisibility == Visibility::Hidden && elementImplicitVisibility(m_element) == Visibility::Visible))
         WKSetObservedContentChange(WKContentVisibilityChange);
 }
 #endif

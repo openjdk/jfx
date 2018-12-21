@@ -98,9 +98,9 @@ private:
     MonotonicTime m_nextFireTime; // 0 if inactive
     MonotonicTime m_unalignedNextFireTime; // m_nextFireTime not considering alignment interval
     Seconds m_repeatInterval; // 0 if not repeating
-    int m_heapIndex { -1 }; // -1 if not in heap
+    signed int m_heapIndex : 31; // -1 if not in heap
+    bool m_wasDeleted : 1;
     unsigned m_heapInsertionOrder; // Used to keep order among equal-fire-time timers
-    bool m_wasDeleted { false };
     Vector<TimerBase*>* m_cachedThreadGlobalTimerHeap { nullptr };
 
     Ref<Thread> m_thread { Thread::current() };
@@ -146,6 +146,7 @@ inline bool TimerBase::isActive() const
 }
 
 class DeferrableOneShotTimer : protected TimerBase {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     template<typename TimerFiredClass>
     DeferrableOneShotTimer(TimerFiredClass& object, void (TimerFiredClass::*function)(), Seconds delay)

@@ -66,7 +66,7 @@ public:
     // Such schemes should delegate to SecurityOrigin::canRequest for any URL
     // passed to SecurityOrigin::canDisplay.
     static bool canDisplayOnlyIfCanRequest(const String& scheme); // Thread safe.
-    static void registerAsCanDisplayOnlyIfCanRequest(const String& scheme); // Thread safe.
+    WEBCORE_EXPORT static void registerAsCanDisplayOnlyIfCanRequest(const String& scheme); // Thread safe.
 
     // Schemes against which javascript: URLs should not be allowed to run (stop
     // bookmarklets from running on sensitive pages).
@@ -82,7 +82,7 @@ public:
 
     // Allow non-HTTP schemes to be registered to allow CORS requests.
     WEBCORE_EXPORT static void registerURLSchemeAsCORSEnabled(const String& scheme);
-    static bool shouldTreatURLSchemeAsCORSEnabled(const String& scheme);
+    WEBCORE_EXPORT static bool shouldTreatURLSchemeAsCORSEnabled(const String& scheme);
 
     // Allow resources from some schemes to load on a page, regardless of its
     // Content Security Policy.

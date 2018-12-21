@@ -26,6 +26,8 @@
 #include "config.h"
 #include "TextureMapperPlatformLayerBuffer.h"
 
+#if USE(COORDINATED_GRAPHICS_THREADED)
+
 #include "NotImplemented.h"
 
 namespace WebCore {
@@ -52,13 +54,13 @@ bool TextureMapperPlatformLayerBuffer::canReuseWithoutReset(const IntSize& size,
     return m_texture && (m_texture->size() == size) && (static_cast<BitmapTextureGL*>(m_texture.get())->internalFormat() == internalFormat || internalFormat == GL_DONT_CARE);
 }
 
-std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerBuffer::clone(TextureMapperGL& texmapGL)
+std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerBuffer::clone()
 {
     if (m_hasManagedTexture || !m_textureID) {
         notImplemented();
         return nullptr;
     }
-    RefPtr<BitmapTexture> texture = texmapGL.createTexture(m_internalFormat);
+    RefPtr<BitmapTexture> texture = BitmapTextureGL::create(TextureMapperContextAttributes::get(), m_internalFormat);
     texture->reset(m_size);
     static_cast<BitmapTextureGL&>(*texture).copyFromExternalTexture(m_textureID);
     return std::make_unique<TextureMapperPlatformLayerBuffer>(WTFMove(texture), m_extraFlags);
@@ -71,7 +73,7 @@ void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textu
     if (m_hasManagedTexture) {
         ASSERT(m_texture);
         BitmapTextureGL* textureGL = static_cast<BitmapTextureGL*>(m_texture.get());
-        texmapGL.drawTexture(textureGL->id(), m_extraFlags, textureGL->size(), targetRect, modelViewMatrix, opacity);
+        texmapGL.drawTexture(textureGL->id(), m_extraFlags | textureGL->colorConvertFlags(), textureGL->size(), targetRect, modelViewMatrix, opacity);
         return;
     }
 
@@ -80,3 +82,5 @@ void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textu
 }
 
 } // namespace WebCore
+
+#endif // USE(COORDINATED_GRAPHICS_THREADED)

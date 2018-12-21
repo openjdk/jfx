@@ -34,18 +34,18 @@ function generatorResume(generator, state, generatorThis, sentValue, value, resu
     var done = state === @GeneratorStateCompleted;
     if (!done) {
         try {
-            generator.@generatorState = @GeneratorStateExecuting;
+            @putByIdDirectPrivate(generator, "generatorState", @GeneratorStateExecuting);
             value = @getByIdDirectPrivate(generator, "generatorNext").@call(generatorThis, generator, state, sentValue, resumeMode, @getByIdDirectPrivate(generator, "generatorFrame"));
             if (@getByIdDirectPrivate(generator, "generatorState") === @GeneratorStateExecuting) {
-                generator.@generatorState = @GeneratorStateCompleted;
+                @putByIdDirectPrivate(generator, "generatorState", @GeneratorStateCompleted);
                 done = true;
             }
         } catch (error) {
-            generator.@generatorState = @GeneratorStateCompleted;
+            @putByIdDirectPrivate(generator, "generatorState", @GeneratorStateCompleted);
             throw error;
         }
     }
-    return { done, value };
+    return { value, done };
 }
 
 function next(value)

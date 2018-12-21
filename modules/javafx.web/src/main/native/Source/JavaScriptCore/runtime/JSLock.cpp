@@ -28,7 +28,6 @@
 #include "JSCInlines.h"
 #include "MachineStackMarker.h"
 #include "SamplingProfiler.h"
-#include "ThreadLocalCacheInlines.h"
 #include "WasmMachineThreads.h"
 #include <thread>
 #include <wtf/Threading.h>
@@ -36,7 +35,7 @@
 
 namespace JSC {
 
-StaticLock GlobalJSLock::s_sharedInstanceMutex;
+Lock GlobalJSLock::s_sharedInstanceMutex;
 
 GlobalJSLock::GlobalJSLock()
 {
@@ -124,8 +123,6 @@ void JSLock::lock(intptr_t lockCount)
 
 void JSLock::didAcquireLock()
 {
-    WTF::speculationFence();
-
     // FIXME: What should happen to the per-thread identifier table if we don't have a VM?
     if (!m_vm)
         return;
@@ -134,6 +131,9 @@ void JSLock::didAcquireLock()
     ASSERT(!m_entryAtomicStringTable);
     m_entryAtomicStringTable = thread.setCurrentAtomicStringTable(m_vm->atomicStringTable());
     ASSERT(m_entryAtomicStringTable);
+
+    m_vm->setLastStackTop(thread.savedLastStackTop());
+    ASSERT(thread.stack().contains(m_vm->lastStackTop()));
 
     if (m_vm->heap.hasAccess())
         m_shouldReleaseHeapAccess = false;
@@ -145,11 +145,6 @@ void JSLock::didAcquireLock()
     RELEASE_ASSERT(!m_vm->stackPointerAtVMEntry());
     void* p = &p; // A proxy for the current stack pointer.
     m_vm->setStackPointerAtVMEntry(p);
-
-    m_vm->setLastStackTop(thread.savedLastStackTop());
-    ASSERT(thread.stack().contains(m_vm->lastStackTop()));
-
-    m_vm->defaultThreadLocalCache->install(*m_vm);
 
     m_vm->heap.machineThreads().addCurrentThread();
 #if ENABLE(WEBASSEMBLY)
@@ -196,11 +191,12 @@ void JSLock::unlock(intptr_t unlockCount)
 
 void JSLock::willReleaseLock()
 {
-    WTF::speculationFence();
-
     RefPtr<VM> vm = m_vm;
     if (vm) {
         vm->drainMicrotasks();
+
+        if (!vm->topCallFrame)
+            vm->clearLastException();
 
         vm->heap.releaseDelayedReleasedObjects();
         vm->setStackPointerAtVMEntry(nullptr);

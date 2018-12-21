@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 #include "BMalloced.h"
 #include "IsoDirectoryPage.h"
 #include "IsoTLSAllocatorEntry.h"
+#include "PhysicalPageMap.h"
 
 namespace bmalloc {
 
@@ -39,12 +40,16 @@ public:
     virtual ~IsoHeapImplBase();
 
     virtual void scavenge(Vector<DeferredDecommit>&) = 0;
+    virtual void scavengeToHighWatermark(Vector<DeferredDecommit>&) = 0;
+    virtual size_t freeableMemory() = 0;
+    virtual size_t footprint() = 0;
 
     void scavengeNow();
     static void finishScavenging(Vector<DeferredDecommit>&);
 
 protected:
     IsoHeapImplBase();
+    void addToAllIsoHeaps();
 
 private:
     friend class AllIsoHeaps;
@@ -53,7 +58,7 @@ private:
 };
 
 template<typename Config>
-class IsoHeapImpl : public IsoHeapImplBase {
+class IsoHeapImpl final : public IsoHeapImplBase {
     // Pick a size that makes us most efficiently use the bitvectors.
     static constexpr unsigned numPagesInInlineDirectory = 32;
 
@@ -67,6 +72,11 @@ public:
     void didBecomeEligible(IsoDirectory<Config, IsoDirectoryPage<Config>::numPages>*);
 
     void scavenge(Vector<DeferredDecommit>&) override;
+    void scavengeToHighWatermark(Vector<DeferredDecommit>&) override;
+
+    size_t freeableMemory() override;
+
+    size_t footprint() override;
 
     unsigned allocatorOffset();
     unsigned deallocatorOffset();
@@ -85,6 +95,12 @@ public:
     template<typename Func>
     void forEachLiveObject(const Func&);
 
+    void didCommit(void* ptr, size_t bytes);
+    void didDecommit(void* ptr, size_t bytes);
+
+    void isNowFreeable(void* ptr, size_t bytes);
+    void isNoLongerFreeable(void* ptr, size_t bytes);
+
     // It's almost always the caller's responsibility to grab the lock. This lock comes from the
     // PerProcess<IsoTLSDeallocatorEntry<Config>>::get()->lock. That's pretty weird, and we don't
     // try to disguise the fact that it's weird. We only do that because heaps in the same size class
@@ -96,7 +112,13 @@ private:
     IsoDirectory<Config, numPagesInInlineDirectory> m_inlineDirectory;
     IsoDirectoryPage<Config>* m_headDirectory { nullptr };
     IsoDirectoryPage<Config>* m_tailDirectory { nullptr };
-    unsigned m_numDirectoryPages { 0 };
+    size_t m_footprint { 0 };
+    size_t m_freeableMemory { 0 };
+#if ENABLE_PHYSICAL_PAGE_MAP
+    PhysicalPageMap m_physicalPageMap;
+#endif
+    unsigned m_nextDirectoryPageIndex { 1 }; // We start at 1 so that the high water mark being zero means we've only allocated in the inline directory since the last scavenge.
+    unsigned m_directoryHighWatermark { 0 };
 
     bool m_isInlineDirectoryEligible { true };
     IsoDirectoryPage<Config>* m_firstEligibleDirectory { nullptr };

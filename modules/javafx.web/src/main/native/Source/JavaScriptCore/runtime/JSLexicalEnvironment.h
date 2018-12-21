@@ -143,10 +143,4 @@ inline JSLexicalEnvironment::JSLexicalEnvironment(VM& vm, Structure* structure, 
 {
 }
 
-inline JSLexicalEnvironment* asActivation(JSValue value)
-{
-    ASSERT(asObject(value)->inherits(*value.getObject()->vm(), JSLexicalEnvironment::info()));
-    return jsCast<JSLexicalEnvironment*>(asObject(value));
-}
-
 } // namespace JSC

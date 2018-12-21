@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
  *
@@ -51,7 +51,7 @@ struct GatherSourceProviders : public MarkedBlock::VoidFunctor {
 
     IterationStatus operator()(HeapCell* heapCell, HeapCell::Kind kind) const
     {
-        if (kind != HeapCell::JSCell)
+        if (!isJSCellKind(kind))
             return IterationStatus::Continue;
 
         JSCell* cell = static_cast<JSCell*>(heapCell);
@@ -173,7 +173,8 @@ void Debugger::detach(JSGlobalObject* globalObject, ReasonForDetach reason)
     // stack, since we won't get further debugger callbacks to do so. Also, resume execution,
     // since there's no point in staying paused once a window closes.
     // We know there is an entry scope, otherwise, m_currentCallFrame would be null.
-    if (m_isPaused && m_currentCallFrame && globalObject->vm().entryScope->globalObject() == globalObject) {
+    VM& vm = globalObject->vm();
+    if (m_isPaused && m_currentCallFrame && vm.entryScope->globalObject() == globalObject) {
         m_currentCallFrame = nullptr;
         m_pauseOnCallFrame = nullptr;
         continueProgram();
@@ -247,12 +248,12 @@ void Debugger::setProfilingClient(ProfilingClient* client)
     m_profilingClient = client;
 }
 
-double Debugger::willEvaluateScript()
+Seconds Debugger::willEvaluateScript()
 {
     return m_profilingClient->willEvaluateScript();
 }
 
-void Debugger::didEvaluateScript(double startTime, ProfilingReason reason)
+void Debugger::didEvaluateScript(Seconds startTime, ProfilingReason reason)
 {
     m_profilingClient->didEvaluateScript(startTime, reason);
 }
@@ -685,6 +686,7 @@ void Debugger::pauseIfNeeded(CallFrame* callFrame)
 {
     VM& vm = m_vm;
     auto scope = DECLARE_THROW_SCOPE(vm);
+    ASSERT(callFrame);
 
     if (m_isPaused)
         return;
@@ -717,7 +719,7 @@ void Debugger::pauseIfNeeded(CallFrame* callFrame)
     // reseting the pause state before executing any breakpoint actions.
     TemporaryPausedState pausedState(*this);
 
-    JSGlobalObject* vmEntryGlobalObject = callFrame->vmEntryGlobalObject(vm);
+    JSGlobalObject* vmEntryGlobalObject = vm.vmEntryGlobalObject(callFrame);
 
     if (didHitBreakpoint) {
         handleBreakpointHit(vmEntryGlobalObject, breakpoint);

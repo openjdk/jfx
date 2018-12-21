@@ -60,20 +60,20 @@ RenderRubyRun* RenderRubyBase::rubyRun() const
     return downcast<RenderRubyRun>(parent());
 }
 
-ETextAlign RenderRubyBase::textAlignmentForLine(bool /* endsWithSoftBreak */) const
+TextAlignMode RenderRubyBase::textAlignmentForLine(bool /* endsWithSoftBreak */) const
 {
-    return JUSTIFY;
+    return TextAlignMode::Justify;
 }
 
 void RenderRubyBase::adjustInlineDirectionLineBounds(int expansionOpportunityCount, float& logicalLeft, float& logicalWidth) const
 {
-    if (rubyRun()->hasOverrideLogicalContentWidth() && firstRootBox() && !firstRootBox()->nextRootBox()) {
+    if (rubyRun()->hasOverrideContentLogicalWidth() && firstRootBox() && !firstRootBox()->nextRootBox()) {
         logicalLeft += m_initialOffset;
         logicalWidth -= 2 * m_initialOffset;
         return;
     }
 
-    LayoutUnit maxPreferredLogicalWidth = rubyRun() && rubyRun()->hasOverrideLogicalContentWidth() ? rubyRun()->overrideLogicalContentWidth() : this->maxPreferredLogicalWidth();
+    LayoutUnit maxPreferredLogicalWidth = rubyRun() && rubyRun()->hasOverrideContentLogicalWidth() ? rubyRun()->overrideContentLogicalWidth() : this->maxPreferredLogicalWidth();
     if (maxPreferredLogicalWidth >= logicalWidth)
         return;
 

@@ -127,6 +127,32 @@ struct RegisterState {
     SAVE_REG(x27, registers.x27); \
     SAVE_REG(x28, registers.x28)
 
+#elif CPU(MIPS)
+struct RegisterState {
+    uint32_t r16;
+    uint32_t r17;
+    uint32_t r18;
+    uint32_t r19;
+    uint32_t r20;
+    uint32_t r21;
+    uint32_t r22;
+    uint32_t r23;
+};
+
+#define SAVE_REG(regname, where) \
+    asm volatile ("sw $" #regname ", %0" : "=m"(where) : : "memory")
+
+#define ALLOCATE_AND_GET_REGISTER_STATE(registers) \
+    RegisterState registers; \
+    SAVE_REG(16, registers.r16); \
+    SAVE_REG(17, registers.r17); \
+    SAVE_REG(18, registers.r18); \
+    SAVE_REG(19, registers.r19); \
+    SAVE_REG(20, registers.r20); \
+    SAVE_REG(21, registers.r21); \
+    SAVE_REG(22, registers.r22); \
+    SAVE_REG(23, registers.r23)
+
 #endif
 #endif // !OS(WINDOWS)
 
@@ -138,14 +164,13 @@ using RegisterState = jmp_buf;
 #if COMPILER(MSVC)
 #pragma warning(push)
 #pragma warning(disable: 4611)
+#endif
 #define ALLOCATE_AND_GET_REGISTER_STATE(registers) \
-    alignas(void*) RegisterState registers; \
+    alignas(alignof(void*) > alignof(RegisterState) ? alignof(void*) : alignof(RegisterState)) RegisterState registers; \
     setjmp(registers)
+
+#if COMPILER(MSVC)
 #pragma warning(pop)
-#else
-#define ALLOCATE_AND_GET_REGISTER_STATE(registers) \
-    alignas(void*) RegisterState registers; \
-    setjmp(registers)
 #endif
 #endif // ALLOCATE_AND_GET_REGISTER_STATE
 

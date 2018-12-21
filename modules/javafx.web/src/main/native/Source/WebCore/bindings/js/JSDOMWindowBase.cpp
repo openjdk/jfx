@@ -29,12 +29,14 @@
 #include "CommonVM.h"
 #include "DOMWindow.h"
 #include "Document.h"
+#include "FetchResponse.h"
 #include "Frame.h"
 #include "InspectorController.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMGlobalObjectTask.h"
 #include "JSDOMWindowCustom.h"
-#include "JSMainThreadExecState.h"
+#include "JSFetchResponse.h"
+#include "JSMicrotaskCallback.h"
 #include "JSNode.h"
 #include "Logging.h"
 #include "Page.h"
@@ -49,7 +51,9 @@
 #include <JavaScriptCore/JSInternalPromise.h>
 #include <JavaScriptCore/JSInternalPromiseDeferred.h>
 #include <JavaScriptCore/Microtask.h>
+#include <JavaScriptCore/PromiseDeferredTimer.h>
 #include <JavaScriptCore/StrongInlines.h>
+#include <JavaScriptCore/WebAssemblyPrototype.h>
 #include <wtf/Language.h>
 #include <wtf/MainThread.h>
 
@@ -75,18 +79,25 @@ const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = {
     &moduleLoaderCreateImportMetaProperties,
     &moduleLoaderEvaluate,
     &promiseRejectionTracker,
-    &defaultLanguage
+    &defaultLanguage,
+#if ENABLE(WEBASSEMBLY)
+    &compileStreaming,
+    &instantiateStreaming,
+#else
+    nullptr,
+    nullptr,
+#endif
 };
 
-JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>&& window, JSDOMWindowProxy* proxy)
-    : JSDOMGlobalObject(vm, structure, proxy->world(), &s_globalObjectMethodTable, window ? &window->document()->threadLocalCache() : nullptr)
+JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, RefPtr<DOMWindow>&& window, JSWindowProxy* proxy)
+    : JSDOMGlobalObject(vm, structure, proxy->world(), &s_globalObjectMethodTable)
     , m_windowCloseWatchpoints((window && window->frame()) ? IsWatched : IsInvalidated)
     , m_wrapped(WTFMove(window))
     , m_proxy(proxy)
 {
 }
 
-void JSDOMWindowBase::finishCreation(VM& vm, JSDOMWindowProxy* proxy)
+void JSDOMWindowBase::finishCreation(VM& vm, JSWindowProxy* proxy)
 {
     Base::finishCreation(vm, proxy);
     ASSERT(inherits(vm, info()));
@@ -194,43 +205,11 @@ RuntimeFlags JSDOMWindowBase::javaScriptRuntimeFlags(const JSGlobalObject* objec
     return frame->settings().javaScriptRuntimeFlags();
 }
 
-class JSDOMWindowMicrotaskCallback : public RefCounted<JSDOMWindowMicrotaskCallback> {
-public:
-    static Ref<JSDOMWindowMicrotaskCallback> create(JSDOMWindowBase& globalObject, Ref<JSC::Microtask>&& task)
-    {
-        return adoptRef(*new JSDOMWindowMicrotaskCallback(globalObject, WTFMove(task)));
-    }
-
-    void call()
-    {
-        Ref<JSDOMWindowMicrotaskCallback> protectedThis(*this);
-        VM& vm = m_globalObject->vm();
-        JSLockHolder lock(vm);
-        auto scope = DECLARE_THROW_SCOPE(vm);
-
-        ExecState* exec = m_globalObject->globalExec();
-
-        JSMainThreadExecState::runTask(exec, m_task);
-
-        scope.assertNoException();
-    }
-
-private:
-    JSDOMWindowMicrotaskCallback(JSDOMWindowBase& globalObject, Ref<JSC::Microtask>&& task)
-        : m_globalObject { globalObject.vm(), &globalObject }
-        , m_task { WTFMove(task) }
-    {
-    }
-
-    Strong<JSDOMWindowBase> m_globalObject;
-    Ref<JSC::Microtask> m_task;
-};
-
 void JSDOMWindowBase::queueTaskToEventLoop(JSGlobalObject& object, Ref<JSC::Microtask>&& task)
 {
     JSDOMWindowBase& thisObject = static_cast<JSDOMWindowBase&>(object);
 
-    RefPtr<JSDOMWindowMicrotaskCallback> callback = JSDOMWindowMicrotaskCallback::create(thisObject, WTFMove(task));
+    RefPtr<JSMicrotaskCallback> callback = JSMicrotaskCallback::create(thisObject, WTFMove(task));
     auto microtask = std::make_unique<ActiveDOMCallbackMicrotask>(MicrotaskQueue::mainThreadQueue(), *thisObject.scriptExecutionContext(), [callback]() mutable {
         callback->call();
     });
@@ -243,31 +222,22 @@ void JSDOMWindowBase::willRemoveFromWindowProxy()
     setCurrentEvent(0);
 }
 
-JSDOMWindowProxy* JSDOMWindowBase::proxy() const
+JSWindowProxy* JSDOMWindowBase::proxy() const
 {
     return m_proxy;
 }
 
-// JSDOMGlobalObject* is ignored, accessing a window in any context will
-// use that DOMWindow's prototype chain.
-JSValue toJS(ExecState* state, JSDOMGlobalObject*, DOMWindow& domWindow)
-{
-    return toJS(state, domWindow);
-}
-
-JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject*, Frame& frame)
-{
-    return toJS(state, frame);
-}
-
 JSValue toJS(ExecState* state, DOMWindow& domWindow)
 {
-    return toJS(state, domWindow.frame());
+    auto* frame = domWindow.frame();
+    if (!frame)
+        return jsNull();
+    return toJS(state, frame->windowProxy());
 }
 
 JSDOMWindow* toJSDOMWindow(Frame& frame, DOMWrapperWorld& world)
 {
-    return frame.script().windowProxy(world)->window();
+    return frame.script().globalObject(world);
 }
 
 JSDOMWindow* toJSDOMWindow(JSC::VM& vm, JSValue value)
@@ -280,8 +250,8 @@ JSDOMWindow* toJSDOMWindow(JSC::VM& vm, JSValue value)
         const ClassInfo* classInfo = object->classInfo(vm);
         if (classInfo == JSDOMWindow::info())
             return jsCast<JSDOMWindow*>(object);
-        if (classInfo == JSDOMWindowProxy::info())
-            return jsCast<JSDOMWindowProxy*>(object)->window();
+        if (classInfo == JSWindowProxy::info())
+            return jsDynamicCast<JSDOMWindow*>(vm, jsCast<JSWindowProxy*>(object)->window());
         value = object->getPrototypeDirect(vm);
     }
     return nullptr;
@@ -299,7 +269,8 @@ DOMWindow& activeDOMWindow(ExecState& state)
 
 DOMWindow& firstDOMWindow(ExecState& state)
 {
-    return asJSDOMWindow(state.vmEntryGlobalObject())->wrapped();
+    VM& vm = state.vm();
+    return asJSDOMWindow(vm.vmEntryGlobalObject(&state))->wrapped();
 }
 
 Document* responsibleDocument(ExecState& state)
@@ -373,31 +344,126 @@ JSC::JSObject* JSDOMWindowBase::moduleLoaderCreateImportMetaProperties(JSC::JSGl
     return constructEmptyObject(exec, globalObject->nullPrototypeObjectStructure());
 }
 
-void JSDOMWindowBase::promiseRejectionTracker(JSGlobalObject* jsGlobalObject, ExecState* exec, JSPromise* promise, JSPromiseRejectionOperation operation)
+#if ENABLE(WEBASSEMBLY)
+static std::optional<Vector<uint8_t>> tryAllocate(JSC::ExecState* exec, JSC::JSPromiseDeferred* promise, const char* data, size_t byteSize)
 {
-    // https://html.spec.whatwg.org/multipage/webappapis.html#the-hostpromiserejectiontracker-implementation
+    Vector<uint8_t> arrayBuffer;
+    if (!arrayBuffer.tryReserveCapacity(byteSize)) {
+        promise->reject(exec, createOutOfMemoryError(exec));
+        return std::nullopt;
+    }
+
+    arrayBuffer.grow(byteSize);
+    memcpy(arrayBuffer.data(), data, byteSize);
+
+    return arrayBuffer;
+}
+
+static bool isResponseCorrect(JSC::ExecState* exec, FetchResponse* inputResponse, JSC::JSPromiseDeferred* promise)
+{
+    bool isResponseCorsSameOrigin = inputResponse->type() == ResourceResponse::Type::Basic || inputResponse->type() == ResourceResponse::Type::Cors || inputResponse->type() == ResourceResponse::Type::Default;
+
+    if (!isResponseCorsSameOrigin) {
+        promise->reject(exec, createTypeError(exec, "Response is not CORS-same-origin"_s));
+        return false;
+    }
+
+    if (!inputResponse->ok()) {
+        promise->reject(exec, createTypeError(exec, "Response has not returned OK status"_s));
+        return false;
+    }
+
+    auto contentType = inputResponse->headers().fastGet(HTTPHeaderName::ContentType);
+    if (!equalLettersIgnoringASCIICase(contentType, "application/wasm")) {
+        promise->reject(exec, createTypeError(exec, "Unexpected response MIME type. Expected 'application/wasm'"_s));
+        return false;
+    }
+
+    return true;
+}
+
+static void handleResponseOnStreamingAction(JSC::JSGlobalObject* globalObject, JSC::ExecState* exec, FetchResponse* inputResponse, JSC::JSPromiseDeferred* promise, Function<void(JSC::ExecState* exec, const char* data, size_t byteSize)>&& actionCallback)
+{
+    if (!isResponseCorrect(exec, inputResponse, promise))
+        return;
+
+    if (inputResponse->isBodyReceivedByChunk()) {
+        inputResponse->consumeBodyReceivedByChunk([promise, callback = WTFMove(actionCallback), globalObject, data = SharedBuffer::create()] (auto&& result) mutable {
+            ExecState* exec = globalObject->globalExec();
+            if (result.hasException()) {
+                promise->reject(exec, createTypeError(exec, result.exception().message()));
+                return;
+            }
+
+            if (auto chunk = result.returnValue())
+                data->append(reinterpret_cast<const char*>(chunk->data), chunk->size);
+            else {
+                VM& vm = exec->vm();
+                JSLockHolder lock(vm);
+
+                callback(exec, data->data(), data->size());
+            }
+        });
+        return;
+    }
+
+    auto body = inputResponse->consumeBody();
+    WTF::switchOn(body, [&] (Ref<FormData>& formData) {
+        if (auto buffer = formData->asSharedBuffer()) {
+            VM& vm = exec->vm();
+            JSLockHolder lock(vm);
+
+            actionCallback(exec, buffer->data(), buffer->size());
+            return;
+        }
+        // FIXME: http://webkit.org/b/184886> Implement loading for the Blob type
+        promise->reject(exec, createTypeError(exec, "Unexpected Response's Content-type"_s));
+    }, [&] (Ref<SharedBuffer>& buffer) {
+        VM& vm = exec->vm();
+        JSLockHolder lock(vm);
+
+        actionCallback(exec, buffer->data(), buffer->size());
+    }, [&] (std::nullptr_t&) {
+        promise->reject(exec, createTypeError(exec, "Unexpected Response's Content-type"_s));
+    });
+}
+
+void JSDOMWindowBase::compileStreaming(JSC::JSGlobalObject* globalObject, JSC::ExecState* exec, JSC::JSPromiseDeferred* promise, JSC::JSValue source)
+{
+    ASSERT(source);
 
     VM& vm = exec->vm();
-    auto& globalObject = *JSC::jsCast<JSDOMWindowBase*>(jsGlobalObject);
-    auto* context = globalObject.scriptExecutionContext();
-    if (!context)
-        return;
 
-    // InternalPromises should not be exposed to user scripts.
-    if (JSC::jsDynamicCast<JSC::JSInternalPromise*>(vm, promise))
-        return;
+    ASSERT(vm.promiseDeferredTimer->hasPendingPromise(promise));
+    ASSERT(vm.promiseDeferredTimer->hasDependancyInPendingPromise(promise, globalObject));
 
-    // FIXME: If script has muted errors (cross origin), terminate these steps.
-    // <https://webkit.org/b/171415> Implement the `muted-errors` property of Scripts to avoid onerror/onunhandledrejection for cross-origin scripts
-
-    switch (operation) {
-    case JSPromiseRejectionOperation::Reject:
-        context->ensureRejectedPromiseTracker().promiseRejected(*exec, globalObject, *promise);
-        break;
-    case JSPromiseRejectionOperation::Handle:
-        context->ensureRejectedPromiseTracker().promiseHandled(*exec, globalObject, *promise);
-        break;
-    }
+    if (auto inputResponse = JSFetchResponse::toWrapped(vm, source)) {
+        handleResponseOnStreamingAction(globalObject, exec, inputResponse, promise, [promise] (JSC::ExecState* exec, const char* data, size_t byteSize) mutable {
+            if (auto arrayBuffer = tryAllocate(exec, promise, data, byteSize))
+                JSC::WebAssemblyPrototype::webAssemblyModuleValidateAsync(exec, promise, WTFMove(*arrayBuffer));
+        });
+    } else
+        promise->reject(exec, createTypeError(exec, "first argument must be an Response or Promise for Response"_s));
 }
+
+void JSDOMWindowBase::instantiateStreaming(JSC::JSGlobalObject* globalObject, JSC::ExecState* exec, JSC::JSPromiseDeferred* promise, JSC::JSValue source, JSC::JSObject* importedObject)
+{
+    ASSERT(source);
+
+    VM& vm = exec->vm();
+
+    ASSERT(vm.promiseDeferredTimer->hasPendingPromise(promise));
+    ASSERT(vm.promiseDeferredTimer->hasDependancyInPendingPromise(promise, globalObject));
+    ASSERT(vm.promiseDeferredTimer->hasDependancyInPendingPromise(promise, importedObject));
+
+    if (auto inputResponse = JSFetchResponse::toWrapped(vm, source)) {
+        handleResponseOnStreamingAction(globalObject, exec, inputResponse, promise, [promise, importedObject] (JSC::ExecState* exec, const char* data, size_t byteSize) mutable {
+            if (auto arrayBuffer = tryAllocate(exec, promise, data, byteSize))
+                JSC::WebAssemblyPrototype::webAssemblyModuleInstantinateAsync(exec, promise, WTFMove(*arrayBuffer), importedObject);
+        });
+    } else
+        promise->reject(exec, createTypeError(exec, "first argument must be an Response or Promise for Response"_s));
+}
+#endif
 
 } // namespace WebCore

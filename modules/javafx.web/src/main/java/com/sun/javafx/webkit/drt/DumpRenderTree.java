@@ -26,12 +26,11 @@
 package com.sun.javafx.webkit.drt;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.logging.PlatformLogger;
 import com.sun.webkit.*;
 import com.sun.webkit.graphics.*;
 
-import static com.sun.webkit.network.URLs.newURL;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -44,8 +43,10 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import javafx.scene.web.WebEngine;
+import static com.sun.webkit.network.URLs.newURL;
 
 public final class DumpRenderTree {
     private final static PlatformLogger log = PlatformLogger.getLogger("DumpRenderTree");
@@ -66,7 +67,7 @@ public final class DumpRenderTree {
 
     private final WebPage webPage;
     private final UIClientImpl uiClient;
-    private final EventSender eventSender;
+    private EventSender eventSender;
 
     private CountDownLatch latch;
     private String testPath;
@@ -137,7 +138,6 @@ public final class DumpRenderTree {
         webPage = new WebPage(new WebPageClientImpl(), uiClient, null, null,
                               new ThemeClientImplStub(), false);
         uiClient.setWebPage(webPage);
-        eventSender = new EventSender(webPage);
 
         webPage.setBounds(0, 0, 800, 600);
         webPage.setDeveloperExtrasEnabled(true);
@@ -193,10 +193,24 @@ public final class DumpRenderTree {
 
     boolean complete() { return this.complete; }
 
-    private void reset() {
-        mlog("reset");
+    private void resetToConsistentStateBeforeTesting(final TestOptions options) {
+        // First disable all supported TestOptions
+        webPage.overridePreference("enableWebAnimationsCSSIntegration", "false");
+        webPage.overridePreference("enableColorFilter", "false");
+        webPage.overridePreference("enableIntersectionObserver", "false");
+        // Enable features based on TestOption
+        for (Map.Entry<String, String> option : options.getOptions().entrySet()) {
+            webPage.overridePreference(option.getKey(), option.getValue());
+        }
         // Reset native objects associated with WebPage
         webPage.resetToConsistentStateBeforeTesting();
+    }
+
+    private void reset(final TestOptions options) {
+        mlog("reset");
+        // create new EventSender for each test
+        eventSender = new EventSender(webPage);
+        resetToConsistentStateBeforeTesting(options);
         // Clear frame name
         webPage.reset(webPage.getMainFrame());
         // Reset zoom factors
@@ -219,7 +233,9 @@ public final class DumpRenderTree {
         } catch (MalformedURLException ex) {
             file = "file:///" + file;
         }
-        reset();
+        // parse test options from the html test header
+        final TestOptions options = new TestOptions(file);
+        reset(options);
         webPage.open(mainFrame, file);
         mlog("}runTest");
     }
@@ -548,7 +564,7 @@ public final class DumpRenderTree {
 
         @Override
         public WCRectangle getScreenBounds(boolean available) {
-            return null;
+            return new WCRectangle(0, 0, 800, 600);
         }
 
         @Override
@@ -611,8 +627,10 @@ public final class DumpRenderTree {
         @Override
         public void didClearWindowObject(long context, long windowObject) {
             mlog("didClearWindowObject");
-            DumpRenderTree.didClearWindowObject(context, windowObject,
-                                                eventSender);
+            if (eventSender != null) {
+                DumpRenderTree.didClearWindowObject(context, windowObject,
+                                                    eventSender);
+            }
         }
     }
 }

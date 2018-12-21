@@ -32,6 +32,7 @@ class RenderTextControlMultiLine;
 class VisibleSelection;
 
 class HTMLTextAreaElement final : public HTMLTextFormControlElement {
+    WTF_MAKE_ISO_ALLOCATED(HTMLTextAreaElement);
 public:
     static Ref<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
@@ -113,7 +114,7 @@ private:
     void reset() final;
     bool hasCustomFocusLogic() const final;
     bool isMouseFocusable() const final;
-    bool isKeyboardFocusable(KeyboardEvent&) const final;
+    bool isKeyboardFocusable(KeyboardEvent*) const final;
     void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode) final;
 
     void accessKeyAction(bool sendMouseEvents) final;

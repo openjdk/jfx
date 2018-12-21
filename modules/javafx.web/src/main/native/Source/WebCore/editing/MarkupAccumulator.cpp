@@ -199,6 +199,12 @@ void MarkupAccumulator::appendEndTag(const Element& element)
     appendEndMarkup(m_markup, element);
 }
 
+void MarkupAccumulator::appendTextSubstring(const Text& text, unsigned start, unsigned length)
+{
+    ASSERT(start + length <= text.data().length());
+    appendCharactersReplacingEntities(m_markup, text.data(), start, length, entityMaskForText(text));
+}
+
 size_t MarkupAccumulator::totalLength(const Vector<String>& strings)
 {
     size_t length = 0;
@@ -370,7 +376,7 @@ void MarkupAccumulator::appendXMLDeclaration(StringBuilder& result, const Docume
         result.appendLiteral("\" encoding=\"");
         result.append(encoding);
     }
-    if (document.xmlStandaloneStatus() != Document::StandaloneUnspecified) {
+    if (document.xmlStandaloneStatus() != Document::StandaloneStatus::Unspecified) {
         result.appendLiteral("\" standalone=\"");
         if (document.xmlStandalone())
             result.appendLiteral("yes");

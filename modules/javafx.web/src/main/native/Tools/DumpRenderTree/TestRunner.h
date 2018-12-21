@@ -59,7 +59,7 @@ public:
     const std::set<std::string>& allowedHosts() const { return m_allowedHosts; }
     void setAllowedHosts(std::set<std::string> hosts) { m_allowedHosts = WTFMove(hosts); }
     void addURLToRedirect(std::string origin, std::string destination);
-    const std::string& redirectionDestinationForURL(std::string);
+    const char* redirectionDestinationForURL(const char*);
     void clearAllApplicationCaches();
     void clearAllDatabases();
     void clearApplicationCacheForOrigin(JSStringRef name);
@@ -376,9 +376,13 @@ public:
     bool dumpJSConsoleLogInStdErr() const { return m_dumpJSConsoleLogInStdErr; }
 
     void setSpellCheckerLoggingEnabled(bool);
+    void setSpellCheckerResults(JSContextRef, JSObjectRef results);
 
     const std::vector<std::string>& openPanelFiles() const { return m_openPanelFiles; }
     void setOpenPanelFiles(JSContextRef, JSValueRef);
+
+    bool didCancelClientRedirect() const { return m_didCancelClientRedirect; }
+    void setDidCancelClientRedirect(bool value) { m_didCancelClientRedirect = value; }
 
 private:
     TestRunner(const std::string& testURL, const std::string& expectedPixelHash);
@@ -445,6 +449,7 @@ private:
     bool m_customFullScreenBehavior;
     bool m_hasPendingWebNotificationClick;
     bool m_dumpJSConsoleLogInStdErr { false };
+    bool m_didCancelClientRedirect { false };
 
     double m_databaseDefaultQuota;
     double m_databaseMaxQuota;

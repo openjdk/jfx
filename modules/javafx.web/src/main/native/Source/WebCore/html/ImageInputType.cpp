@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
@@ -62,8 +62,8 @@ bool ImageInputType::appendFormData(DOMFormData& formData, bool) const
 
     auto& name = element()->name();
     if (name.isEmpty()) {
-        formData.append(ASCIILiteral("x"), String::number(m_clickLocation.x()));
-        formData.append(ASCIILiteral("y"), String::number(m_clickLocation.y()));
+        formData.append("x"_s, String::number(m_clickLocation.x()));
+        formData.append("y"_s, String::number(m_clickLocation.y()));
         return true;
     }
 
@@ -120,21 +120,21 @@ RenderPtr<RenderElement> ImageInputType::createInputRenderer(RenderStyle&& style
     return createRenderer<RenderImage>(*element(), WTFMove(style));
 }
 
-void ImageInputType::altAttributeChanged()
+void ImageInputType::attributeChanged(const QualifiedName& name)
 {
-    if (auto* element = this->element()) {
-        auto* renderer = element->renderer();
-        if (is<RenderImage>(renderer))
-            downcast<RenderImage>(*renderer).updateAltText();
+    if (name == altAttr) {
+        if (auto* element = this->element()) {
+            auto* renderer = element->renderer();
+            if (is<RenderImage>(renderer))
+                downcast<RenderImage>(*renderer).updateAltText();
+        }
+    } else if (name == srcAttr) {
+        if (auto* element = this->element()) {
+            if (element->renderer())
+                element->ensureImageLoader().updateFromElementIgnoringPreviousError();
+        }
     }
-}
-
-void ImageInputType::srcAttributeChanged()
-{
-    if (auto* element = this->element()) {
-        if (element->renderer())
-            element->ensureImageLoader().updateFromElementIgnoringPreviousError();
-    }
+    BaseButtonInputType::attributeChanged(name);
 }
 
 void ImageInputType::attach()

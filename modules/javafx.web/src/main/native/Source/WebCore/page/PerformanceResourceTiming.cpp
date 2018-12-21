@@ -54,11 +54,17 @@ static double monotonicTimeToDOMHighResTimeStamp(MonotonicTime timeOrigin, Monot
 
 static double entryStartTime(MonotonicTime timeOrigin, const ResourceTiming& resourceTiming)
 {
+    if (!resourceTiming.allowTimingDetails())
+        return monotonicTimeToDOMHighResTimeStamp(timeOrigin, resourceTiming.loadTiming().fetchStart());
+
     return monotonicTimeToDOMHighResTimeStamp(timeOrigin, resourceTiming.loadTiming().startTime());
 }
 
 static double entryEndTime(MonotonicTime timeOrigin, const ResourceTiming& resourceTiming)
 {
+    if (!resourceTiming.allowTimingDetails())
+        return entryStartTime(timeOrigin, resourceTiming);
+
     if (resourceTiming.networkLoadMetrics().isComplete()) {
         Seconds endTime = (resourceTiming.loadTiming().fetchStart() + resourceTiming.networkLoadMetrics().responseEnd) - timeOrigin;
         return Performance::reduceTimeResolution(endTime).milliseconds();
@@ -73,12 +79,13 @@ Ref<PerformanceResourceTiming> PerformanceResourceTiming::create(MonotonicTime t
 }
 
 PerformanceResourceTiming::PerformanceResourceTiming(MonotonicTime timeOrigin, ResourceTiming&& resourceTiming)
-    : PerformanceEntry(PerformanceEntry::Type::Resource, resourceTiming.url().string(), ASCIILiteral("resource"), entryStartTime(timeOrigin, resourceTiming), entryEndTime(timeOrigin, resourceTiming))
+    : PerformanceEntry(PerformanceEntry::Type::Resource, resourceTiming.url().string(), "resource"_s, entryStartTime(timeOrigin, resourceTiming), entryEndTime(timeOrigin, resourceTiming))
     , m_initiatorType(resourceTiming.initiator())
     , m_timeOrigin(timeOrigin)
     , m_loadTiming(resourceTiming.loadTiming())
     , m_networkLoadMetrics(resourceTiming.networkLoadMetrics())
     , m_shouldReportDetails(resourceTiming.allowTimingDetails())
+    , m_serverTiming(resourceTiming.populateServerTiming())
 {
     m_networkLoadMetrics.clearNonTimingData();
 }

@@ -102,7 +102,6 @@ public:
     Length perspectiveOriginY;
 
     LineClampValue lineClamp; // An Apple extension.
-    LinesClampValue linesClamp; // An Apple extension.
 
     IntSize initialLetter;
 
@@ -177,15 +176,15 @@ public:
 #endif
 
     unsigned pageSizeType : 2; // PageSizeType
-    unsigned transformStyle3D : 1; // ETransformStyle3D
-    unsigned backfaceVisibility : 1; // EBackfaceVisibility
+    unsigned transformStyle3D : 1; // TransformStyle3D
+    unsigned backfaceVisibility : 1; // BackfaceVisibility
 
-    unsigned userDrag : 2; // EUserDrag
+    unsigned userDrag : 2; // UserDrag
     unsigned textOverflow : 1; // Whether or not lines that spill out should be truncated with "..."
-    unsigned marginBeforeCollapse : 2; // EMarginCollapse
-    unsigned marginAfterCollapse : 2; // EMarginCollapse
+    unsigned marginBeforeCollapse : 2; // MarginCollapse
+    unsigned marginAfterCollapse : 2; // MarginCollapse
     unsigned appearance : 6; // EAppearance
-    unsigned borderFit : 1; // EBorderFit
+    unsigned borderFit : 1; // BorderFit
     unsigned textCombine : 1; // CSS3 text-combine properties
 
     unsigned textDecorationStyle : 3; // TextDecorationStyle
@@ -207,7 +206,7 @@ public:
     unsigned breakBefore : 4; // BreakBetween
     unsigned breakAfter : 4;
     unsigned breakInside : 3; // BreakInside
-    unsigned resize : 2; // EResize
+    unsigned resize : 2; // Resize
 
     unsigned hasAttrContent : 1;
 

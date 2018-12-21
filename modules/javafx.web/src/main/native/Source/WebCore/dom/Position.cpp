@@ -685,7 +685,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
 
         // skip position in unrendered or invisible node
         RenderObject* renderer = currentNode.renderer();
-        if (!renderer || renderer->style().visibility() != VISIBLE)
+        if (!renderer || renderer->style().visibility() != Visibility::Visible)
             continue;
         ensureLineBoxesIfNeeded(*renderer);
         if (rule == CanCrossEditingBoundary && boundaryCrossed) {
@@ -820,7 +820,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
 
         // skip position in unrendered or invisible node
         auto* renderer = currentNode.renderer();
-        if (!renderer || renderer->style().visibility() != VISIBLE)
+        if (!renderer || renderer->style().visibility() != Visibility::Visible)
             continue;
         ensureLineBoxesIfNeeded(*renderer);
         if (rule == CanCrossEditingBoundary && boundaryCrossed) {
@@ -954,13 +954,13 @@ bool Position::hasRenderedNonAnonymousDescendantsWithHeight(const RenderElement&
 
 bool Position::nodeIsUserSelectNone(Node* node)
 {
-    return node && node->renderer() && node->renderer()->style().userSelect() == SELECT_NONE;
+    return node && node->renderer() && node->renderer()->style().userSelect() == UserSelect::None;
 }
 
 #if ENABLE(USERSELECT_ALL)
 bool Position::nodeIsUserSelectAll(const Node* node)
 {
-    return node && node->renderer() && node->renderer()->style().userSelect() == SELECT_ALL;
+    return node && node->renderer() && node->renderer()->style().userSelect() == UserSelect::All;
 }
 
 Node* Position::rootUserSelectAllForNode(Node* node)
@@ -995,7 +995,7 @@ bool Position::isCandidate() const
     if (!renderer)
         return false;
 
-    if (renderer->style().visibility() != VISIBLE)
+    if (renderer->style().visibility() != Visibility::Visible)
         return false;
 
     if (renderer->isBR()) {
@@ -1058,7 +1058,7 @@ bool Position::rendersInDifferentPosition(const Position& position) const
     if (!positionRenderer)
         return false;
 
-    if (renderer->style().visibility() != VISIBLE || positionRenderer->style().visibility() != VISIBLE)
+    if (renderer->style().visibility() != Visibility::Visible || positionRenderer->style().visibility() != Visibility::Visible)
         return false;
 
     if (deprecatedNode() == position.deprecatedNode()) {
@@ -1388,10 +1388,10 @@ void Position::getInlineBoxAndOffset(EAffinity affinity, TextDirection primaryDi
 TextDirection Position::primaryDirection() const
 {
     if (!m_anchorNode->renderer())
-        return LTR;
+        return TextDirection::LTR;
     if (auto* blockFlow = lineageOfType<RenderBlockFlow>(*m_anchorNode->renderer()).first())
         return blockFlow->style().direction();
-    return LTR;
+    return TextDirection::LTR;
 }
 
 #if ENABLE(TREE_DEBUGGING)

@@ -19,7 +19,7 @@
 
 #pragma once
 
-#if ENABLE(GRAPHICS_CONTEXT_3D) && USE(TEXTURE_MAPPER)
+#if ENABLE(GRAPHICS_CONTEXT_3D) && USE(TEXTURE_MAPPER) && !USE(NICOSIA)
 
 #include "GraphicsContext3D.h"
 #include "PlatformLayer.h"
@@ -28,7 +28,6 @@
 
 namespace WebCore {
 
-class BitmapTextureGL;
 class GLContext;
 class TextureMapperPlatformLayerProxy;
 
@@ -53,7 +52,6 @@ private:
 
 #if USE(COORDINATED_GRAPHICS_THREADED)
     RefPtr<TextureMapperPlatformLayerProxy> m_platformLayerProxy;
-    RefPtr<BitmapTextureGL> m_compositorTexture;
 #endif
 };
 

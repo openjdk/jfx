@@ -38,6 +38,7 @@
 #include "CachedImage.h"
 #include "Document.h"
 #include "Element.h"
+#include "Frame.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLHeadElement.h"
 #include "HTMLImageElement.h"
@@ -48,7 +49,6 @@
 #include "HTMLStyleElement.h"
 #include "HTTPParsers.h"
 #include "Image.h"
-#include "MainFrame.h"
 #include "MarkupAccumulator.h"
 #include "Page.h"
 #include "RenderElement.h"
@@ -263,7 +263,7 @@ void PageSerializer::serializeCSSStyleSheet(CSSStyleSheet* styleSheet, const URL
         // FIXME: We should check whether a charset has been specified and if none was found add one.
         TextEncoding textEncoding(styleSheet->contents().charset());
         ASSERT(textEncoding.isValid());
-        m_resources.append({ url, ASCIILiteral { "text/css" }, SharedBuffer::create(textEncoding.encode(cssText.toString(), UnencodableHandling::Entities)) });
+        m_resources.append({ url, "text/css"_s, SharedBuffer::create(textEncoding.encode(cssText.toString(), UnencodableHandling::Entities)) });
         m_resourceURLs.add(url);
     }
 }

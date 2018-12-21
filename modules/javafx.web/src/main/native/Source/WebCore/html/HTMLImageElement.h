@@ -32,10 +32,12 @@
 namespace WebCore {
 
 class HTMLFormElement;
+class HTMLMapElement;
 
 struct ImageCandidate;
 
 class HTMLImageElement : public HTMLElement, public FormNamedItem {
+    WTF_MAKE_ISO_ALLOCATED(HTMLImageElement);
     friend class HTMLFormElement;
 public:
     static Ref<HTMLImageElement> create(Document&);
@@ -62,6 +64,7 @@ public:
     void setLoadManually(bool loadManually) { m_imageLoader.setLoadManually(loadManually); }
 
     bool matchesUsemap(const AtomicStringImpl&) const;
+    HTMLMapElement* associatedMapElement() const;
 
     WEBCORE_EXPORT const AtomicString& alt() const;
 
@@ -98,6 +101,10 @@ public:
 
     HTMLPictureElement* pictureElement() const;
     void setPictureElement(HTMLPictureElement*);
+
+#if USE(SYSTEM_PREVIEW)
+    WEBCORE_EXPORT bool isSystemPreviewImage() const;
+#endif
 
 protected:
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = 0);

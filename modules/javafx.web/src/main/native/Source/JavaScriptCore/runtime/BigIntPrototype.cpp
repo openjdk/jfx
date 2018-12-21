@@ -96,14 +96,14 @@ EncodedJSValue JSC_HOST_CALL bigIntProtoFuncToString(ExecState* state)
 
     JSBigInt* value = toThisBigIntValue(vm, state->thisValue());
     if (!value)
-        return throwVMTypeError(state, scope, ASCIILiteral("'this' value must be a BigInt or BigIntObject"));
+        return throwVMTypeError(state, scope, "'this' value must be a BigInt or BigIntObject"_s);
 
     ASSERT(value);
 
     int32_t radix = extractToStringRadixArgument(state, state->argument(0), scope);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    String resultString = value->toString(*state, radix);
+    String resultString = value->toString(state, radix);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     scope.release();
     if (resultString.length() == 1)
@@ -124,7 +124,7 @@ EncodedJSValue JSC_HOST_CALL bigIntProtoFuncValueOf(ExecState* state)
         return JSValue::encode(value);
 
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return throwVMTypeError(state, scope, ASCIILiteral("'this' value must be a BigInt or BigIntObject"));
+    return throwVMTypeError(state, scope, "'this' value must be a BigInt or BigIntObject"_s);
 }
 
 } // namespace JSC

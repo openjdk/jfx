@@ -40,7 +40,6 @@
 #include "NFA.h"
 #include "NFAToDFA.h"
 #include "URLFilterParser.h"
-#include <wtf/CurrentTime.h>
 #include <wtf/DataLog.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -284,12 +283,13 @@ static void compileToBytecode(CombinedURLFilters&& filters, UniversalActionSet&&
     LOG_LARGE_STRUCTURES(universalActions, universalActions.capacity() * sizeof(unsigned));
 }
 
-std::error_code compileRuleList(ContentExtensionCompilationClient& client, String&& ruleJSON)
+std::error_code compileRuleList(ContentExtensionCompilationClient& client, String&& ruleJSON, Vector<ContentExtensionRule>&& parsedRuleList)
 {
-    auto ruleList = parseRuleList(WTFMove(ruleJSON));
-    if (!ruleList.has_value())
-        return ruleList.error();
-    Vector<ContentExtensionRule> parsedRuleList = WTFMove(ruleList.value());
+#if !ASSERT_DISABLED
+    callOnMainThread([ruleJSON = ruleJSON.isolatedCopy(), parsedRuleList = parsedRuleList.isolatedCopy()] {
+        ASSERT(parseRuleList(ruleJSON) == parsedRuleList);
+    });
+#endif
 
     bool domainConditionSeen = false;
     bool topURLConditionSeen = false;
@@ -311,10 +311,10 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
         return ContentExtensionError::JSONTopURLAndDomainConditions;
 
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double patternPartitioningStart = monotonicallyIncreasingTime();
+    MonotonicTime patternPartitioningStart = MonotonicTime::now();
 #endif
 
-    client.writeSource(ruleJSON);
+    client.writeSource(std::exchange(ruleJSON, String()));
 
     Vector<SerializedActionByte> actions;
     Vector<unsigned> actionLocations = serializeActions(parsedRuleList, actions);
@@ -402,8 +402,8 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
     actionLocations.clear();
 
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double patternPartitioningEnd = monotonicallyIncreasingTime();
-    dataLogF("    Time spent partitioning the rules into groups: %f\n", (patternPartitioningEnd - patternPartitioningStart));
+    MonotonicTime patternPartitioningEnd = MonotonicTime::now();
+    dataLogF("    Time spent partitioning the rules into groups: %f\n", (patternPartitioningEnd - patternPartitioningStart).seconds());
 #endif
 
     LOG_LARGE_STRUCTURES(filtersWithoutConditions, filtersWithoutConditions.memoryUsed());
@@ -411,7 +411,7 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
     LOG_LARGE_STRUCTURES(topURLFilters, topURLFilters.memoryUsed());
 
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double totalNFAToByteCodeBuildTimeStart = monotonicallyIncreasingTime();
+    MonotonicTime totalNFAToByteCodeBuildTimeStart = MonotonicTime::now();
 #endif
 
     compileToBytecode(WTFMove(filtersWithoutConditions), WTFMove(universalActionsWithoutConditions), [&](Vector<DFABytecode>&& bytecode) {
@@ -425,8 +425,8 @@ std::error_code compileRuleList(ContentExtensionCompilationClient& client, Strin
     });
 
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
-    double totalNFAToByteCodeBuildTimeEnd = monotonicallyIncreasingTime();
-    dataLogF("    Time spent building and compiling the DFAs: %f\n", (totalNFAToByteCodeBuildTimeEnd - totalNFAToByteCodeBuildTimeStart));
+    MonotonicTime totalNFAToByteCodeBuildTimeEnd = MonotonicTime::now();
+    dataLogF("    Time spent building and compiling the DFAs: %f\n", (totalNFAToByteCodeBuildTimeEnd - totalNFAToByteCodeBuildTimeStart).seconds());
 
     dataLogF("    Number of machines without condition filters: %d (total bytecode size = %d)\n", machinesWithoutConditionsCount, totalBytecodeSizeForMachinesWithoutConditions);
     dataLogF("    Number of machines with condition filters: %d (total bytecode size = %d)\n", machinesWithConditionsCount, totalBytecodeSizeForMachinesWithConditions);

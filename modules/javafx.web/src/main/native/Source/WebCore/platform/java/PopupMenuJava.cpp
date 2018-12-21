@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,15 +179,10 @@ void PopupMenuJava::disconnectClient()
 
 } // namespace WebCore
 
-using namespace WebCore;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkSelectionCommited
     (JNIEnv*, jobject, jlong pdata, jint index)
 {
+    using namespace WebCore;
     if (!pdata) {
         return;
     }
@@ -203,6 +198,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkSelectionCommited
 JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkPopupClosed
     (JNIEnv*, jobject, jlong pdata)
 {
+    using namespace WebCore;
     if (!pdata) {
         return;
     }
@@ -214,7 +210,3 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkPopupClosed
         pPopupMenu->client()->popupDidHide();
     }
 }
-
-#ifdef __cplusplus
-}
-#endif

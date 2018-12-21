@@ -31,7 +31,6 @@
 #include "DisplayRefreshMonitor.h"
 #include "DisplayRefreshMonitorClient.h"
 #include "Logging.h"
-#include <wtf/CurrentTime.h>
 
 namespace WebCore {
 
@@ -124,6 +123,14 @@ void DisplayRefreshMonitorManager::windowScreenDidChange(PlatformDisplayID displ
     registerClient(client);
     if (client.isScheduled())
         scheduleAnimation(client);
+}
+
+void DisplayRefreshMonitorManager::displayWasUpdated()
+{
+    for (auto monitor : m_monitors) {
+        if (monitor->hasRequestedRefreshCallback())
+            monitor->displayLinkFired();
+    }
 }
 
 }

@@ -85,6 +85,10 @@ void computeUsesForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
     case op_jngreater:
     case op_jngreatereq:
     case op_jless:
+    case op_jeq:
+    case op_jneq:
+    case op_jstricteq:
+    case op_jnstricteq:
     case op_jbelow:
     case op_jbeloweq:
     case op_set_function_name:
@@ -102,7 +106,6 @@ void computeUsesForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
         functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
         return;
     }
-    case op_put_by_index:
     case op_put_by_id:
     case op_put_to_scope:
     case op_put_to_arguments: {
@@ -183,6 +186,7 @@ void computeUsesForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
     case op_get_by_id_unset:
     case op_get_by_id_direct:
     case op_get_array_length:
+    case op_in_by_id:
     case op_typeof:
     case op_is_empty:
     case op_is_undefined:
@@ -223,7 +227,7 @@ void computeUsesForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
     case op_enumerator_structure_pname:
     case op_enumerator_generic_pname:
     case op_get_by_val:
-    case op_in:
+    case op_in_by_val:
     case op_overrides_has_instance:
     case op_instanceof:
     case op_add:
@@ -349,6 +353,10 @@ void computeDefsForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
     case op_jnlesseq:
     case op_jngreater:
     case op_jngreatereq:
+    case op_jeq:
+    case op_jneq:
+    case op_jstricteq:
+    case op_jnstricteq:
     case op_jbelow:
     case op_jbeloweq:
     case op_loop_hint:
@@ -365,7 +373,6 @@ void computeDefsForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
     case op_put_setter_by_val:
     case op_put_by_val:
     case op_put_by_val_direct:
-    case op_put_by_index:
     case op_define_data_property:
     case op_define_accessor_property:
     case op_profile_type:
@@ -448,7 +455,8 @@ void computeDefsForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
     case op_is_object_or_null:
     case op_is_cell_with_type:
     case op_is_function:
-    case op_in:
+    case op_in_by_id:
+    case op_in_by_val:
     case op_to_number:
     case op_to_string:
     case op_to_object:
@@ -506,7 +514,7 @@ void computeDefsForBytecodeOffset(Block* codeBlock, OpcodeID opcodeID, Instructi
         return;
     }
     case op_enter: {
-        for (unsigned i = codeBlock->m_numVars; i--;)
+        for (unsigned i = codeBlock->numVars(); i--;)
             functor(codeBlock, instruction, opcodeID, virtualRegisterForLocal(i).offset());
         return;
     }

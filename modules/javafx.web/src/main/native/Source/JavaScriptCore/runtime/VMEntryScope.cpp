@@ -30,7 +30,6 @@
 #include "JSGlobalObject.h"
 #include "Options.h"
 #include "SamplingProfiler.h"
-#include "ThreadLocalCacheInlines.h"
 #include "VM.h"
 #include "Watchdog.h"
 #include <wtf/StackBounds.h>
@@ -42,7 +41,6 @@ VMEntryScope::VMEntryScope(VM& vm, JSGlobalObject* globalObject)
     : m_vm(vm)
     , m_globalObject(globalObject)
 {
-    globalObject->threadLocalCache().install(vm, &m_previousTLC);
     ASSERT(!DisallowVMReentry::isInEffectOnCurrentThread());
     ASSERT(Thread::current().stack().isGrowingDownward());
     if (!vm.entryScope) {
@@ -59,26 +57,25 @@ VMEntryScope::VMEntryScope(VM& vm, JSGlobalObject* globalObject)
         if (SamplingProfiler* samplingProfiler = vm.samplingProfiler())
             samplingProfiler->noticeVMEntry();
 #endif
-        TracePoint(VMEntryScopeStart);
+        if (Options::useTracePoints())
+            tracePoint(VMEntryScopeStart);
     }
 
     vm.clearLastException();
 }
 
-void VMEntryScope::addDidPopListener(std::function<void ()> listener)
+void VMEntryScope::addDidPopListener(Function<void ()>&& listener)
 {
-    m_didPopListeners.append(listener);
+    m_didPopListeners.append(WTFMove(listener));
 }
 
 VMEntryScope::~VMEntryScope()
 {
-    if (m_previousTLC)
-        m_previousTLC->install(m_vm);
-
     if (m_vm.entryScope != this)
         return;
 
-    TracePoint(VMEntryScopeEnd);
+    if (Options::useTracePoints())
+        tracePoint(VMEntryScopeEnd);
 
     if (m_vm.watchdog())
         m_vm.watchdog()->exitedVM();
@@ -87,6 +84,8 @@ VMEntryScope::~VMEntryScope()
 
     for (auto& listener : m_didPopListeners)
         listener();
+
+    m_vm.clearScratchBuffers();
 }
 
 } // namespace JSC

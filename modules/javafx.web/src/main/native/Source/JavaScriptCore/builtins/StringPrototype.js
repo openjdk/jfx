@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2015 Andy VanWagoner <thetalecrafter@gmail.com>.
+ * Copyright (C) 2015 Andy VanWagoner <andy@vanwagoner.family>.
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -191,7 +191,13 @@ function padEnd(maxLength/*, fillString*/)
 }
 
 @globalPrivate
-function hasObservableSideEffectsForStringReplace(regexp, replacer) {
+function hasObservableSideEffectsForStringReplace(regexp, replacer)
+{
+    "use strict";
+
+    if (!@isRegExpObject(regexp))
+        return true;
+
     if (replacer !== @regExpPrototypeSymbolReplace)
         return true;
     
@@ -207,7 +213,7 @@ function hasObservableSideEffectsForStringReplace(regexp, replacer) {
     if (regexpUnicode !== @regExpProtoUnicodeGetter)
         return true;
 
-    return !@isRegExpObject(regexp);
+    return typeof regexp.lastIndex !== "number";
 }
 
 @intrinsic=StringPrototypeReplaceIntrinsic
@@ -235,6 +241,8 @@ function replace(search, replace)
 @globalPrivate
 function getDefaultCollator()
 {
+    "use strict";
+
     return @getDefaultCollator.collator || (@getDefaultCollator.collator = new @Collator());
 }
     

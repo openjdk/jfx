@@ -32,25 +32,31 @@
 #include "ANGLEWebKitBridge.h"
 #include "GraphicsContext3D.h"
 
-#if PLATFORM(IOS)
+#if PLATFORM(COCOA)
+
+#if USE(OPENGL_ES)
 #include <OpenGLES/ES2/glext.h>
 #include <OpenGLES/ES3/gl.h>
 #else
-#if USE(LIBEPOXY)
-#include "EpoxyShims.h"
-#elif USE(OPENGL_ES_2)
-#include "OpenGLESShims.h"
-#define GL_GLEXT_PROTOTYPES 1
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#elif PLATFORM(MAC)
 #define GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
 #include <OpenGL/gl.h>
 #include <OpenGL/gl3.h>
 #undef GL_DO_NOT_WARN_IF_MULTI_GL_VERSION_HEADERS_INCLUDED
+#endif
+
+#else
+
+#if USE(LIBEPOXY)
+#include "EpoxyShims.h"
+#elif USE(OPENGL_ES)
+#include "OpenGLESShims.h"
+#define GL_GLEXT_PROTOTYPES 1
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #elif PLATFORM(GTK) || PLATFORM(WIN)
 #include "OpenGLShims.h"
 #endif
+
 #endif
 
 #include <wtf/MainThread.h>
@@ -72,8 +78,7 @@ Extensions3DOpenGLCommon::Extensions3DOpenGLCommon(GraphicsContext3D* context, b
     m_vendor = String(reinterpret_cast<const char*>(::glGetString(GL_VENDOR)));
     m_renderer = String(reinterpret_cast<const char*>(::glGetString(GL_RENDERER)));
 
-    Vector<String> vendorComponents;
-    m_vendor.convertToASCIILowercase().split(' ', vendorComponents);
+    Vector<String> vendorComponents = m_vendor.convertToASCIILowercase().split(' ');
     if (vendorComponents.contains("nvidia"))
         m_isNVIDIA = true;
     if (vendorComponents.contains("ati") || vendorComponents.contains("amd"))
@@ -210,29 +215,27 @@ String Extensions3DOpenGLCommon::getTranslatedShaderSourceANGLE(Platform3DObject
 
 void Extensions3DOpenGLCommon::initializeAvailableExtensions()
 {
-#if PLATFORM(MAC) || (PLATFORM(GTK) && !USE(OPENGL_ES_2))
+#if (PLATFORM(COCOA) && USE(OPENGL)) || (PLATFORM(GTK) && !USE(OPENGL_ES))
     if (m_useIndexedGetString) {
         GLint numExtensions = 0;
         ::glGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
         for (GLint i = 0; i < numExtensions; ++i)
             m_availableExtensions.add(glGetStringi(GL_EXTENSIONS, i));
 
-        if (!m_availableExtensions.contains(ASCIILiteral("GL_ARB_texture_storage"))) {
+        if (!m_availableExtensions.contains("GL_ARB_texture_storage"_s)) {
             GLint majorVersion;
             glGetIntegerv(GL_MAJOR_VERSION, &majorVersion);
             GLint minorVersion;
             glGetIntegerv(GL_MINOR_VERSION, &minorVersion);
             if (majorVersion > 4 || (majorVersion == 4 && minorVersion >= 2))
-                m_availableExtensions.add(ASCIILiteral("GL_ARB_texture_storage"));
+                m_availableExtensions.add("GL_ARB_texture_storage"_s);
         }
     } else
 #endif
     {
         String extensionsString = getExtensions();
-        Vector<String> availableExtensions;
-        extensionsString.split(' ', availableExtensions);
-        for (size_t i = 0; i < availableExtensions.size(); ++i)
-            m_availableExtensions.add(availableExtensions[i]);
+        for (auto& extension : extensionsString.split(' '))
+            m_availableExtensions.add(extension);
     }
     m_initializedAvailableExtensions = true;
 }

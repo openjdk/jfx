@@ -28,7 +28,9 @@
 #include "CachedCall.h"
 #include "Error.h"
 #include "FrameTracers.h"
+#include "InterpreterInlines.h"
 #include "IntlObject.h"
+#include "JITCodeInlines.h"
 #include "JSArray.h"
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
@@ -159,14 +161,14 @@ void StringPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject, JSStr
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("normalize", stringProtoFuncNormalize, static_cast<unsigned>(PropertyAttribute::DontEnum), 0);
     JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().charCodeAtPrivateName(), stringProtoFuncCharCodeAt, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, CharCodeAtIntrinsic);
 
-    JSFunction* trimStartFunction = JSFunction::create(vm, globalObject, 0, ASCIILiteral("trimStart"), stringProtoFuncTrimStart, NoIntrinsic);
-    JSFunction* trimEndFunction = JSFunction::create(vm, globalObject, 0, ASCIILiteral("trimEnd"), stringProtoFuncTrimEnd, NoIntrinsic);
+    JSFunction* trimStartFunction = JSFunction::create(vm, globalObject, 0, "trimStart"_s, stringProtoFuncTrimStart, NoIntrinsic);
+    JSFunction* trimEndFunction = JSFunction::create(vm, globalObject, 0, "trimEnd"_s, stringProtoFuncTrimEnd, NoIntrinsic);
     putDirectWithoutTransition(vm, Identifier::fromString(&vm, "trimStart"), trimStartFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, Identifier::fromString(&vm, "trimLeft"), trimStartFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, Identifier::fromString(&vm, "trimEnd"), trimEndFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
     putDirectWithoutTransition(vm, Identifier::fromString(&vm, "trimRight"), trimEndFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
-    JSFunction* iteratorFunction = JSFunction::create(vm, globalObject, 0, ASCIILiteral("[Symbol.iterator]"), stringProtoFuncIterator, NoIntrinsic);
+    JSFunction* iteratorFunction = JSFunction::create(vm, globalObject, 0, "[Symbol.iterator]"_s, stringProtoFuncIterator, NoIntrinsic);
     putDirectWithoutTransition(vm, vm.propertyNames->iteratorSymbol, iteratorFunction, static_cast<unsigned>(PropertyAttribute::DontEnum));
 
     // The constructor will be added later, after StringConstructor has been built
@@ -533,7 +535,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
     const String& source = string->value(exec);
     unsigned sourceLen = source.length();
     RETURN_IF_EXCEPTION(scope, nullptr);
-    RegExpObject* regExpObject = asRegExpObject(searchValue);
+    RegExpObject* regExpObject = jsCast<RegExpObject*>(searchValue);
     RegExp* regExp = regExpObject->regExp();
     bool global = regExp->global();
     bool hasNamedCaptures = regExp->hasNamedCaptures();
@@ -563,140 +565,73 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(
     if (global && callType == CallType::JS) {
         // regExp->numSubpatterns() + 1 for pattern args, + 2 for match start and string
         int argCount = regExp->numSubpatterns() + 1 + 2;
+        if (hasNamedCaptures)
+            ++argCount;
         JSFunction* func = jsCast<JSFunction*>(replaceValue);
         CachedCall cachedCall(exec, func, argCount);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        if (source.is8Bit()) {
-            while (true) {
-                int* ovector;
-                MatchResult result = regExpConstructor->performMatch(vm, regExp, string, source, startPosition, &ovector);
-                if (!result)
-                    break;
+        while (true) {
+            int* ovector;
+            MatchResult result = regExpConstructor->performMatch(vm, regExp, string, source, startPosition, &ovector);
+            if (!result)
+                break;
 
-                if (UNLIKELY(!sourceRanges.tryConstructAndAppend(lastIndex, result.start - lastIndex)))
-                    OUT_OF_MEMORY(exec, scope);
+            if (UNLIKELY(!sourceRanges.tryConstructAndAppend(lastIndex, result.start - lastIndex)))
+                OUT_OF_MEMORY(exec, scope);
 
-                unsigned i = 0;
-                cachedCall.clearArguments();
+            cachedCall.clearArguments();
 
-                JSObject* groups = nullptr;
+            JSObject* groups = nullptr;
 
-                if (hasNamedCaptures) {
-                    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
-                    groups = JSFinalObject::create(vm, JSFinalObject::createStructure(vm, globalObject, globalObject->objectPrototype(), 0));
-                }
+            if (hasNamedCaptures) {
+                JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+                groups = JSFinalObject::create(vm, JSFinalObject::createStructure(vm, globalObject, globalObject->objectPrototype(), 0));
+            }
 
-                for (; i < regExp->numSubpatterns() + 1; ++i) {
-                    int matchStart = ovector[i * 2];
-                    int matchLen = ovector[i * 2 + 1] - matchStart;
+            for (unsigned i = 0; i < regExp->numSubpatterns() + 1; ++i) {
+                int matchStart = ovector[i * 2];
+                int matchLen = ovector[i * 2 + 1] - matchStart;
 
-                    JSValue patternValue;
+                JSValue patternValue;
 
-                    if (matchStart < 0)
-                        patternValue = jsUndefined();
-                    else
-                        patternValue = jsSubstring(&vm, source, matchStart, matchLen);
+                if (matchStart < 0)
+                    patternValue = jsUndefined();
+                else
+                    patternValue = jsSubstring(&vm, source, matchStart, matchLen);
 
-                    cachedCall.appendArgument(patternValue);
+                cachedCall.appendArgument(patternValue);
 
-                    if (i && hasNamedCaptures) {
-                        String groupName = regExp->getCaptureGroupName(i);
-                        if (!groupName.isEmpty())
-                            groups->putDirect(vm, Identifier::fromString(&vm, groupName), patternValue);
-                    }
-                }
-
-                cachedCall.appendArgument(jsNumber(result.start));
-                cachedCall.appendArgument(string);
-                if (hasNamedCaptures)
-                    cachedCall.appendArgument(groups);
-
-                cachedCall.setThis(jsUndefined());
-                if (UNLIKELY(cachedCall.hasOverflowedArguments())) {
-                    throwOutOfMemoryError(exec, scope);
-                    return nullptr;
-                }
-
-                JSValue jsResult = cachedCall.call();
-                RETURN_IF_EXCEPTION(scope, nullptr);
-                replacements.append(jsResult.toWTFString(exec));
-                RETURN_IF_EXCEPTION(scope, nullptr);
-
-                lastIndex = result.end;
-                startPosition = lastIndex;
-
-                // special case of empty match
-                if (result.empty()) {
-                    startPosition++;
-                    if (startPosition > sourceLen)
-                        break;
+                if (i && hasNamedCaptures) {
+                    String groupName = regExp->getCaptureGroupName(i);
+                    if (!groupName.isEmpty())
+                        groups->putDirect(vm, Identifier::fromString(&vm, groupName), patternValue);
                 }
             }
-        } else {
-            while (true) {
-                int* ovector;
-                MatchResult result = regExpConstructor->performMatch(vm, regExp, string, source, startPosition, &ovector);
-                if (!result)
+
+            cachedCall.appendArgument(jsNumber(result.start));
+            cachedCall.appendArgument(string);
+            if (hasNamedCaptures)
+                cachedCall.appendArgument(groups);
+
+            cachedCall.setThis(jsUndefined());
+            if (UNLIKELY(cachedCall.hasOverflowedArguments())) {
+                throwOutOfMemoryError(exec, scope);
+                return nullptr;
+            }
+
+            JSValue jsResult = cachedCall.call();
+            RETURN_IF_EXCEPTION(scope, nullptr);
+            replacements.append(jsResult.toWTFString(exec));
+            RETURN_IF_EXCEPTION(scope, nullptr);
+
+            lastIndex = result.end;
+            startPosition = lastIndex;
+
+            // special case of empty match
+            if (result.empty()) {
+                startPosition++;
+                if (startPosition > sourceLen)
                     break;
-
-                if (UNLIKELY(!sourceRanges.tryConstructAndAppend(lastIndex, result.start - lastIndex)))
-                    OUT_OF_MEMORY(exec, scope);
-
-                unsigned i = 0;
-                cachedCall.clearArguments();
-
-                JSObject* groups = nullptr;
-
-                if (hasNamedCaptures) {
-                    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
-                    groups = JSFinalObject::create(vm, JSFinalObject::createStructure(vm, globalObject, globalObject->objectPrototype(), 0));
-                }
-
-                for (; i < regExp->numSubpatterns() + 1; ++i) {
-                    int matchStart = ovector[i * 2];
-                    int matchLen = ovector[i * 2 + 1] - matchStart;
-
-                    JSValue patternValue;
-
-                    if (matchStart < 0)
-                        patternValue = jsUndefined();
-                    else
-                        patternValue = jsSubstring(&vm, source, matchStart, matchLen);
-
-                    cachedCall.appendArgument(patternValue);
-
-                    if (i && hasNamedCaptures) {
-                        String groupName = regExp->getCaptureGroupName(i);
-                        if (!groupName.isEmpty())
-                            groups->putDirect(vm, Identifier::fromString(&vm, groupName), patternValue);
-                    }
-                }
-
-                cachedCall.appendArgument(jsNumber(result.start));
-                cachedCall.appendArgument(string);
-                if (hasNamedCaptures)
-                    cachedCall.appendArgument(groups);
-
-                cachedCall.setThis(jsUndefined());
-                if (UNLIKELY(cachedCall.hasOverflowedArguments())) {
-                    throwOutOfMemoryError(exec, scope);
-                    return nullptr;
-                }
-
-                JSValue jsResult = cachedCall.call();
-                RETURN_IF_EXCEPTION(scope, nullptr);
-                replacements.append(jsResult.toWTFString(exec));
-                RETURN_IF_EXCEPTION(scope, nullptr);
-
-                lastIndex = result.end;
-                startPosition = lastIndex;
-
-                // special case of empty match
-                if (result.empty()) {
-                    startPosition++;
-                    if (startPosition > sourceLen)
-                        break;
-                }
             }
         }
     } else {
@@ -831,7 +766,7 @@ static ALWAYS_INLINE JSString* replaceUsingRegExpSearch(VM& vm, ExecState* exec,
 
     String replacementString;
     CallData callData;
-    CallType callType = getCallData(replaceValue, callData);
+    CallType callType = getCallData(vm, replaceValue, callData);
     if (callType == CallType::None) {
         replacementString = replaceValue.toWTFString(exec);
         RETURN_IF_EXCEPTION(scope, nullptr);
@@ -857,7 +792,7 @@ static ALWAYS_INLINE JSString* replaceUsingStringSearch(VM& vm, ExecState* exec,
         return jsString;
 
     CallData callData;
-    CallType callType = getCallData(replaceValue, callData);
+    CallType callType = getCallData(vm, replaceValue, callData);
     if (callType != CallType::None) {
         MarkedArgumentBuffer args;
         args.append(jsSubstring(exec, string, matchStart, searchString.impl()->length()));
@@ -954,7 +889,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncRepeatCharacter(ExecState* exec)
 ALWAYS_INLINE JSString* replace(
     VM& vm, ExecState* exec, JSString* string, JSValue searchValue, JSValue replaceValue)
 {
-    if (searchValue.inherits(vm, RegExpObject::info()))
+    if (searchValue.inherits<RegExpObject>(vm))
         return replaceUsingRegExpSearch(vm, exec, string, searchValue, replaceValue);
     return replaceUsingStringSearch(vm, exec, string, searchValue, replaceValue);
 }
@@ -983,7 +918,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncReplaceUsingRegExp(ExecState* exec)
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
     JSValue searchValue = exec->argument(0);
-    if (!searchValue.inherits(vm, RegExpObject::info()))
+    if (!searchValue.inherits<RegExpObject>(vm))
         return JSValue::encode(jsUndefined());
 
     scope.release();
@@ -1025,8 +960,9 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncToString(ExecState* exec)
     if (thisValue.isString())
         return JSValue::encode(thisValue);
 
-    if (thisValue.inherits(vm, StringObject::info()))
-        return JSValue::encode(asStringObject(thisValue)->internalValue());
+    auto* stringObject = jsDynamicCast<StringObject*>(vm, thisValue);
+    if (stringObject)
+        return JSValue::encode(stringObject->internalValue());
 
     return throwVMTypeError(exec, scope);
 }
@@ -1614,14 +1550,14 @@ static EncodedJSValue toLocaleCase(ExecState* state, int32_t (*convertCase)(UCha
 
     // 10. Let availableLocales be a List with the language tags of the languages for which the Unicode character database contains language sensitive case mappings.
     // Note 1: As of Unicode 5.1, the availableLocales list contains the elements "az", "lt", and "tr".
-    const HashSet<String> availableLocales({ ASCIILiteral("az"), ASCIILiteral("lt"), ASCIILiteral("tr") });
+    const HashSet<String> availableLocales({ "az"_s, "lt"_s, "tr"_s });
 
     // 11. Let locale be BestAvailableLocale(availableLocales, noExtensionsLocale).
     String locale = bestAvailableLocale(availableLocales, noExtensionsLocale);
 
     // 12. If locale is undefined, let locale be "und".
     if (locale.isNull())
-        locale = ASCIILiteral("und");
+        locale = "und"_s;
 
     CString utf8LocaleBuffer = locale.utf8();
     const StringView view(s);
@@ -1876,7 +1812,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncIterator(ExecState* exec)
         return throwVMTypeError(exec, scope);
     JSString* string = thisValue.toString(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    return JSValue::encode(JSStringIterator::create(exec, exec->jsCallee()->globalObject()->stringIteratorStructure(), string));
+    return JSValue::encode(JSStringIterator::create(exec, exec->jsCallee()->globalObject(vm)->stringIteratorStructure(), string));
 }
 
 enum class NormalizationForm {
@@ -1961,7 +1897,7 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncNormalize(ExecState* exec)
         else if (formString == "NFKD")
             form = NormalizationForm::CompatibilityDecomposition;
         else
-            return throwVMError(exec, scope, createRangeError(exec, ASCIILiteral("argument does not match any normalization form")));
+            return throwVMError(exec, scope, createRangeError(exec, "argument does not match any normalization form"_s));
     }
 
     scope.release();

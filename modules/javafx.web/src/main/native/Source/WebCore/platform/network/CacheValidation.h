@@ -38,17 +38,17 @@ class ResourceRequest;
 class ResourceResponse;
 
 struct RedirectChainCacheStatus {
-    enum Status {
+    enum class Status : uint8_t {
         NoRedirection,
         NotCachedRedirection,
         CachedRedirection
     };
     RedirectChainCacheStatus()
-        : status(NoRedirection)
-        , endOfValidity(WallTime::infinity())
+        : endOfValidity(WallTime::infinity())
+        , status(Status::NoRedirection)
     { }
-    Status status;
     WallTime endOfValidity;
+    Status status;
 };
 
 WEBCORE_EXPORT Seconds computeCurrentAge(const ResourceResponse&, WallTime responseTimestamp);

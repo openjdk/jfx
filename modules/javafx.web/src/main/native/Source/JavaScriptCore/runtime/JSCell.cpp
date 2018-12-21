@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003, 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -46,7 +46,7 @@ void JSCell::destroy(JSCell* cell)
 
 void JSCell::dump(PrintStream& out) const
 {
-    methodTable()->dumpToStream(this, out);
+    methodTable(*vm())->dumpToStream(this, out);
 }
 
 void JSCell::dumpToStream(const JSCell* cell, PrintStream& out)
@@ -54,19 +54,14 @@ void JSCell::dumpToStream(const JSCell* cell, PrintStream& out)
     out.printf("<%p, %s>", cell, cell->className(*cell->vm()));
 }
 
-size_t JSCell::estimatedSizeInBytes() const
+size_t JSCell::estimatedSizeInBytes(VM& vm) const
 {
-    return methodTable()->estimatedSize(const_cast<JSCell*>(this));
+    return methodTable(vm)->estimatedSize(const_cast<JSCell*>(this), vm);
 }
 
-size_t JSCell::estimatedSize(JSCell* cell)
+size_t JSCell::estimatedSize(JSCell* cell, VM&)
 {
     return cell->cellSize();
-}
-
-PropertyReificationResult JSCell::reifyPropertyNameIfNeeded(JSCell*, ExecState*, PropertyName&)
-{
-    return PropertyReificationResult::Nothing;
 }
 
 void JSCell::heapSnapshot(JSCell*, HeapSnapshotBuilder&)
@@ -98,17 +93,17 @@ const JSObject* JSCell::getObject() const
 
 CallType JSCell::getCallData(JSCell*, CallData& callData)
 {
-    callData.js.functionExecutable = 0;
-    callData.js.scope = 0;
-    callData.native.function = 0;
+    callData.js.functionExecutable = nullptr;
+    callData.js.scope = nullptr;
+    callData.native.function = nullptr;
     return CallType::None;
 }
 
 ConstructType JSCell::getConstructData(JSCell*, ConstructData& constructData)
 {
-    constructData.js.functionExecutable = 0;
-    constructData.js.scope = 0;
-    constructData.native.function = 0;
+    constructData.js.functionExecutable = nullptr;
+    constructData.js.scope = nullptr;
+    constructData.native.function = nullptr;
     return ConstructType::None;
 }
 
@@ -227,7 +222,7 @@ void JSCell::getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArra
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-String JSCell::className(const JSObject*)
+String JSCell::className(const JSObject*, VM&)
 {
     RELEASE_ASSERT_NOT_REACHED();
     return String();
@@ -259,18 +254,6 @@ bool JSCell::defineOwnProperty(JSObject*, ExecState*, PropertyName, const Proper
 {
     RELEASE_ASSERT_NOT_REACHED();
     return false;
-}
-
-ArrayBuffer* JSCell::slowDownAndWasteMemory(JSArrayBufferView*)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-    return nullptr;
-}
-
-RefPtr<ArrayBufferView> JSCell::getTypedArrayImpl(JSArrayBufferView*)
-{
-    RELEASE_ASSERT_NOT_REACHED();
-    return nullptr;
 }
 
 uint32_t JSCell::getEnumerableLength(ExecState*, JSObject*)

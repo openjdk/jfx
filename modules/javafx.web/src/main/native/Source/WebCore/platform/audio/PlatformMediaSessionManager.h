@@ -29,7 +29,7 @@
 #include "AudioHardwareListener.h"
 #include "PlatformMediaSession.h"
 #include "RemoteCommandListener.h"
-#include <map>
+#include "Timer.h"
 #include <pal/system/SystemSleepListener.h>
 #include <wtf/Vector.h>
 
@@ -56,17 +56,17 @@ public:
     bool activeAudioSessionRequired() const;
     bool canProduceAudio() const;
 
-    WEBCORE_EXPORT virtual bool hasActiveNowPlayingSession() const { return false; }
-    WEBCORE_EXPORT virtual String lastUpdatedNowPlayingTitle() const { return emptyString(); }
-    WEBCORE_EXPORT virtual double lastUpdatedNowPlayingDuration() const { return NAN; }
-    WEBCORE_EXPORT virtual double lastUpdatedNowPlayingElapsedTime() const { return NAN; }
-    WEBCORE_EXPORT virtual uint64_t lastUpdatedNowPlayingInfoUniqueIdentifier() const { return 0; }
-    WEBCORE_EXPORT virtual bool registeredAsNowPlayingApplication() const { return false; }
+    virtual bool hasActiveNowPlayingSession() const { return false; }
+    virtual String lastUpdatedNowPlayingTitle() const { return emptyString(); }
+    virtual double lastUpdatedNowPlayingDuration() const { return NAN; }
+    virtual double lastUpdatedNowPlayingElapsedTime() const { return NAN; }
+    virtual uint64_t lastUpdatedNowPlayingInfoUniqueIdentifier() const { return 0; }
+    virtual bool registeredAsNowPlayingApplication() const { return false; }
 
     bool willIgnoreSystemInterruptions() const { return m_willIgnoreSystemInterruptions; }
     void setWillIgnoreSystemInterruptions(bool ignore) { m_willIgnoreSystemInterruptions = ignore; }
 
-    WEBCORE_EXPORT void beginInterruption(PlatformMediaSession::InterruptionType);
+    WEBCORE_EXPORT virtual void beginInterruption(PlatformMediaSession::InterruptionType);
     WEBCORE_EXPORT void endInterruption(PlatformMediaSession::EndInterruptionFlags);
 
     WEBCORE_EXPORT void applicationWillBecomeInactive() const;
@@ -95,7 +95,7 @@ public:
 
     virtual bool sessionWillBeginPlayback(PlatformMediaSession&);
     virtual void sessionWillEndPlayback(PlatformMediaSession&);
-    virtual bool sessionCanLoadMedia(const PlatformMediaSession&) const;
+    virtual void sessionStateChanged(PlatformMediaSession&);
     virtual void sessionDidEndRemoteScrubbing(const PlatformMediaSession&) { };
     virtual void clientCharacteristicsChanged(PlatformMediaSession&) { }
 
@@ -123,10 +123,12 @@ protected:
     PlatformMediaSession* findSession(const Function<bool(PlatformMediaSession&, size_t)>&) const;
     bool anyOfSessions(const Function<bool(PlatformMediaSession&, size_t)>& predicate) const { return findSession(predicate); }
 
+    AudioHardwareListener* audioHardwareListener() { return m_audioHardwareListener.get(); }
+
 private:
     friend class Internals;
 
-    void updateSessionState();
+    virtual void updateSessionState() { }
 
     // RemoteCommandListenerClient
     WEBCORE_EXPORT void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument*) override;

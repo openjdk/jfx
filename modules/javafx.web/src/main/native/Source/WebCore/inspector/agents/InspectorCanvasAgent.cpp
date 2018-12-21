@@ -35,9 +35,8 @@
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
 #include "JSCanvasRenderingContext2D.h"
+#include "JSExecState.h"
 #include "JSImageBitmapRenderingContext.h"
-#include "JSMainThreadExecState.h"
-#include "MainFrame.h"
 #include "OffscreenCanvas.h"
 #include "ScriptState.h"
 #include "StringAdaptors.h"
@@ -67,7 +66,7 @@ namespace WebCore {
 using namespace Inspector;
 
 InspectorCanvasAgent::InspectorCanvasAgent(WebAgentContext& context)
-    : InspectorAgentBase(ASCIILiteral("Canvas"), context)
+    : InspectorAgentBase("Canvas"_s, context)
     , m_frontendDispatcher(std::make_unique<Inspector::CanvasFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::CanvasBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
@@ -150,13 +149,13 @@ void InspectorCanvasAgent::requestNode(ErrorString& errorString, const String& c
 
     auto* node = inspectorCanvas->canvasElement();
     if (!node) {
-        errorString = ASCIILiteral("No node for canvas");
+        errorString = "No node for canvas"_s;
         return;
     }
 
     int documentNodeId = m_instrumentingAgents.inspectorDOMAgent()->boundNodeId(&node->document());
     if (!documentNodeId) {
-        errorString = ASCIILiteral("Document has not been requested");
+        errorString = "Document has not been requested"_s;
         return;
     }
 
@@ -173,7 +172,7 @@ void InspectorCanvasAgent::requestContent(ErrorString& errorString, const String
 
     if (auto* node = inspectorCanvas->canvasElement()) {
         if (is<CanvasRenderingContext2D>(inspectorCanvas->context()) || is<ImageBitmapRenderingContext>(inspectorCanvas->context())) {
-            auto result = node->toDataURL(ASCIILiteral("image/png"));
+            auto result = node->toDataURL("image/png"_s);
             if (result.hasException()) {
                 errorString = result.releaseException().releaseMessage();
                 return;
@@ -187,7 +186,7 @@ void InspectorCanvasAgent::requestContent(ErrorString& errorString, const String
             WebGLRenderingContextBase& contextWebGLBase = downcast<WebGLRenderingContextBase>(inspectorCanvas->context());
 
             contextWebGLBase.setPreventBufferClearForInspector(true);
-            auto result = node->toDataURL(ASCIILiteral("image/png"));
+            auto result = node->toDataURL("image/png"_s);
             contextWebGLBase.setPreventBufferClearForInspector(false);
 
             if (result.hasException()) {
@@ -201,7 +200,7 @@ void InspectorCanvasAgent::requestContent(ErrorString& errorString, const String
     }
 
     // FIXME: <https://webkit.org/b/173621> Web Inspector: Support getting the content of WebGPU context;
-    errorString = ASCIILiteral("Unsupported canvas context type");
+    errorString = "Unsupported canvas context type"_s;
 }
 
 void InspectorCanvasAgent::requestCSSCanvasClientNodes(ErrorString& errorString, const String& canvasId, RefPtr<JSON::ArrayOf<int>>& result)
@@ -241,7 +240,7 @@ static JSC::JSValue contextAsScriptValue(JSC::ExecState& state, CanvasRenderingC
     return { };
 }
 
-void InspectorCanvasAgent::resolveCanvasContext(ErrorString& errorString, const String& canvasId, const String* const objectGroup, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result)
+void InspectorCanvasAgent::resolveCanvasContext(ErrorString& errorString, const String& canvasId, const String* objectGroup, RefPtr<Inspector::Protocol::Runtime::RemoteObject>& result)
 {
     auto* inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
@@ -254,7 +253,7 @@ void InspectorCanvasAgent::resolveCanvasContext(ErrorString& errorString, const 
     JSC::JSValue value = contextAsScriptValue(state, inspectorCanvas->context());
     if (!value) {
         ASSERT_NOT_REACHED();
-        errorString = ASCIILiteral("Unknown context type");
+        errorString = "Unknown context type"_s;
         return;
     }
 
@@ -262,14 +261,14 @@ void InspectorCanvasAgent::resolveCanvasContext(ErrorString& errorString, const 
     result = injectedScript.wrapObject(value, objectGroupName);
 }
 
-void InspectorCanvasAgent::startRecording(ErrorString& errorString, const String& canvasId, const bool* const singleFrame, const int* const memoryLimit)
+void InspectorCanvasAgent::startRecording(ErrorString& errorString, const String& canvasId, const bool* singleFrame, const int* memoryLimit)
 {
     auto* inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
         return;
 
     if (inspectorCanvas->context().callTracingActive()) {
-        errorString = ASCIILiteral("Already recording canvas");
+        errorString = "Already recording canvas"_s;
         return;
     }
 
@@ -289,7 +288,7 @@ void InspectorCanvasAgent::stopRecording(ErrorString& errorString, const String&
         return;
 
     if (!inspectorCanvas->context().callTracingActive()) {
-        errorString = ASCIILiteral("No active recording for canvas");
+        errorString = "No active recording for canvas"_s;
         return;
     }
 
@@ -305,7 +304,7 @@ void InspectorCanvasAgent::requestShaderSource(ErrorString& errorString, const S
 
     auto* shader = inspectorProgram->shaderForType(shaderType);
     if (!shader) {
-        errorString = ASCIILiteral("No shader for given type.");
+        errorString = "No shader for given type."_s;
         return;
     }
 
@@ -314,7 +313,7 @@ void InspectorCanvasAgent::requestShaderSource(ErrorString& errorString, const S
     UNUSED_PARAM(programId);
     UNUSED_PARAM(shaderType);
     UNUSED_PARAM(content);
-    errorString = ASCIILiteral("WebGL is not supported.");
+    errorString = "WebGL is not supported."_s;
 #endif
 }
 
@@ -327,7 +326,7 @@ void InspectorCanvasAgent::updateShader(ErrorString& errorString, const String& 
 
     auto* shader = inspectorProgram->shaderForType(shaderType);
     if (!shader) {
-        errorString = ASCIILiteral("No shader for given type.");
+        errorString = "No shader for given type."_s;
         return;
     }
 
@@ -336,7 +335,7 @@ void InspectorCanvasAgent::updateShader(ErrorString& errorString, const String& 
     contextWebGL.compileShader(shader);
 
     if (!shader->isValid()) {
-        errorString = ASCIILiteral("Shader compilation failed.");
+        errorString = "Shader compilation failed."_s;
         return;
     }
 
@@ -345,7 +344,7 @@ void InspectorCanvasAgent::updateShader(ErrorString& errorString, const String& 
     UNUSED_PARAM(programId);
     UNUSED_PARAM(shaderType);
     UNUSED_PARAM(source);
-    errorString = ASCIILiteral("WebGL is not supported.");
+    errorString = "WebGL is not supported."_s;
 #endif
 }
 
@@ -360,7 +359,22 @@ void InspectorCanvasAgent::setShaderProgramDisabled(ErrorString& errorString, co
 #else
     UNUSED_PARAM(programId);
     UNUSED_PARAM(disabled);
-    errorString = ASCIILiteral("WebGL is not supported.");
+    errorString = "WebGL is not supported."_s;
+#endif
+}
+
+void InspectorCanvasAgent::setShaderProgramHighlighted(ErrorString& errorString, const String& programId, bool highlighted)
+{
+#if ENABLE(WEBGL)
+    auto* inspectorProgram = assertInspectorProgram(errorString, programId);
+    if (!inspectorProgram)
+        return;
+
+    inspectorProgram->setHighlighted(highlighted);
+#else
+    UNUSED_PARAM(programId);
+    UNUSED_PARAM(highlighted);
+    errorString = "WebGL is not supported."_s;
 #endif
 }
 
@@ -608,6 +622,15 @@ bool InspectorCanvasAgent::isShaderProgramDisabled(WebGLProgram& program)
 
     return inspectorProgram->disabled();
 }
+
+bool InspectorCanvasAgent::isShaderProgramHighlighted(WebGLProgram& program)
+{
+    auto* inspectorProgram = findInspectorProgram(program);
+    if (!inspectorProgram)
+        return false;
+
+    return inspectorProgram->highlighted();
+}
 #endif
 
 void InspectorCanvasAgent::canvasDestroyedTimerFired()
@@ -674,7 +697,7 @@ InspectorCanvas* InspectorCanvasAgent::assertInspectorCanvas(ErrorString& errorS
 {
     RefPtr<InspectorCanvas> inspectorCanvas = m_identifierToInspectorCanvas.get(identifier);
     if (!inspectorCanvas) {
-        errorString = ASCIILiteral("No canvas for given identifier.");
+        errorString = "No canvas for given identifier."_s;
         return nullptr;
     }
 
@@ -704,7 +727,7 @@ InspectorShaderProgram* InspectorCanvasAgent::assertInspectorProgram(ErrorString
 {
     RefPtr<InspectorShaderProgram> inspectorProgram = m_identifierToInspectorProgram.get(identifier);
     if (!inspectorProgram) {
-        errorString = ASCIILiteral("No shader program for given identifier.");
+        errorString = "No shader program for given identifier."_s;
         return nullptr;
     }
 

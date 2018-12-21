@@ -85,7 +85,9 @@ public:
 
     bool isOriginClean(SecurityOrigin*);
 
-    void addPendingImageDrawingClient(CachedImageClient&);
+    bool isClientWaitingForAsyncDecoding(CachedImageClient&) const;
+    void addClientWaitingForAsyncDecoding(CachedImageClient&);
+    void removeAllClientsWaitingForAsyncDecoding();
 
     void setForceUpdateImageDataEnabledForTesting(bool enabled) { m_forceUpdateImageDataEnabledForTesting =  enabled; }
 
@@ -170,14 +172,15 @@ private:
     using ContainerContextRequests = HashMap<const CachedImageClient*, ContainerContext>;
     ContainerContextRequests m_pendingContainerContextRequests;
 
-    HashSet<CachedImageClient*> m_pendingImageDrawingClients;
+    HashSet<CachedImageClient*> m_clienstWaitingForAsyncDecoding;
 
     RefPtr<CachedImageObserver> m_imageObserver;
     RefPtr<Image> m_image;
-    MonotonicTime m_lastUpdateImageDataTime;
-    unsigned m_updateImageDataCount { 0 };
-
     std::unique_ptr<SVGImageCache> m_svgImageCache;
+
+    MonotonicTime m_lastUpdateImageDataTime;
+
+    unsigned m_updateImageDataCount { 0 };
     bool m_isManuallyCached { false };
     bool m_shouldPaintBrokenImage { true };
     bool m_forceUpdateImageDataEnabledForTesting { false };
@@ -185,4 +188,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedImage, CachedResource::ImageResource)
+SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedImage, CachedResource::Type::ImageResource)

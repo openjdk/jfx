@@ -50,11 +50,12 @@ public:
         ASSERT(m_graph.m_form == ThreadedCPS);
         ASSERT(m_graph.m_unificationState == GloballyUnified);
 
+        m_pass = PrimaryPass;
+
         propagateThroughArgumentPositions();
 
         processInvariants();
 
-        m_pass = PrimaryPass;
         propagateToFixpoint();
 
         m_pass = RareCasePass;
@@ -245,6 +246,7 @@ private:
             break;
         }
 
+        case ValueNegate:
         case ArithNegate: {
             SpeculatedType prediction = node->child1()->prediction();
             if (prediction) {
@@ -256,6 +258,11 @@ private:
                     changed |= mergePrediction(speculatedDoubleTypeForPrediction(node->child1()->prediction()));
                 else {
                     changed |= mergePrediction(SpecInt32Only);
+                    if (node->op() == ValueNegate && node->mayHaveNonNumberResult()) {
+                        // FIXME: We should add support to BigInt into speculatio
+                        // https://bugs.webkit.org/show_bug.cgi?id=182470
+                        changed |= mergePrediction(SpecBigInt);
+                    }
                     if (node->mayHaveDoubleResult())
                         changed |= mergePrediction(SpecBytecodeDouble);
                 }
@@ -422,6 +429,11 @@ private:
 
                 if (node->child1()->shouldSpeculateSymbol()) {
                     changed |= mergePrediction(SpecSymbol);
+                    break;
+                }
+
+                if (node->child1()->shouldSpeculateBigInt()) {
+                    changed |= mergePrediction(SpecBigInt);
                     break;
                 }
 
@@ -610,6 +622,13 @@ private:
             break;
         }
 
+        case DataViewSet: {
+            DataViewData data = node->dataViewData();
+            if (data.isFloatingPoint)
+                m_graph.voteNode(m_graph.varArgChild(node, 2), VoteValue, weight);
+            break;
+        }
+
         case MovHint:
             // Ignore these since they have no effect on in-DFG execution.
             break;
@@ -699,6 +718,7 @@ private:
         case RegExpExecNonGlobalOrSticky:
         case RegExpTest:
         case RegExpMatchFast:
+        case RegExpMatchFastGlobal:
         case StringReplace:
         case StringReplaceRegExp:
         case GetById:
@@ -737,7 +757,9 @@ private:
         case CallDOMGetter:
         case GetDynamicVar:
         case GetPrototypeOf:
-        case ExtractValueFromWeakMapGet: {
+        case ExtractValueFromWeakMapGet:
+        case DataViewGetInt:
+        case DataViewGetFloat: {
             setPrediction(m_currentNode->getHeapPrediction());
             break;
         }
@@ -804,6 +826,7 @@ private:
             break;
         }
 
+        case StringValueOf:
         case StringSlice:
         case ToLowerCase:
             setPrediction(SpecString);
@@ -845,6 +868,7 @@ private:
         case CompareEq:
         case CompareStrictEq:
         case CompareEqPtr:
+        case SameValue:
         case OverridesHasInstance:
         case InstanceOf:
         case InstanceOfCustom:
@@ -857,7 +881,8 @@ private:
         case IsObjectOrNull:
         case IsFunction:
         case IsCellWithType:
-        case IsTypedArrayView: {
+        case IsTypedArrayView:
+        case MatchStructure: {
             setPrediction(SpecBoolean);
             break;
         }
@@ -892,6 +917,7 @@ private:
             break;
         }
 
+        case ObjectCreate:
         case CreateThis:
         case NewObject: {
             setPrediction(SpecFinalObject);
@@ -973,7 +999,8 @@ private:
             setPrediction(SpecObjectOther);
             break;
 
-        case In:
+        case InByVal:
+        case InById:
             setPrediction(SpecBoolean);
             break;
 
@@ -1029,6 +1056,7 @@ private:
         case GetLocal:
         case SetLocal:
         case UInt32ToNumber:
+        case ValueNegate:
         case ValueAdd:
         case ArithAdd:
         case ArithSub:
@@ -1069,7 +1097,6 @@ private:
             break;
         }
 
-        case GetArrayMask:
         case PutByValAlias:
         case DoubleAsInt32:
         case CheckArray:
@@ -1079,7 +1106,6 @@ private:
         case CheckTierUpInLoop:
         case CheckTierUpAtReturn:
         case CheckTierUpAndOSREnter:
-        case InvalidationPoint:
         case CheckInBounds:
         case ValueToInt32:
         case DoubleRep:
@@ -1198,6 +1224,13 @@ private:
         case InitializeEntrypointArguments:
         case WeakSetAdd:
         case WeakMapSet:
+        case FilterCallLinkStatus:
+        case FilterGetByIdStatus:
+        case FilterPutByIdStatus:
+        case FilterInByIdStatus:
+        case ClearCatchLocals:
+        case DataViewSet:
+        case InvalidationPoint:
             break;
 
         // This gets ignored because it only pretends to produce a value.
@@ -1242,8 +1275,8 @@ private:
 
     Vector<Node*> m_dependentNodes;
     Node* m_currentNode;
-    bool m_changed;
-    PredictionPass m_pass; // We use different logic for considering predictions depending on how far along we are in propagation.
+    bool m_changed { false };
+    PredictionPass m_pass { PrimaryPass }; // We use different logic for considering predictions depending on how far along we are in propagation.
 };
 
 } // Anonymous namespace.

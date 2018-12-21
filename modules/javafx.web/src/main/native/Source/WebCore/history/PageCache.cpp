@@ -37,17 +37,18 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FocusController.h"
+#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "HistoryController.h"
 #include "IgnoreOpensDuringUnloadCountIncrementer.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "SubframeLoader.h"
+#include <pal/Logging.h>
 #include <wtf/MemoryPressureHandler.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SetForScope.h>
@@ -278,6 +279,25 @@ PageCache& PageCache::singleton()
     return globalPageCache;
 }
 
+PageCache::PageCache()
+{
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PAL::registerNotifyCallback("com.apple.WebKit.showPageCache", [] {
+            PageCache::singleton().dump();
+        });
+    });
+}
+
+void PageCache::dump() const
+{
+    WTFLogAlways("\nPage Cache:");
+    for (auto& item : m_items) {
+        CachedPage& cachedPage = *item->m_cachedPage;
+        WTFLogAlways("  Page %p, document %p %s", &cachedPage.page(), cachedPage.document(), cachedPage.document() ? cachedPage.document()->url().string().utf8().data() : "");
+    }
+}
+
 bool PageCache::canCache(Page& page) const
 {
     if (!m_maxSize) {
@@ -371,7 +391,7 @@ static void setPageCacheState(Page& page, Document::PageCacheState pageCacheStat
 // When entering page cache, tear down the render tree before setting the in-cache flag.
 // This maintains the invariant that render trees are never present in the page cache.
 // Note that destruction happens bottom-up so that the main frame's tree dies last.
-static void destroyRenderTree(MainFrame& mainFrame)
+static void destroyRenderTree(Frame& mainFrame)
 {
     for (Frame* frame = mainFrame.tree().traversePrevious(CanWrap::Yes); frame; frame = frame->tree().traversePrevious(CanWrap::No)) {
         if (!frame->document())

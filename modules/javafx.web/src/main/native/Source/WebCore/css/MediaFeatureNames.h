@@ -70,6 +70,7 @@
     macro(monochrome, "monochrome") \
     macro(orientation, "orientation") \
     macro(pointer, "pointer") \
+    macro(prefersDarkInterface, "prefers-dark-interface") \
     macro(prefersReducedMotion, "prefers-reduced-motion") \
     macro(resolution, "resolution") \
     macro(transform2d, "-webkit-transform-2d") \

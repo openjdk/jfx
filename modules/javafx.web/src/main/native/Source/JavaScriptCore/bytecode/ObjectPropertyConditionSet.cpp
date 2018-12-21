@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -189,7 +189,7 @@ static const bool verbose = false;
 ObjectPropertyCondition generateCondition(
     VM& vm, JSCell* owner, JSObject* object, UniquedStringImpl* uid, PropertyCondition::Kind conditionKind)
 {
-    Structure* structure = object->structure();
+    Structure* structure = object->structure(vm);
     if (ObjectPropertyConditionSetInternal::verbose)
         dataLog("Creating condition ", conditionKind, " for ", pointerDump(structure), "\n");
 
@@ -207,14 +207,14 @@ ObjectPropertyCondition generateCondition(
         if (structure->hasPolyProto())
             return ObjectPropertyCondition();
         result = ObjectPropertyCondition::absence(
-            vm, owner, object, uid, object->structure()->storedPrototypeObject());
+            vm, owner, object, uid, object->structure(vm)->storedPrototypeObject());
         break;
     }
     case PropertyCondition::AbsenceOfSetEffect: {
         if (structure->hasPolyProto())
             return ObjectPropertyCondition();
         result = ObjectPropertyCondition::absenceOfSetEffect(
-            vm, owner, object, uid, object->structure()->storedPrototypeObject());
+            vm, owner, object, uid, object->structure(vm)->storedPrototypeObject());
         break;
     }
     case PropertyCondition::Equivalence: {
@@ -222,7 +222,9 @@ ObjectPropertyCondition generateCondition(
         PropertyOffset offset = structure->getConcurrently(uid, attributes);
         if (offset == invalidOffset)
             return ObjectPropertyCondition();
-        JSValue value = object->getDirect(offset);
+        JSValue value = object->getDirectConcurrently(structure, offset);
+        if (!value)
+            return ObjectPropertyCondition();
         result = ObjectPropertyCondition::equivalence(vm, owner, object, uid, value);
         break;
     }
@@ -372,6 +374,58 @@ ObjectPropertyConditionSet generateConditionsForPrototypePropertyHit(
             conditions.append(result);
             return true;
         });
+}
+
+ObjectPropertyConditionSet generateConditionsForPrototypePropertyHitCustom(
+    VM& vm, JSCell* owner, ExecState* exec, Structure* headStructure, JSObject* prototype,
+    UniquedStringImpl* uid)
+{
+    return generateConditions(
+        vm, exec->lexicalGlobalObject(), headStructure, prototype,
+        [&] (Vector<ObjectPropertyCondition>& conditions, JSObject* object) -> bool {
+            if (object == prototype)
+                return true;
+            ObjectPropertyCondition result =
+                generateCondition(vm, owner, object, uid, PropertyCondition::Absence);
+            if (!result)
+                return false;
+            conditions.append(result);
+            return true;
+        });
+}
+
+ObjectPropertyConditionSet generateConditionsForInstanceOf(
+    VM& vm, JSCell* owner, ExecState* exec, Structure* headStructure, JSObject* prototype,
+    bool shouldHit)
+{
+    bool didHit = false;
+    if (ObjectPropertyConditionSetInternal::verbose)
+        dataLog("Searching for prototype ", JSValue(prototype), " starting with structure ", RawPointer(headStructure), " with shouldHit = ", shouldHit, "\n");
+    ObjectPropertyConditionSet result = generateConditions(
+        vm, exec->lexicalGlobalObject(), headStructure, shouldHit ? prototype : nullptr,
+        [&] (Vector<ObjectPropertyCondition>& conditions, JSObject* object) -> bool {
+            if (ObjectPropertyConditionSetInternal::verbose)
+                dataLog("Encountered object: ", RawPointer(object), "\n");
+            if (object == prototype) {
+                RELEASE_ASSERT(shouldHit);
+                didHit = true;
+                return true;
+            }
+
+            Structure* structure = object->structure(vm);
+            if (structure->hasPolyProto())
+                return false;
+            conditions.append(
+                ObjectPropertyCondition::hasPrototype(
+                    vm, owner, object, structure->storedPrototypeObject()));
+            return true;
+        });
+    if (result.isValid()) {
+        if (ObjectPropertyConditionSetInternal::verbose)
+            dataLog("didHit = ", didHit, ", shouldHit = ", shouldHit, "\n");
+        RELEASE_ASSERT(didHit == shouldHit);
+    }
+    return result;
 }
 
 ObjectPropertyConditionSet generateConditionsForPrototypeEquivalenceConcurrently(

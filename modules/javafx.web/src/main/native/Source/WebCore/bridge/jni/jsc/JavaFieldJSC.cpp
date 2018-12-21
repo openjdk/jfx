@@ -35,8 +35,8 @@
 #include "Logging.h"
 #include "runtime_array.h"
 #include "runtime_object.h"
-#include <JavaScriptCore/Error.h>
 
+#include <JavaScriptCore/Error.h>
 #include <JavaScriptCore/APICast.h>
 
 using namespace JSC;

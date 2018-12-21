@@ -28,7 +28,7 @@
 
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
-#elif USE(OPENGL_ES_2)
+#elif USE(OPENGL_ES)
 #define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
 #endif
@@ -63,7 +63,7 @@ inline ThreadGlobalGLContext* currentContext()
 
 static bool initializeOpenGLShimsIfNeeded()
 {
-#if USE(OPENGL_ES_2) || USE(LIBEPOXY)
+#if USE(OPENGL_ES) || USE(LIBEPOXY)
     return true;
 #else
     static bool initialized = false;
@@ -173,19 +173,18 @@ unsigned GLContext::version()
         // Version string can start with the version number (all versions except GLES 1 and 2) or with
         // "OpenGL". Different fields inside the version string are separated by spaces.
         String versionString = String(reinterpret_cast<const char*>(::glGetString(GL_VERSION)));
-        Vector<String> versionStringComponents;
-        versionString.split(' ', versionStringComponents);
+        Vector<String> versionStringComponents = versionString.split(' ');
 
         Vector<String> versionDigits;
         if (versionStringComponents[0] == "OpenGL") {
             // If the version string starts with "OpenGL" it can be GLES 1 or 2. In GLES1 version string starts
             // with "OpenGL ES-<profile> major.minor" and in GLES2 with "OpenGL ES major.minor". Version is the
             // third component in both cases.
-            versionStringComponents[2].split('.', versionDigits);
+            versionDigits = versionStringComponents[2].split('.');
         } else {
             // Version is the first component. The version number is always "major.minor" or
             // "major.minor.release". Ignore the release number.
-            versionStringComponents[0].split('.', versionDigits);
+            versionDigits = versionStringComponents[0].split('.');
         }
 
         m_version = versionDigits[0].toUInt() * 100 + versionDigits[1].toUInt() * 10;

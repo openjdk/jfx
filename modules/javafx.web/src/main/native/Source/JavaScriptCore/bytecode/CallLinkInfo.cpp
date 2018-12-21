@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,6 +59,7 @@ CallLinkInfo::CallLinkInfo()
     : m_hasSeenShouldRepatch(false)
     , m_hasSeenClosure(false)
     , m_clearedByGC(false)
+    , m_clearedByVirtual(false)
     , m_allowStubs(true)
     , m_isLinked(false)
     , m_callType(None)
@@ -97,25 +98,25 @@ void CallLinkInfo::unlink(VM& vm)
     RELEASE_ASSERT(!isOnList());
 }
 
-CodeLocationNearCall CallLinkInfo::callReturnLocation()
+CodeLocationNearCall<JSInternalPtrTag> CallLinkInfo::callReturnLocation()
 {
     RELEASE_ASSERT(!isDirect());
-    return CodeLocationNearCall(m_callReturnLocationOrPatchableJump, Regular);
+    return CodeLocationNearCall<JSInternalPtrTag>(m_callReturnLocationOrPatchableJump, Regular);
 }
 
-CodeLocationJump CallLinkInfo::patchableJump()
+CodeLocationJump<JSInternalPtrTag> CallLinkInfo::patchableJump()
 {
     RELEASE_ASSERT(callType() == DirectTailCall);
-    return CodeLocationJump(m_callReturnLocationOrPatchableJump);
+    return CodeLocationJump<JSInternalPtrTag>(m_callReturnLocationOrPatchableJump);
 }
 
-CodeLocationDataLabelPtr CallLinkInfo::hotPathBegin()
+CodeLocationDataLabelPtr<JSInternalPtrTag> CallLinkInfo::hotPathBegin()
 {
     RELEASE_ASSERT(!isDirect());
-    return CodeLocationDataLabelPtr(m_hotPathBeginOrSlowPathStart);
+    return CodeLocationDataLabelPtr<JSInternalPtrTag>(m_hotPathBeginOrSlowPathStart);
 }
 
-CodeLocationLabel CallLinkInfo::slowPathStart()
+CodeLocationLabel<JSInternalPtrTag> CallLinkInfo::slowPathStart()
 {
     RELEASE_ASSERT(isDirect());
     return m_hotPathBeginOrSlowPathStart;
@@ -220,7 +221,7 @@ void CallLinkInfo::visitWeak(VM& vm)
             if (!stub()->visitWeak(vm)) {
                 if (Options::verboseOSR()) {
                     dataLog(
-                        "Clearing closure call to ",
+                        "At ", m_codeOrigin, ", ", RawPointer(this), ": clearing call stub to ",
                         listDump(stub()->variants()), ", stub routine ", RawPointer(stub()),
                         ".\n");
                 }

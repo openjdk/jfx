@@ -31,11 +31,12 @@
 #include <WebCore/EventTarget.h>
 #include <WebCore/MouseEvent.h>
 #include <WebCore/Node.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
+#include "AbstractViewInternal.h"
 #include "JavaDOMUtils.h"
 #include <wtf/java/JavaEnv.h>
 
@@ -166,7 +167,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MouseEventImpl_initMouseEventImpl
     IMPL->initMouseEvent(String(env, type)
             , canBubble
             , cancelable
-            , static_cast<DOMWindow*>(jlong_to_ptr(view))
+            , toWindowProxy(static_cast<DOMWindow*>(jlong_to_ptr(view)))
             , detail
             , screenX
             , screenY

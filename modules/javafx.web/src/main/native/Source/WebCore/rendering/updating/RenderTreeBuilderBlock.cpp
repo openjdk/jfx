@@ -134,9 +134,9 @@ void RenderTreeBuilder::Block::insertChildToContinuation(RenderBlock& parent, Re
         return;
     }
 
-    bool childIsNormal = child->isInline() || !child->style().columnSpan();
-    bool bcpIsNormal = beforeChildParent->isInline() || !beforeChildParent->style().columnSpan();
-    bool flowIsNormal = flow->isInline() || !flow->style().columnSpan();
+    bool childIsNormal = child->isInline() || child->style().columnSpan() == ColumnSpan::None;
+    bool bcpIsNormal = beforeChildParent->isInline() || beforeChildParent->style().columnSpan() == ColumnSpan::None;
+    bool flowIsNormal = flow->isInline() || flow->style().columnSpan() == ColumnSpan::None;
 
     if (flow == beforeChildParent) {
         m_builder.attachIgnoringContinuation(*flow, WTFMove(child), beforeChild);
@@ -193,7 +193,7 @@ void RenderTreeBuilder::Block::attachIgnoringContinuation(RenderBlock& parent, R
                 return;
             }
 
-            beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, beforeChild);
+            beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, *beforeChild);
 
             RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(beforeChild->parent() == &parent);
         }
@@ -271,7 +271,7 @@ void RenderTreeBuilder::Block::removeLeftoverAnonymousBlock(RenderBlock& anonymo
     // anonymousBlock is dead here.
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlock& parent, RenderObject& oldChild)
+RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlock& parent, RenderObject& oldChild, CanCollapseAnonymousBlock canCollapseAnonymousBlock)
 {
     // No need to waste time in merging or removing empty anonymous blocks.
     // We can just bail out if our document is getting destroyed.
@@ -303,7 +303,7 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlock& parent, Re
             // column span flag if it is set.
             ASSERT(!inlineChildrenBlock.continuation());
             // Cache this value as it might get changed in setStyle() call.
-            inlineChildrenBlock.setStyle(RenderStyle::createAnonymousStyleWithDisplay(parent.style(), BLOCK));
+            inlineChildrenBlock.setStyle(RenderStyle::createAnonymousStyleWithDisplay(parent.style(), DisplayType::Block));
             auto blockToMove = m_builder.detachFromRenderElement(parent, inlineChildrenBlock);
 
             // Now just put the inlineChildrenBlock inside the blockChildrenBlock.
@@ -328,27 +328,27 @@ RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlock& parent, Re
         }
     }
 
-    RenderObject* child = prev ? prev.get() : next.get();
-    if (canMergeAnonymousBlocks && child && !child->previousSibling() && !child->nextSibling() && parent.canDropAnonymousBlockChild()) {
-        // The removal has knocked us down to containing only a single anonymous
-        // box. We can pull the content right back up into our box.
-        dropAnonymousBoxChild(parent, downcast<RenderBlock>(*child));
-    } else if (((prev && prev->isAnonymousBlock()) || (next && next->isAnonymousBlock())) && parent.canDropAnonymousBlockChild()) {
-        // It's possible that the removal has knocked us down to a single anonymous
-        // block with floating siblings.
-        RenderBlock& anonBlock = downcast<RenderBlock>((prev && prev->isAnonymousBlock()) ? *prev : *next);
-        if (canDropAnonymousBlock(anonBlock)) {
-            bool dropAnonymousBlock = true;
-            for (auto& sibling : childrenOfType<RenderObject>(parent)) {
-                if (&sibling == &anonBlock)
-                    continue;
-                if (!sibling.isFloating()) {
-                    dropAnonymousBlock = false;
-                    break;
+    if (canCollapseAnonymousBlock == CanCollapseAnonymousBlock::Yes && parent.canDropAnonymousBlockChild()) {
+        RenderObject* child = prev ? prev.get() : next.get();
+        if (canMergeAnonymousBlocks && child && !child->previousSibling() && !child->nextSibling()) {
+            // The removal has knocked us down to containing only a single anonymous box. We can pull the content right back up into our box.
+            dropAnonymousBoxChild(parent, downcast<RenderBlock>(*child));
+        } else if ((prev && prev->isAnonymousBlock()) || (next && next->isAnonymousBlock())) {
+            // It's possible that the removal has knocked us down to a single anonymous block with floating siblings.
+            RenderBlock& anonBlock = downcast<RenderBlock>((prev && prev->isAnonymousBlock()) ? *prev : *next);
+            if (canDropAnonymousBlock(anonBlock)) {
+                bool dropAnonymousBlock = true;
+                for (auto& sibling : childrenOfType<RenderObject>(parent)) {
+                    if (&sibling == &anonBlock)
+                        continue;
+                    if (!sibling.isFloating()) {
+                        dropAnonymousBlock = false;
+                        break;
+                    }
                 }
+                if (dropAnonymousBlock)
+                    dropAnonymousBoxChild(parent, anonBlock);
             }
-            if (dropAnonymousBlock)
-                dropAnonymousBoxChild(parent, anonBlock);
         }
     }
 
@@ -372,14 +372,14 @@ void RenderTreeBuilder::Block::dropAnonymousBoxChild(RenderBlock& parent, Render
     child.deleteLines();
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlockFlow& parent, RenderObject& child)
+RenderPtr<RenderObject> RenderTreeBuilder::Block::detach(RenderBlockFlow& parent, RenderObject& child, CanCollapseAnonymousBlock canCollapseAnonymousBlock)
 {
     if (!parent.renderTreeBeingDestroyed()) {
         auto* fragmentedFlow = parent.multiColumnFlow();
         if (fragmentedFlow && fragmentedFlow != &child)
             m_builder.multiColumnBuilder().multiColumnRelativeWillBeRemoved(*fragmentedFlow, child);
     }
-    return detach(static_cast<RenderBlock&>(parent), child);
+    return detach(static_cast<RenderBlock&>(parent), child, canCollapseAnonymousBlock);
 }
 
 }

@@ -38,13 +38,17 @@
 #include "JSRTCSessionDescription.h"
 #include "JSReadableStream.h"
 #include "JSReadableStreamPrivateConstructors.h"
+#include "JSRemoteDOMWindow.h"
 #include "JSWorkerGlobalScope.h"
+#include "RejectedPromiseTracker.h"
 #include "RuntimeEnabledFeatures.h"
 #include "StructuredClone.h"
 #include "WebCoreJSClientData.h"
 #include "WorkerGlobalScope.h"
 #include <JavaScriptCore/BuiltinNames.h>
 #include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/JSInternalPromise.h>
+#include <JavaScriptCore/JSInternalPromiseDeferred.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -56,9 +60,8 @@ EncodedJSValue JSC_HOST_CALL isReadableByteStreamAPIEnabled(ExecState*);
 
 const ClassInfo JSDOMGlobalObject::s_info = { "DOMGlobalObject", &JSGlobalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMGlobalObject) };
 
-JSDOMGlobalObject::JSDOMGlobalObject(VM& vm, Structure* structure, Ref<DOMWrapperWorld>&& world, const GlobalObjectMethodTable* globalObjectMethodTable, RefPtr<JSC::ThreadLocalCache>&& threadLocalCache)
-    : JSGlobalObject(vm, structure, globalObjectMethodTable, WTFMove(threadLocalCache))
-    , m_currentEvent(0)
+JSDOMGlobalObject::JSDOMGlobalObject(VM& vm, Structure* structure, Ref<DOMWrapperWorld>&& world, const GlobalObjectMethodTable* globalObjectMethodTable)
+    : JSGlobalObject(vm, structure, globalObjectMethodTable)
     , m_world(WTFMove(world))
     , m_worldIsNormal(m_world->isNormal())
     , m_builtinInternalFunctions(vm)
@@ -196,13 +199,15 @@ void JSDOMGlobalObject::finishCreation(VM& vm, JSObject* thisValue)
 
 ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
 {
-    if (inherits(vm(), JSDOMWindowBase::info()))
+    if (inherits<JSDOMWindowBase>(vm()))
         return jsCast<const JSDOMWindowBase*>(this)->scriptExecutionContext();
-    if (inherits(vm(), JSWorkerGlobalScopeBase::info()))
+    if (inherits<JSRemoteDOMWindowBase>(vm()))
+        return nullptr;
+    if (inherits<JSWorkerGlobalScopeBase>(vm()))
         return jsCast<const JSWorkerGlobalScopeBase*>(this)->scriptExecutionContext();
     dataLog("Unexpected global object: ", JSValue(this), "\n");
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 void JSDOMGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -237,38 +242,31 @@ Event* JSDOMGlobalObject::currentEvent() const
     return m_currentEvent;
 }
 
-JSDOMGlobalObject* toJSDOMGlobalObject(Document* document, JSC::ExecState* exec)
+void JSDOMGlobalObject::promiseRejectionTracker(JSGlobalObject* jsGlobalObject, ExecState* exec, JSPromise* promise, JSPromiseRejectionOperation operation)
 {
-    return toJSDOMWindow(document->frame(), currentWorld(exec));
-}
+    // https://html.spec.whatwg.org/multipage/webappapis.html#the-hostpromiserejectiontracker-implementation
 
-JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext* scriptExecutionContext, JSC::ExecState* exec)
-{
-    if (is<Document>(*scriptExecutionContext))
-        return toJSDOMGlobalObject(downcast<Document>(scriptExecutionContext), exec);
+    VM& vm = exec->vm();
+    auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(jsGlobalObject);
+    auto* context = globalObject.scriptExecutionContext();
+    if (!context)
+        return;
 
-    if (is<WorkerGlobalScope>(*scriptExecutionContext))
-        return downcast<WorkerGlobalScope>(*scriptExecutionContext).script()->workerGlobalScopeWrapper();
+    // InternalPromises should not be exposed to user scripts.
+    if (JSC::jsDynamicCast<JSC::JSInternalPromise*>(vm, promise))
+        return;
 
-    ASSERT_NOT_REACHED();
-    return nullptr;
-}
+    // FIXME: If script has muted errors (cross origin), terminate these steps.
+    // <https://webkit.org/b/171415> Implement the `muted-errors` property of Scripts to avoid onerror/onunhandledrejection for cross-origin scripts
 
-JSDOMGlobalObject* toJSDOMGlobalObject(Document* document, DOMWrapperWorld& world)
-{
-    return toJSDOMWindow(document->frame(), world);
-}
-
-JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext* scriptExecutionContext, DOMWrapperWorld& world)
-{
-    if (is<Document>(*scriptExecutionContext))
-        return toJSDOMGlobalObject(downcast<Document>(scriptExecutionContext), world);
-
-    if (is<WorkerGlobalScope>(*scriptExecutionContext))
-        return downcast<WorkerGlobalScope>(*scriptExecutionContext).script()->workerGlobalScopeWrapper();
-
-    ASSERT_NOT_REACHED();
-    return nullptr;
+    switch (operation) {
+    case JSPromiseRejectionOperation::Reject:
+        context->ensureRejectedPromiseTracker().promiseRejected(*exec, globalObject, *promise);
+        break;
+    case JSPromiseRejectionOperation::Handle:
+        context->ensureRejectedPromiseTracker().promiseHandled(*exec, globalObject, *promise);
+        break;
+    }
 }
 
 JSDOMGlobalObject& callerGlobalObject(ExecState& state)
@@ -306,7 +304,23 @@ JSDOMGlobalObject& callerGlobalObject(ExecState& state)
 
     GetCallerGlobalObjectFunctor iter;
     state.iterate(iter);
-    return *jsCast<JSDOMGlobalObject*>(iter.globalObject() ? iter.globalObject() : state.vmEntryGlobalObject());
+    if (iter.globalObject())
+        return *jsCast<JSDOMGlobalObject*>(iter.globalObject());
+
+    VM& vm = state.vm();
+    return *jsCast<JSDOMGlobalObject*>(vm.vmEntryGlobalObject(&state));
+}
+
+JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext& context, DOMWrapperWorld& world)
+{
+    if (is<Document>(context))
+        return toJSDOMWindow(downcast<Document>(context).frame(), world);
+
+    if (is<WorkerGlobalScope>(context))
+        return downcast<WorkerGlobalScope>(context).script()->workerGlobalScopeWrapper();
+
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,10 +90,6 @@ JavaEventListener::~JavaEventListener()
         ptr_to_jlong(this));
 }
 
-}; // namespace WebCore
-
-using namespace WebCore;
-
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer
@@ -122,6 +118,5 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDispatchEven
 }
 
 }
-
-
+}
 

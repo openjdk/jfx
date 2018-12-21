@@ -39,7 +39,7 @@
 #include "FrameLoadRequest.h"
 #include "FrameTree.h"
 #include "FrameView.h"
-#include "MainFrame.h"
+#include "Frame.h"
 #include "HistoryItem.h"
 #include "HTMLFormElement.h"
 #include "MIMETypeRegistry.h"
@@ -168,8 +168,7 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
     if (contentDisposition.isEmpty())
         return ContentDispositionNone;
 
-    Vector<String> parameters;
-    contentDisposition.split(';', parameters);
+    Vector<String> parameters = contentDisposition.split(';');
 
     String dispositionType = parameters[0];
     dispositionType.stripWhiteSpace();
@@ -349,14 +348,13 @@ WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(co
     return DocumentLoader::create(request, substituteData);
 }
 
-void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, WTF::Function<void(void)>&& policyFunction)
+void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&& function)
 {
     // FIXME: This is surely too simple
-    ASSERT(frame() && policyFunction);
-    if (!frame() || !policyFunction) {
+    if (!frame() || !function) {
         return;
     }
-    policyFunction();
+    function();
 }
 
 void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const char* data, int length)
@@ -432,8 +430,9 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
 
 void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const NavigationAction& action,
                                                                     const ResourceRequest& req,
-                                                                    bool /*didReceiveRedirectResponse*/,
+                                                                    const ResourceResponse& /*didReceiveRedirectResponse*/,
                                                                     FormState*,
+                                                                    PolicyDecisionMode,
                                                                     FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;

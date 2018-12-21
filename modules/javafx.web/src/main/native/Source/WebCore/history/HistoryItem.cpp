@@ -35,12 +35,13 @@
 #include "SharedBuffer.h"
 #include <stdio.h>
 #include <wtf/DateMath.h>
+#include <wtf/DebugUtilities.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
 
-static long long generateSequenceNumber()
+int64_t HistoryItem::generateSequenceNumber()
 {
     // Initialize to the current time to reduce the likelihood of generating
     // identifiers that overlap with those from past/future browser sessions.
@@ -61,31 +62,27 @@ extern void notifyHistoryItemDestroyed(const JLObject&);
 #endif
 
 HistoryItem::HistoryItem()
-    : m_itemSequenceNumber(generateSequenceNumber())
-    , m_documentSequenceNumber(generateSequenceNumber())
-    , m_pruningReason(PruningReason::None)
+    : HistoryItem({ }, { })
 {
 }
 
 HistoryItem::HistoryItem(const String& urlString, const String& title)
-    : m_urlString(urlString)
-    , m_originalURLString(urlString)
-    , m_title(title)
-    , m_itemSequenceNumber(generateSequenceNumber())
-    , m_documentSequenceNumber(generateSequenceNumber())
-    , m_pruningReason(PruningReason::None)
+    : HistoryItem(urlString, title, { })
 {
 }
 
 HistoryItem::HistoryItem(const String& urlString, const String& title, const String& alternateTitle)
+    : HistoryItem(urlString, title, alternateTitle, { Process::identifier(), generateObjectIdentifier<BackForwardItemIdentifier::ItemIdentifierType>() })
+{
+}
+
+HistoryItem::HistoryItem(const String& urlString, const String& title, const String& alternateTitle, BackForwardItemIdentifier BackForwardItemIdentifier)
     : m_urlString(urlString)
     , m_originalURLString(urlString)
     , m_title(title)
     , m_displayTitle(alternateTitle)
-    , m_pageScaleFactor(0)
-    , m_itemSequenceNumber(generateSequenceNumber())
-    , m_documentSequenceNumber(generateSequenceNumber())
     , m_pruningReason(PruningReason::None)
+    , m_identifier(BackForwardItemIdentifier)
 {
 }
 
@@ -123,6 +120,7 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
 #if PLATFORM(JAVA)
     , m_hostObject(item.m_hostObject)
 #endif
+    , m_identifier(item.m_identifier)
 {
     if (item.m_formData)
         m_formData = item.m_formData->copy();
@@ -325,6 +323,7 @@ void HistoryItem::setIsTargetItem(bool flag)
 void HistoryItem::setStateObject(RefPtr<SerializedScriptValue>&& object)
 {
     m_stateObject = WTFMove(object);
+    notifyHistoryItemChanged(this);
 }
 
 void HistoryItem::addChildItem(Ref<HistoryItem>&& child)
@@ -517,6 +516,13 @@ int HistoryItem::showTreeWithIndent(unsigned indentLevel) const
     return totalSubItems + 1;
 }
 
+#endif
+
+#if !LOG_DISABLED
+const char* HistoryItem::logString() const
+{
+    return debugString("HistoryItem current URL ", urlString(), ", identifier ", m_identifier.logString());
+}
 #endif
 
 } // namespace WebCore

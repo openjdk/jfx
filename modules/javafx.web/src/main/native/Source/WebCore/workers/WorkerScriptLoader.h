@@ -27,6 +27,7 @@
 #pragma once
 
 #include "ContentSecurityPolicyResponseHeaders.h"
+#include "FetchOptions.h"
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ThreadableLoader.h"
@@ -53,8 +54,8 @@ public:
         return adoptRef(*new WorkerScriptLoader);
     }
 
-    void loadSynchronously(ScriptExecutionContext*, const URL&, FetchOptions::Mode, FetchOptions::Cache, ContentSecurityPolicyEnforcement, const String& initiatorIdentifier);
-    void loadAsynchronously(ScriptExecutionContext&, ResourceRequest&&, FetchOptions::Mode, FetchOptions::Cache, FetchOptions::Redirect, ContentSecurityPolicyEnforcement, WorkerScriptLoaderClient&);
+    std::optional<Exception> loadSynchronously(ScriptExecutionContext*, const URL&, FetchOptions::Mode, FetchOptions::Cache, ContentSecurityPolicyEnforcement, const String& initiatorIdentifier);
+    void loadAsynchronously(ScriptExecutionContext&, ResourceRequest&&, FetchOptions&&, ContentSecurityPolicyEnforcement, ServiceWorkersMode, WorkerScriptLoaderClient&);
 
     void notifyError();
 
@@ -91,6 +92,7 @@ private:
     URL m_url;
     URL m_responseURL;
     String m_responseMIMEType;
+    FetchOptions::Destination m_destination;
     ContentSecurityPolicyResponseHeaders m_contentSecurityPolicy;
     unsigned long m_identifier { 0 };
     bool m_failed { false };

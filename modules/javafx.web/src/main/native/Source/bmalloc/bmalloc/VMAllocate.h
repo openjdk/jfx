@@ -56,8 +56,12 @@ namespace bmalloc {
 inline size_t vmPageSize()
 {
     static size_t cached;
-    if (!cached)
-        cached = sysconf(_SC_PAGESIZE);
+    if (!cached) {
+        long pageSize = sysconf(_SC_PAGESIZE);
+        if (pageSize < 0)
+            BCRASH();
+        cached = pageSize;
+    }
     return cached;
 }
 
@@ -76,7 +80,7 @@ inline size_t vmSize(size_t size)
 
 inline void vmValidate(size_t vmSize)
 {
-    UNUSED(vmSize);
+    BUNUSED(vmSize);
     BASSERT(vmSize);
     BASSERT(vmSize == roundUpToMultipleOf(vmPageSize(), vmSize));
 }
@@ -85,7 +89,7 @@ inline void vmValidate(void* p, size_t vmSize)
 {
     vmValidate(vmSize);
 
-    UNUSED(p);
+    BUNUSED(p);
     BASSERT(p);
     BASSERT(p == mask(p, ~(vmPageSize() - 1)));
 }
@@ -104,7 +108,7 @@ inline size_t vmPageSizePhysical()
 
 inline void vmValidatePhysical(size_t vmSize)
 {
-    UNUSED(vmSize);
+    BUNUSED(vmSize);
     BASSERT(vmSize);
     BASSERT(vmSize == roundUpToMultipleOf(vmPageSizePhysical(), vmSize));
 }
@@ -113,7 +117,7 @@ inline void vmValidatePhysical(void* p, size_t vmSize)
 {
     vmValidatePhysical(vmSize);
 
-    UNUSED(p);
+    BUNUSED(p);
     BASSERT(p);
     BASSERT(p == mask(p, ~(vmPageSizePhysical() - 1)));
 }
@@ -217,6 +221,18 @@ inline void vmAllocatePhysicalPages(void* p, size_t vmSize)
     SYSCALL(madvise(p, vmSize, MADV_DODUMP));
 #endif
 #endif
+}
+
+// Returns how much memory you would commit/decommit had you called
+// vmDeallocate/AllocatePhysicalPagesSloppy with p and size.
+inline size_t physicalPageSizeSloppy(void* p, size_t size)
+{
+    char* begin = roundUpToMultipleOf(vmPageSizePhysical(), static_cast<char*>(p));
+    char* end = roundDownToMultipleOf(vmPageSizePhysical(), static_cast<char*>(p) + size);
+
+    if (begin >= end)
+        return 0;
+    return end - begin;
 }
 
 // Trims requests that are un-page-aligned.

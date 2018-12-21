@@ -25,9 +25,14 @@
 
 #pragma once
 
-namespace JSC { namespace Yarr {
+namespace JSC {
 
-enum class ErrorCode : unsigned {
+class ExecState;
+class JSObject;
+
+namespace Yarr {
+
+enum class ErrorCode : uint8_t {
     NoError = 0,
     PatternTooLarge,
     QuantifierOutOfOrder,
@@ -55,5 +60,6 @@ inline bool hasError(ErrorCode errorCode)
 {
     return errorCode != ErrorCode::NoError;
 }
+JS_EXPORT_PRIVATE JSObject* errorToThrow(ExecState*, ErrorCode);
 
 } } // namespace JSC::Yarr

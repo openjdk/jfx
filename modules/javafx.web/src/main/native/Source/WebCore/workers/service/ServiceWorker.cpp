@@ -86,7 +86,7 @@ void ServiceWorker::scheduleTaskToUpdateState(State state)
         m_data.state = state;
         if (state != State::Installing && !m_isStopped) {
             ASSERT(m_pendingActivityForEventDispatch);
-            dispatchEvent(Event::create(eventNames().statechangeEvent, false, false));
+            dispatchEvent(Event::create(eventNames().statechangeEvent, Event::CanBubble::No, Event::IsCancelable::No));
         }
 
         updatePendingActivityForEventDispatch();
@@ -99,7 +99,7 @@ ExceptionOr<void> ServiceWorker::postMessage(ScriptExecutionContext& context, JS
         return Exception { InvalidStateError };
 
     if (state() == State::Redundant)
-        return Exception { InvalidStateError, ASCIILiteral("Service Worker state is redundant") };
+        return Exception { InvalidStateError, "Service Worker state is redundant"_s };
 
     // FIXME: Invoke Run Service Worker algorithm with serviceWorker as the argument.
 

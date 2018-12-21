@@ -41,8 +41,11 @@
 namespace WebCore {
 
 class Element;
+class Event;
+class Frame;
 class InspectorDOMAgent;
 class Node;
+class RegisteredEventListener;
 
 typedef String ErrorString;
 
@@ -54,14 +57,14 @@ public:
     virtual ~InspectorDOMDebuggerAgent();
 
     // DOMDebugger API
-    void setXHRBreakpoint(ErrorString&, const String& url, const bool* const optionalIsRegex) override;
-    void removeXHRBreakpoint(ErrorString&, const String& url) override;
-    void setEventListenerBreakpoint(ErrorString&, const String& eventName) override;
-    void removeEventListenerBreakpoint(ErrorString&, const String& eventName) override;
-    void setInstrumentationBreakpoint(ErrorString&, const String& eventName) override;
-    void removeInstrumentationBreakpoint(ErrorString&, const String& eventName) override;
-    void setDOMBreakpoint(ErrorString&, int nodeId, const String& type) override;
-    void removeDOMBreakpoint(ErrorString&, int nodeId, const String& type) override;
+    void setXHRBreakpoint(ErrorString&, const String& url, const bool* optionalIsRegex) final;
+    void removeXHRBreakpoint(ErrorString&, const String& url) final;
+    void setEventListenerBreakpoint(ErrorString&, const String& eventName) final;
+    void removeEventListenerBreakpoint(ErrorString&, const String& eventName) final;
+    void setInstrumentationBreakpoint(ErrorString&, const String& eventName) final;
+    void removeInstrumentationBreakpoint(ErrorString&, const String& eventName) final;
+    void setDOMBreakpoint(ErrorString&, int nodeId, const String& type) final;
+    void removeDOMBreakpoint(ErrorString&, int nodeId, const String& type) final;
 
     // InspectorInstrumentation
     void willInsertDOMNode(Node& parent);
@@ -71,17 +74,19 @@ public:
     void didRemoveDOMNode(Node&);
     void willModifyDOMAttr(Element&);
     void willSendXMLHttpRequest(const String& url);
-    void pauseOnNativeEventIfNeeded(bool isDOMEvent, const String& eventName, bool synchronous);
+    void frameDocumentUpdated(Frame&);
+    void willHandleEvent(const Event&, const RegisteredEventListener&);
+    void pauseOnNativeEventIfNeeded(const String& eventName, bool synchronous);
     void mainFrameDOMContentLoaded();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
-    void discardAgent() override;
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) final;
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) final;
+    void discardAgent() final;
 
 private:
     // Inspector::InspectorDebuggerAgent::Listener implementation.
-    void debuggerWasEnabled() override;
-    void debuggerWasDisabled() override;
+    void debuggerWasEnabled() final;
+    void debuggerWasDisabled() final;
     void disable();
 
     void descriptionForDOMEvent(Node& target, int breakpointType, bool insertion, JSON::Object& description);

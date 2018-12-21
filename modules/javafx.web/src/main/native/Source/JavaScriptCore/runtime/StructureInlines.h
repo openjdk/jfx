@@ -59,6 +59,29 @@ inline Structure* Structure::create(VM& vm, Structure* previous, DeferredStructu
     return newStructure;
 }
 
+inline bool Structure::mayInterceptIndexedAccesses() const
+{
+    if (indexingModeIncludingHistory() & MayHaveIndexedAccessors)
+        return true;
+
+    // Consider a scenario where object O (of global G1)'s prototype is set to A
+    // (of global G2), and G2 is already having a bad time. If an object B with
+    // indexed accessors is then set as the prototype of A:
+    //      O -> A -> B
+    // Then, O should be converted to SlowPutArrayStorage (because it now has an
+    // object with indexed accessors in its prototype chain). But it won't be
+    // converted because this conversion is done by JSGlobalObject::haveAbadTime(),
+    // but G2 is already having a bad time. We solve this by conservatively
+    // treating A as potentially having indexed accessors if its global is already
+    // having a bad time. Hence, when A is set as O's prototype, O will be
+    // converted to SlowPutArrayStorage.
+
+    JSGlobalObject* globalObject = this->globalObject();
+    if (!globalObject)
+        return false;
+    return globalObject->isHavingABadTime();
+}
+
 inline JSObject* Structure::storedPrototypeObject() const
 {
     ASSERT(hasMonoProto());
@@ -119,7 +142,7 @@ ALWAYS_INLINE PropertyOffset Structure::get(VM& vm, PropertyName propertyName, u
 ALWAYS_INLINE PropertyOffset Structure::get(VM& vm, PropertyName propertyName, unsigned& attributes, bool& hasInferredType)
 {
     ASSERT(!isCompilationThread());
-    ASSERT(structure()->classInfo() == info());
+    ASSERT(structure(vm)->classInfo() == info());
 
     PropertyTable* propertyTable = ensurePropertyTableIfNotEmpty(vm);
     if (!propertyTable)
@@ -160,6 +183,17 @@ void Structure::forEachPropertyConcurrently(const Functor& functor)
 
         if (!functor(PropertyMapEntry(structure->m_nameInPrevious.get(), structure->m_offset, structure->attributesInPrevious())))
             return;
+    }
+}
+
+template<typename Functor>
+void Structure::forEachProperty(VM& vm, const Functor& functor)
+{
+    if (PropertyTable* table = ensurePropertyTableIfNotEmpty(vm)) {
+        for (auto& entry : *table) {
+            if (!functor(entry))
+                return;
+        }
     }
 }
 
@@ -376,6 +410,8 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     checkConsistency();
     if (attributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (propertyName == vm.propertyNames->underscoreProto)
+        setHasUnderscoreProtoPropertyExcludingOriginalProto(true);
 
     auto rep = propertyName.uid();
 
@@ -509,6 +545,25 @@ ALWAYS_INLINE bool Structure::shouldConvertToPolyProto(const Structure* a, const
     }
 
     return !aObj && !bObj;
+}
+
+inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure, NonPropertyTransition transitionKind)
+{
+    IndexingType indexingModeIncludingHistory = newIndexingType(structure->indexingModeIncludingHistory(), transitionKind);
+
+    if (changesIndexingType(transitionKind)) {
+        if (JSGlobalObject* globalObject = structure->m_globalObject.get()) {
+            if (globalObject->isOriginalArrayStructure(structure)) {
+                Structure* result = globalObject->originalArrayStructureForIndexingType(indexingModeIncludingHistory);
+                if (result->indexingModeIncludingHistory() == indexingModeIncludingHistory) {
+                    structure->didTransitionFromThisStructure();
+                    return result;
+                }
+            }
+        }
+    }
+
+    return nonPropertyTransitionSlow(vm, structure, transitionKind);
 }
 
 } // namespace JSC

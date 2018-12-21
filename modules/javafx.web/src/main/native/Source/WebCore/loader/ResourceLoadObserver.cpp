@@ -32,7 +32,6 @@
 #include "FrameLoader.h"
 #include "HTMLFrameOwnerElement.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "ResourceLoadStatistics.h"
 #include "ResourceRequest.h"
@@ -48,7 +47,6 @@ template<typename T> static inline String primaryDomain(const T& value)
     return ResourceLoadStatistics::primaryDomain(value);
 }
 
-static Seconds timestampResolution { 5_s };
 static const Seconds minimumNotificationInterval { 5_s };
 
 ResourceLoadObserver& ResourceLoadObserver::shared()
@@ -70,42 +68,21 @@ static bool shouldEnableSiteSpecificQuirks(Page* page)
 #endif
 }
 
-// FIXME: Temporary fix for <rdar://problem/32343256> until content can be updated.
 static bool areDomainsAssociated(Page* page, const String& firstDomain, const String& secondDomain)
 {
-    static NeverDestroyed<HashMap<String, unsigned>> metaDomainIdentifiers = [] {
-        HashMap<String, unsigned> map;
-
-        // Domains owned by Dow Jones & Company, Inc.
-        const unsigned dowJonesIdentifier = 1;
-        map.add(ASCIILiteral("dowjones.com"), dowJonesIdentifier);
-        map.add(ASCIILiteral("wsj.com"), dowJonesIdentifier);
-        map.add(ASCIILiteral("barrons.com"), dowJonesIdentifier);
-        map.add(ASCIILiteral("marketwatch.com"), dowJonesIdentifier);
-        map.add(ASCIILiteral("wsjplus.com"), dowJonesIdentifier);
-
-        return map;
-    }();
-
-    if (firstDomain == secondDomain)
-        return true;
-
-    ASSERT(!equalIgnoringASCIICase(firstDomain, secondDomain));
-
-    if (!shouldEnableSiteSpecificQuirks(page))
-        return false;
-
-    unsigned firstMetaDomainIdentifier = metaDomainIdentifiers.get().get(firstDomain);
-    if (!firstMetaDomainIdentifier)
-        return false;
-
-    return firstMetaDomainIdentifier == metaDomainIdentifiers.get().get(secondDomain);
+    return ResourceLoadStatistics::areDomainsAssociated(shouldEnableSiteSpecificQuirks(page), firstDomain, secondDomain);
 }
 
 void ResourceLoadObserver::setNotificationCallback(WTF::Function<void (Vector<ResourceLoadStatistics>&&)>&& notificationCallback)
 {
     ASSERT(!m_notificationCallback);
     m_notificationCallback = WTFMove(notificationCallback);
+}
+
+void ResourceLoadObserver::setRequestStorageAccessUnderOpenerCallback(WTF::Function<void(const String& domainInNeedOfStorageAccess, uint64_t openerPageID, const String& openerDomain, bool isTriggeredByUserGesture)>&& callback)
+{
+    ASSERT(!m_requestStorageAccessUnderOpenerCallback);
+    m_requestStorageAccessUnderOpenerCallback = WTFMove(callback);
 }
 
 ResourceLoadObserver::ResourceLoadObserver()
@@ -125,84 +102,6 @@ bool ResourceLoadObserver::shouldLog(Page* page) const
         return false;
 
     return DeprecatedGlobalSettings::resourceLoadStatisticsEnabled() && !page->usesEphemeralSession() && m_notificationCallback;
-}
-
-static WallTime reduceTimeResolution(WallTime time)
-{
-    return WallTime::fromRawSeconds(std::floor(time.secondsSinceEpoch() / timestampResolution) * timestampResolution.seconds());
-}
-
-void ResourceLoadObserver::logFrameNavigation(const Frame& frame, const Frame& topFrame, const ResourceRequest& newRequest, const URL& redirectUrl)
-{
-    ASSERT(frame.document());
-    ASSERT(topFrame.document());
-    ASSERT(topFrame.page());
-
-    auto* page = topFrame.page();
-    if (!shouldLog(page))
-        return;
-
-    auto sourceURL = redirectUrl;
-    bool isRedirect = !redirectUrl.isNull();
-    if (!isRedirect)
-        sourceURL = nonNullOwnerURL(*frame.document());
-
-    auto& targetURL = newRequest.url();
-    auto& mainFrameURL = topFrame.document()->url();
-
-    if (!targetURL.isValid() || !mainFrameURL.isValid())
-        return;
-
-    auto targetHost = targetURL.host();
-    auto mainFrameHost = mainFrameURL.host();
-
-    if (targetHost.isEmpty() || mainFrameHost.isEmpty() || targetHost == sourceURL.host())
-        return;
-
-    auto targetPrimaryDomain = primaryDomain(targetURL);
-    auto mainFramePrimaryDomain = primaryDomain(mainFrameURL);
-    auto sourcePrimaryDomain = primaryDomain(sourceURL);
-    bool shouldCallNotificationCallback = false;
-
-    if (targetHost != mainFrameHost
-        && !(areDomainsAssociated(page, targetPrimaryDomain, mainFramePrimaryDomain) || areDomainsAssociated(page, targetPrimaryDomain, sourcePrimaryDomain))) {
-        auto& targetStatistics = ensureResourceStatisticsForPrimaryDomain(targetPrimaryDomain);
-        targetStatistics.lastSeen = reduceTimeResolution(WallTime::now());
-        if (targetStatistics.subframeUnderTopFrameOrigins.add(mainFramePrimaryDomain).isNewEntry)
-            shouldCallNotificationCallback = true;
-    }
-
-    if (isRedirect
-        && !areDomainsAssociated(page, sourcePrimaryDomain, targetPrimaryDomain)) {
-        bool isNewRedirectToEntry = false;
-        bool isNewRedirectFromEntry = false;
-        if (frame.isMainFrame()) {
-            auto& redirectingOriginStatistics = ensureResourceStatisticsForPrimaryDomain(sourcePrimaryDomain);
-            isNewRedirectToEntry = redirectingOriginStatistics.topFrameUniqueRedirectsTo.add(targetPrimaryDomain).isNewEntry;
-            auto& targetStatistics = ensureResourceStatisticsForPrimaryDomain(targetPrimaryDomain);
-            isNewRedirectFromEntry = targetStatistics.topFrameUniqueRedirectsFrom.add(sourcePrimaryDomain).isNewEntry;
-        } else {
-            auto& redirectingOriginStatistics = ensureResourceStatisticsForPrimaryDomain(sourcePrimaryDomain);
-            isNewRedirectToEntry = redirectingOriginStatistics.subresourceUniqueRedirectsTo.add(targetPrimaryDomain).isNewEntry;
-            auto& targetStatistics = ensureResourceStatisticsForPrimaryDomain(targetPrimaryDomain);
-            isNewRedirectFromEntry = targetStatistics.subresourceUniqueRedirectsFrom.add(sourcePrimaryDomain).isNewEntry;
-        }
-
-        if (isNewRedirectToEntry || isNewRedirectFromEntry)
-            shouldCallNotificationCallback = true;
-    }
-
-    if (shouldCallNotificationCallback)
-        scheduleNotificationIfNeeded();
-}
-
-// FIXME: This quirk was added to address <rdar://problem/33325881> and should be removed once content is fixed.
-static bool resourceNeedsSSOQuirk(Page* page, const URL& url)
-{
-    if (!shouldEnableSiteSpecificQuirks(page))
-        return false;
-
-    return equalIgnoringASCIICase(url.host(), "sp.auth.adobe.com");
 }
 
 void ResourceLoadObserver::logSubresourceLoading(const Frame* frame, const ResourceRequest& newRequest, const ResourceResponse& redirectResponse)
@@ -231,13 +130,10 @@ void ResourceLoadObserver::logSubresourceLoading(const Frame* frame, const Resou
     if (areDomainsAssociated(page, targetPrimaryDomain, mainFramePrimaryDomain) || (isRedirect && areDomainsAssociated(page, targetPrimaryDomain, sourcePrimaryDomain)))
         return;
 
-    if (resourceNeedsSSOQuirk(page, targetURL))
-        return;
-
     bool shouldCallNotificationCallback = false;
     {
         auto& targetStatistics = ensureResourceStatisticsForPrimaryDomain(targetPrimaryDomain);
-        targetStatistics.lastSeen = reduceTimeResolution(WallTime::now());
+        targetStatistics.lastSeen = ResourceLoadStatistics::reduceTimeResolution(WallTime::now());
         if (targetStatistics.subresourceUnderTopFrameOrigins.add(mainFramePrimaryDomain).isNewEntry)
             shouldCallNotificationCallback = true;
     }
@@ -282,7 +178,7 @@ void ResourceLoadObserver::logWebSocketLoading(const Frame* frame, const URL& ta
         return;
 
     auto& targetStatistics = ensureResourceStatisticsForPrimaryDomain(targetPrimaryDomain);
-    targetStatistics.lastSeen = reduceTimeResolution(WallTime::now());
+    targetStatistics.lastSeen = ResourceLoadStatistics::reduceTimeResolution(WallTime::now());
     if (targetStatistics.subresourceUnderTopFrameOrigins.add(mainFramePrimaryDomain).isNewEntry)
         scheduleNotificationIfNeeded();
 }
@@ -299,7 +195,7 @@ void ResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const Doc
         return;
 
     auto domain = primaryDomain(url);
-    auto newTime = reduceTimeResolution(WallTime::now());
+    auto newTime = ResourceLoadStatistics::reduceTimeResolution(WallTime::now());
     auto lastReportedUserInteraction = m_lastReportedUserInteractionMap.get(domain);
     if (newTime == lastReportedUserInteraction)
         return;
@@ -310,6 +206,18 @@ void ResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const Doc
     statistics.hadUserInteraction = true;
     statistics.lastSeen = newTime;
     statistics.mostRecentUserInteractionTime = newTime;
+
+#if HAVE(CFNETWORK_STORAGE_PARTITIONING)
+    if (auto* opener = document.frame()->loader().opener()) {
+        if (auto* openerDocument = opener->document()) {
+            if (auto* openerFrame = openerDocument->frame()) {
+                if (auto openerPageID = openerFrame->loader().client().pageID()) {
+                    requestStorageAccessUnderOpener(domain, openerPageID.value(), *openerDocument, true);
+                }
+            }
+        }
+    }
+#endif
 
     m_notificationTimer.stop();
     notifyObserver();
@@ -335,6 +243,33 @@ void ResourceLoadObserver::logUserInteractionWithReducedTimeResolution(const Doc
     }
 #endif
 }
+
+void ResourceLoadObserver::logWindowCreation(const URL& popupUrl, uint64_t openerPageID, Document& openerDocument)
+{
+#if HAVE(CFNETWORK_STORAGE_PARTITIONING)
+    requestStorageAccessUnderOpener(primaryDomain(popupUrl), openerPageID, openerDocument, false);
+#else
+    UNUSED_PARAM(popupUrl);
+    UNUSED_PARAM(openerPageID);
+    UNUSED_PARAM(openerDocument);
+#endif
+}
+
+#if HAVE(CFNETWORK_STORAGE_PARTITIONING)
+void ResourceLoadObserver::requestStorageAccessUnderOpener(const String& domainInNeedOfStorageAccess, uint64_t openerPageID, Document& openerDocument, bool isTriggeredByUserGesture)
+{
+    auto openerUrl = openerDocument.url();
+    auto openerPrimaryDomain = primaryDomain(openerUrl);
+    if (domainInNeedOfStorageAccess != openerPrimaryDomain
+        && !openerDocument.hasRequestedPageSpecificStorageAccessWithUserInteraction(domainInNeedOfStorageAccess)
+        && !equalIgnoringASCIICase(openerUrl.string(), blankURL())) {
+        m_requestStorageAccessUnderOpenerCallback(domainInNeedOfStorageAccess, openerPageID, openerPrimaryDomain, isTriggeredByUserGesture);
+        // Remember user interaction-based requests since they don't need to be repeated.
+        if (isTriggeredByUserGesture)
+            openerDocument.setHasRequestedPageSpecificStorageAccessWithUserInteraction(domainInNeedOfStorageAccess);
+    }
+}
+#endif
 
 ResourceLoadStatistics& ResourceLoadObserver::ensureResourceStatisticsForPrimaryDomain(const String& primaryDomain)
 {

@@ -384,7 +384,12 @@ input[type="range"],
 input,
 input:matches([type="password"], [type="search"]) {
     -webkit-appearance: textfield;
+#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+    color: text;
+    background-color: -apple-system-control-background;
+#else
     background-color: white;
+#endif
 #if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
     border-radius: 5px;
     font: 11px Helvetica, -webkit-pictograph;
@@ -398,6 +403,15 @@ input:matches([type="password"], [type="search"]) {
     -webkit-user-select: text;
     cursor: auto;
 }
+
+#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+@media (prefers-dark-interface) {
+    input,
+    input:matches([type="password"], [type="search"]) {
+        background-color: transparent;
+    }
+}
+#endif
 
 input[type="search"] {
     -webkit-appearance: searchfield;
@@ -543,14 +557,15 @@ input::-webkit-inner-spin-button {
 }
 
 input::-webkit-strong-password-auto-fill-button {
-    flex: none !important;
+    flex-shrink: 1 !important;
     font-family: -apple-system !important;
     -webkit-text-security: none !important;
     -webkit-user-select: none !important;
     pointer-events: none !important;
     text-align: right !important;
-    color: black !important;
+    color: rgba(0, 0, 0, 0.8) !important;
     padding-left: 6px !important;
+    white-space: nowrap !important;
 }
 
 input::-webkit-credentials-auto-fill-button {
@@ -601,6 +616,20 @@ input::-webkit-caps-lock-indicator {
     -webkit-user-select: none;
 }
 
+#if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
+input::-webkit-list-button {
+    -webkit-appearance: list-button;
+    display: block;
+    position: relative;
+    cursor: default;
+    align-self: stretch;
+    flex: none;
+    -webkit-user-select: none;
+    width: 16px;
+    height: 100%;
+}
+#endif
+
 keygen, select {
     border-radius: 5px;
 }
@@ -612,7 +641,12 @@ keygen::-webkit-keygen-select {
 textarea {
     -webkit-appearance: textarea;
 #if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
+#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+    color: text;
+    background-color: -apple-system-control-background;
+#else
     background-color: white;
+#endif
     border: 1px solid;
     -webkit-rtl-ordering: logical;
     -webkit-user-select: text;
@@ -816,6 +850,15 @@ input[type="radio"] {
     background-color: rgba(255, 255, 255, 0.01);
 }
 
+input[type="checkbox"]:indeterminate {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+input[type="checkbox"]:indeterminate:disabled {
+    opacity: 0.4;
+    background: rgba(0, 0, 0, 0.8);
+}
+
 input:matches([type="checkbox"], [type="radio"]):checked {
     background: rgba(0, 0, 0, 0.8);
     border-color: rgba(255, 255, 255, 0.0);
@@ -843,9 +886,12 @@ select:focus {
 #if defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
 
 input[type="color"] {
-    -webkit-appearance: square-button;
+#if !(defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS)
+    -webkit-appearance: color-well;
+#endif
     width: 44px;
     height: 23px;
+    outline: none;
 }
 
 input[type="color"]::-webkit-color-swatch-wrapper {
@@ -858,28 +904,9 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 
 input[type="color"]::-webkit-color-swatch {
     background-color: #000000;
-    border: 1px solid #777777;
+    border: 1px solid #8A8A8A;
     flex: 1;
 }
-
-#if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
-
-input[type="color"][list] {
-    -webkit-appearance: menulist;
-    width: 88px;
-    height: 23px;
-}
-
-input[type="color"][list]::-webkit-color-swatch-wrapper {
-    padding-left: 8px;
-    padding-right: 24px;
-}
-
-input[type="color"][list]::-webkit-color-swatch {
-    border-color: #000000;
-}
-
-#endif // defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
 
 #endif // defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
 
@@ -898,8 +925,13 @@ select {
 #else
     -webkit-appearance: menulist;
     border: 1px solid;
+#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+    color: text;
+    background-color: -apple-system-control-background;
+#else
     color: black;
     background-color: white;
+#endif
 #endif
     align-items: center;
     white-space: pre;

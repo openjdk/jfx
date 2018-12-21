@@ -55,7 +55,7 @@
 
 namespace WTF {
 
-static StaticLock s_dtoaP5Mutex;
+static Lock s_dtoaP5Mutex;
 
 typedef union {
     double d;
@@ -360,7 +360,7 @@ struct P5Node {
 public:
     P5Node() { }
     BigInt val;
-    P5Node* next;
+    P5Node* next { nullptr };
 };
 
 static P5Node* p5s;

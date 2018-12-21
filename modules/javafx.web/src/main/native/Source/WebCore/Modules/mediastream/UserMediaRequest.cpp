@@ -40,12 +40,12 @@
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "Frame.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLParserIdioms.h"
 #include "JSMediaStream.h"
 #include "JSOverconstrainedError.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "MediaConstraints.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "SchemeRegistry.h"
@@ -257,45 +257,51 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
 #endif
 }
 
-void UserMediaRequest::deny(MediaAccessDenialReason reason, const String& invalidConstraint)
+void UserMediaRequest::deny(MediaAccessDenialReason reason, const String& message)
 {
     if (!m_scriptExecutionContext)
         return;
 
+    ExceptionCode code;
     switch (reason) {
     case MediaAccessDenialReason::NoConstraints:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - no constraints");
-        m_promise.reject(TypeError);
+        code = TypeError;
         break;
     case MediaAccessDenialReason::UserMediaDisabled:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - user media disabled");
-        m_promise.reject(SecurityError);
+        code = SecurityError;
         break;
     case MediaAccessDenialReason::NoCaptureDevices:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - no capture devices");
-        m_promise.reject(NotFoundError);
+        code = NotFoundError;
         break;
     case MediaAccessDenialReason::InvalidConstraint:
-        RELEASE_LOG(MediaStream, "UserMediaRequest::deny - invalid constraint - %s", invalidConstraint.utf8().data());
-        m_promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(invalidConstraint, ASCIILiteral("Invalid constraint")).get());
-        break;
+        RELEASE_LOG(MediaStream, "UserMediaRequest::deny - invalid constraint - %s", message.utf8().data());
+        m_promise.rejectType<IDLInterface<OverconstrainedError>>(OverconstrainedError::create(message, "Invalid constraint"_s).get());
+        return;
     case MediaAccessDenialReason::HardwareError:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - hardware error");
-        m_promise.reject(NotReadableError);
+        code = NotReadableError;
         break;
     case MediaAccessDenialReason::OtherFailure:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - other failure");
-        m_promise.reject(AbortError);
+        code = AbortError;
         break;
     case MediaAccessDenialReason::PermissionDenied:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - permission denied");
-        m_promise.reject(NotAllowedError);
+        code = NotAllowedError;
         break;
     case MediaAccessDenialReason::InvalidAccess:
         RELEASE_LOG(MediaStream, "UserMediaRequest::deny - invalid access");
-        m_promise.reject(InvalidAccessError);
+        code = InvalidAccessError;
         break;
     }
+
+    if (!message.isEmpty())
+        m_promise.reject(code, message);
+    else
+        m_promise.reject(code);
 }
 
 void UserMediaRequest::stop()
@@ -341,13 +347,47 @@ UserMediaRequest::PendingActivationMediaStream::~PendingActivationMediaStream()
 
 void UserMediaRequest::PendingActivationMediaStream::characteristicsChanged()
 {
-    if (m_mediaStream->privateStream().hasVideo() || m_mediaStream->privateStream().hasAudio())
-        m_userMediaRequest.mediaStreamIsReady(m_mediaStream.copyRef());
+    if (!m_userMediaRequest.m_pendingActivationMediaStream)
+        return;
+
+    for (auto& track : m_mediaStream->privateStream().tracks()) {
+        if (track->source().captureDidFail()) {
+            m_userMediaRequest.mediaStreamDidFail(track->source().type());
+            return;
+        }
+    }
+
+    if (m_mediaStream->privateStream().hasVideo() || m_mediaStream->privateStream().hasAudio()) {
+        m_userMediaRequest.mediaStreamIsReady(WTFMove(m_mediaStream));
+        return;
+    }
 }
 
 void UserMediaRequest::mediaStreamIsReady(Ref<MediaStream>&& stream)
 {
+    RELEASE_LOG(MediaStream, "UserMediaRequest::mediaStreamIsReady");
+    stream->document()->setHasCaptureMediaStreamTrack();
     m_promise.resolve(WTFMove(stream));
+    // We are in an observer iterator loop, we do not want to change the observers within this loop.
+    callOnMainThread([stream = WTFMove(m_pendingActivationMediaStream)] { });
+}
+
+void UserMediaRequest::mediaStreamDidFail(RealtimeMediaSource::Type type)
+{
+    RELEASE_LOG(MediaStream, "UserMediaRequest::mediaStreamDidFail");
+    const char* typeDescription = "";
+    switch (type) {
+    case RealtimeMediaSource::Type::Audio:
+        typeDescription = "audio";
+        break;
+    case RealtimeMediaSource::Type::Video:
+        typeDescription = "video";
+        break;
+    case RealtimeMediaSource::Type::None:
+        typeDescription = "unknown";
+        break;
+    }
+    m_promise.reject(NotReadableError, makeString("Failed starting capture of a "_s, typeDescription, " track"_s));
     // We are in an observer iterator loop, we do not want to change the observers within this loop.
     callOnMainThread([stream = WTFMove(m_pendingActivationMediaStream)] { });
 }

@@ -24,7 +24,7 @@
 
 # Utilities.
 macro jumpToInstruction()
-    jmp [PB, PC, 8]
+    jmp [PB, PC, 8], BytecodePtrTag
 end
 
 macro dispatch(advance)
@@ -54,7 +54,7 @@ end
 
 macro cCall2(function)
     checkStackPointerAlignment(t4, 0xbad0c002)
-    if X86_64 or ARM64
+    if X86_64 or ARM64 or ARM64E
         call function
     elsif X86_64_WIN
         # Note: this implementation is only correct if the return type size is > 8 bytes.
@@ -92,7 +92,7 @@ macro cCall2Void(function)
         # See http://msdn.microsoft.com/en-us/library/ms235286.aspx
         subp 32, sp 
         call function
-        addp 32, sp 
+        addp 32, sp
     else
         cCall2(function)
     end
@@ -101,7 +101,7 @@ end
 # This barely works. arg3 and arg4 should probably be immediates.
 macro cCall4(function)
     checkStackPointerAlignment(t4, 0xbad0c004)
-    if X86_64 or ARM64
+    if X86_64 or ARM64 or ARM64E
         call function
     elsif X86_64_WIN
         # On Win64, rcx, rdx, r8, and r9 are used for passing the first four parameters.
@@ -132,6 +132,8 @@ macro doVMEntry(makeCall)
     storep t4, VMEntryRecord::m_prevTopCallFrame[sp]
     loadp VM::topEntryFrame[vm], t4
     storep t4, VMEntryRecord::m_prevTopEntryFrame[sp]
+    loadp ProtoCallFrame::calleeValue[protoCallFrame], t4
+    storep t4, VMEntryRecord::m_callee[sp]
 
     loadi ProtoCallFrame::paddedArgCount[protoCallFrame], t4
     addp CallFrameHeaderSlots, t4, t4
@@ -144,11 +146,6 @@ macro doVMEntry(makeCall)
     # before we start copying the args from the protoCallFrame below.
     if C_LOOP
         bpaeq t3, VM::m_cloopStackLimit[vm], .stackHeightOK
-    else
-        bpaeq t3, VM::m_softStackLimit[vm], .stackHeightOK
-    end
-
-    if C_LOOP
         move entry, t4
         move vm, t5
         cloopCallSlowPath _llint_stack_check_at_vm_entry, vm, t3
@@ -160,26 +157,10 @@ macro doVMEntry(makeCall)
 .stackCheckFailed:
         move t4, entry
         move t5, vm
+        jmp .throwStackOverflow
+    else
+        bpb t3, VM::m_softStackLimit[vm], .throwStackOverflow
     end
-
-.throwStackOverflow:
-    move vm, a0
-    move protoCallFrame, a1
-    cCall2(_llint_throw_stack_overflow_error)
-
-    vmEntryRecord(cfr, t4)
-
-    loadp VMEntryRecord::m_vm[t4], vm
-    loadp VMEntryRecord::m_prevTopCallFrame[t4], extraTempReg
-    storep extraTempReg, VM::topCallFrame[vm]
-    loadp VMEntryRecord::m_prevTopEntryFrame[t4], extraTempReg
-    storep extraTempReg, VM::topEntryFrame[vm]
-
-    subp cfr, CalleeRegisterSaveSize, sp
-
-    popCalleeSaves()
-    functionEpilogue()
-    ret
 
 .stackHeightOK:
     move t3, sp
@@ -215,7 +196,7 @@ macro doVMEntry(makeCall)
     jmp .copyArgsLoop
 
 .copyArgsDone:
-    if ARM64
+    if ARM64 or ARM64E
         move sp, t4
         storep t4, VM::topCallFrame[vm]
     else
@@ -244,7 +225,25 @@ macro doVMEntry(makeCall)
 
     popCalleeSaves()
     functionEpilogue()
+    ret
 
+.throwStackOverflow:
+    move vm, a0
+    move protoCallFrame, a1
+    cCall2(_llint_throw_stack_overflow_error)
+
+    vmEntryRecord(cfr, t4)
+
+    loadp VMEntryRecord::m_vm[t4], vm
+    loadp VMEntryRecord::m_prevTopCallFrame[t4], extraTempReg
+    storep extraTempReg, VM::topCallFrame[vm]
+    loadp VMEntryRecord::m_prevTopEntryFrame[t4], extraTempReg
+    storep extraTempReg, VM::topEntryFrame[vm]
+
+    subp cfr, CalleeRegisterSaveSize, sp
+
+    popCalleeSaves()
+    functionEpilogue()
     ret
 end
 
@@ -254,7 +253,7 @@ macro makeJavaScriptCall(entry, temp)
     if C_LOOP
         cloopCallJSFunction entry
     else
-        call entry
+        call entry, JSEntryPtrTag
     end
     subp 16, sp
 end
@@ -270,10 +269,10 @@ macro makeHostFunctionCall(entry, temp)
     elsif X86_64_WIN
         # We need to allocate 32 bytes on the stack for the shadow space.
         subp 32, sp
-        call temp
+        call temp, JSEntryPtrTag
         addp 32, sp
     else
-        call temp
+        call temp, JSEntryPtrTag
     end
 end
 
@@ -282,10 +281,9 @@ _handleUncaughtException:
     andp MarkedBlockMask, t3
     loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[t3], t3
     restoreCalleeSavesFromVMEntryFrameCalleeSavesBuffer(t3, t0)
-    loadp VM::callFrameForCatch[t3], cfr
     storep 0, VM::callFrameForCatch[t3]
 
-    loadp CallerFrame[cfr], cfr
+    loadp VM::topEntryFrame[t3], cfr
     vmEntryRecord(cfr, t2)
 
     loadp VMEntryRecord::m_vm[t2], t3
@@ -370,7 +368,7 @@ macro checkSwitchToJITForLoop()
             cCall2(_llint_loop_osr)
             btpz r0, .recover
             move r1, sp
-            jmp r0
+            jmp r0, JSEntryPtrTag
         .recover:
             loadi ArgumentCount + TagOffset[cfr], PC
         end)
@@ -388,19 +386,6 @@ end
 
 macro loadCaged(basePtr, mask, source, dest, scratch)
     loadp source, dest
-    uncage(basePtr, mask, dest, scratch)
-end
-
-macro loadTypedArrayCaged(basePtr, mask, source, typeIndex, dest, scratch)
-    if POISON
-        andp TypedArrayPoisonIndexMask, typeIndex
-        leap _g_typedArrayPoisons, dest
-        loadp [dest, typeIndex, 8], dest
-        loadp source, scratch
-        xorp scratch, dest
-    else
-        loadp source, dest
-    end
     uncage(basePtr, mask, dest, scratch)
 end
 
@@ -521,6 +506,12 @@ macro functionArityCheck(doneLabel, slowPath)
     move PC, a1
     cCall2(slowPath)   # This slowPath has the protocol: r0 = 0 => no error, r0 != 0 => error
     btiz r0, .noError
+
+    # We're throwing before the frame is fully set up. This frame will be
+    # ignored by the unwinder. So, let's restore the callee saves before we
+    # start unwinding. We need to do this before we change the cfr.
+    restoreCalleeSavesUsedByLLInt()
+
     move r1, cfr   # r1 contains caller frame
     jmp _llint_throw_from_slow_path_trampoline
 
@@ -543,6 +534,15 @@ macro functionArityCheck(doneLabel, slowPath)
     btiz t1, .continue
 
 .noExtraSlot:
+    if POINTER_PROFILING
+        if ARM64 or ARM64E
+            loadp 8[cfr], lr
+        end
+
+        addp 16, cfr, t3
+        untagReturnAddress t3
+    end
+
     // Move frame up t1 slots
     negq t1
     move cfr, t3
@@ -565,6 +565,15 @@ macro functionArityCheck(doneLabel, slowPath)
     storeq t0, [t3, t1, 8]
     addp 8, t3
     baddinz 1, t2, .fillLoop
+
+    if POINTER_PROFILING
+        addp 16, cfr, t1
+        tagReturnAddress t1
+
+        if ARM64 or ARM64E
+            storep lr, 8[cfr]
+        end
+    end
 
 .continue:
     # Reload CodeBlock and reset PC, since the slow_path clobbered them.
@@ -603,7 +612,7 @@ _llint_op_enter:
     addq 1, t2
     btqnz t2, .opEnterLoop
 .opEnterDone:
-    callOpcodeSlowPath(_slow_path_enter)
+    callSlowPath(_slow_path_enter)
     dispatch(constexpr op_enter_length)
 
 
@@ -655,7 +664,7 @@ _llint_op_to_this:
     dispatch(constexpr op_to_this_length)
 
 .opToThisSlow:
-    callOpcodeSlowPath(_slow_path_to_this)
+    callSlowPath(_slow_path_to_this)
     dispatch(constexpr op_to_this_length)
 
 
@@ -664,7 +673,7 @@ _llint_op_check_tdz:
     loadisFromInstruction(1, t0)
     loadConstantOrVariable(t0, t1)
     bqneq t1, ValueEmpty, .opNotTDZ
-    callOpcodeSlowPath(_slow_path_throw_tdz_error)
+    callSlowPath(_slow_path_throw_tdz_error)
 
 .opNotTDZ:
     dispatch(constexpr op_check_tdz_length)
@@ -691,12 +700,11 @@ _llint_op_not:
     dispatch(constexpr op_not_length)
 
 .opNotSlow:
-    callOpcodeSlowPath(_slow_path_not)
+    callSlowPath(_slow_path_not)
     dispatch(constexpr op_not_length)
 
 
 macro equalityComparison(integerComparison, slowPath)
-    traceExecution()
     loadisFromInstruction(3, t0)
     loadisFromInstruction(2, t2)
     loadisFromInstruction(1, t3)
@@ -708,20 +716,26 @@ macro equalityComparison(integerComparison, slowPath)
     dispatch(4)
 
 .slow:
-    callOpcodeSlowPath(slowPath)
+    callSlowPath(slowPath)
     dispatch(4)
 end
 
-_llint_op_eq:
-    equalityComparison(
-        macro (left, right, result) cieq left, right, result end,
-        _slow_path_eq)
 
+macro equalityJump(integerComparison, slowPath)
+    loadisFromInstruction(1, t2)
+    loadisFromInstruction(2, t3)
+    loadConstantOrVariableInt32(t2, t0, .slow)
+    loadConstantOrVariableInt32(t3, t1, .slow)
+    integerComparison(t0, t1, .jumpTarget)
+    dispatch(constexpr op_jeq_length)
 
-_llint_op_neq:
-    equalityComparison(
-        macro (left, right, result) cineq left, right, result end,
-        _slow_path_neq)
+.jumpTarget:
+    dispatchIntIndirect(3)
+
+.slow:
+    callSlowPath(slowPath)
+    dispatch(0)
+end
 
 
 macro equalNullComparison()
@@ -762,7 +776,6 @@ _llint_op_neq_null:
 
 
 macro strictEq(equalityOperation, slowPath)
-    traceExecution()
     loadisFromInstruction(3, t0)
     loadisFromInstruction(2, t2)
     loadConstantOrVariable(t0, t1)
@@ -783,20 +796,63 @@ macro strictEq(equalityOperation, slowPath)
     dispatch(4)
 
 .slow:
-    callOpcodeSlowPath(slowPath)
+    callSlowPath(slowPath)
     dispatch(4)
 end
 
+
+macro strictEqualityJump(equalityOperation, slowPath)
+    loadisFromInstruction(1, t2)
+    loadisFromInstruction(2, t3)
+    loadConstantOrVariable(t2, t0)
+    loadConstantOrVariable(t3, t1)
+    move t0, t2
+    orq t1, t2
+    btqz t2, tagMask, .slow
+    bqaeq t0, tagTypeNumber, .leftOK
+    btqnz t0, tagTypeNumber, .slow
+.leftOK:
+    bqaeq t1, tagTypeNumber, .rightOK
+    btqnz t1, tagTypeNumber, .slow
+.rightOK:
+    equalityOperation(t0, t1, .jumpTarget)
+    dispatch(constexpr op_jstricteq_length)
+
+.jumpTarget:
+    dispatchIntIndirect(3)
+
+.slow:
+    callSlowPath(slowPath)
+    dispatch(0)
+end
+
+
 _llint_op_stricteq:
+    traceExecution()
     strictEq(
         macro (left, right, result) cqeq left, right, result end,
         _slow_path_stricteq)
 
 
 _llint_op_nstricteq:
+    traceExecution()
     strictEq(
         macro (left, right, result) cqneq left, right, result end,
         _slow_path_nstricteq)
+
+
+_llint_op_jstricteq:
+    traceExecution()
+    strictEqualityJump(
+        macro (left, right, target) bqeq left, right, target end,
+        _llint_slow_path_jstricteq)
+
+
+_llint_op_jnstricteq:
+    traceExecution()
+    strictEqualityJump(
+        macro (left, right, target) bqneq left, right, target end,
+        _llint_slow_path_jnstricteq)
 
 
 macro preOp(arithmeticOperation, slowPath)
@@ -810,7 +866,7 @@ macro preOp(arithmeticOperation, slowPath)
     dispatch(2)
 
 .slow:
-    callOpcodeSlowPath(slowPath)
+    callSlowPath(slowPath)
     dispatch(2)
 end
 
@@ -839,7 +895,7 @@ _llint_op_to_number:
     dispatch(constexpr op_to_number_length)
 
 .opToNumberSlow:
-    callOpcodeSlowPath(_slow_path_to_number)
+    callSlowPath(_slow_path_to_number)
     dispatch(constexpr op_to_number_length)
 
 
@@ -855,7 +911,7 @@ _llint_op_to_string:
     dispatch(constexpr op_to_string_length)
 
 .opToStringSlow:
-    callOpcodeSlowPath(_slow_path_to_string)
+    callSlowPath(_slow_path_to_string)
     dispatch(constexpr op_to_string_length)
 
 
@@ -871,7 +927,7 @@ _llint_op_to_object:
     dispatch(constexpr op_to_object_length)
 
 .opToObjectSlow:
-    callOpcodeSlowPath(_slow_path_to_object)
+    callSlowPath(_slow_path_to_object)
     dispatch(constexpr op_to_object_length)
 
 
@@ -898,7 +954,7 @@ _llint_op_negate:
     dispatch(constexpr op_negate_length)
 
 .opNegateSlow:
-    callOpcodeSlowPath(_slow_path_negate)
+    callSlowPath(_slow_path_negate)
     dispatch(constexpr op_negate_length)
 
 
@@ -959,7 +1015,7 @@ macro binaryOpCustomStore(integerOperationAndStore, doubleOperation, slowPath)
     dispatch(5)
 
 .slow:
-    callOpcodeSlowPath(slowPath)
+    callSlowPath(slowPath)
     dispatch(5)
 end
 
@@ -1031,7 +1087,7 @@ _llint_op_div:
             macro (left, right) divd left, right end,
             _slow_path_div)
     else
-        callOpcodeSlowPath(_slow_path_div)
+        callSlowPath(_slow_path_div)
         dispatch(constexpr op_div_length)
     end
 
@@ -1050,7 +1106,7 @@ macro bitOp(operation, slowPath, advance)
     dispatch(advance)
 
 .slow:
-    callOpcodeSlowPath(slowPath)
+    callSlowPath(slowPath)
     dispatch(advance)
 end
 
@@ -1087,7 +1143,7 @@ _llint_op_unsigned:
     storeq t2, [cfr, t0, 8]
     dispatch(constexpr op_unsigned_length)
 .opUnsignedSlow:
-    callOpcodeSlowPath(_slow_path_unsigned)
+    callSlowPath(_slow_path_unsigned)
     dispatch(constexpr op_unsigned_length)
 
 
@@ -1140,7 +1196,7 @@ _llint_op_overrides_has_instance:
 
 _llint_op_instanceof_custom:
     traceExecution()
-    callOpcodeSlowPath(_llint_slow_path_instanceof_custom)
+    callSlowPath(_llint_slow_path_instanceof_custom)
     dispatch(constexpr op_instanceof_custom_length)
 
 
@@ -1294,7 +1350,7 @@ _llint_op_get_by_id:
     dispatch(constexpr op_get_by_id_length)
 
 .opGetByIdSlow:
-    callOpcodeSlowPath(_llint_slow_path_get_by_id)
+    callSlowPath(_llint_slow_path_get_by_id)
     dispatch(constexpr op_get_by_id_length)
 
 
@@ -1314,7 +1370,7 @@ _llint_op_get_by_id_proto_load:
     dispatch(constexpr op_get_by_id_proto_load_length)
 
 .opGetByIdProtoSlow:
-    callOpcodeSlowPath(_llint_slow_path_get_by_id)
+    callSlowPath(_llint_slow_path_get_by_id)
     dispatch(constexpr op_get_by_id_proto_load_length)
 
 
@@ -1331,7 +1387,7 @@ _llint_op_get_by_id_unset:
     dispatch(constexpr op_get_by_id_unset_length)
 
 .opGetByIdUnsetSlow:
-    callOpcodeSlowPath(_llint_slow_path_get_by_id)
+    callSlowPath(_llint_slow_path_get_by_id)
     dispatch(constexpr op_get_by_id_unset_length)
 
 
@@ -1354,7 +1410,7 @@ _llint_op_get_array_length:
     dispatch(constexpr op_get_array_length_length)
 
 .opGetArrayLengthSlow:
-    callOpcodeSlowPath(_llint_slow_path_get_by_id)
+    callSlowPath(_llint_slow_path_get_by_id)
     dispatch(constexpr op_get_array_length_length)
 
 
@@ -1497,8 +1553,9 @@ _llint_op_put_by_id:
     dispatch(constexpr op_put_by_id_length)
 
 .opPutByIdSlow:
-    callOpcodeSlowPath(_llint_slow_path_put_by_id)
+    callSlowPath(_llint_slow_path_put_by_id)
     dispatch(constexpr op_put_by_id_length)
+
 
 macro finishGetByVal(result, scratch)
     loadisFromInstruction(1, scratch)
@@ -1535,7 +1592,6 @@ _llint_op_get_by_val:
 
 .opGetByValIsContiguous:
     biaeq t1, -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t3], .opGetByValSlow
-    andi JSObject::m_butterflyIndexingMask[t0], t1
     loadisFromInstruction(1, t0)
     loadq [t3, t1, 8], t2
     btqz t2, .opGetByValSlow
@@ -1544,7 +1600,6 @@ _llint_op_get_by_val:
 .opGetByValNotContiguous:
     bineq t2, DoubleShape, .opGetByValNotDouble
     biaeq t1, -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t3], .opGetByValSlow
-    andi JSObject::m_butterflyIndexingMask[t0], t1
     loadisFromInstruction(1 ,t0)
     loadd [t3, t1, 8], ft0
     bdnequn ft0, ft0, .opGetByValSlow
@@ -1556,7 +1611,6 @@ _llint_op_get_by_val:
     subi ArrayStorageShape, t2
     bia t2, SlowPutArrayStorageShape - ArrayStorageShape, .opGetByValNotIndexedStorage
     biaeq t1, -sizeof IndexingHeader + IndexingHeader::u.lengths.vectorLength[t3], .opGetByValSlow
-    andi JSObject::m_butterflyIndexingMask[t0], t1
     loadisFromInstruction(1, t0)
     loadq ArrayStorage::m_vector[t3, t1, 8], t2
     btqz t2, .opGetByValSlow
@@ -1569,12 +1623,11 @@ _llint_op_get_by_val:
 .opGetByValNotIndexedStorage:
     # First lets check if we even have a typed array. This lets us do some boilerplate up front.
     loadb JSCell::m_type[t0], t2
-    subi FirstArrayType, t2
+    subi FirstTypedArrayType, t2
     biaeq t2, NumberOfTypedArrayTypesExcludingDataView, .opGetByValSlow
     
     # Sweet, now we know that we have a typed array. Do some basic things now.
     biaeq t1, JSArrayBufferView::m_length[t0], .opGetByValSlow
-    loadTypedArrayCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_poisonedVector[t0], t2, t3, t5)
 
     # Now bisect through the various types:
     #    Int8ArrayType,
@@ -1587,49 +1640,63 @@ _llint_op_get_by_val:
     #    Float32ArrayType,
     #    Float64ArrayType,
 
-    bia t2, Uint16ArrayType - FirstArrayType, .opGetByValAboveUint16Array
+    bia t2, Uint16ArrayType - FirstTypedArrayType, .opGetByValAboveUint16Array
 
     # We have one of Int8ArrayType .. Uint16ArrayType.
-    bia t2, Uint8ClampedArrayType - FirstArrayType, .opGetByValInt16ArrayOrUint16Array
+    bia t2, Uint8ClampedArrayType - FirstTypedArrayType, .opGetByValInt16ArrayOrUint16Array
 
     # We have one of Int8ArrayType ... Uint8ClampedArrayType
-    bineq t2, Int8ArrayType - FirstArrayType, .opGetByValUint8ArrayOrUint8ClampedArray
+    bia t2, Int8ArrayType - FirstTypedArrayType, .opGetByValUint8ArrayOrUint8ClampedArray
 
-    # We have Int8ArrayType
+    # We have Int8ArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
     loadbs [t3, t1], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValUint8ArrayOrUint8ClampedArray:
-    # We have either Uint8ArrayType or Uint8ClampedArrayType. They behave the same so that's cool.
+    bia t2, Uint8ArrayType - FirstTypedArrayType, .opGetByValUint8ClampedArray
+
+    # We have Uint8ArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
+    loadb [t3, t1], t0
+    finishIntGetByVal(t0, t1)
+
+.opGetByValUint8ClampedArray:
+    # We have Uint8ClampedArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
     loadb [t3, t1], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValInt16ArrayOrUint16Array:
     # We have either Int16ArrayType or Uint16ClampedArrayType.
-    bieq t2, Uint16ArrayType - FirstArrayType, .opGetByValUint16Array
+    bia t2, Int16ArrayType - FirstTypedArrayType, .opGetByValUint16Array
 
     # We have Int16ArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
     loadhs [t3, t1, 2], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValUint16Array:
     # We have Uint16ArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
     loadh [t3, t1, 2], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValAboveUint16Array:
     # We have one of Int32ArrayType .. Float64ArrayType.
-    bia t2, Uint32ArrayType - FirstArrayType, .opGetByValFloat32ArrayOrFloat64Array
+    bia t2, Uint32ArrayType - FirstTypedArrayType, .opGetByValFloat32ArrayOrFloat64Array
 
     # We have either Int32ArrayType or Uint32ArrayType
-    bineq t2, Int32ArrayType - FirstArrayType, .opGetByValUint32Array
+    bia t2, Int32ArrayType - FirstTypedArrayType, .opGetByValUint32Array
 
-    # We have Int32ArrayType
+    # We have Int32ArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
     loadi [t3, t1, 4], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValUint32Array:
     # We have Uint32ArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
     # This is the hardest part because of large unsigned values.
     loadi [t3, t1, 4], t0
     bilt t0, 0, .opGetByValSlow # This case is still awkward to implement in LLInt.
@@ -1638,15 +1705,16 @@ _llint_op_get_by_val:
 .opGetByValFloat32ArrayOrFloat64Array:
     # We have one of Float32ArrayType or Float64ArrayType. Sadly, we cannot handle Float32Array
     # inline yet. That would require some offlineasm changes.
-    bieq t2, Float32ArrayType - FirstArrayType, .opGetByValSlow
+    bieq t2, Float32ArrayType - FirstTypedArrayType, .opGetByValSlow
 
     # We have Float64ArrayType.
+    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr PRIMITIVE_GIGACAGE_MASK, JSArrayBufferView::m_vector[t0], t3, t2)
     loadd [t3, t1, 8], ft0
     bdnequn ft0, ft0, .opGetByValSlow
     finishDoubleGetByVal(ft0, t0, t1)
 
 .opGetByValSlow:
-    callOpcodeSlowPath(_llint_slow_path_get_by_val)
+    callSlowPath(_llint_slow_path_get_by_val)
     dispatch(constexpr op_get_by_val_length)
 
 
@@ -1677,6 +1745,7 @@ macro putByVal(slowPath)
     loadConstantOrVariableInt32(t0, t3, .opPutByValSlow)
     sxi2q t3, t3
     loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::jsValue, constexpr JSVALUE_GIGACAGE_MASK, JSObject::m_butterfly[t1], t0, t5)
+    btinz t2, CopyOnWrite, .opPutByValSlow
     andi IndexingShapeMask, t2
     bineq t2, Int32Shape, .opPutByValNotInt32
     contiguousPutByVal(
@@ -1737,7 +1806,7 @@ macro putByVal(slowPath)
     loadpFromInstruction(4, t0)
     storeb 1, ArrayProfile::m_outOfBounds[t0]
 .opPutByValSlow:
-    callOpcodeSlowPath(slowPath)
+    callSlowPath(slowPath)
     dispatch(5)
 end
 
@@ -1756,8 +1825,7 @@ _llint_op_jmp:
 macro jumpTrueOrFalse(conditionOp, slow)
     loadisFromInstruction(1, t1)
     loadConstantOrVariable(t1, t0)
-    xorq ValueFalse, t0
-    btqnz t0, -1, .slow
+    btqnz t0, ~0xf, .slow
     conditionOp(t0, .target)
     dispatch(3)
 
@@ -1765,7 +1833,7 @@ macro jumpTrueOrFalse(conditionOp, slow)
     dispatchIntIndirect(2)
 
 .slow:
-    callOpcodeSlowPath(slow)
+    callSlowPath(slow)
     dispatch(0)
 end
 
@@ -1828,7 +1896,7 @@ _llint_op_jneq_ptr:
     dispatchIntIndirect(3)
 
 
-macro compare(integerCompare, doubleCompare, slowPath)
+macro compareJump(integerCompare, doubleCompare, slowPath)
     loadisFromInstruction(1, t2)
     loadisFromInstruction(2, t3)
     loadConstantOrVariable(t2, t0)
@@ -1865,7 +1933,7 @@ macro compare(integerCompare, doubleCompare, slowPath)
     dispatchIntIndirect(3)
 
 .slow:
-    callOpcodeSlowPath(slowPath)
+    callSlowPath(slowPath)
     dispatch(0)
 end
 
@@ -1884,7 +1952,6 @@ end
 
 
 macro compareUnsigned(integerCompareAndSet)
-    traceExecution()
     loadisFromInstruction(3, t0)
     loadisFromInstruction(2, t2)
     loadisFromInstruction(1, t3)
@@ -1921,7 +1988,7 @@ _llint_op_switch_imm:
     dispatchIntIndirect(2)
 
 .opSwitchImmSlow:
-    callOpcodeSlowPath(_llint_slow_path_switch_imm)
+    callSlowPath(_llint_slow_path_switch_imm)
     dispatch(0)
 
 
@@ -1958,7 +2025,7 @@ _llint_op_switch_char:
     dispatchIntIndirect(2)
 
 .opSwitchOnRope:
-    callOpcodeSlowPath(_llint_slow_path_switch_char)
+    callSlowPath(_llint_slow_path_switch_char)
     dispatch(0)
 
 
@@ -1976,6 +2043,9 @@ end
 macro doCall(slowPath, prepareCall)
     loadisFromInstruction(2, t0)
     loadpFromInstruction(5, t1)
+    if POINTER_PROFILING
+        move t1, t5
+    end
     loadp LLIntCallLinkInfo::callee[t1], t2
     loadConstantOrVariable(t0, t3)
     bqneq t3, t2, .opCallSlow
@@ -1991,11 +2061,11 @@ macro doCall(slowPath, prepareCall)
     if POISON
         loadp _g_JITCodePoison, t2
         xorp LLIntCallLinkInfo::machineCodeTarget[t1], t2
-        prepareCall(t2, t1, t3, t4)
-        callTargetFunction(t2)
+        prepareCall(t2, t1, t3, t4, JSEntryPtrTag)
+        callTargetFunction(t2, JSEntryPtrTag)
     else
-        prepareCall(LLIntCallLinkInfo::machineCodeTarget[t1], t2, t3, t4)
-        callTargetFunction(LLIntCallLinkInfo::machineCodeTarget[t1])
+        prepareCall(LLIntCallLinkInfo::machineCodeTarget[t1], t2, t3, t4, JSEntryPtrTag)
+        callTargetFunction(LLIntCallLinkInfo::machineCodeTarget[t1], JSEntryPtrTag)
     end
 
 .opCallSlow:
@@ -2022,7 +2092,7 @@ _llint_op_to_primitive:
     dispatch(constexpr op_to_primitive_length)
 
 .opToPrimitiveSlowCase:
-    callOpcodeSlowPath(_slow_path_to_primitive)
+    callSlowPath(_slow_path_to_primitive)
     dispatch(constexpr op_to_primitive_length)
 
 
@@ -2047,7 +2117,7 @@ _llint_op_catch:
     subp PB, PC
     rshiftp 3, PC
 
-    callOpcodeSlowPath(_llint_slow_path_check_if_exception_is_uncatchable_and_notify_profiler)
+    callSlowPath(_llint_slow_path_check_if_exception_is_uncatchable_and_notify_profiler)
     bpeq r1, 0, .isCatchableException
     jmp _llint_throw_from_slow_path_trampoline
 
@@ -2067,7 +2137,7 @@ _llint_op_catch:
 
     traceExecution()
 
-    callOpcodeSlowPath(_llint_slow_path_profile_catch)
+    callSlowPath(_llint_slow_path_profile_catch)
 
     dispatch(constexpr op_catch_length)
 
@@ -2095,7 +2165,7 @@ _llint_throw_from_slow_path_trampoline:
     loadp Callee[cfr], t1
     andp MarkedBlockMask, t1
     loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[t1], t1
-    jmp VM::targetMachinePCForThrow[t1]
+    jmp VM::targetMachinePCForThrow[t1], ExceptionHandlerPtrTag
 
 
 _llint_throw_during_call_trampoline:
@@ -2111,7 +2181,7 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     andp MarkedBlockMask, t0, t1
     loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[t1], t1
     storep cfr, VM::topCallFrame[t1]
-    if ARM64 or C_LOOP
+    if ARM64 or ARM64E or C_LOOP
         storep lr, ReturnPC[cfr]
     end
     move cfr, a0
@@ -2126,12 +2196,12 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     else
         if X86_64_WIN
             subp 32, sp
-            call executableOffsetToFunction[t1]
+            call executableOffsetToFunction[t1], JSEntryPtrTag
             addp 32, sp
         else
             loadp _g_NativeCodePoison, t2
             xorp executableOffsetToFunction[t1], t2
-            call t2
+            call t2, JSEntryPtrTag
         end
     end
 
@@ -2156,7 +2226,7 @@ macro internalFunctionCallTrampoline(offsetOfFunction)
     andp MarkedBlockMask, t0, t1
     loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[t1], t1
     storep cfr, VM::topCallFrame[t1]
-    if ARM64 or C_LOOP
+    if ARM64 or ARM64E or C_LOOP
         storep lr, ReturnPC[cfr]
     end
     move cfr, a0
@@ -2169,12 +2239,12 @@ macro internalFunctionCallTrampoline(offsetOfFunction)
     else
         if X86_64_WIN
             subp 32, sp
-            call offsetOfFunction[t1]
+            call offsetOfFunction[t1], JSEntryPtrTag
             addp 32, sp
         else
             loadp _g_NativeCodePoison, t2
             xorp offsetOfFunction[t1], t2
-            call t2
+            call t2, JSEntryPtrTag
         end
     end
 
@@ -2276,7 +2346,7 @@ _llint_op_resolve_scope:
     dispatch(constexpr op_resolve_scope_length)
 
 .rDynamic:
-    callOpcodeSlowPath(_slow_path_resolve_scope)
+    callSlowPath(_slow_path_resolve_scope)
     dispatch(constexpr op_resolve_scope_length)
 
 
@@ -2372,7 +2442,7 @@ _llint_op_get_from_scope:
     dispatch(constexpr op_get_from_scope_length)
 
 .gDynamic:
-    callOpcodeSlowPath(_llint_slow_path_get_from_scope)
+    callSlowPath(_llint_slow_path_get_from_scope)
     dispatch(constexpr op_get_from_scope_length)
 
 
@@ -2493,11 +2563,11 @@ _llint_op_put_to_scope:
 
 .pModuleVar:
     bineq t0, ModuleVar, .pDynamic
-    callOpcodeSlowPath(_slow_path_throw_strict_mode_readonly_property_write_error)
+    callSlowPath(_slow_path_throw_strict_mode_readonly_property_write_error)
     dispatch(constexpr op_put_to_scope_length)
 
 .pDynamic:
-    callOpcodeSlowPath(_llint_slow_path_put_to_scope)
+    callSlowPath(_llint_slow_path_put_to_scope)
     dispatch(constexpr op_put_to_scope_length)
 
 
@@ -2568,7 +2638,7 @@ _llint_op_profile_type:
 
     loadp TypeProfilerLog::m_logEndPtr[t1], t1
     bpneq t2, t1, .opProfileTypeDone
-    callOpcodeSlowPath(_slow_path_profile_type_clear_log)
+    callSlowPath(_slow_path_profile_type_clear_log)
 
 .opProfileTypeDone:
     dispatch(constexpr op_profile_type_length)
@@ -2609,7 +2679,7 @@ _llint_op_log_shadow_chicken_prologue:
     storep t1, ShadowChicken::Packet::scope[t0]
     dispatch(constexpr op_log_shadow_chicken_prologue_length)
 .opLogShadowChickenPrologueSlow:
-    callOpcodeSlowPath(_llint_slow_path_log_shadow_chicken_prologue)
+    callSlowPath(_llint_slow_path_log_shadow_chicken_prologue)
     dispatch(constexpr op_log_shadow_chicken_prologue_length)
 
 
@@ -2627,5 +2697,5 @@ _llint_op_log_shadow_chicken_tail:
     storei PC, ShadowChicken::Packet::callSiteIndex[t0]
     dispatch(constexpr op_log_shadow_chicken_tail_length)
 .opLogShadowChickenTailSlow:
-    callOpcodeSlowPath(_llint_slow_path_log_shadow_chicken_tail)
+    callSlowPath(_llint_slow_path_log_shadow_chicken_tail)
     dispatch(constexpr op_log_shadow_chicken_tail_length)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,6 @@
 #include "CallFrame.h"
 #include "ClonedArguments.h"
 #include "CodeProfiling.h"
-#include "CommonSlowPathsExceptions.h"
 #include "DefinePropertyAttributes.h"
 #include "DirectArguments.h"
 #include "Error.h"
@@ -51,6 +50,7 @@
 #include "JSCJSValue.h"
 #include "JSFixedArray.h"
 #include "JSGlobalObjectFunctions.h"
+#include "JSImmutableButterfly.h"
 #include "JSLexicalEnvironment.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
@@ -60,11 +60,13 @@
 #include "LowLevelInterpreter.h"
 #include "MathCommon.h"
 #include "ObjectConstructor.h"
+#include "OpcodeInlines.h"
 #include "ScopedArguments.h"
 #include "StructureRareDataInlines.h"
 #include "ThunkGenerators.h"
 #include "TypeProfilerLog.h"
 #include <wtf/StringPrintStream.h>
+#include <wtf/Variant.h>
 
 namespace JSC {
 
@@ -95,6 +97,7 @@ namespace JSC {
 #define OP_C(index) (exec->r(pc[index].u.operand))
 
 #define GET(operand) (exec->uncheckedR(operand))
+#define GET_C(operand) (exec->r(operand))
 
 #define RETURN_TWO(first, second) do {       \
         return encodeResult(first, second);        \
@@ -150,33 +153,36 @@ namespace JSC {
         JSValue::encode(value);                  \
     } while (false)
 
-#define CALL_END_IMPL(exec, callTarget) RETURN_TWO((callTarget), (exec))
+#define CALL_END_IMPL(exec, callTarget, callTargetTag) \
+    RETURN_TWO(retagCodePtr((callTarget), callTargetTag, SlowPathPtrTag), (exec))
 
 #define CALL_CHECK_EXCEPTION(exec, pc) do {                          \
         ExecState* cceExec = (exec);                                 \
         Instruction* ccePC = (pc);                                   \
         if (UNLIKELY(throwScope.exception()))                        \
-            CALL_END_IMPL(cceExec, LLInt::callToThrow(cceExec));     \
+            CALL_END_IMPL(cceExec, LLInt::callToThrow(cceExec), ExceptionHandlerPtrTag); \
     } while (false)
 
-#define CALL_RETURN(exec, pc, callTarget) do {                    \
-        ExecState* crExec = (exec);                                  \
-        Instruction* crPC = (pc);                                    \
-        void* crCallTarget = (callTarget);                           \
-        CALL_CHECK_EXCEPTION(crExec->callerFrame(), crPC);  \
-        CALL_END_IMPL(crExec, crCallTarget);                \
-    } while (false)
+static void throwArityCheckStackOverflowError(ExecState* exec, ThrowScope& scope)
+{
+    JSObject* error = createStackOverflowError(exec);
+    throwException(exec, scope, error);
+#if LLINT_TRACING
+    if (UNLIKELY(Options::traceLLIntSlowPath()))
+        dataLog("Throwing exception ", JSValue(scope.exception()), ".\n");
+#endif
+}
 
 SLOW_PATH_DECL(slow_path_call_arityCheck)
 {
     BEGIN();
     int slotsToAdd = CommonSlowPaths::arityCheckFor(exec, vm, CodeForCall);
     if (slotsToAdd < 0) {
-        exec = exec->callerFrame();
-        vm.topCallFrame = exec;
+        exec->convertToStackOverflowFrame(vm);
+        NativeCallFrameTracer tracer(&vm, exec);
         ErrorHandlingScope errorScope(vm);
         throwScope.release();
-        CommonSlowPaths::interpreterThrowInCaller(exec, createStackOverflowError(exec));
+        throwArityCheckStackOverflowError(exec, throwScope);
         RETURN_TWO(bitwise_cast<void*>(static_cast<uintptr_t>(1)), exec);
     }
     RETURN_TWO(0, bitwise_cast<void*>(static_cast<uintptr_t>(slotsToAdd)));
@@ -187,10 +193,10 @@ SLOW_PATH_DECL(slow_path_construct_arityCheck)
     BEGIN();
     int slotsToAdd = CommonSlowPaths::arityCheckFor(exec, vm, CodeForConstruct);
     if (slotsToAdd < 0) {
-        exec = exec->callerFrame();
-        vm.topCallFrame = exec;
+        exec->convertToStackOverflowFrame(vm);
+        NativeCallFrameTracer tracer(&vm, exec);
         ErrorHandlingScope errorScope(vm);
-        CommonSlowPaths::interpreterThrowInCaller(exec, createStackOverflowError(exec));
+        throwArityCheckStackOverflowError(exec, throwScope);
         RETURN_TWO(bitwise_cast<void*>(static_cast<uintptr_t>(1)), exec);
     }
     RETURN_TWO(0, bitwise_cast<void*>(static_cast<uintptr_t>(slotsToAdd)));
@@ -231,10 +237,12 @@ SLOW_PATH_DECL(slow_path_create_this)
             cachedCallee.setWithoutWriteBarrier(JSCell::seenMultipleCalleeObjects());
 
         size_t inlineCapacity = bytecode.inlineCapacity();
-        Structure* structure = constructor->ensureRareDataAndAllocationProfile(exec, inlineCapacity)->objectAllocationProfile()->structure();
+        ObjectAllocationProfile* allocationProfile = constructor->ensureRareDataAndAllocationProfile(exec, inlineCapacity)->objectAllocationProfile();
+        Structure* structure = allocationProfile->structure();
         result = constructEmptyObject(exec, structure);
         if (structure->hasPolyProto()) {
-            JSObject* prototype = constructor->prototypeForConstruction(vm, exec);
+            JSObject* prototype = allocationProfile->prototype();
+            ASSERT(prototype == constructor->prototypeForConstruction(vm, exec));
             result->putDirect(vm, knownPolyProtoOffset, prototype);
             prototype->didBecomePrototype();
             ASSERT_WITH_MESSAGE(!hasIndexedProperties(result->indexingType()), "We rely on JSFinalObject not starting out with an indexing type otherwise we would potentially need to convert to slow put storage");
@@ -291,7 +299,7 @@ SLOW_PATH_DECL(slow_path_check_tdz)
 SLOW_PATH_DECL(slow_path_throw_strict_mode_readonly_property_write_error)
 {
     BEGIN();
-    THROW(createTypeError(exec, ASCIILiteral(ReadonlyPropertyWriteError)));
+    THROW(createTypeError(exec, ReadonlyPropertyWriteError));
 }
 
 SLOW_PATH_DECL(slow_path_not)
@@ -371,26 +379,29 @@ static void updateArithProfileForUnaryArithOp(Instruction* pc, JSValue result, J
 {
     ArithProfile& profile = *bitwise_cast<ArithProfile*>(&pc[3].u.operand);
     profile.observeLHS(operand);
-    ASSERT(result.isNumber());
-    if (!result.isInt32()) {
-        if (operand.isInt32())
-            profile.setObservedInt32Overflow();
+    ASSERT(result.isNumber() || result.isBigInt());
+    if (result.isNumber()) {
+        if (!result.isInt32()) {
+            if (operand.isInt32())
+                profile.setObservedInt32Overflow();
 
-        double doubleVal = result.asNumber();
-        if (!doubleVal && std::signbit(doubleVal))
-            profile.setObservedNegZeroDouble();
-        else {
-            profile.setObservedNonNegZeroDouble();
+            double doubleVal = result.asNumber();
+            if (!doubleVal && std::signbit(doubleVal))
+                profile.setObservedNegZeroDouble();
+            else {
+                profile.setObservedNonNegZeroDouble();
 
-            // The Int52 overflow check here intentionally omits 1ll << 51 as a valid negative Int52 value.
-            // Therefore, we will get a false positive if the result is that value. This is intentionally
-            // done to simplify the checking algorithm.
-            static const int64_t int52OverflowPoint = (1ll << 51);
-            int64_t int64Val = static_cast<int64_t>(std::abs(doubleVal));
-            if (int64Val >= int52OverflowPoint)
-                profile.setObservedInt52Overflow();
+                // The Int52 overflow check here intentionally omits 1ll << 51 as a valid negative Int52 value.
+                // Therefore, we will get a false positive if the result is that value. This is intentionally
+                // done to simplify the checking algorithm.
+                static const int64_t int52OverflowPoint = (1ll << 51);
+                int64_t int64Val = static_cast<int64_t>(std::abs(doubleVal));
+                if (int64Val >= int52OverflowPoint)
+                    profile.setObservedInt52Overflow();
+            }
         }
-    }
+    } else
+        profile.setObservedNonNumber();
 }
 #else
 static void updateArithProfileForUnaryArithOp(Instruction*, JSValue, JSValue) { }
@@ -400,7 +411,18 @@ SLOW_PATH_DECL(slow_path_negate)
 {
     BEGIN();
     JSValue operand = OP_C(2).jsValue();
-    JSValue result = jsNumber(-operand.toNumber(exec));
+    JSValue primValue = operand.toPrimitive(exec, PreferNumber);
+    CHECK_EXCEPTION();
+
+    if (primValue.isBigInt()) {
+        JSBigInt* result = JSBigInt::unaryMinus(vm, asBigInt(primValue));
+        RETURN_WITH_PROFILING(result, {
+            updateArithProfileForUnaryArithOp(pc, result, operand);
+        });
+    }
+
+    JSValue result = jsNumber(-primValue.toNumber(exec));
+    CHECK_EXCEPTION();
     RETURN_WITH_PROFILING(result, {
         updateArithProfileForUnaryArithOp(pc, result, operand);
     });
@@ -493,11 +515,8 @@ SLOW_PATH_DECL(slow_path_mul)
     BEGIN();
     JSValue left = OP_C(2).jsValue();
     JSValue right = OP_C(3).jsValue();
-    double a = left.toNumber(exec);
-    if (UNLIKELY(throwScope.exception()))
-        RETURN(JSValue());
-    double b = right.toNumber(exec);
-    JSValue result = jsNumber(a * b);
+    JSValue result = jsMul(exec, left, right);
+    CHECK_EXCEPTION();
     RETURN_WITH_PROFILING(result, {
         updateArithProfileForBinaryArithOp(exec, pc, result, left, right);
     });
@@ -508,11 +527,23 @@ SLOW_PATH_DECL(slow_path_sub)
     BEGIN();
     JSValue left = OP_C(2).jsValue();
     JSValue right = OP_C(3).jsValue();
-    double a = left.toNumber(exec);
-    if (UNLIKELY(throwScope.exception()))
-        RETURN(JSValue());
-    double b = right.toNumber(exec);
-    JSValue result = jsNumber(a - b);
+    auto leftNumeric = left.toNumeric(exec);
+    CHECK_EXCEPTION();
+    auto rightNumeric = right.toNumeric(exec);
+    CHECK_EXCEPTION();
+
+    if (WTF::holds_alternative<JSBigInt*>(leftNumeric) || WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
+        if (WTF::holds_alternative<JSBigInt*>(leftNumeric) && WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
+            JSBigInt* result = JSBigInt::sub(vm, WTF::get<JSBigInt*>(leftNumeric), WTF::get<JSBigInt*>(rightNumeric));
+            RETURN_WITH_PROFILING(result, {
+                updateArithProfileForBinaryArithOp(exec, pc, result, left, right);
+            });
+        }
+
+        THROW(createTypeError(exec, "Invalid mix of BigInt and other type in subtraction."));
+    }
+
+    JSValue result = jsNumber(WTF::get<double>(leftNumeric) - WTF::get<double>(rightNumeric));
     RETURN_WITH_PROFILING(result, {
         updateArithProfileForBinaryArithOp(exec, pc, result, left, right);
     });
@@ -523,12 +554,25 @@ SLOW_PATH_DECL(slow_path_div)
     BEGIN();
     JSValue left = OP_C(2).jsValue();
     JSValue right = OP_C(3).jsValue();
-    double a = left.toNumber(exec);
-    if (UNLIKELY(throwScope.exception()))
-        RETURN(JSValue());
-    double b = right.toNumber(exec);
-    if (UNLIKELY(throwScope.exception()))
-        RETURN(JSValue());
+    auto leftNumeric = left.toNumeric(exec);
+    CHECK_EXCEPTION();
+    auto rightNumeric = right.toNumeric(exec);
+    CHECK_EXCEPTION();
+
+    if (WTF::holds_alternative<JSBigInt*>(leftNumeric) || WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
+        if (WTF::holds_alternative<JSBigInt*>(leftNumeric) && WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
+            JSBigInt* result = JSBigInt::divide(exec, WTF::get<JSBigInt*>(leftNumeric), WTF::get<JSBigInt*>(rightNumeric));
+            CHECK_EXCEPTION();
+            RETURN_WITH_PROFILING(result, {
+                updateArithProfileForBinaryArithOp(exec, pc, result, left, right);
+            });
+        }
+
+        THROW(createTypeError(exec, "Invalid mix of BigInt and other type in division."));
+    }
+
+    double a = WTF::get<double>(leftNumeric);
+    double b = WTF::get<double>(rightNumeric);
     JSValue result = jsNumber(a / b);
     RETURN_WITH_PROFILING(result, {
         updateArithProfileForBinaryArithOp(exec, pc, result, left, right);
@@ -538,10 +582,25 @@ SLOW_PATH_DECL(slow_path_div)
 SLOW_PATH_DECL(slow_path_mod)
 {
     BEGIN();
-    double a = OP_C(2).jsValue().toNumber(exec);
-    if (UNLIKELY(throwScope.exception()))
-        RETURN(JSValue());
-    double b = OP_C(3).jsValue().toNumber(exec);
+    JSValue left = OP_C(2).jsValue();
+    JSValue right = OP_C(3).jsValue();
+    auto leftNumeric = left.toNumeric(exec);
+    CHECK_EXCEPTION();
+    auto rightNumeric = right.toNumeric(exec);
+    CHECK_EXCEPTION();
+
+    if (WTF::holds_alternative<JSBigInt*>(leftNumeric) || WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
+        if (WTF::holds_alternative<JSBigInt*>(leftNumeric) && WTF::holds_alternative<JSBigInt*>(rightNumeric)) {
+            JSBigInt* result = JSBigInt::remainder(exec, WTF::get<JSBigInt*>(leftNumeric), WTF::get<JSBigInt*>(rightNumeric));
+            CHECK_EXCEPTION();
+            RETURN(result);
+        }
+
+        THROW(createTypeError(exec, "Invalid mix of BigInt and other type in remainder operation."));
+    }
+
+    double a = WTF::get<double>(leftNumeric);
+    double b = WTF::get<double>(rightNumeric);
     RETURN(jsNumber(jsMod(a, b)));
 }
 
@@ -639,13 +698,24 @@ SLOW_PATH_DECL(slow_path_is_object_or_null)
 SLOW_PATH_DECL(slow_path_is_function)
 {
     BEGIN();
-    RETURN(jsBoolean(jsIsFunctionType(OP_C(2).jsValue())));
+    RETURN(jsBoolean(OP_C(2).jsValue().isFunction(vm)));
 }
 
-SLOW_PATH_DECL(slow_path_in)
+SLOW_PATH_DECL(slow_path_in_by_val)
 {
     BEGIN();
-    RETURN(jsBoolean(CommonSlowPaths::opIn(exec, OP_C(2).jsValue(), OP_C(3).jsValue(), pc[4].u.arrayProfile)));
+    RETURN(jsBoolean(CommonSlowPaths::opInByVal(exec, OP_C(2).jsValue(), OP_C(3).jsValue(), arrayProfileFor<OpInByValShape>(pc))));
+}
+
+SLOW_PATH_DECL(slow_path_in_by_id)
+{
+    BEGIN();
+
+    JSValue baseValue = OP_C(2).jsValue();
+    if (!baseValue.isObject())
+        THROW(createInvalidInParameterError(exec, baseValue));
+
+    RETURN(jsBoolean(asObject(baseValue)->hasProperty(exec, exec->codeBlock()->identifier(pc[3].u.operand))));
 }
 
 SLOW_PATH_DECL(slow_path_del_by_val)
@@ -713,7 +783,7 @@ SLOW_PATH_DECL(slow_path_has_indexed_property)
     JSObject* base = OP(2).jsValue().toObject(exec);
     CHECK_EXCEPTION();
     JSValue property = OP(3).jsValue();
-    pc[4].u.arrayProfile->observeStructure(base->structure(vm));
+    arrayProfileFor<OpHasIndexedPropertyShape>(pc)->observeStructure(base->structure(vm));
     ASSERT(property.isUInt32());
     RETURN(jsBoolean(base->hasPropertyGeneric(exec, property.asUInt32(), PropertySlot::InternalMethodType::GetOwnProperty)));
 }
@@ -740,6 +810,7 @@ SLOW_PATH_DECL(slow_path_has_generic_property)
     JSObject* base = OP(2).jsValue().toObject(exec);
     CHECK_EXCEPTION();
     JSValue property = OP(3).jsValue();
+    ASSERT(property.isString());
     JSString* string = asString(property);
     auto propertyName = string->toIdentifier(exec);
     CHECK_EXCEPTION();
@@ -751,6 +822,7 @@ SLOW_PATH_DECL(slow_path_get_direct_pname)
     BEGIN();
     JSValue baseValue = OP_C(2).jsValue();
     JSValue property = OP(3).jsValue();
+    ASSERT(property.isString());
     JSString* string = asString(property);
     auto propertyName = string->toIdentifier(exec);
     CHECK_EXCEPTION();
@@ -803,7 +875,7 @@ SLOW_PATH_DECL(slow_path_to_index_string)
 SLOW_PATH_DECL(slow_path_profile_type_clear_log)
 {
     BEGIN();
-    vm.typeProfilerLog()->processLogEntries(ASCIILiteral("LLInt log full."));
+    vm.typeProfilerLog()->processLogEntries("LLInt log full."_s);
     END();
 }
 
@@ -1076,8 +1148,35 @@ SLOW_PATH_DECL(slow_path_new_array_with_spread)
 SLOW_PATH_DECL(slow_path_new_array_buffer)
 {
     BEGIN();
-    auto* fixedArray = jsCast<JSFixedArray*>(OP_C(2).jsValue());
-    RETURN(constructArray(exec, pc[3].u.arrayAllocationProfile, fixedArray->values(), fixedArray->length()));
+    auto* newArrayBuffer = bitwise_cast<OpNewArrayBuffer*>(pc);
+    ASSERT(exec->codeBlock()->isConstantRegisterIndex(newArrayBuffer->immutableButterfly()));
+    JSImmutableButterfly* immutableButterfly = bitwise_cast<JSImmutableButterfly*>(GET_C(newArrayBuffer->immutableButterfly()).jsValue().asCell());
+    auto* profile = newArrayBuffer->profile();
+
+    IndexingType indexingMode = profile->selectIndexingType();
+    Structure* structure = exec->lexicalGlobalObject()->arrayStructureForIndexingTypeDuringAllocation(indexingMode);
+    ASSERT(isCopyOnWrite(indexingMode));
+    ASSERT(!structure->outOfLineCapacity());
+
+    if (UNLIKELY(immutableButterfly->indexingMode() != indexingMode)) {
+        auto* newButterfly = JSImmutableButterfly::create(vm, indexingMode, immutableButterfly->length());
+        for (unsigned i = 0; i < immutableButterfly->length(); ++i)
+            newButterfly->setIndex(vm, i, immutableButterfly->get(i));
+        immutableButterfly = newButterfly;
+        CodeBlock* codeBlock = exec->codeBlock();
+
+        // FIXME: This is kinda gross and only works because we can't inline new_array_bufffer in the baseline.
+        // We also cannot allocate a new butterfly from compilation threads since it's invalid to allocate cells from
+        // a compilation thread.
+        WTF::storeStoreFence();
+        codeBlock->constantRegister(newArrayBuffer->immutableButterfly()).set(vm, codeBlock, immutableButterfly);
+        WTF::storeStoreFence();
+    }
+
+    JSArray* result = CommonSlowPaths::allocateNewArrayBuffer(vm, structure, immutableButterfly);
+    ASSERT(isCopyOnWrite(result->indexingMode()) || exec->lexicalGlobalObject()->isHavingABadTime());
+    ArrayAllocationProfile::updateLastAllocationFor(profile, result);
+    RETURN(result);
 }
 
 SLOW_PATH_DECL(slow_path_spread)
@@ -1102,7 +1201,7 @@ SLOW_PATH_DECL(slow_path_spread)
     {
         JSFunction* iterationFunction = globalObject->iteratorProtocolFunction();
         CallData callData;
-        CallType callType = JSC::getCallData(iterationFunction, callData);
+        CallType callType = JSC::getCallData(vm, iterationFunction, callData);
         ASSERT(callType != CallType::None);
 
         MarkedArgumentBuffer arguments;

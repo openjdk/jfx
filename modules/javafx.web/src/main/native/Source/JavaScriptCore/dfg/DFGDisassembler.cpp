@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -159,17 +159,17 @@ void Disassembler::dumpDisassembly(PrintStream& out, const char* prefix, LinkBuf
         amountOfNodeWhiteSpace = 0;
     else
         amountOfNodeWhiteSpace = Graph::amountOfNodeWhiteSpace(context);
-    auto prefixBuffer = std::make_unique<char[]>(prefixLength + amountOfNodeWhiteSpace + 1);
-    memcpy(prefixBuffer.get(), prefix, prefixLength);
+    Vector<char> prefixBuffer(prefixLength + amountOfNodeWhiteSpace + 1);
+    memcpy(prefixBuffer.data(), prefix, prefixLength);
     for (int i = 0; i < amountOfNodeWhiteSpace; ++i)
         prefixBuffer[i + prefixLength] = ' ';
     prefixBuffer[prefixLength + amountOfNodeWhiteSpace] = 0;
 
-    CodeLocationLabel start = linkBuffer.locationOf(previousLabel);
-    CodeLocationLabel end = linkBuffer.locationOf(currentLabel);
+    CodeLocationLabel<DisassemblyPtrTag> start = linkBuffer.locationOf<DisassemblyPtrTag>(previousLabel);
+    CodeLocationLabel<DisassemblyPtrTag> end = linkBuffer.locationOf<DisassemblyPtrTag>(currentLabel);
     previousLabel = currentLabel;
-    ASSERT(end.executableAddress<uintptr_t>() >= start.executableAddress<uintptr_t>());
-    disassemble(start, end.executableAddress<uintptr_t>() - start.executableAddress<uintptr_t>(), prefixBuffer.get(), out);
+    ASSERT(end.dataLocation<uintptr_t>() >= start.dataLocation<uintptr_t>());
+    disassemble(start, end.dataLocation<uintptr_t>() - start.dataLocation<uintptr_t>(), prefixBuffer.data(), out);
 }
 
 } } // namespace JSC::DFG

@@ -110,7 +110,7 @@ private:
     void renderCompositedLayers(GraphicsContext&, const IntRect&);
 
     // GraphicsLayerClient
-    void notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, double /*time*/) override;
+    void notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, MonotonicTime /*time*/) override;
     void notifyFlushRequired(const GraphicsLayer*) override;
     void paintContents(const GraphicsLayer*,
                        GraphicsContext&,

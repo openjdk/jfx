@@ -99,7 +99,7 @@ static EncodedJSValue pluginElementPropertyGetter(ExecState* exec, EncodedJSValu
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSHTMLElement* thisObject = jsDynamicDowncast<JSHTMLElement*>(vm, JSValue::decode(thisValue));
+    JSHTMLElement* thisObject = jsDynamicCast<JSHTMLElement*>(vm, JSValue::decode(thisValue));
     if (!thisObject)
         return throwVMTypeError(exec, scope);
     JSObject* scriptObject = pluginScriptObject(exec, thisObject);
@@ -135,7 +135,7 @@ bool pluginElementCustomPut(JSHTMLElement* element, ExecState* exec, PropertyNam
         return false;
     if (!scriptObject->hasProperty(exec, propertyName))
         return false;
-    putResult = scriptObject->methodTable()->put(scriptObject, exec, propertyName, value, slot);
+    putResult = scriptObject->methodTable(exec->vm())->put(scriptObject, exec, propertyName, value, slot);
     return true;
 }
 
@@ -154,7 +154,7 @@ static EncodedJSValue JSC_HOST_CALL callPlugin(ExecState* exec)
     ASSERT(!argumentList.hasOverflowed());
 
     CallData callData;
-    CallType callType = getCallData(scriptObject, callData);
+    CallType callType = getCallData(exec->vm(), scriptObject, callData);
     ASSERT(callType == CallType::Host);
 
     // Call the object.
@@ -168,7 +168,8 @@ CallType pluginElementCustomGetCallData(JSHTMLElement* element, CallData& callDa
     if (JSObject* scriptObject = pluginScriptObjectFromPluginViewBase(element)) {
         CallData scriptObjectCallData;
 
-        if (scriptObject->methodTable()->getCallData(scriptObject, scriptObjectCallData) == CallType::None)
+        VM& vm = *scriptObject->vm();
+        if (scriptObject->methodTable(vm)->getCallData(scriptObject, scriptObjectCallData) == CallType::None)
             return CallType::None;
 
         callData.native.function = callPlugin;

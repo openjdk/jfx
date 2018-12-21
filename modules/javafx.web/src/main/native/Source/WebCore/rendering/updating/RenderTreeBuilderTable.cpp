@@ -139,8 +139,8 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
     auto* parentCandidate = beforeChild;
     while (parentCandidate && parentCandidate->parent()->isAnonymous()
         && !is<RenderTableSection>(*parentCandidate)
-        && parentCandidate->style().display() != TABLE_CAPTION
-        && parentCandidate->style().display() != TABLE_COLUMN_GROUP)
+        && parentCandidate->style().display() != DisplayType::TableCaption
+        && parentCandidate->style().display() != DisplayType::TableColumnGroup)
         parentCandidate = parentCandidate->parent();
 
     if (parentCandidate && is<RenderTableSection>(*parentCandidate) && parentCandidate->isAnonymous() && !parent.isAfterContent(parentCandidate)) {
@@ -150,8 +150,8 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
     }
 
     if (beforeChild && !is<RenderTableSection>(*beforeChild)
-        && beforeChild->style().display() != TABLE_CAPTION
-        && beforeChild->style().display() != TABLE_COLUMN_GROUP)
+        && beforeChild->style().display() != DisplayType::TableCaption
+        && beforeChild->style().display() != DisplayType::TableColumnGroup)
         beforeChild = nullptr;
 
     auto newSection = RenderTableSection::createAnonymousWithParentRenderer(parent);
@@ -164,7 +164,7 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
 void RenderTreeBuilder::Table::attach(RenderTableRow& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     if (beforeChild && beforeChild->parent() != &parent)
-        beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, beforeChild);
+        beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, *beforeChild);
 
     auto& newChild = *child.get();
     ASSERT(!beforeChild || is<RenderTableCell>(*beforeChild));
@@ -177,7 +177,7 @@ void RenderTreeBuilder::Table::attach(RenderTableRow& parent, RenderPtr<RenderOb
 void RenderTreeBuilder::Table::attach(RenderTableSection& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     if (beforeChild && beforeChild->parent() != &parent)
-        beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, beforeChild);
+        beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, *beforeChild);
 
     // FIXME: child should always be a RenderTableRow at this point.
     if (is<RenderTableRow>(*child.get()))
@@ -189,7 +189,7 @@ void RenderTreeBuilder::Table::attach(RenderTableSection& parent, RenderPtr<Rend
 void RenderTreeBuilder::Table::attach(RenderTable& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
 {
     if (beforeChild && beforeChild->parent() != &parent)
-        beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, beforeChild);
+        beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, *beforeChild);
 
     auto& newChild = *child.get();
     if (is<RenderTableSection>(newChild))

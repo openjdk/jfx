@@ -83,12 +83,12 @@ bool JSString::equalSlowCase(ExecState* exec, JSString* other) const
     return WTF::equal(*str1.impl(), *str2.impl());
 }
 
-size_t JSString::estimatedSize(JSCell* cell)
+size_t JSString::estimatedSize(JSCell* cell, VM& vm)
 {
     JSString* thisObject = asString(cell);
     if (thisObject->isRope())
-        return Base::estimatedSize(cell);
-    return Base::estimatedSize(cell) + thisObject->m_value.impl()->costDuringGC();
+        return Base::estimatedSize(cell, vm);
+    return Base::estimatedSize(cell, vm) + thisObject->m_value.impl()->costDuringGC();
 }
 
 void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -178,34 +178,34 @@ void JSRopeString::resolveRopeInternal16NoSubstring(UChar* buffer) const
 
 void JSRopeString::resolveRopeToAtomicString(ExecState* exec) const
 {
-    [&] () {
-        if (length() > maxLengthForOnStackResolve) {
-            resolveRope(exec);
-            m_value = AtomicString(m_value);
-            setIs8Bit(m_value.impl()->is8Bit());
-            return;
-        }
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-        if (is8Bit()) {
-            LChar buffer[maxLengthForOnStackResolve];
-            resolveRopeInternal8(buffer);
-            m_value = AtomicString(buffer, length());
-            setIs8Bit(m_value.impl()->is8Bit());
-        } else {
-            UChar buffer[maxLengthForOnStackResolve];
-            resolveRopeInternal16(buffer);
-            m_value = AtomicString(buffer, length());
-            setIs8Bit(m_value.impl()->is8Bit());
-        }
+    if (length() > maxLengthForOnStackResolve) {
+        resolveRope(exec);
+        RETURN_IF_EXCEPTION(scope, void());
+        m_value = AtomicString(m_value);
+        setIs8Bit(m_value.impl()->is8Bit());
+        return;
+    }
 
-        clearFibers();
+    if (is8Bit()) {
+        LChar buffer[maxLengthForOnStackResolve];
+        resolveRopeInternal8(buffer);
+        m_value = AtomicString(buffer, length());
+        setIs8Bit(m_value.impl()->is8Bit());
+    } else {
+        UChar buffer[maxLengthForOnStackResolve];
+        resolveRopeInternal16(buffer);
+        m_value = AtomicString(buffer, length());
+        setIs8Bit(m_value.impl()->is8Bit());
+    }
 
-        // If we resolved a string that didn't previously exist, notify the heap that we've grown.
-        if (m_value.impl()->hasOneRef())
-            Heap::heap(this)->reportExtraMemoryAllocated(m_value.impl()->cost());
-    }();
+    clearFibers();
 
-    m_value.releaseAssertCaged();
+    // If we resolved a string that didn't previously exist, notify the heap that we've grown.
+    if (m_value.impl()->hasOneRef())
+        Heap::heap(this)->reportExtraMemoryAllocated(m_value.impl()->cost());
 }
 
 void JSRopeString::clearFibers() const
@@ -252,32 +252,17 @@ RefPtr<AtomicStringImpl> JSRopeString::resolveRopeToExistingAtomicString(ExecSta
 
 void JSRopeString::resolveRope(ExecState* exec) const
 {
-    [&] () {
-        ASSERT(isRope());
+    ASSERT(isRope());
 
-        if (isSubstring()) {
-            ASSERT(!substringBase()->isRope());
-            m_value = substringBase()->m_value.substringSharingImpl(substringOffset(), length());
-            substringBase().clear();
-            return;
-        }
+    if (isSubstring()) {
+        ASSERT(!substringBase()->isRope());
+        m_value = substringBase()->m_value.substringSharingImpl(substringOffset(), length());
+        substringBase().clear();
+        return;
+    }
 
-        if (is8Bit()) {
-            LChar* buffer;
-            if (auto newImpl = StringImpl::tryCreateUninitialized(length(), buffer)) {
-                Heap::heap(this)->reportExtraMemoryAllocated(newImpl->cost());
-                m_value = WTFMove(newImpl);
-            } else {
-                outOfMemory(exec);
-                return;
-            }
-            resolveRopeInternal8NoSubstring(buffer);
-            clearFibers();
-            ASSERT(!isRope());
-            return;
-        }
-
-        UChar* buffer;
+    if (is8Bit()) {
+        LChar* buffer;
         if (auto newImpl = StringImpl::tryCreateUninitialized(length(), buffer)) {
             Heap::heap(this)->reportExtraMemoryAllocated(newImpl->cost());
             m_value = WTFMove(newImpl);
@@ -285,13 +270,24 @@ void JSRopeString::resolveRope(ExecState* exec) const
             outOfMemory(exec);
             return;
         }
-
-        resolveRopeInternal16NoSubstring(buffer);
+        resolveRopeInternal8NoSubstring(buffer);
         clearFibers();
         ASSERT(!isRope());
-    }();
+        return;
+    }
 
-    m_value.releaseAssertCaged();
+    UChar* buffer;
+    if (auto newImpl = StringImpl::tryCreateUninitialized(length(), buffer)) {
+        Heap::heap(this)->reportExtraMemoryAllocated(newImpl->cost());
+        m_value = WTFMove(newImpl);
+    } else {
+        outOfMemory(exec);
+        return;
+    }
+
+    resolveRopeInternal16NoSubstring(buffer);
+    clearFibers();
+    ASSERT(!isRope());
 }
 
 // Overview: These functions convert a JSString from holding a string in rope form

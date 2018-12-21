@@ -69,9 +69,9 @@ RenderStyle RenderListItem::computeMarkerStyle() const
     RenderStyle parentStyle = RenderStyle::clone(style());
     auto fontDescription = style().fontDescription();
     fontDescription.setVariantNumericSpacing(FontVariantNumericSpacing::TabularNumbers);
-    parentStyle.setFontDescription(fontDescription);
+    parentStyle.setFontDescription(WTFMove(fontDescription));
     parentStyle.fontCascade().update(&document().fontSelector());
-    if (auto markerStyle = getCachedPseudoStyle(MARKER, &parentStyle))
+    if (auto markerStyle = getCachedPseudoStyle(PseudoId::Marker, &parentStyle))
         return RenderStyle::clone(*markerStyle);
     auto markerStyle = RenderStyle::create();
     markerStyle.inheritFrom(parentStyle);
@@ -272,9 +272,9 @@ void RenderListItem::positionListMarker()
     LayoutUnit markerOldLogicalLeft = m_marker->logicalLeft();
     LayoutUnit blockOffset = 0;
     LayoutUnit lineOffset = 0;
-    for (RenderBox* o = m_marker->parentBox(); o != this; o = o->parentBox()) {
-        blockOffset += o->logicalTop();
-        lineOffset += o->logicalLeft();
+    for (auto* ancestor = m_marker->parentBox(); ancestor && ancestor != this; ancestor = ancestor->parentBox()) {
+        blockOffset += ancestor->logicalTop();
+        lineOffset += ancestor->logicalLeft();
     }
 
     bool adjustOverflow = false;

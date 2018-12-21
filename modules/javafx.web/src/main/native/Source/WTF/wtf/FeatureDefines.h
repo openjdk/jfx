@@ -54,6 +54,12 @@
 /* --------- Apple IOS (but not MAC) port --------- */
 #if PLATFORM(IOS)
 
+#if !defined(ENABLE_AIRPLAY_PICKER)
+#if !PLATFORM(IOSMAC)
+#define ENABLE_AIRPLAY_PICKER 1
+#endif
+#endif
+
 #if !defined(ENABLE_ASYNC_SCROLLING)
 #define ENABLE_ASYNC_SCROLLING 1
 #endif
@@ -160,6 +166,18 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 #define ENABLE_DOWNLOAD_ATTRIBUTE 0
 #endif
 
+#if !defined(ENABLE_WKLEGACYPDFVIEW)
+#if PLATFORM(IOS) && !PLATFORM(WATCHOS) && !PLATFORM(APPLETV) && !PLATFORM(IOSMAC) && __IPHONE_OS_VERSION_MIN_REQUIRED < 120000
+#define ENABLE_WKLEGACYPDFVIEW 1
+#endif
+#endif
+
+#if !defined(ENABLE_WKPDFVIEW)
+#if PLATFORM(IOS) && !PLATFORM(WATCHOS) && !PLATFORM(APPLETV) && !PLATFORM(IOSMAC) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 120000
+#define ENABLE_WKPDFVIEW 1
+#endif
+#endif
+
 #endif /* PLATFORM(IOS) */
 
 /* --------- Apple MAC port (not IOS) --------- */
@@ -219,16 +237,24 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 #define ENABLE_MAC_GESTURE_EVENTS 1
 #endif
 
+#if !defined(ENABLE_WEBPROCESS_NSRUNLOOP)
+#define ENABLE_WEBPROCESS_NSRUNLOOP __MAC_OS_X_VERSION_MIN_REQUIRED >= 101400
+#endif
+
+#if !defined(ENABLE_WEBPROCESS_WINDOWSERVER_BLOCKING)
+#define ENABLE_WEBPROCESS_WINDOWSERVER_BLOCKING ENABLE_WEBPROCESS_NSRUNLOOP
+#endif
+
 #endif /* PLATFORM(MAC) */
 
 #if PLATFORM(COCOA)
 
-#if !defined(ENABLE_DATA_DETECTION)
-#define ENABLE_DATA_DETECTION 0
-#endif
-
 #if !defined(ENABLE_LEGACY_ENCRYPTED_MEDIA)
+#if PLATFORM(IOSMAC)
+#define ENABLE_LEGACY_ENCRYPTED_MEDIA 0
+#else
 #define ENABLE_LEGACY_ENCRYPTED_MEDIA 1
+#endif
 #endif
 
 #if !defined(ENABLE_FILE_REPLACEMENT)
@@ -474,8 +500,8 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 #define ENABLE_INTL 0
 #endif
 
-#if !defined(ENABLE_JAVASCRIPT_I18N_API)
-#define ENABLE_JAVASCRIPT_I18N_API 0
+#if !defined(ENABLE_LAYOUT_FORMATTING_CONTEXT)
+#define ENABLE_LAYOUT_FORMATTING_CONTEXT 0
 #endif
 
 #if !defined(ENABLE_LEGACY_CSS_VENDOR_PREFIXES)
@@ -484,10 +510,6 @@ the public iOS SDK. See <https://webkit.org/b/179167>. */
 
 #if !defined(ENABLE_LETTERPRESS)
 #define ENABLE_LETTERPRESS 0
-#endif
-
-#if !defined(ENABLE_LINK_PREFETCH)
-#define ENABLE_LINK_PREFETCH 0
 #endif
 
 #if !defined(ENABLE_MATHML)

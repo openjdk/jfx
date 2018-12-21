@@ -56,9 +56,12 @@ class MediaController
         media.videoTracks.addEventListener("addtrack", this);
         media.videoTracks.addEventListener("removetrack", this);
 
+        media.addEventListener("play", this);
         media.addEventListener(this.fullscreenChangeEventType, this);
 
         window.addEventListener("keydown", this);
+
+        new MutationObserver(this._updateControlsAvailability.bind(this)).observe(this.media, { attributes: true, attributeFilter: ["controls"] });
     }
 
     // Public
@@ -93,6 +96,9 @@ class MediaController
 
     get layoutTraits()
     {
+        if (this.host && this.host.compactMode)
+            return LayoutTraits.Compact;
+
         let traits = window.navigator.platform === "MacIntel" ? LayoutTraits.macOS : LayoutTraits.iOS;
         if (this.isFullscreen)
             return traits | LayoutTraits.Fullscreen;
@@ -163,8 +169,10 @@ class MediaController
             // We must immediately perform layouts so that we don't lag behind the media layout size.
             scheduler.flushScheduledLayoutCallbacks();
         } else if (event.currentTarget === this.media) {
+            if (event.type === "play")
+                this.hasPlayed = true;
             this._updateControlsIfNeeded();
-            this._updateiOSFullscreenProperties();
+            this._updateControlsAvailability();
             if (event.type === "webkitpresentationmodechanged")
                 this._returnMediaLayerToInlineIfNeeded();
         } else if (event.type === "keydown" && this.isFullscreen && event.key === " ") {
@@ -174,6 +182,14 @@ class MediaController
     }
 
     // Private
+
+    _supportingObjectClasses()
+    {
+        if (this.layoutTraits & LayoutTraits.Compact)
+            return [CompactMediaControlsSupport];
+
+        return [AirplaySupport, AudioSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport, VolumeDownSupport, VolumeUpSupport];
+    }
 
     _updateControlsIfNeeded()
     {
@@ -196,7 +212,7 @@ class MediaController
         this.controls = new ControlsClass;
         this.controls.delegate = this;
 
-        if (this.shadowRoot.host && this.shadowRoot.host.dataset.autoHideDelay)
+        if (this.controls.autoHideController && this.shadowRoot.host && this.shadowRoot.host.dataset.autoHideDelay)
             this.controls.autoHideController.autoHideDelay = this.shadowRoot.host.dataset.autoHideDelay;
 
         if (previousControls) {
@@ -209,11 +225,11 @@ class MediaController
         this._updateTextTracksClassList();
         this._updateControlsSize();
 
-        this._supportingObjects = [AirplaySupport, AudioSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport, VolumeDownSupport, VolumeUpSupport].map(SupportClass => {
-            return new SupportClass(this);
-        }, this);
+        this._supportingObjects = this._supportingObjectClasses().map(SupportClass => new SupportClass(this), this);
 
         this.controls.shouldUseSingleBarLayout = this.controls instanceof InlineMediaControls && this.isYouTubeEmbedWithTitle;
+
+        this._updateControlsAvailability();
     }
 
     _updateControlsSize()
@@ -273,6 +289,8 @@ class MediaController
 
     _controlsClassForLayoutTraits(layoutTraits)
     {
+        if (layoutTraits & LayoutTraits.Compact)
+            return CompactMediaControls;
         if (layoutTraits & LayoutTraits.iOS)
             return IOSInlineMediaControls;
         if (layoutTraits & LayoutTraits.Fullscreen)
@@ -300,20 +318,30 @@ class MediaController
         this._supportingObjects.forEach(supportingObject => supportingObject.controlsUserVisibilityDidChange());
     }
 
-    _updateiOSFullscreenProperties()
+    _shouldControlsBeAvailable()
     {
-        // On iOS, we want to make sure not to update controls when we're in fullscreen since the UI
-        // will be completely invisible.
-        if (!(this.layoutTraits & LayoutTraits.iOS))
-            return;
+        // Controls are always available with compact layout.
+        if (this.layoutTraits & LayoutTraits.Compact)
+            return true;
 
-        const isFullscreen = this.isFullscreen;
-        if (isFullscreen)
+        // Controls are always available while in fullscreen on macOS, and they are never available when in fullscreen on iOS.
+        if (this.isFullscreen)
+            return !!(this.layoutTraits & LayoutTraits.macOS);
+
+        // Otherwise, for controls to be available, the controls attribute must be present on the media element
+        // or the MediaControlsHost must indicate that controls are forced.
+        return this.media.controls || !!(this.host && this.host.shouldForceControlsDisplay);
+    }
+
+    _updateControlsAvailability()
+    {
+        const shouldControlsBeAvailable = this._shouldControlsBeAvailable();
+        if (!shouldControlsBeAvailable)
             this._supportingObjects.forEach(supportingObject => supportingObject.disable());
         else
             this._supportingObjects.forEach(supportingObject => supportingObject.enable());
 
-        this.controls.visible = !isFullscreen;
+        this.controls.visible = shouldControlsBeAvailable;
     }
 
 }

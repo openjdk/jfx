@@ -52,7 +52,7 @@ class RenderView;
 class VisibleSelection;
 class Widget;
 
-class AccessibilityRenderObject : public AccessibilityNodeObject {
+class AccessibilityRenderObject : public AccessibilityNodeObject, public CanMakeWeakPtr<AccessibilityRenderObject> {
 public:
     static Ref<AccessibilityRenderObject> create(RenderObject*);
     virtual ~AccessibilityRenderObject();
@@ -176,7 +176,7 @@ public:
     bool supportsARIADropping() const override;
     bool supportsARIADragging() const override;
     bool isARIAGrabbed() override;
-    void determineARIADropEffects(Vector<String>&) override;
+    Vector<String> determineARIADropEffects() override;
 
     VisiblePosition visiblePositionForPoint(const IntPoint&) const override;
     VisiblePosition visiblePositionForIndex(unsigned indexValue, bool lastIndexOK) const override;
@@ -201,8 +201,6 @@ public:
 
     String passwordFieldValue() const override;
 
-    WeakPtr<AccessibilityRenderObject> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
-
 protected:
     explicit AccessibilityRenderObject(RenderObject*);
     ScrollableArea* getScrollableAreaIfScrollable() const override;
@@ -220,7 +218,6 @@ protected:
     WeakPtr<RenderObject> m_renderer;
 
 private:
-    WeakPtrFactory<AccessibilityRenderObject> m_weakPtrFactory;
     bool isAccessibilityRenderObject() const final { return true; }
     void ariaListboxSelectedChildren(AccessibilityChildrenVector&);
     void ariaListboxVisibleChildren(AccessibilityChildrenVector&);
@@ -274,7 +271,7 @@ private:
     bool elementAttributeValue(const QualifiedName&) const;
     void setElementAttributeValue(const QualifiedName&, bool);
 
-    ESpeakAs speakAsProperty() const override;
+    OptionSet<SpeakAs> speakAsProperty() const override;
 
     const String liveRegionStatus() const override;
     const String liveRegionRelevant() const override;

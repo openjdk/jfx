@@ -78,8 +78,6 @@ private:
     // WorkerScriptLoaderClient
     void didReceiveResponse(unsigned long identifier, const ResourceResponse&) final;
     void notifyFinished() final;
-    bool isServiceWorkerClient() const final { return true; }
-
 
     Ref<ServiceWorkerJobClient> m_client;
     ServiceWorkerJobData m_jobData;
@@ -89,7 +87,6 @@ private:
 
     DocumentOrWorkerIdentifier m_contextIdentifier;
     RefPtr<WorkerScriptLoader> m_scriptLoader;
-    ResourceResponse m_lastResponse;
 
 #if !ASSERT_DISABLED
     Ref<Thread> m_creationThread { Thread::current() };

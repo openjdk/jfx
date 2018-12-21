@@ -73,22 +73,13 @@ public:
 
     constexpr OptionSet() = default;
 
-#if ASSERT_DISABLED
     constexpr OptionSet(T t)
         : m_storage(static_cast<StorageType>(t))
     {
+        ASSERT_WITH_MESSAGE(!m_storage || hasOneBitSet(m_storage), "Enumerator is not a zero or a positive power of two.");
     }
-#else
-    OptionSet(T t)
-        : m_storage(static_cast<StorageType>(t))
-    {
-        ASSERT_WITH_MESSAGE(hasOneBitSet(static_cast<StorageType>(t)), "Enumerator is not a positive power of two.");
-    }
-#endif
 
-    // FIXME: Make this constexpr once we adopt C++14 as C++11 does not support for-loops
-    // in a constexpr function.
-    OptionSet(std::initializer_list<T> initializerList)
+    constexpr OptionSet(std::initializer_list<T> initializerList)
     {
         for (auto& option : initializerList) {
             ASSERT_WITH_MESSAGE(hasOneBitSet(static_cast<StorageType>(option)), "Enumerator is not a positive power of two.");
@@ -103,9 +94,21 @@ public:
     constexpr iterator begin() const { return m_storage; }
     constexpr iterator end() const { return 0; }
 
-    constexpr bool contains(OptionSet optionSet) const
+    constexpr explicit operator bool() { return !isEmpty(); }
+
+    constexpr bool contains(T option) const
     {
-        return m_storage & optionSet.m_storage;
+        return containsAny(option);
+    }
+
+    constexpr bool containsAny(OptionSet optionSet) const
+    {
+        return !!(*this & optionSet);
+    }
+
+    constexpr bool containsAll(OptionSet optionSet) const
+    {
+        return (*this & optionSet) == optionSet;
     }
 
     constexpr friend bool operator==(OptionSet lhs, OptionSet rhs)
@@ -135,9 +138,9 @@ public:
         return fromRaw(lhs.m_storage | rhs.m_storage);
     }
 
-    constexpr friend OptionSet operator|(OptionSet lhs, T rhs)
+    constexpr friend OptionSet operator&(OptionSet lhs, OptionSet rhs)
     {
-        return lhs | OptionSet { rhs };
+        return fromRaw(lhs.m_storage & rhs.m_storage);
     }
 
     constexpr friend OptionSet operator-(OptionSet lhs, OptionSet rhs)
@@ -145,9 +148,9 @@ public:
         return fromRaw(lhs.m_storage & ~rhs.m_storage);
     }
 
-    constexpr friend OptionSet operator-(OptionSet lhs, T rhs)
+    constexpr friend OptionSet operator^(OptionSet lhs, OptionSet rhs)
     {
-        return lhs - OptionSet { rhs };
+        return fromRaw(lhs.m_storage ^ rhs.m_storage);
     }
 
 private:

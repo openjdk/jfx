@@ -29,7 +29,7 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "MainFrame.h"
+#include "Frame.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "Range.h"
@@ -44,7 +44,7 @@ namespace WebCore {
 
 inline bool DocumentMarkerController::possiblyHasMarkers(OptionSet<DocumentMarker::MarkerType> types)
 {
-    return m_possiblyExistingMarkerTypes.contains(types);
+    return m_possiblyExistingMarkerTypes.containsAny(types);
 }
 
 DocumentMarkerController::DocumentMarkerController(Document& document)
