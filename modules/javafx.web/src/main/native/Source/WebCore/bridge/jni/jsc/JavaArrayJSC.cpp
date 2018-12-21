@@ -146,6 +146,7 @@ bool JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) cons
     case JavaTypeLong:
         {
             env->SetLongArrayRegion(static_cast<jlongArray>(javaArray()), index, 1, &aJValue.j);
+            break;
         }
 
     case JavaTypeFloat:

@@ -107,11 +107,15 @@ void AccessibilityMediaObject::toggleMute()
 
 void AccessibilityMediaObject::increment()
 {
+    if (dispatchAccessibilityEventWithType(AccessibilityEventType::Increment))
+        return;
     mediaSeek(AXSeekForward);
 }
 
 void AccessibilityMediaObject::decrement()
 {
+    if (dispatchAccessibilityEventWithType(AccessibilityEventType::Decrement))
+        return;
     mediaSeek(AXSeekBackward);
 }
 
@@ -169,7 +173,7 @@ bool AccessibilityMediaObject::isPlayingInline() const
     if (!element)
         return false;
 
-    return !element->mediaSession().requiresFullscreenForVideoPlayback(*element);
+    return !element->mediaSession().requiresFullscreenForVideoPlayback();
 }
 
 void AccessibilityMediaObject::enterFullscreen() const

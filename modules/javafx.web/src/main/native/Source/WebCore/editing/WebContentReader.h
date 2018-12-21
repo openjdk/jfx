@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include "DocumentFragment.h"
 #include "Frame.h"
 #include "Pasteboard.h"
 #include "Range.h"
+#include "markup.h"
 
 namespace WebCore {
 
@@ -45,6 +47,7 @@ public:
 
 protected:
     bool shouldSanitize() const;
+    MSOListQuirks msoListQuirksForMarkup() const;
 };
 
 class WebContentReader final : public FrameWebContentReader {
@@ -63,7 +66,6 @@ public:
     {
     }
 
-    DocumentFragment& ensureFragment();
     void addFragment(Ref<DocumentFragment>&&);
 
 private:

@@ -53,9 +53,8 @@
 #include "ImageData.h"
 #include "InspectorInstrumentation.h"
 #include "IntSize.h"
-#include "JSMainThreadExecState.h"
+#include "JSExecState.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "NotImplemented.h"
 #include "OESElementIndexUint.h"
 #include "OESStandardDerivatives.h"
@@ -72,6 +71,7 @@
 #include "WebGL2RenderingContext.h"
 #include "WebGLActiveInfo.h"
 #include "WebGLBuffer.h"
+#include "WebGLCompressedTextureASTC.h"
 #include "WebGLCompressedTextureATC.h"
 #include "WebGLCompressedTexturePVRTC.h"
 #include "WebGLCompressedTextureS3TC.h"
@@ -99,6 +99,7 @@
 #include <JavaScriptCore/Uint32Array.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/UniqueArray.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -392,6 +393,123 @@ private:
     WebGLRenderingContextBase* m_context;
 };
 
+class InspectorScopedShaderProgramHighlight {
+public:
+    InspectorScopedShaderProgramHighlight(WebGLRenderingContextBase& context, WebGLProgram* program)
+        : m_context(context)
+        , m_program(program)
+    {
+        showHightlight();
+    }
+
+    ~InspectorScopedShaderProgramHighlight()
+    {
+        hideHighlight();
+    }
+
+private:
+    void showHightlight()
+    {
+        if (!m_program || LIKELY(!InspectorInstrumentation::isShaderProgramHighlighted(m_context, *m_program)))
+            return;
+
+        if (hasBufferBinding(GraphicsContext3D::FRAMEBUFFER_BINDING)) {
+            if (!hasBufferBinding(GraphicsContext3D::RENDERBUFFER_BINDING))
+                return;
+            if (hasFramebufferParameterAttachment(GraphicsContext3D::DEPTH_ATTACHMENT))
+                return;
+            if (hasFramebufferParameterAttachment(GraphicsContext3D::STENCIL_ATTACHMENT))
+                return;
+#if ENABLE(WEBGL2)
+            if (hasFramebufferParameterAttachment(GraphicsContext3D::DEPTH_STENCIL_ATTACHMENT))
+                return;
+#endif
+        }
+
+        saveBlendValue(GraphicsContext3D::BLEND_COLOR, m_savedBlend.color);
+        saveBlendValue(GraphicsContext3D::BLEND_EQUATION_RGB, m_savedBlend.equationRGB);
+        saveBlendValue(GraphicsContext3D::BLEND_EQUATION_ALPHA, m_savedBlend.equationAlpha);
+        saveBlendValue(GraphicsContext3D::BLEND_SRC_RGB, m_savedBlend.srcRGB);
+        saveBlendValue(GraphicsContext3D::BLEND_SRC_ALPHA, m_savedBlend.srcAlpha);
+        saveBlendValue(GraphicsContext3D::BLEND_DST_RGB, m_savedBlend.dstRGB);
+        saveBlendValue(GraphicsContext3D::BLEND_DST_ALPHA, m_savedBlend.dstAlpha);
+        saveBlendValue(GraphicsContext3D::BLEND, m_savedBlend.enabled);
+
+        static const GC3Dfloat red = 111.0 / 255.0;
+        static const GC3Dfloat green = 168.0 / 255.0;
+        static const GC3Dfloat blue = 220.0 / 255.0;
+        static const GC3Dfloat alpha = 2.0 / 3.0;
+
+        m_context.enable(GraphicsContext3D::BLEND);
+        m_context.blendColor(red, green, blue, alpha);
+        m_context.blendEquation(GraphicsContext3D::FUNC_ADD);
+        m_context.blendFunc(GraphicsContext3D::CONSTANT_COLOR, GraphicsContext3D::ONE_MINUS_SRC_ALPHA);
+
+        m_didApply = true;
+    }
+
+    void hideHighlight()
+    {
+        if (!m_didApply)
+            return;
+
+        if (!m_savedBlend.enabled)
+            m_context.disable(GraphicsContext3D::BLEND);
+
+        const RefPtr<Float32Array>& color = m_savedBlend.color;
+        m_context.blendColor(color->item(0), color->item(1), color->item(2), color->item(3));
+        m_context.blendEquationSeparate(m_savedBlend.equationRGB, m_savedBlend.equationAlpha);
+        m_context.blendFuncSeparate(m_savedBlend.srcRGB, m_savedBlend.dstRGB, m_savedBlend.srcAlpha, m_savedBlend.dstAlpha);
+
+        m_savedBlend.color = nullptr;
+
+        m_didApply = false;
+    }
+
+    template <typename T>
+    void saveBlendValue(GC3Denum attachment, T& destination)
+    {
+        WebGLAny param = m_context.getParameter(attachment);
+        if (WTF::holds_alternative<T>(param))
+            destination = WTF::get<T>(param);
+    }
+
+    bool hasBufferBinding(GC3Denum pname)
+    {
+        WebGLAny binding = m_context.getParameter(pname);
+        if (pname == GraphicsContext3D::FRAMEBUFFER_BINDING)
+            return WTF::holds_alternative<RefPtr<WebGLFramebuffer>>(binding) && WTF::get<RefPtr<WebGLFramebuffer>>(binding);
+        if (pname == GraphicsContext3D::RENDERBUFFER_BINDING)
+            return WTF::holds_alternative<RefPtr<WebGLRenderbuffer>>(binding) && WTF::get<RefPtr<WebGLRenderbuffer>>(binding);
+        return false;
+    }
+
+    bool hasFramebufferParameterAttachment(GC3Denum attachment)
+    {
+        WebGLAny attachmentParameter = m_context.getFramebufferAttachmentParameter(GraphicsContext3D::FRAMEBUFFER, attachment, GraphicsContext3D::FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE);
+        if (!WTF::holds_alternative<unsigned>(attachmentParameter))
+            return false;
+        if (WTF::get<unsigned>(attachmentParameter) != static_cast<unsigned>(GraphicsContext3D::RENDERBUFFER))
+            return false;
+        return true;
+    }
+
+    struct {
+        RefPtr<Float32Array> color;
+        unsigned equationRGB { 0 };
+        unsigned equationAlpha { 0 };
+        unsigned srcRGB { 0 };
+        unsigned srcAlpha { 0 };
+        unsigned dstRGB { 0 };
+        unsigned dstAlpha { 0 };
+        bool enabled { false };
+    } m_savedBlend;
+
+    WebGLRenderingContextBase& m_context;
+    WebGLProgram* m_program { nullptr };
+    bool m_didApply { false };
+};
+
 static bool isHighPerformanceContext(const RefPtr<GraphicsContext3D>& context)
 {
     return context->powerPreferenceUsedForCreation() == WebGLPowerPreference::HighPerformance;
@@ -420,7 +538,8 @@ std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(Can
         // The FrameLoaderClient might block creation of a new WebGL context despite the page settings; in
         // particular, if WebGL contexts were lost one or more times via the GL_ARB_robustness extension.
         if (!frame->loader().client().allowWebGL(frame->settings().webGLEnabled())) {
-            canvasElement->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextcreationerrorEvent, false, true, "Web page was not allowed to create a WebGL context."));
+            canvasElement->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextcreationerrorEvent,
+                Event::CanBubble::No, Event::IsCancelable::Yes, "Web page was not allowed to create a WebGL context."));
             return nullptr;
         }
 
@@ -465,7 +584,7 @@ std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(Can
 
 #if ENABLE(WEBGL2)
     if (type == "webgl2")
-        attributes.useGLES3 = true;
+        attributes.isWebGL2 = true;
 #endif
 
     if (isPendingPolicyResolution) {
@@ -483,19 +602,21 @@ std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(Can
 
     auto context = GraphicsContext3D::create(attributes, hostWindow);
     if (!context || !context->makeContextCurrent()) {
-        if (canvasElement)
-            canvasElement->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextcreationerrorEvent, false, true, "Could not create a WebGL context."));
+        if (canvasElement) {
+            canvasElement->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextcreationerrorEvent,
+                Event::CanBubble::No, Event::IsCancelable::Yes, "Could not create a WebGL context."));
+        }
         return nullptr;
     }
 
     auto& extensions = context->getExtensions();
-    if (extensions.supports(ASCIILiteral { "GL_EXT_debug_marker" }))
-        extensions.pushGroupMarkerEXT(ASCIILiteral { "WebGLRenderingContext" });
+    if (extensions.supports("GL_EXT_debug_marker"_s))
+        extensions.pushGroupMarkerEXT("WebGLRenderingContext"_s);
 
 #if ENABLE(WEBGL2) && PLATFORM(MAC)
     // glTexStorage() was only added to Core in OpenGL 4.2.
     // However, according to https://developer.apple.com/opengl/capabilities/ all Apple GPUs support this extension.
-    if (attributes.useGLES3 && !extensions.supports("GL_ARB_texture_storage"))
+    if (attributes.isWebGL2 && !extensions.supports("GL_ARB_texture_storage"))
         return nullptr;
 #endif
 
@@ -1416,11 +1537,9 @@ void WebGLRenderingContextBase::compileShader(WebGLShader* shader)
     auto* canvas = htmlCanvas();
 
     if (canvas && m_synthesizedErrorsToConsole && !value) {
-        Ref<Inspector::ScriptCallStack> stackTrace = Inspector::createScriptCallStack(JSMainThreadExecState::currentState());
+        Ref<Inspector::ScriptCallStack> stackTrace = Inspector::createScriptCallStack(JSExecState::currentState());
 
-        Vector<String> errors;
-        getShaderInfoLog(shader).split("\n", errors);
-        for (String& error : errors)
+        for (auto& error : getShaderInfoLog(shader).split('\n'))
             canvas->document().addConsoleMessage(std::make_unique<Inspector::ConsoleMessage>(MessageSource::Rendering, MessageType::Log, MessageLevel::Error, "WebGL: " + error, stackTrace.copyRef()));
     }
 }
@@ -1553,7 +1672,7 @@ void WebGLRenderingContextBase::copyTexSubImage2D(GC3Denum target, GC3Dint level
             synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "copyTexSubImage2D", "Texture has unknown internal format");
             return;
         }
-        std::unique_ptr<unsigned char[]> zero;
+        UniqueArray<unsigned char> zero;
         if (width && height) {
             unsigned size;
             GC3Denum error = m_context->computeImageSizeInBytes(format, type, width, height, m_unpackAlignment, &size, nullptr);
@@ -1561,7 +1680,7 @@ void WebGLRenderingContextBase::copyTexSubImage2D(GC3Denum target, GC3Dint level
                 synthesizeGLError(error, "copyTexSubImage2D", "bad dimensions");
                 return;
             }
-            zero = std::make_unique<unsigned char[]>(size);
+            zero = makeUniqueArray<unsigned char>(size);
             if (!zero) {
                 synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "copyTexSubImage2D", "out of memory");
                 return;
@@ -1652,6 +1771,8 @@ bool WebGLRenderingContextBase::deleteObject(WebGLObject* object)
         synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "delete", "object does not belong to this context");
         return false;
     }
+    if (object->isDeleted())
+        return false;
     if (object->object())
         // We need to pass in context here because we want
         // things in this context unbound.
@@ -2131,7 +2252,11 @@ void WebGLRenderingContextBase::drawArrays(GC3Denum mode, GC3Dint first, GC3Dsiz
     if (!isGLES2NPOTStrict())
         usesFallbackTexture = checkTextureCompleteness("drawArrays", true);
 
-    m_context->drawArrays(mode, first, count);
+    {
+        InspectorScopedShaderProgramHighlight scopedHighlight(*this, m_currentProgram.get());
+
+        m_context->drawArrays(mode, first, count);
+    }
 
     if (!isGLES2Compliant() && vertexAttrib0Simulated)
         restoreStatesAfterVertexAttrib0Simulation();
@@ -2168,7 +2293,11 @@ void WebGLRenderingContextBase::drawElements(GC3Denum mode, GC3Dsizei count, GC3
     if (!isGLES2NPOTStrict())
         usesFallbackTexture = checkTextureCompleteness("drawElements", true);
 
-    m_context->drawElements(mode, count, type, static_cast<GC3Dintptr>(offset));
+    {
+        InspectorScopedShaderProgramHighlight scopedHighlight(*this, m_currentProgram.get());
+
+        m_context->drawElements(mode, count, type, static_cast<GC3Dintptr>(offset));
+    }
 
     if (!isGLES2Compliant() && vertexAttrib0Simulated)
         restoreStatesAfterVertexAttrib0Simulation();
@@ -5239,6 +5368,17 @@ bool WebGLRenderingContextBase::validateCompressedTexFormat(GC3Denum format)
     return m_compressedTextureFormats.contains(format);
 }
 
+struct BlockParameters {
+    const int width;
+    const int height;
+    const int size;
+};
+
+static inline unsigned calculateBytesForASTC(GC3Dsizei width, GC3Dsizei height, const BlockParameters& parameters)
+{
+    return ((width + parameters.width - 1) / parameters.width) * ((height + parameters.height - 1) / parameters.height) * parameters.size;
+}
+
 bool WebGLRenderingContextBase::validateCompressedTexFuncData(const char* functionName, GC3Dsizei width, GC3Dsizei height, GC3Denum format, ArrayBufferView& pixels)
 {
     if (width < 0 || height < 0) {
@@ -5247,6 +5387,27 @@ bool WebGLRenderingContextBase::validateCompressedTexFuncData(const char* functi
     }
 
     unsigned bytesRequired = 0;
+
+    // Block parameters for ASTC formats
+    const int kASTCBlockSize = 16;
+    static const BlockParameters ASTCParameters[] {
+        BlockParameters { 4, 4, kASTCBlockSize },
+        BlockParameters { 5, 4, kASTCBlockSize },
+        BlockParameters { 5, 5, kASTCBlockSize },
+        BlockParameters { 6, 5, kASTCBlockSize },
+        BlockParameters { 6, 6, kASTCBlockSize },
+        BlockParameters { 8, 5, kASTCBlockSize },
+        BlockParameters { 8, 6, kASTCBlockSize },
+        BlockParameters { 8, 8, kASTCBlockSize },
+        BlockParameters { 10, 5, kASTCBlockSize },
+        BlockParameters { 10, 6, kASTCBlockSize },
+        BlockParameters { 10, 8, kASTCBlockSize },
+        BlockParameters { 10, 10, kASTCBlockSize },
+        BlockParameters { 12, 10, kASTCBlockSize },
+        BlockParameters { 12, 12, kASTCBlockSize }
+    };
+    const GC3Denum ASTCEnumStartRGBA = Extensions3D::COMPRESSED_RGBA_ASTC_4x4_KHR;
+    const GC3Denum ASTCEnumStartSRGB8 = Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR;
 
     switch (format) {
     case Extensions3D::COMPRESSED_RGB_S3TC_DXT1_EXT:
@@ -5292,6 +5453,38 @@ bool WebGLRenderingContextBase::validateCompressedTexFuncData(const char* functi
             bytesRequired = (std::max(width, kBlockWidth) * std::max(height, kBlockHeight) * 2 + 7) / kBlockSize;
         }
         break;
+    case Extensions3D::COMPRESSED_RGBA_ASTC_4x4_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_5x4_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_5x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_6x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_6x6_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_8x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_8x6_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_8x8_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x6_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x8_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x10_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_12x10_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_12x12_KHR:
+        bytesRequired = calculateBytesForASTC(width, height, ASTCParameters[format - ASTCEnumStartRGBA]);
+        break;
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR:
+        bytesRequired = calculateBytesForASTC(width, height, ASTCParameters[format - ASTCEnumStartSRGB8]);
+        break;
     default:
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid format");
         return false;
@@ -5333,6 +5526,36 @@ bool WebGLRenderingContextBase::validateCompressedTexDimensions(const char* func
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "width or height invalid for level");
             return false;
         }
+        return true;
+    case Extensions3D::COMPRESSED_RGBA_ASTC_4x4_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_5x4_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_5x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_6x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_6x6_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_8x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_8x6_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_8x8_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x5_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x6_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x8_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_10x10_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_12x10_KHR:
+    case Extensions3D::COMPRESSED_RGBA_ASTC_12x12_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR:
+    case Extensions3D::COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR:
+        // No height and width restrictions on ASTC.
         return true;
     default:
         return false;
@@ -5438,7 +5661,7 @@ void WebGLRenderingContextBase::printToConsole(MessageLevel level, const String&
 
     // Error messages can occur during function calls, so show stack traces for them.
     if (level == MessageLevel::Error) {
-        Ref<Inspector::ScriptCallStack> stackTrace = Inspector::createScriptCallStack(JSMainThreadExecState::currentState());
+        Ref<Inspector::ScriptCallStack> stackTrace = Inspector::createScriptCallStack(JSExecState::currentState());
         consoleMessage = std::make_unique<Inspector::ConsoleMessage>(MessageSource::Rendering, MessageType::Log, level, message, WTFMove(stackTrace));
     } else
         consoleMessage = std::make_unique<Inspector::ConsoleMessage>(MessageSource::Rendering, MessageType::Log, level, message);
@@ -5763,7 +5986,7 @@ std::optional<bool> WebGLRenderingContextBase::simulateVertexAttrib0(GC3Duint nu
             || attribValue.value[2] != m_vertexAttrib0BufferValue[2]
             || attribValue.value[3] != m_vertexAttrib0BufferValue[3])) {
 
-        auto bufferData = std::make_unique<GC3Dfloat[]>(bufferSize);
+        auto bufferData = makeUniqueArray<GC3Dfloat>(bufferSize);
         for (GC3Duint ii = 0; ii < numVertex + 1; ++ii) {
             bufferData[ii * 4] = attribValue.value[0];
             bufferData[ii * 4 + 1] = attribValue.value[1];
@@ -5797,7 +6020,7 @@ void WebGLRenderingContextBase::dispatchContextLostEvent()
     if (!canvas)
         return;
 
-    Ref<WebGLContextEvent> event = WebGLContextEvent::create(eventNames().webglcontextlostEvent, false, true, emptyString());
+    Ref<WebGLContextEvent> event = WebGLContextEvent::create(eventNames().webglcontextlostEvent, Event::CanBubble::No, Event::IsCancelable::Yes, emptyString());
     canvas->dispatchEvent(event);
     m_restoreAllowed = event->defaultPrevented();
     if (m_contextLostMode == RealLostContext && m_restoreAllowed)
@@ -5883,7 +6106,7 @@ void WebGLRenderingContextBase::maybeRestoreContext()
     setupFlags();
     initializeNewContext();
     initializeVertexArrayObjects();
-    canvas->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextrestoredEvent, false, true, emptyString()));
+    canvas->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextrestoredEvent, Event::CanBubble::No, Event::IsCancelable::Yes, emptyString()));
 }
 
 void WebGLRenderingContextBase::dispatchContextChangedEvent()
@@ -5892,7 +6115,7 @@ void WebGLRenderingContextBase::dispatchContextChangedEvent()
     if (!canvas)
         return;
 
-    canvas->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextchangedEvent, false, true, emptyString()));
+    canvas->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextchangedEvent, Event::CanBubble::No, Event::IsCancelable::Yes, emptyString()));
 }
 
 void WebGLRenderingContextBase::simulateContextChanged()
@@ -5909,15 +6132,14 @@ String WebGLRenderingContextBase::ensureNotNull(const String& text) const
 }
 
 WebGLRenderingContextBase::LRUImageBufferCache::LRUImageBufferCache(int capacity)
-    : m_buffers(std::make_unique<std::unique_ptr<ImageBuffer>[]>(capacity))
-    , m_capacity(capacity)
+    : m_buffers(capacity)
 {
 }
 
 ImageBuffer* WebGLRenderingContextBase::LRUImageBufferCache::imageBuffer(const IntSize& size)
 {
-    int i;
-    for (i = 0; i < m_capacity; ++i) {
+    size_t i;
+    for (i = 0; i < m_buffers.size(); ++i) {
         ImageBuffer* buf = m_buffers[i].get();
         if (!buf)
             break;
@@ -5932,7 +6154,8 @@ ImageBuffer* WebGLRenderingContextBase::LRUImageBufferCache::imageBuffer(const I
     std::unique_ptr<ImageBuffer> temp = ImageBuffer::create(size, Unaccelerated);
     if (!temp)
         return nullptr;
-    i = std::min(m_capacity - 1, i);
+    ASSERT(m_buffers.size() > 0);
+    i = std::min(m_buffers.size() - 1, i);
     m_buffers[i] = WTFMove(temp);
 
     ImageBuffer* buf = m_buffers[i].get();
@@ -5940,9 +6163,9 @@ ImageBuffer* WebGLRenderingContextBase::LRUImageBufferCache::imageBuffer(const I
     return buf;
 }
 
-void WebGLRenderingContextBase::LRUImageBufferCache::bubbleToFront(int idx)
+void WebGLRenderingContextBase::LRUImageBufferCache::bubbleToFront(size_t idx)
 {
-    for (int i = idx; i > 0; --i)
+    for (size_t i = idx; i > 0; --i)
         m_buffers[i].swap(m_buffers[i-1]);
 }
 
@@ -5952,17 +6175,17 @@ namespace {
     {
         switch (error) {
         case GraphicsContext3D::INVALID_ENUM:
-            return ASCIILiteral("INVALID_ENUM");
+            return "INVALID_ENUM"_s;
         case GraphicsContext3D::INVALID_VALUE:
-            return ASCIILiteral("INVALID_VALUE");
+            return "INVALID_VALUE"_s;
         case GraphicsContext3D::INVALID_OPERATION:
-            return ASCIILiteral("INVALID_OPERATION");
+            return "INVALID_OPERATION"_s;
         case GraphicsContext3D::OUT_OF_MEMORY:
-            return ASCIILiteral("OUT_OF_MEMORY");
+            return "OUT_OF_MEMORY"_s;
         case GraphicsContext3D::INVALID_FRAMEBUFFER_OPERATION:
-            return ASCIILiteral("INVALID_FRAMEBUFFER_OPERATION");
+            return "INVALID_FRAMEBUFFER_OPERATION"_s;
         case GraphicsContext3D::CONTEXT_LOST_WEBGL:
-            return ASCIILiteral("CONTEXT_LOST_WEBGL");
+            return "CONTEXT_LOST_WEBGL"_s;
         default:
             return String::format("WebGL ERROR(%04x)", error);
         }
@@ -6140,25 +6363,25 @@ void WebGLRenderingContextBase::vertexAttribDivisor(GC3Duint index, GC3Duint div
     m_context->vertexAttribDivisor(index, divisor);
 }
 
-bool WebGLRenderingContextBase::enableSupportedExtension(const char* extensionNameLiteral)
+bool WebGLRenderingContextBase::enableSupportedExtension(ASCIILiteral extensionNameLiteral)
 {
     ASSERT(m_context);
     auto& extensions = m_context->getExtensions();
-    String extensionName { ASCIILiteral { extensionNameLiteral } };
+    String extensionName { extensionNameLiteral };
     if (!extensions.supports(extensionName))
         return false;
     extensions.ensureEnabled(extensionName);
     return true;
 }
 
-void WebGLRenderingContextBase::activityStateDidChange(ActivityState::Flags oldActivityState, ActivityState::Flags newActivityState)
+void WebGLRenderingContextBase::activityStateDidChange(OptionSet<ActivityState::Flag> oldActivityState, OptionSet<ActivityState::Flag> newActivityState)
 {
     if (!m_context)
         return;
 
-    ActivityState::Flags changed = oldActivityState ^ newActivityState;
+    auto changed = oldActivityState ^ newActivityState;
     if (changed & ActivityState::IsVisible)
-        m_context->setContextVisibility(newActivityState & ActivityState::IsVisible);
+        m_context->setContextVisibility(newActivityState.contains(ActivityState::IsVisible));
 }
 
 void WebGLRenderingContextBase::setFailNextGPUStatusCheck()

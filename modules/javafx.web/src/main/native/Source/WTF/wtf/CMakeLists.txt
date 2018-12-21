@@ -1,4 +1,4 @@
-set(WTF_HEADERS
+set(WTF_PUBLIC_HEADERS
     ASCIICType.h
     Algorithms.h
     Assertions.h
@@ -14,6 +14,7 @@ set(WTF_HEADERS
     BlockPtr.h
     BlockStack.h
     BloomFilter.h
+    BooleanLattice.h
     Box.h
     Brigand.h
     BubbleSort.h
@@ -27,6 +28,7 @@ set(WTF_HEADERS
     CheckedBoolean.h
     ClockType.h
     CommaPrinter.h
+    CompactPointerTuple.h
     CompilationThread.h
     Compiler.h
     CompletionHandler.h
@@ -41,7 +43,6 @@ set(WTF_HEADERS
     CrossThreadTaskHandler.h
     CryptographicUtilities.h
     CryptographicallyRandomNumber.h
-    CurrentTime.h
     DataLog.h
     DateMath.h
     DebugUtilities.h
@@ -50,7 +51,6 @@ set(WTF_HEADERS
     DeprecatedOptional.h
     Deque.h
     DisallowCType.h
-    DispatchPtr.h
     Dominators.h
     DoublyLinkedList.h
     DumbPtrTraits.h
@@ -68,6 +68,7 @@ set(WTF_HEADERS
     Forward.h
     Function.h
     FunctionDispatcher.h
+    FunctionTraits.h
     GetPtr.h
     Gigacage.h
     GlobalVersion.h
@@ -119,6 +120,7 @@ set(WTF_HEADERS
     LoggingHashSet.h
     LoggingHashTraits.h
     MD5.h
+    MachSendRight.h
     MainThread.h
     MallocPtr.h
     MathExtras.h
@@ -128,6 +130,7 @@ set(WTF_HEADERS
     MessageQueue.h
     MetaAllocator.h
     MetaAllocatorHandle.h
+    MetaAllocatorPtr.h
     MonotonicTime.h
     NakedPtr.h
     NaturalLoops.h
@@ -165,6 +168,8 @@ set(WTF_HEADERS
     PrintStream.h
     PriorityQueue.h
     ProcessID.h
+    ProcessPrivilege.h
+    PtrTag.h
     RAMSize.h
     RandomDevice.h
     RandomNumber.h
@@ -209,6 +214,11 @@ set(WTF_HEADERS
     StackStats.h
     StackTrace.h
     StdLibExtras.h
+    StdList.h
+    StdMap.h
+    StdSet.h
+    StdUnorderedMap.h
+    StdUnorderedSet.h
     Stopwatch.h
     StreamBuffer.h
     StringExtras.h
@@ -230,9 +240,11 @@ set(WTF_HEADERS
     TriState.h
     TypeCasts.h
     UUID.h
+    UnalignedAccess.h
     Unexpected.h
     UniStdExtras.h
     UnionFind.h
+    UniqueArray.h
     UniqueRef.h
     UnsafePointer.h
     VMTags.h
@@ -246,6 +258,7 @@ set(WTF_HEADERS
     WindowsExtras.h
     WordLock.h
     WorkQueue.h
+    WorkerPool.h
     dtoa.h
 
     dtoa/bignum-dtoa.h
@@ -265,6 +278,7 @@ set(WTF_HEADERS
     persistence/PersistentEncoder.h
 
     text/ASCIIFastPath.h
+    text/ASCIILiteral.h
     text/AtomicString.h
     text/AtomicStringHash.h
     text/AtomicStringImpl.h
@@ -286,9 +300,7 @@ set(WTF_HEADERS
     text/StringHash.h
     text/StringHasher.h
     text/StringImpl.h
-    text/StringMalloc.h
     text/StringOperators.h
-    text/StringVector.h
     text/StringView.h
     text/SymbolImpl.h
     text/SymbolRegistry.h
@@ -296,6 +308,7 @@ set(WTF_HEADERS
     text/TextBreakIteratorInternalICU.h
     text/TextPosition.h
     text/TextStream.h
+    text/UTF8ConversionError.h
     text/UniquedStringImpl.h
     text/ValueToString.h
     text/WTFString.h
@@ -357,6 +370,7 @@ set(WTF_SOURCES
     ParkingLot.cpp
     Poisoned.cpp
     PrintStream.cpp
+    ProcessPrivilege.cpp
     RAMSize.cpp
     RandomDevice.cpp
     RandomNumber.cpp
@@ -380,6 +394,7 @@ set(WTF_SOURCES
     WallTime.cpp
     WordLock.cpp
     WorkQueue.cpp
+    WorkerPool.cpp
     dtoa.cpp
 
     dtoa/bignum-dtoa.cc
@@ -395,6 +410,7 @@ set(WTF_SOURCES
     persistence/PersistentDecoder.cpp
     persistence/PersistentEncoder.cpp
 
+    text/ASCIILiteral.cpp
     text/AtomicString.cpp
     text/AtomicStringImpl.cpp
     text/AtomicStringTable.cpp
@@ -404,7 +420,6 @@ set(WTF_SOURCES
     text/StringBuilder.cpp
     text/StringBuilderJSON.cpp
     text/StringImpl.cpp
-    text/StringMalloc.cpp
     text/StringView.cpp
     text/SymbolImpl.cpp
     text/SymbolRegistry.cpp
@@ -445,7 +460,7 @@ set(WTF_LIBRARIES
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    list(APPEND WTF_HEADERS
+    list(APPEND WTF_PUBLIC_HEADERS
         spi/darwin/CommonCryptoSPI.h
     )
 list(APPEND WTF_PRIVATE_INCLUDE_DIRECTORIES
@@ -495,7 +510,7 @@ WEBKIT_FRAMEWORK(WTF)
 
 WEBKIT_MAKE_FORWARDING_HEADERS(WTF
     DESTINATION ${FORWARDING_HEADERS_DIR}/wtf
-    FILES ${WTF_HEADERS}
+    FILES ${WTF_PUBLIC_HEADERS}
 )
 
 if (MSVC AND NOT PORT STREQUAL Java)

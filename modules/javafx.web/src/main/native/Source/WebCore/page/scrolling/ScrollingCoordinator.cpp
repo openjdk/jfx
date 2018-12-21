@@ -29,9 +29,9 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsLayer.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "PlatformWheelEvent.h"
 #include "PluginViewBase.h"
@@ -44,19 +44,11 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
-#if USE(COORDINATED_GRAPHICS)
-#include "ScrollingCoordinatorCoordinatedGraphics.h"
-#endif
-
 namespace WebCore {
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !USE(COORDINATED_GRAPHICS)
 Ref<ScrollingCoordinator> ScrollingCoordinator::create(Page* page)
 {
-#if USE(COORDINATED_GRAPHICS)
-    return adoptRef(*new ScrollingCoordinatorCoordinatedGraphics(page));
-#endif
-
     return adoptRef(*new ScrollingCoordinator(page));
 }
 #endif
@@ -425,8 +417,11 @@ TextStream& operator<<(TextStream& ts, ScrollableAreaParameters scrollableAreaPa
 TextStream& operator<<(TextStream& ts, ScrollingNodeType nodeType)
 {
     switch (nodeType) {
-    case FrameScrollingNode:
-        ts << "frame-scrolling";
+    case MainFrameScrollingNode:
+        ts << "main-frame-scrolling";
+        break;
+    case SubframeScrollingNode:
+        ts << "subframe-scrolling";
         break;
     case OverflowScrollingNode:
         ts << "overflow-scrolling";

@@ -28,7 +28,7 @@
 #include "DragClientJava.h"
 #include "WebPage.h"
 
-#include <WebCore/MainFrame.h>
+#include <WebCore/Frame.h>
 #include <WebCore/Page.h>
 #include "DataTransfer.h"
 #include "NotImplemented.h"

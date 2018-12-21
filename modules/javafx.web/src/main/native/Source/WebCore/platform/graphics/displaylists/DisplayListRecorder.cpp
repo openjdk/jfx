@@ -36,12 +36,12 @@
 namespace WebCore {
 namespace DisplayList {
 
-Recorder::Recorder(GraphicsContext& context, DisplayList& displayList, const FloatRect& initialClip, const AffineTransform& baseCTM)
+Recorder::Recorder(GraphicsContext& context, DisplayList& displayList, const GraphicsContextState& state, const FloatRect& initialClip, const AffineTransform& baseCTM)
     : GraphicsContextImpl(context, initialClip, baseCTM)
     , m_displayList(displayList)
 {
     LOG_WITH_STREAM(DisplayLists, stream << "\nRecording with clip " << initialClip);
-    m_stateStack.append(ContextState(baseCTM, initialClip));
+    m_stateStack.append(ContextState(state, baseCTM, initialClip));
 }
 
 Recorder::~Recorder()
@@ -236,7 +236,7 @@ void Recorder::drawLinesForText(const FloatPoint& point, const DashArray& widths
     updateItemExtent(newItem);
 }
 
-void Recorder::drawLineForDocumentMarker(const FloatPoint& point, float width, GraphicsContext::DocumentMarkerLineStyle style)
+void Recorder::drawLineForDocumentMarker(const FloatPoint& point, float width, DocumentMarkerLineStyle style)
 {
     DrawingItem& newItem = downcast<DrawingItem>(appendItem(DrawLineForDocumentMarker::create(point, width, style)));
     updateItemExtent(newItem);
@@ -376,6 +376,11 @@ IntRect Recorder::clipBounds()
 {
     WTFLogAlways("Getting the clip bounds not yet supported with DisplayList::Recorder.");
     return IntRect(-2048, -2048, 4096, 4096);
+}
+
+void Recorder::clipToImageBuffer(ImageBuffer&, const FloatRect&)
+{
+    WTFLogAlways("GraphicsContext::clipToImageBuffer is not compatible with DisplayList::Recorder.");
 }
 
 void Recorder::applyDeviceScaleFactor(float deviceScaleFactor)

@@ -32,9 +32,12 @@
 #include "config.h"
 #include "InspectorDOMDebuggerAgent.h"
 
+#include "Event.h"
+#include "Frame.h"
 #include "HTMLElement.h"
 #include "InspectorDOMAgent.h"
 #include "InstrumentingAgents.h"
+#include "RegisteredEventListener.h"
 #include <JavaScriptCore/ContentSearchUtilities.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/RegularExpression.h>
@@ -43,14 +46,14 @@
 namespace {
 
 enum DOMBreakpointType {
-    SubtreeModified = 0,
+    SubtreeModified,
     AttributeModified,
     NodeRemoved,
     DOMBreakpointTypesCount
 };
 
-static const char* const listenerEventCategoryType = "listener:";
-static const char* const instrumentationEventCategoryType = "instrumentation:";
+static const char eventNameCategoryType[] = "event-name:";
+static const char instrumentationCategoryType[] = "instrumentation:";
 
 const uint32_t inheritableDOMBreakpointTypesMask = (1 << SubtreeModified);
 const int domBreakpointDerivedTypeShift = 16;
@@ -63,7 +66,7 @@ namespace WebCore {
 using namespace Inspector;
 
 InspectorDOMDebuggerAgent::InspectorDOMDebuggerAgent(WebAgentContext& context, InspectorDOMAgent* domAgent, InspectorDebuggerAgent* debuggerAgent)
-    : InspectorAgentBase(ASCIILiteral("DOMDebugger"), context)
+    : InspectorAgentBase("DOMDebugger"_s, context)
     , m_backendDispatcher(Inspector::DOMDebuggerBackendDispatcher::create(context.backendDispatcher, this))
     , m_domAgent(domAgent)
     , m_debuggerAgent(debuggerAgent)
@@ -109,8 +112,11 @@ void InspectorDOMDebuggerAgent::discardAgent()
     m_debuggerAgent = nullptr;
 }
 
-void InspectorDOMDebuggerAgent::mainFrameDOMContentLoaded()
+void InspectorDOMDebuggerAgent::frameDocumentUpdated(Frame& frame)
 {
+    if (!frame.isMainFrame())
+        return;
+
     discardBindings();
 }
 
@@ -122,18 +128,18 @@ void InspectorDOMDebuggerAgent::discardBindings()
 
 void InspectorDOMDebuggerAgent::setEventListenerBreakpoint(ErrorString& error, const String& eventName)
 {
-    setBreakpoint(error, String(listenerEventCategoryType) + eventName);
+    setBreakpoint(error, eventNameCategoryType + eventName);
 }
 
 void InspectorDOMDebuggerAgent::setInstrumentationBreakpoint(ErrorString& error, const String& eventName)
 {
-    setBreakpoint(error, String(instrumentationEventCategoryType) + eventName);
+    setBreakpoint(error, instrumentationCategoryType + eventName);
 }
 
 void InspectorDOMDebuggerAgent::setBreakpoint(ErrorString& error, const String& eventName)
 {
     if (eventName.isEmpty()) {
-        error = ASCIILiteral("Event name is empty");
+        error = "Event name is empty"_s;
         return;
     }
 
@@ -142,18 +148,18 @@ void InspectorDOMDebuggerAgent::setBreakpoint(ErrorString& error, const String& 
 
 void InspectorDOMDebuggerAgent::removeEventListenerBreakpoint(ErrorString& error, const String& eventName)
 {
-    removeBreakpoint(error, String(listenerEventCategoryType) + eventName);
+    removeBreakpoint(error, eventNameCategoryType + eventName);
 }
 
 void InspectorDOMDebuggerAgent::removeInstrumentationBreakpoint(ErrorString& error, const String& eventName)
 {
-    removeBreakpoint(error, String(instrumentationEventCategoryType) + eventName);
+    removeBreakpoint(error, instrumentationCategoryType + eventName);
 }
 
 void InspectorDOMDebuggerAgent::removeBreakpoint(ErrorString& error, const String& eventName)
 {
     if (eventName.isEmpty()) {
-        error = ASCIILiteral("Event name is empty");
+        error = "Event name is empty"_s;
         return;
     }
 
@@ -212,9 +218,9 @@ static int domTypeForName(ErrorString& errorString, const String& typeString)
 static String domTypeName(int type)
 {
     switch (type) {
-    case SubtreeModified: return ASCIILiteral("subtree-modified");
-    case AttributeModified: return ASCIILiteral("attribute-modified");
-    case NodeRemoved: return ASCIILiteral("node-removed");
+    case SubtreeModified: return "subtree-modified"_s;
+    case AttributeModified: return "attribute-modified"_s;
+    case NodeRemoved: return "node-removed"_s;
     default: break;
     }
     return emptyString();
@@ -358,16 +364,35 @@ void InspectorDOMDebuggerAgent::updateSubtreeBreakpoints(Node* node, uint32_t ro
         updateSubtreeBreakpoints(child, newRootMask, set);
 }
 
-void InspectorDOMDebuggerAgent::pauseOnNativeEventIfNeeded(bool isDOMEvent, const String& eventName, bool synchronous)
+void InspectorDOMDebuggerAgent::willHandleEvent(const Event& event, const RegisteredEventListener& registeredEventListener)
 {
-    String fullEventName = (isDOMEvent ? listenerEventCategoryType : instrumentationEventCategoryType) + eventName;
+    bool shouldPause = m_debuggerAgent->pauseOnNextStatementEnabled() || m_eventListenerBreakpoints.contains(eventNameCategoryType + event.type());
 
-    bool shouldPause = m_debuggerAgent->pauseOnNextStatementEnabled() || m_eventListenerBreakpoints.contains(fullEventName);
+    if (!shouldPause && m_domAgent)
+        shouldPause = m_domAgent->hasBreakpointForEventListener(*event.currentTarget(), event.type(), registeredEventListener.callback(), registeredEventListener.useCapture());
+
     if (!shouldPause)
         return;
 
     Ref<JSON::Object> eventData = JSON::Object::create();
-    eventData->setString(ASCIILiteral("eventName"), fullEventName);
+    eventData->setString("eventName"_s, event.type());
+    if (m_domAgent) {
+        int eventListenerId = m_domAgent->idForEventListener(*event.currentTarget(), event.type(), registeredEventListener.callback(), registeredEventListener.useCapture());
+        if (eventListenerId)
+            eventData->setInteger("eventListenerId"_s, eventListenerId);
+    }
+
+    m_debuggerAgent->schedulePauseOnNextStatement(Inspector::DebuggerFrontendDispatcher::Reason::EventListener, WTFMove(eventData));
+}
+
+void InspectorDOMDebuggerAgent::pauseOnNativeEventIfNeeded(const String& eventName, bool synchronous)
+{
+    bool shouldPause = m_debuggerAgent->pauseOnNextStatementEnabled() || m_eventListenerBreakpoints.contains(instrumentationCategoryType + eventName);
+    if (!shouldPause)
+        return;
+
+    Ref<JSON::Object> eventData = JSON::Object::create();
+    eventData->setString("eventName"_s, eventName);
 
     if (synchronous)
         m_debuggerAgent->breakProgram(Inspector::DebuggerFrontendDispatcher::Reason::EventListener, WTFMove(eventData));
@@ -375,7 +400,7 @@ void InspectorDOMDebuggerAgent::pauseOnNativeEventIfNeeded(bool isDOMEvent, cons
         m_debuggerAgent->schedulePauseOnNextStatement(Inspector::DebuggerFrontendDispatcher::Reason::EventListener, WTFMove(eventData));
 }
 
-void InspectorDOMDebuggerAgent::setXHRBreakpoint(ErrorString&, const String& url, const bool* const optionalIsRegex)
+void InspectorDOMDebuggerAgent::setXHRBreakpoint(ErrorString&, const String& url, const bool* optionalIsRegex)
 {
     if (url.isEmpty()) {
         m_pauseOnAllXHRsEnabled = true;

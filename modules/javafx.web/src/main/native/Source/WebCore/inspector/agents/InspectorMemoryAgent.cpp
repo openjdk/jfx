@@ -39,7 +39,7 @@ namespace WebCore {
 using namespace Inspector;
 
 InspectorMemoryAgent::InspectorMemoryAgent(PageAgentContext& context)
-    : InspectorAgentBase(ASCIILiteral("Memory"), context)
+    : InspectorAgentBase("Memory"_s, context)
     , m_frontendDispatcher(std::make_unique<Inspector::MemoryFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::MemoryBackendDispatcher::create(context.backendDispatcher, this))
 {
@@ -80,7 +80,7 @@ void InspectorMemoryAgent::startTracking(ErrorString&)
 
     m_tracking = true;
 
-    m_frontendDispatcher->trackingStart(m_environment.executionStopwatch()->elapsedTime());
+    m_frontendDispatcher->trackingStart(m_environment.executionStopwatch()->elapsedTime().seconds());
 }
 
 void InspectorMemoryAgent::stopTracking(ErrorString&)
@@ -101,7 +101,7 @@ void InspectorMemoryAgent::didHandleMemoryPressure(Critical critical)
         return;
 
     MemoryFrontendDispatcher::Severity severity = critical == Critical::Yes ? MemoryFrontendDispatcher::Severity::Critical : MemoryFrontendDispatcher::Severity::NonCritical;
-    m_frontendDispatcher->memoryPressure(m_environment.executionStopwatch()->elapsedTime(), severity);
+    m_frontendDispatcher->memoryPressure(m_environment.executionStopwatch()->elapsedTime().seconds(), severity);
 }
 
 void InspectorMemoryAgent::collectSample(const ResourceUsageData& data)
@@ -145,7 +145,7 @@ void InspectorMemoryAgent::collectSample(const ResourceUsageData& data)
     categories->addItem(WTFMove(otherCategory));
 
     auto event = Protocol::Memory::Event::create()
-        .setTimestamp(m_environment.executionStopwatch()->elapsedTime())
+        .setTimestamp(m_environment.executionStopwatch()->elapsedTime().seconds())
         .setCategories(WTFMove(categories))
         .release();
 

@@ -578,3 +578,8 @@ void TestRunner::forceImmediateCompletion()
 {
     fprintf(testResult, "ERROR: TestRunner::forceImmediateCompletion() not implemented\n");
 }
+
+void TestRunner::setSpellCheckerResults(JSContextRef, JSObjectRef)
+{
+    fprintf(testResult, "ERROR: TestRunner::setSpellCheckerResults() not implemented\n");
+}

@@ -235,7 +235,9 @@ void BBQPlan::compileFunctions(CompilationEffort effort)
     if (!hasWork())
         return;
 
-    TraceScope traceScope(WebAssemblyCompileStart, WebAssemblyCompileEnd);
+    std::optional<TraceScope> traceScope;
+    if (Options::useTracePoints())
+        traceScope.emplace(WebAssemblyCompileStart, WebAssemblyCompileEnd);
     ThreadCountHolder holder(*this);
 
     size_t bytesCompiled = 0;
@@ -300,6 +302,7 @@ void BBQPlan::complete(const AbstractLocker& locker)
         for (uint32_t functionIndex = 0; functionIndex < m_moduleInformation->functionLocationInBinary.size(); functionIndex++) {
             CompilationContext& context = m_compilationContexts[functionIndex];
             SignatureIndex signatureIndex = m_moduleInformation->internalFunctionSignatureIndices[functionIndex];
+            const Signature& signature = SignatureInformation::get(signatureIndex);
             {
                 LinkBuffer linkBuffer(*context.wasmEntrypointJIT, nullptr, JITCompilationCanFail);
                 if (UNLIKELY(linkBuffer.didFailToAllocate())) {
@@ -308,7 +311,7 @@ void BBQPlan::complete(const AbstractLocker& locker)
                 }
 
                 m_wasmInternalFunctions[functionIndex]->entrypoint.compilation = std::make_unique<B3::Compilation>(
-                    FINALIZE_CODE(linkBuffer, "WebAssembly function[%i] %s", functionIndex, SignatureInformation::get(signatureIndex).toString().ascii().data()),
+                    FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "WebAssembly function[%i] %s", functionIndex, signature.toString().ascii().data()),
                     WTFMove(context.wasmEntrypointByproducts));
             }
 
@@ -320,20 +323,20 @@ void BBQPlan::complete(const AbstractLocker& locker)
                 }
 
                 embedderToWasmInternalFunction->entrypoint.compilation = std::make_unique<B3::Compilation>(
-                    FINALIZE_CODE(linkBuffer, "Embedder->WebAssembly entrypoint[%i] %s", functionIndex, SignatureInformation::get(signatureIndex).toString().ascii().data()),
+                    FINALIZE_CODE(linkBuffer, B3CompilationPtrTag, "Embedder->WebAssembly entrypoint[%i] %s", functionIndex, signature.toString().ascii().data()),
                     WTFMove(context.embedderEntrypointByproducts));
             }
         }
 
         for (auto& unlinked : m_unlinkedWasmToWasmCalls) {
             for (auto& call : unlinked) {
-                MacroAssemblerCodePtr executableAddress;
+                MacroAssemblerCodePtr<WasmEntryPtrTag> executableAddress;
                 if (m_moduleInformation->isImportedFunctionFromFunctionIndexSpace(call.functionIndexSpace)) {
                     // FIXME imports could have been linked in B3, instead of generating a patchpoint. This condition should be replaced by a RELEASE_ASSERT. https://bugs.webkit.org/show_bug.cgi?id=166462
                     executableAddress = m_wasmToWasmExitStubs.at(call.functionIndexSpace).code();
                 } else
-                    executableAddress = m_wasmInternalFunctions.at(call.functionIndexSpace - m_moduleInformation->importFunctionCount())->entrypoint.compilation->code();
-                MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel(executableAddress));
+                    executableAddress = m_wasmInternalFunctions.at(call.functionIndexSpace - m_moduleInformation->importFunctionCount())->entrypoint.compilation->code().retagged<WasmEntryPtrTag>();
+                MacroAssembler::repatchNearCall(call.callLocation, CodeLocationLabel<WasmEntryPtrTag>(executableAddress));
             }
         }
     }

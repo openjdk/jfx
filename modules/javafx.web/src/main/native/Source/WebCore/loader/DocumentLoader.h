@@ -31,6 +31,7 @@
 
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
+#include "ContentSecurityPolicyClient.h"
 #include "DocumentWriter.h"
 #include "FrameDestructionObserver.h"
 #include "LinkIcon.h"
@@ -40,6 +41,7 @@
 #include "ResourceLoaderOptions.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SecurityPolicyViolationEvent.h"
 #include "ServiceWorkerRegistrationData.h"
 #include "StringWithDirection.h"
 #include "StyleSheetContents.h"
@@ -84,6 +86,8 @@ class SharedBuffer;
 class SubresourceLoader;
 class SubstituteResource;
 
+enum class ShouldContinue;
+
 using ResourceLoaderMap = HashMap<unsigned long, RefPtr<ResourceLoader>>;
 
 enum class AutoplayPolicy {
@@ -105,7 +109,11 @@ enum class PopUpPolicy {
     Block,
 };
 
-class DocumentLoader : public RefCounted<DocumentLoader>, public FrameDestructionObserver, private CachedRawResourceClient {
+class DocumentLoader
+    : public RefCounted<DocumentLoader>
+    , public FrameDestructionObserver
+    , public ContentSecurityPolicyClient
+    , private CachedRawResourceClient {
     WTF_MAKE_FAST_ALLOCATED;
     friend class ContentFilter;
 public:
@@ -237,7 +245,7 @@ public:
     void setDefersLoading(bool);
     void setMainResourceDataBufferingPolicy(DataBufferingPolicy);
 
-    void startLoadingMainResource();
+    void startLoadingMainResource(ShouldContinue);
     WEBCORE_EXPORT void cancelMainResourceLoad(const ResourceError&);
     void willContinueMainResourceLoadAfterRedirect(const ResourceRequest&);
 
@@ -246,6 +254,7 @@ public:
 
     void stopLoadingPlugIns();
     void stopLoadingSubresources();
+    WEBCORE_EXPORT void stopLoadingAfterXFrameOptionsOrContentSecurityPolicyDenied(unsigned long identifier, const ResourceResponse&);
 
     bool userContentExtensionsEnabled() const { return m_userContentExtensionsEnabled; }
     void setUserContentExtensionsEnabled(bool enabled) { m_userContentExtensionsEnabled = enabled; }
@@ -260,7 +269,7 @@ public:
     void setPopUpPolicy(PopUpPolicy popUpPolicy) { m_popUpPolicy = popUpPolicy; }
 
     void addSubresourceLoader(ResourceLoader*);
-    void removeSubresourceLoader(ResourceLoader*);
+    void removeSubresourceLoader(LoadCompletionType, ResourceLoader*);
     void addPlugInStreamLoader(ResourceLoader&);
     void removePlugInStreamLoader(ResourceLoader&);
 
@@ -351,15 +360,15 @@ private:
     void clearArchiveResources();
 #endif
 
-    void willSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
+    void willSendRequest(ResourceRequest&&, const ResourceResponse&, ShouldContinue, CompletionHandler<void(ResourceRequest&&)>&&);
     void finishedLoading();
     void mainReceivedError(const ResourceError&);
     WEBCORE_EXPORT void redirectReceived(CachedResource&, ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&) override;
-    WEBCORE_EXPORT void responseReceived(CachedResource&, const ResourceResponse&) override;
+    WEBCORE_EXPORT void responseReceived(CachedResource&, const ResourceResponse&, CompletionHandler<void()>&&) override;
     WEBCORE_EXPORT void dataReceived(CachedResource&, const char* data, int length) override;
     WEBCORE_EXPORT void notifyFinished(CachedResource&) override;
 
-    void responseReceived(const ResourceResponse&);
+    void responseReceived(const ResourceResponse&, CompletionHandler<void()>&&);
     void dataReceived(const char* data, int length);
 
     bool maybeLoadEmpty();
@@ -367,20 +376,22 @@ private:
     bool isMultipartReplacingLoad() const;
     bool isPostOrRedirectAfterPost(const ResourceRequest&, const ResourceResponse&);
 
-    void continueAfterNavigationPolicy(const ResourceRequest&, bool shouldContinue);
+    bool tryLoadingRequestFromApplicationCache();
+    bool tryLoadingSubstituteData();
+    bool tryLoadingRedirectRequestFromApplicationCache(const ResourceRequest&);
+#if ENABLE(SERVICE_WORKER)
+    void restartLoadingDueToServiceWorkerRegistrationChange(ResourceRequest&&, std::optional<ServiceWorkerRegistrationData>&&);
+#endif
     void continueAfterContentPolicy(PolicyAction);
 
     void stopLoadingForPolicyChange();
     ResourceError interruptedForPolicyChangeError() const;
-
-    void stopLoadingAfterXFrameOptionsOrContentSecurityPolicyDenied(unsigned long identifier, const ResourceResponse&);
 
 #if HAVE(RUNLOOP_TIMER)
     typedef RunLoopTimer<DocumentLoader> DocumentLoaderTimer;
 #else
     typedef Timer DocumentLoaderTimer;
 #endif
-    void handleSubstituteDataLoadSoon();
     void handleSubstituteDataLoadNow();
     void startDataLoadTimer();
 
@@ -397,6 +408,13 @@ private:
 #if ENABLE(APPLICATION_MANIFEST)
     void notifyFinishedLoadingApplicationManifest(uint64_t callbackIdentifier, std::optional<ApplicationManifest>);
 #endif
+
+    // ContentSecurityPolicyClient
+    WEBCORE_EXPORT void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long requestIdentifier) final;
+    WEBCORE_EXPORT void sendCSPViolationReport(URL&&, Ref<FormData>&&) final;
+    WEBCORE_EXPORT void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEvent::Init&&) final;
+
+    bool disallowWebArchive() const;
 
     Ref<CachedResourceLoader> m_cachedResourceLoader;
 

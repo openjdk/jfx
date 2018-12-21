@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "VRPlatformDisplay.h"
+
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
@@ -32,19 +34,24 @@ namespace WebCore {
 
 class VRDisplayCapabilities : public RefCounted<VRDisplayCapabilities> {
 public:
-    static Ref<VRDisplayCapabilities> create()
+    static Ref<VRDisplayCapabilities> create(unsigned capabilityFlags)
     {
-        return adoptRef(*new VRDisplayCapabilities);
+        return adoptRef(*new VRDisplayCapabilities(capabilityFlags));
     }
 
-    bool hasPosition() const;
-    bool hasOrientation() const;
-    bool hasExternalDisplay() const;
-    bool canPresent() const;
-    unsigned maxLayer() const;
+    bool hasPosition() const { return m_flags & VRDisplayCapabilityFlagPosition; }
+    bool hasOrientation() const { return m_flags & VRDisplayCapabilityFlagOrientation; }
+    bool hasExternalDisplay() const { return m_flags & VRDisplayCapabilityFlagExternalDisplay; }
+    bool canPresent() const { return m_flags & VRDisplayCapabilityFlagPresent; }
+    unsigned maxLayers() const { return canPresent() ? 1 : 0; }
 
 private:
-    VRDisplayCapabilities();
+    VRDisplayCapabilities(unsigned capabilityFlags)
+        : m_flags(capabilityFlags)
+    {
+    }
+
+    unsigned m_flags;
 };
 
 } // namespace WebCore

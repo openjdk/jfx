@@ -20,8 +20,6 @@ SUNWprivate_1.0 {
                _ZN3WTF10fastMallocEj;
                _ZN3WTF10fastMallocEm;
                _ZN3WTF10StringImpl7destroyEPS0_;
-               _ZN3WTF10stringFreeEPv;
-               _ZN3WTF11currentTimeEv;
                _ZN3WTF16fastZeroedMallocEj;
                _ZN3WTF16fastZeroedMallocEm;
                _ZN3WTF26getAndResetAccumulatedLogsEv;

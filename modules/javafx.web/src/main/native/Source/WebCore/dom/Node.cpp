@@ -33,6 +33,7 @@
 #include "ComposedTreeAncestorIterator.h"
 #include "ContainerNodeAlgorithms.h"
 #include "ContextMenuController.h"
+#include "DOMWindow.h"
 #include "DataTransfer.h"
 #include "DocumentType.h"
 #include "ElementIterator.h"
@@ -71,6 +72,7 @@
 #include "WheelEvent.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/SHA1.h>
 #include <wtf/Variant.h>
@@ -79,10 +81,16 @@
 
 namespace WebCore {
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(Node);
+
 using namespace HTMLNames;
 
 #if DUMP_NODE_STATISTICS
-static HashSet<Node*> liveNodeSet;
+static HashSet<Node*>& liveNodeSet()
+{
+    static NeverDestroyed<HashSet<Node*>> liveNodes;
+    return liveNodes;
+}
 #endif
 
 void Node::dumpStatistics()
@@ -95,7 +103,6 @@ void Node::dumpStatistics()
     size_t textNodes = 0;
     size_t cdataNodes = 0;
     size_t commentNodes = 0;
-    size_t entityNodes = 0;
     size_t piNodes = 0;
     size_t documentNodes = 0;
     size_t docTypeNodes = 0;
@@ -110,7 +117,7 @@ void Node::dumpStatistics()
     size_t elementsWithRareData = 0;
     size_t elementsWithNamedNodeMap = 0;
 
-    for (auto* node : liveNodeSet) {
+    for (auto* node : liveNodeSet()) {
         if (node->hasRareData()) {
             ++nodesWithRareData;
             if (is<Element>(*node)) {
@@ -154,16 +161,12 @@ void Node::dumpStatistics()
                 ++cdataNodes;
                 break;
             }
-            case COMMENT_NODE: {
-                ++commentNodes;
-                break;
-            }
-            case ENTITY_NODE: {
-                ++entityNodes;
-                break;
-            }
             case PROCESSING_INSTRUCTION_NODE: {
                 ++piNodes;
+                break;
+            }
+            case COMMENT_NODE: {
+                ++commentNodes;
                 break;
             }
             case DOCUMENT_NODE: {
@@ -184,7 +187,7 @@ void Node::dumpStatistics()
         }
     }
 
-    printf("Number of Nodes: %d\n\n", liveNodeSet.size());
+    printf("Number of Nodes: %d\n\n", liveNodeSet().size());
     printf("Number of Nodes with RareData: %zu\n\n", nodesWithRareData);
 
     printf("NodeType distribution:\n");
@@ -193,7 +196,6 @@ void Node::dumpStatistics()
     printf("  Number of Text nodes: %zu\n", textNodes);
     printf("  Number of CDATASection nodes: %zu\n", cdataNodes);
     printf("  Number of Comment nodes: %zu\n", commentNodes);
-    printf("  Number of Entity nodes: %zu\n", entityNodes);
     printf("  Number of ProcessingInstruction nodes: %zu\n", piNodes);
     printf("  Number of Document nodes: %zu\n", documentNodes);
     printf("  Number of DocumentType nodes: %zu\n", docTypeNodes);
@@ -251,7 +253,7 @@ void Node::trackForDebugging()
 #endif
 
 #if DUMP_NODE_STATISTICS
-    liveNodeSet.add(this);
+    liveNodeSet().add(this);
 #endif
 }
 
@@ -282,7 +284,7 @@ Node::~Node()
 #endif
 
 #if DUMP_NODE_STATISTICS
-    liveNodeSet.remove(this);
+    liveNodeSet().remove(this);
 #endif
 
     RELEASE_ASSERT(!renderer());
@@ -676,22 +678,22 @@ static Node::Editability computeEditabilityFromComputedStyle(const Node& startNo
         auto* style = node->isDocumentNode() ? node->renderStyle() : const_cast<Node*>(node)->computedStyle();
         if (!style)
             continue;
-        if (style->display() == NONE)
+        if (style->display() == DisplayType::None)
             continue;
 #if ENABLE(USERSELECT_ALL)
         // Elements with user-select: all style are considered atomic
         // therefore non editable.
-        if (treatment == Node::UserSelectAllIsAlwaysNonEditable && style->userSelect() == SELECT_ALL)
+        if (treatment == Node::UserSelectAllIsAlwaysNonEditable && style->userSelect() == UserSelect::All)
             return Node::Editability::ReadOnly;
 #else
         UNUSED_PARAM(treatment);
 #endif
         switch (style->userModify()) {
-        case READ_ONLY:
+        case UserModify::ReadOnly:
             return Node::Editability::ReadOnly;
-        case READ_WRITE:
+        case UserModify::ReadWrite:
             return Node::Editability::CanEditRichly;
-        case READ_WRITE_PLAINTEXT_ONLY:
+        case UserModify::ReadWritePlaintextOnly:
             return Node::Editability::CanEditPlainText;
         }
         ASSERT_NOT_REACHED();
@@ -1066,7 +1068,7 @@ bool Node::canStartSelection() const
         const RenderStyle& style = renderer()->style();
         // We allow selections to begin within an element that has -webkit-user-select: none set,
         // but if the element is draggable then dragging should take priority over selection.
-        if (style.userDrag() == DRAG_ELEMENT && style.userSelect() == SELECT_NONE)
+        if (style.userDrag() == UserDrag::Element && style.userSelect() == UserSelect::None)
             return false;
     }
     return parentOrShadowHostNode() ? parentOrShadowHostNode()->canStartSelection() : true;
@@ -2151,7 +2153,7 @@ static EventTargetDataMap& eventTargetDataMap()
     return map;
 }
 
-static StaticLock s_eventTargetDataMapLock;
+static Lock s_eventTargetDataMapLock;
 
 EventTargetData* Node::eventTargetData()
 {
@@ -2340,14 +2342,14 @@ void Node::dispatchSubtreeModifiedEvent()
     if (!parentNode() && !hasEventListeners(subtreeModifiedEventName))
         return;
 
-    dispatchScopedEvent(MutationEvent::create(subtreeModifiedEventName, true));
+    dispatchScopedEvent(MutationEvent::create(subtreeModifiedEventName, Event::CanBubble::Yes));
 }
 
 void Node::dispatchDOMActivateEvent(Event& underlyingClickEvent)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isScriptAllowed());
     int detail = is<UIEvent>(underlyingClickEvent) ? downcast<UIEvent>(underlyingClickEvent).detail() : 0;
-    auto event = UIEvent::create(eventNames().DOMActivateEvent, true, true, document().defaultView(), detail);
+    auto event = UIEvent::create(eventNames().DOMActivateEvent, Event::CanBubble::Yes, Event::IsCancelable::Yes, document().windowProxy(), detail);
     event->setUnderlyingEvent(&underlyingClickEvent);
     dispatchScopedEvent(event);
     if (event->defaultHandled())
@@ -2367,7 +2369,7 @@ bool Node::dispatchBeforeLoadEvent(const String& sourceURL)
 
 void Node::dispatchInputEvent()
 {
-    dispatchScopedEvent(Event::create(eventNames().inputEvent, true, false));
+    dispatchScopedEvent(Event::create(eventNames().inputEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
 
 void Node::defaultEventHandler(Event& event)

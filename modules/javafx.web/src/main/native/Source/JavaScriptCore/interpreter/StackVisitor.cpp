@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,13 +44,18 @@ StackVisitor::StackVisitor(CallFrame* startFrame, VM* vm)
     CallFrame* topFrame;
     if (startFrame) {
         ASSERT(vm);
+        ASSERT(!vm->topCallFrame || reinterpret_cast<void*>(vm->topCallFrame) != vm->topEntryFrame);
+
         m_frame.m_entryFrame = vm->topEntryFrame;
         topFrame = vm->topCallFrame;
 
-        if (topFrame && static_cast<void*>(m_frame.m_entryFrame) == static_cast<void*>(topFrame)) {
-            topFrame = vmEntryRecord(m_frame.m_entryFrame)->m_prevTopCallFrame;
-            m_frame.m_entryFrame = vmEntryRecord(m_frame.m_entryFrame)->m_prevTopEntryFrame;
+        if (topFrame && topFrame->isStackOverflowFrame()) {
+            topFrame = topFrame->callerFrame(m_frame.m_entryFrame);
+            m_topEntryFrameIsEmpty = (m_frame.m_entryFrame != vm->topEntryFrame);
+            if (startFrame == vm->topCallFrame)
+                startFrame = topFrame;
         }
+
     } else {
         m_frame.m_entryFrame = 0;
         topFrame = 0;
@@ -282,10 +287,10 @@ String StackVisitor::Frame::functionName() const
         traceLine = makeString(m_wasmFunctionIndexOrName);
         break;
     case CodeType::Eval:
-        traceLine = ASCIILiteral("eval code");
+        traceLine = "eval code"_s;
         break;
     case CodeType::Module:
-        traceLine = ASCIILiteral("module code");
+        traceLine = "module code"_s;
         break;
     case CodeType::Native: {
         JSCell* callee = this->callee().asCell();
@@ -297,7 +302,7 @@ String StackVisitor::Frame::functionName() const
         traceLine = getCalculatedDisplayName(callFrame()->vm(), jsCast<JSObject*>(this->callee().asCell())).impl();
         break;
     case CodeType::Global:
-        traceLine = ASCIILiteral("global code");
+        traceLine = "global code"_s;
         break;
     }
     return traceLine.isNull() ? emptyString() : traceLine;
@@ -318,10 +323,10 @@ String StackVisitor::Frame::sourceURL() const
         break;
     }
     case CodeType::Native:
-        traceLine = ASCIILiteral("[native code]");
+        traceLine = "[native code]"_s;
         break;
     case CodeType::Wasm:
-        traceLine = ASCIILiteral("[wasm code]");
+        traceLine = "[wasm code]"_s;
         break;
     }
     return traceLine.isNull() ? emptyString() : traceLine;
@@ -426,7 +431,7 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent) const
     dump(out, indent, [] (PrintStream&) { });
 }
 
-void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, std::function<void(PrintStream&)> prefix) const
+void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, WTF::Function<void(PrintStream&)> prefix) const
 {
     if (!this->callFrame()) {
         out.print(indent, "frame 0x0\n");

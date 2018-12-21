@@ -21,6 +21,7 @@
 #pragma once
 
 #include "ExceptionOr.h"
+#include "MediaQueryParserContext.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
@@ -43,8 +44,7 @@ public:
     {
         return adoptRef(*new MediaQuerySet);
     }
-
-    static WEBCORE_EXPORT Ref<MediaQuerySet> create(const String& mediaString);
+    static WEBCORE_EXPORT Ref<MediaQuerySet> create(const String& mediaString, MediaQueryParserContext = MediaQueryParserContext());
 
     WEBCORE_EXPORT ~MediaQuerySet();
 
@@ -90,7 +90,7 @@ public:
     unsigned length() const { return m_mediaQueries->queryVector().size(); }
     WEBCORE_EXPORT String item(unsigned index) const;
     WEBCORE_EXPORT ExceptionOr<void> deleteMedium(const String& oldMedium);
-    WEBCORE_EXPORT ExceptionOr<void> appendMedium(const String& newMedium);
+    WEBCORE_EXPORT void appendMedium(const String& newMedium);
 
     String mediaText() const { return m_mediaQueries->mediaText(); }
     WEBCORE_EXPORT ExceptionOr<void> setMediaText(const String&);

@@ -75,12 +75,13 @@ bool EventTarget::addEventListener(const AtomicString& eventType, Ref<EventListe
     }
 
     bool listenerCreatedFromScript = listener->type() == EventListener::JSEventListenerType && !listener->wasCreatedFromMarkup();
+    auto listenerRef = listener.copyRef();
 
     if (!ensureEventTargetData().eventListenerMap.add(eventType, WTFMove(listener), { options.capture, passive.value_or(false), options.once }))
         return false;
 
     if (listenerCreatedFromScript)
-        InspectorInstrumentation::didAddEventListener(*this, eventType);
+        InspectorInstrumentation::didAddEventListener(*this, eventType, listenerRef.get(), options.capture);
 
     return true;
 }
@@ -135,9 +136,10 @@ bool EventTarget::setAttributeEventListener(const AtomicString& eventType, RefPt
     if (existingListener) {
         InspectorInstrumentation::willRemoveEventListener(*this, eventType, *existingListener, false);
 
+        auto listenerPointer = listener.copyRef();
         eventTargetData()->eventListenerMap.replace(eventType, *existingListener, listener.releaseNonNull(), { });
 
-        InspectorInstrumentation::didAddEventListener(*this, eventType);
+        InspectorInstrumentation::didAddEventListener(*this, eventType, *listenerPointer, false);
 
         return true;
     }
@@ -187,6 +189,7 @@ void EventTarget::dispatchEvent(Event& event)
     event.setTarget(this);
     event.setCurrentTarget(this);
     event.setEventPhase(Event::AT_TARGET);
+    event.resetBeforeDispatch();
     fireEventListeners(event);
     event.resetAfterDispatch();
 }
@@ -307,10 +310,16 @@ const EventListenerVector& EventTarget::eventListeners(const AtomicString& event
 
 void EventTarget::removeAllEventListeners()
 {
+    auto& threadData = threadGlobalData();
+    RELEASE_ASSERT(!threadData.isInRemoveAllEventListeners());
+
+    threadData.setIsInRemoveAllEventListeners(true);
+
     auto* data = eventTargetData();
-    if (!data)
-        return;
-    data->eventListenerMap.clear();
+    if (data)
+        data->eventListenerMap.clear();
+
+    threadData.setIsInRemoveAllEventListeners(false);
 }
 
 void EventTarget::visitJSEventListeners(JSC::SlotVisitor& visitor)

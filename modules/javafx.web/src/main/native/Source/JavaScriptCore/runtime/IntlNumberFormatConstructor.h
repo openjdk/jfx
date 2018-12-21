@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2015 Andy VanWagoner (thetalecrafter@gmail.com)
+ * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,10 +35,16 @@ namespace JSC {
 class IntlNumberFormat;
 class IntlNumberFormatPrototype;
 
-class IntlNumberFormatConstructor : public InternalFunction {
+class IntlNumberFormatConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
     static const unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+
+    template<typename CellType>
+    static IsoSubspace* subspaceFor(VM& vm)
+    {
+        return &vm.intlNumberFormatConstructorSpace;
+    }
 
     static IntlNumberFormatConstructor* create(VM&, Structure*, IntlNumberFormatPrototype*, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);

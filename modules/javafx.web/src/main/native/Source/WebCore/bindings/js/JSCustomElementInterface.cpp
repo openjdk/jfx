@@ -33,11 +33,11 @@
 #include "JSDOMBinding.h"
 #include "JSDOMConvertNullable.h"
 #include "JSDOMConvertStrings.h"
-#include "JSDOMGlobalObject.h"
+#include "JSDOMWindow.h"
 #include "JSElement.h"
+#include "JSExecState.h"
+#include "JSExecStateInstrumentation.h"
 #include "JSHTMLElement.h"
-#include "JSMainThreadExecState.h"
-#include "JSMainThreadExecStateInstrumentation.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/WeakInlines.h>
@@ -124,7 +124,7 @@ static RefPtr<Element> constructCustomElementSynchronously(Document& document, V
         return nullptr;
     }
 
-    InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionConstruct(&document, constructType, constructData);
+    InspectorInstrumentationCookie cookie = JSExecState::instrumentFunctionConstruct(&document, constructType, constructData);
     MarkedArgumentBuffer args;
     ASSERT(!args.hasOverflowed());
     JSValue newElement = construct(&state, constructor, constructType, constructData, args);
@@ -134,29 +134,29 @@ static RefPtr<Element> constructCustomElementSynchronously(Document& document, V
     ASSERT(!newElement.isEmpty());
     HTMLElement* wrappedElement = JSHTMLElement::toWrapped(vm, newElement);
     if (!wrappedElement) {
-        throwTypeError(&state, scope, ASCIILiteral("The result of constructing a custom element must be a HTMLElement"));
+        throwTypeError(&state, scope, "The result of constructing a custom element must be a HTMLElement"_s);
         return nullptr;
     }
 
     if (wrappedElement->hasAttributes()) {
-        throwNotSupportedError(state, scope, ASCIILiteral("A newly constructed custom element must not have attributes"));
+        throwNotSupportedError(state, scope, "A newly constructed custom element must not have attributes"_s);
         return nullptr;
     }
     if (wrappedElement->hasChildNodes()) {
-        throwNotSupportedError(state, scope, ASCIILiteral("A newly constructed custom element must not have child nodes"));
+        throwNotSupportedError(state, scope, "A newly constructed custom element must not have child nodes"_s);
         return nullptr;
     }
     if (wrappedElement->parentNode()) {
-        throwNotSupportedError(state, scope, ASCIILiteral("A newly constructed custom element must not have a parent node"));
+        throwNotSupportedError(state, scope, "A newly constructed custom element must not have a parent node"_s);
         return nullptr;
     }
     if (&wrappedElement->document() != &document) {
-        throwNotSupportedError(state, scope, ASCIILiteral("A newly constructed custom element belongs to a wrong docuemnt"));
+        throwNotSupportedError(state, scope, "A newly constructed custom element belongs to a wrong document"_s);
         return nullptr;
     }
     ASSERT(wrappedElement->namespaceURI() == HTMLNames::xhtmlNamespaceURI);
     if (wrappedElement->localName() != localName) {
-        throwNotSupportedError(state, scope, ASCIILiteral("A newly constructed custom element belongs to a wrong docuemnt"));
+        throwNotSupportedError(state, scope, "A newly constructed custom element has incorrect local name"_s);
         return nullptr;
     }
 
@@ -178,13 +178,13 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     if (!m_constructor)
         return;
 
-    ScriptExecutionContext* context = scriptExecutionContext();
+    auto* context = scriptExecutionContext();
     if (!context)
         return;
-    ASSERT(context->isDocument());
-    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, m_isolatedWorld);
+    auto* globalObject = toJSDOMWindow(downcast<Document>(*context).frame(), m_isolatedWorld);
+    if (!globalObject)
+        return;
     ExecState* state = globalObject->globalExec();
-    RETURN_IF_EXCEPTION(scope, void());
 
     ConstructData constructData;
     ConstructType constructType = m_constructor->methodTable(vm)->getConstructData(m_constructor.get(), constructData);
@@ -199,7 +199,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
 
     MarkedArgumentBuffer args;
     ASSERT(!args.hasOverflowed());
-    InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionConstruct(context, constructType, constructData);
+    InspectorInstrumentationCookie cookie = JSExecState::instrumentFunctionConstruct(context, constructType, constructData);
     JSValue returnedElement = construct(state, m_constructor.get(), constructType, constructData, args);
     InspectorInstrumentation::didCallFunction(cookie, context);
 
@@ -233,9 +233,9 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
     VM& vm = m_isolatedWorld->vm();
     JSLockHolder lock(vm);
 
-    ASSERT(context);
-    ASSERT(context->isDocument());
-    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, m_isolatedWorld);
+    auto* globalObject = toJSDOMWindow(downcast<Document>(*context).frame(), m_isolatedWorld);
+    if (!globalObject)
+        return;
     ExecState* state = globalObject->globalExec();
 
     JSObject* jsElement = asObject(toJS(state, globalObject, element));
@@ -248,10 +248,10 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
     addArguments(state, globalObject, args);
     RELEASE_ASSERT(!args.hasOverflowed());
 
-    InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(context, callType, callData);
+    InspectorInstrumentationCookie cookie = JSExecState::instrumentFunctionCall(context, callType, callData);
 
     NakedPtr<JSC::Exception> exception;
-    JSMainThreadExecState::call(state, callback, callType, callData, jsElement, args, exception);
+    JSExecState::call(state, callback, callType, callData, jsElement, args, exception);
 
     InspectorInstrumentation::didCallFunction(cookie, context);
 

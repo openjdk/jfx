@@ -58,7 +58,7 @@ class Worklist::Thread final : public AutomaticThread {
 public:
     using Base = AutomaticThread;
     Thread(const AbstractLocker& locker, Worklist& work)
-        : Base(locker, work.m_lock, work.m_planEnqueued)
+        : Base(locker, work.m_lock, work.m_planEnqueued.copyRef())
         , worklist(work)
     {
 
@@ -115,6 +115,11 @@ protected:
         }
 
         return complete(holdLock(*worklist.m_lock));
+    }
+
+    const char* name() const override
+    {
+        return "Wasm Worklist Helper Thread";
     }
 
 public:

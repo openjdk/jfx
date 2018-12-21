@@ -67,10 +67,6 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextStream.h>
 
-#if USE(CG) && !PLATFORM(IOS)
-#include <ApplicationServices/ApplicationServices.h>
-#endif
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -91,9 +87,9 @@ public:
     GraphicsContext context;
     DisplayList::DisplayList displayList;
 
-    DisplayListDrawingContext(const FloatRect& clip)
-        : context([&](GraphicsContext& context) {
-            return std::make_unique<DisplayList::Recorder>(context, displayList, clip, AffineTransform());
+    DisplayListDrawingContext(GraphicsContext& context, const FloatRect& clip)
+        : context([&](GraphicsContext& displayListContext) {
+            return std::make_unique<DisplayList::Recorder>(displayListContext, displayList, context.state(), clip, AffineTransform());
         })
     {
     }
@@ -203,7 +199,7 @@ CanvasRenderingContext2DBase::State::State()
     , shadowColor(Color::transparent)
     , globalAlpha(1)
     , globalComposite(CompositeSourceOver)
-    , globalBlend(BlendModeNormal)
+    , globalBlend(BlendMode::Normal)
     , hasInvertibleTransform(true)
     , lineDashOffset(0)
     , imageSmoothingEnabled(true)
@@ -778,7 +774,7 @@ String CanvasRenderingContext2DBase::globalCompositeOperation() const
 void CanvasRenderingContext2DBase::setGlobalCompositeOperation(const String& operation)
 {
     CompositeOperator op = CompositeSourceOver;
-    BlendMode blendMode = BlendModeNormal;
+    BlendMode blendMode = BlendMode::Normal;
     if (!parseCompositeAndBlendOperator(operation, op, blendMode))
         return;
     if ((state().globalComposite == op) && (state().globalBlend == blendMode))
@@ -1050,7 +1046,7 @@ bool CanvasRenderingContext2DBase::isFullCanvasCompositeMode(CompositeOperator o
 
 static WindRule toWindRule(CanvasFillRule rule)
 {
-    return rule == CanvasFillRule::Nonzero ? RULE_NONZERO : RULE_EVENODD;
+    return rule == CanvasFillRule::Nonzero ? WindRule::NonZero : WindRule::EvenOdd;
 }
 
 void CanvasRenderingContext2DBase::fill(CanvasFillRule windingRule)
@@ -1718,10 +1714,10 @@ ExceptionOr<void> CanvasRenderingContext2DBase::drawImage(ImageBitmap& imageBitm
 void CanvasRenderingContext2DBase::drawImageFromRect(HTMLImageElement& imageElement, float sx, float sy, float sw, float sh, float dx, float dy, float dw, float dh, const String& compositeOperation)
 {
     CompositeOperator op;
-    auto blendOp = BlendModeNormal;
-    if (!parseCompositeAndBlendOperator(compositeOperation, op, blendOp) || blendOp != BlendModeNormal)
+    auto blendOp = BlendMode::Normal;
+    if (!parseCompositeAndBlendOperator(compositeOperation, op, blendOp) || blendOp != BlendMode::Normal)
         op = CompositeSourceOver;
-    drawImage(imageElement, FloatRect { sx, sy, sw, sh }, FloatRect { dx, dy, dw, dh }, op, BlendModeNormal);
+    drawImage(imageElement, FloatRect { sx, sy, sw, sh }, FloatRect { dx, dy, dw, dh }, op, BlendMode::Normal);
 }
 
 void CanvasRenderingContext2DBase::clearCanvas()
@@ -1974,6 +1970,9 @@ ExceptionOr<RefPtr<CanvasPattern>> CanvasRenderingContext2DBase::createPattern(H
 #endif
 
     auto imageBuffer = ImageBuffer::create(size(videoElement), drawingContext() ? drawingContext()->renderingMode() : Accelerated);
+    if (!imageBuffer)
+        return nullptr;
+
     videoElement.paintCurrentFrameInContext(imageBuffer->context(), FloatRect(FloatPoint(), size(videoElement)));
 
     return RefPtr<CanvasPattern> { CanvasPattern::create(ImageBuffer::sinkIntoImage(WTFMove(imageBuffer), PreserveResolution::Yes).releaseNonNull(), repeatX, repeatY, originClean) };
@@ -2090,7 +2089,7 @@ GraphicsContext* CanvasRenderingContext2DBase::drawingContext() const
     auto& canvas = downcast<HTMLCanvasElement>(canvasBase());
     if (UNLIKELY(m_usesDisplayListDrawing)) {
         if (!m_recordingContext)
-            m_recordingContext = std::make_unique<DisplayListDrawingContext>(FloatRect(FloatPoint::zero(), canvas.size()));
+            m_recordingContext = std::make_unique<DisplayListDrawingContext>(*canvas.drawingContext(), FloatRect(FloatPoint::zero(), canvas.size()));
         return &m_recordingContext->context;
     }
 

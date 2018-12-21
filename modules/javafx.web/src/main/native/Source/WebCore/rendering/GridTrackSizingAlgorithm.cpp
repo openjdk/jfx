@@ -587,16 +587,11 @@ GridTrackSize GridTrackSizingAlgorithm::gridTrackSize(GridTrackSizingDirection d
 
     // FIXME: Ensure this condition for determining whether a size is indefinite or not is working
     // correctly for orthogonal flows.
-    if (minTrackBreadth.isPercentage() || maxTrackBreadth.isPercentage()) {
-        // FIXME: we should remove the second check later. We need it because during the second
-        // iteration of the algorithm we set definite sizes in the grid container so percents would
-        // not resolve properly (it would think that the height is definite when it is not).
-        if (!availableSpace(direction) || (direction == ForRows && !m_renderGrid->hasDefiniteLogicalHeight())) {
-            if (minTrackBreadth.isPercentage())
-                minTrackBreadth = Length(Auto);
-            if (maxTrackBreadth.isPercentage())
-                maxTrackBreadth = Length(Auto);
-        }
+    if (!availableSpace(direction) && (minTrackBreadth.isPercentage() || maxTrackBreadth.isPercentage())) {
+        if (minTrackBreadth.isPercentage())
+            minTrackBreadth = Length(Auto);
+        if (maxTrackBreadth.isPercentage())
+            maxTrackBreadth = Length(Auto);
     }
 
     // Flex sizes are invalid as a min sizing function. However we still can have a flexible |minTrackBreadth|
@@ -624,7 +619,7 @@ double GridTrackSizingAlgorithm::computeFlexFactorUnitSize(const Vector<GridTrac
             leftOverSpace -= baseSize;
             flexFactorSum -= flexFactor;
             if (!tracksToTreatAsInflexible)
-                tracksToTreatAsInflexible = std::unique_ptr<TrackIndexSet>(new TrackIndexSet());
+                tracksToTreatAsInflexible = std::make_unique<TrackIndexSet>();
             tracksToTreatAsInflexible->add(index);
             validFlexFactorUnit = false;
         }
@@ -704,7 +699,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::logicalHeightForChild(RenderBox& ch
 
     // We need to clear the stretched height to properly compute logical height during layout.
     if (child.needsLayout())
-        child.clearOverrideLogicalContentHeight();
+        child.clearOverrideContentLogicalHeight();
 
     child.layoutIfNeeded();
     return child.logicalHeight() + GridLayoutFunctions::marginLogicalSizeForChild(*renderGrid(), childBlockDirection, child);
@@ -745,7 +740,7 @@ LayoutUnit GridTrackSizingAlgorithmStrategy::minSizeForChild(RenderBox& child) c
     const Length& childMinSize = isRowAxis ? child.style().logicalMinWidth() : child.style().logicalMinHeight();
     const Length& childSize = isRowAxis ? child.style().logicalWidth() : child.style().logicalHeight();
 
-    bool overflowIsVisible = isRowAxis ? child.style().overflowInlineDirection() == OVISIBLE : child.style().overflowBlockDirection() == OVISIBLE;
+    bool overflowIsVisible = isRowAxis ? child.style().overflowInlineDirection() == Overflow::Visible : child.style().overflowBlockDirection() == Overflow::Visible;
     if (childSize.isAuto() && childMinSize.isAuto() && overflowIsVisible) {
         auto minSize = minContentForChild(child);
         LayoutUnit maxBreadth;
@@ -908,6 +903,8 @@ LayoutUnit IndefiniteSizeStrategy::freeSpaceForStretchAutoTracksStep() const
         return LayoutUnit();
 
     auto minSize = renderGrid()->computeContentLogicalHeight(MinSize, renderGrid()->style().logicalMinHeight(), std::nullopt);
+    if (!minSize)
+        return LayoutUnit();
     return minSize.value() - computeTrackBasedSize();
 }
 
@@ -968,9 +965,11 @@ void GridTrackSizingAlgorithm::initializeTrackSizes()
     ASSERT(m_contentSizedTracksIndex.isEmpty());
     ASSERT(m_flexibleSizedTracksIndex.isEmpty());
     ASSERT(m_autoSizedTracksForStretchIndex.isEmpty());
+    ASSERT(!m_hasPercentSizedRowsIndefiniteHeight);
 
     Vector<GridTrack>& allTracks = tracks(m_direction);
     const bool hasDefiniteFreeSpace = !!availableSpace();
+    const bool indefiniteHeight = m_direction == ForRows && !m_renderGrid->hasDefiniteLogicalHeight();
     LayoutUnit maxSize = std::max(LayoutUnit(), availableSpace().value_or(LayoutUnit()));
     // 1. Initialize per Grid track variables.
     for (unsigned i = 0; i < allTracks.size(); ++i) {
@@ -992,6 +991,12 @@ void GridTrackSizingAlgorithm::initializeTrackSizes()
             m_flexibleSizedTracksIndex.append(i);
         if (trackSize.hasAutoMaxTrackBreadth() && !trackSize.isFitContent())
             m_autoSizedTracksForStretchIndex.append(i);
+
+        if (!m_hasPercentSizedRowsIndefiniteHeight && indefiniteHeight) {
+            auto& rawTrackSize = rawGridTrackSize(m_direction, i);
+            if (rawTrackSize.minTrackBreadth().isPercentage() || rawTrackSize.maxTrackBreadth().isPercentage())
+                m_hasPercentSizedRowsIndefiniteHeight = true;
+        }
     }
 }
 
@@ -1070,7 +1075,7 @@ void GridTrackSizingAlgorithm::stretchAutoTracks()
 {
     auto currentFreeSpace = m_strategy->freeSpaceForStretchAutoTracksStep();
     if (m_autoSizedTracksForStretchIndex.isEmpty() || currentFreeSpace <= 0
-        || (m_renderGrid->contentAlignment(m_direction).distribution() != ContentDistributionStretch))
+        || (m_renderGrid->contentAlignment(m_direction).distribution() != ContentDistribution::Stretch))
         return;
 
     Vector<GridTrack>& allTracks = tracks(m_direction);
@@ -1143,6 +1148,7 @@ void GridTrackSizingAlgorithm::setup(GridTrackSizingDirection direction, unsigne
     tracks(direction).resize(numTracks);
 
     m_needsSetup = false;
+    m_hasPercentSizedRowsIndefiniteHeight = false;
 }
 
 void GridTrackSizingAlgorithm::run()
@@ -1188,6 +1194,7 @@ void GridTrackSizingAlgorithm::reset()
     m_autoSizedTracksForStretchIndex.shrink(0);
     setAvailableSpace(ForRows, std::nullopt);
     setAvailableSpace(ForColumns, std::nullopt);
+    m_hasPercentSizedRowsIndefiniteHeight = false;
 }
 
 #ifndef NDEBUG

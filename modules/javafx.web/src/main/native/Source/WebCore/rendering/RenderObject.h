@@ -46,6 +46,7 @@ class CSSAnimationController;
 class Color;
 class Cursor;
 class Document;
+class DocumentTimeline;
 class HitTestLocation;
 class HitTestRequest;
 class HitTestResult;
@@ -80,6 +81,8 @@ const int caretWidth = 2; // This value should be kept in sync with UIKit. See <
 const int caretWidth = 1;
 #endif
 
+enum class ShouldAllowCrossOriginScrolling { No, Yes };
+
 #if ENABLE(DASHBOARD_SUPPORT)
 struct AnnotatedRegionValue {
     bool operator==(const AnnotatedRegionValue& o) const
@@ -99,7 +102,7 @@ struct AnnotatedRegionValue {
 #endif
 
 // Base class for all rendering tree objects.
-class RenderObject : public CachedImageClient {
+class RenderObject : public CachedImageClient, public CanMakeWeakPtr<RenderObject> {
     WTF_MAKE_ISO_ALLOCATED(RenderObject);
     friend class RenderBlock;
     friend class RenderBlockFlow;
@@ -110,8 +113,6 @@ public:
     // marked as anonymous in the constructor.
     explicit RenderObject(Node&);
     virtual ~RenderObject();
-
-    auto& weakPtrFactory() const { return m_weakFactory; }
 
     RenderTheme& theme() const;
 
@@ -157,7 +158,7 @@ public:
     WEBCORE_EXPORT RenderLayer* enclosingLayer() const;
 
     // Scrolling is a RenderBox concept, however some code just cares about recursively scrolling our enclosing ScrollableArea(s).
-    WEBCORE_EXPORT bool scrollRectToVisible(SelectionRevealMode, const LayoutRect& absoluteRect, bool insideFixed, const ScrollAlignment& alignX = ScrollAlignment::alignCenterIfNeeded, const ScrollAlignment& alignY = ScrollAlignment::alignCenterIfNeeded);
+    WEBCORE_EXPORT bool scrollRectToVisible(SelectionRevealMode, const LayoutRect& absoluteRect, bool insideFixed, const ScrollAlignment& alignX = ScrollAlignment::alignCenterIfNeeded, const ScrollAlignment& alignY = ScrollAlignment::alignCenterIfNeeded, ShouldAllowCrossOriginScrolling = ShouldAllowCrossOriginScrolling::No);
 
     // Convenience function for getting to the nearest enclosing box of a RenderObject.
     WEBCORE_EXPORT RenderBox& enclosingBox() const;
@@ -284,9 +285,6 @@ public:
     virtual bool isRenderMultiColumnFlow() const { return false; }
     virtual bool isRenderMultiColumnSpannerPlaceholder() const { return false; }
 
-    virtual bool isRenderLinesClampFlow() const { return false; }
-    virtual bool isRenderLinesClampSet() const { return false; }
-
     virtual bool isRenderScrollbarPart() const { return false; }
 
     bool isDocumentElementRenderer() const { return document().documentElement() == &m_node; }
@@ -404,9 +402,9 @@ public:
     {
         // This function is kept in sync with anonymous block creation conditions in
         // RenderBlock::createAnonymousBlock(). This includes creating an anonymous
-        // RenderBlock having a BLOCK or BOX display. Other classes such as RenderTextFragment
+        // RenderBlock having a DisplayType::Block or DisplayType::Box display. Other classes such as RenderTextFragment
         // are not RenderBlocks and will return false. See https://bugs.webkit.org/show_bug.cgi?id=56709.
-        return isAnonymous() && (style().display() == BLOCK || style().display() == BOX) && style().styleType() == NOPSEUDO && isRenderBlock() && !isListMarker() && !isRenderFragmentedFlow() && !isRenderMultiColumnSet() && !isRenderView()
+        return isAnonymous() && (style().display() == DisplayType::Block || style().display() == DisplayType::Box) && style().styleType() == PseudoId::None && isRenderBlock() && !isListMarker() && !isRenderFragmentedFlow() && !isRenderMultiColumnSet() && !isRenderView()
 #if ENABLE(FULLSCREEN_API)
             && !isRenderFullScreen()
             && !isRenderFullScreenPlaceholder()
@@ -422,8 +420,8 @@ public:
     bool isPositioned() const { return m_bitfields.isPositioned(); }
     bool isInFlowPositioned() const { return m_bitfields.isRelativelyPositioned() || m_bitfields.isStickilyPositioned(); }
     bool isOutOfFlowPositioned() const { return m_bitfields.isOutOfFlowPositioned(); } // absolute or fixed positioning
-    bool isFixedPositioned() const { return isOutOfFlowPositioned() && style().position() == FixedPosition; }
-    bool isAbsolutelyPositioned() const { return isOutOfFlowPositioned() && style().position() == AbsolutePosition; }
+    bool isFixedPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Fixed; }
+    bool isAbsolutelyPositioned() const { return isOutOfFlowPositioned() && style().position() == PositionType::Absolute; }
     bool isRelativelyPositioned() const { return m_bitfields.isRelativelyPositioned(); }
     bool isStickilyPositioned() const { return m_bitfields.isStickilyPositioned(); }
 
@@ -528,10 +526,10 @@ public:
         setPreferredLogicalWidthsDirty(true);
     }
 
-    void setPositionState(EPosition position)
+    void setPositionState(PositionType position)
     {
-        ASSERT((position != AbsolutePosition && position != FixedPosition) || isBox());
-        m_bitfields.setPositionedState(position);
+        ASSERT((position != PositionType::Absolute && position != PositionType::Fixed) || isBox());
+        m_bitfields.setPositionedState(static_cast<int>(position));
     }
     void clearPositionedState() { m_bitfields.clearPositionedState(); }
 
@@ -755,6 +753,7 @@ public:
     virtual void imageChanged(WrappedImagePtr, const IntRect* = nullptr) { }
 
     CSSAnimationController& animation() const;
+    DocumentTimeline* documentTimeline() const;
 
     // Map points and quads through elements, potentially via 3d transforms. You should never need to call these directly; use
     // localToAbsolute/absoluteToLocal methods instead.
@@ -800,7 +799,7 @@ protected:
     void setNeedsSimplifiedNormalFlowLayoutBit(bool b) { m_bitfields.setNeedsSimplifiedNormalFlowLayout(b); }
 
     virtual RenderFragmentedFlow* locateEnclosingFragmentedFlow() const;
-    static void calculateBorderStyleColor(const EBorderStyle&, const BoxSide&, Color&);
+    static void calculateBorderStyleColor(const BorderStyle&, const BoxSide&, Color&);
 
     static FragmentedFlowState computedFragmentedFlowState(const RenderObject&);
 
@@ -834,8 +833,6 @@ private:
     RenderElement* m_parent;
     RenderObject* m_previous;
     RenderObject* m_next;
-
-    WeakPtrFactory<RenderObject> m_weakFactory;
 
 #ifndef NDEBUG
     bool m_hasAXObject             : 1;
@@ -940,10 +937,10 @@ private:
 
         void setPositionedState(int positionState)
         {
-            // This mask maps FixedPosition and AbsolutePosition to IsOutOfFlowPositioned, saving one bit.
+            // This mask maps PositionType::Fixed and PositionType::Absolute to IsOutOfFlowPositioned, saving one bit.
             m_positionedState = static_cast<PositionedState>(positionState & 0x3);
         }
-        void clearPositionedState() { m_positionedState = StaticPosition; }
+        void clearPositionedState() { m_positionedState = static_cast<unsigned>(PositionType::Static); }
 
         ALWAYS_INLINE SelectionState selectionState() const { return static_cast<SelectionState>(m_selectionState); }
         ALWAYS_INLINE void setSelectionState(SelectionState selectionState) { m_selectionState = selectionState; }
@@ -1005,6 +1002,11 @@ inline CSSAnimationController& RenderObject::animation() const
     return frame().animation();
 }
 
+inline DocumentTimeline* RenderObject::documentTimeline() const
+{
+    return document().existingTimeline();
+}
+
 inline bool RenderObject::renderTreeBeingDestroyed() const
 {
     return document().renderTreeBeingDestroyed();
@@ -1015,7 +1017,7 @@ inline bool RenderObject::isBeforeContent() const
     // Text nodes don't have their own styles, so ignore the style on a text node.
     if (isText())
         return false;
-    if (style().styleType() != BEFORE)
+    if (style().styleType() != PseudoId::Before)
         return false;
     return true;
 }
@@ -1025,7 +1027,7 @@ inline bool RenderObject::isAfterContent() const
     // Text nodes don't have their own styles, so ignore the style on a text node.
     if (isText())
         return false;
-    if (style().styleType() != AFTER)
+    if (style().styleType() != PseudoId::After)
         return false;
     return true;
 }

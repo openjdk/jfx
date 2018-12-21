@@ -40,9 +40,12 @@
 #include "NodeRareData.h"
 #include "RenderTable.h"
 #include "StyleProperties.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableElement);
 
 using namespace HTMLNames;
 
@@ -333,8 +336,8 @@ void HTMLTableElement::collectStyleForPresentationAttribute(const QualifiedName&
     } else if (name == alignAttr) {
         if (!value.isEmpty()) {
             if (equalLettersIgnoringASCIICase(value, "center")) {
-                addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitMarginStart, CSSValueAuto);
-                addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitMarginEnd, CSSValueAuto);
+                addPropertyToPresentationAttributeStyle(style, CSSPropertyMarginInlineStart, CSSValueAuto);
+                addPropertyToPresentationAttributeStyle(style, CSSPropertyMarginInlineEnd, CSSValueAuto);
             } else
                 addPropertyToPresentationAttributeStyle(style, CSSPropertyFloat, value);
         }

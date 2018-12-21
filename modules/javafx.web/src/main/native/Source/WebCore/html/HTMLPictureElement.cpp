@@ -27,10 +27,15 @@
 #include "HTMLPictureElement.h"
 
 #include "ElementChildIterator.h"
+#include "HTMLAnchorElement.h"
 #include "HTMLImageElement.h"
 #include "Logging.h"
+#include "RuntimeEnabledFeatures.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPictureElement);
 
 HTMLPictureElement::HTMLPictureElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
@@ -71,6 +76,19 @@ bool HTMLPictureElement::viewportChangeAffectedPicture() const
     }
     return false;
 }
+
+#if USE(SYSTEM_PREVIEW)
+bool HTMLPictureElement::isSystemPreviewImage() const
+{
+    if (!RuntimeEnabledFeatures::sharedFeatures().systemPreviewEnabled())
+        return false;
+
+    const auto* parent = parentElement();
+    if (!is<HTMLAnchorElement>(parent))
+        return false;
+    return downcast<HTMLAnchorElement>(parent)->isSystemPreviewLink();
+}
+#endif
 
 }
 

@@ -30,7 +30,6 @@ import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.embed.swing.FXDnD;
 import com.sun.javafx.embed.swing.SwingCursors;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
-import com.sun.javafx.embed.swing.SwingNodeInterop;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.util.Utils;
@@ -56,7 +55,7 @@ import jdk.swing.interop.DragSourceContextWrapper;
 import jdk.swing.interop.LightweightContentWrapper;
 import jdk.swing.interop.LightweightFrameWrapper;
 
-public class SwingNodeInteropN extends SwingNodeInterop {
+public class SwingNodeInteropN {
 
     private volatile LightweightFrameWrapper lwFrame;
 

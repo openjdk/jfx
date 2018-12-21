@@ -42,13 +42,6 @@
 #endif
 
 #if OS(WINDOWS)
-
-#if !USE(CURL)
-#ifndef _WINSOCKAPI_
-#define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
-#endif
-#endif
-
 #undef WEBCORE_EXPORT
 #if PLATFORM(JAVA)
 #undef WEBCORE_TESTSUPPORT_EXPORT

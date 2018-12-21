@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,6 +43,7 @@ inline JSFunction::JSFunction(VM& vm, FunctionExecutable* executable, JSScope* s
     , m_executable(vm, this, executable)
     , m_rareData()
 {
+    assertTypeInfoFlagInvariants();
 }
 
 inline FunctionExecutable* JSFunction::jsExecutable() const
@@ -77,19 +78,19 @@ inline bool JSFunction::isClassConstructorFunction() const
     return !isHostFunction() && jsExecutable()->isClassConstructorFunction();
 }
 
-inline NativeFunction JSFunction::nativeFunction()
+inline TaggedNativeFunction JSFunction::nativeFunction()
 {
     ASSERT(isHostFunctionNonInline());
     return static_cast<NativeExecutable*>(m_executable.get())->function();
 }
 
-inline NativeFunction JSFunction::nativeConstructor()
+inline TaggedNativeFunction JSFunction::nativeConstructor()
 {
     ASSERT(isHostFunctionNonInline());
     return static_cast<NativeExecutable*>(m_executable.get())->constructor();
 }
 
-inline bool isHostFunction(JSValue value, NativeFunction nativeFunction)
+inline bool isHostFunction(JSValue value, TaggedNativeFunction nativeFunction)
 {
     JSFunction* function = jsCast<JSFunction*>(getJSFunction(value));
     if (!function || !function->isHostFunction())

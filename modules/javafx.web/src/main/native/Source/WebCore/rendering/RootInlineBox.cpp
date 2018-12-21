@@ -45,9 +45,9 @@ namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RootInlineBox);
 
-struct SameSizeAsRootInlineBox : public InlineFlowBox {
+struct SameSizeAsRootInlineBox : public InlineFlowBox, public CanMakeWeakPtr<RootInlineBox> {
     unsigned variables[7];
-    void* pointers[4];
+    void* pointers[3];
 };
 
 COMPILE_ASSERT(sizeof(RootInlineBox) == sizeof(SameSizeAsRootInlineBox), RootInlineBox_should_stay_small);
@@ -63,7 +63,6 @@ static ContainingFragmentMap& containingFragmentMap(RenderBlockFlow& block)
 
 RootInlineBox::RootInlineBox(RenderBlockFlow& block)
     : InlineFlowBox(block)
-    , m_lineBreakPos(0)
 {
     setIsHorizontal(block.isHorizontalWritingMode());
 }
@@ -160,8 +159,7 @@ float RootInlineBox::placeEllipsisBox(bool ltr, float blockLeftEdge, float block
 
 void RootInlineBox::paintEllipsisBox(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom) const
 {
-    if (hasEllipsisBox() && paintInfo.shouldPaintWithinRoot(renderer()) && renderer().style().visibility() == VISIBLE
-            && paintInfo.phase == PaintPhaseForeground)
+    if (hasEllipsisBox() && paintInfo.shouldPaintWithinRoot(renderer()) && renderer().style().visibility() == Visibility::Visible && paintInfo.phase == PaintPhase::Foreground)
         ellipsisBox()->paint(paintInfo, paintOffset, lineTop, lineBottom);
 }
 
@@ -335,7 +333,7 @@ LayoutUnit RootInlineBox::lineSnapAdjustment(LayoutUnit delta) const
 {
     // If our block doesn't have snapping turned on, do nothing.
     // FIXME: Implement bounds snapping.
-    if (blockFlow().style().lineSnap() == LineSnapNone)
+    if (blockFlow().style().lineSnap() == LineSnap::None)
         return 0;
 
     // Get the current line grid and offset.
@@ -382,7 +380,7 @@ LayoutUnit RootInlineBox::lineSnapAdjustment(LayoutUnit delta) const
             firstTextTop = pageLogicalTop + lineGridBox->logicalTop() - lineGrid->borderAndPaddingBefore() + lineGridPaginationOrigin;
     }
 
-    if (blockFlow().style().lineSnap() == LineSnapContain) {
+    if (blockFlow().style().lineSnap() == LineSnap::Contain) {
         // Compute the desired offset from the text-top of a grid line.
         // Look at our height (logicalHeight()).
         // Look at the total available height. It's going to be (textBottom - textTop) + (n-1)*(multiple with leading)
@@ -460,7 +458,7 @@ GapRects RootInlineBox::lineSelectionGap(RenderBlock& rootBlock, const LayoutPoi
                 logicalRect.move(renderer().isHorizontalWritingMode() ? offsetFromRootBlock : LayoutSize(offsetFromRootBlock.height(), offsetFromRootBlock.width()));
                 LayoutRect gapRect = rootBlock.logicalRectToPhysicalRect(rootBlockPhysicalPosition, logicalRect);
                 if (isPreviousBoxSelected && gapRect.width() > 0 && gapRect.height() > 0) {
-                    if (paintInfo && box->parent()->renderer().style().visibility() == VISIBLE)
+                    if (paintInfo && box->parent()->renderer().style().visibility() == Visibility::Visible)
                         paintInfo->context().fillRect(gapRect, box->parent()->renderer().selectionBackgroundColor());
                     // VisibleSelection may be non-contiguous, see comment above.
                     result.uniteCenter(gapRect);
@@ -498,20 +496,20 @@ IntRect RootInlineBox::computeCaretRect(float logicalLeftPosition, unsigned care
 
     bool rightAligned = false;
     switch (blockStyle.textAlign()) {
-    case RIGHT:
-    case WEBKIT_RIGHT:
+    case TextAlignMode::Right:
+    case TextAlignMode::WebKitRight:
         rightAligned = true;
         break;
-    case LEFT:
-    case WEBKIT_LEFT:
-    case CENTER:
-    case WEBKIT_CENTER:
+    case TextAlignMode::Left:
+    case TextAlignMode::WebKitLeft:
+    case TextAlignMode::Center:
+    case TextAlignMode::WebKitCenter:
         break;
-    case JUSTIFY:
-    case TASTART:
+    case TextAlignMode::Justify:
+    case TextAlignMode::Start:
         rightAligned = !blockStyle.isLeftToRightDirection();
         break;
-    case TAEND:
+    case TextAlignMode::End:
         rightAligned = blockStyle.isLeftToRightDirection();
         break;
     }
@@ -1016,15 +1014,15 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
     }
 
     LayoutUnit verticalPosition = 0;
-    EVerticalAlign verticalAlign = renderer->style().verticalAlign();
-    if (verticalAlign == TOP || verticalAlign == BOTTOM)
+    VerticalAlign verticalAlign = renderer->style().verticalAlign();
+    if (verticalAlign == VerticalAlign::Top || verticalAlign == VerticalAlign::Bottom)
         return 0;
 
     RenderElement* parent = renderer->parent();
-    if (parent->isRenderInline() && parent->style().verticalAlign() != TOP && parent->style().verticalAlign() != BOTTOM)
+    if (parent->isRenderInline() && parent->style().verticalAlign() != VerticalAlign::Top && parent->style().verticalAlign() != VerticalAlign::Bottom)
         verticalPosition = box->parent()->logicalTop();
 
-    if (verticalAlign != BASELINE) {
+    if (verticalAlign != VerticalAlign::Baseline) {
         const RenderStyle& parentLineStyle = firstLine ? parent->firstLineStyle() : parent->style();
         const FontCascade& font = parentLineStyle.fontCascade();
         const FontMetrics& fontMetrics = font.fontMetrics();
@@ -1032,22 +1030,22 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
 
         LineDirectionMode lineDirection = parent->isHorizontalWritingMode() ? HorizontalLine : VerticalLine;
 
-        if (verticalAlign == SUB)
+        if (verticalAlign == VerticalAlign::Sub)
             verticalPosition += fontSize / 5 + 1;
-        else if (verticalAlign == SUPER)
+        else if (verticalAlign == VerticalAlign::Super)
             verticalPosition -= fontSize / 3 + 1;
-        else if (verticalAlign == TEXT_TOP)
+        else if (verticalAlign == VerticalAlign::TextTop)
             verticalPosition += renderer->baselinePosition(baselineType(), firstLine, lineDirection) - fontMetrics.ascent(baselineType());
-        else if (verticalAlign == MIDDLE)
+        else if (verticalAlign == VerticalAlign::Middle)
             verticalPosition = (verticalPosition - LayoutUnit(fontMetrics.xHeight() / 2) - renderer->lineHeight(firstLine, lineDirection) / 2 + renderer->baselinePosition(baselineType(), firstLine, lineDirection)).round();
-        else if (verticalAlign == TEXT_BOTTOM) {
+        else if (verticalAlign == VerticalAlign::TextBottom) {
             verticalPosition += fontMetrics.descent(baselineType());
             // lineHeight - baselinePosition is always 0 for replaced elements (except inline blocks), so don't bother wasting time in that case.
             if (!renderer->isReplaced() || renderer->isInlineBlockOrInlineTable())
                 verticalPosition -= (renderer->lineHeight(firstLine, lineDirection) - renderer->baselinePosition(baselineType(), firstLine, lineDirection));
-        } else if (verticalAlign == BASELINE_MIDDLE)
+        } else if (verticalAlign == VerticalAlign::BaselineMiddle)
             verticalPosition += -renderer->lineHeight(firstLine, lineDirection) / 2 + renderer->baselinePosition(baselineType(), firstLine, lineDirection);
-        else if (verticalAlign == LENGTH) {
+        else if (verticalAlign == VerticalAlign::Length) {
             LayoutUnit lineHeight;
             //Per http://www.w3.org/TR/CSS21/visudet.html#propdef-vertical-align: 'Percentages: refer to the 'line-height' of the element itself'.
             if (renderer->style().verticalAlignLength().isPercentOrCalculated())

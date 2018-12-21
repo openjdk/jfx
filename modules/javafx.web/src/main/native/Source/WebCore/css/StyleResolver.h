@@ -86,13 +86,13 @@ struct ResourceLoaderOptions;
 // are interpreted according to the document root element style, and styled only
 // from the User Agent Stylesheet rules.
 
-enum RuleMatchingBehavior {
+enum class RuleMatchingBehavior: uint8_t {
     MatchAllRules,
     MatchAllRulesExcludingSMIL,
     MatchOnlyUserAgentRules,
 };
 
-enum CascadeLevel {
+enum class CascadeLevel: uint8_t {
     UserAgentLevel,
     AuthorLevel,
     UserLevel
@@ -129,7 +129,7 @@ public:
     StyleResolver(Document&);
     ~StyleResolver();
 
-    ElementStyle styleForElement(const Element&, const RenderStyle* parentStyle, const RenderStyle* parentBoxStyle = nullptr, RuleMatchingBehavior = MatchAllRules, const SelectorFilter* = nullptr);
+    ElementStyle styleForElement(const Element&, const RenderStyle* parentStyle, const RenderStyle* parentBoxStyle = nullptr, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules, const SelectorFilter* = nullptr);
 
     void keyframeStylesForAnimation(const Element&, const RenderStyle*, KeyframeList&);
 
@@ -157,9 +157,11 @@ public:
     void setOverrideDocumentElementStyle(RenderStyle* style) { m_overrideDocumentElementStyle = style; }
 
     void addCurrentSVGFontFaceRules();
+    static void adjustSVGElementStyle(const SVGElement&, RenderStyle&);
 
-private:
+    void setNewStateWithElement(const Element&);
     std::unique_ptr<RenderStyle> styleForKeyframe(const RenderStyle*, const StyleRuleKeyframe*, KeyframeValue&);
+    bool isAnimationNameValid(const String&);
 
 public:
     // These methods will give back the set of rules that matched for a given element (or a pseudo-element).
@@ -356,7 +358,7 @@ public:
         const RenderStyle* parentStyle() const { return m_parentStyle; }
         const RenderStyle* rootElementStyle() const { return m_rootElementStyle; }
 
-        EInsideLink elementLinkState() const { return m_elementLinkState; }
+        InsideLink elementLinkState() const { return m_elementLinkState; }
 
         void setApplyPropertyToRegularStyle(bool isApply) { m_applyPropertyToRegularStyle = isApply; }
         void setApplyPropertyToVisitedLinkStyle(bool isApply) { m_applyPropertyToVisitedLinkStyle = isApply; }
@@ -376,7 +378,7 @@ public:
 
         const FontCascadeDescription& fontDescription() { return m_style->fontDescription(); }
         const FontCascadeDescription& parentFontDescription() { return m_parentStyle->fontDescription(); }
-        void setFontDescription(const FontCascadeDescription& fontDescription) { m_fontDirty |= m_style->setFontDescription(fontDescription); }
+        void setFontDescription(FontCascadeDescription&& fontDescription) { m_fontDirty |= m_style->setFontDescription(WTFMove(fontDescription)); }
         void setZoom(float f) { m_fontDirty |= m_style->setZoom(f); }
         void setEffectiveZoom(float f) { m_fontDirty |= m_style->setEffectiveZoom(f); }
         void setWritingMode(WritingMode writingMode) { m_fontDirty |= m_style->setWritingMode(writingMode); }
@@ -407,27 +409,27 @@ public:
         const RenderStyle* m_parentStyle { nullptr };
         std::unique_ptr<RenderStyle> m_ownedParentStyle;
         const RenderStyle* m_rootElementStyle { nullptr };
+        std::unique_ptr<CascadedProperties> m_authorRollback;
+        std::unique_ptr<CascadedProperties> m_userRollback;
 
-        EInsideLink m_elementLinkState { NotInsideLink };
+        const SelectorFilter* m_selectorFilter { nullptr };
+
+        BorderData m_borderData;
+        FillLayer m_backgroundData { FillLayerType::Background };
+        Color m_backgroundColor;
+
+        CSSToLengthConversionData m_cssToLengthConversionData;
+
+        Style::ScopeOrdinal m_styleScopeOrdinal { Style::ScopeOrdinal::Element };
+
+        InsideLink m_elementLinkState { InsideLink::NotInside };
+        CascadeLevel m_cascadeLevel { CascadeLevel::UserAgentLevel };
 
         bool m_applyPropertyToRegularStyle { true };
         bool m_applyPropertyToVisitedLinkStyle { false };
         bool m_fontDirty { false };
         bool m_fontSizeHasViewportUnits { false };
         bool m_hasUAAppearance { false };
-
-        BorderData m_borderData;
-        FillLayer m_backgroundData { BackgroundFillLayer };
-        Color m_backgroundColor;
-
-        CSSToLengthConversionData m_cssToLengthConversionData;
-
-        CascadeLevel m_cascadeLevel { UserAgentLevel };
-        Style::ScopeOrdinal m_styleScopeOrdinal { Style::ScopeOrdinal::Element };
-        std::unique_ptr<CascadedProperties> m_authorRollback;
-        std::unique_ptr<CascadedProperties> m_userRollback;
-
-        const SelectorFilter* m_selectorFilter { nullptr };
     };
 
     State& state() { return m_state; }
@@ -447,7 +449,7 @@ public:
     InspectorCSSOMWrappers& inspectorCSSOMWrappers() { return m_inspectorCSSOMWrappers; }
     const FontCascadeDescription& fontDescription() { return m_state.fontDescription(); }
     const FontCascadeDescription& parentFontDescription() { return m_state.parentFontDescription(); }
-    void setFontDescription(const FontCascadeDescription& fontDescription) { m_state.setFontDescription(fontDescription); }
+    void setFontDescription(FontCascadeDescription&& fontDescription) { m_state.setFontDescription(WTFMove(fontDescription)); }
     void setZoom(float f) { m_state.setZoom(f); }
     void setEffectiveZoom(float f) { m_state.setEffectiveZoom(f); }
     void setWritingMode(WritingMode writingMode) { m_state.setWritingMode(writingMode); }
@@ -467,6 +469,16 @@ private:
         MatchRanges ranges;
         std::unique_ptr<RenderStyle> renderStyle;
         std::unique_ptr<RenderStyle> parentRenderStyle;
+
+        MatchedPropertiesCacheItem(const MatchResult& matchResult, const RenderStyle* style, const RenderStyle* parentStyle)
+            : ranges(matchResult.ranges)
+            , renderStyle(RenderStyle::clonePtr(*style))
+            , parentRenderStyle(RenderStyle::clonePtr(*parentStyle))
+        {
+            // Assign rather than copy-construct so we only allocate as much vector capacity as needed.
+            matchedProperties = matchResult.matchedProperties();
+        }
+        MatchedPropertiesCacheItem() = default;
     };
     const MatchedPropertiesCacheItem* findFromMatchedPropertiesCache(unsigned hash, const MatchResult&);
     void addToMatchedPropertiesCache(const RenderStyle*, const RenderStyle* parentStyle, unsigned hash, const MatchResult&);
@@ -474,8 +486,6 @@ private:
     // Every N additions to the matched declaration cache trigger a sweep where entries holding
     // the last reference to a style declaration are garbage collected.
     void sweepMatchedPropertiesCache();
-
-    unsigned m_matchedPropertiesCacheAdditionsSinceLastSweep;
 
     typedef HashMap<unsigned, MatchedPropertiesCacheItem> MatchedPropertiesCache;
     MatchedPropertiesCache m_matchedPropertiesCache;
@@ -486,8 +496,6 @@ private:
     std::unique_ptr<RenderStyle> m_rootDefaultStyle;
 
     Document& m_document;
-
-    bool m_matchAuthorAndUserStyles;
 
     RenderStyle* m_overrideDocumentElementStyle { nullptr };
 
@@ -503,6 +511,9 @@ private:
 
     State m_state;
 
+    unsigned m_matchedPropertiesCacheAdditionsSinceLastSweep { 0 };
+
+    bool m_matchAuthorAndUserStyles { true };
     // See if we still have crashes where StyleResolver gets deleted early.
     bool m_isDeleted { false };
 

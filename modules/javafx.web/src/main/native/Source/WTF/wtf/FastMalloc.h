@@ -70,6 +70,11 @@ WTF_EXPORT_PRIVATE size_t fastMallocGoodSize(size_t);
 WTF_EXPORT_PRIVATE void releaseFastMallocFreeMemory();
 WTF_EXPORT_PRIVATE void releaseFastMallocFreeMemoryForThisThread();
 
+WTF_EXPORT_PRIVATE void fastCommitAlignedMemory(void*, size_t);
+WTF_EXPORT_PRIVATE void fastDecommitAlignedMemory(void*, size_t);
+
+WTF_EXPORT_PRIVATE void fastEnableMiniMode();
+
 struct FastMallocStatistics {
     size_t reservedVMBytes;
     size_t committedVMBytes;
@@ -200,6 +205,26 @@ struct FastMalloc {
     static void free(void* p) { fastFree(p); }
 };
 
+template<typename T>
+struct FastFree {
+    static_assert(std::is_trivially_destructible<T>::value, "");
+
+    void operator()(T* pointer) const
+    {
+        fastFree(const_cast<typename std::remove_cv<T>::type*>(pointer));
+    }
+};
+
+template<typename T>
+struct FastFree<T[]> {
+    static_assert(std::is_trivially_destructible<T>::value, "");
+
+    void operator()(T* pointer) const
+    {
+        fastFree(const_cast<typename std::remove_cv<T>::type*>(pointer));
+    }
+};
+
 } // namespace WTF
 
 #if !defined(NDEBUG)
@@ -208,6 +233,7 @@ using WTF::fastSetMaxSingleAllocationSize;
 
 using WTF::FastAllocator;
 using WTF::FastMalloc;
+using WTF::FastFree;
 using WTF::isFastMallocEnabled;
 using WTF::fastCalloc;
 using WTF::fastFree;

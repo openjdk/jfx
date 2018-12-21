@@ -35,7 +35,7 @@ const ClassInfo JSMap::s_info = { "Map", &Base::s_info, nullptr, nullptr, CREATE
 
 String JSMap::toStringName(const JSObject*, ExecState*)
 {
-    return ASCIILiteral("Object");
+    return "Object"_s;
 }
 
 JSMap* JSMap::clone(ExecState* exec, VM& vm, Structure* structure)
@@ -51,12 +51,12 @@ bool JSMap::isIteratorProtocolFastAndNonObservable()
     if (!globalObject->isMapPrototypeIteratorProtocolFastAndNonObservable())
         return false;
 
-    Structure* structure = this->structure();
+    VM& vm = globalObject->vm();
+    Structure* structure = this->structure(vm);
     // This is the fast case. Many maps will be an original map.
     if (structure == globalObject->mapStructure())
         return true;
 
-    VM& vm = globalObject->vm();
     if (getPrototypeDirect(vm) != globalObject->mapPrototype())
         return false;
 

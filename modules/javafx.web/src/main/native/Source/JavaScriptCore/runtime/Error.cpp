@@ -91,7 +91,7 @@ JSObject* createTypeError(ExecState* exec, const String& message, ErrorInstance:
 
 JSObject* createNotEnoughArgumentsError(ExecState* exec, ErrorInstance::SourceAppender appender)
 {
-    return createTypeError(exec, ASCIILiteral("Not enough arguments"), appender, TypeNothing);
+    return createTypeError(exec, "Not enough arguments"_s, appender, TypeNothing);
 }
 
 JSObject* createURIError(ExecState* exec, const String& message, ErrorInstance::SourceAppender appender)
@@ -160,7 +160,7 @@ private:
 
 std::unique_ptr<Vector<StackFrame>> getStackTrace(ExecState* exec, VM& vm, JSObject* obj, bool useCurrentFrame)
 {
-    JSGlobalObject* globalObject = obj->globalObject();
+    JSGlobalObject* globalObject = obj->globalObject(vm);
     ErrorConstructor* errorConstructor = globalObject->errorConstructor();
     if (!errorConstructor->stackTraceLimit())
         return nullptr;
@@ -169,7 +169,7 @@ std::unique_ptr<Vector<StackFrame>> getStackTrace(ExecState* exec, VM& vm, JSObj
     std::unique_ptr<Vector<StackFrame>> stackTrace = std::make_unique<Vector<StackFrame>>();
     vm.interpreter->getStackTrace(obj, *stackTrace, framesToSkip, errorConstructor->stackTraceLimit().value());
     if (!stackTrace->isEmpty())
-        ASSERT_UNUSED(exec, exec == vm.topCallFrame || exec == exec->lexicalGlobalObject()->globalExec() || exec == exec->vmEntryGlobalObject()->globalExec());
+        ASSERT_UNUSED(exec, exec == vm.topCallFrame || exec->isGlobalExec());
     return stackTrace;
 }
 
@@ -220,7 +220,7 @@ bool addErrorInfo(VM& vm, Vector<StackFrame>* stackTrace, JSObject* obj)
         if (!sourceURL.isEmpty())
             obj->putDirect(vm, vm.propertyNames->sourceURL, jsString(&vm, sourceURL));
 
-        obj->putDirect(vm, vm.propertyNames->stack, Interpreter::stackTraceAsString(vm, *stackTrace), static_cast<unsigned>(PropertyAttribute::DontEnum));
+        obj->putDirect(vm, vm.propertyNames->stack, jsString(&vm, Interpreter::stackTraceAsString(vm, *stackTrace)), static_cast<unsigned>(PropertyAttribute::DontEnum));
 
         return true;
     }
@@ -283,7 +283,7 @@ JSObject* throwTypeError(ExecState* exec, ThrowScope& scope, const String& messa
 
 JSObject* throwSyntaxError(ExecState* exec, ThrowScope& scope)
 {
-    return throwException(exec, scope, createSyntaxError(exec, ASCIILiteral("Syntax error")));
+    return throwException(exec, scope, createSyntaxError(exec, "Syntax error"_s));
 }
 
 JSObject* throwSyntaxError(ExecState* exec, ThrowScope& scope, const String& message)
@@ -328,7 +328,7 @@ JSObject* createSyntaxError(ExecState* exec, const String& message)
 
 JSObject* createTypeError(ExecState* exec)
 {
-    return createTypeError(exec, ASCIILiteral("Type error"));
+    return createTypeError(exec, "Type error"_s);
 }
 
 JSObject* createTypeError(ExecState* exec, const String& message)
@@ -348,7 +348,15 @@ JSObject* createURIError(ExecState* exec, const String& message)
 
 JSObject* createOutOfMemoryError(ExecState* exec)
 {
-    auto* error = createError(exec, ASCIILiteral("Out of memory"), nullptr);
+    auto* error = createError(exec, "Out of memory"_s, nullptr);
+    jsCast<ErrorInstance*>(error)->setOutOfMemoryError();
+    return error;
+}
+
+JSObject* createOutOfMemoryError(ExecState* exec, const String& message)
+{
+
+    auto* error = createError(exec, makeString("Out of memory: ", message), nullptr);
     jsCast<ErrorInstance*>(error)->setOutOfMemoryError();
     return error;
 }

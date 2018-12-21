@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ public:
               const FloatRect& srcRect, CompositeOperator op, BlendMode bm, DecodingMode dm, ImageOrientationDescription) override;
 
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendModeNormal) override;
+        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal) override;
 
     NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
 

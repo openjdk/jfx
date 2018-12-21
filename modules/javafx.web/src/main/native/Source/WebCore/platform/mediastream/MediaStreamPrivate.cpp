@@ -44,6 +44,11 @@
 
 namespace WebCore {
 
+Ref<MediaStreamPrivate> MediaStreamPrivate::create(Ref<RealtimeMediaSource>&& source)
+{
+    return MediaStreamPrivate::create(MediaStreamTrackPrivateVector::from(MediaStreamTrackPrivate::create(WTFMove(source))));
+}
+
 Ref<MediaStreamPrivate> MediaStreamPrivate::create(const Vector<Ref<RealtimeMediaSource>>& audioSources, const Vector<Ref<RealtimeMediaSource>>& videoSources)
 {
     MediaStreamTrackPrivateVector tracks;
@@ -294,7 +299,7 @@ void MediaStreamPrivate::trackEnded(MediaStreamTrackPrivate&)
 void MediaStreamPrivate::scheduleDeferredTask(Function<void ()>&& function)
 {
     ASSERT(function);
-    callOnMainThread([weakThis = createWeakPtr(), function = WTFMove(function)] {
+    callOnMainThread([weakThis = makeWeakPtr(*this), function = WTFMove(function)] {
         if (!weakThis)
             return;
 

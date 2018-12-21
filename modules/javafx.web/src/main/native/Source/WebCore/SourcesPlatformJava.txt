@@ -24,13 +24,13 @@
 bridge/jni/JNIUtility.cpp
 bridge/jni/JobjectWrapper.cpp
 bridge/jni/jsc/BridgeUtils.cpp
+bridge/jni/jsc/JNIUtilityPrivate.cpp
 bridge/jni/jsc/JavaArrayJSC.cpp
 bridge/jni/jsc/JavaClassJSC.cpp
 bridge/jni/jsc/JavaFieldJSC.cpp
 bridge/jni/jsc/JavaInstanceJSC.cpp
 bridge/jni/jsc/JavaMethodJSC.cpp
 bridge/jni/jsc/JavaRuntimeObject.cpp
-bridge/jni/jsc/JNIUtilityPrivate.cpp
 
 editing/java/EditorJava.cpp
 
@@ -69,6 +69,7 @@ platform/graphics/java/BitmapImageJava.cpp
 platform/graphics/java/BufferImageJava.cpp
 platform/graphics/java/ChromiumBridge.cpp
 platform/graphics/java/ComplexTextControllerJava.cpp
+platform/graphics/java/DisplayRefreshMonitorJava.cpp
 platform/graphics/java/FontCacheJava.cpp
 platform/graphics/java/FontCustomPlatformData.cpp
 platform/graphics/java/FontCascadeJava.cpp
@@ -91,19 +92,17 @@ platform/graphics/texmap/BitmapTextureJava.cpp
 platform/ScrollAnimatorSmooth.cpp
 platform/ScrollAnimationSmooth.cpp
 
-platform/network/java/SocketStreamHandleImplJava.cpp
-platform/network/java/SynchronousLoaderClientJava.cpp
-platform/network/java/URLLoader.cpp
-
 platform/text/LocaleNone.cpp
 platform/text/Hyphenation.cpp
 
-platform/network/java/CookieJarJava.cpp
-platform/network/java/DNSJava.cpp
+platform/network/java/DNSResolveQueueJava.cpp
 platform/network/java/NetworkStateNotifierJava.cpp
 platform/network/java/NetworkStorageSessionJava.cpp
 platform/network/java/ResourceHandleJava.cpp
 platform/network/java/ResourceRequestJava.cpp
+platform/network/java/SocketStreamHandleImplJava.cpp
+platform/network/java/SynchronousLoaderClientJava.cpp
+platform/network/java/URLLoader.cpp
 
 bindings/java/JavaDOMUtils.cpp
 bindings/java/JavaEventListener.cpp

@@ -29,10 +29,13 @@
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
+#include <wtf/ScopedLambda.h>
 #include <wtf/SentinelLinkedList.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace JSC {
+
+class VM;
 
 class FireDetail {
     void* operator new(size_t) = delete;
@@ -62,6 +65,28 @@ private:
     const char* m_string;
 };
 
+template<typename... Types>
+class LazyFireDetail : public FireDetail {
+public:
+    LazyFireDetail(const Types&... args)
+    {
+        m_lambda = scopedLambda<void(PrintStream&)>([&] (PrintStream& out) {
+            out.print(args...);
+        });
+    }
+
+    void dump(PrintStream& out) const override { m_lambda(out); }
+
+private:
+    ScopedLambda<void(PrintStream&)> m_lambda;
+};
+
+template<typename... Types>
+LazyFireDetail<Types...> createLazyFireDetail(const Types&... types)
+{
+    return LazyFireDetail<Types...>(types...);
+}
+
 class WatchpointSet;
 
 class Watchpoint : public BasicRawSentinelNode<Watchpoint> {
@@ -73,11 +98,11 @@ public:
     virtual ~Watchpoint();
 
 protected:
-    virtual void fireInternal(const FireDetail&) = 0;
+    virtual void fireInternal(VM&, const FireDetail&) = 0;
 
 private:
     friend class WatchpointSet;
-    void fire(const FireDetail&);
+    void fire(VM&, const FireDetail&);
 };
 
 enum WatchpointState {
@@ -152,25 +177,12 @@ public:
         WTF::storeStoreFence();
     }
 
-    void fireAll(VM& vm, const FireDetail& detail)
+    template <typename T>
+    void fireAll(VM& vm, T& fireDetails)
     {
         if (LIKELY(m_state != IsWatched))
             return;
-        fireAllSlow(vm, detail);
-    }
-
-    void fireAll(VM& vm, DeferredWatchpointFire* deferredWatchpoints)
-    {
-        if (LIKELY(m_state != IsWatched))
-            return;
-        fireAllSlow(vm, deferredWatchpoints);
-    }
-
-    void fireAll(VM& vm, const char* reason)
-    {
-        if (LIKELY(m_state != IsWatched))
-            return;
-        fireAllSlow(vm, reason);
+        fireAllSlow(vm, fireDetails);
     }
 
     void touch(VM& vm, const FireDetail& detail)
@@ -208,7 +220,7 @@ public:
     int8_t* addressOfSetIsNotEmpty() { return &m_setIsNotEmpty; }
 
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const FireDetail&); // Call only if you've checked isWatched.
-    JS_EXPORT_PRIVATE void fireAllSlow(VM&, DeferredWatchpointFire* deferredWatchpoints);
+    JS_EXPORT_PRIVATE void fireAllSlow(VM&, DeferredWatchpointFire* deferredWatchpoints); // Ditto.
     JS_EXPORT_PRIVATE void fireAllSlow(VM&, const char* reason); // Ditto.
 
 private:
@@ -305,22 +317,11 @@ public:
         m_data = encodeState(IsWatched);
     }
 
-    void fireAll(VM& vm, const FireDetail& detail)
+    template <typename T>
+    void fireAll(VM& vm, T fireDetails)
     {
         if (isFat()) {
-            fat()->fireAll(vm, detail);
-            return;
-        }
-        if (decodeState(m_data) == ClearWatchpoint)
-            return;
-        m_data = encodeState(IsInvalidated);
-        WTF::storeStoreFence();
-    }
-
-    void fireAll(VM& vm, DeferredWatchpointFire* deferred)
-    {
-        if (isFat()) {
-            fat()->fireAll(vm, deferred);
+            fat()->fireAll(vm, fireDetails);
             return;
         }
         if (decodeState(m_data) == ClearWatchpoint)
@@ -472,3 +473,10 @@ private:
 };
 
 } // namespace JSC
+
+namespace WTF {
+
+void printInternal(PrintStream& out, JSC::WatchpointState);
+
+} // namespace WTF
+

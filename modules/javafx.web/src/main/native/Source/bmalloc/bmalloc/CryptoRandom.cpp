@@ -54,8 +54,6 @@ int CCRandomCopyBytes(CCRandomRef rnd, void *bytes, size_t count);
 
 namespace bmalloc {
 
-namespace {
-
 class ARC4Stream {
 public:
     ARC4Stream();
@@ -67,7 +65,7 @@ public:
 
 class ARC4RandomNumberGenerator {
 public:
-    ARC4RandomNumberGenerator(const std::lock_guard<StaticMutex>&);
+    ARC4RandomNumberGenerator(const std::lock_guard<Mutex>&);
 
     uint32_t randomNumber();
     void randomValues(void* buffer, size_t length);
@@ -91,7 +89,7 @@ ARC4Stream::ARC4Stream()
     j = 0;
 }
 
-ARC4RandomNumberGenerator::ARC4RandomNumberGenerator(const std::lock_guard<StaticMutex>&)
+ARC4RandomNumberGenerator::ARC4RandomNumberGenerator(const std::lock_guard<Mutex>&)
     : m_count(0)
 {
 }
@@ -178,8 +176,6 @@ void ARC4RandomNumberGenerator::randomValues(void* buffer, size_t length)
         stirIfNeeded();
         result[length] = getByte();
     }
-}
-
 }
 
 void cryptoRandom(void* buffer, size_t length)

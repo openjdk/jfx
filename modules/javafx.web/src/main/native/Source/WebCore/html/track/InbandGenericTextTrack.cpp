@@ -107,11 +107,11 @@ void InbandGenericTextTrack::updateCueFromCueData(TextTrackCueGeneric& cue, Gene
         cue.setHighlightColor(cueData.highlightColor().rgb());
 
     if (cueData.align() == GenericCueData::Start)
-        cue.setAlign(ASCIILiteral("start"));
+        cue.setAlign("start"_s);
     else if (cueData.align() == GenericCueData::Middle)
-        cue.setAlign(ASCIILiteral("middle"));
+        cue.setAlign("middle"_s);
     else if (cueData.align() == GenericCueData::End)
-        cue.setAlign(ASCIILiteral("end"));
+        cue.setAlign("end"_s);
     cue.setSnapToLines(false);
 
     cue.didChange();
@@ -156,7 +156,7 @@ void InbandGenericTextTrack::removeGenericCue(GenericCueData& cueData)
         DEBUG_LOG(LOGIDENTIFIER, *cue);
         removeCue(*cue);
     } else
-        DEBUG_LOG(LOGIDENTIFIER, "UNABLE to find cue: ", *cue);
+        DEBUG_LOG(LOGIDENTIFIER, "UNABLE to find cue: ", cueData);
 
 }
 

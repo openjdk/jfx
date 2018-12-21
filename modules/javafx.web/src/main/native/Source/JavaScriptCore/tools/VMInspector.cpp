@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #include "CodeBlockSet.h"
 #include "HeapInlines.h"
 #include "HeapIterationScope.h"
+#include "JSCInlines.h"
 #include "MachineContext.h"
 #include "MarkedSpaceInlines.h"
 #include "StackVisitor.h"
@@ -326,14 +327,14 @@ CodeBlock* VMInspector::codeBlockForFrame(CallFrame* topCallFrame, unsigned fram
     return functor.codeBlock;
 }
 
-class PrintFrameFunctor {
+class DumpFrameFunctor {
 public:
     enum Action {
-        PrintOne,
-        PrintAll
+        DumpOne,
+        DumpAll
     };
 
-    PrintFrameFunctor(Action action, unsigned framesToSkip)
+    DumpFrameFunctor(Action action, unsigned framesToSkip)
         : m_action(action)
         , m_framesToSkip(framesToSkip)
     {
@@ -347,7 +348,7 @@ public:
                 out.print("[", (m_currentFrame - m_framesToSkip - 1), "] ");
             });
         }
-        if (m_action == PrintOne && m_currentFrame > m_framesToSkip)
+        if (m_action == DumpOne && m_currentFrame > m_framesToSkip)
             return StackVisitor::Done;
         return StackVisitor::Continue;
     }
@@ -358,27 +359,180 @@ private:
     mutable unsigned m_currentFrame { 0 };
 };
 
-void VMInspector::printCallFrame(CallFrame* callFrame, unsigned framesToSkip)
+void VMInspector::dumpCallFrame(CallFrame* callFrame, unsigned framesToSkip)
 {
     if (!ensureCurrentThreadOwnsJSLock(callFrame))
         return;
-    PrintFrameFunctor functor(PrintFrameFunctor::PrintOne, framesToSkip);
+    DumpFrameFunctor functor(DumpFrameFunctor::DumpOne, framesToSkip);
     callFrame->iterate(functor);
 }
 
-void VMInspector::printStack(CallFrame* topCallFrame, unsigned framesToSkip)
+void VMInspector::dumpStack(CallFrame* topCallFrame, unsigned framesToSkip)
 {
     if (!ensureCurrentThreadOwnsJSLock(topCallFrame))
         return;
     if (!topCallFrame)
         return;
-    PrintFrameFunctor functor(PrintFrameFunctor::PrintAll, framesToSkip);
+    DumpFrameFunctor functor(DumpFrameFunctor::DumpAll, framesToSkip);
     topCallFrame->iterate(functor);
 }
 
-void VMInspector::printValue(JSValue value)
+void VMInspector::dumpValue(JSValue value)
 {
     dataLog(value);
+}
+
+void VMInspector::dumpCellMemory(JSCell* cell)
+{
+    dumpCellMemoryToStream(cell, WTF::dataFile());
+}
+
+class IndentationScope {
+public:
+    IndentationScope(unsigned& indentation)
+        : m_indentation(indentation)
+    {
+        ++m_indentation;
+    }
+
+    ~IndentationScope()
+    {
+        --m_indentation;
+    }
+
+private:
+    unsigned& m_indentation;
+};
+
+void VMInspector::dumpCellMemoryToStream(JSCell* cell, PrintStream& out)
+{
+    VM& vm = *cell->vm();
+    StructureID structureID = cell->structureID();
+    Structure* structure = cell->structure(vm);
+    IndexingType indexingTypeAndMisc = cell->indexingTypeAndMisc();
+    IndexingType indexingType = structure->indexingType();
+    IndexingType indexingMode = structure->indexingMode();
+    JSType type = cell->type();
+    TypeInfo::InlineTypeFlags inlineTypeFlags = cell->inlineTypeFlags();
+    CellState cellState = cell->cellState();
+    size_t cellSize = cell->cellSize();
+    size_t slotCount = cellSize / sizeof(EncodedJSValue);
+
+    EncodedJSValue* slots = bitwise_cast<EncodedJSValue*>(cell);
+    unsigned indentation = 0;
+
+    auto indent = [&] {
+        for (unsigned i = 0 ; i < indentation; ++i)
+            out.print("  ");
+    };
+
+#define INDENT indent(),
+
+    auto dumpSlot = [&] (EncodedJSValue* slots, unsigned index, const char* label = nullptr) {
+        out.print("[", index, "] ", format("%p : 0x%016" PRIx64, &slots[index], slots[index]));
+        if (label)
+            out.print(" ", label);
+        out.print("\n");
+    };
+
+    out.printf("<%p, %s>\n", cell, cell->className(vm));
+    IndentationScope scope(indentation);
+
+    INDENT dumpSlot(slots, 0, "header");
+    {
+        IndentationScope scope(indentation);
+        INDENT out.println("structureID ", format("%d 0x%" PRIx32, structureID, structureID), " structure ", RawPointer(structure));
+        INDENT out.println("indexingTypeAndMisc ", format("%d 0x%" PRIx8, indexingTypeAndMisc, indexingTypeAndMisc), " ", IndexingTypeDump(indexingMode));
+        INDENT out.println("type ", format("%d 0x%" PRIx8, type, type));
+        INDENT out.println("flags ", format("%d 0x%" PRIx8, inlineTypeFlags, inlineTypeFlags));
+        INDENT out.println("cellState ", format("%d", cellState));
+    }
+
+    unsigned slotIndex = 1;
+    if (cell->isObject()) {
+        JSObject* obj = static_cast<JSObject*>(const_cast<JSCell*>(cell));
+        Butterfly* butterfly = obj->butterfly();
+        size_t butterflySize = obj->butterflyTotalSize();
+
+        INDENT dumpSlot(slots, slotIndex, "butterfly");
+        slotIndex++;
+
+        if (butterfly) {
+            IndentationScope scope(indentation);
+
+            bool hasIndexingHeader = structure->hasIndexingHeader(cell);
+            bool hasAnyArrayStorage = JSC::hasAnyArrayStorage(indexingType);
+
+            size_t preCapacity = obj->butterflyPreCapacity();
+            size_t propertyCapacity = structure->outOfLineCapacity();
+
+            void* base = hasIndexingHeader
+                ? butterfly->base(preCapacity, propertyCapacity)
+                : butterfly->base(structure);
+
+            unsigned publicLength = butterfly->publicLength();
+            unsigned vectorLength = butterfly->vectorLength();
+            size_t butterflyCellSize = MarkedSpace::optimalSizeFor(butterflySize);
+
+            size_t endOfIndexedPropertiesIndex = butterflySize / sizeof(EncodedJSValue);
+            size_t endOfButterflyIndex = butterflyCellSize / sizeof(EncodedJSValue);
+
+            INDENT out.println("base ", RawPointer(base));
+            INDENT out.println("hasIndexingHeader ", (hasIndexingHeader ? "YES" : "NO"), " hasAnyArrayStorage ", (hasAnyArrayStorage ? "YES" : "NO"));
+            if (hasIndexingHeader) {
+                INDENT out.print("publicLength ", publicLength, " vectorLength ", vectorLength);
+                if (hasAnyArrayStorage)
+                    out.print(" indexBias ", butterfly->arrayStorage()->m_indexBias);
+                out.print("\n");
+            }
+            INDENT out.println("preCapacity ", preCapacity, " propertyCapacity ", propertyCapacity);
+
+            unsigned index = 0;
+            EncodedJSValue* slots = reinterpret_cast<EncodedJSValue*>(base);
+
+            auto asVoidPtr = [] (void* p) {
+                return p;
+            };
+
+            auto dumpSectionHeader = [&] (const char* name) {
+                out.println("<--- ", name);
+            };
+
+            auto dumpSection = [&] (unsigned startIndex, unsigned endIndex, const char* name) -> unsigned {
+                for (unsigned index = startIndex; index < endIndex; ++index) {
+                    if (name && index == startIndex)
+                        INDENT dumpSectionHeader(name);
+                    INDENT dumpSlot(slots, index);
+                }
+                return endIndex;
+            };
+
+            {
+                IndentationScope scope(indentation);
+
+                index = dumpSection(index, preCapacity, "preCapacity");
+                index = dumpSection(index, preCapacity + propertyCapacity, "propertyCapacity");
+
+                if (hasIndexingHeader)
+                    index = dumpSection(index, index + 1, "indexingHeader");
+
+                INDENT dumpSectionHeader("butterfly");
+                if (hasAnyArrayStorage) {
+                    RELEASE_ASSERT(asVoidPtr(butterfly->arrayStorage()) == asVoidPtr(&slots[index]));
+                    RELEASE_ASSERT(ArrayStorage::vectorOffset() == 2 * sizeof(EncodedJSValue));
+                    index = dumpSection(index, index + 2, "arrayStorage");
+                }
+
+                index = dumpSection(index, endOfIndexedPropertiesIndex, "indexedProperties");
+                index = dumpSection(index, endOfButterflyIndex, "unallocated capacity");
+            }
+        }
+    }
+
+    for (; slotIndex < slotCount; ++slotIndex)
+        INDENT dumpSlot(slots, slotIndex);
+
+#undef INDENT
 }
 
 } // namespace JSC

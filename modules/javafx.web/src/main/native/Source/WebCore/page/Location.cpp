@@ -94,7 +94,7 @@ String Location::hostname() const
     if (!m_frame)
         return String();
 
-    return url().host();
+    return url().host().toString();
 }
 
 String Location::port() const
@@ -269,7 +269,7 @@ void Location::reload(DOMWindow& activeWindow)
     // Other location operations simply block use of JavaScript URLs cross origin.
     if (!activeDocument.securityOrigin().canAccess(targetDocument.securityOrigin())) {
         auto& targetWindow = *targetDocument.domWindow();
-        targetWindow.printErrorMessage(targetWindow.crossDomainAccessErrorMessage(activeWindow));
+        targetWindow.printErrorMessage(targetWindow.crossDomainAccessErrorMessage(activeWindow, IncludeTargetOrigin::Yes));
         return;
     }
 

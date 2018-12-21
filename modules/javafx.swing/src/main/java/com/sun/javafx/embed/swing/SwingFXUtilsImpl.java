@@ -28,19 +28,14 @@ package com.sun.javafx.embed.swing;
 import java.awt.EventQueue;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import com.sun.javafx.embed.swing.newimpl.SwingFXUtilsImplInteropN;
 
 public class SwingFXUtilsImpl {
 
-    private static SwingFXUtilsImplInterop swFXUtilIOP;
+    private static SwingFXUtilsImplInteropN swFXUtilIOP;
 
     static {
-        InteropFactory iopFactoryInstance = null;
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-        swFXUtilIOP = iopFactoryInstance.createSwingFXUtilsImpl();
+        swFXUtilIOP = new SwingFXUtilsImplInteropN();
     }
 
     private static EventQueue getEventQueue() {

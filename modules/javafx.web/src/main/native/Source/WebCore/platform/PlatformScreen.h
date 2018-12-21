@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2018 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,8 @@
 #endif
 
 #if PLATFORM(MAC)
+#include <wtf/HashMap.h>
+
 OBJC_CLASS NSScreen;
 OBJC_CLASS NSWindow;
 #ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
@@ -56,6 +58,7 @@ class FloatSize;
 class Widget;
 
 using PlatformDisplayID = uint32_t;
+using IORegistryGPUID = int64_t; // Global IOKit I/O registryID that can match a GPU across process boundaries.
 
 int screenDepth(Widget*);
 int screenDepthPerComponent(Widget*);
@@ -77,22 +80,42 @@ WEBCORE_EXPORT CGColorSpaceRef screenColorSpace(Widget* = nullptr);
 #endif
 
 #if PLATFORM(MAC)
+struct ScreenProperties;
 
-NSScreen *screen(NSWindow *);
+WEBCORE_EXPORT PlatformDisplayID displayID(NSScreen *);
+
+WEBCORE_EXPORT NSScreen *screen(NSWindow *);
 NSScreen *screen(PlatformDisplayID);
 
+FloatRect screenRectForDisplay(PlatformDisplayID);
+WEBCORE_EXPORT FloatRect screenRectForPrimaryScreen();
+
 WEBCORE_EXPORT FloatRect toUserSpace(const NSRect&, NSWindow *destination);
+FloatRect toUserSpaceForPrimaryScreen(const NSRect&);
 WEBCORE_EXPORT NSRect toDeviceSpace(const FloatRect&, NSWindow *source);
 
 NSPoint flipScreenPoint(const NSPoint&, NSScreen *);
 
+WEBCORE_EXPORT ScreenProperties collectScreenProperties();
+WEBCORE_EXPORT void setScreenProperties(const ScreenProperties&);
+
+uint32_t primaryOpenGLDisplayMask();
+uint32_t displayMaskForDisplay(PlatformDisplayID);
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+IORegistryGPUID primaryGPUID();
+IORegistryGPUID gpuIDForDisplay(PlatformDisplayID);
+IORegistryGPUID gpuIDForDisplayMask(uint32_t);
 #endif
+
+#endif // !PLATFORM(MAC)
 
 #if PLATFORM(IOS)
 
 float screenPPIFactor();
 WEBCORE_EXPORT FloatSize screenSize();
 WEBCORE_EXPORT FloatSize availableScreenSize();
+WEBCORE_EXPORT FloatSize overrideScreenSize();
 WEBCORE_EXPORT float screenScaleFactor(UIScreen * = nullptr);
 
 #endif

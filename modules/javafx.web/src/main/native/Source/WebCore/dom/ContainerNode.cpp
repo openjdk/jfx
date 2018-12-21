@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -61,9 +61,12 @@
 #include "SelectorQuery.h"
 #include "TemplateContentDocumentFragment.h"
 #include <algorithm>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Variant.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ContainerNode);
 
 static void dispatchChildInsertionEvents(Node&);
 static void dispatchChildRemovalEvents(Ref<Node>&);
@@ -772,12 +775,12 @@ static void dispatchChildInsertionEvents(Node& child)
     Ref<Document> document(child.document());
 
     if (c->parentNode() && document->hasListenerType(Document::DOMNODEINSERTED_LISTENER))
-        c->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeInsertedEvent, true, c->parentNode()));
+        c->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeInsertedEvent, Event::CanBubble::Yes, c->parentNode()));
 
     // dispatch the DOMNodeInsertedIntoDocument event to all descendants
     if (c->isConnected() && document->hasListenerType(Document::DOMNODEINSERTEDINTODOCUMENT_LISTENER)) {
         for (; c; c = NodeTraversal::next(*c, &child))
-            c->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeInsertedIntoDocumentEvent, false));
+            c->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeInsertedIntoDocumentEvent, Event::CanBubble::No));
     }
 }
 
@@ -797,12 +800,12 @@ static void dispatchChildRemovalEvents(Ref<Node>& child)
 
     // dispatch pre-removal mutation events
     if (child->parentNode() && document->hasListenerType(Document::DOMNODEREMOVED_LISTENER))
-        child->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeRemovedEvent, true, child->parentNode()));
+        child->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeRemovedEvent, Event::CanBubble::Yes, child->parentNode()));
 
     // dispatch the DOMNodeRemovedFromDocument event to all descendants
     if (child->isConnected() && document->hasListenerType(Document::DOMNODEREMOVEDFROMDOCUMENT_LISTENER)) {
         for (RefPtr<Node> currentNode = child.copyRef(); currentNode; currentNode = NodeTraversal::next(*currentNode, child.ptr()))
-            currentNode->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeRemovedFromDocumentEvent, false));
+            currentNode->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeRemovedFromDocumentEvent, Event::CanBubble::No));
     }
 }
 

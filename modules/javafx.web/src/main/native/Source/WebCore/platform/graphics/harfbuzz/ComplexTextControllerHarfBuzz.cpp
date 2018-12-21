@@ -89,7 +89,7 @@ static Vector<hb_feature_t, 4> fontFeatures(const FontCascade& font, FontOrienta
 {
     Vector<hb_feature_t, 4> features;
 
-    if (orientation == Vertical) {
+    if (orientation == FontOrientation::Vertical) {
         features.append({ HarfBuzzFace::vertTag, 1, 0, hbEnd });
         features.append({ HarfBuzzFace::vrt2Tag, 1, 0, hbEnd });
     }
@@ -193,7 +193,6 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cha
     const auto& fontPlatformData = font->platformData();
     auto features = fontFeatures(m_font, fontPlatformData.orientation());
     HbUniquePtr<hb_buffer_t> buffer(hb_buffer_create());
-    hb_buffer_set_unicode_funcs(buffer.get(), hb_icu_get_unicode_funcs());
 
     for (unsigned i = 0; i < runCount; ++i) {
         auto& run = runList[m_run.rtl() ? runCount - i - 1 : i];
@@ -208,7 +207,7 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cha
         hb_buffer_add_utf16(buffer.get(), reinterpret_cast<const uint16_t*>(characters), length, run.startIndex, run.endIndex - run.startIndex);
 
         auto& face = fontPlatformData.harfBuzzFace();
-        if (fontPlatformData.orientation() == Vertical)
+        if (fontPlatformData.orientation() == FontOrientation::Vertical)
             face.setScriptForVerticalGlyphSubstitution(buffer.get());
 
         HbUniquePtr<hb_font_t> harfBuzzFont(face.createFont());

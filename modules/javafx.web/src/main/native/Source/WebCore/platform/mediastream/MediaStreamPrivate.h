@@ -53,7 +53,7 @@ namespace WebCore {
 class MediaStream;
 class OrientationNotifier;
 
-class MediaStreamPrivate : public MediaStreamTrackPrivate::Observer, public RefCounted<MediaStreamPrivate> {
+class MediaStreamPrivate : public MediaStreamTrackPrivate::Observer, public RefCounted<MediaStreamPrivate>, public CanMakeWeakPtr<MediaStreamPrivate> {
 public:
     class Observer {
     public:
@@ -65,6 +65,7 @@ public:
         virtual void didRemoveTrack(MediaStreamTrackPrivate&) { }
     };
 
+    static Ref<MediaStreamPrivate> create(Ref<RealtimeMediaSource>&&);
     static Ref<MediaStreamPrivate> create(const Vector<Ref<RealtimeMediaSource>>& audioSources, const Vector<Ref<RealtimeMediaSource>>& videoSources);
     static Ref<MediaStreamPrivate> create(const MediaStreamTrackPrivateVector& tracks, String&& id = createCanonicalUUIDString()) { return adoptRef(*new MediaStreamPrivate(tracks, WTFMove(id))); }
 
@@ -90,8 +91,6 @@ public:
     void stopProducingData();
     bool isProducingData() const;
 
-    void endStream();
-
     bool hasVideo() const;
     bool hasAudio() const;
     bool muted() const;
@@ -101,8 +100,6 @@ public:
     void setCaptureTracksMuted(bool);
 
     FloatSize intrinsicSize() const;
-
-    WeakPtr<MediaStreamPrivate> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
 
     void monitorOrientation(OrientationNotifier&);
 
@@ -121,7 +118,6 @@ private:
 
     void scheduleDeferredTask(Function<void ()>&&);
 
-    WeakPtrFactory<MediaStreamPrivate> m_weakPtrFactory;
     Vector<Observer*> m_observers;
     String m_id;
     MediaStreamTrackPrivate* m_activeVideoTrack { nullptr };

@@ -38,7 +38,6 @@
 #include "FileIconLoader.h"
 #include "FloatRect.h"
 #include "Frame.h"
-#include "MainFrame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
 #include "FrameView.h"

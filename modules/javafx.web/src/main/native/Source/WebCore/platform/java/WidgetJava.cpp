@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,14 +50,6 @@
 #include "ScrollView.h"
 #include "Widget.h"
 
-static jmethodID wcWidgetSetBoundsMID;
-static jmethodID wcWidgetRequestFocusMID;
-static jmethodID wcWidgetSetCursorMID;
-static jmethodID wcWidgetSetVisibleMID;
-static jmethodID wcWidgetDestroyMID;
-
-
-using namespace WebCore;
 
 // some helper methods defined below
 
@@ -65,6 +57,13 @@ using namespace WebCore;
 // MouseEventType getWebKitMouseEventType(jint eventID);
 
 namespace WebCore {
+
+static jmethodID wcWidgetSetBoundsMID;
+static jmethodID wcWidgetRequestFocusMID;
+static jmethodID wcWidgetSetCursorMID;
+static jmethodID wcWidgetSetVisibleMID;
+static jmethodID wcWidgetDestroyMID;
+
 
 class WidgetPrivate {
 public:
@@ -238,13 +237,9 @@ void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy)
 */
 }
 
-} // namespace WebCore
 
-using namespace WebCore;
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WCWidget_initIDs
     (JNIEnv* env, jclass wcWidgetClass)
@@ -266,6 +261,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WCWidget_initIDs
     ASSERT(wcWidgetDestroyMID);
 
 }
-#ifdef __cplusplus
 }
-#endif
+} // namespace WebCore
+

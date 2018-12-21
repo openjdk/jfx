@@ -61,7 +61,7 @@ public:
     void willFireAnimationFrame(int callbackId);
     void didCancelAnimationFrame(int callbackId);
 
-    void didAddEventListener(EventTarget&, const AtomicString& eventType);
+    void didAddEventListener(EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     void willRemoveEventListener(EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     void willHandleEvent(const RegisteredEventListener&);
 
@@ -85,7 +85,7 @@ private:
     void breakpointActionLog(JSC::ExecState&, const String&) override;
 
     Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
-    void setOverlayMessage(ErrorString&, const String* const) final;
+    void setOverlayMessage(ErrorString&, const String*) final;
 
     Page& m_page;
 

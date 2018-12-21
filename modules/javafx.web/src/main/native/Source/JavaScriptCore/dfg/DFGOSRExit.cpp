@@ -217,7 +217,7 @@ static JSCell* createDirectArgumentsDuringExit(Context& context, CodeBlock* code
     DirectArguments* result = DirectArguments::create(
         vm, codeBlock->globalObject()->directArgumentsStructure(), length, capacity);
 
-    result->callee().set(vm, result, callee);
+    result->setCallee(vm, callee);
 
     void* frameBase = context.fp<Register*>() + (inlineCallFrame ? inlineCallFrame->stackOffset : 0);
     Frame frame(frameBase, context.stack());
@@ -389,15 +389,11 @@ void OSRExit::executeOSRExit(Context& context)
         adjustedThreshold = BaselineExecutionCounter::clippedThreshold(codeBlock->globalObject(), adjustedThreshold);
 
         CodeBlock* codeBlockForExit = baselineCodeBlockForOriginAndBaselineCodeBlock(exit.m_codeOrigin, baselineCodeBlock);
-        Vector<BytecodeAndMachineOffset> decodedCodeMap;
-        codeBlockForExit->jitCodeMap()->decode(decodedCodeMap);
+        const JITCodeMap& codeMap = codeBlockForExit->jitCodeMap();
+        CodeLocationLabel<JSEntryPtrTag> codeLocation = codeMap.find(exit.m_codeOrigin.bytecodeIndex);
+        ASSERT(codeLocation);
 
-        BytecodeAndMachineOffset* mapping = binarySearch<BytecodeAndMachineOffset, unsigned>(decodedCodeMap, decodedCodeMap.size(), exit.m_codeOrigin.bytecodeIndex, BytecodeAndMachineOffset::getBytecodeIndex);
-
-        ASSERT(mapping);
-        ASSERT(mapping->m_bytecodeIndex == exit.m_codeOrigin.bytecodeIndex);
-
-        void* jumpTarget = codeBlockForExit->jitCode()->executableAddressAtOffset(mapping->m_machineCodeOffset);
+        void* jumpTarget = codeLocation.executableAddress();
 
         // Compute the value recoveries.
         Operands<ValueRecovery> operands;
@@ -503,7 +499,7 @@ void OSRExit::executeOSRExit(Context& context)
             ASSERT(exit.m_kind == BadCache || exit.m_kind == BadIndexingType);
             Structure* structure = profiledValue.asCell()->structure(vm);
             arrayProfile->observeStructure(structure);
-            arrayProfile->observeArrayMode(asArrayModes(structure->indexingType()));
+            arrayProfile->observeArrayMode(asArrayModes(structure->indexingMode()));
         }
         if (extraInitializationLevel <= ExtraInitializationLevel::ArrayProfileUpdate)
             break;
@@ -720,7 +716,7 @@ void OSRExit::executeOSRExit(Context& context)
     // counterValueForOptimizeAfterWarmUp().
 
     if (UNLIKELY(codeBlock->updateOSRExitCounterAndCheckIfNeedToReoptimize(exitState) == CodeBlock::OptimizeAction::ReoptimizeNow))
-        triggerReoptimizationNow(baselineCodeBlock, &exit);
+        triggerReoptimizationNow(baselineCodeBlock, codeBlock, &exit);
 
     reifyInlinedCallFrames(context, baselineCodeBlock, exit);
     adjustAndJumpToTarget(context, vm, codeBlock, baselineCodeBlock, exit);
@@ -748,12 +744,17 @@ static void reifyInlinedCallFrames(Context& context, CodeBlock* outermostBaselin
         if (!trueCaller) {
             ASSERT(inlineCallFrame->isTail());
             void* returnPC = frame.get<void*>(CallFrame::returnPCOffset());
+#if USE(POINTER_PROFILING)
+            void* oldEntrySP = cpu.fp<uint8_t*>() + sizeof(CallerFrameAndPC);
+            void* newEntrySP = cpu.fp<uint8_t*>() + inlineCallFrame->returnPCOffset() + sizeof(void*);
+            returnPC = retagCodePtr(returnPC, bitwise_cast<PtrTag>(oldEntrySP), bitwise_cast<PtrTag>(newEntrySP));
+#endif
             frame.set<void*>(inlineCallFrame->returnPCOffset(), returnPC);
             callerFrame = frame.get<void*>(CallFrame::callerFrameOffset());
         } else {
             CodeBlock* baselineCodeBlockForCaller = baselineCodeBlockForOriginAndBaselineCodeBlock(*trueCaller, outermostBaselineCodeBlock);
             unsigned callBytecodeIndex = trueCaller->bytecodeIndex;
-            void* jumpTarget = nullptr;
+            MacroAssemblerCodePtr<JSInternalPtrTag> jumpTarget;
 
             switch (trueCallerCallKind) {
             case InlineCallFrame::Call:
@@ -766,7 +767,7 @@ static void reifyInlinedCallFrames(Context& context, CodeBlock* outermostBaselin
                     baselineCodeBlockForCaller->getCallLinkInfoForBytecodeIndex(callBytecodeIndex);
                 RELEASE_ASSERT(callLinkInfo);
 
-                jumpTarget = callLinkInfo->callReturnLocation().executableAddress();
+                jumpTarget = callLinkInfo->callReturnLocation();
                 break;
             }
 
@@ -776,7 +777,7 @@ static void reifyInlinedCallFrames(Context& context, CodeBlock* outermostBaselin
                     baselineCodeBlockForCaller->findStubInfo(CodeOrigin(callBytecodeIndex));
                 RELEASE_ASSERT(stubInfo);
 
-                jumpTarget = stubInfo->doneLocation().executableAddress();
+                jumpTarget = stubInfo->doneLocation();
                 break;
             }
 
@@ -787,7 +788,12 @@ static void reifyInlinedCallFrames(Context& context, CodeBlock* outermostBaselin
             if (trueCaller->inlineCallFrame)
                 callerFrame = cpu.fp<uint8_t*>() + trueCaller->inlineCallFrame->stackOffset * sizeof(EncodedJSValue);
 
-            frame.set<void*>(inlineCallFrame->returnPCOffset(), jumpTarget);
+            void* targetAddress = jumpTarget.executableAddress();
+#if USE(POINTER_PROFILING)
+            void* newEntrySP = cpu.fp<uint8_t*>() + inlineCallFrame->returnPCOffset() + sizeof(void*);
+            targetAddress = retagCodePtr(targetAddress, JSInternalPtrTag, bitwise_cast<PtrTag>(newEntrySP));
+#endif
+            frame.set<void*>(inlineCallFrame->returnPCOffset(), targetAddress);
         }
 
         frame.setOperand<void*>(inlineCallFrame->stackOffset + CallFrameSlot::codeBlock, baselineCodeBlock);
@@ -807,7 +813,7 @@ static void reifyInlinedCallFrames(Context& context, CodeBlock* outermostBaselin
         if (!inlineCallFrame->isClosureCall)
             frame.setOperand(inlineCallFrame->stackOffset + CallFrameSlot::callee, JSValue(inlineCallFrame->calleeConstant()));
 #else // USE(JSVALUE64) // so this is the 32-bit part
-        Instruction* instruction = baselineCodeBlock->instructions().begin() + codeOrigin->bytecodeIndex;
+        Instruction* instruction = &baselineCodeBlock->instructions()[codeOrigin->bytecodeIndex];
         uint32_t locationBits = CallSiteIndex(instruction).bits();
         frame.setOperand<uint32_t>(inlineCallFrame->stackOffset + CallFrameSlot::argumentCount, TagOffset, locationBits);
         frame.setOperand<uint32_t>(inlineCallFrame->stackOffset + CallFrameSlot::callee, TagOffset, static_cast<uint32_t>(JSValue::CellTag));
@@ -821,7 +827,7 @@ static void reifyInlinedCallFrames(Context& context, CodeBlock* outermostBaselin
 #if USE(JSVALUE64)
         uint32_t locationBits = CallSiteIndex(codeOrigin->bytecodeIndex).bits();
 #else
-        Instruction* instruction = outermostBaselineCodeBlock->instructions().begin() + codeOrigin->bytecodeIndex;
+        Instruction* instruction = &outermostBaselineCodeBlock->instructions()[codeOrigin->bytecodeIndex];
         uint32_t locationBits = CallSiteIndex(instruction).bits();
 #endif
         frame.setOperand<uint32_t>(CallFrameSlot::argumentCount, TagOffset, locationBits);
@@ -860,7 +866,7 @@ static void adjustAndJumpToTarget(Context& context, VM& vm, CodeBlock* codeBlock
     }
 
     vm.topCallFrame = context.fp<ExecState*>();
-    context.pc() = jumpTarget;
+    context.pc() = untagCodePtr<JSEntryPtrTag>(jumpTarget);
 }
 
 static void printOSRExit(Context& context, uint32_t osrExitIndex, const OSRExit& exit)
@@ -915,26 +921,9 @@ OSRExit::OSRExit(ExitKind kind, JSValueSource jsValueSource, MethodOfGettingAVal
     DFG_ASSERT(jit->m_jit.graph(), jit->m_currentNode, canExit);
 }
 
-void OSRExit::setPatchableCodeOffset(MacroAssembler::PatchableJump check)
+CodeLocationJump<JSInternalPtrTag> OSRExit::codeLocationForRepatch() const
 {
-    m_patchableCodeOffset = check.m_jump.m_label.m_offset;
-}
-
-MacroAssembler::Jump OSRExit::getPatchableCodeOffsetAsJump() const
-{
-    return MacroAssembler::Jump(AssemblerLabel(m_patchableCodeOffset));
-}
-
-CodeLocationJump OSRExit::codeLocationForRepatch(CodeBlock* dfgCodeBlock) const
-{
-    return CodeLocationJump(dfgCodeBlock->jitCode()->dataAddressAtOffset(m_patchableCodeOffset));
-}
-
-void OSRExit::correctJump(LinkBuffer& linkBuffer)
-{
-    MacroAssembler::Label label;
-    label.m_label.m_offset = m_patchableCodeOffset;
-    m_patchableCodeOffset = linkBuffer.offsetOf(label);
+    return CodeLocationJump<JSInternalPtrTag>(m_patchableJumpLocation);
 }
 
 void OSRExit::emitRestoreArguments(CCallHelpers& jit, const Operands<ValueRecovery>& operands)
@@ -986,20 +975,21 @@ void OSRExit::emitRestoreArguments(CCallHelpers& jit, const Operands<ValueRecove
                 GPRInfo::regT1);
         }
 
-        jit.setupArgumentsWithExecState(
+        static_assert(std::is_same<decltype(operationCreateDirectArgumentsDuringExit), decltype(operationCreateClonedArgumentsDuringExit)>::value, "We assume these functions have the same signature below.");
+        jit.setupArguments<decltype(operationCreateDirectArgumentsDuringExit)>(
             AssemblyHelpers::TrustedImmPtr(inlineCallFrame), GPRInfo::regT0, GPRInfo::regT1);
         switch (recovery.technique()) {
         case DirectArgumentsThatWereNotCreated:
-            jit.move(AssemblyHelpers::TrustedImmPtr(bitwise_cast<void*>(operationCreateDirectArgumentsDuringExit)), GPRInfo::nonArgGPR0);
+            jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationCreateDirectArgumentsDuringExit)), GPRInfo::nonArgGPR0);
             break;
         case ClonedArgumentsThatWereNotCreated:
-            jit.move(AssemblyHelpers::TrustedImmPtr(bitwise_cast<void*>(operationCreateClonedArgumentsDuringExit)), GPRInfo::nonArgGPR0);
+            jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunctionPtr<OperationPtrTag>(operationCreateClonedArgumentsDuringExit)), GPRInfo::nonArgGPR0);
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
             break;
         }
-        jit.call(GPRInfo::nonArgGPR0);
+        jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
         jit.storeCell(GPRInfo::returnValueGPR, AssemblyHelpers::addressFor(operand));
 
         alreadyAllocatedArguments.add(id, operand);
@@ -1068,14 +1058,14 @@ void JIT_OPERATION OSRExit::compileOSRExit(ExecState* exec)
         LinkBuffer patchBuffer(jit, codeBlock);
         exit.m_code = FINALIZE_CODE_IF(
             shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseDFGOSRExit(),
-            patchBuffer,
+            patchBuffer, OSRExitPtrTag,
             "DFG OSR exit #%u (%s, %s) from %s, with operands = %s",
                 exitIndex, toCString(exit.m_codeOrigin).data(),
                 exitKindToString(exit.m_kind), toCString(*codeBlock).data(),
                 toCString(ignoringContext<DumpContext>(operands)).data());
     }
 
-    MacroAssembler::repatchJump(exit.codeLocationForRepatch(codeBlock), CodeLocationLabel(exit.m_code.code()));
+    MacroAssembler::repatchJump(exit.codeLocationForRepatch(), CodeLocationLabel<OSRExitPtrTag>(exit.m_code.code()));
 
     vm->osrExitJumpDestination = exit.m_code.code().executableAddress();
 }
@@ -1190,8 +1180,9 @@ void OSRExit::compileExit(CCallHelpers& jit, VM& vm, const OSRExit& exit, const 
 #if USE(JSVALUE64)
                 jit.load8(AssemblyHelpers::Address(value, JSCell::indexingTypeAndMiscOffset()), scratch1);
 #else
-                jit.load8(AssemblyHelpers::Address(scratch1, Structure::indexingTypeIncludingHistoryOffset()), scratch1);
+                jit.load8(AssemblyHelpers::Address(scratch1, Structure::indexingModeIncludingHistoryOffset()), scratch1);
 #endif
+                jit.and32(AssemblyHelpers::TrustedImm32(IndexingModeMask), scratch1);
                 jit.move(AssemblyHelpers::TrustedImm32(1), scratch2);
                 jit.lshift32(scratch1, scratch2);
                 jit.or32(scratch2, AssemblyHelpers::AbsoluteAddress(arrayProfile->addressOfArrayModes()));

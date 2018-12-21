@@ -74,7 +74,7 @@ void RenderInline::willBeDestroyed()
 {
 #if !ASSERT_DISABLED
     // Make sure we do not retain "this" in the continuation outline table map of our containing blocks.
-    if (parent() && style().visibility() == VISIBLE && hasOutline()) {
+    if (parent() && style().visibility() == Visibility::Visible && hasOutline()) {
         bool containingBlockPaintsContinuationOutline = continuation() || isContinuation();
         if (containingBlockPaintsContinuationOutline) {
             if (RenderBlock* cb = containingBlock()) {
@@ -148,7 +148,7 @@ static void updateStyleOfAnonymousBlockContinuations(const RenderBlock& block, c
         RenderInline* continuation = block.inlineContinuation();
         if (oldStyle->hasInFlowPosition() && inFlowPositionedInlineAncestor(continuation))
             continue;
-        auto blockStyle = RenderStyle::createAnonymousStyleWithDisplay(block.style(), BLOCK);
+        auto blockStyle = RenderStyle::createAnonymousStyleWithDisplay(block.style(), DisplayType::Block);
         blockStyle.setPosition(newStyle->position());
         block.setStyle(WTFMove(blockStyle));
     }
@@ -159,7 +159,7 @@ void RenderInline::styleWillChange(StyleDifference diff, const RenderStyle& newS
     RenderBoxModelObject::styleWillChange(diff, newStyle);
     // RenderInlines forward their absolute positioned descendants to their (non-anonymous) containing block.
     // Check if this non-anonymous containing block can hold the absolute positioned elements when the inline is no longer positioned.
-    if (canContainAbsolutelyPositionedObjects() && newStyle.position() == StaticPosition) {
+    if (canContainAbsolutelyPositionedObjects() && newStyle.position() == PositionType::Static) {
         auto* container = containingBlockForAbsolutePosition();
         if (container && !container->canContainAbsolutelyPositionedObjects())
             container->removePositionedObjects(nullptr, NewContainingBlock);
@@ -209,9 +209,9 @@ void RenderInline::updateAlwaysCreateLineBoxes(bool fullLayout)
     RenderInline* parentRenderInline = is<RenderInline>(*parent()) ? downcast<RenderInline>(parent()) : nullptr;
     bool checkFonts = document().inNoQuirksMode();
     bool alwaysCreateLineBoxes = (parentRenderInline && parentRenderInline->alwaysCreateLineBoxes())
-        || (parentRenderInline && parentStyle->verticalAlign() != BASELINE)
-        || style().verticalAlign() != BASELINE
-        || style().textEmphasisMark() != TextEmphasisMarkNone
+        || (parentRenderInline && parentStyle->verticalAlign() != VerticalAlign::Baseline)
+        || style().verticalAlign() != VerticalAlign::Baseline
+        || style().textEmphasisMark() != TextEmphasisMark::None
         || (checkFonts && (!parentStyle->fontCascade().fontMetrics().hasIdenticalAscentDescentAndLineGap(style().fontCascade().fontMetrics())
         || parentStyle->lineHeight() != style().lineHeight()));
 
@@ -220,7 +220,7 @@ void RenderInline::updateAlwaysCreateLineBoxes(bool fullLayout)
         parentStyle = &parent()->firstLineStyle();
         auto& childStyle = firstLineStyle();
         alwaysCreateLineBoxes = !parentStyle->fontCascade().fontMetrics().hasIdenticalAscentDescentAndLineGap(childStyle.fontCascade().fontMetrics())
-            || childStyle.verticalAlign() != BASELINE
+            || childStyle.verticalAlign() != VerticalAlign::Baseline
             || parentStyle->lineHeight() != childStyle.lineHeight();
     }
 
@@ -818,7 +818,7 @@ LayoutRect RenderInline::linesVisualOverflowBoundingBoxInFragment(const RenderFr
 LayoutRect RenderInline::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
 {
     // Only first-letter renderers are allowed in here during layout. They mutate the tree triggering repaints.
-    ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled() || style().styleType() == FIRST_LETTER || hasSelfPaintingLayer());
+    ASSERT(!view().frameView().layoutContext().isPaintOffsetCacheEnabled() || style().styleType() == PseudoId::FirstLetter || hasSelfPaintingLayer());
 
     if (!firstLineBoxIncludingCulling() && !continuation())
         return LayoutRect();
@@ -1204,20 +1204,20 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
     auto& styleToUse = style();
     // Only paint the focus ring by hand if the theme isn't able to draw it.
-    if (styleToUse.outlineStyleIsAuto() && !theme().supportsFocusRing(styleToUse)) {
+    if (styleToUse.outlineStyleIsAuto() == OutlineIsAuto::On && !theme().supportsFocusRing(styleToUse)) {
         Vector<LayoutRect> focusRingRects;
         addFocusRingRects(focusRingRects, paintOffset, paintInfo.paintContainer);
         paintFocusRing(paintInfo, styleToUse, focusRingRects);
     }
 
-    if (hasOutlineAnnotation() && !styleToUse.outlineStyleIsAuto() && !theme().supportsFocusRing(styleToUse))
+    if (hasOutlineAnnotation() && styleToUse.outlineStyleIsAuto() == OutlineIsAuto::Off && !theme().supportsFocusRing(styleToUse))
         addPDFURLRect(paintInfo, paintOffset);
 
     GraphicsContext& graphicsContext = paintInfo.context();
     if (graphicsContext.paintingDisabled())
         return;
 
-    if (styleToUse.outlineStyleIsAuto() || !styleToUse.hasOutline())
+    if (styleToUse.outlineStyleIsAuto() == OutlineIsAuto::On || !styleToUse.hasOutline())
         return;
 
     Vector<LayoutRect> rects;
@@ -1230,7 +1230,7 @@ void RenderInline::paintOutline(PaintInfo& paintInfo, const LayoutPoint& paintOf
     }
     rects.append(LayoutRect());
 
-    Color outlineColor = styleToUse.visitedDependentColor(CSSPropertyOutlineColor);
+    Color outlineColor = styleToUse.visitedDependentColorWithColorFilter(CSSPropertyOutlineColor);
     bool useTransparencyLayer = !outlineColor.isOpaque();
     if (useTransparencyLayer) {
         graphicsContext.beginTransparencyLayer(outlineColor.alphaAsFloat());
@@ -1256,7 +1256,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext& graphicsContext, const L
         return;
 
     float outlineWidth = styleToUse.outlineWidth();
-    EBorderStyle outlineStyle = styleToUse.outlineStyle();
+    BorderStyle outlineStyle = styleToUse.outlineStyle();
     bool antialias = shouldAntialiasLines(graphicsContext);
 
     auto adjustedPreviousLine = previousLine;
@@ -1387,7 +1387,7 @@ void RenderInline::paintOutlineForLine(GraphicsContext& graphicsContext, const L
 void RenderInline::addAnnotatedRegions(Vector<AnnotatedRegionValue>& regions)
 {
     // Convert the style regions to absolute coordinates.
-    if (style().visibility() != VISIBLE)
+    if (style().visibility() != Visibility::Visible)
         return;
 
     const Vector<StyleDashboardRegion>& styleRegions = style().dashboardRegions();

@@ -33,6 +33,7 @@
 #include "FontCascade.h"
 #include "FontPlatformData.h"
 #include "FontSelector.h"
+#include "Logging.h"
 #include "WebKitFontFamilyNames.h"
 #include <wtf/HashMap.h>
 #include <wtf/MemoryPressureHandler.h>
@@ -53,8 +54,7 @@
 #include <wtf/Lock.h>
 #include <wtf/RecursiveLockAdapter.h>
 
-using RecursiveStaticLock = WTF::RecursiveLockAdapter<StaticLock>;
-static RecursiveStaticLock fontLock;
+static RecursiveLock fontLock;
 
 #endif // PLATFORM(IOS)
 
@@ -325,11 +325,10 @@ RefPtr<Font> FontCache::fontForFamily(const FontDescription& fontDescription, co
     if (!m_purgeTimer.isActive())
         m_purgeTimer.startOneShot(0_s);
 
-    FontPlatformData* platformData = getCachedFontPlatformData(fontDescription, family, fontFaceFeatures, fontFaceVariantSettings, fontFaceCapabilities, checkingAlternateName);
-    if (!platformData)
-        return nullptr;
+    if (auto* platformData = getCachedFontPlatformData(fontDescription, family, fontFaceFeatures, fontFaceVariantSettings, fontFaceCapabilities, checkingAlternateName))
+        return fontForPlatformData(*platformData);
 
-    return fontForPlatformData(*platformData);
+    return nullptr;
 }
 
 Ref<Font> FontCache::fontForPlatformData(const FontPlatformData& platformData)
@@ -352,6 +351,8 @@ void FontCache::purgeInactiveFontDataIfNeeded()
     bool underMemoryPressure = MemoryPressureHandler::singleton().isUnderMemoryPressure();
     unsigned inactiveFontDataLimit = underMemoryPressure ? cMaxUnderMemoryPressureInactiveFontData : cMaxInactiveFontData;
 
+    LOG(Fonts, "FontCache::purgeInactiveFontDataIfNeeded() - underMemoryPressure %d, inactiveFontDataLimit %u", underMemoryPressure, inactiveFontDataLimit);
+
     if (cachedFonts().size() < inactiveFontDataLimit)
         return;
     unsigned inactiveCount = inactiveFontCount();
@@ -364,6 +365,8 @@ void FontCache::purgeInactiveFontDataIfNeeded()
 
 void FontCache::purgeInactiveFontData(unsigned purgeCount)
 {
+    LOG(Fonts, "FontCache::purgeInactiveFontData(%u)", purgeCount);
+
     pruneUnreferencedEntriesFromFontCascadeCache();
     pruneSystemFallbackFonts();
 
@@ -374,6 +377,7 @@ void FontCache::purgeInactiveFontData(unsigned purgeCount)
     while (purgeCount) {
         Vector<RefPtr<Font>, 20> fontsToDelete;
         for (auto& font : cachedFonts().values()) {
+            LOG(Fonts, " trying to purge font %s (has one ref %d)", font->platformData().description().utf8().data(), font->hasOneRef());
             if (!font->hasOneRef())
                 continue;
             fontsToDelete.append(WTFMove(font));
@@ -398,6 +402,9 @@ void FontCache::purgeInactiveFontData(unsigned purgeCount)
         if (entry.value && !cachedFonts().contains(*entry.value))
             keysToRemove.uncheckedAppend(entry.key);
     }
+
+    LOG(Fonts, " removing %lu keys", keysToRemove.size());
+
     for (auto& key : keysToRemove)
         fontPlatformDataCache().remove(key);
 

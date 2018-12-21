@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2014-2016 Apple Inc. All rights reserved.
+# Copyright (c) 2014-2018 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -136,10 +136,10 @@ class ObjCBackendDispatcherImplementationGenerator(ObjCGenerator):
                 var_expression = '*%s' % var_name if parameter.is_optional else var_name
                 export_expression = self.objc_protocol_export_expression_for_variable(parameter.type, var_expression)
                 if not parameter.is_optional:
-                    lines.append('        resultObject->%s(ASCIILiteral("%s"), %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
+                    lines.append('        resultObject->%s("%s"_s, %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
                 else:
                     lines.append('        if (%s)' % var_name)
-                    lines.append('            resultObject->%s(ASCIILiteral("%s"), %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
+                    lines.append('            resultObject->%s("%s"_s, %s);' % (keyed_set_method, parameter.parameter_name, export_expression))
             lines.append('        backendDispatcher()->sendResponse(requestId, WTFMove(resultObject), false);')
         else:
             lines.append('        backendDispatcher()->sendResponse(requestId, JSON::Object::create(), false);')
@@ -177,7 +177,7 @@ class ObjCBackendDispatcherImplementationGenerator(ObjCGenerator):
 
                 if isinstance(parameter.type, EnumType):
                     lines.append('    if (!%s) {' % objc_in_param_name)
-                    lines.append('        backendDispatcher()->reportProtocolError(BackendDispatcher::InvalidParams, String::format("Parameter \'%%s\' of method \'%%s\' cannot be processed", "%s", "%s.%s"));' % (parameter.parameter_name, domain.domain_name, command.command_name))
+                    lines.append('        backendDispatcher()->reportProtocolError(BackendDispatcher::InvalidParams, "Parameter \'%s\' of method \'%s.%s\' cannot be processed"_s);' % (parameter.parameter_name, domain.domain_name, command.command_name))
                     lines.append('        return;')
                     lines.append('    }')
 

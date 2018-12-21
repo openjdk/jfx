@@ -71,6 +71,7 @@ class OffscreenCanvas;
 class WebGLActiveInfo;
 class WebGLContextGroup;
 class WebGLContextObject;
+class WebGLCompressedTextureASTC;
 class WebGLCompressedTextureATC;
 class WebGLCompressedTexturePVRTC;
 class WebGLCompressedTextureS3TC;
@@ -366,6 +367,7 @@ protected:
     friend class WebGLObject;
     friend class OESVertexArrayObject;
     friend class WebGLDebugShaders;
+    friend class WebGLCompressedTextureASTC;
     friend class WebGLCompressedTextureATC;
     friend class WebGLCompressedTexturePVRTC;
     friend class WebGLCompressedTextureS3TC;
@@ -433,7 +435,7 @@ protected:
 
     WebGLTexture::TextureExtensionFlag textureExtensionFlags() const;
 
-    bool enableSupportedExtension(const char* extensionNameLiteral);
+    bool enableSupportedExtension(ASCIILiteral extensionNameLiteral);
 
     RefPtr<GraphicsContext3D> m_context;
     RefPtr<WebGLContextGroup> m_contextGroup;
@@ -517,9 +519,8 @@ protected:
         // The pointer returned is owned by the image buffer map.
         ImageBuffer* imageBuffer(const IntSize& size);
     private:
-        void bubbleToFront(int idx);
-        std::unique_ptr<std::unique_ptr<ImageBuffer>[]> m_buffers;
-        int m_capacity;
+        void bubbleToFront(size_t idx);
+        Vector<std::unique_ptr<ImageBuffer>> m_buffers;
     };
     LRUImageBufferCache m_generatedImageCache { 0 };
 
@@ -592,6 +593,7 @@ protected:
     std::unique_ptr<WebGLLoseContext> m_webglLoseContext;
     std::unique_ptr<WebGLDebugRendererInfo> m_webglDebugRendererInfo;
     std::unique_ptr<WebGLDebugShaders> m_webglDebugShaders;
+    std::unique_ptr<WebGLCompressedTextureASTC> m_webglCompressedTextureASTC;
     std::unique_ptr<WebGLCompressedTextureATC> m_webglCompressedTextureATC;
     std::unique_ptr<WebGLCompressedTexturePVRTC> m_webglCompressedTexturePVRTC;
     std::unique_ptr<WebGLCompressedTextureS3TC> m_webglCompressedTextureS3TC;
@@ -836,7 +838,7 @@ private:
     void registerWithWebGLStateTracker();
     void checkForContextLossHandling();
 
-    void activityStateDidChange(ActivityState::Flags oldActivityState, ActivityState::Flags newActivityState) override;
+    void activityStateDidChange(OptionSet<ActivityState::Flag> oldActivityState, OptionSet<ActivityState::Flag> newActivityState) override;
 
     WebGLStateTracker::Token m_trackerToken;
     Timer m_checkForContextLossHandlingTimer;

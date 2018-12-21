@@ -42,13 +42,6 @@
 #endif
 
 #if OS(WINDOWS)
-
-#if !USE(CURL)
-#ifndef _WINSOCKAPI_
-#define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
-#endif
-#endif
-
 #undef WEBCORE_EXPORT
 #if PLATFORM(JAVA)
 #define WEBCORE_EXPORT
@@ -57,9 +50,7 @@
 #endif
 
 #else
-
 #include <pthread.h>
-
 #endif // OS(WINDOWS)
 
 #include <sys/types.h>
@@ -152,11 +143,15 @@
 #endif
 
 #include <windows.h>
-#else
-#if !PLATFORM(IOS)
-#include <CoreServices/CoreServices.h>
-#endif // !PLATFORM(IOS)
 #endif // OS(WINDOWS)
+
+#if PLATFORM(IOS)
+#include <MobileCoreServices/MobileCoreServices.h>
+#endif
+
+#if PLATFORM(MAC)
+#include <CoreServices/CoreServices.h>
+#endif
 
 #endif
 

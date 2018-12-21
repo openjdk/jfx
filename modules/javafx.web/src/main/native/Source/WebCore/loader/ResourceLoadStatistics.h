@@ -51,10 +51,13 @@ struct ResourceLoadStatistics {
     ResourceLoadStatistics& operator=(ResourceLoadStatistics&&) = default;
 
     WEBCORE_EXPORT static String primaryDomain(const URL&);
-    WEBCORE_EXPORT static String primaryDomain(const String& host);
+    WEBCORE_EXPORT static String primaryDomain(StringView host);
+
+    WEBCORE_EXPORT static bool areDomainsAssociated(bool needsSiteSpecificQuirks, const String&, const String&);
+    WEBCORE_EXPORT static WallTime reduceTimeResolution(WallTime);
 
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
-    WEBCORE_EXPORT bool decode(KeyedDecoder&);
+    WEBCORE_EXPORT bool decode(KeyedDecoder&, unsigned modelVersion);
 
     String toString() const;
 
@@ -87,12 +90,12 @@ struct ResourceLoadStatistics {
 
     // Prevalent resource stats
     bool isPrevalentResource { false };
+    bool isVeryPrevalentResource { false };
     unsigned dataRecordsRemoved { 0 };
     unsigned timesAccessedAsFirstPartyDueToUserInteraction { 0 };
     unsigned timesAccessedAsFirstPartyDueToStorageAccessAPI { 0 };
 
     // In-memory only
-    bool isMarkedForCookiePartitioning { false };
     bool isMarkedForCookieBlocking { false };
 };
 

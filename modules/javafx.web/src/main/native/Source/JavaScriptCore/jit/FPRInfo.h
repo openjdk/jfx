@@ -31,7 +31,7 @@
 namespace JSC {
 
 typedef MacroAssembler::FPRegisterID FPRReg;
-#define InvalidFPRReg ((::JSC::FPRReg)-1)
+static constexpr FPRReg InvalidFPRReg { FPRReg::InvalidFPRReg };
 
 #if ENABLE(JIT)
 
@@ -41,7 +41,7 @@ class FPRInfo {
 public:
     typedef FPRReg RegisterType;
     static const unsigned numberOfRegisters = 6;
-    static const unsigned numberOfArgumentRegisters = 8;
+    static const unsigned numberOfArgumentRegisters = is64Bit() ? 8 : 0;
 
     // Temporary registers.
     static const FPRReg fpRegT0 = X86Registers::xmm0;
@@ -108,6 +108,12 @@ public:
     typedef FPRReg RegisterType;
     static const unsigned numberOfRegisters = 6;
 
+#if CPU(ARM_HARDFP)
+    static const unsigned numberOfArgumentRegisters = 8;
+#else
+    static const unsigned numberOfArgumentRegisters = 0;
+#endif
+
     // Temporary registers.
     // d7 is use by the MacroAssembler as fpTempRegister.
     static const FPRReg fpRegT0 = ARMRegisters::d0;
@@ -142,6 +148,14 @@ public:
     {
         return (unsigned)reg;
     }
+
+#if CPU(ARM_HARDFP)
+    static FPRReg toArgumentRegister(unsigned index)
+    {
+        ASSERT(index < numberOfArgumentRegisters);
+        return static_cast<FPRReg>(index);
+    }
+#endif
 
     static const char* debugName(FPRReg reg)
     {
@@ -255,6 +269,7 @@ class FPRInfo {
 public:
     typedef FPRReg RegisterType;
     static const unsigned numberOfRegisters = 7;
+    static const unsigned numberOfArgumentRegisters = 2;
 
     // Temporary registers.
     static const FPRReg fpRegT0 = MIPSRegisters::f0;
@@ -277,6 +292,15 @@ public:
 
         ASSERT(index < numberOfRegisters);
         return registerForIndex[index];
+    }
+
+    static FPRReg toArgumentRegister(unsigned index)
+    {
+        ASSERT(index < numberOfArgumentRegisters);
+        static const FPRReg indexForRegister[2] = {
+            argumentFPR0, argumentFPR1
+        };
+        return indexForRegister[index];
     }
 
     static unsigned toIndex(FPRReg reg)
@@ -304,6 +328,9 @@ public:
 };
 
 #endif // CPU(MIPS)
+
+// We use this hack to get the FPRInfo from the FPRReg type in templates because our code is bad and we should feel bad..
+constexpr FPRInfo toInfoFromReg(FPRReg) { return FPRInfo(); }
 
 #endif // ENABLE(JIT)
 

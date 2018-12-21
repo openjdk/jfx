@@ -31,8 +31,8 @@
 
 #include "Document.h"
 #include "JSDOMBinding.h"
-#include "JSMainThreadExecState.h"
-#include "JSMainThreadExecStateInstrumentation.h"
+#include "JSExecState.h"
+#include "JSExecStateInstrumentation.h"
 #include <JavaScriptCore/Exception.h>
 
 namespace WebCore {
@@ -60,7 +60,7 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
 
         ASSERT(!functionName.isNull());
         function = callback->get(exec, functionName);
-        callType = getCallData(function, callData);
+        callType = getCallData(vm, function, callData);
         if (callType == CallType::None) {
             returnedException = JSC::Exception::create(vm, createTypeError(exec));
             return JSValue();
@@ -75,12 +75,10 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
     if (!context)
         return JSValue();
 
-    InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(context, callType, callData);
+    InspectorInstrumentationCookie cookie = JSExecState::instrumentFunctionCall(context, callType, callData);
 
     returnedException = nullptr;
-    JSValue result = context->isDocument()
-        ? JSMainThreadExecState::profiledCall(exec, JSC::ProfilingReason::Other, function, callType, callData, thisValue, args, returnedException)
-        : JSC::profiledCall(exec, JSC::ProfilingReason::Other, function, callType, callData, thisValue, args, returnedException);
+    JSValue result = JSExecState::profiledCall(exec, JSC::ProfilingReason::Other, function, callType, callData, thisValue, args, returnedException);
 
     InspectorInstrumentation::didCallFunction(cookie, context);
 

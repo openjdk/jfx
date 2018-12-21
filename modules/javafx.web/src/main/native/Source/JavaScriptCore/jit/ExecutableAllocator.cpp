@@ -38,6 +38,10 @@
 #include <sys/mman.h>
 #endif
 
+#if PLATFORM(IOS)
+#include <wtf/cocoa/Entitlements.h>
+#endif
+
 #include "LinkBuffer.h"
 #include "MacroAssembler.h"
 
@@ -100,15 +104,24 @@ static const double executablePoolReservationFraction = 0.15;
 static const double executablePoolReservationFraction = 0.25;
 #endif
 
-JS_EXPORTDATA uintptr_t startOfFixedExecutableMemoryPool;
-JS_EXPORTDATA uintptr_t endOfFixedExecutableMemoryPool;
-JS_EXPORTDATA bool useFastPermisionsJITCopy { false };
+JS_EXPORT_PRIVATE void* taggedStartOfFixedExecutableMemoryPool;
+JS_EXPORT_PRIVATE void* taggedEndOfFixedExecutableMemoryPool;
+JS_EXPORT_PRIVATE bool useFastPermisionsJITCopy { false };
 
-JS_EXPORTDATA JITWriteSeparateHeapsFunction jitWriteSeparateHeapsFunction;
+JS_EXPORT_PRIVATE JITWriteSeparateHeapsFunction jitWriteSeparateHeapsFunction;
 
 #if !USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION) && HAVE(REMAP_JIT)
 static uintptr_t startOfFixedWritableMemoryPool;
 #endif
+
+static bool allowJIT()
+{
+#if PLATFORM(IOS) && (CPU(ARM64) || CPU(ARM))
+    return processHasEntitlement("dynamic-codesigning");
+#else
+    return true;
+#endif
+}
 
 class FixedVMPoolExecutableAllocator : public MetaAllocator {
     WTF_MAKE_FAST_ALLOCATED;
@@ -116,6 +129,9 @@ public:
     FixedVMPoolExecutableAllocator()
         : MetaAllocator(jitAllocationGranule) // round up all allocations to 32 bytes
     {
+        if (!allowJIT())
+            return;
+
         size_t reservationSize;
         if (Options::jitMemoryReservationSize())
             reservationSize = Options::jitMemoryReservationSize();
@@ -143,18 +159,19 @@ public:
 
             addFreshFreeSpace(reservationBase, reservationSize);
 
-            startOfFixedExecutableMemoryPool = reinterpret_cast<uintptr_t>(reservationBase);
-            endOfFixedExecutableMemoryPool = startOfFixedExecutableMemoryPool + reservationSize;
+            void* reservationEnd = reinterpret_cast<uint8_t*>(reservationBase) + reservationSize;
+            taggedStartOfFixedExecutableMemoryPool = tagCodePtr<ExecutableMemoryPtrTag>(reservationBase);
+            taggedEndOfFixedExecutableMemoryPool = tagCodePtr<ExecutableMemoryPtrTag>(reservationEnd);
         }
     }
 
     virtual ~FixedVMPoolExecutableAllocator();
 
 protected:
-    void* allocateNewSpace(size_t&) override
+    FreeSpacePtr allocateNewSpace(size_t&) override
     {
         // We're operating in a fixed pool, so new allocation is always prohibited.
-        return 0;
+        return nullptr;
     }
 
     void notifyNeedPage(void* page) override
@@ -206,7 +223,7 @@ private:
             return;
 
         // Assemble a thunk that will serve as the means for writing into the JIT region.
-        MacroAssemblerCodeRef writeThunk = jitWriteThunkGenerator(reinterpret_cast<void*>(writableAddr), stubBase, stubSize);
+        MacroAssemblerCodeRef<JITThunkPtrTag> writeThunk = jitWriteThunkGenerator(reinterpret_cast<void*>(writableAddr), stubBase, stubSize);
 
         int result = 0;
 
@@ -231,13 +248,14 @@ private:
     }
 
 #if CPU(ARM64) && USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
-    MacroAssemblerCodeRef jitWriteThunkGenerator(void* writableAddr, void* stubBase, size_t stubSize)
+    MacroAssemblerCodeRef<JITThunkPtrTag> jitWriteThunkGenerator(void* writableAddr, void* stubBase, size_t stubSize)
     {
         using namespace ARM64Registers;
         using TrustedImm32 = MacroAssembler::TrustedImm32;
 
         MacroAssembler jit;
 
+        jit.tagReturnAddress();
         jit.move(MacroAssembler::TrustedImmPtr(writableAddr), x7);
         jit.addPtr(x7, x0);
 
@@ -292,13 +310,14 @@ private:
         local2.link(&jit);
         jit.ret();
 
-        LinkBuffer linkBuffer(jit, stubBase, stubSize);
+        auto stubBaseCodePtr = MacroAssemblerCodePtr<LinkBufferPtrTag>(tagCodePtr<LinkBufferPtrTag>(stubBase));
+        LinkBuffer linkBuffer(jit, stubBaseCodePtr, stubSize);
         // We don't use FINALIZE_CODE() for two reasons.
         // The first is that we don't want the writeable address, as disassembled instructions,
         // to appear in the console or anywhere in memory, via the PrintStream buffer.
         // The second is we can't guarantee that the code is readable when using the
         // asyncDisassembly option as our caller will set our pages execute only.
-        return linkBuffer.finalizeCodeWithoutDisassembly();
+        return linkBuffer.finalizeCodeWithoutDisassembly<JITThunkPtrTag>();
     }
 #else // CPU(ARM64) && USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
     static void genericWriteToJITRegion(off_t offset, const void* data, size_t dataSize)
@@ -306,15 +325,18 @@ private:
         memcpy((void*)(startOfFixedWritableMemoryPool + offset), data, dataSize);
     }
 
-    MacroAssemblerCodeRef jitWriteThunkGenerator(void* address, void*, size_t)
+    MacroAssemblerCodeRef<JITThunkPtrTag> jitWriteThunkGenerator(void* address, void*, size_t)
     {
         startOfFixedWritableMemoryPool = reinterpret_cast<uintptr_t>(address);
-        uintptr_t function = (uintptr_t)((void*)&genericWriteToJITRegion);
+        void* function = reinterpret_cast<void*>(&genericWriteToJITRegion);
 #if CPU(ARM_THUMB2)
         // Handle thumb offset
-        function -= 1;
+        uintptr_t functionAsInt = reinterpret_cast<uintptr_t>(function);
+        functionAsInt -= 1;
+        function = reinterpret_cast<void*>(functionAsInt);
 #endif
-        return MacroAssemblerCodeRef::createSelfManagedCodeRef(MacroAssemblerCodePtr((void*)function));
+        auto codePtr = MacroAssemblerCodePtr<JITThunkPtrTag>(tagCFunctionPtr<JITThunkPtrTag>(function));
+        return MacroAssemblerCodeRef<JITThunkPtrTag>::createSelfManagedCodeRef(codePtr);
     }
 #endif
 
@@ -427,6 +449,17 @@ RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(size_t sizeInBytes,
         }
         return nullptr;
     }
+
+#if USE(POINTER_PROFILING)
+    void* start = startOfFixedExecutableMemoryPool();
+    void* end = endOfFixedExecutableMemoryPool();
+    void* resultStart = result->start().untaggedPtr();
+    void* resultEnd = result->end().untaggedPtr();
+    RELEASE_ASSERT(start == removeCodePtrTag(taggedStartOfFixedExecutableMemoryPool));
+    RELEASE_ASSERT(end == removeCodePtrTag(taggedEndOfFixedExecutableMemoryPool));
+    RELEASE_ASSERT(start <= resultStart && resultStart < end);
+    RELEASE_ASSERT(start < resultEnd && resultEnd <= end);
+#endif
     return result;
 }
 

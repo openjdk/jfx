@@ -29,12 +29,14 @@
 
 #include "Color.h"
 #include "ContainerNode.h"
+#include "DisabledAdaptations.h"
 #include "DocumentEventQueue.h"
 #include "DocumentIdentifier.h"
 #include "DocumentTiming.h"
 #include "FocusDirection.h"
 #include "FontSelectorClient.h"
 #include "FrameDestructionObserver.h"
+#include "GenericTaskQueue.h"
 #include "MediaProducer.h"
 #include "MutationObserver.h"
 #include "OrientationNotifier.h"
@@ -43,7 +45,9 @@
 #include "Region.h"
 #include "RenderPtr.h"
 #include "ScriptExecutionContext.h"
+#include "SecurityPolicyViolationEvent.h"
 #include "StringWithDirection.h"
+#include "StyleColor.h"
 #include "Supplementable.h"
 #include "TextResourceDecoder.h"
 #include "Timer.h"
@@ -51,7 +55,6 @@
 #include "UserActionElementSet.h"
 #include "ViewportArguments.h"
 #include "VisibilityState.h"
-#include <JavaScriptCore/ThreadLocalCache.h>
 #include <pal/SessionID.h>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
@@ -100,6 +103,7 @@ class DOMWrapperWorld;
 class Database;
 class DatabaseThread;
 class DeferredPromise;
+class DocumentAnimationScheduler;
 class DocumentFragment;
 class DocumentLoader;
 class DocumentMarkerController;
@@ -184,6 +188,7 @@ class WebAnimation;
 class WebGL2RenderingContext;
 class WebGLRenderingContext;
 class WebGPURenderingContext;
+class WindowProxy;
 class XPathEvaluator;
 class XPathExpression;
 class XPathNSResolver;
@@ -193,6 +198,8 @@ template<typename> class ExceptionOr;
 
 enum CollectionType;
 enum class ShouldOpenExternalURLsPolicy;
+
+enum class RouteSharingPolicy;
 
 using PlatformDisplayID = uint32_t;
 
@@ -226,6 +233,10 @@ class MediaSession;
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 class HTMLAttachmentElement;
+#endif
+
+#if ENABLE(INTERSECTION_OBSERVER)
+class IntersectionObserver;
 #endif
 
 namespace Style {
@@ -310,14 +321,25 @@ using RenderingContext = Variant<
     RefPtr<CanvasRenderingContext2D>
 >;
 
+class DocumentParserYieldToken {
+public:
+    WEBCORE_EXPORT DocumentParserYieldToken(Document&);
+    WEBCORE_EXPORT ~DocumentParserYieldToken();
+
+private:
+    WeakPtr<Document> m_document;
+};
+
 class Document
     : public ContainerNode
     , public TreeScope
     , public ScriptExecutionContext
     , public FontSelectorClient
+    , public CanMakeWeakPtr<Document>
     , public FrameDestructionObserver
     , public Supplementable<Document>
     , public Logger::Observer {
+    WTF_MAKE_ISO_ALLOCATED(Document);
 public:
     static Ref<Document> create(Frame* frame, const URL& url)
     {
@@ -376,10 +398,6 @@ public:
     Element* getElementByAccessKey(const String& key);
     void invalidateAccessKeyMap();
 
-    void addImageElementByUsemap(const AtomicStringImpl&, HTMLImageElement&);
-    void removeImageElementByUsemap(const AtomicStringImpl&, HTMLImageElement&);
-    HTMLImageElement* imageElementByUsemap(const AtomicStringImpl&) const;
-
     ExceptionOr<SelectorQuery&> selectorQueryForString(const String&);
     void clearSelectorQueryCache();
 
@@ -387,12 +405,16 @@ public:
 
     void setViewportArguments(const ViewportArguments& viewportArguments) { m_viewportArguments = viewportArguments; }
     ViewportArguments viewportArguments() const { return m_viewportArguments; }
+
+    WEBCORE_EXPORT void setOverrideViewportArguments(const std::optional<ViewportArguments>&);
+
+    OptionSet<DisabledAdaptations> disabledAdaptations() const { return m_disabledAdaptations; }
 #ifndef NDEBUG
     bool didDispatchViewportPropertiesChanged() const { return m_didDispatchViewportPropertiesChanged; }
 #endif
 
-    void setReferrerPolicy(ReferrerPolicy referrerPolicy) { m_referrerPolicy = referrerPolicy; }
-    ReferrerPolicy referrerPolicy() const { return m_referrerPolicy; }
+    void setReferrerPolicy(ReferrerPolicy);
+    ReferrerPolicy referrerPolicy() const { return m_referrerPolicy.value_or(ReferrerPolicy::NoReferrerWhenDowngrade); }
 
     WEBCORE_EXPORT DocumentType* doctype() const;
 
@@ -422,8 +444,6 @@ public:
     WEBCORE_EXPORT Ref<Element> createElement(const QualifiedName&, bool createdByParser);
 
     static CustomElementNameValidationStatus validateCustomElementName(const AtomicString&);
-
-    bool isCSSGridLayoutEnabled() const;
 
     WEBCORE_EXPORT RefPtr<Range> caretRangeFromPoint(int x, int y);
     RefPtr<Range> caretRangeFromPoint(const LayoutPoint& clientPoint);
@@ -459,8 +479,8 @@ public:
 
     String xmlEncoding() const { return m_xmlEncoding; }
     String xmlVersion() const { return m_xmlVersion; }
-    enum StandaloneStatus { StandaloneUnspecified, Standalone, NotStandalone };
-    bool xmlStandalone() const { return m_xmlStandalone == Standalone; }
+    enum class StandaloneStatus : uint8_t { Unspecified, Standalone, NotStandalone };
+    bool xmlStandalone() const { return m_xmlStandalone == StandaloneStatus::Standalone; }
     StandaloneStatus xmlStandaloneStatus() const { return m_xmlStandalone; }
     bool hasXMLDeclaration() const { return m_hasXMLDeclaration; }
 
@@ -545,6 +565,11 @@ public:
 
     float deviceScaleFactor() const;
 
+    bool useSystemAppearance() const;
+    bool useDarkAppearance() const;
+
+    OptionSet<StyleColor::Options> styleColorOptions() const;
+
     WEBCORE_EXPORT Ref<Range> createRange();
 
     // The last bool parameter is for ObjC bindings.
@@ -573,7 +598,7 @@ public:
     };
     WEBCORE_EXPORT void updateLayoutIgnorePendingStylesheets(RunPostLayoutTasks = RunPostLayoutTasks::Asynchronously);
 
-    std::unique_ptr<RenderStyle> styleForElementIgnoringPendingStylesheets(Element&, const RenderStyle* parentStyle, PseudoId = NOPSEUDO);
+    std::unique_ptr<RenderStyle> styleForElementIgnoringPendingStylesheets(Element&, const RenderStyle* parentStyle, PseudoId = PseudoId::None);
 
     // Returns true if page box (margin boxes and page borders) is visible.
     WEBCORE_EXPORT bool isPageBoxVisible(int pageIndex);
@@ -592,8 +617,8 @@ public:
 
     // Override ScriptExecutionContext methods to do additional work
     WEBCORE_EXPORT bool shouldBypassMainWorldContentSecurityPolicy() const final;
-    void suspendActiveDOMObjects(ActiveDOMObject::ReasonForSuspension) final;
-    void resumeActiveDOMObjects(ActiveDOMObject::ReasonForSuspension) final;
+    void suspendActiveDOMObjects(ReasonForSuspension) final;
+    void resumeActiveDOMObjects(ReasonForSuspension) final;
     void stopActiveDOMObjects() final;
 
     void suspendDeviceMotionAndOrientationUpdates();
@@ -616,7 +641,7 @@ public:
 
     WEBCORE_EXPORT DocumentLoader* loader() const;
 
-    WEBCORE_EXPORT ExceptionOr<RefPtr<DOMWindow>> openForBindings(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& url, const AtomicString& name, const String& features);
+    WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> openForBindings(DOMWindow& activeWindow, DOMWindow& firstDOMWindow, const String& url, const AtomicString& name, const String& features);
     WEBCORE_EXPORT ExceptionOr<Document&> openForBindings(Document* responsibleDocument, const String& type, const String& replace);
 
     // FIXME: We should rename this at some point and give back the name 'open' to the HTML specified ones.
@@ -670,7 +695,6 @@ public:
     SocketProvider* socketProvider() final;
 
     bool canNavigate(Frame* targetFrame);
-    Frame* findUnsafeParentScrollPropagationBoundary();
 
     bool usesStyleBasedEditability() const;
     void setHasElementUsingStyleBasedEditability();
@@ -721,10 +745,6 @@ public:
     VisitedLinkState& visitedLinkState() const { return *m_visitedLinkState; }
 
     MouseEventWithHitTestResults prepareMouseEvent(const HitTestRequest&, const LayoutPoint&, const PlatformMouseEvent&);
-
-    WEBCORE_EXPORT String preferredStylesheetSet() const;
-    WEBCORE_EXPORT String selectedStylesheetSet() const;
-    WEBCORE_EXPORT void setSelectedStylesheetSet(const String&);
 
     enum class FocusRemovalEventsMode { Dispatch, DoNotDispatch };
     WEBCORE_EXPORT bool setFocusedElement(Element*, FocusDirection = FocusDirectionNone,
@@ -795,10 +815,12 @@ public:
 
     DOMWindow* domWindow() const { return m_domWindow.get(); }
     // In DOM Level 2, the Document's DOMWindow is called the defaultView.
-    DOMWindow* defaultView() const { return domWindow(); }
+    WEBCORE_EXPORT WindowProxy* windowProxy() const;
+
+    bool hasBrowsingContext() const { return !!frame(); }
 
     Document& contextDocument() const;
-    void setContextDocument(Document& document) { m_contextDocument = document.createWeakPtr(); }
+    void setContextDocument(Document& document) { m_contextDocument = makeWeakPtr(document); }
 
     // Helper functions for forwarding DOMWindow event related tasks to the DOMWindow if it exists.
     void setWindowAttributeEventListener(const AtomicString& eventType, const QualifiedName& attributeName, const AtomicString& value, DOMWrapperWorld&);
@@ -859,8 +881,9 @@ public:
 #endif
 
     void processViewport(const String& features, ViewportArguments::Type origin);
+    void processDisabledAdaptations(const String& adaptations);
     void updateViewportArguments();
-    void processReferrerPolicy(const String& policy);
+    void processReferrerPolicy(const String& policy, ReferrerPolicySource);
 
     // Returns the owning element in the parent document.
     // Returns 0 if this is the top level document.
@@ -915,6 +938,14 @@ public:
     const URL& firstPartyForCookies() const { return m_firstPartyForCookies; }
     void setFirstPartyForCookies(const URL& url) { m_firstPartyForCookies = url; }
 
+    // The full URL corresponding to the "site for cookies" in the Same-Site Cookies spec.,
+    // <https://tools.ietf.org/html/draft-ietf-httpbis-cookie-same-site-00>. It is either
+    // the URL of the top-level document or the null URL depending on whether the registrable
+    // domain of this document's URL matches the registrable domain of its parent's/opener's
+    // URL. For the top-level document, it is set to the document's URL.
+    const URL& siteForCookies() const { return m_siteForCookies; }
+    void setSiteForCookies(const URL& url) { m_siteForCookies = url; }
+
     // The following implements the rule from HTML 4 for what valid names are.
     // To get this right for all the XML cases, we probably have to improve this or move it
     // and make it sensitive to the type of document.
@@ -963,6 +994,8 @@ public:
     HTMLScriptElement* currentScript() const { return !m_currentScriptStack.isEmpty() ? m_currentScriptStack.last().get() : nullptr; }
     void pushCurrentScript(HTMLScriptElement*);
     void popCurrentScript();
+
+    bool shouldDeferAsynchronousScriptsUntilParsingFinishes() const;
 
 #if ENABLE(XSLT)
     void scheduleToApplyXSLTransforms();
@@ -1018,8 +1051,8 @@ public:
     void unregisterForDocumentSuspensionCallbacks(Element*);
 
     void documentWillBecomeInactive();
-    void suspend(ActiveDOMObject::ReasonForSuspension);
-    void resume(ActiveDOMObject::ReasonForSuspension);
+    void suspend(ReasonForSuspension);
+    void resume(ReasonForSuspension);
 
     void registerForMediaVolumeCallbacks(Element*);
     void unregisterForMediaVolumeCallbacks(Element*);
@@ -1104,6 +1137,7 @@ public:
     void enqueueDocumentEvent(Ref<Event>&&);
     void enqueueOverflowEvent(Ref<Event>&&);
     void dispatchPageshowEvent(PageshowEventPersistence);
+    WEBCORE_EXPORT void enqueueSecurityPolicyViolationEvent(SecurityPolicyViolationEvent::Init&&);
     void enqueueHashchangeEvent(const String& oldURL, const String& newURL);
     void dispatchPopstateEvent(RefPtr<SerializedScriptValue>&& stateObject);
     DocumentEventQueue& eventQueue() const final { return m_eventQueue; }
@@ -1134,12 +1168,15 @@ public:
     void setFullScreenRenderer(RenderTreeBuilder&, RenderFullScreen&);
     RenderFullScreen* fullScreenRenderer() const { return m_fullScreenRenderer.get(); }
 
-    void fullScreenChangeDelayTimerFired();
+    void dispatchFullScreenChangeEvents();
     bool fullScreenIsAllowedForElement(Element*) const;
     void fullScreenElementRemoved();
     void removeFullScreenElementOfSubtree(Node&, bool amongChildrenOnly = false);
-    bool isAnimatingFullScreen() const;
+    WEBCORE_EXPORT bool isAnimatingFullScreen() const;
     WEBCORE_EXPORT void setAnimatingFullScreen(bool);
+
+    WEBCORE_EXPORT bool areFullscreenControlsHidden() const;
+    WEBCORE_EXPORT void setFullscreenControlsHidden(bool);
 
     WEBCORE_EXPORT bool webkitFullscreenEnabled() const;
     Element* webkitFullscreenElement() const { return !m_fullScreenElementStack.isEmpty() ? m_fullScreenElementStack.last().get() : nullptr; }
@@ -1229,8 +1266,8 @@ public:
 
     bool isInDocumentWrite() { return m_writeRecursionDepth > 0; }
 
-    void suspendScheduledTasks(ActiveDOMObject::ReasonForSuspension);
-    void resumeScheduledTasks(ActiveDOMObject::ReasonForSuspension);
+    void suspendScheduledTasks(ReasonForSuspension);
+    void resumeScheduledTasks(ReasonForSuspension);
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     IntSize initialViewportSize() const;
@@ -1243,6 +1280,13 @@ public:
     bool hasActiveParser();
     void incrementActiveParserCount() { ++m_activeParserCount; }
     void decrementActiveParserCount();
+
+    std::unique_ptr<DocumentParserYieldToken> createParserYieldToken()
+    {
+        return std::make_unique<DocumentParserYieldToken>(*this);
+    }
+
+    bool hasActiveParserYieldToken() const { return m_parserYieldTokenCount; }
 
     DocumentSharedObjectPool* sharedObjectPool() { return m_sharedObjectPool.get(); }
 
@@ -1300,12 +1344,11 @@ public:
     bool isCapturing() const { return MediaProducer::isCapturing(m_mediaState); }
     WEBCORE_EXPORT void updateIsPlayingMedia(uint64_t = HTMLMediaElementInvalidID);
     void pageMutedStateDidChange();
-    WeakPtr<Document> createWeakPtr() { return m_weakFactory.createWeakPtr(*this); }
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     void addPlaybackTargetPickerClient(MediaPlaybackTargetClient&);
     void removePlaybackTargetPickerClient(MediaPlaybackTargetClient&);
-    void showPlaybackTargetPicker(MediaPlaybackTargetClient&, bool);
+    void showPlaybackTargetPicker(MediaPlaybackTargetClient&, bool, RouteSharingPolicy, const String&);
     void playbackTargetPickerClientStateDidChange(MediaPlaybackTargetClient&, MediaProducer::MediaStateFlags);
 
     void setPlaybackTarget(uint64_t, Ref<MediaPlaybackTarget>&&);
@@ -1320,9 +1363,16 @@ public:
     void addViewportDependentPicture(HTMLPictureElement&);
     void removeViewportDependentPicture(HTMLPictureElement&);
 
+#if ENABLE(INTERSECTION_OBSERVER)
+    void addIntersectionObserver(RefPtr<IntersectionObserver>&&);
+    RefPtr<IntersectionObserver> removeIntersectionObserver(IntersectionObserver&);
+    unsigned numberOfIntersectionObservers() const { return m_intersectionObservers.size(); }
+    void updateIntersectionObservations();
+#endif
+
 #if ENABLE(MEDIA_STREAM)
-    void setHasActiveMediaStreamTrack() { m_hasHadActiveMediaStreamTrack = true; }
-    bool hasHadActiveMediaStreamTrack() const { return m_hasHadActiveMediaStreamTrack; }
+    void setHasCaptureMediaStreamTrack() { m_hasHadCaptureMediaStreamTrack = true; }
+    bool hasHadCaptureMediaStreamTrack() const { return m_hasHadCaptureMediaStreamTrack; }
     void setDeviceIDHashSalt(const String& salt) { m_idHashSalt = salt; }
     String deviceIDHashSalt() const { return m_idHashSalt; }
     void stopMediaCapture();
@@ -1389,7 +1439,11 @@ public:
 
     WEBCORE_EXPORT void setConsoleMessageListener(RefPtr<StringCallback>&&); // For testing.
 
-    DocumentTimeline& timeline();
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    DocumentAnimationScheduler& animationScheduler();
+#endif
+
+    WEBCORE_EXPORT DocumentTimeline& timeline();
     DocumentTimeline* existingTimeline() const { return m_timeline.get(); }
     Vector<RefPtr<WebAnimation>> getAnimations();
 
@@ -1412,7 +1466,26 @@ public:
     bool handlingTouchEvent() const { return m_handlingTouchEvent; }
 #endif
 
-    JSC::ThreadLocalCache& threadLocalCache();
+#if HAVE(CFNETWORK_STORAGE_PARTITIONING)
+    bool hasRequestedPageSpecificStorageAccessWithUserInteraction(const String& primaryDomain);
+    void setHasRequestedPageSpecificStorageAccessWithUserInteraction(const String& primaryDomain);
+#endif
+
+    String signedPublicKeyAndChallengeString(unsigned keySizeIndex, const String& challengeString, const URL&);
+
+    void consumeTemporaryTimeUserGesture();
+
+    void registerArticleElement(Element&);
+    void unregisterArticleElement(Element&);
+    void updateMainArticleElementAfterLayout();
+    bool hasMainArticleElement() const { return !!m_mainArticleElement; }
+
+    void setAsRunningUserScripts() { m_isRunningUserScripts = true; }
+    bool isRunningUserScripts() const { return m_isRunningUserScripts; }
+
+    // Used in webarchive loading tests.
+    void setAlwaysAllowLocalWebarchive() { m_alwaysAllowLocalWebarchive = true; }
+    bool alwaysAllowLocalWebarchive() const { return m_alwaysAllowLocalWebarchive; }
 
 protected:
     enum ConstructionFlags { Synthesized = 1, NonRenderedPlaceholder = 1 << 1 };
@@ -1423,9 +1496,11 @@ protected:
     virtual Ref<Document> cloneDocumentWithoutChildren() const;
 
 private:
+    friend class DocumentParserYieldToken;
     friend class Node;
-    friend class IgnoreDestructiveWriteCountIncrementer;
+    friend class ThrowOnDynamicMarkupInsertionCountIncrementer;
     friend class IgnoreOpensDuringUnloadCountIncrementer;
+    friend class IgnoreDestructiveWriteCountIncrementer;
 
     bool shouldInheritContentSecurityPolicyFromOwner() const;
 
@@ -1489,6 +1564,8 @@ private:
     void addDocumentToFullScreenChangeEventQueue(Document*);
 #endif
 
+    void dispatchDisabledAdaptationsDidChangeForMainFrame();
+
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
     friend void setParserFeature(const String& key, const String& value, Document*, void* userData);
     void setIsTelephoneNumberParsingAllowed(bool);
@@ -1516,6 +1593,10 @@ private:
 
     void checkViewportDependentPictures();
 
+#if ENABLE(INTERSECTION_OBSERVER)
+    void notifyIntersectionObserversTimerFired();
+#endif
+
 #if USE(QUICK_LOOK)
     bool shouldEnforceQuickLookSandbox() const;
     void applyQuickLookSandbox();
@@ -1527,6 +1608,8 @@ private:
 
     bool domainIsRegisterable(const String&) const;
 
+    void enableTemporaryTimeUserGesture();
+
     const Ref<Settings> m_settings;
 
     std::unique_ptr<StyleResolver> m_userAgentShadowTreeStyleResolver;
@@ -1537,6 +1620,8 @@ private:
     Ref<CachedResourceLoader> m_cachedResourceLoader;
     RefPtr<DocumentParser> m_parser;
 
+    unsigned m_parserYieldTokenCount { 0 };
+
     // Document URLs.
     URL m_url; // Document.URL: The URL from which this document was retrieved.
     URL m_baseURL; // Node.baseURI: The URL to use when resolving relative URLs.
@@ -1544,6 +1629,7 @@ private:
     URL m_baseElementURL; // The URL set by the <base> element.
     URL m_cookieURL; // The URL to use for cookie access.
     URL m_firstPartyForCookies; // The policy URL for third-party cookie blocking.
+    URL m_siteForCookies; // The policy URL for Same-Site cookies.
 
     // Document.documentURI:
     // Although URL-like, Document.documentURI can actually be set to any
@@ -1619,7 +1705,7 @@ private:
 
     String m_xmlEncoding;
     String m_xmlVersion;
-    StandaloneStatus m_xmlStandalone { StandaloneUnspecified };
+    StandaloneStatus m_xmlStandalone { StandaloneStatus::Unspecified };
     bool m_hasXMLDeclaration { false };
 
     String m_contentLanguage;
@@ -1650,6 +1736,9 @@ private:
     HashSet<Element*> m_captionPreferencesChangedElements;
 #endif
 
+    Element* m_mainArticleElement { nullptr };
+    HashSet<Element*> m_articleElements;
+
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
     HashSet<HTMLMediaElement*> m_pageScaleFactorChangedElements;
     HashSet<HTMLMediaElement*> m_userInterfaceLayoutDirectionChangedElements;
@@ -1662,8 +1751,6 @@ private:
 
     HashMap<StringImpl*, Element*, ASCIICaseInsensitiveHash> m_elementsByAccessKey;
 
-    DocumentOrderedMap m_imagesByUsemap;
-
     std::unique_ptr<ConstantPropertyMap> m_constantPropertyMap;
 
     std::unique_ptr<SelectorQueryCache> m_selectorQueryCache;
@@ -1673,15 +1760,13 @@ private:
     RenderPtr<RenderView> m_renderView;
     mutable DocumentEventQueue m_eventQueue;
 
-    WeakPtrFactory<Document> m_weakFactory;
-
     HashSet<MediaCanStartListener*> m_mediaCanStartListeners;
 
 #if ENABLE(FULLSCREEN_API)
     RefPtr<Element> m_fullScreenElement;
     Vector<RefPtr<Element>> m_fullScreenElementStack;
     WeakPtr<RenderFullScreen> m_fullScreenRenderer { nullptr };
-    Timer m_fullScreenChangeDelayTimer;
+    GenericTaskQueue<Timer> m_fullScreenTaskQueue;
     Deque<RefPtr<Node>> m_fullScreenChangeEventTargetQueue;
     Deque<RefPtr<Node>> m_fullScreenErrorEventTargetQueue;
     LayoutRect m_savedPlaceholderFrameRect;
@@ -1689,13 +1774,22 @@ private:
 
     bool m_areKeysEnabledInFullScreen { false };
     bool m_isAnimatingFullScreen { false };
+    bool m_areFullscreenControlsHidden { false };
 #endif
 
     HashSet<HTMLPictureElement*> m_viewportDependentPictures;
 
+#if ENABLE(INTERSECTION_OBSERVER)
+    Vector<RefPtr<IntersectionObserver>> m_intersectionObservers;
+    Vector<WeakPtr<IntersectionObserver>> m_intersectionObserversWithPendingNotifications;
+    Timer m_intersectionObserversNotifyTimer;
+#endif
+
     Timer m_loadEventDelayTimer;
 
     ViewportArguments m_viewportArguments;
+    std::optional<ViewportArguments> m_overrideViewportArguments;
+    OptionSet<DisabledAdaptations> m_disabledAdaptations;
 
     DocumentTiming m_documentTiming;
 
@@ -1726,6 +1820,8 @@ private:
     std::unique_ptr<DeviceOrientationClient> m_deviceOrientationClient;
     std::unique_ptr<DeviceOrientationController> m_deviceOrientationController;
 #endif
+
+    GenericTaskQueue<Timer> m_logMessageTaskQueue;
 
     Timer m_pendingTasksTimer;
     Vector<Task> m_pendingTasks;
@@ -1787,11 +1883,14 @@ private:
     int m_loadEventDelayCount { 0 };
     unsigned m_lastStyleUpdateSizeForTesting { 0 };
 
-    // https://html.spec.whatwg.org/multipage/webappapis.html#ignore-destructive-writes-counter
-    unsigned m_ignoreDestructiveWriteCount { 0 };
+    // https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#throw-on-dynamic-markup-insertion-counter
+    unsigned m_throwOnDynamicMarkupInsertionCount { 0 };
 
-    // https://html.spec.whatwg.org/multipage/webappapis.html#ignore-opens-during-unload-counter
+    // https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#ignore-opens-during-unload-counter
     unsigned m_ignoreOpensDuringUnloadCount { 0 };
+
+    // https://html.spec.whatwg.org/multipage/dynamic-markup-insertion.html#ignore-destructive-writes-counter
+    unsigned m_ignoreDestructiveWriteCount { 0 };
 
     unsigned m_activeParserCount { 0 };
     unsigned m_styleRecalcCount { 0 };
@@ -1802,7 +1901,7 @@ private:
     MediaProducer::MediaStateFlags m_mediaState { MediaProducer::IsNotPlaying };
     bool m_userHasInteractedWithMediaElement { false };
     PageCacheState m_pageCacheState { NotInPageCache };
-    ReferrerPolicy m_referrerPolicy { ReferrerPolicy::NoReferrerWhenDowngrade };
+    std::optional<ReferrerPolicy> m_referrerPolicy;
     ReadyState m_readyState { Complete };
 
     MutationObserverOptions m_mutationObserverTypes { 0 };
@@ -1873,7 +1972,7 @@ private:
 #if ENABLE(MEDIA_STREAM)
     HashSet<HTMLMediaElement*> m_mediaStreamStateChangeElements;
     String m_idHashSalt;
-    bool m_hasHadActiveMediaStreamTrack { false };
+    bool m_hasHadCaptureMediaStreamTrack { false };
 #endif
 
 #ifndef NDEBUG
@@ -1887,9 +1986,11 @@ private:
 
     static bool hasEverCreatedAnAXObjectCache;
 
-    bool m_hasFrameSpecificStorageAccess { false };
     bool m_grantStorageAccessOverride { false };
 
+#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+    RefPtr<DocumentAnimationScheduler> m_animationScheduler;
+#endif
     RefPtr<DocumentTimeline> m_timeline;
     DocumentIdentifier m_identifier;
 
@@ -1899,7 +2000,15 @@ private:
 
     HashSet<ApplicationStateChangeListener*> m_applicationStateChangeListeners;
 
-    RefPtr<JSC::ThreadLocalCache> m_threadLocalCache;
+#if HAVE(CFNETWORK_STORAGE_PARTITIONING)
+    String m_primaryDomainRequestedPageSpecificStorageAccessWithUserInteraction { };
+#endif
+
+    std::unique_ptr<UserGestureIndicator> m_temporaryUserGesture;
+
+    bool m_isRunningUserScripts { false };
+
+    bool m_alwaysAllowLocalWebarchive { false };
 };
 
 Element* eventTargetElementForDocument(Document*);

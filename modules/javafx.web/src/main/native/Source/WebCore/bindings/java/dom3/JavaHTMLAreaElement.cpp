@@ -29,7 +29,7 @@
 
 #include <WebCore/HTMLAreaElement.h>
 #include <WebCore/HTMLNames.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

@@ -35,7 +35,7 @@ const ClassInfo JSSet::s_info = { "Set", &Base::s_info, nullptr, nullptr, CREATE
 
 String JSSet::toStringName(const JSObject*, ExecState*)
 {
-    return ASCIILiteral("Object");
+    return "Object"_s;
 }
 
 JSSet* JSSet::clone(ExecState* exec, VM& vm, Structure* structure)
@@ -51,12 +51,12 @@ bool JSSet::isIteratorProtocolFastAndNonObservable()
     if (!globalObject->isSetPrototypeIteratorProtocolFastAndNonObservable())
         return false;
 
-    Structure* structure = this->structure();
+    VM& vm = globalObject->vm();
+    Structure* structure = this->structure(vm);
     // This is the fast case. Many sets will be an original set.
     if (structure == globalObject->setStructure())
         return true;
 
-    VM& vm = globalObject->vm();
     if (getPrototypeDirect(vm) != globalObject->jsSetPrototype())
         return false;
 

@@ -42,8 +42,8 @@ else ()
     set(ENABLE_API_TESTS ON)
 endif ()
 
-if (WTF_CPU_X86 OR WTF_CPU_X86_64)
-    SET_AND_EXPOSE_TO_BUILD(USE_UDIS86 1)
+if (WTF_CPU_ARM OR WTF_CPU_MIPS)
+    SET_AND_EXPOSE_TO_BUILD(USE_CAPSTONE TRUE)
 endif ()
 
 # FIXME: JSCOnly on WIN32 seems to only work with fully static build
@@ -71,8 +71,9 @@ if (WIN32)
         set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB32_PATHS OFF)
         set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 
+        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib64)
         set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib64)
-        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin64)
     endif ()
 
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}")
@@ -96,6 +97,9 @@ endif ()
 
 if (NOT APPLE)
     find_package(ICU REQUIRED)
+    if (WIN32)
+        add_definitions(-DUCHAR_TYPE=wchar_t)
+    endif ()
 else ()
     add_definitions(-DU_DISABLE_RENAMING=1 -DU_SHOW_CPLUSPLUS_API=0)
     set(ICU_LIBRARIES libicucore.dylib)

@@ -93,7 +93,7 @@ static EncodedJSValue JSC_HOST_CALL stringFromCharCode(ExecState* exec)
     return JSValue::encode(jsString(exec, WTFMove(impl)));
 }
 
-JSCell* JSC_HOST_CALL stringFromCharCode(ExecState* exec, int32_t arg)
+JSString* JSC_HOST_CALL stringFromCharCode(ExecState* exec, int32_t arg)
 {
     return jsSingleCharacterString(exec, arg);
 }
@@ -114,7 +114,7 @@ static EncodedJSValue JSC_HOST_CALL stringFromCodePoint(ExecState* exec)
         uint32_t codePoint = static_cast<uint32_t>(codePointAsDouble);
 
         if (codePoint != codePointAsDouble || codePoint > UCHAR_MAX_VALUE)
-            return throwVMError(exec, scope, createRangeError(exec, ASCIILiteral("Arguments contain a value that is out of range of code points")));
+            return throwVMError(exec, scope, createRangeError(exec, "Arguments contain a value that is out of range of code points"_s));
 
         if (U_IS_BMP(codePoint))
             builder.append(static_cast<UChar>(codePoint));
@@ -130,8 +130,8 @@ static EncodedJSValue JSC_HOST_CALL stringFromCodePoint(ExecState* exec)
 
 static EncodedJSValue JSC_HOST_CALL constructWithStringConstructor(ExecState* exec)
 {
-    JSGlobalObject* globalObject = asInternalFunction(exec->jsCallee())->globalObject();
-    VM& vm = globalObject->vm();
+    VM& vm = exec->vm();
+    JSGlobalObject* globalObject = jsCast<InternalFunction*>(exec->jsCallee())->globalObject(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     Structure* structure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), globalObject->stringObjectStructure());
@@ -144,7 +144,7 @@ static EncodedJSValue JSC_HOST_CALL constructWithStringConstructor(ExecState* ex
     return JSValue::encode(StringObject::create(vm, structure, str));
 }
 
-JSCell* stringConstructor(ExecState* exec, JSValue argument)
+JSString* stringConstructor(ExecState* exec, JSValue argument)
 {
     if (argument.isSymbol())
         return jsNontrivialString(exec, asSymbol(argument)->descriptiveString());

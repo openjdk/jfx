@@ -34,15 +34,15 @@
 #include "MediaStreamTrackPrivate.h"
 #include <Timer.h>
 #include <webrtc/api/mediastreaminterface.h>
-#include <webrtc/base/optional.h>
+#include <webrtc/api/optional.h>
 #include <webrtc/common_video/include/i420_buffer_pool.h>
-#include <webrtc/media/base/videosinkinterface.h>
+#include <webrtc/api/videosinkinterface.h>
 #include <wtf/Optional.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
-class RealtimeOutgoingVideoSource : public ThreadSafeRefCounted<RealtimeOutgoingVideoSource>, public webrtc::VideoTrackSourceInterface, private MediaStreamTrackPrivate::Observer {
+class RealtimeOutgoingVideoSource : public ThreadSafeRefCounted<RealtimeOutgoingVideoSource, WTF::DestructionThread::Main>, public webrtc::VideoTrackSourceInterface, private MediaStreamTrackPrivate::Observer {
 public:
     static Ref<RealtimeOutgoingVideoSource> create(Ref<MediaStreamTrackPrivate>&& videoSource);
     ~RealtimeOutgoingVideoSource() { stop(); }
@@ -51,8 +51,13 @@ public:
     bool setSource(Ref<MediaStreamTrackPrivate>&&);
     MediaStreamTrackPrivate& source() const { return m_videoSource.get(); }
 
-    int AddRef() const final { ref(); return refCount(); }
-    int Release() const final { deref(); return refCount(); }
+    void AddRef() const final { ref(); }
+    rtc::RefCountReleaseStatus Release() const final
+    {
+        auto result = hasOneRef() ? rtc::RefCountReleaseStatus::kDroppedLastRef : rtc::RefCountReleaseStatus::kOtherRefsRemained;
+        deref();
+        return result;
+    }
 
     void setApplyRotation(bool shouldApplyRotation) { m_shouldApplyRotation = shouldApplyRotation; }
 

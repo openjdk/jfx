@@ -7,7 +7,7 @@ list(APPEND WTF_INCLUDE_DIRECTORIES
     "${JAVA_INCLUDE_PATH2}"
 )
 
-list(APPEND WTF_HEADERS
+list(APPEND WTF_PUBLIC_HEADERS
     java/JavaEnv.h
     java/JavaRef.h
     java/DbgUtils.h
@@ -48,7 +48,7 @@ if (APPLE)
         ${DERIVED_SOURCES_WTF_DIR}/mach_excUser.c
     )
 
-    list(APPEND WTF_HEADERS
+    list(APPEND WTF_PUBLIC_HEADERS
         cf/TypeCastsCF.h
     )
 
@@ -61,14 +61,14 @@ if (APPLE)
     list(APPEND WTF_SOURCES
         cf/RunLoopCF.cpp
         cf/LanguageCF.cpp
-        cocoa/CPUTimeCocoa.mm
+        cocoa/CPUTimeCocoa.cpp
+        cocoa/MachSendRight.cpp
         cocoa/MemoryFootprintCocoa.cpp
         cocoa/MemoryPressureHandlerCocoa.mm
         cocoa/WorkQueueCocoa.cpp
         text/cf/StringImplCF.cpp
         text/cf/StringCF.cpp
-        text/mac/StringMac.mm
-        text/mac/StringImplMac.mm
+        text/cocoa/StringImplCocoa.mm
         BlockObjCExceptions.mm
     )
 
@@ -97,10 +97,9 @@ elseif (WIN32)
         win/MemoryPressureHandlerWin.cpp
         win/RunLoopWin.cpp
         win/WorkQueueWin.cpp
-        win/WorkItemContext.cpp
     )
 
-    list(APPEND WTF_HEADERS
+    list(APPEND WTF_PUBLIC_HEADERS
         text/win/WCharStringExtras.h
         win/Win32Handle.h
     )

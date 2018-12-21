@@ -79,7 +79,7 @@ bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestR
     return false;
 }
 
-bool EventHandler::tabsToAllFormControls(KeyboardEvent&) const
+bool EventHandler::tabsToAllFormControls(KeyboardEvent*) const
 {
     return true;
 }

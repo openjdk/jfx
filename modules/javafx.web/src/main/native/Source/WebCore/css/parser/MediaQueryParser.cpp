@@ -32,23 +32,24 @@
 
 #include "CSSTokenizer.h"
 #include "MediaList.h"
+#include "MediaQueryParserContext.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-RefPtr<MediaQuerySet> MediaQueryParser::parseMediaQuerySet(const String& queryString)
+RefPtr<MediaQuerySet> MediaQueryParser::parseMediaQuerySet(const String& queryString, MediaQueryParserContext context)
 {
-    return parseMediaQuerySet(CSSTokenizer(queryString).tokenRange());
+    return parseMediaQuerySet(CSSTokenizer(queryString).tokenRange(), context);
 }
 
-RefPtr<MediaQuerySet> MediaQueryParser::parseMediaQuerySet(CSSParserTokenRange range)
+RefPtr<MediaQuerySet> MediaQueryParser::parseMediaQuerySet(CSSParserTokenRange range, MediaQueryParserContext context)
 {
-    return MediaQueryParser(MediaQuerySetParser).parseInternal(range);
+    return MediaQueryParser(MediaQuerySetParser, context).parseInternal(range);
 }
 
-RefPtr<MediaQuerySet> MediaQueryParser::parseMediaCondition(CSSParserTokenRange range)
+RefPtr<MediaQuerySet> MediaQueryParser::parseMediaCondition(CSSParserTokenRange range, MediaQueryParserContext context)
 {
-    return MediaQueryParser(MediaConditionParser).parseInternal(range);
+    return MediaQueryParser(MediaConditionParser, context).parseInternal(range);
 }
 
 const MediaQueryParser::State MediaQueryParser::ReadRestrictor = &MediaQueryParser::readRestrictor;
@@ -64,9 +65,11 @@ const MediaQueryParser::State MediaQueryParser::SkipUntilComma = &MediaQueryPars
 const MediaQueryParser::State MediaQueryParser::SkipUntilBlockEnd = &MediaQueryParser::skipUntilBlockEnd;
 const MediaQueryParser::State MediaQueryParser::Done = &MediaQueryParser::done;
 
-MediaQueryParser::MediaQueryParser(ParserType parserType)
+MediaQueryParser::MediaQueryParser(ParserType parserType, MediaQueryParserContext context)
     : m_parserType(parserType)
+    , m_mediaQueryData(context)
     , m_querySet(MediaQuerySet::create())
+
 {
     if (parserType == MediaQuerySetParser)
         m_state = &MediaQueryParser::readRestrictor;
@@ -137,7 +140,8 @@ void MediaQueryParser::commitMediaQuery()
 {
     // FIXME-NEWPARSER: Convoluted and awful, but we can't change the MediaQuerySet yet because of the
     // old parser.
-    MediaQuery mediaQuery = MediaQuery(m_mediaQueryData.restrictor(), m_mediaQueryData.mediaType(), WTFMove(m_mediaQueryData.expressions()));
+    static const NeverDestroyed<String> defaultMediaType { "all"_s };
+    MediaQuery mediaQuery { m_mediaQueryData.restrictor(), m_mediaQueryData.mediaType().value_or(defaultMediaType), WTFMove(m_mediaQueryData.expressions()) };
     m_mediaQueryData.clear();
     m_querySet->addMediaQuery(WTFMove(mediaQuery));
 }
@@ -268,45 +272,37 @@ RefPtr<MediaQuerySet> MediaQueryParser::parseInternal(CSSParserTokenRange range)
     } else if (m_mediaQueryData.currentMediaQueryChanged())
         commitMediaQuery();
 
+    m_querySet->shrinkToFit();
+
     return m_querySet;
 }
 
-MediaQueryData::MediaQueryData()
-    : m_restrictor(MediaQuery::None)
-    , m_mediaType("all")
-    , m_mediaTypeSet(false)
+MediaQueryParser::MediaQueryData::MediaQueryData(MediaQueryParserContext context)
+    : m_context(context)
 {
 }
 
-void MediaQueryData::clear()
+void MediaQueryParser::MediaQueryData::clear()
 {
     m_restrictor = MediaQuery::None;
-    m_mediaType = "all";
-    m_mediaTypeSet = false;
+    m_mediaType = std::nullopt;
     m_mediaFeature = String();
     m_expressions.clear();
 }
 
-void MediaQueryData::addExpression(CSSParserTokenRange& range)
+void MediaQueryParser::MediaQueryData::addExpression(CSSParserTokenRange& range)
 {
-    MediaQueryExpression expression = MediaQueryExpression(m_mediaFeature, range);
-    m_expressions.append(WTFMove(expression));
+    m_expressions.append(MediaQueryExpression { m_mediaFeature, range, m_context });
 }
 
-bool MediaQueryData::lastExpressionValid()
+bool MediaQueryParser::MediaQueryData::lastExpressionValid()
 {
     return m_expressions.last().isValid();
 }
 
-void MediaQueryData::removeLastExpression()
+void MediaQueryParser::MediaQueryData::removeLastExpression()
 {
     m_expressions.removeLast();
 }
 
-void MediaQueryData::setMediaType(const String& mediaType)
-{
-    m_mediaType = mediaType;
-    m_mediaTypeSet = true;
-}
-
-} // namespace WebCsore
+} // namespace WebCore

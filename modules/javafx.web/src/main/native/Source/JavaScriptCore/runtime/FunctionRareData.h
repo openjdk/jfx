@@ -39,7 +39,7 @@ class SpeculativeJIT;
 class JITCompiler;
 }
 
-class FunctionRareData : public JSCell {
+class FunctionRareData final : public JSCell {
     friend class JIT;
     friend class DFG::SpeculativeJIT;
     friend class DFG::JITCompiler;
@@ -71,6 +71,7 @@ public:
     }
 
     Structure* objectAllocationStructure() { return m_objectAllocationProfile.structure(); }
+    JSObject* objectAllocationPrototype() { return m_objectAllocationProfile.prototype(); }
 
     InlineWatchpointSet& allocationProfileWatchpointSet()
     {
@@ -121,7 +122,7 @@ private:
             : m_rareData(rareData)
         { }
     protected:
-        void fireInternal(const FireDetail&) override;
+        void fireInternal(VM&, const FireDetail&) override;
     private:
         FunctionRareData* m_rareData;
     };

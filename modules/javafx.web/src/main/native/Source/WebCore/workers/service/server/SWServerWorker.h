@@ -27,12 +27,13 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "ContentSecurityPolicyResponseHeaders.h"
 #include "ServiceWorkerClientData.h"
+#include "ServiceWorkerContextData.h"
 #include "ServiceWorkerData.h"
 #include "ServiceWorkerIdentifier.h"
 #include "ServiceWorkerRegistrationKey.h"
 #include "ServiceWorkerTypes.h"
-#include "URL.h"
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -40,6 +41,7 @@ namespace WebCore {
 struct ClientOrigin;
 class SWServer;
 class SWServerRegistration;
+class SWServerToContextConnection;
 struct ServiceWorkerClientData;
 struct ServiceWorkerClientIdentifier;
 struct ServiceWorkerClientQueryOptions;
@@ -78,9 +80,6 @@ public:
 
     ServiceWorkerIdentifier identifier() const { return m_data.identifier; }
 
-    std::optional<SWServerToContextConnectionIdentifier> contextConnectionIdentifier() const { return m_contextConnectionIdentifier; }
-    void setContextConnectionIdentifier(std::optional<SWServerToContextConnectionIdentifier> identifier) { m_contextConnectionIdentifier = identifier; }
-
     ServiceWorkerState state() const { return m_data.state; }
     void setState(ServiceWorkerState);
 
@@ -95,24 +94,29 @@ public:
     WEBCORE_EXPORT std::optional<ServiceWorkerClientData> findClientByIdentifier(const ServiceWorkerClientIdentifier&) const;
     void matchAll(const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&);
     void claim();
+    void setScriptResource(URL&&, ServiceWorkerContextData::ImportedScript&&);
 
     void skipWaiting();
     bool isSkipWaitingFlagSet() const { return m_isSkipWaitingFlagSet; }
 
     WEBCORE_EXPORT static SWServerWorker* existingWorkerForIdentifier(ServiceWorkerIdentifier);
+    static HashMap<ServiceWorkerIdentifier, SWServerWorker*>& allWorkers();
 
     const ServiceWorkerData& data() const { return m_data; }
     ServiceWorkerContextData contextData() const;
+
     const ClientOrigin& origin() const;
+    WEBCORE_EXPORT const SecurityOriginData& securityOrigin() const;
+
+    WEBCORE_EXPORT SWServerToContextConnection* contextConnection();
 
 private:
-    SWServerWorker(SWServer&, SWServerRegistration&, std::optional<SWServerToContextConnectionIdentifier>, const URL&, const String& script, const ContentSecurityPolicyResponseHeaders&,  WorkerType, ServiceWorkerIdentifier);
+    SWServerWorker(SWServer&, SWServerRegistration&, const URL&, const String& script, const ContentSecurityPolicyResponseHeaders&,  WorkerType, ServiceWorkerIdentifier, HashMap<URL, ServiceWorkerContextData::ImportedScript>&&);
 
     void callWhenActivatedHandler(bool success);
 
     SWServer& m_server;
     ServiceWorkerRegistrationKey m_registrationKey;
-    std::optional<SWServerToContextConnectionIdentifier> m_contextConnectionIdentifier;
     ServiceWorkerData m_data;
     String m_script;
     ContentSecurityPolicyResponseHeaders m_contentSecurityPolicy;
@@ -120,7 +124,8 @@ private:
     State m_state { State::NotRunning };
     mutable std::optional<ClientOrigin> m_origin;
     bool m_isSkipWaitingFlagSet { false };
-    Vector<WTF::Function<void(bool)>> m_whenActivatedHandlers;
+    Vector<Function<void(bool)>> m_whenActivatedHandlers;
+    HashMap<URL, ServiceWorkerContextData::ImportedScript> m_scriptResourceMap;
 };
 
 } // namespace WebCore

@@ -38,7 +38,7 @@ class SecurityOrigin;
 
 class FrameLoadRequest {
 public:
-    WEBCORE_EXPORT FrameLoadRequest(Document&, SecurityOrigin&, const ResourceRequest&, const String& frameName, LockHistory, LockBackForwardList, ShouldSendReferrer, AllowNavigationToInvalidURL, NewFrameOpenerPolicy, ShouldOpenExternalURLsPolicy, InitiatedByMainFrame, ShouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL, const AtomicString& downloadAttribute = { });
+    WEBCORE_EXPORT FrameLoadRequest(Document&, SecurityOrigin&, const ResourceRequest&, const String& frameName, LockHistory, LockBackForwardList, ShouldSendReferrer, AllowNavigationToInvalidURL, NewFrameOpenerPolicy, ShouldOpenExternalURLsPolicy, InitiatedByMainFrame, ShouldReplaceDocumentIfJavaScriptURL = ReplaceDocumentIfJavaScriptURL, const AtomicString& downloadAttribute = { }, const SystemPreviewInfo& = { });
     WEBCORE_EXPORT FrameLoadRequest(Frame&, const ResourceRequest&, ShouldOpenExternalURLsPolicy, const SubstituteData& = SubstituteData());
 
     WEBCORE_EXPORT ~FrameLoadRequest();
@@ -59,6 +59,9 @@ public:
 
     void setShouldCheckNewWindowPolicy(bool checkPolicy) { m_shouldCheckNewWindowPolicy = checkPolicy; }
     bool shouldCheckNewWindowPolicy() const { return m_shouldCheckNewWindowPolicy; }
+
+    void setShouldTreatAsContinuingLoad(bool value) { m_shouldTreatAsContinuingLoad = value; }
+    bool shouldTreatAsContinuingLoad() const { return m_shouldTreatAsContinuingLoad; }
 
     const SubstituteData& substituteData() const { return m_substituteData; }
     void setSubstituteData(const SubstituteData& data) { m_substituteData = data; }
@@ -81,6 +84,12 @@ public:
 
     InitiatedByMainFrame initiatedByMainFrame() const { return m_initiatedByMainFrame; }
 
+    void setIsCrossOriginWindowOpenNavigation(bool value) { m_isCrossOriginWindowOpenNavigation = value; }
+    bool isCrossOriginWindowOpenNavigation() const { return m_isCrossOriginWindowOpenNavigation; }
+
+    bool isSystemPreview() const { return m_systemPreviewInfo.isSystemPreview; }
+    const IntRect& systemPreviewRect() const { return m_systemPreviewInfo.systemPreviewRect; }
+
 private:
     Ref<Document> m_requester;
     Ref<SecurityOrigin> m_requesterSecurityOrigin;
@@ -89,6 +98,7 @@ private:
     SubstituteData m_substituteData;
 
     bool m_shouldCheckNewWindowPolicy { false };
+    bool m_shouldTreatAsContinuingLoad { false };
     LockHistory m_lockHistory;
     LockBackForwardList m_lockBackForwardList;
     ShouldSendReferrer m_shouldSendReferrer;
@@ -98,6 +108,8 @@ private:
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
     AtomicString m_downloadAttribute;
     InitiatedByMainFrame m_initiatedByMainFrame { InitiatedByMainFrame::Unknown };
+    bool m_isCrossOriginWindowOpenNavigation { false };
+    SystemPreviewInfo m_systemPreviewInfo;
 };
 
 } // namespace WebCore

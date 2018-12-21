@@ -39,14 +39,14 @@
 #include "Editor.h"
 #include "Event.h"
 #include "FocusController.h"
+#include "Frame.h"
 #include "HitTestResult.h"
 #include "InspectorController.h"
 #include "InspectorFrontendClient.h"
 #include "JSDOMConvertInterface.h"
 #include "JSDOMExceptionHandling.h"
+#include "JSExecState.h"
 #include "JSInspectorFrontendHost.h"
-#include "JSMainThreadExecState.h"
-#include "MainFrame.h"
 #include "MouseEvent.h"
 #include "Node.h"
 #include "Page.h"
@@ -218,9 +218,9 @@ float InspectorFrontendHost::zoomFactor()
 String InspectorFrontendHost::userInterfaceLayoutDirection()
 {
     if (m_client && m_client->userInterfaceLayoutDirection() == UserInterfaceLayoutDirection::RTL)
-        return ASCIILiteral("rtl");
+        return "rtl"_s;
 
-    return ASCIILiteral("ltr");
+    return "ltr"_s;
 }
 
 void InspectorFrontendHost::setAttachedWindowHeight(unsigned height)
@@ -270,26 +270,26 @@ unsigned InspectorFrontendHost::inspectionLevel()
 String InspectorFrontendHost::platform()
 {
 #if PLATFORM(MAC) || PLATFORM(IOS)
-    return ASCIILiteral("mac");
+    return "mac"_s;
 #elif OS(WINDOWS)
-    return ASCIILiteral("windows");
+    return "windows"_s;
 #elif OS(LINUX)
-    return ASCIILiteral("linux");
+    return "linux"_s;
 #elif OS(FREEBSD)
-    return ASCIILiteral("freebsd");
+    return "freebsd"_s;
 #elif OS(OPENBSD)
-    return ASCIILiteral("openbsd");
+    return "openbsd"_s;
 #else
-    return ASCIILiteral("unknown");
+    return "unknown"_s;
 #endif
 }
 
 String InspectorFrontendHost::port()
 {
 #if PLATFORM(GTK)
-    return ASCIILiteral("gtk");
+    return "gtk"_s;
 #else
-    return ASCIILiteral("unknown");
+    return "unknown"_s;
 #endif
 }
 

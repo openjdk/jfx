@@ -24,7 +24,6 @@ set(JavaScriptCore_PRIVATE_INCLUDE_DIRECTORIES
     "${JAVASCRIPTCORE_DIR}/dfg"
     "${JAVASCRIPTCORE_DIR}/disassembler"
     "${JAVASCRIPTCORE_DIR}/disassembler/ARM64"
-    "${JAVASCRIPTCORE_DIR}/disassembler/ARMv7"
     "${JAVASCRIPTCORE_DIR}/disassembler/udis86"
     "${JAVASCRIPTCORE_DIR}/domjit"
     "${JAVASCRIPTCORE_DIR}/ftl"
@@ -50,6 +49,10 @@ set(JavaScriptCore_PRIVATE_INCLUDE_DIRECTORIES
     "${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/yarr"
 )
 
+if (USE_CAPSTONE)
+    list(APPEND JavaScriptCore_PRIVATE_INCLUDE_DIRECTORIES "${THIRDPARTY_DIR}/capstone/Source/include")
+endif ()
+
 set(JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES
     "${ICU_INCLUDE_DIRS}"
 )
@@ -72,14 +75,16 @@ set(JavaScriptCore_OBJECT_LUT_SOURCES
     runtime/IntlDateTimeFormatPrototype.cpp
     runtime/IntlNumberFormatConstructor.cpp
     runtime/IntlNumberFormatPrototype.cpp
+    runtime/IntlPluralRulesConstructor.cpp
+    runtime/IntlPluralRulesPrototype.cpp
     runtime/JSDataViewPrototype.cpp
     runtime/JSGlobalObject.cpp
     runtime/JSInternalPromiseConstructor.cpp
+    runtime/JSModuleLoader.cpp
     runtime/JSONObject.cpp
     runtime/JSPromiseConstructor.cpp
     runtime/JSPromisePrototype.cpp
     runtime/MapPrototype.cpp
-    runtime/ModuleLoaderPrototype.cpp
     runtime/NumberConstructor.cpp
     runtime/NumberPrototype.cpp
     runtime/ObjectConstructor.cpp
@@ -113,8 +118,11 @@ set(JavaScriptCore_OBJECT_LUT_SOURCES
 set(JavaScriptCore_LIBRARIES
     WTF${DEBUG_SUFFIX}
     ${ICU_I18N_LIBRARIES}
-    ${LLVM_LIBRARIES}
 )
+
+if (USE_CAPSTONE)
+    list(APPEND JavaScriptCore_LIBRARIES capstone)
+endif ()
 
 if (ATOMIC_INT64_REQUIRES_LIBATOMIC)
     list(APPEND JavaScriptCore_LIBRARIES atomic)
@@ -255,7 +263,7 @@ add_dependencies(LLIntOffsetsExtractor JavaScriptCoreForwardingHeaders)
 # LLIntOffsetsExtractor matches, no output is generated. To make this target consistent and avoid
 # running this command for every build, we artificially update LLIntAssembly.h's mtime (using touch)
 # after every asm.rb run.
-if (MSVC)
+if (MSVC AND ENABLE_JIT)
     set(LLIntOutput LowLevelInterpreterWin.asm)
     set(OFFLINE_ASM_ARGS --assembler=MASM)
 else ()
@@ -275,7 +283,7 @@ add_custom_command(
 # the .cpp files below is similar to the one in the previous comment. However, since these .cpp
 # files are used to build JavaScriptCore itself, we can just add LLIntAssembly.h to JSC_HEADERS
 # since it is used in the add_library() call at the end of this file.
-if (MSVC)
+if (MSVC AND ENABLE_JIT)
     enable_language(ASM_MASM)
     if (CMAKE_SIZEOF_VOID_P EQUAL 4)
         # Win32 needs /safeseh with assembly, but Win64 does not.
@@ -334,28 +342,51 @@ foreach (_file ${JavaScriptCore_OBJECT_LUT_SOURCES})
     GENERATE_HASH_LUT(${CMAKE_CURRENT_SOURCE_DIR}/${_file} ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/${_name}.lut.h)
 endforeach ()
 
-set(JavaScriptCore_FORWARDING_HEADERS
-    API/APICast.h
+set(JavaScriptCore_PUBLIC_FRAMEWORK_HEADERS
     API/JSBase.h
-    API/JSCTestRunnerUtils.h
-    API/JSClassRef.h
     API/JSContextRef.h
-    API/JSContextRefPrivate.h
-    API/JSHeapFinalizerPrivate.h
     API/JSObjectRef.h
-    API/JSObjectRefPrivate.h
-    API/JSRetainPtr.h
     API/JSStringRef.h
-    API/JSStringRefBSTR.h
-    API/JSStringRefCF.h
-    API/JSStringRefPrivate.h
     API/JSTypedArray.h
     API/JSValueRef.h
-    API/JSWeakObjectMapRefInternal.h
     API/JavaScript.h
-    API/JavaScriptCore.h
-    API/OpaqueJSString.h
     API/WebKitAvailability.h
+)
+
+set(JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS
+    API/APICallbackFunction.h
+    API/APICast.h
+    API/APIUtils.h
+    API/JSAPIWrapperObject.h
+    API/JSBasePrivate.h
+    API/JSCTestRunnerUtils.h
+    API/JSCallbackConstructor.h
+    API/JSCallbackFunction.h
+    API/JSCallbackObject.h
+    API/JSCallbackObjectFunctions.h
+    API/JSClassRef.h
+    API/JSContextInternal.h
+    API/JSContextPrivate.h
+    API/JSContextRefInspectorSupport.h
+    API/JSContextRefInternal.h
+    API/JSContextRefPrivate.h
+    API/JSHeapFinalizerPrivate.h
+    API/JSManagedValueInternal.h
+    API/JSMarkingConstraintPrivate.h
+    API/JSObjectRefPrivate.h
+    API/JSRemoteInspector.h
+    API/JSRetainPtr.h
+    API/JSScriptRefPrivate.h
+    API/JSStringRefPrivate.h
+    API/JSValueInternal.h
+    API/JSVirtualMachineInternal.h
+    API/JSWeakObjectMapRefInternal.h
+    API/JSWeakObjectMapRefPrivate.h
+    API/JSWeakPrivate.h
+    API/JSWrapperMap.h
+    API/ObjCCallbackFunction.h
+    API/ObjcRuntimeExtras.h
+    API/OpaqueJSString.h
 
     assembler/ARM64Assembler.h
     assembler/ARMAssembler.h
@@ -409,9 +440,11 @@ set(JavaScriptCore_FORWARDING_HEADERS
     bytecode/ExecutableToCodeBlockEdge.h
     bytecode/ExecutionCounter.h
     bytecode/ExitKind.h
+    bytecode/ExitingInlineKind.h
     bytecode/ExitingJITType.h
     bytecode/ExpressionRangeInfo.h
     bytecode/HandlerInfo.h
+    bytecode/ICStatusMap.h
     bytecode/InlineCallFrame.h
     bytecode/Instruction.h
     bytecode/InternalFunctionAllocationProfile.h
@@ -459,6 +492,7 @@ set(JavaScriptCore_FORWARDING_HEADERS
     heap/AlignedMemoryAllocator.h
     heap/AllocationFailureMode.h
     heap/Allocator.h
+    heap/AllocatorInlines.h
     heap/AllocatorForMode.h
     heap/BlockDirectory.h
     heap/BlockDirectoryInlines.h
@@ -469,6 +503,7 @@ set(JavaScriptCore_FORWARDING_HEADERS
     heap/CollectionScope.h
     heap/CollectorPhase.h
     heap/CompleteSubspace.h
+    heap/CompleteSubspaceInlines.h
     heap/ConstraintConcurrency.h
     heap/ConstraintParallelism.h
     heap/ConstraintVolatility.h
@@ -502,9 +537,11 @@ set(JavaScriptCore_FORWARDING_HEADERS
     heap/IncrementalSweeper.h
     heap/IsoCellSet.h
     heap/IsoSubspace.h
+    heap/IsoSubspaceInlines.h
+    heap/IsoSubspacePerVM.h
     heap/LargeAllocation.h
-    heap/ListableHandler.h
     heap/LocalAllocator.h
+    heap/LocalAllocatorInlines.h
     heap/LockDuringMarking.h
     heap/MachineStackMarker.h
     heap/MarkStack.h
@@ -516,8 +553,6 @@ set(JavaScriptCore_FORWARDING_HEADERS
     heap/MutatorState.h
     heap/RegisterState.h
     heap/RunningScope.h
-    heap/SecurityKind.h
-    heap/SecurityOriginToken.h
     heap/SimpleMarkingConstraint.h
     heap/SlotVisitor.h
     heap/SlotVisitorInlines.h
@@ -526,16 +561,13 @@ set(JavaScriptCore_FORWARDING_HEADERS
     heap/Subspace.h
     heap/SubspaceInlines.h
     heap/Synchronousness.h
-    heap/ThreadLocalCache.h
     heap/TinyBloomFilter.h
-    heap/UnconditionalFinalizer.h
     heap/VisitRaceKey.h
     heap/Weak.h
     heap/WeakBlock.h
     heap/WeakHandleOwner.h
     heap/WeakImpl.h
     heap/WeakInlines.h
-    heap/WeakReferenceHarvester.h
     heap/WeakSet.h
     heap/WeakSetInlines.h
 
@@ -579,7 +611,9 @@ set(JavaScriptCore_FORWARDING_HEADERS
 
     interpreter/AbstractPC.h
     interpreter/CallFrame.h
+    interpreter/CallFrameInlines.h
     interpreter/CalleeBits.h
+    interpreter/EntryFrame.h
     interpreter/FrameTracers.h
     interpreter/Register.h
     interpreter/ShadowChicken.h
@@ -588,13 +622,13 @@ set(JavaScriptCore_FORWARDING_HEADERS
 
     jit/AssemblyHelpers.h
     jit/CCallHelpers.h
-    jit/CompactJITCodeMap.h
     jit/ExecutableAllocator.h
     jit/FPRInfo.h
     jit/GCAwareJITStubRoutine.h
     jit/GPRInfo.h
     jit/JITAllocator.h
     jit/JITCode.h
+    jit/JITCodeMap.h
     jit/JITCompilationEffort.h
     jit/JITMathICForwards.h
     jit/JITOperations.h
@@ -742,6 +776,7 @@ set(JavaScriptCore_FORWARDING_HEADERS
     runtime/JSCJSValue.h
     runtime/JSCJSValueInlines.h
     runtime/JSCPoison.h
+    runtime/JSCPtrTag.h
     runtime/JSCallee.h
     runtime/JSCast.h
     runtime/JSCell.h
@@ -761,6 +796,7 @@ set(JavaScriptCore_FORWARDING_HEADERS
     runtime/JSGlobalObjectInlines.h
     runtime/JSInternalPromise.h
     runtime/JSInternalPromiseDeferred.h
+    runtime/JSMicrotask.h
     runtime/JSLock.h
     runtime/JSMap.h
     runtime/JSMapIterator.h
@@ -800,6 +836,7 @@ set(JavaScriptCore_FORWARDING_HEADERS
     runtime/Microtask.h
     runtime/ModuleProgramExecutable.h
     runtime/NativeExecutable.h
+    runtime/NativeFunction.h
     runtime/NumberObject.h
     runtime/NumberPrototype.h
     runtime/NumericStrings.h
@@ -897,6 +934,8 @@ set(JavaScriptCore_FORWARDING_HEADERS
     wasm/WasmTierUpCount.h
 
     wasm/js/JSWebAssemblyModule.h
+    wasm/js/WebAssemblyPrototype.h
+
 
     yarr/RegularExpression.h
     yarr/Yarr.h
@@ -937,6 +976,16 @@ add_custom_command(
     DEPENDS ${JAVASCRIPTCORE_DIR}/ucd/CaseFolding.txt
     COMMAND ${PYTHON_EXECUTABLE} ${JAVASCRIPTCORE_DIR}/yarr/generateYarrCanonicalizeUnicode ${JAVASCRIPTCORE_DIR}/ucd/CaseFolding.txt ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/yarr/YarrCanonicalizeUnicode.cpp
     VERBATIM)
+
+#GENERATOR: "IntlCanonicalizeLanguage.h": tables used by Intl
+add_custom_command(
+    OUTPUT ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/IntlCanonicalizeLanguage.h
+    MAIN_DEPENDENCY ${JAVASCRIPTCORE_DIR}/Scripts/generateIntlCanonicalizeLanguage.py
+    DEPENDS ${JAVASCRIPTCORE_DIR}/ucd/language-subtag-registry.txt
+    COMMAND ${PYTHON_EXECUTABLE} ${JAVASCRIPTCORE_DIR}/Scripts/generateIntlCanonicalizeLanguage.py ${JAVASCRIPTCORE_DIR}/ucd/language-subtag-registry.txt ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/IntlCanonicalizeLanguage.h
+    VERBATIM)
+list(APPEND JavaScriptCore_HEADERS ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/IntlCanonicalizeLanguage.h)
+WEBKIT_ADD_SOURCE_DEPENDENCIES(${CMAKE_CURRENT_SOURCE_DIR}/runtime/IntlObject.cpp ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/IntlCanonicalizeLanguage.h)
 
 #GENERATOR: "KeywordLookup.h": keyword decision tree used by the lexer
 add_custom_command(
@@ -1073,7 +1122,7 @@ set(JavaScriptCore_BUILTINS_SOURCES
     ${JAVASCRIPTCORE_DIR}/builtins/IteratorPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/MapIteratorPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/MapPrototype.js
-    ${JAVASCRIPTCORE_DIR}/builtins/ModuleLoaderPrototype.js
+    ${JAVASCRIPTCORE_DIR}/builtins/ModuleLoader.js
     ${JAVASCRIPTCORE_DIR}/builtins/NumberConstructor.js
     ${JAVASCRIPTCORE_DIR}/builtins/NumberPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/ObjectConstructor.js
@@ -1089,6 +1138,7 @@ set(JavaScriptCore_BUILTINS_SOURCES
     ${JAVASCRIPTCORE_DIR}/builtins/StringPrototype.js
     ${JAVASCRIPTCORE_DIR}/builtins/TypedArrayConstructor.js
     ${JAVASCRIPTCORE_DIR}/builtins/TypedArrayPrototype.js
+    ${JAVASCRIPTCORE_DIR}/builtins/WebAssemblyPrototype.js
 )
 
 add_custom_command(
@@ -1144,8 +1194,23 @@ endif ()
 WEBKIT_FRAMEWORK_DECLARE(JavaScriptCore)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
+if (COMPILER_IS_GCC_OR_CLANG)
+    # Avoid using fused multiply-add instructions since this could give different results
+    # for e.g. parseInt depending on the platform and compilation flags.
+    WEBKIT_ADD_TARGET_CXX_FLAGS(JavaScriptCore -ffp-contract=off)
+
+    # Avoid "variable tracking size limit exceeded"
+    set_source_files_properties(builtins/BuiltinNames.cpp PROPERTIES COMPILE_FLAGS -fno-var-tracking-assignments)
+endif ()
+
 WEBKIT_MAKE_FORWARDING_HEADERS(JavaScriptCore
-    FILES ${JavaScriptCore_FORWARDING_HEADERS}
+    FILES ${JavaScriptCore_PUBLIC_FRAMEWORK_HEADERS}
+    FLATTENED
+)
+
+WEBKIT_MAKE_FORWARDING_HEADERS(JavaScriptCore
+    TARGET_NAME JavaScriptCorePrivateForwardingHeaders
+    FILES ${JavaScriptCore_PRIVATE_FRAMEWORK_HEADERS}
     DERIVED_SOURCE_DIRECTORIES ${DERIVED_SOURCES_DIR}/JavaScriptCore ${DERIVED_SOURCES_DIR}/JavaScriptCore/inspector
     FLATTENED
 )
@@ -1175,7 +1240,7 @@ endif ()
 # Force staging of shared scripts, even if they aren't directly used to build JavaScriptCore.
 
 add_custom_target(stageSharedScripts DEPENDS ${JavaScriptCore_SCRIPTS})
-add_dependencies(JavaScriptCore stageSharedScripts)
+add_dependencies(JavaScriptCore stageSharedScripts ${JavaScriptCore_EXTRA_DEPENDENCIES})
 
 if (MSVC AND NOT PORT STREQUAL Java)
     add_custom_command(

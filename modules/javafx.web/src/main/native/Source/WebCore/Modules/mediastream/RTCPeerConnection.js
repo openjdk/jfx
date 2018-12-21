@@ -39,16 +39,9 @@ function initializeRTCPeerConnection(configuration)
     else if (!@isObject(configuration))
         @throwTypeError("RTCPeerConnection argument must be a valid dictionary");
 
-    // FIXME: Handle errors in a better way than catching and re-throwing (http://webkit.org/b/158936)
-    try {
-        this.@initializeWith(configuration);
-    } catch (e) {
-        const message = e.name === "TypeMismatchError" ? "Invalid RTCPeerConnection constructor arguments"
-            : "Error creating RTCPeerConnection";
-        @throwTypeError(message);
-    }
-    this.@operations = [];
-    this.@localStreams = [];
+    this.@initializeWith(configuration);
+    @putByIdDirectPrivate(this, "operations", []);
+    @putByIdDirectPrivate(this, "localStreams", []);
 
     return this;
 }
@@ -60,7 +53,7 @@ function getLocalStreams()
     if (!@isRTCPeerConnection(this))
         throw @makeThisTypeError("RTCPeerConnection", "getLocalStreams");
 
-    return this.@localStreams.slice();
+    return @getByIdDirectPrivate(this, "localStreams").slice();
 }
 
 function getStreamById(streamIdArg)
@@ -73,9 +66,9 @@ function getStreamById(streamIdArg)
     if (arguments.length < 1)
         @throwTypeError("Not enough arguments");
 
-    const streamId = @String(streamIdArg);
+    const streamId = @toString(streamIdArg);
 
-    return this.@localStreams.find(stream => stream.id === streamId)
+    return @getByIdDirectPrivate(this, "localStreams").find(stream => stream.id === streamId)
         || this.@getRemoteStreams().find(stream => stream.id === streamId)
         || null;
 }
@@ -93,10 +86,10 @@ function addStream(stream)
     if (!(stream instanceof @MediaStream))
         @throwTypeError("Argument 1 ('stream') to RTCPeerConnection.addStream must be an instance of MediaStream");
 
-    if (this.@localStreams.find(localStream => localStream.id === stream.id))
+    if (@getByIdDirectPrivate(this, "localStreams").find(localStream => localStream.id === stream.id))
         return;
 
-    this.@localStreams.@push(stream);
+    @getByIdDirectPrivate(this, "localStreams").@push(stream);
     stream.@getTracks().forEach(track => this.@addTrack(track, stream));
 }
 
@@ -113,18 +106,18 @@ function removeStream(stream)
     if (!(stream instanceof @MediaStream))
         @throwTypeError("Argument 1 ('stream') to RTCPeerConnection.removeStream must be an instance of MediaStream");
 
-    const indexOfStreamToRemove = this.@localStreams.findIndex(localStream => localStream.id === stream.id);
+    const indexOfStreamToRemove = @getByIdDirectPrivate(this, "localStreams").findIndex(localStream => localStream.id === stream.id);
     if (indexOfStreamToRemove === -1)
         return;
 
     const senders = this.@getSenders();
-    this.@localStreams[indexOfStreamToRemove].@getTracks().forEach(track => {
+    @getByIdDirectPrivate(this, "localStreams")[indexOfStreamToRemove].@getTracks().forEach(track => {
         const senderForTrack = senders.find(sender => sender.track && sender.track.id === track.id);
         if (senderForTrack)
             this.@removeTrack(senderForTrack);
     });
 
-    this.@localStreams.splice(indexOfStreamToRemove, 1);
+    @getByIdDirectPrivate(this, "localStreams").splice(indexOfStreamToRemove, 1);
 }
 
 function createOffer()

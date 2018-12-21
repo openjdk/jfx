@@ -131,7 +131,7 @@ void SWClientConnection::postMessageToServiceWorkerClient(DocumentIdentifier des
 
     MessageEventSource source = RefPtr<ServiceWorker> { ServiceWorker::getOrCreate(*destinationDocument, WTFMove(sourceData)) };
 
-    auto messageEvent = MessageEvent::create(MessagePort::entanglePorts(*destinationDocument, WTFMove(message.transferredPorts)), WTFMove(message.message), sourceOrigin, { }, WTFMove(source));
+    auto messageEvent = MessageEvent::create(MessagePort::entanglePorts(*destinationDocument, WTFMove(message.transferredPorts)), message.message.releaseNonNull(), sourceOrigin, { }, WTFMove(source));
     container->dispatchEvent(messageEvent);
 }
 
@@ -255,7 +255,7 @@ void SWClientConnection::clearPendingJobs()
         ScriptExecutionContext::postTaskTo(keyValue.value, [identifier = keyValue.key] (auto& context) {
             if (auto* container = context.serviceWorkerContainer()) {
                 if (auto* job = container->job(identifier))
-                    job->failedWithException(Exception { TypeError, ASCIILiteral("Internal error") });
+                    job->failedWithException(Exception { TypeError, "Internal error"_s });
             }
         });
     }

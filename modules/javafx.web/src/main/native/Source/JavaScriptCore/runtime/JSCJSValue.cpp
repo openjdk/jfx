@@ -164,21 +164,21 @@ bool JSValue::putToPrimitive(ExecState* exec, PropertyName propertyName, JSValue
         return false;
     JSValue prototype;
     if (propertyName != vm.propertyNames->underscoreProto) {
-        for (; !obj->structure()->hasReadOnlyOrGetterSetterPropertiesExcludingProto(); obj = asObject(prototype)) {
+        for (; !obj->structure(vm)->hasReadOnlyOrGetterSetterPropertiesExcludingProto(); obj = asObject(prototype)) {
             prototype = obj->getPrototype(vm, exec);
             RETURN_IF_EXCEPTION(scope, false);
 
             if (prototype.isNull())
-                return typeError(exec, scope, slot.isStrictMode(), ASCIILiteral(ReadonlyPropertyWriteError));
+                return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
         }
     }
 
     for (; ; obj = asObject(prototype)) {
         unsigned attributes;
-        PropertyOffset offset = obj->structure()->get(vm, propertyName, attributes);
+        PropertyOffset offset = obj->structure(vm)->get(vm, propertyName, attributes);
         if (offset != invalidOffset) {
             if (attributes & PropertyAttribute::ReadOnly)
-                return typeError(exec, scope, slot.isStrictMode(), ASCIILiteral(ReadonlyPropertyWriteError));
+                return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 
             JSValue gs = obj->getDirect(offset);
             if (gs.isGetterSetter()) {
@@ -200,7 +200,7 @@ bool JSValue::putToPrimitive(ExecState* exec, PropertyName propertyName, JSValue
             break;
     }
 
-    return typeError(exec, scope, slot.isStrictMode(), ASCIILiteral(ReadonlyPropertyWriteError));
+    return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 }
 
 bool JSValue::putToPrimitiveByIndex(ExecState* exec, unsigned propertyName, JSValue value, bool shouldThrow)
@@ -223,7 +223,7 @@ bool JSValue::putToPrimitiveByIndex(ExecState* exec, unsigned propertyName, JSVa
     if (success)
         return putResult;
 
-    return typeError(exec, scope, shouldThrow, ASCIILiteral(ReadonlyPropertyWriteError));
+    return typeError(exec, scope, shouldThrow, ReadonlyPropertyWriteError);
 }
 
 void JSValue::dump(PrintStream& out) const
@@ -272,7 +272,9 @@ void JSValue::dumpInContextAssumingStructure(
             } else
                 out.print(" (unresolved)");
             out.print(": ", impl);
-        } else if (structure->classInfo()->isSubClassOf(Symbol::info()))
+        } else if (structure->classInfo()->isSubClassOf(RegExp::info()))
+            out.print("RegExp: ", *jsCast<RegExp*>(asCell()));
+        else if (structure->classInfo()->isSubClassOf(Symbol::info()))
             out.print("Symbol: ", RawPointer(asCell()));
         else if (structure->classInfo()->isSubClassOf(Structure::info()))
             out.print("Structure: ", inContext(*jsCast<Structure*>(asCell()), context));
@@ -309,14 +311,14 @@ void JSValue::dumpForBacktrace(PrintStream& out) const
         out.printf("%lf", asDouble());
     else if (isCell()) {
         VM& vm = *asCell()->vm();
-        if (asCell()->inherits(vm, JSString::info())) {
+        if (asCell()->inherits<JSString>(vm)) {
             JSString* string = asString(asCell());
             const StringImpl* impl = string->tryGetValueImpl();
             if (impl)
                 out.print("\"", impl, "\"");
             else
                 out.print("(unresolved string)");
-        } else if (asCell()->inherits(vm, Structure::info())) {
+        } else if (asCell()->inherits<Structure>(vm)) {
             out.print("Structure[ ", asCell()->structure()->classInfo()->className);
 #if USE(JSVALUE64)
             out.print(" ID: ", asCell()->structureID());
@@ -375,14 +377,14 @@ JSString* JSValue::toStringSlowCase(ExecState* exec, bool returnEmptyStringOnErr
     if (isUndefined())
         return vm.smallStrings.undefinedString();
     if (isSymbol()) {
-        throwTypeError(exec, scope, ASCIILiteral("Cannot convert a symbol to a string"));
+        throwTypeError(exec, scope, "Cannot convert a symbol to a string"_s);
         return errorValue();
     }
     if (isBigInt()) {
         JSBigInt* bigInt = asBigInt(*this);
         if (auto digit = bigInt->singleDigitValueForString())
             return vm.smallStrings.singleCharacterString(*digit + '0');
-        JSString* returnString = jsNontrivialString(&vm, bigInt->toString(*exec, 10));
+        JSString* returnString = jsNontrivialString(&vm, bigInt->toString(exec, 10));
         RETURN_IF_EXCEPTION(scope, errorValue());
         return returnString;
     }

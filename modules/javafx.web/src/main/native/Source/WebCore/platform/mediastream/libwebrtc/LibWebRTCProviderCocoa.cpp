@@ -27,38 +27,58 @@
 #include "LibWebRTCProviderCocoa.h"
 
 #if USE(LIBWEBRTC)
-
-#include "VideoToolBoxDecoderFactory.h"
-#include "VideoToolBoxEncoderFactory.h"
+#include <webrtc/media/engine/webrtcvideodecoderfactory.h>
+#include <webrtc/media/engine/webrtcvideoencoderfactory.h>
+#include <webrtc/sdk/WebKit/WebKitUtilities.h>
+#include <wtf/darwin/WeakLinking.h>
+#endif
 
 namespace WebCore {
 
-std::unique_ptr<cricket::WebRtcVideoDecoderFactory> LibWebRTCProviderCocoa::createDecoderFactory()
+UniqueRef<LibWebRTCProvider> LibWebRTCProvider::create()
 {
-    ASSERT(!m_decoderFactory);
-    auto decoderFactory = std::make_unique<VideoToolboxVideoDecoderFactory>();
-    m_decoderFactory = decoderFactory.get();
-
-    return WTFMove(decoderFactory);
+#if USE(LIBWEBRTC) && PLATFORM(COCOA)
+    return makeUniqueRef<LibWebRTCProviderCocoa>();
+#else
+    return makeUniqueRef<LibWebRTCProvider>();
+#endif
 }
 
-std::unique_ptr<cricket::WebRtcVideoEncoderFactory> LibWebRTCProviderCocoa::createEncoderFactory()
-{
-    ASSERT(!m_encoderFactory);
-    auto encoderFactory = std::make_unique<VideoToolboxVideoEncoderFactory>();
-    m_encoderFactory = encoderFactory.get();
+#if USE(LIBWEBRTC)
 
-    return WTFMove(encoderFactory);
+LibWebRTCProviderCocoa::~LibWebRTCProviderCocoa()
+{
+}
+
+void LibWebRTCProviderCocoa::setH264HardwareEncoderAllowed(bool allowed)
+{
+    webrtc::setH264HardwareEncoderAllowed(allowed);
+}
+
+std::unique_ptr<webrtc::VideoDecoderFactory> LibWebRTCProviderCocoa::createDecoderFactory()
+{
+    return webrtc::createVideoToolboxDecoderFactory();
+}
+
+std::unique_ptr<webrtc::VideoEncoderFactory> LibWebRTCProviderCocoa::createEncoderFactory()
+{
+    return webrtc::createVideoToolboxEncoderFactory();
 }
 
 void LibWebRTCProviderCocoa::setActive(bool value)
 {
-    if (m_decoderFactory)
-        m_decoderFactory->setActive(value);
-    if (m_encoderFactory)
-        m_encoderFactory->setActive(value);
+    webrtc::setApplicationStatus(value);
+}
+
+#endif // USE(LIBWEBRTC)
+
+bool LibWebRTCProvider::webRTCAvailable()
+{
+#if USE(LIBWEBRTC)
+    return !isNullFunctionPointer(rtc::LogMessage::LogToDebug);
+#else
+    return true;
+#endif
 }
 
 } // namespace WebCore
-
-#endif

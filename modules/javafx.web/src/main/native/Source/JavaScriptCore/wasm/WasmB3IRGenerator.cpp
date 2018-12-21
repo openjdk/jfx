@@ -48,6 +48,7 @@
 #include "B3WasmAddressValue.h"
 #include "B3WasmBoundsCheckValue.h"
 #include "JSCInlines.h"
+#include "JSCPoison.h"
 #include "ScratchRegisterAllocator.h"
 #include "VirtualRegister.h"
 #include "WasmCallingConvention.h"
@@ -169,7 +170,7 @@ public:
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN fail(Args... args) const
     {
         using namespace FailureHelper; // See ADL comment in WasmParser.h.
-        return UnexpectedResult(makeString(ASCIILiteral("WebAssembly.Module failed compiling: "), makeString(args)...));
+        return UnexpectedResult(makeString("WebAssembly.Module failed compiling: "_s, makeString(args)...));
     }
 #define WASM_COMPILE_FAIL_IF(condition, ...) do { \
         if (UNLIKELY(condition))                  \
@@ -233,8 +234,7 @@ private:
 
     void emitTierUpCheck(uint32_t decrementCount, Origin);
 
-    enum class ShouldMask { Yes, No };
-    ExpressionType emitCheckAndPreparePointer(ExpressionType pointer, uint32_t offset, uint32_t sizeOfOp, ShouldMask);
+    ExpressionType emitCheckAndPreparePointer(ExpressionType pointer, uint32_t offset, uint32_t sizeOfOp);
     B3::Kind memoryKind(B3::Opcode memoryOp);
     ExpressionType emitLoadOp(LoadOpType, ExpressionType pointer, uint32_t offset);
     void emitStoreOp(StoreOpType, ExpressionType pointer, ExpressionType value, uint32_t offset);
@@ -267,7 +267,6 @@ private:
     InsertionSet m_constantInsertionValues;
     GPRReg m_memoryBaseGPR { InvalidGPRReg };
     GPRReg m_memorySizeGPR { InvalidGPRReg };
-    GPRReg m_indexingMaskGPR { InvalidGPRReg };
     GPRReg m_wasmContextInstanceGPR { InvalidGPRReg };
     bool m_makesCalls { false };
 
@@ -346,8 +345,6 @@ B3IRGenerator::B3IRGenerator(const ModuleInformation& info, Procedure& procedure
 
     if (mode != MemoryMode::Signaling) {
         ASSERT(!pinnedRegs.sizeRegisters[0].sizeOffset);
-        m_indexingMaskGPR = pinnedRegs.indexingMask;
-        m_proc.pinRegister(pinnedRegs.indexingMask);
         m_memorySizeGPR = pinnedRegs.sizeRegisters[0].sizeRegister;
         for (const PinnedSizeRegisterInfo& regInfo : pinnedRegs.sizeRegisters)
             m_proc.pinRegister(regInfo.sizeRegister);
@@ -440,7 +437,7 @@ B3IRGenerator::B3IRGenerator(const ModuleInformation& info, Procedure& procedure
                     overflow.append(jit.branchPtr(CCallHelpers::Above, scratch1, fp));
                 overflow.append(jit.branchPtr(CCallHelpers::Below, scratch1, scratch2));
                 jit.addLinkTask([overflow] (LinkBuffer& linkBuffer) {
-                    linkBuffer.link(overflow, CodeLocationLabel(Thunks::singleton().stub(throwStackOverflowFromWasmThunkGenerator).code()));
+                    linkBuffer.link(overflow, CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(throwStackOverflowFromWasmThunkGenerator).code()));
                 });
             } else if (m_usesInstanceValue && Context::useFastTLS()) {
                 // No overflow check is needed, but the instance values still needs to be correct.
@@ -470,7 +467,6 @@ void B3IRGenerator::restoreWebAssemblyGlobalState(RestoreCachedStackLimit restor
         const PinnedRegisterInfo* pinnedRegs = &PinnedRegisterInfo::get();
         RegisterSet clobbers;
         clobbers.set(pinnedRegs->baseMemoryPointer);
-        clobbers.set(pinnedRegs->indexingMask);
         for (auto info : pinnedRegs->sizeRegisters)
             clobbers.set(info.sizeRegister);
 
@@ -489,7 +485,6 @@ void B3IRGenerator::restoreWebAssemblyGlobalState(RestoreCachedStackLimit restor
             ASSERT(sizeRegs.size() >= 1);
             ASSERT(!sizeRegs[0].sizeOffset); // The following code assumes we start at 0, and calculates subsequent size registers relative to 0.
             jit.loadPtr(CCallHelpers::Address(params[0].gpr(), Instance::offsetOfCachedMemorySize()), sizeRegs[0].sizeRegister);
-            jit.loadPtr(CCallHelpers::Address(params[0].gpr(), Instance::offsetOfCachedIndexingMask()), pinnedRegs->indexingMask);
             jit.loadPtr(CCallHelpers::Address(params[0].gpr(), Instance::offsetOfCachedMemory()), baseMemory);
             for (unsigned i = 1; i < sizeRegs.size(); ++i)
                 jit.add64(CCallHelpers::TrustedImm32(-sizeRegs[i].sizeOffset), sizeRegs[0].sizeRegister, sizeRegs[i].sizeRegister);
@@ -503,7 +498,7 @@ void B3IRGenerator::emitExceptionCheck(CCallHelpers& jit, ExceptionType type)
     auto jumpToExceptionStub = jit.jump();
 
     jit.addLinkTask([jumpToExceptionStub] (LinkBuffer& linkBuffer) {
-        linkBuffer.link(jumpToExceptionStub, CodeLocationLabel(Thunks::singleton().stub(throwExceptionFromWasmThunkGenerator).code()));
+        linkBuffer.link(jumpToExceptionStub, CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(throwExceptionFromWasmThunkGenerator).code()));
     });
 }
 
@@ -593,7 +588,7 @@ auto B3IRGenerator::addGrowMemory(ExpressionType delta, ExpressionType& result) 
     };
 
     result = m_currentBlock->appendNew<CCallValue>(m_proc, Int32, origin(),
-        m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), bitwise_cast<void*>(growMemory)),
+        m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), tagCFunctionPtr<void*>(growMemory, B3CCallPtrTag)),
         m_currentBlock->appendNew<B3::Value>(m_proc, B3::FramePointer, origin()), instanceValue(), delta);
 
     restoreWebAssemblyGlobalState(RestoreCachedStackLimit::No, m_info.memory, instanceValue(), m_proc, m_currentBlock);
@@ -638,7 +633,7 @@ auto B3IRGenerator::setGlobal(uint32_t index, ExpressionType value) -> PartialRe
     return { };
 }
 
-inline Value* B3IRGenerator::emitCheckAndPreparePointer(ExpressionType pointer, uint32_t offset, uint32_t sizeOfOperation, ShouldMask shouldMask)
+inline Value* B3IRGenerator::emitCheckAndPreparePointer(ExpressionType pointer, uint32_t offset, uint32_t sizeOfOperation)
 {
     ASSERT(m_memoryBaseGPR);
 
@@ -647,8 +642,7 @@ inline Value* B3IRGenerator::emitCheckAndPreparePointer(ExpressionType pointer, 
         // We're not using signal handling at all, we must therefore check that no memory access exceeds the current memory size.
         ASSERT(m_memorySizeGPR);
         ASSERT(sizeOfOperation + offset > offset);
-        GPRReg indexingMask = (shouldMask == ShouldMask::Yes && Options::enableSpectreMitigations()) ? m_indexingMaskGPR : InvalidGPRReg;
-        m_currentBlock->appendNew<WasmBoundsCheckValue>(m_proc, origin(), m_memorySizeGPR, indexingMask, pointer, sizeOfOperation + offset - 1);
+        m_currentBlock->appendNew<WasmBoundsCheckValue>(m_proc, origin(), m_memorySizeGPR, pointer, sizeOfOperation + offset - 1);
         break;
     }
 
@@ -733,9 +727,19 @@ inline Value* B3IRGenerator::emitLoadOp(LoadOpType op, ExpressionType pointer, u
     case LoadOpType::I32Load16S: {
         return m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16S), origin(), pointer, offset);
     }
+
     case LoadOpType::I64Load16S: {
         Value* value = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16S), origin(), pointer, offset);
         return m_currentBlock->appendNew<Value>(m_proc, SExt32, origin(), value);
+    }
+
+    case LoadOpType::I32Load16U: {
+        return m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16Z), origin(), pointer, offset);
+    }
+
+    case LoadOpType::I64Load16U: {
+        Value* value = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16Z), origin(), pointer, offset);
+        return m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(), value);
     }
 
     case LoadOpType::I32Load: {
@@ -762,21 +766,6 @@ inline Value* B3IRGenerator::emitLoadOp(LoadOpType op, ExpressionType pointer, u
 
     case LoadOpType::F64Load: {
         return m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load), Double, origin(), pointer, offset);
-    }
-
-    // FIXME: B3 doesn't support Load16Z yet. We should lower to that value when
-    // it's added. https://bugs.webkit.org/show_bug.cgi?id=165884
-    case LoadOpType::I32Load16U: {
-        Value* value = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16S), origin(), pointer, offset);
-        return m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), value,
-            m_currentBlock->appendNew<Const32Value>(m_proc, origin(), 0x0000ffff));
-    }
-    case LoadOpType::I64Load16U: {
-        Value* value = m_currentBlock->appendNew<MemoryValue>(m_proc, memoryKind(Load16S), origin(), pointer, offset);
-        Value* partialResult = m_currentBlock->appendNew<Value>(m_proc, BitAnd, origin(), value,
-            m_currentBlock->appendNew<Const32Value>(m_proc, origin(), 0x0000ffff));
-
-        return m_currentBlock->appendNew<Value>(m_proc, ZExt32, origin(), partialResult);
     }
     }
     RELEASE_ASSERT_NOT_REACHED();
@@ -820,7 +809,7 @@ auto B3IRGenerator::load(LoadOpType op, ExpressionType pointer, ExpressionType& 
         }
 
     } else
-        result = emitLoadOp(op, emitCheckAndPreparePointer(pointer, offset, sizeOfLoadOp(op), ShouldMask::Yes), offset);
+        result = emitLoadOp(op, emitCheckAndPreparePointer(pointer, offset, sizeOfLoadOp(op)), offset);
 
     return { };
 }
@@ -893,7 +882,7 @@ auto B3IRGenerator::store(StoreOpType op, ExpressionType pointer, ExpressionType
             this->emitExceptionCheck(jit, ExceptionType::OutOfBoundsMemoryAccess);
         });
     } else
-        emitStoreOp(op, emitCheckAndPreparePointer(pointer, offset, sizeOfStoreOp(op), ShouldMask::No), value, offset);
+        emitStoreOp(op, emitCheckAndPreparePointer(pointer, offset, sizeOfStoreOp(op)), value, offset);
 
     return { };
 }
@@ -948,7 +937,7 @@ void B3IRGenerator::emitTierUpCheck(uint32_t decrementCount, Origin origin)
             jit.jump(tierUpResume);
 
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-                MacroAssembler::repatchNearCall(linkBuffer.locationOfNearCall(call), CodeLocationLabel(Thunks::singleton().stub(triggerOMGTierUpThunkGenerator).code()));
+                MacroAssembler::repatchNearCall(linkBuffer.locationOfNearCall<NoPtrTag>(call), CodeLocationLabel<JITThunkPtrTag>(Thunks::singleton().stub(triggerOMGTierUpThunkGenerator).code()));
 
             });
         });
@@ -1123,7 +1112,7 @@ auto B3IRGenerator::addCall(uint32_t functionIndex, const Signature& signature, 
                     AllowMacroScratchRegisterUsage allowScratch(jit);
                     CCallHelpers::Call call = jit.threadSafePatchableNearCall();
                     jit.addLinkTask([unlinkedWasmToWasmCalls, call, functionIndex] (LinkBuffer& linkBuffer) {
-                        unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall(call), functionIndex });
+                        unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall<WasmEntryPtrTag>(call), functionIndex });
                     });
                 });
             });
@@ -1135,9 +1124,12 @@ auto B3IRGenerator::addCall(uint32_t functionIndex, const Signature& signature, 
         // implement the IC to be over Context*.
         // https://bugs.webkit.org/show_bug.cgi?id=170375
         Value* jumpDestination = isEmbedderBlock->appendNew<MemoryValue>(m_proc,
-            Load, pointerType(), origin(), instanceValue(), safeCast<int32_t>(Instance::offsetOfWasmToEmbedderStubExecutableAddress(functionIndex)));
+            Load, pointerType(), origin(), instanceValue(), safeCast<int32_t>(Instance::offsetOfWasmToEmbedderStub(functionIndex)));
+        if (Options::usePoisoning())
+            jumpDestination = isEmbedderBlock->appendNew<Value>(m_proc, BitXor, origin(), jumpDestination, isEmbedderBlock->appendNew<Const64Value>(m_proc, origin(), g_JITCodePoison));
+
         Value* embedderCallResult = wasmCallingConvention().setupCall(m_proc, isEmbedderBlock, origin(), args, toB3Type(returnType),
-            [&] (PatchpointValue* patchpoint) {
+            [=] (PatchpointValue* patchpoint) {
                 patchpoint->effects.writesPinned = true;
                 patchpoint->effects.readsPinned = true;
                 patchpoint->append(jumpDestination, ValueRep::SomeRegister);
@@ -1147,7 +1139,7 @@ auto B3IRGenerator::addCall(uint32_t functionIndex, const Signature& signature, 
                 patchpoint->clobberLate(PinnedRegisterInfo::get().toSave(MemoryMode::BoundsChecking));
                 patchpoint->setGenerator([returnType] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
                     AllowMacroScratchRegisterUsage allowScratch(jit);
-                    jit.call(params[returnType == Void ? 0 : 1].gpr());
+                    jit.call(params[returnType == Void ? 0 : 1].gpr(), WasmEntryPtrTag);
                 });
             });
         UpsilonValue* embedderCallResultUpsilon = returnType == Void ? nullptr : isEmbedderBlock->appendNew<UpsilonValue>(m_proc, origin(), embedderCallResult);
@@ -1175,7 +1167,7 @@ auto B3IRGenerator::addCall(uint32_t functionIndex, const Signature& signature, 
                     AllowMacroScratchRegisterUsage allowScratch(jit);
                     CCallHelpers::Call call = jit.threadSafePatchableNearCall();
                     jit.addLinkTask([unlinkedWasmToWasmCalls, call, functionIndex] (LinkBuffer& linkBuffer) {
-                        unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall(call), functionIndex });
+                        unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall<WasmEntryPtrTag>(call), functionIndex });
                     });
                 });
             });
@@ -1232,13 +1224,13 @@ auto B3IRGenerator::addCallIndirect(const Signature& signature, Vector<Expressio
     {
         // Compute the offset in the table index space we are looking for.
         ExpressionType offset = m_currentBlock->appendNew<Value>(m_proc, Mul, origin(),
-            calleeIndex, constant(pointerType(), sizeof(CallableFunction)));
+            calleeIndex, constant(pointerType(), sizeof(WasmToWasmImportableFunction)));
         callableFunction = m_currentBlock->appendNew<Value>(m_proc, Add, origin(), callableFunctionBuffer, offset);
 
-        // Check that the CallableFunction is initialized. We trap if it isn't. An "invalid" SignatureIndex indicates it's not initialized.
+        // Check that the WasmToWasmImportableFunction is initialized. We trap if it isn't. An "invalid" SignatureIndex indicates it's not initialized.
         // FIXME: when we have trap handlers, we can just let the call fail because Signature::invalidIndex is 0. https://bugs.webkit.org/show_bug.cgi?id=177210
-        static_assert(sizeof(CallableFunction::signatureIndex) == sizeof(uint32_t), "Load codegen assumes i32");
-        ExpressionType calleeSignatureIndex = m_currentBlock->appendNew<MemoryValue>(m_proc, Load, Int32, origin(), callableFunction, safeCast<int32_t>(OBJECT_OFFSETOF(CallableFunction, signatureIndex)));
+        static_assert(sizeof(WasmToWasmImportableFunction::signatureIndex) == sizeof(uint32_t), "Load codegen assumes i32");
+        ExpressionType calleeSignatureIndex = m_currentBlock->appendNew<MemoryValue>(m_proc, Load, Int32, origin(), callableFunction, safeCast<int32_t>(OBJECT_OFFSETOF(WasmToWasmImportableFunction, signatureIndex)));
         {
             CheckValue* check = m_currentBlock->appendNew<CheckValue>(m_proc, Check, origin(),
                 m_currentBlock->appendNew<Value>(m_proc, Equal, origin(),
@@ -1302,7 +1294,6 @@ auto B3IRGenerator::addCallIndirect(const Signature& signature, Vector<Expressio
             ASSERT(sizeRegs.size() == 1);
             ASSERT(sizeRegs[0].sizeRegister != newContextInstance);
             ASSERT(!sizeRegs[0].sizeOffset);
-            jit.loadPtr(CCallHelpers::Address(newContextInstance, Instance::offsetOfCachedIndexingMask()), pinnedRegs.indexingMask); // Indexing mask.
             jit.loadPtr(CCallHelpers::Address(newContextInstance, Instance::offsetOfCachedMemorySize()), sizeRegs[0].sizeRegister); // Memory size.
             jit.loadPtr(CCallHelpers::Address(newContextInstance, Instance::offsetOfCachedMemory()), baseMemory); // Memory::void*.
         });
@@ -1313,7 +1304,9 @@ auto B3IRGenerator::addCallIndirect(const Signature& signature, Vector<Expressio
 
     ExpressionType calleeCode = m_currentBlock->appendNew<MemoryValue>(m_proc, Load, pointerType(), origin(),
         m_currentBlock->appendNew<MemoryValue>(m_proc, Load, pointerType(), origin(), callableFunction,
-            safeCast<int32_t>(OBJECT_OFFSETOF(CallableFunction, code))));
+            safeCast<int32_t>(WasmToWasmImportableFunction::offsetOfEntrypointLoadLocation())));
+    if (Options::usePoisoning())
+        calleeCode = m_currentBlock->appendNew<Value>(m_proc, BitXor, origin(), calleeCode, m_currentBlock->appendNew<Const64Value>(m_proc, origin(), g_JITCodePoison));
 
     Type returnType = signature.returnType();
     result = wasmCallingConvention().setupCall(m_proc, m_currentBlock, origin(), args, toB3Type(returnType),
@@ -1330,7 +1323,7 @@ auto B3IRGenerator::addCallIndirect(const Signature& signature, Vector<Expressio
             patchpoint->append(calleeCode, ValueRep::SomeRegister);
             patchpoint->setGenerator([=] (CCallHelpers& jit, const B3::StackmapGenerationParams& params) {
                 AllowMacroScratchRegisterUsage allowScratch(jit);
-                jit.call(params[returnType == Void ? 0 : 1].gpr());
+                jit.call(params[returnType == Void ? 0 : 1].gpr(), WasmEntryPtrTag);
             });
         });
 
@@ -1567,10 +1560,21 @@ auto B3IRGenerator::addOp<OpType::I64Ctz>(ExpressionType arg, ExpressionType& re
 template<>
 auto B3IRGenerator::addOp<OpType::I32Popcnt>(ExpressionType arg, ExpressionType& result) -> PartialResult
 {
-    // FIXME: This should use the popcnt instruction if SSE4 is available but we don't have code to detect SSE4 yet.
-    // see: https://bugs.webkit.org/show_bug.cgi?id=165363
+#if CPU(X86_64)
+    if (MacroAssembler::supportsCountPopulation()) {
+        PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Int32, origin());
+        patchpoint->append(arg, ValueRep::SomeRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.countPopulation32(params[1].gpr(), params[0].gpr());
+        });
+        patchpoint->effects = Effects::none();
+        result = patchpoint;
+        return { };
+    }
+#endif
+
     uint32_t (*popcount)(int32_t) = [] (int32_t value) -> uint32_t { return __builtin_popcount(value); };
-    Value* funcAddress = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), bitwise_cast<void*>(popcount));
+    Value* funcAddress = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), tagCFunctionPtr<void*>(popcount, B3CCallPtrTag));
     result = m_currentBlock->appendNew<CCallValue>(m_proc, Int32, origin(), Effects::none(), funcAddress, arg);
     return { };
 }
@@ -1578,10 +1582,21 @@ auto B3IRGenerator::addOp<OpType::I32Popcnt>(ExpressionType arg, ExpressionType&
 template<>
 auto B3IRGenerator::addOp<OpType::I64Popcnt>(ExpressionType arg, ExpressionType& result) -> PartialResult
 {
-    // FIXME: This should use the popcnt instruction if SSE4 is available but we don't have code to detect SSE4 yet.
-    // see: https://bugs.webkit.org/show_bug.cgi?id=165363
+#if CPU(X86_64)
+    if (MacroAssembler::supportsCountPopulation()) {
+        PatchpointValue* patchpoint = m_currentBlock->appendNew<PatchpointValue>(m_proc, Int64, origin());
+        patchpoint->append(arg, ValueRep::SomeRegister);
+        patchpoint->setGenerator([=] (CCallHelpers& jit, const StackmapGenerationParams& params) {
+            jit.countPopulation64(params[1].gpr(), params[0].gpr());
+        });
+        patchpoint->effects = Effects::none();
+        result = patchpoint;
+        return { };
+    }
+#endif
+
     uint64_t (*popcount)(int64_t) = [] (int64_t value) -> uint64_t { return __builtin_popcountll(value); };
-    Value* funcAddress = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), bitwise_cast<void*>(popcount));
+    Value* funcAddress = m_currentBlock->appendNew<ConstPtrValue>(m_proc, origin(), tagCFunctionPtr<void*>(popcount, B3CCallPtrTag));
     result = m_currentBlock->appendNew<CCallValue>(m_proc, Int64, origin(), Effects::none(), funcAddress, arg);
     return { };
 }

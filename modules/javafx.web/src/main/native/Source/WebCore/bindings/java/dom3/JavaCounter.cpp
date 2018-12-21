@@ -28,7 +28,7 @@
 #include "config.h"
 
 #include <WebCore/DeprecatedCSSOMCounter.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>

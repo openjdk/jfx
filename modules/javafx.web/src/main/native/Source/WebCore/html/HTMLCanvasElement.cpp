@@ -55,6 +55,7 @@
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <math.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RAMSize.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -82,6 +83,9 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLCanvasElement);
+
 using namespace PAL;
 using namespace HTMLNames;
 
@@ -192,7 +196,11 @@ static inline size_t maxActivePixelMemory()
     static size_t maxPixelMemory;
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
+#if PLATFORM(IOS)
+        maxPixelMemory = ramSize() / 4;
+#else
         maxPixelMemory = std::max(ramSize() / 4, 2151 * MB);
+#endif
     });
     return maxPixelMemory;
 }
@@ -365,7 +373,7 @@ CanvasRenderingContext2D* HTMLCanvasElement::getContext2d(const String& type)
 
 static bool requiresAcceleratedCompositingForWebGL()
 {
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(WIN_CAIRO)
     return false;
 #else
     return true;
@@ -500,16 +508,23 @@ void HTMLCanvasElement::didDraw(const FloatRect& rect)
     clearCopiedImage();
 
     FloatRect dirtyRect = rect;
-    if (RenderBox* ro = renderBox()) {
-        FloatRect destRect = ro->contentBoxRect();
+    if (auto* renderer = renderBox()) {
+        FloatRect destRect;
+        if (is<RenderReplaced>(renderer))
+            destRect = downcast<RenderReplaced>(renderer)->replacedContentRect();
+        else
+            destRect = renderer->contentBoxRect();
+
         // Inflate dirty rect to cover antialiasing on image buffers.
         if (drawingContext() && drawingContext()->shouldAntialias())
             dirtyRect.inflate(1);
+
         FloatRect r = mapRect(dirtyRect, FloatRect(0, 0, size().width(), size().height()), destRect);
         r.intersect(destRect);
+
         if (!r.isEmpty() && !m_dirtyRect.contains(r)) {
             m_dirtyRect.unite(r);
-            ro->repaintRectangle(enclosingIntRect(m_dirtyRect));
+            renderer->repaintRectangle(enclosingIntRect(m_dirtyRect));
         }
     }
     notifyObserversCanvasChanged(dirtyRect);
@@ -659,7 +674,7 @@ void HTMLCanvasElement::setSurfaceSize(const IntSize& size)
 static String toEncodingMimeType(const String& mimeType)
 {
     if (!MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType))
-        return ASCIILiteral("image/png");
+        return "image/png"_s;
     return mimeType.convertToASCIILowercase();
 }
 
@@ -682,7 +697,7 @@ ExceptionOr<UncachedString> HTMLCanvasElement::toDataURL(const String& mimeType,
         return Exception { SecurityError };
 
     if (m_size.isEmpty() || !buffer())
-        return UncachedString { ASCIILiteral { "data:," } };
+        return UncachedString { "data:,"_s };
 
     auto encodingMIMEType = toEncodingMimeType(mimeType);
     auto quality = qualityFromJSValue(qualityValue);
@@ -765,10 +780,10 @@ RefPtr<MediaSample> HTMLCanvasElement::toMediaSample()
 ExceptionOr<Ref<MediaStream>> HTMLCanvasElement::captureStream(ScriptExecutionContext& context, std::optional<double>&& frameRequestRate)
 {
     if (!originClean())
-        return Exception(SecurityError, ASCIILiteral("Canvas is tainted"));
+        return Exception(SecurityError, "Canvas is tainted"_s);
 
     if (frameRequestRate && frameRequestRate.value() < 0)
-        return Exception(NotSupportedError, ASCIILiteral("frameRequestRate is negative"));
+        return Exception(NotSupportedError, "frameRequestRate is negative"_s);
 
     auto track = CanvasCaptureMediaStreamTrack::create(context, *this, WTFMove(frameRequestRate));
     auto stream =  MediaStream::create(context);
@@ -905,7 +920,8 @@ void HTMLCanvasElement::createImageBuffer() const
 
     RenderingMode renderingMode = shouldAccelerate(size()) ? Accelerated : Unaccelerated;
 
-    setImageBuffer(ImageBuffer::create(size(), renderingMode));
+    auto hostWindow = (document().view() && document().view()->root()) ? document().view()->root()->hostWindow() : nullptr;
+    setImageBuffer(ImageBuffer::create(size(), renderingMode, 1, ColorSpaceSRGB, hostWindow));
     if (!m_imageBuffer)
         return;
     m_imageBuffer->context().setShadowsIgnoreTransforms(true);

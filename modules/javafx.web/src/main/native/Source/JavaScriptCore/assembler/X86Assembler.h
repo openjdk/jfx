@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ inline bool CAN_SIGN_EXTEND_8_32(int32_t value) { return value == (int32_t)(sign
 
 namespace X86Registers {
 
-typedef enum {
+typedef enum : int8_t {
     eax,
     ecx,
     edx,
@@ -58,16 +58,17 @@ typedef enum {
     r12,
     r13,
     r14,
-    r15
+    r15,
 #endif
+    InvalidGPRReg = -1,
 } RegisterID;
 
-typedef enum {
+typedef enum : int8_t {
     eip,
     eflags
 } SPRegisterID;
 
-typedef enum {
+typedef enum : int8_t {
     xmm0,
     xmm1,
     xmm2,
@@ -84,8 +85,9 @@ typedef enum {
     xmm12,
     xmm13,
     xmm14,
-    xmm15
+    xmm15,
 #endif
+    InvalidFPRReg = -1,
 } XMMRegisterID;
 
 } // namespace X86Register
@@ -326,6 +328,7 @@ private:
         OP2_CMPXCHGb        = 0xB0,
         OP2_CMPXCHG         = 0xB1,
         OP2_MOVZX_GvEb      = 0xB6,
+        OP2_POPCNT          = 0xB8,
         OP2_BSF             = 0xBC,
         OP2_TZCNT           = 0xBC,
         OP2_BSR             = 0xBD,
@@ -336,6 +339,7 @@ private:
         OP2_XADDb           = 0xC0,
         OP2_XADD            = 0xC1,
         OP2_PEXTRW_GdUdIb   = 0xC5,
+        OP2_BSWAP           = 0xC8,
         OP2_PSLLQ_UdqIb     = 0x73,
         OP2_PSRLQ_UdqIb     = 0x73,
         OP2_POR_VdqWdq      = 0XEB,
@@ -682,6 +686,18 @@ public:
     void andl_mr(int offset, RegisterID base, RegisterID index, int scale, RegisterID dst)
     {
         m_formatter.oneByteOp(OP_AND_GvEv, dst, base, index, scale, offset);
+    }
+
+    void andw_mr(int offset, RegisterID base, RegisterID dst)
+    {
+        m_formatter.prefix(PRE_OPERAND_SIZE);
+        andl_mr(offset, base, dst);
+    }
+
+    void andw_mr(int offset, RegisterID base, RegisterID index, int scale, RegisterID dst)
+    {
+        m_formatter.prefix(PRE_OPERAND_SIZE);
+        andl_mr(offset, base, index, scale, dst);
     }
 
     void andl_rm(RegisterID src, int offset, RegisterID base)
@@ -1625,6 +1641,18 @@ public:
     }
 #endif
 
+    void bswapl_r(RegisterID dst)
+    {
+        m_formatter.twoByteOp(OP2_BSWAP, dst);
+    }
+
+#if CPU(X86_64)
+    void bswapq_r(RegisterID dst)
+    {
+        m_formatter.twoByteOp64(OP2_BSWAP, dst);
+    }
+#endif
+
     void tzcnt_rr(RegisterID src, RegisterID dst)
     {
         m_formatter.prefix(PRE_SSE_F3);
@@ -1651,10 +1679,48 @@ public:
     }
 #endif
 
+    void popcnt_rr(RegisterID src, RegisterID dst)
+    {
+        m_formatter.prefix(PRE_SSE_F3);
+        m_formatter.twoByteOp(OP2_POPCNT, dst, src);
+    }
+
+    void popcnt_mr(int offset, RegisterID base, RegisterID dst)
+    {
+        m_formatter.prefix(PRE_SSE_F3);
+        m_formatter.twoByteOp(OP2_POPCNT, dst, base, offset);
+    }
+
+#if CPU(X86_64)
+    void popcntq_rr(RegisterID src, RegisterID dst)
+    {
+        m_formatter.prefix(PRE_SSE_F3);
+        m_formatter.twoByteOp64(OP2_POPCNT, dst, src);
+    }
+
+    void popcntq_mr(int offset, RegisterID base, RegisterID dst)
+    {
+        m_formatter.prefix(PRE_SSE_F3);
+        m_formatter.twoByteOp64(OP2_POPCNT, dst, base, offset);
+    }
+#endif
+
 private:
     template<GroupOpcodeID op>
     void shiftInstruction32(int imm, RegisterID dst)
     {
+        if (imm == 1)
+            m_formatter.oneByteOp(OP_GROUP2_Ev1, op, dst);
+        else {
+            m_formatter.oneByteOp(OP_GROUP2_EvIb, op, dst);
+            m_formatter.immediate8(imm);
+        }
+    }
+
+    template<GroupOpcodeID op>
+    void shiftInstruction16(int imm, RegisterID dst)
+    {
+        m_formatter.prefix(PRE_OPERAND_SIZE);
         if (imm == 1)
             m_formatter.oneByteOp(OP_GROUP2_Ev1, op, dst);
         else {
@@ -1712,6 +1778,11 @@ public:
     void roll_CLr(RegisterID dst)
     {
         m_formatter.oneByteOp(OP_GROUP2_EvCL, GROUP2_OP_ROL, dst);
+    }
+
+    void rolw_i8r(int imm, RegisterID dst)
+    {
+        shiftInstruction16<GROUP2_OP_ROL>(imm, dst);
     }
 
 #if CPU(X86_64)
@@ -3122,6 +3193,16 @@ public:
         m_formatter.prefix(PRE_SSE_F2);
         m_formatter.twoByteOpAddr(OP2_MOVSD_WsdVsd, (RegisterID)src, bitwise_cast<uint32_t>(address));
     }
+    void movss_mr(const void* address, XMMRegisterID dst)
+    {
+        m_formatter.prefix(PRE_SSE_F3);
+        m_formatter.twoByteOpAddr(OP2_MOVSD_VsdWsd, (RegisterID)dst, bitwise_cast<uint32_t>(address));
+    }
+    void movss_rm(XMMRegisterID src, const void* address)
+    {
+        m_formatter.prefix(PRE_SSE_F3);
+        m_formatter.twoByteOpAddr(OP2_MOVSD_WsdVsd, (RegisterID)src, bitwise_cast<uint32_t>(address));
+    }
 #endif
 
     void mulsd_rr(XMMRegisterID src, XMMRegisterID dst)
@@ -3629,7 +3710,7 @@ public:
         ASSERT(to.isSet());
 
         char* code = reinterpret_cast<char*>(m_formatter.data());
-        ASSERT(!reinterpret_cast<int32_t*>(code + from.m_offset)[-1]);
+        ASSERT(!WTF::unalignedLoad<int32_t>(bitwise_cast<int32_t*>(code + from.m_offset) - 1));
         setRel32(code + from.m_offset, code + to.m_offset);
     }
 
@@ -3688,22 +3769,21 @@ public:
 
     static void* readPointer(void* where)
     {
-        return reinterpret_cast<void**>(where)[-1];
+        return WTF::unalignedLoad<void*>(bitwise_cast<void**>(where) - 1);
     }
 
     static void replaceWithHlt(void* instructionStart)
     {
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(instructionStart);
-        ptr[0] = static_cast<uint8_t>(OP_HLT);
+        WTF::unalignedStore<uint8_t>(instructionStart, static_cast<uint8_t>(OP_HLT));
     }
 
     static void replaceWithJump(void* instructionStart, void* to)
     {
-        uint8_t* ptr = reinterpret_cast<uint8_t*>(instructionStart);
-        uint8_t* dstPtr = reinterpret_cast<uint8_t*>(to);
+        uint8_t* ptr = bitwise_cast<uint8_t*>(instructionStart);
+        uint8_t* dstPtr = bitwise_cast<uint8_t*>(to);
         intptr_t distance = (intptr_t)(dstPtr - (ptr + 5));
-        ptr[0] = static_cast<uint8_t>(OP_JMP_rel32);
-        *reinterpret_cast<int32_t*>(ptr + 1) = static_cast<int32_t>(distance);
+        WTF::unalignedStore<uint8_t>(ptr, static_cast<uint8_t>(OP_JMP_rel32));
+        WTF::unalignedStore<int32_t>(ptr + 1, static_cast<int32_t>(distance));
     }
 
     static ptrdiff_t maxJumpReplacementSize()
@@ -3905,17 +3985,17 @@ private:
 
     static void setPointer(void* where, void* value)
     {
-        reinterpret_cast<void**>(where)[-1] = value;
+        WTF::unalignedStore<void*>(bitwise_cast<void**>(where) - 1, value);
     }
 
     static void setInt32(void* where, int32_t value)
     {
-        reinterpret_cast<int32_t*>(where)[-1] = value;
+        WTF::unalignedStore<int32_t>(bitwise_cast<int32_t*>(where) - 1, value);
     }
 
     static void setInt8(void* where, int8_t value)
     {
-        reinterpret_cast<int8_t*>(where)[-1] = value;
+        WTF::unalignedStore<int8_t>(bitwise_cast<int8_t*>(where) - 1, value);
     }
 
     static void setRel32(void* from, void* to)
@@ -4284,6 +4364,14 @@ private:
             writer.putByteUnchecked(opcode);
         }
 
+        void twoByteOp(TwoByteOpcodeID opcode, int reg)
+        {
+            SingleInstructionBufferWriter writer(m_buffer);
+            writer.emitRexIfNeeded(0, 0, reg);
+            writer.putByteUnchecked(OP_2BYTE_ESCAPE);
+            writer.putByteUnchecked(opcode + (reg & 7));
+        }
+
         void twoByteOp(TwoByteOpcodeID opcode, int reg, RegisterID rm)
         {
             SingleInstructionBufferWriter writer(m_buffer);
@@ -4455,6 +4543,14 @@ private:
             writer.emitRexW(reg, 0, 0);
             writer.putByteUnchecked(opcode);
             writer.memoryModRMAddr(reg, address);
+        }
+
+        void twoByteOp64(TwoByteOpcodeID opcode, int reg)
+        {
+            SingleInstructionBufferWriter writer(m_buffer);
+            writer.emitRexW(0, 0, reg);
+            writer.putByteUnchecked(OP_2BYTE_ESCAPE);
+            writer.putByteUnchecked(opcode + (reg & 7));
         }
 
         void twoByteOp64(TwoByteOpcodeID opcode, int reg, RegisterID rm)

@@ -34,8 +34,6 @@
 #include "JSCInlines.h"
 #include "JSFunction.h"
 
-using namespace std;
-
 namespace JSC {
 
 const ClassInfo JSModuleEnvironment::s_info = { "JSModuleEnvironment", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSModuleEnvironment) };
@@ -103,10 +101,9 @@ void JSModuleEnvironment::getOwnNonIndexPropertyNames(JSObject* cell, ExecState*
 {
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
     if (propertyNamesArray.includeStringProperties()) {
-        VM& vm = exec->vm();
         for (const auto& pair : thisObject->moduleRecord()->importEntries()) {
             const AbstractModuleRecord::ImportEntry& importEntry = pair.value;
-            if (!importEntry.isNamespace(vm))
+            if (importEntry.type == AbstractModuleRecord::ImportEntryType::Single)
                 propertyNamesArray.add(importEntry.localName);
         }
     }
@@ -123,7 +120,7 @@ bool JSModuleEnvironment::put(JSCell* cell, ExecState* exec, PropertyName proper
     AbstractModuleRecord::Resolution resolution = thisObject->moduleRecord()->resolveImport(exec, Identifier::fromUid(exec, propertyName.uid()));
     RETURN_IF_EXCEPTION(scope, false);
     if (resolution.type == AbstractModuleRecord::Resolution::Type::Resolved) {
-        throwTypeError(exec, scope, ASCIILiteral(ReadonlyPropertyWriteError));
+        throwTypeError(exec, scope, ReadonlyPropertyWriteError);
         return false;
     }
     scope.release();

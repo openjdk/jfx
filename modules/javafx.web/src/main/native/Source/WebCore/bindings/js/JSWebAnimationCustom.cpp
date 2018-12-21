@@ -27,13 +27,29 @@
 #include "JSWebAnimation.h"
 
 #include "Document.h"
-#include "JSAnimationEffect.h"
+#include "JSAnimationEffectReadOnly.h"
 #include "JSAnimationTimeline.h"
+#include "JSCSSAnimation.h"
+#include "JSCSSTransition.h"
 #include "JSDOMConstructor.h"
 
 namespace WebCore {
 
 using namespace JSC;
+
+JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Ref<WebAnimation>&& value)
+{
+    if (value->isCSSAnimation())
+        return createWrapper<CSSAnimation>(globalObject, WTFMove(value));
+    if (value->isCSSTransition())
+        return createWrapper<CSSTransition>(globalObject, WTFMove(value));
+    return createWrapper<WebAnimation>(globalObject, WTFMove(value));
+}
+
+JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, WebAnimation& value)
+{
+    return wrap(state, globalObject, value);
+}
 
 EncodedJSValue JSC_HOST_CALL constructJSWebAnimation(ExecState& state)
 {
@@ -46,8 +62,8 @@ EncodedJSValue JSC_HOST_CALL constructJSWebAnimation(ExecState& state)
     if (UNLIKELY(!context))
         return throwConstructorScriptExecutionContextUnavailableError(state, throwScope, "Animation");
     auto& document = downcast<Document>(*context);
-    auto effect = convert<IDLNullable<IDLInterface<AnimationEffect>>>(state, state.argument(0), [](ExecState& state, ThrowScope& scope) {
-        throwArgumentTypeError(state, scope, 0, "effect", "Animation", nullptr, "AnimationEffect");
+    auto effect = convert<IDLNullable<IDLInterface<AnimationEffectReadOnly>>>(state, state.argument(0), [](ExecState& state, ThrowScope& scope) {
+        throwArgumentTypeError(state, scope, 0, "effect", "Animation", nullptr, "AnimationEffectReadOnly");
     });
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 

@@ -35,6 +35,7 @@
 #include "CachedPage.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameLoaderStateMachine.h"
@@ -42,12 +43,12 @@
 #include "FrameView.h"
 #include "HistoryItem.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "ScrollingCoordinator.h"
 #include "SerializedScriptValue.h"
 #include "SharedStringHash.h"
+#include "ShouldTreatAsContinuingLoad.h"
 #include "VisitedLinkStore.h"
 #include <wtf/text/CString.h>
 
@@ -290,7 +291,7 @@ bool HistoryController::shouldStopLoadingForHistoryItem(HistoryItem& targetItem)
 
 // Main funnel for navigating to a previous location (back/forward, non-search snap-back)
 // This includes recursion to handle loading into framesets properly
-void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType type)
+void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType type, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad)
 {
     LOG(History, "HistoryController %p goToItem %p type=%d", this, &targetItem, static_cast<int>(type));
 
@@ -325,14 +326,14 @@ void HistoryController::goToItem(HistoryItem& targetItem, FrameLoadType type)
     recursiveSetProvisionalItem(targetItem, currentItem.get());
 
     // Now that all other frames have provisional items, do the actual navigation.
-    recursiveGoToItem(targetItem, currentItem.get(), type);
+    recursiveGoToItem(targetItem, currentItem.get(), type, shouldTreatAsContinuingLoad);
 }
 
 void HistoryController::setDefersLoading(bool defer)
 {
     m_defersLoading = defer;
     if (!defer && m_deferredItem) {
-        goToItem(*m_deferredItem, m_deferredFrameLoadType);
+        goToItem(*m_deferredItem, m_deferredFrameLoadType, ShouldTreatAsContinuingLoad::No);
         m_deferredItem = nullptr;
     }
 }
@@ -749,10 +750,10 @@ void HistoryController::recursiveSetProvisionalItem(HistoryItem& item, HistoryIt
 
 // We now traverse the frame tree and item tree a second time, loading frames that
 // do have the content the item requests.
-void HistoryController::recursiveGoToItem(HistoryItem& item, HistoryItem* fromItem, FrameLoadType type)
+void HistoryController::recursiveGoToItem(HistoryItem& item, HistoryItem* fromItem, FrameLoadType type, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad)
 {
     if (!itemsAreClones(item, fromItem)) {
-        m_frame.loader().loadItem(item, type);
+        m_frame.loader().loadItem(item, type, shouldTreatAsContinuingLoad);
         return;
     }
 
@@ -763,7 +764,7 @@ void HistoryController::recursiveGoToItem(HistoryItem& item, HistoryItem* fromIt
         HistoryItem* fromChildItem = fromItem->childItemWithTarget(childFrameName);
         ASSERT(fromChildItem);
         if (Frame* childFrame = m_frame.tree().child(childFrameName))
-            childFrame->loader().history().recursiveGoToItem(childItem, fromChildItem, type);
+            childFrame->loader().history().recursiveGoToItem(childItem, fromChildItem, type, shouldTreatAsContinuingLoad);
     }
 }
 

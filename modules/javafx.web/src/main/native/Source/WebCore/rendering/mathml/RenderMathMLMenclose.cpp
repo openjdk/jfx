@@ -207,7 +207,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLRow::paint(info, paintOffset);
 
-    if (info.context().paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible)
         return;
 
     LayoutUnit thickness = ruleThickness();
@@ -218,7 +218,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 
     paintInfo.context().setStrokeThickness(thickness);
     paintInfo.context().setStrokeStyle(SolidStroke);
-    paintInfo.context().setStrokeColor(style().visitedDependentColor(CSSPropertyColor));
+    paintInfo.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
     paintInfo.context().setFillColor(Color::transparent);
     paintInfo.applyTransform(AffineTransform().translate(paintOffset + location()));
 

@@ -26,6 +26,7 @@
 package com.sun.webkit;
 
 import com.sun.webkit.WebPage;
+import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCPageBackBuffer;
@@ -59,5 +60,22 @@ public class WebPageShim {
         page.beginPrinting(w, h);
         page.print(gc, pageNo, w);
         page.endPrinting();
+    }
+
+    public static void click(WebPage page, int x, int y) {
+        WCMouseEvent mousePressEvent =
+                new WCMouseEvent(WCMouseEvent.MOUSE_PRESSED, WCMouseEvent.BUTTON1,
+                    1, x, y,
+                    x, y,
+                    System.currentTimeMillis(),
+                    false, false, false, false, false);
+        WCMouseEvent mouseReleaseEvent =
+                new WCMouseEvent(WCMouseEvent.MOUSE_RELEASED, WCMouseEvent.BUTTON1,
+                    1, x, y,
+                    x, y,
+                    System.currentTimeMillis(),
+                    false, false, false, false, false);
+        page.dispatchMouseEvent(mousePressEvent);
+        page.dispatchMouseEvent(mouseReleaseEvent);
     }
 }

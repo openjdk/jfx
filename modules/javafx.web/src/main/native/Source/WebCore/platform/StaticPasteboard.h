@@ -53,7 +53,7 @@ public:
     void clear(const String& type) final;
 
     void read(PasteboardPlainText&) final { }
-    void read(PasteboardWebContentReader&) final { }
+    void read(PasteboardWebContentReader&, WebContentReadingPolicy) final { }
 
     void write(const PasteboardURL&) final { }
     void write(const PasteboardImage&) final { }
@@ -61,7 +61,7 @@ public:
 
     void writeCustomData(const PasteboardCustomData&) final { }
 
-    bool containsFiles() final { return false; }
+    Pasteboard::FileContentState fileContentState() final { return FileContentState::NoFileOrImageData; }
     bool canSmartReplace() final { return false; }
 
     void writeMarkup(const String&) final { }

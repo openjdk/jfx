@@ -35,6 +35,7 @@ import java.awt.dnd.InvalidDnDOperationException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import javafx.embed.swing.SwingNode;
+import com.sun.javafx.embed.swing.newimpl.FXDnDInteropN;
 
 /**
  * A utility class to connect DnD mechanism of Swing and FX.
@@ -44,7 +45,7 @@ final public class FXDnD {
     private static SwingNode node;
     public static boolean fxAppThreadIsDispatchThread;
     private SwingNode getNode() { return node; }
-    private static FXDnDInterop fxdndiop;
+    private FXDnDInteropN fxdndiop;
 
     static {
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
@@ -55,18 +56,12 @@ final public class FXDnD {
             }
         });
 
-    InteropFactory instance = null;
-    try {
-        instance = InteropFactory.getInstance();
-    } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-    }
-        fxdndiop = instance.createFXDnDImpl();
     }
 
     public FXDnD(SwingNode node) {
         this.node = node;
-    fxdndiop.setNode(node);
+        fxdndiop = new FXDnDInteropN();
+        fxdndiop.setNode(node);
     }
 
     public Object createDragSourceContext(DragGestureEvent dge)
@@ -83,7 +78,7 @@ final public class FXDnD {
     }
 
     public void addDropTarget(DropTarget dt) {
-    fxdndiop.addDropTarget(dt, node);
+        fxdndiop.addDropTarget(dt, node);
     }
 
     public void removeDropTarget(DropTarget dt) {

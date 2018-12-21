@@ -129,7 +129,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
             length = lengthOpt.value();
         else {
             if ((buffer->byteLength() - offset) % ViewClass::elementSize)
-                return throwRangeError(exec, scope, ASCIILiteral("ArrayBuffer length minus the byteOffset is not a multiple of the element size"));
+                return throwRangeError(exec, scope, "ArrayBuffer length minus the byteOffset is not a multiple of the element size"_s);
             length = (buffer->byteLength() - offset) / ViewClass::elementSize;
         }
 
@@ -139,7 +139,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
     ASSERT(!offset && !lengthOpt);
 
     if (ViewClass::TypedArrayStorageType == TypeDataView)
-        return throwTypeError(exec, scope, ASCIILiteral("Expected ArrayBuffer for the first argument."));
+        return throwTypeError(exec, scope, "Expected ArrayBuffer for the first argument."_s);
 
     // For everything but DataView, we allow construction with any of:
     // - Another array. This creates a copy of the of that array.
@@ -167,7 +167,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
             // it should not be observable that we do not use the iterator.
 
             if (!iteratorFunc.isUndefined()
-                && (iteratorFunc != object->globalObject()->arrayProtoValuesFunction()
+                && (iteratorFunc != object->globalObject(vm)->arrayProtoValuesFunction()
                     || lengthSlot.isAccessor() || lengthSlot.isCustom() || lengthSlot.isTaintedByOpaqueObject()
                     || hasAnyArrayStorage(object->indexingType()))) {
 
@@ -210,8 +210,8 @@ EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(ExecState* exec)
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    InternalFunction* function = asInternalFunction(exec->jsCallee());
-    Structure* parentStructure = function->globalObject()->typedArrayStructure(ViewClass::TypedArrayStorageType);
+    InternalFunction* function = jsCast<InternalFunction*>(exec->jsCallee());
+    Structure* parentStructure = function->globalObject(vm)->typedArrayStructure(ViewClass::TypedArrayStorageType);
     Structure* structure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), parentStructure);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
@@ -219,7 +219,7 @@ EncodedJSValue JSC_HOST_CALL constructGenericTypedArrayView(ExecState* exec)
 
     if (!argCount) {
         if (ViewClass::TypedArrayStorageType == TypeDataView)
-            return throwVMTypeError(exec, scope, ASCIILiteral("DataView constructor requires at least one argument."));
+            return throwVMTypeError(exec, scope, "DataView constructor requires at least one argument."_s);
 
         scope.release();
         return JSValue::encode(ViewClass::create(exec, structure, 0));

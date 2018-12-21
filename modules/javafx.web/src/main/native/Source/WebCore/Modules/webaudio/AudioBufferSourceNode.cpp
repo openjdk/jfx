@@ -111,8 +111,8 @@ void AudioBufferSourceNode::process(size_t framesToProcess)
         return;
     }
 
-    size_t quantumFrameOffset;
-    size_t bufferFramesToProcess;
+    size_t quantumFrameOffset = 0;
+    size_t bufferFramesToProcess = 0;
     updateSchedulingInfo(framesToProcess, outputBus, quantumFrameOffset, bufferFramesToProcess);
 
     if (!bufferFramesToProcess) {
@@ -421,8 +421,8 @@ void AudioBufferSourceNode::setBuffer(RefPtr<AudioBuffer>&& buffer)
 
         output(0)->setNumberOfChannels(numberOfChannels);
 
-        m_sourceChannels = std::make_unique<const float*[]>(numberOfChannels);
-        m_destinationChannels = std::make_unique<float*[]>(numberOfChannels);
+        m_sourceChannels = makeUniqueArray<const float*>(numberOfChannels);
+        m_destinationChannels = makeUniqueArray<float*>(numberOfChannels);
 
         for (unsigned i = 0; i < numberOfChannels; ++i)
             m_sourceChannels[i] = buffer->channelData(i)->data();
@@ -529,7 +529,7 @@ bool AudioBufferSourceNode::looping()
 {
     static bool firstTime = true;
     if (firstTime && context().scriptExecutionContext()) {
-        context().scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, ASCIILiteral("AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."));
+        context().scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
         firstTime = false;
     }
 
@@ -540,7 +540,7 @@ void AudioBufferSourceNode::setLooping(bool looping)
 {
     static bool firstTime = true;
     if (firstTime && context().scriptExecutionContext()) {
-        context().scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, ASCIILiteral("AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."));
+        context().scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Warning, "AudioBufferSourceNode 'looping' attribute is deprecated.  Use 'loop' instead."_s);
         firstTime = false;
     }
 

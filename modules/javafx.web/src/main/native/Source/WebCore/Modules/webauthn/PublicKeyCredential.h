@@ -29,17 +29,13 @@
 
 #include "BasicCredential.h"
 #include "ExceptionOr.h"
+#include "JSDOMPromiseDeferred.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
 class AuthenticatorResponse;
-class DeferredPromise;
-class SecurityOrigin;
-
-struct PublicKeyCredentialCreationOptions;
-struct PublicKeyCredentialRequestOptions;
 
 class PublicKeyCredential final : public BasicCredential {
 public:
@@ -48,17 +44,12 @@ public:
         return adoptRef(*new PublicKeyCredential(WTFMove(id), WTFMove(response)));
     }
 
-    static Vector<Ref<BasicCredential>> collectFromCredentialStore(PublicKeyCredentialRequestOptions&&, bool);
-    static ExceptionOr<RefPtr<BasicCredential>> discoverFromExternalSource(const SecurityOrigin&, const PublicKeyCredentialRequestOptions&, bool sameOriginWithAncestors);
-    static RefPtr<BasicCredential> store(RefPtr<BasicCredential>&&, bool);
-    static ExceptionOr<RefPtr<BasicCredential>> create(const SecurityOrigin&, const PublicKeyCredentialCreationOptions&, bool sameOriginWithAncestors);
-
-    ArrayBuffer* rawId() const;
-    AuthenticatorResponse* response() const;
+    ArrayBuffer* rawId() const { return m_rawId.get(); }
+    AuthenticatorResponse* response() const { return m_response.get(); }
     // Not support yet. Always throws.
     ExceptionOr<bool> getClientExtensionResults() const;
 
-    static void isUserVerifyingPlatformAuthenticatorAvailable(Ref<DeferredPromise>&&);
+    static void isUserVerifyingPlatformAuthenticatorAvailable(DOMPromiseDeferred<IDLBoolean>&&);
 
 private:
     PublicKeyCredential(RefPtr<ArrayBuffer>&& id, RefPtr<AuthenticatorResponse>&&);

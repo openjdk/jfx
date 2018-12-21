@@ -98,4 +98,10 @@ static const bool defaultUnifiedTextCheckerEnabled = false;
 static const bool defaultSmartInsertDeleteEnabled = true;
 static const bool defaultSelectTrailingWhitespaceEnabled = false;
 
+#if ENABLE(VIDEO) && (USE(AVFOUNDATION) || USE(GSTREAMER) || USE(MEDIA_FOUNDATION) || PLATFORM(JAVA))
+static const bool defaultMediaEnabled = true;
+#else
+static const bool defaultMediaEnabled = false;
+#endif
+
 }

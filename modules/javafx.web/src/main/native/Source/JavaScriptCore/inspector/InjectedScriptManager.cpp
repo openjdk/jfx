@@ -110,7 +110,7 @@ InjectedScript InjectedScriptManager::injectedScriptForObjectId(const String& ob
         return InjectedScript();
 
     long injectedScriptId = 0;
-    if (!resultObject->getInteger(ASCIILiteral("injectedScriptId"), injectedScriptId))
+    if (!resultObject->getInteger("injectedScriptId"_s, injectedScriptId))
         return InjectedScript();
 
     return m_idToInjectedScript.get(injectedScriptId);
@@ -150,7 +150,7 @@ JSC::JSObject* InjectedScriptManager::createInjectedScript(const String& source,
         return nullptr;
 
     CallData callData;
-    CallType callType = getCallData(functionValue, callData);
+    CallType callType = getCallData(vm, functionValue, callData);
     if (callType == CallType::None)
         return nullptr;
 

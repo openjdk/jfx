@@ -44,6 +44,7 @@
 #include "Color.h"
 #include <png.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/UniqueArray.h>
 
 #if defined(PNG_LIBPNG_VER_MAJOR) && defined(PNG_LIBPNG_VER_MINOR) && (PNG_LIBPNG_VER_MAJOR > 1 || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 4))
 #define JMPBUF(png_ptr) png_jmpbuf(png_ptr)
@@ -120,7 +121,6 @@ public:
         , m_currentBufferSize(0)
         , m_decodingSizeOnly(false)
         , m_hasAlpha(false)
-        , m_interlaceBuffer(0)
     {
         m_png = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, decodingFailed, decodingWarning);
         m_info = png_create_info_struct(m_png);
@@ -143,8 +143,7 @@ public:
         if (m_png && m_info)
             // This will zero the pointers.
             png_destroy_read_struct(&m_png, &m_info, 0);
-        delete[] m_interlaceBuffer;
-        m_interlaceBuffer = 0;
+        m_interlaceBuffer.reset();
         m_readOffset = 0;
     }
 
@@ -188,8 +187,8 @@ public:
     void setHasAlpha(bool hasAlpha) { m_hasAlpha = hasAlpha; }
     bool hasAlpha() const { return m_hasAlpha; }
 
-    png_bytep interlaceBuffer() const { return m_interlaceBuffer; }
-    void createInterlaceBuffer(int size) { m_interlaceBuffer = new png_byte[size]; }
+    png_bytep interlaceBuffer() const { return m_interlaceBuffer.get(); }
+    void createInterlaceBuffer(int size) { m_interlaceBuffer = makeUniqueArray<png_byte>(size); }
 
 private:
     png_structp m_png;
@@ -198,7 +197,7 @@ private:
     unsigned m_currentBufferSize;
     bool m_decodingSizeOnly;
     bool m_hasAlpha;
-    png_bytep m_interlaceBuffer;
+    UniqueArray<png_byte> m_interlaceBuffer;
 };
 
 PNGImageDecoder::PNGImageDecoder(AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
@@ -254,7 +253,7 @@ bool PNGImageDecoder::setSize(const IntSize& size)
     return true;
 }
 
-ImageFrame* PNGImageDecoder::frameBufferAtIndex(size_t index)
+ScalableImageDecoderFrame* PNGImageDecoder::frameBufferAtIndex(size_t index)
 {
 #if ENABLE(APNG)
     if (ScalableImageDecoder::encodedDataStatus() < EncodedDataStatus::SizeAvailable)
@@ -270,7 +269,7 @@ ImageFrame* PNGImageDecoder::frameBufferAtIndex(size_t index)
     if (m_frameBufferCache.isEmpty())
         m_frameBufferCache.grow(1);
 
-    ImageFrame& frame = m_frameBufferCache[index];
+    auto& frame = m_frameBufferCache[index];
     if (!frame.isComplete())
         decode(false, index, isAllDataReceived());
     return &frame;
@@ -429,7 +428,7 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     if (m_currentFrame >= frameCount())
         return;
 #endif
-    ImageFrame& buffer = m_frameBufferCache[m_currentFrame];
+    auto& buffer = m_frameBufferCache[m_currentFrame];
     if (buffer.isInvalid()) {
         png_structp png = m_reader->pngPtr();
         if (!buffer.initialize(scaledSize(), m_premultiplyAlpha)) {
@@ -513,7 +512,7 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     }
 
     // Write the decoded row pixels to the frame buffer.
-    RGBA32* address = buffer.backingStore()->pixelAt(0, y);
+    auto* address = buffer.backingStore()->pixelAt(0, y);
     int width = scaledSize().width();
     unsigned char nonTrivialAlphaMask = 0;
 
@@ -633,7 +632,7 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
             m_frameBufferCache.grow(1);
 
         if (m_currentFrame < m_frameBufferCache.size()) {
-            ImageFrame& buffer = m_frameBufferCache[m_currentFrame];
+            auto& buffer = m_frameBufferCache[m_currentFrame];
 
             if (!m_delayDenominator)
                 buffer.setDuration(Seconds::fromMilliseconds(m_delayNumerator * 10));
@@ -641,11 +640,11 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
                 buffer.setDuration(Seconds::fromMilliseconds(m_delayNumerator * 1000 / m_delayDenominator));
 
             if (m_dispose == 2)
-                buffer.setDisposalMethod(ImageFrame::DisposalMethod::RestoreToPrevious);
+                buffer.setDisposalMethod(ScalableImageDecoderFrame::DisposalMethod::RestoreToPrevious);
             else if (m_dispose == 1)
-                buffer.setDisposalMethod(ImageFrame::DisposalMethod::RestoreToBackground);
+                buffer.setDisposalMethod(ScalableImageDecoderFrame::DisposalMethod::RestoreToBackground);
             else
-                buffer.setDisposalMethod(ImageFrame::DisposalMethod::DoNotDispose);
+                buffer.setDisposalMethod(ScalableImageDecoderFrame::DisposalMethod::DoNotDispose);
         }
 
         m_frameInfo = true;
@@ -725,16 +724,16 @@ void PNGImageDecoder::clearFrameBufferCache(size_t clearBeforeFrame)
 
     // See GIFImageDecoder for full explanation.
     clearBeforeFrame = std::min(clearBeforeFrame, m_frameBufferCache.size() - 1);
-    const Vector<ImageFrame>::iterator end(m_frameBufferCache.begin() + clearBeforeFrame);
+    const Vector<ScalableImageDecoderFrame>::iterator end(m_frameBufferCache.begin() + clearBeforeFrame);
 
-    Vector<ImageFrame>::iterator i(end);
-    for (; (i != m_frameBufferCache.begin()) && (i->isInvalid() || (i->disposalMethod() == ImageFrame::DisposalMethod::RestoreToPrevious)); --i) {
+    Vector<ScalableImageDecoderFrame>::iterator i(end);
+    for (; (i != m_frameBufferCache.begin()) && (i->isInvalid() || (i->disposalMethod() == ScalableImageDecoderFrame::DisposalMethod::RestoreToPrevious)); --i) {
         if (i->isComplete() && (i != end))
             i->clear();
     }
 
     // Now |i| holds the last frame we need to preserve; clear prior frames.
-    for (Vector<ImageFrame>::iterator j(m_frameBufferCache.begin()); j != i; ++j) {
+    for (Vector<ScalableImageDecoderFrame>::iterator j(m_frameBufferCache.begin()); j != i; ++j) {
         ASSERT(!j->isPartial());
         if (j->isInvalid())
             j->clear();
@@ -746,7 +745,7 @@ void PNGImageDecoder::initFrameBuffer(size_t frameIndex)
     if (frameIndex >= frameCount())
         return;
 
-    ImageFrame& buffer = m_frameBufferCache[frameIndex];
+    auto& buffer = m_frameBufferCache[frameIndex];
 
     // The starting state for this frame depends on the previous frame's
     // disposal method.
@@ -756,9 +755,9 @@ void PNGImageDecoder::initFrameBuffer(size_t frameIndex)
     // the starting state of the previous frame, so skip over them.  (If the
     // first frame specifies this method, it will get treated like
     // DisposeOverwriteBgcolor below and reset to a completely empty image.)
-    const ImageFrame* prevBuffer = &m_frameBufferCache[--frameIndex];
-    ImageFrame::DisposalMethod prevMethod = prevBuffer->disposalMethod();
-    while (frameIndex && (prevMethod == ImageFrame::DisposalMethod::RestoreToPrevious)) {
+    const auto* prevBuffer = &m_frameBufferCache[--frameIndex];
+    auto prevMethod = prevBuffer->disposalMethod();
+    while (frameIndex && (prevMethod == ScalableImageDecoderFrame::DisposalMethod::RestoreToPrevious)) {
         prevBuffer = &m_frameBufferCache[--frameIndex];
         prevMethod = prevBuffer->disposalMethod();
     }
@@ -766,7 +765,7 @@ void PNGImageDecoder::initFrameBuffer(size_t frameIndex)
     png_structp png = m_reader->pngPtr();
     ASSERT(prevBuffer->isComplete());
 
-    if (prevMethod == ImageFrame::DisposalMethod::DoNotDispose) {
+    if (prevMethod == ScalableImageDecoderFrame::DisposalMethod::DoNotDispose) {
         // Preserve the last frame as the starting state for this frame.
         if (!prevBuffer->backingStore() || !buffer.initialize(*prevBuffer->backingStore()))
             longjmp(JMPBUF(png), 1);
@@ -810,7 +809,7 @@ void PNGImageDecoder::frameComplete()
     if (m_frameIsHidden || m_currentFrame >= frameCount())
         return;
 
-    ImageFrame& buffer = m_frameBufferCache[m_currentFrame];
+    auto& buffer = m_frameBufferCache[m_currentFrame];
     buffer.setDecodingStatus(DecodingStatus::Complete);
 
     png_bytep interlaceBuffer = m_reader->interlaceBuffer();
@@ -827,7 +826,7 @@ void PNGImageDecoder::frameComplete()
         png_bytep row = interlaceBuffer;
         for (int y = rect.y(); y < rect.maxY(); ++y, row += colorChannels * size().width()) {
             png_bytep pixel = row;
-            RGBA32* address = buffer.backingStore()->pixelAt(rect.x(), y);
+            auto* address = buffer.backingStore()->pixelAt(rect.x(), y);
             for (int x = rect.x(); x < rect.maxX(); ++x, pixel += colorChannels) {
                 unsigned alpha = hasAlpha ? pixel[3] : 255;
                 nonTrivialAlpha |= alpha < 255;
@@ -844,12 +843,12 @@ void PNGImageDecoder::frameComplete()
                 buffer.setHasAlpha(false);
             else {
                 size_t frameIndex = m_currentFrame;
-                const ImageFrame* prevBuffer = &m_frameBufferCache[--frameIndex];
-                while (frameIndex && (prevBuffer->disposalMethod() == ImageFrame::DisposalMethod::RestoreToPrevious))
+                const auto* prevBuffer = &m_frameBufferCache[--frameIndex];
+                while (frameIndex && (prevBuffer->disposalMethod() == ScalableImageDecoderFrame::DisposalMethod::RestoreToPrevious))
                     prevBuffer = &m_frameBufferCache[--frameIndex];
 
                 IntRect prevRect = prevBuffer->backingStore()->frameRect();
-                if ((prevBuffer->disposalMethod() == ImageFrame::DisposalMethod::RestoreToBackground) && !prevBuffer->hasAlpha() && rect.contains(prevRect))
+                if ((prevBuffer->disposalMethod() == ScalableImageDecoderFrame::DisposalMethod::RestoreToBackground) && !prevBuffer->hasAlpha() && rect.contains(prevRect))
                     buffer.setHasAlpha(false);
             }
         } else if (!m_blend && !buffer.hasAlpha())

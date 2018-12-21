@@ -56,6 +56,7 @@
 #include "CSSPropertyNames.h"
 #include "CommonVM.h"
 #include "CookieJar.h"
+#include "DOMWindow.h"
 #include "DocumentLoader.h"
 #include "DocumentType.h"
 #include "ElementChildIterator.h"
@@ -76,9 +77,12 @@
 #include "HashTools.h"
 #include "ScriptController.h"
 #include "StyleResolver.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLDocument);
 
 using namespace HTMLNames;
 
@@ -110,7 +114,7 @@ Ref<DocumentParser> HTMLDocument::createParser()
 }
 
 // https://html.spec.whatwg.org/multipage/dom.html#dom-document-nameditem
-std::optional<Variant<RefPtr<DOMWindow>, RefPtr<Element>, RefPtr<HTMLCollection>>> HTMLDocument::namedItem(const AtomicString& name)
+std::optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> HTMLDocument::namedItem(const AtomicString& name)
 {
     if (name.isNull() || !hasDocumentNamedItem(*name.impl()))
         return std::nullopt;
@@ -118,16 +122,16 @@ std::optional<Variant<RefPtr<DOMWindow>, RefPtr<Element>, RefPtr<HTMLCollection>
     if (UNLIKELY(documentNamedItemContainsMultipleElements(*name.impl()))) {
         auto collection = documentNamedItems(name);
         ASSERT(collection->length() > 1);
-        return Variant<RefPtr<DOMWindow>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<HTMLCollection> { WTFMove(collection) } };
+        return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<HTMLCollection> { WTFMove(collection) } };
     }
 
     auto& element = *documentNamedItem(*name.impl());
     if (UNLIKELY(is<HTMLIFrameElement>(element))) {
         if (auto domWindow = makeRefPtr(downcast<HTMLIFrameElement>(element).contentWindow()))
-            return Variant<RefPtr<DOMWindow>, RefPtr<Element>, RefPtr<HTMLCollection>> { WTFMove(domWindow) };
+            return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { WTFMove(domWindow) };
     }
 
-    return Variant<RefPtr<DOMWindow>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<Element> { &element } };
+    return Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>> { RefPtr<Element> { &element } };
 }
 
 Vector<AtomicString> HTMLDocument::supportedPropertyNames() const

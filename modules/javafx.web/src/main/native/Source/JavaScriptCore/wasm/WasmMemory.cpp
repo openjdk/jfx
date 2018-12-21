@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -258,7 +258,6 @@ Memory::Memory(PageCount initial, PageCount maximum, Function<void(NotifyPressur
 Memory::Memory(void* memory, PageCount initial, PageCount maximum, size_t mappedCapacity, MemoryMode mode, Function<void(NotifyPressure)>&& notifyMemoryPressure, Function<void(SyncTryToReclaim)>&& syncTryToReclaimMemory, WTF::Function<void(GrowSuccess, PageCount, PageCount)>&& growSuccessCallback)
     : m_memory(memory)
     , m_size(initial.bytes())
-    , m_indexingMask(WTF::computeIndexingMask(initial.bytes()))
     , m_initial(initial)
     , m_maximum(maximum)
     , m_mappedCapacity(mappedCapacity)
@@ -282,6 +281,8 @@ RefPtr<Memory> Memory::create(PageCount initial, PageCount maximum, WTF::Functio
 
     const size_t initialBytes = initial.bytes();
     const size_t maximumBytes = maximum ? maximum.bytes() : 0;
+
+    RELEASE_ASSERT(initialBytes <= MAX_ARRAY_BUFFER_SIZE);
 
     if (maximum && !maximumBytes) {
         // User specified a zero maximum, initial size must also be zero.
@@ -373,7 +374,10 @@ Expected<PageCount, Memory::GrowFailReason> Memory::grow(PageCount delta)
         return makeUnexpected(GrowFailReason::InvalidDelta);
 
     const Wasm::PageCount newPageCount = oldPageCount + delta;
-    if (!newPageCount)
+    // FIXME: Creating a wasm memory that is bigger than the ArrayBuffer limit but smaller than the spec limit should throw
+    // OOME not RangeError
+    // https://bugs.webkit.org/show_bug.cgi?id=191776
+    if (!newPageCount || !newPageCount.isValid() || newPageCount.bytes() >= MAX_ARRAY_BUFFER_SIZE)
         return makeUnexpected(GrowFailReason::InvalidGrowSize);
 
     auto success = [&] () {
@@ -396,6 +400,7 @@ Expected<PageCount, Memory::GrowFailReason> Memory::grow(PageCount delta)
         return makeUnexpected(GrowFailReason::WouldExceedMaximum);
 
     size_t desiredSize = newPageCount.bytes();
+    RELEASE_ASSERT(desiredSize <= MAX_ARRAY_BUFFER_SIZE);
     RELEASE_ASSERT(desiredSize > m_size);
     size_t extraBytes = desiredSize - m_size;
     RELEASE_ASSERT(extraBytes);
@@ -420,7 +425,6 @@ Expected<PageCount, Memory::GrowFailReason> Memory::grow(PageCount delta)
         m_memory = newMemory;
         m_mappedCapacity = desiredSize;
         m_size = desiredSize;
-        m_indexingMask = WTF::computeIndexingMask(desiredSize);
         return success();
     }
     case MemoryMode::Signaling: {
@@ -434,7 +438,6 @@ Expected<PageCount, Memory::GrowFailReason> Memory::grow(PageCount delta)
             RELEASE_ASSERT_NOT_REACHED();
         }
         m_size = desiredSize;
-        m_indexingMask = WTF::computeIndexingMask(desiredSize);
         return success();
     }
     }
@@ -448,11 +451,11 @@ void Memory::registerInstance(Instance* instance)
     size_t count = m_instances.size();
     for (size_t index = 0; index < count; index++) {
         if (m_instances.at(index).get() == nullptr) {
-            m_instances.at(index) = instance->createWeakPtr();
+            m_instances.at(index) = makeWeakPtr(*instance);
             return;
         }
     }
-    m_instances.append(instance->createWeakPtr());
+    m_instances.append(makeWeakPtr(*instance));
 }
 
 void Memory::dump(PrintStream& out) const

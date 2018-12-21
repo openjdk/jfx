@@ -40,9 +40,12 @@
 #include "ScriptElement.h"
 #include "StyleResolver.h"
 #include "Text.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLOptionElement);
 
 using namespace HTMLNames;
 
@@ -90,7 +93,7 @@ bool HTMLOptionElement::isFocusable() const
         return false;
     // Option elements do not have a renderer.
     auto* style = const_cast<HTMLOptionElement&>(*this).computedStyle();
-    return style && style->display() != NONE;
+    return style && style->display() != DisplayType::None;
 }
 
 bool HTMLOptionElement::matchesDefaultPseudoClass() const
@@ -247,11 +250,14 @@ void HTMLOptionElement::childrenChanged(const ChildChange& change)
 #if ENABLE(DATALIST_ELEMENT)
 HTMLDataListElement* HTMLOptionElement::ownerDataListElement() const
 {
-    for (RefPtr<ContainerNode> parent = parentNode(); parent ; parent = parent->parentNode()) {
-        if (is<HTMLDataListElement>(*parent))
-            return downcast<HTMLDataListElement>(parent.get());
-    }
-    return nullptr;
+    RefPtr<ContainerNode> datalist = parentNode();
+    while (datalist && !is<HTMLDataListElement>(*datalist))
+        datalist = datalist->parentNode();
+
+    if (!datalist)
+        return nullptr;
+
+    return downcast<HTMLDataListElement>(datalist.get());
 }
 #endif
 

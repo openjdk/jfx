@@ -86,6 +86,7 @@ Structure* InferredType::createStructure(VM& vm, JSGlobalObject* globalObject, J
 void InferredType::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     InferredType* inferredType = jsCast<InferredType*>(cell);
+    Base::visitChildren(cell, visitor);
     if (inferredType->m_structure)
         visitor.vm().inferredTypesWithFinalizers.add(inferredType);
 }
@@ -145,6 +146,8 @@ InferredType::Descriptor InferredType::Descriptor::forValue(JSValue value)
             return String;
         if (cell->isSymbol())
             return Symbol;
+        if (cell->isBigInt())
+            return BigInt;
         if (cell->isObject()) {
             if (cell->structure()->transitionWatchpointSetIsStillValid())
                 return Descriptor(ObjectWithStructure, cell->structure());
@@ -184,6 +187,7 @@ PutByIdFlags InferredType::Descriptor::putByIdFlags() const
         return static_cast<PutByIdFlags>(PutByIdPrimaryTypeSecondary | PutByIdSecondaryTypeSymbol);
     case Object:
         return static_cast<PutByIdFlags>(PutByIdPrimaryTypeSecondary | PutByIdSecondaryTypeObject);
+    case BigInt:
     case ObjectOrOther:
         return static_cast<PutByIdFlags>(PutByIdPrimaryTypeSecondary | PutByIdSecondaryTypeObjectOrOther);
     case Top:
@@ -214,6 +218,7 @@ void InferredType::Descriptor::merge(const Descriptor& other)
     case Boolean:
     case String:
     case Symbol:
+    case BigInt:
         *this = Top;
         return;
     case Other:
@@ -480,12 +485,10 @@ bool InferredType::set(const ConcurrentJSLocker& locker, VM& vm, Descriptor newD
     return shouldFireWatchpointSet;
 }
 
-void InferredType::removeStructure()
+void InferredType::removeStructure(VM& vm)
 {
     // FIXME: Find an elegant and cheap way to thread information about why we got here into the fire
     // detail in set().
-
-    VM& vm = *Heap::heap(this)->vm();
 
     Descriptor oldDescriptor;
     Descriptor newDescriptor;
@@ -532,6 +535,9 @@ void printInternal(PrintStream& out, InferredType::Kind kind)
         return;
     case InferredType::Symbol:
         out.print("Symbol");
+        return;
+    case InferredType::BigInt:
+        out.print("BigInt");
         return;
     case InferredType::ObjectWithStructure:
         out.print("ObjectWithStructure");

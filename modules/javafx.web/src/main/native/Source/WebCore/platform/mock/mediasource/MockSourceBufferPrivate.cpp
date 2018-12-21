@@ -37,7 +37,6 @@
 #include "MockTracks.h"
 #include "SourceBufferPrivateClient.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <map>
 #include <wtf/StringPrintStream.h>
 
 namespace WebCore {
@@ -221,13 +220,13 @@ void MockSourceBufferPrivate::removedFromMediaSource()
 
 MediaPlayer::ReadyState MockSourceBufferPrivate::readyState() const
 {
-    return m_mediaSource ? m_mediaSource->player()->readyState() : MediaPlayer::HaveNothing;
+    return m_mediaSource ? m_mediaSource->player().readyState() : MediaPlayer::HaveNothing;
 }
 
 void MockSourceBufferPrivate::setReadyState(MediaPlayer::ReadyState readyState)
 {
     if (m_mediaSource)
-        m_mediaSource->player()->setReadyState(readyState);
+        m_mediaSource->player().setReadyState(readyState);
 }
 
 void MockSourceBufferPrivate::setActive(bool isActive)

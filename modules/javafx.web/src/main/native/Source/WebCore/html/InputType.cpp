@@ -566,7 +566,7 @@ bool InputType::hasCustomFocusLogic() const
     return true;
 }
 
-bool InputType::isKeyboardFocusable(KeyboardEvent& event) const
+bool InputType::isKeyboardFocusable(KeyboardEvent* event) const
 {
     ASSERT(element());
     return !element()->isReadOnly() && element()->isTextFormControlKeyboardFocusable(event);
@@ -609,29 +609,9 @@ void InputType::detach()
 {
 }
 
-void InputType::altAttributeChanged()
-{
-}
-
-void InputType::srcAttributeChanged()
-{
-}
-
-void InputType::maxResultsAttributeChanged()
-{
-}
-
 bool InputType::shouldRespectAlignAttribute()
 {
     return false;
-}
-
-void InputType::minOrMaxAttributeChanged()
-{
-}
-
-void InputType::stepAttributeChanged()
-{
 }
 
 bool InputType::canBeSuccessfulSubmitButton()
@@ -914,26 +894,6 @@ void InputType::updatePlaceholderText()
 {
 }
 
-void InputType::attributeChanged(const QualifiedName&)
-{
-}
-
-void InputType::multipleAttributeChanged()
-{
-}
-
-void InputType::disabledAttributeChanged()
-{
-}
-
-void InputType::readonlyAttributeChanged()
-{
-}
-
-void InputType::requiredAttributeChanged()
-{
-}
-
 void InputType::capsLockStateMayHaveChanged()
 {
 }
@@ -977,6 +937,11 @@ bool InputType::matchesIndeterminatePseudoClass() const
 }
 
 bool InputType::shouldAppearIndeterminate() const
+{
+    return false;
+}
+
+bool InputType::isPresentingAttachedView() const
 {
     return false;
 }

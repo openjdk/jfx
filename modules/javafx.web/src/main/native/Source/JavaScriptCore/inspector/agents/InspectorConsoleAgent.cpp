@@ -35,7 +35,6 @@
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
 #include "ScriptObject.h"
-#include <wtf/CurrentTime.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -44,7 +43,7 @@ static const unsigned maximumConsoleMessages = 100;
 static const int expireConsoleMessagesStep = 10;
 
 InspectorConsoleAgent::InspectorConsoleAgent(AgentContext& context, InspectorHeapAgent* heapAgent)
-    : InspectorAgentBase(ASCIILiteral("Console"))
+    : InspectorAgentBase("Console"_s)
     , m_injectedScriptManager(context.injectedScriptManager)
     , m_frontendDispatcher(std::make_unique<ConsoleFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(ConsoleBackendDispatcher::create(context.backendDispatcher, this))
@@ -104,7 +103,7 @@ void InspectorConsoleAgent::clearMessages(ErrorString&)
     m_consoleMessages.clear();
     m_expiredConsoleMessageCount = 0;
 
-    m_injectedScriptManager.releaseObjectGroup(ASCIILiteral("console"));
+    m_injectedScriptManager.releaseObjectGroup("console"_s);
 
     if (m_enabled)
         m_frontendDispatcher->messagesCleared();
@@ -190,7 +189,7 @@ void InspectorConsoleAgent::count(JSC::ExecState* state, Ref<ScriptArguments>&& 
     String identifier;
     if (!arguments->argumentCount()) {
         // '@' prefix for engine generated labels.
-        title = ASCIILiteral("Global");
+        title = "Global"_s;
         identifier = makeString('@', title);
     } else {
         // '#' prefix for user labels.
@@ -239,15 +238,15 @@ void InspectorConsoleAgent::addConsoleMessage(std::unique_ptr<ConsoleMessage> co
     }
 }
 
-void InspectorConsoleAgent::getLoggingChannels(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::Console::Channel>>& channels)
+void InspectorConsoleAgent::getLoggingChannels(ErrorString&, RefPtr<JSON::ArrayOf<Protocol::Console::Channel>>& channels)
 {
     // Default implementation has no logging channels.
-    channels = JSON::ArrayOf<Inspector::Protocol::Console::Channel>::create();
+    channels = JSON::ArrayOf<Protocol::Console::Channel>::create();
 }
 
 void InspectorConsoleAgent::setLoggingChannelLevel(ErrorString& errorString, const String&, const String&)
 {
-    errorString = ASCIILiteral("No such channel to enable");
+    errorString = "No such channel to enable"_s;
 }
 
 } // namespace Inspector

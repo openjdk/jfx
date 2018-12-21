@@ -69,6 +69,8 @@ public final class UIClientImpl implements UIClient {
     private final Accessor accessor;
     private FileChooser chooser;
     private static final Map<String, FileExtensionInfo> fileExtensionMap = new HashMap<>();
+    // for testing purposes only
+    private static String[] chooseFiles = null;
 
     private static class FileExtensionInfo {
         private String description;
@@ -220,7 +222,15 @@ public final class UIClientImpl implements UIClient {
         return false;
     }
 
+    // for testing purposes only
+    static void test_setChooseFiles(String[] files) {
+        chooseFiles = files;
+    }
+
     @Override public String[] chooseFile(String initialFileName, boolean multiple, String mimeFilters) {
+        if (chooseFiles != null) {
+            return chooseFiles;
+        }
         // get the toplevel window
         Window win = null;
         WebView view = accessor.getView();

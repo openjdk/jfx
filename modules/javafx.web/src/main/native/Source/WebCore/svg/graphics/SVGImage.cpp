@@ -35,6 +35,7 @@
 #include "DocumentLoader.h"
 #include "EditorClient.h"
 #include "ElementIterator.h"
+#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
 #include "ImageBuffer.h"
@@ -42,7 +43,6 @@
 #include "IntRect.h"
 #include "JSDOMWindowBase.h"
 #include "LibWebRTCProvider.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "RenderSVGRoot.h"
@@ -59,6 +59,10 @@
 #include <JavaScriptCore/JSCInlines.h>
 #include <JavaScriptCore/JSLock.h>
 #include <wtf/text/TextStream.h>
+
+#if PLATFORM(MAC)
+#include "LocalDefaultSystemAppearance.h"
+#endif
 
 #if USE(DIRECT2D)
 #include "COMPtr.h"
@@ -212,7 +216,7 @@ NativeImagePtr SVGImage::nativeImageForCurrentFrame(const GraphicsContext*)
     if (!buffer) // failed to allocate image
         return nullptr;
 
-    draw(buffer->context(), rect(), rect(), CompositeSourceOver, BlendModeNormal, DecodingMode::Synchronous, ImageOrientationDescription());
+    draw(buffer->context(), rect(), rect(), CompositeSourceOver, BlendMode::Normal, DecodingMode::Synchronous, ImageOrientationDescription());
 
     // FIXME: WK(Bug 113657): We should use DontCopyBackingStore here.
     return buffer->copyImage(CopyBackingStore)->nativeImageForCurrentFrame();
@@ -236,7 +240,7 @@ NativeImagePtr SVGImage::nativeImage(const GraphicsContext* targetContext)
 
     GraphicsContext localContext(nativeImageTarget.get());
 
-    draw(localContext, rect(), rect(), CompositeSourceOver, BlendModeNormal, DecodingMode::Synchronous, ImageOrientationDescription());
+    draw(localContext, rect(), rect(), CompositeSourceOver, BlendMode::Normal, DecodingMode::Synchronous, ImageOrientationDescription());
 
     COMPtr<ID2D1Bitmap> nativeImage;
     hr = nativeImageTarget->GetBitmap(&nativeImage);
@@ -264,7 +268,7 @@ void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize
     std::unique_ptr<ImageBuffer> buffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(imageBufferSize.size()), 1, ColorSpaceSRGB, context);
     if (!buffer) // Failed to allocate buffer.
         return;
-    drawForContainer(buffer->context(), containerSize, containerZoom, initialFragmentURL, imageBufferSize, zoomedContainerRect, CompositeSourceOver, BlendModeNormal);
+    drawForContainer(buffer->context(), containerSize, containerZoom, initialFragmentURL, imageBufferSize, zoomedContainerRect, CompositeSourceOver, BlendMode::Normal);
     if (context.drawLuminanceMask())
         buffer->convertToLuminanceMask();
 
@@ -295,10 +299,10 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
     context.clip(enclosingIntRect(dstRect));
 
     float alpha = context.alpha();
-    bool compositingRequiresTransparencyLayer = compositeOp != CompositeSourceOver || blendMode != BlendModeNormal || alpha < 1;
+    bool compositingRequiresTransparencyLayer = compositeOp != CompositeSourceOver || blendMode != BlendMode::Normal || alpha < 1;
     if (compositingRequiresTransparencyLayer) {
         context.beginTransparencyLayer(alpha);
-        context.setCompositeOperation(CompositeSourceOver, BlendModeNormal);
+        context.setCompositeOperation(CompositeSourceOver, BlendMode::Normal);
     }
 
     FloatSize scale(dstRect.size() / srcRect.size());
@@ -318,6 +322,10 @@ ImageDrawResult SVGImage::draw(GraphicsContext& context, const FloatRect& dstRec
         if (view->needsLayout())
             view->layoutContext().layout();
     }
+
+#if PLATFORM(MAC)
+    LocalDefaultSystemAppearance localAppearance(m_page->useSystemAppearance(), m_page->useDarkAppearance());
+#endif
 
     view->paint(context, intersection(context.clipBounds(), enclosingIntRect(srcRect)));
 
@@ -494,7 +502,7 @@ EncodedDataStatus SVGImage::dataChanged(bool allDataReceived)
 
 String SVGImage::filenameExtension() const
 {
-    return ASCIILiteral("svg");
+    return "svg"_s;
 }
 
 bool isInSVGImage(const Element* element)

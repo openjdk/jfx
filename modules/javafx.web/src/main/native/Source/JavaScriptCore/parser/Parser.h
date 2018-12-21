@@ -26,6 +26,7 @@
 #include "Lexer.h"
 #include "ModuleScopeData.h"
 #include "Nodes.h"
+#include "ParseHash.h"
 #include "ParserArena.h"
 #include "ParserError.h"
 #include "ParserFunctionInfo.h"
@@ -1418,7 +1419,7 @@ private:
         ASSERT_WITH_MESSAGE(!message.isEmpty(), "Attempted to set the empty string as an error message. Likely caused by invalid UTF8 used when creating the message.");
         m_errorMessage = message;
         if (m_errorMessage.isEmpty())
-            m_errorMessage = ASCIILiteral("Unparseable script");
+            m_errorMessage = "Unparseable script"_s;
     }
 
     NEVER_INLINE void logError(bool);
@@ -1570,7 +1571,7 @@ private:
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseArgument(TreeBuilder&, ArgumentType&);
     template <class TreeBuilder> TreeProperty parseProperty(TreeBuilder&, bool strict);
     template <class TreeBuilder> TreeExpression parsePropertyMethod(TreeBuilder& context, const Identifier* methodName, SourceParseMode);
-    template <class TreeBuilder> TreeProperty parseGetterSetter(TreeBuilder&, bool strict, PropertyNode::Type, unsigned getterOrSetterStartOffset, ConstructorKind, bool isClassProperty, bool isStaticMethod);
+    template <class TreeBuilder> TreeProperty parseGetterSetter(TreeBuilder&, bool strict, PropertyNode::Type, unsigned getterOrSetterStartOffset, ConstructorKind, ClassElementTag);
     template <class TreeBuilder> ALWAYS_INLINE TreeFunctionBody parseFunctionBody(TreeBuilder&, SyntaxChecker&, const JSTokenLocation&, int, int functionKeywordStart, int functionNameStart, int parametersStart, ConstructorKind, SuperBinding, FunctionBodyType, unsigned, SourceParseMode);
     template <class TreeBuilder> ALWAYS_INLINE bool parseFormalParameters(TreeBuilder&, TreeFormalParameterList, bool isArrowFunction, bool isMethod, unsigned&);
     enum VarDeclarationListContext { ForLoopContext, VarDeclarationContext };
@@ -1951,22 +1952,38 @@ std::unique_ptr<ParsedNode> parse(
     DebuggerParseData* debuggerParseData = nullptr)
 {
     ASSERT(!source.provider()->source().isNull());
+
+    MonotonicTime before;
+    if (UNLIKELY(Options::reportParseTimes()))
+        before = MonotonicTime::now();
+
+    std::unique_ptr<ParsedNode> result;
     if (source.provider()->source().is8Bit()) {
         Parser<Lexer<LChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKind, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
-        std::unique_ptr<ParsedNode> result = parser.parse<ParsedNode>(error, name, parseMode);
+        result = parser.parse<ParsedNode>(error, name, parseMode);
         if (positionBeforeLastNewline)
             *positionBeforeLastNewline = parser.positionBeforeLastNewline();
         if (builtinMode == JSParserBuiltinMode::Builtin) {
-            if (!result)
-                WTF::dataLog("Error compiling builtin: ", error.message(), "\n");
+            if (!result) {
+                ASSERT(error.isValid());
+                if (error.type() != ParserError::StackOverflow)
+                    dataLogLn("Unexpected error compiling builtin: ", error.message());
+            }
         }
-        return result;
+    } else {
+        ASSERT_WITH_MESSAGE(defaultConstructorKind == ConstructorKind::None, "BuiltinExecutables::createDefaultConstructor should always use a 8-bit string");
+        Parser<Lexer<UChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKind, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
+        result = parser.parse<ParsedNode>(error, name, parseMode);
+        if (positionBeforeLastNewline)
+            *positionBeforeLastNewline = parser.positionBeforeLastNewline();
     }
-    ASSERT_WITH_MESSAGE(defaultConstructorKind == ConstructorKind::None, "BuiltinExecutables::createDefaultConstructor should always use a 8-bit string");
-    Parser<Lexer<UChar>> parser(vm, source, builtinMode, strictMode, scriptMode, parseMode, superBinding, defaultConstructorKind, derivedContextType, isEvalNode<ParsedNode>(), evalContextType, debuggerParseData);
-    std::unique_ptr<ParsedNode> result = parser.parse<ParsedNode>(error, name, parseMode);
-    if (positionBeforeLastNewline)
-        *positionBeforeLastNewline = parser.positionBeforeLastNewline();
+
+    if (UNLIKELY(Options::reportParseTimes())) {
+        MonotonicTime after = MonotonicTime::now();
+        ParseHash hash(source);
+        dataLogLn(result ? "Parsed #" : "Failed to parse #", hash.hashForCall(), "/#", hash.hashForConstruct(), " in ", (after - before).milliseconds(), " ms.");
+    }
+
     return result;
 }
 

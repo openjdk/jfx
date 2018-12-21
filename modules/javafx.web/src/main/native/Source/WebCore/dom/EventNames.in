@@ -1,4 +1,6 @@
 namespace="Event"
+factoryFunction=toNewlyCreated
+useNamespaceAsSuffix=false
 
 Event
 Events interfaceName=Event
@@ -53,6 +55,7 @@ PaymentRequestUpdateEvent conditional=PAYMENT_REQUEST
 RTCPeerConnectionIceEvent conditional=WEB_RTC
 RTCDataChannelEvent conditional=WEB_RTC
 RTCDTMFToneChangeEvent conditional=WEB_RTC_DTMF
+RTCPeerConnectionIceEvent conditional=WEB_RTC
 RTCTrackEvent conditional=WEB_RTC
 SpeechSynthesisEvent conditional=SPEECH_SYNTHESIS
 WebGLContextEvent conditional=WEBGL
@@ -76,3 +79,4 @@ OverconstrainedErrorEvent conditional=MEDIA_STREAM
 MediaEncryptedEvent conditional=ENCRYPTED_MEDIA
 MediaKeyMessageEvent conditional=ENCRYPTED_MEDIA
 VRDisplayEvent
+AccessibleSetValueEvent

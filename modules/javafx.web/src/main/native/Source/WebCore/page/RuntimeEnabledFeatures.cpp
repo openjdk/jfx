@@ -43,6 +43,9 @@ RuntimeEnabledFeatures::RuntimeEnabledFeatures()
 #if ENABLE(MEDIA_STREAM) && PLATFORM(COCOA)
     m_isMediaDevicesEnabled = false;
 #endif
+#if PLATFORM(WATCHOS)
+    m_isWebSocketEnabled = false;
+#endif
 }
 
 RuntimeEnabledFeatures& RuntimeEnabledFeatures::sharedFeatures()
@@ -56,12 +59,5 @@ bool RuntimeEnabledFeatures::spectreGadgetsEnabled() const
 {
     return JSC::Options::enableSpectreGadgets();
 }
-
-#if ENABLE(VIDEO)
-bool RuntimeEnabledFeatures::audioEnabled() const
-{
-    return MediaPlayer::isAvailable();
-}
-#endif
 
 } // namespace WebCore

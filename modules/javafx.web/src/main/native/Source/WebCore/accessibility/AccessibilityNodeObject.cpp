@@ -1072,12 +1072,16 @@ void AccessibilityNodeObject::alterSliderValue(bool increase)
 
 void AccessibilityNodeObject::increment()
 {
+    if (dispatchAccessibilityEventWithType(AccessibilityEventType::Increment))
+        return;
     UserGestureIndicator gestureIndicator(ProcessingUserGesture, document());
     alterSliderValue(true);
 }
 
 void AccessibilityNodeObject::decrement()
 {
+    if (dispatchAccessibilityEventWithType(AccessibilityEventType::Decrement))
+        return;
     UserGestureIndicator gestureIndicator(ProcessingUserGesture, document());
     alterSliderValue(false);
 }
@@ -1274,11 +1278,7 @@ String AccessibilityNodeObject::textForLabelElement(Element* element) const
     if (AccessibilityObject* labelObject = axObjectCache()->getOrCreate(label))
         result = labelObject->ariaLabeledByAttribute();
 
-    // Then check for aria-label attribute.
-    if (result.isEmpty())
-        result = label->attributeWithoutSynchronization(aria_labelAttr);
-
-    return !result.isEmpty() ? result : label->innerText();
+    return !result.isEmpty() ? result : accessibleNameForNode(label);
 }
 
 void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOrder) const
@@ -1289,12 +1289,11 @@ void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOr
 
     if (isLabelable()) {
         if (HTMLLabelElement* label = labelForElement(downcast<Element>(node))) {
-            AccessibilityObject* labelObject = axObjectCache()->getOrCreate(label);
             String innerText = textForLabelElement(label);
 
             // Only use the <label> text if there's no ARIA override.
             if (!innerText.isEmpty() && !ariaAccessibilityDescription())
-                textOrder.append(AccessibilityText(innerText, isMeter() ? AccessibilityTextSource::Alternative : AccessibilityTextSource::LabelByElement, labelObject));
+                textOrder.append(AccessibilityText(innerText, isMeter() ? AccessibilityTextSource::Alternative : AccessibilityTextSource::LabelByElement, axObjectCache()->getOrCreate(label)));
             return;
         }
     }
@@ -1442,6 +1441,14 @@ void AccessibilityNodeObject::helpText(Vector<AccessibilityText>& textOrder) con
     String describedBy = ariaDescribedByAttribute();
     if (!describedBy.isEmpty())
         textOrder.append(AccessibilityText(describedBy, AccessibilityTextSource::Summary));
+    else if (isControl()) {
+        // For controls, use their fieldset parent's described-by text if available.
+        auto matchFunc = [] (const AccessibilityObject& object) {
+            return object.isFieldset() && !object.ariaDescribedByAttribute().isEmpty();
+        };
+        if (const auto* parent = AccessibilityObject::matchedParent(*this, false, WTFMove(matchFunc)))
+            textOrder.append(AccessibilityText(parent->ariaDescribedByAttribute(), AccessibilityTextSource::Summary));
+    }
 
     // Summary attribute used as help text on tables.
     const AtomicString& summary = getAttribute(summaryAttr);
@@ -1734,6 +1741,18 @@ String AccessibilityNodeObject::textUnderElement(AccessibilityTextUnderElementMo
     if (is<Text>(node))
         return downcast<Text>(*node).wholeText();
 
+    // The Accname specification states that if the current node is hidden, and not directly
+    // referenced by aria-labelledby or aria-describedby, and is not a host language text
+    // alternative, the empty string should be returned.
+    if (isHidden() && !is<HTMLLabelElement>(node) && (node && !ancestorsOfType<HTMLCanvasElement>(*node).first())) {
+        AccessibilityObject::AccessibilityChildrenVector labelFor;
+        AccessibilityObject::AccessibilityChildrenVector descriptionFor;
+        ariaLabelledByReferencingElements(labelFor);
+        ariaDescribedByReferencingElements(descriptionFor);
+        if (!labelFor.size() && !descriptionFor.size())
+            return String();
+    }
+
     StringBuilder builder;
     for (AccessibilityObject* child = firstChild(); child; child = child->nextSibling()) {
         if (mode.ignoredChildNode && child->node() == mode.ignoredChildNode)
@@ -1941,6 +1960,29 @@ static String accessibleNameForNode(Node* node, Node* labelledbyNode)
         String valueDescription = axObject->valueDescription();
         if (!valueDescription.isEmpty())
             return valueDescription;
+
+        // The Accname specification states that if the name is being calculated for a combobox
+        // or listbox inside a labeling element, return the text alternative of the chosen option.
+        AccessibilityObject::AccessibilityChildrenVector children;
+        if (axObject->isListBox())
+            axObject->selectedChildren(children);
+        else if (axObject->isComboBox()) {
+            for (const auto& child : axObject->children()) {
+                if (child->isListBox()) {
+                    child->selectedChildren(children);
+                    break;
+                }
+            }
+        }
+
+        StringBuilder builder;
+        String childText;
+        for (const auto& child : children)
+            appendNameToStringBuilder(builder, accessibleNameForNode(child->node()));
+
+        childText = builder.toString();
+        if (!childText.isEmpty())
+            return childText;
     }
 
     if (is<HTMLInputElement>(*node))
@@ -1951,7 +1993,7 @@ static String accessibleNameForNode(Node* node, Node* labelledbyNode)
         if (axObject->accessibleNameDerivesFromContent())
             text = axObject->textUnderElement(AccessibilityTextUnderElementMode(AccessibilityTextUnderElementMode::TextUnderElementModeIncludeNameFromContentsChildren, true, labelledbyNode));
     } else
-        text = element.innerText();
+        text = element.innerText().simplifyWhiteSpace();
 
     if (!text.isEmpty())
         return text;
@@ -2083,7 +2125,7 @@ bool AccessibilityNodeObject::canSetValueAttribute() const
     if (isMeter())
         return false;
 
-    if (isProgressIndicator() || isSlider())
+    if (isProgressIndicator() || isSlider() || isScrollbar())
         return true;
 
 #if PLATFORM(GTK)

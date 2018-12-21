@@ -40,7 +40,7 @@ JSObject* construct(ExecState* exec, JSValue constructorObject, const ArgList& a
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     ConstructData constructData;
-    ConstructType constructType = getConstructData(constructorObject, constructData);
+    ConstructType constructType = getConstructData(vm, constructorObject, constructData);
     if (constructType == ConstructType::None)
         return throwTypeError(exec, scope, errorMessage);
 
@@ -58,7 +58,8 @@ JSObject* construct(ExecState* exec, JSValue constructorObject, ConstructType co
 
 JSObject* profiledConstruct(ExecState* exec, ProfilingReason reason, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args, JSValue newTarget)
 {
-    ScriptProfilingScope profilingScope(exec->vmEntryGlobalObject(), reason);
+    VM& vm = exec->vm();
+    ScriptProfilingScope profilingScope(vm.vmEntryGlobalObject(exec), reason);
     return construct(exec, constructorObject, constructType, constructData, args, newTarget);
 }
 

@@ -78,7 +78,7 @@ void RenderTreeBuilder::List::updateItemMarker(RenderListItem& listItemRenderer)
 {
     auto& style = listItemRenderer.style();
 
-    if (style.listStyleType() == NoneListStyle && (!style.listStyleImage() || style.listStyleImage()->errorOccurred())) {
+    if (style.listStyleType() == ListStyleType::None && (!style.listStyleImage() || style.listStyleImage()->errorOccurred())) {
         if (auto* marker = listItemRenderer.markerRenderer())
             m_builder.destroy(*marker);
         return;
@@ -115,7 +115,7 @@ void RenderTreeBuilder::List::updateItemMarker(RenderListItem& listItemRenderer)
         return;
 
     if (currentParent)
-        m_builder.attach(*newParent, m_builder.detach(*currentParent, *markerRenderer), firstNonMarkerChild(*newParent));
+        m_builder.attach(*newParent, m_builder.detach(*currentParent, *markerRenderer, RenderTreeBuilder::CanCollapseAnonymousBlock::No), firstNonMarkerChild(*newParent));
     else
         m_builder.attach(*newParent, WTFMove(newMarkerRenderer), firstNonMarkerChild(*newParent));
 

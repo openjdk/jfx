@@ -124,7 +124,7 @@ public:
 
 
 template <class Parent>
-class JSCallbackObject : public Parent {
+class JSCallbackObject final : public Parent {
 protected:
     JSCallbackObject(ExecState*, Structure*, JSClassRef, void* data);
     JSCallbackObject(VM&, JSClassRef, Structure*);
@@ -134,7 +134,7 @@ protected:
 
 public:
     typedef Parent Base;
-    static const unsigned StructureFlags = Base::StructureFlags | ProhibitsPropertyCaching | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | ImplementsHasInstance | OverridesGetPropertyNames | TypeOfShouldCallGetCallData;
+    static const unsigned StructureFlags = Base::StructureFlags | ProhibitsPropertyCaching | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | ImplementsHasInstance | OverridesGetPropertyNames | OverridesGetCallData;
 
     ~JSCallbackObject();
 
@@ -194,7 +194,7 @@ public:
     using Parent::methodTable;
 
 private:
-    static String className(const JSObject*);
+    static String className(const JSObject*, VM&);
 
     static JSValue defaultValue(const JSObject*, ExecState*, PreferredPrimitiveType);
 

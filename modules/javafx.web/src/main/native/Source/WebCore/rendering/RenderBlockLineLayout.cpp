@@ -60,11 +60,11 @@ static void determineDirectionality(TextDirection& dir, InlineIterator iter)
         if (UChar current = iter.current()) {
             UCharDirection charDirection = u_charDirection(current);
             if (charDirection == U_LEFT_TO_RIGHT) {
-                dir = LTR;
+                dir = TextDirection::LTR;
                 return;
             }
             if (charDirection == U_RIGHT_TO_LEFT || charDirection == U_RIGHT_TO_LEFT_ARABIC) {
-                dir = RTL;
+                dir = TextDirection::RTL;
                 return;
             }
         }
@@ -306,7 +306,7 @@ RootInlineBox* RenderBlockFlow::constructLine(BidiRunList<BidiRun>& bidiRuns, co
             parentBox->addToLine(box);
         }
 
-        bool visuallyOrdered = r->renderer().style().rtlOrdering() == VisualOrder;
+        bool visuallyOrdered = r->renderer().style().rtlOrdering() == Order::Visual;
         box->setBidiLevel(r->level());
 
         if (is<InlineTextBox>(*box)) {
@@ -342,42 +342,42 @@ RootInlineBox* RenderBlockFlow::constructLine(BidiRunList<BidiRun>& bidiRuns, co
     return lastRootBox();
 }
 
-ETextAlign RenderBlockFlow::textAlignmentForLine(bool endsWithSoftBreak) const
+TextAlignMode RenderBlockFlow::textAlignmentForLine(bool endsWithSoftBreak) const
 {
-    ETextAlign alignment = style().textAlign();
+    TextAlignMode alignment = style().textAlign();
 #if ENABLE(CSS3_TEXT)
     TextJustify textJustify = style().textJustify();
-    if (alignment == JUSTIFY && textJustify == TextJustifyNone)
-        return style().direction() == LTR ? LEFT : RIGHT;
+    if (alignment == TextAlignMode::Justify && textJustify == TextJustify::None)
+        return style().direction() == TextDirection::LTR ? TextAlignMode::Left : TextAlignMode::Right;
 #endif
 
     if (endsWithSoftBreak)
         return alignment;
 
 #if !ENABLE(CSS3_TEXT)
-    return (alignment == JUSTIFY) ? TASTART : alignment;
+    return (alignment == TextAlignMode::Justify) ? TextAlignMode::Start : alignment;
 #else
-    if (alignment != JUSTIFY)
+    if (alignment != TextAlignMode::Justify)
         return alignment;
 
     TextAlignLast alignmentLast = style().textAlignLast();
     switch (alignmentLast) {
-    case TextAlignLastStart:
-        return TASTART;
-    case TextAlignLastEnd:
-        return TAEND;
-    case TextAlignLastLeft:
-        return LEFT;
-    case TextAlignLastRight:
-        return RIGHT;
-    case TextAlignLastCenter:
-        return CENTER;
-    case TextAlignLastJustify:
-        return JUSTIFY;
-    case TextAlignLastAuto:
-        if (textJustify == TextJustifyDistribute)
-            return JUSTIFY;
-        return TASTART;
+    case TextAlignLast::Start:
+        return TextAlignMode::Start;
+    case TextAlignLast::End:
+        return TextAlignMode::End;
+    case TextAlignLast::Left:
+        return TextAlignMode::Left;
+    case TextAlignLast::Right:
+        return TextAlignMode::Right;
+    case TextAlignLast::Center:
+        return TextAlignMode::Center;
+    case TextAlignLast::Justify:
+        return TextAlignMode::Justify;
+    case TextAlignLast::Auto:
+        if (textJustify == TextJustify::Distribute)
+            return TextAlignMode::Justify;
+        return TextAlignMode::Start;
     }
     return alignment;
 #endif
@@ -532,7 +532,7 @@ static inline void setLogicalWidthForTextRun(RootInlineBox* lineBox, BidiRun* ru
     }
 
     // Include text decoration visual overflow as part of the glyph overflow.
-    if (renderer.style().textDecorationsInEffect() != TextDecorationNone)
+    if (!renderer.style().textDecorationsInEffect().isEmpty())
         glyphOverflow.extendTo(visualOverflowForDecorations(run->box()->lineStyle(), downcast<InlineTextBox>(run->box())));
 
     if (!glyphOverflow.isEmpty()) {
@@ -564,11 +564,11 @@ void RenderBlockFlow::updateRubyForJustifiedText(RenderRubyRun& rubyRun, BidiRun
         totalOpportunitiesInRun += opportunitiesInRun;
     }
 
-    ASSERT(!rubyRun.hasOverrideLogicalContentWidth());
+    ASSERT(!rubyRun.hasOverrideContentLogicalWidth());
     float newBaseWidth = rubyRun.logicalWidth() + totalExpansion + marginStartForChild(rubyRun) + marginEndForChild(rubyRun);
     float newRubyRunWidth = rubyRun.logicalWidth() + totalExpansion;
     rubyBase.setInitialOffset((newRubyRunWidth - newBaseWidth) / 2);
-    rubyRun.setOverrideLogicalContentWidth(newRubyRunWidth);
+    rubyRun.setOverrideContentLogicalWidth(newRubyRunWidth);
     rubyRun.setNeedsLayout(MarkOnlyThis);
     rootBox.markDirty();
     if (RenderRubyText* rubyText = rubyRun.rubyText()) {
@@ -576,7 +576,7 @@ void RenderBlockFlow::updateRubyForJustifiedText(RenderRubyRun& rubyRun, BidiRun
             textRootBox->markDirty();
     }
     rubyRun.layoutBlock(true);
-    rubyRun.clearOverrideLogicalContentWidth();
+    rubyRun.clearOverrideContentLogicalWidth();
     r.box()->setExpansion(newRubyRunWidth - r.box()->logicalWidth());
 
     totalLogicalWidth += totalExpansion;
@@ -614,7 +614,7 @@ void RenderBlockFlow::computeExpansionForJustifiedText(BidiRun* firstRun, BidiRu
     }
 }
 
-void RenderBlockFlow::updateLogicalWidthForAlignment(const ETextAlign& textAlign, const RootInlineBox* rootInlineBox, BidiRun* trailingSpaceRun, float& logicalLeft, float& totalLogicalWidth, float& availableLogicalWidth, int expansionOpportunityCount)
+void RenderBlockFlow::updateLogicalWidthForAlignment(const TextAlignMode& textAlign, const RootInlineBox* rootInlineBox, BidiRun* trailingSpaceRun, float& logicalLeft, float& totalLogicalWidth, float& availableLogicalWidth, int expansionOpportunityCount)
 {
     TextDirection direction;
     if (rootInlineBox && style().unicodeBidi() == Plaintext)
@@ -627,19 +627,19 @@ void RenderBlockFlow::updateLogicalWidthForAlignment(const ETextAlign& textAlign
     // objects horizontally. The total width of the line can be increased if we end up
     // justifying text.
     switch (textAlign) {
-    case LEFT:
-    case WEBKIT_LEFT:
+    case TextAlignMode::Left:
+    case TextAlignMode::WebKitLeft:
         updateLogicalWidthForLeftAlignedBlock(style().isLeftToRightDirection(), trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth);
         break;
-    case RIGHT:
-    case WEBKIT_RIGHT:
+    case TextAlignMode::Right:
+    case TextAlignMode::WebKitRight:
         updateLogicalWidthForRightAlignedBlock(style().isLeftToRightDirection(), trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth);
         break;
-    case CENTER:
-    case WEBKIT_CENTER:
+    case TextAlignMode::Center:
+    case TextAlignMode::WebKitCenter:
         updateLogicalWidthForCenterAlignedBlock(style().isLeftToRightDirection(), trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth);
         break;
-    case JUSTIFY:
+    case TextAlignMode::Justify:
         adjustInlineDirectionLineBounds(expansionOpportunityCount, logicalLeft, availableLogicalWidth);
         if (expansionOpportunityCount) {
             if (trailingSpaceRun) {
@@ -649,14 +649,14 @@ void RenderBlockFlow::updateLogicalWidthForAlignment(const ETextAlign& textAlign
             break;
         }
         FALLTHROUGH;
-    case TASTART:
-        if (direction == LTR)
+    case TextAlignMode::Start:
+        if (direction == TextDirection::LTR)
             updateLogicalWidthForLeftAlignedBlock(style().isLeftToRightDirection(), trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth);
         else
             updateLogicalWidthForRightAlignedBlock(style().isLeftToRightDirection(), trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth);
         break;
-    case TAEND:
-        if (direction == LTR)
+    case TextAlignMode::End:
+        if (direction == TextDirection::LTR)
             updateLogicalWidthForRightAlignedBlock(style().isLeftToRightDirection(), trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth);
         else
             updateLogicalWidthForLeftAlignedBlock(style().isLeftToRightDirection(), trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth);
@@ -675,7 +675,7 @@ static void updateLogicalInlinePositions(RenderBlockFlow& block, float& lineLogi
 
 void RenderBlockFlow::computeInlineDirectionPositionsForLine(RootInlineBox* lineBox, const LineInfo& lineInfo, BidiRun* firstRun, BidiRun* trailingSpaceRun, bool reachedEnd, GlyphOverflowAndFallbackFontsMap& textBoxDataMap, VerticalPositionCache& verticalPositionCache, WordMeasurements& wordMeasurements)
 {
-    ETextAlign textAlign = textAlignmentForLine(!reachedEnd && !lineBox->endsWithBreak());
+    TextAlignMode textAlign = textAlignmentForLine(!reachedEnd && !lineBox->endsWithBreak());
 
     // CSS 2.1: "'Text-indent' only affects a line if it is the first formatted line of an element. For example, the first line of an anonymous block
     // box is only affected if it is the first child of its parent element."
@@ -702,16 +702,16 @@ void RenderBlockFlow::computeInlineDirectionPositionsForLine(RootInlineBox* line
     lineBox->placeBoxesInInlineDirection(lineLogicalLeft, needsWordSpacing);
 }
 
-static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlow& block, InlineTextBox& textBox, BidiRun* previousRun, BidiRun* nextRun, ETextAlign textAlign, bool isAfterExpansion)
+static inline ExpansionBehavior expansionBehaviorForInlineTextBox(RenderBlockFlow& block, InlineTextBox& textBox, BidiRun* previousRun, BidiRun* nextRun, TextAlignMode textAlign, bool isAfterExpansion)
 {
     // Tatechuyoko is modeled as the Object Replacement Character (U+FFFC), which can never have expansion opportunities inside nor intrinsically adjacent to it.
-    if (textBox.renderer().style().textCombine() == TextCombineHorizontal)
+    if (textBox.renderer().style().textCombine() == TextCombine::Horizontal)
         return ForbidLeadingExpansion | ForbidTrailingExpansion;
 
     ExpansionBehavior result = 0;
     bool setLeadingExpansion = false;
     bool setTrailingExpansion = false;
-    if (textAlign == JUSTIFY) {
+    if (textAlign == TextAlignMode::Justify) {
         // If the next box is ruby, and we're justifying, and the first box in the ruby base has a leading expansion, and we are a text box, then force a trailing expansion.
         if (nextRun && is<RenderRubyRun>(nextRun->renderer()) && downcast<RenderRubyRun>(nextRun->renderer()).rubyBase() && nextRun->renderer().style().collapseWhiteSpace()) {
             auto& rubyBase = *downcast<RenderRubyRun>(nextRun->renderer()).rubyBase();
@@ -825,13 +825,13 @@ static bool isLastInFlowRun(BidiRun& runToCheck)
     return true;
 }
 
-BidiRun* RenderBlockFlow::computeInlineDirectionPositionsForSegment(RootInlineBox* lineBox, const LineInfo& lineInfo, ETextAlign textAlign, float& logicalLeft,
+BidiRun* RenderBlockFlow::computeInlineDirectionPositionsForSegment(RootInlineBox* lineBox, const LineInfo& lineInfo, TextAlignMode textAlign, float& logicalLeft,
     float& availableLogicalWidth, BidiRun* firstRun, BidiRun* trailingSpaceRun, GlyphOverflowAndFallbackFontsMap& textBoxDataMap, VerticalPositionCache& verticalPositionCache,
     WordMeasurements& wordMeasurements)
 {
     bool needsWordSpacing = false;
-    bool canHangPunctuationAtStart = style().hangingPunctuation() & FirstHangingPunctuation;
-    bool canHangPunctuationAtEnd = style().hangingPunctuation() & LastHangingPunctuation;
+    bool canHangPunctuationAtStart = style().hangingPunctuation().contains(HangingPunctuation::First);
+    bool canHangPunctuationAtEnd = style().hangingPunctuation().contains(HangingPunctuation::Last);
     bool isLTR = style().isLeftToRightDirection();
     float totalLogicalWidth = lineBox->getFlowSpacingLogicalWidth();
     unsigned expansionOpportunityCount = 0;
@@ -882,7 +882,7 @@ BidiRun* RenderBlockFlow::computeInlineDirectionPositionsForSegment(RootInlineBo
                 canHangPunctuationAtEnd = false;
             }
 
-            if (textAlign == JUSTIFY && run != trailingSpaceRun)
+            if (textAlign == TextAlignMode::Justify && run != trailingSpaceRun)
                 computeExpansionOpportunities(*this, textBox, previousRun, run->next(), renderText.stringView(run->m_start, run->m_stop), run->box()->direction());
 
             if (unsigned length = renderText.text().length()) {
@@ -897,7 +897,7 @@ BidiRun* RenderBlockFlow::computeInlineDirectionPositionsForSegment(RootInlineBo
         } else {
             canHangPunctuationAtStart = false;
             bool encounteredJustifiedRuby = false;
-            if (is<RenderRubyRun>(run->renderer()) && textAlign == JUSTIFY && run != trailingSpaceRun && downcast<RenderRubyRun>(run->renderer()).rubyBase()) {
+            if (is<RenderRubyRun>(run->renderer()) && textAlign == TextAlignMode::Justify && run != trailingSpaceRun && downcast<RenderRubyRun>(run->renderer()).rubyBase()) {
                 auto* rubyBase = downcast<RenderRubyRun>(run->renderer()).rubyBase();
                 if (rubyBase->firstRootBox() && !rubyBase->firstRootBox()->nextRootBox() && run->renderer().style().collapseWhiteSpace()) {
                     rubyBase->setIsAfterExpansion(isAfterExpansion);
@@ -940,7 +940,7 @@ BidiRun* RenderBlockFlow::computeInlineDirectionPositionsForSegment(RootInlineBo
     }
 
     if (is<RenderRubyBase>(*this) && !expansionOpportunityCount)
-        textAlign = CENTER;
+        textAlign = TextAlignMode::Center;
 
     updateLogicalWidthForAlignment(textAlign, lineBox, trailingSpaceRun, logicalLeft, totalLogicalWidth, availableLogicalWidth, expansionOpportunityCount);
 
@@ -1001,7 +1001,7 @@ void RenderBlockFlow::computeBlockDirectionPositionsForLine(RootInlineBox* lineB
         if (is<RenderText>(renderer)) {
             auto& inlineTextBox = downcast<InlineTextBox>(*run->box());
             downcast<RenderText>(renderer).positionLineBox(inlineTextBox);
-            inlineBoxIsRedundant = !inlineTextBox.len();
+            inlineBoxIsRedundant = !inlineTextBox.hasTextContent();
         } else if (is<RenderBox>(renderer)) {
             downcast<RenderBox>(renderer).positionLineBox(downcast<InlineElementBox>(*run->box()));
             inlineBoxIsRedundant = renderer.isOutOfFlowPositioned();
@@ -1020,7 +1020,7 @@ static inline bool isCollapsibleSpace(UChar character, const RenderText& rendere
     if (character == '\n')
         return !renderer.style().preserveNewline();
     if (character == noBreakSpace)
-        return renderer.style().nbspMode() == SPACE;
+        return renderer.style().nbspMode() == NBSPMode::Space;
     return false;
 }
 
@@ -1061,7 +1061,7 @@ inline BidiRun* RenderBlockFlow::handleTrailingSpaces(BidiRunList<BidiRun>& bidi
         return nullptr;
 
     TextDirection direction = style().direction();
-    bool shouldReorder = trailingSpaceRun != (direction == LTR ? bidiRuns.lastRun() : bidiRuns.firstRun());
+    bool shouldReorder = trailingSpaceRun != (direction == TextDirection::LTR ? bidiRuns.lastRun() : bidiRuns.firstRun());
     if (firstSpace != trailingSpaceRun->start()) {
         BidiContext* baseContext = currentContext;
         while (BidiContext* parent = baseContext->parent())
@@ -1070,7 +1070,7 @@ inline BidiRun* RenderBlockFlow::handleTrailingSpaces(BidiRunList<BidiRun>& bidi
         std::unique_ptr<BidiRun> newTrailingRun = std::make_unique<BidiRun>(firstSpace, trailingSpaceRun->m_stop, trailingSpaceRun->renderer(), baseContext, U_OTHER_NEUTRAL);
         trailingSpaceRun->m_stop = firstSpace;
         trailingSpaceRun = newTrailingRun.get();
-        if (direction == LTR)
+        if (direction == TextDirection::LTR)
             bidiRuns.appendRun(WTFMove(newTrailingRun));
         else
             bidiRuns.prependRun(WTFMove(newTrailingRun));
@@ -1079,7 +1079,7 @@ inline BidiRun* RenderBlockFlow::handleTrailingSpaces(BidiRunList<BidiRun>& bidi
     if (!shouldReorder)
         return trailingSpaceRun;
 
-    if (direction == LTR) {
+    if (direction == TextDirection::LTR) {
         bidiRuns.moveRunToEnd(trailingSpaceRun);
         trailingSpaceRun->m_level = 0;
     } else {
@@ -1304,8 +1304,8 @@ void RenderBlockFlow::layoutRunsAndFloats(LineLayoutState& layoutState, bool has
             if (!lastObject->isBR())
                 lastObject = &lastRootBox()->firstLeafChild()->renderer();
             if (lastObject->isBR()) {
-                EClear clear = lastObject->style().clear();
-                if (clear != CNONE)
+                Clear clear = lastObject->style().clear();
+                if (clear != Clear::None)
                     clearFloats(clear);
             }
         }
@@ -1378,7 +1378,7 @@ void RenderBlockFlow::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, I
             if (lastRootBox())
                 lastRootBox()->setLineBreakInfo(end.renderer(), end.offset(), resolver.status());
         } else {
-            VisualDirectionOverride override = (styleToUse.rtlOrdering() == VisualOrder ? (styleToUse.direction() == LTR ? VisualLeftToRightOverride : VisualRightToLeftOverride) : NoVisualOverride);
+            VisualDirectionOverride override = (styleToUse.rtlOrdering() == Order::Visual ? (styleToUse.direction() == TextDirection::LTR ? VisualLeftToRightOverride : VisualRightToLeftOverride) : NoVisualOverride);
 
             if (isNewUBAParagraph && styleToUse.unicodeBidi() == Plaintext && !resolver.context()->parent()) {
                 TextDirection direction = styleToUse.direction();
@@ -1658,8 +1658,8 @@ void RenderBlockFlow::layoutLineBoxes(bool relayoutChildren, LayoutUnit& repaint
     // FIXME: CSS3 says that descendants that are clipped must also know how to truncate.  This is insanely
     // difficult to figure out in general (especially in the middle of doing layout), so we only handle the
     // simple case of an anonymous block truncating when it's parent is clipped.
-    bool hasTextOverflow = (style().textOverflow() && hasOverflowClip())
-        || (isAnonymousBlock() && parent() && parent()->isRenderBlock() && parent()->style().textOverflow() && parent()->hasOverflowClip());
+    bool hasTextOverflow = (style().textOverflow() == TextOverflow::Ellipsis && hasOverflowClip())
+        || (isAnonymousBlock() && parent() && parent()->isRenderBlock() && parent()->style().textOverflow() == TextOverflow::Ellipsis && parent()->hasOverflowClip());
 
     // Walk all the lines and delete our ellipsis line boxes if they exist.
     if (hasTextOverflow)
@@ -1763,7 +1763,7 @@ void RenderBlockFlow::checkFloatInCleanLine(RootInlineBox& cleanLine, RenderBox&
         floatBoxOnCleanLine.height() + floatBoxOnCleanLine.verticalMarginExtent());
 
     // We have to reset the cap-height alignment done by the first-letter floats when initial-letter is set, so just always treat first-letter floats as dirty.
-    if (originalFloatRect.size() == newSize && (floatBoxOnCleanLine.style().styleType() != FIRST_LETTER || !floatBoxOnCleanLine.style().initialLetterDrop()))
+    if (originalFloatRect.size() == newSize && (floatBoxOnCleanLine.style().styleType() != PseudoId::FirstLetter || !floatBoxOnCleanLine.style().initialLetterDrop()))
         return;
 
     LayoutUnit floatTop = isHorizontalWritingMode() ? originalFloatRect.y() : originalFloatRect.x();
@@ -1834,8 +1834,19 @@ RootInlineBox* RenderBlockFlow::determineStartPosition(LineLayoutState& layoutSt
             }
         }
         // Check if a new float has been inserted after the last known float.
-        if (!currentLine && floatsIterator != end)
-            layoutState.markForFullLayout();
+        if (floatsIterator != end) {
+            if (!currentLine)
+                layoutState.markForFullLayout();
+            else {
+                for (; floatsIterator != end; ++floatsIterator) {
+                    auto& floatWithRect = *floatsIterator;
+                    if (!floatWithRect->renderer().needsLayout())
+                        continue;
+                    layoutState.markForFullLayout();
+                    break;
+                }
+            }
+        }
     }
 
     if (layoutState.isFullLayout()) {
@@ -2089,7 +2100,7 @@ void RenderBlockFlow::addOverflowFromInlineChildren()
 
 void RenderBlockFlow::deleteEllipsisLineBoxes()
 {
-    ETextAlign textAlign = style().textAlign();
+    TextAlignMode textAlign = style().textAlign();
     bool ltr = style().isLeftToRightDirection();
     IndentTextOrNot shouldIndentText = IndentText;
     for (RootInlineBox* curr = firstRootBox(); curr; curr = curr->nextRootBox()) {
@@ -2126,7 +2137,7 @@ void RenderBlockFlow::checkLinesForTextOverflow()
     // check the left edge of the line box to see if it is less
     // Include the scrollbar for overflow blocks, which means we want to use "contentWidth()"
     bool ltr = style().isLeftToRightDirection();
-    ETextAlign textAlign = style().textAlign();
+    TextAlignMode textAlign = style().textAlign();
     bool firstLine = true;
     for (RootInlineBox* curr = firstRootBox(); curr; curr = curr->nextRootBox()) {
         IndentTextOrNot shouldIndentText = firstLine ? IndentText : DoNotIndentText;
@@ -2214,18 +2225,18 @@ bool RenderBlockFlow::positionNewFloatOnLine(const FloatingObject& newFloat, Flo
 
 LayoutUnit RenderBlockFlow::startAlignedOffsetForLine(LayoutUnit position, IndentTextOrNot shouldIndentText)
 {
-    ETextAlign textAlign = style().textAlign();
+    TextAlignMode textAlign = style().textAlign();
     bool shouldApplyIndentText = false;
     switch (textAlign) {
-    case LEFT:
-    case WEBKIT_LEFT:
+    case TextAlignMode::Left:
+    case TextAlignMode::WebKitLeft:
         shouldApplyIndentText = style().isLeftToRightDirection();
         break;
-    case RIGHT:
-    case WEBKIT_RIGHT:
+    case TextAlignMode::Right:
+    case TextAlignMode::WebKitRight:
         shouldApplyIndentText = !style().isLeftToRightDirection();
         break;
-    case TASTART:
+    case TextAlignMode::Start:
         shouldApplyIndentText = true;
         break;
     default:
@@ -2235,7 +2246,7 @@ LayoutUnit RenderBlockFlow::startAlignedOffsetForLine(LayoutUnit position, Inden
     // https://bugs.webkit.org/show_bug.cgi?id=124522
     // This quirk is for legacy content that doesn't work properly with the center positioning scheme
     // being honored (e.g., epubs).
-    if (shouldApplyIndentText || settings().useLegacyTextAlignPositionedElementBehavior()) // FIXME: Handle TAEND here
+    if (shouldApplyIndentText || settings().useLegacyTextAlignPositionedElementBehavior()) // FIXME: Handle TextAlignMode::End here
         return startOffsetForLine(position, shouldIndentText);
 
     // updateLogicalWidthForAlignment() handles the direction of the block so no need to consider it here

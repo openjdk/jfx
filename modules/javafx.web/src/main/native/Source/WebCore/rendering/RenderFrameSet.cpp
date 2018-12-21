@@ -95,7 +95,7 @@ void RenderFrameSet::paintColumnBorder(const PaintInfo& paintInfo, const IntRect
 
     // Fill first.
     GraphicsContext& context = paintInfo.context();
-    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColor(CSSPropertyBorderLeftColor) : borderFillColor());
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor());
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
@@ -114,7 +114,7 @@ void RenderFrameSet::paintRowBorder(const PaintInfo& paintInfo, const IntRect& b
 
     // Fill first.
     GraphicsContext& context = paintInfo.context();
-    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColor(CSSPropertyBorderLeftColor) : borderFillColor());
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColorWithColorFilter(CSSPropertyBorderLeftColor) : borderFillColor());
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
@@ -126,7 +126,7 @@ void RenderFrameSet::paintRowBorder(const PaintInfo& paintInfo, const IntRect& b
 
 void RenderFrameSet::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (paintInfo.phase != PaintPhaseForeground)
+    if (paintInfo.phase != PaintPhase::Foreground)
         return;
 
     RenderObject* child = firstChild();

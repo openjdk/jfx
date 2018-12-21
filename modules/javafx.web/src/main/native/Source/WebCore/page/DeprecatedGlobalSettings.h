@@ -88,6 +88,8 @@ public:
     WEBCORE_EXPORT static void setNetworkInterfaceName(const String&);
     static const String& networkInterfaceName();
 
+    static void setDisableScreenSizeOverride(bool flag) { gDisableScreenSizeOverride = flag; }
+    static bool disableScreenSizeOverride() { return gDisableScreenSizeOverride; }
 #if HAVE(AVKIT)
     static void setAVKitEnabled(bool flag) { gAVKitEnabled = flag; }
 #endif
@@ -135,9 +137,9 @@ private:
     static bool gNetworkDataUsageTrackingEnabled;
     WEBCORE_EXPORT static bool gAVKitEnabled;
     WEBCORE_EXPORT static bool gShouldOptOutOfNetworkStateObservation;
+    WEBCORE_EXPORT static bool gDisableScreenSizeOverride;
 #endif
     WEBCORE_EXPORT static bool gManageAudioSession;
-    WEBCORE_EXPORT static bool gCustomPasteboardDataEnabled;
 
 #if ENABLE(MEDIA_STREAM)
     static bool gMockCaptureDevicesEnabled;

@@ -29,19 +29,17 @@
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "DOMWindow.h"
-#include "DisplayRefreshMonitor.h"
-#include "DisplayRefreshMonitorManager.h"
 #include "Document.h"
+#include "DocumentAnimationScheduler.h"
 #include "DocumentLoader.h"
+#include "Frame.h"
 #include "FrameView.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "RequestAnimationFrameCallback.h"
 #include "Settings.h"
 #include <algorithm>
-#include <wtf/CurrentTime.h>
 #include <wtf/Ref.h>
 #include <wtf/SystemTracing.h>
 #include <wtf/text/StringBuilder.h>
@@ -56,11 +54,10 @@ static const Seconds aggressiveThrottlingAnimationInterval { 10_s };
 
 namespace WebCore {
 
-ScriptedAnimationController::ScriptedAnimationController(Document& document, PlatformDisplayID displayID)
+ScriptedAnimationController::ScriptedAnimationController(Document& document)
     : m_document(&document)
     , m_animationTimer(*this, &ScriptedAnimationController::animationTimerFired)
 {
-    windowScreenDidChange(displayID);
 }
 
 ScriptedAnimationController::~ScriptedAnimationController() = default;
@@ -105,7 +102,7 @@ static const char* throttlingReasonToString(ScriptedAnimationController::Throttl
 static String throttlingReasonsToString(OptionSet<ScriptedAnimationController::ThrottlingReason> reasons)
 {
     if (reasons.isEmpty())
-        return ASCIILiteral("[Unthrottled]");
+        return "[Unthrottled]"_s;
 
     StringBuilder builder;
     for (auto reason : reasons) {
@@ -199,7 +196,8 @@ void ScriptedAnimationController::serviceScriptedAnimations(double timestamp)
 
     TraceScope tracingScope(RAFCallbackStart, RAFCallbackEnd);
 
-    double highResNowMs = 1000 * timestamp;
+    // We round this to the nearest microsecond so that we can return a time that matches what is returned by document.timeline.currentTime.
+    double highResNowMs = std::round(1000 * timestamp);
     double legacyHighResNowMs = 1000 * (timestamp + m_document->loader()->timing().referenceWallTime().secondsSinceEpoch().seconds());
 
     // First, generate a list of callbacks to consider.  Callbacks registered from this point
@@ -235,17 +233,6 @@ void ScriptedAnimationController::serviceScriptedAnimations(double timestamp)
         scheduleAnimation();
 }
 
-void ScriptedAnimationController::windowScreenDidChange(PlatformDisplayID displayID)
-{
-    if (!requestAnimationFrameEnabled())
-        return;
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-    DisplayRefreshMonitorManager::sharedManager().windowScreenDidChange(displayID, *this);
-#else
-    UNUSED_PARAM(displayID);
-#endif
-}
-
 Seconds ScriptedAnimationController::interval() const
 {
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
@@ -275,7 +262,7 @@ void ScriptedAnimationController::scheduleAnimation()
 
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     if (!m_isUsingTimer && !isThrottled()) {
-        if (DisplayRefreshMonitorManager::sharedManager().scheduleAnimation(*this))
+        if (m_document->animationScheduler().scheduleScriptedAnimationResolution())
             return;
 
         m_isUsingTimer = true;
@@ -309,20 +296,10 @@ void ScriptedAnimationController::animationTimerFired()
 }
 
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-void ScriptedAnimationController::displayRefreshFired()
+void ScriptedAnimationController::documentAnimationSchedulerDidFire()
 {
-    serviceScriptedAnimations(m_document->domWindow()->nowTimestamp());
-}
-
-RefPtr<DisplayRefreshMonitor> ScriptedAnimationController::createDisplayRefreshMonitor(PlatformDisplayID displayID) const
-{
-    if (!m_document->page())
-        return nullptr;
-
-    if (auto monitor = m_document->page()->chrome().client().createDisplayRefreshMonitor(displayID))
-        return monitor;
-
-    return DisplayRefreshMonitor::createDefaultDisplayRefreshMonitor(displayID);
+    // We obtain the time from the animation scheduler so that we use the same timestamp as the DocumentTimeline.
+    serviceScriptedAnimations(m_document->animationScheduler().lastTimestamp().seconds());
 }
 #endif
 

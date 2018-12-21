@@ -74,12 +74,12 @@ public:
 #if USE(CG) || USE(CAIRO)
     virtual void drawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator, BlendMode, ImageOrientation) = 0;
 #endif
-    virtual void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendModeNormal) = 0;
+    virtual void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal) = 0;
 
     virtual void drawRect(const FloatRect&, float borderThickness) = 0;
     virtual void drawLine(const FloatPoint&, const FloatPoint&) = 0;
     virtual void drawLinesForText(const FloatPoint&, const DashArray& widths, bool printing, bool doubleLines, float strokeThickness) = 0;
-    virtual void drawLineForDocumentMarker(const FloatPoint&, float width, GraphicsContext::DocumentMarkerLineStyle) = 0;
+    virtual void drawLineForDocumentMarker(const FloatPoint&, float width, DocumentMarkerLineStyle) = 0;
     virtual void drawEllipse(const FloatRect&) = 0;
     virtual void drawPath(const Path&) = 0;
 
@@ -104,6 +104,7 @@ public:
     virtual void clipOut(const Path&) = 0;
     virtual void clipPath(const Path&, WindRule) = 0;
     virtual IntRect clipBounds() = 0;
+    virtual void clipToImageBuffer(ImageBuffer&, const FloatRect&) = 0;
 
     virtual void applyDeviceScaleFactor(float) = 0;
 

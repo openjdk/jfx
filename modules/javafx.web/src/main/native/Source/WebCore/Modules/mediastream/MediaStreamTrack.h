@@ -50,6 +50,7 @@ class MediaStreamTrack :
     public RefCounted<MediaStreamTrack>,
     public ActiveDOMObject,
     public EventTargetWithInlineData,
+    public CanMakeWeakPtr<MediaStreamTrack>,
     private MediaProducer,
     private MediaStreamTrackPrivate::Observer {
 public:
@@ -115,7 +116,7 @@ public:
         String deviceId;
         String groupId;
     };
-    TrackCapabilities getCapabilities() const;
+    TrackCapabilities getCapabilities(Document&) const;
 
     const MediaTrackConstraints& getConstraints() const { return m_constraints; }
     void applyConstraints(const std::optional<MediaTrackConstraints>&, DOMPromiseDeferred<void>&&);
@@ -137,6 +138,8 @@ public:
 
     // ActiveDOMObject API.
     bool hasPendingActivity() const final;
+
+    void setIdForTesting(String&& id) { m_private->setIdForTesting(WTFMove(id)); }
 
 protected:
     MediaStreamTrack(ScriptExecutionContext&, Ref<MediaStreamTrackPrivate>&&);
@@ -167,14 +170,11 @@ private:
     void trackSettingsChanged(MediaStreamTrackPrivate&) final;
     void trackEnabledChanged(MediaStreamTrackPrivate&) final;
 
-    WeakPtr<MediaStreamTrack> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(*this); }
-
     Vector<Observer*> m_observers;
     Ref<MediaStreamTrackPrivate> m_private;
 
     MediaTrackConstraints m_constraints;
     std::optional<DOMPromiseDeferred<void>> m_promise;
-    WeakPtrFactory<MediaStreamTrack> m_weakPtrFactory;
     GenericTaskQueue<ScriptExecutionContext> m_taskQueue;
 
     bool m_ended { false };

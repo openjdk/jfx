@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -49,9 +49,12 @@
 #include "ShadowRoot.h"
 #include "Text.h"
 #include "TextControlInnerElements.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTextFormControlElement);
 
 using namespace HTMLNames;
 
@@ -301,7 +304,7 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
         auto* rendererTextControl = renderer();
 
         if (innerText && rendererTextControl) {
-            if (rendererTextControl->style().visibility() == HIDDEN || !innerText->renderBox() || !innerText->renderBox()->height()) {
+            if (rendererTextControl->style().visibility() == Visibility::Hidden || !innerText->renderBox() || !innerText->renderBox()->height()) {
                 cacheSelection(start, end, direction);
                 return;
             }
@@ -487,7 +490,7 @@ void HTMLTextFormControlElement::selectionChanged(bool shouldFireSelectEvent)
     cacheSelection(computeSelectionStart(), computeSelectionEnd(), computeSelectionDirection());
 
     if (shouldFireSelectEvent && m_cachedSelectionStart != m_cachedSelectionEnd)
-        dispatchEvent(Event::create(eventNames().selectEvent, true, false));
+        dispatchEvent(Event::create(eventNames().selectEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
 
 void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -505,9 +508,9 @@ void HTMLTextFormControlElement::disabledStateChanged()
     updateInnerTextElementEditability();
 }
 
-void HTMLTextFormControlElement::readOnlyAttributeChanged()
+void HTMLTextFormControlElement::readOnlyStateChanged()
 {
-    HTMLFormControlElementWithState::disabledAttributeChanged();
+    HTMLFormControlElementWithState::readOnlyStateChanged();
     updateInnerTextElementEditability();
 }
 
@@ -772,7 +775,7 @@ String HTMLTextFormControlElement::directionForFormData() const
         if (equalLettersIgnoringASCIICase(dirAttributeValue, "auto")) {
             bool isAuto;
             TextDirection textDirection = static_cast<const HTMLElement*>(element)->directionalityIfhasDirAutoAttribute(isAuto);
-            return textDirection == RTL ? "rtl" : "ltr";
+            return textDirection == TextDirection::RTL ? "rtl" : "ltr";
         }
     }
 
@@ -811,30 +814,30 @@ void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentS
     }
 
     if (isDisabledFormControl())
-        textBlockStyle.setColor(RenderTheme::singleton().disabledTextColor(textBlockStyle.visitedDependentColor(CSSPropertyColor), parentStyle.visitedDependentColor(CSSPropertyBackgroundColor)));
+        textBlockStyle.setColor(RenderTheme::singleton().disabledTextColor(textBlockStyle.visitedDependentColorWithColorFilter(CSSPropertyColor), parentStyle.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor)));
 #if PLATFORM(IOS)
-    if (textBlockStyle.textSecurity() != TSNONE && !textBlockStyle.isLeftToRightDirection()) {
+    if (textBlockStyle.textSecurity() != TextSecurity::None && !textBlockStyle.isLeftToRightDirection()) {
         // Preserve the alignment but force the direction to LTR so that the last-typed, unmasked character
         // (which cannot have RTL directionality) will appear to the right of the masked characters. See <rdar://problem/7024375>.
 
         switch (textBlockStyle.textAlign()) {
-        case TASTART:
-        case JUSTIFY:
-            textBlockStyle.setTextAlign(RIGHT);
+        case TextAlignMode::Start:
+        case TextAlignMode::Justify:
+            textBlockStyle.setTextAlign(TextAlignMode::Right);
             break;
-        case TAEND:
-            textBlockStyle.setTextAlign(LEFT);
+        case TextAlignMode::End:
+            textBlockStyle.setTextAlign(TextAlignMode::Left);
             break;
-        case LEFT:
-        case RIGHT:
-        case CENTER:
-        case WEBKIT_LEFT:
-        case WEBKIT_RIGHT:
-        case WEBKIT_CENTER:
+        case TextAlignMode::Left:
+        case TextAlignMode::Right:
+        case TextAlignMode::Center:
+        case TextAlignMode::WebKitLeft:
+        case TextAlignMode::WebKitRight:
+        case TextAlignMode::WebKitCenter:
             break;
         }
 
-        textBlockStyle.setDirection(LTR);
+        textBlockStyle.setDirection(TextDirection::LTR);
     }
 #endif
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2018 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,16 +23,17 @@
 
 #include <limits>
 #include <utility>
+#include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/KeyValuePair.h>
 #include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 
+#ifdef __OBJC__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 namespace WTF {
-
-class String;
-
-template<typename T> struct HashTraits;
 
 template<bool isInteger, typename T> struct GenericHashTraitsBase;
 
@@ -67,6 +68,12 @@ template<typename T> struct GenericHashTraits : GenericHashTraitsBase<std::is_in
     static void assignToEmpty(U& emptyValue, V&& value)
     {
         emptyValue = std::forward<V>(value);
+    }
+
+    template <typename Traits>
+    static void constructEmptyValue(T& slot)
+    {
+        new (NotNull, std::addressof(slot)) T(Traits::emptyValue());
     }
 
     // Type for return value of functions that do not transfer ownership, such as get.
@@ -117,6 +124,16 @@ template<typename P> struct HashTraits<P*> : GenericHashTraits<P*> {
     static void constructDeletedValue(P*& slot) { slot = reinterpret_cast<P*>(-1); }
     static bool isDeletedValue(P* value) { return value == reinterpret_cast<P*>(-1); }
 };
+
+#ifdef __OBJC__
+
+template<> struct HashTraits<__unsafe_unretained id> : GenericHashTraits<__unsafe_unretained id> {
+    static const bool emptyValueIsZero = true;
+    static void constructDeletedValue(__unsafe_unretained id& slot) { slot = (__bridge __unsafe_unretained id)reinterpret_cast<CFTypeRef>(-1); }
+    static bool isDeletedValue(__unsafe_unretained id value) { return (__bridge CFTypeRef)value == reinterpret_cast<CFTypeRef>(-1); }
+};
+
+#endif
 
 template<typename T> struct SimpleClassHashTraits : GenericHashTraits<T> {
     static const bool emptyValueIsZero = true;
@@ -179,6 +196,12 @@ template<typename P> struct HashTraits<RefPtr<P>> : SimpleClassHashTraits<RefPtr
 template<typename P> struct HashTraits<Ref<P>> : SimpleClassHashTraits<Ref<P>> {
     static const bool emptyValueIsZero = true;
     static Ref<P> emptyValue() { return HashTableEmptyValue; }
+
+    template <typename>
+    static void constructEmptyValue(Ref<P>& slot)
+    {
+        new (NotNull, std::addressof(slot)) Ref<P>(HashTableEmptyValue);
+    }
 
     static const bool hasIsEmptyValueFunction = true;
     static bool isEmptyValue(const Ref<P>& value) { return value.isHashTableEmptyValue(); }
@@ -290,6 +313,13 @@ struct KeyValuePairHashTraits : GenericHashTraits<KeyValuePair<typename KeyTrait
 
     static const bool emptyValueIsZero = KeyTraits::emptyValueIsZero && ValueTraits::emptyValueIsZero;
     static EmptyValueType emptyValue() { return KeyValuePair<typename KeyTraits::EmptyValueType, typename ValueTraits::EmptyValueType>(KeyTraits::emptyValue(), ValueTraits::emptyValue()); }
+
+    template <typename>
+    static void constructEmptyValue(TraitType& slot)
+    {
+        KeyTraits::template constructEmptyValue<KeyTraits>(slot.key);
+        ValueTraits::template constructEmptyValue<ValueTraits>(slot.value);
+    }
 
     static const unsigned minimumTableSize = KeyTraits::minimumTableSize;
 

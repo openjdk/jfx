@@ -35,6 +35,11 @@ SVGPreserveAspectRatioValue::SVGPreserveAspectRatioValue()
 {
 }
 
+SVGPreserveAspectRatioValue::SVGPreserveAspectRatioValue(const String& value)
+{
+    parse(value);
+}
+
 ExceptionOr<void> SVGPreserveAspectRatioValue::setAlign(unsigned short align)
 {
     if (align == SVG_PRESERVEASPECTRATIO_UNKNOWN || align > SVG_PRESERVEASPECTRATIO_XMAXYMAX)
@@ -175,7 +180,7 @@ bool SVGPreserveAspectRatioValue::parseInternal(const UChar*& currParam, const U
     return true;
 }
 
-void SVGPreserveAspectRatioValue::transformRect(FloatRect& destRect, FloatRect& srcRect)
+void SVGPreserveAspectRatioValue::transformRect(FloatRect& destRect, FloatRect& srcRect) const
 {
     if (m_align == SVG_PRESERVEASPECTRATIO_NONE)
         return;

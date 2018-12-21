@@ -33,7 +33,7 @@
 #include "IDBConnectionProxy.h"
 #include "ImageBitmapOptions.h"
 #include "InspectorInstrumentation.h"
-#include "MIMETypeRegistry.h"
+#include "Microtasks.h"
 #include "Performance.h"
 #include "ScheduledAction.h"
 #include "ScriptSourceCode.h"
@@ -54,13 +54,14 @@
 namespace WebCore {
 using namespace Inspector;
 
-WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& identifier, const String& userAgent, bool isOnline, WorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
+WorkerGlobalScope::WorkerGlobalScope(const URL& url, Ref<SecurityOrigin>&& origin, const String& identifier, const String& userAgent, bool isOnline, WorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
     : m_url(url)
     , m_identifier(identifier)
     , m_userAgent(userAgent)
     , m_thread(thread)
     , m_script(std::make_unique<WorkerScriptController>(this))
     , m_inspectorController(std::make_unique<WorkerInspectorController>(*this))
+    , m_microtaskQueue(std::make_unique<MicrotaskQueue>())
     , m_isOnline(isOnline)
     , m_shouldBypassMainWorldContentSecurityPolicy(shouldBypassMainWorldContentSecurityPolicy)
     , m_eventQueue(*this)
@@ -76,19 +77,20 @@ WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& identifier, c
     UNUSED_PARAM(connectionProxy);
 #endif
 
-    auto origin = SecurityOrigin::create(url);
     if (m_topOrigin->hasUniversalAccess())
         origin->grantUniversalAccess();
     if (m_topOrigin->needsStorageAccessFromFileURLsQuirk())
         origin->grantStorageAccessFromFileURLsQuirk();
 
     setSecurityOriginPolicy(SecurityOriginPolicy::create(WTFMove(origin)));
-    setContentSecurityPolicy(std::make_unique<ContentSecurityPolicy>(*this));
+    setContentSecurityPolicy(std::make_unique<ContentSecurityPolicy>(URL { m_url }, *this));
 }
 
 WorkerGlobalScope::~WorkerGlobalScope()
 {
     ASSERT(thread().thread() == &Thread::current());
+    // We need to remove from the contexts map very early in the destructor so that calling postTask() on this WorkerGlobalScope from another thread is safe.
+    removeFromContextsMap();
 
     m_performance = nullptr;
     m_crypto = nullptr;
@@ -101,6 +103,25 @@ String WorkerGlobalScope::origin() const
 {
     auto* securityOrigin = this->securityOrigin();
     return securityOrigin ? securityOrigin->toString() : emptyString();
+}
+
+void WorkerGlobalScope::prepareForTermination()
+{
+#if ENABLE(INDEXED_DATABASE)
+    stopIndexedDatabase();
+#endif
+
+    stopActiveDOMObjects();
+
+    m_inspectorController->workerTerminating();
+
+    // Event listeners would keep DOMWrapperWorld objects alive for too long. Also, they have references to JS objects,
+    // which become dangling once Heap is destroyed.
+    removeAllEventListeners();
+
+    // MicrotaskQueue and RejectedPromiseTracker reference Heap.
+    m_microtaskQueue = nullptr;
+    removeRejectedPromiseTracker();
 }
 
 void WorkerGlobalScope::removeAllEventListeners()
@@ -117,7 +138,7 @@ bool WorkerGlobalScope::isSecureContext() const
 
 void WorkerGlobalScope::applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders)
 {
-    contentSecurityPolicy()->didReceiveHeaders(contentSecurityPolicyResponseHeaders);
+    contentSecurityPolicy()->didReceiveHeaders(contentSecurityPolicyResponseHeaders, String { });
 }
 
 URL WorkerGlobalScope::completeURL(const String& url) const
@@ -284,16 +305,9 @@ ExceptionOr<void> WorkerGlobalScope::importScripts(const Vector<String>& urls)
             return Exception { NetworkError };
 
         auto scriptLoader = WorkerScriptLoader::create();
-        scriptLoader->loadSynchronously(this, url, FetchOptions::Mode::NoCors, cachePolicy, shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceScriptSrcDirective, resourceRequestIdentifier());
-
-        // If the fetching attempt failed, throw a NetworkError exception and abort all these steps.
-        if (scriptLoader->failed())
-            return Exception { NetworkError };
-
-#if ENABLE(SERVICE_WORKER)
-        if (isServiceWorkerGlobalScope && !MIMETypeRegistry::isSupportedJavaScriptMIMEType(scriptLoader->responseMIMEType()))
-            return Exception { NetworkError };
-#endif
+        auto cspEnforcement = shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceScriptSrcDirective;
+        if (auto exception = scriptLoader->loadSynchronously(this, url, FetchOptions::Mode::NoCors, cachePolicy, cspEnforcement, resourceRequestIdentifier()))
+            return WTFMove(*exception);
 
         InspectorInstrumentation::scriptImported(*this, scriptLoader->identifier(), scriptLoader->script());
 

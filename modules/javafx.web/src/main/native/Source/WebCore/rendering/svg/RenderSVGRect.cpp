@@ -93,7 +93,7 @@ void RenderSVGRect::updateShapeFromElement()
 
 #if USE(CG)
     // CoreGraphics can inflate the stroke by 1px when drawing a rectangle with antialiasing disabled at non-integer coordinates, we need to compensate.
-    if (style().svgStyle().shapeRendering() == SR_CRISPEDGES)
+    if (style().svgStyle().shapeRendering() == ShapeRendering::CrispEdges)
         m_strokeBoundingBox.inflate(1);
 #endif
 }
@@ -134,14 +134,14 @@ void RenderSVGRect::strokeShape(GraphicsContext& context) const
     context.strokeRect(m_fillBoundingBox, strokeWidth());
 }
 
-bool RenderSVGRect::shapeDependentStrokeContains(const FloatPoint& point)
+bool RenderSVGRect::shapeDependentStrokeContains(const FloatPoint& point, PointCoordinateSpace pointCoordinateSpace)
 {
     // The optimized contains code below does not support non-smooth strokes so we need
     // to fall back to RenderSVGShape::shapeDependentStrokeContains in these cases.
     if (m_usePathFallback || !hasSmoothStroke()) {
         if (!hasPath())
             RenderSVGShape::updateShapeFromElement();
-        return RenderSVGShape::shapeDependentStrokeContains(point);
+        return RenderSVGShape::shapeDependentStrokeContains(point, pointCoordinateSpace);
     }
 
     return m_outerStrokeRect.contains(point, FloatRect::InsideOrOnStroke) && !m_innerStrokeRect.contains(point, FloatRect::InsideButNotOnStroke);

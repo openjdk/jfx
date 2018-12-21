@@ -51,9 +51,11 @@ public:
     WebResourceLoadScheduler();
 
     void loadResource(WebCore::DocumentLoader&, WebCore::CachedResource&, WebCore::ResourceRequest&&, const WebCore::ResourceLoaderOptions&, CompletionHandler<void(RefPtr<WebCore::SubresourceLoader>&&)>&&) final;
-    void loadResourceSynchronously(WebCore::NetworkingContext*, unsigned long, const WebCore::ResourceRequest&, WebCore::StoredCredentialsPolicy, WebCore::ClientCredentialPolicy, WebCore::ResourceError&, WebCore::ResourceResponse&, Vector<char>&) final;
+    void loadResourceSynchronously(WebCore::FrameLoader&, unsigned long, const WebCore::ResourceRequest&, WebCore::ClientCredentialPolicy, const WebCore::FetchOptions&, const WebCore::HTTPHeaderMap&, WebCore::ResourceError&, WebCore::ResourceResponse&, Vector<char>&) final;
+    void pageLoadCompleted(uint64_t webPageID) final;
+
     void remove(WebCore::ResourceLoader*) final;
-    void setDefersLoading(WebCore::ResourceLoader*, bool) final;
+    void setDefersLoading(WebCore::ResourceLoader&, bool) final;
     void crossOriginRedirectReceived(WebCore::ResourceLoader*, const WebCore::URL& redirectURL) final;
 
     void servePendingRequests(WebCore::ResourceLoadPriority minimumPriority = WebCore::ResourceLoadPriority::VeryLow) final;
@@ -62,7 +64,7 @@ public:
 
     void startPingLoad(WebCore::Frame&, WebCore::ResourceRequest&, const WebCore::HTTPHeaderMap&, const WebCore::FetchOptions&, PingLoadCompletionHandler&&) final;
 
-    void preconnectTo(WebCore::NetworkingContext&, const WebCore::URL&, WebCore::StoredCredentialsPolicy, PreconnectCompletionHandler&&) final;
+    void preconnectTo(WebCore::FrameLoader&, const WebCore::URL&, WebCore::StoredCredentialsPolicy, PreconnectCompletionHandler&&) final;
 
     void storeDerivedDataToCache(const SHA1::Digest&, const String&, const String&, WebCore::SharedBuffer&) final { }
 
@@ -72,6 +74,9 @@ public:
     void setSerialLoadingEnabled(bool b) { m_isSerialLoadingEnabled = b; }
 
     void schedulePluginStreamLoad(WebCore::DocumentLoader&, WebCore::NetscapePlugInStreamLoaderClient&, WebCore::ResourceRequest&&, CompletionHandler<void(RefPtr<WebCore::NetscapePlugInStreamLoader>&&)>&&);
+
+    bool isOnLine() const final;
+    void addOnlineStateChangeListener(WTF::Function<void(bool)>&&) final;
 
 protected:
     virtual ~WebResourceLoadScheduler();

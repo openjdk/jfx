@@ -146,7 +146,7 @@ public:
 
     static InspectorInstrumentationCookie willCallFunction(ScriptExecutionContext*, const String& scriptName, int scriptLine);
     static void didCallFunction(const InspectorInstrumentationCookie&, ScriptExecutionContext*);
-    static void didAddEventListener(EventTarget&, const AtomicString& eventType);
+    static void didAddEventListener(EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     static void willRemoveEventListener(EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     static bool isEventListenerDisabled(EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     static InspectorInstrumentationCookie willDispatchEvent(Document&, const Event&, bool hasEventListeners);
@@ -262,6 +262,7 @@ public:
     static void didCreateProgram(WebGLRenderingContextBase&, WebGLProgram&);
     static void willDeleteProgram(WebGLRenderingContextBase&, WebGLProgram&);
     static bool isShaderProgramDisabled(WebGLRenderingContextBase&, WebGLProgram&);
+    static bool isShaderProgramHighlighted(WebGLRenderingContextBase&, WebGLProgram&);
 #endif
 
     static void networkStateChanged(Page&);
@@ -329,7 +330,7 @@ private:
 
     static InspectorInstrumentationCookie willCallFunctionImpl(InstrumentingAgents&, const String& scriptName, int scriptLine, ScriptExecutionContext*);
     static void didCallFunctionImpl(const InspectorInstrumentationCookie&, ScriptExecutionContext*);
-    static void didAddEventListenerImpl(InstrumentingAgents&, EventTarget&, const AtomicString& eventType);
+    static void didAddEventListenerImpl(InstrumentingAgents&, EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     static void willRemoveEventListenerImpl(InstrumentingAgents&, EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     static bool isEventListenerDisabledImpl(InstrumentingAgents&, EventTarget&, const AtomicString& eventType, EventListener&, bool capture);
     static InspectorInstrumentationCookie willDispatchEventImpl(InstrumentingAgents&, Document&, const Event&, bool hasEventListeners);
@@ -432,6 +433,7 @@ private:
     static void didCreateProgramImpl(InstrumentingAgents&, WebGLRenderingContextBase&, WebGLProgram&);
     static void willDeleteProgramImpl(InstrumentingAgents&, WebGLProgram&);
     static bool isShaderProgramDisabledImpl(InstrumentingAgents&, WebGLProgram&);
+    static bool isShaderProgramHighlightedImpl(InstrumentingAgents&, WebGLProgram&);
 #endif
 
     static void layerTreeDidChangeImpl(InstrumentingAgents&);
@@ -451,7 +453,7 @@ private:
 
     static InspectorTimelineAgent* retrieveTimelineAgent(const InspectorInstrumentationCookie&);
 
-    static void pauseOnNativeEventIfNeeded(InstrumentingAgents&, bool isDOMEvent, const String& eventName, bool synchronous);
+    static void pauseOnNativeEventIfNeeded(InstrumentingAgents&, const String& eventName, bool synchronous);
 
     WEBCORE_EXPORT static int s_frontendCounter;
 };
@@ -681,11 +683,11 @@ inline void InspectorInstrumentation::didRemoveTimer(ScriptExecutionContext& con
         didRemoveTimerImpl(*instrumentingAgents, timerId, context);
 }
 
-inline void InspectorInstrumentation::didAddEventListener(EventTarget& target, const AtomicString& eventType)
+inline void InspectorInstrumentation::didAddEventListener(EventTarget& target, const AtomicString& eventType, EventListener& listener, bool capture)
 {
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForContext(target.scriptExecutionContext()))
-        didAddEventListenerImpl(*instrumentingAgents, target, eventType);
+        didAddEventListenerImpl(*instrumentingAgents, target, eventType, listener, capture);
 }
 
 inline void InspectorInstrumentation::willRemoveEventListener(EventTarget& target, const AtomicString& eventType, EventListener& listener, bool capture)
@@ -1260,6 +1262,14 @@ inline bool InspectorInstrumentation::isShaderProgramDisabled(WebGLRenderingCont
         return isShaderProgramDisabledImpl(*instrumentingAgents, program);
     return false;
 }
+
+inline bool InspectorInstrumentation::isShaderProgramHighlighted(WebGLRenderingContextBase& contextWebGLBase, WebGLProgram& program)
+{
+    FAST_RETURN_IF_NO_FRONTENDS(false);
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForContext(contextWebGLBase.canvasBase().scriptExecutionContext()))
+        return isShaderProgramHighlightedImpl(*instrumentingAgents, program);
+    return false;
+}
 #endif
 
 inline void InspectorInstrumentation::networkStateChanged(Page& page)
@@ -1448,6 +1458,7 @@ inline InstrumentingAgents& InspectorInstrumentation::instrumentingAgentsForWork
 
 inline void InspectorInstrumentation::frontendCreated()
 {
+    ASSERT(isMainThread());
     s_frontendCounter++;
 
     if (s_frontendCounter == 1)
@@ -1456,6 +1467,7 @@ inline void InspectorInstrumentation::frontendCreated()
 
 inline void InspectorInstrumentation::frontendDeleted()
 {
+    ASSERT(isMainThread());
     s_frontendCounter--;
 
     if (!s_frontendCounter)

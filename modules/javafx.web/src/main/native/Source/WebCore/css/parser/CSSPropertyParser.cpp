@@ -1340,25 +1340,6 @@ static RefPtr<CSSPrimitiveValue> consumeLineClamp(CSSParserTokenRange& range)
     return consumePositiveInteger(range);
 }
 
-static RefPtr<CSSValue> consumeLinesClamp(CSSParserTokenRange& range)
-{
-    if (range.peek().id() == CSSValueNone)
-        return consumeIdent(range);
-
-    RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    RefPtr<CSSPrimitiveValue> startClampValue = consumeLineClamp(range);
-    RefPtr<CSSPrimitiveValue> endClampValue = consumeLineClamp(range);
-    RefPtr<CSSPrimitiveValue> centerClampValue = consumeCustomIdent(range);
-    if (!startClampValue)
-        return nullptr;
-    list->append(startClampValue.releaseNonNull());
-    if (endClampValue)
-        list->append(endClampValue.releaseNonNull());
-    if (centerClampValue)
-        list->append(centerClampValue.releaseNonNull());
-    return list;
-}
-
 static RefPtr<CSSValue> consumeAutoOrString(CSSParserTokenRange& range)
 {
     if (range.peek().id() == CSSValueAuto)
@@ -2453,7 +2434,7 @@ static RefPtr<CSSBasicShapePolygon> consumeBasicShapePolygon(CSSParserTokenRange
 {
     RefPtr<CSSBasicShapePolygon> shape = CSSBasicShapePolygon::create();
     if (identMatches<CSSValueEvenodd, CSSValueNonzero>(args.peek().id())) {
-        shape->setWindRule(args.consumeIncludingWhitespace().id() == CSSValueEvenodd ? RULE_EVENODD : RULE_NONZERO);
+        shape->setWindRule(args.consumeIncludingWhitespace().id() == CSSValueEvenodd ? WindRule::EvenOdd : WindRule::NonZero);
         if (!consumeCommaIncludingWhitespace(args))
             return nullptr;
     }
@@ -2472,9 +2453,9 @@ static RefPtr<CSSBasicShapePolygon> consumeBasicShapePolygon(CSSParserTokenRange
 
 static RefPtr<CSSBasicShapePath> consumeBasicShapePath(CSSParserTokenRange& args)
 {
-    WindRule windRule = RULE_NONZERO;
+    WindRule windRule = WindRule::NonZero;
     if (identMatches<CSSValueEvenodd, CSSValueNonzero>(args.peek().id())) {
-        windRule = args.consumeIncludingWhitespace().id() == CSSValueEvenodd ? RULE_EVENODD : RULE_NONZERO;
+        windRule = args.consumeIncludingWhitespace().id() == CSSValueEvenodd ? WindRule::EvenOdd : WindRule::NonZero;
         if (!consumeCommaIncludingWhitespace(args))
             return nullptr;
     }
@@ -2619,7 +2600,7 @@ static RefPtr<CSSValue> consumeBasicShapeOrBox(CSSParserTokenRange& range, const
             componentValue = consumeBasicShape(range, context);
             shapeFound = true;
         } else if (range.peek().type() == IdentToken && !boxFound) {
-            componentValue = consumeIdent<CSSValueContentBox, CSSValuePaddingBox, CSSValueBorderBox, CSSValueMarginBox, CSSValueFill, CSSValueStroke, CSSValueViewBox>(range);
+            componentValue = consumeIdent<CSSValueContentBox, CSSValuePaddingBox, CSSValueBorderBox, CSSValueMarginBox, CSSValueFillBox, CSSValueStrokeBox, CSSValueViewBox>(range);
             boxFound = true;
         }
         if (!componentValue)
@@ -3615,7 +3596,6 @@ static RefPtr<CSSValue> consumeSpeakAs(CSSParserTokenRange& range)
         return consumeIdent(range);
 
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    std::bitset<numCSSValueKeywords> seenValues;
 
     bool seenNormal = false;
     bool seenSpellOut = false;
@@ -3661,7 +3641,6 @@ static RefPtr<CSSValue> consumeHangingPunctuation(CSSParserTokenRange& range)
         return consumeIdent(range);
 
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    std::bitset<numCSSValueKeywords> seenValues;
 
     bool seenForceEnd = false;
     bool seenAllowEnd = false;
@@ -3964,18 +3943,18 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
     case CSSPropertyMaxWidth:
     case CSSPropertyMaxHeight:
         return consumeMaxWidthOrHeight(m_range, m_context, UnitlessQuirk::Allow);
-    case CSSPropertyWebkitMaxLogicalWidth:
-    case CSSPropertyWebkitMaxLogicalHeight:
+    case CSSPropertyMaxInlineSize:
+    case CSSPropertyMaxBlockSize:
         return consumeMaxWidthOrHeight(m_range, m_context);
     case CSSPropertyMinWidth:
     case CSSPropertyMinHeight:
     case CSSPropertyWidth:
     case CSSPropertyHeight:
         return consumeWidthOrHeight(m_range, m_context, UnitlessQuirk::Allow);
-    case CSSPropertyWebkitMinLogicalWidth:
-    case CSSPropertyWebkitMinLogicalHeight:
-    case CSSPropertyWebkitLogicalWidth:
-    case CSSPropertyWebkitLogicalHeight:
+    case CSSPropertyMinInlineSize:
+    case CSSPropertyMinBlockSize:
+    case CSSPropertyInlineSize:
+    case CSSPropertyBlockSize:
         return consumeWidthOrHeight(m_range, m_context);
     case CSSPropertyMarginTop:
     case CSSPropertyMarginRight:
@@ -3986,20 +3965,20 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
     case CSSPropertyRight:
     case CSSPropertyTop:
         return consumeMarginOrOffset(m_range, m_context.mode, UnitlessQuirk::Allow);
-    case CSSPropertyWebkitMarginStart:
-    case CSSPropertyWebkitMarginEnd:
-    case CSSPropertyWebkitMarginBefore:
-    case CSSPropertyWebkitMarginAfter:
+    case CSSPropertyMarginInlineStart:
+    case CSSPropertyMarginInlineEnd:
+    case CSSPropertyMarginBlockStart:
+    case CSSPropertyMarginBlockEnd:
         return consumeMarginOrOffset(m_range, m_context.mode, UnitlessQuirk::Forbid);
     case CSSPropertyPaddingTop:
     case CSSPropertyPaddingRight:
     case CSSPropertyPaddingBottom:
     case CSSPropertyPaddingLeft:
         return consumeLengthOrPercent(m_range, m_context.mode, ValueRangeNonNegative, UnitlessQuirk::Allow);
-    case CSSPropertyWebkitPaddingStart:
-    case CSSPropertyWebkitPaddingEnd:
-    case CSSPropertyWebkitPaddingBefore:
-    case CSSPropertyWebkitPaddingAfter:
+    case CSSPropertyPaddingInlineStart:
+    case CSSPropertyPaddingInlineEnd:
+    case CSSPropertyPaddingBlockStart:
+    case CSSPropertyPaddingBlockEnd:
         return consumeLengthOrPercent(m_range, m_context.mode, ValueRangeNonNegative, UnitlessQuirk::Forbid);
 #if ENABLE(CSS_SCROLL_SNAP)
     case CSSPropertyScrollSnapMarginBottom:
@@ -4027,8 +4006,6 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
         return consumePosition(m_range, m_context.mode, UnitlessQuirk::Forbid);
     case CSSPropertyWebkitLineClamp:
         return consumeLineClamp(m_range);
-    case CSSPropertyWebkitLinesClamp:
-        return m_context.allowNewLinesClamp ? consumeLinesClamp(m_range) : nullptr;
     case CSSPropertyWebkitFontSizeDelta:
         return consumeLength(m_range, m_context.mode, ValueRangeAll, UnitlessQuirk::Allow);
     case CSSPropertyWebkitHyphenateCharacter:
@@ -4086,10 +4063,10 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
     case CSSPropertyWebkitTapHighlightColor:
 #endif
     case CSSPropertyWebkitTextEmphasisColor:
-    case CSSPropertyWebkitBorderStartColor:
-    case CSSPropertyWebkitBorderEndColor:
-    case CSSPropertyWebkitBorderBeforeColor:
-    case CSSPropertyWebkitBorderAfterColor:
+    case CSSPropertyBorderInlineStartColor:
+    case CSSPropertyBorderInlineEndColor:
+    case CSSPropertyBorderBlockStartColor:
+    case CSSPropertyBorderBlockEndColor:
     case CSSPropertyWebkitTextStrokeColor:
     case CSSPropertyStrokeColor:
     case CSSPropertyStopColor:
@@ -4102,10 +4079,10 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
     case CSSPropertyColor:
     case CSSPropertyBackgroundColor:
         return consumeColor(m_range, m_context.mode, inQuirksMode());
-    case CSSPropertyWebkitBorderStartWidth:
-    case CSSPropertyWebkitBorderEndWidth:
-    case CSSPropertyWebkitBorderBeforeWidth:
-    case CSSPropertyWebkitBorderAfterWidth:
+    case CSSPropertyBorderInlineStartWidth:
+    case CSSPropertyBorderInlineEndWidth:
+    case CSSPropertyBorderBlockStartWidth:
+    case CSSPropertyBorderBlockEndWidth:
         return consumeBorderWidth(m_range, m_context.mode, UnitlessQuirk::Forbid);
     case CSSPropertyBorderBottomColor:
     case CSSPropertyBorderLeftColor:
@@ -4135,7 +4112,11 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
 #if ENABLE(FILTERS_LEVEL_2)
     case CSSPropertyWebkitBackdropFilter:
 #endif
-        return consumeFilter(m_range, m_context);
+        return consumeFilter(m_range, m_context, AllowedFilterFunctions::PixelFilters);
+    case CSSPropertyAppleColorFilter:
+        if (!m_context.colorFilterEnabled)
+            return nullptr;
+        return consumeFilter(m_range, m_context, AllowedFilterFunctions::ColorFilters);
     case CSSPropertyTextDecoration:
     case CSSPropertyWebkitTextDecorationsInEffect:
     case CSSPropertyWebkitTextDecorationLine:
@@ -4290,43 +4271,27 @@ RefPtr<CSSValue> CSSPropertyParser::parseSingleValue(CSSPropertyID property, CSS
     case CSSPropertyWebkitMaskRepeatY:
         return nullptr;
     case CSSPropertyAlignItems:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeAlignItems(m_range);
     case CSSPropertyJustifySelf:
         return consumeSelfPositionOverflowPosition(m_range, isSelfPositionOrLeftOrRightKeyword);
     case CSSPropertyAlignSelf:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeSelfPositionOverflowPosition(m_range, isSelfPositionKeyword);
     case CSSPropertyJustifyItems:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeJustifyItems(m_range);
     case CSSPropertyGridColumnEnd:
     case CSSPropertyGridColumnStart:
     case CSSPropertyGridRowEnd:
     case CSSPropertyGridRowStart:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeGridLine(m_range);
     case CSSPropertyGridAutoColumns:
     case CSSPropertyGridAutoRows:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeGridTrackList(m_range, m_context.mode, GridAuto);
     case CSSPropertyGridTemplateColumns:
     case CSSPropertyGridTemplateRows:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeGridTemplatesRowsOrColumns(m_range, m_context.mode);
     case CSSPropertyGridTemplateAreas:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeGridTemplateAreas(m_range);
     case CSSPropertyGridAutoFlow:
-        if (!m_context.cssGridLayoutEnabled)
-            return nullptr;
         return consumeGridAutoFlow(m_range);
     case CSSPropertyWebkitLineGrid:
         return consumeLineGrid(m_range);
@@ -5532,23 +5497,6 @@ bool CSSPropertyParser::consumeGridShorthand(bool important)
     return true;
 }
 
-static RefPtr<CSSValue> consumeSimplifiedContentPosition(CSSParserTokenRange& range, IsPositionKeyword isPositionKeyword)
-{
-    ASSERT(isPositionKeyword);
-    CSSValueID id = range.peek().id();
-    if (identMatches<CSSValueNormal>(id) || isPositionKeyword(id))
-        return CSSContentDistributionValue::create(CSSValueInvalid, range.consumeIncludingWhitespace().id(), CSSValueInvalid);
-    if (isBaselineKeyword(id)) {
-        RefPtr<CSSValue> baseline = consumeBaselineKeyword(range);
-        if (!baseline)
-            return nullptr;
-        return CSSContentDistributionValue::create(CSSValueInvalid, getBaselineKeyword(baseline.releaseNonNull()), CSSValueInvalid);
-    }
-    if (isContentDistributionKeyword(id))
-        return CSSContentDistributionValue::create(range.consumeIncludingWhitespace().id(), CSSValueInvalid, CSSValueInvalid);
-    return nullptr;
-}
-
 bool CSSPropertyParser::consumePlaceContentShorthand(bool important)
 {
     ASSERT(shorthandForProperty(CSSPropertyPlaceContent).length() == 2);
@@ -5556,8 +5504,9 @@ bool CSSPropertyParser::consumePlaceContentShorthand(bool important)
     if (m_range.atEnd())
         return false;
 
+    CSSParserTokenRange rangeCopy = m_range;
     bool isBaseline = isBaselineKeyword(m_range.peek().id());
-    RefPtr<CSSValue> alignContentValue = consumeSimplifiedContentPosition(m_range, isContentPositionKeyword);
+    RefPtr<CSSValue> alignContentValue = consumeContentDistributionOverflowPosition(m_range, isContentPositionKeyword);
     if (!alignContentValue)
         return false;
 
@@ -5567,7 +5516,9 @@ bool CSSPropertyParser::consumePlaceContentShorthand(bool important)
     if (isBaselineKeyword(m_range.peek().id()))
         return false;
 
-    RefPtr<CSSValue> justifyContentValue = m_range.atEnd() ? alignContentValue : consumeSimplifiedContentPosition(m_range, isContentPositionOrLeftOrRightKeyword);
+    if (m_range.atEnd())
+        m_range = rangeCopy;
+    RefPtr<CSSValue> justifyContentValue = consumeContentDistributionOverflowPosition(m_range, isContentPositionOrLeftOrRightKeyword);
     if (!justifyContentValue)
         return false;
     if (!m_range.atEnd())
@@ -5578,35 +5529,18 @@ bool CSSPropertyParser::consumePlaceContentShorthand(bool important)
     return true;
 }
 
-static RefPtr<CSSValue> consumeSimplifiedDefaultPosition(CSSParserTokenRange& range, IsPositionKeyword isPositionKeyword)
-{
-    ASSERT(isPositionKeyword);
-    CSSValueID id = range.peek().id();
-    if (isNormalOrStretch(id) || isPositionKeyword(id))
-        return consumeIdent(range);
-
-    if (isBaselineKeyword(id))
-        return consumeBaselineKeyword(range);
-
-    return nullptr;
-}
-
-static RefPtr<CSSValue> consumeSimplifiedSelfPosition(CSSParserTokenRange& range, IsPositionKeyword isPositionKeyword)
-{
-    ASSERT(isPositionKeyword);
-    if (isAuto(range.peek().id()))
-        return consumeIdent(range);
-    return consumeSimplifiedDefaultPosition(range, isPositionKeyword);
-}
-
 bool CSSPropertyParser::consumePlaceItemsShorthand(bool important)
 {
     ASSERT(shorthandForProperty(CSSPropertyPlaceItems).length() == 2);
 
-    RefPtr<CSSValue> alignItemsValue = consumeSimplifiedDefaultPosition(m_range, isSelfPositionKeyword);
+    CSSParserTokenRange rangeCopy = m_range;
+    RefPtr<CSSValue> alignItemsValue = consumeAlignItems(m_range);
     if (!alignItemsValue)
         return false;
-    RefPtr<CSSValue> justifyItemsValue = m_range.atEnd() ? alignItemsValue : consumeSimplifiedDefaultPosition(m_range, isSelfPositionOrLeftOrRightKeyword);
+
+    if (m_range.atEnd())
+        m_range = rangeCopy;
+    RefPtr<CSSValue> justifyItemsValue = consumeJustifyItems(m_range);
     if (!justifyItemsValue)
         return false;
 
@@ -5622,10 +5556,14 @@ bool CSSPropertyParser::consumePlaceSelfShorthand(bool important)
 {
     ASSERT(shorthandForProperty(CSSPropertyPlaceSelf).length() == 2);
 
-    RefPtr<CSSValue> alignSelfValue = consumeSimplifiedSelfPosition(m_range, isSelfPositionKeyword);
+    CSSParserTokenRange rangeCopy = m_range;
+    RefPtr<CSSValue> alignSelfValue = consumeSelfPositionOverflowPosition(m_range, isSelfPositionKeyword);
     if (!alignSelfValue)
         return false;
-    RefPtr<CSSValue> justifySelfValue = m_range.atEnd() ? alignSelfValue : consumeSimplifiedSelfPosition(m_range, isSelfPositionOrLeftOrRightKeyword);
+
+    if (m_range.atEnd())
+        m_range = rangeCopy;
+    RefPtr<CSSValue> justifySelfValue = consumeSelfPositionOverflowPosition(m_range, isSelfPositionOrLeftOrRightKeyword);
     if (!justifySelfValue)
         return false;
 
@@ -5711,14 +5649,14 @@ bool CSSPropertyParser::parseShorthand(CSSPropertyID property, bool important)
         return consumeShorthandGreedily(webkitTextEmphasisShorthand(), important);
     case CSSPropertyOutline:
         return consumeShorthandGreedily(outlineShorthand(), important);
-    case CSSPropertyWebkitBorderStart:
-        return consumeShorthandGreedily(webkitBorderStartShorthand(), important);
-    case CSSPropertyWebkitBorderEnd:
-        return consumeShorthandGreedily(webkitBorderEndShorthand(), important);
-    case CSSPropertyWebkitBorderBefore:
-        return consumeShorthandGreedily(webkitBorderBeforeShorthand(), important);
-    case CSSPropertyWebkitBorderAfter:
-        return consumeShorthandGreedily(webkitBorderAfterShorthand(), important);
+    case CSSPropertyBorderInlineStart:
+        return consumeShorthandGreedily(borderInlineStartShorthand(), important);
+    case CSSPropertyBorderInlineEnd:
+        return consumeShorthandGreedily(borderInlineEndShorthand(), important);
+    case CSSPropertyBorderBlockStart:
+        return consumeShorthandGreedily(borderBlockStartShorthand(), important);
+    case CSSPropertyBorderBlockEnd:
+        return consumeShorthandGreedily(borderBlockEndShorthand(), important);
     case CSSPropertyWebkitTextStroke:
         return consumeShorthandGreedily(webkitTextStrokeShorthand(), important);
     case CSSPropertyMarker: {

@@ -54,9 +54,9 @@ class ContentExtensionsBackend {
 public:
     // - Rule management interface. This can be used by upper layer.
 
-    // Set a list of rules for a given name. If there were existing rules for the name, they are overriden.
+    // Set a list of rules for a given name. If there were existing rules for the name, they are overridden.
     // The identifier cannot be empty.
-    WEBCORE_EXPORT void addContentExtension(const String& identifier, Ref<CompiledContentExtension>);
+    WEBCORE_EXPORT void addContentExtension(const String& identifier, Ref<CompiledContentExtension>, ContentExtension::ShouldCompileCSS = ContentExtension::ShouldCompileCSS::Yes);
     WEBCORE_EXPORT void removeContentExtension(const String& identifier);
     WEBCORE_EXPORT void removeAllContentExtensions();
 

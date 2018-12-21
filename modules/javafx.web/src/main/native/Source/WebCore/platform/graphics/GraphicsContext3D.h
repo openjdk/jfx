@@ -36,6 +36,8 @@
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RetainPtr.h>
+#include <wtf/UniqueArray.h>
 #include <wtf/text/WTFString.h>
 
 #if USE(CA)
@@ -51,34 +53,38 @@
 #endif
 
 #if PLATFORM(COCOA)
-#if PLATFORM(IOS)
+
+#if USE(OPENGL_ES)
 #include <OpenGLES/ES2/gl.h>
 #ifdef __OBJC__
 #import <OpenGLES/EAGL.h>
-#endif // __OBJC__
-#endif // PLATFORM(IOS)
-#include <wtf/RetainPtr.h>
-OBJC_CLASS CALayer;
-OBJC_CLASS WebGLLayer;
-typedef struct __IOSurface* IOSurfaceRef;
-#else
-typedef unsigned int GLuint;
-#endif
-
-#if PLATFORM(IOS)
-#ifdef __OBJC__
 typedef EAGLContext* PlatformGraphicsContext3D;
 #else
 typedef void* PlatformGraphicsContext3D;
 #endif // __OBJC__
-#elif PLATFORM(MAC)
-typedef struct _CGLContextObject *CGLContextObj;
+#endif // USE(OPENGL_ES)
 
+#if !USE(OPENGL_ES)
+typedef struct _CGLContextObject *CGLContextObj;
 typedef CGLContextObj PlatformGraphicsContext3D;
-#else
+#endif
+
+OBJC_CLASS CALayer;
+OBJC_CLASS WebGLLayer;
+typedef struct __IOSurface* IOSurfaceRef;
+#endif // PLATFORM(COCOA)
+
+#if USE(NICOSIA)
+namespace Nicosia {
+class GC3DLayer;
+}
+#endif
+
+#if !PLATFORM(COCOA)
+typedef unsigned GLuint;
 typedef void* PlatformGraphicsContext3D;
 typedef void* PlatformGraphicsSurface3D;
-#endif
+#endif // !PLATFORM(COCOA)
 
 // These are currently the same among all implementations.
 const PlatformGraphicsContext3D NullPlatformGraphicsContext3D = 0;
@@ -86,7 +92,7 @@ const Platform3DObject NullPlatform3DObject = 0;
 
 namespace WebCore {
 class Extensions3D;
-#if USE(OPENGL_ES_2)
+#if !PLATFORM(COCOA) && USE(OPENGL_ES)
 class Extensions3DOpenGLES;
 #else
 class Extensions3DOpenGL;
@@ -1144,17 +1150,17 @@ public:
 
 #if PLATFORM(COCOA)
     bool texImageIOSurface2D(GC3Denum target, GC3Denum internalFormat, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, IOSurfaceRef, GC3Duint plane);
-#endif
 
-#if PLATFORM(IOS)
+#if USE(OPENGL_ES)
     void presentRenderbuffer();
 #endif
 
-#if PLATFORM(MAC)
+#if USE(OPENGL)
     void allocateIOSurfaceBackingStore(IntSize);
     void updateFramebufferTextureBackingStoreFromLayer();
     void updateCGLContext();
 #endif
+#endif // PLATFORM(COCOA)
 
     void setContextVisibility(bool);
 
@@ -1262,7 +1268,7 @@ public:
         RetainPtr<CGImageRef> m_cgImage;
         RetainPtr<CGImageRef> m_decodedImage;
         RetainPtr<CFDataRef> m_pixelData;
-        std::unique_ptr<uint8_t[]> m_formalizedRGBA8Data;
+        UniqueArray<uint8_t> m_formalizedRGBA8Data;
 #endif
         Image* m_image;
         ImageHtmlDomSource m_imageHtmlDomSource;
@@ -1281,6 +1287,11 @@ public:
     GC3Denum currentBoundTexture() const { return m_state.currentBoundTexture(); }
     GC3Denum currentBoundTarget() const { return m_state.currentBoundTarget(); }
     unsigned textureSeed(GC3Duint texture) { return m_state.textureSeedCount.count(texture); }
+
+#if PLATFORM(MAC)
+    using PlatformDisplayID = uint32_t;
+    void screenDidChange(PlatformDisplayID);
+#endif
 
 private:
     GraphicsContext3D(GraphicsContext3DAttributes, HostWindow*, RenderStyle = RenderOffscreen, GraphicsContext3D* sharedContext = nullptr);
@@ -1314,6 +1325,10 @@ private:
     bool reshapeFBOs(const IntSize&);
     void resolveMultisamplingIfNecessary(const IntRect& = IntRect());
     void attachDepthAndStencilBufferIfNeeded(GLuint internalDepthStencilFormat, int width, int height);
+
+#if PLATFORM(COCOA)
+    bool allowOfflineRenderers() const;
+#endif
 
     int m_currentWidth { 0 };
     int m_currentHeight { 0 };
@@ -1394,7 +1409,7 @@ private:
 
     std::unique_ptr<ShaderNameHash> nameHashMapForShaders;
 
-#if USE(OPENGL_ES_2)
+#if !PLATFORM(COCOA) && USE(OPENGL_ES)
     friend class Extensions3DOpenGLES;
     std::unique_ptr<Extensions3DOpenGLES> m_extensions;
 #else
@@ -1472,7 +1487,10 @@ private:
     // Errors raised by synthesizeGLError().
     ListHashSet<GC3Denum> m_syntheticErrors;
 
-#if USE(TEXTURE_MAPPER)
+#if USE(NICOSIA) && USE(TEXTURE_MAPPER)
+    friend class Nicosia::GC3DLayer;
+    std::unique_ptr<Nicosia::GC3DLayer> m_nicosiaLayer;
+#elif USE(TEXTURE_MAPPER)
     friend class TextureMapperGC3DPlatformLayer;
     std::unique_ptr<TextureMapperGC3DPlatformLayer> m_texmapLayer;
 #else
@@ -1492,7 +1510,6 @@ private:
 #if USE(CAIRO)
     Platform3DObject m_vao { 0 };
 #endif
-
 };
 
 } // namespace WebCore

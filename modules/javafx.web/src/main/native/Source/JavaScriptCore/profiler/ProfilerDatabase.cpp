@@ -31,14 +31,13 @@
 #include "JSONObject.h"
 #include "ObjectConstructor.h"
 #include "JSCInlines.h"
-#include <wtf/CurrentTime.h>
 #include <wtf/FilePrintStream.h>
 
 namespace JSC { namespace Profiler {
 
 static std::atomic<int> databaseCounter;
 
-static StaticLock registrationLock;
+static Lock registrationLock;
 static std::atomic<int> didRegisterAtExit;
 static Database* firstDatabase;
 

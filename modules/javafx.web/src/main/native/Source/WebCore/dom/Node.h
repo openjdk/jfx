@@ -33,6 +33,7 @@
 #include "TreeScope.h"
 #include "URLHash.h"
 #include <wtf/Forward.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/MainThread.h>
 
@@ -78,7 +79,7 @@ private:
 };
 
 class Node : public EventTarget {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(Node);
 
     friend class Document;
     friend class TreeScope;
@@ -201,10 +202,10 @@ public:
     bool isSVGElement() const { return getFlag(IsSVGFlag); }
     bool isMathMLElement() const { return getFlag(IsMathMLFlag); }
 
-    bool isPseudoElement() const { return pseudoId() != NOPSEUDO; }
-    bool isBeforePseudoElement() const { return pseudoId() == BEFORE; }
-    bool isAfterPseudoElement() const { return pseudoId() == AFTER; }
-    PseudoId pseudoId() const { return (isElementNode() && hasCustomStyleResolveCallbacks()) ? customPseudoId() : NOPSEUDO; }
+    bool isPseudoElement() const { return pseudoId() != PseudoId::None; }
+    bool isBeforePseudoElement() const { return pseudoId() == PseudoId::Before; }
+    bool isAfterPseudoElement() const { return pseudoId() == PseudoId::After; }
+    PseudoId pseudoId() const { return (isElementNode() && hasCustomStyleResolveCallbacks()) ? customPseudoId() : PseudoId::None; }
 
     virtual bool isMediaControlElement() const { return false; }
     virtual bool isMediaControls() const { return false; }
@@ -431,7 +432,7 @@ public:
     // Wrapper for nodes that don't have a renderer, but still cache the style (like HTMLOptionElement).
     const RenderStyle* renderStyle() const;
 
-    virtual const RenderStyle* computedStyle(PseudoId pseudoElementSpecifier = NOPSEUDO);
+    virtual const RenderStyle* computedStyle(PseudoId pseudoElementSpecifier = PseudoId::None);
 
     enum class InsertedIntoAncestorResult {
         Done,
@@ -439,12 +440,6 @@ public:
     };
 
     struct InsertionType {
-#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
-        InsertionType(bool connectedToDocument, bool treeScopeChanged)
-            : connectedToDocument(connectedToDocument)
-            , treeScopeChanged(treeScopeChanged)
-        { }
-#endif
         bool connectedToDocument { false };
         bool treeScopeChanged { false };
     };
@@ -454,12 +449,6 @@ public:
     virtual void didFinishInsertingNode() { }
 
     struct RemovalType {
-#if !COMPILER_SUPPORTS(NSDMI_FOR_AGGREGATES)
-        RemovalType(bool disconnectedFromDocument, bool treeScopeChanged)
-            : disconnectedFromDocument(disconnectedFromDocument)
-            , treeScopeChanged(treeScopeChanged)
-        { }
-#endif
         bool disconnectedFromDocument { false };
         bool treeScopeChanged { false };
     };
@@ -508,7 +497,7 @@ public:
 
     bool dispatchBeforeLoadEvent(const String& sourceURL);
 
-    void dispatchInputEvent();
+    WEBCORE_EXPORT void dispatchInputEvent();
 
     // Perform the default action for an event.
     virtual void defaultEventHandler(Event&);
@@ -569,7 +558,7 @@ protected:
         IsStyledElementFlag = 1 << 3,
         IsHTMLFlag = 1 << 4,
         IsSVGFlag = 1 << 5,
-        // One free bit left.
+        DescendantsAffectedByPreviousSiblingFlag = 1 << 6,
         ChildNeedsStyleRecalcFlag = 1 << 7,
         IsConnectedFlag = 1 << 8,
         IsLinkFlag = 1 << 9,
@@ -654,7 +643,7 @@ private:
     virtual PseudoId customPseudoId() const
     {
         ASSERT(hasCustomStyleResolveCallbacks());
-        return NOPSEUDO;
+        return PseudoId::None;
     }
 
     WEBCORE_EXPORT void removedLastRef();

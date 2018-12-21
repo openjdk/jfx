@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,6 +68,7 @@ class Range;
 class SelectionData;
 class SharedBuffer;
 
+enum class WebContentReadingPolicy { AnyType, OnlyRichTextTypes };
 enum ShouldSerializeSelectedTextForDataTransfer { DefaultSelectedTextType, IncludeImageAltTextForDataTransfer };
 
 // For writing to the pasteboard. Generally sorted with the richest formats on top.
@@ -213,7 +214,7 @@ public:
     virtual WEBCORE_EXPORT void clear(const String& type);
 
     virtual WEBCORE_EXPORT void read(PasteboardPlainText&);
-    virtual WEBCORE_EXPORT void read(PasteboardWebContentReader&);
+    virtual WEBCORE_EXPORT void read(PasteboardWebContentReader&, WebContentReadingPolicy = WebContentReadingPolicy::AnyType);
     virtual WEBCORE_EXPORT void read(PasteboardFileReader&);
 
     virtual WEBCORE_EXPORT void write(const PasteboardURL&);
@@ -223,7 +224,8 @@ public:
 
     virtual WEBCORE_EXPORT void writeCustomData(const PasteboardCustomData&);
 
-    virtual WEBCORE_EXPORT bool containsFiles();
+    enum class FileContentState { NoFileOrImageData, InMemoryImage, MayContainFilePaths };
+    virtual WEBCORE_EXPORT FileContentState fileContentState();
     virtual WEBCORE_EXPORT bool canSmartReplace();
 
     virtual WEBCORE_EXPORT void writeMarkup(const String& markup);
@@ -254,14 +256,17 @@ public:
 
 #if PLATFORM(IOS)
     explicit Pasteboard(long changeCount);
+    explicit Pasteboard(const String& pasteboardName);
 
     static NSArray *supportedWebContentPasteboardTypes();
     static String resourceMIMEType(NSString *mimeType);
 #endif
 
-#if PLATFORM(COCOA)
-    explicit Pasteboard(const String& pasteboardName);
+#if PLATFORM(MAC)
+    explicit Pasteboard(const String& pasteboardName, const Vector<String>& promisedFilePaths = { });
+#endif
 
+#if PLATFORM(COCOA)
     static bool shouldTreatCocoaTypeAsFile(const String&);
     WEBCORE_EXPORT static NSArray *supportedFileUploadPasteboardTypes();
     const String& name() const { return m_pasteboardName; }
@@ -281,7 +286,7 @@ public:
 private:
 #if PLATFORM(IOS)
     bool respectsUTIFidelities() const;
-    void readRespectingUTIFidelities(PasteboardWebContentReader&);
+    void readRespectingUTIFidelities(PasteboardWebContentReader&, WebContentReadingPolicy);
 
     enum class ReaderResult {
         ReadType,
@@ -325,6 +330,10 @@ private:
     std::optional<PasteboardCustomData> m_customDataCache;
 #endif
 
+#if PLATFORM(MAC)
+    Vector<String> m_promisedFilePaths;
+#endif
+
 #if PLATFORM(WIN)
     HWND m_owner;
     COMPtr<IDataObject> m_dataObject;
@@ -345,6 +354,7 @@ extern NSString *WebArchivePboardType;
 #if PLATFORM(MAC)
 extern const char* const WebArchivePboardType;
 extern const char* const WebURLNamePboardType;
+extern const char* const WebURLsWithTitlesPboardType;
 #endif
 
 #if !PLATFORM(GTK)

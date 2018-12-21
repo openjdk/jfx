@@ -29,7 +29,7 @@
 
 #include "DOMException.h"
 #include <WebCore/MediaList.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
@@ -90,7 +90,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_MediaListImpl_appendMediumImpl(JN
     , jstring newMedium)
 {
     WebCore::JSMainThreadNullState state;
-    raiseOnDOMError(env, IMPL->appendMedium(String(env, newMedium)));
+    IMPL->appendMedium(String(env, newMedium));
 }
 
 

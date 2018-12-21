@@ -22,6 +22,7 @@
 #include "config.h"
 #include "ImageLoader.h"
 
+#include "BitmapImage.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
@@ -283,13 +284,15 @@ void ImageLoader::notifyFinished(CachedResource& resource)
         return;
 
     if (m_image->resourceError().isAccessControl()) {
+        URL imageURL = m_image->url();
+
         clearImageWithoutConsideringPendingLoadEvent();
 
         m_hasPendingErrorEvent = true;
         errorEventSender().dispatchEventSoon(*this);
 
-        static NeverDestroyed<String> consoleMessage(MAKE_STATIC_STRING_IMPL("Cross-origin image load denied by Cross-Origin Resource Sharing policy."));
-        element().document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, consoleMessage);
+        auto message = makeString("Cannot load image ", imageURL.string(), " due to access control checks.");
+        element().document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, message);
 
         if (hasPendingDecodePromises())
             decodeError("Access control error.");
@@ -418,12 +421,13 @@ void ImageLoader::decode()
     }
 
     Image* image = m_image->image();
-    if (!image->isBitmapImage()) {
+    if (!is<BitmapImage>(image)) {
         decodeError("Invalid image type.");
         return;
     }
 
-    image->decode([promises = WTFMove(m_decodingPromises)]() mutable {
+    auto& bitmapImage = downcast<BitmapImage>(*image);
+    bitmapImage.decode([promises = WTFMove(m_decodingPromises)]() mutable {
         for (auto& promise : promises)
             promise->resolve();
     });
@@ -501,7 +505,7 @@ void ImageLoader::dispatchPendingErrorEvent()
         return;
     m_hasPendingErrorEvent = false;
     if (element().document().hasLivingRenderTree())
-        element().dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+        element().dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
 
     // Only consider updating the protection ref-count of the Element immediately before returning
     // from this function as doing so might result in the destruction of this ImageLoader.

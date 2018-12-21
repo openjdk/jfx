@@ -53,7 +53,7 @@ public:
     LayoutUnit hBorderSpacing() const { return m_hSpacing; }
     LayoutUnit vBorderSpacing() const { return m_vSpacing; }
 
-    bool collapseBorders() const { return style().borderCollapse(); }
+    bool collapseBorders() const { return style().borderCollapse() == BorderCollapse::Collapse; }
 
     LayoutUnit borderStart() const override { return m_borderStart; }
     LayoutUnit borderEnd() const override { return m_borderEnd; }
@@ -88,7 +88,7 @@ public:
         return style().isLeftToRightDirection() ? borderEnd() : borderStart();
     }
 
-    Color bgColor() const { return style().visitedDependentColor(CSSPropertyBackgroundColor); }
+    Color bgColor() const { return style().visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor); }
 
     LayoutUnit outerBorderBefore() const;
     LayoutUnit outerBorderAfter() const;
@@ -310,7 +310,7 @@ private:
     LayoutUnit convertStyleLogicalWidthToComputedWidth(const Length& styleLogicalWidth, LayoutUnit availableWidth);
     LayoutUnit convertStyleLogicalHeightToComputedHeight(const Length& styleLogicalHeight);
 
-    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhaseBlockBackground) final;
+    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer*, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) final;
     LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderFragmentContainer* fragment, OverlayScrollbarSizeRelevancy relevancy) override { return RenderBox::overflowClipRect(location, fragment, relevancy); }
 
     void addOverflowFromChildren() final;

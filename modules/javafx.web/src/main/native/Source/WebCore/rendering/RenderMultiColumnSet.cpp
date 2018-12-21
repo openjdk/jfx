@@ -332,7 +332,7 @@ bool RenderMultiColumnSet::requiresBalancing() const
         }
     }
     RenderBlockFlow* container = multiColumnBlockFlow();
-    if (container->style().columnFill() == ColumnFillBalance)
+    if (container->style().columnFill() == ColumnFill::Balance)
         return true;
     return !multiColumnFlow()->columnHeightAvailable();
 }
@@ -581,12 +581,12 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
 
     RenderMultiColumnFlow* fragmentedFlow = multiColumnFlow();
     const RenderStyle& blockStyle = parent()->style();
-    const Color& ruleColor = blockStyle.visitedDependentColor(CSSPropertyColumnRuleColor);
+    const Color& ruleColor = blockStyle.visitedDependentColorWithColorFilter(CSSPropertyColumnRuleColor);
     bool ruleTransparent = blockStyle.columnRuleIsTransparent();
-    EBorderStyle ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
+    BorderStyle ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
     LayoutUnit ruleThickness = blockStyle.columnRuleWidth();
     LayoutUnit colGap = columnGap();
-    bool renderRule = ruleStyle > BHIDDEN && !ruleTransparent;
+    bool renderRule = ruleStyle > BorderStyle::Hidden && !ruleTransparent;
     if (!renderRule)
         return;
 
@@ -770,9 +770,6 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
     LayoutUnit initialBlockOffset = initialBlockOffsetForPainting();
 
     for (unsigned i = startColumn; i <= endColumn; i++) {
-        if (skipLayerFragmentCollectionForColumn(i))
-            continue;
-
         // Get the portion of the flow thread that corresponds to this column.
         LayoutRect fragmentedFlowPortion = fragmentedFlowPortionRectAt(i);
 
@@ -801,7 +798,7 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
         LayoutUnit blockOffset = initialBlockOffset + logicalTop() - fragmentedFlow()->logicalTop() + (isHorizontalWritingMode() ? -fragmentedFlowPortion.y() : -fragmentedFlowPortion.x());
         if (!progressionIsInline) {
             if (!progressionReversed)
-                blockOffset = i * colGap + customBlockProgressionAdjustmentForColumn(i);
+                blockOffset = i * colGap;
             else
                 blockOffset -= i * (computedColumnHeight() + colGap);
         }
@@ -853,7 +850,7 @@ LayoutPoint RenderMultiColumnSet::columnTranslationForOffset(const LayoutUnit& o
     LayoutUnit blockOffset = initialBlockOffset - (isHorizontalWritingMode() ? fragmentedFlowPortion.y() : fragmentedFlowPortion.x());
     if (!progressionIsInline) {
         if (!progressionReversed)
-            blockOffset = startColumn * colGap + customBlockProgressionAdjustmentForColumn(startColumn);
+            blockOffset = startColumn * colGap;
         else
             blockOffset -= startColumn * (computedColumnHeight() + colGap);
     }

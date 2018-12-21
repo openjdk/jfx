@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2006, 2007, 2008, 2009, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -75,7 +75,7 @@ struct HashTableValue {
 
     Intrinsic intrinsic() const { ASSERT(m_attributes & PropertyAttribute::Function); return m_intrinsic; }
     BuiltinGenerator builtinGenerator() const { ASSERT(m_attributes & PropertyAttribute::Builtin); return reinterpret_cast<BuiltinGenerator>(m_values.value1); }
-    NativeFunction function() const { ASSERT(m_attributes & PropertyAttribute::Function); return reinterpret_cast<NativeFunction>(m_values.value1); }
+    NativeFunction function() const { ASSERT(m_attributes & PropertyAttribute::Function); return NativeFunction(m_values.value1); }
     unsigned char functionLength() const
     {
         ASSERT(m_attributes & PropertyAttribute::Function);
@@ -90,8 +90,8 @@ struct HashTableValue {
     const DOMJIT::GetterSetter* domJIT() const { ASSERT(m_attributes & PropertyAttribute::DOMJITAttribute); return reinterpret_cast<const DOMJIT::GetterSetter*>(m_values.value1); }
     const DOMJIT::Signature* signature() const { ASSERT(m_attributes & PropertyAttribute::DOMJITFunction); return reinterpret_cast<const DOMJIT::Signature*>(m_values.value2); }
 
-    NativeFunction accessorGetter() const { ASSERT(m_attributes & PropertyAttribute::Accessor); return reinterpret_cast<NativeFunction>(m_values.value1); }
-    NativeFunction accessorSetter() const { ASSERT(m_attributes & PropertyAttribute::Accessor); return reinterpret_cast<NativeFunction>(m_values.value2); }
+    NativeFunction accessorGetter() const { ASSERT(m_attributes & PropertyAttribute::Accessor); return NativeFunction(m_values.value1); }
+    NativeFunction accessorSetter() const { ASSERT(m_attributes & PropertyAttribute::Accessor); return NativeFunction(m_values.value2); }
     BuiltinGenerator builtinAccessorGetterGenerator() const;
     BuiltinGenerator builtinAccessorSetterGenerator() const;
 
@@ -222,7 +222,7 @@ inline BuiltinGenerator HashTableValue::builtinAccessorSetterGenerator() const
 
 inline bool getStaticPropertySlotFromTable(VM& vm, const ClassInfo* classInfo, const HashTable& table, JSObject* thisObject, PropertyName propertyName, PropertySlot& slot)
 {
-    if (thisObject->staticPropertiesReified())
+    if (thisObject->staticPropertiesReified(vm))
         return false;
 
     auto* entry = table.entry(propertyName);
@@ -257,8 +257,8 @@ inline bool replaceStaticPropertySlot(VM& vm, JSObject* thisObject, PropertyName
     if (!thisObject->putDirect(vm, propertyName, value))
         return false;
 
-    if (!thisObject->staticPropertiesReified())
-        thisObject->JSObject::setStructure(vm, Structure::attributeChangeTransition(vm, thisObject->structure(), propertyName, 0));
+    if (!thisObject->staticPropertiesReified(vm))
+        thisObject->JSObject::setStructure(vm, Structure::attributeChangeTransition(vm, thisObject->structure(vm), propertyName, 0));
 
     return true;
 }
@@ -279,11 +279,11 @@ inline bool putEntry(ExecState* exec, const ClassInfo*, const HashTableValue* en
                 thisObject->putDirect(vm, propertyName, value);
             return true;
         }
-        return typeError(exec, scope, slot.isStrictMode(), ASCIILiteral(ReadonlyPropertyWriteError));
+        return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
     }
 
     if (entry->attributes() & PropertyAttribute::Accessor)
-        return typeError(exec, scope, slot.isStrictMode(), ASCIILiteral(ReadonlyPropertyWriteError));
+        return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 
     if (!(entry->attributes() & PropertyAttribute::ReadOnly)) {
         ASSERT_WITH_MESSAGE(!(entry->attributes() & PropertyAttribute::DOMJITAttribute), "DOMJITAttribute supports readonly attributes currently.");
@@ -300,7 +300,7 @@ inline bool putEntry(ExecState* exec, const ClassInfo*, const HashTableValue* en
         return result;
     }
 
-    return typeError(exec, scope, slot.isStrictMode(), ASCIILiteral(ReadonlyPropertyWriteError));
+    return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 }
 
 /**
@@ -325,19 +325,19 @@ inline void reifyStaticProperty(VM& vm, const ClassInfo* classInfo, const Proper
         if (value.attributes() & PropertyAttribute::Accessor)
             reifyStaticAccessor(vm, value, thisObj, propertyName);
         else
-            thisObj.putDirectBuiltinFunction(vm, thisObj.globalObject(), propertyName, value.builtinGenerator()(vm), attributesForStructure(value.attributes()));
+            thisObj.putDirectBuiltinFunction(vm, thisObj.globalObject(vm), propertyName, value.builtinGenerator()(vm), attributesForStructure(value.attributes()));
         return;
     }
 
     if (value.attributes() & PropertyAttribute::Function) {
         if (value.attributes() & PropertyAttribute::DOMJITFunction) {
             thisObj.putDirectNativeFunction(
-                vm, thisObj.globalObject(), propertyName, value.functionLength(),
+                vm, thisObj.globalObject(vm), propertyName, value.functionLength(),
                 value.function(), value.intrinsic(), value.signature(), attributesForStructure(value.attributes()));
             return;
         }
         thisObj.putDirectNativeFunction(
-            vm, thisObj.globalObject(), propertyName, value.functionLength(),
+            vm, thisObj.globalObject(vm), propertyName, value.functionLength(),
             value.function(), value.intrinsic(), attributesForStructure(value.attributes()));
         return;
     }
@@ -404,7 +404,7 @@ inline void reifyStaticProperties(VM& vm, const ClassInfo* classInfo, const Hash
     }
 }
 
-template<NativeFunction nativeFunction, int length> EncodedJSValue nonCachingStaticFunctionGetter(ExecState* state, EncodedJSValue, PropertyName propertyName)
+template<RawNativeFunction nativeFunction, int length> EncodedJSValue nonCachingStaticFunctionGetter(ExecState* state, EncodedJSValue, PropertyName propertyName)
 {
     return JSValue::encode(JSFunction::create(state->vm(), state->lexicalGlobalObject(), length, propertyName.publicName(), nativeFunction));
 }

@@ -40,6 +40,8 @@ struct FloatComponents {
         components[3] = d;
     }
 
+    FloatComponents(const Color&);
+
     FloatComponents& operator+=(const FloatComponents& rhs)
     {
         components[0] += rhs.components[0];
@@ -152,8 +154,32 @@ inline unsigned byteOffsetOfPixel(unsigned x, unsigned y, unsigned rowBytes)
 float linearToSRGBColorComponent(float);
 float sRGBToLinearColorComponent(float);
 
-Color linearToSRGBColor(const Color&);
-Color sRGBToLinearColor(const Color&);
+FloatComponents sRGBColorToLinearComponents(const Color&);
+FloatComponents sRGBToLinearComponents(const FloatComponents&);
+FloatComponents linearToSRGBComponents(const FloatComponents&);
+
+FloatComponents sRGBToHSL(const FloatComponents&);
+FloatComponents HSLToSRGB(const FloatComponents&);
+
+float luminance(const FloatComponents& sRGBCompontents);
+
+class ColorMatrix {
+public:
+    static ColorMatrix grayscaleMatrix(float);
+    static ColorMatrix saturationMatrix(float);
+    static ColorMatrix hueRotateMatrix(float angleInDegrees);
+    static ColorMatrix sepiaMatrix(float);
+
+    ColorMatrix();
+    ColorMatrix(float[20]);
+
+    void transformColorComponents(FloatComponents&) const;
+
+private:
+    void makeIdentity();
+
+    float m_matrix[4][5];
+};
 
 } // namespace WebCore
 

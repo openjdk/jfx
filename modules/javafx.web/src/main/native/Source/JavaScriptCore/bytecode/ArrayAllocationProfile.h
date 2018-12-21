@@ -71,6 +71,8 @@ public:
         return lastArray;
     }
 
+    void initializeIndexingMode(IndexingType recommendedIndexingMode) { m_currentIndexingType = recommendedIndexingMode; }
+
 private:
 
     IndexingType m_currentIndexingType { ArrayWithUndecided };

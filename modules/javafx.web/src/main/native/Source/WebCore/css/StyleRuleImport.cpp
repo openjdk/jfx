@@ -29,6 +29,7 @@
 #include "CachedResourceRequestInitiators.h"
 #include "Document.h"
 #include "MediaList.h"
+#include "MediaQueryParser.h"
 #include "SecurityOrigin.h"
 #include "StyleSheetContents.h"
 #include <wtf/StdLibExtras.h>
@@ -50,7 +51,7 @@ StyleRuleImport::StyleRuleImport(const String& href, Ref<MediaQuerySet>&& media)
     , m_loading(false)
 {
     if (!m_mediaQueries)
-        m_mediaQueries = MediaQuerySet::create(String());
+        m_mediaQueries = MediaQuerySet::create(String(), MediaQueryParserContext());
 }
 
 StyleRuleImport::~StyleRuleImport()
@@ -120,7 +121,19 @@ void StyleRuleImport::requestStyleSheet()
     if (m_cachedSheet)
         m_cachedSheet->removeClient(m_styleSheetClient);
     if (m_parentStyleSheet->isUserStyleSheet()) {
-        request.setOptions(ResourceLoaderOptions(DoNotSendCallbacks, SniffContent, BufferData, StoredCredentialsPolicy::Use, ClientCredentialPolicy::MayAskClientForCredentials, FetchOptions::Credentials::Include, SkipSecurityCheck, FetchOptions::Mode::NoCors, DoNotIncludeCertificateInfo, ContentSecurityPolicyImposition::SkipPolicyCheck, DefersLoadingPolicy::AllowDefersLoading, CachingPolicy::AllowCaching));
+        request.setOptions(ResourceLoaderOptions(
+            SendCallbackPolicy::DoNotSendCallbacks,
+            ContentSniffingPolicy::SniffContent,
+            DataBufferingPolicy::BufferData,
+            StoredCredentialsPolicy::Use,
+            ClientCredentialPolicy::MayAskClientForCredentials,
+            FetchOptions::Credentials::Include,
+            SecurityCheckPolicy::SkipSecurityCheck,
+            FetchOptions::Mode::NoCors,
+            CertificateInfoPolicy::DoNotIncludeCertificateInfo,
+            ContentSecurityPolicyImposition::SkipPolicyCheck,
+            DefersLoadingPolicy::AllowDefersLoading,
+            CachingPolicy::AllowCaching));
         m_cachedSheet = document->cachedResourceLoader().requestUserCSSStyleSheet(WTFMove(request));
     } else
         m_cachedSheet = document->cachedResourceLoader().requestCSSStyleSheet(WTFMove(request)).value_or(nullptr);

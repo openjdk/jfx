@@ -80,39 +80,39 @@ using namespace HTMLNames;
 
 static void writeLayers(TextStream&, const RenderLayer& rootLayer, RenderLayer&, const LayoutRect& paintDirtyRect, RenderAsTextBehavior = RenderAsTextBehaviorNormal);
 
-static void printBorderStyle(TextStream& ts, const EBorderStyle borderStyle)
+static void printBorderStyle(TextStream& ts, const BorderStyle borderStyle)
 {
     switch (borderStyle) {
-        case BNONE:
-            ts << "none";
-            break;
-        case BHIDDEN:
-            ts << "hidden";
-            break;
-        case INSET:
-            ts << "inset";
-            break;
-        case GROOVE:
-            ts << "groove";
-            break;
-        case RIDGE:
-            ts << "ridge";
-            break;
-        case OUTSET:
-            ts << "outset";
-            break;
-        case DOTTED:
-            ts << "dotted";
-            break;
-        case DASHED:
-            ts << "dashed";
-            break;
-        case SOLID:
-            ts << "solid";
-            break;
-        case DOUBLE:
-            ts << "double";
-            break;
+    case BorderStyle::None:
+        ts << "none";
+        break;
+    case BorderStyle::Hidden:
+        ts << "hidden";
+        break;
+    case BorderStyle::Inset:
+        ts << "inset";
+        break;
+    case BorderStyle::Groove:
+        ts << "groove";
+        break;
+    case BorderStyle::Ridge:
+        ts << "ridge";
+        break;
+    case BorderStyle::Outset:
+        ts << "outset";
+        break;
+    case BorderStyle::Dotted:
+        ts << "dotted";
+        break;
+    case BorderStyle::Dashed:
+        ts << "dashed";
+        break;
+    case BorderStyle::Solid:
+        ts << "solid";
+        break;
+    case BorderStyle::Double:
+        ts << "double";
+        break;
     }
 
     ts << " ";
@@ -242,23 +242,23 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
 
         if (o.parent()) {
             Color color = o.style().visitedDependentColor(CSSPropertyColor);
-            if (o.parent()->style().visitedDependentColor(CSSPropertyColor) != color)
+            if (o.parent()->style().visitedDependentColor(CSSPropertyColor).rgb() != color.rgb())
                 ts << " [color=" << color.nameForRenderTreeAsText() << "]";
 
             // Do not dump invalid or transparent backgrounds, since that is the default.
             Color backgroundColor = o.style().visitedDependentColor(CSSPropertyBackgroundColor);
-            if (o.parent()->style().visitedDependentColor(CSSPropertyBackgroundColor) != backgroundColor
+            if (o.parent()->style().visitedDependentColor(CSSPropertyBackgroundColor).rgb() != backgroundColor.rgb()
                 && backgroundColor.isValid() && backgroundColor.rgb())
                 ts << " [bgcolor=" << backgroundColor.nameForRenderTreeAsText() << "]";
 
             Color textFillColor = o.style().visitedDependentColor(CSSPropertyWebkitTextFillColor);
-            if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextFillColor) != textFillColor
-                && textFillColor.isValid() && textFillColor != color && textFillColor.rgb())
+            if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextFillColor).rgb() != textFillColor.rgb()
+                && textFillColor.isValid() && textFillColor.rgb() != color.rgb() && textFillColor.rgb())
                 ts << " [textFillColor=" << textFillColor.nameForRenderTreeAsText() << "]";
 
             Color textStrokeColor = o.style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor);
-            if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor) != textStrokeColor
-                && textStrokeColor.isValid() && textStrokeColor != color && textStrokeColor.rgb())
+            if (o.parent()->style().visitedDependentColor(CSSPropertyWebkitTextStrokeColor).rgb() != textStrokeColor.rgb()
+                && textStrokeColor.isValid() && textStrokeColor.rgb() != color.rgb() && textStrokeColor.rgb())
                 ts << " [textStrokeColor=" << textStrokeColor.nameForRenderTreeAsText() << "]";
 
             if (o.parent()->style().textStrokeWidth() != o.style().textStrokeWidth() && o.style().textStrokeWidth() > 0)

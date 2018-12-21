@@ -45,15 +45,10 @@ static SecurityPolicy::LocalLoadPolicy localLoadPolicy = SecurityPolicy::AllowLo
 typedef Vector<OriginAccessEntry> OriginAccessWhiteList;
 typedef HashMap<String, std::unique_ptr<OriginAccessWhiteList>> OriginAccessMap;
 
-static Lock& originAccessMapLock()
-{
-    static NeverDestroyed<Lock> lock;
-    return lock;
-}
-
+static Lock originAccessMapLock;
 static OriginAccessMap& originAccessMap()
 {
-    ASSERT(originAccessMapLock().isHeld());
+    ASSERT(originAccessMapLock.isHeld());
     static NeverDestroyed<OriginAccessMap> originAccessMap;
     return originAccessMap;
 }
@@ -74,7 +69,7 @@ bool SecurityPolicy::shouldHideReferrer(const URL& url, const String& referrer)
     return !URLIsSecureURL;
 }
 
-static String referrerToOriginString(const String& referrer)
+String SecurityPolicy::referrerToOriginString(const String& referrer)
 {
     String originString = SecurityOrigin::createFromString(referrer)->toString();
     if (originString == "null")
@@ -136,6 +131,20 @@ String SecurityPolicy::generateReferrerHeader(ReferrerPolicy referrerPolicy, con
     return shouldHideReferrer(url, referrer) ? String() : referrer;
 }
 
+bool SecurityPolicy::shouldInheritSecurityOriginFromOwner(const URL& url)
+{
+    // Paraphrased from <https://html.spec.whatwg.org/multipage/browsers.html#origin> (8 July 2016)
+    //
+    // If a Document has the address "about:blank"
+    //      The origin of the document is the origin it was assigned when its browsing context was created.
+    // If a Document has the address "about:srcdoc"
+    //      The origin of the document is the origin of its parent document.
+    //
+    // Note: We generalize this to invalid URLs because we treat such URLs as about:blank.
+    //
+    return url.isEmpty() || equalIgnoringASCIICase(url.string(), blankURL()) || equalLettersIgnoringASCIICase(url.string(), "about:srcdoc");
+}
+
 void SecurityPolicy::setLocalLoadPolicy(LocalLoadPolicy policy)
 {
     localLoadPolicy = policy;
@@ -153,7 +162,7 @@ bool SecurityPolicy::allowSubstituteDataAccessToLocal()
 
 bool SecurityPolicy::isAccessWhiteListed(const SecurityOrigin* activeOrigin, const SecurityOrigin* targetOrigin)
 {
-    Locker<Lock> locker(originAccessMapLock());
+    Locker<Lock> locker(originAccessMapLock);
     if (OriginAccessWhiteList* list = originAccessMap().get(activeOrigin->toString())) {
         for (auto& entry : *list) {
             if (entry.matchesOrigin(*targetOrigin))
@@ -177,7 +186,7 @@ void SecurityPolicy::addOriginAccessWhitelistEntry(const SecurityOrigin& sourceO
 
     String sourceString = sourceOrigin.toString();
 
-    Locker<Lock> locker(originAccessMapLock());
+    Locker<Lock> locker(originAccessMapLock);
     OriginAccessMap::AddResult result = originAccessMap().add(sourceString, nullptr);
     if (result.isNewEntry)
         result.iterator->value = std::make_unique<OriginAccessWhiteList>();
@@ -194,7 +203,7 @@ void SecurityPolicy::removeOriginAccessWhitelistEntry(const SecurityOrigin& sour
 
     String sourceString = sourceOrigin.toString();
 
-    Locker<Lock> locker(originAccessMapLock());
+    Locker<Lock> locker(originAccessMapLock);
     OriginAccessMap& map = originAccessMap();
     OriginAccessMap::iterator it = map.find(sourceString);
     if (it == map.end())
@@ -211,7 +220,7 @@ void SecurityPolicy::removeOriginAccessWhitelistEntry(const SecurityOrigin& sour
 
 void SecurityPolicy::resetOriginAccessWhitelists()
 {
-    Locker<Lock> locker(originAccessMapLock());
+    Locker<Lock> locker(originAccessMapLock);
     originAccessMap().clear();
 }
 

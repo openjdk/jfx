@@ -29,6 +29,7 @@
 
 #include "CacheStorageConnection.h"
 #include "Document.h"
+#include "FetchIdentifier.h"
 #include "Page.h"
 #include "SecurityOrigin.h"
 #include "ServiceWorkerDebuggable.h"
@@ -65,8 +66,14 @@ public:
 
     WEBCORE_EXPORT std::unique_ptr<FetchLoader> createBlobLoader(FetchLoaderClient&, const URL&);
 
+    const URL& scriptURL() const { return m_document->url(); }
+
     // Public only for testing purposes.
     WEBCORE_TESTSUPPORT_EXPORT void notifyNetworkStateChange(bool isOnline);
+
+    WEBCORE_EXPORT void startFetch(SWServerConnectionIdentifier, FetchIdentifier, Ref<ServiceWorkerFetch::Client>&&, std::optional<ServiceWorkerClientIdentifier>&&, ResourceRequest&&, String&& referrer, FetchOptions&&);
+    WEBCORE_EXPORT void cancelFetch(SWServerConnectionIdentifier, FetchIdentifier);
+    WEBCORE_EXPORT void removeFetch(SWServerConnectionIdentifier, FetchIdentifier);
 
 private:
     WEBCORE_EXPORT ServiceWorkerThreadProxy(PageConfiguration&&, const ServiceWorkerContextData&, PAL::SessionID, String&& userAgent, CacheStorageProvider&, SecurityOrigin::StorageBlockingPolicy);
@@ -94,6 +101,7 @@ private:
 #if ENABLE(REMOTE_INSPECTOR)
     std::unique_ptr<ServiceWorkerDebuggable> m_remoteDebuggable;
 #endif
+    HashMap<std::pair<SWServerConnectionIdentifier, FetchIdentifier>, Ref<ServiceWorkerFetch::Client>> m_ongoingFetchTasks;
 };
 
 } // namespace WebKit

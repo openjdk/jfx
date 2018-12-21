@@ -21,40 +21,36 @@ const float DragController::DragImageAlpha = 0.75f;
 static bool copyKeyIsDown = false;
 void setCopyKeyState(bool _copyKeyIsDown)
 {
-        copyKeyIsDown = _copyKeyIsDown;
+    copyKeyIsDown = _copyKeyIsDown;
 }
 
 DragOperation DragController::dragOperation(const DragData& dragData)
 {
-        //Protects the page from opening URL by fake anchor drag.
-        return dragData.containsURL() && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
+    //Protects the page from opening URL by fake anchor drag.
+    return dragData.containsURL() && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
 }
 
 //uta: need to be fixed with usage of DragData pointer
 bool DragController::isCopyKeyDown(const DragData&)
 {
-        //State has not direct connection with keyboard state.
-        //Now it is imported from Java (user drag action).
-        return copyKeyIsDown;
+    //State has not direct connection with keyboard state.
+    //Now it is imported from Java (user drag action).
+    return copyKeyIsDown;
 }
 
 void DragController::declareAndWriteDragImage(DataTransfer& clipboard, Element& element, const URL& url, const String& label)
 {
-        clipboard.pasteboard().writeImage(element, url, label);
+    clipboard.pasteboard().writeImage(element, url, label);
 }
 
 const IntSize &DragController::maxDragImageSize()
 {
-        static const IntSize s(400, 400);
-        return s;
+    static const IntSize s(400, 400);
+    return s;
 }
 
 void DragController::cleanupAfterSystemDrag()
 {
 }
-
-// PassRefPtr<DocumentFragment> DragController::createFragmentFromDragData(DragData& dragData, Frame& frame, Range&, bool /*allowPlainText*/, bool& /*chosePlainText*/)
-// {
-// }
 
 } // namespace WebCore

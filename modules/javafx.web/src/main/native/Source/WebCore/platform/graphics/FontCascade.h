@@ -48,6 +48,10 @@ class RenderText;
 class TextLayout;
 class TextRun;
 
+namespace DisplayList {
+class DisplayList;
+}
+
 struct GlyphData;
 
 struct GlyphOverflow {
@@ -94,12 +98,12 @@ public:
     void operator()(TextLayout*) const;
 };
 
-class FontCascade {
+class FontCascade : public CanMakeWeakPtr<FontCascade> {
 public:
     WEBCORE_EXPORT FontCascade();
-    WEBCORE_EXPORT FontCascade(const FontCascadeDescription&, float letterSpacing = 0, float wordSpacing = 0);
+    WEBCORE_EXPORT FontCascade(FontCascadeDescription&&, float letterSpacing = 0, float wordSpacing = 0);
     // This constructor is only used if the platform wants to start with a native font.
-    WEBCORE_EXPORT FontCascade(const FontPlatformData&, FontSmoothingMode = AutoSmoothing);
+    WEBCORE_EXPORT FontCascade(const FontPlatformData&, FontSmoothingMode = FontSmoothingMode::AutoSmoothing);
 
     FontCascade(const FontCascade&);
     WEBCORE_EXPORT FontCascade& operator=(const FontCascade&);
@@ -148,7 +152,8 @@ public:
     unsigned familyCount() const { return m_fontDescription.familyCount(); }
     const AtomicString& familyAt(unsigned i) const { return m_fontDescription.familyAt(i); }
 
-    FontSelectionValue italic() const { return m_fontDescription.italic(); }
+    // A std::nullopt return value indicates "font-style: normal".
+    std::optional<FontSelectionValue> italic() const { return m_fontDescription.italic(); }
     FontSelectionValue weight() const { return m_fontDescription.weight(); }
     FontWidthVariant widthVariant() const { return m_fontDescription.widthVariant(); }
 
@@ -195,7 +200,7 @@ public:
 
     bool primaryFontIsSystemFont() const;
 
-    WeakPtr<FontCascade> createWeakPtr() const { return m_weakPtrFactory.createWeakPtr(*const_cast<FontCascade*>(this)); }
+    std::unique_ptr<DisplayList::DisplayList> displayListForTextRun(GraphicsContext&, const TextRun&, unsigned from = 0, std::optional<unsigned> to = { }, CustomFontNotReadyAction = CustomFontNotReadyAction::DoNotPaintIfFontNotReady) const;
 
 private:
     enum ForTextEmphasisOrNot { NotForTextEmphasis, ForTextEmphasis };
@@ -271,9 +276,9 @@ private:
     bool advancedTextRenderingMode() const
     {
         auto textRenderingMode = m_fontDescription.textRenderingMode();
-        if (textRenderingMode == GeometricPrecision || textRenderingMode == OptimizeLegibility)
+        if (textRenderingMode == TextRenderingMode::GeometricPrecision || textRenderingMode == TextRenderingMode::OptimizeLegibility)
             return true;
-        if (textRenderingMode == OptimizeSpeed)
+        if (textRenderingMode == TextRenderingMode::OptimizeSpeed)
             return false;
 #if PLATFORM(COCOA) || USE(FREETYPE)
         return true;
@@ -307,7 +312,6 @@ private:
 
     FontCascadeDescription m_fontDescription;
     mutable RefPtr<FontCascadeFonts> m_fonts;
-    WeakPtrFactory<FontCascade> m_weakPtrFactory;
     float m_letterSpacing { 0 };
     float m_wordSpacing { 0 };
     mutable bool m_useBackslashAsYenSymbol { false };

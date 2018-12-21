@@ -42,7 +42,7 @@ public:
     template<typename CellType>
     static IsoSubspace* subspaceFor(VM& vm)
     {
-        return &vm.functionExecutableSpace;
+        return &vm.functionExecutableSpace.space;
     }
 
     static FunctionExecutable* create(
@@ -136,7 +136,7 @@ public:
     bool isGetter() const { return parseMode() == SourceParseMode::GetterMode; }
     bool isSetter() const { return parseMode() == SourceParseMode::SetterMode; }
     bool isGenerator() const { return isGeneratorParseMode(parseMode()); }
-    bool isAsyncGenerator() const { return SourceParseModeSet(SourceParseMode::AsyncGeneratorWrapperFunctionMode, SourceParseMode::AsyncGeneratorBodyMode).contains(parseMode()); }
+    bool isAsyncGenerator() const { return isAsyncGeneratorParseMode(parseMode()); }
     bool isMethod() const { return parseMode() == SourceParseMode::MethodMode; }
     bool hasCallerAndArgumentsProperties() const
     {
@@ -152,6 +152,7 @@ public:
             SourceParseMode::GeneratorWrapperFunctionMode,
             SourceParseMode::GeneratorWrapperMethodMode,
             SourceParseMode::AsyncGeneratorWrapperFunctionMode,
+            SourceParseMode::AsyncGeneratorWrapperMethodMode,
             SourceParseMode::AsyncGeneratorBodyMode
         ).contains(parseMode()) || isClass();
     }

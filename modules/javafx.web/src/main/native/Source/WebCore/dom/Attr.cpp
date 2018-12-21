@@ -30,9 +30,12 @@
 #include "StyledElement.h"
 #include "TextNodeTraversal.h"
 #include "XMLNSNames.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(Attr);
 
 using namespace HTMLNames;
 
@@ -104,7 +107,8 @@ Ref<Node> Attr::cloneNodeInternal(Document& targetDocument, CloningOperation)
 
 CSSStyleDeclaration* Attr::style()
 {
-    // This function only exists to support the Obj-C bindings.
+    // This is not part of the DOM API, and therefore not available to webpages. However, WebKit SPI
+    // lets clients use this via the Objective-C and JavaScript bindings.
     if (!is<StyledElement>(m_element))
         return nullptr;
     m_style = MutableStyleProperties::create();

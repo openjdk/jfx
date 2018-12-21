@@ -35,7 +35,7 @@
 #include <WebCore/HTMLOptGroupElement.h>
 #include <WebCore/HTMLOptionsCollection.h>
 #include <WebCore/HTMLSelectElement.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 #include <WebCore/NameNodeList.h>
 #include <WebCore/Node.h>
 #include <WebCore/NodeList.h>

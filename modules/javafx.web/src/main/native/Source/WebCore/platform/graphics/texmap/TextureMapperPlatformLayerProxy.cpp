@@ -37,7 +37,7 @@
 #include <wtf/glib/RunLoopSourcePriority.h>
 #endif
 
-static const double releaseUnusedSecondsTolerance = 1;
+static const Seconds releaseUnusedSecondsTolerance { 1_s };
 static const Seconds releaseUnusedBuffersTimerInterval = { 500_ms };
 
 namespace WebCore {
@@ -163,7 +163,7 @@ void TextureMapperPlatformLayerProxy::releaseUnusedBuffersTimerFired()
         return;
 
     auto buffers = WTFMove(m_usedBuffers);
-    double minUsedTime = monotonicallyIncreasingTime() - releaseUnusedSecondsTolerance;
+    MonotonicTime minUsedTime = MonotonicTime::now() - releaseUnusedSecondsTolerance;
 
     for (auto& buffer : buffers) {
         if (buffer && buffer->lastUsedTime() >= minUsedTime)
@@ -203,14 +203,10 @@ void TextureMapperPlatformLayerProxy::dropCurrentBufferWhilePreservingTexture()
         [this] {
             LockHolder locker(m_lock);
 
-            if (!m_compositor || !m_targetLayer)
+            if (!m_compositor || !m_targetLayer || !m_currentBuffer)
                 return;
 
-            TextureMapperGL* texmapGL = m_compositor->texmapGL();
-            if (!texmapGL || !m_currentBuffer)
-                return;
-
-            m_pendingBuffer = m_currentBuffer->clone(*texmapGL);
+            m_pendingBuffer = m_currentBuffer->clone();
             auto prevBuffer = WTFMove(m_currentBuffer);
             m_currentBuffer = WTFMove(m_pendingBuffer);
             m_targetLayer->setContentsLayer(m_currentBuffer.get());
@@ -218,7 +214,7 @@ void TextureMapperPlatformLayerProxy::dropCurrentBufferWhilePreservingTexture()
             if (prevBuffer->hasManagedTexture())
                 appendToUnusedBuffers(WTFMove(prevBuffer));
         };
-    m_compositorThreadUpdateTimer->startOneShot(0);
+    m_compositorThreadUpdateTimer->startOneShot(0_s);
 }
 
 bool TextureMapperPlatformLayerProxy::scheduleUpdateOnCompositorThread(Function<void()>&& updateFunction)

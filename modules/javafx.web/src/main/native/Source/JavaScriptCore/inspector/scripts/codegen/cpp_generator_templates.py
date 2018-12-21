@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2014, 2015 Apple Inc. All rights reserved.
+# Copyright (c) 2014-2018 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -124,11 +124,11 @@ private:
     Ref<${domainName}BackendDispatcher> protect(*this);
 
     RefPtr<JSON::Object> parameters;
-    message->getObject(ASCIILiteral("params"), parameters);
+    message->getObject("params"_s, parameters);
 
 ${dispatchCases}
     else
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString('\\'', "${domainName}", '.', method, "' was not found"));
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, "'${domainName}." + method + "' was not found");
 }""")
 
     BackendDispatcherImplementationLargeSwitch = (
@@ -137,7 +137,7 @@ ${dispatchCases}
     Ref<${domainName}BackendDispatcher> protect(*this);
 
     RefPtr<JSON::Object> parameters;
-    message->getObject(ASCIILiteral("params"), parameters);
+    message->getObject("params"_s, parameters);
 
     typedef void (${domainName}BackendDispatcher::*CallHandler)(long requestId, RefPtr<JSON::Object>&& message);
     typedef HashMap<String, CallHandler> DispatchMap;
@@ -156,7 +156,7 @@ ${dispatchCases}
 
     auto findResult = dispatchMap.get().find(method);
     if (findResult == dispatchMap.get().end()) {
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, makeString('\\'', "${domainName}", '.', method, "' was not found"));
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::MethodNotFound, "'${domainName}." + method + "' was not found");
         return;
     }
 
@@ -173,13 +173,13 @@ ${domainName}BackendDispatcher::${domainName}BackendDispatcher(BackendDispatcher
     : SupplementalBackendDispatcher(backendDispatcher)
     , m_agent(agent)
 {
-    m_backendDispatcher->registerDispatcherForDomain(ASCIILiteral("${domainName}"), this);
+    m_backendDispatcher->registerDispatcherForDomain("${domainName}"_s, this);
 }""")
 
     BackendDispatcherImplementationPrepareCommandArguments = (
 """${inParameterDeclarations}
     if (m_backendDispatcher->hasProtocolErrors()) {
-        m_backendDispatcher->reportProtocolError(BackendDispatcher::InvalidParams, String::format("Some arguments of method \'%s\' can't be processed", "${domainName}.${commandName}"));
+        m_backendDispatcher->reportProtocolError(BackendDispatcher::InvalidParams, "Some arguments of method \'${domainName}.${commandName}\' can't be processed"_s);
         return;
     }
 """)
@@ -249,9 +249,7 @@ ${constructorExample}
     RefPtr<JSON::Object> result;
     bool castSucceeded = value->asObject(result);
     ASSERT_UNUSED(castSucceeded, castSucceeded);
-#if !ASSERT_DISABLED
     BindingTraits<${objectType}>::assertValueHasExpectedType(result.get());
-#endif  // !ASSERT_DISABLED
     COMPILE_ASSERT(sizeof(${objectType}) == sizeof(JSON::ObjectBase), type_cast_problem);
     return static_cast<${objectType}*>(static_cast<JSON::ObjectBase*>(result.get()));
 }

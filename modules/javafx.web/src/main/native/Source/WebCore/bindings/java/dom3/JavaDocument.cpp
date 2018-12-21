@@ -57,11 +57,12 @@
 #include <WebCore/XPathNSResolver.h>
 #include <WebCore/XPathResult.h>
 #include <WebCore/EventNames.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
+#include "AbstractViewInternal.h"
 #include "JavaDOMUtils.h"
 #include <wtf/java/JavaEnv.h>
 
@@ -147,7 +148,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_setDocumentURIImpl(J
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getDefaultViewImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->defaultView()));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(toDOMWindow(IMPL->windowProxy())));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getStyleSheetsImpl(JNIEnv* env, jclass, jlong peer)
@@ -274,7 +275,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getReadyStateImpl
 {
     WebCore::JSMainThreadNullState state;
     auto readyState = IMPL->readyState();
-    const char* readyStateStr;
+    const char* readyStateStr { };
     switch (readyState) {
     case WebCore::Document::Loading:
         readyStateStr = "loading";
@@ -297,22 +298,18 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCharacterSetIm
     return JavaReturn<String>(env, IMPL->characterSetWithUTF8Fallback());
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getPreferredStylesheetSetImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getPreferredStylesheetSetImpl(JNIEnv*, jclass, jlong)
 {
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->preferredStylesheetSet());
+    return nullptr;
 }
 
-JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getSelectedStylesheetSetImpl(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getSelectedStylesheetSetImpl(JNIEnv*, jclass, jlong)
 {
-    WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->selectedStylesheetSet());
+    return nullptr;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_setSelectedStylesheetSetImpl(JNIEnv* env, jclass, jlong peer, jstring value)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DocumentImpl_setSelectedStylesheetSetImpl(JNIEnv*, jclass, jlong, jstring)
 {
-    WebCore::JSMainThreadNullState state;
-    IMPL->setSelectedStylesheetSet(String(env, value));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_getActiveElementImpl(JNIEnv* env, jclass, jlong peer)

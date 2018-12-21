@@ -42,6 +42,7 @@ class HTMLFormControlsCollection;
 class HTMLImageElement;
 
 class HTMLFormElement final : public HTMLElement {
+    WTF_MAKE_ISO_ALLOCATED(HTMLFormElement);
 public:
     static Ref<HTMLFormElement> create(Document&);
     static Ref<HTMLFormElement> create(const QualifiedName&, Document&);
@@ -95,8 +96,8 @@ public:
     String acceptCharset() const { return m_attributes.acceptCharset(); }
     void setAcceptCharset(const String&);
 
-    String action() const;
-    void setAction(const String&);
+    WEBCORE_EXPORT String action() const;
+    WEBCORE_EXPORT void setAction(const String&);
 
     WEBCORE_EXPORT String method() const;
     WEBCORE_EXPORT void setMethod(const String&);

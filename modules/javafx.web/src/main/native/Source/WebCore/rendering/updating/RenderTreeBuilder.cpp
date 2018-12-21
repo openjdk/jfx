@@ -37,6 +37,7 @@
 #include "RenderLineBreak.h"
 #include "RenderMathMLFenced.h"
 #include "RenderMenuList.h"
+#include "RenderMultiColumnFlow.h"
 #include "RenderRuby.h"
 #include "RenderRubyBase.h"
 #include "RenderRubyRun.h"
@@ -130,7 +131,9 @@ RenderTreeBuilder::RenderTreeBuilder(RenderView& view)
     , m_blockFlowBuilder(std::make_unique<BlockFlow>(*this))
     , m_inlineBuilder(std::make_unique<Inline>(*this))
     , m_svgBuilder(std::make_unique<SVG>(*this))
+#if ENABLE(MATHML)
     , m_mathMLBuilder(std::make_unique<MathML>(*this))
+#endif
     , m_continuationBuilder(std::make_unique<Continuation>(*this))
 #if ENABLE(FULLSCREEN_API)
     , m_fullScreenBuilder(std::make_unique<FullScreen>(*this))
@@ -269,10 +272,12 @@ void RenderTreeBuilder::attach(RenderElement& parent, RenderPtr<RenderObject> ch
         return;
     }
 
+#if ENABLE(MATHML)
     if (is<RenderMathMLFenced>(parent)) {
         mathMLBuilder().attach(downcast<RenderMathMLFenced>(parent), WTFMove(child), beforeChild);
         return;
     }
+#endif
 
     if (is<RenderGrid>(parent)) {
         attachToRenderGrid(downcast<RenderGrid>(parent), WTFMove(child), beforeChild);
@@ -312,7 +317,7 @@ void RenderTreeBuilder::attachIgnoringContinuation(RenderElement& parent, Render
     attach(parent, WTFMove(child), beforeChild);
 }
 
-RenderPtr<RenderObject> RenderTreeBuilder::detach(RenderElement& parent, RenderObject& child)
+RenderPtr<RenderObject> RenderTreeBuilder::detach(RenderElement& parent, RenderObject& child, CanCollapseAnonymousBlock canCollapseAnonymousBlock)
 {
     if (is<RenderRubyAsInline>(parent))
         return rubyBuilder().detach(downcast<RenderRubyAsInline>(parent), child);
@@ -345,10 +350,10 @@ RenderPtr<RenderObject> RenderTreeBuilder::detach(RenderElement& parent, RenderO
         return svgBuilder().detach(downcast<RenderSVGRoot>(parent), child);
 
     if (is<RenderBlockFlow>(parent))
-        return blockBuilder().detach(downcast<RenderBlockFlow>(parent), child);
+        return blockBuilder().detach(downcast<RenderBlockFlow>(parent), child, canCollapseAnonymousBlock);
 
     if (is<RenderBlock>(parent))
-        return blockBuilder().detach(downcast<RenderBlock>(parent), child);
+        return blockBuilder().detach(downcast<RenderBlock>(parent), child, canCollapseAnonymousBlock);
 
     return detachFromRenderElement(parent, child);
 }
@@ -423,7 +428,7 @@ void RenderTreeBuilder::attachToRenderElementInternal(RenderElement& parent, Ren
         cache->childrenChanged(&parent, newChild);
     if (is<RenderBlockFlow>(parent))
         downcast<RenderBlockFlow>(parent).invalidateLineLayoutPath();
-    if (parent.hasOutlineAutoAncestor() || parent.outlineStyleForRepaint().outlineStyleIsAuto())
+    if (parent.hasOutlineAutoAncestor() || parent.outlineStyleForRepaint().outlineStyleIsAuto() == OutlineIsAuto::On)
         newChild->setHasOutlineAutoAncestor();
 }
 
@@ -539,7 +544,9 @@ void RenderTreeBuilder::normalizeTreeAfterStyleChange(RenderElement& renderer, R
         // We have gone from not affecting the inline status of the parent flow to suddenly
         // having an impact. See if there is a mismatch between the parent flow's
         // childrenInline() state and our state.
-        renderer.setInline(renderer.style().isDisplayInlineType());
+        // FIXME(186894): startsAffectingParent has clearly nothing to do with resetting the inline state.
+        if (!is<RenderSVGInline>(renderer))
+            renderer.setInline(renderer.style().isDisplayInlineType());
         if (renderer.isInline() != renderer.parent()->childrenInline())
             childFlowStateChangesAndAffectsParentBlock(renderer);
         return;
@@ -599,8 +606,10 @@ void RenderTreeBuilder::makeChildrenNonInline(RenderBlock& parent, RenderObject*
     parent.repaint();
 }
 
-RenderObject* RenderTreeBuilder::splitAnonymousBoxesAroundChild(RenderBox& parent, RenderObject* beforeChild)
+RenderObject* RenderTreeBuilder::splitAnonymousBoxesAroundChild(RenderBox& parent, RenderObject& originalBeforeChild)
 {
+    // Adjust beforeChild if it is a column spanner and has been moved out of its original position.
+    auto* beforeChild = RenderTreeBuilder::MultiColumn::adjustBeforeChildForMultiColumnSpannerIfNeeded(originalBeforeChild);
     bool didSplitParentAnonymousBoxes = false;
 
     while (beforeChild->parent() != &parent) {
@@ -727,13 +736,16 @@ void RenderTreeBuilder::destroyAndCleanUpAnonymousWrappers(RenderObject& child)
     if (is<RenderTableRow>(destroyRoot))
         tableBuilder().collapseAndDestroyAnonymousSiblingRows(downcast<RenderTableRow>(destroyRoot));
 
-    auto& destroyRootParent = *destroyRoot.parent();
+    // FIXME: Do not try to collapse/cleanup the anonymous wrappers inside destroy (see webkit.org/b/186746).
+    auto destroyRootParent = makeWeakPtr(*destroyRoot.parent());
     destroy(destroyRoot);
-    removeAnonymousWrappersForInlineChildrenIfNeeded(destroyRootParent);
+    if (!destroyRootParent)
+        return;
+    removeAnonymousWrappersForInlineChildrenIfNeeded(*destroyRootParent);
 
     // Anonymous parent might have become empty, try to delete it too.
-    if (isAnonymousAndSafeToDelete(destroyRootParent) && !destroyRootParent.firstChild())
-        destroyAndCleanUpAnonymousWrappers(destroyRootParent);
+    if (isAnonymousAndSafeToDelete(*destroyRootParent) && !destroyRootParent->firstChild())
+        destroyAndCleanUpAnonymousWrappers(*destroyRootParent);
     // WARNING: child is deleted here.
 }
 

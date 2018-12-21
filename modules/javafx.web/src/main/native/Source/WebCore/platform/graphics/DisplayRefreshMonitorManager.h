@@ -38,7 +38,7 @@ namespace WebCore {
 class DisplayRefreshMonitorManager {
     friend class NeverDestroyed<DisplayRefreshMonitorManager>;
 public:
-    static DisplayRefreshMonitorManager& sharedManager();
+    WEBCORE_EXPORT static DisplayRefreshMonitorManager& sharedManager();
 
     void registerClient(DisplayRefreshMonitorClient&);
     void unregisterClient(DisplayRefreshMonitorClient&);
@@ -46,12 +46,13 @@ public:
     bool scheduleAnimation(DisplayRefreshMonitorClient&);
     void windowScreenDidChange(PlatformDisplayID, DisplayRefreshMonitorClient&);
 
-    void displayDidRefresh(DisplayRefreshMonitor&);
-
-private:
-    friend class DisplayRefreshMonitor;
+    WEBCORE_EXPORT void displayWasUpdated();
 
     DisplayRefreshMonitorManager() { }
+private:
+    friend class DisplayRefreshMonitor;
+    void displayDidRefresh(DisplayRefreshMonitor&);
+
     virtual ~DisplayRefreshMonitorManager();
 
     DisplayRefreshMonitor* createMonitorForClient(DisplayRefreshMonitorClient&);

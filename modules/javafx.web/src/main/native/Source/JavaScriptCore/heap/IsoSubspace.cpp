@@ -30,7 +30,6 @@
 #include "BlockDirectoryInlines.h"
 #include "IsoAlignedMemoryAllocator.h"
 #include "LocalAllocatorInlines.h"
-#include "ThreadLocalCacheInlines.h"
 
 namespace JSC {
 
@@ -38,7 +37,7 @@ IsoSubspace::IsoSubspace(CString name, Heap& heap, HeapCellType* heapCellType, s
     : Subspace(name, heap)
     , m_size(size)
     , m_directory(&heap, WTF::roundUpToMultipleOf<MarkedBlock::atomSize>(size))
-    , m_allocator(m_directory.allocator())
+    , m_localAllocator(&m_directory)
     , m_isoAlignedMemoryAllocator(std::make_unique<IsoAlignedMemoryAllocator>())
 {
     initialize(heapCellType, m_isoAlignedMemoryAllocator.get());
@@ -62,13 +61,6 @@ Allocator IsoSubspace::allocatorFor(size_t size, AllocatorForMode mode)
 void* IsoSubspace::allocate(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
 {
     return allocateNonVirtual(vm, size, deferralContext, failureMode);
-}
-
-void* IsoSubspace::allocateNonVirtual(VM& vm, size_t size, GCDeferralContext* deferralContext, AllocationFailureMode failureMode)
-{
-    RELEASE_ASSERT(size == this->size());
-    void* result = m_allocator.allocate(vm, deferralContext, failureMode);
-    return result;
 }
 
 void IsoSubspace::didResizeBits(size_t blockIndex)

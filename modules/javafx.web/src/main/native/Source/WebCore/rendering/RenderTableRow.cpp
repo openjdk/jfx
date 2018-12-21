@@ -74,7 +74,7 @@ static bool borderWidthChanged(const RenderStyle* oldStyle, const RenderStyle* n
 
 void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    ASSERT(style().display() == TABLE_ROW);
+    ASSERT(style().display() == DisplayType::TableRow);
 
     RenderBox::styleDidChange(diff, oldStyle);
     propagateStyleToAnonymousChildren(PropagateToAllChildren);
@@ -87,7 +87,7 @@ void RenderTableRow::styleDidChange(StyleDifference diff, const RenderStyle* old
         if (oldStyle && oldStyle->border() != style().border())
             table->invalidateCollapsedBorders();
 
-        if (oldStyle && diff == StyleDifferenceLayout && needsLayout() && table->collapseBorders() && borderWidthChanged(oldStyle, &style())) {
+        if (oldStyle && diff == StyleDifference::Layout && needsLayout() && table->collapseBorders() && borderWidthChanged(oldStyle, &style())) {
             // If the border width changes on a row, we need to make sure the cells in the row know to lay out again.
             // This only happens when borders are collapsed, since they end up affecting the border sides of the cell
             // itself.
@@ -201,7 +201,7 @@ void RenderTableRow::paintOutlineForRowIfNeeded(PaintInfo& paintInfo, const Layo
 {
     LayoutPoint adjustedPaintOffset = paintOffset + location();
     PaintPhase paintPhase = paintInfo.phase;
-    if ((paintPhase == PaintPhaseOutline || paintPhase == PaintPhaseSelfOutline) && style().visibility() == VISIBLE)
+    if ((paintPhase == PaintPhase::Outline || paintPhase == PaintPhase::SelfOutline) && style().visibility() == Visibility::Visible)
         paintOutline(paintInfo, LayoutRect(adjustedPaintOffset, size()));
 }
 
@@ -212,7 +212,7 @@ void RenderTableRow::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     paintOutlineForRowIfNeeded(paintInfo, paintOffset);
     for (RenderTableCell* cell = firstCell(); cell; cell = cell->nextCell()) {
         // Paint the row background behind the cell.
-        if (paintInfo.phase == PaintPhaseBlockBackground || paintInfo.phase == PaintPhaseChildBlockBackground)
+        if (paintInfo.phase == PaintPhase::BlockBackground || paintInfo.phase == PaintPhase::ChildBlockBackground)
             cell->paintBackgroundsBehindCell(paintInfo, paintOffset, this);
         if (!cell->hasSelfPaintingLayer())
             cell->paint(paintInfo, paintOffset);
@@ -227,7 +227,7 @@ void RenderTableRow::imageChanged(WrappedImagePtr, const IntRect*)
 
 RenderPtr<RenderTableRow> RenderTableRow::createTableRowWithStyle(Document& document, const RenderStyle& style)
 {
-    auto row = createRenderer<RenderTableRow>(document, RenderStyle::createAnonymousStyleWithDisplay(style, TABLE_ROW));
+    auto row = createRenderer<RenderTableRow>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableRow));
     row->initializeStyle();
     return row;
 }

@@ -69,7 +69,7 @@ public:
     }
 
     typedef JSCallee Base;
-    const static unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames;
+    const static unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetPropertyNames | OverridesGetCallData;
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
@@ -107,8 +107,8 @@ public:
         return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
     }
 
-    NativeFunction nativeFunction();
-    NativeFunction nativeConstructor();
+    TaggedNativeFunction nativeFunction();
+    TaggedNativeFunction nativeConstructor();
 
     static ConstructType getConstructData(JSCell*, ConstructData&);
     static CallType getCallData(JSCell*, CallData&);
@@ -156,6 +156,13 @@ public:
     bool canUseAllocationProfile();
     bool canUseAllocationProfileNonInline();
 
+    enum class PropertyStatus {
+        Eager,
+        Lazy,
+        Reified,
+    };
+    PropertyStatus reifyLazyPropertyIfNeeded(VM&, ExecState*, PropertyName);
+
 protected:
     JS_EXPORT_PRIVATE JSFunction(VM&, JSGlobalObject*, Structure*);
     JSFunction(VM&, FunctionExecutable*, JSScope*, Structure*);
@@ -173,13 +180,11 @@ protected:
 
     static void visitChildren(JSCell*, SlotVisitor&);
 
-    static PropertyReificationResult reifyPropertyNameIfNeeded(JSCell*, ExecState*, PropertyName&);
-
 private:
     static JSFunction* createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
     {
         JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm.heap)) JSFunction(vm, executable, scope, structure);
-        ASSERT(function->structure()->globalObject());
+        ASSERT(function->structure(vm)->globalObject());
         function->finishCreation(vm);
         return function;
     }
@@ -194,19 +199,19 @@ private:
     void reifyName(VM&, ExecState*);
     void reifyName(VM&, ExecState*, String name);
 
-    enum class PropertyStatus {
-        Eager,
-        Lazy,
-        Reified,
-    };
     static bool isLazy(PropertyStatus property) { return property == PropertyStatus::Lazy || property == PropertyStatus::Reified; }
     static bool isReified(PropertyStatus property) { return property == PropertyStatus::Reified; }
 
-    PropertyStatus reifyLazyPropertyIfNeeded(VM&, ExecState*, PropertyName);
     PropertyStatus reifyLazyPropertyForHostOrBuiltinIfNeeded(VM&, ExecState*, PropertyName);
     PropertyStatus reifyLazyLengthIfNeeded(VM&, ExecState*, PropertyName);
     PropertyStatus reifyLazyNameIfNeeded(VM&, ExecState*, PropertyName);
     PropertyStatus reifyLazyBoundNameIfNeeded(VM&, ExecState*, PropertyName);
+
+#if ASSERT_DISABLED
+    void assertTypeInfoFlagInvariants() { }
+#else
+    void assertTypeInfoFlagInvariants();
+#endif
 
     friend class LLIntOffsetsExtractor;
 

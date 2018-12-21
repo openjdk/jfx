@@ -31,11 +31,12 @@
 #include <WebCore/Document.h>
 #include <WebCore/HTMLIFrameElement.h>
 #include <WebCore/HTMLNames.h>
-#include <WebCore/JSMainThreadExecState.h>
+#include <WebCore/JSExecState.h>
 
 #include <wtf/RefPtr.h>
 #include <wtf/GetPtr.h>
 
+#include "AbstractViewInternal.h"
 #include "JavaDOMUtils.h"
 #include <wtf/java/JavaEnv.h>
 
@@ -188,7 +189,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getContent
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getContentWindowImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL->contentWindow()));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(toDOMWindow(IMPL->contentWindow())));
 }
 
 }

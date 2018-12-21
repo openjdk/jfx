@@ -73,12 +73,11 @@ import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
 
-import com.sun.javafx.embed.swing.InteropFactory;
 import com.sun.javafx.embed.swing.SwingDnD;
 import com.sun.javafx.embed.swing.SwingEvents;
 import com.sun.javafx.embed.swing.SwingCursors;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
-import com.sun.javafx.embed.swing.JFXPanelInterop;
+import com.sun.javafx.embed.swing.newimpl.JFXPanelInteropN;
 
 /**
 * {@code JFXPanel} is a component to embed JavaFX content into
@@ -181,16 +180,7 @@ public class JFXPanel extends JComponent {
 
     private static boolean fxInitialized;
 
-    private static InteropFactory iopFactoryInstance = null;
-    private JFXPanelInterop jfxPanelIOP;
-
-    static {
-        try {
-            iopFactoryInstance = InteropFactory.getInstance();
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
-    }
+    private JFXPanelInteropN jfxPanelIOP;
 
     private synchronized void registerFinishListener() {
         if (instanceCount.getAndIncrement() > 0) {
@@ -263,7 +253,7 @@ public class JFXPanel extends JComponent {
     public JFXPanel() {
         super();
 
-        jfxPanelIOP = iopFactoryInstance.createJFXPanelImpl();
+        jfxPanelIOP = new JFXPanelInteropN();
         initFx();
 
         hostContainer = new HostContainer();

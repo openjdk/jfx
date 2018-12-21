@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,10 +32,12 @@
 #include "DFGCommonData.h"
 #include "ExceptionHelpers.h"
 #include "HeapInlines.h"
+#include "JSCPtrTag.h"
 #include "LLIntPCRanges.h"
 #include "MachineContext.h"
 #include "MachineStackMarker.h"
 #include "MacroAssembler.h"
+#include "MacroAssemblerCodeRef.h"
 #include "VM.h"
 #include "VMInspector.h"
 #include "Watchdog.h"
@@ -53,16 +55,25 @@ ALWAYS_INLINE VM& VMTraps::vm() const
 #if ENABLE(SIGNAL_BASED_VM_TRAPS)
 
 struct SignalContext {
-    SignalContext(PlatformRegisters& registers)
+private:
+    SignalContext(PlatformRegisters& registers, MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> trapPC)
         : registers(registers)
-        , trapPC(MachineContext::instructionPointer(registers))
+        , trapPC(trapPC)
         , stackPointer(MachineContext::stackPointer(registers))
         , framePointer(MachineContext::framePointer(registers))
+    { }
+
+public:
+    static std::optional<SignalContext> tryCreate(PlatformRegisters& registers)
     {
+        auto instructionPointer = MachineContext::instructionPointer(registers);
+        if (!instructionPointer)
+            return std::nullopt;
+        return SignalContext(registers, *instructionPointer);
     }
 
     PlatformRegisters& registers;
-    void* trapPC;
+    MacroAssemblerCodePtr<PlatformRegistersPCPtrTag> trapPC;
     void* stackPointer;
     void* framePointer;
 };
@@ -86,7 +97,7 @@ void VMTraps::tryInstallTrapBreakpoints(SignalContext& context, StackBounds stac
     // This must be the initial signal to get the mutator thread's attention.
     // Let's get the thread to break at invalidation points if needed.
     VM& vm = this->vm();
-    void* trapPC = context.trapPC;
+    void* trapPC = context.trapPC.untaggedExecutableAddress();
     // We must ensure we're in JIT/LLint code. If we are, we know a few things:
     // - The JS thread isn't holding the malloc lock. Therefore, it's safe to malloc below.
     // - The JS thread isn't holding the CodeBlockSet lock.
@@ -115,7 +126,7 @@ void VMTraps::tryInstallTrapBreakpoints(SignalContext& context, StackBounds stac
         if (!isSaneFrame(callFrame, calleeFrame, entryFrame, stackBounds))
             return; // Let the SignalSender try again later.
 
-        CodeBlock* candidateCodeBlock = callFrame->codeBlock();
+        CodeBlock* candidateCodeBlock = callFrame->unsafeCodeBlock();
         if (candidateCodeBlock && vm.heap.codeBlockSet().contains(codeBlockSetLocker, candidateCodeBlock)) {
             foundCodeBlock = candidateCodeBlock;
             break;
@@ -179,18 +190,21 @@ class VMTraps::SignalSender final : public AutomaticThread {
 public:
     using Base = AutomaticThread;
     SignalSender(const AbstractLocker& locker, VM& vm)
-        : Base(locker, vm.traps().m_lock, vm.traps().m_trapSet)
+        : Base(locker, vm.traps().m_lock, vm.traps().m_trapSet.copyRef())
         , m_vm(vm)
     {
         static std::once_flag once;
         std::call_once(once, [] {
             installSignalHandler(Signal::BadAccess, [] (Signal, SigInfo&, PlatformRegisters& registers) -> SignalAction {
-                SignalContext context(registers);
-
-                if (!isJITPC(context.trapPC))
+                auto signalContext = SignalContext::tryCreate(registers);
+                if (!signalContext)
                     return SignalAction::NotHandled;
 
-                CodeBlock* currentCodeBlock = DFG::codeBlockForVMTrapPC(context.trapPC);
+                void* trapPC = signalContext->trapPC.untaggedExecutableAddress();
+                if (!isJITPC(trapPC))
+                    return SignalAction::NotHandled;
+
+                CodeBlock* currentCodeBlock = DFG::codeBlockForVMTrapPC(trapPC);
                 if (!currentCodeBlock) {
                     // Either we trapped for some other reason, e.g. Wasm OOB, or we didn't properly monitor the PC. Regardless, we can't do much now...
                     return SignalAction::NotHandled;
@@ -218,6 +232,11 @@ public:
         });
     }
 
+    const char* name() const override
+    {
+        return "JSC VMTraps Signal Sender Thread";
+    }
+
     VMTraps& traps() { return m_vm.traps(); }
 
 protected:
@@ -242,7 +261,9 @@ protected:
         auto optionalOwnerThread = vm.ownerThread();
         if (optionalOwnerThread) {
             sendMessage(*optionalOwnerThread.value().get(), [&] (PlatformRegisters& registers) -> void {
-                SignalContext context(registers);
+                auto signalContext = SignalContext::tryCreate(registers);
+                if (!signalContext)
+                    return;
 
                 auto ownerThread = vm.apiLock().ownerThread();
                 // We can't mess with a thread unless it's the one we suspended.
@@ -250,7 +271,7 @@ protected:
                     return;
 
                 Thread& thread = *ownerThread->get();
-                vm.traps().tryInstallTrapBreakpoints(context, thread.stack());
+                vm.traps().tryInstallTrapBreakpoints(*signalContext, thread.stack());
             });
         }
 

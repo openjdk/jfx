@@ -26,11 +26,19 @@ accessibility/wpe/AccessibilityObjectWPE.cpp
 
 editing/wpe/EditorWPE.cpp
 
+loader/soup/ResourceLoaderSoup.cpp
+
 page/linux/ResourceUsageOverlayLinux.cpp
 page/linux/ResourceUsageThreadLinux.cpp
 
 page/scrolling/coordinatedgraphics/ScrollingCoordinatorCoordinatedGraphics.cpp
+page/scrolling/coordinatedgraphics/ScrollingTreeCoordinatedGraphics.cpp
+page/scrolling/coordinatedgraphics/ScrollingTreeFixedNode.cpp
+page/scrolling/coordinatedgraphics/ScrollingTreeFrameScrollingNodeCoordinatedGraphics.cpp
+page/scrolling/coordinatedgraphics/ScrollingTreeStickyNode.cpp
 page/scrolling/coordinatedgraphics/ScrollingStateNodeCoordinatedGraphics.cpp
+
+page/scrolling/generic/ScrollingThreadGeneric.cpp
 
 platform/UserAgentQuirks.cpp
 

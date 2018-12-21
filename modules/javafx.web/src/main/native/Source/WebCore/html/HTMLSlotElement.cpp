@@ -32,8 +32,11 @@
 #include "MutationObserver.h"
 #include "ShadowRoot.h"
 #include "Text.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLSlotElement);
 
 using namespace HTMLNames;
 
@@ -139,9 +142,7 @@ void HTMLSlotElement::dispatchSlotChangeEvent()
 {
     m_inSignalSlotList = false;
 
-    bool bubbles = true;
-    bool cancelable = false;
-    Ref<Event> event = Event::create(eventNames().slotchangeEvent, bubbles, cancelable);
+    Ref<Event> event = Event::create(eventNames().slotchangeEvent, Event::CanBubble::Yes, Event::IsCancelable::No);
     event->setTarget(this);
     dispatchEvent(event);
 }

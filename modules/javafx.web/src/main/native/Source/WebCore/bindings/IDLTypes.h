@@ -51,6 +51,7 @@ namespace WebCore {
 class IDBKey;
 class IDBKeyData;
 class IDBValue;
+class JSWindowProxy;
 class DOMPromise;
 class ScheduledAction;
 

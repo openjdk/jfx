@@ -35,19 +35,17 @@
 
 namespace WebCore {
 
+class BitmapImage;
 class GraphicsContext;
-class Image;
 class ImageDecoder;
 class URL;
 
 class ImageSource : public ThreadSafeRefCounted<ImageSource> {
     friend class BitmapImage;
 public:
-    ImageSource(Image*, AlphaOption = AlphaOption::Premultiplied, GammaAndColorProfileOption = GammaAndColorProfileOption::Applied);
-    ImageSource(NativeImagePtr&&);
     ~ImageSource();
 
-    static Ref<ImageSource> create(Image* image, AlphaOption alphaOption = AlphaOption::Premultiplied, GammaAndColorProfileOption gammaAndColorProfileOption = GammaAndColorProfileOption::Applied)
+    static Ref<ImageSource> create(BitmapImage* image, AlphaOption alphaOption = AlphaOption::Premultiplied, GammaAndColorProfileOption gammaAndColorProfileOption = GammaAndColorProfileOption::Applied)
     {
         return adoptRef(*new ImageSource(image, alphaOption, gammaAndColorProfileOption));
     }
@@ -83,6 +81,8 @@ public:
     void stopAsyncDecodingQueue();
     bool hasAsyncDecodingQueue() const { return m_decodingQueue; }
     bool isAsyncDecodingQueueIdle() const;
+    void setFrameDecodingDurationForTesting(Seconds duration) { m_frameDecodingDurationForTesting = duration; }
+    Seconds frameDecodingDurationForTesting() const { return m_frameDecodingDurationForTesting; }
 
     // Image metadata which is calculated either by the ImageDecoder or directly
     // from the NativeImage if this class was created for a memory image.
@@ -123,6 +123,9 @@ public:
     NativeImagePtr frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel = SubsamplingLevel::Default);
 
 private:
+    ImageSource(BitmapImage*, AlphaOption = AlphaOption::Premultiplied, GammaAndColorProfileOption = GammaAndColorProfileOption::Applied);
+    ImageSource(NativeImagePtr&&);
+
     template<typename T, T (ImageDecoder::*functor)() const>
     T metadata(const T& defaultValue, std::optional<T>* cachedValue = nullptr);
 
@@ -155,7 +158,7 @@ private:
 
     void dump(TextStream&);
 
-    Image* m_image { nullptr };
+    BitmapImage* m_image { nullptr };
     RefPtr<ImageDecoder> m_decoder;
     AlphaOption m_alphaOption { AlphaOption::Premultiplied };
     GammaAndColorProfileOption m_gammaAndColorProfileOption { GammaAndColorProfileOption::Applied };
@@ -180,6 +183,7 @@ private:
     RefPtr<FrameRequestQueue> m_frameRequestQueue;
     FrameCommitQueue m_frameCommitQueue;
     RefPtr<WorkQueue> m_decodingQueue;
+    Seconds m_frameDecodingDurationForTesting;
 
     // Image metadata.
     std::optional<EncodedDataStatus> m_encodedDataStatus;

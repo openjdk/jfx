@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2011 Motorola Mobility. All rights reserved.
  *
@@ -64,11 +64,14 @@
 #include "Text.h"
 #include "XMLNames.h"
 #include "markup.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLElement);
 
 using namespace HTMLNames;
 using namespace WTF;
@@ -223,9 +226,19 @@ HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
 
     static const QualifiedName* const table[] = {
         &onabortAttr.get(),
+        &onaccessiblecontextmenuAttr.get(),
+        &onaccessibleclickAttr.get(),
+        &onaccessibledecrementAttr.get(),
+        &onaccessibledismissAttr.get(),
+        &onaccessiblefocusAttr.get(),
+        &onaccessibleincrementAttr.get(),
+        &onaccessiblescrollintoviewAttr.get(),
+        &onaccessiblesetvalueAttr.get(),
+        &onaccessibleselectAttr.get(),
         &onanimationendAttr.get(),
         &onanimationiterationAttr.get(),
         &onanimationstartAttr.get(),
+        &onanimationcancelAttr.get(),
         &onautocompleteAttr.get(),
         &onautocompleteerrorAttr.get(),
         &onbeforecopyAttr.get(),
@@ -300,7 +313,10 @@ HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
         &ontouchforcechangeAttr.get(),
         &ontouchmoveAttr.get(),
         &ontouchstartAttr.get(),
+        &ontransitioncancelAttr.get(),
         &ontransitionendAttr.get(),
+        &ontransitionrunAttr.get(),
+        &ontransitionstartAttr.get(),
         &onvolumechangeAttr.get(),
         &onwaitingAttr.get(),
         &onwebkitbeginfullscreenAttr.get(),
@@ -623,15 +639,15 @@ String HTMLElement::contentEditable() const
 {
     switch (contentEditableType(*this)) {
     case ContentEditableType::Inherit:
-        return ASCIILiteral("inherit");
+        return "inherit"_s;
     case ContentEditableType::True:
-        return ASCIILiteral("true");
+        return "true"_s;
     case ContentEditableType::False:
-        return ASCIILiteral("false");
+        return "false"_s;
     case ContentEditableType::PlaintextOnly:
-        return ASCIILiteral("plaintext-only");
+        return "plaintext-only"_s;
     }
-    return ASCIILiteral("inherit");
+    return "inherit"_s;
 }
 
 ExceptionOr<void> HTMLElement::setContentEditable(const String& enabled)
@@ -784,7 +800,7 @@ TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) con
 {
     if (!(selfOrAncestorHasDirAutoAttribute() && hasDirectionAuto())) {
         isAuto = false;
-        return LTR;
+        return TextDirection::LTR;
     }
 
     isAuto = true;
@@ -799,7 +815,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
         UCharDirection textDirection = textElement.value().defaultWritingDirection(&hasStrongDirectionality);
         if (strongDirectionalityTextNode)
             *strongDirectionalityTextNode = hasStrongDirectionality ? &textElement : nullptr;
-        return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
+        return (textDirection == U_LEFT_TO_RIGHT) ? TextDirection::LTR : TextDirection::RTL;
     }
 
     RefPtr<Node> node = firstChild();
@@ -826,14 +842,14 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
             if (hasStrongDirectionality) {
                 if (strongDirectionalityTextNode)
                     *strongDirectionalityTextNode = node.get();
-                return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
+                return (textDirection == U_LEFT_TO_RIGHT) ? TextDirection::LTR : TextDirection::RTL;
             }
         }
         node = NodeTraversal::next(*node, this);
     }
     if (strongDirectionalityTextNode)
         *strongDirectionalityTextNode = nullptr;
-    return LTR;
+    return TextDirection::LTR;
 }
 
 void HTMLElement::dirAttributeChanged(const AtomicString& value)

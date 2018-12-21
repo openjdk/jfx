@@ -33,6 +33,7 @@
 #include "Frame.h"
 #include "HTMLAnchorElement.h"
 #include "Page.h"
+#include "SVGNames.h"
 #include "VisitedLinkStore.h"
 #include "XLinkNames.h"
 
@@ -47,7 +48,7 @@ inline static const AtomicString* linkAttribute(const Element& element)
     if (element.isHTMLElement())
         return &element.attributeWithoutSynchronization(HTMLNames::hrefAttr);
     if (element.isSVGElement())
-        return &element.getAttribute(XLinkNames::hrefAttr);
+        return &element.getAttribute(SVGNames::hrefAttr, XLinkNames::hrefAttr);
     return 0;
 }
 
@@ -85,18 +86,18 @@ void VisitedLinkState::invalidateStyleForLink(SharedStringHash linkHash)
     }
 }
 
-EInsideLink VisitedLinkState::determineLinkStateSlowCase(const Element& element)
+InsideLink VisitedLinkState::determineLinkStateSlowCase(const Element& element)
 {
     ASSERT(element.isLink());
 
     const AtomicString* attribute = linkAttribute(element);
     if (!attribute || attribute->isNull())
-        return NotInsideLink;
+        return InsideLink::NotInside;
 
     // An empty href refers to the document itself which is always visited. It is useful to check this explicitly so
     // that visited links can be tested in platform independent manner, without explicit support in the test harness.
     if (attribute->isEmpty())
-        return InsideVisitedLink;
+        return InsideLink::InsideVisited;
 
     SharedStringHash hash;
     if (is<HTMLAnchorElement>(element))
@@ -105,22 +106,22 @@ EInsideLink VisitedLinkState::determineLinkStateSlowCase(const Element& element)
         hash = computeVisitedLinkHash(element.document().baseURL(), *attribute);
 
     if (!hash)
-        return InsideUnvisitedLink;
+        return InsideLink::InsideUnvisited;
 
     Frame* frame = element.document().frame();
     if (!frame)
-        return InsideUnvisitedLink;
+        return InsideLink::InsideUnvisited;
 
     Page* page = frame->page();
     if (!page)
-        return InsideUnvisitedLink;
+        return InsideLink::InsideUnvisited;
 
     m_linksCheckedForVisitedState.add(hash);
 
     if (!page->visitedLinkStore().isLinkVisited(*page, hash, element.document().baseURL(), *attribute))
-        return InsideUnvisitedLink;
+        return InsideLink::InsideUnvisited;
 
-    return InsideVisitedLink;
+    return InsideLink::InsideVisited;
 }
 
 } // namespace WebCore
