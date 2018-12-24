@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,6 +178,13 @@ final class PaintCollector implements CompletionListener {
         return hasDirty;
     }
 
+    private final void setDirty(boolean value) {
+        hasDirty = value;
+        if (hasDirty) {
+            QuantumToolkit.getToolkit().requestNextPulse();
+        }
+    }
+
     /**
      * Adds a dirty scene to the PaintCollector for subsequent processing.
      * This method simply makes the PaintCollector aware of this new
@@ -209,7 +216,7 @@ final class PaintCollector implements CompletionListener {
             dirtyScenes.add(scene);
             // Now that we know we have added a scene to dirtyScenes,
             // we should ensure hasDirty is true.
-            hasDirty = true;
+            setDirty(true);
         }
     }
 
@@ -241,7 +248,7 @@ final class PaintCollector implements CompletionListener {
         // Remove the scene
         dirtyScenes.remove(scene);
         // Update hasDirty
-        hasDirty = !dirtyScenes.isEmpty();
+        setDirty(!dirtyScenes.isEmpty());
     }
 
     /**
@@ -361,7 +368,7 @@ final class PaintCollector implements CompletionListener {
         Collections.sort(dirtyScenes, DIRTY_SCENE_SORTER);
 
         // Reset the fields
-        hasDirty = false;
+        setDirty(false);
         needsHint = false;
 
         // If pulse logging is enabled, then we must call renderStart

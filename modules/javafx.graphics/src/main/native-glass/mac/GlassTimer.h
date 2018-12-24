@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@
 
     pthread_t   _thread;
     BOOL        _running;
+    BOOL        _paused;
 
     int64_t     _period;
     JNIEnv*     _env;
