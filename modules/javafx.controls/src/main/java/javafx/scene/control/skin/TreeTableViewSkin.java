@@ -276,6 +276,8 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
         }
     }
 
+
+
     /***************************************************************************
      *                                                                         *
      * Private methods                                                         *

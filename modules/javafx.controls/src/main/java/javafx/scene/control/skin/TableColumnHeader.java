@@ -590,28 +590,27 @@ public class TableColumnHeader extends Region {
 
         // if the prefWidth has been set, we do _not_ autosize columns
         if (prefWidth == DEFAULT_COLUMN_WIDTH) {
-            resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
+            resizeColumnToFitContent(column, cellsToMeasure);
         }
     }
 
     /**
      * Resizes the given column based on the preferred width of all items contained in it. This can be potentially very
-     * expensive if the number of rows is large.
+     * expensive if the number of rows is large. Subclass can either call this method or override it (no need to call
+     * {@code super()}) to provide their custom algorithm.
      *
-     * @param tableSkin the {@code TableViewSkinBase} used to determine if we are dealing with a {@link TableView} or a
-     *                  {@link TreeTableView}
-     * @param tc        the column to resize
-     * @param maxRows   the number of rows considered when resizing. If -1 is given, all rows are considered.
+     * @param tc      the column to resize
+     * @param maxRows the number of rows considered when resizing. If -1 is given, all rows are considered.
      * @since 12
      */
-    protected void resizeColumnToFitContent(TableViewSkinBase<?,?,?,?,?> tableSkin, TableColumnBase<?, ?> tc, int maxRows) {
+    protected void resizeColumnToFitContent(TableColumnBase<?, ?> tc, int maxRows) {
         if (!tc.isResizable()) return;
 
-        Object control = tableSkin.getSkinnable();
+        Object control = this.getTableSkin().getSkinnable();
         if (control instanceof TableView) {
-            resizeColumnToFitContent((TableView)control, (TableColumn)tc, tableSkin, maxRows);
+            resizeColumnToFitContent((TableView)control, (TableColumn)tc, this.getTableSkin(), maxRows);
         } else if (control instanceof TreeTableView) {
-            resizeColumnToFitContent((TreeTableView)control, (TreeTableColumn)tc, tableSkin, maxRows);
+            resizeColumnToFitContent((TreeTableView)control, (TreeTableColumn)tc, this.getTableSkin(), maxRows);
         }
     }
 
@@ -673,7 +672,7 @@ public class TableColumnHeader extends Region {
 
             int size = tc.getColumns().size();
             if (size > 0) {
-                resizeColumnToFitContent(tableSkin, tc.getColumns().get(size - 1), maxRows);
+                resizeColumnToFitContent(tc.getColumns().get(size - 1), maxRows);
                 return;
             }
 
@@ -752,7 +751,7 @@ public class TableColumnHeader extends Region {
 
             int size = tc.getColumns().size();
             if (size > 0) {
-                resizeColumnToFitContent(tableSkin, tc.getColumns().get(size - 1), maxRows);
+                resizeColumnToFitContent(tc.getColumns().get(size - 1), maxRows);
                 return;
             }
 
