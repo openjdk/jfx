@@ -501,6 +501,12 @@ static jint getTouchStateFromPhase(int phase)
             case com_sun_glass_events_MouseEvent_BUTTON_OTHER:
                 modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE;
                 break;
+            case com_sun_glass_events_MouseEvent_BUTTON_BACK:
+                modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK;
+                break;
+            case com_sun_glass_events_MouseEvent_BUTTON_FORWARD:
+                modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD;
+                break;
         }
     }
 

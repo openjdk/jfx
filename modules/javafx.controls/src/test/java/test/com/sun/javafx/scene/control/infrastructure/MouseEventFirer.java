@@ -194,6 +194,8 @@ public final class MouseEventFirer {
                 button == MouseButton.PRIMARY,     // primary button
                 button == MouseButton.MIDDLE,      // middle button
                 button == MouseButton.SECONDARY,   // secondary button
+                button == MouseButton.BACK,        // back button
+                button == MouseButton.FORWARD,     // forward button
                 false,                             // synthesized
                 button == MouseButton.SECONDARY,   // is popup trigger
                 true,                              // still since pick

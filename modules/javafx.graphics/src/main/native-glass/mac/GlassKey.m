@@ -218,6 +218,12 @@ jint GetJavaMouseModifiers(NSUInteger buttons)
     if (buttons & (1 << 2)) {
         jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE;
     }
+    if (buttons & (1 << 3)) {
+        jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK;
+    }
+    if (buttons & (1 << 4)) {
+        jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD;
+    }
     return jModifiers;
 }
 

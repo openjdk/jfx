@@ -115,6 +115,12 @@ class MouseState {
                 case MouseEvent.BUTTON_RIGHT:
                     modifiers |= KeyEvent.MODIFIER_BUTTON_SECONDARY;
                     break;
+                case MouseEvent.BUTTON_BACK:
+                    modifiers |= KeyEvent.MODIFIER_BUTTON_BACK;
+                    break;
+                case MouseEvent.BUTTON_FORWARD:
+                    modifiers |= KeyEvent.MODIFIER_BUTTON_FORWARD;
+                    break;
             }
         }
         return modifiers;

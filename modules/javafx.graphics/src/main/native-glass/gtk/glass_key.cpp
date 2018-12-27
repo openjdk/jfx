@@ -293,6 +293,8 @@ jint gdk_modifier_mask_to_glass(guint mask)
     glass_mask |= (mask & GDK_BUTTON1_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY : 0;
     glass_mask |= (mask & GDK_BUTTON2_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE : 0;
     glass_mask |= (mask & GDK_BUTTON3_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY : 0;
+    glass_mask |= (mask & GDK_BUTTON4_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK : 0;
+    glass_mask |= (mask & GDK_BUTTON5_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD : 0;
     glass_mask |= (mask & GDK_SUPER_MASK) ? com_sun_glass_events_KeyEvent_MODIFIER_WINDOWS : 0; // XXX: is this OK?
 
     return glass_mask;

@@ -79,6 +79,26 @@ public class RobotTest {
             assertEquals(400, (int) robot.getMouseY());
         });
         TestLogShim.waitForLog("Clicked at 300, 400");
+
+        Platform.runLater(() -> {
+            Robot robot = new Robot();
+            robot.mouseMove(new Point2D(300, 400));
+            robot.mouseClick(MouseButton.BACK);
+            assertEquals(new Point2D(300, 400), robot.getMousePosition());
+            assertEquals(300, (int) robot.getMouseX());
+            assertEquals(400, (int) robot.getMouseY());
+        });
+        TestLogShim.waitForLog("Clicked at 300, 400");
+
+        Platform.runLater(() -> {
+            Robot robot = new Robot();
+            robot.mouseMove(new Point2D(300, 400));
+            robot.mouseClick(MouseButton.FORWARD);
+            assertEquals(new Point2D(300, 400), robot.getMousePosition());
+            assertEquals(300, (int) robot.getMouseX());
+            assertEquals(400, (int) robot.getMouseY());
+        });
+        TestLogShim.waitForLog("Clicked at 300, 400");
     }
 
     @Test

@@ -45,6 +45,10 @@ class GlassEventUtils {
                 return "BUTTON_RIGHT";
             case MouseEvent.BUTTON_OTHER:
                 return "BUTTON_OTHER";
+            case MouseEvent.BUTTON_BACK:
+                return "BUTTON_BACK";
+            case MouseEvent.BUTTON_FORWARD:
+                return "BUTTON_FORWARD";
             case MouseEvent.DOWN:
                 return "DOWN";
             case MouseEvent.UP:

@@ -48,6 +48,9 @@
 
 #include <algorithm>
 
+#define MOUSE_BACK_BTN 8
+#define MOUSE_FORWARD_BTN 9
+
 WindowContext * WindowContextBase::sm_grab_window = NULL;
 WindowContext * WindowContextBase::sm_mouse_drag_window = NULL;
 
@@ -241,6 +244,10 @@ static inline jint gtk_button_number_to_mouse_button(guint button) {
             return com_sun_glass_events_MouseEvent_BUTTON_OTHER;
         case 3:
             return com_sun_glass_events_MouseEvent_BUTTON_RIGHT;
+        case MOUSE_BACK_BTN:
+            return com_sun_glass_events_MouseEvent_BUTTON_BACK;
+        case MOUSE_FORWARD_BTN:
+            return com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
         default:
             // Other buttons are not supported by quantum and are not reported by other platforms
             return com_sun_glass_events_MouseEvent_BUTTON_NONE;
@@ -264,6 +271,12 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
             break;
         case 3:
             mask = GDK_BUTTON3_MASK;
+            break;
+        case MOUSE_BACK_BTN:
+            mask = GDK_BUTTON4_MASK;
+            break;
+        case MOUSE_FORWARD_BTN:
+            mask = GDK_BUTTON5_MASK;
             break;
     }
 
@@ -290,9 +303,17 @@ void WindowContextBase::process_mouse_button(GdkEventButton* event) {
     // We can grab mouse pointer for these needs.
     if (press) {
         grab_mouse_drag_focus();
-    } else if ((event->state & MOUSE_BUTTONS_MASK)
+    } else {
+        if ((event->state & MOUSE_BUTTONS_MASK)
             && !(state & MOUSE_BUTTONS_MASK)) { // all buttons released
-        ungrab_mouse_drag_focus();
+            ungrab_mouse_drag_focus();
+        } else if (event->button == 8 || event->button == 9) {
+            // GDK X backend interprets button press events for buttons 4-7 as
+            // scroll events so GDK_BUTTON4_MASK and GDK_BUTTON5_MASK will never
+            // be set on the event->state from GDK. Thus we cannot check if all
+            // buttons have been released in the usual way (as above).
+            ungrab_mouse_drag_focus();
+        }
     }
 
     jint button = gtk_button_number_to_mouse_button(event->button);
@@ -323,7 +344,9 @@ void WindowContextBase::process_mouse_motion(GdkEventMotion* event) {
     jint isDrag = glass_modifier & (
             com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY |
             com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE |
-            com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY);
+            com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY |
+            com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK |
+            com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD);
     jint button = com_sun_glass_events_MouseEvent_BUTTON_NONE;
 
     if (glass_modifier & com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY) {
@@ -332,6 +355,10 @@ void WindowContextBase::process_mouse_motion(GdkEventMotion* event) {
         button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
     } else if (glass_modifier & com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_SECONDARY) {
         button = com_sun_glass_events_MouseEvent_BUTTON_RIGHT;
+    } else if (glass_modifier & com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK) {
+        button = com_sun_glass_events_MouseEvent_BUTTON_BACK;
+    } else if (glass_modifier & com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD) {
+        button = com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
     }
 
     if (jview) {

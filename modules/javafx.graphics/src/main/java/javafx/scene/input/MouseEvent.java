@@ -297,6 +297,10 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Constructs new MouseEvent event with null source and target.
+     *
+     * Both {@link #isBackButtonDown()}  and {@link #isForwardButtonDown()}
+     * will return {@literal false} for this event.
+     *
      * @param eventType The type of the event.
      * @param x The x with respect to the scene.
      * @param y The y with respect to the scene.
@@ -343,7 +347,63 @@ public class MouseEvent extends InputEvent {
     }
 
     /**
+     * Constructs new MouseEvent event with null source and target.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the scene.
+     * @param y The y with respect to the scene.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param primaryButtonDown true if primary button was pressed.
+     * @param middleButtonDown true if middle button was pressed.
+     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param backButtonDown true if back button was pressed.
+     * @param forwardButtonDown true if forward button was pressed
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param stillSincePress see {@link #isStillSincePress() }
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates
+     * @since 12
+     */
+    public MouseEvent(
+            @NamedArg("eventType") EventType<? extends MouseEvent> eventType,
+            @NamedArg("x") double x, @NamedArg("y") double y,
+            @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+            @NamedArg("button") MouseButton button,
+            @NamedArg("clickCount") int clickCount,
+            @NamedArg("shiftDown") boolean shiftDown,
+            @NamedArg("controlDown") boolean controlDown,
+            @NamedArg("altDown") boolean altDown,
+            @NamedArg("metaDown") boolean metaDown,
+            @NamedArg("primaryButtonDown") boolean primaryButtonDown,
+            @NamedArg("middleButtonDown") boolean middleButtonDown,
+            @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+            @NamedArg("backButtonDown") boolean backButtonDown,
+            @NamedArg("forwardButtonDown") boolean forwardButtonDown,
+            @NamedArg("synthesized") boolean synthesized,
+            @NamedArg("popupTrigger") boolean popupTrigger,
+            @NamedArg("stillSincePress") boolean stillSincePress,
+            @NamedArg("pickResult") PickResult pickResult) {
+        this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
+                shiftDown, controlDown, altDown, metaDown,
+                primaryButtonDown, middleButtonDown, secondaryButtonDown,
+                backButtonDown, forwardButtonDown,
+                synthesized, popupTrigger, stillSincePress, pickResult);
+    }
+
+    /**
      * Constructs new MouseEvent event.
+     *
+     * Both {@link #isBackButtonDown()}  and {@link #isForwardButtonDown()}
+     * will return {@literal false} for this event.
+     *
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
@@ -385,6 +445,59 @@ public class MouseEvent extends InputEvent {
             @NamedArg("popupTrigger") boolean popupTrigger,
             @NamedArg("stillSincePress") boolean stillSincePress,
             @NamedArg("pickResult") PickResult pickResult) {
+        this(source, target, eventType, x, y, screenX, screenY, button, clickCount,
+                shiftDown, controlDown, altDown, metaDown,
+                primaryButtonDown, middleButtonDown, secondaryButtonDown, false, false,
+                synthesized, popupTrigger, stillSincePress, pickResult);
+    }
+
+    /**
+     * Constructs new MouseEvent event.
+     * @param source the source of the event. Can be null.
+     * @param target the target of the event. Can be null.
+     * @param eventType The type of the event.
+     * @param x The x with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param y The y with respect to the source. Should be in scene coordinates if source == null or source is not a Node.
+     * @param screenX The x coordinate relative to screen.
+     * @param screenY The y coordinate relative to screen.
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed.
+     * @param controlDown true if control modifier was pressed.
+     * @param altDown true if alt modifier was pressed.
+     * @param metaDown true if meta modifier was pressed.
+     * @param primaryButtonDown true if primary button was pressed.
+     * @param middleButtonDown true if middle button was pressed.
+     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param backButtonDown true if the back button was pressed
+     * @param forwardButtonDown true if the forward button was pressed
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param stillSincePress see {@link #isStillSincePress() }
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and target
+     * @since 12
+     */
+    public MouseEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target,
+                      @NamedArg("eventType") EventType<? extends MouseEvent> eventType,
+                      @NamedArg("x") double x, @NamedArg("y") double y,
+                      @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+                      @NamedArg("button") MouseButton button,
+                      @NamedArg("clickCount") int clickCount,
+                      @NamedArg("shiftDown") boolean shiftDown,
+                      @NamedArg("controlDown") boolean controlDown,
+                      @NamedArg("altDown") boolean altDown,
+                      @NamedArg("metaDown") boolean metaDown,
+                      @NamedArg("primaryButtonDown") boolean primaryButtonDown,
+                      @NamedArg("middleButtonDown") boolean middleButtonDown,
+                      @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+                      @NamedArg("backButtonDown") boolean backButtonDown,
+                      @NamedArg("forwardButtonDown") boolean forwardButtonDown,
+                      @NamedArg("synthesized") boolean synthesized,
+                      @NamedArg("popupTrigger") boolean popupTrigger,
+                      @NamedArg("stillSincePress") boolean stillSincePress,
+                      @NamedArg("pickResult") PickResult pickResult) {
         super(source, target, eventType);
         this.x = x;
         this.y = y;
@@ -401,6 +514,8 @@ public class MouseEvent extends InputEvent {
         this.primaryButtonDown = primaryButtonDown;
         this.middleButtonDown = middleButtonDown;
         this.secondaryButtonDown = secondaryButtonDown;
+        this.backButtonDown = backButtonDown;
+        this.forwardButtonDown = forwardButtonDown;
         this.synthesized = synthesized;
         this.stillSincePress = stillSincePress;
         this.popupTrigger = popupTrigger;
@@ -434,7 +549,7 @@ public class MouseEvent extends InputEvent {
                 type, e.sceneX, e.sceneY, e.screenX, e.screenY,
                 e.button, e.clickCount, e.shiftDown, e.controlDown,
                 e.altDown, e.metaDown, e.primaryButtonDown, e.middleButtonDown,
-                e.secondaryButtonDown, e.synthesized, e.popupTrigger,
+                e.secondaryButtonDown, e.backButtonDown, e.forwardButtonDown, e.synthesized, e.popupTrigger,
                 pickResult, gestureSource);
         ev.recomputeCoordinatesToSource(e, source);
         return ev;
@@ -847,6 +962,52 @@ public class MouseEvent extends InputEvent {
     }
 
     /**
+     * {@code true} if back button (button 4) is currently pressed.
+     * Note that this is different from the {@link #getButton() button} variable in
+     * that the {@code button} variable indicates which button press was
+     * responsible for this event while this variable indicates whether the
+     * back button is depressed.
+     */
+    private final boolean backButtonDown;
+
+    /**
+     * Returns {@code true} if back button (button 4)
+     * is currently pressed. Note that this is different from the
+     * {@code getButton()} method that indicates which button press was
+     * responsible for this event while this method indicates whether the
+     * back button is depressed.
+     *
+     * @return {@code true} if back button (button 4) is currently pressed
+     * @since 12
+     */
+    public final boolean isBackButtonDown() {
+        return backButtonDown;
+    }
+
+    /**
+     * {@code true} if forward button (button 5) is currently pressed.
+     * Note that this is different from the {@link #getButton() button} variable in
+     * that the {@code button} variable indicates which button press was
+     * responsible for this event while this variable indicates whether the
+     * forward button is depressed.
+     */
+    private final boolean forwardButtonDown;
+
+    /**
+     * Returns {@code true} if forward button (button 5)
+     * is currently pressed. Note that this is different from the
+     * {@code getButton()} method that indicates which button press was
+     * responsible for this event while this method indicates whether the
+     * back button is depressed.
+     *
+     * @return {@code true} if forward button (button 5) is currently pressed
+     * @since 12
+     */
+    public final boolean isForwardButtonDown() {
+        return forwardButtonDown;
+    }
+
+    /**
      * Returns a string representation of this {@code MouseEvent} object.
      * @return a string representation of this {@code MouseEvent} object.
      */
@@ -875,6 +1036,12 @@ public class MouseEvent extends InputEvent {
         }
         if (isSecondaryButtonDown()) {
             sb.append(", secondaryButtonDown");
+        }
+        if (isBackButtonDown()) {
+            sb.append(", backButtonDown");
+        }
+        if (isForwardButtonDown()) {
+            sb.append(", forwardButtonDown");
         }
         if (isShiftDown()) {
             sb.append(", shiftDown");

@@ -69,6 +69,8 @@ class SWTEvents {
             case 1: return AbstractEvents.MOUSEEVENT_PRIMARY_BUTTON;
             case 2: return AbstractEvents.MOUSEEVENT_MIDDLE_BUTTON;
             case 3: return AbstractEvents.MOUSEEVENT_SECONDARY_BUTTON;
+            case 4: return AbstractEvents.MOUSEEVENT_BACK_BUTTON;
+            case 5: return AbstractEvents.MOUSEEVENT_FORWARD_BUTTON;
         }
         return AbstractEvents.MOUSEEVENT_NONE_BUTTON;
     }

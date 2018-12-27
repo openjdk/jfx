@@ -178,6 +178,8 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
             case X.Button1: return MouseEvent.BUTTON_LEFT;
             case X.Button2: return MouseEvent.BUTTON_OTHER;
             case X.Button3: return MouseEvent.BUTTON_RIGHT;
+            case X.Button8: return MouseEvent.BUTTON_BACK;
+            case X.Button9: return MouseEvent.BUTTON_FORWARD;
             default: return MouseEvent.BUTTON_NONE;
         }
     }

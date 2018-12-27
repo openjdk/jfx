@@ -47,7 +47,21 @@ public enum MouseButton {
     MIDDLE,
 
     /**
-     * Represents seconday (button 3, usually the right) mouse button.
+     * Represents secondary (button 3, usually the right) mouse button.
      */
     SECONDARY,
+
+    /**
+     * Represents back (button 4) mouse button.
+     *
+     * @since 12
+     */
+    BACK,
+
+    /**
+     * Represents forward (button 5) mouse button.
+     *
+     * @since 12
+     */
+    FORWARD;
 }

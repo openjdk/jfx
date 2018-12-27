@@ -127,6 +127,10 @@ class LinuxMouseProcessor implements LinuxInputProcessor {
                 return MouseEvent.BUTTON_OTHER;
             case LinuxInput.BTN_RIGHT:
                 return MouseEvent.BUTTON_RIGHT;
+            case LinuxInput.BTN_BACK:
+                return MouseEvent.BUTTON_BACK;
+            case LinuxInput.BTN_FORWARD:
+                return MouseEvent.BUTTON_FORWARD;
             default:
                 return -1;
         }

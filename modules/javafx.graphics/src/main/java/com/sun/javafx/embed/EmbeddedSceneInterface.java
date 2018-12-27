@@ -69,6 +69,7 @@ public interface EmbeddedSceneInterface {
      */
     public void mouseEvent(int type, int button,
                            boolean primaryBtnDown, boolean middleBtnDown, boolean secondaryBtnDown,
+                           boolean backBtnDown, boolean forwardBtnDown,
                            int x, int y, int xAbs, int yAbs,
                            boolean shift, boolean ctrl, boolean alt, boolean meta,
                            boolean popupTrigger);

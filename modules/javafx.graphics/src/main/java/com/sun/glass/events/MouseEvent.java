@@ -31,6 +31,8 @@ public class MouseEvent {
     @Native final static public int BUTTON_LEFT     = 212;
     @Native final static public int BUTTON_RIGHT    = 213;
     @Native final static public int BUTTON_OTHER    = 214;
+    @Native final static public int BUTTON_BACK     = 215;
+    @Native final static public int BUTTON_FORWARD  = 216;
 
     @Native final static public int DOWN            = 221;
     @Native final static public int UP              = 222;

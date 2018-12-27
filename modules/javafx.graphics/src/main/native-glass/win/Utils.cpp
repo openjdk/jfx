@@ -97,6 +97,12 @@ jint GetModifiers()
     if (HIBYTE(::GetKeyState(VK_LBUTTON)) != 0) {
         modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY;
     }
+    if (HIBYTE(::GetKeyState(VK_XBUTTON1)) != 0) {
+        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK;
+    }
+    if (HIBYTE(::GetKeyState(VK_XBUTTON2)) != 0) {
+        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD;
+    }
 
     return modifiers;
 }

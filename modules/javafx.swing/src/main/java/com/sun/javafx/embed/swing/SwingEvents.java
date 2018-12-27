@@ -71,6 +71,12 @@ public class SwingEvents {
             case MouseEvent.BUTTON3:
                 abstractButton = AbstractEvents.MOUSEEVENT_SECONDARY_BUTTON;
                 break;
+            case 4:
+                abstractButton = AbstractEvents.MOUSEEVENT_BACK_BUTTON;
+                break;
+            case 5:
+                abstractButton = AbstractEvents.MOUSEEVENT_FORWARD_BUTTON;
+                break;
             default:
                 break;
         }
@@ -81,6 +87,10 @@ public class SwingEvents {
             abstractButton = AbstractEvents.MOUSEEVENT_MIDDLE_BUTTON;
         } else if ((extModifiers & MouseEvent.BUTTON3_DOWN_MASK) != 0) {
             abstractButton = AbstractEvents.MOUSEEVENT_SECONDARY_BUTTON;
+        } else if ((extModifiers & MouseEvent.getMaskForButton(4)) != 0) {
+            abstractButton = AbstractEvents.MOUSEEVENT_BACK_BUTTON;
+        } else if ((extModifiers & MouseEvent.getMaskForButton(5)) != 0) {
+            abstractButton = AbstractEvents.MOUSEEVENT_FORWARD_BUTTON;
         }
         return abstractButton;
     }
@@ -180,6 +190,12 @@ public class SwingEvents {
         if (event.isMiddleButtonDown()) {
             mods |= MouseEvent.BUTTON2_DOWN_MASK;
         }
+        if (event.isBackButtonDown()) {
+            mods |= MouseEvent.getMaskForButton(4);
+        }
+        if (event.isForwardButtonDown()) {
+            mods |= MouseEvent.getMaskForButton(5);
+        }
         return mods;
     }
 
@@ -191,6 +207,10 @@ public class SwingEvents {
                 return MouseEvent.BUTTON3;
             case MIDDLE:
                 return MouseEvent.BUTTON2;
+            case BACK:
+                return 4;
+            case FORWARD:
+                return 5;
         }
         return 0;
     }

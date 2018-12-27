@@ -85,6 +85,10 @@ class X {
     static final int Button3 = 3;
     static final int Button4 = 4;
     static final int Button5 = 5;
+    // 4th button (aka browser backward button).
+    static final int Button8 = 8;
+    // 5th button (aka browser forward button).
+    static final int Button9 = 9;
 
     static final long _NET_WM_STATE_REMOVE = 0;
     static final long _NET_WM_STATE_ADD = 1;

@@ -316,6 +316,12 @@ GlassDropSource::GlassDropSource(jobject jDnDClipboard)
     case com_sun_glass_events_MouseEvent_BUTTON_OTHER:
         m_button = MK_MBUTTON;
         break;
+    case com_sun_glass_events_MouseEvent_BUTTON_BACK:
+        m_button = MK_XBUTTON1;
+        break;
+    case com_sun_glass_events_MouseEvent_BUTTON_FORWARD:
+        m_button = MK_XBUTTON2;
+        break;
     default:
         m_button = 0;
         break;

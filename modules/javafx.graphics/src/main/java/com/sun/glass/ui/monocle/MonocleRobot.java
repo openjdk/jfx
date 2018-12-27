@@ -100,6 +100,20 @@ class MonocleRobot extends GlassRobot {
                         state.releaseButton(MouseEvent.BUTTON_OTHER);
                     }
                     break;
+                case BACK:
+                    if (press) {
+                        state.pressButton(MouseEvent.BUTTON_BACK);
+                    } else {
+                        state.releaseButton(MouseEvent.BUTTON_BACK);
+                    }
+                    break;
+                case FORWARD:
+                    if (press) {
+                        state.pressButton(MouseEvent.BUTTON_FORWARD);
+                    } else {
+                        state.releaseButton(MouseEvent.BUTTON_FORWARD);
+                    }
+                    break;
                 default: throw new IllegalArgumentException("MouseButton: " + button +
                         " not supported by Monocle Robot");
             }

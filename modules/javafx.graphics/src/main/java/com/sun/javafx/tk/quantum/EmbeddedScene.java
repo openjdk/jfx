@@ -271,6 +271,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     @Override
     public void mouseEvent(final int type, final int button,
                            final boolean primaryBtnDown, final boolean middleBtnDown, final boolean secondaryBtnDown,
+                           final boolean backBtnDown, final boolean forwardBtnDown,
                            final int x, final int y, final int xAbs, final int yAbs,
                            final boolean shift, final boolean ctrl, final boolean alt, final boolean meta,
                            final boolean popupTrigger)
@@ -287,7 +288,9 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                             AbstractEvents.mouseButtonToFXMouseButton(button),
                             popupTrigger, false, // do we know if it's synthesized? RT-20142
                             shift, ctrl, alt, meta,
-                            primaryBtnDown, middleBtnDown, secondaryBtnDown);
+                            primaryBtnDown, middleBtnDown, secondaryBtnDown,
+                            backBtnDown, forwardBtnDown
+                        );
                 return null;
             }, getAccessControlContext());
         });
