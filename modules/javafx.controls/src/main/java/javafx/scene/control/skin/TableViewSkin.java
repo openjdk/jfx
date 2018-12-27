@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.property.BooleanProperty;

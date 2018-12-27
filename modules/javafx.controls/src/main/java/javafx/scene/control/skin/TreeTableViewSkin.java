@@ -29,7 +29,6 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
-import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.TreeTableViewBackingList;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.event.WeakEventHandler;
