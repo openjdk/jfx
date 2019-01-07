@@ -27,37 +27,25 @@ package com.sun.javafx.logging;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 
 public class PulseLogger {
-
     public static final boolean PULSE_LOGGING_ENABLED;
 
+    private static final String [] DEFAULT_LOGGERS = {"com.sun.javafx.logging.PrintLogger", "com.sun.javafx.logging.jfr.JFRPulseLogger"};
     private static final Logger[] loggers;
 
     static {
-        List<Logger> list = new ArrayList();
-        Logger logger = PrintLogger.getInstance();
-        if (logger != null) {
-            list.add(logger);
+        List<Logger> list = new ArrayList<>();
+        for (String loggerClass : DEFAULT_LOGGERS) {
+            Logger logger = loadLogger(loggerClass);
+            if (logger != null) {
+                list.add(logger);
+            }
         }
-
-//        // Another optional logger could be added as follows:
-//        try {
-//            Class klass = Class.forName("com.sun.javafx.logging.OtherLogger");
-//            if (klass != null) {
-//                Method method = klass.getDeclaredMethod("getInstance");
-//                logger = (Logger) method.invoke(null);
-//                if (logger != null) {
-//                    list.add(logger);
-//                }
-//            }
-//        }
-//        catch (NoClassDefFoundError | ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-//            // Ignore
-//        }
-
         loggers = list.toArray(new Logger[list.size()]);
         PULSE_LOGGING_ENABLED = loggers.length > 0;
     }
@@ -108,5 +96,27 @@ public class PulseLogger {
         for (Logger logger: loggers) {
             logger.newInput(name);
         }
+    }
+
+    /**
+     * @return true if the user requested pulse logging by setting the system
+     *         property javafx.pulseLogger to true, false otherwise.
+     */
+    public static boolean isPulseLoggingRequested() {
+        return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.pulseLogger"));
+    }
+
+    // Loading known loggers reflectively, in case an expected module isn't available
+    private static Logger loadLogger(String className) {
+        try {
+            Class<?> klass = Class.forName(className);
+            if (klass != null) {
+                Method method = klass.getDeclaredMethod("createInstance");
+                return (Logger) method.invoke(null);
+            }
+        } catch (NoClassDefFoundError | ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            // Ignore
+        }
+        return null;
     }
 }
