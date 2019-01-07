@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,12 +48,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * to ensure that the logging system works correctly.
  */
 class PrintLogger extends Logger {
-
-    /**
-     * A reference to the pulse logger. This will be null if pulse logging
-     * is not enabled.
-     */
-    private static PrintLogger printLogger;
 
     /**
      * A time in milliseconds which defines the threshold. If a pulse lasts <em>longer</em> than
@@ -110,7 +103,7 @@ class PrintLogger extends Logger {
 
     private Thread fxThread;
     private final ThreadLocal<ThreadLocalData> phaseData =
-        new ThreadLocal() {
+        new ThreadLocal<>() {
             @Override
             public ThreadLocalData initialValue() {
                 return new ThreadLocalData();
@@ -149,14 +142,12 @@ class PrintLogger extends Logger {
         active = new AtomicInteger(0);
     }
 
-    public static Logger getInstance() {
-        if (printLogger == null) {
-            boolean enabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.pulseLogger"));
-            if (enabled) {
-                printLogger = new PrintLogger();
-            }
+    public static Logger createInstance() {
+        boolean enabled = PulseLogger.isPulseLoggingRequested();
+        if (enabled) {
+            return new PrintLogger();
         }
-        return printLogger;
+        return null;
     }
 
     /**
@@ -355,7 +346,7 @@ class PrintLogger extends Logger {
         int pulseCount;
         boolean pushedRender;
         StringBuffer message = new StringBuffer();
-        Map<String,Counter> counters = new ConcurrentHashMap();
+        Map<String,Counter> counters = new ConcurrentHashMap<>();
 
         void init(int n) {
             state = INCOMPLETE;
@@ -394,7 +385,7 @@ class PrintLogger extends Logger {
                 System.err.print(message);
                 if (!counters.isEmpty()) {
                     System.err.println("Counters:");
-                    List<Map.Entry<String,Counter>> entries = new ArrayList(counters.entrySet());
+                    List<Map.Entry<String,Counter>> entries = new ArrayList<>(counters.entrySet());
                     Collections.sort(entries, (a, b) -> a.getKey().compareTo(b.getKey()));
                     for (Map.Entry<String, Counter> entry : entries) {
                         System.err.println("\t" + entry.getKey() + ": " + entry.getValue().value);
