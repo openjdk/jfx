@@ -73,11 +73,11 @@ XMLPUBVAR unsigned int xmlParserMaxDepth;
 #define XML_MAX_LOOKUP_LIMIT 10000000
 
 /**
-  * XML_MAX_NAMELEN:
-  *
-  * Identifiers can be longer, but this will be more costly
-  * at runtime.
-  */
+ * XML_MAX_NAMELEN:
+ *
+ * Identifiers can be longer, but this will be more costly
+ * at runtime.
+ */
 #define XML_MAX_NAMELEN 100
 
 /**
@@ -90,7 +90,7 @@ XMLPUBVAR unsigned int xmlParserMaxDepth;
 
 /************************************************************************
  *                                  *
- * UNICODE version of the macros.                       *
+ * UNICODE version of the macros.                   *
  *                                  *
  ************************************************************************/
 /**
@@ -284,7 +284,7 @@ XMLPUBVAR unsigned int xmlParserMaxDepth;
  *
  * Skips the end of line chars.
  */
-#define SKIP_EOL(p)                             \
+#define SKIP_EOL(p)                         \
     if (*(p) == 0x13) { p++ ; if (*(p) == 0x10) p++; }          \
     if (*(p) == 0x10) { p++ ; if (*(p) == 0x13) p++; }
 
@@ -516,7 +516,7 @@ XMLPUBFUN void XMLCALL
  *
  * Both general and parameter entities need to be substituted.
  */
-#define XML_SUBSTITUTE_BOTH     3
+#define XML_SUBSTITUTE_BOTH 3
 
 XMLPUBFUN xmlChar * XMLCALL
         xmlStringDecodeEntities     (xmlParserCtxtPtr ctxt,
