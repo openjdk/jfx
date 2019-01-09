@@ -9944,6 +9944,14 @@ qtdemux_parse_trak (GstQTDemux * qtdemux, GNode * trak)
 
   stream->stsd_entries_length = stsd_entry_count = QT_UINT32 (stsd_data + 12);
   stream->stsd_entries = g_new0 (QtDemuxStreamStsdEntry, stsd_entry_count);
+#ifdef GSTREAMER_LITE
+  // Even if we check stsd header length (stsd_len) to make sure we have at least
+  // one entry, we still might have actual entry count set to 0. g_new0() will
+  // return NULL if fail or count is 0.
+  if (stream->stsd_entries == NULL) {
+    goto corrupt_file;
+  }
+#endif // GSTREAMER_LITE
   GST_LOG_OBJECT (qtdemux, "stsd len:           %d", stsd_len);
   GST_LOG_OBJECT (qtdemux, "stsd entry count:   %u", stsd_entry_count);
 

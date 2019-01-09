@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -349,4 +349,8 @@ public interface MediaPlayer {
      * after this method is invoked.
      */
     public void dispose();
+    /**
+     * Returns true if we have cached error event.
+     */
+    public boolean isErrorEventCached();
 }

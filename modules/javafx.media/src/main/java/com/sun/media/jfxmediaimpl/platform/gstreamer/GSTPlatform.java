@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -149,6 +149,13 @@ public final class GSTPlatform extends Platform {
                         }
                     } catch (InterruptedException ex) {
                         // Ignore it.
+                    }
+
+                    // Check if error event was set. We will not go to READY or
+                    // HALT state in this case. Error event is basically same
+                    // as HALT.
+                    if (player.isErrorEventCached()) {
+                        break;
                     }
 
                     state = player.getState();
