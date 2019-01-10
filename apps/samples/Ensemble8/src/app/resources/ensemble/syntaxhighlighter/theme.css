@@ -1,19 +1,25 @@
-/**
- * SyntaxHighlighter
- * http://alexgorbatchev.com/SyntaxHighlighter
+/*
+ * Copyright (c) 2004-2016, Alex Gorbatchev
  *
- * SyntaxHighlighter is donationware. If you are using it, please donate.
- * http://alexgorbatchev.com/SyntaxHighlighter/donate.html
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * @version
- * 3.0.83 (July 02 2010)
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * @copyright
- * Copyright (C) 2004-2010 Alex Gorbatchev.
- *
- * @license
- * Dual licensed under the MIT and GPL licenses.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  */
+
 .syntaxhighlighter a,
 .syntaxhighlighter div,
 .syntaxhighlighter code,
@@ -58,6 +64,9 @@
   position: relative !important;
   overflow: auto !important;
   font-size: 1em !important;
+}
+.syntaxhighlighter .container:before, .syntaxhighlighter .container:after {
+  content: none !important;
 }
 .syntaxhighlighter.source {
   overflow: hidden !important;
@@ -243,6 +252,10 @@
 .syntaxhighlighter table caption {
   color: black !important;
 }
+.syntaxhighlighter table td.code .container textarea {
+  background: #f4f4f4;
+  color: black
+}
 .syntaxhighlighter .gutter {
   color: #afafaf !important;
 }
@@ -260,15 +273,15 @@
   overflow: visible !important;
 }
 .syntaxhighlighter.collapsed .toolbar {
-  color: blue !important;
+  color: #00f !important;
   background: #f4f4f4 !important;
   border: 1px solid #6ce26c !important;
 }
 .syntaxhighlighter.collapsed .toolbar a {
-  color: blue !important;
+  color: #00f !important;
 }
 .syntaxhighlighter.collapsed .toolbar a:hover {
-  color: red !important;
+  color: #f00 !important;
 }
 .syntaxhighlighter .toolbar {
   color: #f4f4f4 !important;
@@ -279,7 +292,7 @@
   color: #f4f4f4 !important;
 }
 .syntaxhighlighter .toolbar a:hover {
-  color: black !important;
+  color: #000 !important;
 }
 .syntaxhighlighter .plain, .syntaxhighlighter .plain a {
   color: black !important;
@@ -291,6 +304,7 @@
   color: blue !important;
 }
 .syntaxhighlighter .keyword {
+  font-weight: bold !important;
   color: #006699 !important;
 }
 .syntaxhighlighter .preprocessor {
@@ -321,8 +335,4 @@
 }
 .syntaxhighlighter .color3, .syntaxhighlighter .color3 a {
   color: red !important;
-}
-
-.syntaxhighlighter .keyword {
-  font-weight: bold !important;
 }
