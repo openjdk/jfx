@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,10 @@ class GlassEventUtils {
                 return "BUTTON_RIGHT";
             case MouseEvent.BUTTON_OTHER:
                 return "BUTTON_OTHER";
+            case MouseEvent.BUTTON_BACK:
+                return "BUTTON_BACK";
+            case MouseEvent.BUTTON_FORWARD:
+                return "BUTTON_FORWARD";
             case MouseEvent.DOWN:
                 return "DOWN";
             case MouseEvent.UP:

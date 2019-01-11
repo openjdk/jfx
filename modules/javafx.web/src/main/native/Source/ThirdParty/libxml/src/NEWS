@@ -2442,7 +2442,7 @@ Lots of bugfixes, and added a basic SGML catalog support:
    - 2.1.0 also ease the upgrade from libxml v1 to the recent version. it
     also contains numerous fixes and enhancements:
     
-    added xmlStopParser() to stop parsing
+      added xmlStopParser() to stop parsing
       improved a lot parsing speed when there is large CDATA blocs
       includes XPath patches provided by Picdar Technology
       tried to fix as much as possible DTD validation and namespace
@@ -2500,7 +2500,7 @@ Lots of bugfixes, and added a basic SGML catalog support:
    - Some interfaces may changes (especially a bit about encoding).
    - the updates includes:
     
-    fix I18N support. ISO-Latin-x/UTF-8/UTF-16 (nearly) seems correctly
+      fix I18N support. ISO-Latin-x/UTF-8/UTF-16 (nearly) seems correctly
         handled now
       Better handling of entities, especially well-formedness checking
         and proper PEref extensions in external subsets

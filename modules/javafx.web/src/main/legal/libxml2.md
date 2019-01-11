@@ -1,4 +1,4 @@
-## xmlsoft.org: libxml2 v2.9.7
+## xmlsoft.org: libxml2 v2.9.9
 
 ### libxml2 License
 <pre>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,8 @@ public class AbstractEvents {
     public final static int MOUSEEVENT_PRIMARY_BUTTON = 1;
     public final static int MOUSEEVENT_SECONDARY_BUTTON = 2;
     public final static int MOUSEEVENT_MIDDLE_BUTTON = 4;
+    public final static int MOUSEEVENT_BACK_BUTTON = 8;
+    public final static int MOUSEEVENT_FORWARD_BUTTON = 16;
 
     public final static int KEYEVENT_PRESSED = 0;
     public final static int KEYEVENT_RELEASED = 1;
@@ -118,6 +120,10 @@ public class AbstractEvents {
                 return MouseButton.SECONDARY;
             case MOUSEEVENT_MIDDLE_BUTTON:
                 return MouseButton.MIDDLE;
+            case MOUSEEVENT_BACK_BUTTON:
+                return MouseButton.BACK;
+            case MOUSEEVENT_FORWARD_BUTTON:
+                return MouseButton.FORWARD;
         }
         // Should never reach here
         return MouseButton.NONE;

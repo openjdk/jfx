@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -781,7 +781,7 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                     m_lastMouseMovePosition = lParam;
                 }
                 // See RT-11305 regarding the GetCapture() check
-                if ((wParam & (MK_LBUTTON | MK_RBUTTON | MK_MBUTTON)) != 0 && ::GetCapture() == hwnd) {
+                if ((wParam & (MK_LBUTTON | MK_RBUTTON | MK_MBUTTON | MK_XBUTTON1 | MK_XBUTTON2)) != 0 && ::GetCapture() == hwnd) {
                     type = com_sun_glass_events_MouseEvent_DRAG;
                 } else {
                     type = com_sun_glass_events_MouseEvent_MOVE;
@@ -795,6 +795,10 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                     button = com_sun_glass_events_MouseEvent_BUTTON_LEFT;
                 } else if (wParam & MK_MBUTTON) {
                     button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                } else if (wParam & MK_XBUTTON1) {
+                    button = com_sun_glass_events_MouseEvent_BUTTON_BACK;
+                } else if (wParam & MK_XBUTTON2) {
+                    button = com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
                 }
                 break;
             case WM_LBUTTONDOWN:
@@ -820,6 +824,16 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
             case WM_MBUTTONUP:
                 type = com_sun_glass_events_MouseEvent_UP;
                 button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                break;
+            case WM_XBUTTONDOWN:
+                type = com_sun_glass_events_MouseEvent_DOWN;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? com_sun_glass_events_MouseEvent_BUTTON_BACK :
+                            com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                break;
+            case WM_XBUTTONUP:
+                type = com_sun_glass_events_MouseEvent_UP;
+                button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? com_sun_glass_events_MouseEvent_BUTTON_BACK :
+                            com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
                 break;
             case WM_MOUSEWHEEL:
             case WM_MOUSEHWHEEL:

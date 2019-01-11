@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,8 @@ public class KeyEvent {
     @Native public final static int MODIFIER_BUTTON_PRIMARY    = 1 << 5;
     @Native public final static int MODIFIER_BUTTON_SECONDARY  = 1 << 6;
     @Native public final static int MODIFIER_BUTTON_MIDDLE     = 1 << 7;
+    @Native public final static int MODIFIER_BUTTON_BACK       = 1 << 8;
+    @Native public final static int MODIFIER_BUTTON_FORWARD    = 1 << 9;
 
     /*
      * Key event key codes.

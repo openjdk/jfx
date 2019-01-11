@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,6 +69,7 @@ public interface EmbeddedSceneInterface {
      */
     public void mouseEvent(int type, int button,
                            boolean primaryBtnDown, boolean middleBtnDown, boolean secondaryBtnDown,
+                           boolean backBtnDown, boolean forwardBtnDown,
                            int x, int y, int xAbs, int yAbs,
                            boolean shift, boolean ctrl, boolean alt, boolean meta,
                            boolean popupTrigger);

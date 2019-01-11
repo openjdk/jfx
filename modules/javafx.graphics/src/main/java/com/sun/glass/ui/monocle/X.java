@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,10 @@ class X {
     static final int Button3 = 3;
     static final int Button4 = 4;
     static final int Button5 = 5;
+    // 4th button (aka browser backward button).
+    static final int Button8 = 8;
+    // 5th button (aka browser forward button).
+    static final int Button9 = 9;
 
     static final long _NET_WM_STATE_REMOVE = 0;
     static final long _NET_WM_STATE_ADD = 1;

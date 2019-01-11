@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,6 +81,8 @@ public class MouseEventTest {
         assertFalse(e.isPrimaryButtonDown());
         assertTrue(e.isMiddleButtonDown());
         assertFalse(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
         assertTrue(e.isSynthesized());
         assertFalse(e.isPopupTrigger());
         assertTrue(e.isStillSincePress());
@@ -102,6 +104,8 @@ public class MouseEventTest {
         assertTrue(e.isPrimaryButtonDown());
         assertFalse(e.isMiddleButtonDown());
         assertTrue(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
         assertFalse(e.isSynthesized());
         assertTrue(e.isPopupTrigger());
         assertFalse(e.isStillSincePress());
@@ -164,6 +168,8 @@ public class MouseEventTest {
         assertFalse(e.isPrimaryButtonDown());
         assertTrue(e.isMiddleButtonDown());
         assertFalse(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
         assertTrue(e.isSynthesized());
         assertFalse(e.isPopupTrigger());
         assertTrue(e.isStillSincePress());
@@ -185,11 +191,12 @@ public class MouseEventTest {
         assertTrue(e.isPrimaryButtonDown());
         assertFalse(e.isMiddleButtonDown());
         assertTrue(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
         assertFalse(e.isSynthesized());
         assertTrue(e.isPopupTrigger());
         assertFalse(e.isStillSincePress());
     }
-
 
     @Test public void testLongConstructorWithoutPickResult() {
         Rectangle n1 = new Rectangle(10, 10);
@@ -199,6 +206,31 @@ public class MouseEventTest {
                 true, false, false, true,
                 false, true, false,
                 true, false, true, null);
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+    }
+
+    @Test public void testFullConstructorWithoutPickResult() {
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+        MouseEvent e = new MouseEvent(n1, n2, MouseEvent.MOUSE_DRAGGED,
+                10, 20, 30, 40, MouseButton.MIDDLE, 3,
+                true, false, false, true,
+                false, true, false,
+                false, false, true,
+                false, true, null);
         assertSame(n1, e.getSource());
         assertSame(n2, e.getTarget());
         assertEquals(10, e.getX(), 10e-20);
@@ -234,6 +266,8 @@ public class MouseEventTest {
         assertFalse(doubleclick.isPrimaryButtonDown());
         assertTrue(doubleclick.isMiddleButtonDown());
         assertFalse(doubleclick.isSecondaryButtonDown());
+        assertFalse(doubleclick.isBackButtonDown());
+        assertFalse(doubleclick.isForwardButtonDown());
         assertSame(MouseEvent.MOUSE_CLICKED, doubleclick.getEventType());
         assertSame(MouseEvent.NULL_SOURCE_TARGET, doubleclick.getSource());
     }
@@ -259,6 +293,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());
+        assertEquals(doubleclick.isBackButtonDown(), copy.isBackButtonDown());
+        assertEquals(doubleclick.isForwardButtonDown(), copy.isForwardButtonDown());
         assertSame(doubleclick.getEventType(), copy.getEventType());
         assertSame(node1, copy.getSource());
         assertSame(node2, copy.getTarget());
@@ -286,6 +322,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());
+        assertEquals(doubleclick.isBackButtonDown(), copy.isBackButtonDown());
+        assertEquals(doubleclick.isForwardButtonDown(), copy.isForwardButtonDown());
         assertSame(MouseEvent.MOUSE_ENTERED, copy.getEventType());
         assertSame(node1, copy.getSource());
         assertSame(node2, copy.getTarget());
@@ -313,6 +351,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());
+        assertEquals(doubleclick.isBackButtonDown(), copy.isBackButtonDown());
+        assertEquals(doubleclick.isForwardButtonDown(), copy.isForwardButtonDown());
         assertSame(doubleclick.getEventType(), copy.getEventType());
         assertSame(node2, copy.getSource());
         assertSame(node1, copy.getTarget());
@@ -339,6 +379,8 @@ public class MouseEventTest {
         assertEquals(doubleclick.isPrimaryButtonDown(), copy.isPrimaryButtonDown());
         assertEquals(doubleclick.isMiddleButtonDown(), copy.isMiddleButtonDown());
         assertEquals(doubleclick.isSecondaryButtonDown(), copy.isSecondaryButtonDown());
+        assertEquals(doubleclick.isBackButtonDown(), copy.isBackButtonDown());
+        assertEquals(doubleclick.isForwardButtonDown(), copy.isForwardButtonDown());
         assertSame(doubleclick.getEventType(), copy.getEventType());
         assertSame(node1, copy.getSource());
         assertSame(node2, copy.getTarget());

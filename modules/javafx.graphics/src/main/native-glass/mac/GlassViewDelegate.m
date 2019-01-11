@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -339,7 +339,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             break;
         case NSOtherMouseDown:
             type = com_sun_glass_events_MouseEvent_DOWN;
-            button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+            switch ([theEvent buttonNumber]) {
+                case 2:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                    break;
+                case 3:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_BACK;
+                    break;
+                case 4:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                    break;
+            }
             break;
 
         case NSLeftMouseUp:
@@ -352,7 +362,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             break;
         case NSOtherMouseUp:
             type = com_sun_glass_events_MouseEvent_UP;
-            button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+            switch ([theEvent buttonNumber]) {
+                case 2:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                    break;
+                case 3:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_BACK;
+                    break;
+                case 4:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                    break;
+            }
             break;
 
         case NSLeftMouseDragged:
@@ -365,7 +385,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             break;
         case NSOtherMouseDragged:
             type = com_sun_glass_events_MouseEvent_DRAG;
-            button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+            switch ([theEvent buttonNumber]) {
+                case 2:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_OTHER;
+                    break;
+                case 3:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_BACK;
+                    break;
+                case 4:
+                    button = com_sun_glass_events_MouseEvent_BUTTON_FORWARD;
+                    break;
+            }
             break;
 
         case NSMouseMoved:
@@ -491,6 +521,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                     case com_sun_glass_events_MouseEvent_BUTTON_OTHER:
                         modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE;
                         break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_BACK:
+                        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK;
+                        break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_FORWARD:
+                        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD;
+                        break;
                 }
             }
         }
@@ -515,9 +551,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // prepare GlassDragSource for possible drag,
             case com_sun_glass_events_MouseEvent_DOWN:
                 switch (button) {
-                    case com_sun_glass_events_MouseEvent_BUTTON_LEFT:  self->mouseDownMask |= 1 << 0; break;
-                    case com_sun_glass_events_MouseEvent_BUTTON_RIGHT: self->mouseDownMask |= 1 << 1; break;
-                    case com_sun_glass_events_MouseEvent_BUTTON_OTHER: self->mouseDownMask |= 1 << 2; break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_LEFT:    self->mouseDownMask |= 1 << 0; break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_RIGHT:   self->mouseDownMask |= 1 << 1; break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_OTHER:   self->mouseDownMask |= 1 << 2; break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_BACK:    self->mouseDownMask |= 1 << 3; break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_FORWARD: self->mouseDownMask |= 1 << 4; break;
                 }
                 //fall through
             case com_sun_glass_events_MouseEvent_DRAG:
@@ -529,9 +567,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 break;
             case com_sun_glass_events_MouseEvent_UP:
                 switch (button) {
-                    case com_sun_glass_events_MouseEvent_BUTTON_LEFT:  self->mouseDownMask &= ~(1 << 0); break;
-                    case com_sun_glass_events_MouseEvent_BUTTON_RIGHT: self->mouseDownMask &= ~(1 << 1); break;
-                    case com_sun_glass_events_MouseEvent_BUTTON_OTHER: self->mouseDownMask &= ~(1 << 2); break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_LEFT:    self->mouseDownMask &= ~(1 << 0); break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_RIGHT:   self->mouseDownMask &= ~(1 << 1); break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_OTHER:   self->mouseDownMask &= ~(1 << 2); break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_BACK:    self->mouseDownMask &= ~(1 << 3); break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_FORWARD: self->mouseDownMask &= ~(1 << 4); break;
                 }
                 break;
 
@@ -988,7 +1028,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 static jstring convertNSStringToJString(id aString, int length)
 {
     GET_MAIN_JENV;
-    
+
     jstring jStr;
     if ([aString isKindOfClass:[NSAttributedString class]]) {
         NSData *data = [[aString string] dataUsingEncoding:NSUTF16LittleEndianStringEncoding];
@@ -1001,7 +1041,7 @@ static jstring convertNSStringToJString(id aString, int length)
     } else {
         jStr = (*env)->NewStringUTF(env, [aString UTF8String]);
     }
-    
+
     GLASS_CHECK_EXCEPTION(env);
 
     return jStr;

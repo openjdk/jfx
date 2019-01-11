@@ -67,22 +67,22 @@ typedef unsigned __int32 uint32_t;
 #define WITH_BIG_KEY
 
 #ifdef WITH_BIG_KEY
-#define xmlDictComputeKey(dict, name, len)          \
-    (((dict)->size == MIN_DICT_SIZE) ?              \
+#define xmlDictComputeKey(dict, name, len)                              \
+    (((dict)->size == MIN_DICT_SIZE) ?                                  \
      xmlDictComputeFastKey(name, len, (dict)->seed) :                   \
      xmlDictComputeBigKey(name, len, (dict)->seed))
 
-#define xmlDictComputeQKey(dict, prefix, plen, name, len)   \
-    (((prefix) == NULL) ?                   \
-      (xmlDictComputeKey(dict, name, len)) :            \
-      (((dict)->size == MIN_DICT_SIZE) ?            \
+#define xmlDictComputeQKey(dict, prefix, plen, name, len)               \
+    (((prefix) == NULL) ?                                               \
+      (xmlDictComputeKey(dict, name, len)) :                             \
+      (((dict)->size == MIN_DICT_SIZE) ?                                \
        xmlDictComputeFastQKey(prefix, plen, name, len, (dict)->seed) :  \
        xmlDictComputeBigQKey(prefix, plen, name, len, (dict)->seed)))
 
 #else /* !WITH_BIG_KEY */
-#define xmlDictComputeKey(dict, name, len)          \
+#define xmlDictComputeKey(dict, name, len)                              \
         xmlDictComputeFastKey(name, len, (dict)->seed)
-#define xmlDictComputeQKey(dict, prefix, plen, name, len)   \
+#define xmlDictComputeQKey(dict, prefix, plen, name, len)               \
         xmlDictComputeFastQKey(prefix, plen, name, len, (dict)->seed)
 #endif /* WITH_BIG_KEY */
 

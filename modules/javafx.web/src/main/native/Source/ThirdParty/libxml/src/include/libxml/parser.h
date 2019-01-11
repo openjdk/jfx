@@ -894,12 +894,12 @@ XMLPUBFUN xmlDocPtr XMLCALL
 XMLPUBFUN xmlDocPtr XMLCALL
         xmlSAXParseMemory   (xmlSAXHandlerPtr sax,
                      const char *buffer,
-                                     int size,
+                     int size,
                      int recovery);
 XMLPUBFUN xmlDocPtr XMLCALL
         xmlSAXParseMemoryWithData (xmlSAXHandlerPtr sax,
                      const char *buffer,
-                                     int size,
+                     int size,
                      int recovery,
                      void *data);
 XMLPUBFUN xmlDocPtr XMLCALL

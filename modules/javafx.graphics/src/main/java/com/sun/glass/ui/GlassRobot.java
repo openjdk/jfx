@@ -44,6 +44,8 @@ public abstract class GlassRobot {
     @Native public static final int MOUSE_LEFT_BTN    = 1 << 0;
     @Native public static final int MOUSE_RIGHT_BTN   = 1 << 1;
     @Native public static final int MOUSE_MIDDLE_BTN  = 1 << 2;
+    @Native public static final int MOUSE_BACK_BTN    = 1 << 3;
+    @Native public static final int MOUSE_FORWARD_BTN = 1 << 4;
 
     /**
      * Initializes any state necessary for this {@code Robot}. Called by
@@ -247,6 +249,8 @@ public abstract class GlassRobot {
                 case PRIMARY: ret |= MOUSE_LEFT_BTN; break;
                 case SECONDARY: ret |= MOUSE_RIGHT_BTN; break;
                 case MIDDLE: ret |= MOUSE_MIDDLE_BTN; break;
+                case BACK: ret |= MOUSE_BACK_BTN; break;
+                case FORWARD: ret |= MOUSE_FORWARD_BTN; break;
                 default: throw new IllegalArgumentException("MouseButton: " + button + " not supported by Robot");
             }
         }

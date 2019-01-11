@@ -38,6 +38,8 @@
 #include "glass_key.h"
 #include "glass_screen.h"
 
+#define MOUSE_BACK_BTN 8
+#define MOUSE_FORWARD_BTN 9
 
 static void checkXTest(JNIEnv* env) {
     int32_t major_opcode, first_event, first_error;
@@ -151,6 +153,12 @@ static void mouseButtons(jint buttons, gboolean press)
     }
     if (buttons & com_sun_glass_ui_GlassRobot_MOUSE_RIGHT_BTN) {
         XTestFakeButtonEvent(xdisplay, 3, press, CurrentTime);
+    }
+    if (buttons & com_sun_glass_ui_GlassRobot_MOUSE_BACK_BTN) {
+        XTestFakeButtonEvent(xdisplay, MOUSE_BACK_BTN, press, CurrentTime);
+    }
+    if (buttons & com_sun_glass_ui_GlassRobot_MOUSE_FORWARD_BTN) {
+        XTestFakeButtonEvent(xdisplay, MOUSE_FORWARD_BTN, press, CurrentTime);
     }
 
     XSync(xdisplay, False);

@@ -27,6 +27,10 @@ package test.javafx.scene.control;
 
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
+
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.scene.control.skin.ToolBarSkin;
@@ -58,9 +62,16 @@ import org.junit.Test;
 public class ToolbarTest {
     private ToolBar toolBar;//Empty
     private ToolBar toolBarWithItems;//Items
+
     private Toolkit tk;
+    private StackPane root;
+
     private Node node1;
     private Node node2;
+
+    private static final double TOOLBAR_SIZE = 300.0;
+    private static final double EXPANDED_CHILDREN_SIZE = 250.0;
+    private static final double ORIGINAL_CHILDREN_SIZE = 100.0;
 
     @Before public void setup() {
         tk = (StubToolkit)Toolkit.getToolkit();//This step is not needed (Just to make sure StubToolkit is loaded into VM)
@@ -220,5 +231,75 @@ public class ToolbarTest {
         keyboard4.doKeyPress(KeyCode.TAB);
         tk.firePulse();
         assertTrue(btn5.isFocused());
+    }
+
+    @Test public void overflowShownInHorizontalAfterChildrenReziseTest() {
+        initializeToolBar();
+
+        toolBar.setOrientation(Orientation.HORIZONTAL);
+
+        testOverflowVisibility();
+    }
+
+    @Test public void overflowShownInVerticalAfterChildrenReziseTest() {
+        initializeToolBar();
+
+        toolBar.setOrientation(Orientation.VERTICAL);
+
+        testOverflowVisibility();
+    }
+
+    private void initializeToolBar() {
+        root = new StackPane(toolBar);
+        root.setPrefSize(400, 400);
+
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+
+        toolBar.getItems().addAll(node1, node2);
+        setFixSize(toolBar, TOOLBAR_SIZE);
+    }
+
+    private void testOverflowVisibility() {
+        setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
+        setFixSize(node2, ORIGINAL_CHILDREN_SIZE);
+
+        assertOverflowNotShown();
+
+        setFixSize(node1, EXPANDED_CHILDREN_SIZE);
+
+        assertOverflowShown();
+
+        setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
+
+        assertOverflowNotShown();
+    }
+
+    private void setFixSize(Node node, double size) {
+        if (node instanceof Region) {
+            ((Region) node).setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+            ((Region) node).setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+            ((Region) node).setPrefSize(size, size);
+        } else if (node instanceof Rectangle) {
+            ((Rectangle) node).setHeight(size);
+            ((Rectangle) node).setWidth(size);
+        }
+
+        root.applyCss();
+        root.autosize();
+        root.layout();
+    }
+
+    private void assertOverflowNotShown() {
+        Pane pane = (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+        assertNotNull(pane);
+        assertFalse(pane.isVisible());
+    }
+
+    private void assertOverflowShown() {
+        Pane pane = (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+        assertNotNull(pane);
+        assertTrue(pane.isVisible());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,6 +79,8 @@ public class MouseDragEventTest {
         assertFalse(e.isPrimaryButtonDown());
         assertTrue(e.isMiddleButtonDown());
         assertFalse(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
         assertTrue(e.isSynthesized());
         assertFalse(e.isPopupTrigger());
         assertSame(gsrc, e.getGestureSource());
@@ -160,6 +162,8 @@ public class MouseDragEventTest {
         assertFalse(e.isPrimaryButtonDown());
         assertTrue(e.isMiddleButtonDown());
         assertFalse(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
         assertTrue(e.isSynthesized());
         assertFalse(e.isPopupTrigger());
         assertSame(gsrc, e.getGestureSource());
@@ -187,7 +191,6 @@ public class MouseDragEventTest {
         assertTrue(e.isPopupTrigger());
     }
 
-
     @Test public void testLongConstructorWithoutPickResult() {
         Rectangle n1 = new Rectangle(10, 10);
         Rectangle n2 = new Rectangle(10, 10);
@@ -195,6 +198,135 @@ public class MouseDragEventTest {
                 10, 20, 30, 40, MouseButton.MIDDLE, 3,
                 true, false, false, true,
                 false, true, false,
+                true, false, null, new Rectangle());
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertEquals(10, e.getX(), 10e-20);
+        assertEquals(20, e.getY(), 10e-20);
+        assertEquals(0, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertNotNull(e.getPickResult());
+        assertNotNull(e.getPickResult().getIntersectedPoint());
+        assertEquals(10, e.getPickResult().getIntersectedPoint().getX(), 10e-20);
+        assertEquals(20, e.getPickResult().getIntersectedPoint().getY(), 10e-20);
+        assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
+    }
+
+    @Test public void testFullConstructor() {
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+        Rectangle node = new Rectangle();
+        node.setTranslateX(3);
+        node.setTranslateY(2);
+        node.setTranslateZ(50);
+        Rectangle gsrc = new Rectangle();
+
+        PickResult pickRes = new PickResult(node, new Point3D(15, 25, 100), 33);
+
+        MouseDragEvent e = new MouseDragEvent(n1, n2, MouseDragEvent.MOUSE_DRAG_OVER,
+                10, 20, 30, 40, MouseButton.MIDDLE, 3,
+                true, false, false, true,
+                false, true, false, true, true,
+                true, false, pickRes, gsrc);
+
+        assertSame(MouseDragEvent.MOUSE_DRAG_OVER, e.getEventType());
+        assertEquals(18, e.getX(), 10e-20);
+        assertEquals(27, e.getY(), 10e-20);
+        assertEquals(150, e.getZ(), 10e-20);
+        assertEquals(10, e.getSceneX(), 10e-20);
+        assertEquals(20, e.getSceneY(), 10e-20);
+        assertEquals(30, e.getScreenX(), 10e-20);
+        assertEquals(40, e.getScreenY(), 10e-20);
+        assertSame(MouseButton.MIDDLE, e.getButton());
+        assertEquals(3, e.getClickCount());
+        assertTrue(e.isShiftDown());
+        assertFalse(e.isControlDown());
+        assertFalse(e.isAltDown());
+        assertTrue(e.isMetaDown());
+        assertFalse(e.isPrimaryButtonDown());
+        assertTrue(e.isMiddleButtonDown());
+        assertFalse(e.isSecondaryButtonDown());
+        assertTrue(e.isBackButtonDown());
+        assertTrue(e.isForwardButtonDown());
+        assertTrue(e.isSynthesized());
+        assertFalse(e.isPopupTrigger());
+        assertSame(gsrc, e.getGestureSource());
+        assertFalse(e.isConsumed());
+        assertSame(pickRes, e.getPickResult());
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+
+        e = new MouseDragEvent(n1, n2, MouseDragEvent.MOUSE_DRAG_OVER,
+                10, 20, 30, 40, MouseButton.MIDDLE, 3,
+                false, true, true, false,
+                true, false, true, true, false,
+                false, true, pickRes, gsrc);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+        assertTrue(e.isPrimaryButtonDown());
+        assertFalse(e.isMiddleButtonDown());
+        assertTrue(e.isSecondaryButtonDown());
+        assertTrue(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
+        assertFalse(e.isSynthesized());
+        assertTrue(e.isPopupTrigger());
+
+        e = new MouseDragEvent(n1, n2, MouseDragEvent.MOUSE_DRAG_OVER,
+                10, 20, 30, 40, MouseButton.MIDDLE, 3,
+                false, true, true, false,
+                true, false, true, false, true,
+                false, true, pickRes, gsrc);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+        assertTrue(e.isPrimaryButtonDown());
+        assertFalse(e.isMiddleButtonDown());
+        assertTrue(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertTrue(e.isForwardButtonDown());
+        assertFalse(e.isSynthesized());
+        assertTrue(e.isPopupTrigger());
+
+        e = new MouseDragEvent(n1, n2, MouseDragEvent.MOUSE_DRAG_OVER,
+                10, 20, 30, 40, MouseButton.MIDDLE, 3,
+                false, true, true, false,
+                true, false, true, false, false,
+                false, true, pickRes, gsrc);
+
+        assertSame(n1, e.getSource());
+        assertSame(n2, e.getTarget());
+        assertFalse(e.isShiftDown());
+        assertTrue(e.isControlDown());
+        assertTrue(e.isAltDown());
+        assertFalse(e.isMetaDown());
+        assertTrue(e.isPrimaryButtonDown());
+        assertFalse(e.isMiddleButtonDown());
+        assertTrue(e.isSecondaryButtonDown());
+        assertFalse(e.isBackButtonDown());
+        assertFalse(e.isForwardButtonDown());
+        assertFalse(e.isSynthesized());
+        assertTrue(e.isPopupTrigger());
+    }
+
+    @Test public void testFullConstructorWithoutPickResult() {
+        Rectangle n1 = new Rectangle(10, 10);
+        Rectangle n2 = new Rectangle(10, 10);
+        MouseDragEvent e = new MouseDragEvent(n1, n2, MouseDragEvent.MOUSE_DRAG_OVER,
+                10, 20, 30, 40, MouseButton.MIDDLE, 3,
+                true, false, false, true,
+                false, true, false, true, true,
                 true, false, null, new Rectangle());
         assertSame(n1, e.getSource());
         assertSame(n2, e.getTarget());

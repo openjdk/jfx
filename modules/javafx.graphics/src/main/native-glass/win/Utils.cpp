@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,6 +96,12 @@ jint GetModifiers()
     }
     if (HIBYTE(::GetKeyState(VK_LBUTTON)) != 0) {
         modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_PRIMARY;
+    }
+    if (HIBYTE(::GetKeyState(VK_XBUTTON1)) != 0) {
+        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK;
+    }
+    if (HIBYTE(::GetKeyState(VK_XBUTTON2)) != 0) {
+        modifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD;
     }
 
     return modifiers;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,8 @@ public interface TKSceneListener {
     public void mouseEvent(EventType<MouseEvent> type, double x, double y, double screenX, double screenY,
                            MouseButton button, boolean popupTrigger, boolean synthesized,
                            boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown,
-                           boolean primaryDown, boolean middleDown, boolean secondaryDown);
+                           boolean primaryDown, boolean middleDown, boolean secondaryDown,
+                           boolean backDown, boolean forwardDown);
 
     /**
      * Pass a key event to the scene to handle

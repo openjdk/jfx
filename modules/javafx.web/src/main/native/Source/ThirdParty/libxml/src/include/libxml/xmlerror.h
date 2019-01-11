@@ -908,7 +908,7 @@ XMLPUBFUN void XMLCALL
     xmlResetError       (xmlErrorPtr err);
 XMLPUBFUN int XMLCALL
     xmlCopyError        (xmlErrorPtr from,
-                     xmlErrorPtr to);
+                 xmlErrorPtr to);
 
 #ifdef IN_LIBXML
 /*
@@ -916,11 +916,11 @@ XMLPUBFUN int XMLCALL
  */
 XMLPUBFUN void XMLCALL
     __xmlRaiseError     (xmlStructuredErrorFunc schannel,
-                     xmlGenericErrorFunc channel,
-                     void *data,
+                 xmlGenericErrorFunc channel,
+                 void *data,
                                  void *ctx,
-                     void *node,
-                     int domain,
+                 void *node,
+                 int domain,
                  int code,
                  xmlErrorLevel level,
                  const char *file,
@@ -934,7 +934,7 @@ XMLPUBFUN void XMLCALL
                  ...) LIBXML_ATTR_FORMAT(16,17);
 XMLPUBFUN void XMLCALL
     __xmlSimpleError        (int domain,
-                     int code,
+                 int code,
                  xmlNodePtr node,
                  const char *msg,
                  const char *extra) LIBXML_ATTR_FORMAT(4,0);

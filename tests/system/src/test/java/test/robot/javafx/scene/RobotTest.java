@@ -24,6 +24,8 @@
  */
 package test.robot.javafx.scene;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -37,6 +39,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
@@ -54,10 +57,12 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import junit.framework.AssertionFailedError;
 import test.util.Util;
@@ -73,6 +78,8 @@ public class RobotTest {
     static volatile Stage stage;
     static volatile Scene scene;
     static Robot robot;
+    static Set<MouseButton> pressedButtons = new HashSet<>();
+
     // A tolerance is needed because on macOS the pixel colors are affected by the configured "color profile"
     // of the display.
     private static final double TOLERANCE = 0.07;
@@ -95,15 +102,24 @@ public class RobotTest {
         test.testMousePressPrimary();
         test.testMousePressSecondary();
         test.testMousePressMiddle();
+        test.testMousePressBack();
+        test.testMousePressForward();
         test.testMouseClickPrimary();
         test.testMouseClickSecondary();
         test.testMouseClickMiddle();
+        test.testMouseClickForward();
+        test.testMouseClickBack();
         test.testMousePressThrowsISEOnWrongThread();
         test.testMousePressThrowsNPEForNullArgument();
         test.testMouseReleaseThrowsISEOnWrongThread();
         test.testMouseReleaseThrowsNPEForNullArgument();
         test.testMouseClickThrowsISEOnWrongThread();
         test.testMouseClickThrowsNPEForNullArgument();
+        test.testMouseDragPrimary();
+        test.testMouseDragSecondary();
+        test.testMouseDragMiddle();
+        test.testMouseDragForward();
+        test.testMouseDragBack();
         test.testMouseWheelPositiveAmount();
         test.testMouseWheelNegativeAmount();
         test.testMouseWheelThrowsISEOnWrongThread();
@@ -176,9 +192,6 @@ public class RobotTest {
                 capFirst(keyAction.name()) + "().");
         Assert.assertEquals("letter 'a' should be " + keyAction.name().toLowerCase() +
                 " by Robot", "a", textField.getText());
-        if (keyAction == KeyAction.PRESSED) {
-            Util.runAndWait(() -> robot.keyRelease(KeyCode.A));
-        }
     }
 
     @Test
@@ -298,6 +311,16 @@ public class RobotTest {
     }
 
     @Test
+    public void testMousePressBack() {
+        testMouseAction(MouseAction.PRESSED, MouseButton.BACK);
+    }
+
+    @Test
+    public void testMousePressForward() {
+        testMouseAction(MouseAction.PRESSED, MouseButton.FORWARD);
+    }
+
+    @Test
     public void testMouseClickPrimary() {
         testMouseAction(MouseAction.CLICKED, MouseButton.PRIMARY);
     }
@@ -310,6 +333,16 @@ public class RobotTest {
     @Test
     public void testMouseClickMiddle() {
         testMouseAction(MouseAction.CLICKED, MouseButton.MIDDLE);
+    }
+
+    @Test
+    public void testMouseClickForward() {
+        testMouseAction(MouseAction.CLICKED, MouseButton.FORWARD);
+    }
+
+    @Test
+    public void testMouseClickBack() {
+        testMouseAction(MouseAction.CLICKED, MouseButton.BACK);
     }
 
     private enum MouseAction {
@@ -377,6 +410,7 @@ public class RobotTest {
             switch (mouseAction) {
                 case PRESSED:
                     robot.mousePress(mouseButton);
+                    pressedButtons.add(mouseButton);
                     break;
                 case CLICKED:
                     robot.mousePress(mouseButton);
@@ -388,9 +422,6 @@ public class RobotTest {
                 capFirst(mouseAction.name()) + "().");
         Assert.assertEquals(mouseButton + " mouse button should be " + mouseAction.name().toLowerCase() + " by Robot",
                 expectedText, button.getText());
-        if (mouseAction == MouseAction.PRESSED) {
-            Util.runAndWait(() -> robot.mouseRelease(MouseButton.PRIMARY, MouseButton.SECONDARY, MouseButton.MIDDLE));
-        }
     }
 
     @Test
@@ -457,6 +488,73 @@ public class RobotTest {
             }
             Assert.fail("Expected NullPointerException");
         });
+    }
+
+    @Test
+    @Ignore("Flaky - see JDK-8215376")
+    public void testMouseDragPrimary() {
+        testMouseDrag(MouseButton.PRIMARY);
+    }
+
+    @Test
+    @Ignore("Flaky - see JDK-8215376")
+    public void testMouseDragSecondary() {
+        testMouseDrag(MouseButton.SECONDARY);
+    }
+
+    @Test
+    @Ignore("Flaky - see JDK-8215376")
+    public void testMouseDragMiddle() {
+        Assume.assumeTrue(!PlatformUtil.isMac() ); // See JDK-8215376
+        testMouseDrag(MouseButton.MIDDLE);
+    }
+
+    @Test
+    @Ignore("Flaky - see JDK-8215376")
+    public void testMouseDragForward() {
+        Assume.assumeTrue(!PlatformUtil.isMac()); // See JDK-8215376
+        testMouseDrag(MouseButton.FORWARD);
+    }
+
+    @Test
+    @Ignore("Flaky - see JDK-8215376")
+    public void testMouseDragBack() {
+        Assume.assumeTrue(!PlatformUtil.isMac()); // See JDK-8215376
+        testMouseDrag(MouseButton.BACK);
+    }
+
+    public void testMouseDrag(MouseButton mouseButton) {
+        CountDownLatch mouseDragLatch = new CountDownLatch(1);
+        CountDownLatch setSceneLatch = new CountDownLatch(1);
+        Label label = new Label("Source");
+        InvalidationListener invalidationListener = observable -> setSceneLatch.countDown();
+        Util.runAndWait(() -> {
+            label.setOnMouseDragged(event -> {
+                if (event.getButton() == mouseButton) {
+                    mouseDragLatch.countDown();
+                }
+            });
+            scene = new Scene(new HBox(label));
+            stage.sceneProperty().addListener(observable -> {
+                setSceneLatch.countDown();
+                stage.sceneProperty().removeListener(invalidationListener);
+            });
+            stage.setScene(scene);
+        });
+        waitForLatch(setSceneLatch, 5, "Timeout while waiting for scene to be set on stage.");
+        Util.runAndWait(() -> {
+            int mouseX = (int) (scene.getWindow().getX() + scene.getX() +
+                    label.getLayoutX() + label.getLayoutBounds().getWidth() / 2);
+            int mouseY = (int) (scene.getWindow().getY() + scene.getY() +
+                    label.getLayoutY() + label.getLayoutBounds().getHeight() / 2);
+            robot.mouseMove(mouseX, mouseY);
+            robot.mousePress(mouseButton);
+            for (int i = 1; i <= 50; i++) {
+                robot.mouseMove(mouseX + i, mouseY);
+            }
+            robot.mouseRelease(mouseButton);
+        });
+        waitForLatch(mouseDragLatch, 5, "Timeout while waiting for button.onMouseDragged().");
     }
 
     @Test
@@ -712,6 +810,17 @@ public class RobotTest {
     public static void exit() {
         Platform.runLater(() -> stage.hide());
         Platform.exit();
+    }
+
+    @After
+    public void cleanup() {
+        Util.runAndWait(() -> {
+            if (!pressedButtons.isEmpty()) {
+                robot.mouseRelease(pressedButtons.toArray(new MouseButton[]{}));
+                pressedButtons.clear();
+            }
+            robot.keyRelease(KeyCode.A);
+        });
     }
 
     private static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
