@@ -134,7 +134,7 @@ XMLPUBFUN xmlRelaxNGParserCtxtPtr XMLCALL
 
 XMLPUBFUN int XMLCALL
             xmlRelaxParserSetFlag   (xmlRelaxNGParserCtxtPtr ctxt,
-                             int flag);
+                         int flag);
 
 XMLPUBFUN void XMLCALL
             xmlRelaxNGFreeParserCtxt    (xmlRelaxNGParserCtxtPtr ctxt);

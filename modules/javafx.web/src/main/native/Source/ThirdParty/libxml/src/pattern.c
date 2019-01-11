@@ -162,7 +162,7 @@ struct _xmlStepOp {
 #define PAT_FROM_CUR    (1<<9)
 
 struct _xmlPattern {
-    void *data;         /* the associated template */
+    void *data;     /* the associated template */
     xmlDictPtr dict;        /* the optional dictionary */
     struct _xmlPattern *next;   /* next pattern if | is used */
     const xmlChar *pattern; /* the pattern */
@@ -719,14 +719,14 @@ rollback:
 #define PEEKPREV(val) ctxt->cur[-(val)]
 #define CUR_PTR ctxt->cur
 
-#define SKIP_BLANKS                             \
+#define SKIP_BLANKS                         \
     while (IS_BLANK_CH(CUR)) NEXT
 
 #define CURRENT (*ctxt->cur)
 #define NEXT ((*ctxt->cur) ?  ctxt->cur++: ctxt->cur)
 
 
-#define PUSH(op, val, val2)                         \
+#define PUSH(op, val, val2)                     \
     if (xmlPatternAdd(ctxt, ctxt->comp, (op), (val), (val2))) goto error;
 
 #define XSLT_ERROR(X)                           \
@@ -1932,7 +1932,7 @@ xmlStreamPushInternal(xmlStreamCtxtPtr stream,
         /*
         * Skip blocked expressions.
         */
-            stream->level++;
+        stream->level++;
         goto stream_next;
     }
 

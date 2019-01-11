@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -127,6 +127,10 @@ class LinuxMouseProcessor implements LinuxInputProcessor {
                 return MouseEvent.BUTTON_OTHER;
             case LinuxInput.BTN_RIGHT:
                 return MouseEvent.BUTTON_RIGHT;
+            case LinuxInput.BTN_BACK:
+                return MouseEvent.BUTTON_BACK;
+            case LinuxInput.BTN_FORWARD:
+                return MouseEvent.BUTTON_FORWARD;
             default:
                 return -1;
         }

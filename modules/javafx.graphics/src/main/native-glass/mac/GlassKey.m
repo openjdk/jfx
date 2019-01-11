@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -217,6 +217,12 @@ jint GetJavaMouseModifiers(NSUInteger buttons)
     }
     if (buttons & (1 << 2)) {
         jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_MIDDLE;
+    }
+    if (buttons & (1 << 3)) {
+        jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_BACK;
+    }
+    if (buttons & (1 << 4)) {
+        jModifiers |= com_sun_glass_events_KeyEvent_MODIFIER_BUTTON_FORWARD;
     }
     return jModifiers;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -283,6 +283,10 @@ class GlassViewEventHandler extends View.EventHandler {
                 return MouseButton.SECONDARY;
             case com.sun.glass.events.MouseEvent.BUTTON_OTHER:
                 return MouseButton.MIDDLE;
+            case com.sun.glass.events.MouseEvent.BUTTON_BACK:
+                return MouseButton.BACK;
+            case com.sun.glass.events.MouseEvent.BUTTON_FORWARD:
+                return MouseButton.FORWARD;
             default:
                 return MouseButton.NONE;
         }
@@ -318,6 +322,12 @@ class GlassViewEventHandler extends View.EventHandler {
                     break;
                 case MouseEvent.BUTTON_RIGHT:
                     buttonMask = KeyEvent.MODIFIER_BUTTON_SECONDARY;
+                    break;
+                case MouseEvent.BUTTON_BACK:
+                    buttonMask = KeyEvent.MODIFIER_BUTTON_BACK;
+                    break;
+                case MouseEvent.BUTTON_FORWARD:
+                    buttonMask = KeyEvent.MODIFIER_BUTTON_FORWARD;
                     break;
                 default:
                     buttonMask = 0;
@@ -375,6 +385,8 @@ class GlassViewEventHandler extends View.EventHandler {
                     boolean primaryButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_PRIMARY) != 0;
                     boolean middleButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_MIDDLE) != 0;
                     boolean secondaryButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_SECONDARY) != 0;
+                    boolean backButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_BACK) != 0;
+                    boolean forwardButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_FORWARD) != 0;
                     final Window w = view.getWindow();
                     double pScaleX, pScaleY, spx, spy, sx, sy;
                     if (w != null) {
@@ -399,7 +411,8 @@ class GlassViewEventHandler extends View.EventHandler {
                             sx + (xAbs - spx) / pScaleX, sy + (yAbs - spy) / pScaleY,
                             mouseEventButton(button), isPopupTrigger, isSynthesized,
                             shiftDown, controlDown, altDown, metaDown,
-                            primaryButtonDown, middleButtonDown, secondaryButtonDown);
+                            primaryButtonDown, middleButtonDown, secondaryButtonDown,
+                            backButtonDown, forwardButtonDown);
                 }
             } finally {
                 if (stage != null) {

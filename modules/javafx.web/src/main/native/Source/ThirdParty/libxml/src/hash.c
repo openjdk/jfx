@@ -286,8 +286,8 @@ xmlHashGrow(xmlHashTablePtr table, int size) {
         table->table[key].next = NULL;
         xmlFree(iter);
         } else {
-            iter->next = table->table[key].next;
-            table->table[key].next = iter;
+        iter->next = table->table[key].next;
+        table->table[key].next = iter;
         }
 
 #ifdef DEBUG_GROW
@@ -358,6 +358,18 @@ xmlHashFree(xmlHashTablePtr table, xmlHashDeallocator f) {
     if (table->dict)
         xmlDictFree(table->dict);
     xmlFree(table);
+}
+
+/**
+ * xmlHashDefaultDeallocator:
+ * @entry: the hash table entry
+ * @name: the entry's name
+ *
+ * Free a hash table entry with xmlFree.
+ */
+void
+xmlHashDefaultDeallocator(void *entry, const xmlChar *name ATTRIBUTE_UNUSED) {
+    xmlFree(entry);
 }
 
 /**
@@ -912,8 +924,11 @@ void
 xmlHashScan3(xmlHashTablePtr table, const xmlChar *name,
          const xmlChar *name2, const xmlChar *name3,
          xmlHashScanner f, void *data) {
-    xmlHashScanFull3 (table, name, name2, name3,
-              (xmlHashScannerFull) f, data);
+    stubData stubdata;
+    stubdata.data = data;
+    stubdata.hashscanner = f;
+    xmlHashScanFull3(table, name, name2, name3, stubHashScannerFull,
+                     &stubdata);
 }
 
 /**

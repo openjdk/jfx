@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -73,5 +73,8 @@ final class MonocleTimer extends Timer {
             task = null;
         }
     }
+
+    @Override protected void _pause(long timer) {}
+    @Override protected void _resume(long timer) {}
 }
 

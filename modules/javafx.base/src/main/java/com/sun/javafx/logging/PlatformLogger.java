@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,22 +118,22 @@ public class PlatformLogger implements System.Logger {
      */
     @Override
     public String getName() {
-       throw new UnsupportedOperationException("not implemented");
+        return loggerProxy.getName();
     }
 
     @Override
     public boolean isLoggable(System.Logger.Level level) {
-        throw new UnsupportedOperationException("not implemented");
+        return loggerProxy.isLoggable(level);
     }
 
     @Override
     public void log(System.Logger.Level level, ResourceBundle bundle, String format, Object... params) {
-        throw new UnsupportedOperationException("not implemented");
+        loggerProxy.log(level, bundle, format, params);
     }
 
     @Override
     public void log(System.Logger.Level level, ResourceBundle bundle, String msg, Throwable thrown) {
-        throw new UnsupportedOperationException("not implemented");
+        loggerProxy.log(level, bundle, msg, thrown);
     }
 
     // ------------------------------------------------------------------------

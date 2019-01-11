@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -93,21 +93,19 @@ class SourceTab extends Tab {
 
     private static final Pattern JAVA_DOC_PATTERN = Pattern.compile("(^\\s+\\*$\\s)?^\\s+\\*\\s+@.*$\\s",Pattern.MULTILINE);
     private static String shCoreJs;
-    private static String shBrushJScript;
-    private static String shCoreDefaultCss;
+    private static String shThemeCss;
 
     private static String convertToHTML(String source) {
         // load syntax highlighter
         if (shCoreJs == null) {
-            shCoreJs = Utils.loadFile(EnsembleApp.class.getResource("syntaxhighlighter/shCore.js")) +";";
+            shCoreJs = Utils.loadFile(EnsembleApp.class.getResource("syntaxhighlighter/syntaxhighlighter.js"));
         }
-        if (shBrushJScript == null) {
-            shBrushJScript = Utils.loadFile(EnsembleApp.class.getResource("syntaxhighlighter/shBrushJava.js"));
+        if (shThemeCss == null) {
+            shThemeCss = Utils.loadFile(EnsembleApp.class.getResource("syntaxhighlighter/theme.css"))
+                    .replaceAll("!important","");
         }
-        if (shCoreDefaultCss == null) {
-            shCoreDefaultCss = Utils.loadFile(EnsembleApp.class.getResource("syntaxhighlighter/shCoreDefault.css")).replaceAll("!important","");
-        }
-        // split copy right and source
+
+        // split copyright and source
         String[] parts = source.split("\\*/",2);
         String copyRight = null;
         if (parts.length > 1) {
@@ -128,11 +126,9 @@ class SourceTab extends Tab {
         html.append("    <head>\n");
         html.append("    <script type=\"text/javascript\">\n");
         html.append(shCoreJs);
-        html.append('\n');
-        html.append(shBrushJScript);
         html.append("    </script>\n");
         html.append("    <style>\n");
-        html.append(shCoreDefaultCss);
+        html.append(shThemeCss);
         html.append('\n');
         html.append("        .syntaxhighlighter {\n");
         html.append("           overflow: visible;\n");
@@ -176,7 +172,6 @@ class SourceTab extends Tab {
         html.append(source);
         html.append('\n');
         html.append("    </pre>\n");
-        html.append("    <script type=\"text/javascript\"> SyntaxHighlighter.all(); </script>\n");
         html.append("</body>\n");
         html.append("</html>\n");
 

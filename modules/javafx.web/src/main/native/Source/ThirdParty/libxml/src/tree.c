@@ -27,7 +27,7 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
 #include <zlib.h>
 #endif
 
@@ -740,9 +740,9 @@ xmlNewNs(xmlNodePtr node, const xmlChar *href, const xmlChar *prefix) {
     if ((prefix != NULL) && (xmlStrEqual(prefix, BAD_CAST "xml"))) {
         /* xml namespace is predefined, no need to add it */
         if (xmlStrEqual(href, XML_XML_NAMESPACE))
-    return(NULL);
+            return(NULL);
 
-    /*
+        /*
          * Problem, this is an attempt to bind xml prefix to a wrong
          * namespace, which breaks
          * Namespace constraint: Reserved Prefixes and Namespace Names
@@ -1389,7 +1389,7 @@ xmlStringLenGetNodeList(const xmlDoc *doc, const xmlChar *value, int len) {
                 }
                 node->content = xmlBufDetach(buf);
 
-            if (last == NULL) {
+                if (last == NULL) {
                 last = ret = node;
                 } else {
                 last = xmlAddNextSibling(last, node);
@@ -1458,9 +1458,9 @@ xmlStringLenGetNodeList(const xmlDoc *doc, const xmlChar *value, int len) {
     if (node == NULL) goto out;
     node->content = xmlBufDetach(buf);
 
-        if (last == NULL) {
+    if (last == NULL) {
         ret = node;
-        } else {
+    } else {
         xmlAddNextSibling(last, node);
     }
     } else if (ret == NULL) {
@@ -1583,7 +1583,7 @@ xmlStringGetNodeList(const xmlDoc *doc, const xmlChar *value) {
                 node = xmlNewDocText(doc, NULL);
                 node->content = xmlBufDetach(buf);
 
-            if (last == NULL) {
+                if (last == NULL) {
                 last = ret = node;
                 } else {
                 last = xmlAddNextSibling(last, node);
@@ -1649,9 +1649,9 @@ xmlStringGetNodeList(const xmlDoc *doc, const xmlChar *value) {
     node = xmlNewDocText(doc, NULL);
     node->content = xmlBufDetach(buf);
 
-        if (last == NULL) {
+    if (last == NULL) {
         ret = node;
-        } else {
+    } else {
         xmlAddNextSibling(last, node);
     }
     }
@@ -1698,7 +1698,7 @@ xmlNodeListGetString(xmlDocPtr doc, const xmlNode *list, int inLine)
         if (attr)
             buffer = xmlEncodeAttributeEntities(doc, node->content);
         else
-                buffer = xmlEncodeEntitiesReentrant(doc, node->content);
+            buffer = xmlEncodeEntitiesReentrant(doc, node->content);
                 if (buffer != NULL) {
                     ret = xmlStrcat(ret, buffer);
                     xmlFree(buffer);
@@ -4765,8 +4765,8 @@ xmlGetNodePath(const xmlNode *node)
             if (occur == 0) {
                 tmp = cur->next;
                 while (tmp != NULL && occur == 0) {
-          if (tmp->type == XML_COMMENT_NODE)
-            occur++;
+            if (tmp->type == XML_COMMENT_NODE)
+                occur++;
                     tmp = tmp->next;
                 }
                 if (occur != 0)
@@ -7272,11 +7272,11 @@ xmlBufferGrow(xmlBufferPtr buf, unsigned int len) {
     if (len + buf->use < buf->size) return(0);
 
     /*
- * Windows has a BIG problem on realloc timing, so we try to double
- * the buffer size (if that's enough) (bug 146697)
+     * Windows has a BIG problem on realloc timing, so we try to double
+     * the buffer size (if that's enough) (bug 146697)
      * Apparently BSD too, and it's probably best for linux too
      * On an embedded system this may be something to change
- */
+     */
 #if 1
     if (buf->size > len)
         size = buf->size * 2;
@@ -7992,8 +7992,8 @@ xmlDOMWrapStoreNs(xmlDocPtr doc,
     }
     /* Create. */
     if (ns != NULL) {
-    ns->next = xmlNewNs(NULL, nsName, prefix);
-    return (ns->next);
+        ns->next = xmlNewNs(NULL, nsName, prefix);
+        return (ns->next);
     }
     return(NULL);
 }

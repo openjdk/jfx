@@ -154,6 +154,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mousePress
     (JNIEnv *env, jobject jrobot, jint buttons)
 {
     DWORD dwFlags = 0L;
+    DWORD mouseFlags = 0L;
+
     // According to MSDN: Software Driving Software
     // application should consider SM_SWAPBUTTON to correctly emulate user with
     // left handed mouse setup
@@ -168,21 +170,21 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mousePress
     if (buttons & (1 << 2)) {
         dwFlags |= MOUSEEVENTF_MIDDLEDOWN;
     }
+    // Support for extra buttons
+    if (buttons & (1 << 3)) {
+        dwFlags |= MOUSEEVENTF_XDOWN;
+        mouseFlags |= XBUTTON1;
+    }
+    if (buttons & (1 << 4)) {
+        dwFlags |= MOUSEEVENTF_XDOWN;
+        mouseFlags |= XBUTTON2;
+    }
 
     INPUT mouseInput = {0};
     mouseInput.type = INPUT_MOUSE;
     mouseInput.mi.time = 0;
     mouseInput.mi.dwFlags = dwFlags;
-
-    // Support for extra buttons
-    if (buttons & (1 << 3)) {
-        mouseInput.mi.dwFlags |= MOUSEEVENTF_XDOWN;
-        mouseInput.mi.mouseData = XBUTTON1;
-    }
-    if (buttons & (1 << 4)) {
-        mouseInput.mi.dwFlags |= MOUSEEVENTF_XDOWN;
-        mouseInput.mi.mouseData = XBUTTON2;
-    }
+    mouseInput.mi.mouseData = mouseFlags;
 
     ::SendInput(1, &mouseInput, sizeof(mouseInput));
 }
@@ -196,6 +198,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseRelease
     (JNIEnv *env, jobject jrobot, jint buttons)
 {
     DWORD dwFlags = 0L;
+    DWORD mouseFlags = 0L;
+
     // According to MSDN: Software Driving Software
     // application should consider SM_SWAPBUTTON to correctly emulate user with
     // left handed mouse setup
@@ -210,21 +214,21 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseRelease
     if (buttons & (1 << 2)) {
         dwFlags |= MOUSEEVENTF_MIDDLEUP;
     }
+    // Support for extra buttons
+    if (buttons & (1 << 3)) {
+        dwFlags |= MOUSEEVENTF_XUP;
+        mouseFlags |= XBUTTON1;
+    }
+    if (buttons & (1 << 4)) {
+        dwFlags |= MOUSEEVENTF_XUP;
+        mouseFlags |= XBUTTON2;
+    }
 
     INPUT mouseInput = {0};
     mouseInput.type = INPUT_MOUSE;
     mouseInput.mi.time = 0;
     mouseInput.mi.dwFlags = dwFlags;
-
-    // Support for extra buttons
-    if (buttons & (1 << 3)) {
-        mouseInput.mi.dwFlags |= MOUSEEVENTF_XUP;
-        mouseInput.mi.mouseData = XBUTTON1;
-    }
-    if (buttons & (1 << 4)) {
-        mouseInput.mi.dwFlags |= MOUSEEVENTF_XUP;
-        mouseInput.mi.mouseData = XBUTTON2;
-    }
+    mouseInput.mi.mouseData = mouseFlags;
 
     ::SendInput(1, &mouseInput, sizeof(mouseInput));
 }

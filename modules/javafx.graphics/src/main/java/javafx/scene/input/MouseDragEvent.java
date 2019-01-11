@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,40 +130,104 @@ public final class MouseDragEvent extends MouseEvent{
 
     /**
      * Constructs new MouseDragEvent event.
-     * @param source the source of the event. Can be null.
-     * @param target the target of the event. Can be null.
-     * @param eventType The type of the event.
-     * @param x The x with respect to the scene.
-     * @param y The y with respect to the scene.
-     * @param screenX The x coordinate relative to screen.
-     * @param screenY The y coordinate relative to screen.
+     *
+     * Both {@link #isBackButtonDown()}  and {@link #isForwardButtonDown()}
+     * will return {@literal false} for this event
+     *
+     * @param source the source of the event, which can be {@code null}
+     * @param target the target of the event, which can be {@code null}
+     * @param eventType The type of the event
+     * @param x The x with respect to the scene
+     * @param y The y with respect to the scene
+     * @param screenX The x coordinate relative to screen
+     * @param screenY The y coordinate relative to screen
      * @param button the mouse button used
      * @param clickCount number of click counts
-     * @param shiftDown true if shift modifier was pressed.
-     * @param controlDown true if control modifier was pressed.
-     * @param altDown true if alt modifier was pressed.
-     * @param metaDown true if meta modifier was pressed.
-     * @param primaryButtonDown true if primary button was pressed.
-     * @param middleButtonDown true if middle button was pressed.
-     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param shiftDown true if shift modifier was pressed
+     * @param controlDown true if control modifier was pressed
+     * @param altDown true if alt modifier was pressed
+     * @param metaDown true if meta modifier was pressed
+     * @param primaryButtonDown true if primary button was pressed
+     * @param middleButtonDown true if middle button was pressed
+     * @param secondaryButtonDown true if secondary button was pressed
      * @param synthesized if this event was synthesized
      * @param popupTrigger whether this event denotes a popup trigger for current platform
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and target
-     * @param gestureSource source object of the ongoing gesture.
+     * @param gestureSource source object of the ongoing gesture
      * @since JavaFX 8.0
      */
-    public MouseDragEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("eventType") EventType<MouseDragEvent> eventType,
-            @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
-            @NamedArg("button") MouseButton button, @NamedArg("clickCount") int clickCount,
-            @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown, @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown,
-            @NamedArg("primaryButtonDown") boolean primaryButtonDown, @NamedArg("middleButtonDown") boolean middleButtonDown, @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
-            @NamedArg("synthesized") boolean synthesized, @NamedArg("popupTrigger") boolean popupTrigger, @NamedArg("pickResult") PickResult pickResult,
-            @NamedArg("gestureSource") Object gestureSource) {
+    public MouseDragEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target,
+                          @NamedArg("eventType") EventType<MouseDragEvent> eventType,
+                          @NamedArg("x") double x, @NamedArg("y") double y,
+                          @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+                          @NamedArg("button") MouseButton button, @NamedArg("clickCount") int clickCount,
+                          @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown,
+                          @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown,
+                          @NamedArg("primaryButtonDown") boolean primaryButtonDown,
+                          @NamedArg("middleButtonDown") boolean middleButtonDown,
+                          @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+                          @NamedArg("synthesized") boolean synthesized,
+                          @NamedArg("popupTrigger") boolean popupTrigger,
+                          @NamedArg("pickResult") PickResult pickResult,
+                          @NamedArg("gestureSource") Object gestureSource) {
+        this(source, target, eventType, x, y, screenX, screenY, button,
+                clickCount, shiftDown, controlDown, altDown, metaDown,
+                primaryButtonDown, middleButtonDown, secondaryButtonDown,
+                false, false,
+                synthesized, popupTrigger, pickResult, gestureSource);
+    }
+
+    /**
+     * Constructs new MouseDragEvent event.
+     *
+     * @param source the source of the event, which can be {@code null}
+     * @param target the target of the event, which can be {@code null}
+     * @param eventType The type of the event
+     * @param x The x with respect to the scene
+     * @param y The y with respect to the scene
+     * @param screenX The x coordinate relative to screen
+     * @param screenY The y coordinate relative to screen
+     * @param button the mouse button used
+     * @param clickCount number of click counts
+     * @param shiftDown true if shift modifier was pressed
+     * @param controlDown true if control modifier was pressed
+     * @param altDown true if alt modifier was pressed
+     * @param metaDown true if meta modifier was pressed
+     * @param primaryButtonDown true if primary button was pressed
+     * @param middleButtonDown true if middle button was pressed
+     * @param secondaryButtonDown true if secondary button was pressed
+     * @param backButtonDown true if back button was pressed
+     * @param forwardButtonDown true if forward button was pressed
+     * @param synthesized if this event was synthesized
+     * @param popupTrigger whether this event denotes a popup trigger for current platform
+     * @param pickResult pick result. Can be null, in this case a 2D pick result
+     *                   without any further values is constructed
+     *                   based on the scene coordinates and target
+     * @param gestureSource source object of the ongoing gesture
+     * @since 12
+     */
+    public MouseDragEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target,
+                          @NamedArg("eventType") EventType<MouseDragEvent> eventType,
+                          @NamedArg("x") double x, @NamedArg("y") double y,
+                          @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+                          @NamedArg("button") MouseButton button, @NamedArg("clickCount") int clickCount,
+                          @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown,
+                          @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown,
+                          @NamedArg("primaryButtonDown") boolean primaryButtonDown,
+                          @NamedArg("middleButtonDown") boolean middleButtonDown,
+                          @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+                          @NamedArg("backButtonDown") boolean backButtonDown,
+                          @NamedArg("forwardButtonDown") boolean forwardButtonDown,
+                          @NamedArg("synthesized") boolean synthesized,
+                          @NamedArg("popupTrigger") boolean popupTrigger,
+                          @NamedArg("pickResult") PickResult pickResult,
+                          @NamedArg("gestureSource") Object gestureSource) {
         super(source, target, eventType, x, y, screenX, screenY, button,
                 clickCount, shiftDown, controlDown, altDown, metaDown,
                 primaryButtonDown, middleButtonDown, secondaryButtonDown,
+                backButtonDown, forwardButtonDown,
                 synthesized, popupTrigger, false, pickResult);
         this.gestureSource = gestureSource;
     }
@@ -171,35 +235,43 @@ public final class MouseDragEvent extends MouseEvent{
     /**
      * Constructs new MouseDragEvent event with null source and target.
      *
-     * @param eventType The type of the event.
-     * @param x The x with respect to the scene.
-     * @param y The y with respect to the scene.
-     * @param screenX The x coordinate relative to screen.
-     * @param screenY The y coordinate relative to screen.
+     * Both {@link #isBackButtonDown()}  and {@link #isForwardButtonDown()}
+     * will return {@literal false} for this event.
+     *
+     * @param eventType The type of the event
+     * @param x The x with respect to the scene
+     * @param y The y with respect to the scene
+     * @param screenX The x coordinate relative to screen
+     * @param screenY The y coordinate relative to screen
      * @param button the mouse button used
      * @param clickCount number of click counts
-     * @param shiftDown true if shift modifier was pressed.
-     * @param controlDown true if control modifier was pressed.
-     * @param altDown true if alt modifier was pressed.
-     * @param metaDown true if meta modifier was pressed.
-     * @param primaryButtonDown true if primary button was pressed.
-     * @param middleButtonDown true if middle button was pressed.
-     * @param secondaryButtonDown true if secondary button was pressed.
+     * @param shiftDown true if shift modifier was pressed
+     * @param controlDown true if control modifier was pressed
+     * @param altDown true if alt modifier was pressed
+     * @param metaDown true if meta modifier was pressed
+     * @param primaryButtonDown true if primary button was pressed
+     * @param middleButtonDown true if middle button was pressed
+     * @param secondaryButtonDown true if secondary button was pressed
      * @param synthesized if this event was synthesized
      * @param popupTrigger whether this event denotes a popup trigger for current platform
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates
-     * @param gestureSource source object of the ongoing gesture.
+     * @param gestureSource source object of the ongoing gesture
      * @since JavaFX 8.0
      */
     public MouseDragEvent(@NamedArg("eventType") EventType<MouseDragEvent> eventType,
-            @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
-            @NamedArg("button") MouseButton button, @NamedArg("clickCount") int clickCount,
-            @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown, @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown,
-            @NamedArg("primaryButtonDown") boolean primaryButtonDown, @NamedArg("middleButtonDown") boolean middleButtonDown, @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
-            @NamedArg("synthesized") boolean synthesized, @NamedArg("popupTrigger") boolean popupTrigger, @NamedArg("pickResult") PickResult pickResult,
-            @NamedArg("gestureSource") Object gestureSource) {
+                          @NamedArg("x") double x, @NamedArg("y") double y,
+                          @NamedArg("screenX") double screenX, @NamedArg("screenY") double screenY,
+                          @NamedArg("button") MouseButton button, @NamedArg("clickCount") int clickCount,
+                          @NamedArg("shiftDown") boolean shiftDown, @NamedArg("controlDown") boolean controlDown,
+                          @NamedArg("altDown") boolean altDown, @NamedArg("metaDown") boolean metaDown,
+                          @NamedArg("primaryButtonDown") boolean primaryButtonDown,
+                          @NamedArg("middleButtonDown") boolean middleButtonDown,
+                          @NamedArg("secondaryButtonDown") boolean secondaryButtonDown,
+                          @NamedArg("synthesized") boolean synthesized, @NamedArg("popupTrigger") boolean popupTrigger,
+                          @NamedArg("pickResult") PickResult pickResult,
+                          @NamedArg("gestureSource") Object gestureSource) {
         this(null, null, eventType, x, y, screenX, screenY, button, clickCount,
                 shiftDown, controlDown, altDown, metaDown, primaryButtonDown,
                 middleButtonDown, secondaryButtonDown, synthesized, popupTrigger,
@@ -249,6 +321,12 @@ public final class MouseDragEvent extends MouseEvent{
         }
         if (isSecondaryButtonDown()) {
             sb.append(", secondaryButtonDown");
+        }
+        if (isBackButtonDown()) {
+            sb.append(", backButtonDown");
+        }
+        if (isForwardButtonDown()) {
+            sb.append(", forwardButtonDown");
         }
         if (isShiftDown()) {
             sb.append(", shiftDown");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,8 @@ public abstract class Timer {
     protected abstract long _start(Runnable runnable);
     protected abstract long _start(Runnable runnable, int period);
     protected abstract void _stop(long timer);
+    protected abstract void _pause(long timer);
+    protected abstract void _resume(long timer);
 
     /**
      * Constructs a new timer.
@@ -131,6 +133,27 @@ public abstract class Timer {
             this.period = UNSET_PERIOD;
         }
     }
+
+    /**
+     * Pauses the timer. See JDK-8189926.
+     * Timer is paused only from the timer thread.
+     */
+    public synchronized void pause() {
+        if (ptr != 0L) {
+            _pause(ptr);
+        }
+    }
+
+    /**
+     * Resumes the timer. See JDK-8189926
+     * Timer can get resumed from different threads.
+     */
+    public synchronized void resume() {
+        if (ptr != 0L) {
+            _resume(ptr);
+        }
+    }
+
 
     /**
      * Returns true if the timer is currently running

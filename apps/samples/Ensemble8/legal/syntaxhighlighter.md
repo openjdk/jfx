@@ -1,8 +1,8 @@
-## SyntaxHighlighter v3.0.83
+## SyntaxHighlighter v4.0.1
 
 ### MIT License
 <pre>
-Copyright (C) 2004-2010 Alex Gorbatchev.
+Copyright (c) 2004-2013, Alex Gorbatchev
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),

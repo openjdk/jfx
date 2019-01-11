@@ -63,7 +63,7 @@
 #ifdef HAVE_STRINGS_H
 #include <strings.h>
 #endif
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
 #include <zlib.h>
 #endif
 
@@ -145,7 +145,7 @@ typedef struct xmlNanoHTTPCtxt {
     char *authHeader;   /* contents of {WWW,Proxy}-Authenticate header */
     char *encoding; /* encoding extracted from the contentType */
     char *mimeType; /* Mime-Type extracted from the contentType */
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
     z_stream *strm; /* Zlib stream object */
     int usesGzip;   /* "Content-Encoding: gzip" was detected */
 #endif
@@ -434,7 +434,7 @@ xmlNanoHTTPFreeCtxt(xmlNanoHTTPCtxtPtr ctxt) {
     if (ctxt->mimeType != NULL) xmlFree(ctxt->mimeType);
     if (ctxt->location != NULL) xmlFree(ctxt->location);
     if (ctxt->authHeader != NULL) xmlFree(ctxt->authHeader);
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
     if (ctxt->strm != NULL) {
     inflateEnd(ctxt->strm);
     xmlFree(ctxt->strm);
@@ -458,7 +458,7 @@ xmlNanoHTTPFreeCtxt(xmlNanoHTTPCtxtPtr ctxt) {
 static int
 xmlNanoHTTPSend(xmlNanoHTTPCtxtPtr ctxt, const char *xmt_ptr, int outlen)
 {
-    int     total_sent = 0;
+    int total_sent = 0;
 #ifdef HAVE_POLL_H
     struct pollfd p;
 #else
@@ -469,7 +469,7 @@ xmlNanoHTTPSend(xmlNanoHTTPCtxtPtr ctxt, const char *xmt_ptr, int outlen)
     if ((ctxt->state & XML_NANO_HTTP_WRITE) && (xmt_ptr != NULL)) {
         while (total_sent < outlen) {
             int nsent = send(ctxt->fd, SEND_ARG2_CAST (xmt_ptr + total_sent),
-                                      outlen - total_sent, 0);
+                             outlen - total_sent, 0);
 
             if (nsent > 0)
                 total_sent += nsent;
@@ -478,25 +478,25 @@ xmlNanoHTTPSend(xmlNanoHTTPCtxtPtr ctxt, const char *xmt_ptr, int outlen)
                      (socket_errno() != EAGAIN) &&
 #endif
                      (socket_errno() != EWOULDBLOCK)) {
-        __xmlIOErr(XML_FROM_HTTP, 0, "send failed\n");
+                __xmlIOErr(XML_FROM_HTTP, 0, "send failed\n");
                 if (total_sent == 0)
-            total_sent = -1;
-        break;
+                    total_sent = -1;
+                break;
             } else {
-            /*
+                /*
                  * No data sent
                  * Since non-blocking sockets are used, wait for
                  * socket to be writable or default timeout prior
                  * to retrying.
-        */
+                 */
 #ifndef HAVE_POLL_H
 #ifndef _WINSOCKAPI_
                 if (ctxt->fd > FD_SETSIZE)
                     return -1;
 #endif
 
-        tv.tv_sec = timeout;
-        tv.tv_usec = 0;
+                tv.tv_sec = timeout;
+                tv.tv_usec = 0;
                 FD_ZERO(&wfd);
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -512,8 +512,8 @@ xmlNanoHTTPSend(xmlNanoHTTPCtxtPtr ctxt, const char *xmt_ptr, int outlen)
                 p.events = POLLOUT;
                 (void) poll(&p, 1, timeout * 1000);
 #endif /* !HAVE_POLL_H */
+            }
         }
-    }
     }
 
     return total_sent;
@@ -541,69 +541,69 @@ xmlNanoHTTPRecv(xmlNanoHTTPCtxtPtr ctxt)
 
 
     while (ctxt->state & XML_NANO_HTTP_READ) {
-    if (ctxt->in == NULL) {
-        ctxt->in = (char *) xmlMallocAtomic(65000 * sizeof(char));
         if (ctxt->in == NULL) {
-        xmlHTTPErrMemory("allocating input");
-            ctxt->last = -1;
+            ctxt->in = (char *) xmlMallocAtomic(65000 * sizeof(char));
+            if (ctxt->in == NULL) {
+                xmlHTTPErrMemory("allocating input");
+                ctxt->last = -1;
                 return (-1);
+            }
+            ctxt->inlen = 65000;
+            ctxt->inptr = ctxt->content = ctxt->inrptr = ctxt->in;
         }
-        ctxt->inlen = 65000;
-        ctxt->inptr = ctxt->content = ctxt->inrptr = ctxt->in;
-    }
-    if (ctxt->inrptr > ctxt->in + XML_NANO_HTTP_CHUNK) {
-        int delta = ctxt->inrptr - ctxt->in;
-        int len = ctxt->inptr - ctxt->inrptr;
+        if (ctxt->inrptr > ctxt->in + XML_NANO_HTTP_CHUNK) {
+            int delta = ctxt->inrptr - ctxt->in;
+            int len = ctxt->inptr - ctxt->inrptr;
 
-        memmove(ctxt->in, ctxt->inrptr, len);
-        ctxt->inrptr -= delta;
-        ctxt->content -= delta;
-        ctxt->inptr -= delta;
-    }
+            memmove(ctxt->in, ctxt->inrptr, len);
+            ctxt->inrptr -= delta;
+            ctxt->content -= delta;
+            ctxt->inptr -= delta;
+        }
         if ((ctxt->in + ctxt->inlen) < (ctxt->inptr + XML_NANO_HTTP_CHUNK)) {
-        int d_inptr = ctxt->inptr - ctxt->in;
-        int d_content = ctxt->content - ctxt->in;
-        int d_inrptr = ctxt->inrptr - ctxt->in;
+            int d_inptr = ctxt->inptr - ctxt->in;
+            int d_content = ctxt->content - ctxt->in;
+            int d_inrptr = ctxt->inrptr - ctxt->in;
             char *tmp_ptr = ctxt->in;
 
-        ctxt->inlen *= 2;
+            ctxt->inlen *= 2;
             ctxt->in = (char *) xmlRealloc(tmp_ptr, ctxt->inlen);
-        if (ctxt->in == NULL) {
-        xmlHTTPErrMemory("allocating input buffer");
+            if (ctxt->in == NULL) {
+                xmlHTTPErrMemory("allocating input buffer");
                 xmlFree(tmp_ptr);
-            ctxt->last = -1;
+                ctxt->last = -1;
                 return (-1);
-        }
+            }
             ctxt->inptr = ctxt->in + d_inptr;
             ctxt->content = ctxt->in + d_content;
             ctxt->inrptr = ctxt->in + d_inrptr;
-    }
-    ctxt->last = recv(ctxt->fd, ctxt->inptr, XML_NANO_HTTP_CHUNK, 0);
-    if (ctxt->last > 0) {
-        ctxt->inptr += ctxt->last;
+        }
+        ctxt->last = recv(ctxt->fd, ctxt->inptr, XML_NANO_HTTP_CHUNK, 0);
+        if (ctxt->last > 0) {
+            ctxt->inptr += ctxt->last;
             return (ctxt->last);
-    }
-    if (ctxt->last == 0) {
+        }
+        if (ctxt->last == 0) {
             return (0);
-    }
-    if (ctxt->last == -1) {
-        switch (socket_errno()) {
-        case EINPROGRESS:
-        case EWOULDBLOCK:
+        }
+        if (ctxt->last == -1) {
+            switch (socket_errno()) {
+                case EINPROGRESS:
+                case EWOULDBLOCK:
 #if defined(EAGAIN) && EAGAIN != EWOULDBLOCK
-        case EAGAIN:
+                case EAGAIN:
 #endif
-            break;
+                    break;
 
-        case ECONNRESET:
-        case ESHUTDOWN:
+                case ECONNRESET:
+                case ESHUTDOWN:
                     return (0);
 
-        default:
-            __xmlIOErr(XML_FROM_HTTP, 0, "recv failed\n");
+                default:
+                    __xmlIOErr(XML_FROM_HTTP, 0, "recv failed\n");
                     return (-1);
+            }
         }
-    }
 #ifdef HAVE_POLL_H
         p.fd = ctxt->fd;
         p.events = POLLIN;
@@ -619,16 +619,16 @@ xmlNanoHTTPRecv(xmlNanoHTTPCtxtPtr ctxt)
             return 0;
 #endif
 
-    tv.tv_sec = timeout;
-    tv.tv_usec = 0;
-    FD_ZERO(&rfd);
+        tv.tv_sec = timeout;
+        tv.tv_usec = 0;
+        FD_ZERO(&rfd);
 
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4018)
 #endif
 
-    FD_SET(ctxt->fd, &rfd);
+        FD_SET(ctxt->fd, &rfd);
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -638,7 +638,7 @@ xmlNanoHTTPRecv(xmlNanoHTTPCtxtPtr ctxt)
 #if defined(EINTR)
             && (socket_errno() != EINTR)
 #endif
-    )
+            )
             return (0);
 #endif /* !HAVE_POLL_H */
     }
@@ -817,7 +817,7 @@ xmlNanoHTTPScanAnswer(xmlNanoHTTPCtxtPtr ctxt, const char *line) {
     if (ctxt->authHeader != NULL)
         xmlFree(ctxt->authHeader);
     ctxt->authHeader = xmlMemStrdup(cur);
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
     } else if ( !xmlStrncasecmp( BAD_CAST line, BAD_CAST"Content-Encoding:", 17) ) {
     cur += 17;
     while ((*cur == ' ') || (*cur == '\t')) cur++;
@@ -884,23 +884,23 @@ xmlNanoHTTPConnectAttempt(struct sockaddr *addr)
     }
     if (s == INVALID_SOCKET) {
 #ifdef DEBUG_HTTP
-    perror("socket");
+        perror("socket");
 #endif
-    __xmlIOErr(XML_FROM_HTTP, 0, "socket failed\n");
+        __xmlIOErr(XML_FROM_HTTP, 0, "socket failed\n");
         return INVALID_SOCKET;
     }
 #ifdef _WINSOCKAPI_
     {
-    u_long one = 1;
+        u_long one = 1;
 
-    status = ioctlsocket(s, FIONBIO, &one) == SOCKET_ERROR ? -1 : 0;
+        status = ioctlsocket(s, FIONBIO, &one) == SOCKET_ERROR ? -1 : 0;
     }
 #else /* _WINSOCKAPI_ */
 #if defined(VMS)
     {
-    int enable = 1;
+        int enable = 1;
 
-    status = ioctl(s, FIONBIO, &enable);
+        status = ioctl(s, FIONBIO, &enable);
     }
 #else /* VMS */
 #if defined(__BEOS__) && !defined(__HAIKU__)
@@ -914,20 +914,20 @@ xmlNanoHTTPConnectAttempt(struct sockaddr *addr)
 #else /* __BEOS__ */
     if ((status = fcntl(s, F_GETFL, 0)) != -1) {
 #ifdef O_NONBLOCK
-    status |= O_NONBLOCK;
+        status |= O_NONBLOCK;
 #else /* O_NONBLOCK */
 #ifdef F_NDELAY
-    status |= F_NDELAY;
+        status |= F_NDELAY;
 #endif /* F_NDELAY */
 #endif /* !O_NONBLOCK */
-    status = fcntl(s, F_SETFL, status);
+        status = fcntl(s, F_SETFL, status);
     }
     if (status < 0) {
 #ifdef DEBUG_HTTP
-    perror("nonblocking");
+        perror("nonblocking");
 #endif
-    __xmlIOErr(XML_FROM_HTTP, 0, "error setting non-blocking IO\n");
-    closesocket(s);
+        __xmlIOErr(XML_FROM_HTTP, 0, "error setting non-blocking IO\n");
+        closesocket(s);
         return INVALID_SOCKET;
     }
 #endif /* !__BEOS__ */
@@ -935,16 +935,16 @@ xmlNanoHTTPConnectAttempt(struct sockaddr *addr)
 #endif /* !_WINSOCKAPI_ */
 
     if (connect(s, addr, addrlen) == -1) {
-    switch (socket_errno()) {
-        case EINPROGRESS:
-        case EWOULDBLOCK:
-        break;
-        default:
+        switch (socket_errno()) {
+            case EINPROGRESS:
+            case EWOULDBLOCK:
+                break;
+            default:
                 __xmlIOErr(XML_FROM_HTTP, 0,
                            "error connecting to HTTP server");
-        closesocket(s);
+                closesocket(s);
                 return INVALID_SOCKET;
-    }
+        }
     }
 #ifndef HAVE_POLL_H
     tv.tv_sec = timeout;
@@ -980,51 +980,51 @@ xmlNanoHTTPConnectAttempt(struct sockaddr *addr)
 #endif /* !HAVE_POLL_H */
 
     {
-    case 0:
-        /* Time out */
-        __xmlIOErr(XML_FROM_HTTP, 0, "Connect attempt timed out");
-        closesocket(s);
+        case 0:
+            /* Time out */
+            __xmlIOErr(XML_FROM_HTTP, 0, "Connect attempt timed out");
+            closesocket(s);
             return INVALID_SOCKET;
-    case -1:
-        /* Ermm.. ?? */
-        __xmlIOErr(XML_FROM_HTTP, 0, "Connect failed");
-        closesocket(s);
+        case -1:
+            /* Ermm.. ?? */
+            __xmlIOErr(XML_FROM_HTTP, 0, "Connect failed");
+            closesocket(s);
             return INVALID_SOCKET;
     }
 
 #ifndef HAVE_POLL_H
     if (FD_ISSET(s, &wfd)
 #ifdef _WINSOCKAPI_
-                           || FD_ISSET(s, &xfd)
+        || FD_ISSET(s, &xfd)
 #endif
         )
 #else /* !HAVE_POLL_H */
     if (p.revents == POLLOUT)
 #endif /* !HAVE_POLL_H */
     {
-    XML_SOCKLEN_T len;
+        XML_SOCKLEN_T len;
 
-    len = sizeof(status);
+        len = sizeof(status);
 #ifdef SO_ERROR
         if (getsockopt(s, SOL_SOCKET, SO_ERROR, (char *) &status, &len) <
             0) {
-        /* Solaris error code */
-        __xmlIOErr(XML_FROM_HTTP, 0, "getsockopt failed\n");
+            /* Solaris error code */
+            __xmlIOErr(XML_FROM_HTTP, 0, "getsockopt failed\n");
             closesocket(s);
             return INVALID_SOCKET;
-    }
+        }
 #endif
         if (status) {
             __xmlIOErr(XML_FROM_HTTP, 0,
                        "Error connecting to remote host");
-        closesocket(s);
-        errno = status;
+            closesocket(s);
+            errno = status;
             return INVALID_SOCKET;
-    }
+        }
     } else {
-    /* pbm */
-    __xmlIOErr(XML_FROM_HTTP, 0, "select failed\n");
-    closesocket(s);
+        /* pbm */
+        __xmlIOErr(XML_FROM_HTTP, 0, "select failed\n");
+        closesocket(s);
         return INVALID_SOCKET;
     }
 
@@ -1273,7 +1273,7 @@ xmlNanoHTTPOpenRedir(const char *URL, char **contentType, char **redir) {
 int
 xmlNanoHTTPRead(void *ctx, void *dest, int len) {
     xmlNanoHTTPCtxtPtr ctxt = (xmlNanoHTTPCtxtPtr) ctx;
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
     int bytes_read = 0;
     int orig_avail_in;
     int z_ret;
@@ -1283,7 +1283,7 @@ xmlNanoHTTPRead(void *ctx, void *dest, int len) {
     if (dest == NULL) return(-1);
     if (len <= 0) return(0);
 
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
     if (ctxt->usesGzip == 1) {
         if (ctxt->strm == NULL) return(0);
 
@@ -1424,7 +1424,7 @@ retry:
     /* 1 for '?' */
     blen += strlen(ctxt->query) + 1;
     blen += strlen(method) + strlen(ctxt->path) + 24;
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
     /* reserve for possible 'Accept-Encoding: gzip' string */
     blen += 23;
 #endif
@@ -1452,7 +1452,7 @@ retry:
     }
     else
         p += snprintf( p, blen - (p - bp), "%s http://%s%s", method,
-                ctxt->hostname, ctxt->path);
+            ctxt->hostname, ctxt->path);
     }
     else
     p += snprintf( p, blen - (p - bp), "%s %s", method, ctxt->path);
@@ -1468,7 +1468,7 @@ retry:
             ctxt->hostname, ctxt->port);
     }
 
-#ifdef HAVE_ZLIB_H
+#ifdef LIBXML_ZLIB_ENABLED
     p += snprintf(p, blen - (p - bp), "Accept-Encoding: gzip\r\n");
 #endif
 
@@ -1511,7 +1511,7 @@ retry:
 
     if ( xmt_bytes != ilen )
         xmlGenericError( xmlGenericErrorContext,
-                "xmlNanoHTTPMethodRedir:  Only %d of %d %s %s\n",
+            "xmlNanoHTTPMethodRedir:  Only %d of %d %s %s\n",
             xmt_bytes, ilen,
             "bytes of HTTP content sent to host",
             ctxt->hostname );

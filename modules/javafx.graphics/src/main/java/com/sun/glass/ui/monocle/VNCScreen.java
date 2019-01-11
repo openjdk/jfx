@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -275,6 +275,7 @@ class VNCScreen extends HeadlessScreen {
                             final MouseState state = new MouseState();
                             state.setX(x);
                             state.setY(y);
+                            // These values are from RFC 6143 Section 7.5.5.
                             if (buttons.get(0)) {
                                 state.pressButton(MouseEvent.BUTTON_LEFT);
                             }
@@ -283,6 +284,20 @@ class VNCScreen extends HeadlessScreen {
                             }
                             if (buttons.get(2)) {
                                 state.pressButton(MouseEvent.BUTTON_RIGHT);
+                            }
+                            if (buttons.get(3)) {
+                                state.setWheel(MouseState.WHEEL_UP);
+                            }
+                            if (buttons.get(4)) {
+                                state.setWheel(MouseState.WHEEL_DOWN);
+                            }
+                            // TODO: Buttons from here on are not officially mentioned in the docs, can someone confirm
+                            // on a real device?
+                            if (buttons.get(5)) {
+                                state.pressButton(MouseEvent.BUTTON_BACK);
+                            }
+                            if (buttons.get(6)) {
+                                state.pressButton(MouseEvent.BUTTON_FORWARD);
                             }
                             Platform.runLater(() -> MouseInput.getInstance().setState(state, false));
                             break;

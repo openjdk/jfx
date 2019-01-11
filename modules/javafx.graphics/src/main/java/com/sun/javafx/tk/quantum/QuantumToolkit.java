@@ -191,9 +191,27 @@ public final class QuantumToolkit extends Toolkit {
                 return result;
             });
 
+    private class PulseTask {
+        private volatile boolean isRunning;
+        PulseTask(boolean state) {
+            isRunning = state;
+        }
+
+        synchronized void set(boolean state) {
+            isRunning = state;
+            if (isRunning) {
+                resumeTimer();
+            }
+        }
+
+        boolean get() {
+            return isRunning;
+        }
+    }
+
     private AtomicBoolean           toolkitRunning = new AtomicBoolean(false);
-    private AtomicBoolean           animationRunning = new AtomicBoolean(false);
-    private AtomicBoolean           nextPulseRequested = new AtomicBoolean(false);
+    private PulseTask               animationRunning = new PulseTask(false);
+    private PulseTask               nextPulseRequested = new PulseTask(false);
     private AtomicBoolean           pulseRunning = new AtomicBoolean(false);
     private int                     inPulse = 0;
     private CountDownLatch          launchLatch = new CountDownLatch(1);
@@ -201,6 +219,9 @@ public final class QuantumToolkit extends Toolkit {
     final int                       PULSE_INTERVAL = (int)(TimeUnit.SECONDS.toMillis(1L) / getRefreshRate());
     final int                       FULLSPEED_INTERVAL = 1;     // ms
     boolean                         nativeSystemVsync = false;
+    private long                    firstPauseRequestTime = 0;
+    private boolean                 pauseRequested = false;
+    private static final long       PAUSE_THRESHOLD_DURATION = 250;
     private float                   _maxPixelScale;
     private Runnable                pulseRunnable, userRunnable, timerRunnable;
     private Timer                   pulseTimer = null;
@@ -455,7 +476,7 @@ public final class QuantumToolkit extends Toolkit {
 
     void postPulse() {
         if (toolkitRunning.get() &&
-            (animationRunning.get() || nextPulseRequested.get() || collector.hasDirty()) &&
+            (animationRunning.get() || nextPulseRequested.get()) &&
             !setPulseRunning()) {
 
             Application.invokeLater(pulseRunnable);
@@ -463,17 +484,39 @@ public final class QuantumToolkit extends Toolkit {
             if (debug) {
                 System.err.println("QT.postPulse@(" + System.nanoTime() + "): " + pulseString());
             }
+        } else if (!animationRunning.get() && !nextPulseRequested.get() && !pulseRunning.get()) {
+            pauseTimer();
         } else if (debug) {
-            System.err.println("QT.postPulse#(" + System.nanoTime() + ") DROP: " + pulseString());
+            System.err.println("QT.postPulse#(" + System.nanoTime() + "): DROP : " + pulseString());
         }
+    }
+
+    private synchronized void pauseTimer() {
+        if (!pauseRequested) {
+            pauseRequested = true;
+            firstPauseRequestTime = System.currentTimeMillis();
+        }
+
+        if (System.currentTimeMillis() - firstPauseRequestTime >= PAUSE_THRESHOLD_DURATION) {
+            pulseTimer.pause();
+            if (debug) {
+                System.err.println("QT.pauseTimer#(" + System.nanoTime() + "): Pausing Timer : " + pulseString());
+            }
+        } else if (debug) {
+            System.err.println("QT.pauseTimer#(" + System.nanoTime() + "): Pause Timer : DROP : " + pulseString());
+        }
+    }
+
+    private synchronized void resumeTimer() {
+        pauseRequested = false;
+        pulseTimer.resume();
     }
 
     private String pulseString() {
         return ((toolkitRunning.get() ? "T" : "t") +
                 (animationRunning.get() ? "A" : "a") +
                 (pulseRunning.get() ? "P" : "p") +
-                (nextPulseRequested.get() ? "N" : "n") +
-                (collector.hasDirty() ? "D" : "d"));
+                (nextPulseRequested.get() ? "N" : "n"));
     }
 
     private boolean setPulseRunning() {
