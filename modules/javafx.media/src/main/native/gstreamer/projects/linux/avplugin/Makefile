@@ -23,6 +23,7 @@ CFLAGS = -fPIC                   \
          -Wformat-security       \
          -fstack-protector       \
          -Werror=implicit-function-declaration \
+         -Werror=trampolines     \
          -msse2                  \
          -fbuiltin               \
          -DHAVE_STDINT_H         \

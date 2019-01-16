@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ LINUX.library = { name -> return "lib${name}.so" as String }
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
         "-fstack-protector",
-        "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
+        "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration", "-Werror=trampolines"] // warning flags
 
 if (!IS_64) {
     commonFlags += "-m32"

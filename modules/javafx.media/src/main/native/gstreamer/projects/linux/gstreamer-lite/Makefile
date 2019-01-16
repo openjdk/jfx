@@ -43,6 +43,7 @@ CFLAGS =-fPIC                   \
         -Wformat-security       \
         -fstack-protector       \
         -Werror=implicit-function-declaration \
+        -Werror=trampolines     \
         -D_GNU_SOURCE           \
         -DGST_REMOVE_DEPRECATED \
         -DGSTREAMER_LITE        \
