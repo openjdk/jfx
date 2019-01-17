@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,13 @@
 
 package test.javafx.scene.web;
 
+import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import static java.lang.String.format;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,14 +46,21 @@ import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
 import org.junit.Test;
 import org.w3c.dom.Document;
+
+import static java.lang.String.format;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import javafx.scene.web.WebEngineShim;
+import com.sun.webkit.WebPage;
+import com.sun.webkit.WebPageShim;
+import com.sun.webkit.graphics.WCGraphicsContext;
 
 public class MiscellaneousTest extends TestBase {
 
@@ -451,6 +459,42 @@ public class MiscellaneousTest extends TestBase {
             } catch (IOException ex){
                 throw new AssertionError(ex);
             }
+        });
+    }
+
+    @Test public void testSVGRenderingWithGradient() {
+        loadContent("<html>\n" +
+                    "<body style='margin: 0px 0px;'>\n" +
+                    "<svg width='400' height='150'>\n" +
+                    "<defs>\n" +
+                    "<linearGradient id='grad1' x1='0%' y1='0%' x2='100%' y2='100%'>\n" +
+                    "<stop offset='0%' style='stop-color:red' />\n" +
+                    "<stop offset='100%' style='stop-color:yellow' />\n" +
+                    "</linearGradient>\n" +
+                    "</defs>\n" +
+                    "<rect width='400' height='150' fill='url(#grad1)' />\n" +
+                    "</svg>\n" +
+                    "</body>\n" +
+                    "</html>");
+        submit(() -> {
+            final WebPage webPage = WebEngineShim.getPage(getEngine());
+            assertNotNull(webPage);
+            final BufferedImage img = WebPageShim.paint(webPage, 0, 0, 800, 600);
+            assertNotNull(img);
+
+            final Color pixelAt0x0 = new Color(img.getRGB(0, 0), true);
+            assertTrue("Color should be opaque red:" + pixelAt0x0, isColorsSimilar(Color.RED, pixelAt0x0, 1));
+
+            final Color pixelAt100x36 = new Color(img.getRGB(100, 36), true);
+            assertTrue("Color should be almost red:" + pixelAt100x36, isColorsSimilar(Color.RED, pixelAt100x36, 40));
+            assertFalse("Color shouldn't be yellow:" + pixelAt100x36, isColorsSimilar(Color.YELLOW, pixelAt100x36, 10));
+
+            final Color pixelAt200x75 = new Color(img.getRGB(200, 75), true);
+            assertFalse("Color shouldn't be red:" + pixelAt200x75, isColorsSimilar(Color.RED, pixelAt200x75, 10));
+            assertTrue("Color should look like yellow:" + pixelAt200x75, isColorsSimilar(Color.YELLOW, pixelAt200x75, 40));
+
+            final Color pixelAt399x145 = new Color(img.getRGB(399, 149), true);
+            assertTrue("Color should be opaque yellow:" + pixelAt399x145, isColorsSimilar(Color.YELLOW, pixelAt399x145, 1));
         });
     }
 }

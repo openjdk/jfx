@@ -48,9 +48,11 @@
 --add-exports javafx.graphics/com.sun.scenario=ALL-UNNAMED
 #
 --add-exports javafx.web/com.sun.javafx.scene.web=ALL-UNNAMED
+--add-exports javafx.web/com.sun.javafx.webkit.prism=ALL-UNNAMED
 --add-exports javafx.web/com.sun.javafx.webkit=ALL-UNNAMED
---add-exports javafx.web/com.sun.webkit=ALL-UNNAMED
 --add-exports javafx.web/com.sun.webkit.dom=ALL-UNNAMED
 --add-exports javafx.web/com.sun.webkit.event=ALL-UNNAMED
+--add-exports javafx.web/com.sun.webkit.graphics=ALL-UNNAMED
 --add-exports javafx.web/com.sun.webkit.network=ALL-UNNAMED
 --add-exports javafx.web/com.sun.webkit.text=ALL-UNNAMED
+--add-exports javafx.web/com.sun.webkit=ALL-UNNAMED
