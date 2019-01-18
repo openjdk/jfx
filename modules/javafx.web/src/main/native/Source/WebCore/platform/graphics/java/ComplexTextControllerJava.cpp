@@ -92,6 +92,12 @@ unsigned jGetEnd(jobject jRun)
 
 unsigned jGetCharOffset(jobject jRun, unsigned glyphIndex)
 {
+    if (!jGetGlyphCount(jRun)) {
+        // Return same value as TextRun.getCharOffset() when there is
+        // no glyph information available.
+        return glyphIndex;
+    }
+
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID mID = env->GetMethodID(
         PG_GetTextRun(env),
