@@ -1,3 +1,5 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!-- was: no XML declaration present -->
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
@@ -11,286 +13,286 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\garray.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\garray.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gasyncqueue.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gasyncqueue.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gatomic.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gatomic.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gbacktrace.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbacktrace.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gbase64.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbase64.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gbitlock.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbitlock.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gbookmarkfile.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbookmarkfile.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gbuffer.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gbuffer.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gcache.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gcache.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gchecksum.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gchecksum.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gcompletion.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gcompletion.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gconvert.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gconvert.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gdataset.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdataset.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gdate.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdate.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gdatetime.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdatetime.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gdir.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gdir.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gerror.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gerror.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gfileutils.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gfileutils.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\ghash.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghash.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\ghook.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghook.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\ghostutils.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\ghostutils.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\giochannel.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giochannel.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\giowin32.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\giowin32.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gkeyfile.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gkeyfile.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\glist.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\glist.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gmain.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmain.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gmappedfile.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmappedfile.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gmarkup.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmarkup.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gmem.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmem.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gmessages.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gmessages.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gnode.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnode.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gnulib\asnprintf.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\asnprintf.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gnulib\printf-args.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf-args.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gnulib\printf-parse.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf-parse.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gnulib\printf.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\printf.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gnulib\vasnprintf.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gnulib\vasnprintf.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\goption.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\goption.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gpattern.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gpattern.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gpoll.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gpoll.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gprimes.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gprimes.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gprintf.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gprintf.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gqsort.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gqsort.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gqueue.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gqueue.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\grand.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\grand.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gregex.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gregex.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\grel.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\grel.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gscanner.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gscanner.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gsequence.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gsequence.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gshell.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gshell.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gslice.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gslice.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gslist.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gslist.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gspawn-win32.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gspawn-win32.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gstdio.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstdio.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gstrfuncs.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstrfuncs.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gstring.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gstring.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gtester.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtester.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gtestutils.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtestutils.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gthread.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gthread.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gthreadpool.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gthreadpool.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gtimer.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtimer.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gtimezone.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtimezone.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gtree.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gtree.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gunibreak.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunibreak.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gunicollate.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunicollate.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gunidecomp.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gunidecomp.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\guniprop.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\guniprop.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gurifuncs.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gurifuncs.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gutf8.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutf8.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gutils.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gutils.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gvariant-core.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-core.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gvariant-parser.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-parser.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gvariant-serialiser.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant-serialiser.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gvariant.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvariant.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gvarianttype.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvarianttype.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gvarianttypeinfo.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gvarianttypeinfo.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\gwin32.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\gwin32.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\libcharset\localcharset.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\libcharset\localcharset.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_chartables.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_chartables.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_compile.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_compile.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_config.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_config.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_dfa_exec.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_dfa_exec.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_exec.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_exec.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_fullinfo.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_fullinfo.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_get.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_get.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_globals.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_globals.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_newline.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_newline.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_ord2utf8.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_ord2utf8.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_study.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_study.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_tables.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_tables.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_try_flipped.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_try_flipped.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_ucp_searchfuncs.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_ucp_searchfuncs.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\glib\pcre\pcre_xclass.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib\pcre\pcre_xclass.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GLIB_COMPILATION;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"Glib\";G_DISABLE_DEPRECATED;PCRE_STATIC;LINK_SIZE=2;MAX_NAME_SIZE=32;MAX_NAME_COUNT=10000;NEWLINE=-1;POSIX_MALLOC_THRESHOLD=10;MATCH_LIMIT=10000000;MATCH_LIMIT_RECURSION=10000000;HAVE_LONG_LONG;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gmodule\gmodule.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gmodule\gmodule.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GSTREAMER_LITE;HAVE_CONFIG_H;G_LOG_DOMAIN=\"GModule\";G_DISABLE_DEPRECATED;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gatomicarray.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gatomicarray.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -300,7 +302,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gboxed.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gboxed.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -310,7 +312,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gclosure.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gclosure.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -320,7 +322,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\genums.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\genums.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -330,7 +332,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gobject.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gobject.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -340,7 +342,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gparam.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gparam.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -350,7 +352,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gparamspecs.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gparamspecs.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -360,7 +362,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gsignal.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gsignal.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -370,7 +372,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gsourceclosure.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gsourceclosure.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -380,7 +382,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gtype.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtype.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -390,7 +392,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gtypemodule.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtypemodule.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -400,7 +402,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gtypeplugin.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gtypeplugin.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -410,7 +412,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gvalue.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvalue.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -420,7 +422,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gvaluearray.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluearray.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -430,7 +432,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gvaluetransform.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluetransform.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -440,7 +442,7 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject\gvaluetypes.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gobject\gvaluetypes.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;
 GSTREAMER_LITE;
 GOBJECT_EXPORTS
@@ -450,17 +452,17 @@ G_LOG_DOMAIN=\"Glib-GObject\";
 G_DISABLE_DEPRECATED;
 _MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\gthread\gthread-impl.c">
+    <ClCompile Include="..\..\gstreamer\3rd_party\glib\gthread\gthread-impl.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;GSTREAMER_LITE;
 HAVE_CONFIG_H;
 G_LOG_DOMAIN=\"GThread\";
-G_DISABLE_DEPRECATED;_MBCS 
+G_DISABLE_DEPRECATED;_MBCS
 ;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100\config.h" />
-    <ClInclude Include="..\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100\glibconfig.h" />
+    <ClInclude Include="..\..\gstreamer\3rd_party\glib\build\win32\vs100\config.h" />
+    <ClInclude Include="..\..\gstreamer\3rd_party\glib\build\win32\vs100\glibconfig.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{520F67C2-7C7E-48F6-B559-457F84CA2DF9}</ProjectGuid>
@@ -504,7 +506,7 @@ G_DISABLE_DEPRECATED;_MBCS
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\glib;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gobject;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gmodule;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\gthread;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\dirent;$(SolutionDir)\..\gstreamer\3rd_party\glib\glib-2.28.8\build\win32\vs100;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\gstreamer\3rd_party\glib\glib;$(SolutionDir)\..\gstreamer\3rd_party\glib\gobject;$(SolutionDir)\..\gstreamer\3rd_party\glib\gmodule;$(SolutionDir)\..\gstreamer\3rd_party\glib\gthread;$(SolutionDir)\..\gstreamer\3rd_party\glib\build\win32\dirent;$(SolutionDir)\..\gstreamer\3rd_party\glib\build\win32\vs100;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

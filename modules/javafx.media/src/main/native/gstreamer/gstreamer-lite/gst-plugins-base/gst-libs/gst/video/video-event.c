@@ -52,7 +52,8 @@ gst_video_event_new_still_frame (gboolean in_still)
 /**
  * gst_video_event_parse_still_frame:
  * @event: A #GstEvent to parse
- * @in_still: A boolean to receive the still-frame status from the event, or NULL
+ * @in_still: (out):
+ *     A boolean to receive the still-frame status from the event, or NULL
  *
  * Parse a #GstEvent, identify if it is a Still Frame event, and
  * return the still-frame state from the event if it is.

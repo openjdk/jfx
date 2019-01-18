@@ -50,7 +50,7 @@
 
 /**
  * gst_util_dump_mem:
- * @mem: a pointer to the memory to dump
+ * @mem: (array length=size): a pointer to the memory to dump
  * @size: the size of the memory block to dump
  *
  * Dumps the memory block into a hex representation. Useful for debugging.
@@ -2428,6 +2428,9 @@ gst_element_query_position (GstElement * element, GstFormat format,
   GstQuery *query;
   gboolean ret;
 
+  if (cur != NULL)
+    *cur = GST_CLOCK_TIME_NONE;
+
   g_return_val_if_fail (GST_IS_ELEMENT (element), FALSE);
   g_return_val_if_fail (format != GST_FORMAT_UNDEFINED, FALSE);
 
@@ -2465,6 +2468,9 @@ gst_element_query_duration (GstElement * element, GstFormat format,
 {
   GstQuery *query;
   gboolean ret;
+
+  if (duration != NULL)
+    *duration = GST_CLOCK_TIME_NONE;
 
   g_return_val_if_fail (GST_IS_ELEMENT (element), FALSE);
   g_return_val_if_fail (format != GST_FORMAT_UNDEFINED, FALSE);
@@ -2836,6 +2842,9 @@ gst_pad_query_position (GstPad * pad, GstFormat format, gint64 * cur)
   GstQuery *query;
   gboolean ret;
 
+  if (cur != NULL)
+    *cur = GST_CLOCK_TIME_NONE;
+
   g_return_val_if_fail (GST_IS_PAD (pad), FALSE);
   g_return_val_if_fail (format != GST_FORMAT_UNDEFINED, FALSE);
 
@@ -2865,6 +2874,9 @@ gst_pad_peer_query_position (GstPad * pad, GstFormat format, gint64 * cur)
   GstQuery *query;
   gboolean ret = FALSE;
 
+  if (cur != NULL)
+    *cur = GST_CLOCK_TIME_NONE;
+
   g_return_val_if_fail (GST_IS_PAD (pad), FALSE);
   g_return_val_if_fail (format != GST_FORMAT_UNDEFINED, FALSE);
 
@@ -2892,6 +2904,9 @@ gst_pad_query_duration (GstPad * pad, GstFormat format, gint64 * duration)
 {
   GstQuery *query;
   gboolean ret;
+
+  if (duration != NULL)
+    *duration = GST_CLOCK_TIME_NONE;
 
   g_return_val_if_fail (GST_IS_PAD (pad), FALSE);
   g_return_val_if_fail (format != GST_FORMAT_UNDEFINED, FALSE);
@@ -2921,6 +2936,9 @@ gst_pad_peer_query_duration (GstPad * pad, GstFormat format, gint64 * duration)
 {
   GstQuery *query;
   gboolean ret = FALSE;
+
+  if (duration != NULL)
+    *duration = GST_CLOCK_TIME_NONE;
 
   g_return_val_if_fail (GST_IS_PAD (pad), FALSE);
   g_return_val_if_fail (GST_PAD_IS_SINK (pad), FALSE);

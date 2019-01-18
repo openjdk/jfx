@@ -1002,8 +1002,9 @@ gst_segment_position_from_running_time (const GstSegment * segment,
  * When 1 is returned, @running_time resulted in a positive position returned
  * in @position.
  *
- * When this function returns -1, the returned @position should be negated
- * to get the real negative segment position.
+ * When this function returns -1, the returned @position was < 0, and the value
+ * in the position variable should be negated to get the real negative segment
+ * position.
  *
  * Returns: a 1 or -1 on success, 0 on failure.
  *
@@ -1046,12 +1047,15 @@ gst_segment_position_from_running_time_full (const GstSegment * segment,
       *position = base - running_time;
       if (G_UNLIKELY (abs_rate != 1.0))
         *position = ceil (*position * abs_rate);
-      if (start + segment->offset > *position) {
-        *position -= start + segment->offset;
-        res = -1;
-      } else {
+      if (start + segment->offset >= *position) {
+        /* The TS is before the segment, but the result is >= 0 */
         *position = start + segment->offset - *position;
         res = 1;
+      } else {
+        /* The TS is before the segment, and the result is < 0
+         * so negate the return result */
+        *position = *position - (start + segment->offset);
+        res = -1;
   }
 }
   } else {
@@ -1067,15 +1071,24 @@ gst_segment_position_from_running_time_full (const GstSegment * segment,
         res = 1;
       }
     } else {
+      /* This case is tricky. Requested running time precedes the
+       * segment base, so in a reversed segment where rate < 0, that
+       * means it's before the alignment point of (stop - offset).
+       * Before = always bigger than (stop-offset), which is usually +ve,
+       * but could be -ve is offset is big enough. -ve position implies
+       * that the offset has clipped away the entire segment anyway */
       *position = base - running_time;
       if (G_UNLIKELY (abs_rate != 1.0))
         *position = ceil (*position * abs_rate);
-      if (G_UNLIKELY (stop < segment->offset - *position)) {
-        *position -= segment->offset - stop;
-        res = -1;
-      } else {
+
+      if (G_LIKELY (stop + *position >= segment->offset)) {
         *position = stop + *position - segment->offset;
         res = 1;
+      } else {
+        /* Requested position is still negative because offset is big,
+         * so negate the result */
+        *position = segment->offset - *position - stop;
+        res = -1;
       }
     }
   }

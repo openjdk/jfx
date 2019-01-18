@@ -954,7 +954,7 @@ gst_byte_reader_masked_scan_uint32 (const GstByteReader * reader, guint32 mask,
  * @offset: offset from which to start scanning, relative to the current
  *     position
  * @size: number of bytes to scan from offset
- * @value: pointer to uint32 to return matching data
+ * @value: (out): pointer to uint32 to return matching data
  *
  * Scan for pattern @pattern with applied mask @mask in the byte reader data,
  * starting from offset @offset relative to the current position.

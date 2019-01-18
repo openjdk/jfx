@@ -1137,8 +1137,18 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
   GstClockTime elapsed;
   gchar *obj = NULL;
   GstDebugColorMode color_mode;
+  const gchar *message_str;
   FILE *log_file = user_data ? user_data : stderr;
   gchar c;
+
+  /* Get message string first because printing it might call into our custom
+   * printf format extension mechanism which in turn might log something, e.g.
+   * from inside gst_structure_to_string() when something can't be serialised.
+   * This means we either need to do this outside of any critical section or
+   * use a recursive lock instead. As we always need the message string in all
+   * code paths, we might just as well get it here first thing and outside of
+   * the win_print_mutex critical section. */
+  message_str = gst_debug_message_get (message);
 
   /* __FILE__ might be a file name or an absolute path or a
    * relative path, irrespective of the exact compiler used,
@@ -1186,7 +1196,7 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
           pidcolor, pid, clear, g_thread_self (), levelcolor,
           gst_debug_level_get_name (level), clear, color,
           gst_debug_category_get_name (category), file, line, function, obj,
-          clear, gst_debug_message_get (message));
+          clear, message_str);
       fflush (log_file);
 #undef PRINT_FMT
       g_free (color);
@@ -1221,7 +1231,7 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
       fflush (log_file);
       /* message */
       SET_COLOR (clear);
-      fprintf (log_file, " %s\n", gst_debug_message_get (message));
+      fprintf (log_file, " %s\n", message_str);
       fflush (log_file);
     }
     g_mutex_unlock (&win_print_mutex);
@@ -1232,7 +1242,7 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
     fprintf (log_file, "%" GST_TIME_FORMAT PRINT_FMT, GST_TIME_ARGS (elapsed),
         pid, g_thread_self (), gst_debug_level_get_name (level),
         gst_debug_category_get_name (category), file, line, function, obj,
-        gst_debug_message_get (message));
+        message_str);
     fflush (log_file);
 #undef PRINT_FMT
   }
@@ -1689,18 +1699,6 @@ gst_debug_unset_threshold_for_name (const gchar * name)
   gst_debug_reset_all_thresholds ();
 }
 
-static void
-gst_debug_apply_patterns_to_category (GstDebugCategory * cat)
-{
-  GSList *l;
-
-  g_mutex_lock (&__level_name_mutex);
-  for (l = __level_name; l != NULL; l = l->next) {
-    for_each_threshold_by_entry (cat, (LevelNameEntry *) l->data);
-  }
-  g_mutex_unlock (&__level_name_mutex);
-}
-
 GstDebugCategory *
 _gst_debug_category_new (const gchar * name, guint color,
     const gchar * description)
@@ -1732,9 +1730,6 @@ _gst_debug_category_new (const gchar * name, guint color,
     __categories = g_slist_prepend (__categories, cat);
   }
   g_mutex_unlock (&__cat_mutex);
-
-  /* ensure the filter is applied to categories registered after _debug_init */
-  gst_debug_apply_patterns_to_category (cat);
 
   return cat;
 }

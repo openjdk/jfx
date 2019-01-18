@@ -62,7 +62,7 @@ G_DEFINE_INTERFACE (GstVideoOrientation, gst_video_orientation, 0)
 /**
  * gst_video_orientation_get_hflip:
  * @video_orientation: #GstVideoOrientation interface of a #GstElement
- * @flip: return location for the result
+ * @flip: (out): return location for the result
  *
  * Get the horizontal flipping state (%TRUE for flipped) from the given object.
  * Returns: %TRUE in case the element supports flipping
@@ -83,7 +83,7 @@ gst_video_orientation_get_hflip (GstVideoOrientation * video_orientation,
 /**
  * gst_video_orientation_get_vflip:
  * @video_orientation: #GstVideoOrientation interface of a #GstElement
- * @flip: return location for the result
+ * @flip: (out): return location for the result
  *
  * Get the vertical flipping state (%TRUE for flipped) from the given object.
  * Returns: %TRUE in case the element supports flipping
@@ -104,7 +104,7 @@ gst_video_orientation_get_vflip (GstVideoOrientation * video_orientation,
 /**
  * gst_video_orientation_get_hcenter:
  * @video_orientation: #GstVideoOrientation interface of a #GstElement
- * @center: return location for the result
+ * @center: (out): return location for the result
  *
  * Get the horizontal centering offset from the given object.
  * Returns: %TRUE in case the element supports centering
@@ -125,7 +125,7 @@ gst_video_orientation_get_hcenter (GstVideoOrientation * video_orientation,
 /**
  * gst_video_orientation_get_vcenter:
  * @video_orientation: #GstVideoOrientation interface of a #GstElement
- * @center: return location for the result
+ * @center: (out): return location for the result
  *
  * Get the vertical centering offset from the given object.
  * Returns: %TRUE in case the element supports centering

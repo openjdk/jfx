@@ -248,6 +248,7 @@ gst_aac_parse_set_src_caps (GstAacParse * aacparse, GstCaps * sink_caps)
         gst_buffer_fill (codec_data_buffer, 0, codec_data, 2);
         gst_caps_set_simple (src_caps, "codec_data", GST_TYPE_BUFFER,
             codec_data_buffer, NULL);
+        gst_buffer_unref (codec_data_buffer);
       }
     } else if (aacparse->header_type == DSPAAC_HEADER_NONE) {
       GST_DEBUG_OBJECT (GST_BASE_PARSE (aacparse)->srcpad,

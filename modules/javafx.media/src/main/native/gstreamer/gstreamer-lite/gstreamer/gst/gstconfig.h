@@ -95,8 +95,26 @@
 /* Configures the use of external plugins */
 /* #undef GST_DISABLE_PLUGIN */
 
-/* whether or not the CPU supports unaligned access */
+#ifndef GSTREAMER_LITE
+/* Whether or not the CPU supports unaligned access
+ * The macros used are defined consistently by GCC, Clang, MSVC, Sun, and ICC
+ *
+ * References:
+ * https://sourceforge.net/p/predef/wiki/Architectures/
+ * https://msdn.microsoft.com/en-us/library/b0084kay.aspx
+ * http://docs.oracle.com/cd/E19205-01/820-4155/c++_faq.html#Vers6
+ * https://software.intel.com/en-us/node/583402
+ */
+#if defined(__alpha__) || defined(__arc__) || defined(__arm__) || defined(__aarch64__) || defined(__bfin) || defined(__hppa__) || defined(__nios2__) || defined(__MICROBLAZE__) || defined(__mips__) || defined(__or1k__) || defined(__sh__) || defined(__SH4__) || defined(__sparc__) || defined(__sparc) || defined(__ia64__) || defined(_M_ALPHA) || defined(_M_ARM) || defined(_M_IA64) || defined(__xtensa__) || defined(__e2k__)
+#  define GST_HAVE_UNALIGNED_ACCESS 0
+#elif defined(__i386__) || defined(__i386) || defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__ppc__) || defined(__ppc64__) || defined(__powerpc__) || defined(__powerpc64__) || defined(__m68k__) || defined(_M_IX86) || defined(_M_AMD64) || defined(_M_X64) || defined(__s390__) || defined(__s390x__) || defined(__zarch__)
+#  define GST_HAVE_UNALIGNED_ACCESS 1
+#else
+#  error "Could not detect architecture; don't know whether it supports unaligned access! Please file a bug."
+#endif
+#else // GSTREAMER_LITE
 #define GST_HAVE_UNALIGNED_ACCESS 1
+#endif // GSTREAMER_LITE
 
 /**
  * GST_EXPORT:
@@ -131,7 +149,7 @@
 # else
 #  define GST_EXPORT __declspec(dllimport) extern
 # endif
-#else /* not _MSC_VER */
+#else
 # if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
 #  define GST_PLUGIN_EXPORT __attribute__ ((visibility ("default")))
 #  define GST_EXPORT extern __attribute__ ((visibility ("default")))

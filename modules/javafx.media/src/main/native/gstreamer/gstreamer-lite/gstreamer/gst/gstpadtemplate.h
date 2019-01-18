@@ -192,6 +192,7 @@ struct _GstStaticPadTemplate {
 }
 
 /* templates and factories */
+
 GST_API
 GType           gst_pad_template_get_type       (void);
 #ifndef GSTREAMER_LITE

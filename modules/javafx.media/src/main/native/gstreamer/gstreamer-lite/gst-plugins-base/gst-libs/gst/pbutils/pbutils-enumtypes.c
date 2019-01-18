@@ -7,9 +7,11 @@
 #include "pbutils-prelude.h"
 #include "codec-utils.h"
 #include "descriptions.h"
+#ifndef GSTREAMER_LITE
 #include "encoding-profile.h"
 #include "encoding-target.h"
 #include "install-plugins.h"
+#endif // GSTREAMER_LITE
 #include "missing-plugins.h"
 #include "gstdiscoverer.h"
 #include "gstaudiovisualizer.h"
@@ -78,6 +80,7 @@ gst_discoverer_serialize_flags_get_type (void)
   return g_define_type_id__volatile;
 }
 
+#ifndef GSTREAMER_LITE
 /* enumerations from "install-plugins.h" */
 GType
 gst_install_plugins_return_get_type (void)
@@ -103,6 +106,6 @@ gst_install_plugins_return_get_type (void)
   }
   return g_define_type_id__volatile;
 }
-
+#endif // GSTREAMER_LITE
 
 

@@ -63,6 +63,7 @@ typedef struct
   GstTypeFindFactory *factory;  /* for logging */
   GstObject *obj;               /* for logging */
   GstObject *parent;
+  GstFlowReturn flow_ret;
 } GstTypeFindHelper;
 
 /*
@@ -83,7 +84,6 @@ helper_find_peek (gpointer data, gint64 offset, guint size)
 {
   GstTypeFindHelper *helper;
   GstBuffer *buffer;
-  GstFlowReturn ret;
   GSList *insert_pos = NULL;
   gsize buf_size;
   guint64 buf_offset;
@@ -140,11 +140,11 @@ helper_find_peek (gpointer data, gint64 offset, guint size)
    * of the file is also not a problem here, we'll just get a truncated buffer
    * in that case (and we'll have to double-check the size we actually get
    * anyway, see below) */
-  ret =
+  helper->flow_ret =
       helper->func (helper->obj, helper->parent, offset, MAX (size, 4096),
       &buffer);
 
-  if (ret != GST_FLOW_OK)
+  if (helper->flow_ret != GST_FLOW_OK)
     goto error;
 
 #if 0
@@ -202,7 +202,8 @@ helper_find_peek (gpointer data, gint64 offset, guint size)
 
 error:
   {
-    GST_INFO ("typefind function returned: %s", gst_flow_get_name (ret));
+    GST_INFO ("typefind function returned: %s",
+        gst_flow_get_name (helper->flow_ret));
     return NULL;
   }
 map_failed:
@@ -282,6 +283,49 @@ gst_type_find_helper_get_range (GstObject * obj, GstObject * parent,
     GstTypeFindHelperGetRangeFunction func, guint64 size,
     const gchar * extension, GstTypeFindProbability * prob)
 {
+  GstCaps *caps = NULL;
+
+  gst_type_find_helper_get_range_full (obj, parent, func, size, extension,
+      &caps, prob);
+
+  return caps;
+}
+
+/**
+ * gst_type_find_helper_get_range_full:
+ * @obj: A #GstObject that will be passed as first argument to @func
+ * @parent: (allow-none): the parent of @obj or %NULL
+ * @func: (scope call): A generic #GstTypeFindHelperGetRangeFunction that will
+ *        be used to access data at random offsets when doing the typefinding
+ * @size: The length in bytes
+ * @extension: (allow-none): extension of the media, or %NULL
+ * @caps: (out) (transfer full): returned caps
+ * @prob: (out) (allow-none): location to store the probability of the found
+ *     caps, or %NULL
+ *
+ * Utility function to do pull-based typefinding. Unlike gst_type_find_helper()
+ * however, this function will use the specified function @func to obtain the
+ * data needed by the typefind functions, rather than operating on a given
+ * source pad. This is useful mostly for elements like tag demuxers which
+ * strip off data at the beginning and/or end of a file and want to typefind
+ * the stripped data stream before adding their own source pad (the specified
+ * callback can then call the upstream peer pad with offsets adjusted for the
+ * tag size, for example).
+ *
+ * When @extension is not %NULL, this function will first try the typefind
+ * functions for the given extension, which might speed up the typefinding
+ * in many cases.
+ *
+ * Returns: the last %GstFlowReturn from pulling a buffer or %GST_FLOW_OK if
+ *          typefinding was successful.
+ *
+ * Since: 1.14.3
+ */
+GstFlowReturn
+gst_type_find_helper_get_range_full (GstObject * obj, GstObject * parent,
+    GstTypeFindHelperGetRangeFunction func, guint64 size,
+    const gchar * extension, GstCaps ** caps, GstTypeFindProbability * prob)
+{
   GstTypeFindHelper helper;
   GstTypeFind find;
   GSList *walk;
@@ -289,8 +333,11 @@ gst_type_find_helper_get_range (GstObject * obj, GstObject * parent,
   GstCaps *result = NULL;
   gint pos = 0;
 
-  g_return_val_if_fail (GST_IS_OBJECT (obj), NULL);
-  g_return_val_if_fail (func != NULL, NULL);
+  g_return_val_if_fail (GST_IS_OBJECT (obj), GST_FLOW_ERROR);
+  g_return_val_if_fail (func != NULL, GST_FLOW_ERROR);
+  g_return_val_if_fail (caps != NULL, GST_FLOW_ERROR);
+
+  *caps = NULL;
 
   helper.buffers = NULL;
   helper.size = size;
@@ -300,6 +347,7 @@ gst_type_find_helper_get_range (GstObject * obj, GstObject * parent,
   helper.caps = NULL;
   helper.obj = obj;
   helper.parent = parent;
+  helper.flow_ret = GST_FLOW_OK;
 
   find.data = &helper;
   find.peek = helper_find_peek;
@@ -358,8 +406,19 @@ gst_type_find_helper_get_range (GstObject * obj, GstObject * parent,
   for (l = type_list; l; l = l->next) {
     helper.factory = GST_TYPE_FIND_FACTORY (l->data);
     gst_type_find_factory_call_function (helper.factory, &find);
-    if (helper.best_probability >= GST_TYPE_FIND_MAXIMUM)
+    if (helper.best_probability >= GST_TYPE_FIND_MAXIMUM) {
+      /* Any other flow return can be ignored here, we found
+       * something before any error with highest probability */
+      helper.flow_ret = GST_FLOW_OK;
       break;
+    } else if (helper.flow_ret != GST_FLOW_OK
+        && helper.flow_ret != GST_FLOW_EOS) {
+      /* We had less than maximum probability and an error, don't return
+       * any caps as they might be with a lower probability than what
+       * we would've gotten when continuing if there was no error */
+      gst_caps_replace (&helper.caps, NULL);
+      break;
+  }
   }
   gst_plugin_feature_list_free (type_list);
 
@@ -378,10 +437,18 @@ gst_type_find_helper_get_range (GstObject * obj, GstObject * parent,
   if (prob)
     *prob = helper.best_probability;
 
+  *caps = result;
+  if (helper.flow_ret == GST_FLOW_EOS) {
+    /* Some typefinder might've tried to read too much, if we
+     * didn't get any meaningful caps because of that this is
+     * just a normal error */
+    helper.flow_ret = GST_FLOW_ERROR;
+  }
+
   GST_LOG_OBJECT (obj, "Returning %" GST_PTR_FORMAT " (probability = %u)",
       result, (guint) helper.best_probability);
 
-  return result;
+  return helper.flow_ret;
 }
 
 /**
@@ -493,8 +560,8 @@ buf_helper_find_suggest (gpointer data, guint probability, GstCaps * caps)
 /**
  * gst_type_find_helper_for_data:
  * @obj: (allow-none): object doing the typefinding, or %NULL (used for logging)
- * @data: (in) (transfer none): a pointer with data to typefind
- * @size: (in): the size of @data
+ * @data: (transfer none) (array length=size): * a pointer with data to typefind
+ * @size: the size of @data
  * @prob: (out) (allow-none): location to store the probability of the found
  *     caps, or %NULL
  *

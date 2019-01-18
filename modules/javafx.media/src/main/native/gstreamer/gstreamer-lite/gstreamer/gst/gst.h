@@ -67,7 +67,9 @@
 #include <gst/gstpipeline.h>
 #include <gst/gstplugin.h>
 #include <gst/gstpoll.h>
+#ifndef GSTREAMER_LITE
 #include <gst/gstpreset.h>
+#endif // GSTREAMER_LITE
 #include <gst/gstprotection.h>
 #include <gst/gstquery.h>
 #include <gst/gstregistry.h>

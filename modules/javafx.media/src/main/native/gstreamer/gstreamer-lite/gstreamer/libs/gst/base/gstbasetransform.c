@@ -643,7 +643,7 @@ gst_base_transform_query_caps (GstBaseTransform * trans, GstPad * pad,
     GST_DEBUG_OBJECT (pad, "transformed  %" GST_PTR_FORMAT, peerfilter);
     gst_caps_unref (temp);
 
-    if (!gst_caps_is_empty (peerfilter)) {
+    if (peerfilter && !gst_caps_is_empty (peerfilter)) {
       /* and filter against the template of the other pad */
       GST_DEBUG_OBJECT (pad, "our template  %" GST_PTR_FORMAT, otempl);
       /* We keep the caps sorted like the returned caps */

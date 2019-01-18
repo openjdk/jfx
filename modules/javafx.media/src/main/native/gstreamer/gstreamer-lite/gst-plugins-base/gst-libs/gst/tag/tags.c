@@ -242,9 +242,11 @@ gst_tag_image_type_is_valid (GstTagImageType type)
 /**
  * gst_tag_parse_extended_comment:
  * @ext_comment: an extended comment string, see #GST_TAG_EXTENDED_COMMENT
- * @key: return location for the comment description key, or NULL
- * @lang: return location for the comment ISO-639 language code, or NULL
- * @value: return location for the actual comment string, or NULL
+ * @key: (out) (nullable):
+ *     return location for the comment description key, or NULL
+ * @lang: (out) (nullable):
+ *     return location for the comment ISO-639 language code, or NULL
+ * @value: (out): return location for the actual comment string, or NULL
  * @fail_if_no_key: whether to fail if strings are not in key=value form
  *
  * Convenience function to parse a GST_TAG_EXTENDED_COMMENT string and
@@ -303,10 +305,10 @@ gst_tag_parse_extended_comment (const gchar * ext_comment, gchar ** key,
 
 /**
  * gst_tag_freeform_string_to_utf8:
- * @data: string data
+ * @data: (array length=size) (element-type gchar): string data
  * @size: length of string data, or -1 if the string is NUL-terminated
- * @env_vars: a NULL-terminated string array of environment variable names,
- *            or NULL
+ * @env_vars: (array zero-terminated=1)
+ *    a NULL-terminated string array of environment variable names, or NULL
  *
  * Convenience function to read a string with unknown character encoding. If
  * the string is already in UTF-8 encoding, it will be returned right away.
@@ -474,7 +476,7 @@ beach:
 
 /**
  * gst_tag_image_data_to_image_sample:
- * @image_data: the (encoded) image
+ * @image_data: (array length=image_data_len): the (encoded) image
  * @image_data_len: the length of the encoded image data at @image_data
  * @image_type: type of the image, or #GST_TAG_IMAGE_TYPE_UNDEFINED. Pass
  *     #GST_TAG_IMAGE_TYPE_NONE if no image type should be set at all (e.g.

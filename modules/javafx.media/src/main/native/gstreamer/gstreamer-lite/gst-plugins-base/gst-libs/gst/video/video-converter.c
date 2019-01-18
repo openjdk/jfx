@@ -1202,7 +1202,8 @@ _custom_video_orc_matrix8 (guint8 * ORC_RESTRICT d1,
 static void
 video_converter_matrix8 (MatrixData * data, gpointer pixels)
 {
-  video_orc_matrix8 (pixels, pixels, data->orc_p1, data->orc_p2,
+  gpointer d = pixels;
+  video_orc_matrix8 (d, pixels, data->orc_p1, data->orc_p2,
       data->orc_p3, data->orc_p4, data->width);
 }
 
@@ -1231,7 +1232,9 @@ video_converter_matrix8_table (MatrixData * data, gpointer pixels)
 static void
 video_converter_matrix8_AYUV_ARGB (MatrixData * data, gpointer pixels)
 {
-  video_orc_convert_AYUV_ARGB (pixels, 0, pixels, 0,
+  gpointer d = pixels;
+
+  video_orc_convert_AYUV_ARGB (d, 0, pixels, 0,
       data->im[0][0], data->im[0][2],
       data->im[2][1], data->im[1][1], data->im[1][2], data->width, 1);
 }

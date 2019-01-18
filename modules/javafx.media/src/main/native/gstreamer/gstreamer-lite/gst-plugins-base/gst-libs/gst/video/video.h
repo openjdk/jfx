@@ -184,5 +184,8 @@ G_END_DECLS
 #include <gst/video/video-overlay-composition.h>
 #include <gst/video/videooverlay.h>
 #include <gst/video/gstvideotimecode.h>
+#ifndef GSTREAMER_LITE
+#include <gst/video/gstvideoaffinetransformationmeta.h>
+#endif // GSTREAMER_LITE
 
 #endif /* __GST_VIDEO_H__ */

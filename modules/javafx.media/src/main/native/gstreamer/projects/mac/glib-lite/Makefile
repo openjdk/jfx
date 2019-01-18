@@ -5,7 +5,7 @@
 BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
 TARGET_DIRS = $(BUILD_DIR)
 
-SRCBASE_DIR = ../../../3rd_party/glib/glib-2.56.1/
+SRCBASE_DIR = ../../../3rd_party/glib/
 LIBFFI_DIR = ../../../3rd_party/libffi
 OBJBASE_DIR = $(BUILD_DIR)/obj/glib-lite
 
@@ -101,6 +101,8 @@ C_SOURCES = glib/garray.c \
             glib/gqueue.c \
             glib/grand.c \
             glib/gregex.c \
+            glib/grcbox.c \
+            glib/grefcount.c \
             glib/gscanner.c \
             glib/gsequence.c \
             glib/gspawn.c \

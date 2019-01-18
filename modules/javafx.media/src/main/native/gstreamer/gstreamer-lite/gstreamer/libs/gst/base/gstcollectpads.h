@@ -253,7 +253,7 @@ typedef gboolean (*GstCollectPadsQueryFunction)        (GstCollectPads *pads, Gs
  * @pads: a #GstCollectPads
  * @data: a #GstCollectData
  * @inbuffer: (transfer full): the input #GstBuffer
- * @outbuffer: the output #GstBuffer
+ * @outbuffer: (out): the output #GstBuffer
  * @user_data: user data
  *
  * A function that will be called when @inbuffer is received on the pad managed

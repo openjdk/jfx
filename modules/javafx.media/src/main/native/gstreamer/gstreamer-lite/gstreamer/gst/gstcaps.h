@@ -433,7 +433,6 @@ GstCaps *         gst_caps_new_full                (GstStructure  *struct1,
 GST_API
 GstCaps *         gst_caps_new_full_valist         (GstStructure  *structure,
                                                     va_list        var_args) G_GNUC_WARN_UNUSED_RESULT;
-
 #ifndef GSTREAMER_LITE
 GST_API
 GType             gst_static_caps_get_type         (void);

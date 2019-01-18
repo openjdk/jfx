@@ -338,7 +338,7 @@ gst_registry_binary_initialize_magic (GstBinaryRegistryMagic * m)
 {
   memset (m, 0, sizeof (GstBinaryRegistryMagic));
 
-  if (!strncpy (m->magic, GST_MAGIC_BINARY_REGISTRY_STR,
+  if (!memcpy (m->magic, GST_MAGIC_BINARY_REGISTRY_STR,
           GST_MAGIC_BINARY_REGISTRY_LEN)
       || !strncpy (m->version, GST_MAGIC_BINARY_VERSION_STR,
           GST_MAGIC_BINARY_VERSION_LEN)) {

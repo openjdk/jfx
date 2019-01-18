@@ -23,6 +23,10 @@
 #include "config.h"
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <gst/audio/audio.h>
 #include "gstaudioutilsprivate.h"
 
@@ -211,4 +215,65 @@ __gst_audio_encoded_audio_convert (GstAudioInfo * fmt,
 
 exit:
   return res;
+}
+
+#ifdef _WIN32
+/* *INDENT-OFF* */
+static struct
+{
+  HMODULE dll;
+  gboolean tried_loading;
+
+    HANDLE (WINAPI * AvSetMmThreadCharacteristics) (LPCSTR, LPDWORD);
+    BOOL (WINAPI * AvRevertMmThreadCharacteristics) (HANDLE);
+} _gst_audio_avrt_tbl = { 0 };
+/* *INDENT-ON* */
+#endif
+
+static gboolean
+__gst_audio_init_thread_priority (void)
+{
+#ifdef _WIN32
+  if (_gst_audio_avrt_tbl.tried_loading)
+    return _gst_audio_avrt_tbl.dll != NULL;
+
+  if (!_gst_audio_avrt_tbl.dll)
+    _gst_audio_avrt_tbl.dll = LoadLibrary (TEXT ("avrt.dll"));
+
+  if (!_gst_audio_avrt_tbl.dll) {
+    GST_WARNING ("Failed to set thread priority, can't find avrt.dll");
+    _gst_audio_avrt_tbl.tried_loading = TRUE;
+    return FALSE;
+  }
+
+  _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics =
+      GetProcAddress (_gst_audio_avrt_tbl.dll, "AvSetMmThreadCharacteristicsA");
+  _gst_audio_avrt_tbl.AvRevertMmThreadCharacteristics =
+      GetProcAddress (_gst_audio_avrt_tbl.dll,
+      "AvRevertMmThreadCharacteristics");
+
+  _gst_audio_avrt_tbl.tried_loading = TRUE;
+#endif
+
+  return TRUE;
+}
+
+/*
+ * Increases the priority of the thread it's called from
+ */
+gpointer
+__gst_audio_set_thread_priority (void)
+{
+  if (!__gst_audio_init_thread_priority ())
+    return NULL;
+
+#ifdef _WIN32
+  DWORD taskIndex = 0;
+  /* This is only used from ringbuffer thread functions, so we don't need to
+   * ever need to revert the thread priorities. */
+  return _gst_audio_avrt_tbl.AvSetMmThreadCharacteristics (TEXT ("Pro Audio"),
+      &taskIndex);
+#else
+  return NULL;
+#endif
 }

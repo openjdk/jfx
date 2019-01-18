@@ -149,6 +149,9 @@ gst_buffer_list_new_sized (guint size)
   gsize slice_size;
   guint n_allocated;
 
+  if (size == 0)
+    size = 1;
+
   n_allocated = GST_ROUND_UP_16 (size);
 
   slice_size = sizeof (GstBufferList) + (n_allocated - 1) * sizeof (gpointer);
