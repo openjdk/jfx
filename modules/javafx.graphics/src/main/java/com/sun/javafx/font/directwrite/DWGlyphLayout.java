@@ -145,7 +145,7 @@ public class DWGlyphLayout extends GlyphLayout {
                 missingGlyph = true;
                 if (composite) break;
             }
-            iglyphs[i] = glyphs[j] | slotMask;
+            iglyphs[i] = (glyphs[j] & DWGlyph.SHORTMASK) | slotMask;
             i++;
             j+=step;
         }
