@@ -497,4 +497,31 @@ public class MiscellaneousTest extends TestBase {
             assertTrue("Color should be opaque yellow:" + pixelAt399x145, isColorsSimilar(Color.YELLOW, pixelAt399x145, 1));
         });
     }
+
+    @Test public void testShadowDOMWithLoadContent() {
+        loadContent("<html>\n" +
+                    "  <body>\n" +
+                    "    <template id='element-details-template'>\n" +
+                    "      <style>\n" +
+                    "        p { font-weight: bold; }\n" +
+                    "      </style>\n" +
+                    "    </template>\n" +
+                    "    <element-details>\n" +
+                    "    </element-details>\n" +
+                    "    <script>\n" +
+                    "    customElements.define('element-details',\n" +
+                    "      class extends HTMLElement {\n" +
+                    "        constructor() {\n" +
+                    "          super();\n" +
+                    "          const template = document\n" +
+                    "            .getElementById('element-details-template')\n" +
+                    "            .content;\n" +
+                    "          const shadowRoot = this.attachShadow({mode: 'open'})\n" +
+                    "            .appendChild(template.cloneNode(true));\n" +
+                    "        }\n" +
+                    "      })\n" +
+                    "    </script>\n" +
+                    "  </body>\n" +
+                    "</html>");
+    }
 }
