@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,15 +69,15 @@ import javafx.css.StyleableProperty;
  * </p>
  *
  * <p>Example:</p>
- * <pre><code>
- * ToggleButton tb1 = new ToggleButton("toggle button 1");
+ * <pre><code> ToggleButton tb1 = new ToggleButton("toggle button 1");
  * ToggleButton tb2 = new ToggleButton("toggle button 2");
  * ToggleButton tb3 = new ToggleButton("toggle button 3");
  * ToggleGroup group = new ToggleGroup();
  * tb1.setToggleGroup(group);
  * tb2.setToggleGroup(group);
- * tb3.setToggleGroup(group);
- * </code></pre>
+ * tb3.setToggleGroup(group);</code></pre>
+ *
+ * <img src="doc-files/ToggleButton.png" alt="Image of the ToggleButton control">
  *
  * <p>
  * MnemonicParsing is enabled by default for ToggleButton.

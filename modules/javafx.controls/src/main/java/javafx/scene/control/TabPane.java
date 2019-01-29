@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,13 +77,13 @@ import javafx.scene.Node;
  * </p>
  *
  * <p>Example:</p>
- * <pre><code>
- * TabPane tabPane = new TabPane();
+ * <pre><code> TabPane tabPane = new TabPane();
  * Tab tab = new Tab();
  * tab.setText("new tab");
- * tab.setContent(new Rectangle(200,200, Color.LIGHTSTEELBLUE));
- * tabPane.getTabs().add(tab);
- * </code></pre>
+ * tab.setContent(new Rectangle(100, 50, Color.LIGHTSTEELBLUE));
+ * tabPane.getTabs().add(tab);</code></pre>
+ *
+ * <img src="doc-files/TabPane.png" alt="Image of the TabPane control">
  *
  * @see Tab
  * @since JavaFX 2.0

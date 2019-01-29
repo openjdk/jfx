@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,25 +78,20 @@ import javafx.css.StyleableProperty;
  * This first example creates a slider whose range, or span, goes from 0 to 1,
  * and whose value defaults to .5:
  *
- * <pre>
- * import javafx.scene.control.Slider;
- *
- * Slider slider = new Slider(0, 1, 0.5);
- * </pre>
+ * <pre> Slider slider = new Slider(0, 1, 0.5);</pre>
  *
  * <p>
  * This next example shows a slider with customized tick marks and tick mark
  * labels, which also spans from 0 to 1:
  *
- * <pre>
- * import javafx.scene.control.Slider;
- *
- * Slider slider = new Slider(0, 1, 0.5);
+ * <pre> Slider slider = new Slider(0, 1, 0.5);
  * slider.setShowTickMarks(true);
  * slider.setShowTickLabels(true);
  * slider.setMajorTickUnit(0.25f);
- * slider.setBlockIncrement(0.1f);
- * </pre>
+ * slider.setBlockIncrement(0.1f);</pre>
+ *
+ * <img src="doc-files/Slider.png" alt="Image of the Slider control">
+ *
  * @since JavaFX 2.0
  */
 public class Slider extends Control {

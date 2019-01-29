@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,6 +70,9 @@ import javafx.scene.control.skin.ButtonSkin;
  *
  * <p>Example:
  * <pre><code>Button button = new Button("Click Me");</code></pre>
+ *
+ * <img src="doc-files/Button.png" alt="Image of the Button control">
+ *
  * @since JavaFX 2.0
  */
 public class Button extends ButtonBase {

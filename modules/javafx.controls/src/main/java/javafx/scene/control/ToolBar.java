@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,20 +66,20 @@ import javafx.css.StyleableProperty;
  * <p>
  * Example of a horizontal ToolBar with eight buttons separated with two vertical separators.
  * </p>
- * <pre><code>
- * ToolBar toolBar = new ToolBar(
+ * <pre><code> ToolBar toolBar = new ToolBar(
  *     new Button("New"),
  *     new Button("Open"),
  *     new Button("Save"),
- *     new Separator(true),
+ *     new Separator(),
  *     new Button("Clean"),
  *     new Button("Compile"),
  *     new Button("Run"),
- *     new Separator(true),
+ *     new Separator(),
  *     new Button("Debug"),
  *     new Button("Profile")
- * );
- * </code></pre>
+ * );</code></pre>
+ *
+ * <img src="doc-files/ToolBar.png" alt="Image of the ToolBar control">
  *
  * @since JavaFX 2.0
  */

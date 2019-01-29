@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,16 +76,13 @@ import javafx.css.Styleable;
  * </p>
  *
  * <p>
- * This example creates a ScrollPane, which contains a Rectangle :
- * <pre><code>
- * import javafx.scene.control.ScrollPane;
- * import javafx.scene.shape.Rectangle;
- *
- * Rectangle rect = new Rectangle(200, 200, Color.RED);
+ * This example creates a ScrollPane, which contains a Rectangle:
+ * <pre><code> Rectangle rect = new Rectangle(200, 200, Color.RED);
  * ScrollPane s1 = new ScrollPane();
  * s1.setPrefSize(120, 120);
- * s1.setContent(rect);
- * </code></pre>
+ * s1.setContent(rect);</code></pre>
+ *
+ * <img src="doc-files/ScrollPane.png" alt="Image of the ScrollPane control">
  *
  * @since JavaFX 2.0
  */

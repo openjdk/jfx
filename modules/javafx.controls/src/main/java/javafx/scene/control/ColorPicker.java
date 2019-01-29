@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,15 +52,13 @@ import javafx.scene.control.skin.ColorPickerSkin;
  * <p>The {@link #promptTextProperty() promptText} is not supported and hence is a no-op.
  * But it may be supported in the future.
  *
- * <pre><code>
- * final ColorPicker colorPicker = new ColorPicker();
- * colorPicker.setOnAction(new EventHandler() {
- *     public void handle(Event t) {
- *         Color c = colorPicker.getValue();
- *         System.out.println("New Color's RGB = "+c.getRed()+" "+c.getGreen()+" "+c.getBlue());
- *     }
- * });
- * </code></pre>
+ * <pre><code> ColorPicker colorPicker = new ColorPicker();
+ * colorPicker.setOnAction(e {@literal ->} {
+ *     Color c = colorPicker.getValue();
+ *     System.out.println("New Color's RGB = "+c.getRed()+" "+c.getGreen()+" "+c.getBlue());
+ * });</code></pre>
+ *
+ * <img src="doc-files/ColorPicker.png" alt="Image of the ColorPicker control">
  *
  * <p>The ColorPicker control's appearance can be styled in three ways: a simple Button mode,
  * MenuButton mode or SplitMenuButton mode. The default is MenuButton mode.
@@ -68,13 +66,10 @@ import javafx.scene.control.skin.ColorPickerSkin;
  * and for SplitMenuButton appearance and behavior, the style class to use is
  * {@link #STYLE_CLASS_SPLIT_BUTTON STYLE_CLASS_SPLIT_BUTTON}.
  *
- * <pre><code>
- * colorPicker.getStyleClass().add("button");
- * </code></pre>
- * or
- * <pre><code>
- * colorPicker.getStyleClass().add("split-button");
- * </code></pre>
+ * <pre>colorPicker.getStyleClass().add("button");</pre>
+ * <p>or
+ * <pre>colorPicker.getStyleClass().add("split-button");</pre>
+ *
  * @since JavaFX 2.2
  */
 public class ColorPicker extends ComboBoxBase<Color> {

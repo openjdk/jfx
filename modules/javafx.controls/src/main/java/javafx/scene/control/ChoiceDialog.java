@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,14 @@ import javafx.scene.layout.Region;
 /**
  * A dialog that shows a list of choices to the user, from which they can pick
  * one item at most.
+ *
+ * <p>
+ * Example:
+ * <pre> {@code List<String> colors = List.of("Red", "Yellow", "Green");
+ * ChoiceDialog choiceDialog = new ChoiceDialog<>("Yellow", colors);
+ * choiceDialog.showAndWait();}</pre>
+ *
+ * <img src="doc-files/ChoiceDialog.png" alt="Image of the ChoiceDialog control">
  *
  * @see Dialog
  * @param <T> The type of the items to show to the user, and the type that is returned

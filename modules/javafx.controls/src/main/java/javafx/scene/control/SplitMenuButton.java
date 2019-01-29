@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,18 +48,12 @@ import javafx.scene.control.skin.SplitMenuButtonSkin;
  * selected in the menu to be the action should the action region be clicked.
  *
  * <p>Example:</p>
- * <pre>
- * {@literal
- * SplitMenuButton m = new SplitMenuButton();
+ * <pre><code> SplitMenuButton m = new SplitMenuButton();
  * m.setText("Shutdown");
  * m.getItems().addAll(new MenuItem("Logout"), new MenuItem("Sleep"));
- * m.setOnAction(new EventHandler<ActionEvent>() {
- *     &#064;Override public void handle(ActionEvent e) {
- *         System.out.println("Shutdown");
- *     }
- * });
- * }
- * </pre>
+ * m.setOnAction(e {@literal ->} System.out.println("Shutdown"));</code></pre>
+ *
+ * <img src="doc-files/SplitMenuButton.png" alt="Image of the SplitMenuButton control">
  *
  * <p>
  * MnemonicParsing is enabled by default for SplitMenuButton.
@@ -69,7 +63,6 @@ import javafx.scene.control.skin.SplitMenuButtonSkin;
  * @see Menu
  * @since JavaFX 2.0
  */
-
 public class SplitMenuButton extends MenuButton {
 
     /***************************************************************************

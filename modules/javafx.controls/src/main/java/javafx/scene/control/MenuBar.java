@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,14 +60,13 @@ import javafx.scene.AccessibleRole;
  * To create and populate a {@code MenuBar}, you may do what is shown below.
  * Please refer to the {@link Menu} API page for more information on how to
  * configure it.
- * <pre><code>
- * final Menu menu1 = new Menu("File");
- * final Menu menu2 = new Menu("Options");
- * final Menu menu3 = new Menu("Help");
+ * <pre><code> Menu menu1 = new Menu("File");
+ * Menu menu2 = new Menu("Options");
+ * Menu menu3 = new Menu("Help");
  *
- * MenuBar menuBar = new MenuBar();
- * menuBar.getMenus().addAll(menu1, menu2, menu3);
- * </code></pre>
+ * MenuBar menuBar = new MenuBar(menu1, menu2, menu3);</code></pre>
+ *
+ * <img src="doc-files/MenuBar.png" alt="Image of the MenuBar control">
  *
  * @see Menu
  * @see MenuItem

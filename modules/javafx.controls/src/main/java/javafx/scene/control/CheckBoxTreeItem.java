@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,24 +55,25 @@ import javafx.scene.Node;
  * <p>A simple example of using the CheckBoxTreeItem class, in conjunction with
  * {@link CheckBoxTreeCell} is shown below:
  *
- * <pre><code>
- * // create the tree model
- * CheckBoxTreeItem&lt;String&gt; jonathanGiles = new CheckBoxTreeItem&lt;String&gt;("Jonathan");
- * CheckBoxTreeItem&lt;String&gt; juliaGiles = new CheckBoxTreeItem&lt;String&gt;("Julia");
- * CheckBoxTreeItem&lt;String&gt; mattGiles = new CheckBoxTreeItem&lt;String&gt;("Matt");
- * CheckBoxTreeItem&lt;String&gt; sueGiles = new CheckBoxTreeItem&lt;String&gt;("Sue");
- * CheckBoxTreeItem&lt;String&gt; ianGiles = new CheckBoxTreeItem&lt;String&gt;("Ian");
+ * <pre><code>// create the tree model
+ * CheckBoxTreeItem&lt;String&gt; jonathanGiles = new CheckBoxTreeItem&lt;&gt;("Jonathan");
+ * CheckBoxTreeItem&lt;String&gt; juliaGiles = new CheckBoxTreeItem&lt;&gt;("Julia");
+ * CheckBoxTreeItem&lt;String&gt; mattGiles = new CheckBoxTreeItem&lt;&gt;("Matt");
+ * CheckBoxTreeItem&lt;String&gt; sueGiles = new CheckBoxTreeItem&lt;&gt;("Sue");
+ * CheckBoxTreeItem&lt;String&gt; ianGiles = new CheckBoxTreeItem&lt;&gt;("Ian");
  *
- * CheckBoxTreeItem&lt;String&gt; gilesFamily = new CheckBoxTreeItem&lt;String&gt;("Giles Family");
+ * CheckBoxTreeItem&lt;String&gt; gilesFamily = new CheckBoxTreeItem&lt;&gt;("Giles Family");
  * gilesFamily.setExpanded(true);
  * gilesFamily.getChildren().addAll(jonathanGiles, juliaGiles, mattGiles, sueGiles, ianGiles);
  *
  * // create the treeView
- * final TreeView&lt;String&gt; treeView = new TreeView&lt;String&gt;();
+ * final TreeView&lt;String&gt; treeView = new TreeView&lt;&gt;();
  * treeView.setRoot(gilesFamily);
  *
  * // set the cell factory
  * treeView.setCellFactory(CheckBoxTreeCell.&lt;String&gt;forTreeView());</code></pre>
+ *
+ * <img src="doc-files/CheckBoxTreeItem.png" alt="Image of the CheckBoxTreeItem control">
  *
  * @param <T> The type of the value contained within the TreeItem
  * @see CheckBoxTreeCell

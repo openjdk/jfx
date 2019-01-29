@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,15 +43,11 @@ import javafx.scene.Node;
  * API documentation for more information on how to add a RadioMenuItem into it.
  * <p>
  * To create a simple, ungrouped RadioMenuItem, do the following:
-<pre><code>
-RadioMenuItem radioItem = new RadioMenuItem("radio text");
+ *
+<pre><code>RadioMenuItem radioItem = new RadioMenuItem("radio text");
 radioItem.setSelected(false);
-radioItem.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-    &#064;Override public void handle(ActionEvent e) {
-        System.out.println("radio toggled");
-    }
-});
-</code></pre>
+radioItem.setOnAction(e {@literal ->} System.out.println("radio toggled"));</code></pre>
+ *
  * <p>
  * The problem with the example above is that this offers no benefit over using
  * a normal MenuItem. As already mentioned, the purpose of a
@@ -62,26 +58,24 @@ radioItem.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
  * in groups, only one RadioMenuItem at a time within that group can be selected.
  * To put two RadioMenuItem instances into the same group, simply assign them
  * both the same value for {@code toggleGroup}. For example:
-<pre><code>
-ToggleGroup toggleGroup = new ToggleGroup();
+ *
+<pre><code>ToggleGroup toggleGroup = new ToggleGroup();
 
 RadioMenuItem radioItem1 = new RadioMenuItem("Option 1");
-radioItem.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-    &#064;Override public void handle(ActionEvent e) {
-        System.out.println("radio toggled");
-    }
-});
+radioItem1.setOnAction(e {@literal ->} System.out.println("radio1 toggled"));
 radioItem1.setToggleGroup(toggleGroup);
+
 RadioMenuItem radioItem2 = new RadioMenuItem("Option 2");
-radioItem.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-    &#064;Override public void handle(ActionEvent e) {
-        System.out.println("radio toggled");
-    }
-});
+radioItem2.setOnAction(e {@literal ->} System.out.println("radio2 toggled"));
 radioItem2.setToggleGroup(toggleGroup);
 
-</code></pre>
+Menu menu = new Menu("Selection");
+menu.getItems().addAll(radioItem1, radioItem2);
+MenuBar menuBar = new MenuBar(menu);</code></pre>
  *
+ * <img src="doc-files/RadioMenuItem.png" alt="Image of the RadioMenuItem control">
+ *
+ * <p>
  * In this example, with both RadioMenuItem's assigned to the same
  * {@link javafx.scene.control.ToggleGroup ToggleGroup}, only one item may be
  * selected at any one time, and should

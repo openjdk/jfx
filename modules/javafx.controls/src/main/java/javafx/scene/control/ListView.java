@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,9 +92,7 @@ import javafx.util.Pair;
  * <p>A simple example of how to create and populate a ListView of names (Strings)
  * is shown here:
  *
- * <pre>
- * {@code
- * ObservableList<String> names = FXCollections.observableArrayList(
+ * <pre> {@code ObservableList<String> names = FXCollections.observableArrayList(
  *          "Julia", "Ian", "Sue", "Matthew", "Hannah", "Stephan", "Denise");
  * ListView<String> listView = new ListView<String>(names);}</pre>
  *
@@ -106,20 +104,18 @@ import javafx.util.Pair;
  * ListView constructor is not feasible, the recommended approach for setting
  * the items is to simply call:
  *
- * <pre>
- * {@code
- * ObservableList<T> content = ...
+ * <pre> {@code ObservableList<T> content = ...
  * listView.setItems(content);}</pre>
  *
- * The end result of this is, as noted above, that the ListView will automatically
+ * <img src="doc-files/ListView.png" alt="Image of the ListView control">
+ *
+ * <p>The end result of this is, as noted above, that the ListView will automatically
  * refresh the view to represent the items in the list.
  *
  * <p>Another approach, whilst accepted by the ListView, <b>is not the
  * recommended approach</b>:
  *
- * <pre>
- * {@code
- * List<T> content = ...
+ * <pre> {@code List<T> content = ...
  * getItems().setAll(content);}</pre>
  *
  * The issue with the approach shown above is that the content list is being
@@ -144,9 +140,7 @@ import javafx.util.Pair;
  * multiple selection in a default ListView instance, it is therefore necessary
  * to do the following:
  *
- * <pre>
- * {@code
- * listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
+ * <pre> {@code listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
  * <h3>Customizing ListView Visuals</h3>
  * <p>The visuals of the ListView can be entirely customized by replacing the

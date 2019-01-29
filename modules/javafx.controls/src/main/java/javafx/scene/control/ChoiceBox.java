@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,12 +72,13 @@ import javafx.beans.DefaultProperty;
  * although this is likely to be rarely changed. ChoiceBox supports only a
  * single selection model, hence the default used is a {@link SingleSelectionModel}.
  *
- * <pre>
- * import javafx.scene.control.ChoiceBox;
+ * <p>
+ * Example:
+ * <pre> ChoiceBox cb = new ChoiceBox();
+ * cb.getItems().addAll("item1", "item2", "item3");</pre>
  *
- * ChoiceBox cb = new ChoiceBox();
- * cb.getItems().addAll("item1", "item2", "item3");
- * </pre>
+ * <img src="doc-files/ChoiceBox.png" alt="Image of the ChoiceBox control">
+ *
  * @since JavaFX 2.0
  */
 @DefaultProperty("items")

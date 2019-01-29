@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,10 +63,10 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * MenuButton.
  *
  * <p>Example:</p>
- * <pre>
- * MenuButton m = new MenuButton("Eats");
- * m.getItems().addAll(new MenuItem("Burger"), new MenuItem("Hot Dog"));
- * </pre>
+ * <pre> MenuButton m = new MenuButton("Eats");
+ * m.getItems().addAll(new MenuItem("Burger"), new MenuItem("Hot Dog"));</pre>
+ *
+ * <img src="doc-files/MenuButton.png" alt="Image of the MenuButton control">
  *
  * <p>
  * MnemonicParsing is enabled by default for MenuButton.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,16 +50,15 @@ import javafx.scene.AccessibleRole;
  * will return you the RadioButton that has been selected.
  * </p>
  *
- * <pre>
- * <code>
- *    ToggleGroup group = new ToggleGroup();
- *    RadioButton button1 = new RadioButton("select first");
- *    button1.setToggleGroup(group);
- *    button1.setSelected(true);
- *    RadioButton button2 = new RadioButton("select second");
- *    button2.setToggleGroup(group);
- * </code>
- * </pre>
+ * <pre><code> ToggleGroup group = new ToggleGroup();
+ * RadioButton button1 = new RadioButton("select first");
+ * button1.setToggleGroup(group);
+ * button1.setSelected(true);
+ * RadioButton button2 = new RadioButton("select second");
+ * button2.setToggleGroup(group);</code></pre>
+ *
+ * <img src="doc-files/RadioButton.png" alt="Image of the RadioButton control">
+ *
  * @since JavaFX 2.0
  */
  public class RadioButton extends ToggleButton {

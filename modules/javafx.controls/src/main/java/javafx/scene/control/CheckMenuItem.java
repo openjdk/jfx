@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,30 +36,23 @@ import javafx.scene.Node;
  * {@link Menu} or {@link ContextMenu} controls.
  * <p>
  * Creating and inserting a CheckMenuItem into a Menu is shown below.
-<pre><code>
-final subsystem1 = new CheckMenuItem("Enabled");
-subsystem1.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-    public void handle(ActionEvent e) {
-        System.out.println("subsystem1 #1 Enabled!");
-    }
-});
+<pre><code>CheckMenuItem subsystem1 = new CheckMenuItem("Enabled");
+subsystem1.setOnAction(e {@literal ->} System.out.println("subsystem1 #1 Enabled!"));
 
-Menu subsystemsMenu = new Menu("Subsystems");
-subsystemsMenu.add(subsystem1);
-</code></pre>
+Menu menu = new Menu("Subsystems");
+menu.getItems().add(subsystem1);
+MenuBar menuBar = new MenuBar(menu);</code></pre>
+ *
+ * <img src="doc-files/CheckMenuItem.png" alt="Image of the CheckMenuItem control">
+ *
  * <p>
  * Of course, the approach shown above separates out the definition of the
  * CheckMenuItem from the Menu, but this needn't be so.
  * <p>
  * To ascertain the current state of the CheckMenuItem, you should refer to the
  * {@link #selectedProperty() selected} boolean. An example use case may be the following example:
-<pre><code>
-final checkMenuItem = new CheckMenuItem("Show Widget");
-subsystem1.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-    public void handle(ActionEvent e) {
-        System.out.println("Show the widget!");
-    }
-});
+<pre><code>final checkMenuItem = new CheckMenuItem("Show Widget");
+subsystem1.setOnAction(e {@literal ->} System.out.println("Show the widget!"));
 private final BooleanProperty widgetShowing();
 public final boolean isWidgetShowing() { return widgetShowing.get(); )
 public final void setWidgetShowing(boolean value) {
@@ -72,8 +65,8 @@ public final BooleanProperty widgetShowingProperty() {
     return widgetShowing;
 }
 
-widgetShowing.bind(checkMenuItem.selected);
-</code></pre>
+widgetShowing.bind(checkMenuItem.selected);</code></pre>
+ *
  * <p>
  * Typically a CheckMenuItem will be rendered such that, when selected, it shows
  * a check (or tick) mark in the area normally reserved for the MenuItem

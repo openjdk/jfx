@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,6 @@ import javafx.css.converter.BooleanConverter;
 import javafx.scene.control.skin.DatePickerSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
-
 /**
  * The DatePicker control allows the user to enter a date as text or
  * to select a date from a calendar popup. The calendar is based on
@@ -72,17 +71,15 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  * or by calling {@link #setValue setValue(LocalDate)}.  The
  * default value is null.
  *
- * <pre><code>
- * final DatePicker datePicker = new DatePicker();
- * datePicker.setOnAction(new EventHandler() {
- *     public void handle(Event t) {
- *         LocalDate date = datePicker.getValue();
- *         System.err.println("Selected date: " + date);
- *     }
- * });
- * </code></pre>
+ * <pre><code> DatePicker datePicker = new DatePicker();
+ * datePicker.setOnAction(e {@literal ->} {
+ *     LocalDate date = datePicker.getValue();
+ *     System.err.println("Selected date: " + date);
+ * });</code></pre>
  *
- * The {@link #chronologyProperty() chronology} property specifies a
+ * <img src="doc-files/DatePicker.png" alt="Image of the DatePicker control">
+ *
+ * <p>The {@link #chronologyProperty() chronology} property specifies a
  * calendar system to be used for parsing, displaying, and choosing
  * dates.
  * The {@link #valueProperty() value} property is always defined in
@@ -92,13 +89,10 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  * corresponding {@link java.time.chrono.ChronoLocalDate} value. For
  * example:
  *
- * <pre><code>
- * LocalDate isoDate = datePicker.getValue();
+ * <pre><code>LocalDate isoDate = datePicker.getValue();
  * ChronoLocalDate chronoDate =
  *     ((isoDate != null) ? datePicker.getChronology().date(isoDate) : null);
- * System.err.println("Selected date: " + chronoDate);
- * </code></pre>
- *
+ * System.err.println("Selected date: " + chronoDate);</code></pre>
  *
  * @since JavaFX 8.0
  */
