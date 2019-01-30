@@ -276,6 +276,11 @@ public class TextField extends TextInputControl {
         return new TextFieldSkin(this);
     }
 
+    @Override
+    String filterInput(String text) {
+        return TextInputControl.filterInput(text, true, true);
+    }
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

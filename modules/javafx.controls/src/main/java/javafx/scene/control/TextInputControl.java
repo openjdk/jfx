@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -546,12 +546,15 @@ public abstract class TextInputControl extends Control {
         if (!this.text.isBound()) {
             final int oldLength = getLength();
             TextFormatter<?> formatter = getTextFormatter();
-            TextFormatter.Change change = new TextFormatter.Change(this, getFormatterAccessor(), start, end, text);
+            TextFormatter.Change change;
             if (formatter != null && formatter.getFilter() != null) {
+                change = new TextFormatter.Change(this, getFormatterAccessor(), start, end, text);
                 change = formatter.getFilter().apply(change);
                 if (change == null) {
                     return;
                 }
+            } else {
+                change = new TextFormatter.Change(this, getFormatterAccessor(), start, end, filterInput(text));
             }
 
             // Update the content
@@ -1289,6 +1292,11 @@ public abstract class TextInputControl extends Control {
         return accessor;
     }
 
+    String filterInput(String text) {
+        // This method should be overridden by child classes.
+        // It is overridden in TextField and TextArea as needed.
+        return text;
+    }
 
     /**
      * A little utility method for stripping out unwanted characters.

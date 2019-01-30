@@ -620,6 +620,10 @@ public class TextArea extends TextInputControl {
         return new TextAreaSkin(this);
     }
 
+    @Override
+    String filterInput(String text) {
+        return TextInputControl.filterInput(text, false, false);
+    }
 
     /***************************************************************************
      *                                                                         *
