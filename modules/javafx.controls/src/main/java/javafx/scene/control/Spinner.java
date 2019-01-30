@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,6 +97,11 @@ import java.util.List;
  * the Spinner {@link #valueProperty() value} to differ from that of the editor.
  * To make sure the model has the same value as the editor, the user must commit
  * the edit using the Enter key.
+ *
+ * <p>Example:
+ * <pre>Spinner spinner = new Spinner(0, 10, 5);</pre>
+ *
+ * <img src="doc-files/Spinner.png" alt="Image of the Spinner control">
  *
  * @see SpinnerValueFactory
  * @param <T> The type of all values that can be iterated through in the Spinner.

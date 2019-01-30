@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,9 +39,15 @@ import javafx.geometry.Orientation;
  * by a separator. Instead of a creating a {@link CustomMenuItem}  for this purpose, the user
  * can use this class as indicated below.
  *
-<pre><code>
-SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
-</code></pre>
+<pre><code>MenuItem item1 = new MenuItem("Item1");
+MenuItem item2 = new MenuItem("Item2");
+SeparatorMenuItem separator = new SeparatorMenuItem();
+
+Menu menu = new Menu("Items");
+menu.getItems().addAll(item1, separator, item2);
+MenuBar menuBar = new MenuBar(menu);</code></pre>
+ *
+ * <img src="doc-files/SeparatorMenuItem.png" alt="Image of the SeparatorMenuItem control">
  *
  * @see CustomMenuItem
  * @see MenuItem

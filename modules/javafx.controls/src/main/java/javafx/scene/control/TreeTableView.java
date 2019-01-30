@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -137,8 +138,7 @@ import javafx.util.Callback;
  * the TreeTableView to visualise a file system, and will therefore make use
  * of an imaginary (and vastly simplified) File class as defined below:
  *
- * <pre>{@code
- * public class File {
+ * <pre> {@code public class File {
  *     private StringProperty name;
  *     public void setName(String value) { nameProperty().set(value); }
  *     public String getName() { return nameProperty().get(); }
@@ -154,36 +154,46 @@ import javafx.util.Callback;
  *         if (lastModified == null) lastModified = new SimpleLongProperty(this, "lastModified");
  *         return lastModified;
  *     }
+ *
+ *     public File(String name, long size) {
+ *         setName(name);
+ *         setSize(size);
+ *     }
  * }}</pre>
  *
- * <p>Firstly, a TreeTableView instance needs to be defined, as such:
+ * <p>The data we will use for this example is a single root with 3 files:
  *
- * <pre>{@code
- * TreeTableView<File> treeTable = new TreeTableView<>();}</pre>
+ * <pre> {@code File rootFile = new File("Images", 900);
+ * List<File> files = List.of(
+ *     new File("Cat.png", 300),
+ *     new File("Dog.png", 500),
+ *     new File("Bird.png", 100));}</pre>
  *
- * <p>With the basic TreeTableView instantiated, we next focus on the data model.
- * As mentioned, for this example, we'll be representing a file system using File
- * instances. To do this, we need to define the root node of the tree table, as such:
+ * <p>Firstly, we need to create a data model. As mentioned, for this example,
+ * we'll be representing a file system using File instances. To do this, we need
+ * to define the root node of the tree table and its hierarchy:
  *
- * <pre>{@code
- * TreeItem<File> root = new TreeItem<>(new File("/"));
- * treeTable.setRoot(root);}</pre>
+ * <pre> {@code TreeItem<File> root = new TreeItem<>(rootFile);
+ * files.forEach(file -> root.getChildren().add(new TreeItem<>(file)));}</pre>
+ *
+ * <p> Then we create a TreeTableView instance:
+ *
+ * <pre> {@code TreeTableView<File> treeTable = new TreeTableView<>(root);}</pre>
  *
  * <p>With the root set as such, the TreeTableView will automatically update whenever
- * the {@link TreeItem#getChildren() children} of the root changes.
+ * the {@link TreeItem#getChildren() children} of the root change.
  *
- * <p>At this point we now have a TreeTableView hooked up to observe the root
+ * <p>At this point we have a TreeTableView hooked up to observe the root
  * TreeItem instance. The missing ingredient
  * now is the means of splitting out the data contained within the model and
  * representing it in one or more {@link TreeTableColumn} instances. To
- * create a two-column TreeTableView to show the file name and last modified
- * properties, we extend the code shown above as follows:
+ * create a two-column TreeTableView to show the file name and size
+ * properties, we write:
  *
- * <pre>{@code
- * TreeTableColumns<File,String> fileNameCol = new TreeTableColumn<>("Filename");
- * TreeTableColumns<File,Long> lastModifiedCol = new TreeTableColumn<>("Size");
+ * <pre> {@code TreeTableColumns<File, String> fileNameCol = new TreeTableColumn<>("Filename");
+ * TreeTableColumns<File, Long> sizeCol = new TreeTableColumn<>("Size");
  *
- * table.getColumns().setAll(fileNameCol, lastModifiedCol);}</pre>
+ * treeTable.getColumns().setAll(fileNameCol, sizeCol);}</pre>
  *
  * <p>With the code shown above we have nearly fully defined the minimum properties
  * required to create a TreeTableView instance. The only thing missing is the
@@ -195,14 +205,14 @@ import javafx.util.Callback;
  * necessary. For example, using {@link javafx.scene.control.cell.TreeItemPropertyValueFactory}
  * you would do the following:
  *
- * <pre>{@code
- * fileNameCol.setCellValueFactory(new TreeItemPropertyValueFactory("name"));
- * lastModifiedCol.setCellValueFactory(new TreeItemPropertyValueFactory("lastModified"));}</pre>
+ * <pre> {@code fileNameCol.setCellValueFactory(new TreeItemPropertyValueFactory(rootFile.nameProperty().getName()));
+ * sizeCol.setCellValueFactory(new TreeItemPropertyValueFactory(rootFile.sizeProperty().getName()));}</pre>
  *
- * Running this code (assuming the file system structure is probably built up in
- * memory) will result in a TreeTableView being shown with two columns for name
- * and lastModified. Any other properties of the File class will not be shown, as
- * no TreeTableColumns are defined for them.
+ * <img src="doc-files/TreeTableView.png" alt="Image of the TreeTableView control">
+ *
+ * <p>Running this code will result in a TreeTableView as shown above with two columns
+ * for name and size. Any other properties the File class might have will not be shown,
+ * as no TreeTableColumns are defined for them.
  *
  * <h3>TreeTableView support for classes that don't contain properties</h3>
  *
@@ -215,15 +225,16 @@ import javafx.util.Callback;
  * about cell value factories can be found in the {@link TreeTableColumn} API
  * documentation, but briefly, here is how a TreeTableColumns could be specified:
  *
- * <pre>{@code
- * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
+ * <pre> {@code firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
  *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
  *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
  *         return p.getValue().getValue().firstNameProperty();
  *     }
- *  });
- * }}</pre>
+ * });
+ *
+ * // or with a lambda expression:
+ * firstNameCol.setCellValueFactory(p -> p.getValue().getValue().firstNameProperty());}</pre>
  *
  * <h3>TreeTableView Selection / Focus APIs</h3>
  * <p>To track selection and focus, it is necessary to become familiar with the
@@ -243,9 +254,7 @@ import javafx.util.Callback;
  * multiple selection in a default TreeTableView instance, it is therefore necessary
  * to do the following:
  *
- * <pre>
- * {@code
- * treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
+ * <pre> {@code treeTableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
  * <h3>Customizing TreeTableView Visuals</h3>
  * <p>The visuals of the TreeTableView can be entirely customized by replacing the

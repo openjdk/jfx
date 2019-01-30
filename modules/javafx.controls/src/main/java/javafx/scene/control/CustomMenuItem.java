@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,15 +50,19 @@ import javafx.scene.Node;
  * Note that by default hideOnClick is true.
  * <p>
  * An example of how to use CustomMenuItem is shown below.
-<pre><code>
-CustomMenuItem customMenuItem = new CustomMenuItem(new Slider());
-customMenuItem.setHideOnClick(false);
-</code></pre>
+ *
+ * <pre><code> CustomMenuItem customMenuItem = new CustomMenuItem(new Slider());
+ * customMenuItem.setHideOnClick(false);
+ *
+ * Menu menu = new Menu("Brightness");
+ * menu.getItems().add(customMenuItem);
+ * MenuBar menuBar = new MenuBar(menu);</code></pre>
+ *
+ * <img src="doc-files/CustomMenuItem.png" alt="Image of the CustomMenuItem control">
+ *
  * <p>
- * If this CustomMenuItem, with the {@link Slider} within it, is placed in a
- * menu, you'll be presented with a slider that is horizontally centered when
- * the menu is visible, and interacting with the slider will not result in the
- * menu disappearing.
+ * The slider is horizontally centered when the menu is visible, and interacting
+ * with the slider will not result in the menu disappearing.
  *
  * @see MenuItem
  * @see Menu

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,16 +80,17 @@ import java.util.Map;
  * For more information on building up a tree using this approach, refer to the
  * {@link TreeItem} class documentation. Briefly however, to create a TreeView,
  * you should do something along the lines of the following:
- * <pre><code>
- * TreeItem&lt;String&gt; root = new TreeItem&lt;String&gt;("Root Node");
+ *
+ * <pre><code> TreeItem&lt;String&gt; root = new TreeItem&lt;&gt;("Root Node");
  * root.setExpanded(true);
  * root.getChildren().addAll(
- *     new TreeItem&lt;String&gt;("Item 1"),
- *     new TreeItem&lt;String&gt;("Item 2"),
- *     new TreeItem&lt;String&gt;("Item 3")
+ *     new TreeItem&lt;&gt;("Item 1"),
+ *     new TreeItem&lt;&gt;("Item 2"),
+ *     new TreeItem&lt;&gt;("Item 3")
  * );
- * TreeView&lt;String&gt; treeView = new TreeView&lt;String&gt;(root);
- * </code></pre>
+ * TreeView&lt;String&gt; treeView = new TreeView&lt;&gt;(root);</code></pre>
+ *
+ * <img src="doc-files/TreeView.png" alt="Image of the TreeView control">
  *
  * <p>
  * A TreeView may be configured to optionally hide the root node by setting the
@@ -116,9 +117,7 @@ import java.util.Map;
  * multiple selection in a default TreeView instance, it is therefore necessary
  * to do the following:
  *
- * <pre>
- * {@code
- * treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
+ * <pre> {@code treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
  * <h3>Customizing TreeView Visuals</h3>
  * <p>The visuals of the TreeView can be entirely customized by replacing the

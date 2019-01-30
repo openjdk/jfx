@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,8 +107,7 @@ import java.lang.ref.WeakReference;
  * is with the following code (note the use of {@code setButtonCell}:
  *
  * <pre>
- * {@code
- * Callback<ListView<String>, ListCell<String>> cellFactory = ...;
+ * {@code Callback<ListView<String>, ListCell<String>> cellFactory = ...;
  * ComboBox comboBox = new ComboBox();
  * comboBox.setItems(items);
  * comboBox.setButtonCell(cellFactory.call(null));
@@ -140,45 +139,42 @@ import java.lang.ref.WeakReference;
  * provide a custom {@link #cellFactoryProperty() cell factory}. For example,
  * rather than use the following code:
  *
- * <pre>
- * {@code
- * ComboBox<Rectangle> cmb = new ComboBox<Rectangle>();
+ * <pre> {@code ComboBox<Rectangle> cmb = new ComboBox<>();
  * cmb.getItems().addAll(
  *     new Rectangle(10, 10, Color.RED),
  *     new Rectangle(10, 10, Color.GREEN),
- *     new Rectangle(10, 10, Color.BLUE));}</pre>
+ *     new Rectangle(10, 10, Color.BLUE));}}</pre>
  *
  * <p>You should do the following:</p>
  *
- * <pre><code>
- * ComboBox&lt;Color&gt; cmb = new ComboBox&lt;Color&gt;();
+ * <pre><code> ComboBox&lt;Color&gt; cmb = new ComboBox&lt;&gt;();
  * cmb.getItems().addAll(
  *     Color.RED,
  *     Color.GREEN,
  *     Color.BLUE);
  *
- * cmb.setCellFactory(new Callback&lt;ListView&lt;Color&gt;, ListCell&lt;Color&gt;&gt;() {
- *     &#064;Override public ListCell&lt;Color&gt; call(ListView&lt;Color&gt; p) {
- *         return new ListCell&lt;Color&gt;() {
- *             private final Rectangle rectangle;
- *             {
- *                 setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
- *                 rectangle = new Rectangle(10, 10);
+ * cmb.setCellFactory(p {@literal ->} {
+ *     return new ListCell&lt;&gt;() {
+ *         private final Rectangle rectangle;
+ *         {
+ *             setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+ *             rectangle = new Rectangle(10, 10);
+ *         }
+ *
+ *         &#064;Override protected void updateItem(Color item, boolean empty) {
+ *             super.updateItem(item, empty);
+ *
+ *             if (item == null || empty) {
+ *                 setGraphic(null);
+ *             } else {
+ *                 rectangle.setFill(item);
+ *                 setGraphic(rectangle);
  *             }
+ *         }
+ *     };
+ * });</code></pre>
  *
- *             &#064;Override protected void updateItem(Color item, boolean empty) {
- *                 super.updateItem(item, empty);
- *
- *                 if (item == null || empty) {
- *                     setGraphic(null);
- *                 } else {
- *                     rectangle.setFill(item);
- *                     setGraphic(rectangle);
- *                 }
- *            }
- *       };
- *   }
- *});</code></pre>
+ * <img src="doc-files/ComboBox.png" alt="Image of the ComboBox control">
  *
  * <p>Admittedly the above approach is far more verbose, but it offers the
  * required functionality without encountering the scenegraph constraints.

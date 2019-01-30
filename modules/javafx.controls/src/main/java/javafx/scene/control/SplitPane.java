@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,17 +107,17 @@ import javafx.css.StyleableProperty;
  * </p>
  *
  * <p>Example:</p>
- * <pre><code>
- * SplitPane sp = new SplitPane();
+ * <pre><code> SplitPane sp = new SplitPane();
  * final StackPane sp1 = new StackPane();
- * sp1.getItems().add(new Button("Button One"));
+ * sp1.getChildren().add(new Button("Button One"));
  * final StackPane sp2 = new StackPane();
- * sp2.getItems().add(new Button("Button Two"));
+ * sp2.getChildren().add(new Button("Button Two"));
  * final StackPane sp3 = new StackPane();
- * sp3.getItems().add(new Button("Button Three"));
+ * sp3.getChildren().add(new Button("Button Three"));
  * sp.getItems().addAll(sp1, sp2, sp3);
- * sp.setDividerPositions(0.3f, 0.6f, 0.9f);
- * </code></pre>
+ * sp.setDividerPositions(0.3f, 0.6f, 0.9f);</code></pre>
+ *
+ * <img src="doc-files/SplitPane.png" alt="Image of the SplitPane control">
  *
  * @since JavaFX 2.0
  */

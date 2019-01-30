@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,9 @@ import javafx.scene.Node;
  *
  * <p>Example:
  * <pre><code>Label label = new Label("a label");</code></pre>
+ *
+ * <img src="doc-files/Label.png" alt="Image of the Label control">
+ *
  * @since JavaFX 2.0
  */
 public class Label extends Labeled {

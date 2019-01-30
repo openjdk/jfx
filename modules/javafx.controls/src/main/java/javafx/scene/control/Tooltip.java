@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 
 package javafx.scene.control;
-
 
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.css.StyleManager;
@@ -71,7 +70,6 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Window;
 import javafx.util.Duration;
 
-
 /**
  * Tooltips are common UI elements which are typically used for showing
  * additional information about a Node in the scenegraph when the Node is
@@ -84,11 +82,9 @@ import javafx.util.Duration;
  *
  * <p>You use the following approach to set a Tooltip on any node:
  *
- * <pre>
- * Rectangle rect = new Rectangle(0, 0, 100, 100);
+ * <pre> Rectangle rect = new Rectangle(0, 0, 100, 100);
  * Tooltip t = new Tooltip("A Square");
- * Tooltip.install(rect, t);
- * </pre>
+ * Tooltip.install(rect, t);</pre>
  *
  * This tooltip will then participate with the typical tooltip semantics (i.e.
  * appearing on hover, etc). Note that the Tooltip does not have to be
@@ -102,13 +98,11 @@ import javafx.util.Duration;
  * for all controls to make installing a Tooltip less verbose. The example below
  * shows how to create a tooltip for a Button control:
  *
- * <pre>
- * import javafx.scene.control.Tooltip;
- * import javafx.scene.control.Button;
+ * <pre> Button button = new Button("Hover Over Me");
+ * button.setTooltip(new Tooltip("Tooltip for Button"));</pre>
  *
- * Button button = new Button("Hover Over Me");
- * button.setTooltip(new Tooltip("Tooltip for Button"));
- * </pre>
+ * <img src="doc-files/Tooltip.png" alt="Image of the Tooltip control">
+ *
  * @since JavaFX 2.0
  */
 @IDProperty("id")

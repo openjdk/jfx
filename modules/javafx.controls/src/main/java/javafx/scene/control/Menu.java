@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,18 +57,17 @@ import javafx.event.EventDispatchChain;
  * {@link ContextMenu} should be used in this circumstance.
  * <p>
  * Creating a Menu and inserting it into a MenuBar is easy, as shown below:
- * <pre><code>
- * final Menu menu1 = new Menu("File");
- * MenuBar menuBar = new MenuBar();
- * menuBar.getMenus().add(menu1);
- * </code></pre>
+ * <pre><code> Menu menu1 = new Menu("File");
+ * MenuBar menuBar = new MenuBar(menu1);</code></pre>
+ *
  * <p>
  * A Menu is a subclass of {@link MenuItem} which means that it can be inserted
  * into a Menu's {@link #getItems() items} ObservableList, resulting in a submenu being created:
- * <pre><code>
- * MenuItem menu12 = new MenuItem("Open");
- * menu1.getItems().add(menu12);
- * </code></pre>
+ * <pre><code> MenuItem menu12 = new MenuItem("Open");
+ * menu1.getItems().add(menu12);</code></pre>
+ *
+ * <img src="doc-files/Menu.png" alt="Image of the Menu control">
+ *
  * <p>
  * The items ObservableList allows for any {@link MenuItem} type to be inserted,
  * including its subclasses {@link Menu}, {@link MenuItem}, {@link RadioMenuItem}, {@link CheckMenuItem},

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,23 +78,17 @@ import javafx.scene.Parent;
  * JavaFX.
  * <p>
  * To create a MenuItem is simple:
-<pre><code>
-MenuItem menuItem = new MenuItem("Open");
-menuItem.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-    &#064;Override public void handle(ActionEvent e) {
-        System.out.println("Opening Database Connection...");
-    }
-});
-menuItem.setGraphic(new ImageView(new Image("flower.png")));
-</code></pre>
- * <p>
- * Refer to the {@link Menu} page to learn how to insert MenuItem into a menu
- * instance. Briefly however, you can insert the MenuItem from the previous
- * example into a Menu as such:
-<pre><code>
-final Menu menu = new Menu("File");
+<pre><code>MenuItem menuItem = new MenuItem("Open");
+menuItem.setOnAction(e {@literal ->} System.out.println("Opening Database Connection..."));
+Circle graphic = new Circle(8);
+graphic.setFill(Color.GREEN);
+menuItem.setGraphic(graphic);
+
+Menu menu = new Menu("File");
 menu.getItems().add(menuItem);
-</code></pre>
+MenuBar menuBar = new MenuBar(menu);</code></pre>
+ *
+ * <img src="doc-files/MenuItem.png" alt="Image of the MenuItem control">
  *
  * @see Menu
  * @since JavaFX 2.0

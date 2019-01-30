@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,17 @@ import javafx.scene.AccessibleRole;
  * TextArea (either via the user, or set programmatically). This is a useful
  * way of informing the user as to what is expected in the text area, without
  * having to resort to {@link Tooltip tooltips} or on-screen {@link Label labels}.
+ *
+ * <p>Example:
+ * <pre><code> var textArea = new TextArea("Lorem ipsum dolor sit amet, consectetur adipiscing elit, "
+ *        + "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim "
+ *        + "ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip "
+ *        + "ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate "
+ *        + "velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat "
+ *        + "cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.");
+ * textArea.setWrapText(true);</code></pre>
+ *
+ * <img src="doc-files/TextArea.png" alt="Image of the TextArea control">
  *
  * @see TextField
  * @since JavaFX 2.0
@@ -609,6 +620,10 @@ public class TextArea extends TextInputControl {
         return new TextAreaSkin(this);
     }
 
+    @Override
+    String filterInput(String text) {
+        return TextInputControl.filterInput(text, false, false);
+    }
 
     /***************************************************************************
      *                                                                         *

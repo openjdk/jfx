@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,6 @@ import javafx.scene.control.skin.TextFieldSkin;
 
 import javafx.css.Styleable;
 
-
 /**
  * Text input component that allows a user to enter a single line of
  * unformatted text. Unlike in previous releases of JavaFX, support for multi-line
@@ -65,6 +64,11 @@ import javafx.css.Styleable;
  * TextField (either via the user, or set programmatically). This is a useful
  * way of informing the user as to what is expected in the text field, without
  * having to resort to {@link Tooltip tooltips} or on-screen {@link Label labels}.
+ *
+ * <p>Example:
+ * <pre> var textField = new TextField("Hello World!");</pre>
+ *
+ * <img src="doc-files/TextField.png" alt="Image of the TextField control">
  *
  * @see TextArea
  * @since JavaFX 2.0
@@ -270,6 +274,11 @@ public class TextField extends TextInputControl {
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new TextFieldSkin(this);
+    }
+
+    @Override
+    String filterInput(String text) {
+        return TextInputControl.filterInput(text, true, true);
     }
 
     /***************************************************************************

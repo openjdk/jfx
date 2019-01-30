@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,13 @@ import javafx.scene.AccessibleRole;
 
 /**
  * Text field that masks entered characters.
+ *
+ * <p>Example:
+ * <pre><code> var passwordField = new PasswordField();
+ * passwordField.setText("password123");</code></pre>
+ *
+ * <img src="doc-files/PasswordField.png" alt="Image of the PasswordField control">
+ *
  * @since JavaFX 2.0
  */
 public class PasswordField extends TextField {
