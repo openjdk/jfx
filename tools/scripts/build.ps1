@@ -1,4 +1,7 @@
-param ([switch]$nocygwin = $false)
+param (
+[switch]$nocygwin = $false,
+[parameter(ValueFromRemainingArguments)][String[]]$args
+)
 
 choco install ant
 choco install vswhere
@@ -20,7 +23,7 @@ if ([string]::IsNullOrWhitespace($vsRoot)) {
 $winSdk = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows Kits\Installed Roots").KitsRoot10 2>$null
 if ([string]::IsNullOrWhitespace($winSdk)) {
   choco install windows-sdk-7.1
-  $winSdk = ((Get-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows Kits\Installed Roots" -ErrorAction Stop).KitsRoot10) 
+  $winSdk = ((Get-ItemProperty -Path "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows Kits\Installed Roots" -ErrorAction Stop).KitsRoot10)
 }
 
 # Cygwin required for chmod
@@ -62,8 +65,8 @@ if ($env:APPVEYOR -eq "true") {
   }
 } else {
   if ($noCygwin) {
-    .\gradlew all test -PCOMPILE_WEBKIT=false -PCONF=Debug -PUSE_CYGWIN=false --stacktrace -x :web:test --info --no-daemon
+    .\gradlew all test -PCOMPILE_WEBKIT=false -PCONF=Debug -PUSE_CYGWIN=false --stacktrace -x :web:test --info --no-daemon $args
   } else {
-    .\gradlew all test -PCOMPILE_WEBKIT=false -PCONF=Debug --stacktrace -x :web:test --info --no-daemon
+    .\gradlew all test -PCOMPILE_WEBKIT=false -PCONF=Debug --stacktrace -x :web:test --info --no-daemon $args
   }
 }
