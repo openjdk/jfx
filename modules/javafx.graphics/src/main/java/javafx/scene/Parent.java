@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -194,7 +194,8 @@ public abstract class Parent extends Node {
         }
 
         if (isDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER)) {
-            computeViewOrderChidrenAndUpdatePeer();
+            computeViewOrderChildren();
+            peer.setViewOrderChildren(viewOrderChildren);
         }
 
         if (Utils.assertionEnabled()) validatePG();
@@ -265,7 +266,7 @@ public abstract class Parent extends Node {
         NodeHelper.markDirty(this, DirtyBits.PARENT_CHILDREN_VIEW_ORDER);
     }
 
-    private void computeViewOrderChidrenAndUpdatePeer() {
+    private void computeViewOrderChildren() {
         boolean viewOrderSet = false;
         for (Node child : children) {
             double vo = child.getViewOrder();
@@ -284,14 +285,15 @@ public abstract class Parent extends Node {
                     -> a.getViewOrder() < b.getViewOrder() ? 1
                             : a.getViewOrder() == b.getViewOrder() ? 0 : -1);
         }
-
-        final NGGroup peer = getPeer();
-        peer.setViewOrderChildren(viewOrderChildren);
     }
 
     // Call this method if children view order is needed for picking.
     // The returned list should be treated as read only.
     private List<Node> getOrderedChildren() {
+        if (isDirty(DirtyBits.PARENT_CHILDREN_VIEW_ORDER)) {
+            //Fix for JDK-8205092
+            computeViewOrderChildren();
+        }
         if (!viewOrderChildren.isEmpty()) {
             return viewOrderChildren;
         }
