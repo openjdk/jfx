@@ -524,4 +524,19 @@ public class MiscellaneousTest extends TestBase {
                     "  </body>\n" +
                     "</html>");
     }
+
+    @Test public void testWindows1251EncodingWithXML() {
+        loadContent(
+            "<script>\n" +
+            "const text = '<?xml version=\"1.0\" encoding=\"windows-1251\"?><test/>';\n" +
+            "const parser = new DOMParser();\n" +
+            "window.xmlDoc = parser.parseFromString(text, 'text/xml');\n" +
+            "</script>"
+        );
+        submit(() -> {
+            // WebKit injects error message into body incase of encoding error, otherwise
+            // body should be null.
+            assertNull(getEngine().executeScript("window.xmlDoc.body"));
+        });
+    }
 }
