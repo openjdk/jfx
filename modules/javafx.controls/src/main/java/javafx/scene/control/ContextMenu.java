@@ -269,7 +269,7 @@ public class ContextMenu extends PopupControl {
      * Shows the {@code ContextMenu} at the specified screen coordinates. If there
      * is not enough room at the specified location to show the {@code ContextMenu}
      * given its size requirements, the necessary adjustments are made to bring
-     * the {@code ContextMenu} back back on screen. This also means that the
+     * the {@code ContextMenu} back on screen. This also means that the
      * {@code ContextMenu} will not span multiple monitors.
      * @param anchor the anchor node
      * @param screenX the x position of the anchor in screen coordinates

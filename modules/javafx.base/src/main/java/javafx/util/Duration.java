@@ -32,7 +32,7 @@ import javafx.beans.NamedArg;
  * <p>
  *     A class that defines a duration of time. Duration instances are immutable,
  *     and are therefore replaced rather than modified, similar to {@link java.math.BigDecimal}.
- *     Duration's can be created using the constructor, or one of the static construction
+ *     Durations can be created using the constructor, or one of the static construction
  *     methods such as {@link #seconds} or {@link #minutes}.
  * </p>
  * @since JavaFX 2.0

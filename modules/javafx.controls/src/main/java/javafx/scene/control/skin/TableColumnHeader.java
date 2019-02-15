@@ -1095,8 +1095,9 @@ public class TableColumnHeader extends Region {
     }
 
     /**
-     * Returnst the CssMetaData associated with this class, which may include the
+     * Returns the CssMetaData associated with this class, which may include the
      * CssMetaData of its superclasses.
+     *
      * @return the CssMetaData associated with this class, which may include the
      * CssMetaData of its superclasses
      */

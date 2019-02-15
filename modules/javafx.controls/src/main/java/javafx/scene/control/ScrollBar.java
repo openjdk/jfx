@@ -63,9 +63,8 @@ import java.util.List;
  * <pre><code> ScrollBar s1 = new ScrollBar();
  * s1.setOrientation(Orientation.VERTICAL);</code></pre>
  *
- * <p><img src="doc-files/ScrollBar.png" alt="Image of the ScrollBar control"></p>
+ * <img src="doc-files/ScrollBar.png" alt="Image of the ScrollBar control">
  *
- * Implementation of ScrollBar According to JavaFX UI Control API Specification
  * @since JavaFX 2.0
  */
 public class ScrollBar extends Control {

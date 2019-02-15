@@ -69,7 +69,7 @@ import javafx.css.Styleable;
  * ScrollPane layout calculations are based on the layoutBounds rather than
  * the boundsInParent (visual bounds) of the scroll node.
  * If an application wants the scrolling to be based on the visual bounds
- * of the node (for scaled content etc.), they need to wrap the scroll
+ * of the node (for scaled content etc.), it needs to wrap the scroll
  * node in a Group.
  * <p>
  * ScrollPane sets focusTraversable to false.

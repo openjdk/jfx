@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,10 +52,7 @@ import javafx.scene.Node;
  * with an empty {@code String} and adds gradually letter by letter until the
  * full {@code String} was set when the animation finishes.
  *
- * <pre>
- * {@code
- *
- * final String content = "Lorem ipsum";
+ * <pre> {@code final String content = "Lorem ipsum";
  * final Text text = new Text(10, 20, "");
  *
  * final Animation animation = new Transition() {
@@ -71,8 +68,7 @@ import javafx.scene.Node;
  *
  * };
  *
- * animation.play();
- * }</pre>
+ * animation.play();}</pre>
  *
  * @see Animation
  *

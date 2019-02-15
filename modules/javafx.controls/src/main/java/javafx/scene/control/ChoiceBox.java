@@ -58,15 +58,13 @@ import javafx.beans.DefaultProperty;
  * Although the ChoiceBox will only allow a user to select from the predefined
  * list, it is possible for the developer to specify the selected item to be
  * something other than what is available in the predefined list. This is
- * required for several important use cases.
- * <p>
- * It means configuration of the ChoiceBox is order independent. You
- * may either specify the items and then the selected item, or you may
- * specify the selected item and then the items. Either way will function
+ * required for several important use cases. Configuration of the ChoiceBox is
+ * order independent. You may either specify the items and then the selected item,
+ * or you may specify the selected item and then the items. Either way will function
  * correctly.
  * <p>
  * ChoiceBox item selection is handled by
- * {@link javafx.scene.control.SelectionModel SelectionModel}
+ * {@link javafx.scene.control.SelectionModel SelectionModel}.
  * As with ListView and ComboBox, it is possible to modify the
  * {@link javafx.scene.control.SelectionModel SelectionModel} that is used,
  * although this is likely to be rarely changed. ChoiceBox supports only a
@@ -399,7 +397,7 @@ public class ChoiceBox<T> extends Control {
 
     // -- On Shown
     /**
-     * Called just after the {@link ChoiceBox} popup is shown.
+     * Called just after the {@code ChoiceBox} popup is shown.
      * @return the on shown property
      * @since JavaFX 8u60
      */
@@ -423,7 +421,7 @@ public class ChoiceBox<T> extends Control {
 
     // --- On Hiding
     /**
-     * Called just prior to the {@link ChoiceBox} popup being hidden.
+     * Called just prior to the {@code ChoiceBox} popup being hidden.
      * @return the on hiding property
      * @since JavaFX 8u60
      */
@@ -447,7 +445,7 @@ public class ChoiceBox<T> extends Control {
 
     // --- On Hidden
     /**
-     * Called just after the {@link ChoiceBox} popup has been hidden.
+     * Called just after the {@code ChoiceBox} popup has been hidden.
      * @return the on hidden property
      * @since JavaFX 8u60
      */

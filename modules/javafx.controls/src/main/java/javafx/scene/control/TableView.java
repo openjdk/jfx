@@ -896,10 +896,9 @@ public class TableView<S> extends Control {
     }
 
     /**
-     * This is the function called when the user completes a column-resize
-     * operation. The two most common policies are available as static functions
-     * in the TableView class: {@link #UNCONSTRAINED_RESIZE_POLICY} and
-     * {@link #CONSTRAINED_RESIZE_POLICY}.
+     * Called when the user completes a column-resize operation. The two most common
+     * policies are available as static functions in the TableView class:
+     * {@link #UNCONSTRAINED_RESIZE_POLICY} and {@link #CONSTRAINED_RESIZE_POLICY}.
      * @return columnResizePolicy property
      */
     public final ObjectProperty<Callback<ResizeFeatures, Boolean>> columnResizePolicyProperty() {
