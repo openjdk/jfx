@@ -59,7 +59,6 @@ import javafx.scene.AccessibleRole;
  *
  * <img src="doc-files/ProgressIndicator.png" alt="Image of the ProgressIndicator control">
  *
- * Implementation of ProgressIndicator According to JavaFX UI Control API Specification
  * @since JavaFX 2.0
  */
 public class ProgressIndicator extends Control {

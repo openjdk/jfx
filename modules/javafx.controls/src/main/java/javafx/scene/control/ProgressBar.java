@@ -52,7 +52,6 @@ import javafx.geometry.Orientation;
  *
  * <img src="doc-files/ProgressBar.png" alt="Image of the ProgressBar control">
  *
- * Implementation of ProgressBar According to JavaFX UI Control API Specification
  * @since JavaFX 2.0
  */
 public class ProgressBar extends ProgressIndicator {

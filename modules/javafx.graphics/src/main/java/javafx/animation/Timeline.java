@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,14 +62,12 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * has to be stopped and started again to pick up the new value.
  * <p>
  * A simple Timeline can be created like this:
- * <pre>{@code
- * final Timeline timeline = new Timeline();
+ * <pre> {@code final Timeline timeline = new Timeline();
  * timeline.setCycleCount(2);
  * timeline.setAutoReverse(true);
  * timeline.getKeyFrames().add(new KeyFrame(Duration.millis(5000),
  *   new KeyValue (node.translateXProperty(), 25)));
- * timeline.play();
- * }</pre>
+ * timeline.play();}</pre>
  * <p>
  * This Timeline will run for 10s, animating the node by x axis to value 25 and then back to 0 on the second cycle.
  * <p>
