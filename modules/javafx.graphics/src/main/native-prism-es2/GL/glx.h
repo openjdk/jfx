@@ -297,6 +297,12 @@ extern void glXGetSelectedEvent( Display *dpy, GLXDrawable drawable,
 /* GLX 1.4 and later */
 extern void (*glXGetProcAddress(const GLubyte *procname))();
 
+/*
+ * Newer versions of glxext.h expect __GLXextFuncPtr to already
+ * be defined by a glx.h file that claims GLX 1.4 support.
+ */
+typedef void (*__GLXextFuncPtr)(void);
+
 #endif  /* GLX_VERSION_1_X */
 
 #ifndef GLX_GLXEXT_LEGACY
