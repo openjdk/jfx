@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,17 +130,28 @@ IntRect getPartRect(Scrollbar& scrollbar, ScrollbarPart part) {
 }
 
 
-bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const IntRect&)
+bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const IntRect& damageRect)
 {
     // platformContext() returns 0 when printing
     if (gc.paintingDisabled() || !gc.platformContext()) {
-        return true;
+        return false;
     }
 
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
         return false;
     }
+
+    double opacity = scrollbar.hoveredPart() == NoPart ? scrollbar.opacity() : 1;
+    if (!opacity) {
+        return true;
+    }
+
+    IntRect rect = scrollbar.frameRect();
+    if (!rect.intersects(damageRect)) {
+        return true;
+    }
+
     JNIEnv* env = WebCore_GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(
@@ -162,6 +173,11 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
     ASSERT(widgetRef.get());
     CheckAndClearException(env);
 
+    if (opacity != 1) {
+        gc.save();
+        gc.clip(damageRect);
+        gc.beginTransparencyLayer(opacity);
+    }
     // widgetRef will go into rq's inner refs vector.
     gc.platformContext()->rq().freeSpace(28)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSCROLLBAR
@@ -171,6 +187,11 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
         << (jint)scrollbar.y()
         << (jint)scrollbar.pressedPart()
         << (jint)scrollbar.hoveredPart();
+
+    if (opacity != 1) {
+        gc.endTransparencyLayer();
+        gc.restore();
+    }
 
     return false;
 }

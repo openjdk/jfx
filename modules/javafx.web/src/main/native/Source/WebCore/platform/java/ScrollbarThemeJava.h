@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,8 @@ public:
     IntRect forwardButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
     IntRect trackRect(Scrollbar&, bool painting = false) override;
     bool usesOverlayScrollbars() const final { return true; }
+    // When using overlay scrollbars, always invalidate the whole scrollbar when entering/leaving.
+    bool invalidateOnMouseEnterExit() override { return usesOverlayScrollbars(); }
 };
 
 } // namespace WebCore
