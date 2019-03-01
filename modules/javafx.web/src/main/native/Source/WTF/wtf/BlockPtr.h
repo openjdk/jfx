@@ -26,6 +26,7 @@
 #pragma once
 
 #include <Block.h>
+#include <objc/runtime.h>
 #include <utility>
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
@@ -39,8 +40,6 @@
 #endif
 
 namespace WTF {
-
-extern "C" void* _NSConcreteMallocBlock[32];
 
 template<typename> class BlockPtr;
 
@@ -82,7 +81,7 @@ public:
         };
 
         Block* block = static_cast<Block*>(malloc(sizeof(Block)));
-        block->isa = _NSConcreteMallocBlock;
+        block->isa = objc_getClass("__NSMallocBlock__");
 
         enum {
             BLOCK_NEEDS_FREE = (1 << 24),
