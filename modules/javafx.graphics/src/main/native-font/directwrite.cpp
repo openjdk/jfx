@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -845,30 +845,35 @@ jobject newD2D1_MATRIX_3X2_F(JNIEnv *env, D2D1_MATRIX_3X2_F *lpStruct)
 /*                                                                        */
 /**************************************************************************/
 
+JNIEXPORT jboolean JNICALL OS_NATIVE(CoInitializeEx)
+    (JNIEnv *env, jclass that, jint arg0)
+{
+    HRESULT hr = CoInitializeEx(NULL, (DWORD)arg0);
+
+    /* This means COM has been initialized with a different concurrency model.
+     * This should never happen. */
+    if (hr == RPC_E_CHANGED_MODE) return JNI_FALSE;
+
+    return JNI_TRUE;
+}
+
+JNIEXPORT void JNICALL OS_NATIVE(CoUninitialize)
+    (JNIEnv *env, jclass that)
+{
+    CoUninitialize();
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(_1WICCreateImagingFactory)
     (JNIEnv *env, jclass that)
 {
-    /* This routine initialize COM in order to create an WICImagingFactory.
-     * It runs on the prism thread and expects no other codes in this thread
-     * to interface with COM.
-     * Note: This method is called by DWFactory a single time.
-     */
-    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-
-    /* This means COM has been initialize with a different concurrency model.
-     * This should never happen. */
-    if (hr == RPC_E_CHANGED_MODE) return NULL;
-
     IWICImagingFactory* result = NULL;
-    hr = CoCreateInstance(
+    HRESULT hr = CoCreateInstance(
             CLSID_WICImagingFactory,
             NULL,
             CLSCTX_INPROC_SERVER,
             IID_PPV_ARGS(&result)
             );
 
-    /* Unload COM as no other COM objects will be create directly */
-    CoUninitialize();
     return SUCCEEDED(hr) ? (jlong)result : NULL;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.javafx.font.directwrite;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontFile;
 import com.sun.javafx.text.GlyphLayout;
+import com.sun.prism.GraphicsPipeline;
 
 public class DWFactory extends PrismFontFactory {
 
@@ -120,7 +121,24 @@ public class DWFactory extends PrismFontFactory {
         checkThread();
         /* Using single threaded WIC Factory as it should only be used by the rendering thread */
         if (WIC_FACTORY == null) {
+            /* Initialize COM in order to create a WICImagingFactory.
+             * It runs on the prism thread and expects no other code in this thread
+             * to interface with COM. */
+            if (!OS.CoInitializeEx(OS.COINIT_APARTMENTTHREADED | OS.COINIT_DISABLE_OLE1DDE)) {
+                return null;
+            }
+
             WIC_FACTORY = OS.WICCreateImagingFactory();
+            if (WIC_FACTORY == null) {
+                return null;
+            }
+
+            GraphicsPipeline.getPipeline().addDisposeHook(() -> {
+                checkThread();
+                WIC_FACTORY.Release();
+                OS.CoUninitialize();
+                WIC_FACTORY = null;
+            });
         }
         return WIC_FACTORY;
     }
