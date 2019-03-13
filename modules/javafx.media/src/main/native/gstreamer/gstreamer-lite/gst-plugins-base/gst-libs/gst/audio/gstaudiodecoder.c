@@ -3203,8 +3203,8 @@ gst_audio_decoder_get_latency (GstAudioDecoder * dec,
 /**
  * gst_audio_decoder_get_parse_state:
  * @dec: a #GstAudioDecoder
- * @sync: a pointer to a variable to hold the current sync state
- * @eos: a pointer to a variable to hold the current eos state
+ * @sync: (out) (optional): a pointer to a variable to hold the current sync state
+ * @eos: (out) (optional): a pointer to a variable to hold the current eos state
  *
  * Return current parsing (sync and eos) state.
  */

@@ -2629,7 +2629,7 @@ gst_video_decoder_prepare_finish_frame (GstVideoDecoder *
     GstVideoCodecFrame *tmp = l->data;
 
     if (tmp->events) {
-      events = g_list_concat (events, tmp->events);
+      events = g_list_concat (tmp->events, events);
       tmp->events = NULL;
     }
 
@@ -2640,7 +2640,7 @@ gst_video_decoder_prepare_finish_frame (GstVideoDecoder *
   if (dropping || !decoder->priv->output_state) {
     /* Push before the next frame that is not dropped */
     decoder->priv->pending_events =
-        g_list_concat (decoder->priv->pending_events, events);
+        g_list_concat (events, decoder->priv->pending_events);
   } else {
     gst_video_decoder_push_event_list (decoder, decoder->priv->pending_events);
     decoder->priv->pending_events = NULL;
@@ -2822,7 +2822,7 @@ gst_video_decoder_release_frame (GstVideoDecoder * dec,
   }
   if (frame->events) {
     dec->priv->pending_events =
-        g_list_concat (dec->priv->pending_events, frame->events);
+        g_list_concat (frame->events, dec->priv->pending_events);
     frame->events = NULL;
   }
   GST_VIDEO_DECODER_STREAM_UNLOCK (dec);

@@ -335,8 +335,8 @@ gst_buffer_add_video_meta_full (GstBuffer * buffer,
  * @meta: a #GstVideoMeta
  * @plane: a plane
  * @info: a #GstMapInfo
- * @data: the data of @plane
- * @stride: the stride of @plane
+ * @data: (out): the data of @plane
+ * @stride: (out): the stride of @plane
  * @flags: @GstMapFlags
  *
  * Map the video plane with index @plane in @meta and return a pointer to the

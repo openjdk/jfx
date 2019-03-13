@@ -540,6 +540,8 @@ gst_audio_base_src_setcaps (GstBaseSrc * bsrc, GstCaps * caps)
 
   /* calculate suggested segsize and segtotal */
   spec->segsize = rate * bpf * spec->latency_time / GST_MSECOND;
+  /* Round to an integer number of samples */
+  spec->segsize -= spec->segsize % bpf;
   spec->segtotal = spec->buffer_time / spec->latency_time;
 
   GST_OBJECT_UNLOCK (src);

@@ -218,7 +218,9 @@ video_chroma_up_v2_##name (GstVideoChromaResample *resample,            \
       resample->h_resample (resample, l1, width);                       \
   }                                                                     \
   if (l0 != l1) {                                                       \
-    video_orc_chroma_up_v2_##name (l0, l1, l0, l1, width);              \
+    type *d0 = l0;                          \
+    type *d1 = l1;                          \
+    video_orc_chroma_up_v2_##name (d0, d1, l0, l1, width);              \
   }                                                                     \
 }
 /* 2x vertical upsampling interlaced without cositing
@@ -295,8 +297,9 @@ video_chroma_down_h2_##name (GstVideoChromaResample *resample,          \
     gpointer pixels, gint width)                                        \
 {                                                                       \
   type *p = pixels;                                                     \
+  type *d = p;                              \
                                                                         \
-  video_orc_chroma_down_h2_##name (p, p, width / 2);                    \
+  video_orc_chroma_down_h2_##name (d, p, width / 2);                    \
 }
 
 #define MAKE_DOWNSAMPLE_H2(name,type)                                   \
@@ -332,8 +335,10 @@ video_chroma_down_v2_##name (GstVideoChromaResample *resample,          \
   type *l0 = lines[0];                                                  \
   type *l1 = lines[1];                                                  \
                                                                         \
-  if (l0 != l1)                                                         \
-    video_orc_chroma_down_v2_##name (l0, l0, l1, width);                \
+  if (l0 != l1) {                           \
+    type *d0 = l0;                          \
+    video_orc_chroma_down_v2_##name (d0, l0, l1, width);                \
+  }                                 \
                                                                         \
   if (resample->h_resample)                                             \
     resample->h_resample (resample, l0, width);                         \
@@ -524,8 +529,9 @@ video_chroma_down_v4_##name (GstVideoChromaResample *resample,          \
   type *l1 = lines[1];                                                  \
   type *l2 = lines[2];                                                  \
   type *l3 = lines[3];                                                  \
+  type *d = l0;                             \
                                                                         \
-  video_orc_chroma_down_v4_##name(l0, l0, l1, l2, l3, width);           \
+  video_orc_chroma_down_v4_##name(d, l0, l1, l2, l3, width);        \
                                                                         \
   if (resample->h_resample)                                             \
     resample->h_resample (resample, l0, width);                         \

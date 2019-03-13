@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -101,12 +101,16 @@ import com.sun.javafx.tk.Toolkit;
  * on if the {@link DialogPane#createButton(ButtonType)} method has been overridden. A
  * typical approach is therefore along the following lines:
  *
- * <pre>{@code
- *     ButtonType loginButtonType = new ButtonType("Login", ButtonData.OK_DONE);
- *     Dialog<String> dialog = new Dialog<>();
- *     dialog.getDialogPane().getButtonTypes().add(loginButtonType);
- *     boolean disabled = false; // computed based on content of text fields, for example
- *     dialog.getDialogPane().lookupButton(loginButtonType).setDisable(disabled);}</pre>
+ * <pre> {@code ButtonType loginButtonType = new ButtonType("Login", ButtonData.OK_DONE);
+ * Dialog<String> dialog = new Dialog<>();
+ * dialog.setTitle("Login Dialog");
+ * dialog.setContentText("Would you like to log in?");
+ * dialog.getDialogPane().getButtonTypes().add(loginButtonType);
+ * boolean disabled = false; // computed based on content of text fields, for example
+ * dialog.getDialogPane().lookupButton(loginButtonType).setDisable(disabled);
+ * dialog.showAndWait();}</pre>
+ *
+ * <img src="doc-files/Dialog.png" alt="Image of the Dialog control">
  *
  * <p>Once a Dialog is instantiated and fully configured, the next step is to
  * show it. More often than not, dialogs are shown in a modal and blocking
@@ -126,25 +130,22 @@ import com.sun.javafx.tk.Toolkit;
  * equally valid ways of showing a dialog:
  *
  * <p><strong>Option 1: The 'traditional' approach</strong>
- * <pre>{@code
- * Optional<ButtonType> result = dialog.showAndWait();
+ * <pre> {@code Optional<ButtonType> result = dialog.showAndWait();
  * if (result.isPresent() && result.get() == ButtonType.OK) {
  *     formatSystem();
  * }}</pre>
  *
  * <p><strong>Option 2: The traditional + Optional approach</strong>
- * <pre>{@code
- * dialog.showAndWait().ifPresent(response -> {
+ * <pre> {@code dialog.showAndWait().ifPresent(response -> {
  *     if (response == ButtonType.OK) {
  *         formatSystem();
  *     }
  * });}</pre>
  *
  * <p><strong>Option 3: The fully lambda approach</strong>
- * <pre>{@code
- * dialog.showAndWait()
- *      .filter(response -> response == ButtonType.OK)
- *      .ifPresent(response -> formatSystem());}</pre>
+ * <pre> {@code dialog.showAndWait()
+ *       .filter(response -> response == ButtonType.OK)
+ *       .ifPresent(response -> formatSystem());}</pre>
  *
  * <p>There is no better or worse option of the three listed above, so developers
  * are encouraged to work to their own style preferences. The purpose of showing
@@ -167,7 +168,7 @@ import com.sun.javafx.tk.Toolkit;
  * prevent the event handling by {@code consuming} the event. Here's a simplified
  * example:
  *
- * <pre>{@code final Button btOk = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+ * <pre> {@code final Button btOk = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
  * btOk.addEventFilter(ActionEvent.ACTION, event -> {
  *     if (!validateAndStore()) {
  *         event.consume();
@@ -248,7 +249,7 @@ public class Dialog<R> implements EventTarget {
      *
      **************************************************************************/
 
-    final FXDialog dialog;
+     FXDialog dialog;
 
     private boolean isClosing;
 

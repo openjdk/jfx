@@ -100,7 +100,6 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
                 return glyphCode;
             }
         }
-        glyphMap.put(unicode, missingGlyph);
         return missingGlyph;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,9 +68,9 @@ import javafx.css.StyleableProperty;
  * results you are after.</p>
  *
  * <p>Example:</p>
- * <pre><code>
- *  TitledPane t1 = new TitledPane("T1", new Button("B1"));
- * </code></pre>
+ * <pre><code> TitledPane t1 = new TitledPane("T1", new Button("B1"));</code></pre>
+ *
+ * <img src="doc-files/TitledPane.png" alt="Image of the TitledPane control">
  *
  * @since JavaFX 2.0
  */

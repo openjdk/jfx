@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assert.fail;
 /**
  */
 @RunWith(Parameterized.class)
@@ -235,7 +235,33 @@ public class TextInputControlTest {
         assertTrue(passed[0]);
     }
 
-    // TODO test that setting text which includes a \n works
+    // Test for JDK-8212102
+    @Test public void testControlCharacters() {
+        try {
+            String cc = "\r\n\n";
+            String str = "123456";
+
+            textInput.setText(cc);
+
+            textInput.setText(str);
+            textInput.replaceText(0, 6, cc);
+
+            textInput.setText(str);
+            textInput.replaceText(new IndexRange(0, 6), cc);
+
+            textInput.setText(str);
+            textInput.selectAll();
+            textInput.replaceSelection(cc);
+
+            textInput.setText(str);
+            textInput.selectRange(0, 6);
+            textInput.replaceSelection(cc);
+
+        } catch (Exception e) {
+            fail("Control characters(\\r\\n) caused Exception: " + e);
+        }
+    }
+
     @Test public void controlCharactersAreOmitted_setText_getText() {
         String s = "This is " + '\0' + "a test";
         textInput.setText(s);

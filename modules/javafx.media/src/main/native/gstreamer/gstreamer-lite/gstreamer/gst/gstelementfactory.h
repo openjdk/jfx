@@ -183,7 +183,7 @@ typedef guint64 GstElementFactoryListType;
 #define GST_ELEMENT_FACTORY_TYPE_AUDIOVIDEO_SINKS ((GstElementFactoryListType)(GST_ELEMENT_FACTORY_TYPE_SINK | GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO | GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO | GST_ELEMENT_FACTORY_TYPE_MEDIA_IMAGE))
 
 /**
- * GST_ELEMENT_FACTORY_TYPE_DECODABLE: (value 353) (type GstElementFactoryListType)
+ * GST_ELEMENT_FACTORY_TYPE_DECODABLE: (value 1377) (type GstElementFactoryListType)
  *
  * All elements used to 'decode' streams (decoders, demuxers, parsers, depayloaders)
  */

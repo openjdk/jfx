@@ -43,6 +43,7 @@ CFLAGS =-fPIC                   \
         -Wformat-security       \
         -fstack-protector       \
         -Werror=implicit-function-declaration \
+        -Werror=trampolines     \
         -D_GNU_SOURCE           \
         -DGST_REMOVE_DEPRECATED \
         -DGSTREAMER_LITE        \
@@ -126,7 +127,6 @@ gstreamer/gst/gst.c \
             gstreamer/gst/gstpluginfeature.c \
             gstreamer/gst/gstpluginloader.c \
             gstreamer/gst/gstpoll.c \
-            gstreamer/gst/gstpreset.c \
             gstreamer/gst/gstprotection.c \
             gstreamer/gst/gstquark.c \
             gstreamer/gst/gstquery.c \
@@ -199,8 +199,6 @@ gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f32.c \
             gst-plugins-base/gst-libs/gst/pbutils/codec-utils.c \
             gst-plugins-base/gst-libs/gst/pbutils/descriptions.c \
-            gst-plugins-base/gst-libs/gst/pbutils/encoding-profile.c \
-            gst-plugins-base/gst-libs/gst/pbutils/encoding-target.c \
             gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer.c \
             gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer-types.c \
             gst-plugins-base/gst-libs/gst/pbutils/gstpluginsbaseversion.c \

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,8 +63,10 @@ import javafx.scene.control.skin.CheckBoxSkin;
  * state.
  *
  * <p>Example:
- * <pre><code>CheckBox cb = new CheckBox("a checkbox");
- * cb.setIndeterminate(false);</code></pre>
+ * <pre><code> CheckBox cb = new CheckBox("a checkbox");
+ * cb.setSelected(true);</code></pre>
+ *
+ * <img src="doc-files/CheckBox.png" alt="Image of the CheckBox control">
  *
  * <p>
  * MnemonicParsing is enabled by default for CheckBox.
@@ -72,7 +74,6 @@ import javafx.scene.control.skin.CheckBoxSkin;
  *
  * @since JavaFX 2.0
  */
-
 public class CheckBox extends ButtonBase {
 
     /***************************************************************************

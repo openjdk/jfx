@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-
 /**
  * Either a horizontal or vertical bar with increment and decrement buttons and
  * a "thumb" with which the user can interact. Typically not used alone but used
@@ -60,18 +59,14 @@ import java.util.List;
  * </p>
  *
  * <p>
- * This example creates a vertical ScrollBar :
- * <pre><code>
- * import javafx.scene.control.ScrollBar;
+ * This example creates a vertical ScrollBar:
+ * <pre><code> ScrollBar s1 = new ScrollBar();
+ * s1.setOrientation(Orientation.VERTICAL);</code></pre>
  *
- * ScrollBar s1 = new ScrollBar();
- * s1.setOrientation(Orientation.VERTICAL);
- * </code></pre>
+ * <img src="doc-files/ScrollBar.png" alt="Image of the ScrollBar control">
  *
- * Implementation of ScrollBar According to JavaFX UI Control API Specification
  * @since JavaFX 2.0
  */
-
 public class ScrollBar extends Control {
 
     /***************************************************************************

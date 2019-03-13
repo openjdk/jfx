@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ import javafx.css.PseudoClass;
 
 import javafx.css.converter.EnumConverter;
 import javafx.scene.control.skin.SeparatorSkin;
-
+import javafx.scene.layout.VBox;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -66,6 +66,18 @@ import javafx.css.StyleableProperty;
  * <p>
  * Separator sets focusTraversable to false.
  * </p>
+ *
+ * <p>
+ * Example:
+ * <pre><code> Button b0 = new Button("Button 0");
+ * Button b1 = new Button("Button 1");
+ * Button b2 = new Button("Button 2");
+ * Button b3 = new Button("Button 3");
+ * Separator separator = new Separator(Orientation.HORIZONTAL);
+ * VBox vBox = new VBox(b0, b1, separator, b2, b3);</code></pre>
+ *
+ * <img src="doc-files/Separator.png" alt="Image of the Separator control">
+ *
  * @since JavaFX 2.0
  */
 public class Separator extends Control {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,26 +58,25 @@ import javafx.beans.DefaultProperty;
  * Although the ChoiceBox will only allow a user to select from the predefined
  * list, it is possible for the developer to specify the selected item to be
  * something other than what is available in the predefined list. This is
- * required for several important use cases.
- * <p>
- * It means configuration of the ChoiceBox is order independent. You
- * may either specify the items and then the selected item, or you may
- * specify the selected item and then the items. Either way will function
+ * required for several important use cases. Configuration of the ChoiceBox is
+ * order independent. You may either specify the items and then the selected item,
+ * or you may specify the selected item and then the items. Either way will function
  * correctly.
  * <p>
  * ChoiceBox item selection is handled by
- * {@link javafx.scene.control.SelectionModel SelectionModel}
+ * {@link javafx.scene.control.SelectionModel SelectionModel}.
  * As with ListView and ComboBox, it is possible to modify the
  * {@link javafx.scene.control.SelectionModel SelectionModel} that is used,
  * although this is likely to be rarely changed. ChoiceBox supports only a
  * single selection model, hence the default used is a {@link SingleSelectionModel}.
  *
- * <pre>
- * import javafx.scene.control.ChoiceBox;
+ * <p>
+ * Example:
+ * <pre> ChoiceBox cb = new ChoiceBox();
+ * cb.getItems().addAll("item1", "item2", "item3");</pre>
  *
- * ChoiceBox cb = new ChoiceBox();
- * cb.getItems().addAll("item1", "item2", "item3");
- * </pre>
+ * <img src="doc-files/ChoiceBox.png" alt="Image of the ChoiceBox control">
+ *
  * @since JavaFX 2.0
  */
 @DefaultProperty("items")
@@ -398,7 +397,7 @@ public class ChoiceBox<T> extends Control {
 
     // -- On Shown
     /**
-     * Called just after the {@link ChoiceBox} popup is shown.
+     * Called just after the {@code ChoiceBox} popup is shown.
      * @return the on shown property
      * @since JavaFX 8u60
      */
@@ -422,7 +421,7 @@ public class ChoiceBox<T> extends Control {
 
     // --- On Hiding
     /**
-     * Called just prior to the {@link ChoiceBox} popup being hidden.
+     * Called just prior to the {@code ChoiceBox} popup being hidden.
      * @return the on hiding property
      * @since JavaFX 8u60
      */
@@ -446,7 +445,7 @@ public class ChoiceBox<T> extends Control {
 
     // --- On Hidden
     /**
-     * Called just after the {@link ChoiceBox} popup has been hidden.
+     * Called just after the {@code ChoiceBox} popup has been hidden.
      * @return the on hidden property
      * @since JavaFX 8u60
      */

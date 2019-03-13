@@ -1654,7 +1654,7 @@ gst_base_parse_src_event_default (GstBaseParse * parse, GstEvent * event)
  * @src_format: #GstFormat describing the source format.
  * @src_value: Source value to be converted.
  * @dest_format: #GstFormat defining the converted format.
- * @dest_value: Pointer where the conversion result will be put.
+ * @dest_value: (out): Pointer where the conversion result will be put.
  *
  * Default implementation of "convert" vmethod in #GstBaseParse class.
  *
@@ -1826,7 +1826,7 @@ gst_base_parse_update_bitrates (GstBaseParse * parse, GstBaseParseFrame * frame)
     if (avg_bitrate > G_MAXUINT)
       return;
 
-    parse->priv->avg_bitrate = avg_bitrate;
+    parse->priv->avg_bitrate = (guint) avg_bitrate;
   } else {
     /* No way to figure out frame duration (is this even possible?) */
     return;
@@ -1877,7 +1877,7 @@ gst_base_parse_update_bitrates (GstBaseParse * parse, GstBaseParseFrame * frame)
 
     /* Only update the tag on a 2% change */
     if (parse->priv->post_avg_bitrate && parse->priv->avg_bitrate) {
-      guint64 diffprev = gst_util_uint64_scale_int (100,
+      guint64 diffprev = gst_util_uint64_scale (100,
           ABSDIFF (parse->priv->avg_bitrate, parse->priv->posted_avg_bitrate),
           parse->priv->avg_bitrate);
       if (diffprev >= UPDATE_THRESHOLD)

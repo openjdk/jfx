@@ -196,14 +196,15 @@ gst_protection_select_system (const gchar ** system_identifiers)
 
 /**
  * gst_protection_filter_systems_by_available_decryptors:
- * @system_identifiers: (transfer none): A null terminated array of strings
- * that contains the UUID values of each protection system that is to be
- * checked.
+ * @system_identifiers: (transfer none) (array zero-terminated=1):
+ * A null terminated array of strings that contains the UUID values of each
+ * protection system that is to be checked.
  *
  * Iterates the supplied list of UUIDs and checks the GstRegistry for
  * all the decryptors supporting one of the supplied UUIDs.
  *
- * Returns: (transfer full) (nullable): A null terminated array containing all
+ * Returns: (transfer full) (array zero-terminated=1) (nullable):
+ * A null terminated array containing all
  * the @system_identifiers supported by the set of available decryptors, or
  * %NULL if no matches were found.
  *

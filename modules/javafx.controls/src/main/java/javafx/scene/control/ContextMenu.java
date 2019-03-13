@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,8 +59,8 @@ import javafx.beans.property.SimpleBooleanProperty;
  * A common use case for this class is creating and showing context menus to
  * users. To create a context menu using ContextMenu you can do the
  * following:
-<pre><code>
-final ContextMenu contextMenu = new ContextMenu();
+ *
+<pre><code>final ContextMenu contextMenu = new ContextMenu();
 contextMenu.setOnShowing(new EventHandler&lt;WindowEvent&gt;() {
     public void handle(WindowEvent e) {
         System.out.println("showing");
@@ -87,16 +87,17 @@ item2.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
 contextMenu.getItems().addAll(item1, item2);
 
 final TextField textField = new TextField("Type Something");
-textField.setContextMenu(contextMenu);
-</code></pre>
+textField.setContextMenu(contextMenu);</code></pre>
+ *
+ * <img src="doc-files/ContextMenu.png" alt="Image of the ContextMenu control">
  *
  * <p>{@link Control#setContextMenu(javafx.scene.control.ContextMenu) } convenience
  * method can be used to set a context menu on on any control. The example above results in the
  * context menu being displayed on the right {@link javafx.geometry.Side Side}
  * of the TextField. Alternatively, an event handler can also be set on the control
  * to invoke the context menu as shown below.
- * <pre><code>
-textField.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
+ *
+<pre><code>textField.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
     public void handle(ActionEvent e) {
         contextMenu.show(textField, Side.BOTTOM, 0, 0);
     }
@@ -268,7 +269,7 @@ public class ContextMenu extends PopupControl {
      * Shows the {@code ContextMenu} at the specified screen coordinates. If there
      * is not enough room at the specified location to show the {@code ContextMenu}
      * given its size requirements, the necessary adjustments are made to bring
-     * the {@code ContextMenu} back back on screen. This also means that the
+     * the {@code ContextMenu} back on screen. This also means that the
      * {@code ContextMenu} will not span multiple monitors.
      * @param anchor the anchor node
      * @param screenX the x position of the anchor in screen coordinates

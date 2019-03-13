@@ -35,7 +35,7 @@ namespace WebCore {
     struct URLHash {
         static unsigned hash(const URL& key)
         {
-            return key.string().impl()->hash();
+            return key.string().hash();
         }
 
         static bool equal(const URL& a, const URL& b)

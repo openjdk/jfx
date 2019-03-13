@@ -187,8 +187,8 @@ gst_video_colorimetry_matches (const GstVideoColorimetry * cinfo,
  * gst_video_color_range_offsets:
  * @range: a #GstVideoColorRange
  * @info: a #GstVideoFormatInfo
- * @offset: (out): output offsets
- * @scale: (out): output scale
+ * @offset: (out caller-allocates) (array fixed-size=4): output offsets
+ * @scale: (out caller-allocates) (array fixed-size=4): output scale
  *
  * Compute the offset and scale values for each component of @info. For each
  * component, (c[i] - offset[i]) / scale[i] will scale the component c[i] to the
@@ -310,8 +310,8 @@ gst_video_color_primaries_get_info (GstVideoColorPrimaries primaries)
 /**
  * gst_video_color_matrix_get_Kr_Kb:
  * @matrix: a #GstVideoColorMatrix
- * @Kr: result red channel coefficient
- * @Kb: result blue channel coefficient
+ * @Kr: (out): result red channel coefficient
+ * @Kb: (out): result blue channel coefficient
  *
  * Get the coefficients used to convert between Y'PbPr and R'G'B' using @matrix.
  *

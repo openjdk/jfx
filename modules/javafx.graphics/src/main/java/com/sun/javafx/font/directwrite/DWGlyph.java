@@ -52,6 +52,7 @@ public class DWGlyph implements Glyph {
     private static D2D1_COLOR_F WHITE = new D2D1_COLOR_F(1f, 1f, 1f, 1f);
     private static D2D1_MATRIX_3X2_F D2D2_MATRIX_IDENTITY = new D2D1_MATRIX_3X2_F(1,0, 0,1, 0,0);
 
+    public static final int SHORTMASK = 0x0000ffff;
 
     DWGlyph(DWFontStrike strike, int glyphCode, boolean drawShapes) {
         this.strike = strike;
@@ -303,12 +304,12 @@ public class DWGlyph implements Glyph {
 
     @Override
     public int getGlyphCode() {
-        return run.glyphIndices;
+        return (run.glyphIndices & SHORTMASK);
     }
 
     @Override
     public RectBounds getBBox() {
-        return strike.getBBox(run.glyphIndices);
+        return strike.getBBox(run.glyphIndices & SHORTMASK);
     }
 
     @Override
@@ -321,7 +322,7 @@ public class DWGlyph implements Glyph {
 
     @Override
     public Shape getShape() {
-        return strike.createGlyphOutline(run.glyphIndices);
+        return strike.createGlyphOutline(run.glyphIndices & SHORTMASK);
     }
 
     @Override

@@ -185,12 +185,12 @@ public abstract class Application {
 
     /**
      * Launch a standalone application. This method is typically called
-     * from the main method(). It must not be called more than once or an
+     * from the {@code main} method. It must not be called more than once or an
      * exception will be thrown.
      *
      * <p>
      * The launch method does not return until the application has exited,
-     * either via a call to Platform.exit or all of the application windows
+     * either via a call to {@link Platform#exit()} or all of the application windows
      * have been closed.
      * The class specified by the {@code appClass} argument must be
      * a public subclass of {@code Application}
@@ -229,7 +229,7 @@ public abstract class Application {
 
     /**
      * Launch a standalone application. This method is typically called
-     * from the main method(). It must not be called more than once or an
+     * from the {@code main} method. It must not be called more than once or an
      * exception will be thrown.
      * This is equivalent to {@code launch(TheClass.class, args)} where
      * {@code TheClass} is the
@@ -242,7 +242,7 @@ public abstract class Application {
      *
      * <p>
      * The launch method does not return until the application has exited,
-     * either via a call to Platform.exit or all of the application windows
+     * either via a call to {@link Platform#exit()} or all of the application windows
      * have been closed.
      *
      * <p>

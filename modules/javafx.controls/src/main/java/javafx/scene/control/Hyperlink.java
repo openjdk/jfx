@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,6 @@ import javafx.scene.control.skin.HyperlinkSkin;
 
 import javafx.css.StyleableProperty;
 
-
 /**
  * <p>An HTML like label which can be a graphic and/or text which responds to rollovers and clicks.
  * When a hyperlink is clicked/pressed {@link #isVisited} becomes {@code true}.  A Hyperlink behaves
@@ -47,8 +46,11 @@ import javafx.css.StyleableProperty;
  * a {@link ActionEvent} is sent, and your application can perform some action based on this event.
  * </p>
  *
- * <p>Example:</p>
- * {@code Hyperlink link = new Hyperlink("www.oracle.com"); }
+ * <p>Example:
+ * <pre><code>Hyperlink link = new Hyperlink("www.oracle.com");</code></pre>
+ *
+ * <img src="doc-files/Hyperlink.png" alt="Image of the Hyperlink control">
+ *
  * @since JavaFX 2.0
  */
 public class Hyperlink extends ButtonBase {

@@ -574,7 +574,7 @@ gst_directsound_sink_prepare (GstAudioSink * asink,
 #ifdef GSTREAMER_LITE
   dsoundsink->rate = spec->info.rate;
   if (dsoundsink->bytes_per_sample == 0 || dsoundsink->rate == 0)
-      return FALSE;
+    return FALSE;
   if (dsoundsink->pDS == NULL)
     return TRUE;
 #endif // GSTREAMER_LITE

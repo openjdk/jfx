@@ -640,7 +640,7 @@ public abstract class Animation {
     /**
      * The status of the {@code Animation}.
      *
-     * In {@code Animation} can be in one of three states:
+     * An {@code Animation} can be in one of three states:
      * {@link Status#STOPPED}, {@link Status#PAUSED} or {@link Status#RUNNING}.
      */
     private ReadOnlyObjectProperty<Status> status;

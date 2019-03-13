@@ -27,7 +27,7 @@ G_BEGIN_DECLS
 /* --- paramspec flags */
 
 /**
- * GST_PARAM_CONTROLLABLE:
+ * GST_PARAM_CONTROLLABLE: (value 512)
  *
  * Use this flag on GObject properties to signal they can make sense to be.
  * controlled over time. This hint is used by the GstController.
@@ -35,7 +35,7 @@ G_BEGIN_DECLS
 #define GST_PARAM_CONTROLLABLE  (1 << (G_PARAM_USER_SHIFT + 1))
 
 /**
- * GST_PARAM_MUTABLE_READY:
+ * GST_PARAM_MUTABLE_READY: (value 1024)
  *
  * Use this flag on GObject properties of GstElements to indicate that
  * they can be changed when the element is in the READY or lower state.
@@ -43,7 +43,7 @@ G_BEGIN_DECLS
 #define GST_PARAM_MUTABLE_READY  (1 << (G_PARAM_USER_SHIFT + 2))
 
 /**
- * GST_PARAM_MUTABLE_PAUSED:
+ * GST_PARAM_MUTABLE_PAUSED: (value 2048)
  *
  * Use this flag on GObject properties of GstElements to indicate that
  * they can be changed when the element is in the PAUSED or lower state.
@@ -52,7 +52,7 @@ G_BEGIN_DECLS
 #define GST_PARAM_MUTABLE_PAUSED  (1 << (G_PARAM_USER_SHIFT + 3))
 
 /**
- * GST_PARAM_MUTABLE_PLAYING:
+ * GST_PARAM_MUTABLE_PLAYING: (value 4096)
  *
  * Use this flag on GObject properties of GstElements to indicate that
  * they can be changed when the element is in the PLAYING or lower state.
@@ -61,7 +61,7 @@ G_BEGIN_DECLS
 #define GST_PARAM_MUTABLE_PLAYING  (1 << (G_PARAM_USER_SHIFT + 4))
 
 /**
- * GST_PARAM_USER_SHIFT:
+ * GST_PARAM_USER_SHIFT: (value 65536)
  *
  * Bits based on GST_PARAM_USER_SHIFT can be used by 3rd party applications.
  */

@@ -269,17 +269,21 @@ gst_audio_encoder_get_type (void)
       0,
       (GInstanceInitFunc) gst_audio_encoder_init,
     };
+#ifndef GSTREAMER_LITE
     const GInterfaceInfo preset_interface_info = {
       NULL,                     /* interface_init */
       NULL,                     /* interface_finalize */
       NULL                      /* interface_data */
     };
+#endif // GSTREAMER_LITE
 
     audio_encoder_type = g_type_register_static (GST_TYPE_ELEMENT,
         "GstAudioEncoder", &audio_encoder_info, G_TYPE_FLAG_ABSTRACT);
 
+#ifndef GSTREAMER_LITE
     g_type_add_interface_static (audio_encoder_type, GST_TYPE_PRESET,
         &preset_interface_info);
+#endif // GSTREAMER_LITE
   }
   return audio_encoder_type;
 }

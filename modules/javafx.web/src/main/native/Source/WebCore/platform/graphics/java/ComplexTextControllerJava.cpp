@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,9 @@
 
 #include "ComplexTextController.h"
 #include "FloatRect.h"
-
+#include "Font.h"
+#include "FontCascade.h"
+#include "TextRun.h"
 #include <wtf/java/JavaEnv.h>
 
 namespace WebCore {
@@ -92,6 +94,12 @@ unsigned jGetEnd(jobject jRun)
 
 unsigned jGetCharOffset(jobject jRun, unsigned glyphIndex)
 {
+    if (!jGetGlyphCount(jRun)) {
+        // Return same value as TextRun.getCharOffset() when there is
+        // no glyph information available.
+        return glyphIndex;
+    }
+
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID mID = env->GetMethodID(
         PG_GetTextRun(env),

@@ -39,6 +39,10 @@ typedef enum
 } GstVideoTileType;
 
 #define GST_VIDEO_TILE_TYPE_SHIFT     (16)
+
+/**
+ * GST_VIDEO_TILE_TYPE_MASK: (value 65535)
+ */
 #define GST_VIDEO_TILE_TYPE_MASK      ((1 << GST_VIDEO_TILE_TYPE_SHIFT) - 1)
 
 /**
@@ -69,6 +73,10 @@ typedef enum
 
 
 #define GST_VIDEO_TILE_Y_TILES_SHIFT     (16)
+
+/**
+ * GST_VIDEO_TILE_X_TILES_MASK: (value 65535)
+ */
 #define GST_VIDEO_TILE_X_TILES_MASK      ((1 << GST_VIDEO_TILE_Y_TILES_SHIFT) - 1)
 
 /**

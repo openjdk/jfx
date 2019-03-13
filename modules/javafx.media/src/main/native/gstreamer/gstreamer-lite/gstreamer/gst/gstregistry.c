@@ -1899,6 +1899,7 @@ scan_and_update_registry (GstRegistry * default_registry,
 #endif // other platforms
 #endif // GSTREAMER_LITE
 
+#ifndef GSTREAMER_LITE
   init_scan_context (&context, default_registry);
 
   /* It sounds tempting to just compare the mtime of directories with the mtime
@@ -1992,7 +1993,9 @@ scan_and_update_registry (GstRegistry * default_registry,
     g_strfreev (list);
   }
 
+
   clear_scan_context (&context);
+#endif // GSTREAMER_LITE
   changed |= context.changed;
 
   /* Remove cached plugins so stale info is cleared. */

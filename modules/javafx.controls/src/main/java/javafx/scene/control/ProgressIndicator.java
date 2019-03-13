@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import javafx.css.StyleableProperty;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 
-
 /**
  * A circular control which is used for indicating progress, either
  * infinite (aka indeterminate) or finite. Often used with the Task API for
@@ -48,24 +47,20 @@ import javafx.scene.AccessibleRole;
  * </p>
  *
  * <p>
- * This first example creates a ProgressIndicator with an indeterminate value :
- * <pre><code>
- * import javafx.scene.control.ProgressIndicator;
- * ProgressIndicator p1 = new ProgressIndicator();
- * </code></pre>
+ * This first example creates a ProgressIndicator with an indeterminate value:
+ * <pre><code> ProgressIndicator p1 = new ProgressIndicator();</code></pre>
+ *
+ * <img src="doc-files/ProgressIndicator_indeterminate.png" alt="Image of the indeterminate progress ProgressIndicator control">
  *
  * <p>
- * This next example creates a ProgressIndicator which is 25% complete :
- * <pre><code>
- * import javafx.scene.control.ProgressIndicator;
- * ProgressIndicator p2 = new ProgressIndicator();
- * p2.setProgress(0.25F);
- * </code></pre>
+ * This next example creates a ProgressIndicator which is 25% complete:
+ * <pre><code> ProgressIndicator p2 = new ProgressIndicator();
+ * p2.setProgress(0.25F);</code></pre>
  *
- * Implementation of ProgressIndicator According to JavaFX UI Control API Specification
+ * <img src="doc-files/ProgressIndicator.png" alt="Image of the ProgressIndicator control">
+ *
  * @since JavaFX 2.0
  */
-
 public class ProgressIndicator extends Control {
 
     /**

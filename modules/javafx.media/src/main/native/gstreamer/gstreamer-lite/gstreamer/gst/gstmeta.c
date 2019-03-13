@@ -70,7 +70,7 @@ _priv_gst_meta_initialize (void)
 /**
  * gst_meta_api_type_register:
  * @api: an API to register
- * @tags: tags for @api
+ * @tags: (array zero-terminated=1): tags for @api
  *
  * Register and return a GType for the @api and associate it with
  * @tags.

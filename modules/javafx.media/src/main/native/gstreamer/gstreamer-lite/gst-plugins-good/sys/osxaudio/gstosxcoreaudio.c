@@ -340,14 +340,8 @@ gst_core_audio_parse_channel_layout (AudioChannelLayout * layout,
   g_assert (channel_mask != NULL);
   g_assert (layout != NULL);
 
-  if (layout->mChannelLayoutTag !=
+  if (layout->mChannelLayoutTag ==
       kAudioChannelLayoutTag_UseChannelDescriptions) {
-    GST_ERROR
-        ("Only kAudioChannelLayoutTag_UseChannelDescriptions is supported.");
-    *channels = 0;
-    *channel_mask = 0;
-    return FALSE;
-  }
 
   switch (layout->mNumberChannelDescriptions) {
     case 0:
@@ -377,6 +371,85 @@ gst_core_audio_parse_channel_layout (AudioChannelLayout * layout,
           pos);
       return TRUE;
   }
+  } else if (layout->mChannelLayoutTag == kAudioChannelLayoutTag_Mono) {
+    if (pos)
+      pos[0] = GST_AUDIO_CHANNEL_POSITION_MONO;
+    *channels = 1;
+    *channel_mask = 0;
+    return TRUE;
+  } else if (layout->mChannelLayoutTag == kAudioChannelLayoutTag_Stereo ||
+      layout->mChannelLayoutTag == kAudioChannelLayoutTag_StereoHeadphones ||
+      layout->mChannelLayoutTag == kAudioChannelLayoutTag_Binaural) {
+    if (pos) {
+      pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+      pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+}
+    *channels = 2;
+    *channel_mask =
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT);
+    return TRUE;
+  } else if (layout->mChannelLayoutTag == kAudioChannelLayoutTag_Quadraphonic) {
+    if (pos) {
+      pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+      pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+      pos[2] = GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT;
+      pos[3] = GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT;
+    }
+    *channels = 4;
+    *channel_mask =
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (SURROUND_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (SURROUND_RIGHT);
+    return TRUE;
+  } else if (layout->mChannelLayoutTag == kAudioChannelLayoutTag_Pentagonal) {
+    if (pos) {
+      pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+      pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+      pos[2] = GST_AUDIO_CHANNEL_POSITION_SURROUND_LEFT;
+      pos[3] = GST_AUDIO_CHANNEL_POSITION_SURROUND_RIGHT;
+      pos[4] = GST_AUDIO_CHANNEL_POSITION_FRONT_CENTER;
+    }
+    *channels = 5;
+    *channel_mask =
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (SURROUND_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (SURROUND_RIGHT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_CENTER);
+    return TRUE;
+  } else if (layout->mChannelLayoutTag == kAudioChannelLayoutTag_Cube) {
+    if (pos) {
+      pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+      pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+      pos[2] = GST_AUDIO_CHANNEL_POSITION_REAR_LEFT;
+      pos[3] = GST_AUDIO_CHANNEL_POSITION_REAR_RIGHT;
+      pos[4] = GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_LEFT;
+      pos[5] = GST_AUDIO_CHANNEL_POSITION_TOP_FRONT_RIGHT;
+      pos[6] = GST_AUDIO_CHANNEL_POSITION_TOP_REAR_LEFT;
+      pos[7] = GST_AUDIO_CHANNEL_POSITION_TOP_REAR_RIGHT;
+
+    }
+    *channels = 8;
+    *channel_mask =
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (REAR_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (REAR_RIGHT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (TOP_FRONT_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (TOP_FRONT_RIGHT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (TOP_REAR_LEFT) |
+        GST_AUDIO_CHANNEL_POSITION_MASK (TOP_REAR_RIGHT);
+    return TRUE;
+  } else {
+    GST_WARNING
+        ("AudioChannelLayoutTag: %u not yet supported",
+        layout->mChannelLayoutTag);
+    *channels = 0;
+    *channel_mask = 0;
+    return FALSE;
+  }
 }
 
 /* Converts an AudioStreamBasicDescription to preferred caps.
@@ -405,6 +478,7 @@ gst_core_audio_asbd_to_caps (AudioStreamBasicDescription * asbd,
   guint rate, channels, bps, endianness;
   guint64 channel_mask;
   gboolean sign, interleaved;
+  GstAudioChannelPosition pos[GST_OSX_AUDIO_MAX_CHANNEL];
 
   if (asbd->mFormatID != kAudioFormatLinearPCM) {
     GST_WARNING ("Only linear PCM is supported");
@@ -457,14 +531,15 @@ gst_core_audio_asbd_to_caps (AudioStreamBasicDescription * asbd,
   }
 
   if (layout) {
-    GstAudioChannelPosition pos[GST_OSX_AUDIO_MAX_CHANNEL];
-
     if (!gst_core_audio_parse_channel_layout (layout, &channels, &channel_mask,
             pos)) {
-      GST_WARNING ("Failed to parse channel layout");
-      goto error;
+      GST_WARNING
+          ("Failed to parse channel layout, best effort channels layout mapping will be used");
+      layout = NULL;
     }
+  }
 
+  if (layout) {
     /* The AU can have arbitrary channel order, but we're using GstAudioInfo
      * which supports only the GStreamer channel order.
      * Also, we're eventually producing caps, which only have channel-mask

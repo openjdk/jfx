@@ -166,45 +166,6 @@ IOS.glass.x86_64.linker = linker
 IOS.glass.x86_64.linkFlags = ["-arch_only", archX86_64, "-syslibroot", sdkPath(iPhoneSim), linkFlags, "-L${sdkPath(iPhoneSim)}/usr/lib"].flatten()
 IOS.glass.x86_64.lib = "glass_${archX86_64}"
 
-IOS.extensions = [:]
-IOS.extensions.variants = ["arm", "arm64", "x86", "x86_64"];
-IOS.extensions.javahSource = files("${project("extensions").buildDir}/classes/ios")
-IOS.extensions.javahClasspath = files("${project("extensions").buildDir}/classes/ios/")
-IOS.extensions.javahInclude = ["com/sun/javafx/ext/device/ios/**/*"]
-IOS.extensions.lib = "extensions_ios"
-
-IOS.extensions.arm = [:]
-IOS.extensions.arm.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
-IOS.extensions.arm.compiler = compiler
-IOS.extensions.arm.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
-IOS.extensions.arm.linker = linker
-IOS.extensions.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags, "-L${sdkPath(iPhoneOS)}/usr/lib"].flatten()
-IOS.extensions.arm.lib = "extensions_ios_${archArm}"
-
-IOS.extensions.arm64 = [:]
-IOS.extensions.arm64.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
-IOS.extensions.arm64.compiler = compiler
-IOS.extensions.arm64.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archArm64, "-isysroot", sdkPath(iPhoneOS)].flatten()
-IOS.extensions.arm64.linker = linker
-IOS.extensions.arm64.linkFlags = ["-arch_only", archArm64, "-syslibroot", sdkPath(iPhoneOS), linkFlags, "-L${sdkPath(iPhoneOS)}/usr/lib"].flatten()
-IOS.extensions.arm64.lib = "extensions_ios_${archArm64}"
-
-IOS.extensions.x86 = [:]
-IOS.extensions.x86.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
-IOS.extensions.x86.compiler = compiler
-IOS.extensions.x86.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
-IOS.extensions.x86.linker = linker
-IOS.extensions.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags, "-L${sdkPath(iPhoneSim)}/usr/lib"].flatten()
-IOS.extensions.x86.lib = "extensions_ios_${archX86}"
-
-IOS.extensions.x86_64 = [:]
-IOS.extensions.x86_64.nativeSource = file("${project("extensions").projectDir}/src/ios/native-device/ios")
-IOS.extensions.x86_64.compiler = compiler
-IOS.extensions.x86_64.ccFlags = ["-x", "objective-c", ccFlags, "-arch", archX86_64, "-isysroot", sdkPath(iPhoneSim)].flatten()
-IOS.extensions.x86_64.linker = linker
-IOS.extensions.x86_64.linkFlags = ["-arch_only", archX86_64, "-syslibroot", sdkPath(iPhoneSim), linkFlags, "-L${sdkPath(iPhoneSim)}/usr/lib"].flatten()
-IOS.extensions.x86_64.lib = "extensions_ios_${archX86_64}"
-
 IOS.decora = [:]
 IOS.decora.variants = ["arm", "arm64"];
 IOS.decora.lib = "decora_sse"

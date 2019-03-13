@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,13 +42,15 @@
 // If this were less than 32GB, those OOB accesses could reach outside of the cage.
 #define GIGACAGE_RUNWAY (32llu * 1024 * 1024 * 1024)
 
+// Note: g_gigacageBasePtrs[0] is reserved for storing the wasEnabled flag.
+// The first gigacageBasePtr will start at g_gigacageBasePtrs[sizeof(void*)].
+// This is done so that the wasEnabled flag will also be protected along with the
+// gigacageBasePtrs.
 alignas(GIGACAGE_BASE_PTRS_SIZE) char g_gigacageBasePtrs[GIGACAGE_BASE_PTRS_SIZE];
 
 using namespace bmalloc;
 
 namespace Gigacage {
-
-bool g_wasEnabled;
 
 namespace {
 
@@ -99,6 +101,21 @@ struct PrimitiveDisableCallbacks {
     Vector<Callback> callbacks;
 };
 
+#if GIGACAGE_ENABLED
+size_t runwaySize(Kind kind)
+{
+    switch (kind) {
+    case Kind::ReservedForFlagsAndNotABasePtr:
+        RELEASE_BASSERT_NOT_REACHED();
+    case Kind::Primitive:
+        return static_cast<size_t>(GIGACAGE_RUNWAY);
+    case Kind::JSValue:
+        return static_cast<size_t>(0);
+    }
+    return static_cast<size_t>(0);
+}
+#endif
+
 } // anonymous namespace
 
 void ensureGigacage()
@@ -113,7 +130,7 @@ void ensureGigacage()
 
             Kind shuffledKinds[numKinds];
             for (unsigned i = 0; i < numKinds; ++i)
-                shuffledKinds[i] = static_cast<Kind>(i);
+                shuffledKinds[i] = static_cast<Kind>(i + 1); // + 1 to skip Kind::ReservedForFlagsAndNotABasePtr.
 
             // We just go ahead and assume that 64 bits is enough randomness. That's trivially true right
             // now, but would stop being true if we went crazy with gigacages. Based on my math, 21 is the
@@ -140,9 +157,9 @@ void ensureGigacage()
 
             for (Kind kind : shuffledKinds) {
                 totalSize = bump(kind, alignTo(kind, totalSize));
+                totalSize += runwaySize(kind);
                 maxAlignment = std::max(maxAlignment, alignment(kind));
             }
-            totalSize += GIGACAGE_RUNWAY;
 
             // FIXME: Randomize where this goes.
             // https://bugs.webkit.org/show_bug.cgi?id=175245
@@ -155,23 +172,22 @@ void ensureGigacage()
                 BCRASH();
             }
 
-            if (GIGACAGE_RUNWAY > 0) {
-                char* runway = reinterpret_cast<char*>(base) + totalSize - GIGACAGE_RUNWAY;
-                // Make OOB accesses into the runway crash.
-                vmRevokePermissions(runway, GIGACAGE_RUNWAY);
-            }
-
-            vmDeallocatePhysicalPages(base, totalSize);
-
             size_t nextCage = 0;
             for (Kind kind : shuffledKinds) {
                 nextCage = alignTo(kind, nextCage);
                 basePtr(kind) = reinterpret_cast<char*>(base) + nextCage;
                 nextCage = bump(kind, nextCage);
+                if (runwaySize(kind) > 0) {
+                    char* runway = reinterpret_cast<char*>(base) + nextCage;
+                    // Make OOB accesses into the runway crash.
+                    vmRevokePermissions(runway, runwaySize(kind));
+                    nextCage += runwaySize(kind);
+                }
             }
 
+            vmDeallocatePhysicalPages(base, totalSize);
+            setWasEnabled();
             protectGigacageBasePtrs();
-            g_wasEnabled = true;
         });
 #endif // GIGACAGE_ENABLED
 }
@@ -224,6 +240,9 @@ void removePrimitiveDisableCallback(void (*function)(void*), void* argument)
 
 static void primitiveGigacageDisabled(void*)
 {
+    if (GIGACAGE_ALLOCATION_CAN_FAIL && !wasEnabled())
+        return;
+
     static bool s_false;
     fprintf(stderr, "FATAL: Primitive gigacage disabled, but we don't want that in this process.\n");
     if (!s_false)

@@ -7,8 +7,7 @@ TARGET_DIRS = $(BUILD_DIR)
 
 BASE_DIR = ../../..
 
-GLIB_VERSION = 2.56.1
-GLIB_DIR = $(BASE_DIR)/3rd_party/glib/glib-$(GLIB_VERSION)
+GLIB_DIR = $(BASE_DIR)/3rd_party/glib
 
 SRCBASE_DIR = $(BASE_DIR)/plugins
 OBJBASE_DIR = $(BUILD_DIR)/obj/fxplugins

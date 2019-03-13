@@ -65,12 +65,20 @@ static void update_coefficients (GstIirEqualizer * equ);
     " channels=(int)[1,MAX],"                                     \
     " layout=(string)interleaved"
 
+#ifndef GSTREAMER_LITE
 #define gst_iir_equalizer_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstIirEqualizer, gst_iir_equalizer,
     GST_TYPE_AUDIO_FILTER,
     G_IMPLEMENT_INTERFACE (GST_TYPE_CHILD_PROXY,
         gst_iir_equalizer_child_proxy_interface_init)
     G_IMPLEMENT_INTERFACE (GST_TYPE_PRESET, NULL));
+#else // GSTREAMER_LITE
+#define gst_iir_equalizer_parent_class parent_class
+G_DEFINE_TYPE_WITH_CODE (GstIirEqualizer, gst_iir_equalizer,
+    GST_TYPE_AUDIO_FILTER,
+    G_IMPLEMENT_INTERFACE (GST_TYPE_CHILD_PROXY,
+        gst_iir_equalizer_child_proxy_interface_init));
+#endif // GSTREAMER_LITE
 
 
 /* child object */

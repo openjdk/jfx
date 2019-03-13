@@ -848,11 +848,12 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
     gint depth = 0;
     gboolean is_float;
     const gchar *str;
-    GstAudioFormat format;
+    GstAudioFormat format = GST_AUDIO_FORMAT_UNKNOWN;
     const GstAudioFormatInfo *finfo;
 
     str = gst_structure_get_string (s, "format");
-    format = gst_audio_format_from_string (str);
+    if (str)
+      format = gst_audio_format_from_string (str);
     if (format == GST_AUDIO_FORMAT_UNKNOWN)
       return g_strdup (_("Uncompressed audio"));
 

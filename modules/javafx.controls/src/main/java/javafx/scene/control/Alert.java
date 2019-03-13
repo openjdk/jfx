@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,9 @@ import javafx.collections.ObservableList;
  * a dialog of the given type.
  *
  * <p>To instantiate (but not yet show) an Alert, simply use code such as the following:
- * {@code Alert alert = new Alert(AlertType.CONFIRMATION, "Are you sure you want to format your system?");}
+ * <pre>{@code Alert alert = new Alert(AlertType.CONFIRMATION, "Are you sure you want to format your system?");}</pre>
+ *
+ * <img src="doc-files/Alert.png" alt="Image of the Alert control">
  *
  * <p>Once an Alert is instantiated, we must show it. More often than not, alerts
  * (and dialogs in general) are shown in a modal and blocking fashion. 'Modal'

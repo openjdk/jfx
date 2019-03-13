@@ -52,6 +52,7 @@
 #include "gsttee.h"
 #include "gsttypefindelement.h"
 #include "gstvalve.h"
+#include "gststreamiddemux.h"
 #endif // GSTREAMER_LITE
 
 

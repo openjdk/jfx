@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,6 +83,9 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
                 endRadius = data.endRadius;
             }
     );
+
+    p0 = gt.mapPoint(p0);
+    p1 = gt.mapPoint(p1);
 
     context->rq().freeSpace(4 * 11 + 8 * nStops)
     << id

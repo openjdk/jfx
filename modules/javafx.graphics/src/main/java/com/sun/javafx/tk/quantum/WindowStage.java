@@ -832,7 +832,10 @@ class WindowStage extends GlassStage {
     // closed notification. This state is necessary to prevent the platform
     // window from being closed more than once.
     void setPlatformWindowClosed() {
-        platformWindow = null;
+        if (platformWindow != null) {
+            platformWindows.remove(platformWindow);
+            platformWindow = null;
+        }
     }
 
     static void addActiveWindow(WindowStage window) {

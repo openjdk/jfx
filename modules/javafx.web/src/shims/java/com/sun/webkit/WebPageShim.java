@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2019 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,15 @@
 
 package com.sun.webkit;
 
+import com.sun.javafx.webkit.prism.WCBufferedContextShim;
 import com.sun.webkit.WebPage;
 import com.sun.webkit.event.WCMouseEvent;
 import com.sun.webkit.graphics.WCGraphicsContext;
 import com.sun.webkit.graphics.WCGraphicsManager;
+import com.sun.webkit.graphics.WCGraphicsManagerShim;
 import com.sun.webkit.graphics.WCPageBackBuffer;
 import com.sun.webkit.graphics.WCRectangle;
+import java.awt.image.BufferedImage;
 
 public class WebPageShim {
 
@@ -42,10 +45,13 @@ public class WebPageShim {
         page.setBounds(x, y, w, h);
         // forces layout and renders the page into RenderQueue.
         page.updateContent(new WCRectangle(x, y, w, h));
+        return WCBufferedContextShim.createBufferedContext(w, h);
+    }
 
-        final WCPageBackBuffer buffer = WCGraphicsManager.getGraphicsManager().createPageBackBuffer();
-        buffer.validate(w, h);
-        return buffer.createGraphics();
+    public static BufferedImage paint(WebPage page, int x, int y, int w, int h) {
+        final WCGraphicsContext gc = setupPageWithGraphics(page, x, y, w, h);
+        page.paint(gc, x, y, w, h);
+        return gc.getImage().toBufferedImage();
     }
 
     public static void mockPrint(WebPage page, int x, int y, int w, int h) {

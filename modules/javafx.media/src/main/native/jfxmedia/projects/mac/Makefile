@@ -10,7 +10,7 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia
 
 BASE_DIR = ../../..
 GSTREAMER_LITE_DIR = $(BASE_DIR)/gstreamer/gstreamer-lite
-GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib/glib-2.56.1
+GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib
 
 OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 

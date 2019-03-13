@@ -624,8 +624,7 @@ CREATE_WRITE_STRING_FUNC (32, guint32);
 /**
  * gst_byte_writer_put_string_utf8:
  * @writer: #GstByteWriter instance
- * @data: (transfer none) (array zero-terminated=1) (type utf8): UTF8 string to
- *     write
+ * @data: (transfer none): UTF8 string to write
  *
  * Writes a NUL-terminated UTF8 string to @writer (including the terminator).
  *

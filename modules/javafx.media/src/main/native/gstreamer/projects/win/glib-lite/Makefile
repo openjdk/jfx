@@ -3,16 +3,14 @@
 #
 LINKER = link.exe
 
-GLIB_VERSION = 2.56.1
-
 export THIRD_PARTY_DIR = 3rd_party
-export GLIB_BASE_DIR = $(THIRD_PARTY_DIR)/glib/glib-$(GLIB_VERSION)
+export GLIB_BASE_DIR = $(THIRD_PARTY_DIR)/glib
 
 FFI_TARGET = libffi.lib
-GLIB_TARGET = libglib-$(GLIB_VERSION).lib
-GMODULE_TARGET = libmodule-$(GLIB_VERSION).lib
-GOBJECT_TARGET = libgobject-$(GLIB_VERSION).lib
-GTHREAD_TARGET = libgthread-$(GLIB_VERSION).lib
+GLIB_TARGET = libglib.lib
+GMODULE_TARGET = libmodule.lib
+GOBJECT_TARGET = libgobject.lib
+GTHREAD_TARGET = libgthread.lib
 MODULES = $(FFI_TARGET) $(GLIB_TARGET) $(GMODULE_TARGET) $(GOBJECT_TARGET) $(GTHREAD_TARGET)
 
 export BUILD_DIR = $(shell cygpath -u "$(OUTPUT_DIR)/$(BUILD_TYPE)")

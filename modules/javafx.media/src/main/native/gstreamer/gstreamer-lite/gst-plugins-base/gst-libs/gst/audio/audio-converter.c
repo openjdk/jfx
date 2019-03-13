@@ -368,12 +368,13 @@ gst_audio_converter_update_config (GstAudioConverter * convert,
 /**
  * gst_audio_converter_get_config:
  * @convert: a #GstAudioConverter
- * @in_rate: result input rate
- * @out_rate: result output rate
+ * @in_rate: (out) (optional): result input rate
+ * @out_rate: (out) (optional): result output rate
  *
  * Get the current configuration of @convert.
  *
- * Returns: a #GstStructure that remains valid for as long as @convert is valid
+ * Returns: (transfer none):
+ *   a #GstStructure that remains valid for as long as @convert is valid
  *   or until gst_audio_converter_update_config() is called.
  */
 const GstStructure *

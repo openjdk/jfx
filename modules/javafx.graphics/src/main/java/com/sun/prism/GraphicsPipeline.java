@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,9 +31,12 @@ import com.sun.javafx.font.PrismFontFactory;
 import com.sun.prism.impl.PrismSettings;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class GraphicsPipeline {
 
@@ -56,10 +59,38 @@ public abstract class GraphicsPipeline {
         SM3
     }
     private FontFactory fontFactory;
+    private final Set<Runnable> disposeHooks = new HashSet<Runnable>();
 
     public abstract boolean init();
     public void dispose() {
+        notifyDisposeHooks();
         installedPipeline = null;
+    }
+
+    /**
+     * Add a dispose hook to be called when the pipeline is disposed.
+     *
+     * @param runnable the {@link Runnable} to be called when the pipeline is disposed
+     */
+    public void addDisposeHook(Runnable runnable) {
+        if (runnable == null) {
+            return;
+        }
+        synchronized (disposeHooks) {
+            disposeHooks.add(runnable);
+        }
+    }
+
+    private void notifyDisposeHooks() {
+        List<Runnable> hooks;
+        synchronized (disposeHooks) {
+            hooks = new ArrayList<Runnable>(disposeHooks);
+            disposeHooks.clear();
+        }
+
+        for (Runnable hook : hooks) {
+            hook.run();
+        }
     }
 
     public abstract int getAdapterOrdinal(Screen screen);

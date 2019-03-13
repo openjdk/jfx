@@ -482,7 +482,7 @@ gst_collect_pads_set_query_function (GstCollectPads * pads,
 * @pads: the collectpads to use
 * @cdata: collect data of corresponding pad
 * @buf: buffer being clipped
-* @outbuf: (allow-none): output buffer with running time, or NULL if clipped
+* @outbuf: (allow-none) (out): output buffer with running time, or NULL if clipped
 * @user_data: user data (unused)
 *
 * Convenience clipping function that converts incoming buffer's timestamp

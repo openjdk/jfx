@@ -248,7 +248,7 @@ GST_API
 GstFlowReturn    gst_buffer_pool_acquire_buffer  (GstBufferPool *pool, GstBuffer **buffer,
                                                   GstBufferPoolAcquireParams *params);
 
-//GST_API
+GST_API
 void             gst_buffer_pool_release_buffer  (GstBufferPool *pool, GstBuffer *buffer);
 
 G_END_DECLS

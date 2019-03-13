@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
+
 import javafx.beans.*;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -123,9 +124,7 @@ import javafx.scene.control.skin.TableViewSkin;
  * TableView. The {@code Person} class will consist of a first
  * name and last name properties. That is:
  *
- * <pre>
- * {@code
- * public class Person {
+ * <pre> {@code public class Person {
  *     private StringProperty firstName;
  *     public void setFirstName(String value) { firstNameProperty().set(value); }
  *     public String getFirstName() { return firstNameProperty().get(); }
@@ -141,27 +140,36 @@ import javafx.scene.control.skin.TableViewSkin;
  *         if (lastName == null) lastName = new SimpleStringProperty(this, "lastName");
  *         return lastName;
  *     }
+ *
+ *     public Person(String firstName, String lastName) {
+ *         setFirstName(firstName);
+ *         setLastName(lastName);
+ *     }
  * }}</pre>
  *
- * <p>Firstly, a TableView instance needs to be defined, as such:
+ * <p>The data we will use for this example is:
  *
- * <pre>
- * {@code
- * TableView<Person> table = new TableView<>();}</pre>
+ * <pre> {@code List<Person> members = List.of(
+ *     new Person("William", "Reed"),
+ *     new Person("James", "Michaelson"),
+ *     new Person("Julius", "Dean"));}</pre>
  *
- * <p>With the basic table defined, we next focus on the data model. As mentioned,
- * for this example, we'll be using an {@literal ObservableList<Person>}. We can immediately
- * set such a list directly in to the TableView, as such:
+ * <p>Firstly, we need to create a data model. As mentioned,
+ * for this example, we'll be using an {@literal ObservableList<Person>}:
  *
- * <pre>
- * {@code
- * ObservableList<Person> teamMembers = getTeamMembers();
+ * <pre> {@code ObservableList<Person> teamMembers = FXCollections.observableArrayList(members);}</pre>
+ *
+ * <p>Then we create a TableView instance:
+ *
+ * <pre> {@code TableView<Person> table = new TableView<>();
  * table.setItems(teamMembers);}</pre>
  *
  * <p>With the items set as such, TableView will automatically update whenever
  * the <code>teamMembers</code> list changes. If the items list is available
  * before the TableView is instantiated, it is possible to pass it directly into
- * the constructor.
+ * the constructor:
+ *
+ * <pre> {@code TableView<Person> table = new TableView<>(teamMembers);}</pre>
  *
  * <p>At this point we now have a TableView hooked up to observe the
  * <code>teamMembers</code> observableList. The missing ingredient
@@ -170,21 +178,18 @@ import javafx.scene.control.skin.TableViewSkin;
  * create a two-column TableView to show the firstName and lastName properties,
  * we extend the last code sample as follows:
  *
- * <pre>
- * {@code
- * ObservableList<Person> teamMembers = ...;
- * table.setItems(teamMembers);
- *
- * TableColumn<Person,String> firstNameCol = new TableColumn<>("First Name");
- * firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
- * TableColumn<Person,String> lastNameCol = new TableColumn<>("Last Name");
- * lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
+ * <pre> {@code TableColumn<Person, String> firstNameCol = new TableColumn<>("First Name");
+ * firstNameCol.setCellValueFactory(new PropertyValueFactory<>(members.get(0).firstNameProperty().getName())));
+ * TableColumn<Person, String> lastNameCol = new TableColumn<>("Last Name");
+ * lastNameCol.setCellValueFactory(new PropertyValueFactory<>(members.get(0).lastNameProperty().getName())));
  *
  * table.getColumns().setAll(firstNameCol, lastNameCol);}</pre>
  *
+ * <img src="doc-files/TableView.png" alt="Image of the TableView control">
+ *
  * <p>With the code shown above we have fully defined the minimum properties
- * required to create a TableView instance. Running this code (assuming the
- * people ObservableList is appropriately created) will result in a TableView being
+ * required to create a TableView instance. Running this code  will result in the
+ * TableView being
  * shown with two columns for firstName and lastName. Any other properties of the
  * Person class will not be shown, as no TableColumns are defined.
  *
@@ -199,9 +204,7 @@ import javafx.scene.control.skin.TableViewSkin;
  * about cell value factories can be found in the {@link TableColumn} API
  * documentation, but briefly, here is how a TableColumn could be specified:
  *
- * <pre>
- * {@code
- * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
+ * <pre> {@code firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
  *         // p.getValue() returns the Person instance for a particular TableView row
  *         return p.getValue().firstNameProperty();
@@ -209,8 +212,7 @@ import javafx.scene.control.skin.TableViewSkin;
  * });
  *
  * // or with a lambda expression:
- * firstNameCol.setCellValueFactory(p -> p.getValue().firstNameProperty());
- * }</pre>
+ * firstNameCol.setCellValueFactory(p -> p.getValue().firstNameProperty());}</pre>
  *
  * <h3>TableView Selection / Focus APIs</h3>
  * <p>To track selection and focus, it is necessary to become familiar with the
@@ -230,9 +232,7 @@ import javafx.scene.control.skin.TableViewSkin;
  * multiple selection in a default TableView instance, it is therefore necessary
  * to do the following:
  *
- * <pre>
- * {@code
- * tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
+ * <pre> {@code tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
  * <h3>Customizing TableView Visuals</h3>
  * <p>The visuals of the TableView can be entirely customized by replacing the
@@ -274,9 +274,7 @@ import javafx.scene.control.skin.TableViewSkin;
  * property to the TableView {@link #comparatorProperty() comparator} property,
  * list so:</p>
  *
- * <pre>
- * {@code
- * // create a SortedList based on the provided ObservableList
+ * <pre> {@code // create a SortedList based on the provided ObservableList
  * SortedList sortedList = new SortedList(FXCollections.observableArrayList(2, 1, 3));
  *
  * // create a TableView with the sorted list set as the items it will show
@@ -285,8 +283,7 @@ import javafx.scene.control.skin.TableViewSkin;
  * // bind the sortedList comparator to the TableView comparator
  * sortedList.comparatorProperty().bind(tableView.comparatorProperty());
  *
- * // Don't forget to define columns!
- * }</pre>
+ * // Don't forget to define columns!}</pre>
  *
  * <h3>Editing</h3>
  * <p>This control supports inline editing of values, and this section attempts to
@@ -899,10 +896,9 @@ public class TableView<S> extends Control {
     }
 
     /**
-     * This is the function called when the user completes a column-resize
-     * operation. The two most common policies are available as static functions
-     * in the TableView class: {@link #UNCONSTRAINED_RESIZE_POLICY} and
-     * {@link #CONSTRAINED_RESIZE_POLICY}.
+     * Called when the user completes a column-resize operation. The two most common
+     * policies are available as static functions in the TableView class:
+     * {@link #UNCONSTRAINED_RESIZE_POLICY} and {@link #CONSTRAINED_RESIZE_POLICY}.
      * @return columnResizePolicy property
      */
     public final ObjectProperty<Callback<ResizeFeatures, Boolean>> columnResizePolicyProperty() {

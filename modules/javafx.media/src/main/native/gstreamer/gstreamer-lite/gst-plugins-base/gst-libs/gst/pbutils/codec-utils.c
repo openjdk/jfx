@@ -1165,7 +1165,7 @@ gst_codec_utils_mpeg4video_caps_set_level_and_profile (GstCaps * caps,
  * @channel_mapping_family: (out): the channel mapping family
  * @stream_count: (out): the number of independent streams
  * @coupled_count: (out): the number of stereo streams
- * @channel_mapping: (out) (array): the mapping between the streams
+ * @channel_mapping: (out) (array fixed-size=256): the mapping between the streams
  *
  * Parses Opus caps and fills the different fields with defaults if possible.
  *
@@ -1586,7 +1586,7 @@ gst_codec_utils_opus_create_header (guint32 rate,
  * @channel_mapping_family: (out): the channel mapping family
  * @stream_count: (out): the number of independent streams
  * @coupled_count: (out): the number of stereo streams
- * @channel_mapping: (out) (array): the mapping between the streams
+ * @channel_mapping: (out) (array fixed-size=256): the mapping between the streams
  * @pre_skip: (out): Pre-skip in 48kHz samples or 0
  * @output_gain: (out): Output gain or 0
  *

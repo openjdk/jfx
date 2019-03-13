@@ -66,6 +66,8 @@ C_SOURCES = \
 	gqueue.c \
 	grand.c \
 	gregex.c \
+        grcbox.c \
+        grefcount.c \
 	gscanner.c \
 	gsequence.c \
 	gshell.c \
@@ -121,7 +123,7 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
                  -Zc:wchar_t -Zc:forScope -Gd -wd"4430" -analyze- -errorReport:queue \
                  -wd"4005" -wd"4018" -wd"4028" -wd"4090" -wd"4113" -wd"4267" -wd"4715" \
                  -wd"4146" -wd"4311" -wd"4312" -wd"4133" -wd"4146" -wd"4334" -wd"4116" \
-                 -FI"msvc_recommended_pragmas.h" 
+                 -FI"msvc_recommended_pragmas.h"
 
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/glib/,$(DIRLIST)) \
            -I$(SRCBASE_DIR) \
@@ -176,7 +178,7 @@ OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES))
 default: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object))) 
+	$(AR) $(LIBFLAGS) $(foreach object,$(OBJECTS),$(shell cygpath -ma $(object)))
 
 $(OBJECTS): | $(DEP_DIRS)
 

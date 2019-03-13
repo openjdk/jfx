@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@ import com.sun.javafx.scene.NodeHelper;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.geom.PickRay;
+import com.sun.javafx.scene.input.PickResultChooser;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
@@ -739,6 +741,101 @@ public class ParentTest {
         ParentShim.getChildren(root).add(child);
 
         assertSame(scene, ParentShim.getChildren(child).get(3).getScene());
+    }
+
+    @Test
+    public void testPickingChildNode() {
+        Rectangle rect1 = new Rectangle();
+        rect1.setX(10);
+        rect1.setY(10);
+        rect1.setWidth(100);
+        rect1.setHeight(100);
+
+        Rectangle rect2 = new Rectangle();
+        rect2.setX(10);
+        rect2.setY(10);
+        rect2.setWidth(100);
+        rect2.setHeight(100);
+        Group g = new Group();
+
+        // needed since picking doesn't work unless rooted in a scene and visible
+        Scene scene = new Scene(g);
+        stage.setScene(scene);
+        stage.show();
+        ParentShim.getChildren(g).addAll(rect1, rect2);
+        toolkit.fireTestPulse();
+
+        PickResultChooser res = new PickResultChooser();
+        NodeHelper.pickNode(g, new PickRay(50, 50, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        assertSame(rect2, res.getIntersectedNode());
+        res = new PickResultChooser();
+        NodeHelper.pickNode(g, new PickRay(0, 0, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        assertNull(res.getIntersectedNode());
+    }
+
+    @Test
+    public void testPickingChildNodeWithViewOrderSet() {
+        Rectangle rect1 = new Rectangle();
+        rect1.setX(10);
+        rect1.setY(10);
+        rect1.setWidth(100);
+        rect1.setHeight(100);
+        rect1.setViewOrder(-1);
+
+        Rectangle rect2 = new Rectangle();
+        rect2.setX(10);
+        rect2.setY(10);
+        rect2.setWidth(100);
+        rect2.setHeight(100);
+        Group g = new Group();
+
+        // needed since picking doesn't work unless rooted in a scene and visible
+        Scene scene = new Scene(g);
+        stage.setScene(scene);
+        stage.show();
+        ParentShim.getChildren(g).addAll(rect1, rect2);
+        toolkit.fireTestPulse();
+
+        PickResultChooser res = new PickResultChooser();
+        NodeHelper.pickNode(g, new PickRay(50, 50, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        assertSame(rect1, res.getIntersectedNode());
+        res = new PickResultChooser();
+        NodeHelper.pickNode(g, new PickRay(0, 0, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        assertNull(res.getIntersectedNode());
+    }
+
+    @Test
+    public void testPickingChildNodeWithDirtyViewOrder() {
+        //JDK-8205092
+        Rectangle rect1 = new Rectangle();
+        rect1.setX(10);
+        rect1.setY(10);
+        rect1.setWidth(100);
+        rect1.setHeight(100);
+        rect1.setViewOrder(-1);
+
+        Rectangle rect2 = new Rectangle();
+        rect2.setX(10);
+        rect2.setY(10);
+        rect2.setWidth(100);
+        rect2.setHeight(100);
+        Group g = new Group();
+
+        // needed since picking doesn't work unless rooted in a scene and visible
+        Scene scene = new Scene(g);
+        stage.setScene(scene);
+        stage.show();
+        ParentShim.getChildren(g).addAll(rect1, rect2);
+        toolkit.fireTestPulse();
+
+        ParentShim.getChildren(g).remove(rect1);
+
+        PickResultChooser res = new PickResultChooser();
+        NodeHelper.pickNode(g, new PickRay(50, 50, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        assertSame(rect2, res.getIntersectedNode());
+        res = new PickResultChooser();
+        NodeHelper.pickNode(g, new PickRay(0, 0, 1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY), res);
+        assertNull(res.getIntersectedNode());
     }
 
     public static class MockParent extends Parent {

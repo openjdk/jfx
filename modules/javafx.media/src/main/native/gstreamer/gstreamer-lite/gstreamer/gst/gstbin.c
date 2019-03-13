@@ -1304,12 +1304,14 @@ no_state_recalc:
     s = (GstStructure *) gst_message_get_structure (msg);
     gst_structure_get (s, "bin.old.context", GST_TYPE_CONTEXT, &context, NULL);
     gst_structure_remove_field (s, "bin.old.context");
-    gst_element_post_message (GST_ELEMENT_CAST (bin), msg);
+    /* Keep the msg around while we still need access to the context_type */
+    gst_element_post_message (GST_ELEMENT_CAST (bin), gst_message_ref (msg));
 
     /* lock to avoid losing a potential write */
     GST_OBJECT_LOCK (bin);
     replacement =
         gst_element_get_context_unlocked (GST_ELEMENT_CAST (bin), context_type);
+    gst_message_unref (msg);
 
     if (replacement) {
       /* we got the context set from GstElement::set_context */
@@ -1459,7 +1461,7 @@ gst_bin_deep_element_added_func (GstBin * bin, GstBin * sub_bin,
 
   GST_LOG_OBJECT (parent_bin, "emitting deep-element-added for element "
       "%" GST_PTR_FORMAT " which has just been added to %" GST_PTR_FORMAT,
-      sub_bin, child);
+      child, sub_bin);
 
   g_signal_emit (parent_bin, gst_bin_signals[DEEP_ELEMENT_ADDED], 0, sub_bin,
       child);

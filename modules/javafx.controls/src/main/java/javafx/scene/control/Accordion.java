@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,13 +55,16 @@ import java.util.List;
  * Accordion sets focusTraversable to false.
  * </p>
  *
- * <p>Example:
- * <pre><code>
- * TitledPane t1 = new TitledPane("T1", new Button("B1"));
+ * <p>
+ * Example:
+ * <pre><code> TitledPane t1 = new TitledPane("T1", new Button("B1"));
  * TitledPane t2 = new TitledPane("T2", new Button("B2"));
  * TitledPane t3 = new TitledPane("T3", new Button("B3"));
  * Accordion accordion = new Accordion();
  * accordion.getPanes().addAll(t1, t2, t3);</code></pre>
+ *
+ * <img src="doc-files/Accordion.png" alt="Image of the Accordion control">
+ *
  * @since JavaFX 2.0
  */
 public class Accordion extends Control {

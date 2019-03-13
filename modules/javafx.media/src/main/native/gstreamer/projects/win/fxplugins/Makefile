@@ -5,8 +5,6 @@
 CC   = cl.exe
 LINKER = link.exe
 
-GLIB_VERSION = 2.56.1
-
 BASECLASSES_TARGET = baseclasses.lib
 MODULES = $(BASECLASSES_TARGET)
 
@@ -36,7 +34,7 @@ LDFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo -incremental:no -libpath:$
 OBJBASE_DIR = $(BUILD_DIR)/obj/plugins
 SRCBASE_DIR = ../../../plugins
 
-GLIB_DIR        = ../../../3rd_party/glib/glib-$(GLIB_VERSION)
+GLIB_DIR        = ../../../3rd_party/glib
 GSTREAMER_DIR   = ../../../gstreamer-lite
 BASECLASSES_DIR = $(shell cygpath -mas "$(BASECLASSES_SDK_DIR)"/Samples/multimedia/directshow/baseclasses)
 

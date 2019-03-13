@@ -1898,7 +1898,8 @@ gst_buffer_fill (GstBuffer * buffer, gsize offset, gconstpointer src,
  * gst_buffer_extract:
  * @buffer: a #GstBuffer.
  * @offset: the offset to extract
- * @dest: the destination address
+ * @dest: (out caller-allocates) (array length=size) (element-type guint8):
+ *     the destination address
  * @size: the size to extract
  *
  * Copy @size bytes starting from @offset in @buffer to @dest.

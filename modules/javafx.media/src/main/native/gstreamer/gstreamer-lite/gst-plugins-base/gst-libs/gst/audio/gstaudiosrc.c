@@ -46,6 +46,7 @@
 
 #include <gst/audio/audio.h>
 #include "gstaudiosrc.h"
+#include "gstaudioutilsprivate.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_audio_src_debug);
 #define GST_CAT_DEFAULT gst_audio_src_debug
@@ -191,6 +192,9 @@ audioringbuffer_thread_func (GstAudioRingBuffer * buf)
 
   if ((readfunc = csrc->read) == NULL)
     goto no_function;
+
+  if (G_UNLIKELY (!__gst_audio_set_thread_priority ()))
+    GST_WARNING_OBJECT (src, "failed to set thread priority");
 
   message = gst_message_new_stream_status (GST_OBJECT_CAST (buf),
       GST_STREAM_STATUS_TYPE_ENTER, GST_ELEMENT_CAST (src));

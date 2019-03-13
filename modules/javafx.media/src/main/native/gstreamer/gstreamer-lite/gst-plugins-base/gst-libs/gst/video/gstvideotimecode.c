@@ -79,7 +79,8 @@ gst_video_time_code_is_valid (const GstVideoTimeCode * tc)
   if (tc->frames >= fr && (tc->config.fps_n != 0 || tc->config.fps_d != 1))
     return FALSE;
   if (tc->config.fps_d == 1001) {
-    if (tc->config.fps_n != 30000 && tc->config.fps_n != 60000)
+    if (tc->config.fps_n != 30000 && tc->config.fps_n != 60000 &&
+        tc->config.fps_n != 24000)
       return FALSE;
   } else if (tc->config.fps_n % tc->config.fps_d != 0) {
     return FALSE;

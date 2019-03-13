@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,21 +40,18 @@ import javafx.geometry.Orientation;
  * </p>
  *
  * <p>
- * This first example creates a ProgressBar with an indeterminate value :
- * <pre><code>
- * import javafx.scene.control.ProgressBar;
+ * This first example creates a ProgressBar with an indeterminate value:
+ * <pre><code> ProgressBar p1 = new ProgressBar();</code></pre>
  *
- * ProgressBar p1 = new ProgressBar();
- * </code></pre>
+ * <img src="doc-files/ProgressBar_indeterminate.png" alt="Image of the indeterminate progress ProgressBar control">
+ *
  * <p>
- * This next example creates a ProgressBar which is 25% complete :
- * <pre><code>
- * import javafx.scene.control.ProgressBar;
- * ProgressBar p2 = new ProgressBar();
- * p2.setProgress(0.25F);
- * </code></pre>
+ * This next example creates a ProgressBar which is 25% complete:
+ * <pre><code> ProgressBar p2 = new ProgressBar();
+ * p2.setProgress(0.25F);</code></pre>
  *
- * Implementation of ProgressBar According to JavaFX UI Control API Specification
+ * <img src="doc-files/ProgressBar.png" alt="Image of the ProgressBar control">
+ *
  * @since JavaFX 2.0
  */
 public class ProgressBar extends ProgressIndicator {

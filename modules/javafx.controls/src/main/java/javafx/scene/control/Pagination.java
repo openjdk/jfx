@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -79,23 +79,22 @@ import javafx.scene.control.skin.PaginationSkin;
  * <h3>Creating a Pagination control:</h3>
  * <p>
  * A simple example of how to create a pagination control with ten pages and
- * each page containing ten hyperlinks.
+ * each page containing text.
  * </p>
  *
- * <pre>
- * {@code
- *   Pagination pagination = new Pagination(10, 0);
- *   pagination.setPageFactory(new Callback<Integer, Node>() {
- *       public Node call(Integer pageIndex) {
- *           VBox box = new VBox(5);
- *           for (int i = 0; i < pageIndex + 10; i++) {
- *               Hyperlink link = new Hyperlink(myurls[i]);
- *               box.getChildren().add(link);
- *           }
- *           return box;
- *       }
- *   });
- * }</pre>
+ * <pre><code> Pagination pagination = new Pagination(10, 0);
+ * pagination.setPageFactory(new Callback&lt;Integer, Node&gt;() {
+ *     &#064;Override
+ *     public Node call(Integer pageIndex) {
+ *         return new Label(pageIndex+1 + ". Lorem ipsum dolor sit amet,\n"
+ *                      + "consectetur adipiscing elit,\n"
+ *                      + "sed do eiusmod tempor incididunt ut\n"
+ *                      + "labore et dolore magna aliqua.");
+ *     }
+ * });</code></pre>
+ *
+ * <img src="doc-files/Pagination.png" alt="Image of the Pagination control">
+ *
  * @since JavaFX 2.2
  */
 @DefaultProperty("pages")

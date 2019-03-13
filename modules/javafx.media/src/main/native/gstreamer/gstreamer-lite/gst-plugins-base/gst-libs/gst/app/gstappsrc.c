@@ -103,9 +103,9 @@
 
 typedef enum
 {
-  NOONE_WAITING,
-  STREAM_WAITING,               /* streaming thread is waiting for application thread */
-  APP_WAITING,                  /* application thread is waiting for streaming thread */
+  NOONE_WAITING = 0,
+  STREAM_WAITING = 1 << 0,      /* streaming thread is waiting for application thread */
+  APP_WAITING = 1 << 1,         /* application thread is waiting for streaming thread */
 } GstAppSrcWaitStatus;
 
 struct _GstAppSrcPrivate
@@ -1242,7 +1242,7 @@ gst_app_src_create (GstBaseSrc * bsrc, guint64 offset, guint size,
         priv->offset += buf_size;
 
       /* signal that we removed an item */
-      if (priv->wait_status == APP_WAITING)
+      if ((priv->wait_status & APP_WAITING))
       g_cond_broadcast (&priv->cond);
 
       /* see if we go lower than the empty-percent */
@@ -1277,9 +1277,9 @@ gst_app_src_create (GstBaseSrc * bsrc, guint64 offset, guint size,
       goto eos;
 
     /* nothing to return, wait a while for new data or flushing. */
-    priv->wait_status = STREAM_WAITING;
+    priv->wait_status |= STREAM_WAITING;
     g_cond_wait (&priv->cond, &priv->mutex);
-    priv->wait_status = NOONE_WAITING;
+    priv->wait_status &= ~STREAM_WAITING;
   }
   g_mutex_unlock (&priv->mutex);
   return ret;
@@ -1840,9 +1840,9 @@ gst_app_src_push_internal (GstAppSrc * appsrc, GstBuffer * buffer,
         GST_DEBUG_OBJECT (appsrc, "waiting for free space");
         /* we are filled, wait until a buffer gets popped or when we
          * flush. */
-        priv->wait_status = APP_WAITING;
+        priv->wait_status |= APP_WAITING;
         g_cond_wait (&priv->cond, &priv->mutex);
-        priv->wait_status = NOONE_WAITING;
+        priv->wait_status &= ~APP_WAITING;
       } else {
         /* no need to wait for free space, we just pump more data into the
          * queue hoping that the caller reacts to the enough-data signal and
@@ -1867,7 +1867,7 @@ gst_app_src_push_internal (GstAppSrc * appsrc, GstBuffer * buffer,
   priv->queued_bytes += gst_buffer_get_size (buffer);
   }
 
-  if (priv->wait_status == STREAM_WAITING)
+  if ((priv->wait_status & STREAM_WAITING))
   g_cond_broadcast (&priv->cond);
 
   g_mutex_unlock (&priv->mutex);
