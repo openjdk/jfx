@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package com.sun.scenario.effect.compiler.parser;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.BinaryOpType;
 import com.sun.scenario.effect.compiler.tree.BinaryExpr;
-import org.antlr.runtime.RecognitionException;
+import com.sun.scenario.effect.compiler.tree.JSLCVisitor;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -47,19 +47,19 @@ public class AddExprTest extends MultExprTest {
     @Test
     public void oneAddition() throws Exception {
         BinaryExpr tree = parseTreeFor(mult + " + " + mult);
-        assertEquals(tree.getOp(), BinaryOpType.ADD);
+        assertEquals(BinaryOpType.ADD, tree.getOp());
     }
 
     @Test
     public void oneSubtraction() throws Exception {
         BinaryExpr tree = parseTreeFor(mult + "   - " + mult);
-        assertEquals(tree.getOp(), BinaryOpType.SUB);
+        assertEquals(BinaryOpType.SUB, tree.getOp());
     }
 
     @Test
     public void additiveCombination() throws Exception {
         BinaryExpr tree = parseTreeFor(mult + " + " + mult + '-' + mult + '-' + mult + "   +" + mult);
-        assertEquals(tree.getOp(), BinaryOpType.ADD);
+        assertEquals(BinaryOpType.ADD, tree.getOp());
     }
 
     @Test(expected = ClassCastException.class)
@@ -67,9 +67,10 @@ public class AddExprTest extends MultExprTest {
         parseTreeFor(mult + "!" + mult);
     }
 
-    private BinaryExpr parseTreeFor(String text) throws RecognitionException {
+    private BinaryExpr parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
-        return (BinaryExpr)parser.additive_expression();
+        JSLCVisitor visitor = new JSLCVisitor();
+        return (BinaryExpr) visitor.visit(parser.additive_expression());
     }
 
     protected String additive() {

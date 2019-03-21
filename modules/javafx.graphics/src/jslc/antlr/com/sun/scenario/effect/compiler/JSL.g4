@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,86 +25,9 @@
 
 grammar JSL;
 
-options {
-    backtrack=true;
-}
-
-tokens {
-    STAR  = '*'  ;
-    SLASH = '/'  ;
-    PLUS  = '+'  ;
-    DASH  = '-'  ;
-    LT    = '<'  ;
-    GT    = '>'  ;
-    LTEQ  = '<=' ;
-    GTEQ  = '>=' ;
-    EQEQ  = '==' ;
-    NEQ   = '!=' ;
-    AND   = '&&' ;
-    XOR   = '^^' ;
-    OR    = '||' ;
-    INC   = '++' ;
-    DEC   = '--' ;
-
-    STAREQ  = '*=' ;
-    SLASHEQ = '/=' ;
-    PLUSEQ  = '+=' ;
-    DASHEQ  = '-=' ;
-
-    LEFT_PAREN    = '(' ;
-    RIGHT_PAREN   = ')' ;
-    LEFT_BRACKET  = '[' ;
-    RIGHT_BRACKET = ']' ;
-    LEFT_BRACE    = '{' ;
-    RIGHT_BRACE   = '}' ;
-
-    LEFT_FRENCH   = '<<' ;
-    RIGHT_FRENCH  = '>>' ;
-
-    DOT           = '.' ;
-    COMMA         = ',' ;
-    EQUAL         = '=' ;
-    BANG          = '!' ;
-    TILDE         = '~' ;
-    QUESTION      = '?' ;
-    COLON         = ':' ;
-    SEMICOLON     = ';' ;
-
-    IF    = 'if'    ;
-    ELSE  = 'else'  ;
-    WHILE = 'while' ;
-    DO    = 'do'    ;
-    FOR   = 'for'   ;
-
-    UNROLL = 'unroll' ;
-
-    CONTINUE = 'continue' ;
-    BREAK    = 'break'    ;
-    DISCARD  = 'discard'  ;
-    RETURN   = 'return'   ;
-
-    VOID = 'void' ;
-}
-
 @header {
-    package com.sun.scenario.effect.compiler;
-
     import com.sun.scenario.effect.compiler.model.*;
     import com.sun.scenario.effect.compiler.tree.*;
-}
-
-@lexer::header {
-    package com.sun.scenario.effect.compiler;
-}
-
-@lexer::members {
-    // allow tests to turn on quiet mode, to reduce spewage
-    public static boolean quiet;
-
-    public void emitErrorMessage(String error) {
-        if (quiet) return;
-        super.emitErrorMessage(error);
-    }
 }
 
 @members {
@@ -113,25 +36,6 @@ tokens {
 
     public SymbolTable getSymbolTable() {
         return symbols;
-    }
-
-    // fail on first error for now
-    // TODO: collect errors and recover...
-    protected void mismatch(IntStream input, int tokenType, BitSet follow) throws RecognitionException {
-        MismatchedTokenException ex = new MismatchedTokenException(tokenType, input);
-        System.err.println("Token mismatch at " + ex.line + ":" + ex.charPositionInLine);
-        throw ex;
-    }
-    
-    public void recoverFromMismatchedSet(IntStream input, int ttype, BitSet follow)
-        throws RecognitionException {
-        throw new MissingTokenException(ttype, input, null);
-    }
-}
-
-@rulecatch {
-    catch (RecognitionException ex) {
-        throw ex;
     }
 }
 
@@ -188,21 +92,21 @@ postfix_expression returns [Expr expr]
 function_call returns [Expr expr]
         : id=IDENTIFIER LEFT_PAREN p=function_call_parameter_list? RIGHT_PAREN
             {
-                $expr = tm.call($id.text, p!=null ? $p.exprList : null);
+                $expr = tm.call($id.text, $p.ctx != null ? $p.exprList : null);
             }
         | ts=type_specifier LEFT_PAREN p=function_call_parameter_list? RIGHT_PAREN
             {
                 Type type = Type.fromToken($ts.text);
-                $expr = tm.vectorCtor(type, p!=null ? $p.exprList : null);
+                $expr = tm.vectorCtor(type, $p.ctx != null ? $p.exprList : null);
             }
         ;
-        
+
 function_call_parameter_list returns [List<Expr> exprList = new ArrayList<Expr>()]
         : a=assignment_expression { $exprList.add($a.expr); }
           (COMMA a=assignment_expression {$exprList.add($a.expr); }
           )*
         ;
-        
+
 unary_expression returns [Expr expr]
         : p=postfix_expression     { $expr = $p.expr; }
         | INC   u=unary_expression { $expr = tm.unary(UnaryOpType.INC,     $u.expr); }
@@ -224,7 +128,7 @@ multiplicative_expression returns [Expr expr]
           |SLASH b=multiplicative_expression { $expr = tm.binary(BinaryOpType.DIV, $expr, $b.expr); }
           )*
         ;
-        
+
 additive_expression returns [Expr expr]
         : a=multiplicative_expression { $expr = $a.expr; }
           (PLUS b=multiplicative_expression { $expr = tm.binary(BinaryOpType.ADD, $expr, $b.expr); }
@@ -247,25 +151,25 @@ equality_expression returns [Expr expr]
           | NEQ b=relational_expression { $expr = tm.binary(BinaryOpType.NEQ,  $expr, $b.expr); }
           )*
         ;
-        
+
 logical_and_expression returns [Expr expr]
         : a=equality_expression { $expr = $a.expr; }
           (AND b=equality_expression { $expr = tm.binary(BinaryOpType.AND, $expr, $b.expr); }
           )*
         ;
-        
+
 logical_xor_expression returns [Expr expr]
         : a=logical_and_expression { $expr = $a.expr; }
           (XOR b=logical_and_expression { $expr = tm.binary(BinaryOpType.XOR, $expr, $b.expr); }
           )*
         ;
-        
+
 logical_or_expression returns [Expr expr]
         : a=logical_xor_expression { $expr = $a.expr; }
           (OR b=logical_xor_expression { $expr = tm.binary(BinaryOpType.OR, $expr, $b.expr); }
           )*
         ;
-        
+
 ternary_part
         : QUESTION expression COLON assignment_expression
         ;
@@ -304,10 +208,10 @@ function_prototype returns [Function func]
         : t=type_specifier id=IDENTIFIER LEFT_PAREN p=parameter_declaration_list? RIGHT_PAREN
             {
                 Type type = Type.fromToken($t.text);
-                $func = symbols.declareFunction($id.text, type, (p != null) ? $p.paramList : null);
+                $func = symbols.declareFunction($id.text, type, ($p.ctx != null) ? $p.paramList : null);
             }
         ;
-        
+
 parameter_declaration returns [Param param]
         : t=type_specifier id=IDENTIFIER
             {
@@ -320,7 +224,7 @@ parameter_declaration_list returns [List<Param> paramList = new ArrayList<Param>
         : p=parameter_declaration { $paramList.add($p.param); }
           (COMMA p=parameter_declaration { $paramList.add($p.param); } )*
         ;
-        
+
 declaration_identifier_and_init returns [String name, Expr arrayInit, Expr init]
         : id=IDENTIFIER { $name = $id.text; }
           (LEFT_BRACKET ae=constant_expression { $arrayInit = $ae.expr; } RIGHT_BRACKET)?
@@ -384,7 +288,7 @@ single_declaration returns [VarDecl decl]
               $decl = tm.varDecl(var, $d.init);
           }
         ;
-        
+
 declaration returns [List<VarDecl> declList = new ArrayList<VarDecl>()]
         : s=single_declaration { $declList.add($s.decl); }
           (COMMA d=declaration_identifier_and_init
@@ -399,9 +303,9 @@ declaration returns [List<VarDecl> declList = new ArrayList<VarDecl>()]
           }
           )* SEMICOLON
         ;
-        
+
 // From GLSL spec...
-// Grammar Note:  No 'enum', or 'typedef'. 
+// Grammar Note:  No 'enum', or 'typedef'.
 
 fully_specified_type returns [Qualifier qual, Precision precision, Type type]
         : tq=type_qualifier tp=type_precision ts=type_specifier
@@ -425,7 +329,7 @@ fully_specified_type returns [Qualifier qual, Precision precision, Type type]
                 $type = Type.fromToken($ts.text);
             }
         ;
-        
+
 type_qualifier
         : 'const'
         | 'param'
@@ -436,35 +340,35 @@ type_precision
         | 'mediump'
         | 'highp'
         ;
-        
+
 type_specifier
         : type_specifier_nonarray array_brackets?
         ;
-        
+
 array_brackets
         : LEFT_BRACKET constant_expression RIGHT_BRACKET
         ;
-       
+
 type_specifier_nonarray
         : TYPE
         | VOID
         ;
-        
+
 initializer returns [Expr expr]
         : e=assignment_expression { $expr = $e.expr; }
         ;
-        
+
 declaration_statement returns [Stmt stmt]
         : d=declaration { $stmt = tm.declStmt($d.declList); }
         ;
-        
+
 statement returns [Stmt stmt]
         : c=compound_statement { $stmt = $c.stmt; }
         | s=simple_statement   { $stmt = $s.stmt; }
         ;
 
 // From GLSL spec...
-// Grammar Note:  No labeled statements; 'goto' is not supported. 
+// Grammar Note:  No labeled statements; 'goto' is not supported.
 
 simple_statement returns [Stmt stmt]
         : d=declaration_statement { $stmt = $d.stmt; }
@@ -473,7 +377,7 @@ simple_statement returns [Stmt stmt]
         | i=iteration_statement   { $stmt = $i.stmt; }
         | j=jump_statement        { $stmt = $j.stmt; }
         ;
-        
+
 compound_statement returns [Stmt stmt]
 @init {
     List<Stmt> stmtList = new ArrayList<Stmt>();
@@ -481,12 +385,12 @@ compound_statement returns [Stmt stmt]
         : LEFT_BRACE (s=statement { stmtList.add($s.stmt); })* RIGHT_BRACE
           { $stmt = tm.compoundStmt(stmtList); }
         ;
-        
+
 statement_no_new_scope returns [Stmt stmt]
         : c=compound_statement_no_new_scope { $stmt = $c.stmt; }
         | s=simple_statement                { $stmt = $s.stmt; }
         ;
-        
+
 compound_statement_no_new_scope returns [Stmt stmt]
 @init {
     List<Stmt> stmtList = new ArrayList<Stmt>();
@@ -494,19 +398,19 @@ compound_statement_no_new_scope returns [Stmt stmt]
         : LEFT_BRACE (s=statement { stmtList.add($s.stmt); })* RIGHT_BRACE
           { $stmt = tm.compoundStmt(stmtList); }
         ;
-        
+
 expression_statement returns [Stmt stmt]
         : SEMICOLON              { $stmt = tm.exprStmt(null); }
         | e=expression SEMICOLON { $stmt = tm.exprStmt($e.expr); }
         ;
-        
+
 constant_expression returns [Expr expr]
         : c=conditional_expression { $expr = $c.expr; }
         ;
 
 selection_statement returns [Stmt stmt]
         : IF LEFT_PAREN e=expression RIGHT_PAREN a=statement (ELSE b=statement)?
-              { $stmt = tm.selectStmt($e.expr, $a.stmt, (b != null) ? $b.stmt : null); }
+              { $stmt = tm.selectStmt($e.expr, $a.stmt, ($b.ctx != null) ? $b.stmt : null); }
         ;
 
 // TODO: implement second half?
@@ -535,12 +439,12 @@ for_init_statement returns [Stmt stmt]
         : e=expression_statement  { $stmt = $e.stmt; }
         | d=declaration_statement { $stmt = $d.stmt; }
         ;
-        
+
 for_rest_statement returns [Expr cond, Expr expr]
-        : c=condition SEMICOLON e=expression? { $cond = $c.expr; if (e != null) $expr = $e.expr; }
-        | SEMICOLON e=expression? { if (e != null) $expr = $e.expr; }
+        : c=condition SEMICOLON e=expression? { $cond = $c.expr; if ($e.ctx != null) $expr = $e.expr; }
+        | SEMICOLON e=expression? { if ($e.ctx != null) $expr = $e.expr; }
         ;
-        
+
 jump_statement returns [Stmt stmt]
         : CONTINUE SEMICOLON            { $stmt = tm.continueStmt(); }
         | BREAK SEMICOLON               { $stmt = tm.breakStmt(); }
@@ -548,9 +452,9 @@ jump_statement returns [Stmt stmt]
         | RETURN SEMICOLON              { $stmt = tm.returnStmt(null); }
         | RETURN e=expression SEMICOLON { $stmt = tm.returnStmt($e.expr); }
         ;
-        
+
 // From GLSL spec...
-// Grammar Note:  No 'goto'.  Gotos are not supported. 
+// Grammar Note:  No 'goto'.  Gotos are not supported.
 
 translation_unit returns [ProgramUnit prog]
 @init {
@@ -559,7 +463,7 @@ translation_unit returns [ProgramUnit prog]
         : (e=external_declaration { declList.addAll($e.res); } )+
             { $prog = tm.programUnit(declList); }
         ;
-        
+
 external_declaration returns [List<ExtDecl> res = new ArrayList<ExtDecl>()]
         : f=function_definition { $res.add($f.def); }
         | d=declaration         { $res.addAll($d.declList); }
@@ -567,7 +471,7 @@ external_declaration returns [List<ExtDecl> res = new ArrayList<ExtDecl>()]
         ;
 
 // From GLSL spec...
-// Grammar Note:  No 'switch'.  Switch statements not supported. 
+// Grammar Note:  No 'switch'.  Switch statements not supported.
 
 function_definition returns [FuncDef def]
 @init {
@@ -582,6 +486,53 @@ finally {
 glue_block returns [GlueBlock block]
         : g=GLUE_BLOCK { $block = tm.glueBlock($g.text.substring(2, $g.text.length()-2)); }
         ;
+
+STAR : '*';
+SLASH : '/';
+PLUS : '+';
+DASH : '-';
+LT : '<';
+GT : '>';
+LTEQ : '<=';
+GTEQ : '>=';
+EQEQ : '==';
+NEQ : '!=';
+AND : '&&';
+XOR : '^^';
+OR : '||';
+INC : '++';
+DEC : '--';
+STAREQ : '*=';
+SLASHEQ : '/=';
+PLUSEQ : '+=';
+DASHEQ : '-=';
+LEFT_PAREN : '(';
+RIGHT_PAREN : ')';
+LEFT_BRACKET : '[';
+RIGHT_BRACKET : ']';
+LEFT_BRACE : '{';
+RIGHT_BRACE : '}';
+LEFT_FRENCH : '<<';
+RIGHT_FRENCH : '>>';
+DOT : '.';
+COMMA : ',';
+EQUAL : '=';
+BANG : '!';
+TILDE : '~';
+QUESTION : '?';
+COLON : ':';
+SEMICOLON : ';';
+IF : 'if';
+ELSE : 'else';
+WHILE : 'while';
+DO : 'do';
+FOR : 'for';
+UNROLL : 'unroll';
+CONTINUE : 'continue';
+BREAK : 'break';
+DISCARD : 'discard';
+RETURN : 'return';
+VOID : 'void';
 
 TYPE
         : 'float2'
@@ -648,15 +599,15 @@ FLOATCONSTANT
 fragment
 DIGIT   : '0'..'9' ;
 
-WS  :  (' '|'\r'|'\t'|'\u000C'|'\n') {$channel=HIDDEN;}
+WS  :  (' '|'\r'|'\t'|'\u000C'|'\n') -> channel(HIDDEN)
     ;
 
 COMMENT
-    :   '/*' ( options {greedy=false;} : . )* '*/' {$channel=HIDDEN;}
+    :   '/*' (.)*? '*/' -> channel(HIDDEN)
     ;
 
 LINE_COMMENT
-    : '//' ~('\n'|'\r')* '\r'? '\n' {$channel=HIDDEN;}
+    : '//' ~('\n'|'\r')* '\r'? '\n' -> channel(HIDDEN)
     ;
 
 GLUE_BLOCK

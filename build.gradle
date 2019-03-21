@@ -1918,7 +1918,7 @@ project(":graphics") {
     dependencies {
         stubCompile group: "junit", name: "junit", version: "4.8.2"
 
-        antlr group: "org.antlr", name: "antlr-complete", version: "3.5.2"
+        antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath_GraphicsOne
@@ -1969,14 +1969,14 @@ project(":graphics") {
         executable = JAVA
         classpath = project.configurations.antlr
         workingDir = wd
-        main = "org.antlr.Tool"
+        main = "org.antlr.v4.Tool"
 
         args = [
-            "-Xconversiontimeout",
-            "30000",
             "-o",
             "$buildDir/gensrc/antlr",
-            "com/sun/scenario/effect/compiler/JSL.g" ]
+            "-package",
+            "com.sun.scenario.effect.compiler",
+            "com/sun/scenario/effect/compiler/JSL.g4" ]
 
         inputs.dir wd
         outputs.dir file("$buildDir/gensrc/antlr")
@@ -2297,7 +2297,7 @@ project(":graphics") {
             libsDir.mkdirs();
 
             def allLibsPresent = true
-            def libNames = [ "antlr-complete-3.5.2.jar" ]
+            def libNames = [ "antlr4-4.7.2-complete.jar" ]
             libNames.each { name ->
                 File f = new File(libsDir, name)
                 if (!f.exists()) allLibsPresent = false
@@ -2308,7 +2308,7 @@ project(":graphics") {
                 copy {
                     into libsDir
                     from f.getParentFile()
-                    include "**/antlr-complete-3.5.2.jar"
+                    include "**/antlr4-4.7.2-complete.jar"
                     includeEmptyDirs = false
                 }
             }

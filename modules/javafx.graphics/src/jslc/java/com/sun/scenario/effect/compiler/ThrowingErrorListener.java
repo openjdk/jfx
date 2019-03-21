@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,21 @@
  * questions.
  */
 
-package com.sun.scenario.effect.compiler.lexer;
+package com.sun.scenario.effect.compiler;
 
-import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+import org.antlr.v4.runtime.BaseErrorListener;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 
-public class CommentTest extends LexerBase {
+public class ThrowingErrorListener extends BaseErrorListener {
 
-    @Test
-    public void comment() throws Exception {
-        assertRecognized("/* ignored */");
-    }
-
-    @Test
-    public void multilineComment() throws Exception {
-        assertRecognized("/* ignored \n * line 2 */");
-    }
-
-    @Test
-    public void notAComment() throws Exception {
-        assertNotRecognized("ignored");
-    }
+    public static final ThrowingErrorListener INSTANCE = new ThrowingErrorListener();
 
     @Override
-    protected int expectedTokenType() {
-        return JSLLexer.COMMENT;
+    public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e)
+            throws ParseCancellationException {
+        // We cannot throw a RecognitionException here because it would be swallowed by DefaultErrorStrategy.
+        throw new ParseCancellationException("line " + line + ":" + charPositionInLine + " " + msg);
     }
 }

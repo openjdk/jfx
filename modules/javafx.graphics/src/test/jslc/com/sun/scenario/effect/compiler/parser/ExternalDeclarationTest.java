@@ -35,7 +35,7 @@ import com.sun.scenario.effect.compiler.model.Variable;
 import com.sun.scenario.effect.compiler.tree.ExtDecl;
 import com.sun.scenario.effect.compiler.tree.FuncDef;
 import com.sun.scenario.effect.compiler.tree.VarDecl;
-import org.antlr.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -125,12 +125,12 @@ public class ExternalDeclarationTest extends ParserBase {
         assertNotNull(d.getStmt());
     }
 
-    @Test(expected = RecognitionException.class)
+    @Test(expected = ParseCancellationException.class)
     public void notAnExtDecl() throws Exception {
         parseTreeFor("foo = 4");
     }
 
-    private List<ExtDecl> parseTreeFor(String text) throws RecognitionException {
+    private List<ExtDecl> parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
         return parser.external_declaration();
     }

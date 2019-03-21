@@ -28,7 +28,7 @@ package com.sun.scenario.effect.compiler.parser;
 import com.sun.scenario.effect.compiler.JSLParser;
 import junit.framework.Assert;
 import junit.framework.AssertionFailedError;
-import org.antlr.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -107,7 +107,7 @@ public class FieldSelectTest extends ParserBase {
         assertEquals(tree, ".wzyx");
     }
 
-    @Test(expected = RecognitionException.class)
+    @Test(expected = ParseCancellationException.class)
     public void notAFieldSelection1() throws Exception {
         parseTreeFor("qpz");
     }
@@ -127,11 +127,11 @@ public class FieldSelectTest extends ParserBase {
         parseTreeFor(".xyba", true);
     }
 
-    private String parseTreeFor(String text) throws RecognitionException {
+    private String parseTreeFor(String text) throws Exception {
         return parseTreeFor(text, false);
     }
 
-    private String parseTreeFor(String text, boolean expectEx) throws RecognitionException {
+    private String parseTreeFor(String text, boolean expectEx) throws Exception {
         JSLParser parser = parserOver(text);
         String ret = parser.field_selection();
         // TODO: there's probably a better way to check for trailing (invalid) characters

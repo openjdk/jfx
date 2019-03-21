@@ -33,7 +33,7 @@ import com.sun.scenario.effect.compiler.tree.ExprStmt;
 import com.sun.scenario.effect.compiler.tree.ForStmt;
 import com.sun.scenario.effect.compiler.tree.Stmt;
 import com.sun.scenario.effect.compiler.tree.WhileStmt;
-import org.antlr.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -102,12 +102,12 @@ public class IterationStatementTest extends ParserBase {
         assertTrue(s.getStmt() instanceof ExprStmt);
     }
 
-    @Test(expected = RecognitionException.class)
+    @Test(expected = ParseCancellationException.class)
     public void notAnIterationStmt() throws Exception {
         parseTreeFor("return;");
     }
 
-    private Stmt parseTreeFor(String text) throws RecognitionException {
+    private Stmt parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
         parser.getSymbolTable().declareVariable("i", Type.INT, null);
         parser.getSymbolTable().declareVariable("j", Type.INT, null);

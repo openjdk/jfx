@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,9 +40,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Map;
-import org.antlr.stringtemplate.StringTemplate;
-import org.antlr.stringtemplate.StringTemplateGroup;
-import org.antlr.stringtemplate.language.DefaultTemplateLexer;
+import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupFile;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * This class is only used at build time to generate EffectPeer
@@ -514,9 +516,8 @@ class PrismLoaderBackend extends TreeScanner {
         scan(program);
     }
 
-    private StringTemplate getTemplate(String type) {
-        Reader template = new InputStreamReader(getClass().getResourceAsStream(type + "Glue.stg"));
-        StringTemplateGroup group = new StringTemplateGroup(template, DefaultTemplateLexer.class);
+    private ST getTemplate(String type) {
+        STGroup group = new STGroupFile(getClass().getResource(type + "Glue.stg"), UTF_8.displayName(), '$', '$');
         return group.getInstanceOf("glue");
     }
 
@@ -536,13 +537,13 @@ class PrismLoaderBackend extends TreeScanner {
             }
         }
 
-        StringTemplate glue = getTemplate("PrismLoader");
-        glue.setAttribute("shaderName", shaderName);
-        glue.setAttribute("samplerInit", samplerInit.toString());
-        glue.setAttribute("paramInit", paramInit.toString());
-        glue.setAttribute("maxTexCoordIndex", maxTexCoordIndex);
-        glue.setAttribute("isPixcoordUsed", isPixcoordReferenced);
-        return glue.toString();
+        ST glue = getTemplate("PrismLoader");
+        glue.add("shaderName", shaderName);
+        glue.add("samplerInit", samplerInit.toString());
+        glue.add("paramInit", paramInit.toString());
+        glue.add("maxTexCoordIndex", maxTexCoordIndex);
+        glue.add("isPixcoordUsed", isPixcoordReferenced);
+        return glue.render();
     }
 
     @Override

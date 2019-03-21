@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,7 @@ import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.JSLParser.fully_specified_type_return;
 import com.sun.scenario.effect.compiler.model.Qualifier;
 import com.sun.scenario.effect.compiler.model.Type;
-import org.antlr.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -50,12 +50,12 @@ public class FullySpecifiedTypeTest extends ParserBase {
         assertEquals(ret.type, Type.BOOL3);
     }
 
-    @Test(expected = RecognitionException.class)
+    @Test(expected = ParseCancellationException.class)
     public void notAFullySpecifiedType() throws Exception {
         parseTreeFor("double");
     }
 
-    private fully_specified_type_return parseTreeFor(String text) throws RecognitionException {
+    private fully_specified_type_return parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
         return parser.fully_specified_type();
     }

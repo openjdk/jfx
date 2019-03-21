@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import com.sun.scenario.effect.compiler.model.UnaryOpType;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.UnaryExpr;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
-import org.antlr.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -96,12 +96,12 @@ public class UnaryExprTest extends PrimaryExprTest {
         assertEquals(((VariableExpr)tree.getExpr()).getVariable().getName(), "foo");
     }
 
-    @Test(expected = RecognitionException.class)
+    @Test(expected = ParseCancellationException.class)
     public void notAUnaryExpression() throws Exception {
         parseTreeFor("^" + primary);
     }
 
-    private UnaryExpr parseTreeFor(String text) throws RecognitionException {
+    private UnaryExpr parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
         parser.getSymbolTable().declareVariable("foo", Type.INT, null);
         parser.getSymbolTable().declareVariable("vec", Type.INT3, null);
