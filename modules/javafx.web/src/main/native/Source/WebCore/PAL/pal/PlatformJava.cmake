@@ -9,15 +9,9 @@ list(APPEND PAL_INCLUDE_DIRECTORIES
     "${ICU_INCLUDE_DIRS}"
 )
 
-if (APPLE)
-    list(APPEND PAL_SOURCES
-        crypto/commoncrypto/CryptoDigestCommonCrypto.cpp
-    )
-else ()
-    list(APPEND PAL_SOURCES
-        crypto/java/CryptoDigestJava.cpp
-    )
-endif ()
+list(APPEND PAL_SOURCES
+    crypto/java/CryptoDigestJava.cpp
+)
 
 add_definitions(-DSTATICALLY_LINKED_WITH_JavaScriptCore)
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
