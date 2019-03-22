@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,9 +37,11 @@ import com.sun.scenario.effect.compiler.tree.GlueBlock;
 import com.sun.scenario.effect.compiler.tree.ProgramUnit;
 import com.sun.scenario.effect.compiler.tree.TreeScanner;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
-import org.antlr.stringtemplate.StringTemplate;
-import org.antlr.stringtemplate.StringTemplateGroup;
-import org.antlr.stringtemplate.language.DefaultTemplateLexer;
+import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupFile;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  */
@@ -54,9 +56,8 @@ public class PrismBackend extends TreeScanner {
         scan(program);
     }
 
-    private StringTemplate getTemplate(String type) {
-        Reader template = new InputStreamReader(getClass().getResourceAsStream(type + "Glue.stg"));
-        StringTemplateGroup group = new StringTemplateGroup(template, DefaultTemplateLexer.class);
+    private ST getTemplate(String type) {
+        STGroup group = new STGroupFile(getClass().getResource(type + "Glue.stg"), UTF_8.displayName(), '$', '$');
         return group.getInstanceOf("glue");
     }
 
@@ -126,19 +127,19 @@ public class PrismBackend extends TreeScanner {
             interfaceDecl.append("implements "+interfaceName);
         }
 
-        StringTemplate glue = getTemplate("Prism");
-        glue.setAttribute("effectName", effectName);
-        glue.setAttribute("peerName", peerName);
-        glue.setAttribute("superClass", superClass);
-        glue.setAttribute("genericsDecl", genericsDecl.toString());
-        glue.setAttribute("interfaceDecl", interfaceDecl.toString());
-        glue.setAttribute("usercode", usercode.toString());
-        glue.setAttribute("samplerLinear", samplerLinear.toString());
-        glue.setAttribute("samplerInit", samplerInit.toString());
-        glue.setAttribute("paramInit", paramInit.toString());
-        glue.setAttribute("paramUpdate", paramUpdate.toString());
-        glue.setAttribute("isPixcoordUsed", isPixcoordReferenced);
-        return glue.toString();
+        ST glue = getTemplate("Prism");
+        glue.add("effectName", effectName);
+        glue.add("peerName", peerName);
+        glue.add("superClass", superClass);
+        glue.add("genericsDecl", genericsDecl.toString());
+        glue.add("interfaceDecl", interfaceDecl.toString());
+        glue.add("usercode", usercode.toString());
+        glue.add("samplerLinear", samplerLinear.toString());
+        glue.add("samplerInit", samplerInit.toString());
+        glue.add("paramInit", paramInit.toString());
+        glue.add("paramUpdate", paramUpdate.toString());
+        glue.add("isPixcoordUsed", isPixcoordReferenced);
+        return glue.render();
     }
 
     @Override

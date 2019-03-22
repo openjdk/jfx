@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,27 @@
  * questions.
  */
 
-package com.sun.scenario.effect.compiler.lexer;
+package com.sun.javafx.webkit;
 
-import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+import com.sun.webkit.security.WCMessageDigest;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
-public class CommentTest extends LexerBase {
+public class WCMessageDigestImpl extends WCMessageDigest {
+    private final MessageDigest digest;
 
-    @Test
-    public void comment() throws Exception {
-        assertRecognized("/* ignored */");
-    }
-
-    @Test
-    public void multilineComment() throws Exception {
-        assertRecognized("/* ignored \n * line 2 */");
-    }
-
-    @Test
-    public void notAComment() throws Exception {
-        assertNotRecognized("ignored");
+    public WCMessageDigestImpl(String algorithm) throws NoSuchAlgorithmException {
+        digest = MessageDigest.getInstance(algorithm);
     }
 
     @Override
-    protected int expectedTokenType() {
-        return JSLLexer.COMMENT;
+    public void addBytes(ByteBuffer input) {
+        digest.update(input);
+    }
+
+    @Override
+    public byte[] computeHash() {
+        return digest.digest();
     }
 }

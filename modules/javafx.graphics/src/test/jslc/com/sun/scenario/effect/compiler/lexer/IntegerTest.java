@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.scenario.effect.compiler.lexer;
 
 import com.sun.scenario.effect.compiler.JSLLexer;
-import org.antlr.runtime.RecognitionException;
 import org.junit.Test;
 
 public class IntegerTest extends LexerBase {
@@ -38,14 +37,9 @@ public class IntegerTest extends LexerBase {
         }
     }
 
-    @Test(expected = RecognitionException.class)
+    @Test
     public void badDigits() throws Exception {
-        assertRecognized("H128376");
-    }
-
-    @Override
-    protected void fireLexerRule(JSLLexer lexer) throws Exception {
-        lexer.mINTCONSTANT();
+        recognize("H128376");
     }
 
     @Override

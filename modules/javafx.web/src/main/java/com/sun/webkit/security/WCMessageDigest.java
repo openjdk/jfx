@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,33 @@
  * questions.
  */
 
-package com.sun.scenario.effect.compiler.lexer;
+package com.sun.webkit.security;
 
-import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+import com.sun.javafx.webkit.WCMessageDigestImpl;
+import com.sun.webkit.perf.WCMessageDigestPerfLogger;
+import java.nio.ByteBuffer;
 
-public class CommentTest extends LexerBase {
-
-    @Test
-    public void comment() throws Exception {
-        assertRecognized("/* ignored */");
+public abstract class WCMessageDigest {
+    /**
+     * Creates the instance of WCMessageDigest for the given algorithm.
+     * @param algorithm the name of the algorithm like SHA-1, SHA-256.
+     */
+    protected static WCMessageDigest getInstance(String algorithm) {
+        try {
+            WCMessageDigest digest = new WCMessageDigestImpl(algorithm);
+            return WCMessageDigestPerfLogger.isEnabled() ? new WCMessageDigestPerfLogger(digest) : digest;
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
-    @Test
-    public void multilineComment() throws Exception {
-        assertRecognized("/* ignored \n * line 2 */");
-    }
+    /**
+     * Update the digest using the specified ByteBuffer.
+     */
+    public abstract void addBytes(ByteBuffer input);
 
-    @Test
-    public void notAComment() throws Exception {
-        assertNotRecognized("ignored");
-    }
-
-    @Override
-    protected int expectedTokenType() {
-        return JSLLexer.COMMENT;
-    }
+    /**
+     * Returns the computed hash value.
+     */
+    public abstract byte[] computeHash();
 }

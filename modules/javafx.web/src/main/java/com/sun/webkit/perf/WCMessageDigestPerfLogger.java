@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,40 @@
  * questions.
  */
 
-package com.sun.scenario.effect.compiler.lexer;
+package com.sun.webkit.perf;
 
-import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.webkit.security.WCMessageDigest;
+import java.nio.ByteBuffer;
 
-public class CommentTest extends LexerBase {
+public class WCMessageDigestPerfLogger extends WCMessageDigest {
+    private static final PlatformLogger log =
+            PlatformLogger.getLogger(WCMessageDigestPerfLogger.class.getName());
 
-    @Test
-    public void comment() throws Exception {
-        assertRecognized("/* ignored */");
+    private static final PerfLogger logger = PerfLogger.getLogger(log);
+
+    final private WCMessageDigest digest;
+
+    public WCMessageDigestPerfLogger(WCMessageDigest digest) {
+        this.digest = digest;
     }
 
-    @Test
-    public void multilineComment() throws Exception {
-        assertRecognized("/* ignored \n * line 2 */");
-    }
-
-    @Test
-    public void notAComment() throws Exception {
-        assertNotRecognized("ignored");
+    public synchronized static boolean isEnabled() {
+        return logger.isEnabled();
     }
 
     @Override
-    protected int expectedTokenType() {
-        return JSLLexer.COMMENT;
+    public void addBytes(ByteBuffer input) {
+        logger.resumeCount("ADDBYTES");
+        digest.addBytes(input);
+        logger.suspendCount("ADDBYTES");
+    }
+
+    @Override
+    public byte[] computeHash() {
+        logger.resumeCount("COMPUTEHASH");
+        byte[] result = digest.computeHash();
+        logger.suspendCount("COMPUTEHASH");
+        return result;
     }
 }

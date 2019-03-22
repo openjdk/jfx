@@ -32,10 +32,11 @@ import com.sun.scenario.effect.compiler.backend.sw.java.JSWBackend;
 import com.sun.scenario.effect.compiler.backend.sw.me.MEBackend;
 import com.sun.scenario.effect.compiler.backend.sw.sse.SSEBackend;
 import com.sun.scenario.effect.compiler.tree.ProgramUnit;
-import org.antlr.runtime.ANTLRInputStream;
-import org.antlr.runtime.CommonTokenStream;
-import org.antlr.stringtemplate.CommonGroupLoader;
-import org.antlr.stringtemplate.StringTemplateGroup;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupDir;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -67,10 +68,11 @@ public class JSLC {
     public static final int OUT_ALL        = OUT_SW_PEERS | OUT_HW_PEERS | OUT_HW_SHADERS;
 
     private static final String rootPkg = "com/sun/scenario/effect";
+    public static final STGroup group;
 
     static {
-        CommonGroupLoader loader = new CommonGroupLoader(rootPkg + "/compiler/backend", null);
-        StringTemplateGroup.registerGroupLoader(loader);
+        group = new STGroupDir(rootPkg + "/compiler/backend", null);
+        group.load();
     }
 
     public static class OutInfo {
@@ -95,7 +97,7 @@ public class JSLC {
 
     public static ParserInfo getParserInfo(InputStream stream) throws Exception {
         JSLParser parser = parse(stream);
-        ProgramUnit program = parser.translation_unit();
+        ProgramUnit program = parser.translation_unit().prog;
         return new ParserInfo(parser, program);
     }
 
@@ -156,14 +158,19 @@ public class JSLC {
         throws Exception
     {
         // Read input
-        ANTLRInputStream input = new ANTLRInputStream(stream);
+        CharStream input = CharStreams.fromStream(stream);
 
         // Lexer
         JSLLexer lexer = new JSLLexer(input);
+        lexer.removeErrorListeners();
+        lexer.addErrorListener(ThrowingErrorListener.INSTANCE);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
 
         // Parser and AST construction
-        return new JSLParser(tokens);
+        JSLParser parser = new JSLParser(tokens);
+        parser.removeErrorListeners();
+        parser.addErrorListener(ThrowingErrorListener.INSTANCE);
+        return parser;
     }
 
     private static ParserInfo compile(JSLCInfo jslcinfo,

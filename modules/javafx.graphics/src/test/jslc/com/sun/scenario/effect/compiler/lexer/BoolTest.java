@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.scenario.effect.compiler.lexer;
 
 import com.sun.scenario.effect.compiler.JSLLexer;
-import org.antlr.runtime.RecognitionException;
 import org.junit.Test;
 
 public class BoolTest extends LexerBase {
@@ -41,14 +40,8 @@ public class BoolTest extends LexerBase {
         assertRecognized("false");
     }
 
-    @Test(expected = RecognitionException.class)
     public void notABool() throws Exception {
-        assertRecognized("629");
-    }
-
-    @Override
-    protected void fireLexerRule(JSLLexer lexer) throws Exception {
-        lexer.mBOOLCONSTANT();
+        assertNotRecognized("629");
     }
 
     @Override

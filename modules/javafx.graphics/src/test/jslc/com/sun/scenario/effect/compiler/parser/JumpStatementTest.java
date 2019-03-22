@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ import com.sun.scenario.effect.compiler.tree.DiscardStmt;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.ReturnStmt;
 import com.sun.scenario.effect.compiler.tree.Stmt;
-import org.antlr.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -75,12 +75,12 @@ public class JumpStatementTest extends ParserBase {
         assertEquals(lit.getValue(), new Integer(3));
     }
 
-    @Test(expected = RecognitionException.class)
+    @Test(expected = ParseCancellationException.class)
     public void notAJump() throws Exception {
         parseTreeFor("float;");
     }
 
-    private Stmt parseTreeFor(String text) throws RecognitionException {
+    private Stmt parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
         return parser.jump_statement();
     }
