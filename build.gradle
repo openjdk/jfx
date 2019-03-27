@@ -1563,9 +1563,11 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                 maven(MavenPublication) {
                     artifactId = "javafx-${project.name}"
 
-                    artifact project.tasks."moduleEmptyPublicationJar$t.capital"
-                    artifact project.tasks."modularPublicationJar$t.capital" {
-                        classifier "$t.name"
+                    afterEvaluate {
+                        artifact project.tasks."moduleEmptyPublicationJar$t.capital"
+                        artifact project.tasks."modularPublicationJar$t.capital" {
+                            classifier "$t.name"
+                        }
                     }
 
                     pom.withXml {
@@ -3868,7 +3870,8 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the javafx-swt.jar for the $t.name target"
-        archiveName = "${project(":swt").buildDir}/libs/javafx-swt.jar";
+        destinationDir = file("${project(":swt").buildDir}/libs")
+        archiveName = "javafx-swt.jar"
         includeEmptyDirs = false
         from("${project(":swt").buildDir}/classes/java/main");
         include("**/javafx/embed/swt/**")
@@ -3888,7 +3891,7 @@ compileTargets { t ->
         dependsOn(javafxSwtTask)
 
         doLast() {
-            ant.jar (update: true, index: true, destfile: javafxSwtTask.archiveName)
+            ant.jar (update: true, index: true, destfile: "${javafxSwtTask.destinationDir}/${javafxSwtTask.archiveName}")
         }
     }
 
