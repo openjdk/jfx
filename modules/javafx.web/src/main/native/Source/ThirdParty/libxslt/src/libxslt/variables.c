@@ -123,7 +123,7 @@ xsltRegisterTmpRVT(xsltTransformContextPtr ctxt, xmlDocPtr RVT)
     return(-1);
 
     RVT->prev = NULL;
-    RVT->psvi = XSLT_RVT_VARIABLE;
+    RVT->psvi = XSLT_RVT_LOCAL;
 
     /*
     * We'll restrict the lifetime of user-created fragments
@@ -163,6 +163,7 @@ xsltRegisterLocalRVT(xsltTransformContextPtr ctxt,
     return(-1);
 
     RVT->prev = NULL;
+    RVT->psvi = XSLT_RVT_LOCAL;
 
     /*
     * When evaluating "select" expressions of xsl:variable
@@ -173,7 +174,6 @@ xsltRegisterLocalRVT(xsltTransformContextPtr ctxt,
     if ((ctxt->contextVariable != NULL) &&
     (XSLT_TCTXT_VARIABLE(ctxt)->flags & XSLT_VAR_IN_SELECT))
     {
-        RVT->psvi = XSLT_RVT_VARIABLE;
     RVT->next = (xmlNodePtr) XSLT_TCTXT_VARIABLE(ctxt)->fragment;
     XSLT_TCTXT_VARIABLE(ctxt)->fragment = RVT;
     return(0);
@@ -183,7 +183,6 @@ xsltRegisterLocalRVT(xsltTransformContextPtr ctxt,
     * If not reference by a returning instruction (like EXSLT's function),
     * then this fragment will be freed, when the instruction exits.
     */
-    RVT->psvi = XSLT_RVT_LOCAL;
     RVT->next = (xmlNodePtr) ctxt->localRVT;
     if (ctxt->localRVT != NULL)
     ctxt->localRVT->prev = (xmlNodePtr) RVT;
@@ -314,14 +313,8 @@ xsltFlagRVTs(xsltTransformContextPtr ctxt, xmlXPathObjectPtr obj, void *val) {
 #endif
 
             if (val == XSLT_RVT_LOCAL) {
-                if (doc->psvi != XSLT_RVT_FUNC_RESULT) {
-            xmlGenericError(xmlGenericErrorContext,
-                            "xsltFlagRVTs: Invalid transition %p => LOCAL\n",
-                            doc->psvi);
-                    return(-1);
-                }
-
-                xsltRegisterLocalRVT(ctxt, doc);
+                if (doc->psvi == XSLT_RVT_FUNC_RESULT)
+                    doc->psvi = XSLT_RVT_LOCAL;
             } else if (val == XSLT_RVT_GLOBAL) {
                 if (doc->psvi != XSLT_RVT_LOCAL) {
             xmlGenericError(xmlGenericErrorContext,
@@ -585,10 +578,12 @@ xsltFreeStackElem(xsltStackElemPtr elem) {
         cur = elem->fragment;
         elem->fragment = (xmlDocPtr) cur->next;
 
-            if (cur->psvi == XSLT_RVT_VARIABLE) {
-        xsltReleaseRVT((xsltTransformContextPtr) elem->context,
-            cur);
-            } else if (cur->psvi != XSLT_RVT_FUNC_RESULT) {
+            if (cur->psvi == XSLT_RVT_LOCAL) {
+        xsltReleaseRVT(elem->context, cur);
+            } else if (cur->psvi == XSLT_RVT_FUNC_RESULT) {
+                xsltRegisterLocalRVT(elem->context, cur);
+                cur->psvi = XSLT_RVT_FUNC_RESULT;
+            } else {
                 xmlGenericError(xmlGenericErrorContext,
                         "xsltFreeStackElem: Unexpected RVT flag %p\n",
                         cur->psvi);
@@ -615,6 +610,12 @@ xsltFreeStackElem(xsltStackElemPtr elem) {
     }
     xmlFree(elem);
 }
+
+static void
+xsltFreeStackElemEntry(void *payload, const xmlChar *name ATTRIBUTE_UNUSED) {
+    xsltFreeStackElem((xsltStackElemPtr) payload);
+}
+
 
 /**
  * xsltFreeStackElemList:
@@ -986,7 +987,7 @@ xsltEvalVariable(xsltTransformContextPtr ctxt, xsltStackElemPtr variable,
         * the Result Tree Fragment.
         */
         variable->fragment = container;
-                container->psvi = XSLT_RVT_VARIABLE;
+                container->psvi = XSLT_RVT_LOCAL;
 
         oldOutput = ctxt->output;
         oldInsert = ctxt->insert;
@@ -1255,6 +1256,13 @@ error:
     return(result);
 }
 
+static void
+xsltEvalGlobalVariableWrapper(void *payload, void *data,
+                              const xmlChar *name ATTRIBUTE_UNUSED) {
+    xsltEvalGlobalVariable((xsltStackElemPtr) payload,
+                           (xsltTransformContextPtr) data);
+}
+
 /**
  * xsltEvalGlobalVariables:
  * @ctxt:  the XSLT transformation context
@@ -1329,8 +1337,7 @@ xsltEvalGlobalVariables(xsltTransformContextPtr ctxt) {
     /*
      * This part does the actual evaluation
      */
-    xmlHashScan(ctxt->globalVars,
-            (xmlHashScanner) xsltEvalGlobalVariable, ctxt);
+    xmlHashScan(ctxt->globalVars, xsltEvalGlobalVariableWrapper, ctxt);
 
     return(0);
 }
@@ -2234,7 +2241,7 @@ xsltParseStylesheetParam(xsltTransformContextPtr ctxt, xmlNodePtr cur)
 
 void
 xsltFreeGlobalVariables(xsltTransformContextPtr ctxt) {
-    xmlHashFree(ctxt->globalVars, (xmlHashDeallocator) xsltFreeStackElem);
+    xmlHashFree(ctxt->globalVars, xsltFreeStackElemEntry);
 }
 
 /**
