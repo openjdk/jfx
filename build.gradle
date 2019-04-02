@@ -336,7 +336,7 @@ defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JMOD", cygpathExe("$JDK_HOME/bin/jmod"))
-defineProperty("JDK_DOCS", "https://docs.oracle.com/javase/10/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/en/java/javase/12/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
@@ -1216,14 +1216,17 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check for Gradle 4.8, error if < 4.8.
-if (gradle.gradleVersion != "4.8") {
+// Check gradle version
+if (gradle.gradleVersion != jfxGradleVersion) {
     def ver = gradle.gradleVersion.split("[\\.]");
+    def verMin = jfxGradleVersionMin.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1].split("[^0-9]")[0]);
+    def gradleMajorMin = Integer.parseInt(verMin[0]);
+    def gradleMinorMin = Integer.parseInt(verMin[1].split("[^0-9]")[0]);
     def err = "";
-    if (gradleMajor < 4 || (gradleMajor == 4 && gradleMinor < 8)) {
-        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 4.8"
+    if (gradleMajor < gradleMajorMin || (gradleMajor == gradleMajorMin && gradleMinor < gradleMinorMin)) {
+        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least ${jfxGradleVersionMin}"
     }
 
     if (IS_GRADLE_VERSION_CHECK && err != "") {
@@ -1232,7 +1235,7 @@ if (gradle.gradleVersion != "4.8") {
 
     logger.warn("*****************************************************************");
     logger.warn("Unsupported gradle version $gradle.gradleVersion in use.");
-    logger.warn("Only version 4.8 is supported. Use this version at your own risk");
+    logger.warn("Only version $jfxGradleVersion is supported. Use this version at your own risk");
     if ( err != "") logger.warn(err);
     logger.warn("*****************************************************************");
 }
@@ -1563,9 +1566,11 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
                 maven(MavenPublication) {
                     artifactId = "javafx-${project.name}"
 
-                    artifact project.tasks."moduleEmptyPublicationJar$t.capital"
-                    artifact project.tasks."modularPublicationJar$t.capital" {
-                        classifier "$t.name"
+                    afterEvaluate {
+                        artifact project.tasks."moduleEmptyPublicationJar$t.capital"
+                        artifact project.tasks."modularPublicationJar$t.capital" {
+                            classifier "$t.name"
+                        }
                     }
 
                     pom.withXml {
@@ -3868,7 +3873,8 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the javafx-swt.jar for the $t.name target"
-        archiveName = "${project(":swt").buildDir}/libs/javafx-swt.jar";
+        destinationDir = file("${project(":swt").buildDir}/libs")
+        archiveName = "javafx-swt.jar"
         includeEmptyDirs = false
         from("${project(":swt").buildDir}/classes/java/main");
         include("**/javafx/embed/swt/**")
@@ -3888,7 +3894,7 @@ compileTargets { t ->
         dependsOn(javafxSwtTask)
 
         doLast() {
-            ant.jar (update: true, index: true, destfile: javafxSwtTask.archiveName)
+            ant.jar (update: true, index: true, destfile: "${javafxSwtTask.destinationDir}/${javafxSwtTask.archiveName}")
         }
     }
 

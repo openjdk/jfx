@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,7 +102,7 @@ class NativeCompileTask extends DefaultTask {
         updateFiles();
         def source = project.files(allFiles);
         boolean forceCompile = false;
-        final Set<File> files = new HashSet<File>();
+        Set<File> files = new HashSet<File>();
         source.each { File file ->
             final Map fileData = dependencies.get(file.toString());
             final boolean isModified = fileData == null ||

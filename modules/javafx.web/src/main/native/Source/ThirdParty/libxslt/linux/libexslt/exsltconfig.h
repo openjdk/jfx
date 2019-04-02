@@ -1,5 +1,5 @@
 /*
- * exsltconfig.h: compile-time version informations for the EXSLT library
+ * exsltconfig.h: compile-time version information for the EXSLT library
  *
  * See Copyright for the status of this software.
  *
@@ -18,7 +18,7 @@ extern "C" {
  *
  * the version string like "1.2.3"
  */
-#define LIBEXSLT_DOTTED_VERSION "1.1.32"
+#define LIBEXSLT_DOTTED_VERSION "1.1.33"
 
 /**
  * LIBEXSLT_VERSION:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,14 +32,12 @@ import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.platform.java.JavaPlatform;
 import com.sun.media.jfxmediaimpl.HostUtils;
-import com.sun.media.jfxmediaimpl.platform.gstreamer.GSTPlatform;
-import com.sun.media.jfxmediaimpl.platform.osx.OSXPlatform;
-import com.sun.media.jfxmediaimpl.platform.ios.IOSPlatform;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.lang.reflect.Method;
 
 /**
  * Core media platform management code.
@@ -77,7 +75,7 @@ public final class PlatformManager {
     private final List<Platform> platforms;
 
     private PlatformManager() {
-        platforms = new ArrayList<Platform>();
+        platforms = new ArrayList<>();
 
         Platform platty;
 
@@ -98,7 +96,8 @@ public final class PlatformManager {
         }
 
         if (!HostUtils.isIOS() && isPlatformEnabled("GSTPlatform")) {
-            platty = GSTPlatform.getPlatformInstance();
+            platty = getPlatformInstance(
+                    "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTPlatform");
             if (null != platty) {
                 platforms.add(platty);
             }
@@ -106,14 +105,16 @@ public final class PlatformManager {
 
         // Add after GSTPlatform so it's used as a fallback
         if (HostUtils.isMacOSX() && isPlatformEnabled("OSXPlatform")) {
-            platty = OSXPlatform.getPlatformInstance();
+            platty = getPlatformInstance(
+                    "com.sun.media.jfxmediaimpl.platform.osx.OSXPlatform");
             if (null != platty) {
                 platforms.add(platty);
             }
         }
 
         if (HostUtils.isIOS() && isPlatformEnabled("IOSPlatform")) {
-            platty = IOSPlatform.getPlatformInstance();
+            platty = getPlatformInstance(
+                    "com.sun.media.jfxmediaimpl.platform.ios.IOSPlatform");
             if (null != platty) {
                 platforms.add(platty);
             }
@@ -127,6 +128,23 @@ public final class PlatformManager {
             }
             Logger.logMsg(Logger.DEBUG, sb.toString());
         }
+    }
+
+    private Platform getPlatformInstance(String platformClass) {
+        try {
+            Class c = Class.forName(platformClass);
+            Method m = c.getDeclaredMethod("getPlatformInstance", (Class[])null);
+            Object platform = m.invoke(null, (Object[])null);
+            return (Platform)platform;
+        } catch (Exception e) {
+            if (Logger.canLog(Logger.DEBUG)) {
+                Logger.logMsg(Logger.DEBUG, "Failed to get platform instance" +
+                              " for " + platformClass + ". Exception: " +
+                              e.getMessage());
+            }
+        }
+
+        return null;
     }
 
     public synchronized void loadPlatforms() {
