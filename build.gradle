@@ -1295,6 +1295,18 @@ logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
+
+if (IS_LINUX) {
+    logger.quiet("GCC version: ${jfxBuildLinuxGccVersion}")
+} else if (IS_WINDOWS) {
+    logger.quiet("MSVC version: ${jfxBuildWindowsMsvcVersion}")
+} else if (IS_MAC) {
+    logger.quiet("XCODE version: ${jfxBuildMacosxXcodeVersion}")
+}
+logger.quiet("cmake version: ${jfxBuildCmakeVersion}")
+logger.quiet("ninja version: ${jfxBuildNinjaVersion}")
+logger.quiet("ant version: ${jfxBuildAntVersion}")
+
 logger.quiet("HAS_JAVAFX_MODULES: $HAS_JAVAFX_MODULES")
 logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
