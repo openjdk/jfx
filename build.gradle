@@ -1864,12 +1864,24 @@ project(":base") {
 
     sourceSets {
         main
-        shims
-        test
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
     }
 
     dependencies {
         testCompile group: "junit", name: "junit", version: "4.8.2"
+        testCompile sourceSets.main.output
+        testCompile sourceSets.shims.output
     }
 
     commonModuleSetup(project, [ 'base' ])
@@ -1926,9 +1938,19 @@ project(":graphics") {
     sourceSets {
         jslc   // JSLC gramar subset
         main
-        shims
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
         shaders // generated shaders (prism & decora)
-        test
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
         stub
     }
 
@@ -1936,6 +1958,7 @@ project(":graphics") {
         stubCompile group: "junit", name: "junit", version: "4.8.2"
 
         antlr group: "org.antlr", name: "antlr4", version: "4.7.2", classifier: "complete"
+        compile project(':base')
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath_GraphicsOne
@@ -2344,8 +2367,18 @@ project(":controls") {
 
     sourceSets {
         main
-        shims
-        test
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath
@@ -2356,6 +2389,8 @@ project(":controls") {
     dependencies {
         testCompile project(":graphics").sourceSets.test.output
         testCompile project(":base").sourceSets.test.output
+        compile project(':base')
+        compile project(':graphics')
     }
 
     test {
@@ -2420,6 +2455,8 @@ project(":swing") {
     commonModuleSetup(project, [ 'base', 'graphics', 'swing' ])
 
     dependencies {
+        compile project(":base")
+        compile project(":graphics")
     }
 
     test {
@@ -2498,8 +2535,18 @@ project(":fxml") {
 
     sourceSets {
         main
-        shims
-        test
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath
@@ -2511,6 +2558,8 @@ project(":fxml") {
     dependencies {
         testCompile project(":graphics").sourceSets.test.output
         testCompile project(":base").sourceSets.test.output
+        compile project(":base")
+        compile project(":graphics")
     }
 
     test {
@@ -2557,6 +2606,8 @@ project(":media") {
             media name: "libav-12.1", ext: "tar.gz"
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
         }
+        compile project(":base")
+        compile project(":graphics")
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -3126,8 +3177,18 @@ project(":web") {
 
     sourceSets {
         main
-        shims
-        test
+        shims {
+            java {
+                compileClasspath += sourceSets.main.output
+                runtimeClasspath += sourceSets.main.output
+            }
+        }
+        test {
+            java {
+                compileClasspath += sourceSets.shims.output
+                runtimeClasspath += sourceSets.shims.output
+            }
+        }
     }
 
     project.ext.moduleSourcePath = defaultModuleSourcePath
@@ -3136,6 +3197,10 @@ project(":web") {
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web' ])
 
     dependencies {
+        compile project(":base")
+        compile project(":graphics")
+        compile project(":controls")
+        compile project(":media")
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -3288,7 +3353,7 @@ project(":web") {
         }
 
         def copyNativeTask = task("copyNative${t.capital}", type: Copy,
-                dependsOn: [compileNativeTask, , copyDumpTreeNativeTask]) {
+                dependsOn: [compileNativeTask, copyDumpTreeNativeTask]) {
             enabled =  (IS_COMPILE_WEBKIT)
             def library = rootProject.ext[t.upper].library
             from "$webkitOutputDir/$webkitConfig/$dllDir/${library('jfxwebkit')}"
