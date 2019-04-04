@@ -105,6 +105,9 @@ public class AccordionSkin extends SkinBase<Accordion> {
             if (!control.getPanes().isEmpty()) {
                 firstTitledPane = control.getPanes().get(0);
                 firstTitledPane.getStyleClass().add("first-titled-pane");
+            } else {
+                // Sever previously stored reference to the first pane, so that it may be collected.
+                firstTitledPane = null;
             }
             // TODO there may be a more efficient way to keep these in sync
             getChildren().setAll(control.getPanes());
