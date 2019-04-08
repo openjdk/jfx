@@ -1616,6 +1616,98 @@ void addMavenPublication(Project project, List<String> projectDependencies) {
 }
 
 /**
+ * Verifies that all of the *.java files in a source tree have the
+ * correct package name. If not, fail the build.
+ *
+ * @param sourceRoot the root of the source tree to check
+ * @param hasModuleName true if the sources under sourceRoot are being
+ * compiled as modules, with the immediate child directories being the
+ * root(s) of the named modules being compiled. In this case the package
+ * root is one directory below the sourceRoot.
+ */
+void validatePackages(File sourceRoot, boolean hasModuleName) {
+    if (!sourceRoot.isDirectory()) {
+        return;
+    }
+    def err = false;
+    String sourceString = sourceRoot.toString().replace("\\", "/")
+    def startPos = sourceString.length() + 1
+    logger.info("validating packages for ${sourceRoot}")
+    def inputFiles = fileTree(dir: sourceRoot, include: "**/*.java")
+    inputFiles.each { file ->
+        def packageRoot = file.toString().replace("\\", "/").substring(startPos)
+        if (hasModuleName) {
+            packageRoot = packageRoot.substring(packageRoot.indexOf("/") + 1)
+        }
+        def endPos = packageRoot.lastIndexOf("/")
+        def pkgEx = endPos > -1 ?  packageRoot.substring(0, endPos).replace("/", ".") : ""
+        def pkg = ""
+        file.withReader { reader ->
+            def line
+            while ((line = reader.readLine()) != null) {
+                def words = line.trim().split("[ ;]+")
+                if (words.length > 1 && words[0] == "package") {
+                    pkg = words[1]
+                    break;
+                }
+            }
+        }
+        if (pkg != pkgEx) {
+            err = true
+            println "*** ERROR: File location <${file}> does not match package name <${pkg}>"
+        }
+    }
+    if (err) {
+        fail("Package validation failed")
+    }
+}
+
+/**
+ * Add a task to the given project to validate that the package names
+ * of all java files in the given source sets have the correct package
+ * name. If not, fail the build.
+ */
+void addValidateSourceSets(Project project,
+                           Collection<SourceSet> sourceSets,
+                           Collection<SourceSet> modSourceSets) {
+    def validateSourceSetsTask = project.task("validateSourceSets") {
+        doLast {
+            // Accumulate the root directories from all sourceSets.
+            // We use a Set to elide duplicates (the shims sourceset
+            // will include the dirs from the main sourceset)
+            Set<File> sourceRoots = []
+            sourceSets.each { srcSet ->
+                srcSet.java.srcDirs.each { rootDir ->
+                    sourceRoots += rootDir
+                }
+            }
+            sourceRoots.each { rootDir ->
+                validatePackages(rootDir, false)
+            }
+
+            Set<File> modSourceRoots = []
+            modSourceSets.each { srcSet ->
+                srcSet.java.srcDirs.each { rootDir ->
+                    modSourceRoots += rootDir
+                }
+            }
+            modSourceRoots.each { rootDir ->
+                validatePackages(rootDir, true)
+            }
+        }
+    }
+
+    // Run this for all projects when compiling the test sources
+    // (i.e., when running "gradle test")
+    project.compileTestJava.dependsOn(validateSourceSetsTask)
+}
+
+void addValidateSourceSets(Project project, Collection<SourceSet> sourceSets) {
+    addValidateSourceSets(project, sourceSets, []);
+}
+
+
+/**
  * Parses a JDK version string. The string must be in one of the following
  * two formats:
  *
@@ -1919,6 +2011,7 @@ project(":base") {
     compileJava.dependsOn processVersionInfo
     addMavenPublication(project, [])
 
+    addValidateSourceSets(project, sourceSets)
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -2357,6 +2450,14 @@ project(":graphics") {
 
     addMavenPublication(project, [ 'base' ])
 
+    /*
+     * The following is a workaroud for JDK-8222036 (antlr generated
+     * files written to wrong location on Windows). This workaround should
+     * be removed as part of fixing JDK-8222036.
+     */
+    // addValidateSourceSets(project, sourceSets)
+    def srcSets = sourceSets - sourceSets.jslc
+    addValidateSourceSets(project, srcSets)
 }
 
 project(":controls") {
@@ -2430,6 +2531,7 @@ project(":controls") {
 
     addMavenPublication(project, [ 'graphics' ])
 
+    addValidateSourceSets(project, sourceSets)
 }
 
 project(":swing") {
@@ -2466,6 +2568,8 @@ project(":swing") {
     if (COMPILE_SWING) {
         addMavenPublication(project, [ 'graphics' ])
     }
+
+    addValidateSourceSets(project, sourceSets)
 }
 
 project(":swt") {
@@ -2525,6 +2629,8 @@ project(":swt") {
             logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
         }
     }
+
+    addValidateSourceSets(project, sourceSets)
 }
 
 project(":fxml") {
@@ -2573,6 +2679,7 @@ project(":fxml") {
 
     addMavenPublication(project, [ 'controls' ])
 
+    addValidateSourceSets(project, sourceSets)
 }
 
 project(":media") {
@@ -3164,6 +3271,7 @@ project(":media") {
 
     addMavenPublication(project, [ 'graphics' ])
 
+    addValidateSourceSets(project, sourceSets)
 }
 
 project(":web") {
@@ -3406,6 +3514,7 @@ project(":web") {
 
     addMavenPublication(project, [ 'controls', 'media' ])
 
+    addValidateSourceSets(project, sourceSets)
 }
 
 // This project is for system tests that need to run with a full SDK.
@@ -3428,6 +3537,19 @@ project(":systemTests") {
         testapp5
         testapp6
     }
+
+    def nonModSrcSets = [
+        sourceSets.test,
+        sourceSets.testapp1
+    ]
+
+    def modSrcSets = [
+        sourceSets.testapp2,
+        sourceSets.testapp3,
+        sourceSets.testapp4,
+        sourceSets.testapp5,
+        sourceSets.testapp6
+    ]
 
     project.ext.buildModule = false
     project.ext.moduleRuntime = false
@@ -3614,6 +3736,8 @@ project(":systemTests") {
 
         forkEvery = 1
     }
+
+    addValidateSourceSets(project, nonModSrcSets, modSrcSets)
 }
 
 allprojects {
