@@ -1995,8 +1995,9 @@ scan_and_update_registry (GstRegistry * default_registry,
 
 
   clear_scan_context (&context);
-#endif // GSTREAMER_LITE
+
   changed |= context.changed;
+#endif // GSTREAMER_LITE
 
   /* Remove cached plugins so stale info is cleared. */
   changed |= gst_registry_remove_cache_plugins (default_registry);

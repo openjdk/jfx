@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,7 @@ CInputPin::CInputPin(CBaseRenderer *pRenderer, HRESULT *phr, LPCWSTR Name) : CRe
     m_pIAlloc = NULL;
     m_pAlloc = NULL;
     m_bUseExternalAllocator = false;
+    m_bEnableDynamicFormatChanges = false;
 }
 
 CInputPin::~CInputPin()
@@ -152,6 +153,70 @@ HRESULT CInputPin::CreateAllocator()
     return S_OK;
 }
 
+HRESULT CInputPin::ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt)
+{
+    HRESULT hr = CBasePin::ReceiveConnection(pConnector, pmt);
+    if (m_bEnableDynamicFormatChanges && hr == VFW_E_ALREADY_CONNECTED)
+    {
+        CAutoLock cObjectLock(m_pLock);
+
+        CMediaType *pcmt = (CMediaType*)pmt;
+        hr = CheckMediaType(pcmt);
+        if (hr == S_OK)
+        {
+            if (m_Connected != pConnector)
+            {
+                if (m_Connected != NULL)
+                {
+                    m_Connected->Release();
+                }
+                m_Connected = pConnector;
+                m_Connected->AddRef();
+            }
+
+            hr = SetMediaType(pcmt);
+            if (SUCCEEDED(hr))
+            {
+                if (IsEqualGUID(FORMAT_VideoInfo2, pcmt->formattype))
+                {
+                    VIDEOINFOHEADER2 *vih2 = (VIDEOINFOHEADER2*)pcmt->pbFormat;
+                    DWORD dwSize = vih2->bmiHeader.biSizeImage;
+                    if (dwSize > 0)
+                    {
+                        IMemAllocator *pAllocator = NULL;
+                        hr = GetAllocator(&pAllocator);
+                        if (SUCCEEDED(hr))
+                        {
+                            ALLOCATOR_PROPERTIES request;
+                            ZeroMemory(&request, sizeof(ALLOCATOR_PROPERTIES));
+                            hr = pAllocator->GetProperties(&request);
+                            if (SUCCEEDED(hr))
+                            {
+                                request.cbBuffer = dwSize;
+                                hr = pAllocator->Decommit();
+                                if (SUCCEEDED(hr))
+                                {
+                                    ALLOCATOR_PROPERTIES actual;
+                                    ZeroMemory(&actual, sizeof(ALLOCATOR_PROPERTIES));
+                                    hr = pAllocator->SetProperties(&request, &actual);
+                                    if (SUCCEEDED(hr))
+                                    {
+                                        hr = pAllocator->Commit();
+                                    }
+                                }
+                            }
+
+                            pAllocator->Release();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return hr;
+}
+
 CSink::CSink(HRESULT *phr) : CBaseRenderer(CLSID_Sink, "CSink", NULL, phr)
 {
     ZeroMemory(&m_UserData, sizeof(sUserData));
@@ -163,6 +228,7 @@ CSink::CSink(HRESULT *phr) : CBaseRenderer(CLSID_Sink, "CSink", NULL, phr)
 
     m_bForceStereoOutput = false;
     m_bUseExternalAllocator = false;
+    m_bEnableDynamicFormatChanges = false;
 
     m_bEOSInProgress = false;
     m_bWorkerThreadExits = false;
@@ -276,10 +342,14 @@ HRESULT CSink::CheckMediaType(const CMediaType *pmt)
 
                 if (SinkEventCallback != NULL)
                 {
-                    __int64 width = hdrout->rcSource.right;
-                    __int64 height = hdrout->rcSource.bottom;
-                    __int64 resolution = (width << 32) | height;
-                    SinkEventCallback(SINK_VIDEO_RESOLUTION, (void*)&resolution, sizeof(__int64), &m_UserData);
+                    sVideoResolutionEvent resolution;
+                    resolution.width = hdrout->rcSource.right;
+                    resolution.height = hdrout->rcSource.bottom;
+                    if (m_bEnableDynamicFormatChanges)
+                        resolution.offset = resolution.width;
+                    else
+                        resolution.offset = 1920;
+                    SinkEventCallback(SINK_VIDEO_RESOLUTION, (void*)&resolution, sizeof(sVideoResolutionEvent), &m_UserData);
                 }
             }
 
@@ -477,6 +547,7 @@ CBasePin *CSink::GetPin(int n)
         }
 
         ((CInputPin*)m_pInputPin)->m_bUseExternalAllocator = m_bUseExternalAllocator;
+        ((CInputPin*)m_pInputPin)->m_bEnableDynamicFormatChanges = m_bEnableDynamicFormatChanges;
     }
 
     return m_pInputPin;
@@ -531,6 +602,9 @@ HRESULT CSink::InitMediaType(sOutputFormat *pOutputFormat)
     m_bUseExternalAllocator = (pOutputFormat->bUseExternalAllocator != 0);
     if (m_pInputPin)
         ((CInputPin*)m_pInputPin)->m_bUseExternalAllocator = m_bUseExternalAllocator;
+    m_bEnableDynamicFormatChanges = (pOutputFormat->bEnableDynamicFormatChanges != 0);
+    if (m_pInputPin)
+        ((CInputPin*)m_pInputPin)->m_bEnableDynamicFormatChanges = m_bEnableDynamicFormatChanges;
 
     return S_OK;
 }
