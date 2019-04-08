@@ -249,7 +249,7 @@ public class Dialog<R> implements EventTarget {
      *
      **************************************************************************/
 
-     FXDialog dialog;
+    final FXDialog dialog;
 
     private boolean isClosing;
 
