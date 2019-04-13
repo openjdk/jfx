@@ -1838,7 +1838,7 @@ allprojects {
         repositories {
             mavenCentral()
             ivy {
-                url "http://download.eclipse.org/eclipse/updates/4.6/R-4.6.3-201703010400/plugins/"
+                url "https://download.eclipse.org/eclipse/updates/4.6/R-4.6.3-201703010400/plugins/"
                 layout "pattern", {
                     artifact "[artifact].[ext]"
                 }
