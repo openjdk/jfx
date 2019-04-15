@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,10 +23,11 @@
  * questions.
  */
 
-package com.sun.webkit.graphics;
+package com.sun.javafx.webkit.prism;
 
 import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.text.TextRun;
+import com.sun.webkit.graphics.WCTextRun;
 
 public final class WCTextRunImpl implements WCTextRun {
     private final TextRun run;

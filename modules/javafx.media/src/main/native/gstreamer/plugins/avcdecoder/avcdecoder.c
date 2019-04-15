@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -324,13 +324,20 @@ avcdecoder_decoder_output_callback (void* userData,
         size_t bytes_per_row = CVPixelBufferGetBytesPerRow(imageBuffer);
         if(!decode->is_stride_set)
         {
-            GstCaps *caps = gst_pad_get_current_caps(srcpad);
-            if (caps != NULL)
+            GstCaps *pad_caps = gst_pad_get_current_caps(srcpad);
+            if (pad_caps != NULL)
             {
-                GstStructure* caps_struct = gst_caps_get_structure(caps, 0);
-                gst_structure_set(caps_struct, "line_stride", G_TYPE_INT, (int)bytes_per_row, NULL);
-                decode->is_stride_set = TRUE;
-                gst_caps_unref(caps);
+                GstCaps *caps = gst_caps_copy(pad_caps);
+                if (caps != NULL)
+                {
+                    gst_caps_set_simple(caps, "line_stride", G_TYPE_INT, (int)bytes_per_row, NULL);
+                    GstEvent *caps_event = gst_event_new_caps(caps);
+                    if (caps_event != NULL)
+                        gst_pad_push_event(decode->srcpad, caps_event);
+                    decode->is_stride_set = TRUE;
+                    gst_caps_unref(caps);
+                }
+                gst_caps_unref(pad_caps);
             }
         }
         if (kCVReturnSuccess == CVPixelBufferLockBaseAddress (imageBuffer, 0))

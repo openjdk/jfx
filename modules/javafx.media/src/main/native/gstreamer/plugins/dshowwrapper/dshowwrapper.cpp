@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -754,43 +754,43 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
             if (decoder->eOutputFormat[pUserData->output_index] == MEDIA_FORMAT_VIDEO_H264)
             {
                 if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("AMDEBUG MP2T H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                    g_print("JFXMEDIA MP2T H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
                 else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("AMDEBUG MP2T H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                    g_print("DEBUG MP2T H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
                 else
-                    g_print("AMDEBUG MP2T H264 -1\n");
+                    g_print("JFXMEDIA MP2T H264 -1\n");
             }
             if (decoder->eOutputFormat[pUserData->output_index] == MEDIA_FORMAT_AUDIO_AAC)
             {
                 if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("AMDEBUG MP2T AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                    g_print("JFXMEDIA MP2T AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
                 else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                    g_print("AMDEBUG MP2T AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                    g_print("JFXMEDIA MP2T AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
                 else
-                    g_print("AMDEBUG MP2T AAC  -1\n");
+                    g_print("JFXMEDIA MP2T AAC  -1\n");
             }
         }
 #endif
 #if H264_PTS_DEBUG
-        if (decoder->eInputFormat == MEDIA_FORMAT_VIDEO_H264)
+        if (decoder->eInputFormat == MEDIA_FORMAT_VIDEO_H264 || decoder->eInputFormat == MEDIA_FORMAT_VIDEO_AVC1)
         {
             if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("AMDEBUG H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA H264 %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
             else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("AMDEBUG H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA H264 %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
             else
-                g_print("AMDEBUG H264 -1\n");
+                g_print("JFXMEDIA H264 -1\n");
         }
 #endif
 #if AAC_PTS_DEBUG
         if (decoder->eInputFormat == MEDIA_FORMAT_AUDIO_AAC)
         {
             if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("AMDEBUG AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA AAC  %I64u %I64u\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]), GST_BUFFER_DURATION(decoder->out_buffer[pUserData->output_index]));
             else if (GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]) && !GST_BUFFER_DURATION_IS_VALID(decoder->out_buffer[pUserData->output_index]))
-                g_print("AMDEBUG AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
+                g_print("JFXMEDIA AAC  %I64u -1\n", GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]));
             else
-                g_print("AMDEBUG AAC  -1\n");
+                g_print("JFXMEDIA AAC  -1\n");
         }
 #endif
 
@@ -875,13 +875,13 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
         decoder->is_eos[pUserData->output_index] = TRUE;
 #if EOS_DEBUG
         if (decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T && (decoder->eOutputFormat[pUserData->output_index] == MEDIA_FORMAT_VIDEO_AVC1 || decoder->eOutputFormat[pUserData->output_index] == MEDIA_FORMAT_VIDEO_H264))
-            g_print("AMDEBUG EOS MP2T H264\n");
+            g_print("JFXMEDIA EOS MP2T H264\n");
         else if (decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T && decoder->eOutputFormat[pUserData->output_index] == MEDIA_FORMAT_AUDIO_AAC)
-            g_print("AMDEBUG EOS MP2T AAC\n");
+            g_print("JFXMEDIA EOS MP2T AAC\n");
         else if (decoder->eInputFormat == MEDIA_FORMAT_VIDEO_AVC1 || decoder->eInputFormat == MEDIA_FORMAT_VIDEO_H264)
-            g_print("AMDEBUG EOS H264\n");
+            g_print("JFXMEDIA EOS H264\n");
         else if (decoder->eInputFormat == MEDIA_FORMAT_AUDIO_AAC)
-            g_print("AMDEBUG EOS AAC\n");
+            g_print("JFXMEDIA EOS AAC\n");
 #endif
         gst_pad_push_event (decoder->srcpad[pUserData->output_index], gst_event_new_eos());
         break;
@@ -947,11 +947,12 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
         }
         break;
     case SINK_VIDEO_RESOLUTION:
-        if (pData != NULL && size == sizeof(__int64))
+        if (pData != NULL && size == sizeof(sVideoResolutionEvent))
         {
-            __int64 resolution = *((__int64*)pData);
-            int width = (resolution >> 32) & 0x00000000FFFFFFFF;
-            int height = resolution & 0x00000000FFFFFFFF;
+            sVideoResolutionEvent resolution = *((sVideoResolutionEvent*)pData);
+            int width = resolution.width;
+            int height = resolution.height;
+            int offset = resolution.offset;
 
             GstCaps *padCaps = gst_pad_get_current_caps(decoder->srcpad[pUserData->output_index]);
             if (padCaps == NULL)
@@ -966,11 +967,11 @@ int dshowwrapper_sink_event(int sinkEvent, void *pData, int size, sUserData *pUs
                     "width", G_TYPE_INT, width,
                     "height", G_TYPE_INT, height,
                     "offset-y", G_TYPE_INT, 0,
-                    "offset-v", G_TYPE_INT, (1920*height+((1920*height)/4)),
-                    "offset-u", G_TYPE_INT, 1920*height,
-                    "stride-y", G_TYPE_INT, 1920,
-                    "stride-v", G_TYPE_INT, 1920/2,
-                    "stride-u", G_TYPE_INT, 1920/2,
+                    "offset-v", G_TYPE_INT, (offset*height+((offset*height)/4)),
+                    "offset-u", G_TYPE_INT, offset*height,
+                    "stride-y", G_TYPE_INT, offset,
+                    "stride-v", G_TYPE_INT, offset/2,
+                    "stride-u", G_TYPE_INT, offset/2,
                     NULL);
             }
             else if (decoder->eOutputFormat[DEFAULT_OUTPUT_DS_STREAM_INDEX] == MEDIA_FORMAT_VIDEO_YV12)
@@ -1944,6 +1945,10 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
     sInputFormat inputFormat;
     ZeroMemory(&inputFormat, sizeof(sInputFormat));
 
+    // Init output
+    sOutputFormat outputFormat;
+    ZeroMemory(&outputFormat, sizeof(sOutputFormat));
+
     gint width = 0;
     gint height = 0;
     const GValue *v = NULL;
@@ -2022,6 +2027,15 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
         pbFormat->dwFlags = lengthSizeMinusOne + 1;
         memcpy(pbFormat->dwSequenceHeader, header, header_size);
         pbFormat->cbSequenceHeader = header_size;
+
+        // Enable dynamic format change for MP4 via ReceiveConnection().
+        // HLS works fine using QueryAccept without buffer size changes and
+        // breaks if dynamic format is enabled, so for now we will use it only
+        // for MP4. It seems we only need it for portrait video or anything
+        // bigger then 1920x1080, so we will enable it only for such resolution.
+        // See JDK-8133841.
+        if ((width < height) || (width > 1920 && height > 1080))
+            outputFormat.bEnableDynamicFormatChanges = 1;
     }
     else
     {
@@ -2059,10 +2073,6 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
 
     if (!dshowwrapper_create_ds_source(decoder, &inputFormat))
         goto exit;
-
-    // Init output
-    sOutputFormat outputFormat;
-    ZeroMemory(&outputFormat, sizeof(sOutputFormat));
 
     gint framerate_num = 0;
     gint framerate_den = 0;

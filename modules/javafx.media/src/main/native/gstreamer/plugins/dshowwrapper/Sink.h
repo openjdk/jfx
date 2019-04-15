@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,14 @@ struct sOutputFormat
     ULONG length;
     BOOL bForceStereoOutput;
     BOOL bUseExternalAllocator;
+    BOOL bEnableDynamicFormatChanges;
+};
+
+struct sVideoResolutionEvent
+{
+    int width;
+    int height;
+    int offset;
 };
 
 enum SINK_EVENTS
@@ -79,9 +87,11 @@ public:
     HRESULT SetReleaseSampleCallback(void (*function)(GstBuffer *pBuffer, sUserData *pUserData));
     HRESULT SetGetGstBufferCallback(void (*function)(GstBuffer **ppBuffer, long lSize, sUserData *pUserData));
     HRESULT CreateAllocator();
+    STDMETHODIMP ReceiveConnection(IPin *pConnector, const AM_MEDIA_TYPE *pmt);
 
 public:
     bool m_bUseExternalAllocator;
+    bool m_bEnableDynamicFormatChanges;
 
 private:
     CAllocator *m_pAlloc;
@@ -130,6 +140,7 @@ private:
 
     bool m_bForceStereoOutput;
     bool m_bUseExternalAllocator;
+    bool m_bEnableDynamicFormatChanges;
 
     bool m_bEOSInProgress;
     bool m_bWorkerThreadExits;
