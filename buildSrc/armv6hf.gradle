@@ -227,14 +227,15 @@ ARMV6HF.glass.javahInclude = [
     "com/sun/glass/ui/*"]
 ARMV6HF.glass.variants = [ ]
 if (ARMV6HF.includeMonocle) {
-    ARMV6HF.glass.variants.addAll("monocle", "monocle_x11");
+    ARMV6HF.glass.variants.addAll("monocle", "monocle_x11", "monocle_epd");
     ARMV6HF.glass.javahInclude.addAll(
         "com/sun/glass/ui/monocle/*",
         "com/sun/glass/ui/monocle/dispman/*",
         "com/sun/glass/ui/monocle/mx6/*",
         "com/sun/glass/ui/monocle/linux/*",
         "com/sun/glass/ui/monocle/util/*",
-        "com/sun/glass/ui/monocle/x11/*");
+        "com/sun/glass/ui/monocle/x11/*",
+        "com/sun/glass/ui/monocle/epd/*");
     ARMV6HF.javafxPlatformProperties = ARMV6HF.javafxPlatformProperties + monoclePlatformAdditions
 }
 if (ARMV6HF.includeGTK) {
@@ -267,6 +268,15 @@ ARMV6HF.glass.monocle_x11.ccFlags = monocleCFlags
 ARMV6HF.glass.monocle_x11.linker = linker
 ARMV6HF.glass.monocle_x11.linkFlags = [ monocleLFlags, "-lX11" ].flatten()
 ARMV6HF.glass.monocle_x11.lib = "glass_monocle_x11"
+
+ARMV6HF.glass.monocle_epd = [:]
+ARMV6HF.glass.monocle_epd.nativeSource = [
+        file("${project("graphics").projectDir}/src/main/native-glass/monocle/epd") ]
+ARMV6HF.glass.monocle_epd.compiler = compiler
+ARMV6HF.glass.monocle_epd.ccFlags = monocleCFlags
+ARMV6HF.glass.monocle_epd.linker = linker
+ARMV6HF.glass.monocle_epd.linkFlags = monocleLFlags
+ARMV6HF.glass.monocle_epd.lib = "glass_monocle_epd"
 
 FileTree ft_gtk = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
     exclude("**/launcher.c")
