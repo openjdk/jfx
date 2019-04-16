@@ -1531,6 +1531,10 @@ public class Window implements EventTarget {
 
         public void apply() {
             if (dirty) {
+                if (peer == null) {
+                    reset();
+                    return;
+                }
                 // Snapshot values and then reset() before we call down
                 // as we may end up with recursive calls back up with
                 // new values that must be recorded as dirty.
@@ -1548,9 +1552,9 @@ public class Window implements EventTarget {
                 float newRY = (float) renderScaleY;
                 reset();
                 peer.setBounds(newX, newY, xSet, ySet,
-                                    newWW, newWH, newCW, newCH,
-                                    newXG, newYG,
-                                    newRX, newRY);
+                        newWW, newWH, newCW, newCH,
+                        newXG, newYG,
+                        newRX, newRY);
             }
         }
 
