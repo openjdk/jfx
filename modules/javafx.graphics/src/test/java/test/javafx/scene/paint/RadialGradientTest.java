@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,12 @@ package test.javafx.scene.paint;
 import java.util.Arrays;
 import java.util.List;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.Scene;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -465,5 +467,24 @@ public class RadialGradientTest {
                 new Stop(0, Color.BLUE),
                 new Stop(1.0, Color.RED));
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testCycleMethodCSSStyle() {
+        Region region = new Region();
+        Scene scene = new Scene(region);
+        RadialGradient rGradient;
+
+        region.setStyle("-fx-background-color: radial-gradient(focus-angle 45deg,"
+            + " focus-distance 20%, center 25% 25%, radius 50%, reflect, red 25%, black 75%);");
+        region.applyCss();
+        rGradient = (RadialGradient) region.backgroundProperty().get().getFills().get(0).getFill();
+        assertEquals(CycleMethod.REFLECT, rGradient.getCycleMethod());
+
+        region.setStyle("-fx-background-color: radial-gradient(focus-angle 45deg,"
+            + " focus-distance 20%, center 25% 25%, radius 50%, repeat, red 25%, black 75%);");
+        region.applyCss();
+        rGradient = (RadialGradient) region.backgroundProperty().get().getFills().get(0).getFill();
+        assertEquals(CycleMethod.REPEAT, rGradient.getCycleMethod());
     }
 }

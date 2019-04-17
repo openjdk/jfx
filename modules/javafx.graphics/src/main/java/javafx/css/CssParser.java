@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1875,7 +1875,7 @@ final public class CssParser {
             prev = arg;
             arg = arg.nextArg;
         } else if ("repeat".equalsIgnoreCase(arg.token.getText())) {
-            cycleMethod = CycleMethod.REFLECT;
+            cycleMethod = CycleMethod.REPEAT;
             prev = arg;
             arg = arg.nextArg;
         }
@@ -2175,7 +2175,7 @@ final public class CssParser {
             prev = arg;
             arg = arg.nextArg;
         } else if ("repeat".equalsIgnoreCase(arg.token.getText())) {
-            cycleMethod = CycleMethod.REFLECT;
+            cycleMethod = CycleMethod.REPEAT;
             prev = arg;
             arg = arg.nextArg;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,12 @@ package test.javafx.scene.paint;
 import java.util.Arrays;
 import java.util.List;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
+import javafx.scene.Scene;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -437,5 +439,24 @@ public class LinearGradientTest {
                 new Stop(0.1, Color.RED),
                 new Stop(1.0, Color.BLACK));
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testCycleMethodCSSStyle() {
+        Region region = new Region();
+        Scene scene = new Scene(region);
+        LinearGradient lGradient;
+
+        region.setStyle("-fx-background-color: linear-gradient(from 0% 0% to 10% 10%,"
+            + " reflect, red 30%, black 70%);");
+        region.applyCss();
+        lGradient = (LinearGradient) region.backgroundProperty().get().getFills().get(0).getFill();
+        assertEquals(CycleMethod.REFLECT, lGradient.getCycleMethod());
+
+        region.setStyle("-fx-background-color: linear-gradient(from 0% 0% to 10% 10%,"
+            + " repeat, red 30%, black 70%);");
+        region.applyCss();
+        lGradient = (LinearGradient) region.backgroundProperty().get().getFills().get(0).getFill();
+        assertEquals(CycleMethod.REPEAT, lGradient.getCycleMethod());
     }
 }
