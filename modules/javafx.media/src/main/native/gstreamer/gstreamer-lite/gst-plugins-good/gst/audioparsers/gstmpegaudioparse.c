@@ -471,6 +471,17 @@ gst_mpeg_audio_parse_head_check (GstMpegAudioParse * mp3parse,
     return FALSE;
   }
   /* if it's an invalid bitrate */
+#ifdef GSTREAMER_LITE
+  // Lets disable free format, since it is not supported by dshowwrapper.
+  // It was enabled with JDK-8199527 (GStreamer 1.14), we disabling it in same
+  // way as before 1.14. This required to fix issue with some MP3 files.
+  // See JDK-8213510.
+  if (((head >> 12) & 0xf) == 0x0) {
+    GST_WARNING_OBJECT (mp3parse, "invalid bitrate: 0x%lx."
+        "Free format files are not supported yet", (head >> 12) & 0xf);
+    return FALSE;
+  }
+#endif // GSTREAMER_LITE
   if (((head >> 12) & 0xf) == 0xf) {
     GST_WARNING_OBJECT (mp3parse, "invalid bitrate: 0x%lx", (head >> 12) & 0xf);
     return FALSE;
