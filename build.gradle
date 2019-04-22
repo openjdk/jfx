@@ -2711,6 +2711,7 @@ project(":media") {
             media name: "libav-11.4", ext: "tar.gz"
             media name: "libav-12.1", ext: "tar.gz"
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
+            media name: "ffmpeg-4.0.2", ext: "tar.gz"
         }
         compile project(":base")
         compile project(":graphics")
@@ -2881,7 +2882,7 @@ project(":media") {
                                                      "cpu_internal.h", "intfloat.h", "opt.h", "version.h", "avutil.h",
                                                      "crc.h", "intreadwrite.h", "parseutils.h", "xtea.h", "base64.h",
                                                      "dict.h", "lfg.h", "pixdesc.h", "intfloat_readwrite.h", "old_pix_fmts.h", "audioconvert.h",
-                                                     "cpu.h")
+                                                     "cpu.h", "hwcontext.h")
                     FileCollection libavutil_x86 = files("cpu.h") // Use cpu.h from x86 instead of libavutil root if exist
                     FileCollection libswscale = files("swscale.h", "version.h")
 
@@ -3063,8 +3064,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/ffmpeg"
-                        project.ext.libav.versions = [ "3.3.3" ]
-                        project.ext.libav.versionmap = [ "3.3.3" : "57" ]
+                        project.ext.libav.versions = [ "3.3.3", "4.0.2" ]
+                        project.ext.libav.versionmap = [ "3.3.3" : "57", "4.0.2" : "58" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
@@ -3083,13 +3084,28 @@ project(":media") {
                             def libavDir = "${libav.basedir}/ffmpeg-${version}"
                             File dir = file(libavDir)
                             if (dir.exists()) {
-                                def configFile = "${libav.basedir}/ffmpeg-${version}/config.h"
+                                def configFile = "${libavDir}/config.h"
                                 File cfgFile = file(configFile)
                                 if (!cfgFile.exists()) {
                                     // Add execute permissions to version.sh, otherwise build fails
-                                    exec {
-                                        workingDir("$libavDir")
-                                        commandLine("chmod", "+x", "version.sh")
+                                    def versionFile = "${libavDir}/version.sh"
+                                    File verFile = file(versionFile)
+                                    if (verFile.exists()) {
+                                        exec {
+                                            workingDir("$libavDir")
+                                            commandLine("chmod", "+x", "version.sh")
+                                        }
+                                    } else {
+                                        versionFile = "${libavDir}/ffbuild/version.sh"
+                                        verFile = file(versionFile)
+                                        if (verFile.exists()) {
+                                            exec {
+                                                workingDir("${libavDir}/ffbuild")
+                                                commandLine("chmod")
+                                                args += "+x"
+                                                args += ["version.sh", "libversion.sh", "pkgconfig_generate.sh"]
+                                            }
+                                        }
                                     }
                                     exec {
                                         workingDir("$libavDir")
@@ -3129,7 +3145,7 @@ project(":media") {
                             project.ext.libav.libavffmpeg.versions = [ "56" ]
                             project.ext.libav.ffmpeg = [:]
                             project.ext.libav.ffmpeg.basedir = "${buildDir}/native/linux/ffmpeg/ffmpeg"
-                            project.ext.libav.ffmpeg.versions = [ "57" ]
+                            project.ext.libav.ffmpeg.versions = [ "57", "58" ]
 
                             project.ext.libav.versions.each { version ->
                                 def libavDir = "${project.ext.libav.basedir}-${version}"
