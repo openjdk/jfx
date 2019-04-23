@@ -4,7 +4,7 @@
 This software is present only on Mac OS X systems.
 
 ### Apple Computer CoreAudio License
-<pre>
+```
 
 File:
 Abstract: Part of CoreAudio Utility Classes
@@ -50,4 +50,4 @@ POSSIBILITY OF SUCH DAMAGE.
 
 Copyright (C) 2014 Apple Inc. All Rights Reserved.
 
-</pre>
+```

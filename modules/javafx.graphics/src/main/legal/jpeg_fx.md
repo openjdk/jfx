@@ -1,7 +1,8 @@
 ## Independent JPEG Group (IJG) JPEG v9c
 
 ### IJG License
-<pre>
+```
+
 /*
  * jcapimin.c
  *
@@ -10,6 +11,7 @@
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  */
+
 [From the README file]
 The authors make NO WARRANTY or representation, either express or implied,
 with respect to this software, its quality, accuracy, merchantability, or
@@ -46,4 +48,4 @@ We specifically permit and encourage the use of this software as the basis of
 commercial products, provided that all warranty or liability claims are
 assumed by the product vendor.
 
-</pre>
+```

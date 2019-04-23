@@ -1,7 +1,8 @@
 ## GStreamer v1.14.4
 
 ### GStreamer Notice
-<pre>
+```
+
 You are receiving a copy of GStreamer, Version: 1.14.4 in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
 Oracle license do NOT apply to the GStreamer, Version: 1.14.4; it is
@@ -23,10 +24,11 @@ source using a web browser. The root directory of the GStreamer source
 code is here:
 
    rt/modules/javafx.media/src/main/native/gstreamer/gstreamer-lite/
-</pre>
+```
 
 ### LGPL 2.1
-<pre>
+```
+
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
 
@@ -84,7 +86,7 @@ modified by someone else and passed on, the recipients should know
 that what they have is not the original version, so that the original
 author's reputation will not be affected by problems that might be
 introduced by others.
-
+
   Finally, software patents pose a constant threat to the existence of
 any free program.  We wish to make sure that a company cannot
 effectively restrict the users of a free program by obtaining a
@@ -530,4 +532,4 @@ necessary.  Here is a sample; alter the names:
 
 That's all there is to it!
 
-</pre>
+```

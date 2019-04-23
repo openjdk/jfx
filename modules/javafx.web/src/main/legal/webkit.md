@@ -1,7 +1,8 @@
 ## WebKit Open Source Project: WebKit v607.1
 
 ### WebKit Notice
-<pre>
+```
+
 You are receiving a copy of WebKit in either source or
 object code in the JavaFX runtime or JavaFX SDK. The terms of the
 Oracle license do NOT apply to WebKit; it is
@@ -23,10 +24,11 @@ source using a web browser. The root directory of the WebKit source
 code is here:
 
    rt/modules/javafx.web/src/main/native/
-</pre>
+```
 
 ### LGPL 2.1
-<pre>
+```
+
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
 
@@ -530,4 +532,4 @@ necessary.  Here is a sample; alter the names:
 
 That's all there is to it!
 
-</pre>
+```

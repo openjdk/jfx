@@ -1,7 +1,7 @@
 ## Khronos Group OpenGL Headers v4.6
 
 ### Khronos Group License
-<pre>
+```
 
 Copyright (c) 2008-2018 The Khronos Group Inc.
 
@@ -24,4 +24,4 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
-</pre>
+```
