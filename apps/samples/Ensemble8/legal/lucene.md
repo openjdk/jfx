@@ -1,7 +1,47 @@
 ## Apache Lucene v7.4.0
 
+### Apache Lucene Notice
+```
+
+    =========================================================================
+    == NOTICE file corresponding to section 4(d) of the Apache License,    ==
+    == Version 2.0, in this case for the Apache Lucene Java distribution.  ==
+    =========================================================================
+
+    Apache Lucene
+    Copyright 2001-2018 The Apache Software Foundation
+
+    This product includes software developed at
+    The Apache Software Foundation (http://www.apache.org/).
+
+    Includes software from other Apache Software Foundation projects,
+    including, but not limited to:
+     - Apache Jakarta Regexp
+     - Apache Commons
+
+    Brics Automaton (under core/src/java/org/apache/lucene/util/automaton) is
+    BSD-licensed, created by Anders Møller. See http://www.brics.dk/automaton/
+
+    The class org.apache.lucene.util.WeakIdentityMap was derived from
+    the Apache CXF project and is Apache License 2.0.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+```
+
 ### Apache 2.0 License
-<pre>
+```
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -203,4 +243,5 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-</pre>
+
+```
