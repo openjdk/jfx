@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -128,7 +128,7 @@ public class AudioClipApp extends Application {
             URL noteURL = baseURI.resolve("resources/"+name).toURL();
 
             // check if the resource exists, then try to load it
-            if (noteURL.getProtocol().equals("http")) {
+            if (noteURL.getProtocol().equals("http") || noteURL.getProtocol().equals("https")) {
                 HttpURLConnection urlCon = (HttpURLConnection)noteURL.openConnection();
                 urlCon.setRequestMethod("HEAD");
                 urlCon.connect();
