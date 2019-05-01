@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -417,7 +417,7 @@ public class Locator {
                             }
 
                             // FIXME: get cache settings from server, honor them
-                        } else if (scheme.equals("file") || scheme.equals("jar")) {
+                        } else if (scheme.equals("file") || scheme.equals("jar") || scheme.equals("jrt")) {
                             InputStream stream = getInputStream(uri);
                             stream.close();
                             isConnected = true;

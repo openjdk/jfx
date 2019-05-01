@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -256,7 +256,9 @@ public abstract class ConnectionHolder {
         }
 
         boolean isSeekable() {
-            return (urlConnection instanceof HttpURLConnection) || (urlConnection instanceof JarURLConnection);
+            return (urlConnection instanceof HttpURLConnection) ||
+                   (urlConnection instanceof JarURLConnection) ||
+                   isJRT();
         }
 
         boolean isRandomAccess() {
@@ -297,7 +299,7 @@ public abstract class ConnectionHolder {
                         Locator.closeConnection(tmpURLConnection);
                     }
                 }
-            } else if (urlConnection instanceof JarURLConnection) {
+            } else if ((urlConnection instanceof JarURLConnection) || isJRT()) {
                 try {
                     closeConnection();
 
@@ -334,6 +336,11 @@ public abstract class ConnectionHolder {
             return (inputStream == null) ?
                     Channels.newChannel(urlConnection.getInputStream()) :
                     Channels.newChannel(inputStream);
+        }
+
+        private boolean isJRT() {
+            String scheme = uri.getScheme().toLowerCase();
+            return "jrt".equals(scheme);
         }
     }
 

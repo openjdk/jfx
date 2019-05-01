@@ -61,7 +61,8 @@ public final class GSTPlatform extends Platform {
     private static final String[] PROTOCOLS = {
         "file",
         "http",
-        "https"
+        "https",
+        "jrt"
     };
 
     private static GSTPlatform globalInstance = null;
