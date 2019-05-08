@@ -606,11 +606,7 @@ bool WindowContextBase::set_view(jobject view) {
     }
 
     if (view) {
-        gint width, height;
         jview = mainEnv->NewGlobalRef(view);
-        gtk_window_get_size(GTK_WINDOW(gtk_widget), &width, &height);
-        mainEnv->CallVoidMethod(view, jViewNotifyResize, width, height);
-        CHECK_JNI_EXCEPTION_RET(mainEnv, FALSE)
     } else {
         jview = NULL;
     }
@@ -1276,6 +1272,14 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom, hints);
         }
         gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
+
+        //JDK-8193502: Moved here from WindowContextBase::set_view because set_view is called
+        //first and the size is not set yet. This also guarantees that the size will be correct
+        //see: gtk_window_get_size doc for more context.
+        if (jview) {
+            mainEnv->CallVoidMethod(jview, jViewNotifyResize, newWidth, newHeight);
+            CHECK_JNI_EXCEPTION(mainEnv);
+        }
     }
 }
 
