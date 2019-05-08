@@ -4307,4 +4307,11 @@ public class TableViewKeyInputTest {
         assertEquals(1, sm.getSelectedIndex());
         assertEquals(1, fm.getFocusedIndex());
     }
+
+    @Test public void test_jdk_8222214() {
+        tableView.getFocusModel().focus(0);
+        keyboard.doUpArrowPress();
+
+        assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
+    }
 }

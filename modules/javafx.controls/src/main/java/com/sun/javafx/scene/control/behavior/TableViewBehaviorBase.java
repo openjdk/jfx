@@ -860,8 +860,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         int currentRow = focusedCell.getRow();
         int currentColumn = getVisibleLeafIndex(focusedCell.getTableColumn());
 
-        if (rowDiff < 0 && currentRow <= 0) return;
-        else if (rowDiff > 0 && currentRow >= getItemCount() - 1) return;
+        if (rowDiff > 0 && currentRow >= getItemCount() - 1) return;
         else if (columnDiff < 0 && currentColumn <= 0) return;
         else if (columnDiff > 0 && currentColumn >= getVisibleLeafColumns().size() - 1) return;
         else if (columnDiff > 0 && currentColumn == -1) return;
@@ -869,7 +868,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableColumnBase tc = focusedCell.getTableColumn();
         tc = getColumn(tc, columnDiff);
 
-        int row = focusedCell.getRow() + rowDiff;
+        //JDK-8222214: Moved this "if" here because the first row might be focused and not selected, so
+        // this makes sure it gets selected when the users presses UP. If not it ends calling
+        // VirtualFlow.scrollTo(-1) at and the content of the TableView disappears.
+        int row = (currentRow <= 0 && rowDiff <= 0) ? 0 : focusedCell.getRow() + rowDiff;
         sm.clearAndSelect(row, tc);
         setAnchor(row, tc);
     }
