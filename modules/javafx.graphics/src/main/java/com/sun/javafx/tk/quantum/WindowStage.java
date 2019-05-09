@@ -194,6 +194,9 @@ class WindowStage extends GlassStage {
                             break;
                     }
                 }
+                if (modality != Modality.NONE) {
+                    windowMask |= Window.MODAL;
+                }
                 platformWindow =
                         app.createWindow(ownerWindow, Screen.getMainScreen(), windowMask);
                 platformWindow.setResizable(resizable);

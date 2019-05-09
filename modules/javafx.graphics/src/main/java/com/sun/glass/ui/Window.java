@@ -160,6 +160,11 @@ public abstract class Window {
      */
     @Native public static final int UNIFIED = 1 << 8;
 
+    /**
+     * Indicates that the window is modal which affects whether the window is minimizable.
+     */
+    @Native public static final int MODAL = 1 << 9;
+
     final static public class State {
         @Native public static final int NORMAL = 1;
         @Native public static final int MINIMIZED = 2;

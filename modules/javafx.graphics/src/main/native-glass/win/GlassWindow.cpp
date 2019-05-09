@@ -1245,6 +1245,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createWindow
         } else {
             dwExStyle = 0;
             dwStyle |= WS_POPUP;
+            // if undecorated or transparent and not modal, enable taskbar iconification toggling
+            if (!(mask & com_sun_glass_ui_Window_MODAL)) {
+                dwStyle |= WS_MINIMIZEBOX;
+            }
         }
 
         if (mask & com_sun_glass_ui_Window_TRANSPARENT) {
