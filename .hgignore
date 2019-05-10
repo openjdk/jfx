@@ -69,6 +69,5 @@ DerivedData
 !default.perspectivev3
 .git
 .gitattributes
-.gitignore
 *.sdf
 
