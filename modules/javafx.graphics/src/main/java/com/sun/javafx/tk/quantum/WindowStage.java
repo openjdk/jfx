@@ -515,15 +515,15 @@ class WindowStage extends GlassStage {
                 }
             } else if (modality == Modality.APPLICATION_MODAL) {
                 windowsSetEnabled(true);
-            } else {
-                // Note: This method is required to workaround a glass issue
-                // mentioned in RT-12607
-                // If the hiding stage is unfocusable (i.e. it's a PopupStage),
-                // then we don't do this to avoid stealing the focus.
-                if (!isPopupStage && owner != null && owner instanceof WindowStage) {
-                    WindowStage ownerStage = (WindowStage)owner;
-                    ownerStage.requestToFront();
-                }
+            }
+            // Note: This method is required to workaround a glass issue
+            // mentioned in RT-12607
+            // If the hiding stage is unfocusable (i.e. it's a PopupStage),
+            // then we don't do this to avoid stealing the focus.
+            // JDK-8210973: APPLICATION_MODAL window can have owner.
+            if (!isPopupStage && owner != null && owner instanceof WindowStage) {
+                WindowStage ownerStage = (WindowStage)owner;
+                ownerStage.requestToFront();
             }
         }
         QuantumToolkit.runWithRenderLock(() -> {
