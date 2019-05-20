@@ -4,9 +4,9 @@ apply plugin:'application'
 def mainClassName = "ensemble.EnsembleApp"
 
 def FileCollection apachecp = files(
-   "./lib/lucene-core-7.4.0.jar",
-   "./lib/lucene-grouping-7.4.0.jar",
-   "./lib/lucene-queryparser-7.4.0.jar")
+   "./lib/lucene-core-7.7.1.jar",
+   "./lib/lucene-grouping-7.7.1.jar",
+   "./lib/lucene-queryparser-7.7.1.jar")
 
 sourceSets {
     main {

@@ -1,0 +1,28 @@
+To update to a new version of Lucene:
+
+1. Change the version number in the following files:
+    apps/samples/.classpath
+    apps/samples/Ensemble8/build.gradle
+    apps/samples/Ensemble8/legal/lucene.md
+    apps/samples/Ensemble8/nbproject/project.properties
+    build.gradle
+
+
+2. Do a clean build of apps:
+
+    gradle clean
+    gradle sdk apps
+
+NOTE: if upgrading to a new major version there are usually compilation errors that need to be fixed.
+
+
+3. Regenerate the index files:
+
+$ cd apps/samples/Ensemble8
+$ rm -rf src/generated/resources/ensemble/search/index
+$ ant -Dplatforms.JDK_1.9.home=$JAVA_HOME clean ensemble-generate-search-index jar
+$ rm src/generated/resources/ensemble/search/index/write.lock
+$ hg addremove src/generated/resources/ensemble/search/index
+
+
+4. Test it by running Ensemble and entering text into the search box (upper right)

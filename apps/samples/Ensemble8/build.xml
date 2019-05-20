@@ -169,7 +169,8 @@
     
     <target name="ensemble-generate-search-index" depends="init,compile" description="Ensemble: Generate search index.">
        <delete dir="${basedir}/src/generated/ensemble/search/index"/>
-       <java classname="ensemble.compiletime.EnsembleCompiletimeMain" fork="true">
+       <java classname="ensemble.compiletime.EnsembleCompiletimeMain" fork="true" failonerror="true">
+         <jvmarg value="@../../../build/run.args"/>
          <arg value="index"/>
          <classpath>
            <pathelement location="${build.classes.dir}"/>
