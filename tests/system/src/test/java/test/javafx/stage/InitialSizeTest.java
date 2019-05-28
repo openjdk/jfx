@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,8 @@
  */
 package test.javafx.stage;
 
-import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -42,53 +40,35 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 
 public class InitialSizeTest {
     static CountDownLatch startupLatch;
     static Stage stage;
-
-    private static final double INIT_SIZE = 100.d;
-
-    public static void main(String[] args) throws Exception {
-        initFX();
-
-        try {
-            InitialSizeTest test = new InitialSizeTest();
-            test.testInitialSize();
-        } catch (Throwable e) {
-            e.printStackTrace();
-        } finally {
-            teardown();
-        }
-    }
+    private static final double INIT_SIZE = 200.d;
 
     public static class TestApp extends Application {
-
         @Override
         public void start(Stage primaryStage) throws Exception {
-            Platform.runLater(startupLatch::countDown);
             primaryStage.setScene(new Scene(new Group()));
             stage = primaryStage;
             stage.setWidth(INIT_SIZE);
             stage.setHeight(INIT_SIZE);
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->
+                    Platform.runLater(startupLatch::countDown));
             stage.show();
         }
     }
 
     @BeforeClass
     public static void initFX() {
-        if (startupLatch == null) {
-            startupLatch = new CountDownLatch(1);
-
-            new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-            try {
-                if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                    fail("Timeout waiting for FX runtime to start");
-                }
-            } catch (InterruptedException ex) {
-                fail("Unexpected exception: " + ex);
+        startupLatch = new CountDownLatch(1);
+        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
+        try {
+            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
+                fail("Timeout waiting for FX runtime to start");
             }
+        } catch (InterruptedException ex) {
+            fail("Unexpected exception: " + ex);
         }
     }
 
