@@ -285,10 +285,10 @@ void
 glass_gdk_mouse_devices_ungrab();
 
 void
-glass_gdk_master_pointer_grab(GdkWindow *window, GdkCursor *cursor);
+glass_gdk_master_pointer_grab(GdkEvent *event, GdkWindow *window, GdkCursor *cursor);
 
 void
-glass_gdk_master_pointer_ungrab();
+glass_gdk_master_pointer_ungrab(GdkEvent *event);
 
 void
 glass_gdk_master_pointer_get_position(gint *x, gint *y);

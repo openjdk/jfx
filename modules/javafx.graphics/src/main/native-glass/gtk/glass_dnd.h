@@ -61,7 +61,7 @@ public:
     public:
         View(GdkPixbuf* pixbuf, gboolean is_raw_image, gboolean is_offset_set, gint offset_x, gint offset_y);
         void screen_changed();
-        void expose();
+        void expose(cairo_t* context);
         void move(gint x, gint y);
         ~View();
     private:

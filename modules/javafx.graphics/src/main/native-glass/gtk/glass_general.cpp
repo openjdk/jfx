@@ -584,17 +584,23 @@ glass_gdk_mouse_devices_ungrab() {
 }
 
 void
-glass_gdk_master_pointer_grab(GdkWindow *window, GdkCursor *cursor) {
+glass_gdk_master_pointer_grab(GdkEvent *event, GdkWindow *window, GdkCursor *cursor) {
     if (disableGrab) {
         gdk_window_set_cursor(window, cursor);
         return;
     }
 #ifdef GLASS_GTK3
-        gdk_device_grab(gdk_device_manager_get_client_pointer(
-                    gdk_display_get_device_manager(
-                        gdk_display_get_default())),
-                    window, GDK_OWNERSHIP_NONE, FALSE, GDK_ALL_EVENTS_MASK,
-                    cursor, GDK_CURRENT_TIME);
+        GdkDevice *device = gdk_event_get_device(event);
+
+        gdk_device_grab(device, window, GDK_OWNERSHIP_NONE, FALSE,
+                        (GdkEventMask)
+                             (GDK_POINTER_MOTION_MASK
+                                 | GDK_BUTTON_MOTION_MASK
+                                 | GDK_BUTTON1_MOTION_MASK
+                                 | GDK_BUTTON2_MOTION_MASK
+                                 | GDK_BUTTON3_MOTION_MASK
+                                 | GDK_BUTTON_RELEASE_MASK),
+                           cursor, GDK_CURRENT_TIME);
 #else
         gdk_pointer_grab(window, FALSE, (GdkEventMask)
                          (GDK_POINTER_MOTION_MASK
@@ -608,12 +614,9 @@ glass_gdk_master_pointer_grab(GdkWindow *window, GdkCursor *cursor) {
 }
 
 void
-glass_gdk_master_pointer_ungrab() {
+glass_gdk_master_pointer_ungrab(GdkEvent *event) {
 #ifdef GLASS_GTK3
-        gdk_device_ungrab(gdk_device_manager_get_client_pointer(
-                              gdk_display_get_device_manager(
-                                  gdk_display_get_default())),
-                          GDK_CURRENT_TIME);
+        gdk_device_ungrab(gdk_event_get_device(event), GDK_CURRENT_TIME);
 #else
         gdk_pointer_ungrab(GDK_CURRENT_TIME);
 #endif
@@ -624,8 +627,7 @@ glass_gdk_master_pointer_get_position(gint *x, gint *y) {
 #ifdef GLASS_GTK3
         gdk_device_get_position(gdk_device_manager_get_client_pointer(
                                     gdk_display_get_device_manager(
-                                        gdk_display_get_default())),
-                                NULL, x, y);
+                                        gdk_display_get_default())), NULL, x, y);
 #else
         gdk_display_get_pointer(gdk_display_get_default(), NULL, x, y, NULL);
 #endif
