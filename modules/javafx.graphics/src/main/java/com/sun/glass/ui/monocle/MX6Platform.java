@@ -29,7 +29,8 @@ class MX6Platform extends LinuxPlatform {
 
     @Override
     protected NativeCursor createCursor() {
-        return new MX6Cursor();
+        final NativeCursor c = useCursor ? new MX6Cursor() : new NullCursor();
+        return logSelectedCursor(c);
     }
 
     @Override

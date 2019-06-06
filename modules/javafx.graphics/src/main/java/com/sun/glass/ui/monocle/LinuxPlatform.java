@@ -39,7 +39,8 @@ class LinuxPlatform extends NativePlatform {
 
     @Override
     protected NativeCursor createCursor() {
-        return new SoftwareCursor();
+        final NativeCursor c = useCursor ? new SoftwareCursor() : new NullCursor();
+        return logSelectedCursor(c);
     }
 
     @Override
