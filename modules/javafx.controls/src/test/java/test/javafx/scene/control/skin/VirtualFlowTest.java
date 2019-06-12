@@ -1126,6 +1126,48 @@ public class VirtualFlowTest {
         assertMinimalNumberOfCellsAreUsed(flow);
         assertEquals(flow.getViewportLength()-25.0, VirtualFlowShim.<IndexedCell>cells_getLast(flow.cells).getLayoutY(), 0.0);
     }
+
+    private void assertLastCellInsideViewport(boolean vertical) {
+        flow.setVertical(vertical);
+        flow.resize(400, 400);
+
+        int total = 10000;
+        flow.setCellCount(total);
+        pulse();
+
+        int count = 9000;
+        flow.setPosition(0d);
+        pulse();
+        flow.setPosition(((double)count) / total);
+        pulse();
+
+        //simulate 500 right key strokes
+        for (int i = 0; i < 500; i++) {
+            count++;
+            flow.scrollTo(count);
+            pulse();
+        }
+
+        IndexedCell vc = flow.getCell(count);
+
+        double cellPosition = flow.getCellPosition(vc);
+        double cellLength = flow.getCellLength(count);
+        double viewportLength = flow.getViewportLength();
+
+        assertEquals("Last cell must end on viewport size", viewportLength, (cellPosition + cellLength), 0.1);
+    }
+
+    @Test
+    // see JDK-8197536
+    public void testScrollOneCell() {
+        assertLastCellInsideViewport(true);
+    }
+
+    @Test
+    // see JDK-8197536
+    public void testScrollOneCellHorizontal() {
+        assertLastCellInsideViewport(false);
+    }
 }
 
 class CellStub extends IndexedCellShim {

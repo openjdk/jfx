@@ -52,6 +52,11 @@ public class VirtualFlowShim<T extends IndexedCell> extends VirtualFlow<T> {
     }
 
     @Override
+    public double getCellPosition(T cell) {
+        return super.getCellPosition(cell);
+    }
+
+    @Override
     public void recreateCells() {
         super.recreateCells();
     }
