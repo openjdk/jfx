@@ -69,6 +69,8 @@ final class Platform {
                 type = WINDOWS;
             } else if (osNameLowerCase.startsWith("linux")) {
                 type = GTK;
+            } else if (osNameLowerCase.startsWith("ios")) {
+                type = IOS;
             }
         }
 

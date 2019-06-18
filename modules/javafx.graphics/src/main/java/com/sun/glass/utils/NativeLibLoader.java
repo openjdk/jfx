@@ -39,6 +39,7 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 
 public class NativeLibLoader {
 
@@ -169,7 +170,7 @@ public class NativeLibLoader {
                 //is recognized by existence of JNI_OnLoad_libraryname() C function.
                 //If libraryname contains hyphen, it needs to be translated
                 //to underscore to form valid C function indentifier.
-                if ("iOS".equals(System.getProperty("os.name"))
+                if ("ios".equals(System.getProperty("os.name").toLowerCase(Locale.ROOT))
                         && libraryName.contains("-")) {
                     libraryName = libraryName.replace("-", "_");
                     try {
