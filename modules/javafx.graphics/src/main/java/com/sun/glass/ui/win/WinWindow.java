@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -202,7 +202,9 @@ class WinWindow extends Window {
                                        bestScreen.getPlatformScaleY(),
                                        bestScreen.getRecommendedOutputScaleX(),
                                        bestScreen.getRecommendedOutputScaleY());
-                    view.updateLocation();
+                    if (view != null) {
+                        view.updateLocation();
+                    }
                     if (resizeMode == RESIZE_DISABLE) {
                         return null;
                     } else {
