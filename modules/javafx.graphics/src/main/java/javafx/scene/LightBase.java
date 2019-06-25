@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,11 +35,14 @@ import com.sun.javafx.scene.LightBaseHelper;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.transform.TransformHelper;
 import com.sun.javafx.sg.prism.NGLightBase;
+import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -52,19 +55,31 @@ import com.sun.javafx.logging.PlatformLogger;
 
 /**
  * The {@code LightBase} class provides definitions of common properties for
- * objects that represent a form of Light source.  These properties
+ * objects that represent a form of light source. These properties
  * include:
  * <ul>
- * <li>The color that defines color of the light source.
+ * <li>{@code color} - the color of the light source</li>
+ * <li>{@code scope} - a list of nodes the light source affects</li>
+ * <li>{@code exlusionScope} - a list of nodes the light source does not affect</li>
  * </ul>
  *
+ * <p>
+ * A node can exist in only one of the lists, if it is added to one, it is silently removed from the other. If a node
+ * does not exist in any list, it inherits its affected state from its parent, recursively. An exception to this is that
+ * a light with an empty {@code scope} affects all nodes in its scene/subscene implicitly (except for those in its
+ * {@code exlusionScope}) as if the root of the scene is in the {@code scope}. <br>
+ * The {@code exlusionScope} is useful only for nodes that would otherwise be in scope of the light. Excluding a node is
+ * a convenient alternative to traversing the scenegraph hierarchy and adding all of the other nodes to the light's
+ * scope. Instead, the scope can remain wide and specific nodes can be excluded.
+ *
+ * <p>
  * Note that this is a conditional feature. See
  * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
  * for more information.
  *
  * <p>
- * An application should not extend the LightBase class directly. Doing so may lead to
- * an UnsupportedOperationException being thrown.
+ * An application should not extend the {@code LightBase} class directly. Doing so may lead to
+ * an {@code UnsupportedOperationException} being thrown.
  * </p>
  *
  * @since JavaFX 8.0
@@ -100,7 +115,7 @@ public abstract class LightBase extends Node {
     private Affine3D localToSceneTx = new Affine3D();
 
     {
-        // To initialize the class helper at the begining each constructor of this class
+        // To initialize the class helper at the beginning of each constructor of this class
         LightBaseHelper.initHelper(this);
     }
 
@@ -185,39 +200,63 @@ public abstract class LightBase extends Node {
     private ObservableList<Node> scope;
 
     /**
-     * Gets the list of nodes that specifies the
-     * hierarchical scope of this Light. If the scope list is empty,
-     * the Light node has universe scope: all nodes under it's scene
-     * are affected by it. If the scope list is non-empty, only those
-     * 3D Shape nodes in the scope list and under the Group nodes in the
-     * scope list are affected by this Light node.
-     * @return the list of nodes that specifies the hierarchical scope of this
-     * Light
+     * Gets the list of nodes that specifies the hierarchical scope of this light. Any {@code Shape3D}s in this list or
+     * under a {@code Parent} in this list are affected by this light, unless a closer parent exists in the
+     * {@code exclusionScope} list. If the list is empty, all nodes under the light's scene/subscene are affected by it
+     * (unless they are in the {@code exclusionScope}).
+     *
+     * @return the list of nodes that specifies the hierarchical scope of this light
+     * @see #getExclusionScope
      */
     public ObservableList<Node> getScope() {
         if (scope == null) {
-            scope = new TrackableObservableList<Node>() {
+            scope = new TrackableObservableList<>() {
 
                 @Override
                 protected void onChanged(Change<Node> c) {
-                    NodeHelper.markDirty(LightBase.this, DirtyBits.NODE_LIGHT_SCOPE);
-                    while (c.next()) {
-                        for (Node node : c.getRemoved()) {
-                            // Update the removed nodes
-                            if (node instanceof Parent || node instanceof Shape3D) {
-                                markChildrenDirty(node);
-                            }
-                        }
-                        for (Node node : c.getAddedSubList()) {
-                            if (node instanceof Parent || node instanceof Shape3D) {
-                                markChildrenDirty(node);
-                            }
-                        }
-                    }
+                    doOnChanged(c, exclusionScope);
                 }
             };
         }
         return scope;
+    }
+
+    private ObservableList<Node> exclusionScope;
+
+    /**
+     * Gets the list of nodes that specifies the hierarchical exclusion scope of this light. Any {@code Shape3D}s in
+     * this list or under a {@code Parent} in this list are not affected by this light, unless a closer parent exists in
+     * the {@code scope} list. <br>
+     * This is a convenience list for excluding nodes that would otherwise be in scope of the light.
+     *
+     * @return the list of nodes that specifies the hierarchical exclusion scope of this light
+     * @see #getScope
+     * @since 13
+     */
+    public ObservableList<Node> getExclusionScope() {
+        if (exclusionScope == null) {
+            exclusionScope = new TrackableObservableList<>() {
+
+                @Override
+                protected void onChanged(Change<Node> c) {
+                    doOnChanged(c, scope);
+                }
+            };
+        }
+        return exclusionScope;
+    }
+
+    private void doOnChanged(Change<Node> c, ObservableList<Node> otherScope) {
+        NodeHelper.markDirty(this, DirtyBits.NODE_LIGHT_SCOPE);
+        while (c.next()) {
+            c.getRemoved().forEach(this::markChildrenDirty);
+            c.getAddedSubList().forEach(node -> {
+                if (otherScope != null && otherScope.remove(node)) {
+                    return; // the other list will take care of the change
+                }
+                markChildrenDirty(node);
+            });
+        }
     }
 
     @Override
@@ -252,12 +291,25 @@ public abstract class LightBase extends Node {
         }
     }
 
+    /**
+     * Marks dirty all the 3D shapes that had their scoped/excluded state change. The method recursively traverses the
+     * given node's graph top-down to find all the leaves (3D shapes). Nodes that are not contained in one of the scope
+     * lists inherit their parent's scope, and nodes that are contained in one of the lists override their parent's
+     * state. For this reason, when traversing the graph, if a node that is contained in a list is reached, its branch
+     * is skipped.
+     *
+     * @param node the node that was added/removed from a scope
+     */
     private void markChildrenDirty(Node node) {
         if (node instanceof Shape3D) {
             // Dirty using a lightweight DirtyBits.NODE_DRAWMODE bit
             NodeHelper.markDirty(((Shape3D) node), DirtyBits.NODE_DRAWMODE);
         } else if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildren()) {
+                if ((scope != null && getScope().contains(child)) ||
+                        (exclusionScope != null && getExclusionScope().contains(child))) {
+                    continue; // child overrides parent, no need to propagate the change
+                }
                 markChildrenDirty(child);
             }
         }
@@ -268,14 +320,11 @@ public abstract class LightBase extends Node {
      */
     private void doMarkDirty(DirtyBits dirtyBit) {
         if ((scope == null) || getScope().isEmpty()) {
-            // This light affect the entire scene/subScene
+            // This light affects the entire scene/subScene
             markOwnerDirty();
         } else if (dirtyBit != DirtyBits.NODE_LIGHT_SCOPE) {
             // Skip NODE_LIGHT_SCOPE dirty since it is processed on scope change.
-            ObservableList<Node> tmpScope = getScope();
-            for (int i = 0, max = tmpScope.size(); i < max; i++) {
-                markChildrenDirty(tmpScope.get(i));
-            }
+            getScope().forEach(this::markChildrenDirty);
         }
     }
 
@@ -293,16 +342,17 @@ public abstract class LightBase extends Node {
 
         if (isDirty(DirtyBits.NODE_LIGHT_SCOPE)) {
             if (scope != null) {
-                ObservableList<Node> tmpScope = getScope();
-                if (tmpScope.isEmpty()) {
-                    peer.setScope(null);
+                if (getScope().isEmpty()) {
+                    peer.setScope(List.of());
                 } else {
-                    Object ngList[] = new Object[tmpScope.size()];
-                    for (int i = 0; i < tmpScope.size(); i++) {
-                        Node n = tmpScope.get(i);
-                        ngList[i] = n.getPeer();
-                    }
-                    peer.setScope(ngList);
+                    peer.setScope(getScope().stream().map(n -> n.<NGNode>getPeer()).collect(Collectors.toList()));
+                }
+            }
+            if (exclusionScope != null) {
+                if (getExclusionScope().isEmpty()) {
+                    peer.setExclusionScope(List.of());
+                } else {
+                    peer.setExclusionScope(getExclusionScope().stream().map(n -> n.<NGNode>getPeer()).collect(Collectors.toList()));
                 }
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package com.sun.javafx.sg.prism;
+
+import java.util.List;
 
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -97,11 +99,20 @@ public class NGLightBase extends NGNode {
         this.worldTransform = localToSceneTx;
     }
 
-    Object scopedNodes[] = null;
+    List<NGNode> scopedNodes = List.of();
 
-    public void setScope(Object[] scopedNodes) {
-        if (this.scopedNodes != scopedNodes) {
+    public void setScope(List<NGNode> scopedNodes) {
+        if (!this.scopedNodes.equals(scopedNodes)) {
             this.scopedNodes = scopedNodes;
+            visualsChanged();
+        }
+    }
+
+    List<NGNode> excludedNodes = List.of();
+
+    public void setExclusionScope(List<NGNode> excludedNodes) {
+        if (!this.excludedNodes.equals(excludedNodes)) {
+            this.excludedNodes = excludedNodes;
             visualsChanged();
         }
     }
@@ -109,25 +120,31 @@ public class NGLightBase extends NGNode {
     final boolean affects(NGShape3D n3d) {
         if (!lightOn) {
             return false;
-        } else if (scopedNodes == null) {
-            return true;
-        } else {
-            for (int i = 0; i < scopedNodes.length; i++) {
-                Object scopedNode = scopedNodes[i];
-                if (scopedNode instanceof NGGroup) {
-                    NGNode parent = n3d.getParent();
-                    while (parent != null) {
-                        if (scopedNode == parent) {
-                            return true;
-                        }
-                        parent = parent.getParent();
-                    }
-                } else if (scopedNode == n3d) {
-                    return true;
-                }
-            }
         }
-        return false;
+
+        // shortcut to avoid traversing the hierarchy
+        if (scopedNodes.isEmpty() && excludedNodes.isEmpty()) {
+            return true;
+        }
+        if (scopedNodes.contains(n3d)) {
+            return true;
+        }
+        if (excludedNodes.contains(n3d)) {
+            return false;
+        }
+        NGNode parent = n3d.getParent();
+        while (parent != null) {
+            if (scopedNodes.contains(parent)) {
+                return true;
+            }
+            if (excludedNodes.contains(parent)) {
+                return false;
+            }
+            parent = parent.getParent();
+        }
+        // if the node's state is not decided by either list,
+        // it comes down to if the light has universal scope or not
+        return scopedNodes.isEmpty();
     }
 
     @Override
