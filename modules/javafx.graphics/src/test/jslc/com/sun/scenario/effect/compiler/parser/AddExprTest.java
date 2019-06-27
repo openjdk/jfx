@@ -28,7 +28,7 @@ package com.sun.scenario.effect.compiler.parser;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.BinaryOpType;
 import com.sun.scenario.effect.compiler.tree.BinaryExpr;
-import com.sun.scenario.effect.compiler.tree.JSLCVisitor;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -69,7 +69,7 @@ public class AddExprTest extends MultExprTest {
 
     private BinaryExpr parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
-        JSLCVisitor visitor = new JSLCVisitor();
+        JSLVisitor visitor = new JSLVisitor();
         return (BinaryExpr) visitor.visit(parser.additive_expression());
     }
 

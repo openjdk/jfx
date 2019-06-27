@@ -34,6 +34,7 @@ import com.sun.scenario.effect.compiler.model.Qualifier;
 import com.sun.scenario.effect.compiler.model.Type;
 import com.sun.scenario.effect.compiler.model.Variable;
 import com.sun.scenario.effect.compiler.tree.GlueBlock;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.ProgramUnit;
 import com.sun.scenario.effect.compiler.tree.TreeScanner;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
@@ -48,11 +49,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class PrismBackend extends TreeScanner {
 
     private JSLParser parser;
+    private JSLVisitor visitor;
     private StringBuilder usercode = new StringBuilder();
     private boolean isPixcoordReferenced = false;
 
-    public PrismBackend(JSLParser parser, ProgramUnit program) {
+    public PrismBackend(JSLParser parser, JSLVisitor visitor, ProgramUnit program) {
         this.parser = parser;
+        this.visitor = visitor;
         scan(program);
     }
 
@@ -66,7 +69,7 @@ public class PrismBackend extends TreeScanner {
                               String genericsName,
                               String interfaceName)
     {
-        Map<String, Variable> vars = parser.getSymbolTable().getGlobalVariables();
+        Map<String, Variable> vars = visitor.getSymbolTable().getGlobalVariables();
         StringBuilder genericsDecl = new StringBuilder();
         StringBuilder interfaceDecl = new StringBuilder();
         StringBuilder samplerLinear = new StringBuilder();
@@ -107,7 +110,7 @@ public class PrismBackend extends TreeScanner {
             }
         }
 
-        int numSamplers = parser.getSymbolTable().getNumSamplers();
+        int numSamplers = visitor.getSymbolTable().getNumSamplers();
         String superClass;
         if (numSamplers == 0) {
             superClass = "PPSZeroSamplerPeer";

@@ -29,6 +29,7 @@ import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.tree.BreakStmt;
 import com.sun.scenario.effect.compiler.tree.ContinueStmt;
 import com.sun.scenario.effect.compiler.tree.DiscardStmt;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.ReturnStmt;
 import com.sun.scenario.effect.compiler.tree.Stmt;
@@ -82,6 +83,7 @@ public class JumpStatementTest extends ParserBase {
 
     private Stmt parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
-        return parser.jump_statement();
+        JSLVisitor visitor = new JSLVisitor();
+        return visitor.visitJump_statement(parser.jump_statement());
     }
 }

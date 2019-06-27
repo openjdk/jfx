@@ -66,7 +66,8 @@ public class SelectionStatementTest extends ParserBase {
 
     private Stmt parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
-        parser.getSymbolTable().declareVariable("foo", Type.INT, null);
-        return parser.selection_statement();
+        JSLVisitor visitor = new JSLVisitor();
+        visitor.getSymbolTable().declareVariable("foo", Type.INT, null);
+        return visitor.visitSelection_statement(parser.selection_statement());
     }
 }

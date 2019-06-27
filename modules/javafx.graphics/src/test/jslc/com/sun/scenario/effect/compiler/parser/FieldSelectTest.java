@@ -26,6 +26,7 @@
 package com.sun.scenario.effect.compiler.parser;
 
 import com.sun.scenario.effect.compiler.JSLParser;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import junit.framework.Assert;
 import junit.framework.AssertionFailedError;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
@@ -133,11 +134,12 @@ public class FieldSelectTest extends ParserBase {
 
     private String parseTreeFor(String text, boolean expectEx) throws Exception {
         JSLParser parser = parserOver(text);
-        String ret = parser.field_selection();
+        JSLVisitor visitor = new JSLVisitor();
+        String ret = visitor.visitField_selection(parser.field_selection()).getString();
         // TODO: there's probably a better way to check for trailing (invalid) characters
         boolean sawException = false;
         try {
-            parser.field_selection();
+            visitor.visitField_selection(parser.field_selection());
         } catch (Exception e) {
             sawException = true;
         }

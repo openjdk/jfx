@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.scenario.effect.compiler.tree.BinaryExpr;
 import com.sun.scenario.effect.compiler.tree.DoWhileStmt;
 import com.sun.scenario.effect.compiler.tree.ExprStmt;
 import com.sun.scenario.effect.compiler.tree.ForStmt;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.Stmt;
 import com.sun.scenario.effect.compiler.tree.WhileStmt;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
@@ -109,8 +110,9 @@ public class IterationStatementTest extends ParserBase {
 
     private Stmt parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
-        parser.getSymbolTable().declareVariable("i", Type.INT, null);
-        parser.getSymbolTable().declareVariable("j", Type.INT, null);
-        return parser.iteration_statement();
+        JSLVisitor visitor = new JSLVisitor();
+        visitor.getSymbolTable().declareVariable("i", Type.INT, null);
+        visitor.getSymbolTable().declareVariable("j", Type.INT, null);
+        return visitor.visitIteration_statement(parser.iteration_statement());
     }
 }

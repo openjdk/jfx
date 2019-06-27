@@ -37,6 +37,7 @@ import com.sun.scenario.effect.compiler.model.Qualifier;
 import com.sun.scenario.effect.compiler.model.Type;
 import com.sun.scenario.effect.compiler.model.Variable;
 import com.sun.scenario.effect.compiler.tree.FuncDef;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.ProgramUnit;
 import com.sun.scenario.effect.compiler.tree.TreeScanner;
 import org.stringtemplate.v4.ST;
@@ -50,13 +51,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class MEBackend extends TreeScanner {
 
     private final JSLParser parser;
+    private final JSLVisitor visitor;
     private final String body;
 
-    public MEBackend(JSLParser parser, ProgramUnit program) {
+    public MEBackend(JSLParser parser, JSLVisitor visitor, ProgramUnit program) {
         // TODO: will be removed once we clean up static usage
         resetStatics();
 
         this.parser = parser;
+        this.visitor = visitor;
 
         METreeScanner scanner = new METreeScanner();
         scanner.scan(program);
@@ -84,7 +87,7 @@ public class MEBackend extends TreeScanner {
                                     String genericsName,
                                     String interfaceName)
     {
-        Map<String, Variable> vars = parser.getSymbolTable().getGlobalVariables();
+        Map<String, Variable> vars = visitor.getSymbolTable().getGlobalVariables();
         StringBuilder genericsDecl = new StringBuilder();
         StringBuilder interfaceDecl = new StringBuilder();
         StringBuilder constants = new StringBuilder();

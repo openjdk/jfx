@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,15 +35,15 @@ import com.sun.scenario.effect.compiler.model.Type;
 import com.sun.scenario.effect.compiler.model.Variable;
 import com.sun.scenario.effect.compiler.tree.Expr;
 import com.sun.scenario.effect.compiler.tree.FuncDef;
-import com.sun.scenario.effect.compiler.tree.ProgramUnit;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.VarDecl;
 
 /**
  */
 public class HLSLBackend extends SLBackend {
 
-    public HLSLBackend(JSLParser parser, ProgramUnit program) {
-        super(parser, program);
+    public HLSLBackend(JSLParser parser, JSLVisitor visitor) {
+        super(parser, visitor);
     }
 
     private static final Map<String, String> qualMap = new HashMap<String, String>();

@@ -29,6 +29,7 @@ import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.BaseType;
 import com.sun.scenario.effect.compiler.model.Qualifier;
 import com.sun.scenario.effect.compiler.model.Variable;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.ProgramUnit;
 import com.sun.scenario.effect.compiler.tree.TreeScanner;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
@@ -423,7 +424,7 @@ public class CompileJSL {
         File outFile = jslcinfo.getOutputFile("prism-ps/build/gensrc/{pkg}/shader/{name}_Loader.java");
         if (JSLC.outOfDate(outFile, sourcetime)) {
             if (pinfo == null) pinfo = JSLC.getParserInfo(source);
-            PrismLoaderBackend loaderBackend = new PrismLoaderBackend(pinfo.parser, pinfo.program);
+            PrismLoaderBackend loaderBackend = new PrismLoaderBackend(pinfo.visitor, pinfo.program);
             JSLC.write(loaderBackend.getGlueCode(name), outFile);
         }
     }
@@ -507,12 +508,12 @@ public class CompileJSL {
 }
 
 class PrismLoaderBackend extends TreeScanner {
-    private JSLParser parser;
+    private JSLVisitor visitor;
     private int maxTexCoordIndex = -1;
     private boolean isPixcoordReferenced = false;
 
-    public PrismLoaderBackend(JSLParser parser, ProgramUnit program) {
-        this.parser = parser;
+    public PrismLoaderBackend(JSLVisitor visitor, ProgramUnit program) {
+        this.visitor = visitor;
         scan(program);
     }
 
@@ -522,7 +523,7 @@ class PrismLoaderBackend extends TreeScanner {
     }
 
     public String getGlueCode(String shaderName) {
-        Map<String, Variable> vars = parser.getSymbolTable().getGlobalVariables();
+        Map<String, Variable> vars = visitor.getSymbolTable().getGlobalVariables();
         StringBuilder samplerInit = new StringBuilder();
         StringBuilder paramInit = new StringBuilder();
 

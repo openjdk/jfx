@@ -28,7 +28,6 @@ package com.sun.scenario.effect.compiler.parser;
 import com.sun.scenario.effect.compiler.JSLLexer;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.ThrowingErrorListener;
-import com.sun.scenario.effect.compiler.tree.JSLCVisitor;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 

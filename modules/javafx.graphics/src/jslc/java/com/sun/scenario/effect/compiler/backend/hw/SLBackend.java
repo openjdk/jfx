@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ import com.sun.scenario.effect.compiler.tree.ExprStmt;
 import com.sun.scenario.effect.compiler.tree.FieldSelectExpr;
 import com.sun.scenario.effect.compiler.tree.ForStmt;
 import com.sun.scenario.effect.compiler.tree.FuncDef;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.ParenExpr;
 import com.sun.scenario.effect.compiler.tree.ProgramUnit;
@@ -65,6 +66,7 @@ import com.sun.scenario.effect.compiler.tree.WhileStmt;
 public abstract class SLBackend extends TreeScanner {
 
     private JSLParser parser;
+    protected JSLVisitor visitor;
     private StringBuilder sb = new StringBuilder();
     private Variable unrollVar = null;
     private int unrollIndex = -1;
@@ -72,9 +74,9 @@ public abstract class SLBackend extends TreeScanner {
     protected boolean isVertexColorReferenced;
     protected int maxTexCoordIndex = -1;
 
-    protected SLBackend(JSLParser parser, ProgramUnit program) {
+    protected SLBackend(JSLParser parser, JSLVisitor visitor) {
         this.parser = parser;
-        scan(program);
+        this.visitor = visitor;
     }
 
     protected final void output(String s) {

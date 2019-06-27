@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.scenario.effect.compiler.backend.prism.PrismBackend;
 import com.sun.scenario.effect.compiler.backend.sw.java.JSWBackend;
 import com.sun.scenario.effect.compiler.backend.sw.me.MEBackend;
 import com.sun.scenario.effect.compiler.backend.sw.sse.SSEBackend;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.ProgramUnit;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -38,7 +39,12 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupDir;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -83,10 +89,12 @@ public class JSLC {
 
     public static class ParserInfo {
         public JSLParser parser;
+        public JSLVisitor visitor;
         public ProgramUnit program;
 
-        public ParserInfo(JSLParser parser, ProgramUnit program) {
+        public ParserInfo(JSLParser parser, JSLVisitor visitor, ProgramUnit program) {
             this.parser = parser;
+            this.visitor = visitor;
             this.program = program;
         }
     }
@@ -97,8 +105,9 @@ public class JSLC {
 
     public static ParserInfo getParserInfo(InputStream stream) throws Exception {
         JSLParser parser = parse(stream);
-        ProgramUnit program = parser.translation_unit().prog;
-        return new ParserInfo(parser, program);
+        JSLVisitor visitor = new JSLVisitor();
+        ProgramUnit program = visitor.visitTranslation_unit(parser.translation_unit());
+        return new ParserInfo(parser, visitor, program);
     }
 
     /**
@@ -199,7 +208,8 @@ public class JSLC {
             File outFile = jslcinfo.getOutputFile(OUT_D3D);
             if (jslcinfo.force || outOfDate(outFile, sourceTime)) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
-                HLSLBackend hlslBackend = new HLSLBackend(pinfo.parser, pinfo.program);
+                HLSLBackend hlslBackend = new HLSLBackend(pinfo.parser, pinfo.visitor);
+                hlslBackend.scan(pinfo.program);
                 write(hlslBackend.getShader(), outFile);
             }
         }
@@ -208,7 +218,8 @@ public class JSLC {
             File outFile = jslcinfo.getOutputFile(OUT_ES2);
             if (jslcinfo.force || outOfDate(outFile, sourceTime)) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
-                ES2Backend es2Backend = new ES2Backend(pinfo.parser, pinfo.program);
+                ES2Backend es2Backend = new ES2Backend(pinfo.parser, pinfo.visitor);
+                es2Backend.scan(pinfo.program);
                 write(es2Backend.getShader(), outFile);
             }
         }
@@ -217,7 +228,7 @@ public class JSLC {
             File outFile = jslcinfo.getOutputFile(OUT_JAVA);
             if (jslcinfo.force || outOfDate(outFile, sourceTime)) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
-                JSWBackend javaBackend = new JSWBackend(pinfo.parser, pinfo.program);
+                JSWBackend javaBackend = new JSWBackend(pinfo.parser, pinfo.visitor, pinfo.program);
                 String genCode = javaBackend.getGenCode(shaderName, peerName, genericsName, interfaceName);
                 write(genCode, outFile);
             }
@@ -233,7 +244,7 @@ public class JSLC {
             boolean genCFileStale = outOfDate(genCFile, sourceTime);
             if (jslcinfo.force || outFileStale || genCFileStale) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
-                SSEBackend sseBackend = new SSEBackend(pinfo.parser, pinfo.program);
+                SSEBackend sseBackend = new SSEBackend(pinfo.parser, pinfo.visitor, pinfo.program);
                 SSEBackend.GenCode gen =
                     sseBackend.getGenCode(shaderName, peerName, genericsName, interfaceName);
 
@@ -259,9 +270,9 @@ public class JSLC {
             boolean genCFileStale = outOfDate(genCFile, sourceTime);
             if (jslcinfo.force || outFileStale || genCFileStale) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
-                MEBackend sseBackend = new MEBackend(pinfo.parser, pinfo.program);
+                MEBackend meBackend = new MEBackend(pinfo.parser, pinfo.visitor, pinfo.program);
                 MEBackend.GenCode gen =
-                    sseBackend.getGenCode(shaderName, peerName, genericsName, interfaceName);
+                    meBackend.getGenCode(shaderName, peerName, genericsName, interfaceName);
 
                 // write impl class
                 if (outFileStale) {
@@ -279,7 +290,7 @@ public class JSLC {
             File outFile = jslcinfo.getOutputFile(OUT_PRISM);
             if (jslcinfo.force || outOfDate(outFile, sourceTime)) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
-                PrismBackend prismBackend = new PrismBackend(pinfo.parser, pinfo.program);
+                PrismBackend prismBackend = new PrismBackend(pinfo.parser, pinfo.visitor, pinfo.program);
                 String genCode = prismBackend.getGlueCode(shaderName, peerName, genericsName, interfaceName);
                 write(genCode, outFile);
             }
@@ -289,10 +300,7 @@ public class JSLC {
     }
 
     public static boolean outOfDate(File outFile, long sourceTime) {
-        if (sourceTime < outFile.lastModified()) {
-            return false;
-        }
-        return true;
+        return sourceTime >= outFile.lastModified();
     }
 
     public static void write(String str, File outFile) throws Exception {
@@ -300,15 +308,9 @@ public class JSLC {
         if (!outDir.exists()) {
             outDir.mkdirs();
         }
-        FileWriter fw = null;
-        try {
-            fw = new FileWriter(outFile);
+        try (FileWriter fw = new FileWriter(outFile)) {
             fw.write(str);
             fw.flush();
-        } finally {
-            if (fw != null) {
-                fw.close();
-            }
         }
     }
 

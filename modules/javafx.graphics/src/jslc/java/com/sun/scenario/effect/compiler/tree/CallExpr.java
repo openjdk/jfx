@@ -36,7 +36,7 @@ public class CallExpr extends Expr {
     private final List<Expr> params;
 
     CallExpr(Function func, List<Expr> params) {
-        super(func.getReturnType());
+        super(func != null ? func.getReturnType() : null);
         this.func = func;
         this.params = params;
     }

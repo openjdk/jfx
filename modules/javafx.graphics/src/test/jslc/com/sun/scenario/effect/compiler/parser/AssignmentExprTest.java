@@ -30,6 +30,7 @@ import com.sun.scenario.effect.compiler.model.SymbolTable;
 import com.sun.scenario.effect.compiler.model.Type;
 import com.sun.scenario.effect.compiler.model.Variable;
 import com.sun.scenario.effect.compiler.tree.BinaryExpr;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
 import com.sun.scenario.effect.compiler.tree.VectorCtorExpr;
@@ -115,13 +116,14 @@ public class AssignmentExprTest extends ParserBase {
 
     private BinaryExpr parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
-        SymbolTable st = parser.getSymbolTable();
+        JSLVisitor visitor = new JSLVisitor();
+        SymbolTable st = visitor.getSymbolTable();
         st.declareVariable("foo", Type.FLOAT, null);
         st.declareVariable("readonly", Type.FLOAT, Qualifier.CONST);
         // trick test into thinking main() function is currently in
         // scope so that we can test core variables such as color and pos0
         st.enterFrame();
         st.declareFunction("main", Type.VOID, null);
-        return (BinaryExpr) parser.assignment_expression();
+        return (BinaryExpr) visitor.visit(parser.assignment_expression());
     }
 }

@@ -28,6 +28,7 @@ package com.sun.scenario.effect.compiler.parser;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.Type;
 import com.sun.scenario.effect.compiler.tree.Expr;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
@@ -93,8 +94,9 @@ public class PrimaryExprTest extends ParserBase {
 
     private Expr parseTreeFor(String text) throws Exception {
         JSLParser parser = parserOver(text);
-        parser.getSymbolTable().declareVariable("foo", Type.INT, null);
-        return parser.primary_expression();
+        JSLVisitor visitor = new JSLVisitor();
+        visitor.getSymbolTable().declareVariable("foo", Type.INT, null);
+        return visitor.visitPrimary_expression(parser.primary_expression());
     }
 
     protected String primary() {

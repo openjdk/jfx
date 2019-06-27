@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,14 +30,14 @@ import java.util.Map;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.Precision;
 import com.sun.scenario.effect.compiler.tree.FuncDef;
-import com.sun.scenario.effect.compiler.tree.ProgramUnit;
+import com.sun.scenario.effect.compiler.tree.JSLVisitor;
 
 /**
  */
 public class ES2Backend extends GLSLBackend {
 
-    public ES2Backend(JSLParser parser, ProgramUnit program) {
-        super(parser, program);
+    public ES2Backend(JSLParser parser, JSLVisitor visitor) {
+        super(parser, visitor);
     }
 
     // GLSL v1.10 no longer has gl_TexCoord*; these are now passed in
