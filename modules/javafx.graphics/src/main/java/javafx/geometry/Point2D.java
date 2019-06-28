@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.geometry;
 
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 
@@ -34,7 +35,7 @@ import javafx.beans.NamedArg;
  * It can also represent a relative magnitude vector's x, y magnitudes.
  * @since JavaFX 2.0
  */
-public class Point2D {
+public class Point2D implements Interpolatable<Point2D> {
 
     /**
      * Point or vector with both coordinates set to 0.
@@ -82,7 +83,7 @@ public class Point2D {
      * @param y the y coordinate of the point
      */
     public Point2D(@NamedArg("x") double x, @NamedArg("y") double y) {
-        this.x  = x;
+        this.x = x;
         this.y = y;
     }
 
@@ -352,6 +353,21 @@ public class Point2D {
      */
     public Point3D crossProduct(Point2D vector) {
         return crossProduct(vector.getX(), vector.getY());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 13
+     */
+    @Override
+    public Point2D interpolate(Point2D endValue, double t) {
+        if (t <= 0.0) return this;
+        if (t >= 1.0) return endValue;
+        return new Point2D(
+            getX() + (endValue.getX() - getX()) * t,
+            getY() + (endValue.getY() - getY()) * t
+        );
     }
 
     /**

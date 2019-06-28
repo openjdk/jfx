@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.geometry;
 
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 
 
@@ -35,7 +36,7 @@ import javafx.beans.NamedArg;
  *
  * @since JavaFX 2.0
  */
-public class Point3D {
+public class Point3D implements Interpolatable<Point3D> {
 
     /**
      * Point or vector with all three coordinates set to 0.
@@ -390,6 +391,22 @@ public class Point3D {
      */
     public Point3D crossProduct(Point3D vector) {
         return crossProduct(vector.getX(), vector.getY(), vector.getZ());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 13
+     */
+    @Override
+    public Point3D interpolate(Point3D endValue, double t) {
+        if (t <= 0.0) return this;
+        if (t >= 1.0) return endValue;
+        return new Point3D(
+            getX() + (endValue.getX() - getX()) * t,
+            getY() + (endValue.getY() - getY()) * t,
+            getZ() + (endValue.getZ() - getZ()) * t
+        );
     }
 
     /**

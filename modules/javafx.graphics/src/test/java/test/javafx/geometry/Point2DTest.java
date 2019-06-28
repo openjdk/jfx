@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -279,6 +279,27 @@ public class Point2DTest {
         Point2D p2 = new Point2D(0.894427190999924, -0.4472135954999417);
         assertEquals(180.0, p1.angle(p2), 0.000001);
         assertEquals(180.0, p2.angle(p1), 0.000001);
+    }
+
+    @Test
+    public void testInterpolate() {
+        Point2D p1 = new Point2D(1, 0);
+        Point2D p2 = new Point2D(0, -1);
+
+        assertEquals("t=0: should return the initial point", p1, p1.interpolate(p2, 0));
+        assertEquals("t=1: should return the final point", p2, p1.interpolate(p2, 1));
+        testNearEquality("t=0.25: should return 25% from the inital point", 0.75, -0.25, p1.interpolate(p2, 0.25));
+        testNearEquality("t=0.5: should return 50% from the inital point", 0.5, -0.5, p1.interpolate(p2, 0.5));
+        testNearEquality("t=0.75: should return 75% from the inital point", 0.25, -0.75, p1.interpolate(p2, 0.75));
+        testNearEquality("t=0.000001: should return 0.0001% from the inital point",
+                0.999999, -0.000001, p1.interpolate(p2, 0.000001));
+        testNearEquality("t=0.999999: should return 99.9999% from the inital point",
+                0.000001, -0.999999, p1.interpolate(p2, 0.999999));
+    }
+
+    private void testNearEquality(String message, double expectedX, double expectedY, Point2D result) {
+        assertEquals(message, expectedX, result.getX(), 1e-15);
+        assertEquals(message, expectedY, result.getY(), 1e-15);
     }
 
     @Test
