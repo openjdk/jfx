@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,6 +89,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
+import javafx.util.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -607,16 +608,29 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             removeTabs(tabsToRemove);
 
             // and add in any new tabs (that we don't already have showing)
+            List<Pair<Integer, TabHeaderSkin>> headersToMove = new ArrayList();
             if (!tabsToAdd.isEmpty()) {
                 for (TabContentRegion tabContentRegion : tabContentRegions) {
                     Tab tab = tabContentRegion.getTab();
                     TabHeaderSkin tabHeader = tabHeaderArea.getTabHeaderSkin(tab);
                     if (!tabHeader.isClosing && tabsToAdd.contains(tabContentRegion.getTab())) {
                         tabsToAdd.remove(tabContentRegion.getTab());
+
+                        // If a tab is removed and added back at the same time,
+                        // then we must ensure that the index of tabHeader in
+                        // headersRegion is same as index of tab in getTabs().
+                        int tabIndex = getSkinnable().getTabs().indexOf(tab);
+                        int tabHeaderIndex = tabHeaderArea.headersRegion.getChildren().indexOf(tabHeader);
+                        if (tabIndex != tabHeaderIndex) {
+                            headersToMove.add(new Pair(tabIndex, tabHeader));
+                        }
                     }
                 }
 
                 addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
+                for (Pair<Integer, TabHeaderSkin> move : headersToMove) {
+                    tabHeaderArea.moveTab(move.getKey(), move.getValue());
+                }
             }
 
             // Fix for RT-34692
@@ -954,6 +968,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             if (tabHeaderSkin != null) {
                 headersRegion.getChildren().remove(tabHeaderSkin);
             }
+        }
+
+        private void moveTab(int moveToIndex, TabHeaderSkin tabHeaderSkin) {
+            headersRegion.getChildren().remove(tabHeaderSkin);
+            headersRegion.getChildren().add(moveToIndex, tabHeaderSkin);
         }
 
         private TabHeaderSkin getTabHeaderSkin(Tab tab) {
