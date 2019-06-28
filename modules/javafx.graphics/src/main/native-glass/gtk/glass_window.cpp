@@ -199,6 +199,11 @@ void WindowContextBase::process_destroy() {
 
     std::set<WindowContextTop*>::iterator it;
     for (it = children.begin(); it != children.end(); ++it) {
+        // FIX JDK-8226537: this method calls set_owner(NULL) which prevents
+        // WindowContextTop::process_destroy() to call remove_child() (because children
+        // is being iterated here) but also prevents gtk_window_set_transient_for from
+        // being called - this causes the crash on gnome.
+        gtk_window_set_transient_for((*it)->get_gtk_window(), NULL);
         (*it)->set_owner(NULL);
         destroy_and_delete_ctx(*it);
     }
