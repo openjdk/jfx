@@ -69,10 +69,10 @@ static bool isValidSimpleColor(StringView string)
 }
 
 // https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#rules-for-parsing-simple-colour-values
-static std::optional<RGBA32> parseSimpleColorValue(StringView string)
+static Optional<RGBA32> parseSimpleColorValue(StringView string)
 {
     if (!isValidSimpleColor(string))
-        return std::nullopt;
+        return WTF::nullopt;
     return makeRGB(toASCIIHexValue(string[1], string[2]), toASCIIHexValue(string[3], string[4]), toASCIIHexValue(string[5], string[6]));
 }
 
@@ -90,7 +90,7 @@ bool ColorInputType::isMouseFocusable() const
 bool ColorInputType::isKeyboardFocusable(KeyboardEvent*) const
 {
     ASSERT(element());
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     if (element()->isReadOnly())
         return false;
 
@@ -281,7 +281,7 @@ bool ColorInputType::shouldShowSuggestions() const
 #endif
 }
 
-Vector<Color> ColorInputType::suggestions() const
+Vector<Color> ColorInputType::suggestedColors() const
 {
     Vector<Color> suggestions;
 #if ENABLE(DATALIST_ELEMENT)

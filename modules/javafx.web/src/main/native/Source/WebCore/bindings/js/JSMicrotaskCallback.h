@@ -27,7 +27,6 @@
 #pragma once
 
 #include "JSExecState.h"
-#include <JavaScriptCore/VM.h>
 
 namespace WebCore {
 

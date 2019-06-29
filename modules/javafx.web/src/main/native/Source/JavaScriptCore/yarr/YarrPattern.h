@@ -354,7 +354,7 @@ struct TermChain {
 struct YarrPattern {
     JS_EXPORT_PRIVATE YarrPattern(const String& pattern, RegExpFlags, ErrorCode&, void* stackLimit = nullptr);
 
-    void reset()
+    void resetForReparsing()
     {
         m_numSubpatterns = 0;
         m_maxBackReference = 0;
@@ -381,11 +381,25 @@ struct YarrPattern {
         m_disjunctions.clear();
         m_userCharacterClasses.clear();
         m_captureGroupNames.shrink(0);
+        m_namedForwardReferences.shrink(0);
     }
 
     bool containsIllegalBackReference()
     {
         return m_maxBackReference > m_numSubpatterns;
+    }
+
+    bool containsIllegalNamedForwardReferences()
+    {
+        if (m_namedForwardReferences.isEmpty())
+            return false;
+
+        for (auto& entry : m_namedForwardReferences) {
+            if (!m_captureGroupNames.contains(entry))
+                return true;
+        }
+
+        return false;
     }
 
     bool containsUnsignedLengthPattern()
@@ -513,6 +527,7 @@ struct YarrPattern {
     Vector<std::unique_ptr<PatternDisjunction>, 4> m_disjunctions;
     Vector<std::unique_ptr<CharacterClass>> m_userCharacterClasses;
     Vector<String> m_captureGroupNames;
+    Vector<String> m_namedForwardReferences;
     HashMap<String, unsigned> m_namedGroupToParenIndex;
 
 private:
@@ -555,8 +570,8 @@ private:
         uintptr_t begin; // Not really needed for greedy quantifiers.
         uintptr_t matchAmount; // Not really needed for fixed quantifiers.
 
-        unsigned beginIndex() { return offsetof(BackTrackInfoBackReference, begin) / sizeof(uintptr_t); }
-        unsigned matchAmountIndex() { return offsetof(BackTrackInfoBackReference, matchAmount) / sizeof(uintptr_t); }
+        static unsigned beginIndex() { return offsetof(BackTrackInfoBackReference, begin) / sizeof(uintptr_t); }
+        static unsigned matchAmountIndex() { return offsetof(BackTrackInfoBackReference, matchAmount) / sizeof(uintptr_t); }
     };
 
     struct BackTrackInfoAlternative {

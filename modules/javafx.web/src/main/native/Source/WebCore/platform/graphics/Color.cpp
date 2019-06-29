@@ -29,7 +29,6 @@
 #include "AnimationUtilities.h"
 #include "HashTools.h"
 #include <wtf/Assertions.h>
-#include <wtf/DecimalNumber.h>
 #include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
@@ -378,10 +377,7 @@ String Color::cssText() const
     builder.appendNumber(static_cast<unsigned char>(blue()));
     if (colorHasAlpha) {
         builder.appendLiteral(", ");
-
-        NumberToStringBuffer buffer;
-        bool shouldTruncateTrailingZeros = true;
-        builder.append(numberToFixedPrecisionString(alpha() / 255.0f, 6, buffer, shouldTruncateTrailingZeros));
+        builder.appendNumber(alpha() / 255.0f);
     }
 
     builder.append(')');
@@ -392,8 +388,8 @@ String Color::nameForRenderTreeAsText() const
 {
     // FIXME: Handle ExtendedColors.
     if (alpha() < 0xFF)
-        return String::format("#%02X%02X%02X%02X", red(), green(), blue(), alpha());
-    return String::format("#%02X%02X%02X", red(), green(), blue());
+        return makeString('#', hex(red(), 2), hex(green(), 2), hex(blue(), 2), hex(alpha(), 2));
+    return makeString('#', hex(red(), 2), hex(green(), 2), hex(blue(), 2));
 }
 
 Color Color::light() const
@@ -517,7 +513,7 @@ Color Color::colorWithAlpha(float alpha) const
     if (isExtended())
         return Color { m_colorData.extendedColor->red(), m_colorData.extendedColor->green(), m_colorData.extendedColor->blue(), alpha, m_colorData.extendedColor->colorSpace() };
 
-    int newAlpha = alpha * 255;
+    int newAlpha = alpha * 255; // Why doesn't this use colorFloatToRGBAByte() like colorWithOverrideAlpha()?
 
     Color result = { red(), green(), blue(), newAlpha };
     if (isSemantic())

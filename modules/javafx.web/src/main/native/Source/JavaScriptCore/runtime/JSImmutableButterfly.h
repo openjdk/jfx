@@ -25,8 +25,11 @@
 
 #pragma once
 
+#include "Butterfly.h"
 #include "IndexingHeader.h"
 #include "JSCell.h"
+#include "Structure.h"
+#include "VirtualRegister.h"
 
 namespace JSC {
 
@@ -85,7 +88,7 @@ public:
 
     void copyToArguments(ExecState*, VirtualRegister firstElementDest, unsigned offset, unsigned length);
 
-    template<typename>
+    template<typename, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
         // We allocate out of the JSValue gigacage as other code expects all butterflies to live there.
@@ -117,6 +120,10 @@ private:
     {
         m_header.setVectorLength(length);
         m_header.setPublicLength(length);
+        if (hasContiguous(indexingType())) {
+            for (unsigned index = 0; index < length; ++index)
+                toButterfly()->contiguous().at(this, index).setStartingValue(JSValue());
+        }
     }
 
     IndexingHeader m_header;

@@ -60,7 +60,17 @@ KeyframeAnimation::KeyframeAnimation(const Animation& animation, Element& elemen
 #endif
     checkForMatchingColorFilterFunctionLists();
 
-    computeStackingContextImpact();
+    for (auto propertyID : m_keyframes.properties()) {
+        if (WillChangeData::propertyCreatesStackingContext(propertyID))
+            m_triggersStackingContext = true;
+
+        if (CSSPropertyAnimation::animationOfPropertyIsAccelerated(propertyID))
+            m_hasAcceleratedProperty = true;
+
+        if (m_triggersStackingContext && m_hasAcceleratedProperty)
+            break;
+    }
+
     computeLayoutDependency();
 }
 
@@ -69,16 +79,6 @@ KeyframeAnimation::~KeyframeAnimation()
     // Make sure to tell the renderer that we are ending. This will make sure any accelerated animations are removed.
     if (!postActive())
         endAnimation();
-}
-
-void KeyframeAnimation::computeStackingContextImpact()
-{
-    for (auto propertyID : m_keyframes.properties()) {
-        if (WillChangeData::propertyCreatesStackingContext(propertyID)) {
-            m_triggersStackingContext = true;
-            break;
-        }
-    }
 }
 
 void KeyframeAnimation::computeLayoutDependency()
@@ -95,7 +95,7 @@ void KeyframeAnimation::computeLayoutDependency()
         }
         if (keyframeStyle->hasTransform()) {
             auto& transformOperations = keyframeStyle->transform();
-            for (auto operation : transformOperations.operations()) {
+            for (const auto& operation : transformOperations.operations()) {
                 if (operation->isTranslateTransformOperationType()) {
                     auto translation = downcast<TranslateTransformOperation>(operation.get());
                     if (translation->x().isPercent() || translation->y().isPercent()) {
@@ -156,9 +156,11 @@ void KeyframeAnimation::fetchIntervalEndpointsForProperty(CSSPropertyID property
     prog = progress(scale, offset, prevKeyframe.timingFunction());
 }
 
-bool KeyframeAnimation::animate(CompositeAnimation& compositeAnimation, const RenderStyle& targetStyle, std::unique_ptr<RenderStyle>& animatedStyle, bool& didBlendStyle)
+OptionSet<AnimateChange> KeyframeAnimation::animate(CompositeAnimation& compositeAnimation, const RenderStyle& targetStyle, std::unique_ptr<RenderStyle>& animatedStyle)
 {
-    // Fire the start timeout if needed
+    AnimationState oldState = state();
+
+    // Update state and fire the start timeout if needed (FIXME: this function needs a better name).
     fireAnimationEventsIfNeeded();
 
     // If we have not yet started, we will not have a valid start time, so just start the animation if needed.
@@ -169,12 +171,12 @@ bool KeyframeAnimation::animate(CompositeAnimation& compositeAnimation, const Re
             updateStateMachine(AnimationStateInput::PlayStatePaused, -1);
     }
 
-    // If we get this far and the animation is done, it means we are cleaning up a just finished animation.
+    // If we get this far and the animation is done, it means we are cleaning up a just-finished animation.
     // If so, we need to send back the targetStyle.
     if (postActive()) {
         if (!animatedStyle)
             animatedStyle = RenderStyle::clonePtr(targetStyle);
-        return false;
+        return { };
     }
 
     // If we are waiting for the start timer, we don't want to change the style yet.
@@ -183,16 +185,13 @@ bool KeyframeAnimation::animate(CompositeAnimation& compositeAnimation, const Re
     // Special case 2 - if there is a backwards fill mode, then we want to continue
     // through to the style blend so that we get the fromStyle.
     if (waitingToStart() && m_animation->delay() > 0 && !m_animation->fillsBackwards())
-        return false;
+        return { };
 
     // If we have no keyframes, don't animate.
     if (!m_keyframes.size()) {
         updateStateMachine(AnimationStateInput::EndAnimation, -1);
-        return false;
+        return { };
     }
-
-    // FIXME: the code below never changes the state, so this function always returns false.
-    AnimationState oldState = state();
 
     // Run a cycle of animation.
     // We know we will need a new render style, so make one if needed.
@@ -211,8 +210,14 @@ bool KeyframeAnimation::animate(CompositeAnimation& compositeAnimation, const Re
         CSSPropertyAnimation::blendProperties(this, propertyID, animatedStyle.get(), fromStyle, toStyle, progress);
     }
 
-    didBlendStyle = true;
-    return state() != oldState;
+    OptionSet<AnimateChange> change(AnimateChange::StyleBlended);
+    if (state() != oldState)
+        change.add(AnimateChange::StateChange);
+
+    if ((isPausedState(oldState) || isRunningState(oldState)) != (isPausedState(state()) || isRunningState(state())))
+        change.add(AnimateChange::RunningStateChange);
+
+    return change;
 }
 
 void KeyframeAnimation::getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyle)
@@ -245,22 +250,29 @@ bool KeyframeAnimation::computeExtentOfTransformAnimation(LayoutRect& bounds) co
     if (!is<RenderBox>(renderer()))
         return true; // Non-boxes don't get transformed;
 
-    RenderBox& box = downcast<RenderBox>(*renderer());
-    FloatRect rendererBox = snapRectToDevicePixels(box.borderBoxRect(), box.document().deviceScaleFactor());
+    auto& box = downcast<RenderBox>(*renderer());
+    auto rendererBox = snapRectToDevicePixels(box.borderBoxRect(), box.document().deviceScaleFactor());
 
-    FloatRect cumulativeBounds = bounds;
+    auto cumulativeBounds = bounds;
 
     for (auto& keyframe : m_keyframes.keyframes()) {
-        if (!keyframe.containsProperty(CSSPropertyTransform))
-            continue;
+        const RenderStyle* keyframeStyle = keyframe.style();
 
-        LayoutRect keyframeBounds = bounds;
+        if (!keyframe.containsProperty(CSSPropertyTransform)) {
+            // If the first keyframe is missing transform style, use the current style.
+            if (!keyframe.key())
+                keyframeStyle = &box.style();
+            else
+                continue;
+        }
+
+        auto keyframeBounds = bounds;
 
         bool canCompute;
         if (transformFunctionListsMatch())
-            canCompute = computeTransformedExtentViaTransformList(rendererBox, *keyframe.style(), keyframeBounds);
+            canCompute = computeTransformedExtentViaTransformList(rendererBox, *keyframeStyle, keyframeBounds);
         else
-            canCompute = computeTransformedExtentViaMatrix(rendererBox, *keyframe.style(), keyframeBounds);
+            canCompute = computeTransformedExtentViaMatrix(rendererBox, *keyframeStyle, keyframeBounds);
 
         if (!canCompute)
             return false;
@@ -268,7 +280,7 @@ bool KeyframeAnimation::computeExtentOfTransformAnimation(LayoutRect& bounds) co
         cumulativeBounds.unite(keyframeBounds);
     }
 
-    bounds = LayoutRect(cumulativeBounds);
+    bounds = cumulativeBounds;
     return true;
 }
 
@@ -499,9 +511,9 @@ void KeyframeAnimation::checkForMatchingColorFilterFunctionLists()
     });
 }
 
-std::optional<Seconds> KeyframeAnimation::timeToNextService()
+Optional<Seconds> KeyframeAnimation::timeToNextService()
 {
-    std::optional<Seconds> t = AnimationBase::timeToNextService();
+    Optional<Seconds> t = AnimationBase::timeToNextService();
     if (!t || t.value() != 0_s || preActive())
         return t;
 

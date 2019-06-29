@@ -24,6 +24,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+[
+    EnabledAtRuntime=WebSQL,
+]
 partial interface DOMWindow {
 #if 0  // FIXME-java: Currently WebSQL feature is not implemented completely in JavaFX port.
     [MayThrowException] Database? openDatabase(DOMString name, DOMString version, DOMString displayName, unsigned long estimatedSize, optional DatabaseCallback? creationCallback);

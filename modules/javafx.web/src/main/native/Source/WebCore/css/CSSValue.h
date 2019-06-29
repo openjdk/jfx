@@ -20,12 +20,13 @@
 
 #pragma once
 
-#include "URLHash.h"
+#include "CSSPropertyNames.h"
 #include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
+#include <wtf/URLHash.h>
 
 namespace WebCore {
 
@@ -101,20 +102,18 @@ public:
     bool isShadowValue() const { return m_classType == ShadowClass; }
     bool isCubicBezierTimingFunctionValue() const { return m_classType == CubicBezierTimingFunctionClass; }
     bool isStepsTimingFunctionValue() const { return m_classType == StepsTimingFunctionClass; }
-    bool isFramesTimingFunctionValue() const { return m_classType == FramesTimingFunctionClass; }
     bool isSpringTimingFunctionValue() const { return m_classType == SpringTimingFunctionClass; }
     bool isLineBoxContainValue() const { return m_classType == LineBoxContainClass; }
     bool isCalcValue() const {return m_classType == CalculationClass; }
     bool isFilterImageValue() const { return m_classType == FilterImageClass; }
+#if ENABLE(CSS_PAINTING_API)
+    bool isPaintImageValue() const { return m_classType == PaintImageClass; }
+#endif
     bool isContentDistributionValue() const { return m_classType == CSSContentDistributionClass; }
     bool isGridAutoRepeatValue() const { return m_classType == GridAutoRepeatClass; }
     bool isGridTemplateAreasValue() const { return m_classType == GridTemplateAreasClass; }
     bool isGridLineNamesValue() const { return m_classType == GridLineNamesClass; }
     bool isUnicodeRangeValue() const { return m_classType == UnicodeRangeClass; }
-
-#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
-    bool isAnimationTriggerScrollValue() const { return m_classType == AnimationTriggerScrollClass; }
-#endif
 
     bool isCustomIdentValue() const { return m_classType == CustomIdentClass; }
     bool isVariableReferenceValue() const { return m_classType == VariableReferenceClass; }
@@ -125,6 +124,11 @@ public:
     Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
     bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
+
+    // What properties does this value rely on (eg, font-size for em units)
+    void collectDirectComputationalDependencies(HashSet<CSSPropertyID>&) const;
+    // What properties in the root element does this value rely on (eg. font-size for rem units)
+    void collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>&) const;
 
     bool equals(const CSSValue&) const;
     bool operator==(const CSSValue& other) const { return equals(other); }
@@ -141,6 +145,9 @@ protected:
 
         // Image generator classes.
         CanvasClass,
+#if ENABLE(CSS_PAINTING_API)
+        PaintImageClass,
+#endif
         NamedImageClass,
         CrossfadeClass,
         FilterImageClass,
@@ -151,7 +158,6 @@ protected:
         // Timing function classes.
         CubicBezierTimingFunctionClass,
         StepsTimingFunctionClass,
-        FramesTimingFunctionClass,
         SpringTimingFunctionClass,
 
         // Other class types.
@@ -178,9 +184,6 @@ protected:
         LineBoxContainClass,
         CalculationClass,
         GridTemplateAreasClass,
-#if ENABLE(CSS_ANIMATIONS_LEVEL_2)
-        AnimationTriggerScrollClass,
-#endif
 
         CSSContentDistributionClass,
 

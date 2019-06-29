@@ -3462,7 +3462,7 @@ project(":web") {
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
                     commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
-                        "--cmakeargs=${cmakeArgs}")
+                        "--no-experimental-features", "--cmakeargs=${cmakeArgs}")
                 }
             }
         }

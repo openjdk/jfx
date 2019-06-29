@@ -26,8 +26,15 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "CachedImage.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "EditableImageReference.h"
+#include "Editor.h"
+#include "ElementIterator.h"
+#include "EventNames.h"
 #include "FrameView.h"
 #include "HTMLAnchorElement.h"
+#include "HTMLAttachmentElement.h"
 #include "HTMLDocument.h"
 #include "HTMLFormElement.h"
 #include "HTMLParserIdioms.h"
@@ -40,6 +47,7 @@
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
 #include "NodeTraversal.h"
+#include "PlatformMouseEvent.h"
 #include "RenderImage.h"
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
@@ -94,7 +102,7 @@ HTMLImageElement::~HTMLImageElement()
     setPictureElement(nullptr);
 }
 
-Ref<HTMLImageElement> HTMLImageElement::createForJSConstructor(Document& document, std::optional<unsigned> width, std::optional<unsigned> height)
+Ref<HTMLImageElement> HTMLImageElement::createForJSConstructor(Document& document, Optional<unsigned> width, Optional<unsigned> height)
 {
     auto image = adoptRef(*new HTMLImageElement(imgTag, document));
     if (width)
@@ -106,7 +114,7 @@ Ref<HTMLImageElement> HTMLImageElement::createForJSConstructor(Document& documen
 
 bool HTMLImageElement::isPresentationAttribute(const QualifiedName& name) const
 {
-    if (name == widthAttr || name == heightAttr || name == borderAttr || name == vspaceAttr || name == hspaceAttr || name == alignAttr || name == valignAttr)
+    if (name == widthAttr || name == heightAttr || name == borderAttr || name == vspaceAttr || name == hspaceAttr || name == valignAttr)
         return true;
     return HTMLElement::isPresentationAttribute(name);
 }
@@ -153,8 +161,13 @@ ImageCandidate HTMLImageElement::bestFitSourceFromPictureElement()
     auto picture = makeRefPtr(pictureElement());
     if (!picture)
         return { };
+
     picture->clearViewportDependentResults();
     document().removeViewportDependentPicture(*picture);
+
+    picture->clearAppearanceDependentResults();
+    document().removeAppearanceDependentPicture(*picture);
+
     for (RefPtr<Node> child = picture->firstChild(); child && child != this; child = child->nextSibling()) {
         if (!is<HTMLSourceElement>(*child))
             continue;
@@ -177,9 +190,11 @@ ImageCandidate HTMLImageElement::bestFitSourceFromPictureElement()
         MediaQueryEvaluator evaluator { document().printing() ? "print" : "screen", document(), documentElement ? documentElement->computedStyle() : nullptr };
         auto* queries = source.parsedMediaAttribute(document());
         LOG(MediaQueries, "HTMLImageElement %p bestFitSourceFromPictureElement evaluating media queries", this);
-        auto evaluation = !queries || evaluator.evaluate(*queries, picture->viewportDependentResults());
+        auto evaluation = !queries || evaluator.evaluate(*queries, picture->viewportDependentResults(), picture->appearanceDependentResults());
         if (picture->hasViewportDependentResults())
             document().addViewportDependentPicture(*picture);
+        if (picture->hasAppearanceDependentResults())
+            document().addAppearanceDependentPicture(*picture);
         if (!evaluation)
             continue;
 
@@ -212,12 +227,12 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomicStr
     } else if (name == srcAttr || name == srcsetAttr || name == sizesAttr)
         selectImageSource();
     else if (name == usemapAttr) {
-        if (isConnected() && !m_parsedUsemap.isNull())
+        if (isInTreeScope() && !m_parsedUsemap.isNull())
             treeScope().removeImageElementByUsemap(*m_parsedUsemap.impl(), *this);
 
         m_parsedUsemap = parseHTMLHashNameReference(value);
 
-        if (isConnected() && !m_parsedUsemap.isNull())
+        if (isInTreeScope() && !m_parsedUsemap.isNull())
             treeScope().addImageElementByUsemap(*m_parsedUsemap.impl(), *this);
     } else if (name == compositeAttr) {
         // FIXME: images don't support blend modes in their compositing attribute.
@@ -229,7 +244,9 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomicStr
         m_experimentalImageMenuEnabled = !value.isNull();
         updateImageControls();
 #endif
-    } else {
+    } else if (name == x_apple_editable_imageAttr)
+        updateEditableImage();
+    else {
         if (name == nameAttr) {
             bool willHaveName = !value.isNull();
             if (m_hadNameBeforeAttributeChanged != willHaveName && isConnected() && !isInShadowTree() && is<HTMLDocument>(document())) {
@@ -276,6 +293,20 @@ bool HTMLImageElement::canStartSelection() const
     return false;
 }
 
+bool HTMLImageElement::supportsFocus() const
+{
+    if (hasEditableImageAttribute())
+        return true;
+    return HTMLElement::supportsFocus();
+}
+
+bool HTMLImageElement::isFocusable() const
+{
+    if (hasEditableImageAttribute())
+        return true;
+    return HTMLElement::isFocusable();
+}
+
 void HTMLImageElement::didAttachRenderers()
 {
     if (!is<RenderImage>(renderer()))
@@ -317,11 +348,15 @@ Node::InsertedIntoAncestorResult HTMLImageElement::insertedIntoAncestor(Insertio
         if (m_form)
             m_form->registerImgElement(this);
     }
+
     // Insert needs to complete first, before we start updating the loader. Loader dispatches events which could result
     // in callbacks back to this node.
     Node::InsertedIntoAncestorResult insertNotificationRequest = HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 
-    if (insertionType.connectedToDocument && !m_parsedUsemap.isNull())
+    if (insertionType.connectedToDocument && hasEditableImageAttribute())
+        insertNotificationRequest = InsertedIntoAncestorResult::NeedsPostInsertionCallback;
+
+    if (insertionType.treeScopeChanged && !m_parsedUsemap.isNull())
         treeScope().addImageElementByUsemap(*m_parsedUsemap.impl(), *this);
 
     if (is<HTMLPictureElement>(parentNode())) {
@@ -337,19 +372,84 @@ Node::InsertedIntoAncestorResult HTMLImageElement::insertedIntoAncestor(Insertio
     return insertNotificationRequest;
 }
 
+void HTMLImageElement::didFinishInsertingNode()
+{
+    if (hasEditableImageAttribute())
+        updateEditableImage();
+}
+
 void HTMLImageElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (m_form)
         m_form->removeImgElement(this);
 
-    if (removalType.disconnectedFromDocument && !m_parsedUsemap.isNull())
+    if (removalType.treeScopeChanged && !m_parsedUsemap.isNull())
         oldParentOfRemovedTree.treeScope().removeImageElementByUsemap(*m_parsedUsemap.impl(), *this);
 
     if (is<HTMLPictureElement>(parentNode()))
         setPictureElement(nullptr);
 
+    if (removalType.disconnectedFromDocument)
+        updateEditableImage();
+
     m_form = nullptr;
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
+}
+
+bool HTMLImageElement::hasEditableImageAttribute() const
+{
+    if (!document().settings().editableImagesEnabled())
+        return false;
+    return hasAttributeWithoutSynchronization(x_apple_editable_imageAttr);
+}
+
+GraphicsLayer::EmbeddedViewID HTMLImageElement::editableImageViewID() const
+{
+    if (!m_editableImage)
+        return 0;
+    return m_editableImage->embeddedViewID();
+}
+
+void HTMLImageElement::updateEditableImage()
+{
+    if (!document().settings().editableImagesEnabled())
+        return;
+
+    auto* page = document().page();
+    if (!page)
+        return;
+
+    bool hasEditableAttribute = hasEditableImageAttribute();
+    bool isCurrentlyEditable = !!m_editableImage;
+    bool shouldBeEditable = isConnected() && hasEditableAttribute;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    // Create the inner attachment for editable images, or non-editable
+    // images that were cloned from editable image sources.
+    if (!attachmentElement() && (shouldBeEditable || !m_pendingClonedAttachmentID.isEmpty())) {
+        auto attachment = HTMLAttachmentElement::create(HTMLNames::attachmentTag, document());
+        if (!m_pendingClonedAttachmentID.isEmpty())
+            attachment->setUniqueIdentifier(WTFMove(m_pendingClonedAttachmentID));
+        else
+            attachment->ensureUniqueIdentifier();
+        setAttachmentElement(WTFMove(attachment));
+    }
+#endif
+
+    if (shouldBeEditable == isCurrentlyEditable)
+        return;
+
+    if (!hasEditableAttribute) {
+        m_editableImage = nullptr;
+        return;
+    }
+
+    if (!m_editableImage)
+        m_editableImage = EditableImageReference::create(document());
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    m_editableImage->associateWithAttachment(attachmentElement()->uniqueIdentifier());
+#endif
 }
 
 HTMLPictureElement* HTMLImageElement::pictureElement() const
@@ -603,6 +703,38 @@ String HTMLImageElement::crossOrigin() const
     return parseCORSSettingsAttribute(attributeWithoutSynchronization(crossoriginAttr));
 }
 
+#if ENABLE(ATTACHMENT_ELEMENT)
+
+void HTMLImageElement::setAttachmentElement(Ref<HTMLAttachmentElement>&& attachment)
+{
+    if (auto existingAttachment = attachmentElement())
+        existingAttachment->remove();
+
+    attachment->setInlineStyleProperty(CSSPropertyDisplay, CSSValueNone, true);
+    ensureUserAgentShadowRoot().appendChild(WTFMove(attachment));
+}
+
+RefPtr<HTMLAttachmentElement> HTMLImageElement::attachmentElement() const
+{
+    if (auto shadowRoot = userAgentShadowRoot())
+        return childrenOfType<HTMLAttachmentElement>(*shadowRoot).first();
+
+    return nullptr;
+}
+
+const String& HTMLImageElement::attachmentIdentifier() const
+{
+    if (!m_pendingClonedAttachmentID.isEmpty())
+        return m_pendingClonedAttachmentID;
+
+    if (auto attachment = attachmentElement())
+        return attachment->uniqueIdentifier();
+
+    return nullAtom();
+}
+
+#endif // ENABLE(ATTACHMENT_ELEMENT)
+
 #if ENABLE(SERVICE_CONTROLS)
 void HTMLImageElement::updateImageControls()
 {
@@ -673,7 +805,7 @@ bool HTMLImageElement::childShouldCreateRenderer(const Node& child) const
 }
 #endif // ENABLE(SERVICE_CONTROLS)
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 // FIXME: This is a workaround for <rdar://problem/7725158>. We should find a better place for the touchCalloutEnabled() logic.
 bool HTMLImageElement::willRespondToMouseClickEvents()
 {
@@ -698,5 +830,25 @@ bool HTMLImageElement::isSystemPreviewImage() const
     return false;
 }
 #endif
+
+void HTMLImageElement::copyNonAttributePropertiesFromElement(const Element& source)
+{
+    auto& sourceImage = static_cast<const HTMLImageElement&>(source);
+#if ENABLE(ATTACHMENT_ELEMENT)
+    m_pendingClonedAttachmentID = !sourceImage.m_pendingClonedAttachmentID.isEmpty() ? sourceImage.m_pendingClonedAttachmentID : sourceImage.attachmentIdentifier();
+#endif
+    m_editableImage = sourceImage.m_editableImage;
+    Element::copyNonAttributePropertiesFromElement(source);
+}
+
+void HTMLImageElement::defaultEventHandler(Event& event)
+{
+    if (hasEditableImageAttribute() && event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
+        focus();
+        event.setDefaultHandled();
+        return;
+    }
+    HTMLElement::defaultEventHandler(event);
+}
 
 }

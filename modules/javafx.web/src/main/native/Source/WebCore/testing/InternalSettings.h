@@ -72,6 +72,7 @@ public:
     ExceptionOr<void> setPDFImageCachingPolicy(const String&);
     ExceptionOr<void> setShouldDisplayTrackKind(const String& kind, bool enabled);
     ExceptionOr<bool> shouldDisplayTrackKind(const String& kind);
+    ExceptionOr<void> setUseDarkAppearance(bool);
     ExceptionOr<void> setStorageBlockingPolicy(const String&);
     ExceptionOr<void> setImagesEnabled(bool);
     ExceptionOr<void> setMinimumTimerInterval(double intervalInSeconds);
@@ -122,7 +123,7 @@ public:
     // RuntimeEnabledFeatures.
     static void setIndexedDBWorkersEnabled(bool);
     static void setWebGL2Enabled(bool);
-    static void setWebGPUEnabled(bool);
+    static void setWebMetalEnabled(bool);
     static void setWebVREnabled(bool);
     static void setScreenCaptureEnabled(bool);
 
@@ -209,7 +210,7 @@ private:
         // Runtime enabled settings.
         bool m_indexedDBWorkersEnabled;
         bool m_webGL2Enabled;
-        bool m_webGPUEnabled;
+        bool m_webMetalEnabled;
         bool m_webVREnabled;
         bool m_setScreenCaptureEnabled;
 

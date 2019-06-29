@@ -75,8 +75,8 @@ RegisterSet StackmapSpecial::extraEarlyClobberedRegs(Inst& inst)
 
 void StackmapSpecial::forEachArgImpl(
     unsigned numIgnoredB3Args, unsigned numIgnoredAirArgs,
-    Inst& inst, RoleMode roleMode, std::optional<unsigned> firstRecoverableIndex,
-    const ScopedLambda<Inst::EachArgCallback>& callback, std::optional<Width> optionalDefArgWidth)
+    Inst& inst, RoleMode roleMode, Optional<unsigned> firstRecoverableIndex,
+    const ScopedLambda<Inst::EachArgCallback>& callback, Optional<Width> optionalDefArgWidth)
 {
     StackmapValue* value = inst.origin->as<StackmapValue>();
     ASSERT(value);
@@ -263,7 +263,7 @@ bool StackmapSpecial::isArgValidForRep(Air::Code& code, const Air::Arg& arg, con
             return true;
         if ((arg.isAddr() || arg.isExtendedOffsetAddr()) && code.frameSize()) {
             if (arg.base() == Tmp(GPRInfo::callFrameRegister)
-                && arg.offset() == rep.offsetFromSP() - code.frameSize())
+                && arg.offset() == static_cast<int64_t>(rep.offsetFromSP()) - code.frameSize())
                 return true;
             if (arg.base() == Tmp(MacroAssembler::stackPointerRegister)
                 && arg.offset() == rep.offsetFromSP())

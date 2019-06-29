@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,17 +41,17 @@
 #include "WasmContext.h"
 #include "WasmExceptionType.h"
 #include "WasmInstance.h"
+#include "WasmSignatureInlines.h"
 
 namespace JSC { namespace Wasm {
 
 using JIT = CCallHelpers;
 
-static void materializeImportJSCell(JIT& jit, unsigned importIndex, GPRReg poison, GPRReg result)
+static void materializeImportJSCell(JIT& jit, unsigned importIndex, GPRReg result)
 {
     // We're calling out of the current WebAssembly.Instance. That Instance has a list of all its import functions.
     jit.loadWasmContextInstance(result);
     jit.loadPtr(JIT::Address(result, Instance::offsetOfImportFunction(importIndex)), result);
-    jit.xor64(poison, result);
 }
 
 static Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> handleBadI64Use(VM* vm, JIT& jit, const Signature& signature, unsigned importIndex)
@@ -85,13 +85,8 @@ static Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> handleBa
 
         // Store Callee.
         jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR1, Instance::offsetOfOwner()), GPRInfo::argumentGPR1);
-        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR1, JSWebAssemblyInstance::offsetOfPoisonedCallee()), GPRInfo::argumentGPR2);
-        jit.move(CCallHelpers::TrustedImm64(JSWebAssemblyInstancePoison::key()), GPRInfo::argumentGPR3);
-        jit.xor64(GPRInfo::argumentGPR3, GPRInfo::argumentGPR2);
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR1, JSWebAssemblyInstance::offsetOfCallee()), GPRInfo::argumentGPR2);
         jit.storePtr(GPRInfo::argumentGPR2, JIT::Address(GPRInfo::callFrameRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register))));
-
-        // Let's be paranoid on the exception path and zero out the poison instead of leaving it in an argument GPR.
-        jit.move(CCallHelpers::TrustedImm32(0), GPRInfo::argumentGPR3);
 
         auto call = jit.call(OperationPtrTag);
         jit.jumpToExceptionHandler(*vm);
@@ -103,7 +98,7 @@ static Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> handleBa
             {
                 auto throwScope = DECLARE_THROW_SCOPE(*vm);
                 JSGlobalObject* globalObject = instance->globalObject(*vm);
-                auto* error = ErrorInstance::create(exec, *vm, globalObject->typeErrorConstructor()->errorStructure(), "i64 not allowed as return type or argument to an imported function"_s);
+                auto* error = ErrorInstance::create(exec, *vm, globalObject->errorStructure(ErrorType::TypeError), "i64 not allowed as return type or argument to an imported function"_s);
                 throwException(exec, throwScope, error);
             }
 
@@ -248,7 +243,7 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM* vm
                         break;
                     case F32:
                     case F64:
-                        arg = jsNumber(bitwise_cast<double>(buffer[argNum]));
+                        arg = jsNumber(purifyNaN(bitwise_cast<double>(buffer[argNum])));
                         break;
                     }
                     args.append(arg);
@@ -290,18 +285,14 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM* vm
 
         jit.loadWasmContextInstance(GPRInfo::argumentGPR0);
         jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, Instance::offsetOfOwner()), GPRInfo::argumentGPR0);
-        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, JSWebAssemblyInstance::offsetOfPoisonedCallee()), GPRInfo::argumentGPR0);
-        jit.move(CCallHelpers::TrustedImm64(JSWebAssemblyInstancePoison::key()), GPRInfo::argumentGPR3);
-        jit.xor64(GPRInfo::argumentGPR3, GPRInfo::argumentGPR0);
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, JSWebAssemblyInstance::offsetOfCallee()), GPRInfo::argumentGPR0);
         jit.storePtr(GPRInfo::argumentGPR0, JIT::Address(GPRInfo::callFrameRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register))));
 
-        materializeImportJSCell(jit, importIndex, GPRInfo::argumentGPR3, GPRInfo::argumentGPR1);
-
-        // Let's be paranoid before the call and zero out the poison instead of leaving it in an argument GPR.
-        jit.move(CCallHelpers::TrustedImm32(0), GPRInfo::argumentGPR3);
+        materializeImportJSCell(jit, importIndex, GPRInfo::argumentGPR1);
 
         static_assert(GPRInfo::numberOfArgumentRegisters >= 4, "We rely on this with the call below.");
-        jit.setupArguments<decltype(callFunc)>(GPRInfo::argumentGPR1, CCallHelpers::TrustedImm32(signatureIndex), CCallHelpers::TrustedImmPtr(buffer));
+        static_assert(sizeof(SignatureIndex) == sizeof(uint64_t), "Following code assumes SignatureIndex is 64bit.");
+        jit.setupArguments<decltype(callFunc)>(GPRInfo::argumentGPR1, CCallHelpers::TrustedImm64(signatureIndex), CCallHelpers::TrustedImmPtr(buffer));
         auto call = jit.call(OperationPtrTag);
         auto noException = jit.emitExceptionCheck(*vm, AssemblyHelpers::InvertedExceptionCheck);
 
@@ -477,24 +468,15 @@ Expected<MacroAssemblerCodeRef<WasmEntryPtrTag>, BindingFailure> wasmToJS(VM* vm
         }
     }
 
-    GPRReg poison = GPRInfo::argumentGPR1;
-    ASSERT(poison != GPRInfo::argumentGPR0); // Both are used at the same time below.
-
     jit.loadWasmContextInstance(GPRInfo::argumentGPR0);
     jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, Instance::offsetOfOwner()), GPRInfo::argumentGPR0);
-    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, JSWebAssemblyInstance::offsetOfPoisonedCallee()), GPRInfo::argumentGPR0);
-    jit.move(CCallHelpers::TrustedImm64(JSWebAssemblyInstancePoison::key()), poison);
-    jit.xor64(poison, GPRInfo::argumentGPR0);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0, JSWebAssemblyInstance::offsetOfCallee()), GPRInfo::argumentGPR0);
     jit.storePtr(GPRInfo::argumentGPR0, JIT::Address(GPRInfo::callFrameRegister, CallFrameSlot::callee * static_cast<int>(sizeof(Register))));
 
     GPRReg importJSCellGPRReg = GPRInfo::regT0; // Callee needs to be in regT0 for slow path below.
-    ASSERT(poison != importJSCellGPRReg);
 
     ASSERT(!wasmCC.m_calleeSaveRegisters.get(importJSCellGPRReg));
-    materializeImportJSCell(jit, importIndex, poison, importJSCellGPRReg);
-
-    // Let's be paranoid zero out the poison instead of leaving it in an argument GPR.
-    jit.move(CCallHelpers::TrustedImm32(0), poison);
+    materializeImportJSCell(jit, importIndex, importJSCellGPRReg);
 
     jit.store64(importJSCellGPRReg, calleeFrame.withOffset(CallFrameSlot::callee * static_cast<int>(sizeof(Register))));
     jit.store32(JIT::TrustedImm32(numberOfParameters), calleeFrame.withOffset(CallFrameSlot::argumentCount * static_cast<int>(sizeof(Register)) + PayloadOffset));

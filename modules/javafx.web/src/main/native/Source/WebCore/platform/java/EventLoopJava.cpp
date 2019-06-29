@@ -26,7 +26,7 @@
 #include "config.h"
 #include "EventLoop.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 
 namespace EventLoopJava {
 
@@ -55,7 +55,7 @@ void EventLoop::cycle()
     initRefs(env);
 
     env->CallStaticVoidMethod(eventLoopClass, cycleMethod);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 } // namespace WebCore

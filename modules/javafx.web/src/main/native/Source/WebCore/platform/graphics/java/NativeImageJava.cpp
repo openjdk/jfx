@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,7 @@
 #include "BitmapImage.h"
 #include "GraphicsContext.h"
 #include "ImageObserver.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "GraphicsContextJava.h"
 
 #include "PlatformContextJava.h"
@@ -48,7 +48,7 @@ IntSize nativeImageSize(const NativeImagePtr& image)
         return {};
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID midGetSize = env->GetMethodID(
         PG_GetImageFrameClass(env),
         "getSize",

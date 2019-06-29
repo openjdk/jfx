@@ -36,7 +36,7 @@ public:
     typedef ScriptExecutable Base;
     static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    template<typename CellType>
+    template<typename CellType, SubspaceAccess>
     static IsoSubspace* subspaceFor(VM& vm)
     {
         return &vm.programExecutableSpace.space;
@@ -58,8 +58,6 @@ public:
     {
         return bitwise_cast<ProgramCodeBlock*>(ExecutableToCodeBlockEdge::unwrap(m_programCodeBlock.get()));
     }
-
-    JSObject* checkSyntax(ExecState*);
 
     Ref<JITCode> generatedJITCode()
     {

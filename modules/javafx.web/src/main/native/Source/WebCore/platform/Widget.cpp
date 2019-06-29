@@ -28,6 +28,7 @@
 
 #include "FrameView.h"
 #include "IntRect.h"
+#include "NotImplemented.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -71,6 +72,15 @@ IntRect Widget::convertFromRootView(const IntRect& rootRect) const
 {
     if (const ScrollView* parentScrollView = parent()) {
         IntRect parentRect = parentScrollView->convertFromRootView(rootRect);
+        return convertFromContainingView(parentRect);
+    }
+    return rootRect;
+}
+
+FloatRect Widget::convertFromRootView(const FloatRect& rootRect) const
+{
+    if (const ScrollView* parentScrollView = parent()) {
+        FloatRect parentRect = parentScrollView->convertFromRootView(rootRect);
         return convertFromContainingView(parentRect);
     }
     return rootRect;
@@ -139,7 +149,18 @@ IntPoint Widget::convertToContainingWindow(const IntPoint& localPoint) const
     return convertFromRootToContainingWindow(this, localPoint);
 }
 
-#if !PLATFORM(COCOA)
+#if !PLATFORM(COCOA) && !PLATFORM(JAVA)
+
+Widget::Widget(PlatformWidget widget)
+{
+    init(widget);
+}
+
+IntRect Widget::frameRect() const
+{
+    return m_frame;
+}
+
 IntRect Widget::convertFromRootToContainingWindow(const Widget*, const IntRect& rect)
 {
     return rect;
@@ -159,7 +180,8 @@ IntPoint Widget::convertFromContainingWindowToRoot(const Widget*, const IntPoint
 {
     return point;
 }
-#endif
+
+#endif // !PLATFORM(COCOA)
 
 IntRect Widget::convertToContainingView(const IntRect& localRect) const
 {
@@ -182,6 +204,11 @@ IntRect Widget::convertFromContainingView(const IntRect& parentRect) const
     return parentRect;
 }
 
+FloatRect Widget::convertFromContainingView(const FloatRect& parentRect) const
+{
+    return convertFromContainingView(IntRect(parentRect));
+}
+
 IntPoint Widget::convertToContainingView(const IntPoint& localPoint) const
 {
     if (const ScrollView* parentScrollView = parent())
@@ -197,5 +224,51 @@ IntPoint Widget::convertFromContainingView(const IntPoint& parentPoint) const
 
     return parentPoint;
 }
+
+#if !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN) && !PLATFORM(JAVA)
+
+Widget::~Widget()
+{
+    ASSERT(!parent());
+    notImplemented();
+}
+
+void Widget::setFrameRect(const IntRect& rect)
+{
+    m_frame = rect;
+    notImplemented();
+}
+
+void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy)
+{
+    notImplemented();
+}
+
+void Widget::setFocus(bool)
+{
+    notImplemented();
+}
+
+void Widget::setCursor(const Cursor&)
+{
+    notImplemented();
+}
+
+void Widget::show()
+{
+    notImplemented();
+}
+
+void Widget::hide()
+{
+    notImplemented();
+}
+
+void Widget::setIsSelected(bool)
+{
+    notImplemented();
+}
+
+#endif // !PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(WIN)
 
 } // namespace WebCore

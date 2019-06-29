@@ -28,7 +28,7 @@
 #include "Path.h"
 #include "FloatRect.h"
 #include "StrokeStyleApplier.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "NotImplemented.h"
 #include "GraphicsContextJava.h"
 #include "RQRef.h"
@@ -51,14 +51,14 @@ static GraphicsContext& scratchContext()
 
 RefPtr<RQRef> createEmptyPath()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
         "createWCPath", "()Lcom/sun/webkit/graphics/WCPath;");
     ASSERT(mid);
 
     JLObject ref(env->CallObjectMethod(PL_GetGraphicsManager(env), mid));
     ASSERT(ref);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     return RQRef::create(ref);
 }
 
@@ -67,7 +67,7 @@ RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
     if (!p) {
         return createEmptyPath();
     }
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
         "createWCPath",
@@ -76,7 +76,7 @@ RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
 
     JLObject ref(env->CallObjectMethod(PL_GetGraphicsManager(env), mid, (jobject)*p));
     ASSERT(ref);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return RQRef::create(ref);
 }
@@ -122,7 +122,7 @@ bool Path::contains(const FloatPoint& p, WindRule rule) const
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "contains",
         "(IDD)Z");
@@ -130,7 +130,7 @@ bool Path::contains(const FloatPoint& p, WindRule rule) const
 
     jboolean res = env->CallBooleanMethod(*m_path, mid, (jint)rule,
         (jdouble)p.x(), (jdouble)p.y());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return jbool_to_bool(res);
 }
@@ -144,14 +144,14 @@ FloatRect Path::strokeBoundingRect(StrokeStyleApplier *applier) const
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "getBounds",
             "()Lcom/sun/webkit/graphics/WCRectangle;");
     ASSERT(mid);
 
     JLObject rect(env->CallObjectMethod(*m_path, mid));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     if (rect) {
         static jfieldID rectxFID = env->GetFieldID(PG_GetRectangleClass(env), "x", "F");
         ASSERT(rectxFID);
@@ -167,7 +167,7 @@ FloatRect Path::strokeBoundingRect(StrokeStyleApplier *applier) const
             float(env->GetFloatField(rect, rectyFID)),
             float(env->GetFloatField(rect, rectwFID)),
             float(env->GetFloatField(rect, recthFID)));
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
 
         float thickness;
         if (applier) {
@@ -188,28 +188,28 @@ void Path::clear()
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
         "clear", "()V");
     ASSERT(mid);
 
     env->CallVoidMethod(*m_path, mid);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 bool Path::isEmpty() const
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
                                             "isEmpty", "()Z");
     ASSERT(mid);
 
     jboolean res = env->CallBooleanMethod(*m_path, mid);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return jbool_to_bool(res);
 }
@@ -218,14 +218,14 @@ bool Path::hasCurrentPoint() const
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
                                             "hasCurrentPoint", "()Z");
     ASSERT(mid);
 
     jboolean res = env->CallBooleanMethod(*m_path, mid);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return jbool_to_bool(res);
 }
@@ -241,42 +241,42 @@ void Path::moveTo(const FloatPoint &p)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "moveTo",
         "(DD)V");
     ASSERT(mid);
 
     env->CallVoidMethod(*m_path, mid, (jdouble)p.x(), (jdouble)p.y());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::addLineTo(const FloatPoint &p)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addLineTo",
         "(DD)V");
     ASSERT(mid);
 
     env->CallVoidMethod(*m_path, mid, (jdouble)p.x(), (jdouble)p.y());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::addQuadCurveTo(const FloatPoint &cp, const FloatPoint &p)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addQuadCurveTo",
                                             "(DDDD)V");
     ASSERT(mid);
 
     env->CallVoidMethod(*m_path, mid, (jdouble)cp.x(), (jdouble)cp.y(), (jdouble)p.x(), (jdouble)p.y());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::addBezierCurveTo(const FloatPoint & controlPoint1,
@@ -285,7 +285,7 @@ void Path::addBezierCurveTo(const FloatPoint & controlPoint1,
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
         "addBezierCurveTo", "(DDDDDD)V");
@@ -295,14 +295,14 @@ void Path::addBezierCurveTo(const FloatPoint & controlPoint1,
                         (jdouble)controlPoint1.x(), (jdouble)controlPoint1.y(),
                         (jdouble)controlPoint2.x(), (jdouble)controlPoint2.y(),
                         (jdouble)controlPoint3.x(), (jdouble)controlPoint3.y());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::addArcTo(const FloatPoint & p1, const FloatPoint & p2, float radius)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addArcTo",
         "(DDDDD)V");
@@ -311,21 +311,21 @@ void Path::addArcTo(const FloatPoint & p1, const FloatPoint & p2, float radius)
     env->CallVoidMethod(*m_path, mid,
                         (jdouble)p1.x(), (jdouble)p1.y(),
                         (jdouble)p2.x(), (jdouble)p2.y(), (jdouble)radius);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::closeSubpath()
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
         "closeSubpath", "()V");
     ASSERT(mid);
 
     env->CallVoidMethod(*m_path, mid);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::addArc(const FloatPoint & p, float radius, float startAngle,
@@ -333,7 +333,7 @@ void Path::addArc(const FloatPoint & p, float radius, float startAngle,
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addArc",
         "(DDDDDZ)V");
@@ -342,14 +342,14 @@ void Path::addArc(const FloatPoint & p, float radius, float startAngle,
     env->CallVoidMethod(*m_path, mid, (jdouble)p.x(), (jdouble)p.y(),
         (jdouble)radius, (jdouble)startAngle, (jdouble)endAngle,
         bool_to_jbool(clockwise));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::addRect(const FloatRect& r)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addRect",
         "(DDDD)V");
@@ -357,7 +357,7 @@ void Path::addRect(const FloatRect& r)
 
     env->CallVoidMethod(*m_path, mid, (jdouble)r.x(), (jdouble)r.y(),
                               (jdouble)r.width(), (jdouble)r.height());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::addEllipse(FloatPoint, float, float, float, float, float, bool)
@@ -374,7 +374,7 @@ void Path::addEllipse(const FloatRect& r)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "addEllipse",
         "(DDDD)V");
     ASSERT(mid);
@@ -382,28 +382,28 @@ void Path::addEllipse(const FloatRect& r)
     env->CallVoidMethod(*m_path, mid,
                         (jdouble)r.x(), (jdouble)r.y(),
                         (jdouble)r.width(), (jdouble)r.height());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::translate(const FloatSize &sz)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "translate",
         "(DD)V");
     ASSERT(mid);
 
     env->CallVoidMethod(*m_path, mid,
                         (jdouble)sz.width(), (jdouble)sz.height());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::transform(const AffineTransform &at)
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
         "transform", "(DDDDDD)V");
@@ -413,21 +413,21 @@ void Path::transform(const AffineTransform &at)
                         (jdouble)at.a(), (jdouble)at.b(),
                         (jdouble)at.c(), (jdouble)at.d(),
                         (jdouble)at.e(), (jdouble)at.f());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Path::apply(const PathApplierFunction& function) const
 {
     ASSERT(m_path);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
         "getPathIterator", "()Lcom/sun/webkit/graphics/WCPathIterator;");
     ASSERT(mid);
 
     JLObject iter(env->CallObjectMethod(*m_path, mid));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     if (iter) {
         static jmethodID midIsDone = env->GetMethodID(PG_GetPathIteratorClass(env),
@@ -486,8 +486,14 @@ void Path::apply(const PathApplierFunction& function) const
             env->ReleaseDoubleArrayElements(coords, data, JNI_ABORT);
             env->CallVoidMethod(iter, midNext);
         }
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
     }
+}
+
+bool Path::strokeContains(StrokeStyleApplier*, const FloatPoint&) const
+{
+    notImplemented();
+    return false;
 }
 
 }

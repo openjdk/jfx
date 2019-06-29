@@ -29,7 +29,7 @@
 #include "GraphicsContextJava.h"
 #include "HTMLPlugInElement.h"
 #include "IntSize.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
 #include "ScrollView.h"

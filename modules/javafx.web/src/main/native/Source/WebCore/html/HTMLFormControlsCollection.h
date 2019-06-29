@@ -23,7 +23,7 @@
 #pragma once
 
 #include "CachedHTMLCollection.h"
-#include "HTMLElement.h"
+#include "HTMLFormElement.h"
 #include "RadioNodeList.h"
 
 namespace WebCore {
@@ -40,7 +40,9 @@ public:
     virtual ~HTMLFormControlsCollection();
 
     HTMLElement* item(unsigned offset) const override;
-    std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItemOrItems(const String&) const;
+    Optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItemOrItems(const String&) const;
+
+    HTMLFormElement& ownerNode() const;
 
     // For CachedHTMLCollection.
     HTMLElement* customElementAfter(Element*) const;

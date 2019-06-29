@@ -27,29 +27,77 @@
 
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
+#include "DisplayBox.h"
 #include "FormattingContext.h"
+#include "InlineFormattingState.h"
+#include "InlineRun.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
-
 namespace Layout {
 
-class InlineFormattingState;
+class FloatingState;
+class InlineContainer;
+class InlineRunProvider;
+class Line;
 
 // This class implements the layout logic for inline formatting contexts.
 // https://www.w3.org/TR/CSS22/visuren.html#inline-formatting
 class InlineFormattingContext : public FormattingContext {
     WTF_MAKE_ISO_ALLOCATED(InlineFormattingContext);
 public:
-    InlineFormattingContext(const Box& formattingContextRoot);
-
-    void layout(LayoutContext&, FormattingState&) const override;
+    InlineFormattingContext(const Box& formattingContextRoot, InlineFormattingState&);
+    void layout() const override;
 
 private:
-    void computeStaticPosition(LayoutContext&, const Box&, Display::Box&) const override;
-    void computeInFlowPositionedPosition(LayoutContext&, const Box&, Display::Box&) const override;
+    void computeIntrinsicWidthConstraints() const override;
 
-    InstrinsicWidthConstraints instrinsicWidthConstraints(LayoutContext&, const Box&) const override;
+    class LineLayout {
+    public:
+        LineLayout(const InlineFormattingContext&);
+        void layout(const InlineRunProvider&) const;
+
+    private:
+        enum class IsLastLine { No, Yes };
+        void initializeNewLine(Line&) const;
+        void closeLine(Line&, IsLastLine) const;
+        void appendContentToLine(Line&, const InlineRunProvider::Run&, const LayoutSize&) const;
+        void postProcessInlineRuns(Line&, IsLastLine) const;
+        void createFinalRuns(Line&) const;
+        void splitInlineRunIfNeeded(const InlineRun&, InlineRuns& splitRuns) const;
+        void computeFloatPosition(const FloatingContext&, Line&, const Box&) const;
+        void placeInFlowPositionedChildren(unsigned firstRunIndex) const;
+        void alignRuns(TextAlignMode, Line&, IsLastLine) const;
+        void computeExpansionOpportunities(Line&, const InlineRunProvider::Run&, InlineRunProvider::Run::Type lastRunType) const;
+        LayoutUnit runWidth(const InlineContent&, const InlineItem&, ItemPosition from, unsigned length, LayoutUnit contentLogicalLeft) const;
+
+    private:
+        static void justifyRuns(Line&);
+
+    private:
+        const InlineFormattingContext& m_formattingContext;
+        InlineFormattingState& m_formattingState;
+        FloatingState& m_floatingState;
+        const Container& m_formattingRoot;
+    };
+
+    class Geometry : public FormattingContext::Geometry {
+    public:
+        static HeightAndMargin inlineBlockHeightAndMargin(const LayoutState&, const Box&);
+        static WidthAndMargin inlineBlockWidthAndMargin(LayoutState&, const Box&, UsedHorizontalValues);
+    };
+
+    void layoutFormattingContextRoot(const Box&, UsedHorizontalValues) const;
+    void computeIntrinsicWidthForFloatBox(const Box&) const;
+    void computeIntrinsicWidthForInlineBlock(const Box&) const;
+    void computeWidthAndHeightForReplacedInlineBox(const Box&, UsedHorizontalValues) const;
+    void computeMargin(const Box&, UsedHorizontalValues) const;
+    void computeHeightAndMargin(const Box&) const;
+    void computeWidthAndMargin(const Box&, UsedHorizontalValues) const;
+
+    void collectInlineContent(InlineRunProvider&) const;
+
+    InlineFormattingState& formattingState() const { return downcast<InlineFormattingState>(FormattingContext::formattingState()); }
 };
 
 }

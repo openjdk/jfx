@@ -26,11 +26,11 @@
 // https://wicg.github.io/IntersectionObserver/
 
 [
+    ActiveDOMObject,
     Conditional=INTERSECTION_OBSERVER,
     ConstructorCallWith=Document,
     ConstructorMayThrowException,
     Constructor(IntersectionObserverCallback callback, optional IntersectionObserverInit options),
-    ImplementationLacksVTable,
     EnabledAtRuntime=IntersectionObserver
 ] interface IntersectionObserver {
     readonly attribute Element? root;
@@ -40,7 +40,7 @@
     void observe(Element target);
     void unobserve(Element target);
     void disconnect();
-    sequence<IntersectionObserverEntry> takeRecords();
+    [ResultField=records] sequence<IntersectionObserverEntry> takeRecords();
 };
 
 [

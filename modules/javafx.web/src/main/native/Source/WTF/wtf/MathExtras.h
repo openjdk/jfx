@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WTF_MathExtras_h
-#define WTF_MathExtras_h
+#pragma once
 
 #include <algorithm>
 #include <cmath>
@@ -119,20 +118,115 @@ inline float rad2grad(float r) { return r * 200.0f / piFloat; }
 inline float grad2rad(float g) { return g * piFloat / 200.0f; }
 
 // std::numeric_limits<T>::min() returns the smallest positive value for floating point types
-template<typename T> constexpr inline T defaultMinimumForClamp() { return std::numeric_limits<T>::min(); }
-template<> constexpr inline float defaultMinimumForClamp() { return -std::numeric_limits<float>::max(); }
-template<> constexpr inline double defaultMinimumForClamp() { return -std::numeric_limits<double>::max(); }
-template<typename T> constexpr inline T defaultMaximumForClamp() { return std::numeric_limits<T>::max(); }
+template<typename T> constexpr T defaultMinimumForClamp() { return std::numeric_limits<T>::min(); }
+template<> constexpr float defaultMinimumForClamp() { return -std::numeric_limits<float>::max(); }
+template<> constexpr double defaultMinimumForClamp() { return -std::numeric_limits<double>::max(); }
+template<typename T> constexpr T defaultMaximumForClamp() { return std::numeric_limits<T>::max(); }
 
-template<typename T> inline T clampTo(double value, T min = defaultMinimumForClamp<T>(), T max = defaultMaximumForClamp<T>())
+// Same type in and out.
+template<typename TargetType, typename SourceType>
+typename std::enable_if<std::is_same<TargetType, SourceType>::value, TargetType>::type
+clampTo(SourceType value, TargetType min = defaultMinimumForClamp<TargetType>(), TargetType max = defaultMaximumForClamp<TargetType>())
 {
-    if (value >= static_cast<double>(max))
+    if (value >= max)
         return max;
-    if (value <= static_cast<double>(min))
+    if (value <= min)
         return min;
-    return static_cast<T>(value);
+    return value;
 }
-template<> inline long long int clampTo(double, long long int, long long int); // clampTo does not support long long ints.
+
+// Floating point source.
+template<typename TargetType, typename SourceType>
+typename std::enable_if<!std::is_same<TargetType, SourceType>::value
+    && std::is_floating_point<SourceType>::value
+    && !(std::is_floating_point<TargetType>::value && sizeof(TargetType) > sizeof(SourceType)), TargetType>::type
+clampTo(SourceType value, TargetType min = defaultMinimumForClamp<TargetType>(), TargetType max = defaultMaximumForClamp<TargetType>())
+{
+    if (value >= static_cast<SourceType>(max))
+        return max;
+    if (value <= static_cast<SourceType>(min))
+        return min;
+    return static_cast<TargetType>(value);
+}
+
+template<typename TargetType, typename SourceType>
+typename std::enable_if<!std::is_same<TargetType, SourceType>::value
+    && std::is_floating_point<SourceType>::value
+    && std::is_floating_point<TargetType>::value
+    && (sizeof(TargetType) > sizeof(SourceType)), TargetType>::type
+clampTo(SourceType value, TargetType min = defaultMinimumForClamp<TargetType>(), TargetType max = defaultMaximumForClamp<TargetType>())
+{
+    TargetType convertedValue = static_cast<TargetType>(value);
+    if (convertedValue >= max)
+        return max;
+    if (convertedValue <= min)
+        return min;
+    return convertedValue;
+}
+
+// Source and Target have the same sign and Source is larger or equal to Target
+template<typename TargetType, typename SourceType>
+typename std::enable_if<!std::is_same<TargetType, SourceType>::value
+    && std::numeric_limits<SourceType>::is_integer
+    && std::numeric_limits<TargetType>::is_integer
+    && std::numeric_limits<TargetType>::is_signed == std::numeric_limits<SourceType>::is_signed
+    && sizeof(SourceType) >= sizeof(TargetType), TargetType>::type
+clampTo(SourceType value, TargetType min = defaultMinimumForClamp<TargetType>(), TargetType max = defaultMaximumForClamp<TargetType>())
+{
+    if (value >= static_cast<SourceType>(max))
+        return max;
+    if (value <= static_cast<SourceType>(min))
+        return min;
+    return static_cast<TargetType>(value);
+}
+
+// Clamping a unsigned integer to the max signed value.
+template<typename TargetType, typename SourceType>
+typename std::enable_if<!std::is_same<TargetType, SourceType>::value
+    && std::numeric_limits<SourceType>::is_integer
+    && std::numeric_limits<TargetType>::is_integer
+    && std::numeric_limits<TargetType>::is_signed
+    && !std::numeric_limits<SourceType>::is_signed
+    && sizeof(SourceType) >= sizeof(TargetType), TargetType>::type
+clampTo(SourceType value)
+{
+    TargetType max = std::numeric_limits<TargetType>::max();
+    if (value >= static_cast<SourceType>(max))
+        return max;
+    return static_cast<TargetType>(value);
+}
+
+// Clamping a signed integer into a valid unsigned integer.
+template<typename TargetType, typename SourceType>
+typename std::enable_if<!std::is_same<TargetType, SourceType>::value
+    && std::numeric_limits<SourceType>::is_integer
+    && std::numeric_limits<TargetType>::is_integer
+    && !std::numeric_limits<TargetType>::is_signed
+    && std::numeric_limits<SourceType>::is_signed
+    && sizeof(SourceType) == sizeof(TargetType), TargetType>::type
+clampTo(SourceType value)
+{
+    if (value < 0)
+        return 0;
+    return static_cast<TargetType>(value);
+}
+
+template<typename TargetType, typename SourceType>
+typename std::enable_if<!std::is_same<TargetType, SourceType>::value
+    && std::numeric_limits<SourceType>::is_integer
+    && std::numeric_limits<TargetType>::is_integer
+    && !std::numeric_limits<TargetType>::is_signed
+    && std::numeric_limits<SourceType>::is_signed
+    && (sizeof(SourceType) > sizeof(TargetType)), TargetType>::type
+clampTo(SourceType value)
+{
+    if (value < 0)
+        return 0;
+    TargetType max = std::numeric_limits<TargetType>::max();
+    if (value >= static_cast<SourceType>(max))
+        return max;
+    return static_cast<TargetType>(value);
+}
 
 inline int clampToInteger(double value)
 {
@@ -173,7 +267,7 @@ inline int clampToInteger(T x)
 
 // Explicitly accept 64bit result when clamping double value.
 // Keep in mind that double can only represent 53bit integer precisely.
-template<typename T> constexpr inline T clampToAccepting64(double value, T min = defaultMinimumForClamp<T>(), T max = defaultMaximumForClamp<T>())
+template<typename T> constexpr T clampToAccepting64(double value, T min = defaultMinimumForClamp<T>(), T max = defaultMaximumForClamp<T>())
 {
     return (value >= static_cast<double>(max)) ? max : ((value <= static_cast<double>(min)) ? min : static_cast<T>(value));
 }
@@ -207,7 +301,10 @@ template<typename T> constexpr bool hasTwoOrMoreBitsSet(T value)
     return !hasZeroOrOneBitsSet(value);
 }
 
-template <typename T> inline unsigned getLSBSet(T value)
+// FIXME: Some Darwin projects shamelessly include WTF headers and don't build with C++14... See: rdar://problem/45395767
+// Since C++11 and before don't support constexpr statements we can't mark this function constexpr.
+#if !defined(WTF_CPP_STD_VER) || WTF_CPP_STD_VER >= 14
+template <typename T> constexpr unsigned getLSBSet(T value)
 {
     typedef typename std::make_unsigned<T>::type UnsignedT;
     unsigned result = 0;
@@ -218,6 +315,7 @@ template <typename T> inline unsigned getLSBSet(T value)
 
     return result;
 }
+#endif
 
 template<typename T> inline T divideRoundedUp(T a, T b)
 {
@@ -251,10 +349,10 @@ template<typename T> inline bool isGreaterThanNonZeroPowerOfTwo(T value, unsigne
     return !!((value >> 1) >> (power - 1));
 }
 
-template<typename T> constexpr inline bool isLessThan(const T& a, const T& b) { return a < b; }
-template<typename T> constexpr inline bool isLessThanEqual(const T& a, const T& b) { return a <= b; }
-template<typename T> constexpr inline bool isGreaterThan(const T& a, const T& b) { return a > b; }
-template<typename T> constexpr inline bool isGreaterThanEqual(const T& a, const T& b) { return a >= b; }
+template<typename T> constexpr bool isLessThan(const T& a, const T& b) { return a < b; }
+template<typename T> constexpr bool isLessThanEqual(const T& a, const T& b) { return a <= b; }
+template<typename T> constexpr bool isGreaterThan(const T& a, const T& b) { return a > b; }
+template<typename T> constexpr bool isGreaterThanEqual(const T& a, const T& b) { return a >= b; }
 
 #ifndef UINT64_C
 #if COMPILER(MSVC)
@@ -334,7 +432,7 @@ inline void doubleToInteger(double d, unsigned long long& value)
 namespace WTF {
 
 // From http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-inline constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
+constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
 {
     v--;
     v |= v >> 1;
@@ -346,7 +444,7 @@ inline constexpr uint32_t roundUpToPowerOfTwo(uint32_t v)
     return v;
 }
 
-inline constexpr unsigned maskForSize(unsigned size)
+constexpr unsigned maskForSize(unsigned size)
 {
     if (!size)
         return 0;
@@ -358,14 +456,22 @@ inline unsigned fastLog2(unsigned i)
     unsigned log2 = 0;
     if (i & (i - 1))
         log2 += 1;
-    if (i >> 16)
-        log2 += 16, i >>= 16;
-    if (i >> 8)
-        log2 += 8, i >>= 8;
-    if (i >> 4)
-        log2 += 4, i >>= 4;
-    if (i >> 2)
-        log2 += 2, i >>= 2;
+    if (i >> 16) {
+        log2 += 16;
+        i >>= 16;
+    }
+    if (i >> 8) {
+        log2 += 8;
+        i >>= 8;
+    }
+    if (i >> 4) {
+        log2 += 4;
+        i >>= 4;
+    }
+    if (i >> 2) {
+        log2 += 2;
+        i >>= 2;
+    }
     if (i >> 1)
         log2 += 1;
     return log2;
@@ -526,7 +632,7 @@ void shuffleVector(VectorType& vector, const RandomFunc& randomFunc)
 
 inline unsigned clz32(uint32_t number)
 {
-#if COMPILER(GCC_OR_CLANG)
+#if COMPILER(GCC_COMPATIBLE)
     if (number)
         return __builtin_clz(number);
     return 32;
@@ -551,7 +657,7 @@ inline unsigned clz32(uint32_t number)
 
 inline unsigned clz64(uint64_t number)
 {
-#if COMPILER(GCC_OR_CLANG)
+#if COMPILER(GCC_COMPATIBLE)
     if (number)
         return __builtin_clzll(number);
     return 64;
@@ -575,6 +681,30 @@ inline unsigned clz64(uint64_t number)
 #endif
 }
 
+inline unsigned ctz32(uint32_t number)
+{
+#if COMPILER(GCC_COMPATIBLE)
+    if (number)
+        return __builtin_ctz(number);
+    return 32;
+#elif COMPILER(MSVC) && !CPU(X86)
+    unsigned long ret = 0;
+    if (_BitScanForward(&ret, number))
+        return ret;
+    return 32;
+#else
+    unsigned zeroCount = 0;
+    for (unsigned i = 0; i < 32; i++) {
+        if (number & 1)
+            break;
+
+        zeroCount++;
+        number >>= 1;
+    }
+    return zeroCount;
+#endif
+}
+
 } // namespace WTF
 
 using WTF::opaque;
@@ -584,5 +714,4 @@ using WTF::preciseIndexMaskShiftForSize;
 using WTF::shuffleVector;
 using WTF::clz32;
 using WTF::clz64;
-
-#endif // #ifndef WTF_MathExtras_h
+using WTF::ctz32;

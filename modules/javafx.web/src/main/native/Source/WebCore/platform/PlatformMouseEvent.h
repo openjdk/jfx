@@ -31,7 +31,7 @@
 #include <wtf/WindowsExtras.h>
 
 #if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #endif
 
 #if PLATFORM(GTK)

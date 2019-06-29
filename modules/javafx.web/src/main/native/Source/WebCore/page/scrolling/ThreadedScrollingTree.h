@@ -45,19 +45,19 @@ public:
 
     void commitTreeState(std::unique_ptr<ScrollingStateTree>) override;
 
-    void handleWheelEvent(const PlatformWheelEvent&) override;
+    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override;
 
     // Can be called from any thread. Will try to handle the wheel event on the scrolling thread.
     // Returns true if the wheel event can be handled on the scrolling thread and false if the
     // event must be sent again to the WebCore event handler.
-    EventResult tryToHandleWheelEvent(const PlatformWheelEvent&) override;
+    ScrollingEventResult tryToHandleWheelEvent(const PlatformWheelEvent&) override;
 
     void invalidate() override;
 
 protected:
     explicit ThreadedScrollingTree(AsyncScrollingCoordinator&);
 
-    void scrollingTreeNodeDidScroll(ScrollingNodeID, const FloatPoint& scrollPosition, const std::optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) override;
+    void scrollingTreeNodeDidScroll(ScrollingNodeID, const FloatPoint& scrollPosition, const Optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction = ScrollingLayerPositionAction::Sync) override;
 #if PLATFORM(MAC)
     void handleWheelEventPhase(PlatformWheelEventPhase) override;
     void setActiveScrollSnapIndices(ScrollingNodeID, unsigned horizontalIndex, unsigned verticalIndex) override;

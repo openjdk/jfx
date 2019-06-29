@@ -24,7 +24,6 @@
 #if USE(COORDINATED_GRAPHICS)
 
 #include "CoordinatedGraphicsState.h"
-#include "CoordinatedImageBacking.h"
 #include "FloatPoint3D.h"
 #include "GraphicsLayer.h"
 #include "GraphicsLayerTransform.h"
@@ -33,9 +32,8 @@
 #include "NicosiaBuffer.h"
 #include "NicosiaPlatformLayer.h"
 #include "TextureMapperAnimation.h"
-#include "TiledBackingStore.h"
-#include "TiledBackingStoreClient.h"
 #include "TransformationMatrix.h"
+#include <wtf/RunLoop.h>
 #include <wtf/text/StringHash.h>
 
 namespace Nicosia {
@@ -50,30 +48,28 @@ class CoordinatedGraphicsLayerClient {
 public:
     virtual bool isFlushingLayerChanges() const = 0;
     virtual FloatRect visibleContentsRect() const = 0;
-    virtual Ref<CoordinatedImageBacking> createImageBackingIfNeeded(Image&) = 0;
     virtual void detachLayer(CoordinatedGraphicsLayer*) = 0;
     virtual void attachLayer(CoordinatedGraphicsLayer*) = 0;
     virtual Nicosia::PaintingEngine& paintingEngine() = 0;
-
-    virtual void syncLayerState(CoordinatedLayerID, CoordinatedGraphicsLayerState&) = 0;
+    virtual void syncLayerState() = 0;
 };
 
-class WEBCORE_EXPORT CoordinatedGraphicsLayer : public GraphicsLayer
-    , public TiledBackingStoreClient
-    , public CoordinatedImageBacking::Host {
+class WEBCORE_EXPORT CoordinatedGraphicsLayer : public GraphicsLayer {
 public:
     explicit CoordinatedGraphicsLayer(Type, GraphicsLayerClient&);
     virtual ~CoordinatedGraphicsLayer();
 
-    PlatformLayerID primaryLayerID() const override { return id(); }
+    // FIXME: Merge these two methods.
+    Nicosia::PlatformLayer::LayerID id() const;
+    PlatformLayerID primaryLayerID() const override;
 
     // Reimplementations from GraphicsLayer.h.
-    bool setChildren(const Vector<GraphicsLayer*>&) override;
-    void addChild(GraphicsLayer*) override;
-    void addChildAtIndex(GraphicsLayer*, int) override;
-    void addChildAbove(GraphicsLayer*, GraphicsLayer*) override;
-    void addChildBelow(GraphicsLayer*, GraphicsLayer*) override;
-    bool replaceChild(GraphicsLayer*, GraphicsLayer*) override;
+    bool setChildren(Vector<Ref<GraphicsLayer>>&&) override;
+    void addChild(Ref<GraphicsLayer>&&) override;
+    void addChildAtIndex(Ref<GraphicsLayer>&&, int) override;
+    void addChildAbove(Ref<GraphicsLayer>&&, GraphicsLayer*) override;
+    void addChildBelow(Ref<GraphicsLayer>&&, GraphicsLayer*) override;
+    bool replaceChild(GraphicsLayer*, Ref<GraphicsLayer>&&) override;
     void removeFromParent() override;
     void setPosition(const FloatPoint&) override;
     void setAnchorPoint(const FloatPoint3D&) override;
@@ -96,8 +92,8 @@ public:
     void setShowRepaintCounter(bool) override;
     bool shouldDirectlyCompositeImage(Image*) const override;
     void setContentsToPlatformLayer(PlatformLayer*, ContentsLayerPurpose) override;
-    void setMaskLayer(GraphicsLayer*) override;
-    void setReplicatedByLayer(GraphicsLayer*) override;
+    void setMaskLayer(RefPtr<GraphicsLayer>&&) override;
+    void setReplicatedByLayer(RefPtr<GraphicsLayer>&&) override;
     void setNeedsDisplay() override;
     void setNeedsDisplayInRect(const FloatRect&, ShouldClipToLayer = ClipToLayer) override;
     void setContentsNeedsDisplay() override;
@@ -110,7 +106,7 @@ public:
     void removeAnimation(const String&) override;
     void suspendAnimations(MonotonicTime) override;
     void resumeAnimations() override;
-    bool usesContentsLayer() const override { return m_platformLayer || m_compositedImage; }
+    bool usesContentsLayer() const override;
 
     void syncPendingStateChangesIncludingSubLayers();
     void updateContentBuffersIncludingSubLayers();
@@ -118,15 +114,7 @@ public:
     FloatPoint computePositionRelativeToBase();
     void computePixelAlignment(FloatPoint& position, FloatSize&, FloatPoint3D& anchorPoint, FloatSize& alignmentOffset);
 
-    CoordinatedLayerID id() const { return m_id; }
-
     IntRect transformedVisibleRect();
-
-    // TiledBackingStoreClient
-    void tiledBackingStoreHasPendingTileCreation() override;
-    void createTile(uint32_t tileID, float) override;
-    void updateTile(uint32_t tileID, const SurfaceUpdateInfo&, const IntRect&) override;
-    void removeTile(uint32_t tileID) override;
 
     void setCoordinator(CoordinatedGraphicsLayerClient*);
     void setCoordinatorIncludingSubLayersIfNeeded(CoordinatedGraphicsLayerClient*);
@@ -137,51 +125,36 @@ public:
     const RefPtr<Nicosia::CompositionLayer>& compositionLayer() const;
 
 private:
-    bool isCoordinatedGraphicsLayer() const override { return true; }
+    bool isCoordinatedGraphicsLayer() const;
 
-    void syncPlatformLayer();
     void updatePlatformLayer();
 
     void setDebugBorder(const Color&, float width) override;
 
-    void didChangeLayerState();
     void didChangeAnimations();
     void didChangeGeometry();
     void didChangeChildren();
     void didChangeFilters();
-    void didChangeImageBacking();
     void didUpdateTileBuffers();
 
-    void resetLayerState();
-    void syncLayerState();
-    void syncAnimations();
-    void syncChildren();
-    void syncFilters();
-    void syncImageBacking();
     void computeTransformedVisibleRect();
     void updateContentBuffers();
 
-    void createBackingStore();
-    void releaseImageBackingIfNeeded();
-
     void notifyFlushRequired();
 
-    // CoordinatedImageBacking::Host
-    bool imageBackingVisible() override;
     bool shouldHaveBackingStore() const;
     bool selfOrAncestorHasActiveTransformAnimation() const;
     bool selfOrAncestorHaveNonAffineTransforms();
-    void adjustContentsScale();
 
     void setShouldUpdateVisibleRect();
     float effectiveContentsScale();
 
     void animationStartedTimerFired();
+    void requestPendingTileCreationTimerFired();
 
     bool filtersCanBeComposited(const FilterOperations&) const;
 
-    CoordinatedLayerID m_id;
-    CoordinatedGraphicsLayerState m_layerState;
+    Nicosia::PlatformLayer::LayerID m_id;
     GraphicsLayerTransform m_layerTransform;
     TransformationMatrix m_cachedInverseTransform;
     FloatSize m_pixelAlignmentOffset;
@@ -196,21 +169,12 @@ private:
 #endif
     bool m_shouldUpdateVisibleRect: 1;
     bool m_shouldSyncLayerState: 1;
-    bool m_shouldSyncChildren: 1;
-    bool m_shouldSyncFilters: 1;
-    bool m_shouldSyncImageBacking: 1;
-    bool m_shouldSyncAnimations: 1;
     bool m_movingVisibleRect : 1;
     bool m_pendingContentsScaleAdjustment : 1;
     bool m_pendingVisibleRectAdjustment : 1;
-#if USE(COORDINATED_GRAPHICS_THREADED)
-    bool m_shouldSyncPlatformLayer : 1;
     bool m_shouldUpdatePlatformLayer : 1;
-#endif
 
     CoordinatedGraphicsLayerClient* m_coordinator;
-    std::unique_ptr<TiledBackingStore> m_mainBackingStore;
-    std::unique_ptr<TiledBackingStore> m_previousBackingStore;
 
     struct {
         bool completeLayer { false };
@@ -219,10 +183,9 @@ private:
 
     RefPtr<Image> m_compositedImage;
     NativeImagePtr m_compositedNativeImagePtr;
-    RefPtr<CoordinatedImageBacking> m_coordinatedImageBacking;
 
-    PlatformLayer* m_platformLayer;
     Timer m_animationStartedTimer;
+    RunLoop::Timer<CoordinatedGraphicsLayer> m_requestPendingTileCreationTimer;
     TextureMapperAnimations m_animations;
     MonotonicTime m_lastAnimationStartTime;
 
@@ -231,6 +194,11 @@ private:
         Nicosia::CompositionLayer::LayerState::Delta delta;
         Nicosia::CompositionLayer::LayerState::RepaintCounter repaintCounter;
         Nicosia::CompositionLayer::LayerState::DebugBorder debugBorder;
+        bool performLayerSync { false };
+
+        RefPtr<Nicosia::BackingStore> backingStore;
+        RefPtr<Nicosia::ContentLayer> contentLayer;
+        RefPtr<Nicosia::ImageBacking> imageBacking;
     } m_nicosia;
 };
 

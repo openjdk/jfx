@@ -25,10 +25,10 @@
 
 #pragma once
 
-#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE) || (PLATFORM(JAVA) && !OS(WINDOWS))
-#include <netinet/in.h>
-#elif OS(WINDOWS)
+#if OS(WINDOWS) || (OS(WINDOWS) && PLATFORM(JAVA))
 #include <winsock2.h>
+#else
+#include <netinet/in.h>
 #endif
 
 #include <wtf/Forward.h>

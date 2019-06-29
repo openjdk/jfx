@@ -29,7 +29,7 @@
 
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
-#include <WebCore/ExceptionOr.h>
+#include "ExceptionOr.h"
 
 // Note that a pointer to a Node is not necessarily the same address
 // as a pointer to an Element: a static_cast between the two is not

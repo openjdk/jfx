@@ -47,7 +47,7 @@ static std::unique_ptr<TextCodec> newTextCodecJava(const TextEncoding& encoding,
 }
 
 static JNIEnv* setUpCodec() {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     if (!textCodecClass) {
         textCodecClass =  JLClass(env->FindClass("com/sun/webkit/text/TextCodec"));
@@ -75,7 +75,7 @@ static Vector<AliasNamePair>* buildPairs()
 
     jobjectArray arr = static_cast<jobjectArray>
             (env->CallStaticObjectMethod(textCodecClass, getEncodingsMID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     ASSERT(arr);
     jsize length = env->GetArrayLength(arr);
 
@@ -138,10 +138,10 @@ TextCodecJava::TextCodecJava(const TextEncoding& encoding)
     JNIEnv* env = setUpCodec();
 
     jstring s = env->NewStringUTF(encoding.name());
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
     ASSERT(s);
     jobject codec = env->NewObject(textCodecClass, ctorMID, s);
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
     ASSERT(codec);
     env->DeleteLocalRef(s);
     m_codec = env->NewGlobalRef(codec);
@@ -164,7 +164,7 @@ String TextCodecJava::decode(const char* bytes, size_t length, bool flush,
     JNIEnv* env = setUpCodec();
 
     JLocalRef<jbyteArray> barr(env->NewByteArray(length));
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
     if (!barr) {
         return String();
     }
@@ -176,7 +176,7 @@ String TextCodecJava::decode(const char* bytes, size_t length, bool flush,
     if (env->ExceptionOccurred()) {
         sawError = true;
     }
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
 
     return s ? String(env, s) : String();
 }
@@ -186,7 +186,7 @@ CString TextCodecJava::encode(const UChar* characters, size_t length, Unencodabl
     JNIEnv* env = setUpCodec();
 
     JLocalRef<jcharArray> carr(env->NewCharArray(length));
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
     if (!carr) {
         return CString();
     }
@@ -194,7 +194,7 @@ CString TextCodecJava::encode(const UChar* characters, size_t length, Unencodabl
     env->SetCharArrayRegion((jcharArray)carr, 0, length, reinterpret_cast<const jchar*>(characters));
     JLocalRef<jbyteArray> barr(
         static_cast<jbyteArray>(env->CallObjectMethod(m_codec, encodeMID, (jcharArray)carr)));
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
     if (!barr) {
         return CString();
     }

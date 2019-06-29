@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,6 +48,8 @@ public:
 
     static void updateNowPlayingInfoIfNecessary();
 
+    WEBCORE_EXPORT static void setShouldDeactivateAudioSession(bool);
+
     virtual ~PlatformMediaSessionManager() = default;
 
     virtual void scheduleUpdateNowPlayingInfo() { }
@@ -62,6 +64,7 @@ public:
     virtual double lastUpdatedNowPlayingElapsedTime() const { return NAN; }
     virtual uint64_t lastUpdatedNowPlayingInfoUniqueIdentifier() const { return 0; }
     virtual bool registeredAsNowPlayingApplication() const { return false; }
+    virtual void prepareToSendUserMediaPermissionRequest() { }
 
     bool willIgnoreSystemInterruptions() const { return m_willIgnoreSystemInterruptions; }
     void setWillIgnoreSystemInterruptions(bool ignore) { m_willIgnoreSystemInterruptions = ignore; }
@@ -76,6 +79,9 @@ public:
 
     void stopAllMediaPlaybackForDocument(const Document*);
     WEBCORE_EXPORT void stopAllMediaPlaybackForProcess();
+
+    void suspendAllMediaPlaybackForDocument(const Document&);
+    void resumeAllMediaPlaybackForDocument(const Document&);
 
     enum SessionRestrictionFlags {
         NoRestrictions = 0,
@@ -98,8 +104,9 @@ public:
     virtual void sessionStateChanged(PlatformMediaSession&);
     virtual void sessionDidEndRemoteScrubbing(const PlatformMediaSession&) { };
     virtual void clientCharacteristicsChanged(PlatformMediaSession&) { }
+    virtual void sessionCanProduceAudioChanged(PlatformMediaSession&);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     virtual void configureWireLessTargetMonitoring() { }
     virtual bool hasWirelessTargetsAvailable() { return false; }
 #endif
@@ -110,7 +117,6 @@ public:
     Vector<PlatformMediaSession*> currentSessionsMatching(const WTF::Function<bool(const PlatformMediaSession&)>&);
 
     void sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSession&);
-    void sessionCanProduceAudioChanged(PlatformMediaSession&);
 
 protected:
     friend class PlatformMediaSession;
@@ -143,13 +149,15 @@ private:
     void systemWillSleep() override;
     void systemDidWake() override;
 
+    static bool shouldDeactivateAudioSession();
+
     SessionRestrictions m_restrictions[PlatformMediaSession::MediaStreamCapturingAudio + 1];
     mutable Vector<PlatformMediaSession*> m_sessions;
     std::unique_ptr<RemoteCommandListener> m_remoteCommandListener;
     std::unique_ptr<PAL::SystemSleepListener> m_systemSleepListener;
     RefPtr<AudioHardwareListener> m_audioHardwareListener;
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
     RefPtr<MediaPlaybackTarget> m_playbackTarget;
     bool m_canPlayToTarget { false };
 #endif
@@ -158,6 +166,10 @@ private:
     mutable bool m_isApplicationInBackground { false };
     bool m_willIgnoreSystemInterruptions { false };
     mutable int m_iteratingOverSessions { 0 };
+
+#if USE(AUDIO_SESSION)
+    bool m_becameActive { false };
+#endif
 };
 
 }

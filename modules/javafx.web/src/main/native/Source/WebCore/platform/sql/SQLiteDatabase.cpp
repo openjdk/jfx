@@ -37,7 +37,7 @@
 #include <thread>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -46,8 +46,7 @@ static const char notOpenErrorMessage[] = "database is not open";
 static void unauthorizedSQLFunction(sqlite3_context *context, int, sqlite3_value **)
 {
     const char* functionName = (const char*)sqlite3_user_data(context);
-    String errorMessage = String::format("Function %s is unauthorized", functionName);
-    sqlite3_result_error(context, errorMessage.utf8().data(), -1);
+    sqlite3_result_error(context, makeString("Function ", functionName, " is unauthorized").utf8().data(), -1);
 }
 
 static void initializeSQLiteIfNecessary()
@@ -112,15 +111,26 @@ bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
     if (!SQLiteStatement(*this, "PRAGMA temp_store = MEMORY;"_s).executeCommand())
         LOG_ERROR("SQLite database could not set temp_store to memory");
 
-    SQLiteStatement walStatement(*this, "PRAGMA journal_mode=WAL;"_s);
-    if (walStatement.prepareAndStep() == SQLITE_ROW) {
+    {
+        SQLiteStatement walStatement(*this, "PRAGMA journal_mode=WAL;"_s);
+        if (walStatement.prepareAndStep() == SQLITE_ROW) {
 #ifndef NDEBUG
-        String mode = walStatement.getColumnText(0);
-        if (!equalLettersIgnoringASCIICase(mode, "wal"))
-            LOG_ERROR("journal_mode of database should be 'WAL', but is '%s'", mode.utf8().data());
+            String mode = walStatement.getColumnText(0);
+            if (!equalLettersIgnoringASCIICase(mode, "wal"))
+                LOG_ERROR("journal_mode of database should be 'WAL', but is '%s'", mode.utf8().data());
 #endif
-    } else
-        LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s", lastErrorMsg());
+        } else
+            LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s", lastErrorMsg());
+    }
+
+    {
+        SQLiteStatement checkpointStatement(*this, "PRAGMA wal_checkpoint(TRUNCATE)"_s);
+        if (checkpointStatement.prepareAndStep() == SQLITE_ROW) {
+            if (checkpointStatement.getColumnInt(0))
+                LOG(SQLDatabase, "SQLite database checkpoint is blocked");
+        } else
+            LOG_ERROR("SQLite database failed to checkpoint: %s", lastErrorMsg());
+    }
 
     return isOpen();
 }
@@ -195,7 +205,7 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
     LockHolder locker(m_authorizerLock);
     enableAuthorizer(false);
 
-    SQLiteStatement statement(*this, "PRAGMA max_page_count = " + String::number(newMaxPageCount));
+    SQLiteStatement statement(*this, makeString("PRAGMA max_page_count = ", newMaxPageCount));
     statement.prepare();
     if (statement.step() != SQLITE_ROW)
         LOG_ERROR("Failed to set maximum size of database to %lli bytes", static_cast<long long>(size));
@@ -254,7 +264,7 @@ int64_t SQLiteDatabase::totalSize()
 
 void SQLiteDatabase::setSynchronous(SynchronousPragma sync)
 {
-    executeCommand("PRAGMA synchronous = " + String::number(sync));
+    executeCommand(makeString("PRAGMA synchronous = ", static_cast<unsigned>(sync)));
 }
 
 void SQLiteDatabase::setBusyTimeout(int ms)
@@ -488,6 +498,7 @@ bool SQLiteDatabase::turnOnIncrementalAutoVacuum()
     SQLiteStatement statement(*this, "PRAGMA auto_vacuum"_s);
     int autoVacuumMode = statement.getColumnInt(0);
     int error = lastError();
+    statement.finalize();
 
     // Check if we got an error while trying to get the value of the auto_vacuum flag.
     // If we got a SQLITE_BUSY error, then there's probably another transaction in

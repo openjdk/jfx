@@ -28,15 +28,18 @@
 #include "SharedStringHash.h"
 #include "URLUtils.h"
 #include <wtf/OptionSet.h>
+#include <wtf/Optional.h>
 
 namespace WebCore {
 
+class AdClickAttribution;
 class DOMTokenList;
 
 // Link relation bitmask values.
 enum class Relation {
     NoReferrer = 1 << 0,
     NoOpener = 1 << 1,
+    Opener = 1 << 2,
 };
 
 class HTMLAnchorElement : public HTMLElement, public URLUtils<HTMLAnchorElement> {
@@ -90,7 +93,11 @@ private:
     int tabIndex() const final;
     bool draggable() const final;
 
+    String effectiveTarget() const;
+
     void sendPings(const URL& destinationURL);
+
+    Optional<AdClickAttribution> parseAdClickAttribution() const;
 
     void handleClick(Event&);
 

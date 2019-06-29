@@ -33,7 +33,7 @@
 #include "CounterDirectives.h"
 #include "DataRef.h"
 #include "FilterOperations.h"
-#include "FontDescription.h"
+#include "FontCascadeDescription.h"
 #include "GapLength.h"
 #include "GraphicsTypes.h"
 #include "Length.h"
@@ -64,6 +64,7 @@
 #include "StyleVisualData.h"
 #include "TextFlags.h"
 #include "ThemeTypes.h"
+#include "TouchAction.h"
 #include "TransformOperations.h"
 #include "UnicodeBidi.h"
 #include <memory>
@@ -82,6 +83,10 @@
 
 #if ENABLE(TEXT_AUTOSIZING)
 #include "TextSizeAdjustment.h"
+#endif
+
+#if ENABLE(DARK_MODE_CSS)
+#include "StyleSupportedColorSchemes.h"
 #endif
 
 #define SET_VAR(group, variable, value) do { \
@@ -183,8 +188,11 @@ public:
 
     const PseudoStyleCache* cachedPseudoStyles() const { return m_cachedPseudoStyles.get(); }
 
-    const CustomPropertyValueMap& customProperties() const { return m_rareInheritedData->customProperties->values; }
-    void setCustomPropertyValue(const AtomicString& name, Ref<CSSCustomPropertyValue>&& value) { return m_rareInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value)); }
+    const CustomPropertyValueMap& inheritedCustomProperties() const { return m_rareInheritedData->customProperties->values; }
+    const CustomPropertyValueMap& nonInheritedCustomProperties() const { return m_rareNonInheritedData->customProperties->values; }
+    const CSSCustomPropertyValue* getCustomProperty(const AtomicString&) const;
+    void setInheritedCustomPropertyValue(const AtomicString& name, Ref<CSSCustomPropertyValue>&& value) { return m_rareInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value)); }
+    void setNonInheritedCustomPropertyValue(const AtomicString& name, Ref<CSSCustomPropertyValue>&& value) { return m_rareNonInheritedData.access().customProperties.access().setCustomPropertyValue(name, WTFMove(value)); }
 
     void setHasViewportUnits(bool v = true) { m_nonInheritedFlags.hasViewportUnits = v; }
     bool hasViewportUnits() const { return m_nonInheritedFlags.hasViewportUnits; }
@@ -331,6 +339,7 @@ public:
     Overflow overflowY() const { return static_cast<Overflow>(m_nonInheritedFlags.overflowY); }
     Overflow overflowInlineDirection() const { return isHorizontalWritingMode() ? overflowX() : overflowY(); }
     Overflow overflowBlockDirection() const { return isHorizontalWritingMode() ? overflowY() : overflowX(); }
+    bool isOverflowVisible() const { return overflowX() == Overflow::Visible || overflowY() == Overflow::Visible; }
 
     Visibility visibility() const { return static_cast<Visibility>(m_inheritedFlags.visibility); }
     VerticalAlign verticalAlign() const { return static_cast<VerticalAlign>(m_nonInheritedFlags.verticalAlign); }
@@ -361,7 +370,7 @@ public:
 #endif
     FontSelectionValue fontWeight() const { return fontDescription().weight(); }
     FontSelectionValue fontStretch() const { return fontDescription().stretch(); }
-    std::optional<FontSelectionValue> fontItalic() const { return fontDescription().italic(); }
+    Optional<FontSelectionValue> fontItalic() const { return fontDescription().italic(); }
 
     const Length& textIndent() const { return m_rareInheritedData->indent; }
     TextAlignMode textAlign() const { return static_cast<TextAlignMode>(m_inheritedFlags.textAlign); }
@@ -370,7 +379,9 @@ public:
     OptionSet<TextDecoration> textDecoration() const { return OptionSet<TextDecoration>::fromRaw(m_visualData->textDecoration); }
     TextDecorationStyle textDecorationStyle() const { return static_cast<TextDecorationStyle>(m_rareNonInheritedData->textDecorationStyle); }
     OptionSet<TextDecorationSkip> textDecorationSkip() const { return OptionSet<TextDecorationSkip>::fromRaw(m_rareInheritedData->textDecorationSkip); }
-    OptionSet<TextUnderlinePosition> textUnderlinePosition() const { return OptionSet<TextUnderlinePosition>::fromRaw(m_rareInheritedData->textUnderlinePosition); }
+    TextUnderlinePosition textUnderlinePosition() const { return static_cast<TextUnderlinePosition>(m_rareInheritedData->textUnderlinePosition); }
+    TextUnderlineOffset textUnderlineOffset() const { return m_rareInheritedData->textUnderlineOffset; }
+    TextDecorationThickness textDecorationThickness() const { return m_rareInheritedData->textDecorationThickness; }
 
 #if ENABLE(CSS3_TEXT)
     TextIndentLine textIndentLine() const { return static_cast<TextIndentLine>(m_rareInheritedData->textIndentLine); }
@@ -626,6 +637,12 @@ public:
 
     RubyPosition rubyPosition() const { return static_cast<RubyPosition>(m_rareInheritedData->rubyPosition); }
 
+#if ENABLE(DARK_MODE_CSS)
+    StyleSupportedColorSchemes supportedColorSchemes() const { return m_rareInheritedData->supportedColorSchemes; }
+    void setHasExplicitlySetSupportedColorSchemes(bool v) { m_nonInheritedFlags.hasExplicitlySetSupportedColorSchemes = v; }
+    bool hasExplicitlySetSupportedColorSchemes() const { return m_nonInheritedFlags.hasExplicitlySetSupportedColorSchemes; };
+#endif
+
     TextOrientation textOrientation() const { return static_cast<TextOrientation>(m_rareInheritedData->textOrientation); }
 
     ObjectFit objectFit() const { return static_cast<ObjectFit>(m_rareNonInheritedData->objectFit); }
@@ -687,8 +704,8 @@ public:
     int initialLetterDrop() const { return initialLetter().width(); }
     int initialLetterHeight() const { return initialLetter().height(); }
 
-#if ENABLE(TOUCH_EVENTS)
-    TouchAction touchAction() const { return static_cast<TouchAction>(m_rareNonInheritedData->touchAction); }
+#if ENABLE(POINTER_EVENTS)
+    OptionSet<TouchAction> touchActions() const { return OptionSet<TouchAction>::fromRaw(m_rareNonInheritedData->touchActions); }
 #endif
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -715,7 +732,7 @@ public:
     Color tapHighlightColor() const { return m_rareInheritedData->tapHighlightColor; }
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     bool touchCalloutEnabled() const { return m_rareInheritedData->touchCalloutEnabled; }
 #endif
 
@@ -783,15 +800,13 @@ public:
     bool shouldPlaceBlockDirectionScrollbarOnLeft() const;
 
 #if ENABLE(CSS_TRAILING_WORD)
-    TrailingWord trailingWord() const { return static_cast<TrailingWord>(m_rareInheritedData->trailingWord); }
+    TrailingWord trailingWord() const { return TrailingWord::Auto; }
 #endif
 
 #if ENABLE(APPLE_PAY)
     ApplePayButtonStyle applePayButtonStyle() const { return static_cast<ApplePayButtonStyle>(m_rareNonInheritedData->applePayButtonStyle); }
     ApplePayButtonType applePayButtonType() const { return static_cast<ApplePayButtonType>(m_rareNonInheritedData->applePayButtonType); }
 #endif
-
-    void checkVariablesInCustomProperties();
 
 // attribute setter methods
 
@@ -908,7 +923,7 @@ public:
 #endif
     void setFontWeight(FontSelectionValue);
     void setFontStretch(FontSelectionValue);
-    void setFontItalic(std::optional<FontSelectionValue>);
+    void setFontItalic(Optional<FontSelectionValue>);
 
     void setColor(const Color&);
     void setTextIndent(Length&& length) { SET_VAR(m_rareInheritedData, indent, WTFMove(length)); }
@@ -919,7 +934,9 @@ public:
     void setTextDecoration(OptionSet<TextDecoration> v) { SET_VAR(m_visualData, textDecoration, v.toRaw()); }
     void setTextDecorationStyle(TextDecorationStyle v) { SET_VAR(m_rareNonInheritedData, textDecorationStyle, static_cast<unsigned>(v)); }
     void setTextDecorationSkip(OptionSet<TextDecorationSkip> skip) { SET_VAR(m_rareInheritedData, textDecorationSkip, skip.toRaw()); }
-    void setTextUnderlinePosition(OptionSet<TextUnderlinePosition> v) { SET_VAR(m_rareInheritedData, textUnderlinePosition, v.toRaw()); }
+    void setTextUnderlinePosition(TextUnderlinePosition position) { SET_VAR(m_rareInheritedData, textUnderlinePosition, static_cast<unsigned>(position)); }
+    void setTextUnderlineOffset(TextUnderlineOffset textUnderlineOffset) { SET_VAR(m_rareInheritedData, textUnderlineOffset, textUnderlineOffset); }
+    void setTextDecorationThickness(TextDecorationThickness textDecorationThickness) { SET_VAR(m_rareInheritedData, textDecorationThickness, textDecorationThickness); }
     void setDirection(TextDirection v) { m_inheritedFlags.direction = static_cast<unsigned>(v); }
     void setHasExplicitlySetDirection(bool v) { m_nonInheritedFlags.hasExplicitlySetDirection = v; }
     void setLineHeight(Length&&);
@@ -1038,7 +1055,7 @@ public:
     void setTextStrokeWidth(float w) { SET_VAR(m_rareInheritedData, textStrokeWidth, w); }
     void setTextFillColor(const Color& c) { SET_VAR(m_rareInheritedData, textFillColor, c); }
     void setCaretColor(const Color& c) { SET_VAR(m_rareInheritedData, caretColor, c); }
-    void setOpacity(float f) { float v = clampTo<float>(f, 0, 1); SET_VAR(m_rareNonInheritedData, opacity, v); }
+    void setOpacity(float f) { float v = clampTo<float>(f, 0.f, 1.f); SET_VAR(m_rareNonInheritedData, opacity, v); }
     void setAppearance(ControlPart a) { SET_VAR(m_rareNonInheritedData, appearance, a); }
     // For valid values of box-align see http://www.w3.org/TR/2009/WD-css3-flexbox-20090723/#alignment
     void setBoxAlign(BoxAlignment a) { SET_NESTED_VAR(m_rareNonInheritedData, deprecatedFlexibleBox, align, static_cast<unsigned>(a)); }
@@ -1159,6 +1176,10 @@ public:
 
     void setRubyPosition(RubyPosition position) { SET_VAR(m_rareInheritedData, rubyPosition, static_cast<unsigned>(position)); }
 
+#if ENABLE(DARK_MODE_CSS)
+    void setSupportedColorSchemes(StyleSupportedColorSchemes supported) { SET_VAR(m_rareInheritedData, supportedColorSchemes, supported); }
+#endif
+
     void setFilter(const FilterOperations& ops) { SET_NESTED_VAR(m_rareNonInheritedData, filter, operations, ops); }
     void setAppleColorFilter(const FilterOperations& ops) { SET_NESTED_VAR(m_rareInheritedData, appleColorFilter, operations, ops); }
 
@@ -1202,8 +1223,8 @@ public:
 
     void setInitialLetter(const IntSize& size) { SET_VAR(m_rareNonInheritedData, initialLetter, size); }
 
-#if ENABLE(TOUCH_EVENTS)
-    void setTouchAction(TouchAction touchAction) { SET_VAR(m_rareNonInheritedData, touchAction, static_cast<unsigned>(touchAction)); }
+#if ENABLE(POINTER_EVENTS)
+    void setTouchActions(OptionSet<TouchAction> touchActions) { SET_VAR(m_rareNonInheritedData, touchActions, touchActions.toRaw()); }
 #endif
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -1224,7 +1245,7 @@ public:
     void setTapHighlightColor(const Color& c) { SET_VAR(m_rareInheritedData, tapHighlightColor, c); }
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     void setTouchCalloutEnabled(bool v) { SET_VAR(m_rareInheritedData, touchCalloutEnabled, v); }
 #endif
 
@@ -1239,12 +1260,16 @@ public:
     void setTextSecurity(TextSecurity security) { SET_VAR(m_rareInheritedData, textSecurity, static_cast<unsigned>(security)); }
 
 #if ENABLE(CSS_TRAILING_WORD)
-    void setTrailingWord(TrailingWord v) { SET_VAR(m_rareInheritedData, trailingWord, static_cast<unsigned>(v)); }
+    void setTrailingWord(TrailingWord) { }
 #endif
 
 #if ENABLE(APPLE_PAY)
     void setApplePayButtonStyle(ApplePayButtonStyle style) { SET_VAR(m_rareNonInheritedData, applePayButtonStyle, static_cast<unsigned>(style)); }
     void setApplePayButtonType(ApplePayButtonType type) { SET_VAR(m_rareNonInheritedData, applePayButtonType, static_cast<unsigned>(type)); }
+#endif
+
+#if ENABLE(CSS_PAINTING_API)
+    void addCustomPaintWatchProperty(const String& name);
 #endif
 
     // Support for paint-order, stroke-linecap, stroke-linejoin, and stroke-miterlimit from https://drafts.fxtf.org/paint/.
@@ -1480,7 +1505,9 @@ public:
     static OptionSet<TextDecoration> initialTextDecoration() { return OptionSet<TextDecoration> { }; }
     static TextDecorationStyle initialTextDecorationStyle() { return TextDecorationStyle::Solid; }
     static OptionSet<TextDecorationSkip> initialTextDecorationSkip() { return TextDecorationSkip::Auto; }
-    static OptionSet<TextUnderlinePosition> initialTextUnderlinePosition() { return TextUnderlinePosition::Auto; }
+    static TextUnderlinePosition initialTextUnderlinePosition() { return TextUnderlinePosition::Auto; }
+    static TextUnderlineOffset initialTextUnderlineOffset() { return TextUnderlineOffset::createWithAuto(); }
+    static TextDecorationThickness initialTextDecorationThickness() { return TextDecorationThickness::createWithAuto(); }
     static float initialZoom() { return 1.0f; }
     static TextZoom initialTextZoom() { return TextZoom::Normal; }
     static float initialOutlineOffset() { return 0; }
@@ -1570,6 +1597,10 @@ public:
     static QuotesData* initialQuotes() { return nullptr; }
     static const AtomicString& initialContentAltText() { return emptyAtom(); }
 
+#if ENABLE(DARK_MODE_CSS)
+    static StyleSupportedColorSchemes initialSupportedColorSchemes() { return { }; }
+#endif
+
 #if ENABLE(CSS3_TEXT)
     static TextIndentLine initialTextIndentLine() { return TextIndentLine::FirstLine; }
     static TextIndentType initialTextIndentType() { return TextIndentType::Normal; }
@@ -1588,8 +1619,8 @@ public:
 
     static WillChangeData* initialWillChange() { return nullptr; }
 
-#if ENABLE(TOUCH_EVENTS)
-    static TouchAction initialTouchAction() { return TouchAction::Auto; }
+#if ENABLE(POINTER_EVENTS)
+    static TouchAction initialTouchActions() { return TouchAction::Auto; }
 #endif
 
 #if ENABLE(CSS_SCROLL_SNAP)
@@ -1646,7 +1677,7 @@ public:
     static LineClampValue initialLineClamp() { return LineClampValue(); }
     static TextSecurity initialTextSecurity() { return TextSecurity::None; }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     static bool initialTouchCalloutEnabled() { return true; }
 #endif
 
@@ -1758,6 +1789,9 @@ private:
         unsigned hasExplicitlySetDirection : 1;
         unsigned hasExplicitlySetWritingMode : 1;
         unsigned hasExplicitlySetTextAlign : 1;
+#if ENABLE(DARK_MODE_CSS)
+        unsigned hasExplicitlySetSupportedColorSchemes : 1;
+#endif
         unsigned hasViewportUnits : 1;
         unsigned hasExplicitlyInheritedProperties : 1; // Explicitly inherits a non-inherited property.
         unsigned isUnique : 1; // Style cannot be shared.
@@ -1884,6 +1918,9 @@ inline bool RenderStyle::NonInheritedFlags::operator==(const NonInheritedFlags& 
         && hasExplicitlySetDirection == other.hasExplicitlySetDirection
         && hasExplicitlySetWritingMode == other.hasExplicitlySetWritingMode
         && hasExplicitlySetTextAlign == other.hasExplicitlySetTextAlign
+#if ENABLE(DARK_MODE_CSS)
+        && hasExplicitlySetSupportedColorSchemes == other.hasExplicitlySetSupportedColorSchemes
+#endif
         && hasViewportUnits == other.hasViewportUnits
         && hasExplicitlyInheritedProperties == other.hasExplicitlyInheritedProperties
         && isUnique == other.isUnique
@@ -1995,6 +2032,15 @@ inline BorderStyle collapsedBorderStyle(BorderStyle style)
     if (style == BorderStyle::Inset)
         return BorderStyle::Ridge;
     return style;
+}
+
+inline const CSSCustomPropertyValue* RenderStyle::getCustomProperty(const AtomicString& name) const
+{
+    for (auto* map : { &nonInheritedCustomProperties(), &inheritedCustomProperties() }) {
+        if (auto* val = map->get(name))
+            return val;
+    }
+    return nullptr;
 }
 
 inline bool RenderStyle::hasBackground() const
@@ -2150,7 +2196,7 @@ inline void RenderStyle::setShapeOutside(RefPtr<ShapeValue>&& value)
 
 inline void RenderStyle::setShapeImageThreshold(float shapeImageThreshold)
 {
-    float clampedShapeImageThreshold = clampTo<float>(shapeImageThreshold, 0, 1);
+    float clampedShapeImageThreshold = clampTo<float>(shapeImageThreshold, 0.f, 1.f);
     SET_VAR(m_rareNonInheritedData, shapeImageThreshold, clampedShapeImageThreshold);
 }
 

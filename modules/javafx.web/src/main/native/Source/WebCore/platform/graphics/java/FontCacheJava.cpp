@@ -39,7 +39,7 @@ void FontCache::platformInit()
 {
 }
 
-RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, const Font*, bool, const UChar*, unsigned)
+RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, const Font*, IsForPlatformFont, PreferColoredFont, const UChar*, unsigned)
 {
     return nullptr;
 }

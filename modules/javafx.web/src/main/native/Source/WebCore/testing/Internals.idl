@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -62,7 +62,8 @@ enum AutoFillButtonType {
     "None",
     "Contacts",
     "Credentials",
-    "StrongPassword"
+    "StrongPassword",
+    "CreditCard"
 };
 
 enum UserInterfaceLayoutDirection {
@@ -120,6 +121,42 @@ enum CompositingPolicy {
     double left;
     double bottom;
     double right;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary HEVCParameterSet {
+    DOMString codecName;
+    unsigned short generalProfileSpace;
+    unsigned short generalProfileIDC;
+    unsigned long generalProfileCompatibilityFlags;
+    boolean generalTierFlag;
+    unsigned short generalLevelIDC;
+    sequence<unsigned short> constraintFlags;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary AcceleratedAnimation {
+    DOMString property;
+    double speed;
+};
+
+[
+    ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
+    JSGenerateToJSObject,
+] dictionary CookieData {
+    DOMString name;
+    DOMString value;
+    DOMString domain;
+    double expires;
+    boolean isHttpOnly;
+    boolean isSecure;
+    boolean isSession;
+    boolean isSameSiteLax;
+    boolean isSameSiteStrict;
 };
 
 [
@@ -188,6 +225,10 @@ enum CompositingPolicy {
     [MayThrowException] boolean pauseTransitionAtTimeOnElement(DOMString propertyName, unrestricted double pauseTime, Element element);
     [MayThrowException] boolean pauseTransitionAtTimeOnPseudoElement(DOMString property, unrestricted double pauseTime, Element element, DOMString pseudoId);
 
+    // Web Animations testing.
+    sequence<AcceleratedAnimation> acceleratedAnimationsForElement(Element element);
+    unsigned long numberOfAnimationTimelineInvalidations();
+
     // For animations testing, we need a way to get at pseudo elements.
     [MayThrowException] Element? pseudoElement(Element element, DOMString pseudoId);
 
@@ -197,6 +238,7 @@ enum CompositingPolicy {
     [MayThrowException] void setFormControlStateOfPreviousHistoryItem(sequence<DOMString> values);
 
     [MayThrowException] DOMRect absoluteCaretBounds();
+    [MayThrowException] boolean isCaretBlinkingSuspended();
 
     DOMRect boundingBox(Element element);
 
@@ -221,6 +263,9 @@ enum CompositingPolicy {
     [MayThrowException] DOMRect layoutViewportRect();
     [MayThrowException] DOMRect visualViewportRect();
 
+    [MayThrowException] void setViewIsTransparent(boolean trnasparent);
+
+    [MayThrowException] DOMString viewBaseBackgroundColor();
     [MayThrowException] void setViewBaseBackgroundColor(DOMString colorValue);
 
     [MayThrowException] void setPagination(DOMString mode, long gap, optional long pageLength = 0);
@@ -230,7 +275,6 @@ enum CompositingPolicy {
 
     [MayThrowException] boolean wasLastChangeUserEdit(Element textField);
     boolean elementShouldAutoComplete(HTMLInputElement inputElement);
-    void setEditingValue(HTMLInputElement inputElement, DOMString value);
     void setAutofilled(HTMLInputElement inputElement, boolean enabled);
     void setShowAutoFillButton(HTMLInputElement inputElement, AutoFillButtonType autoFillButtonType);
     AutoFillButtonType autoFillButtonType(HTMLInputElement inputElement);
@@ -292,6 +336,7 @@ enum CompositingPolicy {
     void setAutomaticSpellingCorrectionEnabled(boolean enabled);
 
     void handleAcceptedCandidate(DOMString candidate, unsigned long location, unsigned long length);
+    void changeSelectionListType();
 
     boolean isOverwriteModeEnabled();
     void toggleOverwriteModeEnabled();
@@ -326,9 +371,13 @@ enum CompositingPolicy {
     const unsigned short LAYER_TREE_INCLUDES_CONTENT_LAYERS = 16;
     const unsigned short LAYER_TREE_INCLUDES_ACCELERATES_DRAWING = 32;
     const unsigned short LAYER_TREE_INCLUDES_BACKING_STORE_ATTACHED = 64;
+    const unsigned short LAYER_TREE_INCLUDES_ROOT_LAYER_PROPERTIES = 128;
     [MayThrowException] DOMString layerTreeAsText(Document document, optional unsigned short flags = 0);
 
     [MayThrowException] unsigned long long layerIDForElement(Element element);
+
+    [MayThrowException] DOMString scrollbarOverlayStyle(optional Node? node = null);
+    [MayThrowException] boolean scrollbarUsingDarkAppearance(optional Node? node = null);
 
     [MayThrowException] DOMString scrollingStateTreeAsText();
     [MayThrowException] DOMString mainThreadScrollingReasons(); // FIXME: rename to synchronousScrollingReasons().
@@ -355,6 +404,8 @@ enum CompositingPolicy {
     readonly attribute boolean isUnderMemoryPressure;
     void beginSimulatedMemoryPressure();
     void endSimulatedMemoryPressure();
+
+    unsigned long numberOfIDBTransactions();
 
     unsigned long numberOfLiveNodes();
     unsigned long numberOfLiveDocuments();
@@ -501,6 +552,7 @@ enum CompositingPolicy {
     boolean isPluginSnapshotted(Element element);
 
     [MayThrowException] DOMRect selectionBounds();
+    void setSelectionWithoutValidation(Node baseNode, unsigned long baseOffset, Node? extentNode, unsigned long extentOffset);
 
     [Conditional=MEDIA_SOURCE] void initializeMockMediaSource();
     [Conditional=MEDIA_SOURCE] sequence<DOMString> bufferedSamplesForTrackID(SourceBuffer buffer, DOMString trackID);
@@ -526,12 +578,14 @@ enum CompositingPolicy {
     [Conditional=WIRELESS_PLAYBACK_TARGET] void setMockMediaPlaybackTargetPickerEnabled(boolean enabled);
     [Conditional=WIRELESS_PLAYBACK_TARGET, MayThrowException] void setMockMediaPlaybackTargetPickerState(DOMString deviceName, DOMString deviceState);
     [Conditional=MEDIA_STREAM] void setMockMediaCaptureDevicesEnabled(boolean enabled);
+    [Conditional=MEDIA_STREAM] void setCustomPrivateRecorderCreator();
 
     [Conditional=WEB_RTC] void emulateRTCPeerConnectionPlatformEvent(RTCPeerConnection connection, DOMString action);
     [Conditional=WEB_RTC] void useMockRTCPeerConnectionFactory(DOMString testCase);
     [Conditional=WEB_RTC] void setICECandidateFiltering(boolean enabled);
     [Conditional=WEB_RTC] void setEnumeratingAllNetworkInterfacesEnabled(boolean enabled);
     [Conditional=WEB_RTC] void stopPeerConnection(RTCPeerConnection connection);
+    [Conditional=WEB_RTC] void clearPeerConnectionFactory();
 
     [Conditional=VIDEO] void simulateSystemSleep();
     [Conditional=VIDEO] void simulateSystemWake();
@@ -563,8 +617,8 @@ enum CompositingPolicy {
 
     void setShowAllPlugins(boolean showAll);
 
-    [Conditional=STREAMS_API, CallWith=ScriptState] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
-    [Conditional=STREAMS_API, CallWith=ScriptState] boolean isReadableStreamDisturbed(any stream);
+    [Conditional=STREAMS_API, CallWith=ExecState] any cloneArrayBuffer(any buffer, any srcByteOffset, any byteLength);
+    [Conditional=STREAMS_API, CallWith=ExecState] boolean isReadableStreamDisturbed(any stream);
 
     DOMString resourceLoadStatisticsForOrigin(DOMString domain);
     void setResourceLoadStatisticsEnabled(boolean enable);
@@ -602,8 +656,10 @@ enum CompositingPolicy {
 
     [Conditional=WEBGL] void simulateWebGLContextChanged(WebGLRenderingContext context);
     [Conditional=WEBGL] void failNextGPUStatusCheck(WebGLRenderingContext context);
+    [Conditional=WEBGL] boolean hasLowAndHighPowerGPUs();
 
     void setPageVisibility(boolean isVisible);
+    void setPageIsFocusedAndActive(boolean isFocused);
 
     [Conditional=WEB_RTC] void setH264HardwareEncoderAllowed(boolean allowed);
     [Conditional=WEB_RTC] void applyRotationForOutgoingVideoSources(RTCPeerConnection connection);
@@ -613,15 +669,19 @@ enum CompositingPolicy {
     [Conditional=MEDIA_STREAM] Promise<ImageData> grabNextMediaStreamTrackFrame();
     [Conditional=MEDIA_STREAM] readonly attribute unsigned long trackAudioSampleCount;
     [Conditional=MEDIA_STREAM] readonly attribute unsigned long trackVideoSampleCount;
-    [Conditional=MEDIA_STREAM, MayThrowException] void setMediaDeviceState(DOMString deviceID, DOMString property, boolean value);
     [Conditional=MEDIA_STREAM] void delayMediaStreamTrackSamples(MediaStreamTrack track, float delay);
     [Conditional=MEDIA_STREAM] void setMediaStreamTrackMuted(MediaStreamTrack track, boolean muted);
     [Conditional=MEDIA_STREAM] void removeMediaStreamTrack(MediaStream stream, MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] void simulateMediaStreamTrackCaptureSourceFailure(MediaStreamTrack track);
     [Conditional=MEDIA_STREAM] void setMediaStreamTrackIdentifier(MediaStreamTrack track, DOMString identifier);
+    [Conditional=MEDIA_STREAM] void setMediaStreamSourceInterrupted(MediaStreamTrack track, boolean interrupted);
 
     unsigned long long documentIdentifier(Document document);
     boolean isDocumentAlive(unsigned long long documentIdentifier);
+
+    boolean isAnyWorkletGlobalScopeAlive();
+
+    DOMString serviceWorkerClientIdentifier(Document document);
 
     Promise<void> clearCacheStorageMemoryRepresentation();
     Promise<DOMString> cacheStorageEngineRepresentation();
@@ -632,24 +692,21 @@ enum CompositingPolicy {
 
     DOMString audioSessionCategory();
     double preferredAudioBufferSize();
+    boolean audioSessionActive();
 
     [Conditional=SERVICE_WORKER] Promise<boolean> hasServiceWorkerRegistration(DOMString scopeURL);
     [Conditional=SERVICE_WORKER] void terminateServiceWorker(ServiceWorker worker);
     [Conditional=SERVICE_WORKER] boolean hasServiceWorkerConnection();
 
-    void testIncomingSyncIPCMessageWhileWaitingForSyncReply();
+    [CallWith=Document, Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
 
-    [EnabledAtRuntime=WebAnimations] DOMString timelineDescription(AnimationTimeline timeline);
-    [EnabledAtRuntime=WebAnimations] void pauseTimeline(AnimationTimeline timeline);
-    [EnabledAtRuntime=WebAnimations] void setTimelineCurrentTime(AnimationTimeline timeline, double currentTime);
-    [Conditional=APPLE_PAY] readonly attribute MockPaymentCoordinator mockPaymentCoordinator;
-    [Conditional=WEB_AUTHN] readonly attribute MockCredentialsMessenger mockCredentialsMessenger;
-
-    DOMString systemPreviewRelType();
     boolean isSystemPreviewLink(Element element);
     boolean isSystemPreviewImage(Element element);
 
     boolean usingAppleInternalSDK();
+
+    void postTask(VoidCallback callback);
+    void markContextAsInsecure();
 
     [Conditional=VIDEO, MayThrowException] readonly attribute NowPlayingState nowPlayingState;
 
@@ -666,6 +723,16 @@ enum CompositingPolicy {
     unsigned long pluginCount();
 
     void notifyResourceLoadObserver();
+
+    unsigned long primaryScreenDisplayID();
+
+    boolean capsLockIsOn();
+
+    boolean supportsVCPEncoder();
+
+    HEVCParameterSet? parseHEVCCodecParameters(DOMString codecParameters);
+
+    sequence<CookieData> getCookies();
 
     void setAlwaysAllowLocalWebarchive(boolean alwaysAllowLocalWebarchive);
 };

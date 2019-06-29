@@ -25,20 +25,19 @@
 
 #include "config.h"
 
-#include "Chrome.h"
-#include "ChromeClientJava.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HostWindow.h"
 #include "Page.h"
 #include "PlatformContextJava.h"
+#include "PageSupplementJava.h"
 #include "Scrollbar.h"
 #include "ScrollbarThemeJava.h"
 #include "ScrollView.h"
 #include "NotImplemented.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "com_sun_webkit_graphics_ScrollBarTheme.h"
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
@@ -54,7 +53,7 @@ ScrollbarTheme& ScrollbarTheme::nativeTheme()
 jclass getJScrollBarThemeClass()
 {
     static JGClass jScrollbarThemeClass(
-        WebCore_GetJavaEnv()->FindClass("com/sun/webkit/graphics/ScrollBarTheme"));
+        WTF::GetJavaEnv()->FindClass("com/sun/webkit/graphics/ScrollBarTheme"));
     ASSERT(jScrollbarThemeClass);
 
     return jScrollbarThemeClass;
@@ -73,15 +72,15 @@ JLObject getJScrollBarTheme(Scrollbar& sb)
         return 0;
     }
 
-    auto& chromeClient = page->chrome().client();
-    if (!chromeClient.isJavaChromeClient()) {
-        // Non Java ChromeClient, might be a utility Page(svg?), refer Page::isUtilityPage
+    PageSupplementJava* pageSupplement = PageSupplementJava::from(page);
+    if (!pageSupplement || !pageSupplement->jWebPage()) {
+        // Non Java Page, might be a utility Page(svg?), refer Page::isUtilityPage
         return 0;
     }
 
-    JLObject jWebPage = static_cast<ChromeClientJava&>(chromeClient).platformPage();
+    JLObject jWebPage = pageSupplement->jWebPage();
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid  = env->GetMethodID(
         PG_GetWebPageClass(env),
         "getScrollBarTheme",
@@ -90,7 +89,7 @@ JLObject getJScrollBarTheme(Scrollbar& sb)
 
     JLObject jScrollbarTheme = env->CallObjectMethod(jWebPage, mid);
     ASSERT(jScrollbarTheme);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return jScrollbarTheme;
 }
@@ -101,21 +100,21 @@ IntRect getPartRect(Scrollbar& scrollbar, ScrollbarPart part) {
         return IntRect();
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID midGetPartRect = env->GetMethodID(
         getJScrollBarThemeClass(),
         "getScrollBarPartRect",
         "(JI[I)V");
     ASSERT(midGetPartRect);
     JLocalRef<jintArray> jrect(env->NewIntArray(4));
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
     ASSERT(jrect);
     env->CallVoidMethod(jtheme,
             midGetPartRect,
             ptr_to_jlong(&scrollbar),
             (jint)part,
             (jintArray)jrect);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     jint *r = (jint*)env->GetPrimitiveArrayCritical(jrect, 0);
     IntRect rect(r[0], r[1], r[2], r[3]);
@@ -152,7 +151,7 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
         return true;
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(
         getJScrollBarThemeClass(),
@@ -171,7 +170,7 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
         (jint)scrollbar.visibleSize(),
         (jint)scrollbar.totalSize()));
     ASSERT(widgetRef.get());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     if (opacity != 1) {
         gc.save();
@@ -221,7 +220,7 @@ IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
 
 int ScrollbarThemeJava::scrollbarThickness(ScrollbarControlSize, ScrollbarExpansionState)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetStaticMethodID(
         getJScrollBarThemeClass(),
@@ -232,7 +231,7 @@ int ScrollbarThemeJava::scrollbarThickness(ScrollbarControlSize, ScrollbarExpans
     int thickness = env->CallStaticIntMethod(
         getJScrollBarThemeClass(),
         mid);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return thickness;
 }

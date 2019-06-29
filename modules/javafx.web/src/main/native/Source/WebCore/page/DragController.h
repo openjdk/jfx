@@ -29,7 +29,7 @@
 #include "DragImage.h"
 #include "IntPoint.h"
 #include "IntRect.h"
-#include "URL.h"
+#include <wtf/URL.h>
 
 namespace WebCore {
 
@@ -40,7 +40,6 @@ class DragData;
 class Element;
 class Frame;
 class FrameSelection;
-class HTMLAttachmentElement;
 class HTMLInputElement;
 class IntRect;
 class Page;
@@ -48,7 +47,7 @@ class PlatformMouseEvent;
 
 struct DragItem;
 struct DragState;
-struct PromisedBlobInfo;
+struct PromisedAttachmentInfo;
 
     class DragController {
         WTF_MAKE_NONCOPYABLE(DragController); WTF_MAKE_FAST_ALLOCATED;
@@ -79,8 +78,8 @@ struct PromisedBlobInfo;
         void setDragOffset(const IntPoint& offset) { m_dragOffset = offset; }
         const IntPoint& dragOffset() const { return m_dragOffset; }
         DragSourceAction dragSourceAction() const { return m_dragSourceAction; }
+        DragHandlingMethod dragHandlingMethod() const { return m_dragHandlingMethod; }
 
-        enum class DragHandlingMethod { None, EditPlainText, EditRichText, UploadFile, PageLoad, SetColor, NonDefault };
         Document* documentUnderMouse() const { return m_documentUnderMouse.get(); }
         DragDestinationAction dragDestinationAction() const { return m_dragDestinationAction; }
         DragSourceAction delegateDragSourceAction(const IntPoint& rootViewPoint);
@@ -115,8 +114,8 @@ struct PromisedBlobInfo;
         void mouseMovedIntoDocument(Document*);
         bool shouldUseCachedImageForDragImage(const Image&) const;
 
-        void doImageDrag(Element&, const IntPoint&, const IntRect&, Frame&, IntPoint&, const DragState&);
-        void doSystemDrag(DragImage, const IntPoint&, const IntPoint&, Frame&, const DragState&, PromisedBlobInfo&&);
+        void doImageDrag(Element&, const IntPoint&, const IntRect&, Frame&, IntPoint&, const DragState&, PromisedAttachmentInfo&&);
+        void doSystemDrag(DragImage, const IntPoint&, const IntPoint&, Frame&, const DragState&, PromisedAttachmentInfo&&);
 
         void beginDrag(DragItem, Frame&, const IntPoint& mouseDownPoint, const IntPoint& mouseDraggedPoint, DataTransfer&, DragSourceAction);
 
@@ -135,7 +134,7 @@ struct PromisedBlobInfo;
         void declareAndWriteDragImage(DataTransfer&, Element&, const URL&, const String& label);
 
 #if ENABLE(ATTACHMENT_ELEMENT)
-        PromisedBlobInfo promisedBlobInfo(Frame&, HTMLAttachmentElement&);
+        PromisedAttachmentInfo promisedAttachmentInfo(Frame&, Element&);
 #endif
         Page& m_page;
         DragClient& m_client;
@@ -144,7 +143,7 @@ struct PromisedBlobInfo;
         RefPtr<Document> m_dragInitiator; // The Document (if any) that initiated the drag.
         RefPtr<HTMLInputElement> m_fileInputElementUnderMouse;
         unsigned m_numberOfItemsToBeAccepted;
-        DragHandlingMethod m_dragHandlingMethod;
+        DragHandlingMethod m_dragHandlingMethod { DragHandlingMethod::None };
 
         DragDestinationAction m_dragDestinationAction;
         DragSourceAction m_dragSourceAction;

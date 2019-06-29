@@ -135,7 +135,7 @@ Profiler::CompilationKind profilerCompilationKindForMode(CompilationMode mode)
 
 Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
     CompilationMode mode, unsigned osrEntryBytecodeIndex,
-    const Operands<JSValue>& mustHandleValues)
+    const Operands<Optional<JSValue>>& mustHandleValues)
     : m_vm(passedCodeBlock->vm())
     , m_codeBlock(passedCodeBlock)
     , m_profiledDFGCodeBlock(profiledDFGCodeBlock)
@@ -556,6 +556,7 @@ void Plan::reallyAdd(CommonData* commonData)
     m_identifiers.reallyAdd(*m_vm, commonData);
     m_weakReferences.reallyAdd(*m_vm, commonData);
     m_transitions.reallyAdd(*m_vm, commonData);
+    m_globalProperties.reallyAdd(m_codeBlock, m_identifiers, *commonData);
     commonData->recordedStatuses = WTFMove(m_recordedStatuses);
 }
 
@@ -570,12 +571,17 @@ void Plan::notifyReady()
     m_stage = Ready;
 }
 
+bool Plan::isStillValidOnMainThread()
+{
+    return m_globalProperties.isStillValidOnMainThread(*m_vm, m_identifiers);
+}
+
 CompilationResult Plan::finalizeWithoutNotifyingCallback()
 {
     // We will establish new references from the code block to things. So, we need a barrier.
     m_vm->heap.writeBarrier(m_codeBlock);
 
-    if (!isStillValid()) {
+    if (!isStillValidOnMainThread() || !isStillValid()) {
         CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
         return CompilationInvalidated;
     }
@@ -633,8 +639,11 @@ void Plan::checkLivenessAndVisitChildren(SlotVisitor& visitor)
         return;
 
     cleanMustHandleValuesIfNecessary();
-    for (unsigned i = m_mustHandleValues.size(); i--;)
-        visitor.appendUnbarriered(m_mustHandleValues[i]);
+    for (unsigned i = m_mustHandleValues.size(); i--;) {
+        Optional<JSValue> value = m_mustHandleValues[i];
+        if (value)
+            visitor.appendUnbarriered(value.value());
+    }
 
     m_recordedStatuses.markIfCheap(visitor);
 
@@ -682,6 +691,7 @@ void Plan::cancel()
     m_inlineCallFrames = nullptr;
     m_watchpoints = DesiredWatchpoints();
     m_identifiers = DesiredIdentifiers();
+    m_globalProperties = DesiredGlobalProperties();
     m_weakReferences = DesiredWeakReferences();
     m_transitions = DesiredTransitions();
     m_callback = nullptr;
@@ -708,7 +718,7 @@ void Plan::cleanMustHandleValuesIfNecessary()
 
     for (unsigned local = m_mustHandleValues.numberOfLocals(); local--;) {
         if (!liveness[local])
-            m_mustHandleValues.local(local) = jsUndefined();
+            m_mustHandleValues.local(local) = WTF::nullopt;
     }
 }
 

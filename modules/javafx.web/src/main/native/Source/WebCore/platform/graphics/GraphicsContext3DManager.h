@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include <Timer.h>
+#include "Timer.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 
 #if PLATFORM(MAC)
+#include <CoreGraphics/CGDisplayConfiguration.h>
 #include <OpenGL/CGLTypes.h>
 #endif
 
@@ -43,10 +44,11 @@ class HostWindow;
 using PlatformDisplayID = uint32_t;
 
 #if HAVE(APPLE_GRAPHICS_CONTROL)
-bool hasMuxableGPU();
+WEBCORE_EXPORT bool hasLowAndHighPowerGPUs();
 #endif
 
 class GraphicsContext3DManager {
+    friend NeverDestroyed<GraphicsContext3DManager>;
 public:
     static GraphicsContext3DManager& sharedManager();
 
@@ -65,11 +67,10 @@ public:
 
 #if PLATFORM(MAC)
     void screenDidChange(PlatformDisplayID, const HostWindow*);
+    WEBCORE_EXPORT static void displayWasReconfigured(CGDirectDisplayID, CGDisplayChangeSummaryFlags, void*);
 #endif
 
 private:
-    friend NeverDestroyed<GraphicsContext3DManager>;
-
     GraphicsContext3DManager()
         : m_disableHighPerformanceGPUTimer(*this, &GraphicsContext3DManager::disableHighPerformanceGPUTimerFired)
     {
@@ -83,10 +84,7 @@ private:
     HashSet<GraphicsContext3D*> m_contextsRequiringHighPerformance;
 
     Timer m_disableHighPerformanceGPUTimer;
-
-#if PLATFORM(MAC)
-    CGLPixelFormatObj m_pixelFormatObj { nullptr };
-#endif
+    bool m_requestingHighPerformance { false };
 };
 
 }

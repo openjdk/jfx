@@ -283,8 +283,7 @@ class RegisterID
             when "t4"
                 isWin ? "r10" : "r8"
             when "t5"
-                raise "cannot use register #{name} on X86-64 Windows" unless not isWin
-                "r10"
+                isWin ? "ecx" : "r10"
             when "csr0"
                 "ebx"
             when "csr1"
@@ -421,9 +420,9 @@ class BaseIndex
     
     def x86AddressOperand(addressKind)
         if !isIntelSyntax
-            "#{offset.value}(#{base.x86Operand(addressKind)}, #{index.x86Operand(addressKind)}, #{scale})"
+            "#{offset.value}(#{base.x86Operand(addressKind)}, #{index.x86Operand(addressKind)}, #{scaleValue})"
         else
-            "#{getSizeString(addressKind)}[#{offset.value} + #{base.x86Operand(addressKind)} + #{index.x86Operand(addressKind)} * #{scale}]"
+            "#{getSizeString(addressKind)}[#{offset.value} + #{base.x86Operand(addressKind)} + #{index.x86Operand(addressKind)} * #{scaleValue}]"
         end
     end
     
@@ -431,7 +430,7 @@ class BaseIndex
         if !isIntelSyntax
             x86AddressOperand(:ptr)
         else
-            "#{getSizeString(kind)}[#{offset.value} + #{base.x86Operand(:ptr)} + #{index.x86Operand(:ptr)} * #{scale}]"
+            "#{getSizeString(kind)}[#{offset.value} + #{base.x86Operand(:ptr)} + #{index.x86Operand(:ptr)} * #{scaleValue}]"
         end
     end
 
@@ -465,7 +464,12 @@ class LabelReference
     def x86LoadOperand(kind, dst)
         # FIXME: Implement this on platforms that aren't Mach-O.
         # https://bugs.webkit.org/show_bug.cgi?id=175104
-        $asm.puts "movq #{asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+        used
+        if !isIntelSyntax
+            $asm.puts "movq #{asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+        else
+            $asm.puts "lea #{dst.x86Operand(:ptr)}, #{asmLabel}"
+        end
         "#{offset}(#{dst.x86Operand(kind)})"
     end
 end
@@ -584,7 +588,12 @@ class Instruction
 
     def emitX86Lea(src, dst, kind)
         if src.is_a? LabelReference
-            $asm.puts "movq #{src.asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+            src.used
+            if !isIntelSyntax
+                $asm.puts "movq #{src.asmLabel}@GOTPCREL(%rip), #{dst.x86Operand(:ptr)}"
+            else
+                $asm.puts "lea #{dst.x86Operand(:ptr)}, #{src.asmLabel}"
+            end
         else
             $asm.puts "lea#{x86Suffix(kind)} #{orderOperands(src.x86AddressOperand(kind), dst.x86Operand(kind))}"
         end
@@ -752,7 +761,7 @@ class Instruction
             raise unless operands[1].is_a? RegisterID
             raise unless operands[2].is_a? RegisterID
             if operands[0].value == 0
-                unless operands[1] == operands[2]
+                if operands[1] != operands[2]
                     $asm.puts "mov#{x86Suffix(kind)} #{orderOperands(operands[1].x86Operand(kind), operands[2].x86Operand(kind))}"
                 end
             else
@@ -778,22 +787,48 @@ class Instruction
     end
     
     def handleX86Sub(kind)
-        if operands.size == 3 and operands[1] == operands[2]
-            $asm.puts "neg#{x86Suffix(kind)} #{operands[2].x86Operand(kind)}"
-            $asm.puts "add#{x86Suffix(kind)} #{orderOperands(operands[0].x86Operand(kind), operands[2].x86Operand(kind))}"
-        else
-            handleX86Op("sub#{x86Suffix(kind)}", kind)
+        if operands.size == 3
+            if Immediate.new(nil, 0) == operands[1]
+                raise unless operands[0].is_a? RegisterID
+                raise unless operands[2].is_a? RegisterID
+                if operands[0] != operands[2]
+                    $asm.puts "mov#{x86Suffix(kind)} #{orderOperands(operands[0].x86Operand(kind), operands[2].x86Operand(kind))}"
+                end
+                return
+            end
+            if operands[1] == operands[2]
+                $asm.puts "neg#{x86Suffix(kind)} #{operands[2].x86Operand(kind)}"
+                if Immediate.new(nil, 0) != operands[0]
+                    $asm.puts "add#{x86Suffix(kind)} #{orderOperands(operands[0].x86Operand(kind), operands[2].x86Operand(kind))}"
+                end
+                return
+            end
         end
+
+        if operands.size == 2
+            if Immediate.new(nil, 0) == operands[0]
+                return
+            end
+        end
+
+        handleX86Op("sub#{x86Suffix(kind)}", kind)
     end
     
     def handleX86Mul(kind)
         if operands.size == 3 and operands[0].is_a? Immediate
             $asm.puts "imul#{x86Suffix(kind)} #{x86Operands(kind, kind, kind)}"
-        else
-            # FIXME: could do some peephole in case the left operand is immediate and it's
-            # a power of two.
-            handleX86Op("imul#{x86Suffix(kind)}", kind)
+            return
         end
+
+        if operands.size == 2 and operands[0].is_a? Immediate
+            imm = operands[0].value
+            if imm > 0 and isPowerOfTwo(imm)
+                $asm.puts "sal#{x86Suffix(kind)} #{orderOperands(Immediate.new(nil, Math.log2(imm).to_i).x86Operand(kind), operands[1].x86Operand(kind))}"
+                return
+            end
+        end
+
+        handleX86Op("imul#{x86Suffix(kind)}", kind)
     end
     
     def handleX86Peek()
@@ -947,6 +982,8 @@ class Instruction
             handleX86Op("xor#{x86Suffix(:ptr)}", :ptr)
         when "xorq"
             handleX86Op("xor#{x86Suffix(:quad)}", :quad)
+        when "leap"
+            emitX86Lea(operands[0], operands[1], :ptr)
         when "loadi"
             $asm.puts "mov#{x86Suffix(:int)} #{x86LoadOperands(:int, :int)}"
         when "storei"
@@ -980,6 +1017,12 @@ class Instruction
                 $asm.puts "movsbl #{x86LoadOperands(:byte, :int)}"
             else
                 $asm.puts "movsx #{x86LoadOperands(:byte, :int)}"
+            end
+        when "loadbsp"
+            if !isIntelSyntax
+                $asm.puts "movsb#{x86Suffix(:ptr)} #{x86LoadOperands(:byte, :ptr)}"
+            else
+                $asm.puts "movsx #{x86LoadOperands(:byte, :ptr)}"
             end
         when "loadh"
             if !isIntelSyntax

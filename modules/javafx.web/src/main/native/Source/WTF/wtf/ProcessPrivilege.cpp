@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#include "ProcessPrivilege.h"
+#include <wtf/ProcessPrivilege.h>
 
 #include <wtf/OptionSet.h>
 
@@ -57,12 +57,12 @@ bool hasProcessPrivilege(ProcessPrivilege privilege)
 
 void addProcessPrivilege(ProcessPrivilege privilege)
 {
-    processPrivileges() |= privilege;
+    processPrivileges().add(privilege);
 }
 
 void removeProcessPrivilege(ProcessPrivilege privilege)
 {
-    processPrivileges() = processPrivileges() - privilege;
+    processPrivileges().remove(privilege);
 }
 
 } // namespace WTF

@@ -30,11 +30,11 @@
 #include "NetworkingContext.h"
 #include "NotImplemented.h"
 #include "ResourceHandle.h"
-#include "URL.h"
 
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/java/JavaEnv.h>
+#include <wtf/URL.h>
+#include "PlatformJavaClasses.h"
 
 namespace WebCore {
 
@@ -68,7 +68,7 @@ static void initRefs(JNIEnv* env)
 static String getCookies(const URL& url, bool includeHttpOnlyCookies)
 {
     using namespace CookieInternalJava;
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
@@ -76,7 +76,7 @@ static String getCookies(const URL& url, bool includeHttpOnlyCookies)
             getMethod,
             (jstring) url.string().toJavaString(env),
             bool_to_jbool(includeHttpOnlyCookies)));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return result ? String(env, result) : emptyString();
 }
@@ -97,24 +97,10 @@ NetworkingContext* NetworkStorageSession::context() const
     return m_context.get();
 }
 
-static std::unique_ptr<NetworkStorageSession>& defaultSession()
-{
-    ASSERT(isMainThread());
-    static NeverDestroyed<std::unique_ptr<NetworkStorageSession>> session;
-    return session;
-}
-
-NetworkStorageSession& NetworkStorageSession::defaultStorageSession()
-{
-    if (!defaultSession())
-        defaultSession() = std::make_unique<NetworkStorageSession>(PAL::SessionID::defaultSessionID(), nullptr);
-    return *defaultSession();
-}
-
-void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<uint64_t>, std::optional<uint64_t>, const String& value) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, const String& value) const
 {
     using namespace CookieInternalJava;
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     env->CallStaticVoidMethod(
@@ -122,16 +108,16 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const S
             putMethod,
             (jstring) url.string().toJavaString(env),
             (jstring) value.toJavaString(env));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
-std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, std::optional<uint64_t>, std::optional<uint64_t>, IncludeSecureCookies) const
+std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, IncludeSecureCookies) const
 {
     // 'HttpOnly' cookies should no be accessible from scripts, so we filter them out here.
     return { CookieInternalJava::getCookies(url, false), false };
 }
 
-std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, std::optional<uint64_t>, std::optional<uint64_t>, IncludeSecureCookies) const
+std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, IncludeSecureCookies) const
 {
     return { CookieInternalJava::getCookies(url, true), true };
 }
@@ -141,20 +127,10 @@ bool NetworkStorageSession::cookiesEnabled() const
     return true;
 }
 
-bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, std::optional<uint64_t>, std::optional<uint64_t>, Vector<Cookie>&) const
+bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, Optional<uint64_t>, Optional<uint64_t>, Vector<Cookie>&) const
 {
     notImplemented();
     return false;
-}
-
-void NetworkStorageSession::ensureSession(PAL::SessionID, const String&)
-{
-    // FIXME: Implement for WebKit to use.
-}
-
-void NetworkStorageSession::switchToNewTestingSession()
-{
-    // FIXME: Implement for WebKit to use.
 }
 
 void NetworkStorageSession::setCookies(const Vector<Cookie>&, const URL&, const URL&)

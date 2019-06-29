@@ -27,12 +27,12 @@
 #include "DOMFileSystem.h"
 
 #include "File.h"
-#include "FileMetadata.h"
-#include "FileSystem.h"
 #include "FileSystemDirectoryEntry.h"
 #include "FileSystemFileEntry.h"
 #include "ScriptExecutionContext.h"
 #include <wtf/CrossThreadCopier.h>
+#include <wtf/FileMetadata.h>
+#include <wtf/FileSystem.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -177,11 +177,11 @@ static ExceptionOr<String> validatePathIsExpectedType(const String& fullPath, St
     return WTFMove(virtualPath);
 }
 
-static std::optional<FileMetadata::Type> fileType(const String& fullPath)
+static Optional<FileMetadata::Type> fileType(const String& fullPath)
 {
     auto metadata = FileSystem::fileMetadata(fullPath);
     if (!metadata || metadata.value().isHidden)
-        return std::nullopt;
+        return WTF::nullopt;
     return metadata.value().type;
 }
 

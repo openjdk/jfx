@@ -32,6 +32,8 @@
 
 #include "AXObjectCache.h"
 
+#include "AXIsolatedTree.h"
+#include "AXIsolatedTreeNode.h"
 #include "AccessibilityARIAGrid.h"
 #include "AccessibilityARIAGridCell.h"
 #include "AccessibilityARIAGridRow.h"
@@ -114,6 +116,8 @@
 namespace WebCore {
 
 using namespace HTMLNames;
+
+const AXID InvalidAXID = 0;
 
 // Post value change notifications for password fields or elements contained in password fields at a 40hz interval to thwart analysis of typing cadence
 static const Seconds accessibilityPasswordValueChangeNotificationInterval { 25_ms };
@@ -465,7 +469,7 @@ static Ref<AccessibilityObject> createFromRenderer(RenderObject* renderer)
     if (node && is<HTMLLabelElement>(node) && nodeHasRole(node, nullAtom()))
         return AccessibilityLabel::create(renderer);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     if (is<HTMLMediaElement>(node) && nodeHasRole(node, nullAtom()))
         return AccessibilityMediaObject::create(renderer);
 #endif
@@ -723,6 +727,10 @@ void AXObjectCache::remove(AXID axID)
     object->setAXObjectID(0);
 
     m_idsInUse.remove(axID);
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (auto pageID = m_document.pageID())
+        AXIsolatedTree::treeForPageID(*pageID)->removeNode(axID);
+#endif
 
     ASSERT(m_objects.size() >= m_idsInUse.size());
 }
@@ -739,10 +747,10 @@ void AXObjectCache::remove(Node& node)
     if (is<Element>(node)) {
         m_deferredRecomputeIsIgnoredList.remove(downcast<Element>(&node));
         m_deferredSelectedChildredChangedList.remove(downcast<Element>(&node));
-        m_deferredChildrenChangedNodeList.remove(&node);
         m_deferredTextFormControlValue.remove(downcast<Element>(&node));
         m_deferredAttributeChange.remove(downcast<Element>(&node));
     }
+    m_deferredChildrenChangedNodeList.remove(&node);
     m_deferredTextChangedList.remove(&node);
     // Remove the entry if the new focused node is being removed.
     m_deferredFocusedNodeChange.removeAllMatching([&node](auto& entry) -> bool {
@@ -1793,13 +1801,13 @@ RefPtr<Range> AXObjectCache::rangeMatchesTextNearRange(RefPtr<Range> originalRan
     if (endPosition.isNull())
         endPosition = lastPositionInOrAfterNode(&originalRange->endContainer());
 
-    RefPtr<Range> searchRange = Range::create(m_document, startPosition, endPosition);
-    if (!searchRange || searchRange->collapsed())
+    auto searchRange = Range::create(m_document, startPosition, endPosition);
+    if (searchRange->collapsed())
         return nullptr;
 
-    RefPtr<Range> range = Range::create(m_document, startPosition, originalRange->startPosition());
-    unsigned targetOffset = TextIterator::rangeLength(range.get(), true);
-    return findClosestPlainText(*searchRange.get(), matchText, { }, targetOffset);
+    auto range = Range::create(m_document, startPosition, originalRange->startPosition());
+    unsigned targetOffset = TextIterator::rangeLength(range.ptr(), true);
+    return findClosestPlainText(searchRange.get(), matchText, { }, targetOffset);
 }
 
 static bool isReplacedNodeOrBR(Node* node)
@@ -1817,9 +1825,9 @@ static bool characterOffsetsInOrder(const CharacterOffset& characterOffset1, con
 
     Node* node1 = characterOffset1.node;
     Node* node2 = characterOffset2.node;
-    if (!node1->offsetInCharacters() && !isReplacedNodeOrBR(node1) && node1->hasChildNodes())
+    if (!node1->isCharacterDataNode() && !isReplacedNodeOrBR(node1) && node1->hasChildNodes())
         node1 = node1->traverseToChildAt(characterOffset1.offset);
-    if (!node2->offsetInCharacters() && !isReplacedNodeOrBR(node2) && node2->hasChildNodes())
+    if (!node2->isCharacterDataNode() && !isReplacedNodeOrBR(node2) && node2->hasChildNodes())
         node2 = node2->traverseToChildAt(characterOffset2.offset);
 
     if (!node1 || !node2)
@@ -1945,14 +1953,14 @@ CharacterOffset AXObjectCache::startOrEndCharacterOffsetForRange(RefPtr<Range> r
     bool stayWithinRange = !isStart;
 
     Node& endNode = range->endContainer();
-    if (endNode.offsetInCharacters() && !isStart)
+    if (endNode.isCharacterDataNode() && !isStart)
         return traverseToOffsetInRange(rangeForNodeContents(&endNode), range->endOffset(), TraverseOptionValidateOffset);
 
     Ref<Range> copyRange = *range;
     // Change the start of the range, so the character offset starts from node beginning.
     int offset = 0;
     Node& node = copyRange->startContainer();
-    if (node.offsetInCharacters()) {
+    if (node.isCharacterDataNode()) {
         CharacterOffset nodeStartOffset = traverseToOffsetInRange(rangeForNodeContents(&node), range->startOffset(), TraverseOptionValidateOffset);
         if (isStart)
             return nodeStartOffset;
@@ -2129,7 +2137,7 @@ CharacterOffset AXObjectCache::characterOffsetFromVisiblePosition(const VisibleP
     Node* domNode = deepPos.deprecatedNode();
     ASSERT(domNode);
 
-    if (domNode->offsetInCharacters())
+    if (domNode->isCharacterDataNode())
         return traverseToOffsetInRange(rangeForNodeContents(domNode), deepPos.deprecatedEditingOffset(), TraverseOptionValidateOffset);
 
     RefPtr<AccessibilityObject> obj = this->getOrCreate(domNode);
@@ -2161,7 +2169,7 @@ CharacterOffset AXObjectCache::characterOffsetFromVisiblePosition(const VisibleP
                 characterOffset--;
         } else {
             // Sometimes VisiblePosition will move multiple characters, like emoji.
-            if (currentPosition.deprecatedNode()->offsetInCharacters())
+            if (currentPosition.deprecatedNode()->isCharacterDataNode())
                 characterOffset += currentPosition.offsetInContainerNode() - previousPosition.offsetInContainerNode() - 1;
         }
     }
@@ -2182,19 +2190,19 @@ AccessibilityObject* AXObjectCache::accessibilityObjectForTextMarkerData(TextMar
     return this->getOrCreate(domNode);
 }
 
-std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePos)
+Optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(const VisiblePosition& visiblePos)
 {
     if (visiblePos.isNull())
-        return std::nullopt;
+        return WTF::nullopt;
 
     Position deepPos = visiblePos.deepEquivalent();
     Node* domNode = deepPos.deprecatedNode();
     ASSERT(domNode);
     if (!domNode)
-        return std::nullopt;
+        return WTF::nullopt;
 
     if (is<HTMLInputElement>(*domNode) && downcast<HTMLInputElement>(*domNode).isPasswordField())
-        return std::nullopt;
+        return WTF::nullopt;
 
     // If the visible position has an anchor type referring to a node other than the anchored node, we should
     // set the text marker data with CharacterOffset so that the offset will correspond to the node.
@@ -2208,7 +2216,7 @@ std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(co
     // find or create an accessibility object for this node
     AXObjectCache* cache = domNode->document().axObjectCache();
     if (!cache)
-        return std::nullopt;
+        return WTF::nullopt;
     RefPtr<AccessibilityObject> obj = cache->getOrCreate(domNode);
 
     // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
@@ -2230,18 +2238,18 @@ std::optional<TextMarkerData> AXObjectCache::textMarkerDataForVisiblePosition(co
 }
 
 // This function exits as a performance optimization to avoid a synchronous layout.
-std::optional<TextMarkerData> AXObjectCache::textMarkerDataForFirstPositionInTextControl(HTMLTextFormControlElement& textControl)
+Optional<TextMarkerData> AXObjectCache::textMarkerDataForFirstPositionInTextControl(HTMLTextFormControlElement& textControl)
 {
     if (is<HTMLInputElement>(textControl) && downcast<HTMLInputElement>(textControl).isPasswordField())
-        return std::nullopt;
+        return WTF::nullopt;
 
     AXObjectCache* cache = textControl.document().axObjectCache();
     if (!cache)
-        return std::nullopt;
+        return WTF::nullopt;
 
     RefPtr<AccessibilityObject> obj = cache->getOrCreate(&textControl);
     if (!obj)
-        return std::nullopt;
+        return WTF::nullopt;
 
     // This memory must be zero'd so instances of TextMarkerData can be tested for byte-equivalence.
     // Warning: This is risky and bad because TextMarkerData is a nontrivial type.
@@ -2911,7 +2919,43 @@ void AXObjectCache::performDeferredCacheUpdate()
     for (auto& deferredFocusedChangeContext : m_deferredFocusedNodeChange)
         handleFocusedUIElementChanged(deferredFocusedChangeContext.first, deferredFocusedChangeContext.second);
     m_deferredFocusedNodeChange.clear();
+
+    platformPerformDeferredCacheUpdate();
 }
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+Ref<AXIsolatedTreeNode> AXObjectCache::createIsolatedAccessibilityTreeHierarchy(AccessibilityObject& object, AXID parentID, AXIsolatedTree& tree, Vector<Ref<AXIsolatedTreeNode>>& nodeChanges)
+{
+    auto isolatedTreeNode = AXIsolatedTreeNode::create(object);
+    nodeChanges.append(isolatedTreeNode.copyRef());
+
+    isolatedTreeNode->setParent(parentID);
+    associateIsolatedTreeNode(object, isolatedTreeNode, tree.treeIdentifier());
+
+    for (auto child : object.children()) {
+        auto staticChild = createIsolatedAccessibilityTreeHierarchy(*child, isolatedTreeNode->identifier(), tree, nodeChanges);
+        isolatedTreeNode->appendChild(staticChild->identifier());
+    }
+
+    return isolatedTreeNode;
+}
+
+Ref<AXIsolatedTree> AXObjectCache::generateIsolatedAccessibilityTree()
+{
+    RELEASE_ASSERT(isMainThread());
+
+    auto tree = AXIsolatedTree::treeForPageID(*m_document.pageID());
+    if (!tree)
+        tree = AXIsolatedTree::createTreeForPageID(*m_document.pageID());
+
+    Vector<Ref<AXIsolatedTreeNode>> nodeChanges;
+    auto root = createIsolatedAccessibilityTreeHierarchy(*rootObject(), InvalidAXID, *tree, nodeChanges);
+    root->setIsRootNode(true);
+    tree->appendNodeChanges(nodeChanges);
+
+    return makeRef(*tree);
+}
+#endif
 
 void AXObjectCache::deferRecomputeIsIgnoredIfNeeded(Element* element)
 {

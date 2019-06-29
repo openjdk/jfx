@@ -1,4 +1,4 @@
-// Copyright 2010 the V8 project authors. All rights reserved.
+// Copyright 2012 the V8 project authors. All rights reserved.
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -27,42 +27,41 @@
 
 #include "config.h"
 
-#include "fast-dtoa.h"
+#include <wtf/dtoa/fast-dtoa.h>
 
-#include "cached-powers.h"
-#include "diy-fp.h"
-#include "double.h"
+#include <wtf/dtoa/cached-powers.h>
+#include <wtf/dtoa/diy-fp.h>
+#include <wtf/dtoa/ieee.h>
 
 namespace WTF {
-
 namespace double_conversion {
     
-    // The minimal and maximal target exponent define the range of w's binary
-    // exponent, where 'w' is the result of multiplying the input by a cached power
-    // of ten.
-    //
-    // A different range might be chosen on a different platform, to optimize digit
-    // generation, but a smaller range requires more powers of ten to be cached.
-    static const int kMinimalTargetExponent = -60;
-    static const int kMaximalTargetExponent = -32;
+// The minimal and maximal target exponent define the range of w's binary
+// exponent, where 'w' is the result of multiplying the input by a cached power
+// of ten.
+//
+// A different range might be chosen on a different platform, to optimize digit
+// generation, but a smaller range requires more powers of ten to be cached.
+static const int kMinimalTargetExponent = -60;
+static const int kMaximalTargetExponent = -32;
     
     
-    // Adjusts the last digit of the generated number, and screens out generated
-    // solutions that may be inaccurate. A solution may be inaccurate if it is
-    // outside the safe interval, or if we cannot prove that it is closer to the
-    // input than a neighboring representation of the same length.
-    //
-    // Input: * buffer containing the digits of too_high / 10^kappa
-    //        * the buffer's length
-    //        * distance_too_high_w == (too_high - w).f() * unit
-    //        * unsafe_interval == (too_high - too_low).f() * unit
-    //        * rest = (too_high - buffer * 10^kappa).f() * unit
-    //        * ten_kappa = 10^kappa * unit
-    //        * unit = the common multiplier
-    // Output: returns true if the buffer is guaranteed to contain the closest
-    //    representable number to the input.
-    //  Modifies the generated digits in the buffer to approach (round towards) w.
-    static bool RoundWeed(BufferReference<char> buffer,
+// Adjusts the last digit of the generated number, and screens out generated
+// solutions that may be inaccurate. A solution may be inaccurate if it is
+// outside the safe interval, or if we cannot prove that it is closer to the
+// input than a neighboring representation of the same length.
+//
+// Input: * buffer containing the digits of too_high / 10^kappa
+//        * the buffer's length
+//        * distance_too_high_w == (too_high - w).f() * unit
+//        * unsafe_interval == (too_high - too_low).f() * unit
+//        * rest = (too_high - buffer * 10^kappa).f() * unit
+//        * ten_kappa = 10^kappa * unit
+//        * unit = the common multiplier
+// Output: returns true if the buffer is guaranteed to contain the closest
+//    representable number to the input.
+//  Modifies the generated digits in the buffer to approach (round towards) w.
+static bool RoundWeed(BufferReference<char> buffer,
                           int length,
                           uint64_t distance_too_high_w,
                           uint64_t unsafe_interval,
@@ -167,22 +166,22 @@ namespace double_conversion {
         //      [too_high - unsafe_interval + 4 ulp; too_high - 2 ulp]
         //   Conceptually we have: rest ~= too_high - buffer
         return (2 * unit <= rest) && (rest <= unsafe_interval - 4 * unit);
-    }
+}
     
     
-    // Rounds the buffer upwards if the result is closer to v by possibly adding
-    // 1 to the buffer. If the precision of the calculation is not sufficient to
-    // round correctly, return false.
-    // The rounding might shift the whole buffer in which case the kappa is
-    // adjusted. For example "99", kappa = 3 might become "10", kappa = 4.
-    //
-    // If 2*rest > ten_kappa then the buffer needs to be round up.
-    // rest can have an error of +/- 1 unit. This function accounts for the
-    // imprecision and returns false, if the rounding direction cannot be
-    // unambiguously determined.
-    //
-    // Precondition: rest < ten_kappa.
-    static bool RoundWeedCounted(BufferReference<char> buffer,
+// Rounds the buffer upwards if the result is closer to v by possibly adding
+// 1 to the buffer. If the precision of the calculation is not sufficient to
+// round correctly, return false.
+// The rounding might shift the whole buffer in which case the kappa is
+// adjusted. For example "99", kappa = 3 might become "10", kappa = 4.
+//
+// If 2*rest > ten_kappa then the buffer needs to be round up.
+// rest can have an error of +/- 1 unit. This function accounts for the
+// imprecision and returns false, if the rounding direction cannot be
+// unambiguously determined.
+//
+// Precondition: rest < ten_kappa.
+static bool RoundWeedCounted(BufferReference<char> buffer,
                                  int length,
                                  uint64_t rest,
                                  uint64_t ten_kappa,
@@ -224,176 +223,84 @@ namespace double_conversion {
             return true;
         }
         return false;
-    }
+}
     
+// Returns the biggest power of ten that is less than or equal to the given
+// number. We furthermore receive the maximum number of bits 'number' has.
+//
+// Returns power == 10^(exponent_plus_one-1) such that
+//    power <= number < power * 10.
+// If number_bits == 0 then 0^(0-1) is returned.
+// The number of bits must be <= 32.
+// Precondition: number < (1 << (number_bits + 1)).
+
+// Inspired by the method for finding an integer log base 10 from here:
+// http://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10
+static unsigned int const kSmallPowersOfTen[] =
+    {0, 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000,
+     1000000000};
     
-    static const uint32_t kTen4 = 10000;
-    static const uint32_t kTen5 = 100000;
-    static const uint32_t kTen6 = 1000000;
-    static const uint32_t kTen7 = 10000000;
-    static const uint32_t kTen8 = 100000000;
-    static const uint32_t kTen9 = 1000000000;
-    
-    // Returns the biggest power of ten that is less than or equal to the given
-    // number. We furthermore receive the maximum number of bits 'number' has.
-    // If number_bits == 0 then 0^-1 is returned
-    // The number of bits must be <= 32.
-    // Precondition: number < (1 << (number_bits + 1)).
-    static void BiggestPowerTen(uint32_t number,
+static void BiggestPowerTen(uint32_t number,
                                 int number_bits,
                                 uint32_t* power,
-                                int* exponent) {
-        ASSERT(number < (uint32_t)(1 << (number_bits + 1)));
-        
-        switch (number_bits) {
-            case 32:
-            case 31:
-            case 30:
-                if (kTen9 <= number) {
-                    *power = kTen9;
-                    *exponent = 9;
-                    break;
-                }
-                FALLTHROUGH;
-            case 29:
-            case 28:
-            case 27:
-                if (kTen8 <= number) {
-                    *power = kTen8;
-                    *exponent = 8;
-                    break;
-                }
-                FALLTHROUGH;
-            case 26:
-            case 25:
-            case 24:
-                if (kTen7 <= number) {
-                    *power = kTen7;
-                    *exponent = 7;
-                    break;
-                }
-                FALLTHROUGH;
-            case 23:
-            case 22:
-            case 21:
-            case 20:
-                if (kTen6 <= number) {
-                    *power = kTen6;
-                    *exponent = 6;
-                    break;
-                }
-                FALLTHROUGH;
-            case 19:
-            case 18:
-            case 17:
-                if (kTen5 <= number) {
-                    *power = kTen5;
-                    *exponent = 5;
-                    break;
-                }
-                FALLTHROUGH;
-            case 16:
-            case 15:
-            case 14:
-                if (kTen4 <= number) {
-                    *power = kTen4;
-                    *exponent = 4;
-                    break;
-                }
-                FALLTHROUGH;
-            case 13:
-            case 12:
-            case 11:
-            case 10:
-                if (1000 <= number) {
-                    *power = 1000;
-                    *exponent = 3;
-                    break;
-                }
-                FALLTHROUGH;
-            case 9:
-            case 8:
-            case 7:
-                if (100 <= number) {
-                    *power = 100;
-                    *exponent = 2;
-                    break;
-                }
-                FALLTHROUGH;
-            case 6:
-            case 5:
-            case 4:
-                if (10 <= number) {
-                    *power = 10;
-                    *exponent = 1;
-                    break;
-                }
-                FALLTHROUGH;
-            case 3:
-            case 2:
-            case 1:
-                if (1 <= number) {
-                    *power = 1;
-                    *exponent = 0;
-                    break;
-                }
-                FALLTHROUGH;
-            case 0:
-                *power = 0;
-                *exponent = -1;
-                break;
-            default:
-                // Following assignments are here to silence compiler warnings.
-                *power = 0;
-                *exponent = 0;
-                UNREACHABLE();
-        }
-    }
-    
-    
-    // Generates the digits of input number w.
-    // w is a floating-point number (DiyFp), consisting of a significand and an
-    // exponent. Its exponent is bounded by kMinimalTargetExponent and
-    // kMaximalTargetExponent.
-    //       Hence -60 <= w.e() <= -32.
-    //
-    // Returns false if it fails, in which case the generated digits in the buffer
-    // should not be used.
-    // Preconditions:
-    //  * low, w and high are correct up to 1 ulp (unit in the last place). That
-    //    is, their error must be less than a unit of their last digits.
-    //  * low.e() == w.e() == high.e()
-    //  * low < w < high, and taking into account their error: low~ <= high~
-    //  * kMinimalTargetExponent <= w.e() <= kMaximalTargetExponent
-    // Postconditions: returns false if procedure fails.
-    //   otherwise:
-    //     * buffer is not null-terminated, but len contains the number of digits.
-    //     * buffer contains the shortest possible decimal digit-sequence
-    //       such that LOW < buffer * 10^kappa < HIGH, where LOW and HIGH are the
-    //       correct values of low and high (without their error).
-    //     * if more than one decimal representation gives the minimal number of
-    //       decimal digits then the one closest to W (where W is the correct value
-    //       of w) is chosen.
-    // Remark: this procedure takes into account the imprecision of its input
-    //   numbers. If the precision is not enough to guarantee all the postconditions
-    //   then false is returned. This usually happens rarely (~0.5%).
-    //
-    // Say, for the sake of example, that
-    //   w.e() == -48, and w.f() == 0x1234567890abcdef
-    // w's value can be computed by w.f() * 2^w.e()
-    // We can obtain w's integral digits by simply shifting w.f() by -w.e().
-    //  -> w's integral part is 0x1234
-    //  w's fractional part is therefore 0x567890abcdef.
-    // Printing w's integral part is easy (simply print 0x1234 in decimal).
-    // In order to print its fraction we repeatedly multiply the fraction by 10 and
-    // get each digit. Example the first digit after the point would be computed by
-    //   (0x567890abcdef * 10) >> 48. -> 3
-    // The whole thing becomes slightly more complicated because we want to stop
-    // once we have enough digits. That is, once the digits inside the buffer
-    // represent 'w' we can stop. Everything inside the interval low - high
-    // represents w. However we have to pay attention to low, high and w's
-    // imprecision.
-    static bool DigitGen(DiyFp low,
+                            int* exponent_plus_one) {
+  ASSERT(number < (1u << (number_bits + 1)));
+  // 1233/4096 is approximately 1/lg(10).
+  int exponent_plus_one_guess = ((number_bits + 1) * 1233 >> 12);
+  // We increment to skip over the first entry in the kPowersOf10 table.
+  // Note: kPowersOf10[i] == 10^(i-1).
+  exponent_plus_one_guess++;
+  // We don't have any guarantees that 2^number_bits <= number.
+  if (number < kSmallPowersOfTen[exponent_plus_one_guess]) {
+    exponent_plus_one_guess--;
+  }
+  *power = kSmallPowersOfTen[exponent_plus_one_guess];
+  *exponent_plus_one = exponent_plus_one_guess;
+}
+
+// Generates the digits of input number w.
+// w is a floating-point number (DiyFp), consisting of a significand and an
+// exponent. Its exponent is bounded by kMinimalTargetExponent and
+// kMaximalTargetExponent.
+//       Hence -60 <= w.e() <= -32.
+//
+// Returns false if it fails, in which case the generated digits in the buffer
+// should not be used.
+// Preconditions:
+//  * low, w and high are correct up to 1 ulp (unit in the last place). That
+//    is, their error must be less than a unit of their last digits.
+//  * low.e() == w.e() == high.e()
+//  * low < w < high, and taking into account their error: low~ <= high~
+//  * kMinimalTargetExponent <= w.e() <= kMaximalTargetExponent
+// Postconditions: returns false if procedure fails.
+//   otherwise:
+//     * buffer is not null-terminated, but len contains the number of digits.
+//     * buffer contains the shortest possible decimal digit-sequence
+//       such that LOW < buffer * 10^kappa < HIGH, where LOW and HIGH are the
+//       correct values of low and high (without their error).
+//     * if more than one decimal representation gives the minimal number of
+//       decimal digits then the one closest to W (where W is the correct value
+//       of w) is chosen.
+// Remark: this procedure takes into account the imprecision of its input
+//   numbers. If the precision is not enough to guarantee all the postconditions
+//   then false is returned. This usually happens rarely (~0.5%).
+//
+// Say, for the sake of example, that
+//   w.e() == -48, and w.f() == 0x1234567890abcdef
+// w's value can be computed by w.f() * 2^w.e()
+// We can obtain w's integral digits by simply shifting w.f() by -w.e().
+//  -> w's integral part is 0x1234
+//  w's fractional part is therefore 0x567890abcdef.
+// Printing w's integral part is easy (simply print 0x1234 in decimal).
+// In order to print its fraction we repeatedly multiply the fraction by 10 and
+// get each digit. Example the first digit after the point would be computed by
+//   (0x567890abcdef * 10) >> 48. -> 3
+// The whole thing becomes slightly more complicated because we want to stop
+// once we have enough digits. That is, once the digits inside the buffer
+// represent 'w' we can stop. Everything inside the interval low - high
+// represents w. However we have to pay attention to low, high and w's
+// imprecision.
+static bool DigitGen(DiyFp low,
                          DiyFp w,
                          DiyFp high,
                          BufferReference<char> buffer,
@@ -432,10 +339,10 @@ namespace double_conversion {
         // Modulo by one is an and.
         uint64_t fractionals = too_high.f() & (one.f() - 1);
         uint32_t divisor;
-        int divisor_exponent;
+  int divisor_exponent_plus_one;
         BiggestPowerTen(integrals, DiyFp::kSignificandSize - (-one.e()),
-                        &divisor, &divisor_exponent);
-        *kappa = divisor_exponent + 1;
+                  &divisor, &divisor_exponent_plus_one);
+  *kappa = divisor_exponent_plus_one;
         *length = 0;
         // Loop invariant: buffer = too_high / 10^kappa  (integer division)
         // The invariant holds for the first iteration: kappa has been initialized
@@ -443,7 +350,8 @@ namespace double_conversion {
         // that is smaller than integrals.
         while (*kappa > 0) {
             int digit = integrals / divisor;
-            buffer[*length] = '0' + digit;
+    ASSERT(digit <= 9);
+    buffer[*length] = static_cast<char>('0' + digit);
             (*length)++;
             integrals %= divisor;
             (*kappa)--;
@@ -472,13 +380,14 @@ namespace double_conversion {
         ASSERT(one.e() >= -60);
         ASSERT(fractionals < one.f());
         ASSERT(UINT64_2PART_C(0xFFFFFFFF, FFFFFFFF) / 10 >= one.f());
-        while (true) {
+  for (;;) {
             fractionals *= 10;
             unit *= 10;
             unsafe_interval.set_f(unsafe_interval.f() * 10);
             // Integer division by one.
             int digit = static_cast<int>(fractionals >> -one.e());
-            buffer[*length] = '0' + digit;
+    ASSERT(digit <= 9);
+    buffer[*length] = static_cast<char>('0' + digit);
             (*length)++;
             fractionals &= one.f() - 1;  // Modulo by one.
             (*kappa)--;
@@ -487,39 +396,39 @@ namespace double_conversion {
                                  unsafe_interval.f(), fractionals, one.f(), unit);
             }
         }
-    }
+}
     
     
     
-    // Generates (at most) requested_digits digits of input number w.
-    // w is a floating-point number (DiyFp), consisting of a significand and an
-    // exponent. Its exponent is bounded by kMinimalTargetExponent and
-    // kMaximalTargetExponent.
-    //       Hence -60 <= w.e() <= -32.
-    //
-    // Returns false if it fails, in which case the generated digits in the buffer
-    // should not be used.
-    // Preconditions:
-    //  * w is correct up to 1 ulp (unit in the last place). That
-    //    is, its error must be strictly less than a unit of its last digit.
-    //  * kMinimalTargetExponent <= w.e() <= kMaximalTargetExponent
-    //
-    // Postconditions: returns false if procedure fails.
-    //   otherwise:
-    //     * buffer is not null-terminated, but length contains the number of
-    //       digits.
-    //     * the representation in buffer is the most precise representation of
-    //       requested_digits digits.
-    //     * buffer contains at most requested_digits digits of w. If there are less
-    //       than requested_digits digits then some trailing '0's have been removed.
-    //     * kappa is such that
-    //            w = buffer * 10^kappa + eps with |eps| < 10^kappa / 2.
-    //
-    // Remark: This procedure takes into account the imprecision of its input
-    //   numbers. If the precision is not enough to guarantee all the postconditions
-    //   then false is returned. This usually happens rarely, but the failure-rate
-    //   increases with higher requested_digits.
-    static bool DigitGenCounted(DiyFp w,
+// Generates (at most) requested_digits digits of input number w.
+// w is a floating-point number (DiyFp), consisting of a significand and an
+// exponent. Its exponent is bounded by kMinimalTargetExponent and
+// kMaximalTargetExponent.
+//       Hence -60 <= w.e() <= -32.
+//
+// Returns false if it fails, in which case the generated digits in the buffer
+// should not be used.
+// Preconditions:
+//  * w is correct up to 1 ulp (unit in the last place). That
+//    is, its error must be strictly less than a unit of its last digit.
+//  * kMinimalTargetExponent <= w.e() <= kMaximalTargetExponent
+//
+// Postconditions: returns false if procedure fails.
+//   otherwise:
+//     * buffer is not null-terminated, but length contains the number of
+//       digits.
+//     * the representation in buffer is the most precise representation of
+//       requested_digits digits.
+//     * buffer contains at most requested_digits digits of w. If there are less
+//       than requested_digits digits then some trailing '0's have been removed.
+//     * kappa is such that
+//            w = buffer * 10^kappa + eps with |eps| < 10^kappa / 2.
+//
+// Remark: This procedure takes into account the imprecision of its input
+//   numbers. If the precision is not enough to guarantee all the postconditions
+//   then false is returned. This usually happens rarely, but the failure-rate
+//   increases with higher requested_digits.
+static bool DigitGenCounted(DiyFp w,
                                 int requested_digits,
                                 BufferReference<char> buffer,
                                 int* length,
@@ -540,10 +449,10 @@ namespace double_conversion {
         // Modulo by one is an and.
         uint64_t fractionals = w.f() & (one.f() - 1);
         uint32_t divisor;
-        int divisor_exponent;
+  int divisor_exponent_plus_one;
         BiggestPowerTen(integrals, DiyFp::kSignificandSize - (-one.e()),
-                        &divisor, &divisor_exponent);
-        *kappa = divisor_exponent + 1;
+                  &divisor, &divisor_exponent_plus_one);
+  *kappa = divisor_exponent_plus_one;
         *length = 0;
         
         // Loop invariant: buffer = w / 10^kappa  (integer division)
@@ -552,7 +461,8 @@ namespace double_conversion {
         // that is smaller than 'integrals'.
         while (*kappa > 0) {
             int digit = integrals / divisor;
-            buffer[*length] = '0' + digit;
+    ASSERT(digit <= 9);
+    buffer[*length] = static_cast<char>('0' + digit);
             (*length)++;
             requested_digits--;
             integrals %= divisor;
@@ -585,7 +495,8 @@ namespace double_conversion {
             w_error *= 10;
             // Integer division by one.
             int digit = static_cast<int>(fractionals >> -one.e());
-            buffer[*length] = '0' + digit;
+    ASSERT(digit <= 9);
+    buffer[*length] = static_cast<char>('0' + digit);
             (*length)++;
             requested_digits--;
             fractionals &= one.f() - 1;  // Modulo by one.
@@ -594,21 +505,22 @@ namespace double_conversion {
         if (requested_digits != 0) return false;
         return RoundWeedCounted(buffer, *length, fractionals, one.f(), w_error,
                                 kappa);
-    }
+}
     
     
-    // Provides a decimal representation of v.
-    // Returns true if it succeeds, otherwise the result cannot be trusted.
-    // There will be *length digits inside the buffer (not null-terminated).
-    // If the function returns true then
-    //        v == (double) (buffer * 10^decimal_exponent).
-    // The digits in the buffer are the shortest representation possible: no
-    // 0.09999999999999999 instead of 0.1. The shorter representation will even be
-    // chosen even if the longer one would be closer to v.
-    // The last digit will be closest to the actual v. That is, even if several
-    // digits might correctly yield 'v' when read again, the closest will be
-    // computed.
-    static bool Grisu3(double v,
+// Provides a decimal representation of v.
+// Returns true if it succeeds, otherwise the result cannot be trusted.
+// There will be *length digits inside the buffer (not null-terminated).
+// If the function returns true then
+//        v == (double) (buffer * 10^decimal_exponent).
+// The digits in the buffer are the shortest representation possible: no
+// 0.09999999999999999 instead of 0.1. The shorter representation will even be
+// chosen even if the longer one would be closer to v.
+// The last digit will be closest to the actual v. That is, even if several
+// digits might correctly yield 'v' when read again, the closest will be
+// computed.
+static bool Grisu3(double v,
+                   FastDtoaMode mode,
                        BufferReference<char> buffer,
                        int* length,
                        int* decimal_exponent) {
@@ -618,7 +530,13 @@ namespace double_conversion {
         // boundary_minus and boundary_plus will round to v when convert to a double.
         // Grisu3 will never output representations that lie exactly on a boundary.
         DiyFp boundary_minus, boundary_plus;
+  if (mode == FAST_DTOA_SHORTEST) {
         Double(v).NormalizedBoundaries(&boundary_minus, &boundary_plus);
+  } else {
+    ASSERT(mode == FAST_DTOA_SHORTEST_SINGLE);
+    float single_v = static_cast<float>(v);
+    Single(single_v).NormalizedBoundaries(&boundary_minus, &boundary_plus);
+  }
         ASSERT(boundary_plus.e() == w.e());
         DiyFp ten_mk;  // Cached power of ten: 10^-k
         int mk;        // -k
@@ -665,15 +583,15 @@ namespace double_conversion {
                                buffer, length, &kappa);
         *decimal_exponent = -mk + kappa;
         return result;
-    }
+}
     
     
-    // The "counted" version of grisu3 (see above) only generates requested_digits
-    // number of digits. This version does not generate the shortest representation,
-    // and with enough requested digits 0.1 will at some point print as 0.9999999...
-    // Grisu3 is too imprecise for real halfway cases (1.5 will not work) and
-    // therefore the rounding strategy for halfway cases is irrelevant.
-    static bool Grisu3Counted(double v,
+// The "counted" version of grisu3 (see above) only generates requested_digits
+// number of digits. This version does not generate the shortest representation,
+// and with enough requested digits 0.1 will at some point print as 0.9999999...
+// Grisu3 is too imprecise for real halfway cases (1.5 will not work) and
+// therefore the rounding strategy for halfway cases is irrelevant.
+static bool Grisu3Counted(double v,
                               int requested_digits,
                               BufferReference<char> buffer,
                               int* length,
@@ -714,10 +632,10 @@ namespace double_conversion {
                                       buffer, length, &kappa);
         *decimal_exponent = -mk + kappa;
         return result;
-    }
+}
     
     
-    bool FastDtoa(double v,
+bool FastDtoa(double v,
                   FastDtoaMode mode,
                   int requested_digits,
                   BufferReference<char> buffer,
@@ -730,7 +648,8 @@ namespace double_conversion {
         int decimal_exponent = 0;
         switch (mode) {
             case FAST_DTOA_SHORTEST:
-                result = Grisu3(v, buffer, length, &decimal_exponent);
+    case FAST_DTOA_SHORTEST_SINGLE:
+      result = Grisu3(v, mode, buffer, length, &decimal_exponent);
                 break;
             case FAST_DTOA_PRECISION:
                 result = Grisu3Counted(v, requested_digits,
@@ -744,8 +663,7 @@ namespace double_conversion {
             buffer[*length] = '\0';
         }
         return result;
-    }
+}
     
 }  // namespace double_conversion
-
 } // namespace WTF

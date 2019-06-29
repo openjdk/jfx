@@ -46,11 +46,11 @@
 #include "HTMLOptGroupElement.h"
 #include "HTMLSelectElement.h"
 #include "HitTestResult.h"
-#include "LayoutState.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderLayer.h"
+#include "RenderLayoutState.h"
 #include "RenderScrollbar.h"
 #include "RenderText.h"
 #include "RenderTheme.h"
@@ -130,7 +130,7 @@ void RenderListBox::updateFromElement()
     if (m_optionsChanged) {
         float width = 0;
         auto& normalFont = style().fontCascade();
-        std::optional<FontCascade> boldFont;
+        Optional<FontCascade> boldFont;
         for (auto* element : selectElement().listItems()) {
             String text;
             WTF::Function<const FontCascade&()> selectFont = [&normalFont] () -> const FontCascade& {
@@ -302,7 +302,7 @@ LayoutRect RenderListBox::itemBoundingBoxRect(const LayoutPoint& additionalOffse
 void RenderListBox::paintItem(PaintInfo& paintInfo, const LayoutPoint& paintOffset, const PaintFunction& paintFunction)
 {
     int listItemsSize = numItems();
-    int firstVisibleItem = m_indexOfFirstVisibleItemInsidePaddingTopArea.value_or(m_indexOffset);
+    int firstVisibleItem = m_indexOfFirstVisibleItemInsidePaddingTopArea.valueOr(m_indexOffset);
     int endIndex = firstVisibleItem + numVisibleItems(ConsiderPadding::Yes);
     for (int i = firstVisibleItem; i < listItemsSize && i < endIndex; ++i)
         paintFunction(paintInfo, paintOffset, i);
@@ -428,10 +428,10 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     Color textColor = itemStyle.visitedDependentColorWithColorFilter(CSSPropertyColor);
     if (isOptionElement && downcast<HTMLOptionElement>(*listItemElement).selected()) {
         if (frame().selection().isFocusedAndActive() && document().focusedElement() == &selectElement())
-            textColor = theme().activeListBoxSelectionForegroundColor(document().styleColorOptions());
+            textColor = theme().activeListBoxSelectionForegroundColor(styleColorOptions());
         // Honor the foreground color for disabled items
         else if (!listItemElement->isDisabledFormControl() && !selectElement().isDisabledFormControl())
-            textColor = theme().inactiveListBoxSelectionForegroundColor(document().styleColorOptions());
+            textColor = theme().inactiveListBoxSelectionForegroundColor(styleColorOptions());
     }
 
     paintInfo.context().setFillColor(textColor);
@@ -461,9 +461,9 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
     Color backColor;
     if (is<HTMLOptionElement>(*listItemElement) && downcast<HTMLOptionElement>(*listItemElement).selected()) {
         if (frame().selection().isFocusedAndActive() && document().focusedElement() == &selectElement())
-            backColor = theme().activeListBoxSelectionBackgroundColor(document().styleColorOptions());
+            backColor = theme().activeListBoxSelectionBackgroundColor(styleColorOptions());
         else
-            backColor = theme().inactiveListBoxSelectionBackgroundColor(document().styleColorOptions());
+            backColor = theme().inactiveListBoxSelectionBackgroundColor(styleColorOptions());
     } else
         backColor = itemStyle.visitedDependentColorWithColorFilter(CSSPropertyBackgroundColor);
 
@@ -621,7 +621,7 @@ bool RenderListBox::scrollToRevealElementAtListIndex(int index)
 
 bool RenderListBox::listIndexIsVisible(int index)
 {
-    int firstIndex = m_indexOfFirstVisibleItemInsidePaddingTopArea.value_or(m_indexOffset);
+    int firstIndex = m_indexOfFirstVisibleItemInsidePaddingTopArea.valueOr(m_indexOffset);
     int endIndex = m_indexOfFirstVisibleItemInsidePaddingBottomArea
         ? m_indexOfFirstVisibleItemInsidePaddingBottomArea.value() + numberOfVisibleItemsInPaddingBottom()
         : m_indexOffset + numVisibleItems();
@@ -693,8 +693,8 @@ int RenderListBox::numberOfVisibleItemsInPaddingBottom() const
 
 void RenderListBox::computeFirstIndexesVisibleInPaddingTopBottomAreas()
 {
-    m_indexOfFirstVisibleItemInsidePaddingTopArea = std::nullopt;
-    m_indexOfFirstVisibleItemInsidePaddingBottomArea = std::nullopt;
+    m_indexOfFirstVisibleItemInsidePaddingTopArea = WTF::nullopt;
+    m_indexOfFirstVisibleItemInsidePaddingBottomArea = WTF::nullopt;
 
     int maximumNumberOfItemsThatFitInPaddingTopArea = paddingTop() / itemHeight();
     if (maximumNumberOfItemsThatFitInPaddingTopArea) {
@@ -954,11 +954,7 @@ void RenderListBox::setHasVerticalScrollbar(bool hasScrollbar)
     if (m_vBar)
         m_vBar->styleChanged();
 
-    // Force an update since we know the scrollbars have changed things.
-#if ENABLE(DASHBOARD_SUPPORT)
-    if (document().hasAnnotatedRegions())
-        document().setAnnotatedRegionsDirty(true);
-#endif
+    document().invalidateScrollbarDependentRegions();
 }
 
 bool RenderListBox::scrolledToTop() const

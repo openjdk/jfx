@@ -252,12 +252,12 @@ StackVisitor::Frame::CodeType StackVisitor::Frame::codeType() const
     return CodeType::Global;
 }
 
-RegisterAtOffsetList* StackVisitor::Frame::calleeSaveRegisters()
+const RegisterAtOffsetList* StackVisitor::Frame::calleeSaveRegisters()
 {
     if (isInlinedFrame())
         return nullptr;
 
-#if ENABLE(JIT) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
+#if !ENABLE(C_LOOP) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
 
 #if ENABLE(WEBASSEMBLY)
     if (isWasmFrame()) {
@@ -273,7 +273,7 @@ RegisterAtOffsetList* StackVisitor::Frame::calleeSaveRegisters()
     if (CodeBlock* codeBlock = this->codeBlock())
         return codeBlock->calleeSaveRegisters();
 
-#endif // ENABLE(JIT) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
+#endif // !ENABLE(C_LOOP) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
 
     return nullptr;
 }
@@ -317,7 +317,7 @@ String StackVisitor::Frame::sourceURL() const
     case CodeType::Module:
     case CodeType::Function:
     case CodeType::Global: {
-        String sourceURL = codeBlock()->ownerScriptExecutable()->sourceURL();
+        String sourceURL = codeBlock()->ownerExecutable()->sourceURL();
         if (!sourceURL.isEmpty())
             traceLine = sourceURL.impl();
         break;
@@ -358,7 +358,7 @@ String StackVisitor::Frame::toString() const
 intptr_t StackVisitor::Frame::sourceID()
 {
     if (CodeBlock* codeBlock = this->codeBlock())
-        return codeBlock->ownerScriptExecutable()->sourceID();
+        return codeBlock->ownerExecutable()->sourceID();
     return noSourceID;
 }
 
@@ -403,11 +403,11 @@ void StackVisitor::Frame::computeLineAndColumn(unsigned& line, unsigned& column)
     unsigned divotColumn = 0;
     retrieveExpressionInfo(divot, unusedStartOffset, unusedEndOffset, divotLine, divotColumn);
 
-    line = divotLine + codeBlock->ownerScriptExecutable()->firstLine();
+    line = divotLine + codeBlock->ownerExecutable()->firstLine();
     column = divotColumn + (divotLine ? 1 : codeBlock->firstLineColumnOffset());
 
-    if (codeBlock->ownerScriptExecutable()->hasOverrideLineNumber())
-        line = codeBlock->ownerScriptExecutable()->overrideLineNumber();
+    if (Optional<int> overrideLineNumber = codeBlock->ownerExecutable()->overrideLineNumber(*codeBlock->vm()))
+        line = overrideLineNumber.value();
 }
 
 void StackVisitor::Frame::retrieveExpressionInfo(int& divot, int& startOffset, int& endOffset, unsigned& line, unsigned& column) const
@@ -448,7 +448,7 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, WTF::Function<
 
         CallFrame* callFrame = m_callFrame;
         CallFrame* callerFrame = this->callerFrame();
-        void* returnPC = callFrame->hasReturnPC() ? callFrame->returnPC().value() : nullptr;
+        const void* returnPC = callFrame->hasReturnPC() ? callFrame->returnPC().value() : nullptr;
 
         out.print(indent, "name: ", functionName(), "\n");
         out.print(indent, "sourceURL: ", sourceURL(), "\n");

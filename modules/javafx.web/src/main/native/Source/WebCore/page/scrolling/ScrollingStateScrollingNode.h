@@ -42,6 +42,7 @@ public:
         ScrollableAreaSize = NumStateNodeBits,
         TotalContentsSize,
         ReachableContentsSize,
+        ParentRelativeScrollableRect,
         ScrollPosition,
         ScrollOrigin,
         ScrollableAreaParams,
@@ -55,6 +56,7 @@ public:
         CurrentVerticalSnapOffsetIndex,
 #endif
         ExpectsWheelEventTestTrigger,
+        ScrollContainerLayer,
         ScrolledContentsLayer,
         NumScrollingStateNodeBits // This must remain at the last position.
     };
@@ -67,6 +69,9 @@ public:
 
     const FloatSize& reachableContentsSize() const { return m_reachableContentsSize; }
     WEBCORE_EXPORT void setReachableContentsSize(const FloatSize&);
+
+    const LayoutRect& parentRelativeScrollableRect() const { return m_parentRelativeScrollableRect; }
+    WEBCORE_EXPORT void setParentRelativeScrollableRect(const LayoutRect&);
 
     const FloatPoint& scrollPosition() const { return m_scrollPosition; }
     WEBCORE_EXPORT void setScrollPosition(const FloatPoint&);
@@ -104,6 +109,9 @@ public:
     bool expectsWheelEventTestTrigger() const { return m_expectsWheelEventTestTrigger; }
     WEBCORE_EXPORT void setExpectsWheelEventTestTrigger(bool);
 
+    const LayerRepresentation& scrollContainerLayer() const { return m_scrollContainerLayer; }
+    WEBCORE_EXPORT void setScrollContainerLayer(const LayerRepresentation&);
+
     // This is a layer with the contents that move.
     const LayerRepresentation& scrolledContentsLayer() const { return m_scrolledContentsLayer; }
     WEBCORE_EXPORT void setScrolledContentsLayer(const LayerRepresentation&);
@@ -112,12 +120,15 @@ protected:
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 
+    void setAllPropertiesChanged() override;
+
     void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
 private:
     FloatSize m_scrollableAreaSize;
     FloatSize m_totalContentsSize;
     FloatSize m_reachableContentsSize;
+    LayoutRect m_parentRelativeScrollableRect;
     FloatPoint m_scrollPosition;
     FloatPoint m_requestedScrollPosition;
     IntPoint m_scrollOrigin;
@@ -127,6 +138,7 @@ private:
     unsigned m_currentVerticalSnapPointIndex { 0 };
 #endif
     ScrollableAreaParameters m_scrollableAreaParameters;
+    LayerRepresentation m_scrollContainerLayer;
     LayerRepresentation m_scrolledContentsLayer;
     bool m_requestedScrollPositionRepresentsProgrammaticScroll { false };
     bool m_expectsWheelEventTestTrigger { false };

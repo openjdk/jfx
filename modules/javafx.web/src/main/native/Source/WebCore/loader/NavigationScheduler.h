@@ -41,7 +41,8 @@ class FormSubmission;
 class Frame;
 class ScheduledNavigation;
 class SecurityOrigin;
-class URL;
+
+enum class NewLoadInProgress : bool { No, Yes };
 
 class NavigationScheduler {
 public:
@@ -52,7 +53,7 @@ public:
     bool locationChangePending();
 
     void scheduleRedirect(Document& initiatingDocument, double delay, const URL&);
-    void scheduleLocationChange(Document& initiatingDocument, SecurityOrigin&, const URL&, const String& referrer, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
+    void scheduleLocationChange(Document& initiatingDocument, SecurityOrigin&, const URL&, const String& referrer, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes, CompletionHandler<void()>&& = [] { });
     void scheduleFormSubmission(Ref<FormSubmission>&&);
     void scheduleRefresh(Document& initiatingDocument);
     void scheduleHistoryNavigation(int steps);
@@ -60,7 +61,7 @@ public:
 
     void startTimer();
 
-    void cancel(bool newLoadInProgress = false);
+    void cancel(NewLoadInProgress = NewLoadInProgress::No);
     void clear();
 
 private:

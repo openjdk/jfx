@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,10 +43,10 @@ private:
     using Base = GenericArguments<ScopedArguments>;
 
 public:
-    template<typename CellType>
+    template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        RELEASE_ASSERT(!CellType::needsDestruction);
+        static_assert(!CellType::needsDestruction, "");
         return &vm.jsValueGigacageCellSpace;
     }
 
@@ -78,8 +78,7 @@ public:
         if (UNLIKELY(storageHeader().overrodeThings)) {
             auto value = get(exec, vm.propertyNames->length);
             RETURN_IF_EXCEPTION(scope, 0);
-            scope.release();
-            return value.toUInt32(exec);
+            RELEASE_AND_RETURN(scope, value.toUInt32(exec));
         }
         return internalLength();
     }
@@ -181,7 +180,7 @@ private:
 
     WriteBarrier<Unknown>* overflowStorage() const
     {
-        return m_storage.get().unpoisoned();
+        return m_storage.get();
     }
 
     static StorageHeader& storageHeader(WriteBarrier<Unknown>* storage)
@@ -195,14 +194,11 @@ private:
         return storageHeader(overflowStorage());
     }
 
-    template<typename T>
-    using PoisonedBarrier = PoisonedWriteBarrier<ScopedArgumentsPoison, T>;
+    WriteBarrier<JSFunction> m_callee;
+    WriteBarrier<ScopedArgumentsTable> m_table;
+    WriteBarrier<JSLexicalEnvironment> m_scope;
 
-    PoisonedBarrier<JSFunction> m_callee;
-    PoisonedBarrier<ScopedArgumentsTable> m_table;
-    PoisonedBarrier<JSLexicalEnvironment> m_scope;
-
-    AuxiliaryBarrier<Poisoned<ScopedArgumentsPoison, WriteBarrier<Unknown>*>> m_storage;
+    AuxiliaryBarrier<WriteBarrier<Unknown>*> m_storage;
 };
 
 } // namespace JSC

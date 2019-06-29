@@ -9,11 +9,6 @@
             "description": "Unique DOM node identifier."
         },
         {
-            "id": "BackendNodeId",
-            "type": "integer",
-            "description": "Unique DOM node identifier used to reference a node that may not have been pushed to the front-end."
-        },
-        {
             "id": "EventListenerId",
             "type": "integer",
             "description": "Unique event listener identifier."
@@ -70,7 +65,6 @@
                 { "name": "shadowRoots", "type": "array", "optional": true, "items": { "$ref": "Node" }, "description": "Shadow root list for given element host." },
                 { "name": "templateContent", "$ref": "Node", "optional": true, "description": "Content document fragment for template elements" },
                 { "name": "pseudoElements", "type": "array", "items": { "$ref": "Node" }, "optional": true, "description": "Pseudo elements associated with this node." },
-                { "name": "role", "type": "string", "optional": true, "description": "Computed value for first recognized role token, default role per element, or overridden role." },
                 { "name": "contentSecurityPolicyHash", "type": "string", "optional": true, "description": "Computed SHA-256 Content Security Policy hash source for given element." }
             ]
         },
@@ -84,10 +78,9 @@
                 { "name": "useCapture", "type": "boolean", "description": "<code>EventListener</code>'s useCapture." },
                 { "name": "isAttribute", "type": "boolean", "description": "<code>EventListener</code>'s isAttribute." },
                 { "name": "nodeId", "$ref": "NodeId", "description": "Target <code>DOMNode</code> id." },
-                { "name": "handlerBody", "type": "string", "description": "Event handler function body." },
                 { "name": "location", "$ref": "Debugger.Location", "optional": true, "description": "Handler code location." },
-                { "name": "sourceName", "type": "string", "optional": true, "description": "Source script URL." },
-                { "name": "handler", "$ref": "Runtime.RemoteObject", "optional": true, "description": "Event handler function value." },
+                { "name": "handlerName", "type": "string", "optional": true, "description": "Event handler function name." },
+                { "name": "handlerObject", "$ref": "Runtime.RemoteObject", "optional": true, "description": "Event handler function value." },
                 { "name": "passive", "type": "boolean", "optional": true, "description": "<code>EventListener</code>'s passive." },
                 { "name": "once", "type": "boolean", "optional": true, "description": "<code>EventListener</code>'s once." },
                 { "name": "disabled", "type": "boolean", "optional": true },
@@ -253,6 +246,13 @@
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId", "description": "Id of the element to remove attribute from." },
                 { "name": "name", "type": "string", "description": "Name of the attribute to remove." }
+            ]
+        },
+        {
+            "name": "getSupportedEventNames",
+            "description": "Gets the list of builtin DOM event names.",
+            "returns": [
+                { "name": "eventNames", "type": "array", "items": { "type": "string" } }
             ]
         },
         {
@@ -446,23 +446,6 @@
             ]
         },
         {
-            "name": "pushNodeByBackendIdToFrontend",
-            "description": "Requests that the node is sent to the caller given its backend node id.",
-            "parameters": [
-                { "name": "backendNodeId", "$ref": "BackendNodeId", "description": "The backend node id of the node." }
-            ],
-            "returns": [
-                { "name": "nodeId", "$ref": "NodeId", "description": "The pushed node's id." }
-            ]
-        },
-        {
-            "name": "releaseBackendNodeIds",
-            "description": "Requests that group of <code>BackendNodeIds</code> is released.",
-            "parameters": [
-                { "name": "nodeGroup", "type": "string", "description": "The backend node ids group name." }
-            ]
-        },
-        {
             "name": "resolveNode",
             "description": "Resolves JavaScript node object for given node id.",
             "parameters": [
@@ -651,6 +634,25 @@
             "description": "Called after a request has been made to remove an event listener from a node.",
             "parameters": [
                 { "name": "nodeId", "$ref": "NodeId" }
+            ]
+        },
+        {
+            "name": "didFireEvent",
+            "description": "Called when an event is fired on a node.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId" },
+                { "name": "eventName", "type": "string" },
+                { "name": "timestamp", "$ref": "Network.Timestamp", "description": "Time when the event was fired" },
+                { "name": "data", "type": "object", "optional": true, "description": "Holds ancillary information about the event or its target." }
+            ]
+        },
+        {
+            "name": "videoLowPowerChanged",
+            "description": "Called when a video element enters/exits low power mode.",
+            "parameters": [
+                { "name": "nodeId", "$ref": "NodeId" },
+                { "name": "timestamp", "$ref": "Network.Timestamp", "description": "Time when the video element entered/exited low power mode" },
+                { "name": "isLowPower", "type": "boolean" }
             ]
         }
     ]

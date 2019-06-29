@@ -174,8 +174,17 @@ private:
     RefPtr<Plan> m_plan;
 };
 
-Worklist::Worklist(CString worklistName)
-    : m_threadName(toCString(worklistName, " Worker Thread"))
+static CString createWorklistName(CString&& tierName)
+{
+#if OS(LINUX)
+    return toCString(WTFMove(tierName), "Worker");
+#else
+    return toCString(WTFMove(tierName), " Worklist Worker Thread");
+#endif
+}
+
+Worklist::Worklist(CString&& tierName)
+    : m_threadName(createWorklistName(WTFMove(tierName)))
     , m_lock(Box<Lock>::create())
     , m_planEnqueued(AutomaticThreadCondition::create())
     , m_numberOfActiveThreads(0)
@@ -211,9 +220,9 @@ void Worklist::createNewThread(const AbstractLocker& locker, int relativePriorit
     m_threads.append(WTFMove(data));
 }
 
-Ref<Worklist> Worklist::create(CString worklistName, unsigned numberOfThreads, int relativePriority)
+Ref<Worklist> Worklist::create(CString&& tierName, unsigned numberOfThreads, int relativePriority)
 {
-    Ref<Worklist> result = adoptRef(*new Worklist(worklistName));
+    Ref<Worklist> result = adoptRef(*new Worklist(WTFMove(tierName)));
     result->finishCreation(numberOfThreads, relativePriority);
     return result;
 }
@@ -561,7 +570,9 @@ Worklist& ensureGlobalDFGWorklist()
 {
     static std::once_flag initializeGlobalWorklistOnceFlag;
     std::call_once(initializeGlobalWorklistOnceFlag, [] {
-        theGlobalDFGWorklist = &Worklist::create("DFG Worklist", getNumberOfDFGCompilerThreads(), Options::priorityDeltaOfDFGCompilerThreads()).leakRef();
+        Worklist* worklist = &Worklist::create("DFG", getNumberOfDFGCompilerThreads(), Options::priorityDeltaOfDFGCompilerThreads()).leakRef();
+        WTF::storeStoreFence();
+        theGlobalDFGWorklist = worklist;
     });
     return *theGlobalDFGWorklist;
 }
@@ -577,7 +588,9 @@ Worklist& ensureGlobalFTLWorklist()
 {
     static std::once_flag initializeGlobalWorklistOnceFlag;
     std::call_once(initializeGlobalWorklistOnceFlag, [] {
-        theGlobalFTLWorklist = &Worklist::create("FTL Worklist", getNumberOfFTLCompilerThreads(), Options::priorityDeltaOfFTLCompilerThreads()).leakRef();
+        Worklist* worklist = &Worklist::create("FTL", getNumberOfFTLCompilerThreads(), Options::priorityDeltaOfFTLCompilerThreads()).leakRef();
+        WTF::storeStoreFence();
+        theGlobalFTLWorklist = worklist;
     });
     return *theGlobalFTLWorklist;
 }
@@ -649,10 +662,6 @@ void completeAllPlansForVM(VM& vm)
 #else // ENABLE(DFG_JIT)
 
 void completeAllPlansForVM(VM&)
-{
-}
-
-void markCodeBlocks(VM&, SlotVisitor&)
 {
 }
 

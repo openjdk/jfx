@@ -37,10 +37,9 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
 
-
 namespace WebCore {
-using namespace WTF;
-using namespace Unicode;
+
+using namespace WTF::Unicode;
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(RenderListMarker);
 
@@ -1122,7 +1121,7 @@ String listMarkerText(ListStyleType type, int value)
 
 RenderListMarker::RenderListMarker(RenderListItem& listItem, RenderStyle&& style)
     : RenderBox(listItem.document(), WTFMove(style), 0)
-    , m_listItem(listItem)
+    , m_listItem(makeWeakPtr(listItem))
 {
     // init RenderObject attributes
     setInline(true);   // our object is Inline
@@ -1145,8 +1144,14 @@ void RenderListMarker::styleDidChange(StyleDifference diff, const RenderStyle* o
 {
     RenderBox::styleDidChange(diff, oldStyle);
 
-    if (oldStyle && (style().listStylePosition() != oldStyle->listStylePosition() || style().listStyleType() != oldStyle->listStyleType()))
+    if (oldStyle) {
+        if (style().listStylePosition() != oldStyle->listStylePosition() || style().listStyleType() != oldStyle->listStyleType())
         setNeedsLayoutAndPrefWidthsRecalc();
+        if (oldStyle->isDisplayInlineType() && !style().isDisplayInlineType()) {
+            delete m_inlineBoxWrapper;
+            m_inlineBoxWrapper = nullptr;
+        }
+    }
 
     if (m_image != style().listStyleImage()) {
         if (m_image)
@@ -1177,8 +1182,8 @@ LayoutRect RenderListMarker::localSelectionRect()
     const RootInlineBox& rootBox = m_inlineBoxWrapper->root();
     LayoutUnit newLogicalTop = rootBox.blockFlow().style().isFlippedBlocksWritingMode() ? m_inlineBoxWrapper->logicalBottom() - rootBox.selectionBottom() : rootBox.selectionTop() - m_inlineBoxWrapper->logicalTop();
     if (rootBox.blockFlow().style().isHorizontalWritingMode())
-        return LayoutRect(0, newLogicalTop, width(), rootBox.selectionHeight());
-    return LayoutRect(newLogicalTop, 0, rootBox.selectionHeight(), height());
+        return LayoutRect(0_lu, newLogicalTop, width(), rootBox.selectionHeight());
+    return LayoutRect(newLogicalTop, 0_lu, rootBox.selectionHeight(), height());
 }
 
 void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -1210,7 +1215,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
         if (selectionState() != SelectionNone) {
             LayoutRect selRect = localSelectionRect();
             selRect.moveBy(boxOrigin);
-            context.fillRect(snappedIntRect(selRect), m_listItem.selectionBackgroundColor());
+            context.fillRect(snappedIntRect(selRect), m_listItem->selectionBackgroundColor());
         }
         return;
     }
@@ -1218,7 +1223,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     if (selectionState() != SelectionNone) {
         LayoutRect selRect = localSelectionRect();
         selRect.moveBy(boxOrigin);
-        context.fillRect(snappedIntRect(selRect), m_listItem.selectionBackgroundColor());
+        context.fillRect(snappedIntRect(selRect), m_listItem->selectionBackgroundColor());
     }
 
     const Color color(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
@@ -1343,7 +1348,7 @@ void RenderListMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffse
     if (type == ListStyleType::Asterisks || type == ListStyleType::Footnotes)
         context.drawText(font, textRun, textOrigin);
     else {
-        const UChar suffix = listMarkerSuffix(type, m_listItem.value());
+        const UChar suffix = listMarkerSuffix(type, m_listItem->value());
 
         // Text is not arbitrary. We can judge whether it's RTL from the first character,
         // and we only need to handle the direction U_RIGHT_TO_LEFT for now.
@@ -1382,12 +1387,12 @@ void RenderListMarker::layout()
     ASSERT(needsLayout());
 
     LayoutUnit blockOffset;
-    for (auto* ancestor = parentBox(); ancestor && ancestor != &m_listItem; ancestor = ancestor->parentBox())
+    for (auto* ancestor = parentBox(); ancestor && ancestor != m_listItem.get(); ancestor = ancestor->parentBox())
         blockOffset += ancestor->logicalTop();
     if (style().isLeftToRightDirection())
-        m_lineOffsetForListItem = m_listItem.logicalLeftOffsetForLine(blockOffset, DoNotIndentText, LayoutUnit());
+        m_lineOffsetForListItem = m_listItem->logicalLeftOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
     else
-        m_lineOffsetForListItem = m_listItem.logicalRightOffsetForLine(blockOffset, DoNotIndentText, LayoutUnit());
+        m_lineOffsetForListItem = m_listItem->logicalRightOffsetForLine(blockOffset, DoNotIndentText, 0_lu);
 
     if (isImage()) {
         updateMarginsAndContent();
@@ -1441,7 +1446,7 @@ void RenderListMarker::updateContent()
     if (isImage()) {
         // FIXME: This is a somewhat arbitrary width.  Generated images for markers really won't become particularly useful
         // until we support the CSS3 marker pseudoclass to allow control over the width and height of the marker box.
-        LayoutUnit bulletWidth = style().fontMetrics().ascent() / LayoutUnit(2);
+        LayoutUnit bulletWidth = style().fontMetrics().ascent() / 2_lu;
         LayoutSize defaultBulletSize(bulletWidth, bulletWidth);
         LayoutSize imageSize = calculateImageIntrinsicDimensions(m_image.get(), defaultBulletSize, DoNotScaleByEffectiveZoom);
         m_image->setContainerContextForRenderer(*this, imageSize, style().effectiveZoom());
@@ -1534,7 +1539,7 @@ void RenderListMarker::updateContent()
     case ListStyleType::UpperNorwegian:
     case ListStyleType::UpperRoman:
     case ListStyleType::Urdu:
-        m_text = listMarkerText(type, m_listItem.value());
+        m_text = listMarkerText(type, m_listItem->value());
         break;
     }
 }
@@ -1554,7 +1559,7 @@ void RenderListMarker::computePreferredLogicalWidths()
 
     const FontCascade& font = style().fontCascade();
 
-    LayoutUnit logicalWidth = 0;
+    LayoutUnit logicalWidth;
     ListStyleType type = style().listStyleType();
     switch (type) {
     case ListStyleType::None:
@@ -1650,7 +1655,7 @@ void RenderListMarker::computePreferredLogicalWidths()
         else {
             TextRun run = RenderBlock::constructTextRun(m_text, style());
             LayoutUnit itemWidth = font.width(run);
-            UChar suffixSpace[2] = { listMarkerSuffix(type, m_listItem.value()), ' ' };
+            UChar suffixSpace[2] = { listMarkerSuffix(type, m_listItem->value()), ' ' };
             LayoutUnit suffixSpaceWidth = font.width(RenderBlock::constructTextRun(suffixSpace, 2, style()));
             logicalWidth = itemWidth + suffixSpaceWidth;
         }
@@ -1669,8 +1674,8 @@ void RenderListMarker::updateMargins()
 {
     const FontMetrics& fontMetrics = style().fontMetrics();
 
-    LayoutUnit marginStart = 0;
-    LayoutUnit marginEnd = 0;
+    LayoutUnit marginStart;
+    LayoutUnit marginEnd;
 
     if (isInside()) {
         if (isImage())
@@ -1700,7 +1705,7 @@ void RenderListMarker::updateMargins()
                 case ListStyleType::None:
                     break;
                 default:
-                    marginStart = m_text.isEmpty() ? LayoutUnit() : -minPreferredLogicalWidth() - offset / 2;
+                    marginStart = m_text.isEmpty() ? 0_lu : -minPreferredLogicalWidth() - offset / 2;
                 }
             }
             marginEnd = -marginStart - minPreferredLogicalWidth();
@@ -1733,24 +1738,24 @@ void RenderListMarker::updateMargins()
 LayoutUnit RenderListMarker::lineHeight(bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     if (!isImage())
-        return m_listItem.lineHeight(firstLine, direction, PositionOfInteriorLineBoxes);
+        return m_listItem->lineHeight(firstLine, direction, PositionOfInteriorLineBoxes);
     return RenderBox::lineHeight(firstLine, direction, linePositionMode);
 }
 
 int RenderListMarker::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     if (!isImage())
-        return m_listItem.baselinePosition(baselineType, firstLine, direction, PositionOfInteriorLineBoxes);
+        return m_listItem->baselinePosition(baselineType, firstLine, direction, PositionOfInteriorLineBoxes);
     return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
 }
 
 String RenderListMarker::suffix() const
 {
     ListStyleType type = style().listStyleType();
-    const UChar suffix = listMarkerSuffix(type, m_listItem.value());
+    const UChar suffix = listMarkerSuffix(type, m_listItem->value());
 
     if (suffix == ' ')
-        return String(" ");
+        return " "_str;
 
     // If the suffix is not ' ', an extra space is needed
     UChar data[2];
@@ -1767,7 +1772,7 @@ String RenderListMarker::suffix() const
 
 bool RenderListMarker::isInside() const
 {
-    return m_listItem.notInList() || style().listStylePosition() == ListStylePosition::Inside;
+    return m_listItem->notInList() || style().listStylePosition() == ListStylePosition::Inside;
 }
 
 FloatRect RenderListMarker::getRelativeMarkerRect()
@@ -1877,7 +1882,7 @@ FloatRect RenderListMarker::getRelativeMarkerRect()
         const FontCascade& font = style().fontCascade();
         TextRun run = RenderBlock::constructTextRun(m_text, style());
         float itemWidth = font.width(run);
-        UChar suffixSpace[2] = { listMarkerSuffix(type, m_listItem.value()), ' ' };
+        UChar suffixSpace[2] = { listMarkerSuffix(type, m_listItem->value()), ' ' };
         float suffixSpaceWidth = font.width(RenderBlock::constructTextRun(suffixSpace, 2, style()));
         relativeRect = FloatRect(0, 0, itemWidth + suffixSpaceWidth, font.fontMetrics().height());
     }
@@ -1907,7 +1912,7 @@ LayoutRect RenderListMarker::selectionRectForRepaint(const RenderLayerModelObjec
         return LayoutRect();
 
     RootInlineBox& rootBox = inlineBoxWrapper()->root();
-    LayoutRect rect(0, rootBox.selectionTop() - y(), width(), rootBox.selectionHeight());
+    LayoutRect rect(0_lu, rootBox.selectionTop() - y(), width(), rootBox.selectionHeight());
 
     if (clipToVisibleContent)
         return computeRectForRepaint(rect, repaintContainer);

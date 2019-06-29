@@ -29,6 +29,8 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePool.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "DOMTokenList.h"
 #include "DocumentFragment.h"
 #include "ElementAncestorIterator.h"
@@ -74,7 +76,6 @@ namespace WebCore {
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLElement);
 
 using namespace HTMLNames;
-using namespace WTF;
 
 Ref<HTMLElement> HTMLElement::create(const QualifiedName& tagName, Document& document)
 {
@@ -187,7 +188,7 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWordWrap, CSSValueBreakWord);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitNbspMode, CSSValueSpace);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyLineBreak, CSSValueAfterWhiteSpace);
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitTextSizeAdjust, CSSValueNone);
 #endif
             break;
@@ -447,6 +448,14 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomicString& 
         else if (auto optionalTabIndex = parseHTMLInteger(value))
             setTabIndexExplicitly(optionalTabIndex.value());
         return;
+    }
+
+    if (name == inputmodeAttr) {
+        auto& document = this->document();
+        if (this == document.focusedElement()) {
+            if (auto* page = document.page())
+                page->chrome().client().focusedElementDidChangeInputMode(*this, canonicalInputMode());
+        }
     }
 
     auto& eventName = eventNameForEventHandlerAttribute(name);
@@ -1085,6 +1094,21 @@ void HTMLElement::setAutocorrect(bool autocorrect)
 }
 
 #endif
+
+InputMode HTMLElement::canonicalInputMode() const
+{
+    return inputModeForAttributeValue(attributeWithoutSynchronization(inputmodeAttr));
+}
+
+const AtomicString& HTMLElement::inputMode() const
+{
+    return stringForInputMode(canonicalInputMode());
+}
+
+void HTMLElement::setInputMode(const AtomicString& value)
+{
+    setAttributeWithoutSynchronization(inputmodeAttr, value);
+}
 
 } // namespace WebCore
 

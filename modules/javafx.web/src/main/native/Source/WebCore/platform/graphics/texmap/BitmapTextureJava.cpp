@@ -33,22 +33,11 @@
 
 namespace WebCore {
 
-void BitmapTextureJava::updateContents(const void* data, const IntRect& targetRect, const IntPoint& sourceOffset, int bytesPerLine)
+void BitmapTextureJava::updateContents(const void*, const IntRect&, const IntPoint&, int)
 {
-#if PLATFORM(CAIRO)
-    RefPtr<cairo_surface_t> surface = adoptRef(cairo_image_surface_create_for_data(static_cast<unsigned char*>(data()),
-        CAIRO_FORMAT_ARGB32, targetRect.width(), targetRect.height(), bytesPerLine));
-    m_image->context()->platformContext()->drawSurfaceToContext(surface.get(), targetRect,
-        IntRect(sourceOffset, targetRect.size()), m_image->context());
-#else
-    UNUSED_PARAM(data);
-    UNUSED_PARAM(targetRect);
-    UNUSED_PARAM(sourceOffset);
-    UNUSED_PARAM(bytesPerLine);
-#endif
 }
 
-void BitmapTextureJava::updateContents(TextureMapper& mapper, GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& sourceOffset, float)
+void BitmapTextureJava::updateContents(TextureMapper& mapper, GraphicsLayer* sourceLayer, const IntRect& targetRect, const IntPoint& sourceOffset, float /*scale*/)
 {
     GraphicsContext& context = m_image->context();
     // Share RenderThemeJava context

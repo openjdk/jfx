@@ -375,7 +375,7 @@ TextDirection directionOfEnclosingBlock(const Position& position)
 // on a Position before using it to create a DOM Range, or an exception will be thrown.
 int lastOffsetForEditing(const Node& node)
 {
-    if (node.offsetInCharacters())
+    if (node.isCharacterDataNode())
         return node.maxCharacterOffset();
 
     if (node.hasChildNodes())
@@ -1117,9 +1117,9 @@ VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node& node, int in
     if (index <= 0)
         return { firstPositionInOrBeforeNode(&node), DOWNSTREAM };
 
-    RefPtr<Range> range = Range::create(node.document());
+    auto range = Range::create(node.document());
     range->selectNodeContents(node);
-    CharacterIterator it(*range);
+    CharacterIterator it(range.get());
     it.advance(index - 1);
     return { it.atEnd() ? range->endPosition() : it.range()->endPosition(), UPSTREAM };
 }
@@ -1165,7 +1165,7 @@ bool areIdenticalElements(const Node& first, const Node& second)
         return false;
     auto& firstElement = downcast<Element>(first);
     auto& secondElement = downcast<Element>(second);
-    return firstElement.hasTagName(secondElement.tagQName()) && firstElement.hasEquivalentAttributes(&secondElement);
+    return firstElement.hasTagName(secondElement.tagQName()) && firstElement.hasEquivalentAttributes(secondElement);
 }
 
 bool isNonTableCellHTMLBlockElement(const Node* node)

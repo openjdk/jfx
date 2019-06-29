@@ -30,7 +30,7 @@
 #include "PlatformStrategies.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
-#include "URLParser.h"
+#include <wtf/URLParser.h>
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/text/StringHash.h>
 
@@ -47,7 +47,7 @@ bool Pasteboard::isSafeTypeForDOMToReadAndWrite(const String& type)
 
 bool Pasteboard::canExposeURLToDOMWhenPasteboardContainsFiles(const String& urlString)
 {
-    auto url = URLParser { urlString }.result();
+    URL url({ }, urlString);
     return url.protocolIsInHTTPFamily() || url.protocolIsBlob() || url.protocolIsData();
 }
 
@@ -84,5 +84,18 @@ PasteboardCustomData PasteboardCustomData::fromSharedBuffer(const SharedBuffer& 
 
     return result;
 }
+
+#if !PLATFORM(COCOA)
+
+Vector<String> Pasteboard::readAllStrings(const String& type)
+{
+    auto result = readString(type);
+    if (result.isEmpty())
+        return { };
+
+    return { result };
+}
+
+#endif
 
 };

@@ -40,7 +40,7 @@ namespace Layout {
 class Container : public Box {
     WTF_MAKE_ISO_ALLOCATED(Container);
 public:
-    friend class TreeBuilder;
+    Container(Optional<ElementAttributes>, RenderStyle&&, BaseTypeFlags);
 
     const Box* firstChild() const { return m_firstChild; }
     const Box* firstInFlowChild() const;
@@ -53,19 +53,16 @@ public:
     bool hasInFlowChild() const { return firstInFlowChild(); }
     bool hasInFlowOrFloatingChild() const { return firstInFlowOrFloatingChild(); }
 
-    const Vector<WeakPtr<Box>>& outOfFlowDescendants() const { return m_outOfFlowDescendants; }
+    const Vector<WeakPtr<const Box>>& outOfFlowDescendants() const { return m_outOfFlowDescendants; }
 
-protected:
-    Container(std::optional<ElementAttributes>, RenderStyle&&, BaseTypeFlags);
-
-private:
     void setFirstChild(Box&);
     void setLastChild(Box&);
     void addOutOfFlowDescendant(const Box&);
 
+private:
     Box* m_firstChild { nullptr };
     Box* m_lastChild { nullptr };
-    Vector<WeakPtr<Box>> m_outOfFlowDescendants;
+    Vector<WeakPtr<const Box>> m_outOfFlowDescendants;
 };
 
 }

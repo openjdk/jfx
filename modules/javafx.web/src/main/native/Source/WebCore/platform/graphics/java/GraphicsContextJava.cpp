@@ -28,6 +28,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <wtf/MathExtras.h>
+#include <wtf/Variant.h>
 #include <wtf/Vector.h>
 
 #include "AffineTransform.h"
@@ -42,7 +43,7 @@
 #include "GraphicsContextJava.h"
 #include "Gradient.h"
 #include "IntRect.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "Path.h"
@@ -81,6 +82,9 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
                 p1 = data.point1;
                 startRadius = data.startRadius;
                 endRadius = data.endRadius;
+            },
+            [&] (const Gradient::ConicData&) -> void {
+                notImplemented();
             }
     );
 
@@ -262,7 +266,7 @@ IntRect GraphicsContext::clipBounds() const
     return enclosingIntRect(m_state
                                 .transform
                                 .inverse()
-                                .value_or(AffineTransform())
+                                .valueOr(AffineTransform())
                                 .mapRect(m_state.clipBounds));
 }
 
@@ -316,32 +320,28 @@ void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float
     }
 }
 
-void GraphicsContext::updateDocumentMarkerResources()
-{
-  //    NotImplemented(); // todo tav implement
-}
+void GraphicsContext::drawLinesForText(const FloatPoint& origin, float thickness, const DashArray& widths, bool, bool, StrokeStyle stroke) {
 
-void GraphicsContext::drawLinesForText(const FloatPoint& origin, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle stroke) {
+    if (paintingDisabled())
+        return;
+
     for (const auto& width : widths) {
-        drawLineForText(origin, width, printing, doubleLines, stroke);
+        // This is a workaround for http://bugs.webkit.org/show_bug.cgi?id=15659
+        StrokeStyle savedStrokeStyle = strokeStyle();
+        setStrokeStyle(stroke);
+
+        FloatPoint endPoint = origin + FloatPoint(width, thickness);
+        drawLine(
+            IntPoint(origin.x(), origin.y()),
+            IntPoint(endPoint.x(), endPoint.y()));
+
+        setStrokeStyle(savedStrokeStyle);
     }
 }
 
-void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool, bool, StrokeStyle stroke)
+void GraphicsContext::drawLineForText(const FloatRect& rect, bool printing, bool doubleLines, StrokeStyle stroke)
 {
-    if (paintingDisabled() || width <= 0)
-        return;
-
-    // This is a workaround for http://bugs.webkit.org/show_bug.cgi?id=15659
-    StrokeStyle savedStrokeStyle = strokeStyle();
-    setStrokeStyle(stroke);
-
-    FloatPoint endPoint = origin + FloatPoint(width, 0);
-    drawLine(
-        IntPoint(origin.x(), origin.y()),
-        IntPoint(endPoint.x(), endPoint.y()));
-
-    setStrokeStyle(savedStrokeStyle);
+    drawLinesForText(rect.location(), rect.height(), { rect.width() }, printing, doubleLines, stroke);
 }
 
 static inline void drawLineTo(GraphicsContext &gc, IntPoint &curPos, double x, double y)
@@ -422,17 +422,17 @@ static inline void drawErrorUnderline(GraphicsContext &gc, double x, double y, d
     }
 }
 
-void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& origin, float width, DocumentMarkerLineStyle style)
+void GraphicsContext::drawDotsForDocumentMarker(const FloatRect& rect, DocumentMarkerLineStyle style)
 {
     savePlatformState(); //fake stroke
-    switch (style) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
-        case DocumentMarkerLineStyle::Spelling:
+    switch (style.mode) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
+        case DocumentMarkerLineStyle::Mode::Spelling:
         {
             static Color red(255, 0, 0);
             setStrokeColor(red);
         }
         break;
-        case DocumentMarkerLineStyle::Grammar:
+        case DocumentMarkerLineStyle::Mode::Grammar:
         {
             static Color green(0, 255, 0);
             setStrokeColor(green);
@@ -442,7 +442,7 @@ void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& origin, float 
         {
         }
     }
-    drawErrorUnderline(*this, origin.x(), origin.y(), width, cMisspellingLineThickness);
+    drawErrorUnderline(*this, rect.x(), rect.y(), rect.width(), rect.height());
     restorePlatformState(); //fake stroke
 }
 
@@ -772,7 +772,7 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const
         return;
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     if (srcRect.isEmpty()) {
         return;
@@ -792,7 +792,7 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const
     JLObject transform(env->CallObjectMethod(PL_GetGraphicsManager(env), mid,
                 tm.a(), tm.b(), tm.c(), tm.d(), tm.e(), tm.f()));
     ASSERT(transform);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     platformContext()->rq().freeSpace(13 * 4)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN

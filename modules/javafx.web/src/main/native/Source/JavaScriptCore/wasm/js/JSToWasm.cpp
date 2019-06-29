@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,12 @@
 
 #include "CCallHelpers.h"
 #include "JSWebAssemblyInstance.h"
+#include "JSWebAssemblyRuntimeError.h"
+#include "MaxFrameExtentForSlowPathCall.h"
 #include "WasmCallingConvention.h"
+#include "WasmContextInlines.h"
+#include "WasmSignatureInlines.h"
+#include "WasmToJS.h"
 
 namespace JSC { namespace Wasm {
 
@@ -68,9 +73,12 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
     totalFrameSize -= sizeof(CallerFrameAndPC);
     unsigned numGPRs = 0;
     unsigned numFPRs = 0;
+    bool argumentsIncludeI64 = false;
     for (unsigned i = 0; i < signature.argumentCount(); i++) {
         switch (signature.argument(i)) {
         case Wasm::I64:
+            argumentsIncludeI64 = true;
+            FALLTHROUGH;
         case Wasm::I32:
             if (numGPRs >= wasmCallingConvention().m_gprArgs.size())
                 totalFrameSize += sizeof(void*);
@@ -100,6 +108,34 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
         jit.storePtr(reg, CCallHelpers::Address(GPRInfo::callFrameRegister, offset));
     }
 
+    if (argumentsIncludeI64 || signature.returnType() == Wasm::I64) {
+        if (Context::useFastTLS())
+            jit.loadWasmContextInstance(GPRInfo::argumentGPR2);
+        else {
+            // vmEntryToWasm passes the JSWebAssemblyInstance corresponding to Wasm::Context*'s
+            // instance as the first JS argument when we're not using fast TLS to hold the
+            // Wasm::Context*'s instance.
+            jit.loadPtr(CCallHelpers::Address(GPRInfo::callFrameRegister, CallFrameSlot::thisArgument * sizeof(EncodedJSValue)), GPRInfo::argumentGPR2);
+            jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, JSWebAssemblyInstance::offsetOfInstance()), GPRInfo::argumentGPR2);
+        }
+
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, Instance::offsetOfPointerToTopEntryFrame()), GPRInfo::argumentGPR0);
+        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0), GPRInfo::argumentGPR0);
+        jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(GPRInfo::argumentGPR0);
+        jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
+        jit.move(CCallHelpers::TrustedImm32(static_cast<int32_t>(argumentsIncludeI64 ? ExceptionType::I64ArgumentType : ExceptionType::I64ReturnType)), GPRInfo::argumentGPR1);
+
+        CCallHelpers::Call call = jit.call(OperationPtrTag);
+
+        jit.jump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
+        jit.breakpoint(); // We should not reach this.
+
+        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
+            linkBuffer.link(call, FunctionPtr<OperationPtrTag>(wasmToJSException));
+        });
+        return result;
+    }
+
     GPRReg wasmContextInstanceGPR = pinnedRegs.wasmContextInstancePointer;
 
     {
@@ -117,9 +153,7 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
         // Wasm::Context*'s instance.
         if (!Context::useFastTLS()) {
             jit.loadPtr(CCallHelpers::Address(GPRInfo::callFrameRegister, jsOffset), wasmContextInstanceGPR);
-            jit.loadPtr(CCallHelpers::Address(wasmContextInstanceGPR, JSWebAssemblyInstance::offsetOfPoisonedInstance()), wasmContextInstanceGPR);
-            jit.move(CCallHelpers::TrustedImm64(JSWebAssemblyInstancePoison::key()), scratchReg);
-            jit.xor64(scratchReg, wasmContextInstanceGPR);
+            jit.loadPtr(CCallHelpers::Address(wasmContextInstanceGPR, JSWebAssemblyInstance::offsetOfInstance()), wasmContextInstanceGPR);
             jsOffset += sizeof(EncodedJSValue);
         }
 
@@ -198,7 +232,6 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
         unlinkedWasmToWasmCalls->append({ linkBuffer.locationOfNearCall<WasmEntryPtrTag>(call), functionIndexSpace });
     });
 
-
     for (const RegisterAtOffset& regAtOffset : registersToSpill) {
         GPRReg reg = regAtOffset.reg().gpr();
         ASSERT(reg != GPRInfo::returnValueGPR);
@@ -207,11 +240,27 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
     }
 
     switch (signature.returnType()) {
-    case Wasm::F32:
-        jit.moveFloatTo32(FPRInfo::returnValueFPR, GPRInfo::returnValueGPR);
+    case Wasm::Void:
+        jit.moveTrustedValue(jsUndefined(), JSValueRegs { GPRInfo::returnValueGPR });
         break;
-    case Wasm::F64:
-        jit.moveDoubleTo64(FPRInfo::returnValueFPR, GPRInfo::returnValueGPR);
+    case Wasm::I32:
+        jit.zeroExtend32ToPtr(GPRInfo::returnValueGPR, GPRInfo::returnValueGPR);
+        jit.boxInt32(GPRInfo::returnValueGPR, JSValueRegs { GPRInfo::returnValueGPR }, DoNotHaveTagRegisters);
+        break;
+    case Wasm::F32:
+        jit.convertFloatToDouble(FPRInfo::returnValueFPR, FPRInfo::returnValueFPR);
+        FALLTHROUGH;
+    case Wasm::F64: {
+        jit.moveTrustedValue(jsNumber(pureNaN()), JSValueRegs { GPRInfo::returnValueGPR });
+        auto isNaN = jit.branchIfNaN(FPRInfo::returnValueFPR);
+        jit.boxDouble(FPRInfo::returnValueFPR, JSValueRegs { GPRInfo::returnValueGPR }, DoNotHaveTagRegisters);
+        isNaN.link(&jit);
+        break;
+    }
+    case Wasm::I64:
+    case Wasm::Func:
+    case Wasm::Anyfunc:
+        jit.breakpoint();
         break;
     default:
         break;

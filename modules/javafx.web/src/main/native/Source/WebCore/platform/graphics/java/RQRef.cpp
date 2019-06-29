@@ -32,7 +32,7 @@ namespace WebCore {
 RQRef::~RQRef()
 {
     if (-1 != m_refID) {
-        JNIEnv* env = WebCore_GetJavaEnv();
+        JNIEnv* env = WTF::GetJavaEnv();
 
         if (env) {
             //do it if JVM is here.
@@ -40,14 +40,14 @@ RQRef::~RQRef()
             ASSERT(mid);
             env->CallVoidMethod(m_ref, mid);
 
-            CheckAndClearException(env);
+            WTF::CheckAndClearException(env);
         }
     }
 }
 
 RQRef::operator jint() {
     if (-1 == m_refID) {
-        JNIEnv* env = WebCore_GetJavaEnv();
+        JNIEnv* env = WTF::GetJavaEnv();
 
         static jmethodID midGetId = env->GetMethodID(PG_GetRefClass(env), "getID", "()I");
         ASSERT(midGetId);
@@ -57,7 +57,7 @@ RQRef::operator jint() {
         ASSERT(midRef);
         env->CallVoidMethod(m_ref, midRef);
 
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
     }
     return m_refID;
 }

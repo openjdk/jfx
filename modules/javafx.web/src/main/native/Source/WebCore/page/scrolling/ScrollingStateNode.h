@@ -196,18 +196,21 @@ public:
 
     ScrollingNodeType nodeType() const { return m_nodeType; }
 
-    bool isFixedNode() const { return m_nodeType == FixedNode; }
-    bool isStickyNode() const { return m_nodeType == StickyNode; }
+    bool isFixedNode() const { return m_nodeType == ScrollingNodeType::Fixed; }
+    bool isStickyNode() const { return m_nodeType == ScrollingNodeType::Sticky; }
     bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode(); }
-    bool isFrameScrollingNode() const { return m_nodeType == MainFrameScrollingNode || m_nodeType == SubframeScrollingNode; }
-    bool isOverflowScrollingNode() const { return m_nodeType == OverflowScrollingNode; }
+    bool isFrameScrollingNode() const { return m_nodeType == ScrollingNodeType::MainFrame || m_nodeType == ScrollingNodeType::Subframe; }
+    bool isFrameHostingNode() const { return m_nodeType == ScrollingNodeType::FrameHosting; }
+    bool isOverflowScrollingNode() const { return m_nodeType == ScrollingNodeType::Overflow; }
 
     virtual Ref<ScrollingStateNode> clone(ScrollingStateTree& adoptiveTree) = 0;
     Ref<ScrollingStateNode> cloneAndReset(ScrollingStateTree& adoptiveTree);
     void cloneAndResetChildren(ScrollingStateNode&, ScrollingStateTree& adoptiveTree);
 
+    // FIXME: using an OptionSet<> for these and derived class bits would simplify code.
     enum {
-        ScrollLayer = 0,
+        Layer = 0,
+        ChildNodes,
         NumStateNodeBits // This must remain at the last position.
     };
     typedef uint64_t ChangedProperties;
@@ -216,6 +219,7 @@ public:
     bool hasChangedProperty(unsigned propertyBit) const { return m_changedProperties & (static_cast<ChangedProperties>(1) << propertyBit); }
     void resetChangedProperties() { m_changedProperties = 0; }
     void setPropertyChanged(unsigned propertyBit);
+    virtual void setAllPropertiesChanged();
 
     ChangedProperties changedProperties() const { return m_changedProperties; }
     void setChangedProperties(ChangedProperties changedProperties) { m_changedProperties = changedProperties; }
@@ -234,8 +238,17 @@ public:
     ScrollingNodeID parentNodeID() const { return m_parent ? m_parent->scrollingNodeID() : 0; }
 
     Vector<RefPtr<ScrollingStateNode>>* children() const { return m_children.get(); }
+    std::unique_ptr<Vector<RefPtr<ScrollingStateNode>>> takeChildren() { return WTFMove(m_children); }
 
     void appendChild(Ref<ScrollingStateNode>&&);
+    void insertChild(Ref<ScrollingStateNode>&&, size_t index);
+
+    // Note that node ownership is via the parent, so these functions can trigger node deletion.
+    void removeFromParent();
+    void removeChildAtIndex(size_t index);
+    void removeChild(ScrollingStateNode&);
+
+    size_t indexOfChild(ScrollingStateNode&) const;
 
     String scrollingStateTreeAsText(ScrollingStateTreeAsTextBehavior = ScrollingStateTreeAsTextBehaviorNormal) const;
 
@@ -244,20 +257,27 @@ protected:
 
     virtual void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
 
+    inline void setPropertyChangedBit(unsigned propertyBit);
+
 private:
     void dump(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const;
 
     const ScrollingNodeType m_nodeType;
-    ScrollingNodeID m_nodeID;
-    ChangedProperties m_changedProperties;
+    const ScrollingNodeID m_nodeID;
+    ChangedProperties m_changedProperties { 0 };
 
     ScrollingStateTree& m_scrollingStateTree;
 
-    ScrollingStateNode* m_parent;
+    ScrollingStateNode* m_parent { nullptr };
     std::unique_ptr<Vector<RefPtr<ScrollingStateNode>>> m_children;
 
     LayerRepresentation m_layer;
 };
+
+void ScrollingStateNode::setPropertyChangedBit(unsigned propertyBit)
+{
+    m_changedProperties |= (static_cast<ChangedProperties>(1) << propertyBit);
+}
 
 } // namespace WebCore
 

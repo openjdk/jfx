@@ -29,12 +29,10 @@
 #include <wtf/Vector.h>
 #include <wtf/text/StringBuilder.h>
 
-#include "Chrome.h"
-#include "ChromeClientJava.h"
 #include "CSSPropertyNames.h"
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "HTMLMediaElement.h"
 #include "NotImplemented.h"
 #include "PaintInfo.h"
@@ -71,51 +69,6 @@ RenderTheme& RenderTheme::singleton()
 {
     static RenderTheme& sm_defaultInstance = *new RenderThemeJava();
     return sm_defaultInstance;
-}
-
-jclass getJRenderThemeClass()
-{
-    static JGClass jRenderThemeCls(
-        WebCore_GetJavaEnv()->FindClass("com/sun/webkit/graphics/RenderTheme"));
-    ASSERT(jRenderThemeCls);
-
-    return jRenderThemeCls;
-}
-
-static JLObject getJRenderTheme(JLObject page)
-{
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    if (!page) {
-        static jmethodID mid  = env->GetStaticMethodID(
-            PG_GetWebPageClass(env),
-            "fwkGetDefaultRenderTheme",
-            "()Lcom/sun/webkit/graphics/RenderTheme;");
-        ASSERT(mid);
-
-        JLObject jRenderTheme(env->CallStaticObjectMethod(PG_GetWebPageClass(env), mid));
-        CheckAndClearException(env);
-
-        return jRenderTheme;
-    }
-
-    static jmethodID mid  = env->GetMethodID(
-        PG_GetWebPageClass(env),
-        "getRenderTheme",
-        "()Lcom/sun/webkit/graphics/RenderTheme;");
-    ASSERT(mid);
-
-    JLObject jRenderTheme(env->CallObjectMethod(
-        page,
-        mid));
-    CheckAndClearException(env);
-
-    return jRenderTheme;
-}
-
-RefPtr<RQRef> RenderThemeJava::themeForPage(JLObject page)
-{
-    return RQRef::create(getJRenderTheme(page));
 }
 
 RenderThemeJava::RenderThemeJava()
@@ -174,7 +127,7 @@ bool RenderThemeJava::paintWidget(
             : CSSPropertyBackgroundColor
     ).rgb();
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     WTF::Vector<jbyte> extParams;
     if (JNI_EXPAND(SLIDER) == widgetIndex && is<RenderSlider>(object)) {
@@ -245,7 +198,7 @@ bool RenderThemeJava::paintWidget(
 #endif
     }
 
-    static jmethodID mid = env->GetMethodID(getJRenderThemeClass(), "createWidget",
+    static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "createWidget",
             "(JIIIIILjava/nio/ByteBuffer;)Lcom/sun/webkit/graphics/Ref;");
     ASSERT(mid);
 
@@ -266,7 +219,7 @@ bool RenderThemeJava::paintWidget(
         //switch to WebKit default render
         return true;
     }
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     // widgetRef will go into rq's inner refs vector.
     paintInfo.context().platformContext()->rq().freeSpace(20)
@@ -339,14 +292,14 @@ void RenderThemeJava::setRadioSize(RenderStyle& style) const
         return;
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
-    static jmethodID mid = env->GetMethodID(getJRenderThemeClass(), "getRadioButtonSize", "()I");
+    static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "getRadioButtonSize", "()I");
     ASSERT(mid);
 
     // Get from default theme object.
-    int radioRadius = env->CallIntMethod((jobject)getJRenderTheme(nullptr), mid);
-    CheckAndClearException(env);
+    int radioRadius = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid);
+    WTF::CheckAndClearException(env);
 
     if (style.width().isIntrinsicOrAuto()) {
         style.setWidth(Length(radioRadius, Fixed));
@@ -496,7 +449,7 @@ bool RenderThemeJava::paintSliderTrack(const RenderObject&object, const PaintInf
 
 void getSliderThumbSize(jint sliderType, int *width, int *height)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     JGClass cls = JLClass(env->FindClass(RENDER_MEDIA_CONTROLS_CLASS_NAME));
     ASSERT(cls);
 
@@ -504,7 +457,7 @@ void getSliderThumbSize(jint sliderType, int *width, int *height)
     ASSERT(mid);
 
     jint size = env->CallStaticIntMethod(cls, mid, sliderType);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     *width = (size >> 16) & 0xFFFF;
     *height = size & 0xFFFF;
 }
@@ -595,15 +548,15 @@ bool RenderThemeJava::supportsFocusRing(const RenderStyle& style) const
 
 Color RenderThemeJava::getSelectionColor(int index) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     ASSERT(env);
 
-    static jmethodID mid = env->GetMethodID(getJRenderThemeClass(), "getSelectionColor", "(I)I");
+    static jmethodID mid = env->GetMethodID(PG_GetRenderThemeClass(env), "getSelectionColor", "(I)I");
     ASSERT(mid);
 
     // Get from default theme object.
-    jint c = env->CallIntMethod((jobject)getJRenderTheme(nullptr), mid, index);
-    CheckAndClearException(env);
+    jint c = env->CallIntMethod((jobject)PG_GetRenderThemeObjectFromPage(env, nullptr), mid, index);
+    WTF::CheckAndClearException(env);
 
     return Color(c);
 }

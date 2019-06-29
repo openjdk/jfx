@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,10 +40,11 @@ struct ApplePayRequestBase {
     Vector<String> supportedNetworks;
     String countryCode;
 
-    std::optional<Vector<ApplePayContactField>> requiredBillingContactFields;
-    std::optional<ApplePayPaymentContact> billingContact;
+    Optional<Vector<ApplePayContactField>> requiredBillingContactFields;
+    Optional<ApplePayPaymentContact> billingContact;
 
-    std::optional<ApplePayPaymentContact> shippingContact;
+    Optional<Vector<ApplePayContactField>> requiredShippingContactFields;
+    Optional<ApplePayPaymentContact> shippingContact;
 
     String applicationData;
     Vector<String> supportedCountries;

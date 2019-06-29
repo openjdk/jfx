@@ -58,6 +58,7 @@ InByIdStatus InByIdStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map
     UNUSED_PARAM(map);
     UNUSED_PARAM(bytecodeIndex);
     UNUSED_PARAM(uid);
+    UNUSED_PARAM(didExit);
 #endif
 
     return result;
@@ -89,6 +90,7 @@ InByIdStatus InByIdStatus::computeFor(
             return result;
         };
 
+#if ENABLE(DFG_JIT)
         if (status.stubInfo) {
             InByIdStatus result;
             {
@@ -98,6 +100,7 @@ InByIdStatus InByIdStatus::computeFor(
             if (result.isSet())
                 return bless(result);
         }
+#endif
 
         if (status.inStatus)
             return bless(*status.inStatus);

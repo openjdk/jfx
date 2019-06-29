@@ -42,6 +42,7 @@
 #include "TextTrack.h"
 #include "Timer.h"
 #include "VideoTrack.h"
+#include <wtf/LoggerHelper.h>
 
 namespace WebCore {
 
@@ -54,7 +55,18 @@ class TextTrackList;
 class TimeRanges;
 class VideoTrackList;
 
-class SourceBuffer final : public RefCounted<SourceBuffer>, public ActiveDOMObject, public EventTargetWithInlineData, private SourceBufferPrivateClient, private AudioTrackClient, private VideoTrackClient, private TextTrackClient {
+class SourceBuffer final
+    : public RefCounted<SourceBuffer>
+    , public ActiveDOMObject
+    , public EventTargetWithInlineData
+    , private SourceBufferPrivateClient
+    , private AudioTrackClient
+    , private VideoTrackClient
+    , private TextTrackClient
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+{
 public:
     static Ref<SourceBuffer> create(Ref<SourceBufferPrivate>&&, MediaSource*);
     virtual ~SourceBuffer();
@@ -79,6 +91,7 @@ public:
     ExceptionOr<void> abort();
     ExceptionOr<void> remove(double start, double end);
     ExceptionOr<void> remove(const MediaTime&, const MediaTime&);
+    ExceptionOr<void> changeType(const String&);
 
     const TimeRanges& bufferedInternal() const { ASSERT(m_buffered); return *m_buffered; }
 
@@ -116,6 +129,13 @@ public:
     bool hasPendingActivity() const final;
 
     void trySignalAllSamplesEnqueued();
+
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    const char* logClassName() const final { return "SourceBuffer"; }
+    WTFLogChannel& logChannel() const final;
+#endif
 
 private:
     SourceBuffer(Ref<SourceBufferPrivate>&&, MediaSource*);
@@ -230,11 +250,17 @@ private:
     MediaTime m_pendingRemoveEnd;
     Timer m_removeTimer;
 
+#if !RELEASE_LOG_DISABLED
+    Ref<const Logger> m_logger;
+    const void* m_logIdentifier;
+#endif
+
     bool m_updating { false };
     bool m_receivedFirstInitializationSegment { false };
     bool m_active { false };
     bool m_bufferFull { false };
     bool m_shouldGenerateTimestamps { false };
+    bool m_pendingInitializationSegmentForChangeType { false };
 };
 
 } // namespace WebCore

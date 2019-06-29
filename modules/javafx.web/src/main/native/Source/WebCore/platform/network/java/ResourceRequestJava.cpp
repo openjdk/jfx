@@ -4,7 +4,7 @@
 #include "config.h"
 #include "ResourceRequest.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 
 namespace ResourceRequestJavaInternal {
 
@@ -36,13 +36,13 @@ unsigned initializeMaximumHTTPConnectionCountPerHost()
     // requests. Our java framework employs HttpURLConnection for all
     // HTTP exchanges, so we delegate this call to java to return
     // the value of the "http.maxConnections" system property.
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     jint result = env->CallStaticIntMethod(
             networkContextClass,
             getMaximumHTTPConnectionCountPerHostMethod);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     ASSERT(result >= 0);
     return result;

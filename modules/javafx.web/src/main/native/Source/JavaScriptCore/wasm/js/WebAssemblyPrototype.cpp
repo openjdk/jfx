@@ -115,7 +115,7 @@ static EncodedJSValue JSC_HOST_CALL webAssemblyCompileFunc(ExecState* exec)
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* globalObject = exec->lexicalGlobalObject();
 
-    JSPromiseDeferred* promise = JSPromiseDeferred::create(exec, globalObject);
+    JSPromiseDeferred* promise = JSPromiseDeferred::tryCreate(exec, globalObject);
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
     {
@@ -261,7 +261,7 @@ static EncodedJSValue JSC_HOST_CALL webAssemblyInstantiateFunc(ExecState* exec)
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* globalObject = exec->lexicalGlobalObject();
 
-    JSPromiseDeferred* promise = JSPromiseDeferred::create(exec, globalObject);
+    JSPromiseDeferred* promise = JSPromiseDeferred::tryCreate(exec, globalObject);
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
     {
@@ -294,10 +294,10 @@ static EncodedJSValue JSC_HOST_CALL webAssemblyValidateFunc(ExecState* exec)
     size_t byteSize;
     std::tie(base, byteSize) = getWasmBufferFromValue(exec, exec->argument(0));
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    BBQPlan plan(&vm.wasmContext, base, byteSize, BBQPlan::Validation, Plan::dontFinalize());
+    BBQPlan plan(&vm.wasmContext, BBQPlan::Validation, Plan::dontFinalize());
     // FIXME: We might want to throw an OOM exception here if we detect that something will OOM.
     // https://bugs.webkit.org/show_bug.cgi?id=166015
-    return JSValue::encode(jsBoolean(plan.parseAndValidateModule()));
+    return JSValue::encode(jsBoolean(plan.parseAndValidateModule(base, byteSize)));
 }
 
 EncodedJSValue JSC_HOST_CALL webAssemblyCompileStreamingInternal(ExecState* exec)
@@ -306,7 +306,7 @@ EncodedJSValue JSC_HOST_CALL webAssemblyCompileStreamingInternal(ExecState* exec
     auto* globalObject = exec->lexicalGlobalObject();
     auto catchScope = DECLARE_CATCH_SCOPE(vm);
 
-    JSPromiseDeferred* promise = JSPromiseDeferred::create(exec, globalObject);
+    JSPromiseDeferred* promise = JSPromiseDeferred::tryCreate(exec, globalObject);
 
     Vector<Strong<JSCell>> dependencies;
     dependencies.append(Strong<JSCell>(vm, globalObject));
@@ -330,8 +330,7 @@ EncodedJSValue JSC_HOST_CALL webAssemblyInstantiateStreamingInternal(ExecState* 
     auto throwScope = DECLARE_THROW_SCOPE(vm);
     auto* globalObject = exec->lexicalGlobalObject();
 
-    JSPromiseDeferred* promise = JSPromiseDeferred::create(exec, globalObject);
-
+    JSPromiseDeferred* promise = JSPromiseDeferred::tryCreate(exec, globalObject);
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
     {
         auto catchScope = DECLARE_CATCH_SCOPE(vm);

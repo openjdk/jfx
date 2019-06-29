@@ -31,11 +31,11 @@
 #include "RenderStyleConstants.h"
 #include "StyleValidity.h"
 #include "TreeScope.h"
-#include "URLHash.h"
 #include <wtf/Forward.h>
 #include <wtf/IsoMalloc.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/MainThread.h>
+#include <wtf/URLHash.h>
 
 // This needs to be here because Document.h also depends on it.
 #define DUMP_NODE_STATISTICS 0
@@ -212,7 +212,7 @@ public:
 #if ENABLE(VIDEO_TRACK)
     virtual bool isWebVTTElement() const { return false; }
 #endif
-    bool isStyledElement() const { return getFlag(IsStyledElementFlag); }
+    bool isStyledElement() const { return getFlag(IsHTMLFlag) || getFlag(IsSVGFlag) || getFlag(IsMathMLFlag); }
     virtual bool isAttributeNode() const { return false; }
     virtual bool isCharacterDataNode() const { return false; }
     virtual bool isFrameOwnerElement() const { return false; }
@@ -222,10 +222,10 @@ public:
     virtual bool isImageControlsButtonElement() const { return false; }
 #endif
 
-    bool isDocumentNode() const { return getFlag(IsContainerFlag) && !getFlag(IsElementFlag) && !getFlag(IsDocumentFragmentFlag); }
-    bool isTreeScope() const;
-    bool isDocumentFragment() const { return getFlag(IsDocumentFragmentFlag); }
-    bool isShadowRoot() const { return isDocumentFragment() && isTreeScope(); }
+    bool isDocumentNode() const { return getFlag(IsDocumentNodeFlag); }
+    bool isTreeScope() const { return getFlag(IsDocumentNodeFlag) || getFlag(IsShadowRootFlag); }
+    bool isDocumentFragment() const { return getFlag(IsContainerFlag) && !(getFlag(IsElementFlag) || getFlag(IsDocumentNodeFlag)); }
+    bool isShadowRoot() const { return getFlag(IsShadowRootFlag); }
 
     bool hasCustomStyleResolveCallbacks() const { return getFlag(HasCustomStyleResolveCallbacksFlag); }
 
@@ -234,9 +234,6 @@ public:
 
     // If this node is in a shadow tree, returns its shadow host. Otherwise, returns null.
     WEBCORE_EXPORT Element* shadowHost() const;
-    // If this node is in a shadow tree, returns its shadow host. Otherwise, returns this.
-    // Deprecated. Should use shadowHost() and check the return value.
-    WEBCORE_EXPORT Node* deprecatedShadowAncestorNode() const;
     ShadowRoot* containingShadowRoot() const;
     ShadowRoot* shadowRoot() const;
     bool isClosedShadowHidden(const Node&) const;
@@ -395,10 +392,7 @@ public:
     bool isDescendantOrShadowDescendantOf(const Node*) const;
     WEBCORE_EXPORT bool contains(const Node*) const;
     bool containsIncludingShadowDOM(const Node*) const;
-    bool containsIncludingHostElements(const Node*) const;
 
-    // Used to determine whether range offsets use characters or node indices.
-    virtual bool offsetInCharacters() const;
     // Number of DOM 16-bit units contained in node. Note that rendered text length can be different - e.g. because of
     // css-transform:capitalize breaking up precomposed characters and ligatures.
     virtual int maxCharacterOffset() const;
@@ -486,7 +480,7 @@ public:
 
     void dispatchScopedEvent(Event&);
 
-    virtual void handleLocalEvents(Event&);
+    virtual void handleLocalEvents(Event&, EventInvokePhase);
 
     void dispatchSubtreeModifiedEvent();
     void dispatchDOMActivateEvent(Event& underlyingClickEvent);
@@ -538,6 +532,7 @@ public:
     static int32_t flagIsText() { return IsTextFlag; }
     static int32_t flagIsContainer() { return IsContainerFlag; }
     static int32_t flagIsElement() { return IsElementFlag; }
+    static int32_t flagIsShadowRoot() { return IsShadowRootFlag; }
     static int32_t flagIsHTML() { return IsHTMLFlag; }
     static int32_t flagIsLink() { return IsLinkFlag; }
     static int32_t flagHasFocusWithin() { return HasFocusWithin; }
@@ -555,41 +550,44 @@ protected:
         IsTextFlag = 1,
         IsContainerFlag = 1 << 1,
         IsElementFlag = 1 << 2,
-        IsStyledElementFlag = 1 << 3,
-        IsHTMLFlag = 1 << 4,
-        IsSVGFlag = 1 << 5,
-        DescendantsAffectedByPreviousSiblingFlag = 1 << 6,
-        ChildNeedsStyleRecalcFlag = 1 << 7,
+        IsHTMLFlag = 1 << 3,
+        IsSVGFlag = 1 << 4,
+        IsMathMLFlag = 1 << 5,
+        IsDocumentNodeFlag = 1 << 6,
+        IsShadowRootFlag = 1 << 7,
         IsConnectedFlag = 1 << 8,
-        IsLinkFlag = 1 << 9,
-        IsUserActionElement = 1 << 10,
-        HasRareDataFlag = 1 << 11,
-        IsDocumentFragmentFlag = 1 << 12,
+        IsInShadowTreeFlag = 1 << 9,
+        HasRareDataFlag = 1 << 10,
+        HasEventTargetDataFlag = 1 << 11,
 
         // These bits are used by derived classes, pulled up here so they can
         // be stored in the same memory word as the Node bits above.
-        IsParsingChildrenFinishedFlag = 1 << 13, // Element
-        StyleValidityShift = 14,
+        ChildNeedsStyleRecalcFlag = 1 << 12, // ContainerNode
+        DirectChildNeedsStyleRecalcFlag = 1 << 13,
+
+        IsEditingTextOrUndefinedCustomElementFlag = 1 << 14, // Text and Element
+        IsCustomElement = 1 << 15, // Element
+        HasFocusWithin = 1 << 16,
+        IsLinkFlag = 1 << 17,
+        IsUserActionElement = 1 << 18,
+        IsParsingChildrenFinishedFlag = 1 << 19,
+        HasSyntheticAttrChildNodesFlag = 1 << 20,
+        SelfOrAncestorHasDirAutoFlag = 1 << 21,
+
+        // The following flags are used in style invalidation.
+        StyleValidityShift = 22,
         StyleValidityMask = 3 << StyleValidityShift,
-        StyleResolutionShouldRecompositeLayerFlag = 1 << 16,
-        IsEditingTextOrUndefinedCustomElementFlag = 1 << 17,
-        HasFocusWithin = 1 << 18,
-        HasSyntheticAttrChildNodesFlag = 1 << 19,
-        HasCustomStyleResolveCallbacksFlag = 1 << 20,
-        HasEventTargetDataFlag = 1 << 21,
-        IsCustomElement = 1 << 22,
-        IsInShadowTreeFlag = 1 << 23,
-        IsMathMLFlag = 1 << 24,
+        StyleResolutionShouldRecompositeLayerFlag = 1 << 24,
 
         ChildrenAffectedByFirstChildRulesFlag = 1 << 25,
         ChildrenAffectedByLastChildRulesFlag = 1 << 26,
         ChildrenAffectedByHoverRulesFlag = 1 << 27,
 
-        DirectChildNeedsStyleRecalcFlag = 1 << 28,
-        AffectsNextSiblingElementStyle = 1 << 29,
-        StyleIsAffectedByPreviousSibling = 1 << 30,
+        AffectsNextSiblingElementStyle = 1 << 28,
+        StyleIsAffectedByPreviousSibling = 1 << 29,
+        DescendantsAffectedByPreviousSiblingFlag = 1 << 30,
 
-        SelfOrAncestorHasDirAutoFlag = 1 << 31,
+        HasCustomStyleResolveCallbacksFlag = 1 << 31,
 
         DefaultNodeFlags = IsParsingChildrenFinishedFlag
     };
@@ -609,14 +607,13 @@ protected:
         CreateContainer = DefaultNodeFlags | IsContainerFlag,
         CreateElement = CreateContainer | IsElementFlag,
         CreatePseudoElement =  CreateElement | IsConnectedFlag,
-        CreateShadowRoot = CreateContainer | IsDocumentFragmentFlag | IsInShadowTreeFlag,
-        CreateDocumentFragment = CreateContainer | IsDocumentFragmentFlag,
-        CreateStyledElement = CreateElement | IsStyledElementFlag,
-        CreateHTMLElement = CreateStyledElement | IsHTMLFlag,
-        CreateSVGElement = CreateStyledElement | IsSVGFlag | HasCustomStyleResolveCallbacksFlag,
-        CreateDocument = CreateContainer | IsConnectedFlag,
+        CreateShadowRoot = CreateContainer | IsShadowRootFlag | IsInShadowTreeFlag,
+        CreateDocumentFragment = CreateContainer,
+        CreateHTMLElement = CreateElement | IsHTMLFlag,
+        CreateSVGElement = CreateElement | IsSVGFlag | HasCustomStyleResolveCallbacksFlag,
+        CreateMathMLElement = CreateElement | IsMathMLFlag,
+        CreateDocument = CreateContainer | IsDocumentNodeFlag | IsConnectedFlag,
         CreateEditingText = CreateText | IsEditingTextOrUndefinedCustomElementFlag,
-        CreateMathMLElement = CreateStyledElement | IsMathMLFlag
     };
     Node(Document&, ConstructionType);
 

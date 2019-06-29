@@ -63,12 +63,6 @@ public:
     void copyUnmultipliedResult(Uint8ClampedArray& destination, const IntRect&);
     void copyPremultipliedResult(Uint8ClampedArray& destination, const IntRect&);
 
-#if ENABLE(OPENCL)
-    OpenCLHandle openCLImage() { return m_openCLImageResult; }
-    void setOpenCLImage(OpenCLHandle openCLImage) { m_openCLImageResult = openCLImage; }
-    ImageBuffer* openCLImageToImageBuffer();
-#endif
-
     FilterEffectVector& inputEffects() { return m_inputEffects; }
     FilterEffect* inputEffect(unsigned) const;
     unsigned numberOfEffectInputs() const { return m_inputEffects.size(); }
@@ -78,15 +72,15 @@ public:
     {
         // This function needs platform specific checks, if the memory managment is not done by FilterEffect.
         return m_imageBufferResult
-#if ENABLE(OPENCL)
-            || m_openCLImageResult
-#endif
             || m_unmultipliedImageResult
             || m_premultipliedImageResult;
     }
 
     FloatRect drawingRegionOfInputImage(const IntRect&) const;
     IntRect requestedRegionOfInputImageData(const IntRect&) const;
+
+    // Recurses on inputs.
+    FloatRect determineFilterPrimitiveSubregion();
 
     // Solid black image with different alpha values.
     bool isAlphaImage() const { return m_alphaImage; }
@@ -99,11 +93,6 @@ public:
     void setMaxEffectRect(const FloatRect& maxEffectRect) { m_maxEffectRect = maxEffectRect; }
 
     void apply();
-#if ENABLE(OPENCL)
-    void applyAll();
-#else
-    inline void applyAll() { apply(); }
-#endif
 
     // Correct any invalid pixels, if necessary, in the result of a filter operation.
     // This method is used to ensure valid pixel values on filter inputs and the final result.
@@ -163,9 +152,6 @@ protected:
     ImageBuffer* createImageBufferResult();
     Uint8ClampedArray* createUnmultipliedImageResult();
     Uint8ClampedArray* createPremultipliedImageResult();
-#if ENABLE(OPENCL)
-    OpenCLHandle createOpenCLImageResult(uint8_t* = 0);
-#endif
 
     // Return true if the filter will only operate correctly on valid RGBA values, with
     // alpha in [0,255] and each color component in [0, alpha].
@@ -195,9 +181,6 @@ private:
     std::unique_ptr<ImageBuffer> m_imageBufferResult;
     RefPtr<Uint8ClampedArray> m_unmultipliedImageResult;
     RefPtr<Uint8ClampedArray> m_premultipliedImageResult;
-#if ENABLE(OPENCL)
-    OpenCLHandle m_openCLImageResult;
-#endif
 
     IntRect m_absolutePaintRect;
 

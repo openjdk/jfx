@@ -56,7 +56,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_init
     ASSERT(!gGCController);
     gGCController = std::make_unique<GCController>();
 
-    WorkQueue::singleton().clear();
+    DRT::WorkQueue::singleton().clear();
 
     env->ReleaseStringUTFChars(testPath, testPathChars);
     env->ReleaseStringUTFChars(pixelsHash, pixelsHashChars);
@@ -118,7 +118,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didFini
     (JNIEnv* env, jclass cls)
 {
     ASSERT(gTestRunner);
-    return bool_to_jbool(WorkQueue::singleton().processWork());
+    return bool_to_jbool(DRT::WorkQueue::singleton().processWork());
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dumpBackForwardList

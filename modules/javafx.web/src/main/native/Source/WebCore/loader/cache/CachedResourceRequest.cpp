@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-CachedResourceRequest::CachedResourceRequest(ResourceRequest&& resourceRequest, const ResourceLoaderOptions& options, std::optional<ResourceLoadPriority> priority, String&& charset)
+CachedResourceRequest::CachedResourceRequest(ResourceRequest&& resourceRequest, const ResourceLoaderOptions& options, Optional<ResourceLoadPriority> priority, String&& charset)
     : m_resourceRequest(WTFMove(resourceRequest))
     , m_charset(WTFMove(charset))
     , m_options(options)
@@ -85,7 +85,7 @@ const AtomicString& CachedResourceRequest::initiatorName() const
     return defaultName;
 }
 
-void CachedResourceRequest::setAsPotentiallyCrossOrigin(const String& mode, Document& document)
+void CachedResourceRequest::deprecatedSetAsPotentiallyCrossOrigin(const String& mode, Document& document)
 {
     ASSERT(m_options.mode == FetchOptions::Mode::NoCors);
 
@@ -300,7 +300,7 @@ void CachedResourceRequest::setSelectedServiceWorkerRegistrationIdentifierIfNeed
     m_options.serviceWorkerRegistrationIdentifier = identifier;
 }
 
-void CachedResourceRequest::setNavigationServiceWorkerRegistrationData(const std::optional<ServiceWorkerRegistrationData>& data)
+void CachedResourceRequest::setNavigationServiceWorkerRegistrationData(const Optional<ServiceWorkerRegistrationData>& data)
 {
     if (!data || !data->activeWorker) {
         m_options.serviceWorkersMode = ServiceWorkersMode::None;

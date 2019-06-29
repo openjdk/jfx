@@ -46,6 +46,7 @@
 #include "ProxyObject.h"
 #include "SlotVisitorInlines.h"
 #include "TypeError.h"
+#include "VMInlines.h"
 #include <math.h>
 #include <wtf/Assertions.h>
 
@@ -123,7 +124,7 @@ ALWAYS_INLINE void JSObject::markAuxiliaryAndVisitOutOfLineProperties(SlotVisito
 
 ALWAYS_INLINE Structure* JSObject::visitButterfly(SlotVisitor& visitor)
 {
-    static const char* raceReason = "JSObject::visitButterfly";
+    static const char* const raceReason = "JSObject::visitButterfly";
     Structure* result = visitButterflyImpl(visitor);
     if (!result)
         visitor.didRace(this, raceReason);
@@ -519,7 +520,7 @@ String JSObject::toStringName(const JSObject* object, ExecState* exec)
     VM& vm = exec->vm();
     const ClassInfo* info = object->classInfo(vm);
     ASSERT(info);
-    return info->methodTable.className(object, vm);
+    return info->className;
 }
 
 String JSObject::calculatedClassName(JSObject* object)
@@ -657,8 +658,7 @@ bool ordinarySetSlow(ExecState* exec, JSObject* object, PropertyName propertyNam
         if (current->type() == ProxyObjectType && propertyName != vm.propertyNames->underscoreProto) {
             ProxyObject* proxy = jsCast<ProxyObject*>(current);
             PutPropertySlot slot(receiver, shouldThrow);
-            scope.release();
-            return proxy->ProxyObject::put(proxy, exec, propertyName, value, slot);
+            RELEASE_AND_RETURN(scope, proxy->ProxyObject::put(proxy, exec, propertyName, value, slot));
         }
 
         // 9.1.9.1-2 Let ownDesc be ? O.[[GetOwnProperty]](P).
@@ -716,14 +716,12 @@ bool ordinarySetSlow(ExecState* exec, JSObject* object, PropertyName propertyNam
             valueDescriptor.setValue(value);
 
             // 9.1.9.1-4-d-iv Return ? Receiver.[[DefineOwnProperty]](P, valueDesc).
-            scope.release();
-            return receiverObject->methodTable(vm)->defineOwnProperty(receiverObject, exec, propertyName, valueDescriptor, shouldThrow);
+            RELEASE_AND_RETURN(scope, receiverObject->methodTable(vm)->defineOwnProperty(receiverObject, exec, propertyName, valueDescriptor, shouldThrow));
         }
 
         // 9.1.9.1-4-e Else Receiver does not currently have a property P,
         // 9.1.9.1-4-e-i Return ? CreateDataProperty(Receiver, P, V).
-        scope.release();
-        return receiverObject->methodTable(vm)->defineOwnProperty(receiverObject, exec, propertyName, PropertyDescriptor(value, static_cast<unsigned>(PropertyAttribute::None)), shouldThrow);
+        RELEASE_AND_RETURN(scope, receiverObject->methodTable(vm)->defineOwnProperty(receiverObject, exec, propertyName, PropertyDescriptor(value, static_cast<unsigned>(PropertyAttribute::None)), shouldThrow));
     }
 
     // 9.1.9.1-5 Assert: IsAccessorDescriptor(ownDesc) is true.
@@ -802,10 +800,8 @@ bool JSObject::putInlineSlow(ExecState* exec, PropertyName propertyName, JSValue
         }
         if (!obj->staticPropertiesReified(vm)) {
             if (obj->classInfo(vm)->hasStaticSetterOrReadonlyProperties()) {
-                if (auto entry = obj->findPropertyHashEntry(vm, propertyName)) {
-                    scope.release();
-                    return putEntry(exec, entry->table->classForThis, entry->value, obj, this, propertyName, value, slot);
-                }
+                if (auto entry = obj->findPropertyHashEntry(vm, propertyName))
+                    RELEASE_AND_RETURN(scope, putEntry(exec, entry->table->classForThis, entry->value, obj, this, propertyName, value, slot));
             }
         }
         if (obj->type() == ProxyObjectType && propertyName != vm.propertyNames->underscoreProto) {
@@ -813,8 +809,7 @@ bool JSObject::putInlineSlow(ExecState* exec, PropertyName propertyName, JSValue
             // We need to do more because this is observable behavior.
             // https://bugs.webkit.org/show_bug.cgi?id=155012
             ProxyObject* proxy = jsCast<ProxyObject*>(obj);
-            scope.release();
-            return proxy->ProxyObject::put(proxy, exec, propertyName, value, slot);
+            RELEASE_AND_RETURN(scope, proxy->ProxyObject::put(proxy, exec, propertyName, value, slot));
         }
         JSValue prototype = obj->getPrototype(vm, exec);
         RETURN_IF_EXCEPTION(scope, false);
@@ -1748,7 +1743,7 @@ void JSObject::setPrototypeDirect(VM& vm, JSValue prototype)
 {
     ASSERT(prototype);
     if (prototype.isObject())
-        prototype.asCell()->didBecomePrototype();
+        asObject(prototype)->didBecomePrototype();
 
     if (structure(vm)->hasMonoProto()) {
         DeferredStructureTransitionWatchpointFire deferred(vm, structure(vm));
@@ -1860,7 +1855,7 @@ bool JSObject::putDirectAccessor(ExecState* exec, PropertyName propertyName, Get
 {
     ASSERT(attributes & PropertyAttribute::Accessor);
 
-    if (std::optional<uint32_t> index = parseIndex(propertyName))
+    if (Optional<uint32_t> index = parseIndex(propertyName))
         return putDirectIndex(exec, index.value(), accessor, attributes, PutDirectIndexLikePutDirect);
 
     return putDirectNonIndexAccessor(exec->vm(), propertyName, accessor, attributes);
@@ -1932,7 +1927,7 @@ bool JSObject::deleteProperty(JSCell* cell, ExecState* exec, PropertyName proper
     JSObject* thisObject = jsCast<JSObject*>(cell);
     VM& vm = exec->vm();
 
-    if (std::optional<uint32_t> index = parseIndex(propertyName))
+    if (Optional<uint32_t> index = parseIndex(propertyName))
         return thisObject->methodTable(vm)->deletePropertyByIndex(thisObject, exec, index.value());
 
     unsigned attributes;
@@ -2148,8 +2143,7 @@ JSValue JSObject::toPrimitive(ExecState* exec, PreferredPrimitiveType preferredT
     if (value)
         return value;
 
-    scope.release();
-    return this->methodTable(vm)->defaultValue(this, exec, preferredType);
+    RELEASE_AND_RETURN(scope, this->methodTable(vm)->defaultValue(this, exec, preferredType));
 }
 
 bool JSObject::getPrimitiveNumber(ExecState* exec, double& number, JSValue& result) const
@@ -2175,7 +2169,7 @@ bool JSObject::getOwnStaticPropertySlot(VM& vm, PropertyName propertyName, Prope
     return false;
 }
 
-auto JSObject::findPropertyHashEntry(VM& vm, PropertyName propertyName) const -> std::optional<PropertyHashEntry>
+auto JSObject::findPropertyHashEntry(VM& vm, PropertyName propertyName) const -> Optional<PropertyHashEntry>
 {
     for (const ClassInfo* info = classInfo(vm); info; info = info->parentClass) {
         if (const HashTable* propHashTable = info->staticPropHashTable) {
@@ -2183,7 +2177,7 @@ auto JSObject::findPropertyHashEntry(VM& vm, PropertyName propertyName) const ->
                 return PropertyHashEntry { propHashTable, entry };
         }
     }
-    return std::nullopt;
+    return WTF::nullopt;
 }
 
 bool JSObject::hasInstance(ExecState* exec, JSValue value, JSValue hasInstanceValue)
@@ -2211,13 +2205,16 @@ bool JSObject::hasInstance(ExecState* exec, JSValue value, JSValue hasInstanceVa
     if (info.implementsDefaultHasInstance()) {
         JSValue prototype = get(exec, vm.propertyNames->prototype);
         RETURN_IF_EXCEPTION(scope, false);
-        scope.release();
-        return defaultHasInstance(exec, value, prototype);
+        RELEASE_AND_RETURN(scope, defaultHasInstance(exec, value, prototype));
     }
     if (info.implementsHasInstance()) {
-        scope.release();
-        return methodTable(vm)->customHasInstance(this, exec, value);
+        if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
+            throwStackOverflowError(exec, scope);
+            return false;
+        }
+        RELEASE_AND_RETURN(scope, methodTable(vm)->customHasInstance(this, exec, value));
     }
+
     throwException(exec, scope, createInvalidInstanceofParameterErrorNotFunction(exec, this));
     return false;
 }
@@ -2229,8 +2226,7 @@ bool JSObject::hasInstance(ExecState* exec, JSValue value)
     JSValue hasInstanceValue = get(exec, vm.propertyNames->hasInstanceSymbol);
     RETURN_IF_EXCEPTION(scope, false);
 
-    scope.release();
-    return hasInstance(exec, value, hasInstanceValue);
+    RELEASE_AND_RETURN(scope, hasInstance(exec, value, hasInstanceValue));
 }
 
 bool JSObject::defaultHasInstance(ExecState* exec, JSValue value, JSValue proto)
@@ -2391,8 +2387,7 @@ double JSObject::toNumber(ExecState* exec) const
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue primitive = toPrimitive(exec, PreferNumber);
     RETURN_IF_EXCEPTION(scope, 0.0); // should be picked up soon in Nodes.cpp
-    scope.release();
-    return primitive.toNumber(exec);
+    RELEASE_AND_RETURN(scope, primitive.toNumber(exec));
 }
 
 JSString* JSObject::toString(ExecState* exec) const
@@ -2442,7 +2437,7 @@ bool JSObject::preventExtensions(JSObject* object, ExecState* exec)
 
 bool JSObject::isExtensible(JSObject* obj, ExecState* exec)
 {
-    return obj->isExtensibleImpl(exec->vm());
+    return obj->isStructureExtensible(exec->vm());
 }
 
 bool JSObject::isExtensible(ExecState* exec)
@@ -2556,8 +2551,7 @@ bool JSObject::defineOwnIndexedProperty(ExecState* exec, unsigned index, const P
         // state (i.e. defineOwnProperty could be used to set a value without needing to entering 'SparseMode').
         if (!descriptor.attributes() && descriptor.value() && canDoFastPutDirectIndex(vm, this)) {
             ASSERT(!descriptor.isAccessorDescriptor());
-            scope.release();
-            return putDirectIndex(exec, index, descriptor.value(), 0, throwException ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow);
+            RELEASE_AND_RETURN(scope, putDirectIndex(exec, index, descriptor.value(), 0, throwException ? PutDirectIndexShouldThrow : PutDirectIndexShouldNotThrow));
         }
 
         ensureArrayStorageExistsAndEnterDictionaryIndexingMode(vm);
@@ -2818,8 +2812,7 @@ bool JSObject::putByIndexBeyondVectorLengthWithArrayStorage(ExecState* exec, uns
         }
         // We don't want to, or can't use a vector to hold this property - allocate a sparse map & add the value.
         map = allocateSparseIndexMap(vm);
-        scope.release();
-        return map->putEntry(exec, this, i, value, shouldThrow);
+        RELEASE_AND_RETURN(scope, map->putEntry(exec, this, i, value, shouldThrow));
     }
 
     // Update m_length if necessary.
@@ -2835,10 +2828,8 @@ bool JSObject::putByIndexBeyondVectorLengthWithArrayStorage(ExecState* exec, uns
     // We are currently using a map - check whether we still want to be doing so.
     // We will continue  to use a sparse map if SparseMode is set, a vector would be too sparse, or if allocation fails.
     unsigned numValuesInArray = storage->m_numValuesInVector + map->size();
-    if (map->sparseMode() || !isDenseEnoughForVector(length, numValuesInArray) || !increaseVectorLength(vm, length)) {
-        scope.release();
-        return map->putEntry(exec, this, i, value, shouldThrow);
-    }
+    if (map->sparseMode() || !isDenseEnoughForVector(length, numValuesInArray) || !increaseVectorLength(vm, length))
+        RELEASE_AND_RETURN(scope, map->putEntry(exec, this, i, value, shouldThrow));
 
     // Reread m_storage after increaseVectorLength, update m_numValuesInVector.
     storage = arrayStorage();
@@ -2959,8 +2950,7 @@ bool JSObject::putDirectIndexBeyondVectorLengthWithArrayStorage(ExecState* exec,
         }
         // We don't want to, or can't use a vector to hold this property - allocate a sparse map & add the value.
         map = allocateSparseIndexMap(vm);
-        scope.release();
-        return map->putDirect(exec, this, i, value, attributes, mode);
+        RELEASE_AND_RETURN(scope, map->putDirect(exec, this, i, value, attributes, mode));
     }
 
     // Update m_length if necessary.
@@ -2980,10 +2970,8 @@ bool JSObject::putDirectIndexBeyondVectorLengthWithArrayStorage(ExecState* exec,
     // We are currently using a map - check whether we still want to be doing so.
     // We will continue  to use a sparse map if SparseMode is set, a vector would be too sparse, or if allocation fails.
     unsigned numValuesInArray = storage->m_numValuesInVector + map->size();
-    if (map->sparseMode() || attributes || !isDenseEnoughForVector(length, numValuesInArray) || !increaseVectorLength(vm, length)) {
-        scope.release();
-        return map->putDirect(exec, this, i, value, attributes, mode);
-    }
+    if (map->sparseMode() || attributes || !isDenseEnoughForVector(length, numValuesInArray) || !increaseVectorLength(vm, length))
+        RELEASE_AND_RETURN(scope, map->putDirect(exec, this, i, value, attributes, mode));
 
     // Reread m_storage after increaseVectorLength, update m_numValuesInVector.
     storage = arrayStorage();
@@ -3493,7 +3481,7 @@ static bool putDescriptor(ExecState* exec, JSObject* target, PropertyName proper
 
 bool JSObject::putDirectMayBeIndex(ExecState* exec, PropertyName propertyName, JSValue value)
 {
-    if (std::optional<uint32_t> index = parseIndex(propertyName))
+    if (Optional<uint32_t> index = parseIndex(propertyName))
         return putDirectIndex(exec, index.value(), value);
     return putDirect(exec->vm(), propertyName, value);
 }
@@ -3653,14 +3641,13 @@ bool JSObject::defineOwnNonIndexProperty(ExecState* exec, PropertyName propertyN
     bool isCurrentDefined = getOwnPropertyDescriptor(exec, propertyName, current);
     bool isExtensible = this->isExtensible(exec);
     RETURN_IF_EXCEPTION(throwScope, false);
-    throwScope.release();
-    return validateAndApplyPropertyDescriptor(exec, this, propertyName, isExtensible, descriptor, isCurrentDefined, current, throwException);
+    RELEASE_AND_RETURN(throwScope, validateAndApplyPropertyDescriptor(exec, this, propertyName, isExtensible, descriptor, isCurrentDefined, current, throwException));
 }
 
 bool JSObject::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, const PropertyDescriptor& descriptor, bool throwException)
 {
     // If it's an array index, then use the indexed property storage.
-    if (std::optional<uint32_t> index = parseIndex(propertyName)) {
+    if (Optional<uint32_t> index = parseIndex(propertyName)) {
         // c. Let succeeded be the result of calling the default [[DefineOwnProperty]] internal method (8.12.9) on A passing P, Desc, and false as arguments.
         // d. Reject if succeeded is false.
         // e. If index >= oldLen

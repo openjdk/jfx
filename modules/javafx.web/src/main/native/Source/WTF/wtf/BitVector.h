@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BitVector_h
-#define BitVector_h
+#pragma once
 
 #include <stdio.h>
 #include <wtf/Assertions.h>
@@ -33,6 +32,10 @@
 #include <wtf/HashTraits.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StdLibExtras.h>
+
+namespace JSC {
+class CachedBitVector;
+}
 
 namespace WTF {
 
@@ -339,6 +342,8 @@ public:
     iterator end() const { return iterator(*this, size()); }
 
 private:
+    friend class JSC::CachedBitVector;
+
     static unsigned bitsInPointer()
     {
         return sizeof(void*) << 3;
@@ -482,11 +487,8 @@ template<> struct DefaultHash<BitVector> {
     typedef BitVectorHash Hash;
 };
 
-template<typename T> struct HashTraits;
 template<> struct HashTraits<BitVector> : public CustomHashTraits<BitVector> { };
 
 } // namespace WTF
 
 using WTF::BitVector;
-
-#endif // BitVector_h

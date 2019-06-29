@@ -290,7 +290,7 @@ SVGElement::~SVGElement()
         m_svgRareData = nullptr;
     }
     document().accessSVGExtensions().rebuildAllElementReferencesForTarget(*this);
-    document().accessSVGExtensions().removeAllElementReferencesForTarget(this);
+    document().accessSVGExtensions().removeAllElementReferencesForTarget(*this);
 }
 
 int SVGElement::tabIndex() const
@@ -370,7 +370,7 @@ void SVGElement::removedFromAncestor(RemovalType removalType, ContainerNode& old
 
     if (removalType.disconnectedFromDocument) {
         document().accessSVGExtensions().clearTargetDependencies(*this);
-        document().accessSVGExtensions().removeAllElementReferencesForTarget(this);
+        document().accessSVGExtensions().removeAllElementReferencesForTarget(*this);
     }
     invalidateInstances();
 }
@@ -686,8 +686,10 @@ void SVGElement::attributeChanged(const QualifiedName& name, const AtomicString&
         document().accessSVGExtensions().rebuildAllElementReferencesForTarget(*this);
 
     // Changes to the style attribute are processed lazily (see Element::getAttribute() and related methods),
-    // so we don't want changes to the style attribute to result in extra work here.
-    if (name != HTMLNames::styleAttr)
+    // so we don't want changes to the style attribute to result in extra work here except invalidateInstances().
+    if (name == HTMLNames::styleAttr)
+        invalidateInstances();
+    else
         svgAttributeChanged(name);
 }
 
@@ -712,11 +714,11 @@ void SVGElement::synchronizeAnimatedSVGAttribute(const QualifiedName& name) cons
         nonConstThis->synchronizeAttribute(name);
 }
 
-std::optional<ElementStyle> SVGElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
+Optional<ElementStyle> SVGElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
 {
     // If the element is in a <use> tree we get the style from the definition tree.
     if (auto styleElement = makeRefPtr(this->correspondingElement())) {
-        std::optional<ElementStyle> style = styleElement->resolveStyle(&parentStyle);
+        Optional<ElementStyle> style = styleElement->resolveStyle(&parentStyle);
         StyleResolver::adjustSVGElementStyle(*this, *style->renderStyle);
         return style;
     }
@@ -776,7 +778,6 @@ QualifiedName SVGElement::animatableAttributeForName(const AtomicString& localNa
             &SVGNames::elevationAttr.get(),
             &SVGNames::exponentAttr.get(),
             &SVGNames::externalResourcesRequiredAttr.get(),
-            &SVGNames::filterResAttr.get(),
             &SVGNames::filterUnitsAttr.get(),
             &SVGNames::fxAttr.get(),
             &SVGNames::fyAttr.get(),
@@ -993,7 +994,7 @@ void SVGElement::buildPendingResourcesIfNeeded()
         ASSERT(clientElement->hasPendingResources());
         if (clientElement->hasPendingResources()) {
             clientElement->buildPendingResource();
-            extensions.clearHasPendingResourcesIfPossible(clientElement.get());
+            extensions.clearHasPendingResourcesIfPossible(*clientElement);
         }
     }
 }
@@ -1017,7 +1018,7 @@ RefPtr<DeprecatedCSSOMValue> SVGElement::getPresentationAttribute(const String& 
     if (!attribute)
         return 0;
 
-    RefPtr<MutableStyleProperties> style = MutableStyleProperties::create(SVGAttributeMode);
+    auto style = MutableStyleProperties::create(SVGAttributeMode);
     CSSPropertyID propertyID = cssPropertyIdForSVGAttributeName(attribute->name());
     style->setProperty(propertyID, attribute->value());
     auto cssValue = style->getPropertyCSSValue(propertyID);

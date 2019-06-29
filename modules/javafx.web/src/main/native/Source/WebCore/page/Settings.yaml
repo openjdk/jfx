@@ -81,7 +81,7 @@ defaultFontSize:
   onChange: setNeedsRecalcStyleInAllFrames
 defaultFixedFontSize:
   type: int
-  initial: 0
+  initial: 13
   onChange: setNeedsRecalcStyleInAllFrames
 
 editingBehaviorType:
@@ -135,6 +135,7 @@ textAreasAreResizable:
 authorAndUserStylesEnabled:
   initial: true
   onChange: setNeedsRecalcStyleInAllFrames
+  inspectorOverride: true
 userStyleSheetLocation:
   type: URL
   onChange: userStyleSheetLocationChanged
@@ -186,6 +187,7 @@ scriptMarkupEnabled:
   initial: true
 needsSiteSpecificQuirks:
   initial: false
+  inspectorOverride: true
 domTimersThrottlingEnabled:
   initial: true
 webArchiveDebugModeEnabled:
@@ -221,8 +223,6 @@ xssAuditorEnabled:
   initial: false
 acceleratedCompositingForFixedPositionEnabled:
   initial: defaultAcceleratedCompositingForFixedPositionEnabled
-acceleratedCompositingForOverflowScrollEnabled:
-  initial: false
 rubberBandingForSubScrollableRegionsEnabled:
   initial: true
   conditional: RUBBER_BANDING
@@ -232,6 +232,8 @@ experimentalNotificationsEnabled:
 webGLEnabled:
   initial: false
 webGLErrorsToConsoleEnabled:
+  initial: true
+unhandledPromiseRejectionToConsoleEnabled:
   initial: true
 forceSoftwareWebGLRendering:
   initial: false
@@ -336,6 +338,12 @@ wantsBalancedSetDefersLoadingBehavior:
 requestAnimationFrameEnabled:
   initial: true
 
+HTTPSUpgradeEnabled:
+  initial: false
+
+thirdPartyIframeRedirectBlockingEnabled:
+  initial: true
+
 cookieEnabled:
   initial: true
 mediaEnabled:
@@ -351,29 +359,42 @@ windowFocusRestricted:
 
 diagnosticLoggingEnabled:
   initial: false
+
 delegatesPageScaling:
   initial: false
+
 plugInSnapshottingEnabled:
   initial: false
+
 snapshotAllPlugIns:
   initial: false
+
 autostartOriginPlugInSnapshottingEnabled:
   initial: true
+
 primaryPlugInSnapshotDetectionEnabled:
   initial: true
+
 maximumPlugInSnapshotAttempts:
   type: unsigned
   initial: 20
+
 frameFlattening:
   type: FrameFlattening
   initial: FrameFlattening::Disabled
   onChange: setNeedsRelayoutAllFrames
+
 asyncFrameScrollingEnabled:
+  initial: false
+  onChange: setNeedsRelayoutAllFrames
+
+asyncOverflowScrollingEnabled:
   initial: false
   onChange: setNeedsRelayoutAllFrames
 
 webSecurityEnabled:
   initial: true
+  inspectorOverride: true
 spatialNavigationEnabled:
   initial: false
 
@@ -398,6 +419,8 @@ smartInsertDeleteEnabled:
   initial: defaultSmartInsertDeleteEnabled
 selectTrailingWhitespaceEnabled:
   initial: defaultSelectTrailingWhitespaceEnabled
+selectionAcrossShadowBoundariesEnabled:
+  initial: true
 
 useLegacyBackgroundSizeShorthandBehavior:
   initial: false
@@ -434,6 +457,10 @@ useGiantTiles:
   initial: false
 
 mediaSourceEnabled:
+  initial: platformDefaultMediaSourceEnabled()
+  conditional: MEDIA_SOURCE
+
+sourceBufferChangeTypeEnabled:
   initial: true
   conditional: MEDIA_SOURCE
 
@@ -527,9 +554,6 @@ shouldConvertInvalidURLsToBlank:
 springTimingFunctionEnabled:
   initial: false
 
-conicGradientsEnabled:
-  initial: false
-
 colorFilterEnabled:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
@@ -555,6 +579,9 @@ visualViewportEnabled:
   onChange: setNeedsRecalcStyleInAllFrames
 
 visualViewportAPIEnabled:
+  initial: false
+
+CSSOMViewScrollingAPIEnabled:
   initial: false
 
 inputEventsEnabled:
@@ -652,10 +679,11 @@ imagesEnabled:
   initial: true
   getter: areImagesEnabled
   onChange: imagesEnabledChanged
+  inspectorOverride: true
 scriptEnabled:
   initial: false
   getter: isScriptEnabled
-  onChange: scriptEnabledChanged
+  inspectorOverride: true
 pluginsEnabled:
   initial: false
   getter: arePluginsEnabled
@@ -735,6 +763,11 @@ touchEventEmulationEnabled:
   getter: isTouchEventEmulationEnabled
   conditional: TOUCH_EVENTS
 
+deviceOrientationEventEnabled:
+  type: bool
+  initial: true
+  conditional: DEVICE_ORIENTATION
+
 shouldEnableTextAutosizingBoost:
   type: bool
   initial: false
@@ -744,15 +777,9 @@ shouldEnableTextAutosizingBoost:
 mediaCapabilitiesEnabled:
   initial: false
 
-resourceLoadStatisticsDebugMode:
-  initial: false
-
 clientCoordinatesRelativeToLayoutViewport:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
-
-crossOriginWindowPolicySupportEnabled:
-  initial: false
 
 accessibilityEventsEnabled:
   initial: true
@@ -763,3 +790,34 @@ incompleteImageBorderEnabled:
 
 shouldDeferAsynchronousScriptsUntilAfterDocumentLoad:
   initial: false
+
+shouldIgnoreMetaViewport:
+  initial: false
+
+videoQualityIncludesDisplayCompositingEnabled:
+  initial: false
+  conditional: VIDEO
+
+editableImagesEnabled:
+  initial: false
+
+adClickAttributionEnabled:
+  initial: false
+
+# Deprecated
+
+iceCandidateFilteringEnabled:
+  initial: true
+  onChange: iceCandidateFilteringEnabledChanged
+  inspectorOverride: true
+
+mockCaptureDevicesEnabled:
+  initial: false
+  conditional: MEDIA_STREAM
+  onChange: mockCaptureDevicesEnabledChanged
+  inspectorOverride: true
+
+mediaCaptureRequiresSecureConnection:
+  initial: true
+  conditional: MEDIA_STREAM
+  inspectorOverride: true

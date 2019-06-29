@@ -140,9 +140,10 @@ struct Global {
     uint64_t initialBitsOrImportNumber { 0 };
 };
 
-struct FunctionLocationInBinary {
+struct FunctionData {
     size_t start;
     size_t end;
+    Vector<uint8_t> data;
 };
 
 class I32InitExpr {
@@ -211,7 +212,7 @@ public:
         ASSERT(!*this);
     }
 
-    TableInformation(uint32_t initial, std::optional<uint32_t> maximum, bool isImport)
+    TableInformation(uint32_t initial, Optional<uint32_t> maximum, bool isImport)
         : m_initial(initial)
         , m_maximum(maximum)
         , m_isImport(isImport)
@@ -223,11 +224,11 @@ public:
     explicit operator bool() const { return m_isValid; }
     bool isImport() const { return m_isImport; }
     uint32_t initial() const { return m_initial; }
-    std::optional<uint32_t> maximum() const { return m_maximum; }
+    Optional<uint32_t> maximum() const { return m_maximum; }
 
 private:
     uint32_t m_initial;
-    std::optional<uint32_t> m_maximum;
+    Optional<uint32_t> m_maximum;
     bool m_isImport { false };
     bool m_isValid { false };
 };
@@ -275,6 +276,7 @@ struct InternalFunction {
 // meant as fast lookup tables for these opcodes and do not own code.
 struct WasmToWasmImportableFunction {
     using LoadLocation = MacroAssemblerCodePtr<WasmEntryPtrTag>*;
+    static ptrdiff_t offsetOfSignatureIndex() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, signatureIndex); }
     static ptrdiff_t offsetOfEntrypointLoadLocation() { return OBJECT_OFFSETOF(WasmToWasmImportableFunction, entrypointLoadLocation); }
 
     // FIXME: Pack signature index and code pointer into one 64-bit value. See <https://bugs.webkit.org/show_bug.cgi?id=165511>.

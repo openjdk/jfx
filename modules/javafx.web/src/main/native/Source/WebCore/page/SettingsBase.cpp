@@ -48,6 +48,10 @@
 #include <limits>
 #include <wtf/StdLibExtras.h>
 
+#if ENABLE(MEDIA_STREAM)
+#include "MockRealtimeMediaSourceCenter.h"
+#endif
+
 namespace WebCore {
 
 static void invalidateAfterGenericFamilyChange(Page* page)
@@ -87,7 +91,7 @@ float SettingsBase::defaultMinimumZoomFontSize()
 #endif
 }
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
 bool SettingsBase::defaultTextAutosizingEnabled()
 {
     return false;
@@ -114,6 +118,13 @@ const String& SettingsBase::defaultMediaContentTypesRequiringHardwareSupport()
 void SettingsBase::initializeDefaultFontFamilies()
 {
     // Other platforms can set up fonts from a client, but on Mac, we want it in WebCore to share code between WebKit1 and WebKit2.
+}
+#endif
+
+#if ENABLE(MEDIA_SOURCE) && !PLATFORM(COCOA)
+bool SettingsBase::platformDefaultMediaSourceEnabled()
+{
+    return true;
 }
 #endif
 
@@ -292,18 +303,20 @@ void SettingsBase::imageLoadingSettingsTimerFired()
     }
 }
 
-void SettingsBase::scriptEnabledChanged()
-{
-#if PLATFORM(IOS)
-    // FIXME: Why do we only do this on iOS?
-    if (m_page)
-        m_page->setNeedsRecalcStyleInAllFrames();
-#endif
-}
-
 void SettingsBase::pluginsEnabledChanged()
 {
     Page::refreshPlugins(false);
+}
+
+void SettingsBase::iceCandidateFilteringEnabledChanged()
+{
+    if (!m_page)
+        return;
+
+    if (m_page->settings().iceCandidateFilteringEnabled())
+        m_page->enableICECandidateFiltering();
+    else
+        m_page->disableICECandidateFiltering();
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -321,6 +334,17 @@ void SettingsBase::shouldEnableTextAutosizingBoostChanged()
     setNeedsRecalcStyleInAllFrames();
 }
 
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+void SettingsBase::mockCaptureDevicesEnabledChanged()
+{
+    bool enabled = false;
+    if (m_page)
+        enabled = m_page->settings().mockCaptureDevicesEnabled();
+
+    MockRealtimeMediaSourceCenter::setMockRealtimeMediaSourceCenterEnabled(enabled);
+}
 #endif
 
 void SettingsBase::userStyleSheetLocationChanged()

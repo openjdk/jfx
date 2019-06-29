@@ -22,6 +22,7 @@
 #pragma once
 
 #include "CSSCustomPropertyValue.h"
+#include "CSSVariableReferenceValue.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
@@ -37,9 +38,6 @@ public:
 
     bool operator==(const StyleCustomPropertyData& other) const
     {
-        if (containsVariables != other.containsVariables)
-            return false;
-
         if (values.size() != other.values.size())
             return false;
 
@@ -56,20 +54,16 @@ public:
 
     void setCustomPropertyValue(const AtomicString& name, Ref<CSSCustomPropertyValue>&& value)
     {
-        if (value->containsVariables())
-            containsVariables = true;
         values.set(name, WTFMove(value));
     }
 
     CustomPropertyValueMap values;
-    bool containsVariables { false };
 
 private:
     StyleCustomPropertyData() = default;
     StyleCustomPropertyData(const StyleCustomPropertyData& other)
         : RefCounted<StyleCustomPropertyData>()
         , values(other.values)
-        , containsVariables(other.containsVariables)
     { }
 };
 

@@ -96,6 +96,12 @@ public:
 #if ENABLE(SERVICE_CONTROLS)
     virtual String imageControlsStyleSheet() const { return String(); }
 #endif
+#if ENABLE(DATALIST_ELEMENT)
+    String dataListStyleSheet() const;
+#endif
+#if ENABLE(INPUT_TYPE_COLOR)
+    String colorInputStyleSheet() const;
+#endif
 
     // A method to obtain the baseline position for a "leaf" control.  This will only be used if a baseline
     // position cannot be determined by examining child content. Checkboxes and radio buttons are examples of
@@ -155,7 +161,7 @@ public:
 
     virtual Color disabledTextColor(const Color& textColor, const Color& backgroundColor) const;
 
-    static Color focusRingColor(OptionSet<StyleColor::Options>);
+    Color focusRingColor(OptionSet<StyleColor::Options>) const;
     virtual Color platformFocusRingColor(OptionSet<StyleColor::Options>) const { return Color(0, 0, 0); }
     static void setCustomFocusRingColor(const Color&);
     static float platformFocusRingWidth() { return 3; }
@@ -254,10 +260,6 @@ public:
 #if USE(SYSTEM_PREVIEW)
     virtual void paintSystemPreviewBadge(Image&, const PaintInfo&, const FloatRect&);
 #endif
-
-    virtual void drawLineForDocumentMarker(const RenderText&, GraphicsContext&, const FloatPoint& origin, float width, DocumentMarkerLineStyle);
-
-    virtual bool usingDarkAppearance(const RenderObject&) const { return false; }
 
 protected:
     virtual FontCascadeDescription& cachedSystemFontDescription(CSSValueID systemFontID) const;
@@ -436,10 +438,11 @@ protected:
         Color inactiveTextSearchHighlightColor;
     };
 
-    virtual ColorCache& colorCache(OptionSet<StyleColor::Options>) const { return m_colorCache; }
+    virtual ColorCache& colorCache(OptionSet<StyleColor::Options>) const;
 
 private:
     mutable ColorCache m_colorCache;
+    mutable ColorCache m_darkColorCache;
 };
 
 } // namespace WebCore

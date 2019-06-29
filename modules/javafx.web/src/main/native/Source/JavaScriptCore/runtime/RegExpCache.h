@@ -46,6 +46,13 @@ public:
     RegExpCache(VM* vm);
     void deleteAllCode();
 
+    RegExp* ensureEmptyRegExp(VM& vm)
+    {
+        if (LIKELY(m_emptyRegExp))
+            return m_emptyRegExp.get();
+        return ensureEmptyRegExpSlow(vm);
+    }
+
 private:
 
     static const unsigned maxStrongCacheablePatternLength = 256;
@@ -54,11 +61,14 @@ private:
 
     void finalize(Handle<Unknown>, void* context) override;
 
+    RegExp* ensureEmptyRegExpSlow(VM&);
+
     RegExp* lookupOrCreate(const WTF::String& patternString, RegExpFlags);
     void addToStrongCache(RegExp*);
     RegExpCacheMap m_weakCache; // Holds all regular expressions currently live.
     int m_nextEntryInStrongCache;
     std::array<Strong<RegExp>, maxStrongCacheableEntries> m_strongCache; // Holds a select few regular expressions that have compiled and executed
+    Strong<RegExp> m_emptyRegExp;
     VM* m_vm;
 };
 

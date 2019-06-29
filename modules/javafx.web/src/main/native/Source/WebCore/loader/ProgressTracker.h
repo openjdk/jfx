@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007, 2018 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,6 +65,7 @@ private:
     void finalProgressComplete();
 
     void progressHeartbeatTimerFired();
+    bool isAlwaysOnLoggingAllowed() const;
 
     static unsigned long s_uniqueIdentifier;
 

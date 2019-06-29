@@ -83,7 +83,7 @@ public:
     typedef Vector<ExpressionType, 1> ExpressionList;
     typedef FunctionParser<Validate>::ControlEntry ControlEntry;
 
-    static const ExpressionType emptyExpression = Void;
+    static constexpr ExpressionType emptyExpression() { return Void; }
 
     template <typename ...Args>
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN fail(Args... args) const
@@ -140,6 +140,8 @@ public:
     // Calls
     Result WARN_UNUSED_RETURN addCall(unsigned calleeIndex, const Signature&, const Vector<ExpressionType>& args, ExpressionType& result);
     Result WARN_UNUSED_RETURN addCallIndirect(const Signature&, const Vector<ExpressionType>& args, ExpressionType& result);
+
+    ALWAYS_INLINE void didKill(ExpressionType) { }
 
     bool hasMemory() const { return !!m_module.memory; }
 

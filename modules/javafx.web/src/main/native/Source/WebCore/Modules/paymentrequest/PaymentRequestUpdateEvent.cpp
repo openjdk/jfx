@@ -33,15 +33,16 @@
 
 namespace WebCore {
 
-PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(const AtomicString& type, PaymentRequestUpdateEventInit&& eventInit)
-    : Event { type, WTFMove(eventInit), IsTrusted::No }
+PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(const AtomicString& type, const PaymentRequestUpdateEventInit& eventInit)
+    : Event { type, eventInit, IsTrusted::No }
 {
+    ASSERT(!isTrusted());
 }
 
-PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(const AtomicString& type, PaymentRequest& paymentRequest)
+PaymentRequestUpdateEvent::PaymentRequestUpdateEvent(const AtomicString& type)
     : Event { type, CanBubble::No, IsCancelable::No }
-    , m_paymentRequest { &paymentRequest }
 {
+    ASSERT(isTrusted());
 }
 
 PaymentRequestUpdateEvent::~PaymentRequestUpdateEvent() = default;
@@ -62,12 +63,14 @@ ExceptionOr<void> PaymentRequestUpdateEvent::updateWith(Ref<DOMPromise>&& detail
         reason = PaymentRequest::UpdateReason::ShippingAddressChanged;
     else if (type() == eventNames().shippingoptionchangeEvent)
         reason = PaymentRequest::UpdateReason::ShippingOptionChanged;
+    else if (type() == eventNames().paymentmethodchangeEvent)
+        reason = PaymentRequest::UpdateReason::PaymentMethodChanged;
     else {
         ASSERT_NOT_REACHED();
         return Exception { TypeError };
     }
 
-    auto exception = m_paymentRequest->updateWith(reason, WTFMove(detailsPromise));
+    auto exception = downcast<PaymentRequest>(target())->updateWith(reason, WTFMove(detailsPromise));
     if (exception.hasException())
         return exception.releaseException();
 

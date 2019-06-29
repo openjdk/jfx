@@ -43,9 +43,9 @@ FontCustomPlatformData::~FontCustomPlatformData()
 }
 
 FontPlatformData FontCustomPlatformData::fontPlatformData(
-        const FontDescription& fontDescription, bool bold, bool italic)
+        const FontDescription& fontDescription, bool bold, bool italic, const FontFeatureSettings&, const FontVariantSettings&, FontSelectionSpecifiedCapabilities)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     int size = fontDescription.computedPixelSize();
     static jmethodID mid = env->GetMethodID(
@@ -60,14 +60,14 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(
             size,
             bool_to_jbool(bold),
             bool_to_jbool(italic)));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return FontPlatformData(RQRef::create(font), size);
 }
 
 std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer, const String& /* index */)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static JGClass sharedBufferClass(env->FindClass(
             "com/sun/webkit/SharedBuffer"));
@@ -83,7 +83,7 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
             sharedBufferClass,
             mid1,
             ptr_to_jlong(&buffer)));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID mid2 = env->GetMethodID(
             PG_GetGraphicsManagerClass(env),
@@ -96,7 +96,7 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
             PL_GetGraphicsManager(env),
             mid2,
             (jobject) sharedBuffer));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return data ? std::make_unique<FontCustomPlatformData>(data) : nullptr;
 }

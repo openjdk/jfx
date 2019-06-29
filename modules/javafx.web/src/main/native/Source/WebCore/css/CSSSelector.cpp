@@ -299,7 +299,6 @@ PseudoId CSSSelector::pseudoId(PseudoElementType type)
 #endif
     case PseudoElementSlotted:
     case PseudoElementUnknown:
-    case PseudoElementUserAgentCustom:
     case PseudoElementWebKitCustom:
     case PseudoElementWebKitCustomLegacyPrefixed:
         return PseudoId::None;
@@ -318,9 +317,6 @@ CSSSelector::PseudoElementType CSSSelector::parsePseudoElementType(const String&
     if (type == PseudoElementUnknown) {
         if (name.startsWith("-webkit-"))
             type = PseudoElementWebKitCustom;
-
-        if (name.startsWith("x-"))
-            type = PseudoElementUserAgentCustom;
     }
     return type;
 }
@@ -507,6 +503,11 @@ String CSSSelector::selectorText(const String& rightSide) const
 #if ENABLE(VIDEO_TRACK)
             case CSSSelector::PseudoClassFuture:
                 str.appendLiteral(":future");
+                break;
+#endif
+#if ENABLE(ATTACHMENT_ELEMENT)
+            case CSSSelector::PseudoClassHasAttachment:
+                str.appendLiteral(":has-attachment");
                 break;
 #endif
             case CSSSelector::PseudoClassHorizontal:

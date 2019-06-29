@@ -30,7 +30,7 @@
 #include <memory>
 #include <wtf/WeakPtr.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include "DateComponents.h"
 #endif
 
@@ -44,7 +44,6 @@ class Icon;
 class InputType;
 class ListAttributeTargetObserver;
 class RadioButtonGroups;
-class URL;
 
 struct DateTimeChooserParameters;
 
@@ -87,7 +86,7 @@ public:
     StepRange createStepRange(AnyStepHandling) const;
 
 #if ENABLE(DATALIST_ELEMENT)
-    std::optional<Decimal> findClosestTickMarkValue(const Decimal&);
+    Optional<Decimal> findClosestTickMarkValue(const Decimal&);
 #endif
 
     WEBCORE_EXPORT ExceptionOr<void> stepUp(int = 1);
@@ -132,7 +131,7 @@ public:
     WEBCORE_EXPORT bool isTimeField() const;
     WEBCORE_EXPORT bool isWeekField() const;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     DateComponents::Type dateType() const;
 #endif
 
@@ -151,11 +150,11 @@ public:
     HTMLElement* placeholderElement() const final;
     WEBCORE_EXPORT HTMLElement* autoFillButtonElement() const;
 #if ENABLE(DATALIST_ELEMENT)
-    HTMLElement* dataListButtonElement() const;
+    WEBCORE_EXPORT HTMLElement* dataListButtonElement() const;
 #endif
 
     bool checked() const { return m_isChecked; }
-    WEBCORE_EXPORT void setChecked(bool, TextFieldEventBehavior = DispatchNoEvent);
+    WEBCORE_EXPORT void setChecked(bool);
 
     // 'indeterminate' is a state independent of the checked state that causes the control to draw in a way that hides the actual state.
     bool indeterminate() const { return m_isIndeterminate; }
@@ -185,8 +184,6 @@ public:
 
     // The value which is drawn by a renderer.
     String visibleValue() const;
-
-    WEBCORE_EXPORT void setEditingValue(const String&);
 
     WEBCORE_EXPORT double valueAsDate() const;
     WEBCORE_EXPORT ExceptionOr<void> setValueAsDate(double);
@@ -296,6 +293,7 @@ public:
 
     Color valueAsColor() const; // Returns transparent color if not type=color.
     WEBCORE_EXPORT void selectColor(StringView); // Does nothing if not type=color. Simulates user selection of color; intended for testing.
+    WEBCORE_EXPORT Vector<Color> suggestedColors() const;
 
     String defaultToolTip() const;
 
@@ -454,12 +452,14 @@ private:
     void addToRadioButtonGroup();
     void removeFromRadioButtonGroup();
 
+    void setDefaultSelectionAfterFocus(SelectionRevealMode);
+
     AtomicString m_name;
     String m_valueIfDirty;
     unsigned m_size;
     short m_maxResults { -1 };
     bool m_isChecked : 1;
-    bool m_reflectsCheckedAttribute : 1;
+    bool m_dirtyCheckednessFlag : 1;
     bool m_isIndeterminate : 1;
     bool m_hasType : 1;
     bool m_isActivatedSubmit : 1;

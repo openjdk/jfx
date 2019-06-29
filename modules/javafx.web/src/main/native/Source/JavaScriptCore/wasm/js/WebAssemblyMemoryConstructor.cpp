@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,11 +70,10 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyMemory(ExecState* exec
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         uint32_t size = toNonWrappingUint32(exec, minSizeValue);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        // FIXME: Creating a wasm memory that is bigger than the ArrayBuffer limit but smaller than the spec limit should throw
-        // OOME not RangeError
-        // https://bugs.webkit.org/show_bug.cgi?id=191776
-        if (!Wasm::PageCount::isValid(size) || Wasm::PageCount(size).bytes() >= MAX_ARRAY_BUFFER_SIZE)
+        if (!Wasm::PageCount::isValid(size))
             return JSValue::encode(throwException(exec, throwScope, createRangeError(exec, "WebAssembly.Memory 'initial' page count is too large"_s)));
+        if (Wasm::PageCount(size).bytes() > MAX_ARRAY_BUFFER_SIZE)
+            return JSValue::encode(throwException(exec, throwScope, createOutOfMemoryError(exec)));
         initialPageCount = Wasm::PageCount(size);
     }
 
@@ -102,7 +101,7 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyMemory(ExecState* exec
     auto* jsMemory = JSWebAssemblyMemory::create(exec, vm, exec->lexicalGlobalObject()->WebAssemblyMemoryStructure());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    RefPtr<Wasm::Memory> memory = Wasm::Memory::create(initialPageCount, maximumPageCount,
+    RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(initialPageCount, maximumPageCount,
         [&vm] (Wasm::Memory::NotifyPressure) { vm.heap.collectAsync(CollectionScope::Full); },
         [&vm] (Wasm::Memory::SyncTryToReclaim) { vm.heap.collectSync(CollectionScope::Full); },
         [&vm, jsMemory] (Wasm::Memory::GrowSuccess, Wasm::PageCount oldPageCount, Wasm::PageCount newPageCount) { jsMemory->growSuccessCallback(vm, oldPageCount, newPageCount); });

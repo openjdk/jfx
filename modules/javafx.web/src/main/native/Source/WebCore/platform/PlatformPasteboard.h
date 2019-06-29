@@ -35,11 +35,11 @@
 OBJC_CLASS NSPasteboard;
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 OBJC_CLASS UIPasteboard;
 #endif
 
-#if PLATFORM(WPE)
+#if USE(LIBWPE)
 struct wpe_pasteboard;
 #endif
 
@@ -48,7 +48,6 @@ namespace WebCore {
 class Color;
 class SelectionData;
 class SharedBuffer;
-class URL;
 struct PasteboardCustomData;
 struct PasteboardImage;
 struct PasteboardItemInfo;
@@ -58,7 +57,7 @@ struct PasteboardWebContent;
 class PlatformPasteboard {
 public:
     WEBCORE_EXPORT explicit PlatformPasteboard(const String& pasteboardName);
-#if PLATFORM(IOS) || PLATFORM(WPE)
+#if PLATFORM(IOS_FAMILY) || USE(LIBWPE)
     WEBCORE_EXPORT PlatformPasteboard();
     WEBCORE_EXPORT Vector<PasteboardItemInfo> allPasteboardItemInfo();
     WEBCORE_EXPORT PasteboardItemInfo informationForItemAtIndex(int index);
@@ -73,6 +72,7 @@ public:
     WEBCORE_EXPORT RefPtr<SharedBuffer> bufferForType(const String& pasteboardType);
     WEBCORE_EXPORT void getPathnamesForType(Vector<String>& pathnames, const String& pasteboardType) const;
     WEBCORE_EXPORT String stringForType(const String& pasteboardType) const;
+    WEBCORE_EXPORT Vector<String> allStringsForType(const String& pasteboardType) const;
     WEBCORE_EXPORT long changeCount() const;
     WEBCORE_EXPORT Color color();
     WEBCORE_EXPORT URL url();
@@ -85,15 +85,16 @@ public:
     WEBCORE_EXPORT long copy(const String& fromPasteboard);
     WEBCORE_EXPORT long setBufferForType(SharedBuffer*, const String& pasteboardType);
     WEBCORE_EXPORT long setURL(const PasteboardURL&);
+    WEBCORE_EXPORT long setColor(const Color&);
     WEBCORE_EXPORT long setStringForType(const String&, const String& pasteboardType);
     WEBCORE_EXPORT void write(const PasteboardWebContent&);
     WEBCORE_EXPORT void write(const PasteboardImage&);
     WEBCORE_EXPORT void write(const String& pasteboardType, const String&);
     WEBCORE_EXPORT void write(const PasteboardURL&);
-    WEBCORE_EXPORT RefPtr<SharedBuffer> readBuffer(int index, const String& pasteboardType);
-    WEBCORE_EXPORT String readString(int index, const String& pasteboardType);
-    WEBCORE_EXPORT URL readURL(int index, const String& pasteboardType, String& title);
-    WEBCORE_EXPORT int count();
+    WEBCORE_EXPORT RefPtr<SharedBuffer> readBuffer(int index, const String& pasteboardType) const;
+    WEBCORE_EXPORT String readString(int index, const String& pasteboardType) const;
+    WEBCORE_EXPORT URL readURL(int index, String& title) const;
+    WEBCORE_EXPORT int count() const;
     WEBCORE_EXPORT int numberOfFiles() const;
 
     WEBCORE_EXPORT long write(const PasteboardCustomData&);
@@ -105,20 +106,20 @@ public:
 #endif
 
 private:
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     bool allowReadingURLAtIndex(const URL&, int index) const;
 #endif
 
 #if PLATFORM(MAC)
     RetainPtr<NSPasteboard> m_pasteboard;
 #endif
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     RetainPtr<id> m_pasteboard;
 #endif
 #if PLATFORM(GTK)
     GtkClipboard* m_clipboard;
 #endif
-#if PLATFORM(WPE)
+#if USE(LIBWPE)
     struct wpe_pasteboard* m_pasteboard;
 #endif
 };

@@ -27,41 +27,41 @@
 
 #include "config.h"
 
-#include <stdarg.h>
-#include <limits.h>
+#include <climits>
+#include <cstdarg>
 
-#include "strtod.h"
-#include "bignum.h"
-#include "cached-powers.h"
-#include "double.h"
+#include <wtf/dtoa/bignum.h>
+#include <wtf/dtoa/cached-powers.h>
+#include <wtf/dtoa/ieee.h>
+#include <wtf/dtoa/strtod.h>
 
 namespace WTF {
-
 namespace double_conversion {
 
 #if defined(DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS)
-    // 2^53 = 9007199254740992.
-    // Any integer with at most 15 decimal digits will hence fit into a double
-    // (which has a 53bit significand) without loss of precision.
-    static const int kMaxExactDoubleIntegerDecimalDigits = 15;
+// 2^53 = 9007199254740992.
+// Any integer with at most 15 decimal digits will hence fit into a double
+// (which has a 53bit significand) without loss of precision.
+static const int kMaxExactDoubleIntegerDecimalDigits = 15;
 #endif
-    // 2^64 = 18446744073709551616 > 10^19
-    static const int kMaxUint64DecimalDigits = 19;
+// 2^64 = 18446744073709551616 > 10^19
+static const int kMaxUint64DecimalDigits = 19;
+
+// Max double: 1.7976931348623157 x 10^308
+// Min non-zero double: 4.9406564584124654 x 10^-324
+// Any x >= 10^309 is interpreted as +infinity.
+// Any x <= 10^-324 is interpreted as 0.
+// Note that 2.5e-324 (despite being smaller than the min double) will be read
+// as non-zero (equal to the min non-zero double).
+static const int kMaxDecimalPower = 309;
+static const int kMinDecimalPower = -324;
     
-    // Max double: 1.7976931348623157 x 10^308
-    // Min non-zero double: 4.9406564584124654 x 10^-324
-    // Any x >= 10^309 is interpreted as +infinity.
-    // Any x <= 10^-324 is interpreted as 0.
-    // Note that 2.5e-324 (despite being smaller than the min double) will be read
-    // as non-zero (equal to the min non-zero double).
-    static const int kMaxDecimalPower = 309;
-    static const int kMinDecimalPower = -324;
+// 2^64 = 18446744073709551616
+static const uint64_t kMaxUint64 = UINT64_2PART_C(0xFFFFFFFF, FFFFFFFF);
     
-    // 2^64 = 18446744073709551616
-    static const uint64_t kMaxUint64 = UINT64_2PART_C(0xFFFFFFFF, FFFFFFFF);
     
 #if defined(DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS)
-    static const double exact_powers_of_ten[] = {
+static const double exact_powers_of_ten[] = {
         1.0,  // 10^0
         10.0,
         100.0,
@@ -86,36 +86,36 @@ namespace double_conversion {
         1000000000000000000000.0,
         // 10^22 = 0x21e19e0c9bab2400000 = 0x878678326eac9 * 2^22
         10000000000000000000000.0
-    };
-    static const int kExactPowersOfTenSize = ARRAY_SIZE(exact_powers_of_ten);
+};
+static const int kExactPowersOfTenSize = ARRAY_SIZE(exact_powers_of_ten);
 #endif
     
-    // Maximum number of significant digits in the decimal representation.
-    // In fact the value is 772 (see conversions.cc), but to give us some margin
-    // we round up to 780.
-    static const int kMaxSignificantDecimalDigits = 780;
+// Maximum number of significant digits in the decimal representation.
+// In fact the value is 772 (see conversions.cc), but to give us some margin
+// we round up to 780.
+static const int kMaxSignificantDecimalDigits = 780;
     
-    static BufferReference<const char> TrimLeadingZeros(BufferReference<const char> buffer) {
+static BufferReference<const char> TrimLeadingZeros(BufferReference<const char> buffer) {
         for (int i = 0; i < buffer.length(); i++) {
             if (buffer[i] != '0') {
                 return buffer.SubBufferReference(i, buffer.length());
             }
         }
         return BufferReference<const char>(buffer.start(), 0);
-    }
+}
     
     
-    static BufferReference<const char> TrimTrailingZeros(BufferReference<const char> buffer) {
+static BufferReference<const char> TrimTrailingZeros(BufferReference<const char> buffer) {
         for (int i = buffer.length() - 1; i >= 0; --i) {
             if (buffer[i] != '0') {
                 return buffer.SubBufferReference(0, i + 1);
             }
         }
         return BufferReference<const char>(buffer.start(), 0);
-    }
+}
     
     
-    static void TrimToMaxSignificantDigits(BufferReference<const char> buffer,
+static void CutToMaxSignificantDigits(BufferReference<const char> buffer,
                                            int exponent,
                                            char* significant_buffer,
                                            int* significant_exponent) {
@@ -130,14 +130,39 @@ namespace double_conversion {
         significant_buffer[kMaxSignificantDecimalDigits - 1] = '1';
         *significant_exponent =
         exponent + (buffer.length() - kMaxSignificantDecimalDigits);
+}
+
+
+// Trims the buffer and cuts it to at most kMaxSignificantDecimalDigits.
+// If possible the input-buffer is reused, but if the buffer needs to be
+// modified (due to cutting), then the input needs to be copied into the
+// buffer_copy_space.
+static void TrimAndCut(BufferReference<const char> buffer, int exponent,
+                       char* buffer_copy_space, int space_size,
+                       BufferReference<const char>* trimmed, int* updated_exponent) {
+  BufferReference<const char> left_trimmed = TrimLeadingZeros(buffer);
+  BufferReference<const char> right_trimmed = TrimTrailingZeros(left_trimmed);
+  exponent += left_trimmed.length() - right_trimmed.length();
+  if (right_trimmed.length() > kMaxSignificantDecimalDigits) {
+    (void) space_size;  // Mark variable as used.
+    ASSERT(space_size >= kMaxSignificantDecimalDigits);
+    CutToMaxSignificantDigits(right_trimmed, exponent,
+                              buffer_copy_space, updated_exponent);
+    *trimmed = BufferReference<const char>(buffer_copy_space,
+                                 kMaxSignificantDecimalDigits);
+  } else {
+    *trimmed = right_trimmed;
+    *updated_exponent = exponent;
     }
+}
     
-    // Reads digits from the buffer and converts them to a uint64.
-    // Reads in as many digits as fit into a uint64.
-    // When the string starts with "1844674407370955161" no further digit is read.
-    // Since 2^64 = 18446744073709551616 it would still be possible read another
-    // digit if it was less or equal than 6, but this would complicate the code.
-    static uint64_t ReadUint64(BufferReference<const char> buffer,
+
+// Reads digits from the buffer and converts them to a uint64.
+// Reads in as many digits as fit into a uint64.
+// When the string starts with "1844674407370955161" no further digit is read.
+// Since 2^64 = 18446744073709551616 it would still be possible read another
+// digit if it was less or equal than 6, but this would complicate the code.
+static uint64_t ReadUint64(BufferReference<const char> buffer,
                                int* number_of_read_digits) {
         uint64_t result = 0;
         int i = 0;
@@ -148,14 +173,14 @@ namespace double_conversion {
         }
         *number_of_read_digits = i;
         return result;
-    }
+}
     
     
-    // Reads a DiyFp from the buffer.
-    // The returned DiyFp is not necessarily normalized.
-    // If remaining_decimals is zero then the returned DiyFp is accurate.
-    // Otherwise it has been rounded and has error of at most 1/2 ulp.
-    static void ReadDiyFp(BufferReference<const char> buffer,
+// Reads a DiyFp from the buffer.
+// The returned DiyFp is not necessarily normalized.
+// If remaining_decimals is zero then the returned DiyFp is accurate.
+// Otherwise it has been rounded and has error of at most 1/2 ulp.
+static void ReadDiyFp(BufferReference<const char> buffer,
                           DiyFp* result,
                           int* remaining_decimals) {
         int read_digits;
@@ -173,10 +198,10 @@ namespace double_conversion {
             *result = DiyFp(significand, exponent);
             *remaining_decimals = buffer.length() - read_digits;
         }
-    }
+}
     
     
-    static bool DoubleStrtod(BufferReference<const char> trimmed,
+static bool DoubleStrtod(BufferReference<const char> trimmed,
                              int exponent,
                              double* result) {
 #if !defined(DOUBLE_CONVERSION_CORRECT_DOUBLE_OPERATIONS)
@@ -229,12 +254,12 @@ namespace double_conversion {
         }
         return false;
 #endif
-    }
+}
     
     
-    // Returns 10^exponent as an exact DiyFp.
-    // The given exponent must be in the range [1; kDecimalExponentDistance[.
-    static DiyFp AdjustmentPowerOfTen(int exponent) {
+// Returns 10^exponent as an exact DiyFp.
+// The given exponent must be in the range [1; kDecimalExponentDistance[.
+static DiyFp AdjustmentPowerOfTen(int exponent) {
         ASSERT(0 < exponent);
         ASSERT(exponent < PowersOfTenCache::kDecimalExponentDistance);
         // Simply hardcode the remaining powers for the given decimal exponent
@@ -250,15 +275,14 @@ namespace double_conversion {
             case 7: return DiyFp(UINT64_2PART_C(0x98968000, 00000000), -40);
             default:
                 UNREACHABLE();
-                return DiyFp(0, 0);
-        }
     }
+}
     
     
-    // If the function returns true then the result is the correct double.
-    // Otherwise it is either the correct double or the double that is just below
-    // the correct double.
-    static bool DiyFpStrtod(BufferReference<const char> buffer,
+// If the function returns true then the result is the correct double.
+// Otherwise it is either the correct double or the double that is just below
+// the correct double.
+static bool DiyFpStrtod(BufferReference<const char> buffer,
                             int exponent,
                             double* result) {
         DiyFp input;
@@ -273,7 +297,7 @@ namespace double_conversion {
         const int kDenominator = 1 << kDenominatorLog;
         // Move the remaining decimals into the exponent.
         exponent += remaining_decimals;
-        int error = (remaining_decimals == 0 ? 0 : kDenominator / 2);
+  uint64_t error = (remaining_decimals == 0 ? 0 : kDenominator / 2);
         
         int old_e = input.e();
         input.Normalize();
@@ -365,25 +389,20 @@ namespace double_conversion {
         } else {
             return true;
         }
-    }
+}
     
     
-    // Returns the correct double for the buffer*10^exponent.
-    // The variable guess should be a close guess that is either the correct double
-    // or its lower neighbor (the nearest double less than the correct one).
-    // Preconditions:
-    //   buffer.length() + exponent <= kMaxDecimalPower + 1
-    //   buffer.length() + exponent > kMinDecimalPower
-    //   buffer.length() <= kMaxDecimalSignificantDigits
-    static double BignumStrtod(BufferReference<const char> buffer,
+// Returns
+//   - -1 if buffer*10^exponent < diy_fp.
+//   -  0 if buffer*10^exponent == diy_fp.
+//   - +1 if buffer*10^exponent > diy_fp.
+// Preconditions:
+//   buffer.length() + exponent <= kMaxDecimalPower + 1
+//   buffer.length() + exponent > kMinDecimalPower
+//   buffer.length() <= kMaxDecimalSignificantDigits
+static int CompareBufferWithDiyFp(BufferReference<const char> buffer,
                                int exponent,
-                               double guess) {
-        if (guess == Double::Infinity()) {
-            return guess;
-        }
-        
-        DiyFp upper_boundary = Double(guess).UpperBoundary();
-        
+                                  DiyFp diy_fp) {
         ASSERT(buffer.length() + exponent <= kMaxDecimalPower + 1);
         ASSERT(buffer.length() + exponent > kMinDecimalPower);
         ASSERT(buffer.length() <= kMaxSignificantDecimalDigits);
@@ -392,21 +411,65 @@ namespace double_conversion {
         // consume at most one bigit (< 64 bits).
         // ln(10) == 3.3219...
         ASSERT(((kMaxDecimalPower + 1) * 333 / 100) < Bignum::kMaxSignificantBits);
-        Bignum input;
-        Bignum boundary;
-        input.AssignDecimalString(buffer);
-        boundary.AssignUInt64(upper_boundary.f());
+  Bignum buffer_bignum;
+  Bignum diy_fp_bignum;
+  buffer_bignum.AssignDecimalString(buffer);
+  diy_fp_bignum.AssignUInt64(diy_fp.f());
         if (exponent >= 0) {
-            input.MultiplyByPowerOfTen(exponent);
+    buffer_bignum.MultiplyByPowerOfTen(exponent);
         } else {
-            boundary.MultiplyByPowerOfTen(-exponent);
+    diy_fp_bignum.MultiplyByPowerOfTen(-exponent);
         }
-        if (upper_boundary.e() > 0) {
-            boundary.ShiftLeft(upper_boundary.e());
+  if (diy_fp.e() > 0) {
+    diy_fp_bignum.ShiftLeft(diy_fp.e());
         } else {
-            input.ShiftLeft(-upper_boundary.e());
+    buffer_bignum.ShiftLeft(-diy_fp.e());
+  }
+  return Bignum::Compare(buffer_bignum, diy_fp_bignum);
+}
+
+
+// Returns true if the guess is the correct double.
+// Returns false, when guess is either correct or the next-lower double.
+static bool ComputeGuess(BufferReference<const char> trimmed, int exponent,
+                         double* guess) {
+  if (trimmed.length() == 0) {
+    *guess = 0.0;
+    return true;
         }
-        int comparison = Bignum::Compare(input, boundary);
+  if (exponent + trimmed.length() - 1 >= kMaxDecimalPower) {
+    *guess = Double::Infinity();
+    return true;
+  }
+  if (exponent + trimmed.length() <= kMinDecimalPower) {
+    *guess = 0.0;
+    return true;
+  }
+
+  if (DoubleStrtod(trimmed, exponent, guess) ||
+      DiyFpStrtod(trimmed, exponent, guess)) {
+    return true;
+  }
+  if (*guess == Double::Infinity()) {
+    return true;
+  }
+  return false;
+}
+
+double Strtod(BufferReference<const char> buffer, int exponent) {
+  char copy_buffer[kMaxSignificantDecimalDigits];
+  BufferReference<const char> trimmed;
+  int updated_exponent;
+  TrimAndCut(buffer, exponent, copy_buffer, kMaxSignificantDecimalDigits,
+             &trimmed, &updated_exponent);
+  exponent = updated_exponent;
+
+  double guess;
+  bool is_correct = ComputeGuess(trimmed, exponent, &guess);
+  if (is_correct) return guess;
+
+  DiyFp upper_boundary = Double(guess).UpperBoundary();
+  int comparison = CompareBufferWithDiyFp(trimmed, exponent, upper_boundary);
         if (comparison < 0) {
             return guess;
         } else if (comparison > 0) {
@@ -417,38 +480,112 @@ namespace double_conversion {
         } else {
             return Double(guess).NextDouble();
         }
-    }
+}
     
-    
-    double Strtod(BufferReference<const char> buffer, int exponent) {
-        BufferReference<const char> left_trimmed = TrimLeadingZeros(buffer);
-        BufferReference<const char> trimmed = TrimTrailingZeros(left_trimmed);
-        exponent += left_trimmed.length() - trimmed.length();
-        if (trimmed.length() == 0) return 0.0;
-        if (trimmed.length() > kMaxSignificantDecimalDigits) {
-            char significant_buffer[kMaxSignificantDecimalDigits];
-            int significant_exponent;
-            TrimToMaxSignificantDigits(trimmed, exponent,
-                                       significant_buffer, &significant_exponent);
-            return Strtod(BufferReference<const char>(significant_buffer,
-                                             kMaxSignificantDecimalDigits),
-                          significant_exponent);
+static float SanitizedDoubletof(double d) {
+  ASSERT(d >= 0.0);
+  // ASAN has a sanitize check that disallows casting doubles to floats if
+  // they are too big.
+  // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks
+  // The behavior should be covered by IEEE 754, but some projects use this
+  // flag, so work around it.
+  float max_finite = 3.4028234663852885981170418348451692544e+38;
+  // The half-way point between the max-finite and infinity value.
+  // Since infinity has an even significand everything equal or greater than
+  // this value should become infinity.
+  double half_max_finite_infinity =
+      3.40282356779733661637539395458142568448e+38;
+  if (d >= max_finite) {
+    if (d >= half_max_finite_infinity) {
+      return Single::Infinity();
+    } else {
+      return max_finite;
         }
-        if (exponent + trimmed.length() - 1 >= kMaxDecimalPower) {
-            return Double::Infinity();
+  } else {
+    return static_cast<float>(d);
         }
-        if (exponent + trimmed.length() <= kMinDecimalPower) {
-            return 0.0;
+}
+
+float Strtof(BufferReference<const char> buffer, int exponent) {
+  char copy_buffer[kMaxSignificantDecimalDigits];
+  BufferReference<const char> trimmed;
+  int updated_exponent;
+  TrimAndCut(buffer, exponent, copy_buffer, kMaxSignificantDecimalDigits,
+             &trimmed, &updated_exponent);
+  exponent = updated_exponent;
+
+  double double_guess;
+  bool is_correct = ComputeGuess(trimmed, exponent, &double_guess);
+
+  float float_guess = SanitizedDoubletof(double_guess);
+  if (float_guess == double_guess) {
+    // This shortcut triggers for integer values.
+    return float_guess;
+  }
+
+  // We must catch double-rounding. Say the double has been rounded up, and is
+  // now a boundary of a float, and rounds up again. This is why we have to
+  // look at previous too.
+  // Example (in decimal numbers):
+  //    input: 12349
+  //    high-precision (4 digits): 1235
+  //    low-precision (3 digits):
+  //       when read from input: 123
+  //       when rounded from high precision: 124.
+  // To do this we simply look at the neigbors of the correct result and see
+  // if they would round to the same float. If the guess is not correct we have
+  // to look at four values (since two different doubles could be the correct
+  // double).
+
+  double double_next = Double(double_guess).NextDouble();
+  double double_previous = Double(double_guess).PreviousDouble();
+
+  float f1 = SanitizedDoubletof(double_previous);
+  float f2 = float_guess;
+  float f3 = SanitizedDoubletof(double_next);
+  float f4;
+  if (is_correct) {
+    f4 = f3;
+  } else {
+    double double_next2 = Double(double_next).NextDouble();
+    f4 = SanitizedDoubletof(double_next2);
         }
+  (void) f2;  // Mark variable as used.
+  ASSERT(f1 <= f2 && f2 <= f3 && f3 <= f4);
         
-        double guess;
-        if (DoubleStrtod(trimmed, exponent, &guess) ||
-            DiyFpStrtod(trimmed, exponent, &guess)) {
-            return guess;
+  // If the guess doesn't lie near a single-precision boundary we can simply
+  // return its float-value.
+  if (f1 == f4) {
+    return float_guess;
+  }
+
+  ASSERT((f1 != f2 && f2 == f3 && f3 == f4) ||
+         (f1 == f2 && f2 != f3 && f3 == f4) ||
+         (f1 == f2 && f2 == f3 && f3 != f4));
+
+  // guess and next are the two possible candidates (in the same way that
+  // double_guess was the lower candidate for a double-precision guess).
+  float guess = f1;
+  float next = f4;
+  DiyFp upper_boundary;
+  if (guess == 0.0f) {
+    float min_float = 1e-45f;
+    upper_boundary = Double(static_cast<double>(min_float) / 2).AsDiyFp();
+  } else {
+    upper_boundary = Single(guess).UpperBoundary();
         }
-        return BignumStrtod(trimmed, exponent, guess);
+  int comparison = CompareBufferWithDiyFp(trimmed, exponent, upper_boundary);
+  if (comparison < 0) {
+    return guess;
+  } else if (comparison > 0) {
+    return next;
+  } else if ((Single(guess).Significand() & 1) == 0) {
+    // Round towards even.
+    return guess;
+  } else {
+    return next;
     }
+}
     
 }  // namespace double_conversion
-
 } // namespace WTF

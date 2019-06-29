@@ -35,7 +35,9 @@
 #include "CallFrameClosure.h"
 #include "CatchScope.h"
 #include "CodeBlock.h"
+#include "CodeCache.h"
 #include "DirectArguments.h"
+#include "ExecutableBaseInlines.h"
 #include "Heap.h"
 #include "Debugger.h"
 #include "DebuggerCallFrame.h"
@@ -67,6 +69,7 @@
 #include "ProtoCallFrame.h"
 #include "RegExpObject.h"
 #include "Register.h"
+#include "RegisterAtOffsetList.h"
 #include "ScopedArguments.h"
 #include "StackAlignment.h"
 #include "StackFrame.h"
@@ -143,23 +146,21 @@ JSValue eval(CallFrame* callFrame)
         if (!callerCodeBlock->isStrictMode()) {
             if (programSource.is8Bit()) {
                 LiteralParser<LChar> preparser(callFrame, programSource.characters8(), programSource.length(), NonStrictJSON);
-                if (JSValue parsedObject = preparser.tryLiteralParse()) {
-                    scope.release();
-                    return parsedObject;
-                }
+                if (JSValue parsedObject = preparser.tryLiteralParse())
+                    RELEASE_AND_RETURN(scope, parsedObject);
+
             } else {
                 LiteralParser<UChar> preparser(callFrame, programSource.characters16(), programSource.length(), NonStrictJSON);
-                if (JSValue parsedObject = preparser.tryLiteralParse()) {
-                    scope.release();
-                    return parsedObject;
-                }
+                if (JSValue parsedObject = preparser.tryLiteralParse())
+                    RELEASE_AND_RETURN(scope, parsedObject);
+
             }
             RETURN_IF_EXCEPTION(scope, JSValue());
         }
 
         VariableEnvironment variablesUnderTDZ;
         JSScope::collectClosureVariablesUnderTDZ(callerScopeChain, variablesUnderTDZ);
-        eval = DirectEvalExecutable::create(callFrame, makeSource(programSource, callerCodeBlock->source()->sourceOrigin()), callerCodeBlock->isStrictMode(), derivedContextType, isArrowFunctionContext, evalContextType, &variablesUnderTDZ);
+        eval = DirectEvalExecutable::create(callFrame, makeSource(programSource, callerCodeBlock->source().provider()->sourceOrigin()), callerCodeBlock->isStrictMode(), derivedContextType, isArrowFunctionContext, evalContextType, &variablesUnderTDZ);
         EXCEPTION_ASSERT(!!scope.exception() == !eval);
         if (!eval)
             return jsUndefined();
@@ -169,8 +170,7 @@ JSValue eval(CallFrame* callFrame)
 
     JSValue thisValue = callerFrame->thisValue();
     Interpreter* interpreter = vm.interpreter;
-    scope.release();
-    return interpreter->execute(eval, callFrame, thisValue, callerScopeChain);
+    RELEASE_AND_RETURN(scope, interpreter->execute(eval, callFrame, thisValue, callerScopeChain));
 }
 
 unsigned sizeOfVarargs(CallFrame* callFrame, JSValue arguments, uint32_t firstVarArgOffset)
@@ -332,7 +332,7 @@ void setupForwardArgumentsFrameAndSetThis(CallFrame* execCaller, CallFrame* exec
 
 Interpreter::Interpreter(VM& vm)
     : m_vm(vm)
-#if !ENABLE(JIT)
+#if ENABLE(C_LOOP)
     , m_cloopStack(vm)
 #endif
 {
@@ -368,129 +368,6 @@ HashMap<Opcode, OpcodeID>& Interpreter::opcodeIDTable()
 }
 #endif // !USE(LLINT_EMBEDDED_OPCODE_ID) || !ASSERT_DISABLED
 #endif // ENABLE(COMPUTED_GOTO_OPCODES)
-
-#ifdef NDEBUG
-
-void Interpreter::dumpCallFrame(CallFrame*)
-{
-}
-
-#else
-
-void Interpreter::dumpCallFrame(CallFrame* callFrame)
-{
-    callFrame->codeBlock()->dumpBytecode();
-    dumpRegisters(callFrame);
-}
-
-class DumpReturnVirtualPCFunctor {
-public:
-    DumpReturnVirtualPCFunctor(const Register*& it)
-        : m_hasSkippedFirstFrame(false)
-        , m_it(it)
-    {
-    }
-
-    StackVisitor::Status operator()(StackVisitor& visitor) const
-    {
-        if (!m_hasSkippedFirstFrame) {
-            m_hasSkippedFirstFrame = true;
-            return StackVisitor::Continue;
-        }
-
-        unsigned line = 0;
-        unsigned unusedColumn = 0;
-        visitor->computeLineAndColumn(line, unusedColumn);
-        dataLogF("[ReturnVPC]                | %10p | %d (line %d)\n", m_it, visitor->bytecodeOffset(), line);
-        return StackVisitor::Done;
-    }
-
-private:
-    mutable bool m_hasSkippedFirstFrame;
-    const Register*& m_it;
-};
-
-void Interpreter::dumpRegisters(CallFrame* callFrame)
-{
-    CodeBlock* codeBlock = callFrame->codeBlock();
-    if (!codeBlock) {
-        dataLog("Dumping host frame registers not supported.\n");
-        return;
-    }
-    VM& vm = *codeBlock->vm();
-
-    dataLogF("Register frame: \n\n");
-    dataLogF("-----------------------------------------------------------------------------\n");
-    dataLogF("            use            |   address  |                value               \n");
-    dataLogF("-----------------------------------------------------------------------------\n");
-
-    const Register* it;
-    const Register* end;
-
-    it = callFrame->registers() + CallFrameSlot::thisArgument + callFrame->argumentCount();
-    end = callFrame->registers() + CallFrameSlot::thisArgument - 1;
-    while (it > end) {
-        JSValue v = it->jsValue();
-        int registerNumber = it - callFrame->registers();
-        String name = codeBlock->nameForRegister(VirtualRegister(registerNumber));
-        dataLogF("[r% 3d %14s]      | %10p | %-16s 0x%lld \n", registerNumber, name.ascii().data(), it, toCString(v).data(), (long long)JSValue::encode(v));
-        --it;
-    }
-
-    dataLogF("-----------------------------------------------------------------------------\n");
-    dataLogF("[ArgumentCount]            | %10p | %lu \n", it, (unsigned long) callFrame->argumentCount());
-    DumpReturnVirtualPCFunctor functor(it);
-    callFrame->iterate(functor);
-    --it;
-    dataLogF("[Callee]                   | %10p | %p \n", it, callFrame->jsCallee());
-    --it;
-    dataLogF("[CodeBlock]                | %10p | %p \n", it, callFrame->codeBlock());
-    --it;
-#if ENABLE(JIT)
-    AbstractPC pc = callFrame->abstractReturnPC(callFrame->vm());
-    if (pc.hasJITReturnAddress())
-        dataLogF("[ReturnPC]                 | %10p | %p \n", it, pc.jitReturnAddress().value());
-    --it;
-#endif
-    dataLogF("[CallerFrame]              | %10p | %p \n", it, callFrame->callerFrame());
-    --it;
-    dataLogF("-----------------------------------------------------------------------------\n");
-
-    size_t numberOfCalleeSaveSlots = codeBlock->calleeSaveSpaceAsVirtualRegisters();
-    const Register* endOfCalleeSaves = it - numberOfCalleeSaveSlots;
-
-    end = it - codeBlock->numVars();
-    if (it != end) {
-        do {
-            JSValue v = it->jsValue();
-            int registerNumber = it - callFrame->registers();
-            String name = (it > endOfCalleeSaves)
-                ? "CalleeSaveReg"
-                : codeBlock->nameForRegister(VirtualRegister(registerNumber));
-            CString valueString = (it > endOfCalleeSaves) ? "" : toCString(v);
-            dataLogF("[r% 3d %14s]      | %10p | %-16s 0x%lld \n", registerNumber, name.ascii().data(), it, valueString.data(), (long long)JSValue::encode(v));
-            --it;
-        } while (it != end);
-    }
-    dataLogF("-----------------------------------------------------------------------------\n");
-
-    end = it - codeBlock->numCalleeLocals() + codeBlock->numVars();
-    if (it != end) {
-        do {
-            JSValue v = (*it).jsValue();
-            int registerNumber = it - callFrame->registers();
-            CString valueString =
-                (v.isCell() && !VMInspector::isValidCell(&vm.heap, reinterpret_cast<JSCell*>(JSValue::encode(v))))
-                ? "INVALID"
-                : toCString(v);
-            dataLogF("[r% 3d]                     | %10p | %-16s 0x%lld \n", registerNumber, it, valueString.data(), (long long)JSValue::encode(v));
-            --it;
-        } while (it != end);
-    }
-    dataLogF("-----------------------------------------------------------------------------\n");
-}
-
-#endif
 
 #if !ASSERT_DISABLED
 bool Interpreter::isOpcode(Opcode opcode)
@@ -686,15 +563,15 @@ public:
 private:
     void copyCalleeSavesToEntryFrameCalleeSavesBuffer(StackVisitor& visitor) const
     {
-#if ENABLE(JIT) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
-        RegisterAtOffsetList* currentCalleeSaves = visitor->calleeSaveRegisters();
+#if !ENABLE(C_LOOP) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
+        const RegisterAtOffsetList* currentCalleeSaves = visitor->calleeSaveRegisters();
 
         if (!currentCalleeSaves)
             return;
 
         RegisterAtOffsetList* allCalleeSaves = RegisterSet::vmCalleeSaveRegisterOffsets();
         RegisterSet dontCopyRegisters = RegisterSet::stackRegisters();
-        intptr_t* frame = reinterpret_cast<intptr_t*>(m_callFrame->registers());
+        CPURegister* frame = reinterpret_cast<CPURegister*>(m_callFrame->registers());
 
         unsigned registerCount = currentCalleeSaves->size();
         VMEntryRecord* record = vmEntryRecord(m_vm.topEntryFrame);
@@ -1168,12 +1045,13 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
             return checkedReturn(compileError);
         codeBlock = jsCast<EvalCodeBlock*>(tempCodeBlock);
     }
+    UnlinkedEvalCodeBlock* unlinkedCodeBlock = codeBlock->unlinkedEvalCodeBlock();
 
     // We can't declare a "var"/"function" that overwrites a global "let"/"const"/"class" in a sloppy-mode eval.
     if (variableObject->isGlobalObject() && !eval->isStrictMode() && (numVariables || numTopLevelFunctionDecls)) {
         JSGlobalLexicalEnvironment* globalLexicalEnvironment = jsCast<JSGlobalObject*>(variableObject)->globalLexicalEnvironment();
         for (unsigned i = 0; i < numVariables; ++i) {
-            const Identifier& ident = codeBlock->variable(i);
+            const Identifier& ident = unlinkedCodeBlock->variable(i);
             PropertySlot slot(globalLexicalEnvironment, PropertySlot::InternalMethodType::VMInquiry);
             if (JSGlobalLexicalEnvironment::getOwnPropertySlot(globalLexicalEnvironment, callFrame, ident, slot)) {
                 return checkedReturn(throwTypeError(callFrame, throwScope, makeString("Can't create duplicate global variable in eval: '", String(ident.impl()), "'")));
@@ -1198,7 +1076,7 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
             variableObject->globalObject(vm)->varInjectionWatchpoint()->fireAll(vm, "Executed eval, fired VarInjection watchpoint");
 
         for (unsigned i = 0; i < numVariables; ++i) {
-            const Identifier& ident = codeBlock->variable(i);
+            const Identifier& ident = unlinkedCodeBlock->variable(i);
             bool hasProperty = variableObject->hasProperty(callFrame, ident);
             RETURN_IF_EXCEPTION(throwScope, checkedReturn(throwScope.exception()));
             if (!hasProperty) {
@@ -1232,7 +1110,7 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
             }
 
             for (unsigned i = 0; i < numFunctionHoistingCandidates; ++i) {
-                const Identifier& ident = codeBlock->functionHoistingCandidate(i);
+                const Identifier& ident = unlinkedCodeBlock->functionHoistingCandidate(i);
                 JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(callFrame, scope, ident);
                 RETURN_IF_EXCEPTION(throwScope, checkedReturn(throwScope.exception()));
                 if (!resolvedScope.isUndefined()) {
@@ -1354,3 +1232,34 @@ NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookType debugHo
 }
 
 } // namespace JSC
+
+namespace WTF {
+
+void printInternal(PrintStream& out, JSC::DebugHookType type)
+{
+    switch (type) {
+    case JSC::WillExecuteProgram:
+        out.print("WillExecuteProgram");
+        return;
+    case JSC::DidExecuteProgram:
+        out.print("DidExecuteProgram");
+        return;
+    case JSC::DidEnterCallFrame:
+        out.print("DidEnterCallFrame");
+        return;
+    case JSC::DidReachBreakpoint:
+        out.print("DidReachBreakpoint");
+        return;
+    case JSC::WillLeaveCallFrame:
+        out.print("WillLeaveCallFrame");
+        return;
+    case JSC::WillExecuteStatement:
+        out.print("WillExecuteStatement");
+        return;
+    case JSC::WillExecuteExpression:
+        out.print("WillExecuteExpression");
+        return;
+    }
+}
+
+} // namespace WTF

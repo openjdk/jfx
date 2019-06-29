@@ -27,7 +27,7 @@
 
 #include "NotImplemented.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "StringJava.h"
 // #include "PluginPackage.h" //XXX: win only?
 // #include "PluginView.h" //XXX: win only?
@@ -48,7 +48,7 @@ PluginWidgetJava::PluginWidgetJava(jobject wfh, const IntSize& size,
     m_paramNames = paramNames;
     m_paramValues = paramValues;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     jstring urlJavaString = url.toJavaString(env);
     jstring mimeTypeJavaString = mimeType.toJavaString(env);
 
@@ -61,13 +61,13 @@ PluginWidgetJava::PluginWidgetJava(jobject wfh, const IntSize& size,
 
     jobject obj = env->CallStaticObjectMethod(cls, pluginWidgetCreateMID, wfh,
         url.toJavaString(env), mimeTypeJavaString, pNames, pValues);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     ASSERT(obj);
     if (obj) {
         setJavaObject(obj);
         env->CallVoidMethod(obj, pluginWidgetFWKInitMID, size.width(),
                         size.height(), url.toJavaString(env));
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
         env->DeleteLocalRef(obj);
     }
     env->DeleteLocalRef(cls);
@@ -79,10 +79,10 @@ PluginWidgetJava::PluginWidgetJava(jobject wfh, const IntSize& size,
 /*
 PluginWidgetJava::~PluginWidgetJava()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     env->CallVoidMethod(javaObject(), pluginWidgetFWKDestroyMID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 */
 

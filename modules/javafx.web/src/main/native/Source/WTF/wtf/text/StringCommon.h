@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef StringCommon_h
-#define StringCommon_h
+#pragma once
 
 #include <algorithm>
 #include <unicode/uchar.h>
@@ -167,7 +166,7 @@ ALWAYS_INLINE bool equal(const UChar* aUChar, const UChar* bUChar, unsigned leng
 
     return true;
 }
-#elif PLATFORM(IOS) && WTF_ARM_ARCH_AT_LEAST(7) && !ASAN_ENABLED
+#elif PLATFORM(IOS_FAMILY) && WTF_ARM_ARCH_AT_LEAST(7) && !ASAN_ENABLED
 ALWAYS_INLINE bool equal(const LChar* a, const LChar* b, unsigned length)
 {
     bool isEqual = false;
@@ -659,5 +658,3 @@ template<unsigned lowercaseLettersLength> inline bool equalLettersIgnoringASCIIC
 
 using WTF::equalIgnoringASCIICase;
 using WTF::equalLettersIgnoringASCIICase;
-
-#endif

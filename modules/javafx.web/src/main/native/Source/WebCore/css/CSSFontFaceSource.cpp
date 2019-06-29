@@ -34,6 +34,8 @@
 #include "FontCache.h"
 #include "FontCustomPlatformData.h"
 #include "FontDescription.h"
+#include "ResourceLoadObserver.h"
+#include "RuntimeEnabledFeatures.h"
 #include "SVGToOTFFontConversion.h"
 #include "SharedBuffer.h"
 
@@ -168,9 +170,8 @@ void CSSFontFaceSource::load(CSSFontSelector* fontSelector)
         if (m_immediateSource) {
             ASSERT(!m_immediateFontCustomPlatformData);
             bool wrapping;
-            RefPtr<SharedBuffer> buffer = SharedBuffer::create(static_cast<const char*>(m_immediateSource->baseAddress()), m_immediateSource->byteLength());
-            ASSERT(buffer);
-            m_immediateFontCustomPlatformData = CachedFont::createCustomFontData(*buffer, String(), wrapping);
+            auto buffer = SharedBuffer::create(static_cast<const char*>(m_immediateSource->baseAddress()), m_immediateSource->byteLength());
+            m_immediateFontCustomPlatformData = CachedFont::createCustomFontData(buffer.get(), String(), wrapping);
             success = static_cast<bool>(m_immediateFontCustomPlatformData);
         } else {
             // We are only interested in whether or not fontForFamily() returns null or not. Luckily, none of
@@ -181,6 +182,10 @@ void CSSFontFaceSource::load(CSSFontSelector* fontSelector)
             fontDescription.setComputedSize(1);
             fontDescription.setShouldAllowUserInstalledFonts(m_face.allowUserInstalledFonts());
             success = FontCache::singleton().fontForFamily(fontDescription, m_familyNameOrURI, nullptr, nullptr, FontSelectionSpecifiedCapabilities(), true);
+            if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
+                if (auto* document = fontSelector->document())
+                    ResourceLoadObserver::shared().logFontLoad(*document, m_familyNameOrURI.string(), success);
+            }
         }
         setStatus(success ? Status::Success : Status::Failure);
     }
@@ -226,11 +231,7 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
         return nullptr;
     if (!m_inDocumentCustomPlatformData)
         return nullptr;
-#if PLATFORM(COCOA)
     return Font::create(m_inDocumentCustomPlatformData->fontPlatformData(fontDescription, syntheticBold, syntheticItalic, fontFaceFeatures, fontFaceVariantSettings, fontFaceCapabilities), Font::Origin::Remote);
-#else
-    return Font::create(m_inDocumentCustomPlatformData->fontPlatformData(fontDescription, syntheticBold, syntheticItalic), Font::Origin::Remote);
-#endif
 #endif
 
     ASSERT_NOT_REACHED();

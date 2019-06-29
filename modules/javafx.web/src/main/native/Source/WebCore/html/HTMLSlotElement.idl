@@ -27,8 +27,9 @@
     EnabledAtRuntime=ShadowDOM,
     JSGenerateToNativeObject
 ] interface HTMLSlotElement : HTMLElement {
-    [Reflect] attribute DOMString name;
+    [CEReactions=NotNeeded, Reflect] attribute DOMString name;
     sequence<Node> assignedNodes(optional AssignedNodesOptions options);
+    sequence<Element> assignedElements(optional AssignedNodesOptions options);
 };
 
 dictionary AssignedNodesOptions {

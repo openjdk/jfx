@@ -28,6 +28,7 @@
 
 #include "CSSFontSelector.h"
 #include "CSSValuePool.h"
+#include "CachedResourceLoader.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "CommonVM.h"
@@ -62,7 +63,6 @@ static void releaseNoncriticalMemory()
     RenderTheme::singleton().purgeCaches();
 
     FontCache::singleton().purgeInactiveFontData();
-    FontDescription::invalidateCaches();
 
     clearWidthCaches();
     TextPainter::clearGlyphDisplayLists();
@@ -75,11 +75,13 @@ static void releaseNoncriticalMemory()
     InlineStyleSheetOwner::clearCache();
 }
 
-static void releaseCriticalMemory(Synchronous synchronous)
+static void releaseCriticalMemory(Synchronous synchronous, MaintainPageCache maintainPageCache)
 {
     // Right now, the only reason we call release critical memory while not under memory pressure is if the process is about to be suspended.
-    PruningReason pruningReason = MemoryPressureHandler::singleton().isUnderMemoryPressure() ? PruningReason::MemoryPressure : PruningReason::ProcessSuspended;
-    PageCache::singleton().pruneToSizeNow(0, pruningReason);
+    if (maintainPageCache == MaintainPageCache::No) {
+        PruningReason pruningReason = MemoryPressureHandler::singleton().isUnderMemoryPressure() ? PruningReason::MemoryPressure : PruningReason::ProcessSuspended;
+        PageCache::singleton().pruneToSizeNow(0, pruningReason);
+    }
 
     MemoryCache::singleton().pruneLiveResourcesToSize(0, /*shouldDestroyDecodedDataForAllLiveResources*/ true);
 
@@ -88,6 +90,7 @@ static void releaseCriticalMemory(Synchronous synchronous)
     for (auto& document : copyToVectorOf<RefPtr<Document>>(Document::allDocuments())) {
         document->styleScope().releaseMemory();
         document->fontSelector().emptyCaches();
+        document->cachedResourceLoader().garbageCollectDocumentResources();
     }
 
     GCController::singleton().deleteAllCode(JSC::DeleteAllCodeIfNotCollecting);
@@ -102,7 +105,7 @@ static void releaseCriticalMemory(Synchronous synchronous)
     if (synchronous == Synchronous::Yes) {
         GCController::singleton().garbageCollectNow();
     } else {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
         GCController::singleton().garbageCollectNowIfNotDoneRecently();
 #else
         GCController::singleton().garbageCollectSoon();
@@ -110,14 +113,14 @@ static void releaseCriticalMemory(Synchronous synchronous)
     }
 }
 
-void releaseMemory(Critical critical, Synchronous synchronous)
+void releaseMemory(Critical critical, Synchronous synchronous, MaintainPageCache maintainPageCache)
 {
     TraceScope scope(MemoryPressureHandlerStart, MemoryPressureHandlerEnd, static_cast<uint64_t>(critical), static_cast<uint64_t>(synchronous));
 
     if (critical == Critical::Yes) {
         // Return unused pages back to the OS now as this will likely give us a little memory to work with.
         WTF::releaseFastMallocFreeMemory();
-        releaseCriticalMemory(synchronous);
+        releaseCriticalMemory(synchronous, maintainPageCache);
     }
 
     releaseNoncriticalMemory();
@@ -127,7 +130,7 @@ void releaseMemory(Critical critical, Synchronous synchronous)
     if (synchronous == Synchronous::Yes) {
         // FastMalloc has lock-free thread specific caches that can only be cleared from the thread itself.
         WorkerThread::releaseFastMallocFreeMemoryInAllThreads();
-#if ENABLE(ASYNC_SCROLLING) && !PLATFORM(IOS)
+#if ENABLE(ASYNC_SCROLLING) && !PLATFORM(IOS_FAMILY)
         ScrollingThread::dispatch(WTF::releaseFastMallocFreeMemory);
 #endif
         WTF::releaseFastMallocFreeMemory();
@@ -166,7 +169,7 @@ void logMemoryStatisticsAtTimeOfDeath()
             continue;
         String tagName = displayNameForVMTag(i);
         if (!tagName)
-            tagName = String::format("Tag %u", i);
+            tagName = makeString("Tag ", i);
         RELEASE_LOG(MemoryPressure, "%16s: %lu MB", tagName.latin1().data(), dirty / MB);
     }
 #endif

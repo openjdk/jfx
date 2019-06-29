@@ -27,25 +27,24 @@
 
 #include "config.h"
 
-#include <stdarg.h>
-#include <limits.h>
-#include <math.h>
+#include <climits>
+#include <cmath>
+#include <cstdarg>
 
-#include "utils.h"
-#include "cached-powers.h"
+#include <wtf/dtoa/utils.h>
+
+#include <wtf/dtoa/cached-powers.h>
 
 namespace WTF {
-
 namespace double_conversion {
     
-    struct CachedPower {
+struct CachedPower {
         uint64_t significand;
         int16_t binary_exponent;
         int16_t decimal_exponent;
-    };
+};
     
-    constexpr static const double kD_1_LOG2_10 = 0.30102999566398114;  //  1 / lg(10)
-    constexpr static const CachedPower kCachedPowers[] = {
+constexpr static const CachedPower kCachedPowers[] = {
         {UINT64_2PART_C(0xfa8fd5a0, 081c0288), -1220, -348},
         {UINT64_2PART_C(0xbaaee17f, a23ebf76), -1193, -340},
         {UINT64_2PART_C(0x8b16fb20, 3055ac76), -1166, -332},
@@ -133,35 +132,36 @@ namespace double_conversion {
         {UINT64_2PART_C(0x9e19db92, b4e31ba9), 1013, 324},
         {UINT64_2PART_C(0xeb96bf6e, badf77d9), 1039, 332},
         {UINT64_2PART_C(0xaf87023b, 9bf0ee6b), 1066, 340},
-    };
-    constexpr static const int kCachedPowersLength { ARRAY_SIZE(kCachedPowers) };
-    constexpr static const int kCachedPowersOffset { -kCachedPowers[0].decimal_exponent };
+};
     
-    const int PowersOfTenCache::kDecimalExponentDistance { kCachedPowers[1].decimal_exponent - kCachedPowers[0].decimal_exponent };
-    const int PowersOfTenCache::kMinDecimalExponent { kCachedPowers[0].decimal_exponent };
-    const int PowersOfTenCache::kMaxDecimalExponent { kCachedPowers[kCachedPowersLength - 1].decimal_exponent };
-    
-    void PowersOfTenCache::GetCachedPowerForBinaryExponentRange(
+constexpr static const int kCachedPowersOffset = 348;  // -1 * the first decimal_exponent.
+constexpr static const double kD_1_LOG2_10 = 0.30102999566398114;  //  1 / lg(10)
+// Difference between the decimal exponents in the table above.
+const int PowersOfTenCache::kDecimalExponentDistance = 8;
+const int PowersOfTenCache::kMinDecimalExponent = -348;
+const int PowersOfTenCache::kMaxDecimalExponent = 340;
+
+void PowersOfTenCache::GetCachedPowerForBinaryExponentRange(
                                                                 int min_exponent,
                                                                 int max_exponent,
                                                                 DiyFp* power,
                                                                 int* decimal_exponent) {
-        UNUSED_PARAM(max_exponent);
         int kQ = DiyFp::kSignificandSize;
         double k = ceil((min_exponent + kQ - 1) * kD_1_LOG2_10);
         int foo = kCachedPowersOffset;
         int index =
         (foo + static_cast<int>(k) - 1) / kDecimalExponentDistance + 1;
-        ASSERT(0 <= index && index < kCachedPowersLength);
+  ASSERT(0 <= index && index < static_cast<int>(ARRAY_SIZE(kCachedPowers)));
         CachedPower cached_power = kCachedPowers[index];
         ASSERT(min_exponent <= cached_power.binary_exponent);
+  (void) max_exponent;  // Mark variable as used.
         ASSERT(cached_power.binary_exponent <= max_exponent);
         *decimal_exponent = cached_power.decimal_exponent;
         *power = DiyFp(cached_power.significand, cached_power.binary_exponent);
-    }
+}
     
     
-    void PowersOfTenCache::GetCachedPowerForDecimalExponent(int requested_exponent,
+void PowersOfTenCache::GetCachedPowerForDecimalExponent(int requested_exponent,
                                                             DiyFp* power,
                                                             int* found_exponent) {
         ASSERT(kMinDecimalExponent <= requested_exponent);
@@ -173,8 +173,7 @@ namespace double_conversion {
         *found_exponent = cached_power.decimal_exponent;
         ASSERT(*found_exponent <= requested_exponent);
         ASSERT(requested_exponent < *found_exponent + kDecimalExponentDistance);
-    }
+}
     
 }  // namespace double_conversion
-
 } // namespace WTF

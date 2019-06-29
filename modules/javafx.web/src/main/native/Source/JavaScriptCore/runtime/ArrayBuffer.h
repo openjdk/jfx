@@ -29,6 +29,7 @@
 #include "GCIncomingRefCounted.h"
 #include "Weak.h"
 #include <wtf/CagedPtr.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/Function.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSafeRefCounted.h>
@@ -113,7 +114,7 @@ public:
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(ArrayBuffer&);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(const void* source, unsigned byteLength);
 
-    // Only for use by Uint8ClampedArray::createUninitialized and SharedBuffer::tryCreateArrayBuffer.
+    // Only for use by Uint8ClampedArray::tryCreateUninitialized and SharedBuffer::tryCreateArrayBuffer.
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createUninitialized(unsigned numElements, unsigned elementByteSize);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreateUninitialized(unsigned numElements, unsigned elementByteSize);
 
@@ -128,8 +129,8 @@ public:
 
     inline size_t gcSizeEstimateInBytes() const;
 
-    JS_EXPORT_PRIVATE RefPtr<ArrayBuffer> slice(double begin, double end) const;
-    JS_EXPORT_PRIVATE RefPtr<ArrayBuffer> slice(double begin) const;
+    JS_EXPORT_PRIVATE Ref<ArrayBuffer> slice(double begin, double end) const;
+    JS_EXPORT_PRIVATE Ref<ArrayBuffer> slice(double begin) const;
 
     inline void pin();
     inline void unpin();
@@ -154,18 +155,18 @@ private:
     static Ref<ArrayBuffer> createInternal(ArrayBufferContents&&, const void*, unsigned);
     static RefPtr<ArrayBuffer> tryCreate(unsigned numElements, unsigned elementByteSize, ArrayBufferContents::InitializationPolicy);
     ArrayBuffer(ArrayBufferContents&&);
-    RefPtr<ArrayBuffer> sliceImpl(unsigned begin, unsigned end) const;
+    Ref<ArrayBuffer> sliceImpl(unsigned begin, unsigned end) const;
     inline unsigned clampIndex(double index) const;
     static inline unsigned clampValue(double x, unsigned left, unsigned right);
 
     void notifyIncommingReferencesOfTransfer(VM&);
 
     ArrayBufferContents m_contents;
-    unsigned m_pinCount : 30;
-    bool m_isWasmMemory : 1;
+    Checked<unsigned> m_pinCount;
+    bool m_isWasmMemory;
     // m_locked == true means that some API user fetched m_contents directly from a TypedArray object,
     // the buffer is backed by a WebAssembly.Memory, or is a SharedArrayBuffer.
-    bool m_locked : 1;
+    bool m_locked;
 
 public:
     Weak<JSArrayBuffer> m_wrapper;

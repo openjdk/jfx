@@ -19,9 +19,10 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}"
     "${WEBCORE_DIR}"
     "${WEBCORE_DIR}/Modules/airplay"
-    "${WEBCORE_DIR}/Modules/beacon"
     "${WEBCORE_DIR}/Modules/applepay"
     "${WEBCORE_DIR}/Modules/applepay/paymentrequest"
+    "${WEBCORE_DIR}/Modules/applicationmanifest"
+    "${WEBCORE_DIR}/Modules/beacon"
     "${WEBCORE_DIR}/Modules/cache"
     "${WEBCORE_DIR}/Modules/credentialmanagement"
     "${WEBCORE_DIR}/Modules/encryptedmedia"
@@ -34,10 +35,12 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/indexeddb/server"
     "${WEBCORE_DIR}/Modules/indexeddb/shared"
     "${WEBCORE_DIR}/Modules/mediacapabilities"
-    "${WEBCORE_DIR}/Modules/mediacontrols/"
+    "${WEBCORE_DIR}/Modules/mediacontrols"
+    "${WEBCORE_DIR}/Modules/mediarecorder"
     "${WEBCORE_DIR}/Modules/mediasession"
     "${WEBCORE_DIR}/Modules/mediasource"
     "${WEBCORE_DIR}/Modules/mediastream"
+    "${WEBCORE_DIR}/Modules/mediastream/libwebrtc"
     "${WEBCORE_DIR}/Modules/navigatorcontentutils"
     "${WEBCORE_DIR}/Modules/notifications"
     "${WEBCORE_DIR}/Modules/paymentrequest"
@@ -47,11 +50,15 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/streams"
     "${WEBCORE_DIR}/Modules/webaudio"
     "${WEBCORE_DIR}/Modules/webauthn"
+    "${WEBCORE_DIR}/Modules/webauthn/cbor"
+    "${WEBCORE_DIR}/Modules/webauthn/fido"
     "${WEBCORE_DIR}/Modules/webdatabase"
     "${WEBCORE_DIR}/Modules/webdriver"
+    "${WEBCORE_DIR}/Modules/webgpu"
     "${WEBCORE_DIR}/Modules/websockets"
     "${WEBCORE_DIR}/Modules/webvr"
     "${WEBCORE_DIR}/accessibility"
+    "${WEBCORE_DIR}/accessibility/isolatedtree"
     "${WEBCORE_DIR}/animation"
     "${WEBCORE_DIR}/bindings"
     "${WEBCORE_DIR}/bindings/js"
@@ -65,9 +72,9 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/crypto/parameters"
     "${WEBCORE_DIR}/css"
     "${WEBCORE_DIR}/css/parser"
+    "${WEBCORE_DIR}/css/typedom"
     "${WEBCORE_DIR}/cssjit"
     "${WEBCORE_DIR}/dom"
-    "${WEBCORE_DIR}/dom/default"
     "${WEBCORE_DIR}/dom/messageports"
     "${WEBCORE_DIR}/domjit"
     "${WEBCORE_DIR}/editing"
@@ -83,6 +90,13 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/inspector/agents"
     "${WEBCORE_DIR}/inspector/agents/page"
     "${WEBCORE_DIR}/inspector/agents/worker"
+    "${WEBCORE_DIR}/layout"
+    "${WEBCORE_DIR}/layout/blockformatting"
+    "${WEBCORE_DIR}/layout/displaytree"
+    "${WEBCORE_DIR}/layout/floats"
+    "${WEBCORE_DIR}/layout/inlineformatting"
+    "${WEBCORE_DIR}/layout/inlineformatting/text"
+    "${WEBCORE_DIR}/layout/layouttree"
     "${WEBCORE_DIR}/loader"
     "${WEBCORE_DIR}/loader/appcache"
     "${WEBCORE_DIR}/loader/archive"
@@ -97,7 +111,6 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform"
     "${WEBCORE_DIR}/platform/animation"
     "${WEBCORE_DIR}/platform/audio"
-    "${WEBCORE_DIR}/platform/crypto"
     "${WEBCORE_DIR}/platform/encryptedmedia"
     "${WEBCORE_DIR}/platform/gamepad"
     "${WEBCORE_DIR}/platform/graphics"
@@ -105,12 +118,12 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/cpu/arm/filters"
     "${WEBCORE_DIR}/platform/graphics/displaylists"
     "${WEBCORE_DIR}/platform/graphics/filters"
-    "${WEBCORE_DIR}/platform/graphics/harfbuzz"
-    "${WEBCORE_DIR}/platform/graphics/harfbuzz/ng"
     "${WEBCORE_DIR}/platform/graphics/iso"
     "${WEBCORE_DIR}/platform/graphics/opentype"
     "${WEBCORE_DIR}/platform/graphics/transforms"
     "${WEBCORE_DIR}/platform/mediacapabilities"
+    "${WEBCORE_DIR}/platform/mediarecorder"
+    "${WEBCORE_DIR}/platform/mediasession"
     "${WEBCORE_DIR}/platform/mediastream"
     "${WEBCORE_DIR}/platform/mediastream/libwebrtc"
     "${WEBCORE_DIR}/platform/mock"
@@ -118,7 +131,6 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/network"
     "${WEBCORE_DIR}/platform/sql"
     "${WEBCORE_DIR}/platform/text"
-    "${WEBCORE_DIR}/platform/text/icu"
     "${WEBCORE_DIR}/platform/vr"
     "${WEBCORE_DIR}/plugins"
     "${WEBCORE_DIR}/rendering"
@@ -141,6 +153,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/workers/service"
     "${WEBCORE_DIR}/workers/service/context"
     "${WEBCORE_DIR}/workers/service/server"
+    "${WEBCORE_DIR}/worklets"
     "${WEBCORE_DIR}/xml"
     "${WEBCORE_DIR}/xml/parser"
     "${DERIVED_SOURCES_WEBCORE_DIR}"
@@ -176,6 +189,7 @@ set(WebCore_IDL_INCLUDES
     Modules/geolocation
     Modules/indexeddb
     Modules/mediacapabilities
+    Modules/mediarecorder
     Modules/mediasession
     Modules/mediastream
     Modules/notifications
@@ -185,10 +199,13 @@ set(WebCore_IDL_INCLUDES
     Modules/streams
     Modules/webaudio
     Modules/webdatabase
+    Modules/webgpu
     Modules/websockets
     Modules/webvr
 
     bindings/js
+
+    css/typedom
 
     html/canvas
     html/shadow
@@ -278,6 +295,10 @@ set(WebCore_NON_SVG_IDL_FILES
 
     Modules/mediacontrols/MediaControlsHost.idl
 
+    Modules/mediarecorder/BlobEvent.idl
+    Modules/mediarecorder/MediaRecorder.idl
+    Modules/mediarecorder/MediaRecorderErrorEvent.idl
+
     Modules/mediasession/HTMLMediaElementMediaSession.idl
     Modules/mediasession/MediaRemoteControls.idl
     Modules/mediasession/MediaSession.idl
@@ -294,21 +315,22 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/mediastream/MediaDeviceInfo.idl
     Modules/mediastream/MediaDevices.idl
     Modules/mediastream/MediaStream.idl
-    Modules/mediastream/MediaStreamEvent.idl
     Modules/mediastream/MediaStreamTrack.idl
     Modules/mediastream/MediaStreamTrackEvent.idl
     Modules/mediastream/MediaTrackConstraints.idl
     Modules/mediastream/MediaTrackSupportedConstraints.idl
     Modules/mediastream/NavigatorMediaDevices.idl
-    Modules/mediastream/NavigatorUserMedia.idl
     Modules/mediastream/OverconstrainedError.idl
     Modules/mediastream/OverconstrainedErrorEvent.idl
     Modules/mediastream/RTCAnswerOptions.idl
+    Modules/mediastream/RTCCertificate.idl
     Modules/mediastream/RTCConfiguration.idl
     Modules/mediastream/RTCDTMFSender.idl
     Modules/mediastream/RTCDTMFToneChangeEvent.idl
     Modules/mediastream/RTCDataChannel.idl
     Modules/mediastream/RTCDataChannelEvent.idl
+    Modules/mediastream/RTCDegradationPreference.idl
+    Modules/mediastream/RTCDtxStatus.idl
     Modules/mediastream/RTCIceCandidate.idl
     Modules/mediastream/RTCIceConnectionState.idl
     Modules/mediastream/RTCIceGatheringState.idl
@@ -320,9 +342,19 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/mediastream/RTCPeerConnection.idl
     Modules/mediastream/RTCPeerConnectionIceEvent.idl
     Modules/mediastream/RTCPeerConnectionState.idl
+    Modules/mediastream/RTCPriorityType.idl
+    Modules/mediastream/RTCRtpCapabilities.idl
+    Modules/mediastream/RTCRtpCodecParameters.idl
+    Modules/mediastream/RTCRtpContributingSource.idl
+    Modules/mediastream/RTCRtpEncodingParameters.idl
+    Modules/mediastream/RTCRtpFecParameters.idl
+    Modules/mediastream/RTCRtpHeaderExtensionParameters.idl
     Modules/mediastream/RTCRtpParameters.idl
     Modules/mediastream/RTCRtpReceiver.idl
+    Modules/mediastream/RTCRtpRtxParameters.idl
+    Modules/mediastream/RTCRtpSendParameters.idl
     Modules/mediastream/RTCRtpSender.idl
+    Modules/mediastream/RTCRtpSynchronizationSource.idl
     Modules/mediastream/RTCRtpTransceiver.idl
     Modules/mediastream/RTCRtpTransceiverDirection.idl
     Modules/mediastream/RTCSessionDescription.idl
@@ -336,7 +368,9 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/notifications/NotificationPermission.idl
     Modules/notifications/NotificationPermissionCallback.idl
 
+    Modules/paymentrequest/AddressErrors.idl
     Modules/paymentrequest/MerchantValidationEvent.idl
+    Modules/paymentrequest/PayerErrorFields.idl
     Modules/paymentrequest/PaymentAddress.idl
     Modules/paymentrequest/PaymentComplete.idl
     Modules/paymentrequest/PaymentCurrencyAmount.idl
@@ -345,6 +379,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/paymentrequest/PaymentDetailsModifier.idl
     Modules/paymentrequest/PaymentDetailsUpdate.idl
     Modules/paymentrequest/PaymentItem.idl
+    Modules/paymentrequest/PaymentMethodChangeEvent.idl
     Modules/paymentrequest/PaymentMethodData.idl
     Modules/paymentrequest/PaymentOptions.idl
     Modules/paymentrequest/PaymentRequest.idl
@@ -353,6 +388,7 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/paymentrequest/PaymentResponse.idl
     Modules/paymentrequest/PaymentShippingOption.idl
     Modules/paymentrequest/PaymentShippingType.idl
+    Modules/paymentrequest/PaymentValidationErrors.idl
 
     Modules/speech/DOMWindowSpeechSynthesis.idl
     Modules/speech/SpeechSynthesis.idl
@@ -403,11 +439,13 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/webauthn/AuthenticatorAssertionResponse.idl
     Modules/webauthn/AuthenticatorAttestationResponse.idl
     Modules/webauthn/AuthenticatorResponse.idl
+    Modules/webauthn/AuthenticatorTransport.idl
     Modules/webauthn/PublicKeyCredential.idl
     Modules/webauthn/PublicKeyCredentialCreationOptions.idl
     Modules/webauthn/PublicKeyCredentialDescriptor.idl
     Modules/webauthn/PublicKeyCredentialRequestOptions.idl
     Modules/webauthn/PublicKeyCredentialType.idl
+    Modules/webauthn/UserVerificationRequirement.idl
 
     Modules/webdatabase/DOMWindowWebDatabase.idl
     Modules/webdatabase/Database.idl
@@ -422,6 +460,55 @@ set(WebCore_NON_SVG_IDL_FILES
     Modules/webdatabase/SQLTransactionErrorCallback.idl
 
     Modules/webdriver/NavigatorWebDriver.idl
+
+    Modules/webgpu/DOMWindowWebGPU.idl
+    Modules/webgpu/GPUCompareFunction.idl
+    Modules/webgpu/GPUDepthStencilStateDescriptor.idl
+    Modules/webgpu/GPUExtent3D.idl
+    Modules/webgpu/GPURequestAdapterOptions.idl
+    Modules/webgpu/GPUTextureDescriptor.idl
+    Modules/webgpu/GPUTextureDimension.idl
+    Modules/webgpu/GPUTextureFormat.idl
+    Modules/webgpu/GPUTextureUsage.idl
+    Modules/webgpu/WebGPU.idl
+    Modules/webgpu/WebGPUAdapter.idl
+    Modules/webgpu/WebGPUBindGroup.idl
+    Modules/webgpu/WebGPUBindGroupBinding.idl
+    Modules/webgpu/WebGPUBindGroupDescriptor.idl
+    Modules/webgpu/WebGPUBindGroupLayout.idl
+    Modules/webgpu/WebGPUBindGroupLayoutBinding.idl
+    Modules/webgpu/WebGPUBindGroupLayoutDescriptor.idl
+    Modules/webgpu/WebGPUBuffer.idl
+    Modules/webgpu/WebGPUBufferBinding.idl
+    Modules/webgpu/WebGPUBufferDescriptor.idl
+    Modules/webgpu/WebGPUBufferUsage.idl
+    Modules/webgpu/WebGPUColor.idl
+    Modules/webgpu/WebGPUCommandBuffer.idl
+    Modules/webgpu/WebGPUDevice.idl
+    Modules/webgpu/WebGPUIndexFormat.idl
+    Modules/webgpu/WebGPUInputStateDescriptor.idl
+    Modules/webgpu/WebGPUInputStepMode.idl
+    Modules/webgpu/WebGPUPipelineDescriptorBase.idl
+    Modules/webgpu/WebGPUPipelineLayout.idl
+    Modules/webgpu/WebGPUPipelineLayoutDescriptor.idl
+    Modules/webgpu/WebGPUPipelineStageDescriptor.idl
+    Modules/webgpu/WebGPUProgrammablePassEncoder.idl
+    Modules/webgpu/WebGPUQueue.idl
+    Modules/webgpu/WebGPURenderPassColorAttachmentDescriptor.idl
+    Modules/webgpu/WebGPURenderPassDescriptor.idl
+    Modules/webgpu/WebGPURenderPassEncoder.idl
+    Modules/webgpu/WebGPURenderPipeline.idl
+    Modules/webgpu/WebGPURenderPipelineDescriptor.idl
+    Modules/webgpu/WebGPURenderingContext.idl
+    Modules/webgpu/WebGPUShaderModule.idl
+    Modules/webgpu/WebGPUShaderModuleDescriptor.idl
+    Modules/webgpu/WebGPUShaderStageBit.idl
+    Modules/webgpu/WebGPUSwapChain.idl
+    Modules/webgpu/WebGPUTexture.idl
+    Modules/webgpu/WebGPUTextureView.idl
+    Modules/webgpu/WebGPUVertexAttributeDescriptor.idl
+    Modules/webgpu/WebGPUVertexFormat.idl
+    Modules/webgpu/WebGPUVertexInputDescriptor.idl
 
     Modules/websockets/CloseEvent.idl
     Modules/websockets/WebSocket.idl
@@ -445,17 +532,16 @@ set(WebCore_NON_SVG_IDL_FILES
     accessibility/AriaAttributes.idl
 
     animation/Animatable.idl
-    animation/AnimationEffectReadOnly.idl
-    animation/AnimationEffectTiming.idl
-    animation/AnimationEffectTimingProperties.idl
-    animation/AnimationEffectTimingReadOnly.idl
+    animation/AnimationEffect.idl
+    animation/EffectTiming.idl
     animation/AnimationPlaybackEvent.idl
     animation/AnimationPlaybackEventInit.idl
     animation/AnimationTimeline.idl
     animation/CSSAnimation.idl
     animation/CSSTransition.idl
     animation/CompositeOperation.idl
-    animation/ComputedTimingProperties.idl
+    animation/CompositeOperationOrAuto.idl
+    animation/ComputedEffectTiming.idl
     animation/DocumentTimeline.idl
     animation/DocumentTimelineOptions.idl
     animation/FillMode.idl
@@ -463,7 +549,7 @@ set(WebCore_NON_SVG_IDL_FILES
     animation/KeyframeAnimationOptions.idl
     animation/KeyframeEffect.idl
     animation/KeyframeEffectOptions.idl
-    animation/KeyframeEffectReadOnly.idl
+    animation/OptionalEffectTiming.idl
     animation/PlaybackDirection.idl
     animation/WebAnimation.idl
 
@@ -504,6 +590,8 @@ set(WebCore_NON_SVG_IDL_FILES
     css/CSSKeyframesRule.idl
     css/CSSMediaRule.idl
     css/CSSNamespaceRule.idl
+    css/CSSPaintCallback.idl
+    css/CSSPaintSize.idl
     css/CSSPageRule.idl
     css/CSSRule.idl
     css/CSSRuleList.idl
@@ -512,6 +600,10 @@ set(WebCore_NON_SVG_IDL_FILES
     css/CSSStyleSheet.idl
     css/CSSSupportsRule.idl
     css/CSSUnknownRule.idl
+    css/DOMCSSCustomPropertyDescriptor.idl
+    css/DOMCSSNamespace.idl
+    css/DOMCSSPaintWorklet.idl
+    css/DOMCSSRegisterCustomProperty.idl
     css/DOMMatrix.idl
     css/DOMMatrix2DInit.idl
     css/DOMMatrixInit.idl
@@ -522,7 +614,6 @@ set(WebCore_NON_SVG_IDL_FILES
     css/DeprecatedCSSOMRect.idl
     css/DeprecatedCSSOMValue.idl
     css/DeprecatedCSSOMValueList.idl
-    css/DOMCSSNamespace.idl
     css/ElementCSSInlineStyle.idl
     css/FontFace.idl
     css/FontFaceSet.idl
@@ -532,6 +623,15 @@ set(WebCore_NON_SVG_IDL_FILES
     css/StyleMedia.idl
     css/StyleSheet.idl
     css/StyleSheetList.idl
+
+    css/typedom/StylePropertyMap.idl
+    css/typedom/StylePropertyMapReadOnly.idl
+    css/typedom/TypedOMCSSImageValue.idl
+    css/typedom/TypedOMCSSNumericValue.idl
+    css/typedom/TypedOMCSSStyleValue.idl
+    css/typedom/TypedOMCSSUnitValue.idl
+    css/typedom/TypedOMCSSUnparsedValue.idl
+
     css/WebKitCSSMatrix.idl
     css/WebKitCSSViewportRule.idl
 
@@ -603,6 +703,7 @@ set(WebCore_NON_SVG_IDL_FILES
     dom/OverflowEvent.idl
     dom/PageTransitionEvent.idl
     dom/ParentNode.idl
+    dom/PointerEvent.idl
     dom/PopStateEvent.idl
     dom/ProcessingInstruction.idl
     dom/ProgressEvent.idl
@@ -768,31 +869,34 @@ set(WebCore_NON_SVG_IDL_FILES
     html/canvas/ImageBitmapRenderingContextSettings.idl
     html/canvas/ImageSmoothingQuality.idl
     html/canvas/OffscreenCanvasRenderingContext2D.idl
+    html/canvas/PaintRenderingContext2D.idl
     html/canvas/Path2D.idl
-    html/canvas/WebGPUBuffer.idl
-    html/canvas/WebGPUCommandBuffer.idl
-    html/canvas/WebGPUCommandQueue.idl
-    html/canvas/WebGPUComputeCommandEncoder.idl
-    html/canvas/WebGPUComputePipelineState.idl
-    html/canvas/WebGPUDepthStencilDescriptor.idl
-    html/canvas/WebGPUDepthStencilState.idl
-    html/canvas/WebGPUDrawable.idl
-    html/canvas/WebGPUFunction.idl
-    html/canvas/WebGPULibrary.idl
-    html/canvas/WebGPURenderCommandEncoder.idl
-    html/canvas/WebGPURenderPassAttachmentDescriptor.idl
-    html/canvas/WebGPURenderPassColorAttachmentDescriptor.idl
-    html/canvas/WebGPURenderPassDepthAttachmentDescriptor.idl
-    html/canvas/WebGPURenderPassDescriptor.idl
-    html/canvas/WebGPURenderPipelineColorAttachmentDescriptor.idl
-    html/canvas/WebGPURenderPipelineDescriptor.idl
-    html/canvas/WebGPURenderPipelineState.idl
-    html/canvas/WebGPURenderingContext.idl
-    html/canvas/WebGPUSize.idl
-    html/canvas/WebGPUTexture.idl
-    html/canvas/WebGPUTextureDescriptor.idl
+    html/canvas/WebMetalBuffer.idl
+    html/canvas/WebMetalCommandBuffer.idl
+    html/canvas/WebMetalCommandQueue.idl
+    html/canvas/WebMetalComputeCommandEncoder.idl
+    html/canvas/WebMetalComputePipelineState.idl
+    html/canvas/WebMetalDepthStencilDescriptor.idl
+    html/canvas/WebMetalDepthStencilState.idl
+    html/canvas/WebMetalDrawable.idl
+    html/canvas/WebMetalFunction.idl
+    html/canvas/WebMetalLibrary.idl
+    html/canvas/WebMetalRenderCommandEncoder.idl
+    html/canvas/WebMetalRenderPassAttachmentDescriptor.idl
+    html/canvas/WebMetalRenderPassColorAttachmentDescriptor.idl
+    html/canvas/WebMetalRenderPassDepthAttachmentDescriptor.idl
+    html/canvas/WebMetalRenderPassDescriptor.idl
+    html/canvas/WebMetalRenderPipelineColorAttachmentDescriptor.idl
+    html/canvas/WebMetalRenderPipelineDescriptor.idl
+    html/canvas/WebMetalRenderPipelineState.idl
+    html/canvas/WebMetalRenderingContext.idl
+    html/canvas/WebMetalSize.idl
+    html/canvas/WebMetalTexture.idl
+    html/canvas/WebMetalTextureDescriptor.idl
 
     inspector/CommandLineAPIHost.idl
+    inspector/InspectorAuditAccessibilityObject.idl
+    inspector/InspectorAuditDOMObject.idl
     inspector/InspectorFrontendHost.idl
 
     loader/appcache/DOMApplicationCache.idl
@@ -814,6 +918,7 @@ set(WebCore_NON_SVG_IDL_FILES
     page/NavigatorLanguage.idl
     page/NavigatorOnLine.idl
     page/NavigatorServiceWorker.idl
+    page/NavigatorShare.idl
     page/Performance.idl
     page/PerformanceEntry.idl
     page/PerformanceMark.idl
@@ -827,7 +932,12 @@ set(WebCore_NON_SVG_IDL_FILES
     page/PerformanceTiming.idl
     page/RemoteDOMWindow.idl
     page/Screen.idl
+    page/ScrollIntoViewOptions.idl
+    page/ScrollLogicalPosition.idl
     page/ScrollToOptions.idl
+    page/ShareData.idl
+    page/UndoItem.idl
+    page/UndoManager.idl
     page/VisualViewport.idl
     page/WebKitPoint.idl
     page/WindowEventHandlers.idl
@@ -862,6 +972,10 @@ set(WebCore_NON_SVG_IDL_FILES
     workers/service/ServiceWorkerRegistration.idl
     workers/service/ServiceWorkerUpdateViaCache.idl
     workers/service/ServiceWorkerWindowClient.idl
+
+    worklets/PaintWorkletGlobalScope.idl
+    worklets/Worklet.idl
+    worklets/WorkletGlobalScope.idl
 
     xml/DOMParser.idl
     xml/XMLHttpRequest.idl
@@ -1138,6 +1252,7 @@ if (ENABLE_ENCRYPTED_MEDIA)
         html/MediaEncryptedEvent.cpp
     )
     list(APPEND WebCore_IDL_FILES
+        Modules/encryptedmedia/MediaKeyEncryptionScheme.idl
         Modules/encryptedmedia/MediaKeyMessageEvent.idl
         Modules/encryptedmedia/MediaKeySession.idl
         Modules/encryptedmedia/MediaKeySessionType.idl
@@ -1555,12 +1670,18 @@ endif ()
 
 if (USE_LIBWEBRTC)
   list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES "${THIRDPARTY_DIR}/libwebrtc/Source/"
-      "${THIRDPARTY_DIR}/libwebrtc/Source/webrtc")
+      "${THIRDPARTY_DIR}/libwebrtc/Source/webrtc"
+      "${THIRDPARTY_DIR}/libwebrtc/Source/third_party/abseil-cpp")
   list(APPEND WebCore_LIBRARIES webrtc)
   list(APPEND WebCore_SOURCES
+      Modules/mediastream/libwebrtc/LibWebRTCStatsCollector.cpp
       Modules/mediastream/libwebrtc/LibWebRTCDataChannelHandler.cpp
       Modules/mediastream/libwebrtc/LibWebRTCMediaEndpoint.cpp
       Modules/mediastream/libwebrtc/LibWebRTCPeerConnectionBackend.cpp
+      Modules/mediastream/libwebrtc/LibWebRTCRtpReceiverBackend.cpp
+      Modules/mediastream/libwebrtc/LibWebRTCRtpSenderBackend.cpp
+      Modules/mediastream/libwebrtc/LibWebRTCRtpTransceiverBackend.cpp
+      Modules/mediastream/libwebrtc/LibWebRTCUtils.cpp
       )
 endif ()
 
@@ -1634,6 +1755,8 @@ set(WINDOW_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/DOMWindowConstructor
 set(WORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/WorkerGlobalScopeConstructors.idl)
 set(DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/DedicatedWorkerGlobalScopeConstructors.idl)
 set(SERVICEWORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/ServiceWorkerGlobalScopeConstructors.idl)
+set(WORKLETGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/WorkletGlobalScopeConstructors.idl)
+set(PAINTWORKLETGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/PaintWorkletGlobalScopeConstructors.idl)
 
 WEBKIT_FRAMEWORK_DECLARE(WebCore)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
@@ -1735,7 +1858,7 @@ add_custom_command(
     DEPENDS ${WebCore_CSS_VALUE_KEYWORDS}
     WORKING_DIRECTORY ${DERIVED_SOURCES_WEBCORE_DIR}
     COMMAND ${PERL_EXECUTABLE} -ne "print" ${WebCore_CSS_VALUE_KEYWORDS} > ${DERIVED_SOURCES_WEBCORE_DIR}/CSSValueKeywords.in
-    COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/css/makevalues.pl --defines "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --gperf-executable "${GPERF_EXECUTABLE}"
+    COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/css/makevalues.pl --defines "${FEATURE_DEFINES_WITH_SPACE_SEPARATOR} ${CSS_VALUE_PLATFORM_DEFINES}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --gperf-executable "${GPERF_EXECUTABLE}"
     VERBATIM)
 list(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/CSSValueKeywords.cpp)
 ADD_SOURCE_WEBCORE_DERIVED_DEPENDENCIES(${WEBCORE_DIR}/css/CSSParser.cpp CSSValueKeywords.h)
@@ -1813,7 +1936,9 @@ GENERATE_BINDINGS(WebCoreBindings
         --windowConstructorsFile ${WINDOW_CONSTRUCTORS_FILE}
         --workerGlobalScopeConstructorsFile ${WORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
         --dedicatedWorkerGlobalScopeConstructorsFile ${DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
-        --serviceWorkerGlobalScopeConstructorsFile ${SERVICEWORKERGLOBALSCOPE_CONSTRUCTORS_FILE})
+        --serviceWorkerGlobalScopeConstructorsFile ${SERVICEWORKERGLOBALSCOPE_CONSTRUCTORS_FILE}
+        --workletGlobalScopeConstructorsFile ${WORKLETGLOBALSCOPE_CONSTRUCTORS_FILE}
+        --paintWorkletGlobalScopeConstructorsFile ${PAINTWORKLETGLOBALSCOPE_CONSTRUCTORS_FILE})
 
 GENERATE_BINDINGS(WebCoreTestSupportBindings
     OUTPUT_SOURCE WebCoreTestSupport_SOURCES
@@ -1830,7 +1955,6 @@ add_dependencies(WebCoreTestSupportBindings WebCore)
 # WebCore JS Builtins
 
 set(WebCore_BUILTINS_SOURCES
-    ${WEBCORE_DIR}/Modules/mediastream/NavigatorUserMedia.js
     ${WEBCORE_DIR}/Modules/mediastream/RTCPeerConnection.js
     ${WEBCORE_DIR}/Modules/mediastream/RTCPeerConnectionInternals.js
     ${WEBCORE_DIR}/Modules/streams/ByteLengthQueuingStrategy.js
@@ -1850,7 +1974,7 @@ set(WebCore_BUILTINS_SOURCES
 )
 
 set(BUILTINS_GENERATOR_SCRIPTS
-    ${JavaScriptCore_SCRIPTS_DIR}/builtins.py
+    ${JavaScriptCore_SCRIPTS_DIR}/wkbuiltins.py
     ${JavaScriptCore_SCRIPTS_DIR}/builtins_generator.py
     ${JavaScriptCore_SCRIPTS_DIR}/builtins_model.py
     ${JavaScriptCore_SCRIPTS_DIR}/builtins_templates.py

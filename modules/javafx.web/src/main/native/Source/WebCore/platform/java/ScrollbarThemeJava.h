@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "ScrollbarThemeComposite.h"
 
 namespace WebCore {

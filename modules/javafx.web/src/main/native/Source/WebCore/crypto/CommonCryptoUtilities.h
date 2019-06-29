@@ -25,11 +25,11 @@
 
 #pragma once
 
-#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300)
+#if (PLATFORM(IOS_FAMILY) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300)
 #define HAVE_CCRSAGetCRTComponents 1
 #endif
 
-#if ENABLE(SUBTLE_CRYPTO)
+#if ENABLE(WEB_CRYPTO)
 
 #include "CryptoAlgorithmIdentifier.h"
 #include <CommonCrypto/CommonCryptor.h>
@@ -71,10 +71,6 @@ enum {
     ccRSAPSSPadding = 1005
 };
 typedef uint32_t CCAsymmetricPadding;
-
-enum {
-    kCCNotVerified = -4306
-};
 #endif
 
 typedef struct _CCBigNumRef *CCBigNumRef;
@@ -169,4 +165,4 @@ bool getCommonCryptoDigestAlgorithm(CryptoAlgorithmIdentifier, CCDigestAlgorithm
 
 } // namespace WebCore
 
-#endif // ENABLE(SUBTLE_CRYPTO)
+#endif // ENABLE(WEB_CRYPTO)

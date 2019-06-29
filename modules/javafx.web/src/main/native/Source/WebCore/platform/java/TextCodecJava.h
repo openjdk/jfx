@@ -27,7 +27,7 @@
 
 #include "TextCodec.h"
 #include "TextEncoding.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 
 namespace WebCore {
 

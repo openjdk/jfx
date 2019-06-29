@@ -35,6 +35,8 @@
 
 #if PLATFORM(COCOA)
 #include "WebAudioSourceProviderAVFObjC.h"
+#elif ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM) && USE(LIBWEBRTC) && USE(GSTREAMER)
+#include "AudioSourceProviderGStreamer.h"
 #else
 #include "WebAudioSourceProvider.h"
 #endif
@@ -96,6 +98,11 @@ const String& MediaStreamTrackPrivate::label() const
     return m_source->name();
 }
 
+void MediaStreamTrackPrivate::setContentHint(HintValue hintValue)
+{
+    m_contentHint = hintValue;
+}
+
 bool MediaStreamTrackPrivate::muted() const
 {
     return m_source->muted();
@@ -130,7 +137,7 @@ void MediaStreamTrackPrivate::endTrack()
     m_isEnded = true;
     updateReadyState();
 
-    m_source->requestStop(this);
+    m_source->requestToEnd(*this);
 
     forEachObserver([this](auto& observer) {
         observer.trackEnded(*this);
@@ -142,6 +149,7 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     auto clonedMediaStreamTrackPrivate = create(m_source.copyRef());
     clonedMediaStreamTrackPrivate->m_isEnabled = this->m_isEnabled;
     clonedMediaStreamTrackPrivate->m_isEnded = this->m_isEnded;
+    clonedMediaStreamTrackPrivate->m_contentHint = this->m_contentHint;
     clonedMediaStreamTrackPrivate->updateReadyState();
 
     return clonedMediaStreamTrackPrivate;
@@ -162,9 +170,9 @@ const RealtimeMediaSourceCapabilities& MediaStreamTrackPrivate::capabilities() c
     return m_source->capabilities();
 }
 
-void MediaStreamTrackPrivate::applyConstraints(const MediaConstraints& constraints, RealtimeMediaSource::SuccessHandler&& successHandler, RealtimeMediaSource::FailureHandler&& failureHandler)
+void MediaStreamTrackPrivate::applyConstraints(const MediaConstraints& constraints, RealtimeMediaSource::ApplyConstraintsHandler&& completionHandler)
 {
-    m_source->applyConstraints(constraints, WTFMove(successHandler), WTFMove(failureHandler));
+    m_source->applyConstraints(constraints, WTFMove(completionHandler));
 }
 
 AudioSourceProvider* MediaStreamTrackPrivate::audioSourceProvider()
@@ -172,6 +180,9 @@ AudioSourceProvider* MediaStreamTrackPrivate::audioSourceProvider()
 #if PLATFORM(COCOA)
     if (!m_audioSourceProvider)
         m_audioSourceProvider = WebAudioSourceProviderAVFObjC::create(*this);
+#elif USE(LIBWEBRTC) && USE(GSTREAMER)
+    if (!m_audioSourceProvider)
+        m_audioSourceProvider = AudioSourceProviderGStreamer::create(*this);
 #endif
     return m_audioSourceProvider.get();
 }

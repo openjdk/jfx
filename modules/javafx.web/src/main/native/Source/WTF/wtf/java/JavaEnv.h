@@ -31,47 +31,25 @@
 
 extern JavaVM* jvm;
 
-ALWAYS_INLINE JNIEnv* JNICALL WebCore_GetJavaEnv()
+#define WC_GETJAVAENV_CHKRET(_env_var, ... /* ret val */)   \
+    JNIEnv* _env_var = WTF::GetJavaEnv(); \
+    if (!_env_var) return __VA_ARGS__;
+
+namespace WTF {
+
+ALWAYS_INLINE JNIEnv* JNICALL GetJavaEnv()
 {
     void* env;
     jvm->GetEnv(&env, JNI_VERSION_1_2);
     return (JNIEnv*)env;
 }
 
-#define WC_GETJAVAENV_CHKRET(_env_var, ... /* ret val */)   \
-    JNIEnv* _env_var = WebCore_GetJavaEnv(); \
-    if (!_env_var) return __VA_ARGS__;
-
-extern bool CheckAndClearException(JNIEnv* env);
-
-namespace WebCore {
-
-jclass PG_GetFontClass(JNIEnv* env);
-jclass PG_GetFontCustomPlatformDataClass(JNIEnv* env);
-jclass PG_GetGraphicsImageDecoderClass(JNIEnv* env);
-jclass PG_GetGraphicsContextClass(JNIEnv* env);
-jclass PG_GetGraphicsManagerClass(JNIEnv* env);
-jclass PG_GetImageClass(JNIEnv* env);
-jclass PG_GetImageFrameClass(JNIEnv* env);
-jclass PG_GetMediaPlayerClass(JNIEnv* env);
-jclass PG_GetPathClass(JNIEnv* env);
-jclass PG_GetPathIteratorClass(JNIEnv* env);
-jclass PG_GetRectangleClass(JNIEnv* env);
-jclass PG_GetRefClass(JNIEnv* env);
-jclass PG_GetRenderQueueClass(JNIEnv* env);
-jclass PG_GetTransformClass(JNIEnv* env);
-jclass PG_GetWebPageClass(JNIEnv* env);
-jclass PG_GetColorChooserClass(JNIEnv* env);
-
-jclass getTimerClass(JNIEnv* env);
+bool CheckAndClearException(JNIEnv* env);
 
 JLObject PL_GetLogger(JNIEnv* env, const char* name);
 void PL_ResumeCount(JNIEnv* env, jobject perfLogger, const char* probe);
 void PL_SuspendCount(JNIEnv* env, jobject perfLogger, const char* probe);
 bool PL_IsEnabled(JNIEnv* env, jobject perfLogger);
-
-JLObject PL_GetGraphicsManager(JNIEnv* env);
-
 
 //Log wrapper
 struct EntryJavaLogger
@@ -98,7 +76,7 @@ struct EntryJavaLogger
 };
 
 
-} // namespace WebCore
+} // namespace WTF
 
 namespace WTF {
 template<bool daemon> class AttachThreadToJavaEnv {
@@ -138,8 +116,8 @@ using AttachThreadAsNonDaemonToJavaEnv = AttachThreadToJavaEnv<false>;
 //  com.sun.webkit.perf.XXXX.level = ALL
 //have to be added into the file <wk_root>/WebKitBuild/<Debug|Release>/dist/logging.properties
 #define LOG_PERF_RECORD(env, LOG_NAME, LOG_RECORD) \
-    static JGObject __logger__(WebCore::PL_GetLogger(env, LOG_NAME)); \
-    WebCore::EntryJavaLogger __el__(env, __logger__, LOG_RECORD);
+    static JGObject __logger__(WTF::PL_GetLogger(env, LOG_NAME)); \
+    WTF::EntryJavaLogger __el__(env, __logger__, LOG_RECORD);
 
 #define jlong_to_ptr(a) ((void*)(uintptr_t)(a))
 #define ptr_to_jlong(a) ((jlong)(uintptr_t)(a))

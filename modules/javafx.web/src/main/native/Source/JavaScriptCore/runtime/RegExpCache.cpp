@@ -56,6 +56,13 @@ RegExpCache::RegExpCache(VM* vm)
 {
 }
 
+RegExp* RegExpCache::ensureEmptyRegExpSlow(VM& vm)
+{
+    RegExp* regExp = RegExp::create(vm, "", NoFlags);
+    m_emptyRegExp.set(vm, regExp);
+    return regExp;
+}
+
 void RegExpCache::finalize(Handle<Unknown> handle, void*)
 {
     RegExp* regExp = static_cast<RegExp*>(handle.get().asCell());

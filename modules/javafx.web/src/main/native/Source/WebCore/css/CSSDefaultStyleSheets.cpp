@@ -34,10 +34,12 @@
 #include "HTMLAnchorElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLBodyElement.h"
+#include "HTMLDataListElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLEmbedElement.h"
 #include "HTMLHeadElement.h"
 #include "HTMLHtmlElement.h"
+#include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLObjectElement.h"
 #include "HTMLSpanElement.h"
@@ -70,9 +72,20 @@ StyleSheetContents* CSSDefaultStyleSheets::fullscreenStyleSheet;
 StyleSheetContents* CSSDefaultStyleSheets::plugInsStyleSheet;
 StyleSheetContents* CSSDefaultStyleSheets::imageControlsStyleSheet;
 StyleSheetContents* CSSDefaultStyleSheets::mediaQueryStyleSheet;
+#if ENABLE(DATALIST_ELEMENT)
+StyleSheetContents* CSSDefaultStyleSheets::dataListStyleSheet;
+#endif
+#if ENABLE(INPUT_TYPE_COLOR)
+StyleSheetContents* CSSDefaultStyleSheets::colorInputStyleSheet;
+#endif
 
 // FIXME: It would be nice to use some mechanism that guarantees this is in sync with the real UA stylesheet.
+#if PLATFORM(MAC)
+// The only difference in the simple style sheet for macOS is the addition of html{color:text}.
+static const char* simpleUserAgentStyleSheet = "html,body,div{display:block}html{color:text}head{display:none}body{margin:8px}div:focus,span:focus,a:focus{outline:auto 5px -webkit-focus-ring-color}a:any-link{color:-webkit-link;text-decoration:underline}a:any-link:active{color:-webkit-activelink}";
+#else
 static const char* simpleUserAgentStyleSheet = "html,body,div{display:block}head{display:none}body{margin:8px}div:focus,span:focus,a:focus{outline:auto 5px -webkit-focus-ring-color}a:any-link{color:-webkit-link;text-decoration:underline}a:any-link:active{color:-webkit-activelink}";
+#endif
 
 static inline bool elementCanUseSimpleDefaultStyle(const Element& element)
 {
@@ -142,6 +155,9 @@ void CSSDefaultStyleSheets::addToDefaultStyle(StyleSheetContents& sheet)
 
 void CSSDefaultStyleSheets::loadFullDefaultStyle()
 {
+    if (defaultStyle && !simpleDefaultStyleSheet)
+        return;
+
     if (simpleDefaultStyleSheet) {
         ASSERT(defaultStyle);
         ASSERT(defaultPrintStyle == defaultStyle);
@@ -222,6 +238,18 @@ void CSSDefaultStyleSheets::ensureDefaultStyleSheetsForElement(const Element& el
             }
         }
 #endif // ENABLE(SERVICE_CONTROLS)
+#if ENABLE(DATALIST_ELEMENT)
+        else if (!dataListStyleSheet && is<HTMLDataListElement>(element)) {
+            dataListStyleSheet = parseUASheet(RenderTheme::singleton().dataListStyleSheet());
+            addToDefaultStyle(*dataListStyleSheet);
+        }
+#endif // ENABLE(DATALIST_ELEMENT)
+#if ENABLE(INPUT_TYPE_COLOR)
+        else if (!colorInputStyleSheet && is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element).isColorControl()) {
+            colorInputStyleSheet = parseUASheet(RenderTheme::singleton().colorInputStyleSheet());
+            addToDefaultStyle(*colorInputStyleSheet);
+        }
+#endif // ENABLE(INPUT_TYPE_COLOR)
     } else if (is<SVGElement>(element)) {
         if (!svgStyleSheet) {
             // SVG rules.

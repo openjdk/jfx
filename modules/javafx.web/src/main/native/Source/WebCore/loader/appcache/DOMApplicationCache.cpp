@@ -34,23 +34,23 @@
 
 namespace WebCore {
 
-DOMApplicationCache::DOMApplicationCache(Frame& frame)
-    : DOMWindowProperty(&frame)
+DOMApplicationCache::DOMApplicationCache(DOMWindow& window)
+    : DOMWindowProperty(&window)
 {
     if (auto* host = applicationCacheHost())
         host->setDOMApplicationCache(this);
 }
 
-void DOMApplicationCache::disconnectFrameForDocumentSuspension()
+void DOMApplicationCache::suspendForPageCache()
 {
     if (auto* host = applicationCacheHost())
         host->setDOMApplicationCache(nullptr);
-    DOMWindowProperty::disconnectFrameForDocumentSuspension();
+    DOMWindowProperty::suspendForPageCache();
 }
 
-void DOMApplicationCache::reconnectFrameFromDocumentSuspension(Frame* frame)
+void DOMApplicationCache::resumeFromPageCache()
 {
-    DOMWindowProperty::reconnectFrameFromDocumentSuspension(frame);
+    DOMWindowProperty::resumeFromPageCache();
     if (auto* host = applicationCacheHost())
         host->setDOMApplicationCache(this);
 }
@@ -64,9 +64,10 @@ void DOMApplicationCache::willDestroyGlobalObjectInFrame()
 
 ApplicationCacheHost* DOMApplicationCache::applicationCacheHost() const
 {
-    if (!m_frame)
+    auto* frame = this->frame();
+    if (!frame)
         return nullptr;
-    auto* documentLoader = m_frame->loader().documentLoader();
+    auto* documentLoader = frame->loader().documentLoader();
     if (!documentLoader)
         return nullptr;
     return &documentLoader->applicationCacheHost();
@@ -104,9 +105,10 @@ void DOMApplicationCache::abort()
 
 ScriptExecutionContext* DOMApplicationCache::scriptExecutionContext() const
 {
-    if (!m_frame)
+    auto* frame = this->frame();
+    if (!frame)
         return nullptr;
-    return m_frame->document();
+    return frame->document();
 }
 
 } // namespace WebCore

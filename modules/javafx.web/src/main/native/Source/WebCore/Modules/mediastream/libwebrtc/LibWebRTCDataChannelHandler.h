@@ -28,20 +28,37 @@
 
 #include "LibWebRTCMacros.h"
 #include "RTCDataChannelHandler.h"
+
+ALLOW_UNUSED_PARAMETERS_BEGIN
+
 #include <webrtc/api/datachannelinterface.h>
+
+ALLOW_UNUSED_PARAMETERS_END
+
+namespace webrtc {
+struct DataChannelInit;
+}
 
 namespace WebCore {
 
+class RTCDataChannelEvent;
 class RTCDataChannelHandlerClient;
+struct RTCDataChannelInit;
+class ScriptExecutionContext;
 
 class LibWebRTCDataChannelHandler final : public RTCDataChannelHandler, private webrtc::DataChannelObserver {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit LibWebRTCDataChannelHandler(rtc::scoped_refptr<webrtc::DataChannelInterface>&& channel) : m_channel(WTFMove(channel)) { ASSERT(m_channel); }
     ~LibWebRTCDataChannelHandler();
 
+    static webrtc::DataChannelInit fromRTCDataChannelInit(const RTCDataChannelInit&);
+    static Ref<RTCDataChannelEvent> channelEvent(ScriptExecutionContext&, rtc::scoped_refptr<webrtc::DataChannelInterface>&&);
+
 private:
     // RTCDataChannelHandler API
     void setClient(RTCDataChannelHandlerClient&) final;
+    void checkState();
     bool sendStringData(const String&) final;
     bool sendRawData(const char*, size_t) final;
     void close() final;

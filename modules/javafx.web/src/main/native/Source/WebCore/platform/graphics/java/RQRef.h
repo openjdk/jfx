@@ -26,7 +26,7 @@
 #pragma once
 
 #include <jni.h>
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 

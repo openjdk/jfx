@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "LocalizedStrings.h"
 #include "NotImplemented.h"
 
@@ -36,7 +36,7 @@ namespace WebCore {
 
 String getLocalizedProperty(String name)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static JGClass cls(env->FindClass("com/sun/webkit/LocalizedStrings"));
     ASSERT(cls);
@@ -49,7 +49,7 @@ String getLocalizedProperty(String name)
 
     JLString ls(static_cast<jstring>(env->CallStaticObjectMethod(cls, mid,
         (jstring)name.toJavaString(env))));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return !ls ? name : String(env, ls);
 }
@@ -487,6 +487,11 @@ String AXWebAreaText()
     return getLocalizedProperty("AXWebAreaText");
 }
 
+String AXAutoFillCreditCardLabel()
+{
+    return getLocalizedProperty("AXAutoFillCreditCardLabel");
+}
+
 String AXLinkText()
 {
     return getLocalizedProperty("AXLinkText");
@@ -705,5 +710,10 @@ String unsupportedPluginText()
 {
     notImplemented();
     return String::fromUTF8("Unsupported Plug-in");
+}
+
+String localizedString(const char* key)
+{
+    return String::fromUTF8(key, strlen(key));
 }
 } // namespace WebCore

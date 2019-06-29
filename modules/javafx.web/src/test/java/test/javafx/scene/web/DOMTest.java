@@ -34,6 +34,7 @@ import static org.junit.Assert.fail;
 
 import javafx.scene.web.WebEngine;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.*;
 import org.w3c.dom.css.*;
@@ -290,6 +291,7 @@ public class DOMTest extends TestBase {
         });
     }
 
+    @Ignore("Incorrect test, refer JDK-8210955")
     @Test public void testEventListenerCascade() {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         submit(() -> {

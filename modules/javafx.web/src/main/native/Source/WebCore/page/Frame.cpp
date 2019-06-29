@@ -57,7 +57,6 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
-#include "HTMLDocument.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLFrameElementBase.h"
@@ -69,14 +68,13 @@
 #include "InspectorInstrumentation.h"
 #include "JSWindowProxy.h"
 #include "Logging.h"
-#include "MathMLNames.h"
-#include "MediaFeatureNames.h"
 #include "NavigationScheduler.h"
 #include "Navigator.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "PageCache.h"
+#include "ProcessWarming.h"
 #include "RenderLayerCompositor.h"
 #include "RenderTableCell.h"
 #include "RenderText.h"
@@ -87,7 +85,6 @@
 #include "RuntimeEnabledFeatures.h"
 #include "SVGDocument.h"
 #include "SVGDocumentExtensions.h"
-#include "SVGNames.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "ScrollingCoordinator.h"
@@ -101,10 +98,6 @@
 #include "UserScript.h"
 #include "UserTypingGestureIndicator.h"
 #include "VisibleUnits.h"
-#include "WebKitFontFamilyNames.h"
-#include "XLinkNames.h"
-#include "XMLNSNames.h"
-#include "XMLNames.h"
 #include "markup.h"
 #include "npruntime_impl.h"
 #include "runtime_root.h"
@@ -113,7 +106,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include "WKContentObservation.h"
 #endif
 
@@ -121,7 +114,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 static const Seconds scrollFrequency { 1000_s / 60. };
 #endif
 
@@ -162,7 +155,7 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
     , m_editor(makeUniqueRef<Editor>(*this))
     , m_selection(makeUniqueRef<FrameSelection>(this))
     , m_animationController(makeUniqueRef<CSSAnimationController>(*this))
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     , m_overflowAutoScrollTimer(*this, &Frame::overflowAutoScrollTimerFired)
     , m_selectionChangeCallbacksDisabled(false)
 #endif
@@ -171,16 +164,7 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
     , m_activeDOMObjectsAndAnimationsSuspendedCount(0)
     , m_eventHandler(makeUniqueRef<EventHandler>(*this))
 {
-    AtomicString::init();
-    HTMLNames::init();
-    QualifiedName::init();
-    MediaFeatureNames::init();
-    SVGNames::init();
-    XLinkNames::init();
-    MathMLNames::init();
-    XMLNSNames::init();
-    XMLNames::init();
-    WebKitFontFamilyNames::init();
+    ProcessWarming::initializeNames();
 
     if (ownerElement) {
         m_mainFrame.selfOnlyRef();
@@ -518,7 +502,7 @@ String Frame::matchLabelsAgainstElement(const Vector<String>& labels, Element* e
     return matchLabelsAgainstString(labels, element->attributeWithoutSynchronization(idAttr));
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 void Frame::scrollOverflowLayer(RenderLayer* layer, const IntRect& visibleRect, const IntRect& exposeRect)
 {
     if (!layer)
@@ -672,7 +656,7 @@ bool Frame::selectionChangeCallbacksDisabled() const
 {
     return m_selectionChangeCallbacksDisabled;
 }
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS_FAMILY)
 
 void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot shouldAdjustViewSize)
 {
@@ -686,12 +670,12 @@ void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSiz
     auto& frameView = *view();
     frameView.adjustMediaTypeForPrinting(printing);
 
-        m_doc->styleScope().didChangeStyleSheetEnvironment();
-        if (shouldUsePrintingLayout())
+    m_doc->styleScope().didChangeStyleSheetEnvironment();
+    if (shouldUsePrintingLayout())
         frameView.forceLayoutForPagination(pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
-        else {
+    else {
         frameView.forceLayout();
-            if (shouldAdjustViewSize == AdjustViewSize)
+        if (shouldAdjustViewSize == AdjustViewSize)
             frameView.adjustViewSize();
     }
 
@@ -753,7 +737,7 @@ void Frame::injectUserScriptImmediately(DOMWrapperWorld& world, const UserScript
 
     document->topDocument().setAsRunningUserScripts();
     loader().client().willInjectUserScript(world);
-    m_script->evaluateInWorld(ScriptSourceCode(script.source(), script.url()), world);
+    m_script->evaluateInWorld(ScriptSourceCode(script.source(), URL(script.url())), world);
 }
 
 RenderView* Frame::contentRenderer() const
@@ -790,9 +774,10 @@ void Frame::clearTimers(FrameView *view, Document *document)
 {
     if (view) {
         view->layoutContext().unscheduleLayout();
-        if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled())
-            document->timeline().suspendAnimations();
-        else
+        if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
+            if (auto* timeline = document->existingTimeline())
+                timeline->suspendAnimations();
+        } else
             view->frame().animation().suspendAnimationsForDocument(document);
         view->frame().eventHandler().stopAutoscrollTimer();
     }
@@ -819,9 +804,11 @@ void Frame::willDetachPage()
     if (page() && page()->scrollingCoordinator() && m_view)
         page()->scrollingCoordinator()->willDestroyScrollableArea(*m_view);
 
-#if PLATFORM(IOS)
-    if (WebThreadCountOfObservedContentModifiers() > 0 && m_page)
+#if PLATFORM(IOS_FAMILY)
+    if (WebThreadCountOfObservedDOMTimers() > 0 && m_page) {
+        LOG(ContentObservation, "Frame::willDetachPage: remove registered timers.");
         m_page->chrome().client().clearContentChangeObservers(*this);
+    }
 #endif
 
     script().clearScriptObjects();
@@ -847,6 +834,9 @@ void Frame::disconnectOwnerElement()
             m_page->decrementSubframeCount();
     }
     m_ownerElement = nullptr;
+
+    if (auto* document = this->document())
+        document->frameWasDisconnectedFromOwner();
 }
 
 String Frame::displayStringModifiedByEncoding(const String& str) const
@@ -911,7 +901,7 @@ RefPtr<Range> Frame::rangeForPoint(const IntPoint& framePoint)
     return nullptr;
 }
 
-void Frame::createView(const IntSize& viewportSize, const Color& backgroundColor, bool transparent,
+void Frame::createView(const IntSize& viewportSize, const Optional<Color>& backgroundColor,
     const IntSize& fixedLayoutSize, const IntRect& fixedVisibleContentRect,
     bool useFixedLayout, ScrollbarMode horizontalScrollbarMode, bool horizontalLock,
     ScrollbarMode verticalScrollbarMode, bool verticalLock)
@@ -942,7 +932,7 @@ void Frame::createView(const IntSize& viewportSize, const Color& backgroundColor
 
     setView(frameView.copyRef());
 
-    frameView->updateBackgroundRecursively(backgroundColor, transparent);
+    frameView->updateBackgroundRecursively(backgroundColor);
 
     if (isMainFrame)
         frameView->setParentVisible(true);

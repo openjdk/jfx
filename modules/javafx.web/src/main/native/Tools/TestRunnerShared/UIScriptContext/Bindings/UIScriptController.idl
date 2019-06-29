@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,12 +22,20 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 enum DeviceOrientation {
     "portrait",
     "portrait-upsidedown",
     "landscape-left",
     "landscape-right"
+};
+
+enum ModifierKey {
+    "alt",
+    "capsLock",
+    "ctrl",
+    "meta", // Command key on Mac and iOS
+    "shift"
 };
 
 interface UIScriptController {
@@ -48,6 +56,7 @@ interface UIScriptController {
     void touchDownAtPoint(long x, long y, long touchCount, object callback);
     void liftUpAtPoint(long x, long y, long touchCount, object callback);
     void singleTapAtPoint(long x, long y, object callback);
+    void singleTapAtPointWithModifiers(long x, long y, object modifierArray, object callback);
     void doubleTapAtPoint(long x, long y, object callback);
     void dragFromPointToPoint(long startX, long startY, long endX, long endY, double durationSeconds, object callback);
 
@@ -57,11 +66,13 @@ interface UIScriptController {
     void stylusMoveToPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
     void stylusUpAtPoint(long x, long y, object callback);
     void stylusTapAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object callback);
+    void stylusTapAtPointWithModifiers(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, object modifierArray, object callback);
 
     void enterText(DOMString text);
     void typeCharacterUsingHardwareKeyboard(DOMString character, object callback);
-    void keyDownUsingHardwareKeyboard(DOMString character, object callback);
-    void keyUpUsingHardwareKeyboard(DOMString character, object callback);
+
+    void keyDown(DOMString character, object modifierArray);
+    void toggleCapsLock(object callback);
 
     // eventsJSON describes a series of user events in JSON form. For the keys, see HIDEventGenerator.mm.
     // For example, this JSON describes a touch down followed by a touch up (i.e. a single tap).
@@ -193,6 +204,9 @@ interface UIScriptController {
 
     void setTimePickerValue(long hour, long minute);
 
+    // Share sheet
+    void setShareSheetCompletesImmediatelyWithResolution(boolean resolved);
+
     // <datalist>
     readonly attribute boolean isShowingDataListSuggestions;
 
@@ -207,11 +221,21 @@ interface UIScriptController {
     // These callbacks also work for the form accessory views.
     attribute object didShowKeyboardCallback;
     attribute object didHideKeyboardCallback;
+    readonly attribute boolean isShowingKeyboard;
 
     attribute object willBeginZoomingCallback;
     attribute object didEndZoomingCallback;
 
     void zoomToScale(double scale, object callback);
+
+    void setViewScale(double scale);
+    void setMinimumEffectiveWidth(double effectiveWidth);
+
+    void resignFirstResponder();
+    readonly attribute boolean isPresentingModally;
+
+    readonly attribute double contentOffsetX;
+    readonly attribute double contentOffsetY;
 
     void scrollToOffset(long x, long y); // Initiate an animated scroll in the UI process.
     attribute object didEndScrollingCallback;
@@ -230,12 +254,17 @@ interface UIScriptController {
 
     readonly attribute object contentVisibleRect; // Returned object has 'left', 'top', 'width', 'height' properties.
 
-    readonly attribute object selectionRangeViewRects; // An array of objects with 'left', 'top', 'width', and 'height' properties.
+    readonly attribute object textSelectionRangeRects; // An array of objects with 'left', 'top', 'width', and 'height' properties.
     readonly attribute object textSelectionCaretRect; // An object with 'left', 'top', 'width', 'height' properties.
     readonly attribute object selectionStartGrabberViewRect;
     readonly attribute object selectionEndGrabberViewRect;
-
+    readonly attribute object selectionCaretViewRect;
+    readonly attribute object selectionRangeViewRects;
+    readonly attribute object calendarType;
+    void setDefaultCalendarType(DOMString calendarIdentifier);
     readonly attribute object inputViewBounds;
+
+    void setKeyboardInputModeIdentifier(DOMString identifier);
 
     void replaceTextAtRange(DOMString text, long location, long length);
     void removeAllDynamicDictionaries();
@@ -263,4 +292,12 @@ interface UIScriptController {
     void firstResponderSuppressionForWebView(boolean shouldSuppress);
     void makeWindowContentViewFirstResponder();
     readonly attribute boolean isWindowContentViewFirstResponder;
+
+    object attachmentInfo(DOMString attachmentIdentifier);
+
+    // Editing
+    void drawSquareInEditableImage();
+    readonly attribute long numberOfStrokesInEditableImage;
+    readonly attribute DOMString lastUndoLabel;
+    readonly attribute DOMString firstRedoLabel;
 };

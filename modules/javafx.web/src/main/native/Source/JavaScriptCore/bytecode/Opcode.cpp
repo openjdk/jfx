@@ -30,6 +30,7 @@
 #include "config.h"
 #include "Opcode.h"
 
+#include "BytecodeStructs.h"
 #include <wtf/PrintStream.h>
 
 #if ENABLE(OPCODE_STATS)
@@ -38,6 +39,12 @@
 #endif
 
 namespace JSC {
+
+const unsigned opcodeLengths[] = {
+#define OPCODE_LENGTH(opcode, length) length,
+    FOR_EACH_OPCODE_ID(OPCODE_LENGTH)
+#undef OPCODE_LENGTH
+};
 
 const char* const opcodeNames[] = {
 #define OPCODE_NAME_ENTRY(opcode, size) #opcode,
@@ -183,6 +190,32 @@ void OpcodeStats::resetLastInstruction()
 }
 
 #endif
+
+static unsigned metadataSizes[] = {
+
+#define METADATA_SIZE(size) size,
+    FOR_EACH_BYTECODE_METADATA_SIZE(METADATA_SIZE)
+#undef METADATA_SIZE
+
+};
+
+static unsigned metadataAlignments[] = {
+
+#define METADATA_ALIGNMENT(size) size,
+    FOR_EACH_BYTECODE_METADATA_ALIGNMENT(METADATA_ALIGNMENT)
+#undef METADATA_ALIGNMENT
+
+};
+
+unsigned metadataSize(OpcodeID opcodeID)
+{
+    return metadataSizes[opcodeID];
+}
+
+unsigned metadataAlignment(OpcodeID opcodeID)
+{
+    return metadataAlignments[opcodeID];
+}
 
 } // namespace JSC
 

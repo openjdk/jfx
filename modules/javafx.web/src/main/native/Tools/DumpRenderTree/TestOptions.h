@@ -29,13 +29,12 @@
 
 struct TestOptions {
     bool enableAttachmentElement { false };
-    bool enableWebAnimationsCSSIntegration { false };
+    bool enableWebAnimationsCSSIntegration { true };
     bool useAcceleratedDrawing { false };
     bool enableIntersectionObserver { false };
     bool enableMenuItemElement { false };
     bool enableModernMediaControls { true };
     bool enablePointerLock { false };
-    bool enableWebAuthentication { true };
     bool enableDragDestinationActionLoad { false };
     bool layerBackedWebView { false };
     bool enableIsSecureContextAttribute { true };
@@ -43,6 +42,10 @@ struct TestOptions {
     bool dumpJSConsoleLogInStdErr { false };
     bool allowCrossOriginSubresourcesToAskForCredentials { false };
     bool enableColorFilter { false };
+    bool enableSelectionAcrossShadowBoundaries { true };
+    bool enableWebGPU { false };
+    bool enableCSSLogical { false };
+    bool adClickAttributionEnabled { false };
     std::string jscOptions;
 
     TestOptions(const std::string& pathOrURL, const std::string& absolutePath);

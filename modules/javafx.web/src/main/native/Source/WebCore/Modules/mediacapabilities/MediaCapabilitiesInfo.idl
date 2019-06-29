@@ -24,11 +24,11 @@
  */
 
 [
-    EnabledAtRuntime=MediaCapabilities,
-    ImplementationLacksVTable
+    EnabledBySetting=MediaCapabilities,
+    JSGenerateToJSObject,
 ]
-interface MediaCapabilitiesInfo {
-  readonly attribute boolean supported;
-  readonly attribute boolean smooth;
-  readonly attribute boolean powerEfficient;
+dictionary MediaCapabilitiesInfo {
+  required boolean supported;
+  required boolean smooth;
+  required boolean powerEfficient;
 };

@@ -25,15 +25,10 @@ platform/audio/glib/AudioBusGLib.cpp
 
 platform/glib/EventLoopGlib.cpp
 platform/glib/FileMonitorGLib.cpp
-platform/glib/FileSystemGlib.cpp
 platform/glib/KeyedDecoderGlib.cpp
 platform/glib/KeyedEncoderGlib.cpp
 platform/glib/LowPowerModeNotifierGLib.cpp
-platform/glib/MainThreadSharedTimerGLib.cpp
-platform/glib/SSLKeyGeneratorGLib.cpp
 platform/glib/SharedBufferGlib.cpp
 platform/glib/UserAgentGLib.cpp
 
 platform/network/glib/NetworkStateNotifierGLib.cpp
-
-platform/mediastream/libwebrtc/LibWebRTCProviderGlib.cpp

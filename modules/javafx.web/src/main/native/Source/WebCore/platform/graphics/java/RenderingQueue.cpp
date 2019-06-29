@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "RenderingQueue.h"
 #include "RQRef.h"
 
@@ -71,18 +71,18 @@ RenderingQueue& RenderingQueue::freeSpace(int size) {
 }
 
 void RenderingQueue::flush() {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID midFwkFlush = env->GetMethodID(
             PG_GetRenderQueueClass(env), "fwkFlush", "()V");
     ASSERT(midFwkFlush);
 
     env->CallVoidMethod(getWCRenderingQueue(), midFwkFlush);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void RenderingQueue::disposeGraphics() {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     // The method is called from the dtor which potentially can be called after VM detach.
     // So the check for nullptr.
     if (!env)
@@ -93,7 +93,7 @@ void RenderingQueue::disposeGraphics() {
     ASSERT(midFwkDisposeGraphics);
 
     env->CallVoidMethod(getWCRenderingQueue(), midFwkDisposeGraphics);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 /*
@@ -103,7 +103,7 @@ RenderingQueue& RenderingQueue::flushBuffer() {
     if (isEmpty()) {
         return *this;
     }
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID midFwkAddBuffer = env->GetMethodID(PG_GetRenderQueueClass(env),
         "fwkAddBuffer", "(Ljava/nio/ByteBuffer;)V");
@@ -115,7 +115,7 @@ RenderingQueue& RenderingQueue::flushBuffer() {
         getWCRenderingQueue(),
         midFwkAddBuffer,
         (jobject)(m_buffer->createDirectByteBuffer(env)));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     m_buffer = nullptr;
 
@@ -123,13 +123,11 @@ RenderingQueue& RenderingQueue::flushBuffer() {
 }
 }
 
-using namespace WebCore;
-
-extern "C" {
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease
     (JNIEnv* env, jobject, jobjectArray bufs)
 {
+    using namespace WebCore;
     /*
      * This method should be called on the Event thread to synchronize with JavaScript
      * by thread. JavaScript may access resources kept in ByteBuffer::m_refList,
@@ -144,6 +142,4 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease
             a2bb.remove(key);
         }
     }
-}
-
 }

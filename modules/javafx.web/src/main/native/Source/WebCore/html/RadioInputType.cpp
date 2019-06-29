@@ -157,7 +157,7 @@ void RadioInputType::willDispatchClick(InputElementClickState& state)
     state.checked = element()->checked();
     state.checkedRadioButton = element()->checkedRadioButtonForGroup();
 
-    element()->setChecked(true, DispatchChangeEvent);
+    element()->setChecked(true);
 }
 
 void RadioInputType::didDispatchClick(Event& event, const InputElementClickState& state)
@@ -169,7 +169,8 @@ void RadioInputType::didDispatchClick(Event& event, const InputElementClickState
         ASSERT(element());
         if (button && button->isRadioButton() && button->form() == element()->form() && button->name() == element()->name())
             button->setChecked(true);
-    }
+    } else if (state.checked != element()->checked())
+        fireInputAndChangeEvents();
 
     // The work we did in willDispatchClick was default handling.
     event.setDefaultHandled();
@@ -183,9 +184,9 @@ bool RadioInputType::isRadioButton() const
 bool RadioInputType::matchesIndeterminatePseudoClass() const
 {
     ASSERT(element());
-    const HTMLInputElement& element = *this->element();
-    if (const RadioButtonGroups* radioButtonGroups = element.radioButtonGroups())
-        return !radioButtonGroups->hasCheckedButton(&element);
+    auto& element = *this->element();
+    if (auto* radioButtonGroups = element.radioButtonGroups())
+        return !radioButtonGroups->hasCheckedButton(element);
     return !element.checked();
 }
 

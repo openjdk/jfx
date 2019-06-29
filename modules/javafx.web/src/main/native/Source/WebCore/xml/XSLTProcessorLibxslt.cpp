@@ -45,10 +45,11 @@
 #include <libxslt/imports.h>
 #include <libxslt/security.h>
 #include <libxslt/variables.h>
+#include <libxslt/xslt.h>
 #include <libxslt/xsltutils.h>
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuffer.h>
-#include <wtf/unicode/UTF8.h>
+#include <wtf/unicode/UTF8Conversion.h>
 
 #if OS(DARWIN) && !PLATFORM(GTK)
 #include "SoftLinkLibxslt.h"
@@ -102,7 +103,7 @@ static xmlDocPtr docLoaderFunc(const xmlChar* uri,
     case XSLT_LOAD_DOCUMENT: {
         xsltTransformContextPtr context = (xsltTransformContextPtr)ctxt;
         xmlChar* base = xmlNodeGetBase(context->document->doc, context->node);
-        URL url(URL(ParsedURLString, reinterpret_cast<const char*>(base)), reinterpret_cast<const char*>(uri));
+        URL url(URL({ }, reinterpret_cast<const char*>(base)), reinterpret_cast<const char*>(uri));
         xmlFree(base);
         ResourceError error;
         ResourceResponse response;
@@ -244,7 +245,7 @@ static xsltStylesheetPtr xsltStylesheetPointer(RefPtr<XSLStyleSheet>& cachedStyl
 
         // According to Mozilla documentation, the node must be a Document node, an xsl:stylesheet or xsl:transform element.
         // But we just use text content regardless of node type.
-        cachedStylesheet->parseString(createMarkup(*stylesheetRootNode));
+        cachedStylesheet->parseString(serializeFragment(*stylesheetRootNode, SerializedNodes::SubtreeIncludingNode));
     }
 
     if (!cachedStylesheet || !cachedStylesheet->document())
@@ -262,7 +263,7 @@ static inline xmlDocPtr xmlDocPtrFromNode(Node& sourceNode, bool& shouldDelete)
     if (sourceIsDocument && ownerDocument->transformSource())
         sourceDoc = ownerDocument->transformSource()->platformSource();
     if (!sourceDoc) {
-        sourceDoc = xmlDocPtrForString(ownerDocument->cachedResourceLoader(), createMarkup(sourceNode),
+        sourceDoc = xmlDocPtrForString(ownerDocument->cachedResourceLoader(), serializeFragment(sourceNode, SerializedNodes::SubtreeIncludingNode),
             sourceIsDocument ? ownerDocument->url().string() : String());
         shouldDelete = sourceDoc;
     }
@@ -300,6 +301,18 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
         return false;
     }
     m_stylesheet->clearDocuments();
+
+#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(JAVA)
+    int origXsltMaxDepth = *xsltMaxDepth;
+    *xsltMaxDepth = 1000;
+#else
+    int origXsltMaxDepth = xsltMaxDepth;
+    xsltMaxDepth = 1000;
+#if USE(JSVALUE32_64) && PLATFORM(JAVA)
+    // Reduce the depth to half on 32-bit systems
+    xsltMaxDepth /= 2;
+#endif
+#endif
 
     xmlChar* origMethod = sheet->method;
     if (!origMethod && mimeType == "text/html")
@@ -353,6 +366,11 @@ bool XSLTProcessor::transformToString(Node& sourceNode, String& mimeType, String
     }
 
     sheet->method = origMethod;
+#if OS(DARWIN) && !PLATFORM(GTK) && !PLATFORM(JAVA)
+    *xsltMaxDepth = origXsltMaxDepth;
+#else
+    xsltMaxDepth = origXsltMaxDepth;
+#endif
     setXSLTLoadCallBack(0, 0, 0);
     xsltFreeStylesheet(sheet);
     m_stylesheet = nullptr;

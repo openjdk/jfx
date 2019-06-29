@@ -50,6 +50,8 @@
 
 namespace WebCore {
 
+class TypedOMCSSImageValue;
+class CachedImage;
 class CanvasBase;
 class CanvasGradient;
 class CanvasPattern;
@@ -62,11 +64,14 @@ class ImageBitmap;
 class ImageData;
 class Path2D;
 class RenderStyle;
+class RenderObject;
 class TextMetrics;
 
 struct DOMMatrix2DInit;
 
-#if ENABLE(VIDEO)
+#if ENABLE(VIDEO) && ENABLE(CSS_TYPED_OM)
+using CanvasImageSource = Variant<RefPtr<HTMLImageElement>, RefPtr<HTMLVideoElement>, RefPtr<HTMLCanvasElement>, RefPtr<ImageBitmap>, RefPtr<TypedOMCSSImageValue>>;
+#elif ENABLE(VIDEO)
 using CanvasImageSource = Variant<RefPtr<HTMLImageElement>, RefPtr<HTMLVideoElement>, RefPtr<HTMLCanvasElement>, RefPtr<ImageBitmap>>;
 #else
 using CanvasImageSource = Variant<RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>, RefPtr<ImageBitmap>>;
@@ -130,12 +135,12 @@ public:
     ExceptionOr<void> setTransform(DOMMatrix2DInit&&);
     void resetTransform();
 
-    void setStrokeColor(const String& color, std::optional<float> alpha = std::nullopt);
+    void setStrokeColor(const String& color, Optional<float> alpha = WTF::nullopt);
     void setStrokeColor(float grayLevel, float alpha = 1.0);
     void setStrokeColor(float r, float g, float b, float a);
     void setStrokeColor(float c, float m, float y, float k, float a);
 
-    void setFillColor(const String& color, std::optional<float> alpha = std::nullopt);
+    void setFillColor(const String& color, Optional<float> alpha = WTF::nullopt);
     void setFillColor(float grayLevel, float alpha = 1.0f);
     void setFillColor(float r, float g, float b, float a);
     void setFillColor(float c, float m, float y, float k, float a);
@@ -160,7 +165,7 @@ public:
     void fillRect(float x, float y, float width, float height);
     void strokeRect(float x, float y, float width, float height);
 
-    void setShadow(float width, float height, float blur, const String& color = String(), std::optional<float> alpha = std::nullopt);
+    void setShadow(float width, float height, float blur, const String& color = String(), Optional<float> alpha = WTF::nullopt);
     void setShadow(float width, float height, float blur, float grayLevel, float alpha = 1.0);
     void setShadow(float width, float height, float blur, float r, float g, float b, float a);
     void setShadow(float width, float height, float blur, float c, float m, float y, float k, float a);
@@ -274,6 +279,7 @@ public:
     };
 
     const State& state() const { return m_stateStack.last(); }
+    const Vector<State, 1>& stateStack();
 
 protected:
     static const int DefaultFontSize;
@@ -315,17 +321,24 @@ protected:
     void setFillStyle(CanvasStyle);
 
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(HTMLImageElement&, bool repeatX, bool repeatY);
-    ExceptionOr<RefPtr<CanvasPattern>> createPattern(HTMLCanvasElement&, bool repeatX, bool repeatY);
+    ExceptionOr<RefPtr<CanvasPattern>> createPattern(CanvasBase&, bool repeatX, bool repeatY);
 #if ENABLE(VIDEO)
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(HTMLVideoElement&, bool repeatX, bool repeatY);
 #endif
     ExceptionOr<RefPtr<CanvasPattern>> createPattern(ImageBitmap&, bool repeatX, bool repeatY);
+#if ENABLE(CSS_TYPED_OM)
+    ExceptionOr<RefPtr<CanvasPattern>> createPattern(TypedOMCSSImageValue&, bool repeatX, bool repeatY);
+#endif
 
     ExceptionOr<void> drawImage(HTMLImageElement&, const FloatRect& srcRect, const FloatRect& dstRect);
     ExceptionOr<void> drawImage(HTMLImageElement&, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&);
     ExceptionOr<void> drawImage(HTMLCanvasElement&, const FloatRect& srcRect, const FloatRect& dstRect);
+    ExceptionOr<void> drawImage(Document&, CachedImage*, const RenderObject*, const FloatRect& imageRect, const FloatRect& srcRect, const FloatRect& dstRect, const CompositeOperator&, const BlendMode&);
 #if ENABLE(VIDEO)
     ExceptionOr<void> drawImage(HTMLVideoElement&, const FloatRect& srcRect, const FloatRect& dstRect);
+#endif
+#if ENABLE(CSS_TYPED_OM)
+    ExceptionOr<void> drawImage(TypedOMCSSImageValue&, const FloatRect& srcRect, const FloatRect& dstRect);
 #endif
     ExceptionOr<void> drawImage(ImageBitmap&, const FloatRect& srcRect, const FloatRect& dstRect);
 

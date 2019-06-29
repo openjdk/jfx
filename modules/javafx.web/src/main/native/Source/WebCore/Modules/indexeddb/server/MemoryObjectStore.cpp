@@ -338,7 +338,7 @@ IDBError MemoryObjectStore::populateIndexWithExistingRecords(MemoryIndex& index)
 
     JSLockHolder locker(UniqueIDBDatabase::databaseThreadVM());
 
-    for (auto iterator : *m_keyValueStore) {
+    for (const auto& iterator : *m_keyValueStore) {
         auto jsValue = deserializeIDBValueToJSValue(UniqueIDBDatabase::databaseThreadExecState(), iterator.value);
         if (jsValue.isUndefinedOrNull())
             return IDBError { };
@@ -405,7 +405,7 @@ ThreadSafeDataBuffer MemoryObjectStore::valueForKeyRange(const IDBKeyRangeData& 
     return m_keyValueStore->get(key);
 }
 
-void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, std::optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
+void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, Optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
 {
     result = { type };
 
@@ -479,8 +479,9 @@ void MemoryObjectStore::registerIndex(Ref<MemoryIndex>&& index)
     ASSERT(!m_indexesByIdentifier.contains(index->info().identifier()));
     ASSERT(!m_indexesByName.contains(index->info().name()));
 
+    auto identifier = index->info().identifier();
     m_indexesByName.set(index->info().name(), &index.get());
-    m_indexesByIdentifier.set(index->info().identifier(), WTFMove(index));
+    m_indexesByIdentifier.set(identifier, WTFMove(index));
 }
 
 void MemoryObjectStore::unregisterIndex(MemoryIndex& index)

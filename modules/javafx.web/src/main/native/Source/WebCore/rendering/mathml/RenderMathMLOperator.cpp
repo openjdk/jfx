@@ -190,7 +190,7 @@ void RenderMathMLOperator::computePreferredLogicalWidths()
 {
     ASSERT(preferredLogicalWidthsDirty());
 
-    LayoutUnit preferredWidth = 0;
+    LayoutUnit preferredWidth;
 
     if (!useMathOperator()) {
         RenderMathMLToken::computePreferredLogicalWidths();
@@ -238,7 +238,7 @@ void RenderMathMLOperator::layoutBlock(bool relayoutChildren, LayoutUnit pageLog
         setLogicalWidth(width);
 
         // We then move the children to take spacing into account.
-        LayoutPoint horizontalShift(style().direction() == TextDirection::LTR ? leadingSpaceValue : -leadingSpaceValue, 0);
+        LayoutPoint horizontalShift(style().direction() == TextDirection::LTR ? leadingSpaceValue : -leadingSpaceValue, 0_lu);
         for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
             child->setLocation(child->location() + horizontalShift);
     }
@@ -295,10 +295,10 @@ LayoutUnit RenderMathMLOperator::verticalStretchedOperatorShift() const
     return (m_stretchDepthBelowBaseline - m_stretchHeightAboveBaseline - m_mathOperator.descent() + m_mathOperator.ascent()) / 2;
 }
 
-std::optional<int> RenderMathMLOperator::firstLineBaseline() const
+Optional<int> RenderMathMLOperator::firstLineBaseline() const
 {
     if (useMathOperator())
-        return std::optional<int>(std::lround(static_cast<float>(m_mathOperator.ascent() - verticalStretchedOperatorShift())));
+        return Optional<int>(std::lround(static_cast<float>(m_mathOperator.ascent() - verticalStretchedOperatorShift())));
     return RenderMathMLToken::firstLineBaseline();
 }
 
@@ -309,7 +309,7 @@ void RenderMathMLOperator::paint(PaintInfo& info, const LayoutPoint& paintOffset
         return;
 
     LayoutPoint operatorTopLeft = paintOffset + location();
-    operatorTopLeft.move(style().isLeftToRightDirection() ? leadingSpace() : trailingSpace(), 0);
+    operatorTopLeft.move(style().isLeftToRightDirection() ? leadingSpace() : trailingSpace(), 0_lu);
 
     m_mathOperator.paint(style(), info, operatorTopLeft);
 }

@@ -28,7 +28,6 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "DisplayBox.h"
-#include "FloatingState.h"
 #include <wtf/IsoMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -42,94 +41,99 @@ namespace Layout {
 class Box;
 class Container;
 class FormattingState;
-class LayoutContext;
+class LayoutState;
 
 class FormattingContext {
     WTF_MAKE_ISO_ALLOCATED(FormattingContext);
 public:
-    FormattingContext(const Box& formattingContextRoot);
+    FormattingContext(const Box& formattingContextRoot, FormattingState&);
     virtual ~FormattingContext();
 
-    virtual void layout(LayoutContext&, FormattingState&) const = 0;
-    void layoutOutOfFlowDescendants(LayoutContext&, const Box&) const;
+    virtual void layout() const = 0;
+    void layoutOutOfFlowDescendants(const Box&) const;
 
-    struct InstrinsicWidthConstraints {
+    struct IntrinsicWidthConstraints {
         LayoutUnit minimum;
         LayoutUnit maximum;
     };
-    virtual InstrinsicWidthConstraints instrinsicWidthConstraints(LayoutContext&, const Box&) const = 0;
+    virtual void computeIntrinsicWidthConstraints() const = 0;
 
-    static Display::Box mapBoxToAncestor(const LayoutContext&, const Box&, const Container& ancestor);
-    static Position mapTopLeftToAncestor(const LayoutContext&, const Box&, const Container& ancestor);
-    static Position mapCoordinateToAncestor(const LayoutContext&, Position, const Container& containingBlock, const Container& ancestor);
+    static Display::Box mapBoxToAncestor(const LayoutState&, const Box&, const Container& ancestor);
+    static LayoutUnit mapTopToAncestor(const LayoutState&, const Box&, const Container& ancestor);
+    static Point mapCoordinateToAncestor(const LayoutState&, Point, const Container& containingBlock, const Container& ancestor);
 
 protected:
-    struct LayoutPair {
-        const Box& layoutBox;
-        Display::Box& displayBox;
-    };
-    using LayoutQueue = Vector<std::unique_ptr<LayoutPair>>;
+    using LayoutQueue = Vector<const Box*>;
 
+    LayoutState& layoutState() const;
+    FormattingState& formattingState() const { return m_formattingState; }
     const Box& root() const { return *m_root; }
 
-    virtual void computeStaticPosition(LayoutContext&, const Box&, Display::Box&) const = 0;
-    virtual void computeInFlowPositionedPosition(LayoutContext&, const Box&, Display::Box&) const = 0;
-
-    void computeFloatingHeightAndMargin(LayoutContext&, const Box&, Display::Box&) const;
-    void computeFloatingWidthAndMargin(LayoutContext&, const Box&, Display::Box&) const;
-
-    void computeBorderAndPadding(LayoutContext&, const Box&, Display::Box&) const;
-
-    void placeInFlowPositionedChildren(LayoutContext&, const Container&) const;
+    void computeBorderAndPadding(const Box&, Optional<UsedHorizontalValues> = WTF::nullopt) const;
 
 #ifndef NDEBUG
-    virtual void validateGeometryConstraintsAfterLayout(const LayoutContext&) const;
+    virtual void validateGeometryConstraintsAfterLayout() const;
 #endif
 
     // This class implements generic positioning and sizing.
     class Geometry {
     public:
-        static VerticalGeometry outOfFlowVerticalGeometry(LayoutContext&, const Box&);
-        static HorizontalGeometry outOfFlowHorizontalGeometry(LayoutContext&, const FormattingContext&, const Box&);
+        static VerticalGeometry outOfFlowVerticalGeometry(const LayoutState&, const Box&, UsedVerticalValues);
+        static HorizontalGeometry outOfFlowHorizontalGeometry(LayoutState&, const Box&, UsedHorizontalValues);
 
-        static HeightAndMargin floatingHeightAndMargin(LayoutContext&, const Box&);
-        static WidthAndMargin floatingWidthAndMargin(LayoutContext&, const FormattingContext&, const Box&);
+        static HeightAndMargin floatingHeightAndMargin(const LayoutState&, const Box&, UsedVerticalValues, UsedHorizontalValues);
+        static WidthAndMargin floatingWidthAndMargin(LayoutState&, const Box&, UsedHorizontalValues);
 
-        static HeightAndMargin inlineReplacedHeightAndMargin(LayoutContext&, const Box&);
-        static WidthAndMargin inlineReplacedWidthAndMargin(LayoutContext&, const Box&, std::optional<LayoutUnit> precomputedMarginLeft = { },
-            std::optional<LayoutUnit> precomputedMarginRight = { });
+        static HeightAndMargin inlineReplacedHeightAndMargin(const LayoutState&, const Box&, UsedVerticalValues);
+        static WidthAndMargin inlineReplacedWidthAndMargin(const LayoutState&, const Box&, UsedHorizontalValues);
 
-        static HeightAndMargin complicatedCases(LayoutContext&, const Box&);
+        static LayoutSize inFlowPositionedPositionOffset(const LayoutState&, const Box&);
 
-        static Edges computedBorder(LayoutContext&, const Box&);
-        static std::optional<Edges> computedPadding(LayoutContext&, const Box&);
+        static HeightAndMargin complicatedCases(const LayoutState&, const Box&, UsedVerticalValues, UsedHorizontalValues);
+        static LayoutUnit shrinkToFitWidth(LayoutState&, const Box&, UsedHorizontalValues);
 
-        static HorizontalEdges computedNonCollapsedHorizontalMarginValue(const LayoutContext&, const Box&);
-        static VerticalEdges computedNonCollapsedVerticalMarginValue(const LayoutContext&, const Box&);
+        static Edges computedBorder(const Box&);
+        static Optional<Edges> computedPadding(const Box&, UsedHorizontalValues);
 
-        static std::optional<LayoutUnit> computedValueIfNotAuto(const Length& geometryProperty, LayoutUnit containingBlockWidth);
-        static std::optional<LayoutUnit> fixedValue(const Length& geometryProperty);
+        static ComputedHorizontalMargin computedHorizontalMargin(const Box&, UsedHorizontalValues);
+        static ComputedVerticalMargin computedVerticalMargin(const Box&, UsedHorizontalValues);
+
+        static Optional<LayoutUnit> computedValueIfNotAuto(const Length& geometryProperty, LayoutUnit containingBlockWidth);
+        static Optional<LayoutUnit> fixedValue(const Length& geometryProperty);
+
+        static Optional<LayoutUnit> computedMinHeight(const LayoutState&, const Box&);
+        static Optional<LayoutUnit> computedMaxHeight(const LayoutState&, const Box&);
+
+        static FormattingContext::IntrinsicWidthConstraints constrainByMinMaxWidth(const Box&, IntrinsicWidthConstraints);
+
+    protected:
+        enum class HeightType { Min, Max, Normal };
+        static Optional<LayoutUnit> computedHeightValue(const LayoutState&, const Box&, HeightType);
 
     private:
-        static VerticalGeometry outOfFlowReplacedVerticalGeometry(LayoutContext&, const Box&);
-        static HorizontalGeometry outOfFlowReplacedHorizontalGeometry(LayoutContext&, const Box&);
+        static VerticalGeometry outOfFlowReplacedVerticalGeometry(const LayoutState&, const Box&, UsedVerticalValues);
+        static HorizontalGeometry outOfFlowReplacedHorizontalGeometry(const LayoutState&, const Box&, UsedHorizontalValues);
 
-        static VerticalGeometry outOfFlowNonReplacedVerticalGeometry(LayoutContext&, const Box&);
-        static HorizontalGeometry outOfFlowNonReplacedHorizontalGeometry(LayoutContext&, const FormattingContext&, const Box&);
+        static VerticalGeometry outOfFlowNonReplacedVerticalGeometry(const LayoutState&, const Box&, UsedVerticalValues);
+        static HorizontalGeometry outOfFlowNonReplacedHorizontalGeometry(LayoutState&, const Box&, UsedHorizontalValues);
 
-        static HeightAndMargin floatingReplacedHeightAndMargin(LayoutContext&, const Box&);
-        static WidthAndMargin floatingReplacedWidthAndMargin(LayoutContext&, const Box&);
+        static HeightAndMargin floatingReplacedHeightAndMargin(const LayoutState&, const Box&, UsedVerticalValues);
+        static WidthAndMargin floatingReplacedWidthAndMargin(const LayoutState&, const Box&, UsedHorizontalValues);
 
-        static WidthAndMargin floatingNonReplacedWidthAndMargin(LayoutContext&, const FormattingContext&, const Box&);
+        static WidthAndMargin floatingNonReplacedWidthAndMargin(LayoutState&, const Box&, UsedHorizontalValues);
+    };
 
-        static LayoutUnit shrinkToFitWidth(LayoutContext&, const FormattingContext&, const Box&);
+    class Quirks {
+    public:
+        static LayoutUnit heightValueOfNearestContainingBlockWithFixedHeight(const LayoutState&, const Box&);
     };
 
 private:
-    void computeOutOfFlowVerticalGeometry(LayoutContext&, const Box&, Display::Box&) const;
-    void computeOutOfFlowHorizontalGeometry(LayoutContext&, const Box&, Display::Box&) const;
+    void computeOutOfFlowVerticalGeometry(const Box&) const;
+    void computeOutOfFlowHorizontalGeometry(const Box&) const;
 
-    WeakPtr<Box> m_root;
+    WeakPtr<const Box> m_root;
+    FormattingState& m_formattingState;
 };
 
 }

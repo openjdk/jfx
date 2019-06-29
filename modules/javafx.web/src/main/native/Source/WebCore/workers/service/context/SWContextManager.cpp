@@ -31,7 +31,6 @@
 #include "MessageWithMessagePorts.h"
 #include "ServiceWorkerClientIdentifier.h"
 #include "ServiceWorkerGlobalScope.h"
-#include <unistd.h>
 
 namespace WebCore {
 
@@ -65,7 +64,7 @@ void SWContextManager::registerServiceWorkerThreadForInstall(Ref<ServiceWorkerTh
     });
 }
 
-void SWContextManager::startedServiceWorker(std::optional<ServiceWorkerJobDataIdentifier> jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, const String& exceptionMessage)
+void SWContextManager::startedServiceWorker(Optional<ServiceWorkerJobDataIdentifier> jobDataIdentifier, ServiceWorkerIdentifier serviceWorkerIdentifier, const String& exceptionMessage)
 {
     connection()->serviceWorkerStartedWithMessage(jobDataIdentifier, serviceWorkerIdentifier, exceptionMessage);
     if (m_serviceWorkerCreationCallback)

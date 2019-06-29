@@ -39,7 +39,7 @@
 #include "NotImplemented.h"
 #include "DataObjectJava.h"
 #include "DragData.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/StringBuilder.h>
@@ -61,22 +61,22 @@ namespace {
 #define PB_CLASS jPBClass()
 
 #define DEFINE_PB_CLASS(_name) \
-    JNIEnv* env = WebCore_GetJavaEnv(); \
+    JNIEnv* env = WTF::GetJavaEnv(); \
     static JGClass cls(env->FindClass(_name)); \
     ASSERT(cls);
 
 #define DEFINE_PB_STATIC_METHOD(_name, _params) \
-    JNIEnv* env = WebCore_GetJavaEnv(); \
+    JNIEnv* env = WTF::GetJavaEnv(); \
     static jmethodID mid = env->GetStaticMethodID(PB_CLASS, _name, _params); \
     ASSERT(mid);
 
 #define CALL_PB_STATIC_VOID_METHOD(...) \
     env->CallStaticVoidMethod(PB_CLASS, mid, __VA_ARGS__); \
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
 #define CALL_PB_STATIC_JSTROBJ_METHOD(_jstrobj) \
     JLString _jstrobj(static_cast<jstring>(env->CallStaticObjectMethod(PB_CLASS, mid))); \
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
 jclass jPBClass()
 {
@@ -262,7 +262,7 @@ void Pasteboard::writeSelection(
     Frame& frame,
     ShouldSerializeSelectedTextForDataTransfer shouldSerializeSelectedTextForDataTransfer)
 {
-    String markup = createMarkup(selectedRange, 0, AnnotateForInterchange, false, ResolveNonLocalURLs);
+    String markup = serializePreservingVisualAppearance(selectedRange, nullptr, AnnotateForInterchange::Yes, ConvertBlocksToInlines::No, ResolveURLs::YesExcludingLocalFileURLsForPrivacy);
     String plainText = shouldSerializeSelectedTextForDataTransfer == IncludeImageAltTextForDataTransfer
         ? frame.editor().selectedTextForDataTransfer()
         : frame.editor().selectedText();
@@ -352,7 +352,7 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
         // SVGImage are not Bitmap backed, Let the receiving end decode the svg image
         // based on url and its markup
         if (image->isSVGImage()) {
-            jWriteURL(url.string(), createMarkup(node));
+            jWriteURL(url.string(), serializeFragment(node, SerializedNodes::SubtreeIncludingNode));
         }
         else {
             jWriteImage(*image);
@@ -532,6 +532,10 @@ void Pasteboard::writeMarkup(const String&)
 }
 
 void Pasteboard::writeCustomData(const PasteboardCustomData&)
+{
+}
+
+void Pasteboard::write(const WebCore::Color&)
 {
 }
 

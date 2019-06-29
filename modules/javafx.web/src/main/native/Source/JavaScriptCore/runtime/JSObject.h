@@ -104,12 +104,6 @@ class JSObject : public JSCell {
 public:
     typedef JSCell Base;
 
-    template<typename>
-    static CompleteSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.cellJSValueOOBSpace;
-    }
-
     // This is a super dangerous method for JITs. Sometimes the JITs will want to create either a
     // JSFinalObject or a JSArray. This is the method that will do that.
     static JSObject* createRawObject(ExecState* exec, Structure* structure, Butterfly* = nullptr);
@@ -753,7 +747,6 @@ public:
 
 private:
     NonPropertyTransition suggestedArrayStorageTransition(VM&) const;
-    ALWAYS_INLINE bool isExtensibleImpl(VM& vm) { return isStructureExtensible(vm); }
 public:
     // You should only call isStructureExtensible() when:
     // - Performing this check in a way that isn't described in the specification
@@ -885,6 +878,9 @@ public:
 
     bool canPerformFastPutInline(VM&, PropertyName);
     bool canPerformFastPutInlineExcludingProto(VM&);
+
+    bool mayBePrototype() const;
+    void didBecomePrototype();
 
     DECLARE_EXPORT_INFO;
 
@@ -1047,7 +1043,7 @@ private:
         const HashTable* table;
         const HashTableValue* value;
     };
-    std::optional<PropertyHashEntry> findPropertyHashEntry(VM&, PropertyName) const;
+    Optional<PropertyHashEntry> findPropertyHashEntry(VM&, PropertyName) const;
 
     bool putByIndexBeyondVectorLength(ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
     bool putDirectIndexBeyondVectorLengthWithArrayStorage(ExecState*, unsigned propertyName, JSValue, unsigned attributes, PutDirectIndexMode, ArrayStorage*);
@@ -1072,7 +1068,7 @@ private:
     PropertyOffset prepareToPutDirectWithoutTransition(VM&, PropertyName, unsigned attributes, StructureID, Structure*);
 
     AuxiliaryBarrier<Butterfly*> m_butterfly;
-#if USE(JSVALUE32_64)
+#if CPU(ADDRESS32)
     unsigned m_32BitPadding;
 #endif
 };
@@ -1400,7 +1396,7 @@ ALWAYS_INLINE bool JSObject::getOwnPropertySlot(JSObject* object, ExecState* exe
     Structure* structure = object->structure(vm);
     if (object->getOwnNonIndexPropertySlot(vm, structure, propertyName, slot))
         return true;
-    if (std::optional<uint32_t> index = parseIndex(propertyName))
+    if (Optional<uint32_t> index = parseIndex(propertyName))
         return getOwnPropertySlotByIndex(object, exec, index.value(), slot);
     return false;
 }
@@ -1419,7 +1415,7 @@ ALWAYS_INLINE bool JSObject::getPropertySlot(ExecState* exec, PropertyName prope
             // getOwnNonIndexPropertySlot), so we cannot safely call the overridden getOwnPropertySlot
             // (lest we return a property from a prototype that is shadowed). Check now for an index,
             // if so we need to start afresh from this object.
-            if (std::optional<uint32_t> index = parseIndex(propertyName))
+            if (Optional<uint32_t> index = parseIndex(propertyName))
                 return getPropertySlot(exec, index.value(), slot);
             // Safe to continue searching from current position; call getNonIndexPropertySlot to avoid
             // parsing the int again.
@@ -1441,7 +1437,7 @@ ALWAYS_INLINE bool JSObject::getPropertySlot(ExecState* exec, PropertyName prope
         object = asObject(prototype);
     }
 
-    if (std::optional<uint32_t> index = parseIndex(propertyName))
+    if (Optional<uint32_t> index = parseIndex(propertyName))
         return getPropertySlot(exec, index.value(), slot);
     return false;
 }
@@ -1453,10 +1449,9 @@ inline JSValue JSObject::get(ExecState* exec, PropertyName propertyName) const
     PropertySlot slot(this, PropertySlot::InternalMethodType::Get);
     bool hasProperty = const_cast<JSObject*>(this)->getPropertySlot(exec, propertyName, slot);
     EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-    if (hasProperty) {
-        scope.release();
-        return slot.getValue(exec, propertyName);
-    }
+    if (hasProperty)
+        RELEASE_AND_RETURN(scope, slot.getValue(exec, propertyName));
+
     return jsUndefined();
 }
 
@@ -1467,10 +1462,9 @@ inline JSValue JSObject::get(ExecState* exec, unsigned propertyName) const
     PropertySlot slot(this, PropertySlot::InternalMethodType::Get);
     bool hasProperty = const_cast<JSObject*>(this)->getPropertySlot(exec, propertyName, slot);
     EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-    if (hasProperty) {
-        scope.release();
-        return slot.getValue(exec, propertyName);
-    }
+    if (hasProperty)
+        RELEASE_AND_RETURN(scope, slot.getValue(exec, propertyName));
+
     return jsUndefined();
 }
 
@@ -1492,7 +1486,7 @@ inline bool JSObject::putOwnDataPropertyMayBeIndex(ExecState* exec, PropertyName
     ASSERT(!structure(vm)->hasGetterSetterProperties());
     ASSERT(!structure(vm)->hasCustomGetterSetterProperties());
 
-    if (std::optional<uint32_t> index = parseIndex(propertyName))
+    if (Optional<uint32_t> index = parseIndex(propertyName))
         return putDirectIndex(exec, index.value(), value, 0, PutDirectIndexLikePutDirect);
 
     return putDirectInternal<PutModePut>(vm, propertyName, value, 0, slot);

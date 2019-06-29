@@ -28,7 +28,8 @@
                 "ConsoleProfile",
                 "RequestAnimationFrame",
                 "CancelAnimationFrame",
-                "FireAnimationFrame"
+                "FireAnimationFrame",
+                "ObserverCallback"
             ]
         },
         {
@@ -38,6 +39,7 @@
             "enum": [
                 "ScriptProfiler",
                 "Timeline",
+                "CPU",
                 "Memory",
                 "Heap"
             ]

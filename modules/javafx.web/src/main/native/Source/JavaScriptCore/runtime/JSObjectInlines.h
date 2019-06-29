@@ -102,8 +102,7 @@ ALWAYS_INLINE typename std::result_of<CallbackWhenNoException(bool, PropertySlot
     auto scope = DECLARE_THROW_SCOPE(vm);
     bool found = const_cast<JSObject*>(this)->getPropertySlot(exec, propertyName, slot);
     RETURN_IF_EXCEPTION(scope, { });
-    scope.release();
-    return callback(found, slot);
+    RELEASE_AND_RETURN(scope, callback(found, slot));
 }
 
 ALWAYS_INLINE bool JSObject::getPropertySlot(ExecState* exec, unsigned propertyName, PropertySlot& slot)
@@ -186,8 +185,6 @@ inline void JSObject::putDirectWithoutTransition(VM& vm, PropertyName propertyNa
     StructureID structureID = this->structureID();
     Structure* structure = vm.heap.structureIDTable().get(structureID);
     PropertyOffset offset = prepareToPutDirectWithoutTransition(vm, propertyName, attributes, structureID, structure);
-    bool shouldOptimize = false;
-    structure->willStoreValueForNewTransition(vm, propertyName, value, shouldOptimize);
     putDirect(vm, offset, value);
     if (attributes & PropertyAttribute::ReadOnly)
         structure->setContainsReadOnlyProperties();
@@ -228,17 +225,13 @@ ALWAYS_INLINE bool JSObject::putInlineForJSObject(JSCell* cell, ExecState* exec,
     ASSERT(value);
     ASSERT(!Heap::heap(value) || Heap::heap(value) == Heap::heap(thisObject));
 
-    if (UNLIKELY(isThisValueAltered(slot, thisObject))) {
-        scope.release();
-        return ordinarySetSlow(exec, thisObject, propertyName, value, slot.thisValue(), slot.isStrictMode());
-    }
+    if (UNLIKELY(isThisValueAltered(slot, thisObject)))
+        RELEASE_AND_RETURN(scope, ordinarySetSlow(exec, thisObject, propertyName, value, slot.thisValue(), slot.isStrictMode()));
 
     // Try indexed put first. This is required for correctness, since loads on property names that appear like
     // valid indices will never look in the named property storage.
-    if (std::optional<uint32_t> index = parseIndex(propertyName)) {
-        scope.release();
-        return putByIndex(thisObject, exec, index.value(), value, slot.isStrictMode());
-    }
+    if (Optional<uint32_t> index = parseIndex(propertyName))
+        RELEASE_AND_RETURN(scope, putByIndex(thisObject, exec, index.value(), value, slot.isStrictMode()));
 
     if (thisObject->canPerformFastPutInline(vm, propertyName)) {
         ASSERT(!thisObject->prototypeChainMayInterceptStoreTo(vm, propertyName));
@@ -247,8 +240,7 @@ ALWAYS_INLINE bool JSObject::putInlineForJSObject(JSCell* cell, ExecState* exec,
         return true;
     }
 
-    scope.release();
-    return thisObject->putInlineSlow(exec, propertyName, value, slot);
+    RELEASE_AND_RETURN(scope, thisObject->putInlineSlow(exec, propertyName, value, slot));
 }
 
 // HasOwnProperty(O, P) from section 7.3.11 in the spec.
@@ -287,7 +279,6 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
     Structure* structure = vm.heap.structureIDTable().get(structureID);
     if (structure->isDictionary()) {
         ASSERT(!isCopyOnWrite(indexingMode()));
-        ASSERT(!structure->hasInferredTypes());
 
         unsigned currentAttributes;
         PropertyOffset offset = structure->get(vm, propertyName, currentAttributes);
@@ -324,9 +315,6 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
     Structure* newStructure = Structure::addPropertyTransitionToExistingStructure(
         structure, propertyName, attributes, offset);
     if (newStructure) {
-        newStructure->willStoreValueForExistingTransition(
-            vm, propertyName, value, slot.context() == PutPropertySlot::PutById);
-
         Butterfly* newButterfly = butterfly();
         if (currentCapacity != newStructure->outOfLineCapacity()) {
             ASSERT(newStructure != this->structure(vm));
@@ -347,18 +335,12 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
     }
 
     unsigned currentAttributes;
-    bool hasInferredType;
-    offset = structure->get(vm, propertyName, currentAttributes, hasInferredType);
+    offset = structure->get(vm, propertyName, currentAttributes);
     if (offset != invalidOffset) {
         if ((mode == PutModePut) && currentAttributes & PropertyAttribute::ReadOnly)
             return false;
 
         structure->didReplaceProperty(offset);
-        if (UNLIKELY(hasInferredType)) {
-            structure->willStoreValueForReplace(
-                vm, propertyName, value, slot.context() == PutPropertySlot::PutById);
-        }
-
         putDirect(vm, offset, value);
 
         if ((attributes & PropertyAttribute::Accessor) != (currentAttributes & PropertyAttribute::Accessor) || (attributes & PropertyAttribute::CustomAccessorOrValue) != (currentAttributes & PropertyAttribute::CustomAccessorOrValue)) {
@@ -380,8 +362,6 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
 
     newStructure = Structure::addNewPropertyTransition(
         vm, structure, propertyName, attributes, offset, slot.context(), &deferredWatchpointFire);
-    newStructure->willStoreValueForNewTransition(
-        vm, propertyName, value, slot.context() == PutPropertySlot::PutById);
 
     validateOffset(offset);
     ASSERT(newStructure->isValidOffset(offset));
@@ -402,6 +382,16 @@ ALWAYS_INLINE bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName
     if (attributes & PropertyAttribute::ReadOnly)
         newStructure->setContainsReadOnlyProperties();
     return true;
+}
+
+inline bool JSObject::mayBePrototype() const
+{
+    return perCellBit();
+}
+
+inline void JSObject::didBecomePrototype()
+{
+    setPerCellBit(true);
 }
 
 } // namespace JSC

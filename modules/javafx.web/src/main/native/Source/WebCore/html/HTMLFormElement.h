@@ -54,7 +54,7 @@ public:
 
     WEBCORE_EXPORT unsigned length() const;
     HTMLElement* item(unsigned index);
-    std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomicString&);
+    Optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomicString&);
     Vector<AtomicString> supportedPropertyNames() const;
 
     String enctype() const { return m_attributes.encodingType(); }
@@ -133,7 +133,7 @@ private:
     void removedFromAncestor(RemovalType, ContainerNode&) final;
     void finishParsingChildren() final;
 
-    void handleLocalEvents(Event&) final;
+    void handleLocalEvents(Event&, EventInvokePhase) final;
 
     void parseAttribute(const QualifiedName&, const AtomicString&) final;
     bool isURLAttribute(const Attribute&) const final;

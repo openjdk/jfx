@@ -277,17 +277,17 @@ String TextCheckingHelper::findFirstMisspelling(int& firstMisspellingOffset, boo
 
         if (misspellingLocation >= 0 && misspellingLength > 0 && misspellingLocation < textLength && misspellingLength <= textLength && misspellingLocation + misspellingLength <= textLength) {
             // Compute range of misspelled word
-            RefPtr<Range> misspellingRange = TextIterator::subrange(m_range, currentChunkOffset + misspellingLocation, misspellingLength);
+            auto misspellingRange = TextIterator::subrange(m_range, currentChunkOffset + misspellingLocation, misspellingLength);
 
             // Remember first-encountered misspelling and its offset.
             if (!firstMisspelling) {
                 firstMisspellingOffset = currentChunkOffset + misspellingLocation;
                 firstMisspelling = text.substring(misspellingLocation, misspellingLength).toString();
-                firstMisspellingRange = misspellingRange;
+                firstMisspellingRange = misspellingRange.ptr();
             }
 
             // Store marker for misspelled word.
-            misspellingRange->startContainer().document().markers().addMarker(misspellingRange.get(), DocumentMarker::Spelling);
+            misspellingRange->startContainer().document().markers().addMarker(misspellingRange, DocumentMarker::Spelling);
 
             // Bail out if we're marking only the first misspelling, and not all instances.
             if (!markAll)
@@ -337,8 +337,8 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
         if (inSameParagraph(paragraphRange->startPosition(), m_range->endPosition())) {
             // Determine the character offset from the end of the original search range to the end of the paragraph,
             // since we will want to ignore results in this area.
-            RefPtr<Range> endOffsetAsRange = Range::create(paragraphRange->startContainer().document(), paragraphRange->startPosition(), m_range->endPosition());
-            currentEndOffset = TextIterator::rangeLength(endOffsetAsRange.get());
+            auto endOffsetAsRange = Range::create(paragraphRange->startContainer().document(), paragraphRange->startPosition(), m_range->endPosition());
+            currentEndOffset = TextIterator::rangeLength(endOffsetAsRange.ptr());
             lastIteration = true;
         }
         if (currentStartOffset < currentEndOffset) {
@@ -353,7 +353,7 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
                 Vector<TextCheckingResult> results;
                 OptionSet<TextCheckingType> checkingTypes { TextCheckingType::Spelling };
                 if (checkGrammar)
-                    checkingTypes |= TextCheckingType::Grammar;
+                    checkingTypes.add(TextCheckingType::Grammar);
                 VisibleSelection currentSelection;
                 if (Frame* frame = paragraphRange->ownerDocument().frame())
                     currentSelection = frame->selection().selection();
@@ -397,8 +397,8 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
                 if (!misspelledWord.isEmpty() && (!checkGrammar || badGrammarPhrase.isEmpty() || spellingLocation <= grammarDetailLocation)) {
                     int spellingOffset = spellingLocation - currentStartOffset;
                     if (!firstIteration) {
-                        RefPtr<Range> paragraphOffsetAsRange = Range::create(paragraphRange->startContainer().document(), m_range->startPosition(), paragraphRange->startPosition());
-                        spellingOffset += TextIterator::rangeLength(paragraphOffsetAsRange.get());
+                        auto paragraphOffsetAsRange = Range::create(paragraphRange->startContainer().document(), m_range->startPosition(), paragraphRange->startPosition());
+                        spellingOffset += TextIterator::rangeLength(paragraphOffsetAsRange.ptr());
                     }
                     outIsSpelling = true;
                     outFirstFoundOffset = spellingOffset;
@@ -408,8 +408,8 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
                 if (checkGrammar && !badGrammarPhrase.isEmpty()) {
                     int grammarPhraseOffset = grammarPhraseLocation - currentStartOffset;
                     if (!firstIteration) {
-                        RefPtr<Range> paragraphOffsetAsRange = Range::create(paragraphRange->startContainer().document(), m_range->startPosition(), paragraphRange->startPosition());
-                        grammarPhraseOffset += TextIterator::rangeLength(paragraphOffsetAsRange.get());
+                        auto paragraphOffsetAsRange = Range::create(paragraphRange->startContainer().document(), m_range->startPosition(), paragraphRange->startPosition());
+                        grammarPhraseOffset += TextIterator::rangeLength(paragraphOffsetAsRange.ptr());
                     }
                     outIsSpelling = false;
                     outFirstFoundOffset = grammarPhraseOffset;
@@ -453,8 +453,8 @@ int TextCheckingHelper::findFirstGrammarDetail(const Vector<GrammarDetail>& gram
             continue;
 
         if (markAll) {
-            RefPtr<Range> badGrammarRange = TextIterator::subrange(m_range, badGrammarPhraseLocation - startOffset + detail->location, detail->length);
-            badGrammarRange->startContainer().document().markers().addMarker(badGrammarRange.get(), DocumentMarker::Grammar, detail->userDescription);
+            auto badGrammarRange = TextIterator::subrange(m_range, badGrammarPhraseLocation - startOffset + detail->location, detail->length);
+            badGrammarRange->startContainer().document().markers().addMarker(badGrammarRange, DocumentMarker::Grammar, detail->userDescription);
         }
 
         // Remember this detail only if it's earlier than our current candidate (the details aren't in a guaranteed order)
@@ -587,7 +587,7 @@ Vector<String> TextCheckingHelper::guessesForMisspelledOrUngrammaticalRange(bool
     Vector<TextCheckingResult> results;
     OptionSet<TextCheckingType> checkingTypes { TextCheckingType::Spelling };
     if (checkGrammar)
-        checkingTypes |= TextCheckingType::Grammar;
+        checkingTypes.add(TextCheckingType::Grammar);
     VisibleSelection currentSelection;
     if (Frame* frame = m_range->ownerDocument().frame())
         currentSelection = frame->selection().selection();

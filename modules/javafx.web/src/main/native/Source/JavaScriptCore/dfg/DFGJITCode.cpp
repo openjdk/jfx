@@ -78,12 +78,12 @@ void JITCode::reconstruct(
 
 void JITCode::reconstruct(
     ExecState* exec, CodeBlock* codeBlock, CodeOrigin codeOrigin, unsigned streamIndex,
-    Operands<JSValue>& result)
+    Operands<Optional<JSValue>>& result)
 {
     Operands<ValueRecovery> recoveries;
     reconstruct(codeBlock, codeOrigin, streamIndex, recoveries);
 
-    result = Operands<JSValue>(OperandsLike, recoveries);
+    result = Operands<Optional<JSValue>>(OperandsLike, recoveries);
     for (size_t i = result.size(); i--;)
         result[i] = recoveries[i].recover(exec);
 }
@@ -225,16 +225,16 @@ void JITCode::validateReferences(const TrackedReferences& trackedReferences)
     minifiedDFG.validateReferences(trackedReferences);
 }
 
-std::optional<CodeOrigin> JITCode::findPC(CodeBlock*, void* pc)
+Optional<CodeOrigin> JITCode::findPC(CodeBlock*, void* pc)
 {
     for (OSRExit& exit : osrExit) {
         if (ExecutableMemoryHandle* handle = exit.m_code.executableMemory()) {
             if (handle->start().untaggedPtr() <= pc && pc < handle->end().untaggedPtr())
-                return std::optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
+                return Optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
         }
     }
 
-    return std::nullopt;
+    return WTF::nullopt;
 }
 
 void JITCode::finalizeOSREntrypoints()

@@ -57,7 +57,7 @@ void RenderSVGResourceMasker::removeClientFromCache(RenderElement& client, bool 
 bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const RenderStyle&, GraphicsContext*& context, OptionSet<RenderSVGResourceMode> resourceMode)
 {
     ASSERT(context);
-    ASSERT_UNUSED(resourceMode, resourceMode == RenderSVGResourceMode::ApplyToDefault);
+    ASSERT_UNUSED(resourceMode, !resourceMode);
 
     bool missingMaskerData = !m_masker.contains(&renderer);
     if (missingMaskerData)
@@ -71,7 +71,7 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
         const SVGRenderStyle& svgStyle = style().svgStyle();
         ColorSpace colorSpace = svgStyle.colorInterpolation() == ColorInterpolation::LinearRGB ? ColorSpaceLinearRGB : ColorSpaceSRGB;
         // FIXME (149470): This image buffer should not be unconditionally unaccelerated. Making it match the context breaks alpha masking, though.
-        maskerData->maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, colorSpace, Unaccelerated);
+        maskerData->maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, colorSpace, Unaccelerated, context);
         if (!maskerData->maskImage)
             return false;
 

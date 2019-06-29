@@ -41,7 +41,7 @@ Ref<ScrollingStateFixedNode> ScrollingStateFixedNode::create(ScrollingStateTree&
 }
 
 ScrollingStateFixedNode::ScrollingStateFixedNode(ScrollingStateTree& tree, ScrollingNodeID nodeID)
-    : ScrollingStateNode(FixedNode, tree, nodeID)
+    : ScrollingStateNode(ScrollingNodeType::Fixed, tree, nodeID)
 {
 }
 
@@ -56,6 +56,12 @@ ScrollingStateFixedNode::~ScrollingStateFixedNode() = default;
 Ref<ScrollingStateNode> ScrollingStateFixedNode::clone(ScrollingStateTree& adoptiveTree)
 {
     return adoptRef(*new ScrollingStateFixedNode(*this, adoptiveTree));
+}
+
+void ScrollingStateFixedNode::setAllPropertiesChanged()
+{
+    setPropertyChangedBit(ViewportConstraints);
+    ScrollingStateNode::setAllPropertiesChanged();
 }
 
 void ScrollingStateFixedNode::updateConstraints(const FixedPositionViewportConstraints& constraints)

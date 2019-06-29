@@ -40,11 +40,10 @@
 #include "RGBColor.h"
 #include "Rect.h"
 #include "RenderStyle.h"
-#include <wtf/DecimalNumber.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 #if ENABLE(DASHBOARD_SUPPORT)
 #include "DashboardRegion.h"
@@ -52,7 +51,6 @@
 
 
 namespace WebCore {
-using namespace WTF;
 
 static inline bool isValidCSSUnitTypeForDoubleConversion(CSSPrimitiveValue::UnitType unitType)
 {
@@ -277,17 +275,9 @@ static const AtomicString& propertyName(CSSPropertyID propertyID)
 
 static const AtomicString& valueName(CSSValueID valueID)
 {
-    ASSERT_ARG(valueID, valueID >= 0);
-    ASSERT_ARG(valueID, valueID < numCSSValueKeywords);
+    ASSERT_ARG(valueID, (valueID >= firstCSSValueKeyword && valueID <= lastCSSValueKeyword));
 
-    if (valueID < 0)
-        return nullAtom();
-
-    static AtomicString* keywordStrings = new AtomicString[numCSSValueKeywords]; // Leaked intentionally.
-    AtomicString& keywordString = keywordStrings[valueID];
-    if (keywordString.isNull())
-        keywordString = getValueName(valueID);
-    return keywordString;
+    return getValueNameAtomicString(valueID);
 }
 
 CSSPrimitiveValue::CSSPrimitiveValue(CSSValueID valueID)
@@ -795,7 +785,7 @@ ExceptionOr<float> CSSPrimitiveValue::getFloatValue(unsigned short unitType) con
 
 double CSSPrimitiveValue::doubleValue(UnitType unitType) const
 {
-    return doubleValueInternal(unitType).value_or(0);
+    return doubleValueInternal(unitType).valueOr(0);
 }
 
 double CSSPrimitiveValue::doubleValue() const
@@ -830,10 +820,10 @@ CSSPrimitiveValue::UnitType CSSPrimitiveValue::canonicalUnitTypeForCategory(Unit
     }
 }
 
-std::optional<double> CSSPrimitiveValue::doubleValueInternal(UnitType requestedUnitType) const
+Optional<double> CSSPrimitiveValue::doubleValueInternal(UnitType requestedUnitType) const
 {
     if (!isValidCSSUnitTypeForDoubleConversion(static_cast<UnitType>(m_primitiveUnitType)) || !isValidCSSUnitTypeForDoubleConversion(requestedUnitType))
-        return std::nullopt;
+        return WTF::nullopt;
 
     UnitType sourceUnitType = static_cast<UnitType>(primitiveType());
     if (requestedUnitType == sourceUnitType || requestedUnitType == CSS_DIMENSION)
@@ -848,20 +838,20 @@ std::optional<double> CSSPrimitiveValue::doubleValueInternal(UnitType requestedU
 
     // Cannot convert between unrelated unit categories if one of them is not UNumber.
     if (sourceCategory != targetCategory && sourceCategory != UNumber && targetCategory != UNumber)
-        return std::nullopt;
+        return WTF::nullopt;
 
     if (targetCategory == UNumber) {
         // We interpret conversion to CSS_NUMBER as conversion to a canonical unit in this value's category.
         targetUnitType = canonicalUnitTypeForCategory(sourceCategory);
         if (targetUnitType == CSS_UNKNOWN)
-            return std::nullopt;
+            return WTF::nullopt;
     }
 
     if (sourceUnitType == CSS_NUMBER) {
         // We interpret conversion from CSS_NUMBER in the same way as CSSParser::validUnit() while using non-strict mode.
         sourceUnitType = canonicalUnitTypeForCategory(targetCategory);
         if (sourceUnitType == CSS_UNKNOWN)
-            return std::nullopt;
+            return WTF::nullopt;
     }
 
     double convertedValue = doubleValue();
@@ -944,26 +934,9 @@ ExceptionOr<Ref<RGBColor>> CSSPrimitiveValue::getRGBColorValue() const
     return RGBColor::create(m_value.color->rgb());
 }
 
-NEVER_INLINE Ref<StringImpl> CSSPrimitiveValue::formatNumberValue(const char* suffix, unsigned suffixLength) const
+NEVER_INLINE String CSSPrimitiveValue::formatNumberValue(StringView suffix) const
 {
-    DecimalNumber decimal(m_value.num);
-
-    unsigned bufferLength = decimal.bufferLengthForStringDecimal() + suffixLength;
-    LChar* buffer;
-    auto string = StringImpl::createUninitialized(bufferLength, buffer);
-
-    unsigned length = decimal.toStringDecimal(buffer, bufferLength);
-
-    for (unsigned i = 0; i < suffixLength; ++i)
-        buffer[length + i] = static_cast<LChar>(suffix[i]);
-
-    return string;
-}
-
-template <unsigned characterCount>
-ALWAYS_INLINE Ref<StringImpl> CSSPrimitiveValue::formatNumberValue(const char (&characters)[characterCount]) const
-{
-    return formatNumberValue(characters, characterCount - 1);
+    return makeString(m_value.num, suffix);
 }
 
 ALWAYS_INLINE String CSSPrimitiveValue::formatNumberForCustomCSSText() const
@@ -1038,15 +1011,8 @@ ALWAYS_INLINE String CSSPrimitiveValue::formatNumberForCustomCSSText() const
         return valueName(m_value.valueID);
     case CSS_PROPERTY_ID:
         return propertyName(m_value.propertyID);
-    case CSS_ATTR: {
-        StringBuilder result;
-        result.reserveCapacity(6 + m_value.string->length());
-        result.appendLiteral("attr(");
-        result.append(String(m_value.string));
-        result.append(')');
-
-        return result.toString();
-    }
+    case CSS_ATTR:
+        return "attr(" + String(m_value.string) + ')';
     case CSS_COUNTER_NAME:
         return "counter(" + String(m_value.string) + ')';
     case CSS_COUNTER: {
@@ -1226,6 +1192,34 @@ bool CSSPrimitiveValue::equals(const CSSPrimitiveValue& other) const
 Ref<DeprecatedCSSOMPrimitiveValue> CSSPrimitiveValue::createDeprecatedCSSOMPrimitiveWrapper(CSSStyleDeclaration& styleDeclaration) const
 {
     return DeprecatedCSSOMPrimitiveValue::create(*this, styleDeclaration);
+}
+
+// https://drafts.css-houdini.org/css-properties-values-api/#dependency-cycles-via-relative-units
+void CSSPrimitiveValue::collectDirectComputationalDependencies(HashSet<CSSPropertyID>& values) const
+{
+    switch (m_primitiveUnitType) {
+    case CSS_EMS:
+    case CSS_QUIRKY_EMS:
+    case CSS_EXS:
+    case CSS_CHS:
+        values.add(CSSPropertyFontSize);
+        break;
+    case CSS_CALC:
+        m_value.calc->collectDirectComputationalDependencies(values);
+        break;
+    }
+}
+
+void CSSPrimitiveValue::collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>& values) const
+{
+    switch (m_primitiveUnitType) {
+    case CSS_REMS:
+        values.add(CSSPropertyFontSize);
+        break;
+    case CSS_CALC:
+        m_value.calc->collectDirectRootComputationalDependencies(values);
+        break;
+    }
 }
 
 } // namespace WebCore

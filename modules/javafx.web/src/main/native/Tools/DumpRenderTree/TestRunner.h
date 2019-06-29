@@ -66,8 +66,8 @@ public:
     void clearBackForwardList();
     void clearPersistentUserStyleSheet();
     bool callShouldCloseOnWebView();
-    JSStringRef copyDecodedHostName(JSStringRef name);
-    JSStringRef copyEncodedHostName(JSStringRef name);
+    JSRetainPtr<JSStringRef> copyDecodedHostName(JSStringRef name);
+    JSRetainPtr<JSStringRef> copyEncodedHostName(JSStringRef name);
     void dispatchPendingLoadRequests();
     void display();
     void displayAndTrackRepaints();
@@ -83,7 +83,7 @@ public:
     int numberOfPendingGeolocationPermissionRequests();
     bool isGeolocationProviderActive();
     void overridePreference(JSStringRef key, JSStringRef value);
-    JSStringRef pathToLocalResource(JSContextRef, JSStringRef url);
+    JSRetainPtr<JSStringRef> pathToLocalResource(JSContextRef, JSStringRef url);
     void queueBackNavigation(int howFarBackward);
     void queueForwardNavigation(int howFarForward);
     void queueLoad(JSStringRef url, JSStringRef target);
@@ -106,6 +106,7 @@ public:
     void setDomainRelaxationForbiddenForURLScheme(bool forbidden, JSStringRef scheme);
     void setDefersLoading(bool);
     void setIconDatabaseEnabled(bool);
+    void setIDBPerOriginQuota(uint64_t);
     void setJavaScriptCanAccessClipboard(bool flag);
     void setAutomaticLinkDetectionEnabled(bool flag);
     void setMainFrameIsFirstResponder(bool flag);
@@ -124,7 +125,7 @@ public:
     void setXSSAuditorEnabled(bool flag);
     void setSpatialNavigationEnabled(bool);
     void setScrollbarPolicy(JSStringRef orientation, JSStringRef policy);
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     void setTelephoneNumberParsingEnabled(bool enable);
     void setPagePaused(bool paused);
 #endif
@@ -271,6 +272,7 @@ public:
 
     bool alwaysAcceptCookies() const { return m_alwaysAcceptCookies; }
     void setAlwaysAcceptCookies(bool);
+    void setOnlyAcceptFirstPartyCookies(bool);
 
     bool rejectsProtectionSpaceAndContinueForAuthenticationChallenges() const { return m_rejectsProtectionSpaceAndContinueForAuthenticationChallenges; }
     void setRejectsProtectionSpaceAndContinueForAuthenticationChallenges(bool value) { m_rejectsProtectionSpaceAndContinueForAuthenticationChallenges = value; }
@@ -319,7 +321,7 @@ public:
     void showWebInspector();
     void closeWebInspector();
     void evaluateInWebInspector(JSStringRef script);
-    JSStringRef inspectorTestStubURL();
+    JSRetainPtr<JSStringRef> inspectorTestStubURL();
 
     void evaluateScriptInIsolatedWorld(unsigned worldID, JSObjectRef globalObject, JSStringRef script);
     void evaluateScriptInIsolatedWorldAndReturnValue(unsigned worldID, JSObjectRef globalObject, JSStringRef script);

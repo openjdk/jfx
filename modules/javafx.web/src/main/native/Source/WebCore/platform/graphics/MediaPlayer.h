@@ -40,7 +40,7 @@
 #include "PlatformMediaSession.h"
 #include "SecurityOriginHash.h"
 #include "Timer.h"
-#include "URL.h"
+#include <wtf/URL.h>
 #include "VideoTrackPrivate.h"
 #include <JavaScriptCore/Uint8Array.h>
 #include <wtf/Function.h>
@@ -87,10 +87,11 @@ struct MediaEngineSupportParameters {
 };
 
 struct VideoPlaybackQualityMetrics {
-    unsigned totalVideoFrames;
-    unsigned droppedVideoFrames;
-    unsigned corruptedVideoFrames;
-    double totalFrameDelay;
+    uint32_t totalVideoFrames { 0 };
+    uint32_t droppedVideoFrames { 0 };
+    uint32_t corruptedVideoFrames { 0 };
+    double totalFrameDelay { 0 };
+    uint32_t displayCompositedVideoFrames { 0 };
 };
 
 class MediaPlayerClient {
@@ -169,6 +170,7 @@ public:
 
 #if ENABLE(ENCRYPTED_MEDIA)
     virtual void mediaPlayerInitializationDataEncountered(const String&, RefPtr<ArrayBuffer>&&) { }
+    virtual void mediaPlayerWaitingForKeyChanged() { }
 #endif
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -211,7 +213,7 @@ public:
     virtual Vector<RefPtr<PlatformTextTrack>> outOfBandTrackSources() { return { }; }
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     virtual String mediaPlayerNetworkInterfaceName() const { return String(); }
     virtual bool mediaPlayerGetRawCookies(const URL&, Vector<Cookie>&) const { return false; }
 #endif
@@ -225,6 +227,7 @@ public:
 
     virtual double mediaPlayerRequestedPlaybackRate() const { return 0; }
     virtual MediaPlayerEnums::VideoFullscreenMode mediaPlayerFullscreenMode() const { return MediaPlayerEnums::VideoFullscreenModeNone; }
+    virtual bool mediaPlayerIsVideoFullscreenStandby() const { return false; }
     virtual Vector<String> mediaPlayerPreferredAudioCharacteristics() const { return Vector<String>(); }
 
 #if USE(GSTREAMER)
@@ -250,8 +253,8 @@ public:
     void invalidate();
 
     // Media engine support.
-    enum SupportsType { IsNotSupported, IsSupported, MayBeSupported };
-    static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
+    using MediaPlayerEnums::SupportsType;
+    static SupportsType supportsType(const MediaEngineSupportParameters&);
     static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>&);
     static bool isAvailable();
     static HashSet<RefPtr<SecurityOrigin>> originsInMediaCache(const String& path);
@@ -267,7 +270,7 @@ public:
     bool doesHaveAttribute(const AtomicString&, AtomicString* value = nullptr) const;
     PlatformLayer* platformLayer() const;
 
-#if PLATFORM(IOS) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+#if PLATFORM(IOS_FAMILY) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
     void setVideoFullscreenLayer(PlatformLayer*, WTF::Function<void()>&& completionHandler = [] { });
     void setVideoFullscreenFrame(FloatRect);
     void updateVideoFullscreenInlineImage();
@@ -275,9 +278,11 @@ public:
     void setVideoFullscreenGravity(VideoGravity);
     void setVideoFullscreenMode(VideoFullscreenMode);
     VideoFullscreenMode fullscreenMode() const;
+    void videoFullscreenStandbyChanged();
+    bool isVideoFullscreenStandby() const;
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     NSArray *timedMetadata() const;
     String accessLog() const;
     String errorLog() const;
@@ -487,6 +492,8 @@ public:
 
 #if ENABLE(ENCRYPTED_MEDIA)
     void initializationDataEncountered(const String&, RefPtr<ArrayBuffer>&&);
+    void waitingForKeyChanged();
+    bool waitingForKey() const;
 #endif
 
     String referrer() const;
@@ -517,7 +524,7 @@ public:
     Vector<RefPtr<PlatformTextTrack>> outOfBandTrackSources();
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     String mediaPlayerNetworkInterfaceName() const;
     bool getRawCookies(const URL&, Vector<Cookie>&) const;
 #endif
@@ -537,9 +544,7 @@ public:
 
     unsigned long long fileSize() const;
 
-#if ENABLE(MEDIA_SOURCE)
-    std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics();
-#endif
+    Optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics();
 
     void handlePlaybackCommand(PlatformMediaSession::RemoteControlCommandType);
     String sourceApplicationIdentifier() const;
@@ -565,9 +570,13 @@ public:
     void applicationWillResignActive();
     void applicationDidBecomeActive();
 
-#if ENABLE(VIDEO) && USE(AVFOUNDATION)
+#if USE(AVFOUNDATION)
     WEBCORE_EXPORT AVPlayer *objCAVFoundationAVPlayer() const;
 #endif
+
+    bool performTaskAtMediaTime(WTF::Function<void()>&&, MediaTime);
+
+    bool shouldIgnoreIntrinsicSize();
 
 private:
     MediaPlayer(MediaPlayerClient&);

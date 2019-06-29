@@ -44,7 +44,7 @@ public:
     // FIXME: We should implement this when we support ScrollingTreeScrollingNodes as children.
     void updateLayersAfterAncestorChange(const ScrollingTreeNode& /*changedNode*/, const FloatRect& /*fixedPositionRect*/, const FloatSize& /*cumulativeDelta*/) override { }
 
-    void handleWheelEvent(const PlatformWheelEvent&) override = 0;
+    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override = 0;
     void setScrollPosition(const FloatPoint&) override;
     void setScrollPositionWithoutContentEdgeConstraints(const FloatPoint&) override = 0;
 
@@ -60,13 +60,11 @@ public:
 
     FloatRect fixedPositionRect() { return FloatRect(lastCommittedScrollPosition(), scrollableAreaSize()); };
 
+    float frameScaleFactor() const { return m_frameScaleFactor; }
+
 protected:
     ScrollingTreeFrameScrollingNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
 
-    void scrollBy(const FloatSize&);
-    void scrollByWithoutContentEdgeConstraints(const FloatSize&);
-
-    float frameScaleFactor() const { return m_frameScaleFactor; }
     int headerHeight() const { return m_headerHeight; }
     int footerHeight() const { return m_footerHeight; }
     float topContentInset() const { return m_topContentInset; }
@@ -80,7 +78,10 @@ protected:
     ScrollBehaviorForFixedElements scrollBehaviorForFixedElements() const { return m_behaviorForFixed; }
 
 private:
-    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    WEBCORE_EXPORT LayoutPoint parentToLocalPoint(LayoutPoint) const final;
+    WEBCORE_EXPORT LayoutPoint localToContentsPoint(LayoutPoint) const final;
+
+    WEBCORE_EXPORT void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
     FloatRect m_layoutViewport;
     FloatPoint m_minLayoutViewportOrigin;

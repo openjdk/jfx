@@ -1,5 +1,4 @@
 list(APPEND WTF_SOURCES
-    generic/MainThreadGeneric.cpp
     generic/WorkQueueGeneric.cpp
 )
 
@@ -8,14 +7,35 @@ if (WIN32)
         text/win/TextBreakIteratorInternalICUWin.cpp
 
         win/CPUTimeWin.cpp
+        win/DbgHelperWin.cpp
+        win/FileSystemWin.cpp
         win/LanguageWin.cpp
+        win/MainThreadWin.cpp
+        win/OSAllocatorWin.cpp
+        win/PathWalker.cpp
+        win/ThreadSpecificWin.cpp
+        win/ThreadingWin.cpp
     )
     list(APPEND WTF_PUBLIC_HEADERS
+        win/DbgHelperWin.h
+        win/PathWalker.h
+
         text/win/WCharStringExtras.h
+    )
+    list(APPEND WTF_LIBRARIES
+        DbgHelp
+        shlwapi
+        winmm
     )
 else ()
     list(APPEND WTF_SOURCES
         UniStdExtras.cpp
+
+        generic/MainThreadGeneric.cpp
+
+        posix/FileSystemPOSIX.cpp
+        posix/OSAllocatorPOSIX.cpp
+        posix/ThreadingPOSIX.cpp
 
         text/unix/TextBreakIteratorInternalICUUnix.cpp
 
@@ -30,12 +50,14 @@ else ()
             unix/CPUTimeUnix.cpp
         )
     endif ()
-
 endif ()
 
 if (WIN32)
     list(APPEND WTF_SOURCES
         win/MemoryFootprintWin.cpp
+    )
+    list(APPEND WTF_PUBLIC_HEADERS
+        win/Win32Handle.h
     )
 elseif (APPLE)
     file(COPY mac/MachExceptions.defs DESTINATION ${DERIVED_SOURCES_WTF_DIR})
@@ -57,9 +79,19 @@ elseif (APPLE)
     list(APPEND WTF_INCLUDE_DIRECTORIES
         ${DERIVED_SOURCES_WTF_DIR}
     )
+elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    list(APPEND WTF_SOURCES
+        linux/CurrentProcessMemoryStatus.cpp
+        linux/MemoryFootprintLinux.cpp
+        linux/MemoryPressureHandlerLinux.cpp
+    )
+    list(APPEND WTF_PUBLIC_HEADERS
+        linux/CurrentProcessMemoryStatus.h
+    )
 else ()
     list(APPEND WTF_SOURCES
-        linux/MemoryFootprintLinux.cpp
+        generic/MemoryFootprintGeneric.cpp
+        generic/MemoryPressureHandlerGeneric.cpp
     )
 endif ()
 

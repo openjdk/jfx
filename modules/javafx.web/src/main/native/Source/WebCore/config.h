@@ -29,21 +29,16 @@
 #define USE_FILE_LOCK 1
 #endif
 
-#if PLATFORM(WIN)
-#include <PALHeaderDetection.h>
-#endif
-
 #include "PlatformExportMacros.h"
 #include <JavaScriptCore/JSExportMacros.h>
 #include <pal/ExportMacros.h>
 
-#ifdef __APPLE__
-#define HAVE_FUNC_USLEEP 1
-#endif /* __APPLE__ */
-
 // Using CMake with Unix makefiles does not use prefix headers.
 #if PLATFORM(MAC) && defined(BUILDING_WITH_CMAKE)
 #include "WebCorePrefix.h"
+#ifndef JSC_API_AVAILABLE
+#define JSC_API_AVAILABLE(...)
+#endif
 #endif
 
 #ifdef __cplusplus
@@ -60,10 +55,6 @@
 
 #include <wtf/DisallowCType.h>
 
-#if PLATFORM(MAC) || PLATFORM(WPE)
-#define USE_NEW_THEME 1
-#endif
-
 #if USE(CG)
 #ifndef CGFLOAT_DEFINED
 #if (defined(__LP64__) && __LP64__) || (defined(__x86_64__) && __x86_64__) || defined(_M_X64) || defined(__amd64__)
@@ -74,15 +65,3 @@ typedef float CGFloat;
 #define CGFLOAT_DEFINED 1
 #endif
 #endif /* USE(CG) */
-
-#if PLATFORM(WIN) && USE(CG) && HAVE(AVCF)
-#define USE_AVFOUNDATION 1
-
-#if HAVE(AVCF_LEGIBLE_OUTPUT)
-#define USE_AVFOUNDATION 1
-#define HAVE_AVFOUNDATION_MEDIA_SELECTION_GROUP 1
-#define HAVE_AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT 1
-#define HAVE_MEDIA_ACCESSIBILITY_FRAMEWORK 1
-#endif
-
-#endif

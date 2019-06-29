@@ -36,7 +36,7 @@
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include "WebCoreThread.h"
 #endif
 
@@ -71,7 +71,7 @@ public:
 private:
     virtual void fired() = 0;
 
-    virtual std::optional<MonotonicTime> alignedFireTime(MonotonicTime) const { return std::nullopt; }
+    virtual Optional<MonotonicTime> alignedFireTime(MonotonicTime) const { return WTF::nullopt; }
 
     void checkConsistency() const;
     void checkHeapIndex() const;
@@ -132,12 +132,12 @@ private:
 
 inline bool TimerBase::isActive() const
 {
-    // FIXME: Write this in terms of USE(WEB_THREAD) instead of PLATFORM(IOS).
-#if !PLATFORM(IOS)
+    // FIXME: Write this in terms of USE(WEB_THREAD) instead of PLATFORM(IOS_FAMILY).
+#if !PLATFORM(IOS_FAMILY)
     ASSERT(m_thread.ptr() == &Thread::current());
 #else
     ASSERT(WebThreadIsCurrent() || pthread_main_np() || m_thread.ptr() == &Thread::current());
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS_FAMILY)
     return static_cast<bool>(nextFireTime());
 }
 

@@ -25,7 +25,7 @@
  */
 
 #include "config.h"
-#include "WorkQueue.h"
+#include <wtf/WorkQueue.h>
 
 #include <mutex>
 #include <wtf/Condition.h>
@@ -36,7 +36,7 @@
 #include <wtf/NumberOfCores.h>
 #include <wtf/Ref.h>
 #include <wtf/Threading.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WTF {
 

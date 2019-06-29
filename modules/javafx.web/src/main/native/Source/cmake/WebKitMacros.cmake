@@ -16,41 +16,59 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
         set(WTF_SCRIPTS_DIR "${FORWARDING_HEADERS_DIR}/wtf/Scripts")
     endif ()
 
-    execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
-        "--derived-sources-path" "${DERIVED_SOURCES_DIR}/${_framework}"
-        "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
-        "--print-bundled-sources"
-        "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
-        ${_sourceListFileTruePaths}
-        RESULT_VARIABLE _resultTmp
-        OUTPUT_VARIABLE _outputTmp)
+    if (ENABLE_UNIFIED_BUILDS)
+        execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+            "--derived-sources-path" "${DERIVED_SOURCES_DIR}/${_framework}"
+            "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
+            "--print-bundled-sources"
+            "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
+            ${_sourceListFileTruePaths}
+            RESULT_VARIABLE _resultTmp
+            OUTPUT_VARIABLE _outputTmp)
 
-    if (${_resultTmp})
-         message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
+        if (${_resultTmp})
+             message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
+        endif ()
+
+        foreach (_sourceFileTmp IN LISTS _outputTmp)
+            set_source_files_properties(${_sourceFileTmp} PROPERTIES HEADER_FILE_ONLY ON)
+            list(APPEND ${_framework}_HEADERS ${_sourceFileTmp})
+        endforeach ()
+        unset(_sourceFileTmp)
+
+        execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+            "--derived-sources-path" "${DERIVED_SOURCES_DIR}/${_framework}"
+            "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
+            "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
+            ${_sourceListFileTruePaths}
+            RESULT_VARIABLE  _resultTmp
+            OUTPUT_VARIABLE _outputTmp)
+
+        if (${_resultTmp})
+            message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
+        endif ()
+
+        list(APPEND ${_framework}_SOURCES ${_outputTmp})
+        unset(_resultTmp)
+        unset(_outputTmp)
+    else ()
+        execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+            "--derived-sources-path" "${DERIVED_SOURCES_DIR}/${_framework}"
+            "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
+            "--print-all-sources"
+            "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
+            ${_sourceListFileTruePaths}
+            RESULT_VARIABLE _resultTmp
+            OUTPUT_VARIABLE _outputTmp)
+
+        if (${_resultTmp})
+             message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
+        endif ()
+
+        list(APPEND ${_framework}_SOURCES ${_outputTmp})
+        unset(_resultTmp)
+        unset(_outputTmp)
     endif ()
-
-    foreach (_sourceFileTmp IN LISTS _outputTmp)
-        set_source_files_properties(${_sourceFileTmp} PROPERTIES HEADER_FILE_ONLY ON)
-        list(APPEND ${_framework}_HEADERS ${_sourceFileTmp})
-    endforeach ()
-    unset(_sourceFileTmp)
-
-    execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
-        "--derived-sources-path" "${DERIVED_SOURCES_DIR}/${_framework}"
-        "--source-tree-path" ${CMAKE_CURRENT_SOURCE_DIR}
-        "--feature-flags" "${UNIFIED_SOURCE_LIST_ENABLED_FEATURES}"
-        ${_sourceListFileTruePaths}
-        RESULT_VARIABLE  _resultTmp
-        OUTPUT_VARIABLE _outputTmp)
-
-    if (${_resultTmp})
-        message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
-    endif ()
-
-    list(APPEND ${_framework}_SOURCES ${_outputTmp})
-    unset(_platformSourcesFile)
-    unset(_resultTmp)
-    unset(_outputTmp)
 endmacro()
 
 macro(WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS)
@@ -136,7 +154,7 @@ macro(WEBKIT_FRAMEWORK _target)
     target_include_directories(${_target} PUBLIC "$<BUILD_INTERFACE:${${_target}_INCLUDE_DIRECTORIES}>")
     target_include_directories(${_target} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_target}_SYSTEM_INCLUDE_DIRECTORIES}>")
     target_include_directories(${_target} PRIVATE "$<BUILD_INTERFACE:${${_target}_PRIVATE_INCLUDE_DIRECTORIES}>")
-    target_link_libraries(${_target} ${${_target}_LIBRARIES})
+        target_link_libraries(${_target} ${${_target}_LIBRARIES})
     set_target_properties(${_target} PROPERTIES COMPILE_DEFINITIONS "BUILDING_${_target}")
 
     if (${_target}_OUTPUT_NAME)

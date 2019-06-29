@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2018 Apple Inc.
+ *  Copyright (C) 2003-2019 Apple Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -25,6 +25,7 @@
 
 #include "CallFrame.h"
 #include "CatchScope.h"
+#include "CodeCache.h"
 #include "CodeProfiling.h"
 #include "Exception.h"
 #include "IdentifierInlines.h"
@@ -44,30 +45,33 @@
 
 namespace JSC {
 
+static inline bool checkSyntaxInternal(VM& vm, const SourceCode& source, ParserError& error)
+{
+    return !!parse<ProgramNode>(
+        &vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin,
+        JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded, error);
+}
+
 bool checkSyntax(ExecState* exec, const SourceCode& source, JSValue* returnedException)
 {
     VM& vm = exec->vm();
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
 
-    ProgramExecutable* program = ProgramExecutable::create(exec, source);
-    JSObject* error = program->checkSyntax(exec);
-    if (error) {
-        if (returnedException)
-            *returnedException = error;
-        return false;
-    }
-
-    return true;
+    ParserError error;
+    if (checkSyntaxInternal(vm, source, error))
+        return true;
+    ASSERT(error.isValid());
+    if (returnedException)
+        *returnedException = error.toErrorObject(exec->lexicalGlobalObject(), source);
+    return false;
 }
 
 bool checkSyntax(VM& vm, const SourceCode& source, ParserError& error)
 {
     JSLockHolder lock(vm);
     RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
-    return !!parse<ProgramNode>(
-        &vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin,
-        JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded, error);
+    return checkSyntaxInternal(vm, source, error);
 }
 
 bool checkModuleSyntax(ExecState* exec, const SourceCode& source, ParserError& error)
@@ -85,6 +89,36 @@ bool checkModuleSyntax(ExecState* exec, const SourceCode& source, ParserError& e
     ModuleAnalyzer moduleAnalyzer(exec, Identifier::fromUid(privateName), source, moduleProgramNode->varDeclarations(), moduleProgramNode->lexicalVariables());
     moduleAnalyzer.analyze(*moduleProgramNode);
     return true;
+}
+
+CachedBytecode generateBytecode(VM& vm, const SourceCode& source, ParserError& error)
+{
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
+
+    VariableEnvironment variablesUnderTDZ;
+    JSParserStrictMode strictMode = JSParserStrictMode::NotStrict;
+    JSParserScriptMode scriptMode = JSParserScriptMode::Classic;
+    DebuggerMode debuggerMode = DebuggerOff;
+    EvalContextType evalContextType = EvalContextType::None;
+
+    UnlinkedCodeBlock* unlinkedCodeBlock = recursivelyGenerateUnlinkedCodeBlock<UnlinkedProgramCodeBlock>(vm, source, strictMode, scriptMode, debuggerMode, error, evalContextType, &variablesUnderTDZ);
+    return serializeBytecode(vm, unlinkedCodeBlock, source, SourceCodeType::ProgramType, strictMode, scriptMode, debuggerMode);
+}
+
+CachedBytecode generateModuleBytecode(VM& vm, const SourceCode& source, ParserError& error)
+{
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
+
+    VariableEnvironment variablesUnderTDZ;
+    JSParserStrictMode strictMode = JSParserStrictMode::Strict;
+    JSParserScriptMode scriptMode = JSParserScriptMode::Module;
+    DebuggerMode debuggerMode = DebuggerOff;
+    EvalContextType evalContextType = EvalContextType::None;
+
+    UnlinkedCodeBlock* unlinkedCodeBlock = recursivelyGenerateUnlinkedCodeBlock<UnlinkedModuleProgramCodeBlock>(vm, source, strictMode, scriptMode, debuggerMode, error, evalContextType, &variablesUnderTDZ);
+    return serializeBytecode(vm, unlinkedCodeBlock, source, SourceCodeType::ModuleType, strictMode, scriptMode, debuggerMode);
 }
 
 JSValue evaluate(ExecState* exec, const SourceCode& source, JSValue thisValue, NakedPtr<Exception>& returnedException)
@@ -151,9 +185,21 @@ static JSInternalPromise* rejectPromise(ExecState* exec, JSGlobalObject* globalO
     scope.assertNoException();
     JSValue exception = scope.exception()->value();
     scope.clearException();
-    JSInternalPromiseDeferred* deferred = JSInternalPromiseDeferred::create(exec, globalObject);
+    JSInternalPromiseDeferred* deferred = JSInternalPromiseDeferred::tryCreate(exec, globalObject);
+    scope.releaseAssertNoException();
     deferred->reject(exec, exception);
+    scope.releaseAssertNoException();
     return deferred->promise();
+}
+
+JSInternalPromise* loadAndEvaluateModule(ExecState* exec, Symbol* moduleId, JSValue parameters, JSValue scriptFetcher)
+{
+    VM& vm = exec->vm();
+    JSLockHolder lock(vm);
+    RELEASE_ASSERT(vm.atomicStringTable() == Thread::current().atomicStringTable());
+    RELEASE_ASSERT(!vm.isCollectorBusyOnCurrentThread());
+
+    return vm.vmEntryGlobalObject(exec)->moduleLoader()->loadAndEvaluateModule(exec, moduleId, parameters, scriptFetcher);
 }
 
 JSInternalPromise* loadAndEvaluateModule(ExecState* exec, const String& moduleName, JSValue parameters, JSValue scriptFetcher)

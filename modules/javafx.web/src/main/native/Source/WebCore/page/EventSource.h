@@ -34,7 +34,7 @@
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "URL.h"
+#include <wtf/URL.h>
 #include "ThreadableLoaderClient.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
@@ -94,7 +94,7 @@ private:
     void scheduleReconnect();
     void abortConnectionAttempt();
     void parseEventStream();
-    void parseEventStreamLine(unsigned position, std::optional<unsigned> fieldLength, unsigned lineLength);
+    void parseEventStreamLine(unsigned position, Optional<unsigned> fieldLength, unsigned lineLength);
     void dispatchMessageEvent();
 
     bool responseIsValid(const ResourceResponse&) const;

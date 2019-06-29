@@ -41,7 +41,7 @@ Ref<ScrollingStateStickyNode> ScrollingStateStickyNode::create(ScrollingStateTre
 }
 
 ScrollingStateStickyNode::ScrollingStateStickyNode(ScrollingStateTree& tree, ScrollingNodeID nodeID)
-    : ScrollingStateNode(StickyNode, tree, nodeID)
+    : ScrollingStateNode(ScrollingNodeType::Sticky, tree, nodeID)
 {
 }
 
@@ -56,6 +56,12 @@ ScrollingStateStickyNode::~ScrollingStateStickyNode() = default;
 Ref<ScrollingStateNode> ScrollingStateStickyNode::clone(ScrollingStateTree& adoptiveTree)
 {
     return adoptRef(*new ScrollingStateStickyNode(*this, adoptiveTree));
+}
+
+void ScrollingStateStickyNode::setAllPropertiesChanged()
+{
+    setPropertyChangedBit(ViewportConstraints);
+    ScrollingStateNode::setAllPropertiesChanged();
 }
 
 void ScrollingStateStickyNode::updateConstraints(const StickyPositionViewportConstraints& constraints)

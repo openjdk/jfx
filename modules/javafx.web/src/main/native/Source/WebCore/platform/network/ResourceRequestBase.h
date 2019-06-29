@@ -31,7 +31,7 @@
 #include "FormData.h"
 #include "HTTPHeaderMap.h"
 #include "IntRect.h"
-#include "URL.h"
+#include <wtf/URL.h>
 #include "ResourceLoadPriority.h"
 
 namespace WebCore {
@@ -57,7 +57,7 @@ class ResourceResponse;
 class ResourceRequestBase {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    ResourceRequest isolatedCopy() const;
+    WEBCORE_EXPORT ResourceRequest isolatedCopy() const;
     WEBCORE_EXPORT void setAsIsolatedCopy(const ResourceRequest&);
 
     WEBCORE_EXPORT bool isNull() const;
@@ -172,6 +172,10 @@ public:
     String initiatorIdentifier() const { return m_initiatorIdentifier; }
     void setInitiatorIdentifier(const String& identifier) { m_initiatorIdentifier = identifier; }
 
+    // Additional information for the Inspector to be able to identify the node that initiated this request.
+    const Optional<int>& inspectorInitiatorNodeIdentifier() const { return m_inspectorInitiatorNodeIdentifier; }
+    void setInspectorInitiatorNodeIdentifier(int inspectorInitiatorNodeIdentifier) { m_inspectorInitiatorNodeIdentifier = inspectorInitiatorNodeIdentifier; }
+
 #if USE(SYSTEM_PREVIEW)
     WEBCORE_EXPORT bool isSystemPreview() const;
     WEBCORE_EXPORT void setSystemPreview(bool);
@@ -232,6 +236,7 @@ protected:
     SameSiteDisposition m_sameSiteDisposition { SameSiteDisposition::Unspecified };
     ResourceLoadPriority m_priority { ResourceLoadPriority::Low };
     Requester m_requester { Requester::Unspecified };
+    Optional<int> m_inspectorInitiatorNodeIdentifier;
     bool m_allowCookies { false };
     mutable bool m_resourceRequestUpdated { false };
     mutable bool m_platformRequestUpdated { false };
@@ -253,20 +258,28 @@ private:
 bool equalIgnoringHeaderFields(const ResourceRequestBase&, const ResourceRequestBase&);
 
 // FIXME: Find a better place for these functions.
+inline String toRegistrableDomain(const URL& a)
+{
+    auto host = a.host().toString();
+    auto registrableDomain = ResourceRequestBase::partitionName(host);
+    // Fall back to the host if we cannot determine the registrable domain.
+    return registrableDomain.isEmpty() ? host : registrableDomain;
+}
+
 inline bool registrableDomainsAreEqual(const URL& a, const URL& b)
 {
-    return ResourceRequestBase::partitionName(a.host().toString()) == ResourceRequestBase::partitionName(b.host().toString());
+    return toRegistrableDomain(a) == toRegistrableDomain(b);
 }
 inline bool registrableDomainsAreEqual(const URL& a, const String& registrableDomain)
 {
-    return ResourceRequestBase::partitionName(a.host().toString()) == registrableDomain;
+    return toRegistrableDomain(a) == registrableDomain;
 }
 
 inline bool operator==(const ResourceRequest& a, const ResourceRequest& b) { return ResourceRequestBase::equal(a, b); }
 inline bool operator!=(ResourceRequest& a, const ResourceRequest& b) { return !(a == b); }
 
 WEBCORE_EXPORT unsigned initializeMaximumHTTPConnectionCountPerHost();
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 WEBCORE_EXPORT void initializeHTTPConnectionSettingsOnStartup();
 #endif
 
@@ -299,7 +312,7 @@ ALWAYS_INLINE bool ResourceRequestBase::decodeBase(Decoder& decoder)
     String firstPartyForCookies;
     if (!decoder.decode(firstPartyForCookies))
         return false;
-    m_firstPartyForCookies = URL(ParsedURLString, firstPartyForCookies);
+    m_firstPartyForCookies = URL({ }, firstPartyForCookies);
 
     if (!decoder.decode(m_httpMethod))
         return false;

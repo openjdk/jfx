@@ -29,22 +29,14 @@ namespace WebCore {
 class HTMLDocument : public Document {
     WTF_MAKE_ISO_ALLOCATED(HTMLDocument);
 public:
-    static Ref<HTMLDocument> create(Frame* frame, const URL& url)
-    {
-        return adoptRef(*new HTMLDocument(frame, url, HTMLDocumentClass));
-    }
-
-    static Ref<HTMLDocument> createSynthesizedDocument(Frame* frame, const URL& url)
-    {
-        return adoptRef(*new HTMLDocument(frame, url, HTMLDocumentClass, Synthesized));
-    }
-
+    static Ref<HTMLDocument> create(Frame*, const URL&);
+    static Ref<HTMLDocument> createSynthesizedDocument(Frame&, const URL&);
     virtual ~HTMLDocument();
 
     WEBCORE_EXPORT int width();
     WEBCORE_EXPORT int height();
 
-    std::optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> namedItem(const AtomicString&);
+    Optional<Variant<RefPtr<WindowProxy>, RefPtr<Element>, RefPtr<HTMLCollection>>> namedItem(const AtomicString&);
     Vector<AtomicString> supportedPropertyNames() const;
 
     Element* documentNamedItem(const AtomicStringImpl& name) const { return m_documentNamedItem.getElementByDocumentNamedItem(name, *this); }
@@ -65,13 +57,23 @@ protected:
     HTMLDocument(Frame*, const URL&, DocumentClassFlags = 0, unsigned constructionFlags = 0);
 
 private:
-    bool isFrameSet() const override;
+    bool isFrameSet() const final;
     Ref<DocumentParser> createParser() override;
     Ref<Document> cloneDocumentWithoutChildren() const final;
 
     TreeScopeOrderedMap m_documentNamedItem;
     TreeScopeOrderedMap m_windowNamedItem;
 };
+
+inline Ref<HTMLDocument> HTMLDocument::create(Frame* frame, const URL& url)
+{
+    return adoptRef(*new HTMLDocument(frame, url, HTMLDocumentClass));
+}
+
+inline Ref<HTMLDocument> HTMLDocument::createSynthesizedDocument(Frame& frame, const URL& url)
+{
+    return adoptRef(*new HTMLDocument(&frame, url, HTMLDocumentClass, Synthesized));
+}
 
 } // namespace WebCore
 

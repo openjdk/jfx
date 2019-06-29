@@ -27,7 +27,7 @@
 
 #include "Cursor.h"
 #include "IntPoint.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "Image.h"
 #include "com_sun_webkit_CursorManager.h"
 
@@ -36,21 +36,21 @@ namespace WebCore {
 jclass getJCursorManagerClass()
 {
     static JGClass jCursorManagerClass(
-        WebCore_GetJavaEnv()->FindClass("com/sun/webkit/CursorManager"));
+        WTF::GetJavaEnv()->FindClass("com/sun/webkit/CursorManager"));
     ASSERT(jCursorManagerClass);
     return jCursorManagerClass;
 }
 
 JLObject getJCursorManager()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetStaticMethodID(getJCursorManagerClass(), "getCursorManager",
                                                   "()Lcom/sun/webkit/CursorManager;");
     ASSERT(mid);
 
     JLObject jCursorManager(env->CallStaticObjectMethod(getJCursorManagerClass(), mid));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return jCursorManager;
 }
@@ -58,7 +58,7 @@ JLObject getJCursorManager()
 Cursor::Cursor(Image* image, const IntPoint& hotspot)
     : m_platformCursor(0)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     if (!image) {
         return;
@@ -80,7 +80,7 @@ Cursor::Cursor(Image* image, const IntPoint& hotspot)
 
     m_platformCursor = env->CallLongMethod(jCursorManager, mid, (jobject)(*cursorImageFrame),
                                          hotspot.x(), hotspot.y());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 Cursor::Cursor(PlatformCursor c)
@@ -230,14 +230,14 @@ const Cursor getPredefinedCursor(jint type)
         return Cursor(0);
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(getJCursorManagerClass(),
                                             "getPredefinedCursorID", "(I)J");
     ASSERT(mid);
 
     jlong cursorID = env->CallLongMethod(jCursorManager, mid, type);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return Cursor(cursorID);
 }

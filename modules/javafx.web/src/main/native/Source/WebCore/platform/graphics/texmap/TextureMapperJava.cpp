@@ -87,7 +87,7 @@ void TextureMapperJava::drawTexture(const BitmapTexture& texture, const FloatRec
     context->restore();
 }
 
-void TextureMapperJava::drawSolidColor(const FloatRect& rect, const TransformationMatrix& transform, const Color& color)
+void TextureMapperJava::drawSolidColor(const FloatRect& rect, const TransformationMatrix& transform, const Color& color, bool)
 {
     GraphicsContext* context = currentContext();
     if (!context)

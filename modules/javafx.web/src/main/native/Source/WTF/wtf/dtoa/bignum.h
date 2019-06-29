@@ -28,13 +28,12 @@
 #ifndef DOUBLE_CONVERSION_BIGNUM_H_
 #define DOUBLE_CONVERSION_BIGNUM_H_
 
-#include "utils.h"
+#include <wtf/dtoa/utils.h>
 
 namespace WTF {
-
 namespace double_conversion {
 
-    class Bignum {
+class Bignum {
     public:
         // 3584 = 128 * 28. We can represent 2^3584 > 10^1000 accurately.
         // This bignum can encode much bigger numbers, since it contains an
@@ -51,7 +50,6 @@ namespace double_conversion {
 
         void AssignPowerUInt16(uint16_t base, int exponent);
 
-        void AddUInt16(uint16_t operand);
         void AddUInt64(uint64_t operand);
         void AddBignum(const Bignum& other);
         // Precondition: this >= other.
@@ -71,6 +69,10 @@ namespace double_conversion {
 
         bool ToHexString(char* buffer, int buffer_size) const;
 
+  // Returns
+  //  -1 if a < b,
+  //   0 if a == b, and
+  //  +1 if a > b.
         static int Compare(const Bignum& a, const Bignum& b);
         static bool Equal(const Bignum& a, const Bignum& b) {
             return Compare(a, b) == 0;
@@ -128,18 +130,17 @@ namespace double_conversion {
         void SubtractTimes(const Bignum& other, int factor);
 
         Chunk bigits_buffer_[kBigitCapacity];
-        // A vector backed by bigits_buffer_. This way accesses to the array are
+  // A BufferReference backed by bigits_buffer_. This way accesses to the array are
         // checked for out-of-bounds errors.
         BufferReference<Chunk> bigits_;
         int used_digits_;
         // The Bignum's value equals value(bigits_) * 2^(exponent_ * kBigitSize).
         int exponent_;
 
-        DISALLOW_COPY_AND_ASSIGN(Bignum);
-    };
+  DC_DISALLOW_COPY_AND_ASSIGN(Bignum);
+};
 
 }  // namespace double_conversion
-
 } // namespace WTF
 
 #endif  // DOUBLE_CONVERSION_BIGNUM_H_

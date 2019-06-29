@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "GCReachableRef.h"
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
@@ -44,6 +45,7 @@ class JSCustomElementInterface;
 class QualifiedName;
 
 class CustomElementReactionQueue {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(CustomElementReactionQueue);
 public:
     CustomElementReactionQueue(JSCustomElementInterface&);
@@ -71,12 +73,12 @@ public:
     private:
         void invokeAll();
 
-        Vector<Ref<Element>> m_elements;
+        Vector<GCReachableRef<Element>> m_elements;
         bool m_invoking { false };
     };
 
 private:
-    static CustomElementReactionQueue& ensureCurrentQueue(Element&);
+    static void enqueueElementOnAppropriateElementQueue(Element&);
     static ElementQueue& ensureBackupQueue();
     static ElementQueue& backupElementQueue();
 

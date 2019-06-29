@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,7 +52,7 @@ bool JavaEventListener::operator==(const EventListener& other) const
 
 void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& event)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     //we need to store context for cascade JS EL execution.
     sm_vScriptExecutionContexts.append(&context);
@@ -70,7 +70,7 @@ void JavaEventListener::handleEvent(ScriptExecutionContext& context, Event& even
         ptr_to_jlong(&event));
 
     sm_vScriptExecutionContexts.removeLast();
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 JavaEventListener::~JavaEventListener()

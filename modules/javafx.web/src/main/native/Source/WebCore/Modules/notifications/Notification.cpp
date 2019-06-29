@@ -53,7 +53,7 @@ Ref<Notification> Notification::create(Document& context, const String& title, c
 }
 
 Notification::Notification(Document& document, const String& title, const Options& options)
-    : ActiveDOMObject(&document)
+    : ActiveDOMObject(document)
     , m_title(title)
     , m_direction(options.dir)
     , m_lang(options.lang)
@@ -91,7 +91,7 @@ void Notification::show()
     }
     if (client.show(this)) {
         m_state = Showing;
-        setPendingActivity(this);
+        setPendingActivity(*this);
     }
 }
 
@@ -136,7 +136,7 @@ void Notification::finalize()
     if (m_state == Closed)
         return;
     m_state = Closed;
-    unsetPendingActivity(this);
+    unsetPendingActivity(*this);
 }
 
 void Notification::dispatchShowEvent()

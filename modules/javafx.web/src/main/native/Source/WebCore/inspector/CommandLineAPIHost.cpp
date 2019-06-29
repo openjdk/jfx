@@ -41,6 +41,8 @@
 #include "JSEventListener.h"
 #include "Pasteboard.h"
 #include "Storage.h"
+#include "WebConsoleAgent.h"
+#include <JavaScriptCore/ConsoleMessage.h>
 #include <JavaScriptCore/InspectorAgent.h>
 #include <JavaScriptCore/InspectorConsoleAgent.h>
 #include <JavaScriptCore/JSCInlines.h>

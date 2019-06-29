@@ -43,8 +43,6 @@
 #include <sys/timeb.h>
 #endif
 
-using namespace WTF;
-
 namespace JSC {
 
 EncodedJSValue JSC_HOST_CALL dateParse(ExecState*);
@@ -55,6 +53,8 @@ EncodedJSValue JSC_HOST_CALL dateUTC(ExecState*);
 #include "DateConstructor.lut.h"
 
 namespace JSC {
+
+using namespace WTF;
 
 const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_info, &dateConstructorTable, nullptr, CREATE_METHOD_TABLE(DateConstructor) };
 
@@ -169,8 +169,7 @@ EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
     auto scope = DECLARE_THROW_SCOPE(vm);
     String dateStr = exec->argument(0).toWTFString(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    return JSValue::encode(jsNumber(parseDate(exec, vm, dateStr)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(jsNumber(parseDate(exec, vm, dateStr))));
 }
 
 EncodedJSValue JSC_HOST_CALL dateNow(ExecState*)

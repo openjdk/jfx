@@ -36,7 +36,6 @@ namespace WebCore {
 
 class DOMTokenList;
 class HTMLLinkElement;
-class URL;
 struct MediaQueryParserContext;
 
 template<typename T> class EventSender;
@@ -55,7 +54,7 @@ public:
 
     const AtomicString& type() const;
 
-    std::optional<LinkIconType> iconType() const;
+    Optional<LinkIconType> iconType() const;
 
     CSSStyleSheet* sheet() const { return m_sheet.get(); }
 

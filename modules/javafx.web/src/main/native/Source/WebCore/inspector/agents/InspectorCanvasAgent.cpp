@@ -56,8 +56,8 @@
 #include "JSWebGL2RenderingContext.h"
 #endif
 
-#if ENABLE(WEBGPU)
-#include "JSWebGPURenderingContext.h"
+#if ENABLE(WEBMETAL)
+#include "JSWebMetalRenderingContext.h"
 #endif
 
 
@@ -95,16 +95,18 @@ void InspectorCanvasAgent::enable(ErrorString&)
     if (m_enabled)
         return;
 
+    m_recordingAutoCaptureFrameCount = WTF::nullopt;
+
     m_enabled = true;
 
     const bool captureBacktrace = false;
     for (auto& inspectorCanvas : m_identifierToInspectorCanvas.values()) {
-        m_frontendDispatcher->canvasAdded(inspectorCanvas->buildObjectForCanvas(m_instrumentingAgents, captureBacktrace));
+        m_frontendDispatcher->canvasAdded(inspectorCanvas->buildObjectForCanvas(captureBacktrace));
 
 #if ENABLE(WEBGL)
         if (is<WebGLRenderingContextBase>(inspectorCanvas->context())) {
             WebGLRenderingContextBase& contextWebGL = downcast<WebGLRenderingContextBase>(inspectorCanvas->context());
-            if (std::optional<Vector<String>> extensions = contextWebGL.getSupportedExtensions()) {
+            if (Optional<Vector<String>> extensions = contextWebGL.getSupportedExtensions()) {
                 for (const String& extension : *extensions) {
                     if (contextWebGL.extensionIsEnabled(extension))
                         m_frontendDispatcher->extensionEnabled(inspectorCanvas->identifier(), extension);
@@ -137,6 +139,8 @@ void InspectorCanvasAgent::disable(ErrorString&)
 
     for (auto& inspectorCanvas : m_identifierToInspectorCanvas.values())
         inspectorCanvas->resetRecordingData();
+
+    m_recordingAutoCaptureFrameCount = WTF::nullopt;
 
     m_enabled = false;
 }
@@ -199,7 +203,7 @@ void InspectorCanvasAgent::requestContent(ErrorString& errorString, const String
 #endif
     }
 
-    // FIXME: <https://webkit.org/b/173621> Web Inspector: Support getting the content of WebGPU context;
+    // FIXME: <https://webkit.org/b/173621> Web Inspector: Support getting the content of WebMetal context;
     errorString = "Unsupported canvas context type"_s;
 }
 
@@ -230,9 +234,9 @@ static JSC::JSValue contextAsScriptValue(JSC::ExecState& state, CanvasRenderingC
     if (is<WebGL2RenderingContext>(context))
         return toJS(&state, deprecatedGlobalObjectForPrototype(&state), downcast<WebGL2RenderingContext>(context));
 #endif
-#if ENABLE(WEBGPU)
-    if (is<WebGPURenderingContext>(context))
-        return toJS(&state, deprecatedGlobalObjectForPrototype(&state), downcast<WebGPURenderingContext>(context));
+#if ENABLE(WEBMETAL)
+    if (is<WebMetalRenderingContext>(context))
+        return toJS(&state, deprecatedGlobalObjectForPrototype(&state), downcast<WebMetalRenderingContext>(context));
 #endif
     if (is<ImageBitmapRenderingContext>(context))
         return toJS(&state, deprecatedGlobalObjectForPrototype(&state), downcast<ImageBitmapRenderingContext>(context));
@@ -261,7 +265,15 @@ void InspectorCanvasAgent::resolveCanvasContext(ErrorString& errorString, const 
     result = injectedScript.wrapObject(value, objectGroupName);
 }
 
-void InspectorCanvasAgent::startRecording(ErrorString& errorString, const String& canvasId, const bool* singleFrame, const int* memoryLimit)
+void InspectorCanvasAgent::setRecordingAutoCaptureFrameCount(ErrorString&, int count)
+{
+    if (count > 0)
+        m_recordingAutoCaptureFrameCount = count;
+    else
+        m_recordingAutoCaptureFrameCount = WTF::nullopt;
+}
+
+void InspectorCanvasAgent::startRecording(ErrorString& errorString, const String& canvasId, const int* frameCount, const int* memoryLimit)
 {
     auto* inspectorCanvas = assertInspectorCanvas(errorString, canvasId);
     if (!inspectorCanvas)
@@ -272,13 +284,12 @@ void InspectorCanvasAgent::startRecording(ErrorString& errorString, const String
         return;
     }
 
-    inspectorCanvas->resetRecordingData();
-    if (singleFrame)
-        inspectorCanvas->setSingleFrame(*singleFrame);
+    RecordingOptions recordingOptions;
+    if (frameCount)
+        recordingOptions.frameCount = *frameCount;
     if (memoryLimit)
-        inspectorCanvas->setBufferLimit(*memoryLimit);
-
-    inspectorCanvas->context().setCallTracingActive(true);
+        recordingOptions.memoryLimit = *memoryLimit;
+    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Frontend, WTFMove(recordingOptions));
 }
 
 void InspectorCanvasAgent::stopRecording(ErrorString& errorString, const String& canvasId)
@@ -428,13 +439,19 @@ void InspectorCanvasAgent::didCreateCanvasRenderingContext(CanvasRenderingContex
     context.canvasBase().addObserver(*this);
 
     auto inspectorCanvas = InspectorCanvas::create(context);
+    m_identifierToInspectorCanvas.set(inspectorCanvas->identifier(), inspectorCanvas.copyRef());
 
-    if (m_enabled) {
-        const bool captureBacktrace = true;
-        m_frontendDispatcher->canvasAdded(inspectorCanvas->buildObjectForCanvas(m_instrumentingAgents, captureBacktrace));
+    if (!m_enabled)
+        return;
+
+    const bool captureBacktrace = true;
+    m_frontendDispatcher->canvasAdded(inspectorCanvas->buildObjectForCanvas(captureBacktrace));
+
+    if (m_recordingAutoCaptureFrameCount) {
+        RecordingOptions recordingOptions;
+        recordingOptions.frameCount = m_recordingAutoCaptureFrameCount.value();
+        startRecording(inspectorCanvas.get(), Inspector::Protocol::Recording::Initiator::AutoCapture, WTFMove(recordingOptions));
     }
-
-    m_identifierToInspectorCanvas.set(inspectorCanvas->identifier(), WTFMove(inspectorCanvas));
 }
 
 void InspectorCanvasAgent::didChangeCanvasMemory(CanvasRenderingContext& context)
@@ -473,6 +490,7 @@ void InspectorCanvasAgent::recordCanvasAction(CanvasRenderingContext& canvasRend
 void InspectorCanvasAgent::canvasDestroyed(CanvasBase& canvasBase)
 {
     auto* context = canvasBase.renderingContext();
+    ASSERT(context);
     if (!context)
         return;
 
@@ -520,7 +538,7 @@ void InspectorCanvasAgent::didFinishRecordingCanvasFrame(CanvasRenderingContext&
     if (inspectorCanvas->currentFrameHasData())
         m_frontendDispatcher->recordingProgress(inspectorCanvas->identifier(), inspectorCanvas->releaseFrames(), inspectorCanvas->bufferUsed());
 
-    if (!forceDispatch && !inspectorCanvas->singleFrame())
+    if (!forceDispatch && !inspectorCanvas->overFrameCount())
         return;
 
     // FIXME: <https://webkit.org/b/176008> Web Inspector: Record actions performed on WebGL2RenderingContext
@@ -528,6 +546,8 @@ void InspectorCanvasAgent::didFinishRecordingCanvasFrame(CanvasRenderingContext&
     Inspector::Protocol::Recording::Type type;
     if (is<CanvasRenderingContext2D>(inspectorCanvas->context()))
         type = Inspector::Protocol::Recording::Type::Canvas2D;
+    else if (is<ImageBitmapRenderingContext>(inspectorCanvas->context()))
+        type = Inspector::Protocol::Recording::Type::CanvasBitmapRenderer;
 #if ENABLE(WEBGL)
     else if (is<WebGLRenderingContext>(inspectorCanvas->context()))
         type = Inspector::Protocol::Recording::Type::CanvasWebGL;
@@ -538,7 +558,7 @@ void InspectorCanvasAgent::didFinishRecordingCanvasFrame(CanvasRenderingContext&
     }
 
     auto recording = Inspector::Protocol::Recording::Recording::create()
-        .setVersion(1)
+        .setVersion(Inspector::Protocol::Recording::VERSION)
         .setType(type)
         .setInitialState(inspectorCanvas->releaseInitialState())
         .setData(inspectorCanvas->releaseData())
@@ -560,21 +580,18 @@ void InspectorCanvasAgent::consoleStartRecordingCanvas(CanvasRenderingContext& c
     if (!inspectorCanvas)
         return;
 
-    if (inspectorCanvas->context().callTracingActive())
-        return;
-
-    inspectorCanvas->resetRecordingData();
-
+    RecordingOptions recordingOptions;
     if (options) {
-        if (JSC::JSValue optionName = options->get(&exec, JSC::Identifier::fromString(&exec, "name")))
-            inspectorCanvas->setRecordingName(optionName.toWTFString(&exec));
         if (JSC::JSValue optionSingleFrame = options->get(&exec, JSC::Identifier::fromString(&exec, "singleFrame")))
-            inspectorCanvas->setSingleFrame(optionSingleFrame.toBoolean(&exec));
+            recordingOptions.frameCount = optionSingleFrame.toBoolean(&exec) ? 1 : 0;
+        if (JSC::JSValue optionFrameCount = options->get(&exec, JSC::Identifier::fromString(&exec, "frameCount")))
+            recordingOptions.frameCount = optionFrameCount.toNumber(&exec);
         if (JSC::JSValue optionMemoryLimit = options->get(&exec, JSC::Identifier::fromString(&exec, "memoryLimit")))
-            inspectorCanvas->setBufferLimit(optionMemoryLimit.toNumber(&exec));
+            recordingOptions.memoryLimit = optionMemoryLimit.toNumber(&exec);
+        if (JSC::JSValue optionName = options->get(&exec, JSC::Identifier::fromString(&exec, "name")))
+            recordingOptions.name = optionName.toWTFString(&exec);
     }
-
-    inspectorCanvas->context().setCallTracingActive(true);
+    startRecording(*inspectorCanvas, Inspector::Protocol::Recording::Initiator::Console, WTFMove(recordingOptions));
 }
 
 #if ENABLE(WEBGL)
@@ -632,6 +649,32 @@ bool InspectorCanvasAgent::isShaderProgramHighlighted(WebGLProgram& program)
     return inspectorProgram->highlighted();
 }
 #endif
+
+void InspectorCanvasAgent::startRecording(InspectorCanvas& inspectorCanvas, Inspector::Protocol::Recording::Initiator initiator, RecordingOptions&& recordingOptions)
+{
+    auto& canvasRenderingContext = inspectorCanvas.context();
+
+    if (!is<CanvasRenderingContext2D>(canvasRenderingContext)
+#if ENABLE(WEBGL)
+        && !is<WebGLRenderingContext>(canvasRenderingContext)
+#endif
+        && !is<ImageBitmapRenderingContext>(canvasRenderingContext))
+        return;
+
+    if (canvasRenderingContext.callTracingActive())
+        return;
+
+    inspectorCanvas.resetRecordingData();
+    if (recordingOptions.frameCount)
+        inspectorCanvas.setFrameCount(recordingOptions.frameCount.value());
+    if (recordingOptions.memoryLimit)
+        inspectorCanvas.setBufferLimit(recordingOptions.memoryLimit.value());
+    if (recordingOptions.name)
+        inspectorCanvas.setRecordingName(recordingOptions.name.value());
+    canvasRenderingContext.setCallTracingActive(true);
+
+    m_frontendDispatcher->recordingStarted(inspectorCanvas.identifier(), initiator);
+}
 
 void InspectorCanvasAgent::canvasDestroyedTimerFired()
 {

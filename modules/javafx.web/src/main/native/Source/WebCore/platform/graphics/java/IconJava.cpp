@@ -29,7 +29,7 @@
 #include "GraphicsContextJava.h"
 #include "Icon.h"
 #include "IntRect.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include <wtf/java/JavaRef.h>
 #include "NotImplemented.h"
 

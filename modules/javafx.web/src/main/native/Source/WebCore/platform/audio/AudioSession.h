@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,13 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AudioSession_h
-#define AudioSession_h
+#pragma once
 
 #if USE(AUDIO_SESSION)
 
 #include <memory>
-#include <wtf/EnumTraits.h>
 #include <wtf/HashSet.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
@@ -38,7 +36,7 @@ namespace WebCore {
 
 class AudioSessionPrivate;
 
-enum class RouteSharingPolicy {
+enum class RouteSharingPolicy : uint8_t {
     Default,
     LongForm,
     Independent,
@@ -89,13 +87,18 @@ public:
     bool isMuted() const;
     void handleMutedStateChange();
 
+    bool isActive() const { return m_active; }
+
 private:
     friend class NeverDestroyed<AudioSession>;
     AudioSession();
     ~AudioSession();
 
+    bool tryToSetActiveInternal(bool);
+
     std::unique_ptr<AudioSessionPrivate> m_private;
     HashSet<MutedStateObserver*> m_observers;
+    bool m_active { false }; // Used only for testing.
 };
 
 }
@@ -112,5 +115,3 @@ template<> struct EnumTraits<WebCore::RouteSharingPolicy> {
 }
 
 #endif // USE(AUDIO_SESSION)
-
-#endif // AudioSession_h

@@ -58,9 +58,10 @@ inline CapabilityLevel canCompile(Node* node)
     case PhantomLocal:
     case SetArgument:
     case Return:
-    case BitAnd:
-    case BitOr:
-    case BitXor:
+    case ArithBitNot:
+    case ArithBitAnd:
+    case ArithBitOr:
+    case ArithBitXor:
     case BitRShift:
     case BitLShift:
     case BitURShift:
@@ -73,6 +74,7 @@ inline CapabilityLevel canCompile(Node* node)
     case GetButterfly:
     case NewObject:
     case NewStringObject:
+    case NewSymbol:
     case NewArray:
     case NewArrayWithSpread:
     case Spread:
@@ -86,8 +88,14 @@ inline CapabilityLevel canCompile(Node* node)
     case GetGlobalVar:
     case GetGlobalLexicalVariable:
     case PutGlobalVariable:
+    case ValueBitAnd:
+    case ValueBitXor:
+    case ValueBitOr:
     case ValueNegate:
     case ValueAdd:
+    case ValueSub:
+    case ValueMul:
+    case ValueDiv:
     case StrCat:
     case ArithAdd:
     case ArithClz32:
@@ -193,6 +201,7 @@ inline CapabilityLevel canCompile(Node* node)
     case CallObjectConstructor:
     case CallStringConstructor:
     case ObjectCreate:
+    case ObjectKeys:
     case MakeRope:
     case NewArrayWithSize:
     case TryGetById:
@@ -227,6 +236,7 @@ inline CapabilityLevel canCompile(Node* node)
     case WeakMapSet:
     case IsEmpty:
     case IsUndefined:
+    case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
     case NumberIsInteger:
@@ -395,7 +405,7 @@ CapabilityLevel canCompile(Graph& graph)
         return CannotCompile;
     }
 
-    if (UNLIKELY(graph.m_codeBlock->ownerScriptExecutable()->neverFTLOptimize())) {
+    if (UNLIKELY(graph.m_codeBlock->ownerExecutable()->neverFTLOptimize())) {
         if (verboseCapabilities())
             dataLog("FTL rejecting ", *graph.m_codeBlock, " because it is marked as never FTL compile.\n");
         return CannotCompile;

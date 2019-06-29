@@ -47,7 +47,7 @@ public:
 
     ~Worklist();
 
-    static Ref<Worklist> create(CString worklistName, unsigned numberOfThreads, int relativePriority = 0);
+    static Ref<Worklist> create(CString&& tierName, unsigned numberOfThreads, int relativePriority = 0);
 
     void enqueue(Ref<Plan>&&);
 
@@ -82,7 +82,7 @@ public:
     unsigned setNumberOfThreads(unsigned, int);
 
 private:
-    Worklist(CString worklistName);
+    Worklist(CString&& tierName);
     void finishCreation(unsigned numberOfThreads, int);
     void createNewThread(const AbstractLocker&, int);
 
@@ -144,7 +144,6 @@ Worklist& existingWorklistForIndex(unsigned index);
 #endif // ENABLE(DFG_JIT)
 
 void completeAllPlansForVM(VM&);
-void markCodeBlocks(VM&, SlotVisitor&);
 
 template<typename Func>
 void iterateCodeBlocksForGC(VM&, const Func&);

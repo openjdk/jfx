@@ -27,6 +27,7 @@
 #include "UserGestureIndicator.h"
 
 #include "Document.h"
+#include "Frame.h"
 #include "ResourceLoadObserver.h"
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
@@ -46,7 +47,7 @@ UserGestureToken::~UserGestureToken()
         observer(*this);
 }
 
-UserGestureIndicator::UserGestureIndicator(std::optional<ProcessingUserGestureState> state, Document* document, UserGestureType gestureType, ProcessInteractionStyle processInteractionStyle)
+UserGestureIndicator::UserGestureIndicator(Optional<ProcessingUserGestureState> state, Document* document, UserGestureType gestureType, ProcessInteractionStyle processInteractionStyle)
     : m_previousToken { currentToken() }
 {
     ASSERT(isMainThread());
@@ -59,6 +60,12 @@ UserGestureIndicator::UserGestureIndicator(std::optional<ProcessingUserGestureSt
         if (processInteractionStyle == ProcessInteractionStyle::Immediate)
             ResourceLoadObserver::shared().logUserInteractionWithReducedTimeResolution(document->topDocument());
         document->topDocument().setUserDidInteractWithPage(true);
+        if (auto* frame = document->frame()) {
+            if (!frame->hasHadUserInteraction()) {
+                for (; frame; frame = frame->tree().parent())
+                    frame->setHasHadUserInteraction();
+            }
+        }
     }
 }
 

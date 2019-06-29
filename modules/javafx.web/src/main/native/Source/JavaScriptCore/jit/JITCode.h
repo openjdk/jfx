@@ -43,6 +43,9 @@ namespace FTL {
 class ForOSREntryJITCode;
 class JITCode;
 }
+namespace DOMJIT {
+class Signature;
+}
 
 struct ProtoCallFrame;
 class TrackedReferences;
@@ -153,6 +156,8 @@ public:
         return jitType == InterpreterThunk || jitType == BaselineJIT;
     }
 
+    virtual const DOMJIT::Signature* signature() const { return nullptr; }
+
 protected:
     JITCode(JITType);
 
@@ -195,11 +200,15 @@ public:
 
 #if ENABLE(JIT)
     virtual RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex);
-    virtual std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) { UNUSED_PARAM(pc); return std::nullopt; }
+    virtual Optional<CodeOrigin> findPC(CodeBlock*, void* pc) { UNUSED_PARAM(pc); return WTF::nullopt; }
 #endif
+
+    Intrinsic intrinsic() { return m_intrinsic; }
 
 private:
     JITType m_jitType;
+protected:
+    Intrinsic m_intrinsic { NoIntrinsic }; // Effective only in NativeExecutable.
 };
 
 class JITCodeWithCodeRef : public JITCode {
@@ -224,11 +233,13 @@ class DirectJITCode : public JITCodeWithCodeRef {
 public:
     DirectJITCode(JITType);
     DirectJITCode(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck, JITType);
+    DirectJITCode(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck, JITType, Intrinsic); // For generated thunk.
     virtual ~DirectJITCode();
 
-    void initializeCodeRef(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck);
-
     CodePtr<JSEntryPtrTag> addressForCall(ArityCheckMode) override;
+
+protected:
+    void initializeCodeRefForDFG(CodeRef<JSEntryPtrTag>, CodePtr<JSEntryPtrTag> withArityCheck);
 
 private:
     CodePtr<JSEntryPtrTag> m_withArityCheck;
@@ -237,12 +248,21 @@ private:
 class NativeJITCode : public JITCodeWithCodeRef {
 public:
     NativeJITCode(JITType);
-    NativeJITCode(CodeRef<JSEntryPtrTag>, JITType);
+    NativeJITCode(CodeRef<JSEntryPtrTag>, JITType, Intrinsic);
     virtual ~NativeJITCode();
 
-    void initializeCodeRef(CodeRef<JSEntryPtrTag>);
-
     CodePtr<JSEntryPtrTag> addressForCall(ArityCheckMode) override;
+};
+
+class NativeDOMJITCode final : public NativeJITCode {
+public:
+    NativeDOMJITCode(CodeRef<JSEntryPtrTag>, JITType, Intrinsic, const DOMJIT::Signature*);
+    virtual ~NativeDOMJITCode() = default;
+
+    const DOMJIT::Signature* signature() const override { return m_signature; }
+
+private:
+    const DOMJIT::Signature* m_signature;
 };
 
 } // namespace JSC

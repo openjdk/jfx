@@ -27,14 +27,13 @@
 
 #include "config.h"
 
-#include "diy-fp.h"
-#include "utils.h"
+#include <wtf/dtoa/diy-fp.h>
+#include <wtf/dtoa/utils.h>
 
 namespace WTF {
-
 namespace double_conversion {
     
-    void DiyFp::Multiply(const DiyFp& other) {
+void DiyFp::Multiply(const DiyFp& other) {
         // Simply "emulates" a 128 bit multiplication.
         // However: the resulting number only contains 64 bits. The least
         // significant 64 bits are only used for rounding the most significant 64
@@ -55,8 +54,7 @@ namespace double_conversion {
         uint64_t result_f = ac + (ad >> 32) + (bc >> 32) + (tmp >> 32);
         e_ += other.e_ + 64;
         f_ = result_f;
-    }
+}
     
 }  // namespace double_conversion
-
 } // namespace WTF

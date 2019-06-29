@@ -48,26 +48,26 @@ ThreadedScrollingTree::~ThreadedScrollingTree()
     ASSERT(!m_scrollingCoordinator);
 }
 
-ScrollingTree::EventResult ThreadedScrollingTree::tryToHandleWheelEvent(const PlatformWheelEvent& wheelEvent)
+ScrollingEventResult ThreadedScrollingTree::tryToHandleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
     if (shouldHandleWheelEventSynchronously(wheelEvent))
-        return SendToMainThread;
+        return ScrollingEventResult::SendToMainThread;
 
     if (willWheelEventStartSwipeGesture(wheelEvent))
-        return DidNotHandleEvent;
+        return ScrollingEventResult::DidNotHandleEvent;
 
     RefPtr<ThreadedScrollingTree> protectedThis(this);
     ScrollingThread::dispatch([protectedThis, wheelEvent] {
         protectedThis->handleWheelEvent(wheelEvent);
     });
 
-    return DidHandleEvent;
+    return ScrollingEventResult::DidHandleEvent;
 }
 
-void ThreadedScrollingTree::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
+ScrollingEventResult ThreadedScrollingTree::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
     ASSERT(ScrollingThread::isCurrentThread());
-    ScrollingTree::handleWheelEvent(wheelEvent);
+    return ScrollingTree::handleWheelEvent(wheelEvent);
 }
 
 void ThreadedScrollingTree::invalidate()
@@ -90,7 +90,7 @@ void ThreadedScrollingTree::commitTreeState(std::unique_ptr<ScrollingStateTree> 
     ScrollingTree::commitTreeState(WTFMove(scrollingStateTree));
 }
 
-void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingNodeID nodeID, const FloatPoint& scrollPosition, const std::optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction scrollingLayerPositionAction)
+void ThreadedScrollingTree::scrollingTreeNodeDidScroll(ScrollingNodeID nodeID, const FloatPoint& scrollPosition, const Optional<FloatPoint>& layoutViewportOrigin, ScrollingLayerPositionAction scrollingLayerPositionAction)
 {
     if (!m_scrollingCoordinator)
         return;

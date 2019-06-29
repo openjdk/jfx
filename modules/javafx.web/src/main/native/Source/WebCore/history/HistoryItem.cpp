@@ -49,11 +49,11 @@ int64_t HistoryItem::generateSequenceNumber()
     return ++next;
 }
 
-static void defaultNotifyHistoryItemChanged(HistoryItem*)
+static void defaultNotifyHistoryItemChanged(HistoryItem&)
 {
 }
 
-WEBCORE_EXPORT void (*notifyHistoryItemChanged)(HistoryItem*) = defaultNotifyHistoryItemChanged;
+void (*notifyHistoryItemChanged)(HistoryItem&) = defaultNotifyHistoryItemChanged;
 
 #if PLATFORM(JAVA)
 extern "C" {
@@ -72,7 +72,7 @@ HistoryItem::HistoryItem(const String& urlString, const String& title)
 }
 
 HistoryItem::HistoryItem(const String& urlString, const String& title, const String& alternateTitle)
-    : HistoryItem(urlString, title, alternateTitle, { Process::identifier(), generateObjectIdentifier<BackForwardItemIdentifier::ItemIdentifierType>() })
+    : HistoryItem(urlString, title, alternateTitle, { Process::identifier(), ObjectIdentifier<BackForwardItemIdentifier::ItemIdentifierType>::generate() })
 {
 }
 
@@ -112,7 +112,7 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
     , m_documentSequenceNumber(item.m_documentSequenceNumber)
     , m_formContentType(item.m_formContentType)
     , m_pruningReason(PruningReason::None)
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     , m_obscuredInsets(item.m_obscuredInsets)
     , m_scale(item.m_scale)
     , m_scaleIsInitial(item.m_scaleIsInitial)
@@ -188,12 +188,12 @@ bool HistoryItem::hasCachedPageExpired() const
 
 URL HistoryItem::url() const
 {
-    return URL(ParsedURLString, m_urlString);
+    return URL({ }, m_urlString);
 }
 
 URL HistoryItem::originalURL() const
 {
-    return URL(ParsedURLString, m_originalURLString);
+    return URL({ }, m_originalURLString);
 }
 
 const String& HistoryItem::referrer() const
@@ -209,13 +209,13 @@ const String& HistoryItem::target() const
 void HistoryItem::setAlternateTitle(const String& alternateTitle)
 {
     m_displayTitle = alternateTitle;
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 void HistoryItem::setURLString(const String& urlString)
 {
     m_urlString = urlString;
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 void HistoryItem::setURL(const URL& url)
@@ -228,25 +228,25 @@ void HistoryItem::setURL(const URL& url)
 void HistoryItem::setOriginalURLString(const String& urlString)
 {
     m_originalURLString = urlString;
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 void HistoryItem::setReferrer(const String& referrer)
 {
     m_referrer = referrer;
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 void HistoryItem::setTitle(const String& title)
 {
     m_title = title;
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 void HistoryItem::setTarget(const String& target)
 {
     m_target = target;
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 const IntPoint& HistoryItem::scrollPosition() const
@@ -272,7 +272,7 @@ bool HistoryItem::shouldRestoreScrollPosition() const
 void HistoryItem::setShouldRestoreScrollPosition(bool shouldRestore)
 {
     m_shouldRestoreScrollPosition = shouldRestore;
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 float HistoryItem::pageScaleFactor() const
@@ -323,7 +323,7 @@ void HistoryItem::setIsTargetItem(bool flag)
 void HistoryItem::setStateObject(RefPtr<SerializedScriptValue>&& object)
 {
     m_stateObject = WTFMove(object);
-    notifyHistoryItemChanged(this);
+    notifyChanged();
 }
 
 void HistoryItem::addChildItem(Ref<HistoryItem>&& child)
@@ -386,6 +386,7 @@ void HistoryItem::clearChildren()
 // - The other item corresponds to the same set of documents, including frames (for history entries created via regular navigation)
 bool HistoryItem::shouldDoSameDocumentNavigationTo(HistoryItem& otherItem) const
 {
+    // The following logic must be kept in sync with WebKit::WebBackForwardListItem::itemIsInSameDocument().
     if (this == &otherItem)
         return false;
 
@@ -479,7 +480,7 @@ bool HistoryItem::isCurrentDocument(Document& document) const
 
 void HistoryItem::notifyChanged()
 {
-    notifyHistoryItemChanged(this);
+    notifyHistoryItemChanged(*this);
 }
 
 #if PLATFORM(JAVA)

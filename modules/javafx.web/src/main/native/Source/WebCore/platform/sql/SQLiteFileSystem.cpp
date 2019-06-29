@@ -31,12 +31,12 @@
 #include "config.h"
 #include "SQLiteFileSystem.h"
 
-#include "FileSystem.h"
 #include "SQLiteDatabase.h"
 #include "SQLiteStatement.h"
 #include <sqlite3.h>
+#include <wtf/FileSystem.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include <pal/spi/ios/SQLite3SPI.h>
 #endif
 
@@ -95,7 +95,7 @@ bool SQLiteFileSystem::deleteDatabaseFile(const String& fileName)
     return !FileSystem::fileExists(fileName) && !FileSystem::fileExists(walFileName) && !FileSystem::fileExists(shmFileName);
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 bool SQLiteFileSystem::truncateDatabaseFile(sqlite3* database)
 {
     return sqlite3_file_control(database, 0, SQLITE_TRUNCATE_DATABASE, 0) == SQLITE_OK;
@@ -108,16 +108,14 @@ long long SQLiteFileSystem::getDatabaseFileSize(const String& fileName)
     return FileSystem::getFileSize(fileName, size) ? size : 0;
 }
 
-double SQLiteFileSystem::databaseCreationTime(const String& fileName)
+Optional<WallTime> SQLiteFileSystem::databaseCreationTime(const String& fileName)
 {
-    time_t time;
-    return FileSystem::getFileCreationTime(fileName, time) ? time : 0;
+    return FileSystem::getFileCreationTime(fileName);
 }
 
-double SQLiteFileSystem::databaseModificationTime(const String& fileName)
+Optional<WallTime> SQLiteFileSystem::databaseModificationTime(const String& fileName)
 {
-    time_t time;
-    return FileSystem::getFileModificationTime(fileName, time) ? time : 0;
+    return FileSystem::getFileModificationTime(fileName);
 }
 
 } // namespace WebCore

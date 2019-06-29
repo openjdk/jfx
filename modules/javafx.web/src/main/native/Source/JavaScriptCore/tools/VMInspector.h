@@ -34,6 +34,9 @@
 namespace JSC {
 
 class VMInspector {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(VMInspector);
+    VMInspector() = default;
 public:
     enum class Error {
         None,
@@ -70,6 +73,7 @@ public:
     JS_EXPORT_PRIVATE static bool isValidCodeBlock(ExecState*, CodeBlock*);
     JS_EXPORT_PRIVATE static CodeBlock* codeBlockForFrame(CallFrame* topCallFrame, unsigned frameNumber);
     JS_EXPORT_PRIVATE static void dumpCallFrame(CallFrame*, unsigned framesToSkip = 0);
+    JS_EXPORT_PRIVATE static void dumpRegisters(CallFrame*);
     JS_EXPORT_PRIVATE static void dumpStack(CallFrame* topCallFrame, unsigned framesToSkip = 0);
     JS_EXPORT_PRIVATE static void dumpValue(JSValue);
     JS_EXPORT_PRIVATE static void dumpCellMemory(JSCell*);

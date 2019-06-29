@@ -82,46 +82,46 @@ FOR_EACH_ADDITIONAL_WTF_PTRTAG(WTF_DECLARE_PTRTAG)
 inline const char* tagForPtr(const void*) { return "<no tag>"; }
 
 template<typename T, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value && !std::is_same<T, PtrType>::value>>
-inline constexpr T tagCodePtr(PtrType ptr, PtrTag) { return bitwise_cast<T>(ptr); }
+constexpr T tagCodePtr(PtrType ptr, PtrTag) { return bitwise_cast<T>(ptr); }
 
 template<typename T, PtrTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
 inline T tagCodePtr(PtrType ptr) { return bitwise_cast<T>(ptr); }
 
 template<typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
-inline constexpr PtrType tagCodePtr(PtrType ptr, PtrTag) { return ptr; }
+constexpr PtrType tagCodePtr(PtrType ptr, PtrTag) { return ptr; }
 
 template<PtrTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
 inline PtrType tagCodePtr(PtrType ptr) { return ptr; }
 
 template<typename T, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value && !std::is_same<T, PtrType>::value>>
-inline constexpr T untagCodePtr(PtrType ptr, PtrTag) { return bitwise_cast<T>(ptr); }
+constexpr T untagCodePtr(PtrType ptr, PtrTag) { return bitwise_cast<T>(ptr); }
 
 template<typename T, PtrTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
 inline T untagCodePtr(PtrType ptr)  { return bitwise_cast<T>(ptr); }
 
 template<typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
-inline constexpr PtrType untagCodePtr(PtrType ptr, PtrTag) { return ptr; }
+constexpr PtrType untagCodePtr(PtrType ptr, PtrTag) { return ptr; }
 
 template<PtrTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
 inline PtrType untagCodePtr(PtrType ptr) { return ptr; }
 
 template<typename T, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value && !std::is_same<T, PtrType>::value>>
-inline constexpr T retagCodePtr(PtrType ptr, PtrTag, PtrTag) { return bitwise_cast<T>(ptr); }
+constexpr T retagCodePtr(PtrType ptr, PtrTag, PtrTag) { return bitwise_cast<T>(ptr); }
 
 template<typename T, PtrTag, PtrTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
 inline T retagCodePtr(PtrType ptr) { return bitwise_cast<T>(ptr); }
 
 template<typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
-inline constexpr PtrType retagCodePtr(PtrType ptr, PtrTag, PtrTag) { return ptr; }
+constexpr PtrType retagCodePtr(PtrType ptr, PtrTag, PtrTag) { return ptr; }
 
 template<PtrTag, PtrTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
 inline PtrType retagCodePtr(PtrType ptr) { return ptr; }
 
 template<typename T, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value && !std::is_same<T, PtrType>::value>>
-inline constexpr T removeCodePtrTag(PtrType ptr) { return bitwise_cast<T>(ptr); }
+constexpr T removeCodePtrTag(PtrType ptr) { return bitwise_cast<T>(ptr); }
 
 template<typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
-inline constexpr PtrType removeCodePtrTag(PtrType ptr) { return ptr; }
+constexpr PtrType removeCodePtrTag(PtrType ptr) { return ptr; }
 
 template<typename T, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value && !std::is_same<T, PtrType>::value>>
 inline T tagCFunctionPtr(PtrType ptr, PtrTag) { return bitwise_cast<T>(ptr); }
@@ -146,6 +146,13 @@ inline PtrType untagCFunctionPtr(PtrType ptr, PtrTag) { return ptr; }
 
 template<PtrTag, typename PtrType, typename = std::enable_if_t<std::is_pointer<PtrType>::value>>
 inline PtrType untagCFunctionPtr(PtrType ptr) { return ptr; }
+
+template <typename IntType>
+inline IntType tagInt(IntType ptrInt, PtrTag)
+{
+    static_assert(sizeof(IntType) == sizeof(uintptr_t), "");
+    return ptrInt;
+}
 
 template<typename PtrType> void assertIsCFunctionPtr(PtrType) { }
 template<typename PtrType> void assertIsNullOrCFunctionPtr(PtrType) { }
@@ -184,6 +191,7 @@ using WTF::retagCodePtr;
 using WTF::removeCodePtrTag;
 using WTF::tagCFunctionPtr;
 using WTF::untagCFunctionPtr;
+using WTF::tagInt;
 
 using WTF::assertIsCFunctionPtr;
 using WTF::assertIsNullOrCFunctionPtr;

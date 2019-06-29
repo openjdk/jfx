@@ -26,7 +26,7 @@
 #include "config.h"
 
 #include "GraphicsContext.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "MediaPlayerPrivateJava.h"
 #include "NotImplemented.h"
 #include "PlatformContextJava.h"
@@ -68,8 +68,7 @@ namespace WebCore {
 #else
 
     #include <stdio.h>
-    #include "wtf/CurrentTime.h"
-    #include "wtf/Threading.h"
+    #include <wtf/Threading.h>
 
     const char* networkStateStr(MediaPlayer::NetworkState networkState) {
         switch (networkState) {
@@ -170,7 +169,7 @@ namespace WebCore {
 void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
 {
     LOG_TRACE0(">>registerMediaEngine\n");
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     jclass playerCls = PG_GetMediaPlayerClass(env);
     if (!playerCls) {
         LOG_ERROR0("<<registerMediaEngine ERROR: MediaPlayer class is unavailable\n");
@@ -222,7 +221,7 @@ HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes
         return supportedTypes;
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID = env->GetMethodID(PG_GetGraphicsManagerClass(env),
         "getSupportedMediaTypes", "()[Ljava/lang/String;");
     ASSERT(s_mID);
@@ -230,7 +229,7 @@ HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes
     JLocalRef<jobjectArray> jArray(
         (jobjectArray)env->CallObjectMethod(PL_GetGraphicsManager(env), s_mID));
     ASSERT(jArray);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     jsize len = env->GetArrayLength(jArray);
     for (jsize  i=0; i<len; i++) {
@@ -260,7 +259,7 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
     , m_bytesLoaded(0)
     , m_didLoadingProgress(false)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
         "fwkCreateMediaPlayer", "(J)Lcom/sun/webkit/graphics/WCMediaPlayer;");
     ASSERT(mid);
@@ -268,7 +267,7 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
     JLocalRef<jobject> obj(env->CallObjectMethod(PL_GetGraphicsManager(env),
         mid, ptr_to_jlong(this)));
     ASSERT(obj);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     m_buffered = std::make_unique<PlatformTimeRanges>();
     m_jPlayer = RQRef::create(obj);
@@ -282,7 +281,7 @@ MediaPlayerPrivate::~MediaPlayerPrivate()
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void MediaPlayerPrivate::load(const String& url)
@@ -298,7 +297,7 @@ void MediaPlayerPrivate::load(const String& url)
     //     userAgent = doc->settings()->userAgent();
     // }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkLoad", "(Ljava/lang/String;Ljava/lang/String;)V");
     ASSERT(s_mID);
@@ -306,7 +305,7 @@ void MediaPlayerPrivate::load(const String& url)
     env->CallVoidMethod(*m_jPlayer, s_mID,
         (jstring)url.toJavaString(env),
         userAgent.isEmpty() ? NULL : (jstring)userAgent.toJavaString(env));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void MediaPlayerPrivate::cancelLoad()
@@ -314,24 +313,24 @@ void MediaPlayerPrivate::cancelLoad()
     m_paused = true;
     m_seeking = false;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkCancelLoad", "()V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void MediaPlayerPrivate::prepareToPlay()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkPrepareToPlay", "()V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 //PlatformMedia MediaPlayerPrivate::platformMedia() const { return NoPlatformMedia; }
@@ -349,13 +348,13 @@ void MediaPlayerPrivate::play()
         return;
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkPlay", "()V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     PLOG_TRACE0("<<MediaPlayerPrivate::play\n");
 }
@@ -366,13 +365,13 @@ void MediaPlayerPrivate::pause()
         return;
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkPause", "()V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 //bool MediaPlayerPrivate::supportsFullscreen() const { return false; }
@@ -416,13 +415,13 @@ float MediaPlayerPrivate::currentTime() const
         LOG_TRACE1("MediaPlayerPrivate currentTime returns (seekTime): %f\n", m_seekTime);
         return m_seekTime;
     }
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkGetCurrentTime", "()F");
     ASSERT(s_mID);
 
     double result = env->CallFloatMethod(*m_jPlayer, s_mID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
 //    LOG_TRACE1("MediaPlayerPrivate currentTime returns: %f\n", (float)result);
 
@@ -435,13 +434,13 @@ void MediaPlayerPrivate::seek(float time)
 
     m_seekTime = time;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSeek", "(F)V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID, time);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     PLOG_TRACE1("<<MediaPlayerPrivate::seek(%f)\n", time);
 }
@@ -459,24 +458,24 @@ MediaTime MediaPlayerPrivate::startTime() const
 
 void MediaPlayerPrivate::setRate(float rate)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetRate", "(F)V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID, rate);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void MediaPlayerPrivate::setPreservesPitch(bool preserve)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetPreservesPitch", "(Z)V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID, bool_to_jbool(preserve));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 bool MediaPlayerPrivate::paused() const
@@ -486,13 +485,13 @@ bool MediaPlayerPrivate::paused() const
 
 void MediaPlayerPrivate::setVolume(float volume)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetVolume", "(F)V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID, volume);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 bool MediaPlayerPrivate::supportsMuting() const
@@ -502,13 +501,13 @@ bool MediaPlayerPrivate::supportsMuting() const
 
 void MediaPlayerPrivate::setMuted(bool mute)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID
         s_mID = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetMute", "(Z)V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID, bool_to_jbool(mute));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 //bool MediaPlayerPrivate::hasClosedCaptions() const { return false; }
@@ -551,13 +550,13 @@ unsigned MediaPlayerPrivate::bytesLoaded() const
 
 void MediaPlayerPrivate::setSize(const IntSize& size)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetSize", "(II)V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID, (jint)size.width(), (jint)size.height());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void MediaPlayerPrivate::paint(GraphicsContext& gc, const FloatRect& r)
@@ -595,13 +594,13 @@ void MediaPlayerPrivate::setPreload(MediaPlayer::Preload preload)
         // unexpected preload value
         return;
     }
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkSetPreload", "(I)V");
     ASSERT(s_mID);
 
     env->CallVoidMethod(*m_jPlayer, s_mID, jPreload);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 //bool MediaPlayerPrivate::hasAvailableVideoFrame() const { return readyState() >= MediaPlayer::HaveCurrentData; }

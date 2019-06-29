@@ -34,12 +34,17 @@
 #if USE(LIBWEBRTC)
 
 #include "LibWebRTCAudioFormat.h"
+#include "Logging.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 
 namespace WebCore {
 
 RealtimeIncomingAudioSource::RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& audioTrack, String&& audioTrackId)
-    : RealtimeMediaSource(WTFMove(audioTrackId), RealtimeMediaSource::Type::Audio, String())
+    : RealtimeMediaSource(RealtimeMediaSource::Type::Audio, "remote audio"_s, WTFMove(audioTrackId))
     , m_audioTrack(WTFMove(audioTrack))
+#if !RELEASE_LOG_DISABLED
+    , m_logIdentifier(reinterpret_cast<const void*>(cryptographicallyRandomNumber()))
+#endif
 {
     notifyMutedChange(!m_audioTrack);
 }
@@ -63,8 +68,10 @@ void RealtimeIncomingAudioSource::stopProducingData()
 
 void RealtimeIncomingAudioSource::setSourceTrack(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& track)
 {
-    ASSERT(!m_audioTrack);
     ASSERT(track);
+
+    if (m_audioTrack && isProducingData())
+        m_audioTrack->RemoveSink(this);
 
     m_audioTrack = WTFMove(track);
     notifyMutedChange(!m_audioTrack);
@@ -72,15 +79,29 @@ void RealtimeIncomingAudioSource::setSourceTrack(rtc::scoped_refptr<webrtc::Audi
         m_audioTrack->AddSink(this);
 }
 
-const RealtimeMediaSourceCapabilities& RealtimeIncomingAudioSource::capabilities() const
+const RealtimeMediaSourceCapabilities& RealtimeIncomingAudioSource::capabilities()
 {
     return RealtimeMediaSourceCapabilities::emptyCapabilities();
 }
 
-const RealtimeMediaSourceSettings& RealtimeIncomingAudioSource::settings() const
+const RealtimeMediaSourceSettings& RealtimeIncomingAudioSource::settings()
 {
     return m_currentSettings;
 }
+
+#if !RELEASE_LOG_DISABLED
+WTFLogChannel& RealtimeIncomingAudioSource::logChannel() const
+{
+    return LogWebRTC;
+}
+
+const Logger& RealtimeIncomingAudioSource::logger() const
+{
+    if (!m_logger)
+        m_logger = Logger::create(this);
+    return *m_logger;
+}
+#endif
 
 }
 

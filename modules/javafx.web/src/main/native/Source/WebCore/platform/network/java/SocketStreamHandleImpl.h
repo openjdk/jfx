@@ -42,10 +42,11 @@ namespace WebCore {
 
 class Page;
 class SocketStreamHandleClient;
+class StorageSessionProvider;
 
 class SocketStreamHandleImpl : public SocketStreamHandle {
 public:
-    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, PAL::SessionID, Page* page, const String&, SourceApplicationAuditToken&&) {
+    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, PAL::SessionID, Page* page, const String&, SourceApplicationAuditToken&&, const StorageSessionProvider*) {
         return adoptRef(*new SocketStreamHandleImpl(url, page, client));
     }
 
@@ -58,7 +59,7 @@ public:
 
 protected:
     void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&&) final;
-    void platformSendHandshake(const uint8_t* data, size_t length, const std::optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
+    void platformSendHandshake(const uint8_t* data, size_t length, const Optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
     void platformClose() final;
     size_t bufferedAmount() final { return 0; }
 

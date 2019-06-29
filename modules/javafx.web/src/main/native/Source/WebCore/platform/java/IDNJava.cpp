@@ -25,7 +25,7 @@
 
 #include "config.h"
 #include "IDNJava.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "com_sun_webkit_network_URLLoader.h"
 
 namespace IDNJavaInternal {
@@ -55,7 +55,7 @@ namespace IDNJava {
 String toASCII(const String& hostname)
 {
     using namespace IDNJavaInternal;
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     JLString result = static_cast<jstring>(env->CallStaticObjectMethod(
@@ -63,7 +63,7 @@ String toASCII(const String& hostname)
             toASCIIMID,
             (jstring)hostname.toJavaString(env),
             com_sun_webkit_network_URLLoader_ALLOW_UNASSIGNED));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return String(env, result);
 }

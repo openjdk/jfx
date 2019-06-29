@@ -28,7 +28,7 @@
  */
 
 #include "config.h"
-#include "WorkQueue.h"
+#include <wtf/WorkQueue.h>
 
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
@@ -46,7 +46,7 @@ void WorkQueue::platformInitialize(const char* name, Type, QOS)
         semaphore.signal();
         m_runLoop->run();
     })->detach();
-    semaphore.wait(WallTime::infinity());
+    semaphore.wait();
 }
 
 void WorkQueue::platformInvalidate()

@@ -32,6 +32,7 @@
 #include "SelectorChecker.h"
 #include <bitset>
 #include <memory>
+#include <wtf/Bitmap.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -57,7 +58,6 @@ class Document;
 class Element;
 class Frame;
 class FrameView;
-class URL;
 class KeyframeList;
 class KeyframeValue;
 class MediaQueryEvaluator;
@@ -187,8 +187,8 @@ public:
     void setFontSize(FontCascadeDescription&, float size);
 
 public:
-    bool useSVGZoomRules();
-    bool useSVGZoomRulesForLength();
+    bool useSVGZoomRules() const;
+    bool useSVGZoomRulesForLength() const;
 
     static bool colorFromPrimitiveValueIsDerivedFromElement(const CSSPrimitiveValue&);
     Color colorFromPrimitiveValue(const CSSPrimitiveValue&, bool forVisitedLink = false) const;
@@ -207,6 +207,10 @@ public:
     void addAccessibilitySettingsDependentMediaQueryResult(const MediaQueryExpression&, bool result);
     bool hasAccessibilitySettingsDependentMediaQueries() const { return !m_accessibilitySettingsDependentMediaQueryResults.isEmpty(); }
     bool hasMediaQueriesAffectedByAccessibilitySettingsChange() const;
+
+    void addAppearanceDependentMediaQueryResult(const MediaQueryExpression&, bool result);
+    bool hasAppearanceDependentMediaQueries() const { return !m_appearanceDependentMediaQueryResults.isEmpty(); }
+    bool hasMediaQueriesAffectedByAppearanceChange() const;
 
     void addKeyframeStyle(Ref<StyleRuleKeyframes>&&);
 
@@ -267,7 +271,7 @@ public:
         CascadedProperties(TextDirection, WritingMode);
 
         struct Property {
-            void apply(StyleResolver&, const MatchResult*);
+            void apply(StyleResolver&, ApplyCascadedPropertyState&);
 
             CSSPropertyID id;
             CascadeLevel level;
@@ -281,7 +285,7 @@ public:
         void addNormalMatches(const MatchResult&, int startIndex, int endIndex, bool inheritedOnly = false);
         void addImportantMatches(const MatchResult&, int startIndex, int endIndex, bool inheritedOnly = false);
 
-        void applyDeferredProperties(StyleResolver&, const MatchResult*);
+        void applyDeferredProperties(StyleResolver&, ApplyCascadedPropertyState&);
 
         HashMap<AtomicString, Property>& customProperties() { return m_customProperties; }
         bool hasCustomProperty(const String&) const;
@@ -303,6 +307,9 @@ public:
         WritingMode m_writingMode;
     };
 
+    void applyCascadedProperties(int firstProperty, int lastProperty, ApplyCascadedPropertyState&);
+    void applyCascadedCustomProperty(const String& name, ApplyCascadedPropertyState&);
+
 private:
     // This function fixes up the default font size if it detects that the current generic font family has changed. -dwh
     void checkForGenericFamilyChange(RenderStyle*, const RenderStyle* parentStyle);
@@ -321,7 +328,10 @@ private:
     enum ShouldUseMatchedPropertiesCache { DoNotUseMatchedPropertiesCache = 0, UseMatchedPropertiesCache };
     void applyMatchedProperties(const MatchResult&, const Element&, ShouldUseMatchedPropertiesCache = UseMatchedPropertiesCache);
 
-    void applyCascadedProperties(CascadedProperties&, int firstProperty, int lastProperty, const MatchResult*);
+    enum CustomPropertyCycleTracking { Enabled = 0, Disabled };
+    template<CustomPropertyCycleTracking>
+    inline void applyCascadedPropertiesImpl(int firstProperty, int lastProperty, ApplyCascadedPropertyState&);
+
     void cascadeMatches(CascadedProperties&, const MatchResult&, bool important, int startIndex, int endIndex, bool inheritedOnly);
 
     void matchPageRules(MatchResult&, RuleSet*, bool isLeftPage, bool isFirstPage, const String& pageName);
@@ -455,11 +465,12 @@ public:
     void setWritingMode(WritingMode writingMode) { m_state.setWritingMode(writingMode); }
     void setTextOrientation(TextOrientation textOrientation) { m_state.setTextOrientation(textOrientation); }
 
+    RefPtr<CSSValue> resolvedVariableValue(CSSPropertyID, const CSSValue&, ApplyCascadedPropertyState&) const;
+
 private:
     void cacheBorderAndBackground();
 
-    void applyProperty(CSSPropertyID, CSSValue*, SelectorChecker::LinkMatchMask = SelectorChecker::MatchDefault, const MatchResult* = nullptr);
-    RefPtr<CSSValue> resolvedVariableValue(CSSPropertyID, const CSSValue&);
+    void applyProperty(CSSPropertyID, CSSValue*, ApplyCascadedPropertyState&, SelectorChecker::LinkMatchMask = SelectorChecker::MatchDefault);
 
     void applySVGProperty(CSSPropertyID, CSSValue*);
 
@@ -501,6 +512,7 @@ private:
 
     Vector<MediaQueryResult> m_viewportDependentMediaQueryResults;
     Vector<MediaQueryResult> m_accessibilitySettingsDependentMediaQueryResults;
+    Vector<MediaQueryResult> m_appearanceDependentMediaQueryResults;
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     RefPtr<ViewportStyleResolver> m_viewportStyleResolver;
@@ -522,6 +534,19 @@ private:
     friend bool operator==(const MatchRanges&, const MatchRanges&);
     friend bool operator!=(const MatchRanges&, const MatchRanges&);
 };
+
+// State to use when applying properties, to keep track of which custom and high-priority
+// properties have been resolved.
+struct ApplyCascadedPropertyState {
+    StyleResolver* styleResolver;
+    StyleResolver::CascadedProperties* cascade;
+    const StyleResolver::MatchResult* matchResult;
+    Bitmap<numCSSProperties> appliedProperties = { };
+    HashSet<String> appliedCustomProperties = { };
+    Bitmap<numCSSProperties> inProgressProperties = { };
+    HashSet<String> inProgressPropertiesCustom = { };
+};
+
 
 inline bool StyleResolver::hasSelectorForAttribute(const Element& element, const AtomicString &attributeName) const
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -160,7 +160,7 @@ static ExceptionOr<ApplePaySessionPaymentRequest::LineItem> convertAndValidate(A
     return WTFMove(result);
 }
 
-static ExceptionOr<Vector<ApplePaySessionPaymentRequest::LineItem>> convertAndValidate(std::optional<Vector<ApplePayLineItem>>&& lineItems)
+static ExceptionOr<Vector<ApplePaySessionPaymentRequest::LineItem>> convertAndValidate(Optional<Vector<ApplePayLineItem>>&& lineItems)
 {
     Vector<ApplePaySessionPaymentRequest::LineItem> result;
     if (!lineItems)
@@ -227,13 +227,6 @@ static ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(unsigned ve
         return lineItems.releaseException();
     result.setLineItems(lineItems.releaseReturnValue());
 
-    if (paymentRequest.requiredShippingContactFields) {
-        auto requiredShippingContactFields = convertAndValidate(version, WTFMove(*paymentRequest.requiredShippingContactFields));
-        if (requiredShippingContactFields.hasException())
-            return requiredShippingContactFields.releaseException();
-        result.setRequiredShippingContactFields(requiredShippingContactFields.releaseReturnValue());
-    }
-
     result.setShippingType(paymentRequest.shippingType);
 
     if (paymentRequest.shippingMethods) {
@@ -284,7 +277,7 @@ static ExceptionOr<PaymentAuthorizationResult> convertAndValidate(ApplePayPaymen
 
     case ApplePaySession::STATUS_INVALID_BILLING_POSTAL_ADDRESS:
         convertedResult.status = PaymentAuthorizationStatus::Failure;
-        convertedResult.errors.append({ PaymentError::Code::BillingContactInvalid, { }, std::nullopt });
+        convertedResult.errors.append({ PaymentError::Code::BillingContactInvalid, { }, WTF::nullopt });
         break;
 
     case ApplePaySession::STATUS_INVALID_SHIPPING_POSTAL_ADDRESS:
@@ -294,7 +287,7 @@ static ExceptionOr<PaymentAuthorizationResult> convertAndValidate(ApplePayPaymen
 
     case ApplePaySession::STATUS_INVALID_SHIPPING_CONTACT:
         convertedResult.status = PaymentAuthorizationStatus::Failure;
-        convertedResult.errors.append({ PaymentError::Code::ShippingContactInvalid, { }, std::nullopt });
+        convertedResult.errors.append({ PaymentError::Code::ShippingContactInvalid, { }, WTF::nullopt });
         break;
 
     case ApplePaySession::STATUS_PIN_REQUIRED:
@@ -406,12 +399,7 @@ ExceptionOr<Ref<ApplePaySession>> ApplePaySession::create(Document& document, un
     if (!document.page())
         return Exception { InvalidAccessError, "Frame is detached" };
 
-    auto& paymentCoordinator = document.page()->paymentCoordinator();
-
-    if (!version || !paymentCoordinator.supportsVersion(version))
-        return Exception { InvalidAccessError, makeString("\"" + String::number(version), "\" is not a supported version.") };
-
-    auto convertedPaymentRequest = convertAndValidate(version, WTFMove(paymentRequest), paymentCoordinator);
+    auto convertedPaymentRequest = convertAndValidate(version, WTFMove(paymentRequest), document.page()->paymentCoordinator());
     if (convertedPaymentRequest.hasException())
         return convertedPaymentRequest.releaseException();
 
@@ -419,7 +407,7 @@ ExceptionOr<Ref<ApplePaySession>> ApplePaySession::create(Document& document, un
 }
 
 ApplePaySession::ApplePaySession(Document& document, unsigned version, ApplePaySessionPaymentRequest&& paymentRequest)
-    : ActiveDOMObject { &document }
+    : ActiveDOMObject { document }
     , m_paymentRequest { WTFMove(paymentRequest) }
     , m_version { version }
 {
@@ -550,7 +538,7 @@ ExceptionOr<void> ApplePaySession::begin()
 
     m_state = State::Active;
 
-    setPendingActivity(this);
+    setPendingActivity(*this);
 
     return { };
 }
@@ -657,7 +645,7 @@ ExceptionOr<void> ApplePaySession::completePayment(ApplePayPaymentAuthorizationR
     }
 
     m_state = State::Completed;
-    unsetPendingActivity(this);
+    unsetPendingActivity(*this);
 
     return { };
 }
@@ -696,8 +684,8 @@ ExceptionOr<void> ApplePaySession::completeShippingContactSelection(unsigned sho
 {
     ApplePayShippingContactUpdate update;
 
-    std::optional<ApplePayError::Code> errorCode;
-    std::optional<ApplePayError::ContactField> contactField;
+    Optional<ApplePayError::Code> errorCode;
+    Optional<ApplePayError::ContactField> contactField;
 
     switch (status) {
     case ApplePaySession::STATUS_SUCCESS:
@@ -760,7 +748,7 @@ unsigned ApplePaySession::version() const
     return m_version;
 }
 
-void ApplePaySession::validateMerchant(const URL& validationURL)
+void ApplePaySession::validateMerchant(URL&& validationURL)
 {
     if (m_state == State::Aborted) {
         // ApplePaySession::abort has been called.
@@ -778,7 +766,7 @@ void ApplePaySession::validateMerchant(const URL& validationURL)
 
     m_merchantValidationState = MerchantValidationState::ValidatingMerchant;
 
-    auto event = ApplePayValidateMerchantEvent::create(eventNames().validatemerchantEvent, validationURL);
+    auto event = ApplePayValidateMerchantEvent::create(eventNames().validatemerchantEvent, WTFMove(validationURL));
     dispatchEvent(event.get());
 }
 
@@ -1052,7 +1040,7 @@ bool ApplePaySession::isFinalState() const
 void ApplePaySession::didReachFinalState()
 {
     ASSERT(isFinalState());
-    unsetPendingActivity(this);
+    unsetPendingActivity(*this);
 }
 
 }

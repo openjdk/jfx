@@ -124,6 +124,7 @@ private:
     void createAutoFillButton(AutoFillButtonType);
 
 #if ENABLE(DATALIST_ELEMENT)
+    void createDataListDropdownIndicator();
     bool isPresentingAttachedView() const final;
     void listAttributeTargetChanged() final;
     void displaySuggestions(DataListSuggestionActivationType);
@@ -131,13 +132,14 @@ private:
 
     // DataListSuggestionsClient
     IntRect elementRectInRootViewCoordinates() const final;
-    Vector<String> suggestions() const final;
+    Vector<String> suggestions() final;
     void didSelectDataListOption(const String&) final;
     void didCloseSuggestions() final;
 
     void dataListButtonElementWasClicked() final;
     RefPtr<DataListButtonElement> m_dataListDropdownIndicator;
 
+    std::pair<String, Vector<String>> m_cachedSuggestions;
     std::unique_ptr<DataListSuggestionPicker> m_suggestionPicker;
 #endif
 

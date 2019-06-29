@@ -47,7 +47,7 @@ static inline bool inheritColorFromParentStyleIfNeeded(RenderElement& object, bo
     return true;
 }
 
-static inline RenderSVGResource* requestPaintingResource(OptionSet<RenderSVGResourceMode> mode, RenderElement& renderer, const RenderStyle& style, Color& fallbackColor)
+static inline RenderSVGResource* requestPaintingResource(RenderSVGResourceMode mode, RenderElement& renderer, const RenderStyle& style, Color& fallbackColor)
 {
     const SVGRenderStyle& svgStyle = style.svgStyle();
 
@@ -165,9 +165,9 @@ static inline void removeFromCacheAndInvalidateDependencies(RenderElement& rende
             clipper->removeClientFromCache(renderer);
     }
 
-    if (!renderer.element() || !renderer.element()->isSVGElement())
+    if (!is<SVGElement>(renderer.element()))
         return;
-    HashSet<SVGElement*>* dependencies = renderer.document().accessSVGExtensions().setOfElementsReferencingTarget(downcast<SVGElement>(renderer.element()));
+    auto* dependencies = renderer.document().accessSVGExtensions().setOfElementsReferencingTarget(downcast<SVGElement>(*renderer.element()));
     if (!dependencies)
         return;
 

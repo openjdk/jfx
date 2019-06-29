@@ -49,7 +49,6 @@ class InspectorOverlay;
 class Page;
 class RenderObject;
 class SharedBuffer;
-class URL;
 
 typedef String ErrorString;
 
@@ -91,6 +90,8 @@ public:
     void disable(ErrorString&) final;
     void reload(ErrorString&, const bool* optionalReloadFromOrigin, const bool* optionalRevalidateAllResources) final;
     void navigate(ErrorString&, const String& url) final;
+    void overrideUserAgent(ErrorString&, const String* value) final;
+    void overrideSetting(ErrorString&, const String& setting, const bool* value) final;
     void getCookies(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::Page::Cookie>>& cookies) final;
     void deleteCookie(ErrorString&, const String& cookieName, const String& url) final;
     void getResourceTree(ErrorString&, RefPtr<Inspector::Protocol::Page::FrameResourceTree>&) final;
@@ -100,6 +101,7 @@ public:
     void setShowRulers(ErrorString&, bool) final;
     void setShowPaintRects(ErrorString&, bool show) final;
     void setEmulatedMedia(ErrorString&, const String&) final;
+    void setForcedAppearance(ErrorString&, const String&) final;
     void getCompositingBordersVisible(ErrorString&, bool* out_param) final;
     void setCompositingBordersVisible(ErrorString&, bool) final;
     void snapshotNode(ErrorString&, int nodeId, String* outDataURL) final;
@@ -116,6 +118,8 @@ public:
     void frameStoppedLoading(Frame&);
     void frameScheduledNavigation(Frame&, Seconds delay);
     void frameClearedScheduledNavigation(Frame&);
+    void defaultAppearanceDidChange(bool useDarkAppearance);
+    void applyUserAgentOverride(String&);
     void applyEmulatedMedia(String&);
     void didPaint(RenderObject&, const LayoutRect&);
     void didLayout();
@@ -159,7 +163,9 @@ private:
     bool m_enabled { false };
     bool m_isFirstLayoutAfterOnLoad { false };
     bool m_showPaintRects { false };
+    String m_userAgentOverride;
     String m_emulatedMedia;
+    String m_forcedAppearance;
 };
 
 } // namespace WebCore

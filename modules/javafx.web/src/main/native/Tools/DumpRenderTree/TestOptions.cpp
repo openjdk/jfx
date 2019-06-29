@@ -85,8 +85,6 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
             enableModernMediaControls = parseBooleanTestHeaderValue(value);
         else if (key == "enablePointerLock")
             enablePointerLock = parseBooleanTestHeaderValue(value);
-        else if (key == "enableWebAuthentication")
-            enableWebAuthentication = parseBooleanTestHeaderValue(value);
         else if (key == "enableDragDestinationActionLoad")
             enableDragDestinationActionLoad = parseBooleanTestHeaderValue(value);
         else if (key == "layerBackedWebView")
@@ -99,12 +97,20 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
             dumpJSConsoleLogInStdErr = parseBooleanTestHeaderValue(value);
         else if (key == "allowCrossOriginSubresourcesToAskForCredentials")
             allowCrossOriginSubresourcesToAskForCredentials = parseBooleanTestHeaderValue(value);
-        else if (key == "enableWebAnimationsCSSIntegration")
+        else if (key == "experimental:WebAnimationsCSSIntegrationEnabled")
             enableWebAnimationsCSSIntegration = parseBooleanTestHeaderValue(value);
+        else if (key == "internal:selectionAcrossShadowBoundariesEnabled")
+            enableSelectionAcrossShadowBoundaries = parseBooleanTestHeaderValue(value);
         else if (key == "enableColorFilter")
             enableColorFilter = parseBooleanTestHeaderValue(value);
         else if (key == "jscOptions")
             jscOptions = value;
+        else if (key == "experimental:WebGPUEnabled")
+            enableWebGPU = parseBooleanTestHeaderValue(value);
+        else if (key == "internal:CSSLogicalEnabled")
+            enableCSSLogical = parseBooleanTestHeaderValue(value);
+        else if (key == "internal:AdClickAttributionEnabled")
+            adClickAttributionEnabled = parseBooleanTestHeaderValue(value);
         pairStart = pairEnd + 1;
     }
 }
@@ -112,5 +118,6 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
 bool TestOptions::webViewIsCompatibleWithOptions(const TestOptions& other) const
 {
     return other.layerBackedWebView == layerBackedWebView
-        && other.jscOptions == jscOptions;
+        && other.jscOptions == jscOptions
+        && other.enableWebAnimationsCSSIntegration == enableWebAnimationsCSSIntegration;
 }

@@ -82,8 +82,7 @@ JSObject* createStackOverflowError(ExecState* exec, JSGlobalObject* globalObject
 JSObject* createUndefinedVariableError(ExecState* exec, const Identifier& ident)
 {
     if (ident.isPrivateName()) {
-        VM& vm = exec->vm();
-        String message(makeString("Can't find private variable: @", vm.propertyNames->lookUpPublicName(ident).string()));
+        String message(makeString("Can't find private variable: PrivateSymbol.", ident.string()));
         return createReferenceError(exec, message);
     }
     String message(makeString("Can't find variable: ", ident.string()));
@@ -267,7 +266,9 @@ JSObject* createError(ExecState* exec, JSValue value, const String& message, Err
     VM& vm = exec->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    String errorMessage = makeString(errorDescriptionForValue(exec, value)->value(exec), ' ', message);
+    String errorMessage = tryMakeString(errorDescriptionForValue(exec, value)->value(exec), ' ', message);
+    if (errorMessage.isNull())
+        return createOutOfMemoryError(exec);
     scope.assertNoException();
     JSObject* exception = createTypeError(exec, errorMessage, appender, runtimeTypeForValue(vm, value));
     ASSERT(exception->isErrorInstance());

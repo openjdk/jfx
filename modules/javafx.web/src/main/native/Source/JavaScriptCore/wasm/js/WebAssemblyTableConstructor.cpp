@@ -74,7 +74,7 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyTable(ExecState* exec)
     uint32_t initial = toNonWrappingUint32(exec, initialSizeValue);
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    std::optional<uint32_t> maximum;
+    Optional<uint32_t> maximum;
     Identifier maximumIdent = Identifier::fromString(&vm, "maximum");
     bool hasProperty = memoryDescriptor->hasProperty(exec, maximumIdent);
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
@@ -90,15 +90,13 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyTable(ExecState* exec)
         }
     }
 
-    RefPtr<Wasm::Table> wasmTable = Wasm::Table::create(initial, maximum);
+    RefPtr<Wasm::Table> wasmTable = Wasm::Table::tryCreate(initial, maximum);
     if (!wasmTable) {
         return JSValue::encode(throwException(exec, throwScope,
             createRangeError(exec, "couldn't create Table"_s)));
     }
 
-    throwScope.release();
-
-    return JSValue::encode(JSWebAssemblyTable::create(exec, vm, exec->lexicalGlobalObject()->WebAssemblyTableStructure(), wasmTable.releaseNonNull()));
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(JSWebAssemblyTable::create(exec, vm, exec->lexicalGlobalObject()->WebAssemblyTableStructure(), wasmTable.releaseNonNull())));
 }
 
 static EncodedJSValue JSC_HOST_CALL callJSWebAssemblyTable(ExecState* exec)

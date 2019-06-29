@@ -26,7 +26,8 @@
 #pragma once
 
 #include "PopupMenuJava.h"
-#include "SearchPopupMenu.h"
+#include <WebCore/SearchPopupMenu.h>
+#include <WebCore/PlatformJavaClasses.h>
 
 namespace WebCore {
 

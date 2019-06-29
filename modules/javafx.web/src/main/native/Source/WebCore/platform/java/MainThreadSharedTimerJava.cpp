@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "MainThreadSharedTimer.h"
 
 #include <wtf/Assertions.h>
@@ -49,7 +49,7 @@ void MainThreadSharedTimer::setFireInterval(Seconds timeout)
     ASSERT(mid);
 
     env->CallStaticVoidMethod(getTimerClass(env), mid, fireTime);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void MainThreadSharedTimer::stop()
@@ -61,7 +61,7 @@ void MainThreadSharedTimer::stop()
     ASSERT(mid);
 
     env->CallStaticVoidMethod(getTimerClass(env), mid);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 // JDK-8146958

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -511,7 +511,6 @@ void AccessCase::generateWithGuard(
         jit.loadPtr(
             CCallHelpers::Address(baseGPR, ScopedArguments::offsetOfStorage()),
             scratchGPR);
-        jit.xorPtr(CCallHelpers::TrustedImmPtr(ScopedArgumentsPoison::key()), scratchGPR);
         fallThrough.append(
             jit.branchTest8(
                 CCallHelpers::NonZero,
@@ -1019,14 +1018,6 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     }
 
     case Replace: {
-        if (InferredType* type = structure()->inferredTypeFor(ident.impl())) {
-            if (AccessCaseInternal::verbose)
-                dataLog("Have type: ", type->descriptor(), "\n");
-            state.failAndRepatch.append(
-                jit.branchIfNotType(valueRegs, scratchGPR, type->descriptor()));
-        } else if (AccessCaseInternal::verbose)
-            dataLog("Don't have type.\n");
-
         if (isInlineOffset(m_offset)) {
             jit.storeValue(
                 valueRegs,
@@ -1048,14 +1039,6 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case Transition: {
         // AccessCase::transition() should have returned null if this wasn't true.
         RELEASE_ASSERT(GPRInfo::numberOfRegisters >= 6 || !structure()->outOfLineCapacity() || structure()->outOfLineCapacity() == newStructure()->outOfLineCapacity());
-
-        if (InferredType* type = newStructure()->inferredTypeFor(ident.impl())) {
-            if (AccessCaseInternal::verbose)
-                dataLog("Have type: ", type->descriptor(), "\n");
-            state.failAndRepatch.append(
-                jit.branchIfNotType(valueRegs, scratchGPR, type->descriptor()));
-        } else if (AccessCaseInternal::verbose)
-            dataLog("Don't have type.\n");
 
         // NOTE: This logic is duplicated in AccessCase::doesCalls(). It's important that doesCalls() knows
         // exactly when this would make calls.
@@ -1230,8 +1213,16 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     }
 
     case StringLength: {
-        jit.load32(CCallHelpers::Address(baseGPR, JSString::offsetOfLength()), valueRegs.payloadGPR());
-        jit.boxInt32(valueRegs.payloadGPR(), valueRegs);
+        jit.loadPtr(CCallHelpers::Address(baseGPR, JSString::offsetOfValue()), scratchGPR);
+        auto isRope = jit.branchIfRopeStringImpl(scratchGPR);
+        jit.load32(CCallHelpers::Address(scratchGPR, StringImpl::lengthMemoryOffset()), scratchGPR);
+        auto done = jit.jump();
+
+        isRope.link(&jit);
+        jit.load32(CCallHelpers::Address(baseGPR, JSRopeString::offsetOfLength()), scratchGPR);
+
+        done.link(&jit);
+        jit.boxInt32(scratchGPR, valueRegs);
         state.succeed();
         return;
     }

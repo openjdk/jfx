@@ -72,7 +72,7 @@ public:
 
     enum class Modifier : uint8_t {
         AltKey      = 1 << 0,
-        CtrlKey     = 1 << 1,
+        ControlKey  = 1 << 1,
         MetaKey     = 1 << 2,
         ShiftKey    = 1 << 3,
         CapsLockKey = 1 << 4,
@@ -84,7 +84,7 @@ public:
     Type type() const { return static_cast<Type>(m_type); }
 
     bool shiftKey() const { return m_modifiers.contains(Modifier::ShiftKey); }
-    bool ctrlKey() const { return m_modifiers.contains(Modifier::CtrlKey); }
+    bool controlKey() const { return m_modifiers.contains(Modifier::ControlKey); }
     bool altKey() const { return m_modifiers.contains(Modifier::AltKey); }
     bool metaKey() const { return m_modifiers.contains(Modifier::MetaKey); }
 
@@ -115,13 +115,13 @@ protected:
         , m_timestamp(timestamp)
     {
         if (shiftKey)
-            m_modifiers |= Modifier::ShiftKey;
+            m_modifiers.add(Modifier::ShiftKey);
         if (ctrlKey)
-            m_modifiers |= Modifier::CtrlKey;
+            m_modifiers.add(Modifier::ControlKey);
         if (altKey)
-            m_modifiers |= Modifier::AltKey;
+            m_modifiers.add(Modifier::AltKey);
         if (metaKey)
-            m_modifiers |= Modifier::MetaKey;
+            m_modifiers.add(Modifier::MetaKey);
     }
 
     // Explicit protected destructor so that people don't accidentally

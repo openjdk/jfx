@@ -48,6 +48,7 @@ protected:
     {
     }
 
+public:
     Frame* frame() const { return m_frame; }
 
 private:

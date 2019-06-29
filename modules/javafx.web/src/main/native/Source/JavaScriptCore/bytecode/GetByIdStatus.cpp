@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "GetByIdStatus.h"
 
+#include "BytecodeStructs.h"
 #include "CodeBlock.h"
 #include "ComplexGetStatus.h"
 #include "GetterSetterAccessCase.h"
@@ -55,35 +56,24 @@ GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
 {
     VM& vm = *profiledBlock->vm();
 
-    Instruction* instruction = &profiledBlock->instructions()[bytecodeIndex];
+    auto instruction = profiledBlock->instructions().at(bytecodeIndex);
 
-    switch (Interpreter::getOpcodeID(instruction[0].u.opcode)) {
-    case op_get_by_id:
-    case op_get_by_id_direct: {
-        StructureID structureID = instruction[4].u.structureID;
-        if (!structureID)
+    StructureID structureID;
+    switch (instruction->opcodeID()) {
+    case op_get_by_id: {
+        auto& metadata = instruction->as<OpGetById>().metadata(profiledBlock);
+        // FIXME: We should not just bail if we see a get_by_id_proto_load.
+        // https://bugs.webkit.org/show_bug.cgi?id=158039
+        if (metadata.m_mode != GetByIdMode::Default)
             return GetByIdStatus(NoInformation, false);
-
-        Structure* structure = vm.heap.structureIDTable().get(structureID);
-
-        if (structure->takesSlowPathInDFGForImpureProperty())
-            return GetByIdStatus(NoInformation, false);
-
-        unsigned attributes;
-        PropertyOffset offset = structure->getConcurrently(uid, attributes);
-        if (!isValidOffset(offset))
-            return GetByIdStatus(NoInformation, false);
-        if (attributes & PropertyAttribute::CustomAccessorOrValue)
-            return GetByIdStatus(NoInformation, false);
-
-        return GetByIdStatus(Simple, false, GetByIdVariant(StructureSet(structure), offset));
+        structureID = metadata.m_modeMetadata.defaultMode.structureID;
+        break;
     }
-
-    case op_get_array_length:
-    case op_try_get_by_id:
-    case op_get_by_id_proto_load:
-    case op_get_by_id_unset: {
-        // FIXME: We should not just bail if we see a try_get_by_id or a get_by_id_proto_load.
+    case op_get_by_id_direct:
+        structureID = instruction->as<OpGetByIdDirect>().metadata(profiledBlock).m_structureID;
+        break;
+    case op_try_get_by_id: {
+        // FIXME: We should not just bail if we see a try_get_by_id.
         // https://bugs.webkit.org/show_bug.cgi?id=158039
         return GetByIdStatus(NoInformation, false);
     }
@@ -93,6 +83,23 @@ GetByIdStatus GetByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned
         return GetByIdStatus(NoInformation, false);
     }
     }
+
+    if (!structureID)
+        return GetByIdStatus(NoInformation, false);
+
+    Structure* structure = vm.heap.structureIDTable().get(structureID);
+
+    if (structure->takesSlowPathInDFGForImpureProperty())
+        return GetByIdStatus(NoInformation, false);
+
+    unsigned attributes;
+    PropertyOffset offset = structure->getConcurrently(uid, attributes);
+    if (!isValidOffset(offset))
+        return GetByIdStatus(NoInformation, false);
+    if (attributes & PropertyAttribute::CustomAccessorOrValue)
+        return GetByIdStatus(NoInformation, false);
+
+    return GetByIdStatus(Simple, false, GetByIdVariant(StructureSet(structure), offset));
 }
 
 GetByIdStatus GetByIdStatus::computeFor(CodeBlock* profiledBlock, ICStatusMap& map, unsigned bytecodeIndex, UniquedStringImpl* uid, ExitFlag didExit, CallLinkStatus::ExitSiteData callExitSiteData)
@@ -222,7 +229,7 @@ GetByIdStatus GetByIdStatus::computeForStubInfoWithoutExitSiteFeedback(
                 std::unique_ptr<CallLinkStatus> callLinkStatus;
                 JSFunction* intrinsicFunction = nullptr;
                 FunctionPtr<OperationPtrTag> customAccessorGetter;
-                std::optional<DOMAttributeAnnotation> domAttribute;
+                Optional<DOMAttributeAnnotation> domAttribute;
 
                 switch (access.type()) {
                 case AccessCase::Load:

@@ -20,12 +20,12 @@
  */
 
 #include "config.h"
-#include "TextBreakIterator.h"
+#include <wtf/text/TextBreakIterator.h>
 
-#include "LineBreakIteratorPoolICU.h"
-#include "TextBreakIteratorInternalICU.h"
-#include "UTextProviderLatin1.h"
-#include "UTextProviderUTF16.h"
+#include <wtf/text/LineBreakIteratorPoolICU.h>
+#include <wtf/text/TextBreakIteratorInternalICU.h>
+#include <wtf/text/icu/UTextProviderLatin1.h>
+#include <wtf/text/icu/UTextProviderUTF16.h>
 #include <atomic>
 #include <mutex>
 #include <unicode/ubrk.h>
@@ -33,7 +33,7 @@
 
 namespace WTF {
 
-#if !PLATFORM(MAC) && !PLATFORM(IOS)
+#if !PLATFORM(MAC) && !PLATFORM(IOS_FAMILY)
 
 static Variant<TextBreakIteratorICU, TextBreakIteratorPlatform> mapModeToBackingIterator(StringView string, TextBreakIterator::Mode mode, const AtomicString& locale)
 {

@@ -64,7 +64,7 @@ struct OpcodeGroupInitializer {
 #define OPCODE_GROUP_ENTRY(groupIndex, groupClass) \
 { groupIndex, groupClass::mask, groupClass::pattern, groupClass::format }
 
-static OpcodeGroupInitializer opcodeGroupList[] = {
+static const OpcodeGroupInitializer opcodeGroupList[] = {
     OPCODE_GROUP_ENTRY(0x08, A64DOpcodeLoadStoreRegisterPair),
     OPCODE_GROUP_ENTRY(0x08, A64DOpcodeLoadStoreExclusive),
     OPCODE_GROUP_ENTRY(0x09, A64DOpcodeLoadStoreRegisterPair),
@@ -818,7 +818,7 @@ const char* const A64DOpcodeFloatingPointIntegerConversions::s_opNames[32] = {
     "fcvtns", "fcvtnu", "scvtf", "ucvtf", "fcvtas", "fcvtau", "fmov", "fmov",
     "fcvtps", "fcvtpu", 0, 0, 0, 0, "fmov", "fmov",
     "fcvtms", "fcvtmu", 0, 0, 0, 0, 0, 0,
-    "fcvtzs", "fcvtzu", 0, 0, 0, 0, 0, 0
+    "fcvtzs", "fcvtzu", 0, 0, 0, 0, "fjcvtzs", 0
 };
 
 const char* A64DOpcodeFloatingPointIntegerConversions::format()

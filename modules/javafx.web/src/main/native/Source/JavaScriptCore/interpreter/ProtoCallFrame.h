@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "CodeBlock.h"
 #include "Register.h"
+#include "StackAlignment.h"
 #include <wtf/ForbidHeapAllocation.h>
 
 namespace JSC {
@@ -33,6 +35,9 @@ namespace JSC {
 struct JS_EXPORT_PRIVATE ProtoCallFrame {
     WTF_FORBID_HEAP_ALLOCATION;
 public:
+    // CodeBlock, Callee, ArgumentCount, and |this|.
+    static constexpr unsigned numberOfRegisters { 4 };
+
     Register codeBlockValue;
     Register calleeValue;
     Register argCountAndCodeOriginValue;
@@ -72,5 +77,23 @@ public:
         args[argumentIndex] = value;
     }
 };
+
+inline void ProtoCallFrame::init(CodeBlock* codeBlock, JSObject* callee, JSValue thisValue, int argCountIncludingThis, JSValue* otherArgs)
+{
+    this->args = otherArgs;
+    this->setCodeBlock(codeBlock);
+    this->setCallee(callee);
+    this->setArgumentCountIncludingThis(argCountIncludingThis);
+    if (codeBlock && argCountIncludingThis < codeBlock->numParameters())
+        this->hasArityMismatch = true;
+    else
+        this->hasArityMismatch = false;
+
+    // Round up argCountIncludingThis to keep the stack frame size aligned.
+    size_t paddedArgsCount = roundArgumentCountToAlignFrame(argCountIncludingThis);
+    this->setPaddedArgCount(paddedArgsCount);
+    this->clearCurrentVPC();
+    this->setThisValue(thisValue);
+}
 
 } // namespace JSC

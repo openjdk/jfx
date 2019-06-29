@@ -30,14 +30,15 @@
 #include "SecurityOrigin.h"
 
 #include "BlobURL.h"
-#include "FileSystem.h"
-#include "URL.h"
 #include "SchemeRegistry.h"
 #include "SecurityPolicy.h"
+#include "TextEncoding.h"
 #include "ThreadableBlobRegistry.h"
+#include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/URL.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -147,8 +148,8 @@ SecurityOrigin::SecurityOrigin(const URL& url)
     // document.domain starts as m_data.host, but can be set by the DOM.
     m_domain = m_data.host;
 
-    if (m_data.port && isDefaultPortForProtocol(m_data.port.value(), m_data.protocol))
-        m_data.port = std::nullopt;
+    if (m_data.port && WTF::isDefaultPortForProtocol(m_data.port.value(), m_data.protocol))
+        m_data.port = WTF::nullopt;
 
     // By default, only local SecurityOrigins can load local resources.
     m_canLoadLocalResources = isLocal();
@@ -160,7 +161,7 @@ SecurityOrigin::SecurityOrigin(const URL& url)
 }
 
 SecurityOrigin::SecurityOrigin()
-    : m_data { emptyString(), emptyString(), std::nullopt }
+    : m_data { emptyString(), emptyString(), WTF::nullopt }
     , m_domain { emptyString() }
     , m_isUnique { true }
     , m_isPotentiallyTrustworthy { true }
@@ -345,7 +346,7 @@ bool SecurityOrigin::canDisplay(const URL& url) const
     if (m_universalAccess)
         return true;
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
     if (m_data.protocol == "file" && url.isLocalFile() && !FileSystem::filesHaveSameVolume(m_filePath, url.fileSystemPath()))
         return false;
 #endif
@@ -511,11 +512,11 @@ Ref<SecurityOrigin> SecurityOrigin::createFromString(const String& originString)
     return SecurityOrigin::create(URL(URL(), originString));
 }
 
-Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, std::optional<uint16_t> port)
+Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, Optional<uint16_t> port)
 {
     String decodedHost = decodeURLEscapeSequences(host);
     auto origin = create(URL(URL(), protocol + "://" + host + "/"));
-    if (port && !isDefaultPortForProtocol(*port, protocol))
+    if (port && !WTF::isDefaultPortForProtocol(*port, protocol))
         origin->m_data.port = port;
     return origin;
 }

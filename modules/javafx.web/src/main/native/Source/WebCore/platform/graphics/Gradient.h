@@ -86,12 +86,18 @@ public:
         float aspectRatio; // For elliptical gradient, width / height.
     };
 
-    using Data = Variant<LinearData, RadialData>;
+    struct ConicData {
+        FloatPoint point0;
+        float angleRadians;
+    };
 
-    enum class Type { Linear, Radial };
+    using Data = Variant<LinearData, RadialData, ConicData>;
+
+    enum class Type { Linear, Radial, Conic };
 
     static Ref<Gradient> create(LinearData&&);
     static Ref<Gradient> create(RadialData&&);
+    static Ref<Gradient> create(ConicData&&);
 
     WEBCORE_EXPORT ~Gradient();
 
@@ -113,7 +119,7 @@ public:
 
     // CG needs to transform the gradient at draw time.
     void setGradientSpaceTransform(const AffineTransform& gradientSpaceTransformation);
-    const AffineTransform& gradientSpaceTransform() { return m_gradientSpaceTransformation; }
+    const AffineTransform& gradientSpaceTransform() const { return m_gradientSpaceTransformation; }
 
     void fill(GraphicsContext&, const FloatRect&);
     void adjustParametersForTiledDrawing(FloatSize&, FloatRect&, const FloatSize& spacing);
@@ -133,6 +139,7 @@ public:
 private:
     Gradient(LinearData&&);
     Gradient(RadialData&&);
+    Gradient(ConicData&&);
 
     PlatformGradient platformGradient();
     void platformInit() { m_gradient = nullptr; }

@@ -151,15 +151,6 @@ JS_EXPORT bool JSValueIsString(JSContextRef ctx, JSValueRef value);
 */
 JS_EXPORT bool JSValueIsObject(JSContextRef ctx, JSValueRef value);
 
-/*!
-@function
-@abstract       Tests whether a JavaScript value's type is the symbol type.
-@param ctx      The execution context to use.
-@param value    The JSValue to test.
-@result         true if value's type is the symbol type, otherwise false.
-*/
-JS_EXPORT bool JSValueIsSymbol(JSContextRef ctx, JSValueRef value) JSC_API_AVAILABLE(macosx(JSC_MAC_TBA), ios(JSC_IOS_TBA));
-
 
 /*!
 @function
@@ -268,15 +259,6 @@ JS_EXPORT JSValueRef JSValueMakeBoolean(JSContextRef ctx, bool boolean);
 @result         A JSValue of the number type, representing the value of number.
 */
 JS_EXPORT JSValueRef JSValueMakeNumber(JSContextRef ctx, double number);
-
-/*!
-@function
-@abstract            Creates a JavaScript value of the symbol type.
-@param ctx           The execution context to use.
-@param description   A description of the newly created symbol value.
-@result              A unique JSValue of the symbol type, whose description matches the one provided.
-*/
-JS_EXPORT JSValueRef JSValueMakeSymbol(JSContextRef ctx, JSStringRef description) JSC_API_AVAILABLE(macosx(JSC_MAC_TBA), ios(JSC_IOS_TBA));
 
 /*!
 @function

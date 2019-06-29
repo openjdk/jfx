@@ -80,7 +80,7 @@ static inline bool isStrongPasswordTextField(const Element* element)
     return is<HTMLInputElement>(element) && downcast<HTMLInputElement>(element)->hasAutoFillStrongPasswordButton();
 }
 
-std::optional<ElementStyle> TextControlInnerContainer::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
+Optional<ElementStyle> TextControlInnerContainer::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
 {
     auto elementStyle = resolveStyle(&parentStyle);
     if (isStrongPasswordTextField(shadowHost())) {
@@ -102,7 +102,7 @@ Ref<TextControlInnerElement> TextControlInnerElement::create(Document& document)
     return adoptRef(*new TextControlInnerElement(document));
 }
 
-std::optional<ElementStyle> TextControlInnerElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
+Optional<ElementStyle> TextControlInnerElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
 {
     auto newStyle = RenderStyle::createPtr();
     newStyle->inheritFrom(*shadowHostStyle);
@@ -122,7 +122,7 @@ std::optional<ElementStyle> TextControlInnerElement::resolveCustomStyle(const Re
         // Set "flex-basis: 1em". Note that CSSPrimitiveValue::computeLengthInt() only needs the element's
         // style to calculate em lengths. Since the element might not be in a document, just pass nullptr
         // for the root element style and the render view.
-        RefPtr<CSSPrimitiveValue> emSize = CSSPrimitiveValue::create(1, CSSPrimitiveValue::CSS_EMS);
+        auto emSize = CSSPrimitiveValue::create(1, CSSPrimitiveValue::CSS_EMS);
         int pixels = emSize->computeLength<int>(CSSToLengthConversionData { newStyle.get(), nullptr, nullptr, 1.0, false });
         newStyle->setFlexBasis(Length { pixels, Fixed });
     }
@@ -172,7 +172,7 @@ RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
     return downcast<RenderTextControlInnerBlock>(HTMLDivElement::renderer());
 }
 
-std::optional<ElementStyle> TextControlInnerTextElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
+Optional<ElementStyle> TextControlInnerTextElement::resolveCustomStyle(const RenderStyle&, const RenderStyle* shadowHostStyle)
 {
     auto style = downcast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
     return ElementStyle(std::make_unique<RenderStyle>(WTFMove(style)));
@@ -192,7 +192,7 @@ Ref<TextControlPlaceholderElement> TextControlPlaceholderElement::create(Documen
     return adoptRef(*new TextControlPlaceholderElement(document));
 }
 
-std::optional<ElementStyle> TextControlPlaceholderElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle)
+Optional<ElementStyle> TextControlPlaceholderElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle* shadowHostStyle)
 {
     auto style = resolveStyle(&parentStyle);
 
@@ -225,7 +225,7 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
     if (input && event.type() == eventNames().mousedownEvent && is<MouseEvent>(event) && downcast<MouseEvent>(event).button() == LeftButton) {
         input->focus();
         input->select();
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
         if (auto* renderer = input->renderer()) {
             auto& searchFieldRenderer = downcast<RenderSearchField>(*renderer);
             if (searchFieldRenderer.popupIsVisible())
@@ -241,7 +241,7 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event& event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
 bool SearchFieldResultsButtonElement::willRespondToMouseClickEvents()
 {
     return true;
@@ -254,7 +254,7 @@ inline SearchFieldCancelButtonElement::SearchFieldCancelButtonElement(Document& 
     : HTMLDivElement(divTag, document)
 {
     setPseudo(AtomicString("-webkit-search-cancel-button", AtomicString::ConstructFromLiteral));
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
     setAttributeWithoutSynchronization(aria_labelAttr, AXSearchFieldCancelButtonText());
 #endif
     setAttributeWithoutSynchronization(roleAttr, AtomicString("button", AtomicString::ConstructFromLiteral));
@@ -290,7 +290,7 @@ void SearchFieldCancelButtonElement::defaultEventHandler(Event& event)
         HTMLDivElement::defaultEventHandler(event);
 }
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
 bool SearchFieldCancelButtonElement::willRespondToMouseClickEvents()
 {
     const RefPtr<HTMLInputElement> input = downcast<HTMLInputElement>(shadowHost());

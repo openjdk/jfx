@@ -1,26 +1,50 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 #include "config.h"
 
 #if COMPILER(GCC)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
-#include "URLLoader.h"
-#include "FrameNetworkingContextJava.h"
+#include "FrameNetworkingContext.h"
 #include "HTTPParsers.h"
-#include <wtf/CompletionHandler.h>
-#include <wtf/java/JavaEnv.h>
 #include "MIMETypeRegistry.h"
+#include "NetworkingContext.h"
+#include "Page.h"
+#include "PageSupplementJava.h"
+#include "PlatformJavaClasses.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
+#include "ResourceHandleClient.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-#include "ResourceHandleClient.h"
-#include "WebPage.h"
+#include "URLLoader.h"
 #include "com_sun_webkit_LoadListenerClient.h"
 #include "com_sun_webkit_network_URLLoader.h"
+#include <wtf/CompletionHandler.h>
 
 namespace WebCore {
 class Page;
@@ -131,11 +155,11 @@ void URLLoader::cancel()
 {
     using namespace URLLoaderJavaInternal;
     if (m_ref) {
-        JNIEnv* env = WebCore_GetJavaEnv();
+        JNIEnv* env = WTF::GetJavaEnv();
         initRefs(env);
 
         env->CallVoidMethod(m_ref, cancelMethod);
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
 
         m_ref.clear();
     }
@@ -161,17 +185,16 @@ JLObject URLLoader::load(bool asynchronous,
         return nullptr;
     }
 
-    if (!context->isValid()) {
+    auto pageSupplement = context->isValid() ?
+        PageSupplementJava::from(static_cast<FrameNetworkingContext*>(context)->frame()) : nullptr;
+    if (!pageSupplement) {
         // If NetworkingContext is invalid then we are no longer attached
         // to a Page. This must be an attempt to load from an unload handler,
         // so let's just block it.
         return nullptr;
     }
 
-    Page* page = static_cast<FrameNetworkingContextJava*>(context)->page();
-    ASSERT(page);
-
-    JLObject webPage = WebPage::jobjectFromPage(page);
+    JLObject webPage = pageSupplement->jWebPage();
     ASSERT(webPage);
 
     String headerString;
@@ -187,7 +210,7 @@ JLObject URLLoader::load(bool asynchronous,
         headerString.append("\n");
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     JLObject loader = env->CallStaticObjectMethod(
@@ -200,7 +223,7 @@ JLObject URLLoader::load(bool asynchronous,
             (jstring) headerString.toJavaString(env),
             (jobjectArray) toJava(request.httpBody()),
             ptr_to_jlong(target));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return loader;
 }
@@ -218,7 +241,7 @@ JLObjectArray URLLoader::toJava(const FormData* formData)
         return nullptr;
     }
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     JLObjectArray result = env->NewObjectArray(
@@ -227,24 +250,32 @@ JLObjectArray URLLoader::toJava(const FormData* formData)
             nullptr);
     for (size_t i = 0; i < size; i++) {
         JLObject resultElement;
-        if (elements[i].m_type == FormDataElement::Type::EncodedFile) {
-            resultElement = env->CallStaticObjectMethod(
-                    formDataElementClass,
-                    createFromFileMethod,
-                    (jstring) elements[i].m_filename.toJavaString(env));
-        } else {
-            const Vector<char>& data = elements[i].m_data;
-            JLByteArray byteArray = env->NewByteArray(data.size());
-            env->SetByteArrayRegion(
-                    (jbyteArray) byteArray,
-                    (jsize) 0,
-                    (jsize) data.size(),
-                    (const jbyte*) data.data());
-            resultElement = env->CallStaticObjectMethod(
-                    formDataElementClass,
-                    createFromByteArrayMethod,
-                    (jbyteArray) byteArray);
-        }
+        WTF::switchOn(elements[i].data,
+            [&] (const Vector<char>& data) -> void {
+                JLByteArray byteArray = env->NewByteArray(data.size());
+                env->SetByteArrayRegion(
+                        (jbyteArray) byteArray,
+                        (jsize) 0,
+                        (jsize) data.size(),
+                        (const jbyte*) data.data());
+                resultElement = env->CallStaticObjectMethod(
+                        formDataElementClass,
+                        createFromByteArrayMethod,
+                        (jbyteArray) byteArray);
+            },
+            [&] (const FormDataElement::EncodedFileData& data) -> void {
+                resultElement = env->CallStaticObjectMethod(
+                        formDataElementClass,
+                        createFromFileMethod,
+                        (jstring) data.filename.toJavaString(env));
+            },
+            [&] (const FormDataElement::EncodedBlobData& data) -> void {
+                resultElement = env->CallStaticObjectMethod(
+                        formDataElementClass,
+                        createFromFileMethod,
+                        (jstring) data.url.string().toJavaString(env));
+            }
+        );
         env->SetObjectArrayElement(
                 (jobjectArray) result,
                 i,

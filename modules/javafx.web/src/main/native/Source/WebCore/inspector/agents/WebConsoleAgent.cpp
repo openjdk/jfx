@@ -89,7 +89,7 @@ void WebConsoleAgent::getLoggingChannels(ErrorString&, RefPtr<JSON::ArrayOf<Insp
     }
 }
 
-static std::optional<std::pair<WTFLogChannelState, WTFLogLevel>> channelConfigurationForString(const String& levelString)
+static Optional<std::pair<WTFLogChannelState, WTFLogLevel>> channelConfigurationForString(const String& levelString)
 {
     WTFLogChannelState state;
     WTFLogLevel level;
@@ -104,7 +104,7 @@ static std::optional<std::pair<WTFLogChannelState, WTFLogLevel>> channelConfigur
         else if (equalIgnoringASCIICase(levelString, "verbose"))
             level = WTFLogLevelDebug;
         else
-            return std::nullopt;
+            return WTF::nullopt;
     }
 
     return { { state, level } };
@@ -148,7 +148,7 @@ void WebConsoleAgent::didReceiveResponse(unsigned long requestIdentifier, const 
         return;
 
     if (response.httpStatusCode() >= 400) {
-        String message = "Failed to load resource: the server responded with a status of " + String::number(response.httpStatusCode()) + " (" + response.httpStatusText() + ')';
+        String message = makeString("Failed to load resource: the server responded with a status of ", response.httpStatusCode(), " (", response.httpStatusText(), ')');
         addMessageToConsole(std::make_unique<ConsoleMessage>(MessageSource::Network, MessageType::Log, MessageLevel::Error, message, response.url().string(), 0, 0, nullptr, requestIdentifier));
     }
 }

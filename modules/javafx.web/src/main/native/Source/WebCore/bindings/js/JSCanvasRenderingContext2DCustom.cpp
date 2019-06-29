@@ -18,13 +18,19 @@
  */
 
 #include "config.h"
+
 #include "JSNodeCustom.h"
 #include "JSCanvasRenderingContext2D.h"
 
 namespace WebCore {
 
-bool JSCanvasRenderingContext2DOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::SlotVisitor& visitor)
+using namespace JSC;
+
+bool JSCanvasRenderingContext2DOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::SlotVisitor& visitor, const char** reason)
 {
+    if (UNLIKELY(reason))
+        *reason = "Canvas is opaque root";
+
     JSCanvasRenderingContext2D* jsCanvasRenderingContext = jsCast<JSCanvasRenderingContext2D*>(handle.slot()->asCell());
     void* root = WebCore::root(jsCanvasRenderingContext->wrapped().canvas());
     return visitor.containsOpaqueRoot(root);

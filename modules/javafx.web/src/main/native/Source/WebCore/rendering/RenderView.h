@@ -33,8 +33,8 @@
 namespace WebCore {
 
 class ImageQualityController;
-class LayoutState;
 class RenderLayerCompositor;
+class RenderLayoutState;
 class RenderQuote;
 
 class RenderView final : public RenderBlockFlow {
@@ -72,7 +72,7 @@ public:
     FrameView& frameView() const { return m_frameView; }
 
     LayoutRect visualOverflowRect() const override;
-    LayoutRect computeRectForRepaint(const LayoutRect&, const RenderLayerModelObject* repaintContainer, RepaintContext = { }) const override;
+    Optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* container, VisibleRectContext) const override;
     void repaintRootContents();
     void repaintViewRectangle(const LayoutRect&) const;
     void repaintViewAndCompositedLayers();
@@ -210,7 +210,7 @@ private:
     bool shouldRepaint(const LayoutRect&) const;
     void flushAccumulatedRepaintRegion() const;
 
-    void layoutContent(const LayoutState&);
+    void layoutContent(const RenderLayoutState&);
 
     bool isScrollableOrRubberbandableBox() const override;
 
@@ -242,7 +242,7 @@ private:
     HashSet<RenderBox*> m_renderersNeedingLazyRepaint;
 
     std::unique_ptr<ImageQualityController> m_imageQualityController;
-    std::optional<LayoutSize> m_pageLogicalSize;
+    Optional<LayoutSize> m_pageLogicalSize;
     bool m_pageLogicalHeightChanged { false };
     std::unique_ptr<RenderLayerCompositor> m_compositor;
 

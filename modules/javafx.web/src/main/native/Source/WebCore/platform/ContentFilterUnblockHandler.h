@@ -23,19 +23,18 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ContentFilterUnblockHandler_h
-#define ContentFilterUnblockHandler_h
+#pragma once
 
 #if ENABLE(CONTENT_FILTERING)
 
-#include "URL.h"
 #include <functional>
 #include <wtf/RetainPtr.h>
+#include <wtf/URL.h>
 #include <wtf/text/WTFString.h>
 
 OBJC_CLASS NSCoder;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 OBJC_CLASS WebFilterEvaluator;
 #endif
 
@@ -50,7 +49,7 @@ public:
 
     ContentFilterUnblockHandler() = default;
     WEBCORE_EXPORT ContentFilterUnblockHandler(String unblockURLHost, UnblockRequesterFunction);
-#if HAVE(PARENTAL_CONTROLS) && PLATFORM(IOS)
+#if HAVE(PARENTAL_CONTROLS) && PLATFORM(IOS_FAMILY)
     ContentFilterUnblockHandler(String unblockURLHost, RetainPtr<WebFilterEvaluator>);
 #endif
 
@@ -69,7 +68,7 @@ private:
     String m_unblockURLHost;
     URL m_unreachableURL;
     UnblockRequesterFunction m_unblockRequester;
-#if HAVE(PARENTAL_CONTROLS) && PLATFORM(IOS)
+#if HAVE(PARENTAL_CONTROLS) && PLATFORM(IOS_FAMILY)
     RetainPtr<WebFilterEvaluator> m_webFilterEvaluator;
 #endif
 };
@@ -77,5 +76,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(CONTENT_FILTERING)
-
-#endif // ContentFilterUnblockHandler_h

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CallLinkStatus.h"
 
+#include "BytecodeStructs.h"
 #include "CallLinkInfo.h"
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
@@ -66,12 +67,24 @@ CallLinkStatus CallLinkStatus::computeFromLLInt(const ConcurrentJSLocker&, CodeB
     }
 #endif
 
-    Instruction* instruction = &profiledBlock->instructions()[bytecodeIndex];
-    OpcodeID op = Interpreter::getOpcodeID(instruction[0].u.opcode);
-    if (op != op_call && op != op_construct && op != op_tail_call)
-        return CallLinkStatus();
+    auto instruction = profiledBlock->instructions().at(bytecodeIndex);
+    OpcodeID op = instruction->opcodeID();
 
-    LLIntCallLinkInfo* callLinkInfo = instruction[5].u.callLinkInfo;
+    LLIntCallLinkInfo* callLinkInfo;
+    switch (op) {
+    case op_call:
+        callLinkInfo = &instruction->as<OpCall>().metadata(profiledBlock).m_callLinkInfo;
+        break;
+    case op_construct:
+        callLinkInfo = &instruction->as<OpConstruct>().metadata(profiledBlock).m_callLinkInfo;
+        break;
+    case op_tail_call:
+        callLinkInfo = &instruction->as<OpTailCall>().metadata(profiledBlock).m_callLinkInfo;
+        break;
+    default:
+        return CallLinkStatus();
+    }
+
 
     return CallLinkStatus(callLinkInfo->lastSeenCallee.get());
 }

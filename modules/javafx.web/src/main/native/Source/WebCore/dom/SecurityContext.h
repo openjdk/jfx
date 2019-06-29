@@ -37,7 +37,6 @@ namespace WebCore {
 class SecurityOrigin;
 class SecurityOriginPolicy;
 class ContentSecurityPolicy;
-class URL;
 
 enum SandboxFlag {
     // See http://www.whatwg.org/specs/web-apps/current-work/#attr-iframe-sandbox for a list of the sandbox flags.
@@ -89,7 +88,7 @@ public:
     };
 
     const OptionSet<MixedContentType>& foundMixedContent() const { return m_mixedContentTypes; }
-    void setFoundMixedContent(MixedContentType type) { m_mixedContentTypes |= type; }
+    void setFoundMixedContent(MixedContentType type) { m_mixedContentTypes.add(type); }
     bool geolocationAccessed() const { return m_geolocationAccessed; }
     void setGeolocationAccessed() { m_geolocationAccessed = true; }
     bool secureCookiesAccessed() const { return m_secureCookiesAccessed; }

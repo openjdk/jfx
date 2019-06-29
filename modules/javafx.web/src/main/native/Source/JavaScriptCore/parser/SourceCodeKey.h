@@ -37,6 +37,8 @@ enum class TypeProfilerEnabled { No, Yes };
 enum class ControlFlowProfilerEnabled { No, Yes };
 
 class SourceCodeFlags {
+    friend class CachedSourceCodeKey;
+
 public:
     SourceCodeFlags() = default;
 
@@ -70,6 +72,8 @@ private:
 };
 
 class SourceCodeKey {
+    friend class CachedSourceCodeKey;
+
 public:
     SourceCodeKey()
     {
@@ -78,10 +82,11 @@ public:
     SourceCodeKey(
         const UnlinkedSourceCode& sourceCode, const String& name, SourceCodeType codeType, JSParserStrictMode strictMode,
         JSParserScriptMode scriptMode, DerivedContextType derivedContextType, EvalContextType evalContextType, bool isArrowFunctionContext,
-        DebuggerMode debuggerMode, TypeProfilerEnabled typeProfilerEnabled, ControlFlowProfilerEnabled controlFlowProfilerEnabled)
+        DebuggerMode debuggerMode, TypeProfilerEnabled typeProfilerEnabled, ControlFlowProfilerEnabled controlFlowProfilerEnabled, Optional<int> functionConstructorParametersEndPosition)
             : m_sourceCode(sourceCode)
             , m_name(name)
             , m_flags(codeType, strictMode, scriptMode, derivedContextType, evalContextType, isArrowFunctionContext, debuggerMode, typeProfilerEnabled, controlFlowProfilerEnabled)
+            , m_functionConstructorParametersEndPosition(functionConstructorParametersEndPosition.valueOr(-1))
             , m_hash(sourceCode.hash() ^ m_flags.bits())
     {
     }
@@ -94,6 +99,8 @@ public:
     bool isHashTableDeletedValue() const { return m_sourceCode.isHashTableDeletedValue(); }
 
     unsigned hash() const { return m_hash; }
+
+    const UnlinkedSourceCode& source() const { return m_sourceCode; }
 
     size_t length() const { return m_sourceCode.length(); }
 
@@ -108,8 +115,14 @@ public:
         return m_hash == other.m_hash
             && length() == other.length()
             && m_flags == other.m_flags
+            && m_functionConstructorParametersEndPosition == other.m_functionConstructorParametersEndPosition
             && m_name == other.m_name
             && string() == other.string();
+    }
+
+    bool operator!=(const SourceCodeKey& other) const
+    {
+        return !(*this == other);
     }
 
     struct Hash {
@@ -127,6 +140,7 @@ private:
     UnlinkedSourceCode m_sourceCode;
     String m_name;
     SourceCodeFlags m_flags;
+    int m_functionConstructorParametersEndPosition;
     unsigned m_hash;
 };
 

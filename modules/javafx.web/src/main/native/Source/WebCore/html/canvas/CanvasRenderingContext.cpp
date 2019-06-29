@@ -34,7 +34,7 @@
 #include "Image.h"
 #include "ImageBitmap.h"
 #include "OffscreenCanvas.h"
-#include "URL.h"
+#include <wtf/URL.h>
 #include "SecurityOrigin.h"
 
 namespace WebCore {
@@ -61,7 +61,7 @@ bool CanvasRenderingContext::wouldTaintOrigin(const CanvasPattern* pattern)
     return false;
 }
 
-bool CanvasRenderingContext::wouldTaintOrigin(const HTMLCanvasElement* sourceCanvas)
+bool CanvasRenderingContext::wouldTaintOrigin(const CanvasBase* sourceCanvas)
 {
     if (m_canvas.originClean() && sourceCanvas && !sourceCanvas->originClean())
         return true;
@@ -142,6 +142,11 @@ void CanvasRenderingContext::checkOrigin(const URL& url)
 {
     if (wouldTaintOrigin(url))
         m_canvas.setOriginTainted();
+}
+
+void CanvasRenderingContext::checkOrigin(const TypedOMCSSImageValue&)
+{
+    m_canvas.setOriginTainted();
 }
 
 } // namespace WebCore

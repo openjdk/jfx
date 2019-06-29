@@ -56,7 +56,7 @@ protected:
 
     ~JSCallbackData()
     {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
         ASSERT(m_thread.ptr() == &Thread::current());
 #endif
     }
@@ -116,7 +116,7 @@ public:
 
 private:
     class WeakOwner : public JSC::WeakHandleOwner {
-        bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::SlotVisitor&) override;
+        bool isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, JSC::SlotVisitor&, const char**) override;
     };
     WeakOwner m_weakOwner;
     JSC::Weak<JSC::JSObject> m_callback;

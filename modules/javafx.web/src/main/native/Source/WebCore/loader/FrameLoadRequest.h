@@ -68,7 +68,14 @@ public:
     bool hasSubstituteData() { return m_substituteData.isValid(); }
 
     LockHistory lockHistory() const { return m_lockHistory; }
+    void setLockHistory(LockHistory value) { m_lockHistory = value; }
+
     LockBackForwardList lockBackForwardList() const { return m_lockBackForwardList; }
+    void setlockBackForwardList(LockBackForwardList value) { m_lockBackForwardList = value; }
+
+    const String& clientRedirectSourceForHistory() const { return m_clientRedirectSourceForHistory; }
+    void setClientRedirectSourceForHistory(const String& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = clientRedirectSourceForHistory; }
+
     ShouldSendReferrer shouldSendReferrer() const { return m_shouldSendReferrer; }
     AllowNavigationToInvalidURL allowNavigationToInvalidURL() const { return m_allowNavigationToInvalidURL; }
     NewFrameOpenerPolicy newFrameOpenerPolicy() const { return m_newFrameOpenerPolicy; }
@@ -84,9 +91,6 @@ public:
 
     InitiatedByMainFrame initiatedByMainFrame() const { return m_initiatedByMainFrame; }
 
-    void setIsCrossOriginWindowOpenNavigation(bool value) { m_isCrossOriginWindowOpenNavigation = value; }
-    bool isCrossOriginWindowOpenNavigation() const { return m_isCrossOriginWindowOpenNavigation; }
-
     bool isSystemPreview() const { return m_systemPreviewInfo.isSystemPreview; }
     const IntRect& systemPreviewRect() const { return m_systemPreviewInfo.systemPreviewRect; }
 
@@ -99,6 +103,7 @@ private:
     ResourceRequest m_resourceRequest;
     String m_frameName;
     SubstituteData m_substituteData;
+    String m_clientRedirectSourceForHistory;
 
     bool m_shouldCheckNewWindowPolicy { false };
     bool m_shouldTreatAsContinuingLoad { false };
@@ -111,7 +116,6 @@ private:
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
     AtomicString m_downloadAttribute;
     InitiatedByMainFrame m_initiatedByMainFrame { InitiatedByMainFrame::Unknown };
-    bool m_isCrossOriginWindowOpenNavigation { false };
     SystemPreviewInfo m_systemPreviewInfo;
     bool m_isRequestFromClientOrUserInput { false };
 };

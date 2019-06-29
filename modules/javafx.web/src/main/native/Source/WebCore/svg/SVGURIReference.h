@@ -27,6 +27,8 @@
 
 namespace WebCore {
 
+class SVGElement;
+
 template<typename OwnerType, typename... BaseTypes>
 class SVGAttributeRegistry;
 
@@ -41,7 +43,12 @@ public:
     void parseAttribute(const QualifiedName&, const AtomicString&);
 
     static String fragmentIdentifierFromIRIString(const String&, const Document&);
-    static Element* targetElementFromIRIString(const String&, const Document&, String* fragmentIdentifier = nullptr, const Document* externalDocument = nullptr);
+
+    struct TargetElementResult {
+        RefPtr<Element> element;
+        String identifier;
+    };
+    static TargetElementResult targetElementFromIRIString(const String&, const TreeScope&, RefPtr<Document> externalDocument = nullptr);
 
     static bool isExternalURIReference(const String& uri, const Document& document)
     {

@@ -47,7 +47,7 @@ void FontCascade::drawGlyphs(GraphicsContext& gc,
     // we need to call freeSpace() before refIntArr() and refFloatArr(), see RT-19695.
     RenderingQueue& rq = gc.platformContext()->rq().freeSpace(24);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     //prepare Glyphs array
     JLocalRef<jintArray> jGlyphs(env->NewIntArray(numGlyphs));
@@ -67,12 +67,12 @@ void FontCascade::drawGlyphs(GraphicsContext& gc,
         rq.getWCRenderingQueue(),
         refIntArr_mID,
         (jintArray)jGlyphs);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
 
     // Prepare Offsets/Advances array
     JLocalRef<jfloatArray> jAdvance(env->NewFloatArray(numGlyphs));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     ASSERT(jAdvance);
     {
         jfloat *bufArray = env->GetFloatArrayElements(jAdvance, NULL);
@@ -94,7 +94,7 @@ void FontCascade::drawGlyphs(GraphicsContext& gc,
         rq.getWCRenderingQueue(),
         refFloatArr_mID,
         (jfloatArray)jAdvance);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     rq  << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSTRING_FAST
         << font.platformData().nativeFontData()

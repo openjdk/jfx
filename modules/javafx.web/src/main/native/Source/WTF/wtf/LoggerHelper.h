@@ -50,9 +50,15 @@ public:
 #define DEBUG_LOG(...)      logger().debug(logChannel(), __VA_ARGS__)
 #define WILL_LOG(_level_)   logger().willLog(logChannel(), _level_)
 
+    const void* childLogIdentifier(uint64_t identifier) const
+    {
+        static const int64_t parentMask = 0xffffffffffff0000l;
+        static const int64_t maskLowerWord = 0xffffl;
+        return reinterpret_cast<const void*>((reinterpret_cast<uint64_t>(logIdentifier()) & parentMask) | (identifier & maskLowerWord));
+    }
 #else
 
-#define LOGIDENTIFIER ((void)0)
+#define LOGIDENTIFIER (WTF::nullopt)
 
 #define ALWAYS_LOG(...)     ((void)0)
 #define ERROR_LOG(...)      ((void)0)

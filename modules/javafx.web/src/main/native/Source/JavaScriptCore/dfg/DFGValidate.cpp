@@ -254,6 +254,9 @@ public:
                     break;
                 case MakeRope:
                 case ValueAdd:
+                case ValueSub:
+                case ValueMul:
+                case ValueDiv:
                 case ArithAdd:
                 case ArithSub:
                 case ArithMul:

@@ -288,14 +288,12 @@ public:
 
     Ref<DeprecatedCSSOMPrimitiveValue> createDeprecatedCSSOMPrimitiveWrapper(CSSStyleDeclaration&) const;
 
-#if COMPILER(MSVC)
-    // FIXME: This should be private, but for some reason MSVC then fails to invoke it from LazyNeverDestroyed::construct.
-public:
-#else
+    void collectDirectComputationalDependencies(HashSet<CSSPropertyID>&) const;
+    void collectDirectRootComputationalDependencies(HashSet<CSSPropertyID>&) const;
+
 private:
     friend class CSSValuePool;
-    friend class LazyNeverDestroyed<CSSPrimitiveValue>;
-#endif
+    friend LazyNeverDestroyed<CSSPrimitiveValue>;
 
     CSSPrimitiveValue(CSSValueID);
     CSSPrimitiveValue(CSSPropertyID);
@@ -327,13 +325,12 @@ private:
     void init(RefPtr<DashboardRegion>&&); // FIXME: Dashboard region should not be a primitive value.
 #endif
 
-    std::optional<double> doubleValueInternal(UnitType targetUnitType) const;
+    Optional<double> doubleValueInternal(UnitType targetUnitType) const;
 
     double computeLengthDouble(const CSSToLengthConversionData&) const;
 
     ALWAYS_INLINE String formatNumberForCustomCSSText() const;
-    template<unsigned characterCount> ALWAYS_INLINE Ref<StringImpl> formatNumberValue(const char (&characters)[characterCount]) const;
-    NEVER_INLINE Ref<StringImpl> formatNumberValue(const char* suffix, unsigned suffixLength) const;
+    NEVER_INLINE String formatNumberValue(StringView) const;
 
     union {
         CSSPropertyID propertyID;
@@ -354,10 +351,11 @@ private:
 
 inline bool CSSPrimitiveValue::isAngle() const
 {
-    return m_primitiveUnitType == CSS_DEG
-        || m_primitiveUnitType == CSS_RAD
-        || m_primitiveUnitType == CSS_GRAD
-        || m_primitiveUnitType == CSS_TURN;
+    auto primitiveType = this->primitiveType();
+    return primitiveType == CSS_DEG
+        || primitiveType == CSS_RAD
+        || primitiveType == CSS_GRAD
+        || primitiveType == CSS_TURN;
 }
 
 inline bool CSSPrimitiveValue::isFontRelativeLength(UnitType type)

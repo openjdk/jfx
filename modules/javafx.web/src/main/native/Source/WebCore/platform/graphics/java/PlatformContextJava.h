@@ -26,11 +26,11 @@
 #pragma once
 
 #include "GraphicsContext.h"
-#include "wtf/Noncopyable.h"
-#include "RenderingQueue.h"
 #include "Path.h"
+#include "RenderingQueue.h"
 #include "com_sun_webkit_graphics_WCRenderQueue.h"
 #include <jni.h>
+#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
@@ -69,14 +69,14 @@ namespace WebCore {
         }
 
         void addPath(PlatformPathPtr pPath) {
-            JNIEnv* env = WebCore_GetJavaEnv();
+            JNIEnv* env = WTF::GetJavaEnv();
 
             static jmethodID mid = env->GetMethodID(PG_GetPathClass(env),
                 "addPath", "(Lcom/sun/webkit/graphics/WCPath;)V");
             ASSERT(mid);
 
             env->CallVoidMethod((jobject)*m_path.platformPath(), mid, (jobject)*pPath);
-            CheckAndClearException(env);
+            WTF::CheckAndClearException(env);
         }
 
         PlatformPathPtr platformPath() {

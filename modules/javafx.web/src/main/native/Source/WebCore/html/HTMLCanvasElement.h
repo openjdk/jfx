@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2018 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
  * Copyright (C) 2010 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
@@ -52,6 +52,7 @@ class MediaSample;
 class MediaStream;
 class WebGLRenderingContextBase;
 class WebGPURenderingContext;
+class WebMetalRenderingContext;
 struct UncachedString;
 
 namespace DisplayList {
@@ -84,7 +85,7 @@ public:
         reset();
     }
 
-    ExceptionOr<std::optional<RenderingContext>> getContext(JSC::ExecState&, const String& contextId, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
+    ExceptionOr<Optional<RenderingContext>> getContext(JSC::ExecState&, const String& contextId, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
 
     CanvasRenderingContext* getContext(const String&);
 
@@ -102,6 +103,11 @@ public:
     WebGPURenderingContext* createContextWebGPU(const String&);
     WebGPURenderingContext* getContextWebGPU(const String&);
 #endif
+#if ENABLE(WEBMETAL)
+    static bool isWebMetalType(const String&);
+    WebMetalRenderingContext* createContextWebMetal(const String&);
+    WebMetalRenderingContext* getContextWebMetal(const String&);
+#endif
 
     static bool isBitmapRendererType(const String&);
     ImageBitmapRenderingContext* createContextBitmapRenderer(const String&, ImageBitmapRenderingContextSettings&& = { });
@@ -112,20 +118,20 @@ public:
     ExceptionOr<void> toBlob(ScriptExecutionContext&, Ref<BlobCallback>&&, const String& mimeType, JSC::JSValue quality);
 
     // Used for rendering
-    void didDraw(const FloatRect&);
+    void didDraw(const FloatRect&) final;
 
     void paint(GraphicsContext&, const LayoutRect&);
 
-    GraphicsContext* drawingContext() const;
-    GraphicsContext* existingDrawingContext() const;
+    GraphicsContext* drawingContext() const final;
+    GraphicsContext* existingDrawingContext() const final;
 
 #if ENABLE(MEDIA_STREAM)
     RefPtr<MediaSample> toMediaSample();
-    ExceptionOr<Ref<MediaStream>> captureStream(ScriptExecutionContext&, std::optional<double>&& frameRequestRate);
+    ExceptionOr<Ref<MediaStream>> captureStream(ScriptExecutionContext&, Optional<double>&& frameRequestRate);
 #endif
 
     ImageBuffer* buffer() const;
-    Image* copiedImage() const;
+    Image* copiedImage() const final;
     void clearCopiedImage();
     RefPtr<ImageData> getImageData();
     void makePresentationCopy();
@@ -133,9 +139,9 @@ public:
 
     SecurityOrigin* securityOrigin() const final;
 
-    AffineTransform baseTransform() const;
+    AffineTransform baseTransform() const final;
 
-    void makeRenderingResultsAvailable();
+    void makeRenderingResultsAvailable() final;
     bool hasCreatedImageBuffer() const { return m_hasCreatedImageBuffer; }
 
     bool shouldAccelerate(const IntSize&) const;
@@ -178,6 +184,8 @@ private:
 
     void refCanvasBase() final { HTMLElement::ref(); }
     void derefCanvasBase() final { HTMLElement::deref(); }
+
+    ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return HTMLElement::scriptExecutionContext(); }
 
     FloatRect m_dirtyRect;
     mutable IntSize m_size;

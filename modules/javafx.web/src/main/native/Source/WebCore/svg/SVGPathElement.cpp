@@ -198,7 +198,7 @@ void SVGPathElement::parseAttribute(const QualifiedName& name, const AtomicStrin
     if (name == SVGNames::dAttr) {
         if (!buildSVGPathByteStreamFromString(value, m_pathByteStream, UnalteredParsing))
             document().accessSVGExtensions().reportError("Problem parsing d=\"" + value + "\"");
-        m_cachedPath = std::nullopt;
+        m_cachedPath = WTF::nullopt;
         return;
     }
 
@@ -237,7 +237,7 @@ void SVGPathElement::invalidateMPathDependencies()
 {
     // <mpath> can only reference <path> but this dependency is not handled in
     // markForLayoutAndParentResourceInvalidation so we update any mpath dependencies manually.
-    if (HashSet<SVGElement*>* dependencies = document().accessSVGExtensions().setOfElementsReferencingTarget(this)) {
+    if (HashSet<SVGElement*>* dependencies = document().accessSVGExtensions().setOfElementsReferencingTarget(*this)) {
         for (auto* element : *dependencies) {
             if (is<SVGMPathElement>(*element))
                 downcast<SVGMPathElement>(*element).targetPathChanged();
@@ -341,7 +341,7 @@ void SVGPathElement::pathSegListChanged(SVGPathSegRole role, ListModification li
             appendSVGPathByteStreamFromSVGPathSeg(pathSegList.last().copyRef(), m_pathByteStream, UnalteredParsing);
         } else
             buildSVGPathByteStreamFromSVGPathSegListValues(pathSegList, m_pathByteStream, UnalteredParsing);
-        m_cachedPath = std::nullopt;
+        m_cachedPath = WTF::nullopt;
         break;
     }
     case PathSegUndefinedRole:

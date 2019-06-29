@@ -32,6 +32,7 @@
 #include "FunctionPrototype.h"
 #include "JSCInlines.h"
 #include "JSWebAssemblyInstance.h"
+#include "WasmSignatureInlines.h"
 
 namespace JSC {
 
@@ -41,16 +42,12 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyWrapperFunction(ExecState* ex
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    WebAssemblyWrapperFunction* wasmFunction = jsDynamicCast<WebAssemblyWrapperFunction*>(vm, exec->jsCallee());
-    if (!wasmFunction)
-        return JSValue::encode(throwException(exec, scope, createTypeError(exec, "expected a WebAssembly function")));
-
+    WebAssemblyWrapperFunction* wasmFunction = jsCast<WebAssemblyWrapperFunction*>(exec->jsCallee());
     CallData callData;
     JSObject* function = wasmFunction->function();
     CallType callType = function->methodTable(vm)->getCallData(function, callData);
     RELEASE_ASSERT(callType != CallType::None);
-    scope.release();
-    return JSValue::encode(call(exec, function, callType, callData, jsUndefined(), ArgList(exec)));
+    RELEASE_AND_RETURN(scope, JSValue::encode(call(exec, function, callType, callData, jsUndefined(), ArgList(exec))));
 }
 
 WebAssemblyWrapperFunction::WebAssemblyWrapperFunction(VM& vm, JSGlobalObject* globalObject, Structure* structure, Wasm::WasmToWasmImportableFunction importableFunction)

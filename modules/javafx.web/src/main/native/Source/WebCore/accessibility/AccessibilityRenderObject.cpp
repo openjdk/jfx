@@ -640,10 +640,7 @@ String AccessibilityRenderObject::textUnderElement(AccessibilityTextUnderElement
             // defining one based in the two external positions defining the boundaries of the subtree.
             RenderObject* firstChildRenderer = m_renderer->firstChildSlow();
             RenderObject* lastChildRenderer = m_renderer->lastChildSlow();
-            if (firstChildRenderer && lastChildRenderer) {
-                ASSERT(firstChildRenderer->node());
-                ASSERT(lastChildRenderer->node());
-
+            if (firstChildRenderer && firstChildRenderer->node() && lastChildRenderer && lastChildRenderer->node()) {
                 // We define the start and end positions for the range as the ones right before and after
                 // the first and the last nodes in the DOM tree that is wrapped inside the anonymous block.
                 Node* firstNodeInBlock = firstChildRenderer->node();
@@ -766,7 +763,7 @@ String AccessibilityRenderObject::stringValue() const
     if (isTextControl())
         return text();
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     if (isInputTypePopupButton())
         return textUnderElement();
 #endif
@@ -1511,7 +1508,7 @@ const AtomicString& AccessibilityRenderObject::accessKey() const
     Node* node = m_renderer->node();
     if (!is<Element>(node))
         return nullAtom();
-    return downcast<Element>(*node).getAttribute(accesskeyAttr);
+    return downcast<Element>(*node).attributeWithoutSynchronization(accesskeyAttr);
 }
 
 VisibleSelection AccessibilityRenderObject::selection() const
@@ -2523,7 +2520,7 @@ RenderObject* AccessibilityRenderObject::targetElementForActiveDescendant(const 
 {
     AccessibilityObject::AccessibilityChildrenVector elements;
     ariaElementsFromAttribute(elements, attributeName);
-    for (auto element : elements) {
+    for (const auto& element : elements) {
         if (activeDescendant->isDescendantOfObject(element.get()))
             return element->renderer();
     }
@@ -2714,7 +2711,7 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
         if (input.isTextButton())
             return buttonRoleType();
         // On iOS, the date field and time field are popup buttons. On other platforms they are text fields.
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
         if (input.isDateField() || input.isTimeField())
             return AccessibilityRole::PopUpButton;
 #endif
@@ -3490,7 +3487,7 @@ void AccessibilityRenderObject::tabChildren(AccessibilityChildrenVector& result)
 
 const String& AccessibilityRenderObject::actionVerb() const
 {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
     // FIXME: Need to add verbs for select elements.
     static NeverDestroyed<const String> buttonAction(AXButtonActionVerb());
     static NeverDestroyed<const String> textFieldAction(AXTextFieldActionVerb());
@@ -3676,7 +3673,7 @@ String AccessibilityRenderObject::positionalDescriptionForMSAA() const
     // See "positional descriptions",
     // https://wiki.mozilla.org/Accessibility/AT-Windows-API
     if (isHeading())
-        return "L" + String::number(headingLevel());
+        return makeString('L', headingLevel());
 
     // FIXME: Add positional descriptions for other elements.
     return String();

@@ -26,6 +26,7 @@
 #include "JSXMLDocument.h"
 #include "NodeTraversal.h"
 #include "SVGDocument.h"
+#include <JavaScriptCore/HeapSnapshotBuilder.h>
 
 
 namespace WebCore {
@@ -56,8 +57,12 @@ JSObject* cachedDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObjec
     if (!window)
         return nullptr;
 
+    auto* documentGlobalObject = toJSDOMWindow(state.vm(), toJS(&state, *window));
+    if (!documentGlobalObject)
+        return nullptr;
+
     // Creating a wrapper for domWindow might have created a wrapper for document as well.
-    return getCachedWrapper(toJSDOMWindow(state.vm(), toJS(&state, *window))->world(), document);
+    return getCachedWrapper(documentGlobalObject->world(), document);
 }
 
 void reportMemoryForDocumentIfFrameless(ExecState& state, Document& document)
@@ -91,6 +96,13 @@ JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, Document& docume
 void JSDocument::visitAdditionalChildren(SlotVisitor& visitor)
 {
     visitor.addOpaqueRoot(static_cast<ScriptExecutionContext*>(&wrapped()));
+}
+
+void JSDocument::heapSnapshot(JSCell* cell, HeapSnapshotBuilder& builder)
+{
+    Base::heapSnapshot(cell, builder);
+    auto* thisObject = jsCast<JSDocument*>(cell);
+    builder.setLabelForCell(cell, thisObject->wrapped().url().string());
 }
 
 } // namespace WebCore

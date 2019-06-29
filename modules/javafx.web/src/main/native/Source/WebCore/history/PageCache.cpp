@@ -85,6 +85,11 @@ static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggi
         return false;
     }
 
+    if (frame.isMainFrame() && frameLoader.stateMachine().isDisplayingInitialEmptyDocument()) {
+        PCLOG("   -MainFrame is displaying initial empty document");
+        return false;
+    }
+
     DocumentLoader* documentLoader = frameLoader.documentLoader();
     if (!documentLoader) {
         PCLOG("   -There is no DocumentLoader object");
@@ -203,7 +208,7 @@ static bool canCachePage(Page& page)
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isDisabledKey());
         isCacheable = false;
     }
-#if ENABLE(DEVICE_ORIENTATION) && !PLATFORM(IOS)
+#if ENABLE(DEVICE_ORIENTATION) && !PLATFORM(IOS_FAMILY)
     if (DeviceMotionController::isActiveAt(&page)) {
         PCLOG("   -Page is using DeviceMotion");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deviceMotionKey());
@@ -420,13 +425,13 @@ static void firePageHideEventRecursively(Frame& frame)
         firePageHideEventRecursively(*child);
 }
 
-void PageCache::addIfCacheable(HistoryItem& item, Page* page)
+bool PageCache::addIfCacheable(HistoryItem& item, Page* page)
 {
     if (item.isInPageCache())
-        return;
+        return false;
 
     if (!page || !canCache(*page))
-        return;
+        return false;
 
     ASSERT_WITH_MESSAGE(!page->isUtilityPage(), "Utility pages such as SVGImage pages should never go into PageCache");
 
@@ -444,7 +449,7 @@ void PageCache::addIfCacheable(HistoryItem& item, Page* page)
     // could have altered the page in a way that could prevent caching.
     if (!canCache(*page)) {
         setPageCacheState(*page, Document::NotInPageCache);
-        return;
+        return false;
     }
 
     destroyRenderTree(page->mainFrame());
@@ -460,6 +465,7 @@ void PageCache::addIfCacheable(HistoryItem& item, Page* page)
         m_items.add(&item);
     }
     prune(PruningReason::ReachedMaxSize);
+    return true;
 }
 
 std::unique_ptr<CachedPage> PageCache::take(HistoryItem& item, Page* page)

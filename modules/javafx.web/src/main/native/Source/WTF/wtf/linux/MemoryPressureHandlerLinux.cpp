@@ -26,9 +26,7 @@
  */
 
 #include "config.h"
-#include "MemoryPressureHandler.h"
-
-#if OS(LINUX)
+#include <wtf/MemoryPressureHandler.h>
 
 #include <malloc.h>
 #include <unistd.h>
@@ -129,17 +127,14 @@ void MemoryPressureHandler::respondToMemoryPressure(Critical critical, Synchrono
 
 void MemoryPressureHandler::platformReleaseMemory(Critical)
 {
-#ifdef __GLIBC__
+#if HAVE(MALLOC_TRIM)
     malloc_trim(0);
 #endif
 }
 
-std::optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
+Optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
 {
     return MemoryUsage {processMemoryUsage(), memoryFootprint()};
 }
 
-
 } // namespace WTF
-
-#endif // OS(LINUX)

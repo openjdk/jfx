@@ -28,6 +28,8 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
+#include "Logging.h"
+#include "ScrollingStateScrollingNode.h"
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
 #include <wtf/text/TextStream.h>
@@ -63,6 +65,9 @@ void ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateN
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollPosition))
         m_lastCommittedScrollPosition = state.scrollPosition();
 
+    if (state.hasChangedProperty(ScrollingStateScrollingNode::ParentRelativeScrollableRect))
+        m_parentRelativeScrollableRect = state.parentRelativeScrollableRect();
+
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollOrigin))
         m_scrollOrigin = state.scrollOrigin();
 
@@ -88,6 +93,17 @@ void ScrollingTreeScrollingNode::commitStateBeforeChildren(const ScrollingStateN
 
     if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollableAreaParams))
         m_scrollableAreaParameters = state.scrollableAreaParameters();
+
+    if (state.hasChangedProperty(ScrollingStateScrollingNode::ExpectsWheelEventTestTrigger))
+        m_expectsWheelEventTestTrigger = state.expectsWheelEventTestTrigger();
+
+#if PLATFORM(COCOA)
+    if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrollContainerLayer))
+        m_scrollContainerLayer = state.scrollContainerLayer();
+
+    if (state.hasChangedProperty(ScrollingStateScrollingNode::ScrolledContentsLayer))
+        m_scrolledContentsLayer = state.scrolledContentsLayer();
+#endif
 }
 
 void ScrollingTreeScrollingNode::commitStateAfterChildren(const ScrollingStateNode& stateNode)
@@ -115,7 +131,7 @@ void ScrollingTreeScrollingNode::setScrollPosition(const FloatPoint& scrollPosit
 void ScrollingTreeScrollingNode::setScrollPositionWithoutContentEdgeConstraints(const FloatPoint& scrollPosition)
 {
     setScrollLayerPosition(scrollPosition, { });
-    scrollingTree().scrollingTreeNodeDidScroll(scrollingNodeID(), scrollPosition, std::nullopt);
+    scrollingTree().scrollingTreeNodeDidScroll(scrollingNodeID(), scrollPosition, WTF::nullopt);
 }
 
 FloatPoint ScrollingTreeScrollingNode::minimumScrollPosition() const
@@ -129,6 +145,45 @@ FloatPoint ScrollingTreeScrollingNode::maximumScrollPosition() const
     return FloatPoint(contentSizePoint - scrollableAreaSize()).expandedTo(FloatPoint());
 }
 
+bool ScrollingTreeScrollingNode::scrollLimitReached(const PlatformWheelEvent& wheelEvent) const
+{
+    FloatPoint oldScrollPosition = scrollPosition();
+    FloatPoint newScrollPosition = oldScrollPosition + FloatSize(wheelEvent.deltaX(), -wheelEvent.deltaY());
+    newScrollPosition = newScrollPosition.constrainedBetween(minimumScrollPosition(), maximumScrollPosition());
+    return newScrollPosition == oldScrollPosition;
+}
+
+void ScrollingTreeScrollingNode::scrollBy(const FloatSize& delta)
+{
+    setScrollPosition(scrollPosition() + delta);
+}
+
+void ScrollingTreeScrollingNode::scrollByWithoutContentEdgeConstraints(const FloatSize& offset)
+{
+    setScrollPositionWithoutContentEdgeConstraints(scrollPosition() + offset);
+}
+
+LayoutPoint ScrollingTreeScrollingNode::parentToLocalPoint(LayoutPoint point) const
+{
+    return point - toLayoutSize(parentRelativeScrollableRect().location());
+}
+
+LayoutPoint ScrollingTreeScrollingNode::localToContentsPoint(LayoutPoint point) const
+{
+    return point + LayoutPoint(scrollPosition());
+}
+
+ScrollingTreeScrollingNode* ScrollingTreeScrollingNode::scrollingNodeForPoint(LayoutPoint parentPoint) const
+{
+    if (auto* node = ScrollingTreeNode::scrollingNodeForPoint(parentPoint))
+        return node;
+
+    if (parentRelativeScrollableRect().contains(parentPoint))
+        return const_cast<ScrollingTreeScrollingNode*>(this);
+
+    return nullptr;
+}
+
 void ScrollingTreeScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const
 {
     ScrollingTreeNode::dumpProperties(ts, behavior);
@@ -139,6 +194,10 @@ void ScrollingTreeScrollingNode::dumpProperties(TextStream& ts, ScrollingStateTr
     if (m_reachableContentsSize != m_totalContentsSize)
         ts.dumpProperty("reachable content size", m_reachableContentsSize);
     ts.dumpProperty("last committed scroll position", m_lastCommittedScrollPosition);
+
+    if (!m_parentRelativeScrollableRect.isEmpty())
+        ts.dumpProperty("parent relative scrollable rect", m_parentRelativeScrollableRect);
+
     if (m_scrollOrigin != IntPoint())
         ts.dumpProperty("scroll origin", m_scrollOrigin);
 

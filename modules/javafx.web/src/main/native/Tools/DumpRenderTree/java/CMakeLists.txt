@@ -22,7 +22,7 @@ set(DumpRenderTree_SOURCES
 )
 
 set(DumpRenderTree_LIBRARIES
-    JFXWebKit
+    WebKitLegacy
     ${JAVA_JVM_LIBRARY}
     ${ICU_I18N_LIBRARIES}
     ${ICU_LIBRARIES}

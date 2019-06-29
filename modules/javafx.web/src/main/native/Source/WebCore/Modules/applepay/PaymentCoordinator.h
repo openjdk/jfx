@@ -38,7 +38,6 @@ class PaymentContact;
 class PaymentMerchantSession;
 class PaymentMethod;
 class PaymentSession;
-class URL;
 enum class PaymentAuthorizationStatus;
 struct PaymentAuthorizationResult;
 struct PaymentMethodUpdate;
@@ -46,9 +45,12 @@ struct ShippingContactUpdate;
 struct ShippingMethodUpdate;
 
 class PaymentCoordinator {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     WEBCORE_EXPORT explicit PaymentCoordinator(PaymentCoordinatorClient&);
     WEBCORE_EXPORT ~PaymentCoordinator();
+
+    PaymentCoordinatorClient& client() { return m_client; }
 
     bool supportsVersion(unsigned version) const;
     bool canMakePayments();
@@ -59,21 +61,21 @@ public:
 
     bool beginPaymentSession(PaymentSession&, const URL& originatingURL, const Vector<URL>& linkIconURLs, const ApplePaySessionPaymentRequest&);
     void completeMerchantValidation(const PaymentMerchantSession&);
-    void completeShippingMethodSelection(std::optional<ShippingMethodUpdate>&&);
-    void completeShippingContactSelection(std::optional<ShippingContactUpdate>&&);
-    void completePaymentMethodSelection(std::optional<PaymentMethodUpdate>&&);
-    void completePaymentSession(std::optional<PaymentAuthorizationResult>&&);
+    void completeShippingMethodSelection(Optional<ShippingMethodUpdate>&&);
+    void completeShippingContactSelection(Optional<ShippingContactUpdate>&&);
+    void completePaymentMethodSelection(Optional<PaymentMethodUpdate>&&);
+    void completePaymentSession(Optional<PaymentAuthorizationResult>&&);
     void abortPaymentSession();
     void cancelPaymentSession();
 
-    WEBCORE_EXPORT void validateMerchant(const URL& validationURL);
+    WEBCORE_EXPORT void validateMerchant(URL&& validationURL);
     WEBCORE_EXPORT void didAuthorizePayment(const Payment&);
     WEBCORE_EXPORT void didSelectPaymentMethod(const PaymentMethod&);
     WEBCORE_EXPORT void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&);
     WEBCORE_EXPORT void didSelectShippingContact(const PaymentContact&);
     WEBCORE_EXPORT void didCancelPaymentSession();
 
-    std::optional<String> validatedPaymentNetwork(unsigned version, const String&) const;
+    Optional<String> validatedPaymentNetwork(unsigned version, const String&) const;
 
 private:
     PaymentCoordinatorClient& m_client;

@@ -28,8 +28,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Threading_h
-#define Threading_h
+#pragma once
 
 #include <mutex>
 #include <stdint.h>
@@ -64,6 +63,13 @@ class PrintStream;
 
 // This function can be called from any threads.
 WTF_EXPORT_PRIVATE void initializeThreading();
+
+#if USE(PTHREADS)
+
+// We use SIGUSR1 to suspend and resume machine threads in JavaScriptCore.
+constexpr const int SigThreadSuspendResume = SIGUSR1;
+
+#endif
 
 // FIXME: The following functions remain because they are used from WebKit Windows support library,
 // WebKitQuartzCoreAdditions.dll. When updating the support library, we should use new API instead
@@ -340,5 +346,3 @@ using WTF::ThreadIdentifier;
 using WTF::createThread;
 using WTF::waitForThreadCompletion;
 #endif
-
-#endif // Threading_h

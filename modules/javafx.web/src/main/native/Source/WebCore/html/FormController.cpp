@@ -61,13 +61,13 @@ static inline void serializeFormControlStateTo(const FormControlState& formContr
         stateVector.append(value.isNull() ? emptyString() : value);
 }
 
-static inline std::optional<FormControlState> deserializeFormControlState(const Vector<String>& stateVector, size_t& index)
+static inline Optional<FormControlState> deserializeFormControlState(const Vector<String>& stateVector, size_t& index)
 {
     if (index >= stateVector.size())
-        return std::nullopt;
+        return WTF::nullopt;
     size_t size = stateVector[index++].toUInt();
     if (index + size > stateVector.size())
-        return std::nullopt;
+        return WTF::nullopt;
     Vector<String> subvector;
     subvector.reserveInitialCapacity(size);
     for (size_t i = 0; i < size; ++i)
@@ -468,6 +468,11 @@ void FormController::restoreControlStateIn(HTMLFormElement& form)
         if (!state.isEmpty())
             control.restoreFormControlState(state);
     }
+}
+
+bool FormController::hasFormStateToRestore() const
+{
+    return !m_savedFormStateMap.isEmpty();
 }
 
 Vector<String> FormController::referencedFilePaths(const Vector<String>& stateVector)

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WTF_Assertions_h
-#define WTF_Assertions_h
+#pragma once
 
 #include <wtf/Platform.h>
 
@@ -45,6 +44,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <wtf/ExportMacros.h>
 
 #if USE(OS_LOG)
@@ -52,10 +52,11 @@
 #endif
 
 #ifdef __cplusplus
+#include <cstdlib>
 #include <type_traits>
 
 #if OS(WINDOWS)
-#if !COMPILER(GCC_OR_CLANG)
+#if !COMPILER(GCC_COMPATIBLE)
 extern "C" void _ReadWriteBarrier(void);
 #pragma intrinsic(_ReadWriteBarrier)
 #endif
@@ -102,7 +103,7 @@ extern "C" void _ReadWriteBarrier(void);
 #define RELEASE_LOG_DISABLED !(USE(OS_LOG))
 #endif
 
-#if COMPILER(GCC_OR_CLANG)
+#if COMPILER(GCC_COMPATIBLE)
 #define WTF_PRETTY_FUNCTION __PRETTY_FUNCTION__
 #else
 #define WTF_PRETTY_FUNCTION __FUNCTION__
@@ -111,7 +112,7 @@ extern "C" void _ReadWriteBarrier(void);
 #if COMPILER(MINGW)
 /* By default MinGW emits warnings when C99 format attributes are used, even if __USE_MINGW_ANSI_STDIO is defined */
 #define WTF_ATTRIBUTE_PRINTF(formatStringArgument, extraArguments) __attribute__((__format__(gnu_printf, formatStringArgument, extraArguments)))
-#elif COMPILER(GCC_OR_CLANG) && !defined(__OBJC__)
+#elif COMPILER(GCC_COMPATIBLE) && !defined(__OBJC__)
 /* WTF logging functions can process %@ in the format string to log a NSObject* but the printf format attribute
    emits a warning when %@ is used in the format string.  Until <rdar://problem/5195437> is resolved we can't include
    the attribute when being used from Objective-C code in case it decides to use %@. */
@@ -120,12 +121,12 @@ extern "C" void _ReadWriteBarrier(void);
 #define WTF_ATTRIBUTE_PRINTF(formatStringArgument, extraArguments)
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 /* For a project that uses WTF but has no config.h, we need to explicitly set the export defines here. */
 #ifndef WTF_EXPORT_PRIVATE
 #define WTF_EXPORT_PRIVATE
 #endif
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS_FAMILY)
 
 /* These helper functions are always declared, but not necessarily always defined if the corresponding function is disabled. */
 
@@ -141,7 +142,7 @@ extern "C" {
 
    Signals are ignored by the crash reporter on OS X so we must do better.
 */
-#if COMPILER(GCC_OR_CLANG) || COMPILER(MSVC)
+#if COMPILER(GCC_COMPATIBLE) || COMPILER(MSVC)
 #define NO_RETURN_DUE_TO_CRASH NO_RETURN
 #else
 #define NO_RETURN_DUE_TO_CRASH
@@ -240,6 +241,14 @@ WTF_EXPORT_PRIVATE bool WTFIsDebuggerAttached(void);
     WTFBreakpointTrapUnderConstexprContext(); \
     __builtin_unreachable(); \
 } while (0)
+#elif !ENABLE(DEVELOPER_MODE) && !OS(DARWIN)
+#ifdef __cplusplus
+#define CRASH() std::abort()
+#define CRASH_UNDER_CONSTEXPR_CONTEXT() std::abort()
+#else
+#define CRASH() abort()
+#define CRASH_UNDER_CONSTEXPR_CONTEXT() abort()
+#endif // __cplusplus
 #else
 #define CRASH() WTFCrash()
 #define CRASH_UNDER_CONSTEXPR_CONTEXT() WTFCrash()
@@ -564,7 +573,7 @@ void isIntegralType(T, Types... types)
 
 inline void compilerFenceForCrash()
 {
-#if OS(WINDOWS) && !COMPILER(GCC_OR_CLANG)
+#if OS(WINDOWS) && !COMPILER(GCC_COMPATIBLE)
     _ReadWriteBarrier();
 #else
     asm volatile("" ::: "memory");
@@ -602,17 +611,14 @@ inline void compilerFenceForCrash()
 #if COMPILER(CLANG)
 // This would be a macro except that its use of #pragma works best around
 // a function. Hence it uses macro naming convention.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
+IGNORE_WARNINGS_BEGIN("missing-noreturn")
 static inline void UNREACHABLE_FOR_PLATFORM()
 {
     // This *MUST* be a release assert. We use it in places where it's better to crash than to keep
     // going.
     RELEASE_ASSERT_NOT_REACHED();
 }
-#pragma clang diagnostic pop
+IGNORE_WARNINGS_END
 #else
 #define UNREACHABLE_FOR_PLATFORM() RELEASE_ASSERT_NOT_REACHED()
 #endif
-
-#endif /* WTF_Assertions_h */

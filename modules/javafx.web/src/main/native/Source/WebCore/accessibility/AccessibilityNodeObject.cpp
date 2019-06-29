@@ -1064,6 +1064,10 @@ void AccessibilityNodeObject::alterSliderValue(bool increase)
     if (roleValue() != AccessibilityRole::Slider)
         return;
 
+    auto element = this->element();
+    if (!element || element->isDisabledFormControl())
+        return;
+
     if (!getAttribute(stepAttr).isEmpty())
         changeValueByStep(increase);
     else
@@ -1741,10 +1745,14 @@ String AccessibilityNodeObject::textUnderElement(AccessibilityTextUnderElementMo
     if (is<Text>(node))
         return downcast<Text>(*node).wholeText();
 
+    bool isAriaVisible = AccessibilityObject::matchedParent(*this, true, [] (const AccessibilityObject& object) {
+        return equalLettersIgnoringASCIICase(object.getAttribute(aria_hiddenAttr), "false");
+    }) != nullptr;
+
     // The Accname specification states that if the current node is hidden, and not directly
     // referenced by aria-labelledby or aria-describedby, and is not a host language text
     // alternative, the empty string should be returned.
-    if (isHidden() && !is<HTMLLabelElement>(node) && (node && !ancestorsOfType<HTMLCanvasElement>(*node).first())) {
+    if (isDOMHidden() && !isAriaVisible && !is<HTMLLabelElement>(node) && (node && !ancestorsOfType<HTMLCanvasElement>(*node).first())) {
         AccessibilityObject::AccessibilityChildrenVector labelFor;
         AccessibilityObject::AccessibilityChildrenVector descriptionFor;
         ariaLabelledByReferencingElements(labelFor);
@@ -2232,7 +2240,6 @@ bool AccessibilityNodeObject::canSetSelectedAttribute() const
     switch (roleValue()) {
     case AccessibilityRole::Cell:
     case AccessibilityRole::GridCell:
-    case AccessibilityRole::RadioButton:
     case AccessibilityRole::RowHeader:
     case AccessibilityRole::Row:
     case AccessibilityRole::TabList:

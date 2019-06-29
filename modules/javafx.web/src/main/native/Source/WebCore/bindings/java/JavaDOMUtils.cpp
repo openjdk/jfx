@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@
 #include "Element.h"
 #include "HTMLDocument.h"
 #include "HTMLElement.h"
-#include <WebCore/DOMException.h>
+#include "DOMException.h"
 
 #include <wtf/java/JavaEnv.h>
 
@@ -127,7 +127,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkGetOwnerElement
 
 uint32_t getJavaHashCode(jobject o)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static JGClass clObject(env->FindClass("java/lang/Object"));
     static jmethodID midHash = env->GetMethodID(clObject, "hashCode", "()I");
@@ -141,7 +141,7 @@ bool isJavaEquals(jobject o1, jobject o2)
     if (!o1)
         return !o2;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID midEquals = env->GetMethodID(
         JLClass(env->FindClass("java/lang/Object")),

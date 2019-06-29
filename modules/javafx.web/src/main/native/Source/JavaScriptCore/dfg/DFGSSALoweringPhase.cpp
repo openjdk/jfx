@@ -124,6 +124,10 @@ private:
         case Array::SlowPutArrayStorage:
             op = GetVectorLength;
             break;
+        case Array::String:
+            // When we need to support this, it will require additional code since base's useKind is KnownStringUse.
+            DFG_CRASH(m_graph, m_node, "Array::String's base.useKind() is KnownStringUse");
+            break;
         default:
             break;
         }

@@ -30,7 +30,7 @@
 #include "NotImplemented.h"
 #include "SharedBuffer.h"
 #include "SharedBuffer.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "Logging.h"
 
 namespace WebCore {
@@ -58,7 +58,7 @@ ImageDecoderJava::ImageDecoderJava()
     ++ImageDecoderCounter::created;
 #endif
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env) {
         return;
     }
@@ -73,7 +73,7 @@ ImageDecoderJava::ImageDecoderJava()
         PL_GetGraphicsManager(env),
         midGetImageDecoder));
 
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 ImageDecoderJava::~ImageDecoderJava()
@@ -81,7 +81,7 @@ ImageDecoderJava::~ImageDecoderJava()
 #ifndef NDEBUG
     ++ImageDecoderCounter::deleted;
 #endif
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     // [env] could be NULL in case of deallocation static BitmapImage objects
     if (!env || !m_nativeDecoder) {
         return;
@@ -94,12 +94,12 @@ ImageDecoderJava::~ImageDecoderJava()
     ASSERT(midDestroy);
 
     env->CallVoidMethod(m_nativeDecoder, midDestroy);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void ImageDecoderJava::setData(SharedBuffer& data, bool allDataReceived)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return;
     }
@@ -114,11 +114,11 @@ void ImageDecoderJava::setData(SharedBuffer& data, bool allDataReceived)
         const auto& someData = data.getSomeData(m_receivedDataSize);
         unsigned length = someData.size();
         JLByteArray jArray(env->NewByteArray(length));
-        if (jArray && !CheckAndClearException(env)) {
+        if (jArray && !WTF::CheckAndClearException(env)) {
             // not OOME in Java
             env->SetByteArrayRegion(jArray, 0, length, (const jbyte*)someData.data());
             env->CallVoidMethod(m_nativeDecoder, midAddImageData, (jbyteArray)jArray);
-            CheckAndClearException(env);
+            WTF::CheckAndClearException(env);
         }
         m_receivedDataSize += length;
     }
@@ -126,13 +126,13 @@ void ImageDecoderJava::setData(SharedBuffer& data, bool allDataReceived)
     if (allDataReceived) {
         m_isAllDataReceived = true;
         env->CallVoidMethod(m_nativeDecoder, midAddImageData, 0);
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
     }
 }
 
 bool ImageDecoderJava::isSizeAvailable() const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return { };
     }
@@ -145,7 +145,7 @@ bool ImageDecoderJava::isSizeAvailable() const
 
     JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
                 m_nativeDecoder, midGetImageSize));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
     m_size.setWidth(size[0]);
@@ -157,7 +157,7 @@ bool ImageDecoderJava::isSizeAvailable() const
 
 size_t ImageDecoderJava::frameCount() const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return { };
     }
@@ -169,7 +169,7 @@ size_t ImageDecoderJava::frameCount() const
     ASSERT(midGetFrameCount);
 
     jint count = env->CallIntMethod(m_nativeDecoder, midGetFrameCount);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return count < 1
         ? 1
@@ -178,7 +178,7 @@ size_t ImageDecoderJava::frameCount() const
 
 NativeImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return { };
     }
@@ -193,14 +193,14 @@ NativeImagePtr ImageDecoderJava::createFrameImageAtIndex(size_t idx, Subsampling
         m_nativeDecoder,
         midGetFrame,
         idx));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return RQRef::create(frame);
 }
 
 WTF::Seconds ImageDecoderJava::frameDurationAtIndex(size_t idx) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return { };
     }
@@ -231,7 +231,7 @@ IntSize ImageDecoderJava::size() const
 
 IntSize ImageDecoderJava::frameSizeAtIndex(size_t idx, SubsamplingLevel) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return { };
     }
@@ -269,7 +269,7 @@ bool ImageDecoderJava::frameHasAlphaAtIndex(size_t) const
 
 bool ImageDecoderJava::frameIsCompleteAtIndex(size_t idx) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return { };
     }
@@ -296,7 +296,7 @@ RepetitionCount ImageDecoderJava::repetitionCount() const
 
 String ImageDecoderJava::filenameExtension() const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env || !m_nativeDecoder) {
         return { };
     }
@@ -310,12 +310,12 @@ String ImageDecoderJava::filenameExtension() const
     JLString ext((jstring)env->CallObjectMethod(
         m_nativeDecoder,
         midGetFileExtention));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return String(env, ext);
 }
 
-std::optional<IntPoint> ImageDecoderJava::hotSpot() const
+Optional<IntPoint> ImageDecoderJava::hotSpot() const
 {
     notImplemented();
     return { };

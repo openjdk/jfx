@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include <WebCore/Event.h>
-#include <WebCore/EventListener.h>
-#include <WebCore/Node.h>
+#include "Event.h"
+#include "EventListener.h"
+#include "Node.h"
 
 #include <wtf/Vector.h>
 #include <wtf/java/JavaRef.h>

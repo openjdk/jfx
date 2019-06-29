@@ -59,7 +59,6 @@ namespace IDBServer {
 class IDBBackingStoreTemporaryFileHandler {
 public:
     virtual ~IDBBackingStoreTemporaryFileHandler() = default;
-    virtual void prepareForAccessToTemporaryFile(const String& path) = 0;
     virtual void accessToTemporaryFileComplete(const String& path) = 0;
 };
 
@@ -100,6 +99,7 @@ public:
     virtual bool supportsSimultaneousTransactions() = 0;
     virtual bool isEphemeral() = 0;
 
+    virtual void setQuota(uint64_t) = 0;
 protected:
     IDBBackingStore() { RELEASE_ASSERT(!isMainThread()); }
 };

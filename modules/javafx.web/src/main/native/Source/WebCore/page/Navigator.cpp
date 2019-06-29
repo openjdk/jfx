@@ -23,6 +23,7 @@
 #include "config.h"
 #include "Navigator.h"
 
+#include "Chrome.h"
 #include "CookieJar.h"
 #include "DOMMimeTypeArray.h"
 #include "DOMPluginArray.h"
@@ -31,23 +32,25 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "Geolocation.h"
+#include "JSDOMPromiseDeferred.h"
 #include "LoaderStrategy.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "PluginData.h"
+#include "ResourceLoadObserver.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include <wtf/Language.h>
 #include <wtf/StdLibExtras.h>
-
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
-using namespace WTF;
 
-Navigator::Navigator(ScriptExecutionContext& context, Frame& frame)
+Navigator::Navigator(ScriptExecutionContext* context, DOMWindow& window)
     : NavigatorBase(context)
-    , DOMWindowProperty(&frame)
+    , DOMWindowProperty(&window)
 {
 }
 
@@ -69,19 +72,41 @@ static bool shouldHideFourDot(Frame& frame)
 
 String Navigator::appVersion() const
 {
-    if (!m_frame)
+    auto* frame = this->frame();
+    if (!frame)
         return String();
+    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::AppVersion);
     String appVersion = NavigatorBase::appVersion();
-    if (shouldHideFourDot(*m_frame))
+    if (shouldHideFourDot(*frame))
         appVersion.replace("4.", "4_");
     return appVersion;
 }
 
 const String& Navigator::userAgent() const
 {
-    if (m_userAgent.isNull() && m_frame && m_frame->page())
-        m_userAgent = m_frame->loader().userAgent(m_frame->document()->url());
+    auto* frame = this->frame();
+    if (!frame || !frame->page())
+        return m_userAgent;
+    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::UserAgent);
+    if (m_userAgent.isNull())
+        m_userAgent = frame->loader().userAgentForJavaScript(frame->document()->url());
     return m_userAgent;
+}
+
+const String& Navigator::platform() const
+{
+    auto* frame = this->frame();
+    if (!frame || !frame->page())
+        return m_platform;
+
+    if (m_platform.isNull())
+        m_platform = frame->loader().navigatorPlatform();
+
+    if (m_platform.isNull())
+        m_platform = NavigatorBase::platform();
+    return m_platform;
 }
 
 void Navigator::userAgentChanged()
@@ -94,53 +119,115 @@ bool Navigator::onLine() const
     return platformStrategies()->loaderStrategy()->isOnLine();
 }
 
+void Navigator::share(ScriptExecutionContext& context, ShareData data, Ref<DeferredPromise>&& promise)
+{
+    auto* frame = this->frame();
+    if (!frame || !frame->page()) {
+        promise->reject(TypeError);
+        return;
+    }
+
+    if (data.title.isEmpty() && data.url.isEmpty() && data.text.isEmpty()) {
+        promise->reject(TypeError);
+        return;
+    }
+
+    Optional<URL> url;
+    if (!data.url.isEmpty()) {
+        url = context.completeURL(data.url);
+        if (!url->isValid()) {
+            promise->reject(TypeError);
+            return;
+        }
+    }
+
+    if (!UserGestureIndicator::processingUserGesture()) {
+        promise->reject(NotAllowedError);
+        return;
+    }
+
+    ShareDataWithParsedURL shareData = {
+        data,
+        url,
+    };
+
+    frame->page()->chrome().showShareSheet(shareData, [promise = WTFMove(promise)] (bool completed) {
+        if (completed) {
+            promise->resolve();
+            return;
+        }
+        promise->reject(Exception { AbortError, "Abort due to cancellation of share."_s });
+    });
+}
+
 DOMPluginArray& Navigator::plugins()
 {
+    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
+        if (auto* frame = this->frame())
+            ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::Plugins);
+    }
     if (!m_plugins)
-        m_plugins = DOMPluginArray::create(m_frame);
+        m_plugins = DOMPluginArray::create(m_window);
     return *m_plugins;
 }
 
 DOMMimeTypeArray& Navigator::mimeTypes()
 {
+    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
+        if (auto* frame = this->frame())
+            ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::MimeTypes);
+    }
     if (!m_mimeTypes)
-        m_mimeTypes = DOMMimeTypeArray::create(m_frame);
+        m_mimeTypes = DOMMimeTypeArray::create(m_window);
     return *m_mimeTypes;
 }
 
 bool Navigator::cookieEnabled() const
 {
-    if (!m_frame)
+    auto* frame = this->frame();
+    if (!frame)
         return false;
 
-    if (m_frame->page() && !m_frame->page()->settings().cookieEnabled())
+    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::CookieEnabled);
+
+    auto* page = frame->page();
+    if (!page)
         return false;
 
-    auto* document = m_frame->document();
+    if (!page->settings().cookieEnabled())
+        return false;
+
+    auto* document = frame->document();
     if (!document)
         return false;
 
-    return cookiesEnabled(*document);
+    return page->cookieJar().cookiesEnabled(*document);
 }
 
 bool Navigator::javaEnabled() const
 {
-    if (!m_frame)
+    auto* frame = this->frame();
+    if (!frame)
         return false;
 
-    if (!m_frame->settings().isJavaEnabled())
+    if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled())
+        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), ResourceLoadStatistics::NavigatorAPI::JavaEnabled);
+
+    if (!frame->settings().isJavaEnabled())
         return false;
-    if (m_frame->document()->securityOrigin().isLocal() && !m_frame->settings().isJavaEnabledForLocalFiles())
+    if (frame->document()->securityOrigin().isLocal() && !frame->settings().isJavaEnabledForLocalFiles())
         return false;
 
     return true;
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 
 bool Navigator::standalone() const
 {
-    return m_frame && m_frame->settings().standalone();
+    auto* frame = this->frame();
+    return frame && frame->settings().standalone();
 }
 
 #endif

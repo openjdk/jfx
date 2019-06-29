@@ -43,6 +43,7 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScr
     , m_scrollableAreaSize(stateNode.scrollableAreaSize())
     , m_totalContentsSize(stateNode.totalContentsSize())
     , m_reachableContentsSize(stateNode.reachableContentsSize())
+    , m_parentRelativeScrollableRect(stateNode.parentRelativeScrollableRect())
     , m_scrollPosition(stateNode.scrollPosition())
     , m_requestedScrollPosition(stateNode.requestedScrollPosition())
     , m_scrollOrigin(stateNode.scrollOrigin())
@@ -53,11 +54,38 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(const ScrollingStateScr
     , m_requestedScrollPositionRepresentsProgrammaticScroll(stateNode.requestedScrollPositionRepresentsProgrammaticScroll())
     , m_expectsWheelEventTestTrigger(stateNode.expectsWheelEventTestTrigger())
 {
+    if (hasChangedProperty(ScrollContainerLayer))
+        setScrollContainerLayer(stateNode.scrollContainerLayer().toRepresentation(adoptiveTree.preferredLayerRepresentation()));
     if (hasChangedProperty(ScrolledContentsLayer))
         setScrolledContentsLayer(stateNode.scrolledContentsLayer().toRepresentation(adoptiveTree.preferredLayerRepresentation()));
 }
 
 ScrollingStateScrollingNode::~ScrollingStateScrollingNode() = default;
+
+void ScrollingStateScrollingNode::setAllPropertiesChanged()
+{
+    setPropertyChangedBit(ScrollableAreaSize);
+    setPropertyChangedBit(TotalContentsSize);
+    setPropertyChangedBit(ReachableContentsSize);
+    setPropertyChangedBit(ParentRelativeScrollableRect);
+    setPropertyChangedBit(ScrollPosition);
+    setPropertyChangedBit(ScrollOrigin);
+    setPropertyChangedBit(ScrollableAreaParams);
+    setPropertyChangedBit(RequestedScrollPosition);
+#if ENABLE(CSS_SCROLL_SNAP)
+    setPropertyChangedBit(HorizontalSnapOffsets);
+    setPropertyChangedBit(VerticalSnapOffsets);
+    setPropertyChangedBit(HorizontalSnapOffsetRanges);
+    setPropertyChangedBit(VerticalSnapOffsetRanges);
+    setPropertyChangedBit(CurrentHorizontalSnapOffsetIndex);
+    setPropertyChangedBit(CurrentVerticalSnapOffsetIndex);
+#endif
+    setPropertyChangedBit(ExpectsWheelEventTestTrigger);
+    setPropertyChangedBit(ScrollContainerLayer);
+    setPropertyChangedBit(ScrolledContentsLayer);
+
+    ScrollingStateNode::setAllPropertiesChanged();
+}
 
 void ScrollingStateScrollingNode::setScrollableAreaSize(const FloatSize& size)
 {
@@ -84,6 +112,15 @@ void ScrollingStateScrollingNode::setReachableContentsSize(const FloatSize& reac
 
     m_reachableContentsSize = reachableContentsSize;
     setPropertyChanged(ReachableContentsSize);
+}
+
+void ScrollingStateScrollingNode::setParentRelativeScrollableRect(const LayoutRect& parentRelativeScrollableRect)
+{
+    if (m_parentRelativeScrollableRect == parentRelativeScrollableRect)
+        return;
+
+    m_parentRelativeScrollableRect = parentRelativeScrollableRect;
+    setPropertyChanged(ParentRelativeScrollableRect);
 }
 
 void ScrollingStateScrollingNode::setScrollPosition(const FloatPoint& scrollPosition)
@@ -185,6 +222,15 @@ void ScrollingStateScrollingNode::setExpectsWheelEventTestTrigger(bool expectsTe
     setPropertyChanged(ExpectsWheelEventTestTrigger);
 }
 
+void ScrollingStateScrollingNode::setScrollContainerLayer(const LayerRepresentation& layerRepresentation)
+{
+    if (layerRepresentation == m_scrollContainerLayer)
+        return;
+
+    m_scrollContainerLayer = layerRepresentation;
+    setPropertyChanged(ScrollContainerLayer);
+}
+
 void ScrollingStateScrollingNode::setScrolledContentsLayer(const LayerRepresentation& layerRepresentation)
 {
     if (layerRepresentation == m_scrolledContentsLayer)
@@ -231,6 +277,9 @@ void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateT
     if (m_requestedScrollPositionRepresentsProgrammaticScroll)
         ts.dumpProperty("requested scroll position represents programmatic scroll", m_requestedScrollPositionRepresentsProgrammaticScroll);
 
+    if (!m_parentRelativeScrollableRect.isEmpty())
+        ts.dumpProperty("parent relative scrollable rect", m_parentRelativeScrollableRect);
+
     if (m_scrollOrigin != IntPoint())
         ts.dumpProperty("scroll origin", m_scrollOrigin);
 
@@ -253,8 +302,12 @@ void ScrollingStateScrollingNode::dumpProperties(TextStream& ts, ScrollingStateT
     if (m_expectsWheelEventTestTrigger)
         ts.dumpProperty("expects wheel event test trigger", m_expectsWheelEventTestTrigger);
 
-    if ((behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs) && m_scrolledContentsLayer.layerID())
-        ts.dumpProperty("scrolled contents layer", m_scrolledContentsLayer.layerID());
+    if (behavior & ScrollingStateTreeAsTextBehaviorIncludeLayerIDs) {
+        if (m_scrollContainerLayer.layerID())
+            ts.dumpProperty("scroll container layer", m_scrollContainerLayer.layerID());
+        if (m_scrolledContentsLayer.layerID())
+            ts.dumpProperty("scrolled contents layer", m_scrolledContentsLayer.layerID());
+    }
 }
 
 } // namespace WebCore

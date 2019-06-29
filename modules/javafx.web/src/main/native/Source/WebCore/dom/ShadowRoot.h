@@ -35,6 +35,7 @@ namespace WebCore {
 
 class HTMLSlotElement;
 class SlotAssignment;
+class StyleSheetList;
 
 class ShadowRoot final : public DocumentFragment, public TreeScope {
     WTF_MAKE_ISO_ALLOCATED(ShadowRoot);
@@ -54,6 +55,7 @@ public:
     using TreeScope::rootNode;
 
     Style::Scope& styleScope();
+    StyleSheetList& styleSheets();
 
     bool resetStyleInheritance() const { return m_resetStyleInheritance; }
     void setResetStyleInheritance(bool);
@@ -67,13 +69,18 @@ public:
     Element* activeElement() const;
 
     ShadowRootMode mode() const { return m_type; }
+    bool shouldFireSlotchangeEvent() const { return m_type != ShadowRootMode::UserAgent && !m_hasBegunDeletingDetachedChildren; }
 
     void removeAllEventListeners() override;
 
     HTMLSlotElement* findAssignedSlot(const Node&);
 
+    void renameSlotElement(HTMLSlotElement&, const AtomicString& oldName, const AtomicString& newName);
     void addSlotElementByName(const AtomicString&, HTMLSlotElement&);
-    void removeSlotElementByName(const AtomicString&, HTMLSlotElement&);
+    void removeSlotElementByName(const AtomicString&, HTMLSlotElement&, ContainerNode& oldParentOfRemovedTree);
+    void slotFallbackDidChange(HTMLSlotElement&);
+    void resolveSlotsBeforeNodeInsertionOrRemoval();
+    void willRemoveAllChildren(ContainerNode&);
 
     void didRemoveAllChildrenOfShadowHost();
     void didChangeDefaultSlot();
@@ -90,9 +97,6 @@ protected:
 
     ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
 
-    // FIXME: This shouldn't happen. https://bugs.webkit.org/show_bug.cgi?id=88834
-    bool isOrphan() const { return !m_host; }
-
 private:
     bool childTypeAllowed(NodeType) const override;
 
@@ -101,13 +105,16 @@ private:
     Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
     void removedFromAncestor(RemovalType, ContainerNode& insertionPoint) override;
 
+    void childrenChanged(const ChildChange&) override;
+
     bool m_resetStyleInheritance { false };
+    bool m_hasBegunDeletingDetachedChildren { false };
     ShadowRootMode m_type { ShadowRootMode::UserAgent };
 
     Element* m_host { nullptr };
+    RefPtr<StyleSheetList> m_styleSheetList;
 
     std::unique_ptr<Style::Scope> m_styleScope;
-
     std::unique_ptr<SlotAssignment> m_slotAssignment;
 };
 

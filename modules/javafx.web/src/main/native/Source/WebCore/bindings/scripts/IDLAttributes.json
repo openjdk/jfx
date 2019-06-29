@@ -46,7 +46,7 @@
         },
         "CallWith": {
             "contextsAllowed": ["attribute", "operation"],
-            "values": ["Document", "ScriptExecutionContext", "ScriptState", "GlobalObject", "ActiveWindow", "FirstWindow", "ResponsibleDocument", "World"]
+            "values": ["Document", "ExecState", "ScriptExecutionContext", "GlobalObject", "ActiveWindow", "FirstWindow", "ResponsibleDocument", "World"]
         },
         "CheckSecurity": {
             "contextsAllowed": ["interface"]
@@ -80,10 +80,13 @@
         },
         "ConstructorCallWith": {
             "contextsAllowed": ["interface"],
-            "values": ["Document", "RuntimeFlags", "ScriptExecutionContext", "ScriptState"]
+            "values": ["Document", "ExecState", "RuntimeFlags", "ScriptExecutionContext"]
         },
         "ConstructorMayThrowException": {
             "contextsAllowed": ["interface"]
+        },
+        "ContextAllowsMediaDevices": {
+            "contextsAllowed": ["attribute"]
         },
         "ContextHasServiceWorkerScheme": {
             "contextsAllowed": ["attribute"]
@@ -117,6 +120,9 @@
         },
         "CustomGetter": {
             "contextsAllowed": ["attribute"]
+        },
+        "CustomHeapSnapshot": {
+            "contextsAllowed": ["interface"]
         },
         "CustomIndexedSetter": {
             "contextsAllowed": ["interface"]
@@ -161,10 +167,6 @@
         "DoNotCheckSecurity": {
             "contextsAllowed": ["attribute", "operation"]
         },
-        "DoNotCheckSecurityIf": {
-            "contextsAllowed": ["attribute", "operation"],
-            "values": ["CrossOriginWindowPolicyAllow", "CrossOriginWindowPolicyAllowPostMessage"]
-        },
         "DoNotCheckSecurityOnGetter": {
             "contextsAllowed": ["attribute"]
         },
@@ -182,6 +184,10 @@
             "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
             "values": ["*"]
         },
+        "DisabledByQuirk": {
+            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
+            "values": ["*"]
+        },
         "EnabledForWorld": {
             "contextsAllowed": ["attribute", "operation"],
             "values": ["*"]
@@ -191,6 +197,9 @@
             "standard": {
                 "url": "https://heycam.github.io/webidl/#EnforceRange"
             }
+        },
+        "ResultField": {
+            "contextsAllowed": ["operation"]
         },
         "ExportMacro": {
             "contextsAllowed": ["interface", "dictionary", "enum", "callback-function"],
@@ -419,7 +428,7 @@
         },
         "SetterCallWith": {
             "contextsAllowed": ["attribute"],
-            "values": ["ScriptExecutionContext", "ScriptState", "GlobalObject", "ActiveWindow", "FirstWindow"]
+            "values": ["ExecState", "ScriptExecutionContext", "GlobalObject", "ActiveWindow", "FirstWindow"]
         },
         "SkipCallbackInvokeCheck": {
             "contextsAllowed": ["operation", "callback-function"]

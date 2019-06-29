@@ -27,6 +27,7 @@
 #include "StructureRareData.h"
 
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
+#include "JSImmutableButterfly.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
 #include "JSCInlines.h"
@@ -70,16 +71,9 @@ void StructureRareData::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(thisObject->m_previous);
     visitor.append(thisObject->m_objectToStringValue);
     visitor.append(thisObject->m_cachedPropertyNameEnumerator);
-}
-
-JSPropertyNameEnumerator* StructureRareData::cachedPropertyNameEnumerator() const
-{
-    return m_cachedPropertyNameEnumerator.get();
-}
-
-void StructureRareData::setCachedPropertyNameEnumerator(VM& vm, JSPropertyNameEnumerator* enumerator)
-{
-    m_cachedPropertyNameEnumerator.set(vm, this, enumerator);
+    auto* cachedOwnKeys = thisObject->m_cachedOwnKeys.unvalidatedGet();
+    if (cachedOwnKeys != cachedOwnKeysSentinel())
+        visitor.appendUnbarriered(cachedOwnKeys);
 }
 
 // ----------- Object.prototype.toString() helper watchpoint classes -----------

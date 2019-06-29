@@ -33,13 +33,13 @@ bridge/jni/jsc/JavaMethodJSC.cpp
 bridge/jni/jsc/JavaRuntimeObject.cpp
 
 editing/java/EditorJava.cpp
+editing/java/SmartReplaceJava.cpp
 
+platform/java/ContextMenuJava.cpp
 platform/java/CursorJava.cpp
 platform/java/DragImageJava.cpp
 platform/java/DragDataJava.cpp
 platform/java/EventLoopJava.cpp
-platform/java/FileChooserJava.cpp
-platform/java/FileSystemJava.cpp
 platform/java/IDNJava.cpp
 platform/java/KeyboardEventJava.cpp
 platform/java/KeyedCodingJava.cpp
@@ -48,20 +48,20 @@ platform/java/LocalizedStringsJava.cpp
 platform/java/LoggingJava.cpp
 platform/java/MIMETypeRegistryJava.cpp
 platform/java/MouseEventJava.cpp
+platform/java/PageSupplementJava.cpp
 platform/java/PasteboardJava.cpp
 platform/java/PasteboardUtilitiesJava.cpp
+platform/java/PlatformJavaClasses.cpp
 platform/java/PlatformScreenJava.cpp
 platform/java/PluginDataJava.cpp
 platform/java/PluginInfoStoreJava.cpp
 platform/java/PluginViewJava.cpp
 platform/java/PluginWidgetJava.cpp
-platform/java/PopupMenuJava.cpp
 platform/java/RenderThemeJava.cpp
 platform/java/ScrollbarThemeJava.cpp
 platform/java/SharedBufferJava.cpp
 platform/java/MainThreadSharedTimerJava.cpp
 platform/java/StringJava.cpp
-platform/java/TemporaryLinkStubsJava.cpp
 platform/java/TouchEventJava.cpp
 platform/java/WheelEventJava.cpp
 platform/java/WidgetJava.cpp
@@ -69,7 +69,6 @@ platform/graphics/java/BitmapImageJava.cpp
 platform/graphics/java/BufferImageJava.cpp
 platform/graphics/java/ChromiumBridge.cpp
 platform/graphics/java/ComplexTextControllerJava.cpp
-platform/graphics/java/DisplayRefreshMonitorJava.cpp
 platform/graphics/java/FontCacheJava.cpp
 platform/graphics/java/FontCustomPlatformData.cpp
 platform/graphics/java/FontCascadeJava.cpp
@@ -91,11 +90,12 @@ platform/graphics/texmap/BitmapTextureJava.cpp
 
 platform/ScrollAnimationKinetic.cpp
 platform/ScrollAnimationSmooth.cpp
-platform/java/ScrollAnimatorJava.cpp
+platform/generic/ScrollAnimatorGeneric.cpp
 
 platform/text/LocaleNone.cpp
 platform/text/Hyphenation.cpp
 
+platform/network/java/CertificateInfoJava.cpp
 platform/network/java/DNSResolveQueueJava.cpp
 platform/network/java/NetworkStateNotifierJava.cpp
 platform/network/java/NetworkStorageSessionJava.cpp
@@ -108,6 +108,5 @@ platform/network/java/URLLoader.cpp
 bindings/java/JavaDOMUtils.cpp
 bindings/java/JavaEventListener.cpp
 
-platform/java/WebKitLogging.cpp
 page/java/DragControllerJava.cpp
 page/java/EventHandlerJava.cpp

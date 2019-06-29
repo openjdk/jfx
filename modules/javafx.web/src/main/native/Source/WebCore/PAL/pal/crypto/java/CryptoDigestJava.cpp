@@ -44,7 +44,7 @@ inline jclass GetMessageDigestClass(JNIEnv* env)
 
 inline JLObject GetMessageDigestInstance(jstring algorithm)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!env) {
         return { };
     }
@@ -55,7 +55,7 @@ inline JLObject GetMessageDigestInstance(jstring algorithm)
         "(Ljava/lang/String;)Lcom/sun/webkit/security/WCMessageDigest;");
     ASSERT(midGetInstance);
     JLObject jDigest = env->CallStaticObjectMethod(GetMessageDigestClass(env), midGetInstance, algorithm);
-    if (CheckAndClearException(env)) {
+    if (WTF::CheckAndClearException(env)) {
         return { };
     }
     return jDigest;
@@ -63,7 +63,7 @@ inline JLObject GetMessageDigestInstance(jstring algorithm)
 
 jstring toJavaMessageDigestAlgorithm(CryptoDigest::Algorithm algorithm)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     const char* algorithmStr = "";
     switch (algorithm) {
@@ -113,7 +113,7 @@ void CryptoDigest::addBytes(const void* input, size_t length)
 {
     using namespace CryptoDigestInternal;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!m_context->jDigest || !env) {
         return;
     }
@@ -130,7 +130,7 @@ Vector<uint8_t> CryptoDigest::computeHash()
 {
     using namespace CryptoDigestInternal;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     if (!m_context->jDigest || !env) {
         return { };
     }
@@ -139,7 +139,7 @@ Vector<uint8_t> CryptoDigest::computeHash()
         GetMessageDigestClass(env),
         "computeHash",
         "()[B");
-    ASSERT(midUpdate);
+    ASSERT(midDigest);
 
     JLocalRef<jbyteArray> jDigestBytes = static_cast<jbyteArray>(env->CallObjectMethod(jobject(m_context->jDigest), midDigest));
     void* digest = env->GetPrimitiveArrayCritical(static_cast<jbyteArray>(jDigestBytes), 0);

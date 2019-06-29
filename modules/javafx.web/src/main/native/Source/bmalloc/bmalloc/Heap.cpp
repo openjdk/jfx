@@ -29,6 +29,7 @@
 #include "BulkDecommit.h"
 #include "BumpAllocator.h"
 #include "Chunk.h"
+#include "CryptoRandom.h"
 #include "Environment.h"
 #include "Gigacage.h"
 #include "DebugHeap.h"
@@ -46,7 +47,6 @@ namespace bmalloc {
 Heap::Heap(HeapKind kind, std::lock_guard<Mutex>&)
     : m_kind(kind)
     , m_vmPageSizePhysical(vmPageSizePhysical())
-    , m_debugHeap(nullptr)
 {
     RELEASE_BASSERT(vmPageSizePhysical() >= smallPageSize);
     RELEASE_BASSERT(vmPageSize() >= vmPageSizePhysical());
@@ -54,17 +54,20 @@ Heap::Heap(HeapKind kind, std::lock_guard<Mutex>&)
     initializeLineMetadata();
     initializePageMetadata();
 
-    if (PerProcess<Environment>::get()->isDebugHeapEnabled())
-        m_debugHeap = PerProcess<DebugHeap>::get();
-    else {
+    BASSERT(!PerProcess<Environment>::get()->isDebugHeapEnabled());
+
         Gigacage::ensureGigacage();
 #if GIGACAGE_ENABLED
         if (usingGigacage()) {
             RELEASE_BASSERT(gigacageBasePtr());
-            m_largeFree.add(LargeRange(gigacageBasePtr(), gigacageSize(), 0, 0));
+            uint64_t random[2];
+            cryptoRandom(reinterpret_cast<unsigned char*>(random), sizeof(random));
+            size_t size = roundDownToMultipleOf(vmPageSize(), gigacageSize() - (random[0] % Gigacage::maximumCageSizeReductionForSlide));
+            ptrdiff_t offset = roundDownToMultipleOf(vmPageSize(), random[1] % (gigacageSize() - size));
+            void* base = reinterpret_cast<unsigned char*>(gigacageBasePtr()) + offset;
+            m_largeFree.add(LargeRange(base, size, 0, 0));
         }
 #endif
-    }
 
     m_scavenger = PerProcess<Scavenger>::get();
 }
@@ -147,7 +150,6 @@ size_t Heap::freeableMemory(std::lock_guard<Mutex>&)
 
 size_t Heap::footprint()
 {
-    BASSERT(!m_debugHeap);
     return m_footprint;
 }
 
@@ -549,9 +551,6 @@ void* Heap::tryAllocateLarge(std::unique_lock<Mutex>& lock, size_t alignment, si
 
     BASSERT(isPowerOfTwo(alignment));
 
-    if (m_debugHeap)
-        return m_debugHeap->memalignLarge(alignment, size);
-
     m_scavenger->didStartGrowing();
 
     size_t roundedSize = size ? roundUpToMultipleOf(largeAlignment, size) : largeAlignment;
@@ -620,9 +619,6 @@ void Heap::shrinkLarge(std::unique_lock<Mutex>& lock, const Range& object, size_
 
 void Heap::deallocateLarge(std::unique_lock<Mutex>&, void* object)
 {
-    if (m_debugHeap)
-        return m_debugHeap->freeLarge(object);
-
     size_t size = m_largeAllocated.remove(object);
     m_largeFree.add(LargeRange(object, size, size, size));
     m_freeableMemory += size;

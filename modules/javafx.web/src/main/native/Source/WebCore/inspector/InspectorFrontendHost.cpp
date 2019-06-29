@@ -30,6 +30,7 @@
 #include "config.h"
 #include "InspectorFrontendHost.h"
 
+#include "CertificateInfo.h"
 #include "ContextMenu.h"
 #include "ContextMenuController.h"
 #include "ContextMenuItem.h"
@@ -56,7 +57,7 @@
 #include <JavaScriptCore/ScriptFunctionCall.h>
 #include <pal/system/Sound.h>
 #include <wtf/StdLibExtras.h>
-
+#include <wtf/text/Base64.h>
 
 namespace WebCore {
 
@@ -189,6 +190,12 @@ void InspectorFrontendHost::closeWindow()
     }
 }
 
+void InspectorFrontendHost::reopen()
+{
+    if (m_client)
+        m_client->reopen();
+}
+
 void InspectorFrontendHost::bringToFront()
 {
     if (m_client)
@@ -247,6 +254,11 @@ void InspectorFrontendHost::moveWindowBy(float x, float y) const
         m_client->moveWindowBy(x, y);
 }
 
+bool InspectorFrontendHost::isRemote() const
+{
+    return m_client ? m_client->isRemote() : false;
+}
+
 String InspectorFrontendHost::localizedStringsURL()
 {
     return m_client ? m_client->localizedStringsURL() : String();
@@ -269,7 +281,7 @@ unsigned InspectorFrontendHost::inspectionLevel()
 
 String InspectorFrontendHost::platform()
 {
-#if PLATFORM(MAC) || PLATFORM(IOS)
+#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
     return "mac"_s;
 #elif OS(WINDOWS)
     return "windows"_s;
@@ -311,7 +323,7 @@ void InspectorFrontendHost::killText(const String& text, bool shouldPrependToKil
 
 void InspectorFrontendHost::openInNewTab(const String& url)
 {
-    if (WebCore::protocolIsJavaScript(url))
+    if (WTF::protocolIsJavaScript(url))
         return;
 
     if (m_client)
@@ -366,7 +378,7 @@ static void populateContextMenu(Vector<InspectorFrontendHost::ContextMenuItem>&&
         }
 
         auto type = item.type == "checkbox" ? CheckableActionType : ActionType;
-        auto action = static_cast<ContextMenuAction>(ContextMenuItemBaseCustomTag + item.id.value_or(0));
+        auto action = static_cast<ContextMenuAction>(ContextMenuItemBaseCustomTag + item.id.valueOr(0));
         ContextMenuItem menuItem = { type, action, item.label };
         if (item.enabled)
             menuItem.setEnabled(*item.enabled);
@@ -436,6 +448,45 @@ void InspectorFrontendHost::inspectInspector()
 {
     if (m_frontendPage)
         m_frontendPage->inspectorController().show();
+}
+
+bool InspectorFrontendHost::isBeingInspected()
+{
+    if (!m_frontendPage)
+        return false;
+
+    InspectorController& inspectorController = m_frontendPage->inspectorController();
+    return inspectorController.hasLocalFrontend() || inspectorController.hasRemoteFrontend();
+}
+
+bool InspectorFrontendHost::supportsShowCertificate() const
+{
+#if PLATFORM(COCOA)
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool InspectorFrontendHost::showCertificate(const String& serializedCertificate)
+{
+    if (!m_client)
+        return false;
+
+    Vector<uint8_t> data;
+    if (!base64Decode(serializedCertificate, data))
+        return false;
+
+    CertificateInfo certificateInfo;
+    WTF::Persistence::Decoder decoder(data.data(), data.size());
+    if (!decoder.decode(certificateInfo))
+        return false;
+
+    if (certificateInfo.isEmpty())
+        return false;
+
+    m_client->showCertificate(certificateInfo);
+    return true;
 }
 
 } // namespace WebCore

@@ -126,7 +126,7 @@ std::unique_ptr<IDBBackingStore> IDBServer::createBackingStore(const IDBDatabase
     if (m_databaseDirectoryPath.isEmpty())
         return MemoryIDBBackingStore::create(identifier);
 
-    return std::make_unique<SQLiteIDBBackingStore>(identifier, m_databaseDirectoryPath, m_backingStoreTemporaryFileHandler);
+    return std::make_unique<SQLiteIDBBackingStore>(identifier, m_databaseDirectoryPath, m_backingStoreTemporaryFileHandler, m_perOriginQuota);
 }
 
 void IDBServer::openDatabase(const IDBRequestData& requestData)
@@ -509,8 +509,8 @@ void IDBServer::closeAndDeleteDatabasesModifiedSince(WallTime modificationTime, 
     }
 
     HashSet<UniqueIDBDatabase*> openDatabases;
-    for (auto* connection : m_databaseConnections.values())
-        openDatabases.add(connection->database());
+    for (auto& database : m_uniqueIDBDatabaseMap.values())
+        openDatabases.add(database.get());
 
     for (auto& database : openDatabases)
         database->immediateCloseForUserDelete();
@@ -525,14 +525,11 @@ void IDBServer::closeAndDeleteDatabasesForOrigins(const Vector<SecurityOriginDat
     ASSERT_UNUSED(addResult, addResult.isNewEntry);
 
     HashSet<UniqueIDBDatabase*> openDatabases;
-    for (auto* connection : m_databaseConnections.values()) {
-        auto database = connection->database();
-        ASSERT(database);
-
+    for (auto& database : m_uniqueIDBDatabaseMap.values()) {
         const auto& identifier = database->identifier();
         for (auto& origin : origins) {
             if (identifier.isRelatedToOrigin(origin)) {
-                openDatabases.add(database);
+                openDatabases.add(database.get());
                 break;
             }
         }
@@ -645,6 +642,14 @@ void IDBServer::didPerformCloseAndDeleteDatabases(uint64_t callbackID)
     auto callback = m_deleteDatabaseCompletionHandlers.take(callbackID);
     ASSERT(callback);
     callback();
+}
+
+void IDBServer::setPerOriginQuota(uint64_t quota)
+{
+    m_perOriginQuota = quota;
+
+    for (auto& database : m_uniqueIDBDatabaseMap.values())
+        database->setQuota(quota);
 }
 
 } // namespace IDBServer

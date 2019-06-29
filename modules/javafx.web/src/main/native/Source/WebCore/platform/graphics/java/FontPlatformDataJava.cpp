@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ namespace {
 
 RefPtr<RQRef> getJavaFont(const String& family, float size, bool italic, bool bold)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
         "getWCFont", "(Ljava/lang/String;ZZF)Lcom/sun/webkit/graphics/WCFont;");
@@ -52,7 +52,7 @@ RefPtr<RQRef> getJavaFont(const String& family, float size, bool italic, bool bo
         bool_to_jbool(italic),
         jfloat(size)));
 
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return RQRef::create(wcFont);
 }
@@ -80,20 +80,20 @@ std::unique_ptr<FontPlatformData> FontPlatformData::derive(float scaleFactor) co
     ASSERT(m_jFont);
     float size = m_size * scaleFactor;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID createScaledMID = env->GetMethodID(
         PG_GetFontClass(env), "deriveFont", "(F)Lcom/sun/webkit/graphics/WCFont;");
     ASSERT(createScaledMID);
 
     JLObject wcFont(env->CallObjectMethod(*m_jFont, createScaledMID, size));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return std::make_unique<FontPlatformData>(RQRef::create(wcFont), size);
 }
 
 bool FontPlatformData::platformIsEqual(const FontPlatformData& other) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     if (m_jFont == other.m_jFont) {
         return true;
@@ -108,14 +108,14 @@ bool FontPlatformData::platformIsEqual(const FontPlatformData& other) const
     ASSERT(compare_mID);
 
     jboolean res = env->CallBooleanMethod(*m_jFont, compare_mID, (jobject)(*other.m_jFont));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return bool_to_jbool(res);
 }
 
 unsigned FontPlatformData::hash() const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     if (!m_jFont || isHashTableDeletedValue()) {
         return (unsigned)-1;
@@ -125,7 +125,7 @@ unsigned FontPlatformData::hash() const
     ASSERT(hash_mID);
 
     jint res = env->CallIntMethod(*m_jFont, hash_mID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return res;
 }

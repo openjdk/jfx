@@ -64,13 +64,16 @@ protected:
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
-    VTTCue& m_cue;
+    int fontSizeFromCaptionUserPrefs() const { return m_fontSizeFromCaptionUserPrefs; }
+
+private:
+    WeakPtr<VTTCue> m_cue;
     int m_fontSizeFromCaptionUserPrefs;
 };
 
 // ----------------------------
 
-class VTTCue : public TextTrackCue {
+class VTTCue : public TextTrackCue, public CanMakeWeakPtr<VTTCue> {
 public:
     static Ref<VTTCue> create(ScriptExecutionContext& context, double start, double end, const String& content)
     {
@@ -88,6 +91,12 @@ public:
 
     virtual ~VTTCue();
 
+    enum AutoKeyword {
+        Auto
+    };
+
+    using LineAndPositionSetting = Variant<double, AutoKeyword>;
+
     const String& vertical() const;
     ExceptionOr<void> setVertical(const String&);
 
@@ -97,8 +106,8 @@ public:
     double line() const { return m_linePosition; }
     virtual ExceptionOr<void> setLine(double);
 
-    double position() const { return m_textPosition; }
-    virtual ExceptionOr<void> setPosition(double);
+    LineAndPositionSetting position() const;
+    virtual ExceptionOr<void> setPosition(const LineAndPositionSetting&);
 
     int size() const { return m_cueSize; }
     ExceptionOr<void> setSize(int);
@@ -149,7 +158,7 @@ public:
 
     enum CueAlignment {
         Start = 0,
-        Middle,
+        Center,
         End,
         Left,
         Right,
@@ -170,6 +179,8 @@ public:
 
     String toJSONString() const;
 
+    double calculateComputedTextPosition() const;
+
 protected:
     VTTCue(ScriptExecutionContext&, const MediaTime& start, const MediaTime& end, const String& content);
     VTTCue(ScriptExecutionContext&, const WebVTTCueData&);
@@ -185,6 +196,8 @@ private:
     void copyWebVTTNodeToDOMTree(ContainerNode* WebVTTNode, ContainerNode* root);
 
     void parseSettings(const String&);
+
+    bool textPositionIsAuto() const;
 
     void determineTextDirection();
     void calculateDisplayParameters();

@@ -29,11 +29,11 @@
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "InlineTextBox.h"
-#include "LayoutState.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "PaintInfo.h"
 #include "RenderFragmentedFlow.h"
 #include "RenderInline.h"
+#include "RenderLayoutState.h"
 #include "RenderRubyBase.h"
 #include "RenderRubyRun.h"
 #include "RenderRubyText.h"
@@ -243,8 +243,8 @@ LayoutUnit RootInlineBox::alignBoxesInBlockDirection(LayoutUnit heightOfBlock, G
     if (isSVGRootInlineBox())
         return 0;
 
-    LayoutUnit maxPositionTop = 0;
-    LayoutUnit maxPositionBottom = 0;
+    LayoutUnit maxPositionTop;
+    LayoutUnit maxPositionBottom;
     int maxAscent = 0;
     int maxDescent = 0;
     bool setMaxAscent = false;
@@ -300,7 +300,7 @@ LayoutUnit RootInlineBox::alignBoxesInBlockDirection(LayoutUnit heightOfBlock, G
 
 LayoutUnit RootInlineBox::beforeAnnotationsAdjustment() const
 {
-    LayoutUnit result = 0;
+    LayoutUnit result;
 
     if (!renderer().style().isFlippedLinesWritingMode()) {
         // Annotations under the previous line may push us down.
@@ -373,7 +373,7 @@ LayoutUnit RootInlineBox::lineSnapAdjustment(LayoutUnit delta) const
 
     // If we're paginated, see if we're on a page after the first one. If so, the grid resets on subsequent pages.
     // FIXME: If the grid is an ancestor of the pagination establisher, then this is incorrect.
-    LayoutUnit pageLogicalTop = 0;
+    LayoutUnit pageLogicalTop;
     if (layoutState->isPaginated() && layoutState->pageLogicalHeight()) {
         pageLogicalTop = blockFlow().pageLogicalTopForOffset(lineTopWithLeading() + delta);
         if (pageLogicalTop > firstLineTopWithLeading)
@@ -579,7 +579,7 @@ LayoutUnit RootInlineBox::selectionTop() const
     if (renderer().style().isFlippedLinesWritingMode())
         return selectionTop;
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
     // See rdar://problem/19692206 ... don't want to do this adjustment for iOS where overlap is ok and handled.
     if (renderer().isRubyBase()) {
         // The ruby base selection should avoid intruding into the ruby text. This is only the case if there is an actual ruby text above us.
@@ -697,7 +697,7 @@ LayoutUnit RootInlineBox::selectionBottom() const
     if (!renderer().style().isFlippedLinesWritingMode() || !nextRootBox())
         return selectionBottom;
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
     // See rdar://problem/19692206 ... don't want to do this adjustment for iOS where overlap is ok and handled.
     if (renderer().isRubyBase()) {
         // The ruby base selection should avoid intruding into the ruby text. This is only the case if there is an actual ruby text below us.
@@ -1013,7 +1013,7 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
             return cachedPosition;
     }
 
-    LayoutUnit verticalPosition = 0;
+    LayoutUnit verticalPosition;
     VerticalAlign verticalAlign = renderer->style().verticalAlign();
     if (verticalAlign == VerticalAlign::Top || verticalAlign == VerticalAlign::Bottom)
         return 0;

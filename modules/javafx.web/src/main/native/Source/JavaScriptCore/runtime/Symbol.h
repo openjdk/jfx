@@ -36,12 +36,6 @@ public:
     typedef JSCell Base;
     static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal | OverridesToThis;
 
-    template<typename>
-    static CompleteSubspace* subspaceFor(VM& vm)
-    {
-        return &vm.cellJSValueOOBSpace;
-    }
-
     DECLARE_EXPORT_INFO;
 
     static const bool needsDestruction = true;
@@ -52,7 +46,7 @@ public:
     }
 
     static Symbol* create(VM&);
-    static Symbol* create(ExecState*, JSString* description);
+    static Symbol* createWithDescription(VM&, const String&);
     JS_EXPORT_PRIVATE static Symbol* create(VM&, SymbolImpl& uid);
 
     const PrivateName& privateName() const { return m_privateName; }

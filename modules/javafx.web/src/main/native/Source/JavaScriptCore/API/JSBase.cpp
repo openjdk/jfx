@@ -64,7 +64,7 @@ JSValueRef JSEvaluateScript(JSContextRef ctx, JSStringRef script, JSObjectRef th
     // evaluate sets "this" to the global object if it is NULL
     JSGlobalObject* globalObject = vm.vmEntryGlobalObject(exec);
     auto sourceURLString = sourceURL ? sourceURL->string() : String();
-    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURLString }, sourceURLString, TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
+    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURLString }, URL({ }, sourceURLString), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
 
     NakedPtr<Exception> evaluationException;
     JSValue returnValue = profiledEvaluate(globalObject->globalExec(), ProfilingReason::API, source, jsThisObject, evaluationException);
@@ -103,7 +103,7 @@ bool JSCheckScriptSyntax(JSContextRef ctx, JSStringRef script, JSStringRef sourc
     startingLineNumber = std::max(1, startingLineNumber);
 
     auto sourceURLString = sourceURL ? sourceURL->string() : String();
-    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURLString }, sourceURLString, TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
+    SourceCode source = makeSource(script->string(), SourceOrigin { sourceURLString }, URL({ }, sourceURLString), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()));
 
     JSValue syntaxException;
     bool isValidSyntax = checkSyntax(vm.vmEntryGlobalObject(exec)->globalExec(), source, &syntaxException);
@@ -181,7 +181,7 @@ void JSDisableGCTimer(void)
     GCActivityCallback::s_shouldCreateGCTimer = false;
 }
 
-#if PLATFORM(IOS) && TARGET_OS_IOS
+#if PLATFORM(IOS_FAMILY) && TARGET_OS_IOS
 // FIXME: Expose symbols to tell dyld where to find JavaScriptCore on older versions of
 // iOS (< 7.0). We should remove these symbols once we no longer need to support such
 // versions of iOS. See <rdar://problem/13696872> for more details.

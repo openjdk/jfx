@@ -19,8 +19,7 @@
  *
  */
 
-#ifndef WTFString_h
-#define WTFString_h
+#pragma once
 
 // This file would be called String.h, but that conflicts with <string.h>
 // on systems without case-sensitive file systems.
@@ -199,8 +198,8 @@ public:
     size_t find(const LChar* string, unsigned start = 0) const { return m_impl ? m_impl->find(string, start) : notFound; }
 
     // Find the last instance of a single character or string.
-    size_t reverseFind(UChar character, unsigned start = std::numeric_limits<unsigned>::max()) const { return m_impl ? m_impl->reverseFind(character, start) : notFound; }
-    size_t reverseFind(const String& string, unsigned start = std::numeric_limits<unsigned>::max()) const { return m_impl ? m_impl->reverseFind(string.impl(), start) : notFound; }
+    size_t reverseFind(UChar character, unsigned start = MaxLength) const { return m_impl ? m_impl->reverseFind(character, start) : notFound; }
+    size_t reverseFind(const String& string, unsigned start = MaxLength) const { return m_impl ? m_impl->reverseFind(string.impl(), start) : notFound; }
 
     WTF_EXPORT_PRIVATE Vector<UChar> charactersWithNullTermination() const;
 
@@ -242,8 +241,8 @@ public:
     WTF_EXPORT_PRIVATE void truncate(unsigned length);
     WTF_EXPORT_PRIVATE void remove(unsigned position, unsigned length = 1);
 
-    WTF_EXPORT_PRIVATE String substring(unsigned position, unsigned length = std::numeric_limits<unsigned>::max()) const;
-    WTF_EXPORT_PRIVATE String substringSharingImpl(unsigned position, unsigned length = std::numeric_limits<unsigned>::max()) const;
+    WTF_EXPORT_PRIVATE String substring(unsigned position, unsigned length = MaxLength) const;
+    WTF_EXPORT_PRIVATE String substringSharingImpl(unsigned position, unsigned length = MaxLength) const;
     String left(unsigned length) const { return substring(0, length); }
     String right(unsigned length) const { return substring(this->length() - length, length); }
 
@@ -265,8 +264,6 @@ public:
     // Returns the string with case folded for case insensitive comparison.
     // Use convertToASCIILowercase instead if ASCII case insensitive comparison is desired.
     WTF_EXPORT_PRIVATE String foldCase() const;
-
-    WTF_EXPORT_PRIVATE static String format(const char *, ...) WTF_ATTRIBUTE_PRINTF(1, 2);
 
     // Returns an uninitialized string. The characters needs to be written
     // into the buffer returned in data before the returned string is used.
@@ -434,8 +431,9 @@ bool codePointCompareLessThan(const String&, const String&);
 
 template<typename CharacterType> void appendNumber(Vector<CharacterType>&, unsigned char number);
 
-// Shared global empty string.
+// Shared global empty and null string.
 WTF_EXPORT_PRIVATE const String& emptyString();
+WTF_EXPORT_PRIVATE const String& nullString();
 
 template<typename> struct DefaultHash;
 template<> struct DefaultHash<String> { using Hash = StringHash; };
@@ -642,6 +640,15 @@ template<unsigned length> inline bool startsWithLettersIgnoringASCIICase(const S
     return startsWithLettersIgnoringASCIICase(string.impl(), lowercaseLetters);
 }
 
+inline namespace StringLiterals {
+
+inline String operator"" _str(const char* characters, size_t)
+{
+    return ASCIILiteral::fromLiteralUnsafe(characters);
+}
+
+} // inline StringLiterals
+
 } // namespace WTF
 
 using WTF::KeepTrailingZeros;
@@ -660,6 +667,7 @@ using WTF::charactersToUInt64Strict;
 using WTF::charactersToUInt;
 using WTF::charactersToUIntStrict;
 using WTF::emptyString;
+using WTF::nullString;
 using WTF::equal;
 using WTF::find;
 using WTF::isAllSpecialCharacters;
@@ -667,5 +675,3 @@ using WTF::isSpaceOrNewline;
 using WTF::reverseFind;
 
 #include <wtf/text/AtomicString.h>
-
-#endif

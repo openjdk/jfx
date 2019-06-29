@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -77,7 +77,7 @@ Allocator CompleteSubspace::allocatorForSlow(size_t size)
         return allocator;
 
     if (false)
-        dataLog("Creating BlockDirectory/LocalAllocator for ", m_name, ", ", m_attributes, ", ", sizeClass, ".\n");
+        dataLog("Creating BlockDirectory/LocalAllocator for ", m_name, ", ", attributes(), ", ", sizeClass, ".\n");
 
     std::unique_ptr<BlockDirectory> uniqueDirectory =
         std::make_unique<BlockDirectory>(m_space.heap(), sizeClass);
@@ -122,6 +122,9 @@ void* CompleteSubspace::allocateSlow(VM& vm, size_t size, GCDeferralContext* def
 
 void* CompleteSubspace::tryAllocateSlow(VM& vm, size_t size, GCDeferralContext* deferralContext)
 {
+    if (validateDFGDoesGC)
+        RELEASE_ASSERT(vm.heap.expectDoesGC());
+
     sanitizeStackForVM(&vm);
 
     if (Allocator allocator = allocatorFor(size, AllocatorForMode::EnsureAllocator))

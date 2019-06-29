@@ -39,8 +39,6 @@ public:
 private:
     HTMLBodyElement(const QualifiedName&, Document&);
 
-    bool isFirstBodyElementOfDocument() const;
-
     void parseAttribute(const QualifiedName&, const AtomicString&) final;
     bool isPresentationAttribute(const QualifiedName&) const final;
     void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) final;
@@ -51,17 +49,6 @@ private:
     bool isURLAttribute(const Attribute&) const final;
 
     bool supportsFocus() const final;
-
-    int scrollLeft() final;
-    void setScrollLeft(int) final;
-
-    int scrollTop() final;
-    void setScrollTop(int) final;
-
-    void scrollTo(const ScrollToOptions&, ScrollClamping) final;
-
-    int scrollHeight() final;
-    int scrollWidth() final;
 
     void addSubresourceAttributeURLs(ListHashSet<URL>&) const final;
 

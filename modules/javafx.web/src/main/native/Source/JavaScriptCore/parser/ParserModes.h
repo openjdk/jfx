@@ -33,7 +33,6 @@ namespace JSC {
 enum class JSParserStrictMode { NotStrict, Strict };
 enum class JSParserBuiltinMode { NotBuiltin, Builtin };
 enum class JSParserScriptMode { Classic, Module };
-enum class JSParserCodeType { Program, Function, Module };
 
 enum class ConstructorKind { None, Base, Extends };
 enum class SuperBinding { Needed, NotNeeded };
@@ -329,4 +328,5 @@ const InnerArrowFunctionCodeFeatures SuperPropertyInnerArrowFunctionFeature = 1 
 const InnerArrowFunctionCodeFeatures NewTargetInnerArrowFunctionFeature =     1 << 5;
 
 const InnerArrowFunctionCodeFeatures AllInnerArrowFunctionCodeFeatures = EvalInnerArrowFunctionFeature | ArgumentsInnerArrowFunctionFeature | ThisInnerArrowFunctionFeature | SuperCallInnerArrowFunctionFeature | SuperPropertyInnerArrowFunctionFeature | NewTargetInnerArrowFunctionFeature;
+static_assert(AllInnerArrowFunctionCodeFeatures <= 0b111111, "InnerArrowFunctionCodeFeatures must be 6bits");
 } // namespace JSC

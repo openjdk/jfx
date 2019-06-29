@@ -111,8 +111,8 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(WEBGL2)
     , m_webGL2Enabled(RuntimeEnabledFeatures::sharedFeatures().webGL2Enabled())
 #endif
-#if ENABLE(WEBGPU)
-    , m_webGPUEnabled(RuntimeEnabledFeatures::sharedFeatures().webGPUEnabled())
+#if ENABLE(WEBMETAL)
+    , m_webMetalEnabled(RuntimeEnabledFeatures::sharedFeatures().webMetalEnabled())
 #endif
     , m_webVREnabled(RuntimeEnabledFeatures::sharedFeatures().webVREnabled())
 #if ENABLE(MEDIA_STREAM)
@@ -216,8 +216,8 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #if ENABLE(WEBGL2)
     RuntimeEnabledFeatures::sharedFeatures().setWebGL2Enabled(m_webGL2Enabled);
 #endif
-#if ENABLE(WEBGPU)
-    RuntimeEnabledFeatures::sharedFeatures().setWebGPUEnabled(m_webGPUEnabled);
+#if ENABLE(WEBMETAL)
+    RuntimeEnabledFeatures::sharedFeatures().setWebMetalEnabled(m_webMetalEnabled);
 #endif
     RuntimeEnabledFeatures::sharedFeatures().setWebVREnabled(m_webVREnabled);
 #if ENABLE(MEDIA_STREAM)
@@ -286,6 +286,7 @@ void InternalSettings::resetToConsistentState()
     m_page->setPageScaleFactor(1, { 0, 0 });
     m_page->mainFrame().setPageAndTextZoomFactors(1, 1);
     m_page->setCanStartMedia(true);
+    m_page->setUseDarkAppearance(false);
 
     settings().setForcePendingWebGLPolicy(false);
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -461,7 +462,7 @@ ExceptionOr<void> InternalSettings::setMediaCaptureRequiresSecureConnection(bool
     if (!m_page)
         return Exception { InvalidAccessError };
 #if ENABLE(MEDIA_STREAM)
-    DeprecatedGlobalSettings::setMediaCaptureRequiresSecureConnection(requires);
+    m_page->settings().setMediaCaptureRequiresSecureConnection(requires);
 #else
     UNUSED_PARAM(requires);
 #endif
@@ -524,6 +525,14 @@ ExceptionOr<bool> InternalSettings::shouldDisplayTrackKind(const String& kind)
     UNUSED_PARAM(kind);
     return false;
 #endif
+}
+
+ExceptionOr<void> InternalSettings::setUseDarkAppearance(bool useDarkAppearance)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    m_page->setUseDarkAppearance(useDarkAppearance);
+    return { };
 }
 
 ExceptionOr<void> InternalSettings::setStorageBlockingPolicy(const String& mode)
@@ -758,10 +767,10 @@ void InternalSettings::setWebGL2Enabled(bool enabled)
 #endif
 }
 
-void InternalSettings::setWebGPUEnabled(bool enabled)
+void InternalSettings::setWebMetalEnabled(bool enabled)
 {
-#if ENABLE(WEBGPU)
-    RuntimeEnabledFeatures::sharedFeatures().setWebGPUEnabled(enabled);
+#if ENABLE(WEBMETAL)
+    RuntimeEnabledFeatures::sharedFeatures().setWebMetalEnabled(enabled);
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -792,9 +801,9 @@ ExceptionOr<String> InternalSettings::userInterfaceDirectionPolicy()
         return Exception { InvalidAccessError };
     switch (settings().userInterfaceDirectionPolicy()) {
     case UserInterfaceDirectionPolicy::Content:
-        return String { "Content"_s };
+        return "Content"_str;
     case UserInterfaceDirectionPolicy::System:
-        return String { "View"_s };
+        return "View"_str;
     }
     ASSERT_NOT_REACHED();
     return Exception { InvalidAccessError };
@@ -821,9 +830,9 @@ ExceptionOr<String> InternalSettings::systemLayoutDirection()
         return Exception { InvalidAccessError };
     switch (settings().systemLayoutDirection()) {
     case TextDirection::LTR:
-        return String { "LTR"_s };
+        return "LTR"_str;
     case TextDirection::RTL:
-        return String { "RTL"_s };
+        return "RTL"_str;
     }
     ASSERT_NOT_REACHED();
     return Exception { InvalidAccessError };

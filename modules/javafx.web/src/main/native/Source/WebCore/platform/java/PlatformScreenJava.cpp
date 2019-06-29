@@ -29,7 +29,7 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "HostWindow.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "PlatformScreen.h"
 #include "ScrollView.h"
 #include "Widget.h"
@@ -108,13 +108,13 @@ int screenDepth(Widget* w)
     if (!j)
         return 24;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     jint depth(env->CallIntMethod(
             (jobject) j,
             getScreenDepthMID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return depth;
 }
@@ -142,14 +142,14 @@ FloatRect getScreenRect(Widget* w, bool available)
     if (!j)
         return IntRect(0, 0, 0, 0);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
     JLObject rect(env->CallObjectMethod(
             (jobject) j,
             getScreenRectMID,
             bool_to_jbool(available)));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     if (!rect) {
         return IntRect(0, 0, 0, 0);

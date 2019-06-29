@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef StringView_h
-#define StringView_h
+#pragma once
 
 #include <limits.h>
 #include <unicode/utypes.h>
@@ -154,7 +153,7 @@ public:
     int toInt() const;
     int toInt(bool& isValid) const;
     int toIntStrict(bool& isValid) const;
-    std::optional<uint64_t> toUInt64Strict() const;
+    Optional<uint64_t> toUInt64Strict() const;
     float toFloat(bool& isValid) const;
 
     static void invalidate(const StringImpl&);
@@ -212,6 +211,16 @@ inline bool operator!=(StringView a, const char* b) { return !equal(a, b); }
 inline bool operator!=(const LChar*a, StringView b) { return !equal(b, a); }
 inline bool operator!=(const char*a, StringView b) { return !equal(b, a); }
 
+struct StringViewWithUnderlyingString;
+
+// This returns a StringView of the normalized result, and a String that is either
+// null, if the input was already normalized, or contains the normalized result
+// and needs to be kept around so the StringView remains valid. Typically the
+// easiest way to use it correctly is to put it into a local and use the StringView.
+WTF_EXPORT_PRIVATE StringViewWithUnderlyingString normalizedNFC(StringView);
+
+WTF_EXPORT_PRIVATE String normalizedNFC(const String&);
+
 }
 
 #include <wtf/text/AtomicString.h>
@@ -219,12 +228,17 @@ inline bool operator!=(const char*a, StringView b) { return !equal(b, a); }
 
 namespace WTF {
 
+struct StringViewWithUnderlyingString {
+    StringView view;
+    String underlyingString;
+};
+
 inline StringView::StringView()
 {
-    // FIXME: It's peculiar that null strings are 16-bit and empty strings return 8-bit (according to the is8Bit function).
 }
 
 #if CHECK_STRINGVIEW_LIFETIME
+
 inline StringView::~StringView()
 {
     setUnderlyingString(nullptr);
@@ -281,6 +295,7 @@ inline StringView& StringView::operator=(const StringView& other)
 
     return *this;
 }
+
 #endif // CHECK_STRINGVIEW_LIFETIME
 
 inline void StringView::initialize(const LChar* characters, unsigned length)
@@ -530,11 +545,11 @@ inline int StringView::toIntStrict(bool& isValid) const
     return charactersToIntStrict(characters16(), m_length, &isValid);
 }
 
-inline std::optional<uint64_t> StringView::toUInt64Strict() const
+inline Optional<uint64_t> StringView::toUInt64Strict() const
 {
     bool isValid;
     uint64_t result = is8Bit() ? charactersToUInt64Strict(characters8(), m_length, &isValid) : charactersToUInt64Strict(characters16(), m_length, &isValid);
-    return isValid ? std::make_optional(result) : std::nullopt;
+    return isValid ? makeOptional(result) : WTF::nullopt;
 }
 
 inline String StringView::toStringWithoutCopying() const
@@ -566,26 +581,23 @@ inline size_t StringView::reverseFind(UChar character, unsigned index) const
 }
 
 #if !CHECK_STRINGVIEW_LIFETIME
+
 inline void StringView::invalidate(const StringImpl&)
 {
 }
-#endif
 
-template<typename StringType, typename> class StringTypeAdapter;
+#endif
 
 template<> class StringTypeAdapter<StringView, void> {
 public:
     StringTypeAdapter(StringView string)
-        : m_string(string)
+        : m_string { string }
     {
     }
 
     unsigned length() { return m_string.length(); }
     bool is8Bit() { return m_string.is8Bit(); }
-    void writeTo(LChar* destination) { m_string.getCharactersWithUpconvert(destination); }
-    void writeTo(UChar* destination) { m_string.getCharactersWithUpconvert(destination); }
-
-    String toString() const { return m_string.toString(); }
+    template<typename CharacterType> void writeTo(CharacterType* destination) { m_string.getCharactersWithUpconvert(destination); }
 
 private:
     StringView m_string;
@@ -744,7 +756,7 @@ public:
 
 private:
     std::reference_wrapper<const StringView> m_stringView;
-    std::optional<unsigned> m_nextCodePointOffset;
+    Optional<unsigned> m_nextCodePointOffset;
     UChar32 m_codePoint;
 };
 
@@ -809,7 +821,7 @@ inline auto StringView::CodePoints::Iterator::operator++() -> Iterator&
 {
     ASSERT(m_nextCodePointOffset);
     if (m_nextCodePointOffset.value() == m_stringView.get().length()) {
-        m_nextCodePointOffset = std::nullopt;
+        m_nextCodePointOffset = WTF::nullopt;
         return *this;
     }
     if (m_stringView.get().is8Bit())
@@ -1000,5 +1012,4 @@ template<unsigned length> inline bool equalLettersIgnoringASCIICase(StringView s
 using WTF::append;
 using WTF::equal;
 using WTF::StringView;
-
-#endif
+using WTF::StringViewWithUnderlyingString;

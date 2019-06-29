@@ -31,11 +31,11 @@
 #include "DataObjectJava.h"
 #include "DataTransfer.h"
 #include "DocumentFragment.h"
-#include "URL.h"
 #include "markup.h"
 #include "NotImplemented.h"
 
 #include <wtf/text/WTFString.h>
+#include <wtf/URL.h>
 
 namespace WebCore {
 

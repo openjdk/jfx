@@ -28,6 +28,9 @@
 #include "BufferImageJava.h"
 
 #include <wtf/text/CString.h>
+#include <JavaScriptCore/JSCInlines.h>
+#include <JavaScriptCore/TypedArrayInlines.h>
+#include <JavaScriptCore/Uint8ClampedArray.h>
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "ImageData.h"
@@ -49,7 +52,7 @@ ImageBufferData::ImageBufferData(
     float resolutionScale)
   : m_rq_holder(rq_holder)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID midCreateImage = env->GetMethodID(
         PG_GetGraphicsManagerClass(env),
@@ -63,7 +66,7 @@ ImageBufferData::ImageBufferData(
         (jint) ceilf(resolutionScale * size.width()),
         (jint) ceilf(resolutionScale * size.height())
     )));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 JLObject ImageBufferData::getWCImage() const
@@ -73,7 +76,7 @@ JLObject ImageBufferData::getWCImage() const
 
 unsigned char *ImageBufferData::data() const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     //RenderQueue need to be processed before pixel buffer extraction.
     //For that purpose it has to be in actual state.
@@ -86,7 +89,7 @@ unsigned char *ImageBufferData::data() const
     ASSERT(midGetBGRABytes);
 
     JLObject byteBuffer(env->CallObjectMethod(getWCImage(), midGetBGRABytes));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return byteBuffer
         ? (unsigned char *) env->GetDirectBufferAddress(byteBuffer)
@@ -95,7 +98,7 @@ unsigned char *ImageBufferData::data() const
 
 void ImageBufferData::update()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID midUpdateByteBuffer = env->GetMethodID(
         PG_GetImageClass(env),
@@ -104,7 +107,7 @@ void ImageBufferData::update()
     ASSERT(midUpdateByteBuffer);
 
     env->CallObjectMethod(getWCImage(), midUpdateByteBuffer);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 ImageBuffer::ImageBuffer(
@@ -135,7 +138,7 @@ ImageBuffer::ImageBuffer(
 
     m_size = IntSize(scaledWidth, scaledHeight);
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID midCreateBufferedContextRQ = env->GetMethodID(
         PG_GetGraphicsManagerClass(env),
         "createBufferedContextRQ",
@@ -147,7 +150,7 @@ ImageBuffer::ImageBuffer(
         midCreateBufferedContextRQ,
         (jobject)m_data.getWCImage()));
     ASSERT(wcRenderQueue);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     m_data.m_context = std::make_unique<GraphicsContext>(new PlatformContextJava(wcRenderQueue, true));
     success = true;
@@ -226,7 +229,7 @@ RefPtr<Uint8ClampedArray> getImageData(
     if (area.hasOverflowed())
         return nullptr;
 
-    auto result = Uint8ClampedArray::createUninitialized(area.unsafeGet());
+    auto result = Uint8ClampedArray::tryCreateUninitialized(area.unsafeGet());
     uint8_t* resultData = result ? result->data() : nullptr;
     if (!resultData)
         return nullptr;
@@ -452,14 +455,14 @@ RefPtr<Image> ImageBuffer::sinkIntoImage(std::unique_ptr<ImageBuffer> imageBuffe
     return imageBuffer->copyImage(DontCopyBackingStore, preserveResolution);
 }
 
-String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, PreserveResolution) const
+String ImageBuffer::toDataURL(const String& mimeType, Optional<double>, PreserveResolution) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         // RenderQueue need to be processed before pixel buffer extraction.
         // For that purpose it has to be in actual state.
         context().platformContext()->rq().flushBuffer();
 
-        JNIEnv* env = WebCore_GetJavaEnv();
+        JNIEnv* env = WTF::GetJavaEnv();
 
         static jmethodID midToDataURL = env->GetMethodID(
                 PG_GetImageClass(env),
@@ -472,7 +475,7 @@ String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, Pre
                 midToDataURL,
                 (jstring) JLString(mimeType.toJavaString(env))));
 
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
         if (data) {
             return String(env, data);
         }
@@ -480,14 +483,14 @@ String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, Pre
     return "data:,";
 }
 
-Vector<uint8_t> ImageBuffer::toData(const String& mimeType, std::optional<double>) const
+Vector<uint8_t> ImageBuffer::toData(const String& mimeType, Optional<double>) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         // RenderQueue need to be processed before pixel buffer extraction.
         // For that purpose it has to be in actual state.
         context().platformContext()->rq().flushBuffer();
 
-        JNIEnv* env = WebCore_GetJavaEnv();
+        JNIEnv* env = WTF::GetJavaEnv();
 
         static jmethodID midToData = env->GetMethodID(
                 PG_GetImageClass(env),
@@ -500,7 +503,7 @@ Vector<uint8_t> ImageBuffer::toData(const String& mimeType, std::optional<double
                 midToData,
                 (jstring) JLString(mimeType.toJavaString(env))));
 
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
         if (jdata) {
             uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
             Vector<uint8_t> data;

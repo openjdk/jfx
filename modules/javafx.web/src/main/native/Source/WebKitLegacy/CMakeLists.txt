@@ -12,6 +12,7 @@ set(WebKitLegacy_SOURCES
     Storage/WebDatabaseProvider.cpp
     Storage/WebStorageNamespaceProvider.cpp
 
+    WebCoreSupport/NetworkStorageSessionMap.cpp
     WebCoreSupport/WebResourceLoadScheduler.cpp
     WebCoreSupport/WebViewGroup.cpp
 )
@@ -36,7 +37,7 @@ set(WebKitLegacy_LIBRARIES
 WEBKIT_FRAMEWORK_DECLARE(WebKitLegacy)
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
-if (MSVC)
+if (MSVC AND NOT PORT STREQUAL Java)
     WEBKIT_ADD_PRECOMPILED_HEADER("WebKitPrefix.h" "win/WebKitPrefix.cpp" WebKitLegacy_SOURCES)
     list(APPEND WebKitLegacy_SOURCES win/WebKit.resources/WebKit.rc)
     add_definitions(/DWEBKIT_EXPORTS /DFRAMEWORK_NAME=WebKitLegacy)
@@ -49,11 +50,11 @@ if (TARGET WebKitLegacyGUID)
     add_dependencies(WebKitLegacy WebKitLegacyGUID)
 endif ()
 
-if (APPLE)
+if (APPLE AND NOT PORT STREQUAL Java)
     set_target_properties(WebKitLegacy PROPERTIES LINK_FLAGS "-umbrella WebKit")
 endif ()
 
-if (MSVC)
+if (MSVC AND NOT PORT STREQUAL Java)
     add_custom_command(
         TARGET WebKitLegacy
         POST_BUILD

@@ -46,8 +46,10 @@ JSContextGroupRef getGroupFromVirtualMachine(JSVirtualMachine *);
 
 - (JSContext *)contextForGlobalContextRef:(JSGlobalContextRef)globalContext;
 - (void)addContext:(JSContext *)wrapper forGlobalContextRef:(JSGlobalContextRef)globalContext;
+- (JSC::VM&)vm;
 
 @end
+
 #endif // defined(__OBJC__)
 
 void scanExternalObjectGraph(JSC::VM&, JSC::SlotVisitor&, void* root);

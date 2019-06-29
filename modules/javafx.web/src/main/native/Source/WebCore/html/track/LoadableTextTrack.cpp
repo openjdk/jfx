@@ -82,13 +82,13 @@ void LoadableTextTrack::loadTimerFired()
     // mode being the state of the media element's crossorigin content attribute, the origin being the
     // origin of the media element's Document, and the default origin behaviour set to fail.
     m_loader = std::make_unique<TextTrackLoader>(static_cast<TextTrackLoaderClient&>(*this), static_cast<ScriptExecutionContext*>(&m_trackElement->document()));
-    if (!m_loader->load(m_url, m_trackElement->mediaElementCrossOriginAttribute(), m_trackElement->isInUserAgentShadowTree()))
+    if (!m_loader->load(m_url, *m_trackElement))
         m_trackElement->didCompleteLoad(HTMLTrackElement::Failure);
 }
 
-void LoadableTextTrack::newCuesAvailable(TextTrackLoader* loader)
+void LoadableTextTrack::newCuesAvailable(TextTrackLoader& loader)
 {
-    ASSERT_UNUSED(loader, m_loader.get() == loader);
+    ASSERT_UNUSED(loader, m_loader.get() == &loader);
 
     Vector<RefPtr<TextTrackCue>> newCues;
     m_loader->getNewCues(newCues);
@@ -106,9 +106,9 @@ void LoadableTextTrack::newCuesAvailable(TextTrackLoader* loader)
         client()->textTrackAddCues(*this, *m_cues);
 }
 
-void LoadableTextTrack::cueLoadingCompleted(TextTrackLoader* loader, bool loadingFailed)
+void LoadableTextTrack::cueLoadingCompleted(TextTrackLoader& loader, bool loadingFailed)
 {
-    ASSERT_UNUSED(loader, m_loader.get() == loader);
+    ASSERT_UNUSED(loader, m_loader.get() == &loader);
 
     if (!m_trackElement)
         return;
@@ -118,9 +118,9 @@ void LoadableTextTrack::cueLoadingCompleted(TextTrackLoader* loader, bool loadin
     m_trackElement->didCompleteLoad(loadingFailed ? HTMLTrackElement::Failure : HTMLTrackElement::Success);
 }
 
-void LoadableTextTrack::newRegionsAvailable(TextTrackLoader* loader)
+void LoadableTextTrack::newRegionsAvailable(TextTrackLoader& loader)
 {
-    ASSERT_UNUSED(loader, m_loader.get() == loader);
+    ASSERT_UNUSED(loader, m_loader.get() == &loader);
 
     Vector<RefPtr<VTTRegion>> newRegions;
     m_loader->getNewRegions(newRegions);
@@ -129,6 +129,12 @@ void LoadableTextTrack::newRegionsAvailable(TextTrackLoader* loader)
         newRegion->setTrack(this);
         regions()->add(newRegion.releaseNonNull());
     }
+}
+
+void LoadableTextTrack::newStyleSheetsAvailable(TextTrackLoader& loader)
+{
+    ASSERT_UNUSED(loader, m_loader.get() == &loader);
+    m_styleSheets = m_loader->getNewStyleSheets();
 }
 
 AtomicString LoadableTextTrack::id() const

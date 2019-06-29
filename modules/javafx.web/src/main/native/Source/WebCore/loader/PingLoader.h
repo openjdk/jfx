@@ -40,13 +40,14 @@ namespace WebCore {
 class FormData;
 class Frame;
 class HTTPHeaderMap;
-class URL;
 class ResourceRequest;
 
 enum class ViolationReportType {
     ContentSecurityPolicy,
     XSSAuditor,
 };
+
+enum class ContentSecurityPolicyImposition : uint8_t;
 
 class PingLoader {
 public:
@@ -56,7 +57,7 @@ public:
 
 private:
     enum class ShouldFollowRedirects { No, Yes };
-    static void startPingLoad(Frame&, ResourceRequest&, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects);
+    static void startPingLoad(Frame&, ResourceRequest&, HTTPHeaderMap&& originalRequestHeaders, ShouldFollowRedirects, ContentSecurityPolicyImposition);
 };
 
 } // namespace WebCore

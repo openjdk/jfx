@@ -66,10 +66,10 @@ public:
     // m_databaseGuard and m_openDatabaseMapGuard currently don't overlap.
     // notificationMutex() is currently independent of the other locks.
 
-    ExceptionOr<void> canEstablishDatabase(DatabaseContext&, const String& name, unsigned estimatedSize);
-    ExceptionOr<void> retryCanEstablishDatabase(DatabaseContext&, const String& name, unsigned estimatedSize);
+    ExceptionOr<void> canEstablishDatabase(DatabaseContext&, const String& name, unsigned long long estimatedSize);
+    ExceptionOr<void> retryCanEstablishDatabase(DatabaseContext&, const String& name, unsigned long long estimatedSize);
 
-    void setDatabaseDetails(const SecurityOriginData&, const String& name, const String& displayName, unsigned estimatedSize);
+    void setDatabaseDetails(const SecurityOriginData&, const String& name, const String& displayName, unsigned long long estimatedSize);
     WEBCORE_EXPORT String fullPathForDatabase(const SecurityOriginData&, const String& name, bool createIfDoesNotExist);
 
     void addOpenDatabase(Database&);
@@ -94,7 +94,7 @@ public:
     WEBCORE_EXPORT bool deleteOrigin(const SecurityOriginData&);
     WEBCORE_EXPORT bool deleteDatabase(const SecurityOriginData&, const String& name);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     WEBCORE_EXPORT void removeDeletedOpenedDatabases();
     WEBCORE_EXPORT static bool deleteDatabaseFileIfEmpty(const String&);
 
@@ -117,7 +117,7 @@ public:
 private:
     explicit DatabaseTracker(const String& databasePath);
 
-    ExceptionOr<void> hasAdequateQuotaForOrigin(const SecurityOriginData&, unsigned estimatedSize);
+    ExceptionOr<void> hasAdequateQuotaForOrigin(const SecurityOriginData&, unsigned long long estimatedSize);
 
     bool hasEntryForOriginNoLock(const SecurityOriginData&);
     String fullPathForDatabaseNoLock(const SecurityOriginData&, const String& name, bool createIfDoesNotExist);
@@ -140,7 +140,7 @@ private:
 
     enum class DeletionMode {
         Immediate,
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
         // Deferred deletion is currently only supported on iOS
         // (see removeDeletedOpenedDatabases etc, above).
         Deferred,

@@ -10,7 +10,9 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/GRefPtrGStreamer.cpp
         platform/graphics/gstreamer/GStreamerCommon.cpp
         platform/graphics/gstreamer/GstAllocatorFastMalloc.cpp
+        platform/graphics/gstreamer/GStreamerRegistryScanner.cpp
         platform/graphics/gstreamer/InbandTextTrackPrivateGStreamer.cpp
+        platform/graphics/gstreamer/MediaEngineConfigurationFactoryGStreamer.cpp
         platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp
         platform/graphics/gstreamer/MediaPlayerPrivateGStreamerBase.cpp
         platform/graphics/gstreamer/MediaSampleGStreamer.cpp
@@ -26,6 +28,7 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
 
         platform/graphics/gstreamer/mse/AppendPipeline.cpp
         platform/graphics/gstreamer/mse/GStreamerMediaDescription.cpp
+        platform/graphics/gstreamer/mse/GStreamerRegistryScannerMSE.cpp
         platform/graphics/gstreamer/mse/MediaPlayerPrivateGStreamerMSE.cpp
         platform/graphics/gstreamer/mse/MediaSourceClientGStreamerMSE.cpp
         platform/graphics/gstreamer/mse/MediaSourceGStreamer.cpp
@@ -34,8 +37,10 @@ if (ENABLE_VIDEO OR ENABLE_WEB_AUDIO)
         platform/graphics/gstreamer/mse/WebKitMediaSourceGStreamer.cpp
 
         platform/mediastream/libwebrtc/GStreamerVideoDecoderFactory.cpp
+        platform/mediastream/libwebrtc/GStreamerVideoEncoder.cpp
         platform/mediastream/libwebrtc/GStreamerVideoEncoderFactory.cpp
         platform/mediastream/libwebrtc/LibWebRTCAudioModule.cpp
+        platform/mediastream/libwebrtc/LibWebRTCProviderGStreamer.cpp
 
         platform/mediastream/gstreamer/GStreamerAudioCaptureSource.cpp
         platform/mediastream/gstreamer/GStreamerAudioCapturer.cpp

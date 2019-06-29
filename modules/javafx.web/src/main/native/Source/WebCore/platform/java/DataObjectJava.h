@@ -25,13 +25,11 @@
 
 #pragma once
 
-#include "config.h"
-
 #include "SharedBuffer.h"
-#include <wtf/text/StringHash.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/URL.h>
 #include <wtf/Vector.h>
-#include <URL.h>
+#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 // A data object for holding data that would be in a clipboard or moved
@@ -118,7 +116,7 @@ public:
         bool succeeded = true;
         String canonicalMimeType = normalizeMIMEType(mimeType);
         if (canonicalMimeType == mimeURIList())
-            setURL(URL(ParsedURLString, data), emptyString());
+            setURL(URL({ }, data), emptyString());
         else if (canonicalMimeType == mimeHTML())
             setHTML(data, emptyURL());
         else if (canonicalMimeType == mimePlainText()) // two special cases for IE compatibility

@@ -28,6 +28,7 @@
 #include "CallTracerTypes.h"
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
+#include <JavaScriptCore/ScriptCallStack.h>
 #include <wtf/Variant.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -42,7 +43,6 @@ class HTMLImageElement;
 class HTMLVideoElement;
 class ImageBitmap;
 class ImageData;
-class InstrumentingAgents;
 
 class InspectorCanvas final : public RefCounted<InspectorCanvas> {
 public:
@@ -72,10 +72,10 @@ public:
     bool hasBufferSpace() const;
     long bufferUsed() const { return m_bufferUsed; }
 
-    bool singleFrame() const { return m_singleFrame; }
-    void setSingleFrame(bool singleFrame) { m_singleFrame = singleFrame; }
+    void setFrameCount(long);
+    bool overFrameCount() const;
 
-    Ref<Inspector::Protocol::Canvas::Canvas> buildObjectForCanvas(InstrumentingAgents&, bool captureBacktrace);
+    Ref<Inspector::Protocol::Canvas::Canvas> buildObjectForCanvas(bool captureBacktrace);
 
 private:
     InspectorCanvas(CanvasRenderingContext&);
@@ -83,20 +83,22 @@ private:
     String getCanvasContentAsDataURL();
 
     using DuplicateDataVariant = Variant<
-        CanvasGradient*,
-        CanvasPattern*,
-        HTMLCanvasElement*,
-        HTMLImageElement*,
+        RefPtr<CanvasGradient>,
+        RefPtr<CanvasPattern>,
+        RefPtr<HTMLCanvasElement>,
+        RefPtr<HTMLImageElement>,
 #if ENABLE(VIDEO)
-        HTMLVideoElement*,
+        RefPtr<HTMLVideoElement>,
 #endif
-        ImageData*,
-        ImageBitmap*,
+        RefPtr<ImageData>,
+        RefPtr<ImageBitmap>,
+        RefPtr<Inspector::ScriptCallStack>,
         Inspector::ScriptCallFrame,
         String
     >;
 
     int indexForData(DuplicateDataVariant);
+    String stringIndexForKey(const String&);
     Ref<Inspector::Protocol::Recording::InitialState> buildInitialState();
     Ref<JSON::ArrayOf<JSON::Value>> buildAction(const String&, Vector<RecordCanvasActionVariant>&& = { });
     Ref<JSON::ArrayOf<JSON::Value>> buildArrayForCanvasGradient(const CanvasGradient&);
@@ -117,7 +119,8 @@ private:
     MonotonicTime m_currentFrameStartTime { MonotonicTime::nan() };
     size_t m_bufferLimit { 100 * 1024 * 1024 };
     size_t m_bufferUsed { 0 };
-    bool m_singleFrame { true };
+    Optional<size_t> m_frameCount;
+    size_t m_framesCaptured { 0 };
 };
 
 } // namespace WebCore

@@ -47,10 +47,12 @@ ApplePayShippingContactSelectedEvent conditional=APPLE_PAY
 ApplePayShippingMethodSelectedEvent conditional=APPLE_PAY
 ApplePayValidateMerchantEvent conditional=APPLE_PAY
 AudioProcessingEvent conditional=WEB_AUDIO
+BlobEvent conditional=MEDIA_STREAM
 OfflineAudioCompletionEvent conditional=WEB_AUDIO
-MediaStreamEvent conditional=WEB_RTC
+MediaRecorderErrorEvent conditional=MEDIA_STREAM
 MediaStreamTrackEvent conditional=MEDIA_STREAM
 MerchantValidationEvent conditional=PAYMENT_REQUEST
+PaymentMethodChangeEvent conditional=PAYMENT_REQUEST
 PaymentRequestUpdateEvent conditional=PAYMENT_REQUEST
 RTCPeerConnectionIceEvent conditional=WEB_RTC
 RTCDataChannelEvent conditional=WEB_RTC
@@ -80,3 +82,4 @@ MediaEncryptedEvent conditional=ENCRYPTED_MEDIA
 MediaKeyMessageEvent conditional=ENCRYPTED_MEDIA
 VRDisplayEvent
 AccessibleSetValueEvent
+PointerEvent conditional=POINTER_EVENTS

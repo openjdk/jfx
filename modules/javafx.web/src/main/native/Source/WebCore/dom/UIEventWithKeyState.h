@@ -33,7 +33,7 @@ class UIEventWithKeyState : public UIEvent {
 public:
     using Modifier = PlatformEvent::Modifier;
 
-    bool ctrlKey() const { return m_modifiers.contains(Modifier::CtrlKey); }
+    bool ctrlKey() const { return m_modifiers.contains(Modifier::ControlKey); }
     bool shiftKey() const { return m_modifiers.contains(Modifier::ShiftKey); }
     bool altKey() const { return m_modifiers.contains(Modifier::AltKey); }
     bool metaKey() const { return m_modifiers.contains(Modifier::MetaKey); }
@@ -47,20 +47,22 @@ public:
 protected:
     UIEventWithKeyState() = default;
 
-    UIEventWithKeyState(const AtomicString& type, CanBubble canBubble, IsCancelable cancelable, RefPtr<WindowProxy>&& view, int detail, OptionSet<Modifier> modifiers)
-        : UIEvent(type, canBubble, cancelable, WTFMove(view), detail)
+    UIEventWithKeyState(const AtomicString& type, CanBubble canBubble, IsCancelable cancelable, IsComposed isComposed,
+        RefPtr<WindowProxy>&& view, int detail, OptionSet<Modifier> modifiers)
+        : UIEvent(type, canBubble, cancelable, isComposed, WTFMove(view), detail)
         , m_modifiers(modifiers)
     {
     }
 
-    UIEventWithKeyState(const AtomicString& type, CanBubble canBubble, IsCancelable cancelable, MonotonicTime timestamp, RefPtr<WindowProxy>&& view, int detail, OptionSet<Modifier> modifiers)
-        : UIEvent(type, canBubble, cancelable, timestamp, WTFMove(view), detail)
+    UIEventWithKeyState(const AtomicString& type, CanBubble canBubble, IsCancelable cancelable, IsComposed isComposed,
+        MonotonicTime timestamp, RefPtr<WindowProxy>&& view, int detail, OptionSet<Modifier> modifiers, IsTrusted isTrusted)
+        : UIEvent(type, canBubble, cancelable, isComposed, timestamp, WTFMove(view), detail, isTrusted)
         , m_modifiers(modifiers)
     {
     }
 
-    UIEventWithKeyState(const AtomicString& type, const EventModifierInit& initializer, IsTrusted isTrusted)
-        : UIEvent(type, initializer, isTrusted)
+    UIEventWithKeyState(const AtomicString& type, const EventModifierInit& initializer)
+        : UIEvent(type, initializer)
         , m_modifiers(modifiersFromInitializer(initializer))
     {
     }

@@ -281,7 +281,6 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         StorageAccessData& storageAccessData = node->storageAccessData();
         out.print(comma, "id", storageAccessData.identifierNumber, "{", identifiers()[storageAccessData.identifierNumber], "}");
         out.print(", ", static_cast<ptrdiff_t>(storageAccessData.offset));
-        out.print(", inferredType = ", inContext(storageAccessData.inferredType, context));
     }
     if (node->hasMultiGetByOffsetData()) {
         MultiGetByOffsetData& data = node->multiGetByOffsetData();
@@ -1059,36 +1058,18 @@ bool Graph::isSafeToLoad(JSObject* base, PropertyOffset offset)
     return m_safeToLoad.contains(std::make_pair(base, offset));
 }
 
-InferredType::Descriptor Graph::inferredTypeFor(const PropertyTypeKey& key)
+bool Graph::watchGlobalProperty(JSGlobalObject* globalObject, unsigned identifierNumber)
 {
-    assertIsRegistered(key.structure());
-
-    auto iter = m_inferredTypes.find(key);
-    if (iter != m_inferredTypes.end())
-        return iter->value;
-
-    InferredType* typeObject = key.structure()->inferredTypeFor(key.uid());
-    if (!typeObject) {
-        m_inferredTypes.add(key, InferredType::Top);
-        return InferredType::Top;
+    UniquedStringImpl* uid = identifiers()[identifierNumber];
+    // If we already have a WatchpointSet, and it is already invalidated, it means that this scope operation must be changed from GlobalProperty to GlobalLexicalVar,
+    // but we still have stale metadata here since we have not yet executed this bytecode operation since the invalidation. Just emitting ForceOSRExit to update the
+    // metadata when it reaches to this code.
+    if (auto* watchpoint = globalObject->getReferencedPropertyWatchpointSet(uid)) {
+        if (!watchpoint->isStillValid())
+            return false;
     }
-
-    InferredType::Descriptor typeDescriptor = typeObject->descriptor();
-    if (typeDescriptor.kind() == InferredType::Top) {
-        m_inferredTypes.add(key, InferredType::Top);
-        return InferredType::Top;
-    }
-
-    m_inferredTypes.add(key, typeDescriptor);
-
-    m_plan.weakReferences().addLazily(typeObject);
-    registerInferredType(typeDescriptor);
-
-    // Note that we may already be watching this desired inferred type, because multiple structures may
-    // point to the same InferredType instance.
-    m_plan.watchpoints().addLazily(DesiredInferredType(typeObject, typeDescriptor));
-
-    return typeDescriptor;
+    globalProperties().addLazily(DesiredGlobalProperty(globalObject, identifierNumber));
+    return true;
 }
 
 FullBytecodeLiveness& Graph::livenessFor(CodeBlock* codeBlock)
@@ -1320,22 +1301,7 @@ JSValue Graph::tryGetConstantProperty(const AbstractValue& base, PropertyOffset 
 }
 
 AbstractValue Graph::inferredValueForProperty(
-    const RegisteredStructureSet& base, UniquedStringImpl* uid, StructureClobberState clobberState)
-{
-    AbstractValue result;
-    base.forEach(
-        [&] (RegisteredStructure structure) {
-            AbstractValue value;
-            value.set(*this, inferredTypeForProperty(structure.get(), uid));
-            result.merge(value);
-        });
-    if (clobberState == StructuresAreClobbered)
-        result.clobberStructures();
-    return result;
-}
-
-AbstractValue Graph::inferredValueForProperty(
-    const AbstractValue& base, UniquedStringImpl* uid, PropertyOffset offset,
+    const AbstractValue& base, PropertyOffset offset,
     StructureClobberState clobberState)
 {
     if (JSValue value = tryGetConstantProperty(base, offset)) {
@@ -1343,9 +1309,6 @@ AbstractValue Graph::inferredValueForProperty(
         result.set(*this, *freeze(value), clobberState);
         return result;
     }
-
-    if (base.m_structure.isFinite())
-        return inferredValueForProperty(base.m_structure.set(), uid, clobberState);
 
     return AbstractValue::heapTop();
 }
@@ -1741,7 +1704,7 @@ bool Graph::isStringPrototypeMethodSane(JSGlobalObject* globalObject, UniquedStr
 
 bool Graph::canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
 {
-    if (hasExitSite(codeOrigin, NotStringObject))
+    if (hasExitSite(codeOrigin, BadCache) || hasExitSite(codeOrigin, BadConstantCache))
         return false;
 
     JSGlobalObject* globalObject = globalObjectFor(codeOrigin);

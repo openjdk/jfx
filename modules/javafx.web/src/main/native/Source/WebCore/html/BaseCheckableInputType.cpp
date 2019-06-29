@@ -119,4 +119,19 @@ bool BaseCheckableInputType::isCheckable()
     return true;
 }
 
+void BaseCheckableInputType::fireInputAndChangeEvents()
+{
+    if (!element()->isConnected())
+        return;
+
+    if (!shouldSendChangeEventAfterCheckedChanged())
+        return;
+
+    auto protectedThis = makeRef(*this);
+    element()->setTextAsOfLastFormControlChangeEvent(String());
+    element()->dispatchInputEvent();
+    if (auto* element = this->element())
+        element->dispatchFormControlChangeEvent();
+}
+
 } // namespace WebCore

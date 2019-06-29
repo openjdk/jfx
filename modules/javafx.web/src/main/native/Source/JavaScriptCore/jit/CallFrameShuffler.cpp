@@ -51,8 +51,14 @@ CallFrameShuffler::CallFrameShuffler(CCallHelpers& jit, const CallFrameShuffleDa
         m_lockedRegisters.clear(GPRInfo::toRegister(i));
     for (unsigned i = FPRInfo::numberOfRegisters; i--; )
         m_lockedRegisters.clear(FPRInfo::toRegister(i));
-    // ... as well as the runtime registers.
+
+#if USE(JSVALUE64)
+    // ... as well as the runtime registers on 64-bit architectures.
+    // However do not use these registers on 32-bit architectures since
+    // saving and restoring callee-saved registers in CallFrameShuffler isn't supported
+    // on 32-bit architectures yet.
     m_lockedRegisters.exclude(RegisterSet::vmCalleeSaveRegisters());
+#endif
 
     ASSERT(!data.callee.isInJSStack() || data.callee.virtualRegister().isLocal());
     addNew(VirtualRegister(CallFrameSlot::callee), data.callee);
@@ -383,7 +389,7 @@ void CallFrameShuffler::prepareForTailCall()
     // sp will point to head0 and we will move it up half a slot
     // manually
     m_newFrameOffset = 0;
-#elif CPU(ARM) || CPU(MIPS)
+#elif CPU(ARM_THUMB2) || CPU(MIPS)
     // We load the frame pointer and link register
     // manually. We could ask the algorithm to load them for us,
     // and it would allow us to use the link register as an extra
@@ -445,7 +451,7 @@ void CallFrameShuffler::prepareForTailCall()
         m_newFrameBase);
 
     // We load the link register manually for architectures that have one
-#if CPU(ARM) || CPU(ARM64)
+#if CPU(ARM_THUMB2) || CPU(ARM64)
     m_jit.loadPtr(MacroAssembler::Address(MacroAssembler::framePointerRegister, CallFrame::returnPCOffset()),
         MacroAssembler::linkRegister);
 #if USE(POINTER_PROFILING)

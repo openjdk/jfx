@@ -81,7 +81,7 @@ HTMLFormElement::~HTMLFormElement()
 {
     document().formController().willDeleteForm(*this);
     if (!shouldAutocomplete())
-        document().unregisterForDocumentSuspensionCallbacks(this);
+        document().unregisterForDocumentSuspensionCallbacks(*this);
 
     m_defaultButton = nullptr;
     for (auto& associatedElement : m_associatedElements)
@@ -129,7 +129,7 @@ Node::InsertedIntoAncestorResult HTMLFormElement::insertedIntoAncestor(Insertion
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument)
-        document().didAssociateFormControl(this);
+        document().didAssociateFormControl(*this);
     return InsertedIntoAncestorResult::Done;
 }
 
@@ -142,13 +142,13 @@ void HTMLFormElement::removedFromAncestor(RemovalType removalType, ContainerNode
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 }
 
-void HTMLFormElement::handleLocalEvents(Event& event)
+void HTMLFormElement::handleLocalEvents(Event& event, EventInvokePhase phase)
 {
     if (event.eventPhase() != Event::CAPTURING_PHASE && is<Node>(event.target()) && event.target() != this && (event.type() == eventNames().submitEvent || event.type() == eventNames().resetEvent)) {
         event.stopPropagation();
         return;
     }
-    HTMLElement::handleLocalEvents(event);
+    HTMLElement::handleLocalEvents(event, phase);
 }
 
 unsigned HTMLFormElement::length() const
@@ -166,12 +166,12 @@ HTMLElement* HTMLFormElement::item(unsigned index)
     return elements()->item(index);
 }
 
-std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> HTMLFormElement::namedItem(const AtomicString& name)
+Optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> HTMLFormElement::namedItem(const AtomicString& name)
 {
     auto namedItems = namedElements(name);
 
     if (namedItems.isEmpty())
-        return std::nullopt;
+        return WTF::nullopt;
     if (namedItems.size() == 1)
         return Variant<RefPtr<RadioNodeList>, RefPtr<Element>> { RefPtr<Element> { WTFMove(namedItems[0]) } };
 
@@ -439,9 +439,9 @@ void HTMLFormElement::parseAttribute(const QualifiedName& name, const AtomicStri
         m_attributes.setAcceptCharset(value);
     else if (name == autocompleteAttr) {
         if (!shouldAutocomplete())
-            document().registerForDocumentSuspensionCallbacks(this);
+            document().registerForDocumentSuspensionCallbacks(*this);
         else
-            document().unregisterForDocumentSuspensionCallbacks(this);
+            document().unregisterForDocumentSuspensionCallbacks(*this);
     } else
         HTMLElement::parseAttribute(name, value);
 }
@@ -704,7 +704,9 @@ void HTMLFormElement::resetDefaultButton()
         return;
     }
 
-    RefPtr<HTMLFormControlElement> oldDefault = m_defaultButton;
+    ScriptDisallowedScope::InMainThread scriptDisallowedScope;
+
+    auto* oldDefault = m_defaultButton;
     m_defaultButton = nullptr;
     defaultButton();
     if (m_defaultButton != oldDefault) {
@@ -843,8 +845,8 @@ void HTMLFormElement::resumeFromDocumentSuspension()
 void HTMLFormElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
     if (!shouldAutocomplete()) {
-        oldDocument.unregisterForDocumentSuspensionCallbacks(this);
-        document().registerForDocumentSuspensionCallbacks(this);
+        oldDocument.unregisterForDocumentSuspensionCallbacks(*this);
+        newDocument.registerForDocumentSuspensionCallbacks(*this);
     }
 
     HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
@@ -863,7 +865,7 @@ void HTMLFormElement::finishParsingChildren()
 
 const Vector<FormAssociatedElement*>& HTMLFormElement::unsafeAssociatedElements() const
 {
-    ASSERT(!ScriptDisallowedScope::InMainThread::isScriptAllowed());
+    ASSERT(ScriptDisallowedScope::InMainThread::hasDisallowedScope());
     return m_associatedElements;
 }
 

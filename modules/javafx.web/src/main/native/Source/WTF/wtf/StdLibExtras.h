@@ -24,8 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WTF_StdLibExtras_h
-#define WTF_StdLibExtras_h
+#pragma once
 
 #include <cstring>
 #include <memory>
@@ -81,7 +80,7 @@
  * - https://bugs.webkit.org/show_bug.cgi?id=38045
  * - http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43976
  */
-#if (CPU(ARM) || CPU(MIPS)) && COMPILER(GCC_OR_CLANG)
+#if (CPU(ARM) || CPU(MIPS)) && COMPILER(GCC_COMPATIBLE)
 template<typename Type>
 inline bool isPointerTypeAlignmentOkay(Type* ptr)
 {
@@ -168,7 +167,7 @@ inline size_t bitCount(uint64_t bits)
 // Macro that returns a compile time constant with the length of an array, but gives an error if passed a non-array.
 template<typename T, size_t Size> char (&ArrayLengthHelperFunction(T (&)[Size]))[Size];
 // GCC needs some help to deduce a 0 length array.
-#if COMPILER(GCC_OR_CLANG)
+#if COMPILER(GCC_COMPATIBLE)
 template<typename T> char (&ArrayLengthHelperFunction(T (&)[0]))[0];
 #endif
 #define WTF_ARRAY_LENGTH(array) sizeof(::WTF::ArrayLengthHelperFunction(array))
@@ -190,7 +189,7 @@ inline size_t roundUpToMultipleOf(size_t divisor, size_t x)
     return roundUpToMultipleOfImpl(divisor, x);
 }
 
-template<size_t divisor> inline constexpr size_t roundUpToMultipleOf(size_t x)
+template<size_t divisor> constexpr size_t roundUpToMultipleOf(size_t x)
 {
     static_assert(divisor && !(divisor & (divisor - 1)), "divisor must be a power of two!");
     return roundUpToMultipleOfImpl(divisor, x);
@@ -449,7 +448,7 @@ IteratorTypeDst mergeDeduplicatedSorted(IteratorTypeLeft leftBegin, IteratorType
 // This workaround can be removed after 2019-04 and all users of WTF::tie can be converted to std::tie
 // For more info see: https://bugs.webkit.org/show_bug.cgi?id=180692 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65978
 template <class ...Args>
-inline constexpr std::tuple<Args&...> tie(Args&... values)
+constexpr std::tuple<Args&...> tie(Args&... values)
 {
     return std::tuple<Args&...>(values...);
 }
@@ -528,7 +527,7 @@ template<class... _Args> struct conjunction : wtf_conjunction_impl<_Args...> { }
 
 // Provide in_place_t when not building with -std=c++17, or when building with libstdc++ 6
 // (which doesn't define the _GLIBCXX_RELEASE macro that's been introduced in libstdc++ 7).
-#if (__cplusplus < 201703L || (defined(__GLIBCXX__) && !defined(_GLIBCXX_RELEASE))) && (!defined(_MSC_FULL_VER) || _MSC_FULL_VER < 190023918)
+#if (__cplusplus < 201703L || (defined(__GLIBCXX__) && !defined(_GLIBCXX_RELEASE))) && (!defined(_MSVC_LANG) || _MSVC_LANG < 201703L)
 
 // These are inline variable for C++17 and later.
 #define __IN_PLACE_INLINE_VARIABLE static const
@@ -590,5 +589,3 @@ using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
 using WTF::safeCast;
 using WTF::tryBinarySearch;
-
-#endif // WTF_StdLibExtras_h

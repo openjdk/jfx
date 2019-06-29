@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "TextNormalizerJava.h"
 
 namespace WebCore {
@@ -37,7 +37,7 @@ namespace TextNormalizer {
 
     static JNIEnv* setUpNormalizer(void)
     {
-        JNIEnv* env = WebCore_GetJavaEnv();
+        JNIEnv* env = WTF::GetJavaEnv();
 
         if (! textNormalizerClass) {
             textNormalizerClass = JLClass(env->FindClass(
@@ -57,12 +57,12 @@ namespace TextNormalizer {
 
         JLString jData(env->NewString(reinterpret_cast<const jchar*>(data), length));
         ASSERT(jData);
-        CheckAndClearException(env); // OOME
+        WTF::CheckAndClearException(env); // OOME
 
         JLString s(static_cast<jstring>(env->CallStaticObjectMethod(
                 textNormalizerClass, normalizeMID, (jstring)jData, form)));
         ASSERT(s);
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
 
         return String(env, s);
     }

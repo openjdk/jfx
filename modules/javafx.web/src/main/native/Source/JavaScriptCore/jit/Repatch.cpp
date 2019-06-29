@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 #include "DFGSpeculativeJIT.h"
 #include "DOMJITGetterSetter.h"
 #include "DirectArguments.h"
+#include "ExecutableBaseInlines.h"
 #include "FTLThunks.h"
 #include "FullCodeOrigin.h"
 #include "FunctionCodeBlock.h"
@@ -130,14 +131,7 @@ static InlineCacheAction actionForCell(VM& vm, JSCell* cell)
 
 static bool forceICFailure(ExecState*)
 {
-#if CPU(ARM_TRADITIONAL)
-    // FIXME: Remove this workaround once the proper fixes are landed.
-    // [ARM] Disable Inline Caching on ARMv7 traditional until proper fix
-    // https://bugs.webkit.org/show_bug.cgi?id=159759
-    return true;
-#else
     return Options::forceICFailure();
-#endif
 }
 
 ALWAYS_INLINE static void fireWatchpointsAndClearStubIfNeeded(VM& vm, StructureStubInfo& stubInfo, CodeBlock* codeBlock, AccessGenerationResult& result)
@@ -216,7 +210,7 @@ static InlineCacheAction tryCacheGetByID(ExecState* exec, JSValue baseValue, con
 
                 newCase = AccessCase::create(vm, codeBlock, AccessCase::ArrayLength);
             } else if (isJSString(baseCell)) {
-                if (stubInfo.cacheType == CacheType::Unset) {
+                if (stubInfo.cacheType == CacheType::Unset && InlineAccess::isCacheableStringLength(stubInfo)) {
                     bool generatedCodeInline = InlineAccess::generateStringLength(stubInfo);
                     if (generatedCodeInline) {
                         ftlThunkAwareRepatchCall(codeBlock, stubInfo.slowPathCallLocation(), appropriateOptimizingGetByIdFunction(kind));
@@ -339,7 +333,7 @@ static InlineCacheAction tryCacheGetByID(ExecState* exec, JSValue baseValue, con
             if (slot.isCacheableGetter())
                 getter = jsDynamicCast<JSFunction*>(vm, slot.getterSetter()->getter());
 
-            std::optional<DOMAttributeAnnotation> domAttribute;
+            Optional<DOMAttributeAnnotation> domAttribute;
             if (slot.isCacheableCustom() && slot.domAttribute())
                 domAttribute = slot.domAttribute();
 
@@ -477,8 +471,7 @@ static InlineCacheAction tryCachePutByID(ExecState* exec, JSValue baseValue, Str
 
                 if (stubInfo.cacheType == CacheType::Unset
                     && InlineAccess::canGenerateSelfPropertyReplace(stubInfo, slot.cachedOffset())
-                    && !structure->needImpurePropertyWatchpoint()
-                    && !structure->inferredTypeFor(ident.impl())) {
+                    && !structure->needImpurePropertyWatchpoint()) {
 
                     bool generatedCodeInline = InlineAccess::generateSelfPropertyReplace(stubInfo, structure, slot.cachedOffset());
                     if (generatedCodeInline) {
@@ -1071,7 +1064,6 @@ void linkPolymorphicCall(
         stubJit.loadPtr(
             CCallHelpers::Address(calleeGPR, JSFunction::offsetOfExecutable()),
             scratchGPR);
-        stubJit.xorPtr(CCallHelpers::TrustedImmPtr(JSFunctionPoison::key()), scratchGPR);
 
         comparisonValueGPR = scratchGPR;
     } else

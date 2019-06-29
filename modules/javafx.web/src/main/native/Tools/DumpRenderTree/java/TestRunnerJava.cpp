@@ -62,13 +62,13 @@ void TestRunner::clearPersistentUserStyleSheet()
     // FIXME: implement
 }
 
-JSStringRef TestRunner::copyDecodedHostName(JSStringRef name)
+JSRetainPtr<JSStringRef> TestRunner::copyDecodedHostName(JSStringRef name)
 {
     // FIXME: implement
     return 0;
 }
 
-JSStringRef TestRunner::copyEncodedHostName(JSStringRef name)
+JSRetainPtr<JSStringRef> TestRunner::copyEncodedHostName(JSStringRef name)
 {
     // FIXME: implement
     return 0;
@@ -126,7 +126,7 @@ void TestRunner::removeAllVisitedLinks()
     // FIXME: implement
 }
 
-JSStringRef TestRunner::pathToLocalResource(JSContextRef context, JSStringRef url)
+JSRetainPtr<JSStringRef> TestRunner::pathToLocalResource(JSContextRef context, JSStringRef url)
 {
     // Function introduced in r28690. This may need special-casing on Windows.
     return url; // Do nothing on Unix.
@@ -147,7 +147,7 @@ void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
     JLString jAbsUrl((jstring)env->CallStaticObjectMethod(getDumpRenderTreeClass(), getResolveURLMID(), (jstring)jRelUrl));
     CheckAndClearException(env);
     JSStringRef absUrlRef = jstring_to_JSStringRef((jstring)jAbsUrl, env);
-    WorkQueue::singleton().queue(new LoadItem(absUrlRef, target));
+    DRT::WorkQueue::singleton().queue(new LoadItem(absUrlRef, target));
 }
 
 void TestRunner::setAcceptsEditing(bool newAcceptsEditing)
@@ -323,7 +323,7 @@ void TestRunner::evaluateInWebInspector(JSStringRef script)
     // FIXME: implement
 }
 
-JSStringRef TestRunner::inspectorTestStubURL()
+JSRetainPtr<JSStringRef> TestRunner::inspectorTestStubURL()
 {
     // FIXME: Implement this to support Web Inspector tests using `protocol-test.js`.
     return nullptr;
@@ -582,4 +582,14 @@ void TestRunner::forceImmediateCompletion()
 void TestRunner::setSpellCheckerResults(JSContextRef, JSObjectRef)
 {
     fprintf(testResult, "ERROR: TestRunner::setSpellCheckerResults() not implemented\n");
+}
+
+void TestRunner::setIDBPerOriginQuota(uint64_t)
+{
+    fprintf(testResult, "ERROR: TestRunner::setIDBPerOriginQuota() not implemented\n");
+}
+
+void TestRunner::setOnlyAcceptFirstPartyCookies(bool)
+{
+    fprintf(testResult, "ERROR: TestRunner::setOnlyAcceptFirstPartyCookies() not implemented\n");
 }

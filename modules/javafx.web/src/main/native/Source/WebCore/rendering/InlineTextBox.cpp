@@ -364,11 +364,11 @@ bool InlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
     return false;
 }
 
-std::optional<bool> InlineTextBox::emphasisMarkExistsAndIsAbove(const RenderStyle& style) const
+Optional<bool> InlineTextBox::emphasisMarkExistsAndIsAbove(const RenderStyle& style) const
 {
     // This function returns true if there are text emphasis marks and they are suppressed by ruby text.
     if (style.textEmphasisMark() == TextEmphasisMark::None)
-        return std::nullopt;
+        return WTF::nullopt;
 
     const OptionSet<TextEmphasisPosition> horizontalMask { TextEmphasisPosition::Left, TextEmphasisPosition::Right };
 
@@ -400,7 +400,7 @@ std::optional<bool> InlineTextBox::emphasisMarkExistsAndIsAbove(const RenderStyl
 
     // The emphasis marks over are suppressed only if there is a ruby text box and it not empty.
     if (rubyText && rubyText->hasLines())
-        return std::nullopt;
+        return WTF::nullopt;
 
     return isAbove;
 }
@@ -422,7 +422,7 @@ struct InlineTextBox::MarkedTextStyle {
     Color backgroundColor;
     TextPaintStyle textStyles;
     TextDecorationPainter::Styles textDecorationStyles;
-    std::optional<ShadowData> textShadow;
+    Optional<ShadowData> textShadow;
     float alpha;
 };
 
@@ -487,7 +487,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
             // truncated string i.e.  |Hello|CBA| -> |...lo|CBA|
             LayoutUnit widthOfVisibleText = renderer().width(m_start, m_truncation, textPos(), isFirstLine());
             LayoutUnit widthOfHiddenText = logicalWidth() - widthOfVisibleText;
-            LayoutSize truncationOffset(isLeftToRightDirection() ? widthOfHiddenText : -widthOfHiddenText, 0);
+            LayoutSize truncationOffset(isLeftToRightDirection() ? widthOfHiddenText : -widthOfHiddenText, 0_lu);
             localPaintOffset.move(isHorizontal() ? truncationOffset : truncationOffset.transposedSize());
         }
     }
@@ -542,6 +542,9 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     // renderers and Page currently relies on each unpainted object having a unique renderer.
     if (paintInfo.phase == PaintPhase::Foreground)
         renderer().page().addRelevantRepaintedObject(&renderer(), IntRect(boxOrigin.x(), boxOrigin.y(), logicalWidth(), logicalHeight()));
+
+    if (paintInfo.phase == PaintPhase::Foreground)
+        paintPlatformDocumentMarkers(context, boxOrigin);
 
     // 2. Now paint the foreground, including text and decorations like underline/overline (in quirks mode only).
     bool shouldPaintSelectionForeground = haveSelection && !useCustomUnderlines;
@@ -620,12 +623,8 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     }
 
     // 3. Paint fancy decorations, including composition underlines and platform-specific underlines for spelling errors, grammar errors, et cetera.
-    if (paintInfo.phase == PaintPhase::Foreground) {
-        paintPlatformDocumentMarkers(context, boxOrigin);
-
-        if (useCustomUnderlines)
-            paintCompositionUnderlines(paintInfo, boxOrigin);
-    }
+    if (paintInfo.phase == PaintPhase::Foreground && useCustomUnderlines)
+        paintCompositionUnderlines(paintInfo, boxOrigin);
 
     if (shouldRotate)
         context.concatCTM(rotation(boxRect, Counterclockwise));
@@ -665,10 +664,44 @@ std::pair<unsigned, unsigned> InlineTextBox::selectionStartEnd() const
     return { clampedOffset(start), clampedOffset(end) };
 }
 
+bool InlineTextBox::hasMarkers() const
+{
+    return collectMarkedTextsForDocumentMarkers(TextPaintPhase::Decoration).size();
+}
+
 void InlineTextBox::paintPlatformDocumentMarkers(GraphicsContext& context, const FloatPoint& boxOrigin)
 {
+    // This must match calculateUnionOfAllDocumentMarkerBounds().
     for (auto& markedText : subdivide(collectMarkedTextsForDocumentMarkers(TextPaintPhase::Decoration), OverlapStrategy::Frontmost))
         paintPlatformDocumentMarker(context, boxOrigin, markedText);
+}
+
+FloatRect InlineTextBox::calculateUnionOfAllDocumentMarkerBounds() const
+{
+    // This must match paintPlatformDocumentMarkers().
+    FloatRect result;
+    for (auto& markedText : subdivide(collectMarkedTextsForDocumentMarkers(TextPaintPhase::Decoration), OverlapStrategy::Frontmost))
+        result = unionRect(result, calculateDocumentMarkerBounds(markedText));
+    return result;
+}
+
+FloatRect InlineTextBox::calculateDocumentMarkerBounds(const MarkedText& markedText) const
+{
+    auto& font = lineFont();
+    auto ascent = font.fontMetrics().ascent();
+    auto fontSize = std::min(std::max(font.size(), 10.0f), 40.0f);
+    auto y = ascent + 0.11035 * fontSize;
+    auto height = 0.13247 * fontSize;
+
+    // Avoid measuring the text when the entire line box is selected as an optimization.
+    if (markedText.startOffset || markedText.endOffset != clampedOffset(end() + 1)) {
+        TextRun run = createTextRun();
+        LayoutRect selectionRect = LayoutRect(0, y, 0, height);
+        lineFont().adjustSelectionRectForText(run, selectionRect, markedText.startOffset, markedText.endOffset);
+        return selectionRect;
+    }
+
+    return FloatRect(0, y, logicalWidth(), height);
 }
 
 void InlineTextBox::paintPlatformDocumentMarker(GraphicsContext& context, const FloatPoint& boxOrigin, const MarkedText& markedText)
@@ -680,68 +713,32 @@ void InlineTextBox::paintPlatformDocumentMarker(GraphicsContext& context, const 
     if (m_truncation == cFullTruncation)
         return;
 
-    float start = 0; // start of line to draw, relative to tx
-    float width = logicalWidth(); // how much line to draw
+    auto bounds = calculateDocumentMarkerBounds(markedText);
 
-    // Avoid measuring the text when the entire line box is selected as an optimization.
-    if (markedText.startOffset || markedText.endOffset != clampedOffset(end() + 1)) {
-        // Calculate start & width
-        int deltaY = renderer().style().isFlippedLinesWritingMode() ? selectionBottom() - logicalBottom() : logicalTop() - selectionTop();
-        int selHeight = selectionHeight();
-        FloatPoint startPoint(boxOrigin.x(), boxOrigin.y() - deltaY);
-        TextRun run = createTextRun();
-
-        LayoutRect selectionRect = LayoutRect(startPoint, FloatSize(0, selHeight));
-        lineFont().adjustSelectionRectForText(run, selectionRect, markedText.startOffset, markedText.endOffset);
-        IntRect markerRect = enclosingIntRect(selectionRect);
-        start = markerRect.x() - startPoint.x();
-        width = markerRect.width();
-    }
-
-    auto lineStyleForMarkedTextType = [] (MarkedText::Type type) {
-        switch (type) {
+    auto lineStyleForMarkedTextType = [&]() -> DocumentMarkerLineStyle {
+        bool shouldUseDarkAppearance = renderer().useDarkAppearance();
+        switch (markedText.type) {
         case MarkedText::SpellingError:
-            return DocumentMarkerLineStyle::Spelling;
+            return { DocumentMarkerLineStyle::Mode::Spelling, shouldUseDarkAppearance };
         case MarkedText::GrammarError:
-            return DocumentMarkerLineStyle::Grammar;
+            return { DocumentMarkerLineStyle::Mode::Grammar, shouldUseDarkAppearance };
         case MarkedText::Correction:
-            return DocumentMarkerLineStyle::AutocorrectionReplacement;
+            return { DocumentMarkerLineStyle::Mode::AutocorrectionReplacement, shouldUseDarkAppearance };
         case MarkedText::DictationAlternatives:
-            return DocumentMarkerLineStyle::DictationAlternatives;
-#if PLATFORM(IOS)
+            return { DocumentMarkerLineStyle::Mode::DictationAlternatives, shouldUseDarkAppearance };
+#if PLATFORM(IOS_FAMILY)
         case MarkedText::DictationPhraseWithAlternatives:
-            // FIXME: Rename DocumentMarkerLineStyle::TextCheckingDictationPhraseWithAlternatives and remove the PLATFORM(IOS)-guard.
-            return DocumentMarkerLineStyle::TextCheckingDictationPhraseWithAlternatives;
+            // FIXME: Rename DocumentMarkerLineStyle::TextCheckingDictationPhraseWithAlternatives and remove the PLATFORM(IOS_FAMILY)-guard.
+            return { DocumentMarkerLineStyle::Mode::TextCheckingDictationPhraseWithAlternatives, shouldUseDarkAppearance };
 #endif
         default:
             ASSERT_NOT_REACHED();
-            return DocumentMarkerLineStyle::Spelling;
+            return { DocumentMarkerLineStyle::Mode::Spelling, shouldUseDarkAppearance };
         }
     };
 
-    // IMPORTANT: The misspelling underline is not considered when calculating the text bounds, so we have to
-    // make sure to fit within those bounds.  This means the top pixel(s) of the underline will overlap the
-    // bottom pixel(s) of the glyphs in smaller font sizes.  The alternatives are to increase the line spacing (bad!!)
-    // or decrease the underline thickness.  The overlap is actually the most useful, and matches what AppKit does.
-    // So, we generally place the underline at the bottom of the text, but in larger fonts that's not so good so
-    // we pin to two pixels under the baseline.
-    int lineThickness = cMisspellingLineThickness;
-    int baseline = lineStyle().fontMetrics().ascent();
-    int descent = logicalHeight() - baseline;
-    int underlineOffset;
-    if (descent <= (2 + lineThickness)) {
-        // Place the underline at the very bottom of the text in small/medium fonts.
-        underlineOffset = logicalHeight() - lineThickness;
-    } else {
-        // In larger fonts, though, place the underline up near the baseline to prevent a big gap.
-        underlineOffset = baseline + 2;
-    }
-
-#if PLATFORM(MAC)
-    RenderTheme::singleton().drawLineForDocumentMarker(renderer(), context, FloatPoint(boxOrigin.x() + start, boxOrigin.y() + underlineOffset), width, lineStyleForMarkedTextType(markedText.type));
-#else
-    context.drawLineForDocumentMarker(FloatPoint(boxOrigin.x() + start, boxOrigin.y() + underlineOffset), width, lineStyleForMarkedTextType(markedText.type));
-#endif
+    bounds.moveBy(boxOrigin);
+    context.drawDotsForDocumentMarker(bounds, lineStyleForMarkedTextType());
 }
 
 auto InlineTextBox::computeStyleForUnmarkedMarkedText(const PaintInfo& paintInfo) const -> MarkedTextStyle
@@ -762,8 +759,8 @@ auto InlineTextBox::resolveStyleForMarkedText(const MarkedText& markedText, cons
     switch (markedText.type) {
     case MarkedText::Correction:
     case MarkedText::DictationAlternatives:
-#if PLATFORM(IOS)
-    // FIXME: See <rdar://problem/8933352>. Also, remove the PLATFORM(IOS)-guard.
+#if PLATFORM(IOS_FAMILY)
+    // FIXME: See <rdar://problem/8933352>. Also, remove the PLATFORM(IOS_FAMILY)-guard.
     case MarkedText::DictationPhraseWithAlternatives:
 #endif
     case MarkedText::GrammarError:
@@ -858,14 +855,14 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForDraggedContent()
     return result;
 }
 
-Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaintPhase phase)
+Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaintPhase phase) const
 {
     ASSERT_ARG(phase, phase == TextPaintPhase::Background || phase == TextPaintPhase::Foreground || phase == TextPaintPhase::Decoration);
 
     if (!renderer().textNode())
         return { };
 
-    Vector<RenderedDocumentMarker*> markers = renderer().document().markers().markersFor(renderer().textNode());
+    Vector<RenderedDocumentMarker*> markers = renderer().document().markers().markersFor(*renderer().textNode());
 
     auto markedTextTypeForMarkerType = [] (DocumentMarker::MarkerType type) {
         switch (type) {
@@ -879,7 +876,7 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaint
             return MarkedText::TextMatch;
         case DocumentMarker::DictationAlternatives:
             return MarkedText::DictationAlternatives;
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
         case DocumentMarker::DictationPhraseWithAlternatives:
             return MarkedText::DictationPhraseWithAlternatives;
 #endif
@@ -901,8 +898,8 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaint
         case DocumentMarker::CorrectionIndicator:
         case DocumentMarker::Replacement:
         case DocumentMarker::DictationAlternatives:
-#if PLATFORM(IOS)
-        // FIXME: Remove the PLATFORM(IOS)-guard.
+#if PLATFORM(IOS_FAMILY)
+        // FIXME: Remove the PLATFORM(IOS_FAMILY)-guard.
         case DocumentMarker::DictationPhraseWithAlternatives:
 #endif
             if (phase != TextPaintPhase::Decoration)
@@ -943,8 +940,8 @@ Vector<MarkedText> InlineTextBox::collectMarkedTextsForDocumentMarkers(TextPaint
         case DocumentMarker::CorrectionIndicator:
         case DocumentMarker::DictationAlternatives:
         case DocumentMarker::Grammar:
-#if PLATFORM(IOS)
-        // FIXME: See <rdar://problem/8933352>. Also, remove the PLATFORM(IOS)-guard.
+#if PLATFORM(IOS_FAMILY)
+        // FIXME: See <rdar://problem/8933352>. Also, remove the PLATFORM(IOS_FAMILY)-guard.
         case DocumentMarker::DictationPhraseWithAlternatives:
 #endif
         case DocumentMarker::TextMatch:
@@ -1034,7 +1031,7 @@ void InlineTextBox::paintMarkedTextForeground(PaintInfo& paintInfo, const FloatR
     const RenderStyle& lineStyle = this->lineStyle();
 
     float emphasisMarkOffset = 0;
-    std::optional<bool> markExistsAndIsAbove = emphasisMarkExistsAndIsAbove(lineStyle);
+    Optional<bool> markExistsAndIsAbove = emphasisMarkExistsAndIsAbove(lineStyle);
     const AtomicString& emphasisMark = markExistsAndIsAbove ? lineStyle.textEmphasisMarkString() : nullAtom();
     if (!emphasisMark.isEmpty())
         emphasisMarkOffset = *markExistsAndIsAbove ? -font.fontMetrics().ascent() - font.emphasisMarkDescent(emphasisMark) : font.fontMetrics().descent() + font.emphasisMarkAscent(emphasisMark);
@@ -1093,11 +1090,9 @@ void InlineTextBox::paintMarkedTextDecoration(PaintInfo& paintInfo, const FloatR
     }
 
     // 2. Paint
-    TextDecorationPainter decorationPainter { context, lineStyle().textDecorationsInEffect(), renderer(), isFirstLine(), markedText.style.textDecorationStyles };
+    TextDecorationPainter decorationPainter { context, lineStyle().textDecorationsInEffect(), renderer(), isFirstLine(), lineFont(), markedText.style.textDecorationStyles };
     decorationPainter.setInlineTextBox(this);
-    decorationPainter.setFont(lineFont());
     decorationPainter.setWidth(snappedSelectionRect.width());
-    decorationPainter.setBaseline(lineStyle().fontMetrics().ascent());
     decorationPainter.setIsHorizontal(isHorizontal());
     if (markedText.style.textShadow) {
         decorationPainter.setTextShadow(&markedText.style.textShadow.value());
@@ -1203,7 +1198,7 @@ void InlineTextBox::paintCompositionUnderline(PaintInfo& paintInfo, const FloatP
     Color underlineColor = underline.compositionUnderlineColor == CompositionUnderlineColor::TextColor ? renderer().style().visitedDependentColorWithColorFilter(CSSPropertyWebkitTextFillColor) : renderer().style().colorByApplyingColorFilter(underline.color);
     context.setStrokeColor(underlineColor);
     context.setStrokeThickness(lineThickness);
-    context.drawLineForText(FloatPoint(boxOrigin.x() + start, boxOrigin.y() + logicalHeight() - lineThickness), width, renderer().document().printing());
+    context.drawLineForText(FloatRect(boxOrigin.x() + start, boxOrigin.y() + logicalHeight() - lineThickness, width, lineThickness), renderer().document().printing());
 }
 
 int InlineTextBox::caretMinOffset() const

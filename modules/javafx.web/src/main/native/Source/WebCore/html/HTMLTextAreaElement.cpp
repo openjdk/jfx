@@ -193,8 +193,6 @@ void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const Atomic
             if (renderer())
                 renderer()->setNeedsLayoutAndPrefWidthsRecalc();
         }
-    } else if (name == accesskeyAttr) {
-        // ignore for the moment
     } else if (name == maxlengthAttr)
         maxLengthAttributeChanged(value);
     else if (name == minlengthAttr)
@@ -553,7 +551,7 @@ RenderStyle HTMLTextAreaElement::createInnerTextStyle(const RenderStyle& style)
     adjustInnerTextStyle(style, textBlockStyle);
     textBlockStyle.setDisplay(DisplayType::Block);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     // We're adding three extra pixels of padding to line textareas up with text fields.
     textBlockStyle.setPaddingLeft(Length(3, Fixed));
     textBlockStyle.setPaddingRight(Length(3, Fixed));

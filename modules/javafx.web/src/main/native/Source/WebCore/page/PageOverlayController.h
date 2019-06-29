@@ -39,15 +39,19 @@ class PlatformMouseEvent;
 
 class PageOverlayController final : public GraphicsLayerClient {
     WTF_MAKE_FAST_ALLOCATED;
+    friend class MockPageOverlayClient;
 public:
     PageOverlayController(Page&);
     virtual ~PageOverlayController();
 
+    bool hasDocumentOverlays() const;
+    bool hasViewOverlays() const;
+
+    void attachViewOverlayLayers();
+    void detachViewOverlayLayers();
+
     GraphicsLayer& layerWithDocumentOverlays();
     GraphicsLayer& layerWithViewOverlays();
-
-    WEBCORE_EXPORT GraphicsLayer* documentOverlayRootLayer() const;
-    WEBCORE_EXPORT GraphicsLayer* viewOverlayRootLayer() const;
 
     const Vector<RefPtr<PageOverlay>>& pageOverlays() const { return m_pageOverlays; }
 
@@ -58,8 +62,6 @@ public:
     void setPageOverlayOpacity(PageOverlay&, float);
     void clearPageOverlay(PageOverlay&);
     GraphicsLayer& layerForOverlay(PageOverlay&) const;
-
-    void willDetachRootLayer();
 
     void didChangeViewSize();
     void didChangeDocumentSize();
@@ -82,6 +84,11 @@ public:
 private:
     void createRootLayersIfNeeded();
 
+    WEBCORE_EXPORT GraphicsLayer* documentOverlayRootLayer() const;
+    WEBCORE_EXPORT GraphicsLayer* viewOverlayRootLayer() const;
+
+    void willDetachRootLayer();
+
     void updateSettingsForLayer(GraphicsLayer&);
     void updateForceSynchronousScrollLayerPositionUpdates();
 
@@ -92,13 +99,13 @@ private:
     bool shouldSkipLayerInDump(const GraphicsLayer*, LayerTreeAsTextBehavior) const override;
     void tiledBackingUsageChanged(const GraphicsLayer*, bool) override;
 
-    std::unique_ptr<GraphicsLayer> m_documentOverlayRootLayer;
-    std::unique_ptr<GraphicsLayer> m_viewOverlayRootLayer;
-    bool m_initialized;
-
-    HashMap<PageOverlay*, std::unique_ptr<GraphicsLayer>> m_overlayGraphicsLayers;
-    Vector<RefPtr<PageOverlay>> m_pageOverlays;
     Page& m_page;
+    RefPtr<GraphicsLayer> m_documentOverlayRootLayer;
+    RefPtr<GraphicsLayer> m_viewOverlayRootLayer;
+
+    HashMap<PageOverlay*, Ref<GraphicsLayer>> m_overlayGraphicsLayers;
+    Vector<RefPtr<PageOverlay>> m_pageOverlays;
+    bool m_initialized { false };
 };
 
 } // namespace WebKit

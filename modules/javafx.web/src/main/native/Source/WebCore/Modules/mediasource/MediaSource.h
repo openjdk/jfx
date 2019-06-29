@@ -38,6 +38,7 @@
 #include "GenericEventQueue.h"
 #include "MediaSourcePrivateClient.h"
 #include "URLRegistry.h"
+#include <wtf/LoggerHelper.h>
 
 namespace WebCore {
 
@@ -48,7 +49,15 @@ class SourceBufferList;
 class SourceBufferPrivate;
 class TimeRanges;
 
-class MediaSource final : public MediaSourcePrivateClient, public ActiveDOMObject, public EventTargetWithInlineData, public URLRegistrable {
+class MediaSource final
+    : public MediaSourcePrivateClient
+    , public ActiveDOMObject
+    , public EventTargetWithInlineData
+    , public URLRegistrable
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+{
 public:
     static void setRegistry(URLRegistry*);
     static MediaSource* lookup(const String& url) { return s_registry ? static_cast<MediaSource*>(s_registry->lookup(url)) : nullptr; }
@@ -65,7 +74,7 @@ public:
     void sourceBufferDidChangeActiveState(SourceBuffer&, bool);
 
     enum class EndOfStreamError { Network, Decode };
-    void streamEndedWithError(std::optional<EndOfStreamError>);
+    void streamEndedWithError(Optional<EndOfStreamError>);
 
     MediaTime duration() const final;
     void durationChanged(const MediaTime&) final;
@@ -85,7 +94,7 @@ public:
 
     enum class ReadyState { Closed, Open, Ended };
     ReadyState readyState() const { return m_readyState; }
-    ExceptionOr<void> endOfStream(std::optional<EndOfStreamError>);
+    ExceptionOr<void> endOfStream(Optional<EndOfStreamError>);
 
     HTMLMediaElement* mediaElement() const { return m_mediaElement; }
 
@@ -103,6 +112,15 @@ public:
     bool hasPendingActivity() const final;
 
     static const MediaTime& currentTimeFudgeFactor();
+    static bool contentTypeShouldGenerateTimestamps(const ContentType&);
+
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    const char* logClassName() const final { return "MediaSource"; }
+    WTFLogChannel& logChannel() const final;
+    void setLogIdentifier(const void*) final;
+#endif
 
 private:
     explicit MediaSource(ScriptExecutionContext&);
@@ -150,8 +168,38 @@ private:
     MediaTime m_pendingSeekTime;
     ReadyState m_readyState { ReadyState::Closed };
     GenericEventQueue m_asyncEventQueue;
+#if !RELEASE_LOG_DISABLED
+    Ref<const Logger> m_logger;
+    const void* m_logIdentifier { nullptr };
+#endif
 };
 
-}
+String convertEnumerationToString(MediaSource::EndOfStreamError);
+String convertEnumerationToString(MediaSource::ReadyState);
+
+} // namespace WebCore
+
+namespace WTF {
+
+template<typename Type>
+struct LogArgument;
+
+template <>
+struct LogArgument<WebCore::MediaSource::EndOfStreamError> {
+    static String toString(const WebCore::MediaSource::EndOfStreamError error)
+    {
+        return convertEnumerationToString(error);
+    }
+};
+
+template <>
+struct LogArgument<WebCore::MediaSource::ReadyState> {
+    static String toString(const WebCore::MediaSource::ReadyState state)
+    {
+        return convertEnumerationToString(state);
+    }
+};
+
+} // namespace WTF
 
 #endif

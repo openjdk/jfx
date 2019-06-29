@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007, 2018 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,8 @@
 #include "ProgressTrackerClient.h"
 #include "ResourceResponse.h"
 #include <wtf/text/CString.h>
+
+#define RELEASE_LOG_IF_ALLOWED(fmt, ...) RELEASE_LOG_IF(isAlwaysOnLoggingAllowed(), Network, "%p - ProgressTracker::" fmt, this, ##__VA_ARGS__)
 
 namespace WebCore {
 
@@ -135,6 +137,8 @@ void ProgressTracker::progressStarted(Frame& frame)
     }
     m_numProgressTrackedFrames++;
 
+    RELEASE_LOG_IF_ALLOWED("progressStarted: frame %p, value %f, tracked frames %d, originating frame %p, isMainLoad %d", &frame, m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad);
+
     m_client.didChangeEstimatedProgress();
     InspectorInstrumentation::frameStartedLoading(frame);
 }
@@ -142,6 +146,7 @@ void ProgressTracker::progressStarted(Frame& frame)
 void ProgressTracker::progressCompleted(Frame& frame)
 {
     LOG(Progress, "Progress completed (%p) - frame %p(\"%s\"), value %f, tracked frames %d, originating frame %p", this, &frame, frame.tree().uniqueName().string().utf8().data(), m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get());
+    RELEASE_LOG_IF_ALLOWED("progressCompleted: frame %p, value %f, tracked frames %d, originating frame %p, isMainLoad %d", &frame, m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad);
 
     if (m_numProgressTrackedFrames <= 0)
         return;
@@ -158,6 +163,7 @@ void ProgressTracker::progressCompleted(Frame& frame)
 void ProgressTracker::finalProgressComplete()
 {
     LOG(Progress, "Final progress complete (%p)", this);
+    RELEASE_LOG_IF_ALLOWED("finalProgressComplete: value %f, tracked frames %d, originating frame %p, isMainLoad %d, isMainLoadProgressing %d", m_progressValue, m_numProgressTrackedFrames, m_originatingProgressFrame.get(), m_isMainLoad, isMainLoadProgressing());
 
     auto frame = WTFMove(m_originatingProgressFrame);
 
@@ -310,6 +316,14 @@ void ProgressTracker::progressHeartbeatTimerFired()
 
     if (m_progressValue >= finalProgressValue)
         m_progressHeartbeatTimer.stop();
+}
+
+bool ProgressTracker::isAlwaysOnLoggingAllowed() const
+{
+    if (!m_originatingProgressFrame)
+        return false;
+
+    return m_originatingProgressFrame->isAlwaysOnLoggingAllowed();
 }
 
 }

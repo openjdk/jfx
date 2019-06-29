@@ -49,14 +49,14 @@
 #include "StyleTreeResolver.h"
 #include <wtf/SystemTracing.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include "WKContentObservation.h"
 #include "WKContentObservationInternal.h"
 #endif
 
 namespace WebCore {
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 class CheckForVisibilityChange {
 public:
     CheckForVisibilityChange(const Element&);
@@ -68,7 +68,7 @@ private:
     Visibility m_previousVisibility;
     Visibility m_previousImplicitVisibility;
 };
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS_FAMILY)
 
 RenderTreeUpdater::Parent::Parent(ContainerNode& root)
     : element(is<Document>(root) ? nullptr : downcast<Element>(&root))
@@ -79,7 +79,7 @@ RenderTreeUpdater::Parent::Parent(ContainerNode& root)
 RenderTreeUpdater::Parent::Parent(Element& element, const Style::ElementUpdates* updates)
     : element(&element)
     , updates(updates)
-    , renderTreePosition(element.renderer() ? std::make_optional(RenderTreePosition(*element.renderer())) : std::nullopt)
+    , renderTreePosition(element.renderer() ? makeOptional(RenderTreePosition(*element.renderer())) : WTF::nullopt)
 {
 }
 
@@ -307,7 +307,7 @@ void RenderTreeUpdater::updateRendererStyle(RenderElement& renderer, RenderStyle
 
 void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::ElementUpdate& update)
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     CheckForVisibilityChange checkForVisibilityChange(element);
 #endif
 
@@ -555,15 +555,13 @@ void RenderTreeUpdater::tearDownRenderers(Element& root, TeardownType teardownTy
             auto& element = *teardownStack.takeLast();
 
             if (teardownType == TeardownType::Full || teardownType == TeardownType::RendererUpdateCancelingAnimations) {
-                if (RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled()) {
-                    if (timeline) {
-                        if (document.renderTreeBeingDestroyed())
-                            timeline->elementWasRemoved(element);
-                        else if (teardownType == TeardownType::RendererUpdateCancelingAnimations)
-                            timeline->cancelDeclarativeAnimationsForElement(element);
-                    }
-                } else
-                    animationController.cancelAnimations(element);
+                if (timeline) {
+                    if (document.renderTreeBeingDestroyed())
+                        timeline->elementWasRemoved(element);
+                    else if (teardownType == TeardownType::RendererUpdateCancelingAnimations)
+                        timeline->cancelDeclarativeAnimationsForElement(element);
+                }
+                animationController.cancelAnimations(element);
             }
 
             if (teardownType == TeardownType::Full)
@@ -645,7 +643,7 @@ RenderView& RenderTreeUpdater::renderView()
     return *m_document.renderView();
 }
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 static Visibility elementImplicitVisibility(const Element& element)
 {
     auto* renderer = element.renderer();
@@ -681,10 +679,20 @@ CheckForVisibilityChange::~CheckForVisibilityChange()
 {
     if (!WKObservingContentChanges())
         return;
-    if (m_element.isInUserAgentShadowTree())
-        return;
+
     auto* style = m_element.renderStyle();
-    if (!style)
+
+    auto qualifiesForVisibilityCheck = [&] {
+        if (!style)
+            return false;
+        if (m_element.isInUserAgentShadowTree())
+            return false;
+        if (!const_cast<Element&>(m_element).willRespondToMouseClickEvents())
+            return false;
+        return true;
+    };
+
+    if (!qualifiesForVisibilityCheck())
         return;
     if ((m_previousDisplay == DisplayType::None && style->display() != DisplayType::None) || (m_previousVisibility == Visibility::Hidden && style->visibility() != Visibility::Hidden)
         || (m_previousImplicitVisibility == Visibility::Hidden && elementImplicitVisibility(m_element) == Visibility::Visible))

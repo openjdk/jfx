@@ -62,7 +62,7 @@ bool GenericArguments<Type>::getOwnPropertySlot(JSObject* object, ExecState* exe
         }
     }
 
-    if (std::optional<uint32_t> index = parseIndex(ident))
+    if (Optional<uint32_t> index = parseIndex(ident))
         return GenericArguments<Type>::getOwnPropertySlotByIndex(thisObject, exec, *index, slot);
 
     return Base::getOwnPropertySlot(thisObject, exec, ident, slot);
@@ -132,7 +132,7 @@ bool GenericArguments<Type>::put(JSCell* cell, ExecState* exec, PropertyName ide
     if (UNLIKELY(isThisValueAltered(slot, thisObject)))
         return ordinarySetSlow(exec, thisObject, ident, value, slot.thisValue(), slot.isStrictMode());
 
-    std::optional<uint32_t> index = parseIndex(ident);
+    Optional<uint32_t> index = parseIndex(ident);
     if (index && thisObject->isMappedArgument(index.value())) {
         thisObject->setIndexQuickly(vm, index.value(), value);
         return true;
@@ -167,7 +167,7 @@ bool GenericArguments<Type>::deleteProperty(JSCell* cell, ExecState* exec, Prope
             || ident == vm.propertyNames->iteratorSymbol))
         thisObject->overrideThings(vm);
 
-    if (std::optional<uint32_t> index = parseIndex(ident))
+    if (Optional<uint32_t> index = parseIndex(ident))
         return GenericArguments<Type>::deletePropertyByIndex(thisObject, exec, *index);
 
     return Base::deleteProperty(thisObject, exec, ident);
@@ -208,7 +208,7 @@ bool GenericArguments<Type>::defineOwnProperty(JSObject* object, ExecState* exec
         || ident == vm.propertyNames->iteratorSymbol)
         thisObject->overrideThingsIfNecessary(vm);
     else {
-        std::optional<uint32_t> optionalIndex = parseIndex(ident);
+        Optional<uint32_t> optionalIndex = parseIndex(ident);
         if (optionalIndex) {
             uint32_t index = optionalIndex.value();
             if (!descriptor.isAccessorDescriptor() && thisObject->isMappedArgument(optionalIndex.value())) {
@@ -254,8 +254,7 @@ bool GenericArguments<Type>::defineOwnProperty(JSObject* object, ExecState* exec
     }
 
     // Now just let the normal object machinery do its thing.
-    scope.release();
-    return Base::defineOwnProperty(object, exec, ident, descriptor, shouldThrow);
+    RELEASE_AND_RETURN(scope, Base::defineOwnProperty(object, exec, ident, descriptor, shouldThrow));
 }
 
 template<typename Type>

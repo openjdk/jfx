@@ -44,26 +44,26 @@ typedef Vector<RefPtr<ThreadTimerHeapItem>> ThreadTimerHeap;
 
 // A collection of timers per thread. Kept in ThreadGlobalData.
 class ThreadTimers {
-        WTF_MAKE_NONCOPYABLE(ThreadTimers); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(ThreadTimers); WTF_MAKE_FAST_ALLOCATED;
 public:
-        ThreadTimers();
+    ThreadTimers();
 
-        // On a thread different then main, we should set the thread's instance of the SharedTimer.
-        void setSharedTimer(SharedTimer*);
+    // On a thread different then main, we should set the thread's instance of the SharedTimer.
+    void setSharedTimer(SharedTimer*);
 
     ThreadTimerHeap& timerHeap() { return m_timerHeap; }
 
-        void updateSharedTimer();
-        void fireTimersInNestedEventLoop();
+    void updateSharedTimer();
+    void fireTimersInNestedEventLoop();
 
 private:
-        void sharedTimerFiredInternal();
-        void fireTimersInNestedEventLoopInternal();
+    void sharedTimerFiredInternal();
+    void fireTimersInNestedEventLoopInternal();
 
     ThreadTimerHeap m_timerHeap;
-        SharedTimer* m_sharedTimer { nullptr }; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
-        bool m_firingTimers { false }; // Reentrancy guard.
-        MonotonicTime m_pendingSharedTimerFireTime;
+    SharedTimer* m_sharedTimer { nullptr }; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
+    bool m_firingTimers { false }; // Reentrancy guard.
+    MonotonicTime m_pendingSharedTimerFireTime;
 };
 
 struct ThreadTimerHeapItem : ThreadSafeRefCounted<ThreadTimerHeapItem> {

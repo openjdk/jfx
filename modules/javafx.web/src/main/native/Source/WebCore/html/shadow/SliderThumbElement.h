@@ -66,7 +66,7 @@ private:
     bool matchesReadWritePseudoClass() const final;
     RefPtr<Element> focusDelegate() final;
 
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
     void defaultEventHandler(Event&) final;
     bool willRespondToMouseMoveEvents() final;
     bool willRespondToMouseClickEvents() final;
@@ -77,7 +77,7 @@ private:
 #endif
     void willDetachRenderers() final;
 
-    std::optional<ElementStyle> resolveCustomStyle(const RenderStyle&, const RenderStyle*) final;
+    Optional<ElementStyle> resolveCustomStyle(const RenderStyle&, const RenderStyle*) final;
     const AtomicString& shadowPseudoId() const final;
 
     void startDragging();
@@ -136,7 +136,7 @@ public:
 private:
     SliderContainerElement(Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    std::optional<ElementStyle> resolveCustomStyle(const RenderStyle&, const RenderStyle*) final;
+    Optional<ElementStyle> resolveCustomStyle(const RenderStyle&, const RenderStyle*) final;
     const AtomicString& shadowPseudoId() const final;
     bool isSliderContainerElement() const final { return true; }
 

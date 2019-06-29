@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,8 +99,17 @@ SlotVisitor::~SlotVisitor()
 
 void SlotVisitor::didStartMarking()
 {
-    if (heap()->collectionScope() == CollectionScope::Eden)
-        reset();
+    auto scope = heap()->collectionScope();
+    if (scope) {
+        switch (*scope) {
+        case CollectionScope::Eden:
+            reset();
+            break;
+        case CollectionScope::Full:
+            m_extraMemorySize = 0;
+            break;
+        }
+    }
 
     if (HeapProfiler* heapProfiler = vm().heapProfiler())
         m_heapSnapshotBuilder = heapProfiler->activeSnapshotBuilder();
@@ -125,7 +134,7 @@ void SlotVisitor::clearMarkStacks()
         });
 }
 
-void SlotVisitor::append(ConservativeRoots& conservativeRoots)
+void SlotVisitor::append(const ConservativeRoots& conservativeRoots)
 {
     HeapCell** roots = conservativeRoots.roots();
     size_t size = conservativeRoots.size();
@@ -189,8 +198,8 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 
 #if USE(JSVALUE64)
         // This detects the worst of the badness.
-        if (structureID >= heap()->structureIDTable().size())
-            die("GC scan found corrupt object: structureID is out of bounds!\n");
+        if (!heap()->structureIDTable().isValid(structureID))
+            die("GC scan found corrupt object: structureID is invalid!\n");
 #endif
     };
 
@@ -225,7 +234,7 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
 void SlotVisitor::appendSlow(JSCell* cell, Dependency dependency)
 {
     if (UNLIKELY(m_heapSnapshotBuilder))
-        m_heapSnapshotBuilder->appendEdge(m_currentCell, cell);
+        m_heapSnapshotBuilder->appendEdge(m_currentCell, cell, m_rootMarkReason);
 
     appendHiddenSlowImpl(cell, dependency);
 }
@@ -397,6 +406,17 @@ void SlotVisitor::visitAsConstraint(const JSCell* cell)
     visitChildren(cell);
 }
 
+inline void SlotVisitor::propagateExternalMemoryVisitedIfNecessary()
+{
+    if (m_isFirstVisit) {
+        if (m_extraMemorySize.hasOverflowed())
+            heap()->reportExtraMemoryVisited(std::numeric_limits<size_t>::max());
+        else if (m_extraMemorySize)
+            heap()->reportExtraMemoryVisited(m_extraMemorySize.unsafeGet());
+        m_extraMemorySize = 0;
+    }
+}
+
 void SlotVisitor::donateKnownParallel(MarkStackArray& from, MarkStackArray& to)
 {
     // NOTE: Because we re-try often, we can afford to be conservative, and
@@ -483,6 +503,7 @@ NEVER_INLINE void SlotVisitor::drain(MonotonicTime timeout)
                     visitChildren(stack.removeLast());
                 return IterationStatus::Done;
             });
+        propagateExternalMemoryVisitedIfNecessary();
         if (status == IterationStatus::Continue)
             break;
 
@@ -539,6 +560,7 @@ size_t SlotVisitor::performIncrementOfDraining(size_t bytesRequested)
                     }
                     return IterationStatus::Done;
                 });
+            propagateExternalMemoryVisitedIfNecessary();
             if (status == IterationStatus::Continue)
                 break;
             m_rightToRun.safepoint();

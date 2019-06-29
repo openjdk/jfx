@@ -64,7 +64,8 @@ void SWServerJobQueue::scriptFetchFinished(SWServer::Connection& connection, con
     auto& job = firstJob();
 
     auto* registration = m_server.getRegistration(m_registrationKey);
-    ASSERT(registration);
+    if (!registration)
+        return;
 
     auto* newestWorker = registration->getNewestWorker();
 
@@ -100,7 +101,7 @@ void SWServerJobQueue::scriptFetchFinished(SWServer::Connection& connection, con
     // FIXME: Update all the imported scripts as per spec. For now, we just do as if there is none.
 
     // FIXME: Support the proper worker type (classic vs module)
-    m_server.updateWorker(connection, job.identifier(), *registration, job.scriptURL, result.script, result.contentSecurityPolicy, WorkerType::Classic, { });
+    m_server.updateWorker(connection, job.identifier(), *registration, job.scriptURL, result.script, result.contentSecurityPolicy, result.referrerPolicy, WorkerType::Classic, { });
 }
 
 // https://w3c.github.io/ServiceWorker/#update-algorithm

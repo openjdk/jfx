@@ -29,6 +29,7 @@
 #include "DocumentTimelineOptions.h"
 #include "GenericTaskQueue.h"
 #include "Timer.h"
+#include <wtf/Markable.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -43,12 +44,18 @@ public:
     static Ref<DocumentTimeline> create(Document&, DocumentTimelineOptions&&);
     ~DocumentTimeline();
 
+    bool isDocumentTimeline() const final { return true; }
+
+    Vector<RefPtr<WebAnimation>> getAnimations() const;
+
     Document* document() const { return m_document.get(); }
 
-    std::optional<Seconds> currentTime() override;
-    void pause() override;
+    Optional<Seconds> currentTime() override;
 
-    void timingModelDidChange() override;
+    void animationTimingDidChange(WebAnimation&) override;
+    void removeAnimation(WebAnimation&) override;
+    void animationWasAddedToElement(WebAnimation&, Element&) final;
+    void animationWasRemovedFromElement(WebAnimation&, Element&) final;
 
     // If possible, compute the visual extent of any transform animation on the given renderer
     // using the given rect, returning the result in the rect. Return false if there is some
@@ -59,7 +66,7 @@ public:
     bool isRunningAcceleratedAnimationOnRenderer(RenderElement&, CSSPropertyID) const;
     void animationAcceleratedRunningStateDidChange(WebAnimation&);
     void applyPendingAcceleratedAnimations();
-    bool runningAnimationsForElementAreAllAccelerated(Element&);
+    bool runningAnimationsForElementAreAllAccelerated(Element&) const;
     bool resolveAnimationsForElement(Element&, RenderStyle&);
     void detachFromDocument();
 
@@ -75,36 +82,44 @@ public:
     WEBCORE_EXPORT void resumeAnimations();
     WEBCORE_EXPORT bool animationsAreSuspended();
     WEBCORE_EXPORT unsigned numberOfActiveAnimationsForTesting() const;
+    WEBCORE_EXPORT Vector<std::pair<String, double>> acceleratedAnimationsForElement(Element&) const;
+    WEBCORE_EXPORT unsigned numberOfAnimationTimelineInvalidationsForTesting() const;
 
 private:
     DocumentTimeline(Document&, Seconds);
 
+    Seconds liveCurrentTime() const;
+    void cacheCurrentTime(Seconds);
+    void scheduleAnimationResolutionIfNeeded();
     void scheduleInvalidationTaskIfNeeded();
     void performInvalidationTask();
-    void updateAnimationSchedule();
     void animationScheduleTimerFired();
     void scheduleAnimationResolution();
-    void updateAnimations();
+    void unscheduleAnimationResolution();
+    void updateAnimationsAndSendEvents();
     void performEventDispatchTask();
     void maybeClearCachedCurrentTime();
-
-    RefPtr<Document> m_document;
-    Seconds m_originTime;
-    bool m_paused { false };
-    bool m_isSuspended { false };
-    bool m_waitingOnVMIdle { false };
-    std::optional<Seconds> m_cachedCurrentTime;
-    GenericTaskQueue<Timer> m_invalidationTaskQueue;
-    GenericTaskQueue<Timer> m_eventDispatchTaskQueue;
-    bool m_needsUpdateAnimationSchedule { false };
-    Timer m_animationScheduleTimer;
-    HashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
-    Vector<Ref<AnimationPlaybackEvent>> m_pendingAnimationEvents;
+    void updateListOfElementsWithRunningAcceleratedAnimationsForElement(Element&);
+    void transitionDidComplete(RefPtr<CSSTransition>);
+    void scheduleNextTick();
 
 #if !USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     void animationResolutionTimerFired();
     Timer m_animationResolutionTimer;
 #endif
+
+    Timer m_tickScheduleTimer;
+    GenericTaskQueue<Timer> m_currentTimeClearingTaskQueue;
+    HashSet<RefPtr<WebAnimation>> m_acceleratedAnimationsPendingRunningStateChange;
+    HashSet<Element*> m_elementsWithRunningAcceleratedAnimations;
+    Vector<Ref<AnimationPlaybackEvent>> m_pendingAnimationEvents;
+    RefPtr<Document> m_document;
+    Markable<Seconds, Seconds::MarkableTraits> m_cachedCurrentTime;
+    Seconds m_originTime;
+    unsigned m_numberOfAnimationTimelineInvalidationsForTesting { 0 };
+    bool m_isSuspended { false };
+    bool m_waitingOnVMIdle { false };
+    bool m_isUpdatingAnimations { false };
 };
 
 } // namespace WebCore

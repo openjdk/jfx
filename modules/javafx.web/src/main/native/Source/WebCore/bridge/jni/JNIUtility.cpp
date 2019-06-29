@@ -107,7 +107,7 @@ typedef void* JNIEnvDummy;
 JNIEnv* getJNIEnv()
 {
 #if ENABLE(JAVA_JSC)
-    return WebCore_GetJavaEnv();
+    return WTF::GetJavaEnv();
 #else
     union {
         JNIEnv* env;

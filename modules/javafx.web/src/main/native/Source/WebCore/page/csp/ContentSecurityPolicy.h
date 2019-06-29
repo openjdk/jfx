@@ -56,7 +56,6 @@ class ResourceRequest;
 class ScriptExecutionContext;
 class SecurityOrigin;
 class TextEncoding;
-class URL;
 struct ContentSecurityPolicyClient;
 
 typedef Vector<std::unique_ptr<ContentSecurityPolicyDirectiveList>> CSPDirectiveListVector;
@@ -151,11 +150,11 @@ public:
     void enforceSandboxFlags(SandboxFlags sandboxFlags) { m_sandboxFlags |= sandboxFlags; }
     void addHashAlgorithmsForInlineScripts(OptionSet<ContentSecurityPolicyHashAlgorithm> hashAlgorithmsForInlineScripts)
     {
-        m_hashAlgorithmsForInlineScripts |= hashAlgorithmsForInlineScripts;
+        m_hashAlgorithmsForInlineScripts.add(hashAlgorithmsForInlineScripts);
     }
     void addHashAlgorithmsForInlineStylesheets(OptionSet<ContentSecurityPolicyHashAlgorithm> hashAlgorithmsForInlineStylesheets)
     {
-        m_hashAlgorithmsForInlineStylesheets |= hashAlgorithmsForInlineStylesheets;
+        m_hashAlgorithmsForInlineStylesheets.add(hashAlgorithmsForInlineStylesheets);
     }
 
     // Used by ContentSecurityPolicySource
@@ -230,7 +229,7 @@ private:
     OptionSet<ContentSecurityPolicyHashAlgorithm> m_hashAlgorithmsForInlineScripts;
     OptionSet<ContentSecurityPolicyHashAlgorithm> m_hashAlgorithmsForInlineStylesheets;
     HashSet<SecurityOriginData> m_insecureNavigationRequestsToUpgrade;
-    mutable std::optional<ContentSecurityPolicyResponseHeaders> m_cachedResponseHeaders;
+    mutable Optional<ContentSecurityPolicyResponseHeaders> m_cachedResponseHeaders;
 };
 
 }

@@ -57,8 +57,7 @@ const char* InspectorDebuggerAgent::backtraceObjectGroup = "backtrace";
 // create objects in the same group.
 static String objectGroupForBreakpointAction(const ScriptBreakpointAction& action)
 {
-    static NeverDestroyed<String> objectGroup(MAKE_STATIC_STRING_IMPL("breakpoint-action-"));
-    return makeString(objectGroup.get(), String::number(action.identifier));
+    return makeString("breakpoint-action-", action.identifier);
 }
 
 InspectorDebuggerAgent::InspectorDebuggerAgent(AgentContext& context)
@@ -309,7 +308,7 @@ void InspectorDebuggerAgent::didDispatchAsyncCall()
     auto& asyncStackTrace = it->value;
     asyncStackTrace->didDispatchAsyncCall();
 
-    m_currentAsyncCallIdentifier = std::nullopt;
+    m_currentAsyncCallIdentifier = WTF::nullopt;
 
     if (!asyncStackTrace->isPending())
         m_pendingAsyncCalls.remove(identifier);
@@ -447,7 +446,7 @@ void InspectorDebuggerAgent::setBreakpointByUrl(ErrorString& errorString, int li
     int columnNumber = optionalColumnNumber ? *optionalColumnNumber : 0;
     bool isRegex = optionalURLRegex;
 
-    String breakpointIdentifier = (isRegex ? "/" + url + "/" : url) + ':' + String::number(lineNumber) + ':' + String::number(columnNumber);
+    String breakpointIdentifier = makeString(isRegex ? "/" : "", url, isRegex ? "/:" : ":", lineNumber, ':', columnNumber);
     if (m_javaScriptBreakpoints.contains(breakpointIdentifier)) {
         errorString = "Breakpoint at specified location already exists."_s;
         return;
@@ -540,7 +539,7 @@ void InspectorDebuggerAgent::setBreakpoint(ErrorString& errorString, const JSON:
         return;
     }
 
-    String breakpointIdentifier = String::number(sourceID) + ':' + String::number(breakpoint.line) + ':' + String::number(breakpoint.column);
+    String breakpointIdentifier = makeString(sourceID, ':', breakpoint.line, ':', breakpoint.column);
     ScriptBreakpoint scriptBreakpoint(breakpoint.line, breakpoint.column, condition, breakpointActions, autoContinue, ignoreCount);
     didSetBreakpoint(breakpoint, breakpointIdentifier, scriptBreakpoint);
 
@@ -827,7 +826,7 @@ void InspectorDebuggerAgent::setPauseOnAssertions(ErrorString&, bool enabled)
     m_pauseOnAssertionFailures = enabled;
 }
 
-void InspectorDebuggerAgent::evaluateOnCallFrame(ErrorString& errorString, const String& callFrameId, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, RefPtr<Protocol::Runtime::RemoteObject>& result, std::optional<bool>& outWasThrown, std::optional<int>& savedResultIndex)
+void InspectorDebuggerAgent::evaluateOnCallFrame(ErrorString& errorString, const String& callFrameId, const String& expression, const String* objectGroup, const bool* includeCommandLineAPI, const bool* doNotPauseOnExceptionsAndMuteConsole, const bool* returnByValue, const bool* generatePreview, const bool* saveResult, RefPtr<Protocol::Runtime::RemoteObject>& result, Optional<bool>& wasThrown, Optional<int>& savedResultIndex)
 {
     if (!m_currentCallStack) {
         errorString = "Not paused"_s;
@@ -848,11 +847,9 @@ void InspectorDebuggerAgent::evaluateOnCallFrame(ErrorString& errorString, const
         muteConsole();
     }
 
-    bool wasThrown;
     injectedScript.evaluateOnCallFrame(errorString, m_currentCallStack.get(), callFrameId, expression,
         objectGroup ? *objectGroup : emptyString(), includeCommandLineAPI && *includeCommandLineAPI, returnByValue && *returnByValue, generatePreview && *generatePreview, saveResult && *saveResult,
         result, wasThrown, savedResultIndex);
-    outWasThrown = wasThrown;
 
     if (pauseAndMute) {
         unmuteConsole();
@@ -1157,7 +1154,7 @@ void InspectorDebuggerAgent::clearExceptionValue()
 void InspectorDebuggerAgent::clearAsyncStackTraceData()
 {
     m_pendingAsyncCalls.clear();
-    m_currentAsyncCallIdentifier = std::nullopt;
+    m_currentAsyncCallIdentifier = WTF::nullopt;
 
     didClearAsyncStackTraceData();
 }

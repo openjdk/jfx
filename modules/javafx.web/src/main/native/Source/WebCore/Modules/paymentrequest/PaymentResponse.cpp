@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,28 +28,109 @@
 
 #if ENABLE(PAYMENT_REQUEST)
 
+#include "NotImplemented.h"
 #include "PaymentRequest.h"
 #include <wtf/RunLoop.h>
 
 namespace WebCore {
 
-PaymentResponse::PaymentResponse(PaymentRequest& request)
-    : m_request { request }
+PaymentResponse::PaymentResponse(ScriptExecutionContext* context, PaymentRequest& request)
+    : ActiveDOMObject { context }
+    , m_request { makeWeakPtr(request) }
 {
+    suspendIfNeeded();
 }
 
-PaymentResponse::~PaymentResponse() = default;
-
-void PaymentResponse::complete(std::optional<PaymentComplete>&& result, DOMPromiseDeferred<void>&& promise)
+void PaymentResponse::finishConstruction()
 {
-    if (m_completeCalled) {
+    ASSERT(!hasPendingActivity());
+    m_pendingActivity = makePendingActivity(*this);
+}
+
+PaymentResponse::~PaymentResponse()
+{
+    ASSERT(!hasPendingActivity());
+    ASSERT(!hasRetryPromise());
+}
+
+void PaymentResponse::setDetailsFunction(DetailsFunction&& detailsFunction)
+{
+    m_detailsFunction = WTFMove(detailsFunction);
+    m_cachedDetails = { };
+}
+
+void PaymentResponse::complete(Optional<PaymentComplete>&& result, DOMPromiseDeferred<void>&& promise)
+{
+    if (m_state == State::Stopped || !m_request) {
+        promise.reject(Exception { AbortError });
+        return;
+    }
+
+    if (m_state == State::Completed || m_retryPromise) {
         promise.reject(Exception { InvalidStateError });
         return;
     }
 
-    m_completeCalled = true;
-    m_request->complete(WTFMove(result));
-    promise.resolve();
+    ASSERT(hasPendingActivity());
+    ASSERT(m_state == State::Created);
+    m_pendingActivity = nullptr;
+    m_state = State::Completed;
+
+    promise.settle(m_request->complete(WTFMove(result)));
+}
+
+void PaymentResponse::retry(PaymentValidationErrors&& errors, DOMPromiseDeferred<void>&& promise)
+{
+    if (m_state == State::Stopped || !m_request) {
+        promise.reject(Exception { AbortError });
+        return;
+    }
+
+    if (m_state == State::Completed || m_retryPromise) {
+        promise.reject(Exception { InvalidStateError });
+        return;
+    }
+
+    ASSERT(hasPendingActivity());
+    ASSERT(m_state == State::Created);
+
+    auto exception = m_request->retry(WTFMove(errors));
+    if (exception.hasException()) {
+        promise.reject(exception.releaseException());
+        return;
+    }
+
+    m_retryPromise = WTFMove(promise);
+}
+
+void PaymentResponse::abortWithException(Exception&& exception)
+{
+    settleRetryPromise(WTFMove(exception));
+    m_pendingActivity = nullptr;
+    m_state = State::Completed;
+}
+
+void PaymentResponse::settleRetryPromise(ExceptionOr<void>&& result)
+{
+    if (!m_retryPromise)
+        return;
+
+    ASSERT(hasPendingActivity());
+    ASSERT(m_state == State::Created);
+    std::exchange(m_retryPromise, WTF::nullopt)->settle(WTFMove(result));
+}
+
+bool PaymentResponse::canSuspendForDocumentSuspension() const
+{
+    ASSERT(m_state != State::Stopped);
+    return !hasPendingActivity();
+}
+
+void PaymentResponse::stop()
+{
+    settleRetryPromise(Exception { AbortError });
+    m_pendingActivity = nullptr;
+    m_state = State::Stopped;
 }
 
 } // namespace WebCore

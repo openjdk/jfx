@@ -65,7 +65,7 @@ public:
         case CompilationSuccessful:
             if (Options::verboseOSR())
                 dataLogF("    JIT compilation successful.\n");
-            m_codeBlock->ownerScriptExecutable()->installCode(m_codeBlock);
+            m_codeBlock->ownerExecutable()->installCode(m_codeBlock);
             m_codeBlock->jitSoon();
             return;
         default:
@@ -108,7 +108,11 @@ public:
 
     const char* name() const override
     {
+#if OS(LINUX)
+        return "JITWorker";
+#else
         return "JIT Worklist Helper Thread";
+#endif
     }
 
 protected:
@@ -305,7 +309,7 @@ void JITWorklist::compileNow(CodeBlock* codeBlock, unsigned loopOSREntryBytecode
 
     // OK, just compile it.
     JIT::compile(vm, codeBlock, JITCompilationMustSucceed, loopOSREntryBytecodeOffset);
-    codeBlock->ownerScriptExecutable()->installCode(codeBlock);
+    codeBlock->ownerExecutable()->installCode(codeBlock);
 }
 
 void JITWorklist::finalizePlans(Plans& myPlans)
@@ -318,16 +322,24 @@ void JITWorklist::finalizePlans(Plans& myPlans)
     }
 }
 
-JITWorklist* JITWorklist::instance()
+static JITWorklist* theGlobalJITWorklist { nullptr };
+
+JITWorklist* JITWorklist::existingGlobalWorklistOrNull()
 {
-    static JITWorklist* worklist;
+    return theGlobalJITWorklist;
+}
+
+JITWorklist& JITWorklist::ensureGlobalWorklist()
+{
     static std::once_flag once;
     std::call_once(
         once,
         [] {
-            worklist = new JITWorklist();
+            auto* worklist = new JITWorklist();
+            WTF::storeStoreFence();
+            theGlobalJITWorklist = worklist;
         });
-    return worklist;
+    return *theGlobalJITWorklist;
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -164,7 +164,7 @@ void lowerToAirForTesting(Procedure& proc)
 }
 
 template<typename Func>
-void checkDisassembly(Compilation& compilation, const Func& func, CString failText)
+void checkDisassembly(Compilation& compilation, const Func& func, const CString& failText)
 {
     CString disassembly = compilation.disassembly();
     if (func(disassembly.data()))
@@ -607,6 +607,36 @@ void testAddImmMem32(int32_t a, int32_t b)
     int32_t inputOutput = b;
     CHECK(!compileAndRun<int>(proc, &inputOutput));
     CHECK(inputOutput == a + b);
+}
+
+void testAddNeg1(int a, int b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, Add, Origin(),
+            root->appendNew<Value>(proc, Neg, Origin(),
+                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1)));
+
+    CHECK(compileAndRun<int>(proc, a, b) == (- a) + b);
+}
+
+void testAddNeg2(int a, int b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, Add, Origin(),
+            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            root->appendNew<Value>(proc, Neg, Origin(),
+                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+
+    CHECK(compileAndRun<int>(proc, a, b) == a + (- b));
 }
 
 void testAddArgZeroImmZDef()
@@ -1897,6 +1927,36 @@ void testSubArgImm(int64_t a, int64_t b)
     CHECK(compileAndRun<int64_t>(proc, a) == a - b);
 }
 
+void testSubNeg(int a, int b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, Sub, Origin(),
+            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            root->appendNew<Value>(proc, Neg, Origin(),
+                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+
+    CHECK(compileAndRun<int>(proc, a, b) == a - (- b));
+}
+
+void testNegSub(int a, int b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, Neg, Origin(),
+            root->appendNew<Value>(proc, Sub, Origin(),
+                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+
+    CHECK(compileAndRun<int>(proc, a, b) == -(a - b));
+}
+
 void testNegValueSubOne(int a)
 {
     Procedure proc;
@@ -2426,6 +2486,41 @@ void testBitAndSameArg(int64_t a)
     CHECK(compileAndRun<int64_t>(proc, a) == a);
 }
 
+void testBitAndNotNot(int64_t a, int64_t b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    Value* notA = root->appendNew<Value>(proc, BitXor, Origin(), argA, root->appendNew<Const64Value>(proc, Origin(), -1));
+    Value* notB = root->appendNew<Value>(proc, BitXor, Origin(), argB, root->appendNew<Const64Value>(proc, Origin(), -1));
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, BitAnd, Origin(),
+            notA,
+            notB));
+
+    CHECK_EQ(compileAndRun<int64_t>(proc, a, b), (~a & ~b));
+}
+
+void testBitAndNotImm(int64_t a, int64_t b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* notA = root->appendNew<Value>(proc, BitXor, Origin(), argA, root->appendNew<Const64Value>(proc, Origin(), -1));
+    Value* cstB = root->appendNew<Const64Value>(proc, Origin(), b);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, BitAnd, Origin(),
+            notA,
+            cstB));
+
+    CHECK_EQ(compileAndRun<int64_t>(proc, a, b), (~a & b));
+}
+
 void testBitAndImms(int64_t a, int64_t b)
 {
     Procedure proc;
@@ -2810,6 +2905,91 @@ void testBitOrSameArg(int64_t a)
     CHECK(compileAndRun<int64_t>(proc, a) == a);
 }
 
+void testBitOrAndAndArgs(int64_t a, int64_t b, int64_t c)
+{
+    // We want to check every possible ordering of arguments (to properly check every path in B3ReduceStrength):
+    // ((a & b) | (a & c))
+    // ((a & b) | (c & a))
+    // ((b & a) | (a & c))
+    // ((b & a) | (c & a))
+    for (int i = 0; i < 4; ++i) {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* argC = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+        Value* andAB = i & 2 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
+            : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
+        Value* andAC = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argC)
+            : root->appendNew<Value>(proc, BitAnd, Origin(), argC, argA);
+        root->appendNewControlValue(
+            proc, Return, Origin(),
+            root->appendNew<Value>(
+                proc, BitOr, Origin(),
+                andAB,
+                andAC));
+
+        CHECK_EQ(compileAndRun<int64_t>(proc, a, b, c), ((a & b) | (a & c)));
+    }
+}
+
+void testBitOrAndSameArgs(int64_t a, int64_t b)
+{
+    // We want to check every possible ordering of arguments (to properly check every path in B3ReduceStrength):
+    // ((a & b) | a)
+    // ((b & a) | a)
+    // (a | (a & b))
+    // (a | (b & a))
+    for (int i = 0; i < 4; ++i) {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* andAB = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
+            : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
+        Value* result = i & 2 ? root->appendNew<Value>(proc, BitOr, Origin(), andAB, argA)
+            : root->appendNew<Value>(proc, BitOr, Origin(), argA, andAB);
+        root->appendNewControlValue(proc, Return, Origin(), result);
+
+        CHECK_EQ(compileAndRun<int64_t>(proc, a, b), ((a & b) | a));
+    }
+}
+
+void testBitOrNotNot(int64_t a, int64_t b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    Value* notA = root->appendNew<Value>(proc, BitXor, Origin(), argA, root->appendNew<Const64Value>(proc, Origin(), -1));
+    Value* notB = root->appendNew<Value>(proc, BitXor, Origin(), argB, root->appendNew<Const64Value>(proc, Origin(), -1));
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, BitOr, Origin(),
+            notA,
+            notB));
+
+    CHECK_EQ(compileAndRun<int64_t>(proc, a, b), (~a | ~b));
+}
+
+void testBitOrNotImm(int64_t a, int64_t b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* notA = root->appendNew<Value>(proc, BitXor, Origin(), argA, root->appendNew<Const64Value>(proc, Origin(), -1));
+    Value* cstB = root->appendNew<Const64Value>(proc, Origin(), b);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(
+            proc, BitOr, Origin(),
+            notA,
+            cstB));
+
+    CHECK_EQ(compileAndRun<int64_t>(proc, a, b), (~a | b));
+}
+
 void testBitOrImms(int64_t a, int64_t b)
 {
     Procedure proc;
@@ -3172,6 +3352,56 @@ void testBitXorSameArg(int64_t a)
     CHECK(!compileAndRun<int64_t>(proc, a));
 }
 
+void testBitXorAndAndArgs(int64_t a, int64_t b, int64_t c)
+{
+    // We want to check every possible ordering of arguments (to properly check every path in B3ReduceStrength):
+    // ((a & b) ^ (a & c))
+    // ((a & b) ^ (c & a))
+    // ((b & a) ^ (a & c))
+    // ((b & a) ^ (c & a))
+    for (int i = 0; i < 4; ++i) {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* argC = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+        Value* andAB = i & 2 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
+            : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
+        Value* andAC = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argC)
+            : root->appendNew<Value>(proc, BitAnd, Origin(), argC, argA);
+        root->appendNewControlValue(
+            proc, Return, Origin(),
+            root->appendNew<Value>(
+                proc, BitXor, Origin(),
+                andAB,
+                andAC));
+
+        CHECK_EQ(compileAndRun<int64_t>(proc, a, b, c), ((a & b) ^ (a & c)));
+    }
+}
+
+void testBitXorAndSameArgs(int64_t a, int64_t b)
+{
+    // We want to check every possible ordering of arguments (to properly check every path in B3ReduceStrength):
+    // ((a & b) ^ a)
+    // ((b & a) ^ a)
+    // (a ^ (a & b))
+    // (a ^ (b & a))
+    for (int i = 0; i < 4; ++i) {
+        Procedure proc;
+        BasicBlock* root = proc.addBlock();
+        Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* andAB = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
+            : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
+        Value* result = i & 2 ? root->appendNew<Value>(proc, BitXor, Origin(), andAB, argA)
+            : root->appendNew<Value>(proc, BitXor, Origin(), argA, andAB);
+        root->appendNewControlValue(proc, Return, Origin(), result);
+
+        CHECK_EQ(compileAndRun<int64_t>(proc, a, b), ((a & b) ^ a));
+    }
+}
+
 void testBitXorImms(int64_t a, int64_t b)
 {
     Procedure proc;
@@ -3461,7 +3691,7 @@ void testBitNotMem32(int32_t a)
     CHECK(isIdentical(input, static_cast<int32_t>((static_cast<uint32_t>(a) ^ 0xffffffff))));
 }
 
-void testBitNotOnBooleanAndBranch32(int64_t a, int64_t b)
+void testNotOnBooleanAndBranch32(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
@@ -3474,7 +3704,7 @@ void testBitNotOnBooleanAndBranch32(int64_t a, int64_t b)
         root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
     Value* argsAreEqual = root->appendNew<Value>(proc, Equal, Origin(), arg1, arg2);
     Value* argsAreNotEqual = root->appendNew<Value>(proc, BitXor, Origin(),
-        root->appendNew<Const32Value>(proc, Origin(), -1),
+        root->appendNew<Const32Value>(proc, Origin(), 1),
         argsAreEqual);
 
     root->appendNewControlValue(
@@ -3491,6 +3721,35 @@ void testBitNotOnBooleanAndBranch32(int64_t a, int64_t b)
         elseCase->appendNew<Const32Value>(proc, Origin(), -42));
 
     int32_t expectedValue = (a != b) ? 42 : -42;
+    CHECK(compileAndRun<int32_t>(proc, a, b) == expectedValue);
+}
+
+void testBitNotOnBooleanAndBranch32(int64_t a, int64_t b)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* thenCase = proc.addBlock();
+    BasicBlock* elseCase = proc.addBlock();
+
+    Value* arg1 = root->appendNew<Value>(proc, Trunc, Origin(),
+        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    Value* arg2 = root->appendNew<Value>(proc, Trunc, Origin(),
+        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* argsAreEqual = root->appendNew<Value>(proc, Equal, Origin(), arg1, arg2);
+    Value* bitNotArgsAreEqual = root->appendNew<Value>(proc, BitXor, Origin(),
+        root->appendNew<Const32Value>(proc, Origin(), -1),
+        argsAreEqual);
+
+    root->appendNewControlValue(proc, Branch, Origin(),
+        bitNotArgsAreEqual, FrequentedBlock(thenCase), FrequentedBlock(elseCase));
+
+    thenCase->appendNewControlValue(proc, Return, Origin(),
+        thenCase->appendNew<Const32Value>(proc, Origin(), 42));
+
+    elseCase->appendNewControlValue(proc, Return, Origin(),
+        elseCase->appendNew<Const32Value>(proc, Origin(), -42));
+
+    int32_t expectedValue = ~(a == b) ? 42 : -42; // always 42
     CHECK(compileAndRun<int32_t>(proc, a, b) == expectedValue);
 }
 
@@ -3917,7 +4176,19 @@ void testAbsAbsArg(double a)
     Value* secondAbs = root->appendNew<Value>(proc, Abs, Origin(), firstAbs);
     root->appendNewControlValue(proc, Return, Origin(), secondAbs);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, a), fabs(a)));
+    CHECK(isIdentical(compileAndRun<double>(proc, a), fabs(fabs(a))));
+}
+
+void testAbsNegArg(double a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* neg = root->appendNew<Value>(proc, Neg, Origin(),
+        root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0));
+    Value* abs = root->appendNew<Value>(proc, Abs, Origin(), neg);
+    root->appendNewControlValue(proc, Return, Origin(), abs);
+
+    CHECK(isIdentical(compileAndRun<double>(proc, a), fabs(- a)));
 }
 
 void testAbsBitwiseCastArg(double a)
@@ -3997,7 +4268,21 @@ void testAbsAbsArg(float a)
     Value* secondAbs = root->appendNew<Value>(proc, Abs, Origin(), firstAbs);
     root->appendNewControlValue(proc, Return, Origin(), secondAbs);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(fabs(a))));
+    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(fabs(fabs(a)))));
+}
+
+void testAbsNegArg(float a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
+        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
+    Value* neg = root->appendNew<Value>(proc, Neg, Origin(), argument);
+    Value* abs = root->appendNew<Value>(proc, Abs, Origin(), neg);
+    root->appendNewControlValue(proc, Return, Origin(), abs);
+
+    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(fabs(- a))));
 }
 
 void testAbsBitwiseCastArg(float a)
@@ -5473,10 +5758,11 @@ void testStoreConstantPtr(intptr_t value)
     Procedure proc;
     BasicBlock* root = proc.addBlock();
     intptr_t slot;
-    if (is64Bit())
-        slot = (static_cast<intptr_t>(0xbaadbeef) << 32) + static_cast<intptr_t>(0xbaadbeef);
-    else
-        slot = 0xbaadbeef;
+#if CPU(ADDRESS64)
+    slot = (static_cast<intptr_t>(0xbaadbeef) << 32) + static_cast<intptr_t>(0xbaadbeef);
+#else
+    slot = 0xbaadbeef;
+#endif
     root->appendNew<MemoryValue>(
         proc, Store, Origin(),
         root->appendNew<ConstPtrValue>(proc, Origin(), value),
@@ -13083,12 +13369,9 @@ void testInterpreter()
                 params.proc().addDataSection(sizeof(MacroAssemblerCodePtr<B3CompilationPtrTag>) * labels.size()));
 
             GPRReg scratch = params.gpScratch(0);
-            GPRReg poisonScratch = params.gpScratch(1);
 
             jit.move(CCallHelpers::TrustedImmPtr(jumpTable), scratch);
-            jit.move(CCallHelpers::TrustedImm64(JITCodePoison::key()), poisonScratch);
             jit.load64(CCallHelpers::BaseIndex(scratch, params[0].gpr(), CCallHelpers::timesPtr()), scratch);
-            jit.xor64(poisonScratch, scratch);
             jit.jump(scratch, B3CompilationPtrTag);
 
             jit.addLinkTask(
@@ -13194,9 +13477,9 @@ void testInterpreter()
 
     auto interpreter = compileProc(proc);
 
-    Vector<intptr_t> data;
-    Vector<intptr_t> code;
-    Vector<intptr_t> stream;
+    Vector<uintptr_t> data;
+    Vector<uintptr_t> code;
+    Vector<uintptr_t> stream;
 
     data.append(1);
     data.append(0);
@@ -14497,7 +14780,7 @@ void testAddShl32()
     root->appendNew<Value>(proc, Return, Origin(), result);
 
     auto code = compileProc(proc);
-    CHECK_EQ(invoke<intptr_t>(*code, 1, 2), 1 + (static_cast<intptr_t>(2) << static_cast<intptr_t>(32)));
+    CHECK_EQ(invoke<int64_t>(*code, 1, 2), 1 + (static_cast<int64_t>(2) << static_cast<int64_t>(32)));
 }
 
 void testAddShl64()
@@ -14607,6 +14890,7 @@ void testLoadBaseIndexShift2()
 
 void testLoadBaseIndexShift32()
 {
+#if CPU(ADDRESS64)
     Procedure proc;
     BasicBlock* root = proc.addBlock();
     root->appendNew<Value>(
@@ -14625,6 +14909,7 @@ void testLoadBaseIndexShift32()
     char* ptr = bitwise_cast<char*>(&value);
     for (unsigned i = 0; i < 10; ++i)
         CHECK_EQ(invoke<int32_t>(*code, ptr - (static_cast<intptr_t>(1) << static_cast<intptr_t>(32)) * i, i), 12341234);
+#endif
 }
 
 void testOptimizeMaterialization()
@@ -16277,6 +16562,98 @@ void testDemotePatchpointTerminal()
     validate(proc);
 }
 
+void testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead()
+{
+    Procedure proc;
+    if (proc.optLevel() < 2)
+        return;
+    BasicBlock* root = proc.addBlock();
+
+    RegisterSet allRegs = RegisterSet::allGPRs();
+    allRegs.exclude(RegisterSet::stackRegisters());
+    allRegs.exclude(RegisterSet::reservedHardwareRegisters());
+
+    {
+        // Make every reg 42 (just needs to be a value other than 10).
+        PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
+        Value* const42 = root->appendNew<Const32Value>(proc, Origin(), 42);
+        for (Reg reg : allRegs)
+            patchpoint->append(const42, ValueRep::reg(reg));
+        patchpoint->setGenerator([&] (CCallHelpers&, const StackmapGenerationParams&) { });
+    }
+
+    {
+        PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Void, Origin());
+        Value* const10 = root->appendNew<Const32Value>(proc, Origin(), 10);
+        for (Reg reg : allRegs)
+            patchpoint->append(const10, ValueRep::lateReg(reg));
+        patchpoint->setGenerator([&] (CCallHelpers& jit, const StackmapGenerationParams&) {
+            for (Reg reg : allRegs) {
+                auto done = jit.branch32(CCallHelpers::Equal, reg.gpr(), CCallHelpers::TrustedImm32(10));
+                jit.breakpoint();
+                done.link(&jit);
+            }
+        });
+    }
+
+    {
+        PatchpointValue* patchpoint = root->appendNew<PatchpointValue>(proc, Int32, Origin());
+        patchpoint->resultConstraint = ValueRep::SomeEarlyRegister;
+        patchpoint->setGenerator([&] (CCallHelpers&, const StackmapGenerationParams& params) {
+            RELEASE_ASSERT(allRegs.contains(params[0].gpr()));
+        });
+    }
+
+    root->appendNewControlValue(proc, Return, Origin());
+
+    compileAndRun<void>(proc);
+}
+
+void testInfiniteLoopDoesntCauseBadHoisting()
+{
+    Procedure proc;
+    if (proc.optLevel() < 2)
+        return;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* header = proc.addBlock();
+    BasicBlock* loadBlock = proc.addBlock();
+    BasicBlock* postLoadBlock = proc.addBlock();
+
+    Value* arg = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    root->appendNewControlValue(proc, Jump, Origin(), header);
+
+    header->appendNewControlValue(
+        proc, Branch, Origin(),
+        header->appendNew<Value>(proc, Equal, Origin(),
+            arg,
+            header->appendNew<Const64Value>(proc, Origin(), 10)), header, loadBlock);
+
+    PatchpointValue* patchpoint = loadBlock->appendNew<PatchpointValue>(proc, Void, Origin());
+    patchpoint->effects = Effects::none();
+    patchpoint->effects.writesLocalState = true; // Don't DCE this.
+    patchpoint->setGenerator(
+        [&] (CCallHelpers& jit, const StackmapGenerationParams&) {
+            // This works because we don't have callee saves.
+            jit.emitFunctionEpilogue();
+            jit.ret();
+        });
+
+    Value* badLoad = loadBlock->appendNew<MemoryValue>(proc, Load, Int64, Origin(), arg, 0);
+
+    loadBlock->appendNewControlValue(
+        proc, Branch, Origin(),
+        loadBlock->appendNew<Value>(proc, Equal, Origin(),
+            badLoad,
+            loadBlock->appendNew<Const64Value>(proc, Origin(), 45)), header, postLoadBlock);
+
+    postLoadBlock->appendNewControlValue(proc, Return, Origin(), badLoad);
+
+    // The patchpoint early ret() works because we don't have callee saves.
+    auto code = compileProc(proc);
+    RELEASE_ASSERT(!proc.calleeSaveRegisterAtOffsetList().size());
+    invoke<void>(*code, static_cast<uint64_t>(55)); // Shouldn't crash dereferncing 55.
+}
+
 // Make sure the compiler does not try to optimize anything out.
 NEVER_INLINE double zero()
 {
@@ -16334,6 +16711,22 @@ double negativeZero()
                 }));                                        \
         }                                                   \
     }
+#define RUN_TERNARY(test, valuesA, valuesB, valuesC) \
+    for (auto a : valuesA) {                                    \
+        for (auto b : valuesB) {                                \
+            for (auto c : valuesC) {                            \
+                CString testStr = toCString(#test, "(", a.name, ", ", b.name, ",", c.name, ")"); \
+                if (!shouldRun(testStr.data()))                 \
+                    continue;                                   \
+                tasks.append(createSharedTask<void()>(          \
+                    [=] () {                                    \
+                        dataLog(toCString(testStr, "...\n"));   \
+                        test(a.value, b.value, c.value);        \
+                        dataLog(toCString(testStr, ": OK!\n")); \
+                    }));                                        \
+            }                                                   \
+        }                                                       \
+    }
 
 void run(const char* filter)
 {
@@ -16379,6 +16772,8 @@ void run(const char* filter)
     RUN_BINARY(testAddArgMem32, int32Operands(), int32Operands());
     RUN_BINARY(testAddMemArg32, int32Operands(), int32Operands());
     RUN_BINARY(testAddImmMem32, int32Operands(), int32Operands());
+    RUN_BINARY(testAddNeg1, int32Operands(), int32Operands());
+    RUN_BINARY(testAddNeg2, int32Operands(), int32Operands());
     RUN(testAddArgZeroImmZDef());
     RUN(testAddLoadTwice());
 
@@ -16546,6 +16941,8 @@ void run(const char* filter)
     RUN_BINARY(testSubMemArg, int64Operands(), int64Operands());
     RUN_BINARY(testSubImmMem, int32Operands(), int32Operands());
     RUN_BINARY(testSubMemImm, int32Operands(), int32Operands());
+    RUN_BINARY(testSubNeg, int32Operands(), int32Operands());
+    RUN_BINARY(testNegSub, int32Operands(), int32Operands());
     RUN_UNARY(testNegValueSubOne, int32Operands());
 
     RUN(testSubArgs32(1, 1));
@@ -16658,6 +17055,8 @@ void run(const char* filter)
     RUN_BINARY(testBitAndArgImmFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testBitAndImmsFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testBitAndArgsFloatWithUselessDoubleConversion, floatingPointOperands<float>(), floatingPointOperands<float>());
+    RUN_BINARY(testBitAndNotNot, int64Operands(), int64Operands());
+    RUN_BINARY(testBitAndNotImm, int64Operands(), int64Operands());
 
     RUN(testBitOrArgs(43, 43));
     RUN(testBitOrArgs(43, 0));
@@ -16720,6 +17119,10 @@ void run(const char* filter)
     RUN_BINARY(testBitOrArgImmFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testBitOrImmsFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testBitOrArgsFloatWithUselessDoubleConversion, floatingPointOperands<float>(), floatingPointOperands<float>());
+    RUN_TERNARY(testBitOrAndAndArgs, int64Operands(), int64Operands(), int64Operands());
+    RUN_BINARY(testBitOrAndSameArgs, int64Operands(), int64Operands());
+    RUN_BINARY(testBitOrNotNot, int64Operands(), int64Operands());
+    RUN_BINARY(testBitOrNotImm, int64Operands(), int64Operands());
 
     RUN_BINARY(testBitXorArgs, int64Operands(), int64Operands());
     RUN_UNARY(testBitXorSameArg, int64Operands());
@@ -16758,6 +17161,8 @@ void run(const char* filter)
     RUN(testBitXorImmBitXorArgImm32(7, 2, 3));
     RUN(testBitXorImmBitXorArgImm32(6, 1, 6));
     RUN(testBitXorImmBitXorArgImm32(24, 0xffff, 7));
+    RUN_TERNARY(testBitXorAndAndArgs, int64Operands(), int64Operands(), int64Operands());
+    RUN_BINARY(testBitXorAndSameArgs, int64Operands(), int64Operands());
 
     RUN_UNARY(testBitNotArg, int64Operands());
     RUN_UNARY(testBitNotImm, int64Operands());
@@ -16765,6 +17170,7 @@ void run(const char* filter)
     RUN_UNARY(testBitNotArg32, int32Operands());
     RUN_UNARY(testBitNotImm32, int32Operands());
     RUN_UNARY(testBitNotMem32, int32Operands());
+    RUN_BINARY(testNotOnBooleanAndBranch32, int32Operands(), int32Operands());
     RUN_BINARY(testBitNotOnBooleanAndBranch32, int32Operands(), int32Operands());
 
     RUN(testShlArgs(1, 0));
@@ -16902,12 +17308,14 @@ void run(const char* filter)
     RUN_UNARY(testAbsImm, floatingPointOperands<double>());
     RUN_UNARY(testAbsMem, floatingPointOperands<double>());
     RUN_UNARY(testAbsAbsArg, floatingPointOperands<double>());
+    RUN_UNARY(testAbsNegArg, floatingPointOperands<double>());
     RUN_UNARY(testAbsBitwiseCastArg, floatingPointOperands<double>());
     RUN_UNARY(testBitwiseCastAbsBitwiseCastArg, floatingPointOperands<double>());
     RUN_UNARY(testAbsArg, floatingPointOperands<float>());
     RUN_UNARY(testAbsImm, floatingPointOperands<float>());
     RUN_UNARY(testAbsMem, floatingPointOperands<float>());
     RUN_UNARY(testAbsAbsArg, floatingPointOperands<float>());
+    RUN_UNARY(testAbsNegArg, floatingPointOperands<float>());
     RUN_UNARY(testAbsBitwiseCastArg, floatingPointOperands<float>());
     RUN_UNARY(testBitwiseCastAbsBitwiseCastArg, floatingPointOperands<float>());
     RUN_UNARY(testAbsArgWithUselessDoubleConversion, floatingPointOperands<float>());
@@ -17848,6 +18256,8 @@ void run(const char* filter)
 
     RUN(testLoopWithMultipleHeaderEdges());
 
+    RUN(testInfiniteLoopDoesntCauseBadHoisting());
+
     if (isX86()) {
         RUN(testBranchBitAndImmFusion(Identity, Int64, 1, Air::BranchTest32, Air::Arg::Tmp));
         RUN(testBranchBitAndImmFusion(Identity, Int64, 0xff, Air::BranchTest32, Air::Arg::Tmp));
@@ -17871,6 +18281,8 @@ void run(const char* filter)
         RUN(testTernarySubInstructionSelection(Identity, Int64, Air::Sub64));
         RUN(testTernarySubInstructionSelection(Trunc, Int32, Air::Sub32));
     }
+
+    RUN(testReportUsedRegistersLateUseFollowedByEarlyDefDoesNotMarkUseAsDead());
 
     if (tasks.isEmpty())
         usage();

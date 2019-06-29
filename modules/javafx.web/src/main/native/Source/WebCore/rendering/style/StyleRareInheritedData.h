@@ -28,11 +28,17 @@
 #include "DataRef.h"
 #include "Length.h"
 #include "StyleCustomPropertyData.h"
+#include "TextDecorationThickness.h"
+#include "TextUnderlineOffset.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomicString.h>
 
 #if ENABLE(TEXT_AUTOSIZING)
 #include "TextSizeAdjustment.h"
+#endif
+
+#if ENABLE(DARK_MODE_CSS)
+#include "StyleSupportedColorSchemes.h"
 #endif
 
 namespace WebCore {
@@ -79,6 +85,9 @@ public:
     RefPtr<CursorList> cursorData;
     Length indent;
     float effectiveZoom;
+
+    TextUnderlineOffset textUnderlineOffset;
+    TextDecorationThickness textDecorationThickness;
 
     Length wordSpacing;
 
@@ -128,16 +137,12 @@ public:
     unsigned textJustify : 2; // TextJustify
 #endif
     unsigned textDecorationSkip : 5; // TextDecorationSkip
-    unsigned textUnderlinePosition : 3; // TextUnderlinePosition
+    unsigned textUnderlinePosition : 2; // TextUnderlinePosition
     unsigned rubyPosition : 2; // RubyPosition
     unsigned textZoom: 1; // TextZoom
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     unsigned touchCalloutEnabled : 1;
-#endif
-
-#if ENABLE(CSS_TRAILING_WORD)
-    unsigned trailingWord : 1;
 #endif
 
     unsigned hangingPunctuation : 4;
@@ -174,6 +179,10 @@ public:
 
 #if ENABLE(TOUCH_EVENTS)
     Color tapHighlightColor;
+#endif
+
+#if ENABLE(DARK_MODE_CSS)
+    StyleSupportedColorSchemes supportedColorSchemes;
 #endif
 
 private:

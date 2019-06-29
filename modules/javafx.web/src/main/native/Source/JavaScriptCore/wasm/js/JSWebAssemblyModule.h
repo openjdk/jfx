@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSCPoison.h"
 #include "JSDestructibleObject.h"
 #include "JSObject.h"
 #include "WasmMemoryMode.h"
@@ -43,7 +42,7 @@ namespace Wasm {
 class Module;
 struct ModuleInformation;
 class Plan;
-using SignatureIndex = uint32_t;
+using SignatureIndex = uint64_t;
 }
 
 class SymbolTable;
@@ -68,8 +67,6 @@ public:
     JSWebAssemblyCodeBlock* codeBlock(Wasm::MemoryMode mode);
     void setCodeBlock(VM&, Wasm::MemoryMode, JSWebAssemblyCodeBlock*);
 
-    const Vector<uint8_t>& source() const;
-
     JS_EXPORT_PRIVATE Wasm::Module& module();
 
 private:
@@ -80,14 +77,10 @@ private:
     static void destroy(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
 
-    PoisonedRef<JSWebAssemblyModulePoison, Wasm::Module> m_module;
-
-    template<typename T>
-    using PoisonedBarrier = PoisonedWriteBarrier<JSWebAssemblyModulePoison, T>;
-
-    PoisonedBarrier<SymbolTable> m_exportSymbolTable;
-    PoisonedBarrier<JSWebAssemblyCodeBlock> m_codeBlocks[Wasm::NumberOfMemoryModes];
-    PoisonedBarrier<WebAssemblyToJSCallee> m_callee;
+    Ref<Wasm::Module> m_module;
+    WriteBarrier<SymbolTable> m_exportSymbolTable;
+    WriteBarrier<JSWebAssemblyCodeBlock> m_codeBlocks[Wasm::NumberOfMemoryModes];
+    WriteBarrier<WebAssemblyToJSCallee> m_callee;
 };
 
 } // namespace JSC

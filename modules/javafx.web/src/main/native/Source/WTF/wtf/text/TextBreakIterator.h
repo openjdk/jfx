@@ -21,12 +21,12 @@
 
 #pragma once
 
-#include "StringView.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Variant.h>
+#include <wtf/text/StringView.h>
 #include <wtf/text/icu/TextBreakIteratorICU.h>
 
-#if PLATFORM(MAC) || PLATFORM(IOS)
+#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
 #include <wtf/text/cf/TextBreakIteratorCF.h>
 #else
 #include <wtf/text/NullTextBreakIterator.h>
@@ -34,7 +34,7 @@
 
 namespace WTF {
 
-#if PLATFORM(MAC) || PLATFORM(IOS)
+#if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
 typedef TextBreakIteratorCF TextBreakIteratorPlatform;
 #else
 typedef NullTextBreakIterator TextBreakIteratorPlatform;
@@ -56,14 +56,14 @@ public:
     TextBreakIterator& operator=(const TextBreakIterator&) = delete;
     TextBreakIterator& operator=(TextBreakIterator&&) = default;
 
-    std::optional<unsigned> preceding(unsigned location) const
+    Optional<unsigned> preceding(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.preceding(location);
         });
     }
 
-    std::optional<unsigned> following(unsigned location) const
+    Optional<unsigned> following(unsigned location) const
     {
         return switchOn(m_backing, [&](const auto& iterator) {
             return iterator.following(location);
@@ -173,12 +173,12 @@ public:
     CachedTextBreakIterator& operator=(const CachedTextBreakIterator&) = delete;
     CachedTextBreakIterator& operator=(CachedTextBreakIterator&&) = default;
 
-    std::optional<unsigned> preceding(unsigned location) const
+    Optional<unsigned> preceding(unsigned location) const
     {
         return m_backing.preceding(location);
     }
 
-    std::optional<unsigned> following(unsigned location) const
+    Optional<unsigned> following(unsigned location) const
     {
         return m_backing.following(location);
     }

@@ -41,7 +41,7 @@
 #include <wtf/java/JavaRef.h>
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include "ViewportArguments.h"
 #endif
 
@@ -58,10 +58,9 @@ class FormData;
 class HistoryItem;
 class Image;
 class ResourceRequest;
-class URL;
 enum class PruningReason;
 
-WEBCORE_EXPORT extern void (*notifyHistoryItemChanged)(HistoryItem*);
+WEBCORE_EXPORT extern void (*notifyHistoryItemChanged)(HistoryItem&);
 
 class HistoryItem : public RefCounted<HistoryItem> {
     friend class PageCache;
@@ -173,11 +172,6 @@ public:
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT id viewState() const;
     WEBCORE_EXPORT void setViewState(id);
-
-    // Transient properties may be of any ObjC type.  They are intended to be used to store state per back/forward list entry.
-    // The properties will not be persisted; when the history item is removed, the properties will be lost.
-    WEBCORE_EXPORT id getTransientProperty(const String&) const;
-    WEBCORE_EXPORT void setTransientProperty(const String&, id);
 #endif
 #if PLATFORM(JAVA)
     JLObject hostObject();
@@ -189,7 +183,7 @@ public:
     int showTreeWithIndent(unsigned indentLevel) const;
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     FloatRect exposedContentRect() const { return m_exposedContentRect; }
     void setExposedContentRect(FloatRect exposedContentRect) { m_exposedContentRect = exposedContentRect; }
 
@@ -281,7 +275,7 @@ private:
     std::unique_ptr<CachedPage> m_cachedPage;
     PruningReason m_pruningReason;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     FloatRect m_exposedContentRect;
     IntRect m_unobscuredContentRect;
     FloatSize m_minimumLayoutSizeInScrollViewCoordinates;
@@ -298,7 +292,6 @@ private:
 
 #if PLATFORM(COCOA)
     RetainPtr<id> m_viewState;
-    std::unique_ptr<HashMap<String, RetainPtr<id>>> m_transientProperties;
 #endif
 
     BackForwardItemIdentifier m_identifier;

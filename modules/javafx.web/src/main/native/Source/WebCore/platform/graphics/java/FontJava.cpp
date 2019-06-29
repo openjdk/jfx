@@ -42,7 +42,7 @@ namespace WebCore {
 
 void Font::platformInit()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont)
@@ -52,25 +52,25 @@ void Font::platformInit()
         "getXHeight", "()F");
     ASSERT(getXHeight_mID);
     m_fontMetrics.setXHeight(env->CallFloatMethod(*jFont, getXHeight_mID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID getCapHeight_mID = env->GetMethodID(PG_GetFontClass(env),
         "getCapHeight", "()F");
     ASSERT(getCapHeight_mID);
     m_fontMetrics.setCapHeight(env->CallFloatMethod(*jFont, getCapHeight_mID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID getAscent_mID = env->GetMethodID(PG_GetFontClass(env),
         "getAscent", "()F");
     ASSERT(getAscent_mID);
     m_fontMetrics.setAscent(env->CallFloatMethod(*jFont, getAscent_mID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID getDescent_mID = env->GetMethodID(PG_GetFontClass(env),
         "getDescent", "()F");
     ASSERT(getDescent_mID);
     m_fontMetrics.setDescent(env->CallFloatMethod(*jFont, getDescent_mID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID getLineSpacing_mID = env->GetMethodID(PG_GetFontClass(env),
         "getLineSpacing", "()F");
@@ -78,18 +78,18 @@ void Font::platformInit()
     // Match CoreGraphics metrics.
     m_fontMetrics.setLineSpacing(lroundf(
         env->CallFloatMethod(*jFont, getLineSpacing_mID)));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID getLineGap_mID = env->GetMethodID(PG_GetFontClass(env),
         "getLineGap", "()F");
     ASSERT(getLineGap_mID);
     m_fontMetrics.setLineGap(env->CallFloatMethod(*jFont, getLineGap_mID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Font::determinePitch()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont) {
@@ -102,7 +102,7 @@ void Font::determinePitch()
     ASSERT(hasUniformLineMetrics_mID);
 
     m_treatAsFixedPitch = jbool_to_bool(env->CallBooleanMethod(*jFont, hasUniformLineMetrics_mID));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Font::platformCharWidthInit()
@@ -124,7 +124,7 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleF
 
 float Font::platformWidthForGlyph(Glyph c) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont)
@@ -135,14 +135,14 @@ float Font::platformWidthForGlyph(Glyph c) const
     ASSERT(getGlyphWidth_mID);
 
     float res = env->CallDoubleMethod(*jFont, getGlyphWidth_mID, (jint)c);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return res;
 }
 
 FloatRect Font::platformBoundsForGlyph(Glyph c) const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont) {
@@ -156,8 +156,14 @@ FloatRect Font::platformBoundsForGlyph(Glyph c) const
     jfloat *bBox = env->GetFloatArrayElements(boundingBox,0);
     auto bb = FloatRect { bBox[0], bBox[1], bBox[2], bBox[3] };
     env->ReleaseFloatArrayElements(boundingBox, bBox, 0);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     return bb;
+}
+
+Path Font::platformPathForGlyph(Glyph) const
+{
+    notImplemented();
+    return Path();
 }
 
 }

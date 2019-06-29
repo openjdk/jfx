@@ -26,7 +26,7 @@
 #pragma once
 
 #include <jni.h>
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 
 extern jmethodID WCGM_getWCFont_mID;
 extern jmethodID WCGM_createBufferedContext_mID;

@@ -165,12 +165,10 @@ static ALWAYS_INLINE JSValue getProperty(ExecState* exec, JSObject* object, unsi
     EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
     if (!hasProperty)
         return { };
-    if (UNLIKELY(slot.isTaintedByOpaqueObject())) {
-        scope.release();
-        return object->get(exec, index);
-    }
-    scope.release();
-    return slot.getValue(exec, index);
+    if (UNLIKELY(slot.isTaintedByOpaqueObject()))
+        RELEASE_AND_RETURN(scope, object->get(exec, index));
+
+    RELEASE_AND_RETURN(scope, slot.getValue(exec, index));
 }
 
 static ALWAYS_INLINE bool putLength(ExecState* exec, VM& vm, JSObject* obj, JSValue value)
@@ -392,6 +390,7 @@ inline bool canUseFastJoin(const JSObject* thisObject)
     case ALL_CONTIGUOUS_INDEXING_TYPES:
     case ALL_INT32_INDEXING_TYPES:
     case ALL_DOUBLE_INDEXING_TYPES:
+    case ALL_UNDECIDED_INDEXING_TYPES:
         return true;
     default:
         break;
@@ -453,8 +452,7 @@ inline JSValue fastJoin(ExecState& state, JSObject* thisObject, StringView separ
                 joiner.appendEmptyString();
             }
         }
-        scope.release();
-        return joiner.join(state);
+        RELEASE_AND_RETURN(scope, joiner.join(state));
     }
     case ALL_CONTIGUOUS_INDEXING_TYPES: {
         auto& butterfly = *thisObject->butterfly();
@@ -479,8 +477,7 @@ inline JSValue fastJoin(ExecState& state, JSObject* thisObject, StringView separ
                 joiner.appendEmptyString();
             }
         }
-        scope.release();
-        return joiner.join(state);
+        RELEASE_AND_RETURN(scope, joiner.join(state));
     }
     case ALL_DOUBLE_INDEXING_TYPES: {
         auto& butterfly = *thisObject->butterfly();
@@ -505,8 +502,22 @@ inline JSValue fastJoin(ExecState& state, JSObject* thisObject, StringView separ
                 joiner.appendEmptyString();
             }
         }
-        scope.release();
-        return joiner.join(state);
+        RELEASE_AND_RETURN(scope, joiner.join(state));
+    }
+    case ALL_UNDECIDED_INDEXING_TYPES: {
+        if (length && holesMustForwardToPrototype(vm, thisObject))
+            goto generalCase;
+        switch (separator.length()) {
+        case 0:
+            RELEASE_AND_RETURN(scope, jsEmptyString(&state));
+        case 1: {
+            if (length <= 1)
+                RELEASE_AND_RETURN(scope, jsEmptyString(&state));
+            if (separator.is8Bit())
+                RELEASE_AND_RETURN(scope, repeatCharacter(state, separator.characters8()[0], length - 1));
+            RELEASE_AND_RETURN(scope, repeatCharacter(state, separator.characters16()[0], length - 1));
+        }
+        }
     }
     }
 
@@ -519,8 +530,7 @@ generalCase:
         joiner.append(state, element);
         RETURN_IF_EXCEPTION(scope, { });
     }
-    scope.release();
-    return joiner.join(state);
+    RELEASE_AND_RETURN(scope, joiner.join(state));
 }
 
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
@@ -546,16 +556,12 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
     if (callType == CallType::None)
         customJoinCase = true;
 
-    if (UNLIKELY(customJoinCase)) {
-        scope.release();
-        return JSValue::encode(jsMakeNontrivialString(exec, "[object ", thisObject->methodTable(vm)->className(thisObject, vm), "]"));
-    }
+    if (UNLIKELY(customJoinCase))
+        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(exec, "[object ", thisObject->methodTable(vm)->className(thisObject, vm), "]")));
 
     // 4. Return the result of calling the [[Call]] internal method of func providing array as the this value and an empty arguments list.
-    if (!isJSArray(thisObject) || callType != CallType::Host || callData.native.function != arrayProtoFuncJoin) {
-        scope.release();
-        return JSValue::encode(call(exec, function, callType, callData, thisObject, *vm.emptyList));
-    }
+    if (!isJSArray(thisObject) || callType != CallType::Host || callData.native.function != arrayProtoFuncJoin)
+        RELEASE_AND_RETURN(scope, JSValue::encode(call(exec, function, callType, callData, thisObject, *vm.emptyList)));
 
     ASSERT(isJSArray(thisValue));
     JSArray* thisArray = asArray(thisValue);
@@ -604,8 +610,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToString(ExecState* exec)
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
 
-    scope.release();
-    return JSValue::encode(joiner.join(*exec));
+    RELEASE_AND_RETURN(scope, JSValue::encode(joiner.join(*exec)));
 }
 
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncToLocaleString(ExecState* exec)
@@ -653,8 +658,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncToLocaleString(ExecState* exec)
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
 
-    scope.release();
-    return JSValue::encode(stringJoiner.join(*exec));
+    RELEASE_AND_RETURN(scope, JSValue::encode(stringJoiner.join(*exec)));
 }
 
 static JSValue slowJoin(ExecState& exec, JSObject* thisObject, JSString* separator, uint64_t length)
@@ -736,15 +740,13 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
             JSString* jsSeparator = jsSingleCharacterString(exec, comma);
             RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-            scope.release();
-            return JSValue::encode(slowJoin(*exec, thisObject, jsSeparator, length64));
+            RELEASE_AND_RETURN(scope, JSValue::encode(slowJoin(*exec, thisObject, jsSeparator, length64)));
         }
 
         unsigned unsignedLength = static_cast<unsigned>(length);
         ASSERT(static_cast<double>(unsignedLength) == length);
 
-        scope.release();
-        return JSValue::encode(fastJoin(*exec, thisObject, { &comma, 1 }, unsignedLength));
+        RELEASE_AND_RETURN(scope, JSValue::encode(fastJoin(*exec, thisObject, { &comma, 1 }, unsignedLength)));
     }
 
     // 4. Let sep be ? ToString(separator).
@@ -755,15 +757,13 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncJoin(ExecState* exec)
         uint64_t length64 = static_cast<uint64_t>(length);
         ASSERT(static_cast<double>(length64) == length);
 
-        scope.release();
-        return JSValue::encode(slowJoin(*exec, thisObject, jsSeparator, length64));
+        RELEASE_AND_RETURN(scope, JSValue::encode(slowJoin(*exec, thisObject, jsSeparator, length64)));
     }
 
     auto viewWithString = jsSeparator->viewWithUnderlyingString(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    scope.release();
-    return JSValue::encode(fastJoin(*exec, thisObject, viewWithString.view, length));
+    RELEASE_AND_RETURN(scope, JSValue::encode(fastJoin(*exec, thisObject, viewWithString.view, length)));
 }
 
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncPop(ExecState* exec)
@@ -773,10 +773,8 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncPop(ExecState* exec)
 
     JSValue thisValue = exec->thisValue().toThis(exec, StrictMode);
 
-    if (isJSArray(thisValue)) {
-        scope.release();
-        return JSValue::encode(asArray(thisValue)->pop(exec));
-    }
+    if (isJSArray(thisValue))
+        RELEASE_AND_RETURN(scope, JSValue::encode(asArray(thisValue)->pop(exec)));
 
     JSObject* thisObj = thisValue.toObject(exec);
     EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
@@ -1150,29 +1148,138 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncUnShift(ExecState* exec)
     return JSValue::encode(result);
 }
 
+enum class IndexOfDirection { Forward, Backward };
+template<IndexOfDirection direction>
+ALWAYS_INLINE JSValue fastIndexOf(ExecState* exec, VM& vm, JSArray* array, unsigned length, JSValue searchElement, unsigned index)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    bool canDoFastPath = array->canDoFastIndexedAccess(vm)
+        && array->getArrayLength() == length; // The effects in getting `index` could have changed the length of this array.
+    if (!canDoFastPath)
+        return JSValue();
+
+    switch (array->indexingType()) {
+    case ALL_INT32_INDEXING_TYPES: {
+        if (!searchElement.isNumber())
+            return jsNumber(-1);
+        JSValue searchInt32;
+        if (searchElement.isInt32())
+            searchInt32 = searchElement;
+        else {
+            double searchNumber = searchElement.asNumber();
+            if (!canBeInt32(searchNumber))
+                return jsNumber(-1);
+            searchInt32 = jsNumber(static_cast<int32_t>(searchNumber));
+        }
+        auto& butterfly = *array->butterfly();
+        auto data = butterfly.contiguous().data();
+        if (direction == IndexOfDirection::Forward) {
+            for (; index < length; ++index) {
+                // Array#indexOf uses `===` semantics (not HashMap isEqual semantics).
+                // And the hole never matches against Int32 value.
+                if (searchInt32 == data[index].get())
+                    return jsNumber(index);
+            }
+        } else {
+            do {
+                ASSERT(index < length);
+                // Array#lastIndexOf uses `===` semantics (not HashMap isEqual semantics).
+                // And the hole never matches against Int32 value.
+                if (searchInt32 == data[index].get())
+                    return jsNumber(index);
+            } while (index--);
+        }
+        return jsNumber(-1);
+    }
+    case ALL_CONTIGUOUS_INDEXING_TYPES: {
+        auto& butterfly = *array->butterfly();
+        auto data = butterfly.contiguous().data();
+
+        if (direction == IndexOfDirection::Forward) {
+            for (; index < length; ++index) {
+                JSValue value = data[index].get();
+                if (!value)
+                    continue;
+                bool isEqual = JSValue::strictEqual(exec, searchElement, value);
+                RETURN_IF_EXCEPTION(scope, { });
+                if (isEqual)
+                    return jsNumber(index);
+            }
+        } else {
+            do {
+                ASSERT(index < length);
+                JSValue value = data[index].get();
+                if (!value)
+                    continue;
+                bool isEqual = JSValue::strictEqual(exec, searchElement, value);
+                RETURN_IF_EXCEPTION(scope, { });
+                if (isEqual)
+                    return jsNumber(index);
+            } while (index--);
+        }
+        return jsNumber(-1);
+    }
+    case ALL_DOUBLE_INDEXING_TYPES: {
+        if (!searchElement.isNumber())
+            return jsNumber(-1);
+        double searchNumber = searchElement.asNumber();
+        auto& butterfly = *array->butterfly();
+        auto data = butterfly.contiguousDouble().data();
+        if (direction == IndexOfDirection::Forward) {
+            for (; index < length; ++index) {
+                // Array#indexOf uses `===` semantics (not HashMap isEqual semantics).
+                // And the hole never matches since it is NaN.
+                if (data[index] == searchNumber)
+                    return jsNumber(index);
+            }
+        } else {
+            do {
+                ASSERT(index < length);
+                // Array#lastIndexOf uses `===` semantics (not HashMap isEqual semantics).
+                // And the hole never matches since it is NaN.
+                if (data[index] == searchNumber)
+                    return jsNumber(index);
+            } while (index--);
+        }
+        return jsNumber(-1);
+    }
+    default:
+        return JSValue();
+    }
+}
+
 EncodedJSValue JSC_HOST_CALL arrayProtoFuncIndexOf(ExecState* exec)
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // 15.4.4.14
-    JSObject* thisObj = exec->thisValue().toThis(exec, StrictMode).toObject(exec);
-    EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
-        return encodedJSValue();
-    unsigned length = toLength(exec, thisObj);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    JSObject* thisObject = exec->thisValue().toThis(exec, StrictMode).toObject(exec);
+    EXCEPTION_ASSERT(!!scope.exception() == !thisObject);
+    if (UNLIKELY(!thisObject))
+        return { };
+    unsigned length = toLength(exec, thisObject);
+    RETURN_IF_EXCEPTION(scope, { });
 
     unsigned index = argumentClampedIndexFromStartOrEnd(exec, 1, length);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RETURN_IF_EXCEPTION(scope, { });
     JSValue searchElement = exec->argument(0);
+
+    if (isJSArray(thisObject)) {
+        JSValue result = fastIndexOf<IndexOfDirection::Forward>(exec, vm, asArray(thisObject), length, searchElement, index);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (result)
+            return JSValue::encode(result);
+    }
+
     for (; index < length; ++index) {
-        JSValue e = getProperty(exec, thisObj, index);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        JSValue e = getProperty(exec, thisObject, index);
+        RETURN_IF_EXCEPTION(scope, { });
         if (!e)
             continue;
         bool isEqual = JSValue::strictEqual(exec, searchElement, e);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
         if (isEqual)
             return JSValue::encode(jsNumber(index));
     }
@@ -1186,11 +1293,11 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncLastIndexOf(ExecState* exec)
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     // 15.4.4.15
-    JSObject* thisObj = exec->thisValue().toThis(exec, StrictMode).toObject(exec);
-    EXCEPTION_ASSERT(!!scope.exception() == !thisObj);
-    if (UNLIKELY(!thisObj))
-        return encodedJSValue();
-    unsigned length = toLength(exec, thisObj);
+    JSObject* thisObject = exec->thisValue().toThis(exec, StrictMode).toObject(exec);
+    EXCEPTION_ASSERT(!!scope.exception() == !thisObject);
+    if (UNLIKELY(!thisObject))
+        return { };
+    unsigned length = toLength(exec, thisObject);
     if (UNLIKELY(scope.exception()) || !length)
         return JSValue::encode(jsNumber(-1));
 
@@ -1198,7 +1305,7 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncLastIndexOf(ExecState* exec)
     if (exec->argumentCount() >= 2) {
         JSValue fromValue = exec->uncheckedArgument(1);
         double fromDouble = fromValue.toInteger(exec);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
         if (fromDouble < 0) {
             fromDouble += length;
             if (fromDouble < 0)
@@ -1209,14 +1316,22 @@ EncodedJSValue JSC_HOST_CALL arrayProtoFuncLastIndexOf(ExecState* exec)
     }
 
     JSValue searchElement = exec->argument(0);
+
+    if (isJSArray(thisObject)) {
+        JSValue result = fastIndexOf<IndexOfDirection::Backward>(exec, vm, asArray(thisObject), length, searchElement, index);
+        RETURN_IF_EXCEPTION(scope, { });
+        if (result)
+            return JSValue::encode(result);
+    }
+
     do {
-        RELEASE_ASSERT(index < length);
-        JSValue e = getProperty(exec, thisObj, index);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        ASSERT(index < length);
+        JSValue e = getProperty(exec, thisObject, index);
+        RETURN_IF_EXCEPTION(scope, { });
         if (!e)
             continue;
         bool isEqual = JSValue::strictEqual(exec, searchElement, e);
-        RETURN_IF_EXCEPTION(scope, encodedJSValue());
+        RETURN_IF_EXCEPTION(scope, { });
         if (isEqual)
             return JSValue::encode(jsNumber(index));
     } while (index--);
@@ -1340,10 +1455,8 @@ EncodedJSValue JSC_HOST_CALL arrayProtoPrivateFuncConcatMemcpy(ExecState* exec)
         return JSValue::encode(jsNull());
 
     JSValue second = exec->uncheckedArgument(1);
-    if (!isJSArray(second)) {
-        scope.release();
-        return concatAppendOne(exec, vm, firstArray, second);
-    }
+    if (!isJSArray(second))
+        RELEASE_AND_RETURN(scope, concatAppendOne(exec, vm, firstArray, second));
 
     JSArray* secondArray = jsCast<JSArray*>(second);
 

@@ -329,7 +329,7 @@ void Scope::collectActiveStyleSheets(Vector<RefPtr<StyleSheet>>& sheets)
             sheet = downcast<ProcessingInstruction>(*node).sheet();
         } else if (is<HTMLLinkElement>(*node) || is<HTMLStyleElement>(*node) || is<SVGStyleElement>(*node)) {
             Element& element = downcast<Element>(*node);
-            AtomicString title = element.attributeWithoutSynchronization(titleAttr);
+            AtomicString title = element.isInShadowTree() ? nullAtom() : element.attributeWithoutSynchronization(titleAttr);
             bool enabledViaScript = false;
             if (is<HTMLLinkElement>(element)) {
                 // <LINK> element
@@ -478,7 +478,7 @@ void Scope::updateActiveStyleSheets(UpdateType updateType)
         // Crash stacks indicate we can get here when a resource load fails synchronously (for example due to content blocking).
         // FIXME: These kind of cases should be eliminated and this path replaced by an assert.
         m_pendingUpdate = UpdateType::ContentsOrInterpretation;
-        m_document.scheduleForcedStyleRecalc();
+        m_document.scheduleFullStyleRebuild();
         return;
     }
 
@@ -515,7 +515,7 @@ void Scope::updateActiveStyleSheets(UpdateType updateType)
                 shadowChild.invalidateStyleForSubtree();
             invalidateHostAndSlottedStyleIfNeeded(*m_shadowRoot, resolver());
         } else
-            m_document.scheduleForcedStyleRecalc();
+            m_document.scheduleFullStyleRebuild();
     }
 }
 
@@ -602,8 +602,10 @@ void Scope::scheduleUpdate(UpdateType update)
         // :host and ::slotted rules might go away.
         if (m_shadowRoot && m_resolver)
             invalidateHostAndSlottedStyleIfNeeded(*m_shadowRoot, *m_resolver);
+        // FIXME: Animation code may trigger resource load in middle of style recalc and that can add a rule to a content extension stylesheet.
+        //        Fix and remove isResolvingTreeStyle() test below, see https://bugs.webkit.org/show_bug.cgi?id=194335
         // FIXME: The m_isUpdatingStyleResolver test is here because extension stylesheets can get us here from StyleResolver::appendAuthorStyleSheets.
-        if (!m_isUpdatingStyleResolver)
+        if (!m_isUpdatingStyleResolver && !m_document.isResolvingTreeStyle())
             clearResolver();
     }
 
@@ -629,6 +631,13 @@ void Scope::evaluateMediaQueriesForAccessibilitySettingsChange()
 {
     evaluateMediaQueries([] (StyleResolver& resolver) {
         return resolver.hasMediaQueriesAffectedByAccessibilitySettingsChange();
+    });
+}
+
+void Scope::evaluateMediaQueriesForAppearanceChange()
+{
+    evaluateMediaQueries([] (StyleResolver& resolver) {
+        return resolver.hasMediaQueriesAffectedByAppearanceChange();
     });
 }
 

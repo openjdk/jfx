@@ -69,19 +69,21 @@ class SelectionRangeData;
 class TransformState;
 class VisiblePosition;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 class SelectionRect;
 #endif
 
 struct PaintInfo;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 const int caretWidth = 2; // This value should be kept in sync with UIKit. See <rdar://problem/15580601>.
 #else
 const int caretWidth = 1;
 #endif
 
 enum class ShouldAllowCrossOriginScrolling { No, Yes };
+
+struct ScrollRectToVisibleOptions;
 
 #if ENABLE(DASHBOARD_SUPPORT)
 struct AnnotatedRegionValue {
@@ -158,11 +160,12 @@ public:
     WEBCORE_EXPORT RenderLayer* enclosingLayer() const;
 
     // Scrolling is a RenderBox concept, however some code just cares about recursively scrolling our enclosing ScrollableArea(s).
-    WEBCORE_EXPORT bool scrollRectToVisible(SelectionRevealMode, const LayoutRect& absoluteRect, bool insideFixed, const ScrollAlignment& alignX = ScrollAlignment::alignCenterIfNeeded, const ScrollAlignment& alignY = ScrollAlignment::alignCenterIfNeeded, ShouldAllowCrossOriginScrolling = ShouldAllowCrossOriginScrolling::No);
+    WEBCORE_EXPORT bool scrollRectToVisible(const LayoutRect& absoluteRect, bool insideFixed, const ScrollRectToVisibleOptions&);
 
     // Convenience function for getting to the nearest enclosing box of a RenderObject.
     WEBCORE_EXPORT RenderBox& enclosingBox() const;
     RenderBoxModelObject& enclosingBoxModelObject() const;
+    const RenderBox* enclosingScrollableContainerForSnapping() const;
 
     // Function to return our enclosing flow thread if we are contained inside one. This
     // function follows the containing block chain.
@@ -173,6 +176,9 @@ public:
 
         return locateEnclosingFragmentedFlow();
     }
+
+    WEBCORE_EXPORT bool useDarkAppearance() const;
+    OptionSet<StyleColor::Options> styleColorOptions() const;
 
 #ifndef NDEBUG
     void setHasAXObject(bool flag) { m_hasAXObject = flag; }
@@ -605,7 +611,7 @@ public:
     // Return the offset from an object up the container() chain. Asserts that none of the intermediate objects have transforms.
     LayoutSize offsetFromAncestorContainer(RenderElement&) const;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     virtual void collectSelectionRects(Vector<SelectionRect>&, unsigned startOffset = 0, unsigned endOffset = std::numeric_limits<unsigned>::max());
     virtual void absoluteQuadsForSelection(Vector<FloatQuad>& quads) const { absoluteQuads(quads); }
 #endif
@@ -669,23 +675,36 @@ public:
 
     // Given a rect in the object's coordinate space, compute a rect suitable for repainting
     // that rect in view coordinates.
-    LayoutRect computeAbsoluteRepaintRect(const LayoutRect& r, bool fixed = false) const
+    LayoutRect computeAbsoluteRepaintRect(const LayoutRect& r) const
     {
-        return computeRectForRepaint(r, nullptr, { fixed, false });
+        return computeRectForRepaint(r, nullptr);
     }
     // Given a rect in the object's coordinate space, compute a rect suitable for repainting
     // that rect in the coordinate space of repaintContainer.
-    struct RepaintContext {
-        RepaintContext(bool hasPositionFixedDescendant = false, bool dirtyRectIsFlipped = false)
+    LayoutRect computeRectForRepaint(const LayoutRect&, const RenderLayerModelObject* repaintContainer) const;
+    FloatRect computeFloatRectForRepaint(const FloatRect&, const RenderLayerModelObject* repaintContainer) const;
+
+    // Given a rect in the object's coordinate space, compute the location in container space where this rect is visible,
+    // when clipping and scrolling as specified by the context. When using edge-inclusive intersection, return WTF::nullopt
+    // rather than an empty rect if the rect is completely clipped out in container space.
+    enum class VisibleRectContextOption {
+        UseEdgeInclusiveIntersection = 1 << 0,
+        ApplyCompositedClips = 1 << 1,
+        ApplyCompositedContainerScrolls  = 1 << 2,
+    };
+    struct VisibleRectContext {
+        VisibleRectContext(bool hasPositionFixedDescendant = false, bool dirtyRectIsFlipped = false, OptionSet<VisibleRectContextOption> options = { })
             : m_hasPositionFixedDescendant(hasPositionFixedDescendant)
             , m_dirtyRectIsFlipped(dirtyRectIsFlipped)
+            , m_options(options)
             {
             }
         bool m_hasPositionFixedDescendant;
         bool m_dirtyRectIsFlipped;
+        OptionSet<VisibleRectContextOption> m_options;
     };
-    virtual LayoutRect computeRectForRepaint(const LayoutRect&, const RenderLayerModelObject* repaintContainer, RepaintContext = { }) const;
-    virtual FloatRect computeFloatRectForRepaint(const FloatRect&, const RenderLayerModelObject* repaintContainer, bool fixed = false) const;
+    virtual Optional<LayoutRect> computeVisibleRectInContainer(const LayoutRect&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
+    virtual Optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* repaintContainer, VisibleRectContext) const;
 
     virtual unsigned int length() const { return 1; }
 
@@ -779,6 +798,8 @@ public:
     void initializeFragmentedFlowStateOnInsertion();
     virtual void insertedIntoTree();
 
+    WEBCORE_EXPORT bool isTransparentOrFullyClippedRespectingParentFrames() const;
+
 protected:
     //////////////////////////////////////////
     // Helper functions. Dangerous to use!
@@ -802,6 +823,10 @@ protected:
     static void calculateBorderStyleColor(const BorderStyle&, const BoxSide&, Color&);
 
     static FragmentedFlowState computedFragmentedFlowState(const RenderObject&);
+
+    static bool shouldApplyCompositedContainerScrollsForRepaint();
+
+    static VisibleRectContext visibleRectContextForRepaint();
 
 private:
 #ifndef NDEBUG
@@ -956,6 +981,7 @@ private:
 
     // FIXME: This should be RenderElementRareData.
     class RenderObjectRareData {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         RenderObjectRareData()
             : m_isDragging(false)
@@ -1101,6 +1127,7 @@ inline bool RenderObject::needsSimplifiedNormalFlowLayoutOnly() const
 #if ENABLE(TREE_DEBUGGING)
 void printRenderTreeForLiveDocuments();
 void printLayerTreeForLiveDocuments();
+void printGraphicsLayerTreeForLiveDocuments();
 #endif
 
 } // namespace WebCore

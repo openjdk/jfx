@@ -97,11 +97,11 @@ uint64_t IDBDatabase::version() const
     return m_info.version();
 }
 
-RefPtr<DOMStringList> IDBDatabase::objectStoreNames() const
+Ref<DOMStringList> IDBDatabase::objectStoreNames() const
 {
     ASSERT(&originThread() == &Thread::current());
 
-    RefPtr<DOMStringList> objectStoreNames = DOMStringList::create();
+    auto objectStoreNames = DOMStringList::create();
     for (auto& name : m_info.objectStoreNames())
         objectStoreNames->append(name);
     objectStoreNames->sort();
@@ -264,7 +264,12 @@ void IDBDatabase::connectionToServerLost(const IDBError& error)
     m_closePending = true;
     m_closedInServer = true;
 
-    for (auto& transaction : m_activeTransactions.values())
+    auto activeTransactions = copyToVector(m_activeTransactions.values());
+    for (auto& transaction : activeTransactions)
+        transaction->connectionClosedFromServer(error);
+
+    auto committingTransactions = copyToVector(m_committingTransactions.values());
+    for (auto& transaction : committingTransactions)
         transaction->connectionClosedFromServer(error);
 
     auto errorEvent = Event::create(m_eventNames.errorEvent, Event::CanBubble::Yes, Event::IsCancelable::No);

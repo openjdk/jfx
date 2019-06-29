@@ -33,7 +33,7 @@
     SecureContext,
 ] interface PaymentRequest : EventTarget {
     [CallWith=Document] Promise<PaymentResponse> show(optional Promise<PaymentDetailsUpdate> detailsPromise);
-    [MayThrowException] Promise<void> abort();
+    Promise<void> abort();
     [CallWith=Document] Promise<boolean> canMakePayment();
 
     readonly attribute DOMString id;
@@ -41,7 +41,8 @@
     readonly attribute DOMString? shippingOption;
     readonly attribute PaymentShippingType? shippingType;
 
+    attribute EventHandler onmerchantvalidation;
     attribute EventHandler onshippingaddresschange;
     attribute EventHandler onshippingoptionchange;
-    attribute EventHandler onmerchantvalidation;
+    attribute EventHandler onpaymentmethodchange;
 };

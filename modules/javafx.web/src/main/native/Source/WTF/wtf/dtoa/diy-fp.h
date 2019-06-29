@@ -28,23 +28,22 @@
 #ifndef DOUBLE_CONVERSION_DIY_FP_H_
 #define DOUBLE_CONVERSION_DIY_FP_H_
 
-#include "utils.h"
+#include <wtf/dtoa/utils.h>
 
 namespace WTF {
-
 namespace double_conversion {
 
-    // This "Do It Yourself Floating Point" class implements a floating-point number
-    // with a uint64 significand and an int exponent. Normalized DiyFp numbers will
-    // have the most significant bit of the significand set.
-    // Multiplication and Subtraction do not normalize their results.
-    // DiyFp are not designed to contain special doubles (NaN and Infinity).
-    class DiyFp {
+// This "Do It Yourself Floating Point" class implements a floating-point number
+// with a uint64 significand and an int exponent. Normalized DiyFp numbers will
+// have the most significant bit of the significand set.
+// Multiplication and Subtraction do not normalize their results.
+// DiyFp are not designed to contain special doubles (NaN and Infinity).
+class DiyFp {
     public:
         static const int kSignificandSize = 64;
 
         DiyFp() : f_(0), e_(0) {}
-        DiyFp(uint64_t f, int e) : f_(f), e_(e) {}
+  DiyFp(uint64_t significand, int exponent) : f_(significand), e_(exponent) {}
 
         // this = this - other.
         // The exponents of both numbers must be the same and the significand of this
@@ -78,22 +77,22 @@ namespace double_conversion {
 
         void Normalize() {
             ASSERT(f_ != 0);
-            uint64_t f = f_;
-            int e = e_;
+    uint64_t significand = f_;
+    int exponent = e_;
 
             // This method is mainly called for normalizing boundaries. In general
             // boundaries need to be shifted by 10 bits. We thus optimize for this case.
             const uint64_t k10MSBits = UINT64_2PART_C(0xFFC00000, 00000000);
-            while ((f & k10MSBits) == 0) {
-                f <<= 10;
-                e -= 10;
+    while ((significand & k10MSBits) == 0) {
+      significand <<= 10;
+      exponent -= 10;
+    }
+    while ((significand & kUint64MSB) == 0) {
+      significand <<= 1;
+      exponent--;
             }
-            while ((f & kUint64MSB) == 0) {
-                f <<= 1;
-                e--;
-            }
-            f_ = f;
-            e_ = e;
+    f_ = significand;
+    e_ = exponent;
         }
 
         static DiyFp Normalize(const DiyFp& a) {
@@ -113,10 +112,9 @@ namespace double_conversion {
 
         uint64_t f_;
         int e_;
-    };
+};
 
 }  // namespace double_conversion
-
 } // namespace WTF
 
 #endif  // DOUBLE_CONVERSION_DIY_FP_H_

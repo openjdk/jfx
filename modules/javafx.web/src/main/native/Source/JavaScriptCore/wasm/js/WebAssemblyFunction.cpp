@@ -39,10 +39,12 @@
 #include "ProtoCallFrame.h"
 #include "VM.h"
 #include "WasmCallee.h"
-#include "WasmContext.h"
+#include "WasmContextInlines.h"
 #include "WasmFormat.h"
 #include "WasmMemory.h"
+#include "WasmSignatureInlines.h"
 #include <wtf/FastTLS.h>
+#include <wtf/StackPointer.h>
 #include <wtf/SystemTracing.h>
 
 namespace JSC {
@@ -53,33 +55,14 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(ExecState* exec)
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    WebAssemblyFunction* wasmFunction = jsDynamicCast<WebAssemblyFunction*>(vm, exec->jsCallee());
-    if (!wasmFunction)
-        return JSValue::encode(throwException(exec, scope, createTypeError(exec, "expected a WebAssembly function", defaultSourceAppender, runtimeTypeForValue(vm, exec->jsCallee()))));
+    WebAssemblyFunction* wasmFunction = jsCast<WebAssemblyFunction*>(exec->jsCallee());
     Wasm::SignatureIndex signatureIndex = wasmFunction->signatureIndex();
     const Wasm::Signature& signature = Wasm::SignatureInformation::get(signatureIndex);
 
     // Make sure that the memory we think we are going to run with matches the one we expect.
     ASSERT(wasmFunction->instance()->instance().codeBlock()->isSafeToRun(wasmFunction->instance()->memory()->memory().mode()));
-    {
-        // Check if we have a disallowed I64 use.
 
-        for (unsigned argIndex = 0; argIndex < signature.argumentCount(); ++argIndex) {
-            if (signature.argument(argIndex) == Wasm::I64) {
-                JSWebAssemblyRuntimeError* error = JSWebAssemblyRuntimeError::create(exec, vm, exec->lexicalGlobalObject()->WebAssemblyRuntimeErrorStructure(),
-                    "WebAssembly function with an i64 argument can't be called from JavaScript");
-                return JSValue::encode(throwException(exec, scope, error));
-            }
-        }
-
-        if (signature.returnType() == Wasm::I64) {
-            JSWebAssemblyRuntimeError* error = JSWebAssemblyRuntimeError::create(exec, vm, exec->lexicalGlobalObject()->WebAssemblyRuntimeErrorStructure(),
-                "WebAssembly function that returns i64 can't be called from JavaScript");
-            return JSValue::encode(throwException(exec, scope, error));
-        }
-    }
-
-    std::optional<TraceScope> traceScope;
+    Optional<TraceScope> traceScope;
     if (Options::useTracePoints())
         traceScope.emplace(WebAssemblyExecuteStart, WebAssemblyExecuteEnd);
 
@@ -97,6 +80,9 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(ExecState* exec)
         case Wasm::I32:
             arg = JSValue::decode(arg.toInt32(exec));
             break;
+        case Wasm::I64:
+            arg = JSValue();
+            break;
         case Wasm::F32:
             arg = JSValue::decode(bitwise_cast<uint32_t>(arg.toFloat(exec)));
             break;
@@ -104,7 +90,6 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(ExecState* exec)
             arg = JSValue::decode(bitwise_cast<uint64_t>(arg.toNumber(exec)));
             break;
         case Wasm::Void:
-        case Wasm::I64:
         case Wasm::Func:
         case Wasm::Anyfunc:
             RELEASE_ASSERT_NOT_REACHED();
@@ -134,7 +119,7 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(ExecState* exec)
     {
         // We do the stack check here for the wrapper function because we don't
         // want to emit a stack check inside every wrapper function.
-        const intptr_t sp = bitwise_cast<intptr_t>(&sp); // A proxy for the current stack pointer.
+        const intptr_t sp = bitwise_cast<intptr_t>(currentStackPointer());
         const intptr_t frameSize = (boxedArgs.size() + CallFrame::headerSizeInRegisters) * sizeof(Register);
         const intptr_t stackSpaceUsed = 2 * frameSize; // We're making two calls. One to the wrapper, and one to the actual wasm code.
         if (UNLIKELY((sp < stackSpaceUsed) || ((sp - stackSpaceUsed) < bitwise_cast<intptr_t>(vm.softStackLimit()))))
@@ -160,22 +145,7 @@ static EncodedJSValue JSC_HOST_CALL callWebAssemblyFunction(ExecState* exec)
     vm.wasmContext.store(prevWasmInstance, vm.softStackLimit());
     RETURN_IF_EXCEPTION(scope, { });
 
-    switch (signature.returnType()) {
-    case Wasm::Void:
-        return JSValue::encode(jsUndefined());
-    case Wasm::I32:
-        return JSValue::encode(jsNumber(static_cast<int32_t>(rawResult)));
-    case Wasm::F32:
-        return JSValue::encode(jsNumber(purifyNaN(static_cast<double>(bitwise_cast<float>(static_cast<int32_t>(rawResult))))));
-    case Wasm::F64:
-        return JSValue::encode(jsNumber(purifyNaN(bitwise_cast<double>(rawResult))));
-    case Wasm::I64:
-    case Wasm::Func:
-    case Wasm::Anyfunc:
-        RELEASE_ASSERT_NOT_REACHED();
-    }
-
-    return EncodedJSValue();
+    return rawResult;
 }
 
 WebAssemblyFunction* WebAssemblyFunction::create(VM& vm, JSGlobalObject* globalObject, unsigned length, const String& name, JSWebAssemblyInstance* instance, Wasm::Callee& jsEntrypoint, Wasm::WasmToWasmImportableFunction::LoadLocation wasmToWasmEntrypointLoadLocation, Wasm::SignatureIndex signatureIndex)

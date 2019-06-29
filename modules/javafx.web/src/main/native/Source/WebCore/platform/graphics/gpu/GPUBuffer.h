@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -10,56 +10,59 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY APPLE INC. ``AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE INC. OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
- * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #pragma once
 
 #if ENABLE(WEBGPU)
 
-#include <wtf/RefPtr.h>
+#include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
 #include <wtf/RetainPtr.h>
 
 OBJC_PROTOCOL(MTLBuffer);
 
 namespace JSC {
 class ArrayBuffer;
-class ArrayBufferView;
 }
 
 namespace WebCore {
 
 class GPUDevice;
 
-class GPUBuffer {
+struct GPUBufferDescriptor;
+
+using PlatformBuffer = MTLBuffer;
+using PlatformBufferSmartPtr = RetainPtr<MTLBuffer>;
+
+class GPUBuffer : public RefCounted<GPUBuffer> {
 public:
-    WEBCORE_EXPORT GPUBuffer(const GPUDevice&, const JSC::ArrayBufferView&);
-    WEBCORE_EXPORT ~GPUBuffer();
+    ~GPUBuffer();
 
-    WEBCORE_EXPORT unsigned length() const;
-    JSC::ArrayBuffer* contents() const { return m_contents.get(); }
+    static RefPtr<GPUBuffer> create(const GPUDevice&, GPUBufferDescriptor&&);
 
-#if USE(METAL)
-    MTLBuffer *metal() const { return m_metal.get(); }
-#endif
+    PlatformBuffer *platformBuffer() const { return m_platformBuffer.get(); }
+
+    JSC::ArrayBuffer* mapping() const { return m_mapping.get(); }
 
 private:
-#if USE(METAL)
-    RetainPtr<MTLBuffer> m_metal;
-#endif
-    RefPtr<JSC::ArrayBuffer> m_contents;
+    explicit GPUBuffer(PlatformBufferSmartPtr&&, RefPtr<JSC::ArrayBuffer>&&);
+
+    PlatformBufferSmartPtr m_platformBuffer;
+    RefPtr<JSC::ArrayBuffer> m_mapping;
 };
 
 } // namespace WebCore
 
-#endif
+#endif // ENABLE(WEBGPU)

@@ -36,6 +36,7 @@
 #endif
 
 #if PLATFORM(MAC)
+#include "SwitchingGPUClient.h"
 #include <OpenGL/OpenGL.h>
 #endif
 
@@ -109,7 +110,7 @@ static bool hasMuxCapability()
     return result;
 }
 
-bool hasMuxableGPU()
+bool hasLowAndHighPowerGPUs()
 {
     static bool canMux = hasMuxCapability();
     return canMux;
@@ -123,8 +124,9 @@ GraphicsContext3DManager& GraphicsContext3DManager::sharedManager()
 }
 
 #if PLATFORM(MAC)
-static void displayWasReconfigured(CGDirectDisplayID, CGDisplayChangeSummaryFlags flags, void*)
+void GraphicsContext3DManager::displayWasReconfigured(CGDirectDisplayID, CGDisplayChangeSummaryFlags flags, void*)
 {
+    LOG(WebGL, "GraphicsContext3DManager::displayWasReconfigured");
     if (flags & kCGDisplaySetModeFlag)
         GraphicsContext3DManager::sharedManager().updateAllContexts();
 }
@@ -158,7 +160,7 @@ void GraphicsContext3DManager::addContext(GraphicsContext3D* context, HostWindow
     if (!context)
         return;
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && !ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
     if (!m_contexts.size())
         CGDisplayRegisterReconfigurationCallback(displayWasReconfigured, nullptr);
 #endif
@@ -175,7 +177,7 @@ void GraphicsContext3DManager::removeContext(GraphicsContext3D* context)
     m_contextWindowMap.remove(context);
     removeContextRequiringHighPerformance(context);
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && !ENABLE(WEBPROCESS_WINDOWSERVER_BLOCKING)
     if (!m_contexts.size())
         CGDisplayRemoveReconfigurationCallback(displayWasReconfigured, nullptr);
 #endif
@@ -216,7 +218,7 @@ void GraphicsContext3DManager::removeContextRequiringHighPerformance(GraphicsCon
 void GraphicsContext3DManager::updateHighPerformanceState()
 {
 #if PLATFORM(MAC)
-    if (!hasMuxableGPU())
+    if (!hasLowAndHighPowerGPUs())
         return;
 
     if (m_contextsRequiringHighPerformance.size()) {
@@ -226,20 +228,20 @@ void GraphicsContext3DManager::updateHighPerformanceState()
             m_disableHighPerformanceGPUTimer.stop();
         }
 
-        if (!m_pixelFormatObj) {
-            LOG(WebGL, "Turning on high-performance GPU.");
-
-            CGLPixelFormatAttribute attributes[] = { kCGLPFAAccelerated, kCGLPFAColorSize, static_cast<CGLPixelFormatAttribute>(32), static_cast<CGLPixelFormatAttribute>(0) };
-            GLint numPixelFormats = 0;
-            CGLChoosePixelFormat(attributes, &m_pixelFormatObj, &numPixelFormats);
+        if (!m_requestingHighPerformance) {
+            LOG(WebGL, "Request the high-performance GPU.");
+            m_requestingHighPerformance = true;
+#if PLATFORM(MAC)
+            SwitchingGPUClient::singleton().requestHighPerformanceGPU();
+#endif
         }
 
-    } else if (m_pixelFormatObj) {
+    } else {
         // Don't immediately turn off the high-performance GPU. The user might be
         // swapping back and forth between tabs or windows, and we don't want to cause
         // churn if we can avoid it.
         if (!m_disableHighPerformanceGPUTimer.isActive()) {
-            LOG(WebGL, "Set a timer to turn off high-performance GPU.");
+            LOG(WebGL, "Set a timer to release the high-performance GPU.");
             // FIXME: Expose this value as a Setting, which would require this class
             // to reference a frame, page or document.
             static const Seconds timeToKeepHighPerformanceGPUAlive { 10_s };
@@ -251,19 +253,19 @@ void GraphicsContext3DManager::updateHighPerformanceState()
 
 void GraphicsContext3DManager::disableHighPerformanceGPUTimerFired()
 {
+    if (m_contextsRequiringHighPerformance.size())
+        return;
+
+    m_requestingHighPerformance = false;
 #if PLATFORM(MAC)
-    if (!m_contextsRequiringHighPerformance.size() && m_pixelFormatObj) {
-        LOG(WebGL, "Turning off high-performance GPU.");
-        CGLReleasePixelFormat(m_pixelFormatObj);
-        m_pixelFormatObj = nullptr;
-    }
+    SwitchingGPUClient::singleton().releaseHighPerformanceGPU();
 #endif
 }
 
 void GraphicsContext3DManager::recycleContextIfNecessary()
 {
     if (hasTooManyContexts()) {
-        LOG(WebGL, "Manager recycled context (%p).", m_contexts[0]);
+        LOG(WebGL, "GraphicsContext3DManager recycled context (%p).", m_contexts[0]);
         m_contexts[0]->recycleContext();
     }
 }

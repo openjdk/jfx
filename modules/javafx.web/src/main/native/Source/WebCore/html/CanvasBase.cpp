@@ -34,14 +34,15 @@
 
 namespace WebCore {
 
-CanvasBase::CanvasBase(ScriptExecutionContext* scriptExecutionContext)
-    : m_scriptExecutionContext(scriptExecutionContext)
+CanvasBase::CanvasBase()
 {
 }
 
 CanvasBase::~CanvasBase()
 {
-    notifyObserversCanvasDestroyed();
+    ASSERT(!m_context); // Should have been set to null by base class.
+    ASSERT(m_didNotifyObserversCanvasDestroyed);
+    ASSERT(m_observers.isEmpty());
 }
 
 CanvasRenderingContext* CanvasBase::renderingContext() const
@@ -79,10 +80,16 @@ void CanvasBase::notifyObserversCanvasResized()
 
 void CanvasBase::notifyObserversCanvasDestroyed()
 {
+    ASSERT(!m_didNotifyObserversCanvasDestroyed);
+
     for (auto& observer : m_observers)
         observer->canvasDestroyed(*this);
 
     m_observers.clear();
+
+#ifndef NDEBUG
+    m_didNotifyObserversCanvasDestroyed = true;
+#endif
 }
 
 HashSet<Element*> CanvasBase::cssCanvasClients() const
@@ -99,6 +106,11 @@ HashSet<Element*> CanvasBase::cssCanvasClients() const
         }
     }
     return cssCanvasClients;
+}
+
+bool CanvasBase::callTracingActive() const
+{
+    return m_context && m_context->callTracingActive();
 }
 
 }

@@ -25,7 +25,7 @@
 
 #include <config.h>
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "MIMETypeRegistry.h"
 #include "PluginData.h"
 //#include "PluginInfoStore.h"
@@ -35,7 +35,7 @@ namespace WebCore {
 /*
 PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     jclass cls = env->FindClass(
         "com/sun/webkit/plugin/PluginManager");
@@ -51,7 +51,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 
     jobject hnd = env->CallStaticObjectMethod(
         cls, pluginMgrGetEnabledPlugin, (jint)i);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     ASSERT(hnd);
 
     cls = env->FindClass("com/sun/webkit/plugin/PluginHandler");
@@ -66,7 +66,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 
     jstring pluginName = (jstring) env->CallObjectMethod(
         hnd, pluginHndGetNameMID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID pluginHndGetFileNameMID = 0;
     if (!pluginHndGetFileNameMID) {
@@ -77,7 +77,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 
     jstring pluginFile = (jstring) env->CallObjectMethod(
         hnd, pluginHndGetFileNameMID);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     static jmethodID pluginHndGetDescription = 0;
     if (!pluginHndGetDescription) {
@@ -88,7 +88,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 
     jstring pluginDescr = (jstring) env->CallObjectMethod(
         hnd, pluginHndGetDescription);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     PluginInfo* info = new PluginInfo();
     info->name = String(env, pluginName);
@@ -105,7 +105,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 
     jobjectArray mTypes = (jobjectArray) env->CallObjectMethod(
         hnd, pluginHndSupportedMIMETypes);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     jint tCount = env->GetArrayLength(mTypes);
 
@@ -128,7 +128,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
         info->mimes.append(mime);
     }
 
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     return info;
 }
 */
@@ -136,7 +136,7 @@ PluginInfo* PluginInfoStore::createPluginInfoForPluginAtIndex(unsigned i)
 /*
 unsigned PluginInfoStore::pluginCount() const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     jclass cls = env->FindClass("com/sun/webkit/plugin/PluginManager");
 
@@ -149,7 +149,7 @@ unsigned PluginInfoStore::pluginCount() const
 
 
     jint res = env->CallStaticIntMethod(cls, pluginMgrGetEnabledPluginCount);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return res;
 }
@@ -158,7 +158,7 @@ unsigned PluginInfoStore::pluginCount() const
 /*
 String PluginInfoStore::pluginNameForMIMEType(const String& mimeType)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     jclass cls = env->FindClass("com/sun/webkit/plugin/PluginManager");
     ASSERT(cls);
@@ -172,7 +172,7 @@ String PluginInfoStore::pluginNameForMIMEType(const String& mimeType)
 
     jstring name = (jstring)env->CallStaticObjectMethod(
         cls, pluginMgrGetPluginNameForMIMEType, mimeType.toJavaString(env));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     String res = String(env, name);
 
@@ -183,7 +183,7 @@ String PluginInfoStore::pluginNameForMIMEType(const String& mimeType)
 /*
 bool PluginInfoStore::supportsMIMEType(const String& mimeType)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     jclass cls = env->FindClass("com/sun/webkit/plugin/PluginManager");
     ASSERT(cls);
@@ -197,7 +197,7 @@ bool PluginInfoStore::supportsMIMEType(const String& mimeType)
 
     jboolean res = env->CallStaticBooleanMethod(
         cls, pluginMgrSupportsMIMEType, mimeType.toJavaString(env));
-     CheckAndClearException(env);
+     WTF::CheckAndClearException(env);
 
     return res == JNI_TRUE;
 }

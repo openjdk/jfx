@@ -27,7 +27,7 @@
 #include "NotImplemented.h"
 #include "TextBreakIterator.h"
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 
 #include <wtf/Assertions.h>
 #include <wtf/Atomics.h>
@@ -38,7 +38,7 @@
 #define JNI_EXPAND(n) com_sun_webkit_text_TextBreakIterator_##n
 
 jclass getTextBreakIteratorClass() {
-    static JGClass textBreakIteratorClass(WebCore_GetJavaEnv()->FindClass(
+    static JGClass textBreakIteratorClass(WTF::GetJavaEnv()->FindClass(
         "com/sun/webkit/text/TextBreakIterator"));
     return textBreakIteratorClass;
 }
@@ -65,7 +65,7 @@ static TextBreakIterator* setUpIterator(
     if (!string)
         return NULL;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     LOG_PERF_RECORD(env, "XXXX", "setUpIterator")
     static jmethodID midGetIterator = env->GetStaticMethodID(
         getTextBreakIteratorClass(),
@@ -83,7 +83,7 @@ static TextBreakIterator* setUpIterator(
     JLString jText(env->NewString(reinterpret_cast<const jchar*>(string), length));
     ASSERT(jText);
 
-    if (CheckAndClearException(env))
+    if (WTF::CheckAndClearException(env))
         return NULL; //OOME
 
     JLObject iterator(env->CallStaticObjectMethod(
@@ -93,7 +93,7 @@ static TextBreakIterator* setUpIterator(
         (jstring)jLocale,
         (jstring)jText,
         (jboolean)create));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     ASSERT(iterator);
 
     lastType = type;
@@ -108,7 +108,7 @@ static TextBreakIterator* setUpIterator(
 
 static int invokeTextBreakMethod(TextBreakIterator* bi, int method, int pos)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     static jmethodID midInvokeMethod = env->GetStaticMethodID(
         getTextBreakIteratorClass(),
@@ -122,7 +122,7 @@ static int invokeTextBreakMethod(TextBreakIterator* bi, int method, int pos)
         reinterpret_cast<jobject>(bi),
         method,
         pos);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return n;
 }

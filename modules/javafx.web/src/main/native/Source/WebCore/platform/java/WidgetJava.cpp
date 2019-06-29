@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@
 #include "GraphicsContextJava.h"
 #include "HostWindow.h"
 #include "IntRect.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "KeyboardEvent.h"
 #include "Logging.h"
 #include "Page.h"
@@ -100,9 +100,9 @@ void Widget::releasePlatformWidget()
         //drop counter
         --m_data->cRef;
         if( 0==m_data->cRef ) {
-            JNIEnv* env = WebCore_GetJavaEnv();
+            JNIEnv* env = WTF::GetJavaEnv();
             env->CallVoidMethod(m_widget, wcWidgetDestroyMID);
-            CheckAndClearException(env);
+            WTF::CheckAndClearException(env);
             m_widget.clear();
         }
     }
@@ -115,7 +115,7 @@ IntRect Widget::frameRect() const
 
 void Widget::setFrameRect(const IntRect &r)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     if (r == m_data->bounds) {
         return;
@@ -126,12 +126,12 @@ void Widget::setFrameRect(const IntRect &r)
     }
 
     env->CallVoidMethod(m_widget, wcWidgetSetBoundsMID, r.x(), r.y(), r.width(), r.height());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Widget::setFocus(bool focused)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     PlatformWidget j(platformWidget());
     if (!j) {
@@ -144,12 +144,12 @@ void Widget::setFocus(bool focused)
     if (focused) {
         env->CallVoidMethod(j, wcWidgetRequestFocusMID);
     }
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Widget::setCursor(const Cursor& cursor)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     PlatformWidget j(platformWidget());
     if (!j) {
@@ -160,12 +160,12 @@ void Widget::setCursor(const Cursor& cursor)
     }
 
     env->CallVoidMethod(j, wcWidgetSetCursorMID, cursor.platformCursor());
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Widget::show()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     // do we need to cache the 'visible' value?
     if (!m_widget) {
@@ -173,12 +173,12 @@ void Widget::show()
     }
 
     env->CallVoidMethod(m_widget, wcWidgetSetVisibleMID, JNI_TRUE);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Widget::hide()
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     // do we need to cache the 'visible' value?
     if (!m_widget) {
@@ -186,7 +186,7 @@ void Widget::hide()
     }
 
     env->CallVoidMethod(m_widget, wcWidgetSetVisibleMID, JNI_FALSE);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 }
 
 void Widget::setIsSelected(bool)
@@ -194,10 +194,30 @@ void Widget::setIsSelected(bool)
     notImplemented();
 }
 
+IntRect Widget::convertFromRootToContainingWindow(const Widget*, const IntRect& rect)
+{
+    return rect;
+}
+
+IntRect Widget::convertFromContainingWindowToRoot(const Widget*, const IntRect& rect)
+{
+    return rect;
+}
+
+IntPoint Widget::convertFromRootToContainingWindow(const Widget*, const IntPoint& point)
+{
+    return point;
+}
+
+IntPoint Widget::convertFromContainingWindowToRoot(const Widget*, const IntPoint& point)
+{
+    return point;
+}
+
 void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy)
 {
 /*
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     if (!gc ||
         !gc->platformContext() ||
@@ -236,8 +256,6 @@ void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy)
     frameView->paintContents(gc, toPaint);
 */
 }
-
-
 
 extern "C" {
 

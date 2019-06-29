@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-class HTMLSlotElement final : public HTMLElement {
+class HTMLSlotElement final : public HTMLElement, public CanMakeWeakPtr<HTMLSlotElement> {
     WTF_MAKE_ISO_ALLOCATED(HTMLSlotElement);
 public:
     static Ref<HTMLSlotElement> create(const QualifiedName&, Document&);
@@ -39,7 +39,8 @@ public:
     struct AssignedNodesOptions {
         bool flatten;
     };
-    Vector<Node*> assignedNodes(const AssignedNodesOptions&) const;
+    Vector<Ref<Node>> assignedNodes(const AssignedNodesOptions&) const;
+    Vector<Ref<Element>> assignedElements(const AssignedNodesOptions&) const;
 
     void enqueueSlotChangeEvent();
     void didRemoveFromSignalSlotList() { m_inSignalSlotList = false; }
@@ -51,6 +52,7 @@ private:
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;
+    void childrenChanged(const ChildChange&) final;
     void attributeChanged(const QualifiedName&, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason) final;
 
     bool m_inSignalSlotList { false };

@@ -28,13 +28,12 @@
 #ifndef DOUBLE_CONVERSION_CACHED_POWERS_H_
 #define DOUBLE_CONVERSION_CACHED_POWERS_H_
 
-#include "diy-fp.h"
+#include <wtf/dtoa/diy-fp.h>
 
 namespace WTF {
-
 namespace double_conversion {
 
-    class PowersOfTenCache {
+class PowersOfTenCache {
     public:
 
         // Not all powers of ten are cached. The decimal exponent of two neighboring
@@ -59,10 +58,9 @@ namespace double_conversion {
         static void GetCachedPowerForDecimalExponent(int requested_exponent,
                                                      DiyFp* power,
                                                      int* found_exponent);
-    };
+};
 
 }  // namespace double_conversion
-
 } // namespace WTF
 
 #endif  // DOUBLE_CONVERSION_CACHED_POWERS_H_

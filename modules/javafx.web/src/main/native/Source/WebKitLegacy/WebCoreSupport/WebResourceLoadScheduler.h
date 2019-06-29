@@ -39,8 +39,6 @@ class WebResourceLoadScheduler;
 
 namespace WebCore {
 class DocumentLoader;
-struct FetchOptions;
-class SecurityOrigin;
 }
 
 WebResourceLoadScheduler& webResourceLoadScheduler();
@@ -56,17 +54,15 @@ public:
 
     void remove(WebCore::ResourceLoader*) final;
     void setDefersLoading(WebCore::ResourceLoader&, bool) final;
-    void crossOriginRedirectReceived(WebCore::ResourceLoader*, const WebCore::URL& redirectURL) final;
+    void crossOriginRedirectReceived(WebCore::ResourceLoader*, const URL& redirectURL) final;
 
     void servePendingRequests(WebCore::ResourceLoadPriority minimumPriority = WebCore::ResourceLoadPriority::VeryLow) final;
     void suspendPendingRequests() final;
     void resumePendingRequests() final;
 
-    void startPingLoad(WebCore::Frame&, WebCore::ResourceRequest&, const WebCore::HTTPHeaderMap&, const WebCore::FetchOptions&, PingLoadCompletionHandler&&) final;
+    void startPingLoad(WebCore::Frame&, WebCore::ResourceRequest&, const WebCore::HTTPHeaderMap&, const WebCore::FetchOptions&, WebCore::ContentSecurityPolicyImposition, PingLoadCompletionHandler&&) final;
 
-    void preconnectTo(WebCore::FrameLoader&, const WebCore::URL&, WebCore::StoredCredentialsPolicy, PreconnectCompletionHandler&&) final;
-
-    void storeDerivedDataToCache(const SHA1::Digest&, const String&, const String&, WebCore::SharedBuffer&) final { }
+    void preconnectTo(WebCore::FrameLoader&, const URL&, WebCore::StoredCredentialsPolicy, PreconnectCompletionHandler&&) final;
 
     void setCaptureExtraNetworkLoadMetricsEnabled(bool) final { }
 
@@ -119,7 +115,7 @@ private:
         FindOnly
     };
 
-    HostInformation* hostForURL(const WebCore::URL&, CreateHostPolicy = FindOnly);
+    HostInformation* hostForURL(const URL&, CreateHostPolicy = FindOnly);
     void servePendingRequests(HostInformation*, WebCore::ResourceLoadPriority);
 
     typedef HashMap<String, HostInformation*, StringHash> HostMap;

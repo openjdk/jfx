@@ -33,14 +33,14 @@ namespace WebCore {
 
 bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     RefPtr<RQRef> jFont = this->font().platformData().nativeFontData();
     if (!jFont)
         return false;
 
     JLocalRef<jcharArray> jchars(env->NewCharArray(bufferLength));
-    CheckAndClearException(env); // OOME
+    WTF::CheckAndClearException(env); // OOME
     ASSERT(jchars);
     if (!jchars)
         return false;
@@ -53,7 +53,7 @@ bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
     static jmethodID mid = env->GetMethodID(PG_GetFontClass(env), "getGlyphCodes", "([C)[I");
     ASSERT(mid);
     JLocalRef<jintArray> jglyphs(static_cast<jintArray>(env->CallObjectMethod(*jFont, mid, (jcharArray)jchars)));
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
     ASSERT(jglyphs);
     if (!jglyphs)
         return false;

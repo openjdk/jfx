@@ -35,6 +35,7 @@
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
 #include "HTMLMediaElement.h"
+#include "InspectorInstrumentation.h"
 #include "SecurityOrigin.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -69,6 +70,10 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
     auto cachingPolicy = options & LoadOption::DisallowCaching ? CachingPolicy::DisallowCaching : CachingPolicy::AllowCaching;
 
     request.setRequester(ResourceRequest::Requester::Media);
+
+    if (m_mediaElement)
+        request.setInspectorInitiatorNodeIdentifier(InspectorInstrumentation::identifierForNode(*m_mediaElement));
+
 #if HAVE(AVFOUNDATION_LOADER_DELEGATE) && PLATFORM(MAC)
     // FIXME: Workaround for <rdar://problem/26071607>. We are not able to do CORS checking on 304 responses because they are usually missing the headers we need.
     if (!m_crossOriginMode.isNull())
@@ -90,12 +95,11 @@ RefPtr<PlatformMediaResource> MediaResourceLoader::requestResource(ResourceReque
         DefersLoadingPolicy::AllowDefersLoading,
         cachingPolicy };
     loaderOptions.destination = m_mediaElement && !m_mediaElement->isVideo() ? FetchOptions::Destination::Audio : FetchOptions::Destination::Video;
-    CachedResourceRequest cacheRequest { WTFMove(request), WTFMove(loaderOptions) };
-    cacheRequest.setAsPotentiallyCrossOrigin(m_crossOriginMode, *m_document);
+    auto cachedRequest = createPotentialAccessControlRequest(WTFMove(request), *m_document, m_crossOriginMode, WTFMove(loaderOptions));
     if (m_mediaElement)
-        cacheRequest.setInitiator(*m_mediaElement.get());
+        cachedRequest.setInitiator(*m_mediaElement.get());
 
-    auto resource = m_document->cachedResourceLoader().requestMedia(WTFMove(cacheRequest)).value_or(nullptr);
+    auto resource = m_document->cachedResourceLoader().requestMedia(WTFMove(cachedRequest)).value_or(nullptr);
     if (!resource)
         return nullptr;
 
@@ -147,12 +151,6 @@ void MediaResource::stop()
     m_resource = nullptr;
 }
 
-void MediaResource::setDefersLoading(bool defersLoading)
-{
-    if (m_resource)
-        m_resource->setDefersLoading(defersLoading);
-}
-
 void MediaResource::responseReceived(CachedResource& resource, const ResourceResponse& response, CompletionHandler<void()>&& completionHandler)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
@@ -174,7 +172,12 @@ void MediaResource::responseReceived(CachedResource& resource, const ResourceRes
 
     m_didPassAccessControlCheck = m_resource->options().mode == FetchOptions::Mode::Cors;
     if (m_client)
-        m_client->responseReceived(*this, response);
+        m_client->responseReceived(*this, response, [this, protectedThis = makeRef(*this), completionHandler = completionHandlerCaller.release()] (ShouldContinue shouldContinue) mutable {
+            if (completionHandler)
+                completionHandler();
+            if (shouldContinue == ShouldContinue::No)
+                stop();
+        });
 
     m_loader->addResponseForTesting(response);
 }

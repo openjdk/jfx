@@ -77,4 +77,9 @@ DragImageRef createDragImageIconForCachedImageFilename(const String&)
 {
     return 0;
 }
+
+DragImageRef createDragImageForColor(const Color&, const FloatRect&, float, Path&)
+{
+    return nullptr;
+}
 }

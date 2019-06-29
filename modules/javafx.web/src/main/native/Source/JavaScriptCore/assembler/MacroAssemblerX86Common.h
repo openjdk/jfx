@@ -1348,6 +1348,16 @@ public:
         store32(TrustedImm32(0), address);
     }
 
+    void storeZero16(ImplicitAddress address)
+    {
+        store16(TrustedImm32(0), address);
+    }
+
+    void storeZero16(BaseIndex address)
+    {
+        store16(TrustedImm32(0), address);
+    }
+
     void store8(TrustedImm32 imm, Address address)
     {
         TrustedImm32 imm8(static_cast<int8_t>(imm.m_value));
@@ -1434,7 +1444,7 @@ public:
         m_assembler.movw_im(static_cast<int16_t>(imm.m_value), address.offset, address.base, address.index, address.scale);
     }
 
-    void store16(TrustedImm32 imm, Address address)
+    void store16(TrustedImm32 imm, ImplicitAddress address)
     {
         m_assembler.movw_im(static_cast<int16_t>(imm.m_value), address.offset, address.base);
     }
@@ -3123,7 +3133,7 @@ public:
         }
     }
 
-    static std::optional<ResultCondition> commuteCompareToZeroIntoTest(RelationalCondition cond)
+    static Optional<ResultCondition> commuteCompareToZeroIntoTest(RelationalCondition cond)
     {
         switch (cond) {
         case Equal:
@@ -3136,7 +3146,7 @@ public:
             return PositiveOrZero;
             break;
         default:
-            return std::nullopt;
+            return WTF::nullopt;
         }
     }
 
@@ -4253,26 +4263,7 @@ private:
         cmov(static_cast<X86Assembler::Condition>(cond & ~DoubleConditionBits), src, dest);
     }
 #endif
-
-#if CPU(X86)
-#if OS(MAC_OS_X)
-
-    // All X86 Macs are guaranteed to support at least SSE2,
-    static bool isSSE2Present()
-    {
-        return true;
-    }
-
-#else // OS(MAC_OS_X)
-    static bool isSSE2Present()
-    {
-        if (s_sse2CheckState == CPUIDCheckState::NotChecked)
-            collectCPUFeatures();
-        return s_sse2CheckState == CPUIDCheckState::Set;
-    }
-
-#endif // OS(MAC_OS_X)
-#elif !defined(NDEBUG) // CPU(X86)
+#if !defined(NDEBUG) // CPU(X86)
 
     // On x86-64 we should never be checking for SSE2 in a non-debug build,
     // but non debug add this method to keep the asserts above happy.
@@ -4288,7 +4279,6 @@ private:
     static CPUID getCPUIDEx(unsigned level, unsigned count);
     JS_EXPORT_PRIVATE static void collectCPUFeatures();
 
-    JS_EXPORT_PRIVATE static CPUIDCheckState s_sse2CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_sse4_1CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_sse4_2CheckState;
     JS_EXPORT_PRIVATE static CPUIDCheckState s_avxCheckState;

@@ -43,7 +43,7 @@ typedef struct _NSPoint NSPoint;
 #endif
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 OBJC_CLASS UIScreen;
 #endif
 
@@ -99,6 +99,8 @@ NSPoint flipScreenPoint(const NSPoint&, NSScreen *);
 WEBCORE_EXPORT ScreenProperties collectScreenProperties();
 WEBCORE_EXPORT void setScreenProperties(const ScreenProperties&);
 
+WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
+
 uint32_t primaryOpenGLDisplayMask();
 uint32_t displayMaskForDisplay(PlatformDisplayID);
 
@@ -110,7 +112,7 @@ IORegistryGPUID gpuIDForDisplayMask(uint32_t);
 
 #endif // !PLATFORM(MAC)
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 
 float screenPPIFactor();
 WEBCORE_EXPORT FloatSize screenSize();

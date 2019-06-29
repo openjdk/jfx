@@ -28,6 +28,7 @@
 
 #include "FloatSize.h"
 #include <JavaScriptCore/TypedArrays.h>
+#include <wtf/EnumTraits.h>
 #include <wtf/MediaTime.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/AtomicString.h>
@@ -92,14 +93,39 @@ public:
     };
     virtual VideoRotation videoRotation() const { return VideoRotation::None; }
     virtual bool videoMirrored() const { return false; }
+    virtual uint32_t videoPixelFormat() const { return 0; }
 
     bool isSync() const { return flags() & IsSync; }
     bool isNonDisplaying() const { return flags() & IsNonDisplaying; }
     bool hasAlpha() const { return flags() & HasAlpha; }
 
     virtual void dump(PrintStream&) const = 0;
+    virtual String toJSONString() const { return { }; }
 };
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+template<> struct EnumTraits<WebCore::MediaSample::VideoRotation> {
+    using values = EnumValues<
+        WebCore::MediaSample::VideoRotation,
+        WebCore::MediaSample::VideoRotation::None,
+        WebCore::MediaSample::VideoRotation::UpsideDown,
+        WebCore::MediaSample::VideoRotation::Right,
+        WebCore::MediaSample::VideoRotation::Left
+    >;
+};
+
+template<typename Type> struct LogArgument;
+template <>
+struct LogArgument<WebCore::MediaSample> {
+    static String toString(const WebCore::MediaSample& sample)
+    {
+        return sample.toJSONString();
+    }
+};
+
+} // namespace WTF
 
 #endif

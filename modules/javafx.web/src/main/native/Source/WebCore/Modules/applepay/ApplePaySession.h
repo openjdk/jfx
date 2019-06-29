@@ -48,7 +48,6 @@ class Payment;
 class PaymentContact;
 class PaymentCoordinator;
 class PaymentMethod;
-class URL;
 enum class PaymentAuthorizationStatus;
 struct ApplePayLineItem;
 struct ApplePayPaymentRequest;
@@ -112,7 +111,7 @@ private:
 
     // PaymentSession
     unsigned version() const override;
-    void validateMerchant(const URL&) override;
+    void validateMerchant(URL&&) override;
     void didAuthorizePayment(const Payment&) override;
     void didSelectShippingMethod(const ApplePaySessionPaymentRequest::ShippingMethod&) override;
     void didSelectShippingContact(const PaymentContact&) override;

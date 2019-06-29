@@ -43,6 +43,7 @@
 #include "Page.h"
 #include "PlatformStrategies.h"
 #include "RenderElement.h"
+#include "RenderStyle.h"
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
@@ -67,6 +68,7 @@ TreeResolver::Scope::Scope(Document& document)
     : styleResolver(document.styleScope().resolver())
     , sharingResolver(document, styleResolver.ruleSets(), selectorFilter)
 {
+    document.setIsResolvingTreeStyle(true);
 }
 
 TreeResolver::Scope::Scope(ShadowRoot& shadowRoot, Scope& enclosingScope)
@@ -80,6 +82,9 @@ TreeResolver::Scope::Scope(ShadowRoot& shadowRoot, Scope& enclosingScope)
 
 TreeResolver::Scope::~Scope()
 {
+    if (!shadowRoot)
+        styleResolver.document().setIsResolvingTreeStyle(false);
+
     styleResolver.setOverrideDocumentElementStyle(nullptr);
 }
 
@@ -162,15 +167,6 @@ static bool affectsRenderedSubtree(Element& element, const RenderStyle& newStyle
     return false;
 }
 
-static const RenderStyle* renderOrDisplayContentsStyle(const Element& element)
-{
-    if (auto* renderStyle = element.renderStyle())
-        return renderStyle;
-    if (element.hasDisplayContents())
-        return element.existingComputedStyle();
-    return nullptr;
-}
-
 static DescendantsToResolve computeDescendantsToResolve(Change change, Validity validity, DescendantsToResolve parentDescendantsToResolve)
 {
     if (parentDescendantsToResolve == DescendantsToResolve::All)
@@ -203,7 +199,7 @@ ElementUpdates TreeResolver::resolveElement(Element& element)
     if (!affectsRenderedSubtree(element, *newStyle))
         return { };
 
-    auto* existingStyle = renderOrDisplayContentsStyle(element);
+    auto* existingStyle = element.renderOrDisplayContentsStyle();
 
     if (m_didSeePendingStylesheet && (!existingStyle || existingStyle->isNotFinal())) {
         newStyle->setIsNotFinal();
@@ -241,6 +237,11 @@ ElementUpdates TreeResolver::resolveElement(Element& element)
     auto beforeUpdate = resolvePseudoStyle(element, update, PseudoId::Before);
     auto afterUpdate = resolvePseudoStyle(element, update, PseudoId::After);
 
+#if ENABLE(POINTER_EVENTS)
+    if (RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled())
+        m_document.updateTouchActionElements(element, *update.style.get());
+#endif
+
     return { WTFMove(update), descendantsToResolve, WTFMove(beforeUpdate), WTFMove(afterUpdate) };
 }
 
@@ -252,7 +253,7 @@ ElementUpdate TreeResolver::resolvePseudoStyle(Element& element, const ElementUp
         return { };
 
     auto pseudoStyle = scope().styleResolver.pseudoStyleForElement(element, { pseudoId }, *elementUpdate.style, &scope().selectorFilter);
-    if (!pseudoStyle)
+    if (!pseudoElementRendererIsNeeded(pseudoStyle.get()))
         return { };
 
     PseudoElement* pseudoElement = pseudoId == PseudoId::Before ? element.beforePseudoElement() : element.afterPseudoElement();
@@ -284,7 +285,7 @@ const RenderStyle* TreeResolver::parentBoxStyle() const
 
 ElementUpdate TreeResolver::createAnimatedElementUpdate(std::unique_ptr<RenderStyle> newStyle, Element& element, Change parentChange)
 {
-    auto* oldStyle = renderOrDisplayContentsStyle(element);
+    auto* oldStyle = element.renderOrDisplayContentsStyle();
 
     bool shouldRecompositeLayer = false;
 
@@ -315,7 +316,7 @@ ElementUpdate TreeResolver::createAnimatedElementUpdate(std::unique_ptr<RenderSt
         auto& animationController = m_document.frame()->animation();
 
         auto animationUpdate = animationController.updateAnimations(element, *newStyle, oldStyle);
-        shouldRecompositeLayer = animationUpdate.stateChanged;
+        shouldRecompositeLayer = animationUpdate.animationChangeRequiresRecomposite;
 
         if (animationUpdate.style)
             newStyle = WTFMove(animationUpdate.style);
@@ -397,7 +398,7 @@ static bool shouldResolveElement(const Element& element, DescendantsToResolve pa
     case DescendantsToResolve::All:
         return true;
     case DescendantsToResolve::ChildrenWithExplicitInherit:
-        auto* existingStyle = renderOrDisplayContentsStyle(element);
+        auto* existingStyle = element.renderOrDisplayContentsStyle();
         return existingStyle && existingStyle->hasExplicitlyInheritedProperties();
     };
     ASSERT_NOT_REACHED();
@@ -482,7 +483,7 @@ void TreeResolver::resolveComposedTree()
             continue;
         }
 
-        auto* style = renderOrDisplayContentsStyle(element);
+        auto* style = element.renderOrDisplayContentsStyle();
         auto change = NoChange;
         auto descendantsToResolve = DescendantsToResolve::None;
 

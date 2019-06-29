@@ -34,7 +34,7 @@
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "TransformationMatrix.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 #include "GraphicsContextJava.h"
 #include "PlatformContextJava.h"
@@ -76,7 +76,7 @@ Ref<Image> Image::loadPlatformResource(const char *name)
 #if !USE(IMAGEIO)
 NativeImagePtr ImageFrame::asNewNativeImage() const
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_createWCImage_mID = env->GetMethodID(
             PG_GetGraphicsManagerClass(env), "createFrame",
             "(IILjava/nio/ByteBuffer;)Lcom/sun/webkit/graphics/WCImageFrame;");
@@ -94,7 +94,7 @@ NativeImagePtr ImageFrame::asNewNativeImage() const
         height(),
         (jobject)data));
     ASSERT(frame);
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 
     return RQRef::create(frame);
 }

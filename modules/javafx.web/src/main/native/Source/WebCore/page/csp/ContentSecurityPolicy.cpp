@@ -208,7 +208,7 @@ void ContentSecurityPolicy::didReceiveHeader(const String& header, ContentSecuri
         m_hasAPIPolicy = true;
     }
 
-    m_cachedResponseHeaders = std::nullopt;
+    m_cachedResponseHeaders = WTF::nullopt;
 
     // RFC2616, section 4.2 specifies that headers appearing multiple times can
     // be combined with a comma. Walk the header string, and parse each comma
@@ -888,10 +888,10 @@ void ContentSecurityPolicy::upgradeInsecureRequestIfNeeded(URL& url, InsecureReq
 
     if (url.protocolIs("http"))
         url.setProtocol("https");
-    else if (url.protocolIs("ws"))
+    else {
+        ASSERT(url.protocolIs("ws"));
         url.setProtocol("wss");
-    else
-        return;
+    }
 
     if (url.port() && url.port().value() == 80)
         url.setPort(443);

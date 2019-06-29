@@ -43,7 +43,7 @@ using namespace HTMLNames;
 
 bool HTMLTablePartElement::isPresentationAttribute(const QualifiedName& name) const
 {
-    if (name == bgcolorAttr || name == backgroundAttr || name == valignAttr || name == alignAttr || name == heightAttr)
+    if (name == bgcolorAttr || name == backgroundAttr || name == valignAttr || name == heightAttr)
         return true;
     return HTMLElement::isPresentationAttribute(name);
 }
@@ -55,7 +55,7 @@ void HTMLTablePartElement::collectStyleForPresentationAttribute(const QualifiedN
     else if (name == backgroundAttr) {
         String url = stripLeadingAndTrailingHTMLSpaces(value);
         if (!url.isEmpty())
-            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, CSSImageValue::create(document().completeURL(url))));
+            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, CSSImageValue::create(document().completeURL(url), LoadedFromOpaqueSource::No)));
     } else if (name == valignAttr) {
         if (equalLettersIgnoringASCIICase(value, "top"))
             addPropertyToPresentationAttributeStyle(style, CSSPropertyVerticalAlign, CSSValueTop);

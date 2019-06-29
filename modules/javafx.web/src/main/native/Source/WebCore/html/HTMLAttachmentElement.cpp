@@ -32,50 +32,26 @@
 #include "Document.h"
 #include "Editor.h"
 #include "File.h"
-#include "FileReaderLoader.h"
-#include "FileReaderLoaderClient.h"
 #include "Frame.h"
+#include "HTMLImageElement.h"
 #include "HTMLNames.h"
+#include "MIMETypeRegistry.h"
 #include "RenderAttachment.h"
 #include "SharedBuffer.h"
 #include <pal/FileSizeFormatter.h>
 #include <wtf/IsoMallocInlines.h>
+#include <wtf/UUID.h>
+#include <wtf/URLParser.h>
+
+#if PLATFORM(COCOA)
+#include "UTIUtilities.h"
+#endif
 
 namespace WebCore {
 
 WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLAttachmentElement);
 
 using namespace HTMLNames;
-
-class AttachmentDataReader : public FileReaderLoaderClient {
-public:
-    static std::unique_ptr<AttachmentDataReader> create(HTMLAttachmentElement& attachment, Function<void(RefPtr<SharedBuffer>&&)>&& callback)
-    {
-        return std::make_unique<AttachmentDataReader>(attachment, WTFMove(callback));
-    }
-
-    AttachmentDataReader(HTMLAttachmentElement& attachment, Function<void(RefPtr<SharedBuffer>&&)>&& callback)
-        : m_attachment(attachment)
-        , m_callback(std::make_unique<Function<void(RefPtr<SharedBuffer>&&)>>(WTFMove(callback)))
-        , m_loader(std::make_unique<FileReaderLoader>(FileReaderLoader::ReadType::ReadAsArrayBuffer, this))
-    {
-        m_loader->start(&attachment.document(), *attachment.file());
-    }
-
-    ~AttachmentDataReader();
-
-private:
-    void didStartLoading() final { }
-    void didReceiveData() final { }
-    void didFinishLoading() final;
-    void didFail(int error) final;
-
-    void invokeCallbackAndFinishReading(RefPtr<SharedBuffer>&&);
-
-    HTMLAttachmentElement& m_attachment;
-    std::unique_ptr<Function<void(RefPtr<SharedBuffer>&&)>> m_callback;
-    std::unique_ptr<FileReaderLoader> m_loader;
-};
 
 HTMLAttachmentElement::HTMLAttachmentElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
@@ -93,6 +69,34 @@ Ref<HTMLAttachmentElement> HTMLAttachmentElement::create(const QualifiedName& ta
 RenderPtr<RenderElement> HTMLAttachmentElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     return createRenderer<RenderAttachment>(*this, WTFMove(style));
+}
+
+const String& HTMLAttachmentElement::getAttachmentIdentifier(HTMLImageElement& image)
+{
+    if (auto attachment = image.attachmentElement())
+        return attachment->uniqueIdentifier();
+
+    auto& document = image.document();
+    auto attachment = create(HTMLNames::attachmentTag, document);
+    auto& identifier = attachment->ensureUniqueIdentifier();
+
+    document.registerAttachmentIdentifier(identifier);
+    image.setAttachmentElement(WTFMove(attachment));
+
+    return identifier;
+}
+
+void HTMLAttachmentElement::copyNonAttributePropertiesFromElement(const Element& source)
+{
+    m_uniqueIdentifier = downcast<HTMLAttachmentElement>(source).uniqueIdentifier();
+    HTMLElement::copyNonAttributePropertiesFromElement(source);
+}
+
+URL HTMLAttachmentElement::archiveResourceURL(const String& identifier)
+{
+    auto resourceURL = URL({ }, "applewebdata://attachment/"_s);
+    resourceURL.setPath(identifier);
+    return resourceURL;
 }
 
 File* HTMLAttachmentElement::file() const
@@ -140,6 +144,18 @@ void HTMLAttachmentElement::removedFromAncestor(RemovalType type, ContainerNode&
         document().didRemoveAttachmentElement(*this);
 }
 
+const String& HTMLAttachmentElement::ensureUniqueIdentifier()
+{
+    if (m_uniqueIdentifier.isEmpty())
+        m_uniqueIdentifier = createCanonicalUUIDString();
+    return m_uniqueIdentifier;
+}
+
+bool HTMLAttachmentElement::hasEnclosingImage() const
+{
+    return is<HTMLImageElement>(shadowHost());
+}
+
 void HTMLAttachmentElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == progressAttr || name == subtitleAttr || name == titleAttr || name == typeAttr) {
@@ -158,6 +174,27 @@ String HTMLAttachmentElement::attachmentTitle() const
     return m_file ? m_file->name() : String();
 }
 
+String HTMLAttachmentElement::attachmentTitleForDisplay() const
+{
+    auto title = attachmentTitle();
+
+    auto indexOfLastDot = title.reverseFind('.');
+    if (indexOfLastDot == notFound)
+        return title;
+
+    String name = title.left(indexOfLastDot);
+    String extension = title.substring(indexOfLastDot);
+
+    StringBuilder builder;
+    builder.append(leftToRightMark);
+    builder.append(firstStrongIsolate);
+    builder.append(name);
+    builder.append(popDirectionalIsolate);
+    builder.append(extension);
+
+    return builder.toString();
+}
+
 String HTMLAttachmentElement::attachmentType() const
 {
     return attributeWithoutSynchronization(typeAttr);
@@ -168,68 +205,48 @@ String HTMLAttachmentElement::attachmentPath() const
     return attributeWithoutSynchronization(webkitattachmentpathAttr);
 }
 
-void HTMLAttachmentElement::updateFileWithData(Ref<SharedBuffer>&& data, std::optional<String>&& newContentType, std::optional<String>&& newFilename)
+void HTMLAttachmentElement::updateAttributes(Optional<uint64_t>&& newFileSize, const String& newContentType, const String& newFilename)
 {
-    auto filename = newFilename ? *newFilename : attachmentTitle();
-    auto contentType = newContentType ? *newContentType : File::contentTypeForFile(filename);
-    auto file = File::create(Blob::create(WTFMove(data), contentType), filename);
-    setFile(WTFMove(file), UpdateDisplayAttributes::Yes);
-}
-
-void HTMLAttachmentElement::requestInfo(Function<void(const AttachmentInfo&)>&& callback)
-{
-    if (!m_file) {
-        callback({ });
-        return;
-    }
-
-    AttachmentInfo infoWithoutData { m_file->type(), m_file->name(), m_file->path(), nullptr };
-    if (!m_file->path().isEmpty()) {
-        callback(infoWithoutData);
-        return;
-    }
-
-    m_attachmentReaders.append(AttachmentDataReader::create(*this, [infoWithoutData = WTFMove(infoWithoutData), protectedFile = makeRef(*m_file), callback = WTFMove(callback)] (RefPtr<SharedBuffer>&& data) {
-        callback({ infoWithoutData.contentType, infoWithoutData.name, infoWithoutData.filePath, WTFMove(data) });
-    }));
-}
-
-void HTMLAttachmentElement::destroyReader(AttachmentDataReader& finishedReader)
-{
-    m_attachmentReaders.removeFirstMatching([&] (const std::unique_ptr<AttachmentDataReader>& reader) -> bool {
-        return reader.get() == &finishedReader;
-    });
-}
-
-AttachmentDataReader::~AttachmentDataReader()
-{
-    invokeCallbackAndFinishReading(nullptr);
-}
-
-void AttachmentDataReader::didFinishLoading()
-{
-    if (auto arrayBuffer = m_loader->arrayBufferResult())
-        invokeCallbackAndFinishReading(SharedBuffer::create(reinterpret_cast<uint8_t*>(arrayBuffer->data()), arrayBuffer->byteLength()));
+    if (!newFilename.isNull())
+        setAttributeWithoutSynchronization(HTMLNames::titleAttr, newFilename);
     else
-        invokeCallbackAndFinishReading(nullptr);
-    m_attachment.destroyReader(*this);
+        removeAttribute(HTMLNames::titleAttr);
+
+    if (!newContentType.isNull())
+        setAttributeWithoutSynchronization(HTMLNames::typeAttr, newContentType);
+    else
+        removeAttribute(HTMLNames::typeAttr);
+
+    if (newFileSize)
+        setAttributeWithoutSynchronization(HTMLNames::subtitleAttr, fileSizeDescription(*newFileSize));
+    else
+        removeAttribute(HTMLNames::subtitleAttr);
+
+    if (auto* renderer = this->renderer())
+        renderer->invalidate();
 }
 
-void AttachmentDataReader::didFail(int)
+static bool mimeTypeIsSuitableForInlineImageAttachment(const String& mimeType)
 {
-    invokeCallbackAndFinishReading(nullptr);
-    m_attachment.destroyReader(*this);
+    return MIMETypeRegistry::isSupportedImageMIMEType(mimeType) || MIMETypeRegistry::isPDFMIMEType(mimeType);
 }
 
-void AttachmentDataReader::invokeCallbackAndFinishReading(RefPtr<SharedBuffer>&& data)
+void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentType, Ref<SharedBuffer>&& data)
 {
-    auto callback = WTFMove(m_callback);
-    if (!callback)
+    auto* hostElement = shadowHost();
+    if (!is<HTMLImageElement>(hostElement) || !data->size())
         return;
 
-    m_loader->cancel();
-    m_loader = nullptr;
-    (*callback)(WTFMove(data));
+    String mimeType = contentType;
+#if PLATFORM(COCOA)
+    if (isDeclaredUTI(contentType))
+        mimeType = MIMETypeFromUTI(contentType);
+#endif
+
+    if (!mimeTypeIsSuitableForInlineImageAttachment(mimeType))
+        return;
+
+    hostElement->setAttributeWithoutSynchronization(HTMLNames::srcAttr, DOMURL::createObjectURL(document(), Blob::create(WTFMove(data), mimeType)));
 }
 
 } // namespace WebCore

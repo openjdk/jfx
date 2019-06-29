@@ -91,6 +91,44 @@ static HashSet<Node*>& liveNodeSet()
     static NeverDestroyed<HashSet<Node*>> liveNodes;
     return liveNodes;
 }
+
+static const char* stringForRareDataUseType(NodeRareData::UseType useType)
+{
+    switch (useType) {
+    case NodeRareData::UseType::ConnectedFrameCount:
+        return "ConnectedFrameCount";
+    case NodeRareData::UseType::NodeList:
+        return "NodeList";
+    case NodeRareData::UseType::MutationObserver:
+        return "MutationObserver";
+    case NodeRareData::UseType::TabIndex:
+        return "TabIndex";
+    case NodeRareData::UseType::StyleFlags:
+        return "StyleFlags";
+    case NodeRareData::UseType::MinimumSize:
+        return "MinimumSize";
+    case NodeRareData::UseType::ScrollingPosition:
+        return "ScrollingPosition";
+    case NodeRareData::UseType::ComputedStyle:
+        return "ComputedStyle";
+    case NodeRareData::UseType::Dataset:
+        return "Dataset";
+    case NodeRareData::UseType::ClassList:
+        return "ClassList";
+    case NodeRareData::UseType::ShadowRoot:
+        return "ShadowRoot";
+    case NodeRareData::UseType::CustomElementQueue:
+        return "CustomElementQueue";
+    case NodeRareData::UseType::AttributeMap:
+        return "AttributeMap";
+    case NodeRareData::UseType::InteractionObserver:
+        return "InteractionObserver";
+    case NodeRareData::UseType::PseudoElements:
+        return "PseudoElements";
+    }
+    return nullptr;
+}
+
 #endif
 
 void Node::dumpStatistics()
@@ -117,6 +155,9 @@ void Node::dumpStatistics()
     size_t elementsWithRareData = 0;
     size_t elementsWithNamedNodeMap = 0;
 
+    HashMap<uint16_t, size_t> rareDataSingleUseTypeCounts;
+    size_t mixedRareDataUseCount = 0;
+
     for (auto* node : liveNodeSet()) {
         if (node->hasRareData()) {
             ++nodesWithRareData;
@@ -125,6 +166,18 @@ void Node::dumpStatistics()
                 if (downcast<Element>(*node).hasNamedNodeMap())
                     ++elementsWithNamedNodeMap;
             }
+            auto* rareData = node->rareData();
+            auto useTypes = is<Element>(node) ? static_cast<ElementRareData*>(rareData)->useTypes() : rareData->useTypes();
+            unsigned useTypeCount = 0;
+            for (auto type : useTypes) {
+                UNUSED_PARAM(type);
+                useTypeCount++;
+            }
+            if (useTypeCount == 1) {
+                auto result = rareDataSingleUseTypeCounts.add(static_cast<uint16_t>(*useTypes.begin()), 0);
+                result.iterator->value++;
+            } else
+                mixedRareDataUseCount++;
         }
 
         switch (node->nodeType()) {
@@ -143,7 +196,7 @@ void Node::dumpStatistics()
                     ++elementsWithAttributeStorage;
                     for (unsigned i = 0; i < length; ++i) {
                         const Attribute& attr = elementData->attributeAt(i);
-                        if (!attr.isEmpty())
+                        if (element.attrIfExists(attr.name()))
                             ++attributesWithAttr;
                     }
                 }
@@ -188,7 +241,12 @@ void Node::dumpStatistics()
     }
 
     printf("Number of Nodes: %d\n\n", liveNodeSet().size());
-    printf("Number of Nodes with RareData: %zu\n\n", nodesWithRareData);
+    printf("Number of Nodes with RareData: %zu\n", nodesWithRareData);
+    printf("  Mixed use: %zu\n", mixedRareDataUseCount);
+    for (auto it : rareDataSingleUseTypeCounts)
+        printf("  %s: %zu\n", stringForRareDataUseType(static_cast<NodeRareData::UseType>(it.key)), it.value);
+    printf("\n");
+
 
     printf("NodeType distribution:\n");
     printf("  Number of Element nodes: %zu\n", elementNodes);
@@ -274,7 +332,9 @@ Node::Node(Document& document, ConstructionType type)
 Node::~Node()
 {
     ASSERT(isMainThread());
-    ASSERT(!m_refCount);
+    // We set m_refCount to 1 before calling delete to avoid double destruction through use of Ref<T>/RefPtr<T>.
+    // This is a security mitigation in case of programmer errorm (caught by a debug assertion).
+    ASSERT(m_refCount == 1);
     ASSERT(m_deletionHasBegun);
     ASSERT(!m_adoptionIsRequired);
 
@@ -303,7 +363,7 @@ Node::~Node()
 
     document().decrementReferencingNodeCount();
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS) && (!ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS))
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY) && (!ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS))
     for (auto* document : Document::allDocuments()) {
         ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventListenersContain(*this));
         ASSERT_WITH_SECURITY_IMPLICATION(!document->touchEventHandlersContain(*this));
@@ -317,14 +377,14 @@ void Node::willBeDeletedFrom(Document& document)
     if (hasEventTargetData()) {
         document.didRemoveWheelEventHandler(*this, EventHandlerRemoval::All);
 #if ENABLE(TOUCH_EVENTS)
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
         document.removeTouchEventListener(*this, EventHandlerRemoval::All);
 #endif
         document.didRemoveTouchEventHandler(*this, EventHandlerRemoval::All);
 #endif
     }
 
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
     document.removeTouchEventHandler(*this, EventHandlerRemoval::All);
 #endif
 
@@ -602,7 +662,7 @@ void Node::normalize()
         while (Node* nextSibling = node->nextSibling()) {
             if (nextSibling->nodeType() != TEXT_NODE)
                 break;
-            RefPtr<Text> nextText = downcast<Text>(nextSibling);
+            Ref<Text> nextText = downcast<Text>(*nextSibling);
 
             // Remove empty text nodes.
             if (!nextText->length()) {
@@ -613,7 +673,7 @@ void Node::normalize()
             // Both non-empty text nodes. Merge them.
             unsigned offset = text->length();
             text->appendData(nextText->data());
-            document().textNodesMerged(nextText.get(), offset);
+            document().textNodesMerged(nextText, offset);
             nextText->remove();
         }
 
@@ -950,21 +1010,15 @@ bool Node::isDescendantOf(const Node& other) const
 
 bool Node::isDescendantOrShadowDescendantOf(const Node* other) const
 {
-    if (!other)
-        return false;
-    if (isDescendantOf(*other))
-        return true;
-    const Node* shadowAncestorNode = deprecatedShadowAncestorNode();
-    if (!shadowAncestorNode)
-        return false;
-    return shadowAncestorNode == other || shadowAncestorNode->isDescendantOf(*other);
+    // FIXME: This element's shadow tree's host could be inside another shadow tree.
+    // This function doesn't handle that case correctly. Maybe share code with
+    // the containsIncludingShadowDOM function?
+    return other && (isDescendantOf(*other) || other->contains(shadowHost()));
 }
 
 bool Node::contains(const Node* node) const
 {
-    if (!node)
-        return false;
-    return this == node || node->isDescendantOf(*this);
+    return this == node || (node && node->isDescendantOf(*this));
 }
 
 bool Node::containsIncludingShadowDOM(const Node* node) const
@@ -972,19 +1026,6 @@ bool Node::containsIncludingShadowDOM(const Node* node) const
     for (; node; node = node->parentOrShadowHostNode()) {
         if (node == this)
             return true;
-    }
-    return false;
-}
-
-bool Node::containsIncludingHostElements(const Node* node) const
-{
-    while (node) {
-        if (node == this)
-            return true;
-        if (node->isDocumentFragment() && static_cast<const DocumentFragment*>(node)->isTemplateContent())
-            node = static_cast<const TemplateContentDocumentFragment*>(node)->host();
-        else
-            node = node->parentOrShadowHostNode();
     }
     return false;
 }
@@ -1081,14 +1122,6 @@ Element* Node::shadowHost() const
     return nullptr;
 }
 
-Node* Node::deprecatedShadowAncestorNode() const
-{
-    if (ShadowRoot* root = containingShadowRoot())
-        return root->host();
-
-    return const_cast<Node*>(this);
-}
-
 ShadowRoot* Node::containingShadowRoot() const
 {
     ContainerNode& root = treeScope().rootNode();
@@ -1166,6 +1199,8 @@ Element* Node::parentElementInComposedTree() const
 {
     if (auto* slot = assignedSlot())
         return slot;
+    if (is<PseudoElement>(*this))
+        return downcast<PseudoElement>(*this).hostElement();
     if (auto* parent = parentNode()) {
         if (is<ShadowRoot>(*parent))
             return downcast<ShadowRoot>(*parent).host();
@@ -1290,7 +1325,7 @@ Document* Node::ownerDocument() const
 const URL& Node::baseURI() const
 {
     auto& url = document().baseURL();
-    return url.isNull() ? blankURL() : url;
+    return url.isNull() ? WTF::blankURL() : url;
 }
 
 bool Node::isEqualNode(Node* other) const
@@ -1319,7 +1354,7 @@ bool Node::isEqualNode(Node* other) const
         auto& otherElement = downcast<Element>(*other);
         if (thisElement.tagQName() != otherElement.tagQName())
             return false;
-        if (!thisElement.hasEquivalentAttributes(&otherElement))
+        if (!thisElement.hasEquivalentAttributes(otherElement))
             return false;
         break;
         }
@@ -1546,11 +1581,6 @@ ExceptionOr<void> Node::setTextContent(const String& text)
     }
     ASSERT_NOT_REACHED();
     return { };
-}
-
-bool Node::offsetInCharacters() const
-{
-    return false;
 }
 
 static SHA1::Digest hashPointer(void* pointer)
@@ -2024,13 +2054,13 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
         }
 
         unsigned numTouchEventListeners = 0;
-        for (auto& name : eventNames().touchEventNames())
+        for (auto& name : eventNames().touchAndPointerEventNames())
             numTouchEventListeners += eventListeners(name).size();
 
         for (unsigned i = 0; i < numTouchEventListeners; ++i) {
             oldDocument.didRemoveTouchEventHandler(*this);
             newDocument.didAddTouchEventHandler(*this);
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
             oldDocument.removeTouchEventListener(*this);
             newDocument.addTouchEventListener(*this);
 #endif
@@ -2049,7 +2079,7 @@ void Node::moveNodeToNewDocument(Document& oldDocument, Document& newDocument)
     }
 
 #if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
     ASSERT_WITH_SECURITY_IMPLICATION(!oldDocument.touchEventListenersContain(*this));
     ASSERT_WITH_SECURITY_IMPLICATION(!oldDocument.touchEventHandlersContain(*this));
 #endif
@@ -2073,7 +2103,7 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomicString& eve
     else if (eventNames().isTouchEventType(eventType))
         targetNode->document().didAddTouchEventHandler(*targetNode);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent)
         targetNode->document().domWindow()->incrementScrollEventListenersCount();
 
@@ -2088,7 +2118,7 @@ static inline bool tryAddEventListener(Node* targetNode, const AtomicString& eve
     if (eventNames().isTouchEventType(eventType))
         targetNode->document().addTouchEventListener(*targetNode);
 #endif
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(IOS_GESTURE_EVENTS) && ENABLE(TOUCH_EVENTS)
     if (eventNames().isGestureEventType(eventType))
@@ -2115,7 +2145,7 @@ static inline bool tryRemoveEventListener(Node* targetNode, const AtomicString& 
     else if (eventNames().isTouchEventType(eventType))
         targetNode->document().didRemoveTouchEventHandler(*targetNode);
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     if (targetNode == &targetNode->document() && eventType == eventNames().scrollEvent)
         targetNode->document().domWindow()->decrementScrollEventListenersCount();
 
@@ -2129,7 +2159,7 @@ static inline bool tryRemoveEventListener(Node* targetNode, const AtomicString& 
     if (eventNames().isTouchEventType(eventType))
         targetNode->document().removeTouchEventListener(*targetNode);
 #endif
-#endif // PLATFORM(IOS)
+#endif // PLATFORM(IOS_FAMILY)
 
 #if ENABLE(IOS_GESTURE_EVENTS) && ENABLE(TOUCH_EVENTS)
     if (eventNames().isGestureEventType(eventType))
@@ -2307,7 +2337,7 @@ void Node::notifyMutationObserversNodeWillDetach()
     }
 }
 
-void Node::handleLocalEvents(Event& event)
+void Node::handleLocalEvents(Event& event, EventInvokePhase phase)
 {
     if (!hasEventTargetData())
         return;
@@ -2316,7 +2346,7 @@ void Node::handleLocalEvents(Event& event)
     if (is<Element>(*this) && downcast<Element>(*this).isDisabledFormControl() && event.isMouseEvent() && !event.isWheelEvent())
         return;
 
-    fireEventListeners(event);
+    fireEventListeners(event, phase);
 }
 
 void Node::dispatchScopedEvent(Event& event)
@@ -2349,7 +2379,7 @@ void Node::dispatchDOMActivateEvent(Event& underlyingClickEvent)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(ScriptDisallowedScope::InMainThread::isScriptAllowed());
     int detail = is<UIEvent>(underlyingClickEvent) ? downcast<UIEvent>(underlyingClickEvent).detail() : 0;
-    auto event = UIEvent::create(eventNames().DOMActivateEvent, Event::CanBubble::Yes, Event::IsCancelable::Yes, document().windowProxy(), detail);
+    auto event = UIEvent::create(eventNames().DOMActivateEvent, Event::CanBubble::Yes, Event::IsCancelable::Yes, Event::IsComposed::Yes, document().windowProxy(), detail);
     event->setUnderlyingEvent(&underlyingClickEvent);
     dispatchScopedEvent(event);
     if (event->defaultHandled())
@@ -2369,7 +2399,7 @@ bool Node::dispatchBeforeLoadEvent(const String& sourceURL)
 
 void Node::dispatchInputEvent()
 {
-    dispatchScopedEvent(Event::create(eventNames().inputEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
+    dispatchScopedEvent(Event::create(eventNames().inputEvent, Event::CanBubble::Yes, Event::IsCancelable::No, Event::IsComposed::Yes));
 }
 
 void Node::defaultEventHandler(Event& event)
@@ -2427,7 +2457,7 @@ void Node::defaultEventHandler(Event& event)
         if (startNode && startNode->renderer())
             if (Frame* frame = document().frame())
                 frame->eventHandler().defaultWheelEventHandler(startNode, downcast<WheelEvent>(event));
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS)
+#if ENABLE(TOUCH_EVENTS) && PLATFORM(IOS_FAMILY)
     } else if (is<TouchEvent>(event) && eventNames().isTouchEventType(eventType)) {
         RenderObject* renderer = this->renderer();
         while (renderer && (!is<RenderBox>(*renderer) || !downcast<RenderBox>(*renderer).canBeScrolledAndHasScrollableArea()))
@@ -2444,7 +2474,7 @@ void Node::defaultEventHandler(Event& event)
 bool Node::willRespondToMouseMoveEvents()
 {
     // FIXME: Why is the iOS code path different from the non-iOS code path?
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
     if (!is<Element>(*this))
         return false;
     if (downcast<Element>(*this).isDisabledFormControl())
@@ -2456,7 +2486,7 @@ bool Node::willRespondToMouseMoveEvents()
 bool Node::willRespondToMouseClickEvents()
 {
     // FIXME: Why is the iOS code path different from the non-iOS code path?
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     return isContentEditable() || hasEventListeners(eventNames().mouseupEvent) || hasEventListeners(eventNames().mousedownEvent) || hasEventListeners(eventNames().clickEvent);
 #else
     if (!is<Element>(*this))
@@ -2488,6 +2518,7 @@ void Node::removedLastRef()
 #ifndef NDEBUG
     m_deletionHasBegun = true;
 #endif
+    m_refCount = 1; // Avoid double destruction through use of RefPtr<T>. (This is a security mitigation in case of programmer error. It will ASSERT in debug builds.)
     delete this;
 }
 

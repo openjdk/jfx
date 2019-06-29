@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 #include "PluginData.h"
 
 namespace WebCore {
@@ -32,13 +32,13 @@ namespace WebCore {
 
 void init_plugins(bool, Vector<PluginInfo>*) {
 /*
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     jclass clsPluginManager
         = env->FindClass("com/sun/webkit/plugin/PluginManager");
     ASSERT(clsPluginManager);
     if (!clsPluginManager) {    // for safety
-        CheckAndClearException(env);
+        WTF::CheckAndClearException(env);
         return;
     }
 
@@ -50,7 +50,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
 
         ASSERT(midGetCount);
         if (!midGetCount) { // for safety
-            CheckAndClearException(env);
+            WTF::CheckAndClearException(env);
             return;
         }
     }
@@ -66,7 +66,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
 
             ASSERT(midGetPlugin);
             if (!midGetPlugin) {    // for safety
-                CheckAndClearException(env);
+                WTF::CheckAndClearException(env);
                 return;
             }
         }
@@ -74,7 +74,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
         jclass clsPlugin = env->FindClass("com/sun/webkit/plugin/PluginHandler");
         ASSERT(clsPlugin);
         if (!clsPlugin) {   // for safety
-            CheckAndClearException(env);
+            WTF::CheckAndClearException(env);
             return;
         }
 
@@ -85,7 +85,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
 
             ASSERT(midGetName);
             if (!midGetName) {
-                CheckAndClearException(env);
+                WTF::CheckAndClearException(env);
                 //return; don't return!
             }
         }
@@ -97,7 +97,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
 
             ASSERT(midGetFileName);
             if (!midGetFileName) {
-                CheckAndClearException(env);
+                WTF::CheckAndClearException(env);
                 //return; don't return!
             }
         }
@@ -109,7 +109,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
 
             ASSERT(midGetDescr);
             if (!midGetDescr) {
-                CheckAndClearException(env);
+                WTF::CheckAndClearException(env);
                 //return; don't return!
             }
         }
@@ -121,7 +121,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
 
             ASSERT(midGetMimeTypes);
             if (!midGetMimeTypes) {
-                CheckAndClearException(env);
+                WTF::CheckAndClearException(env);
                 //return; don't return!
             }
         }
@@ -185,7 +185,7 @@ void init_plugins(bool, Vector<PluginInfo>*) {
             }
         }
     }
-    CheckAndClearException(env);
+    WTF::CheckAndClearException(env);
 */
 }
 

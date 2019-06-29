@@ -57,6 +57,23 @@ class SlotVisitor {
     friend class Heap;
 
 public:
+    enum RootMarkReason {
+        None,
+        ConservativeScan,
+        StrongReferences,
+        ProtectedValues,
+        MarkListSet,
+        VMExceptions,
+        StrongHandles,
+        Debugger,
+        JITStubRoutines,
+        WeakSets,
+        Output,
+        DFGWorkLists,
+        CodeBlocks,
+        DOMGCOutput,
+    };
+
     SlotVisitor(Heap&, CString codeName);
     ~SlotVisitor();
 
@@ -69,7 +86,7 @@ public:
     const VM& vm() const;
     Heap* heap() const;
 
-    void append(ConservativeRoots&);
+    void append(const ConservativeRoots&);
 
     template<typename T, typename Traits> void append(const WriteBarrierBase<T, Traits>&);
     template<typename T, typename Traits> void appendHidden(const WriteBarrierBase<T, Traits>&);
@@ -142,6 +159,10 @@ public:
     void dump(PrintStream&) const;
 
     bool isBuildingHeapSnapshot() const { return !!m_heapSnapshotBuilder; }
+    HeapSnapshotBuilder* heapSnapshotBuilder() const { return m_heapSnapshotBuilder; }
+
+    RootMarkReason rootMarkReason() const { return m_rootMarkReason; }
+    void setRootMarkReason(RootMarkReason reason) { m_rootMarkReason = reason; }
 
     HeapVersion markingVersion() const { return m_markingVersion; }
 
@@ -196,6 +217,8 @@ private:
 
     void visitChildren(const JSCell*);
 
+    void propagateExternalMemoryVisitedIfNecessary();
+
     void donateKnownParallel();
     void donateKnownParallel(MarkStackArray& from, MarkStackArray& to);
 
@@ -216,6 +239,7 @@ private:
     size_t m_bytesVisited;
     size_t m_visitCount;
     size_t m_nonCellVisitCount { 0 }; // Used for incremental draining, ignored otherwise.
+    Checked<size_t, RecordOverflow> m_extraMemorySize { 0 };
     bool m_isInParallelMode;
 
     HeapVersion m_markingVersion;
@@ -224,6 +248,7 @@ private:
 
     HeapSnapshotBuilder* m_heapSnapshotBuilder { nullptr };
     JSCell* m_currentCell { nullptr };
+    RootMarkReason m_rootMarkReason { RootMarkReason::None };
     bool m_isFirstVisit { false };
     bool m_mutatorIsStopped { false };
     bool m_canOptimizeForStoppedMutator { false };
@@ -234,8 +259,6 @@ private:
     MarkingConstraint* m_currentConstraint { nullptr };
     MarkingConstraintSolver* m_currentSolver { nullptr };
 
-    // Put padding here to mitigate false sharing between multiple SlotVisitors.
-    char padding[64];
 public:
 #if !ASSERT_DISABLED
     bool m_isCheckingForDefaultMarkViolation;
@@ -260,6 +283,25 @@ public:
 
 private:
     SlotVisitor& m_stack;
+};
+
+class SetRootMarkReasonScope {
+public:
+    SetRootMarkReasonScope(SlotVisitor& visitor, SlotVisitor::RootMarkReason reason)
+        : m_visitor(visitor)
+        , m_previousReason(visitor.rootMarkReason())
+    {
+        m_visitor.setRootMarkReason(reason);
+    }
+
+    ~SetRootMarkReasonScope()
+    {
+        m_visitor.setRootMarkReason(m_previousReason);
+    }
+
+private:
+    SlotVisitor& m_visitor;
+    SlotVisitor::RootMarkReason m_previousReason;
 };
 
 } // namespace JSC

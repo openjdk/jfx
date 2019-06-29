@@ -44,7 +44,6 @@
 
 
 namespace WebCore {
-using namespace WTF;
 
 // true if there is more to parse, after incrementing pos past whitespace.
 // Note: Might return pos == str.length()
@@ -260,11 +259,11 @@ bool parseHTTPRefresh(const String& refresh, double& delay, String& url)
     }
 }
 
-std::optional<WallTime> parseHTTPDate(const String& value)
+Optional<WallTime> parseHTTPDate(const String& value)
 {
     double dateInMillisecondsSinceEpoch = parseDateFromNullTerminatedCharacters(value.utf8().data());
     if (!std::isfinite(dateInMillisecondsSinceEpoch))
-        return std::nullopt;
+        return WTF::nullopt;
     // This assumes system_clock epoch equals Unix epoch which is true for all implementations but unspecified.
     // FIXME: The parsing function should be switched to WallTime too.
     return WallTime::fromRawSeconds(dateInMillisecondsSinceEpoch / 1000.0);
@@ -301,14 +300,23 @@ String filenameFromHTTPContentDisposition(const String& value)
 
 String extractMIMETypeFromMediaType(const String& mediaType)
 {
-    StringBuilder mimeType;
+    unsigned position = 0;
     unsigned length = mediaType.length();
-    mimeType.reserveCapacity(length);
-    for (unsigned i = 0; i < length; i++) {
-        UChar c = mediaType[i];
 
-        if (c == ';')
+    for (; position < length; ++position) {
+        UChar c = mediaType[position];
+        if (c != '\t' && c != ' ')
             break;
+    }
+
+    if (position == length)
+        return mediaType;
+
+    unsigned typeStart = position;
+
+    unsigned typeEnd = position;
+    for (; position < length; ++position) {
+        UChar c = mediaType[position];
 
         // While RFC 2616 does not allow it, other browsers allow multiple values in the HTTP media
         // type header field, Content-Type. In such cases, the media type string passed here may contain
@@ -319,19 +327,13 @@ String extractMIMETypeFromMediaType(const String& mediaType)
         if (c == ',')
             break;
 
-        // FIXME: The following is not correct. RFC 2616 allows linear white space before and
-        // after the MIME type, but not within the MIME type itself. And linear white space
-        // includes only a few specific ASCII characters; a small subset of isSpaceOrNewline.
-        // See https://bugs.webkit.org/show_bug.cgi?id=8644 for a bug tracking part of this.
-        if (isSpaceOrNewline(c))
-            continue;
+        if (c == '\t' || c == ' ' || c == ';')
+            break;
 
-        mimeType.append(c);
+        typeEnd = position + 1;
     }
 
-    if (mimeType.length() == length)
-        return mediaType;
-    return mimeType.toString();
+    return mediaType.substring(typeStart, typeEnd - typeStart);
 }
 
 String extractCharsetFromMediaType(const String& mediaType)
@@ -474,9 +476,10 @@ XSSProtectionDisposition parseXSSProtectionHeader(const String& header, String& 
     }
 }
 
-ContentTypeOptionsDisposition parseContentTypeOptionsHeader(const String& header)
+ContentTypeOptionsDisposition parseContentTypeOptionsHeader(StringView header)
 {
-    if (equalLettersIgnoringASCIICase(header.stripWhiteSpace(), "nosniff"))
+    StringView leftToken = header.left(header.find(','));
+    if (equalLettersIgnoringASCIICase(stripLeadingAndTrailingHTTPSpaces(leftToken), "nosniff"))
         return ContentTypeOptionsNosniff;
     return ContentTypeOptionsNone;
 }
@@ -768,15 +771,6 @@ size_t parseHTTPRequestBody(const char* data, size_t length, Vector<unsigned cha
     return length;
 }
 
-void parseAccessControlExposeHeadersAllowList(const String& headerValue, HTTPHeaderSet& headerSet)
-{
-    for (auto& header : headerValue.split(',')) {
-        String strippedHeader = header.stripWhiteSpace();
-        if (!strippedHeader.isEmpty())
-            headerSet.add(strippedHeader);
-    }
-}
-
 // Implements <https://fetch.spec.whatwg.org/#forbidden-header-name>.
 bool isForbiddenHeaderName(const String& name)
 {
@@ -910,21 +904,6 @@ CrossOriginResourcePolicy parseCrossOriginResourcePolicyHeader(StringView header
         return CrossOriginResourcePolicy::SameSite;
 
     return CrossOriginResourcePolicy::Invalid;
-}
-
-CrossOriginWindowPolicy parseCrossOriginWindowPolicyHeader(StringView header)
-{
-    header = stripLeadingAndTrailingHTTPSpaces(header);
-    if (header.isEmpty())
-        return CrossOriginWindowPolicy::Allow;
-
-    if (equalLettersIgnoringASCIICase(header, "deny"))
-        return CrossOriginWindowPolicy::Deny;
-
-    if (equalLettersIgnoringASCIICase(header, "allow-postmessage"))
-        return CrossOriginWindowPolicy::AllowPostMessage;
-
-    return CrossOriginWindowPolicy::Allow;
 }
 
 }

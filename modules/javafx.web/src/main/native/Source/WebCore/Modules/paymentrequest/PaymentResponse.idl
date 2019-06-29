@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,19 +26,23 @@
 [
     Conditional=PAYMENT_REQUEST,
     EnabledBySetting=PaymentRequest,
-    ImplementationLacksVTable,
-    SecureContext
-] interface PaymentResponse {
+    Exposed=Window,
+    JSCustomMarkFunction,
+    SecureContext,
+] interface PaymentResponse : EventTarget {
     serializer = { attribute };
 
     readonly attribute DOMString requestId;
     readonly attribute DOMString methodName;
-    readonly attribute object details;
+    [CustomGetter] readonly attribute object details;
     readonly attribute PaymentAddress? shippingAddress;
     readonly attribute DOMString? shippingOption;
     readonly attribute DOMString? payerName;
     readonly attribute DOMString? payerEmail;
     readonly attribute DOMString? payerPhone;
 
-    Promise<void> complete(optional PaymentComplete result = "unknown");
+    [NewObject] Promise<void> complete(optional PaymentComplete result = "unknown");
+    [NewObject] Promise<void> retry(optional PaymentValidationErrors errorFields);
+
+    attribute EventHandler onpayerdetailchange;
 };

@@ -25,7 +25,7 @@
  */
 
 #include "config.h"
-#include "RandomDevice.h"
+#include <wtf/RandomDevice.h>
 
 #include <stdint.h>
 #include <stdlib.h>

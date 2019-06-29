@@ -30,11 +30,15 @@
 #include "Heap.h"
 #include "JSCInlines.h"
 #include "Operations.h"
+#include "SubspaceInlines.h"
 
 namespace JSC {
 
 LargeAllocation* LargeAllocation::tryCreate(Heap& heap, size_t size, Subspace* subspace)
 {
+    if (validateDFGDoesGC)
+        RELEASE_ASSERT(heap.expectDoesGC());
+
     // This includes padding at the end of the allocation to maintain the distancing constraint.
     constexpr size_t distancing = minimumDistanceBetweenCellsFromDifferentOrigins;
     size_t sizeBeforeDistancing = headerSize() + size;

@@ -37,7 +37,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(IOS) || PLATFORM(MAC)
+#if PLATFORM(IOS_FAMILY) || PLATFORM(MAC)
 #include <wtf/spi/darwin/dyldSPI.h>
 #endif
 
@@ -229,14 +229,14 @@ public:
 private:
     static bool compare(MonotonicTime aTime, unsigned aOrder, MonotonicTime bTime, unsigned bOrder)
     {
-    // The comparisons below are "backwards" because the heap puts the largest
-    // element first and we want the lowest time to be the first one in the heap.
+        // The comparisons below are "backwards" because the heap puts the largest
+        // element first and we want the lowest time to be the first one in the heap.
         if (bTime != aTime)
             return bTime < aTime;
-    // We need to look at the difference of the insertion orders instead of comparing the two
-    // outright in case of overflow.
+        // We need to look at the difference of the insertion orders instead of comparing the two
+        // outright in case of overflow.
         unsigned difference = aOrder - bOrder;
-    return difference < std::numeric_limits<unsigned>::max() / 2;
+        return difference < std::numeric_limits<unsigned>::max() / 2;
     }
 };
 
@@ -244,7 +244,7 @@ private:
 
 static bool shouldSuppressThreadSafetyCheck()
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     return WebThreadIsEnabled() || applicationSDKVersion() < DYLD_IOS_VERSION_12_0;
 #elif PLATFORM(MAC)
     return !isInWebProcess() && applicationSDKVersion() < DYLD_MACOSX_VERSION_10_14;
@@ -262,7 +262,6 @@ TimerBase::~TimerBase()
 {
     ASSERT(canAccessThreadLocalDataForThread(m_thread.get()));
     RELEASE_ASSERT(canAccessThreadLocalDataForThread(m_thread.get()) || shouldSuppressThreadSafetyCheck());
-    RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(canAccessThreadLocalDataForThread(m_thread.get()));
     stop();
     ASSERT(!inHeap());
     if (m_heapItem) {

@@ -28,7 +28,7 @@
 #include "MIMETypeRegistry.h"
 #include <wtf/text/CString.h>
 
-#include <wtf/java/JavaEnv.h>
+#include "PlatformJavaClasses.h"
 
 namespace WebCore {
 

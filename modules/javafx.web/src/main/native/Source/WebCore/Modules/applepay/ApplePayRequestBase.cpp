@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(APPLE_PAY)
 
 #include "PaymentCoordinator.h"
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -51,6 +52,9 @@ static ExceptionOr<Vector<String>> convertAndValidate(unsigned version, const Ve
 
 ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(unsigned version, ApplePayRequestBase& request, const PaymentCoordinator& paymentCoordinator)
 {
+    if (!version || !paymentCoordinator.supportsVersion(version))
+        return Exception { InvalidAccessError, makeString('"', version, "\" is not a supported version.") };
+
     ApplePaySessionPaymentRequest result;
     result.setVersion(version);
     result.setCountryCode(request.countryCode);
@@ -74,6 +78,13 @@ ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(unsigned version, 
 
     if (request.billingContact)
         result.setBillingContact(PaymentContact::fromApplePayPaymentContact(version, *request.billingContact));
+
+    if (request.requiredShippingContactFields) {
+        auto requiredShippingContactFields = convertAndValidate(version, *request.requiredShippingContactFields);
+        if (requiredShippingContactFields.hasException())
+            return requiredShippingContactFields.releaseException();
+        result.setRequiredShippingContactFields(requiredShippingContactFields.releaseReturnValue());
+    }
 
     if (request.shippingContact)
         result.setShippingContact(PaymentContact::fromApplePayPaymentContact(version, *request.shippingContact));

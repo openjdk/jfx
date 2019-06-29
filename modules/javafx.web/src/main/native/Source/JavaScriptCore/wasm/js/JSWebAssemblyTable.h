@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,6 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSCPoison.h"
 #include "JSDestructibleObject.h"
 #include "JSObject.h"
 #include "WasmLimits.h"
@@ -49,7 +48,7 @@ public:
     DECLARE_INFO;
 
     static bool isValidLength(uint32_t length) { return Wasm::Table::isValidLength(length); }
-    std::optional<uint32_t> maximum() const { return m_table->maximum(); }
+    Optional<uint32_t> maximum() const { return m_table->maximum(); }
     uint32_t length() const { return m_table->length(); }
     uint32_t allocatedLength() const { return m_table->allocatedLength(length()); }
     bool grow(uint32_t delta) WARN_UNUSED_RETURN;
@@ -66,12 +65,8 @@ private:
     static void destroy(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
 
-    PoisonedRef<JSWebAssemblyTablePoison, Wasm::Table> m_table;
-
-    template<typename T>
-    using PoisonedBarrier = PoisonedWriteBarrier<JSWebAssemblyTablePoison, T>;
-
-    MallocPtr<PoisonedBarrier<JSObject>> m_jsFunctions;
+    Ref<Wasm::Table> m_table;
+    MallocPtr<WriteBarrier<JSObject>> m_jsFunctions;
 };
 
 } // namespace JSC

@@ -36,7 +36,7 @@
 #include "VisibleSelection.h"
 #include <wtf/Noncopyable.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include "Color.h"
 #endif
 
@@ -104,6 +104,7 @@ public:
     void setCaretPosition(const VisiblePosition&);
     void clear() { setCaretPosition(VisiblePosition()); }
     WEBCORE_EXPORT IntRect caretRectInRootViewCoordinates() const;
+    WEBCORE_EXPORT IntRect editableElementRectInRootViewCoordinates() const;
 
     void nodeWillBeRemoved(Node&);
 
@@ -133,7 +134,7 @@ public:
     {
         OptionSet<SetSelectionOption> options { CloseTyping, ClearTypingStyle };
         if (userTriggered == UserTriggered)
-            options |= { RevealSelection, FireSelectEvent, IsUserTriggered };
+            options.add({ RevealSelection, FireSelectEvent, IsUserTriggered });
         return options;
     }
 
@@ -150,14 +151,18 @@ public:
 
     const VisibleSelection& selection() const { return m_selection; }
     WEBCORE_EXPORT void setSelection(const VisibleSelection&, OptionSet<SetSelectionOption> = defaultSetSelectionOptions(), AXTextStateChangeIntent = AXTextStateChangeIntent(), CursorAlignOnScroll = AlignCursorOnScrollIfNeeded, TextGranularity = CharacterGranularity);
-    WEBCORE_EXPORT bool setSelectedRange(Range*, EAffinity, bool closeTyping, EUserTriggered = NotUserTriggered);
+
+    enum class ShouldCloseTyping : bool { No, Yes };
+    WEBCORE_EXPORT bool setSelectedRange(Range*, EAffinity, ShouldCloseTyping, EUserTriggered = NotUserTriggered);
     WEBCORE_EXPORT void selectAll();
     WEBCORE_EXPORT void clear();
     void prepareForDestruction();
 
     void updateAppearanceAfterLayout();
     void scheduleAppearanceUpdateAfterStyleChange();
-    void setNeedsSelectionUpdate();
+
+    enum class RevealSelectionAfterUpdate : bool { NotForced, Forced };
+    void setNeedsSelectionUpdate(RevealSelectionAfterUpdate = RevealSelectionAfterUpdate::NotForced);
 
     bool contains(const LayoutPoint&) const;
 
@@ -218,7 +223,7 @@ public:
     void showTreeForThis() const;
 #endif
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 public:
     WEBCORE_EXPORT void expandSelectionToElementContainingCaretSelection();
     WEBCORE_EXPORT RefPtr<Range> elementRangeContainingCaretSelection() const;
@@ -362,7 +367,7 @@ private:
     bool m_pendingSelectionUpdate : 1;
     bool m_alwaysAlignCursorOnScrollWhenRevealingSelection : 1;
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     bool m_updateAppearanceEnabled : 1;
     bool m_caretBlinks : 1;
     Color m_caretColor;

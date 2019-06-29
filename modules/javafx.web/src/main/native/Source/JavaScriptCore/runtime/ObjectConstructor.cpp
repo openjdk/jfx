@@ -30,6 +30,7 @@
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include "JSGlobalObjectFunctions.h"
+#include "JSImmutableButterfly.h"
 #include "Lookup.h"
 #include "ObjectPrototype.h"
 #include "PropertyDescriptor.h"
@@ -73,7 +74,7 @@ const ClassInfo ObjectConstructor::s_info = { "Function", &InternalFunction::s_i
   getOwnPropertyDescriptors objectConstructorGetOwnPropertyDescriptors  DontEnum|Function 1
   getOwnPropertyNames       objectConstructorGetOwnPropertyNames        DontEnum|Function 1
   getOwnPropertySymbols     objectConstructorGetOwnPropertySymbols      DontEnum|Function 1
-  keys                      objectConstructorKeys                       DontEnum|Function 1
+  keys                      objectConstructorKeys                       DontEnum|Function 1 ObjectKeysIntrinsic
   defineProperty            objectConstructorDefineProperty             DontEnum|Function 3
   defineProperties          objectConstructorDefineProperties           DontEnum|Function 2
   create                    objectConstructorCreate                     DontEnum|Function 2 ObjectCreateIntrinsic
@@ -87,6 +88,7 @@ const ClassInfo ObjectConstructor::s_info = { "Function", &InternalFunction::s_i
   assign                    objectConstructorAssign                     DontEnum|Function 2
   values                    objectConstructorValues                     DontEnum|Function 1
   entries                   JSBuiltin                                   DontEnum|Function 1
+  fromEntries               JSBuiltin                                   DontEnum|Function 1
 @end
 */
 
@@ -138,8 +140,7 @@ static ALWAYS_INLINE JSObject* constructObject(ExecState* exec, JSValue newTarge
         return constructEmptyObject(exec, globalObject->objectStructureForObjectConstructor());
 
     // 3. Return ToObject(value).
-    scope.release();
-    return arg.toObject(exec, globalObject);
+    RELEASE_AND_RETURN(scope, arg.toObject(exec, globalObject));
 }
 
 static EncodedJSValue JSC_HOST_CALL constructWithObjectConstructor(ExecState* exec)
@@ -158,8 +159,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorGetPrototypeOf(ExecState* exec)
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = exec->argument(0).toObject(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    return JSValue::encode(object->getPrototype(vm, exec));
+    RELEASE_AND_RETURN(scope, JSValue::encode(object->getPrototype(vm, exec)));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorSetPrototypeOf(ExecState* exec)
@@ -189,10 +189,8 @@ JSValue objectConstructorGetOwnPropertyDescriptor(ExecState* exec, JSObject* obj
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     PropertyDescriptor descriptor;
-    if (!object->getOwnPropertyDescriptor(exec, propertyName, descriptor)) {
-        scope.release();
-        return jsUndefined();
-    }
+    if (!object->getOwnPropertyDescriptor(exec, propertyName, descriptor))
+        RELEASE_AND_RETURN(scope, jsUndefined());
     RETURN_IF_EXCEPTION(scope, { });
 
     JSObject* result = constructObjectFromPropertyDescriptor(exec, descriptor);
@@ -242,8 +240,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptor(ExecState
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
     auto propertyName = exec->argument(1).toPropertyKey(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    return JSValue::encode(objectConstructorGetOwnPropertyDescriptor(exec, object, propertyName));
+    RELEASE_AND_RETURN(scope, JSValue::encode(objectConstructorGetOwnPropertyDescriptor(exec, object, propertyName)));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptors(ExecState* exec)
@@ -252,8 +249,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptors(ExecStat
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = exec->argument(0).toObject(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    return JSValue::encode(objectConstructorGetOwnPropertyDescriptors(exec, object));
+    RELEASE_AND_RETURN(scope, JSValue::encode(objectConstructorGetOwnPropertyDescriptors(exec, object)));
 }
 
 // FIXME: Use the enumeration cache.
@@ -263,8 +259,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyNames(ExecState* exe
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = exec->argument(0).toObject(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    return JSValue::encode(ownPropertyKeys(exec, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(exec, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Include)));
 }
 
 // FIXME: Use the enumeration cache.
@@ -274,19 +269,16 @@ EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertySymbols(ExecState* e
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = exec->argument(0).toObject(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    return JSValue::encode(ownPropertyKeys(exec, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(exec, object, PropertyNameMode::Symbols, DontEnumPropertiesMode::Include)));
 }
 
-// FIXME: Use the enumeration cache.
 EncodedJSValue JSC_HOST_CALL objectConstructorKeys(ExecState* exec)
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* object = exec->argument(0).toObject(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    return JSValue::encode(ownPropertyKeys(exec, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude));
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(exec, object, PropertyNameMode::Strings, DontEnumPropertiesMode::Exclude)));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorAssign(ExecState* exec)
@@ -600,8 +592,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorDefineProperty(ExecState* exec)
     ASSERT((descriptor.attributes() & PropertyAttribute::Accessor) || (!descriptor.isAccessorDescriptor()));
     scope.assertNoException();
     obj->methodTable(vm)->defineOwnProperty(obj, exec, propertyName, descriptor, true);
-    scope.release();
-    return JSValue::encode(obj);
+    RELEASE_AND_RETURN(scope, JSValue::encode(obj));
 }
 
 static JSValue defineProperties(ExecState* exec, JSObject* object, JSObject* properties)
@@ -659,8 +650,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorDefineProperties(ExecState* exec)
     EXCEPTION_ASSERT(!!scope.exception() == !props);
     if (UNLIKELY(!props))
         return encodedJSValue();
-    scope.release();
-    return JSValue::encode(defineProperties(exec, targetObj, props));
+    RELEASE_AND_RETURN(scope, JSValue::encode(defineProperties(exec, targetObj, props)));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorCreate(ExecState* exec)
@@ -678,8 +668,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorCreate(ExecState* exec)
         return JSValue::encode(newObject);
     if (!exec->argument(1).isObject())
         return throwVMTypeError(exec, scope, "Property descriptor list must be an Object."_s);
-    scope.release();
-    return JSValue::encode(defineProperties(exec, newObject, asObject(exec->argument(1))));
+    RELEASE_AND_RETURN(scope, JSValue::encode(defineProperties(exec, newObject, asObject(exec->argument(1)))));
 }
 
 enum class IntegrityLevel {
@@ -777,6 +766,24 @@ bool testIntegrityLevel(ExecState* exec, VM& vm, JSObject* object)
     return true;
 }
 
+JSObject* objectConstructorSeal(ExecState* exec, JSObject* object)
+{
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (jsDynamicCast<JSFinalObject*>(vm, object) && !hasIndexedProperties(object->indexingType())) {
+        object->seal(vm);
+        return object;
+    }
+
+    bool success = setIntegrityLevel<IntegrityLevel::Sealed>(exec, vm, object);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    if (UNLIKELY(!success))
+        return throwTypeError(exec, scope, "Unable to prevent extension in Object.seal"_s);
+
+    return object;
+}
+
 EncodedJSValue JSC_HOST_CALL objectConstructorSeal(ExecState* exec)
 {
     VM& vm = exec->vm();
@@ -786,21 +793,8 @@ EncodedJSValue JSC_HOST_CALL objectConstructorSeal(ExecState* exec)
     JSValue obj = exec->argument(0);
     if (!obj.isObject())
         return JSValue::encode(obj);
-    JSObject* object = asObject(obj);
 
-    if (jsDynamicCast<JSFinalObject*>(vm, object) && !hasIndexedProperties(object->indexingType())) {
-        object->seal(vm);
-        return JSValue::encode(obj);
-    }
-
-    bool success = setIntegrityLevel<IntegrityLevel::Sealed>(exec, vm, object);
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    if (UNLIKELY(!success)) {
-        throwTypeError(exec, scope, "Unable to prevent extension in Object.seal"_s);
-        return encodedJSValue();
-    }
-
-    return JSValue::encode(obj);
+    RELEASE_AND_RETURN(scope, JSValue::encode(objectConstructorSeal(exec, asObject(obj))));
 }
 
 JSObject* objectConstructorFreeze(ExecState* exec, JSObject* object)
@@ -898,11 +892,23 @@ EncodedJSValue JSC_HOST_CALL objectConstructorIs(ExecState* exec)
     return JSValue::encode(jsBoolean(sameValue(exec, exec->argument(0), exec->argument(1))));
 }
 
-// FIXME: Use the enumeration cache.
 JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode propertyNameMode, DontEnumPropertiesMode dontEnumPropertiesMode)
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
+
+    auto* globalObject = exec->lexicalGlobalObject();
+    bool isObjectKeys = propertyNameMode == PropertyNameMode::Strings && dontEnumPropertiesMode == DontEnumPropertiesMode::Exclude;
+    // We attempt to look up own property keys cache in Object.keys case.
+    if (isObjectKeys) {
+        if (LIKELY(!globalObject->isHavingABadTime())) {
+            if (auto* immutableButterfly = object->structure(vm)->cachedOwnKeys()) {
+                Structure* arrayStructure = globalObject->originalArrayStructureForIndexingType(immutableButterfly->indexingMode());
+                return JSArray::createWithButterfly(vm, nullptr, arrayStructure, immutableButterfly->toButterfly());
+            }
+        }
+    }
+
     PropertyNameArray properties(&vm, propertyNameMode, PrivateSymbolMode::Exclude);
     object->methodTable(vm)->getOwnPropertyNames(object, exec, properties, EnumerationMode(dontEnumPropertiesMode));
     RETURN_IF_EXCEPTION(scope, nullptr);
@@ -924,8 +930,30 @@ JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode pro
     if (propertyNameMode != PropertyNameMode::StringsAndSymbols) {
         ASSERT(propertyNameMode == PropertyNameMode::Strings || propertyNameMode == PropertyNameMode::Symbols);
         if (!mustFilterProperty && properties.size() < MIN_SPARSE_ARRAY_INDEX) {
-            auto* globalObject = exec->lexicalGlobalObject();
             if (LIKELY(!globalObject->isHavingABadTime())) {
+                if (isObjectKeys) {
+                    Structure* structure = object->structure(vm);
+                    if (structure->canCacheOwnKeys()) {
+                        auto* cachedButterfly = structure->cachedOwnKeysIgnoringSentinel();
+                        if (cachedButterfly == StructureRareData::cachedOwnKeysSentinel()) {
+                            size_t numProperties = properties.size();
+                            auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
+                            for (size_t i = 0; i < numProperties; i++) {
+                                const auto& identifier = properties[i];
+                                ASSERT(!identifier.isSymbol());
+                                newButterfly->setIndex(vm, i, jsOwnedString(&vm, identifier.string()));
+                            }
+
+                            structure->setCachedOwnKeys(vm, newButterfly);
+                            Structure* arrayStructure = globalObject->originalArrayStructureForIndexingType(newButterfly->indexingMode());
+                            return JSArray::createWithButterfly(vm, nullptr, arrayStructure, newButterfly->toButterfly());
+                        }
+
+                        if (cachedButterfly == nullptr)
+                            structure->setCachedOwnKeys(vm, StructureRareData::cachedOwnKeysSentinel());
+                    }
+                }
+
                 size_t numProperties = properties.size();
                 JSArray* keys = JSArray::create(vm, globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous), numProperties);
                 WriteBarrier<Unknown>* buffer = keys->butterfly()->contiguous().data();

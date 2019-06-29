@@ -91,7 +91,11 @@ void HTMLMetaElement::process()
         document().processViewport(contentValue, ViewportArguments::ViewportMeta);
     else if (RuntimeEnabledFeatures::sharedFeatures().disabledAdaptationsMetaTagEnabled() && equalLettersIgnoringASCIICase(name(), "disabled-adaptations"))
         document().processDisabledAdaptations(contentValue);
-#if PLATFORM(IOS)
+#if ENABLE(DARK_MODE_CSS)
+    else if (RuntimeEnabledFeatures::sharedFeatures().darkModeCSSEnabled() && equalLettersIgnoringASCIICase(name(), "supported-color-schemes"))
+        document().processSupportedColorSchemes(contentValue);
+#endif
+#if PLATFORM(IOS_FAMILY)
     else if (equalLettersIgnoringASCIICase(name(), "format-detection"))
         document().processFormatDetection(contentValue);
     else if (equalLettersIgnoringASCIICase(name(), "apple-mobile-web-app-orientations"))

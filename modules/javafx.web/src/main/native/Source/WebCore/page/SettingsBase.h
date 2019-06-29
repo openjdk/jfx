@@ -34,7 +34,7 @@
 #include "StorageMap.h"
 #include "TextFlags.h"
 #include "Timer.h"
-#include "URL.h"
+#include <wtf/URL.h>
 #include "WritingMode.h"
 #include <JavaScriptCore/RuntimeFlags.h>
 #include <unicode/uscript.h>
@@ -81,7 +81,7 @@ enum PDFImageCachingPolicy {
     PDFImageCachingBelowMemoryLimit,
     PDFImageCachingDisabled,
     PDFImageCachingClipBoundsOnly,
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     PDFImageCachingDefault = PDFImageCachingBelowMemoryLimit
 #else
     PDFImageCachingDefault = PDFImageCachingEnabled
@@ -115,6 +115,10 @@ public:
     WEBCORE_EXPORT static bool defaultTextAutosizingEnabled();
     WEBCORE_EXPORT static float defaultMinimumZoomFontSize();
     WEBCORE_EXPORT static bool defaultDownloadableBinaryFontsEnabled();
+
+#if ENABLE(MEDIA_SOURCE)
+    WEBCORE_EXPORT static bool platformDefaultMediaSourceEnabled();
+#endif
 
     static const unsigned defaultMaximumHTMLParserDOMTreeDepth = 512;
     static const unsigned defaultMaximumRenderTreeDepth = 512;
@@ -178,7 +182,6 @@ protected:
     void setNeedsRelayoutAllFrames();
     void mediaTypeOverrideChanged();
     void imagesEnabledChanged();
-    void scriptEnabledChanged();
     void pluginsEnabledChanged();
     void userStyleSheetLocationChanged();
     void usesPageCacheChanged();
@@ -189,8 +192,12 @@ protected:
     void hiddenPageDOMTimerThrottlingStateChanged();
     void hiddenPageCSSAnimationSuspensionEnabledChanged();
     void resourceUsageOverlayVisibleChanged();
+    void iceCandidateFilteringEnabledChanged();
 #if ENABLE(TEXT_AUTOSIZING)
     void shouldEnableTextAutosizingBoostChanged();
+#endif
+#if ENABLE(MEDIA_STREAM)
+    void mockCaptureDevicesEnabledChanged();
 #endif
 
     Page* m_page;
@@ -207,6 +214,10 @@ protected:
     float m_oneLineTextMultiplierCoefficient { defaultOneLineTextMultiplierCoefficient };
     float m_multiLineTextMultiplierCoefficient { defaultMultiLineTextMultiplierCoefficient };
     float m_maxTextAutosizingScaleIncrease { defaultMaxTextAutosizingScaleIncrease };
+#endif
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/SettingsAdditions.h>
 #endif
 };
 

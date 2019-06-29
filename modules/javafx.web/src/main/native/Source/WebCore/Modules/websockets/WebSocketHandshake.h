@@ -31,7 +31,7 @@
 #pragma once
 
 #include "CookieRequestHeaderFieldProxy.h"
-#include "URL.h"
+#include <wtf/URL.h>
 #include "ResourceResponse.h"
 #include "WebSocketExtensionDispatcher.h"
 #include "WebSocketExtensionProcessor.h"
@@ -66,7 +66,7 @@ public:
 
     CString clientHandshakeMessage() const;
     ResourceRequest clientHandshakeRequest() const;
-    std::optional<CookieRequestHeaderFieldProxy> clientHandshakeCookieRequestHeaderFieldProxy() const;
+    Optional<CookieRequestHeaderFieldProxy> clientHandshakeCookieRequestHeaderFieldProxy() const;
 
     void reset();
     void clearDocument();

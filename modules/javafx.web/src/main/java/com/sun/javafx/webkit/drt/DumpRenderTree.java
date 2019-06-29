@@ -26,11 +26,12 @@
 package com.sun.javafx.webkit.drt;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.webkit.*;
 import com.sun.webkit.graphics.*;
 
+import static com.sun.webkit.network.URLs.newURL;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -42,11 +43,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import javafx.scene.web.WebEngine;
-import static com.sun.webkit.network.URLs.newURL;
 
 public final class DumpRenderTree {
     private final static PlatformLogger log = PlatformLogger.getLogger("DumpRenderTree");
@@ -194,8 +194,9 @@ public final class DumpRenderTree {
     boolean complete() { return this.complete; }
 
     private void resetToConsistentStateBeforeTesting(final TestOptions options) {
-        // First disable all supported TestOptions
-        webPage.overridePreference("enableWebAnimationsCSSIntegration", "false");
+        // Assign default values for all supported TestOptions
+        webPage.overridePreference("experimental:CSSCustomPropertiesAndValuesEnabled", "false");
+        webPage.overridePreference("experimental:WebAnimationsCSSIntegrationEnabled", "true");
         webPage.overridePreference("enableColorFilter", "false");
         webPage.overridePreference("enableIntersectionObserver", "false");
         // Enable features based on TestOption
@@ -208,7 +209,7 @@ public final class DumpRenderTree {
 
     private void reset(final TestOptions options) {
         mlog("reset");
-        // create new EventSender for each test
+        // newly create EventSender for each test
         eventSender = new EventSender(webPage);
         resetToConsistentStateBeforeTesting(options);
         // Clear frame name

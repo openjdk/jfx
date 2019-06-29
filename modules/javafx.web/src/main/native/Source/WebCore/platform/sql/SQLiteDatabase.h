@@ -46,6 +46,7 @@ class SQLiteStatement;
 class SQLiteTransaction;
 
 class SQLiteDatabase {
+    WTF_MAKE_FAST_ALLOCATED;
     WTF_MAKE_NONCOPYABLE(SQLiteDatabase);
     friend class SQLiteTransaction;
 public:
@@ -102,7 +103,7 @@ public:
 
     sqlite3* sqlite3Handle() const
     {
-#if !PLATFORM(IOS)
+#if !PLATFORM(IOS_FAMILY)
         ASSERT(m_sharable || m_openingThread == &Thread::current() || !m_db);
 #endif
         return m_db;

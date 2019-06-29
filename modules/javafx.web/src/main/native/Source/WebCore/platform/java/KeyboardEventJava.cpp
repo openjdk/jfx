@@ -72,7 +72,7 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(
         , m_autoRepeat(false)
         , m_isKeypad(false)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
+    JNIEnv* env = WTF::GetJavaEnv();
 
     m_text = text
         ? String(env, text)

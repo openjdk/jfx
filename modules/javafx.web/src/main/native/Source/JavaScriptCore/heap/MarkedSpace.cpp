@@ -197,8 +197,6 @@ void MarkedSpace::initializeSizeClassForStepSize()
 
 MarkedSpace::MarkedSpace(Heap* heap)
     : m_heap(heap)
-    , m_capacity(0)
-    , m_isIterating(false)
 {
     initializeSizeClassForStepSize();
 }
@@ -260,6 +258,7 @@ void MarkedSpace::sweepLargeAllocations()
 
 void MarkedSpace::prepareForAllocation()
 {
+    ASSERT(!mayBeGCThread() || m_heap->worldIsStopped());
     for (Subspace* subspace : m_subspaces)
         subspace->prepareForAllocation();
 

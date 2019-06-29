@@ -44,14 +44,20 @@ public:
     static StyleSheetContents* fullscreenStyleSheet;
     static StyleSheetContents* plugInsStyleSheet;
     static StyleSheetContents* imageControlsStyleSheet;
+#if ENABLE(DATALIST_ELEMENT)
+    static StyleSheetContents* dataListStyleSheet;
+#endif
+#if ENABLE(INPUT_TYPE_COLOR)
+    static StyleSheetContents* colorInputStyleSheet;
+#endif
 
     static StyleSheetContents* mediaQueryStyleSheet;
 
     static void initDefaultStyle(const Element*);
     static void ensureDefaultStyleSheetsForElement(const Element&);
+    static void loadFullDefaultStyle();
 
 private:
-    static void loadFullDefaultStyle();
     static void loadSimpleDefaultStyle();
     static void addToDefaultStyle(StyleSheetContents&);
 };

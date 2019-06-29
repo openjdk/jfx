@@ -36,6 +36,7 @@
 #include "DOMWindow.h"
 #include "Event.h"
 #include "Frame.h"
+#include "InspectorCPUProfilerAgent.h"
 #include "InspectorMemoryAgent.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
@@ -52,7 +53,7 @@
 #include <JavaScriptCore/ScriptBreakpoint.h>
 #include <wtf/Stopwatch.h>
 
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
 #include "RuntimeApplicationChecks.h"
 #include "WebCoreThreadInternal.h"
 #endif
@@ -69,7 +70,7 @@ using namespace Inspector;
 #if PLATFORM(COCOA)
 static CFRunLoopRef currentRunLoop()
 {
-#if PLATFORM(IOS)
+#if PLATFORM(IOS_FAMILY)
     // A race condition during WebView deallocation can lead to a crash if the layer sync run loop
     // observer is added to the main run loop <rdar://problem/9798550>. However, for responsiveness,
     // we still allow this, see <rdar://problem/7403328>. Since the race condition and subsequent
@@ -134,14 +135,14 @@ void InspectorTimelineAgent::setInstruments(ErrorString& errorString, const JSON
     Vector<Protocol::Timeline::Instrument> newInstruments;
     newInstruments.reserveCapacity(instruments.length());
 
-    for (auto instrumentValue : instruments) {
+    for (const auto& instrumentValue : instruments) {
         String enumValueString;
         if (!instrumentValue->asString(enumValueString)) {
             errorString = "Unexpected type in instruments list, should be string"_s;
             return;
         }
 
-        std::optional<Protocol::Timeline::Instrument> instrumentType = Protocol::InspectorHelpers::parseEnumValueFromString<Protocol::Timeline::Instrument>(enumValueString);
+        Optional<Protocol::Timeline::Instrument> instrumentType = Protocol::InspectorHelpers::parseEnumValueFromString<Protocol::Timeline::Instrument>(enumValueString);
         if (!instrumentType) {
             errorString = makeString("Unexpected enum value: ", enumValueString);
             return;
@@ -293,9 +294,9 @@ void InspectorTimelineAgent::stopFromConsole(JSC::ExecState*, const String& titl
     }
 }
 
-void InspectorTimelineAgent::willCallFunction(const String& scriptName, int scriptLine, Frame* frame)
+void InspectorTimelineAgent::willCallFunction(const String& scriptName, int scriptLine, int scriptColumn, Frame* frame)
 {
-    pushCurrentRecord(TimelineRecordFactory::createFunctionCallData(scriptName, scriptLine), TimelineRecordType::FunctionCall, true, frame);
+    pushCurrentRecord(TimelineRecordFactory::createFunctionCallData(scriptName, scriptLine, scriptColumn), TimelineRecordType::FunctionCall, true, frame);
 }
 
 void InspectorTimelineAgent::didCallFunction(Frame*)
@@ -402,9 +403,9 @@ void InspectorTimelineAgent::didFireTimer()
     didCompleteCurrentRecord(TimelineRecordType::TimerFire);
 }
 
-void InspectorTimelineAgent::willEvaluateScript(const String& url, int lineNumber, Frame& frame)
+void InspectorTimelineAgent::willEvaluateScript(const String& url, int lineNumber, int columnNumber, Frame& frame)
 {
-    pushCurrentRecord(TimelineRecordFactory::createEvaluateScriptData(url, lineNumber), TimelineRecordType::EvaluateScript, true, &frame);
+    pushCurrentRecord(TimelineRecordFactory::createEvaluateScriptData(url, lineNumber, columnNumber), TimelineRecordType::EvaluateScript, true, &frame);
 }
 
 void InspectorTimelineAgent::didEvaluateScript(Frame&)
@@ -514,6 +515,10 @@ void InspectorTimelineAgent::toggleInstruments(InstrumentState state)
             toggleHeapInstrument(state);
             break;
         }
+        case Inspector::Protocol::Timeline::Instrument::CPU: {
+            toggleCPUInstrument(state);
+            break;
+        }
         case Inspector::Protocol::Timeline::Instrument::Memory: {
             toggleMemoryInstrument(state);
             break;
@@ -547,6 +552,21 @@ void InspectorTimelineAgent::toggleHeapInstrument(InstrumentState state)
         } else
             m_heapAgent->stopTracking(unused);
     }
+}
+
+void InspectorTimelineAgent::toggleCPUInstrument(InstrumentState state)
+{
+#if ENABLE(RESOURCE_USAGE)
+    if (InspectorCPUProfilerAgent* cpuProfilerAgent = m_instrumentingAgents.inspectorCPUProfilerAgent()) {
+        ErrorString unused;
+        if (state == InstrumentState::Start)
+            cpuProfilerAgent->startTracking(unused);
+        else
+            cpuProfilerAgent->stopTracking(unused);
+    }
+#else
+    UNUSED_PARAM(state);
+#endif
 }
 
 void InspectorTimelineAgent::toggleMemoryInstrument(InstrumentState state)
@@ -595,6 +615,16 @@ void InspectorTimelineAgent::willFireAnimationFrame(int callbackId, Frame* frame
 void InspectorTimelineAgent::didFireAnimationFrame()
 {
     didCompleteCurrentRecord(TimelineRecordType::FireAnimationFrame);
+}
+
+void InspectorTimelineAgent::willFireObserverCallback(const String& callbackType, Frame* frame)
+{
+    pushCurrentRecord(TimelineRecordFactory::createObserverCallbackData(callbackType), TimelineRecordType::ObserverCallback, false, frame);
+}
+
+void InspectorTimelineAgent::didFireObserverCallback()
+{
+    didCompleteCurrentRecord(TimelineRecordType::ObserverCallback);
 }
 
 // ScriptDebugListener
@@ -654,6 +684,9 @@ static Inspector::Protocol::Timeline::EventType toProtocol(TimelineRecordType ty
         return Inspector::Protocol::Timeline::EventType::CancelAnimationFrame;
     case TimelineRecordType::FireAnimationFrame:
         return Inspector::Protocol::Timeline::EventType::FireAnimationFrame;
+
+    case TimelineRecordType::ObserverCallback:
+        return Inspector::Protocol::Timeline::EventType::ObserverCallback;
     }
 
     return Inspector::Protocol::Timeline::EventType::TimeStamp;
