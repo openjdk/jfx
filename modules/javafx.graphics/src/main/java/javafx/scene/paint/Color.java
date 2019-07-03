@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1854,7 +1854,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @defaultValue 0.0
      */
     public final double getRed() { return red; }
-    private float red;
+    private final float red;
 
     /**
      * The green component of the {@code Color}, in the range {@code 0.0-1.0}.
@@ -1863,7 +1863,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @defaultValue 0.0
      */
     public final double getGreen() { return green; }
-    private float green;
+    private final float green;
 
     /**
      * The blue component of the {@code Color}, in the range {@code 0.0-1.0}.
@@ -1872,7 +1872,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @defaultValue 0.0
      */
     public final double getBlue() { return blue; }
-    private float blue;
+    private final float blue;
 
     /**
      * The opacity of the {@code Color}, in the range {@code 0.0-1.0}.
@@ -1881,7 +1881,7 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @defaultValue 1.0
      */
     public final double getOpacity() { return opacity; }
-    private float opacity = 1;
+    private final float opacity;
 
     /**
      * {@inheritDoc}
@@ -1928,12 +1928,12 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * @param red red component ranging from {@code 0} to {@code 1}
      * @param green green component ranging from {@code 0} to {@code 1}
      * @param blue blue component ranging from {@code 0} to {@code 1}
-     * @param opacity opacity ranging from {@code 0} to {@code 1}
      */
     private Color(float red, float green, float blue) {
         this.red = red;
         this.green = green;
         this.blue = blue;
+        this.opacity = 1;
     }
 
     @Override

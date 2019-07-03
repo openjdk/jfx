@@ -48,7 +48,7 @@ public class Point3D implements Interpolatable<Point3D> {
      *
      * @defaultValue 0.0
      */
-    private double x;
+    private final double x;
 
     /**
      * The x coordinate.
@@ -63,7 +63,7 @@ public class Point3D implements Interpolatable<Point3D> {
      *
      * @defaultValue 0.0
      */
-    private double y;
+    private final double y;
 
     /**
      * The y coordinate.
@@ -78,7 +78,7 @@ public class Point3D implements Interpolatable<Point3D> {
      *
      * @defaultValue 0.0
      */
-    private double z;
+    private final double z;
 
     /**
      * The z coordinate.
