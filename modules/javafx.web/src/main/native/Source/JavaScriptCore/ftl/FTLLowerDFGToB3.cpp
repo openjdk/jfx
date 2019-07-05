@@ -4254,13 +4254,15 @@ private:
 
         LValue numberOfArgs = m_out.sub(numberOfArgsIncludingThis, m_out.int32One);
         LValue indexToCheck = originalIndex;
+        LValue numberOfArgumentsToSkip = m_out.int32Zero;
         if (m_node->numberOfArgumentsToSkip()) {
-            CheckValue* check = m_out.speculateAdd(indexToCheck, m_out.constInt32(m_node->numberOfArgumentsToSkip()));
+            numberOfArgumentsToSkip = m_out.constInt32(m_node->numberOfArgumentsToSkip());
+            CheckValue* check = m_out.speculateAdd(indexToCheck, numberOfArgumentsToSkip);
             blessSpeculation(check, Overflow, noValue(), nullptr, m_origin);
             indexToCheck = check;
         }
 
-        LValue isOutOfBounds = m_out.aboveOrEqual(indexToCheck, numberOfArgs);
+        LValue isOutOfBounds = m_out.bitOr(m_out.aboveOrEqual(indexToCheck, numberOfArgs), m_out.below(indexToCheck, numberOfArgumentsToSkip));
         LBasicBlock continuation = nullptr;
         LBasicBlock lastNext = nullptr;
         ValueFromBlock slowResult;
@@ -4907,6 +4909,7 @@ private:
     {
         JSGlobalObject* globalObject = m_graph.globalObjectFor(m_node->origin.semantic);
 
+        LValue sourceArray = lowCell(m_graph.varArgChild(m_node, 0));
         LValue sourceStorage = lowStorage(m_graph.varArgChild(m_node, m_node->numChildren() - 1));
         LValue inputLength = m_out.load32(sourceStorage, m_heaps.Butterfly_publicLength);
 
@@ -4932,7 +4935,7 @@ private:
 
         ArrayValues arrayResult;
         {
-            LValue indexingType = m_out.load8ZeroExt32(lowCell(m_graph.varArgChild(m_node, 0)), m_heaps.JSCell_indexingTypeAndMisc);
+            LValue indexingType = m_out.load8ZeroExt32(sourceArray, m_heaps.JSCell_indexingTypeAndMisc);
             // We can ignore the writability of the cell since we won't write to the source.
             indexingType = m_out.bitAnd(indexingType, m_out.constInt32(AllWritableArrayTypesAndHistory));
             // When we emit an ArraySlice, we dominate the use of the array by a CheckStructure
@@ -4946,6 +4949,9 @@ private:
                     weakStructure(m_graph.registerStructure(globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithDouble)))));
             arrayResult = allocateJSArray(resultLength, resultLength, structure, indexingType, false, false);
         }
+
+        // Keep the sourceArray alive at least until after anything that can GC.
+        keepAlive(sourceArray);
 
         LBasicBlock loop = m_out.newBlock();
         LBasicBlock continuation = m_out.newBlock();
@@ -16993,6 +16999,15 @@ private:
         if (!m_graph.m_ssaDominators->dominates(value.block(), m_highBlock))
             return false;
         return true;
+    }
+
+    void keepAlive(LValue value)
+    {
+        PatchpointValue* patchpoint = m_out.patchpoint(Void);
+        patchpoint->effects = Effects::none();
+        patchpoint->effects.writesLocalState = true;
+        patchpoint->append(value, ValueRep::ColdAny);
+        patchpoint->setGenerator([=] (CCallHelpers&, const StackmapGenerationParams&) { });
     }
 
     void addWeakReference(JSCell* target)

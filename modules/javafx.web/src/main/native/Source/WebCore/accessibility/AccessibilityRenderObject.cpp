@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2008 Apple Inc. All rights reserved.
+* Copyright (C) 2008-2019 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -1558,9 +1558,10 @@ void AccessibilityRenderObject::setSelectedTextRange(const PlainTextRange& range
         HTMLTextFormControlElement& textControl = downcast<RenderTextControl>(*m_renderer).textFormControlElement();
         textControl.setSelectionRange(range.start, range.start + range.length);
     } else {
-        ASSERT(node());
-        VisiblePosition start = visiblePositionForIndexUsingCharacterIterator(*node(), range.start);
-        VisiblePosition end = visiblePositionForIndexUsingCharacterIterator(*node(), range.start + range.length);
+        auto node = this->node();
+        ASSERT(node);
+        VisiblePosition start = visiblePositionForIndexUsingCharacterIterator(*node, range.start);
+        VisiblePosition end = visiblePositionForIndexUsingCharacterIterator(*node, range.start + range.length);
         m_renderer->frame().selection().setSelection(VisibleSelection(start, end), FrameSelection::defaultSetSelectionOptions(UserTriggered));
     }
 
@@ -2157,7 +2158,7 @@ VisiblePosition AccessibilityRenderObject::visiblePositionForPoint(const IntPoin
         HitTestRequest request(HitTestRequest::ReadOnly |
                                HitTestRequest::Active);
         HitTestResult result(ourpoint);
-        renderView->hitTest(request, result);
+        renderView->document().hitTest(request, result);
         innerNode = result.innerNode();
         if (!innerNode)
             return VisiblePosition();
@@ -2362,6 +2363,9 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityHitTest(const IntPo
         return nullptr;
 
     m_renderer->document().updateLayout();
+
+    if (!m_renderer || !m_renderer->hasLayer())
+        return nullptr;
 
     RenderLayer* layer = downcast<RenderBox>(*m_renderer).layer();
 

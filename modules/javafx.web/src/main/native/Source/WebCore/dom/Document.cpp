@@ -183,6 +183,7 @@
 #include "ScriptSourceCode.h"
 #include "ScriptState.h"
 #include "ScriptedAnimationController.h"
+#include "ScrollbarTheme.h"
 #include "ScrollingCoordinator.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
@@ -338,6 +339,26 @@ static const unsigned cMaxWriteRecursionDepth = 21;
 bool Document::hasEverCreatedAnAXObjectCache = false;
 
 unsigned ScriptDisallowedScope::LayoutAssertionDisableScope::s_layoutAssertionDisableCount = 0;
+
+struct FrameFlatteningLayoutDisallower {
+    FrameFlatteningLayoutDisallower(FrameView& frameView)
+        : m_frameView(frameView)
+        , m_disallowLayout(frameView.effectiveFrameFlattening() != FrameFlattening::Disabled)
+    {
+        if (m_disallowLayout)
+            m_frameView.startDisallowingLayout();
+    }
+
+    ~FrameFlatteningLayoutDisallower()
+    {
+        if (m_disallowLayout)
+            m_frameView.endDisallowingLayout();
+    }
+
+private:
+    FrameView& m_frameView;
+    bool m_disallowLayout { false };
+};
 
 // DOM Level 2 says (letters added):
 //
@@ -1821,7 +1842,7 @@ void Document::scheduleFullStyleRebuild()
 
 void Document::scheduleStyleRecalc()
 {
-    ASSERT(!m_renderView || !m_renderView->inHitTesting());
+    ASSERT(!m_renderView || !inHitTesting());
 
     if (m_styleRecalcTimer.isActive() || pageCacheState() != NotInPageCache)
         return;
@@ -3798,7 +3819,7 @@ MouseEventWithHitTestResults Document::prepareMouseEvent(const HitTestRequest& r
         return MouseEventWithHitTestResults(event, HitTestResult(LayoutPoint()));
 
     HitTestResult result(documentPoint);
-    renderView()->hitTest(request, result);
+    hitTest(request, result);
 
     if (!request.readOnly())
         updateHoverActiveState(request, result.targetElement());
@@ -4330,8 +4351,8 @@ bool Document::setFocusedElement(Element* element, FocusDirection direction, Foc
             }
             if (focusWidget)
                 focusWidget->setFocus(true);
-            else
-                view()->setFocus(true);
+            else if (auto* frameView = view())
+                frameView->setFocus(true);
         }
     }
 
@@ -5583,6 +5604,11 @@ void Document::applyPendingXSLTransformsTimerFired()
         if (transformSourceDocument() || !processingInstruction->sheet())
             return;
 
+        // If the Document has already been detached from the frame, or the frame is currently in the process of
+        // changing to a new document, don't attempt to create a new Document from the XSLT.
+        if (!frame() || frame()->documentIsBeingReplaced())
+            return;
+
         auto processor = XSLTProcessor::create();
         processor->setXSLStyleSheet(downcast<XSLStyleSheet>(processingInstruction->sheet()));
         String resultMIMEType;
@@ -6014,10 +6040,13 @@ void Document::initSecurityContext()
     setSecurityOriginPolicy(ownerFrame->document()->securityOriginPolicy());
 }
 
-bool Document::shouldInheritContentSecurityPolicyFromOwner() const
+// FIXME: The current criterion is stricter than <https://www.w3.org/TR/CSP3/#security-inherit-csp> (Editor's Draft, 28 February 2019).
+bool Document::shouldInheritContentSecurityPolicy() const
 {
     ASSERT(m_frame);
     if (SecurityPolicy::shouldInheritSecurityOriginFromOwner(m_url))
+        return true;
+    if (m_url.protocolIsData() || m_url.protocolIsBlob())
         return true;
     if (!isPluginDocument())
         return false;
@@ -6029,7 +6058,7 @@ bool Document::shouldInheritContentSecurityPolicyFromOwner() const
     return openerFrame->document()->securityOrigin().canAccess(securityOrigin());
 }
 
-void Document::initContentSecurityPolicy()
+void Document::initContentSecurityPolicy(ContentSecurityPolicy* previousPolicy)
 {
     // 1. Inherit Upgrade Insecure Requests
     Frame* parentFrame = m_frame->tree().parent();
@@ -6037,19 +6066,27 @@ void Document::initContentSecurityPolicy()
         contentSecurityPolicy()->copyUpgradeInsecureRequestStateFrom(*parentFrame->document()->contentSecurityPolicy());
 
     // 2. Inherit Content Security Policy (without copying Upgrade Insecure Requests state).
-    if (!shouldInheritContentSecurityPolicyFromOwner())
+    if (!shouldInheritContentSecurityPolicy())
         return;
+    ContentSecurityPolicy* ownerPolicy = nullptr;
+    if (previousPolicy && (m_url.protocolIsData() || m_url.protocolIsBlob()))
+        ownerPolicy = previousPolicy;
+    if (!ownerPolicy) {
     Frame* ownerFrame = parentFrame;
     if (!ownerFrame)
         ownerFrame = m_frame->loader().opener();
-    if (!ownerFrame)
+        if (ownerFrame)
+            ownerPolicy = ownerFrame->document()->contentSecurityPolicy();
+    }
+    if (!ownerPolicy)
         return;
-    // FIXME: The CSP 3 spec. implies that only plugin documents delivered with a local scheme (e.g. blob, file, data)
-    // should inherit a policy.
+    // FIXME: We are stricter than the CSP 3 spec. with regards to plugins: we prefer to inherit the full policy unless the plugin
+    // document is opened in a new window. The CSP 3 spec. implies that only plugin documents delivered with a local scheme (e.g. blob,
+    // file, data) should inherit a policy.
     if (isPluginDocument() && m_frame->loader().opener())
-        contentSecurityPolicy()->createPolicyForPluginDocumentFrom(*ownerFrame->document()->contentSecurityPolicy());
+        contentSecurityPolicy()->createPolicyForPluginDocumentFrom(*ownerPolicy);
     else
-        contentSecurityPolicy()->copyStateFrom(ownerFrame->document()->contentSecurityPolicy());
+        contentSecurityPolicy()->copyStateFrom(ownerPolicy);
 }
 
 bool Document::isContextThread() const
@@ -8688,6 +8725,45 @@ void Document::frameWasDisconnectedFromOwner()
         window->willDetachDocumentFromFrame();
 
     detachFromFrame();
+}
+
+bool Document::hitTest(const HitTestRequest& request, HitTestResult& result)
+{
+    return hitTest(request, result.hitTestLocation(), result);
+}
+
+bool Document::hitTest(const HitTestRequest& request, const HitTestLocation& location, HitTestResult& result)
+{
+    Ref<Document> protectedThis(*this);
+    updateLayout();
+    if (!renderView())
+        return false;
+
+#if !ASSERT_DISABLED
+    SetForScope<bool> hitTestRestorer { m_inHitTesting, true };
+#endif
+
+    auto& frameView = renderView()->frameView();
+    Ref<FrameView> protector(frameView);
+
+    FrameFlatteningLayoutDisallower disallower(frameView);
+
+    bool resultLayer = renderView()->layer()->hitTest(request, location, result);
+
+    // ScrollView scrollbars are not the same as RenderLayer scrollbars tested by RenderLayer::hitTestOverflowControls,
+    // so we need to test ScrollView scrollbars separately here. In case of using overlay scrollbars, the layer hit test
+    // will always work so we need to check the ScrollView scrollbars in that case too.
+    if (!resultLayer || ScrollbarTheme::theme().usesOverlayScrollbars()) {
+        // FIXME: Consider if this test should be done unconditionally.
+        if (request.allowsFrameScrollbars()) {
+            IntPoint windowPoint = frameView.contentsToWindow(location.roundedPoint());
+            if (auto* frameScrollbar = frameView.scrollbarAtPoint(windowPoint)) {
+                result.setScrollbar(frameScrollbar);
+                return true;
+            }
+        }
+    }
+    return resultLayer;
 }
 
 #if ENABLE(CSS_PAINTING_API)

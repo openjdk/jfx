@@ -717,7 +717,7 @@ void FrameLoader::setOutgoingReferrer(const URL& url)
     m_outgoingReferrer = url.strippedForUseAsReferrer();
 }
 
-void FrameLoader::didBeginDocument(bool dispatch)
+void FrameLoader::didBeginDocument(bool dispatch, ContentSecurityPolicy* previousPolicy)
 {
     m_needsClear = true;
     m_isComplete = false;
@@ -733,7 +733,7 @@ void FrameLoader::didBeginDocument(bool dispatch)
         dispatchDidClearWindowObjectsInAllWorlds();
 
     updateFirstPartyForCookies();
-    m_frame.document()->initContentSecurityPolicy();
+    m_frame.document()->initContentSecurityPolicy(previousPolicy);
 
     const Settings& settings = m_frame.settings();
     m_frame.document()->cachedResourceLoader().setImagesEnabled(settings.areImagesEnabled());
@@ -3690,6 +3690,8 @@ void FrameLoader::loadSameDocumentItem(HistoryItem& item)
 void FrameLoader::loadDifferentDocumentItem(HistoryItem& item, FrameLoadType loadType, FormSubmissionCacheLoadPolicy cacheLoadPolicy, ShouldTreatAsContinuingLoad shouldTreatAsContinuingLoad)
 {
     RELEASE_LOG_IF_ALLOWED("loadDifferentDocumentItem: frame load started (frame = %p, main = %d)", &m_frame, m_frame.isMainFrame());
+
+    Ref<Frame> protectedFrame(m_frame);
 
     // History items should not be reported to the parent.
     m_shouldReportResourceTimingToParentFrame = false;
