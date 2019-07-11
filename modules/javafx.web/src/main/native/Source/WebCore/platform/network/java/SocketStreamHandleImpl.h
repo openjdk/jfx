@@ -37,6 +37,7 @@
 #include <pal/SessionID.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/RefCounted.h>
+#include <wtf/StreamBuffer.h>
 
 namespace WebCore {
 
@@ -46,8 +47,8 @@ class StorageSessionProvider;
 
 class SocketStreamHandleImpl : public SocketStreamHandle {
 public:
-    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, PAL::SessionID, Page* page, const String&, SourceApplicationAuditToken&&, const StorageSessionProvider*) {
-        return adoptRef(*new SocketStreamHandleImpl(url, page, client));
+    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, PAL::SessionID, Page* page, const String&, SourceApplicationAuditToken&&, const StorageSessionProvider* provider) {
+        return adoptRef(*new SocketStreamHandleImpl(url, page, client, provider));
     }
 
     ~SocketStreamHandleImpl() final;
@@ -59,14 +60,19 @@ public:
 
 protected:
     void platformSend(const uint8_t* data, size_t length, Function<void(bool)>&&) final;
+    Optional<size_t> platformSendInternal(const uint8_t*, size_t);
     void platformSendHandshake(const uint8_t* data, size_t length, const Optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&) final;
     void platformClose() final;
-    size_t bufferedAmount() final { return 0; }
+    size_t bufferedAmount() final;
+    bool sendPendingData();
 
 private:
-    SocketStreamHandleImpl(const URL&, Page*, SocketStreamHandleClient&);
+    SocketStreamHandleImpl(const URL&, Page*, SocketStreamHandleClient&, const StorageSessionProvider*);
 
+    RefPtr<const StorageSessionProvider> m_storageSessionProvider;
     JGObject m_ref;
+    StreamBuffer<uint8_t, 1024 * 1024> m_buffer;
+    static const unsigned maxBufferSize = 100 * 1024 * 1024;
 };
 
 }  // namespace WebCore

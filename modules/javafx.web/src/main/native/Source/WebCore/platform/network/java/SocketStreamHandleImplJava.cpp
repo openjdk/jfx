@@ -43,8 +43,9 @@ static jclass GetSocketStreamHandleClass(JNIEnv* env)
 }
 
 SocketStreamHandleImpl::SocketStreamHandleImpl(const URL& url, Page* page,
-                                       SocketStreamHandleClient& client)
+                                       SocketStreamHandleClient& client, const StorageSessionProvider* provider)
     : SocketStreamHandle(url, client)
+    , m_storageSessionProvider(provider)
 {
     String host = url.host().toString();
     bool ssl = url.protocolIs("wss");
@@ -84,7 +85,7 @@ SocketStreamHandleImpl::~SocketStreamHandleImpl()
     WTF::CheckAndClearException(env);
 }
 
-void SocketStreamHandleImpl::platformSend(const uint8_t* data, size_t len, Function<void(bool)>&& completionHandler)
+Optional<size_t> SocketStreamHandleImpl::platformSendInternal(const uint8_t* data, size_t len)
 {
     JNIEnv* env = WTF::GetJavaEnv();
 
@@ -103,14 +104,9 @@ void SocketStreamHandleImpl::platformSend(const uint8_t* data, size_t len, Funct
 
     jint res = env->CallIntMethod(m_ref, mid, (jbyteArray) byteArray);
     if (WTF::CheckAndClearException(env)) {
-        completionHandler(false);
-    } else {
-        completionHandler(res == (int)len);
+        return { };
     }
-}
-
-void SocketStreamHandleImpl::platformSendHandshake(const uint8_t*, size_t, const Optional<CookieRequestHeaderFieldProxy>&, Function<void(bool, bool)>&&)
-{
+    return { static_cast<size_t>(res) };
 }
 
 void SocketStreamHandleImpl::platformClose()
@@ -129,8 +125,10 @@ void SocketStreamHandleImpl::platformClose()
 
 void SocketStreamHandleImpl::didOpen()
 {
-    m_state = Open;
-    m_client.didOpenSocketStream(*this);
+    if (m_state == Connecting) {
+        m_state = Open;
+        m_client.didOpenSocketStream(*this);
+    }
 }
 
 void SocketStreamHandleImpl::didReceiveData(const char* data, int length)
@@ -140,13 +138,19 @@ void SocketStreamHandleImpl::didReceiveData(const char* data, int length)
 
 void SocketStreamHandleImpl::didFail(int errorCode, const String& errorDescription)
 {
-    m_client.didFailSocketStream(
-            *this,
-            SocketStreamError(errorCode, m_url.string(), errorDescription));
+    if (m_state == Open) {
+        m_client.didFailSocketStream(
+                *this,
+                SocketStreamError(errorCode, m_url.string(), errorDescription));
+    }
 }
 
 void SocketStreamHandleImpl::didClose()
 {
+    if (m_state == Closed)
+        return;
+    m_state = Closed;
+
     m_client.didCloseSocketStream(*this);
 }
 
