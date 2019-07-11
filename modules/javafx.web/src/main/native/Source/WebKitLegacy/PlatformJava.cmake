@@ -4,7 +4,6 @@ configure_file(java/WebCoreSupport/WebPageConfig.h.in ${DERIVED_SOURCES_WEBKITLE
 # Remove unused files
 list(REMOVE_ITEM WebKitLegacy_SOURCES
     WebCoreSupport/WebViewGroup.cpp
-    WebCoreSupport/NetworkStorageSessionMap.cpp
 )
 
 list(APPEND WebKitLegacy_SOURCES
