@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -185,6 +185,10 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                 // Fix for RT-38527 which led to a stack overflow
                 if (ke.getCode() == KeyCode.ESCAPE) return;
 
+                // This and the additional check of isIncDecKeyEvent in
+                // textField's event filter fix JDK-8185937.
+                if (isIncDecKeyEvent(ke)) return;
+
                 // Fix for the regression noted in a comment in RT-29885.
                 // This forwards the event down into the TextField when
                 // the key event is actually received by the Spinner.
@@ -202,7 +206,7 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         // work when you click inside the TextField area (but they do in the case
         // of tabbing in).
         textField.addEventFilter(KeyEvent.ANY, ke -> {
-            if (! control.isEditable()) {
+            if (! control.isEditable() || isIncDecKeyEvent(ke)) {
                 control.fireEvent(ke.copyFor(control, control));
                 ke.consume();
             }
@@ -247,7 +251,10 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
         }));
     }
 
-
+    private boolean isIncDecKeyEvent(KeyEvent ke) {
+        final KeyCode kc = ke.getCode();
+        return (kc == KeyCode.UP || kc == KeyCode.DOWN) && behavior.arrowsAreVertical();
+    }
 
     /***************************************************************************
      *                                                                         *

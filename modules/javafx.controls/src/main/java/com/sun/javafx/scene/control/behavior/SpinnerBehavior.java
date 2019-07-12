@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -151,7 +151,7 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private boolean arrowsAreVertical() {
+    public boolean arrowsAreVertical() {
         final List<String> styleClass = getNode().getStyleClass();
 
         return ! (styleClass.contains(Spinner.STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL)  ||
