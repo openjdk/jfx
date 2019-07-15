@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -251,6 +251,26 @@ public class ButtonTest {
         tk.firePulse();
     }
 
+    // Test for JDK-8209938
+    @Test public void defaultButtonSceneAccelerators() {
+        assertEquals("Scene.getAccelerators() should contain no accelerators.",
+            0, scene.getAccelerators().size());
+
+        HBox btnParent = new HBox();
+        btnParent.getChildren().add(btn);
+        root.getChildren().add(btnParent);
+        btn.setDefaultButton(true);
+        show();
+        assertEquals("Scene.getAccelerators() should contain one accelerator" +
+            " for Default button.", 1, scene.getAccelerators().size());
+
+        root.getChildren().remove(btnParent);
+        assertEquals("Default button accelerator should be removed from" +
+            " Scene.getAccelerators().", 0, scene.getAccelerators().size());
+
+        tk.firePulse();
+    }
+
     /*********************************************************************
      * Tests for the cancelButton state                                 *
      ********************************************************************/
@@ -304,6 +324,26 @@ public class ButtonTest {
         btn.cancelButtonProperty().bind(other);
         other.setValue(false);
         assertPseudoClassDoesNotExist(btn, "cancel");
+    }
+
+    // Test for JDK-8209938
+    @Test public void cancelButtonSceneAccelerators() {
+        assertEquals("Scene.getAccelerators() should contain no accelerators.",
+            0, scene.getAccelerators().size());
+
+        HBox btnParent = new HBox();
+        btnParent.getChildren().add(btn);
+        root.getChildren().add(btnParent);
+        btn.setCancelButton(true);
+        show();
+        assertEquals("Scene.getAccelerators() should contain one accelerator" +
+            " for Cancel button.", 1, scene.getAccelerators().size());
+
+        root.getChildren().remove(btnParent);
+        assertEquals("Cancel button accelerator should be removed from" +
+            " Scene.getAccelerators().", 0, scene.getAccelerators().size());
+
+        tk.firePulse();
     }
 
     @Ignore("impl_cssSet API removed")
