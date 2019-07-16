@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@
 #include "ImageBuffer.h"
 
 #include <wtf/text/WTFString.h>
+#include <wtf/java/JavaRef.h>
 
 #include "com_sun_webkit_graphics_WCPathIterator.h"
 
@@ -490,10 +491,49 @@ void Path::apply(const PathApplierFunction& function) const
     }
 }
 
-bool Path::strokeContains(StrokeStyleApplier*, const FloatPoint&) const
+bool Path::strokeContains(StrokeStyleApplier *applier, const FloatPoint& p) const
 {
-    notImplemented();
-    return false;
+    ASSERT(m_path);
+
+    GraphicsContext& gc = scratchContext();
+    gc.save();
+
+    // Stroke style is set to SolidStroke if the path is not dashed, else it
+    // is unchanged. Setting it to NoStroke enables us to detect the switch.
+    gc.setStrokeStyle(NoStroke);
+
+    if (applier) {
+        applier->strokeStyle(&gc);
+    }
+
+    float thickness = gc.strokeThickness();
+    StrokeStyle strokeStyle = gc.strokeStyle();
+    float miterLimit = gc.platformContext()->miterLimit();
+    LineCap cap = gc.platformContext()->lineCap();
+    LineJoin join = gc.platformContext()->lineJoin();
+    float dashOffset = gc.platformContext()->dashOffset();
+    DashArray dashes = gc.platformContext()->dashArray();
+
+    gc.restore();
+
+    JNIEnv* env = WTF::GetJavaEnv();
+
+    static jmethodID mid = env->GetMethodID(PG_GetPathClass(env), "strokeContains",
+        "(DDDDIID[D)Z");
+
+    ASSERT(mid);
+
+    size_t size = strokeStyle == SolidStroke ? 0 : dashes.size();
+    JLocalRef<jdoubleArray> dashArray(env->NewDoubleArray(size));
+    env->SetDoubleArrayRegion(dashArray, 0, size, dashes.data());
+
+    jboolean res = env->CallBooleanMethod(*m_path, mid, (jdouble)p.x(),
+        (jdouble)p.y(), (jdouble) thickness, (jdouble) miterLimit,
+        (jint) cap, (jint) join, (jdouble) dashOffset, (jdoubleArray) dashArray);
+
+    WTF::CheckAndClearException(env);
+
+    return jbool_to_bool(res);
 }
 
 }
