@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,6 +124,24 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
                 }
             }
         });
+        control.sceneProperty().addListener((ov, oldScene, newScene) -> {
+            if (oldScene != null) {
+                if (getSkinnable().isDefaultButton()) {
+                    setDefaultButton(oldScene, false);
+                }
+                if (getSkinnable().isCancelButton()) {
+                    setCancelButton(oldScene, false);
+                }
+            }
+            if (newScene != null) {
+                if (getSkinnable().isDefaultButton()) {
+                    setDefaultButton(newScene, true);
+                }
+                if (getSkinnable().isCancelButton()) {
+                    setCancelButton(newScene, true);
+                }
+            }
+        });
 
         // set visuals
         if (getSkinnable().isDefaultButton()) {
@@ -168,14 +186,17 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
      *                                                                         *
      **************************************************************************/
 
-    private void setDefaultButton(boolean value) {
-        Scene scene = getSkinnable().getScene();
+    private void setDefaultButton(boolean isDefault) {
+        setDefaultButton(getSkinnable().getScene(), isDefault);
+    }
+
+    private void setDefaultButton(Scene scene, boolean isDefault) {
         if (scene != null) {
             KeyCode acceleratorCode = KeyCode.ENTER;
             defaultAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
 
             Runnable oldDefault = scene.getAccelerators().get(defaultAcceleratorKeyCodeCombination);
-            if (!value) {
+            if (!isDefault) {
                 /**
                  * first check of there's a default button already
                  */
@@ -195,14 +216,17 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
         }
     }
 
-    private void setCancelButton(boolean value) {
-        Scene scene = getSkinnable().getScene();
+    private void setCancelButton(boolean isCancel) {
+        setCancelButton(getSkinnable().getScene(), isCancel);
+    }
+
+    private void setCancelButton(Scene scene, boolean isCancel) {
         if (scene != null) {
             KeyCode acceleratorCode = KeyCode.ESCAPE;
             cancelAcceleratorKeyCodeCombination = new KeyCodeCombination(acceleratorCode);
 
             Runnable oldCancel = scene.getAccelerators().get(cancelAcceleratorKeyCodeCombination);
-            if (!value) {
+            if (!isCancel) {
                 /**
                  * first check of there's a cancel button already
                  */
