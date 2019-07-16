@@ -32,6 +32,8 @@
 typedef CGFloat DashArrayElement;
 #elif USE(CAIRO)
 typedef double DashArrayElement;
+#elif PLATFORM(JAVA)
+typedef double DashArrayElement;
 #else
 typedef float DashArrayElement;
 #endif
