@@ -27,6 +27,7 @@
 #include "NetworkStorageSession.h"
 
 #include "Cookie.h"
+#include "CookieRequestHeaderFieldProxy.h"
 #include "NetworkingContext.h"
 #include "NotImplemented.h"
 #include "ResourceHandle.h"
@@ -82,19 +83,13 @@ static String getCookies(const URL& url, bool includeHttpOnlyCookies)
 }
 }
 
-NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID, NetworkingContext* context)
+NetworkStorageSession::NetworkStorageSession(PAL::SessionID sessionID)
     : m_sessionID(sessionID)
-    , m_context(context)
 {
 }
 
 NetworkStorageSession::~NetworkStorageSession()
 {
-}
-
-NetworkingContext* NetworkStorageSession::context() const
-{
-    return m_context.get();
 }
 
 void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, const String& value) const
@@ -120,6 +115,11 @@ std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const S
 std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, IncludeSecureCookies) const
 {
     return { CookieInternalJava::getCookies(url, true), true };
+}
+
+std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const CookieRequestHeaderFieldProxy& headerFieldProxy) const
+{
+    return { CookieInternalJava::getCookies(headerFieldProxy.firstParty, true), true };
 }
 
 bool NetworkStorageSession::cookiesEnabled() const

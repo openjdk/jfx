@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test pointer events on stroke</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style type="text/css">
+            rect, path, polyline, line, circle, ellipse, polygon {
+                pointer-events: stroke;
+                stroke: gray;
+                stroke-opacity: 1;
+                stroke-width: 10px;
+                fill: transparent;
+            }
+            #dashed {
+                stroke-dasharray: 20px;
+                stroke-dashoffset: 20px;
+            }
+            rect.clicked, path.clicked, polyline.clicked, line.clicked, circle.clicked, ellipse.clicked, polygon.clicked {
+                stroke: green;
+            }
+        </style>
+        <script>
+            var testElements = ["polyline", "path", "rect", "circle", "ellipse", "polygon", "dashed"];
+            window.addEventListener("DOMContentLoaded", (event) => {
+                for (var el of testElements) {
+                    document.getElementById(el).addEventListener("mousedown", function (evt) {
+                        this.classList.add("clicked");
+                        console.log("mousedown(" + evt.pageX + ", " + evt.pageY + ")");
+                    } );
+                }
+            } );
+
+            function clearState() {
+                for (var el of testElements) {
+                    document.getElementById(el).addEventListener("mousedown", function (evt) {
+                        this.classList.remove("clicked");
+                    } );
+                }
+            }
+
+            function isActivated(id) {
+                return document.getElementById(id).classList.contains("clicked");
+            }
+        </script>
+    </head>
+    <body>
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            id="svg8"
+            version="1.1"
+            viewBox="0 0 300 220"
+            height="440px"
+            width="600px">
+
+        <polyline points="10,10 60,10 60,60 10,60 " id="polyline" />
+        <path d="M110 10 H 160 V 60 H 110" id="path"/>
+        <polygon points="210,10 260,10 260,60 210,60 " id="polygon" />
+        <rect x="10" y="110" width="50" height="50" id="rect"/>
+        <circle cx="135" cy="135" r="25" id="circle"/>
+        <ellipse cx="235" cy="135" rx="25" ry="25" id="ellipse"/>
+        <path d="M0 200 H 200" id="dashed" />
+        </svg>
+        <p>
+            It is expected, that a click on each of the shapes is recorded.
+            In an interactive test a successful record is reflected by the
+            shape turning green.
+        </p>
+    </body>
+</html>

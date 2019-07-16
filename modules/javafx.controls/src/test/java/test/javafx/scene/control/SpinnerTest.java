@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1428,5 +1428,40 @@ public class SpinnerTest {
 
         assertEquals(400.0, spinner.getInitialDelay().toMillis(), 0.001);
         assertEquals(100.0, spinner.getRepeatDelay().toMillis(), 0.001);
+    }
+
+    // Test for JDK-8185937
+    @Test public void testIncDecKeys() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        VBox root = new VBox();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.setWidth(200);
+        stage.setHeight(200);
+
+        Spinner<Integer> spinner = new Spinner<>(-100, 100, 0);
+        spinner.setEditable(true);
+        assertEquals(0, spinner.getValue().intValue());
+
+        try {
+            root.getChildren().addAll(spinner);
+            stage.show();
+            spinner.requestFocus();
+            tk.firePulse();
+
+            KeyEventFirer keyboard = new KeyEventFirer(spinner.getEditor());
+            keyboard.doKeyPress(KeyCode.UP);
+            tk.firePulse();
+
+            assertEquals(1, spinner.getValue().intValue());
+
+            keyboard.doKeyPress(KeyCode.DOWN);
+            tk.firePulse();
+
+            assertEquals(0, spinner.getValue().intValue());
+        } finally {
+            stage.hide();
+        }
     }
 }

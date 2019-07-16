@@ -113,6 +113,9 @@ public:
     WEBCORE_EXPORT void setCookieDatabase(UniqueRef<CookieJarDB>&&);
 
     WEBCORE_EXPORT void setProxySettings(CurlProxySettings&&);
+#elif PLATFORM(JAVA)
+    WEBCORE_EXPORT NetworkStorageSession(PAL::SessionID);
+    ~NetworkStorageSession();
 #else
     WEBCORE_EXPORT NetworkStorageSession(PAL::SessionID, NetworkingContext*);
     ~NetworkStorageSession();
