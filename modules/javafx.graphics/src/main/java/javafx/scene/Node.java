@@ -104,6 +104,7 @@ import java.security.AccessControlContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -623,13 +624,15 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                        *
      *************************************************************************/
 
-    /*
+    /**
      * Set of dirty bits that are set when state is invalidated and cleared by
      * the updateState method, which is called from the synchronizer.
+     * <p>
+     * A node starts dirty.
      */
-    private int dirtyBits;
+    private Set<DirtyBits> dirtyBits = EnumSet.allOf(DirtyBits.class);
 
-    /*
+    /**
      * Mark the specified bit as dirty, and add this node to the scene's dirty list.
      *
      * Note: This method MUST only be called via its accessor method.
@@ -639,7 +642,7 @@ public abstract class Node implements EventTarget, Styleable {
             addToSceneDirtyList();
         }
 
-        dirtyBits |= dirtyBit.getMask();
+        dirtyBits.add(dirtyBit);
     }
 
     private void addToSceneDirtyList() {
@@ -652,39 +655,32 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    /*
+    /**
      * Test whether the specified dirty bit is set
      */
     final boolean isDirty(DirtyBits dirtyBit) {
-        return (dirtyBits & dirtyBit.getMask()) != 0;
+        return dirtyBits.contains(dirtyBit);
     }
 
-    /*
+    /**
      * Clear the specified dirty bit
      */
     final void clearDirty(DirtyBits dirtyBit) {
-        dirtyBits &= ~dirtyBit.getMask();
+        dirtyBits.remove(dirtyBit);
     }
 
-    /*
-     * Set all dirty bits
-     */
-    private void setDirty() {
-        dirtyBits = ~0;
-    }
-
-    /*
+    /**
      * Clear all dirty bits
      */
     private void clearDirty() {
-        dirtyBits = 0;
+        dirtyBits.clear();
     }
 
-    /*
+    /**
      * Test whether the set of dirty bits is empty
      */
-    final boolean isDirtyEmpty() {
-        return dirtyBits == 0;
+    private boolean isDirtyEmpty() {
+        return dirtyBits.isEmpty();
     }
 
     /**************************************************************************
@@ -696,7 +692,7 @@ public abstract class Node implements EventTarget, Styleable {
      *                                                                        *
      *************************************************************************/
 
-    /*
+    /**
      * Called by the synchronizer to update the state and
      * clear dirtybits of this node in the PG graph
      */
@@ -2621,7 +2617,6 @@ public abstract class Node implements EventTarget, Styleable {
         //if (PerformanceTracker.isLoggingEnabled()) {
         //    PerformanceTracker.logEvent("Node.init for [{this}, id=\"{id}\"]");
         //}
-        setDirty();
         updateTreeVisible(false);
         //if (PerformanceTracker.isLoggingEnabled()) {
         //    PerformanceTracker.logEvent("Node.postinit " +
