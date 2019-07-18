@@ -30,7 +30,7 @@
 #include <jni.h>
 #include <com_sun_javafx_font_MacFontFinder.h>
 
-#if TARGET_OS_IPHONE /* iOS */
+#if TARGET_OS_IPHONE || defined(STATIC_BUILD) /* iOS or static build */
 
 #import <CoreText/CoreText.h>
 

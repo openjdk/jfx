@@ -39,12 +39,18 @@ class LinkTask extends DefaultTask {
         lib.getParentFile().mkdirs();
         project.exec({
             commandLine(linker);
+            if ((project.IS_LINUX) && (project.IS_STATIC_BUILD)) {
+              args("rcs");
+              args("$lib");
+            }
             // Exclude parfait files (.bc)
             args(objectDir.listFiles().findAll{ !it.getAbsolutePath().endsWith(".bc") });
             if (project.IS_WINDOWS) {
                 args("/out:$lib");
             } else {
-                args("-o", "$lib");
+                if (! ((project.IS_LINUX) && (project.IS_STATIC_BUILD))) {
+                    args("-o", "$lib");
+                }
             }
             if (project.IS_DEBUG_NATIVE && !project.IS_WINDOWS) args("-g");
             if (linkParams != null) args(linkParams);

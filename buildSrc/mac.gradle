@@ -35,7 +35,7 @@ MAC.compileSWT = true;
 MAC.includeNull3d = true
 
 // Lambda for naming the generated libs
-MAC.library = { name -> return "lib${name}.dylib" as String }
+MAC.library = { name -> return (IS_STATIC_BUILD ? "lib${name}.a" : "lib${name}.dylib") as String }
 
 MAC.libDest = "lib"
 
@@ -117,9 +117,10 @@ def ccFlags = [
         ccBaseFlags,
         "-std=c99",
         "-c",
+        IS_STATIC_BUILD ? "-DSTATIC_BUILD" : "",
         IS_DEBUG_NATIVE ? "-DDEBUG" : ["-O3", "-DNDEBUG"]].flatten()
 
-def linkFlags = [
+def dynamicLinkFlags = [
         commonParams,
         "-framework", "AppKit",
         "-framework", "ApplicationServices",
@@ -127,6 +128,13 @@ def linkFlags = [
         "-framework", "QuartzCore",
         "-framework", "Security",
         "-dynamiclib", "-lobjc"].flatten();
+def dynamicLinkFlagsAlt = ["-dynamiclib", commonParams].flatten()
+
+def staticLinkFlags = ["-static"].flatten();
+
+def linkFlags = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlags
+
+def linkFlagsAlt = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlagsAlt
 
 def toolchainDir
 if (hasProperty('toolchainDir')) {
@@ -136,7 +144,7 @@ if (hasProperty('toolchainDir')) {
 }
 
 def compiler = IS_COMPILE_PARFAIT ? "parfait-clang" : "${toolchainDir}clang";
-def linker = IS_COMPILE_PARFAIT ? "parfait-clang++" : "${toolchainDir}clang++";
+def linker = IS_STATIC_BUILD ? "libtool" : IS_COMPILE_PARFAIT ? "parfait-clang++" : "${toolchainDir}clang++";
 
 MAC.glass = [:]
 MAC.glass.javahInclude = [
@@ -154,7 +162,7 @@ MAC.decora = [:]
 MAC.decora.compiler = compiler
 MAC.decora.ccFlags = ["-O1", "-ffast-math", "-c", ccBaseFlags].flatten()
 MAC.decora.linker = linker
-MAC.decora.linkFlags = ["-dynamiclib", commonParams].flatten()
+MAC.decora.linkFlags = linkFlagsAlt
 MAC.decora.lib = "decora_sse"
 
 MAC.prism = [:]
@@ -163,7 +171,7 @@ MAC.prism.nativeSource = file("${project("graphics").projectDir}/src/main/native
 MAC.prism.compiler = compiler
 MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", ccBaseFlags].flatten()
 MAC.prism.linker = linker
-MAC.prism.linkFlags = ["-dynamiclib", commonParams].flatten()
+MAC.prism.linkFlags = linkFlagsAlt
 MAC.prism.lib = "prism_common"
 
 MAC.prismSW = [:]
