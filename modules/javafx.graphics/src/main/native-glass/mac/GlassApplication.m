@@ -56,7 +56,11 @@ static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
 static BOOL disableSyncRendering = NO;
 
+#ifdef STATIC_BUILD
+jint JNICALL JNI_OnLoad_glass(JavaVM *vm, void *reserved)
+#else
 jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+#endif
 {
     pthread_key_create(&GlassThreadDataKey, NULL);
 

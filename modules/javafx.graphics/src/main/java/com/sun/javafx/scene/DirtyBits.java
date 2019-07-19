@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,18 +97,5 @@ public enum DirtyBits {
     MESH_GEOM,
 
     // Used for any debug information we want to sync down.
-    DEBUG,
-
-    // NOTE: The following MUST be the last enum value in this class. The ordinal
-    // of this enum indicates the number of dirty bits in this set, exclusive of
-    // the MAX_DIRTY bit itself, which will never be set or tested.
-    MAX_DIRTY;
-
-    private long mask;
-
-    private DirtyBits() {
-        mask = 1 << ordinal();
-    }
-
-    public final long getMask() { return mask; }
+    DEBUG;
 }

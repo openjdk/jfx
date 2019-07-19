@@ -120,8 +120,15 @@ is_display_valid() {
 
 JavaVM* javaVM;
 
+#ifdef STATIC_BUILD
+extern "C" {
+#endif
 JNIEXPORT jint JNICALL
+#ifdef STATIC_BUILD
+JNI_OnLoad_glassgtk3(JavaVM *jvm, void *reserved)
+#else
 JNI_OnLoad(JavaVM *jvm, void *reserved)
+#endif
 {
     (void)reserved;
 
@@ -323,6 +330,10 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     return JNI_VERSION_1_6;
 }
+
+#ifdef STATIC_BUILD
+}
+#endif
 
 void
 glass_throw_exception(JNIEnv * env,

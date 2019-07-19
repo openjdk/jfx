@@ -37,7 +37,7 @@ LINUX.compileSWT = true;
 LINUX.libDest = "lib"
 
 // Lambda for naming the generated libs
-LINUX.library = { name -> return "lib${name}.so" as String }
+LINUX.library = { name -> return (IS_STATIC_BUILD ? "lib${name}.a" : "lib${name}.so") as String }
 
 // A set of common parameters to use for both compiling and linking
 def commonFlags = [
@@ -49,6 +49,10 @@ if (!IS_64) {
     commonFlags += "-m32"
 }
 
+if (IS_STATIC_BUILD) {
+    commonFlags += "-DSTATIC_BUILD"
+}
+
 // Specify the compilation parameters and link parameters
 def ccFlags = [
         commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
@@ -56,9 +60,13 @@ def ccFlags = [
         IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : ["-O2", "-DNDEBUG"]].flatten()
 def ccFlagsGTK3 = ccFlags
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
-def linkFlags = ["-static-libgcc", "-static-libstdc++", "-shared", commonFlags,
+def dynamicLinkFlags = ["-static-libgcc", "-static-libstdc++", "-shared", commonFlags,
                  "-z", "relro",
                  "-Wl,--gc-sections"].flatten()
+
+def staticLinkFlags = [].flatten()
+
+def linkFlags = IS_STATIC_BUILD ? staticLinkFlags : dynamicLinkFlags;
 
 if (IS_DEBUG_NATIVE) {
     linkFlags += "-g"
@@ -192,7 +200,9 @@ setupTools("linux_freetype_tools",
         def libs = properties.getProperty("libs")
         if (cflags && libs) {
             freetypeCCFlags.addAll(cflags.split(" "))
-            freetypeLinkFlags.addAll(libs.split(" "))
+            if (!IS_STATIC_BUILD) {
+                freetypeLinkFlags.addAll(libs.split(" "))
+            }
         } else {
             throw new IllegalStateException("Linux freetype packages not found.\nIf freetype pacakges are installed, please remove the build directory and try again.")
         }
@@ -200,7 +210,7 @@ setupTools("linux_freetype_tools",
 )
 
 def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "${toolchainDir}gcc";
-def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "${toolchainDir}g++";
+def linker = IS_STATIC_BUILD ? "ar" : IS_COMPILE_PARFAIT ? "parfait-g++" : "${toolchainDir}g++";
 
 LINUX.glass = [:]
 LINUX.glass.variants = ["glass", "glassgtk2"]
@@ -224,23 +234,27 @@ LINUX.glass.glass.nativeSource = ft_gtk_launcher.getFiles()
 LINUX.glass.glass.compiler = compiler
 LINUX.glass.glass.ccFlags = [ccFlags, gtk2CCFlags,  "-Werror"].flatten()
 LINUX.glass.glass.linker = linker
-LINUX.glass.glass.linkFlags = [linkFlags, "-lX11", "-ldl" ].flatten()
+LINUX.glass.glass.linkFlags = IS_STATIC_BUILD? linkFlags : [linkFlags, "-lX11", "-ldl"].flatten()
 LINUX.glass.glass.lib = "glass"
 
 LINUX.glass.glassgtk2 = [:]
 LINUX.glass.glassgtk2.nativeSource =  ft_gtk.getFiles()
 LINUX.glass.glassgtk2.compiler = compiler
-LINUX.glass.glassgtk2.ccFlags = [ccFlags, gtk2CCFlags, "-Werror"].flatten()
+LINUX.glass.glassgtk2.ccFlags = IS_STATIC_BUILD ?
+        ["-fno-threadsafe-statics", ccFlags, gtk2CCFlags].flatten() :
+        [ccFlags, gtk2CCFlags, "-Werror"].flatten()
 LINUX.glass.glassgtk2.linker = linker
-LINUX.glass.glassgtk2.linkFlags = [linkFlags, gtk2LinkFlags ].flatten()
+LINUX.glass.glassgtk2.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk2LinkFlags].flatten()
 LINUX.glass.glassgtk2.lib = "glassgtk2"
 
 LINUX.glass.glassgtk3 = [:]
 LINUX.glass.glassgtk3.nativeSource =  ft_gtk.getFiles()
 LINUX.glass.glassgtk3.compiler = compiler
-LINUX.glass.glassgtk3.ccFlags = [ccFlags, gtk3CCFlags, "-Werror"].flatten()
+LINUX.glass.glassgtk3.ccFlags = IS_STATIC_BUILD ?
+        ["-fno-threadsafe-statics", ccFlags, gtk3CCFlags].flatten() :
+        [ccFlags, gtk3CCFlags, "-Werror"].flatten()
 LINUX.glass.glassgtk3.linker = linker
-LINUX.glass.glassgtk3.linkFlags = [linkFlags, gtk3LinkFlags ].flatten()
+LINUX.glass.glassgtk3.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk3LinkFlags].flatten()
 LINUX.glass.glassgtk3.lib = "glassgtk3"
 
 LINUX.decora = [:]
@@ -285,7 +299,7 @@ LINUX.prismES2.nativeSource = [
 LINUX.prismES2.compiler = compiler
 LINUX.prismES2.ccFlags = ["-DLINUX", ccFlags].flatten()
 LINUX.prismES2.linker = linker
-LINUX.prismES2.linkFlags = [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
+LINUX.prismES2.linkFlags =IS_STATIC_BUILD ? linkFlags : [linkFlags, "-lX11", "-lXxf86vm", "-lGL"].flatten()
 LINUX.prismES2.lib = "prism_es2"
 
 def closedDir = file("$projectDir/../rt-closed")
@@ -302,7 +316,7 @@ LINUX.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
 LINUX.fontFreetype.compiler = compiler
 LINUX.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, freetypeCCFlags].flatten()
 LINUX.fontFreetype.linker = linker
-LINUX.fontFreetype.linkFlags = [linkFlags, freetypeLinkFlags].flatten()
+LINUX.fontFreetype.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, freetypeLinkFlags].flatten()
 LINUX.fontFreetype.lib = "javafx_font_freetype"
 
 LINUX.fontPango = [:]
@@ -310,7 +324,7 @@ LINUX.fontPango.nativeSource = ["src/main/native-font/pango.c"]
 LINUX.fontPango.compiler = compiler
 LINUX.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 LINUX.fontPango.linker = linker
-LINUX.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
+LINUX.fontPango.linkFlags =IS_STATIC_BUILD ? linkFlags : [linkFlags, pangoLinkFlags].flatten()
 LINUX.fontPango.lib = "javafx_font_pango"
 
 LINUX.media = [:]
