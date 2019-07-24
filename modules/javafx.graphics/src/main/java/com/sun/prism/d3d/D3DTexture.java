@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,10 +80,12 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
         return D3DResourceFactory.nGetNativeTextureObject(getNativeSourceHandle());
     }
 
+    @Override
     public D3DContext getContext() {
         return resource.getResource().getContext();
     }
 
+    @Override
     public void update(MediaFrame frame, boolean skipFlush)
     {
         if (frame.getPixelFormat() == PixelFormat.MULTI_YCbCr_420) {
@@ -92,7 +94,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
         }
         frame.holdFrame();
 
-        ByteBuffer pixels = (ByteBuffer)frame.getBufferForPlane(0);
+        ByteBuffer pixels = frame.getBufferForPlane(0);
         int result;
 
         // FIXME: checkVideoParams since they differ from normal params slightly
@@ -128,6 +130,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
         frame.releaseFrame();
     }
 
+    @Override
     public void update(Buffer pixels, PixelFormat format,
                        int dstx, int dsty,
                        int srcx, int srcy,

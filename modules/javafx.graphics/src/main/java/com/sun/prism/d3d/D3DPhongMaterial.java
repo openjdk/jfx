@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,6 +71,7 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         context.setSpecularColor(nativeHandle, set, r, g, b, a);
     }
 
+    @Override
     public void setTextureMap(TextureMap map) {
         maps[map.getType().ordinal()] = map;
     }
@@ -84,6 +85,7 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         return texture;
     }
 
+    @Override
     public void lockTextureMaps() {
         for (int i = 0; i < MAX_MAP_TYPE; i++) {
             Texture texture = maps[i].getTexture();
@@ -106,6 +108,7 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
         }
     }
 
+    @Override
     public void unlockTextureMaps() {
         for (int i = 0; i < MAX_MAP_TYPE; i++) {
             Texture texture = maps[i].getTexture();
@@ -135,9 +138,9 @@ class D3DPhongMaterial extends BaseGraphicsResource implements PhongMaterial {
             this.nativeHandle = nativeHandle;
         }
 
-        void traceDispose() {
-        }
+        void traceDispose() {}
 
+        @Override
         public void dispose() {
             if (nativeHandle != 0L) {
                 traceDispose();

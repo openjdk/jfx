@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,22 +65,27 @@ class D3DRTTexture extends D3DTexture
         this.opaque = false;
     }
 
+    @Override
     public Texture getBackBuffer() {
         return this;
     }
 
+    @Override
     public long getResourceHandle() {
         return resource.getResource().getResource();
     }
 
+    @Override
     public Graphics createGraphics() {
         return D3DGraphics.create(this, getContext());
     }
 
+    @Override
     public int[] getPixels() {
         return null;
     }
 
+    @Override
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
         if (x != getContentX() || y != getContentY()
                 || width != getContentWidth() || height != getContentHeight())
@@ -90,6 +95,7 @@ class D3DRTTexture extends D3DTexture
         return readPixels(pixels);
     }
 
+    @Override
     public boolean readPixels(Buffer pixels) {
         getContext().flushVertexBuffer();
         long ctx = getContext().getContextHandle();
@@ -116,6 +122,7 @@ class D3DRTTexture extends D3DTexture
         return getContext().validatePresent(res);
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return getContext().getAssociatedScreen();
     }
@@ -149,18 +156,22 @@ class D3DRTTexture extends D3DTexture
         throw new UnsupportedOperationException("update() not supported for RTTextures");
     }
 
+    @Override
     public void setOpaque(boolean isOpaque) {
         this.opaque = isOpaque;
     }
 
+    @Override
     public boolean isOpaque() {
         return opaque;
     }
 
+    @Override
     public boolean isVolatile() {
         return getContext().isRTTVolatile();
     }
 
+    @Override
     public boolean isMSAA() {
         return resource.getResource().getSamples() != 0;
     }

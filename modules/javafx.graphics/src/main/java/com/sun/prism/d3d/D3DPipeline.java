@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -134,6 +134,7 @@ public final class D3DPipeline extends GraphicsPipeline {
     private D3DPipeline() {
     }
 
+    @Override
     public boolean init() {
         return d3dEnabled;
     }
@@ -234,6 +235,7 @@ public final class D3DPipeline extends GraphicsPipeline {
         return _default;
     }
 
+    @Override
     public ResourceFactory getResourceFactory(Screen screen) {
         return getD3DResourceFactory(screen.getAdapterOrdinal(), screen);
     }

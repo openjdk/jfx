@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,6 @@ package com.sun.prism.es2;
 import java.lang.annotation.Native;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-
-import com.sun.glass.utils.NativeLibLoader;
-import com.sun.javafx.PlatformUtil;
-import com.sun.prism.impl.PrismSettings;
 
 class GLPixelFormat {
     final private Attributes attributes;
@@ -168,6 +164,7 @@ class GLPixelFormat {
             redSize = rs;
         }
 
+        @Override
         public String toString() {
             return "onScreen: " + onScreen
                     + "redSize : " + redSize + ", "

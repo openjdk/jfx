@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,6 +90,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         return context;
     }
 
+    @Override
     public TextureResourcePool getTextureResourcePool() {
         return D3DVramPool.instance;
     }
@@ -241,6 +242,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
     }
 
+    @Override
     public int getRTTWidth(int w, WrapMode wrapMode) {
         // D3DRTTexture returns the requested dimension as the content dimension
         // so the answer here is just "w" despite the fact that a pow2 adjustment
@@ -253,6 +255,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         return w;
     }
 
+    @Override
     public int getRTTHeight(int h, WrapMode wrapMode) {
         // D3DRTTexture returns the requested dimension as the content dimension
         // so the answer here is just "h" despite the fact that a pow2 adjustment
@@ -317,6 +320,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         return rtt;
     }
 
+    @Override
     public Presentable createPresentable(PresentableState pState) {
         if (PrismSettings.verbose && context.isLost()) {
             System.err.println("SwapChain allocation while the device is lost");
@@ -379,6 +383,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
     }
 
+    @Override
     public Shader createShader(InputStream pixelShaderCode,
                                Map<String, Integer> samplers,
                                Map<String, Integer> params,
@@ -393,6 +398,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         return new D3DShader(context, shaderHandle, params);
     }
 
+    @Override
     public Shader createStockShader(final String name) {
         if (name == null) {
             throw new IllegalArgumentException("Shader name must be non-null");
@@ -436,6 +442,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         return size;
     }
 
+    @Override
     public int getMaximumTextureSize() {
         return maxTextureSize;
     }
@@ -470,15 +477,17 @@ class D3DResourceFactory extends BaseShaderFactory {
         records.remove(record);
     }
 
+    @Override
     public PhongMaterial createPhongMaterial() {
         return D3DPhongMaterial.create(context);
     }
 
+    @Override
     public MeshView createMeshView(Mesh mesh) {
         return D3DMeshView.create(context, (D3DMesh) mesh);
-
     }
 
+    @Override
     public Mesh createMesh() {
         return D3DMesh.create(context);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ class ES2Mesh extends BaseMesh {
         count--;
     }
 
+    @Override
     public int getCount() {
         return count;
     }
@@ -87,9 +88,9 @@ class ES2Mesh extends BaseMesh {
             this.nativeHandle = nativeHandle;
         }
 
-        void traceDispose() {
-        }
+        void traceDispose() {}
 
+        @Override
         public void dispose() {
             if (nativeHandle != 0L) {
                 traceDispose();

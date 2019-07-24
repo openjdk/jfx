@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import com.sun.prism.MultiTexture;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.impl.BaseTexture;
 import com.sun.prism.impl.BufferUtil;
-import com.sun.prism.impl.PrismSettings;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -631,6 +630,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         return resource.getResource().getTexID();
     }
 
+    @Override
     public void update(Buffer pixels, PixelFormat format,
             int dstx, int dsty,
             int srcx, int srcy,
@@ -752,6 +752,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         }
     }
 
+    @Override
     public void update(MediaFrame frame, boolean skipFlush) {
         if (!skipFlush) {
             context.flushVertexBuffer();

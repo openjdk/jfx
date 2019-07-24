@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -243,6 +243,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void enable() throws RuntimeException {
         context.updateShaderProgram(programID);
     }
@@ -253,11 +254,13 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void disable() throws RuntimeException {
         // TODO: remove disable() method from Shader interface... (RT-27442)
         context.updateShaderProgram(0);
     }
 
+    @Override
     public boolean isValid() {
         return valid;
     }
@@ -271,6 +274,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, int i0)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -297,6 +301,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, int i0, int i1)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -325,6 +330,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, int i0, int i1, int i2)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -355,6 +361,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, int i0, int i1, int i2, int i3)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -383,6 +390,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, float f0)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -409,6 +417,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, float f0, float f1)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -437,6 +446,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, float f0, float f1, float f2)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -467,6 +477,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstant(String name, float f0, float f1, float f2, float f3)
             throws RuntimeException {
         Uniform uniform = getUniform(name);
@@ -497,6 +508,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstants(String name, IntBuffer buf, int off, int count)
             throws RuntimeException {
         // TODO: remove off param in favor of IntBuffer.position() (RT-27442)
@@ -519,6 +531,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void setConstants(String name, FloatBuffer buf, int off, int count)
             throws RuntimeException {
         int loc = getUniform(name).location;
@@ -547,7 +560,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
             currentMatrix = new float[GLContext.NUM_MATRIX_ELEMENTS];
         }
 
-        if (Arrays.equals(currentMatrix, buf) == false) {
+        if (!Arrays.equals(currentMatrix, buf)) {
             context.getGLContext().uniformMatrix4fv(loc, false, buf);
             System.arraycopy(buf, 0, currentMatrix, 0, buf.length);
         }
@@ -559,6 +572,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      * @throws RuntimeException if no OpenGL context was current or if any
      * OpenGL-related errors occurred
      */
+    @Override
     public void dispose() throws RuntimeException {
         if (programID != 0) {
             disposerRecord.dispose();
@@ -584,6 +598,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
             this.programID = programID;
         }
 
+        @Override
         public void dispose() {
             if (programID != 0) {
                 context.getGLContext().disposeShaders(programID,
