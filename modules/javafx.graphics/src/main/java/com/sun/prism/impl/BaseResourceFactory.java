@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.prism.impl;
 
+import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
@@ -32,9 +33,12 @@ import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
+
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.Collection;
+
+import javafx.util.Pair;
 
 public abstract class BaseResourceFactory implements ResourceFactory {
     private final Map<Image,Texture> clampTexCache;
@@ -178,7 +182,6 @@ public abstract class BaseResourceFactory implements ResourceFactory {
                  tex = null;
              }
          }
-         int serial = image.getSerial();
 
          // Doesn't apply if useMipmap is true
          if (!useMipmap && tex == null) {
@@ -204,6 +207,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
             }
         }
 
+        Pair <Integer, Rectangle> idRect = image.getSerial().getIdRect();
         if (tex == null) {
             int w = image.getWidth();
             int h = image.getHeight();
@@ -217,12 +221,22 @@ public abstract class BaseResourceFactory implements ResourceFactory {
 
             tex = createTexture(image, Usage.DEFAULT, wrapMode, useMipmap);
             if (tex != null) {
-                tex.setLastImageSerial(serial);
+                tex.setLastImageSerial(idRect.getKey());
                 texCache.put(image, tex);
             }
-        } else if (tex.getLastImageSerial() != serial) {
-            tex.update(image, 0, 0, image.getWidth(), image.getHeight(), false);
-            tex.setLastImageSerial(serial);
+        } else if (tex.getLastImageSerial() != idRect.getKey()) {
+            // If the image was updated only once, then the image is partially updated.
+            // Else whole image is updated.
+            if (idRect.getKey() - tex.getLastImageSerial() == 1 && idRect.getValue() != null) {
+                Rectangle dirtyRect = idRect.getValue();
+                tex.update(image.getPixelBuffer(), image.getPixelFormat(),
+                        dirtyRect.x, dirtyRect.y, dirtyRect.x, dirtyRect.y,
+                        dirtyRect.width, dirtyRect.height,
+                        image.getScanlineStride(), false);
+            } else {
+                tex.update(image, 0, 0, image.getWidth(), image.getHeight(), false);
+            }
+            tex.setLastImageSerial(idRect.getKey());
         }
         return tex;
     }

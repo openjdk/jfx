@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.com.sun.javafx.pgstub;
 
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.tk.PlatformImage;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -156,5 +157,10 @@ public final class StubPlatformImage implements PlatformImage {
           .append("]");
 
         return sb.toString();
+    }
+
+    @Override
+    public void bufferDirty(Rectangle rect) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

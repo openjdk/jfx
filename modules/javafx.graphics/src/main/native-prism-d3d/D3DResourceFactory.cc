@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -294,9 +294,9 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nUpdateTextureI
     RETURN_STATUS_IF_NULL(ctx, E_FAIL);
     RETURN_STATUS_IF_NULL(resource, E_FAIL);
 
-    jint size = pixelArray ?
-        env->GetArrayLength(pixelArray) * sizeof(jint) :
-        jint(env->GetDirectBufferCapacity(buf));
+    jint size = (pixelArray ?
+        env->GetArrayLength(pixelArray) :
+        jint(env->GetDirectBufferCapacity(buf))) * sizeof(jint);
 
     PBYTE pixels = PBYTE((pixelArray != NULL) ?
         env->GetPrimitiveArrayCritical(pixelArray, NULL) :
