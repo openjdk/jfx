@@ -740,6 +740,17 @@ public class Image {
         initialize(Toolkit.getToolkit().createPlatformImage(width, height));
     }
 
+    /**
+     * Package private internal constructor used only by {@code WritableImage}.
+     *
+     * @param pixelBuffer the {@code PixelBuffer} used to construct this image.
+     */
+    Image(PixelBuffer pixelBuffer) {
+        this(null, null, pixelBuffer.getWidth(), pixelBuffer.getHeight(),
+                false, false, false);
+        initialize(pixelBuffer); // Creates an image using the java.nio.Buffer provided by PixelBuffer.
+    }
+
     private Image(Object externalImage) {
         this(null, null, 0, 0, false, false, false);
         initialize(externalImage);

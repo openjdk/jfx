@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javafx.scene.image.WritablePixelFormat;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.tk.PlatformImage;
 
 /**
@@ -101,5 +102,9 @@ public class StubWritablePlatformImage implements PlatformImage {
 
     @Override
     public void setPixels(int dstx, int dsty, int w, int h, PixelReader reader, int srcx, int srcy) {
+    }
+
+    @Override
+    public void bufferDirty(Rectangle rect) {
     }
 }
