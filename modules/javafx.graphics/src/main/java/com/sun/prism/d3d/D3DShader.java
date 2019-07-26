@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,19 +59,21 @@ final class D3DShader extends D3DResource implements Shader {
 
     private static native int nGetRegister(long pCtx, long pData, String name);
 
+    @Override
     public void enable() {
         // res >= 0 is equivalent to D3D's SUCCEEDED(res) macro
         int res = enable(d3dResRecord.getContext().getContextHandle(),
                           d3dResRecord.getResource());
         valid &= res >= 0;
-        d3dResRecord.getContext().validate(res);
+        D3DContext.validate(res);
     }
 
+    @Override
     public void disable() {
         int res = disable(d3dResRecord.getContext().getContextHandle(),
                            d3dResRecord.getResource());
         valid &= res >= 0;
-        d3dResRecord.getContext().validate(res);
+        D3DContext.validate(res);
     }
 
     private static void checkTmpIntBuf() {
@@ -81,6 +83,7 @@ final class D3DShader extends D3DResource implements Shader {
         itmp.clear();
     }
 
+    @Override
     public void setConstant(String name, int i0) {
         // NOTE: see HLSLBackend for an explanation of why we're using
         // floats here instead of ints...
@@ -92,6 +95,7 @@ final class D3DShader extends D3DResource implements Shader {
         setConstant(name, (float)i0);
     }
 
+    @Override
     public void setConstant(String name, int i0, int i1) {
         /*
         checkTmpIntBuf();
@@ -102,6 +106,7 @@ final class D3DShader extends D3DResource implements Shader {
         setConstant(name, (float)i0, (float)i1);
     }
 
+    @Override
     public void setConstant(String name, int i0, int i1, int i2) {
         /*
         checkTmpIntBuf();
@@ -113,6 +118,7 @@ final class D3DShader extends D3DResource implements Shader {
         setConstant(name, (float)i0, (float)i1, (float)i2);
     }
 
+    @Override
     public void setConstant(String name, int i0, int i1, int i2, int i3) {
         /*
         checkTmpIntBuf();
@@ -125,6 +131,7 @@ final class D3DShader extends D3DResource implements Shader {
         setConstant(name, (float)i0, (float)i1, (float)i2, (float)i3);
     }
 
+    @Override
     public void setConstants(String name, IntBuffer buf, int off, int count) {
         // NOTE: see HLSLBackend for an explanation of why we need to use
         // floats instead of ints; for now this codepath is disabled...
@@ -139,12 +146,14 @@ final class D3DShader extends D3DResource implements Shader {
         ftmp.clear();
     }
 
+    @Override
     public void setConstant(String name, float f0) {
         checkTmpFloatBuf();
         ftmp.put(f0);
         setConstants(name, ftmp, 0, 1);
     }
 
+    @Override
     public void setConstant(String name, float f0, float f1) {
         checkTmpFloatBuf();
         ftmp.put(f0);
@@ -152,6 +161,7 @@ final class D3DShader extends D3DResource implements Shader {
         setConstants(name, ftmp, 0, 1);
     }
 
+    @Override
     public void setConstant(String name, float f0, float f1, float f2) {
         checkTmpFloatBuf();
         ftmp.put(f0);
@@ -160,6 +170,7 @@ final class D3DShader extends D3DResource implements Shader {
         setConstants(name, ftmp, 0, 1);
     }
 
+    @Override
     public void setConstant(String name, float f0, float f1, float f2, float f3) {
         checkTmpFloatBuf();
         ftmp.put(f0);
@@ -169,12 +180,13 @@ final class D3DShader extends D3DResource implements Shader {
         setConstants(name, ftmp, 0, 1);
     }
 
+    @Override
     public void setConstants(String name, FloatBuffer buf, int off, int count) {
             int res = setConstantsF(d3dResRecord.getContext().getContextHandle(),
                                      d3dResRecord.getResource(),
                                      getRegister(name), buf, off, count);
             valid &= res >= 0;
-            d3dResRecord.getContext().validate(res);
+            D3DContext.validate(res);
     }
 
     private int getRegister(String name) {

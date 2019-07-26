@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,10 +93,12 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         }
     }
 
+    @Override
     public TextureResourcePool getTextureResourcePool() {
         return ES2VramPool.instance;
     }
 
+    @Override
     public Presentable createPresentable(PresentableState pState) {
         return new ES2SwapChain(context, pState);
     }
@@ -123,6 +125,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return context.getGLContext().canCreateNonPowTwoTextures();
     }
 
+    @Override
     public Texture createTexture(PixelFormat formatHint,
                                  Usage usageHint,
                                  WrapMode wrapMode,
@@ -137,26 +140,32 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return ES2Texture.create(context, formatHint, wrapMode, w, h, useMipmap);
     }
 
+    @Override
     public Texture createTexture(MediaFrame frame) {
         return ES2Texture.create(context, frame);
     }
 
+    @Override
     public int getRTTWidth(int w, WrapMode wrapMode) {
         return ES2RTTexture.getCompatibleDimension(context, w, wrapMode);
     }
 
+    @Override
     public int getRTTHeight(int h, WrapMode wrapMode) {
         return ES2RTTexture.getCompatibleDimension(context, h, wrapMode);
     }
 
+    @Override
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode) {
         return createRTTexture(width, height, wrapMode, false);
     }
 
+    @Override
     public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean msaa) {
         return ES2RTTexture.create(context, width, height, wrapMode, msaa);
     }
 
+    @Override
     public boolean isFormatSupported(PixelFormat format) {
         GLFactory glFactory = ES2Pipeline.glFactory;
         switch (format) {
@@ -202,10 +211,12 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return size;
     }
 
+    @Override
     public int getMaximumTextureSize() {
         return maxTextureSize;
     }
 
+    @Override
     public Shader createShader(InputStream pixelShaderCode,
             Map<String, Integer> samplers,
             Map<String, Integer> params,
@@ -293,6 +304,7 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return attributes;
     }
 
+    @Override
     public Shader createStockShader(String name) {
         if (name == null) {
             throw new IllegalArgumentException("Shader name must be non-null");
@@ -316,18 +328,22 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         }
     }
 
+    @Override
     public void dispose() {
         context.clearContext();
     }
 
+    @Override
     public PhongMaterial createPhongMaterial() {
         return ES2PhongMaterial.create(context);
 }
 
+    @Override
     public MeshView createMeshView(Mesh mesh) {
         return ES2MeshView.create(context, (ES2Mesh) mesh);
     }
 
+    @Override
     public Mesh createMesh() {
         return ES2Mesh.create(context);
     }

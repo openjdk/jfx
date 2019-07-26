@@ -26,8 +26,12 @@ package test.com.sun.marlin;
 
 import java.awt.BasicStroke;
 import java.awt.Shape;
+import java.awt.geom.CubicCurve2D;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.PathIterator;
+import java.awt.geom.QuadCurve2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -106,15 +110,17 @@ public final class ClipShapeTest {
     static long THRESHOLD_NBPIX;
 
     // constants:
-    static final boolean DO_FAIL = true;
+    static final boolean DO_FAIL = Boolean.valueOf(System.getProperty("ClipShapeTest.fail", "true"));
 
     static final boolean TEST_STROKER = true;
     static final boolean TEST_FILLER = true;
 
+    static final boolean SUBDIVIDE_CURVE = true;
+    static final double SUBDIVIDE_LEN_TH = 50.0;
+    static final boolean TRACE_SUBDIVIDE_CURVE = false;
+
     static final int TESTW = 100;
     static final int TESTH = 100;
-
-    static final boolean SHAPE_REPEAT = true;
 
     // dump path on console:
     static final boolean DUMP_SHAPE = true;
@@ -324,28 +330,33 @@ public final class ClipShapeTest {
             case TWO_CUBICS:
                 // Define uncertainty for curves:
 /*
-Diff Pixels [Worst(All Test setups)][n: 647] sum: 15130 avg: 23.384 [1 | 174] {
-            1 ..     2[n: 93] sum: 93 avg: 1.0 [1 | 1]
-            2 ..     4[n: 92] sum: 223 avg: 2.423 [2 | 3]
-            4 ..     8[n: 135] sum: 732 avg: 5.422 [4 | 7]
-            8 ..    16[n: 109] sum: 1235 avg: 11.33 [8 | 15]
-           16 ..    32[n: 82] sum: 1782 avg: 21.731 [16 | 31]
-           32 ..    64[n: 59] sum: 2584 avg: 43.796 [32 | 62]
-           64 ..   128[n: 52] sum: 4929 avg: 94.788 [64 | 127]
-          128 ..   256[n: 25] sum: 3552 avg: 142.08 [129 | 174] }
+Diff Pixels [Worst(All Test setups)][n: 293] sum: 16014 avg: 54.655 [4 | 160] {
+            4 ..     8[n: 35] sum: 140 avg: 4.0 [4 | 4]
+            8 ..    16[n: 32] sum: 320 avg: 10.0 [8 | 12]
+           16 ..    32[n: 47] sum: 1068 avg: 22.723 [16 | 31]
+           32 ..    64[n: 78] sum: 3566 avg: 45.717 [32 | 63]
+           64 ..   128[n: 77] sum: 7453 avg: 96.792 [64 | 127]
+          128 ..   256[n: 24] sum: 3467 avg: 144.458 [131 | 160] }
+Differences [Diff Pixels [All Test setups]]:
+NbPixels [All Test setups][n: 101819] sum: 250541 avg: 2.46 [0 | 175]
 
-DASH: Diff Pixels [Worst(All Test setups)][n: 128] sum: 5399 avg: 42.179 [1 | 255] {
-            1 ..     2[n: 54] sum: 54 avg: 1.0 [1 | 1]
-            2 ..     4[n: 28] sum: 63 avg: 2.25 [2 | 3]
-            4 ..     8[n: 6] sum: 33 avg: 5.5 [4 | 7]
-            8 ..    16[n: 3] sum: 33 avg: 11.0 [9 | 15]
-           16 ..    32[n: 4] sum: 87 avg: 21.75 [16 | 25]
-           32 ..    64[n: 6] sum: 276 avg: 46.0 [37 | 60]
-           64 ..   128[n: 6] sum: 568 avg: 94.666 [71 | 118]
-          128 ..   256[n: 21] sum: 4285 avg: 204.047 [128 | 255] }
+Float DASH: Diff Pixels [Worst(All Test setups)][n: 117] sum: 7571 avg: 64.709 [1 | 255] {
+            1 ..     2[n: 25] sum: 25 avg: 1.0 [1 | 1]
+            2 ..     4[n: 9] sum: 22 avg: 2.444 [2 | 3]
+            4 ..     8[n: 8] sum: 45 avg: 5.625 [4 | 7]
+            8 ..    16[n: 11] sum: 122 avg: 11.09 [8 | 15]
+           16 ..    32[n: 15] sum: 340 avg: 22.666 [18 | 31]
+           32 ..    64[n: 15] sum: 612 avg: 40.8 [32 | 58]
+           64 ..   128[n: 7] sum: 616 avg: 88.0 [64 | 127]
+          128 ..   256[n: 27] sum: 5789 avg: 214.407 [133 | 255] }
+Differences [Diff Pixels [All Test setups]]:
+NbPixels [All Test setups][n: 2054] sum: 7778 avg: 3.786 [1 | 46]
 */
                 THRESHOLD_DELTA = 32;
-                THRESHOLD_NBPIX = (USE_DASHES) ? 40 : 150;
+                THRESHOLD_NBPIX = (USE_DASHES) ? 50 : 200;
+                if (SUBDIVIDE_CURVE) {
+                    THRESHOLD_NBPIX = 4;
+                }
                 break;
             case FOUR_QUADS:
             case MIXED:
@@ -353,49 +364,64 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 128] sum: 5399 avg: 42.179 [1 | 25
                 // curve subdivision causes curves to be smaller
                 // then curve offsets are different (more accurate)
 /*
-Diff Pixels [Worst(All Test setups)][n: 775] sum: 57659 avg: 74.398 [1 | 251] {
-            1 ..     2[n: 21] sum: 21 avg: 1.0 [1 | 1]
-            2 ..     4[n: 20] sum: 52 avg: 2.6 [2 | 3]
-            4 ..     8[n: 44] sum: 236 avg: 5.363 [4 | 7]
-            8 ..    16[n: 52] sum: 578 avg: 11.115 [8 | 15]
-           16 ..    32[n: 75] sum: 1729 avg: 23.053 [16 | 31]
-           32 ..    64[n: 152] sum: 7178 avg: 47.223 [32 | 63]
-           64 ..   128[n: 274] sum: 25741 avg: 93.945 [64 | 127]
-          128 ..   256[n: 137] sum: 22124 avg: 161.489 [128 | 251] }
+Diff Pixels [Worst(All Test setups)][n: 759] sum: 61342 avg: 80.819 [3 | 255] {
+            2 ..     4[n: 3] sum: 9 avg: 3.0 [3 | 3]
+            4 ..     8[n: 99] sum: 396 avg: 4.0 [4 | 4]
+            8 ..    16[n: 76] sum: 800 avg: 10.526 [8 | 12]
+           16 ..    32[n: 65] sum: 1460 avg: 22.461 [16 | 28]
+           32 ..    64[n: 121] sum: 5621 avg: 46.454 [32 | 60]
+           64 ..   128[n: 193] sum: 17740 avg: 91.917 [64 | 127]
+          128 ..   256[n: 202] sum: 35316 avg: 174.831 [128 | 255] }
+Differences [Diff Pixels [All Test setups]]:
+NbPixels [All Test setups][n: 90621] sum: 2819936 avg: 31.117 [0 | 392]
 
-DASH: Diff Pixels [Worst(All Test setups)][n: 354] sum: 29638 avg: 83.723 [1 | 254] {
-            1 ..     2[n: 31] sum: 31 avg: 1.0 [1 | 1]
-            2 ..     4[n: 45] sum: 111 avg: 2.466 [2 | 3]
-            4 ..     8[n: 22] sum: 113 avg: 5.136 [4 | 7]
-            8 ..    16[n: 25] sum: 247 avg: 9.88 [8 | 15]
-           16 ..    32[n: 26] sum: 579 avg: 22.269 [16 | 31]
-           32 ..    64[n: 39] sum: 1698 avg: 43.538 [32 | 62]
-           64 ..   128[n: 56] sum: 5284 avg: 94.357 [64 | 127]
-          128 ..   256[n: 110] sum: 21575 avg: 196.136 [128 | 254] }
+DASH: Diff Pixels [Worst(All Test setups)][n: 218] sum: 7183 avg: 32.949 [1 | 255] {
+            1 ..     2[n: 101] sum: 101 avg: 1.0 [1 | 1]
+            2 ..     4[n: 40] sum: 94 avg: 2.35 [2 | 3]
+            4 ..     8[n: 27] sum: 150 avg: 5.555 [4 | 7]
+            8 ..    16[n: 7] sum: 59 avg: 8.428 [8 | 10]
+           16 ..    32[n: 1] sum: 31 avg: 31.0 [31 | 31]
+           32 ..    64[n: 6] sum: 254 avg: 42.333 [35 | 49]
+           64 ..   128[n: 11] sum: 923 avg: 83.909 [64 | 117]
+          128 ..   256[n: 25] sum: 5571 avg: 222.84 [130 | 255] }
+Differences [Diff Pixels [All Test setups]]:
+NbPixels [All Test setups][n: 25] sum: 162 avg: 6.48 [1 | 35]
 */
                 THRESHOLD_DELTA = 64;
-                THRESHOLD_NBPIX = (USE_DASHES) ? 180 : 420;
+                THRESHOLD_NBPIX = (USE_DASHES) ? 40 : 420;
+                if (SUBDIVIDE_CURVE) {
+                    THRESHOLD_NBPIX = 10;
+                }
                 break;
             default:
                 // Define uncertainty for lines:
-                // float variant have higher uncertainty
 /*
 DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
             1 ..     2[n: 6] sum: 6 avg: 1.0 [1 | 1]
             2 ..     4[n: 1] sum: 2 avg: 2.0 [2 | 2] }
+
+Float DASH: Diff Pixels [Worst(All Test setups)][n: 22] sum: 427 avg: 19.409 [1 | 55] {
+            1 ..     2[n: 1] sum: 1 avg: 1.0 [1 | 1]
+            2 ..     4[n: 3] sum: 8 avg: 2.666 [2 | 3]
+            4 ..     8[n: 1] sum: 4 avg: 4.0 [4 | 4]
+            8 ..    16[n: 5] sum: 55 avg: 11.0 [9 | 13]
+           16 ..    32[n: 8] sum: 175 avg: 21.875 [16 | 30]
+           32 ..    64[n: 4] sum: 184 avg: 46.0 [39 | 55] }
+Differences [Diff Pixels [All Test setups]]:
+NbPixels [All Test setups][n: 30] sum: 232 avg: 7.733 [1 | 27]
 */
                 THRESHOLD_DELTA = 2;
-                THRESHOLD_NBPIX = 4; // very low
+                THRESHOLD_NBPIX = (USE_DASHES) ? 6 : 0;
         }
 
-        // TODO: define one more threshold on total result (total sum) ?
+// Visual inspection (low threshold):
+//        THRESHOLD_NBPIX = 2;
 
         System.out.println("THRESHOLD_DELTA: " + THRESHOLD_DELTA);
         System.out.println("THRESHOLD_NBPIX: " + THRESHOLD_NBPIX);
 
         if (runSlowTests) {
             NUM_TESTS = 10000; // or 100000 (very slow)
-            USE_DASHES = true;
             USE_VAR_STROKE = true;
         }
 
@@ -406,6 +432,9 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
         }
         if (USE_VAR_STROKE) {
             System.out.println("USE_VAR_STROKE: enabled.");
+        }
+        if (!DO_FAIL) {
+            System.out.println("DO_FAIL: disabled.");
         }
 
         System.out.println("---------------------------------------");
@@ -438,7 +467,7 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
 
                 int nsw = 0;
                 if (USE_VAR_STROKE) {
-                    for (float width = 0.1f; width < 110f; width *= 5f) {
+                    for (float width = 0.25f; width < 110f; width *= 5f) {
                         strokeWidths[nsw++] = width;
                     }
                 } else {
@@ -529,16 +558,18 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
                 Platform.runLater(() -> {
                     /*
                     Note: as CachingShapeRep try caching the Path mask at the second rendering pass,
-                    then its xformBounds corresponds to the shape not the giiiiven clip.
-                    To avoid such side-effect, perform clipping first below (or call setPath again)
+                    then its xformBounds corresponds to the shape not the given clip.
+                    To avoid such side-effect, always call setPath() before paintShape()
                     */
                     setPath(p, p2d);
 
-                    // Runtime clip setting ON (FIRST):
-                    paintShape(p, imgOn, true);
-
-                    // Runtime clip setting OFF (2ND):
+                    // Runtime clip setting OFF (FIRST):
                     paintShape(p, imgOff, false);
+
+                    setPath(p, p2d);
+
+                    // Runtime clip setting ON (2ND):
+                    paintShape(p, imgOn, true);
 
                     signalDone();
                 });
@@ -721,20 +752,35 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
     static void genShape(final Path2D p2d, final TestSetup ts) {
         p2d.reset();
 
-        final int end = (SHAPE_REPEAT) ? 2 : 1;
+        /*
+            Test closed path:
+            0: moveTo + (draw)To + closePath
+            1: (draw)To + closePath (closePath + (draw)To sequence)
+        */
+        final int end  = (ts.closed) ? 2 : 1;
+
+        final double[] in = new double[8];
+
+        double sx0 = 0.0, sy0 = 0.0, x0 = 0.0, y0 = 0.0;
 
         for (int p = 0; p < end; p++) {
-            p2d.moveTo(randX(), randY());
+            if (p <= 0) {
+                x0 = randX(); y0 = randY();
+                p2d.moveTo(x0, y0);
+                sx0 = x0; sy0 = y0;
+            }
 
             switch (ts.shapeMode) {
                 case MIXED:
-                case FIFTY_LINE_POLYS:
-                case NINE_LINE_POLYS:
                 case FIVE_LINE_POLYS:
+                case NINE_LINE_POLYS:
+                case FIFTY_LINE_POLYS:
                     p2d.lineTo(randX(), randY());
                     p2d.lineTo(randX(), randY());
                     p2d.lineTo(randX(), randY());
                     p2d.lineTo(randX(), randY());
+                    x0 = randX(); y0 = randY();
+                    p2d.lineTo(x0, y0);
                     if (ts.shapeMode == ShapeMode.FIVE_LINE_POLYS) {
                         // And an implicit close makes 5 lines
                         break;
@@ -742,29 +788,75 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
                     p2d.lineTo(randX(), randY());
                     p2d.lineTo(randX(), randY());
                     p2d.lineTo(randX(), randY());
-                    p2d.lineTo(randX(), randY());
+                    x0 = randX(); y0 = randY();
+                    p2d.lineTo(x0, y0);
                     if (ts.shapeMode == ShapeMode.NINE_LINE_POLYS) {
                         // And an implicit close makes 9 lines
                         break;
                     }
                     if (ts.shapeMode == ShapeMode.FIFTY_LINE_POLYS) {
                         for (int i = 0; i < 41; i++) {
-                            p2d.lineTo(randX(), randY());
+                            x0 = randX(); y0 = randY();
+                            p2d.lineTo(x0, y0);
                         }
                         // And an implicit close makes 50 lines
                         break;
                     }
                 case TWO_CUBICS:
-                    p2d.curveTo(randX(), randY(), randX(), randY(), randX(), randY());
-                    p2d.curveTo(randX(), randY(), randX(), randY(), randX(), randY());
+                    if (SUBDIVIDE_CURVE) {
+                        in[0] = x0; in[1] = y0;
+                        in[2] = randX(); in[3] = randY();
+                        in[4] = randX(); in[5] = randY();
+                        x0 = randX(); y0 = randY();
+                        in[6] = x0; in[7] = y0;
+                        subdivide(p2d, 8, in);
+                        in[0] = x0; in[1] = y0;
+                        in[2] = randX(); in[3] = randY();
+                        in[4] = randX(); in[5] = randY();
+                        x0 = randX(); y0 = randY();
+                        in[6] = x0; in[7] = y0;
+                        subdivide(p2d, 8, in);
+                    } else {
+                        x0 = randX(); y0 = randY();
+                        p2d.curveTo(randX(), randY(), randX(), randY(), x0, y0);
+                        x0 = randX(); y0 = randY();
+                        p2d.curveTo(randX(), randY(), randX(), randY(), x0, y0);
+                    }
                     if (ts.shapeMode == ShapeMode.TWO_CUBICS) {
                         break;
                     }
                 case FOUR_QUADS:
-                    p2d.quadTo(randX(), randY(), randX(), randY());
-                    p2d.quadTo(randX(), randY(), randX(), randY());
-                    p2d.quadTo(randX(), randY(), randX(), randY());
-                    p2d.quadTo(randX(), randY(), randX(), randY());
+                    if (SUBDIVIDE_CURVE) {
+                        in[0] = x0; in[1] = y0;
+                        in[2] = randX(); in[3] = randY();
+                        x0 = randX(); y0 = randY();
+                        in[4] = x0; in[5] = y0;
+                        subdivide(p2d, 6, in);
+                        in[0] = x0; in[1] = y0;
+                        in[2] = randX(); in[3] = randY();
+                        x0 = randX(); y0 = randY();
+                        in[4] = x0; in[5] = y0;
+                        subdivide(p2d, 6, in);
+                        in[0] = x0; in[1] = y0;
+                        in[2] = randX(); in[3] = randY();
+                        x0 = randX(); y0 = randY();
+                        in[4] = x0; in[5] = y0;
+                        subdivide(p2d, 6, in);
+                        in[0] = x0; in[1] = y0;
+                        in[2] = randX(); in[3] = randY();
+                        x0 = randX(); y0 = randY();
+                        in[4] = x0; in[5] = y0;
+                        subdivide(p2d, 6, in);
+                    } else {
+                        x0 = randX(); y0 = randY();
+                        p2d.quadTo(randX(), randY(), x0, y0);
+                        x0 = randX(); y0 = randY();
+                        p2d.quadTo(randX(), randY(), x0, y0);
+                        x0 = randX(); y0 = randY();
+                        p2d.quadTo(randX(), randY(), x0, y0);
+                        x0 = randX(); y0 = randY();
+                        p2d.quadTo(randX(), randY(), x0, y0);
+                    }
                     if (ts.shapeMode == ShapeMode.FOUR_QUADS) {
                         break;
                     }
@@ -773,6 +865,111 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
 
             if (ts.closed) {
                 p2d.closePath();
+                x0 = sx0; y0 = sy0;
+            }
+        }
+    }
+
+    static final int SUBDIVIDE_LIMIT = 5;
+    static final double[][] SUBDIVIDE_CURVES = new double[SUBDIVIDE_LIMIT + 1][];
+
+    static {
+        for (int i = 0, n = 1; i < SUBDIVIDE_LIMIT; i++, n *= 2) {
+            SUBDIVIDE_CURVES[i] = new double[8 * n];
+        }
+    }
+
+    static void subdivide(final Path2D p2d, final int type, final double[] in) {
+        if (TRACE_SUBDIVIDE_CURVE) {
+            System.out.println("subdivide: " + Arrays.toString(Arrays.copyOf(in, type)));
+        }
+
+        double curveLen = ((type == 8)
+                ? curvelen(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
+                : quadlen(in[0], in[1], in[2], in[3], in[4], in[5]));
+
+        if (curveLen > SUBDIVIDE_LEN_TH) {
+            if (TRACE_SUBDIVIDE_CURVE) {
+                System.out.println("curvelen: " + curveLen);
+            }
+
+            System.arraycopy(in, 0, SUBDIVIDE_CURVES[0], 0, 8);
+
+            int level = 0;
+            while (curveLen >= SUBDIVIDE_LEN_TH) {
+                level++;
+                curveLen /= 2.0;
+                if (TRACE_SUBDIVIDE_CURVE) {
+                    System.out.println("curvelen: " + curveLen);
+                }
+            }
+
+            if (TRACE_SUBDIVIDE_CURVE) {
+                System.out.println("level: " + level);
+            }
+
+            if (level > SUBDIVIDE_LIMIT) {
+                if (TRACE_SUBDIVIDE_CURVE) {
+                    System.out.println("max level reached : " + level);
+                }
+                level = SUBDIVIDE_LIMIT;
+            }
+
+            for (int l = 0; l < level; l++) {
+                if (TRACE_SUBDIVIDE_CURVE) {
+                    System.out.println("level: " + l);
+                }
+
+                double[] src = SUBDIVIDE_CURVES[l];
+                double[] dst = SUBDIVIDE_CURVES[l + 1];
+
+                for (int i = 0, j = 0; i < src.length; i += 8, j += 16) {
+                    if (TRACE_SUBDIVIDE_CURVE) {
+                        System.out.println("subdivide: " + Arrays.toString(Arrays.copyOfRange(src, i, i + type)));
+                    }
+                    if (type == 8) {
+                        CubicCurve2D.subdivide(src, i, dst, j, dst, j + 8);
+                    } else {
+                        QuadCurve2D.subdivide(src, i, dst, j, dst, j + 8);
+                    }
+                    if (TRACE_SUBDIVIDE_CURVE) {
+                        System.out.println("left: " + Arrays.toString(Arrays.copyOfRange(dst, j, j + type)));
+                        System.out.println("right: " + Arrays.toString(Arrays.copyOfRange(dst, j + 8, j + 8 + type)));
+                    }
+                }
+            }
+
+            // Emit curves at last level:
+            double[] src = SUBDIVIDE_CURVES[level];
+
+            double len = 0.0;
+
+            for (int i = 0; i < src.length; i += 8) {
+                if (TRACE_SUBDIVIDE_CURVE) {
+                    System.out.println("curve: " + Arrays.toString(Arrays.copyOfRange(src, i, i + type)));
+                }
+
+                if (type == 8) {
+                    if (TRACE_SUBDIVIDE_CURVE) {
+                        len += curvelen(src[i + 0], src[i + 1], src[i + 2], src[i + 3], src[i + 4], src[i + 5], src[i + 6], src[i + 7]);
+                    }
+                    p2d.curveTo(src[i + 2], src[i + 3], src[i + 4], src[i + 5], src[i + 6], src[i + 7]);
+                } else {
+                    if (TRACE_SUBDIVIDE_CURVE) {
+                        len += quadlen(src[i + 0], src[i + 1], src[i + 2], src[i + 3], src[i + 4], src[i + 5]);
+                    }
+                    p2d.quadTo(src[i + 2], src[i + 3], src[i + 4], src[i + 5]);
+                }
+            }
+
+            if (TRACE_SUBDIVIDE_CURVE) {
+                System.out.println("curveLen (final) = " + len);
+            }
+        } else {
+            if (type == 8) {
+                p2d.curveTo(in[2], in[3], in[4], in[5], in[6], in[7]);
+            } else {
+                p2d.quadTo(in[2], in[3], in[4], in[5]);
             }
         }
     }
@@ -1008,6 +1205,8 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
             }
         }
 
+        testCtx.addNbPix(testThCtx.histPix.count);
+
         if (!testThCtx.isDiff() || (testThCtx.histPix.count <= THRESHOLD_NBPIX)) {
             return null;
         }
@@ -1140,8 +1339,11 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
 
         public final StringBuilder toString(final StringBuilder sb) {
             sb.append(name).append("[n: ").append(count);
-            sb.append("] sum: ").append(sum).append(" avg: ").append(trimTo3Digits(average()));
-            sb.append(" [").append(min).append(" | ").append(max).append("]");
+            sb.append("] ");
+            if (count != 0) {
+                sb.append("sum: ").append(sum).append(" avg: ").append(trimTo3Digits(average()));
+                sb.append(" [").append(min).append(" | ").append(max).append("]");
+            }
             return sb;
         }
 
@@ -1267,17 +1469,24 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
 
         public final Histogram histPix;
 
+        public final StatInteger nbPix;
+
         DiffContext(String name) {
             histPix = new Histogram("Diff Pixels [" + name + "]");
+            nbPix = new StatInteger("NbPixels [" + name + "]");
         }
 
         void reset() {
             histPix.reset();
+            nbPix.reset();
         }
 
         void dump() {
             if (isDiff()) {
-                System.out.println("Differences [" + histPix.name + "]:\n" + histPix.toString());
+                System.out.println("Differences [" + histPix.name + "]:\n"
+                        + ((nbPix.count != 0) ? (nbPix.toString() + "\n") : "")
+                        + histPix.toString()
+                );
             } else {
                 System.out.println("No difference for [" + histPix.name + "].");
             }
@@ -1289,6 +1498,15 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
 
         void add(DiffContext ctx) {
             histPix.add(ctx.histPix);
+            if (ctx.nbPix.count != 0L) {
+                nbPix.add(ctx.nbPix);
+            }
+        }
+
+        void addNbPix(long val) {
+            if (val != 0L) {
+                nbPix.add(val);
+            }
         }
 
         void set(DiffContext ctx) {
@@ -1303,5 +1521,34 @@ DASH: Diff Pixels [Worst(All Test setups)][n: 7] sum: 8 avg: 1.142 [1 | 2] {
         boolean isDiff() {
             return histPix.sum != 0l;
         }
+    }
+
+
+    static double linelen(final double x0, final double y0,
+                          final double x1, final double y1)
+    {
+        final double dx = x1 - x0;
+        final double dy = y1 - y0;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    static double quadlen(final double x0, final double y0,
+                          final double x1, final double y1,
+                          final double x2, final double y2)
+    {
+        return (linelen(x0, y0, x1, y1)
+                + linelen(x1, y1, x2, y2)
+                + linelen(x0, y0, x2, y2)) / 2.0d;
+    }
+
+    static double curvelen(final double x0, final double y0,
+                           final double x1, final double y1,
+                           final double x2, final double y2,
+                           final double x3, final double y3)
+    {
+        return (linelen(x0, y0, x1, y1)
+              + linelen(x1, y1, x2, y2)
+              + linelen(x2, y2, x3, y3)
+              + linelen(x0, y0, x3, y3)) / 2.0d;
     }
 }

@@ -1,23 +1,36 @@
-# FIXME: Eventually we should include the needed patterns from .hgingore
-# The goal is that a full build & test, followed by "git status" would show
-# no untracked files
+# Ignore the following directories and files
+.gradle/
+.hg/
+Debug/
+Release/
+bin/
+build/
+dist/
+gradle.properties
+testbin/
+**/Ensemble8/lib/
+**/Ensemble8/src/generated/resources/ensemble/search/index/write.lock
+**/nbproject/private/
 
+# Ignore webrevs
+/webrev/
+/webrev.zip
+
+# Ignore Eclipse files
+org.eclipse.buildship*
+
+# Ignore IntelliJ files
+.idea/tasks.xml
+.idea/workspace.xml
+.idea/inspectionProfiles/**
+.idea/copyright/profiles_settings.xml
+.idea/codeStyles/**
+.idea/checkstyle-idea.xml
+
+# Ignore the following file suffixes
+*.vcxproj.user
 *.orig
 *.bak
 *.rej
 *.swp
-build/
-.gradle/
-**/nbproject/private/
-dist/
-webrev/
-webrev.zip
-gradle.properties
-apps/samples/Ensemble8/lib/
-
-.idea/tasks.xml
-.idea/workspace.xml
-.idea/inspectionProfiles/*
-.idea/copyright/profiles_settings.xml
-.idea/codeStyles/*
-.idea/checkstyle-idea.xml
+*~

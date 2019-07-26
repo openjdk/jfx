@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,46 +78,56 @@ class D3DSwapChain
         return true;
     }
 
+    @Override
     public boolean present() {
         D3DContext context = getContext();
         int res = nPresent(context.getContextHandle(), d3dResRecord.getResource());
         return context.validatePresent(res);
     }
 
+    @Override
     public long getResourceHandle() {
         return d3dResRecord.getResource();
     }
 
+    @Override
     public int getPhysicalWidth() {
         return D3DResourceFactory.nGetTextureWidth(d3dResRecord.getResource());
     }
 
+    @Override
     public int getPhysicalHeight() {
         return D3DResourceFactory.nGetTextureHeight(d3dResRecord.getResource());
     }
 
+    @Override
     public int getContentWidth() {
         return getPhysicalWidth();
     }
 
+    @Override
     public int getContentHeight() {
         return getPhysicalHeight();
     }
 
+    @Override
     public int getContentX() {
         return 0;
     }
 
+    @Override
     public int getContentY() {
         return 0;
     }
 
     private static native int nPresent(long context, long pSwapChain);
 
+    @Override
     public D3DContext getContext() {
         return d3dResRecord.getContext();
     }
 
+    @Override
     public boolean lockResources(PresentableState pState) {
         if (pState.getRenderWidth() != texBackBuffer.getContentWidth() ||
             pState.getRenderHeight() != texBackBuffer.getContentHeight() ||
@@ -130,6 +140,7 @@ class D3DSwapChain
         return texBackBuffer.isSurfaceLost();
     }
 
+    @Override
     public Graphics createGraphics() {
         Graphics g = D3DGraphics.create(texBackBuffer, getContext());
         g.scale(pixelScaleFactorX, pixelScaleFactorY);
@@ -140,6 +151,7 @@ class D3DSwapChain
         return texBackBuffer;
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return getContext().getAssociatedScreen();
     }
@@ -154,14 +166,17 @@ class D3DSwapChain
         return pixelScaleFactorY;
     }
 
+    @Override
     public boolean isOpaque() {
         return texBackBuffer.isOpaque();
     }
 
+    @Override
     public void setOpaque(boolean opaque) {
         texBackBuffer.setOpaque(opaque);
     }
 
+    @Override
     public boolean isMSAA() {
         return texBackBuffer != null ? texBackBuffer.isMSAA() : false;
     }

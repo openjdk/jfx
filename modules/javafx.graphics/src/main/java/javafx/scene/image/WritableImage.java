@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.image;
 
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
@@ -35,6 +36,7 @@ import javafx.scene.paint.Color;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Objects;
 
 /**
  * The {@code WritableImage} class represents a custom graphical image
@@ -73,6 +75,26 @@ public class WritableImage extends Image {
      */
     public WritableImage(@NamedArg("width") int width, @NamedArg("height") int height) {
         super(width, height);
+    }
+
+    private PixelBuffer<? extends Buffer> pixelBuffer = null;
+
+    /**
+     * Constructs a {@code WritableImage} using the specified {@code PixelBuffer}.
+     * The {@code Buffer} provided by the {@code PixelBuffer} will be used
+     * directly as the pixel data for this image.
+     * The {@code PixelBuffer} can be shared by multiple {@code WritableImage}s.
+     * Images constructed this way are readable using {@code Image.getPixelReader()},
+     * but are not writable using {@code WritableImage.getPixelWriter()}.
+     *
+     * @param pixelBuffer the {@code PixelBuffer} used to construct this image
+     * @throws NullPointerException if {@code pixelBuffer} is {@code null}
+     * @since 13
+     */
+    public WritableImage(@NamedArg("PixelBuffer") PixelBuffer<? extends Buffer> pixelBuffer) {
+        super(validatePixelBuffer(pixelBuffer));
+        pixelBuffer.addImage(this);
+        this.pixelBuffer = pixelBuffer;
     }
 
     /**
@@ -145,14 +167,28 @@ public class WritableImage extends Image {
         return true;
     }
 
+    void bufferDirty(Rectangle rect) {
+        getWritablePlatformImage().bufferDirty(rect);
+        pixelsDirty();
+    }
+
+    private static PixelBuffer<? extends Buffer> validatePixelBuffer(PixelBuffer<? extends Buffer> pixelBuffer) {
+        return (Objects.requireNonNull(pixelBuffer, "pixelBuffer must not be null."));
+    }
+
     private PixelWriter writer;
     /**
      * This method returns a {@code PixelWriter} that provides access to
-     * write the pixels of the image.
+     * write the pixels of the image. This method is not supported for
+     * images constructed using a {@code PixelBuffer}.
      *
      * @return the {@code PixelWriter} for writing pixels to the image
+     * @throws UnsupportedOperationException if this image was created using a {@code PixelBuffer}
      */
     public final PixelWriter getPixelWriter() {
+        if (pixelBuffer != null) {
+            throw new UnsupportedOperationException("PixelWriter is not supported with PixelBuffer");
+        }
         if (getProgress() < 1.0 || isError()) {
             return null;
         }

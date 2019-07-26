@@ -251,7 +251,7 @@ final class Helpers implements MarlinConst {
         final float y12 = pts[3] - pts[1];
         // if the curve is already parallel to either axis we gain nothing
         // from rotating it.
-        if ((y12 != 0.0f && x12 != 0.0f)) {
+        if ((y12 != 0.0f) && (x12 != 0.0f)) {
             // we rotate it so that the first vector in the control polygon is
             // parallel to the x-axis. This will ensure that rotated quarter
             // circles won't be subdivided.

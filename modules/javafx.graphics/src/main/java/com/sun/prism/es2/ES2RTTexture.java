@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -304,18 +304,22 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         return es2RTT;
     }
 
+    @Override
     public Texture getBackBuffer() {
         return this;
     }
 
+    @Override
     public Graphics createGraphics() {
         return ES2Graphics.create(context, this);
     }
 
+    @Override
     public int[] getPixels() {
         return null;
     }
 
+    @Override
     public boolean readPixels(Buffer pixels, int x, int y, int width, int height) {
         context.flushVertexBuffer();
         GLContext glContext = context.getGLContext();
@@ -332,15 +336,18 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         return result;
     }
 
+    @Override
     public boolean readPixels(Buffer pixels) {
         return readPixels(pixels, getContentX(), getContentY(),
                  getContentWidth(), getContentHeight());
     }
 
+    @Override
     public int getFboID() {
         return resource.getResource().getFboID();
     }
 
+    @Override
     public Screen getAssociatedScreen() {
         return context.getAssociatedScreen();
     }
@@ -373,18 +380,22 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         throw new UnsupportedOperationException("update() not supported for RTTextures");
     }
 
+    @Override
     public boolean isOpaque() {
         return opaque;
     }
 
+    @Override
     public void setOpaque(boolean opaque) {
         this.opaque = opaque;
     }
 
+    @Override
     public boolean isVolatile() {
         return false;
     }
 
+    @Override
     public boolean isMSAA() {
         return resource.getResource().getMSAARenderBufferID() != 0;
     }

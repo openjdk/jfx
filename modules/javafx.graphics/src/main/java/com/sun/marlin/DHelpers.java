@@ -243,7 +243,7 @@ final class DHelpers implements MarlinConst {
         final double y12 = pts[3] - pts[1];
         // if the curve is already parallel to either axis we gain nothing
         // from rotating it.
-        if ((y12 != 0.0d && x12 != 0.0d)) {
+        if ((y12 != 0.0d) && (x12 != 0.0d)) {
             // we rotate it so that the first vector in the control polygon is
             // parallel to the x-axis. This will ensure that rotated quarter
             // circles won't be subdivided.

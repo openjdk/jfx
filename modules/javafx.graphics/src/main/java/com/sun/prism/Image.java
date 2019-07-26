@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,10 +27,12 @@ package com.sun.prism;
 
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.WritablePixelFormat;
+import javafx.util.Pair;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
+import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.iio.ImageFrame;
 import com.sun.javafx.iio.ImageStorage;
 import com.sun.javafx.image.BytePixelGetter;
@@ -71,7 +73,7 @@ public class Image implements PlatformImage {
     private final int scanlineStride;
     private final PixelFormat pixelFormat;
     private final float pixelScale;
-    int serial[] = new int[1];
+    private Serial serial = new Serial();
 
     public static Image fromIntArgbPreData(int[] pixels, int width, int height) {
         return new Image(PixelFormat.INT_ARGB_PRE, pixels, width, height);
@@ -109,6 +111,10 @@ public class Image implements PlatformImage {
 
     public static Image fromByteBgraPreData(ByteBuffer pixels, int width, int height) {
         return new Image(PixelFormat.BYTE_BGRA_PRE, pixels, width, height);
+    }
+
+    public static Image fromPixelBufferPreData(PixelFormat pf, Buffer pixels, int width, int height) {
+        return new Image(pf, pixels, width, height);
     }
 
     public static Image fromByteBgraPreData(ByteBuffer pixels, int width, int height, int scanlineStride) {
@@ -572,8 +578,37 @@ public class Image implements PlatformImage {
             " bpp=" + getBytesPerPixelUnit() + "]";
     }
 
-    public int getSerial() {
-        return serial[0];
+    public Serial getSerial() {
+        return serial;
+    }
+
+    private void updateSerial() {
+        updateSerial(null);
+    }
+
+    private void updateSerial(Rectangle rect) {
+        serial.update(rect);
+    }
+
+    public static class Serial {
+        private int id;
+        private Rectangle dirtyRegion;
+
+        Serial() {
+            id = 0;
+            dirtyRegion = null;
+        }
+
+        public synchronized Pair<Integer, Rectangle> getIdRect() {
+            // Called on quantumRenderer-0
+            return new Pair(id, (dirtyRegion == null)? null : new Rectangle(dirtyRegion));
+        }
+
+        public synchronized void update(Rectangle rect) {
+            // Called on FX Application thread
+            id++;
+            dirtyRegion = rect;
+        }
     }
 
     public Image promoteByteRgbToByteBgra() {
@@ -623,6 +658,11 @@ public class Image implements PlatformImage {
     }
 
     @Override
+    public void bufferDirty(Rectangle rect) {
+        updateSerial(rect);
+    }
+
+    @Override
     public javafx.scene.image.PixelFormat<?> getPlatformPixelFormat() {
         return getPixelAccessor().getPlatformPixelFormat();
     }
@@ -645,7 +685,7 @@ public class Image implements PlatformImage {
     @Override
     public void setArgb(int x, int y, int argb) {
         getPixelAccessor().setArgb(x, y, argb);
-        serial[0]++;
+        updateSerial();
     }
 
     @Override
@@ -684,7 +724,7 @@ public class Image implements PlatformImage {
     {
         getPixelAccessor().setPixels(x, y, w, h, pixelformat,
                                      pixels, scanlineBytes);
-        serial[0]++;
+        updateSerial();
     }
 
     @Override
@@ -694,7 +734,7 @@ public class Image implements PlatformImage {
     {
         getPixelAccessor().setPixels(x, y, w, h, pixelformat,
                                      pixels, offset, scanlineBytes);
-        serial[0]++;
+        updateSerial();
     }
 
     @Override
@@ -704,7 +744,7 @@ public class Image implements PlatformImage {
     {
         getPixelAccessor().setPixels(x, y, w, h, pixelformat,
                                      pixels, offset, scanlineInts);
-        serial[0]++;
+        updateSerial();
     }
 
     @Override
@@ -712,7 +752,7 @@ public class Image implements PlatformImage {
                           PixelReader reader, int srcx, int srcy)
     {
         getPixelAccessor().setPixels(dstx, dsty, w, h, reader, srcx, srcy);
-        serial[0]++;
+        updateSerial();
     }
 
     public boolean isOpaque() {
