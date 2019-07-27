@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,35 +50,36 @@ import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
 import javafx.css.Styleable;
 
 /**
- * The Border of a {@link Region}. A Border is an immutable object which
+ * The border of a {@link Region}. A {@code Border} is an immutable object which
  * encapsulates the entire set of data required to render the border
- * of a Region. Because this class is immutable, you can freely reuse the same
- * Border on many different Regions. Please refer to
+ * of a {@code Region}. Because this class is immutable, you can freely reuse the same
+ * {@code Border} on many different {@code Region}s. Please refer to
  * <a href="../doc-files/cssref.html">JavaFX CSS Reference Guide</a> for a
- * complete description of the CSS rules for styling the border of a Region.
+ * complete description of the CSS rules for styling the border of a {@code Region}.
  * <p>
- * Every Border is comprised of {@link #getStrokes() strokes} and / or
- * {@link #getImages() images}. Neither list will ever be null, but either or
+ * Every {@code Border} is comprised of {@link #getStrokes() strokes} and / or
+ * {@link #getImages() images}. Neither list will ever be {@code null}, but either or
  * both may be empty. When rendering, if no images are specified or no
  * image succeeds in loading, then all strokes will be rendered in order.
  * If any image is specified and succeeds in loading, then no strokes will
  * be drawn, although they will still contribute to the {@link #getInsets() insets}
- * and {@link #getOutsets() outsets} of the Border.
+ * and {@link #getOutsets() outsets} of the {@code Border}.
  * <p>
- * The Border's {@link #getOutsets() outsets} define any extension of the drawing area of a Region
- * which is necessary to account for all border drawing and positioning. These outsets are defined
- * by both the {@link BorderStroke}s and {@link BorderImage}s specified on this Border.
- * Outsets are strictly non-negative.
+ * The {@code Border}'s {@code outsets} define any extension of the drawing area of a {@code Region}
+ * which is necessary to account for all border drawing and positioning. These {@code outsets} are defined
+ * by both the {@link BorderStroke}s and {@link BorderImage}s specified on this {@code Border}.
+ * {@code outsets} are strictly non-negative.
  * <p>
- * {@link #getInsets()} are used to define the inner-most edge of all of the borders. It also is
- * always strictly non-negative. The Region uses the insets of the {@link Background} and Border
- * and the {@link javafx.scene.layout.Region#getPadding() Region's padding} to determine the
- * Region {@link javafx.scene.layout.Region#getInsets() insets}, which define the content area
- * for any children of the Region. The outsets of a Border together with the outsets of a Background
- * and the width and height of the Region define the geometric bounds of the Region (which in
- * turn contribute to the {@code layoutBounds}, {@code boundsInLocal}, and {@code boundsInParent}).
+ * {@code insets} are used to define the inner-most edge of all of the borders. It also is
+ * always strictly non-negative. The {@code Region} uses the insets of the {@link Background} and {@code Border},
+ * and the {@link Region#getPadding() Region's padding} to determine the
+ * {@code Region} {@link Region#getInsets() insets}, which define the content area
+ * for any children of the {@code Region}. The {@code outsets} of a {@code Border} together with the {@code outsets} of
+ * a {@code Background}, and the width and height of the {@code Region} define the geometric bounds of the
+ * {@code Region} (which in turn contribute to the {@code layoutBounds}, {@code boundsInLocal}, and
+ * {@code boundsInParent}).
  * <p>
- * A Border is most often used in cases where you want to skin the Region with an image,
+ * A {@code Border} is most often used in cases where you want to skin the {@code Region} with an image,
  * often used in conjunction with 9-patch scaling techniques. In such cases, you may
  * also specify a stroked border which is only used when the image fails to load for some
  * reason.
@@ -194,7 +195,7 @@ public final class Border {
 
     /**
      * The insets define the distance from the edge of the Region to the inner-most edge
-     * of the border, if that distance is non-negative. The values in these outsets
+     * of the border, if that distance is non-negative. The values in these insets
      * are strictly non-negative.
      * @return the insets define the distance from the edge of the Region to the
      * inner-most edge of the border

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,7 +58,7 @@ import javafx.util.Callback;
  * StackPane example:
  * <pre>{@code
  *     StackPane stack = new StackPane();
- *     stack.getChildren().addAll(new Rectangle(100,100,Color.BLUE), new Label("Go!));
+ *     stack.getChildren().addAll(new Rectangle(100,100,Color.BLUE), new Label("Go!"));
  * }</pre>
  * <p>
  * StackPane lays out each managed child regardless of the child's

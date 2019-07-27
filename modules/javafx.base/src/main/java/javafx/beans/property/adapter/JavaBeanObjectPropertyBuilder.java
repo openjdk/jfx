@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ import java.lang.reflect.Method;
  * method chaining.
  * <p>
  * If you have to generate adapters for the same property of several instances
- * of the same class, you can reuse a {@code JavaBeanObjectPropertyBuilder}.
+ * of the same class, you can reuse a {@code JavaBeanObjectPropertyBuilder}
  * by switching the Java Bean instance (with {@link #bean(java.lang.Object)} and
  * calling {@link #build()}.
  *
@@ -64,7 +64,12 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
 
     /**
-     * Create a new instance of {@code JavaBeanObjectPropertyBuilder}
+     * <b>Do not use this constructor.</b> It will be deprecated in the next version. Use {@link #create()} instead.
+     */
+    public JavaBeanObjectPropertyBuilder() {}
+
+    /**
+     * Creates a new instance of {@code JavaBeanObjectPropertyBuilder}.
      *
      * @return the new {@code JavaBeanObjectPropertyBuilder}
      */
@@ -73,7 +78,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Generate a new {@link JavaBeanObjectProperty} with the current settings.
+     * Generates a new {@link JavaBeanObjectProperty} with the current settings.
      *
      * @return the new {@code JavaBeanObjectProperty}
      * @throws NoSuchMethodException if the settings were not sufficient to find
@@ -85,7 +90,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Set the name of the property
+     * Sets the name of the property.
      *
      * @param name the name of the property
      * @return a reference to this builder to enable method chaining
@@ -96,7 +101,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Set the Java Bean instance the adapter should connect to
+     * Sets the Java Bean instance the adapter should connect to.
      *
      * @param bean the Java Bean instance
      * @return a reference to this builder to enable method chaining
@@ -107,8 +112,8 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Set the Java Bean class in which the getter and setter should be searched.
-     * This can be useful, if the builder should generate adapters for several
+     * Sets the Java Bean class in which the getter and setter should be searched.
+     * This can be useful if the builder should generate adapters for several
      * Java Beans of different types.
      *
      * @param beanClass the Java Bean class
@@ -120,7 +125,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Set an alternative name for the getter. This can be omitted, if the
+     * Sets an alternative name for the getter. This can be omitted if the
      * name of the getter follows Java Bean naming conventions.
      *
      * @param getter the alternative name of the getter
@@ -132,7 +137,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Set an alternative name for the setter. This can be omitted, if the
+     * Sets an alternative name for the setter. This can be omitted if the
      * name of the setter follows Java Bean naming conventions.
      *
      * @param setter the alternative name of the setter
@@ -144,7 +149,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Set the getter method directly. This can be omitted, if the
+     * Sets the getter method directly. This can be omitted if the
      * name of the getter follows Java Bean naming conventions.
      *
      * @param getter the getter
@@ -156,7 +161,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     }
 
     /**
-     * Set the setter method directly. This can be omitted, if the
+     * Sets the setter method directly. This can be omitted if the
      * name of the setter follows Java Bean naming conventions.
      *
      * @param setter the setter

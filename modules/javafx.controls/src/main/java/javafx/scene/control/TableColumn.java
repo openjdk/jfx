@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -411,12 +411,12 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     // --- Cell Factory
     /**
      * The cell factory for all cells in this column. The cell factory
-     * is responsible for rendering the data contained within each TableCell for
+     * is responsible for rendering the data contained within each {@code TableCell} for
      * a single table column.
      *
-     * <p>By default TableColumn uses the {@link #DEFAULT_CELL_FACTORY default cell
+     * <p>By default, {@code TableColumn} uses the {@link #DEFAULT_CELL_FACTORY default cell
      * factory}, but this can be replaced with a custom implementation, for
-     * example to show data in a different way or to support editing.There is a
+     * example, to show data in a different way or to support editing. There is a
      * lot of documentation on creating custom cell factories
      * elsewhere (see {@link Cell} and {@link TableView} for example).</p>
      *

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ import javafx.beans.Observable;
  * Implementations of this class should strive to generate as few events as
  * possible to avoid wasting too much time in event handlers. Implementations in
  * this library mark themselves as invalid when the first invalidation event
- * occurs. They do not generate anymore invalidation events until their value is
+ * occurs. They do not generate any more invalidation events until their value is
  * recomputed and valid again.
  * <p>
  * Two types of listeners can be attached to an {@code ObservableValue}:

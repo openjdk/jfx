@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -647,8 +647,8 @@ public class Text extends Shape {
     }
 
     /**
-     * Defines a width constraint for the text in user space coordinates,
-     * e.g. pixels, not glyph or character count.
+     * Defines a width constraint for the text in user space coordinates.
+     * The width is measured in pixels (and not glyph or character count).
      * If the value is {@code > 0} text will be line wrapped as needed
      * to satisfy this constraint.
      *
@@ -792,7 +792,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Specifies a requested font smoothing type : gray or LCD.
+     * Specifies a requested font smoothing type: gray or LCD.
      *
      * The width of the bounding box is defined by the widest row.
      *
@@ -848,27 +848,21 @@ public class Text extends Shape {
         NodeHelper.markDirty(this, DirtyBits.NODE_GEOMETRY);
     }
 
-    /**
-     * Shape of selection in local coordinates.
-     *
-     * @return the shape of selection in local coordinates
-     * @since 9
-     */
     public final PathElement[] getSelectionShape() {
         return selectionShapeProperty().get();
     }
 
+    /**
+     * The shape of the selection in local coordinates.
+     *
+     * @return the {@code selectionShape} property
+     *
+     * @since 9
+     */
     public final ReadOnlyObjectProperty<PathElement[]> selectionShapeProperty() {
         return getTextAttribute().selectionShapeProperty();
     }
 
-    /**
-     * Selection start index in the content.
-     * Set to {@code -1} to unset selection.
-     *
-     * @param value the selection start index
-     * @since 9
-     */
     public final void setSelectionStart(int value) {
         if (value == -1 &&
                 (attributes == null || attributes.selectionStart == null)) {
@@ -884,17 +878,20 @@ public class Text extends Shape {
         return attributes.getSelectionStart();
     }
 
+    /**
+     * The start index of the selection in the content.
+     * If the value is -1, the selection is unset.
+     *
+     * @return the {@code selectionStart} property
+     *
+     * @defaultValue -1
+     *
+     * @since 9
+     */
     public final IntegerProperty selectionStartProperty() {
         return getTextAttribute().selectionStartProperty();
     }
 
-    /**
-     * Selection end index in the content.
-     * Set to {@code -1} to unset selection.
-     *
-     * @param value the selection end index
-     * @since 9
-     */
     public final void setSelectionEnd(int value) {
         if (value == -1 &&
                 (attributes == null || attributes.selectionEnd == null)) {
@@ -910,6 +907,16 @@ public class Text extends Shape {
         return attributes.getSelectionEnd();
     }
 
+    /**
+     * The end index of the selection in the content.
+     * If the value is -1, the selection is unset.
+     *
+     * @return the {@code selectionEnd} property
+     *
+     * @defaultValue -1
+     *
+     * @since 9
+     */
     public final IntegerProperty selectionEndProperty() {
         return getTextAttribute().selectionEndProperty();
     }
@@ -931,27 +938,21 @@ public class Text extends Shape {
         return selectionFillProperty().get();
     }
 
-    /**
-     * Shape of caret in local coordinates.
-     *
-     * @return the shape of caret in local coordinates
-     * @since 9
-     */
     public final PathElement[] getCaretShape() {
         return caretShapeProperty().get();
     }
 
+    /**
+     * The shape of caret, in local coordinates.
+     *
+     * @return the {@code caretShape} property
+     *
+     * @since 9
+     */
     public final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
         return getTextAttribute().caretShapeProperty();
     }
 
-    /**
-     * Caret index in the content.
-     * Set to {@code -1} to unset caret.
-     *
-     * @param value the caret index in the content
-     * @since 9
-     */
     public final void setCaretPosition(int value) {
         if (value == -1 &&
                 (attributes == null || attributes.caretPosition == null)) {
@@ -967,17 +968,20 @@ public class Text extends Shape {
         return attributes.getCaretPosition();
     }
 
+    /**
+     * The caret index in the content.
+     * If the value is -1, the caret is unset.
+     *
+     * @return the {@code caretPosition} property
+     *
+     * @defaultValue -1
+     *
+     * @since 9
+     */
     public final IntegerProperty caretPositionProperty() {
         return getTextAttribute().caretPositionProperty();
     }
 
-    /**
-     * caret bias in the content. {@code true} means a bias towards the leading character edge.
-     * (true=leading/false=trailing)
-     *
-     * @param value the caret bias in the content
-     * @since 9
-     */
     public final void setCaretBias(boolean value) {
         if (value && (attributes == null || attributes.caretBias == null)) {
             return;
@@ -992,6 +996,16 @@ public class Text extends Shape {
         return getTextAttribute().isCaretBias();
     }
 
+    /**
+     * The type of caret bias in the content. If {@code true}, the bias is towards the leading character edge,
+     * otherwise, the bias is towards the trailing character edge.
+     *
+     * @return the {@code caretBias} property
+     *
+     * @defaultValue {@code true}
+     *
+     * @since 9
+     */
     public final BooleanProperty caretBiasProperty() {
         return getTextAttribute().caretBiasProperty();
     }
@@ -1025,7 +1039,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Returns shape for the caret at given index and bias.
+     * Returns the shape for the caret at the given index and bias.
      *
      * @param charIndex the character index for the caret
      * @param caretBias whether the caret is biased on the leading edge of the character
@@ -1043,7 +1057,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Returns shape for the range of the text in local coordinates.
+     * Returns the shape for the range of the text in local coordinates.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range
@@ -1055,7 +1069,7 @@ public class Text extends Shape {
     }
 
     /**
-     * Returns shape for the underline in local coordinates.
+     * Returns the shape for the underline in local coordinates.
      *
      * @param start the beginning character index for the range
      * @param end the end character index (non-inclusive) for the range

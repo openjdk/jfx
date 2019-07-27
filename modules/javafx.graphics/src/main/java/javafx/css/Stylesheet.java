@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,6 +91,12 @@ public class Stylesheet {
     public StyleOrigin getOrigin() {
         return origin;
     }
+
+    /**
+     * Sets the origin of this {@code Stylesheet}.
+
+     * @param origin the origin of this {@code Stylesheet}
+     */
     public void setOrigin(StyleOrigin origin) {
         this.origin = origin;
     }
@@ -145,9 +151,7 @@ public class Stylesheet {
      * @param url the base URI for this stylesheet
      */
     Stylesheet(String url) {
-
         this.url = url;
-
     }
 
     /**
@@ -168,7 +172,12 @@ public class Stylesheet {
         return fontFaces;
     }
 
-    @Override public boolean equals(Object obj) {
+    /**
+     * Indicates whether this {@code Stylesheet} is "equal to" some other object. Equality of two {@code Stylesheet}s is
+     * based on the equality of their URL as defined by {@link #getUrl()}.
+     */
+    @Override
+    public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj instanceof Stylesheet) {
             Stylesheet other = (Stylesheet)obj;
@@ -184,6 +193,9 @@ public class Stylesheet {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override public int hashCode() {
         int hash = 7;
         hash = 13 * hash + (this.url != null ? this.url.hashCode() : 0);

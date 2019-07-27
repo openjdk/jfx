@@ -1894,7 +1894,8 @@ public final class Color extends Paint implements Interpolatable<Color> {
     private Object platformPaint;
 
     /**
-     * Creates a new instance of color
+     * Creates a {@code Color} with the specified red, green, blue, and alpha values in the range 0.0-1.0.
+     *
      * @param red red component ranging from {@code 0} to {@code 1}
      * @param green green component ranging from {@code 0} to {@code 1}
      * @param blue blue component ranging from {@code 0} to {@code 1}

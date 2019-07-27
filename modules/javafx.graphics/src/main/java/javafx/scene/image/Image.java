@@ -620,7 +620,7 @@ public class Image {
     }
 
     /**
-     * Construct a new {@code Image} with the specified parameters.
+     * Constructs a new {@code Image} with the specified parameters.
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
@@ -635,7 +635,7 @@ public class Image {
     }
 
     /**
-     * Construct a new {@code Image} with the specified parameters.
+     * Constructs a new {@code Image} with the specified parameters.
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
@@ -658,7 +658,7 @@ public class Image {
     }
 
     /**
-     * Construct a new {@code Image} with the specified parameters.
+     * Constructs a new {@code Image} with the specified parameters.
      *
      * The <i>url</i> without scheme is threated as relative to classpath,
      * url with scheme is treated accordingly to the scheme using
@@ -692,7 +692,7 @@ public class Image {
     }
 
     /**
-     * Construct an {@code Image} with content loaded from the specified
+     * Constructs an {@code Image} with content loaded from the specified
      * input stream.
      *
      * @param is the stream from which to load the image
@@ -704,7 +704,7 @@ public class Image {
     }
 
     /**
-     * Construct a new {@code Image} with the specified parameters.
+     * Constructs a new {@code Image} with the specified parameters.
      *
      * @param is the stream from which to load the image
      * @param requestedWidth the image's bounding box width

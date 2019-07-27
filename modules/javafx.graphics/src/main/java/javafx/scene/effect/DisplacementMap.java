@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,11 +47,11 @@ import com.sun.javafx.scene.BoundsAccessor;
  * and {@code offset} attributes, scaled again by the size of the
  * source input image and used as an offset from the destination pixel
  * to retrieve the pixel data from the source input.
- * <pre>
- *     dst[x,y] = src[(x,y) + (offset+scale*map[x,y])*(srcw,srch)]
- * </pre>
- * A value of {@code (0.0,&nbsp;0.0)} would specify no offset for the
- * pixel data whereas a value of {@code (0.5,&nbsp;0.5)} would specify
+ * <p>
+ * {@code dst[x, y] = src[(x, y) + (offset + scale * map[x, y]) * (srcw, srch)]}
+ * <p>
+ * A value of {@code (0.0, 0.0)} would specify no offset for the
+ * pixel data whereas a value of {@code (0.5, 0.5)} would specify
  * an offset of half of the source image size.
  * <p>
  * <b>Note</b> that the mapping is the offset from a destination pixel to
@@ -69,8 +69,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * </p>
  * <p>
  * Example:
- * <pre>{@code
- * int width = 220;
+ * <pre>{@code  int width = 220;
  * int height = 100;
  *
  * FloatMap floatMap = new FloatMap();
@@ -93,9 +92,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  * text.setText("Wavy Text");
  * text.setFill(Color.web("0x3b596d"));
  * text.setFont(Font.font(null, FontWeight.BOLD, 50));
- * text.setEffect(displacementMap);
- *
- * }</pre>
+ * text.setEffect(displacementMap);}</pre>
  *
  * <p> The code above produces the following: </p>
  * <p> <img src="doc-files/displacementmap.png" alt="The visual effect of
