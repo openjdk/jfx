@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,9 +46,7 @@ package javafx.beans.value;
 public interface ChangeListener<T> {
 
     /**
-     * This method needs to be provided by an implementation of
-     * {@code ChangeListener}. It is called if the value of an
-     * {@link ObservableValue} changes.
+     * Called when the value of an {@link ObservableValue} changes.
      * <p>
      * In general, it is considered bad practice to modify the observed value in
      * this method.

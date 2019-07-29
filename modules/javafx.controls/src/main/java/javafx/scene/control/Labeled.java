@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,7 +179,7 @@ public abstract class Labeled extends Control {
 
 
     /**
-     * Specifies the behavior for lines of text <em>when text is multiline</em>
+     * Specifies the behavior for lines of text <em>when text is multiline</em>.
      * Unlike {@link #contentDisplayProperty} which affects the graphic and text, this setting
      * only affects multiple lines of text relative to the text bounds.
      * @return the alignment of lines of text within this labeled

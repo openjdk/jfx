@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,18 +60,18 @@ import javafx.css.StyleableProperty;
  * TextFlow is special layout designed to lay out rich text.
  * It can be used to layout several {@link Text} nodes in a single text flow.
  * The TextFlow uses the text and the font of each {@link Text} node inside of it
- * plus it own width and text alignment to determine the location for each child.
- * A single {@link Text} node can span over several lines due to wrapping and
+ * plus its own width and text alignment to determine the location for each child.
+ * A single {@link Text} node can span over several lines due to wrapping, and
  * the visual location of {@link Text} node can differ from the logical location
  * due to bidi reordering.
  *
  * <p>
- * Any other Node, rather than Text, will be treated as embedded object in the
+ * Any Node, other than Text, will be treated as an embedded object in the
  * text layout. It will be inserted in the content using its preferred width,
  * height, and baseline offset.
  *
  * <p>
- * When a {@link Text} node is inside of a TextFlow some its properties are ignored.
+ * When a {@link Text} node is inside of a TextFlow, some of its properties are ignored.
  * For example, the x and y properties of the {@link Text} node are ignored since
  * the location of the node is determined by the parent. Likewise, the wrapping
  * width in the {@link Text} node is ignored since the width used for wrapping
