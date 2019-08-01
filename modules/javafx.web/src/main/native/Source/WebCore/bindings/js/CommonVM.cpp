@@ -73,6 +73,11 @@ JSC::VM& commonVMSlow()
 Frame* lexicalFrameFromCommonVM()
 {
     if (auto* topCallFrame = commonVM().topCallFrame) {
+#if PLATFORM(JAVA) && ENABLE(C_LOOP)
+        if (!topCallFrame->codeBlock()) {
+            return nullptr;
+        }
+#endif
         if (auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(topCallFrame->lexicalGlobalObject())) {
             if (auto* window = JSC::jsDynamicCast<JSDOMWindow*>(commonVM(), globalObject)) {
                 if (auto* frame = window->wrapped().frame())

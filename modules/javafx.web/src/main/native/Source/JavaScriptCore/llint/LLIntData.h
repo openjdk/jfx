@@ -96,8 +96,7 @@ inline Opcode getOpcodeWide(OpcodeID id)
 #if ENABLE(COMPUTED_GOTO_OPCODES)
     return g_opcodeMapWide[id];
 #else
-    UNUSED_PARAM(id);
-    RELEASE_ASSERT_NOT_REACHED();
+    return static_cast<Opcode>(id - numOpcodeIDs);
 #endif
 }
 
