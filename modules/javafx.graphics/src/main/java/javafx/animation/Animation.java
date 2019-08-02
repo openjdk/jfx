@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -356,10 +356,10 @@ public abstract class Animation {
      * Read-only variable to indicate current direction/speed at which the
      * {@code Animation} is being played.
      * <p>
-     * {@code currentRate} is not necessary equal to {@code rate}.
+     * {@code currentRate} is not necessarily equal to {@code rate}.
      * {@code currentRate} is set to {@code 0.0} when animation is paused or
-     * stopped. {@code currentRate} may also point to different direction during
-     * reverse cycles when {@code autoReverse} is {@code true}
+     * stopped. {@code currentRate} may also point in the opposite direction of {@code rate} during
+     * reverse cycles when {@code autoReverse} is {@code true}.
      *
      * @defaultValue 0.0
      */
@@ -563,8 +563,7 @@ public abstract class Animation {
      * running {@code Animation}, the animation has to be stopped and started again to pick
      * up the new value.
      *
-     * @defaultValue 1.0
-     *
+     * @defaultValue 1
      */
     private IntegerProperty cycleCount;
     private static final int DEFAULT_CYCLE_COUNT = 1;

@@ -106,8 +106,8 @@ import java.lang.ref.WeakReference;
  * the {@code root} property.   If a {@code Group} is used as the root, the
  * contents of the scene graph will be clipped by the scene's width and height and
  * changes to the scene's size (if user resizes the stage) will not alter the
- * layout of the scene graph.    If a resizable node (layout {@code Region} or
- * {@code Control} is set as the root, then the root's size will track the
+ * layout of the scene graph. If a resizable node (layout {@code Region} or
+ * {@code Control}) is set as the root, then the root's size will track the
  * scene's size, causing the contents to be relayed out as necessary.
  * <p>
  * The scene's size may be initialized by the application during construction.

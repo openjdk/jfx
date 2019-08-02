@@ -62,7 +62,7 @@ public class WritableImage extends Image {
     private ImageLoader tkImageLoader;
 
     /**
-     * Construct an empty image of the specified dimensions.
+     * Constructs an empty image of the specified dimensions.
      * The image will initially be filled with transparent pixels.
      * Images constructed this way will always be readable and writable
      * so the corresponding getPixelReader() and getPixelWriter() will
@@ -98,7 +98,7 @@ public class WritableImage extends Image {
     }
 
     /**
-     * Construct an image of the specified dimensions, initialized from
+     * Constructs an image of the specified dimensions, initialized from
      * the indicated {@link PixelReader}.
      * The image will initially be filled with data returned from the
      * {@code PixelReader}.
@@ -125,7 +125,7 @@ public class WritableImage extends Image {
     }
 
     /**
-     * Construct an image of the specified dimensions, initialized from
+     * Constructs an image of the specified dimensions, initialized from
      * the indicated region of the {@link PixelReader}.
      * The image will initially be filled with data returned from the
      * {@code PixelReader} for the specified region.

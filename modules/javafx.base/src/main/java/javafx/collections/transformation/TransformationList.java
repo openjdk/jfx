@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,7 @@ import javafx.collections.WeakListChangeListener;
  * (transforms) the wrapped list's elements, order, size, or structure.
  *
  * If the source list is observable, a listener is automatically added to it
- * and the events are delegated to {@link #sourceChanged(javafx.collections.ListChangeListener.Change)}
+ * and the events are delegated to {@link #sourceChanged(javafx.collections.ListChangeListener.Change)}.
  *
  * @param <E> the type parameter of this list
  * @param <F> the upper bound of the type of the source list
