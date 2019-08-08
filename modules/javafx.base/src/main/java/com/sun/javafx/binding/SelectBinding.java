@@ -486,13 +486,15 @@ public class SelectBinding {
                 } catch (RuntimeException ex) {
                     final PlatformLogger logger = Logging.getLogger();
                     if (logger.isLoggable(Level.WARNING)) {
-                        Logging.getLogger().warning("Exception while evaluating select-binding " + stepsToString());
-                        if (ex instanceof  IllegalStateException) {
+                        String msg = "Exception while evaluating select-binding " + stepsToString();
+                        if (ex instanceof IllegalStateException) {
+                            logger.warning(msg);
                             logger.warning("Property '" + propertyNames[i] + "' does not exist in " + obj.getClass(), ex);
                         } else if (ex instanceof NullPointerException) {
+                            logger.fine(msg);
                             logger.fine("Property '" + propertyNames[i] + "' in " + properties[i] + " is null", ex);
                         } else {
-                            Logging.getLogger().warning("", ex);
+                            logger.warning(msg, ex);
                         }
                     }
                     // return default
