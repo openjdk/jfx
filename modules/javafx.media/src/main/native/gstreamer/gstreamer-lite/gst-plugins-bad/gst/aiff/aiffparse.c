@@ -643,7 +643,11 @@ gst_aiff_parse_calculate_duration (GstAiffParse * aiff)
   return FALSE;
 }
 
+#ifdef GSTREAMER_LITE
+static gboolean
+#else
 static void
+#endif
 gst_aiff_parse_ignore_chunk (GstAiffParse * aiff, guint32 tag, guint32 size)
 {
 #ifdef GSTREAMER_LITE
@@ -654,7 +658,11 @@ gst_aiff_parse_ignore_chunk (GstAiffParse * aiff, guint32 tag, guint32 size)
 
   if (aiff->streaming) {
     if (!gst_aiff_parse_peek_chunk (aiff, &tag, &size))
+#ifdef GSTREAMER_LITE
+      return FALSE;
+#else
       return;
+#endif
   }
   GST_WARNING_OBJECT (aiff, "Ignoring tag %" GST_FOURCC_FORMAT,
       GST_FOURCC_ARGS (tag));
@@ -667,6 +675,10 @@ gst_aiff_parse_ignore_chunk (GstAiffParse * aiff, guint32 tag, guint32 size)
   if (aiff->streaming) {
     gst_adapter_flush (aiff->adapter, flush);
   }
+
+#ifdef GSTREAMER_LITE
+  return TRUE;
+#endif
 }
 
 static double
@@ -1124,11 +1136,23 @@ gst_aiff_parse_stream_headers (GstAiffParse * aiff)
       }
       case GST_MAKE_FOURCC ('C', 'H', 'A', 'N'):{
         GST_FIXME_OBJECT (aiff, "Handle CHAN chunk with channel layouts");
+#ifdef GSTREAMER_LITE
+        if (!gst_aiff_parse_ignore_chunk (aiff, tag, size)) {
+          return GST_FLOW_OK;
+        }
+#else
         gst_aiff_parse_ignore_chunk (aiff, tag, size);
+#endif
         break;
       }
       default:
+#ifdef GSTREAMER_LITE
+        if (!gst_aiff_parse_ignore_chunk (aiff, tag, size)) {
+          return GST_FLOW_OK;
+        }
+#else
         gst_aiff_parse_ignore_chunk (aiff, tag, size);
+#endif
     }
 
     buf = NULL;
