@@ -189,15 +189,17 @@ public class PixelBuffer<T extends Buffer> {
         Toolkit.getToolkit().checkFxUserThread();
         Objects.requireNonNull(callback, "callback must not be null.");
         Rectangle2D rect2D = callback.call(this);
-        Rectangle rect = null;
         if (rect2D != null) {
-            int x1 = (int) Math.floor(rect2D.getMinX());
-            int y1 = (int) Math.floor(rect2D.getMinY());
-            int x2 = (int) Math.ceil(rect2D.getMaxX());
-            int y2 = (int) Math.ceil(rect2D.getMaxY());
-            rect = new Rectangle(x1, y1, x2 - x1, y2 - y1);
+            if (rect2D.getWidth() > 0 && rect2D.getHeight() > 0) {
+                int x1 = (int) Math.floor(rect2D.getMinX());
+                int y1 = (int) Math.floor(rect2D.getMinY());
+                int x2 = (int) Math.ceil(rect2D.getMaxX());
+                int y2 = (int) Math.ceil(rect2D.getMaxY());
+                bufferDirty(new Rectangle(x1, y1, x2 - x1, y2 - y1));
+            }
+        } else {
+            bufferDirty(null);
         }
-        bufferDirty(rect);
     }
 
     private void bufferDirty(Rectangle rect) {
