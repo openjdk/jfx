@@ -227,6 +227,16 @@ public class MiscellaneousTest extends TestBase {
         }
     }
 
+    @Test public void testCookieEnabled() {
+        final WebEngine webEngine = createWebEngine();
+        submit(() -> {
+            final JSObject window = (JSObject) webEngine.executeScript("window");
+            assertNotNull(window);
+            webEngine.executeScript("var cookieEnabled = navigator.cookieEnabled");
+            assertTrue((Boolean)window.getMember("cookieEnabled"));
+        });
+    }
+
     // This test case will be removed once we implement Websql feature.
     @Test public void testWebSQLUndefined() {
         final WebEngine webEngine = createWebEngine();
