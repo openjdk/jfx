@@ -38,6 +38,7 @@
 #include "EditorClientJava.h"
 #include "FrameLoaderClientJava.h"
 #include "InspectorClientJava.h"
+#include "PageStorageSessionProvider.h"
 #include "PlatformStrategiesJava.h"
 #include "ProgressTrackerClientJava.h"
 #include "VisitedLinkStoreJava.h"
@@ -59,6 +60,7 @@
 #include <WebCore/Chrome.h>
 #include <WebCore/ContextMenu.h>
 #include <WebCore/ContextMenuController.h>
+#include <WebCore/CookieJar.h>
 #include <WebCore/DeprecatedGlobalSettings.h>
 #include <WebCore/Document.h>
 #include <WebCore/DragController.h>
@@ -875,7 +877,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     //utaTODO: history agent implementation
 
     auto pc = pageConfigurationWithEmptyClients();
-
+    auto pageStorageSessionProvider = PageStorageSessionProvider::create();
+    pc.cookieJar = CookieJar::create(pageStorageSessionProvider.copyRef());
     pc.chromeClient = new ChromeClientJava(jlself);
     pc.contextMenuClient = new ContextMenuClientJava(jlself);
     pc.editorClient = makeUniqueRef<EditorClientJava>(jlself);
@@ -889,10 +892,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.progressTrackerClient = new ProgressTrackerClientJava(jlself);
 
     pc.backForwardClient = BackForwardList::create();
-
     auto page = std::make_unique<Page>(WTFMove(pc));
     // Associate PageSupplementJava instance which has WebPage java object.
     page->provideSupplement(PageSupplementJava::supplementName(), std::make_unique<PageSupplementJava>(self));
+    pageStorageSessionProvider->setPage(*page);
 #if ENABLE(GEOLOCATION)
     WebCore::provideGeolocationTo(page.get(), *new GeolocationClientMock());
 #endif
