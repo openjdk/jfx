@@ -34,15 +34,20 @@ import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Skin;
 import javafx.scene.control.SkinBase;
+import javafx.scene.input.Mnemonic;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the
@@ -168,6 +173,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             label.setMnemonicParsing(getSkinnable().isMnemonicParsing());
             getSkinnable().requestLayout();
         });
+        List<Mnemonic> mnemonics = new ArrayList<>();
         registerChangeListener(popup.showingProperty(), e -> {
             if (!popup.isShowing() && getSkinnable().isShowing()) {
                 // Popup was dismissed. Maybe user clicked outside or typed ESCAPE.
@@ -176,7 +182,8 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
             }
 
             if (popup.isShowing()) {
-                Utils.addMnemonics(popup, getSkinnable().getScene(), NodeHelper.isShowMnemonics(getSkinnable()));
+                boolean showMnemonics = NodeHelper.isShowMnemonics(getSkinnable());
+                Utils.addMnemonics(popup, getSkinnable().getScene(), showMnemonics, mnemonics);
             } else {
                 // we wrap this in a runLater so that mnemonics are not removed
                 // before all key events are fired (because KEY_PRESSED might have
@@ -185,7 +192,10 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
                 // through the mnemonics code (especially in case they should be
                 // consumed to prevent them being used elsewhere).
                 // See JBS-8090026 for more detail.
-                Platform.runLater(() -> Utils.removeMnemonics(popup, getSkinnable().getScene()));
+                Scene scene = getSkinnable().getScene();
+                List<Mnemonic> mnemonicsToRemove = new ArrayList<>(mnemonics);
+                mnemonics.clear();
+                Platform.runLater(() -> mnemonicsToRemove.forEach(scene::removeMnemonic));
             }
         });
     }

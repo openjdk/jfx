@@ -60,6 +60,7 @@ import javafx.scene.text.TextBoundsType;
 import javafx.scene.text.HitInfo;
 
 import java.text.Bidi;
+import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
 
@@ -693,6 +694,10 @@ public class Utils {
     }
 
     public static void addMnemonics(ContextMenu popup, Scene scene, boolean initialState) {
+        addMnemonics(popup, scene, initialState, null);
+    }
+
+    public static void addMnemonics(ContextMenu popup, Scene scene, boolean initialState, List<Mnemonic> into) {
 
         if (!com.sun.javafx.PlatformUtil.isMac()) {
 
@@ -713,6 +718,9 @@ public class Utils {
                         Mnemonic myMnemonic = new Mnemonic(cmContent.getLabelAt(i), mnemonicKeyCombo);
                         scene.addMnemonic(myMnemonic);
                         NodeHelper.setShowMnemonics(cmContent.getLabelAt(i), initialState);
+                        if (into != null) {
+                            into.add(myMnemonic);
+                        }
                     }
                 }
             }
