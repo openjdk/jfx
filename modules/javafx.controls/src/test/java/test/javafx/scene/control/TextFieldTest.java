@@ -25,7 +25,20 @@
 
 package test.javafx.scene.control;
 
-import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.sun.javafx.tk.Toolkit;
+
+import static javafx.scene.input.KeyCode.*;
+import static org.junit.Assert.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -37,12 +50,13 @@ import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControlShim;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import static org.junit.Assert.*;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class TextFieldTest {
     private TextField txtField;//Empty string
@@ -284,6 +298,81 @@ public class TextFieldTest {
         assertEquals("x", dummyTxtField.getText());
     }
 
+    private Scene scene;
+    private Stage stage;
+    private StackPane root;
 
+    /**
+     * test for JDK-8207774: ENTER must not be forwared if actionHandler
+     * consumed the action.
+     *
+     * Here we test that an accelerator is not triggered.
+     */
+    @Test
+    public void testEnterWithConsumingActionHandlerAccelerator() {
+        initStage();
+        root.getChildren().add(txtField);
+        txtField.addEventHandler(ActionEvent.ACTION, e -> e.consume());
+        scene.getAccelerators().put(new KeyCodeCombination(ENTER), () ->
+            fail("accelerator must not be notified"));
+        stage.show();
+        KeyEventFirer keyboard = new KeyEventFirer(txtField);
+        keyboard.doKeyPress(ENTER);
+    }
 
+    /**
+     * test for JDK-8207774: ENTER must not be forwared if actionHandler
+     * consumed the action.
+     *
+     * Here we test that handlers on parent are not notified.
+     */
+    @Test
+    public void testEnterWithConsumingActionHandlerParentHandler() {
+        initStage();
+        root.getChildren().add(txtField);
+        txtField.addEventHandler(ActionEvent.ACTION, e -> e.consume());
+        root.addEventHandler(KeyEvent.KEY_PRESSED, e ->
+            fail("parent handler must not be notified but received: " + e ));
+        stage.show();
+        KeyEventFirer keyboard = new KeyEventFirer(txtField);
+        keyboard.doKeyPress(ENTER);
+    }
+
+    /**
+     * sanity: pressing enter actually triggers a consuming actionHandler.
+     */
+    @Test
+    public void testEnterWithConsumingActionHandler() {
+        initStage();
+        root.getChildren().add(txtField);
+        List<ActionEvent> actions = new ArrayList<>();
+        txtField.addEventHandler(ActionEvent.ACTION, e -> {
+            e.consume();
+            actions.add(e);
+        });
+        stage.show();
+        KeyEventFirer keyboard = new KeyEventFirer(txtField);
+        keyboard.doKeyPress(ENTER);
+        assertEquals("actionHandler must be notified", 1, actions.size());
+        assertTrue("action must be consumed ", actions.get(0).isConsumed());
+    }
+
+    /**
+     * Helper method to init the stage only if really needed.
+     */
+    private void initStage() {
+        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        root = new StackPane();
+        scene = new Scene(root);
+        stage = new Stage();
+        stage.setScene(scene);
+    }
+
+    @After
+    public void cleanup() {
+        if (stage != null) {
+            stage.hide();
+        }
+    }
 }

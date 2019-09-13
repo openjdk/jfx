@@ -72,6 +72,7 @@ import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.ImagePattern;
 import com.sun.prism.paint.Paint;
+import com.sun.prism.PrinterGraphics;
 import com.sun.scenario.effect.Offset;
 
 /**
@@ -612,7 +613,7 @@ public class NGRegion extends NGGroup {
             Rectangle rect = null;
             // RT-25013: We need to make sure that we do not use a cached image in the case of a
             // scaled region, or things won't look right (they'll looked scaled instead of vector-resized).
-            if (cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity()) {
+            if (cacheMode != 0 && g.getTransformNoClone().isTranslateOrIdentity() && !(g instanceof PrinterGraphics)) {
                 final RegionImageCache imageCache = getImageCache(g);
                 if (imageCache.isImageCachable(textureWidth, textureHeight)) {
                     final Integer key = getCacheKey(textureWidth, textureHeight);
@@ -805,7 +806,8 @@ public class NGRegion extends NGGroup {
         final boolean cache =
                 background.getFills().size() > 1 && // Not worth the overhead otherwise
                 cacheMode != 0 &&
-                g.getTransformNoClone().isTranslateOrIdentity();
+                g.getTransformNoClone().isTranslateOrIdentity() &&
+                !(g instanceof PrinterGraphics);
         final int border = 1;
         RTTexture cached = null;
         Rectangle rect = null;
