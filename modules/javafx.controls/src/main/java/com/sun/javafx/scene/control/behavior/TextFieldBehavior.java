@@ -178,7 +178,8 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
     @Override protected void fire(KeyEvent event) {
         TextField textField = getNode();
         EventHandler<ActionEvent> onAction = textField.getOnAction();
-        ActionEvent actionEvent = new ActionEvent(textField, null);
+        // use textField as target to prevent immediate copy in dispatch
+        ActionEvent actionEvent = new ActionEvent(textField, textField);
 
         textField.commitValue();
         textField.fireEvent(actionEvent);
