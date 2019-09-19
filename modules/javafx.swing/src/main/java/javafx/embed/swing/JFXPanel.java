@@ -299,12 +299,11 @@ public class JFXPanel extends JComponent {
                     (PrivilegedAction<EventQueue>) java.awt.Toolkit
                             .getDefaultToolkit()::getSystemEventQueue);
             SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
-            if (secondaryLoop.enter()) {
-                Platform.runLater(() -> {
-                    setSceneImpl(newScene);
-                });
+            Platform.runLater(() -> {
+                setSceneImpl(newScene);
                 secondaryLoop.exit();
-            }
+            });
+            secondaryLoop.enter();
         }
     }
 
