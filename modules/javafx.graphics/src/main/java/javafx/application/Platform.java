@@ -51,7 +51,9 @@ public final class Platform {
      *
      * <p>
      * This method may or may not return to the caller before the run method
-     * of the specified Runnable has been called. In any case, once this method
+     * of the specified Runnable has been called. In any case, this
+     * method is not blocked on the specified Runnable being executed.
+     * Once this method
      * returns, you may call {@link #runLater(Runnable)} with additional Runnables.
      * Those Runnables will be called, also on the JavaFX Application Thread,
      * after the Runnable passed into this method has been called.

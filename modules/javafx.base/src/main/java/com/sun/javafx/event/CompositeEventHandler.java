@@ -101,6 +101,15 @@ public final class CompositeEventHandler<T extends Event> {
         }
     }
 
+    public boolean hasFilter() {
+        return find(true);
+    }
+
+    public boolean hasHandler() {
+        if (getEventHandler() != null) return true;
+        return find(false);
+    }
+
     /* Used for testing. */
     boolean containsHandler(final EventHandler<? super T> eventHandler) {
         return find(eventHandler, false) != null;
@@ -184,12 +193,27 @@ public final class CompositeEventHandler<T extends Event> {
         return null;
     }
 
+    private boolean find(boolean isFilter) {
+        EventProcessorRecord<T> record = firstRecord;
+        while (record != null) {
+            if (record.isDisconnected()) {
+                remove(record);
+            } else if (isFilter == record.isFilter()) {
+                return true;
+            }
+            record = record.nextRecord;
+        }
+        return false;
+    }
+
     private static abstract class EventProcessorRecord<T extends Event> {
         private EventProcessorRecord<T> nextRecord;
         private EventProcessorRecord<T> prevRecord;
 
         public abstract boolean stores(EventHandler<? super T> eventProcessor,
                                        boolean isFilter);
+
+        public abstract boolean isFilter();
 
         public abstract void handleBubblingEvent(T event);
 
@@ -210,7 +234,12 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return !isFilter && (this.eventHandler == eventProcessor);
+            return isFilter == isFilter() && (this.eventHandler == eventProcessor);
+        }
+
+        @Override
+        public boolean isFilter() {
+            return false;
         }
 
         @Override
@@ -240,7 +269,12 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return !isFilter && (weakEventHandler == eventProcessor);
+            return isFilter == isFilter() && (weakEventHandler == eventProcessor);
+        }
+
+        @Override
+        public boolean isFilter() {
+            return false;
         }
 
         @Override
@@ -270,7 +304,12 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return isFilter && (this.eventFilter == eventProcessor);
+            return isFilter == isFilter() && (this.eventFilter == eventProcessor);
+        }
+
+        @Override
+        public boolean isFilter() {
+            return true;
         }
 
         @Override
@@ -300,7 +339,12 @@ public final class CompositeEventHandler<T extends Event> {
         @Override
         public boolean stores(final EventHandler<? super T> eventProcessor,
                               final boolean isFilter) {
-            return isFilter && (weakEventFilter == eventProcessor);
+            return isFilter == isFilter() && (weakEventFilter == eventProcessor);
+        }
+
+        @Override
+        public boolean isFilter() {
+            return true;
         }
 
         @Override

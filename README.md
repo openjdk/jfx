@@ -10,8 +10,6 @@ OpenJFX is a project under the charter of the OpenJDK. The [OpenJDK Bylaws](http
 
 If you think you have found a bug in OpenJFX, first make sure that you are testing against the latest version - your issue may already have been fixed. If not, search our [issues list](https://bugs.openjdk.java.net) in the Java Bug System (JBS) in case a similar issue has already been opened. More information on where and how to report a bug can be found at [bugreport.java.com](https://bugreport.java.com/).
 
-Please note that while the issue tracker in this Github project can be a convenient place to file an issue (either a bug or an enhancement request), the official bug database for OpenJFX is [JBS](https://bugs.openjdk.java.net).
-
 ## Getting Started
 
 For instructions on building JavaFX, see the [Building OpenJFX](https://wiki.openjdk.java.net/display/OpenJFX/Building+OpenJFX) Wiki page.

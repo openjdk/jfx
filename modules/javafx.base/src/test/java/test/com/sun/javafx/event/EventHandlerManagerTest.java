@@ -25,16 +25,21 @@
 
 package test.com.sun.javafx.event;
 
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import com.sun.javafx.event.EventHandlerManager;
+
+import static org.junit.Assert.*;
+
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import javafx.event.WeakEventHandler;
+import javafx.event.WeakEventHandlerUtil;
 
 public final class EventHandlerManagerTest {
     private EventHandlerManager eventHandlerManager;
@@ -42,6 +47,128 @@ public final class EventHandlerManagerTest {
     @Before
     public void setUp() {
         eventHandlerManager = new EventHandlerManager(this);
+    }
+
+    /**
+     * JDK-8092352: Skip dispatch if there are no handlers/filters
+     * sanity test: freshly instantiated empty EventHandlerManager returns
+     * same instance of event
+     */
+    @Test
+    public void testEmptyHandler() {
+        assertDispatch(new ValueEvent(0), 0);
+    }
+
+    /**
+     * JDK-8092352: Skip dispatch if there are no handlers/filters
+     * Test cycle set/null singleton
+     */
+    @Test
+    public void testShouldNotCopyEventWithoutSingletonHandler() {
+        EventChangingHandler eventHandler = new EventChangingHandler(Operation.add(5));
+        // add handler
+        eventHandlerManager.setEventHandler(
+                ValueEvent.VALUE_A,
+                eventHandler);
+        ValueEvent sent = new ValueEvent(0);
+        assertDispatch(sent, 5);
+        // remove handler
+        eventHandlerManager.setEventHandler(ValueEvent.VALUE_A, null);
+        assertDispatch(sent, 0);
+    }
+
+    /**
+     * JDK-8092352: Skip dispatch if there are no handlers/filters
+     * Test cycle add/remove handler
+     */
+    @Test
+    public void testShouldNotCopyEventWithoutHandler() {
+        EventChangingHandler eventHandler = new EventChangingHandler(Operation.add(5));
+        // add handler
+        eventHandlerManager.addEventHandler(
+                ValueEvent.VALUE_A,
+                eventHandler);
+        ValueEvent sent = new ValueEvent(0);
+        assertDispatch(sent, 5);
+        // remove handler
+        eventHandlerManager.removeEventHandler(ValueEvent.VALUE_A, eventHandler);
+        assertDispatch(sent, 0);
+    }
+
+    /**
+     * JDK-8092352: Skip dispatch if there are no handlers/filters
+     * Test cycle add/remove filter
+     */
+    @Test
+    public void testShouldNotCopyEventWithoutFilter() {
+        EventChangingHandler eventFilter = new EventChangingHandler(Operation.add(5));
+        // add filter
+        eventHandlerManager.addEventFilter(
+                ValueEvent.VALUE_A,
+                eventFilter);
+        ValueEvent sent = new ValueEvent(0);
+        assertDispatch(sent, 5);
+        // remove filter
+        eventHandlerManager.removeEventFilter(ValueEvent.VALUE_A, eventFilter);
+        assertDispatch(sent, 0);
+    }
+
+    /**
+     * JDK-8092352: Skip dispatch if there are no handlers/filters
+     * Test cycle add/clear weak handler
+     */
+    @Test
+    public void testShouldNotCopyEventWeakHandlerCleared() {
+        EventChangingHandler eventHandler = new EventChangingHandler(Operation.add(5));
+        WeakEventHandler<ValueEvent> weakHandler = new WeakEventHandler<>(eventHandler);
+        // add weak handler
+        eventHandlerManager.addEventHandler(
+                ValueEvent.VALUE_A,
+                weakHandler);
+        ValueEvent sent = new ValueEvent(0);
+        assertDispatch(sent, 5);
+        // clear weak handler
+        WeakEventHandlerUtil.clear(weakHandler);
+        assertDispatch(sent, 0);
+    }
+
+    /**
+     * JDK-8092352: Skip dispatch if there are no handlers/filters
+     * Test cycle add/clear weak filter
+     */
+    @Test
+    public void testShouldNotCopyEventWeakFilterCleared() {
+        EventChangingHandler eventFilter = new EventChangingHandler(Operation.add(5));
+        WeakEventHandler<ValueEvent> weakFilter = new WeakEventHandler<>(eventFilter);
+        // add filter
+        eventHandlerManager.addEventFilter(
+                ValueEvent.VALUE_A,
+                weakFilter);
+
+        ValueEvent sent = new ValueEvent(0);
+        assertDispatch(sent, 5);
+        // clear weak filter
+        WeakEventHandlerUtil.clear(weakFilter);
+        assertDispatch(sent, 0);
+    }
+
+    /**
+     * Helper for JDK-8092352 testing: dispatches the given event and
+     * asserts its value and identity. If the given expected value is the
+     * same as the event's initial value, the received event is expected
+     * to be the same instance as the sent.
+     */
+    private void assertDispatch(ValueEvent sent, int expected) {
+        boolean same = sent.getValue() == expected;
+        ValueEvent received = (ValueEvent)
+                eventHandlerManager.dispatchEvent(sent, StubEventDispatchChain.EMPTY_CHAIN);
+        String message = "value must be " + (same ? "unchanged " : "changed ");
+        assertEquals(message, expected, received.getValue());
+        if (same) {
+            assertSame("received event", sent, received);
+        } else {
+            assertNotSame("received event", sent, received);
+        }
     }
 
     @Test
