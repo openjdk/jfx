@@ -216,9 +216,7 @@ public class EventHandlerManager extends BasicEventDispatcher {
         final CompositeEventHandler<? extends Event> compositeEventHandler =
                 eventHandlerMap.get(handlerType);
 
-        if (compositeEventHandler != null) {
-            // TODO: skip when no filters are registered in the
-            //       CompositeEventHandler (RT-23952)
+        if (compositeEventHandler != null && compositeEventHandler.hasFilter()) {
             event = fixEventSource(event, eventSource);
             compositeEventHandler.dispatchCapturingEvent(event);
         }
@@ -231,9 +229,7 @@ public class EventHandlerManager extends BasicEventDispatcher {
         final CompositeEventHandler<? extends Event> compositeEventHandler =
                 eventHandlerMap.get(handlerType);
 
-        if (compositeEventHandler != null) {
-            // TODO: skip when no handlers are registered in the
-            //       CompositeEventHandler (RT-23952)
+        if (compositeEventHandler != null && compositeEventHandler.hasHandler()) {
             event = fixEventSource(event, eventSource);
             compositeEventHandler.dispatchBubblingEvent(event);
         }

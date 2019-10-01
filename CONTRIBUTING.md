@@ -41,11 +41,18 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * Sign the Contributor Agreement
 
-    In order for us to evaluate your contribution, you need to sign the [Oracle Contributor Agreement](https://www.oracle.com/technetwork/community/oca-486395.html) (OCA). Ultimately, the goal is to send accepted Pull Requests upstream to the OpenJFX repository hosted on openjdk.java.net. We are not asking you to give up your copyright, but to give us the right to distribute your code without restriction. By doing this you assert that the code you contribute is *yours* to contribute, and not third-party code that you do not own. We ask this of all contributors in order to assure our users of the origin and continuing existence of the code. You only need to sign the OCA once.
+    In order for us to evaluate your contribution, you need to sign the [Oracle Contributor Agreement](https://www.oracle.com/technetwork/community/oca-486395.html) (OCA). We are not asking you to give up your copyright, but to give us the right to distribute your code without restriction. By doing this you assert that the code you contribute is *yours* to contribute, and not third-party code that you do not own. We ask this of all contributors in order to assure our users of the origin and continuing existence of the code. You only need to sign the OCA once.
 
 * Read the code review policies
 
     Please read the entire section below on how to submit a pull request, as well as the [OpenJFX Code Review Policies](https://wiki.openjdk.java.net/display/OpenJFX/Code+Reviews). If this is a feature request, please note the additional requirements and expectations in the [New features / API additions](https://wiki.openjdk.java.net/display/OpenJFX/Code+Reviews#CodeReviews-NewFeaturesC.Newfeatures/APIadditions.) section of the Code Review Policies doc.
+
+* File a bug in JBS for every pull request
+
+    A [JBS](https://bugs.openjdk.java.net) bug ID is needed for every
+    pull request. If there isn't already a bug filed in JBS, then please
+    file one at [bugreport.java.com](https://bugreport.java.com/).
+    A developer with an active OpenJDK ID can file a bug directly in JBS.
 
 TIP: A GitHub pull request (PR) should not be the first time we hear about your proposed change to OpenJFX. Unless clearly identified as experimental or work-in-progress (WIP), we will usually close a pull request that isn't associated with an existing bug report. Reading the policies below will help you in getting your change approved.
 
@@ -61,39 +68,121 @@ Once your changes and tests are ready to submit for review:
 
     Update your local repository with the most recent code from the main [repository]((https://github.com/openjdk/jfx)), and rebase your branch on top of the latest `master` branch. We prefer your initial changes to be squashed into a single commit. See the [GitHub help page](https://help.github.com/articles/about-git-rebase/) for help. Later, if we ask you to make changes, add them as separate commits. This makes them easier to review.
 
-3. File a bug in JBS
+3. Submit a pull request
 
-    If there isn't already a bug filed in [JBS](https://bugs.openjdk.java.net), then please file one at [bugreport.java.com](https://bugreport.java.com/). A JBS bug ID is needed even if you have already filed an issue in the GitHub issue tracker. A GitHub issue can be used as a convenience, but JBS is the official bug database for the OpenJFX Project. Once you submit a pull request, you can add an Issue link to the PR in the JBS bug. If you don't have direct JBS access, one of the Project Committers or Authors will do this for you.
+    Push your local changes to your forked copy of the repository and
+    [submit a pull request](https://help.github.com/articles/using-pull-requests).
+    The title of the pull request must start with the 7-digit JBS bug id
+    (without the `JDK-` prefix), followed by a colon (`:`), then a space,
+    and finally the bug title as taken from JBS. You should include
+    additional details about your change in the Description of the pull
+    request. For example, the following is a valid pull request title:
 
-4. Submit a pull request
-
-    Push your local changes to your forked copy of the repository and [submit a pull request](https://help.github.com/articles/using-pull-requests). In the pull request, choose a title which sums up the changes that you have made, and in the body provide more details about what your changes do. The title *should include a JBS Bug ID*, which will make it easier for reviewers to cross-reference your pull requests with JBS.
-
-5. Send an email requesting a code review
-
-    NOTE: Project Skara will automate the RFR email, so this step will likely be removed.
-
-    Send a Request For Review (RFR) email to the [openjfx-dev](mailto:openjfx-dev@openjdk.java.net) mailing list. The email subject should include the JBS bug ID. The body of the review request should contain a pointer to the JBS issue and a pointer to the pull request. Here is an example RFR email:
     ```
-    Subject: RFR: 8888888: The Bug Synopsis
-
-    Please review the fix for The Bug Synopsis:
-    https://bugs.openjdk.java.net/browse/JDK-8888888
-    https://github.com/openjdk/jfx/pull/12345
+    8231326: Update README and CONTRIBUTING docs for Skara
     ```
 
-Then sit back and wait. There will probably be discussion about the pull request and, if any changes are needed, we would love to work with you to get your pull request merged into OpenJFX.
+    The Skara bot will then run `jcheck` on the server to verify the format
+    of the PR title and check for whitespace errors. Once that passes,
+    it will automatically send a Request For Review (RFR) email to the
+    [openjfx-dev](mailto:openjfx-dev@openjdk.java.net) mailing list.
+    See the
+    [Skara project page](https://github.com/openjdk/skara#openjdk-project-skara)
+    for information on `jcheck` and other Skara tools.
 
-Please adhere to the general guideline that you should never force push
-to a publicly shared branch. Once you have opened your pull request, you
-should consider your branch publicly shared. Instead of force pushing
-you can just add incremental commits; this is generally easier on your
-reviewers. If you need to pick up changes from `master`, you can merge
-`master` into your branch. A reviewer might ask you to rebase a
-long-running pull request in which case force pushing is okay for that
-request. Note that squashing at the end of the review process should
-also not be done, that will be done when the pull request is [integrated
-via GitHub](https://github.com/blog/2141-squash-your-commits).
+    TIP: prefix the pull request title with `WIP:` if you aren't yet
+    ready for it to be reviewed. The Skara bot will not send an RFR
+    email unless the title starts with a 7-digit bug ID.
+
+    Please cross-link the JBS Issue and the pull request. A link to the
+    JBS issue can be added as part of the pull request's Description. A
+    link to the PR, can be added as an issue link in the JBS bug. If
+    you don't have direct JBS access, one of the Project Committers or
+    Authors will do this for you.
+
+    Please adhere to the general guideline that you should never force push
+    to a publicly shared branch. Once you have opened your pull request, you
+    should consider your branch publicly shared. Instead of force pushing
+    you can just add incremental commits; this is generally easier on your
+    reviewers. If you need to pick up changes from `master`, you can merge
+    `master` into your branch. A reviewer might ask you to rebase a
+    long-running pull request in which case force pushing is okay for that
+    request. Note that squashing at the end of the review process should
+    also not be done. The Skara bot will squash your commits into a
+    single commit, and rebase it onto the target branch when the pull
+    request is integrated.
+
+4. Code review
+
+    All pull requests _must_ be reviewed according to the
+    [OpenJFX Code Review Policies](https://wiki.openjdk.java.net/display/OpenJFX/Code+Reviews).
+    It is the responsibility of the Reviewer(s) and the Committer who
+    will integrate the change to ensure that the code review policies
+    are followed, and that all concerns have been addressed.
+
+    Discussion and review of the pull request can happen either by adding
+    a comment to the PR itself, or by replying to the mailing list "RFR"
+    thread. The Skara bot will cross-forward between them.
+    To approve a pull request, a reviewer must do that in the PR itself.
+    See the following
+    [GitHub help page](https://help.github.com/en/articles/reviewing-proposed-changes-in-a-pull-request)
+    for help on reviewing a pull request.
+
+    If any changes
+    are needed, you would push additional commits to the branch
+    from which you made the pull request.
+
+    The code review continues until there are no unaddressed concerns, and
+    at least the minimum number of reviewers have approved the PR -- which
+    is one for low-impact bug fixes and two for enhancements or high-impact
+    bug fixes.
+
+    NOTE: while the Skara tooling will indicate that the PR is
+    ready to integrate once the first reviewer with a "Reviewer" role
+    in the project has approved it, this may or may not be sufficient
+    depending on the type of fix. For example, you must wait for a second
+    approval for enhancements or high-impact bug fixes.
+
+5. Integrate the pull request
+
+    Once the review has completed as described above, you can integrate
+    the PR.
+
+    A. Verify the commit message. The Skara tooling adds a comment with
+    the commit message that will be used. You can add a summary to the
+    commit message with the `/summary` command. You can add additional
+    contributors with the `/contributor` command. Commands are issued
+    by adding a comment to the PR that starts with a slash `/` character.
+
+    B. Issue the `/integrate` command. If you have the "Committer" role
+    (or higher) in the Project, then the Skara bot will merge the change
+    with no further action on your part. If you are not a Committer,
+    then you must get a Committer to sponsor your change. This is often
+    one of the reviewers who reviewed your PR, but it need not be. The
+    sponsor will issue the `/sponsor` command after you issue `/integrate`
+    once they are satisfied that the review criteria have been met.
+
+6. Resolve the JBS bug as "Fixed"
+
+    There is currently no automation for resolving JBS bugs, although
+    a future Skara improvement will automate this. Until then,
+    the Committer who integrated or sponsored the fix is responsible for
+    resolving the JBS issue. You do this with the "Resolve" action in JBS,
+    selecting "Fixed" as the resolution. You also need to add the commit
+    notification message (minus the list of modified files) as a comment.
+    This includes the URL of the commit. For example:
+
+    ```
+    Changeset: 1de25a49
+    Author:    Kevin Rushforth <kcr@openjdk.org>
+    Date:      2019-09-23 08:15:36 +7000
+    URL:       https://git.openjdk.java.net/jfx/commit/1de25a49
+
+    8231126: libxslt.md has incorrect version string
+
+    Reviewed-by: ghb
+    ```
+
 
 Contributing to the OpenJFX codebase
 ------------------------------------------
@@ -106,7 +195,7 @@ Currently OpenJFX builds are running on JDK 11 (recommended) and JDK 12.
 It is possible to develop in any major Java IDE (Eclipse, IntelliJ, NetBeans). IDEs can automatically configure projects based on Gradle setup.
 
 The following formatting rules are enforced for source code files by
-the white-space checker that is run as part of our CI test builds:
+`git jcheck`, which is run by the Skara bot:
 
 * Use Unix-style (LF) line endings not DOS-style (CRLF)
 * Do not use TAB characters (exception: Makefiles can have TABS)

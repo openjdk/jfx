@@ -168,6 +168,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
+        // unblock main thread. Glass is started at this point.
+        self->started = YES;
+
         if (self->jLaunchable != NULL)
         {
             jclass runnableClass = [GlassHelper ClassForName:"java.lang.Runnable" withEnv:jEnv];
@@ -226,8 +229,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         }
 
         (*env)->CallVoidMethod(env, self->jApplication, [GlassHelper ApplicationNotifyWillFinishLaunchingMethod]);
-
-        self->started = YES;
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);

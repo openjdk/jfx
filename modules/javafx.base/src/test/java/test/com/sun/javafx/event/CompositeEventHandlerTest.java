@@ -27,6 +27,9 @@ package test.com.sun.javafx.event;
 
 import com.sun.javafx.event.CompositeEventHandler;
 import com.sun.javafx.event.CompositeEventHandlerShim;
+
+import static org.junit.Assert.*;
+
 import test.com.sun.javafx.event.EventCountingHandler;
 import test.com.sun.javafx.event.EmptyEvent;
 import javafx.event.Event;
@@ -43,6 +46,132 @@ public class CompositeEventHandlerTest {
     @Before
     public void setUp() {
         compositeEventHandler = new CompositeEventHandler<Event>();
+    }
+
+    /**
+     * test state report after add/clear weak filter
+     * Here we test that a garbage collected weak filter is actually
+     * removed from the chain.
+     */
+    @Test
+    public void testHasFilterWeakCleared() {
+        final EventCountingHandler<Event> eventCountingHandler =
+                new EventCountingHandler<Event>();
+        final WeakEventHandler<Event> weakEventHandler =
+                new WeakEventHandler<Event>(eventCountingHandler);
+
+        compositeEventHandler.addEventFilter(weakEventHandler);
+        assertFalse("must not have handler after adding filter", compositeEventHandler.hasHandler());
+        assertTrue("must have filter", compositeEventHandler.hasFilter());
+        WeakEventHandlerUtil.clear(weakEventHandler);
+        assertFalse("must not have filter", compositeEventHandler.hasFilter());
+        assertFalse("must not have handler", compositeEventHandler.hasHandler());
+    }
+
+    /**
+     * test state report after add/clear weak handler
+     */
+    @Test
+    public void testHasHandlerAddWeakClear() {
+        final EventCountingHandler<Event> eventCountingHandler =
+                new EventCountingHandler<Event>();
+        final WeakEventHandler<Event> weakEventHandler =
+                new WeakEventHandler<Event>(eventCountingHandler);
+        compositeEventHandler.addEventHandler(weakEventHandler);
+        assertTrue("sanity: really added?", CompositeEventHandlerShim.containsHandler(
+                compositeEventHandler, weakEventHandler));
+        assertFalse("must not have filter after adding handler", compositeEventHandler.hasFilter());
+        assertTrue("must have handler", compositeEventHandler.hasHandler());
+        WeakEventHandlerUtil.clear(weakEventHandler);
+        assertFalse("must not have handler", compositeEventHandler.hasHandler());
+        assertFalse("must not have filter", compositeEventHandler.hasFilter());
+    }
+
+    /**
+     * test state report after add/remove weak filter
+     * Here we test that the duplicated (against normal) implementation
+     * behaves as expected.
+     */
+    @Test
+    public void testHasFilterWeak() {
+        final EventCountingHandler<Event> eventCountingHandler =
+                new EventCountingHandler<Event>();
+        final WeakEventHandler<Event> weakEventHandler =
+                new WeakEventHandler<Event>(eventCountingHandler);
+
+        compositeEventHandler.addEventFilter(weakEventHandler);
+        assertFalse("must not have handler after adding filter", compositeEventHandler.hasHandler());
+        assertTrue("must have filter", compositeEventHandler.hasFilter());
+        compositeEventHandler.removeEventFilter(weakEventHandler);
+        assertFalse("must not have filter", compositeEventHandler.hasFilter());
+        assertFalse("must not have handler", compositeEventHandler.hasHandler());
+    }
+
+    /**
+     * test state report after add/remove weak handler
+     */
+    @Test
+    public void testHasHandlerAddWeak() {
+        final EventCountingHandler<Event> eventCountingHandler =
+                new EventCountingHandler<Event>();
+        final WeakEventHandler<Event> weakEventHandler =
+                new WeakEventHandler<Event>(eventCountingHandler);
+        compositeEventHandler.addEventHandler(weakEventHandler);
+        assertTrue("sanity: really added?", CompositeEventHandlerShim.containsHandler(
+                compositeEventHandler, weakEventHandler));
+        assertFalse("must not have filter after adding handler", compositeEventHandler.hasFilter());
+        assertTrue("must have handler", compositeEventHandler.hasHandler());
+        compositeEventHandler.removeEventHandler(weakEventHandler);
+        assertFalse("must not have filter", compositeEventHandler.hasFilter());
+        assertFalse("must not have handler", compositeEventHandler.hasHandler());
+    }
+
+    /**
+     * test state after add/remove filter
+     */
+    @Test
+    public void testHasFilter() {
+        final EventCountingHandler<Event> eventCountingHandler =
+                new EventCountingHandler<Event>();
+        compositeEventHandler.addEventFilter(eventCountingHandler);
+        assertFalse("must not have handler after adding filter", compositeEventHandler.hasHandler());
+        assertTrue("must have filter", compositeEventHandler.hasFilter());
+        compositeEventHandler.removeEventFilter(eventCountingHandler);
+        assertFalse("must not have filter", compositeEventHandler.hasFilter());
+        assertFalse("must not have handler", compositeEventHandler.hasHandler());
+    }
+
+    /**
+     * test report after add/remove handler
+     */
+    @Test
+    public void testHasHandlerAdd() {
+        final EventCountingHandler<Event> eventCountingHandler =
+                new EventCountingHandler<Event>();
+        compositeEventHandler.addEventHandler(eventCountingHandler);
+        assertTrue("sanity: really added?", CompositeEventHandlerShim.containsHandler(
+                compositeEventHandler, eventCountingHandler));
+        assertFalse("must not have filter after adding handler", compositeEventHandler.hasFilter());
+        assertTrue("must have handler", compositeEventHandler.hasHandler());
+        compositeEventHandler.removeEventHandler(eventCountingHandler);
+        assertFalse("must not have filter", compositeEventHandler.hasFilter());
+        assertFalse("must not have handler", compositeEventHandler.hasHandler());
+
+    }
+
+    /**
+     * test state after set/null singleton handler
+     */
+    @Test
+    public void testHasHandlerSingleton() {
+        final EventCountingHandler<Event> eventCountingHandler =
+                new EventCountingHandler<Event>();
+        compositeEventHandler.setEventHandler(eventCountingHandler);
+        assertFalse("must not have filter after set handler", compositeEventHandler.hasFilter());
+        assertTrue("must have handler", compositeEventHandler.hasHandler());
+        compositeEventHandler.setEventHandler(null);
+        assertFalse("must not have filter", compositeEventHandler.hasFilter());
+        assertFalse("must not have handler", compositeEventHandler.hasHandler());
     }
 
     @Test
