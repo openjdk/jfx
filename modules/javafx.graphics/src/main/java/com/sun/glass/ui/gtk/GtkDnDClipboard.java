@@ -38,7 +38,11 @@ final class GtkDnDClipboard extends SystemClipboard{
                                 int supportedActions) {
         final int performedAction = pushToSystemImpl(cacheData,
                                                      supportedActions);
-        actionPerformed(performedAction);
+
+        // drag can fail or be cancelled
+        if (performedAction != ACTION_NONE) {
+            actionPerformed(performedAction);
+        }
     }
 
     @Override
