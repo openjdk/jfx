@@ -17,7 +17,7 @@ this library:
 A copy of the Oracle modified GNU Glib library source code is located
 in the following OpenJDK Mercurial repository:
 
-   http://hg.openjdk.java.net/openjfx/jfx/rt
+   https://github.com/openjdk/jfx
 
 You can use Mercurial to clone the repository or you can browse the
 source using a web browser. The root directory of the GNU Glib source
