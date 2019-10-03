@@ -15,11 +15,11 @@ this library:
    - On Windows systems: delete $(JAVA_HOME)\bin\gstreamer-lite.dll
 
 A copy of the Oracle modified GStreamer library source code is located
-in the following OpenJDK Mercurial repository:
+in the following OpenJDK git repository:
 
    https://github.com/openjdk/jfx
 
-You can use Mercurial to clone the repository or you can browse the
+You can use git to clone the repository or you can browse the
 source using a web browser. The root directory of the GStreamer source
 code is here:
 

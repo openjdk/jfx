@@ -15,11 +15,11 @@ this library:
    - On Windows systems: delete $(JAVA_HOME)\bin\glib-lite.dll
 
 A copy of the Oracle modified GNU Glib library source code is located
-in the following OpenJDK Mercurial repository:
+in the following OpenJDK git repository:
 
    https://github.com/openjdk/jfx
 
-You can use Mercurial to clone the repository or you can browse the
+You can use git to clone the repository or you can browse the
 source using a web browser. The root directory of the GNU Glib source
 code is here:
 
