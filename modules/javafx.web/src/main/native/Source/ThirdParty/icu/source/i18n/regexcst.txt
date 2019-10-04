@@ -75,7 +75,7 @@ term:
     '\'                  n backslash
     '|'                  n  term                                    doOrOperator
     ')'                  n  pop                                     doCloseParen
-    eof	                   term                                     doPatFinish
+    eof                       term                                     doPatFinish
     default                errorDeath                               doRuleError
 
 
@@ -157,7 +157,7 @@ open-paren-lookbehind:
 #
 paren-comment:
     ')'                  n  pop
-    eof		                errorDeath                              doMismatchedParenErr
+    eof                        errorDeath                              doMismatchedParenErr
     default              n  paren-comment
 
 #
@@ -225,7 +225,7 @@ interval-open:
 
 interval-lower:
     digit_char           n  interval-lower                          doIntevalLowerDigit
-    ','			         n  interval-upper
+    ','                     n  interval-upper
     '}'                  n  interval-type                           doIntervalSame             # {n}
     default                 errorDeath                              doIntervalError
 
@@ -372,7 +372,7 @@ set-after-range:
     '\'                  n  set-escape
     eof                     errorDeath                              doSetNoCloseError
     default              n  set-after-lit                           doSetLiteral
-    
+
 
 # set-after-op
 #     After a --  or &&
@@ -463,7 +463,7 @@ set-lit-dash-escape:
    'N'                      set-after-range                        doSetNamedRange
    default               n  set-after-range                        doSetRange
 
-   
+
 #
 #  set-escape
 #       Common back-slash escape processing within set expressions
@@ -482,7 +482,7 @@ set-escape:
    'H'                   n  set-after-range                         doSetBackslash_H
    'v'                   n  set-after-range                         doSetBackslash_v
    'V'                   n  set-after-range                         doSetBackslash_V
-   default               n  set-after-lit                           doSetLiteralEscaped 
+   default               n  set-after-lit                           doSetLiteralEscaped
 
 #
 # set-finish

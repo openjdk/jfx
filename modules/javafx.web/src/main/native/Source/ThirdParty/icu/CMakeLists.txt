@@ -81,6 +81,7 @@ set(ICU_COMMON_SOURCES
     source/common/bytestrie.cpp
     source/common/bytestrieiterator.cpp
     source/common/caniter.cpp
+    source/common/characterproperties.cpp
     source/common/chariter.cpp
     source/common/charstr.cpp
     source/common/cmemory.cpp
@@ -96,8 +97,8 @@ set(ICU_COMMON_SOURCES
     source/common/filterednormalizer2.cpp
     source/common/icudataver.cpp
     source/common/icuplug.cpp
-    source/common/listformatter.cpp
     source/common/loadednormalizer2impl.cpp
+    source/common/localebuilder.cpp
     source/common/locavailable.cpp
     source/common/locbased.cpp
     source/common/locdispnames.cpp
@@ -186,6 +187,7 @@ set(ICU_COMMON_SOURCES
     source/common/ucnv_u7.cpp
     source/common/ucnv_u8.cpp
     source/common/ucol_swp.cpp
+    source/common/ucptrie.cpp
     source/common/ucurr.cpp
     source/common/udata.cpp
     source/common/udatamem.cpp
@@ -198,12 +200,12 @@ set(ICU_COMMON_SOURCES
     source/common/uinvchar.cpp
     source/common/uiter.cpp
     source/common/ulist.cpp
-    source/common/ulistformatter.cpp
     source/common/uloc.cpp
     source/common/uloc_keytype.cpp
     source/common/uloc_tag.cpp
     source/common/umapfile.cpp
     source/common/umath.cpp
+    source/common/umutablecptrie.cpp
     source/common/umutex.cpp
     source/common/unames.cpp
     source/common/unifiedcache.cpp
@@ -250,6 +252,7 @@ set(ICU_COMMON_SOURCES
     source/common/util_props.cpp
     source/common/utrace.cpp
     source/common/utrie2_builder.cpp
+    source/common/utrie_swap.cpp
     source/common/utrie2.cpp
     source/common/utrie.cpp
     source/common/uts46.cpp
@@ -343,11 +346,15 @@ set(ICU_I18N_SOURCES
     source/i18n/dtitvinf.cpp
     source/i18n/dtptngen.cpp
     source/i18n/dtrule.cpp
+    source/i18n/erarules.cpp
     source/i18n/esctrn.cpp
     source/i18n/ethpccal.cpp
     source/i18n/fmtable.cpp
     source/i18n/fmtable_cnv.cpp
     source/i18n/format.cpp
+    source/i18n/formattedval_iterimpl.cpp
+    source/i18n/formattedval_sbimpl.cpp
+    source/i18n/formattedvalue.cpp
     source/i18n/fphdlimp.cpp
     source/i18n/fpositer.cpp
     source/i18n/funcrepl.cpp
@@ -359,6 +366,7 @@ set(ICU_I18N_SOURCES
     source/i18n/inputext.cpp
     source/i18n/islamcal.cpp
     source/i18n/japancal.cpp
+    source/i18n/listformatter.cpp
     source/i18n/measfmt.cpp
     source/i18n/measunit.cpp
     source/i18n/measure.cpp
@@ -386,6 +394,7 @@ set(ICU_I18N_SOURCES
     source/i18n/number_modifiers.cpp
     source/i18n/number_multiplier.cpp
     source/i18n/number_notation.cpp
+    source/i18n/number_output.cpp
     source/i18n/number_padding.cpp
     source/i18n/number_patternmodifier.cpp
     source/i18n/number_patternstring.cpp
@@ -405,6 +414,8 @@ set(ICU_I18N_SOURCES
     source/i18n/numparse_stringsegment.cpp
     source/i18n/numparse_symbols.cpp
     source/i18n/numparse_validators.cpp
+    source/i18n/numrange_fluent.cpp
+    source/i18n/numrange_impl.cpp
     source/i18n/numsys.cpp
     source/i18n/olsontz.cpp
     source/i18n/persncal.cpp
@@ -472,6 +483,7 @@ set(ICU_I18N_SOURCES
     source/i18n/udatpg.cpp
     source/i18n/ufieldpositer.cpp
     source/i18n/uitercollationiterator.cpp
+    source/i18n/ulistformatter.cpp
     source/i18n/ulocdata.cpp
     source/i18n/umsg.cpp
     source/i18n/unesctrn.cpp
@@ -519,22 +531,33 @@ target_link_libraries(icui18n PUBLIC icuuc)
 
 ###### tools BEGIN ####
 set(ICU_TOOLSUTILS_SOURCES
+    source/tools/toolutil/collationinfo.cpp
+    source/tools/toolutil/dbgutil.cpp
+    source/tools/toolutil/denseranges.cpp
     source/tools/toolutil/filestrm.cpp
+    source/tools/toolutil/filetools.cpp
+    source/tools/toolutil/flagparser.cpp
     source/tools/toolutil/package.cpp
     source/tools/toolutil/pkgitems.cpp
+    source/tools/toolutil/ppucd.cpp
     source/tools/toolutil/swapimpl.cpp
     source/tools/toolutil/toolutil.cpp
     source/tools/toolutil/unewdata.cpp
+    source/tools/toolutil/ucln_tu.cpp
     source/tools/toolutil/ucm.cpp
     source/tools/toolutil/ucmstate.cpp
+    source/tools/toolutil/udbgutil.cpp
+    source/tools/toolutil/uoptions.cpp
     source/tools/toolutil/uparse.cpp
     source/tools/toolutil/ucbuf.cpp
     source/tools/toolutil/writesrc.cpp
     source/tools/toolutil/pkg_genc.cpp
     source/tools/toolutil/pkg_gencmn.cpp
+    source/tools/toolutil/pkg_icu.cpp
+    source/tools/toolutil/xmlparser.cpp
 
     java/data/data_as_asm.cpp
-	  source/stubdata/stubdata.cpp
+    source/stubdata/stubdata.cpp
 )
 
 add_executable(data_as_asm ${ICU_TOOLSUTILS_SOURCES})

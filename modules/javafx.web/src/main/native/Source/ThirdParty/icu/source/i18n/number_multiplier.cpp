@@ -65,6 +65,9 @@ Scale::Scale(Scale&& src) U_NOEXCEPT
 
 Scale& Scale::operator=(Scale&& src) U_NOEXCEPT {
     fMagnitude = src.fMagnitude;
+    if (fArbitrary != nullptr) {
+        delete fArbitrary;
+    }
     fArbitrary = src.fArbitrary;
     fError = src.fError;
     // Take ownership away from src if necessary
@@ -143,14 +146,14 @@ void Scale::applyReciprocalTo(impl::DecimalQuantity& quantity) const {
 
 void
 MultiplierFormatHandler::setAndChain(const Scale& multiplier, const MicroPropsGenerator* parent) {
-    this->multiplier = multiplier;
-    this->parent = parent;
+    fMultiplier = multiplier;
+    fParent = parent;
 }
 
 void MultiplierFormatHandler::processQuantity(DecimalQuantity& quantity, MicroProps& micros,
                                               UErrorCode& status) const {
-    parent->processQuantity(quantity, micros, status);
-    multiplier.applyTo(quantity);
+    fParent->processQuantity(quantity, micros, status);
+    fMultiplier.applyTo(quantity);
 }
 
 #endif /* #if !UCONFIG_NO_FORMATTING */

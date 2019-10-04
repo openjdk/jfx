@@ -15,7 +15,7 @@
 *   created on: 1999nov19
 *   created by: Markus W. Scherer
 *
-*   6/25/08 - Added Cygwin specific code in uprv_mkdir - Brian Rower
+*    6/25/08 - Added Cygwin specific code in uprv_mkdir - Brian Rower
 *
 *   This file contains utility functions for ICU tools like genccode.
 */
@@ -143,7 +143,7 @@ findDirname(const char *path, char *buffer, int32_t bufLen, UErrorCode* status) 
     resultLen = 0;
   } else {
     resultPtr = path;
-    resultLen = basename - path;
+    resultLen = static_cast<int32_t>(basename - path);
     if(resultLen<1) {
       resultLen = 1; /* '/' or '/a' -> '/' */
     }
