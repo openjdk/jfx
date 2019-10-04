@@ -22,7 +22,7 @@ $ cd apps/samples/Ensemble8
 $ rm -rf src/generated/resources/ensemble/search/index
 $ ant -Dplatforms.JDK_1.9.home=$JAVA_HOME clean ensemble-generate-search-index jar
 $ rm src/generated/resources/ensemble/search/index/write.lock
-$ hg addremove src/generated/resources/ensemble/search/index
+$ git add --all src/generated/resources/ensemble/search/index
 
 
 4. Test it by running Ensemble and entering text into the search box (upper right)
