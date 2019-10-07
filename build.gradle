@@ -1833,7 +1833,10 @@ allprojects {
         repositories {
             ivy {
                 url JFX_DEPS_URL
-                layout "pattern", {
+                metadataSources {
+                    artifact()
+                }
+                patternLayout {
                     artifact "[artifact]-[revision](-[classifier]).[ext]"
                     artifact "[artifact].[ext]"
                 }
@@ -1846,7 +1849,10 @@ allprojects {
             mavenCentral()
             ivy {
                 url "https://download.eclipse.org/eclipse/updates/4.6/R-4.6.3-201703010400/plugins/"
-                layout "pattern", {
+                metadataSources {
+                    artifact()
+                }
+                patternLayout {
                     artifact "[artifact].[ext]"
                 }
             }
@@ -1857,13 +1863,19 @@ allprojects {
         repositories {
             ivy {
                 url libAVRepositoryURL
-                layout "pattern", {
+                metadataSources {
+                    artifact()
+                }
+                patternLayout {
                     artifact "[artifact].[ext]"
                 }
             }
             ivy {
                 url FFmpegRepositoryURL
-                layout "pattern", {
+                metadataSources {
+                    artifact()
+                }
+                patternLayout {
                     artifact "[artifact].[ext]"
                 }
             }
@@ -3810,6 +3822,7 @@ allprojects {
         project.jar.enabled = false
 
         // and redirect the resources into the module
+        project.sourceSets.main.output.resourcesDir = project.moduleDir
         project.processResources.destinationDir = project.moduleDir
     }
 
@@ -3843,6 +3856,7 @@ allprojects {
         project.sourceSets.shims.resources.srcDirs += project.sourceSets.main.resources.srcDirs
 
         // and redirect the resources into the module
+        project.sourceSets.shims.output.resourcesDir = project.moduleShimsDir
         project.processShimsResources.destinationDir = project.moduleShimsDir
 
        compileTestJava.dependsOn(copyGeneratedShimsTask)
