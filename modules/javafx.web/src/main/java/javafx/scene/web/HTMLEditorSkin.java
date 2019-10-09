@@ -963,13 +963,13 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         if (fontFamilyValue != null) {
             String fontFamilyStr = fontFamilyValue;
 
-            // stripping out apostrophe characters, which are appended to either
+            // stripping out apostrophe and quote characters, which are appended to either
             // end of the font face name when the font face has one or more spaces.
-            if (fontFamilyStr.startsWith("'")) {
+            if (fontFamilyStr.startsWith("'") || fontFamilyStr.startsWith("\"")) {
                 fontFamilyStr = fontFamilyStr.substring(1);
             }
-            if (fontFamilyStr.endsWith("'")) {
-                fontFamilyStr = fontFamilyStr.substring(0,fontFamilyStr.length() - 1);
+            if (fontFamilyStr.endsWith("'") || fontFamilyStr.endsWith("\"")) {
+                fontFamilyStr = fontFamilyStr.substring(0, fontFamilyStr.length() - 1);
             }
 
             Object selectedFont = fontFamilyComboBox.getValue();
