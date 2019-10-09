@@ -116,4 +116,12 @@ public abstract class AnimationTimer {
             active = false;
         }
     }
+    
+    /**
+    * Return the state of the {@code AnimationTimers}. 
+    * @return 
+    */
+    public boolean isActive() {
+        return active;
+    }
 }
