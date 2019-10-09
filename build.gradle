@@ -1833,10 +1833,7 @@ allprojects {
         repositories {
             ivy {
                 url JFX_DEPS_URL
-                metadataSources {
-                    artifact()
-                }
-                patternLayout {
+                layout "pattern", {
                     artifact "[artifact]-[revision](-[classifier]).[ext]"
                     artifact "[artifact].[ext]"
                 }
@@ -1849,10 +1846,7 @@ allprojects {
             mavenCentral()
             ivy {
                 url "https://download.eclipse.org/eclipse/updates/4.6/R-4.6.3-201703010400/plugins/"
-                metadataSources {
-                    artifact()
-                }
-                patternLayout {
+                layout "pattern", {
                     artifact "[artifact].[ext]"
                 }
             }
@@ -1863,19 +1857,13 @@ allprojects {
         repositories {
             ivy {
                 url libAVRepositoryURL
-                metadataSources {
-                    artifact()
-                }
-                patternLayout {
+                layout "pattern", {
                     artifact "[artifact].[ext]"
                 }
             }
             ivy {
                 url FFmpegRepositoryURL
-                metadataSources {
-                    artifact()
-                }
-                patternLayout {
+                layout "pattern", {
                     artifact "[artifact].[ext]"
                 }
             }
