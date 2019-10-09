@@ -533,7 +533,7 @@ public class TableColumnHeader extends Region {
             if (getTableColumn() == null || getTableColumn().getWidth() != DEFAULT_COLUMN_WIDTH || getScene() == null) {
                 return;
             }
-            doColumnAutoSize(getTableColumn(), n);
+            doColumnAutoSize(n);
             autoSizeComplete = true;
         }
     }
@@ -585,25 +585,27 @@ public class TableColumnHeader extends Region {
         }
     }
 
-    private void doColumnAutoSize(TableColumnBase<?,?> column, int cellsToMeasure) {
-        double prefWidth = column.getPrefWidth();
+    private void doColumnAutoSize(int cellsToMeasure) {
+        double prefWidth = getTableColumn().getPrefWidth();
 
         // if the prefWidth has been set, we do _not_ autosize columns
         if (prefWidth == DEFAULT_COLUMN_WIDTH) {
-            resizeColumnToFitContent(column, cellsToMeasure);
+            resizeColumnToFitContent(cellsToMeasure);
         }
     }
 
     /**
-     * Resizes the given column based on the preferred width of all items contained in it. This can be potentially very
-     * expensive if the number of rows is large. Subclass can either call this method or override it (no need to call
-     * {@code super()}) to provide their custom algorithm.
+     * Resizes this {@code TableColumnHeader}'s column based on content of header and content of cells. This
+     * implementation measures the preferred width of the header, the preferred width of the first {@code maxRow} cells
+     * and sizes the column to the maximum width of all measured values. Subclass can either call this method or
+     * override it (no need to call {@code super()}) to provide their custom implementation (exclude headers, exclude
+     * null content, use min).
      *
-     * @param tc      the column to resize
      * @param maxRows the number of rows considered when resizing. If -1 is given, all rows are considered.
-     * @since 12
+     * @since 14
      */
-    protected void resizeColumnToFitContent(TableColumnBase<?, ?> tc, int maxRows) {
+    protected void resizeColumnToFitContent(int maxRows) {
+        TableColumnBase<?, ?> tc = getTableColumn();
         if (!tc.isResizable()) return;
 
         Object control = this.getTableSkin().getSkinnable();
@@ -672,7 +674,10 @@ public class TableColumnHeader extends Region {
 
             int size = tc.getColumns().size();
             if (size > 0) {
-                resizeColumnToFitContent(tc.getColumns().get(size - 1), maxRows);
+                TableColumnHeader columnHeader = getTableHeaderRow().getColumnHeaderFor(tc.getColumns().get(size - 1));
+                if (columnHeader != null) {
+                    columnHeader.resizeColumnToFitContent(maxRows);
+                }
                 return;
             }
 
@@ -751,7 +756,10 @@ public class TableColumnHeader extends Region {
 
             int size = tc.getColumns().size();
             if (size > 0) {
-                resizeColumnToFitContent(tc.getColumns().get(size - 1), maxRows);
+                TableColumnHeader columnHeader = getTableHeaderRow().getColumnHeaderFor(tc.getColumns().get(size - 1));
+                if (columnHeader != null) {
+                    columnHeader.resizeColumnToFitContent(maxRows);
+                }
                 return;
             }
 

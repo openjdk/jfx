@@ -140,7 +140,7 @@ public class TableColumnHeaderTest {
         }
 
         public void resizeCol() {
-            resizeColumnToFitContent(getTableColumn(), -1);
+            resizeColumnToFitContent(-1);
         }
     }
 }
