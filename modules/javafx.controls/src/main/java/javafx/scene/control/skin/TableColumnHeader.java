@@ -595,11 +595,12 @@ public class TableColumnHeader extends Region {
     }
 
     /**
-     * Resizes this {@code TableColumnHeader}'s column based on content of header and content of cells. This
-     * implementation measures the preferred width of the header, the preferred width of the first {@code maxRow} cells
-     * and sizes the column to the maximum width of all measured values. Subclass can either call this method or
-     * override it (no need to call {@code super()}) to provide their custom implementation (exclude headers, exclude
-     * null content, use min).
+     * Resizes this {@code TableColumnHeader}'s column to fit the width of its content. The resulting column width is
+     * the maximum of the preferred width of the header cell and the preferred width of the first {@code maxRow} cells.
+     * <p>
+     * Subclasses can either use this method or override it (without the need to call {@code super()}) to provide their
+     * custom implementation (such as ones that exclude the header, exclude {@code null} content, compute the minimum
+     * width etc.).
      *
      * @param maxRows the number of rows considered when resizing. If -1 is given, all rows are considered.
      * @since 14
@@ -610,9 +611,9 @@ public class TableColumnHeader extends Region {
 
         Object control = this.getTableSkin().getSkinnable();
         if (control instanceof TableView) {
-            resizeColumnToFitContent((TableView)control, (TableColumn)tc, this.getTableSkin(), maxRows);
+            resizeColumnToFitContent((TableView) control, (TableColumn) tc, this.getTableSkin(), maxRows);
         } else if (control instanceof TreeTableView) {
-            resizeColumnToFitContent((TreeTableView)control, (TreeTableColumn)tc, this.getTableSkin(), maxRows);
+            resizeColumnToFitContent((TreeTableView) control, (TreeTableColumn) tc, this.getTableSkin(), maxRows);
         }
     }
 

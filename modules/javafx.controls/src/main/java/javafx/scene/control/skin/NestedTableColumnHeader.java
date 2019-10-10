@@ -167,7 +167,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             // width is equal to the widest element in the column
             TableHeaderRow tableHeader = header.getTableHeaderRow();
             TableColumnHeader columnHeader = tableHeader.getColumnHeaderFor(column);
-            if(columnHeader != null){
+            if (columnHeader != null) {
                 columnHeader.resizeColumnToFitContent(-1);
             }
         } else {
