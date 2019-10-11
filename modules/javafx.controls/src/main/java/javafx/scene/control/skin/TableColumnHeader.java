@@ -595,8 +595,9 @@ public class TableColumnHeader extends Region {
     }
 
     /**
-     * Resizes this {@code TableColumnHeader}'s column to fit the width of its content. The resulting column width is
-     * the maximum of the preferred width of the header cell and the preferred width of the first {@code maxRow} cells.
+     * Resizes this {@code TableColumnHeader}'s column to fit the width of its content. The resulting column width for
+     * this implementation is the maximum of the preferred width of the header cell and the preferred width of the first
+     * {@code maxRow} cells.
      * <p>
      * Subclasses can either use this method or override it (without the need to call {@code super()}) to provide their
      * custom implementation (such as ones that exclude the header, exclude {@code null} content, compute the minimum
