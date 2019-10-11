@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.annotation.Native;
 import java.net.ConnectException;
 import java.net.HttpRetryException;
 import java.net.HttpURLConnection;
@@ -65,13 +64,10 @@ import javax.net.ssl.SSLHandshakeException;
 /**
  * A runnable that loads a resource specified by a URL.
  */
-final class URLLoader implements Runnable {
-
-    @Native public static final int ALLOW_UNASSIGNED = java.net.IDN.ALLOW_UNASSIGNED;
+final class URLLoader extends URLLoaderBase implements Runnable {
 
     private static final PlatformLogger logger =
             PlatformLogger.getLogger(URLLoader.class.getName());
-    private static final int MAX_REDIRECTS = 10;
     private static final int MAX_BUF_COUNT = 3;
     private static final String GET = "GET";
     private static final String HEAD = "HEAD";
@@ -115,7 +111,8 @@ final class URLLoader implements Runnable {
     /**
      * Cancels this loader.
      */
-    private void fwkCancel() {
+    @Override
+    public void fwkCancel() {
         if (logger.isLoggable(Level.FINEST)) {
             logger.finest(String.format("data: [0x%016X]", data));
         }
@@ -141,7 +138,6 @@ final class URLLoader implements Runnable {
         Throwable error = null;
         int errorCode = 0;
         try {
-            int redirectCount = 0;
             boolean streaming = true;
             boolean connectionResetRetry = true;
             while (true) {
@@ -162,10 +158,9 @@ final class URLLoader implements Runnable {
                 URLConnection c = urlObject.openConnection();
                 prepareConnection(c);
 
-                Redirect redirect = null;
                 try {
                     sendRequest(c, streaming);
-                    redirect = receiveResponse(c);
+                    receiveResponse(c);
                 } catch (HttpRetryException ex) {
                     // RT-19914
                     if (streaming) {
@@ -185,25 +180,7 @@ final class URLLoader implements Runnable {
                 } finally {
                     close(c);
                 }
-
-                if (redirect != null) {
-                    if (redirectCount++ >= MAX_REDIRECTS) {
-                        throw new TooManyRedirectsException();
-                    }
-                    boolean resetRequest = !redirect.preserveRequest
-                            && !method.equals(GET) && !method.equals(HEAD);
-                    String newMethod = resetRequest ? GET : method;
-                    willSendRequest(redirect.url, newMethod, c);
-                    // willSendRequest() may cancel this loader
-                    if (canceled) {
-                        break;
-                    }
-                    url = redirect.url;
-                    method = newMethod;
-                    formDataElements = resetRequest ? null : formDataElements;
-                } else {
-                    break;
-                }
+                break;
             }
         } catch (MalformedURLException ex) {
             error = ex;
@@ -232,9 +209,6 @@ final class URLLoader implements Runnable {
         } catch (InvalidResponseException ex) {
             error = ex;
             errorCode = LoadListenerClient.INVALID_RESPONSE;
-        } catch (TooManyRedirectsException ex) {
-            error = ex;
-            errorCode = LoadListenerClient.TOO_MANY_REDIRECTS;
         } catch (FileNotFoundException ex) {
             error = ex;
             errorCode = LoadListenerClient.FILE_NOT_FOUND;
@@ -417,11 +391,11 @@ final class URLLoader implements Runnable {
     /**
      * Receives response from the server.
      */
-    private Redirect receiveResponse(URLConnection c)
+    private void receiveResponse(URLConnection c)
         throws IOException, InterruptedException
     {
         if (canceled) {
-            return null;
+            return;
         }
 
         InputStream errorStream = null;
@@ -435,7 +409,7 @@ final class URLLoader implements Runnable {
             }
 
             if (canceled) {
-                return null;
+                return;
             }
 
             // See RT-17435
@@ -444,25 +418,13 @@ final class URLLoader implements Runnable {
                 case 302: // Found
                 case 303: // See Other
                 case 307: // Temporary Redirect
-                    String newLoc = http.getHeaderField("Location");
-                    if (newLoc != null) {
-                        URL newUrl;
-                        try {
-                            newUrl = newURL(newLoc);
-                        } catch (MalformedURLException mue) {
-                            // Try to treat newLoc as a relative URI to conform
-                            // to popular browsers
-                            newUrl = newURL(c.getURL(), newLoc);
-                        }
-                        return new Redirect(newUrl.toExternalForm(),
-                                            code == 307);
-                    }
+                    willSendRequest(c);
                     break;
 
                 case 304: // Not Modified
                     didReceiveResponse(c);
                     didFinishLoading();
-                    return null;
+                    return;
             }
 
             if (code >= 400 && !method.equals(HEAD)) {
@@ -510,7 +472,7 @@ final class URLLoader implements Runnable {
 
         if (method.equals(HEAD)) {
             didFinishLoading();
-            return null;
+            return;
         }
 
         InputStream inputStream = null;
@@ -601,11 +563,9 @@ final class URLLoader implements Runnable {
             }
         } finally {
             if (byteBuffer != null) {
-                byteBuffer.clear();
                 allocator.release(byteBuffer);
             }
         }
-        return null;
     }
 
     /**
@@ -625,36 +585,12 @@ final class URLLoader implements Runnable {
         } catch (IOException ignore) {}
     }
 
-
-    /**
-     * A holder for redirect information.
-     */
-    private static final class Redirect {
-        private final String url;
-        private final boolean preserveRequest;
-
-        private Redirect(String url, boolean preserveRequest) {
-            this.url = url;
-            this.preserveRequest = preserveRequest;
-        }
-    }
-
     /**
      * Signals an invalid response from the server.
      */
     private static final class InvalidResponseException extends IOException {
         private InvalidResponseException() {
             super("Invalid server response");
-        }
-    }
-
-    /**
-     * Signals that too many redirects have been encountered
-     * while processing the request.
-     */
-    private static final class TooManyRedirectsException extends IOException {
-        private TooManyRedirectsException() {
-            super("Too many redirects");
         }
     }
 
@@ -683,49 +619,28 @@ final class URLLoader implements Runnable {
         twkDidSendData(totalBytesSent, totalBytesToBeSent, data);
     }
 
-    private void willSendRequest(String newUrl,
-                                 final String newMethod,
-                                 URLConnection c) throws InterruptedException
+    private void willSendRequest(URLConnection c) throws InterruptedException
     {
-        final String adjustedNewUrl = adjustUrlForWebKit(newUrl);
         final int status = extractStatus(c);
         final String contentType = c.getContentType();
         final String contentEncoding = extractContentEncoding(c);
         final long contentLength = extractContentLength(c);
         final String responseHeaders = extractHeaders(c);
         final String adjustedUrl = adjustUrlForWebKit(url);
-        final CountDownLatch latch =
-                asynchronous ? new CountDownLatch(1) : null;
         callBack(() -> {
-            try {
-                if (!canceled) {
-                    boolean keepGoing = notifyWillSendRequest(
-                            adjustedNewUrl,
-                            newMethod,
-                            status,
-                            contentType,
-                            contentEncoding,
-                            contentLength,
-                            responseHeaders,
-                            adjustedUrl);
-                    if (!keepGoing) {
-                        fwkCancel();
-                    }
-                }
-            } finally {
-                if (latch != null) {
-                    latch.countDown();
-                }
+            if (!canceled) {
+                notifyWillSendRequest(
+                        status,
+                        contentType,
+                        contentEncoding,
+                        contentLength,
+                        responseHeaders,
+                        adjustedUrl);
             }
         });
-        if (latch != null) {
-            latch.await();
-        }
     }
 
-    private boolean notifyWillSendRequest(String newUrl,
-                                          String newMethod,
-                                          int status,
+    private void notifyWillSendRequest(int status,
                                           String contentType,
                                           String contentEncoding,
                                           long contentLength,
@@ -734,17 +649,13 @@ final class URLLoader implements Runnable {
     {
         if (logger.isLoggable(Level.FINEST)) {
             logger.finest(String.format(
-                    "newUrl: [%s], "
-                    + "newMethod: [%s], "
-                    + "status: [%d], "
+                    "status: [%d], "
                     + "contentType: [%s], "
                     + "contentEncoding: [%s], "
                     + "contentLength: [%d], "
                     + "url: [%s], "
                     + "data: [0x%016X], "
                     + "headers:%n%s",
-                    newUrl,
-                    newMethod,
                     status,
                     contentType,
                     contentEncoding,
@@ -753,9 +664,7 @@ final class URLLoader implements Runnable {
                     data,
                     Util.formatHeaders(headers)));
         }
-        boolean result = twkWillSendRequest(
-                newUrl,
-                newMethod,
+        twkWillSendRequest(
                 status,
                 contentType,
                 contentEncoding,
@@ -763,10 +672,6 @@ final class URLLoader implements Runnable {
                 headers,
                 url,
                 data);
-        if (logger.isLoggable(Level.FINEST)) {
-            logger.finest(String.format("result: [%s]", result));
-        }
-        return result;
     }
 
     private void didReceiveResponse(URLConnection c) {
@@ -833,7 +738,6 @@ final class URLLoader implements Runnable {
                         byteBuffer.position(),
                         byteBuffer.remaining());
             }
-            byteBuffer.clear();
             allocator.release(byteBuffer);
         });
     }
@@ -902,40 +806,6 @@ final class URLLoader implements Runnable {
             runnable.run();
         }
     }
-
-    private static native void twkDidSendData(long totalBytesSent,
-                                              long totalBytesToBeSent,
-                                              long data);
-
-    private static native boolean twkWillSendRequest(String newUrl,
-                                                     String newMethod,
-                                                     int status,
-                                                     String contentType,
-                                                     String contentEncoding,
-                                                     long contentLength,
-                                                     String headers,
-                                                     String url,
-                                                     long data);
-
-    private static native void twkDidReceiveResponse(int status,
-                                                     String contentType,
-                                                     String contentEncoding,
-                                                     long contentLength,
-                                                     String headers,
-                                                     String url,
-                                                     long data);
-
-    private static native void twkDidReceiveData(ByteBuffer byteBuffer,
-                                                 int position,
-                                                 int remaining,
-                                                 long data);
-
-    private static native void twkDidFinishLoading(long data);
-
-    private static native void twkDidFail(int errorCode,
-                                          String url,
-                                          String message,
-                                          long data);
 
     /**
      * Given a {@link URLConnection}, returns the connection status
