@@ -36,6 +36,8 @@ import org.junit.Test;
 import com.sun.javafx.tk.Toolkit;
 
 import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyEvent.*;
+import static java.util.stream.Collectors.*;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
@@ -46,10 +48,12 @@ import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableSet;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControlShim;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
@@ -301,6 +305,53 @@ public class TextFieldTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
+
+    /**
+     * Test related to https://bugs.openjdk.java.net/browse/JDK-8207759
+     * broken event dispatch sequence by forwardToParent.
+     */
+    @Test
+    public void testEventSequenceEnterHandler() {
+        initStage();
+        root.getChildren().add(txtField);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        EventHandler<KeyEvent> adder = events::add;
+        scene.addEventHandler(KEY_PRESSED, adder);
+        root.addEventHandler(KEY_PRESSED, adder);
+        txtField.addEventHandler(KEY_PRESSED, adder);
+        KeyCode key = ENTER;
+        KeyEventFirer keyFirer = new KeyEventFirer(txtField);
+        keyFirer.doKeyPress(key);
+        assertEquals("event count", 3, events.size());
+        List<Object> sources = events.stream()
+                .map(e -> e.getSource())
+                .collect(toList());
+        List<Object> expected = List.of(txtField, root, scene);
+        assertEquals(expected, sources);
+    }
+
+    @Test
+    public void testEventSequenceEscapeHandler() {
+        initStage();
+        root.getChildren().add(txtField);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        EventHandler<KeyEvent> adder = events::add;
+        scene.addEventHandler(KEY_PRESSED, adder);
+        root.addEventHandler(KEY_PRESSED, adder);
+        txtField.addEventHandler(KEY_PRESSED, adder);
+        KeyCode key = ESCAPE;
+        KeyEventFirer keyFirer = new KeyEventFirer(txtField);
+        keyFirer.doKeyPress(key);
+        assertEquals("event count", 3, events.size());
+        List<Object> sources = events.stream()
+                .map(e -> e.getSource())
+                .collect(toList());
+        List<Object> expected = List.of(txtField, root, scene);
+        assertEquals(expected, sources);
+    }
+
 
     /**
      * test for JDK-8207774: ENTER must not be forwared if actionHandler
