@@ -35,10 +35,6 @@ project(":web").projectDir = file("modules/javafx.web")
 project(":media").projectDir = file("modules/javafx.media")
 project(":systemTests").projectDir = file("tests/system")
 
-// Stable publishing behavior is the default in gradle 5.x.
-// This setting enables it in gradle 4.8 to help with the transition.
-enableFeaturePreview('STABLE_PUBLISHING')
-
 def closedDir = file("../rt-closed")
 def buildClosed = closedDir.isDirectory()
 
