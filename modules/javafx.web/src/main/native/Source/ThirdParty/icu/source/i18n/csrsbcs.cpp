@@ -173,13 +173,13 @@ NGramParser_IBM420::~NGramParser_IBM420() {}
 int32_t NGramParser_IBM420::isLamAlef(int32_t b)
 {
     if(b == 0xB2 || b == 0xB3){
-            return 0x47;
+             return 0x47;
         }else if(b == 0xB4 || b == 0xB5){
-            return 0x49;
+             return 0x49;
         }else if(b == 0xB8 || b == 0xB9){
-            return 0x56;
+             return 0x56;
         }else
-            return 0x00;
+             return 0x00;
 }
 
 /*
