@@ -102,13 +102,13 @@ final class HTTP2Loader extends URLLoaderBase {
 
     private final CompletableFuture<Void> response;
     // Use singleton instance of HttpClient to get the maximum benefits
-    private final static HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-                   .version(Version.HTTP_2)  // this is the default
-                   .followRedirects(Redirect.NEVER) // WebCore handles redirection
-                   .connectTimeout(Duration.ofSeconds(30)) // FIXME: Add a property to control the timeout
-                   .cookieHandler(CookieHandler.getDefault())
-                   .build();
-
+    private final static HttpClient HTTP_CLIENT =
+        AccessController.doPrivileged((PrivilegedAction<HttpClient>) () -> HttpClient.newBuilder()
+                .version(Version.HTTP_2)  // this is the default
+                .followRedirects(Redirect.NEVER) // WebCore handles redirection
+                .connectTimeout(Duration.ofSeconds(30)) // FIXME: Add a property to control the timeout
+                .cookieHandler(CookieHandler.getDefault())
+                .build());
     // Singleton instance of direct ByteBuffer to transfer downloaded bytes from
     // Java to native
     private static final int DEFAULT_BUFSIZE = 40 * 1024;

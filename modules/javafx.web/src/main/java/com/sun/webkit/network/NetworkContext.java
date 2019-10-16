@@ -92,7 +92,12 @@ final class NetworkContext {
                 new URLLoaderThreadFactory());
         threadPool.allowCoreThreadTimeOut(true);
 
-        useHTTP2Loader = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.valueOf(System.getProperty("com.sun.webkit.useHTTP2Loader", "true")));
+        useHTTP2Loader = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            // Use HTTP2 by default on JDK 12 or later
+            final var version = Runtime.Version.parse(System.getProperty("java.version"));
+            final String defaultUseHTTP2 = version.feature() >= 12 ? "true" : "false";
+            return Boolean.valueOf(System.getProperty("com.sun.webkit.useHTTP2Loader", defaultUseHTTP2));
+        });
     }
 
     /**
