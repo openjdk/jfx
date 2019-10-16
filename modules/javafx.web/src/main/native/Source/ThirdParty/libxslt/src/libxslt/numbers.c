@@ -382,6 +382,9 @@ xsltNumberFormatTokenize(const xmlChar *format,
         tokens->tokens[tokens->nTokens].token = val - 1;
         ix += len;
         val = xmlStringCurrentChar(NULL, format+ix, &len);
+        } else {
+            tokens->tokens[tokens->nTokens].token = (xmlChar)'0';
+            tokens->tokens[tokens->nTokens].width = 1;
         }
     } else if ( (val == (xmlChar)'A') ||
             (val == (xmlChar)'a') ||
