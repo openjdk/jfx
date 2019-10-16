@@ -2121,7 +2121,7 @@ UConverter_toUnicode_ISO_2022_JP_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
                     continue;
                 } else {
                     /* only JIS7 uses SI/SO, not ISO-2022-JP-x */
-                    myData->isEmptySegment = FALSE; /* reset this, we have a different error */
+                    myData->isEmptySegment = FALSE;    /* reset this, we have a different error */
                     break;
                 }
 
@@ -2133,7 +2133,7 @@ UConverter_toUnicode_ISO_2022_JP_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
                     continue;
                 } else {
                     /* only JIS7 uses SI/SO, not ISO-2022-JP-x */
-                    myData->isEmptySegment = FALSE; /* reset this, we have a different error */
+                    myData->isEmptySegment = FALSE;    /* reset this, we have a different error */
                     break;
                 }
 
@@ -2159,7 +2159,7 @@ escape:
                 if(U_FAILURE(*err)){
                     args->target = myTarget;
                     args->source = mySource;
-                    myData->isEmptySegment = FALSE; /* Reset to avoid future spurious errors */
+                    myData->isEmptySegment = FALSE;    /* Reset to avoid future spurious errors */
                     return;
                 }
                 /* If we successfully completed an escape sequence, we begin a new segment, empty so far */
@@ -2712,7 +2712,7 @@ UConverter_toUnicode_ISO_2022_KR_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
             if(mySourceChar==UCNV_SI){
                 myData->toU2022State.g = 0;
                 if (myData->isEmptySegment) {
-                    myData->isEmptySegment = FALSE; /* we are handling it, reset to avoid future spurious errors */
+                    myData->isEmptySegment = FALSE;    /* we are handling it, reset to avoid future spurious errors */
                     *err = U_ILLEGAL_ESCAPE_SEQUENCE;
                     args->converter->toUCallbackReason = UCNV_IRREGULAR;
                     args->converter->toUBytes[0] = (uint8_t)mySourceChar;
@@ -2725,13 +2725,13 @@ UConverter_toUnicode_ISO_2022_KR_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
                 continue;
             }else if(mySourceChar==UCNV_SO){
                 myData->toU2022State.g = 1;
-                myData->isEmptySegment = TRUE;  /* Begin a new segment, empty so far */
+                myData->isEmptySegment = TRUE;    /* Begin a new segment, empty so far */
                 /*consume the source */
                 continue;
             }else if(mySourceChar==ESC_2022){
                 mySource--;
 escape:
-                myData->isEmptySegment = FALSE; /* Any invalid ESC sequences will be detected separately, so just reset this */
+                myData->isEmptySegment = FALSE;    /* Any invalid ESC sequences will be detected separately, so just reset this */
                 changeState_2022(args->converter,&(mySource),
                                 mySourceLimit, ISO_2022_KR, err);
                 if(U_FAILURE(*err)){
@@ -2742,7 +2742,7 @@ escape:
                 continue;
             }
 
-            myData->isEmptySegment = FALSE; /* Any invalid char errors will be detected separately, so just reset this */
+            myData->isEmptySegment = FALSE;    /* Any invalid char errors will be detected separately, so just reset this */
             if(myData->toU2022State.g == 1) {
                 if(mySource < mySourceLimit) {
                     int leadIsOk, trailIsOk;
@@ -2772,7 +2772,7 @@ getTrailByte:
                         /* report a pair of illegal bytes if the second byte is not a DBCS starter */
                         ++mySource;
                         /* add another bit so that the code below writes 2 bytes in case of error */
-                        mySourceChar = 0x10000 | (mySourceChar << 8) | trailByte;
+                        mySourceChar = static_cast<UChar>(0x10000 | (mySourceChar << 8) | trailByte);
                     }
                 } else {
                     args->converter->toUBytes[0] = (uint8_t)mySourceChar;
@@ -3301,10 +3301,10 @@ UConverter_toUnicode_ISO_2022_CN_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
             case UCNV_SI:
                 pToU2022State->g=0;
                 if (myData->isEmptySegment) {
-                    myData->isEmptySegment = FALSE; /* we are handling it, reset to avoid future spurious errors */
+                    myData->isEmptySegment = FALSE;    /* we are handling it, reset to avoid future spurious errors */
                     *err = U_ILLEGAL_ESCAPE_SEQUENCE;
                     args->converter->toUCallbackReason = UCNV_IRREGULAR;
-                    args->converter->toUBytes[0] = mySourceChar;
+                    args->converter->toUBytes[0] = static_cast<uint8_t>(mySourceChar);
                     args->converter->toULength = 1;
                     args->target = myTarget;
                     args->source = mySource;
@@ -3315,11 +3315,11 @@ UConverter_toUnicode_ISO_2022_CN_OFFSETS_LOGIC(UConverterToUnicodeArgs *args,
             case UCNV_SO:
                 if(pToU2022State->cs[1] != 0) {
                     pToU2022State->g=1;
-                    myData->isEmptySegment = TRUE;  /* Begin a new segment, empty so far */
+                    myData->isEmptySegment = TRUE;    /* Begin a new segment, empty so far */
                     continue;
                 } else {
                     /* illegal to have SO before a matching designator */
-                    myData->isEmptySegment = FALSE; /* Handling a different error, reset this to avoid future spurious errs */
+                    myData->isEmptySegment = FALSE;    /* Handling a different error, reset this to avoid future spurious errs */
                     break;
                 }
 
@@ -3345,7 +3345,7 @@ escape:
                 if(U_FAILURE(*err)){
                     args->target = myTarget;
                     args->source = mySource;
-                    myData->isEmptySegment = FALSE; /* Reset to avoid future spurious errors */
+                    myData->isEmptySegment = FALSE;    /* Reset to avoid future spurious errors */
                     return;
                 }
                 continue;

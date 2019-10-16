@@ -189,7 +189,7 @@ usprep_open(const char* path,
 /**
  * Creates a StringPrep profile for the specified profile type.
  *
- * @param type      The profile type
+ * @param type        The profile type
  * @param status    ICU error code in/out parameter. Must not be NULL.
  *                  Must fulfill U_SUCCESS before the function call.
  * @return          Pointer to UStringPrepProfile that is opened. Should be closed by

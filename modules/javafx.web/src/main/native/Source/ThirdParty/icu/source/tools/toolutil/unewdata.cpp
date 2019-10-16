@@ -58,28 +58,28 @@ udata_create(const char *dir, const char *type, const char *name,
     }
 
     /* Check that the full path won't be too long */
-    length = 0;                 /* Start with nothing */
+    length = 0;                    /* Start with nothing */
     if(dir != NULL  && *dir !=0)    /* Add directory length if one was given */
     {
-        length += strlen(dir);
+        length += static_cast<int32_t>(strlen(dir));
 
         /* Add 1 if dir doesn't end with path sep */
         if (dir[strlen(dir) - 1]!= U_FILE_SEP_CHAR) {
             length++;
         }
     }
-    length += strlen(name);     /* Add the filename length */
+    length += static_cast<int32_t>(strlen(name));        /* Add the filename length */
 
     if(type != NULL  && *type !=0) { /* Add directory length if  given */
-        length += strlen(type);
+        length += static_cast<int32_t>(strlen(type));
     }
 
 
      /* LDH buffer Length error check */
     if(length  > ((int32_t)sizeof(filename) - 1))
     {
-        *pErrorCode = U_BUFFER_OVERFLOW_ERROR;
-        uprv_free(pData);
+           *pErrorCode = U_BUFFER_OVERFLOW_ERROR;
+           uprv_free(pData);
         return NULL;
     }
 

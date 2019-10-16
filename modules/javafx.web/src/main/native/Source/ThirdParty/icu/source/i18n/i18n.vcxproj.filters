@@ -156,6 +156,15 @@
     <ClCompile Include="format.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
+    <ClCompile Include="formattedval_iterimpl.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="formattedval_sbimpl.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="formattedvalue.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
     <ClCompile Include="fphdlimp.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
@@ -181,6 +190,12 @@
       <Filter>formatting</Filter>
     </ClCompile>
     <ClCompile Include="japancal.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="listformatter.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="ulistformatter.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
     <ClCompile Include="measfmt.cpp">
@@ -552,6 +567,9 @@
     <ClCompile Include="number_notation.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
+    <ClCompile Include="number_output.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
     <ClCompile Include="number_padding.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
@@ -618,7 +636,16 @@
     <ClCompile Include="numparse_validators.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
+    <ClCompile Include="numrange_fluent.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="numrange_impl.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
     <ClCompile Include="dayperiodrules.cpp">
+      <Filter>formatting</Filter>
+    </ClCompile>
+    <ClCompile Include="erarules.cpp">
       <Filter>formatting</Filter>
     </ClCompile>
   </ItemGroup>
@@ -773,6 +800,9 @@
     <ClInclude Include="ethpccal.h">
       <Filter>formatting</Filter>
     </ClInclude>
+    <ClInclude Include="formattedval_impl.h">
+      <Filter>formatting</Filter>
+    </ClInclude>
     <ClInclude Include="fphdlimp.h">
       <Filter>formatting</Filter>
     </ClInclude>
@@ -903,6 +933,9 @@
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="numparse_utils.h">
+      <Filter>formatting</Filter>
+    </ClInclude>
+    <ClInclude Include="numrange_impl.h">
       <Filter>formatting</Filter>
     </ClInclude>
     <ClInclude Include="olsontz.h">
@@ -1177,6 +1210,9 @@
     </ClInclude>
     <ClInclude Include="utf8collationiterator.h">
       <Filter>collation</Filter>
+    </ClInclude>
+    <ClInclude Include="erarules.h">
+      <Filter>formatting</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
