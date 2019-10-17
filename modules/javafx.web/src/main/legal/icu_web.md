@@ -1,12 +1,12 @@
-## IBM International Components for Unicode (ICU4C) v62.1
+## IBM International Components for Unicode (ICU4C) v64.2
 
 ### ICU License
 ```
 
 COPYRIGHT AND PERMISSION NOTICE (ICU 58 and later)
 
-Copyright © 1991-2018 Unicode, Inc. All rights reserved.
-Distributed under the Terms of Use in http://www.unicode.org/copyright.html.
+Copyright © 1991-2019 Unicode, Inc. All rights reserved.
+Distributed under the Terms of Use in https://www.unicode.org/copyright.html.
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of the Unicode data files and any associated documentation
