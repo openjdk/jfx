@@ -1007,7 +1007,7 @@ public class FXCollections {
             this.backingList = list;
             this.mutex = mutex;
         }
-        
+
         SynchronizedList(List<T> list) {
             this.backingList = list;
             this.mutex = this;
