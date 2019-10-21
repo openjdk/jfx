@@ -169,7 +169,7 @@ MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 MAC.prism.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 MAC.prism.compiler = compiler
-MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", ccBaseFlags].flatten()
+MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", IS_STATIC_BUILD? "-DSTATIC_BUILD" : "", ccBaseFlags].flatten()
 MAC.prism.linker = linker
 MAC.prism.linkFlags = linkFlagsAlt
 MAC.prism.lib = "prism_common"
