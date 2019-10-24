@@ -491,7 +491,7 @@ final public class WebEngine {
      * Location of the user stylesheet as a string URL.
      *
      * <p>This should be a local URL, i.e. either {@code 'data:'},
-     * {@code 'file:'}, or {@code 'jar:'}. Remote URLs are not allowed
+     * {@code 'file:'}, {@code 'jar:'}, or {@code 'jrt:'}. Remote URLs are not allowed
      * for security reasons.
      *
      * @defaultValue null
@@ -554,6 +554,7 @@ final public class WebEngine {
                         dataUrl = url;
                     } else if (url.startsWith("file:") ||
                                url.startsWith("jar:")  ||
+                               url.startsWith("jrt:")  ||
                                url.startsWith("data:"))
                     {
                         try {
