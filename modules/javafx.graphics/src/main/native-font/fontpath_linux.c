@@ -461,7 +461,7 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
                 /* Upstream Java code currently stores this in a byte;
                  * And we need one slot free for when this sequence is
                  * used as a fallback sequeunce.
-                 */ 
+                 */
                 break;
             }
         }
