@@ -69,6 +69,7 @@ public class GlyphCache {
     // segmented arrays are in blocks of 32 glyphs.
     private static final int SEGSHIFT = 5;
     private static final int SEGSIZE  = 1 << SEGSHIFT;
+    private static final int SEGMASK  = SEGSIZE - 1;
     HashMap<Integer, GlyphData[]>
         glyphDataMap = new HashMap<Integer, GlyphData[]>();
 
@@ -238,8 +239,8 @@ public class GlyphCache {
     }
 
     private GlyphData getCachedGlyph(int glyphCode, int subPixel) {
-        int segIndex = glyphCode >> SEGSHIFT;
-        int subIndex = glyphCode % SEGSIZE;
+        int segIndex = glyphCode >>> SEGSHIFT;
+        int subIndex = glyphCode & SEGMASK;
         segIndex |= (subPixel << SUBPIXEL_SHIFT);
         GlyphData[] segment = glyphDataMap.get(segIndex);
         if (segment != null) {
