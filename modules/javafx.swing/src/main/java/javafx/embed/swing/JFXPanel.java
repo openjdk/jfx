@@ -446,13 +446,11 @@ public class JFXPanel extends JComponent {
             (e.getButton() == MouseEvent.BUTTON1)) {
             if (isFocusable() && !hasFocus()) {
                 requestFocus();
-                // this focus request event goes to eventqueue and will be
-                // asynchronously handled so MOUSE_PRESSED event will not be
-                // honoured by FX immediately due to lack of focus in fx
-                // component. Fire the same MOUSE_PRESSED event after
-                // requestFocus() so that 2nd mouse press will be honoured
-                // since now fx have focus
-                jfxPanelIOP.postEvent(this, e);
+                // This fixes JDK-8087914 without causing JDK-8200224
+                // It is save, because in JavaFX only the method "setFocused(true)" is called,
+                // which doesn't have any side-effects when called multiple times.
+                int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
+                stagePeer.setFocused(true, focusCause);
             }
         }
 
