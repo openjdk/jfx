@@ -3,19 +3,6 @@
 ### Mesa License
 
 ```
-
-License / Copyright Information
-The Mesa distribution consists of several components.
-Different copyrights and licenses apply to different components.
-For example, the GLX client code uses the SGI Free Software License B,
-and some of the Mesa device drivers are copyrighted by their authors.
-See below for a list of Mesa's main components and the license for each.
-
-The core Mesa library is licensed according to the terms of the MIT license.
-This allows integration with the XFree86, Xorg and DRI projects.
-
-The default Mesa license is as follows:
-
 Copyright (C) 1999-2007  Brian Paul   All Rights Reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a
