@@ -31,9 +31,12 @@ import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.Event;
+import javafx.scene.control.ComboBox;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.text.Font;
 import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
@@ -83,6 +86,12 @@ public class HTMLEditorTest {
         // Start the Test Application
         new Thread(() -> Application.launch(HTMLEditorTestApp.class,
             (String[]) null)).start();
+
+        // Used by selectFontFamilysWithSpace() for JDK-8230492
+        Font.loadFont(
+            HTMLEditorTest.class.getResource("WebKit_Layout_Tests_2.ttf").toExternalForm(),
+            10
+        );
 
         assertTrue("Timeout waiting for FX runtime to start", Util.await(launchLatch));
     }
@@ -293,5 +302,56 @@ public class HTMLEditorTest {
         assertTrue("Timeout when waiting for focus change ", Util.await(editorStateLatch));
         assertNotNull("result must have a valid reference ", result.get());
         assertEquals("document.body.style.fontWeight must be bold ", "bold", result.get());
+    }
+
+    /**
+     * @test
+     * @bug 8230492
+     * Summary Check font-family change on font name with numbers
+     */
+    @Test
+    public void selectFontFamilyWithSpace() {
+        final CountDownLatch editorStateLatch = new CountDownLatch(1);
+        final AtomicReference<String> result = new AtomicReference<>();
+
+        Util.runAndWait(() -> {
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    htmlEditor.requestFocus();
+                }
+            });
+
+            htmlEditor.setHtmlText("<body>Sample Text</body>");
+
+            webView.focusedProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    ComboBox<String> fontFamilyComboBox = null;
+                    int i = 0;
+                    for(Node comboBox : htmlEditor.lookupAll(".font-menu-button")) {
+                        // 0 - Format, 1 - Font Family, 2 - Font Size
+                        if (i == 1) {
+                            assertTrue("fontFamilyComboBox must be ComboBox",
+                                comboBox instanceof ComboBox);
+                            fontFamilyComboBox = (ComboBox<String>) comboBox;
+                            assertNotNull("fontFamilyComboBox must not be null",
+                                fontFamilyComboBox);
+                        }
+                        i++;
+                    }
+                    webView.getEngine().
+                        executeScript("document.execCommand('selectAll', false, 'true');");
+                    fontFamilyComboBox.getSelectionModel().select("WebKit Layout Tests 2");
+                    result.set(htmlEditor.getHtmlText());
+                    editorStateLatch.countDown();
+                }
+            });
+        });
+
+        assertTrue("Timeout when waiting for focus change ", Util.await(editorStateLatch));
+        assertNotNull("result must have a valid reference ", result.get());
+        assertTrue("font-family must be 'WebKit Layout Test 2' ", result.get().
+            contains("font-family: &quot;WebKit Layout Tests 2&quot;"));
     }
 }
