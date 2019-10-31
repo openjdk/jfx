@@ -562,12 +562,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             } else if (textField != null) {
                 textField.fireEvent(ke);
             }
-        } else if (ke.getCode() == KeyCode.F4) {
-            if (ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                if (comboBoxBase.isShowing()) comboBoxBase.hide();
-                else comboBoxBase.show();
-            }
-            ke.consume(); // we always do a consume here (otherwise unit tests fail)
         } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
             // RT-23275: The TextField fires F10 and ESCAPE key events
             // up to the parent, which are then fired back at the
