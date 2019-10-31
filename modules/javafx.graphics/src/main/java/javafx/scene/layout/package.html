@@ -43,7 +43,7 @@ should not position or resize the node directly; see &quot;Node Resizability&quo
 for more details.
 </p>
 
-<h3>Scene Graph Layout Mechanism</h3>
+<h2>Scene Graph Layout Mechanism</h2>
 <p>
 The scene graph layout mechanism is driven automatically by the system once
 the application creates and displays a {@link javafx.scene.Scene Scene}.
@@ -59,7 +59,7 @@ change. Therefore, applications should not invoke layout directly on nodes.
 </p>
 
 
-<h3>Node Resizability</h3>
+<h2>Node Resizability</h2>
 <p>
 The scene graph supports both resizable and non-resizable node classes.  The
 {@code isResizable()} method on {@link javafx.scene.Node Node} returns whether a
@@ -101,7 +101,7 @@ needs to set appropriate geometric properties which determine its size:
     circle.setRadius(50);
 </code></pre>
 
-<h3>Resizable Range</h3>
+<h2>Resizable Range</h2>
 
 Each resizable node class computes an appropriate min, pref, and max size based
 on its own content and property settings (it's 'intrinsic' size range).
@@ -126,7 +126,7 @@ And finally, if the application needs to restore the intrinsically computed valu
 <pre><code>    listview.setPrefSize(Region.USE_COMPUTED_SIZE, Region.USE_COMPUTED_SIZE);
 </code></pre>
 
-<h3>CSS Styling and Node Sizing</h3>
+<h2>CSS Styling and Node Sizing</h2>
 
 Applications cannot reliably query the bounds of a resizable node until it has been
 added to a scene because the size of that node may be dependent on CSS.  This is
@@ -142,7 +142,7 @@ the layout pass.
 
 
 
-<h3>Visual Bounds vs. Layout Bounds</h3>
+<h2>Visual Bounds vs. Layout Bounds</h2>
 
 A graphically rich user interface often has the need to make a distinction between
 a node's visual bounds and the bounds used for layout.  For example, the tight visual

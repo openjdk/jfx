@@ -49,7 +49,7 @@ import java.io.IOException;
  * screenX,screenY - relative to origin of the screen that
  * contains the mouse pointer.
  *
- * <h3>Dragging gestures</h3>
+ * <h2>Dragging gestures</h2>
  * <p>
  * There are three types of dragging gestures. They are all initiated by
  * a mouse press event and terminated as a result of a mouse released
@@ -94,7 +94,7 @@ import java.io.IOException;
  * {@code isSynthesized()} method may be used to detect the problem and make the
  * dragging handlers behave accordingly.
  *
- * <h3>Mouse enter/exit handling</h3>
+ * <h2>Mouse enter/exit handling</h2>
  * <p>
  * When mouse enters a node, the node gets {@code MOUSE_ENTERED} event, when
  * it leaves, it gets {@code MOUSE_EXITED} event. These events are delivered
@@ -122,7 +122,7 @@ import java.io.IOException;
  * {@code MOUSE_ENTERED_TARGET} event handler will receive the
  * {@code MOUSE_ENTERED} event on target.
  *
- * <h3>Notes</h3>
+ * <h2>Notes</h2>
  * <ul>
  *   <li>For triggering context menus see the {@link ContextMenuEvent}.</li>
  * </ul>
