@@ -262,7 +262,7 @@ gst_tag_extract_id3v1_string (GstTagList * list, const gchar * tag,
 GstTagList *
 gst_tag_list_new_from_id3v1 (const guint8 * data)
 {
-  guint year;
+  gint64 year;
   gchar *ystr;
   GstTagList *list;
 
@@ -275,9 +275,9 @@ gst_tag_list_new_from_id3v1 (const guint8 * data)
   gst_tag_extract_id3v1_string (list, GST_TAG_ARTIST, (gchar *) & data[33], 30);
   gst_tag_extract_id3v1_string (list, GST_TAG_ALBUM, (gchar *) & data[63], 30);
   ystr = g_strndup ((gchar *) & data[93], 4);
-  year = strtoul (ystr, NULL, 10);
+  year = g_ascii_strtoll (ystr, NULL, 10);
   g_free (ystr);
-  if (year > 0) {
+  if (year > 0 && year <= 9999) {
     GstDateTime *dt = gst_date_time_new_y (year);
 
     gst_tag_list_add (list, GST_TAG_MERGE_REPLACE, GST_TAG_DATE_TIME, dt, NULL);

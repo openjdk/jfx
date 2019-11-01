@@ -38,6 +38,7 @@
 #include "audiofirfilter.h"
 #include "audioecho.h"
 #include "gstscaletempo.h"
+#include "gststereo.h"
 #endif // GSTREAMER_LITE
 
 /* entry point to initialize the plug-in
@@ -82,7 +83,8 @@ plugin_init (GstPlugin * plugin)
       gst_element_register (plugin, "audioecho", GST_RANK_NONE,
           GST_TYPE_AUDIO_ECHO) &&
       gst_element_register (plugin, "scaletempo", GST_RANK_NONE,
-          GST_TYPE_SCALETEMPO));
+          GST_TYPE_SCALETEMPO) &&
+      gst_element_register (plugin, "stereo", GST_RANK_NONE, GST_TYPE_STEREO));
 #endif // GSTREAMER_LITE
 }
 

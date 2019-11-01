@@ -36,10 +36,10 @@
  */
 #ifndef G_MODULE_HAVE_DLERROR
 #  ifdef __NetBSD__
-#    define dlerror()   g_strerror (errno)
+#    define dlerror() g_strerror (errno)
 #  else /* !__NetBSD__ */
 /* could we rely on errno's state here? */
-#    define dlerror()   "unknown dl-error"
+#    define dlerror() "unknown dl-error"
 #  endif /* !__NetBSD__ */
 #endif  /* G_MODULE_HAVE_DLERROR */
 
@@ -50,18 +50,18 @@
  *
  * Mandatory:
  * RTLD_LAZY   - resolve undefined symbols as code from the dynamic library
- *       is executed.
+ *     is executed.
  * RTLD_NOW    - resolve all undefined symbols before dlopen returns, and fail
- *       if this cannot be done.
+ *     if this cannot be done.
  * Optionally:
  * RTLD_GLOBAL - the external symbols defined in the library will be made
- *       available to subsequently loaded libraries.
+ *     available to subsequently loaded libraries.
  */
 #ifndef HAVE_RTLD_LAZY
-#define RTLD_LAZY   1
+#define RTLD_LAZY 1
 #endif  /* RTLD_LAZY */
 #ifndef HAVE_RTLD_NOW
-#define RTLD_NOW    0
+#define RTLD_NOW  0
 #endif  /* RTLD_NOW */
 /* some systems (OSF1 V5.0) have broken RTLD_GLOBAL linkage */
 #ifdef G_MODULE_BROKEN_RTLD_GLOBAL
@@ -90,13 +90,13 @@ fetch_dlerror (gboolean replace_null)
 
 static gpointer
 _g_module_open (const gchar *file_name,
-        gboolean     bind_lazy,
-        gboolean     bind_local)
+    gboolean     bind_lazy,
+    gboolean     bind_local)
 {
   gpointer handle;
 
   handle = dlopen (file_name,
-           (bind_local ? 0 : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
+       (bind_local ? 0 : RTLD_GLOBAL) | (bind_lazy ? RTLD_LAZY : RTLD_NOW));
   if (!handle)
     g_module_set_error (fetch_dlerror (TRUE));
 
@@ -132,7 +132,7 @@ _g_module_self (void)
 
 static void
 _g_module_close (gpointer handle,
-         gboolean is_unref)
+     gboolean is_unref)
 {
   /* are there any systems out there that have dlopen()/dlclose()
    * without a reference count implementation?
@@ -148,13 +148,13 @@ _g_module_close (gpointer handle,
   if (is_unref)
     {
       if (dlclose (handle) != 0)
-    g_module_set_error (fetch_dlerror (TRUE));
+  g_module_set_error (fetch_dlerror (TRUE));
     }
 }
 
 static gpointer
 _g_module_symbol (gpointer     handle,
-          const gchar *symbol_name)
+      const gchar *symbol_name)
 {
   gpointer p;
   gchar *msg;
@@ -170,7 +170,7 @@ _g_module_symbol (gpointer     handle,
 
 static gchar*
 _g_module_build_path (const gchar *directory,
-              const gchar *module_name)
+          const gchar *module_name)
 {
   if (directory && *directory) {
     if (strncmp (module_name, "lib", 3) == 0)

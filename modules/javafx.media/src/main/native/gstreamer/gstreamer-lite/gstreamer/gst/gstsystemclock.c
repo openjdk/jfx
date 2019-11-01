@@ -89,15 +89,12 @@ struct _GstSystemClockPrivate
 #ifdef G_OS_WIN32
   LARGE_INTEGER start;
   LARGE_INTEGER frequency;
+  guint64 ratio;
 #endif                          /* G_OS_WIN32 */
 #ifdef __APPLE__
   struct mach_timebase_info mach_timebase;
 #endif
 };
-
-#define GST_SYSTEM_CLOCK_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_SYSTEM_CLOCK, \
-        GstSystemClockPrivate))
 
 #ifdef HAVE_POSIX_TIMERS
 # ifdef HAVE_MONOTONIC_CLOCK
@@ -146,7 +143,7 @@ static GMutex _gst_sysclock_mutex;
 /* static guint gst_system_clock_signals[LAST_SIGNAL] = { 0 }; */
 
 #define gst_system_clock_parent_class parent_class
-G_DEFINE_TYPE (GstSystemClock, gst_system_clock, GST_TYPE_CLOCK);
+G_DEFINE_TYPE_WITH_PRIVATE (GstSystemClock, gst_system_clock, GST_TYPE_CLOCK);
 
 static void
 gst_system_clock_class_init (GstSystemClockClass * klass)
@@ -156,8 +153,6 @@ gst_system_clock_class_init (GstSystemClockClass * klass)
 
   gobject_class = (GObjectClass *) klass;
   gstclock_class = (GstClockClass *) klass;
-
-  g_type_class_add_private (klass, sizeof (GstSystemClockPrivate));
 
   gobject_class->dispose = gst_system_clock_dispose;
   gobject_class->set_property = gst_system_clock_set_property;
@@ -187,7 +182,7 @@ gst_system_clock_init (GstSystemClock * clock)
       GST_CLOCK_FLAG_CAN_DO_PERIODIC_SYNC |
       GST_CLOCK_FLAG_CAN_DO_PERIODIC_ASYNC);
 
-  clock->priv = priv = GST_SYSTEM_CLOCK_GET_PRIVATE (clock);
+  clock->priv = priv = gst_system_clock_get_instance_private (clock);
 
   priv->clock_type = DEFAULT_CLOCK_TYPE;
   priv->timer = gst_poll_new_timer ();
@@ -201,6 +196,7 @@ gst_system_clock_init (GstSystemClock * clock)
   if (priv->frequency.QuadPart != 0)
     /* we take a base time so that time starts from 0 to ease debugging */
     QueryPerformanceCounter (&priv->start);
+  priv->ratio = GST_SECOND / priv->frequency.QuadPart;
 #endif /* G_OS_WIN32 */
 
 #ifdef __APPLE__
@@ -375,8 +371,8 @@ gst_system_clock_remove_wakeup (GstSystemClock * sysclock)
   g_return_if_fail (sysclock->priv->wakeup_count > 0);
 
   sysclock->priv->wakeup_count--;
-    GST_CAT_DEBUG (GST_CAT_CLOCK, "reading control");
-    while (!gst_poll_read_control (sysclock->priv->timer)) {
+  GST_CAT_DEBUG (GST_CAT_CLOCK, "reading control");
+  while (!gst_poll_read_control (sysclock->priv->timer)) {
     if (errno == EWOULDBLOCK) {
       /* Try again and give other threads the chance to do something */
       g_thread_yield ();
@@ -386,7 +382,7 @@ gst_system_clock_remove_wakeup (GstSystemClock * sysclock)
       break;
     }
   }
-    GST_SYSTEM_CLOCK_BROADCAST (sysclock);
+  GST_SYSTEM_CLOCK_BROADCAST (sysclock);
   GST_CAT_DEBUG (GST_CAT_CLOCK, "wakeup count %d",
       sysclock->priv->wakeup_count);
 }
@@ -394,7 +390,7 @@ gst_system_clock_remove_wakeup (GstSystemClock * sysclock)
 static void
 gst_system_clock_add_wakeup (GstSystemClock * sysclock)
 {
-    GST_CAT_DEBUG (GST_CAT_CLOCK, "writing control");
+  GST_CAT_DEBUG (GST_CAT_CLOCK, "writing control");
   gst_poll_write_control (sysclock->priv->timer);
   sysclock->priv->wakeup_count++;
   GST_CAT_DEBUG (GST_CAT_CLOCK, "wakeup count %d",
@@ -586,8 +582,8 @@ gst_system_clock_get_internal_time (GstClock * clock)
     /* we prefer the highly accurate performance counters on windows */
     QueryPerformanceCounter (&now);
 
-    return gst_util_uint64_scale (now.QuadPart - sysclock->priv->start.QuadPart,
-        GST_SECOND, sysclock->priv->frequency.QuadPart);
+    return ((now.QuadPart -
+            sysclock->priv->start.QuadPart) * sysclock->priv->ratio);
   } else
 #endif /* G_OS_WIN32 */
 #if !defined HAVE_POSIX_TIMERS || !defined HAVE_CLOCK_GETTIME

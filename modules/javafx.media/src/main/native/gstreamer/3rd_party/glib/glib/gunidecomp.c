@@ -107,7 +107,7 @@ g_unichar_combining_class (gunichar uc)
  **/
 void
 g_unicode_canonical_ordering (gunichar *string,
-                  gsize     len)
+            gsize     len)
 {
   gsize i;
   int swap = 1;
@@ -118,28 +118,28 @@ g_unicode_canonical_ordering (gunichar *string,
       swap = 0;
       last = COMBINING_CLASS (string[0]);
       for (i = 0; i < len - 1; ++i)
+  {
+    int next = COMBINING_CLASS (string[i + 1]);
+    if (next != 0 && last > next)
+      {
+        gsize j;
+        /* Percolate item leftward through string.  */
+        for (j = i + 1; j > 0; --j)
     {
-      int next = COMBINING_CLASS (string[i + 1]);
-      if (next != 0 && last > next)
-        {
-          gsize j;
-          /* Percolate item leftward through string.  */
-          for (j = i + 1; j > 0; --j)
-        {
-          gunichar t;
-          if (COMBINING_CLASS (string[j - 1]) <= next)
-            break;
-          t = string[j];
-          string[j] = string[j - 1];
-          string[j - 1] = t;
-          swap = 1;
-        }
-          /* We're re-entering the loop looking at the old
-         character again.  */
-          next = last;
-        }
-      last = next;
+      gunichar t;
+      if (COMBINING_CLASS (string[j - 1]) <= next)
+        break;
+      t = string[j];
+      string[j] = string[j - 1];
+      string[j - 1] = t;
+      swap = 1;
     }
+        /* We're re-entering the loop looking at the old
+     character again.  */
+        next = last;
+      }
+    last = next;
+  }
     }
 }
 
@@ -164,7 +164,7 @@ decompose_hangul (gunichar s,
   if (TIndex)
     {
       if (r)
-    r[2] = TBase + TIndex;
+  r[2] = TBase + TIndex;
       *result_len = 3;
     }
   else
@@ -174,7 +174,7 @@ decompose_hangul (gunichar s,
 /* returns a pointer to a null-terminated UTF-8 string */
 static const gchar *
 find_decomposition (gunichar ch,
-            gboolean compat)
+        gboolean compat)
 {
   int start = 0;
   int end = G_N_ELEMENTS (decomp_table);
@@ -183,34 +183,34 @@ find_decomposition (gunichar ch,
       ch <= decomp_table[end - 1].ch)
     {
       while (TRUE)
+  {
+    int half = (start + end) / 2;
+    if (ch == decomp_table[half].ch)
+      {
+        int offset;
+
+        if (compat)
     {
-      int half = (start + end) / 2;
-      if (ch == decomp_table[half].ch)
-        {
-          int offset;
-
-          if (compat)
-        {
-          offset = decomp_table[half].compat_offset;
-          if (offset == G_UNICODE_NOT_PRESENT_OFFSET)
-            offset = decomp_table[half].canon_offset;
-        }
-          else
-        {
-          offset = decomp_table[half].canon_offset;
-          if (offset == G_UNICODE_NOT_PRESENT_OFFSET)
-            return NULL;
-        }
-
-          return &(decomp_expansion_string[offset]);
-        }
-      else if (half == start)
-        break;
-      else if (ch > decomp_table[half].ch)
-        start = half;
-      else
-        end = half;
+      offset = decomp_table[half].compat_offset;
+      if (offset == G_UNICODE_NOT_PRESENT_OFFSET)
+        offset = decomp_table[half].canon_offset;
     }
+        else
+    {
+      offset = decomp_table[half].canon_offset;
+      if (offset == G_UNICODE_NOT_PRESENT_OFFSET)
+        return NULL;
+    }
+
+        return &(decomp_expansion_string[offset]);
+      }
+    else if (half == start)
+      break;
+    else if (ch > decomp_table[half].ch)
+      start = half;
+    else
+      end = half;
+  }
     }
 
   return NULL;
@@ -231,7 +231,7 @@ find_decomposition (gunichar ch,
  **/
 gunichar *
 g_unicode_canonical_decomposition (gunichar ch,
-                   gsize   *result_len)
+           gsize   *result_len)
 {
   const gchar *decomp;
   const gchar *p;
@@ -308,8 +308,8 @@ combine_hangul (gunichar a,
 
 static gboolean
 combine (gunichar  a,
-     gunichar  b,
-     gunichar *result)
+   gunichar  b,
+   gunichar *result)
 {
   gushort index_a, index_b;
 
@@ -321,10 +321,10 @@ combine (gunichar  a,
   if (index_a >= COMPOSE_FIRST_SINGLE_START && index_a < COMPOSE_SECOND_START)
     {
       if (b == compose_first_single[index_a - COMPOSE_FIRST_SINGLE_START][0])
-    {
-      *result = compose_first_single[index_a - COMPOSE_FIRST_SINGLE_START][1];
-      return TRUE;
-    }
+  {
+    *result = compose_first_single[index_a - COMPOSE_FIRST_SINGLE_START][1];
+    return TRUE;
+  }
       else
         return FALSE;
     }
@@ -334,10 +334,10 @@ combine (gunichar  a,
   if (index_b >= COMPOSE_SECOND_SINGLE_START)
     {
       if (a == compose_second_single[index_b - COMPOSE_SECOND_SINGLE_START][0])
-    {
-      *result = compose_second_single[index_b - COMPOSE_SECOND_SINGLE_START][1];
-      return TRUE;
-    }
+  {
+    *result = compose_second_single[index_b - COMPOSE_SECOND_SINGLE_START][1];
+    return TRUE;
+  }
       else
         return FALSE;
     }
@@ -348,10 +348,10 @@ combine (gunichar  a,
       gunichar res = compose_array[index_a - COMPOSE_FIRST_START][index_b - COMPOSE_SECOND_START];
 
       if (res)
-    {
-      *result = res;
-      return TRUE;
-    }
+  {
+    *result = res;
+    return TRUE;
+  }
     }
 
   return FALSE;
@@ -359,17 +359,17 @@ combine (gunichar  a,
 
 gunichar *
 _g_utf8_normalize_wc (const gchar    *str,
-              gssize          max_len,
-              GNormalizeMode  mode)
+          gssize          max_len,
+          GNormalizeMode  mode)
 {
   gsize n_wc;
   gunichar *wc_buffer;
   const char *p;
   gsize last_start;
   gboolean do_compat = (mode == G_NORMALIZE_NFKC ||
-            mode == G_NORMALIZE_NFKD);
+      mode == G_NORMALIZE_NFKD);
   gboolean do_compose = (mode == G_NORMALIZE_NFC ||
-             mode == G_NORMALIZE_NFKC);
+       mode == G_NORMALIZE_NFKC);
 
   n_wc = 0;
   p = str;
@@ -430,15 +430,15 @@ _g_utf8_normalize_wc (const gchar    *str,
         }
 
       if (n_wc > 0)
-    {
-      cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
+  {
+    cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
 
-      if (cc == 0)
-        {
-          g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
-          last_start = old_n_wc;
-        }
-    }
+    if (cc == 0)
+      {
+        g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
+        last_start = old_n_wc;
+      }
+  }
 
       p = g_utf8_next_char (p);
     }
@@ -460,32 +460,32 @@ _g_utf8_normalize_wc (const gchar    *str,
       last_start = 0;
 
       for (i = 0; i < n_wc; i++)
-    {
-      int cc = COMBINING_CLASS (wc_buffer[i]);
+  {
+    int cc = COMBINING_CLASS (wc_buffer[i]);
 
-      if (i > 0 &&
-          (last_cc == 0 || last_cc < cc) &&
-          combine (wc_buffer[last_start], wc_buffer[i],
-               &wc_buffer[last_start]))
-        {
-          for (j = i + 1; j < n_wc; j++)
-        wc_buffer[j-1] = wc_buffer[j];
-          n_wc--;
-          i--;
+    if (i > 0 &&
+        (last_cc == 0 || last_cc < cc) &&
+        combine (wc_buffer[last_start], wc_buffer[i],
+           &wc_buffer[last_start]))
+      {
+        for (j = i + 1; j < n_wc; j++)
+    wc_buffer[j-1] = wc_buffer[j];
+        n_wc--;
+        i--;
 
-          if (i == last_start)
-        last_cc = 0;
-          else
-        last_cc = COMBINING_CLASS (wc_buffer[i-1]);
+        if (i == last_start)
+    last_cc = 0;
+        else
+    last_cc = COMBINING_CLASS (wc_buffer[i-1]);
 
-          continue;
-        }
+        continue;
+      }
 
-      if (cc == 0)
-        last_start = i;
+    if (cc == 0)
+      last_start = i;
 
-      last_cc = cc;
-    }
+    last_cc = cc;
+  }
     }
 
   wc_buffer[n_wc] = 0;
@@ -525,14 +525,14 @@ _g_utf8_normalize_wc (const gchar    *str,
  * a legacy encoding or pass it to a system with
  * less capable Unicode handling.
  *
- * Returns: a newly allocated string, that is the
- *   normalized form of @str, or %NULL if @str is not
- *   valid UTF-8.
+ * Returns: (nullable): a newly allocated string, that
+ *   is the normalized form of @str, or %NULL if @str
+ *   is not valid UTF-8.
  **/
 gchar *
 g_utf8_normalize (const gchar    *str,
-          gssize          len,
-          GNormalizeMode  mode)
+      gssize          len,
+      GNormalizeMode  mode)
 {
   gunichar *result_wc = _g_utf8_normalize_wc (str, len, mode);
   gchar *result;
@@ -575,8 +575,8 @@ decompose_hangul_step (gunichar  ch,
 /**
  * g_unichar_decompose:
  * @ch: a Unicode character
- * @a: return location for the first component of @ch
- * @b: return location for the second component of @ch
+ * @a: (out) (not optional): return location for the first component of @ch
+ * @b: (out) (not optional): return location for the second component of @ch
  *
  * Performs a single decomposition step of the
  * Unicode canonical decomposition algorithm.
@@ -650,7 +650,7 @@ g_unichar_decompose (gunichar  ch,
  * g_unichar_compose:
  * @a: a Unicode character
  * @b: a Unicode character
- * @ch: return location for the composed character
+ * @ch: (out) (not optional): return location for the composed character
  *
  * Performs a single composition step of the
  * Unicode canonical composition algorithm.
@@ -689,7 +689,7 @@ g_unichar_compose (gunichar  a,
  * g_unichar_fully_decompose:
  * @ch: a Unicode character.
  * @compat: whether perform canonical or compatibility decomposition
- * @result: (nullable): location to store decomposed result, or %NULL
+ * @result: (optional) (out caller-allocates): location to store decomposed result, or %NULL
  * @result_len: length of @result
  *
  * Computes the canonical or compatibility decomposition of a
@@ -718,9 +718,9 @@ g_unichar_compose (gunichar  a,
  **/
 gsize
 g_unichar_fully_decompose (gunichar  ch,
-               gboolean  compat,
-               gunichar *result,
-               gsize     result_len)
+         gboolean  compat,
+         gunichar *result,
+         gsize     result_len)
 {
   const gchar *decomp;
   const gchar *p;
@@ -733,7 +733,7 @@ g_unichar_fully_decompose (gunichar  ch,
       decompose_hangul (ch, result ? buffer : NULL, &len);
       if (result)
         for (i = 0; i < len && i < result_len; i++)
-      result[i] = buffer[i];
+    result[i] = buffer[i];
       return len;
     }
   else if ((decomp = find_decomposition (ch, compat)) != NULL)

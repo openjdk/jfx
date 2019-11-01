@@ -196,7 +196,7 @@ gst_date_time_has_second (const GstDateTime * datetime)
  * @datetime: a #GstDateTime
  *
  * Returns the year of this #GstDateTime
- * Call gst_date_time_has_year before, to avoid warnings.
+ * Call gst_date_time_has_year() before, to avoid warnings.
  *
  * Return value: The year of this #GstDateTime
  */
@@ -213,7 +213,7 @@ gst_date_time_get_year (const GstDateTime * datetime)
  * @datetime: a #GstDateTime
  *
  * Returns the month of this #GstDateTime. January is 1, February is 2, etc..
- * Call gst_date_time_has_month before, to avoid warnings.
+ * Call gst_date_time_has_month() before, to avoid warnings.
  *
  * Return value: The month of this #GstDateTime
  */
@@ -231,7 +231,7 @@ gst_date_time_get_month (const GstDateTime * datetime)
  * @datetime: a #GstDateTime
  *
  * Returns the day of the month of this #GstDateTime.
- * Call gst_date_time_has_day before, to avoid warnings.
+ * Call gst_date_time_has_day() before, to avoid warnings.
  *
  * Return value: The day of this #GstDateTime
  */
@@ -250,7 +250,7 @@ gst_date_time_get_day (const GstDateTime * datetime)
  *
  * Retrieves the hour of the day represented by @datetime in the gregorian
  * calendar. The return is in the range of 0 to 23.
- * Call gst_date_time_has_haur before, to avoid warnings.
+ * Call gst_date_time_has_time() before, to avoid warnings.
  *
  * Return value: the hour of the day
  */
@@ -269,7 +269,7 @@ gst_date_time_get_hour (const GstDateTime * datetime)
  *
  * Retrieves the minute of the hour represented by @datetime in the gregorian
  * calendar.
- * Call gst_date_time_has_minute before, to avoid warnings.
+ * Call gst_date_time_has_time() before, to avoid warnings.
  *
  * Return value: the minute of the hour
  */
@@ -288,7 +288,7 @@ gst_date_time_get_minute (const GstDateTime * datetime)
  *
  * Retrieves the second of the minute represented by @datetime in the gregorian
  * calendar.
- * Call gst_date_time_has_second before, to avoid warnings.
+ * Call gst_date_time_has_time() before, to avoid warnings.
  *
  * Return value: the second represented by @datetime
  */
@@ -498,7 +498,7 @@ gst_date_time_check_fields (gint * year, gint * month, gint * day,
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full) (nullable): the newly created #GstDateTime
+ * Return value: (transfer full): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new_local_time (gint year, gint month, gint day, gint hour,
@@ -611,7 +611,7 @@ __gst_date_time_compare (const GstDateTime * dt1, const GstDateTime * dt2)
  *
  * Free-function: gst_date_time_unref
  *
- * Return value: (transfer full) (nullable): the newly created #GstDateTime
+ * Return value: (transfer full): the newly created #GstDateTime
  */
 GstDateTime *
 gst_date_time_new (gfloat tzoffset, gint year, gint month, gint day, gint hour,
@@ -792,33 +792,33 @@ gst_date_time_new_from_iso8601_string (const gchar * string)
     return NULL;
 
   if (g_ascii_isdigit (string[2]) && g_ascii_isdigit (string[3])) {
-  ret = sscanf (string, "%04d-%02d-%02d", &year, &month, &day);
+    ret = sscanf (string, "%04d-%02d-%02d", &year, &month, &day);
 
-  if (ret == 0)
-    return NULL;
+    if (ret == 0)
+      return NULL;
 
-  if (ret == 3 && day <= 0) {
-    ret = 2;
-    day = -1;
-  }
+    if (ret == 3 && day <= 0) {
+      ret = 2;
+      day = -1;
+    }
 
-  if (ret >= 2 && month <= 0) {
-    ret = 1;
-    month = day = -1;
-  }
+    if (ret >= 2 && month <= 0) {
+      ret = 1;
+      month = day = -1;
+    }
 
     if (ret >= 1 && (year <= 0 || year > 9999 || month > 12 || day > 31))
-    return NULL;
+      return NULL;
 
-  else if (ret >= 1 && len < 16)
-    /* YMD is 10 chars. XMD + HM will be 16 chars. if it is less,
-     * it make no sense to continue. We will stay with YMD. */
-    goto ymd;
+    else if (ret >= 1 && len < 16)
+      /* YMD is 10 chars. XMD + HM will be 16 chars. if it is less,
+       * it make no sense to continue. We will stay with YMD. */
+      goto ymd;
 
-  string += 10;
-  /* Exit if there is no expeceted value on this stage */
-  if (!(*string == 'T' || *string == '-' || *string == ' '))
-    goto ymd;
+    string += 10;
+    /* Exit if there is no expeceted value on this stage */
+    if (!(*string == 'T' || *string == '-' || *string == ' '))
+      goto ymd;
 
     string += 1;
   }
@@ -930,6 +930,11 @@ static void
 gst_date_time_free (GstDateTime * datetime)
 {
   g_date_time_unref (datetime->datetime);
+
+#ifdef USE_POISONING
+  memset (datetime, 0xff, sizeof (GstDateTime));
+#endif
+
   g_slice_free (GstDateTime, datetime);
 }
 

@@ -54,8 +54,8 @@ typedef struct _GstAllocator GstAllocator;
  * made when this memory needs to be shared between buffers.
  * @GST_MEMORY_FLAG_ZERO_PREFIXED: the memory prefix is filled with 0 bytes
  * @GST_MEMORY_FLAG_ZERO_PADDED: the memory padding is filled with 0 bytes
- * @GST_MEMORY_FLAG_PHYSICALLY_CONTIGUOUS: the memory is physically contiguous. (Since 1.2)
- * @GST_MEMORY_FLAG_NOT_MAPPABLE: the memory can't be mapped via gst_memory_map() without any preconditions. (Since 1.2)
+ * @GST_MEMORY_FLAG_PHYSICALLY_CONTIGUOUS: the memory is physically contiguous. (Since: 1.2)
+ * @GST_MEMORY_FLAG_NOT_MAPPABLE: the memory can't be mapped via gst_memory_map() without any preconditions. (Since: 1.2)
  * @GST_MEMORY_FLAG_LAST: first flag that can be used for custom purposes
  *
  * Flags for wrapped memory.

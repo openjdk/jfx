@@ -1,5 +1,5 @@
 /*
- * Copyright © 2010 Codethink Limited
+ * Copyright (C) 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -39,8 +39,10 @@
 #include "gdate.h"
 
 #ifdef G_OS_WIN32
+
 #define STRICT
 #include <windows.h>
+#include <wchar.h>
 #endif
 
 /**
@@ -52,17 +54,17 @@
  * #GTimeZone is a structure that represents a time zone, at no
  * particular point in time.  It is refcounted and immutable.
  *
- * Each time zone has an identifier (for example, ‘Europe/London’) which is
+ * Each time zone has an identifier (for example, 'Europe/London') which is
  * platform dependent. See g_time_zone_new() for information on the identifier
  * formats. The identifier of a time zone can be retrieved using
  * g_time_zone_get_identifier().
  *
  * A time zone contains a number of intervals.  Each interval has
- * an abbreviation to describe it (for example, ‘PDT’), an offet to UTC and a
+ * an abbreviation to describe it (for example, 'PDT'), an offet to UTC and a
  * flag indicating if the daylight savings time is in effect during that
- * interval.  A time zone always has at least one interval — interval 0. Note
+ * interval.  A time zone always has at least one interval - interval 0. Note
  * that interval abbreviations are not the same as time zone identifiers
- * (apart from ‘UTC’), and cannot be passed to g_time_zone_new().
+ * (apart from 'UTC'), and cannot be passed to g_time_zone_new().
  *
  * Every UTC time is contained within exactly one interval, but a given
  * local time may be contained within zero, one or two intervals (due to
@@ -237,7 +239,7 @@ again:
 
       if (tz->t_info != NULL)
         {
-          gint idx;
+          guint idx;
           for (idx = 0; idx < tz->t_info->len; idx++)
             {
               TransitionInfo *info = &g_array_index (tz->t_info, TransitionInfo, idx);
@@ -372,6 +374,8 @@ parse_constant_offset (const gchar *name,
           *offset = -*offset;
           return TRUE;
         }
+      else
+        return FALSE;
 
     default:
       return FALSE;
@@ -436,7 +440,7 @@ zone_info_unix (const gchar  *identifier,
       gchar *canonical_path = NULL;
       GError *read_link_err = NULL;
 
-    filename = g_strdup ("/etc/localtime");
+      filename = g_strdup ("/etc/localtime");
 
       /* Resolve the actual timezone pointed to by /etc/localtime. */
       resolved_identifier = g_file_read_link (filename, &read_link_err);
@@ -573,7 +577,7 @@ init_zone_from_iana_info (GTimeZone *gtz,
         trans.time = gint32_from_be (((gint32_be*)tz_transitions)[index]);
       trans.info_index = tz_type_index[index];
       g_assert (trans.info_index >= 0);
-      g_assert (trans.info_index < gtz->t_info->len);
+      g_assert ((guint) trans.info_index < gtz->t_info->len);
       g_array_append_val (gtz->transitions, trans);
     }
 }
@@ -600,10 +604,23 @@ copy_windows_systemtime (SYSTEMTIME *s_time, TimeZoneDate *tzdate)
 }
 
 /* UTC = local time + bias while local time = UTC + offset */
-static void
+static gboolean
 rule_from_windows_time_zone_info (TimeZoneRule *rule,
                                   TIME_ZONE_INFORMATION *tzi)
 {
+  gchar *std_name, *dlt_name;
+
+  std_name = g_utf16_to_utf8 ((gunichar2 *)tzi->StandardName, -1, NULL, NULL, NULL);
+  if (std_name == NULL)
+    return FALSE;
+
+  dlt_name = g_utf16_to_utf8 ((gunichar2 *)tzi->DaylightName, -1, NULL, NULL, NULL);
+  if (dlt_name == NULL)
+    {
+      g_free (std_name);
+      return FALSE;
+    }
+
   /* Set offset */
   if (tzi->StandardDate.wMonth)
     {
@@ -612,7 +629,6 @@ rule_from_windows_time_zone_info (TimeZoneRule *rule,
       copy_windows_systemtime (&(tzi->DaylightDate), &(rule->dlt_start));
 
       copy_windows_systemtime (&(tzi->StandardDate), &(rule->dlt_end));
-
     }
 
   else
@@ -620,31 +636,41 @@ rule_from_windows_time_zone_info (TimeZoneRule *rule,
       rule->std_offset = -tzi->Bias * 60;
       rule->dlt_start.mon = 0;
     }
-  strncpy (rule->std_name, (gchar*)tzi->StandardName, NAME_SIZE - 1);
-  strncpy (rule->dlt_name, (gchar*)tzi->DaylightName, NAME_SIZE - 1);
+  strncpy (rule->std_name, std_name, NAME_SIZE - 1);
+  strncpy (rule->dlt_name, dlt_name, NAME_SIZE - 1);
+
+  g_free (std_name);
+  g_free (dlt_name);
+
+  return TRUE;
 }
 
 static gchar*
 windows_default_tzname (void)
 {
-  const gchar *subkey =
-    "SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation";
+  const gunichar2 *subkey =
+    L"SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation";
   HKEY key;
   gchar *key_name = NULL;
-  if (RegOpenKeyExA (HKEY_LOCAL_MACHINE, subkey, 0,
+  gunichar2 *key_name_w = NULL;
+  if (RegOpenKeyExW (HKEY_LOCAL_MACHINE, subkey, 0,
                      KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
     {
       DWORD size = 0;
-      if (RegQueryValueExA (key, "TimeZoneKeyName", NULL, NULL,
+      if (RegQueryValueExW (key, L"TimeZoneKeyName", NULL, NULL,
                             NULL, &size) == ERROR_SUCCESS)
         {
-          key_name = g_malloc ((gint)size);
-          if (RegQueryValueExA (key, "TimeZoneKeyName", NULL, NULL,
-                                (LPBYTE)key_name, &size) != ERROR_SUCCESS)
+          key_name_w = g_malloc ((gint)size);
+
+          if (key_name_w == NULL ||
+              RegQueryValueExW (key, L"TimeZoneKeyName", NULL, NULL,
+                                (LPBYTE)key_name_w, &size) != ERROR_SUCCESS)
             {
-              g_free (key_name);
+              g_free (key_name_w);
               key_name = NULL;
             }
+          else
+            key_name = g_utf16_to_utf8 (key_name_w, -1, NULL, NULL, NULL);
         }
       RegCloseKey (key);
     }
@@ -688,25 +714,34 @@ register_tzi_to_tzi (RegTZI *reg, TIME_ZONE_INFORMATION *tzi)
   tzi->DaylightBias = reg->DaylightBias;
 }
 
-static gint
+static guint
 rules_from_windows_time_zone (const gchar   *identifier,
                               gchar        **out_identifier,
-                              TimeZoneRule **rules)
+                              TimeZoneRule **rules,
+                              gboolean       copy_identifier)
 {
   HKEY key;
-  gchar *subkey, *subkey_dynamic;
+  gchar *subkey = NULL;
+  gchar *subkey_dynamic = NULL;
   gchar *key_name = NULL;
   const gchar *reg_key =
     "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\\";
   TIME_ZONE_INFORMATION tzi;
   DWORD size;
-  gint rules_num = 0;
+  guint rules_num = 0;
   RegTZI regtzi, regtzi_prev;
+  WCHAR winsyspath[MAX_PATH];
+  gunichar2 *subkey_w, *subkey_dynamic_w;
 
-  g_assert (out_identifier != NULL);
+  if (GetSystemDirectoryW (winsyspath, MAX_PATH) == 0)
+    return 0;
+
+  g_assert (copy_identifier == FALSE || out_identifier != NULL);
   g_assert (rules != NULL);
 
-  *out_identifier = NULL;
+  if (copy_identifier)
+    *out_identifier = NULL;
+
   *rules = NULL;
   key_name = NULL;
 
@@ -719,57 +754,85 @@ rules_from_windows_time_zone (const gchar   *identifier,
     return 0;
 
   subkey = g_strconcat (reg_key, key_name, NULL);
-  subkey_dynamic = g_strconcat (subkey, "\\Dynamic DST", NULL);
+  subkey_w = g_utf8_to_utf16 (subkey, -1, NULL, NULL, NULL);
+  if (subkey_w == NULL)
+    goto utf16_conv_failed;
 
-  if (RegOpenKeyExA (HKEY_LOCAL_MACHINE, subkey, 0,
+  subkey_dynamic = g_strconcat (subkey, "\\Dynamic DST", NULL);
+  subkey_dynamic_w = g_utf8_to_utf16 (subkey_dynamic, -1, NULL, NULL, NULL);
+  if (subkey_dynamic_w == NULL)
+    goto utf16_conv_failed;
+
+  if (RegOpenKeyExW (HKEY_LOCAL_MACHINE, subkey_w, 0,
                      KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
-      return 0;
+      goto utf16_conv_failed;
+
   size = sizeof tzi.StandardName;
-  if (RegQueryValueExA (key, "Std", NULL, NULL,
-                        (LPBYTE)&(tzi.StandardName), &size) != ERROR_SUCCESS)
-    goto failed;
+
+  /* use RegLoadMUIStringW() to query MUI_Std from the registry if possible, otherwise
+     fallback to querying Std */
+  if (RegLoadMUIStringW (key, L"MUI_Std", tzi.StandardName,
+                         size, &size, 0, winsyspath) != ERROR_SUCCESS)
+    {
+      size = sizeof tzi.StandardName;
+      if (RegQueryValueExW (key, L"Std", NULL, NULL,
+                            (LPBYTE)&(tzi.StandardName), &size) != ERROR_SUCCESS)
+        goto registry_failed;
+    }
 
   size = sizeof tzi.DaylightName;
 
-  if (RegQueryValueExA (key, "Dlt", NULL, NULL,
-                        (LPBYTE)&(tzi.DaylightName), &size) != ERROR_SUCCESS)
-    goto failed;
+  /* use RegLoadMUIStringW() to query MUI_Dlt from the registry if possible, otherwise
+     fallback to querying Dlt */
+  if (RegLoadMUIStringW (key, L"MUI_Dlt", tzi.DaylightName,
+                         size, &size, 0, winsyspath) != ERROR_SUCCESS)
+    {
+      size = sizeof tzi.DaylightName;
+      if (RegQueryValueExW (key, L"Dlt", NULL, NULL,
+                            (LPBYTE)&(tzi.DaylightName), &size) != ERROR_SUCCESS)
+        goto registry_failed;
+    }
 
   RegCloseKey (key);
-  if (RegOpenKeyExA (HKEY_LOCAL_MACHINE, subkey_dynamic, 0,
+  if (RegOpenKeyExW (HKEY_LOCAL_MACHINE, subkey_dynamic_w, 0,
                      KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
     {
       DWORD first, last;
       int year, i;
-      gchar *s;
+      wchar_t s[12];
 
       size = sizeof first;
-      if (RegQueryValueExA (key, "FirstEntry", NULL, NULL,
+      if (RegQueryValueExW (key, L"FirstEntry", NULL, NULL,
                             (LPBYTE) &first, &size) != ERROR_SUCCESS)
-        goto failed;
+        goto registry_failed;
 
       size = sizeof last;
-      if (RegQueryValueExA (key, "LastEntry", NULL, NULL,
+      if (RegQueryValueExW (key, L"LastEntry", NULL, NULL,
                             (LPBYTE) &last, &size) != ERROR_SUCCESS)
-        goto failed;
+        goto registry_failed;
 
       rules_num = last - first + 2;
       *rules = g_new0 (TimeZoneRule, rules_num);
 
-      for (year = first, i = 0; year <= last; year++)
+      for (year = first, i = 0; *rules != NULL && year <= last; year++)
         {
-          s = g_strdup_printf ("%d", year);
+          gboolean failed = FALSE;
+          swprintf_s (s, 11, L"%d", year);
 
-          size = sizeof regtzi;
-          if (RegQueryValueExA (key, s, NULL, NULL,
-                            (LPBYTE) &regtzi, &size) != ERROR_SUCCESS)
+          if (!failed)
+            {
+              size = sizeof regtzi;
+              if (RegQueryValueExW (key, s, NULL, NULL,
+                                    (LPBYTE) &regtzi, &size) != ERROR_SUCCESS)
+                failed = TRUE;
+            }
+
+          if (failed)
             {
               g_free (*rules);
               *rules = NULL;
               break;
             }
-
-          g_free (s);
 
           if (year > first && memcmp (&regtzi_prev, &regtzi, sizeof regtzi) == 0)
               continue;
@@ -777,32 +840,47 @@ rules_from_windows_time_zone (const gchar   *identifier,
             memcpy (&regtzi_prev, &regtzi, sizeof regtzi);
 
           register_tzi_to_tzi (&regtzi, &tzi);
-          rule_from_windows_time_zone_info (&(*rules)[i], &tzi);
+
+          if (!rule_from_windows_time_zone_info (&(*rules)[i], &tzi))
+            {
+              g_free (*rules);
+              *rules = NULL;
+              break;
+            }
+
           (*rules)[i++].start_year = year;
         }
 
       rules_num = i + 1;
 
-failed:
+registry_failed:
       RegCloseKey (key);
     }
-  else if (RegOpenKeyExA (HKEY_LOCAL_MACHINE, subkey, 0,
+  else if (RegOpenKeyExW (HKEY_LOCAL_MACHINE, subkey_w, 0,
                           KEY_QUERY_VALUE, &key) == ERROR_SUCCESS)
     {
       size = sizeof regtzi;
-      if (RegQueryValueExA (key, "TZI", NULL, NULL,
+      if (RegQueryValueExW (key, L"TZI", NULL, NULL,
                             (LPBYTE) &regtzi, &size) == ERROR_SUCCESS)
         {
           rules_num = 2;
           *rules = g_new0 (TimeZoneRule, 2);
           register_tzi_to_tzi (&regtzi, &tzi);
-          rule_from_windows_time_zone_info (&(*rules)[0], &tzi);
+
+          if (!rule_from_windows_time_zone_info (&(*rules)[0], &tzi))
+            {
+              g_free (*rules);
+              *rules = NULL;
+            }
         }
 
       RegCloseKey (key);
     }
 
+utf16_conv_failed:
+  g_free (subkey_dynamic_w);
   g_free (subkey_dynamic);
+  g_free (subkey_w);
   g_free (subkey);
 
   if (*rules)
@@ -813,14 +891,17 @@ failed:
       else
         (*rules)[rules_num - 1].start_year = (*rules)[rules_num - 2].start_year + 1;
 
-      *out_identifier = g_steal_pointer (&key_name);
+      if (copy_identifier)
+        *out_identifier = g_steal_pointer (&key_name);
+      else
+        g_free (key_name);
 
       return rules_num;
     }
 
   g_free (key_name);
 
-    return 0;
+  return 0;
 }
 
 #endif
@@ -828,7 +909,7 @@ failed:
 static void
 find_relative_date (TimeZoneDate *buffer)
 {
-  gint wday;
+  guint wday;
   GDate date;
   g_date_clear (&date, 1);
   wday = buffer->wday;
@@ -925,7 +1006,7 @@ fill_transition_info_from_rule (TransitionInfo *info,
 static void
 init_zone_from_rules (GTimeZone    *gtz,
                       TimeZoneRule *rules,
-                      gint          rules_num,
+                      guint         rules_num,
                       gchar        *identifier  /* (transfer full) */)
 {
   guint type_count = 0, trans_count = 0, info_index = 0;
@@ -1216,7 +1297,7 @@ parse_tz_boundary (const gchar  *identifier,
     }
 }
 
-static gint
+static guint
 create_ruleset_from_rule (TimeZoneRule **rules, TimeZoneRule *rule)
 {
   *rules = g_new0 (TimeZoneRule, 2);
@@ -1308,7 +1389,7 @@ parse_identifier_boundaries (gchar **pos, TimeZoneRule *tzr)
  * Creates an array of TimeZoneRule from a TZ environment variable
  * type of identifier.  Should free rules afterwards
  */
-static gint
+static guint
 rules_from_identifier (const gchar   *identifier,
                        gchar        **out_identifier,
                        TimeZoneRule **rules)
@@ -1354,9 +1435,15 @@ rules_from_identifier (const gchar   *identifier,
 
       /* Use US rules, Windows' default is Pacific Standard Time */
       if ((rules_num = rules_from_windows_time_zone ("Pacific Standard Time",
-                                                     out_identifier,
-                                                     rules)))
+                                                     NULL,
+                                                     rules,
+                                                     FALSE)))
         {
+          /* We don't want to hardcode our identifier here as
+           * "Pacific Standard Time", use what was passed in
+           */
+          *out_identifier = g_strdup (identifier);
+
           for (i = 0; i < rules_num - 1; i++)
             {
               (*rules)[i].std_offset = - tzr.std_offset;
@@ -1437,7 +1524,7 @@ rules_from_identifier (const gchar   *identifier,
  * instead.
  *
  * See
- * [RFC3339 §5.6](http://tools.ietf.org/html/rfc3339#section-5.6)
+ * [RFC3339 5.6](http://tools.ietf.org/html/rfc3339#section-5.6)
  * for a precise definition of valid RFC3339 time offsets
  * (the `time-offset` expansion) and ISO 8601 for the
  * full list of valid time offsets.  See
@@ -1501,7 +1588,8 @@ g_time_zone_new (const gchar *identifier)
 #elif defined (G_OS_WIN32)
       if ((rules_num = rules_from_windows_time_zone (identifier,
                                                      &resolved_identifier,
-                                                     &rules)))
+                                                     &rules,
+                                                     TRUE)))
         {
           init_zone_from_rules (tz, rules, rules_num, g_steal_pointer (&resolved_identifier));
           g_free (rules);
@@ -1520,15 +1608,16 @@ g_time_zone_new (const gchar *identifier)
             {
               rules = g_new0 (TimeZoneRule, 2);
 
-              rule_from_windows_time_zone_info (&rules[0], &tzi);
+              if (rule_from_windows_time_zone_info (&rules[0], &tzi))
+                {
+                  memset (rules[0].std_name, 0, NAME_SIZE);
+                  memset (rules[0].dlt_name, 0, NAME_SIZE);
 
-              memset (rules[0].std_name, 0, NAME_SIZE);
-              memset (rules[0].dlt_name, 0, NAME_SIZE);
+                  rules[0].start_year = MIN_TZYEAR;
+                  rules[1].start_year = MAX_TZYEAR;
 
-              rules[0].start_year = MIN_TZYEAR;
-              rules[1].start_year = MAX_TZYEAR;
-
-              init_zone_from_rules (tz, rules, 2, windows_default_tzname ());
+                  init_zone_from_rules (tz, rules, 2, windows_default_tzname ());
+                }
 
               g_free (rules);
             }
@@ -1781,8 +1870,8 @@ g_time_zone_adjust_time (GTimeZone *tz,
                          GTimeType  type,
                          gint64    *time_)
 {
-  gint i;
-  guint intervals;
+  guint i, intervals;
+  gboolean interval_is_dst;
 
   if (tz->transitions == NULL)
     return 0;
@@ -1824,16 +1913,21 @@ g_time_zone_adjust_time (GTimeZone *tz,
             *time_ = interval_local_start (tz, i);
         }
 
-      else if (interval_isdst (tz, i) != type)
-        /* it's in this interval, but dst flag doesn't match.
-         * check neighbours for a better fit. */
+      else
         {
-          if (i && *time_ <= interval_local_end (tz, i - 1))
-            i--;
+          interval_is_dst = interval_isdst (tz, i);
+          if ((interval_is_dst && type != G_TIME_TYPE_DAYLIGHT) ||
+              (!interval_is_dst && type == G_TIME_TYPE_DAYLIGHT))
+            {
+              /* it's in this interval, but dst flag doesn't match.
+               * check neighbours for a better fit. */
+              if (i && *time_ <= interval_local_end (tz, i - 1))
+                i--;
 
-          else if (i < intervals &&
-                   *time_ >= interval_local_start (tz, i + 1))
-            i++;
+              else if (i < intervals &&
+                       *time_ >= interval_local_start (tz, i + 1))
+                i++;
+            }
         }
     }
 
@@ -1846,7 +1940,7 @@ g_time_zone_adjust_time (GTimeZone *tz,
  * @type: the #GTimeType of @time_
  * @time_: a number of seconds since January 1, 1970
  *
- * Finds an the interval within @tz that corresponds to the given @time_.
+ * Finds an interval within @tz that corresponds to the given @time_.
  * The meaning of @time_ depends on @type.
  *
  * If @type is %G_TIME_TYPE_UNIVERSAL then this function will always
@@ -1874,8 +1968,8 @@ g_time_zone_find_interval (GTimeZone *tz,
                            GTimeType  type,
                            gint64     time_)
 {
-  gint i;
-  guint intervals;
+  guint i, intervals;
+  gboolean interval_is_dst;
 
   if (tz->transitions == NULL)
     return 0;
@@ -1899,13 +1993,18 @@ g_time_zone_find_interval (GTimeZone *tz,
         return -1;
     }
 
-  else if (interval_isdst (tz, i) != type)
+  else
     {
-      if (i && time_ <= interval_local_end (tz, i - 1))
-        i--;
+      interval_is_dst = interval_isdst (tz, i);
+      if  ((interval_is_dst && type != G_TIME_TYPE_DAYLIGHT) ||
+           (!interval_is_dst && type == G_TIME_TYPE_DAYLIGHT))
+        {
+          if (i && time_ <= interval_local_end (tz, i - 1))
+            i--;
 
-      else if (i < intervals && time_ >= interval_local_start (tz, i + 1))
-        i++;
+          else if (i < intervals && time_ >= interval_local_start (tz, i + 1))
+            i++;
+        }
     }
 
   return i;

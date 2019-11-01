@@ -95,6 +95,7 @@ _gst_memory_free (GstMemory * mem)
   allocator = mem->allocator;
 
   gst_allocator_free (allocator, mem);
+
   gst_object_unref (allocator);
 }
 
@@ -303,7 +304,7 @@ gst_memory_map (GstMemory * mem, GstMapInfo * info, GstMapFlags flags)
   if (mem->allocator->mem_map_full)
     info->data = mem->allocator->mem_map_full (mem, info, mem->maxsize);
   else
-  info->data = mem->allocator->mem_map (mem, mem->maxsize, flags);
+    info->data = mem->allocator->mem_map (mem, mem->maxsize, flags);
 
   if (G_UNLIKELY (info->data == NULL))
     goto error;
@@ -321,7 +322,7 @@ lock_failed:
   }
 error:
   {
-    /* something went wrong, restore the orginal state again
+    /* something went wrong, restore the original state again
      * it is up to the subclass to log an error if needed. */
     GST_CAT_INFO (GST_CAT_MEMORY, "mem %p: subclass map failed", mem);
     gst_memory_unlock (mem, (GstLockFlags) flags);
@@ -347,7 +348,7 @@ gst_memory_unmap (GstMemory * mem, GstMapInfo * info)
   if (mem->allocator->mem_unmap_full)
     mem->allocator->mem_unmap_full (mem, info);
   else
-  mem->allocator->mem_unmap (mem);
+    mem->allocator->mem_unmap (mem);
   gst_memory_unlock (mem, (GstLockFlags) info->flags);
 }
 

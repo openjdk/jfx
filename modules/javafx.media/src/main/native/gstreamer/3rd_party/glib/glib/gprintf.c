@@ -46,7 +46,7 @@
  **/
 gint
 g_printf (gchar const *format,
-      ...)
+    ...)
 {
   va_list args;
   gint retval;
@@ -77,7 +77,7 @@ g_printf (gchar const *format,
 gint
 g_fprintf (FILE        *file,
            gchar const *format,
-       ...)
+     ...)
 {
   va_list args;
   gint retval;
@@ -114,8 +114,8 @@ g_fprintf (FILE        *file,
  **/
 gint
 g_sprintf (gchar       *string,
-       gchar const *format,
-       ...)
+     gchar const *format,
+     ...)
 {
   va_list args;
   gint retval;
@@ -158,10 +158,10 @@ g_sprintf (gchar       *string,
  *     was large enough.
  **/
 gint
-g_snprintf (gchar   *string,
-        gulong   n,
-            gchar const *format,
-            ...)
+g_snprintf (gchar *string,
+      gulong   n,
+      gchar const *format,
+      ...)
 {
   va_list args;
   gint retval;
@@ -190,7 +190,7 @@ g_snprintf (gchar   *string,
  **/
 gint
 g_vprintf (gchar const *format,
-       va_list      args)
+     va_list      args)
 {
   g_return_val_if_fail (format != NULL, -1);
 
@@ -216,7 +216,7 @@ g_vprintf (gchar const *format,
 gint
 g_vfprintf (FILE        *file,
             gchar const *format,
-        va_list      args)
+      va_list      args)
 {
   g_return_val_if_fail (format != NULL, -1);
 
@@ -240,9 +240,9 @@ g_vfprintf (FILE        *file,
  * Since: 2.2
  **/
 gint
-g_vsprintf (gchar    *string,
-            gchar const *format,
-            va_list      args)
+g_vsprintf (gchar  *string,
+      gchar const *format,
+      va_list      args)
 {
   g_return_val_if_fail (string != NULL, -1);
   g_return_val_if_fail (format != NULL, -1);
@@ -282,9 +282,9 @@ g_vsprintf (gchar    *string,
  */
 gint
 g_vsnprintf (gchar   *string,
-         gulong   n,
-             gchar const *format,
-             va_list      args)
+       gulong   n,
+       gchar const *format,
+       va_list      args)
 {
   g_return_val_if_fail (n == 0 || string != NULL, -1);
   g_return_val_if_fail (format != NULL, -1);
@@ -313,13 +313,13 @@ g_vsnprintf (gchar   *string,
  **/
 gint
 g_vasprintf (gchar      **string,
-         gchar const *format,
-         va_list      args)
+       gchar const *format,
+       va_list      args)
 {
   gint len;
   g_return_val_if_fail (string != NULL, -1);
 
-#if !defined(HAVE_GOOD_PRINTF)
+#if !defined(USE_SYSTEM_PRINTF)
 
   len = _g_gnulib_vasprintf (string, format, args);
   if (len < 0)

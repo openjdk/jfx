@@ -2,7 +2,7 @@
  * Copyright (C) 1999,2000 Erik Walthinsen <omega@cse.ogi.edu>
  *                    2000 Wim Taymans <wtay@chello.be>
  *                    2005 Andy Wingo <wingo@pobox.com>
- *            2006 Edward Hervey <bilboed@bilboed.com>
+ *          2006 Edward Hervey <bilboed@bilboed.com>
  *
  * gstghostpad.c: Proxy pads
  *
@@ -69,7 +69,7 @@ struct _GstProxyPadPrivate
   GstPad *internal;
 };
 
-G_DEFINE_TYPE (GstProxyPad, gst_proxy_pad, GST_TYPE_PAD);
+G_DEFINE_TYPE_WITH_PRIVATE (GstProxyPad, gst_proxy_pad, GST_TYPE_PAD);
 
 static GstPad *gst_proxy_pad_get_target (GstPad * pad);
 
@@ -231,8 +231,6 @@ gst_proxy_pad_get_internal (GstProxyPad * pad)
 static void
 gst_proxy_pad_class_init (GstProxyPadClass * klass)
 {
-  g_type_class_add_private (klass, sizeof (GstProxyPadPrivate));
-
   /* Register common function pointer descriptions */
   GST_DEBUG_REGISTER_FUNCPTR (gst_proxy_pad_iterate_internal_links_default);
   GST_DEBUG_REGISTER_FUNCPTR (gst_proxy_pad_chain_default);
@@ -245,8 +243,7 @@ gst_proxy_pad_init (GstProxyPad * ppad)
 {
   GstPad *pad = (GstPad *) ppad;
 
-  GST_PROXY_PAD_PRIVATE (ppad) = G_TYPE_INSTANCE_GET_PRIVATE (ppad,
-      GST_TYPE_PROXY_PAD, GstProxyPadPrivate);
+  GST_PROXY_PAD_PRIVATE (ppad) = gst_proxy_pad_get_instance_private (ppad);
 
   gst_pad_set_iterate_internal_links_function (pad,
       gst_proxy_pad_iterate_internal_links_default);
@@ -270,7 +267,7 @@ struct _GstGhostPadPrivate
   gboolean constructed;
 };
 
-G_DEFINE_TYPE (GstGhostPad, gst_ghost_pad, GST_TYPE_PROXY_PAD);
+G_DEFINE_TYPE_WITH_PRIVATE (GstGhostPad, gst_ghost_pad, GST_TYPE_PROXY_PAD);
 
 static void gst_ghost_pad_dispose (GObject * object);
 
@@ -461,8 +458,6 @@ gst_ghost_pad_class_init (GstGhostPadClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
 
-  g_type_class_add_private (klass, sizeof (GstGhostPadPrivate));
-
   gobject_class->dispose = gst_ghost_pad_dispose;
 
   GST_DEBUG_REGISTER_FUNCPTR (gst_ghost_pad_activate_pull_default);
@@ -472,8 +467,7 @@ gst_ghost_pad_class_init (GstGhostPadClass * klass)
 static void
 gst_ghost_pad_init (GstGhostPad * pad)
 {
-  GST_GHOST_PAD_PRIVATE (pad) = G_TYPE_INSTANCE_GET_PRIVATE (pad,
-      GST_TYPE_GHOST_PAD, GstGhostPadPrivate);
+  GST_GHOST_PAD_PRIVATE (pad) = gst_ghost_pad_get_instance_private (pad);
 
   gst_pad_set_activatemode_function (GST_PAD_CAST (pad),
       gst_ghost_pad_activate_mode_default);
@@ -507,14 +501,14 @@ gst_ghost_pad_dispose (GObject * object)
   GST_OBJECT_LOCK (pad);
   internal = GST_PROXY_PAD_INTERNAL (pad);
   if (internal) {
-  gst_pad_set_activatemode_function (internal, NULL);
+    gst_pad_set_activatemode_function (internal, NULL);
 
     GST_PROXY_PAD_INTERNAL (pad) = NULL;
     GST_PROXY_PAD_INTERNAL (internal) = NULL;
 
-  /* disposes of the internal pad, since the ghostpad is the only possible object
-   * that has a refcount on the internal pad. */
-  gst_object_unparent (GST_OBJECT_CAST (internal));
+    /* disposes of the internal pad, since the ghostpad is the only possible object
+     * that has a refcount on the internal pad. */
+    gst_object_unparent (GST_OBJECT_CAST (internal));
   }
 
   GST_OBJECT_UNLOCK (pad);

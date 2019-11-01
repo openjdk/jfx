@@ -116,14 +116,14 @@
 #define MAKE_ORC_PACK_UNPACK(fmt,fmt_t)                         \
 static void unpack_ ##fmt (const GstAudioFormatInfo *info,      \
     GstAudioPackFlags flags, gpointer dest,                     \
-    const gpointer data, gint length) {                         \
+    gconstpointer data, gint length) {                          \
   if (flags & GST_AUDIO_PACK_FLAG_TRUNCATE_RANGE)               \
     audio_orc_unpack_ ##fmt_t (dest, data, length);             \
   else                                                          \
     audio_orc_unpack_ ##fmt (dest, data, length);               \
 }                                                               \
 static void pack_ ##fmt (const GstAudioFormatInfo *info,        \
-    GstAudioPackFlags flags, const gpointer src,                \
+    GstAudioPackFlags flags, gconstpointer src,                 \
     gpointer data, gint length) {                               \
   audio_orc_pack_ ##fmt (data, src, length);                    \
 }
@@ -165,21 +165,21 @@ MAKE_ORC_PACK_UNPACK (s8, s8_trunc)
 #define MAKE_PACK_UNPACK(name, stride, sign, scale, READ_FUNC, WRITE_FUNC)     \
 static void unpack_ ##name (const GstAudioFormatInfo *info,             \
     GstAudioPackFlags flags, gpointer dest,                             \
-    const gpointer data, gint length)                                   \
+    gconstpointer data, gint length)                                    \
 {                                                                       \
   guint32 *d = dest;                                                    \
-  guint8 *s = data;                                                     \
+  const guint8 *s = data;                                               \
   for (;length; length--) {                                             \
     *d++ = (((gint32) READ_FUNC (s)) << scale) ^ (sign);                \
     s += stride;                                                        \
   }                                                                     \
 }                                                                       \
 static void pack_ ##name (const GstAudioFormatInfo *info,               \
-    GstAudioPackFlags flags, const gpointer src,                        \
+    GstAudioPackFlags flags, gconstpointer src,                         \
     gpointer data, gint length)                                         \
 {                                                                       \
   gint32 tmp;                                                           \
-  guint32 *s = src;                                                     \
+  const guint32 *s = src;                                               \
   guint8 *d = data;                                                     \
   for (;length; length--) {                                             \
     tmp = (*s++ ^ (sign)) >> scale;                                     \

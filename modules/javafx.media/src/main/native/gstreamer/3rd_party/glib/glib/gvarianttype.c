@@ -1,6 +1,6 @@
 /*
- * Copyright © 2007, 2008 Ryan Lortie
- * Copyright © 2009, 2010 Codethink Limited
+ * Copyright (C) 2007, 2008 Ryan Lortie
+ * Copyright (C) 2009, 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -200,7 +200,7 @@ g_variant_type_check (const GVariantType *type)
 
 static gboolean
 variant_type_string_scan_internal (const gchar  *string,
-                            const gchar  *limit,
+                                   const gchar  *limit,
                                    const gchar **endptr,
                                    gsize        *depth,
                                    gsize         depth_limit)
@@ -221,7 +221,7 @@ variant_type_string_scan_internal (const gchar  *string,
               !variant_type_string_scan_internal (string, limit, &string,
                                                   &child_depth,
                                                   depth_limit - 1))
-          return FALSE;
+            return FALSE;
 
           max_depth = MAX (max_depth, child_depth + 1);
         }
@@ -312,7 +312,7 @@ g_variant_type_string_scan (const gchar  *string,
  * If @type_string is not a valid #GVariant type string, 0 will be returned.
  *
  * Returns: depth of @type_string, or 0 on error
- * Since: 2.60 (backported to 2.58)
+ * Since: 2.60
  */
 gsize
 g_variant_type_string_get_depth_ (const gchar *type_string)
@@ -1088,12 +1088,16 @@ g_variant_type_key (const GVariantType *type)
 const GVariantType *
 g_variant_type_value (const GVariantType *type)
 {
+#ifndef G_DISABLE_ASSERT
   const gchar *type_string;
+#endif
 
   g_return_val_if_fail (g_variant_type_check (type), NULL);
 
+#ifndef G_DISABLE_ASSERT
   type_string = g_variant_type_peek_string (type);
   g_assert (type_string[0] == '{');
+#endif
 
   return g_variant_type_next (g_variant_type_key (type));
 }

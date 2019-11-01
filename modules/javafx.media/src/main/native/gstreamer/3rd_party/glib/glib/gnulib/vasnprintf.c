@@ -1,5 +1,5 @@
 /* vsprintf with automatic memory allocation.
-   Copyright (C) 1999, 2002-2016 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2002-2019 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as published by
@@ -12,7 +12,7 @@
    GNU Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public License along
-   with this program; if not, see <http://www.gnu.org/licenses/>.  */
+   with this program; if not, see <https://www.gnu.org/licenses/>.  */
 
 /* This file can be parametrized with the following macros:
      VASNPRINTF         The name of the function being defined.
@@ -55,14 +55,18 @@
 #ifndef VASNPRINTF
 # include <config.h>
 #endif
-/* galloca.h also defines alloca and HAVE_ALLOCA makes the code below use it */
 #include "glib/galloca.h"
-#define HAVE_ALLOCA 1
 
 #include "g-gnulib.h"
 
 /* Specification.  */
-#include "vasnprintf.h"
+#ifndef VASNPRINTF
+# if WIDE_CHAR_VERSION
+#  include "vasnwprintf.h"
+# else
+#  include "vasnprintf.h"
+# endif
+#endif
 
 #include <locale.h>     /* localeconv() */
 #include <stdio.h>      /* snprintf(), sprintf() */
@@ -71,39 +75,57 @@
 #include <errno.h>      /* errno */
 #include <limits.h>     /* CHAR_BIT */
 #include <float.h>      /* DBL_MAX_EXP, LDBL_MAX_EXP */
+#if HAVE_NL_LANGINFO
+# include <langinfo.h>
+#endif
+#ifndef VASNPRINTF
+# if WIDE_CHAR_VERSION
+#  include "wprintf-parse.h"
+# else
 #  include "printf-parse.h"
+# endif
+#endif
 
+/* Checked size_t computations.  */
 #include "xsize.h"
 
 #include "verify.h"
 
 #if (NEED_PRINTF_DOUBLE || NEED_PRINTF_LONG_DOUBLE) && !defined IN_LIBINTL
-# include <math.h>
+# include <gnulib_math.h>
 # include "float+.h"
 #endif
 
 #if (NEED_PRINTF_DOUBLE || NEED_PRINTF_INFINITE_DOUBLE) && !defined IN_LIBINTL
-# include <math.h>
+# include <gnulib_math.h>
 # include "isnand-nolibm.h"
 #endif
 
 #if (NEED_PRINTF_LONG_DOUBLE || NEED_PRINTF_INFINITE_LONG_DOUBLE) && !defined IN_LIBINTL
-# include <math.h>
+# include <gnulib_math.h>
 # include "isnanl-nolibm.h"
 # include "fpucw.h"
 #endif
 
 #if (NEED_PRINTF_DIRECTIVE_A || NEED_PRINTF_DOUBLE) && !defined IN_LIBINTL
-# include <math.h>
+# include <gnulib_math.h>
 # include "isnand-nolibm.h"
 # include "printf-frexp.h"
 #endif
 
 #if (NEED_PRINTF_DIRECTIVE_A || NEED_PRINTF_LONG_DOUBLE) && !defined IN_LIBINTL
-# include <math.h>
+# include <gnulib_math.h>
 # include "isnanl-nolibm.h"
 # include "printf-frexpl.h"
 # include "fpucw.h"
+#endif
+
+#ifndef FALLTHROUGH
+# if __GNUC__ < 7
+#  define FALLTHROUGH ((void) 0)
+# else
+#  define FALLTHROUGH __attribute__ ((__fallthrough__))
+# endif
 #endif
 
 /* Default parameters.  */
@@ -144,6 +166,7 @@
 #   define SNPRINTF snwprintf
 #  else
 #   define SNPRINTF _snwprintf
+#   define USE_MSVC__SNPRINTF 1
 #  endif
 # else
    /* Unix.  */
@@ -169,7 +192,9 @@
     /* Here we need to call the native snprintf, not rpl_snprintf.  */
 #   undef snprintf
 #  else
+    /* MSVC versions < 14 did not have snprintf, only _snprintf.  */
 #   define SNPRINTF _snprintf
+#   define USE_MSVC__SNPRINTF 1
 #  endif
 # else
    /* Unix.  */
@@ -183,7 +208,7 @@
 
 /* GCC >= 4.0 with -Wall emits unjustified "... may be used uninitialized"
    warnings in this file.  Use -Dlint to suppress them.  */
-#ifdef lint
+#if defined GCC_LINT || defined lint
 # define IF_LINT(Code) Code
 #else
 # define IF_LINT(Code) /* empty */
@@ -196,7 +221,7 @@
 #undef remainder
 #define remainder rem
 
-#if (!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99) && !WIDE_CHAR_VERSION
+#if (!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF) && !WIDE_CHAR_VERSION
 # if (HAVE_STRNLEN && !defined _AIX)
 #  define local_strnlen strnlen
 # else
@@ -212,7 +237,7 @@ local_strnlen (const char *string, size_t maxlen)
 # endif
 #endif
 
-#if (((!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99) && WIDE_CHAR_VERSION) || ((!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || (NEED_PRINTF_DIRECTIVE_LS && !defined IN_LIBINTL)) && !WIDE_CHAR_VERSION && DCHAR_IS_TCHAR)) && HAVE_WCHAR_T
+#if (((!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF) && WIDE_CHAR_VERSION) || ((!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF || (NEED_PRINTF_DIRECTIVE_LS && !defined IN_LIBINTL)) && !WIDE_CHAR_VERSION && DCHAR_IS_TCHAR)) && HAVE_WCHAR_T
 # if HAVE_WCSLEN
 #  define local_wcslen wcslen
 # else
@@ -235,7 +260,7 @@ local_wcslen (const wchar_t *s)
 # endif
 #endif
 
-#if (!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99) && HAVE_WCHAR_T && WIDE_CHAR_VERSION
+#if (!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF) && HAVE_WCHAR_T && WIDE_CHAR_VERSION
 # if HAVE_WCSNLEN
 #  define local_wcsnlen wcsnlen
 # else
@@ -837,7 +862,9 @@ convert_to_decimal (mpn_t a, size_t extra_zeroes)
   size_t a_len = a.nlimbs;
   /* 0.03345 is slightly larger than log(2)/(9*log(10)).  */
   size_t c_len = 9 * ((size_t)(a_len * (GMP_LIMB_BITS * 0.03345f)) + 1);
-  char *c_ptr = (char *) malloc (xsum (c_len, extra_zeroes));
+  /* We need extra_zeroes bytes for zeroes, followed by c_len bytes for the
+     digits of a, followed by 1 byte for the terminating NUL.  */
+  char *c_ptr = (char *) malloc (xsum (xsum (extra_zeroes, c_len), 1));
   if (c_ptr != NULL)
     {
       char *d_ptr = c_ptr;
@@ -1505,7 +1532,7 @@ is_borderline (const char *digits, size_t precision)
 
 #endif
 
-#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99
+#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF
 
 /* Use a different function name, to make it possible that the 'wchar_t'
    parametrization and the 'char' parametrization get compiled in the same
@@ -2380,7 +2407,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                   }
               }
 #endif
-#if (!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || (NEED_PRINTF_DIRECTIVE_LS && !defined IN_LIBINTL)) && HAVE_WCHAR_T
+#if (!USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF || (NEED_PRINTF_DIRECTIVE_LS && !defined IN_LIBINTL)) && HAVE_WCHAR_T
             else if (dp->conversion == 's'
 # if WIDE_CHAR_VERSION
                      && a.arg[dp->arg_index].type != TYPE_WIDE_STRING
@@ -2671,7 +2698,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                               errno = EILSEQ;
                               return NULL;
                             }
-                          if (precision < count)
+                          if (precision < (unsigned int) count)
                             break;
                           arg_end++;
                           characters += count;
@@ -4220,7 +4247,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                   static const wchar_t decimal_format[] =
                                     /* Produce the same number of exponent digits
                                        as the native printf implementation.  */
-#    if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#    if (defined _WIN32 && FALSE) && ! defined __CYGWIN__
                                     { '%', '+', '.', '3', 'd', '\0' };
 #    else
                                     { '%', '+', '.', '2', 'd', '\0' };
@@ -4234,7 +4261,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                   static const char decimal_format[] =
                                     /* Produce the same number of exponent digits
                                        as the native printf implementation.  */
-#    if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#    if (defined _WIN32 && FALSE) && ! defined __CYGWIN__
                                     "%+.3d";
 #    else
                                     "%+.2d";
@@ -4413,7 +4440,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                           static const wchar_t decimal_format[] =
                                             /* Produce the same number of exponent digits
                                                as the native printf implementation.  */
-#    if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#    if (defined _WIN32 && FALSE) && ! defined __CYGWIN__
                                             { '%', '+', '.', '3', 'd', '\0' };
 #    else
                                             { '%', '+', '.', '2', 'd', '\0' };
@@ -4427,7 +4454,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                           static const char decimal_format[] =
                                             /* Produce the same number of exponent digits
                                                as the native printf implementation.  */
-#    if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#    if (defined _WIN32 && FALSE) && ! defined __CYGWIN__
                                             "%+.3d";
 #    else
                                             "%+.2d";
@@ -4485,7 +4512,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                                 *p++ = '+';
                                 /* Produce the same number of exponent digits as
                                    the native printf implementation.  */
-#   if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+#   if (defined _WIN32 && FALSE) && ! defined __CYGWIN__
                                 *p++ = '0';
 #   endif
                                 *p++ = '0';
@@ -4579,10 +4606,10 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
 #if !DCHAR_IS_TCHAR || ENABLE_UNISTDIO || NEED_PRINTF_FLAG_LEFTADJUST || NEED_PRINTF_FLAG_ZERO || NEED_PRINTF_UNBOUNDED_PRECISION
                 int has_width;
 #endif
-#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || !DCHAR_IS_TCHAR || ENABLE_UNISTDIO || NEED_PRINTF_FLAG_LEFTADJUST || NEED_PRINTF_FLAG_ZERO || NEED_PRINTF_UNBOUNDED_PRECISION
+#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF || !DCHAR_IS_TCHAR || ENABLE_UNISTDIO || NEED_PRINTF_FLAG_LEFTADJUST || NEED_PRINTF_FLAG_ZERO || NEED_PRINTF_UNBOUNDED_PRECISION
                 size_t width;
 #endif
-#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || NEED_PRINTF_UNBOUNDED_PRECISION
+#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF || NEED_PRINTF_UNBOUNDED_PRECISION
                 int has_precision;
                 size_t precision;
 #endif
@@ -4611,7 +4638,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
 #if !DCHAR_IS_TCHAR || ENABLE_UNISTDIO || NEED_PRINTF_FLAG_LEFTADJUST || NEED_PRINTF_FLAG_ZERO || NEED_PRINTF_UNBOUNDED_PRECISION
                 has_width = 0;
 #endif
-#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || !DCHAR_IS_TCHAR || ENABLE_UNISTDIO || NEED_PRINTF_FLAG_LEFTADJUST || NEED_PRINTF_FLAG_ZERO || NEED_PRINTF_UNBOUNDED_PRECISION
+#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF || !DCHAR_IS_TCHAR || ENABLE_UNISTDIO || NEED_PRINTF_FLAG_LEFTADJUST || NEED_PRINTF_FLAG_ZERO || NEED_PRINTF_UNBOUNDED_PRECISION
                 width = 0;
                 if (dp->width_start != dp->width_end)
                   {
@@ -4645,7 +4672,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                   }
 #endif
 
-#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || NEED_PRINTF_UNBOUNDED_PRECISION
+#if !USE_SNPRINTF || !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF || NEED_PRINTF_UNBOUNDED_PRECISION
                 has_precision = 0;
                 precision = 6;
                 if (dp->precision_start != dp->precision_end)
@@ -4813,16 +4840,16 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
 #if HAVE_LONG_LONG
                   case TYPE_LONGLONGINT:
                   case TYPE_ULONGLONGINT:
-# if (defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__
+# if (defined _WIN32 && FALSE) && ! defined __CYGWIN__
                     *fbp++ = 'I';
                     *fbp++ = '6';
                     *fbp++ = '4';
                     break;
 # else
                     *fbp++ = 'l';
-                    /*FALLTHROUGH*/
 # endif
 #endif
+                    FALLTHROUGH;
                   case TYPE_LONGINT:
                   case TYPE_ULONGINT:
 #if HAVE_WINT_T
@@ -4846,7 +4873,11 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
 #endif
                   *fbp = dp->conversion;
 #if USE_SNPRINTF
-# if !(((__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 3)) && !defined __UCLIBC__) || ((defined _WIN32 || defined __WIN32__) && ! defined __CYGWIN__))
+# if ! (((__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 3))        \
+         && !defined __UCLIBC__)                                            \
+        || (defined __APPLE__ && defined __MACH__)                          \
+        || defined __ANDROID__                                              \
+        || (defined _WIN32 && ! defined __CYGWIN__))
                 fbp[1] = '%';
                 fbp[2] = 'n';
                 fbp[3] = '\0';
@@ -4860,6 +4891,21 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                    in format strings in writable memory may crash the program
                    (if compiled with _FORTIFY_SOURCE=2), so we should avoid it
                    in this situation.  */
+                /* On Mac OS X 10.3 or newer, we know that snprintf's return
+                   value conforms to ISO C 99: the tests gl_SNPRINTF_RETVAL_C99
+                   and gl_SNPRINTF_TRUNCATION_C99 pass.
+                   Therefore we can avoid using %n in this situation.
+                   On Mac OS X 10.13 or newer, the use of %n in format strings
+                   in writable memory by default crashes the program, so we
+                   should avoid it in this situation.  */
+                /* On Android, we know that snprintf's return value conforms to
+                   ISO C 99: the tests gl_SNPRINTF_RETVAL_C99 and
+                   gl_SNPRINTF_TRUNCATION_C99 pass.
+                   Therefore we can avoid using %n in this situation.
+                   Starting on 2018-03-07, the use of %n in format strings
+                   produces a fatal error (see
+                   <https://android.googlesource.com/platform/bionic/+/41398d03b7e8e0dfb951660ae713e682e9fc0336>),
+                   so we should avoid it.  */
                 /* On native Windows systems (such as mingw), we can avoid using
                    %n because:
                      - Although the gl_SNPRINTF_TRUNCATION_C99 test fails,
@@ -4872,8 +4918,8 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                    On native Windows systems (such as mingw) where the OS is
                    Windows Vista, the use of %n in format strings by default
                    crashes the program. See
-                     <http://gcc.gnu.org/ml/gcc/2007-06/msg00122.html> and
-                     <http://msdn2.microsoft.com/en-us/library/ms175782(VS.80).aspx>
+                     <https://gcc.gnu.org/ml/gcc/2007-06/msg00122.html> and
+                     <https://msdn.microsoft.com/en-us/library/ms175782.aspx>
                    So we should avoid %n in this situation.  */
                 fbp[1] = '\0';
 # endif
@@ -5092,7 +5138,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                       {
                         /* Verify that snprintf() has NUL-terminated its
                            result.  */
-                        if (count < maxlen
+                        if ((unsigned int) count < maxlen
                             && ((TCHAR_T *) (result + length)) [count] != '\0')
                           abort ();
                         /* Portability hack.  */
@@ -5115,7 +5161,7 @@ VASNPRINTF (DCHAR_T *resultbuf, size_t *lengthp,
                             /* Look at the snprintf() return value.  */
                             if (retcount < 0)
                               {
-# if !HAVE_SNPRINTF_RETVAL_C99
+# if !HAVE_SNPRINTF_RETVAL_C99 || USE_MSVC__SNPRINTF
                                 /* HP-UX 10.20 snprintf() is doubly deficient:
                                    It doesn't understand the '%n' directive,
                                    *and* it returns -1 (rather than the length

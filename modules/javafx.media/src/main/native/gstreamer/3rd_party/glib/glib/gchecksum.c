@@ -177,8 +177,7 @@ static gchar *
 digest_to_string (guint8 *digest,
                   gsize   digest_len)
 {
-  gint len = digest_len * 2;
-  gint i;
+  gsize i, len = digest_len * 2;
   gchar *retval;
 
   retval = g_new (gchar, len + 1);
@@ -463,7 +462,7 @@ md5_sum_digest (Md5sum *md5,
 
 /* The following implementation comes from D-Bus dbus-sha.c. I've changed
  * it to use GLib types and to work more like the MD5 implementation above.
- * I left the comments to have an history of this code.
+ * I left the comments to have a history of this code.
  *      -- Emmanuele Bassi, ebassi@gnome.org
  */
 
@@ -1090,13 +1089,13 @@ sha256_sum_digest (Sha256sum *sha256,
  *
  * Implemented following FIPS-180-4 standard at
  * http://csrc.nist.gov/publications/fips/fips180-4/fips180-4.pdf.
- * References in the form [§x.y.z] map to sections in that document.
+ * References in the form [x.y.z] map to sections in that document.
  *
  *   Author(s): Eduardo Lima Mitev <elima@igalia.com>
  *              Igor Gnatenko <ignatenko@src.gnome.org>
  */
 
-/* SHA-384, SHA-512, SHA-512/224 and SHA-512/256 functions [§4.1.3] */
+/* SHA-384, SHA-512, SHA-512/224 and SHA-512/256 functions [4.1.3] */
 #define Ch(x,y,z)  ((x & y) ^ (~x & z))
 #define Maj(x,y,z) ((x & y) ^ (x & z) ^ (y & z))
 #define SHR(n,x)   (x >> n)
@@ -1116,7 +1115,7 @@ sha256_sum_digest (Sha256sum *sha256,
     (b)[(i) + 6] = (guint8) (n >>  8);                   \
     (b)[(i) + 7] = (guint8) (n      ); } G_STMT_END
 
-/* SHA-384 and SHA-512 constants [§4.2.3] */
+/* SHA-384 and SHA-512 constants [4.2.3] */
 static const guint64 SHA2_K[80] = {
   G_GUINT64_CONSTANT (0x428a2f98d728ae22), G_GUINT64_CONSTANT (0x7137449123ef65cd),
   G_GUINT64_CONSTANT (0xb5c0fbcfec4d3b2f), G_GUINT64_CONSTANT (0xe9b5dba58189dbbc),
@@ -1164,7 +1163,7 @@ static const guint64 SHA2_K[80] = {
 static void
 sha384_sum_init (Sha512sum *sha512)
 {
-  /* Initial Hash Value [§5.3.4] */
+  /* Initial Hash Value [5.3.4] */
   sha512->H[0] = G_GUINT64_CONSTANT (0xcbbb9d5dc1059ed8);
   sha512->H[1] = G_GUINT64_CONSTANT (0x629a292a367cd507);
   sha512->H[2] = G_GUINT64_CONSTANT (0x9159015a3070dd17);
@@ -1183,7 +1182,7 @@ sha384_sum_init (Sha512sum *sha512)
 static void
 sha512_sum_init (Sha512sum *sha512)
 {
-  /* Initial Hash Value [§5.3.5] */
+  /* Initial Hash Value [5.3.5] */
   sha512->H[0] = G_GUINT64_CONSTANT (0x6a09e667f3bcc908);
   sha512->H[1] = G_GUINT64_CONSTANT (0xbb67ae8584caa73b);
   sha512->H[2] = G_GUINT64_CONSTANT (0x3c6ef372fe94f82b);
@@ -1209,7 +1208,7 @@ sha512_transform (guint64      H[8],
   guint64 M[16];
   guint64 W[80];
 
-  /* SHA-512 hash computation [§6.4.2] */
+  /* SHA-512 hash computation [6.4.2] */
 
   /* prepare the message schedule */
   for (i = 0; i < 16; i++)
@@ -1331,7 +1330,7 @@ sha512_sum_close (Sha512sum *sha512)
   guint pad_len = 0;
   gint i;
 
-  /* apply padding [§5.1.2] */
+  /* apply padding [5.1.2] */
   l = sha512->block_len * 8;
   zeros = 896 - (l + 1);
 
@@ -1629,7 +1628,7 @@ g_checksum_update (GChecksum    *checksum,
  * g_checksum_get_string:
  * @checksum: a #GChecksum
  *
- * Gets the digest as an hexadecimal string.
+ * Gets the digest as a hexadecimal string.
  *
  * Once this function has been called the #GChecksum can no longer be
  * updated with g_checksum_update().

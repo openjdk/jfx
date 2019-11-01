@@ -65,7 +65,7 @@ struct _GstTracerPrivate
 };
 
 #define gst_tracer_parent_class parent_class
-G_DEFINE_ABSTRACT_TYPE (GstTracer, gst_tracer, GST_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (GstTracer, gst_tracer, GST_TYPE_OBJECT);
 
 static void
 gst_tracer_dispose (GObject * object)
@@ -88,14 +88,12 @@ gst_tracer_class_init (GstTracerClass * klass)
       NULL, G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, properties);
-  g_type_class_add_private (klass, sizeof (GstTracerPrivate));
 }
 
 static void
 gst_tracer_init (GstTracer * tracer)
 {
-  tracer->priv = G_TYPE_INSTANCE_GET_PRIVATE (tracer, GST_TYPE_TRACER,
-      GstTracerPrivate);
+  tracer->priv = gst_tracer_get_instance_private (tracer);
 }
 
 static void

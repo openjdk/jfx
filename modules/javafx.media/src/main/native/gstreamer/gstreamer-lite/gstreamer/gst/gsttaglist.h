@@ -486,6 +486,25 @@ gst_tag_list_unref (GstTagList * taglist)
 }
 
 /**
+ * gst_clear_tag_list: (skip)
+ * @taglist_ptr: a pointer to a #GstTagList reference
+ *
+ * Clears a reference to a #GstTagList.
+ *
+ * @taglist_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the taglist is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+static inline void
+gst_clear_tag_list (GstTagList ** taglist_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) taglist_ptr);
+}
+
+/**
  * gst_tag_list_copy:
  * @taglist: a #GstTagList.
  *
@@ -505,6 +524,54 @@ static inline GstTagList *
 gst_tag_list_copy (const GstTagList * taglist)
 {
   return GST_TAG_LIST (gst_mini_object_copy (GST_MINI_OBJECT_CAST (taglist)));
+}
+
+/**
+ * gst_tag_list_replace:
+ * @old_taglist: (inout) (transfer full) (nullable): pointer to a pointer to a
+ *     #GstTagList to be replaced.
+ * @new_taglist: (transfer none) (allow-none): pointer to a #GstTagList that
+ *     will replace the tag list pointed to by @old_taglist.
+ *
+ * Modifies a pointer to a #GstTagList to point to a different #GstTagList. The
+ * modification is done atomically (so this is useful for ensuring thread
+ * safety in some cases), and the reference counts are updated appropriately
+ * (the old tag list is unreffed, the new is reffed).
+ *
+ * Either @new_taglist or the #GstTagList pointed to by @old_taglist may be
+ * %NULL.
+ *
+ * Returns: %TRUE if @new_taglist was different from @old_taglist
+ *
+ * Since: 1.16
+ */
+static inline gboolean
+gst_tag_list_replace (GstTagList **old_taglist, GstTagList *new_taglist)
+{
+    return gst_mini_object_replace ((GstMiniObject **) old_taglist,
+        (GstMiniObject *) new_taglist);
+}
+
+/**
+ * gst_tag_list_take:
+ * @old_taglist: (inout) (transfer full): pointer to a pointer to a #GstTagList
+ *     to be replaced.
+ * @new_taglist: (transfer full) (allow-none): pointer to a #GstTagList that
+ *     will replace the taglist pointed to by @old_taglist.
+ *
+ * Modifies a pointer to a #GstTagList to point to a different #GstTagList.
+ * This function is similar to gst_tag_list_replace() except that it takes
+ * ownership of @new_taglist.
+ *
+ * Returns: %TRUE if @new_taglist was different from @old_taglist
+ *
+ * Since: 1.16
+ */
+static inline gboolean
+gst_tag_list_take (GstTagList **old_taglist, GstTagList *new_taglist)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_taglist,
+      (GstMiniObject *) new_taglist);
 }
 
 /**

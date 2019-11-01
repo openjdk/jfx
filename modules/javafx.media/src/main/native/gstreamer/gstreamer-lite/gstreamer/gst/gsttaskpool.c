@@ -35,6 +35,7 @@
 
 #include "gstinfo.h"
 #include "gsttaskpool.h"
+#include "gsterror.h"
 
 GST_DEBUG_CATEGORY_STATIC (taskpool_debug);
 #define GST_CAT_DEFAULT (taskpool_debug)
@@ -73,22 +74,26 @@ static void
 default_prepare (GstTaskPool * pool, GError ** error)
 {
   GST_OBJECT_LOCK (pool);
-  pool->pool = g_thread_pool_new ((GFunc) default_func, pool, -1, FALSE, NULL);
+  pool->pool = g_thread_pool_new ((GFunc) default_func, pool, -1, FALSE, error);
   GST_OBJECT_UNLOCK (pool);
 }
 
 static void
 default_cleanup (GstTaskPool * pool)
 {
+  GThreadPool *pool_;
+
   GST_OBJECT_LOCK (pool);
-  if (pool->pool) {
+  pool_ = pool->pool;
+  pool->pool = NULL;
+  GST_OBJECT_UNLOCK (pool);
+
+  if (pool_) {
     /* Shut down all the threads, we still process the ones scheduled
      * because the unref happens in the thread function.
      * Also wait for currently running ones to finish. */
-    g_thread_pool_free (pool->pool, FALSE, TRUE);
-    pool->pool = NULL;
+    g_thread_pool_free (pool_, FALSE, TRUE);
   }
-  GST_OBJECT_UNLOCK (pool);
 }
 
 static gpointer
@@ -106,6 +111,9 @@ default_push (GstTaskPool * pool, GstTaskPoolFunction func,
     g_thread_pool_push (pool->pool, tdata, error);
   else {
     g_slice_free (TaskData, tdata);
+    g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
+        "No thread pool");
+
   }
   GST_OBJECT_UNLOCK (pool);
 

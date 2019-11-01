@@ -66,21 +66,21 @@ copy_func (void *prop, guint size, guint8 ** buffer, guint64 * bsize,
   return size;
 }
 
-#define INT_ARRAY_COPY_FUNC_FAST(name, datatype)            \
-guint64 prop_copy_ ## name ## _array (datatype *prop, guint size,   \
-    guint8 ** buffer, guint64 * bsize, guint64 * offset) {      \
+#define INT_ARRAY_COPY_FUNC_FAST(name, datatype)      \
+guint64 prop_copy_ ## name ## _array (datatype *prop, guint size, \
+    guint8 ** buffer, guint64 * bsize, guint64 * offset) {    \
   return copy_func (prop, sizeof (datatype) * size, buffer, bsize, offset);\
 }
 
-#define INT_ARRAY_COPY_FUNC(name, datatype)                 \
-guint64 prop_copy_ ## name ## _array (datatype *prop, guint size,   \
-    guint8 ** buffer, guint64 * bsize, guint64 * offset) {      \
-  guint i;                              \
-                                    \
-  for (i = 0; i < size; i++) {                      \
-    prop_copy_ ## name (prop[i], buffer, bsize, offset);        \
-  }                                 \
-  return sizeof (datatype) * size;                  \
+#define INT_ARRAY_COPY_FUNC(name, datatype)         \
+guint64 prop_copy_ ## name ## _array (datatype *prop, guint size, \
+    guint8 ** buffer, guint64 * bsize, guint64 * offset) {    \
+  guint i;                \
+                  \
+  for (i = 0; i < size; i++) {            \
+    prop_copy_ ## name (prop[i], buffer, bsize, offset);    \
+  }                 \
+  return sizeof (datatype) * size;          \
 }
 
 /* INTEGERS */

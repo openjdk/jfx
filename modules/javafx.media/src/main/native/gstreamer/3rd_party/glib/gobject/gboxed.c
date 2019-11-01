@@ -37,18 +37,29 @@
  * @see_also: #GParamSpecBoxed, g_param_spec_boxed()
  * @title: Boxed Types
  *
- * GBoxed is a generic wrapper mechanism for arbitrary C structures. The only
- * thing the type system needs to know about the structures is how to copy and
- * free them, beyond that they are treated as opaque chunks of memory.
+ * #GBoxed is a generic wrapper mechanism for arbitrary C structures. The only
+ * thing the type system needs to know about the structures is how to copy them
+ * (a #GBoxedCopyFunc) and how to free them (a #GBoxedFreeFunc) - beyond that
+ * they are treated as opaque chunks of memory.
  *
  * Boxed types are useful for simple value-holder structures like rectangles or
- * points. They can also be used for wrapping structures defined in non-GObject
- * based libraries.
+ * points. They can also be used for wrapping structures defined in non-#GObject
+ * based libraries. They allow arbitrary structures to be handled in a uniform
+ * way, allowing uniform copying (or referencing) and freeing (or unreferencing)
+ * of them, and uniform representation of the type of the contained structure.
+ * In turn, this allows any type which can be boxed to be set as the data in a
+ * #GValue, which allows for polymorphic handling of a much wider range of data
+ * types, and hence usage of such types as #GObject property values.
+ *
+ * #GBoxed is designed so that reference counted types can be boxed. Use the
+ * type's 'ref' function as the #GBoxedCopyFunc, and its 'unref' function as the
+ * #GBoxedFreeFunc. For example, for #GBytes, the #GBoxedCopyFunc is
+ * g_bytes_ref(), and the #GBoxedFreeFunc is g_bytes_unref().
  */
 
 static inline void              /* keep this function in sync with gvalue.c */
 value_meminit (GValue *value,
-           GType   value_type)
+         GType   value_type)
 {
   value->g_type = value_type;
   memset (value->data, 0, sizeof (value->data));
@@ -100,12 +111,12 @@ _g_boxed_type_init (void)
     NULL,                       /* value_table */
   };
   const GTypeFundamentalInfo finfo = { G_TYPE_FLAG_DERIVABLE, };
-  GType type;
+  GType type G_GNUC_UNUSED  /* when compiling with G_DISABLE_ASSERT */;
 
   /* G_TYPE_BOXED
    */
   type = g_type_register_fundamental (G_TYPE_BOXED, g_intern_static_string ("GBoxed"), &info, &finfo,
-                      G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT);
+              G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT);
   g_assert (type == G_TYPE_BOXED);
 }
 
@@ -201,7 +212,7 @@ boxed_proxy_value_free (GValue *value)
 
 static void
 boxed_proxy_value_copy (const GValue *src_value,
-            GValue       *dest_value)
+      GValue       *dest_value)
 {
   if (src_value->data[0].v_pointer)
     dest_value->data[0].v_pointer = _g_type_boxed_copy (G_VALUE_TYPE (src_value), src_value->data[0].v_pointer);
@@ -217,21 +228,21 @@ boxed_proxy_value_peek_pointer (const GValue *value)
 
 static gchar*
 boxed_proxy_collect_value (GValue      *value,
-               guint        n_collect_values,
-               GTypeCValue *collect_values,
-               guint        collect_flags)
+         guint        n_collect_values,
+         GTypeCValue *collect_values,
+         guint        collect_flags)
 {
   if (!collect_values[0].v_pointer)
     value->data[0].v_pointer = NULL;
   else
     {
       if (collect_flags & G_VALUE_NOCOPY_CONTENTS)
-    {
-      value->data[0].v_pointer = collect_values[0].v_pointer;
-      value->data[1].v_uint = G_VALUE_NOCOPY_CONTENTS;
-    }
+  {
+    value->data[0].v_pointer = collect_values[0].v_pointer;
+    value->data[1].v_uint = G_VALUE_NOCOPY_CONTENTS;
+  }
       else
-    value->data[0].v_pointer = _g_type_boxed_copy (G_VALUE_TYPE (value), collect_values[0].v_pointer);
+  value->data[0].v_pointer = _g_type_boxed_copy (G_VALUE_TYPE (value), collect_values[0].v_pointer);
     }
 
   return NULL;
@@ -239,9 +250,9 @@ boxed_proxy_collect_value (GValue      *value,
 
 static gchar*
 boxed_proxy_lcopy_value (const GValue *value,
-             guint         n_collect_values,
-             GTypeCValue  *collect_values,
-             guint         collect_flags)
+       guint         n_collect_values,
+       GTypeCValue  *collect_values,
+       guint         collect_flags)
 {
   gpointer *boxed_p = collect_values[0].v_pointer;
 
@@ -272,8 +283,8 @@ boxed_proxy_lcopy_value (const GValue *value,
  */
 GType
 g_boxed_type_register_static (const gchar   *name,
-                  GBoxedCopyFunc boxed_copy,
-                  GBoxedFreeFunc boxed_free)
+            GBoxedCopyFunc boxed_copy,
+            GBoxedFreeFunc boxed_free)
 {
   static const GTypeValueTable vtable = {
     boxed_proxy_value_init,
@@ -286,16 +297,16 @@ g_boxed_type_register_static (const gchar   *name,
     boxed_proxy_lcopy_value,
   };
   GTypeInfo type_info = {
-    0,          /* class_size */
-    NULL,       /* base_init */
-    NULL,       /* base_finalize */
-    NULL,       /* class_init */
-    NULL,       /* class_finalize */
-    NULL,       /* class_data */
-    0,          /* instance_size */
-    0,          /* n_preallocs */
-    NULL,       /* instance_init */
-    &vtable,        /* value_table */
+    0,      /* class_size */
+    NULL,   /* base_init */
+    NULL,   /* base_finalize */
+    NULL,   /* class_init */
+    NULL,   /* class_finalize */
+    NULL,   /* class_data */
+    0,      /* instance_size */
+    0,      /* n_preallocs */
+    NULL,   /* instance_init */
+    &vtable,    /* value_table */
   };
   GType type;
 
@@ -325,7 +336,7 @@ g_boxed_type_register_static (const gchar   *name,
  */
 gpointer
 g_boxed_copy (GType         boxed_type,
-          gconstpointer src_boxed)
+        gconstpointer src_boxed)
 {
   GTypeValueTable *value_table;
   gpointer dest_boxed;
@@ -366,8 +377,8 @@ g_boxed_copy (GType         boxed_type,
 
       /* double check and grouse if things went wrong */
       if (dest_value.data[1].v_ulong)
-    g_warning ("the copy_value() implementation of type '%s' seems to make use of reserved GValue fields",
-           g_type_name (boxed_type));
+  g_warning ("the copy_value() implementation of type '%s' seems to make use of reserved GValue fields",
+       g_type_name (boxed_type));
 
       dest_boxed = dest_value.data[0].v_pointer;
     }
@@ -384,7 +395,7 @@ g_boxed_copy (GType         boxed_type,
  */
 void
 g_boxed_free (GType    boxed_type,
-          gpointer boxed)
+        gpointer boxed)
 {
   GTypeValueTable *value_table;
 
@@ -449,9 +460,9 @@ g_value_dup_boxed (const GValue *value)
 
 static inline void
 value_set_boxed_internal (GValue       *value,
-              gconstpointer boxed,
-              gboolean      need_copy,
-              gboolean      need_free)
+        gconstpointer boxed,
+        gboolean      need_copy,
+        gboolean      need_free)
 {
   if (!boxed)
     {
@@ -479,7 +490,7 @@ value_set_boxed_internal (GValue       *value,
  */
 void
 g_value_set_boxed (GValue       *value,
-           gconstpointer boxed)
+       gconstpointer boxed)
 {
   g_return_if_fail (G_VALUE_HOLDS_BOXED (value));
   g_return_if_fail (G_TYPE_IS_VALUE (G_VALUE_TYPE (value)));
@@ -498,7 +509,7 @@ g_value_set_boxed (GValue       *value,
  */
 void
 g_value_set_static_boxed (GValue       *value,
-              gconstpointer boxed)
+        gconstpointer boxed)
 {
   g_return_if_fail (G_VALUE_HOLDS_BOXED (value));
   g_return_if_fail (G_TYPE_IS_VALUE (G_VALUE_TYPE (value)));
@@ -517,7 +528,7 @@ g_value_set_static_boxed (GValue       *value,
  */
 void
 g_value_set_boxed_take_ownership (GValue       *value,
-                  gconstpointer boxed)
+          gconstpointer boxed)
 {
   g_value_take_boxed (value, boxed);
 }
@@ -528,14 +539,14 @@ g_value_set_boxed_take_ownership (GValue       *value,
  * @v_boxed: (nullable): duplicated unowned boxed value to be set
  *
  * Sets the contents of a %G_TYPE_BOXED derived #GValue to @v_boxed
- * and takes over the ownership of the callers reference to @v_boxed;
+ * and takes over the ownership of the caller's reference to @v_boxed;
  * the caller doesn't have to unref it any more.
  *
  * Since: 2.4
  */
 void
 g_value_take_boxed (GValue       *value,
-            gconstpointer boxed)
+        gconstpointer boxed)
 {
   g_return_if_fail (G_VALUE_HOLDS_BOXED (value));
   g_return_if_fail (G_TYPE_IS_VALUE (G_VALUE_TYPE (value)));

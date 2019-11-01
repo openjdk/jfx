@@ -60,7 +60,7 @@ typedef void (*GstAudioRingBufferCallback) (GstAudioRingBuffer *rbuf, guint8* da
  * @GST_AUDIO_RING_BUFFER_STATE_STARTED: The ringbuffer is started
  * @GST_AUDIO_RING_BUFFER_STATE_ERROR: The ringbuffer has encountered an
  *     error after it has been started, e.g. because the device was
- *     disconnected (Since 1.2)
+ *     disconnected (Since: 1.2)
  *
  * The state of the ringbuffer.
  */
@@ -85,9 +85,9 @@ typedef enum {
  * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_DTS: samples in DTS format
  * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC: samples in MPEG-2 AAC ADTS format
  * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC: samples in MPEG-4 AAC ADTS format
- * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC_RAW: samples in MPEG-2 AAC raw format (Since 1.12)
- * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC_RAW: samples in MPEG-4 AAC raw format (Since 1.12)
- * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_FLAC: samples in FLAC format (Since 1.12)
+ * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG2_AAC_RAW: samples in MPEG-2 AAC raw format (Since: 1.12)
+ * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_MPEG4_AAC_RAW: samples in MPEG-4 AAC raw format (Since: 1.12)
+ * @GST_AUDIO_RING_BUFFER_FORMAT_TYPE_FLAC: samples in FLAC format (Since: 1.12)
  *
  * The format of the samples in the ringbuffer.
  */
@@ -136,21 +136,21 @@ struct _GstAudioRingBufferSpec
 
 
   guint64  latency_time;        /* the required/actual latency time, this is the
-                 * actual the size of one segment and the
-                 * minimum possible latency we can achieve. */
+         * actual the size of one segment and the
+         * minimum possible latency we can achieve. */
   guint64  buffer_time;         /* the required/actual time of the buffer, this is
-                 * the total size of the buffer and maximum
-                 * latency we can compensate for. */
+         * the total size of the buffer and maximum
+         * latency we can compensate for. */
   gint     segsize;             /* size of one buffer segment in bytes, this value
-                 * should be chosen to match latency_time as
-                 * well as possible. */
+         * should be chosen to match latency_time as
+         * well as possible. */
   gint     segtotal;            /* total number of segments, this value is the
-                 * number of segments of @segsize and should be
-                 * chosen so that it matches buffer_time as
-                 * close as possible. */
+         * number of segments of @segsize and should be
+         * chosen so that it matches buffer_time as
+         * close as possible. */
   /* ABI added 0.10.20 */
   gint     seglatency;          /* number of segments queued in the lower
-                 * level device, defaults to segtotal. */
+         * level device, defaults to segtotal. */
 
   /*< private >*/
   gpointer _gst_reserved[GST_PADDING];
@@ -187,7 +187,9 @@ struct _GstAudioRingBuffer {
   gboolean                    acquired;
   guint8                     *memory;
   gsize                       size;
+  /*< private >*/
   GstClockTime               *timestamps;
+  /*< public >*/ /* with LOCK */
   GstAudioRingBufferSpec      spec;
   gint                        samples_per_seg;
   guint8                     *empty_seg;
@@ -272,8 +274,8 @@ GType gst_audio_ring_buffer_get_type(void);
 
 GST_AUDIO_API
 void            gst_audio_ring_buffer_set_callback      (GstAudioRingBuffer *buf,
-                                                       GstAudioRingBufferCallback cb,
-                                                       gpointer user_data);
+                                                         GstAudioRingBufferCallback cb,
+                                                         gpointer user_data);
 
 GST_AUDIO_API
 void            gst_audio_ring_buffer_set_callback_full (GstAudioRingBuffer *buf,

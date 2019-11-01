@@ -191,6 +191,7 @@ static const FormatInfo formats[] = {
   {"video/x-4xm", "4X Technologies Video", FLAG_VIDEO, ""},
   {"video/x-apple-video", "Apple video", FLAG_VIDEO, ""},
   {"video/x-aasc", "Autodesk Animator", FLAG_VIDEO, ""},
+  {"video/x-av1", "AV1", FLAG_VIDEO, ""},
   {"video/x-camtasia", "TechSmith Camtasia", FLAG_VIDEO, ""},
   {"video/x-cavs", "Chinese AVS (CAVS)", FLAG_VIDEO, ""},
   {"video/x-cdxa", "RIFF/CDXA (VCD)", AV_CONTAINER, ""},
@@ -284,6 +285,8 @@ static const FormatInfo formats[] = {
       ""},
   {"application/x-teletext", "Teletext", 0, ""},
   {"application/x-kate", "Kate", 0, ""},
+  {"closedcaption/x-cea-608", N_("CEA 608 Closed Caption"), FLAG_SUB, ""},
+  {"closedcaption/x-cea-708", N_("CEA 708 Closed Caption"), FLAG_SUB, ""},
   {"subtitle/x-kate", N_("Kate subtitle format"), FLAG_SUB, ""},
   {"application/x-subtitle-vtt", N_("WebVTT subtitle format"), FLAG_SUB, ""},
   {"subpicture/x-dvb", "DVB subtitles", FLAG_SUB, ""},
@@ -502,7 +505,7 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
         subs = "4:1:1";
       } else {
         subs = "";
-    }
+      }
 
       n_semi = GST_VIDEO_FORMAT_INFO_HAS_ALPHA (finfo) ? 3 : 2;
 
@@ -510,9 +513,9 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
         ret = g_strdup_printf (_("Uncompressed packed YUV %s"), subs);
       } else if (GST_VIDEO_FORMAT_INFO_N_PLANES (finfo) == n_semi) {
         ret = g_strdup_printf (_("Uncompressed semi-planar YUV %s"), subs);
-    } else {
+      } else {
         ret = g_strdup_printf (_("Uncompressed planar YUV %s"), subs);
-    }
+      }
     } else if (GST_VIDEO_FORMAT_INFO_IS_RGB (finfo)) {
       gboolean alpha, palette;
       gint bits;
@@ -577,7 +580,7 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
     if (profile != NULL)
       profile = pbutils_desc_get_h264_profile_name_from_nick (profile);
     if (profile == NULL)
-    return g_strdup (ret);
+      return g_strdup (ret);
     return g_strdup_printf ("%s (%s Profile)", ret, profile);
   } else if (strcmp (info->type, "video/x-h265") == 0) {
     const gchar *profile = gst_structure_get_string (s, "profile");
@@ -838,7 +841,7 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
         if (profile != NULL)
           return g_strdup_printf ("MPEG-%d Video (%s Profile)", ver, profile);
         else
-        return g_strdup_printf ("MPEG-%d Video", ver);
+          return g_strdup_printf ("MPEG-%d Video", ver);
       }
     }
     GST_WARNING ("Missing mpegversion field in mpeg video caps "
@@ -873,7 +876,7 @@ format_info_get_desc (const FormatInfo * info, const GstCaps * caps)
         return g_strdup ("TechSmith Screen Capture 2");
       default:
         break;
-  }
+    }
     GST_WARNING ("Unexpected version in %" GST_PTR_FORMAT, caps);
     return g_strdup ("TechSmith Screen Capture");
   }

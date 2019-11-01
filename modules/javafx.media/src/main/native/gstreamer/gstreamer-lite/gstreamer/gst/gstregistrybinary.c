@@ -253,11 +253,11 @@ gst_registry_binary_cache_finish (BinaryRegistryCache * cache, gboolean success)
   if (!success)
     goto fail_after_close;
 
-    /* Only do the rename if we wrote the entire file successfully */
-    if (g_rename (cache->tmp_location, cache->location) < 0) {
-      GST_ERROR ("g_rename() failed: %s", g_strerror (errno));
-      goto rename_failed;
-    }
+  /* Only do the rename if we wrote the entire file successfully */
+  if (g_rename (cache->tmp_location, cache->location) < 0) {
+    GST_ERROR ("g_rename() failed: %s", g_strerror (errno));
+    goto rename_failed;
+  }
 
   g_free (cache->tmp_location);
   g_slice_free (BinaryRegistryCache, cache);
@@ -304,7 +304,7 @@ gst_registry_binary_write_chunk (BinaryRegistryCache * cache,
   gchar padder[ALIGNMENT] = { 0, };
   int padsize = 0;
 
-  /* Padding to insert the struct that requiere word alignment */
+  /* Padding to insert the struct that require word alignment */
   if ((chunk->align) && (alignment (*file_position) != 0)) {
     padsize = ALIGNMENT - alignment (*file_position);
     if (gst_registry_binary_cache_write (cache, *file_position,

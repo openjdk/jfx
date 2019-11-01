@@ -600,7 +600,7 @@ typedef void (*GstTracerHookMiniObjectDestroyed) (GObject *self, GstClockTime ts
  * @self: the tracer instance
  * @ts: the current timestamp
  * @object: the object being unreffed
- * @refcount: the new refcount after unrefing @object
+ * @new_refcount: the new refcount after unrefing @object
  *
  * Hook called when a #GstObject is being unreffed named
  * "object-unreffed"
@@ -617,7 +617,7 @@ typedef void (*GstTracerHookObjectUnreffed) (GObject *self, GstClockTime ts,
  * @self: the tracer instance
  * @ts: the current timestamp
  * @object: the object being reffed
- * @refcount: the new refcount after refing @object
+ * @new_refcount: the new refcount after refing @object
  *
  * Hook called when a #GstObject is being reffed named
  * "object-reffed".
@@ -634,7 +634,7 @@ typedef void (*GstTracerHookObjectReffed) (GObject *self, GstClockTime ts,
  * @self: the tracer instance
  * @ts: the current timestamp
  * @object: the mini object being unreffed
- * @refcount: the new refcount after unrefing @object
+ * @new_refcount: the new refcount after unrefing @object
  *
  * Hook called when a #GstMiniObject is being unreffed named
  * "mini-object-unreffed".
@@ -651,7 +651,7 @@ typedef void (*GstTracerHookMiniObjectUnreffed) (GObject *self, GstClockTime ts,
  * @self: the tracer instance
  * @ts: the current timestamp
  * @object: the mini object being reffed
- * @refcount: the new refcount after refing @object
+ * @new_refcount: the new refcount after refing @object
  *
  * Hook called when a #GstMiniObject is being reffed named
  * "mini-object-reffed".

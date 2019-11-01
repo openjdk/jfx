@@ -66,17 +66,17 @@ G_BEGIN_DECLS
 
 GLIB_AVAILABLE_IN_ALL
 char *   g_uri_unescape_string       (const char *escaped_string,
-                      const char *illegal_characters);
+              const char *illegal_characters);
 GLIB_AVAILABLE_IN_ALL
 char *   g_uri_unescape_segment      (const char *escaped_string,
-                      const char *escaped_string_end,
-                      const char *illegal_characters);
+              const char *escaped_string_end,
+              const char *illegal_characters);
 GLIB_AVAILABLE_IN_ALL
 char *   g_uri_parse_scheme          (const char *uri);
 GLIB_AVAILABLE_IN_ALL
 char *   g_uri_escape_string         (const char *unescaped,
-                      const char *reserved_chars_allowed,
-                      gboolean    allow_utf8);
+              const char *reserved_chars_allowed,
+              gboolean    allow_utf8);
 
 G_END_DECLS
 

@@ -89,6 +89,9 @@ GST_API
 gboolean        gst_poll_fd_ctl_read      (GstPoll *set, GstPollFD *fd, gboolean active);
 
 GST_API
+gboolean        gst_poll_fd_ctl_pri       (GstPoll *set, GstPollFD *fd, gboolean active);
+
+GST_API
 void            gst_poll_fd_ignored       (GstPoll *set, GstPollFD *fd);
 
 GST_API
@@ -102,6 +105,9 @@ gboolean        gst_poll_fd_can_read      (const GstPoll *set, GstPollFD *fd);
 
 GST_API
 gboolean        gst_poll_fd_can_write     (const GstPoll *set, GstPollFD *fd);
+
+GST_API
+gboolean        gst_poll_fd_has_pri       (const GstPoll *set, GstPollFD *fd);
 
 GST_API
 gint            gst_poll_wait             (GstPoll *set, GstClockTime timeout);

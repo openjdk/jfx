@@ -119,9 +119,9 @@ GType     gst_stream_get_type (void);
 
 GST_API
 GstStream *gst_stream_new            (const gchar *stream_id,
-                      GstCaps *caps,
-                      GstStreamType type,
-                      GstStreamFlags flags);
+              GstCaps *caps,
+              GstStreamType type,
+              GstStreamFlags flags);
 GST_API
 const gchar *  gst_stream_get_stream_id (GstStream *stream);
 

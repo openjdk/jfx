@@ -119,6 +119,8 @@ void video_orc_pack_NV24 (guint8 * ORC_RESTRICT d1, guint8 * ORC_RESTRICT d2, co
 void video_orc_unpack_A420 (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, const guint8 * ORC_RESTRICT s2, const guint8 * ORC_RESTRICT s3, const guint8 * ORC_RESTRICT s4, int n);
 void video_orc_pack_A420 (guint8 * ORC_RESTRICT d1, guint8 * ORC_RESTRICT d2, guint8 * ORC_RESTRICT d3, guint8 * ORC_RESTRICT d4, const guint8 * ORC_RESTRICT s1, int n);
 void video_orc_pack_AY (guint8 * ORC_RESTRICT d1, guint8 * ORC_RESTRICT d2, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_unpack_VUYA (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_pack_VUYA (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
 void video_orc_unpack_RGB15_le (guint32 * ORC_RESTRICT d1, const guint16 * ORC_RESTRICT s1, int n);
 void video_orc_unpack_RGB15_be (guint32 * ORC_RESTRICT d1, const guint16 * ORC_RESTRICT s1, int n);
 void video_orc_unpack_RGB15_le_trunc (guint32 * ORC_RESTRICT d1, const guint16 * ORC_RESTRICT s1, int n);

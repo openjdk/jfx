@@ -96,7 +96,8 @@ static char *_gst_plugin_fault_handler_filename = NULL;
  * QPL: http://www.trolltech.com/licenses/qpl.html
  * MPL: http://www.opensource.org/licenses/mozilla1.1.php
  * MIT/X11: http://www.opensource.org/licenses/mit-license.php
- * 3-clause BSD: http://www.opensource.org/licenses/bsd-license.php
+ * 3-clause BSD: https://opensource.org/licenses/BSD-3-Clause
+ * Zero-Clause BSD: https://opensource.org/licenses/0BSD
  */
 static const gchar valid_licenses[] = "LGPL\000"        /* GNU Lesser General Public License */
     "GPL\000"                   /* GNU General Public License */
@@ -105,10 +106,13 @@ static const gchar valid_licenses[] = "LGPL\000"        /* GNU Lesser General Pu
     "MPL\000"                   /* MPL 1.1 license */
     "BSD\000"                   /* 3-clause BSD license */
     "MIT/X11\000"               /* MIT/X11 license */
+    "0BSD\000"                  /* Zero-Clause BSD */
     "Proprietary\000"           /* Proprietary license */
     GST_LICENSE_UNKNOWN;        /* some other license */
 
-static const guint8 valid_licenses_idx[] = { 0, 5, 9, 13, 21, 25, 29, 37, 49 };
+static const guint8 valid_licenses_idx[] = { 0, 5, 9, 13, 21, 25, 29, 37, 42,
+  54
+};
 
 static GstPlugin *gst_plugin_register_func (GstPlugin * plugin,
     const GstPluginDesc * desc, gpointer user_data);
@@ -117,13 +121,12 @@ static void gst_plugin_desc_copy (GstPluginDesc * dest,
 
 static void gst_plugin_ext_dep_free (GstPluginDep * dep);
 
-G_DEFINE_TYPE (GstPlugin, gst_plugin, GST_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (GstPlugin, gst_plugin, GST_TYPE_OBJECT);
 
 static void
 gst_plugin_init (GstPlugin * plugin)
 {
-  plugin->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (plugin, GST_TYPE_PLUGIN, GstPluginPrivate);
+  plugin->priv = gst_plugin_get_instance_private (plugin);
 }
 
 static void
@@ -164,8 +167,6 @@ static void
 gst_plugin_class_init (GstPluginClass * klass)
 {
   G_OBJECT_CLASS (klass)->finalize = gst_plugin_finalize;
-
-  g_type_class_add_private (klass, sizeof (GstPluginPrivate));
 }
 
 GQuark
@@ -750,7 +751,7 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
   g_return_val_if_fail (filename != NULL, NULL);
 
   if (registry == NULL)
-  registry = gst_registry_get ();
+    registry = gst_registry_get ();
 
   g_mutex_lock (&gst_plugin_loading_mutex);
 
@@ -819,7 +820,7 @@ _priv_gst_plugin_load_file_for_registry (const gchar * filename,
   } else {
     GST_DEBUG ("Could not find symbol '%s', falling back to gst_plugin_desc",
         symname);
-  ret = g_module_symbol (module, "gst_plugin_desc", &ptr);
+    ret = g_module_symbol (module, "gst_plugin_desc", &ptr);
   }
 
   g_free (symname);
@@ -1757,8 +1758,8 @@ gst_plugin_ext_dep_get_stat_hash (GstPlugin * plugin, GstPluginDep * dep)
       } else {
         GST_LOG_OBJECT (plugin, "path: '%s' (duplicate, ignoring)", full_path);
         g_free (full_path);
+      }
     }
-  }
   }
 
   while ((path = g_queue_pop_head (&scan_paths))) {

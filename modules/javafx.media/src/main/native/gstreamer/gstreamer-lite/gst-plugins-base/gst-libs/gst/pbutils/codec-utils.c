@@ -38,6 +38,7 @@
 
 #include "pbutils.h"
 #include <gst/base/base.h>
+#include <gst/base/gstbitreader.h>
 #include <gst/tag/tag.h>
 
 #include <string.h>
@@ -107,6 +108,83 @@ gst_codec_utils_aac_get_index_from_sample_rate (guint rate)
   return -1;
 }
 
+static gboolean
+gst_codec_utils_aac_get_audio_object_type (GstBitReader * br,
+    guint8 * audio_object_type)
+{
+  guint8 aot;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &aot, 5))
+    return FALSE;
+
+  if (aot == 31) {
+    if (!gst_bit_reader_get_bits_uint8 (br, &aot, 6))
+      return FALSE;
+    aot += 32;
+  }
+
+  *audio_object_type = aot;
+
+  return TRUE;
+}
+
+static gboolean
+gst_codec_utils_aac_get_audio_sample_rate (GstBitReader * br,
+    guint * sample_rate)
+{
+  guint8 sampling_freq_index;
+  guint32 sampling_rate;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &sampling_freq_index, 4))
+    return FALSE;
+
+  if (sampling_freq_index == 0xf) {
+    if (!gst_bit_reader_get_bits_uint32 (br, &sampling_rate, 24))
+      return FALSE;
+  } else {
+    sampling_rate =
+        gst_codec_utils_aac_get_sample_rate_from_index (sampling_freq_index);
+    if (!sampling_rate)
+      return FALSE;
+  }
+
+  *sample_rate = sampling_rate;
+
+  return TRUE;
+}
+
+static gboolean
+gst_codec_utils_aac_get_audio_object_type_full (GstBitReader * br,
+    guint8 * audio_object_type, guint8 * channel_config, guint * sample_rate)
+{
+  guint8 aot, channels;
+  guint rate;
+
+  if (!gst_codec_utils_aac_get_audio_object_type (br, &aot))
+    return FALSE;
+
+  if (!gst_codec_utils_aac_get_audio_sample_rate (br, &rate))
+    return FALSE;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &channels, 4))
+    return FALSE;
+
+  /* 5 indicates SBR extension (i.e. HE-AAC) */
+  /* 29 indicates PS extension */
+  if (aot == 5 || aot == 29) {
+    if (!gst_codec_utils_aac_get_audio_sample_rate (br, &rate))
+      return FALSE;
+    if (!gst_codec_utils_aac_get_audio_object_type (br, &aot))
+      return FALSE;
+  }
+
+  *audio_object_type = aot;
+  *sample_rate = rate;
+  *channel_config = channels;
+
+  return TRUE;
+}
+
 /**
  * gst_codec_utils_aac_get_sample_rate:
  * @audio_config: (array length=len): a pointer to the AudioSpecificConfig
@@ -119,18 +197,22 @@ gst_codec_utils_aac_get_index_from_sample_rate (guint rate)
  *
  * Returns: The sample rate if sr_idx is valid, 0 otherwise.
  *
- * Since 1.10
+ * Since: 1.10
  */
 guint
 gst_codec_utils_aac_get_sample_rate (const guint8 * audio_config, guint len)
 {
-  guint rate_index;
+  guint sample_rate = 0;
+  guint8 audio_object_type = 0, channel_config = 0;
+  GstBitReader br = GST_BIT_READER_INIT (audio_config, len);
 
   if (len < 2)
     return 0;
 
-  rate_index = ((audio_config[0] & 0x7) << 1) | ((audio_config[1] & 0x80) >> 7);
-  return gst_codec_utils_aac_get_sample_rate_from_index (rate_index);
+  gst_codec_utils_aac_get_audio_object_type_full (&br, &audio_object_type,
+      &channel_config, &sample_rate);
+
+  return sample_rate;
 }
 
 /**
@@ -144,7 +226,7 @@ gst_codec_utils_aac_get_sample_rate (const guint8 * audio_config, guint len)
  *
  * Returns: The channels or 0 if the channel could not be determined.
  *
- * Since 1.10
+ * Since: 1.10
  */
 guint
 gst_codec_utils_aac_get_channels (const guint8 * audio_config, guint len)
@@ -171,10 +253,8 @@ gst_codec_utils_aac_get_channels (const guint8 * audio_config, guint len)
  * @len: Length of @audio_config in bytes
  *
  * Returns the profile of the given AAC stream as a string. The profile is
- * determined using the AudioObjectType field which is in the first 5 bits of
- * @audio_config.
- *
- * > HE-AAC support has not yet been implemented.
+ * normally determined using the AudioObjectType field which is in the first
+ * 5 bits of @audio_config
  *
  * Returns: The profile as a const string and %NULL if the profile could not be
  * determined.
@@ -182,29 +262,40 @@ gst_codec_utils_aac_get_channels (const guint8 * audio_config, guint len)
 const gchar *
 gst_codec_utils_aac_get_profile (const guint8 * audio_config, guint len)
 {
-  guint profile;
+  const gchar *profile = NULL;
+  guint sample_rate;
+  guint8 audio_object_type, channel_config;
+  GstBitReader br = GST_BIT_READER_INIT (audio_config, len);
 
   if (len < 1)
     return NULL;
 
   GST_MEMDUMP ("audio config", audio_config, len);
 
-  profile = audio_config[0] >> 3;
-  switch (profile) {
+  if (!gst_codec_utils_aac_get_audio_object_type_full (&br, &audio_object_type,
+          &channel_config, &sample_rate)) {
+    return NULL;
+  }
+
+  switch (audio_object_type) {
     case 1:
-      return "main";
+      profile = "main";
+      break;
     case 2:
-      return "lc";
+      profile = "lc";
+      break;
     case 3:
-      return "ssr";
+      profile = "ssr";
+      break;
     case 4:
-      return "ltp";
+      profile = "ltp";
+      break;
     default:
+      GST_DEBUG ("Invalid profile idx: %u", audio_object_type);
       break;
   }
 
-  GST_DEBUG ("Invalid profile idx: %u", profile);
-  return NULL;
+  return profile;
 }
 
 /**
@@ -221,13 +312,12 @@ gst_codec_utils_aac_get_profile (const guint8 * audio_config, guint len)
  * The @audio_config parameter follows the following format, starting from the
  * most significant bit of the first byte:
  *
- *   * Bit 0:4 contains the AudioObjectType
+ *   * Bit 0:4 contains the AudioObjectType (if this is 0x5, then the
+ *     real AudioObjectType is carried after the rate and channel data)
  *   * Bit 5:8 contains the sample frequency index (if this is 0xf, then the
  *     next 24 bits define the actual sample frequency, and subsequent
  *     fields are appropriately shifted).
  *   * Bit 9:12 contains the channel configuration
- *
- * > HE-AAC support has not yet been implemented.
  *
  * Returns: The level as a const string and %NULL if the level could not be
  * determined.
@@ -235,7 +325,8 @@ gst_codec_utils_aac_get_profile (const guint8 * audio_config, guint len)
 const gchar *
 gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
 {
-  int profile, sr_idx, channel_config, rate;
+  guint8 audio_object_type = 0xFF, channel_config = 0xFF;
+  guint rate;
   /* Number of single channel elements, channel pair elements, low frequency
    * elements, independently switched coupling channel elements, and
    * dependently switched coupling channel elements.
@@ -247,8 +338,9 @@ gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
   int num_channels;
   /* Processor and RAM Complexity Units (calculated and "reference" for single
    * channel) */
-  int pcu, rcu, pcu_ref, rcu_ref;
+  int pcu = -1, rcu = -1, pcu_ref, rcu_ref;
   int ret = -1;
+  GstBitReader br = GST_BIT_READER_INIT (audio_config, len);
 
   g_return_val_if_fail (audio_config != NULL, NULL);
 
@@ -257,14 +349,10 @@ gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
 
   GST_MEMDUMP ("audio config", audio_config, len);
 
-  profile = audio_config[0] >> 3;
-  /* FIXME: add support for sr_idx = 0xf */
-  sr_idx = ((audio_config[0] & 0x7) << 1) | ((audio_config[1] & 0x80) >> 7);
-  rate = gst_codec_utils_aac_get_sample_rate_from_index (sr_idx);
-  channel_config = (audio_config[1] & 0x7f) >> 3;
-
-  if (rate == 0)
+  if (!gst_codec_utils_aac_get_audio_object_type_full (&br, &audio_object_type,
+          &channel_config, &rate)) {
     return NULL;
+  }
 
   switch (channel_config) {
     case 0:
@@ -322,7 +410,7 @@ gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
       return NULL;
   }
 
-  switch (profile) {
+  switch (audio_object_type) {
     case 0:                    /* NULL */
       GST_WARNING ("profile 0 is not a valid profile");
       return NULL;
@@ -362,7 +450,7 @@ gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
 
   num_channels = num_sce + (2 * num_cpe) + num_lfe;
 
-  if (profile == 2) {
+  if (audio_object_type == 2) {
     /* AAC LC => return the level as per the 'AAC Profile' */
     if (num_channels <= 2 && rate <= 24000 && pcu <= 3 && rcu <= 5)
       ret = 1;
@@ -391,8 +479,8 @@ gst_codec_utils_aac_get_level (const guint8 * audio_config, guint len)
 
   if (ret == -1) {
     GST_WARNING ("couldn't determine level: profile=%u, rate=%u, "
-        "channel_config=%u, pcu=%d,rcu=%d", profile, rate, channel_config, pcu,
-        rcu);
+        "channel_config=%u, pcu=%d,rcu=%d", audio_object_type, rate,
+        channel_config, pcu, rcu);
     return NULL;
   } else {
     return digit_to_string (ret);
@@ -736,7 +824,7 @@ gst_codec_utils_h264_caps_set_level_and_profile (GstCaps * caps,
  *
  * Returns: The profile as a const string, or %NULL if there is an error.
  *
- * Since 1.4
+ * Since: 1.4
  */
 const gchar *
 gst_codec_utils_h265_get_profile (const guint8 * profile_tier_level, guint len)
@@ -777,7 +865,7 @@ gst_codec_utils_h265_get_profile (const guint8 * profile_tier_level, guint len)
  *
  * Returns: The tier as a const string, or %NULL if there is an error.
  *
- * Since 1.4
+ * Since: 1.4
  */
 const gchar *
 gst_codec_utils_h265_get_tier (const guint8 * profile_tier_level, guint len)
@@ -814,7 +902,7 @@ gst_codec_utils_h265_get_tier (const guint8 * profile_tier_level, guint len)
  *
  * Returns: The level as a const string, or %NULL if there is an error.
  *
- * Since 1.4
+ * Since: 1.4
  */
 const gchar *
 gst_codec_utils_h265_get_level (const guint8 * profile_tier_level, guint len)
@@ -867,7 +955,7 @@ gst_codec_utils_h265_get_level (const guint8 * profile_tier_level, guint len)
  *
  * Returns: the level_idc or 0 if the level is unknown
  *
- * Since 1.4
+ * Since: 1.4
  */
 guint8
 gst_codec_utils_h265_get_level_idc (const gchar * level)
@@ -919,7 +1007,7 @@ gst_codec_utils_h265_get_level_idc (const gchar * level)
  *
  * Returns: %TRUE if the level, tier, profile could be set, %FALSE otherwise.
  *
- * Since 1.4
+ * Since: 1.4
  */
 gboolean
 gst_codec_utils_h265_caps_set_level_tier_and_profile (GstCaps * caps,
@@ -1568,6 +1656,7 @@ gst_codec_utils_opus_create_header (guint32 rate,
 
   if (!hdl) {
     GST_WARNING ("Error creating header");
+    gst_byte_writer_reset (&bw);
     return NULL;
   }
 

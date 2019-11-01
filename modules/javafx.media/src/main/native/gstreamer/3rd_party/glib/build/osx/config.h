@@ -37,7 +37,7 @@
 #define GETTEXT_PACKAGE "glib20"
 
 /* Define to the GLIB binary age */
-#define GLIB_BINARY_AGE 5802
+#define GLIB_BINARY_AGE 6202
 
 /* Define to the GLIB interface age */
 #define GLIB_INTERFACE_AGE 1
@@ -52,7 +52,7 @@
 #define GLIB_MICRO_VERSION 2
 
 /* Define to the GLIB minor version */
-#define GLIB_MINOR_VERSION 58
+#define GLIB_MINOR_VERSION 62
 
 /* Have inline keyword */
 #define G_HAVE_INLINE 1
@@ -105,7 +105,7 @@
 /* #undef HAVE_CLOCK_GETTIME */
 
 /* define to 1 if Cocoa is available */
-#define HAVE_COCOA 1
+/* #undef HAVE_COCOA */
 
 /* Have nl_langinfo (CODESET) */
 #define HAVE_CODESET 1
@@ -186,6 +186,9 @@
 
 /* Define to 1 if you have the `getprotobyname_r' function. */
 /* #undef HAVE_GETPROTOBYNAME_R */
+
+/* Define to 1 if you have the `getpwuid_r' function. */
+/* #undef HAVE_GETPWUID_R */
 
 /* Define to 1 if you have the `getresuid' function. */
 /* #undef HAVE_GETRESUID */
@@ -346,6 +349,9 @@
 
 /* Have function pthread_attr_setstacksize */
 #define HAVE_PTHREAD_ATTR_SETSTACKSIZE 1
+
+/* Have function pthread_cond_timedwait_relative_np */
+/* #undef HAVE_PTHREAD_COND_TIMEDWAIT_RELATIVE_NP */
 
 /* Have function pthread_condattr_setclock */
 /* #undef HAVE_PTHREAD_CONDATTR_SETCLOCK */
@@ -550,6 +556,9 @@
 /* Define to 1 if you have the <sys/inotify.h> header file. */
 /* #undef HAVE_SYS_INOTIFY_H */
 
+/* Define to 1 if you have the <sys/mkdev.h> header file. */
+/* #undef HAVE_SYS_MKDEV_H */
+
 /* Define to 1 if you have the <sys/mntctl.h> header file. */
 /* #undef HAVE_SYS_MNTCTL_H */
 
@@ -565,6 +574,9 @@
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #define HAVE_SYS_PARAM_H 1
+
+/* Define to 1 if you have the <sys/poll.h> header file. */
+/* #undef HAVE_SYS_POLL_H */
 
 /* Define to 1 if you have the <sys/resource.h> header file. */
 #define HAVE_SYS_RESOURCE_H 1
@@ -584,11 +596,17 @@
 /* Define to 1 if you have the <sys/sysctl.h> header file. */
 #define HAVE_SYS_SYSCTL_H 1
 
+/* Define to 1 if you have the <sys/times.h> header file. */
+/* #undef HAVE_SYS_TIMES_H */
+
 /* Define to 1 if you have the <sys/time.h> header file. */
 #define HAVE_SYS_TIME_H 1
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
+
+/* Define to 1 if you have the <sys/uio.h> header file. */
+/* #undef HAVE_SYS_UIO_H */
 
 /* Define to 1 if you have the <sys/vfstab.h> header file. */
 /* #undef HAVE_SYS_VFSTAB_H */
@@ -598,6 +616,9 @@
 
 /* Define to 1 if you have the <sys/vmount.h> header file. */
 /* #undef HAVE_SYS_VMOUNT_H */
+
+/* Define to 1 if you have the <sys/wait.h> header file. */
+/* #undef HAVE_SYS_WAIT_H */
 
 /* Define to 1 if you have the <sys/xattr.h> header file. */
 #define HAVE_SYS_XATTR_H 1
@@ -651,6 +672,9 @@
 /* Define if you have the 'wint_t' type. */
 #define HAVE_WINT_T 1
 
+/* Have a working bcopy */
+/* #undef HAVE_WORKING_BCOPY */
+
 /* Define to 1 if xattr is available */
 #define HAVE_XATTR 1
 
@@ -666,13 +690,8 @@
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
 
-/* Define to 1 if `major', `minor', and `makedev' are declared in <mkdev.h>.
-   */
-/* #undef MAJOR_IN_MKDEV */
-
-/* Define to 1 if `major', `minor', and `makedev' are declared in
-   <sysmacros.h>. */
-/* #undef MAJOR_IN_SYSMACROS */
+/* Do we cache iconv descriptors */
+/* #undef NEED_ICONV_CACHE */
 
 /* didn't find fd_set */
 /* #undef NO_FD_SET */
@@ -684,7 +703,7 @@
 #define PACKAGE_NAME "glib"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "glib 2.58.2"
+#define PACKAGE_STRING "glib 2.62.2"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "glib"
@@ -693,7 +712,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.58.2"
+#define PACKAGE_VERSION "2.62.2"
 
 /* define if posix_memalign() can allocate any size */
 #define POSIX_MEMALIGN_WITH_COMPLIANT_ALLOCS 1
@@ -817,16 +836,6 @@
 /* Define to 1 if on MINIX. */
 /* #undef _MINIX */
 
-/* Define to 2 if the system does not provide POSIX.1 features except with
-   this defined. */
-/* #undef _POSIX_1_SOURCE */
-
-/* Define to 1 if you need to in order for `stat' and other things to work. */
-/* #undef _POSIX_SOURCE */
-
-/* Target the Windows XP API */
-/* #undef _WIN32_WINNT */
-
 /* Needed to get declarations for msg_control and msg_controllen on Solaris */
 /* #undef _XOPEN_SOURCE */
 
@@ -850,3 +859,9 @@
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */
+
+#ifdef GSTREAMER_LITE
+#define XSIZE_INLINE static inline
+#define _GL_INLINE_HEADER_BEGIN
+#define _GL_INLINE_HEADER_END
+#endif // GSTREAMER_LITE
