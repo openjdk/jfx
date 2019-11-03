@@ -61,28 +61,37 @@ setupTools("mac_tools",
         } else if (!file(defaultSdkPath).isDirectory()) {
             // Get list of all macosx sdks
             ByteArrayOutputStream results = new ByteArrayOutputStream();
-            exec {
+            def xcodeBuildResult = exec {
                 commandLine("xcodebuild", "-version", "-showsdks");
                 setStandardOutput(results);
+                ignoreExitValue(true);
             }
-
-            BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
-            // If our preferred SDK is in the list use it, else use the default
-            String sdk = "macosx"
-            String prefSdk = sdk + prefSdkVersion
-            while (true) {
-                def line = reader.readLine();
-                if (line == null) break;
-                if (line.contains("-sdk ${prefSdk}")) {
-                    sdk = prefSdk
-                    break;
+            if (xcodeBuildResult.exitValue == 0) {
+                BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
+                // If our preferred SDK is in the list use it, else use the default
+                String sdk = "macosx"
+                String prefSdk = sdk + prefSdkVersion
+                while (true) {
+                    def line = reader.readLine();
+                    if (line == null) break;
+                    if (line.contains("-sdk ${prefSdk}")) {
+                        sdk = prefSdk
+                        break;
+                    }
                 }
-            }
 
-            results = new ByteArrayOutputStream();
-            exec {
-                commandLine("xcodebuild", "-version", "-sdk", sdk, "Path");
-                setStandardOutput(results);
+                results = new ByteArrayOutputStream();
+                exec {
+                    commandLine("xcodebuild", "-version", "-sdk", sdk, "Path");
+                    setStandardOutput(results);
+                }
+            } else {
+                // try with command line developer tools
+                results = new ByteArrayOutputStream();
+                exec {
+                    commandLine("xcrun", "--show-sdk-path");
+                    setStandardOutput(results);
+                }
             }
             String sdkPath = results.toString().trim();
             propFile << "MACOSX_SDK_PATH=" << sdkPath << "\n";
@@ -97,7 +106,12 @@ println "MACOSX_MIN_VERSION = $MACOSX_MIN_VERSION"
 println "MACOSX_SDK_PATH = $MACOSX_SDK_PATH"
 
 if (!file(MACOSX_SDK_PATH).isDirectory()) {
-    throw new GradleException("FAIL: Cannot find $MACOSX_SDK_PATH")
+    throw new GradleException(
+        """
+        FAIL: Cannot find $MACOSX_SDK_PATH
+        Install Xcode or Command line developer tool using `xcode-select --install`
+        """
+    );
 }
 
 // NOTE: There is no space between -iframework and the specified path
@@ -169,7 +183,7 @@ MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 MAC.prism.nativeSource = file("${project("graphics").projectDir}/src/main/native-prism")
 MAC.prism.compiler = compiler
-MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", ccBaseFlags].flatten()
+MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", IS_STATIC_BUILD ? "-DSTATIC_BUILD" : "", ccBaseFlags].flatten()
 MAC.prism.linker = linker
 MAC.prism.linkFlags = linkFlagsAlt
 MAC.prism.lib = "prism_common"

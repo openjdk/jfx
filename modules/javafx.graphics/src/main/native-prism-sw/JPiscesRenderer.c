@@ -332,7 +332,7 @@ initializeObjectFieldIds(JNIEnv *env,
         classHandle = (*env)->GetObjectClass(env, objectHandle);
     } else if (className != 0) {
         classHandle = (*env)->FindClass(env, className);
-        if (checkAndClearException(env)) return JNI_FALSE;
+        if (prismsw_checkAndClearException(env)) return JNI_FALSE;
     } else {
         return JNI_FALSE;
     }

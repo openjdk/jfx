@@ -74,9 +74,7 @@ UBool RuleBasedBreakIterator::DictionaryCache::following(int32_t fromPos, int32_
             return TRUE;
         }
     }
-    U_ASSERT(FALSE);
-    fPositionInCache = -1;
-    return FALSE;
+    UPRV_UNREACHABLE;
 }
 
 
@@ -116,9 +114,7 @@ UBool RuleBasedBreakIterator::DictionaryCache::preceding(int32_t fromPos, int32_
             return TRUE;
         }
     }
-    U_ASSERT(FALSE);
-    fPositionInCache = -1;
-    return FALSE;
+    UPRV_UNREACHABLE;
 }
 
 void RuleBasedBreakIterator::DictionaryCache::populateDictionary(int32_t startPos, int32_t endPos,
@@ -388,8 +384,7 @@ UBool RuleBasedBreakIterator::BreakCache::populateNear(int32_t position, UErrorC
         // Add following position(s) to the cache.
         while (fBoundaries[fEndBufIdx] < position) {
             if (!populateFollowing()) {
-                U_ASSERT(false);
-                return false;
+                UPRV_UNREACHABLE;
             }
         }
         fBufIdx = fEndBufIdx;                      // Set iterator position to the end of the buffer.
@@ -603,7 +598,7 @@ void RuleBasedBreakIterator::BreakCache::addFollowing(int32_t position, int32_t 
         fStartBufIdx = modChunkSize(fStartBufIdx + 6);    // TODO: experiment. Probably revert to 1.
     }
     fBoundaries[nextIdx] = position;
-    fStatuses[nextIdx] = ruleStatusIdx;
+    fStatuses[nextIdx] = static_cast<uint16_t>(ruleStatusIdx);
     fEndBufIdx = nextIdx;
     if (update == UpdateCachePosition) {
         // Set current position to the newly added boundary.
@@ -631,7 +626,7 @@ bool RuleBasedBreakIterator::BreakCache::addPreceding(int32_t position, int32_t 
         fEndBufIdx = modChunkSize(fEndBufIdx - 1);
     }
     fBoundaries[nextIdx] = position;
-    fStatuses[nextIdx] = ruleStatusIdx;
+    fStatuses[nextIdx] = static_cast<uint16_t>(ruleStatusIdx);
     fStartBufIdx = nextIdx;
     if (update == UpdateCachePosition) {
         fBufIdx = nextIdx;

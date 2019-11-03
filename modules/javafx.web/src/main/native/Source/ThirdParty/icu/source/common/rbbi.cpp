@@ -18,6 +18,8 @@
 
 #if !UCONFIG_NO_BREAK_ITERATION
 
+#include <cinttypes>
+
 #include "unicode/rbbi.h"
 #include "unicode/schriter.h"
 #include "unicode/uchriter.h"
@@ -28,17 +30,13 @@
 #include "ucln_cmn.h"
 #include "cmemory.h"
 #include "cstring.h"
+#include "localsvc.h"
 #include "rbbidata.h"
 #include "rbbi_cache.h"
 #include "rbbirb.h"
 #include "uassert.h"
 #include "umutex.h"
 #include "uvectr32.h"
-
-// if U_LOCAL_SERVICE_HOOK is defined, then localsvc.cpp is expected to be included.
-#if U_LOCAL_SERVICE_HOOK
-#include "localsvc.h"
-#endif
 
 #ifdef RBBI_DEBUG
 static UBool gTrace = FALSE;
@@ -628,7 +626,7 @@ int32_t RuleBasedBreakIterator::preceding(int32_t offset) {
     // or on a trail byte if the input is UTF-8.
 
     utext_setNativeIndex(&fText, offset);
-    int32_t adjustedOffset = utext_getNativeIndex(&fText);
+    int32_t adjustedOffset = static_cast<int32_t>(utext_getNativeIndex(&fText));
 
     UErrorCode status = U_ZERO_ERROR;
     fBreakCache->preceding(adjustedOffset, status);
@@ -655,7 +653,7 @@ UBool RuleBasedBreakIterator::isBoundary(int32_t offset) {
     // But we still need the side effect of leaving iteration at the following boundary.
 
     utext_setNativeIndex(&fText, offset);
-    int32_t adjustedOffset = utext_getNativeIndex(&fText);
+    int32_t adjustedOffset = static_cast<int32_t>(utext_getNativeIndex(&fText));
 
     bool result = false;
     UErrorCode status = U_ZERO_ERROR;
@@ -718,7 +716,7 @@ struct LookAheadResults {
     int32_t    fPositions[8];
     int16_t    fKeys[8];
 
-    LookAheadResults() : fUsedSlotLimit(0), fPositions(), fKeys() {};
+    LookAheadResults() : fUsedSlotLimit(0), fPositions(), fKeys() {}
 
     int32_t getPosition(int16_t key) {
         for (int32_t i=0; i<fUsedSlotLimit; ++i) {
@@ -726,8 +724,7 @@ struct LookAheadResults {
                 return fPositions[i];
             }
         }
-        U_ASSERT(FALSE);
-        return -1;
+        UPRV_UNREACHABLE;
     }
 
     void setPosition(int16_t key, int32_t position) {
@@ -739,8 +736,7 @@ struct LookAheadResults {
             }
         }
         if (i >= kMaxLookaheads) {
-            U_ASSERT(FALSE);
-            i = kMaxLookaheads - 1;
+            UPRV_UNREACHABLE;
         }
         fKeys[i] = key;
         fPositions[i] = position;
@@ -848,7 +844,7 @@ int32_t RuleBasedBreakIterator::handleNext() {
 
        #ifdef RBBI_DEBUG
             if (gTrace) {
-                RBBIDebugPrintf("             %4ld   ", utext_getNativeIndex(&fText));
+                RBBIDebugPrintf("             %4" PRId64 "   ", utext_getNativeIndex(&fText));
                 if (0x20<=c && c<0x7f) {
                     RBBIDebugPrintf("\"%c\"  ", c);
                 } else {

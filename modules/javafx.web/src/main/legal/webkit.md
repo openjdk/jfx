@@ -15,11 +15,11 @@ this library:
    - On Windows systems: delete $(JAVA_HOME)\bin\jfxwebkit.dll
 
 A copy of the Oracle modified WebKit library source code is located
-in the following OpenJDK Mercurial repository:
+in the following OpenJDK git repository:
 
-   http://hg.openjdk.java.net/openjfx/jfx/rt
+   https://github.com/openjdk/jfx
 
-You can use Mercurial to clone the repository or you can browse the
+You can use git to clone the repository or you can browse the
 source using a web browser. The root directory of the WebKit source
 code is here:
 

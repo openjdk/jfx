@@ -92,6 +92,9 @@ public class CompositeGlyphMapper extends CharToGlyphMapper {
 
     private final int convertToGlyph(int unicode) {
         for (int slot = 0; slot < font.getNumSlots(); slot++) {
+            if (slot >= 255) { // not supposed to happen.
+                return missingGlyph;
+            }
             CharToGlyphMapper mapper = getSlotMapper(slot);
             int glyphCode = mapper.charToGlyph(unicode);
             if (glyphCode != mapper.getMissingGlyphCode()) {
