@@ -549,7 +549,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
 
     private void handleKeyEvent(KeyEvent ke, boolean doConsume) {
-        // When the user hits the enter or F4 keys, we respond before
+        // When the user hits the enter key, we respond before
         // ever giving the event to the TextField.
         if (ke.getCode() == KeyCode.ENTER) {
             if (ke.isConsumed() || ke.getEventType() != KeyEvent.KEY_RELEASED) {
