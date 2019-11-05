@@ -51,7 +51,7 @@ extern "C" {
 #define GLAPI extern
 #endif
 
-#define GL_GLEXT_VERSION 20190204
+#define GL_GLEXT_VERSION 20190611
 
 #include <KHR/khrplatform.h>
 
@@ -4072,7 +4072,12 @@ GLAPI void APIENTRY glMinSampleShadingARB (GLfloat value);
 #ifndef GL_ARB_shader_objects
 #define GL_ARB_shader_objects 1
 #ifdef __APPLE__
+#ifdef BUILDING_MESA
+/* Avoid uint <-> void* warnings */
+typedef unsigned long GLhandleARB;
+#else
 typedef void *GLhandleARB;
+#endif
 #else
 typedef unsigned int GLhandleARB;
 #endif
@@ -7794,6 +7799,18 @@ GLAPI void APIENTRY glSamplePatternEXT (GLenum pattern);
 #endif
 #endif /* GL_EXT_multisample */
 
+#ifndef GL_EXT_multiview_tessellation_geometry_shader
+#define GL_EXT_multiview_tessellation_geometry_shader 1
+#endif /* GL_EXT_multiview_tessellation_geometry_shader */
+
+#ifndef GL_EXT_multiview_texture_multisample
+#define GL_EXT_multiview_texture_multisample 1
+#endif /* GL_EXT_multiview_texture_multisample */
+
+#ifndef GL_EXT_multiview_timer_query
+#define GL_EXT_multiview_timer_query 1
+#endif /* GL_EXT_multiview_timer_query */
+
 #ifndef GL_EXT_packed_depth_stencil
 #define GL_EXT_packed_depth_stencil 1
 #define GL_DEPTH_STENCIL_EXT              0x84F9
@@ -8523,6 +8540,10 @@ GLAPI void APIENTRY glTextureNormalEXT (GLenum mode);
 #define GL_DECODE_EXT                     0x8A49
 #define GL_SKIP_DECODE_EXT                0x8A4A
 #endif /* GL_EXT_texture_sRGB_decode */
+
+#ifndef GL_EXT_texture_shadow_lod
+#define GL_EXT_texture_shadow_lod 1
+#endif /* GL_EXT_texture_shadow_lod */
 
 #ifndef GL_EXT_texture_shared_exponent
 #define GL_EXT_texture_shared_exponent 1
@@ -10240,16 +10261,16 @@ GLAPI void APIENTRY glNamedBufferAttachMemoryNV (GLuint buffer, GLuint memory, G
 #define GL_MESH_OUTPUT_TYPE_NV            0x957B
 #define GL_UNIFORM_BLOCK_REFERENCED_BY_MESH_SHADER_NV 0x959C
 #define GL_UNIFORM_BLOCK_REFERENCED_BY_TASK_SHADER_NV 0x959D
-#define GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_MESH_SHADER_NV 0x959E
-#define GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TASK_SHADER_NV 0x959F
 #define GL_REFERENCED_BY_MESH_SHADER_NV   0x95A0
 #define GL_REFERENCED_BY_TASK_SHADER_NV   0x95A1
+#define GL_MESH_SHADER_BIT_NV             0x00000040
+#define GL_TASK_SHADER_BIT_NV             0x00000080
 #define GL_MESH_SUBROUTINE_NV             0x957C
 #define GL_TASK_SUBROUTINE_NV             0x957D
 #define GL_MESH_SUBROUTINE_UNIFORM_NV     0x957E
 #define GL_TASK_SUBROUTINE_UNIFORM_NV     0x957F
-#define GL_MESH_SHADER_BIT_NV             0x00000040
-#define GL_TASK_SHADER_BIT_NV             0x00000080
+#define GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_MESH_SHADER_NV 0x959E
+#define GL_ATOMIC_COUNTER_BUFFER_REFERENCED_BY_TASK_SHADER_NV 0x959F
 typedef void (APIENTRYP PFNGLDRAWMESHTASKSNVPROC) (GLuint first, GLuint count);
 typedef void (APIENTRYP PFNGLDRAWMESHTASKSINDIRECTNVPROC) (GLintptr indirect);
 typedef void (APIENTRYP PFNGLMULTIDRAWMESHTASKSINDIRECTNVPROC) (GLintptr indirect, GLsizei drawcount, GLsizei stride);
