@@ -329,7 +329,7 @@ public class HTMLEditorTest {
                 if (newValue) {
                     ComboBox<String> fontFamilyComboBox = null;
                     int i = 0;
-                    for(Node comboBox : htmlEditor.lookupAll(".font-menu-button")) {
+                    for (Node comboBox : htmlEditor.lookupAll(".font-menu-button")) {
                         // 0 - Format, 1 - Font Family, 2 - Font Size
                         if (i == 1) {
                             assertTrue("fontFamilyComboBox must be ComboBox",
