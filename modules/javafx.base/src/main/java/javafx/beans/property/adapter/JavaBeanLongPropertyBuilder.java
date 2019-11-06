@@ -64,7 +64,7 @@ public final class JavaBeanLongPropertyBuilder {
     /**
      * This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
      */
-    @Deprecated(since = "14", forRemoval = true)
+    @Deprecated(since="14", forRemoval=true)
     public JavaBeanLongPropertyBuilder() {}
 
     /**
