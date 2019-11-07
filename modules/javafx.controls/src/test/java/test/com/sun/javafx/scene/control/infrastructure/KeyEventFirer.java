@@ -78,8 +78,9 @@ public class KeyEventFirer {
     public KeyEventFirer(EventTarget target, Scene scene) {
         this.target = target;
         this.scene = scene;
-        if (target == null && scene == null)
+        if (target == null && scene == null) {
             throw new NullPointerException("both target and scene are null");
+        }
     }
 
     public void doUpArrowPress(KeyModifier... modifiers) {
