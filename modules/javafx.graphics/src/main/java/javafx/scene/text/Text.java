@@ -1892,8 +1892,8 @@ public class Text extends Shape {
                     @Override public CssMetaData getCssMetaData() {
                         return StyleableProperties.TAB_SIZE;
                     }
-                    @Override
-                    protected void invalidated() {
+                    @Override public void set(int v) { super.set((v < 1) ? 1 : v); }
+                    @Override protected void invalidated() {
                         TextLayout layout = getTextLayout();
                         if (layout.setTabSize(get())) {
                             needsTextLayout();

@@ -525,6 +525,7 @@ public class TextFlow extends Pane {
                 @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.TAB_SIZE;
                 }
+                @Override public void set(int v) { super.set((v < 1) ? 1 : v); }
                 @Override protected void invalidated() {
                     TextLayout layout = getTextLayout();
                     if (layout.setTabSize(get())) {
