@@ -112,8 +112,8 @@ public class KeyEventFirerTest {
         // firing on the scene makes a difference
         KeyEventFirer correctFirer = new KeyEventFirer(null, scene);
         correctFirer.doKeyPress(A);
-        assertNotEquals(falseTextFieldNotification, textFieldEvents.size());
-        assertNotEquals(falseButtonNotification, buttonEvents.size());
+        assertEquals(falseTextFieldNotification - 1, textFieldEvents.size());
+        assertEquals(falseButtonNotification + 1, buttonEvents.size());
     }
 
     @Test (expected= NullPointerException.class)
