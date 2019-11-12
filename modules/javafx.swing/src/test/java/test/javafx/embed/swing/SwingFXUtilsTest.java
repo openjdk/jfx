@@ -56,11 +56,6 @@ public class SwingFXUtilsTest {
         JFXPanelTest.doSetupOnce();
     }
 
-    @AfterClass
-    public static void doTeardownOnce() {
-        Platform.exit();
-    }
-
     @Test
     public void testFromFXImg() {
         testFromFXImg("alpha.png");
