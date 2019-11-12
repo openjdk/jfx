@@ -756,6 +756,7 @@ public abstract class Parent extends Node {
     @Override
     void scenesChanged(final Scene newScene, final SubScene newSubScene,
                        final Scene oldScene, final SubScene oldSubScene) {
+        super.scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
 
         if (oldScene != null && newScene == null) {
             // RT-34863 - clean up CSS cache when Parent is removed from scene-graph

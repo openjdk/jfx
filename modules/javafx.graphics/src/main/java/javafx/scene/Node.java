@@ -1184,8 +1184,10 @@ public abstract class Node implements EventTarget, Styleable {
      * Exists for Parent and LightBase
      */
     void scenesChanged(final Scene newScene, final SubScene newSubScene,
-                       final Scene oldScene, final SubScene oldSubScene) { }
-
+                       final Scene oldScene, final SubScene oldSubScene) {
+        // On scenes change, reapply CSS for this Node
+        reapplyCSS();
+    }
 
     /**
      * The id of this {@code Node}. This simple string identifier is useful for
