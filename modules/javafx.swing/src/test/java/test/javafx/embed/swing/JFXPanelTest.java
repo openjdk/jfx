@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,38 +30,38 @@ import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Group;
 import javafx.scene.shape.Circle;
-import javafx.stage.Stage;
-import jdk.swing.interop.SwingInterOpUtils;
-import junit.framework.AssertionFailedError;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javax.swing.JPanel;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import junit.framework.AssertionFailedError;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import java.awt.Dimension;
 import java.awt.event.MouseEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 
 public class JFXPanelTest {
 
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
-
+    private static boolean setupIsDone = false;
 
     @BeforeClass
     public static void doSetupOnce() {
+        if (setupIsDone) return;
         Platform.startup(() -> {
             Platform.setImplicitExit(false);
             launchLatch.countDown();
         });
-
 
         try {
             if (!launchLatch.await(5000, TimeUnit.MILLISECONDS)) {
@@ -74,9 +74,10 @@ public class JFXPanelTest {
         }
 
         assertEquals(0, launchLatch.getCount());
+        setupIsDone = true;
     }
 
-    class TestFXPanel extends JFXPanel {
+    static class TestFXPanel extends JFXPanel {
         protected void processMouseEventPublic(MouseEvent e) {
             processMouseEvent(e);
         }
@@ -85,10 +86,10 @@ public class JFXPanelTest {
     @Test
     public void testNoDoubleClickOnFirstClick() throws Exception {
 
-        CountDownLatch firstPressedEventLatch = new CountDownLatch(1);
+        final CountDownLatch firstPressedEventLatch = new CountDownLatch(1);
 
         // It's an array, so we can mutate it inside of lambda statement
-        int[] pressedEventCounter = {0};
+        final int[] pressedEventCounter = {0};
 
         SwingUtilities.invokeLater(() -> {
             TestFXPanel fxPnl = new TestFXPanel();
@@ -120,14 +121,11 @@ public class JFXPanelTest {
             });
         });
 
-        if(!firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS)) {
-            throw new Exception();
+        if (!firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS)) {
+            throw new Exception("No first click detected.");
         };
 
         Thread.sleep(100); // there should be no pressed event after the initial one. Let's wait for 0.1s and check again.
-
         assertEquals(1, pressedEventCounter[0]);
     }
-
-
 }

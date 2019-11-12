@@ -43,41 +43,17 @@ import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+
 public class SwingFXUtilsTest {
     static final boolean verbose = false;
 
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
 
-    // Application class. An instance is created and initialized before running
-    // the first test, and it lives through the execution of all tests.
-    public static class MyApp extends Application {
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            Platform.setImplicitExit(false);
-            assertTrue(Platform.isFxApplicationThread());
-            assertNotNull(primaryStage);
-
-            launchLatch.countDown();
-        }
-    }
 
     @BeforeClass
     public static void doSetupOnce() {
-        // Start the Application
-        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
-
-        try {
-            if (!launchLatch.await(5000, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
-        }
-
-        assertEquals(0, launchLatch.getCount());
+        JFXPanelTest.doSetupOnce();
     }
 
     @AfterClass

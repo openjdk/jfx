@@ -447,7 +447,7 @@ public class JFXPanel extends JComponent {
             if (isFocusable() && !hasFocus()) {
                 requestFocus();
                 // This fixes JDK-8087914 without causing JDK-8200224
-                // It is save, because in JavaFX only the method "setFocused(true)" is called,
+                // It is safe, because in JavaFX only the method "setFocused(true)" is called,
                 // which doesn't have any side-effects when called multiple times.
                 int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
                 stagePeer.setFocused(true, focusCause);
