@@ -28,37 +28,32 @@ package test.javafx.scene.control.skin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.EventType;
 import javafx.scene.Scene;
-import javafx.scene.control.Skin;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
-import javafx.scene.control.skin.TableHeaderRow;
-import javafx.scene.control.skin.TableViewSkin;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import test.com.sun.javafx.scene.control.test.Person;
+import javafx.scene.control.skin.TableColumnHeaderShim;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TableColumnHeaderTest {
 
-    private MyTableColumnHeader tableColumnHeader;
+    private TableColumnHeader firstColumnHeader;
+    private TableView<Person> tableView;
+    private StageLoader sl;
 
     @Before
-    public void beforeTest() {
-        tableColumnHeader = null;
-    }
-
-    @Test
-    public void test_resizeColumnToFitContent() {
+    public void before(){
         ObservableList<Person> model = FXCollections.observableArrayList(
                 new Person("Humphrey McPhee", 76),
                 new Person("Justice Caldwell", 30),
@@ -67,80 +62,150 @@ public class TableColumnHeaderTest {
         );
         TableColumn<Person, String> column = new TableColumn<>("Col ");
         column.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
-        TableView<Person> tableView = new TableView<>(model) {
-            @Override
-            protected Skin<?> createDefaultSkin() {
-                return new TableViewSkin(this) {
-                    @Override
-                    protected TableHeaderRow createTableHeaderRow() {
-                        return new TableHeaderRow(this) {
-                            @Override
-                            protected NestedTableColumnHeader createRootHeader() {
-                                return new NestedTableColumnHeader(null) {
-                                    @Override
-                                    protected TableColumnHeader createTableColumnHeader(TableColumnBase col) {
-                                        tableColumnHeader = new MyTableColumnHeader(column);
-                                        return col == null || col.getColumns().isEmpty() || col == getTableColumn() ?
-                                                tableColumnHeader :
-                                                new NestedTableColumnHeader(col);
 
-                                    }
-                                };
-                            }
-                        };
-                    }
-                };
-            }
-        };
+        tableView = new TableView<>(model);
 
         tableView.getColumns().add(column);
 
+        sl = new StageLoader(tableView);
         Toolkit tk = Toolkit.getToolkit();
 
-        Scene scene = new Scene(tableView);
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.setWidth(500);
-        stage.setHeight(400);
-        stage.centerOnScreen();
-        stage.show();
-
         tk.firePulse();
+        //Force the column to have default font, otherwise font Amble is applied and mess with header width size
+        column.setStyle("-fx-font: System;");
+        firstColumnHeader = VirtualFlowTestUtils.getTableColumnHeader(tableView, column);
+    }
 
+    @After
+    public void after(){
+        sl.dispose();
+    }
+
+    /**
+     * @test
+     * @bug 8207957
+     * Resize the column header without modifications
+     */
+    @Test
+    public void test_resizeColumnToFitContent() {
+        TableColumn column = tableView.getColumns().get(0);
         double width = column.getWidth();
-        tableColumnHeader.resizeCol();
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+
+        assertEquals("Width must be the same",
+                width, column.getWidth(), 0.001);
+    }
+
+    /**
+     * @test
+     * @bug 8207957
+     * Resize the column header with first column increase
+     */
+    @Test
+    public void test_resizeColumnToFitContentIncrease() {
+        TableColumn column = tableView.getColumns().get(0);
+        double width = column.getWidth();
+
+        tableView.getItems().get(0).setFirstName("This is a big text inside that column");
+
         assertEquals("Width must be the same",
                 width, column.getWidth(), 0.001);
 
-        EventType<TableColumn.CellEditEvent<Person, String>> eventType = TableColumn.editCommitEvent();
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                tableView, new TablePosition<Person, String>(tableView, 0, column), (EventType) eventType, "This is a big text inside that column"));
-        tableColumnHeader.resizeCol();
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
         assertTrue("Column width must be greater",
                 width < column.getWidth());
 
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                tableView, new TablePosition<Person, String>(tableView, 0, column), (EventType) eventType, "small"));
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                tableView, new TablePosition<Person, String>(tableView, 1, column), (EventType) eventType, "small"));
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                tableView, new TablePosition<Person, String>(tableView, 2, column), (EventType) eventType, "small"));
-        column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
-                tableView, new TablePosition<Person, String>(tableView, 3, column), (EventType) eventType, "small"));
+        //Back to initial value
+        tableView.getItems().get(0).setFirstName("Humphrey McPhee");
 
-        tableColumnHeader.resizeCol();
-        assertTrue("Column width must be smaller",
-                width > column.getWidth());
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+        assertEquals("Width must be equal to initial value",
+                width, column.getWidth(), 0.001);
     }
 
-    private class MyTableColumnHeader extends TableColumnHeader {
+    /**
+     * @test
+     * @bug 8207957
+     * Resize the column header with first column decrease
+     */
+    @Test
+    public void test_resizeColumnToFitContentDecrease() {
+        TableColumn column = tableView.getColumns().get(0);
+        double width = column.getWidth();
 
-        public MyTableColumnHeader(final TableColumnBase tc) {
-            super(tc);
-        }
+        tableView.getItems().get(0).setFirstName("small");
+        tableView.getItems().get(1).setFirstName("small");
+        tableView.getItems().get(2).setFirstName("small");
+        tableView.getItems().get(3).setFirstName("small");
 
-        public void resizeCol() {
-            resizeColumnToFitContent(-1);
-        }
+        assertEquals("Width must be the same",
+                width, column.getWidth(), 0.001);
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+        assertTrue("Column width must be smaller",
+                width > column.getWidth());
+
+        //Back to initial value
+        tableView.getItems().get(0).setFirstName("Humphrey McPhee");
+        tableView.getItems().get(1).setFirstName("Justice Caldwell");
+        tableView.getItems().get(2).setFirstName("Orrin Davies");
+        tableView.getItems().get(3).setFirstName("Emma Wilson");
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+        assertEquals("Width must be equal to initial value",
+                width, column.getWidth(), 0.001);
+    }
+
+    /**
+     * @test
+     * @bug 8207957
+     * Resize the column header itself
+     */
+    @Test
+    public void test_resizeColumnToFitContentHeader() {
+        TableColumn column = tableView.getColumns().get(0);
+        double width = column.getWidth();
+
+        column.setText("This is a big text inside that column");
+
+        assertEquals("Width must be the same",
+                width, column.getWidth(), 0.001);
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
+        assertTrue("Column width must be greater",
+                width < column.getWidth());
+
+        //Back to initial value
+        column.setText("Col");
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
+        assertEquals("Width must be equal to initial value",
+                width, column.getWidth(), 0.001);
+    }
+
+    /**
+     * @test
+     * @bug 8207957
+     * Resize the column header with only 3 first rows
+     */
+    @Test
+    public void test_resizeColumnToFitContentMaxRow() {
+        TableColumn column = tableView.getColumns().get(0);
+        double width = column.getWidth();
+
+        tableView.getItems().get(3).setFirstName("This is a big text inside that column");
+
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
+        assertEquals("Width must be the same",
+                width, column.getWidth(), 0.001);
+
+
+        //Back to initial value
+        tableView.getItems().get(3).setFirstName("Emma Wilson");
+
+
+        TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);
+        assertEquals("Width must be equal to initial value",
+                width, column.getWidth(), 0.001);
     }
 }
