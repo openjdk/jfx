@@ -82,7 +82,7 @@ import static javafx.scene.layout.Region.positionInArea;
  * BorderPane lays out each child set in the five positions regardless of the child's
  * visible property value; unmanaged children are ignored.</p>
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  * <p>
  * BorderPane is commonly used as the root of a {@link javafx.scene.Scene Scene},
  * in which case its size will track the size of the scene.  If the scene or stage
@@ -122,7 +122,7 @@ import static javafx.scene.layout.Region.positionInArea;
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within it space.</p>
  *
- * <h4>Optional Layout Constraints</h4>
+ * <h2>Optional Layout Constraints</h2>
  *
  * <p>
  * An application may set constraints on individual children to customize BorderPane's layout.
