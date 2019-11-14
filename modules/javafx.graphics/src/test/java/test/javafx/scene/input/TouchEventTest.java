@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1527,27 +1527,6 @@ public class TouchEventTest {
 
         ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
                 System.currentTimeMillis(), 1, true, false, false, false, false);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
-                TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
-    }
-
-    // Reenable once indirect events are used
-    @Ignore("For now we've decided to ingore indirect events completely.")
-    @Test(expected=RuntimeException.class)
-    public void shouldThrowREOnLostIndirectRelease() {
-        Scene scene = createScene();
-        Rectangle rect =
-                (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
-                System.currentTimeMillis(), 1, false, false, false, false, false);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
-                TouchPoint.State.PRESSED, 1368, 110, 110, 110, 110);
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
-
-        ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventBegin(
-                System.currentTimeMillis(), 1, false, false, false, false, false);
         ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventNext(
                 TouchPoint.State.PRESSED, 1, 110, 110, 110, 110);
         ((StubScene) SceneHelper.getPeer(scene)).getListener().touchEventEnd();
