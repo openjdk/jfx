@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package test.com.sun.javafx.scene.layout.region;
 
 import javafx.scene.layout.BackgroundRepeat;
-import org.junit.Ignore;
 import org.junit.Test;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
@@ -54,8 +53,8 @@ public class BackgroundRepeatConverterTest {
     /*
         -fx-background-repeat: null
      */
-    @Ignore ("this doesn't work, but I'm not sure what would happen with a null background-repeat in reality")
-    @Test public void scenario2() {
+    @Test(expected=NullPointerException.class)
+    public void scenario2() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 {null}
         };
@@ -65,7 +64,6 @@ public class BackgroundRepeatConverterTest {
                         values, null
                 );
         RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
-        assertEquals(0, results.length, 0);
     }
 
     /*

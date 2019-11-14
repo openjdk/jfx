@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3375,7 +3375,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("I am not certain that supporting auto makes sense for us, and if it does, is it anything other than 1?")
     @Test public void borderImageWidth_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
@@ -3397,7 +3396,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("I am not certain that supporting auto makes sense for us, and if it does, is it anything other than 1?")
     @Test public void borderImageWidth_1_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
@@ -3418,7 +3416,6 @@ public class RegionCSSTest {
         assertEquals(expected, image);
     }
 
-    @Ignore("I am not certain that supporting auto makes sense for us, and if it does, is it anything other than 1?")
     @Test public void borderImageWidth_1_2Percent_auto() {
         region.setStyle(
                 "-fx-border-image-source: url('test/javafx/scene/layout/center-btn.png');" +
