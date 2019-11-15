@@ -32,6 +32,7 @@
 #include <com_sun_glass_events_ViewEvent.h>
 #include <com_sun_glass_events_MouseEvent.h>
 #include <com_sun_glass_events_KeyEvent.h>
+#include <com_sun_glass_events_TouchEvent.h>
 
 #include <com_sun_glass_ui_Window_Level.h>
 
@@ -446,6 +447,66 @@ void WindowContextBase::process_mouse_cross(GdkEventCrossing* event) {
     }
 }
 
+void WindowContextBase::process_touch(GdkEventTouch *event) {
+  if (jview) {
+    switch (event->type) {
+      case GDK_TOUCH_BEGIN:
+      {
+        mainEnv->CallVoidMethod(jview, jViewNotifyBeginTouch, 0, JNI_TRUE, touchPoints.size() + 1);
+
+        for(TouchPointsMap::const_iterator tpi = touchPoints.begin(); tpi != touchPoints.end(); tpi++) {
+          mainEnv->CallVoidMethod(jview, jViewNotifyNextTouch, com_sun_glass_events_TouchEvent_TOUCH_STILL,
+                                  tpi->first, tpi->second.x, tpi->second.y, tpi->second.x_abs, tpi->second.y_abs);
+        }
+
+        TouchPoint te(event);
+        mainEnv->CallVoidMethod(jview, jViewNotifyNextTouch, com_sun_glass_events_TouchEvent_TOUCH_PRESSED,
+                                event->sequence, te.x, te.y, te.x_abs, te.y_abs);
+        mainEnv->CallVoidMethod(jview, jViewNotifyEndTouch);
+
+        touchPoints[event->sequence] = te;
+        break;
+      }
+
+      case GDK_TOUCH_UPDATE:
+        touchPoints[event->sequence] = TouchPoint(event); // Update the point
+
+        mainEnv->CallVoidMethod(jview, jViewNotifyBeginTouch, 0, JNI_TRUE, touchPoints.size());
+        for(TouchPointsMap::const_iterator tpi = touchPoints.begin(); tpi != touchPoints.end(); tpi++) {
+          mainEnv->CallVoidMethod(jview, jViewNotifyNextTouch, com_sun_glass_events_TouchEvent_TOUCH_MOVED,
+                                  tpi->first, tpi->second.x, tpi->second.y, tpi->second.x_abs, tpi->second.y_abs);
+        }
+
+        mainEnv->CallVoidMethod(jview, jViewNotifyEndTouch);
+        break;
+
+      case GDK_TOUCH_END:
+        mainEnv->CallVoidMethod(jview, jViewNotifyBeginTouch, 0, JNI_TRUE, touchPoints.size());
+        mainEnv->CallVoidMethod(jview, jViewNotifyNextTouch,
+                                com_sun_glass_events_TouchEvent_TOUCH_RELEASED,
+                                event->sequence, (jint)event->x, (jint)event->y, (jint)event->x_root, (jint)event->y_root);
+
+        touchPoints.erase(event->sequence);
+
+        for(TouchPointsMap::const_iterator tpi = touchPoints.begin(); tpi != touchPoints.end(); tpi++) {
+          mainEnv->CallVoidMethod(jview, jViewNotifyNextTouch, com_sun_glass_events_TouchEvent_TOUCH_STILL,
+                                  tpi->first, tpi->second.x, tpi->second.y, tpi->second.x_abs, tpi->second.y_abs);
+        }
+
+        mainEnv->CallVoidMethod(jview, jViewNotifyEndTouch);
+        break;
+
+      case GDK_TOUCH_CANCEL:
+        touchPoints.clear();
+        break;
+
+      default:
+        break;
+    }
+    CHECK_JNI_EXCEPTION(mainEnv)
+  }
+}
+
 void WindowContextBase::process_key(GdkEventKey* event) {
     bool press = event->type == GDK_KEY_PRESS;
     jint glassKey = get_glass_key(event);
@@ -766,7 +827,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
         glass_gtk_window_configure_from_visual(gtk_widget, visual);
     }
 
-    gtk_widget_set_events(gtk_widget, GDK_FILTERED_EVENTS_MASK);
+    gtk_widget_set_events(gtk_widget, GLASS_EVENTS_MASK);
     gtk_widget_set_app_paintable(gtk_widget, TRUE);
 
     glass_configure_window_transparency(gtk_widget, frame_type == TRANSPARENT);
