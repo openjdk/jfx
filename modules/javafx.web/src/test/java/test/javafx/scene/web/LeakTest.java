@@ -56,7 +56,6 @@ public class LeakTest extends TestBase {
 
     private static final int SLEEP_TIME = 1000;
 
-    @Ignore // RT-26710: javafx.scene.web.LeakTest hangs
     @Test public void testOleg() throws InterruptedException{
         final String URL = new File("src/test/resources/test/html/guimark2-vector.html").toURI().toASCIIString();
         final int CYCLE_COUNT = 16;
@@ -82,7 +81,6 @@ public class LeakTest extends TestBase {
         latch.await();
     }
 
-    @Ignore // RT-26710: javafx.scene.web.LeakTest hangs
     @Test public void testGarbageCollectability() throws InterruptedException {
         final BlockingQueue<WeakReference<WebPage>> webPageRefQueue =
                 new LinkedBlockingQueue<WeakReference<WebPage>>();

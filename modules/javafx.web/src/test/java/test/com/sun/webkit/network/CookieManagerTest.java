@@ -407,10 +407,7 @@ public class CookieManagerTest {
 
     /**
      * Tests if put() correctly overwrites expired cookie.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutOverwriteExpired() {
         put("http://example.org/", "foo=bar; Max-Age=1; HttpOnly");
@@ -497,10 +494,7 @@ public class CookieManagerTest {
     /**
      * Tests if put() correctly purges individual domains
      * and takes into account cookie expiry.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeDomainAfterExpiry() {
         for (int i = 0; i < 25; i++) {
@@ -547,10 +541,7 @@ public class CookieManagerTest {
 
     /**
      * Tests if put() correctly purges cookies globally.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeCookiesGlobally2() {
         String urip = "http://example%d.org/";
@@ -579,10 +570,7 @@ public class CookieManagerTest {
 
     /**
      * Tests if put() correctly purges cookies globally.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeCookiesGlobally3() {
         String urip = "http://example%d.org/";
@@ -612,10 +600,7 @@ public class CookieManagerTest {
     /**
      * Tests if put() correctly purges cookies globally and takes
      * into account cookie expiry.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeCookiesGloballyAfterExpiry() {
         String urip = "http://example%d.org/";
