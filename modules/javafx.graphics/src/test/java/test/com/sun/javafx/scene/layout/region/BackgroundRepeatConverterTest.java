@@ -32,7 +32,7 @@ import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 
 import static org.junit.Assert.assertEquals;
-import com.sun.javafx.scene.layout.region.RepeatStructConverter;
+import static org.junit.Assert.fail;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 
 /**
@@ -53,7 +53,7 @@ public class BackgroundRepeatConverterTest {
     /*
         -fx-background-repeat: null
      */
-    @Test(expected=NullPointerException.class)
+    @Test
     public void scenario2() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 {null}
@@ -63,7 +63,12 @@ public class BackgroundRepeatConverterTest {
                 new ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]>(
                         values, null
                 );
-        RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
+        try {
+            RepeatStruct[] results = RepeatStructConverter.getInstance().convert(value, null);
+            fail("Expected NullPointerException");
+        } catch (NullPointerException expected) {
+            // Test Pass, NPE is expected
+        }
     }
 
     /*
