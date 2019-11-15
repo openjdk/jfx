@@ -225,7 +225,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * an UnsupportedOperationException being thrown.
  * </p>
  *
- * <h3>String ID</h3>
+ * <h2>String ID</h2>
  * <p>
  * Each node in the scene graph can be given a unique {@link #idProperty id}. This id is
  * much like the "id" attribute of an HTML tag in that it is up to the designer
@@ -235,7 +235,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * scene graph. The id can also be used identify nodes for applying styles; see
  * the CSS section below.
  *
- * <h3>Coordinate System</h3>
+ * <h2>Coordinate System</h2>
  * <p>
  * The {@code Node} class defines a traditional computer graphics "local"
  * coordinate system in which the {@code x} axis increases to the right and the
@@ -268,7 +268,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * important context-specific information about coordinate mapping and how
  * it can affect rendering.
  *
- * <h3>Transformations</h3>
+ * <h2>Transformations</h2>
  * <p>
  * Any {@code Node} can have transformations applied to it. These include
  * translation, rotation, scaling, or shearing.
@@ -325,7 +325,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * chain of transforms.  The order in which the transforms are applied is
  * defined by the ObservableList specified in the {@link #getTransforms transforms} variable.
  *
- * <h3>Bounding Rectangles</h3>
+ * <h2>Bounding Rectangles</h2>
  * <p>
  * Since every {@code Node} has transformations, every Node's geometric
  * bounding rectangle can be described differently depending on whether
@@ -381,7 +381,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
  * respective bounds"> </p>
  *
  *
- * <h3>CSS</h3>
+ * <h2>CSS</h2>
  * <p>
  * The {@code Node} class contains {@code id}, {@code styleClass}, and
  * {@code style} variables that are used in styling this node from

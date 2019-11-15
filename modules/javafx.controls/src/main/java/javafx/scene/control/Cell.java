@@ -187,7 +187,7 @@ import javafx.css.StyleableProperty;
  * }
  * </pre>
  *
- * <h3>Key Design Goals</h3>
+ * <h2>Key Design Goals</h2>
  * <ul>
  *   <li>Both time and memory efficient for large data sets</li>
  *   <li>Easy to build and use libraries for custom cells</li>
@@ -198,7 +198,7 @@ import javafx.css.StyleableProperty;
  *   <li>Easy to animate the cell size or other properties</li>
  * </ul>
  *
- * <h3>Key Use Cases</h3>
+ * <h2>Key Use Cases</h2>
  * Following are a number of key use cases used to drive the Cell API design,
  * along with code examples showing how those use cases are satisfied by this
  * API. This is by no means to be considered the definitive list of capabilities
@@ -262,7 +262,7 @@ import javafx.css.StyleableProperty;
  *   -fx-text-fill: red;
  * }</pre>
  *
- * <h3>Editing</h3>
+ * <h2>Editing</h2>
  * <p>Most virtualized controls that use the Cell architecture (e.g. {@link ListView},
  * {@link TreeView}, {@link TableView} and {@link TreeTableView}) all support
  * the notion of editing values directly via the cell. You can learn more about

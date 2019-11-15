@@ -110,7 +110,7 @@ import javafx.css.StyleableProperty;
  * TextFlow may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  *
  * <p>
  * A textflow's parent will resize the textflow within the textflow's range

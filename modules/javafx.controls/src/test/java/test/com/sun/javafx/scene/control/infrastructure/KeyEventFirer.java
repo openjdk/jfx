@@ -27,19 +27,60 @@ package test.com.sun.javafx.scene.control.infrastructure;
 
 import java.util.Arrays;
 import java.util.List;
-import javafx.event.EventType;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
+import java.util.Objects;
+
 import javafx.event.Event;
 import javafx.event.EventTarget;
+import javafx.event.EventType;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 
 
 public class KeyEventFirer {
 
     private final EventTarget target;
+    private final Scene scene;
 
+    /**
+     * Instantiates a KeyEventFirer on the given event target. KeyEvents are
+     * fired directly onto the target.
+     *
+     * <p>
+     * Beware: using this constructor on an <code>EventTarget</code> of type <code>Node</code>
+     * which is not focusOwner may lead
+     * to false greens (see https://bugs.openjdk.java.net/browse/JDK-8231692).
+     *
+     * @param target the target to fire keyEvents onto, must not be null.
+     * @throws NullPointerException if target is null.
+     */
     public KeyEventFirer(EventTarget target) {
+        this(Objects.requireNonNull(target), null);
+    }
+
+    /**
+     * Instantiates a KeyEventFirer for the given target and scene.
+     * Any one of those can be null, but not both. A null/not null scene decides
+     * about the delivering path of events. If null, events are delivered
+     * via <code>EventUtils.fire(target, keyEvent)</code>, otherwise via
+     * <code>scene.processKeyEvent(keyEvent)</code>.
+     * <p>
+     * Note that in the latter case, the target doesn't matter - the scene
+     * delivers keyEvents to its focusOwner. Calling code is responsible to
+     * setup focus state as required.
+     *
+     * @param target eventTarget used to create the event for and fire events onto
+     *    if there's no scene
+     * @param scene to use for delivering events to its focusOwner if not null
+     *
+     * @throws NullPointerException if both target and scene are null
+     */
+    public KeyEventFirer(EventTarget target, Scene scene) {
         this.target = target;
+        this.scene = scene;
+        if (target == null && scene == null) {
+            throw new NullPointerException("both target and scene are null");
+        }
     }
 
     public void doUpArrowPress(KeyModifier... modifiers) {
@@ -66,9 +107,21 @@ public class KeyEventFirer {
         fireEvents(createEvent(keyCode, KeyEvent.KEY_TYPED, modifiers));
     }
 
+    /**
+     * Dispatches the given events. The process depends on the state of
+     * this firer. If the scene is null, the events are delivered via
+     * Event.fireEvent(target,..), otherwise they are delivered via
+     * scene.processKeyEvent.
+     *
+     * @param events the events to dispatch.
+     */
     private void fireEvents(KeyEvent... events) {
         for (KeyEvent evt : events) {
-            Event.fireEvent(target, evt);
+            if (scene != null) {
+                scene.processKeyEvent(evt);
+            } else {
+                Event.fireEvent(target, evt);
+            }
         }
     }
 
