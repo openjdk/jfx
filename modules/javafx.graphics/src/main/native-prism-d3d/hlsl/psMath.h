@@ -64,9 +64,8 @@ void phong(
 {
     float3 refl = reflect(e, n);
     for (int i = _s; i < _e; i++) {
-        float range = gLightAttenuation[i].w;
         float dist = length(L[i].xyz);
-        if (dist <= range) {
+        if (dist <= gLightRange[i].x) {
             float ca = gLightAttenuation[i].x;
             float la = gLightAttenuation[i].y;
             float qa = gLightAttenuation[i].z;

@@ -46,7 +46,7 @@ D3DLight::D3DLight() {
     attenuation[0] = 1;
     attenuation[1] = 0;
     attenuation[2] = 0;
-    attenuation[3] = 0;
+    maxRange = 0;
 }
 
 void D3DLight::setColor(float r, float g, float b) {
@@ -62,5 +62,5 @@ void D3DLight::setPosition(float x, float y, float z) {
 }
 
 /*void D3DLight::setRange(float r) {
-    range = r;
+    maxRange = r;
 }*/
