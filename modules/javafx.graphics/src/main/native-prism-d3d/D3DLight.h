@@ -40,7 +40,8 @@ public:
     float position[4]; // Only need x, y, z. The last float is needed for padding when upload to shader.
     float color[3];
     float w;
-    float attenuation[4]; // ca, la, qa, range
+    float attenuation[3]; // ca, la, qa
+    float maxRange;
 
 private:
 
