@@ -26,7 +26,6 @@
 package javafx.scene;
 
 import com.sun.javafx.scene.DirtyBits;
-import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.PointLightHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGPointLight;
@@ -107,7 +106,7 @@ public class PointLight extends LightBase {
      * outside of the light's range, it is more performant to exclude it from its scope.
      *
      * @defaultValue {@code Double.POSITIVE_INFINITY}
-     * @since 14
+     * @since 13
      */
     private DoubleProperty maxRange;
     
@@ -135,8 +134,8 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue 1
-     * @since 14
+     * @defaultValue {@code 1}
+     * @since 13
      */
     private DoubleProperty constantAttenuation;
     
@@ -164,8 +163,8 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue 0
-     * @since 14
+     * @defaultValue {@code 0}
+     * @since 13
      */
     private DoubleProperty linearAttenuation;
     
@@ -193,8 +192,8 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue 0
-     * @since 14
+     * @defaultValue {@code 0}
+     * @since 13
      */
     private DoubleProperty quadraticAttenuation;
     
