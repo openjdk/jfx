@@ -380,6 +380,8 @@ struct MeshViewInfoRec {
     GLfloat pointLightWeight;
     GLfloat pointLightPosition[3];
     GLfloat pointLightColor[3];
+    GLfloat pointLightAttenuation[3];
+    GLfloat pointLightMaxRange;
     GLboolean cullEnable;
     GLenum cullMode;
     GLenum fillMode;
