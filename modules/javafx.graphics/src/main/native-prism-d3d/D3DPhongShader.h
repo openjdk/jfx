@@ -44,7 +44,7 @@
 #define PSR_SPECULARCOLOR 1
 #define PSR_LIGHTCOLOR 4        // 3 lights + 2 reserve
 #define PSR_LIGHT_ATTENUATION 9 // 3 lights + 2 reserve
-#define PSR_LIGHT_RANGE 14 		// 3 lights + 2 reserve
+#define PSR_LIGHT_RANGE 14 	    // 3 lights + 2 reserve
 
 // SR implies Sampler Registers
 #define SR_DIFFUSEMAP 0

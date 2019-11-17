@@ -102,11 +102,12 @@ public class PointLight extends LightBase {
      * {@code maxRange} value by finding the where the attenuation is close enough to 0.
      * <p>
      * Nodes that are inside the light's range can still be excluded from the light's effect
-     * by removing them from its {@link #getScope() scope}. If a node is known to always be
+     * by removing them from its {@link #getScope() scope} (or including them in its
+     * {@link #getExclusionScope() exclusion scope}). If a node is known to always be
      * outside of the light's range, it is more performant to exclude it from its scope.
      *
      * @defaultValue {@code Double.POSITIVE_INFINITY}
-     * @since 13
+     * @since 14
      */
     private DoubleProperty maxRange;
     
@@ -134,8 +135,8 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue {@code 1}
-     * @since 13
+     * @defaultValue 1
+     * @since 14
      */
     private DoubleProperty constantAttenuation;
     
@@ -163,8 +164,8 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue {@code 0}
-     * @since 13
+     * @defaultValue 0
+     * @since 14
      */
     private DoubleProperty linearAttenuation;
     
@@ -192,8 +193,8 @@ public class PointLight extends LightBase {
      * <p>
      * where {@code dist} is the distance between the light source and the pixel.
      *
-     * @defaultValue {@code 0}
-     * @since 13
+     * @defaultValue 0
+     * @since 14
      */
     private DoubleProperty quadraticAttenuation;
     
