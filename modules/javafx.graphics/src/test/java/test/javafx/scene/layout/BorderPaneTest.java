@@ -32,7 +32,6 @@ import javafx.geometry.Orientation;
 import javafx.scene.ParentShim;
 import javafx.scene.layout.BorderPane;
 import org.junit.Before;
-import org.junit.Ignore;
 
 import org.junit.Test;
 

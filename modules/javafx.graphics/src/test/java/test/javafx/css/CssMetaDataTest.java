@@ -80,6 +80,7 @@ import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
 import org.junit.Test;
+import org.junit.Ignore;
 
 import static org.junit.Assert.*;
 
@@ -260,7 +261,8 @@ public class CssMetaDataTest {
         );
     }
 
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStyles() {
 
 
@@ -365,7 +367,8 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnParent() {
 
 
@@ -488,7 +491,8 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnLeaf() {
 
 
@@ -611,7 +615,8 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStylesWithInlineStyleOnRootAndLeaf() {
 
 
@@ -738,7 +743,8 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStylesShouldNotReturnAncestorPropertyIfNotInherited() {
 
 
@@ -846,8 +852,8 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStylesShouldNotReturnInlineAncestorPropertyIfNotInherited() {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
@@ -952,7 +958,8 @@ public class CssMetaDataTest {
         assertTrue(actuals.toString(), actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStylesReturnsInheritedProperty() {
 
 
@@ -1033,7 +1040,8 @@ public class CssMetaDataTest {
         assertTrue(actuals.isEmpty());
     }
 
-    @Test @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testGetMatchingStylesReturnsSubProperty() {
 
         final Stylesheet stylesheet = StylesheetShim.getStylesheet();
@@ -1221,7 +1229,8 @@ public class CssMetaDataTest {
         }
     }
 
-    @Test @org.junit.Ignore("tested CssMetaData#set method, which is deprecated")
+    @Ignore("JDK-8234143") // Tested CssMetaData#set method, which is deprecated.
+    @Test
     public void testRT_21185() {
 
         Color c1 = new Color(.1,.2,.3,1.0);
@@ -1260,8 +1269,8 @@ public class CssMetaDataTest {
 
     }
 
-
-    @Test  @org.junit.Ignore
+    @Ignore("JDK-8234142")
+    @Test
     public void testRT_24606() {
 
         final Stylesheet stylesheet = new CssParser().parse(

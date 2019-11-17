@@ -96,7 +96,7 @@ public class TextLayoutTest {
     }
 
     @SuppressWarnings("deprecation")
-    @Ignore("RT-31357")
+    @Ignore("JDK-8087615")
     @Test public void buildRuns() {
 
         PrismTextLayout layout = new PrismTextLayout();

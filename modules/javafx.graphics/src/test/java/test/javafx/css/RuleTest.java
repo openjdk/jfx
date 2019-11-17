@@ -154,7 +154,8 @@ public class RuleTest {
         assertNull(result);
     }
 
-    @Ignore @Test
+    @Ignore("JDK-8234154")
+    @Test
     public void testApplies() {
         System.out.println("applies");
         Node node = null;
@@ -165,7 +166,8 @@ public class RuleTest {
         fail("The test case is a prototype.");
     }
 
-    @Ignore @Test
+    @Ignore("JDK-8234154")
+    @Test
     public void testToString() {
         System.out.println("toString");
         Rule instance = null;
@@ -175,7 +177,8 @@ public class RuleTest {
         fail("The test case is a prototype.");
     }
 
-    @Ignore @Test
+    @Ignore("JDK-8234154")
+    @Test
     public void testWriteBinary() throws Exception {
         System.out.println("writeBinary");
         DataOutputStream os = null;
@@ -185,7 +188,8 @@ public class RuleTest {
         fail("The test case is a prototype.");
     }
 
-    @Ignore @Test
+    @Ignore("JDK-8234154")
+    @Test
     public void testReadBinary() throws Exception {
         System.out.println("readBinary");
         DataInputStream is = null;
