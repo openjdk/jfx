@@ -110,7 +110,7 @@ public class PointLight extends LightBase {
      * @since 14
      */
     private DoubleProperty maxRange;
-    
+
     public final void setMaxRange(double value) {
         maxRangeProperty().set(value);
     }
@@ -139,7 +139,7 @@ public class PointLight extends LightBase {
      * @since 14
      */
     private DoubleProperty constantAttenuation;
-    
+
     public final void setConstantAttenuation(double value) {
         constantAttenuationProperty().set(value);
     }
@@ -168,7 +168,7 @@ public class PointLight extends LightBase {
      * @since 14
      */
     private DoubleProperty linearAttenuation;
-    
+
     public final void setLinearAttenuation(double value) {
         linearAttenuationProperty().set(value);
     }
@@ -197,7 +197,7 @@ public class PointLight extends LightBase {
      * @since 14
      */
     private DoubleProperty quadraticAttenuation;
-    
+
     public final void setQuadraticAttenuation(double value) {
         quadraticAttenuationProperty().set(value);
     }

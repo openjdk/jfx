@@ -2270,7 +2270,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetAmbientLight
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetPointLight
   (JNIEnv *env, jclass class, jlong nativeCtxInfo, jlong nativeMeshViewInfo,
         jint index, jfloat x, jfloat y, jfloat z, jfloat r, jfloat g, jfloat b, jfloat w,
-		jfloat ca, jfloat la, jfloat qa, jfloat maxRange)
+        jfloat ca, jfloat la, jfloat qa, jfloat maxRange)
 {
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     MeshViewInfo *meshViewInfo = (MeshViewInfo *) jlong_to_ptr(nativeMeshViewInfo);
