@@ -98,13 +98,13 @@ void main()
         s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * lights[1].color.rgb * att;
     }
 
-    float range = lights[3].range;
-    float dist = length(lightTangentSpacePositions[3].xyz);
+    float range = lights[2].range;
+    float dist = length(lightTangentSpacePositions[2].xyz);
     if (dist <= range) {
-        vec3 l = normalize(lightTangentSpacePositions[3].xyz);
-        float att = 1.0 / (lights[1].attn.x + lights[3].attn.y * dist + lights[3].attn.z * dist * dist);
-        d += clamp(dot(n,l), 0.0, 1.0) * (lights[3].color).rgb * att;
-        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * lights[3].color.rgb * att;
+        vec3 l = normalize(lightTangentSpacePositions[2].xyz);
+        float att = 1.0 / (lights[2].attn.x + lights[2].attn.y * dist + lights[2].attn.z * dist * dist);
+        d += clamp(dot(n,l), 0.0, 1.0) * (lights[2].color).rgb * att;
+        s += pow(clamp(dot(-refl, l), 0.0, 1.0), power) * lights[2].color.rgb * att;
     }
 
     vec3 rez = (ambientColor + d) * diffuse.xyz + s * specular.rgb;
