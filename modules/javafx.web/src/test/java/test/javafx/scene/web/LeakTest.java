@@ -63,7 +63,7 @@ public class LeakTest extends TestBase {
 
         Timeline time = new Timeline();
         time.setCycleCount(CYCLE_LENGTH * CYCLE_COUNT);
-        time.getKeyFrames().add(new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
+        time.getKeyFrames().add(new KeyFrame(Duration.millis(200), new EventHandler<ActionEvent>() {
             int counter = -1;
             @Override public void handle(final ActionEvent e) {
                 ++counter;
