@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,6 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebEvent;
 import javafx.util.Callback;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -88,7 +87,6 @@ public class CallbackTest extends TestBase {
         popupUi.clear();
     }
 
-    @Ignore("RT-34508")
     @Test public void testDefaultPopup() {
         clear();
         executeScript(JS_OPEN_DEFAULT);
@@ -106,7 +104,6 @@ public class CallbackTest extends TestBase {
         popupUi.checkCalled(VISIBILITY_CHANGED, true);
     }
 
-    @Ignore("RT-34508")
     @Test public void testCustomPopup() {
         clear();
         executeScript(JS_OPEN);
