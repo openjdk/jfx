@@ -27,12 +27,17 @@ package com.sun.glass.ui.monocle;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
+import com.sun.javafx.util.Logging;
 
 /** Abstract of a platform on which JavaFX can run. */
 public abstract class NativePlatform {
 
     private static InputDeviceRegistry inputDeviceRegistry;
     private final RunnableProcessor runnableProcessor;
+    private final PlatformLogger logger = Logging.getJavaFXLogger();
+
     private NativeCursor cursor;
     private NativeScreen screen;
     protected AcceleratedScreen accScreen;
@@ -42,13 +47,6 @@ public abstract class NativePlatform {
         AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             final String str =
                 System.getProperty("monocle.cursor.enabled", "true");
-            return "true".equalsIgnoreCase(str);
-        });
-
-    protected static final boolean debugCursor =
-        AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            final String str =
-                System.getProperty("monocle.debugcursor", "");
             return "true".equalsIgnoreCase(str);
         });
 
@@ -157,9 +155,9 @@ public abstract class NativePlatform {
      * @return the passed in cursor
      */
     protected NativeCursor logSelectedCursor(final NativeCursor cursor) {
-        if (debugCursor) {
+        if (logger.isLoggable(Level.FINE)) {
             final String name = cursor == null ? null : cursor.getClass().getSimpleName();
-            System.err.println("Using native cursor: " + name);
+            logger.fine("Using native cursor: {0}", name);
         }
         return cursor;
     }
