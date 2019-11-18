@@ -25,6 +25,9 @@
 package test.robot.javafx.embed.swing;
 
 import com.sun.javafx.PlatformUtil;
+import javafx.application.Platform;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import org.junit.Assume;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -33,13 +36,10 @@ import org.junit.Test;
 
 import javafx.embed.swing.JFXPanel;
 
-import javax.swing.JFrame;
-import javax.swing.JMenuBar;
-import javax.swing.JMenu;
-import javax.swing.JMenuItem;
-import javax.swing.SwingUtilities;
-import java.awt.Robot;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -106,6 +106,61 @@ public class JFXPanelTest {
         endLatch.await(5, TimeUnit.SECONDS);
         Assert.assertTrue("It seems FX initialization is deadlocked", stop);
     }
+
+    class TestFXPanel extends JFXPanel {
+        protected void processMouseEventPublic(MouseEvent e) {
+            processMouseEvent(e);
+        }
+    };
+
+    @Test
+    public void testNoDoubleClickOnFirstClick() throws Exception {
+
+        CountDownLatch firstPressedEventLatch = new CountDownLatch(1);
+
+        // It's an array, so we can mutate it inside of lambda statement
+        int[] pressedEventCounter = {0};
+
+        SwingUtilities.invokeLater(() -> {
+            TestFXPanel fxPnl = new TestFXPanel();
+            fxPnl.setPreferredSize(new Dimension(100, 100));
+            JFrame jframe = new JFrame();
+            JPanel jpanel = new JPanel();
+            jpanel.add(fxPnl);
+            jframe.setContentPane(jpanel);
+            jframe.pack();
+            jframe.setVisible(true);
+
+            Platform.runLater(() -> {
+                Group grp = new Group();
+                Scene scene = new Scene(new Group());
+                scene.getRoot().requestFocus();
+
+                scene.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED, (event -> {
+                    pressedEventCounter[0] += 1;
+                    firstPressedEventLatch.countDown();
+                }));
+
+                fxPnl.setScene(scene);
+
+                SwingUtilities.invokeLater(() -> {
+                    MouseEvent e = new MouseEvent(fxPnl, MouseEvent.MOUSE_PRESSED, 0, MouseEvent.BUTTON1_DOWN_MASK,
+                            5, 5, 1, false, MouseEvent.BUTTON1);
+
+                    fxPnl.processMouseEventPublic(e);
+                });
+            });
+        });
+
+        if(!firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS)) {
+            throw new Exception();
+        };
+
+        Thread.sleep(500); // there should be no pressed event after the initial one. Let's wait for 0.5s and check again.
+
+        Assert.assertEquals(1, pressedEventCounter[0]);
+    }
+
 
     @AfterClass
     public static void teardown() throws Exception {
