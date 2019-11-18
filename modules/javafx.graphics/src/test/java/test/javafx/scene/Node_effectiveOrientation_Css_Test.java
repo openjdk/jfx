@@ -44,7 +44,7 @@ import org.junit.Before;
 /**
  * Test :dir functional pseudo-class
  */
-@Ignore
+@Ignore("JDK-8234152")
 public class Node_effectiveOrientation_Css_Test {
 
     private Group root;
