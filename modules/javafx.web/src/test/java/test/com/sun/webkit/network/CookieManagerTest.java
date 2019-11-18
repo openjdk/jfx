@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -407,10 +406,7 @@ public class CookieManagerTest {
 
     /**
      * Tests if put() correctly overwrites expired cookie.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutOverwriteExpired() {
         put("http://example.org/", "foo=bar; Max-Age=1; HttpOnly");
@@ -497,10 +493,7 @@ public class CookieManagerTest {
     /**
      * Tests if put() correctly purges individual domains
      * and takes into account cookie expiry.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeDomainAfterExpiry() {
         for (int i = 0; i < 25; i++) {
@@ -547,10 +540,7 @@ public class CookieManagerTest {
 
     /**
      * Tests if put() correctly purges cookies globally.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeCookiesGlobally2() {
         String urip = "http://example%d.org/";
@@ -579,10 +569,7 @@ public class CookieManagerTest {
 
     /**
      * Tests if put() correctly purges cookies globally.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeCookiesGlobally3() {
         String urip = "http://example%d.org/";
@@ -612,10 +599,7 @@ public class CookieManagerTest {
     /**
      * Tests if put() correctly purges cookies globally and takes
      * into account cookie expiry.
-     * This test is disabled because it takes considerable amount of time
-     * to run.
      */
-    @Ignore
     @Test
     public void testPutPurgeCookiesGloballyAfterExpiry() {
         String urip = "http://example%d.org/";
