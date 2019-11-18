@@ -51,7 +51,7 @@ import java.io.IOException;
  * Drag entered/exited events behave similarly to mouse entered/exited
  * events, please see {@code MouseEvent} overview.
  *
- * <h3>Drag sources: initiating a drag and drop gesture</h3>
+ * <h2>Drag sources: initiating a drag and drop gesture</h2>
  *
  * When a drag gesture is detected, an application can decide whether to
  * start a drag and drop gesture or continue with a press-drag-release gesture.
@@ -95,7 +95,7 @@ rect.setOnDragDetected(new EventHandler&lt;MouseEvent&gt;() {
 });
  * </pre>
  *
- * <br><h3>Potential drop targets</h3>
+ * <br><h2>Potential drop targets</h2>
  *
  * <p>
  * After the drag and drop gesture has been started, any object
@@ -183,7 +183,7 @@ rect.setOnDragDropped(new EventHandler&lt;DragEvent&gt;() {
 });
  * </pre>
  *
- * <h3>Drag sources: finalizing drag and drop gesture</h3>
+ * <h2>Drag sources: finalizing drag and drop gesture</h2>
  *
  * <p>
  * After the gesture has been finished, whether by successful or unsuccessful

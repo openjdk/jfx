@@ -99,7 +99,7 @@ import java.util.Map;
  * nodes of the root node are shown. By default, the root node is shown in the
  * TreeView.
  *
- * <h3>TreeView Selection / Focus APIs</h3>
+ * <h2>TreeView Selection / Focus APIs</h2>
  * <p>To track selection and focus, it is necessary to become familiar with the
  * {@link SelectionModel} and {@link FocusModel} classes. A TreeView has at most
  * one instance of each of these classes, available from
@@ -119,14 +119,14 @@ import java.util.Map;
  *
  * <pre> {@code treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);}</pre>
  *
- * <h3>Customizing TreeView Visuals</h3>
+ * <h2>Customizing TreeView Visuals</h2>
  * <p>The visuals of the TreeView can be entirely customized by replacing the
  * default {@link #cellFactoryProperty() cell factory}. A cell factory is used to
  * generate {@link TreeCell} instances, which are used to represent an item in the
  * TreeView. See the {@link Cell} class documentation for a more complete
  * description of how to write custom Cells.
  *
- * <h3>Editing</h3>
+ * <h2>Editing</h2>
  * <p>This control supports inline editing of values, and this section attempts to
  * give an overview of the available APIs and how you should use them.</p>
  *

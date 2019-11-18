@@ -52,7 +52,7 @@ import java.util.Map;
  * annotations, as well as the overarching
  * {@link #buttonOrderProperty() button order} specified for the ButtonBar.
  *
- * <h3>Uniform button sizing</h3>
+ * <h2>Uniform button sizing</h2>
  * <p>By default all buttons are uniformly sized in a ButtonBar, meaning that all
  * buttons take the width of the widest button. It is possible to opt-out of this
  * on a per-button basis, but calling the {@link #setButtonUniformSize(Node, boolean)} method with
@@ -63,7 +63,7 @@ import java.util.Map;
  * measuring process, so its size will not influence the maximum size calculated
  * for all buttons in the ButtonBar.
  *
- * <h3>Screenshots</h3>
+ * <h2>Screenshots</h2>
  * <p>Because a ButtonBar comes with built-in support for Windows, Mac OS
  * and Linux, there are three screenshots shown below, with the same buttons
  * laid out on each of the three operating systems.
@@ -73,7 +73,7 @@ import java.util.Map;
  * <strong>Mac OS:</strong><p><img src="doc-files/buttonBar-mac.png" alt=""></p>
  * <strong>Linux:</strong><p><img src="doc-files/buttonBar-linux.png" alt=""></p>
  *
- * <h3>Code Samples</h3>
+ * <h2>Code Samples</h2>
  * <p>Instantiating and using the ButtonBar is simple, simply do the following:
  *
  * <pre>

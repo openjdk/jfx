@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,12 +74,6 @@ public class BackgroundSizeTest {
         new BackgroundSize(-2, 1, true, true, false, false);
     }
 
-    @Ignore("Surprised that MIN_VALUE is not < 0")
-    @Test(expected = IllegalArgumentException.class)
-    public void negativeWidthThrowsException3() {
-        new BackgroundSize(Double.MIN_VALUE, 1, true, true, false, false);
-    }
-
     @Ignore("Not handling positive infinity")
     @Test(expected = IllegalArgumentException.class)
     public void positiveInfinityWidthThrowsException() {
@@ -116,12 +110,6 @@ public class BackgroundSizeTest {
     @Test(expected = IllegalArgumentException.class)
     public void negativeHeightThrowsException2() {
         new BackgroundSize(1, -2, true, true, false, false);
-    }
-
-    @Ignore("Surprised that MIN_VALUE is not < 0")
-    @Test(expected = IllegalArgumentException.class)
-    public void negativeHeightThrowsException3() {
-        new BackgroundSize(1, Double.MIN_VALUE, true, true, false, false);
     }
 
     @Ignore("Not handling positive infinity")

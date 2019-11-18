@@ -31,6 +31,7 @@
 #import "com_sun_glass_events_TouchEvent.h"
 
 #import "GlassStatics.h"
+#import "GlassHelper.h"
 #import "GlassMacros.h"
 #import "GlassWindow.h"
 
@@ -382,7 +383,7 @@ static jint getTouchStateFromPhase(int phase)
 
         // Ensure JNI stuff related to gesture processing is ready
         if (NULL == jGestureSupportClass) {
-            (*env)->FindClass(env, "com/sun/glass/ui/ios/IosGestureSupport");
+            [GlassHelper ClassForName:"com.sun.glass.ui.ios.IosGestureSupport" withEnv:env];
         }
         self.touches = NULL;
         self.lastTouchId = 0;
