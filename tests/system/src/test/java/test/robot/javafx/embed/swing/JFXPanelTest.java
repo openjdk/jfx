@@ -134,7 +134,6 @@ public class JFXPanelTest {
             Platform.runLater(() -> {
                 Group grp = new Group();
                 Scene scene = new Scene(new Group());
-                scene.getRoot().requestFocus();
 
                 scene.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED, (event -> {
                     pressedEventCounter[0] += 1;
