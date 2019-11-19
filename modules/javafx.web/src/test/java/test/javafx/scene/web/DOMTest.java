@@ -34,7 +34,6 @@ import static org.junit.Assert.fail;
 
 import javafx.scene.web.WebEngine;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.*;
 import org.w3c.dom.css.*;
@@ -291,7 +290,6 @@ public class DOMTest extends TestBase {
         });
     }
 
-    @Ignore("Incorrect test, refer JDK-8210955")
     @Test public void testEventListenerCascade() {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         submit(() -> {
@@ -342,7 +340,7 @@ public class DOMTest extends TestBase {
                 EventTarget src = ((MouseEvent) evt).getTarget();
                 ((HTMLBodyElement) src).setClassName("newTestClass");
             };
-            ((EventTarget)body).addEventListener("click", listener1, true);
+            ((EventTarget)body).addEventListener("click", listener1, false);
             ((EventTarget)body).dispatchEvent(evClick);
             assertEquals("Java EventHandler does not work directly", "newTestClass", body.getClassName());
 
@@ -350,7 +348,7 @@ public class DOMTest extends TestBase {
                 //OK: stacked ScriptExecutionContext
                 listenerJS.handleEvent(evt);
             };
-            ((EventTarget)body).addEventListener("click", listener2, true);
+            ((EventTarget)body).addEventListener("click", listener2, false);
             ((EventTarget)body).dispatchEvent(evClick);
             assertEquals("JS EventHandler does not work from Java call", "testClass", body.getClassName());
         });
