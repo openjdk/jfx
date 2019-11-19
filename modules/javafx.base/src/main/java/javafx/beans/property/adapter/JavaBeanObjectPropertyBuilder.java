@@ -64,7 +64,7 @@ public final class JavaBeanObjectPropertyBuilder<T> {
     private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
 
     /**
-     * This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
+     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
      */
     @Deprecated(since="14", forRemoval=true)
     public JavaBeanObjectPropertyBuilder() {}
