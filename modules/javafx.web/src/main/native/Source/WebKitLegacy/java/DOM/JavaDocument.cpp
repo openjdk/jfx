@@ -1254,7 +1254,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DocumentImpl_createAttributeImpl
     , jstring name)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Attr>(env, WTF::getPtr(raiseOnDOMError(env, IMPL->createAttribute(String(env, name)))));
+
+    auto result = IMPL->createAttribute(String(env, name));
+    if (result.hasException()) {
+        raiseDOMErrorException(env, result.releaseException());
+        return {};
+    }
+    return JavaReturn<Attr>(env, WTF::getPtr(result.releaseReturnValue()));
 }
 
 
