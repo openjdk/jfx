@@ -55,7 +55,7 @@ CFLAGS += -I$(BASEDIR) -I$(XSLT_SRCDIR) -I$(INCPREFIX)
 # The linker and its options.
 LD = gcc.exe
 LDFLAGS += -Wl,-L,$(BINDIR) -Wl,-L,$(LIBPREFIX)
-LIBS = -lwsock32
+LIBS =
 
 # The archiver and its options.
 AR = ar.exe
