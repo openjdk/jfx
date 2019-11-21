@@ -80,6 +80,11 @@ public class SwingFXUtilsTest {
         assertEquals(0, launchLatch.getCount());
     }
 
+    @AfterClass
+    public static void doTeardownOnce() {
+        Platform.exit();
+    }
+
     @Test
     public void testFromFXImg() {
         testFromFXImg("alpha.png");

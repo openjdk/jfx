@@ -22,89 +22,73 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.robot.javafx.embed.swing;
+package test.javafx.embed.swing;
 
 import com.sun.javafx.PlatformUtil;
-import javafx.application.Platform;
-import javafx.scene.Group;
-import javafx.scene.Scene;
 import org.junit.Assume;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 import org.junit.Test;
+import junit.framework.AssertionFailedError;
 
+
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JMenuBar;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
-
-import javax.swing.*;
-import java.awt.*;
+import javafx.stage.Stage;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import java.awt.Dimension;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class JFXPanelTest {
-    private static Robot robot;
-    private static JFrame frame;
-    private static volatile boolean stop;
+    // Used to launch the application before running any test
+    private static final CountDownLatch launchLatch = new CountDownLatch(1);
 
-    public static void main(String[] args) throws Exception {
-        init();
-        try {
-            new JFXPanelTest().testJFXPanelNew();
-            teardown();
-        } catch (Throwable th) {
-            th.printStackTrace();
-            System.exit(1);
-        } finally {
-            System.exit(0);
+    // Application class. An instance is created and initialized before running
+    // the first test, and it lives through the execution of all tests.
+    public static class MyApp extends Application {
+        @Override
+        public void start(Stage primaryStage) throws Exception {
+            Platform.setImplicitExit(false);
+            Assert.assertTrue(Platform.isFxApplicationThread());
+            Assert.assertNotNull(primaryStage);
+
+            launchLatch.countDown();
         }
     }
 
     @BeforeClass
-    public static void init() throws Exception {
-        Assume.assumeTrue(PlatformUtil.isMac());
-        System.setProperty("apple.laf.useScreenMenuBar", "true");
-        robot = new Robot();
-        robot.waitForIdle();
-        robot.setAutoDelay(10);
-        SwingUtilities.invokeAndWait(() -> {
-            frame = new JFrame("JFXPanel init test");
-            JMenuBar menubar = new JMenuBar();
-            JMenu menu = new JMenu("te-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-e-st");
-            menu.add(new JMenuItem("1"));
-            menubar.add(menu);
-            frame.setJMenuBar(menubar);
-            frame.setSize(200, 200);
-            frame.setVisible(true);
-        });
-        robot.waitForIdle();
+    public static void doSetupOnce() {
+        // Start the Application
+        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
+
+        try {
+            if (!launchLatch.await(5000, TimeUnit.MILLISECONDS)) {
+                throw new AssertionFailedError("Timeout waiting for Application to launch");
+            }
+        } catch (InterruptedException ex) {
+            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
+            err.initCause(ex);
+            throw err;
+        }
+
+        Assert.assertEquals(0, launchLatch.getCount());
     }
 
-    @Test
-    public void testJFXPanelNew() throws Exception {
-        CountDownLatch beginLatch = new CountDownLatch(1);
-        new Thread(() -> {
-            try {
-                beginLatch.await();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            while (!stop) {
-                robot.mouseMove(300, 10);
-                robot.mousePress(InputEvent.BUTTON1_MASK);
-                robot.mouseRelease(InputEvent.BUTTON1_MASK);
-            }
-        }).start();
-        beginLatch.countDown();
-        CountDownLatch endLatch = new CountDownLatch(1);
-        SwingUtilities.invokeLater(() -> {
-            new JFXPanel();
-            stop = true;
-            endLatch.countDown();
-        });
-        endLatch.await(5, TimeUnit.SECONDS);
-        Assert.assertTrue("It seems FX initialization is deadlocked", stop);
+    @AfterClass
+    public static void doTeardownOnce() {
+        Platform.exit();
     }
 
     class TestFXPanel extends JFXPanel {
@@ -158,15 +142,6 @@ public class JFXPanelTest {
         Thread.sleep(500); // there should be no pressed event after the initial one. Let's wait for 0.5s and check again.
 
         Assert.assertEquals(1, pressedEventCounter[0]);
-    }
-
-
-    @AfterClass
-    public static void teardown() throws Exception {
-        stop = true;
-        if (frame != null) {
-            SwingUtilities.invokeLater(frame::dispose);
-        }
     }
 }
 
