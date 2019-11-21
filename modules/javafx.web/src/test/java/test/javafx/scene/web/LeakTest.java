@@ -50,6 +50,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class LeakTest extends TestBase {
 
@@ -81,6 +82,8 @@ public class LeakTest extends TestBase {
     }
 
     @Test public void testGarbageCollectability() throws InterruptedException {
+        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8234540
+
         final BlockingQueue<WeakReference<WebPage>> webPageRefQueue =
                 new LinkedBlockingQueue<WeakReference<WebPage>>();
         submit(() -> {
