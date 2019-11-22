@@ -1550,7 +1550,7 @@ public class TouchEventTest {
     }
 
     @Test
-    @Ignore("This is a benchmark, not any functional test. Run it individually if you wish.")
+    @Ignore("JDK-8234084") // This is a benchmark, not any functional test.
     public void saneOrderingBenchmark() {
         long[] ids = new long[] { 2, 3, 4, 5, 6 };
         boolean[] active = new boolean[] { false, false, false, false, false };
@@ -1638,7 +1638,7 @@ public class TouchEventTest {
     }
 
     @Test
-    @Ignore("This is a benchmark, not any functional test. Run it individually if you wish.")
+    @Ignore("JDK-8234084") // This is a benchmark, not any functional test.
     public void crazyOrderingBenchmark() {
         long[] ids = new long[] { 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000 };
         boolean[] active = new boolean[] { false, false, false, false, false,
