@@ -236,16 +236,16 @@ public abstract class NodeHelper {
         return nodeAccessor.traverse(node, direction);
     }
 
-    public static double getPivotX(Node node) {
-        return nodeAccessor.getPivotX(node);
+    public static double getCenterPivotX(Node node) {
+        return nodeAccessor.getCenterPivotX(node);
     }
 
-    public static double getPivotY(Node node) {
-        return nodeAccessor.getPivotY(node);
+    public static double getCenterPivotY(Node node) {
+        return nodeAccessor.getCenterPivotY(node);
     }
 
-    public static double getPivotZ(Node node) {
-        return nodeAccessor.getPivotZ(node);
+    public static double getCenterPivotZ(Node node) {
+        return nodeAccessor.getCenterPivotZ(node);
     }
 
     public static void pickNode(Node node, PickRay pickRay,
@@ -346,9 +346,9 @@ public abstract class NodeHelper {
         boolean isShowMnemonics(Node node);
         BooleanProperty showMnemonicsProperty(Node node);
         boolean traverse(Node node, Direction direction);
-        double getPivotX(Node node);
-        double getPivotY(Node node);
-        double getPivotZ(Node node);
+        double getCenterPivotX(Node node);
+        double getCenterPivotY(Node node);
+        double getCenterPivotZ(Node node);
         void pickNode(Node node, PickRay pickRay, PickResultChooser result);
         boolean intersects(Node node, PickRay pickRay, PickResultChooser pickResult);
         double intersectsBounds(Node node, PickRay pickRay);

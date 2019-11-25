@@ -30,6 +30,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Point3D;
 import javafx.scene.Node;
 import javafx.util.Duration;
 
@@ -185,6 +186,26 @@ public final class ScaleTransition extends Transition {
             };
         }
         return duration;
+    }
+
+    private ObjectProperty<Point3D> pivot;
+    private static final Point3D DEFAULT_PIVOT = null;
+
+    public final void setPivot(Point3D value) {
+        if ((pivot != null) || (value != null /* DEFAULT_PIVOT */)) {
+            pivotProperty().set(value);
+        }
+    }
+
+    public final Point3D getPivot() {
+        return (pivot == null) ? DEFAULT_PIVOT : pivot.get();
+    }
+
+    public final ObjectProperty<Point3D> pivotProperty() {
+        if (pivot == null) {
+            pivot = new SimpleObjectProperty<>(this, "pivot", DEFAULT_PIVOT);
+        }
+        return pivot;
     }
 
     /**
@@ -549,6 +570,10 @@ public final class ScaleTransition extends Transition {
             } else {
                 startZ = (!Double.isNaN(_fromZ)) ? _fromZ : cachedNode.getScaleZ();
                 deltaZ = (!Double.isNaN(_toZ)) ? _toZ - startZ : getByZ();
+            }
+            Point3D pivot = getPivot();
+            if (pivot != null) {
+                node.get().setScalePivot(pivot);
             }
         }
     }

@@ -342,8 +342,8 @@ public final class PathTransition extends Transition {
                 }
             }
         }
-        cachedNode.setTranslateX(x - NodeHelper.getPivotX(cachedNode));
-        cachedNode.setTranslateY(y - NodeHelper.getPivotY(cachedNode));
+        cachedNode.setTranslateX(x - NodeHelper.getCenterPivotX(cachedNode));
+        cachedNode.setTranslateY(y - NodeHelper.getCenterPivotY(cachedNode));
         // Need to handle orientation if it is requested
         if (cachedIsNormalRequired) {
             cachedNode.setRotate(rotateAngle);

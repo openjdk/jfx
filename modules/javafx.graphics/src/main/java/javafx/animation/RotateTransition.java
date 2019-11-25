@@ -202,14 +202,34 @@ public final class RotateTransition extends Transition {
     }
 
     public final Point3D getAxis() {
-        return (axis == null)? DEFAULT_AXIS : axis.get();
+        return (axis == null) ? DEFAULT_AXIS : axis.get();
     }
 
     public final ObjectProperty<Point3D> axisProperty() {
         if (axis == null) {
-            axis = new SimpleObjectProperty<Point3D>(this, "axis", DEFAULT_AXIS);
+            axis = new SimpleObjectProperty<>(this, "axis", DEFAULT_AXIS);
         }
         return axis;
+    }
+
+    private ObjectProperty<Point3D> pivot;
+    private static final Point3D DEFAULT_PIVOT = null;
+
+    public final void setPivot(Point3D value) {
+        if ((pivot != null) || (value != DEFAULT_PIVOT)) {
+            pivotProperty().set(value);
+        }
+    }
+
+    public final Point3D getPivot() {
+        return (pivot == null) ? DEFAULT_PIVOT : pivot.get();
+    }
+
+    public final ObjectProperty<Point3D> pivotProperty() {
+        if (pivot == null) {
+            pivot = new SimpleObjectProperty<>(this, "pivot", DEFAULT_PIVOT);
+        }
+        return pivot;
     }
 
     /**
@@ -359,12 +379,15 @@ public final class RotateTransition extends Transition {
             cachedNode = getTargetNode();
             final double _fromAngle = getFromAngle();
             final double _toAngle = getToAngle();
-            start = (!Double.isNaN(_fromAngle)) ? _fromAngle : cachedNode
-                    .getRotate();
+            start = (!Double.isNaN(_fromAngle)) ? _fromAngle : cachedNode.getRotate();
             delta = (!Double.isNaN(_toAngle)) ? _toAngle - start : getByAngle();
             final Point3D _axis = getAxis();
             if (_axis != null) {
                 node.get().setRotationAxis(_axis);
+            }
+            Point3D pivot = getPivot();
+            if (pivot != null) {
+                node.get().setRotationPivot(pivot);
             }
         }
     }
