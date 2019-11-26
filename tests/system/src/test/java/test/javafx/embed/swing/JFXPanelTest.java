@@ -101,9 +101,12 @@ public class JFXPanelTest {
         SwingUtilities.invokeLater(() -> {
             TestFXPanel dummyFXPanel = new TestFXPanel();
             dummyFXPanel.setPreferredSize(new Dimension(100, 100));
+            TestFXPanel fxPnl = new TestFXPanel();
+            fxPnl.setPreferredSize(new Dimension(100, 100));
             JFrame jframe = new JFrame();
             JPanel jpanel = new JPanel();
             jpanel.add(dummyFXPanel);
+            jpanel.add(fxPnl);
             jframe.setContentPane(jpanel);
             jframe.pack();
             jframe.setVisible(true);
@@ -111,17 +114,19 @@ public class JFXPanelTest {
             Platform.runLater(() -> {
                 Scene dummyScene = new Scene(new Group());
                 dummyFXPanel.setScene(dummyScene);
+                Scene scene = new Scene(new Group());
+                fxPnl.setScene(scene);
 
-                dummyScene.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED, (event -> {
+                scene.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED, (event -> {
                     pressedEventCounter[0] += 1;
                     firstPressedEventLatch.countDown();
                 }));
 
                 SwingUtilities.invokeLater(() -> {
-                    MouseEvent e = new MouseEvent(dummyFXPanel, MouseEvent.MOUSE_PRESSED, 0, MouseEvent.BUTTON1_DOWN_MASK,
+                    MouseEvent e = new MouseEvent(fxPnl, MouseEvent.MOUSE_PRESSED, 0, MouseEvent.BUTTON1_DOWN_MASK,
                             5, 5, 1, false, MouseEvent.BUTTON1);
 
-                    dummyFXPanel.processMouseEventPublic(e);
+                    fxPnl.processMouseEventPublic(e);
                 });
             });
         });
