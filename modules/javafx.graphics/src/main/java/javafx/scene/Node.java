@@ -5724,7 +5724,7 @@ public abstract class Node implements EventTarget, Styleable {
     public final ObjectProperty<Point3D> scalePivotProperty() {
         return getNodeTransformation().scalePivotProperty();
     }
-    
+
     public final void setRotate(double value) {
         rotateProperty().set(value);
     }
@@ -5808,8 +5808,8 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public final ObjectProperty<Point3D> rotationPivotProperty() {
         return getNodeTransformation().rotationPivotProperty();
-    }    
-    
+    }
+
     /**
      * An affine transform that holds the computed local-to-parent transform.
      * This is the concatenation of all transforms in this node, including all
