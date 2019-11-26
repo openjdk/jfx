@@ -31,6 +31,8 @@ GLIB_AVAILABLE_IN_ALL
 gboolean              g_get_charset         (const char **charset);
 GLIB_AVAILABLE_IN_ALL
 gchar *               g_get_codeset         (void);
+GLIB_AVAILABLE_IN_2_62
+gboolean              g_get_console_charset (const char **charset);
 
 GLIB_AVAILABLE_IN_ALL
 const gchar * const * g_get_language_names  (void);

@@ -41,7 +41,7 @@
 
 static void
 set_error (const gchar *format,
-       ...)
+     ...)
 {
   gchar *error;
   gchar *detail;
@@ -65,8 +65,8 @@ set_error (const gchar *format,
 /* --- functions --- */
 static gpointer
 _g_module_open (const gchar *file_name,
-        gboolean     bind_lazy,
-        gboolean     bind_local)
+    gboolean     bind_lazy,
+    gboolean     bind_local)
 {
   HINSTANCE handle;
   wchar_t *wfilename;
@@ -84,7 +84,15 @@ _g_module_open (const gchar *file_name,
   success = SetThreadErrorMode (SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS, &old_mode);
   if (!success)
     set_error ("");
+
+  /* When building for UWP, load app asset DLLs instead of filesystem DLLs.
+   * Needs MSVC, Windows 8 and newer, and is only usable from apps. */
+#if _WIN32_WINNT >= 0x0602 && defined(G_WINAPI_ONLY_APP)
+  handle = LoadPackagedLibrary (wfilename, 0);
+#else
   handle = LoadLibraryW (wfilename);
+#endif
+
   if (success)
     SetThreadErrorMode (old_mode, NULL);
   g_free (wfilename);
@@ -106,7 +114,7 @@ _g_module_self (void)
 
 static void
 _g_module_close (gpointer handle,
-         gboolean is_unref)
+     gboolean is_unref)
 {
   if (handle != null_module_handle)
     if (!FreeLibrary (handle))
@@ -119,8 +127,11 @@ find_in_any_module_using_toolhelp (const gchar *symbol_name)
   HANDLE snapshot;
   MODULEENTRY32 me32;
 
-  gpointer p;
+  gpointer p = NULL;
 
+  /* Under UWP, Module32Next and Module32First are not available since we're
+   * not allowed to search in the address space of arbitrary loaded DLLs */
+#if !defined(G_WINAPI_ONLY_APP)
   if ((snapshot = CreateToolhelp32Snapshot (TH32CS_SNAPMODULE, 0)) == (HANDLE) -1)
     return NULL;
 
@@ -129,12 +140,13 @@ find_in_any_module_using_toolhelp (const gchar *symbol_name)
   if (Module32First (snapshot, &me32))
     {
       do {
-    if ((p = GetProcAddress (me32.hModule, symbol_name)) != NULL)
-      break;
+  if ((p = GetProcAddress (me32.hModule, symbol_name)) != NULL)
+    break;
       } while (Module32Next (snapshot, &me32));
     }
 
   CloseHandle (snapshot);
+#endif
 
   return p;
 }
@@ -152,14 +164,14 @@ find_in_any_module (const gchar *symbol_name)
 
 static gpointer
 _g_module_symbol (gpointer     handle,
-          const gchar *symbol_name)
+      const gchar *symbol_name)
 {
   gpointer p;
 
   if (handle == null_module_handle)
     {
       if ((p = GetProcAddress (GetModuleHandle (NULL), symbol_name)) == NULL)
-    p = find_in_any_module (symbol_name);
+  p = find_in_any_module (symbol_name);
     }
   else
     p = GetProcAddress (handle, symbol_name);
@@ -172,7 +184,7 @@ _g_module_symbol (gpointer     handle,
 
 static gchar*
 _g_module_build_path (const gchar *directory,
-              const gchar *module_name)
+          const gchar *module_name)
 {
   gint k;
 

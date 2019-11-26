@@ -83,8 +83,8 @@ unescape_character (const char *scanner)
  **/
 char *
 g_uri_unescape_segment (const char *escaped_string,
-            const char *escaped_string_end,
-            const char *illegal_characters)
+      const char *escaped_string_end,
+      const char *illegal_characters)
 {
   const char *in;
   char *out, *result;
@@ -104,29 +104,29 @@ g_uri_unescape_segment (const char *escaped_string,
       character = *in;
 
       if (*in == '%')
-    {
-      in++;
+  {
+    in++;
 
-      if (escaped_string_end - in < 2)
-        {
-          /* Invalid escaped char (to short) */
-          g_free (result);
-          return NULL;
-        }
+    if (escaped_string_end - in < 2)
+      {
+        /* Invalid escaped char (to short) */
+        g_free (result);
+        return NULL;
+      }
 
-      character = unescape_character (in);
+    character = unescape_character (in);
 
-      /* Check for an illegal character. We consider '\0' illegal here. */
-      if (character <= 0 ||
-          (illegal_characters != NULL &&
-           strchr (illegal_characters, (char)character) != NULL))
-        {
-          g_free (result);
-          return NULL;
-        }
+    /* Check for an illegal character. We consider '\0' illegal here. */
+    if (character <= 0 ||
+        (illegal_characters != NULL &&
+         strchr (illegal_characters, (char)character) != NULL))
+      {
+        g_free (result);
+        return NULL;
+      }
 
-      in++; /* The other char will be eaten in the loop header */
-    }
+    in++; /* The other char will be eaten in the loop header */
+  }
       *out++ = (char)character;
     }
 
@@ -156,7 +156,7 @@ g_uri_unescape_segment (const char *escaped_string,
  **/
 char *
 g_uri_unescape_string (const char *escaped_string,
-               const char *illegal_characters)
+           const char *illegal_characters)
 {
   return g_uri_unescape_segment (escaped_string, NULL, illegal_characters);
 }
@@ -202,13 +202,13 @@ g_uri_parse_scheme (const char  *uri)
       c = *p++;
 
       if (c == ':')
-    break;
+  break;
 
       if (!(g_ascii_isalnum(c) ||
-        c == '+' ||
-        c == '-' ||
-        c == '.'))
-    return NULL;
+      c == '+' ||
+      c == '-' ||
+      c == '.'))
+  return NULL;
     }
 
   return g_strndup (uri, p - uri - 1);
@@ -237,8 +237,8 @@ g_uri_parse_scheme (const char  *uri)
  **/
 char *
 g_uri_escape_string (const char *unescaped,
-             const char  *reserved_chars_allowed,
-             gboolean     allow_utf8)
+         const char  *reserved_chars_allowed,
+         gboolean     allow_utf8)
 {
   GString *s;
 

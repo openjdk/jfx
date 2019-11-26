@@ -87,6 +87,23 @@ typedef void (*GTestFixtureFunc) (gpointer      fixture,
                                                g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
                                                                     "assertion failed (" #m1 " == " #m2 ")"); \
                                         } G_STMT_END
+#define g_assert_cmpvariant(v1, v2) \
+  G_STMT_START \
+  { \
+    GVariant *__v1 = (v1), *__v2 = (v2); \
+    if (!g_variant_equal (__v1, __v2)) \
+      { \
+        gchar *__s1, *__s2, *__msg; \
+        __s1 = g_variant_print (__v1, TRUE); \
+        __s2 = g_variant_print (__v2, TRUE); \
+        __msg = g_strdup_printf ("assertion failed (" #v1 " == " #v2 "): %s does not equal %s", __s1, __s2); \
+        g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, __msg); \
+        g_free (__s1); \
+        g_free (__s2); \
+        g_free (__msg); \
+      } \
+  } \
+  G_STMT_END
 #define g_assert_no_error(err)          G_STMT_START { \
                                              if (err) \
                                                g_assertion_message_error (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
@@ -107,6 +124,19 @@ typedef void (*GTestFixtureFunc) (gpointer      fixture,
                                                g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
                                                                     "'" #expr "' should be FALSE"); \
                                         } G_STMT_END
+
+/* Use nullptr in C++ to catch misuse of these macros. */
+#if defined(__cplusplus) && __cplusplus >= 201100L
+#define g_assert_null(expr)             G_STMT_START { if G_LIKELY ((expr) == nullptr) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should be nullptr"); \
+                                        } G_STMT_END
+#define g_assert_nonnull(expr)          G_STMT_START { \
+                                             if G_LIKELY ((expr) != nullptr) ; else \
+                                               g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
+                                                                    "'" #expr "' should not be nullptr"); \
+                                        } G_STMT_END
+#else /* not C++ */
 #define g_assert_null(expr)             G_STMT_START { if G_LIKELY ((expr) == NULL) ; else \
                                                g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
                                                                     "'" #expr "' should be NULL"); \
@@ -116,8 +146,17 @@ typedef void (*GTestFixtureFunc) (gpointer      fixture,
                                                g_assertion_message (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, \
                                                                     "'" #expr "' should not be NULL"); \
                                         } G_STMT_END
+#endif
+
 #ifdef G_DISABLE_ASSERT
+/* https://gcc.gnu.org/onlinedocs/gcc-8.3.0/gcc/Other-Builtins.html#index-_005f_005fbuiltin_005funreachable
+ * GCC 5 is not a strict lower bound for versions of GCC which provide __builtin_unreachable(). */
+#if __GNUC__ >= 5 || g_macro__has_builtin(__builtin_unreachable)
+#define g_assert_not_reached()          G_STMT_START { (void) 0; __builtin_unreachable (); } G_STMT_END
+#else  /* if __builtin_unreachable() is not supported: */
 #define g_assert_not_reached()          G_STMT_START { (void) 0; } G_STMT_END
+#endif
+
 #define g_assert(expr)                  G_STMT_START { (void) 0; } G_STMT_END
 #else /* !G_DISABLE_ASSERT */
 #define g_assert_not_reached()          G_STMT_START { g_assertion_message_expr (G_LOG_DOMAIN, __FILE__, __LINE__, G_STRFUNC, NULL); } G_STMT_END
@@ -147,6 +186,36 @@ GLIB_AVAILABLE_IN_ALL
 void    g_test_init                     (int            *argc,
                                          char         ***argv,
                                          ...) G_GNUC_NULL_TERMINATED;
+
+/**
+ * G_TEST_OPTION_ISOLATE_DIRS:
+ *
+ * Creates a unique temporary directory for each unit test and uses
+ * g_set_user_dirs() to set XDG directories to point into subdirectories of it
+ * for the duration of the unit test. The directory tree is cleaned up after the
+ * test finishes successfully. Note that this doesn't take effect until
+ * g_test_run() is called, so calls to (for example) g_get_user_home_dir() will
+ * return the system-wide value when made in a test program's main() function.
+ *
+ * The following functions will return subdirectories of the temporary directory
+ * when this option is used. The specific subdirectory paths in use are not
+ * guaranteed to be stable API - always use a getter function to retrieve them.
+ *
+ *  - g_get_home_dir()
+ *  - g_get_user_cache_dir()
+ *  - g_get_system_config_dirs()
+ *  - g_get_user_config_dir()
+ *  - g_get_system_data_dirs()
+ *  - g_get_user_data_dir()
+ *  - g_get_user_runtime_dir()
+ *
+ * The subdirectories may not be created by the test harness; as with normal
+ * calls to functions like g_get_user_cache_dir(), the caller must be prepared
+ * to create the directory if it doesn't exist.
+ *
+ * Since: 2.60
+ */
+#define G_TEST_OPTION_ISOLATE_DIRS "isolate_dirs"
 
 /* While we discourage its use, g_assert() is often used in unit tests
  * (especially in legacy code). g_assert_*() should really be used instead.
@@ -213,9 +282,27 @@ gboolean g_test_failed                  (void);
 GLIB_AVAILABLE_IN_2_38
 void    g_test_set_nonfatal_assertions  (void);
 
-/* hook up a test with fixture under test path */
+/**
+ * g_test_add:
+ * @testpath:  The test path for a new test case.
+ * @Fixture:   The type of a fixture data structure.
+ * @tdata:     Data argument for the test functions.
+ * @fsetup:    The function to set up the fixture data.
+ * @ftest:     The actual test function.
+ * @fteardown: The function to tear down the fixture data.
+ *
+ * Hook up a new test case at @testpath, similar to g_test_add_func().
+ * A fixture data structure with setup and teardown functions may be provided,
+ * similar to g_test_create_case().
+ *
+ * g_test_add() is implemented as a macro, so that the fsetup(), ftest() and
+ * fteardown() callbacks can expect a @Fixture pointer as their first argument
+ * in a type safe manner. They otherwise have type #GTestFixtureFunc.
+ *
+ * Since: 2.16
+ */
 #define g_test_add(testpath, Fixture, tdata, fsetup, ftest, fteardown) \
-                    G_STMT_START {          \
+          G_STMT_START {      \
                                          void (*add_vtable) (const char*,       \
                                                     gsize,             \
                                                     gconstpointer,     \
@@ -224,7 +311,7 @@ void    g_test_set_nonfatal_assertions  (void);
                                                     void (*) (Fixture*, gconstpointer)) =  (void (*) (const gchar *, gsize, gconstpointer, void (*) (Fixture*, gconstpointer), void (*) (Fixture*, gconstpointer), void (*) (Fixture*, gconstpointer))) g_test_add_vtable; \
                                          add_vtable \
                                           (testpath, sizeof (Fixture), tdata, fsetup, ftest, fteardown); \
-                    } G_STMT_END
+          } G_STMT_END
 
 /* add test messages to the test report */
 GLIB_AVAILABLE_IN_ALL
@@ -234,6 +321,8 @@ GLIB_AVAILABLE_IN_ALL
 void    g_test_bug_base                 (const char *uri_pattern);
 GLIB_AVAILABLE_IN_ALL
 void    g_test_bug                      (const char *bug_uri_snippet);
+GLIB_AVAILABLE_IN_2_62
+void    g_test_summary                  (const char *summary);
 /* measure test timings */
 GLIB_AVAILABLE_IN_ALL
 void    g_test_timer_start              (void);
@@ -250,15 +339,40 @@ void    g_test_queue_destroy            (GDestroyNotify destroy_func,
                                          gpointer       destroy_data);
 #define g_test_queue_unref(gobject)     g_test_queue_destroy (g_object_unref, gobject)
 
+/**
+ * GTestTrapFlags:
+ * @G_TEST_TRAP_SILENCE_STDOUT: Redirect stdout of the test child to
+ *     `/dev/null` so it cannot be observed on the console during test
+ *     runs. The actual output is still captured though to allow later
+ *     tests with g_test_trap_assert_stdout().
+ * @G_TEST_TRAP_SILENCE_STDERR: Redirect stderr of the test child to
+ *     `/dev/null` so it cannot be observed on the console during test
+ *     runs. The actual output is still captured though to allow later
+ *     tests with g_test_trap_assert_stderr().
+ * @G_TEST_TRAP_INHERIT_STDIN: If this flag is given, stdin of the
+ *     child process is shared with stdin of its parent process.
+ *     It is redirected to `/dev/null` otherwise.
+ *
+ * Test traps are guards around forked tests.
+ * These flags determine what traps to set.
+ *
+ * Deprecated: 2.38: #GTestTrapFlags is used only with g_test_trap_fork(),
+ * which is deprecated. g_test_trap_subprocess() uses
+ * #GTestSubprocessFlags.
+ */
 typedef enum {
   G_TEST_TRAP_SILENCE_STDOUT    = 1 << 7,
   G_TEST_TRAP_SILENCE_STDERR    = 1 << 8,
   G_TEST_TRAP_INHERIT_STDIN     = 1 << 9
-} GTestTrapFlags;
+} GTestTrapFlags GLIB_DEPRECATED_TYPE_IN_2_38_FOR(GTestSubprocessFlags);
+
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
 GLIB_DEPRECATED_IN_2_38_FOR (g_test_trap_subprocess)
 gboolean g_test_trap_fork               (guint64              usec_timeout,
                                          GTestTrapFlags       test_trap_flags);
+
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 typedef enum {
   G_TEST_SUBPROCESS_INHERIT_STDIN  = 1 << 0,

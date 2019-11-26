@@ -655,7 +655,7 @@ gst_register_core_elements (GstPlugin * plugin)
 
 /*
  * this bit handles:
- * - initalization of threads if we use them
+ * - initialization of threads if we use them
  * - log handler
  * - initial output
  * - initializes gst_format
@@ -906,7 +906,7 @@ gst_debug_help (void)
         e = gst_element_factory_create (factory, NULL);
         if (e)
           gst_object_unref (e);
-  }
+      }
 
     next:
       features = g_list_next (features);
@@ -1020,7 +1020,7 @@ parse_one_option (gint opt, const gchar * arg, GError ** err)
     case ARG_PLUGIN_PATH:
 #ifndef GST_DISABLE_REGISTRY
       if (!_priv_gst_disable_registry)
-      split_and_iterate (arg, G_SEARCHPATH_SEPARATOR_S, add_path_func, NULL);
+        split_and_iterate (arg, G_SEARCHPATH_SEPARATOR_S, add_path_func, NULL);
 #endif /* GST_DISABLE_REGISTRY */
       break;
     case ARG_PLUGIN_LOAD:
@@ -1032,7 +1032,7 @@ parse_one_option (gint opt, const gchar * arg, GError ** err)
     case ARG_REGISTRY_UPDATE_DISABLE:
 #ifndef GST_DISABLE_REGISTRY
       if (!_priv_gst_disable_registry)
-      _priv_gst_disable_registry_update = TRUE;
+        _priv_gst_disable_registry_update = TRUE;
 #endif
       break;
     case ARG_REGISTRY_FORK_DISABLE:
@@ -1156,6 +1156,7 @@ gst_deinit (void)
 
   _priv_gst_caps_features_cleanup ();
   _priv_gst_caps_cleanup ();
+  _priv_gst_debug_cleanup ();
 
   g_type_class_unref (g_type_class_peek (gst_object_get_type ()));
   g_type_class_unref (g_type_class_peek (gst_pad_get_type ()));

@@ -310,7 +310,7 @@ g_unix_fd_source_dispatch (GSource     *source,
 }
 
 GSourceFuncs g_unix_fd_source_funcs = {
-  NULL, NULL, g_unix_fd_source_dispatch, NULL
+  NULL, NULL, g_unix_fd_source_dispatch, NULL, NULL, NULL
 };
 
 /**

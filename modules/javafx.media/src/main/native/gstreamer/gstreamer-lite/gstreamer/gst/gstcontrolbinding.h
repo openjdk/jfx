@@ -84,7 +84,7 @@ struct _GstControlBinding {
     struct {
       GstControlBindingPrivate *priv;
     } abi;
-  gpointer _gst_reserved[GST_PADDING];
+    gpointer _gst_reserved[GST_PADDING];
   } ABI;
 };
 

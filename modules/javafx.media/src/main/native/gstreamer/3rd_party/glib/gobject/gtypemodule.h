@@ -204,19 +204,19 @@ type_name##_register_type (GTypeModule *type_module) \
     sizeof (TypeName##Class), \
     (GBaseInitFunc) NULL, \
     (GBaseFinalizeFunc) NULL, \
-    (GClassInitFunc) type_name##_class_intern_init, \
-    (GClassFinalizeFunc) type_name##_class_finalize, \
+    (GClassInitFunc)(void (*)(void)) type_name##_class_intern_init, \
+    (GClassFinalizeFunc)(void (*)(void)) type_name##_class_finalize, \
     NULL,   /* class_data */ \
     sizeof (TypeName), \
     0,      /* n_preallocs */ \
-    (GInstanceInitFunc) type_name##_init, \
+    (GInstanceInitFunc)(void (*)(void)) type_name##_init, \
     NULL    /* value_table */ \
   }; \
   type_name##_type_id = g_type_module_register_type (type_module, \
-                             TYPE_PARENT, \
-                             #TypeName, \
-                             &g_define_type_info, \
-                             (GTypeFlags) flags); \
+                 TYPE_PARENT, \
+                 #TypeName, \
+                 &g_define_type_info, \
+                 (GTypeFlags) flags); \
   g_define_type_id = type_name##_type_id; \
   { CODE ; } \
 }
@@ -238,7 +238,7 @@ type_name##_register_type (GTypeModule *type_module) \
  */
 #define G_IMPLEMENT_INTERFACE_DYNAMIC(TYPE_IFACE, iface_init)       { \
   const GInterfaceInfo g_implement_interface_info = { \
-    (GInterfaceInitFunc) iface_init, NULL, NULL      \
+    (GInterfaceInitFunc)(void (*)(void)) iface_init, NULL, NULL      \
   }; \
   g_type_module_add_interface (type_module, g_define_type_id, TYPE_IFACE, &g_implement_interface_info); \
 }

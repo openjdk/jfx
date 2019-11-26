@@ -320,6 +320,10 @@
  * simultaneous read-only access (by holding the 'reader' lock via
  * g_rw_lock_reader_lock()).
  *
+ * It is unspecified whether readers or writers have priority in acquiring the
+ * lock when a reader already holds the lock and a writer is queued to acquire
+ * it.
+ *
  * Here is an example for an array with access functions:
  * |[<!-- language="C" -->
  *   GRWLock lock;
@@ -511,7 +515,32 @@ static GSList   *g_once_init_list = NULL;
 static void g_thread_cleanup (gpointer data);
 static GPrivate     g_thread_specific_private = G_PRIVATE_INIT (g_thread_cleanup);
 
-G_LOCK_DEFINE_STATIC (g_thread_new);
+/*
+ * g_private_set_alloc0:
+ * @key: a #GPrivate
+ * @size: size of the allocation, in bytes
+ *
+ * Sets the thread local variable @key to have a newly-allocated and zero-filled
+ * value of given @size, and returns a pointer to that memory. Allocations made
+ * using this API will be suppressed in valgrind: it is intended to be used for
+ * one-time allocations which are known to be leaked, such as those for
+ * per-thread initialisation data. Otherwise, this function behaves the same as
+ * g_private_set().
+ *
+ * Returns: (transfer full): new thread-local heap allocation of size @size
+ * Since: 2.60
+ */
+/*< private >*/
+gpointer
+g_private_set_alloc0 (GPrivate *key,
+                      gsize     size)
+{
+  gpointer allocated = g_malloc0 (size);
+
+  g_private_set (key, allocated);
+
+  return g_steal_pointer (&allocated);
+}
 
 /* GOnce {{{1 ------------------------------------------------------------- */
 
@@ -589,8 +618,8 @@ G_LOCK_DEFINE_STATIC (g_thread_new);
  */
 gpointer
 g_once_impl (GOnce       *once,
-         GThreadFunc  func,
-         gpointer     arg)
+       GThreadFunc  func,
+       gpointer     arg)
 {
   g_mutex_lock (&g_once_mutex);
 
@@ -691,10 +720,10 @@ void
 
   g_return_if_fail (g_atomic_pointer_get (value_location) == NULL);
   g_return_if_fail (result != 0);
-  g_return_if_fail (g_once_init_list != NULL);
 
   g_atomic_pointer_set (value_location, result);
   g_mutex_lock (&g_once_mutex);
+  g_return_if_fail (g_once_init_list != NULL);
   g_once_init_list = g_slist_remove (g_once_init_list, (void*) value_location);
   g_cond_broadcast (&g_once_cond);
   g_mutex_unlock (&g_once_mutex);
@@ -761,15 +790,7 @@ g_thread_proxy (gpointer data)
   GRealThread* thread = data;
 
   g_assert (data);
-
-  /* This has to happen before G_LOCK, as that might call g_thread_self */
   g_private_set (&g_thread_specific_private, data);
-
-  /* The lock makes sure that g_thread_new_internal() has a chance to
-   * setup 'func' and 'data' before we make the call.
-   */
-  G_LOCK (g_thread_new);
-  G_UNLOCK (g_thread_new);
 
   TRACE (GLIB_THREAD_SPAWNED (thread->thread.func, thread->thread.data,
                               thread->name));
@@ -866,24 +887,10 @@ g_thread_new_internal (const gchar   *name,
                        gsize          stack_size,
                        GError       **error)
 {
-  GRealThread *thread;
-
   g_return_val_if_fail (func != NULL, NULL);
 
-  G_LOCK (g_thread_new);
-  thread = g_system_thread_new (proxy, stack_size, error);
-  if (thread)
-    {
-      thread->ref_count = 2;
-      thread->ours = TRUE;
-      thread->thread.joinable = TRUE;
-      thread->thread.func = func;
-      thread->thread.data = data;
-      thread->name = g_strdup (name);
-    }
-  G_UNLOCK (g_thread_new);
-
-  return (GThread*) thread;
+  return (GThread*) g_system_thread_new (proxy, stack_size, name,
+                                         func, data, error);
 }
 
 /**

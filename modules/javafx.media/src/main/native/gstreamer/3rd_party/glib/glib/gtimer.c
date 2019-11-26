@@ -216,7 +216,7 @@ g_timer_continue (GTimer *timer)
  **/
 gdouble
 g_timer_elapsed (GTimer *timer,
-         gulong *microseconds)
+     gulong *microseconds)
 {
   gdouble total;
   gint64 elapsed;
@@ -234,6 +234,23 @@ g_timer_elapsed (GTimer *timer,
     *microseconds = elapsed % 1000000;
 
   return total;
+}
+
+/**
+ * g_timer_is_active:
+ * @timer: a #GTimer.
+ *
+ * Exposes whether the timer is currently active.
+ *
+ * Returns: %TRUE if the timer is running, %FALSE otherwise
+ * Since: 2.62
+ **/
+gboolean
+g_timer_is_active (GTimer *timer)
+{
+  g_return_val_if_fail (timer != NULL, FALSE);
+
+  return timer->active;
 }
 
 /**
@@ -269,7 +286,11 @@ g_usleep (gulong microseconds)
  *
  * Adds the given number of microseconds to @time_. @microseconds can
  * also be negative to decrease the value of @time_.
+ *
+ * Deprecated: 2.62: #GTimeVal is not year-2038-safe. Use `guint64` for
+ *    representing microseconds since the epoch, or use #GDateTime.
  **/
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void
 g_time_val_add (GTimeVal *time_, glong microseconds)
 {
@@ -297,6 +318,7 @@ g_time_val_add (GTimeVal *time_, glong microseconds)
        }
     }
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /* converts a broken down date representation, relative to UTC,
  * to a timestamp; it uses timegm() if it's available.
@@ -347,13 +369,24 @@ mktime_utc (struct tm *tm)
  *
  * Any leading or trailing space in @iso_date is ignored.
  *
+ * This function was deprecated, along with #GTimeVal itself, in GLib 2.62.
+ * Equivalent functionality is available using code like:
+ * |[
+ * GDateTime *dt = g_date_time_new_from_iso8601 (iso8601_string, NULL);
+ * gint64 time_val = g_date_time_to_unix (dt);
+ * g_date_time_unref (dt);
+ * ]|
+ *
  * Returns: %TRUE if the conversion was successful.
  *
  * Since: 2.12
+ * Deprecated: 2.62: #GTimeVal is not year-2038-safe. Use
+ *    g_date_time_new_from_iso8601() instead.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gboolean
 g_time_val_from_iso8601 (const gchar *iso_date,
-             GTimeVal    *time_)
+       GTimeVal    *time_)
 {
   struct tm tm = {0};
   long val;
@@ -462,7 +495,7 @@ g_time_val_from_iso8601 (const gchar *iso_date,
           mul /= 10;
         }
 
-      /* Skip any remaining digits after we’ve reached our limit of precision. */
+      /* Skip any remaining digits after we've reached our limit of precision. */
       while (g_ascii_isdigit (*iso_date))
         iso_date++;
     }
@@ -511,6 +544,7 @@ g_time_val_from_iso8601 (const gchar *iso_date,
 
   return *iso_date == '\0';
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_time_val_to_iso8601:
@@ -540,7 +574,13 @@ g_time_val_from_iso8601 (const gchar *iso_date,
  * If @time_ represents a date which is too large to fit into a `struct tm`,
  * %NULL will be returned. This is platform dependent. Note also that since
  * `GTimeVal` stores the number of seconds as a `glong`, on 32-bit systems it
- * is subject to the year 2038 problem.
+ * is subject to the year 2038 problem. Accordingly, since GLib 2.62, this
+ * function has been deprecated. Equivalent functionality is available using:
+ * |[
+ * GDateTime *dt = g_date_time_new_from_unix_utc (time_val);
+ * iso8601_string = g_date_time_format_iso8601 (dt);
+ * g_date_time_unref (dt);
+ * ]|
  *
  * The return value of g_time_val_to_iso8601() has been nullable since GLib
  * 2.54; before then, GLib would crash under the same conditions.
@@ -549,7 +589,10 @@ g_time_val_from_iso8601 (const gchar *iso_date,
  *    or %NULL if @time_ was too large
  *
  * Since: 2.12
+ * Deprecated: 2.62: #GTimeVal is not year-2038-safe. Use
+ *    g_date_time_format_iso8601(dt) instead.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gchar *
 g_time_val_to_iso8601 (GTimeVal *time_)
 {
@@ -607,3 +650,4 @@ g_time_val_to_iso8601 (GTimeVal *time_)
 
   return retval;
 }
+G_GNUC_END_IGNORE_DEPRECATIONS

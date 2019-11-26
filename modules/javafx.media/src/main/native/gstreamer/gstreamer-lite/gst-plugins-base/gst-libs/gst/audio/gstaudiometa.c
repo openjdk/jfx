@@ -19,13 +19,16 @@
 
 /**
  * SECTION:gstaudiometa
- * @title: GstAudioDownmixMeta
+ * @title: GstAudio meta
  * @short_description: Buffer metadata for audio downmix matrix handling
  *
  * #GstAudioDownmixMeta defines an audio downmix matrix to be send along with
  * audio buffers. These functions in this module help to create and attach the
  * meta as well as extracting it.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <string.h>
 
@@ -66,8 +69,8 @@ gst_audio_downmix_meta_transform (GstBuffer * dest, GstMeta * meta,
 
   if (GST_META_TRANSFORM_IS_COPY (type)) {
     dmeta = gst_buffer_add_audio_downmix_meta (dest, smeta->from_position,
-      smeta->from_channels, smeta->to_position, smeta->to_channels,
-      (const gfloat **) smeta->matrix);
+        smeta->from_channels, smeta->to_position, smeta->to_channels,
+        (const gfloat **) smeta->matrix);
     if (!dmeta)
       return FALSE;
   } else {
@@ -303,4 +306,189 @@ gst_audio_clipping_meta_get_info (void)
         (GstMetaInfo *) meta);
   }
   return audio_clipping_meta_info;
+}
+
+
+static gboolean
+gst_audio_meta_init (GstMeta * meta, gpointer params, GstBuffer * buffer)
+{
+  GstAudioMeta *ameta = (GstAudioMeta *) meta;
+
+  gst_audio_info_init (&ameta->info);
+  ameta->samples = 0;
+  ameta->offsets = NULL;
+
+  return TRUE;
+}
+
+static void
+gst_audio_meta_free (GstMeta * meta, GstBuffer * buffer)
+{
+  GstAudioMeta *ameta = (GstAudioMeta *) meta;
+
+  if (ameta->offsets && ameta->offsets != ameta->priv_offsets_arr)
+    g_slice_free1 (ameta->info.channels * sizeof (gsize), ameta->offsets);
+}
+
+static gboolean
+gst_audio_meta_transform (GstBuffer * dest, GstMeta * meta,
+    GstBuffer * buffer, GQuark type, gpointer data)
+{
+  GstAudioMeta *smeta, *dmeta;
+
+  smeta = (GstAudioMeta *) meta;
+
+  if (GST_META_TRANSFORM_IS_COPY (type)) {
+    dmeta = gst_buffer_add_audio_meta (dest, &smeta->info, smeta->samples,
+        smeta->offsets);
+    if (!dmeta)
+      return FALSE;
+  } else {
+    /* return FALSE, if transform type is not supported */
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * gst_buffer_add_audio_meta:
+ * @buffer: a #GstBuffer
+ * @info: the audio properties of the buffer
+ * @samples: the number of valid samples in the buffer
+ * @offsets: (nullable): the offsets (in bytes) where each channel plane starts
+ *   in the buffer or %NULL to calculate it (see below); must be %NULL also
+ *   when @info->layout is %GST_AUDIO_LAYOUT_INTERLEAVED
+ *
+ * Allocates and attaches a #GstAudioMeta on @buffer, which must be writable
+ * for that purpose. The fields of the #GstAudioMeta are directly populated
+ * from the arguments of this function.
+ *
+ * When @info->layout is %GST_AUDIO_LAYOUT_NON_INTERLEAVED and @offsets is
+ * %NULL, the offsets are calculated with a formula that assumes the planes are
+ * tightly packed and in sequence:
+ * offsets[channel] = channel * @samples * sample_stride
+ *
+ * It is not allowed for channels to overlap in memory,
+ * i.e. for each i in [0, channels), the range
+ * [@offsets[i], @offsets[i] + @samples * sample_stride) must not overlap
+ * with any other such range. This function will assert if the parameters
+ * specified cause this restriction to be violated.
+ *
+ * It is, obviously, also not allowed to specify parameters that would cause
+ * out-of-bounds memory access on @buffer. This is also checked, which means
+ * that you must add enough memory on the @buffer before adding this meta.
+ *
+ * Returns: (transfer none): the #GstAudioMeta that was attached on the @buffer
+ *
+ * Since: 1.16
+ */
+GstAudioMeta *
+gst_buffer_add_audio_meta (GstBuffer * buffer, const GstAudioInfo * info,
+    gsize samples, gsize offsets[])
+{
+  GstAudioMeta *meta;
+  gint i;
+  gsize plane_size;
+
+  g_return_val_if_fail (GST_IS_BUFFER (buffer), FALSE);
+  g_return_val_if_fail (info != NULL, NULL);
+  g_return_val_if_fail (GST_AUDIO_INFO_IS_VALID (info), NULL);
+  g_return_val_if_fail (GST_AUDIO_INFO_FORMAT (info) !=
+      GST_AUDIO_FORMAT_UNKNOWN, NULL);
+  g_return_val_if_fail (info->layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED
+      || !offsets, NULL);
+
+  meta =
+      (GstAudioMeta *) gst_buffer_add_meta (buffer, GST_AUDIO_META_INFO, NULL);
+
+  meta->info = *info;
+  meta->samples = samples;
+  plane_size = samples * info->finfo->width / 8;
+
+  if (info->layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED) {
+#ifndef G_DISABLE_CHECKS
+    gsize max_offset = 0;
+    gint j;
+#endif
+
+    if (G_UNLIKELY (info->channels > 8))
+      meta->offsets = g_slice_alloc (info->channels * sizeof (gsize));
+    else
+      meta->offsets = meta->priv_offsets_arr;
+
+    if (offsets) {
+      for (i = 0; i < info->channels; i++) {
+        meta->offsets[i] = offsets[i];
+#ifndef G_DISABLE_CHECKS
+        max_offset = MAX (max_offset, offsets[i]);
+        for (j = 0; j < info->channels; j++) {
+          if (i != j && !(offsets[j] + plane_size <= offsets[i]
+                  || offsets[i] + plane_size <= offsets[j])) {
+            g_critical ("GstAudioMeta properties would cause channel memory "
+                "areas to overlap! offsets: %" G_GSIZE_FORMAT " (%d), %"
+                G_GSIZE_FORMAT " (%d) with plane size %" G_GSIZE_FORMAT,
+                offsets[i], i, offsets[j], j, plane_size);
+            gst_buffer_remove_meta (buffer, (GstMeta *) meta);
+            return NULL;
+          }
+        }
+#endif
+      }
+    } else {
+      /* default offsets assume channels are laid out sequentially in memory */
+      for (i = 0; i < info->channels; i++)
+        meta->offsets[i] = i * plane_size;
+#ifndef G_DISABLE_CHECKS
+      max_offset = meta->offsets[info->channels - 1];
+#endif
+    }
+
+#ifndef G_DISABLE_CHECKS
+    if (max_offset + plane_size > gst_buffer_get_size (buffer)) {
+      g_critical ("GstAudioMeta properties would cause "
+          "out-of-bounds memory access on the buffer: max_offset %"
+          G_GSIZE_FORMAT ", samples %" G_GSIZE_FORMAT ", bps %u, buffer size %"
+          G_GSIZE_FORMAT, max_offset, samples, info->finfo->width / 8,
+          gst_buffer_get_size (buffer));
+      gst_buffer_remove_meta (buffer, (GstMeta *) meta);
+      return NULL;
+    }
+#endif
+  }
+
+  return meta;
+}
+
+GType
+gst_audio_meta_api_get_type (void)
+{
+  static volatile GType type;
+  static const gchar *tags[] = {
+    GST_META_TAG_AUDIO_STR, GST_META_TAG_AUDIO_CHANNELS_STR,
+    GST_META_TAG_AUDIO_RATE_STR, NULL
+  };
+
+  if (g_once_init_enter (&type)) {
+    GType _type = gst_meta_api_type_register ("GstAudioMetaAPI", tags);
+    g_once_init_leave (&type, _type);
+  }
+  return type;
+}
+
+const GstMetaInfo *
+gst_audio_meta_get_info (void)
+{
+  static const GstMetaInfo *audio_meta_info = NULL;
+
+  if (g_once_init_enter ((GstMetaInfo **) & audio_meta_info)) {
+    const GstMetaInfo *meta = gst_meta_register (GST_AUDIO_META_API_TYPE,
+        "GstAudioMeta", sizeof (GstAudioMeta),
+        gst_audio_meta_init,
+        gst_audio_meta_free,
+        gst_audio_meta_transform);
+    g_once_init_leave ((GstMetaInfo **) & audio_meta_info,
+        (GstMetaInfo *) meta);
+  }
+  return audio_meta_info;
 }

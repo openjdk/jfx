@@ -63,13 +63,6 @@ typedef struct
 
 #define GST_VIDEO_COLORIMETRY_NONAME  NULL
 
-#define DEFAULT_YUV_SD  0
-#define DEFAULT_YUV_HD  1
-#define DEFAULT_RGB     3
-#define DEFAULT_YUV_UHD 4
-#define DEFAULT_GRAY    5
-#define DEFAULT_UNKNOWN 6
-
 static const ColorimetryInfo colorimetry[] = {
   MAKE_COLORIMETRY (BT601, _16_235, BT601, BT709, SMPTE170M),
   MAKE_COLORIMETRY (BT709, _16_235, BT709, BT709, BT709),
@@ -77,8 +70,10 @@ static const ColorimetryInfo colorimetry[] = {
   MAKE_COLORIMETRY (SRGB, _0_255, RGB, SRGB, BT709),
   MAKE_COLORIMETRY (BT2020, _16_235, BT2020, BT2020_12, BT2020),
   MAKE_COLORIMETRY (NONAME, _0_255, BT601, UNKNOWN, UNKNOWN),
-  MAKE_COLORIMETRY (NONAME, _UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),
+  MAKE_COLORIMETRY (NONAME, _UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN),       /* Keep last! */
 };
+
+#define DEFAULT_UNKNOWN (G_N_ELEMENTS(colorimetry)-1)
 
 static const ColorimetryInfo *
 gst_video_get_colorimetry (const gchar * s)
@@ -118,7 +113,10 @@ gst_video_colorimetry_from_string (GstVideoColorimetry * cinfo,
   const ColorimetryInfo *ci;
   gboolean res = FALSE;
 
-  if ((ci = gst_video_get_colorimetry (color))) {
+  if (!color) {
+    *cinfo = colorimetry[DEFAULT_UNKNOWN].color;
+    res = TRUE;
+  } else if ((ci = gst_video_get_colorimetry (color))) {
     *cinfo = ci->color;
     res = TRUE;
   } else {
@@ -269,6 +267,8 @@ gst_video_colorimetry_is_equal (const GstVideoColorimetry * cinfo,
 
 #define WP_C    0.31006, 0.31616
 #define WP_D65  0.31271, 0.32902
+#define WP_CENTRE (1/3), (1/3)
+#define WP_WHITE 0.314, 0.351
 
 static const GstVideoColorPrimariesInfo color_primaries[] = {
   {GST_VIDEO_COLOR_PRIMARIES_UNKNOWN, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
@@ -285,7 +285,15 @@ static const GstVideoColorPrimariesInfo color_primaries[] = {
   {GST_VIDEO_COLOR_PRIMARIES_BT2020, WP_D65, 0.708, 0.292, 0.170, 0.797, 0.131,
       0.046},
   {GST_VIDEO_COLOR_PRIMARIES_ADOBERGB, WP_D65, 0.64, 0.33, 0.21, 0.71, 0.15,
-      0.06}
+      0.06},
+  {GST_VIDEO_COLOR_PRIMARIES_SMPTEST428, WP_CENTRE, 1.0, 0.0, 0.0, 1.0, 0.0,
+      0.0},
+  {GST_VIDEO_COLOR_PRIMARIES_SMPTERP431, WP_WHITE, 0.68, 0.32, 0.265, 0.69,
+      0.15, 0.06},
+  {GST_VIDEO_COLOR_PRIMARIES_SMPTEEG432, WP_D65, 0.68, 0.32, 0.265, 0.69, 0.15,
+      0.06},
+  {GST_VIDEO_COLOR_PRIMARIES_EBU3213, WP_D65, 0.63, 0.34, 0.295, 0.605, 0.155,
+      0.077},
 };
 
 /**

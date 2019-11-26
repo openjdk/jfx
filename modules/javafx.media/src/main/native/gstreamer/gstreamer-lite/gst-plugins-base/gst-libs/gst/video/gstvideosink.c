@@ -37,8 +37,6 @@
 
 #include "gstvideosink.h"
 
-G_DEFINE_TYPE (GstVideoSink, gst_video_sink, GST_TYPE_BASE_SINK);
-
 enum
 {
   PROP_SHOW_PREROLL_FRAME = 1
@@ -50,6 +48,8 @@ struct _GstVideoSinkPrivate
 {
   gboolean show_preroll_frame;  /* ATOMIC */
 };
+
+G_DEFINE_TYPE_WITH_PRIVATE (GstVideoSink, gst_video_sink, GST_TYPE_BASE_SINK);
 
 #ifndef GST_DISABLE_GST_DEBUG
 #define GST_CAT_DEFAULT gst_video_sink_ensure_debug_category()
@@ -142,11 +142,12 @@ gst_video_sink_init (GstVideoSink * videosink)
   videosink->height = 0;
 
   /* 20ms is more than enough, 80-130ms is noticable */
-  gst_base_sink_set_max_lateness (GST_BASE_SINK (videosink), 20 * GST_MSECOND);
+  gst_base_sink_set_processing_deadline (GST_BASE_SINK (videosink),
+      15 * GST_MSECOND);
+  gst_base_sink_set_max_lateness (GST_BASE_SINK (videosink), 5 * GST_MSECOND);
   gst_base_sink_set_qos_enabled (GST_BASE_SINK (videosink), TRUE);
 
-  videosink->priv = G_TYPE_INSTANCE_GET_PRIVATE (videosink,
-      GST_TYPE_VIDEO_SINK, GstVideoSinkPrivate);
+  videosink->priv = gst_video_sink_get_instance_private (videosink);
 }
 
 static void
@@ -175,8 +176,6 @@ gst_video_sink_class_init (GstVideoSinkClass * klass)
   basesink_class->render = GST_DEBUG_FUNCPTR (gst_video_sink_show_frame);
   basesink_class->preroll =
       GST_DEBUG_FUNCPTR (gst_video_sink_show_preroll_frame);
-
-  g_type_class_add_private (klass, sizeof (GstVideoSinkPrivate));
 }
 
 static GstFlowReturn

@@ -29,8 +29,10 @@
 #define GST_FFT_API
 #endif
 #else // GSTREAMER_LITE
-#ifndef GST_FFT_API
-#define GST_FFT_API GST_EXPORT
+#ifdef BUILDING_GST_FFT
+#define GST_FFT_API GST_API_EXPORT         /* from config.h */
+#else
+#define GST_FFT_API GST_API_IMPORT
 #endif
 #endif // GSTREAMER_LITE
 

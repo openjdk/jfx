@@ -146,8 +146,8 @@ struct _GstBufferPool {
  *        is not set on the buffer. If #GST_BUFFER_FLAG_TAG_MEMORY is set, the
  *        buffer will be freed with @free_buffer.
  * @free_buffer: free a buffer. The default implementation unrefs the buffer.
- * @flush_start: enter the flushing state. (Since 1.4)
- * @flush_stop: leave the flushign state. (Since 1.4)
+ * @flush_start: enter the flushing state. (Since: 1.4)
+ * @flush_stop: leave the flushign state. (Since: 1.4)
  *
  * The GstBufferPool class.
  */

@@ -96,8 +96,8 @@ struct _GstWavParse {
   guint max_buf_size;
 
   /* position in data part */
-  guint64   offset;
-  guint64   end_offset;
+  guint64 offset;
+  guint64 end_offset;
   guint64   dataleft;
   /* offset/length of data part */
   guint64   datastart;

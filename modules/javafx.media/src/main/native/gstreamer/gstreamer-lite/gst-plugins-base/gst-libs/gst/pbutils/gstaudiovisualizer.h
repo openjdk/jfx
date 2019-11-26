@@ -84,14 +84,16 @@ struct _GstAudioVisualizer
   /* audio state */
   GstAudioInfo ainfo;
 
-  /* <private> */
+  /*< private >*/
   GstAudioVisualizerPrivate *priv;
 };
 
 struct _GstAudioVisualizerClass
 {
+  /*< private >*/
   GstElementClass parent_class;
 
+  /*< public >*/
   /* virtual function, called whenever the format changes */
   gboolean (*setup) (GstAudioVisualizer * scope);
 

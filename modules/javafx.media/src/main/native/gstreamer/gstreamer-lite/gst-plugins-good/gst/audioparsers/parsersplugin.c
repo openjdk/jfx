@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU Library General Public
  * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
  */
 
 #ifdef HAVE_CONFIG_H
@@ -22,12 +22,62 @@
 #endif
 
 #ifdef GSTREAMER_LITE
-#include "gstmpegaudioparse.h"
+// Original file name is plugin.c. It was renamed to avoid object file conflict
+// with audioconvert plugin.c during compilation.
+#endif // GSTREAMER_LITE
 
+#ifndef GSTREAMER_LITE
+#include "gstaacparse.h"
+#include "gstamrparse.h"
+#include "gstac3parse.h"
+#include "gstdcaparse.h"
+#include "gstflacparse.h"
+#endif // GSTREAMER_LITE
+#include "gstmpegaudioparse.h"
+#ifndef GSTREAMER_LITE
+#include "gstsbcparse.h"
+#include "gstwavpackparse.h"
+#endif // GSTREAMER_LITE
+
+#ifdef GSTREAMER_LITE
 gboolean
 plugin_init_audioparsers (GstPlugin * plugin)
+#else // GSTREAMER_LITE
+static gboolean
+plugin_init (GstPlugin * plugin)
+#endif // GSTREAMER_LITE
 {
+#ifndef GSTREAMER_LITE
+  gboolean ret;
+
+  ret = gst_element_register (plugin, "aacparse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_AAC_PARSE);
+  ret &= gst_element_register (plugin, "amrparse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_AMR_PARSE);
+  ret &= gst_element_register (plugin, "ac3parse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_AC3_PARSE);
+  ret &= gst_element_register (plugin, "dcaparse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_DCA_PARSE);
+  ret &= gst_element_register (plugin, "flacparse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_FLAC_PARSE);
+  ret &= gst_element_register (plugin, "mpegaudioparse",
+      GST_RANK_PRIMARY + 2, GST_TYPE_MPEG_AUDIO_PARSE);
+  ret &= gst_element_register (plugin, "sbcparse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_SBC_PARSE);
+  ret &= gst_element_register (plugin, "wavpackparse",
+      GST_RANK_PRIMARY + 1, GST_TYPE_WAVPACK_PARSE);
+
+  return ret;
+#else // GSTREAMER_LITE
   return gst_element_register (plugin, "mpegaudioparse",
       GST_RANK_PRIMARY + 2, GST_TYPE_MPEG_AUDIO_PARSE);
+#endif // GSTREAMER_LITE
 }
+
+#ifndef GSTREAMER_LITE
+GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
+    GST_VERSION_MINOR,
+    audioparsers,
+    "Parsers for various audio formats",
+    plugin_init, VERSION, "LGPL", GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
 #endif // GSTREAMER_LITE

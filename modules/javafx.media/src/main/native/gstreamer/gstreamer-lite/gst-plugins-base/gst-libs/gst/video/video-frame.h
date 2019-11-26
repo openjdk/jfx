@@ -39,6 +39,12 @@ typedef struct _GstVideoFrame GstVideoFrame;
  *     more non-mono views
  * @GST_VIDEO_FRAME_FLAG_FIRST_IN_BUNDLE: The video frame is the first
  *     in a set of corresponding views provided as sequential frames.
+ * @GST_VIDEO_FRAME_FLAG_TOP_FIELD: The video frame has the top field only. This
+ *     is the same as GST_VIDEO_FRAME_FLAG_TFF | GST_VIDEO_FRAME_FLAG_ONEFIELD
+ *     (Since: 1.16).
+ * @GST_VIDEO_FRAME_FLAG_BOTTOM_FIELD: The video frame has the bottom field
+ *     only. This is the same as GST_VIDEO_FRAME_FLAG_ONEFIELD
+ *     (GST_VIDEO_FRAME_FLAG_TFF flag unset) (Since: 1.16).
  *
  * Extra video frame flags
  */
@@ -49,7 +55,10 @@ typedef enum {
   GST_VIDEO_FRAME_FLAG_RFF          = (1 << 2),
   GST_VIDEO_FRAME_FLAG_ONEFIELD     = (1 << 3),
   GST_VIDEO_FRAME_FLAG_MULTIPLE_VIEW = (1 << 4),
-  GST_VIDEO_FRAME_FLAG_FIRST_IN_BUNDLE = (1 << 5)
+  GST_VIDEO_FRAME_FLAG_FIRST_IN_BUNDLE = (1 << 5),
+  GST_VIDEO_FRAME_FLAG_TOP_FIELD    = GST_VIDEO_FRAME_FLAG_TFF |
+                                      GST_VIDEO_FRAME_FLAG_ONEFIELD,
+  GST_VIDEO_FRAME_FLAG_BOTTOM_FIELD = GST_VIDEO_FRAME_FLAG_ONEFIELD,
 } GstVideoFrameFlags;
 
 /* circular dependency, need to include this after defining the enums */
@@ -109,12 +118,14 @@ gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFr
 #define GST_VIDEO_FRAME_SIZE(f)           (GST_VIDEO_INFO_SIZE(&(f)->info))
 
 /* flags */
-#define GST_VIDEO_FRAME_FLAGS(f)          ((f)->flags)
-#define GST_VIDEO_FRAME_FLAG_IS_SET(f,fl) ((GST_VIDEO_FRAME_FLAGS(f) & (fl)) == (fl))
-#define GST_VIDEO_FRAME_IS_INTERLACED(f)  (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_INTERLACED))
-#define GST_VIDEO_FRAME_IS_TFF(f)         (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_TFF))
-#define GST_VIDEO_FRAME_IS_RFF(f)         (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_RFF))
-#define GST_VIDEO_FRAME_IS_ONEFIELD(f)    (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_ONEFIELD))
+#define GST_VIDEO_FRAME_FLAGS(f)           ((f)->flags)
+#define GST_VIDEO_FRAME_FLAG_IS_SET(f,fl)  ((GST_VIDEO_FRAME_FLAGS(f) & (fl)) == (fl))
+#define GST_VIDEO_FRAME_IS_INTERLACED(f)   (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_INTERLACED))
+#define GST_VIDEO_FRAME_IS_TFF(f)          (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_TFF))
+#define GST_VIDEO_FRAME_IS_RFF(f)          (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_RFF))
+#define GST_VIDEO_FRAME_IS_ONEFIELD(f)     (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_ONEFIELD))
+#define GST_VIDEO_FRAME_IS_TOP_FIELD(f)    (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_TOP_FIELD))
+#define GST_VIDEO_FRAME_IS_BOTTOM_FIELD(f) (GST_VIDEO_FRAME_FLAG_IS_SET(f, GST_VIDEO_FRAME_FLAG_BOTTOM_FIELD))
 
 /* dealing with planes */
 #define GST_VIDEO_FRAME_N_PLANES(f)       (GST_VIDEO_INFO_N_PLANES(&(f)->info))
@@ -145,11 +156,11 @@ gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFr
  *                                     in the video frame is the top field.  If unset, the
  *                                     bottom field is first.
  * @GST_VIDEO_BUFFER_FLAG_RFF:         If the #GstBuffer is interlaced, then the first field
- *                                     (as defined by the %GST_VIDEO_BUFFER_TFF flag setting)
+ *                                     (as defined by the %GST_VIDEO_BUFFER_FLAG_TFF flag setting)
  *                                     is repeated.
  * @GST_VIDEO_BUFFER_FLAG_ONEFIELD:    If the #GstBuffer is interlaced, then only the
- *                                     first field (as defined by the %GST_VIDEO_BUFFER_TFF
- *                                     flag setting) is to be displayed.
+ *                                     first field (as defined by the %GST_VIDEO_BUFFER_FLAG_TFF
+ *                                     flag setting) is to be displayed (Since: 1.16).
  * @GST_VIDEO_BUFFER_FLAG_MULTIPLE_VIEW: The #GstBuffer contains one or more specific views,
  *                                     such as left or right eye view. This flags is set on
  *                                     any buffer that contains non-mono content - even for
@@ -159,6 +170,12 @@ gboolean    gst_video_frame_copy_plane    (GstVideoFrame *dest, const GstVideoFr
  * @GST_VIDEO_BUFFER_FLAG_FIRST_IN_BUNDLE: When conveying stereo/multiview content with
  *                                     frame-by-frame methods, this flag marks the first buffer
  *                                      in a bundle of frames that belong together.
+ * @GST_VIDEO_BUFFER_FLAG_TOP_FIELD:   The video frame has the top field only. This is the
+ *                                     same as GST_VIDEO_BUFFER_FLAG_TFF |
+ *                                     GST_VIDEO_BUFFER_FLAG_ONEFIELD (Since: 1.16).
+ * @GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD: The video frame has the bottom field only. This is
+ *                                     the same as GST_VIDEO_BUFFER_FLAG_ONEFIELD
+ *                                     (GST_VIDEO_BUFFER_FLAG_TFF flag unset) (Since: 1.16).
  * @GST_VIDEO_BUFFER_FLAG_LAST:        Offset to define more flags
  *
  * Additional video buffer flags. These flags can potentially be used on any
@@ -175,6 +192,10 @@ typedef enum {
 
   GST_VIDEO_BUFFER_FLAG_MULTIPLE_VIEW = (GST_BUFFER_FLAG_LAST << 4),
   GST_VIDEO_BUFFER_FLAG_FIRST_IN_BUNDLE = (GST_BUFFER_FLAG_LAST << 5),
+
+  GST_VIDEO_BUFFER_FLAG_TOP_FIELD   = GST_VIDEO_BUFFER_FLAG_TFF |
+                                      GST_VIDEO_BUFFER_FLAG_ONEFIELD,
+  GST_VIDEO_BUFFER_FLAG_BOTTOM_FIELD = GST_VIDEO_BUFFER_FLAG_ONEFIELD,
 
   GST_VIDEO_BUFFER_FLAG_LAST        = (GST_BUFFER_FLAG_LAST << 8)
 } GstVideoBufferFlags;

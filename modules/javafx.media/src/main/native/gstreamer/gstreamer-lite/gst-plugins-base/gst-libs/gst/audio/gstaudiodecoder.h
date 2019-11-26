@@ -237,12 +237,12 @@ struct _GstAudioDecoder
  *                  Query handler on the sink pad. This function should
  *                  return TRUE if the query could be performed. Subclasses
  *                  should chain up to the parent implementation to invoke the
- *                  default handler. Since 1.6
+ *                  default handler. Since: 1.6
  * @src_query:      Optional.
  *                  Query handler on the source pad. This function should
  *                  return TRUE if the query could be performed. Subclasses
  *                  should chain up to the parent implementation to invoke the
- *                  default handler. Since 1.6
+ *                  default handler. Since: 1.6
  * @getcaps:        Optional.
  *                  Allows for a custom sink getcaps implementation.
  *                  If not implemented,
@@ -252,7 +252,7 @@ struct _GstAudioDecoder
  *                  output buffer. By default this method copies all meta without
  *                  tags and meta with only the "audio" tag. subclasses can
  *                  implement this method and return %TRUE if the metadata is to be
- *                  copied. Since 1.6
+ *                  copied. Since: 1.6
  *
  * Subclasses can override any of the available virtual methods or not, as
  * needed. At minimum @handle_frame (and likely @set_format) needs to be
@@ -322,12 +322,19 @@ gboolean          gst_audio_decoder_set_output_format  (GstAudioDecoder    * dec
                                                         const GstAudioInfo * info);
 
 GST_AUDIO_API
+gboolean          gst_audio_decoder_set_output_caps  (GstAudioDecoder * dec,
+                                                      GstCaps         * caps);
+GST_AUDIO_API
 GstCaps *         gst_audio_decoder_proxy_getcaps (GstAudioDecoder * decoder,
                                                    GstCaps         * caps,
                                                    GstCaps         * filter);
 
 GST_AUDIO_API
 gboolean          gst_audio_decoder_negotiate (GstAudioDecoder * dec);
+
+GST_AUDIO_API
+GstFlowReturn     gst_audio_decoder_finish_subframe (GstAudioDecoder * dec,
+                                                     GstBuffer       * buf);
 
 GST_AUDIO_API
 GstFlowReturn     gst_audio_decoder_finish_frame (GstAudioDecoder * dec,

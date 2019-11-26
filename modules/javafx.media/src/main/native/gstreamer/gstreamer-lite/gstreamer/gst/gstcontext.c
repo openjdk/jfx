@@ -108,6 +108,10 @@ _gst_context_free (GstContext * context)
   }
   g_free (context->context_type);
 
+#ifdef USE_POISONING
+  memset (context, 0xff, sizeof (GstContext));
+#endif
+
   g_slice_free1 (sizeof (GstContext), context);
 }
 
