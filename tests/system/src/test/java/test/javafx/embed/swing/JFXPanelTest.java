@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import org.junit.BeforeClass;
 import org.junit.AfterClass;
 import org.junit.Test;
 import junit.framework.AssertionFailedError;
-
 
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -69,18 +68,12 @@ public class JFXPanelTest {
     }
 
     @BeforeClass
-    public static void doSetupOnce() {
+    public static void doSetupOnce() throws Exception {
         // Start the Application
         new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
 
-        try {
-            if (!launchLatch.await(5000, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
-            }
-        } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+        if (!launchLatch.await(5000, TimeUnit.MILLISECONDS)) {
+            throw new AssertionFailedError("Timeout waiting for Application to launch");
         }
 
         Assert.assertEquals(0, launchLatch.getCount());
@@ -91,7 +84,7 @@ public class JFXPanelTest {
         Platform.exit();
     }
 
-    class TestFXPanel extends JFXPanel {
+    static class TestFXPanel extends JFXPanel {
         protected void processMouseEventPublic(MouseEvent e) {
             processMouseEvent(e);
         }
@@ -106,38 +99,34 @@ public class JFXPanelTest {
         int[] pressedEventCounter = {0};
 
         SwingUtilities.invokeLater(() -> {
-            TestFXPanel fxPnl = new TestFXPanel();
-            fxPnl.setPreferredSize(new Dimension(100, 100));
+            TestFXPanel dummyFXPanel = new TestFXPanel();
+            dummyFXPanel.setPreferredSize(new Dimension(100, 100));
             JFrame jframe = new JFrame();
             JPanel jpanel = new JPanel();
-            jpanel.add(fxPnl);
+            jpanel.add(dummyFXPanel);
             jframe.setContentPane(jpanel);
             jframe.pack();
             jframe.setVisible(true);
 
             Platform.runLater(() -> {
-                Group grp = new Group();
-                Scene scene = new Scene(new Group());
+                Scene dummyScene = new Scene(new Group());
+                dummyFXPanel.setScene(dummyScene);
 
-                scene.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED, (event -> {
+                dummyScene.addEventHandler(javafx.scene.input.MouseEvent.MOUSE_PRESSED, (event -> {
                     pressedEventCounter[0] += 1;
                     firstPressedEventLatch.countDown();
                 }));
 
-                fxPnl.setScene(scene);
-
                 SwingUtilities.invokeLater(() -> {
-                    MouseEvent e = new MouseEvent(fxPnl, MouseEvent.MOUSE_PRESSED, 0, MouseEvent.BUTTON1_DOWN_MASK,
+                    MouseEvent e = new MouseEvent(dummyFXPanel, MouseEvent.MOUSE_PRESSED, 0, MouseEvent.BUTTON1_DOWN_MASK,
                             5, 5, 1, false, MouseEvent.BUTTON1);
 
-                    fxPnl.processMouseEventPublic(e);
+                    dummyFXPanel.processMouseEventPublic(e);
                 });
             });
         });
 
-        if(!firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS)) {
-            throw new Exception();
-        };
+        Assert.assertTrue(firstPressedEventLatch.await(5000, TimeUnit.MILLISECONDS));
 
         Thread.sleep(500); // there should be no pressed event after the initial one. Let's wait for 0.5s and check again.
 
