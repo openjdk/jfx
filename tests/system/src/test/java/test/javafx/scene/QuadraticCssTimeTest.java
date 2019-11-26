@@ -38,6 +38,7 @@ import javafx.stage.WindowEvent;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import test.util.Util;
 import junit.framework.Assert;
 import org.junit.Test;
 import org.junit.AfterClass;
@@ -60,59 +61,58 @@ import static org.junit.Assert.assertTrue;
  * in performance, if any.
  */
 
-public class QuadraticCssTimeTest extends Application {
+public class QuadraticCssTimeTest {
 
-    static private CountDownLatch startupLatch;
-    static private Stage stage;
-    private BorderPane rootPane = new BorderPane();
+    private static CountDownLatch startupLatch;
+    private static Stage stage;
+    private static BorderPane rootPane;
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        stage = primaryStage;
-        rootPane = new BorderPane();
-        stage.setScene(new Scene(rootPane));
-        stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
-            Platform.runLater(() -> startupLatch.countDown());
-        });
-        stage.show();
+    public static class TestApp extends Application {
+
+        @Override
+        public void start(Stage primaryStage) throws Exception {
+            stage = primaryStage;
+            rootPane = new BorderPane();
+            stage.setScene(new Scene(rootPane));
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
+                Platform.runLater(() -> startupLatch.countDown());
+            });
+            stage.show();
+        }
     }
 
     @BeforeClass
-    public static void initFX() {
+    public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(QuadraticCssTimeTest.class, (String[]) null)).start();
+        new Thread(() -> Application.launch(QuadraticCssTimeTest.TestApp.class, (String[]) null)).start();
 
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+        assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Test
     public void testTimeForAdding500NodesToScene() throws Exception {
 
-        // Compute time for adding 500 Nodes
-        long startTime = System.currentTimeMillis();
+        Util.runAndWait(() -> {
+            // Compute time for adding 500 Nodes
+            long startTime = System.currentTimeMillis();
 
-        HBox hbox = new HBox();
-        for (int i = 0; i < 500; i++) {
-            hbox = new HBox(new Text("y"), hbox);
-            final HBox h = hbox;
-            h.setPadding(new Insets(1));
-        }
-        rootPane.setCenter(hbox);
+            HBox hbox = new HBox();
+            for (int i = 0; i < 500; i++) {
+                hbox = new HBox(new Text("y"), hbox);
+                final HBox h = hbox;
+                h.setPadding(new Insets(1));
+            }
+            rootPane.setCenter(hbox);
 
-        long endTime = System.currentTimeMillis();
+            long endTime = System.currentTimeMillis();
 
-        System.out.println("Time to create and add 500 nodes to a Scene = " +
-                           (endTime - startTime) + " mSec");
+            System.out.println("Time to create and add 500 nodes to a Scene = " +
+                               (endTime - startTime) + " mSec");
 
-        // NOTE : 800 mSec is not a benchmark value
-        // It is good enough to catch the regression in performance, if any
-        assertTrue("Time to add 500 Nodes is more than 800 mSec", (endTime - startTime) < 800);
+            // NOTE : 800 mSec is not a benchmark value
+            // It is good enough to catch the regression in performance, if any
+            assertTrue("Time to add 500 Nodes is more than 800 mSec", (endTime - startTime) < 800);
+        });
     }
 
     @AfterClass
