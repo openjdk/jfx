@@ -35,7 +35,7 @@
 <body>
     <p>Provides classes that create and operate on a {@link Binding Binding}
         that calculates a value that depends on one or more sources.</p>
-	<h1>Characteristics of Bindings</h1>
+	<h2>Characteristics of Bindings</h2>
 	<p>Bindings are assembled from one or more sources, usually called
 		their dependencies. A binding observes its dependencies for changes
 		and updates its own value according to changes in the dependencies.</p>
@@ -51,7 +51,7 @@
 		That means, if a dependency changes, the result of a binding is not
 		immediately recalculated, but it is marked as invalid. Next time the
 		value of an invalid binding is requested, it is recalculated.</p>
-	<h1>High Level API and Low Level API</h1>
+	<h2>High Level API and Low Level API</h2>
 	<p>The Binding API is roughly divided in two parts, the High Level
 		Binding API and the Low Level Binding API. The High Level Binding API
 		allows to construct simple bindings in an easy to use fashion.

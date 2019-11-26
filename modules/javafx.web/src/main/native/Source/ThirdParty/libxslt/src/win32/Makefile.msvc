@@ -59,7 +59,7 @@ CFLAGS = $(CFLAGS) /D_CRT_SECURE_NO_DEPRECATE /D_CRT_NONSTDC_NO_DEPRECATE
 LD = link.exe
 LDFLAGS = /nologo
 LDFLAGS = $(LDFLAGS) /LIBPATH:$(BINDIR) /LIBPATH:$(LIBPREFIX)
-LIBS = wsock32.lib
+LIBS =
 
 # The archiver and its options.
 AR = lib.exe

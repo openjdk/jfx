@@ -76,7 +76,7 @@ import javafx.util.Callback;
  * HBox lays out each managed child regardless of the child's
  * visible property value; unmanaged children are ignored.</p>
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  *
  * <p>
  * An hbox's parent will resize the hbox within the hbox's resizable range
@@ -113,7 +113,7 @@ import javafx.util.Callback;
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the hbox.</p>
  *
- * <h3>Optional Layout Constraints</h3>
+ * <h2>Optional Layout Constraints</h2>
  *
  * <p>
  * An application may set constraints on individual children to customize HBox's layout.

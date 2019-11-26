@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,18 +45,17 @@ import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 import javafx.util.Duration;
 import netscape.javascript.JSObject;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class LeakTest extends TestBase {
 
     private static final int SLEEP_TIME = 1000;
 
-    @Ignore // RT-26710: javafx.scene.web.LeakTest hangs
     @Test public void testOleg() throws InterruptedException{
         final String URL = new File("src/test/resources/test/html/guimark2-vector.html").toURI().toASCIIString();
         final int CYCLE_COUNT = 16;
@@ -65,7 +64,7 @@ public class LeakTest extends TestBase {
 
         Timeline time = new Timeline();
         time.setCycleCount(CYCLE_LENGTH * CYCLE_COUNT);
-        time.getKeyFrames().add(new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
+        time.getKeyFrames().add(new KeyFrame(Duration.millis(200), new EventHandler<ActionEvent>() {
             int counter = -1;
             @Override public void handle(final ActionEvent e) {
                 ++counter;
@@ -82,8 +81,9 @@ public class LeakTest extends TestBase {
         latch.await();
     }
 
-    @Ignore // RT-26710: javafx.scene.web.LeakTest hangs
     @Test public void testGarbageCollectability() throws InterruptedException {
+        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8234540
+
         final BlockingQueue<WeakReference<WebPage>> webPageRefQueue =
                 new LinkedBlockingQueue<WeakReference<WebPage>>();
         submit(() -> {

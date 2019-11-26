@@ -51,7 +51,7 @@ import javafx.scene.control.skin.PaginationSkin;
  * which has been divided into smaller parts.
  * </p>
  *
- * <h3>Styling the page indicators</h3>
+ * <h2>Styling the page indicators</h2>
  * <p>
  * The control can be customized to display numeric page indicators or bullet style indicators by
  * setting the style class {@link #STYLE_CLASS_BULLET}.  The
@@ -60,14 +60,14 @@ import javafx.scene.control.skin.PaginationSkin;
  * via CSS using -fx-max-page-indicator-count.
  *</p>
  *
- * <h3>Page count</h3>
+ * <h2>Page count</h2>
  * <p>
  * The {@link #pageCountProperty() pageCountProperty} controls the number of
  * pages this pagination control has.  If the page count is
  * not known {@link #INDETERMINATE} should be used as the page count.
  * </p>
  *
- * <h3>Page factory</h3>
+ * <h2>Page factory</h2>
  * <p>
  * The {@link #pageFactoryProperty() pageFactoryProperty} is a callback function
  * that is called when a page has been selected by the application or
@@ -76,7 +76,7 @@ import javafx.scene.control.skin.PaginationSkin;
  * Null should be returned if the selected page index does not exist.
  * </p>
  *
- * <h3>Creating a Pagination control:</h3>
+ * <h2>Creating a Pagination control:</h2>
  * <p>
  * A simple example of how to create a pagination control with ten pages and
  * each page containing text.

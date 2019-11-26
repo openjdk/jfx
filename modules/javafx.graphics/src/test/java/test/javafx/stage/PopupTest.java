@@ -451,8 +451,7 @@ public class PopupTest {
         assertTrue(done);
     }
 
-
-    @Ignore ("Not sure how this ever worked, or what the point is")
+    @Ignore("JDK-8234161")
     @Test
     public void testPeerListener() {
         Popup p = new Popup();

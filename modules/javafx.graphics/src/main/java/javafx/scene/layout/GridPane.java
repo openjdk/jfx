@@ -81,7 +81,7 @@ import javafx.util.Callback;
  * GridPane may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
- * <h3>Grid Constraints</h3>
+ * <h2>Grid Constraints</h2>
  * <p>
  * A child's placement within the grid is defined by it's layout constraints:
  * </p>
@@ -132,7 +132,7 @@ import javafx.util.Callback;
  * </code></pre>
  *
  *
- * <h3>Row/Column Sizing</h3>
+ * <h2>Row/Column Sizing</h2>
  *
  * By default, rows and columns will be sized to fit their content;
  * a column will be wide enough to accommodate the widest child, a
@@ -162,7 +162,7 @@ import javafx.util.Callback;
  * The affected rows/columns are resized by the following priority: grow priorities, last row.
  * This is with respect to row/column constraints.
  *
- * <h3>Percentage Sizing</h3>
+ * <h2>Percentage Sizing</h2>
  *
  * Alternatively, RowConstraints and ColumnConstraints allow the size to be specified
  * as a percentage of gridpane's available space:
@@ -181,7 +181,7 @@ import javafx.util.Callback;
  * be treated as weights.  e.g.  if 3 columns are each given a widthPercent of 50,
  * then each will be allocated 1/3 of the gridpane's available width (50/(50+50+50)).
  *
- * <h3>Mixing Size Types</h3>
+ * <h2>Mixing Size Types</h2>
  *
  * An application may freely mix the size-types of rows/columns (computed from content, fixed,
  * or percentage).  The percentage rows/columns will always be allocated space first
@@ -189,7 +189,7 @@ import javafx.util.Callback;
  * The remaining space will be allocated to rows/columns given their minimum, preferred,
  * and maximum sizes and grow priorities.
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  * <p>
  * A gridpane's parent will resize the gridpane within the gridpane's resizable range
  * during layout.   By default the gridpane computes this range based on its content
@@ -227,7 +227,7 @@ import javafx.util.Callback;
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within it space.</p>
  *
- * <h3>Optional Layout Constraints</h3>
+ * <h2>Optional Layout Constraints</h2>
  *
  * <p>
  * An application may set additional constraints on children to customize how the

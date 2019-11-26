@@ -98,7 +98,7 @@ import javafx.util.Callback;
  * FlowPane may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
- * <h3>Resizable Range</h3>
+ * <h2>Resizable Range</h2>
  *
  * <p>
  * A flowpane's parent will resize the flowpane within the flowpane's resizable range
