@@ -5037,7 +5037,6 @@ public abstract class Node implements EventTarget, Styleable {
                 if (mirroringCenter == 0.0) {
                     mirroringCenter = getCenterPivotX();
                 }
-
                 localToParentTx = localToParentTx.deriveWithTranslation(mirroringCenter, 0.0);
                 localToParentTx = localToParentTx.deriveWithScale(-1.0, 1.0, 1.0);
                 localToParentTx = localToParentTx.deriveWithTranslation(-mirroringCenter, 0.0);
@@ -5054,10 +5053,13 @@ public abstract class Node implements EventTarget, Styleable {
             double rotPivotX = getRotationPivot().getX();
             double rotPivotY = getRotationPivot().getY();
             double rotPivotZ = getRotationPivot().getZ();
+            double rotAxisX = getRotationAxis().getX();
+            double rotAxisY = getRotationAxis().getY();
+            double rotAxisZ = getRotationAxis().getZ();
+            double rotAngle = Math.toRadians(getRotate());
 
             localToParentTx = localToParentTx.deriveWithTranslation(rotPivotX, rotPivotY, rotPivotZ)
-                                             .deriveWithRotation(Math.toRadians(getRotate()),
-                            getRotationAxis().getX(), getRotationAxis().getY(), getRotationAxis().getZ())
+                                             .deriveWithRotation(rotAngle, rotAxisX, rotAxisY, rotAxisZ)
                                              .deriveWithTranslation(-rotPivotX, -rotPivotY, -rotPivotZ);
         }
 
@@ -5710,14 +5712,14 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Defines the axis of rotation of this {@code Node}.
+     * The point of origin for the scaling of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
      * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @return the rotationAxis for this {@code Node}
-     * @defaultValue Rotate.Z_AXIS
+     * @return the scale pivot for this {@code Node}
      */
     public final ObjectProperty<Point3D> scalePivotProperty() {
         return getNodeTransformation().scalePivotProperty();
@@ -5795,14 +5797,14 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Defines the axis of rotation of this {@code Node}.
+     * The rotation pivot of this {@code Node}. If this value is not defined, the center
+     * of the node is used. Setting to null will cause an NPE.
      * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @return the rotationAxis for this {@code Node}
-     * @defaultValue Rotate.Z_AXIS
+     * @return the rotation pivot for this {@code Node}
      */
     public final ObjectProperty<Point3D> rotationPivotProperty() {
         return getNodeTransformation().rotationPivotProperty();
