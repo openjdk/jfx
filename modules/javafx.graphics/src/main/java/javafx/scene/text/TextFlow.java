@@ -487,10 +487,10 @@ public class TextFlow extends Pane {
         }
         return lineSpacing;
     }
+
     /**
      * The size of a tab stop in spaces.
-     *
-     * @return the {@code tabSize} property
+     * Values less than 1 are treated as 1.
      *
      * @defaultValue {@code 8}
      *
@@ -498,21 +498,10 @@ public class TextFlow extends Pane {
      */
     private IntegerProperty tabSize;
 
-    /**
-     * Gets the size of a tab stop in spaces.
-     * @return the size of a tab in spaces
-     * @since 14
-     */
     public final int getTabSize() {
         return tabSize == null ? TextLayout.DEFAULT_TAB_SIZE : tabSize.get();
     }
 
-    /**
-     * Sets the size of a tab stop.
-     * @param spaces the size of a tab in spaces. Defaults to 8.
-     * Minimum is 1, lower values will be clamped to 1.
-     * @since 14
-    */
     public final void setTabSize(int spaces) {
         tabSizeProperty().set(spaces);
     }
@@ -525,7 +514,6 @@ public class TextFlow extends Pane {
                 @Override public CssMetaData getCssMetaData() {
                     return StyleableProperties.TAB_SIZE;
                 }
-                @Override public void set(int v) { super.set((v < 1) ? 1 : v); }
                 @Override protected void invalidated() {
                     TextLayout layout = getTextLayout();
                     if (layout.setTabSize(get())) {

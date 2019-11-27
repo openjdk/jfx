@@ -651,8 +651,9 @@ public class PrismTextLayout implements TextLayout {
 
     @Override
     public boolean setTabSize(int spaces) {
-        if (spaces < 1)
+        if (spaces < 1) {
             spaces = 1;
+        }
         if (tabSize != spaces) {
             tabSize = spaces;
             relayout();
