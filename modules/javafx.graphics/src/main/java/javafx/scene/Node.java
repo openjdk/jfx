@@ -9415,6 +9415,13 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (cssFlag == CssFlags.REAPPLY) return;
 
+        if (cssFlag == CssFlags.DIRTY_BRANCH) {
+            // JDK-8193445 - don't reapply CSS from here
+            // Defer CSS application to this Node by marking cssFlag as REAPPLY
+            cssFlag = CssFlags.REAPPLY;
+            return;
+        }
+
         // RT-36838 - don't reapply CSS in the middle of an update
         if (cssFlag == CssFlags.UPDATE) {
             cssFlag = CssFlags.REAPPLY;
