@@ -446,7 +446,7 @@ public class JFXPanel extends JComponent {
             (e.getButton() == MouseEvent.BUTTON1)) {
             if (isFocusable() && !hasFocus()) {
                 requestFocus();
-                // This fixes JDK-8087914 without causing JDK-8200224
+                // The extra simulated mouse pressed event is removed by making the JavaFX scene focused.
                 // It is safe, because in JavaFX only the method "setFocused(true)" is called,
                 // which doesn't have any side-effects when called multiple times.
                 int focusCause = AbstractEvents.FOCUSEVENT_ACTIVATED;
