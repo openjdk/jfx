@@ -5619,8 +5619,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final double getScaleX() {
-        return (nodeTransformation == null) ? DEFAULT_SCALE_X
-                                            : nodeTransformation.getScaleX();
+        return (nodeTransformation == null) ? DEFAULT_SCALE_X : nodeTransformation.getScaleX();
     }
 
     /**
@@ -5632,8 +5631,8 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for scaling the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the scale occurs is the center of the
-     * untransformed {@link #layoutBoundsProperty layoutBounds}.
+     * The pivot point about which the scale occurs is defined by the {@link #scalePivotProperty() scale pivot},
+     * which by default is the center of the untransformed {@link #layoutBoundsProperty layoutBounds}.
      *
      * @return the scaleX for this {@code Node}
      * @defaultValue 1.0
@@ -5647,8 +5646,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final double getScaleY() {
-        return (nodeTransformation == null) ? DEFAULT_SCALE_Y
-                                            : nodeTransformation.getScaleY();
+        return (nodeTransformation == null) ? DEFAULT_SCALE_Y : nodeTransformation.getScaleY();
     }
 
     /**
@@ -5660,8 +5658,8 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for scaling the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the scale occurs is the center of the
-     * untransformed {@link #layoutBoundsProperty layoutBounds}.
+     * The pivot point about which the scale occurs is defined by the {@link #scalePivotProperty() scale pivot},
+     * which by default is the center of the untransformed {@link #layoutBoundsProperty layoutBounds}.
      *
      * @return the scaleY for this {@code Node}
      * @defaultValue 1.0
@@ -5675,8 +5673,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     public final double getScaleZ() {
-        return (nodeTransformation == null) ? DEFAULT_SCALE_Z
-                                            : nodeTransformation.getScaleZ();
+        return (nodeTransformation == null) ? DEFAULT_SCALE_Z : nodeTransformation.getScaleZ();
     }
 
     /**
@@ -5688,9 +5685,10 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for scaling the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the scale occurs is the center of the
-     * rectangular bounds formed by taking {@link #boundsInLocalProperty boundsInLocal} and applying
-     * all the transforms in the {@link #getTransforms transforms} ObservableList.
+     * The pivot point about which the scale occurs is defined by the {@link #scalePivotProperty() scale pivot},
+     * which by default is the center of the rectangular bounds formed by taking
+     * {@link #boundsInLocalProperty boundsInLocal} and applying all the transforms in the
+     * {@link #getTransforms transforms} {@code ObservableList}.
      * <p>
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
@@ -5742,20 +5740,21 @@ public abstract class Node implements EventTarget, Styleable {
      * default, which makes it ideal for rotating the entire node after
      * all effects and transforms have been taken into account.
      * <p>
-     * The pivot point about which the rotation occurs is the center of the
+     * The rotation axis is defined by the {@link #rotationAxisProperty() rotation axis}.
+     * The pivot point about which the rotation occurs is defined by the
+     * {@link #rotationPivotProperty() rotation pivot}, which by default is the center of the
      * untransformed {@link #layoutBoundsProperty layoutBounds}.
      * <p>
-     * Note that because the pivot point is computed as the center of this
+     * Note that in the default case where the pivot point is computed as the center of this
      * {@code Node}'s layout bounds, any change to the layout bounds will cause
      * the pivot point to change, which can move the object. For a leaf node,
      * any change to the geometry will cause the layout bounds to change.
      * For a group node, any change to any of its children, including a
      * change in a child's geometry, clip, effect, position, orientation, or
      * scale, will cause the group's layout bounds to change. If this movement
-     * of the pivot point is not
-     * desired, applications should instead use the Node's {@link #getTransforms transforms}
-     * ObservableList, and add a {@link javafx.scene.transform.Rotate} transform,
-     * which has a user-specifiable pivot point.
+     * of the pivot point is not desired, applications should instead set their own pivot or
+     * use the Node's {@link #getTransforms transforms} {@code ObservableList}, and add a
+     * {@link javafx.scene.transform.Rotate} transform, which also has a user-specifiable pivot point.
      *
      * @return the rotate for this {@code Node}
      * @defaultValue 0.0
@@ -5782,7 +5781,7 @@ public abstract class Node implements EventTarget, Styleable {
      * for more information.
      *
      * @return the rotationAxis for this {@code Node}
-     * @defaultValue Rotate.Z_AXIS
+     * @defaultValue {@code Rotate.Z_AXIS}
      */
     public final ObjectProperty<Point3D> rotationAxisProperty() {
         return getNodeTransformation().rotationAxisProperty();
