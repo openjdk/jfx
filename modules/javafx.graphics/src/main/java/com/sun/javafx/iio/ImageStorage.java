@@ -272,6 +272,8 @@ public class ImageStorage {
             } else {
                 throw new ImageStorageException("No loader for image data");
             }
+        } catch (ImageStorageException ise) {
+            throw ise;
         } catch (IOException e) {
             throw new ImageStorageException(e.getMessage(), e);
         } finally {
