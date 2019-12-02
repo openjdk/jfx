@@ -1621,21 +1621,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     sun_jpeg_error_ptr jerr;
     int bytes_per_row = cinfo->output_width * cinfo->output_components;
     int offset = 0;
-
-    JSAMPROW scanline_ptr = (JSAMPROW) malloc(bytes_per_row * sizeof (JSAMPLE));
-    if (scanline_ptr == NULL) {
-        ThrowByName(env,
-                "java/lang/OutOfMemoryError",
-                "Reading JPEG Stream");
-        return JNI_FALSE;
-    }
+    JSAMPROW scanline_ptr = NULL;
 
     if (!SAFE_TO_MULT(cinfo->output_width, cinfo->output_components) ||
         !SAFE_TO_MULT(bytes_per_row, cinfo->output_height) ||
         ((*env)->GetArrayLength(env, barray) <
          (bytes_per_row * cinfo->output_height)))
      {
-        free(scanline_ptr);
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
                 "Reading JPEG Stream");
@@ -1643,7 +1635,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     }
 
     if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-        free(scanline_ptr);
         ThrowByName(env,
                 "java/io/IOException",
                 "Array pin failed");
@@ -1656,7 +1647,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     if (setjmp(jerr->setjmp_buffer)) {
         /* If we get here, the JPEG code has signaled an error
            while reading. */
-        free(scanline_ptr);
         if (!(*env)->ExceptionOccurred(env)) {
             char buffer[JMSG_LENGTH_MAX];
             (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
@@ -1664,6 +1654,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             ThrowByName(env, "java/io/IOException", buffer);
         }
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
+        return JNI_FALSE;
+    }
+
+    scanline_ptr = (JSAMPROW) malloc(bytes_per_row * sizeof(JSAMPLE));
+    if (scanline_ptr == NULL) {
+        ThrowByName(env,
+                "java/lang/OutOfMemoryError",
+                "Reading JPEG Stream");
         return JNI_FALSE;
     }
 
@@ -1701,6 +1699,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             offset += bytes_per_row;
         }
     }
+    free(scanline_ptr);
 
     if (report_progress == JNI_TRUE) {
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
@@ -1708,11 +1707,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
                 JPEGImageLoader_updateImageProgressID,
                 cinfo->output_height);
         if ((*env)->ExceptionCheck(env)) {
-            free(scanline_ptr);
             return JNI_FALSE;
         }
         if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-            free(scanline_ptr);
             ThrowByName(env,
                 "java/io/IOException",
                 "Array pin failed");
@@ -1721,7 +1718,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     }
 
     jpeg_finish_decompress(cinfo);
-    free(scanline_ptr);
 
     RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
     return JNI_TRUE;
