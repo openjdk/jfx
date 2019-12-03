@@ -135,6 +135,7 @@ public:
 
 #if PLATFORM(JAVA)
     std::unique_ptr<URLLoader> m_loader;
+    int m_redirectCount { 0 };
 #endif
 
 #if PLATFORM(COCOA)

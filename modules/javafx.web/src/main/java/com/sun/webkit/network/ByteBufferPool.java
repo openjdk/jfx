@@ -112,6 +112,7 @@ final class ByteBufferPool {
          */
         @Override
         public void release(ByteBuffer byteBuffer) {
+            byteBuffer.clear();
             byteBuffers.add(byteBuffer);
             semaphore.release();
         }

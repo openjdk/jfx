@@ -32,9 +32,10 @@
  */
 module javafx.web {
     requires java.desktop;
+    requires java.net.http;
     requires javafx.media;
-    requires jdk.xml.dom;
     requires jdk.jsobject;
+    requires jdk.xml.dom;
 
     requires transitive java.xml;
     requires transitive javafx.base;
