@@ -36,7 +36,7 @@ public class EPDSettingsTest {
 
     private static final String BITS_PER_PIXEL = "monocle.epd.bitsPerPixel";
     private static final String ROTATE = "monocle.epd.rotate";
-    private static final String Y8_INVERTED = "monocle.epd.y8inverted";
+    private static final String Y8_INVERTED = "monocle.epd.Y8Inverted";
     private static final String NO_WAIT = "monocle.epd.noWait";
     private static final String WAVEFORM_MODE = "monocle.epd.waveformMode";
     private static final String FLAG_ENABLE_INVERSION = "monocle.epd.enableInversion";
