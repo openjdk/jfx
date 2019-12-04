@@ -223,20 +223,20 @@
 }
 
 
-+ (jmethodID)ApplicationNotifyQuitMethod
++ (jmethodID)ApplicationNotifyWillQuitMethod
 {
-    static jmethodID _ApplicationNotifyQuitMethod = NULL;
-    if (_ApplicationNotifyQuitMethod == NULL)
+    static jmethodID _ApplicationNotifyWillQuitMethod = NULL;
+    if (_ApplicationNotifyWillQuitMethod == NULL)
     {
         GET_MAIN_JENV;
-        _ApplicationNotifyQuitMethod = (*env)->GetMethodID(env, [GlassHelper ApplicationClass], "notifyQuit", "()V");
+        _ApplicationNotifyWillQuitMethod = (*env)->GetMethodID(env, [GlassHelper ApplicationClass], "notifyWillQuit", "()V");
         GLASS_CHECK_EXCEPTION(env);
     }
-    if (_ApplicationNotifyQuitMethod == NULL)
+    if (_ApplicationNotifyWillQuitMethod == NULL)
     {
-        NSLog(@"GlassHelper error: _ApplicationNotifyQuitMethod == NULL");
+        NSLog(@"GlassHelper error: _ApplicationNotifyWillQuitMethod == NULL");
     }
-    return _ApplicationNotifyQuitMethod;
+    return _ApplicationNotifyWillQuitMethod;
 }
 
 
