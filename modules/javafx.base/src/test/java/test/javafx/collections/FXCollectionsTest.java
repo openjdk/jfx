@@ -727,6 +727,7 @@ public class FXCollectionsTest {
                     protectedCode.accept(collection);
                 }
             } catch (ConcurrentModificationException e) {
+                thread.terminate();
                 fail("ConcurrentModificationException should not be thrown");
             }
         }
