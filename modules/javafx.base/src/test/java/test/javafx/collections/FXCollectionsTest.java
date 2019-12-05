@@ -29,6 +29,8 @@ import javafx.beans.InvalidationListener;
 import org.junit.Test;
 
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import test.javafx.collections.MockSetObserver.Tuple;
@@ -669,6 +671,93 @@ public class FXCollectionsTest {
         assertTrue(set.containsAll(Arrays.asList("foo", "foo2", "foo3", "foo6", "foo7")));
         assertEquals(5, set.size());
     }
+
+    @Test
+    public void synchronizedMapIterationProtectionTest() {
+        testIterationProtection(FXCollections.synchronizedObservableMap(FXCollections.observableHashMap()), this::putRandomValue, this::copyMap);
+    }
+
+    private void putRandomValue(Map<Integer, Integer> map, Random rnd) {
+        map.put(rnd.nextInt(1000), rnd.nextInt());
+    }
+
+    private void copyMap(Map<Integer, Integer> map) {
+        new HashMap<>(map);
+    }
+
+    @Test
+    public void synchronizedSetIterationProtectionTest() {
+        testIterationProtection(FXCollections.synchronizedObservableSet(FXCollections.observableSet()), this::addRandomValue, this::copySet);
+    }
+
+    private void addRandomValue(Set<Integer> set, Random rnd) {
+        set.add(rnd.nextInt(1000));
+    }
+
+    private void copySet(Set<Integer> set) {
+        new HashSet<>(set);
+    }
+
+    @Test
+    public void synchronizedListIterationProtectionTest() {
+        testIterationProtection(FXCollections.synchronizedObservableList(FXCollections.observableArrayList()), this::modifyList, this::iterateOverList);
+    }
+
+    private void modifyList(List<Integer> list, Random rnd) {
+        if (rnd.nextInt(1000) > list.size()) {
+            list.add(rnd.nextInt(1000));
+        } else {
+            list.remove(rnd.nextInt(list.size()));
+        }
+    }
+
+    private void iterateOverList(List<Integer> list) {
+        Iterator<Integer> it = list.iterator();
+        while (it.hasNext()) {
+            it.next();
+        }
+    }
+
+    public <V> void testIterationProtection(V collection, BiConsumer<V, Random> backgroundChanger, Consumer<V> protectedCode) {
+        CollectionChangeThread<V> thread = new CollectionChangeThread<>(collection, backgroundChanger);
+        thread.start();
+        for (int i = 0; i < 10000; i++) {
+            try {
+                synchronized (collection) {
+                    protectedCode.accept(collection);
+                }
+            } catch (ConcurrentModificationException e) {
+                thread.terminate();
+                fail("ConcurrentModificationException should not be thrown");
+            }
+        }
+        thread.terminate();
+    }
+
+    private static class CollectionChangeThread<V> extends Thread {
+        private boolean shallRun = true;
+        private V collection;
+        private BiConsumer<V, Random> backgroundChanger;
+        private Random rnd = new Random();
+
+        public CollectionChangeThread(V collection, BiConsumer<V, Random> backgroundChanger) {
+            super("FXCollectionsTest.CollectionChangeThread");
+            this.collection = collection;
+            this.backgroundChanger = backgroundChanger;
+        }
+
+        @Override
+        public void run() {
+            while (shallRun) {
+                backgroundChanger.accept(collection, rnd);
+            }
+        }
+
+        public void terminate() {
+            shallRun = false;
+        }
+    }
+
 
     private static class NonSortableObservableList extends AbstractList<String> implements ObservableList<String> {
 
