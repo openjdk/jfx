@@ -428,7 +428,7 @@ public class DOMTest extends TestBase {
             } catch (DOMException ex) {
                 // Expected.
             } catch (Throwable ex) {
-                fail("DOMException expected but instead threw "+ex.getClass().getName());
+                fail("DOMException expected but instead threw " + ex.getClass().getName());
             }
 
             String attributeName = "test";
