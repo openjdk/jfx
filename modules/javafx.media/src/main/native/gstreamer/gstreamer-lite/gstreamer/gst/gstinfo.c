@@ -155,7 +155,24 @@ static char *gst_info_printf_pointer_extension_func (const char *format,
 #define BT_BUF_SIZE 100
 #endif /* HAVE_BACKTRACE */
 
+#ifdef HAVE_DBGHELP
+#include <Windows.h>
+#include <dbghelp.h>
+#include <tlhelp32.h>
+#endif /* HAVE_DBGHELP */
+
 extern gboolean gst_is_initialized (void);
+
+#ifdef GSTREAMER_LITE
+// For some reason it is not defined if GST_DISABLE_GST_DEBUG and
+// GST_REMOVE_DISABLED is defined which we do for GSTREAMER_LITE
+#ifdef GST_REMOVE_DISABLED
+void
+_priv_gst_debug_cleanup (void)
+{
+}
+#endif // GST_REMOVE_DISABLED
+#endif // GSTREAMER_LITE
 
 /* we want these symbols exported even if debug is disabled, to maintain
  * ABI compatibility. Unless GST_REMOVE_DISABLED is defined. */
@@ -353,23 +370,23 @@ _priv_gst_debug_init (void)
   FILE *log_file;
 
   if (add_default_log_func) {
-  env = g_getenv ("GST_DEBUG_FILE");
-  if (env != NULL && *env != '\0') {
-    if (strcmp (env, "-") == 0) {
-      log_file = stdout;
-    } else {
+    env = g_getenv ("GST_DEBUG_FILE");
+    if (env != NULL && *env != '\0') {
+      if (strcmp (env, "-") == 0) {
+        log_file = stdout;
+      } else {
         gchar *name = _priv_gst_debug_file_name (env);
         log_file = g_fopen (name, "w");
         g_free (name);
-      if (log_file == NULL) {
-        g_printerr ("Could not open log file '%s' for writing: %s\n", env,
-            g_strerror (errno));
-        log_file = stderr;
+        if (log_file == NULL) {
+          g_printerr ("Could not open log file '%s' for writing: %s\n", env,
+              g_strerror (errno));
+          log_file = stderr;
+        }
       }
+    } else {
+      log_file = stderr;
     }
-  } else {
-    log_file = stderr;
-  }
 
     gst_debug_add_log_function (gst_debug_log_default, log_file, NULL);
   }
@@ -406,7 +423,7 @@ _priv_gst_debug_init (void)
   GST_CAT_ELEMENT_PADS = _gst_debug_category_new ("GST_ELEMENT_PADS",
       GST_DEBUG_BOLD | GST_DEBUG_FG_WHITE | GST_DEBUG_BG_RED, NULL);
   GST_CAT_PADS = _gst_debug_category_new ("GST_PADS",
-      GST_DEBUG_BOLD | GST_DEBUG_FG_RED | GST_DEBUG_BG_RED, NULL);
+      GST_DEBUG_BOLD | GST_DEBUG_FG_RED | GST_DEBUG_BG_BLUE, NULL);
   GST_CAT_PERFORMANCE = _gst_debug_category_new ("GST_PERFORMANCE",
       GST_DEBUG_BOLD | GST_DEBUG_FG_WHITE | GST_DEBUG_BG_RED, NULL);
   GST_CAT_PIPELINE = _gst_debug_category_new ("GST_PIPELINE",
@@ -465,7 +482,7 @@ _priv_gst_debug_init (void)
   env = g_getenv ("GST_DEBUG");
   if (env)
     gst_debug_set_threshold_from_string (env, FALSE);
-  }
+}
 
 /* we can't do this further above, because we initialize the GST_CAT_DEFAULT struct */
 #define GST_CAT_DEFAULT _GST_CAT_DEBUG
@@ -1248,7 +1265,7 @@ gst_debug_log_default (GstDebugCategory * category, GstDebugLevel level,
   }
 
   if (object != NULL)
-  g_free (obj);
+    g_free (obj);
 }
 
 /**
@@ -1587,6 +1604,20 @@ gst_debug_get_default_threshold (void)
   return (GstDebugLevel) g_atomic_int_get (&__default_level);
 }
 
+static gboolean
+gst_debug_apply_entry (GstDebugCategory * cat, LevelNameEntry * entry)
+{
+  if (!g_pattern_match_string (entry->pat, cat->name))
+    return FALSE;
+
+  if (gst_is_initialized ())
+    GST_LOG ("category %s matches pattern %p - gets set to level %d",
+        cat->name, entry->pat, entry->level);
+
+  gst_debug_category_set_threshold (cat, entry->level);
+  return TRUE;
+}
+
 static void
 gst_debug_reset_threshold (gpointer category, gpointer unused)
 {
@@ -1594,23 +1625,16 @@ gst_debug_reset_threshold (gpointer category, gpointer unused)
   GSList *walk;
 
   g_mutex_lock (&__level_name_mutex);
-  walk = __level_name;
-  while (walk) {
-    LevelNameEntry *entry = walk->data;
 
-    walk = g_slist_next (walk);
-    if (g_pattern_match_string (entry->pat, cat->name)) {
-      if (gst_is_initialized ())
-        GST_LOG ("category %s matches pattern %p - gets set to level %d",
-            cat->name, entry->pat, entry->level);
-      gst_debug_category_set_threshold (cat, entry->level);
-      goto exit;
-    }
+  for (walk = __level_name; walk != NULL; walk = walk->next) {
+    if (gst_debug_apply_entry (cat, walk->data))
+      break;
   }
-  gst_debug_category_set_threshold (cat, gst_debug_get_default_threshold ());
 
-exit:
   g_mutex_unlock (&__level_name_mutex);
+
+  if (walk == NULL)
+    gst_debug_category_set_threshold (cat, gst_debug_get_default_threshold ());
 }
 
 static void
@@ -1627,12 +1651,7 @@ for_each_threshold_by_entry (gpointer data, gpointer user_data)
   GstDebugCategory *cat = (GstDebugCategory *) data;
   LevelNameEntry *entry = (LevelNameEntry *) user_data;
 
-  if (g_pattern_match_string (entry->pat, cat->name)) {
-    if (gst_is_initialized ())
-      GST_TRACE ("category %s matches pattern %p - gets set to level %d",
-          cat->name, entry->pat, entry->level);
-    gst_debug_category_set_threshold (cat, entry->level);
-  }
+  gst_debug_apply_entry (cat, entry);
 }
 
 /**
@@ -2005,7 +2024,7 @@ gst_debug_set_threshold_from_string (const gchar * list, gboolean reset)
            * future still */
           if (level > _gst_debug_min) {
             _gst_debug_min = level;
-      }
+          }
         }
       }
 
@@ -2052,7 +2071,7 @@ _gst_debug_nameof_funcptr (GstDebugFuncPtr func)
    * the name */
 #ifdef HAVE_DLADDR
   if (dladdr ((gpointer) func, &dl_info) && dl_info.dli_sname) {
-    gchar *name = g_strdup (dl_info.dli_sname);
+    const gchar *name = g_intern_string (dl_info.dli_sname);
 
     _gst_debug_register_funcptr (func, name);
     return name;
@@ -2060,9 +2079,12 @@ _gst_debug_nameof_funcptr (GstDebugFuncPtr func)
 #endif
   {
     gchar *name = g_strdup_printf ("%p", (gpointer) func);
+    const gchar *iname = g_intern_string (name);
 
-    _gst_debug_register_funcptr (func, name);
-    return name;
+    g_free (name);
+
+    _gst_debug_register_funcptr (func, iname);
+    return iname;
   }
 }
 
@@ -2075,8 +2097,22 @@ _gst_debug_register_funcptr (GstDebugFuncPtr func, const gchar * ptrname)
 
   if (!__gst_function_pointers)
     __gst_function_pointers = g_hash_table_new (g_direct_hash, g_direct_equal);
-  if (!g_hash_table_lookup (__gst_function_pointers, ptr))
+  if (!g_hash_table_lookup (__gst_function_pointers, ptr)) {
     g_hash_table_insert (__gst_function_pointers, ptr, (gpointer) ptrname);
+  }
+
+  g_mutex_unlock (&__dbg_functions_mutex);
+}
+
+void
+_priv_gst_debug_cleanup (void)
+{
+  g_mutex_lock (&__dbg_functions_mutex);
+
+  if (__gst_function_pointers) {
+    g_hash_table_unref (__gst_function_pointers);
+    __gst_function_pointers = NULL;
+  }
 
   g_mutex_unlock (&__dbg_functions_mutex);
 }
@@ -2157,6 +2193,11 @@ const gchar *
 _gst_debug_nameof_funcptr (GstDebugFuncPtr func)
 {
   return "(NULL)";
+}
+
+void
+_priv_gst_debug_cleanup (void)
+{
 }
 
 void
@@ -2616,7 +2657,7 @@ gst_printerrln (const gchar * format, ...)
 
   g_printerr ("%s\n", str);
   g_free (str);
-  }
+}
 
 #ifdef HAVE_UNWIND
 #ifdef HAVE_DW
@@ -2654,7 +2695,7 @@ append_debug_info (GString * trace, Dwfl * dwfl, const void *ip)
 
     dwfl_module_info (module, NULL, NULL, NULL, NULL, NULL, &eflfile, NULL);
     g_string_append_printf (trace, "%s:%p", eflfile ? eflfile : "??", ip);
-}
+  }
 
   return TRUE;
 }
@@ -2761,6 +2802,98 @@ generate_backtrace_trace (void)
 #define generate_backtrace_trace() NULL
 #endif /* HAVE_BACKTRACE */
 
+#ifdef HAVE_DBGHELP
+static void
+dbghelp_initialize_symbols (HANDLE process)
+{
+  static gsize initialization_value = 0;
+
+  if (g_once_init_enter (&initialization_value)) {
+    GST_INFO ("Initializing Windows symbol handler");
+    SymSetOptions (SYMOPT_LOAD_LINES);
+    SymInitialize (process, NULL, TRUE);
+    GST_INFO ("Initialized Windows symbol handler");
+
+    g_once_init_leave (&initialization_value, 1);
+  }
+}
+
+static gchar *
+generate_dbghelp_trace (void)
+{
+  HANDLE process = GetCurrentProcess ();
+  HANDLE thread = GetCurrentThread ();
+  IMAGEHLP_MODULE64 module_info;
+  DWORD machine;
+  CONTEXT context;
+  STACKFRAME64 frame = { 0 };
+  PVOID save_context;
+  GString *trace = g_string_new (NULL);
+
+  dbghelp_initialize_symbols (process);
+
+  memset (&context, 0, sizeof (CONTEXT));
+  context.ContextFlags = CONTEXT_FULL;
+
+  RtlCaptureContext (&context);
+
+  frame.AddrPC.Mode = AddrModeFlat;
+  frame.AddrStack.Mode = AddrModeFlat;
+  frame.AddrFrame.Mode = AddrModeFlat;
+
+#if (defined _M_IX86)
+  machine = IMAGE_FILE_MACHINE_I386;
+  frame.AddrFrame.Offset = context.Ebp;
+  frame.AddrPC.Offset = context.Eip;
+  frame.AddrStack.Offset = context.Esp;
+#elif (defined _M_X64)
+  machine = IMAGE_FILE_MACHINE_AMD64;
+  frame.AddrFrame.Offset = context.Rbp;
+  frame.AddrPC.Offset = context.Rip;
+  frame.AddrStack.Offset = context.Rsp;
+#else
+  goto done;
+#endif
+
+  module_info.SizeOfStruct = sizeof (module_info);
+  save_context = (machine == IMAGE_FILE_MACHINE_I386) ? NULL : &context;
+
+  while (TRUE) {
+    char buffer[sizeof (SYMBOL_INFO) + MAX_SYM_NAME * sizeof (TCHAR)];
+    PSYMBOL_INFO symbol = (PSYMBOL_INFO) buffer;
+    IMAGEHLP_LINE64 line;
+    DWORD displacement = 0;
+
+    symbol->SizeOfStruct = sizeof (SYMBOL_INFO);
+    symbol->MaxNameLen = MAX_SYM_NAME;
+
+    line.SizeOfStruct = sizeof (line);
+
+    if (!StackWalk64 (machine, process, thread, &frame, save_context, 0,
+            SymFunctionTableAccess64, SymGetModuleBase64, 0))
+      break;
+
+    if (SymFromAddr (process, frame.AddrPC.Offset, 0, symbol))
+      g_string_append_printf (trace, "%s ", symbol->Name);
+    else
+      g_string_append (trace, "?? ");
+
+    if (SymGetLineFromAddr64 (process, frame.AddrPC.Offset, &displacement,
+            &line))
+      g_string_append_printf (trace, "(%s:%u)", line.FileName, line.LineNumber);
+    else if (SymGetModuleInfo64 (process, frame.AddrPC.Offset, &module_info))
+      g_string_append_printf (trace, "(%s)", module_info.ImageName);
+    else
+      g_string_append_printf (trace, "(%s)", "??");
+
+    g_string_append (trace, "\n");
+  }
+
+done:
+  return g_string_free (trace, FALSE);
+}
+#endif /* HAVE_DBGHELP */
+
 /**
  * gst_debug_get_stack_trace:
  * @flags: A set of #GstStackTraceFlags to determine how the stack
@@ -2786,6 +2919,10 @@ gst_debug_get_stack_trace (GstStackTraceFlags flags)
     trace = generate_unwind_trace (flags);
 #endif /* HAVE_UNWIND */
 
+#ifdef HAVE_DBGHELP
+  trace = generate_dbghelp_trace ();
+#endif
+
   if (trace)
     return trace;
   else if (have_backtrace)
@@ -2797,7 +2934,7 @@ gst_debug_get_stack_trace (GstStackTraceFlags flags)
 /**
  * gst_debug_print_stack_trace:
  *
- * If libunwind or glibc backtrace are present
+ * If libunwind, glibc backtrace or DbgHelp are present
  * a stack trace is printed.
  */
 void
@@ -2852,9 +2989,44 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
   gint64 now = g_get_monotonic_time ();
   const gchar *message_str = gst_debug_message_get (message);
 
+  /* __FILE__ might be a file name or an absolute path or a
+   * relative path, irrespective of the exact compiler used,
+   * in which case we want to shorten it to the filename for
+   * readability. */
+  c = file[0];
+  if (c == '.' || c == '/' || c == '\\' || (c != '\0' && file[1] == ':')) {
+    file = gst_path_basename (file);
+  }
+
+  if (object) {
+    obj = gst_debug_print_object (object);
+  } else {
+    obj = (gchar *) "";
+  }
+
+  elapsed = GST_CLOCK_DIFF (_priv_gst_start_time, gst_util_get_timestamp ());
+  pid = getpid ();
+  thread = g_thread_self ();
+
+  /* no color, all platforms */
+#define PRINT_FMT " "PID_FMT" "PTR_FMT" %s "CAT_FMT" %s\n"
+  output =
+      g_strdup_printf ("%" GST_TIME_FORMAT PRINT_FMT, GST_TIME_ARGS (elapsed),
+      pid, thread, gst_debug_level_get_name (level),
+      gst_debug_category_get_name (category), file, line, function, obj,
+      message_str);
+#undef PRINT_FMT
+
+  output_len = strlen (output);
+
+  if (object != NULL)
+    g_free (obj);
+
   G_LOCK (ring_buffer_logger);
 
   if (logger->thread_timeout > 0) {
+    gchar *buf;
+
     /* Remove all threads that saw no output since thread_timeout seconds.
      * By construction these are all at the tail of the queue, and the queue
      * is ordered by last use, so we just need to look at the tail.
@@ -2865,8 +3037,8 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
         break;
 
       g_hash_table_remove (logger->thread_index, log->thread);
-      while ((output = g_queue_pop_head (&log->log)))
-        g_free (output);
+      while ((buf = g_queue_pop_head (&log->log)))
+        g_free (buf);
       g_free (log);
       g_queue_pop_tail (&logger->threads);
     }
@@ -2874,7 +3046,6 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
 
   /* Get logger for this thread, and put it back at the
    * head of the threads queue */
-  thread = g_thread_self ();
   log = g_hash_table_lookup (logger->thread_index, thread);
   if (!log) {
     log = g_new0 (GstRingBufferLog, 1);
@@ -2889,36 +3060,6 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
     g_queue_push_head_link (&logger->threads, log->link);
   }
   log->last_use = now;
-
-  /* __FILE__ might be a file name or an absolute path or a
-   * relative path, irrespective of the exact compiler used,
-   * in which case we want to shorten it to the filename for
-   * readability. */
-  c = file[0];
-  if (c == '.' || c == '/' || c == '\\' || (c != '\0' && file[1] == ':')) {
-    file = gst_path_basename (file);
-  }
-
-  pid = getpid ();
-
-  if (object) {
-    obj = gst_debug_print_object (object);
-  } else {
-    obj = (gchar *) "";
-  }
-
-  elapsed = GST_CLOCK_DIFF (_priv_gst_start_time, gst_util_get_timestamp ());
-
-  /* no color, all platforms */
-#define PRINT_FMT " "PID_FMT" "PTR_FMT" %s "CAT_FMT" %s\n"
-  output =
-      g_strdup_printf ("%" GST_TIME_FORMAT PRINT_FMT, GST_TIME_ARGS (elapsed),
-      pid, thread, gst_debug_level_get_name (level),
-      gst_debug_category_get_name (category), file, line, function, obj,
-      message_str);
-#undef PRINT_FMT
-
-  output_len = strlen (output);
 
   if (output_len < logger->max_size_per_thread) {
     gchar *buf;
@@ -2949,9 +3090,6 @@ gst_ring_buffer_logger_log (GstDebugCategory * category,
     g_free (output);
     log->log_size = 0;
   }
-
-  if (object != NULL)
-    g_free (obj);
 
   G_UNLOCK (ring_buffer_logger);
 }

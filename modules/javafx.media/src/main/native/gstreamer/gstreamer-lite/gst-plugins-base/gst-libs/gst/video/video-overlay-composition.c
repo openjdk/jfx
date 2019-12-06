@@ -42,7 +42,7 @@
  *
  * Together, this allows existing overlay elements to easily handle raw
  * and non-raw video as input in without major changes (once the overlays
- * have been put into a #GstOverlayComposition object anyway) - for raw
+ * have been put into a #GstVideoOverlayComposition object anyway) - for raw
  * video the overlay can just use the blending function to blend the data
  * on top of the video, and for surface buffers it can just attach them to
  * the buffer and let the sink render the overlays.
@@ -312,6 +312,8 @@ gst_video_overlay_composition_free (GstMiniObject * mini_obj)
   num = comp->num_rectangles;
 
   while (num > 0) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (comp->rectangles[num -
+                1]), GST_MINI_OBJECT_CAST (comp));
     gst_video_overlay_rectangle_unref (comp->rectangles[num - 1]);
     --num;
   }
@@ -354,6 +356,8 @@ gst_video_overlay_composition_new (GstVideoOverlayRectangle * rectangle)
 
   comp->rectangles = g_new0 (GstVideoOverlayRectangle *, RECTANGLE_ARRAY_STEP);
   comp->rectangles[0] = gst_video_overlay_rectangle_ref (rectangle);
+  gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (rectangle),
+      GST_MINI_OBJECT_CAST (comp));
   comp->num_rectangles = 1;
 
   comp->seq_num = gst_video_overlay_get_seqnum ();
@@ -382,7 +386,7 @@ gst_video_overlay_composition_add_rectangle (GstVideoOverlayComposition * comp,
 {
   g_return_if_fail (GST_IS_VIDEO_OVERLAY_COMPOSITION (comp));
   g_return_if_fail (GST_IS_VIDEO_OVERLAY_RECTANGLE (rectangle));
-  g_return_if_fail (GST_MINI_OBJECT_REFCOUNT_VALUE (comp) == 1);
+  g_return_if_fail (gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (comp)));
 
   if (comp->num_rectangles % RECTANGLE_ARRAY_STEP == 0) {
     comp->rectangles =
@@ -392,6 +396,8 @@ gst_video_overlay_composition_add_rectangle (GstVideoOverlayComposition * comp,
 
   comp->rectangles[comp->num_rectangles] =
       gst_video_overlay_rectangle_ref (rectangle);
+  gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (rectangle),
+      GST_MINI_OBJECT_CAST (comp));
   comp->num_rectangles += 1;
 
   comp->min_seq_num_used = MIN (comp->min_seq_num_used, rectangle->seq_num);
@@ -581,11 +587,12 @@ gst_video_overlay_composition_make_writable (GstVideoOverlayComposition * comp)
 
   g_return_val_if_fail (GST_IS_VIDEO_OVERLAY_COMPOSITION (comp), NULL);
 
-  if (GST_MINI_OBJECT_REFCOUNT_VALUE (comp) == 1) {
+  if (gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (comp))) {
     guint n;
 
     for (n = 0; n < comp->num_rectangles; ++n) {
-      if (GST_MINI_OBJECT_REFCOUNT_VALUE (comp->rectangles[n]) != 1)
+      if (!gst_mini_object_is_writable (GST_MINI_OBJECT_CAST (comp->rectangles
+                  [n])))
         goto copy;
     }
     return comp;
@@ -628,6 +635,8 @@ gst_video_overlay_rectangle_free (GstMiniObject * mini_obj)
 {
   GstVideoOverlayRectangle *rect = (GstVideoOverlayRectangle *) mini_obj;
 
+  gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (rect->pixels),
+      GST_MINI_OBJECT_CAST (rect));
   gst_buffer_replace (&rect->pixels, NULL);
 
   while (rect->scaled_rectangles != NULL) {
@@ -729,6 +738,8 @@ gst_video_overlay_rectangle_new_raw (GstBuffer * pixels,
   g_mutex_init (&rect->lock);
 
   rect->pixels = gst_buffer_ref (pixels);
+  gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (pixels),
+      GST_MINI_OBJECT_CAST (rect));
   rect->scaled_rectangles = NULL;
 
   gst_video_info_init (&rect->info);
@@ -816,7 +827,8 @@ gst_video_overlay_rectangle_set_render_rectangle (GstVideoOverlayRectangle *
     guint render_height)
 {
   g_return_if_fail (GST_IS_VIDEO_OVERLAY_RECTANGLE (rectangle));
-  g_return_if_fail (GST_MINI_OBJECT_REFCOUNT_VALUE (rectangle) == 1);
+  g_return_if_fail (gst_mini_object_is_writable (GST_MINI_OBJECT_CAST
+          (rectangle)));
 
   rectangle->x = render_x;
   rectangle->y = render_y;
@@ -829,12 +841,17 @@ static void
 gst_video_overlay_rectangle_premultiply_0 (GstVideoFrame * frame)
 {
   int i, j;
-  for (j = 0; j < GST_VIDEO_FRAME_HEIGHT (frame); ++j) {
+  int width = GST_VIDEO_FRAME_WIDTH (frame);
+  int height = GST_VIDEO_FRAME_HEIGHT (frame);
+  int stride = GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0);
+  guint8 *data = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
+
+  for (j = 0; j < height; ++j) {
     guint8 *line;
 
-    line = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
-    line += GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0) * j;
-    for (i = 0; i < GST_VIDEO_FRAME_WIDTH (frame); ++i) {
+    line = data;
+    line += stride * j;
+    for (i = 0; i < width; ++i) {
       int a = line[0];
       line[1] = line[1] * a / 255;
       line[2] = line[2] * a / 255;
@@ -848,12 +865,17 @@ static void
 gst_video_overlay_rectangle_premultiply_3 (GstVideoFrame * frame)
 {
   int i, j;
-  for (j = 0; j < GST_VIDEO_FRAME_HEIGHT (frame); ++j) {
+  int width = GST_VIDEO_FRAME_WIDTH (frame);
+  int height = GST_VIDEO_FRAME_HEIGHT (frame);
+  int stride = GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0);
+  guint8 *data = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
+
+  for (j = 0; j < height; ++j) {
     guint8 *line;
 
-    line = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
-    line += GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0) * j;
-    for (i = 0; i < GST_VIDEO_FRAME_WIDTH (frame); ++i) {
+    line = data;
+    line += stride * j;
+    for (i = 0; i < width; ++i) {
       int a = line[3];
       line[0] = line[0] * a / 255;
       line[1] = line[1] * a / 255;
@@ -887,12 +909,17 @@ static void
 gst_video_overlay_rectangle_unpremultiply_0 (GstVideoFrame * frame)
 {
   int i, j;
-  for (j = 0; j < GST_VIDEO_FRAME_HEIGHT (frame); ++j) {
+  int width = GST_VIDEO_FRAME_WIDTH (frame);
+  int height = GST_VIDEO_FRAME_HEIGHT (frame);
+  int stride = GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0);
+  guint8 *data = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
+
+  for (j = 0; j < height; ++j) {
     guint8 *line;
 
-    line = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
-    line += GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0) * j;
-    for (i = 0; i < GST_VIDEO_FRAME_WIDTH (frame); ++i) {
+    line = data;
+    line += stride * j;
+    for (i = 0; i < width; ++i) {
       int a = line[0];
       if (a) {
         line[1] = MIN ((line[1] * 255 + a / 2) / a, 255);
@@ -908,12 +935,17 @@ static void
 gst_video_overlay_rectangle_unpremultiply_3 (GstVideoFrame * frame)
 {
   int i, j;
-  for (j = 0; j < GST_VIDEO_FRAME_HEIGHT (frame); ++j) {
+  int width = GST_VIDEO_FRAME_WIDTH (frame);
+  int height = GST_VIDEO_FRAME_HEIGHT (frame);
+  int stride = GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0);
+  guint8 *data = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
+
+  for (j = 0; j < height; ++j) {
     guint8 *line;
 
-    line = GST_VIDEO_FRAME_PLANE_DATA (frame, 0);
-    line += GST_VIDEO_FRAME_PLANE_STRIDE (frame, 0) * j;
-    for (i = 0; i < GST_VIDEO_FRAME_WIDTH (frame); ++i) {
+    line = data;
+    line += stride * j;
+    for (i = 0; i < width; ++i) {
       int a = line[3];
       if (a) {
         line[0] = MIN ((line[0] * 255 + a / 2) / a, 255);
@@ -1000,7 +1032,13 @@ gst_video_overlay_rectangle_apply_global_alpha (GstVideoOverlayRectangle * rect,
     gst_video_overlay_rectangle_extract_alpha (rect);
 
   src = rect->initial_alpha;
-  rect->pixels = gst_buffer_make_writable (rect->pixels);
+  if (!gst_buffer_is_writable (rect->pixels)) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (rect->pixels),
+        GST_MINI_OBJECT_CAST (rect));
+    rect->pixels = gst_buffer_copy (rect->pixels);
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (rect->pixels),
+        GST_MINI_OBJECT_CAST (rect));
+  }
 
   gst_video_frame_map (&frame, &rect->info, rect->pixels, GST_MAP_READ);
   dst = GST_VIDEO_FRAME_PLANE_DATA (&frame, 0);
@@ -1528,6 +1566,8 @@ gst_video_overlay_rectangle_set_global_alpha (GstVideoOverlayRectangle *
     rectangle, gfloat global_alpha)
 {
   g_return_if_fail (GST_IS_VIDEO_OVERLAY_RECTANGLE (rectangle));
+  g_return_if_fail (gst_mini_object_is_writable (GST_MINI_OBJECT_CAST
+          (rectangle)));
   g_return_if_fail (global_alpha >= 0 && global_alpha <= 1);
 
   if (rectangle->global_alpha != global_alpha) {

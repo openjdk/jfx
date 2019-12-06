@@ -227,30 +227,32 @@ struct _GstVideoCodecFrame
 {
   /*< private >*/
   gint ref_count;
-
   guint32 flags;
 
   /*< public >*/
   guint32 system_frame_number;  /* ED */
+
+  /*< private >*/
   guint32 decode_frame_number;  /* ED */
   guint32 presentation_frame_number; /* ED */
 
+  /*< public >*/
   GstClockTime dts;       /* ED */
   GstClockTime pts;       /* ED */
   GstClockTime duration;  /* ED */
 
-  int distance_from_sync;   /* ED */
+  int distance_from_sync; /* ED */
 
   GstBuffer *input_buffer;  /* ED */
   GstBuffer *output_buffer; /* ED */
 
-  GstClockTime deadline;    /* D */
+  GstClockTime deadline;  /* D */
 
   /*< private >*/
 
   /* Events that should be pushed downstream *before*
    * the next output_buffer */
-  GList *events;        /* ED */
+  GList *events;    /* ED */
 
   gpointer       user_data;
   GDestroyNotify user_data_destroy_notify;
@@ -289,8 +291,8 @@ void                 gst_video_codec_frame_unref (GstVideoCodecFrame * frame);
 
 GST_VIDEO_API
 void                 gst_video_codec_frame_set_user_data (GstVideoCodecFrame *frame,
-                                  gpointer user_data,
-                                          GDestroyNotify notify);
+                      gpointer user_data,
+                                  GDestroyNotify notify);
 
 GST_VIDEO_API
 gpointer             gst_video_codec_frame_get_user_data (GstVideoCodecFrame *frame);

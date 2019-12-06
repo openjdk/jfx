@@ -58,7 +58,7 @@ typedef enum {
  * @GST_SEEK_FLAG_SEGMENT: perform a segment seek.
  * @GST_SEEK_FLAG_TRICKMODE: when doing fast forward or fast reverse playback, allow
  *                     elements to skip frames instead of generating all
- *                     frames. (Since 1.6)
+ *                     frames. (Since: 1.6)
  * @GST_SEEK_FLAG_SNAP_BEFORE: go to a location before the requested position,
  *                     if %GST_SEEK_FLAG_KEY_UNIT this means the keyframe at or before
  *                     the requested position the one at or before the seek target.
@@ -72,10 +72,10 @@ typedef enum {
  * @GST_SEEK_FLAG_TRICKMODE_KEY_UNITS: when doing fast forward or fast reverse
  *                     playback, request that elements only decode keyframes
  *                     and skip all other content, for formats that have
- *                     keyframes. (Since 1.6)
+ *                     keyframes. (Since: 1.6)
  * @GST_SEEK_FLAG_TRICKMODE_NO_AUDIO: when doing fast forward or fast reverse
  *                     playback, request that audio decoder elements skip
- *                     decoding and output only gap events or silence. (Since 1.6)
+ *                     decoding and output only gap events or silence. (Since: 1.6)
  * @GST_SEEK_FLAG_SKIP: Deprecated backward compatibility flag, replaced
  *                     by %GST_SEEK_FLAG_TRICKMODE
  *
@@ -144,12 +144,12 @@ typedef enum {
  * @GST_SEGMENT_FLAG_NONE: no flags
  * @GST_SEGMENT_FLAG_RESET: reset the pipeline running_time to the segment
  *                          running_time
- * @GST_SEGMENT_FLAG_TRICKMODE: perform skip playback (Since 1.6)
+ * @GST_SEGMENT_FLAG_TRICKMODE: perform skip playback (Since: 1.6)
  * @GST_SEGMENT_FLAG_SEGMENT: send SEGMENT_DONE instead of EOS
  * @GST_SEGMENT_FLAG_TRICKMODE_KEY_UNITS: Decode only keyframes, where
- *                                        possible (Since 1.6)
+ *                                        possible (Since: 1.6)
  * @GST_SEGMENT_FLAG_TRICKMODE_NO_AUDIO: Do not decode any audio, where
- *                                        possible (Since 1.6)
+ *                                        possible (Since: 1.6)
  * @GST_SEGMENT_FLAG_SKIP: Deprecated backward compatibility flag, replaced
  *                         by @GST_SEGMENT_FLAG_TRICKMODE
  *

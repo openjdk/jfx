@@ -1865,8 +1865,8 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
     result = pad_link_maybe_ghosting (srcpad, destpad, flags);
 
     if (result) {
-    gst_object_unref (srcpad);
-    gst_object_unref (destpad);
+      gst_object_unref (srcpad);
+      gst_object_unref (destpad);
     } else {
       release_and_unref_pad (src, srcpad, srcrequest);
       release_and_unref_pad (dest, destpad, destrequest);
@@ -1896,7 +1896,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
               && GST_PAD_TEMPLATE_PRESENCE (GST_PAD_PAD_TEMPLATE (temp)) ==
               GST_PAD_REQUEST) {
             temprequest = TRUE;
-        }
+          }
         }
 
         if (temp && pad_link_maybe_ghosting (srcpad, temp, flags)) {
@@ -1937,7 +1937,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
   }
   if (srcpad) {
     release_and_unref_pad (src, srcpad, srcrequest);
-  srcpad = NULL;
+    srcpad = NULL;
   }
 
   if (destpad) {
@@ -1965,7 +1965,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
         }
 
         release_and_unref_pad (src, temp, temprequest);
-        }
+      }
       if (destpads) {
         destpads = g_list_next (destpads);
         if (destpads) {
@@ -1984,7 +1984,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
     return FALSE;
   } else {
     /* no need to release any request pad as the case of unset destpatname and
-     * destpad being a requst pad has already been taken care of when looking
+     * destpad being a request pad has already been taken care of when looking
      * though the destination pads above */
     if (destpad) {
       gst_object_unref (destpad);
@@ -2038,7 +2038,7 @@ gst_element_link_pads_full (GstElement * src, const gchar * srcpadname,
               if (destpad) {
                 gst_element_release_request_pad (dest, destpad);
                 gst_object_unref (destpad);
-            }
+              }
             }
             gst_caps_unref (srccaps);
             gst_caps_unref (destcaps);
@@ -2619,7 +2619,7 @@ gst_pad_get_parent_element (GstPad * pad)
  * @debug: (in) (allow-none): an additional debug information string, or %NULL
  *
  * A default error function that uses g_printerr() to display the error message
- * and the optional debug sting..
+ * and the optional debug string..
  *
  * The default handler will simply print the error string using g_print.
  */
@@ -3419,9 +3419,9 @@ gst_parse_bin_from_description_full (const gchar * bin_description,
   if (flags & GST_PARSE_FLAG_NO_SINGLE_ELEMENT_BINS) {
     element = gst_parse_launch_full (bin_description, context, flags, err);
   } else {
-  desc = g_strdup_printf ("bin.( %s )", bin_description);
+    desc = g_strdup_printf ("bin.( %s )", bin_description);
     element = gst_parse_launch_full (desc, context, flags, err);
-  g_free (desc);
+    g_free (desc);
   }
 
   if (element == NULL || (err && *err != NULL)) {

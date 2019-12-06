@@ -215,7 +215,7 @@ gst_protection_filter_systems_by_available_decryptors (const gchar **
     system_identifiers)
 {
   GList *decryptors, *walk;
-  gchar **retval;
+  gchar **retval = NULL;
   guint i = 0, decryptors_number;
 
   decryptors =
@@ -227,7 +227,7 @@ gst_protection_filter_systems_by_available_decryptors (const gchar **
   GST_TRACE ("found %u decrytors", decryptors_number);
 
   if (decryptors_number == 0)
-    return NULL;
+    goto beach;
 
   retval = g_new (gchar *, decryptors_number + 1);
 
@@ -250,6 +250,7 @@ gst_protection_filter_systems_by_available_decryptors (const gchar **
     retval = NULL;
   }
 
+beach:
   gst_plugin_feature_list_free (decryptors);
 
   return retval;

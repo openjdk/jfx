@@ -57,6 +57,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#ifdef HAVE_PTHREAD_SET_NAME_NP
+#include <pthread_np.h>
+#endif
 #ifdef HAVE_SCHED_H
 #include <sched.h>
 #endif
@@ -587,8 +590,10 @@ g_rw_lock_writer_unlock (GRWLock *rw_lock)
  * @rw_lock: a #GRWLock
  *
  * Obtain a read lock on @rw_lock. If another thread currently holds
- * the write lock on @rw_lock or blocks waiting for it, the current
- * thread will block. Read locks can be taken recursively.
+ * the write lock on @rw_lock, the current thread will block. If another thread
+ * does not hold the write lock, but is waiting for it, it is implementation
+ * defined whether the reader or writer will block. Read locks can be taken
+ * recursively.
  *
  * It is implementation-defined how many threads are allowed to
  * hold read locks on the same lock simultaneously. If the limit is hit,
@@ -1115,12 +1120,12 @@ g_private_replace (GPrivate *key,
 
 /* {{{1 GThread */
 
-#define posix_check_err(err, name) G_STMT_START{            \
-  int error = (err);                            \
-  if (error)                                \
-    g_error ("file %s: line %d (%s): error '%s' during '%s'",       \
-           __FILE__, __LINE__, G_STRFUNC,               \
-           g_strerror (error), name);                   \
+#define posix_check_err(err, name) G_STMT_START{      \
+  int error = (err);              \
+  if (error)                \
+    g_error ("file %s: line %d (%s): error '%s' during '%s'",   \
+           __FILE__, __LINE__, G_STRFUNC,       \
+           g_strerror (error), name);         \
   }G_STMT_END
 
 #define posix_check_cmd(cmd) posix_check_err (cmd, #cmd)
@@ -1148,15 +1153,26 @@ g_system_thread_free (GRealThread *thread)
 }
 
 GRealThread *
-g_system_thread_new (GThreadFunc   thread_func,
+g_system_thread_new (GThreadFunc   proxy,
                      gulong        stack_size,
+                     const char   *name,
+                     GThreadFunc   func,
+                     gpointer      data,
                      GError      **error)
 {
   GThreadPosix *thread;
+  GRealThread *base_thread;
   pthread_attr_t attr;
   gint ret;
 
   thread = g_slice_new0 (GThreadPosix);
+  base_thread = (GRealThread*)thread;
+  base_thread->ref_count = 2;
+  base_thread->ours = TRUE;
+  base_thread->thread.joinable = TRUE;
+  base_thread->thread.func = func;
+  base_thread->thread.data = data;
+  base_thread->name = g_strdup (name);
 
   posix_check_cmd (pthread_attr_init (&attr));
 
@@ -1166,7 +1182,7 @@ g_system_thread_new (GThreadFunc   thread_func,
 #ifdef _SC_THREAD_STACK_MIN
       long min_stack_size = sysconf (_SC_THREAD_STACK_MIN);
       if (min_stack_size >= 0)
-        stack_size = MAX (min_stack_size, stack_size);
+        stack_size = MAX ((gulong) min_stack_size, stack_size);
 #endif /* _SC_THREAD_STACK_MIN */
       /* No error check here, because some systems can't do it and
        * we simply don't want threads to fail because of that. */
@@ -1174,7 +1190,7 @@ g_system_thread_new (GThreadFunc   thread_func,
     }
 #endif /* HAVE_PTHREAD_ATTR_SETSTACKSIZE */
 
-  ret = pthread_create (&thread->system_thread, &attr, (void* (*)(void*))thread_func, thread);
+  ret = pthread_create (&thread->system_thread, &attr, (void* (*)(void*))proxy, thread);
 
   posix_check_cmd (pthread_attr_destroy (&attr));
 
@@ -1232,10 +1248,14 @@ g_system_thread_exit (void)
 void
 g_system_thread_set_name (const gchar *name)
 {
-#if defined(HAVE_PTHREAD_SETNAME_NP_WITH_TID)
-  pthread_setname_np (pthread_self(), name); /* on Linux and Solaris */
-#elif defined(HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID)
+#if defined(HAVE_PTHREAD_SETNAME_NP_WITHOUT_TID)
   pthread_setname_np (name); /* on OS X and iOS */
+#elif defined(HAVE_PTHREAD_SETNAME_NP_WITH_TID)
+  pthread_setname_np (pthread_self (), name); /* on Linux and Solaris */
+#elif defined(HAVE_PTHREAD_SETNAME_NP_WITH_TID_AND_ARG)
+  pthread_setname_np (pthread_self (), "%s", (gchar *) name); /* on NetBSD */
+#elif defined(HAVE_PTHREAD_SET_NAME_NP)
+  pthread_set_name_np (pthread_self (), name); /* on FreeBSD, DragonFlyBSD, OpenBSD */
 #endif
 }
 
@@ -1428,6 +1448,7 @@ g_cond_wait_until (GCond  *cond,
   struct timespec span;
   guint sampled;
   int res;
+  gboolean success;
 
   if (end_time < 0)
     return FALSE;
@@ -1447,9 +1468,10 @@ g_cond_wait_until (GCond  *cond,
   sampled = cond->i[0];
   g_mutex_unlock (mutex);
   res = syscall (__NR_futex, &cond->i[0], (gsize) FUTEX_WAIT_PRIVATE, (gsize) sampled, &span);
+  success = (res < 0 && errno == ETIMEDOUT) ? FALSE : TRUE;
   g_mutex_lock (mutex);
 
-  return (res < 0 && errno == ETIMEDOUT) ? FALSE : TRUE;
+  return success;
 }
 
 #endif

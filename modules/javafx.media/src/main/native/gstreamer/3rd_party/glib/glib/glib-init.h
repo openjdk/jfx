@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Canonical Limited
+ * Copyright (C) 2011 Canonical Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -36,6 +36,10 @@ void g_thread_win32_thread_detach (void);
 void g_thread_win32_init (void);
 void g_console_win32_init (void);
 void g_clock_win32_init (void);
+#ifndef GSTREAMER_LITE
+void g_crash_handler_win32_init (void);
+void g_crash_handler_win32_deinit (void);
+#endif // GSTREAMER_LITE
 extern HMODULE glib_dll;
 #endif
 

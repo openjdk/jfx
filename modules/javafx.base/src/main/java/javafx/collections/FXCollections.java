@@ -1008,6 +1008,11 @@ public class FXCollections {
             this.mutex = mutex;
         }
 
+        SynchronizedList(List<T> list) {
+            this.backingList = list;
+            this.mutex = this;
+        }
+
         @Override
         public int size() {
             synchronized(mutex) {
@@ -1197,17 +1202,13 @@ public class FXCollections {
         private final ObservableList<T> backingList;
         private final ListChangeListener<T> listener;
 
-        SynchronizedObservableList(ObservableList<T> seq, Object mutex) {
-            super(seq, mutex);
+        SynchronizedObservableList(ObservableList<T> seq) {
+            super(seq);
             this.backingList = seq;
             listener = c -> {
                 ListListenerHelper.fireValueChangedEvent(helper, new SourceAdapterChange<T>(SynchronizedObservableList.this, c));
             };
             backingList.addListener(new WeakListChangeListener<T>(listener));
-        }
-
-        SynchronizedObservableList(ObservableList<T> seq) {
-            this(seq, new Object());
         }
 
         @Override
@@ -1774,7 +1775,8 @@ public class FXCollections {
         }
 
         SynchronizedSet(Set<E> set) {
-            this(set, new Object());
+            this.backingSet = set;
+            this.mutex = this;
         }
 
         @Override
@@ -1890,17 +1892,13 @@ public class FXCollections {
         private SetListenerHelper listenerHelper;
         private final SetChangeListener<E> listener;
 
-        SynchronizedObservableSet(ObservableSet<E> set, Object mutex) {
-            super(set, mutex);
+        SynchronizedObservableSet(ObservableSet<E> set) {
+            super(set);
             backingSet = set;
             listener = c -> {
                 SetListenerHelper.fireValueChangedEvent(listenerHelper, new SetAdapterChange<E>(SynchronizedObservableSet.this, c));
             };
             backingSet.addListener(new WeakSetChangeListener<E>(listener));
-        }
-
-        SynchronizedObservableSet(ObservableSet<E> set) {
-            this(set, new Object());
         }
 
         @Override
@@ -2552,13 +2550,9 @@ public class FXCollections {
         final Object mutex;
         private final Map<K, V> backingMap;
 
-        SynchronizedMap(Map<K, V> map, Object mutex) {
-            backingMap = map;
-            this.mutex = mutex;
-        }
-
         SynchronizedMap(Map<K, V> map) {
-            this(map, new Object());
+            backingMap = map;
+            this.mutex = this;
         }
 
         @Override
@@ -2784,17 +2778,13 @@ public class FXCollections {
         private MapListenerHelper listenerHelper;
         private final MapChangeListener<K, V> listener;
 
-        SynchronizedObservableMap(ObservableMap<K, V> map, Object mutex) {
-            super(map, mutex);
+        SynchronizedObservableMap(ObservableMap<K, V> map) {
+            super(map);
             backingMap = map;
             listener = c -> {
                 MapListenerHelper.fireValueChangedEvent(listenerHelper, new MapAdapterChange<K, V>(SynchronizedObservableMap.this, c));
             };
             backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
-        }
-
-        SynchronizedObservableMap(ObservableMap<K, V> map) {
-            this(map, new Object());
         }
 
         @Override

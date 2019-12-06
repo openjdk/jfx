@@ -54,12 +54,15 @@ typedef struct stat GStatBuf;
 
 #endif
 
-#if defined(G_OS_UNIX) && !defined(G_STDIO_NO_WRAP_ON_UNIX)
+#if defined(G_OS_UNIX) && !defined(G_STDIO_WRAP_ON_UNIX)
 
 /* Just pass on to the system functions, so there's no potential for data
  * format mismatches, especially with large file interfaces.
  * A few functions can't be handled in this way, since they are not defined
  * in a portable system header that we could include here.
+ *
+ * #G_STDIO_WRAP_ON_UNIX is not public API and its behaviour is not guaranteed
+ * in future.
  */
 
 #ifndef __GTK_DOC_IGNORE__
@@ -78,7 +81,7 @@ typedef struct stat GStatBuf;
 
 GLIB_AVAILABLE_IN_ALL
 int g_access (const gchar *filename,
-          int          mode);
+        int          mode);
 
 GLIB_AVAILABLE_IN_ALL
 int g_chdir  (const gchar *path);
@@ -103,11 +106,11 @@ int g_rmdir  (const gchar *filename);
 
 GLIB_AVAILABLE_IN_ALL
 int g_access    (const gchar *filename,
-         int          mode);
+     int          mode);
 
 GLIB_AVAILABLE_IN_ALL
 int g_chmod     (const gchar *filename,
-         int          mode);
+     int          mode);
 
 GLIB_AVAILABLE_IN_ALL
 int g_open      (const gchar *filename,
@@ -155,13 +158,13 @@ FILE *g_freopen (const gchar *filename,
                  const gchar *mode,
                  FILE        *stream);
 
-struct utimbuf;         /* Don't need the real definition of struct utimbuf when just
-                                 * including this header.
-                                 */
+struct utimbuf;     /* Don't need the real definition of struct utimbuf when just
+         * including this header.
+         */
 
 GLIB_AVAILABLE_IN_ALL
 int g_utime     (const gchar    *filename,
-         struct utimbuf *utb);
+     struct utimbuf *utb);
 
 #endif /* G_OS_UNIX */
 

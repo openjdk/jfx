@@ -48,7 +48,7 @@
  *
  * To insert a key/value pair into a #GTree use g_tree_insert().
  *
- * To lookup the value corresponding to a given key, use
+ * To look up the value corresponding to a given key, use
  * g_tree_lookup() and g_tree_lookup_extended().
  *
  * To find out the number of nodes in a #GTree, use g_tree_nnodes(). To
@@ -873,8 +873,8 @@ g_tree_lookup (GTree         *tree,
  * g_tree_lookup_extended:
  * @tree: a #GTree
  * @lookup_key: the key to look up
- * @orig_key: (optional) (nullable): returns the original key
- * @value: (optional) (nullable): returns the value associated with the key
+ * @orig_key: (out) (optional) (nullable): returns the original key
+ * @value: (out) (optional) (nullable): returns the value associated with the key
  *
  * Looks up a key in the #GTree, returning the original key and the
  * associated value. This is useful if you need to free the memory

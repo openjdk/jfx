@@ -58,9 +58,9 @@
 #define ESTRPIPE EPIPE
 #endif
 
-#define DEFAULT_DEVICE      "default"
+#define DEFAULT_DEVICE    "default"
 #define DEFAULT_DEVICE_NAME ""
-#define DEFAULT_CARD_NAME   ""
+#define DEFAULT_CARD_NAME ""
 #define SPDIF_PERIOD_SIZE 1536
 #define SPDIF_BUFFER_SIZE 15360
 

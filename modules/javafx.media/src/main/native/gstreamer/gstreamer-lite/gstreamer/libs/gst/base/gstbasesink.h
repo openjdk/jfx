@@ -310,6 +310,13 @@ void            gst_base_sink_set_max_bitrate   (GstBaseSink *sink, guint64 max_
 GST_BASE_API
 guint64         gst_base_sink_get_max_bitrate   (GstBaseSink *sink);
 
+/* processing deadline */
+GST_BASE_API
+void            gst_base_sink_set_processing_deadline  (GstBaseSink *sink, GstClockTime processing_deadline);
+
+GST_BASE_API
+GstClockTime    gst_base_sink_get_processing_deadline  (GstBaseSink *sink);
+
 GST_BASE_API
 GstClockReturn  gst_base_sink_wait_clock        (GstBaseSink *sink, GstClockTime time,
                                                  GstClockTimeDiff * jitter);

@@ -33,6 +33,9 @@
 #include <gst/base/gstbasesrc.h>
 #include <gst/base/gstbasetransform.h>
 #include <gst/base/gstbitreader.h>
+#ifndef GSTREAMER_LITE
+#include <gst/base/gstbitwriter.h>
+#endif // GSTREAMER_LITE
 #include <gst/base/gstbytereader.h>
 #include <gst/base/gstbytewriter.h>
 #include <gst/base/gstcollectpads.h>

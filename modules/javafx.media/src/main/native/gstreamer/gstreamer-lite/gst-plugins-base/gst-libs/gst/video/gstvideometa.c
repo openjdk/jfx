@@ -16,10 +16,20 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gstvideometa.h"
 
 #include <string.h>
+
+/**
+ * SECTION:gstvideometa
+ * @title: GstMeta for video
+ * @short_description: Video related GstMeta
+ *
+ */
 
 #ifndef GST_DISABLE_GST_DEBUG
 #define GST_CAT_DEFAULT ensure_debug_category()
@@ -227,12 +237,12 @@ default_map (GstVideoMeta * meta, guint plane, GstMapInfo * info,
   /* ERRORS */
 no_memory:
   {
-    GST_DEBUG ("plane %u, no memory at offset %" G_GSIZE_FORMAT, plane, offset);
+    GST_ERROR ("plane %u, no memory at offset %" G_GSIZE_FORMAT, plane, offset);
     return FALSE;
   }
 cannot_map:
   {
-    GST_DEBUG ("cannot map memory range %u-%u", idx, length);
+    GST_ERROR ("cannot map memory range %u-%u", idx, length);
     return FALSE;
   }
 }
@@ -288,8 +298,8 @@ gst_buffer_add_video_meta (GstBuffer * buffer,
  * @width: the width
  * @height: the height
  * @n_planes: number of planes
- * @offset: offset of each plane
- * @stride: stride of each plane
+ * @offset: (array fixed-size=4): offset of each plane
+ * @stride: (array fixed-size=4): stride of each plane
  *
  * Attaches GstVideoMeta metadata to @buffer with the given parameters.
  *
@@ -885,6 +895,7 @@ gst_video_region_of_interest_meta_add_param (GstVideoRegionOfInterestMeta *
 /**
  * gst_video_region_of_interest_meta_get_param:
  * @meta: a #GstVideoRegionOfInterestMeta
+ * @name: a name.
  *
  * Retrieve the parameter for @meta having @name as structure name,
  * or %NULL if there is none.
@@ -999,14 +1010,17 @@ gst_video_time_code_meta_get_info (void)
  * Attaches #GstVideoTimeCodeMeta metadata to @buffer with the given
  * parameters.
  *
- * Returns: (transfer none): the #GstVideoTimeCodeMeta on @buffer.
+ * Returns: (transfer none) (nullable): the #GstVideoTimeCodeMeta on @buffer, or
+ * (since 1.16) %NULL if the timecode was invalid.
  *
  * Since: 1.10
  */
 GstVideoTimeCodeMeta *
 gst_buffer_add_video_time_code_meta (GstBuffer * buffer, GstVideoTimeCode * tc)
 {
-  g_return_val_if_fail (gst_video_time_code_is_valid (tc), NULL);
+  if (!gst_video_time_code_is_valid (tc))
+    return NULL;
+
   return gst_buffer_add_video_time_code_meta_full (buffer, tc->config.fps_n,
       tc->config.fps_d, tc->config.latest_daily_jam, tc->config.flags,
       tc->hours, tc->minutes, tc->seconds, tc->frames, tc->field_count);
@@ -1028,7 +1042,8 @@ gst_buffer_add_video_time_code_meta (GstBuffer * buffer, GstVideoTimeCode * tc)
  * Attaches #GstVideoTimeCodeMeta metadata to @buffer with the given
  * parameters.
  *
- * Returns: (transfer none): the #GstVideoTimeCodeMeta on @buffer.
+ * Returns: (transfer none): the #GstVideoTimeCodeMeta on @buffer, or
+ * (since 1.16) %NULL if the timecode was invalid.
  *
  * Since: 1.10
  */
@@ -1048,7 +1063,10 @@ gst_buffer_add_video_time_code_meta_full (GstBuffer * buffer, guint fps_n,
   gst_video_time_code_init (&meta->tc, fps_n, fps_d, latest_daily_jam, flags,
       hours, minutes, seconds, frames, field_count);
 
-  g_return_val_if_fail (gst_video_time_code_is_valid (&meta->tc), NULL);
+  if (!gst_video_time_code_is_valid (&meta->tc)) {
+    gst_buffer_remove_meta (buffer, (GstMeta *) meta);
+    return NULL;
+  }
 
   return meta;
 }

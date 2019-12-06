@@ -397,6 +397,30 @@ gst_structure_free (GstStructure * structure)
 }
 
 /**
+ * gst_clear_structure: (skip)
+ * @structure_ptr: a pointer to a #GstStructure reference
+ *
+ * Clears a reference to a #GstStructure.
+ *
+ * @structure_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing.
+ * Otherwise, the structure is free'd using gst_structure_free() and the
+ * pointer is set to %NULL.
+ *
+ * A macro is also included that allows this function to be used without
+ * pointer casts.
+ *
+ * Since: 1.16
+ **/
+#undef gst_clear_structure
+void
+gst_clear_structure (GstStructure ** structure_ptr)
+{
+  g_clear_pointer (structure_ptr, gst_structure_free);
+}
+
+/**
  * gst_structure_get_name:
  * @structure: a #GstStructure
  *
@@ -609,6 +633,7 @@ gst_structure_set_valist_internal (GstStructure * structure,
     G_VALUE_COLLECT_INIT (&field.value, type, varargs, 0, &err);
     if (G_UNLIKELY (err)) {
       g_critical ("%s", err);
+      g_free (err);
       return;
     }
     gst_structure_set_field (structure, &field);
@@ -675,6 +700,7 @@ gst_structure_id_set_valist_internal (GstStructure * structure,
     G_VALUE_COLLECT_INIT (&field.value, type, varargs, 0, &err);
     if (G_UNLIKELY (err)) {
       g_critical ("%s", err);
+      g_free (err);
       return;
     }
     gst_structure_set_field (structure, &field);
@@ -1762,7 +1788,7 @@ gst_structure_get_flagset (const GstStructure * structure,
     *value_mask = gst_value_get_flagset_mask (&field->value);
 
   return TRUE;
-    }
+}
 
 static GType
 gst_structure_value_get_generic_type (const GValue * val)
@@ -1811,7 +1837,7 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
     } else if (G_VALUE_TYPE (&field->value) == GST_TYPE_LIST) {
       t = _priv_gst_value_serialize_any_list (&field->value, "{ ", " }", FALSE);
     } else {
-    t = gst_value_serialize (&field->value);
+      t = gst_value_serialize (&field->value);
     }
 
     type = gst_structure_value_get_generic_type (&field->value);
@@ -1824,17 +1850,22 @@ priv_gst_structure_append_to_gstring (const GstStructure * structure,
     g_string_append_c (s, ')');
     if (t) {
       g_string_append (s, t);
-    g_free (t);
+      g_free (t);
+    } else if (G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_POINTER)) {
+      gpointer ptr = g_value_get_pointer (&field->value);
+
+      if (!ptr)
+        g_string_append (s, "NULL");
+      else
+        g_string_append_printf (s, "%p", ptr);
     } else {
-      if (!G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_STRING) &&
-          !(G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_POINTER) &&
-              g_value_get_pointer (&field->value) == NULL))
+      if (!G_TYPE_CHECK_VALUE_TYPE (&field->value, G_TYPE_STRING))
         GST_WARNING ("No value transform to serialize field '%s' of type '%s'",
             g_quark_to_string (field->name),
             _priv_gst_value_gtype_to_abbr (type));
       /* TODO(ensonic): don't print NULL if field->value is not empty */
       g_string_append (s, "NULL");
-  }
+    }
   }
 
   g_string_append_c (s, ';');
@@ -2184,14 +2215,20 @@ gst_structure_fixate_field_nearest_int (GstStructure * structure,
     /* already fixed */
     return FALSE;
   } else if (G_VALUE_TYPE (value) == GST_TYPE_INT_RANGE) {
-    int x;
+    int min, max, step;
 
-    x = gst_value_get_int_range_min (value);
-    if (target < x)
-      target = x;
-    x = gst_value_get_int_range_max (value);
-    if (target > x)
-      target = x;
+    min = gst_value_get_int_range_min (value);
+    max = gst_value_get_int_range_max (value);
+    step = gst_value_get_int_range_step (value);
+
+    target = CLAMP (target, min, max);
+    if (G_UNLIKELY (step != 1)) {
+      gint rem = target % step;
+      target -= rem;
+      if (rem > step / 2)
+        target += step;
+    }
+
     gst_structure_set (structure, field_name, G_TYPE_INT, target, NULL);
     return TRUE;
   } else if (G_VALUE_TYPE (value) == GST_TYPE_LIST) {
@@ -3060,13 +3097,13 @@ _gst_structure_get_any_list (GstStructure * structure, GType type,
  * @array: (out): a pointer to a #GValueArray
  *
  * This is useful in language bindings where unknown #GValue types are not
- * supported. This function will convert the %GST_TYPE_ARRAY and
- * %GST_TYPE_LIST into a newly allocated #GValueArray and return it through
- * @array. Be aware that this is slower then getting the #GValue directly.
+ * supported. This function will convert the %GST_TYPE_ARRAY into a newly
+ * allocated #GValueArray and return it through @array. Be aware that this is
+ * slower then getting the #GValue directly.
  *
  * Returns: %TRUE if the value could be set correctly. If there was no field
- * with @fieldname or the existing field did not contain an int, this function
- * returns %FALSE.
+ * with @fieldname or the existing field did not contain a %GST_TYPE_ARRAY,
+ * this function returns %FALSE.
  */
 gboolean
 gst_structure_get_array (GstStructure * structure, const gchar * fieldname,
@@ -3083,15 +3120,15 @@ gst_structure_get_array (GstStructure * structure, const gchar * fieldname,
  * @array: (out): a pointer to a #GValueArray
  *
  * This is useful in language bindings where unknown #GValue types are not
- * supported. This function will convert the %GST_TYPE_ARRAY and
- * %GST_TYPE_LIST into a newly allocated GValueArray and return it through
- * @array. Be aware that this is slower then getting the #GValue directly.
+ * supported. This function will convert the %GST_TYPE_LIST into a newly
+ * allocated GValueArray and return it through @array. Be aware that this is
+ * slower then getting the #GValue directly.
  *
  * Returns: %TRUE if the value could be set correctly. If there was no field
- * with @fieldname or the existing field did not contain an int, this function
- * returns %FALSE.
+ * with @fieldname or the existing field did not contain a %GST_TYPE_LIST, this
+ * function returns %FALSE.
  *
- * Since 1.12
+ * Since: 1.12
  */
 gboolean
 gst_structure_get_list (GstStructure * structure, const gchar * fieldname,
@@ -3139,7 +3176,7 @@ _gst_structure_set_any_list (GstStructure * structure, GType type,
  * the field specified by @fieldname.  Be aware that this is slower then using
  * %GST_TYPE_ARRAY in a #GValue directly.
  *
- * Since 1.12
+ * Since: 1.12
  */
 void
 gst_structure_set_array (GstStructure * structure, const gchar * fieldname,
@@ -3155,11 +3192,11 @@ gst_structure_set_array (GstStructure * structure, const gchar * fieldname,
  * @array: a pointer to a #GValueArray
  *
  * This is useful in language bindings where unknown GValue types are not
- * supported. This function will convert a @array to %GST_TYPE_ARRAY and set
+ * supported. This function will convert a @array to %GST_TYPE_LIST and set
  * the field specified by @fieldname. Be aware that this is slower then using
- * %GST_TYPE_ARRAY in a #GValue directly.
+ * %GST_TYPE_LIST in a #GValue directly.
  *
- * Since 1.12
+ * Since: 1.12
  */
 void
 gst_structure_set_list (GstStructure * structure, const gchar * fieldname,

@@ -144,9 +144,6 @@ GST_DEBUG_CATEGORY_STATIC (bin_debug);
  * a toplevel bin */
 #define BIN_IS_TOPLEVEL(bin) ((GST_OBJECT_PARENT (bin) == NULL) || bin->priv->asynchandling)
 
-#define GST_BIN_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_BIN, GstBinPrivate))
-
 struct _GstBinPrivate
 {
   gboolean asynchandling;
@@ -272,7 +269,9 @@ static guint gst_bin_signals[LAST_SIGNAL] = { 0 };
 }
 
 #define gst_bin_parent_class parent_class
-G_DEFINE_TYPE_WITH_CODE (GstBin, gst_bin, GST_TYPE_ELEMENT, _do_init);
+G_DEFINE_TYPE_WITH_CODE (GstBin, gst_bin, GST_TYPE_ELEMENT,
+    G_ADD_PRIVATE (GstBin)
+    _do_init);
 
 static GObject *
 gst_bin_child_proxy_get_child_by_index (GstChildProxy * child_proxy,
@@ -339,8 +338,6 @@ gst_bin_class_init (GstBinClass * klass)
 
   gobject_class = (GObjectClass *) klass;
   gstelement_class = (GstElementClass *) klass;
-
-  g_type_class_add_private (klass, sizeof (GstBinPrivate));
 
   gobject_class->set_property = gst_bin_set_property;
   gobject_class->get_property = gst_bin_get_property;
@@ -480,7 +477,7 @@ gst_bin_class_init (GstBinClass * klass)
   klass->deep_element_removed = gst_bin_deep_element_removed_func;
 
   klass->do_latency = GST_DEBUG_FUNCPTR (gst_bin_do_latency_func);
-  }
+}
 
 static void
 gst_bin_init (GstBin * bin)
@@ -503,7 +500,7 @@ gst_bin_init (GstBin * bin)
   gst_bus_set_sync_handler (bus, (GstBusSyncHandler) bin_bus_handler, bin,
       NULL);
 
-  bin->priv = GST_BIN_GET_PRIVATE (bin);
+  bin->priv = gst_bin_get_instance_private (bin);
   bin->priv->asynchandling = DEFAULT_ASYNC_HANDLING;
   bin->priv->structure_cookie = 0;
   bin->priv->message_forward = DEFAULT_MESSAGE_FORWARD;
@@ -1125,11 +1122,15 @@ gst_bin_do_deep_add_remove (GstBin * bin, gint sig_id, const gchar * sig_name,
       while ((e = g_queue_pop_head (&elements))) {
         GstObject *parent = gst_object_get_parent (GST_OBJECT_CAST (e));
 
-        GST_LOG_OBJECT (bin, "calling %s for element %" GST_PTR_FORMAT
-            " in bin %" GST_PTR_FORMAT, sig_name, e, parent);
-        g_signal_emit (bin, sig_id, 0, parent, e);
-        gst_object_unref (parent);
-        g_object_unref (e);
+        /* an element could have removed some of its internal elements
+         * meanwhile, so protect against that */
+        if (parent) {
+          GST_LOG_OBJECT (bin, "calling %s for element %" GST_PTR_FORMAT
+              " in bin %" GST_PTR_FORMAT, sig_name, e, parent);
+          g_signal_emit (bin, sig_id, 0, parent, e);
+          gst_object_unref (parent);
+          g_object_unref (e);
+        }
       }
     }
     gst_iterator_free (it);
@@ -2580,7 +2581,7 @@ gst_bin_element_set_state (GstBin * bin, GstElement * element,
 do_state:
   GST_OBJECT_LOCK (bin);
   /* the element was busy with an upwards async state change, we must wait for
-   * an ASYNC_DONE message before we attemp to change the state. */
+   * an ASYNC_DONE message before we attempt to change the state. */
   if ((found =
           find_message (bin, GST_OBJECT_CAST (element),
               GST_MESSAGE_ASYNC_START))) {
@@ -2650,7 +2651,7 @@ activate_pads (const GValue * vpad, GValue * ret, gboolean * active)
   if (!gst_pad_set_active (pad, *active)) {
     if (GST_PAD_PARENT (pad) != NULL) {
       cont = FALSE;
-    g_value_set_boolean (ret, FALSE);
+      g_value_set_boolean (ret, FALSE);
     }
   }
 
@@ -2910,7 +2911,7 @@ gst_bin_change_state_func (GstElement * element, GstStateChange transition)
       if (current == GST_STATE_READY) {
         if (!(gst_bin_src_pads_activate (bin, FALSE)))
           goto activate_failure;
-          }
+      }
       break;
     default:
       break;
@@ -3065,12 +3066,12 @@ done:
   /* check if all elements managed to commit their state already */
   if (!find_message (bin, NULL, GST_MESSAGE_ASYNC_START)) {
     /* nothing found, remove all old ASYNC_DONE messages. This can happen when
-     * all the elements commited their state while we were doing the state
+     * all the elements committed their state while we were doing the state
      * change. We will still return ASYNC for consistency but we commit the
      * state already so that a _get_state() will return immediately. */
     bin_remove_messages (bin, NULL, GST_MESSAGE_ASYNC_DONE);
 
-    GST_DEBUG_OBJECT (bin, "async elements commited");
+    GST_DEBUG_OBJECT (bin, "async elements committed");
     bin_handle_async_done (bin, GST_STATE_CHANGE_SUCCESS, FALSE,
         GST_CLOCK_TIME_NONE);
   }
@@ -3111,7 +3112,7 @@ undo:
         if (ret != GST_ITERATOR_RESYNC)
           break;
         gst_iterator_resync (it);
-}
+      }
       gst_iterator_free (it);
     }
     goto done;
@@ -3520,12 +3521,12 @@ nothing_pending:
 static void
 bin_do_eos (GstBin * bin)
 {
-  guint32 seqnum = 0;
+  guint32 seqnum = GST_SEQNUM_INVALID;
   gboolean eos;
 
   GST_OBJECT_LOCK (bin);
   /* If all sinks are EOS, we're in PLAYING and no state change is pending
-   * (or we're doing playing to playing and noone else will trigger posting
+   * (or we're doing playing to playing and no one else will trigger posting
    * EOS for us) we forward the EOS message to the parent bin or application
    */
   eos = GST_STATE (bin) == GST_STATE_PLAYING
@@ -3549,7 +3550,8 @@ bin_do_eos (GstBin * bin)
     GST_OBJECT_UNLOCK (bin);
 
     tmessage = gst_message_new_eos (GST_OBJECT_CAST (bin));
-    gst_message_set_seqnum (tmessage, seqnum);
+    if (seqnum != GST_SEQNUM_INVALID)
+      gst_message_set_seqnum (tmessage, seqnum);
     GST_DEBUG_OBJECT (bin,
         "all sinks posted EOS, posting seqnum #%" G_GUINT32_FORMAT, seqnum);
     gst_element_post_message (GST_ELEMENT_CAST (bin), tmessage);
@@ -3562,7 +3564,7 @@ bin_do_eos (GstBin * bin)
 static void
 bin_do_stream_start (GstBin * bin)
 {
-  guint32 seqnum = 0;
+  guint32 seqnum = GST_SEQNUM_INVALID;
   gboolean stream_start;
   gboolean have_group_id = FALSE;
   guint group_id = 0;
@@ -3582,7 +3584,8 @@ bin_do_stream_start (GstBin * bin)
     GST_OBJECT_UNLOCK (bin);
 
     tmessage = gst_message_new_stream_start (GST_OBJECT_CAST (bin));
-    gst_message_set_seqnum (tmessage, seqnum);
+    if (seqnum != GST_SEQNUM_INVALID)
+      gst_message_set_seqnum (tmessage, seqnum);
     if (have_group_id)
       gst_message_set_group_id (tmessage, group_id);
 
@@ -3649,7 +3652,7 @@ gst_bin_update_context_unlocked (GstBin * bin, GstContext * context)
   /* Not found? Add */
   if (l == NULL) {
     *contexts = g_list_prepend (*contexts, gst_context_ref (context));
-}
+  }
 }
 
 /* handle child messages:
@@ -3959,7 +3962,7 @@ gst_bin_handle_message_func (GstBin * bin, GstMessage * message)
         /* nothing found, remove all old ASYNC_DONE messages */
         bin_remove_messages (bin, NULL, GST_MESSAGE_ASYNC_DONE);
 
-        GST_DEBUG_OBJECT (bin, "async elements commited");
+        GST_DEBUG_OBJECT (bin, "async elements committed");
         /* when we get an async done message when a state change was busy, we
          * need to set the pending_done flag so that at the end of the state
          * change we can see if we need to verify pending async elements, hence
@@ -4340,7 +4343,7 @@ gst_bin_query (GstElement * element, GstQuery * query)
         /* Quieten this particularly annoying FIXME a bit: */
         static gboolean printed_fixme = FALSE;
         if (!printed_fixme) {
-      GST_FIXME ("implement duration caching in GstBin again");
+          GST_FIXME ("implement duration caching in GstBin again");
           printed_fixme = TRUE;
         }
       }

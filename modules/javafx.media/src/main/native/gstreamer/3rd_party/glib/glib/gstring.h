@@ -179,10 +179,8 @@ GString *g_string_down (GString *string);
 GLIB_DEPRECATED
 GString *g_string_up   (GString *string);
 
-#ifndef G_DISABLE_DEPRECATED
-#define  g_string_sprintf  g_string_printf
-#define  g_string_sprintfa g_string_append_printf
-#endif
+#define  g_string_sprintf  g_string_printf GLIB_DEPRECATED_MACRO_IN_2_26_FOR(g_string_printf)
+#define  g_string_sprintfa g_string_append_printf GLIB_DEPRECATED_MACRO_IN_2_26_FOR(g_string_append_printf)
 
 G_END_DECLS
 

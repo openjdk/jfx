@@ -368,7 +368,7 @@ gst_video_multiview_video_info_change_mode (GstVideoInfo * info,
  * @par_d: Denominator of the video pixel-aspect-ratio
  *
  * Returns: A boolean indicating whether the
- *   #GST_VIDEO_MULTIVIEW_FLAG_HALF_ASPECT flag should be set.
+ *   #GST_VIDEO_MULTIVIEW_FLAGS_HALF_ASPECT flag should be set.
  *
  * Utility function that heuristically guess whether a
  * frame-packed stereoscopic video contains half width/height

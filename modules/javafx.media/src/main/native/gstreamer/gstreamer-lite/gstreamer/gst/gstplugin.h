@@ -97,7 +97,7 @@ typedef enum
  *         the directory
  * @GST_PLUGIN_DEPENDENCY_FLAG_FILE_NAME_IS_PREFIX : interpret
  *         filename argument as filter prefix and check all matching files in
- *         the directory. Since 1.8.
+ *         the directory. Since: 1.8.
  * @GST_PLUGIN_DEPENDENCY_FLAG_PATHS_ARE_RELATIVE_TO_EXE : interpret
  *   non-absolute paths as relative to the main executable directory. Since
  *   1.14.
@@ -256,7 +256,7 @@ struct _GstPluginDesc {
 G_BEGIN_DECLS \
 GST_PLUGIN_EXPORT const GstPluginDesc * G_PASTE(gst_plugin_, G_PASTE(name, _get_desc)) (void); \
 GST_PLUGIN_EXPORT void G_PASTE(gst_plugin_, G_PASTE(name, _register)) (void); \
-                            \
+\
 static const GstPluginDesc gst_plugin_desc = { \
   major, \
   minor, \
@@ -313,7 +313,7 @@ GST_API
 GType                   gst_plugin_get_type             (void);
 
 GST_API
-gboolean        gst_plugin_register_static  (gint major_version,
+gboolean    gst_plugin_register_static  (gint major_version,
                                                          gint minor_version,
                                                          const gchar *name,
                                                          const gchar *description,
@@ -324,7 +324,7 @@ gboolean        gst_plugin_register_static  (gint major_version,
                                                          const gchar *package,
                                                          const gchar *origin);
 GST_API
-gboolean        gst_plugin_register_static_full (gint major_version,
+gboolean    gst_plugin_register_static_full (gint major_version,
                                                          gint minor_version,
                                                          const gchar *name,
                                                          const gchar *description,
@@ -336,43 +336,43 @@ gboolean        gst_plugin_register_static_full (gint major_version,
                                                          const gchar *origin,
                                                          gpointer user_data);
 GST_API
-const gchar*        gst_plugin_get_name     (GstPlugin *plugin);
+const gchar*    gst_plugin_get_name   (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_description  (GstPlugin *plugin);
+const gchar*    gst_plugin_get_description  (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_filename     (GstPlugin *plugin);
+const gchar*    gst_plugin_get_filename   (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_version      (GstPlugin *plugin);
+const gchar*    gst_plugin_get_version    (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_license      (GstPlugin *plugin);
+const gchar*    gst_plugin_get_license    (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_source       (GstPlugin *plugin);
+const gchar*    gst_plugin_get_source   (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_package      (GstPlugin *plugin);
+const gchar*    gst_plugin_get_package    (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_origin       (GstPlugin *plugin);
+const gchar*    gst_plugin_get_origin   (GstPlugin *plugin);
 
 GST_API
-const gchar*        gst_plugin_get_release_date_string (GstPlugin *plugin);
+const gchar*    gst_plugin_get_release_date_string (GstPlugin *plugin);
 
 GST_API
-const GstStructure* gst_plugin_get_cache_data   (GstPlugin * plugin);
+const GstStructure* gst_plugin_get_cache_data (GstPlugin * plugin);
 
 GST_API
-void            gst_plugin_set_cache_data   (GstPlugin * plugin, GstStructure *cache_data);
+void      gst_plugin_set_cache_data (GstPlugin * plugin, GstStructure *cache_data);
 
 GST_API
-gboolean        gst_plugin_is_loaded        (GstPlugin *plugin);
+gboolean    gst_plugin_is_loaded    (GstPlugin *plugin);
 
 GST_API
-GstPlugin *     gst_plugin_load_file        (const gchar *filename, GError** error);
+GstPlugin *   gst_plugin_load_file    (const gchar *filename, GError** error);
 
 GST_API
 GstPlugin *             gst_plugin_load                 (GstPlugin *plugin);

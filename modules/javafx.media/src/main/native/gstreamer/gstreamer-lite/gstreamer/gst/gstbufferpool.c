@@ -90,9 +90,6 @@
 GST_DEBUG_CATEGORY_STATIC (gst_buffer_pool_debug);
 #define GST_CAT_DEFAULT gst_buffer_pool_debug
 
-#define GST_BUFFER_POOL_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_BUFFER_POOL, GstBufferPoolPrivate))
-
 #define GST_BUFFER_POOL_LOCK(pool)   (g_rec_mutex_lock(&pool->priv->rec_lock))
 #define GST_BUFFER_POOL_UNLOCK(pool) (g_rec_mutex_unlock(&pool->priv->rec_lock))
 
@@ -120,7 +117,7 @@ struct _GstBufferPoolPrivate
 
 static void gst_buffer_pool_finalize (GObject * object);
 
-G_DEFINE_TYPE (GstBufferPool, gst_buffer_pool, GST_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (GstBufferPool, gst_buffer_pool, GST_TYPE_OBJECT);
 
 static gboolean default_start (GstBufferPool * pool);
 static gboolean default_stop (GstBufferPool * pool);
@@ -138,8 +135,6 @@ static void
 gst_buffer_pool_class_init (GstBufferPoolClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
-
-  g_type_class_add_private (klass, sizeof (GstBufferPoolPrivate));
 
   gobject_class->finalize = gst_buffer_pool_finalize;
 
@@ -161,7 +156,7 @@ gst_buffer_pool_init (GstBufferPool * pool)
 {
   GstBufferPoolPrivate *priv;
 
-  priv = pool->priv = GST_BUFFER_POOL_GET_PRIVATE (pool);
+  priv = pool->priv = gst_buffer_pool_get_instance_private (pool);
 
   g_rec_mutex_init (&priv->rec_lock);
 
@@ -676,8 +671,8 @@ gst_buffer_pool_set_config (GstBufferPool * pool, GstStructure * config)
     goto config_unchanged;
 
   /* can't change the settings when active */
-    if (priv->active)
-      goto was_active;
+  if (priv->active)
+    goto was_active;
 
   /* we can't change when outstanding buffers */
   if (g_atomic_int_get (&priv->outstanding) != 0)
@@ -1155,8 +1150,8 @@ default_acquire_buffer (GstBufferPool * pool, GstBuffer ** buffer,
          * means that we only have to wait for the poll now and not write the
          * token afterwards: we will be woken up once the other thread is
          * woken up and that one will write the wait token it removed */
-    GST_LOG_OBJECT (pool, "waiting for free buffers or flushing");
-    gst_poll_wait (priv->poll, GST_CLOCK_TIME_NONE);
+        GST_LOG_OBJECT (pool, "waiting for free buffers or flushing");
+        gst_poll_wait (priv->poll, GST_CLOCK_TIME_NONE);
       } else {
         /* This is a critical error, GstPoll already gave a warning */
         result = GST_FLOW_ERROR;
@@ -1173,8 +1168,8 @@ default_acquire_buffer (GstBufferPool * pool, GstBuffer ** buffer,
         GST_LOG_OBJECT (pool, "waiting for free buffers or flushing");
         gst_poll_wait (priv->poll, GST_CLOCK_TIME_NONE);
       }
-    gst_poll_write_control (pool->priv->poll);
-  }
+      gst_poll_write_control (pool->priv->poll);
+    }
   }
 
   return result;
@@ -1225,6 +1220,13 @@ default_reset_buffer (GstBufferPool * pool, GstBuffer * buffer)
   GST_BUFFER_DURATION (buffer) = GST_CLOCK_TIME_NONE;
   GST_BUFFER_OFFSET (buffer) = GST_BUFFER_OFFSET_NONE;
   GST_BUFFER_OFFSET_END (buffer) = GST_BUFFER_OFFSET_NONE;
+
+  /* if the memory is intact reset the size to the full size */
+  if (!GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_TAG_MEMORY)) {
+    gsize offset;
+    gst_buffer_get_sizes (buffer, &offset, NULL);
+    gst_buffer_resize (buffer, -offset, pool->priv->size);
+  }
 
   /* remove all metadata without the POOLED flag */
   gst_buffer_foreach_meta (buffer, remove_meta_unpooled, pool);

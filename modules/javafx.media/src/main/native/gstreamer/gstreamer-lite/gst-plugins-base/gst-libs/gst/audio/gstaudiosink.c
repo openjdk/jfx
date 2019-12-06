@@ -48,6 +48,9 @@
  * together with #GstAudioBaseSink using a default implementation of a
  * #GstAudioRingBuffer that uses threads.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <string.h>
 

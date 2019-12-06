@@ -210,7 +210,7 @@ gst_osx_audio_sink_init (GstOsxAudioSink * sink)
 
   sink->device_id = kAudioDeviceUnknown;
   sink->volume = DEFAULT_VOLUME;
-  }
+}
 
 static void
 gst_osx_audio_sink_set_property (GObject * object, guint prop_id,

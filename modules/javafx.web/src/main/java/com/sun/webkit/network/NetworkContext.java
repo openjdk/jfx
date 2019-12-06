@@ -63,6 +63,12 @@ final class NetworkContext {
     private static final int DEFAULT_HTTP_MAX_CONNECTIONS = 5;
 
     /**
+     * The default value of the maximum concurrent connections for
+     * new gen HTTP2 client
+     */
+    private static final int DEFAULT_HTTP2_MAX_CONNECTIONS = 20;
+
+    /**
      * The buffer size for the shared pool of byte buffers.
      */
     private static final int BYTE_BUFFER_SIZE = 1024 * 40;
@@ -71,6 +77,11 @@ final class NetworkContext {
      * The thread pool used to execute asynchronous loaders.
      */
     private static final ThreadPoolExecutor threadPool;
+
+    /**
+     * Can use HTTP2Loader
+     */
+    private static final boolean useHTTP2Loader;
     static {
         threadPool = new ThreadPoolExecutor(
                 THREAD_POOL_SIZE,
@@ -80,6 +91,13 @@ final class NetworkContext {
                 new LinkedBlockingQueue<Runnable>(),
                 new URLLoaderThreadFactory());
         threadPool.allowCoreThreadTimeOut(true);
+
+        useHTTP2Loader = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            // Use HTTP2 by default on JDK 12 or later
+            final var version = Runtime.Version.parse(System.getProperty("java.version"));
+            final String defaultUseHTTP2 = version.feature() >= 12 ? "true" : "false";
+            return Boolean.valueOf(System.getProperty("com.sun.webkit.useHTTP2Loader", defaultUseHTTP2));
+        });
     }
 
     /**
@@ -117,7 +135,7 @@ final class NetworkContext {
     /**
      * Starts an asynchronous load or executes a synchronous one.
      */
-    private static URLLoader fwkLoad(WebPage webPage,
+    private static URLLoaderBase fwkLoad(WebPage webPage,
                                      boolean asynchronous,
                                      String url,
                                      String method,
@@ -143,6 +161,22 @@ final class NetworkContext {
                     data,
                     Util.formatHeaders(headers)));
         }
+
+        if (useHTTP2Loader) {
+            final URLLoaderBase loader = HTTP2Loader.create(
+                webPage,
+                byteBufferPool,
+                asynchronous,
+                url,
+                method,
+                headers,
+                formDataElements,
+                data);
+            if (loader != null) {
+                return loader;
+            }
+        }
+
         URLLoader loader = new URLLoader(
                 webPage,
                 byteBufferPool,
@@ -184,6 +218,10 @@ final class NetworkContext {
         // system property.
         int propValue = AccessController.doPrivileged(
                 (PrivilegedAction<Integer>) () -> Integer.getInteger("http.maxConnections", -1));
+
+        if (useHTTP2Loader) {
+            return propValue >= 0 ? propValue : DEFAULT_HTTP2_MAX_CONNECTIONS;
+        }
         return propValue >= 0 ? propValue : DEFAULT_HTTP_MAX_CONNECTIONS;
     }
 

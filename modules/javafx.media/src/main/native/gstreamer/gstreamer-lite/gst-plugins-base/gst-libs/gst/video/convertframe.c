@@ -18,6 +18,9 @@
  * Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <string.h>
 #include "video.h"
@@ -317,7 +320,6 @@ gst_video_convert_sample (GstSample * sample, const GstCaps * to_caps,
   from_caps = gst_sample_get_caps (sample);
   g_return_val_if_fail (from_caps != NULL, NULL);
 
-
   to_caps_copy = gst_caps_new_empty ();
   n = gst_caps_get_size (to_caps);
   for (i = 0; i < n; i++) {
@@ -338,7 +340,9 @@ gst_video_convert_sample (GstSample * sample, const GstCaps * to_caps,
    * appsrc, this should preroll the converted buffer in appsink */
   GST_DEBUG ("running conversion pipeline to caps %" GST_PTR_FORMAT,
       to_caps_copy);
-  gst_element_set_state (pipeline, GST_STATE_PAUSED);
+  if (gst_element_set_state (pipeline,
+          GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE)
+    goto state_change_failed;
 
   /* feed buffer in appsrc */
   GST_DEBUG ("feeding buffer %p, size %" G_GSIZE_FORMAT ", caps %"
@@ -401,6 +405,7 @@ gst_video_convert_sample (GstSample * sample, const GstCaps * to_caps,
 
   /* ERRORS */
 no_pipeline:
+state_change_failed:
   {
     gst_caps_unref (to_caps_copy);
 
@@ -415,6 +420,7 @@ no_pipeline:
 
 typedef struct
 {
+  gint ref_count;
   GMutex mutex;
   GstElement *pipeline;
   GstVideoConvertSampleCallback callback;
@@ -422,57 +428,60 @@ typedef struct
   GDestroyNotify destroy_notify;
   GMainContext *context;
   GstSample *sample;
-  //GstBuffer *buffer;
   GSource *timeout_source;
   gboolean finished;
+
+  /* Results */
+  GstSample *converted_sample;
+  GError *error;
 } GstVideoConvertSampleContext;
 
-typedef struct
+static GstVideoConvertSampleContext *
+gst_video_convert_frame_context_ref (GstVideoConvertSampleContext * ctx)
 {
-  GstVideoConvertSampleCallback callback;
-  GstSample *sample;
-  //GstBuffer *buffer;
-  GError *error;
-  gpointer user_data;
-  GDestroyNotify destroy_notify;
+  g_atomic_int_inc (&ctx->ref_count);
 
-  GstVideoConvertSampleContext *context;
-} GstVideoConvertSampleCallbackContext;
+  return ctx;
+}
 
 static void
-gst_video_convert_frame_context_free (GstVideoConvertSampleContext * ctx)
+gst_video_convert_frame_context_unref (GstVideoConvertSampleContext * ctx)
 {
-  /* Wait until all users of the mutex are done */
-  g_mutex_lock (&ctx->mutex);
-  g_mutex_unlock (&ctx->mutex);
+  if (!g_atomic_int_dec_and_test (&ctx->ref_count))
+    return;
+
   g_mutex_clear (&ctx->mutex);
   if (ctx->timeout_source)
     g_source_destroy (ctx->timeout_source);
-  //if (ctx->buffer)
-  //  gst_buffer_unref (ctx->buffer);
   if (ctx->sample)
     gst_sample_unref (ctx->sample);
+  if (ctx->converted_sample)
+    gst_sample_unref (ctx->converted_sample);
+  g_clear_error (&ctx->error);
   g_main_context_unref (ctx->context);
 
-  gst_element_set_state (ctx->pipeline, GST_STATE_NULL);
-  gst_object_unref (ctx->pipeline);
+  /* The pipeline was already destroyed in finish() earlier and we
+   * must not end up here without finish() being called */
+  g_warn_if_fail (ctx->pipeline == NULL);
 
   g_slice_free (GstVideoConvertSampleContext, ctx);
 }
 
-static void
-    gst_video_convert_frame_callback_context_free
-    (GstVideoConvertSampleCallbackContext * ctx)
-{
-  if (ctx->context)
-    gst_video_convert_frame_context_free (ctx->context);
-  g_slice_free (GstVideoConvertSampleCallbackContext, ctx);
-}
-
 static gboolean
-convert_frame_dispatch_callback (GstVideoConvertSampleCallbackContext * ctx)
+convert_frame_dispatch_callback (GstVideoConvertSampleContext * ctx)
 {
-  ctx->callback (ctx->sample, ctx->error, ctx->user_data);
+  GstSample *sample;
+  GError *error;
+
+  g_return_val_if_fail (ctx->converted_sample != NULL
+      || ctx->error != NULL, FALSE);
+
+  sample = ctx->converted_sample;
+  error = ctx->error;
+  ctx->converted_sample = NULL;
+  ctx->error = NULL;
+
+  ctx->callback (sample, error, ctx->user_data);
 
   if (ctx->destroy_notify)
     ctx->destroy_notify (ctx->user_data);
@@ -481,33 +490,51 @@ convert_frame_dispatch_callback (GstVideoConvertSampleCallbackContext * ctx)
 }
 
 static void
+convert_frame_stop_pipeline (GstElement * element, gpointer user_data)
+{
+  gst_element_set_state (element, GST_STATE_NULL);
+}
+
+static void
 convert_frame_finish (GstVideoConvertSampleContext * context,
     GstSample * sample, GError * error)
 {
   GSource *source;
-  GstVideoConvertSampleCallbackContext *ctx;
+
+  g_return_if_fail (!context->finished);
+  g_return_if_fail (sample != NULL || error != NULL);
+
+  context->finished = TRUE;
+  context->converted_sample = sample;
+  context->error = error;
 
   if (context->timeout_source)
     g_source_destroy (context->timeout_source);
   context->timeout_source = NULL;
 
-  ctx = g_slice_new (GstVideoConvertSampleCallbackContext);
-  ctx->callback = context->callback;
-  ctx->user_data = context->user_data;
-  ctx->destroy_notify = context->destroy_notify;
-  ctx->sample = sample;
-  //ctx->buffer = buffer;
-  ctx->error = error;
-  ctx->context = context;
-
   source = g_timeout_source_new (0);
   g_source_set_callback (source,
-      (GSourceFunc) convert_frame_dispatch_callback, ctx,
-      (GDestroyNotify) gst_video_convert_frame_callback_context_free);
+      (GSourceFunc) convert_frame_dispatch_callback,
+      gst_video_convert_frame_context_ref (context),
+      (GDestroyNotify) gst_video_convert_frame_context_unref);
   g_source_attach (source, context->context);
   g_source_unref (source);
 
-  context->finished = TRUE;
+  /* Asynchronously stop the pipeline here: this will set its
+   * state to NULL and get rid of its last reference, which in turn
+   * will get rid of all remaining references to our context and free
+   * it too. We can't do this directly here as we might be called from
+   * a streaming thread.
+   *
+   * We don't use the main loop here because the user might shut down it
+   * immediately after getting the result of the conversion above.
+   */
+  if (context->pipeline) {
+    gst_element_call_async (context->pipeline, convert_frame_stop_pipeline,
+        NULL, NULL);
+    gst_object_unref (context->pipeline);
+    context->pipeline = NULL;
+  }
 }
 
 static gboolean
@@ -593,11 +620,11 @@ convert_frame_need_data_callback (GstElement * src, guint size,
     convert_frame_finish (context, NULL, error);
   }
 
-  g_signal_handlers_disconnect_by_func (src, convert_frame_need_data_callback,
-      context);
-
 done:
   g_mutex_unlock (&context->mutex);
+
+  g_signal_handlers_disconnect_by_func (src, convert_frame_need_data_callback,
+      context);
 }
 
 static GstFlowReturn
@@ -620,11 +647,11 @@ convert_frame_new_preroll_callback (GstElement * sink,
   }
   convert_frame_finish (context, sample, error);
 
-  g_signal_handlers_disconnect_by_func (sink, convert_frame_need_data_callback,
-      context);
-
 done:
   g_mutex_unlock (&context->mutex);
+
+  g_signal_handlers_disconnect_by_func (sink, convert_frame_need_data_callback,
+      context);
 
   return GST_FLOW_OK;
 }
@@ -693,69 +720,87 @@ gst_video_convert_sample_async (GstSample * sample,
     gst_caps_append_structure (to_caps_copy, s);
   }
 
-  pipeline =
-      build_convert_frame_pipeline (&src, &sink, from_caps,
-      gst_buffer_get_video_crop_meta (buf), to_caps_copy, &error);
-  if (!pipeline)
-    goto no_pipeline;
-
-  bus = gst_element_get_bus (pipeline);
-
+  /* There's a reference cycle between the context and the pipeline, which is
+   * broken up once the finish() is called on the context. At latest when the
+   * timeout triggers the context will be freed */
   ctx = g_slice_new0 (GstVideoConvertSampleContext);
+  ctx->ref_count = 1;
   g_mutex_init (&ctx->mutex);
-  //ctx->buffer = gst_buffer_ref (buf);
   ctx->sample = gst_sample_ref (sample);
   ctx->callback = callback;
   ctx->user_data = user_data;
   ctx->destroy_notify = destroy_notify;
   ctx->context = g_main_context_ref (context);
   ctx->finished = FALSE;
+
+  pipeline =
+      build_convert_frame_pipeline (&src, &sink, from_caps,
+      gst_buffer_get_video_crop_meta (buf), to_caps_copy, &error);
+  if (!pipeline)
+    goto no_pipeline;
   ctx->pipeline = pipeline;
+
+  bus = gst_element_get_bus (pipeline);
 
   if (timeout != GST_CLOCK_TIME_NONE) {
     ctx->timeout_source = g_timeout_source_new (timeout / GST_MSECOND);
     g_source_set_callback (ctx->timeout_source,
-        (GSourceFunc) convert_frame_timeout_callback, ctx, NULL);
+        (GSourceFunc) convert_frame_timeout_callback,
+        gst_video_convert_frame_context_ref (ctx),
+        (GDestroyNotify) gst_video_convert_frame_context_unref);
     g_source_attach (ctx->timeout_source, context);
   }
 
-  g_signal_connect (src, "need-data",
-      G_CALLBACK (convert_frame_need_data_callback), ctx);
-  g_signal_connect (sink, "new-preroll",
-      G_CALLBACK (convert_frame_new_preroll_callback), ctx);
+  g_signal_connect_data (src, "need-data",
+      G_CALLBACK (convert_frame_need_data_callback),
+      gst_video_convert_frame_context_ref (ctx),
+      (GClosureNotify) gst_video_convert_frame_context_unref, 0);
+  g_signal_connect_data (sink, "new-preroll",
+      G_CALLBACK (convert_frame_new_preroll_callback),
+      gst_video_convert_frame_context_ref (ctx),
+      (GClosureNotify) gst_video_convert_frame_context_unref, 0);
 
   source = gst_bus_create_watch (bus);
   g_source_set_callback (source, (GSourceFunc) convert_frame_bus_callback,
-      ctx, NULL);
+      gst_video_convert_frame_context_ref (ctx),
+      (GDestroyNotify) gst_video_convert_frame_context_unref);
   g_source_attach (source, context);
   g_source_unref (source);
-
-  gst_element_set_state (pipeline, GST_STATE_PLAYING);
-
   gst_object_unref (bus);
+
+  if (gst_element_set_state (pipeline,
+          GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE)
+    goto state_change_failed;
+
   gst_caps_unref (to_caps_copy);
+
+  gst_video_convert_frame_context_unref (ctx);
 
   return;
   /* ERRORS */
 no_pipeline:
   {
-    GstVideoConvertSampleCallbackContext *ctx;
-    GSource *source;
-
     gst_caps_unref (to_caps_copy);
 
-    ctx = g_slice_new0 (GstVideoConvertSampleCallbackContext);
-    ctx->callback = callback;
-    ctx->user_data = user_data;
-    ctx->destroy_notify = destroy_notify;
-    ctx->sample = NULL;
-    ctx->error = error;
+    g_mutex_lock (&ctx->mutex);
+    convert_frame_finish (ctx, NULL, error);
+    g_mutex_unlock (&ctx->mutex);
+    gst_video_convert_frame_context_unref (ctx);
 
-    source = g_timeout_source_new (0);
-    g_source_set_callback (source,
-        (GSourceFunc) convert_frame_dispatch_callback, ctx,
-        (GDestroyNotify) gst_video_convert_frame_callback_context_free);
-    g_source_attach (source, context);
-    g_source_unref (source);
+    return;
+  }
+state_change_failed:
+  {
+    gst_caps_unref (to_caps_copy);
+
+    error = g_error_new (GST_CORE_ERROR, GST_CORE_ERROR_STATE_CHANGE,
+        "failed to change state to PLAYING");
+
+    g_mutex_lock (&ctx->mutex);
+    convert_frame_finish (ctx, NULL, error);
+    g_mutex_unlock (&ctx->mutex);
+    gst_video_convert_frame_context_unref (ctx);
+
+    return;
   }
 }

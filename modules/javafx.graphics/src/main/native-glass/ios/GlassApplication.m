@@ -381,7 +381,7 @@ jclass classForName(JNIEnv *env, char *className)
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
-        (*env)->CallVoidMethod(env, self.jApplication, [GlassHelper ApplicationNotifyQuitMethod]);
+        (*env)->CallVoidMethod(env, self.jApplication, [GlassHelper ApplicationNotifyWillQuitMethod]);
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);

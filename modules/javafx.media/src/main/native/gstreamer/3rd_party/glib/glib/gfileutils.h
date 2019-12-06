@@ -161,9 +161,7 @@ const gchar *g_path_skip_root   (const gchar *file_name);
 
 GLIB_DEPRECATED_FOR(g_path_get_basename)
 const gchar *g_basename         (const gchar *file_name);
-#ifndef G_DISABLE_DEPRECATED
-#define g_dirname g_path_get_dirname
-#endif
+#define g_dirname g_path_get_dirname GLIB_DEPRECATED_MACRO_IN_2_26_FOR(g_path_get_dirname)
 
 GLIB_AVAILABLE_IN_ALL
 gchar *g_get_current_dir   (void);

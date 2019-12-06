@@ -2080,20 +2080,18 @@ chain_pack (GstVideoConverter * convert, GstLineCache * prev, gint idx)
 static void
 setup_allocators (GstVideoConverter * convert)
 {
-  GstLineCache *cache;
+  GstLineCache *cache, *prev;
   GstLineCacheAllocLineFunc alloc_line;
   gboolean alloc_writable;
   gpointer user_data;
   GDestroyNotify notify;
-  gint width, n_lines;
+  gint width;
   gint i;
 
   width = MAX (convert->in_maxwidth, convert->out_maxwidth);
   width += convert->out_x;
 
   for (i = 0; i < convert->conversion_runner->n_threads; i++) {
-    n_lines = 1;
-
     /* start with using dest lines if we can directly write into it */
     if (convert->identity_pack) {
       alloc_line = get_dest_line;
@@ -2111,12 +2109,24 @@ setup_allocators (GstVideoConverter * convert)
       alloc_writable = convert->borderline != NULL;
     }
 
+    /* First step, try to calculate how many temp lines we need. Go backwards,
+     * keep track of the maximum number of lines we need for each intermediate
+     * step.  */
+    for (prev = cache = convert->pack_lines[i]; cache; cache = cache->prev) {
+      GST_DEBUG ("looking at cache %p, %d lines, %d backlog", cache,
+          cache->n_lines, cache->backlog);
+      prev->n_lines = MAX (prev->n_lines, cache->n_lines);
+      if (!cache->pass_alloc) {
+        GST_DEBUG ("cache %p, needs %d lines", prev, prev->n_lines);
+        prev = cache;
+      }
+    }
+
     /* now walk backwards, we try to write into the dest lines directly
      * and keep track if the source needs to be writable */
     for (cache = convert->pack_lines[i]; cache; cache = cache->prev) {
       gst_line_cache_set_alloc_line_func (cache, alloc_line, user_data, notify);
       cache->alloc_writable = alloc_writable;
-      n_lines = MAX (n_lines, cache->n_lines);
 
       /* make sure only one cache frees the allocator */
       notify = NULL;
@@ -2125,11 +2135,10 @@ setup_allocators (GstVideoConverter * convert)
         /* can't pass allocator, make new temp line allocator */
         user_data =
             converter_alloc_new (sizeof (guint16) * width * 4,
-            n_lines + cache->backlog, convert, NULL);
+            cache->n_lines + cache->backlog, convert, NULL);
         notify = (GDestroyNotify) converter_alloc_free;
         alloc_line = get_temp_line;
         alloc_writable = FALSE;
-        n_lines = cache->n_lines;
       }
       /* if someone writes to the input, we need a writable line from the
        * previous cache */
@@ -5827,6 +5836,7 @@ get_scale_format (GstVideoFormat format, gint plane)
     case GST_VIDEO_FORMAT_VYUY:
     case GST_VIDEO_FORMAT_YVYU:
     case GST_VIDEO_FORMAT_AYUV:
+    case GST_VIDEO_FORMAT_VUYA:
     case GST_VIDEO_FORMAT_RGBx:
     case GST_VIDEO_FORMAT_BGRx:
     case GST_VIDEO_FORMAT_xRGB:
@@ -5860,6 +5870,8 @@ get_scale_format (GstVideoFormat format, gint plane)
     case GST_VIDEO_FORMAT_ENCODED:
     case GST_VIDEO_FORMAT_v210:
     case GST_VIDEO_FORMAT_v216:
+    case GST_VIDEO_FORMAT_Y210:
+    case GST_VIDEO_FORMAT_Y410:
     case GST_VIDEO_FORMAT_UYVP:
     case GST_VIDEO_FORMAT_RGB8P:
     case GST_VIDEO_FORMAT_IYU1:
@@ -5896,6 +5908,8 @@ get_scale_format (GstVideoFormat format, gint plane)
     case GST_VIDEO_FORMAT_GRAY10_LE32:
     case GST_VIDEO_FORMAT_NV12_10LE32:
     case GST_VIDEO_FORMAT_NV16_10LE32:
+    case GST_VIDEO_FORMAT_NV12_10LE40:
+    case GST_VIDEO_FORMAT_BGR10A2_LE:
       res = format;
       g_assert_not_reached ();
       break;
@@ -5921,7 +5935,7 @@ static gboolean
 setup_scale (GstVideoConverter * convert)
 {
   int i, n_planes;
-  gint method, cr_method, stride, in_width, in_height, out_width, out_height;
+  gint method, cr_method, in_width, in_height, out_width, out_height;
   guint taps;
   GstVideoInfo *in_info, *out_info;
   const GstVideoFormatInfo *in_finfo, *out_finfo;
@@ -5970,8 +5984,6 @@ setup_scale (GstVideoConverter * convert)
   in_height = convert->in_height;
   out_width = convert->out_width;
   out_height = convert->out_height;
-
-  stride = 0;
 
   if (n_planes == 1 && !GST_VIDEO_FORMAT_INFO_IS_GRAY (out_finfo)) {
     gint pstride;
@@ -6027,9 +6039,6 @@ setup_scale (GstVideoConverter * convert)
       convert->fout_x[0] = convert->out_x * pstride;
     }
 
-    stride = MAX (stride, GST_VIDEO_INFO_PLANE_STRIDE (in_info, 0));
-    stride = MAX (stride, GST_VIDEO_INFO_PLANE_STRIDE (out_info, 0));
-
     if (in_height != out_height && in_height != 0 && out_height != 0) {
       convert->fv_scaler[0].scaler = g_new (GstVideoScaler *, n_threads);
 
@@ -6067,9 +6076,6 @@ setup_scale (GstVideoConverter * convert)
           break;
         }
       }
-
-      stride = MAX (stride, GST_VIDEO_INFO_COMP_STRIDE (in_info, i));
-      stride = MAX (stride, GST_VIDEO_INFO_COMP_STRIDE (out_info, i));
 
       iw = GST_VIDEO_FORMAT_INFO_SCALE_WIDTH (in_finfo, i, in_width);
       ih = GST_VIDEO_FORMAT_INFO_SCALE_HEIGHT (in_finfo, i, in_height);

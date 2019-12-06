@@ -313,7 +313,7 @@ gst_index_new (void)
 /**
  * gst_index_commit:
  * @index: the index to commit
- * @id: the writer that commited the index
+ * @id: the writer that committed the index
  *
  * Tell the index that the writer with the given id is done
  * with this index and is not going to write any more entries
@@ -772,7 +772,7 @@ gst_index_add_entry (GstIndex * index, GstIndexEntry * entry)
  * gst_index_add_associationv:
  * @index: the index to add the entry to
  * @id: the id of the index writer
- * @flags: optinal flags for this entry
+ * @flags: optional flags for this entry
  * @n: number of associations
  * @list: (array length=n): list of associations
  *
@@ -811,7 +811,7 @@ gst_index_add_associationv (GstIndex * index, gint id,
  * gst_index_add_association:
  * @index: the index to add the entry to
  * @id: the id of the index writer
- * @flags: optinal flags for this entry
+ * @flags: optional flags for this entry
  * @format: the format of the value
  * @value: the value
  * @...: other format/value pairs or 0 to end the list

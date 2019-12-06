@@ -46,7 +46,7 @@
 + (jmethodID)ApplicationNotifyDidBecomeActiveMethod;
 + (jmethodID)ApplicationNotifyWillResignActiveMethod;
 + (jmethodID)ApplicationNotifyDidResignActiveMethod;
-+ (jmethodID)ApplicationNotifyQuitMethod;
++ (jmethodID)ApplicationNotifyWillQuitMethod;
 + (jmethodID)ApplicationNotifyDidReceiveMemoryWarningMethod;
 
 @end

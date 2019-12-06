@@ -74,9 +74,9 @@ _glib_get_locale_dir (void)
        */
       const char *p = GLIB_LOCALE_DIR + strlen (GLIB_LOCALE_DIR);
       while (*--p != '/')
-    ;
+  ;
       while (*--p != '/')
-    ;
+  ;
 
       locale_dir = g_build_filename (install_dir, p, NULL);
 
@@ -503,7 +503,7 @@ g_dngettext (const gchar *domain,
  *   // Rest of your application.
  * }
  * ]|
- * where `DATADIR` is as typically provided by automake.
+ * where `DATADIR` is as typically provided by automake or Meson.
  *
  * For a library, you only have to call bindtextdomain() and
  * bind_textdomain_codeset() in your initialization function. If your library

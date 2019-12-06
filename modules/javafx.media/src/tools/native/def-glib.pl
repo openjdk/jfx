@@ -1,7 +1,6 @@
 #!/usr/bin/perl -w
 
-my @files = ("../../main/native/gstreamer/3rd_party/glib/build/win32/vs100/glib-lite.def",
-             "../../main/native/gstreamer/3rd_party/glib/build/win32/vs100/glib-liteD.def");
+my @files = ("../../main/native/gstreamer/3rd_party/glib/build/win32/vs100/glib-lite.def");
 
 foreach $file (@files)
 {
