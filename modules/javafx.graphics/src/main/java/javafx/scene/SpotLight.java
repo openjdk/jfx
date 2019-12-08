@@ -68,7 +68,7 @@ import javafx.scene.paint.PhongMaterial;
  * which represents a drop in illumination from the inner angle to the outer angle. {@code falloff} determines the
  * behavior of the drop.
  *
- * @since JavaFX 14
+ * @since 14
  * @see PhongMaterial
  */
 public class SpotLight extends LightBase {
