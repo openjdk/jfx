@@ -24,6 +24,8 @@
  */
 
 #include <iostream>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include "D3DMeshView.h"
 #include "D3DPhongShader.h"
 
@@ -76,20 +78,43 @@ void D3DMeshView::setPointLight(int index, float x, float y, float z,
         float r, float g, float b, float w,
         float ca, float la, float qa, float maxRange) {
     // NOTE: We only support up to 3 point lights at the present
-    if (index >= 0 && index <= 2) {
-        lights[index].position[0] = x;
-        lights[index].position[1] = y;
-        lights[index].position[2] = z;
-        lights[index].color[0] = r;
-        lights[index].color[1] = g;
-        lights[index].color[2] = b;
-        lights[index].w = w;
-        lights[index].attenuation[0] = ca;
-        lights[index].attenuation[1] = la;
-        lights[index].attenuation[2] = qa;
-        lights[index].maxRange = maxRange;
+    if (index >= 0 && index <= MAX_NUM_LIGHTS - 1) {
+        lights[index].type = D3DLight::Point;
+        setPointLightParams(lights[index], x, y, z, r, g, b, w, ca, la, qa, maxRange);
         lightsDirty = TRUE;
     }
+}
+
+void D3DMeshView::setSpotLight(int index, float x, float y, float z, float r, float g, float b, float w,
+        float ca, float la, float qa, float maxRange,
+        float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff) {
+    // NOTE: We only support up to 3 point lights at the present
+    if (index >= 0 && index <= MAX_NUM_LIGHTS - 1) {
+        lights[index].type = D3DLight::Spot;
+        setPointLightParams(lights[index], x, y, z, r, g, b, w, ca, la, qa, maxRange);
+        lights[index].direction[0] = dirX;
+        lights[index].direction[1] = dirY;
+        lights[index].direction[2] = dirZ;
+        lights[index].innerAngle = innerAngle;
+        lights[index].outerAngle = outerAngle;
+        lights[index].falloff = falloff;
+        lightsDirty = TRUE;
+    }
+}
+
+void D3DMeshView::setPointLightParams(D3DLight &light, float x, float y, float z,
+        float r, float g, float b, float w, float ca, float la, float qa, float maxRange) {
+    light.position[0] = x;
+    light.position[1] = y;
+    light.position[2] = z;
+    light.color[0] = r;
+    light.color[1] = g;
+    light.color[2] = b;
+    light.w = w;
+    light.attenuation[0] = ca;
+    light.attenuation[1] = la;
+    light.attenuation[2] = qa;
+    light.maxRange = maxRange;
 }
 
 void D3DMeshView::computeNumLights() {
@@ -98,7 +123,7 @@ void D3DMeshView::computeNumLights() {
     lightsDirty = false;
 
     int n = 0;
-    for (int i = 0; i != 3; ++i)
+    for (int i = 0; i != MAX_NUM_LIGHTS; ++i)
         n += lights[i].w ? 1 : 0;
 
     numLights = n;
@@ -137,7 +162,7 @@ void D3DMeshView::render() {
 
     computeNumLights();
     // We only support up to 3 point lights at the present
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < MAX_NUM_LIGHTS; i++) {
         status = SUCCEEDED(device->SetVertexShaderConstantF(VSR_LIGHTS + i*2, lights[i].position, 1));
     }
 
@@ -159,10 +184,13 @@ void D3DMeshView::render() {
         return;
     }
 
-    float lightsColor[12];       // 3 lights x (3 color + 1 padding)
-    float lightsAttenuation[12]; // 3 lights x (3 attenuation factors + 1 padding)
-    float lightsRange[12];		 // 3 lights x (1 maxRange + 3 padding)
-    for (int i = 0, c = 0, a = 0, r = 0; i < 3; i++) {
+    float lightsColor[MAX_NUM_LIGHTS * 4];        // 3 lights x (3 color + 1 padding)
+    float lightsAttenuation[MAX_NUM_LIGHTS * 4];  // 3 lights x (3 attenuation factors + 1 padding)
+    float lightsRange[MAX_NUM_LIGHTS * 4];        // 3 lights x (1 maxRange + 3 padding)
+    float lighsNormDirection[MAX_NUM_LIGHTS * 4]; // 3 lights x (3 direction + 1 padding)
+    float spotLightsFactors[MAX_NUM_LIGHTS * 4];  // 3 lights x (2 angles + 1 falloff + 1 padding)
+    float lightType[MAX_NUM_LIGHTS * 4];            // 3 lights x (1 type + 3 padding)
+    for (int i = 0, c = 0, a = 0, r = 0, d = 0, s = 0, t = 0; i < MAX_NUM_LIGHTS; i++) {
         float w = lights[i].w;
         lightsColor[c++] = lights[i].color[0] * w;
         lightsColor[c++] = lights[i].color[1] * w;
@@ -178,20 +206,81 @@ void D3DMeshView::render() {
         lightsRange[r++] = 0;
         lightsRange[r++] = 0;
         lightsRange[r++] = 0;
+
+        float dirX = lights[i].direction[0];
+        float dirY = lights[i].direction[1];
+        float dirZ = lights[i].direction[2];
+        float length = sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+
+        lighsNormDirection[d++] = dirX / length;
+        lighsNormDirection[d++] = dirY / length;
+        lighsNormDirection[d++] = dirZ / length;
+        lighsNormDirection[d++] = 0;
+
+        spotLightsFactors[s++] = cos(lights[i].innerAngle * M_PI / 180 / 2);
+        spotLightsFactors[s++] = cos(lights[i].outerAngle * M_PI / 180 / 2);
+        spotLightsFactors[s++] = lights[i].falloff;
+        spotLightsFactors[s++] = 0;
+
+        lightType[t++] = lights[i].type;
+        lightType[t++] = 0;
+        lightType[t++] = 0;
+        lightType[t++] = 0;
     }
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHTCOLOR, lightsColor, 3));
+
+//    for (int i = 0; i < 12; i++) {
+//        cout << "lightsColor " << lightsColor[i] << endl;
+//    }
+//
+//    for (int i = 0; i < 12; i++) {
+//        cout << "lightsAttenuation " << lightsAttenuation[i] << endl;
+//    }
+//
+//    for (int i = 0; i < 12; i++) {
+//        cout << "lightsRange " << lightsRange[i] << endl;
+//    }
+//
+    for (int i = 0; i < 4; i++) {
+        cout << "lighsNormDirection " << lighsNormDirection[i] << endl;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        cout << "spotLightsFactors " << spotLightsFactors[i] << endl;
+    }
+
+    for (int i = 0; i < 4; i++) {
+        cout << "lightType " << lightType[i] << endl;
+    }
+    cout << "---------" << endl;
+
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHTCOLOR, lightsColor, MAX_NUM_LIGHTS));
     if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHTCOLOR) failed !!!" << endl;
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHTCOLOR) failed !!!" << endl;
         return;
     }
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION, lightsAttenuation, 3));
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION, lightsAttenuation, MAX_NUM_LIGHTS));
     if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHT_ATTENUATION) failed !!!" << endl;
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_ATTENUATION) failed !!!" << endl;
         return;
     }
-    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_RANGE, lightsRange, 3));
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_RANGE, lightsRange, MAX_NUM_LIGHTS));
     if (!status) {
-        cout << "D3DMeshView.render() - SetPixelShaderConstantF (PSR_LIGHT_RANGE) failed !!!" << endl;
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_RANGE) failed !!!" << endl;
+        return;
+    }
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_DIRECTION, lighsNormDirection, MAX_NUM_LIGHTS));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_DIRECTION) failed !!!" << endl;
+        return;
+    }
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS, spotLightsFactors, MAX_NUM_LIGHTS));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_SPOTLIGHT_FACTORS) failed !!!" << endl;
+        return;
+    }
+    status = SUCCEEDED(device->SetPixelShaderConstantF(PSR_LIGHT_TYPE, lightType, MAX_NUM_LIGHTS));
+    if (!status) {
+        cout << "D3DMeshView.render() - SetPixelShaderConstantF(PSR_LIGHT_TYPE) failed !!!" << status << endl;
         return;
     }
 

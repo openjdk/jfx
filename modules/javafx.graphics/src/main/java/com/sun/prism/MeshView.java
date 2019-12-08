@@ -51,5 +51,12 @@ public interface MeshView {
             float r, float g, float b, float w,
             float ca, float la, float qa, float maxRange);
 
+    public void setSpotLight(int index,
+            float x, float y, float z,
+            float r, float g, float b, float w,
+            float ca, float la, float qa, float maxRange,
+            float dirX, float dirY, float dirZ,
+            float innerAngle, float outerAngle, float falloff);
+
     public void render(Graphics g);
 }

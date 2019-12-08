@@ -106,21 +106,17 @@ public abstract class NGShape3D extends NGNode {
         }
 
         // Setup lights
-        int pointLightIdx = 0;
+        int lightIndex = 0;
         if (g.getLights() == null || g.getLights()[0] == null) {
             // If no lights are in scene apply default light. Default light
             // is a single white point light at camera eye position.
             meshView.setAmbientLight(0.0f, 0.0f, 0.0f);
             Vec3d cameraPos = g.getCameraNoClone().getPositionInWorld(null);
-            meshView.setPointLight(pointLightIdx++,
-                                   (float)cameraPos.x,
-                                   (float)cameraPos.y,
-                                   (float)cameraPos.z,
-                                   1.0f, 1.0f, 1.0f, 1.0f,
-                                   (float) NGPointLight.getDefaultCa(),
-                                   (float) NGPointLight.getDefaultLa(),
-                                   (float) NGPointLight.getDefaultQa(),
-                                   (float) NGPointLight.getDefaultMaxRange());
+            meshView.setPointLight(lightIndex++,
+                    (float) cameraPos.x, (float) cameraPos.y, (float) cameraPos.z,
+                    1.0f, 1.0f, 1.0f, 1.0f,
+                    (float) NGPointLight.getDefaultCa(), (float) NGPointLight.getDefaultLa(), (float) NGPointLight.getDefaultQa(),
+                    (float) NGPointLight.getDefaultMaxRange());
         } else {
             float ambientRed = 0.0f;
             float ambientBlue = 0.0f;
@@ -131,46 +127,59 @@ public abstract class NGShape3D extends NGNode {
                 if (lightBase == null) {
                     // The array of lights can have nulls
                     break;
-                } else if (lightBase.affects(this)) {
-                    float rL = lightBase.getColor().getRed();
-                    float gL = lightBase.getColor().getGreen();
-                    float bL = lightBase.getColor().getBlue();
-                    /* TODO: 3D
-                     * There is a limit on the number of point lights that can affect
-                     * a 3D shape. (Currently we simply select the first 3)
-                     * Thus it is important to select the most relevant lights.
-                     *
-                     * One such way would be to sort lights according to
-                     * intensity, which becomes especially relevant when lights
-                     * are attenuated. Only the most intense set of lights
-                     * would be set.
-                     * The approximate intesity a light will have on a given
-                     * shape, could be defined by:
-                     */
-//                    // Where d is distance from point light
-//                    float attenuationFactor = 1/(c + cL * d + cQ * d * d);
-//                    float intensity = rL * 0.299f + gL * 0.587f + bL * 0.114f;
-//                    intensity *= attenuationFactor;
-                    if (lightBase instanceof NGPointLight) {
-                        NGPointLight light = (NGPointLight)lightBase;
-                        if (rL != 0.0f || gL != 0.0f || bL != 0.0f) {
-                            Affine3D lightWT = light.getWorldTransform();
-                            meshView.setPointLight(pointLightIdx++,
-                                    (float)lightWT.getMxt(),
-                                    (float)lightWT.getMyt(),
-                                    (float)lightWT.getMzt(),
-                                    rL, gL, bL, 1.0f,
-                                    (float) light.getCa(),
-                                    (float) light.getLa(),
-                                    (float) light.getQa(),
-                                    (float) light.getMaxRange());
-                        }
-                    } else if (lightBase instanceof NGAmbientLight) {
-                        // Accumulate ambient lights
-                        ambientRed   += rL;
-                        ambientGreen += gL;
-                        ambientBlue  += bL;
-                    }
+                }
+                if (!lightBase.affects(this)) {
+                    continue;
+                }
+                // Transparent component is ignored
+                float rL = lightBase.getColor().getRed();
+                float gL = lightBase.getColor().getGreen();
+                float bL = lightBase.getColor().getBlue();
+                // Black color is ignored
+                if (rL == 0.0f && gL == 0.0f && bL == 0.0f) {
+                    continue;
+                }
+                /* TODO: 3D
+                 * There is a limit on the number of point lights that can affect
+                 * a 3D shape. (Currently we simply select the first 3)
+                 * Thus it is important to select the most relevant lights.
+                 *
+                 * One such way would be to sort lights according to
+                 * intensity, which becomes especially relevant when lights
+                 * are attenuated. Only the most intense set of lights
+                 * would be set.
+                 * The approximate intensity a light will have on a given
+                 * shape, could be defined by:
+                 */
+//                // Where d is distance from point light
+//                float attenuationFactor = 1/(c + cL * d + cQ * d * d);
+//                float intensity = rL * 0.299f + gL * 0.587f + bL * 0.114f;
+//                intensity *= attenuationFactor;
+                if (lightBase instanceof NGPointLight) {
+                    NGPointLight light = (NGPointLight) lightBase;
+                    Affine3D lightWT = light.getWorldTransform();
+                    meshView.setPointLight(lightIndex++,
+                            (float) lightWT.getMxt(), (float) lightWT.getMyt(), (float) lightWT.getMzt(),
+                            rL, gL, bL, 1.0f,
+                            (float) light.getCa(), (float) light.getLa(), (float) light.getQa(),
+                            (float) light.getMaxRange());
+                } else if (lightBase instanceof NGSpotLight) {
+                    var light = (NGSpotLight) lightBase;
+                    Affine3D lightWT = light.getWorldTransform();
+                    meshView.setSpotLight(lightIndex++,
+                            (float) lightWT.getMxt(), (float) lightWT.getMyt(), (float) lightWT.getMzt(),
+                            rL, gL, bL, 1.0f,
+                            (float) light.getCa(), (float) light.getLa(), (float) light.getQa(),
+                            (float) light.getMaxRange(),
+                            (float) light.getDirection().getX(), (float) light.getDirection().getY(), (float) light.getDirection().getZ(),
+                            (float) light.getInnerAngle(),
+                            (float) light.getOuterAngle(),
+                            (float) light.getFalloff());
+                } else if (lightBase instanceof NGAmbientLight) {
+                    // Accumulate ambient lights
+                    ambientRed   += rL;
+                    ambientGreen += gL;
+                    ambientBlue  += bL;
                 }
             }
             ambientRed = saturate(ambientRed);
@@ -179,12 +188,14 @@ public abstract class NGShape3D extends NGNode {
             meshView.setAmbientLight(ambientRed, ambientGreen, ambientBlue);
         }
         // TODO: 3D Required for D3D implementation of lights, which is limited to 3
-        while (pointLightIdx < 3) {
-                // Reset any previously set lights
-                meshView.setPointLight(pointLightIdx++,
-                        0, 0, 0, // x y z
-                        0, 0, 0, 0, // r g b w
-                        1, 0, 0, 0); // ca la qa maxRange
+
+        while (lightIndex < 3) { // Reset any previously set lights
+            meshView.setSpotLight(lightIndex++,
+                    0, 0, 0, // x y z
+                    0, 0, 0, 0, // r g b w
+                    1, 0, 0, 0, // ca la qa maxRange
+                    0, 0, 0, // dir
+                    0, 0, 0); // inner, outer, falloff
         }
 
         meshView.render(g);

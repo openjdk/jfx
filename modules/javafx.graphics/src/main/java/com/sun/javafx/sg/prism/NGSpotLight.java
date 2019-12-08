@@ -25,12 +25,14 @@
 
 package com.sun.javafx.sg.prism;
 
+import javafx.geometry.Point3D;
+
 /**
  * The peer of the {@code PointLight} class. Holds the default values of {@code PointLight}'s
  * properties and updates the visuals via {@link NGNode#visualsChanged} when one of the current
  * values changes. The peer receives its changes by {@code PointLight.doUpdatePeer} calls.
  */
-public class NGPointLight extends NGLightBase {
+public class NGSpotLight extends NGLightBase {
 
     /** Constant attenuation factor default value */
     private static final double DEFAULT_CA = 1;
@@ -40,8 +42,16 @@ public class NGPointLight extends NGLightBase {
     private static final double DEFAULT_QA = 0;
     /** Max range default value */
     private static final double DEFAULT_MAX_RANGE = Double.POSITIVE_INFINITY;
+    /** Direction default value */
+    private static final Point3D DEFAULT_DIRECTION = new Point3D(0, 0, -1);
+    /** Inner angle default value */
+    private static final double DEFAULT_INNER_ANGLE = 0;
+    /** Outer angle default value */
+    private static final double DEFAULT_OUTER_ANGLE = 90;
+    /** Falloff default value */
+    private static final double DEFAULT_FALLOFF = 1;
 
-    public NGPointLight() {
+    public NGSpotLight() {
     }
 
     public static double getDefaultCa() {
@@ -60,6 +70,22 @@ public class NGPointLight extends NGLightBase {
         return DEFAULT_MAX_RANGE;
     }
 
+    public static Point3D getDefaultDirection() {
+        return DEFAULT_DIRECTION;
+    }
+
+    public static double getDefaultInnerAngle() {
+        return DEFAULT_INNER_ANGLE;
+    }
+    
+    public static double getDefaultOuterAngle() {
+        return DEFAULT_OUTER_ANGLE;
+    }
+
+    public static double getDefaultFalloff() {
+        return DEFAULT_FALLOFF;
+    }
+
 
     private double ca = DEFAULT_CA;
 
@@ -72,7 +98,6 @@ public class NGPointLight extends NGLightBase {
         visualsChanged();
     }
 
-
     private double la = DEFAULT_LA;
 
     public double getLa() {
@@ -83,7 +108,6 @@ public class NGPointLight extends NGLightBase {
         this.la = la;
         visualsChanged();
     }
-
 
     private double qa = DEFAULT_QA;
 
@@ -104,6 +128,51 @@ public class NGPointLight extends NGLightBase {
 
     public void setMaxRange(double maxRange) {
         this.maxRange = maxRange < 0 ? 0 : maxRange;
+        visualsChanged();
+    }
+
+    private Point3D direction = DEFAULT_DIRECTION;
+
+    public Point3D getDirection() {
+        return direction;
+    }
+
+    public void setDirection(Point3D direction) {
+        this.direction = direction;
+        visualsChanged();
+    }
+
+    private double innerAngle = DEFAULT_INNER_ANGLE;
+
+    public double getInnerAngle() {
+        return innerAngle;
+    }
+
+    public void setInnerAngle(double innerAngle) {
+        System.out.println(innerAngle > outerAngle);
+        this.innerAngle = innerAngle < 0 ? 0 : innerAngle > outerAngle ? outerAngle : innerAngle;
+        visualsChanged();
+    }
+
+    private double outerAngle = DEFAULT_OUTER_ANGLE;
+
+    public double getOuterAngle() {
+        return outerAngle;
+    }
+
+    public void setOuterAngle(double outerAngle) {
+        this.outerAngle = outerAngle < innerAngle ? innerAngle : outerAngle; // limit to 360?
+        visualsChanged();
+    }
+
+    private double falloff = DEFAULT_FALLOFF;
+
+    public double getFalloff() {
+        return falloff;
+    }
+
+    public void setFalloff(double falloff) {
+        this.falloff = falloff;
         visualsChanged();
     }
 }

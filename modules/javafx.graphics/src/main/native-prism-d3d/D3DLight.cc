@@ -34,20 +34,18 @@ using std::endl;
 D3DLight::~D3DLight() {
 }
 
-D3DLight::D3DLight() {
-    color[0] = 0;
-    color[1] = 0;
-    color[2] = 0;
-    position[0] = 0;
-    position[1] = 0;
-    position[2] = 0;
-    position[3] = 0; // padding since SetPixelShaderConstantF only takes vec4f; position[3] is unused
-    w = 0;
-    attenuation[0] = 1;
-    attenuation[1] = 0;
-    attenuation[2] = 0;
-    maxRange = 0;
-}
+D3DLight::D3DLight() :
+	type(D3DLight::Point),
+    color(),
+    position(),
+    w(0),
+    attenuation(),
+    maxRange(0),
+    direction(),
+    innerAngle(0),
+    outerAngle(0),
+    falloff(1)
+    {}
 
 void D3DLight::setColor(float r, float g, float b) {
     color[0] = r;

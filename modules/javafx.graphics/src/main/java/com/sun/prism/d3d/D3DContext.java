@@ -428,6 +428,9 @@ class D3DContext extends BaseShaderContext {
     private static native void nSetPointLight(long pContext, long nativeMeshView,
             int index, float x, float y, float z, float r, float g, float b, float w,
             float ca, float la, float qa, float maxRange);
+    private static native void nSetSpotLight(long pContext, long nativeMeshView,
+            int index, float x, float y, float z, float r, float g, float b, float w, float ca, float la, float qa,
+            float maxRange, float dirX, float dirY, float dirZ, float innerAngle, float outerAngle, float falloff);
     private static native void nRenderMeshView(long pContext, long nativeMeshView);
     private static native int nDrawIndexedQuads(long pContext,
             float coords[], byte colors[], int numVertices);
@@ -555,6 +558,13 @@ class D3DContext extends BaseShaderContext {
     void setPointLight(long nativeMeshView, int index, float x, float y, float z,
             float r, float g, float b, float w, float ca, float la, float qa,  float maxRange) {
         nSetPointLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w, ca, la, qa, maxRange);
+    }
+
+    void setSpotLight(long nativeMeshView, int index, float x, float y, float z, float r, float g, float b, float w,
+            float ca, float la, float qa, float maxRange, float dirX, float dirY, float dirZ, 
+            float innerAngle, float outerAngle, float falloff) {
+        nSetSpotLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w,  ca, la, qa, maxRange,
+                dirX, dirY, dirZ, innerAngle, outerAngle, falloff);
     }
 
     @Override
