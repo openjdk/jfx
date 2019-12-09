@@ -1059,8 +1059,6 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         geometry.final_width.type = BOUNDSTYPE_CONTENT;
         geometry.final_height.value = h;
         geometry.final_height.type = BOUNDSTYPE_CONTENT;
-        geometry.current_width = w;
-        geometry.current_height = h;
     }
 
     geometry_set_window_x(&geometry, x);
