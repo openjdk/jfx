@@ -141,9 +141,9 @@ GType          gst_data_queue_get_type (void);
 
 GST_BASE_API
 GstDataQueue * gst_data_queue_new            (GstDataQueueCheckFullFunction checkfull,
-                          GstDataQueueFullCallback fullcallback,
-                          GstDataQueueEmptyCallback emptycallback,
-                          gpointer checkdata) G_GNUC_MALLOC;
+                GstDataQueueFullCallback fullcallback,
+                GstDataQueueEmptyCallback emptycallback,
+                gpointer checkdata) G_GNUC_MALLOC;
 GST_BASE_API
 gboolean       gst_data_queue_push           (GstDataQueue * queue, GstDataQueueItem * item);
 

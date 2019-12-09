@@ -30,11 +30,11 @@ G_BEGIN_DECLS
 #define G_MINSHORT  SHRT_MIN
 #define G_MAXSHORT  SHRT_MAX
 #define G_MAXUSHORT USHRT_MAX
-#define G_MININT    INT_MIN
-#define G_MAXINT    INT_MAX
-#define G_MAXUINT   UINT_MAX
-#define G_MINLONG   LONG_MIN
-#define G_MAXLONG   LONG_MAX
+#define G_MININT  INT_MIN
+#define G_MAXINT  INT_MAX
+#define G_MAXUINT UINT_MAX
+#define G_MINLONG LONG_MIN
+#define G_MAXLONG LONG_MAX
 #define G_MAXULONG  ULONG_MAX
 
 typedef signed char gint8;
@@ -143,7 +143,7 @@ typedef unsigned int guintptr;
 #endif
 
 #define GLIB_MAJOR_VERSION 2
-#define GLIB_MINOR_VERSION 58
+#define GLIB_MINOR_VERSION 62
 #define GLIB_MICRO_VERSION 2
 
 #define G_OS_WIN32
@@ -174,13 +174,13 @@ typedef unsigned int guintptr;
 #endif /* not _MSC_VER */
 
 #if defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590)
-# define G_GNUC_INTERNAL __attribute__((visibility("hidden")))
+#define G_GNUC_INTERNAL __attribute__((visibility("hidden")))
 #elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
-# define G_GNUC_INTERNAL __hidden
+#define G_GNUC_INTERNAL __hidden
 #elif defined (__GNUC__) && defined (G_HAVE_GNUC_VISIBILITY)
-# define G_GNUC_INTERNAL __attribute__((visibility("hidden")))
+#define G_GNUC_INTERNAL __attribute__((visibility("hidden")))
 #else
-# define G_GNUC_INTERNAL
+#define G_GNUC_INTERNAL
 #endif
 
 #define G_THREADS_ENABLED

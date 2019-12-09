@@ -525,7 +525,7 @@ gst_is_video_overlay_prepare_window_handle_message (GstMessage * msg)
  * properties. This helper will install "render-rectangle" property into the
  * class.
  *
- * Since 1.14
+ * Since: 1.14
  */
 void
 gst_video_overlay_install_properties (GObjectClass * oclass, gint last_prop_id)
@@ -534,7 +534,7 @@ gst_video_overlay_install_properties (GObjectClass * oclass, gint last_prop_id)
       gst_param_spec_array ("render-rectangle", "Render Rectangle",
           "The render rectangle ('<x, y, width, height>')",
           g_param_spec_int ("rect-value", "Rectangle Value",
-              "One of x, y, width or height value.", -1, G_MAXINT, -1,
+              "One of x, y, width or height value.", G_MININT, G_MAXINT, -1,
               G_PARAM_WRITABLE | G_PARAM_STATIC_STRINGS),
           G_PARAM_WRITABLE | G_PARAM_STATIC_STRINGS));
 }
@@ -553,7 +553,7 @@ gst_video_overlay_install_properties (GObjectClass * oclass, gint last_prop_id)
  *
  * Returns: %TRUE if the @property_id matches the GstVideoOverlay property
  *
- * Since 1.14
+ * Since: 1.14
  */
 gboolean
 gst_video_overlay_set_property (GObject * object, gint last_prop_id,

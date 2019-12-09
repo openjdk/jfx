@@ -151,7 +151,7 @@ value_transform_##func_name (const GValue *src_value,                       \
                              GValue       *dest_value)                      \
 {                                                                           \
   dest_value->data[0].v_pointer = g_strdup_printf ((format),                \
-                           src_value->data[0].from_member);             \
+               src_value->data[0].from_member);             \
 } extern void glib_dummy_decl (void)
 DEFINE_SPRINTF (int_string,     v_int,    "%d");
 DEFINE_SPRINTF (uint_string,    v_uint,   "%u");

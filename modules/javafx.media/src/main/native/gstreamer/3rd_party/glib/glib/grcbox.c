@@ -156,30 +156,54 @@
  *   g_rc_box_release_full (data, (GDestroyNotify) my_data_struct_clear);
  * }
  *
- * G_DEFINE_AUTOPTR_CLEANUP_FUNC (MyDataStruct, my_data_struct_clear)
+ * G_DEFINE_AUTOPTR_CLEANUP_FUNC (MyDataStruct, my_data_struct_release)
  * ]|
  *
- * Since: 2.58.
+ * Since: 2.58
  */
+
+/* We use the same alignment as GTypeInstance and GNU libc's malloc */
+#define ALIGN_STRUCT(offset)    ((offset + (STRUCT_ALIGNMENT - 1)) & -STRUCT_ALIGNMENT)
 
 #define G_RC_BOX(p)             (GRcBox *) (((char *) (p)) - G_RC_BOX_SIZE)
 
-/* We use the same alignment as GTypeInstance and GNU libc's malloc */
-#define STRUCT_ALIGNMENT        (2 * sizeof (gsize))
-#define ALIGN_STRUCT(offset)    ((offset + (STRUCT_ALIGNMENT - 1)) & -STRUCT_ALIGNMENT)
-
 gpointer
 g_rc_box_alloc_full (gsize    block_size,
+                     gsize    alignment,
                      gboolean atomic,
                      gboolean clear)
 {
-  /* sizeof GArcBox == sizeof GRcBox */
+  /* We don't do an (atomic ? G_ARC_BOX_SIZE : G_RC_BOX_SIZE) check, here
+   * because we have a static assertion that sizeof(GArcBox) == sizeof(GRcBox)
+   * inside grcboxprivate.h, and we don't want the compiler to unnecessarily
+   * warn about both branches of the conditional yielding identical results
+   */
   gsize private_size = G_ARC_BOX_SIZE;
+  gsize private_offset = 0;
   gsize real_size;
   char *allocated;
 
-  g_assert (block_size < (G_MAXSIZE - G_ARC_BOX_SIZE));
+  g_assert (alignment != 0);
+
+  /* We need to ensure that the private data is aligned */
+  if (private_size % alignment != 0)
+    {
+      private_offset = private_size % alignment;
+      private_size += (alignment - private_offset);
+    }
+
+  g_assert (block_size < (G_MAXSIZE - private_size));
   real_size = private_size + block_size;
+
+  /* The real allocated size must be a multiple of @alignment, to
+   * maintain the alignment of block_size
+   */
+  if (real_size % alignment != 0)
+    {
+      gsize offset = real_size % alignment;
+      g_assert (real_size < (G_MAXSIZE - (alignment - offset)));
+      real_size += (alignment - offset);
+    }
 
 #ifdef ENABLE_VALGRIND
   if (RUNNING_ON_VALGRIND)
@@ -214,8 +238,18 @@ g_rc_box_alloc_full (gsize    block_size,
 
   if (atomic)
     {
-      GArcBox *real_box = (GArcBox *) allocated;
+      /* We leave the alignment padding at the top of the allocation,
+       * so we have an in memory layout of:
+       *
+       *  |[ offset ][ sizeof(GArcBox) ]||[ block_size ]|
+       */
+      GArcBox *real_box = (GArcBox *) (allocated + private_offset);
+      /* Store the real size */
       real_box->mem_size = block_size;
+      /* Store the alignment offset, to be used when freeing the
+       * allocated block
+       */
+      real_box->private_offset = private_offset;
 #ifndef G_DISABLE_ASSERT
       real_box->magic = G_BOX_MAGIC;
 #endif
@@ -223,8 +257,18 @@ g_rc_box_alloc_full (gsize    block_size,
     }
   else
     {
-      GRcBox *real_box = (GRcBox *) allocated;
+      /* We leave the alignment padding at the top of the allocation,
+       * so we have an in memory layout of:
+       *
+       *  |[ offset ][ sizeof(GRcBox) ]||[ block_size ]|
+       */
+      GRcBox *real_box = (GRcBox *) (allocated + private_offset);
+      /* Store the real size */
       real_box->mem_size = block_size;
+      /* Store the alignment offset, to be used when freeing the
+       * allocated block
+       */
+      real_box->private_offset = private_offset;
 #ifndef G_DISABLE_ASSERT
       real_box->magic = G_BOX_MAGIC;
 #endif
@@ -246,6 +290,9 @@ g_rc_box_alloc_full (gsize    block_size,
  * The data will be freed when its reference count drops to
  * zero.
  *
+ * The allocated data is guaranteed to be suitably aligned for any
+ * built-in type.
+ *
  * Returns: (transfer full) (not nullable): a pointer to the allocated memory
  *
  * Since: 2.58
@@ -255,7 +302,7 @@ g_rc_box_alloc (gsize block_size)
 {
   g_return_val_if_fail (block_size > 0, NULL);
 
-  return g_rc_box_alloc_full (block_size, FALSE, FALSE);
+  return g_rc_box_alloc_full (block_size, STRUCT_ALIGNMENT, FALSE, FALSE);
 }
 
 /**
@@ -270,6 +317,9 @@ g_rc_box_alloc (gsize block_size)
  * The data will be freed when its reference count drops to
  * zero.
  *
+ * The allocated data is guaranteed to be suitably aligned for any
+ * built-in type.
+ *
  * Returns: (transfer full) (not nullable): a pointer to the allocated memory
  *
  * Since: 2.58
@@ -279,7 +329,7 @@ g_rc_box_alloc0 (gsize block_size)
 {
   g_return_val_if_fail (block_size > 0, NULL);
 
-  return g_rc_box_alloc_full (block_size, FALSE, TRUE);
+  return g_rc_box_alloc_full (block_size, STRUCT_ALIGNMENT, FALSE, TRUE);
 }
 
 /**
@@ -339,7 +389,7 @@ gpointer
   g_return_val_if_fail (block_size > 0, NULL);
   g_return_val_if_fail (mem_block != NULL, NULL);
 
-  res = g_rc_box_alloc_full (block_size, FALSE, FALSE);
+  res = g_rc_box_alloc_full (block_size, STRUCT_ALIGNMENT, FALSE, FALSE);
   memcpy (res, mem_block, block_size);
 
   return res;
@@ -416,13 +466,15 @@ g_rc_box_release_full (gpointer       mem_block,
 
   if (g_ref_count_dec (&real_box->ref_count))
     {
+      char *real_mem = (char *) real_box - real_box->private_offset;
+
       TRACE (GLIB_RCBOX_RELEASE (mem_block, 0));
 
       if (clear_func != NULL)
         clear_func (mem_block);
 
       TRACE (GLIB_RCBOX_FREE (mem_block));
-      g_free (real_box);
+      g_free (real_mem);
     }
 }
 

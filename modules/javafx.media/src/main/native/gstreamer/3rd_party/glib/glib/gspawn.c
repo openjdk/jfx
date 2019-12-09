@@ -452,8 +452,8 @@ g_spawn_sync (const gchar          *working_directory,
         {
           int errsv = errno;
 
-      if (errno == EINTR)
-        continue;
+    if (errno == EINTR)
+      continue;
 
           failed = TRUE;
 
@@ -633,7 +633,7 @@ g_spawn_sync (const gchar          *working_directory,
  * a command line, and the C runtime startup code does a corresponding
  * reconstruction of an argument vector from the command line, to be
  * passed to main(). Complications arise when you have argument vector
- * elements that contain spaces of double quotes. The spawn*() functions
+ * elements that contain spaces or double quotes. The `spawn*()` functions
  * don't do any quoting or escaping, but on the other hand the startup
  * code does do unquoting and unescaping in order to enable receiving
  * arguments with embedded spaces or double quotes. To work around this
@@ -1044,38 +1044,38 @@ g_spawn_command_line_async (const gchar *command_line,
  */
 gboolean
 g_spawn_check_exit_status (gint      exit_status,
-               GError  **error)
+         GError  **error)
 {
   gboolean ret = FALSE;
 
   if (WIFEXITED (exit_status))
     {
       if (WEXITSTATUS (exit_status) != 0)
-    {
-      g_set_error (error, G_SPAWN_EXIT_ERROR, WEXITSTATUS (exit_status),
-               _("Child process exited with code %ld"),
-               (long) WEXITSTATUS (exit_status));
-      goto out;
-    }
+  {
+    g_set_error (error, G_SPAWN_EXIT_ERROR, WEXITSTATUS (exit_status),
+           _("Child process exited with code %ld"),
+           (long) WEXITSTATUS (exit_status));
+    goto out;
+  }
     }
   else if (WIFSIGNALED (exit_status))
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-           _("Child process killed by signal %ld"),
-           (long) WTERMSIG (exit_status));
+       _("Child process killed by signal %ld"),
+       (long) WTERMSIG (exit_status));
       goto out;
     }
   else if (WIFSTOPPED (exit_status))
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-           _("Child process stopped by signal %ld"),
-           (long) WSTOPSIG (exit_status));
+       _("Child process stopped by signal %ld"),
+       (long) WSTOPSIG (exit_status));
       goto out;
     }
   else
     {
       g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
-           _("Child process exited abnormally"));
+       _("Child process exited abnormally"));
       goto out;
     }
 
@@ -1195,16 +1195,16 @@ fdwalk (int (*cb)(void *data, int fd), void *data)
 
               fd = filename_to_fd (de->d_name);
               if (fd < 0 || fd == dir_fd)
-              continue;
+                  continue;
 
-          if ((res = cb (data, fd)) != 0)
-              break;
-        }
+              if ((res = cb (data, fd)) != 0)
+                  break;
+            }
         }
 
       close (dir_fd);
       return res;
-  }
+    }
 
   /* If /proc is not mounted or not accessible we fall back to the old
    * rlimit trick */
@@ -1410,7 +1410,7 @@ read_ints (int      fd,
       else if (chunk == 0)
         break; /* EOF */
       else /* chunk > 0 */
-    bytes += chunk;
+  bytes += chunk;
     }
 
   *n_ints_read = (gint)(bytes / sizeof(gint));
@@ -1599,25 +1599,25 @@ out_free_spawnattr:
 
 static gboolean
 fork_exec_with_fds (gboolean              intermediate_child,
-                      const gchar          *working_directory,
-                      gchar               **argv,
-                      gchar               **envp,
-                      gboolean              close_descriptors,
-                      gboolean              search_path,
-                      gboolean              search_path_from_envp,
-                      gboolean              stdout_to_null,
-                      gboolean              stderr_to_null,
-                      gboolean              child_inherits_stdin,
-                      gboolean              file_and_argv_zero,
-                      gboolean              cloexec_pipes,
-                      GSpawnChildSetupFunc  child_setup,
-                      gpointer              user_data,
-                      GPid                 *child_pid,
-                      gint                 *child_close_fds,
-                      gint                  stdin_fd,
-                      gint                  stdout_fd,
-                      gint                  stderr_fd,
-                      GError              **error)
+                    const gchar          *working_directory,
+                    gchar               **argv,
+                    gchar               **envp,
+                    gboolean              close_descriptors,
+                    gboolean              search_path,
+                    gboolean              search_path_from_envp,
+                    gboolean              stdout_to_null,
+                    gboolean              stderr_to_null,
+                    gboolean              child_inherits_stdin,
+                    gboolean              file_and_argv_zero,
+                    gboolean              cloexec_pipes,
+                    GSpawnChildSetupFunc  child_setup,
+                    gpointer              user_data,
+                    GPid                 *child_pid,
+                    gint                 *child_close_fds,
+                    gint                  stdin_fd,
+                    gint                  stdout_fd,
+                    gint                  stderr_fd,
+                    GError              **error)
 {
   GPid pid = -1;
   gint child_err_report_pipe[2] = { -1, -1 };
@@ -1650,7 +1650,7 @@ fork_exec_with_fds (gboolean              intermediate_child,
           g_set_error (error,
                        G_SPAWN_ERROR,
                        G_SPAWN_ERROR_FAILED,
-                       _("Failed to spawn child process “%s” (%s)"),
+                       _("Failed to spawn child process '%s' (%s)"),
                        argv[0],
                        g_strerror (status));
           return FALSE;
@@ -1818,7 +1818,7 @@ fork_exec_with_fds (gboolean              intermediate_child,
                 ; /* do nothing, child already reaped */
               else
                 g_warning ("waitpid() should not fail in "
-               "'fork_exec_with_pipes'");
+         "'fork_exec_with_pipes'");
             }
         }
 
@@ -1848,7 +1848,7 @@ fork_exec_with_fds (gboolean              intermediate_child,
               g_set_error (error,
                            G_SPAWN_ERROR,
                            _g_spawn_exec_err_to_g_error (buf[1]),
-                           _("Failed to execute child process \"%s\" (%s)"),
+                           _("Failed to execute child process '%s' (%s)"),
                            argv[0],
                            g_strerror (buf[1]));
 
@@ -1875,7 +1875,7 @@ fork_exec_with_fds (gboolean              intermediate_child,
               g_set_error (error,
                            G_SPAWN_ERROR,
                            G_SPAWN_ERROR_FAILED,
-                           _("Unknown error executing child process \"%s\""),
+                           _("Unknown error executing child process '%s'"),
                            argv[0]);
               break;
             }
@@ -2063,8 +2063,8 @@ script_execute (const gchar *file,
     new_argv[1] = (char *) file;
     while (argc > 0)
       {
-    new_argv[argc + 1] = argv[argc];
-    --argc;
+  new_argv[argc + 1] = argv[argc];
+  --argc;
       }
 
     /* Execute the shell. */
@@ -2110,7 +2110,7 @@ g_execute (const gchar *file,
         execv (file, argv);
 
       if (errno == ENOEXEC)
-    script_execute (file, argv, envp);
+  script_execute (file, argv, envp);
     }
   else
     {
@@ -2127,10 +2127,10 @@ g_execute (const gchar *file,
         path = g_getenv ("PATH");
 
       if (path == NULL)
-    {
-      /* There is no 'PATH' in the environment.  The default
-       * search path in libc is the current directory followed by
-       * the path 'confstr' returns for '_CS_PATH'.
+  {
+    /* There is no 'PATH' in the environment.  The default
+     * search path in libc is the current directory followed by
+     * the path 'confstr' returns for '_CS_PATH'.
            */
 
           /* In GLib we put . last, for security, and don't use the
@@ -2139,7 +2139,7 @@ g_execute (const gchar *file,
            */
 
           path = "/bin:/usr/bin:.";
-    }
+  }
 
       len = strlen (file) + 1;
       pathlen = strlen (path);
@@ -2153,75 +2153,75 @@ g_execute (const gchar *file,
 
       p = path;
       do
-    {
-      char *startp;
+  {
+    char *startp;
 
-      path = p;
-      p = my_strchrnul (path, ':');
+    path = p;
+    p = my_strchrnul (path, ':');
 
-      if (p == path)
-        /* Two adjacent colons, or a colon at the beginning or the end
+    if (p == path)
+      /* Two adjacent colons, or a colon at the beginning or the end
              * of 'PATH' means to search the current directory.
              */
-        startp = name + 1;
-      else
-        startp = memcpy (name - (p - path), path, p - path);
+      startp = name + 1;
+    else
+      startp = memcpy (name - (p - path), path, p - path);
 
-      /* Try to execute this name.  If it works, execv will not return.  */
+    /* Try to execute this name.  If it works, execv will not return.  */
           if (envp)
             execve (startp, argv, envp);
           else
             execv (startp, argv);
 
-      if (errno == ENOEXEC)
-        script_execute (startp, argv, envp);
+    if (errno == ENOEXEC)
+      script_execute (startp, argv, envp);
 
-      switch (errno)
-        {
-        case EACCES:
-          /* Record the we got a 'Permission denied' error.  If we end
+    switch (errno)
+      {
+      case EACCES:
+        /* Record the we got a 'Permission denied' error.  If we end
                * up finding no executable we can use, we want to diagnose
                * that we did find one but were denied access.
                */
-          got_eacces = TRUE;
+        got_eacces = TRUE;
 
               /* FALL THRU */
 
-        case ENOENT:
+      case ENOENT:
 #ifdef ESTALE
-        case ESTALE:
+      case ESTALE:
 #endif
 #ifdef ENOTDIR
-        case ENOTDIR:
+      case ENOTDIR:
 #endif
-          /* Those errors indicate the file is missing or not executable
+        /* Those errors indicate the file is missing or not executable
                * by us, in which case we want to just try the next path
                * directory.
                */
-          break;
+        break;
 
-        case ENODEV:
-        case ETIMEDOUT:
-          /* Some strange filesystems like AFS return even
-           * stranger error numbers.  They cannot reasonably mean anything
-           * else so ignore those, too.
-           */
-          break;
+      case ENODEV:
+      case ETIMEDOUT:
+        /* Some strange filesystems like AFS return even
+         * stranger error numbers.  They cannot reasonably mean anything
+         * else so ignore those, too.
+         */
+        break;
 
-        default:
-          /* Some other error means we found an executable file, but
+      default:
+        /* Some other error means we found an executable file, but
                * something went wrong executing it; return the error to our
                * caller.
                */
               g_free (freeme);
-          return -1;
-        }
-    }
+        return -1;
+      }
+  }
       while (*p++ != '\0');
 
       /* We tried every element and none of them worked.  */
       if (got_eacces)
-    /* At least one failure was due to permissions, so report that
+  /* At least one failure was due to permissions, so report that
          * error.
          */
         errno = EACCES;

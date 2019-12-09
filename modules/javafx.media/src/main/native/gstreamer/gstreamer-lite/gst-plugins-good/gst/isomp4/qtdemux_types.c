@@ -213,6 +213,13 @@ static const QtNodeType qt_node_types[] = {
   {FOURCC_pssh, "protection system specific header", 0},
   {FOURCC_tenc, "track encryption", 0},
   {FOURCC_stpp, "XML subtitle sample entry", 0},
+  {FOURCC_clcp, "Closed Caption", 0},
+  {FOURCC_av01, "AV1 Sample Entry", 0},
+  {FOURCC_av1C, "AV1 Codec Configuration", 0},
+  {FOURCC_av1f, "AV1 Forward Key Frame sample group entry", 0},
+  {FOURCC_av1m, "AV1 Multi-Frame sample group entry", 0},
+  {FOURCC_av1s, "AV1 S-Frame sample group entry", 0},
+  {FOURCC_av1M, "AV1 Metadata sample group entry", 0},
   {0, "unknown", 0,},
 };
 

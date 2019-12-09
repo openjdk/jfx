@@ -228,6 +228,9 @@ _gst_event_free (GstEvent * event)
     gst_structure_set_parent_refcount (s, NULL);
     gst_structure_free (s);
   }
+#ifdef USE_POISONING
+  memset (event, 0xff, sizeof (GstEventImpl));
+#endif
 
   g_slice_free1 (sizeof (GstEventImpl), event);
 }
@@ -448,6 +451,8 @@ void
 gst_event_set_seqnum (GstEvent * event, guint32 seqnum)
 {
   g_return_if_fail (GST_IS_EVENT (event));
+  g_return_if_fail (seqnum != GST_SEQNUM_INVALID);
+  g_return_if_fail (gst_event_is_writable (event));
 
   GST_EVENT_SEQNUM (event) = seqnum;
 }
@@ -496,6 +501,7 @@ void
 gst_event_set_running_time_offset (GstEvent * event, gint64 offset)
 {
   g_return_if_fail (GST_IS_EVENT (event));
+  g_return_if_fail (gst_event_is_writable (event));
 
   ((GstEventImpl *) event)->running_time_offset = offset;
 }
@@ -1265,6 +1271,18 @@ gst_event_new_seek (gdouble rate, GstFormat format, GstSeekFlags flags,
 
   g_return_val_if_fail (rate != 0.0, NULL);
 
+  /* SNAP flags only make sense in combination with the KEYUNIT flag. Warn
+   * and unset the SNAP flags if they're set without the KEYUNIT flag */
+  if (!(flags & GST_SEEK_FLAG_KEY_UNIT) &&
+      (flags & (GST_SEEK_FLAG_SNAP_BEFORE | GST_SEEK_FLAG_SNAP_AFTER |
+              GST_SEEK_FLAG_SNAP_NEAREST))) {
+    g_warning ("SNAP seeks only work in combination with the KEY_UNIT "
+        "flag, ignoring SNAP flags");
+    flags &=
+        ~(GST_SEEK_FLAG_SNAP_BEFORE | GST_SEEK_FLAG_SNAP_AFTER |
+        GST_SEEK_FLAG_SNAP_NEAREST);
+  }
+
   if (format == GST_FORMAT_TIME) {
     GST_CAT_INFO (GST_CAT_EVENT,
         "creating seek rate %lf, format TIME, flags %d, "
@@ -1288,7 +1306,9 @@ gst_event_new_seek (gdouble rate, GstFormat format, GstSeekFlags flags,
       GST_QUARK (CUR_TYPE), GST_TYPE_SEEK_TYPE, start_type,
       GST_QUARK (CUR), G_TYPE_INT64, start,
       GST_QUARK (STOP_TYPE), GST_TYPE_SEEK_TYPE, stop_type,
-      GST_QUARK (STOP), G_TYPE_INT64, stop, NULL);
+      GST_QUARK (STOP), G_TYPE_INT64, stop,
+      GST_QUARK (TRICKMODE_INTERVAL), GST_TYPE_CLOCK_TIME, (GstClockTime) 0,
+      NULL);
   event = gst_event_new_custom (GST_EVENT_SEEK, structure);
 
   return event;
@@ -1346,6 +1366,48 @@ gst_event_parse_seek (GstEvent * event, gdouble * rate,
     *stop =
         g_value_get_int64 (gst_structure_id_get_value (structure,
             GST_QUARK (STOP)));
+}
+
+/**
+ * gst_event_set_seek_trickmode_interval:
+ *
+ * Sets a trickmode interval on a (writable) seek event. Elements
+ * that support TRICKMODE_KEY_UNITS seeks SHOULD use this as the minimal
+ * interval between each frame they may output.
+ *
+ * Since: 1.16
+ */
+void
+gst_event_set_seek_trickmode_interval (GstEvent * event, GstClockTime interval)
+{
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_SEEK);
+  g_return_if_fail (gst_event_is_writable (event));
+  g_return_if_fail (GST_CLOCK_TIME_IS_VALID (interval));
+
+  gst_structure_id_set (GST_EVENT_STRUCTURE (event),
+      GST_QUARK (TRICKMODE_INTERVAL), GST_TYPE_CLOCK_TIME, interval, NULL);
+}
+
+/**
+ * gst_event_parse_seek_trickmode_interval:
+ * @interval: (out)
+ *
+ * Retrieve the trickmode interval that may have been set on a
+ * seek event with gst_event_set_seek_trickmode_interval().
+ *
+ * Since: 1.16
+ */
+void
+gst_event_parse_seek_trickmode_interval (GstEvent * event,
+    GstClockTime * interval)
+{
+  g_return_if_fail (event != NULL);
+  g_return_if_fail (interval != NULL);
+  g_return_if_fail (GST_EVENT_TYPE (event) == GST_EVENT_SEEK);
+
+  gst_structure_id_get (GST_EVENT_STRUCTURE (event),
+      GST_QUARK (TRICKMODE_INTERVAL), GST_TYPE_CLOCK_TIME, interval, NULL);
 }
 
 /**
@@ -1665,7 +1727,7 @@ gst_event_set_stream (GstEvent * event, GstStream * stream)
 /**
  * gst_event_parse_stream:
  * @event: a stream-start event
- * @stream: (out) (transfer full): adress of variable to store the stream
+ * @stream: (out) (transfer full): address of variable to store the stream
  *
  * Parse a stream-start @event and extract the #GstStream from it.
  *

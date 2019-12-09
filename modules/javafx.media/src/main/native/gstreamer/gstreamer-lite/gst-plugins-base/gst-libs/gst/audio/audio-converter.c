@@ -31,7 +31,7 @@
 #include "gstaudiopack.h"
 
 /**
- * SECTION:audioconverter
+ * SECTION:gstaudioconverter
  * @title: GstAudioConverter
  * @short_description: Generic audio conversion
  *
@@ -111,6 +111,8 @@ struct _GstAudioConverter
 
   gboolean in_place;            /* the conversion can be done in place; returned by gst_audio_converter_supports_inplace() */
 
+  gboolean passthrough;
+
   /* unpack */
   gboolean in_default;
   gboolean unpack_ip;
@@ -130,6 +132,11 @@ struct _GstAudioConverter
 
   /* quant */
   GstAudioQuantize *quant;
+
+  /* change layout */
+  GstAudioFormat chlayout_format;
+  GstAudioLayout chlayout_target;
+  gint chlayout_channels;
 
   /* pack */
   gboolean out_default;
@@ -582,6 +589,110 @@ do_quantize (AudioChain * chain, gpointer user_data)
   return TRUE;
 }
 
+#define MAKE_INTERLEAVE_FUNC(type) \
+static inline void \
+interleave_##type (const type * in[], type * out[], \
+    gsize num_samples, gint channels) \
+{ \
+  gsize s; \
+  gint c; \
+  for (s = 0; s < num_samples; s++) { \
+    for (c = 0; c < channels; c++) { \
+      out[0][s * channels + c] = in[c][s]; \
+    } \
+  } \
+}
+
+#define MAKE_DEINTERLEAVE_FUNC(type) \
+static inline void \
+deinterleave_##type (const type * in[], type * out[], \
+    gsize num_samples, gint channels) \
+{ \
+  gsize s; \
+  gint c; \
+  for (s = 0; s < num_samples; s++) { \
+    for (c = 0; c < channels; c++) { \
+      out[c][s] = in[0][s * channels + c]; \
+    } \
+  } \
+}
+
+MAKE_INTERLEAVE_FUNC (gint16);
+MAKE_INTERLEAVE_FUNC (gint32);
+MAKE_INTERLEAVE_FUNC (gfloat);
+MAKE_INTERLEAVE_FUNC (gdouble);
+MAKE_DEINTERLEAVE_FUNC (gint16);
+MAKE_DEINTERLEAVE_FUNC (gint32);
+MAKE_DEINTERLEAVE_FUNC (gfloat);
+MAKE_DEINTERLEAVE_FUNC (gdouble);
+
+static gboolean
+do_change_layout (AudioChain * chain, gpointer user_data)
+{
+  GstAudioConverter *convert = user_data;
+  GstAudioFormat format = convert->chlayout_format;
+  GstAudioLayout out_layout = convert->chlayout_target;
+  gint channels = convert->chlayout_channels;
+  gsize num_samples;
+  gpointer *in, *out;
+
+  in = audio_chain_get_samples (chain->prev, &num_samples);
+  out = (chain->allow_ip ? in : audio_chain_alloc_samples (chain, num_samples));
+
+  if (out_layout == GST_AUDIO_LAYOUT_INTERLEAVED) {
+    /* interleave */
+    GST_LOG ("interleaving %p, %p %" G_GSIZE_FORMAT, in, out, num_samples);
+    switch (format) {
+      case GST_AUDIO_FORMAT_S16:
+        interleave_gint16 ((const gint16 **) in, (gint16 **) out,
+            num_samples, channels);
+        break;
+      case GST_AUDIO_FORMAT_S32:
+        interleave_gint32 ((const gint32 **) in, (gint32 **) out,
+            num_samples, channels);
+        break;
+      case GST_AUDIO_FORMAT_F32:
+        interleave_gfloat ((const gfloat **) in, (gfloat **) out,
+            num_samples, channels);
+        break;
+      case GST_AUDIO_FORMAT_F64:
+        interleave_gdouble ((const gdouble **) in, (gdouble **) out,
+            num_samples, channels);
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  } else {
+    /* deinterleave */
+    GST_LOG ("deinterleaving %p, %p %" G_GSIZE_FORMAT, in, out, num_samples);
+    switch (format) {
+      case GST_AUDIO_FORMAT_S16:
+        deinterleave_gint16 ((const gint16 **) in, (gint16 **) out,
+            num_samples, channels);
+        break;
+      case GST_AUDIO_FORMAT_S32:
+        deinterleave_gint32 ((const gint32 **) in, (gint32 **) out,
+            num_samples, channels);
+        break;
+      case GST_AUDIO_FORMAT_F32:
+        deinterleave_gfloat ((const gfloat **) in, (gfloat **) out,
+            num_samples, channels);
+        break;
+      case GST_AUDIO_FORMAT_F64:
+        deinterleave_gdouble ((const gdouble **) in, (gdouble **) out,
+            num_samples, channels);
+        break;
+      default:
+        g_assert_not_reached ();
+        break;
+    }
+  }
+
+  audio_chain_set_samples (chain, out, num_samples);
+  return TRUE;
+}
+
 static gboolean
 is_intermediate_format (GstAudioFormat format)
 {
@@ -719,8 +830,15 @@ chain_mix (GstAudioConverter * convert, AudioChain * prev)
   GstAudioInfo *out = &convert->out;
   GstAudioFormat format = convert->current_format;
   const GValue *opt_matrix = GET_OPT_MIX_MATRIX (convert);
+  GstAudioChannelMixerFlags flags = 0;
 
   convert->current_channels = out->channels;
+
+  /* keep the input layout */
+  if (convert->current_layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED) {
+    flags |= GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_IN;
+    flags |= GST_AUDIO_CHANNEL_MIXER_FLAGS_NON_INTERLEAVED_OUT;
+  }
 
   if (opt_matrix) {
     gfloat **matrix = NULL;
@@ -730,12 +848,10 @@ chain_mix (GstAudioConverter * convert, AudioChain * prev)
           mix_matrix_from_g_value (in->channels, out->channels, opt_matrix);
 
     convert->mix =
-        gst_audio_channel_mixer_new_with_matrix (0, format, in->channels,
+        gst_audio_channel_mixer_new_with_matrix (flags, format, in->channels,
         out->channels, matrix);
   } else {
-    GstAudioChannelMixerFlags flags;
-
-    flags =
+    flags |=
         GST_AUDIO_INFO_IS_UNPOSITIONED (in) ?
         GST_AUDIO_CHANNEL_MIXER_FLAGS_UNPOSITIONED_IN : 0;
     flags |=
@@ -781,8 +897,13 @@ chain_resample (GstAudioConverter * convert, AudioChain * prev)
     flags = 0;
     if (convert->current_layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED) {
       flags |= GST_AUDIO_RESAMPLER_FLAG_NON_INTERLEAVED_IN;
+    }
+    /* if the resampler is activated, it is optimal to change layout here */
+    if (out->layout == GST_AUDIO_LAYOUT_NON_INTERLEAVED) {
       flags |= GST_AUDIO_RESAMPLER_FLAG_NON_INTERLEAVED_OUT;
     }
+    convert->current_layout = out->layout;
+
     if (variable_rate)
       flags |= GST_AUDIO_RESAMPLER_FLAG_VARIABLE_RATE;
 
@@ -871,6 +992,29 @@ chain_quantize (GstAudioConverter * convert, AudioChain * prev)
     prev->allow_ip = TRUE;
     prev->pass_alloc = TRUE;
     audio_chain_set_make_func (prev, do_quantize, convert, NULL);
+  }
+  return prev;
+}
+
+static AudioChain *
+chain_change_layout (GstAudioConverter * convert, AudioChain * prev)
+{
+  GstAudioInfo *out = &convert->out;
+
+  if (convert->current_layout != out->layout) {
+    convert->current_layout = out->layout;
+
+    /* if there is only 1 channel, layouts are identical */
+    if (convert->current_channels > 1) {
+      convert->chlayout_target = convert->current_layout;
+      convert->chlayout_format = convert->current_format;
+      convert->chlayout_channels = convert->current_channels;
+
+      prev = audio_chain_new (prev, convert);
+      prev->allow_ip = FALSE;
+      prev->pass_alloc = FALSE;
+      audio_chain_set_make_func (prev, do_change_layout, convert, NULL);
+    }
   }
   return prev;
 }
@@ -1152,12 +1296,12 @@ converter_resample (GstAudioConverter * convert,
 }
 
 #define GST_AUDIO_FORMAT_IS_ENDIAN_CONVERSION(info1, info2) \
-        ( \
-            !(((info1)->flags ^ (info2)->flags) & (~GST_AUDIO_FORMAT_FLAG_UNPACK)) && \
-            (info1)->endianness != (info2)->endianness && \
-            (info1)->width == (info2)->width && \
-            (info1)->depth == (info2)->depth \
-        )
+    ( \
+      !(((info1)->flags ^ (info2)->flags) & (~GST_AUDIO_FORMAT_FLAG_UNPACK)) && \
+      (info1)->endianness != (info2)->endianness && \
+      (info1)->width == (info2)->width && \
+      (info1)->depth == (info2)->depth \
+    )
 
 /**
  * gst_audio_converter_new:
@@ -1169,7 +1313,7 @@ converter_resample (GstAudioConverter * convert,
  * Create a new #GstAudioConverter that is able to convert between @in and @out
  * audio formats.
  *
- * @config contains extra configuration options, see #GST_VIDEO_CONVERTER_OPT_*
+ * @config contains extra configuration options, see #GST_AUDIO_CONVERTER_OPT_*
  * parameters for details about the options and values.
  *
  * Returns: a #GstAudioConverter or %NULL if conversion is not possible.
@@ -1184,8 +1328,6 @@ gst_audio_converter_new (GstAudioConverterFlags flags, GstAudioInfo * in_info,
 
   g_return_val_if_fail (in_info != NULL, FALSE);
   g_return_val_if_fail (out_info != NULL, FALSE);
-  g_return_val_if_fail (in_info->layout == GST_AUDIO_LAYOUT_INTERLEAVED, FALSE);
-  g_return_val_if_fail (in_info->layout == out_info->layout, FALSE);
 
   if (config)
     opt_matrix =
@@ -1226,20 +1368,26 @@ gst_audio_converter_new (GstAudioConverterFlags flags, GstAudioInfo * in_info,
   prev = chain_convert_out (convert, prev);
   /* step 6, optional quantize */
   prev = chain_quantize (convert, prev);
-  /* step 7, pack */
+  /* step 7, change layout */
+  prev = chain_change_layout (convert, prev);
+  /* step 8, pack */
   convert->chain_end = chain_pack (convert, prev);
 
   convert->convert = converter_generic;
   convert->in_place = FALSE;
+  convert->passthrough = FALSE;
 
   /* optimize */
   if (convert->mix_passthrough) {
     if (out_info->finfo->format == in_info->finfo->format) {
       if (convert->resampler == NULL) {
-        GST_INFO
-            ("same formats, no resampler and passthrough mixing -> passthrough");
-        convert->convert = converter_passthrough;
-        convert->in_place = TRUE;
+        if (out_info->layout == in_info->layout) {
+          GST_INFO ("same formats, same layout, no resampler and "
+              "passthrough mixing -> passthrough");
+          convert->convert = converter_passthrough;
+          convert->in_place = TRUE;
+          convert->passthrough = TRUE;
+        }
       } else {
         if (is_intermediate_format (in_info->finfo->format)) {
           GST_INFO ("same formats, and passthrough mixing -> only resampling");
@@ -1248,25 +1396,25 @@ gst_audio_converter_new (GstAudioConverterFlags flags, GstAudioInfo * in_info,
       }
     } else if (GST_AUDIO_FORMAT_IS_ENDIAN_CONVERSION (out_info->finfo,
             in_info->finfo)) {
-      if (convert->resampler == NULL) {
+      if (convert->resampler == NULL && out_info->layout == in_info->layout) {
         GST_INFO ("no resampler, passthrough mixing -> only endian conversion");
         convert->convert = converter_endian;
         convert->in_place = TRUE;
 
-        switch (GST_AUDIO_INFO_BPS (in_info)) {
-          case 2:
+        switch (GST_AUDIO_INFO_WIDTH (in_info)) {
+          case 16:
             GST_DEBUG ("initializing 16-bit endian conversion");
             convert->swap_endian = converter_swap_endian_16;
             break;
-          case 3:
+          case 24:
             GST_DEBUG ("initializing 24-bit endian conversion");
             convert->swap_endian = converter_swap_endian_24;
             break;
-          case 4:
+          case 32:
             GST_DEBUG ("initializing 32-bit endian conversion");
             convert->swap_endian = converter_swap_endian_32;
             break;
-          case 8:
+          case 64:
             GST_DEBUG ("initializing 64-bit endian conversion");
             convert->swap_endian = converter_swap_endian_64;
             break;
@@ -1450,6 +1598,7 @@ gst_audio_converter_samples (GstAudioConverter * convert,
 
 /**
  * gst_audio_converter_convert:
+ * @convert: a #GstAudioConverter
  * @flags: extra #GstAudioConverterFlags
  * @in: (array length=in_size) (element-type guint8): input data
  * @in_size: size of @in
@@ -1499,4 +1648,20 @@ gboolean
 gst_audio_converter_supports_inplace (GstAudioConverter * convert)
 {
   return convert->in_place;
+}
+
+/**
+ * gst_audio_converter_is_passthrough:
+ *
+ * Returns whether the audio converter will operate in passthrough mode.
+ * The return value would be typically input to gst_base_transform_set_passthrough()
+ *
+ * Returns: %TRUE when no conversion will actually occur.
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_audio_converter_is_passthrough (GstAudioConverter * convert)
+{
+  return convert->passthrough;
 }

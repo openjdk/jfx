@@ -78,9 +78,6 @@
 GST_DEBUG_CATEGORY_STATIC (collect_pads_debug);
 #define GST_CAT_DEFAULT collect_pads_debug
 
-#define parent_class gst_collect_pads_parent_class
-G_DEFINE_TYPE (GstCollectPads, gst_collect_pads, GST_TYPE_OBJECT);
-
 struct _GstCollectDataPrivate
 {
   /* refcounting for struct, and destroy callback */
@@ -129,6 +126,9 @@ struct _GstCollectPadsPrivate
   gboolean pending_flush_start;
   gboolean pending_flush_stop;
 };
+
+#define parent_class gst_collect_pads_parent_class
+G_DEFINE_TYPE_WITH_PRIVATE (GstCollectPads, gst_collect_pads, GST_TYPE_OBJECT);
 
 static void gst_collect_pads_clear (GstCollectPads * pads,
     GstCollectData * data);
@@ -203,8 +203,6 @@ gst_collect_pads_class_init (GstCollectPadsClass * klass)
 {
   GObjectClass *gobject_class = (GObjectClass *) klass;
 
-  g_type_class_add_private (klass, sizeof (GstCollectPadsPrivate));
-
   GST_DEBUG_CATEGORY_INIT (collect_pads_debug, "collectpads", 0,
       "GstCollectPads");
 
@@ -214,9 +212,7 @@ gst_collect_pads_class_init (GstCollectPadsClass * klass)
 static void
 gst_collect_pads_init (GstCollectPads * pads)
 {
-  pads->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (pads, GST_TYPE_COLLECT_PADS,
-      GstCollectPadsPrivate);
+  pads->priv = gst_collect_pads_get_instance_private (pads);
 
   pads->data = NULL;
   pads->priv->cookie = 0;
@@ -346,7 +342,7 @@ gst_collect_pads_set_buffer_function (GstCollectPads * pads,
  */
 /* NOTE allowing to change comparison seems not advisable;
 no known use-case, and collaboration with default algorithm is unpredictable.
-If custom compairing/operation is needed, just use a collect function of
+If custom comparing/operation is needed, just use a collect function of
 your own */
 void
 gst_collect_pads_set_compare_function (GstCollectPads * pads,

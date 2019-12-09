@@ -265,7 +265,7 @@ g_hmac_update (GHmac        *hmac,
  * g_hmac_get_string:
  * @hmac: a #GHmac
  *
- * Gets the HMAC as an hexadecimal string.
+ * Gets the HMAC as a hexadecimal string.
  *
  * Once this function has been called the #GHmac can no longer be
  * updated with g_hmac_update().

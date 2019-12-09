@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,25 +74,19 @@ public class BackgroundSizeTest {
         new BackgroundSize(-2, 1, true, true, false, false);
     }
 
-    @Ignore("Surprised that MIN_VALUE is not < 0")
-    @Test(expected = IllegalArgumentException.class)
-    public void negativeWidthThrowsException3() {
-        new BackgroundSize(Double.MIN_VALUE, 1, true, true, false, false);
-    }
-
-    @Ignore("Not handling positive infinity")
+    @Ignore("JDK-8234090")
     @Test(expected = IllegalArgumentException.class)
     public void positiveInfinityWidthThrowsException() {
         new BackgroundSize(Double.POSITIVE_INFINITY, 1, true, true, false, false);
     }
 
-    @Ignore("Not handling negative infinity")
+    @Ignore("JDK-8234090")
     @Test(expected = IllegalArgumentException.class)
     public void negativeInfinityWidthThrowsException() {
         new BackgroundSize(Double.NEGATIVE_INFINITY, 1, true, true, false, false);
     }
 
-    @Ignore("Not handling NaN")
+    @Ignore("JDK-8234090")
     @Test(expected = IllegalArgumentException.class)
     public void nanWidthThrowsException() {
         new BackgroundSize(Double.NaN, 1, true, true, false, false);
@@ -118,25 +112,19 @@ public class BackgroundSizeTest {
         new BackgroundSize(1, -2, true, true, false, false);
     }
 
-    @Ignore("Surprised that MIN_VALUE is not < 0")
-    @Test(expected = IllegalArgumentException.class)
-    public void negativeHeightThrowsException3() {
-        new BackgroundSize(1, Double.MIN_VALUE, true, true, false, false);
-    }
-
-    @Ignore("Not handling positive infinity")
+    @Ignore("JDK-8234090")
     @Test(expected = IllegalArgumentException.class)
     public void positiveInfinityHeightThrowsException() {
         new BackgroundSize(1, Double.POSITIVE_INFINITY, true, true, false, false);
     }
 
-    @Ignore("Not handling negative infinity")
+    @Ignore("JDK-8234090")
     @Test(expected = IllegalArgumentException.class)
     public void negativeInfinityHeightThrowsException() {
         new BackgroundSize(1, Double.NEGATIVE_INFINITY, true, true, false, false);
     }
 
-    @Ignore("Not handling NaN")
+    @Ignore("JDK-8234090")
     @Test(expected = IllegalArgumentException.class)
     public void nanHeightThrowsException() {
         new BackgroundSize(1, Double.NaN, true, true, false, false);

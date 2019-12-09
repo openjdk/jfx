@@ -43,7 +43,7 @@
 #include "ResourceResponse.h"
 #include "URLLoader.h"
 #include "com_sun_webkit_LoadListenerClient.h"
-#include "com_sun_webkit_network_URLLoader.h"
+#include "com_sun_webkit_network_URLLoaderBase.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
@@ -77,12 +77,12 @@ static void initRefs(JNIEnv* env)
                 "(Lcom/sun/webkit/WebPage;Z"
                 "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
                 "[Lcom/sun/webkit/network/FormDataElement;J)"
-                "Lcom/sun/webkit/network/URLLoader;");
+                "Lcom/sun/webkit/network/URLLoaderBase;");
         ASSERT(loadMethod);
     }
     if (!urlLoaderClass) {
         urlLoaderClass = JLClass(env->FindClass(
-                "com/sun/webkit/network/URLLoader"));
+                "com/sun/webkit/network/URLLoaderBase"));
         ASSERT(urlLoaderClass);
 
         cancelMethod = env->GetMethodID(urlLoaderClass, "fwkCancel", "()V");
@@ -108,25 +108,6 @@ static void initRefs(JNIEnv* env)
     }
 }
 
-static bool shouldRedirectAsGET(const ResourceRequest& request, const ResourceResponse& response, bool crossOrigin)
-{
-    if (request.httpMethod() == "GET" || request.httpMethod() == "HEAD")
-        return false;
-
-    if (!request.url().protocolIsInHTTPFamily())
-        return true;
-
-    if (response.isSeeOther())
-        return true;
-
-    if ((response.isMovedPermanently() || response.isFound()) && (request.httpMethod() == "POST"))
-        return true;
-
-    if (crossOrigin && (request.httpMethod() == "DELETE"))
-        return true;
-
-    return false;
-}
 }
 
 URLLoader::URLLoader()
@@ -139,14 +120,15 @@ URLLoader::~URLLoader()
 }
 
 std::unique_ptr<URLLoader> URLLoader::loadAsynchronously(NetworkingContext* context,
-                                                    ResourceHandle* handle)
+                                                    ResourceHandle* handle,
+                                                    const ResourceRequest& request)
 {
     std::unique_ptr<URLLoader> result = std::unique_ptr<URLLoader>(new URLLoader());
     result->m_target = std::unique_ptr<AsynchronousTarget>(new AsynchronousTarget(handle));
     result->m_ref = load(
             true,
             context,
-            handle->firstRequest(),
+            request,
             result->m_target.get());
     return result;
 }
@@ -198,15 +180,10 @@ JLObject URLLoader::load(bool asynchronous,
     ASSERT(webPage);
 
     String headerString;
-    const HTTPHeaderMap& headerMap = request.httpHeaderFields();
-    for (
-        HTTPHeaderMap::const_iterator it = headerMap.begin();
-        headerMap.end() != it;
-        ++it)
-    {
-        headerString.append(it->key);
+    for (const auto& header : request.httpHeaderFields()) {
+        headerString.append(header.key);
         headerString.append(": ");
-        headerString.append(it->value);
+        headerString.append(header.value);
         headerString.append("\n");
     }
 
@@ -304,39 +281,10 @@ void URLLoader::AsynchronousTarget::didSendData(long totalBytesSent,
 }
 
 
-bool URLLoader::AsynchronousTarget::willSendRequest(
-        const String& newUrl,
-        const String& newMethod,
-        const ResourceResponse& response)
+bool URLLoader::AsynchronousTarget::willSendRequest(const ResourceResponse& response)
 {
-    using namespace URLLoaderJavaInternal;
-    ASSERT(isMainThread());
-    ResourceHandleClient* client = m_handle->client();
-    if (client) {
-        ResourceRequest request = m_handle->firstRequest();
-        String location = response.httpHeaderField(HTTPHeaderName::Location);
-        URL newURL = URL(URL(), newUrl);
-        bool crossOrigin = !protocolHostAndPortAreEqual(request.url(), newURL);
-
-        ResourceRequest newRequest = request;
-        newRequest.setURL(newURL);
-
-        if (shouldRedirectAsGET(newRequest, response, crossOrigin)) {
-            newRequest.setHTTPMethod("GET");
-            newRequest.setHTTPBody(nullptr);
-            newRequest.clearHTTPContentType();
-        } else {
-            newRequest.setHTTPMethod(newMethod);
-        }
-
-        // Should not set Referer after a redirect from a secure resource to non-secure one.
-        if (!newURL.protocolIs("https") && protocolIs(newRequest.httpReferrer(), "https") && m_handle->context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
-            newRequest.clearHTTPReferrer();
-
-        client->willSendRequestAsync(m_handle, WTFMove(newRequest), ResourceResponse(response), [] (ResourceRequest&&) {
-        });
-    }
-    return true;
+    m_handle->willSendRequest(response);
+    return false;
 }
 
 void URLLoader::AsynchronousTarget::didReceiveResponse(
@@ -344,8 +292,7 @@ void URLLoader::AsynchronousTarget::didReceiveResponse(
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didReceiveResponseAsync(m_handle, ResourceResponse(response), [] () {
-        });
+        client->didReceiveResponseAsync(m_handle, ResourceResponse(response), [] () {});
     }
 }
 
@@ -389,15 +336,14 @@ void URLLoader::SynchronousTarget::didSendData(long, long)
 {
 }
 
-bool URLLoader::SynchronousTarget::willSendRequest(
-        const String& newUrl,
-        const String&,
-        const ResourceResponse&)
+bool URLLoader::SynchronousTarget::willSendRequest(const ResourceResponse& response)
 {
     // The following code was adapted from the Windows port
     // FIXME: This needs to be fixed to follow redirects correctly even
     // for cross-domain requests
-    if (!protocolHostAndPortAreEqual(m_request.url(), URL(URL(), newUrl))) {
+    String location = response.httpHeaderField(HTTPHeaderName::Location);
+    URL newURL = URL(response.url(), location);
+    if (!protocolHostAndPortAreEqual(m_request.url(), newURL)) {
         didFail(ResourceError(
                 String(),
                 com_sun_webkit_LoadListenerClient_INVALID_RESPONSE,
@@ -431,14 +377,7 @@ void URLLoader::SynchronousTarget::didFail(const ResourceError& error)
 
 } // namespace WebCore
 
-using namespace WebCore;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-static void setupResponse(ResourceResponse& response,
-                          JNIEnv* env,
+static WebCore::ResourceResponse setupResponse(JNIEnv* env,
                           jint status,
                           jstring contentType,
                           jstring contentEncoding,
@@ -446,6 +385,9 @@ static void setupResponse(ResourceResponse& response,
                           jstring headers,
                           jstring url)
 {
+    using namespace WebCore;
+    ResourceResponse response { };
+
     if (status > 0) {
         response.setHTTPStatusCode(status);
     }
@@ -496,29 +438,30 @@ static void setupResponse(ResourceResponse& response,
     if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file")) {
         response.setMimeType(MIMETypeRegistry::getMIMETypeForPath(kurl.path()));
     }
+    return response;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidSendData
+JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidSendData
   (JNIEnv*, jclass, jlong totalBytesSent, jlong totalBytesToBeSent, jlong data)
 {
+    using namespace WebCore;
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
     target->didSendData(totalBytesSent, totalBytesToBeSent);
 }
 
-JNIEXPORT jboolean JNICALL Java_com_sun_webkit_network_URLLoader_twkWillSendRequest
-  (JNIEnv* env, jclass, jstring newUrl, jstring newMethod, jint status,
+JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkWillSendRequest
+  (JNIEnv* env, jclass, jint status,
    jstring contentType, jstring contentEncoding, jlong contentLength,
    jstring headers, jstring url, jlong data)
 {
+    using namespace WebCore;
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
 
-    ResourceResponse response;
-    setupResponse(
-            response,
+    ResourceResponse response = setupResponse(
             env,
             status,
             contentType,
@@ -527,24 +470,20 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_network_URLLoader_twkWillSendRequ
             headers,
             url);
 
-    return bool_to_jbool(target->willSendRequest(
-            String(env, newUrl),
-            String(env, newMethod),
-            response));
+    target->willSendRequest(response);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidReceiveResponse
+JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveResponse
   (JNIEnv* env, jclass, jint status, jstring contentType,
    jstring contentEncoding, jlong contentLength, jstring headers,
    jstring url, jlong data)
 {
+    using namespace WebCore;
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
 
-    ResourceResponse response;
-    setupResponse(
-            response,
+    ResourceResponse response = setupResponse(
             env,
             status,
             contentType,
@@ -556,10 +495,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidReceiveRespon
     target->didReceiveResponse(response);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidReceiveData
+JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData
   (JNIEnv* env, jclass, jobject byteBuffer, jint position, jint remaining,
    jlong data)
 {
+    using namespace WebCore;
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
@@ -568,19 +508,21 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidReceiveData
     target->didReceiveData(address + position, remaining);
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidFinishLoading
+JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading
   (JNIEnv*, jclass, jlong data)
 {
+    using namespace WebCore;
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
     target->didFinishLoading();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidFail
+JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoaderBase_twkDidFail
   (JNIEnv* env, jclass, jint errorCode, jstring url, jstring message,
    jlong data)
 {
+    using namespace WebCore;
     URLLoader::Target* target =
             static_cast<URLLoader::Target*>(jlong_to_ptr(data));
     ASSERT(target);
@@ -590,7 +532,3 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidFail
             URL(env, url),
             String(env, message)));
 }
-
-#ifdef __cplusplus
-}
-#endif

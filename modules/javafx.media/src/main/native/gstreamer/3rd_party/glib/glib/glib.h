@@ -106,14 +106,14 @@
 #include <glib/gwin32.h>
 #endif
 
-#ifndef G_DISABLE_DEPRECATED
+#ifndef GSTREAMER_LITE
 #include <glib/deprecated/gallocator.h>
 #include <glib/deprecated/gcache.h>
 #include <glib/deprecated/gcompletion.h>
 #include <glib/deprecated/gmain.h>
 #include <glib/deprecated/grel.h>
 #include <glib/deprecated/gthread.h>
-#endif /* G_DISABLE_DEPRECATED */
+#endif // GSTREAMER_LITE
 
 #include <glib/glib-autocleanups.h>
 

@@ -383,6 +383,64 @@ g_list_insert (GList    *list,
 }
 
 /**
+ * g_list_insert_before_link:
+ * @list: a pointer to a #GList, this must point to the top of the list
+ * @sibling: (nullable): the list element before which the new element
+ *     is inserted or %NULL to insert at the end of the list
+ * @link_: the list element to be added, which must not be part of
+ *     any other list
+ *
+ * Inserts @link_ into the list before the given position.
+ *
+ * Returns: the (possibly changed) start of the #GList
+ *
+ * Since: 2.62
+ */
+GList *
+g_list_insert_before_link (GList *list,
+                           GList *sibling,
+                           GList *link_)
+{
+  g_return_val_if_fail (link_ != NULL, list);
+  g_return_val_if_fail (link_->prev == NULL, list);
+  g_return_val_if_fail (link_->next == NULL, list);
+
+  if (list == NULL)
+    {
+      g_return_val_if_fail (sibling == NULL, list);
+      return link_;
+    }
+  else if (sibling != NULL)
+    {
+      link_->prev = sibling->prev;
+      link_->next = sibling;
+      sibling->prev = link_;
+      if (link_->prev != NULL)
+        {
+          link_->prev->next = link_;
+          return list;
+        }
+      else
+        {
+          g_return_val_if_fail (sibling == list, link_);
+          return link_;
+        }
+    }
+  else
+    {
+      GList *last;
+
+      for (last = list; last->next != NULL; last = last->next) {}
+
+      last->next = link_;
+      last->next->prev = last;
+      last->next->next = NULL;
+
+      return list;
+    }
+}
+
+/**
  * g_list_insert_before:
  * @list: a pointer to a #GList, this must point to the top of the list
  * @sibling: the list element before which the new element
@@ -398,14 +456,14 @@ g_list_insert_before (GList    *list,
                       GList    *sibling,
                       gpointer  data)
 {
-  if (!list)
+  if (list == NULL)
     {
       list = g_list_alloc ();
       list->data = data;
       g_return_val_if_fail (sibling == NULL, list);
       return list;
     }
-  else if (sibling)
+  else if (sibling != NULL)
     {
       GList *node;
 
@@ -419,7 +477,7 @@ g_list_insert_before (GList    *list,
       node->prev = sibling->prev;
       node->next = sibling;
       sibling->prev = node;
-      if (node->prev)
+      if (node->prev != NULL)
         {
           node->prev->next = node;
           return list;
@@ -434,9 +492,7 @@ g_list_insert_before (GList    *list,
     {
       GList *last;
 
-      last = list;
-      while (last->next)
-        last = last->next;
+      for (last = list; last->next != NULL; last = last->next) {}
 
       last->next = _g_list_alloc ();
 #ifdef GSTREAMER_LITE
@@ -676,7 +732,7 @@ g_list_copy (GList *list)
  * @func, as a #GCopyFunc, takes two arguments, the data to be copied
  * and a @user_data pointer. On common processor architectures, it's safe to
  * pass %NULL as @user_data if the copy function takes only one argument. You
- * may get compiler warnings from this though if compiling with GCC’s
+ * may get compiler warnings from this though if compiling with GCC's
  * `-Wcast-function-type` warning.
  *
  * For instance, if @list holds a list of GObjects, you can do:
@@ -706,11 +762,11 @@ g_list_copy_deep (GList     *list,
       GList *last;
 
       new_list = _g_list_alloc ();
- #ifdef GSTREAMER_LITE
+#ifdef GSTREAMER_LITE
       if (new_list == NULL) {
         return NULL;
       }
- #endif // GSTREAMER_LITE
+#endif // GSTREAMER_LITE
       if (func)
         new_list->data = func (list->data, user_data);
       else

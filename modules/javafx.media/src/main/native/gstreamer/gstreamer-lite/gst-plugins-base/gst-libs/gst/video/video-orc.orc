@@ -538,6 +538,20 @@ select0lw ay, ayuv
 select1wb y, ay
 select0wb a, ay
 
+
+.function video_orc_unpack_VUYA
+.dest 4 ayuv guint8
+.source 4 vuya guint8
+
+swapl ayuv, vuya
+
+
+.function video_orc_pack_VUYA
+.dest 4 vuya guint8
+.source 4 ayuv guint8
+
+swapl vuya, ayuv
+
 .function video_orc_unpack_RGB15_le
 .dest 4 argb guint32
 .source 2 rgb15 guint16

@@ -45,8 +45,6 @@ G_BEGIN_DECLS
 #define GST_QT_DEMUX_PRIVATE_TAG "private-qt-tag"
 #define GST_QT_DEMUX_CLASSIFICATION_TAG "classification"
 
-#define GST_QTDEMUX_MAX_STREAMS         32
-
 typedef struct _GstQTDemux GstQTDemux;
 typedef struct _GstQTDemuxClass GstQTDemuxClass;
 typedef struct _QtDemuxStream QtDemuxStream;
@@ -73,8 +71,13 @@ struct _GstQTDemux {
 
   gboolean posted_redirect;
 
-  QtDemuxStream *streams[GST_QTDEMUX_MAX_STREAMS];
-  gint     n_streams;
+  /* Protect pad exposing from flush event */
+  GMutex expose_lock;
+
+  /* list of QtDemuxStream */
+  GPtrArray *active_streams;
+  GPtrArray *old_streams;
+
   gint     n_video_streams;
   gint     n_audio_streams;
   gint     n_sub_streams;
@@ -115,8 +118,11 @@ struct _GstQTDemux {
   /* configured playback region */
   GstSegment segment;
 
-  /* The SEGMENT_EVENT from upstream *OR* generated from segment (above) */
-  GstEvent *pending_newsegment;
+  /* PUSH-BASED only: If the initial segment event, or a segment consequence of
+   * a seek or incoming TIME segment from upstream needs to be pushed. This
+   * variable is used instead of pushing the event directly because at that
+   * point we may not have yet emitted the srcpads. */
+  gboolean need_segment;
 
   guint32 segment_seqnum;
 
@@ -151,7 +157,11 @@ struct _GstQTDemux {
   guint64 cenc_aux_info_offset;
   guint8 *cenc_aux_info_sizes;
   guint32 cenc_aux_sample_count;
+  gchar *preferred_protection_system_id;
 
+  /* Whether the parent bin is streams-aware, meaning we can
+   * add/remove streams at any point in time */
+  gboolean streams_aware;
 
   /*
    * ALL VARIABLES BELOW ARE ONLY USED IN PUSH-BASED MODE
@@ -229,6 +239,17 @@ struct _GstQTDemux {
    * header start.
    * Note : This is not computed from the GST_BUFFER_OFFSET field */
   guint64 fragment_start_offset;
+
+  /* These two fields are used to perform an implicit seek when a fragmented
+   * file whose first tfdt is not zero. This way if the first fragment starts
+   * at 1 hour, the user does not have to wait 1 hour or perform a manual seek
+   * for the image to move and the sound to play.
+   *
+   * This implicit seek is only done if the first parsed fragment has a non-zero
+   * decode base time and a seek has not been received previously, hence these
+   * fields. */
+  gboolean received_seek;
+  gboolean first_moof_already_parsed;
 };
 
 struct _GstQTDemuxClass {

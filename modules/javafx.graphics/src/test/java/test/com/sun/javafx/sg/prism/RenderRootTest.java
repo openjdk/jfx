@@ -325,14 +325,16 @@ public class RenderRootTest extends NGTestBase {
         assertRenderRoot(root, rootPath);
     }
 
-    @Ignore("What is the right thing here? It seems that an empty dirty region should result in no rendering?")
+    // What is the right thing here? It seems that an empty dirty region should result in no rendering?
+    @Ignore("JDK-8234077")
     @Test
     public void emptyDirtyRegion() {
         NodePath rootPath = getRenderRoot(root, 0, 0, -1, -1);
         assertRenderRoot(root, rootPath);
     }
 
-    @Ignore("Currently fails because isEmpty doesn't take into account width == 0, height == 0")
+    // Currently fails because isEmpty doesn't take into account width == 0, height == 0")
+    @Ignore("JDK-8234077")
     @Test
     public void zeroSizeDirtyRegionWithinOpaqueRegion() {
         NodePath rootPath = getRenderRoot(root, 20, 20, 0, 0);

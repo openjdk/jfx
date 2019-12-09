@@ -912,6 +912,22 @@ static DeinterleaveFunc deinterleave_funcs[] = {
 };
 
 static void
+copy_func (GstAudioResampler * resampler, gpointer sbuf[],
+    gpointer in[], gsize in_frames)
+{
+  gint c, channels = resampler->channels;
+  gsize samples_avail = resampler->samples_avail;
+  for (c = 0; c < channels; c++) {
+    guint8 *s = ((guint8 *) sbuf[c]) + (samples_avail * resampler->bps);
+    if (G_UNLIKELY (in == NULL)) {
+      memset (s, 0, in_frames * resampler->bps);
+    } else {
+      memcpy (s, in[c], in_frames * resampler->bps);
+    }
+  }
+}
+
+static void
 calculate_kaiser_params (GstAudioResampler * resampler)
 {
   gdouble A, B, dw, tr_bw, Fc;
@@ -1318,13 +1334,16 @@ gst_audio_resampler_options_set_quality (GstAudioResamplerMethod method,
  * gst_audio_resampler_new:
  * @method: a #GstAudioResamplerMethod
  * @flags: #GstAudioResamplerFlags
+ * @format: the #GstAudioFormat
+ * @channels: the number of channels
  * @in_rate: input rate
  * @out_rate: output rate
  * @options: extra options
  *
  * Make a new resampler.
  *
- * Returns: (skip) (transfer full): %TRUE on success
+ * Returns: (skip) (transfer full): The new #GstAudioResampler, or
+ * %NULL on failure.
  */
 GstAudioResampler *
 gst_audio_resampler_new (GstAudioResamplerMethod method,
@@ -1332,7 +1351,7 @@ gst_audio_resampler_new (GstAudioResamplerMethod method,
     GstAudioFormat format, gint channels,
     gint in_rate, gint out_rate, GstStructure * options)
 {
-  gboolean non_interleaved;
+  gboolean non_interleaved_in, non_interleaved_out;
   GstAudioResampler *resampler;
   const GstAudioFormatInfo *info;
   GstStructure *def_options = NULL;
@@ -1376,14 +1395,17 @@ gst_audio_resampler_new (GstAudioResamplerMethod method,
   resampler->bps = GST_AUDIO_FORMAT_INFO_WIDTH (info) / 8;
   resampler->sbuf = g_malloc0 (sizeof (gpointer) * channels);
 
-  non_interleaved =
+  non_interleaved_in =
+      (resampler->flags & GST_AUDIO_RESAMPLER_FLAG_NON_INTERLEAVED_IN);
+  non_interleaved_out =
       (resampler->flags & GST_AUDIO_RESAMPLER_FLAG_NON_INTERLEAVED_OUT);
 
   /* we resample each channel separately */
   resampler->blocks = resampler->channels;
   resampler->inc = 1;
-  resampler->ostride = non_interleaved ? 1 : resampler->channels;
-  resampler->deinterleave = deinterleave_funcs[resampler->format_index];
+  resampler->ostride = non_interleaved_out ? 1 : resampler->channels;
+  resampler->deinterleave = non_interleaved_in ?
+      copy_func : deinterleave_funcs[resampler->format_index];
   resampler->convert_taps = convert_taps_funcs[resampler->format_index];
 
   GST_DEBUG ("method %d, bps %d, channels %d", method, resampler->bps,

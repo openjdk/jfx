@@ -55,7 +55,7 @@ typedef struct
 {
   guint64 offset;
   const guint8 *data;
-  gint size;
+  guint size;
 } DataScanCtx;
 
 static inline void
@@ -72,7 +72,7 @@ data_scan_ctx_advance (GstTypeFind * tf, DataScanCtx * c, guint bytes_to_skip)
 }
 
 static inline gboolean
-data_scan_ctx_ensure_data (GstTypeFind * tf, DataScanCtx * c, gint min_len)
+data_scan_ctx_ensure_data (GstTypeFind * tf, DataScanCtx * c, guint min_len)
 {
   const guint8 *data;
   guint64 len;
@@ -112,6 +112,9 @@ static inline gboolean
 data_scan_ctx_memcmp (GstTypeFind * tf, DataScanCtx * c, guint offset,
     const gchar * data, guint len)
 {
+  if (G_UNLIKELY (offset + len >= G_MAXUINT32))
+    return FALSE;
+
   if (!data_scan_ctx_ensure_data (tf, c, offset + len))
     return FALSE;
 
@@ -279,8 +282,8 @@ static void
 unicode_type_find (GstTypeFind * tf, const GstUnicodeTester * tester,
     guint n_tester, const char *media_type, gboolean require_bom)
 {
-  size_t n;
-  gint len = 4;
+  gsize n;
+  gsize len = 4;
   const guint8 *data = gst_type_find_peek (tf, 0, len);
   int prob = -1;
   const gint max_scan_size = 256 * 1024;
@@ -679,6 +682,21 @@ dash_mpd_type_find (GstTypeFind * tf, gpointer unused)
     gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, DASH_CAPS);
   }
 }
+
+/*** application/xges ****************************************************/
+
+static GstStaticCaps xges_caps = GST_STATIC_CAPS ("application/xges");
+
+#define XGES_CAPS gst_static_caps_get (&xges_caps)
+
+static void
+xges_type_find (GstTypeFind * tf, gpointer unused)
+{
+  if (xml_check_first_element (tf, "ges", 3, FALSE)) {
+    gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, XGES_CAPS);
+  }
+}
+
 
 /*** application/sdp *********************************************************/
 
@@ -1096,7 +1114,7 @@ aac_type_find (GstTypeFind * tf, gpointer unused)
   DataScanCtx c = { 0, NULL, 0 };
   GstTypeFindProbability best_probability = GST_TYPE_FIND_NONE;
   GstCaps *best_caps = NULL;
-  guint best_count = 0;
+  gint best_count = 0;
 
   while (c.offset < AAC_AMOUNT) {
     guint snc, len, offset, i;
@@ -1183,7 +1201,7 @@ aac_type_find (GstTypeFind * tf, gpointer unused)
 
         if (len == 0 || !data_scan_ctx_ensure_data (tf, &c, offset + len + 6)) {
           GST_DEBUG ("Wrong sync or next frame not within reach, len=%u", len);
-        gst_type_find_suggest (tf, GST_TYPE_FIND_LIKELY, caps);
+          gst_type_find_suggest (tf, GST_TYPE_FIND_LIKELY, caps);
         } else {
           offset += len;
           /* find more aac sync to select correctly */
@@ -1235,7 +1253,7 @@ aac_type_find (GstTypeFind * tf, gpointer unused)
         best_count = count;
         best_probability = GST_TYPE_FIND_POSSIBLE - 10 + count * 3;
         if (best_probability >= GST_TYPE_FIND_LIKELY)
-        break;
+          break;
       }
     } else if (!memcmp (c.data, "ADIF", 4)) {
       /* ADIF header */
@@ -1598,10 +1616,10 @@ mp3_type_find (GstTypeFind * tf, gpointer unused)
    * that this is actually plain mpeg-1 audio */
   if (prob > 0) {
     data = gst_type_find_peek (tf, 0, 4);       /* use min. frame size? */
-  if (data && mp3_type_frame_length_from_header (GST_READ_UINT32_BE (data),
-          &layer, NULL, NULL, NULL, NULL, 0) != 0) {
+    if (data && mp3_type_frame_length_from_header (GST_READ_UINT32_BE (data),
+            &layer, NULL, NULL, NULL, NULL, 0) != 0) {
       prob = MIN (prob + 10, GST_TYPE_FIND_MAXIMUM);
-  }
+    }
   }
 
   if (prob > 0)
@@ -2470,7 +2488,7 @@ mpeg_ts_type_find (GstTypeFind * tf, gpointer unused)
 
     /* Have at least MPEGTS_HDR_SIZE bytes at this point */
     if (IS_MPEGTS_HEADER (data)) {
-      gint p;
+      gsize p;
 
       GST_LOG ("possible mpeg-ts sync at offset %" G_GUINT64_FORMAT, skipped);
 
@@ -2692,7 +2710,7 @@ h263_video_type_find (GstTypeFind * tf, gpointer unused)
         if (!pc_type && pb_mode)
           bad++;
         else
-        good++;
+          good++;
       } else
         bad++;
 
@@ -2773,13 +2791,13 @@ h264_video_type_find (GstTypeFind * tf, gpointer unused)
            * if dropped into the middle of a stream -
            * just ignore those (don't add to bad count) */
           if (seen_ssps)
-          good++;
+            good++;
         } else {
-        /* reserved */
-        /* Theoretically these are good, since if they exist in the
-           stream it merely means that a newer backwards-compatible
-           h.264 stream.  But we should be identifying that separately. */
-        bad++;
+          /* reserved */
+          /* Theoretically these are good, since if they exist in the
+             stream it merely means that a newer backwards-compatible
+             h.264 stream.  But we should be identifying that separately. */
+          bad++;
         }
       } else {
         /* unspecified, application specific */
@@ -2923,7 +2941,7 @@ mpeg_video_stream_type_find (GstTypeFind * tf, gpointer unused)
   gboolean seen_seq = FALSE;
   gboolean seen_gop = FALSE;
   guint64 last_pic_offset = 0;
-  guint num_pic_headers = 0;
+  gint num_pic_headers = 0;
   gint found = 0;
 
   while (c.offset < GST_MPEGVID_TYPEFIND_TRY_SYNC) {
@@ -3122,7 +3140,7 @@ q3gp_type_find (GstTypeFind * tf, gpointer unused)
 {
   const gchar *profile;
   guint32 ftyp_size = 0;
-  gint offset = 0;
+  guint32 offset = 0;
   const guint8 *data = NULL;
 
   if ((data = gst_type_find_peek (tf, 0, 12)) == NULL) {
@@ -3149,11 +3167,11 @@ q3gp_type_find (GstTypeFind * tf, gpointer unused)
   if ((data = gst_type_find_peek (tf, 0, ftyp_size)) != NULL) {
     for (offset = 16; offset + 4 < ftyp_size; offset += 4) {
       if ((profile = q3gp_type_find_get_profile (data + offset))) {
-      gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MAXIMUM,
-          "application/x-3gp", "profile", G_TYPE_STRING, profile, NULL);
-      return;
+        gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MAXIMUM,
+            "application/x-3gp", "profile", G_TYPE_STRING, profile, NULL);
+        return;
+      }
     }
-  }
   }
 
   return;
@@ -3364,8 +3382,8 @@ qt_type_find (GstTypeFind * tf, gpointer unused)
     /* check compatible brands rather than ever expaning major brands above */
     if ((STRNCMP (&data[4], "ftyp", 4) == 0) && (size >= 16)) {
       data = gst_type_find_peek (tf, offset, size);
-        if (data == NULL)
-          goto done;
+      if (data == NULL)
+        goto done;
       new_offset = 12;
       while (new_offset + 4 <= size) {
         if (STRNCMP (&data[new_offset], "isom", 4) == 0 ||
@@ -3601,7 +3619,7 @@ mod_type_find (GstTypeFind * tf, gpointer unused)
       probability = GST_TYPE_FIND_MAXIMUM;
       goto suggest_audio_mod_caps;
     }
-        /* IT */
+    /* IT */
     if (memcmp (data, "IMPM", 4) == 0) {
       mod_type = "it";
       probability = GST_TYPE_FIND_MAXIMUM;
@@ -3631,13 +3649,13 @@ mod_type_find (GstTypeFind * tf, gpointer unused)
       probability = GST_TYPE_FIND_MAXIMUM;
       goto suggest_audio_mod_caps;
     }
-        /* MED */
+    /* MED */
     if ((memcmp (data, "MMD0", 4) == 0) || (memcmp (data, "MMD1", 4) == 0)) {
       mod_type = "med";
       probability = GST_TYPE_FIND_MAXIMUM;
       goto suggest_audio_mod_caps;
     }
-        /* MTM */
+    /* MTM */
     if (memcmp (data, "MTM", 3) == 0) {
       mod_type = "mtm";
       probability = GST_TYPE_FIND_MAXIMUM;
@@ -3700,7 +3718,7 @@ mod_type_find (GstTypeFind * tf, gpointer unused)
       mod_type = "umx";
       probability = GST_TYPE_FIND_POSSIBLE;
       goto suggest_audio_mod_caps;
-  }
+    }
   }
   /* FAR (Farandole) (secondary detection) */
   if ((data = gst_type_find_peek (tf, 44, 3)) != NULL) {
@@ -3814,13 +3832,13 @@ mss_manifest_type_find (GstTypeFind * tf, gpointer unused)
 
   length = gst_type_find_get_length (tf);
 
-    /* try detecting the charset */
+  /* try detecting the charset */
   data = gst_type_find_peek (tf, 0, 3);
 
-    if (data == NULL)
-      return;
+  if (data == NULL)
+    return;
 
-    /* look for a possible BOM */
+  /* look for a possible BOM */
   if (data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF)
     utf8_bom_detected = TRUE;
   else if (data[0] == 0xFF && data[1] == 0xFE)
@@ -3830,22 +3848,22 @@ mss_manifest_type_find (GstTypeFind * tf, gpointer unused)
   else
     return;
 
-      /* try a default that should be enough */
-      if (length == 0)
-        length = 512;
+  /* try a default that should be enough */
+  if (length == 0)
+    length = 512;
   else if (length < 64)
     return;
   else                          /* the first few bytes should be enough */
     length = MIN (1024, length);
 
-      data = gst_type_find_peek (tf, 0, length);
+  data = gst_type_find_peek (tf, 0, length);
 
   if (data == NULL)
     return;
 
-        /* skip the BOM */
-        data += 2;
-        length -= 2;
+  /* skip the BOM */
+  data += 2;
+  length -= 2;
 
   if (utf8_bom_detected) {
     /* skip last byte of the BOM */
@@ -3853,7 +3871,7 @@ mss_manifest_type_find (GstTypeFind * tf, gpointer unused)
     length--;
 
     if (xml_check_first_element_from_data (data, length,
-                  "SmoothStreamingMedia", 20, TRUE))
+            "SmoothStreamingMedia", 20, TRUE))
       gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, MSS_MANIFEST_CAPS);
   } else {
     length = GST_ROUND_DOWN_2 (length);
@@ -3867,10 +3885,10 @@ mss_manifest_type_find (GstTypeFind * tf, gpointer unused)
       if (xml_check_first_element_from_data ((const guint8 *) utf8, size,
               "SmoothStreamingMedia", 20, TRUE))
         gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, MSS_MANIFEST_CAPS);
-        }
-    g_free (utf8);
-      }
     }
+    g_free (utf8);
+  }
+}
 
 /*** image/jpeg ***/
 
@@ -4361,7 +4379,7 @@ ebml_parse_chunk (GstTypeFind * tf, DataScanCtx * ctx, guint32 chunk_id,
 {                               /* FIXME: make sure input size is clipped to 32 bit */
   static const gchar SPACES[] = "                ";
   DataScanCtx c = *ctx;
-  guint64 element_size;
+  guint64 element_size = 0;
   guint32 id, hdr_len;
 
   if (depth >= 8)               /* keep SPACES large enough for depth */
@@ -4369,21 +4387,26 @@ ebml_parse_chunk (GstTypeFind * tf, DataScanCtx * ctx, guint32 chunk_id,
 
   while (chunk_size > 0) {
     if (c.offset > EBML_MAX_LEN || !data_scan_ctx_ensure_data (tf, &c, 64))
-    return FALSE;
+      return FALSE;
 
     hdr_len = ebml_read_chunk_header (tf, &c, chunk_size, &id, &element_size);
     if (hdr_len == 0)
-    return FALSE;
+      return FALSE;
 
     g_assert (hdr_len <= chunk_size);
     chunk_size -= hdr_len;
 
     if (element_size > chunk_size)
-    return FALSE;
+      return FALSE;
 
     GST_DEBUG ("%s %08x, size %" G_GUINT64_FORMAT " / %" G_GUINT64_FORMAT,
         SPACES + sizeof (SPACES) - 1 - (2 * depth), id, element_size,
         hdr_len + element_size);
+
+    if (element_size >= G_MAXUINT32) {
+      GST_DEBUG ("Chunk too big for typefinding");
+      return FALSE;
+    }
 
     if (!data_scan_ctx_ensure_data (tf, &c, element_size)) {
       GST_DEBUG ("not enough data");
@@ -4401,7 +4424,7 @@ ebml_parse_chunk (GstTypeFind * tf, DataScanCtx * ctx, guint32 chunk_id,
         GST_LOG ("parsing segment");
         ebml_parse_chunk (tf, &c, id, element_size, info, depth + 1);
         GST_LOG ("parsed segment, done");
-  return FALSE;
+        return FALSE;
       case MATROSKA_TRACKS:
         GST_LOG ("parsing tracks");
         info->tracks_ok =
@@ -5238,6 +5261,28 @@ dirac_type_find (GstTypeFind * tf, gpointer unused)
   }
 }
 
+/*** audio/x-tap-tap ***/
+
+/* NOTE: we cannot replace this function with TYPE_FIND_REGISTER_START_WITH,
+ * as it is only possible to register one typefind factory per 'name'
+ * (which is in this case the caps), and the first one would be replaced by
+ * the second one. */
+static GstStaticCaps tap_caps = GST_STATIC_CAPS ("audio/x-tap-tap");
+
+#define TAP_CAPS (gst_static_caps_get(&tap_caps))
+static void
+tap_type_find (GstTypeFind * tf, gpointer unused)
+{
+  const guint8 *data = gst_type_find_peek (tf, 0, 16);
+
+  if (data) {
+    if (memcmp (data, "C64-TAPE-RAW", 12) == 0
+        || memcmp (data, "C16-TAPE-RAW", 12) == 0) {
+      gst_type_find_suggest (tf, GST_TYPE_FIND_MAXIMUM, TAP_CAPS);
+    }
+  }
+}
+
 /*** video/vivo ***/
 
 static GstStaticCaps vivo_caps = GST_STATIC_CAPS ("video/vivo");
@@ -5615,6 +5660,32 @@ ssa_type_find (GstTypeFind * tf, gpointer private)
   g_free (str);
 }
 
+/*** application/x-mcc ***/
+static GstStaticCaps mcc_caps = GST_STATIC_CAPS ("application/x-mcc");
+
+#define MCC_CAPS gst_static_caps_get(&mcc_caps)
+
+static void
+mcc_type_find (GstTypeFind * tf, gpointer private)
+{
+  const guint8 *data;
+
+  data = gst_type_find_peek (tf, 0, 31);
+
+  if (data == NULL)
+    return;
+
+  /* MCC files always start with this followed by the version */
+  if (memcmp (data, "File Format=MacCaption_MCC V", 28) != 0 ||
+      !g_ascii_isdigit (data[28]) || data[29] != '.' ||
+      !g_ascii_isdigit (data[30])) {
+    return;
+  }
+
+  gst_type_find_suggest_simple (tf, GST_TYPE_FIND_MAXIMUM,
+      "application/x-mcc", "version", G_TYPE_INT, data[28] - '0', NULL);
+}
+
 /*** video/x-pva ***/
 
 static GstStaticCaps pva_caps = GST_STATIC_CAPS ("video/x-pva");
@@ -5785,6 +5856,11 @@ plugin_init (GstPlugin * plugin)
       GST_TYPE_FIND_MAXIMUM);
   TYPE_FIND_REGISTER_START_WITH (plugin, "audio/x-imelody", GST_RANK_PRIMARY,
       "imy,ime,imelody", "BEGIN:IMELODY", 13, GST_TYPE_FIND_MAXIMUM);
+  TYPE_FIND_REGISTER_START_WITH (plugin, "application/x-scc", GST_RANK_PRIMARY,
+      "scc", "Scenarist_SCC V1.0", 18, GST_TYPE_FIND_MAXIMUM);
+  TYPE_FIND_REGISTER (plugin, "application/x-mcc", GST_RANK_PRIMARY,
+      mcc_type_find, "mcc", MCC_CAPS, NULL, NULL);
+
 #if 0
   TYPE_FIND_REGISTER_START_WITH (plugin, "video/x-smoke", GST_RANK_PRIMARY,
       NULL, "\x80smoke\x00\x01\x00", 6, GST_TYPE_FIND_MAXIMUM);
@@ -5863,6 +5939,8 @@ plugin_init (GstPlugin * plugin)
       GST_TYPE_FIND_MAXIMUM);
   TYPE_FIND_REGISTER (plugin, "application/x-shockwave-flash",
       GST_RANK_SECONDARY, swf_type_find, "swf,swfl", SWF_CAPS, NULL, NULL);
+  TYPE_FIND_REGISTER (plugin, "application/xges",
+      GST_RANK_PRIMARY, xges_type_find, "xges", XGES_CAPS, NULL, NULL);
   TYPE_FIND_REGISTER (plugin, "application/dash+xml",
       GST_RANK_PRIMARY, dash_mpd_type_find, "mpd,MPD", DASH_CAPS, NULL, NULL);
   TYPE_FIND_REGISTER (plugin, "application/vnd.ms-sstr+xml",
@@ -6085,6 +6163,11 @@ plugin_init (GstPlugin * plugin)
   TYPE_FIND_REGISTER (plugin, "audio/audible", GST_RANK_MARGINAL,
       aa_type_find, "aa,aax", AA_CAPS, NULL, NULL);
 #endif // GSTREAMER_LITE
+
+  TYPE_FIND_REGISTER (plugin, "audio/x-tap-tap", GST_RANK_PRIMARY,
+      tap_type_find, "tap", TAP_CAPS, NULL, NULL);
+  TYPE_FIND_REGISTER_START_WITH (plugin, "audio/x-tap-dmp",
+      GST_RANK_SECONDARY, "dmp", "DC2N-TAP-RAW", 12, GST_TYPE_FIND_LIKELY);
 
   return TRUE;
 }

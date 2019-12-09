@@ -47,7 +47,7 @@ plugin_init (GstPlugin * plugin)
           GST_TYPE_DIRECTSOUND_SINK))
     return FALSE;
 #else // GSTREAMER_LITE
-if (!gst_element_register (plugin, "directsoundsink", GST_RANK_SECONDARY,
+  if (!gst_element_register (plugin, "directsoundsink", GST_RANK_SECONDARY,
           GST_TYPE_DIRECTSOUND_SINK))
     return FALSE;
 

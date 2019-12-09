@@ -201,9 +201,6 @@ enum
   PROP_DO_TIMESTAMP
 };
 
-#define GST_BASE_SRC_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_BASE_SRC, GstBaseSrcPrivate))
-
 /* The basesrc implementation need to respect the following locking order:
  *   1. STREAM_LOCK
  *   2. LIVE_LOCK
@@ -270,6 +267,7 @@ struct _GstBaseSrcPrivate
     ((src)->priv->pending_bufferlist != NULL)
 
 static GstElementClass *parent_class = NULL;
+static gint private_offset = 0;
 
 static void gst_base_src_class_init (GstBaseSrcClass * klass);
 static void gst_base_src_init (GstBaseSrc * src, gpointer g_class);
@@ -297,9 +295,19 @@ gst_base_src_get_type (void)
 
     _type = g_type_register_static (GST_TYPE_ELEMENT,
         "GstBaseSrc", &base_src_info, G_TYPE_FLAG_ABSTRACT);
+
+    private_offset =
+        g_type_add_instance_private (_type, sizeof (GstBaseSrcPrivate));
+
     g_once_init_leave (&base_src_type, _type);
   }
   return base_src_type;
+}
+
+static inline GstBaseSrcPrivate *
+gst_base_src_get_instance_private (GstBaseSrc * self)
+{
+  return (G_STRUCT_MEMBER_P (self, private_offset));
 }
 
 static GstCaps *gst_base_src_default_get_caps (GstBaseSrc * bsrc,
@@ -365,9 +373,10 @@ gst_base_src_class_init (GstBaseSrcClass * klass)
   gobject_class = G_OBJECT_CLASS (klass);
   gstelement_class = GST_ELEMENT_CLASS (klass);
 
-  GST_DEBUG_CATEGORY_INIT (gst_base_src_debug, "basesrc", 0, "basesrc element");
+  if (private_offset != 0)
+    g_type_class_adjust_private_offset (klass, &private_offset);
 
-  g_type_class_add_private (klass, sizeof (GstBaseSrcPrivate));
+  GST_DEBUG_CATEGORY_INIT (gst_base_src_debug, "basesrc", 0, "basesrc element");
 
   parent_class = g_type_class_peek_parent (klass);
 
@@ -426,7 +435,7 @@ gst_base_src_init (GstBaseSrc * basesrc, gpointer g_class)
   GstPad *pad;
   GstPadTemplate *pad_template;
 
-  basesrc->priv = GST_BASE_SRC_GET_PRIVATE (basesrc);
+  basesrc->priv = gst_base_src_get_instance_private (basesrc);
 
   basesrc->is_live = FALSE;
   g_mutex_init (&basesrc->live_lock);
@@ -646,6 +655,12 @@ gst_base_src_set_dynamic_size (GstBaseSrc * src, gboolean dynamic)
  * after the total size is returned. By default this is %TRUE but sources
  * that can't return an authoritative size and only know that they're EOS
  * when trying to read more should set this to %FALSE.
+ *
+ * When @src operates in %GST_FORMAT_TIME, #GstBaseSrc will send an EOS
+ * when a buffer outside of the currently configured segment is pushed if
+ * @automatic_eos is %TRUE. Since 1.16, if @automatic_eos is %FALSE an
+ * EOS will be pushed only when the #GstBaseSrc.create implementation
+ * returns %GST_FLOW_EOS.
  *
  * Since: 1.4
  */
@@ -2442,7 +2457,7 @@ gst_base_src_update_length (GstBaseSrc * src, guint64 offset, guint * length,
   /* ERRORS */
 unexpected_length:
   {
-    GST_WARNING_OBJECT (src, "processing at or past EOS");
+    GST_DEBUG_OBJECT (src, "processing at or past EOS");
     return FALSE;
   }
 }
@@ -2922,7 +2937,8 @@ gst_base_src_loop (GstPad * pad)
       /* positive rate, check if we reached the stop */
       if (src->segment.stop != -1) {
         if (position >= src->segment.stop) {
-          eos = TRUE;
+          if (g_atomic_int_get (&src->priv->automatic_eos))
+            eos = TRUE;
           position = src->segment.stop;
         }
       }
@@ -2930,7 +2946,8 @@ gst_base_src_loop (GstPad * pad)
       /* negative rate, check if we reached the start. start is always set to
        * something different from -1 */
       if (position <= src->segment.start) {
-        eos = TRUE;
+        if (g_atomic_int_get (&src->priv->automatic_eos))
+          eos = TRUE;
         position = src->segment.start;
       }
       /* when going reverse, all buffers are DISCONT */
@@ -4027,7 +4044,8 @@ gst_base_src_submit_buffer_list (GstBaseSrc * src, GstBufferList * buffer_list)
   g_return_if_fail (GST_IS_BUFFER_LIST (buffer_list));
   g_return_if_fail (BASE_SRC_HAS_PENDING_BUFFER_LIST (src) == FALSE);
 
-  src->priv->pending_bufferlist = buffer_list;
+  /* we need it to be writable later in get_range() where we use get_writable */
+  src->priv->pending_bufferlist = gst_buffer_list_make_writable (buffer_list);
 
   GST_LOG_OBJECT (src, "%u buffers submitted in buffer list",
       gst_buffer_list_length (buffer_list));

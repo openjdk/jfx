@@ -343,34 +343,34 @@ gst_core_audio_parse_channel_layout (AudioChannelLayout * layout,
   if (layout->mChannelLayoutTag ==
       kAudioChannelLayoutTag_UseChannelDescriptions) {
 
-  switch (layout->mNumberChannelDescriptions) {
-    case 0:
-      if (pos)
-        pos[0] = GST_AUDIO_CHANNEL_POSITION_NONE;
-      *channels = 0;
-      *channel_mask = 0;
-      return TRUE;
-    case 1:
-      if (pos)
-        pos[0] = GST_AUDIO_CHANNEL_POSITION_MONO;
-      *channels = 1;
-      *channel_mask = 0;
-      return TRUE;
-    case 2:
-      if (pos) {
-        pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
-        pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
-      }
-      *channels = 2;
-      *channel_mask =
-          GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
-          GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT);
-      return TRUE;
-    default:
-      _core_audio_parse_channel_descriptions (layout, channels, channel_mask,
-          pos);
-      return TRUE;
-  }
+    switch (layout->mNumberChannelDescriptions) {
+      case 0:
+        if (pos)
+          pos[0] = GST_AUDIO_CHANNEL_POSITION_NONE;
+        *channels = 0;
+        *channel_mask = 0;
+        return TRUE;
+      case 1:
+        if (pos)
+          pos[0] = GST_AUDIO_CHANNEL_POSITION_MONO;
+        *channels = 1;
+        *channel_mask = 0;
+        return TRUE;
+      case 2:
+        if (pos) {
+          pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
+          pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
+        }
+        *channels = 2;
+        *channel_mask =
+            GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
+            GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_RIGHT);
+        return TRUE;
+      default:
+        _core_audio_parse_channel_descriptions (layout, channels, channel_mask,
+            pos);
+        return TRUE;
+    }
   } else if (layout->mChannelLayoutTag == kAudioChannelLayoutTag_Mono) {
     if (pos)
       pos[0] = GST_AUDIO_CHANNEL_POSITION_MONO;
@@ -383,7 +383,7 @@ gst_core_audio_parse_channel_layout (AudioChannelLayout * layout,
     if (pos) {
       pos[0] = GST_AUDIO_CHANNEL_POSITION_FRONT_LEFT;
       pos[1] = GST_AUDIO_CHANNEL_POSITION_FRONT_RIGHT;
-}
+    }
     *channels = 2;
     *channel_mask =
         GST_AUDIO_CHANNEL_POSITION_MASK (FRONT_LEFT) |
@@ -504,7 +504,7 @@ gst_core_audio_asbd_to_caps (AudioStreamBasicDescription * asbd,
   bps = asbd->mBitsPerChannel;
   endianness = asbd->mFormatFlags & kAudioFormatFlagIsBigEndian ?
       G_BIG_ENDIAN : G_LITTLE_ENDIAN;
-  sign = asbd->mFormatID & kAudioFormatFlagIsSignedInteger ? TRUE : FALSE;
+  sign = asbd->mFormatFlags & kAudioFormatFlagIsSignedInteger ? TRUE : FALSE;
   interleaved = asbd->mFormatFlags & kAudioFormatFlagIsNonInterleaved ?
       TRUE : FALSE;
 

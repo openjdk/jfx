@@ -113,7 +113,7 @@
  * Typically, #GstParentBufferMeta is used when the child buffer is directly
  * using the #GstMemory of the parent buffer, and wants to prevent the parent
  * buffer from being returned to a buffer pool until the #GstMemory is available
- * for re-use. (Since 1.6)
+ * for re-use. (Since: 1.6)
  *
  */
 #include "gst_private.h"
@@ -133,14 +133,9 @@
 
 GType _gst_buffer_type = 0;
 
-typedef struct _GstMetaItem GstMetaItem;
-
-struct _GstMetaItem
-{
-  GstMetaItem *next;
-  GstMeta meta;
-};
-#define ITEM_SIZE(info) ((info)->size + sizeof (GstMetaItem))
+/* info->size will be sizeof(FooMeta) which contains a GstMeta at the beginning
+ * too, and then there is again a GstMeta in GstMetaItem, so subtract one. */
+#define ITEM_SIZE(info) ((info)->size + sizeof (GstMetaItem) - sizeof (GstMeta))
 
 #define GST_BUFFER_MEM_MAX         16
 
@@ -150,6 +145,7 @@ struct _GstMetaItem
 #define GST_BUFFER_MEM_PTR(b,i)    (((GstBufferImpl *)(b))->mem[i])
 #define GST_BUFFER_BUFMEM(b)       (((GstBufferImpl *)(b))->bufmem)
 #define GST_BUFFER_META(b)         (((GstBufferImpl *)(b))->item)
+#define GST_BUFFER_TAIL_META(b)    (((GstBufferImpl *)(b))->tail_item)
 
 typedef struct
 {
@@ -167,8 +163,41 @@ typedef struct
   /* FIXME, make metadata allocation more efficient by using part of the
    * GstBufferImpl */
   GstMetaItem *item;
+  GstMetaItem *tail_item;
 } GstBufferImpl;
 
+static gint64 meta_seq;         /* 0 *//* ATOMIC */
+
+/* TODO: use GLib's once https://gitlab.gnome.org/GNOME/glib/issues/1076 lands */
+#if defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8)
+static inline gint64
+gst_atomic_int64_inc (volatile gint64 * atomic)
+{
+  return __sync_fetch_and_add (atomic, 1);
+}
+#elif defined (G_PLATFORM_WIN32)
+#include <windows.h>
+static inline gint64
+gst_atomic_int64_inc (volatile gint64 * atomic)
+{
+  return InterlockedExchangeAdd64 (atomic, 1);
+}
+#else
+#warning No 64-bit atomic int defined for this platform/toolchain!
+#define NO_64BIT_ATOMIC_INT_FOR_PLATFORM
+G_LOCK_DEFINE_STATIC (meta_seq);
+static inline gint64
+gst_atomic_int64_inc (volatile gint64 * atomic)
+{
+  gint64 ret;
+
+  G_LOCK (meta_seq);
+  ret = *atomic++;
+  G_UNLOCK (meta_seq);
+
+  return ret;
+}
+#endif
 
 static gboolean
 _is_span (GstMemory ** mem, gsize len, gsize * poffset, GstMemory ** parent)
@@ -288,11 +317,15 @@ _replace_memory (GstBuffer * buffer, guint len, guint idx, guint length,
     GstMemory *old = GST_BUFFER_MEM_PTR (buffer, i);
 
     gst_memory_unlock (old, GST_LOCK_FLAG_EXCLUSIVE);
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (old),
+        GST_MINI_OBJECT_CAST (buffer));
     gst_memory_unref (old);
   }
 
   if (mem != NULL) {
     /* replace with single memory */
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (mem),
+        GST_MINI_OBJECT_CAST (buffer));
     gst_memory_lock (mem, GST_LOCK_FLAG_EXCLUSIVE);
     GST_BUFFER_MEM_PTR (buffer, idx) = mem;
     idx++;
@@ -435,6 +468,8 @@ _memory_add (GstBuffer * buffer, gint idx, GstMemory * mem)
   /* and insert the new buffer */
   GST_BUFFER_MEM_PTR (buffer, idx) = mem;
   GST_BUFFER_MEM_LEN (buffer) = len + 1;
+  gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (mem),
+      GST_MINI_OBJECT_CAST (buffer));
 
   GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_TAG_MEMORY);
 }
@@ -445,6 +480,11 @@ void
 _priv_gst_buffer_initialize (void)
 {
   _gst_buffer_type = gst_buffer_get_type ();
+
+#ifdef NO_64BIT_ATOMIC_INT_FOR_PLATFORM
+  GST_CAT_WARNING (GST_CAT_PERFORMANCE,
+      "No 64-bit atomic int defined for this platform/toolchain!");
+#endif
 }
 
 /**
@@ -573,7 +613,7 @@ gst_buffer_copy_into (GstBuffer * dest, GstBuffer * src,
           if (newmem) {
             gst_memory_lock (newmem, GST_LOCK_FLAG_EXCLUSIVE);
             skip = 0;
-        }
+          }
         }
 
         if (deep || GST_MEMORY_IS_NO_SHARE (mem) || (!newmem && tocopy < bsize)) {
@@ -582,7 +622,7 @@ gst_buffer_copy_into (GstBuffer * dest, GstBuffer * src,
           newmem = gst_memory_copy (mem, skip, tocopy);
           if (newmem) {
             gst_memory_lock (newmem, GST_LOCK_FLAG_EXCLUSIVE);
-          skip = 0;
+            skip = 0;
           }
         } else if (!newmem) {
           newmem = _memory_get_exclusive_reference (mem);
@@ -640,9 +680,9 @@ gst_buffer_copy_into (GstBuffer * dest, GstBuffer * src,
           GST_CAT_ERROR (GST_CAT_BUFFER,
               "failed to copy meta %p of API type %s", meta,
               g_type_name (info->api));
+        }
       }
     }
-  }
   }
 
   return TRUE;
@@ -746,6 +786,8 @@ _gst_buffer_free (GstBuffer * buffer)
   len = GST_BUFFER_MEM_LEN (buffer);
   for (i = 0; i < len; i++) {
     gst_memory_unlock (GST_BUFFER_MEM_PTR (buffer, i), GST_LOCK_FLAG_EXCLUSIVE);
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (GST_BUFFER_MEM_PTR
+            (buffer, i)), GST_MINI_OBJECT_CAST (buffer));
     gst_memory_unref (GST_BUFFER_MEM_PTR (buffer, i));
   }
 
@@ -968,6 +1010,33 @@ gst_buffer_new_wrapped (gpointer data, gsize size)
 }
 
 /**
+ * gst_buffer_new_wrapped_bytes:
+ * @bytes: (transfer none): a #GBytes to wrap
+ *
+ * Creates a new #GstBuffer that wraps the given @bytes. The data inside
+ * @bytes cannot be %NULL and the resulting buffer will be marked as read only.
+ *
+ * MT safe.
+ *
+ * Returns: (transfer full): a new #GstBuffer wrapping @bytes
+ *
+ * Since: 1.16
+ */
+GstBuffer *
+gst_buffer_new_wrapped_bytes (GBytes * bytes)
+{
+  guint8 *bytes_data;
+  gsize size;
+
+  g_return_val_if_fail (bytes != NULL, NULL);
+  bytes_data = (guint8 *) g_bytes_get_data (bytes, &size);
+  g_return_val_if_fail (bytes_data != NULL, NULL);
+
+  return gst_buffer_new_wrapped_full (GST_MEMORY_FLAG_READONLY, bytes_data,
+      size, 0, size, g_bytes_ref (bytes), (GDestroyNotify) g_bytes_unref);
+}
+
+/**
  * gst_buffer_n_memory:
  * @buffer: a #GstBuffer.
  *
@@ -1060,10 +1129,14 @@ _get_mapped (GstBuffer * buffer, guint idx, GstMapInfo * info,
 
   if (mapped != mem) {
     /* memory changed, lock new memory */
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (mapped),
+        GST_MINI_OBJECT_CAST (buffer));
     gst_memory_lock (mapped, GST_LOCK_FLAG_EXCLUSIVE);
     GST_BUFFER_MEM_PTR (buffer, idx) = mapped;
     /* unlock old memory */
     gst_memory_unlock (mem, GST_LOCK_FLAG_EXCLUSIVE);
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (mem),
+        GST_MINI_OBJECT_CAST (buffer));
     GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_TAG_MEMORY);
   }
   gst_memory_unref (mem);
@@ -1677,9 +1750,13 @@ gst_buffer_resize_range (GstBuffer * buffer, guint idx, gint length,
         if (newmem == NULL)
           return FALSE;
 
+        gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (newmem),
+            GST_MINI_OBJECT_CAST (buffer));
         gst_memory_lock (newmem, GST_LOCK_FLAG_EXCLUSIVE);
         GST_BUFFER_MEM_PTR (buffer, i) = newmem;
         gst_memory_unlock (mem, GST_LOCK_FLAG_EXCLUSIVE);
+        gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (mem),
+            GST_MINI_OBJECT_CAST (buffer));
         gst_memory_unref (mem);
 
         GST_BUFFER_FLAG_SET (buffer, GST_BUFFER_FLAG_TAG_MEMORY);
@@ -2139,6 +2216,8 @@ gst_buffer_append_region (GstBuffer * buf1, GstBuffer * buf2, gssize offset,
     GstMemory *mem;
 
     mem = GST_BUFFER_MEM_PTR (buf2, i);
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (mem),
+        GST_MINI_OBJECT_CAST (buf2));
     GST_BUFFER_MEM_PTR (buf2, i) = NULL;
     _memory_add (buf1, -1, mem);
   }
@@ -2237,7 +2316,7 @@ gst_buffer_add_meta (GstBuffer * buffer, const GstMetaInfo * info,
   if (!info->init_func)
     item = g_slice_alloc0 (size);
   else
-  item = g_slice_alloc (size);
+    item = g_slice_alloc (size);
   result = &item->meta;
   result->info = info;
   result->flags = GST_META_FLAG_NONE;
@@ -2250,9 +2329,16 @@ gst_buffer_add_meta (GstBuffer * buffer, const GstMetaInfo * info,
     if (!info->init_func (result, params, buffer))
       goto init_failed;
 
-  /* and add to the list of metadata */
-  item->next = GST_BUFFER_META (buffer);
-  GST_BUFFER_META (buffer) = item;
+  item->seq_num = gst_atomic_int64_inc (&meta_seq);
+  item->next = NULL;
+
+  if (!GST_BUFFER_META (buffer)) {
+    GST_BUFFER_META (buffer) = item;
+    GST_BUFFER_TAIL_META (buffer) = item;
+  } else {
+    GST_BUFFER_TAIL_META (buffer)->next = item;
+    GST_BUFFER_TAIL_META (buffer) = item;
+  }
 
   return result;
 
@@ -2292,10 +2378,18 @@ gst_buffer_remove_meta (GstBuffer * buffer, GstMeta * meta)
       const GstMetaInfo *info = meta->info;
 
       /* remove from list */
+      if (GST_BUFFER_TAIL_META (buffer) == walk) {
+        if (prev != walk)
+          GST_BUFFER_TAIL_META (buffer) = prev;
+        else
+          GST_BUFFER_TAIL_META (buffer) = NULL;
+      }
+
       if (GST_BUFFER_META (buffer) == walk)
         GST_BUFFER_META (buffer) = walk->next;
       else
         prev->next = walk->next;
+
       /* call free_func if any */
       if (info->free_func)
         info->free_func (m, buffer);
@@ -2431,13 +2525,18 @@ gst_buffer_foreach_meta (GstBuffer * buffer, GstBufferForeachMetaFunc func,
       g_return_val_if_fail (!GST_META_FLAG_IS_SET (m, GST_META_FLAG_LOCKED),
           FALSE);
 
+      if (GST_BUFFER_TAIL_META (buffer) == walk) {
+        if (prev != walk)
+          GST_BUFFER_TAIL_META (buffer) = prev;
+        else
+          GST_BUFFER_TAIL_META (buffer) = NULL;
+      }
+
       /* remove from list */
       if (GST_BUFFER_META (buffer) == walk)
-        GST_BUFFER_META (buffer) = next;
+        prev = GST_BUFFER_META (buffer) = next;
       else
         prev->next = next;
-
-      prev = next;
 
       /* call free_func if any */
       if (info->free_func)
@@ -2483,8 +2582,8 @@ gst_buffer_extract_dup (GstBuffer * buffer, gsize offset, gsize size,
     *dest_size = 0;
   } else {
     *dest = g_malloc (alloc_size);
-  *dest_size = gst_buffer_extract (buffer, offset, *dest, size);
-}
+    *dest_size = gst_buffer_extract (buffer, offset, *dest, size);
+  }
 }
 
 GST_DEBUG_CATEGORY_STATIC (gst_parent_buffer_meta_debug);

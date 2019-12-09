@@ -123,13 +123,13 @@ GST_DEBUG_CATEGORY_STATIC (gst_spectrum_debug);
   "layout = (string) interleaved"
 
 /* Spectrum properties */
-#define DEFAULT_POST_MESSAGES           TRUE
-#define DEFAULT_MESSAGE_MAGNITUDE   TRUE
-#define DEFAULT_MESSAGE_PHASE       FALSE
-#define DEFAULT_INTERVAL        (GST_SECOND / 10)
-#define DEFAULT_BANDS           128
-#define DEFAULT_THRESHOLD       -60
-#define DEFAULT_MULTI_CHANNEL       FALSE
+#define DEFAULT_POST_MESSAGES         TRUE
+#define DEFAULT_MESSAGE_MAGNITUDE TRUE
+#define DEFAULT_MESSAGE_PHASE   FALSE
+#define DEFAULT_INTERVAL    (GST_SECOND / 10)
+#define DEFAULT_BANDS     128
+#define DEFAULT_THRESHOLD   -60
+#define DEFAULT_MULTI_CHANNEL   FALSE
 
 enum
 {
@@ -626,15 +626,15 @@ gst_spectrum_setup (GstAudioFilter * base, const GstAudioInfo * info)
   g_mutex_lock (&spectrum->lock);
   switch (GST_AUDIO_INFO_FORMAT (info)) {
     case GST_AUDIO_FORMAT_S16:
-        input_data =
+      input_data =
           multi_channel ? input_data_int16_max : input_data_mixed_int16_max;
       break;
     case GST_AUDIO_FORMAT_S24:
-        input_data =
-            multi_channel ? input_data_int24_max : input_data_mixed_int24_max;
+      input_data =
+          multi_channel ? input_data_int24_max : input_data_mixed_int24_max;
       break;
     case GST_AUDIO_FORMAT_S32:
-        input_data =
+      input_data =
           multi_channel ? input_data_int32_max : input_data_mixed_int32_max;
       break;
     case GST_AUDIO_FORMAT_F32:
@@ -646,7 +646,7 @@ gst_spectrum_setup (GstAudioFilter * base, const GstAudioInfo * info)
     default:
       g_assert_not_reached ();
       break;
-    }
+  }
   spectrum->input_data = input_data;
 
   gst_spectrum_reset_state (spectrum);

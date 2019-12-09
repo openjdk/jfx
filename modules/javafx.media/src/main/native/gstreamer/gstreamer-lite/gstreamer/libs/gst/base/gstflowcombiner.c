@@ -56,10 +56,13 @@
  * * %GST_FLOW_OK: otherwise
  *
  * %GST_FLOW_ERROR or below, GST_FLOW_NOT_NEGOTIATED and GST_FLOW_FLUSHING are
- * returned immediatelly from the gst_flow_combiner_update_flow() function.
+ * returned immediately from the gst_flow_combiner_update_flow() function.
  *
  * Since: 1.4
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <gst/gst.h>
 #include "gstflowcombiner.h"

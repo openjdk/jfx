@@ -188,7 +188,7 @@ public final class IosApplication extends Application {
     }
 
     private native Object _enterNestedEventLoopImpl();
-    private native void _leaveNestedEventLoopImpl();
+    private native void _leaveNestedEventLoopImpl(Object retValue);
 
     @Override
     protected Object _enterNestedEventLoop() {
@@ -197,7 +197,7 @@ public final class IosApplication extends Application {
 
     @Override
     protected void _leaveNestedEventLoop(Object retValue) {
-        _leaveNestedEventLoopImpl();
+        _leaveNestedEventLoopImpl(retValue);
     }
 
     @Override

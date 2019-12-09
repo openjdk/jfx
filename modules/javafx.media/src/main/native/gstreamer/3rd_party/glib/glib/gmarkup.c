@@ -35,7 +35,6 @@
 #include "gtestutils.h"
 #include "glibintl.h"
 #include "gthread.h"
-#include "gunicodeprivate.h"
 
 /**
  * SECTION:markup
@@ -46,7 +45,8 @@
  * The "GMarkup" parser is intended to parse a simple markup format
  * that's a subset of XML. This is a small, efficient, easy-to-use
  * parser. It should not be used if you expect to interoperate with
- * other applications generating full-scale XML. However, it's very
+ * other applications generating full-scale XML, and must not be used if you
+ * expect to parse untrusted input. However, it's very
  * useful for application data files, config files, etc. where you
  * know your application will be the only one writing the file.
  * Full-scale XML parsers should be able to parse the subset used by
@@ -539,7 +539,7 @@ text_validate (GMarkupParseContext  *context,
                gint                  len,
                GError              **error)
 {
-  if (!_g_utf8_validate_len (p, len, NULL))
+  if (!g_utf8_validate_len (p, len, NULL))
     {
       set_error (context, error, G_MARKUP_ERROR_BAD_UTF8,
                  _("Invalid UTF-8 encoded text in name - not valid '%s'"), p);
@@ -786,8 +786,8 @@ unescape_gstring_inplace (GMarkupParseContext  *context,
         }
     }
 
-  g_assert (to - string->str <= string->len);
-  if (to - string->str != string->len)
+  g_assert (to - string->str <= (gssize) string->len);
+  if (to - string->str != (gssize) string->len)
     g_string_truncate (string, to - string->str);
 
   *is_ascii = !(mask & 0x80);
@@ -1860,7 +1860,7 @@ g_markup_parse_context_end_parse (GMarkupParseContext  *context,
       if (context->tag_stack != NULL)
         set_error (context, error, G_MARKUP_ERROR_PARSE,
                    _("Document ended unexpectedly inside the close tag for "
-                   "element '%s'"), current_element (context));
+                     "element '%s'"), current_element (context));
       else
         set_error (context, error, G_MARKUP_ERROR_PARSE,
                    _("Document ended unexpectedly inside the close tag for an "
@@ -2172,61 +2172,108 @@ g_markup_parse_context_pop (GMarkupParseContext *context)
   return user_data;
 }
 
+#define APPEND_TEXT_AND_SEEK(_str, _start, _end)          \
+  G_STMT_START {                                          \
+    if (_end > _start)                                    \
+      g_string_append_len (_str, _start, _end - _start);  \
+    _start = ++_end;                                      \
+  } G_STMT_END
+
+/*
+ * https://www.w3.org/TR/REC-xml/ defines the set of valid
+ * characters as:
+ *   #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+ *
+ * That is, from non-ASCII UTF-8 character set, only 0xC27F - 0xC284 and
+ * 0xC286 - 0xC29F have to be escaped (excluding the surrogate blocks).
+ * Corresponding Unicode code points are [0x7F-0x84] and [0x86-0x9F].
+ *
+ * So instead of using costly g_utf8_next_char or similar UTF8 functions, it's
+ * better to read each byte, and make an exception for 0xC2XX.
+ */
 static void
 append_escaped_text (GString     *str,
                      const gchar *text,
                      gssize       length)
 {
-  const gchar *p;
+  const gchar *p, *pending;
   const gchar *end;
-  gunichar c;
 
-  p = text;
+  p = pending = text;
   end = text + length;
 
-  while (p < end)
+  while (p < end && pending < end)
     {
-      const gchar *next;
-      next = g_utf8_next_char (p);
+      guchar c = (guchar) *pending;
 
-      switch (*p)
+      switch (c)
         {
         case '&':
+          APPEND_TEXT_AND_SEEK (str, p, pending);
           g_string_append (str, "&amp;");
           break;
 
         case '<':
+          APPEND_TEXT_AND_SEEK (str, p, pending);
           g_string_append (str, "&lt;");
           break;
 
         case '>':
+          APPEND_TEXT_AND_SEEK (str, p, pending);
           g_string_append (str, "&gt;");
           break;
 
         case '\'':
+          APPEND_TEXT_AND_SEEK (str, p, pending);
           g_string_append (str, "&apos;");
           break;
 
         case '"':
+          APPEND_TEXT_AND_SEEK (str, p, pending);
           g_string_append (str, "&quot;");
           break;
 
         default:
-          c = g_utf8_get_char (p);
           if ((0x1 <= c && c <= 0x8) ||
               (0xb <= c && c  <= 0xc) ||
               (0xe <= c && c <= 0x1f) ||
-              (0x7f <= c && c <= 0x84) ||
-              (0x86 <= c && c <= 0x9f))
-            g_string_append_printf (str, "&#x%x;", c);
+              (c == 0x7f))
+            {
+              APPEND_TEXT_AND_SEEK (str, p, pending);
+              g_string_append_printf (str, "&#x%x;", c);
+            }
+          /* The utf-8 control characters to escape begins with 0xc2 byte */
+          else if (c == 0xc2)
+            {
+              gunichar u = g_utf8_get_char (pending);
+
+              if ((0x7f < u && u <= 0x84) ||
+                  (0x86 <= u && u <= 0x9f))
+                {
+                  APPEND_TEXT_AND_SEEK (str, p, pending);
+                  g_string_append_printf (str, "&#x%x;", u);
+
+                  /*
+                   * We have appended a two byte character above, which
+                   * is one byte ahead of what we read on every loop.
+                   * Increment to skip 0xc2 and point to the right location.
+                   */
+                  p++;
+                }
+              else
+                pending++;
+            }
           else
-            g_string_append_len (str, p, next - p);
+            pending++;
           break;
         }
-
-      p = next;
     }
+
+  if (pending > p)
+    g_string_append_len (str, p, pending - p);
 }
+
+#undef APPEND_TEXT_AND_SEEK
 
 /**
  * g_markup_escape_text:
@@ -2601,7 +2648,7 @@ g_markup_parse_boolean (const char  *string,
 {
   char const * const falses[] = { "false", "f", "no", "n", "0" };
   char const * const trues[] = { "true", "t", "yes", "y", "1" };
-  int i;
+  gsize i;
 
   for (i = 0; i < G_N_ELEMENTS (falses); i++)
     {
@@ -2844,9 +2891,10 @@ g_markup_collect_attributes (const gchar         *element_name,
           g_assert_not_reached ();
         }
 
-      type = va_arg (ap, GMarkupCollectType);
-      attr = va_arg (ap, const char *);
       written++;
+      type = va_arg (ap, GMarkupCollectType);
+      if (type != G_MARKUP_COLLECT_INVALID)
+        attr = va_arg (ap, const char *);
     }
   va_end (ap);
 
@@ -2904,6 +2952,8 @@ failure:
             case G_MARKUP_COLLECT_STRDUP:
               if (written)
                 g_free (*(char **) ptr);
+              *(char **) ptr = NULL;
+              break;
 
             case G_MARKUP_COLLECT_STRING:
               *(char **) ptr = NULL;
@@ -2920,7 +2970,8 @@ failure:
         }
 
       type = va_arg (ap, GMarkupCollectType);
-      attr = va_arg (ap, const char *);
+      if (type != G_MARKUP_COLLECT_INVALID)
+        attr = va_arg (ap, const char *);
     }
   va_end (ap);
 

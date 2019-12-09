@@ -42,8 +42,8 @@
  * ## Linking to this library
  *
  * You should obtain the required CFLAGS and LIBS using pkg-config on the
- * gstreamer-plugins-base-0.10 module. You will then also need to add
- * '-lgstpbutils-0.10' manually to your LIBS line.
+ * gstreamer-plugins-base-1.0 module. You will then also need to add
+ * '-lgstreamer-pbutils-1.0' manually to your LIBS line.
  *
  * ## Library initialisation
  *

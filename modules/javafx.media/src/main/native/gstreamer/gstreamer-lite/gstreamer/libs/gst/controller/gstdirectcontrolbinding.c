@@ -31,6 +31,9 @@
  * will be clipped. An absolute control binding will not do any value
  * transformations.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <glib-object.h>
 #include <gst/gst.h>

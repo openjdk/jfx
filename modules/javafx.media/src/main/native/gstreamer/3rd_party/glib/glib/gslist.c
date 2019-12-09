@@ -1,55 +1,55 @@
 /* GLIB - Library of useful routines for C programming
-     * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
-     *
-     * This library is free software; you can redistribute it and/or
-     * modify it under the terms of the GNU Lesser General Public
-     * License as published by the Free Software Foundation; either
+ * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
-     *
-     * This library is distributed in the hope that it will be useful,
-     * but WITHOUT ANY WARRANTY; without even the implied warranty of
-     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-     * Lesser General Public License for more details.
-     *
-     * You should have received a copy of the GNU Lesser General Public
-     * License along with this library; if not, see <http://www.gnu.org/licenses/>.
-     */
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
+ */
 
-    /*
-     * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
-     * file for a list of people on the GLib Team.  See the ChangeLog
-     * files for a list of changes.  These files are distributed with
-     * GLib at ftp://ftp.gtk.org/pub/gtk/.
-     */
+/*
+ * Modified by the GLib Team and others 1997-2000.  See the AUTHORS
+ * file for a list of people on the GLib Team.  See the ChangeLog
+ * files for a list of changes.  These files are distributed with
+ * GLib at ftp://ftp.gtk.org/pub/gtk/.
+ */
 
-    /*
-     * MT safe
-     */
+/*
+ * MT safe
+ */
 
-    #include "config.h"
+#include "config.h"
 
-    #include "gslist.h"
+#include "gslist.h"
 
-    #include "gtestutils.h"
-    #include "gslice.h"
+#include "gtestutils.h"
+#include "gslice.h"
 
-    /**
-     * SECTION:linked_lists_single
-     * @title: Singly-Linked Lists
-     * @short_description: linked lists that can be iterated in one direction
-     *
-     * The #GSList structure and its associated functions provide a
-     * standard singly-linked list data structure.
-     *
-     * Each element in the list contains a piece of data, together with a
-     * pointer which links to the next element in the list. Using this
-     * pointer it is possible to move through the list in one direction
-     * only (unlike the [double-linked lists][glib-Doubly-Linked-Lists],
-     * which allow movement in both directions).
-     *
-     * The data contained in each element can be either integer values, by
-     * using one of the [Type Conversion Macros][glib-Type-Conversion-Macros],
-     * or simply pointers to any type of data.
+/**
+ * SECTION:linked_lists_single
+ * @title: Singly-Linked Lists
+ * @short_description: linked lists that can be iterated in one direction
+ *
+ * The #GSList structure and its associated functions provide a
+ * standard singly-linked list data structure.
+ *
+ * Each element in the list contains a piece of data, together with a
+ * pointer which links to the next element in the list. Using this
+ * pointer it is possible to move through the list in one direction
+ * only (unlike the [double-linked lists][glib-Doubly-Linked-Lists],
+ * which allow movement in both directions).
+ *
+ * The data contained in each element can be either integer values, by
+ * using one of the [Type Conversion Macros][glib-Type-Conversion-Macros],
+ * or simply pointers to any type of data.
  *
  * List elements are allocated from the [slice allocator][glib-Memory-Slices],
  * which is more efficient than allocating elements individually.
@@ -172,7 +172,7 @@ g_slist_free_1 (GSList *list)
  **/
 void
 g_slist_free_full (GSList         *list,
-           GDestroyNotify  free_func)
+       GDestroyNotify  free_func)
 {
   g_slist_foreach (list, (GFunc) free_func, NULL);
   g_slist_free (list);
@@ -431,7 +431,7 @@ g_slist_remove (GSList        *list,
                 gconstpointer  data)
 {
   return _g_slist_remove_data (list, data, FALSE);
-        }
+}
 
 /**
  * g_slist_remove_all:
@@ -450,7 +450,7 @@ g_slist_remove_all (GSList        *list,
                     gconstpointer  data)
 {
   return _g_slist_remove_data (list, data, TRUE);
-        }
+}
 
 static inline GSList*
 _g_slist_remove_link (GSList *list,
@@ -560,7 +560,7 @@ g_slist_copy (GSList *list)
  * @func, as a #GCopyFunc, takes two arguments, the data to be copied
  * and a @user_data pointer. On common processor architectures, it's safe to
  * pass %NULL as @user_data if the copy function takes only one argument. You
- * may get compiler warnings from this though if compiling with GCC’s
+ * may get compiler warnings from this though if compiling with GCC's
  * `-Wcast-function-type` warning.
  *
  * For instance, if @list holds a list of GObjects, you can do:

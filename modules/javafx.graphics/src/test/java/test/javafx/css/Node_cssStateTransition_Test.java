@@ -42,7 +42,6 @@ import javafx.scene.shape.Rectangle;
 import static org.junit.Assert.*;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class Node_cssStateTransition_Test {

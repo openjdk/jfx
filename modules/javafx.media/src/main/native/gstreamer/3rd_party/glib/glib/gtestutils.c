@@ -27,7 +27,6 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <glib/gstdio.h>
 #endif
 #include <string.h>
 #include <stdlib.h>
@@ -44,6 +43,7 @@
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif /* HAVE_SYS_SELECT_H */
+#include <glib/gstdio.h>
 
 #include "gmain.h"
 #include "gpattern.h"
@@ -53,13 +53,13 @@
 #include "gslice.h"
 #include "gspawn.h"
 #include "glib-private.h"
+#include "gutilsprivate.h"
 
 
 /**
  * SECTION:testing
  * @title: Testing
  * @short_description: a test framework
- * @see_also: [gtester][gtester], [gtester-report][gtester-report]
  *
  * GLib provides a framework for writing and maintaining unit tests
  * in parallel to the code they are testing. The API is designed according
@@ -90,7 +90,8 @@
  * In addition to the traditional g_assert_true(), the test framework provides
  * an extended set of assertions for comparisons: g_assert_cmpfloat(),
  * g_assert_cmpfloat_with_epsilon(), g_assert_cmpint(), g_assert_cmpuint(),
- * g_assert_cmphex(), g_assert_cmpstr(), and g_assert_cmpmem(). The
+ * g_assert_cmphex(), g_assert_cmpstr(), g_assert_cmpmem() and
+ * g_assert_cmpvariant(). The
  * advantage of these variants over plain g_assert_true() is that the assertion
  * messages can be more elaborate, and include the values of the compared
  * entities.
@@ -149,7 +150,6 @@
  *   setlocale (LC_ALL, "");
  *
  *   g_test_init (&argc, &argv, NULL);
- *   g_test_bug_base ("http://bugzilla.gnome.org/show_bug.cgi?id=");
  *
  *   // Define the tests.
  *   g_test_add ("/my-object/test1", MyObjectFixture, "some-user-data",
@@ -193,9 +193,9 @@
  * [TAP](https://testanything.org/) harness; GLib provides template files for
  * easily integrating with it:
  *
- *   - [glib-tap.mk](https://git.gnome.org/browse/glib/tree/glib-tap.mk)
- *   - [tap-test](https://git.gnome.org/browse/glib/tree/tap-test)
- *   - [tap-driver.sh](https://git.gnome.org/browse/glib/tree/tap-driver.sh)
+ *   - [glib-tap.mk](https://gitlab.gnome.org/GNOME/glib/blob/glib-2-58/glib-tap.mk)
+ *   - [tap-test](https://gitlab.gnome.org/GNOME/glib/blob/glib-2-58/tap-test)
+ *   - [tap-driver.sh](https://gitlab.gnome.org/GNOME/glib/blob/glib-2-58/tap-driver.sh)
  *
  * You can copy these files in your own project's root directory, and then
  * set up your `Makefile.am` file to reference them, for instance:
@@ -232,8 +232,11 @@
  *
  * If you don't have access to the Autotools TAP harness, you can use the
  * [gtester][gtester] and [gtester-report][gtester-report] tools, and use
- * the [glib.mk](https://git.gnome.org/browse/glib/tree/glib.mk) Automake
- * template provided by GLib.
+ * the [glib.mk](https://gitlab.gnome.org/GNOME/glib/blob/glib-2-58/glib.mk)
+ * Automake template provided by GLib. Note, however, that since GLib 2.62,
+ * [gtester][gtester] and [gtester-report][gtester-report] have been deprecated
+ * in favour of using TAP. The `--tap` argument to tests is enabled by default
+ * as of GLib 2.62.
  */
 
 /**
@@ -343,28 +346,6 @@
  * g_test_queue_destroy() with a destroy callback of g_object_unref().
  *
  * Since: 2.16
- */
-
-/**
- * GTestTrapFlags:
- * @G_TEST_TRAP_SILENCE_STDOUT: Redirect stdout of the test child to
- *     `/dev/null` so it cannot be observed on the console during test
- *     runs. The actual output is still captured though to allow later
- *     tests with g_test_trap_assert_stdout().
- * @G_TEST_TRAP_SILENCE_STDERR: Redirect stderr of the test child to
- *     `/dev/null` so it cannot be observed on the console during test
- *     runs. The actual output is still captured though to allow later
- *     tests with g_test_trap_assert_stderr().
- * @G_TEST_TRAP_INHERIT_STDIN: If this flag is given, stdin of the
- *     child process is shared with stdin of its parent process.
- *     It is redirected to `/dev/null` otherwise.
- *
- * Test traps are guards around forked tests.
- * These flags determine what traps to set.
- *
- * Deprecated: #GTestTrapFlags is used only with g_test_trap_fork(),
- * which is deprecated. g_test_trap_subprocess() uses
- * #GTestSubprocessFlags.
  */
 
 /**
@@ -575,7 +556,7 @@
  * g_assert_cmpstr:
  * @s1: a string (may be %NULL)
  * @cmp: The comparison operator to use.
- *     One of ==, !=, <, >, <=, >=.
+ *     One of `==`, `!=`, `<`, `>`, `<=`, `>=`.
  * @s2: another string (may be %NULL)
  *
  * Debugging macro to compare two strings. If the comparison fails,
@@ -599,7 +580,7 @@
  * g_assert_cmpint:
  * @n1: an integer
  * @cmp: The comparison operator to use.
- *     One of ==, !=, <, >, <=, >=.
+ *     One of `==`, `!=`, `<`, `>`, `<=`, `>=`.
  * @n2: another integer
  *
  * Debugging macro to compare two integers.
@@ -616,7 +597,7 @@
  * g_assert_cmpuint:
  * @n1: an unsigned integer
  * @cmp: The comparison operator to use.
- *     One of ==, !=, <, >, <=, >=.
+ *     One of `==`, `!=`, `<`, `>`, `<=`, `>=`.
  * @n2: another unsigned integer
  *
  * Debugging macro to compare two unsigned integers.
@@ -633,7 +614,7 @@
  * g_assert_cmphex:
  * @n1: an unsigned integer
  * @cmp: The comparison operator to use.
- *     One of ==, !=, <, >, <=, >=.
+ *     One of `==`, `!=`, `<`, `>`, `<=`, `>=`.
  * @n2: another unsigned integer
  *
  * Debugging macro to compare to unsigned integers.
@@ -646,9 +627,9 @@
 
 /**
  * g_assert_cmpfloat:
- * @n1: an floating point number
+ * @n1: a floating point number
  * @cmp: The comparison operator to use.
- *     One of ==, !=, <, >, <=, >=.
+ *     One of `==`, `!=`, `<`, `>`, `<=`, `>=`.
  * @n2: another floating point number
  *
  * Debugging macro to compare two floating point numbers.
@@ -663,7 +644,7 @@
 
 /**
  * g_assert_cmpfloat_with_epsilon:
- * @n1: an floating point number
+ * @n1: a floating point number
  * @n2: another floating point number
  * @epsilon: a numeric value that expresses the expected tolerance
  *   between @n1 and @n2
@@ -702,6 +683,23 @@
  */
 
 /**
+ * g_assert_cmpvariant:
+ * @v1: pointer to a #GVariant
+ * @v2: pointer to another #GVariant
+ *
+ * Debugging macro to compare two #GVariants. If the comparison fails,
+ * an error message is logged and the application is either terminated
+ * or the testcase marked as failed. The variants are compared using
+ * g_variant_equal().
+ *
+ * The effect of `g_assert_cmpvariant (v1, v2)` is the same as
+ * `g_assert_true (g_variant_equal (v1, v2))`. The advantage of this macro is
+ * that it can produce a message that includes the actual values of @v1 and @v2.
+ *
+ * Since: 2.60
+ */
+
+/**
  * g_assert_no_error:
  * @err: a #GError, possibly %NULL
  *
@@ -732,7 +730,7 @@
  *
  * This can only be used to test for a specific error. If you want to
  * test that @err is set, but don't care what it's set to, just use
- * `g_assert (err != NULL)`
+ * `g_assert_nonnull (err)`.
  *
  * Since: 2.20
  */
@@ -807,8 +805,12 @@ static const char * const g_test_result_names[] = {
 static int         test_log_fd = -1;
 static gboolean    test_mode_fatal = TRUE;
 static gboolean    g_test_run_once = TRUE;
+static gboolean    test_isolate_dirs = FALSE;
+static gchar      *test_isolate_dirs_tmpdir = NULL;
+static const gchar *test_tmpdir = NULL;
 static gboolean    test_run_list = FALSE;
 static gchar      *test_run_seedstr = NULL;
+G_LOCK_DEFINE_STATIC (test_run_rand);
 static GRand      *test_run_rand = NULL;
 static gchar      *test_run_name = "";
 static GSList    **test_filename_free_list;
@@ -831,7 +833,7 @@ static char       *test_trap_last_stdout = NULL;
 static char       *test_trap_last_stderr = NULL;
 static char       *test_uri_base = NULL;
 static gboolean    test_debug_log = FALSE;
-static gboolean    test_tap_log = FALSE;
+static gboolean    test_tap_log = TRUE;  /* default to TAP as of GLib 2.62; see #1619; the non-TAP output mode is deprecated */
 static gboolean    test_nonfatal_assertions = FALSE;
 static DestroyEntry *test_destroy_queue = NULL;
 static char       *test_argv0 = NULL;
@@ -941,17 +943,24 @@ g_test_log (GTestLogType lbit,
     case G_TEST_LOG_START_SUITE:
       if (test_tap_log)
         {
+          /* We only print the TAP "plan" (1..n) ahead of time if we did
+           * not use the -p option to select specific tests to be run. */
           if (string1[0] != 0)
             g_print ("# Start of %s tests\n", string1);
-          else
+          else if (test_paths == NULL)
             g_print ("1..%d\n", test_count);
         }
       break;
     case G_TEST_LOG_STOP_SUITE:
       if (test_tap_log)
         {
+          /* If we didn't print the TAP "plan" at the beginning because
+           * we were using -p, we need to print how many tests we ran at
+           * the end instead. */
           if (string1[0] != 0)
             g_print ("# End of %s tests\n", string1);
+          else if (test_paths != NULL)
+            g_print ("1..%d\n", test_run_count);
         }
       break;
     case G_TEST_LOG_STOP_CASE:
@@ -992,6 +1001,10 @@ g_test_log (GTestLogType lbit,
         }
       if (result == G_TEST_RUN_SKIPPED || result == G_TEST_RUN_INCOMPLETE)
         test_skipped_count++;
+      break;
+    case G_TEST_LOG_SKIP_CASE:
+      if (test_tap_log)
+          g_print ("ok %d %s # SKIP\n", test_run_count, string1);
       break;
     case G_TEST_LOG_MIN_RESULT:
       if (test_tap_log)
@@ -1096,6 +1109,9 @@ parse_args (gint    *argc_p,
               test_log_fd = g_ascii_strtoull (argv[i], NULL, 0);
             }
           argv[i] = NULL;
+
+          /* Force non-TAP output when using gtester */
+          test_tap_log = FALSE;
         }
       else if (strcmp ("--GTestSkipCount", argv[i]) == 0 || strncmp ("--GTestSkipCount=", argv[i], 17) == 0)
         {
@@ -1123,6 +1139,10 @@ parse_args (gint    *argc_p,
           }
 #endif
           argv[i] = NULL;
+
+          /* Force non-TAP output when spawning a subprocess, since people often
+           * test the stdout/stderr of the subprocess strictly */
+          test_tap_log = FALSE;
         }
       else if (strcmp ("-p", argv[i]) == 0 || strncmp ("-p=", argv[i], 3) == 0)
         {
@@ -1230,6 +1250,11 @@ parse_args (gint    *argc_p,
           exit (0);
         }
     }
+
+  /* We've been prepending to test_paths, but its order matters, so
+   * permute it */
+  test_paths = g_slist_reverse (test_paths);
+
   /* collapse argv */
   e = 1;
   for (i = 1; i < argc; i++)
@@ -1242,15 +1267,139 @@ parse_args (gint    *argc_p,
   *argc_p = e;
 }
 
+/* A fairly naive `rm -rf` implementation to clean up after unit tests. */
+static void
+rm_rf (const gchar *path)
+{
+  GDir *dir = NULL;
+  const gchar *entry;
+
+  dir = g_dir_open (path, 0, NULL);
+  if (dir == NULL)
+    {
+      /* Assume it's a file. */
+      g_remove (path);
+      return;
+    }
+
+  while ((entry = g_dir_read_name (dir)) != NULL)
+    {
+      gchar *sub_path = g_build_filename (path, entry, NULL);
+      rm_rf (sub_path);
+      g_free (sub_path);
+    }
+
+  g_dir_close (dir);
+
+  g_rmdir (path);
+}
+
+/* Implement the %G_TEST_OPTION_ISOLATE_DIRS option, iff it's enabled. Create
+ * a temporary directory for this unit test (disambiguated using @test_run_name)
+ * and use g_set_user_dirs() to point various XDG directories into it, without
+ * having to call setenv() in a process which potentially has threads running.
+ *
+ * Note that this is called for each unit test, and hence won't have taken
+ * effect before g_test_run() is called in the unit test's main(). Hence
+ * references to XDG variables in main() will not be using the temporary
+ * directory. */
+static gboolean
+test_do_isolate_dirs (GError **error)
+{
+  gchar *subdir = NULL;
+  gchar *home_dir = NULL, *cache_dir = NULL, *config_dir = NULL;
+  gchar *data_dir = NULL, *runtime_dir = NULL;
+  gchar *config_dirs[3];
+  gchar *data_dirs[3];
+
+  if (!test_isolate_dirs)
+    return TRUE;
+
+  /* The @test_run_name includes the test suites, so may be several directories
+   * deep. Add a `.dirs` directory to contain all the paths we create, and
+   * guarantee none of them clash with test paths below the current one - test
+   * paths may not contain components starting with `.`. */
+  subdir = g_build_filename (test_tmpdir, test_run_name, ".dirs", NULL);
+
+  /* We have to create the runtime directory (because it must be bound to
+   * the session lifetime, which we consider to be the lifetime of the unit
+   * test for testing purposes - see
+   * https://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html.
+   * We don't need to create the other directories - the specification
+   * requires that client code create them if they don't exist. Not creating
+   * them automatically is a good test of clients' adherence to the spec
+   * and error handling of missing directories. */
+  runtime_dir = g_build_filename (subdir, "runtime", NULL);
+  if (g_mkdir_with_parents (runtime_dir, 0700) != 0)
+    {
+      gint saved_errno = errno;
+      g_set_error (error, G_FILE_ERROR, g_file_error_from_errno (saved_errno),
+                   "Failed to create XDG_RUNTIME_DIR '%s': %s",
+                  runtime_dir, g_strerror (saved_errno));
+      g_free (runtime_dir);
+      g_free (subdir);
+      return FALSE;
+    }
+
+  home_dir = g_build_filename (subdir, "home", NULL);
+  cache_dir = g_build_filename (subdir, "cache", NULL);
+  config_dir = g_build_filename (subdir, "config", NULL);
+  data_dir = g_build_filename (subdir, "data", NULL);
+
+  config_dirs[0] = g_build_filename (subdir, "system-config1", NULL);
+  config_dirs[1] = g_build_filename (subdir, "system-config2", NULL);
+  config_dirs[2] = NULL;
+
+  data_dirs[0] = g_build_filename (subdir, "system-data1", NULL);
+  data_dirs[1] = g_build_filename (subdir, "system-data2", NULL);
+  data_dirs[2] = NULL;
+
+  /* Remember to update the documentation for %G_TEST_OPTION_ISOLATE_DIRS if
+   * this list changes. */
+  g_set_user_dirs ("HOME", home_dir,
+                   "XDG_CACHE_HOME", cache_dir,
+                   "XDG_CONFIG_DIRS", config_dirs,
+                   "XDG_CONFIG_HOME", config_dir,
+                   "XDG_DATA_DIRS", data_dirs,
+                   "XDG_DATA_HOME", data_dir,
+                   "XDG_RUNTIME_DIR", runtime_dir,
+                   NULL);
+
+  g_free (runtime_dir);
+  g_free (data_dir);
+  g_free (config_dir);
+  g_free (cache_dir);
+  g_free (home_dir);
+  g_free (data_dirs[1]);
+  g_free (data_dirs[0]);
+  g_free (config_dirs[1]);
+  g_free (config_dirs[0]);
+  g_free (subdir);
+
+  return TRUE;
+}
+
+/* Clean up after test_do_isolate_dirs(). */
+static void
+test_rm_isolate_dirs (void)
+{
+  gchar *subdir = NULL;
+
+  if (!test_isolate_dirs)
+    return;
+
+  subdir = g_build_filename (test_tmpdir, test_run_name, NULL);
+  rm_rf (subdir);
+  g_free (subdir);
+}
+
 /**
  * g_test_init:
  * @argc: Address of the @argc parameter of the main() function.
  *        Changed if any arguments were handled.
  * @argv: Address of the @argv parameter of main().
  *        Any parameters understood by g_test_init() stripped before return.
- * @...: %NULL-terminated list of special options. Currently the only
- *       defined option is `"no_g_set_prgname"`, which
- *       will cause g_test_init() to not call g_set_prgname().
+ * @...: %NULL-terminated list of special options, documented below.
  *
  * Initialize the GLib testing framework, e.g. by seeding the
  * test random number generator, the name for g_get_prgname()
@@ -1284,6 +1433,14 @@ parse_args (gint    *argc_p,
  *
  * - `--debug-log`: Debug test logging output.
  *
+ * Options which can be passed to @... are:
+ *
+ *  - `"no_g_set_prgname"`: Causes g_test_init() to not call g_set_prgname().
+ *  - %G_TEST_OPTION_ISOLATE_DIRS: Creates a unique temporary directory for each
+ *    unit test and uses g_set_user_dirs() to set XDG directories to point into
+ *    that temporary directory for the duration of the unit test. See the
+ *    documentation for %G_TEST_OPTION_ISOLATE_DIRS.
+ *
  * Since 2.58, if tests are compiled with `G_DISABLE_ASSERT` defined,
  * g_test_init() will print an error and exit. This is to prevent no-op tests
  * from being executed, as g_assert() is commonly (erroneously) used in unit
@@ -1316,6 +1473,8 @@ void
     {
       if (g_strcmp0 (option, "no_g_set_prgname") == 0)
         no_g_set_prgname = TRUE;
+      else if (g_strcmp0 (option, G_TEST_OPTION_ISOLATE_DIRS) == 0)
+        test_isolate_dirs = TRUE;
     }
   va_end (args);
 
@@ -1329,16 +1488,75 @@ void
   if (!g_get_prgname() && !no_g_set_prgname)
     g_set_prgname ((*argv)[0]);
 
-  /* sanity check */
-  if (test_tap_log)
+  /* Set up the temporary directory for isolating the test. We have to do this
+   * early, as we want the return values from g_get_user_data_dir() (and
+   * friends) to return subdirectories of the temporary directory throughout
+   * the setup function, test, and teardown function, for each unit test.
+   * See test_do_isolate_dirs().
+   *
+   * The directory is deleted at the bottom of g_test_run().
+   *
+   * Rather than setting the XDG_* environment variables we use a new
+   * G_TEST_TMPDIR variable which gives the top-level temporary directory. This
+   * allows test subprocesses to reuse the same temporary directory when
+   * g_test_init() is called in them. */
+  if (test_isolate_dirs)
     {
-      if (test_paths || test_startup_skip_count)
+      if (g_getenv ("G_TEST_TMPDIR") == NULL)
         {
-          /* Not invoking every test (even if SKIPped) breaks the "1..XX" plan */
-          g_printerr ("%s: -p and --GTestSkipCount options are incompatible with --tap\n",
-                      (*argv)[0]);
-          exit (1);
+          gchar *test_prgname = NULL;
+          gchar *tmpl = NULL;
+          GError *local_error = NULL;
+
+          test_prgname = g_path_get_basename (g_get_prgname ());
+          if (*test_prgname == '\0')
+            test_prgname = g_strdup ("unknown");
+          tmpl = g_strdup_printf ("test_%s_XXXXXX", test_prgname);
+          g_free (test_prgname);
+
+          test_isolate_dirs_tmpdir = g_dir_make_tmp (tmpl, &local_error);
+          if (local_error != NULL)
+            {
+              g_printerr ("%s: Failed to create temporary directory: %s\n",
+                          (*argv)[0], local_error->message);
+              g_error_free (local_error);
+              exit (1);
+            }
+          g_free (tmpl);
+
+          /* Propagate the temporary directory to subprocesses. */
+          g_setenv ("G_TEST_TMPDIR", test_isolate_dirs_tmpdir, TRUE);
+
+          /* And clear the traditional environment variables so subprocesses
+           * spawned by the code under test can't trash anything. If a test
+           * spawns a process, the test is responsible for propagating
+           * appropriate environment variables.
+           *
+           * We assume that any in-process code will use g_get_user_data_dir()
+           * and friends, rather than getenv() directly.
+           *
+           * We set them to '/dev/null' as that should fairly obviously not
+           * accidentally work, and should be fairly greppable. */
+            {
+              const gchar *overridden_environment_variables[] =
+                {
+                  "HOME",
+                  "XDG_CACHE_HOME",
+                  "XDG_CONFIG_DIRS",
+                  "XDG_CONFIG_HOME",
+                  "XDG_DATA_DIRS",
+                  "XDG_DATA_HOME",
+                  "XDG_RUNTIME_DIR",
+                };
+              gsize i;
+
+              for (i = 0; i < G_N_ELEMENTS (overridden_environment_variables); i++)
+                g_setenv (overridden_environment_variables[i], "/dev/null", TRUE);
+            }
         }
+
+      /* Cache this for the remainder of this process' lifetime. */
+      test_tmpdir = g_getenv ("G_TEST_TMPDIR");
     }
 
   /* verify GRand reliability, needed for reliable seeds */
@@ -1437,7 +1655,13 @@ test_run_seed (const gchar *rseed)
 gint32
 g_test_rand_int (void)
 {
-  return g_rand_int (test_run_rand);
+  gint32 r;
+
+  G_LOCK (test_run_rand);
+  r = g_rand_int (test_run_rand);
+  G_UNLOCK (test_run_rand);
+
+  return r;
 }
 
 /**
@@ -1456,7 +1680,13 @@ gint32
 g_test_rand_int_range (gint32          begin,
                        gint32          end)
 {
-  return g_rand_int_range (test_run_rand, begin, end);
+  gint32 r;
+
+  G_LOCK (test_run_rand);
+  r = g_rand_int_range (test_run_rand, begin, end);
+  G_UNLOCK (test_run_rand);
+
+  return r;
 }
 
 /**
@@ -1472,7 +1702,13 @@ g_test_rand_int_range (gint32          begin,
 double
 g_test_rand_double (void)
 {
-  return g_rand_double (test_run_rand);
+  double r;
+
+  G_LOCK (test_run_rand);
+  r = g_rand_double (test_run_rand);
+  G_UNLOCK (test_run_rand);
+
+  return r;
 }
 
 /**
@@ -1491,7 +1727,13 @@ double
 g_test_rand_double_range (double          range_start,
                           double          range_end)
 {
-  return g_rand_double_range (test_run_rand, range_start, range_end);
+  double r;
+
+  G_LOCK (test_run_rand);
+  r = g_rand_double_range (test_run_rand, range_start, range_end);
+  G_UNLOCK (test_run_rand);
+
+  return r;
 }
 
 /**
@@ -1644,6 +1886,9 @@ g_test_message (const char *format,
  * portion to @uri_pattern, or by replacing the special string
  * '\%s' within @uri_pattern if that is present.
  *
+ * If g_test_bug_base() is not called, bug URIs are formed solely
+ * from the value provided by g_test_bug().
+ *
  * Since: 2.16
  */
 void
@@ -1660,19 +1905,22 @@ g_test_bug_base (const char *uri_pattern)
  * This function adds a message to test reports that
  * associates a bug URI with a test case.
  * Bug URIs are constructed from a base URI set with g_test_bug_base()
- * and @bug_uri_snippet.
+ * and @bug_uri_snippet. If g_test_bug_base() has not been called, it is
+ * assumed to be the empty string, so a full URI can be provided to
+ * g_test_bug() instead.
  *
  * Since: 2.16
+ * See also: g_test_summary()
  */
 void
 g_test_bug (const char *bug_uri_snippet)
 {
-  char *c;
+  const char *c = NULL;
 
-  g_return_if_fail (test_uri_base != NULL);
   g_return_if_fail (bug_uri_snippet != NULL);
 
-  c = strstr (test_uri_base, "%s");
+  if (test_uri_base != NULL)
+    c = strstr (test_uri_base, "%s");
   if (c)
     {
       char *b = g_strndup (test_uri_base, c - test_uri_base);
@@ -1682,7 +1930,44 @@ g_test_bug (const char *bug_uri_snippet)
       g_free (s);
     }
   else
-    g_test_message ("Bug Reference: %s%s", test_uri_base, bug_uri_snippet);
+    g_test_message ("Bug Reference: %s%s",
+                    test_uri_base ? test_uri_base : "", bug_uri_snippet);
+}
+
+/**
+ * g_test_summary:
+ * @summary: One or two sentences summarising what the test checks, and how it
+ *    checks it.
+ *
+ * Set the summary for a test, which describes what the test checks, and how it
+ * goes about checking it. This may be included in test report output, and is
+ * useful documentation for anyone reading the source code or modifying a test
+ * in future. It must be a single line.
+ *
+ * This should be called at the top of a test function.
+ *
+ * For example:
+ * |[<!-- language="C" -->
+ * static void
+ * test_array_sort (void)
+ * {
+ *   g_test_summary ("Test my_array_sort() sorts the array correctly and stably, "
+ *                   "including testing zero length and one-element arrays.");
+ *
+ * }
+ * ]|
+ *
+ * Since: 2.62
+ * See also: g_test_bug()
+ */
+void
+g_test_summary (const char *summary)
+{
+  g_return_if_fail (summary != NULL);
+  g_return_if_fail (strchr (summary, '\n') == NULL);
+  g_return_if_fail (strchr (summary, '\r') == NULL);
+
+  g_test_message ("%s summary: %s", test_run_name, summary);
 }
 
 /**
@@ -1754,6 +2039,14 @@ g_test_run (void)
 {
   if (g_test_run_suite (g_test_get_root()) != 0)
     return 1;
+
+  /* Clean up the temporary directory. */
+  if (test_isolate_dirs_tmpdir != NULL)
+    {
+      rm_rf (test_isolate_dirs_tmpdir);
+      g_free (test_isolate_dirs_tmpdir);
+      test_isolate_dirs_tmpdir = NULL;
+    }
 
   /* 77 is special to Automake's default driver, but not Automake's TAP driver
    * or Perl's prove(1) TAP driver. */
@@ -1871,6 +2164,7 @@ g_test_add_vtable (const char       *testpath,
   g_return_if_fail (testpath != NULL);
   g_return_if_fail (g_path_is_absolute (testpath));
   g_return_if_fail (fixture_test_func != NULL);
+  g_return_if_fail (!test_isolate_dirs || strstr (testpath, "/.") == NULL);
 
   suite = g_test_get_root();
   segments = g_strsplit (testpath, "/", -1);
@@ -2059,6 +2353,10 @@ g_test_set_nonfatal_assertions (void)
  * the test will be skipped by default, and only run if explicitly
  * required via the `-p` command-line option or g_test_trap_subprocess().
  *
+ * No component of @testpath may start with a dot (`.`) if the
+ * %G_TEST_OPTION_ISOLATE_DIRS option is being used; and it is recommended to
+ * do so even if it isn't.
+ *
  * Since: 2.16
  */
 void
@@ -2096,6 +2394,10 @@ g_test_add_func (const char *testpath,
  * If @testpath includes the component "subprocess" anywhere in it,
  * the test will be skipped by default, and only run if explicitly
  * required via the `-p` command-line option or g_test_trap_subprocess().
+ *
+ * No component of @testpath may start with a dot (`.`) if the
+ * %G_TEST_OPTION_ISOLATE_DIRS option is being used; and it is recommended to
+ * do so even if it isn't.
  *
  * Since: 2.16
  */
@@ -2310,25 +2612,38 @@ test_case_run (GTestCase *tc)
         g_test_skip ("by request (-s option)");
       else
         {
-          g_timer_start (test_run_timer);
-          fixture = tc->fixture_size ? g_malloc0 (tc->fixture_size) : tc->test_data;
-          test_run_seed (test_run_seedstr);
-          if (tc->fixture_setup)
-            tc->fixture_setup (fixture, tc->test_data);
-          tc->fixture_test (fixture, tc->test_data);
-          test_trap_clear();
-          while (test_destroy_queue)
+          GError *local_error = NULL;
+
+          if (!test_do_isolate_dirs (&local_error))
             {
-              DestroyEntry *dentry = test_destroy_queue;
-              test_destroy_queue = dentry->next;
-              dentry->destroy_func (dentry->destroy_data);
-              g_slice_free (DestroyEntry, dentry);
+              g_test_log (G_TEST_LOG_ERROR, local_error->message, NULL, 0, NULL);
+              g_test_fail ();
+              g_error_free (local_error);
             }
-          if (tc->fixture_teardown)
-            tc->fixture_teardown (fixture, tc->test_data);
-          if (tc->fixture_size)
-            g_free (fixture);
-          g_timer_stop (test_run_timer);
+          else
+            {
+              g_timer_start (test_run_timer);
+              fixture = tc->fixture_size ? g_malloc0 (tc->fixture_size) : tc->test_data;
+              test_run_seed (test_run_seedstr);
+              if (tc->fixture_setup)
+                tc->fixture_setup (fixture, tc->test_data);
+              tc->fixture_test (fixture, tc->test_data);
+              test_trap_clear();
+              while (test_destroy_queue)
+                {
+                  DestroyEntry *dentry = test_destroy_queue;
+                  test_destroy_queue = dentry->next;
+                  dentry->destroy_func (dentry->destroy_data);
+                  g_slice_free (DestroyEntry, dentry);
+                }
+              if (tc->fixture_teardown)
+                tc->fixture_teardown (fixture, tc->test_data);
+              if (tc->fixture_size)
+                g_free (fixture);
+              g_timer_stop (test_run_timer);
+            }
+
+          test_rm_isolate_dirs ();
         }
       success = test_run_success;
       test_run_success = G_TEST_RUN_FAILURE;
@@ -2598,11 +2913,14 @@ g_assertion_message (const char     *domain,
 
 /**
  * g_assertion_message_expr: (skip)
- * @domain: (nullable):
- * @file:
- * @line:
- * @func:
- * @expr: (nullable):
+ * @domain: (nullable): log domain
+ * @file: file containing the assertion
+ * @line: line number of the assertion
+ * @func: function containing the assertion
+ * @expr: (nullable): expression which failed
+ *
+ * Internal function used to print messages from the public g_assert() and
+ * g_assert_not_reached() macros.
  */
 void
 g_assertion_message_expr (const char     *domain,
@@ -2677,13 +2995,13 @@ g_assertion_message_cmpstr (const char     *domain,
 
 void
 g_assertion_message_error (const char     *domain,
-               const char     *file,
-               int             line,
-               const char     *func,
-               const char     *expr,
-               const GError   *error,
-               GQuark          error_domain,
-               int             error_code)
+         const char     *file,
+         int             line,
+         const char     *func,
+         const char     *expr,
+         const GError   *error,
+         GQuark          error_domain,
+         int             error_code)
 {
   GString *gstring;
 
@@ -2695,13 +3013,13 @@ g_assertion_message_error (const char     *domain,
   gstring = g_string_new ("assertion failed ");
   if (error_domain)
       g_string_append_printf (gstring, "(%s == (%s, %d)): ", expr,
-                  g_quark_to_string (error_domain), error_code);
+            g_quark_to_string (error_domain), error_code);
   else
     g_string_append_printf (gstring, "(%s == NULL): ", expr);
 
   if (error)
       g_string_append_printf (gstring, "%s (%s, %d)", error->message,
-                  g_quark_to_string (error->domain), error->code);
+            g_quark_to_string (error->domain), error->code);
   else
     g_string_append_printf (gstring, "%s is NULL", expr);
 
@@ -2966,6 +3284,7 @@ wait_for_child (GPid pid,
  * and is not always reliable due to problems inherent in
  * fork-without-exec. Use g_test_trap_subprocess() instead.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gboolean
 g_test_trap_fork (guint64        usec_timeout,
                   GTestTrapFlags test_trap_flags)
@@ -3008,6 +3327,18 @@ g_test_trap_fork (guint64        usec_timeout,
         close (stdout_pipe[1]);
       if (stderr_pipe[1] >= 3)
         close (stderr_pipe[1]);
+
+      /* We typically expect these child processes to crash, and some
+       * tests spawn a *lot* of them.  Avoid spamming system crash
+       * collection programs such as systemd-coredump and abrt.
+       */
+#ifdef HAVE_SYS_RESOURCE_H
+      {
+        struct rlimit limit = { 0, 0 };
+        (void) setrlimit (RLIMIT_CORE, &limit);
+      }
+#endif
+
       return TRUE;
     }
   else                          /* parent */
@@ -3028,6 +3359,7 @@ g_test_trap_fork (guint64        usec_timeout,
   return FALSE;
 #endif
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_test_trap_subprocess:
@@ -3146,6 +3478,8 @@ g_test_trap_subprocess (const char           *test_path,
   g_ptr_array_add (argv, NULL);
 
   flags = G_SPAWN_DO_NOT_REAP_CHILD;
+  if (test_log_fd != -1)
+    flags |= G_SPAWN_LEAVE_DESCRIPTORS_OPEN;
   if (test_flags & G_TEST_TRAP_INHERIT_STDIN)
     flags |= G_SPAWN_CHILD_INHERITS_STDIN;
 
@@ -3343,7 +3677,8 @@ g_test_trap_assertions (const char     *domain,
 
       logged_child_output = logged_child_output || log_child_output (process_id);
 
-      msg = g_strdup_printf ("stdout of child process (%s) %s: %s", process_id, match_error, stdout_pattern);
+      msg = g_strdup_printf ("stdout of child process (%s) %s: %s\nstdout was:\n%s",
+                             process_id, match_error, stdout_pattern, test_trap_last_stdout);
       g_assertion_message (domain, file, line, func, msg);
       g_free (msg);
     }
@@ -3353,7 +3688,8 @@ g_test_trap_assertions (const char     *domain,
 
       logged_child_output = logged_child_output || log_child_output (process_id);
 
-      msg = g_strdup_printf ("stderr of child process (%s) %s: %s", process_id, match_error, stderr_pattern);
+      msg = g_strdup_printf ("stderr of child process (%s) %s: %s\nstderr was:\n%s",
+                             process_id, match_error, stderr_pattern, test_trap_last_stderr);
       g_assertion_message (domain, file, line, func, msg);
       g_free (msg);
     }
@@ -3562,7 +3898,7 @@ g_test_build_filename_va (GTestFileType  file_type,
                           va_list        ap)
 {
   const gchar *pathv[16];
-  gint num_path_segments;
+  gsize num_path_segments;
 
   if (file_type == G_TEST_DIST)
     pathv[0] = test_disted_files_dir;
@@ -3735,25 +4071,3 @@ g_test_get_filename (GTestFileType  file_type,
 
   return result;
 }
-
-/* --- macros docs START --- */
-/**
- * g_test_add:
- * @testpath:  The test path for a new test case.
- * @Fixture:   The type of a fixture data structure.
- * @tdata:     Data argument for the test functions.
- * @fsetup:    The function to set up the fixture data.
- * @ftest:     The actual test function.
- * @fteardown: The function to tear down the fixture data.
- *
- * Hook up a new test case at @testpath, similar to g_test_add_func().
- * A fixture data structure with setup and teardown functions may be provided,
- * similar to g_test_create_case().
- *
- * g_test_add() is implemented as a macro, so that the fsetup(), ftest() and
- * fteardown() callbacks can expect a @Fixture pointer as their first argument
- * in a type safe manner. They otherwise have type #GTestFixtureFunc.
- *
- * Since: 2.16
- **/
-/* --- macros docs END --- */

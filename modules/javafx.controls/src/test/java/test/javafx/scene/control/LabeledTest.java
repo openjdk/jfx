@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -243,7 +243,6 @@ public class LabeledTest {
      *                                                                              *
      *******************************************************************************/
 
-    @Ignore("This is not the default whilst we await a fix for RT-12212")
     @Test public void alignmentDefaultValueIsCENTER_LEFT() {
         assertEquals(Pos.CENTER_LEFT, labeled.getAlignment());
     }
@@ -765,11 +764,10 @@ public class LabeledTest {
         assertEquals(Insets.EMPTY, labeled.labelPaddingProperty().get());
     }
 
-    @Ignore ("labelPaddingProperty returns read-only property")
     @Test public void canSpecifyLabelPaddingFromCSS() {
         Insets insets = new Insets(5, 4, 3, 2);
-//        CssMetaData styleable = ((StyleableProperty)labeled.labelPaddingProperty()).getCssMetaData();
-//        styleable.set(labeled,insets, null);
+        CssMetaData styleable = ((StyleableProperty)labeled.labelPaddingProperty()).getCssMetaData();
+        styleable.set(labeled, insets, null);
         assertEquals(insets, labeled.getLabelPadding());
         assertEquals(insets, labeled.labelPaddingProperty().get());
     }

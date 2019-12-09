@@ -53,7 +53,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -206,15 +205,6 @@ public class TextInputControlTest {
         assertEquals("Oranges", textInput.getText());
     }
 
-    @Ignore("getCssMetaData will return null for textProperty")
-    @Test public void impl_cssSettable_ReturnsFalseForTextAlways() {
-        CssMetaData styleable = ((StyleableProperty)textInput.textProperty()).getCssMetaData();
-        assertTrue(styleable.isSettable(textInput));
-        StringProperty other = new SimpleStringProperty("Apples");
-        textInput.textProperty().bind(other);
-        assertFalse(styleable.isSettable(textInput));
-    }
-
     @Test public void cannotSpecifyTextViaCSS() {
         try {
             CssMetaData styleable = ((StyleableProperty)textInput.textProperty()).getCssMetaData();
@@ -315,15 +305,6 @@ public class TextInputControlTest {
         assertFalse(textInput.isEditable());
         other.set(true);
         assertTrue(textInput.isEditable());
-    }
-
-    @Ignore("getCssMetaData will return null for editableProperty")
-    @Test public void impl_cssSettable_ReturnsFalseForEditableAlways() {
-        CssMetaData styleable = ((StyleableProperty)textInput.editableProperty()).getCssMetaData();
-        assertTrue(styleable.isSettable(textInput));
-        StringProperty other = new SimpleStringProperty("Apples");
-        textInput.textProperty().bind(other);
-        assertFalse(styleable.isSettable(textInput));
     }
 
     @Test public void cannotSpecifyEditableViaCSS() {
@@ -451,9 +432,6 @@ public class TextInputControlTest {
         assertTrue(passed[0]);
     }
 
-    @Ignore("The notification here doesn't happen because the invalid flag is set after the first set," +
-            "however setting a change listener *must* clear that, but doesn't. I copied the code for this " +
-            "straight from the beans package, so there may be a bug there.")
     @Test public void lengthChangeNotificationWhenTextIsSetToEmptyResult() {
         textInput.setText("Goodbye");
         final boolean[] passed = new boolean[] { false };
@@ -640,11 +618,6 @@ public class TextInputControlTest {
         });
         other.set("Cleared!");
         assertTrue(passed[0]);
-    }
-
-    @Ignore
-    @Test public void selectionCanBeNull() {
-
     }
 
     /******************************************************

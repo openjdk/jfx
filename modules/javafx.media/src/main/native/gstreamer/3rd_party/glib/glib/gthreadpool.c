@@ -31,6 +31,7 @@
 #include "gmain.h"
 #include "gtestutils.h"
 #include "gtimer.h"
+#include "gutils.h"
 
 /**
  * SECTION:thread_pools
@@ -90,7 +91,7 @@ struct _GRealThreadPool
   GAsyncQueue *queue;
   GCond cond;
   gint max_threads;
-  gint num_threads;
+  guint num_threads;
   gboolean running;
   gboolean immediate;
   gboolean waiting;
@@ -153,7 +154,7 @@ g_thread_pool_wait_for_new_pool (void)
 
   do
     {
-      if (g_atomic_int_get (&unused_threads) >= local_max_unused_threads)
+      if ((guint) g_atomic_int_get (&unused_threads) >= local_max_unused_threads)
         {
           /* If this is a superfluous thread, stop it. */
           pool = NULL;
@@ -165,7 +166,7 @@ g_thread_pool_wait_for_new_pool (void)
                       g_thread_self (), local_max_idle_time / 1000.0));
 
           pool = g_async_queue_timeout_pop (unused_thread_queue,
-                        local_max_idle_time * 1000);
+              local_max_idle_time * 1000);
         }
       else
         {
@@ -233,7 +234,7 @@ g_thread_pool_wait_for_new_task (GRealThreadPool *pool)
                         g_async_queue_length_unlocked (pool->queue) > 0))
     {
       /* This thread pool is still active. */
-      if (pool->num_threads > pool->max_threads && pool->max_threads != -1)
+      if (pool->max_threads != -1 && pool->num_threads > (guint) pool->max_threads)
         {
           /* This is a superfluous thread, so it goes to the global pool. */
           DEBUG_MSG (("superfluous thread %p in pool %p.",
@@ -260,7 +261,7 @@ g_thread_pool_wait_for_new_task (GRealThreadPool *pool)
                       g_async_queue_length_unlocked (pool->queue)));
 
           task = g_async_queue_timeout_pop_unlocked (pool->queue,
-                             G_USEC_PER_SEC / 2);
+                 G_USEC_PER_SEC / 2);
         }
     }
   else
@@ -339,7 +340,7 @@ g_thread_pool_thread_proxy (gpointer data)
                        * queue, wakeup the remaining threads.
                        */
                       if (g_async_queue_length_unlocked (pool->queue) ==
-                          - pool->num_threads)
+                          (gint) -pool->num_threads)
                         g_thread_pool_wakeup_and_stop_all (pool);
                     }
                 }
@@ -385,7 +386,7 @@ g_thread_pool_start_thread (GRealThreadPool  *pool,
 {
   gboolean success = FALSE;
 
-  if (pool->num_threads >= pool->max_threads && pool->max_threads != -1)
+  if (pool->max_threads != -1 && pool->num_threads >= (guint) pool->max_threads)
     /* Enough threads are already running */
     return TRUE;
 
@@ -401,10 +402,15 @@ g_thread_pool_start_thread (GRealThreadPool  *pool,
 
   if (!success)
     {
+      const gchar *prgname = g_get_prgname ();
+      gchar name[16] = "pool";
       GThread *thread;
 
+      if (prgname)
+        g_snprintf (name, sizeof (name), "pool-%s", prgname);
+
       /* No thread was found, we have to start a new one */
-      thread = g_thread_try_new ("pool", g_thread_pool_thread_proxy, pool, error);
+      thread = g_thread_try_new (name, g_thread_pool_thread_proxy, pool, error);
 
       if (thread == NULL)
         return FALSE;
@@ -498,7 +504,7 @@ g_thread_pool_new (GFunc      func,
     {
       g_async_queue_lock (retval->queue);
 
-      while (retval->num_threads < retval->max_threads)
+      while (retval->num_threads < (guint) retval->max_threads)
         {
           GError *local_error = NULL;
 
@@ -771,12 +777,12 @@ g_thread_pool_free (GThreadPool *pool,
 
   if (wait_)
     {
-      while (g_async_queue_length_unlocked (real->queue) != -real->num_threads &&
+      while (g_async_queue_length_unlocked (real->queue) != (gint) -real->num_threads &&
              !(immediate && real->num_threads == 0))
         g_cond_wait (&real->cond, _g_async_queue_get_mutex (real->queue));
     }
 
-  if (immediate || g_async_queue_length_unlocked (real->queue) == -real->num_threads)
+  if (immediate || g_async_queue_length_unlocked (real->queue) == (gint) -real->num_threads)
     {
       /* No thread is currently doing something (and nothing is left
        * to process in the queue)

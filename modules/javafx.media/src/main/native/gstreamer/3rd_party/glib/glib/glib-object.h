@@ -34,6 +34,9 @@
 #include <gobject/gvalue.h>
 #include <gobject/gvaluearray.h>
 #include <gobject/gvaluetypes.h>
+#ifndef GSTREAMER_LITE
+#include <gobject/glib-enumtypes.h>
+#endif // GSTREAMER_LITE
 
 #include <gobject/gobject-autocleanups.h>
 

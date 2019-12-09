@@ -105,9 +105,6 @@ enum
   PROP_LATENCY
 };
 
-#define GST_PIPELINE_GET_PRIVATE(obj)  \
-   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_PIPELINE, GstPipelinePrivate))
-
 struct _GstPipelinePrivate
 {
   /* with LOCK */
@@ -144,7 +141,8 @@ static gboolean gst_pipeline_do_latency (GstBin * bin);
 }
 
 #define gst_pipeline_parent_class parent_class
-G_DEFINE_TYPE_WITH_CODE (GstPipeline, gst_pipeline, GST_TYPE_BIN, _do_init);
+G_DEFINE_TYPE_WITH_CODE (GstPipeline, gst_pipeline, GST_TYPE_BIN,
+    G_ADD_PRIVATE (GstPipeline) _do_init);
 
 static void
 gst_pipeline_class_init (GstPipelineClass * klass)
@@ -152,8 +150,6 @@ gst_pipeline_class_init (GstPipelineClass * klass)
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
   GstElementClass *gstelement_class = GST_ELEMENT_CLASS (klass);
   GstBinClass *gstbin_class = GST_BIN_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (GstPipelinePrivate));
 
   gobject_class->set_property = gst_pipeline_set_property;
   gobject_class->get_property = gst_pipeline_get_property;
@@ -217,7 +213,7 @@ gst_pipeline_init (GstPipeline * pipeline)
 {
   GstBus *bus;
 
-  pipeline->priv = GST_PIPELINE_GET_PRIVATE (pipeline);
+  pipeline->priv = gst_pipeline_get_instance_private (pipeline);
 
   /* set default property values */
   pipeline->priv->auto_flush_bus = DEFAULT_AUTO_FLUSH_BUS;

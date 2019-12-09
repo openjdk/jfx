@@ -37,9 +37,10 @@
  * A copy can be made with gst_mini_object_copy().
  *
  * gst_mini_object_is_writable() will return %TRUE when the refcount of the
- * object is exactly 1, meaning the current caller has the only reference to the
- * object. gst_mini_object_make_writable() will return a writable version of the
- * object, which might be a new copy when the refcount was not 1.
+ * object is exactly 1 and there is no parent or a single parent exists and is
+ * writable itself, meaning the current caller has the only reference to the
+ * object. gst_mini_object_make_writable() will return a writable version of
+ * the object, which might be a new copy when the refcount was not 1.
  *
  * Opaque data can be associated with a #GstMiniObject with
  * gst_mini_object_set_qdata() and gst_mini_object_get_qdata(). The data is
@@ -71,6 +72,35 @@ static GQuark weak_ref_quark;
 #define LOCK_MASK ((SHARE_ONE - 1) - FLAG_MASK)
 #define LOCK_FLAG_MASK (SHARE_ONE - 1)
 
+/* For backwards compatibility reasons we use the
+ * guint and gpointer in the GstMiniObject struct in
+ * a rather complicated way to store the parent(s) and qdata.
+ * Originally the were just the number of qdatas and the qdata.
+ *
+ * The guint is used as an atomic state integer with the following
+ * states:
+ * - Locked: 0, basically a spinlock
+ * - No parent, no qdata: 1 (pointer is NULL)
+ * - One parent: 2 (pointer contains the parent)
+ * - Multiple parents or qdata: 3 (pointer contains a PrivData struct)
+ *
+ * Unless we're in state 3, we always have to move to Locking state
+ * atomically and release that again later to the target state whenever
+ * accessing the pointer. When we're in state 3, we will never move to lower
+ * states again
+ *
+ * FIXME 2.0: We should store this directly inside the struct, possibly
+ * keeping space directly allocated for a couple of parents
+ */
+
+enum
+{
+  PRIV_DATA_STATE_LOCKED = 0,
+  PRIV_DATA_STATE_NO_PARENT = 1,
+  PRIV_DATA_STATE_ONE_PARENT = 2,
+  PRIV_DATA_STATE_PARENTS_OR_QDATA = 3,
+};
+
 typedef struct
 {
   GQuark quark;
@@ -79,7 +109,18 @@ typedef struct
   GDestroyNotify destroy;
 } GstQData;
 
-#define QDATA(o,i)          ((GstQData *)(o)->qdata)[(i)]
+typedef struct
+{
+  /* Atomic spinlock: 1 if locked, 0 otherwise */
+  gint parent_lock;
+  guint n_parents, n_parents_len;
+  GstMiniObject **parents;
+
+  guint n_qdata, n_qdata_len;
+  GstQData *qdata;
+} PrivData;
+
+#define QDATA(q,i)          (q->qdata)[(i)]
 #define QDATA_QUARK(o,i)    (QDATA(o,i).quark)
 #define QDATA_NOTIFY(o,i)   (QDATA(o,i).notify)
 #define QDATA_DATA(o,i)     (QDATA(o,i).data)
@@ -118,8 +159,9 @@ gst_mini_object_init (GstMiniObject * mini_object, guint flags, GType type,
   mini_object->dispose = dispose_func;
   mini_object->free = free_func;
 
-  mini_object->n_qdata = 0;
-  mini_object->qdata = NULL;
+  g_atomic_int_set ((gint *) & mini_object->priv_uint,
+      PRIV_DATA_STATE_NO_PARENT);
+  mini_object->priv_pointer = NULL;
 
   GST_TRACER_MINI_OBJECT_CREATED (mini_object);
 }
@@ -184,11 +226,11 @@ gst_mini_object_lock (GstMiniObject * object, GstLockFlags flags)
       access_mode &= ~GST_LOCK_FLAG_EXCLUSIVE;
     }
 
-      /* shared counter > 1 and write access is not allowed */
+    /* shared counter > 1 and write access is not allowed */
     if (((state & GST_LOCK_FLAG_WRITE) != 0
             || (access_mode & GST_LOCK_FLAG_WRITE) != 0)
         && IS_SHARED (newstate))
-        goto lock_failed;
+      goto lock_failed;
 
     if (access_mode) {
       if ((state & LOCK_FLAG_MASK) == 0) {
@@ -257,6 +299,32 @@ gst_mini_object_unlock (GstMiniObject * object, GstLockFlags flags)
           newstate));
 }
 
+/* Locks the priv pointer and sets the priv uint to PRIV_DATA_STATE_LOCKED,
+ * unless the full struct was already stored in the priv pointer.
+ *
+ * Returns the previous state of the priv uint
+ */
+static guint
+lock_priv_pointer (GstMiniObject * object)
+{
+  gint priv_state = g_atomic_int_get ((gint *) & object->priv_uint);
+
+  if (priv_state != PRIV_DATA_STATE_PARENTS_OR_QDATA) {
+    /* As long as the struct was not allocated yet and either someone else
+     * locked it or our priv_state is out of date, try to lock it */
+    while (priv_state != PRIV_DATA_STATE_PARENTS_OR_QDATA &&
+        (priv_state == PRIV_DATA_STATE_LOCKED ||
+            !g_atomic_int_compare_and_exchange ((gint *) & object->priv_uint,
+                priv_state, PRIV_DATA_STATE_LOCKED)))
+      priv_state = g_atomic_int_get ((gint *) & object->priv_uint);
+
+    /* Note that if we got the full struct, we did not store
+     * PRIV_DATA_STATE_LOCKED and did not actually lock the priv pointer */
+  }
+
+  return priv_state;
+}
+
 /**
  * gst_mini_object_is_writable:
  * @mini_object: the mini-object to check
@@ -278,14 +346,57 @@ gboolean
 gst_mini_object_is_writable (const GstMiniObject * mini_object)
 {
   gboolean result;
+  gint priv_state;
 
   g_return_val_if_fail (mini_object != NULL, FALSE);
 
+  /* Let's first check our own writability. If this already fails there's
+   * no point in checking anything else */
   if (GST_MINI_OBJECT_IS_LOCKABLE (mini_object)) {
     result = !IS_SHARED (g_atomic_int_get (&mini_object->lockstate));
   } else {
     result = (GST_MINI_OBJECT_REFCOUNT_VALUE (mini_object) == 1);
   }
+  if (!result)
+    return result;
+
+  /* We are writable ourselves, but are there parents and are they all
+   * writable too? */
+  priv_state = lock_priv_pointer (GST_MINI_OBJECT_CAST (mini_object));
+
+  /* Now we either have to check the full struct and all the
+   * parents in there, or if there is exactly one parent we
+   * can check that one */
+  if (priv_state == PRIV_DATA_STATE_PARENTS_OR_QDATA) {
+    PrivData *priv_data = mini_object->priv_pointer;
+
+    /* Lock parents */
+    while (!g_atomic_int_compare_and_exchange (&priv_data->parent_lock, 0, 1));
+
+    /* If we have one parent, we're only writable if that parent is writable.
+     * Otherwise if we have multiple parents we are not writable, and if
+     * we have no parent, we are writable */
+    if (priv_data->n_parents == 1)
+      result = gst_mini_object_is_writable (priv_data->parents[0]);
+    else if (priv_data->n_parents == 0)
+      result = TRUE;
+    else
+      result = FALSE;
+
+    /* Unlock again */
+    g_atomic_int_set (&priv_data->parent_lock, 0);
+  } else {
+    if (priv_state == PRIV_DATA_STATE_ONE_PARENT) {
+      result = gst_mini_object_is_writable (mini_object->priv_pointer);
+    } else {
+      g_assert (priv_state == PRIV_DATA_STATE_NO_PARENT);
+      result = TRUE;
+    }
+
+    /* Unlock again */
+    g_atomic_int_set ((gint *) & mini_object->priv_uint, priv_state);
+  }
+
   return result;
 }
 
@@ -343,7 +454,7 @@ gst_mini_object_ref (GstMiniObject * mini_object)
 
   g_return_val_if_fail (mini_object != NULL, NULL);
   /* we can't assert that the refcount > 0 since the _free functions
-   * increments the refcount from 0 to 1 again to allow resurecting
+   * increments the refcount from 0 to 1 again to allow resurrecting
    * the object
    g_return_val_if_fail (mini_object->refcount > 0, NULL);
    */
@@ -359,17 +470,25 @@ gst_mini_object_ref (GstMiniObject * mini_object)
   return mini_object;
 }
 
+/* Called with global qdata lock */
 static gint
 find_notify (GstMiniObject * object, GQuark quark, gboolean match_notify,
     GstMiniObjectNotify notify, gpointer data)
 {
   guint i;
+  gint priv_state = g_atomic_int_get ((gint *) & object->priv_uint);
+  PrivData *priv_data;
 
-  for (i = 0; i < object->n_qdata; i++) {
-    if (QDATA_QUARK (object, i) == quark) {
+  if (priv_state != PRIV_DATA_STATE_PARENTS_OR_QDATA)
+    return -1;
+
+  priv_data = object->priv_pointer;
+
+  for (i = 0; i < priv_data->n_qdata; i++) {
+    if (QDATA_QUARK (priv_data, i) == quark) {
       /* check if we need to match the callback too */
-      if (!match_notify || (QDATA_NOTIFY (object, i) == notify &&
-              QDATA_DATA (object, i) == data))
+      if (!match_notify || (QDATA_NOTIFY (priv_data, i) == notify &&
+              QDATA_DATA (priv_data, i) == data))
         return i;
     }
   }
@@ -379,42 +498,130 @@ find_notify (GstMiniObject * object, GQuark quark, gboolean match_notify,
 static void
 remove_notify (GstMiniObject * object, gint index)
 {
+  gint priv_state = g_atomic_int_get ((gint *) & object->priv_uint);
+  PrivData *priv_data;
+
+  g_assert (priv_state == PRIV_DATA_STATE_PARENTS_OR_QDATA);
+  priv_data = object->priv_pointer;
+
   /* remove item */
-  if (--object->n_qdata == 0) {
+  priv_data->n_qdata--;
+  if (priv_data->n_qdata == 0) {
     /* we don't shrink but free when everything is gone */
-    g_free (object->qdata);
-    object->qdata = NULL;
-  } else if (index != object->n_qdata)
-    QDATA (object, index) = QDATA (object, object->n_qdata);
+    g_free (priv_data->qdata);
+    priv_data->qdata = NULL;
+    priv_data->n_qdata_len = 0;
+  } else if (index != priv_data->n_qdata) {
+    QDATA (priv_data, index) = QDATA (priv_data, priv_data->n_qdata);
+  }
+}
+
+/* Make sure we allocate the PrivData of this object if not happened yet */
+static void
+ensure_priv_data (GstMiniObject * object)
+{
+  gint priv_state;
+  PrivData *priv_data;
+  GstMiniObject *parent = NULL;
+
+  GST_CAT_DEBUG (GST_CAT_PERFORMANCE,
+      "allocating private data %s miniobject %p",
+      g_type_name (GST_MINI_OBJECT_TYPE (object)), object);
+
+  priv_state = lock_priv_pointer (object);
+  if (priv_state == PRIV_DATA_STATE_PARENTS_OR_QDATA)
+    return;
+
+  /* Now we're either locked, or someone has already allocated the struct
+   * before us and we can just go ahead
+   *
+   * Note: if someone else allocated it in the meantime, we don't have to
+   * unlock as we didn't lock! */
+  if (priv_state != PRIV_DATA_STATE_PARENTS_OR_QDATA) {
+    if (priv_state == PRIV_DATA_STATE_ONE_PARENT)
+      parent = object->priv_pointer;
+
+    object->priv_pointer = priv_data = g_new0 (PrivData, 1);
+
+    if (parent) {
+      priv_data->parents = g_new (GstMiniObject *, 16);
+      priv_data->n_parents_len = 16;
+      priv_data->n_parents = 1;
+      priv_data->parents[0] = parent;
+    }
+
+    /* Unlock */
+    g_atomic_int_set ((gint *) & object->priv_uint,
+        PRIV_DATA_STATE_PARENTS_OR_QDATA);
+  }
 }
 
 static void
 set_notify (GstMiniObject * object, gint index, GQuark quark,
     GstMiniObjectNotify notify, gpointer data, GDestroyNotify destroy)
 {
+  PrivData *priv_data;
+
+  ensure_priv_data (object);
+  priv_data = object->priv_pointer;
+
   if (index == -1) {
     /* add item */
-    index = object->n_qdata++;
-    object->qdata =
-        g_realloc (object->qdata, sizeof (GstQData) * object->n_qdata);
+    index = priv_data->n_qdata++;
+    if (index >= priv_data->n_qdata_len) {
+      priv_data->n_qdata_len *= 2;
+      if (priv_data->n_qdata_len == 0)
+        priv_data->n_qdata_len = 16;
+
+      priv_data->qdata =
+          g_realloc (priv_data->qdata,
+          sizeof (GstQData) * priv_data->n_qdata_len);
+    }
   }
-  QDATA_QUARK (object, index) = quark;
-  QDATA_NOTIFY (object, index) = notify;
-  QDATA_DATA (object, index) = data;
-  QDATA_DESTROY (object, index) = destroy;
+
+  QDATA_QUARK (priv_data, index) = quark;
+  QDATA_NOTIFY (priv_data, index) = notify;
+  QDATA_DATA (priv_data, index) = data;
+  QDATA_DESTROY (priv_data, index) = destroy;
 }
 
 static void
-call_finalize_notify (GstMiniObject * obj)
+free_priv_data (GstMiniObject * obj)
 {
   guint i;
+  gint priv_state = g_atomic_int_get ((gint *) & obj->priv_uint);
+  PrivData *priv_data;
 
-  for (i = 0; i < obj->n_qdata; i++) {
-    if (QDATA_QUARK (obj, i) == weak_ref_quark)
-      QDATA_NOTIFY (obj, i) (QDATA_DATA (obj, i), obj);
-    if (QDATA_DESTROY (obj, i))
-      QDATA_DESTROY (obj, i) (QDATA_DATA (obj, i));
+  if (priv_state != PRIV_DATA_STATE_PARENTS_OR_QDATA) {
+    if (priv_state == PRIV_DATA_STATE_LOCKED) {
+      g_warning
+          ("%s: object finalizing but has locked private data (object:%p)",
+          G_STRFUNC, obj);
+    } else if (priv_state == PRIV_DATA_STATE_ONE_PARENT) {
+      g_warning
+          ("%s: object finalizing but still has parent (object:%p, parent:%p)",
+          G_STRFUNC, obj, obj->priv_pointer);
+    }
+
+    return;
   }
+
+  priv_data = obj->priv_pointer;
+
+  for (i = 0; i < priv_data->n_qdata; i++) {
+    if (QDATA_QUARK (priv_data, i) == weak_ref_quark)
+      QDATA_NOTIFY (priv_data, i) (QDATA_DATA (priv_data, i), obj);
+    if (QDATA_DESTROY (priv_data, i))
+      QDATA_DESTROY (priv_data, i) (QDATA_DATA (priv_data, i));
+  }
+  g_free (priv_data->qdata);
+
+  if (priv_data->n_parents)
+    g_warning ("%s: object finalizing but still has %d parents (object:%p)",
+        G_STRFUNC, priv_data->n_parents, obj);
+  g_free (priv_data->parents);
+
+  g_free (priv_data);
 }
 
 /**
@@ -457,15 +664,37 @@ gst_mini_object_unref (GstMiniObject * mini_object)
       g_return_if_fail ((g_atomic_int_get (&mini_object->lockstate) & LOCK_MASK)
           < 4);
 
-      if (mini_object->n_qdata) {
-        call_finalize_notify (mini_object);
-        g_free (mini_object->qdata);
-      }
+      free_priv_data (mini_object);
+
       GST_TRACER_MINI_OBJECT_DESTROYED (mini_object);
       if (mini_object->free)
         mini_object->free (mini_object);
     }
   }
+}
+
+/**
+ * gst_clear_mini_object: (skip)
+ * @object_ptr: a pointer to a #GstMiniObject reference
+ *
+ * Clears a reference to a #GstMiniObject.
+ *
+ * @object_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing.
+ * Otherwise, the reference count of the object is decreased using
+ * gst_mini_object_unref() and the pointer is set to %NULL.
+ *
+ * A macro is also included that allows this function to be used without
+ * pointer casts.
+ *
+ * Since: 1.16
+ **/
+#undef gst_clear_mini_object
+void
+gst_clear_mini_object (GstMiniObject ** object_ptr)
+{
+  g_clear_pointer (object_ptr, gst_mini_object_unref);
 }
 
 /**
@@ -670,9 +899,10 @@ gst_mini_object_set_qdata (GstMiniObject * object, GQuark quark,
 
   G_LOCK (qdata_mutex);
   if ((i = find_notify (object, quark, FALSE, NULL, NULL)) != -1) {
+    PrivData *priv_data = object->priv_pointer;
 
-    old_data = QDATA_DATA (object, i);
-    old_notify = QDATA_DESTROY (object, i);
+    old_data = QDATA_DATA (priv_data, i);
+    old_notify = QDATA_DESTROY (priv_data, i);
 
     if (data == NULL)
       remove_notify (object, i);
@@ -706,10 +936,12 @@ gst_mini_object_get_qdata (GstMiniObject * object, GQuark quark)
   g_return_val_if_fail (quark > 0, NULL);
 
   G_LOCK (qdata_mutex);
-  if ((i = find_notify (object, quark, FALSE, NULL, NULL)) != -1)
-    result = QDATA_DATA (object, i);
-  else
+  if ((i = find_notify (object, quark, FALSE, NULL, NULL)) != -1) {
+    PrivData *priv_data = object->priv_pointer;
+    result = QDATA_DATA (priv_data, i);
+  } else {
     result = NULL;
+  }
   G_UNLOCK (qdata_mutex);
 
   return result;
@@ -738,7 +970,8 @@ gst_mini_object_steal_qdata (GstMiniObject * object, GQuark quark)
 
   G_LOCK (qdata_mutex);
   if ((i = find_notify (object, quark, FALSE, NULL, NULL)) != -1) {
-    result = QDATA_DATA (object, i);
+    PrivData *priv_data = object->priv_pointer;
+    result = QDATA_DATA (priv_data, i);
     remove_notify (object, i);
   } else {
     result = NULL;
@@ -746,4 +979,136 @@ gst_mini_object_steal_qdata (GstMiniObject * object, GQuark quark)
   G_UNLOCK (qdata_mutex);
 
   return result;
+}
+
+/**
+ * gst_mini_object_add_parent:
+ * @object: a #GstMiniObject
+ * @parent: a parent #GstMiniObject
+ *
+ * This adds @parent as a parent for @object. Having one ore more parents affects the
+ * writability of @object: if a @parent is not writable, @object is also not
+ * writable, regardless of its refcount. @object is only writable if all
+ * the parents are writable and its own refcount is exactly 1.
+ *
+ * Note: This function does not take ownership of @parent and also does not
+ * take an additional reference. It is the responsibility of the caller to
+ * remove the parent again at a later time.
+ *
+ * Since: 1.16
+ */
+void
+gst_mini_object_add_parent (GstMiniObject * object, GstMiniObject * parent)
+{
+  gint priv_state;
+
+  g_return_if_fail (object != NULL);
+
+  GST_CAT_TRACE (GST_CAT_REFCOUNTING, "adding parent %p to object %p", parent,
+      object);
+
+  priv_state = lock_priv_pointer (object);
+  /* If we already had one parent, we need to allocate the full struct now */
+  if (priv_state == PRIV_DATA_STATE_ONE_PARENT) {
+    /* Unlock again */
+    g_atomic_int_set ((gint *) & object->priv_uint, priv_state);
+
+    ensure_priv_data (object);
+    priv_state = PRIV_DATA_STATE_PARENTS_OR_QDATA;
+  }
+
+  /* Now we either have to add the new parent to the full struct, or add
+   * our one and only parent to the pointer field */
+  if (priv_state == PRIV_DATA_STATE_PARENTS_OR_QDATA) {
+    PrivData *priv_data = object->priv_pointer;
+
+    /* Lock parents */
+    while (!g_atomic_int_compare_and_exchange (&priv_data->parent_lock, 0, 1));
+
+    if (priv_data->n_parents >= priv_data->n_parents_len) {
+      priv_data->n_parents_len *= 2;
+      if (priv_data->n_parents_len == 0)
+        priv_data->n_parents_len = 16;
+
+      priv_data->parents =
+          g_realloc (priv_data->parents,
+          priv_data->n_parents_len * sizeof (GstMiniObject *));
+    }
+    priv_data->parents[priv_data->n_parents] = parent;
+    priv_data->n_parents++;
+
+    /* Unlock again */
+    g_atomic_int_set (&priv_data->parent_lock, 0);
+  } else if (priv_state == PRIV_DATA_STATE_NO_PARENT) {
+    object->priv_pointer = parent;
+
+    /* Unlock again */
+    g_atomic_int_set ((gint *) & object->priv_uint, PRIV_DATA_STATE_ONE_PARENT);
+  } else {
+    g_assert_not_reached ();
+  }
+}
+
+/**
+ * gst_mini_object_remove_parent:
+ * @object: a #GstMiniObject
+ * @parent: a parent #GstMiniObject
+ *
+ * This removes @parent as a parent for @object. See
+ * gst_mini_object_add_parent().
+ *
+ * Since: 1.16
+ */
+void
+gst_mini_object_remove_parent (GstMiniObject * object, GstMiniObject * parent)
+{
+  gint priv_state;
+
+  g_return_if_fail (object != NULL);
+
+  GST_CAT_TRACE (GST_CAT_REFCOUNTING, "removing parent %p from object %p",
+      parent, object);
+
+  priv_state = lock_priv_pointer (object);
+
+  /* Now we either have to add the new parent to the full struct, or add
+   * our one and only parent to the pointer field */
+  if (priv_state == PRIV_DATA_STATE_PARENTS_OR_QDATA) {
+    PrivData *priv_data = object->priv_pointer;
+    guint i;
+
+    /* Lock parents */
+    while (!g_atomic_int_compare_and_exchange (&priv_data->parent_lock, 0, 1));
+
+    for (i = 0; i < priv_data->n_parents; i++)
+      if (parent == priv_data->parents[i])
+        break;
+
+    if (i != priv_data->n_parents) {
+      priv_data->n_parents--;
+      if (priv_data->n_parents != i)
+        priv_data->parents[i] = priv_data->parents[priv_data->n_parents];
+    } else {
+      g_warning ("%s: couldn't find parent %p (object:%p)", G_STRFUNC,
+          object, parent);
+    }
+
+    /* Unlock again */
+    g_atomic_int_set (&priv_data->parent_lock, 0);
+  } else if (priv_state == PRIV_DATA_STATE_ONE_PARENT) {
+    if (object->priv_pointer != parent) {
+      g_warning ("%s: couldn't find parent %p (object:%p)", G_STRFUNC,
+          object, parent);
+      /* Unlock again */
+      g_atomic_int_set ((gint *) & object->priv_uint, priv_state);
+    } else {
+      object->priv_pointer = NULL;
+      /* Unlock again */
+      g_atomic_int_set ((gint *) & object->priv_uint,
+          PRIV_DATA_STATE_NO_PARENT);
+    }
+  } else {
+    /* Unlock again */
+    g_atomic_int_set ((gint *) & object->priv_uint, PRIV_DATA_STATE_NO_PARENT);
+  }
 }

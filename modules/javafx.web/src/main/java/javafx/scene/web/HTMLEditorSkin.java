@@ -689,7 +689,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         });
 
         fontFamilyComboBox.valueProperty().addListener((observable, oldValue, newValue) -> {
-            executeCommand(FONT_FAMILY.getCommand(), ("".equals(newValue)) ? "''" : newValue);
+            executeCommand(FONT_FAMILY.getCommand(), "'" + newValue + "'");
         });
 
         fontSizeComboBox = new ComboBox<String>();
@@ -1139,7 +1139,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             String font   = fontFamilyComboBox.getValue().toString();
 
             executeCommand(FORMAT.getCommand(), format);
-            executeCommand(FONT_FAMILY.getCommand(), font);
+            executeCommand(FONT_FAMILY.getCommand(), "'" + font + "'");
         }
     }
 
