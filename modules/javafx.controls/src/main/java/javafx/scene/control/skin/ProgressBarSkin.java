@@ -98,7 +98,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
 
         barWidth = ((int) (control.getWidth() - snappedLeftInset() - snappedRightInset()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
 
-        control.widthProperty().addListener(observable -> updateProgress());
+        registerChangeListener(control.widthProperty(), o -> updateProgress());
 
         initialize();
         getSkinnable().requestLayout();
