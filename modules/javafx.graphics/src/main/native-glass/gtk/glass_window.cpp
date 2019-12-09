@@ -1050,12 +1050,19 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                                              geometry.final_height.value > 1)) {
         // skip artifact
         return;
+
     }
 
-    geometry.final_width.value = w;
-    geometry.final_width.type = BOUNDSTYPE_CONTENT;
-    geometry.final_height.value = h;
-    geometry.final_height.type = BOUNDSTYPE_CONTENT;
+    //JDK-8232811: update the geometry only after window pops to avoid conflicting events while updating sizes
+    if (map_received) {
+        geometry.final_width.value = w;
+        geometry.final_width.type = BOUNDSTYPE_CONTENT;
+        geometry.final_height.value = h;
+        geometry.final_height.type = BOUNDSTYPE_CONTENT;
+        geometry.current_width = w;
+        geometry.current_height = h;
+    }
+
     geometry_set_window_x(&geometry, x);
     geometry_set_window_y(&geometry, y);
 
@@ -1067,6 +1074,12 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         mainEnv->CallVoidMethod(jview, jViewNotifyView,
                 com_sun_glass_events_ViewEvent_MOVE);
         CHECK_JNI_EXCEPTION(mainEnv)
+
+        //JDK-8193502: Moved here from WindowContextBase::set_view because set_view is called
+        //first and the size is not set yet. This also guarantees that the size will be correct
+        //see: gtk_window_get_size doc for more context.
+        mainEnv->CallVoidMethod(jview, jViewNotifyResize, w, h);
+        CHECK_JNI_EXCEPTION(mainEnv);
     }
     if (jwindow) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
@@ -1281,15 +1294,8 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             geom.min_height = geom.max_height = newHeight;
             gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom, hints);
         }
-        gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
 
-        //JDK-8193502: Moved here from WindowContextBase::set_view because set_view is called
-        //first and the size is not set yet. This also guarantees that the size will be correct
-        //see: gtk_window_get_size doc for more context.
-        if (jview) {
-            mainEnv->CallVoidMethod(jview, jViewNotifyResize, newWidth, newHeight);
-            CHECK_JNI_EXCEPTION(mainEnv);
-        }
+        gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
     }
 }
 
