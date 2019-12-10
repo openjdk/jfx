@@ -51,6 +51,7 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControlShim;
 import javafx.scene.input.KeyCode;
@@ -305,6 +306,45 @@ public class TextFieldTest {
     private Scene scene;
     private Stage stage;
     private StackPane root;
+
+    /**
+     * Guard against potential regression of JDK-8145515: eventFilter
+     * on editor not notified for ENTER released.
+     */
+    @Test
+    public void testEditorInComboBoxEnterReleasedFilter() {
+        initStage();
+        ComboBox<String> combo = new ComboBox<>();
+        combo.setEditable(true);
+        root.getChildren().add(combo);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        combo.getEditor().addEventFilter(KEY_RELEASED, events::add);
+        KeyCode key = ENTER;
+        KeyEventFirer keyFirer = new KeyEventFirer(combo);
+        keyFirer.doKeyPress(key);
+        assertEquals(1, events.size());
+    }
+
+    /**
+     * Unfixed part of JDK-8145515, reported as regression JDK-8229914: eventFilter
+     * on editor not notified for ENTER pressed.
+     */
+    @Ignore("JDK-8229914")
+    @Test
+    public void testEditorInComboBoxEnterPressedFilter() {
+        initStage();
+        ComboBox<String> combo = new ComboBox<>();
+        combo.setEditable(true);
+        root.getChildren().add(combo);
+        stage.show();
+        List<Event> events = new ArrayList<>();
+        combo.getEditor().addEventFilter(KEY_PRESSED, events::add);
+        KeyCode key = ENTER;
+        KeyEventFirer keyFirer = new KeyEventFirer(combo);
+        keyFirer.doKeyPress(key);
+        assertEquals(1, events.size());
+    }
 
     /**
      * Test related to https://bugs.openjdk.java.net/browse/JDK-8207759
