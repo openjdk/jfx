@@ -93,7 +93,7 @@
         };
         GLint npix = 0;
         CGLError err = CGLChoosePixelFormat(attributes, &pix, &npix);
-        if ((err == kCGLNoError) && (npix == 0))
+        if (pix == NULL)
         {
             const CGLPixelFormatAttribute attributes2[] =
             {
