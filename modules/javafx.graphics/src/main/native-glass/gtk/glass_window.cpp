@@ -1053,7 +1053,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
 
     }
 
-    //JDK-8232811: update the geometry only after window pops to avoid conflicting events while updating sizes
+    // JDK-8232811: to avoid conflicting events, update the geometry only after window pops.
     if (map_received) {
         geometry.final_width.value = w;
         geometry.final_width.type = BOUNDSTYPE_CONTENT;
