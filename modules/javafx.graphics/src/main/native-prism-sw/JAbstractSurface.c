@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,9 +52,14 @@ surface_initialize(JNIEnv* env, jobject surfaceHandle) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_AbstractSurface_nativeFinalize(JNIEnv* env,
-        jobject objectHandle) {
-    disposeNativeImpl(env, objectHandle);
+Java_com_sun_pisces_AbstractSurface_disposeNative(JNIEnv *env, jclass cls, jlong nativePtr)
+{
+    AbstractSurface* surface = (AbstractSurface*) JLongToPointer(nativePtr);
+
+    if (surface != NULL) {
+        surface->cleanup(surface);
+        surface_dispose(&surface->super);
+    }
 }
 
 JNIEXPORT void JNICALL
@@ -184,29 +189,3 @@ initializeSurfaceFieldIds(JNIEnv* env, jobject objectHandle) {
 
     return retVal;
 }
-
-static void
-disposeNativeImpl(JNIEnv* env, jobject objectHandle) {
-    AbstractSurface* surface;
-
-    if (!fieldIdsInitialized) {
-        return;
-    }
-
-    surface = (AbstractSurface*)JLongToPointer(
-                  (*env)->GetLongField(env, objectHandle,
-                                       fieldIds[SURFACE_NATIVE_PTR]));
-
-    if (surface != NULL) {
-        surface->cleanup(surface);
-        surface_dispose(&surface->super);
-        (*env)->SetLongField(env, objectHandle, fieldIds[SURFACE_NATIVE_PTR],
-                             (jlong)0);
-
-        if (JNI_TRUE == readAndClearMemErrorFlag()) {
-            JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
-                         "Allocation of internal renderer buffer failed.");
-        }
-    }
-}
-
