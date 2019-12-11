@@ -38,7 +38,6 @@ final class GtkDnDClipboard extends SystemClipboard{
                                 int supportedActions) {
         final int performedAction = pushToSystemImpl(cacheData,
                                                      supportedActions);
-
         actionPerformed(performedAction);
     }
 
