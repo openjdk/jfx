@@ -518,7 +518,6 @@ jobject dnd_target_get_data(JNIEnv *env, jstring mime)
 
 /************************* SOURCE *********************************************/
 
-
 static jint dnd_performed_action;
 
 const char * const SOURCE_DND_DATA = "fx-dnd-data";
@@ -740,6 +739,15 @@ static gboolean dnd_source_set_raw(GtkWidget *widget, GtkSelectionData *sel_data
     return is_data_set;
 }
 
+static gboolean dnd_destroy_drag_widget_callback(gpointer) {
+    if (drag_widget) {
+        gtk_widget_destroy(drag_widget);
+        drag_widget = NULL;
+    }
+
+    return FALSE;
+}
+
 static void dnd_end_callback(GtkWidget *widget,
                              GdkDragContext *context,
                              gpointer user_data)
@@ -747,9 +755,8 @@ static void dnd_end_callback(GtkWidget *widget,
     if (drag_widget) {
         GdkDragAction action = gdk_drag_context_get_selected_action(context);
         dnd_set_performed_action(translate_gdk_action_to_glass(action));
-        gtk_widget_destroy(drag_widget);
-        drag_widget = NULL;
     }
+    gdk_threads_add_idle((GSourceFunc) dnd_destroy_drag_widget_callback, NULL);
 }
 
 static gboolean dnd_drag_failed_callback(GtkWidget *widget,
@@ -757,9 +764,8 @@ static gboolean dnd_drag_failed_callback(GtkWidget *widget,
                                      GtkDragResult result,
                                      gpointer user_data)
 {
-    gtk_widget_destroy(drag_widget);
-    drag_widget = NULL;
     dnd_set_performed_action(com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_NONE);
+    gdk_threads_add_idle((GSourceFunc) dnd_destroy_drag_widget_callback, NULL);
 
     return FALSE;
 }
@@ -845,6 +851,7 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported)
     try {
         dnd_source_push_data(env, data, supported);
     } catch (jni_exception&) {
+        gdk_threads_add_idle((GSourceFunc) dnd_destroy_drag_widget_callback, NULL);
         return com_sun_glass_ui_gtk_GtkDnDClipboard_ACTION_NONE;
     }
 
