@@ -75,7 +75,7 @@ public interface TextLayout {
     public static final int TYPE_TOP            = 1 << 4;
     public static final int TYPE_BEARINGS       = 1 << 5;
 
-    static final int DEFAULT_TAB_SIZE = 8;
+    public static final int DEFAULT_TAB_SIZE = 8;
 
     public static class Hit {
         int charIndex;

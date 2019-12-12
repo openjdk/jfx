@@ -37,12 +37,17 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public boolean setContent(TextSpan[] spans) {
+        this.spans = spans;
+        this.text = null; /* Initialized in getText() */
+        this.nullFontSize = 10; // need a non-zero size
         return true;
     }
 
+    private TextSpan[] spans;
     private String text;
     private Font font;
     private int tabSize = DEFAULT_TAB_SIZE;
+    private int nullFontSize = 10;
 
     @Override
     public boolean setContent(String text, Object font) {
@@ -84,12 +89,11 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
-        final double fontSize = (font == null ? 0 : ((Font)font).getSize());
-        final String[] lines = text.split("\n");
+        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
+        final String[] lines = getText().split("\n");
         double width = 0.0;
         double height = fontSize * lines.length;
         for (String line : lines) {
-            int tabs = 0;
             final int length;
             if (line.contains("\t")) {
                 // count chars but when encountering a tab round up to a tabSize boundary
@@ -153,11 +157,11 @@ public class StubTextLayout implements TextLayout {
     @Override
     public Hit getHitInfo(float x, float y) {
         // TODO this probably needs to be entirely rewritten...
-        if (text == null) {
+        if (getText() == null) {
             return new Hit(0, -1, true);
         }
 
-        final double fontSize = (font == null ? 0 : ((Font)font).getSize());
+        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
         final String[] lines = text.split("\n");
         int lineIndex = Math.min(lines.length - 1, (int) (y / fontSize));
         if (lineIndex >= lines.length) {
@@ -206,4 +210,16 @@ public class StubTextLayout implements TextLayout {
         return false;
     }
 
+    private String getText() {
+        if (text == null) {
+            if (spans != null) {
+                StringBuilder sb = new StringBuilder();
+                for (TextSpan span : spans) {
+                    sb.append(span.getText());
+                }
+                text = sb.toString();
+            }
+        }
+        return text;
+    }
 }

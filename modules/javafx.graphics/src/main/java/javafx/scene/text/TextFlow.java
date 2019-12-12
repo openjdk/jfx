@@ -490,7 +490,8 @@ public class TextFlow extends Pane {
 
     /**
      * The size of a tab stop in spaces.
-     * Values less than 1 are treated as 1.
+     * Values less than 1 are treated as 1. This value overrides the
+     * {@code tabSize} of contained {@link javafx.scene.text.Text Text} nodes.
      *
      * @defaultValue {@code 8}
      *
@@ -498,15 +499,7 @@ public class TextFlow extends Pane {
      */
     private IntegerProperty tabSize;
 
-    public final int getTabSize() {
-        return tabSize == null ? TextLayout.DEFAULT_TAB_SIZE : tabSize.get();
-    }
-
-    public final void setTabSize(int spaces) {
-        tabSizeProperty().set(spaces);
-    }
-
-    final IntegerProperty tabSizeProperty() {
+    public final IntegerProperty tabSizeProperty() {
         if (tabSize == null) {
             tabSize = new StyleableIntegerProperty(TextLayout.DEFAULT_TAB_SIZE) {
                 @Override public Object getBean() { return TextFlow.this; }
@@ -523,6 +516,14 @@ public class TextFlow extends Pane {
             };
         }
         return tabSize;
+    }
+
+    public final int getTabSize() {
+        return tabSize == null ? TextLayout.DEFAULT_TAB_SIZE : tabSize.get();
+    }
+
+    public final void setTabSize(int spaces) {
+        tabSizeProperty().set(spaces);
     }
 
     @Override public final double getBaselineOffset() {

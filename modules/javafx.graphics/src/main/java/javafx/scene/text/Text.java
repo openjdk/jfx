@@ -1881,13 +1881,15 @@ public class Text extends Shape {
                         return StyleableProperties.TAB_SIZE;
                     }
                     @Override protected void invalidated() {
-                        TextLayout layout = getTextLayout();
-                        if (layout.setTabSize(get())) {
-                            needsTextLayout();
-                        }
-                        NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
-                        if (getBoundsType() == TextBoundsType.VISUAL) {
-                            NodeHelper.geomChanged(Text.this);
+                        if (!isSpan()) {
+                            TextLayout layout = getTextLayout();
+                            if (layout.setTabSize(get())) {
+                                needsTextLayout();
+                            }
+                            NodeHelper.markDirty(Text.this, DirtyBits.TEXT_ATTRS);
+                            if (getBoundsType() == TextBoundsType.VISUAL) {
+                                NodeHelper.geomChanged(Text.this);
+                            }
                         }
                     }
                 };

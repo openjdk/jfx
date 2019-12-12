@@ -265,9 +265,12 @@ public class TextTest {
             double expected = widthT8 - 4 * widthSpace;
             // should be approximately 4 space-widths shorter
             assertEquals(expected, widthT4, 0.5);
+            assertEquals(4, text.getTabSize());
+            assertEquals(4, text.tabSizeProperty().get());
 
             text.tabSizeProperty().set(5);
             assertEquals(5, text.tabSizeProperty().get());
+            assertEquals(5, text.getTabSize());
             tk.firePulse();
             double widthT5 = text.getBoundsInLocal().getWidth();
             expected = widthT8 - 3 * widthSpace;
