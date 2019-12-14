@@ -1273,7 +1273,7 @@ public class Text extends Shape {
      * The size of a tab stop in spaces.
      * Values less than 1 are treated as 1.
      *
-     * @defaultValue {@code 8}
+     * @defaultValue 8
      *
      * @since 14
      */
@@ -1446,7 +1446,7 @@ public class Text extends Shape {
             }
         };
 
-        private static final CssMetaData<Text,Number> TAB_SIZE =
+        private static final CssMetaData<Text, Number> TAB_SIZE =
                 new CssMetaData<Text,Number>("-fx-tab-size",
                 SizeConverter.getInstance(), TextLayout.DEFAULT_TAB_SIZE) {
 

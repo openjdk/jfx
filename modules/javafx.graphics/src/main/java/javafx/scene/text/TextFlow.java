@@ -491,9 +491,9 @@ public class TextFlow extends Pane {
     /**
      * The size of a tab stop in spaces.
      * Values less than 1 are treated as 1. This value overrides the
-     * {@code tabSize} of contained {@link javafx.scene.text.Text Text} nodes.
+     * {@code tabSize} of contained {@link Text} nodes.
      *
-     * @defaultValue {@code 8}
+     * @defaultValue 8
      *
      * @since 14
      */
@@ -572,7 +572,7 @@ public class TextFlow extends Pane {
             }
         };
 
-        private static final CssMetaData<TextFlow,Number> TAB_SIZE =
+        private static final CssMetaData<TextFlow, Number> TAB_SIZE =
                 new CssMetaData<TextFlow,Number>("-fx-tab-size",
                 SizeConverter.getInstance(), TextLayout.DEFAULT_TAB_SIZE) {
 
