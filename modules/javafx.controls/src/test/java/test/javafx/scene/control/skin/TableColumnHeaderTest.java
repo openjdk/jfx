@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,10 @@ package test.javafx.scene.control.skin;
 import com.sun.javafx.tk.Toolkit;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.Scene;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.skin.TableColumnHeader;
-import javafx.scene.text.Font;
-import javafx.stage.Stage;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.Test;
@@ -51,14 +48,18 @@ public class TableColumnHeaderTest {
     private TableColumnHeader firstColumnHeader;
     private TableView<Person> tableView;
     private StageLoader sl;
-
+    private static String NAME0 = "Humphrey McPhee";
+    private static String NAME1 = "Justice Caldwell";
+    private static String NAME2 = "Orrin Davies";
+    private static String NAME3 = "Emma Wilson";
+    
     @Before
-    public void before(){
+    public void before() {
         ObservableList<Person> model = FXCollections.observableArrayList(
-                new Person("Humphrey McPhee", 76),
-                new Person("Justice Caldwell", 30),
-                new Person("Orrin Davies", 30),
-                new Person("Emma Wilson", 8)
+                new Person(NAME0, 76),
+                new Person(NAME1, 30),
+                new Person(NAME2, 30),
+                new Person(NAME3, 8)
         );
         TableColumn<Person, String> column = new TableColumn<>("Col ");
         column.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
@@ -77,7 +78,7 @@ public class TableColumnHeaderTest {
     }
 
     @After
-    public void after(){
+    public void after() {
         sl.dispose();
     }
 
@@ -116,7 +117,7 @@ public class TableColumnHeaderTest {
                 width < column.getWidth());
 
         //Back to initial value
-        tableView.getItems().get(0).setFirstName("Humphrey McPhee");
+        tableView.getItems().get(0).setFirstName(NAME0);
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
         assertEquals("Width must be equal to initial value",
@@ -146,10 +147,10 @@ public class TableColumnHeaderTest {
                 width > column.getWidth());
 
         //Back to initial value
-        tableView.getItems().get(0).setFirstName("Humphrey McPhee");
-        tableView.getItems().get(1).setFirstName("Justice Caldwell");
-        tableView.getItems().get(2).setFirstName("Orrin Davies");
-        tableView.getItems().get(3).setFirstName("Emma Wilson");
+        tableView.getItems().get(0).setFirstName(NAME0);
+        tableView.getItems().get(1).setFirstName(NAME1);
+        tableView.getItems().get(2).setFirstName(NAME2);
+        tableView.getItems().get(3).setFirstName(NAME3);
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, -1);
         assertEquals("Width must be equal to initial value",
@@ -201,7 +202,7 @@ public class TableColumnHeaderTest {
 
 
         //Back to initial value
-        tableView.getItems().get(3).setFirstName("Emma Wilson");
+        tableView.getItems().get(3).setFirstName(NAME3);
 
 
         TableColumnHeaderShim.resizeColumnToFitContent(firstColumnHeader, 3);

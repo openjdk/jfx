@@ -37,7 +37,11 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.css.*;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
 import javafx.css.converter.SizeConverter;
 import javafx.event.EventHandler;
 import javafx.geometry.HPos;
@@ -602,7 +606,7 @@ public class TableColumnHeader extends Region {
      * <p>
      * Subclasses can either use this method or override it (without the need to call {@code super()}) to provide their
      * custom implementation (such as ones that exclude the header, exclude {@code null} content, compute the minimum
-     * width etc.).
+     * width, etc.).
      *
      * @param maxRows the number of rows considered when resizing. If -1 is given, all rows are considered.
      * @since 14
