@@ -52,7 +52,7 @@ public class TableColumnHeaderTest {
     private static String NAME1 = "Justice Caldwell";
     private static String NAME2 = "Orrin Davies";
     private static String NAME3 = "Emma Wilson";
-    
+
     @Before
     public void before() {
         ObservableList<Person> model = FXCollections.observableArrayList(
