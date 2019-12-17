@@ -124,6 +124,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         final Predicate<KeyEvent> validOnLinux = e -> !PlatformUtil.isLinux();
 
         KeyMapping cancelEditMapping;
+        KeyMapping fireMapping;
         KeyMapping consumeMostPressedEventsMapping;
 
         // create a child input map for mappings which are applicable on all
@@ -136,7 +137,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
                 keyMapping(HOME, e -> c.home()),
                 keyMapping(DOWN, e -> c.end()),
                 keyMapping(END, e -> c.end()),
-                keyMapping(ENTER, this::fire),
+                fireMapping = keyMapping(ENTER, this::fire),
 
                 keyMapping(new KeyBinding(HOME).shortcut(), e -> c.home()),
                 keyMapping(new KeyBinding(END).shortcut(), e -> c.end()),
@@ -213,6 +214,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         );
 
         cancelEditMapping.setAutoConsume(false);
+        // fix of JDK-8207759: don't auto-consume
+        fireMapping.setAutoConsume(false);
         consumeMostPressedEventsMapping.setAutoConsume(false);
 
         // mac os specific mappings
@@ -620,18 +623,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
-    protected void cancelEdit(KeyEvent event) { forwardToParent(event);} // not autoconsumed
-
-    protected void forwardToParent(KeyEvent event) {
-        // fix for JDK-8145515
-        if (getNode().getProperties().containsKey(DISABLE_FORWARD_TO_PARENT)) {
-            return;
-        }
-
-        if (getNode().getParent() != null) {
-            getNode().getParent().fireEvent(event);
-        }
-    }
+    protected void cancelEdit(KeyEvent event) { };
 
     protected void selectHome() {
         getNode().selectHome();
