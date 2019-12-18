@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -257,6 +257,8 @@ public class ImageStorage {
             double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageLoader loader = null;
+        ImageFrame[] images = null;
+
         try {
             if (isIOS) {
                 // no extension/signature recognition done here,
@@ -265,17 +267,20 @@ public class ImageStorage {
             } else {
                 loader = getLoaderBySignature(input, listener);
             }
+            if (loader != null) {
+                images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, smooth);
+            } else {
+                throw new ImageStorageException("No loader for image data");
+            }
+        } catch (ImageStorageException ise) {
+            throw ise;
         } catch (IOException e) {
             throw new ImageStorageException(e.getMessage(), e);
+        } finally {
+            if (loader != null) {
+                loader.dispose();
+            }
         }
-
-        ImageFrame[] images = null;
-        if (loader != null) {
-            images = loadAll(loader, width, height, preserveAspectRatio, pixelScale, smooth);
-        } else {
-            throw new ImageStorageException("No loader for image data");
-        }
-
         return images;
     }
 
@@ -326,6 +331,9 @@ public class ImageStorage {
                 throw new ImageStorageException("No loader for image data");
             }
         } finally {
+            if (loader != null) {
+                loader.dispose();
+            }
             try {
                 if (theStream != null) {
                     theStream.close();
