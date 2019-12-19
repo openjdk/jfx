@@ -1050,8 +1050,7 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                                              geometry.final_height.value > 1)) {
         // skip artifact
         return;
-
-    }
+   }
 
     //JDK-8232811: update the geometry only after window pops to avoid conflicting events while updating sizes
     if (map_received) {
@@ -1292,7 +1291,6 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             geom.min_height = geom.max_height = newHeight;
             gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom, hints);
         }
-
         gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
     }
 }

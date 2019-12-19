@@ -31,7 +31,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
-import javafx.scene.control.DialogEvent;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -47,7 +46,7 @@ import test.util.Util;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-//see JDK8193502
+//see JDK-8193502
 public class DialogWithOwnerSizingTest {
     static Robot robot;
     static Button button;
@@ -64,17 +63,19 @@ public class DialogWithOwnerSizingTest {
         Thread.sleep(500);
         clickButton();
         Thread.sleep(500);
-        Assert.assertEquals(dialog.getDialogPane().getWidth(), dialog2.getDialogPane().getWidth(), 0.0);
-        Assert.assertEquals(dialog.getDialogPane().getHeight(), dialog2.getDialogPane().getHeight(), 0.0);
-        hide();
-    }
 
+        try {
+            Assert.assertEquals(dialog2.getDialogPane().getWidth(), dialog.getDialogPane().getWidth(), 2.0);
+            Assert.assertEquals(dialog2.getDialogPane().getHeight(), dialog.getDialogPane().getHeight(), 2.0);
+        } finally {
+            hide();
+        }
+    }
 
     private void clickButton() throws Exception {
         dialogShownLatch = new CountDownLatch(2);
         mouseClick(button.getLayoutX() + button.getWidth() / 2, button.getLayoutY() + button.getHeight() / 2);
 
-        Thread.sleep(400);
         waitForLatch(dialogShownLatch, 10, "Failed to show Dialog");
     }
 
@@ -84,7 +85,6 @@ public class DialogWithOwnerSizingTest {
             dialog.close();
             dialog2.close();
         });
-        Thread.sleep(600);
         waitForLatch(dialogHideLatch, 10, "Failed to hide Dialog");
     }
 
@@ -115,6 +115,7 @@ public class DialogWithOwnerSizingTest {
         public void start(Stage primaryStage) {
             robot = new Robot();
             stage = primaryStage;
+            stage.setAlwaysOnTop(true);
 
             button = new Button("Open Dialogs");
 
