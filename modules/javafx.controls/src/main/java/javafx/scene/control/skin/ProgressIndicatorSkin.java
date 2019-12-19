@@ -30,6 +30,7 @@ import com.sun.javafx.scene.control.skin.Utils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -38,6 +39,7 @@ import javafx.animation.Timeline;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -55,6 +57,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 import javafx.scene.transform.Scale;
@@ -324,7 +327,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     void initialize() {
         boolean isIndeterminate = control.isIndeterminate();
         if (isIndeterminate) {
-            // clean up determinateIndicator
+            // clean up the old determinateIndicator
+            if(determinateIndicator != null) {
+                determinateIndicator.unregisterListener();
+            }
             determinateIndicator = null;
 
             // create spinner
@@ -492,6 +498,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         private Circle indicatorCircle;
         private double doneTextWidth;
         private double doneTextHeight;
+        private Consumer<ObservableValue<?>> fontListener = null;
 
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s, Paint fillOverride) {
 
@@ -506,10 +513,11 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             text.setTextOrigin(VPos.TOP);
             text.getStyleClass().setAll("text", "percentage");
 
-            registerChangeListener(text.fontProperty(), o -> {
+            fontListener = o -> {
                 doneTextWidth = Utils.computeTextWidth(text.getFont(), DONE, 0);
                 doneTextHeight = Utils.computeTextHeight(text.getFont(), DONE, 0, TextBoundsType.LOGICAL_VERTICAL_CENTER);
-            });
+            };
+            registerChangeListener(text.fontProperty(), (Consumer<ObservableValue<?>>) fontListener);
 
             // The circular background for the progress pie piece
             indicator = new StackPane();
@@ -539,6 +547,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
             getChildren().setAll(indicator, progress, text, tick);
             updateProgress(control.getProgress());
+        }
+
+        private void unregisterListener() {
+            unregisterChangeListeners(text.fontProperty());
         }
 
         private void setFillOverride(Paint fillOverride) {

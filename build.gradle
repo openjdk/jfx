@@ -2511,6 +2511,7 @@ project(":controls") {
         testCompile project(":base").sourceSets.test.output
         compile project(':base')
         compile project(':graphics')
+        testCompile "de.sandec:JMemoryBuddy:0.1.3"
     }
 
     test {

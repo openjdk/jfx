@@ -27,9 +27,12 @@ package test.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
 
+import de.sandec.jmemorybuddy.JMemoryBuddy;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.Group;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.Scene;
 import javafx.scene.control.skin.ProgressIndicatorSkin;
@@ -37,6 +40,7 @@ import javafx.scene.control.skin.ProgressIndicatorSkinShim;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -82,5 +86,29 @@ public class ProgressIndicatorSkinTest {
         public Paint getProgressColor() {
             return ProgressIndicatorSkinShim.getProgressColor(this);
         }
+    }
+
+
+    @Test
+    public void memoryTest() {
+        ProgressIndicator indicator = new ProgressIndicator(-1);
+        JMemoryBuddy.memoryTest((checker) -> {
+            indicator.setSkin(new ProgressIndicatorSkin(indicator));
+            Scene scene = new Scene(indicator);
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+
+            indicator.setProgress(1.0);
+            Assert.assertTrue("size was: " + indicator.getChildrenUnmodifiable().size(), indicator.getChildrenUnmodifiable().size() == 1);
+
+            Node detIndicator = indicator.getChildrenUnmodifiable().get(0);
+            System.out.println(detIndicator.getClass().getSimpleName());
+            checker.assertCollectable(detIndicator);
+            indicator.setProgress(-1.0);
+            indicator.setProgress(1.0);
+
+            indicator.test_getRemoved().clear();
+        });
     }
 }

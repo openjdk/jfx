@@ -1926,7 +1926,7 @@ public abstract class Parent extends Node {
     /**
      * Note: The only user of this method is in unit test: Parent_structure_sync_Test.
      */
-    List<Node> test_getRemoved() {
+    public List<Node> test_getRemoved() {
         return removed;
     }
 
