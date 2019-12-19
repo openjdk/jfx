@@ -498,7 +498,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         private Circle indicatorCircle;
         private double doneTextWidth;
         private double doneTextHeight;
-        private Consumer<ObservableValue<?>> fontListener = null;
 
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s, Paint fillOverride) {
 
@@ -513,11 +512,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             text.setTextOrigin(VPos.TOP);
             text.getStyleClass().setAll("text", "percentage");
 
-            fontListener = o -> {
+            registerChangeListener(text.fontProperty(), o -> {
                 doneTextWidth = Utils.computeTextWidth(text.getFont(), DONE, 0);
                 doneTextHeight = Utils.computeTextHeight(text.getFont(), DONE, 0, TextBoundsType.LOGICAL_VERTICAL_CENTER);
-            };
-            registerChangeListener(text.fontProperty(), (Consumer<ObservableValue<?>>) fontListener);
+            });
 
             // The circular background for the progress pie piece
             indicator = new StackPane();
