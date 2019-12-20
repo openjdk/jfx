@@ -56,4 +56,8 @@ public class TableColumnHeaderShim {
     public static void columnReorderingComplete(TableColumnHeader header) {
         header.columnReorderingComplete();
     }
+
+    public static void resizeColumnToFitContent(TableColumnHeader header, int nbRows) {
+        header.resizeColumnToFitContent(nbRows);
+    }
 }
