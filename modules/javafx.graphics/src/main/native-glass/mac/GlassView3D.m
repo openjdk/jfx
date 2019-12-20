@@ -95,6 +95,7 @@
         CGLError err = CGLChoosePixelFormat(attributes, &pix, &npix);
         if (pix == NULL)
         {
+            NSLog(@"CGLChoosePixelFormat: No matching pixel format exists for the requested attributes, trying again with limited capabilities");
             const CGLPixelFormatAttribute attributes2[] =
             {
                 kCGLPFAAllowOfflineRenderers,
