@@ -47,7 +47,7 @@ public class StubTextLayout implements TextLayout {
     private String text;
     private Font font;
     private int tabSize = DEFAULT_TAB_SIZE;
-    private int nullFontSize = 10;
+    private int nullFontSize = 0;
 
     @Override
     public boolean setContent(String text, Object font) {
