@@ -25,6 +25,7 @@
 
 package test.javafx.scene.control;
 
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -35,17 +36,21 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.Semaphore;
+
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
@@ -2041,6 +2046,105 @@ public class TextInputControlTest {
         root.getChildren().removeAll();
         stage.hide();
         tk.firePulse();
+    }
+
+    // Test for case 1 of JDK-8176270
+    @Test public void addingListenerWorks() {
+        VBox vBox = new VBox();
+        TextField textField = new TextField();
+        textField.setText("1234 5678");
+        vBox.getChildren().add(textField);
+        textField.selectedTextProperty()
+                 .addListener((observable -> {}));
+
+        Scene scene = new Scene(vBox);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    // Test for case 2 of JDK-8176270
+    @Test public void replaceSelectionWorks() throws Exception {
+        VBox vBox = new VBox();
+        TextField textField = new TextField();
+        textField.setText("1234 5678");
+        vBox.getChildren().add(textField);
+        textField.selectedTextProperty()
+                 .addListener((observable -> {}));
+
+        Scene scene = new Scene(vBox);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        textField.selectedTextProperty()
+                 .addListener(observable -> {
+                     // accessing the selectedTextProperty causes a
+                     // StringOutOfBoundsException
+                     observable.toString();
+                 });
+        textField.positionCaret(5);
+        Semaphore semaphore = new Semaphore(0);
+        Platform.runLater(semaphore::release);
+        semaphore.acquire();
+
+        // select 2nd word
+        textField.selectNextWord();
+        semaphore = new Semaphore(0);
+        Platform.runLater(semaphore::release);
+        semaphore.acquire();
+
+        // replace selection
+        Platform.runLater(() -> {Event.fireEvent(scene, new KeyEvent(KeyEvent.KEY_PRESSED, "", KeyCode.DIGIT0.getName(), KeyCode.DIGIT0, false, false, false, false));});
+        Platform.runLater(() -> {Event.fireEvent(scene, new KeyEvent(KeyEvent.KEY_RELEASED, "", KeyCode.DIGIT0.getName(), KeyCode.DIGIT0, false, false, false, false));});
+        semaphore = new Semaphore(0);
+        Platform.runLater(semaphore::release);
+        semaphore.acquire();
+    }
+
+    // Test for workaround of JDK-8176270
+    @Test public void accessingTheValueInInvalidationListenerWorks() throws Exception {
+        VBox vBox = new VBox();
+        TextField textField = new TextField();
+        textField.setText("1234 5678");
+        vBox.getChildren().add(textField);
+        textField.selectedTextProperty()
+                 .addListener((observable -> {}));
+
+        Scene scene = new Scene(vBox);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        textField.selectedTextProperty()
+                 .addListener(new InvalidationListener() {
+                     @Override
+                     public void invalidated(Observable observable) {
+                         Platform.runLater(() -> observable.toString());
+                     }
+                 });
+
+        textField.positionCaret(5);
+        Semaphore semaphore = new Semaphore(0);
+        Platform.runLater(semaphore::release);
+        semaphore.acquire();
+
+        // select 2nd word
+        textField.selectNextWord();
+        semaphore = new Semaphore(0);
+        Platform.runLater(semaphore::release);
+        semaphore.acquire();
+
+        // replace selection
+        Platform.runLater(() -> {Event.fireEvent(scene,
+                new KeyEvent(KeyEvent.KEY_PRESSED, "", KeyCode.DIGIT0.getName(), KeyCode.DIGIT0,
+                        false, false, false, false));});
+        Platform.runLater(() -> {Event.fireEvent(scene,
+                new KeyEvent(KeyEvent.KEY_RELEASED, "", KeyCode.DIGIT0.getName(), KeyCode.DIGIT0,
+                        false, false, false, false));});
+        semaphore = new Semaphore(0);
+        Platform.runLater(semaphore::release);
+        semaphore.acquire();
     }
 
     // TODO tests for Content firing event notification properly

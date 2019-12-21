@@ -164,8 +164,10 @@ public abstract class TextInputControl extends Control {
                 int start = sel.getStart();
                 int end = sel.getEnd();
                 int length = txt.length();
-                if (end > start + length) end = length;
-                if (start > length-1) start = end = 0;
+                // Ensure that the last character to get is within the bounds of the txt string
+                if (end >= start + length) end = length-1;
+                // In case the start is after the whole txt, nothing valid is selected. Thus, return the default.
+                if (start >= length) return "";
                 return txt.substring(start, end);
             }
         });
