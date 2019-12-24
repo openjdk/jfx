@@ -1281,22 +1281,21 @@ public class Scene implements EventTarget {
     // Shared method for Scene.snapshot and Node.snapshot. It is static because
     // we might be doing a Node snapshot with a null scene
     static WritableImage doSnapshot(Scene scene,
-                                    double x, double y, double w, double h,
-                                    Node root, BaseTransform transform, boolean depthBuffer,
-                                    Paint fill, Camera camera, WritableImage wimg) {
+            double x, double y, double w, double h,
+            Node root, BaseTransform transform, boolean depthBuffer,
+            Paint fill, Camera camera, WritableImage wimg) {
 
-        int xMin = (int) Math.floor(x);
-        int yMin = (int) Math.floor(y);
-        int xMax = (int) Math.ceil(x + w);
-        int yMax = (int) Math.ceil(y + h);
+        int xMin = (int)Math.floor(x);
+        int yMin = (int)Math.floor(y);
+        int xMax = (int)Math.ceil(x + w);
+        int yMax = (int)Math.ceil(y + h);
         int width = Math.max(xMax - xMin, 1);
         int height = Math.max(yMax - yMin, 1);
         if (wimg == null) {
             wimg = new WritableImage(width, height);
-        }
-        else {
-            width = (int) wimg.getWidth();
-            height = (int) wimg.getHeight();
+        } else {
+            width = (int)wimg.getWidth();
+            height = (int)wimg.getHeight();
         }
 
         int maxTextureSize = PrismSettings.maxTextureSize;
@@ -1315,8 +1314,7 @@ public class Scene implements EventTarget {
                     wimg.getPixelWriter().setPixels(xOffset, yOffset, tileWidth, tileHeight, tile.getPixelReader(), 0, 0);
                 }
             }
-        }
-        else {
+        } else {
             // The requested size for the screenshot fits max texture size,
             // so we can directly return the one generated tile and avoid the extra pixel copy.
             wimg = doSnapshotTile(scene, xMin, yMin, width, height, root, transform, depthBuffer, fill, camera, wimg);
@@ -1336,9 +1334,9 @@ public class Scene implements EventTarget {
      * Capture a single snapshot tile
      */
     private static WritableImage doSnapshotTile(Scene scene,
-                                                int x, int y, int w, int h,
-                                                Node root, BaseTransform transform, boolean depthBuffer,
-                                                Paint fill, Camera camera, WritableImage tileImg) {
+                    int x, int y, int w, int h,
+                    Node root, BaseTransform transform, boolean depthBuffer,
+                    Paint fill, Camera camera, WritableImage tileImg) {
         Toolkit tk = Toolkit.getToolkit();
         Toolkit.ImageRenderingContext context = new Toolkit.ImageRenderingContext();
         if (tileImg == null) {
