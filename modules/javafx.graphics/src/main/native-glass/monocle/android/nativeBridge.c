@@ -163,7 +163,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard__1hide
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_LinuxSystem_dlopen
-  (JNIEnv *env, jobject obj, jstring filenameS, jint flag) { 
+  (JNIEnv *env, jobject obj, jstring filenameS, jint flag) {
     const char *filename = (*env)->GetStringUTFChars(env, filenameS, NULL);
     GLASS_LOG_FINE("I have to Call dlopen %s\n",filename);
     void *handle = dlopen(filename, RTLD_LAZY | RTLD_GLOBAL);
