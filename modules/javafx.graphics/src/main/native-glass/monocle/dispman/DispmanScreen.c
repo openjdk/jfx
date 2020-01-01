@@ -82,6 +82,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_DispmanScreen_wrapNativeSym
 #ifdef USE_DISPMAN
     load_bcm_symbols();
 #else
-    return 0l;
+    return;
 #endif /* USE_DISPMAN */
 }
