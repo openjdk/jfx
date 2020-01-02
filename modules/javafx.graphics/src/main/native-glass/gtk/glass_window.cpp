@@ -1050,12 +1050,16 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                                              geometry.final_height.value > 1)) {
         // skip artifact
         return;
+   }
+
+    // JDK-8232811: to avoid conflicting events, update the geometry only after window pops.
+    if (map_received) {
+        geometry.final_width.value = w;
+        geometry.final_width.type = BOUNDSTYPE_CONTENT;
+        geometry.final_height.value = h;
+        geometry.final_height.type = BOUNDSTYPE_CONTENT;
     }
 
-    geometry.final_width.value = w;
-    geometry.final_width.type = BOUNDSTYPE_CONTENT;
-    geometry.final_height.value = h;
-    geometry.final_height.type = BOUNDSTYPE_CONTENT;
     geometry_set_window_x(&geometry, x);
     geometry_set_window_y(&geometry, y);
 
