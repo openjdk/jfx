@@ -595,45 +595,6 @@ glass_gdk_mouse_devices_ungrab() {
 }
 
 void
-glass_gdk_master_pointer_grab(GdkEvent *event, GdkWindow *window, GdkCursor *cursor) {
-    if (disableGrab) {
-        gdk_window_set_cursor(window, cursor);
-        return;
-    }
-#ifdef GLASS_GTK3
-        GdkDevice *device = gdk_event_get_device(event);
-
-        gdk_device_grab(device, window, GDK_OWNERSHIP_NONE, FALSE,
-                        (GdkEventMask)
-                             (GDK_POINTER_MOTION_MASK
-                                 | GDK_BUTTON_MOTION_MASK
-                                 | GDK_BUTTON1_MOTION_MASK
-                                 | GDK_BUTTON2_MOTION_MASK
-                                 | GDK_BUTTON3_MOTION_MASK
-                                 | GDK_BUTTON_RELEASE_MASK),
-                           cursor, GDK_CURRENT_TIME);
-#else
-        gdk_pointer_grab(window, FALSE, (GdkEventMask)
-                         (GDK_POINTER_MOTION_MASK
-                             | GDK_BUTTON_MOTION_MASK
-                             | GDK_BUTTON1_MOTION_MASK
-                             | GDK_BUTTON2_MOTION_MASK
-                             | GDK_BUTTON3_MOTION_MASK
-                             | GDK_BUTTON_RELEASE_MASK),
-                         NULL, cursor, GDK_CURRENT_TIME);
-#endif
-}
-
-void
-glass_gdk_master_pointer_ungrab(GdkEvent *event) {
-#ifdef GLASS_GTK3
-        gdk_device_ungrab(gdk_event_get_device(event), GDK_CURRENT_TIME);
-#else
-        gdk_pointer_ungrab(GDK_CURRENT_TIME);
-#endif
-}
-
-void
 glass_gdk_master_pointer_get_position(gint *x, gint *y) {
 #ifdef GLASS_GTK3
         gdk_device_get_position(gdk_device_manager_get_client_pointer(
