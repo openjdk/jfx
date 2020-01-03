@@ -68,8 +68,10 @@ public class NGPointLight extends NGLightBase {
     }
 
     public void setCa(double ca) {
-        this.ca = ca;
-        visualsChanged();
+        if (this.ca != ca) {
+            this.ca = ca;
+            visualsChanged();
+        }
     }
 
 
@@ -80,8 +82,10 @@ public class NGPointLight extends NGLightBase {
     }
 
     public void setLa(double la) {
-        this.la = la;
-        visualsChanged();
+        if (this.la != la) {
+            this.la = la;
+            visualsChanged();
+        }
     }
 
 
@@ -92,8 +96,10 @@ public class NGPointLight extends NGLightBase {
     }
 
     public void setQa(double qa) {
-        this.qa = qa;
-        visualsChanged();
+        if (this.qa != qa) {
+            this.qa = qa;
+            visualsChanged();
+        }
     }
 
 
@@ -104,7 +110,9 @@ public class NGPointLight extends NGLightBase {
     }
 
     public void setMaxRange(double maxRange) {
-        this.maxRange = maxRange < 0 ? 0 : maxRange;
-        visualsChanged();
+        if (this.maxRange != maxRange) {
+            this.maxRange = maxRange < 0 ? 0 : maxRange;
+            visualsChanged();
+        }
     }
 }

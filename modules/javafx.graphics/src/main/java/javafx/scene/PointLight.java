@@ -93,18 +93,16 @@ public class PointLight extends LightBase {
     }
 
     /**
-     * The maximum range of this {@code PointLight}. For a pixel to be affected by this light, its distance to
-     * the light source must be less than or equal to the light's maximum range. Any negative value will treated
-     * as 0.
+     * The maximum range of this {@code PointLight}. For a pixel to be affected by this light, its distance to the
+     * light source must be less than or equal to the light's maximum range. Any negative value will be treated as 0.
      * <p>
      * Lower {@code maxRange} values can give better performance as pixels outside the range of the light
      * will not require complex calculation. The attenuation formula can be used to calculate a realistic
-     * {@code maxRange} value by finding the where the attenuation is close enough to 0.
+     * {@code maxRange} value by finding the distance where the attenuation is close enough to 0.
      * <p>
-     * Nodes that are inside the light's range can still be excluded from the light's effect
-     * by removing them from its {@link #getScope() scope} (or including them in its
-     * {@link #getExclusionScope() exclusion scope}). If a node is known to always be
-     * outside of the light's range, it is more performant to exclude it from its scope.
+     * Nodes that are inside the light's range can still be excluded from the light's effect by removing them from
+     * its {@link #getScope() scope} (or including them in its {@link #getExclusionScope() exclusion scope}). If a
+     * node is known to always be outside of the light's range, it is more performant to exclude it from its scope.
      *
      * @defaultValue {@code Double.POSITIVE_INFINITY}
      * @since 14

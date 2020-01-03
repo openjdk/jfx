@@ -553,7 +553,7 @@ class D3DContext extends BaseShaderContext {
     }
 
     void setPointLight(long nativeMeshView, int index, float x, float y, float z,
-            float r, float g, float b, float w, float ca, float la, float qa,  float maxRange) {
+            float r, float g, float b, float w, float ca, float la, float qa, float maxRange) {
         nSetPointLight(pContext, nativeMeshView, index, x, y, z, r, g, b, w, ca, la, qa, maxRange);
     }
 
