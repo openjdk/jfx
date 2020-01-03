@@ -117,10 +117,10 @@ public abstract class NGShape3D extends NGNode {
                                    (float)cameraPos.y,
                                    (float)cameraPos.z,
                                    1.0f, 1.0f, 1.0f, 1.0f,
-                                   (float) NGPointLight.getDefaultCa(),
-                                   (float) NGPointLight.getDefaultLa(),
-                                   (float) NGPointLight.getDefaultQa(),
-                                   (float) NGPointLight.getDefaultMaxRange());
+                                   NGPointLight.getDefaultCa(),
+                                   NGPointLight.getDefaultLa(),
+                                   NGPointLight.getDefaultQa(),
+                                   NGPointLight.getDefaultMaxRange());
         } else {
             float ambientRed = 0.0f;
             float ambientBlue = 0.0f;
@@ -160,10 +160,10 @@ public abstract class NGShape3D extends NGNode {
                                     (float)lightWT.getMyt(),
                                     (float)lightWT.getMzt(),
                                     rL, gL, bL, 1.0f,
-                                    (float) light.getCa(),
-                                    (float) light.getLa(),
-                                    (float) light.getQa(),
-                                    (float) light.getMaxRange());
+                                    light.getCa(),
+                                    light.getLa(),
+                                    light.getQa(),
+                                    light.getMaxRange());
                         }
                     } else if (lightBase instanceof NGAmbientLight) {
                         // Accumulate ambient lights

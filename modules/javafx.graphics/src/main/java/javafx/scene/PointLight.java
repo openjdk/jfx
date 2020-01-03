@@ -223,10 +223,10 @@ public class PointLight extends LightBase {
     private void doUpdatePeer() {
         if (isDirty(DirtyBits.NODE_LIGHT)) {
             NGPointLight peer = getPeer();
-            peer.setCa(getConstantAttenuation());
-            peer.setLa(getLinearAttenuation());
-            peer.setQa(getQuadraticAttenuation());
-            peer.setMaxRange(getMaxRange());
+            peer.setCa((float) getConstantAttenuation());
+            peer.setLa((float) getLinearAttenuation());
+            peer.setQa((float) getQuadraticAttenuation());
+            peer.setMaxRange((float) getMaxRange());
         }
     }
 }

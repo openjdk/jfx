@@ -33,41 +33,41 @@ package com.sun.javafx.sg.prism;
 public class NGPointLight extends NGLightBase {
 
     /** Constant attenuation factor default value */
-    private static final double DEFAULT_CA = 1;
+    private static final float DEFAULT_CA = 1;
     /** Linear attenuation factor default value */
-    private static final double DEFAULT_LA = 0;
+    private static final float DEFAULT_LA = 0;
     /** Quadratic attenuation factor default value */
-    private static final double DEFAULT_QA = 0;
+    private static final float DEFAULT_QA = 0;
     /** Max range default value */
-    private static final double DEFAULT_MAX_RANGE = Double.POSITIVE_INFINITY;
+    private static final float DEFAULT_MAX_RANGE = Float.POSITIVE_INFINITY;
 
     public NGPointLight() {
     }
 
-    public static double getDefaultCa() {
+    public static float getDefaultCa() {
         return DEFAULT_CA;
     }
 
-    public static double getDefaultLa() {
+    public static float getDefaultLa() {
         return DEFAULT_LA;
     }
 
-    public static double getDefaultQa() {
+    public static float getDefaultQa() {
         return DEFAULT_QA;
     }
 
-    public static double getDefaultMaxRange() {
+    public static float getDefaultMaxRange() {
         return DEFAULT_MAX_RANGE;
     }
 
 
-    private double ca = DEFAULT_CA;
+    private float ca = DEFAULT_CA;
 
-    public double getCa() {
+    public float getCa() {
         return ca;
     }
 
-    public void setCa(double ca) {
+    public void setCa(float ca) {
         if (this.ca != ca) {
             this.ca = ca;
             visualsChanged();
@@ -75,13 +75,13 @@ public class NGPointLight extends NGLightBase {
     }
 
 
-    private double la = DEFAULT_LA;
+    private float la = DEFAULT_LA;
 
-    public double getLa() {
+    public float getLa() {
         return la;
     }
 
-    public void setLa(double la) {
+    public void setLa(float la) {
         if (this.la != la) {
             this.la = la;
             visualsChanged();
@@ -89,13 +89,13 @@ public class NGPointLight extends NGLightBase {
     }
 
 
-    private double qa = DEFAULT_QA;
+    private float qa = DEFAULT_QA;
 
-    public double getQa() {
+    public float getQa() {
         return qa;
     }
 
-    public void setQa(double qa) {
+    public void setQa(float qa) {
         if (this.qa != qa) {
             this.qa = qa;
             visualsChanged();
@@ -103,13 +103,13 @@ public class NGPointLight extends NGLightBase {
     }
 
 
-    private double maxRange = DEFAULT_MAX_RANGE;
+    private float maxRange = DEFAULT_MAX_RANGE;
 
-    public double getMaxRange() {
+    public float getMaxRange() {
         return maxRange;
     }
 
-    public void setMaxRange(double maxRange) {
+    public void setMaxRange(float maxRange) {
         if (this.maxRange != maxRange) {
             this.maxRange = maxRange < 0 ? 0 : maxRange;
             visualsChanged();
