@@ -61,10 +61,11 @@ class X11Platform extends NativePlatform {
      */
     @Override
     protected NativeCursor createCursor() {
-        if (x11Input) {
-            return new X11Cursor();
+        if (useCursor) {
+            final NativeCursor c = x11Input ? new X11Cursor() : new X11WarpingCursor();
+            return logSelectedCursor(c);
         } else {
-            return new X11WarpingCursor();
+            return logSelectedCursor(new NullCursor());
         }
     }
 

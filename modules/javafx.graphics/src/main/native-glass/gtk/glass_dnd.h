@@ -52,6 +52,7 @@ gboolean is_in_drag();
 class DragView {
 public:
     class View {
+        GdkDragContext* context;
         GtkWidget* widget;
         GdkPixbuf* pixbuf;
         gint width, height;
@@ -59,9 +60,10 @@ public:
         gboolean is_offset_set;
         gint offset_x, offset_y;
     public:
-        View(GdkPixbuf* pixbuf, gboolean is_raw_image, gboolean is_offset_set, gint offset_x, gint offset_y);
+        View(GdkDragContext* context, GdkPixbuf* pixbuf, gint width, gint height,
+                gboolean is_raw_image, gboolean is_offset_set, gint offset_x, gint offset_y);
         void screen_changed();
-        void expose(cairo_t* context);
+        void expose();
         void move(gint x, gint y);
         ~View();
     private:
@@ -70,13 +72,13 @@ public:
     };
 
     static void reset_drag_view();
-    static void set_drag_view();
+    static void set_drag_view(GtkWidget* widget, GdkDragContext* context);
     static void move(gint x, gint y);
 
 private:
     static View* view;
-    static gboolean get_drag_image_offset(int* x, int* y);
-    static GdkPixbuf* get_drag_image(gboolean* is_raw_image, gint* width, gint* height);
+    static gboolean get_drag_image_offset(GtkWidget *widget, int* x, int* y);
+    static GdkPixbuf* get_drag_image(GtkWidget* widget, gboolean* is_raw_image, gint* width, gint* height);
 
     DragView() {}
     DragView(DragView&);
@@ -84,4 +86,3 @@ private:
 };
 
 #endif        /* GLASS_DND_H */
-

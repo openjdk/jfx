@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,11 +37,18 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public boolean setContent(TextSpan[] spans) {
+        this.spans = spans;
+        this.text = null; /* Initialized in getText() */
+        this.nullFontSize = 10; // need a non-zero size
         return true;
     }
 
+    private TextSpan[] spans;
     private String text;
     private Font font;
+    private int tabSize = DEFAULT_TAB_SIZE;
+    private int nullFontSize = 0;
+
     @Override
     public boolean setContent(String text, Object font) {
         this.text = text;
@@ -82,12 +89,30 @@ public class StubTextLayout implements TextLayout {
 
     @Override
     public BaseBounds getBounds(TextSpan filter, BaseBounds bounds) {
-        final double fontSize = (font == null ? 0 : ((Font)font).getSize());
-        final String[] lines = text.split("\n");
+        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
+        final String[] lines = getText().split("\n");
         double width = 0.0;
         double height = fontSize * lines.length;
         for (String line : lines) {
-            width = Math.max(width, fontSize * line.length());
+            final int length;
+            if (line.contains("\t")) {
+                // count chars but when encountering a tab round up to a tabSize boundary
+                char [] chrs = line.toCharArray();
+                int spaces = 0;
+                for (int i = 0; i < chrs.length; i++) {
+                    if (chrs[i] == '\t') {
+                        if (tabSize != 0) {
+                            while ((++spaces % tabSize) != 0) {}
+                        }
+                    } else {
+                        spaces++;
+                    }
+                }
+                length = spaces;
+            } else {
+                length = line.length();
+            }
+            width = Math.max(width, fontSize * length);
         }
         return bounds.deriveWithNewBounds(0, (float)-fontSize, 0,
                 (float)width, (float)(height-fontSize), 0);
@@ -132,11 +157,11 @@ public class StubTextLayout implements TextLayout {
     @Override
     public Hit getHitInfo(float x, float y) {
         // TODO this probably needs to be entirely rewritten...
-        if (text == null) {
+        if (getText() == null) {
             return new Hit(0, -1, true);
         }
 
-        final double fontSize = (font == null ? 0 : ((Font)font).getSize());
+        final double fontSize = (font == null ? nullFontSize : ((Font)font).getSize());
         final String[] lines = text.split("\n");
         int lineIndex = Math.min(lines.length - 1, (int) (y / fontSize));
         if (lineIndex >= lines.length) {
@@ -173,4 +198,28 @@ public class StubTextLayout implements TextLayout {
         return new RectBounds();
     }
 
+    @Override
+    public boolean setTabSize(int spaces) {
+        if (spaces < 1) {
+            spaces = 1;
+        }
+        if (tabSize != spaces) {
+            tabSize = spaces;
+            return true;
+        }
+        return false;
+    }
+
+    private String getText() {
+        if (text == null) {
+            if (spans != null) {
+                StringBuilder sb = new StringBuilder();
+                for (TextSpan span : spans) {
+                    sb.append(span.getText());
+                }
+                text = sb.toString();
+            }
+        }
+        return text;
+    }
 }

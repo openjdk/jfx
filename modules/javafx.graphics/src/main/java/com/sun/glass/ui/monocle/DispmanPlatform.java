@@ -29,7 +29,8 @@ class DispmanPlatform extends LinuxPlatform {
 
     @Override
     protected NativeCursor createCursor() {
-        return new DispmanCursor();
+        final NativeCursor c = useCursor ? new DispmanCursor() : new NullCursor();
+        return logSelectedCursor(c);
     }
 
     @Override
