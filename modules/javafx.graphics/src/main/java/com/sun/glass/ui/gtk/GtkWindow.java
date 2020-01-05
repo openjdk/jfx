@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 
 class GtkWindow extends Window {
+    private static boolean USE_EXPERIMENTAL_GTK_IMPL = Boolean.getBoolean("javafx.gtk.experimental");
 
     public GtkWindow(Window owner, Screen screen, int styleMask) {
         super(owner, screen, styleMask);
@@ -201,16 +202,18 @@ class GtkWindow extends Window {
         _setGravity(ptr, xGravity, yGravity);
         setBoundsImpl(ptr, x, y, xSet, ySet, w, h, cw, ch);
 
-        if ((w <= 0) && (cw > 0) || (h <= 0) && (ch > 0)) {
-            final int[] extarr = new int[4];
-            getFrameExtents(ptr, extarr);
+        if (!USE_EXPERIMENTAL_GTK_IMPL) {
+            if ((w <= 0) && (cw > 0) || (h <= 0) && (ch > 0)) {
+                final int[] extarr = new int[4];
+                getFrameExtents(ptr, extarr);
 
-            // TODO: ((w <= 0) && (cw <= 0)) || ((h <= 0) && (ch <= 0))
-            notifyResize(WindowEvent.RESIZE,
-                         ((w <= 0) && (cw > 0)) ? cw + extarr[0] + extarr[1]
-                                                : w,
-                         ((h <= 0) && (ch > 0)) ? ch + extarr[2] + extarr[3]
-                                                : h);
+                // TODO: ((w <= 0) && (cw <= 0)) || ((h <= 0) && (ch <= 0))
+                notifyResize(WindowEvent.RESIZE,
+                        ((w <= 0) && (cw > 0)) ? cw + extarr[0] + extarr[1]
+                                : w,
+                        ((h <= 0) && (ch > 0)) ? ch + extarr[2] + extarr[3]
+                                : h);
+            }
         }
     }
 

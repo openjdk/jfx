@@ -84,6 +84,7 @@ if (hasProperty('toolchainDir')) {
 
 def gtk2CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
+def gtk3expCCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk2LinkFlags = [ ];
 def gtk3LinkFlags = [ ];
 
@@ -138,6 +139,7 @@ setupTools("linux_gtk3",
         def libsGTK3 = properties.getProperty("libsGTK3")
         if (cflagsGTK3 && libsGTK3) {
             gtk3CCFlags.addAll(cflagsGTK3.split(" "))
+            gtk3expCCFlags.addAll(cflagsGTK3.split(" "))
             gtk3LinkFlags.addAll(libsGTK3.split(" "))
         } else {
             throw new IllegalStateException("GTK3 development packages not found. If GTK3 packages are installed, please remove the build directory and try again.")
@@ -212,7 +214,7 @@ def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "${toolchainDir}gcc";
 def linker = IS_STATIC_BUILD ? "ar" : IS_COMPILE_PARFAIT ? "parfait-g++" : "${toolchainDir}g++";
 
 LINUX.glass = [:]
-LINUX.glass.variants = ["glass", "glassgtk2", "glassgtk3"]
+LINUX.glass.variants = ["glass", "glassgtk2", "glassgtk3", "glassgtk2_exp", "glassgtk3_exp"]
 
 FileTree ft_gtk_launcher = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
     include("**/launcher.c")
@@ -221,6 +223,11 @@ FileTree ft_gtk_launcher = fileTree("${project(":graphics").projectDir}/src/main
 FileTree ft_gtk = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
     exclude("**/launcher.c")
 }
+
+FileTree ft_gtkexp = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk_experimental/") {
+    exclude("**/launcher.c")
+}
+
 
 LINUX.glass.glass = [:]
 LINUX.glass.glass.nativeSource = ft_gtk_launcher.getFiles()
@@ -249,6 +256,26 @@ LINUX.glass.glassgtk3.ccFlags = IS_STATIC_BUILD ?
 LINUX.glass.glassgtk3.linker = linker
 LINUX.glass.glassgtk3.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk3LinkFlags].flatten()
 LINUX.glass.glassgtk3.lib = "glassgtk3"
+
+LINUX.glass.glassgtk2_exp = [:]
+LINUX.glass.glassgtk2_exp.nativeSource =  ft_gtkexp.getFiles()
+LINUX.glass.glassgtk2_exp.compiler = compiler
+LINUX.glass.glassgtk2_exp.ccFlags = IS_STATIC_BUILD ?
+        ["-fno-threadsafe-statics", ccFlags, gtk2CCFlags].flatten() :
+        [cppFlags, gtk2CCFlags, "-Werror"].flatten()
+LINUX.glass.glassgtk2_exp.linker = linker
+LINUX.glass.glassgtk2_exp.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk2LinkFlags].flatten()
+LINUX.glass.glassgtk2_exp.lib = "glassgtk2_exp"
+
+LINUX.glass.glassgtk3_exp = [:]
+LINUX.glass.glassgtk3_exp.nativeSource =  ft_gtkexp.getFiles()
+LINUX.glass.glassgtk3_exp.compiler = compiler
+LINUX.glass.glassgtk3_exp.ccFlags = IS_STATIC_BUILD ?
+        ["-fno-threadsafe-statics", ccFlags, gtk3expCCFlags].flatten() :
+        [cppFlags, gtk3expCCFlags, "-Werror"].flatten()
+LINUX.glass.glassgtk3_exp.linker = linker
+LINUX.glass.glassgtk3_exp.linkFlags = IS_STATIC_BUILD ? linkFlags : [linkFlags, gtk3LinkFlags].flatten()
+LINUX.glass.glassgtk3_exp.lib = "glassgtk3_exp"
 
 LINUX.decora = [:]
 LINUX.decora.compiler = compiler

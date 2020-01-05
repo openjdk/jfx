@@ -155,6 +155,10 @@ final class GtkApplication extends Application implements
                 }
                 return ret;
             }) : forcedGtkVersion;
+
+        boolean gtkExperimental = AccessController.doPrivileged((PrivilegedAction<Boolean>) () ->
+                Boolean.getBoolean("javafx.gtk.experimental"));
+
         boolean gtkVersionVerbose =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             return Boolean.getBoolean("jdk.gtk.verbose");
@@ -176,15 +180,19 @@ final class GtkApplication extends Application implements
                     System.out.println("Glass GTK library to load is already loaded");
                 }
             } else if (libraryToLoad == QUERY_LOAD_GTK2) {
+                String libName = (gtkExperimental) ? "glassgtk2_exp" : "glassgtk2";
                 if (gtkVersionVerbose) {
-                    System.out.println("Glass GTK library to load is glassgtk2");
+                    System.out.println(String.format("Glass GTK library to load is %s", libName));
                 }
-                NativeLibLoader.loadLibrary("glassgtk2");
+
+                NativeLibLoader.loadLibrary(libName);
             } else if (libraryToLoad == QUERY_LOAD_GTK3) {
+                String libName = (gtkExperimental) ? "glassgtk3_exp" : "glassgtk3";
                 if (gtkVersionVerbose) {
-                    System.out.println("Glass GTK library to load is glassgtk3");
+                    System.out.println(String.format("Glass GTK library to load is %s", libName));
                 }
-                NativeLibLoader.loadLibrary("glassgtk3");
+
+                NativeLibLoader.loadLibrary(libName);
             } else {
                 throw new UnsupportedOperationException("Internal Error");
             }
