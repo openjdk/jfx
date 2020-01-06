@@ -1273,6 +1273,8 @@ public class Text extends Shape {
      * The size of a tab stop in spaces.
      * Values less than 1 are treated as 1.
      *
+     * @return the {@code tabSize} property
+     *
      * @defaultValue 8
      *
      * @since 14
