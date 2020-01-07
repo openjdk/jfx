@@ -172,6 +172,7 @@ final class MonocleWindowManager {
 
     static void repaintFromNative () {
         Platform.runLater(new Runnable () {
+
             @Override
             public void run() {
                 Screen.notifySettingsChanged();
