@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,49 +24,31 @@
  */
 
 #include "AVFAudioSpectrumUnit.h"
-#include "AUEffectBase.h"
 
 #include <iostream>
 #include <Accelerate/Accelerate.h>
 
-// Determines the amount of overlap when running FFT operations
-// More oversampling produces smoother results, at the cost of CPU time
-// This doesn't have much effect until you get to high bin counts, with JavaFX
-// running 128 as the default, there doesn't seem to be much gain to doing
-// more than 2x
-// NOTE: this should be a user configurable option...
-#define kSpectrumOversampleFactor 2
-
-AVFAudioSpectrumUnit::AVFAudioSpectrumUnit() :
-    AVFKernelProcessor(),
-    mSpectrumCallbackProc(NULL),
-    mSpectrumCallbackContext(NULL),
-
-    mEnabled(true),
-
-    mBandCount(128),
-    mBands(NULL),
-    mUpdateInterval(kDefaultAudioSpectrumUpdateInterval),
-    mThreshold(kDefaultAudioSpectrumThreshold),
-    mProcessor(NULL),
-
-    mMixBufferFrameCapacity(0),
-
-    mSamplesPerInterval(0),
-    mFFTSize(0),
-    mFFTsPerInterval(0),
-    mFFTCount(0),
-    mWorkBuffer(),
-    mMagnitudes(),
-    mPhases(),
-
-    mRebuildCrunch(true),
-    mSpectralCrunch(NULL)
-{
+AVFAudioSpectrumUnit::AVFAudioSpectrumUnit() : mSpectrumCallbackProc(NULL),
+                                               mSpectrumCallbackContext(NULL),
+                                               mEnabled(true),
+                                               mBandCount(128),
+                                               mBands(NULL),
+                                               mUpdateInterval(kDefaultAudioSpectrumUpdateInterval),
+                                               mThreshold(kDefaultAudioSpectrumThreshold),
+                                               mMixBufferFrameCapacity(0),
+                                               mSampleRate(0),
+                                               mChannels(0),
+                                               mMaxFrames(0),
+                                               mSamplesPerInterval(0),
+                                               mRebuildCrunch(true),
+                                               mSpectrumElement(NULL),
+                                               mSpectrum(NULL) {
     mMixBuffer.mNumberBuffers = 1;
     mMixBuffer.mBuffers[0].mData = NULL;
 
     pthread_mutex_init(&mBandLock, NULL);
+
+    gst_init_check(NULL, NULL, NULL);
 }
 
 AVFAudioSpectrumUnit::~AVFAudioSpectrumUnit() {
@@ -74,23 +56,16 @@ AVFAudioSpectrumUnit::~AVFAudioSpectrumUnit() {
         free(mMixBuffer.mBuffers[0].mData);
         mMixBuffer.mBuffers[0].mData = NULL;
     }
-    if (mSpectralCrunch) {
-        delete mSpectralCrunch;
-        mSpectralCrunch = NULL;
-    }
-    mWorkBuffer.free();
-    mMagnitudes.free();
-    mPhases.free();
+
+    ReleaseSpectralProcessor();
 }
 
-OSStatus AVFAudioSpectrumUnit::ProcessBufferLists(AudioUnitRenderActionFlags& ioActionFlags,
-                                                  const AudioBufferList& inBuffer,
-                                                  AudioBufferList& outBuffer,
-                                                  UInt32 inFramesToProcess)
-{
+bool AVFAudioSpectrumUnit::ProcessBufferLists(const AudioBufferList& inBuffer,
+                                                  UInt32 inFramesToProcess) {
     if (!mEnabled) {
-        return noErr;
+        return true;
     }
+
     // (Re)allocate mix buffer if needed
     if (!mMixBuffer.mBuffers[0].mData || mMixBufferFrameCapacity < inFramesToProcess) {
         // allocate buffer list (only need to do this once)
@@ -99,40 +74,55 @@ OSStatus AVFAudioSpectrumUnit::ProcessBufferLists(AudioUnitRenderActionFlags& io
             mMixBuffer.mBuffers[0].mData = NULL;
         }
 
-        mMixBufferFrameCapacity = mAudioUnit->GetMaxFramesPerSlice();
+        mMixBufferFrameCapacity = mMaxFrames;
 
         mMixBuffer.mBuffers[0].mNumberChannels = 1;
-        mMixBuffer.mBuffers[0].mData = calloc(mMixBufferFrameCapacity, sizeof(Float32));
+        mMixBuffer.mBuffers[0].mData = calloc(mMixBufferFrameCapacity, sizeof (Float32));
         mMixBuffer.mBuffers[0].mDataByteSize = 0; // size of actual contained data, not size of buffer
     }
 
     if (mRebuildCrunch) {
         SetupSpectralProcessor();
     }
-    if (mSpectralCrunch) {
+
+    if (mSpectrum != NULL) {
         // Mix the audio into one channel since JavaFX only supports single channel spectrum
         // Just use an arithmetic average, nothing fancy here
-        float *buffer = (float*)mMixBuffer.mBuffers[0].mData;
+        float *buffer = (float*) mMixBuffer.mBuffers[0].mData;
         vDSP_vclr(buffer, 1, mMixBufferFrameCapacity);
         for (int ii = 0; ii < inBuffer.mNumberBuffers; ii++) {
-            vDSP_vadd((float*)inBuffer.mBuffers[ii].mData, 1,
-                      buffer, 1,
-                      buffer, 1, inFramesToProcess);
+            vDSP_vadd((float*) inBuffer.mBuffers[ii].mData, 1,
+                    buffer, 1,
+                    buffer, 1, inFramesToProcess);
         }
-        float divisor = (float)inBuffer.mNumberBuffers;
+        float divisor = (float) inBuffer.mNumberBuffers;
         vDSP_vsdiv(buffer, 1,
-                   &divisor,
-                   buffer, 1, inFramesToProcess);
-        mMixBuffer.mBuffers[0].mDataByteSize = inFramesToProcess * sizeof(Float32);
+                &divisor,
+                buffer, 1, inFramesToProcess);
+        mMixBuffer.mBuffers[0].mDataByteSize = inFramesToProcess * sizeof (Float32);
 
-        mSpectralCrunch->ProcessForwards(inFramesToProcess, &mMixBuffer);
+        // Just reuse already allocated memory from mMixBuffer and do not free it
+        // in GStreamer
+        GstBuffer *gstBuffer =
+                gst_buffer_new_wrapped_full(GST_MEMORY_FLAG_READONLY, // Allow only reading
+                mMixBuffer.mBuffers[0].mData,
+                mMixBuffer.mBuffers[0].mDataByteSize,
+                0,
+                mMixBuffer.mBuffers[0].mDataByteSize,
+                NULL,
+                NULL); // No need to free memory
+        if (gstBuffer == NULL) {
+            return false;
+        }
+
+        GstFlowReturn result = gst_spectrum_transform_ip_api((GstBaseTransform *) mSpectrum, gstBuffer);
+        if (result != GST_FLOW_OK) {
+            return false;
+        }
+        gst_buffer_unref(gstBuffer);
     }
-    return noErr;
-}
 
-void AVFAudioSpectrumUnit::StreamFormatChanged(const CAStreamBasicDescription &newFormat) {
-    // just trigger rebuilding the spectrum based on an updated format
-    mRebuildCrunch = true;
+    return true;
 }
 
 bool AVFAudioSpectrumUnit::IsEnabled() {
@@ -177,142 +167,156 @@ void AVFAudioSpectrumUnit::SetInterval(double interval) {
 }
 
 int AVFAudioSpectrumUnit::GetThreshold() {
-    return (int)mThreshold;
+    return (int) mThreshold;
 }
 
 void AVFAudioSpectrumUnit::SetThreshold(int threshold) {
-    if (mThreshold != (Float32)threshold) {
-        mThreshold = (Float32)threshold;
+    if (mThreshold != (Float32) threshold) {
+        mThreshold = (Float32) threshold;
+        mRebuildCrunch = true;
     }
 }
 
 void AVFAudioSpectrumUnit::UpdateBands(int size, const float* magnitudes, const float* phases) {
-}
-
-void AVFAudioSpectrumUnit::Reset() {
-    mRebuildCrunch = true;
-}
-
-static void AVFAudioSpectrum_SpectralFunction(SpectralBufferList* inSpectra, void* inUserData) {
-    AVFAudioSpectrumUnit *unit = static_cast<AVFAudioSpectrumUnit*>(inUserData);
-    if (unit && unit->IsEnabled()) {
-        unit->SpectralFunction(inSpectra);
-    }
-}
-
-void AVFAudioSpectrumUnit::SpectralFunction(SpectralBufferList* inSpectra) {
-    // https://developer.apple.com/library/mac/documentation/Performance/Conceptual/vDSP_Programming_Guide/UsingFourierTransforms/UsingFourierTransforms.html
-    // Scale the results properly, scale factor is 2x for 1D real forward transforms
-
     // lock now otherwise the bands could change while we're processing
     lockBands();
-    if (!mBands || mBandCount <= 0 || !mEnabled) {
+    if (!mBands || size <= 0 || !mEnabled) {
         unlockBands();
         return;
     }
 
-    float scale = 2.0;
-    DSPSplitComplex *cplx = inSpectra->mDSPSplitComplex;
-    vDSP_vsmul(cplx->realp, 1, &scale, cplx->realp, 1, mBandCount);
-    vDSP_vsmul(cplx->imagp, 1, &scale, cplx->imagp, 1, mBandCount);
+    // Update band data
+    mBands->UpdateBands(size, magnitudes, magnitudes);
 
-    if (mMagnitudes()) {
-        // Calculate magnitudes: (C.r^^2 + C.i^^2)
-        vDSP_zvmags(cplx, 1, mWorkBuffer, 1, mBandCount);
-
-        // Convert magnitudes to dB: 10 * log10(mags[n] / nfft^^2)
-        Float32 nfft_sq = mFFTSize * mFFTSize;
-        vDSP_vdbcon(mWorkBuffer, 1, &nfft_sq, mWorkBuffer, 1, mBandCount, 0);
-
-        // Set threshold: M = (M > T) ? M : T
-        vDSP_vthr(mWorkBuffer, 1, &mThreshold, mWorkBuffer, 1, mBandCount);
-
-        // Now have magnitudes in dB, just accumulate it
-        vDSP_vadd(mWorkBuffer, 1, mMagnitudes, 1, mMagnitudes, 1, mBandCount);
+    // Call our listener to dispatch the spectrum event
+    if (mSpectrumCallbackProc) {
+        double duration = (double) mSamplesPerInterval / (double) 44100;
+        mSpectrumCallbackProc(mSpectrumCallbackContext, duration);
     }
 
-    if (mPhases()) {
-        // Just use vDSP to calculate phase directly
-        vDSP_zvphas(cplx, 1, mWorkBuffer, 1, mBandCount);
-        vDSP_vadd(mWorkBuffer, 1, mPhases, 1, mPhases, 1, mBandCount);
-    }
-
-    mFFTCount++;
-    if (mFFTCount >= mFFTsPerInterval) {
-        float divisor = (float)mFFTCount;
-
-        // Get averages
-        vDSP_vsdiv(mMagnitudes, 1, &divisor, mMagnitudes, 1, mBandCount);
-        vDSP_vsdiv(mPhases, 1, &divisor, mPhases, 1, mBandCount);
-
-        // Update band data
-        mBands->UpdateBands(mBandCount, mMagnitudes, mPhases);
-
-        // Call our listener to dispatch the spectrum event
-        if (mSpectrumCallbackProc) {
-            double duration = (double)mSamplesPerInterval / (double)mAudioUnit->GetSampleRate();
-            mSpectrumCallbackProc(mSpectrumCallbackContext, duration);
-        }
-
-        // Reset things
-        vDSP_vclr(mMagnitudes, 1, mBandCount);
-        vDSP_vclr(mPhases, 1, mBandCount);
-        mFFTCount = 0;
-    }
     unlockBands();
 }
 
-void AVFAudioSpectrumUnit::SetupSpectralProcessor() {
-    lockBands();
+void AVFAudioSpectrumUnit::SetSampleRate(UInt32 rate) {
+    mSampleRate = rate;
+}
 
-    if (mSpectralCrunch) {
-        delete mSpectralCrunch;
-        mSpectralCrunch = NULL;
+void AVFAudioSpectrumUnit::SetChannels(UInt32 count) {
+    mChannels = count;
+}
 
-        mWorkBuffer.free();
-        mMagnitudes.free();
-        mPhases.free();
+void AVFAudioSpectrumUnit::SetMaxFrames(UInt32 maxFrames) {
+    mMaxFrames = maxFrames;
+}
+
+void AVFAudioSpectrumUnit::SetSpectrumCallbackProc(AVFSpectrumUnitCallbackProc proc, void *context) {
+    mSpectrumCallbackProc = proc;
+    mSpectrumCallbackContext = context;
+}
+
+static gboolean PostMessageCallback(GstElement * element, GstMessage * message) {
+    if (message == NULL) {
+        return FALSE;
     }
 
-    if (mEnabled && mBandCount > 0 && (mBands != NULL)) {
-        // inFFTSize = 2x number of bins (this is adjusted properly later)
-        // inHopSize = the number of samples to increment per update, depends on
-        //             how much oversampling we want
-        // inNumChannels = number of audio channels, we mix down to 1 since FX
-        //                 lamely only supports one channel spectrum output
-        // inMaxFrames = maximum number of frames we should ever process at once
-        //               this is not relevant to anything but how much memory
-        //               the analyzer allocates up front
-        mFFTSize = mBandCount * 2;
-        mSpectralCrunch = new CASpectralProcessor(mFFTSize,
-                                                  mFFTSize / kSpectrumOversampleFactor,
-                                                  1,
-                                                  mAudioUnit->GetMaxFramesPerSlice());
+    GstSpectrum *pSpectrum = GST_SPECTRUM(element);
+    if (pSpectrum == NULL || pSpectrum->user_data == NULL) {
+        return FALSE;
+    }
 
-        // Set up a Hamming window to match GStreamer
-        vDSP_hamm_window(mSpectralCrunch->Window(), mFFTSize, vDSP_HALF_WINDOW);
+    AVFAudioSpectrumUnit *pSpectrumUnit = (AVFAudioSpectrumUnit*)pSpectrum->user_data;
 
-        mSpectralCrunch->SetSpectralFunction(AVFAudioSpectrum_SpectralFunction, this);
+    const GstStructure *pStr = gst_message_get_structure(message);
+    if (gst_structure_has_name(pStr, "spectrum")) {
+        GstClockTime timestamp, duration;
 
-        // Allocate mag/phase buffers and calculate FFT count per iteration
-        mWorkBuffer.alloc(mBandCount);
+        if (!gst_structure_get_clock_time(pStr, "timestamp", &timestamp))
+            timestamp = GST_CLOCK_TIME_NONE;
 
-        mMagnitudes.alloc(mBandCount);
-        vDSP_vclr(mMagnitudes(), 1, mBandCount);
+        if (!gst_structure_get_clock_time(pStr, "duration", &duration))
+            duration = GST_CLOCK_TIME_NONE;
 
-        mPhases.alloc(mBandCount);
-        vDSP_vclr(mPhases(), 1, mBandCount);
+        size_t bandsNum = pSpectrumUnit->GetBands();
 
-        mSamplesPerInterval = (UInt32)(mAudioUnit->GetSampleRate() * mUpdateInterval);
+        if (bandsNum > 0) {
+            float *magnitudes = new float[bandsNum];
+            float *phases = new float[bandsNum];
 
-        // Clamp FFTs per interval to an integral number
-        mFFTCount = 0;
-        mFFTsPerInterval = mSamplesPerInterval / mFFTSize * kSpectrumOversampleFactor;
+            const GValue *magnitudes_value = gst_structure_get_value(pStr, "magnitude");
+            const GValue *phases_value = gst_structure_get_value(pStr, "phase");
+            for (int i = 0; i < bandsNum; i++) {
+                magnitudes[i] = g_value_get_float(gst_value_list_get_value(magnitudes_value, i));
+                phases[i] = g_value_get_float(gst_value_list_get_value(phases_value, i));
+            }
+            pSpectrumUnit->UpdateBands((int) bandsNum, magnitudes, phases);
 
-        // Recalculate mSamplesPerInterval so we report duration correctly
-        mSamplesPerInterval = mFFTsPerInterval / kSpectrumOversampleFactor * mFFTSize;
-    } // else leave disabled
+            delete [] magnitudes;
+            delete [] phases;
+        }
+    }
+
+    gst_message_unref(message);
+
+    return TRUE;
+}
+
+void AVFAudioSpectrumUnit::SetupSpectralProcessor() {
+    ReleaseSpectralProcessor();
+
+    lockBands();
+
+    mSpectrumElement = gst_element_factory_make("spectrum", NULL);
+    mSpectrum = GST_SPECTRUM(mSpectrumElement);
+    mSpectrum->user_data = (void*)this;
+
+    // Set our own callback for post message
+    GstElementClass *klass;
+    klass = GST_ELEMENT_GET_CLASS(mSpectrumElement);
+    klass->post_message = PostMessageCallback;
+
+    // Configure spectrum element
+    // Do send magnitude and phase information, off by default
+    g_object_set(mSpectrumElement, "post-messages", TRUE,
+                                   "message-magnitude", TRUE,
+                                   "message-phase", TRUE, NULL);
+
+    g_object_set(mSpectrumElement, "bands", mBandCount, NULL);
+
+    mSamplesPerInterval = (UInt32)(mSampleRate * mUpdateInterval);
+    guint64 value = (guint64) (mUpdateInterval * GST_SECOND);
+    g_object_set(mSpectrumElement, "interval", value, NULL);
+
+    g_object_set(mSpectrumElement, "threshold", (int) mThreshold, NULL);
+
+    // Since we do not run spectrum element in pipeline and it will not get configured
+    // correctly, we need to set required information directly.
+    GST_AUDIO_FILTER_RATE(mSpectrum) = mSampleRate;
+    GST_AUDIO_FILTER_CHANNELS(mSpectrum) = 1; // Always 1 channel
+
+    // gst_spectrum_setup()
+    GstAudioInfo *info = gst_audio_info_new();
+    gst_audio_info_init(info);
+    gst_audio_info_set_format(info, GST_AUDIO_FORMAT_F32, mSampleRate, 1, NULL);
+    // bps = 4 bytes - 32-bit float, bpf = 4 bytes - 32-bit float mono
+    gst_spectrum_setup_api((GstAudioFilter*) mSpectrum, info, 4, 4);
+    gst_audio_info_free(info);
+
+    // Set element to playing state
+    gst_element_set_state(mSpectrumElement, GST_STATE_PLAYING);
 
     mRebuildCrunch = false;
+    unlockBands();
+}
+
+void AVFAudioSpectrumUnit::ReleaseSpectralProcessor() {
+    lockBands();
+
+    if (mSpectrumElement) {
+        gst_element_set_state(mSpectrumElement, GST_STATE_NULL);
+        gst_object_unref(GST_OBJECT(mSpectrumElement));
+        mSpectrumElement = NULL;
+        mSpectrum = NULL;
+    }
+
     unlockBands();
 }

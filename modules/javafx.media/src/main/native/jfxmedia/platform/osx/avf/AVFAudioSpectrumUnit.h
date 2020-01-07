@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,9 @@
 #include <memory>
 
 #include "PipelineManagement/AudioSpectrum.h"
-#include "AVFKernelProcessor.h"
-#include "CASpectralProcessor.h"
-#include "CAStreamBasicDescription.h"
-#include "CAAutoDisposer.h"
 
+#include <gst/gst.h>
+#include <gstspectrum.h>
 
 // Defaults, these match the current defaults in JavaFX which get set anyways
 // but we can optimize things a bit here...
@@ -53,19 +51,15 @@
  */
 typedef void (*AVFSpectrumUnitCallbackProc)(void *callbackContext, double duration);
 
-class AVFAudioSpectrumUnit : public AVFKernelProcessor, public CAudioSpectrum {
+class AVFAudioSpectrumUnit : public CAudioSpectrum {
 public:
     AVFAudioSpectrumUnit();
     virtual ~AVFAudioSpectrumUnit();
 
     // We'll use ProcessBufferLists as it sends all channels at once instead
     // of individual channels
-    virtual OSStatus ProcessBufferLists(AudioUnitRenderActionFlags& ioActionFlags,
-                                        const AudioBufferList& inBuffer,
-                                        AudioBufferList& outBuffer,
-                                        UInt32 inFramesToProcess);
-
-    virtual void StreamFormatChanged(const CAStreamBasicDescription &newFormat);
+    bool ProcessBufferLists(const AudioBufferList& inBuffer,
+                            UInt32 inFramesToProcess);
 
     // Parameter accessors
     virtual bool IsEnabled();
@@ -82,17 +76,10 @@ public:
 
     virtual void UpdateBands(int size, const float* magnitudes, const float* phases);
 
-    void Reset();
-    void SetSampleRate(Float32 rate);
-    void SetChannelCount(int count);
-
-    void SetSpectrumCallbackProc(AVFSpectrumUnitCallbackProc proc, void *context) {
-        mSpectrumCallbackProc = proc;
-        mSpectrumCallbackContext = context;
-    }
-
-    // Called by the spectrum processor, do not call
-    void SpectralFunction(SpectralBufferList* inSpectra);
+    void SetSampleRate(UInt32 rate);
+    void SetChannels(UInt32 count);
+    void SetMaxFrames(UInt32 maxFrames);
+    void SetSpectrumCallbackProc(AVFSpectrumUnitCallbackProc proc, void *context);
 
 private:
     AVFSpectrumUnitCallbackProc mSpectrumCallbackProc;
@@ -104,23 +91,21 @@ private:
     CBandsHolder *mBands;
     double mUpdateInterval;
     Float32 mThreshold;
-    CASpectralProcessor *mProcessor;
 
     AudioBufferList mMixBuffer;
     int mMixBufferFrameCapacity;    // number of frames that can currently be stored in mix buffer
 
+    // Audio parameters
+    UInt32 mSampleRate;
+    UInt32 mChannels;
+    UInt32 mMaxFrames;
     UInt32 mSamplesPerInterval;
-    UInt32 mFFTSize;                // number of samples per FFT
-    UInt32 mFFTsPerInterval;        // integral number of FFTs per update interval
-    UInt32 mFFTCount;               // number of FFTs performed since last update
-
-    CAAutoFree<Float32> mWorkBuffer; // temp vectors for calculations
-    CAAutoFree<Float32> mMagnitudes; // magnitude accumulator
-    CAAutoFree<Float32> mPhases;     // phase accumulator
-
 
     bool mRebuildCrunch;
-    CASpectralProcessor *mSpectralCrunch;
+
+    // GStreamer
+    GstElement *mSpectrumElement;
+    GstSpectrum *mSpectrum;
 
     void lockBands() {
         pthread_mutex_lock(&mBandLock);
@@ -131,6 +116,7 @@ private:
     }
 
     void SetupSpectralProcessor();
+    void ReleaseSpectralProcessor();
 };
 
 typedef std::shared_ptr<AVFAudioSpectrumUnit> AVFAudioSpectrumUnitPtr;

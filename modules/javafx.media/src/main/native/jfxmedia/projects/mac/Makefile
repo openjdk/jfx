@@ -183,7 +183,9 @@ AVF_LDFLAGS = $(LDFLAGS) \
               -framework CoreMedia \
               -framework Accelerate \
               -framework AudioUnit \
-              -framework MediaToolbox
+              -framework MediaToolbox \
+              -lgstreamer-lite \
+              -lglib-lite
 
 AVF_CFLAGS = $(CFLAGS) \
              -DCA_AU_USE_FAST_DISPATCH=1 \
@@ -191,39 +193,22 @@ AVF_CFLAGS = $(CFLAGS) \
              -DCA_NO_AU_HOST_CALLBACKS=1 \
              -DCA_NO_AU_UI_FEATURES=1 \
              -DCA_USE_AUDIO_PLUGIN_ONLY=1 \
-             -fobjc-arc
-
-# CoreAudio Utility Classes provided by Apple
-COREAUDIO_UTILITY_CLASSES = \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUBase.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUInputElement.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUOutputElement.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUPlugInDispatch.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUScopeElement.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/ComponentBase.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/OtherBases/AUEffectBase.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/Utility/AUBuffer.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAAudioChannelLayout.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CADebugPrintf.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAHostTimeBase.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CASpectralProcessor.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAStreamBasicDescription.cpp \
-        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAVectorUnit.cpp
-
-COREAUDIO_INCLUDES = \
-        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase \
-        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/OtherBases \
-        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/Utility \
-        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/PublicUtility
+             -fobjc-arc \
+             -DGST_REMOVE_DEPRECATED   \
+             -DGST_DISABLE_GST_DEBUG   \
+             -DGST_DISABLE_LOADSAVE    \
+             -DGST_DISABLE_XML         \
+             -DG_DISABLE_DEPRECATED    \
+             -DGSTREAMER_LITE          \
+             -DOSX                     \
+             -DHAVE_CONFIG_H
 
 AVF_SOURCES = \
         platform/osx/avf/AVFMediaPlayer.mm \
         platform/osx/avf/AVFAudioProcessor.mm \
         platform/osx/avf/AVFAudioEqualizer.cpp \
         platform/osx/avf/AVFAudioSpectrumUnit.cpp \
-        platform/osx/avf/AVFSoundLevelUnit.cpp \
-        platform/osx/avf/AVFKernelProcessor.cpp \
-        $(COREAUDIO_UTILITY_CLASSES)
+        platform/osx/avf/AVFSoundLevelUnit.cpp
 
 
 AVF_OBJECTS = $(patsubst %.mm,$(AVF_OBJBASE)/%.o,$(filter %.mm, $(AVF_SOURCES))) \
@@ -231,8 +216,15 @@ AVF_OBJECTS = $(patsubst %.mm,$(AVF_OBJBASE)/%.o,$(filter %.mm, $(AVF_SOURCES)))
 
 AVF_INCLUDES = \
     $(INCLUDES) \
-    $(COREAUDIO_INCLUDES) \
-    -I$(OSX_PLATFORM_BASE)
+    -I$(OSX_PLATFORM_BASE) \
+    -I$(GLIB_LITE_DIR)/ \
+    -I$(GLIB_LITE_DIR)/glib \
+    -I$(GLIB_LITE_DIR)/gmodule \
+    -I$(GLIB_LITE_DIR)/build/osx \
+    -I$(GSTREAMER_LITE_DIR)/gstreamer \
+    -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
+    -I$(GSTREAMER_LITE_DIR)/gstreamer/libs \
+    -I$(GSTREAMER_LITE_DIR)/gst-plugins-good/gst/spectrum
 
 -include $(AVF_OBJECTS:.o=.d)
 

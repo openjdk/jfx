@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,30 +31,30 @@
 #include <map>
 #include <memory>
 
-#include "AVFKernelProcessor.h"
-#include "CAAutoDisposer.h"
+#include <AudioUnit/AudioUnit.h>
 
 class AVFAudioEqualizer;
 
 struct AVFEQBandHistory {
 public:
-    double x1, x2;  // input history
-    double y1, y2;  // output history
+    double x1, x2; // input history
+    double y1, y2; // output history
 
     AVFEQBandHistory() :
-        x1(0.0),
-        x2(0.0),
-        y1(0.0),
-        y2(0.0)
-    {}
+    x1(0.0),
+    x2(0.0),
+    y1(0.0),
+    y2(0.0) {
+    }
 };
 
 class AVFEqualizerBand : public CEqualizerBand {
 public:
+
     enum AVFEqualizerFilterType {
-        Peak,       // Use for middle bands
-        LowShelf,   // Use for lowest freq band
-        HighShelf   // Use for highest freq band
+        Peak, // Use for middle bands
+        LowShelf, // Use for lowest freq band
+        HighShelf // Use for highest freq band
     };
     AVFEqualizerBand(AVFAudioEqualizer *eq, double frequency, double bandwidth, double gain);
 
@@ -92,7 +92,7 @@ public:
 private:
     AVFAudioEqualizer *mEQ;
     bool mBypass;
-    int mChannels;          // number of channels to process
+    int mChannels; // number of channels to process
     AVFEQBandHistory *mHistory; // one per channel
     double mFrequency;
     AVFEqualizerFilterType mFilterType;
@@ -108,25 +108,16 @@ private:
     void SetupHighShelfFilter(double omega, double bw, double absGain);
 };
 
-typedef std::map<double,AVFEqualizerBand*> AVFEQBandMap;
+typedef std::map<double, AVFEqualizerBand*> AVFEQBandMap;
 typedef AVFEQBandMap::iterator AVFEQBandIterator;
 
 // Simple bridge class that forwards messages to it's AVFMediaPlayer
-class AVFAudioEqualizer : public AVFKernelProcessor, public CAudioEqualizer {
+
+class AVFAudioEqualizer : public CAudioEqualizer {
 public:
-    AVFAudioEqualizer() :
-        AVFKernelProcessor(),
-        CAudioEqualizer(),
-        mEnabled(false),
-        mEQBands(),
-        mEQBufferSize(0),
-        mEQBufferA(),
-        mEQBufferB()
-    {}
 
+    AVFAudioEqualizer();
     virtual ~AVFAudioEqualizer();
-
-    virtual AUKernelBase *NewKernel();
 
     virtual bool IsEnabled();
     virtual void SetEnabled(bool isEnabled);
@@ -136,33 +127,27 @@ public:
 
     void MoveBand(double oldFrequency, double newFrequency);
 
-    virtual void SetAudioUnit(AUEffectBase *unit);
+    void SetSampleRate(UInt32 rate);
+    void SetChannels(UInt32 count);
+    UInt32 GetSampleRate();
+    UInt32 GetChannels();
 
-    double GetSampleRate() {
-        if (mAudioUnit) {
-            return (double)mAudioUnit->GetSampleRate();
-        }
-        return 0.0;
-    }
-
-    int GetChannelCount() {
-        if (mAudioUnit) {
-            return mAudioUnit->GetNumberOfChannels();
-        }
-        return 0;
-    }
+    bool ProcessBufferLists(const AudioBufferList & buffer,
+                                UInt32 inFramesToProcess);
 
     void RunFilter(const Float32 *inSourceP, Float32 *inDestP, UInt32 inFramesToProcess, UInt32 channel);
+
+    // Call this after adding, removing or reordering bands
+    void ResetBandParameters();
 
 private:
     bool mEnabled;
     AVFEQBandMap mEQBands;
     int mEQBufferSize;
-    CAAutoFree<double> mEQBufferA; // temp storage since we have to process out of line
-    CAAutoFree<double> mEQBufferB;
-
-    // Call this after adding, removing or reordering bands
-    void ResetBandParameters();
+    double *mEQBufferA; // temp storage since we have to process out of line
+    double *mEQBufferB;
+    UInt32 mSampleRate;
+    UInt32 mChannels;
 };
 
 typedef std::shared_ptr<AVFAudioEqualizer> AVFAudioEqualizerPtr;
