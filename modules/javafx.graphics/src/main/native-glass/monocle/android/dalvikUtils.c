@@ -23,7 +23,7 @@
  * questions.
  */
 
-#if (defined(ANDROID_NDK) && defined(DALVIK_VM))
+#if defined(ANDROID_NDK)
 
 #include <android/keycodes.h>
 #include "dalvikConst.h"
@@ -60,6 +60,7 @@ int to_jfx_key_action(int action) {
         case KEY_ACTION_MULTIPLE:
             return com_sun_glass_events_KeyEvent_TYPED;
     }
+    return -1;
 }
 
 int to_linux_keycode(int androidKeyCode) {
@@ -120,6 +121,7 @@ char *describe_key_action(int action) {
         case KEY_ACTION_MULTIPLE:
             return "KEY_ACTION_MULTIPLE";
     }
+    return "UNKNOWN";
 }
 
 #endif
