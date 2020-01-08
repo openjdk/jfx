@@ -256,7 +256,7 @@ public abstract class Animation {
     /* Package-private for testing purposes */
     ClipEnvelope clipEnvelope;
 
-    private boolean lastPlayedFinished = false;
+    private boolean lastPlayedFinished = true;
 
     private boolean lastPlayedForward = true;
     /**
@@ -978,6 +978,7 @@ public abstract class Animation {
             clipEnvelope.abortCurrentPulse();
             doStop();
             jumpTo(Duration.ZERO);
+            lastPlayedFinished = true;
         }
     }
 
