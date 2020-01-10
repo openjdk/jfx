@@ -227,3 +227,51 @@ gst_meta_get_info (const gchar * impl)
 
   return info;
 }
+
+/**
+ * gst_meta_get_seqnum:
+ * @meta: a #GstMeta
+ *
+ * Gets seqnum for this meta.
+ *
+ * Since: 1.16
+ */
+guint64
+gst_meta_get_seqnum (const GstMeta * meta)
+{
+  GstMetaItem *meta_item;
+  guint8 *p;
+
+  g_return_val_if_fail (meta != NULL, 0);
+
+  p = (guint8 *) meta;
+  p -= G_STRUCT_OFFSET (GstMetaItem, meta);
+  meta_item = (GstMetaItem *) p;
+  return meta_item->seq_num;
+}
+
+/**
+ * gst_meta_compare_seqnum:
+ * @meta1: a #GstMeta
+ * @meta2: a #GstMeta
+ *
+ * Meta sequence number compare function. Can be used as #GCompareFunc
+ * or a #GCompareDataFunc.
+ *
+ * Returns: a negative number if @meta1 comes before @meta2, 0 if both metas
+ *   have an equal sequence number, or a positive integer if @meta1 comes
+ *   after @meta2.
+ *
+ * Since: 1.16
+ */
+gint
+gst_meta_compare_seqnum (const GstMeta * meta1, const GstMeta * meta2)
+{
+  guint64 seqnum1 = gst_meta_get_seqnum (meta1);
+  guint64 seqnum2 = gst_meta_get_seqnum (meta2);
+
+  if (seqnum1 == seqnum2)
+    return 0;
+
+  return (seqnum1 < seqnum2) ? -1 : 1;
+}

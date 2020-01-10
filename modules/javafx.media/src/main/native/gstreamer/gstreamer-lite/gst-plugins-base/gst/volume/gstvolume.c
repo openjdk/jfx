@@ -183,48 +183,48 @@ volume_choose_func (GstVolume * self, const GstAudioInfo * info)
   switch (format) {
     case GST_AUDIO_FORMAT_S32:
       /* only clamp if the gain is greater than 1.0 */
-          if (self->current_vol_i32 > VOLUME_UNITY_INT32) {
-            self->process = volume_process_int32_clamp;
-          } else {
-            self->process = volume_process_int32;
-          }
-          self->process_controlled = volume_process_controlled_int32_clamp;
-          break;
+      if (self->current_vol_i32 > VOLUME_UNITY_INT32) {
+        self->process = volume_process_int32_clamp;
+      } else {
+        self->process = volume_process_int32;
+      }
+      self->process_controlled = volume_process_controlled_int32_clamp;
+      break;
     case GST_AUDIO_FORMAT_S24:
       /* only clamp if the gain is greater than 1.0 */
-          if (self->current_vol_i24 > VOLUME_UNITY_INT24) {
-            self->process = volume_process_int24_clamp;
-          } else {
-            self->process = volume_process_int24;
-          }
-          self->process_controlled = volume_process_controlled_int24_clamp;
-          break;
+      if (self->current_vol_i24 > VOLUME_UNITY_INT24) {
+        self->process = volume_process_int24_clamp;
+      } else {
+        self->process = volume_process_int24;
+      }
+      self->process_controlled = volume_process_controlled_int24_clamp;
+      break;
     case GST_AUDIO_FORMAT_S16:
       /* only clamp if the gain is greater than 1.0 */
-          if (self->current_vol_i16 > VOLUME_UNITY_INT16) {
-            self->process = volume_process_int16_clamp;
-          } else {
-            self->process = volume_process_int16;
-          }
-          self->process_controlled = volume_process_controlled_int16_clamp;
-          break;
+      if (self->current_vol_i16 > VOLUME_UNITY_INT16) {
+        self->process = volume_process_int16_clamp;
+      } else {
+        self->process = volume_process_int16;
+      }
+      self->process_controlled = volume_process_controlled_int16_clamp;
+      break;
     case GST_AUDIO_FORMAT_S8:
       /* only clamp if the gain is greater than 1.0 */
       if (self->current_vol_i8 > VOLUME_UNITY_INT8) {
-            self->process = volume_process_int8_clamp;
-          } else {
-            self->process = volume_process_int8;
-          }
-          self->process_controlled = volume_process_controlled_int8_clamp;
-          break;
+        self->process = volume_process_int8_clamp;
+      } else {
+        self->process = volume_process_int8;
+      }
+      self->process_controlled = volume_process_controlled_int8_clamp;
+      break;
     case GST_AUDIO_FORMAT_F32:
-          self->process = volume_process_float;
-          self->process_controlled = volume_process_controlled_float;
-          break;
+      self->process = volume_process_float;
+      self->process_controlled = volume_process_controlled_float;
+      break;
     case GST_AUDIO_FORMAT_F64:
-          self->process = volume_process_double;
-          self->process_controlled = volume_process_controlled_double;
-          break;
+      self->process = volume_process_double;
+      self->process_controlled = volume_process_controlled_double;
+      break;
     default:
       break;
   }
@@ -751,19 +751,19 @@ volume_transform_ip (GstBaseTransform * base, GstBuffer * outbuf)
       gint width = GST_AUDIO_FORMAT_INFO_WIDTH (filter->info.finfo) / 8;
       gint channels = GST_AUDIO_INFO_CHANNELS (&filter->info);
       guint nsamples = map.size / (width * channels);
-    GstClockTime interval = gst_util_uint64_scale_int (1, GST_SECOND, rate);
+      GstClockTime interval = gst_util_uint64_scale_int (1, GST_SECOND, rate);
       gboolean have_mutes = FALSE;
       gboolean have_volumes = FALSE;
 
       if (self->mutes_count < nsamples && mute_cb) {
-      self->mutes = g_realloc (self->mutes, sizeof (gboolean) * nsamples);
-      self->mutes_count = nsamples;
-    }
+        self->mutes = g_realloc (self->mutes, sizeof (gboolean) * nsamples);
+        self->mutes_count = nsamples;
+      }
 
-    if (self->volumes_count < nsamples) {
-      self->volumes = g_realloc (self->volumes, sizeof (gdouble) * nsamples);
-      self->volumes_count = nsamples;
-    }
+      if (self->volumes_count < nsamples) {
+        self->volumes = g_realloc (self->volumes, sizeof (gdouble) * nsamples);
+        self->volumes_count = nsamples;
+      }
 
       if (volume_cb && self->volumes) {
         have_volumes =
@@ -782,11 +782,11 @@ volume_transform_ip (GstBaseTransform * base, GstBuffer * outbuf)
       }
       if (have_mutes) {
         volume_orc_prepare_volumes (self->volumes, self->mutes, nsamples);
-    } else {
-      g_free (self->mutes);
-      self->mutes = NULL;
-      self->mutes_count = 0;
-    }
+      } else {
+        g_free (self->mutes);
+        self->mutes = NULL;
+        self->mutes_count = 0;
+      }
 
       self->process_controlled (self, map.data, self->volumes, channels,
           map.size);
@@ -795,7 +795,7 @@ volume_transform_ip (GstBaseTransform * base, GstBuffer * outbuf)
     } else if (volume_cb) {
       gst_object_unref (volume_cb);
     }
-    }
+  }
 
   if (self->current_volume == 0.0 || self->current_mute) {
     orc_memset (map.data, 0, map.size);

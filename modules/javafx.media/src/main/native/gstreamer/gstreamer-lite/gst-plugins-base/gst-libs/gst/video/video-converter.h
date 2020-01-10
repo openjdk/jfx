@@ -27,17 +27,17 @@ G_BEGIN_DECLS
 /**
  * GST_VIDEO_CONVERTER_OPT_RESAMPLER_METHOD:
  *
- * #GST_TYPE_RESAMPLER_METHOD, The resampler method to use for
+ * #GST_TYPE_VIDEO_RESAMPLER_METHOD, The resampler method to use for
  * resampling. Other options for the resampler can be used, see
- * the #GstResampler. Default is #GST_RESAMPLER_METHOD_CUBIC
+ * the #GstVideoResampler. Default is #GST_VIDEO_RESAMPLER_METHOD_CUBIC
  */
 #define GST_VIDEO_CONVERTER_OPT_RESAMPLER_METHOD   "GstVideoConverter.resampler-method"
 /**
  * GST_VIDEO_CONVERTER_OPT_CHROMA_RESAMPLER_METHOD:
  *
- * #GST_TYPE_RESAMPLER_METHOD, The resampler method to use for
+ * #GST_TYPE_VIDEO_RESAMPLER_METHOD, The resampler method to use for
  * chroma resampling. Other options for the resampler can be used, see
- * the #GstResampler. Default is #GST_RESAMPLER_METHOD_LINEAR
+ * the #GstVideoResampler. Default is #GST_VIDEO_RESAMPLER_METHOD_LINEAR
  */
 #define GST_VIDEO_CONVERTER_OPT_CHROMA_RESAMPLER_METHOD   "GstVideoConverter.chroma-resampler-method"
 /**

@@ -1786,9 +1786,9 @@
                _Java_com_sun_webkit_network_SocketStreamHandle_twkDidFail
                _Java_com_sun_webkit_network_SocketStreamHandle_twkDidOpen
                _Java_com_sun_webkit_network_SocketStreamHandle_twkDidReceiveData
-               _Java_com_sun_webkit_network_URLLoader_twkDidFail
-               _Java_com_sun_webkit_network_URLLoader_twkDidFinishLoading
-               _Java_com_sun_webkit_network_URLLoader_twkDidReceiveData
-               _Java_com_sun_webkit_network_URLLoader_twkDidReceiveResponse
-               _Java_com_sun_webkit_network_URLLoader_twkDidSendData
-               _Java_com_sun_webkit_network_URLLoader_twkWillSendRequest
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidFail
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidFinishLoading
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveData
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidReceiveResponse
+               _Java_com_sun_webkit_network_URLLoaderBase_twkDidSendData
+               _Java_com_sun_webkit_network_URLLoaderBase_twkWillSendRequest

@@ -83,7 +83,6 @@ def gtk2CCFlags = [  ];
 def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk2LinkFlags = [ ];
 def gtk3LinkFlags = [ ];
-LINUX.buildGTK3 = true
 
 // Create $buildDir/linux_tools.properties file and load props from it
 setupTools("linux_gtk2",
@@ -120,7 +119,6 @@ setupTools("linux_gtk3",
         exec {
             commandLine("${toolchainDir}pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst")
             setStandardOutput(results2);
-            ignoreExitValue(true)
         }
         propFile << "cflagsGTK3=" << results2.toString().trim() << "\n";
 
@@ -128,20 +126,18 @@ setupTools("linux_gtk3",
         exec {
             commandLine("${toolchainDir}pkg-config", "--libs", "gtk+-3.0", "gthread-2.0", "xtst")
             setStandardOutput(results4);
-            ignoreExitValue(true)
         }
         propFile << "libsGTK3=" << results4.toString().trim()  << "\n";
 
     },
     { properties ->
-        def ccflags =  properties.getProperty("cflagsGTK3")
-        def ldflags =  properties.getProperty("libsGTK3")
-        if (ccflags && ldflags) {
-            gtk3CCFlags.addAll(ccflags.split(" "))
-            gtk3LinkFlags.addAll(ldflags.split(" "))
+        def cflagsGTK3 = properties.getProperty("cflagsGTK3")
+        def libsGTK3 = properties.getProperty("libsGTK3")
+        if (cflagsGTK3 && libsGTK3) {
+            gtk3CCFlags.addAll(cflagsGTK3.split(" "))
+            gtk3LinkFlags.addAll(libsGTK3.split(" "))
         } else {
-            logger.info("Warning: GTK3 development packages not found, not building GTK3 support");
-            LINUX.buildGTK3 = false
+            throw new IllegalStateException("GTK3 development packages not found. If GTK3 packages are installed, please remove the build directory and try again.")
         }
     }
 )
@@ -213,13 +209,7 @@ def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "${toolchainDir}gcc";
 def linker = IS_STATIC_BUILD ? "ar" : IS_COMPILE_PARFAIT ? "parfait-g++" : "${toolchainDir}g++";
 
 LINUX.glass = [:]
-LINUX.glass.variants = ["glass", "glassgtk2"]
-if (LINUX.buildGTK3) {
-    logger.info("Building libglassgtk3")
-    LINUX.glass.variants += "glassgtk3"
-} else {
-    logger.warn("NOT Building libglassgtk3")
-}
+LINUX.glass.variants = ["glass", "glassgtk2", "glassgtk3"]
 
 FileTree ft_gtk_launcher = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
     include("**/launcher.c")
@@ -232,7 +222,7 @@ FileTree ft_gtk = fileTree("${project(":graphics").projectDir}/src/main/native-g
 LINUX.glass.glass = [:]
 LINUX.glass.glass.nativeSource = ft_gtk_launcher.getFiles()
 LINUX.glass.glass.compiler = compiler
-LINUX.glass.glass.ccFlags = [ccFlags, gtk2CCFlags,  "-Werror"].flatten()
+LINUX.glass.glass.ccFlags = [ccFlags, "-Werror"].flatten()
 LINUX.glass.glass.linker = linker
 LINUX.glass.glass.linkFlags = IS_STATIC_BUILD? linkFlags : [linkFlags, "-lX11", "-ldl"].flatten()
 LINUX.glass.glass.lib = "glass"

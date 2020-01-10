@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -859,7 +859,7 @@ public class ComboBoxTest {
         assertTrue(sm.isSelected(2));
     }
 
-    @Ignore("Test not working as the heights being returned are not accurate")
+    @Ignore("JDK-8091127 Test not working as the heights being returned are not accurate")
     @Test public void test_rt20106() {
         comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
 
@@ -948,7 +948,6 @@ public class ComboBoxTest {
         assertEquals("TO_STRING", cell.getText());
     }
 
-    @Ignore
     @Test public void test_rt20189() {
         comboBox.getItems().addAll("0","1","2","3","4","5","6","7","8","9");
 
@@ -957,8 +956,6 @@ public class ComboBoxTest {
         stage.setScene(scene);
         comboBox.applyCss();
         comboBox.show();
-
-        SelectionModel sm = getListView().getSelectionModel();
 
         comboBox.getSelectionModel().select(2);
         Object item = sm.getSelectedItem();
@@ -1200,7 +1197,6 @@ public class ComboBoxTest {
     }
 
     private int test_rt34603_count = 0;
-    @Ignore("Bug has not yet been resolved")
     @Test public void test_rt34603() {
         assertEquals(0, test_rt34603_count);
 

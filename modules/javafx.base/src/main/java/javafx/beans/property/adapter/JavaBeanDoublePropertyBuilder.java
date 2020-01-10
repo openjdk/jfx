@@ -62,8 +62,9 @@ public final class JavaBeanDoublePropertyBuilder {
     private final JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
 
     /**
-     * <b>Do not use this constructor.</b> It will be deprecated in the next version. Use {@link #create()} instead.
+     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
      */
+    @Deprecated(since="14", forRemoval=true)
     public JavaBeanDoublePropertyBuilder() {}
 
     /**

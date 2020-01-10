@@ -188,6 +188,7 @@ typedef enum
 /**
  * GstAudioFormatUnpack:
  * @info: a #GstAudioFormatInfo
+ * @flags: #GstAudioPackFlags
  * @dest: (array) (element-type guint8): a destination array
  * @data: (array) (element-type guint8): pointer to the audio data
  * @length: the amount of samples to unpack.
@@ -199,10 +200,11 @@ typedef enum
  */
 typedef void (*GstAudioFormatUnpack)         (const GstAudioFormatInfo *info,
                                               GstAudioPackFlags flags, gpointer dest,
-                                              const gpointer data, gint length);
+                                              gconstpointer data, gint length);
 /**
  * GstAudioFormatPack:
  * @info: a #GstAudioFormatInfo
+ * @flags: #GstAudioPackFlags
  * @src: (array) (element-type guint8): a source array
  * @data: (array) (element-type guint8): pointer to the destination
  *   data
@@ -213,7 +215,7 @@ typedef void (*GstAudioFormatUnpack)         (const GstAudioFormatInfo *info,
  * and will be packed into @data.
  */
 typedef void (*GstAudioFormatPack)           (const GstAudioFormatInfo *info,
-                                              GstAudioPackFlags flags, const gpointer src,
+                                              GstAudioPackFlags flags, gconstpointer src,
                                               gpointer data, gint length);
 
 /**
@@ -233,6 +235,7 @@ typedef void (*GstAudioFormatPack)           (const GstAudioFormatInfo *info,
  * Information for an audio format.
  */
 struct _GstAudioFormatInfo {
+  /*< public >*/
   GstAudioFormat format;
   const gchar *name;
   const gchar *description;

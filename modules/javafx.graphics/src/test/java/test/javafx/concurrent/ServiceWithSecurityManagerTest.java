@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ import org.junit.runners.model.Statement;
  * related tests on lots of different unit tests.
  */
 @RunWith(ServiceWithSecurityManagerTest.ServiceTestRunner.class)
-@Ignore("This class doesn't appear to run correctly, often s.evaluate isn't called. Likely bogus test at present.")
+@Ignore("JDK-8234175") // This class doesn't appear to run correctly, often s.evaluate isn't called. Likely bogus test at present.
 public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
 
     public static final class ServiceTestRunner extends BlockJUnit4ClassRunner {

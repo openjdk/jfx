@@ -36,7 +36,7 @@ class HeadlessPlatform extends NativePlatform {
 
     @Override
     protected NativeCursor createCursor() {
-        return new NullCursor();
+        return logSelectedCursor(new NullCursor());
     }
 
     @Override

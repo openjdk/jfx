@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import static org.junit.Assert.*;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class ImageLoaderScalingTest {
@@ -152,12 +151,6 @@ public class ImageLoaderScalingTest {
     @Test
     public void testAllTheScalesBMP() throws Exception {
         testAllTheScales("bmp");
-    }
-
-    @Ignore // libjpeg can scale the image itself and results are unpredictable
-    @Test
-    public void testAllTheScalesJPG() throws Exception {
-        testAllTheScales("jpg");
     }
 
     @Test

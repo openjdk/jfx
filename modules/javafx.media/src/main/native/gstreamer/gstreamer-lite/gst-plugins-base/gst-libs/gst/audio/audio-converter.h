@@ -160,6 +160,9 @@ GST_AUDIO_API
 gboolean             gst_audio_converter_supports_inplace (GstAudioConverter *convert);
 
 GST_AUDIO_API
+gboolean             gst_audio_converter_is_passthrough   (GstAudioConverter *convert);
+
+GST_AUDIO_API
 gboolean             gst_audio_converter_convert          (GstAudioConverter * convert,
                                                            GstAudioConverterFlags flags,
                                                            gpointer in, gsize in_size,

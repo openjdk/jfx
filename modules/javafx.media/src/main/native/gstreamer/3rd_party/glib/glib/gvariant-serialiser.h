@@ -1,6 +1,6 @@
 /*
- * Copyright © 2007, 2008 Ryan Lortie
- * Copyright © 2010 Codethink Limited
+ * Copyright (C) 2007, 2008 Ryan Lortie
+ * Copyright (C) 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -55,6 +55,8 @@ void                            g_variant_serialiser_serialise          (GVarian
                                                                          gsize                     n_children);
 
 /* misc */
+GLIB_AVAILABLE_IN_2_60
+gboolean                        g_variant_serialised_check              (GVariantSerialised        serialised);
 GLIB_AVAILABLE_IN_ALL
 gboolean                        g_variant_serialised_is_normal          (GVariantSerialised        value);
 GLIB_AVAILABLE_IN_ALL

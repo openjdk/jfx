@@ -29,7 +29,8 @@ class OMAPPlatform extends LinuxPlatform {
 
     @Override
     protected NativeCursor createCursor() {
-        return new OMAPCursor();
+        final NativeCursor c = useCursor ? new OMAPCursor() : new NullCursor();
+        return logSelectedCursor(c);
     }
 
     @Override

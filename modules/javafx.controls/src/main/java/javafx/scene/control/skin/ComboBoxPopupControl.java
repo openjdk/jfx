@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -549,7 +549,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
 
     private void handleKeyEvent(KeyEvent ke, boolean doConsume) {
-        // When the user hits the enter or F4 keys, we respond before
+        // When the user hits the enter key, we respond before
         // ever giving the event to the TextField.
         if (ke.getCode() == KeyCode.ENTER) {
             if (ke.isConsumed() || ke.getEventType() != KeyEvent.KEY_RELEASED) {
@@ -562,12 +562,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             } else if (textField != null) {
                 textField.fireEvent(ke);
             }
-        } else if (ke.getCode() == KeyCode.F4) {
-            if (ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                if (comboBoxBase.isShowing()) comboBoxBase.hide();
-                else comboBoxBase.show();
-            }
-            ke.consume(); // we always do a consume here (otherwise unit tests fail)
         } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
             // RT-23275: The TextField fires F10 and ESCAPE key events
             // up to the parent, which are then fired back at the

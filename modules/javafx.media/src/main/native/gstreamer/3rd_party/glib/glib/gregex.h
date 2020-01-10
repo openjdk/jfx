@@ -410,7 +410,7 @@ typedef enum
  *
  * Since: 2.14
  */
-typedef struct _GRegex      GRegex;
+typedef struct _GRegex    GRegex;
 
 
 /**
@@ -438,39 +438,39 @@ typedef struct _GMatchInfo  GMatchInfo;
  *
  * Since: 2.14
  */
-typedef gboolean (*GRegexEvalCallback)      (const GMatchInfo *match_info,
-                                                 GString          *result,
-                                                 gpointer          user_data);
+typedef gboolean (*GRegexEvalCallback)    (const GMatchInfo *match_info,
+             GString          *result,
+             gpointer          user_data);
 
 
 GLIB_AVAILABLE_IN_ALL
-GRegex       *g_regex_new           (const gchar         *pattern,
-                                                 GRegexCompileFlags   compile_options,
-                                                 GRegexMatchFlags     match_options,
-                                                 GError             **error);
+GRegex     *g_regex_new     (const gchar         *pattern,
+             GRegexCompileFlags   compile_options,
+             GRegexMatchFlags     match_options,
+             GError             **error);
 GLIB_AVAILABLE_IN_ALL
-GRegex           *g_regex_ref           (GRegex              *regex);
+GRegex           *g_regex_ref     (GRegex              *regex);
 GLIB_AVAILABLE_IN_ALL
-void          g_regex_unref         (GRegex              *regex);
+void      g_regex_unref     (GRegex              *regex);
 GLIB_AVAILABLE_IN_ALL
-const gchar  *g_regex_get_pattern       (const GRegex        *regex);
+const gchar  *g_regex_get_pattern   (const GRegex        *regex);
 GLIB_AVAILABLE_IN_ALL
-gint          g_regex_get_max_backref   (const GRegex        *regex);
+gint      g_regex_get_max_backref (const GRegex        *regex);
 GLIB_AVAILABLE_IN_ALL
-gint          g_regex_get_capture_count (const GRegex        *regex);
+gint      g_regex_get_capture_count (const GRegex        *regex);
 GLIB_AVAILABLE_IN_ALL
 gboolean          g_regex_get_has_cr_or_lf      (const GRegex        *regex);
 GLIB_AVAILABLE_IN_2_38
 gint              g_regex_get_max_lookbehind    (const GRegex        *regex);
 GLIB_AVAILABLE_IN_ALL
-gint          g_regex_get_string_number (const GRegex        *regex,
-                                                 const gchar         *name);
+gint      g_regex_get_string_number (const GRegex        *regex,
+             const gchar         *name);
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_regex_escape_string     (const gchar         *string,
-                                                 gint                 length);
+gchar    *g_regex_escape_string   (const gchar         *string,
+             gint                 length);
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_regex_escape_nul        (const gchar         *string,
-                                                 gint                 length);
+gchar    *g_regex_escape_nul    (const gchar         *string,
+             gint                 length);
 
 GLIB_AVAILABLE_IN_ALL
 GRegexCompileFlags g_regex_get_compile_flags    (const GRegex        *regex);
@@ -479,90 +479,90 @@ GRegexMatchFlags   g_regex_get_match_flags      (const GRegex        *regex);
 
 /* Matching. */
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_regex_match_simple      (const gchar         *pattern,
-                                                 const gchar         *string,
-                                                 GRegexCompileFlags   compile_options,
-                                                 GRegexMatchFlags     match_options);
+gboolean    g_regex_match_simple    (const gchar         *pattern,
+             const gchar         *string,
+             GRegexCompileFlags   compile_options,
+             GRegexMatchFlags     match_options);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_regex_match         (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 GRegexMatchFlags     match_options,
-                                                 GMatchInfo         **match_info);
+gboolean    g_regex_match     (const GRegex        *regex,
+             const gchar         *string,
+             GRegexMatchFlags     match_options,
+             GMatchInfo         **match_info);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_regex_match_full        (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 gssize               string_len,
-                                                 gint                 start_position,
-                                                 GRegexMatchFlags     match_options,
-                                                 GMatchInfo         **match_info,
-                                                 GError             **error);
+gboolean    g_regex_match_full    (const GRegex        *regex,
+             const gchar         *string,
+             gssize               string_len,
+             gint                 start_position,
+             GRegexMatchFlags     match_options,
+             GMatchInfo         **match_info,
+             GError             **error);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_regex_match_all     (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 GRegexMatchFlags     match_options,
-                                                 GMatchInfo         **match_info);
+gboolean    g_regex_match_all   (const GRegex        *regex,
+             const gchar         *string,
+             GRegexMatchFlags     match_options,
+             GMatchInfo         **match_info);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_regex_match_all_full    (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 gssize               string_len,
-                                                 gint                 start_position,
-                                                 GRegexMatchFlags     match_options,
-                                                 GMatchInfo         **match_info,
-                                                 GError             **error);
+gboolean    g_regex_match_all_full  (const GRegex        *regex,
+             const gchar         *string,
+             gssize               string_len,
+             gint                 start_position,
+             GRegexMatchFlags     match_options,
+             GMatchInfo         **match_info,
+             GError             **error);
 
 /* String splitting. */
 GLIB_AVAILABLE_IN_ALL
-gchar       **g_regex_split_simple      (const gchar         *pattern,
-                                                 const gchar         *string,
-                                                 GRegexCompileFlags   compile_options,
-                                                 GRegexMatchFlags     match_options);
+gchar   **g_regex_split_simple    (const gchar         *pattern,
+             const gchar         *string,
+             GRegexCompileFlags   compile_options,
+             GRegexMatchFlags     match_options);
 GLIB_AVAILABLE_IN_ALL
-gchar       **g_regex_split         (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 GRegexMatchFlags     match_options);
+gchar   **g_regex_split     (const GRegex        *regex,
+             const gchar         *string,
+             GRegexMatchFlags     match_options);
 GLIB_AVAILABLE_IN_ALL
-gchar       **g_regex_split_full        (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 gssize               string_len,
-                                                 gint                 start_position,
-                                                 GRegexMatchFlags     match_options,
-                                                 gint                 max_tokens,
-                                                 GError             **error);
+gchar   **g_regex_split_full    (const GRegex        *regex,
+             const gchar         *string,
+             gssize               string_len,
+             gint                 start_position,
+             GRegexMatchFlags     match_options,
+             gint                 max_tokens,
+             GError             **error);
 
 /* String replacement. */
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_regex_replace       (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 gssize               string_len,
-                                                 gint                 start_position,
-                                                 const gchar         *replacement,
-                                                 GRegexMatchFlags     match_options,
-                                                 GError             **error);
+gchar    *g_regex_replace   (const GRegex        *regex,
+             const gchar         *string,
+             gssize               string_len,
+             gint                 start_position,
+             const gchar         *replacement,
+             GRegexMatchFlags     match_options,
+             GError             **error);
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_regex_replace_literal   (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 gssize               string_len,
-                                                 gint                 start_position,
-                                                 const gchar         *replacement,
-                                                 GRegexMatchFlags     match_options,
-                                                 GError             **error);
+gchar    *g_regex_replace_literal (const GRegex        *regex,
+             const gchar         *string,
+             gssize               string_len,
+             gint                 start_position,
+             const gchar         *replacement,
+             GRegexMatchFlags     match_options,
+             GError             **error);
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_regex_replace_eval      (const GRegex        *regex,
-                                                 const gchar         *string,
-                                                 gssize               string_len,
-                                                 gint                 start_position,
-                                                 GRegexMatchFlags     match_options,
-                                                 GRegexEvalCallback   eval,
-                                                 gpointer             user_data,
-                                                 GError             **error);
+gchar    *g_regex_replace_eval    (const GRegex        *regex,
+             const gchar         *string,
+             gssize               string_len,
+             gint                 start_position,
+             GRegexMatchFlags     match_options,
+             GRegexEvalCallback   eval,
+             gpointer             user_data,
+             GError             **error);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_regex_check_replacement (const gchar         *replacement,
-                                                 gboolean            *has_references,
-                                                 GError             **error);
+gboolean    g_regex_check_replacement (const gchar         *replacement,
+             gboolean            *has_references,
+             GError             **error);
 
 /* Match info */
 GLIB_AVAILABLE_IN_ALL
-GRegex       *g_match_info_get_regex    (const GMatchInfo    *match_info);
+GRegex     *g_match_info_get_regex  (const GMatchInfo    *match_info);
 GLIB_AVAILABLE_IN_ALL
 const gchar      *g_match_info_get_string       (const GMatchInfo    *match_info);
 
@@ -571,38 +571,38 @@ GMatchInfo       *g_match_info_ref              (GMatchInfo          *match_info
 GLIB_AVAILABLE_IN_ALL
 void              g_match_info_unref            (GMatchInfo          *match_info);
 GLIB_AVAILABLE_IN_ALL
-void          g_match_info_free     (GMatchInfo          *match_info);
+void      g_match_info_free   (GMatchInfo          *match_info);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_match_info_next     (GMatchInfo          *match_info,
-                                                 GError             **error);
+gboolean    g_match_info_next   (GMatchInfo          *match_info,
+             GError             **error);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_match_info_matches      (const GMatchInfo    *match_info);
+gboolean    g_match_info_matches    (const GMatchInfo    *match_info);
 GLIB_AVAILABLE_IN_ALL
-gint          g_match_info_get_match_count  (const GMatchInfo    *match_info);
+gint      g_match_info_get_match_count  (const GMatchInfo    *match_info);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_match_info_is_partial_match (const GMatchInfo    *match_info);
+gboolean    g_match_info_is_partial_match (const GMatchInfo    *match_info);
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_match_info_expand_references(const GMatchInfo    *match_info,
-                         const gchar         *string_to_expand,
-                         GError             **error);
+gchar    *g_match_info_expand_references(const GMatchInfo    *match_info,
+             const gchar         *string_to_expand,
+             GError             **error);
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_match_info_fetch        (const GMatchInfo    *match_info,
-                                                 gint                 match_num);
+gchar    *g_match_info_fetch    (const GMatchInfo    *match_info,
+             gint                 match_num);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_match_info_fetch_pos    (const GMatchInfo    *match_info,
-                                                 gint                 match_num,
-                                                 gint                *start_pos,
-                                                 gint                *end_pos);
+gboolean    g_match_info_fetch_pos  (const GMatchInfo    *match_info,
+             gint                 match_num,
+             gint                *start_pos,
+             gint                *end_pos);
 GLIB_AVAILABLE_IN_ALL
-gchar        *g_match_info_fetch_named  (const GMatchInfo    *match_info,
-                                                 const gchar         *name);
+gchar    *g_match_info_fetch_named  (const GMatchInfo    *match_info,
+             const gchar         *name);
 GLIB_AVAILABLE_IN_ALL
-gboolean      g_match_info_fetch_named_pos  (const GMatchInfo    *match_info,
-                                                 const gchar         *name,
-                                                 gint                *start_pos,
-                                                 gint                *end_pos);
+gboolean    g_match_info_fetch_named_pos  (const GMatchInfo    *match_info,
+             const gchar         *name,
+             gint                *start_pos,
+             gint                *end_pos);
 GLIB_AVAILABLE_IN_ALL
-gchar       **g_match_info_fetch_all    (const GMatchInfo    *match_info);
+gchar   **g_match_info_fetch_all  (const GMatchInfo    *match_info);
 
 G_END_DECLS
 

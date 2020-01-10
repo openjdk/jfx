@@ -29,7 +29,9 @@
  * based on an array instead of linked lists. This reduces the overhead
  * caused by memory management by a large factor.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <string.h>
 #include <gst/gst.h>
@@ -45,6 +47,7 @@ struct _GstQueueArray
   guint length;
   guint elt_size;
   gboolean struct_array;
+  GDestroyNotify clear_func;
 };
 
 /**
@@ -74,6 +77,7 @@ gst_queue_array_new_for_struct (gsize struct_size, guint initial_size)
   array->tail = 0;
   array->length = 0;
   array->struct_array = TRUE;
+  array->clear_func = NULL;
   return array;
 }
 
@@ -110,8 +114,76 @@ void
 gst_queue_array_free (GstQueueArray * array)
 {
   g_return_if_fail (array != NULL);
+  gst_queue_array_clear (array);
   g_free (array->array);
   g_slice_free (GstQueueArray, array);
+}
+
+/**
+ * gst_queue_array_set_clear_func: (skip)
+ * @array: a #GstQueueArray object
+ * @clear_func: a function to clear an element of @array
+ *
+ * Sets a function to clear an element of @array.
+ *
+ * The @clear_func will be called when an element in the array
+ * data segment is removed and when the array is freed and data
+ * segment is deallocated as well. @clear_func will be passed a
+ * pointer to the element to clear, rather than the element itself.
+ *
+ * Note that in contrast with other uses of #GDestroyNotify
+ * functions, @clear_func is expected to clear the contents of
+ * the array element it is given, but not free the element itself.
+ *
+ * Since: 1.16
+ */
+void
+gst_queue_array_set_clear_func (GstQueueArray * array,
+    GDestroyNotify clear_func)
+{
+  g_return_if_fail (array != NULL);
+  array->clear_func = clear_func;
+}
+
+static void
+gst_queue_array_clear_idx (GstQueueArray * array, guint idx)
+{
+  guint pos;
+
+  if (!array->clear_func)
+    return;
+
+  pos = (idx + array->head) % array->size;
+  if (array->struct_array)
+    array->clear_func (array->array + pos * array->elt_size);
+  else
+    array->clear_func (*(gpointer *) (array->array + pos * array->elt_size));
+}
+
+/**
+ * gst_queue_array_clear: (skip)
+ * @array: a #GstQueueArray object
+ *
+ * Clears queue @array and frees all memory associated to it.
+ *
+ * Since: 1.16
+ */
+void
+gst_queue_array_clear (GstQueueArray * array)
+{
+  g_return_if_fail (array != NULL);
+
+  if (array->clear_func != NULL) {
+    guint i;
+
+    for (i = 0; i < array->length; i++) {
+      gst_queue_array_clear_idx (array, i);
+    }
+  }
+
+  array->head = 0;
+  array->tail = 0;
+  array->length = 0;
 }
 
 /**
@@ -215,6 +287,46 @@ gst_queue_array_peek_head (GstQueueArray * array)
     return NULL;
 
   return *(gpointer *) (array->array + (sizeof (gpointer) * array->head));
+}
+
+/**
+ * gst_queue_array_peek_nth: (skip)
+ *
+ * Returns the item at @idx in @array, but does not remove it from the queue.
+ *
+ * Returns: The item, or %NULL if @idx was out of bounds
+ *
+ * Since: 1.16
+ */
+gpointer
+gst_queue_array_peek_nth (GstQueueArray * array, guint idx)
+{
+  g_return_val_if_fail (array != NULL, NULL);
+  g_return_val_if_fail (idx < array->length, NULL);
+
+  idx = (array->head + idx) % array->size;
+
+  return *(gpointer *) (array->array + (sizeof (gpointer) * idx));
+}
+
+/**
+ * gst_queue_array_peek_nth_struct: (skip)
+ *
+ * Returns the item at @idx in @array, but does not remove it from the queue.
+ *
+ * Returns: The item, or %NULL if @idx was out of bounds
+ *
+ * Since: 1.16
+ */
+gpointer
+gst_queue_array_peek_nth_struct (GstQueueArray * array, guint idx)
+{
+  g_return_val_if_fail (array != NULL, NULL);
+  g_return_val_if_fail (idx < array->length, NULL);
+
+  idx = (array->head + idx) % array->size;
+
+  return array->array + (array->elt_size * idx);
 }
 
 static void
@@ -473,11 +585,14 @@ gst_queue_array_drop_struct (GstQueueArray * array, guint idx,
     gpointer p_struct)
 {
   int first_item_index, last_item_index;
+  guint actual_idx;
   guint elt_size;
 
   g_return_val_if_fail (array != NULL, FALSE);
+  actual_idx = (array->head + idx) % array->size;
+
   g_return_val_if_fail (array->length > 0, FALSE);
-  g_return_val_if_fail (idx < array->size, FALSE);
+  g_return_val_if_fail (actual_idx < array->size, FALSE);
 
   elt_size = array->elt_size;
 
@@ -487,10 +602,14 @@ gst_queue_array_drop_struct (GstQueueArray * array, guint idx,
   last_item_index = (array->tail - 1 + array->size) % array->size;
 
   if (p_struct != NULL)
-    memcpy (p_struct, array->array + elt_size * idx, elt_size);
+    memcpy (p_struct, array->array + elt_size * actual_idx, elt_size);
 
-  /* simple case idx == first item */
-  if (idx == first_item_index) {
+  /* simple case actual_idx == first item */
+  if (actual_idx == first_item_index) {
+    /* clear current head position if needed */
+    if (p_struct == NULL)
+      gst_queue_array_clear_idx (array, idx);
+
     /* move the head plus one */
     array->head++;
     array->head %= array->size;
@@ -499,7 +618,11 @@ gst_queue_array_drop_struct (GstQueueArray * array, guint idx,
   }
 
   /* simple case idx == last item */
-  if (idx == last_item_index) {
+  if (actual_idx == last_item_index) {
+    /* clear current tail position if needed */
+    if (p_struct == NULL)
+      gst_queue_array_clear_idx (array, idx);
+
     /* move tail minus one, potentially wrapping */
     array->tail = (array->tail - 1 + array->size) % array->size;
     array->length--;
@@ -508,11 +631,15 @@ gst_queue_array_drop_struct (GstQueueArray * array, guint idx,
 
   /* non-wrapped case */
   if (first_item_index < last_item_index) {
-    g_assert (first_item_index < idx && idx < last_item_index);
-    /* move everything beyond idx one step towards zero in array */
-    memmove (array->array + elt_size * idx,
-        array->array + elt_size * (idx + 1),
-        (last_item_index - idx) * elt_size);
+    /* clear idx if needed */
+    if (p_struct == NULL)
+      gst_queue_array_clear_idx (array, idx);
+
+    g_assert (first_item_index < actual_idx && actual_idx < last_item_index);
+    /* move everything beyond actual_idx one step towards zero in array */
+    memmove (array->array + elt_size * actual_idx,
+        array->array + elt_size * (actual_idx + 1),
+        (last_item_index - actual_idx) * elt_size);
     /* tail might wrap, ie if tail == 0 (and last_item_index == size) */
     array->tail = (array->tail - 1 + array->size) % array->size;
     array->length--;
@@ -522,11 +649,15 @@ gst_queue_array_drop_struct (GstQueueArray * array, guint idx,
   /* only wrapped cases left */
   g_assert (first_item_index > last_item_index);
 
-  if (idx < last_item_index) {
-    /* idx is before last_item_index, move data towards zero */
-    memmove (array->array + elt_size * idx,
-        array->array + elt_size * (idx + 1),
-        (last_item_index - idx) * elt_size);
+  if (actual_idx < last_item_index) {
+    /* clear idx if needed */
+    if (p_struct == NULL)
+      gst_queue_array_clear_idx (array, idx);
+
+    /* actual_idx is before last_item_index, move data towards zero */
+    memmove (array->array + elt_size * actual_idx,
+        array->array + elt_size * (actual_idx + 1),
+        (last_item_index - actual_idx) * elt_size);
     /* tail should not wrap in this case! */
     g_assert (array->tail > 0);
     array->tail--;
@@ -534,11 +665,15 @@ gst_queue_array_drop_struct (GstQueueArray * array, guint idx,
     return TRUE;
   }
 
-  if (idx > first_item_index) {
-    /* idx is after first_item_index, move data to higher indices */
+  if (actual_idx > first_item_index) {
+    /* clear idx if needed */
+    if (p_struct == NULL)
+      gst_queue_array_clear_idx (array, idx);
+
+    /* actual_idx is after first_item_index, move data to higher indices */
     memmove (array->array + elt_size * (first_item_index + 1),
         array->array + elt_size * first_item_index,
-        (idx - first_item_index) * elt_size);
+        (actual_idx - first_item_index) * elt_size);
     array->head++;
     /* head should not wrap in this case! */
     g_assert (array->head < array->size);
@@ -581,11 +716,6 @@ gst_queue_array_drop_element (GstQueueArray * array, guint idx)
  * with @func or by looking up @data if no compare function @func is provided,
  * and returning the index of the found element.
  *
- * Note that the index is not 0-based, but an internal index number with a
- * random offset. The index can be used in connection with
- * gst_queue_array_drop_element(). FIXME: return index 0-based and make
- * gst_queue_array_drop_element() take a 0-based index.
- *
  * Returns: Index of the found element or -1 if nothing was found.
  *
  * Since: 1.2
@@ -611,13 +741,13 @@ gst_queue_array_find (GstQueueArray * array, GCompareFunc func, gpointer data)
     for (i = 0; i < array->length; i++) {
       p_element = array->array + ((i + array->head) % array->size) * elt_size;
       if (func (*(gpointer *) p_element, data) == 0)
-        return (i + array->head) % array->size;
+        return i;
     }
   } else {
     for (i = 0; i < array->length; i++) {
       p_element = array->array + ((i + array->head) % array->size) * elt_size;
       if (*(gpointer *) p_element == data)
-        return (i + array->head) % array->size;
+        return i;
     }
   }
 

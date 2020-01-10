@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,25 @@
 #import "AVFAudioEqualizer.h"
 
 @class AVFMediaPlayer;
+
+class AVFTapContext {
+public:
+
+    AVFTapContext(AVFSoundLevelUnitPtr slu, AVFAudioSpectrumUnitPtr spectrum, AVFAudioEqualizerPtr eq);
+    ~AVFTapContext();
+
+    // Hold on to these while we're running
+    AVFSoundLevelUnitPtr audioSLU;
+    AVFAudioSpectrumUnitPtr audioSpectrum;
+    AVFAudioEqualizerPtr audioEQ;
+
+    // Audio parameters
+    UInt32 mSampleRate;
+    UInt32 mChannels;
+    UInt32 mMaxFrames;
+};
+
+typedef std::shared_ptr<AVFTapContext> AVFTapContextPtr;
 
 @interface AVFAudioProcessor : NSObject {
     AVAudioMix *_mixer;

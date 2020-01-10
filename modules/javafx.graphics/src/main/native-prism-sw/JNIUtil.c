@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,22 @@
  */
 
 #include <JNIUtil.h>
+#ifdef STATIC_BUILD
+JNIEXPORT jint JNICALL
+JNI_OnLoad_prism_sw(JavaVM *vm, void * reserved) {
+#ifdef JNI_VERSION_1_8
+    //min. returned JNI_VERSION required by JDK8 for builtin libraries
+    JNIEnv *env;
+    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_8) != JNI_OK) {
+        return JNI_VERSION_1_4;
+    }
+    return JNI_VERSION_1_8;
+#else
+    return JNI_VERSION_1_4;
+#endif
+}
+#endif // STATIC_BUILD
+
 
 jboolean
 initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
@@ -33,7 +49,7 @@ initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
     while (fields->name != NULL) {
         *dest = (*env)->GetFieldID(env, classHandle, fields->name,
                                    fields->signature);
-        checkAndClearException(env);
+        prismsw_checkAndClearException(env);
         if (*dest == NULL) {
             retVal = JNI_FALSE;
             break;
@@ -53,7 +69,7 @@ initializeStaticFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
     while (fields->name != NULL) {
         *dest = (*env)->GetStaticFieldID(env, classHandle, fields->name,
                                          fields->signature);
-        checkAndClearException(env);
+        prismsw_checkAndClearException(env);
         if (*dest == NULL) {
             retVal = JNI_FALSE;
             break;
@@ -83,7 +99,7 @@ JNI_ThrowNew(JNIEnv* env, const char* throwable, const char* message) {
 }
 
 jboolean
-checkAndClearException(JNIEnv *env) {
+prismsw_checkAndClearException(JNIEnv *env) {
     if (!(*env)->ExceptionCheck(env)) {
         return JNI_FALSE;
     }

@@ -35,6 +35,9 @@
  *
  * All functions are MT-safe.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <float.h>
 
@@ -377,7 +380,7 @@ enum
 
 #define gst_lfo_control_source_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstLFOControlSource, gst_lfo_control_source,
-    GST_TYPE_CONTROL_SOURCE, _do_init);
+    GST_TYPE_CONTROL_SOURCE, G_ADD_PRIVATE (GstLFOControlSource) _do_init);
 
 static void
 gst_lfo_control_source_reset (GstLFOControlSource * self)
@@ -428,9 +431,7 @@ gst_lfo_control_source_set_waveform (GstLFOControlSource * self,
 static void
 gst_lfo_control_source_init (GstLFOControlSource * self)
 {
-  self->priv =
-      G_TYPE_INSTANCE_GET_PRIVATE (self, GST_TYPE_LFO_CONTROL_SOURCE,
-      GstLFOControlSourcePrivate);
+  self->priv = gst_lfo_control_source_get_instance_private (self);
   self->priv->waveform = gst_lfo_control_source_set_waveform (self,
       GST_LFO_WAVEFORM_SINE);
   self->priv->frequency = 1.0;
@@ -529,8 +530,6 @@ static void
 gst_lfo_control_source_class_init (GstLFOControlSourceClass * klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
-
-  g_type_class_add_private (klass, sizeof (GstLFOControlSourcePrivate));
 
   gobject_class->finalize = gst_lfo_control_source_finalize;
   gobject_class->set_property = gst_lfo_control_source_set_property;

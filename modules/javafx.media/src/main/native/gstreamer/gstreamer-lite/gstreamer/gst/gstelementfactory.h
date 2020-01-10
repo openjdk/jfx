@@ -103,8 +103,8 @@ gboolean                gst_element_register                    (GstPlugin *plug
  * @GST_ELEMENT_FACTORY_TYPE_PARSER: Parser elements
  * @GST_ELEMENT_FACTORY_TYPE_PAYLOADER: Payloader elements
  * @GST_ELEMENT_FACTORY_TYPE_DEPAYLOADER: Depayloader elements
- * @GST_ELEMENT_FACTORY_TYPE_DECRYPTOR: Elements handling decryption (Since 1.6)
- * @GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR: Elements handling encryption (Since 1.6)
+ * @GST_ELEMENT_FACTORY_TYPE_DECRYPTOR: Elements handling decryption (Since: 1.6)
+ * @GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR: Elements handling encryption (Since: 1.6)
  * @GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS: Private, do not use
  * @GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO: Elements handling video media types
  * @GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO: Elements handling audio media types
@@ -209,6 +209,17 @@ typedef guint64 GstElementFactoryListType;
 #define GST_ELEMENT_FACTORY_KLASS_MEDIA_IMAGE           "Image"
 #define GST_ELEMENT_FACTORY_KLASS_MEDIA_SUBTITLE        "Subtitle"
 #define GST_ELEMENT_FACTORY_KLASS_MEDIA_METADATA        "Metadata"
+
+/**
+ * GST_ELEMENT_FACTORY_KLASS_HARDWARE:
+ *
+ * Elements interacting with hardware devices should specify this classifier in
+ * their metadata. You may need to put the element in "READY" state to test if
+ * the hardware is present in the system.
+ *
+ * Since: 1.16
+ */
+#define GST_ELEMENT_FACTORY_KLASS_HARDWARE              "Hardware"
 
 GST_API
 gboolean      gst_element_factory_list_is_type      (GstElementFactory *factory,

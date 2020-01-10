@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -332,7 +332,7 @@ initializeObjectFieldIds(JNIEnv *env,
         classHandle = (*env)->GetObjectClass(env, objectHandle);
     } else if (className != 0) {
         classHandle = (*env)->FindClass(env, className);
-        if (checkAndClearException(env)) return JNI_FALSE;
+        if (prismsw_checkAndClearException(env)) return JNI_FALSE;
     } else {
         return JNI_FALSE;
     }

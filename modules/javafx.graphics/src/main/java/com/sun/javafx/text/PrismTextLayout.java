@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -80,6 +80,7 @@ public class PrismTextLayout implements TextLayout {
     private LayoutCache layoutCache;
     private Shape shape;
     private int flags;
+    private int tabSize = DEFAULT_TAB_SIZE;
 
     public PrismTextLayout() {
         logicalBounds = new RectBounds();
@@ -648,6 +649,19 @@ public class PrismTextLayout implements TextLayout {
         return outline;
     }
 
+    @Override
+    public boolean setTabSize(int spaces) {
+        if (spaces < 1) {
+            spaces = 1;
+        }
+        if (tabSize != spaces) {
+            tabSize = spaces;
+            relayout();
+            return true;
+        }
+        return false;
+    }
+
     /***************************************************************************
      *                                                                         *
      *                     Text Layout Implementation                          *
@@ -1004,7 +1018,7 @@ public class PrismTextLayout implements TextLayout {
         } else {
             spaceAdvance = strike.getCharAdvance(' ');
         }
-        return 8 * spaceAdvance;
+        return tabSize * spaceAdvance;
     }
 
     private void layout() {

@@ -127,6 +127,7 @@ COMPILER_FLAGS = -nologo -W3 -WX- -EHsc -GS -fp:precise -Gm- \
 
 INCLUDES = $(addprefix -I$(SRCBASE_DIR)/glib/,$(DIRLIST)) \
            -I$(SRCBASE_DIR) \
+           -I$(SRCBASE_DIR)/build/win32 \
            -I$(SRCBASE_DIR)/build/win32/vs100
 
 CFLAGS =   -DWIN32 \

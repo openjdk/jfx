@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -381,7 +381,7 @@ jclass classForName(JNIEnv *env, char *className)
     GET_MAIN_JENV;
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
-        (*env)->CallVoidMethod(env, self.jApplication, [GlassHelper ApplicationNotifyQuitMethod]);
+        (*env)->CallVoidMethod(env, self.jApplication, [GlassHelper ApplicationNotifyWillQuitMethod]);
     }
     [pool drain];
     GLASS_CHECK_EXCEPTION(env);

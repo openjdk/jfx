@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@
 #import "com_sun_glass_events_TouchEvent.h"
 
 #import "GlassStatics.h"
+#import "GlassHelper.h"
 #import "GlassMacros.h"
 #import "GlassWindow.h"
 
@@ -382,7 +383,7 @@ static jint getTouchStateFromPhase(int phase)
 
         // Ensure JNI stuff related to gesture processing is ready
         if (NULL == jGestureSupportClass) {
-            (*env)->FindClass(env, "com/sun/glass/ui/ios/IosGestureSupport");
+            [GlassHelper ClassForName:"com.sun.glass.ui.ios.IosGestureSupport" withEnv:env];
         }
         self.touches = NULL;
         self.lastTouchId = 0;

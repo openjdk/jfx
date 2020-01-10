@@ -3,7 +3,7 @@ AC_PREREQ(2.63)
 
 m4_define([MAJOR_VERSION], [1])
 m4_define([MINOR_VERSION], [1])
-m4_define([MICRO_VERSION], [33])
+m4_define([MICRO_VERSION], [34])
 
 AC_INIT([libxslt], [MAJOR_VERSION.MINOR_VERSION.MICRO_VERSION])
 AC_CONFIG_SRCDIR([libxslt/xslt.c])
@@ -168,7 +168,7 @@ dnl
 dnl Math detection
 dnl
 
-AC_CHECK_HEADERS(ieeefp.h nan.h math.h fp_class.h float.h ansidecl.h)
+AC_CHECK_HEADERS(ieeefp.h nan.h math.h fp_class.h float.h)
 AC_CHECK_HEADERS(sys/timeb.h time.h sys/stat.h sys/select.h stdarg.h)
 AC_CHECK_HEADERS(errno.h)
 AC_CHECK_FUNCS(stat _stat)
@@ -403,6 +403,20 @@ fi
 AC_SUBST(WITH_DEBUGGER)
 
 dnl
+dnl Is profiler support requested
+dnl
+AC_ARG_WITH(profiler, [  --with-profiler        Add the profiling support (on)])
+if test "$with_profiler" = "no" ; then
+    echo Disabling profiler
+    WITH_PROFILER=0
+else
+    echo Enabling profiler
+    WITH_PROFILER=1
+    AC_DEFINE([WITH_PROFILER],[], [Define if profiling support is enabled])
+fi
+AC_SUBST(WITH_PROFILER)
+
+dnl
 dnl The following new parameters were added to offer
 dnl the ability to specify the location of the libxml
 dnl library during linking and compilation.
@@ -460,7 +474,7 @@ if test "${GCC}" != "yes" ; then
                ;;
     esac
 else
-    CFLAGS="${CFLAGS} -Wall -Wformat=2 -Wmissing-format-attribute"
+    CFLAGS="${CFLAGS} -Wall -Wextra -Wformat=2 -Wmissing-format-attribute"
     case "${host}" in
           alpha*-*-linux* )
 	       CFLAGS="${CFLAGS} -mieee"
@@ -472,34 +486,59 @@ else
 fi
 
 dnl
+dnl Check which type of library to build. Default to building shared and static.
+dnl
+
+build_shared_libs="yes"
+build_static_libs="yes"
+
+if test "$enable_shared" = "no"; then
+    build_shared_libs="no"
+fi
+
+if test "$enable_static" = "no"; then
+    build_static_libs="no"
+fi
+
+if test "$build_shared_libs" = "no" -a "$build_static_libs" = "no"; then
+    build_static_libs="yes"
+fi
+
+dnl
 dnl Override other variables if LIBXML_SRC is set
 dnl
 
-if test "x$LIBXML_SRC" != "x"
-then
-	CWD=`pwd`
-	if cd $LIBXML_SRC
-	then
-		LIBXML_SRC=`pwd`
-		XML_CONFIG="${LIBXML_SRC}/xml2-config"
-		LIBXML_CFLAGS="-I${LIBXML_SRC}/include"
-		LIBXML_LIBS="-L${LIBXML_SRC} `$XML_CONFIG --libs`"
-                WITH_MODULES="`$XML_CONFIG --modules`"
-		cd $CWD
-	else
-		AC_MSG_ERROR([libxml source dir not found (${LIBXML_SRC}), typo?])
-	fi
+if test "x$LIBXML_SRC" != "x"; then
+    CWD=`pwd`
+    if cd $LIBXML_SRC; then
+        LIBXML_SRC=`pwd`
+        XML_CONFIG="${LIBXML_SRC}/xml2-config"
+        LIBXML_CFLAGS="-I${LIBXML_SRC}/include"
+        if test "$build_static_libs" = "no"; then
+            LIBXML_LIBS="-L${LIBXML_SRC} `$XML_CONFIG --libs --dynamic`"
+        else
+            LIBXML_LIBS="-L${LIBXML_SRC} `$XML_CONFIG --libs`"
+        fi
+        WITH_MODULES="`$XML_CONFIG --modules`"
+        cd $CWD
+    else
+        AC_MSG_ERROR([libxml source dir not found (${LIBXML_SRC}), typo?])
+    fi
 fi
 
 dnl
 dnl Try pkg-config first if nothing is set
 dnl
 
-if test "x$LIBXML_CONFIG_PREFIX" = "x" -a "x$LIBXML_LIBS" = "x"
-then
-	PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= $LIBXML_REQUIRED_VERSION], [
-		WITH_MODULES="`$PKG_CONFIG --variable=modules libxml-2.0`"
-	], [ ])
+if test "x$LIBXML_CONFIG_PREFIX" = "x" -a "x$LIBXML_LIBS" = "x"; then
+    if test "$build_static_libs" = "no"; then
+        PKG_CHECK_MODULES([LIBXML], [libxml-2.0 >= $LIBXML_REQUIRED_VERSION], [
+            WITH_MODULES="`$PKG_CONFIG --variable=modules libxml-2.0`"
+        ], [ ])
+    else
+        PKG_CHECK_MODULES_STATIC([LIBXML], [libxml-2.0 >= $LIBXML_REQUIRED_VERSION],
+        [ ], [ ])
+    fi
 fi
 
 dnl
@@ -509,15 +548,19 @@ dnl
 
 if test "x$LIBXML_LIBS" = "x" && ${XML_CONFIG} --libs print > /dev/null 2>&1
 then
-        AC_MSG_CHECKING(for libxml libraries >= $LIBXML_REQUIRED_VERSION)
-	XMLVERS=`$XML_CONFIG --version`
-	if test VERSION_TO_NUMBER(echo $XMLVERS) -ge VERSION_TO_NUMBER(echo $LIBXML_REQUIRED_VERSION)
-	then
-		AC_MSG_RESULT($XMLVERS found)
-	else
-		AC_MSG_ERROR(Version $XMLVERS found. You need at least libxml2 $LIBXML_REQUIRED_VERSION for this version of libxslt)
-	fi
-	LIBXML_LIBS="`$XML_CONFIG --libs`"
+    AC_MSG_CHECKING(for libxml libraries >= $LIBXML_REQUIRED_VERSION)
+    XMLVERS=`$XML_CONFIG --version`
+    if test VERSION_TO_NUMBER(echo $XMLVERS) -ge VERSION_TO_NUMBER(echo $LIBXML_REQUIRED_VERSION); then
+        AC_MSG_RESULT($XMLVERS found)
+    else
+        AC_MSG_ERROR(Version $XMLVERS found. You need at least libxml2 $LIBXML_REQUIRED_VERSION for this version of libxslt)
+    fi
+
+    if test "$build_static_libs" = "no"; then
+        LIBXML_LIBS="`$XML_CONFIG --libs --dynamic`"
+    else
+        LIBXML_LIBS="`$XML_CONFIG --libs`"
+    fi
 	LIBXML_CFLAGS="`$XML_CONFIG --cflags`"
         WITH_MODULES="`$XML_CONFIG --modules`"
 fi
@@ -540,7 +583,7 @@ then
 fi
 
 AC_MSG_CHECKING([whether shared libraries will be built (required for plugins)])
-if test "$enable_shared" = "no" -a "$with_plugins" = "yes"; then
+if test "$build_shared_libs" = "no" -a "$with_plugins" = "yes"; then
 	 AC_MSG_RESULT(no)
 	 AC_MSG_WARN([Disabling plugin support.])
 	 AC_MSG_WARN([Plugins require that shared libraries be built.])
@@ -579,22 +622,11 @@ expanded_libdir=$(
 LIBXSLT_DEFAULT_PLUGINS_PATH="$expanded_libdir/libxslt-plugins"
 AC_SUBST(LIBXSLT_DEFAULT_PLUGINS_PATH)
 
-WIN32_EXTRA_LIBADD=
-WIN32_EXTRA_LDFLAGS=
 case "$host" in
- *-*-cygwin*)
- WIN32_EXTRA_LDFLAGS="-no-undefined"
- ;;
- *-*-mingw*)
- WIN32_EXTRA_LIBADD="-lwsock32"
- WIN32_EXTRA_LDFLAGS="-no-undefined"
- AC_DEFINE([_WINSOCKAPI_],1,[Using the Win32 Socket implementation])
- AC_DEFINE([snprintf],[_snprintf],[Win32 Std C name mangling work-around])
- AC_DEFINE([vsnprintf],[_vsnprintf],[Win32 Std C name mangling work-around])
+ *-*-cygwin*|*-*-mingw*)
+ LDFLAGS="$LDFLAGS -no-undefined"
  ;;
 esac
-AC_SUBST(WIN32_EXTRA_LIBADD)
-AC_SUBST(WIN32_EXTRA_LDFLAGS)
 
 
 AC_SUBST(XSLTPROCDV)
@@ -609,17 +641,21 @@ AC_SUBST(PYTHON_SITE_PACKAGES)
 
 XSLT_LIBDIR='-L${libdir}'
 XSLT_INCLUDEDIR='-I${includedir}'
-XSLT_LIBS="-lxslt $LIBXML_LIBS $M_LIBS"
+XSLT_LIBS="-lxslt $LIBXML_LIBS"
+XSLT_PRIVATE_LIBS="$M_LIBS"
 AC_SUBST(XSLT_LIBDIR)
 AC_SUBST(XSLT_INCLUDEDIR)
 AC_SUBST(XSLT_LIBS)
+AC_SUBST(XSLT_PRIVATE_LIBS)
 
 EXSLT_LIBDIR='-L${libdir}'
 EXSLT_INCLUDEDIR='-I${includedir}'
-EXSLT_LIBS="-lexslt $XSLT_LIBS $LIBGCRYPT_LIBS"
+EXSLT_LIBS="-lexslt $XSLT_LIBS"
+EXSLT_PRIVATE_LIBS="$XSLT_PRIVATE_LIBS $LIBGCRYPT_LIBS"
 AC_SUBST(EXSLT_LIBDIR)
 AC_SUBST(EXSLT_INCLUDEDIR)
 AC_SUBST(EXSLT_LIBS)
+AC_SUBST(EXSLT_PRIVATE_LIBS)
 
 AC_SUBST(EXTRA_LIBS)
 
@@ -672,9 +708,12 @@ tests/exslt/date/Makefile
 tests/exslt/dynamic/Makefile
 tests/exslt/crypto/Makefile
 tests/plugins/Makefile
+tests/fuzz/Makefile
 doc/Makefile
 xslt-config
 libxslt.spec
 ])
+AC_CONFIG_LINKS([tests/fuzz/xpath.xml:tests/fuzz/xpath.xml])
+AC_CONFIG_LINKS([tests/fuzz/xslt.xml:tests/fuzz/xslt.xml])
 
 AC_OUTPUT

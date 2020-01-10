@@ -167,6 +167,9 @@ G_END_DECLS
 
 #include <gst/video/colorbalancechannel.h>
 #include <gst/video/colorbalance.h>
+#ifndef GSTREAMER_LITE
+#include <gst/video/gstvideoaggregator.h>
+#endif // GSTREAMER_LITE
 #include <gst/video/gstvideodecoder.h>
 #include <gst/video/gstvideoencoder.h>
 #include <gst/video/gstvideofilter.h>
@@ -186,6 +189,7 @@ G_END_DECLS
 #include <gst/video/gstvideotimecode.h>
 #ifndef GSTREAMER_LITE
 #include <gst/video/gstvideoaffinetransformationmeta.h>
+#include <gst/video/video-anc.h>
 #endif // GSTREAMER_LITE
 
 #endif /* __GST_VIDEO_H__ */

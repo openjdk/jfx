@@ -48,9 +48,6 @@
 GST_DEBUG_CATEGORY_STATIC (gst_allocator_debug);
 #define GST_CAT_DEFAULT gst_allocator_debug
 
-#define GST_ALLOCATOR_GET_PRIVATE(obj)  \
-     (G_TYPE_INSTANCE_GET_PRIVATE ((obj), GST_TYPE_ALLOCATOR, GstAllocatorPrivate))
-
 struct _GstAllocatorPrivate
 {
   gpointer dummy;
@@ -83,13 +80,12 @@ static GstAllocator *_sysmem_allocator;
 static GRWLock lock;
 static GHashTable *allocators;
 
-G_DEFINE_ABSTRACT_TYPE (GstAllocator, gst_allocator, GST_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (GstAllocator, gst_allocator,
+    GST_TYPE_OBJECT);
 
 static void
 gst_allocator_class_init (GstAllocatorClass * klass)
 {
-  g_type_class_add_private (klass, sizeof (GstAllocatorPrivate));
-
   GST_DEBUG_CATEGORY_INIT (gst_allocator_debug, "allocator", 0,
       "allocator debug");
 }
@@ -139,7 +135,7 @@ _fallback_mem_is_span (GstMemory * mem1, GstMemory * mem2, gsize * offset)
 static void
 gst_allocator_init (GstAllocator * allocator)
 {
-  allocator->priv = GST_ALLOCATOR_GET_PRIVATE (allocator);
+  allocator->priv = gst_allocator_get_instance_private (allocator);
 
   allocator->mem_copy = _fallback_mem_copy;
   allocator->mem_is_span = _fallback_mem_is_span;
@@ -551,7 +547,7 @@ gst_allocator_sysmem_finalize (GObject * obj)
 {
   /* Don't raise warnings if we are shutting down */
   if (_default_allocator)
-  g_warning ("The default memory allocator was freed!");
+    g_warning ("The default memory allocator was freed!");
 
   ((GObjectClass *) gst_allocator_sysmem_parent_class)->finalize (obj);
 }

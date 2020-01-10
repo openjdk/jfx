@@ -47,7 +47,7 @@ typedef struct _GstSystemClockPrivate GstSystemClockPrivate;
  * @GST_CLOCK_TYPE_REALTIME: time since Epoch
  * @GST_CLOCK_TYPE_MONOTONIC: monotonic time since some unspecified starting
  *                            point
- * @GST_CLOCK_TYPE_OTHER: some other time source is used (Since 1.0.5)
+ * @GST_CLOCK_TYPE_OTHER: some other time source is used (Since: 1.0.5)
  *
  * The different kind of clocks.
  */

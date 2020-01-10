@@ -402,10 +402,11 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
         }
         fontCount = 0;
         minGlyphs = 20;
+        FcCharSet *unionCharset = NULL;
         for (j=0; j<nfonts; j++) {
             FcPattern *fontPattern = fontset->fonts[j];
             FcChar8 *fontformat;
-            FcCharSet *unionCharset = NULL, *charset;
+            FcCharSet *charset;
 
             fontformat = NULL;
             (*FcPatternGetString)(fontPattern, FC_FONTFORMAT, 0, &fontformat);
@@ -454,6 +455,13 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
             (*FcPatternGetString)(fontPattern, FC_STYLE, 0, &styleStr[j]);
             (*FcPatternGetString)(fontPattern, FC_FULLNAME, 0, &fullname[j]);
             if (!includeFallbacks) {
+                break;
+            }
+            if (fontCount == 254) {
+                /* Upstream Java code currently stores this in a byte;
+                 * And we need one slot free for when this sequence is
+                 * used as a fallback sequeunce.
+                 */
                 break;
             }
         }

@@ -78,7 +78,7 @@ const GstToc*            gst_discoverer_stream_info_get_toc(GstDiscovererStreamI
 GST_PBUTILS_API
 const gchar*             gst_discoverer_stream_info_get_stream_id(GstDiscovererStreamInfo* info);
 
-GST_PBUTILS_API
+GST_PBUTILS_DEPRECATED_FOR(gst_discoverer_info_get_missing_elements_installer_details)
 const GstStructure*      gst_discoverer_stream_info_get_misc(GstDiscovererStreamInfo* info);
 
 GST_PBUTILS_API
@@ -303,7 +303,7 @@ gboolean                  gst_discoverer_info_get_seekable(const GstDiscovererIn
 GST_PBUTILS_API
 gboolean                  gst_discoverer_info_get_live(const GstDiscovererInfo* info);
 
-GST_PBUTILS_API
+GST_PBUTILS_DEPRECATED_FOR(gst_discoverer_info_get_missing_elements_installer_details)
 const GstStructure*       gst_discoverer_info_get_misc(const GstDiscovererInfo* info);
 
 GST_PBUTILS_API
@@ -316,7 +316,7 @@ const gchar**             gst_discoverer_info_get_missing_elements_installer_det
 
 GST_PBUTILS_API
 GList *                   gst_discoverer_info_get_streams (GstDiscovererInfo *info,
-                               GType streamtype);
+                 GType streamtype);
 
 GST_PBUTILS_API
 GList *                   gst_discoverer_info_get_audio_streams (GstDiscovererInfo *info);
@@ -377,7 +377,7 @@ struct _GstDiscovererClass {
   void        (*starting)        (GstDiscoverer *discoverer);
   void        (*discovered)      (GstDiscoverer *discoverer,
                                   GstDiscovererInfo *info,
-                  const GError *err);
+          const GError *err);
   void        (*source_setup)    (GstDiscoverer *discoverer,
                                   GstElement *source);
 
@@ -400,15 +400,15 @@ void           gst_discoverer_stop (GstDiscoverer *discoverer);
 
 GST_PBUTILS_API
 gboolean       gst_discoverer_discover_uri_async (GstDiscoverer *discoverer,
-                          const gchar *uri);
+              const gchar *uri);
 
 /* Synchronous API */
 
 GST_PBUTILS_API
 GstDiscovererInfo *
 gst_discoverer_discover_uri (GstDiscoverer * discoverer,
-                 const gchar * uri,
-                 GError ** err);
+           const gchar * uri,
+           GError ** err);
 
 #ifdef G_DEFINE_AUTOPTR_CLEANUP_FUNC
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstDiscoverer, gst_object_unref)

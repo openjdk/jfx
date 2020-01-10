@@ -194,6 +194,10 @@
 #include "gprintf.h"
 #include "glibintl.h"
 
+#if defined G_OS_WIN32
+#include <windows.h>
+#endif
+
 #define TRANSLATE(group, str) (((group)->translate_func ? (* (group)->translate_func) ((str), (group)->translate_data) : (str)))
 
 #define NO_ARG(entry) ((entry)->arg == G_OPTION_ARG_NONE ||       \
@@ -277,7 +281,7 @@ struct _GOptionGroup
   gpointer         translate_data;
 
   GOptionEntry    *entries;
-  gint             n_entries;
+  gsize            n_entries;
 
   GOptionParseFunc pre_parse_func;
   GOptionParseFunc post_parse_func;
@@ -651,6 +655,7 @@ g_option_context_add_main_entries (GOptionContext      *context,
                                    const GOptionEntry  *entries,
                                    const gchar         *translation_domain)
 {
+  g_return_if_fail (context != NULL);
   g_return_if_fail (entries != NULL);
 
   if (!context->main_group)
@@ -665,7 +670,7 @@ calculate_max_length (GOptionGroup *group,
                       GHashTable   *aliases)
 {
   GOptionEntry *entry;
-  gint i, len, max_length;
+  gsize i, len, max_length;
   const gchar *long_name;
 
   max_length = 0;
@@ -828,7 +833,7 @@ g_option_context_get_help (GOptionContext *context,
 {
   GList *list;
   gint max_length = 0, len;
-  gint i;
+  gsize i;
   GOptionEntry *entry;
   GHashTable *shadow_map;
   GHashTable *aliases;
@@ -836,6 +841,8 @@ g_option_context_get_help (GOptionContext *context,
   const gchar *rest_description;
   GString *string;
   guchar token;
+
+  g_return_val_if_fail (context != NULL, NULL);
 
   string = g_string_sized_new (1024);
 
@@ -1044,7 +1051,7 @@ g_option_context_get_help (GOptionContext *context,
       list = context->groups;
 
       if (context->help_enabled || list)
-      g_string_append (string,  _("Application Options:"));
+        g_string_append (string,  _("Application Options:"));
       else
         g_string_append (string, _("Options:"));
       g_string_append (string, "\n");
@@ -1285,7 +1292,7 @@ parse_arg (GOptionContext *context,
         if (!change->allocated.str)
           change->prev.str = *(gchar **)entry->arg_data;
         else
-        g_free (change->allocated.str);
+          g_free (change->allocated.str);
 
         change->allocated.str = data;
 
@@ -1352,7 +1359,7 @@ parse_arg (GOptionContext *context,
         if (!change->allocated.str)
           change->prev.str = *(gchar **)entry->arg_data;
         else
-        g_free (change->allocated.str);
+          g_free (change->allocated.str);
 
         change->allocated.str = data;
 
@@ -1505,7 +1512,7 @@ parse_short_option (GOptionContext *context,
                     GError        **error,
                     gboolean       *parsed)
 {
-  gint j;
+  gsize j;
 
   for (j = 0; j < group->n_entries; j++)
     {
@@ -1587,7 +1594,7 @@ parse_long_option (GOptionContext *context,
                    GError        **error,
                    gboolean       *parsed)
 {
-  gint j;
+  gsize j;
 
   for (j = 0; j < group->n_entries; j++)
     {
@@ -1698,7 +1705,7 @@ parse_remaining_arg (GOptionContext *context,
                      GError        **error,
                      gboolean       *parsed)
 {
-  gint j;
+  gsize j;
 
   for (j = 0; j < group->n_entries; j++)
     {
@@ -1815,19 +1822,20 @@ free_pending_nulls (GOptionContext *context,
 static char *
 platform_get_argv0 (void)
 {
-#if defined __linux
+#ifdef HAVE_PROC_SELF_CMDLINE
   char *cmdline;
   char *base_arg0;
   gsize len;
 
   if (!g_file_get_contents ("/proc/self/cmdline",
-                &cmdline,
-                &len,
-                NULL))
+          &cmdline,
+          &len,
+          NULL))
     return NULL;
+
   /* Sanity check for a NUL terminator. */
-  if (!memchr (cmdline, 0, len))
-    return NULL;
+  g_assert (memchr (cmdline, 0, len));
+
   /* We could just return cmdline, but I think it's better
    * to hold on to a smaller malloc block; the arguments
    * could be large.
@@ -1859,6 +1867,51 @@ platform_get_argv0 (void)
    */
   base_arg0 = g_path_get_basename (*cmdline);
   g_free (cmdline);
+  return base_arg0;
+#elif defined G_OS_WIN32
+  const wchar_t *cmdline;
+  wchar_t **wargv;
+  int wargc;
+  gchar *utf8_buf = NULL;
+  char *base_arg0 = NULL;
+
+  /* Pretend it's const, since we're not allowed to free it */
+  cmdline = (const wchar_t *) GetCommandLineW ();
+  if (G_UNLIKELY (cmdline == NULL))
+    return NULL;
+
+  /* Skip leading whitespace. CommandLineToArgvW() is documented
+   * to behave weirdly with that. The character codes below
+   * correspond to the *only* unicode characters that are
+   * considered to be spaces by CommandLineToArgvW(). The rest
+   * (such as 0xa0 - NO-BREAK SPACE) are treated as
+   * normal characters.
+   */
+  while (cmdline[0] == 0x09 ||
+         cmdline[0] == 0x0a ||
+         cmdline[0] == 0x0c ||
+         cmdline[0] == 0x0d ||
+         cmdline[0] == 0x20)
+    cmdline++;
+
+  wargv = CommandLineToArgvW (cmdline, &wargc);
+  if (G_UNLIKELY (wargv == NULL))
+    return NULL;
+
+  if (wargc > 0)
+    utf8_buf = g_utf16_to_utf8 (wargv[0], -1, NULL, NULL, NULL);
+
+  LocalFree (wargv);
+
+  if (G_UNLIKELY (utf8_buf == NULL))
+    return NULL;
+
+  /* We could just return cmdline, but I think it's better
+   * to hold on to a smaller malloc block; the arguments
+   * could be large.
+   */
+  base_arg0 = g_path_get_basename (utf8_buf);
+  g_free (utf8_buf);
   return base_arg0;
 #endif
 
@@ -1908,20 +1961,22 @@ g_option_context_parse (GOptionContext   *context,
   gint i, j, k;
   GList *list;
 
+  g_return_val_if_fail (context != NULL, FALSE);
+
   /* Set program name */
   if (!g_get_prgname())
     {
       gchar *prgname;
 
       if (argc && argv && *argc)
-    prgname = g_path_get_basename ((*argv)[0]);
+  prgname = g_path_get_basename ((*argv)[0]);
       else
-    prgname = platform_get_argv0 ();
+  prgname = platform_get_argv0 ();
 
       if (prgname)
-    g_set_prgname (prgname);
+  g_set_prgname (prgname);
       else
-    g_set_prgname ("<unknown>");
+  g_set_prgname ("<unknown>");
 
       g_free (prgname);
     }
@@ -2324,20 +2379,20 @@ g_option_group_unref (GOptionGroup *group)
 
   if (--group->ref_count == 0)
     {
-  g_free (group->name);
-  g_free (group->description);
-  g_free (group->help_description);
+      g_free (group->name);
+      g_free (group->description);
+      g_free (group->help_description);
 
-  g_free (group->entries);
+      g_free (group->entries);
 
-  if (group->destroy_notify)
-    (* group->destroy_notify) (group->user_data);
+      if (group->destroy_notify)
+        (* group->destroy_notify) (group->user_data);
 
-  if (group->translate_notify)
-    (* group->translate_notify) (group->translate_data);
+      if (group->translate_notify)
+        (* group->translate_notify) (group->translate_data);
 
-  g_free (group);
-}
+      g_free (group);
+    }
 }
 
 /**
@@ -2353,8 +2408,9 @@ void
 g_option_group_add_entries (GOptionGroup       *group,
                             const GOptionEntry *entries)
 {
-  gint i, n_entries;
+  gsize i, n_entries;
 
+  g_return_if_fail (group != NULL);
   g_return_if_fail (entries != NULL);
 
   for (n_entries = 0; entries[n_entries].long_name != NULL; n_entries++) ;
@@ -2364,7 +2420,7 @@ g_option_group_add_entries (GOptionGroup       *group,
   /* group->entries could be NULL in the trivial case where we add no
    * entries to no entries */
   if (n_entries != 0)
-  memcpy (group->entries + group->n_entries, entries, sizeof (GOptionEntry) * n_entries);
+    memcpy (group->entries + group->n_entries, entries, sizeof (GOptionEntry) * n_entries);
 
   for (i = group->n_entries; i < group->n_entries + n_entries; i++)
     {
@@ -2659,8 +2715,10 @@ g_option_context_get_description (GOptionContext *context)
 /**
  * g_option_context_parse_strv:
  * @context: a #GOptionContext
- * @arguments: (inout) (array null-terminated=1): a pointer to the
- *    command line arguments (which must be in UTF-8 on Windows)
+ * @arguments: (inout) (array null-terminated=1) (optional): a pointer
+ *    to the command line arguments (which must be in UTF-8 on Windows).
+ *    Starting with GLib 2.62, @arguments can be %NULL, which matches
+ *    g_option_context_parse().
  * @error: a return location for errors
  *
  * Parses the command line arguments.
@@ -2693,8 +2751,10 @@ g_option_context_parse_strv (GOptionContext   *context,
   gboolean success;
   gint argc;
 
+  g_return_val_if_fail (context != NULL, FALSE);
+
   context->strv_mode = TRUE;
-  argc = g_strv_length (*arguments);
+  argc = arguments && *arguments ? g_strv_length (*arguments) : 0;
   success = g_option_context_parse (context, &argc, arguments, error);
   context->strv_mode = FALSE;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,18 @@ package test.javafx.scene.text;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import javafx.geometry.VPos;
 import test.javafx.scene.NodeTest;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.layout.HBox;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
+import test.com.sun.javafx.pgstub.StubToolkit;
+import com.sun.javafx.tk.Toolkit;
 
 import org.junit.Test;
 
@@ -225,4 +232,60 @@ public class TextTest {
         assertNotNull(s);
         assertFalse(s.isEmpty());
     }
+
+    // Test for JDK-8130738
+    @Test public void testTabSize() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        HBox root = new HBox();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.setWidth(300);
+        stage.setHeight(200);
+
+        try {
+            Text text = new Text("\tHello");
+            root.getChildren().addAll(text);
+            stage.show();
+            tk.firePulse();
+            assertEquals(8, text.getTabSize());
+            // initial width with default 8-space tab
+            double widthT8 = text.getBoundsInLocal().getWidth();
+            text.setTabSize(1);
+            tk.firePulse();
+            // width with tab at 1 spaces
+            double widthT1 = text.getBoundsInLocal().getWidth();
+            // approximate width of a single space
+            double widthSpace = (widthT8 - widthT1) / 7;
+            assertTrue(widthSpace > 0);
+            text.setTabSize(4);
+            tk.firePulse();
+            // width with tab at 4 spaces
+            double widthT4 = text.getBoundsInLocal().getWidth();
+            double expected = widthT8 - 4 * widthSpace;
+            // should be approximately 4 space-widths shorter
+            assertEquals(expected, widthT4, 0.5);
+            assertEquals(4, text.getTabSize());
+            assertEquals(4, text.tabSizeProperty().get());
+
+            text.tabSizeProperty().set(5);
+            assertEquals(5, text.tabSizeProperty().get());
+            assertEquals(5, text.getTabSize());
+            tk.firePulse();
+            double widthT5 = text.getBoundsInLocal().getWidth();
+            expected = widthT8 - 3 * widthSpace;
+            assertEquals(expected, widthT5, 0.5);
+
+            // Test clamping
+            text.tabSizeProperty().set(0);
+            assertEquals(0, text.tabSizeProperty().get());
+            assertEquals(0, text.getTabSize());
+            tk.firePulse();
+            double widthT0Clamp = text.getBoundsInLocal().getWidth();
+            // values < 1 are treated as 1
+            assertEquals(widthT1, widthT0Clamp, 0.5);
+        } finally {
+            stage.hide();
+        }
+  }
 }

@@ -38,7 +38,7 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define STRICT          /* Strict typing, please */
+#define STRICT      /* Strict typing, please */
 #include <windows.h>
 #undef STRICT
 #ifndef G_WITH_CYGWIN
@@ -79,7 +79,7 @@
 
 gint
 g_win32_ftruncate (gint  fd,
-           guint size)
+       guint size)
 {
   return _chsize (fd, size);
 }
@@ -143,34 +143,34 @@ g_win32_getlocale (void)
     {
     case LANG_AZERI:
       switch (sub)
-    {
-    case SUBLANG_AZERI_LATIN:
-      script = "@Latn";
+  {
+  case SUBLANG_AZERI_LATIN:
+    script = "@Latn";
+    break;
+  case SUBLANG_AZERI_CYRILLIC:
+    script = "@Cyrl";
+    break;
+  }
       break;
-    case SUBLANG_AZERI_CYRILLIC:
-      script = "@Cyrl";
-      break;
-    }
-      break;
-    case LANG_SERBIAN:      /* LANG_CROATIAN == LANG_SERBIAN */
+    case LANG_SERBIAN:    /* LANG_CROATIAN == LANG_SERBIAN */
       switch (sub)
-    {
-    case SUBLANG_SERBIAN_LATIN:
-    case 0x06: /* Serbian (Latin) - Bosnia and Herzegovina */
-      script = "@Latn";
-      break;
-    }
+  {
+  case SUBLANG_SERBIAN_LATIN:
+  case 0x06: /* Serbian (Latin) - Bosnia and Herzegovina */
+    script = "@Latn";
+    break;
+  }
       break;
     case LANG_UZBEK:
       switch (sub)
-    {
-    case SUBLANG_UZBEK_LATIN:
-      script = "@Latn";
-      break;
-    case SUBLANG_UZBEK_CYRILLIC:
-      script = "@Cyrl";
-      break;
-    }
+  {
+  case SUBLANG_UZBEK_LATIN:
+    script = "@Latn";
+    break;
+  case SUBLANG_UZBEK_CYRILLIC:
+    script = "@Cyrl";
+    break;
+  }
       break;
     }
   return g_strconcat (iso639, "_", iso3166, script, NULL);
@@ -197,10 +197,10 @@ g_win32_error_message (gint error)
   size_t nchars;
 
   FormatMessageW (FORMAT_MESSAGE_ALLOCATE_BUFFER
-          |FORMAT_MESSAGE_IGNORE_INSERTS
-          |FORMAT_MESSAGE_FROM_SYSTEM,
-          NULL, error, 0,
-          (LPWSTR) &msg, 0, NULL);
+      |FORMAT_MESSAGE_IGNORE_INSERTS
+      |FORMAT_MESSAGE_FROM_SYSTEM,
+      NULL, error, 0,
+      (LPWSTR) &msg, 0, NULL);
   if (msg != NULL)
     {
       nchars = wcslen (msg);
@@ -337,10 +337,10 @@ get_package_directory_from_module (const gchar *module_name)
       g_free (wc_module_name);
 
       if (!hmodule)
-    {
-      G_UNLOCK (module_dirs);
-      return NULL;
-    }
+  {
+    G_UNLOCK (module_dirs);
+    return NULL;
+  }
     }
 
   fn = g_win32_get_package_installation_directory_of_module (hmodule);
@@ -1017,5 +1017,220 @@ g_console_win32_init (void)
       _close (new_fd);
     }
 }
+
+#ifndef GSTREAMER_LITE
+/* This is a handle to the Vectored Exception Handler that
+ * we install on library initialization. If installed correctly,
+ * it will be non-NULL. Only used to later de-install the handler
+ * on library de-initialization.
+ */
+static void *WinVEH_handle = NULL;
+
+#include "gwin32-private.c"
+
+/* Handles exceptions (useful for debugging).
+ * Issues a DebugBreak() call if the process is being debugged (not really
+ * useful - if the process is being debugged, this handler won't be invoked
+ * anyway). If it is not, runs a debugger from G_DEBUGGER env var,
+ * substituting first %p in it for PID, and the first %e for the event handle -
+ * that event should be set once the debugger attaches itself (otherwise the
+ * only way out of WaitForSingleObject() is to time out after 1 minute).
+ * For example, G_DEBUGGER can be set to the following command:
+ * ```
+ * gdb.exe -ex "attach %p" -ex "signal-event %e" -ex "bt" -ex "c"
+ * ```
+ * This will make GDB attach to the process, signal the event (GDB must be
+ * recent enough for the signal-event command to be available),
+ * show the backtrace and resume execution, which should make it catch
+ * the exception when Windows re-raises it again.
+ * The command line can't be longer than MAX_PATH (260 characters).
+ *
+ * This function will only stop (and run a debugger) on the following exceptions:
+ * * EXCEPTION_ACCESS_VIOLATION
+ * * EXCEPTION_STACK_OVERFLOW
+ * * EXCEPTION_ILLEGAL_INSTRUCTION
+ * To make it stop at other exceptions one should set the G_VEH_CATCH
+ * environment variable to a list of comma-separated hexademical numbers,
+ * where each number is the code of an exception that should be caught.
+ * This is done to prevent GLib from breaking when Windows uses
+ * exceptions to shuttle information (SetThreadName(), OutputDebugString())
+ * or for control flow.
+ *
+ * This function deliberately avoids calling any GLib code.
+ */
+static LONG __stdcall
+g_win32_veh_handler (PEXCEPTION_POINTERS ExceptionInfo)
+{
+  EXCEPTION_RECORD    *er;
+  char                 debugger[MAX_PATH + 1];
+  const char          *debugger_env = NULL;
+  const char          *catch_list;
+  gboolean             catch = FALSE;
+  STARTUPINFO          si;
+  PROCESS_INFORMATION  pi;
+  HANDLE               event;
+  SECURITY_ATTRIBUTES  sa;
+
+  if (ExceptionInfo == NULL ||
+      ExceptionInfo->ExceptionRecord == NULL)
+    return EXCEPTION_CONTINUE_SEARCH;
+
+  er = ExceptionInfo->ExceptionRecord;
+
+  switch (er->ExceptionCode)
+    {
+    case EXCEPTION_ACCESS_VIOLATION:
+    case EXCEPTION_STACK_OVERFLOW:
+    case EXCEPTION_ILLEGAL_INSTRUCTION:
+    case EXCEPTION_BREAKPOINT: /* DebugBreak() raises this */
+      break;
+    default:
+      catch_list = getenv ("G_VEH_CATCH");
+
+      while (!catch &&
+             catch_list != NULL &&
+             catch_list[0] != 0)
+        {
+          unsigned long  catch_code;
+          char          *end;
+          errno = 0;
+          catch_code = strtoul (catch_list, &end, 16);
+          if (errno != NO_ERROR)
+            break;
+          catch_list = end;
+          if (catch_list != NULL && catch_list[0] == ',')
+            catch_list++;
+          if (catch_code == er->ExceptionCode)
+            catch = TRUE;
+        }
+
+      if (catch)
+        break;
+
+      return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+  if (IsDebuggerPresent ())
+    {
+      /* This shouldn't happen, but still try to
+       * avoid recursion with EXCEPTION_BREAKPOINT and
+       * DebugBreak().
+       */
+      if (er->ExceptionCode != EXCEPTION_BREAKPOINT)
+        DebugBreak ();
+      return EXCEPTION_CONTINUE_EXECUTION;
+    }
+
+  fprintf_s (stderr,
+             "Exception code=0x%lx flags=0x%lx at 0x%p",
+             er->ExceptionCode,
+             er->ExceptionFlags,
+             er->ExceptionAddress);
+
+  switch (er->ExceptionCode)
+    {
+    case EXCEPTION_ACCESS_VIOLATION:
+      fprintf_s (stderr,
+                 ". Access violation - attempting to %s at address 0x%p\n",
+                 er->ExceptionInformation[0] == 0 ? "read data" :
+                 er->ExceptionInformation[0] == 1 ? "write data" :
+                 er->ExceptionInformation[0] == 8 ? "execute data" :
+                 "do something bad",
+                 (void *) er->ExceptionInformation[1]);
+      break;
+    case EXCEPTION_IN_PAGE_ERROR:
+      fprintf_s (stderr,
+                 ". Page access violation - attempting to %s at address 0x%p with status %Ix\n",
+                 er->ExceptionInformation[0] == 0 ? "read from an inaccessible page" :
+                 er->ExceptionInformation[0] == 1 ? "write to an inaccessible page" :
+                 er->ExceptionInformation[0] == 8 ? "execute data in page" :
+                 "do something bad with a page",
+                 (void *) er->ExceptionInformation[1],
+                 er->ExceptionInformation[2]);
+      break;
+    default:
+      fprintf_s (stderr, "\n");
+      break;
+    }
+
+  fflush (stderr);
+
+  debugger_env = getenv ("G_DEBUGGER");
+
+  if (debugger_env == NULL)
+    return EXCEPTION_CONTINUE_SEARCH;
+
+  /* Create an inheritable event */
+  memset (&si, 0, sizeof (si));
+  memset (&pi, 0, sizeof (pi));
+  memset (&sa, 0, sizeof (sa));
+  si.cb = sizeof (si);
+  sa.nLength = sizeof (sa);
+  sa.bInheritHandle = TRUE;
+  event = CreateEvent (&sa, FALSE, FALSE, NULL);
+
+  /* Put process ID and event handle into debugger commandline */
+  if (!_g_win32_subst_pid_and_event (debugger, G_N_ELEMENTS (debugger),
+                                     debugger_env, GetCurrentProcessId (),
+                                     (guintptr) event))
+    {
+      CloseHandle (event);
+      return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+  /* Run the debugger */
+  debugger[MAX_PATH] = '\0';
+  if (0 != CreateProcessA (NULL,
+                           debugger,
+                           NULL,
+                           NULL,
+                           TRUE,
+                           getenv ("G_DEBUGGER_OLD_CONSOLE") != NULL ? 0 : CREATE_NEW_CONSOLE,
+                           NULL,
+                           NULL,
+                           &si,
+                           &pi))
+    {
+      CloseHandle (pi.hProcess);
+      CloseHandle (pi.hThread);
+      /* If successful, wait for 60 seconds on the event
+       * we passed. The debugger should signal that event.
+       * 60 second limit is here to prevent us from hanging
+       * up forever in case the debugger does not support
+       * event signalling.
+       */
+      WaitForSingleObject (event, 60000);
+    }
+
+  CloseHandle (event);
+
+  /* Now the debugger is present, and we can try
+   * resuming execution, re-triggering the exception,
+   * which will be caught by debugger this time around.
+   */
+  if (IsDebuggerPresent ())
+    return EXCEPTION_CONTINUE_EXECUTION;
+
+  return EXCEPTION_CONTINUE_SEARCH;
+}
+
+void
+g_crash_handler_win32_init (void)
+{
+  if (WinVEH_handle != NULL)
+    return;
+
+  WinVEH_handle = AddVectoredExceptionHandler (0, &g_win32_veh_handler);
+}
+
+void
+g_crash_handler_win32_deinit (void)
+{
+  if (WinVEH_handle != NULL)
+    RemoveVectoredExceptionHandler (WinVEH_handle);
+
+  WinVEH_handle = NULL;
+}
+#endif // GSTREAMER_LITE
 
 #endif

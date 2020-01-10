@@ -1,7 +1,7 @@
 /* GStreamer
  * Copyright (C) 2007 Stefan Kost <ensonic@users.sf.net>
  *
- * gstdebugutils.c: debugging and analysis utillities
+ * gstdebugutils.c: debugging and analysis utilities
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,7 +21,7 @@
 /* TODO:
  * edge [ constraint=false ];
  *   this creates strange graphs ("minlen=0" is better)
- * try puting src/sink ghostpads for each bin into invisible clusters
+ * try putting src/sink ghostpads for each bin into invisible clusters
  *
  * for more compact nodes, try
  * - changing node-shape from box into record
@@ -183,7 +183,7 @@ debug_dump_get_object_params (GObject * object,
 
           tmp = g_string_free (s, FALSE);
         } else {
-        tmp = g_strdup_value_contents (&value);
+          tmp = g_strdup_value_contents (&value);
         }
         value_str = g_strescape (tmp, NULL);
         g_free (tmp);
@@ -191,7 +191,7 @@ debug_dump_get_object_params (GObject * object,
         /* too long, ellipsize */
         if (!(details & GST_DEBUG_GRAPH_SHOW_FULL_PARAMS) &&
             strlen (value_str) > PARAM_MAX_LENGTH)
-          ellipses = "...";
+          ellipses = "…";
         else
           ellipses = "";
 
@@ -587,7 +587,7 @@ debug_dump_element_pads (GstIterator * pad_iter, GstPad * pad,
   }
   if (*num_pads) {
     g_string_append_printf (str, "%s}\n\n", spc);
-}
+  }
 }
 
 /*
@@ -795,6 +795,7 @@ debug_dump_footer (GString * str)
 /**
  * gst_debug_bin_to_dot_data:
  * @bin: the top-level pipeline that should be analyzed
+ * @details: type of #GstDebugGraphDetails to use
  *
  * To aid debugging applications one can use this method to obtain the whole
  * network of gstreamer elements that form the pipeline into an dot file.
@@ -822,6 +823,7 @@ gst_debug_bin_to_dot_data (GstBin * bin, GstDebugGraphDetails details)
 /**
  * gst_debug_bin_to_dot_file:
  * @bin: the top-level pipeline that should be analyzed
+ * @details: type of #GstDebugGraphDetails to use
  * @file_name: (type filename): output base filename (e.g. "myplayer")
  *
  * To aid debugging applications one can use this method to write out the whole
@@ -872,6 +874,7 @@ gst_debug_bin_to_dot_file (GstBin * bin, GstDebugGraphDetails details,
 /**
  * gst_debug_bin_to_dot_file_with_ts:
  * @bin: the top-level pipeline that should be analyzed
+ * @details: type of #GstDebugGraphDetails to use
  * @file_name: (type filename): output base filename (e.g. "myplayer")
  *
  * This works like gst_debug_bin_to_dot_file(), but adds the current timestamp
