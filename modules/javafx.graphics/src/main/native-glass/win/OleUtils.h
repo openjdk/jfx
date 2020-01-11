@@ -227,7 +227,7 @@ inline HRESULT checkJavaException(JNIEnv *env)
                 s_jcidThrowable_getMessage
             ));
             if(jsMessage){
-                STRACE1(_T("Java Messsge:%s"), (LPCWSTR)JString(env, jsMessage) );
+                STRACE1(_T("Java Message:%s"), (LPCWSTR)JString(env, jsMessage) );
             }
             env->ExceptionDescribe();
         }

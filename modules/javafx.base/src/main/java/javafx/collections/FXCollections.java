@@ -576,7 +576,7 @@ public class FXCollections {
     }
 
     /**
-     * Reverse the order in the list
+     * Reverses the order in the list.
      * Fires only <b>one</b> change notification on the list.
      * @param list the list to be reversed
      * @see Collections#reverse(java.util.List)

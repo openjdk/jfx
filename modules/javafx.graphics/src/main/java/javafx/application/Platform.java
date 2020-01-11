@@ -175,7 +175,7 @@ public final class Platform {
 
     /**
      * Returns true if the calling thread is the JavaFX Application Thread.
-     * Use this call the ensure that a given task is being executed
+     * Use this call to ensure that a given task is being executed
      * (or not being executed) on the JavaFX Application Thread.
      *
      * @return true if running on the JavaFX Application Thread
