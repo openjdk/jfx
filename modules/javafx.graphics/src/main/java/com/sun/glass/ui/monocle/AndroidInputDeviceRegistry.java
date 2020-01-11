@@ -59,7 +59,7 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
                 touchState.addPoint(p);
             }
         }
-        instance.gotTouchEvent(touchState);
+        Platform.runLater(() -> instance.gotTouchEvent(touchState));
     }
 
     private void gotTouchEvent(TouchState touchState) {

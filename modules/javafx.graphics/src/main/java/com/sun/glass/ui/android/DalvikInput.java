@@ -28,6 +28,7 @@ import javafx.application.Platform;
 import javafx.scene.Node;
 
 public class DalvikInput {
+/*
 
     public static void onMultiTouchEvent(final int count, final int[] actions,
             final int[] ids, final int[] touchXs, final int[] touchYs) {
@@ -71,4 +72,5 @@ public class DalvikInput {
     public static native void onSurfaceRedrawNeededNative();
 
     public static native void onConfigurationChangedNative(int flag);
+*/
 }

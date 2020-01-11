@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,31 +34,6 @@
 #define IND_B1 3
 #define IND_B2 4
 
-class AVFEqualizerKernel : public AUKernelBase {
-public:
-    AVFEqualizerKernel(AVFAudioEqualizer *eq, AUEffectBase *inAudioUnit) :
-        AUKernelBase(dynamic_cast<AUEffectBase*>(inAudioUnit)),
-        mEQ(eq)
-    {}
-
-    virtual ~AVFEqualizerKernel() {}
-
-    virtual void Process(const Float32 *inSourceP,
-                         Float32 *inDestP,
-                         UInt32 inFramesToProcess,
-                         UInt32 inNumChannels,
-                         bool& ioSilence) {
-        if (ioSilence) {
-            return;
-        }
-
-        mEQ->RunFilter(inSourceP, inDestP, inFramesToProcess, mChannelNum);
-    }
-
-private:
-    AVFAudioEqualizer *mEQ;
-};
-
 #pragma mark -
 
 AVFEqualizerBand::AVFEqualizerBand(AVFAudioEqualizer *eq, double frequency, double bandwidth, double gain) :
@@ -71,7 +46,7 @@ AVFEqualizerBand::AVFEqualizerBand(AVFAudioEqualizer *eq, double frequency, doub
     mFilterType(Peak)  // set later by the EQ, can be changed if band moves
 {
     // we may not have an audio unit yet
-    int channels = mEQ->GetChannelCount();
+    int channels = mEQ->GetChannels();
     if (channels > 0) {
         SetChannelCount(channels);
     }
@@ -162,7 +137,7 @@ static inline double calculate_bandwidth(double bw, double rate) {
  */
 void AVFEqualizerBand::SetupPeakFilter(double omega, double bw, double gain) {
     double cosF = cos(omega);
-    double alpha =  tan(bw / 2.0);
+    double alpha = tan(bw / 2.0);
     double alpha1 = alpha * gain;
     double alpha2 = alpha / gain;
 
@@ -230,7 +205,7 @@ void AVFEqualizerBand::RecalculateParams() {
         mBypass = true;
         return;
     }
-    double absGain = pow(10, m_Gain / 40);      // convert dB to scale
+    double absGain = pow(10, m_Gain / 40); // convert dB to scale
     double omega = calculate_omega(mFrequency, rate);
 
     switch (mFilterType) {
@@ -258,7 +233,7 @@ void AVFEqualizerBand::ApplyFilter(double *inSource, double *inDest, int frameCo
 
     // We may have more channels now than when we were initialized
     if (channel > mChannels) {
-        mChannels = mEQ->GetChannelCount();
+        mChannels = mEQ->GetChannels();
         SetChannelCount(mChannels);
     }
 
@@ -272,18 +247,35 @@ void AVFEqualizerBand::ApplyFilter(double *inSource, double *inDest, int frameCo
         vDSP_deq22D(inSource, 1, mCoefficients, inDest, 1, frameCount);
 
         // update history
-        mHistory[channel].x1 = inSource[frameCount+1];
+        mHistory[channel].x1 = inSource[frameCount + 1];
         mHistory[channel].x2 = inSource[frameCount];
-        mHistory[channel].y1 = inDest[frameCount+1];
+        mHistory[channel].y1 = inDest[frameCount + 1];
         mHistory[channel].y2 = inDest[frameCount];
     }
 }
 
 #pragma mark -
 
+AVFAudioEqualizer::AVFAudioEqualizer() : CAudioEqualizer(),
+                                         mEnabled(false),
+                                         mEQBands(),
+                                         mEQBufferSize(0),
+                                         mEQBufferA(NULL),
+                                         mEQBufferB(NULL),
+                                         mSampleRate(0),
+                                         mChannels(0) {
+}
+
 AVFAudioEqualizer::~AVFAudioEqualizer() {
-    mEQBufferA.free();
-    mEQBufferB.free();
+    if (mEQBufferA != NULL) {
+        free(mEQBufferA);
+        mEQBufferA = NULL;
+    }
+
+    if (mEQBufferB != NULL) {
+        free(mEQBufferB);
+        mEQBufferB = NULL;
+    }
 
     // Free the EQ bands, otherwise they'll leak
     for (AVFEQBandIterator iter = mEQBands.begin(); iter != mEQBands.end(); iter++) {
@@ -292,10 +284,6 @@ AVFAudioEqualizer::~AVFAudioEqualizer() {
         }
     }
     mEQBands.clear();
-}
-
-AUKernelBase *AVFAudioEqualizer::NewKernel() {
-    return new AVFEqualizerKernel(this, mAudioUnit);
 }
 
 bool AVFAudioEqualizer::IsEnabled() {
@@ -307,7 +295,7 @@ void AVFAudioEqualizer::SetEnabled(bool isEnabled) {
 }
 
 int AVFAudioEqualizer::GetNumBands() {
-    return (int)mEQBands.size();
+    return (int) mEQBands.size();
 }
 
 CEqualizerBand *AVFAudioEqualizer::AddBand(double frequency, double bandwidth, double gain) {
@@ -371,36 +359,79 @@ void AVFAudioEqualizer::ResetBandParameters() {
         }
 
         band->SetFilterType(type);
-        band->SetChannelCount(GetChannelCount());
+        band->SetChannelCount(GetChannels());
         band->RecalculateParams();
         iter++; // here due to NULL ptr protection, otherwise we double increment
     }
+
+    // Clear temp buffers
+    if (mEQBufferA != NULL) {
+        memset(mEQBufferA, 0, mEQBufferSize * sizeof(double));
+    }
+
+    if (mEQBufferB != NULL) {
+        memset(mEQBufferB, 0, mEQBufferSize * sizeof(double));
+    }
 }
 
-void AVFAudioEqualizer::SetAudioUnit(AUEffectBase *unit) {
-    this->AVFKernelProcessor::SetAudioUnit(unit);
-    ResetBandParameters();
+void AVFAudioEqualizer::SetSampleRate(UInt32 rate) {
+    mSampleRate = rate;
+}
+
+void AVFAudioEqualizer::SetChannels(UInt32 count) {
+    mChannels = count;
+}
+
+UInt32 AVFAudioEqualizer::GetSampleRate() {
+    return mSampleRate;
+}
+
+UInt32 AVFAudioEqualizer::GetChannels() {
+    return mChannels;
+}
+
+bool AVFAudioEqualizer::ProcessBufferLists(const AudioBufferList & buffer,
+                                               UInt32 inFramesToProcess) {
+    for (UInt32 i = 0; i < buffer.mNumberBuffers; i++) {
+        RunFilter((const Float32 *) buffer.mBuffers[i].mData,
+                  (Float32 *) buffer.mBuffers[i].mData,
+                  inFramesToProcess,
+                  i);
+    }
+
+    return true;
 }
 
 void AVFAudioEqualizer::RunFilter(const Float32 *inSourceP,
-                                  Float32 *inDestP,
-                                  UInt32 inFramesToProcess,
-                                  UInt32 channel) {
+        Float32 *inDestP,
+        UInt32 inFramesToProcess,
+        UInt32 channel) {
     if (mEnabled && !mEQBands.empty()) {
         if (inFramesToProcess + 2 > mEQBufferSize) {
             mEQBufferSize = inFramesToProcess + 2;
-            mEQBufferA.free();
-            mEQBufferA.alloc(mEQBufferSize);
-            mEQBufferB.free();
-            mEQBufferB.alloc(mEQBufferSize);
+            if (mEQBufferA != NULL) {
+                free(mEQBufferA);
+                mEQBufferA = NULL;
+            }
+            if (mEQBufferB != NULL) {
+                free(mEQBufferB);
+                mEQBufferB = NULL;
+            }
+
+            mEQBufferA = (double*)calloc(mEQBufferSize, sizeof(double));
+            mEQBufferB = (double*)calloc(mEQBufferSize, sizeof(double));
+        }
+
+        if (mEQBufferA == NULL || mEQBufferB == NULL) {
+            return;
         }
 
         // start processing with A buffer first
         bool srcA = true;
 
         // The first two elements are copied each time we call a band to process
-            // float* cast is needed for Xcode 4.5
-        vDSP_vspdp((float*)inSourceP, 1, mEQBufferA.get() + 2, 1, inFramesToProcess);
+        // float* cast is needed for Xcode 4.5
+        vDSP_vspdp((float*) inSourceP, 1, mEQBufferA + 2, 1, inFramesToProcess);
 
         // Run each band in sequence
         for (AVFEQBandIterator iter = mEQBands.begin(); iter != mEQBands.end(); iter++) {
@@ -415,6 +446,6 @@ void AVFAudioEqualizer::RunFilter(const Float32 *inSourceP,
         }
 
         // Copy back to dest stream
-        vDSP_vdpsp((srcA ? mEQBufferA : mEQBufferB)+2, 1, inDestP, 1, inFramesToProcess);
+        vDSP_vdpsp((srcA ? mEQBufferA : mEQBufferB) + 2, 1, inDestP, 1, inFramesToProcess);
     }
 }
