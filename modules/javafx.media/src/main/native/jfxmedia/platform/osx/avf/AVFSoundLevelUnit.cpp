@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,64 +26,108 @@
 #include "AVFSoundLevelUnit.h"
 #include <Accelerate/Accelerate.h>
 
-/*
- * The object that will do the actual processing. Each kernel processes only one
- * stream.
- */
-class AVFSoundLevelKernel : public AUKernelBase {
-public:
-    AVFSoundLevelKernel(AVFSoundLevelUnit *levelUnit, AUEffectBase *inAudioUnit)
-        : AUKernelBase(dynamic_cast<AUEffectBase*>(inAudioUnit)),
-        mLevelUnit(levelUnit)
-    {}
+AVFSoundLevelUnit::AVFSoundLevelUnit() :
+    mVolume(kDefaultSoundLevelParam_Volume),
+    mBalance(kDefaultSoundLevelParam_Balance),
+    mChannels(0) {
+}
 
-    virtual ~AVFSoundLevelKernel() {}
+AVFSoundLevelUnit::~AVFSoundLevelUnit() {
+}
 
-    virtual void Process(const Float32 *inSourceP,
-                 Float32 *inDestP,
-                 UInt32 inFramesToProcess,
-                 UInt32 inNumChannels,
-                 bool& ioSilence) {
-        if (ioSilence) {
-            return;
-        }
+Float32 AVFSoundLevelUnit::volume() {
+    return mVolume;
+}
 
-        Float32 level = mLevelUnit->CalculateChannelLevel(GetChannelNum(),
-                                                          mAudioUnit->GetNumberOfChannels());
-        if (level == 1.0f) {
-            // Unity volume and balance
-            // if we're processing in-place then no need to do anything
-            if (inDestP != inSourceP) {
-                // There's no vector copy for non-complex numbers, so we'll just add zero
-                // We could just do memcpy, but if the channels are interleaved we don't
-                // want to modify other channels
-                Float32 addend = 0;
-                    // float* casts are needed for Xcode 4.5
-                vDSP_vsadd((float*)inSourceP, inNumChannels,
-                           &addend,
-                           (float*)inDestP, inNumChannels,
-                           inFramesToProcess);
-            }
-        } else if (level == 0.0) {
-            ioSilence = true;
-            // Just zero out the channel
-            vDSP_vclr(inDestP, inNumChannels, inFramesToProcess);
-        } else {
-            // Just multiply vector inSourceP by scalar volume, storing in vector inDestP
-            // we only attenuate the signal, so we don't need to be concerned about clipping
-            vDSP_vsmul(inSourceP,
-                       inNumChannels,
-                       &level,
-                       inDestP,
-                       inNumChannels,
-                       inFramesToProcess);
+void AVFSoundLevelUnit::setVolume(Float32 volume) {
+    if (volume < 0.0) {
+        volume = 0.0;
+    } else if (volume > 1.0) {
+        volume = 1.0;
+    }
+    mVolume = volume;
+}
+
+Float32 AVFSoundLevelUnit::balance() {
+    return mBalance;
+}
+
+void AVFSoundLevelUnit::setBalance(Float32 balance) {
+    if (balance < -1.0) {
+        balance = -1.0;
+    } else if (balance > 1.0) {
+        balance = 1.0;
+    }
+    mBalance = balance;
+}
+
+void AVFSoundLevelUnit::SetChannels(UInt32 count) {
+    mChannels = count;
+}
+
+// For stereo (2 channel), channel 0 is left, channel 1 is right
+Float32 AVFSoundLevelUnit::CalculateChannelLevel(int channelNum, int channelCount) {
+    Float32 volume = mVolume;
+    Float32 balance = mBalance;
+    Float32 level = volume;
+
+    if (channelCount == 2) {
+        // balance is only done on stereo audio
+        if (((balance < 0.0) && channelNum == 1) ||
+                ((balance > 0.0) && channelNum == 0)) {
+            // attenuate according to balance
+            balance = 1.0 - fabsf(balance);
+            level *= balance; // invert so it ramps the right direction
         }
     }
+    return level;
+}
 
-private:
-    AVFSoundLevelUnit *mLevelUnit;
-};
+bool AVFSoundLevelUnit::ProcessBufferLists(const AudioBufferList & buffer,
+                                           UInt32 inFramesToProcess) {
+    for (UInt32 i = 0; i < buffer.mNumberBuffers; i++) {
+        Process((const Float32 *) buffer.mBuffers[i].mData,
+                (Float32 *) buffer.mBuffers[i].mData,
+                inFramesToProcess,
+                i,
+                buffer.mBuffers[i].mNumberChannels);
+    }
 
-AUKernelBase *AVFSoundLevelUnit::NewKernel() {
-    return new AVFSoundLevelKernel(this, mAudioUnit);
+    return true;
+}
+
+void AVFSoundLevelUnit::Process(const Float32 *inSourceP,
+        Float32 *inDestP,
+        UInt32 inFramesToProcess,
+        UInt32 channelNum,
+        UInt32 inNumChannels) {
+
+    Float32 level = CalculateChannelLevel(channelNum, mChannels);
+    if (level == 1.0f) {
+        // Unity volume and balance
+        // if we're processing in-place then no need to do anything
+        if (inDestP != inSourceP) {
+            // There's no vector copy for non-complex numbers, so we'll just add zero
+            // We could just do memcpy, but if the channels are interleaved we don't
+            // want to modify other channels
+            Float32 addend = 0;
+            // float* casts are needed for Xcode 4.5
+            vDSP_vsadd((float*) inSourceP, inNumChannels,
+                    &addend,
+                    (float*) inDestP, inNumChannels,
+                    inFramesToProcess);
+        }
+    } else if (level == 0.0) {
+        // Just zero out the channel
+        vDSP_vclr(inDestP, inNumChannels, inFramesToProcess);
+    } else {
+        // Just multiply vector inSourceP by scalar volume, storing in vector inDestP
+        // we only attenuate the signal, so we don't need to be concerned about clipping
+        vDSP_vsmul(inSourceP,
+                inNumChannels,
+                &level,
+                inDestP,
+                inNumChannels,
+                inFramesToProcess);
+    }
 }

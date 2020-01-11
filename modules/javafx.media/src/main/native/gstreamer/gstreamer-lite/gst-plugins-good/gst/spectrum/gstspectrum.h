@@ -81,6 +81,12 @@ struct _GstSpectrum
   GMutex lock;
 
   GstSpectrumInputData input_data;
+
+#if defined (GSTREAMER_LITE) && defined (OSX)
+  guint bps_user; // User provided values to avoid more complex spectrum initialization
+  guint bpf_user;
+  void *user_data;
+#endif // GSTREAMER_LITE and OSX
 };
 
 struct _GstSpectrumClass
@@ -89,6 +95,14 @@ struct _GstSpectrumClass
 };
 
 GType gst_spectrum_get_type (void);
+
+#if defined (GSTREAMER_LITE) && defined (OSX)
+GST_EXPORT gboolean gst_spectrum_setup_api (GstAudioFilter * base,
+    const GstAudioInfo * info, guint bps_user, guint bpf_user);
+
+GST_EXPORT GstFlowReturn
+gst_spectrum_transform_ip_api (GstBaseTransform * trans, GstBuffer * buffer);
+#endif // GSTREAMER_LITE and OSX
 
 G_END_DECLS
 

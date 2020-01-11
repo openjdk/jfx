@@ -45,10 +45,6 @@
 #define ptr_to_jlong(a) ((jlong)(int)(a))
 #endif
 
-/* On non iOS platforms we use JNI_OnLoad() shared library entrypoint. */
-#define USING_BUILTIN_LIBRARY_ENTRYPOINT 0
-
-/* On iOS we use builtin libraries, thus JNI_OnLoad_javafx_iio() is the entrypoint */
 #ifdef __APPLE__
 
 #include <TargetConditionals.h>
@@ -57,10 +53,6 @@
 #define longjmp _longjmp
 #define setjmp _setjmp
 
-#if TARGET_OS_IPHONE /* iOS */
-#undef  USING_BUILTIN_LIBRARY_ENTRYPOINT
-#define USING_BUILTIN_LIBRARY_ENTRYPOINT 1
-#endif
 #endif
 
 static jboolean checkAndClearException(JNIEnv *env) {
@@ -108,7 +100,7 @@ static jmethodID JPEGImageLoader_emitWarningID;
    first loaded */
 static JavaVM *jvm;
 
-#if USING_BUILTIN_LIBRARY_ENTRYPOINT
+#ifdef STATIC_BUILD
 
 JNIEXPORT jint JNICALL
 JNI_OnLoad_javafx_iio(JavaVM *vm, void *reserved) {
@@ -133,7 +125,7 @@ JNI_OnLoad(JavaVM *vm, void *reserved) {
     return JNI_VERSION_1_2;
 }
 
-#endif
+#endif // STATIC_BUILD
 
 
 /*

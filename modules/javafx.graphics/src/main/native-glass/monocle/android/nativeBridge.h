@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,34 +22,21 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#ifndef DALVIKINPUT_H
-#define DALVIKINPUT_H
-
-#include <jni.h>
 #include <android/native_window_jni.h>
 #include <android/log.h>
-#include <linux/input.h>
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
+// the following functions can be invoked by native code invoked by Android Activity code
+void androidJfx_setNativeWindow(ANativeWindow* nativeWindow);
+void androidJfx_setDensity(float nativeDensity);
+void androidJfx_gotTouchEvent (int count, int* actions, int* ids, int* xs, int* ys, int primary);
+void androidJfx_requestGlassToRedraw();
+
+#define GLASS_LOG_INFO(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))
+#define GLASS_LOG_FINE(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))
+#define GLASS_LOG_FINEST(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))
+#define GLASS_LOG_WARNING(...)  ((void)__android_log_print(ANDROID_LOG_INFO,"GLASS", __VA_ARGS__))
+
+ANativeWindow* android_getNativeWindow(JNIEnv *env);
+jfloat android_getDensity(JNIEnv *env);
 
 
-ANativeWindow   *android_getNativeWindow(JNIEnv *env);
-const char      *android_getDataDir(JNIEnv *env);
-jfloat android_getDensity();
-
-#ifdef  __cplusplus
-}
-#endif
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <jni.h>
-
-#endif
