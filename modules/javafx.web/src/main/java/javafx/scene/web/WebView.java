@@ -994,12 +994,13 @@ final public class WebView extends Parent {
         }
 
         final Integer id = idMap.get(type);
-        if (id == null) {
+        final Integer button = idMap.get(ev.getButton());
+        if (id == null || button == null) {
             // not supported by webkit
             return;
         }
         WCMouseEvent mouseEvent =
-                new WCMouseEvent(id, idMap.get(ev.getButton()),
+                new WCMouseEvent(id, button,
                     ev.getClickCount(), (int) x, (int) y,
                     (int) screenX, (int) screenY,
                     System.currentTimeMillis(),
