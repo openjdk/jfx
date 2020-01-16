@@ -1300,15 +1300,15 @@ public class Scene implements EventTarget {
 
         int maxTextureSize = PrismSettings.maxTextureSize;
         if (height > maxTextureSize || width > maxTextureSize) {
-            // The requested size for the screenshot is to big to fit a single texture,
+            // The requested size for the screenshot is too big to fit a single texture,
             // so we need to take several snapshot tiles and merge them into single image (fixes JDK-8088198)
-            int verticalTileNb = (int) Math.ceil(height / (double) maxTextureSize);
-            int horizontalTileNb = (int) Math.ceil(width / (double) maxTextureSize);
-            for (int i = 0; i < horizontalTileNb; i++) {
-                for (int j = 0; j < verticalTileNb; j++) {
-                    int xOffset = i * maxTextureSize;
+            int numVerticalTiles = (int) Math.ceil(height / (double) maxTextureSize);
+            int numHorizontalTiles = (int) Math.ceil(width / (double) maxTextureSize);
+            for (int i = 0; i < numHorizontalTiles; i++) {
+                int xOffset = i * maxTextureSize;
+                int tileWidth = Math.min(maxTextureSize, width - xOffset);
+                for (int j = 0; j < numVerticalTiles; j++) {
                     int yOffset = j * maxTextureSize;
-                    int tileWidth = Math.min(maxTextureSize, width - xOffset);
                     int tileHeight = Math.min(maxTextureSize, height - yOffset);
                     WritableImage tile = doSnapshotTile(scene, xMin + xOffset, yMin + yOffset, tileWidth, tileHeight, root, transform, depthBuffer, fill, camera, null);
                     wimg.getPixelWriter().setPixels(xOffset, yOffset, tileWidth, tileHeight, tile.getPixelReader(), 0, 0);
