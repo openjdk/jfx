@@ -1312,7 +1312,8 @@ public class Scene implements EventTarget {
                 for (int j = 0; j < numVerticalTiles; j++) {
                     int yOffset = j * maxTextureSize;
                     int tileHeight = Math.min(maxTextureSize, height - yOffset);
-                    WritableImage tile = doSnapshotTile(scene, xMin + xOffset, yMin + yOffset, tileWidth, tileHeight, root, transform, depthBuffer, fill, camera, null);
+                    WritableImage tile = doSnapshotTile(scene, xMin + xOffset, yMin + yOffset, tileWidth,
+                            tileHeight, root, transform, depthBuffer, fill, camera, null);
                     wimg.getPixelWriter().setPixels(xOffset, yOffset, tileWidth, tileHeight, tile.getPixelReader(), 0, 0);
                 }
             }
