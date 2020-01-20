@@ -213,16 +213,16 @@ struct SwitchData {
     // constructing this should make sure to initialize everything they
     // care about manually.
     SwitchData()
-        : kind(static_cast<SwitchKind>(-1))
-        , switchTableIndex(UINT_MAX)
+        : switchTableIndex(UINT_MAX)
+        , kind(static_cast<SwitchKind>(-1))
         , didUseJumpTable(false)
     {
     }
 
     Vector<SwitchCase> cases;
     BranchTarget fallThrough;
-    SwitchKind kind;
     size_t switchTableIndex;
+    SwitchKind kind;
     bool didUseJumpTable;
 };
 
@@ -683,7 +683,7 @@ public:
 
     void convertPhantomToPhantomLocal()
     {
-        ASSERT(m_op == Phantom && (child1()->op() == Phi || child1()->op() == SetLocal || child1()->op() == SetArgument));
+        ASSERT(m_op == Phantom && (child1()->op() == Phi || child1()->op() == SetLocal || child1()->op() == SetArgumentDefinitely));
         m_op = PhantomLocal;
         m_opInfo = child1()->m_opInfo; // Copy the variableAccessData.
         children.setChild1(Edge());
@@ -710,7 +710,7 @@ public:
 
     void convertToCompareEqPtr(FrozenValue* cell, Edge node)
     {
-        ASSERT(m_op == CompareStrictEq);
+        ASSERT(m_op == CompareStrictEq || m_op == SameValue);
         setOpAndDefaultFlags(CompareEqPtr);
         children.setChild1(node);
         children.setChild2(Edge());
@@ -857,14 +857,6 @@ public:
         if (!isCellConstant())
             return nullptr;
         return jsDynamicCast<T>(vm, asCell());
-    }
-
-    template<typename T>
-    T castConstant(VM& vm)
-    {
-        T result = dynamicCastConstant<T>(vm);
-        RELEASE_ASSERT(result);
-        return result;
     }
 
     bool hasLazyJSValue()
@@ -1693,6 +1685,8 @@ public:
         case ValueBitAnd:
         case ValueBitOr:
         case ValueBitXor:
+        case ValueBitNot:
+        case ValueBitLShift:
         case CallObjectConstructor:
         case LoadKeyFromMapBucket:
         case LoadValueFromMapBucket:
@@ -2345,9 +2339,26 @@ public:
         return isInt32OrBooleanSpeculationExpectingDefined(prediction());
     }
 
-    bool shouldSpeculateAnyInt()
+    bool shouldSpeculateInt52()
     {
-        return isAnyIntSpeculation(prediction());
+        // We have to include SpecInt32Only here for two reasons:
+        // 1. We diligently write code that first checks if we should speculate Int32.
+        // For example:
+        // if (shouldSpeculateInt32()) ...
+        // else if (shouldSpeculateInt52()) ...
+        // This means we it's totally valid to speculate Int52 when we're dealing
+        // with a type that's the union of Int32 and Int52.
+        //
+        // It would be a performance mistake to not include Int32 here because we obviously
+        // have variables that are the union of Int32 and Int52 values, and it's better
+        // to speculate Int52 than double in that situation.
+        //
+        // 2. We also write code where we ask if the inputs can be Int52, like if
+        // we know via profiling that an Add overflows, we may not emit an Int32 add.
+        // However, we only emit such an add if both inputs can be Int52, and Int32
+        // can trivially become Int52.
+        //
+        return enableInt52() && isInt32OrInt52Speculation(prediction());
     }
 
     bool shouldSpeculateDouble()
@@ -2608,9 +2619,9 @@ public:
             && op2->shouldSpeculateInt32OrBooleanExpectingDefined();
     }
 
-    static bool shouldSpeculateAnyInt(Node* op1, Node* op2)
+    static bool shouldSpeculateInt52(Node* op1, Node* op2)
     {
-        return op1->shouldSpeculateAnyInt() && op2->shouldSpeculateAnyInt();
+        return enableInt52() && op1->shouldSpeculateInt52() && op2->shouldSpeculateInt52();
     }
 
     static bool shouldSpeculateNumber(Node* op1, Node* op2)
@@ -2886,8 +2897,6 @@ public:
             return;
         out.printf(", @%u", child3()->index());
     }
-
-    // NB. This class must have a trivial destructor.
 
     NodeOrigin origin;
 

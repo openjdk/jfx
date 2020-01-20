@@ -61,7 +61,7 @@ static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector
 
     if (selector.match() == CSSSelector::Tag) {
         const QualifiedName& tagQualifiedName = selector.tagQName();
-        const AtomicString& selectorNamespace = tagQualifiedName.namespaceURI();
+        const AtomString& selectorNamespace = tagQualifiedName.namespaceURI();
         if (selectorNamespace == starAtom() || selectorNamespace == xhtmlNamespaceURI) {
             if (tagQualifiedName == anyQName())
                 return MatchBasedOnRuleHash::Universal;
@@ -176,17 +176,17 @@ RuleSet::RuleSet() = default;
 
 RuleSet::~RuleSet() = default;
 
-void RuleSet::addToRuleSet(const AtomicString& key, AtomRuleMap& map, const RuleData& ruleData)
+void RuleSet::addToRuleSet(const AtomString& key, AtomRuleMap& map, const RuleData& ruleData)
 {
     if (key.isNull())
         return;
     auto& rules = map.add(key, nullptr).iterator->value;
     if (!rules)
-        rules = std::make_unique<RuleDataVector>();
+        rules = makeUnique<RuleDataVector>();
     rules->append(ruleData);
 }
 
-static unsigned rulesCountForName(const RuleSet::AtomRuleMap& map, const AtomicString& name)
+static unsigned rulesCountForName(const RuleSet::AtomRuleMap& map, const AtomString& name)
 {
     if (const auto* rules = map.get(name))
         return rules->size();

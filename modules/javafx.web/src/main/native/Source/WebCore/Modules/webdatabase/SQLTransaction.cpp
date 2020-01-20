@@ -34,6 +34,7 @@
 #include "DatabaseContext.h"
 #include "DatabaseThread.h"
 #include "DatabaseTracker.h"
+#include "Document.h"
 #include "Logging.h"
 #include "OriginLock.h"
 #include "SQLError.h"
@@ -46,6 +47,7 @@
 #include "SQLTransactionErrorCallback.h"
 #include "SQLiteTransaction.h"
 #include "VoidCallback.h"
+#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
 
@@ -58,9 +60,9 @@ Ref<SQLTransaction> SQLTransaction::create(Ref<Database>&& database, RefPtr<SQLT
 
 SQLTransaction::SQLTransaction(Ref<Database>&& database, RefPtr<SQLTransactionCallback>&& callback, RefPtr<VoidCallback>&& successCallback, RefPtr<SQLTransactionErrorCallback>&& errorCallback, RefPtr<SQLTransactionWrapper>&& wrapper, bool readOnly)
     : m_database(WTFMove(database))
-    , m_callbackWrapper(WTFMove(callback), &m_database->scriptExecutionContext())
-    , m_successCallbackWrapper(WTFMove(successCallback), &m_database->scriptExecutionContext())
-    , m_errorCallbackWrapper(WTFMove(errorCallback), &m_database->scriptExecutionContext())
+    , m_callbackWrapper(WTFMove(callback), &m_database->document())
+    , m_successCallbackWrapper(WTFMove(successCallback), &m_database->document())
+    , m_errorCallbackWrapper(WTFMove(errorCallback), &m_database->document())
     , m_wrapper(WTFMove(wrapper))
     , m_nextStep(&SQLTransaction::acquireLock)
     , m_readOnly(readOnly)
@@ -81,7 +83,7 @@ ExceptionOr<void> SQLTransaction::executeSql(const String& sqlStatement, Optiona
     else if (m_readOnly)
         permissions |= DatabaseAuthorizer::ReadOnlyMask;
 
-    auto statement = std::make_unique<SQLStatement>(m_database, sqlStatement, arguments.valueOr(Vector<SQLValue> { }), WTFMove(callback), WTFMove(callbackError), permissions);
+    auto statement = makeUnique<SQLStatement>(m_database, sqlStatement, arguments.valueOr(Vector<SQLValue> { }), WTFMove(callback), WTFMove(callbackError), permissions);
 
     if (m_database->deleted())
         statement->setDatabaseDeletedError();
@@ -232,7 +234,7 @@ void SQLTransaction::openTransactionAndPreflight()
     }
 
     ASSERT(!m_sqliteTransaction);
-    m_sqliteTransaction = std::make_unique<SQLiteTransaction>(m_database->sqliteDatabase(), m_readOnly);
+    m_sqliteTransaction = makeUnique<SQLiteTransaction>(m_database->sqliteDatabase(), m_readOnly);
 
     m_database->resetDeletes();
     m_database->disableAuthorizer();
@@ -263,7 +265,8 @@ void SQLTransaction::openTransactionAndPreflight()
         return;
     }
 
-    m_hasVersionMismatch = !m_database->expectedVersion().isEmpty() && (m_database->expectedVersion() != actualVersion);
+    auto expectedVersion = m_database->expectedVersionIsolatedCopy();
+    m_hasVersionMismatch = !expectedVersion.isEmpty() && expectedVersion != actualVersion;
 
     // Spec 4.3.2.3: Perform preflight steps, jumping to the error callback if they fail
     if (m_wrapper && !m_wrapper->performPreflight(*this)) {

@@ -98,9 +98,12 @@ void CommonData::removeDisposableCallSiteIndex(DisposableCallSiteIndex callSite)
 void CommonData::shrinkToFit()
 {
     codeOrigins.shrinkToFit();
+    dfgIdentifiers.shrinkToFit();
     weakReferences.shrinkToFit();
+    weakStructureReferences.shrinkToFit();
     transitions.shrinkToFit();
     catchEntrypoints.shrinkToFit();
+    jumpReplacements.shrinkToFit();
 }
 
 static Lock pcCodeBlockMapLock;

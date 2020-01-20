@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -58,7 +58,7 @@ FunctionConstructor::FunctionConstructor(VM& vm, Structure* structure)
 
 void FunctionConstructor::finishCreation(VM& vm, FunctionPrototype* functionPrototype)
 {
-    Base::finishCreation(vm, functionPrototype->classInfo()->className);
+    Base::finishCreation(vm, vm.propertyNames->Function.string(), NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, functionPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
@@ -69,8 +69,10 @@ JSObject* constructFunction(ExecState* exec, JSGlobalObject* globalObject, const
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (!globalObject->evalEnabled())
-        return throwException(exec, scope, createEvalError(exec, globalObject->evalDisabledErrorMessage()));
+    if (UNLIKELY(!globalObject->evalEnabled())) {
+        throwException(exec, scope, createEvalError(exec, globalObject->evalDisabledErrorMessage()));
+        return nullptr;
+    }
     RELEASE_AND_RETURN(scope, constructFunctionSkippingEvalEnabledCheck(exec, globalObject, args, functionName, sourceOrigin, sourceURL, position, -1, functionConstructionMode, newTarget));
 }
 
@@ -107,35 +109,34 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
     else if (args.size() == 1) {
         auto body = args.at(0).toWTFString(exec);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        program = makeString(prefix, functionName.string(), "() {\n", body, "\n}");
+        program = tryMakeString(prefix, functionName.string(), "() {\n", body, "\n}");
+        if (UNLIKELY(!program)) {
+            throwOutOfMemoryError(exec, scope);
+            return nullptr;
+        }
     } else {
         StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
-        builder.append(prefix);
-        builder.append(functionName.string());
+        builder.append(prefix, functionName.string(), '(');
 
-        builder.append('(');
         auto viewWithString = args.at(0).toString(exec)->viewWithUnderlyingString(exec);
         RETURN_IF_EXCEPTION(scope, nullptr);
         builder.append(viewWithString.view);
         for (size_t i = 1; !builder.hasOverflowed() && i < args.size() - 1; i++) {
-            builder.appendLiteral(", ");
             auto viewWithString = args.at(i).toString(exec)->viewWithUnderlyingString(exec);
             RETURN_IF_EXCEPTION(scope, nullptr);
-            builder.append(viewWithString.view);
+            builder.append(", ", viewWithString.view);
         }
-        if (builder.hasOverflowed()) {
+        if (UNLIKELY(builder.hasOverflowed())) {
             throwOutOfMemoryError(exec, scope);
             return nullptr;
         }
 
         functionConstructorParametersEndPosition = builder.length() + 1;
-        builder.appendLiteral(") {\n");
 
         auto body = args.at(args.size() - 1).toString(exec)->viewWithUnderlyingString(exec);
         RETURN_IF_EXCEPTION(scope, nullptr);
-        builder.append(body.view);
-        builder.appendLiteral("\n}");
-        if (builder.hasOverflowed()) {
+        builder.append(") {\n", body.view, "\n}");
+        if (UNLIKELY(builder.hasOverflowed())) {
             throwOutOfMemoryError(exec, scope);
             return nullptr;
         }
@@ -145,9 +146,10 @@ JSObject* constructFunctionSkippingEvalEnabledCheck(
     SourceCode source = makeSource(program, sourceOrigin, URL({ }, sourceURL), position);
     JSObject* exception = nullptr;
     FunctionExecutable* function = FunctionExecutable::fromGlobalCode(functionName, *exec, source, exception, overrideLineNumber, functionConstructorParametersEndPosition);
-    if (!function) {
+    if (UNLIKELY(!function)) {
         ASSERT(exception);
-        return throwException(exec, scope, exception);
+        throwException(exec, scope, exception);
+        return nullptr;
     }
 
     Structure* structure = nullptr;

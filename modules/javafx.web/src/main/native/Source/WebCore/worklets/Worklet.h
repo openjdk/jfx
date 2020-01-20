@@ -26,13 +26,15 @@
 #pragma once
 
 #include "ScriptWrappable.h"
+#include <wtf/RefCounted.h>
 
 #if ENABLE(CSS_PAINTING_API)
 
 namespace WebCore {
 class Document;
 
-class Worklet : public RefCounted<Worklet>, public ScriptWrappable {
+class Worklet final : public RefCounted<Worklet>, public ScriptWrappable {
+    WTF_MAKE_ISO_ALLOCATED(Worklet);
 public:
     static Ref<Worklet> create();
 

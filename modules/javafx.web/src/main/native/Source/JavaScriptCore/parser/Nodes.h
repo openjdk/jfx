@@ -204,6 +204,9 @@ namespace JSC {
         virtual bool isImportMeta() const { return false; }
         virtual bool isBytecodeIntrinsicNode() const { return false; }
         virtual bool isBinaryOpNode() const { return false; }
+        virtual bool isFunctionCall() const { return false; }
+        virtual bool isDeleteNode() const { return false; }
+        virtual bool isOptionalChain() const { return false; }
 
         virtual void emitBytecodeInConditionContext(BytecodeGenerator&, Label&, Label&, FallThroughMode);
 
@@ -211,8 +214,12 @@ namespace JSC {
 
         ResultType resultDescriptor() const { return m_resultType; }
 
+        bool isOptionalChainBase() const { return m_isOptionalChainBase; }
+        void setIsOptionalChainBase() { m_isOptionalChainBase = true; }
+
     private:
         ResultType m_resultType;
+        bool m_isOptionalChainBase { false };
     };
 
     class StatementNode : public Node {
@@ -869,6 +876,8 @@ namespace JSC {
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
+        bool isFunctionCall() const override { return true; }
+
         ArgumentsNode* m_args;
     };
 
@@ -878,6 +887,8 @@ namespace JSC {
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool isFunctionCall() const override { return true; }
 
         ExpressionNode* m_expr;
         ArgumentsNode* m_args;
@@ -890,6 +901,8 @@ namespace JSC {
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
+        bool isFunctionCall() const override { return true; }
+
         const Identifier& m_ident;
         ArgumentsNode* m_args;
     };
@@ -900,6 +913,8 @@ namespace JSC {
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool isFunctionCall() const override { return true; }
 
         ExpressionNode* m_base;
         ExpressionNode* m_subscript;
@@ -915,6 +930,8 @@ namespace JSC {
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
     protected:
+        bool isFunctionCall() const override { return true; }
+
         ExpressionNode* m_base;
         const Identifier& m_ident;
         ArgumentsNode* m_args;
@@ -944,6 +961,8 @@ namespace JSC {
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool isFunctionCall() const override { return m_type == Type::Function; }
 
         EmitterType m_emitter;
         const Identifier& m_ident;
@@ -976,6 +995,8 @@ namespace JSC {
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
+        bool isDeleteNode() const final { return true; }
+
         const Identifier& m_ident;
     };
 
@@ -985,6 +1006,8 @@ namespace JSC {
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool isDeleteNode() const final { return true; }
 
         ExpressionNode* m_base;
         ExpressionNode* m_subscript;
@@ -997,6 +1020,8 @@ namespace JSC {
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
 
+        bool isDeleteNode() const final { return true; }
+
         ExpressionNode* m_base;
         const Identifier& m_ident;
     };
@@ -1007,6 +1032,8 @@ namespace JSC {
 
     private:
         RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) override;
+
+        bool isDeleteNode() const final { return true; }
 
         ExpressionNode* m_expr;
     };
@@ -1290,6 +1317,34 @@ namespace JSC {
         LogicalOperator m_operator;
         ExpressionNode* m_expr1;
         ExpressionNode* m_expr2;
+    };
+
+    class CoalesceNode final : public ExpressionNode {
+    public:
+        CoalesceNode(const JSTokenLocation&, ExpressionNode* expr1, ExpressionNode* expr2, bool);
+
+    private:
+        RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
+
+        ExpressionNode* m_expr1;
+        ExpressionNode* m_expr2;
+        bool m_hasAbsorbedOptionalChain;
+    };
+
+    class OptionalChainNode final : public ExpressionNode {
+    public:
+        OptionalChainNode(const JSTokenLocation&, ExpressionNode*, bool);
+
+        void setExpr(ExpressionNode* expr) { m_expr = expr; }
+        ExpressionNode* expr() const { return m_expr; }
+
+    private:
+        RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = nullptr) final;
+
+        bool isOptionalChain() const final { return true; }
+
+        ExpressionNode* m_expr;
+        bool m_isOutermost;
     };
 
     // The ternary operator, "m_logical ? m_expr1 : m_expr2"
@@ -1744,6 +1799,11 @@ namespace JSC {
         bool captures(const Identifier& ident) { return captures(ident.impl()); }
         bool hasSloppyModeHoistedFunction(UniquedStringImpl* uid) const { return m_sloppyModeHoistedFunctions.contains(uid); }
 
+        bool needsNewTargetRegisterForThisScope() const
+        {
+            return usesSuperCall() || usesNewTarget();
+        }
+
         VariableEnvironment& varDeclarations() { return m_varDeclarations; }
 
         int neededConstants()
@@ -1994,8 +2054,6 @@ namespace JSC {
         const Identifier& ident() { return m_ident; }
         void setEcmaName(const Identifier& ecmaName) { m_ecmaName = ecmaName; }
         const Identifier& ecmaName() { return m_ident.isEmpty() ? m_ecmaName : m_ident; }
-        void setInferredName(const Identifier& inferredName) { ASSERT(!inferredName.isNull()); m_inferredName = inferredName; }
-        const Identifier& inferredName() { return m_inferredName.isEmpty() ? m_ident : m_inferredName; }
 
         FunctionMode functionMode() { return m_functionMode; }
 
@@ -2039,10 +2097,9 @@ namespace JSC {
         unsigned m_constructorKind : 2;
         unsigned m_isArrowFunctionBodyExpression : 1;
         SourceParseMode m_parseMode;
+        FunctionMode m_functionMode;
         Identifier m_ident;
         Identifier m_ecmaName;
-        Identifier m_inferredName;
-        FunctionMode m_functionMode;
         unsigned m_startColumn;
         unsigned m_endColumn;
         int m_functionKeywordStart;

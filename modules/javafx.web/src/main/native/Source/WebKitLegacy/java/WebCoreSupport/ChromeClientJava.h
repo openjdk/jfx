@@ -98,6 +98,9 @@ public:
 #endif
     IntPoint screenToRootView(const IntPoint&) const override;
     IntRect rootViewToScreen(const IntRect&) const override;
+    IntPoint accessibilityScreenToRootView(const IntPoint&) const final;
+    IntRect rootViewToAccessibilityScreen(const IntRect&) const final;
+    void intrinsicContentsSizeChanged(const IntSize&) const final;
     PlatformPageClient platformPageClient() const override;
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
@@ -166,6 +169,8 @@ public:
     void wheelEventHandlersChanged(bool) override {};
 
     RefPtr<Icon> createIconForFiles(const Vector<String>&) override;
+    void didFinishLoadingImageForElement(HTMLImageElement&) override;
+
 
 private:
     void repaint(const IntRect&);

@@ -39,10 +39,12 @@ using namespace Inspector;
 
 InspectorCPUProfilerAgent::InspectorCPUProfilerAgent(PageAgentContext& context)
     : InspectorAgentBase("CPUProfiler"_s, context)
-    , m_frontendDispatcher(std::make_unique<Inspector::CPUProfilerFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<Inspector::CPUProfilerFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::CPUProfilerBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
+
+InspectorCPUProfilerAgent::~InspectorCPUProfilerAgent() = default;
 
 void InspectorCPUProfilerAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
 {
@@ -51,6 +53,9 @@ void InspectorCPUProfilerAgent::didCreateFrontendAndBackend(FrontendRouter*, Bac
 
 void InspectorCPUProfilerAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
+    ErrorString ignored;
+    stopTracking(ignored);
+
     m_instrumentingAgents.setInspectorCPUProfilerAgent(nullptr);
 }
 
@@ -77,7 +82,27 @@ void InspectorCPUProfilerAgent::stopTracking(ErrorString&)
 
     m_tracking = false;
 
-    m_frontendDispatcher->trackingComplete();
+    m_frontendDispatcher->trackingComplete(m_environment.executionStopwatch()->elapsedTime().seconds());
+}
+
+static Ref<Protocol::CPUProfiler::ThreadInfo> buildThreadInfo(const ThreadCPUInfo& thread)
+{
+    ASSERT(thread.cpu <= 100);
+
+    auto threadInfo = Protocol::CPUProfiler::ThreadInfo::create()
+        .setName(thread.name)
+        .setUsage(thread.cpu)
+        .release();
+
+    if (thread.type == ThreadCPUInfo::Type::Main)
+        threadInfo->setType(Protocol::CPUProfiler::ThreadInfo::Type::Main);
+    else if (thread.type == ThreadCPUInfo::Type::WebKit)
+        threadInfo->setType(Protocol::CPUProfiler::ThreadInfo::Type::WebKit);
+
+    if (!thread.identifier.isEmpty())
+        threadInfo->setTargetId(thread.identifier);
+
+    return threadInfo;
 }
 
 void InspectorCPUProfilerAgent::collectSample(const ResourceUsageData& data)
@@ -86,6 +111,13 @@ void InspectorCPUProfilerAgent::collectSample(const ResourceUsageData& data)
         .setTimestamp(m_environment.executionStopwatch()->elapsedTimeSince(data.timestamp).seconds())
         .setUsage(data.cpuExcludingDebuggerThreads)
         .release();
+
+    if (!data.cpuThreads.isEmpty()) {
+        RefPtr<JSON::ArrayOf<Protocol::CPUProfiler::ThreadInfo>> threads = JSON::ArrayOf<Protocol::CPUProfiler::ThreadInfo>::create();
+        for (auto& threadInfo : data.cpuThreads)
+            threads->addItem(buildThreadInfo(threadInfo));
+        event->setThreads(WTFMove(threads));
+    }
 
     m_frontendDispatcher->trackingUpdate(WTFMove(event));
 }

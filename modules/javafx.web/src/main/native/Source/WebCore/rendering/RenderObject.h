@@ -85,24 +85,6 @@ enum class ShouldAllowCrossOriginScrolling { No, Yes };
 
 struct ScrollRectToVisibleOptions;
 
-#if ENABLE(DASHBOARD_SUPPORT)
-struct AnnotatedRegionValue {
-    bool operator==(const AnnotatedRegionValue& o) const
-    {
-        return type == o.type && bounds == o.bounds && clip == o.clip && label == o.label;
-    }
-    bool operator!=(const AnnotatedRegionValue& o) const
-    {
-        return !(*this == o);
-    }
-
-    LayoutRect bounds;
-    String label;
-    LayoutRect clip;
-    int type;
-};
-#endif
-
 // Base class for all rendering tree objects.
 class RenderObject : public CachedImageClient, public CanMakeWeakPtr<RenderObject> {
     WTF_MAKE_ISO_ALLOCATED(RenderObject);
@@ -154,7 +136,7 @@ public:
     };
 
     typedef BlockContentHeightType (*HeightTypeTraverseNextInclusionFunction)(const RenderObject&);
-    RenderObject* traverseNext(const RenderObject* stayWithin, HeightTypeTraverseNextInclusionFunction, int& currentDepth,  int& newFixedDepth) const;
+    RenderObject* traverseNext(const RenderObject* stayWithin, HeightTypeTraverseNextInclusionFunction, int& currentDepth, int& newFixedDepth) const;
 #endif
 
     WEBCORE_EXPORT RenderLayer* enclosingLayer() const;
@@ -569,11 +551,6 @@ public:
     // repaint and do not need a relayout
     virtual void updateFromElement() { }
 
-#if ENABLE(DASHBOARD_SUPPORT)
-    virtual void addAnnotatedRegions(Vector<AnnotatedRegionValue>&);
-    void collectAnnotatedRegions(Vector<AnnotatedRegionValue>&);
-#endif
-
     bool isComposited() const;
 
     bool hitTest(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestFilter = HitTestAll);
@@ -691,6 +668,7 @@ public:
         UseEdgeInclusiveIntersection = 1 << 0,
         ApplyCompositedClips = 1 << 1,
         ApplyCompositedContainerScrolls  = 1 << 2,
+        ApplyContainerClip = 1 << 3,
     };
     struct VisibleRectContext {
         VisibleRectContext(bool hasPositionFixedDescendant = false, bool dirtyRectIsFlipped = false, OptionSet<VisibleRectContextOption> options = { })
@@ -798,8 +776,6 @@ public:
     void initializeFragmentedFlowStateOnInsertion();
     virtual void insertedIntoTree();
 
-    WEBCORE_EXPORT bool isTransparentOrFullyClippedRespectingParentFrames() const;
-
 protected:
     //////////////////////////////////////////
     // Helper functions. Dangerous to use!
@@ -826,7 +802,10 @@ protected:
 
     static bool shouldApplyCompositedContainerScrollsForRepaint();
 
-    static VisibleRectContext visibleRectContextForRepaint();
+    static VisibleRectContext visibleRectContextForRepaint()
+    {
+        return VisibleRectContext(false, false, { VisibleRectContextOption::ApplyContainerClip, VisibleRectContextOption::ApplyCompositedContainerScrolls });
+    }
 
 private:
 #ifndef NDEBUG
@@ -1123,6 +1102,8 @@ inline bool RenderObject::needsSimplifiedNormalFlowLayoutOnly() const
     return m_bitfields.needsSimplifiedNormalFlowLayout() && !m_bitfields.needsLayout() && !m_bitfields.normalChildNeedsLayout()
         && !m_bitfields.posChildNeedsLayout() && !m_bitfields.needsPositionedMovementLayout();
 }
+
+inline void Node::setRenderer(RenderObject* renderer) { m_rendererWithStyleFlags.setPointer(renderer); }
 
 #if ENABLE(TREE_DEBUGGING)
 void printRenderTreeForLiveDocuments();

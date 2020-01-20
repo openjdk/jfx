@@ -28,47 +28,16 @@
 
 #if ENABLE(WEBGPU)
 
-#include "GPUCommandBuffer.h"
-#include "GPURenderPassDescriptor.h"
-#include "GPURenderPassEncoder.h"
-#include "GPURenderPipeline.h"
-#include "Logging.h"
-#include "WebGPURenderPassDescriptor.h"
-#include "WebGPURenderPassEncoder.h"
-
 namespace WebCore {
 
-Ref<WebGPUCommandBuffer> WebGPUCommandBuffer::create(Ref<GPUCommandBuffer>&& buffer)
+Ref<WebGPUCommandBuffer> WebGPUCommandBuffer::create(RefPtr<GPUCommandBuffer>&& buffer)
 {
     return adoptRef(*new WebGPUCommandBuffer(WTFMove(buffer)));
 }
 
-WebGPUCommandBuffer::WebGPUCommandBuffer(Ref<GPUCommandBuffer>&& buffer)
+WebGPUCommandBuffer::WebGPUCommandBuffer(RefPtr<GPUCommandBuffer>&& buffer)
     : m_commandBuffer(WTFMove(buffer))
 {
-}
-
-RefPtr<WebGPURenderPassEncoder> WebGPUCommandBuffer::beginRenderPass(WebGPURenderPassDescriptor&& descriptor)
-{
-    // FIXME: Improve error checking as WebGPURenderPassDescriptor is implemented.
-    if (descriptor.colorAttachments.isEmpty()) {
-        LOG(WebGPU, "WebGPUCommandBuffer::create(): No attachments specified for WebGPURenderPassDescriptor!");
-        return nullptr;
-    }
-
-    GPURenderPassDescriptor gpuRenderPassDescriptor;
-
-    for (const auto& colorAttachment : descriptor.colorAttachments) {
-        if (!colorAttachment.attachment) {
-            LOG(WebGPU, "WebGPUCommandBuffer::create(): Invalid attachment in WebGPURenderPassColorAttachmentDescriptor!");
-            return nullptr;
-        }
-        gpuRenderPassDescriptor.colorAttachments.append(GPURenderPassColorAttachmentDescriptor { colorAttachment.attachment->texture(), colorAttachment.clearColor });
-    }
-
-    if (auto encoder = GPURenderPassEncoder::create(m_commandBuffer.get(), WTFMove(gpuRenderPassDescriptor)))
-        return WebGPURenderPassEncoder::create(*this, encoder.releaseNonNull());
-    return nullptr;
 }
 
 } // namespace WebCore

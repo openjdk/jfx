@@ -1409,6 +1409,9 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(DisplayType e)
     case DisplayType::Contents:
         m_value.valueID = CSSValueContents;
         break;
+    case DisplayType::FlowRoot:
+        m_value.valueID = CSSValueFlowRoot;
+        break;
     }
 }
 
@@ -1644,6 +1647,9 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(LineBreak e)
     case LineBreak::AfterWhiteSpace:
         m_value.valueID = CSSValueAfterWhiteSpace;
         break;
+    case LineBreak::Anywhere:
+        m_value.valueID = CSSValueAnywhere;
+        break;
     }
 }
 
@@ -1685,6 +1691,8 @@ template<> inline CSSPrimitiveValue::operator LineBreak() const
         return LineBreak::Strict;
     case CSSValueAfterWhiteSpace:
         return LineBreak::AfterWhiteSpace;
+    case CSSValueAnywhere:
+        return LineBreak::Anywhere;
     default:
         break;
     }
@@ -2335,7 +2343,7 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(PositionType e)
         m_value.valueID = CSSValueFixed;
         break;
     case PositionType::Sticky:
-        m_value.valueID = CSSValueWebkitSticky;
+        m_value.valueID = CSSValueSticky;
         break;
     }
 }
@@ -2353,6 +2361,7 @@ template<> inline CSSPrimitiveValue::operator PositionType() const
         return PositionType::Absolute;
     case CSSValueFixed:
         return PositionType::Fixed;
+    case CSSValueSticky:
     case CSSValueWebkitSticky:
         return PositionType::Sticky;
     default:
@@ -3051,6 +3060,9 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(WhiteSpace e)
     case WhiteSpace::KHTMLNoWrap:
         m_value.valueID = CSSValueWebkitNowrap;
         break;
+    case WhiteSpace::BreakSpaces:
+        m_value.valueID = CSSValueBreakSpaces;
+        break;
     }
 }
 
@@ -3071,6 +3083,8 @@ template<> inline CSSPrimitiveValue::operator WhiteSpace() const
         return WhiteSpace::PreLine;
     case CSSValueNormal:
         return WhiteSpace::Normal;
+    case CSSValueBreakSpaces:
+        return WhiteSpace::BreakSpaces;
     default:
         break;
     }
@@ -4860,49 +4874,50 @@ template<> inline CSSPrimitiveValue::operator MaskType() const
 
 #if ENABLE(CSS_IMAGE_ORIENTATION)
 
-template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ImageOrientationEnum e)
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ImageOrientation e)
     : CSSValue(PrimitiveClass)
 {
     m_primitiveUnitType = CSS_DEG;
     switch (e) {
-    case OriginTopLeft:
+    case ImageOrientation::OriginTopLeft:
         m_value.num = 0;
         break;
-    case OriginRightTop:
+    case ImageOrientation::OriginRightTop:
         m_value.num = 90;
         break;
-    case OriginBottomRight:
+    case ImageOrientation::OriginBottomRight:
         m_value.num = 180;
         break;
-    case OriginLeftBottom:
+    case ImageOrientation::OriginLeftBottom:
         m_value.num = 270;
         break;
-    case OriginTopRight:
-    case OriginLeftTop:
-    case OriginBottomLeft:
-    case OriginRightBottom:
+    case ImageOrientation::FromImage:
+    case ImageOrientation::OriginTopRight:
+    case ImageOrientation::OriginLeftTop:
+    case ImageOrientation::OriginBottomLeft:
+    case ImageOrientation::OriginRightBottom:
         ASSERT_NOT_REACHED();
     }
 }
 
-template<> inline CSSPrimitiveValue::operator ImageOrientationEnum() const
+template<> inline CSSPrimitiveValue::operator ImageOrientation() const
 {
     ASSERT(isAngle());
     double quarters = 4 * doubleValue(CSS_TURN);
     int orientation = 3 & static_cast<int>(quarters < 0 ? floor(quarters) : ceil(quarters));
     switch (orientation) {
     case 0:
-        return OriginTopLeft;
+        return ImageOrientation::OriginTopLeft;
     case 1:
-        return OriginRightTop;
+        return ImageOrientation::OriginRightTop;
     case 2:
-        return OriginBottomRight;
+        return ImageOrientation::OriginBottomRight;
     case 3:
-        return OriginLeftBottom;
+        return ImageOrientation::OriginLeftBottom;
     }
 
     ASSERT_NOT_REACHED();
-    return OriginTopLeft;
+    return ImageOrientation::None;
 }
 
 #endif // ENABLE(CSS_IMAGE_ORIENTATION)

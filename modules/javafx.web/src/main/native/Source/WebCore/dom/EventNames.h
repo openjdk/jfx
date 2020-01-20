@@ -21,10 +21,16 @@
 
 #pragma once
 
+#include "Document.h"
+#include "Quirks.h"
 #include "ThreadGlobalData.h"
 #include <array>
 #include <functional>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
+
+#if ENABLE(TOUCH_EVENTS)
+#include "RuntimeEnabledFeatures.h"
+#endif
 
 namespace WebCore {
 
@@ -45,20 +51,12 @@ namespace WebCore {
     macro(DOMNodeRemovedFromDocument) \
     macro(DOMSubtreeModified) \
     macro(abort) \
-    macro(accessiblecontextmenu) \
-    macro(accessibleclick) \
-    macro(accessibledecrement) \
-    macro(accessibledismiss) \
-    macro(accessiblefocus) \
-    macro(accessibleincrement) \
-    macro(accessiblescrollintoview) \
-    macro(accessiblesetvalue) \
-    macro(accessibleselect) \
     macro(activate) \
     macro(active) \
     macro(addsourcebuffer) \
     macro(addstream) \
     macro(addtrack) \
+    macro(afterprint) \
     macro(animationcancel) \
     macro(animationend) \
     macro(animationiteration) \
@@ -73,6 +71,7 @@ namespace WebCore {
     macro(beforeinput) \
     macro(beforeload) \
     macro(beforepaste) \
+    macro(beforeprint) \
     macro(beforeunload) \
     macro(beginEvent) \
     macro(blocked) \
@@ -202,7 +201,11 @@ namespace WebCore {
     macro(pointerlockerror) \
     macro(pointercancel) \
     macro(pointerdown) \
+    macro(pointerenter) \
+    macro(pointerleave) \
     macro(pointermove) \
+    macro(pointerout) \
+    macro(pointerover) \
     macro(pointerup) \
     macro(popstate) \
     macro(previoustrack) \
@@ -294,7 +297,6 @@ namespace WebCore {
     macro(webkitAnimationIteration) \
     macro(webkitAnimationStart) \
     macro(webkitBeforeTextInserted) \
-    macro(webkitEditableContentChanged) \
     macro(webkitTransitionEnd) \
     macro(webkitbeginfullscreen) \
     macro(webkitcurrentplaybacktargetiswirelesschanged) \
@@ -333,17 +335,17 @@ struct EventNames {
     WTF_MAKE_NONCOPYABLE(EventNames); WTF_MAKE_FAST_ALLOCATED;
 
 public:
-#define DOM_EVENT_NAMES_DECLARE(name) const AtomicString name##Event;
+#define DOM_EVENT_NAMES_DECLARE(name) const AtomString name##Event;
     DOM_EVENT_NAMES_FOR_EACH(DOM_EVENT_NAMES_DECLARE)
 #undef DOM_EVENT_NAMES_DECLARE
 
-    // FIXME: The friend declaration to std::make_unique below does not work in windows port.
+    // FIXME: The friend declaration to makeUnique below does not work in windows port.
     //
     // template<class T, class... Args>
-    // friend typename std::_Unique_if<T>::_Single_object std::make_unique(Args&&...);
+    // friend typename std::_Unique_if<T>::_Single_object makeUnique(Args&&...);
     //
     // This create function should be deleted later and is only for keeping EventNames as private.
-    // std::make_unique should be used instead.
+    // makeUnique should be used instead.
     //
     template<class... Args>
     static std::unique_ptr<EventNames> create(Args&&... args)
@@ -353,16 +355,17 @@ public:
 
     // FIXME: Inelegant to call these both event names and event types.
     // We should choose one term and stick to it.
-    bool isWheelEventType(const AtomicString& eventType) const;
-    bool isGestureEventType(const AtomicString& eventType) const;
-    bool isTouchEventType(const AtomicString& eventType) const;
-    bool isTouchScrollBlockingEventType(const AtomicString& eventType) const;
+    bool isWheelEventType(const AtomString& eventType) const;
+    bool isGestureEventType(const AtomString& eventType) const;
+    bool isTouchRelatedEventType(const Document&, const AtomString& eventType) const;
+    bool isTouchScrollBlockingEventType(const AtomString& eventType) const;
 #if ENABLE(GAMEPAD)
-    bool isGamepadEventType(const AtomicString& eventType) const;
+    bool isGamepadEventType(const AtomString& eventType) const;
 #endif
 
-    std::array<std::reference_wrapper<const AtomicString>, 9> touchAndPointerEventNames() const;
-    std::array<std::reference_wrapper<const AtomicString>, 3> gestureEventNames() const;
+    std::array<std::reference_wrapper<const AtomString>, 13> touchRelatedEventNames() const;
+    std::array<std::reference_wrapper<const AtomString>, 16> extendedTouchRelatedEventNames() const;
+    std::array<std::reference_wrapper<const AtomString>, 3> gestureEventNames() const;
 
 private:
     EventNames(); // Private to prevent accidental call to EventNames() instead of eventNames().
@@ -378,49 +381,65 @@ inline const EventNames& eventNames()
     return threadGlobalData().eventNames();
 }
 
-inline bool EventNames::isGestureEventType(const AtomicString& eventType) const
+inline bool EventNames::isGestureEventType(const AtomString& eventType) const
 {
     return eventType == gesturestartEvent || eventType == gesturechangeEvent || eventType == gestureendEvent;
 }
 
-inline bool EventNames::isTouchScrollBlockingEventType(const AtomicString& eventType) const
+inline bool EventNames::isTouchScrollBlockingEventType(const AtomString& eventType) const
 {
     return eventType == touchstartEvent
         || eventType == touchmoveEvent;
 }
 
-inline bool EventNames::isTouchEventType(const AtomicString& eventType) const
+inline bool EventNames::isTouchRelatedEventType(const Document& document, const AtomString& eventType) const
 {
+#if ENABLE(TOUCH_EVENTS)
+    if (document.quirks().shouldDispatchSimulatedMouseEvents()) {
+        if (eventType == mousedownEvent || eventType == mousemoveEvent || eventType == mouseupEvent)
+            return true;
+    }
+#endif
+    UNUSED_PARAM(document);
     return eventType == touchstartEvent
         || eventType == touchmoveEvent
         || eventType == touchendEvent
         || eventType == touchcancelEvent
         || eventType == touchforcechangeEvent
+        || eventType == pointeroverEvent
+        || eventType == pointerenterEvent
         || eventType == pointerdownEvent
         || eventType == pointermoveEvent
         || eventType == pointerupEvent
+        || eventType == pointeroutEvent
+        || eventType == pointerleaveEvent
         || eventType == pointercancelEvent;
 }
 
-inline bool EventNames::isWheelEventType(const AtomicString& eventType) const
+inline bool EventNames::isWheelEventType(const AtomString& eventType) const
 {
     return eventType == wheelEvent
         || eventType == mousewheelEvent;
 }
 
-inline std::array<std::reference_wrapper<const AtomicString>, 9> EventNames::touchAndPointerEventNames() const
+inline std::array<std::reference_wrapper<const AtomString>, 13> EventNames::touchRelatedEventNames() const
 {
-    return { { touchstartEvent, touchmoveEvent, touchendEvent, touchcancelEvent, touchforcechangeEvent, pointerdownEvent, pointermoveEvent, pointerupEvent, pointercancelEvent } };
+    return { { touchstartEvent, touchmoveEvent, touchendEvent, touchcancelEvent, touchforcechangeEvent, pointeroverEvent, pointerenterEvent, pointerdownEvent, pointermoveEvent, pointerupEvent, pointeroutEvent, pointerleaveEvent, pointercancelEvent } };
 }
 
-inline std::array<std::reference_wrapper<const AtomicString>, 3> EventNames::gestureEventNames() const
+inline std::array<std::reference_wrapper<const AtomString>, 16> EventNames::extendedTouchRelatedEventNames() const
+{
+    return { { touchstartEvent, touchmoveEvent, touchendEvent, touchcancelEvent, touchforcechangeEvent, pointeroverEvent, pointerenterEvent, pointerdownEvent, pointermoveEvent, pointerupEvent, pointeroutEvent, pointerleaveEvent, pointercancelEvent, mousedownEvent, mousemoveEvent, mouseupEvent } };
+}
+
+inline std::array<std::reference_wrapper<const AtomString>, 3> EventNames::gestureEventNames() const
 {
     return { { gesturestartEvent, gesturechangeEvent, gestureendEvent } };
 }
 
 #if ENABLE(GAMEPAD)
 
-inline bool EventNames::isGamepadEventType(const AtomicString& eventType) const
+inline bool EventNames::isGamepadEventType(const AtomString& eventType) const
 {
     return eventType == gamepadconnectedEvent
         || eventType == gamepaddisconnectedEvent;

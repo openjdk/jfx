@@ -46,13 +46,14 @@ namespace IDBServer {
 // The IndexedDB spec states the value you can get from the key generator is 2^53
 static uint64_t maxGeneratedKeyValue = 0x20000000000000;
 
-std::unique_ptr<MemoryIDBBackingStore> MemoryIDBBackingStore::create(const IDBDatabaseIdentifier& identifier)
+std::unique_ptr<MemoryIDBBackingStore> MemoryIDBBackingStore::create(PAL::SessionID sessionID, const IDBDatabaseIdentifier& identifier)
 {
-    return std::make_unique<MemoryIDBBackingStore>(identifier);
+    return makeUnique<MemoryIDBBackingStore>(sessionID, identifier);
 }
 
-MemoryIDBBackingStore::MemoryIDBBackingStore(const IDBDatabaseIdentifier& identifier)
+MemoryIDBBackingStore::MemoryIDBBackingStore(PAL::SessionID sessionID, const IDBDatabaseIdentifier& identifier)
     : m_identifier(identifier)
+    , m_sessionID(sessionID)
 {
 }
 
@@ -61,7 +62,7 @@ MemoryIDBBackingStore::~MemoryIDBBackingStore() = default;
 IDBError MemoryIDBBackingStore::getOrEstablishDatabaseInfo(IDBDatabaseInfo& info)
 {
     if (!m_databaseInfo)
-        m_databaseInfo = std::make_unique<IDBDatabaseInfo>(m_identifier.databaseName(), 0);
+        m_databaseInfo = makeUnique<IDBDatabaseInfo>(m_identifier.databaseName(), 0);
 
     info = *m_databaseInfo;
     return IDBError { };
@@ -72,7 +73,7 @@ void MemoryIDBBackingStore::setDatabaseInfo(const IDBDatabaseInfo& info)
     // It is not valid to directly set database info on a backing store that hasn't already set its own database info.
     ASSERT(m_databaseInfo);
 
-    m_databaseInfo = std::make_unique<IDBDatabaseInfo>(info);
+    m_databaseInfo = makeUnique<IDBDatabaseInfo>(info);
 }
 
 IDBError MemoryIDBBackingStore::beginTransaction(const IDBTransactionInfo& info)
@@ -135,7 +136,7 @@ IDBError MemoryIDBBackingStore::createObjectStore(const IDBResourceIdentifier& t
         return IDBError { ConstraintError };
 
     ASSERT(!m_objectStoresByIdentifier.contains(info.identifier()));
-    auto objectStore = MemoryObjectStore::create(info);
+    auto objectStore = MemoryObjectStore::create(m_sessionID, info);
 
     m_databaseInfo->addExistingObjectStore(info);
 
@@ -363,9 +364,11 @@ IDBError MemoryIDBBackingStore::getRecord(const IDBResourceIdentifier& transacti
         return IDBError { UnknownError, "No backing store object store found"_s };
 
     switch (type) {
-    case IDBGetRecordDataType::KeyAndValue:
-        outValue = objectStore->valueForKeyRange(range);
+    case IDBGetRecordDataType::KeyAndValue: {
+        auto key = objectStore->lowestKeyWithRecordInRange(range);
+        outValue = { key, key.isNull() ? ThreadSafeDataBuffer() : objectStore->valueForKey(key), objectStore->info().keyPath() };
         break;
+    }
     case IDBGetRecordDataType::KeyOnly:
         outValue = objectStore->lowestKeyWithRecordInRange(range);
         break;
@@ -590,6 +593,16 @@ IDBObjectStoreInfo* MemoryIDBBackingStore::infoForObjectStore(uint64_t objectSto
 void MemoryIDBBackingStore::deleteBackingStore()
 {
     // The in-memory IDB backing store doesn't need to do any cleanup when it is deleted.
+}
+
+uint64_t MemoryIDBBackingStore::databaseSize() const
+{
+    // FIXME: Implement this.
+    return 0;
+}
+
+void MemoryIDBBackingStore::close()
+{
 }
 
 } // namespace IDBServer

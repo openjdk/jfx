@@ -28,18 +28,24 @@
 #if ENABLE(LAYOUT_FORMATTING_CONTEXT)
 
 #include "InlineItem.h"
-#include "InlineRunProvider.h"
 
 namespace WebCore {
 namespace Layout {
 
 class TextUtil {
 public:
-    static LayoutUnit width(const InlineItem&, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft);
-    static Optional<ItemPosition> hyphenPositionBefore(const InlineItem&, ItemPosition from, unsigned length);
+    static LayoutUnit width(const Box&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft);
+    static Optional<unsigned> hyphenPositionBefore(const InlineItem&, unsigned from, unsigned length);
+    static bool isTrimmableContent(const InlineItem&);
+    struct SplitData {
+        unsigned start { 0 };
+        unsigned length { 0 };
+        LayoutUnit logicalWidth;
+    };
+    static SplitData split(const Box&, unsigned startPosition, unsigned length, LayoutUnit textWidth, LayoutUnit availableWidth, LayoutUnit contentLogicalLeft);
 
 private:
-    static LayoutUnit fixedPitchWidth(String, const RenderStyle&, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft);
+    static LayoutUnit fixedPitchWidth(String, const RenderStyle&, unsigned from, unsigned to, LayoutUnit contentLogicalLeft);
 };
 
 }

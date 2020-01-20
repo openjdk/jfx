@@ -38,6 +38,7 @@ class Element;
 class RenderStyle;
 
 class DeclarativeAnimation : public WebAnimation {
+    WTF_MAKE_ISO_ALLOCATED(DeclarativeAnimation);
 public:
     ~DeclarativeAnimation();
 
@@ -76,7 +77,7 @@ private:
     void disassociateFromOwningElement();
     void flushPendingStyleChanges() const;
     AnimationEffectPhase phaseWithoutEffect() const;
-    void enqueueDOMEvent(const AtomicString&, Seconds);
+    void enqueueDOMEvent(const AtomString&, Seconds);
     void remove() final;
 
     // ActiveDOMObject.

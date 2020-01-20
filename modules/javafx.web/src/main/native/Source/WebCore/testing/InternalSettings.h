@@ -27,7 +27,7 @@
 #pragma once
 
 // FIXME (121927): This include should not be needed.
-#include <wtf/text/AtomicStringHash.h>
+#include <wtf/text/AtomStringHash.h>
 
 #include "EditingBehaviorTypes.h"
 #include "ExceptionOr.h"
@@ -61,6 +61,7 @@ public:
     ExceptionOr<void> setPictographFontFamily(const String& family, const String& script);
     ExceptionOr<void> setTextAutosizingEnabled(bool);
     ExceptionOr<void> setTextAutosizingWindowSizeOverride(int width, int height);
+    ExceptionOr<void> setTextAutosizingUsesIdempotentMode(bool);
     ExceptionOr<void> setTextAutosizingFontScaleFactor(float);
     ExceptionOr<void> setMediaTypeOverride(const String&);
     ExceptionOr<void> setCanStartMedia(bool);
@@ -101,8 +102,10 @@ public:
     ExceptionOr<void> setShouldMockBoldSystemFontForAccessibility(bool);
     ExceptionOr<void> setShouldManageAudioSessionCategory(bool);
     ExceptionOr<void> setCustomPasteboardDataEnabled(bool);
-    ExceptionOr<void> setAccessibilityEventsEnabled(bool);
     ExceptionOr<void> setIncompleteImageBorderEnabled(bool);
+    ExceptionOr<void> setShouldDispatchSyntheticMouseEventsWhenModifyingSelection(bool);
+    ExceptionOr<void> setShouldDispatchSyntheticMouseOutAfterSyntheticClick(bool);
+    ExceptionOr<void> setAnimatedImageDebugCanvasDrawingEnabled(bool);
 
     using FrameFlatteningValue = FrameFlattening;
     ExceptionOr<void> setFrameFlattening(FrameFlatteningValue);
@@ -123,19 +126,21 @@ public:
     // RuntimeEnabledFeatures.
     static void setIndexedDBWorkersEnabled(bool);
     static void setWebGL2Enabled(bool);
-    static void setWebMetalEnabled(bool);
+    static void setWebGPUEnabled(bool);
     static void setWebVREnabled(bool);
     static void setScreenCaptureEnabled(bool);
 
     static bool webAnimationsCSSIntegrationEnabled();
 
-    static void setStorageAccessPromptsEnabled(bool);
+    void setShouldDeactivateAudioSession(bool);
 
 private:
     explicit InternalSettings(Page*);
 
     Settings& settings() const;
     static const char* supplementName();
+
+    void setUseDarkAppearanceInternal(bool);
 
     class Backup {
     public:
@@ -156,6 +161,7 @@ private:
 #if ENABLE(TEXT_AUTOSIZING)
         bool m_originalTextAutosizingEnabled;
         IntSize m_originalTextAutosizingWindowSizeOverride;
+        bool m_originalTextAutosizingUsesIdempotentMode;
 #endif
 
         String m_originalMediaTypeOverride;
@@ -195,9 +201,10 @@ private:
         bool m_deferredCSSParserEnabled;
         bool m_inputEventsEnabled;
         bool m_incompleteImageBorderEnabled;
-#if ENABLE(ACCESSIBILITY_EVENTS)
-        bool m_accessibilityEventsEnabled;
-#endif
+        bool m_shouldDispatchSyntheticMouseEventsWhenModifyingSelection;
+        bool m_shouldDispatchSyntheticMouseOutAfterSyntheticClick { false };
+        bool m_shouldDeactivateAudioSession;
+        bool m_animatedImageDebugCanvasDrawingEnabled;
         UserInterfaceDirectionPolicy m_userInterfaceDirectionPolicy;
         TextDirection m_systemLayoutDirection;
         PDFImageCachingPolicy m_pdfImageCachingPolicy;
@@ -210,7 +217,6 @@ private:
         // Runtime enabled settings.
         bool m_indexedDBWorkersEnabled;
         bool m_webGL2Enabled;
-        bool m_webMetalEnabled;
         bool m_webVREnabled;
         bool m_setScreenCaptureEnabled;
 
@@ -219,7 +225,6 @@ private:
         bool m_shouldManageAudioSessionCategory;
 #endif
         bool m_customPasteboardDataEnabled;
-        bool m_promptForStorageAccessAPIEnabled { false };
     };
 
     Page* m_page;

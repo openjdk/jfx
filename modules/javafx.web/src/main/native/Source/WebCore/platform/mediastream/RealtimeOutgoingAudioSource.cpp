@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.
+ * Copyright (C) 2017-2019 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -40,9 +40,6 @@ namespace WebCore {
 
 RealtimeOutgoingAudioSource::RealtimeOutgoingAudioSource(Ref<MediaStreamTrackPrivate>&& source)
     : m_audioSource(WTFMove(source))
-#if !RELEASE_LOG_DISABLED
-    , m_logIdentifier(reinterpret_cast<const void*>(cryptographicallyRandomNumber()))
-#endif
 {
 }
 
@@ -65,6 +62,7 @@ void RealtimeOutgoingAudioSource::unobserveSource()
 
 bool RealtimeOutgoingAudioSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
 {
+    ALWAYS_LOG("Changing source to ", newSource->logIdentifier());
     auto locker = holdLock(m_sinksLock);
     bool hasSinks = !m_sinks.isEmpty();
 
@@ -73,6 +71,8 @@ bool RealtimeOutgoingAudioSource::setSource(Ref<MediaStreamTrackPrivate>&& newSo
     m_audioSource = WTFMove(newSource);
     if (hasSinks)
         observeSource();
+
+    sourceUpdated();
 
     return true;
 }
@@ -134,14 +134,6 @@ WTFLogChannel& RealtimeOutgoingAudioSource::logChannel() const
 {
     return LogWebRTC;
 }
-
-const Logger& RealtimeOutgoingAudioSource::logger() const
-{
-    if (!m_logger)
-        m_logger = Logger::create(this);
-    return *m_logger;
-}
-
 #endif
 
 } // namespace WebCore

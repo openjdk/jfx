@@ -92,7 +92,7 @@ class PendingCallbacks {
 public:
     void appendStartElementNSCallback(const xmlChar* xmlLocalName, const xmlChar* xmlPrefix, const xmlChar* xmlURI, int numNamespaces, const xmlChar** namespaces, int numAttributes, int numDefaulted, const xmlChar** attributes)
     {
-        auto callback = std::make_unique<PendingStartElementNSCallback>();
+        auto callback = makeUnique<PendingStartElementNSCallback>();
 
         callback->xmlLocalName = xmlStrdup(xmlLocalName);
         callback->xmlPrefix = xmlStrdup(xmlPrefix);
@@ -122,12 +122,12 @@ public:
 
     void appendEndElementNSCallback()
     {
-        m_callbacks.append(std::make_unique<PendingEndElementNSCallback>());
+        m_callbacks.append(makeUnique<PendingEndElementNSCallback>());
     }
 
     void appendCharactersCallback(const xmlChar* s, int len)
     {
-        auto callback = std::make_unique<PendingCharactersCallback>();
+        auto callback = makeUnique<PendingCharactersCallback>();
 
         callback->s = xmlStrndup(s, len);
         callback->len = len;
@@ -137,7 +137,7 @@ public:
 
     void appendProcessingInstructionCallback(const xmlChar* target, const xmlChar* data)
     {
-        auto callback = std::make_unique<PendingProcessingInstructionCallback>();
+        auto callback = makeUnique<PendingProcessingInstructionCallback>();
 
         callback->target = xmlStrdup(target);
         callback->data = xmlStrdup(data);
@@ -147,7 +147,7 @@ public:
 
     void appendCDATABlockCallback(const xmlChar* s, int len)
     {
-        auto callback = std::make_unique<PendingCDATABlockCallback>();
+        auto callback = makeUnique<PendingCDATABlockCallback>();
 
         callback->s = xmlStrndup(s, len);
         callback->len = len;
@@ -157,7 +157,7 @@ public:
 
     void appendCommentCallback(const xmlChar* s)
     {
-        auto callback = std::make_unique<PendingCommentCallback>();
+        auto callback = makeUnique<PendingCommentCallback>();
 
         callback->s = xmlStrdup(s);
 
@@ -166,7 +166,7 @@ public:
 
     void appendInternalSubsetCallback(const xmlChar* name, const xmlChar* externalID, const xmlChar* systemID)
     {
-        auto callback = std::make_unique<PendingInternalSubsetCallback>();
+        auto callback = makeUnique<PendingInternalSubsetCallback>();
 
         callback->name = xmlStrdup(name);
         callback->externalID = xmlStrdup(externalID);
@@ -177,7 +177,7 @@ public:
 
     void appendErrorCallback(XMLErrors::ErrorType type, const xmlChar* message, OrdinalNumber lineNumber, OrdinalNumber columnNumber)
     {
-        auto callback = std::make_unique<PendingErrorCallback>();
+        auto callback = makeUnique<PendingErrorCallback>();
 
         callback->message = xmlStrdup(message);
         callback->type = type;
@@ -197,6 +197,7 @@ public:
 
 private:
     struct PendingCallback {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
         virtual ~PendingCallback() = default;
         virtual void call(XMLDocumentParser* parser) = 0;
     };
@@ -564,7 +565,7 @@ bool XMLDocumentParser::supportsXMLVersion(const String& version)
 XMLDocumentParser::XMLDocumentParser(Document& document, FrameView* frameView)
     : ScriptableDocumentParser(document)
     , m_view(frameView)
-    , m_pendingCallbacks(std::make_unique<PendingCallbacks>())
+    , m_pendingCallbacks(makeUnique<PendingCallbacks>())
     , m_currentNode(&document)
     , m_scriptStartPosition(TextPosition::belowRangePosition())
 {
@@ -572,7 +573,7 @@ XMLDocumentParser::XMLDocumentParser(Document& document, FrameView* frameView)
 
 XMLDocumentParser::XMLDocumentParser(DocumentFragment& fragment, Element* parentElement, ParserContentPolicy parserContentPolicy)
     : ScriptableDocumentParser(fragment.document(), parserContentPolicy)
-    , m_pendingCallbacks(std::make_unique<PendingCallbacks>())
+    , m_pendingCallbacks(makeUnique<PendingCallbacks>())
     , m_currentNode(&fragment)
     , m_scriptStartPosition(TextPosition::belowRangePosition())
     , m_parsingFragment(true)
@@ -673,14 +674,14 @@ static inline String toString(const xmlChar* string)
     return String::fromUTF8(reinterpret_cast<const char*>(string));
 }
 
-static inline AtomicString toAtomicString(const xmlChar* string, size_t size)
+static inline AtomString toAtomString(const xmlChar* string, size_t size)
 {
-    return AtomicString::fromUTF8(reinterpret_cast<const char*>(string), size);
+    return AtomString::fromUTF8(reinterpret_cast<const char*>(string), size);
 }
 
-static inline AtomicString toAtomicString(const xmlChar* string)
+static inline AtomString toAtomString(const xmlChar* string)
 {
-    return AtomicString::fromUTF8(reinterpret_cast<const char*>(string));
+    return AtomString::fromUTF8(reinterpret_cast<const char*>(string));
 }
 
 struct _xmlSAX2Namespace {
@@ -693,8 +694,8 @@ static inline bool handleNamespaceAttributes(Vector<Attribute>& prefixedAttribut
 {
     xmlSAX2Namespace* namespaces = reinterpret_cast<xmlSAX2Namespace*>(libxmlNamespaces);
     for (int i = 0; i < numNamespaces; i++) {
-        AtomicString namespaceQName = xmlnsAtom();
-        AtomicString namespaceURI = toAtomicString(namespaces[i].uri);
+        AtomString namespaceQName = xmlnsAtom();
+        AtomString namespaceURI = toAtomString(namespaces[i].uri);
         if (namespaces[i].prefix)
             namespaceQName = "xmlns:" + toString(namespaces[i].prefix);
 
@@ -721,10 +722,10 @@ static inline bool handleElementAttributes(Vector<Attribute>& prefixedAttributes
     xmlSAX2Attributes* attributes = reinterpret_cast<xmlSAX2Attributes*>(libxmlAttributes);
     for (int i = 0; i < numAttributes; i++) {
         int valueLength = static_cast<int>(attributes[i].end - attributes[i].value);
-        AtomicString attrValue = toAtomicString(attributes[i].value, valueLength);
+        AtomString attrValue = toAtomString(attributes[i].value, valueLength);
         String attrPrefix = toString(attributes[i].prefix);
-        AtomicString attrURI = attrPrefix.isEmpty() ? nullAtom() : toAtomicString(attributes[i].uri);
-        AtomicString attrQName = attrPrefix.isEmpty() ? toAtomicString(attributes[i].localname) : attrPrefix + ":" + toString(attributes[i].localname);
+        AtomString attrURI = attrPrefix.isEmpty() ? nullAtom() : toAtomString(attributes[i].uri);
+        AtomString attrQName = attrPrefix.isEmpty() ? toAtomString(attributes[i].localname) : attrPrefix + ":" + toString(attributes[i].localname);
 
         auto result = Element::parseAttributeName(attrURI, attrQName);
         if (result.hasException())
@@ -761,9 +762,9 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
     if (!updateLeafTextNode())
         return;
 
-    AtomicString localName = toAtomicString(xmlLocalName);
-    AtomicString uri = toAtomicString(xmlURI);
-    AtomicString prefix = toAtomicString(xmlPrefix);
+    AtomString localName = toAtomString(xmlLocalName);
+    AtomString uri = toAtomString(xmlURI);
+    AtomString prefix = toAtomString(xmlPrefix);
 
     if (m_parsingFragment && uri.isNull()) {
         if (!prefix.isNull())
@@ -1154,7 +1155,7 @@ static size_t convertUTF16EntityToUTF8(const UChar* utf16Entity, size_t numberOf
 {
     const char* originalTarget = target;
     auto conversionResult = WTF::Unicode::convertUTF16ToUTF8(&utf16Entity, utf16Entity + numberOfCodeUnits, &target, target + targetSize);
-    if (conversionResult != WTF::Unicode::conversionOK)
+    if (conversionResult != WTF::Unicode::ConversionOK)
         return 0;
 
     // Even though we must pass the length, libxml expects the entity string to be null terminated.
@@ -1328,7 +1329,7 @@ void XMLDocumentParser::doEnd()
         xmlTreeViewer.transformDocumentToTreeView();
     } else if (m_sawXSLTransform) {
         xmlDocPtr doc = xmlDocPtrForString(document()->cachedResourceLoader(), m_originalSourceForTransform.toString(), document()->url().string());
-        document()->setTransformSource(std::make_unique<TransformSource>(doc));
+        document()->setTransformSource(makeUnique<TransformSource>(doc));
 
         document()->setParsing(false); // Make the document think it's done, so it will apply XSL stylesheets.
         document()->applyPendingXSLTransformsNowIfScheduled();
@@ -1387,6 +1388,9 @@ bool XMLDocumentParser::shouldAssociateConsoleMessagesWithTextPosition() const
 
 void XMLDocumentParser::stopParsing()
 {
+    if (m_sawError)
+        insertErrorMessageBlock();
+
     DocumentParser::stopParsing();
     if (context())
         xmlStopParser(context());

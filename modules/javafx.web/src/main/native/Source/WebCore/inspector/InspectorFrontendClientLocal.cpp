@@ -45,11 +45,13 @@
 #include "InspectorPageAgent.h"
 #include "Page.h"
 #include "ScriptController.h"
+#include "ScriptSourceCode.h"
 #include "ScriptState.h"
 #include "Settings.h"
 #include "Timer.h"
 #include "UserGestureIndicator.h"
 #include "WindowFeatures.h"
+#include <JavaScriptCore/FrameTracers.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <wtf/Deque.h>
 #include <wtf/text/CString.h>
@@ -127,6 +129,10 @@ void InspectorFrontendClientLocal::Settings::setProperty(const String&, const St
 {
 }
 
+void InspectorFrontendClientLocal::Settings::deleteProperty(const String&)
+{
+}
+
 InspectorFrontendClientLocal::InspectorFrontendClientLocal(InspectorController* inspectedPageController, Page* frontendPage, std::unique_ptr<Settings> settings)
     : m_inspectedPageController(inspectedPageController)
     , m_frontendPage(frontendPage)
@@ -144,6 +150,11 @@ InspectorFrontendClientLocal::~InspectorFrontendClientLocal()
     m_frontendPage = nullptr;
     m_inspectedPageController = nullptr;
     m_dispatchTask->reset();
+}
+
+void InspectorFrontendClientLocal::resetState()
+{
+    m_settings->deleteProperty(inspectorAttachedHeightSetting);
 }
 
 void InspectorFrontendClientLocal::windowObjectCleared()
@@ -205,7 +216,7 @@ bool InspectorFrontendClientLocal::canAttachWindow()
 
 void InspectorFrontendClientLocal::setDockingUnavailable(bool unavailable)
 {
-    evaluateOnLoad(makeString("[\"setDockingUnavailable\", ", unavailable ? "true" : "false", ']'));
+    dispatch(makeString("[\"setDockingUnavailable\", ", unavailable ? "true" : "false", ']'));
 }
 
 void InspectorFrontendClientLocal::changeAttachedWindowHeight(unsigned height)
@@ -221,6 +232,11 @@ void InspectorFrontendClientLocal::changeAttachedWindowWidth(unsigned width)
     unsigned totalWidth = m_frontendPage->mainFrame().view()->visibleWidth() + m_inspectedPageController->inspectedPage().mainFrame().view()->visibleWidth();
     unsigned attachedWidth = constrainedAttachedWindowWidth(width, totalWidth);
     setAttachedWindowWidth(attachedWidth);
+}
+
+void InspectorFrontendClientLocal::changeSheetRect(const FloatRect& rect)
+{
+    setSheetRect(rect);
 }
 
 void InspectorFrontendClientLocal::openInNewTab(const String& url)
@@ -270,7 +286,7 @@ void InspectorFrontendClientLocal::setAttachedWindow(DockSide dockSide)
 
     m_dockSide = dockSide;
 
-    evaluateOnLoad(makeString("[\"setDockSide\", \"", side, "\"]"));
+    dispatch(makeString("[\"setDockSide\", \"", side, "\"]"));
 }
 
 void InspectorFrontendClientLocal::restoreAttachedWindowHeight()
@@ -294,7 +310,7 @@ bool InspectorFrontendClientLocal::isDebuggingEnabled()
 
 void InspectorFrontendClientLocal::setDebuggingEnabled(bool enabled)
 {
-    evaluateOnLoad(makeString("[\"setDebuggingEnabled\", ", enabled ? "true" : "false", ']'));
+    dispatch(makeString("[\"setDebuggingEnabled\", ", enabled ? "true" : "false", ']'));
 }
 
 bool InspectorFrontendClientLocal::isTimelineProfilingEnabled()
@@ -306,7 +322,7 @@ bool InspectorFrontendClientLocal::isTimelineProfilingEnabled()
 
 void InspectorFrontendClientLocal::setTimelineProfilingEnabled(bool enabled)
 {
-    evaluateOnLoad(makeString("[\"setTimelineProfilingEnabled\", ", enabled ? "true" : "false", ']'));
+    dispatch(makeString("[\"setTimelineProfilingEnabled\", ", enabled ? "true" : "false", ']'));
 }
 
 bool InspectorFrontendClientLocal::isProfilingJavaScript()
@@ -318,28 +334,28 @@ bool InspectorFrontendClientLocal::isProfilingJavaScript()
 
 void InspectorFrontendClientLocal::startProfilingJavaScript()
 {
-    evaluateOnLoad("[\"startProfilingJavaScript\"]");
+    dispatch("[\"startProfilingJavaScript\"]");
 }
 
 void InspectorFrontendClientLocal::stopProfilingJavaScript()
 {
-    evaluateOnLoad("[\"stopProfilingJavaScript\"]");
+    dispatch("[\"stopProfilingJavaScript\"]");
 }
 
 void InspectorFrontendClientLocal::showConsole()
 {
-    evaluateOnLoad("[\"showConsole\"]");
+    dispatch("[\"showConsole\"]");
 }
 
 void InspectorFrontendClientLocal::showResources()
 {
-    evaluateOnLoad("[\"showResources\"]");
+    dispatch("[\"showResources\"]");
 }
 
 void InspectorFrontendClientLocal::showMainResourceForFrame(Frame* frame)
 {
-    String frameId = m_inspectedPageController->pageAgent()->frameId(frame);
-    evaluateOnLoad(makeString("[\"showMainResourceForFrame\", \"", frameId, "\"]"));
+    String frameId = m_inspectedPageController->ensurePageAgent().frameId(frame);
+    dispatch(makeString("[\"showMainResourceForFrame\", \"", frameId, "\"]"));
 }
 
 unsigned InspectorFrontendClientLocal::constrainedAttachedWindowHeight(unsigned preferredHeight, unsigned totalWindowHeight)
@@ -367,6 +383,29 @@ unsigned InspectorFrontendClientLocal::inspectionLevel() const
     return m_inspectedPageController->inspectionLevel() + 1;
 }
 
+void InspectorFrontendClientLocal::dispatch(const String& signature)
+{
+    ASSERT(!signature.isEmpty());
+    ASSERT(signature.startsWith('['));
+    ASSERT(signature.endsWith(']'));
+
+    evaluateOnLoad("InspectorFrontendAPI.dispatch(" + signature + ")");
+}
+
+void InspectorFrontendClientLocal::dispatchMessage(const String& messageObject)
+{
+    ASSERT(!messageObject.isEmpty());
+
+    evaluateOnLoad("InspectorFrontendAPI.dispatchMessage(" + messageObject + ")");
+}
+
+void InspectorFrontendClientLocal::dispatchMessageAsync(const String& messageObject)
+{
+    ASSERT(!messageObject.isEmpty());
+
+    evaluateOnLoad("InspectorFrontendAPI.dispatchMessageAsync(" + messageObject + ")");
+}
+
 bool InspectorFrontendClientLocal::evaluateAsBoolean(const String& expression)
 {
     auto& state = *mainWorldExecState(&m_frontendPage->mainFrame());
@@ -375,10 +414,13 @@ bool InspectorFrontendClientLocal::evaluateAsBoolean(const String& expression)
 
 void InspectorFrontendClientLocal::evaluateOnLoad(const String& expression)
 {
-    if (m_frontendLoaded)
-        m_frontendPage->mainFrame().script().executeScript("if (InspectorFrontendAPI) InspectorFrontendAPI.dispatch(" + expression + ")");
-    else
+    if (!m_frontendLoaded) {
         m_evaluateOnLoad.append(expression);
+        return;
+    }
+
+    JSC::SuspendExceptionScope scope(&m_frontendPage->inspectorController().vm());
+    m_frontendPage->mainFrame().script().evaluate(ScriptSourceCode(expression));
 }
 
 Page* InspectorFrontendClientLocal::inspectedPage() const

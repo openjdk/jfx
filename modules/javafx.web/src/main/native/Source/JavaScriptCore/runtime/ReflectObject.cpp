@@ -78,13 +78,10 @@ ReflectObject::ReflectObject(VM& vm, Structure* structure)
 {
 }
 
-void ReflectObject::finishCreation(VM& vm, JSGlobalObject* globalObject)
+void ReflectObject::finishCreation(VM& vm, JSGlobalObject*)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().ownKeysPrivateName(), reflectObjectOwnKeys, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly, 1);
-    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().getOwnPropertyDescriptorPrivateName(), reflectObjectGetOwnPropertyDescriptor, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly, 2);
 }
 
 // ------------------------------ Functions --------------------------------
@@ -116,7 +113,7 @@ EncodedJSValue JSC_HOST_CALL reflectObjectConstruct(ExecState* exec)
     if (!argumentsObject)
         return JSValue::encode(throwTypeError(exec, scope, "Reflect.construct requires the second argument be an object"_s));
 
-    createListFromArrayLike(exec, argumentsObject, RuntimeTypeMaskAllTypes, "This error must not be raised"_s, [&] (JSValue value, RuntimeType) -> bool {
+    createListFromArrayLike(exec, argumentsObject, RuntimeTypeMaskAllTypes, "This error must not be raised"_s, "This error must not be raised"_s, [&] (JSValue value, RuntimeType) -> bool {
         arguments.append(value);
         return false;
     });

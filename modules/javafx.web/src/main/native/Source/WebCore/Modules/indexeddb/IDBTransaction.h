@@ -65,7 +65,8 @@ class IDBConnectionProxy;
 class TransactionOperation;
 }
 
-class IDBTransaction : public ThreadSafeRefCounted<IDBTransaction>, public EventTargetWithInlineData, public IDBActiveDOMObject {
+class IDBTransaction final : public ThreadSafeRefCounted<IDBTransaction>, public EventTargetWithInlineData, public IDBActiveDOMObject {
+    WTF_MAKE_ISO_ALLOCATED(IDBTransaction);
 public:
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&);
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&, IDBOpenDBRequest&);
@@ -145,6 +146,7 @@ public:
 
     bool isFinishedOrFinishing() const;
     bool isFinished() const { return m_state == IndexedDB::TransactionState::Finished; }
+    bool didDispatchAbortOrCommit() const { return m_didDispatchAbortOrCommit; }
 
     IDBClient::IDBConnectionProxy& connectionProxy();
 
@@ -260,6 +262,7 @@ private:
     RefPtr<IDBRequest> m_currentlyCompletingRequest;
 
     bool m_contextStopped { false };
+    bool m_didDispatchAbortOrCommit { false };
 };
 
 class TransactionActivator {

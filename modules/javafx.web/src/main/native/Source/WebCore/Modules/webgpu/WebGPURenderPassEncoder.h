@@ -28,7 +28,6 @@
 #if ENABLE(WEBGPU)
 
 #include "WebGPUProgrammablePassEncoder.h"
-
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
@@ -37,20 +36,30 @@ namespace WebCore {
 class GPUProgrammablePassEncoder;
 class GPURenderPassEncoder;
 class WebGPUBuffer;
+class WebGPURenderPipeline;
+
+struct GPUColor;
 
 class WebGPURenderPassEncoder final : public WebGPUProgrammablePassEncoder {
 public:
-    static Ref<WebGPURenderPassEncoder> create(Ref<WebGPUCommandBuffer>&&, Ref<GPURenderPassEncoder>&&);
+    static Ref<WebGPURenderPassEncoder> create(RefPtr<GPURenderPassEncoder>&&);
 
-    void setVertexBuffers(unsigned long, Vector<RefPtr<WebGPUBuffer>>&&, Vector<unsigned long long>&&);
-    void draw(unsigned long vertexCount, unsigned long instanceCount, unsigned long firstVertex, unsigned long firstInstance);
+    void setPipeline(const WebGPURenderPipeline&);
+    void setBlendColor(const GPUColor&);
+    void setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
+    void setScissorRect(unsigned x, unsigned y, unsigned width, unsigned height);
+    void setIndexBuffer(WebGPUBuffer&, uint64_t offset);
+    void setVertexBuffers(unsigned startSlot, const Vector<RefPtr<WebGPUBuffer>>&, const Vector<uint64_t>& offsets);
+    void draw(unsigned vertexCount, unsigned instanceCount, unsigned firstVertex, unsigned firstInstance);
+    void drawIndexed(unsigned indexCount, unsigned instanceCount, unsigned firstIndex, int baseVertex, unsigned firstInstance);
 
 private:
-    WebGPURenderPassEncoder(Ref<WebGPUCommandBuffer>&&, Ref<GPURenderPassEncoder>&&);
+    WebGPURenderPassEncoder(RefPtr<GPURenderPassEncoder>&&);
 
-    GPUProgrammablePassEncoder& passEncoder() const final;
+    GPUProgrammablePassEncoder* passEncoder() final;
+    const GPUProgrammablePassEncoder* passEncoder() const final;
 
-    Ref<GPURenderPassEncoder> m_passEncoder;
+    RefPtr<GPURenderPassEncoder> m_passEncoder;
 };
 
 } // namespace WebCore

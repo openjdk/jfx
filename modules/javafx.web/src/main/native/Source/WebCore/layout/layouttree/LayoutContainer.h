@@ -29,7 +29,6 @@
 
 #include "LayoutBox.h"
 #include <wtf/IsoMalloc.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -37,10 +36,10 @@ class RenderStyle;
 
 namespace Layout {
 
-class Container : public Box {
+class Container final : public Box {
     WTF_MAKE_ISO_ALLOCATED(Container);
 public:
-    Container(Optional<ElementAttributes>, RenderStyle&&, BaseTypeFlags);
+    Container(Optional<ElementAttributes>, RenderStyle&&, BaseTypeFlags = ContainerFlag);
 
     const Box* firstChild() const { return m_firstChild; }
     const Box* firstInFlowChild() const;
@@ -53,16 +52,12 @@ public:
     bool hasInFlowChild() const { return firstInFlowChild(); }
     bool hasInFlowOrFloatingChild() const { return firstInFlowOrFloatingChild(); }
 
-    const Vector<WeakPtr<const Box>>& outOfFlowDescendants() const { return m_outOfFlowDescendants; }
-
     void setFirstChild(Box&);
     void setLastChild(Box&);
-    void addOutOfFlowDescendant(const Box&);
 
 private:
     Box* m_firstChild { nullptr };
     Box* m_lastChild { nullptr };
-    Vector<WeakPtr<const Box>> m_outOfFlowDescendants;
 };
 
 }

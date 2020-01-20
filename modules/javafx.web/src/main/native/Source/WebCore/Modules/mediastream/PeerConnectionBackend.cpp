@@ -43,6 +43,7 @@
 #include "RTCPeerConnection.h"
 #include "RTCPeerConnectionIceEvent.h"
 #include "RTCRtpCapabilities.h"
+#include "RTCTrackEvent.h"
 #include "RuntimeEnabledFeatures.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenateNumbers.h>
@@ -248,6 +249,21 @@ void PeerConnectionBackend::setRemoteDescriptionSucceeded()
     ASSERT(isMainThread());
     ALWAYS_LOG(LOGIDENTIFIER, "Set remote description succeeded");
 
+    ASSERT(!m_peerConnection.isClosed());
+
+    auto events = WTFMove(m_pendingTrackEvents);
+    for (auto& event : events) {
+        auto& track = event.track.get();
+
+        m_peerConnection.fireEvent(RTCTrackEvent::create(eventNames().trackEvent, Event::CanBubble::No, Event::IsCancelable::No, WTFMove(event.receiver), WTFMove(event.track), WTFMove(event.streams), WTFMove(event.transceiver)));
+
+        if (m_peerConnection.isClosed())
+            return;
+
+        // FIXME: As per spec, we should set muted to 'false' when starting to receive the content from network.
+        track.source().setMuted(false);
+    }
+
     if (m_peerConnection.isClosed())
         return;
 
@@ -262,13 +278,20 @@ void PeerConnectionBackend::setRemoteDescriptionFailed(Exception&& exception)
     ASSERT(isMainThread());
     ALWAYS_LOG(LOGIDENTIFIER, "Set remote description failed:", exception.message());
 
-    if (m_peerConnection.isClosed())
-        return;
+    ASSERT(m_pendingTrackEvents.isEmpty());
+    m_pendingTrackEvents.clear();
 
+    ASSERT(!m_peerConnection.isClosed());
     ASSERT(m_setDescriptionPromise);
 
     m_setDescriptionPromise->reject(WTFMove(exception));
     m_setDescriptionPromise = WTF::nullopt;
+}
+
+void PeerConnectionBackend::addPendingTrackEvent(PendingTrackEvent&& event)
+{
+    ASSERT(!m_peerConnection.isClosed());
+    m_pendingTrackEvents.append(WTFMove(event));
 }
 
 static String extractIPAddres(const String& sdp)
@@ -308,14 +331,10 @@ void PeerConnectionBackend::addIceCandidateSucceeded()
     if (m_peerConnection.isClosed())
         return;
 
-    // FIXME: Update remote description and set ICE connection state to checking if not already done so.
     ASSERT(m_addIceCandidatePromise);
 
     m_addIceCandidatePromise->resolve();
     m_addIceCandidatePromise = WTF::nullopt;
-
-    if (!m_waitingForMDNSResolution && m_finishedReceivingCandidates)
-        endOfIceCandidates(WTFMove(*m_endOfIceCandidatePromise));
 }
 
 void PeerConnectionBackend::addIceCandidateFailed(Exception&& exception)
@@ -330,9 +349,6 @@ void PeerConnectionBackend::addIceCandidateFailed(Exception&& exception)
 
     m_addIceCandidatePromise->reject(WTFMove(exception));
     m_addIceCandidatePromise = WTF::nullopt;
-
-    if (!m_waitingForMDNSResolution && m_finishedReceivingCandidates)
-        endOfIceCandidates(WTFMove(*m_endOfIceCandidatePromise));
 }
 
 void PeerConnectionBackend::fireICECandidateEvent(RefPtr<RTCIceCandidate>&& candidate, String&& serverURL)
@@ -396,7 +412,11 @@ String PeerConnectionBackend::filterSDP(String&& sdp) const
 
     StringBuilder filteredSDP;
     sdp.split('\n', [&filteredSDP](StringView line) {
-        if (!line.startsWith("a=candidate"))
+        if (line.startsWith("c=IN IP4"))
+            filteredSDP.append("c=IN IP4 0.0.0.0");
+        else if (line.startsWith("c=IN IP6"))
+            filteredSDP.append("c=IN IP6 ::");
+        else if (!line.startsWith("a=candidate"))
             filteredSDP.append(line);
         else if (line.find(" host ", 11) == notFound)
             filteredSDP.append(filterICECandidate(line.toString()));
@@ -498,6 +518,8 @@ void PeerConnectionBackend::stop()
     m_setDescriptionPromise = WTF::nullopt;
     m_addIceCandidatePromise = WTF::nullopt;
 
+    m_pendingTrackEvents.clear();
+
     doStop();
 }
 
@@ -537,6 +559,20 @@ void PeerConnectionBackend::generateCertificate(Document& document, const Certif
     UNUSED_PARAM(type);
     promise.reject(NotSupportedError);
 #endif
+}
+
+ScriptExecutionContext* PeerConnectionBackend::context() const
+{
+    return m_peerConnection.scriptExecutionContext();
+}
+
+RTCRtpTransceiver* PeerConnectionBackend::transceiverFromSender(const RTCRtpSender& sender)
+{
+    for (auto& transceiver : m_peerConnection.currentTransceivers()) {
+        if (&transceiver->sender() == &sender)
+            return transceiver.get();
+    }
+    return nullptr;
 }
 
 #if !RELEASE_LOG_DISABLED

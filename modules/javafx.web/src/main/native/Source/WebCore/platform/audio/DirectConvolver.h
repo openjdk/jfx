@@ -30,12 +30,15 @@
 #define DirectConvolver_h
 
 #include "AudioArray.h"
+#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
-class DirectConvolver {
+class DirectConvolver final {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(DirectConvolver);
 public:
-    DirectConvolver(size_t inputBlockSize);
+    explicit DirectConvolver(size_t inputBlockSize);
 
     void process(AudioFloatArray* convolutionKernel, const float* sourceP, float* destP, size_t framesToProcess);
 

@@ -38,7 +38,6 @@
 #if USE(LIBEPOXY)
 #include <epoxy/gl.h>
 #elif USE(OPENGL_ES)
-#define GL_GLEXT_PROTOTYPES 1
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #else
@@ -183,11 +182,14 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createWindowContext(GLNativeWindowTy
     if (platformDisplay.type() == PlatformDisplay::Type::Wayland)
         surface = createWindowSurfaceWayland(display, config, window);
 #endif
-#elif PLATFORM(WPE)
+#endif
+
+#if USE(WPE_RENDERER)
     if (platformDisplay.type() == PlatformDisplay::Type::WPE)
         surface = createWindowSurfaceWPE(display, config, window);
 #else
-    surface = eglCreateWindowSurface(display, config, static_cast<EGLNativeWindowType>(window), nullptr);
+    if (surface == EGL_NO_SURFACE)
+        surface = eglCreateWindowSurface(display, config, static_cast<EGLNativeWindowType>(window), nullptr);
 #endif
     if (surface == EGL_NO_SURFACE) {
         WTFLogAlways("Cannot create EGL window surface: %s\n", lastErrorString());
@@ -233,10 +235,8 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createSurfacelessContext(PlatformDis
     }
 
     const char* extensions = eglQueryString(display, EGL_EXTENSIONS);
-    if (!GLContext::isExtensionSupported(extensions, "EGL_KHR_surfaceless_context") && !GLContext::isExtensionSupported(extensions, "EGL_KHR_surfaceless_opengl")) {
-        WTFLogAlways("Cannot create EGL surfaceless context: missing EGL_KHR_surfaceless_{context,opengl} extension.\n");
+    if (!GLContext::isExtensionSupported(extensions, "EGL_KHR_surfaceless_context") && !GLContext::isExtensionSupported(extensions, "EGL_KHR_surfaceless_opengl"))
         return nullptr;
-    }
 
     EGLConfig config;
     if (!getEGLConfig(display, &config, Surfaceless)) {
@@ -282,7 +282,7 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createContext(GLNativeWindowType win
         if (platformDisplay.type() == PlatformDisplay::Type::Wayland)
             context = createWaylandContext(platformDisplay, eglSharingContext);
 #endif
-#if PLATFORM(WPE)
+#if USE(WPE_RENDERER)
         if (platformDisplay.type() == PlatformDisplay::Type::WPE)
             context = createWPEContext(platformDisplay, eglSharingContext);
 #endif
@@ -319,7 +319,7 @@ std::unique_ptr<GLContextEGL> GLContextEGL::createSharingContext(PlatformDisplay
         if (platformDisplay.type() == PlatformDisplay::Type::Wayland)
             context = createWaylandContext(platformDisplay);
 #endif
-#if PLATFORM(WPE)
+#if USE(WPE_RENDERER)
         if (platformDisplay.type() == PlatformDisplay::Type::WPE)
             context = createWPEContext(platformDisplay);
 #endif
@@ -362,7 +362,7 @@ GLContextEGL::~GLContextEGL()
 #if PLATFORM(WAYLAND)
     destroyWaylandWindow();
 #endif
-#if PLATFORM(WPE)
+#if USE(WPE_RENDERER)
     destroyWPETarget();
 #endif
 }

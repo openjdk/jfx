@@ -158,7 +158,7 @@ void HTMLLinkElement::setDisabledState(bool disabled)
     }
 }
 
-void HTMLLinkElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLLinkElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == relAttr) {
         m_relAttribute = LinkRelAttribute(document(), value);
@@ -216,7 +216,7 @@ bool HTMLLinkElement::shouldLoadLink()
     return true;
 }
 
-void HTMLLinkElement::setCrossOrigin(const AtomicString& value)
+void HTMLLinkElement::setCrossOrigin(const AtomString& value)
 {
     setAttributeWithoutSynchronization(crossoriginAttr, value);
 }
@@ -226,7 +226,7 @@ String HTMLLinkElement::crossOrigin() const
     return parseCORSSettingsAttribute(attributeWithoutSynchronization(crossoriginAttr));
 }
 
-void HTMLLinkElement::setAs(const AtomicString& value)
+void HTMLLinkElement::setAs(const AtomString& value)
 {
     setAttributeWithoutSynchronization(asAttr, value);
 }
@@ -245,7 +245,7 @@ String HTMLLinkElement::as() const
         || equalLettersIgnoringASCIICase(as, "track")
 #endif
         || equalLettersIgnoringASCIICase(as, "font"))
-        return as;
+        return as.convertToASCIILowercase();
     return String();
 }
 
@@ -262,8 +262,18 @@ void HTMLLinkElement::process()
 
     URL url = getNonEmptyURLAttribute(hrefAttr);
 
-    if (!m_linkLoader.loadLink(m_relAttribute, url, attributeWithoutSynchronization(asAttr), attributeWithoutSynchronization(mediaAttr), attributeWithoutSynchronization(typeAttr), attributeWithoutSynchronization(crossoriginAttr), document()))
-        return;
+    LinkLoadParameters params {
+        m_relAttribute,
+        url,
+        attributeWithoutSynchronization(asAttr),
+        attributeWithoutSynchronization(mediaAttr),
+        attributeWithoutSynchronization(typeAttr),
+        attributeWithoutSynchronization(crossoriginAttr),
+        attributeWithoutSynchronization(imagesrcsetAttr),
+        attributeWithoutSynchronization(imagesizesAttr)
+    };
+
+    m_linkLoader.loadLink(params, document());
 
     bool treatAsStyleSheet = m_relAttribute.isStyleSheet
         || (document().settings().treatsAnyTextCSSLinkAsStylesheet() && m_type.containsIgnoringASCIICase("text/css"));
@@ -471,7 +481,7 @@ bool HTMLLinkElement::styleSheetIsLoading() const
 DOMTokenList& HTMLLinkElement::sizes()
 {
     if (!m_sizes)
-        m_sizes = std::make_unique<DOMTokenList>(*this, sizesAttr);
+        m_sizes = makeUnique<DOMTokenList>(*this, sizesAttr);
     return *m_sizes;
 }
 
@@ -512,7 +522,7 @@ void HTMLLinkElement::dispatchPendingEvent(LinkEventSender* eventSender)
 DOMTokenList& HTMLLinkElement::relList()
 {
     if (!m_relList)
-        m_relList = std::make_unique<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
+        m_relList = makeUnique<DOMTokenList>(*this, HTMLNames::relAttr, [](Document& document, StringView token) {
             return LinkRelAttribute::isSupported(document, token);
         });
     return *m_relList;
@@ -565,7 +575,7 @@ URL HTMLLinkElement::href() const
     return document().completeURL(attributeWithoutSynchronization(hrefAttr));
 }
 
-const AtomicString& HTMLLinkElement::rel() const
+const AtomString& HTMLLinkElement::rel() const
 {
     return attributeWithoutSynchronization(relAttr);
 }
@@ -575,7 +585,7 @@ String HTMLLinkElement::target() const
     return attributeWithoutSynchronization(targetAttr);
 }
 
-const AtomicString& HTMLLinkElement::type() const
+const AtomString& HTMLLinkElement::type() const
 {
     return attributeWithoutSynchronization(typeAttr);
 }

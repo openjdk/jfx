@@ -35,6 +35,7 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include <wtf/Forward.h>
+#include <wtf/WeakPtr.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
 #include "ResourceLoadInfo.h"
@@ -53,7 +54,7 @@ class FrameLoader;
 class NetworkLoadMetrics;
 class PreviewLoader;
 
-class ResourceLoader : public RefCounted<ResourceLoader>, protected ResourceHandleClient {
+class ResourceLoader : public CanMakeWeakPtr<ResourceLoader>, public RefCounted<ResourceLoader>, protected ResourceHandleClient {
 public:
     virtual ~ResourceLoader() = 0;
 
@@ -153,7 +154,7 @@ public:
     ResourceRequest takeDeferredRequest() { return std::exchange(m_deferredRequest, { }); }
 
 protected:
-    ResourceLoader(DocumentLoader&, ResourceLoaderOptions);
+    ResourceLoader(Frame&, ResourceLoaderOptions);
 
     void didFinishLoadingOnePart(const NetworkLoadMetrics&);
     void cleanupForError(const ResourceError&);
@@ -243,7 +244,7 @@ private:
 
 #if ENABLE(CONTENT_EXTENSIONS)
 protected:
-    ResourceType m_resourceType { ResourceType::Invalid };
+    ContentExtensions::ResourceType m_resourceType { ContentExtensions::ResourceType::Invalid };
 #endif
 };
 

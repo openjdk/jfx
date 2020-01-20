@@ -25,9 +25,12 @@
 #include "AutoplayEvent.h"
 #include "Cursor.h"
 #include "DatabaseDetails.h"
+#include "DeviceOrientationOrMotionPermissionState.h"
 #include "DisabledAdaptations.h"
 #include "DisplayRefreshMonitor.h"
+#include "DocumentStorageAccess.h"
 #include "FocusDirection.h"
+#include "FrameIdentifier.h"
 #include "FrameLoader.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
@@ -39,12 +42,14 @@
 #include "MediaProducer.h"
 #include "PopupMenu.h"
 #include "PopupMenuClient.h"
+#include "RegistrableDomain.h"
 #include "RenderEmbeddedObject.h"
 #include "ScrollTypes.h"
 #include "ScrollingCoordinator.h"
 #include "SearchPopupMenu.h"
 #include "WebCoreKeyboardUIMode.h"
 #include <JavaScriptCore/ConsoleTypes.h>
+#include <wtf/Assertions.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Seconds.h>
@@ -55,6 +60,7 @@
 
 #if PLATFORM(IOS_FAMILY)
 #include "PlatformLayer.h"
+#include "WKContentObservation.h"
 #define NSResponder WAKResponder
 #ifndef __OBJC__
 class WAKResponder;
@@ -83,6 +89,7 @@ class FrameLoadRequest;
 class Geolocation;
 class GraphicsLayer;
 class GraphicsLayerFactory;
+class HTMLImageElement;
 class HTMLInputElement;
 class HTMLMediaElement;
 class HTMLVideoElement;
@@ -101,6 +108,7 @@ class Widget;
 class MediaPlayerRequestInstallMissingPluginsCallback;
 #endif
 
+struct ContentRuleListResults;
 struct DateTimeChooserParameters;
 struct GraphicsDeviceAdapter;
 struct ShareDataWithParsedURL;
@@ -109,7 +117,7 @@ struct WindowFeatures;
 
 enum class RouteSharingPolicy : uint8_t;
 
-class WEBCORE_EXPORT ChromeClient {
+class ChromeClient {
 public:
     virtual void chromeDestroyed() = 0;
 
@@ -174,11 +182,10 @@ public:
 
     virtual IntPoint screenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToScreen(const IntRect&) const = 0;
-
-#if PLATFORM(IOS_FAMILY)
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
-#endif
+
+    virtual void didFinishLoadingImageForElement(HTMLImageElement&) = 0;
 
     virtual PlatformPageClient platformPageClient() const = 0;
 
@@ -195,6 +202,7 @@ public:
     virtual void dispatchViewportPropertiesDidChange(const ViewportArguments&) const { }
 
     virtual void contentsSizeChanged(Frame&, const IntSize&) const = 0;
+    virtual void intrinsicContentsSizeChanged(const IntSize&) const = 0;
     virtual void scrollRectIntoView(const IntRect&) const { }; // Currently only Mac has a non empty implementation.
 
     virtual bool shouldUnavailablePluginMessageBeButton(RenderEmbeddedObject::PluginUnavailabilityReason) const { return false; }
@@ -228,13 +236,6 @@ public:
     // the new cache.
     virtual void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t totalSpaceNeeded) = 0;
 
-#if ENABLE(DASHBOARD_SUPPORT)
-    virtual void annotatedRegionsChanged();
-#endif
-
-    virtual bool shouldReplaceWithGeneratedFileForUpload(const String& path, String& generatedFilename);
-    virtual String generateReplacementFile(const String& path);
-
 #if ENABLE(IOS_TOUCH_EVENTS)
     virtual void didPreventDefaultForEvent() = 0;
 #endif
@@ -244,8 +245,7 @@ public:
 #if PLATFORM(IOS_FAMILY)
     virtual void didReceiveMobileDocType(bool) = 0;
     virtual void setNeedsScrollNotifications(Frame&, bool) = 0;
-    virtual void observedContentChange(Frame&) = 0;
-    virtual void clearContentChangeObservers(Frame&) = 0;
+    virtual void didFinishContentChangeObserving(Frame&, WKContentChange) = 0;
     virtual void notifyRevealedSelectionByScrollingFrame(Frame&) = 0;
 
     enum LayoutType { NormalLayout, Scroll };
@@ -315,6 +315,7 @@ public:
     // Sets a flag to specify that the view needs to be updated, so we need
     // to do an eager layout before the drawing.
     virtual void scheduleCompositingLayerFlush() = 0;
+    virtual bool needsImmediateRenderingUpdate() const { return false; }
     // Returns whether or not the client can render the composited layer,
     // regardless of the settings.
     virtual bool allowsAcceleratedCompositing() const { return true; }
@@ -379,6 +380,8 @@ public:
     virtual void assistiveTechnologyMakeFirstResponder() { }
 #endif
 
+    virtual bool testProcessIncomingSyncMessagesWhenWaitingForSyncReply() { return true; }
+
 #if PLATFORM(IOS_FAMILY)
     // FIXME: Come up with a more descriptive name for this function and make it platform independent (if possible).
     virtual bool isStopping() = 0;
@@ -387,7 +390,7 @@ public:
     virtual void enableSuddenTermination() { }
     virtual void disableSuddenTermination() { }
 
-    virtual void contentRuleListNotification(const URL&, const HashSet<std::pair<String, String>>&) { };
+    virtual void contentRuleListNotification(const URL&, const ContentRuleListResults&) { };
 
 #if PLATFORM(WIN)
     virtual void setLastSetCursorToCurrentCursor() = 0;
@@ -426,7 +429,7 @@ public:
     virtual String plugInExtraStyleSheet() const { return String(); }
     virtual String plugInExtraScript() const { return String(); }
 
-    virtual void didAssociateFormControls(const Vector<RefPtr<Element>>&) { };
+    virtual void didAssociateFormControls(const Vector<RefPtr<Element>>&, Frame&) { };
     virtual bool shouldNotifyOnFormChanges() { return false; };
 
     virtual void didAddHeaderLayer(GraphicsLayer&) { }
@@ -483,8 +486,14 @@ public:
     virtual void reportProcessCPUTime(Seconds, ActivityStateForCPUSampling) { }
     virtual RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) = 0;
 
-    virtual void hasStorageAccess(String&& /*subFrameHost*/, String&& /*topFrameHost*/, uint64_t /*frameID*/, uint64_t /*pageID*/, WTF::CompletionHandler<void (bool)>&& callback) { callback(false); }
-    virtual void requestStorageAccess(String&& /*subFrameHost*/, String&& /*topFrameHost*/, uint64_t /*frameID*/, uint64_t /*pageID*/, WTF::CompletionHandler<void (bool)>&& callback) { callback(false); }
+#if ENABLE(RESOURCE_LOAD_STATISTICS)
+    virtual void hasStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, FrameIdentifier, PageIdentifier, WTF::CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
+    virtual void requestStorageAccess(RegistrableDomain&& /*subFrameDomain*/, RegistrableDomain&& /*topFrameDomain*/, FrameIdentifier, PageIdentifier, WTF::CompletionHandler<void(StorageAccessWasGranted, StorageAccessPromptWasShown)>&& completionHandler) { completionHandler(StorageAccessWasGranted::No, StorageAccessPromptWasShown::No); }
+#endif
+
+#if ENABLE(DEVICE_ORIENTATION)
+    virtual void shouldAllowDeviceOrientationAndMotionAccess(Frame&, bool /* mayPrompt */, WTF::CompletionHandler<void(DeviceOrientationOrMotionPermissionState)>&& callback) { callback(DeviceOrientationOrMotionPermissionState::Denied); }
+#endif
 
     virtual void didInsertMenuElement(HTMLMenuElement&) { }
     virtual void didRemoveMenuElement(HTMLMenuElement&) { }
@@ -496,6 +505,11 @@ public:
     virtual void associateEditableImageWithAttachment(GraphicsLayer::EmbeddedViewID, const String&) { }
     virtual void didCreateEditableImage(GraphicsLayer::EmbeddedViewID) { }
     virtual void didDestroyEditableImage(GraphicsLayer::EmbeddedViewID) { }
+
+    virtual void configureLoggingChannel(const String&, WTFLogChannelState, WTFLogLevel) { }
+
+    virtual bool userIsInteracting() const { return false; }
+    virtual void setUserIsInteracting(bool) { }
 
 protected:
     virtual ~ChromeClient() = default;

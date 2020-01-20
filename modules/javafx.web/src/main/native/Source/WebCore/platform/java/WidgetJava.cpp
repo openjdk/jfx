@@ -67,9 +67,7 @@ static jmethodID wcWidgetDestroyMID;
 
 class WidgetPrivate {
 public:
-    WidgetPrivate():cRef(0){}
     IntRect bounds;
-    long    cRef;
 };
 
 Widget::Widget(PlatformWidget widget)
@@ -80,32 +78,13 @@ Widget::Widget(PlatformWidget widget)
 
 Widget::~Widget()
 {
-    if (m_widget) {
-        releasePlatformWidget();
+    JNIEnv* env = WTF::GetJavaEnv();
+    if (m_widget && env) {
+        env->CallVoidMethod(m_widget, wcWidgetDestroyMID);
+        WTF::CheckAndClearException(env);
+        m_widget.clear();
     }
     delete m_data;
-}
-
-void Widget::retainPlatformWidget()
-{
-    if (m_widget) {
-        //add counter
-        ++m_data->cRef;
-    }
-}
-
-void Widget::releasePlatformWidget()
-{
-    if( m_widget ){
-        //drop counter
-        --m_data->cRef;
-        if( 0==m_data->cRef ) {
-            JNIEnv* env = WTF::GetJavaEnv();
-            env->CallVoidMethod(m_widget, wcWidgetDestroyMID);
-            WTF::CheckAndClearException(env);
-            m_widget.clear();
-        }
-    }
 }
 
 IntRect Widget::frameRect() const

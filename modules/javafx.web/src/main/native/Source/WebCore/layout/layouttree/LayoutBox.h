@@ -45,15 +45,17 @@ public:
     enum class ElementType {
         Document,
         Body,
-        TableCell,
+        TableWrapperBox, // The table generates a principal block container box called the table wrapper box that contains the table box and any caption boxes.
+        TableBox, // The table box is a block-level box that contains the table's internal table boxes.
         TableColumn,
         TableRow,
         TableColumnGroup,
-        TableRowGroup,
         TableHeaderGroup,
+        TableBodyGroup,
         TableFooterGroup,
         Image,
         IFrame,
+        HardLineBreak,
         GenericElement
     };
 
@@ -63,21 +65,20 @@ public:
 
     enum BaseTypeFlag {
         BoxFlag               = 1 << 0,
-        ContainerFlag         = 1 << 1,
-        BlockContainerFlag    = 1 << 2,
-        InlineBoxFlag         = 1 << 3,
-        InlineContainerFlag   = 1 << 4,
-        LineBreakBoxFlag      = 1 << 5
+        ContainerFlag         = 1 << 1
     };
     typedef unsigned BaseTypeFlags;
 
     Box(Optional<ElementAttributes>, RenderStyle&&);
+    Box(String textContent, RenderStyle&&);
     virtual ~Box();
 
     bool establishesFormattingContext() const;
     bool establishesBlockFormattingContext() const;
+    bool establishesTableFormattingContext() const;
     bool establishesBlockFormattingContextOnly() const;
-    virtual bool establishesInlineFormattingContext() const { return false; }
+    bool establishesInlineFormattingContext() const;
+    bool establishesInlineFormattingContextOnly() const;
 
     bool isInFlow() const { return !isFloatingOrOutOfFlowPositioned(); }
     bool isPositioned() const { return isInFlowPositioned() || isOutOfFlowPositioned(); }
@@ -91,6 +92,7 @@ public:
     bool isLeftFloatingPositioned() const;
     bool isRightFloatingPositioned() const;
     bool hasFloatClear() const;
+    bool isFloatAvoider() const;
 
     bool isFloatingOrOutOfFlowPositioned() const { return isFloatingPositioned() || isOutOfFlowPositioned(); }
 
@@ -99,6 +101,7 @@ public:
     const Container& initialContainingBlock() const;
 
     bool isDescendantOf(const Container&) const;
+    bool isContainingBlockDescendantOf(const Container&) const;
 
     bool isAnonymous() const { return !m_elementAttributes; }
 
@@ -110,10 +113,18 @@ public:
 
     bool isDocumentBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Document; }
     bool isBodyBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Body; }
-    bool isTableCell() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableCell; }
+    bool isTableWrapperBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableWrapperBox; }
+    bool isTableBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableBox; }
+    bool isTableCaption() const { return style().display() == DisplayType::TableCaption; }
+    bool isTableHeader() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableHeaderGroup; }
+    bool isTableBody() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableBodyGroup; }
+    bool isTableFooter() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableFooterGroup; }
+    bool isTableRow() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::TableRow; }
+    bool isTableCell() const { return style().display() == DisplayType::TableCell;; }
     bool isReplaced() const { return isImage() || isIFrame(); }
     bool isIFrame() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::IFrame; }
     bool isImage() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::Image; }
+    bool isLineBreakBox() const { return m_elementAttributes && m_elementAttributes.value().elementType == ElementType::HardLineBreak; }
 
     const Container* parent() const { return m_parent; }
     const Box* nextSibling() const { return m_nextSibling; }
@@ -124,28 +135,59 @@ public:
     const Box* previousInFlowOrFloatingSibling() const;
 
     bool isContainer() const { return m_baseTypeFlags & ContainerFlag; }
-    bool isBlockContainer() const { return m_baseTypeFlags & BlockContainerFlag; }
-    bool isInlineBox() const { return m_baseTypeFlags & InlineBoxFlag; }
-    bool isInlineContainer() const { return m_baseTypeFlags & InlineContainerFlag; }
-    bool isLineBreakBox() const { return m_baseTypeFlags & LineBreakBoxFlag; }
+    bool isBlockContainer() const { return isBlockLevelBox() && isContainer(); }
+    bool isInlineContainer() const { return isInlineLevelBox() && isContainer(); }
 
     bool isPaddingApplicable() const;
     bool isOverflowVisible() const;
 
     const RenderStyle& style() const { return m_style; }
 
-    const Replaced* replaced() const { return m_replaced.get(); }
+    const Replaced* replaced() const;
     // FIXME: Temporary until after intrinsic size change is tracked by Replaced.
-    Replaced* replaced() { return m_replaced.get(); }
+    Replaced* replaced();
+    bool hasTextContent() const;
+    String textContent() const;
+
+    // FIXME: Find a better place for random DOM things.
+    void setRowSpan(unsigned);
+    void setColumnSpan(unsigned);
+    unsigned rowSpan() const;
+    unsigned columnSpan() const;
 
     void setParent(Container& parent) { m_parent = &parent; }
     void setNextSibling(Box& nextSibling) { m_nextSibling = &nextSibling; }
     void setPreviousSibling(Box& previousSibling) { m_previousSibling = &previousSibling; }
 
+    void setIsAnonymous() { m_isAnonymous = true; }
+
 protected:
     Box(Optional<ElementAttributes>, RenderStyle&&, BaseTypeFlags);
 
 private:
+    void setTextContent(String);
+
+    class BoxRareData {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
+        BoxRareData() = default;
+
+        String textContent;
+        std::unique_ptr<Replaced> replaced;
+        unsigned rowSpan { 1 };
+        unsigned columnSpan { 1 };
+    };
+
+    bool hasRareData() const { return m_hasRareData; }
+    void setHasRareData(bool hasRareData) { m_hasRareData = hasRareData; }
+    const BoxRareData& rareData() const;
+    BoxRareData& ensureRareData();
+    void removeRareData();
+
+    typedef HashMap<const Box*, std::unique_ptr<BoxRareData>> RareDataMap;
+
+    static RareDataMap& rareDataMap();
+
     RenderStyle m_style;
     Optional<ElementAttributes> m_elementAttributes;
 
@@ -153,9 +195,9 @@ private:
     Box* m_previousSibling { nullptr };
     Box* m_nextSibling { nullptr };
 
-    std::unique_ptr<Replaced> m_replaced;
-
-    unsigned m_baseTypeFlags : 5;
+    unsigned m_baseTypeFlags : 6;
+    bool m_hasRareData : 1;
+    bool m_isAnonymous : 1;
 };
 
 }

@@ -46,6 +46,7 @@
 #include "SWClientConnection.h"
 #include "SWContextManager.h"
 #include "SchemeRegistry.h"
+#include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "ScriptState.h"
 #include "ServiceWorker.h"
@@ -306,6 +307,10 @@ void ScriptExecutionContext::resumeActiveDOMObjects(ReasonForSuspension why)
         activeDOMObject.resume();
         return ShouldContinue::Yes;
     });
+
+    // In case there were pending messages at the time the script execution context entered PageCache,
+    // make sure those get dispatched shortly after restoring from PageCache.
+    processMessageWithMessagePortsSoon();
 }
 
 void ScriptExecutionContext::stopActiveDOMObjects()
@@ -374,8 +379,8 @@ void ScriptExecutionContext::reportException(const String& errorMessage, int lin
 {
     if (m_inDispatchErrorEvent) {
         if (!m_pendingExceptions)
-            m_pendingExceptions = std::make_unique<Vector<std::unique_ptr<PendingException>>>();
-        m_pendingExceptions->append(std::make_unique<PendingException>(errorMessage, lineNumber, columnNumber, sourceURL, WTFMove(callStack)));
+            m_pendingExceptions = makeUnique<Vector<std::unique_ptr<PendingException>>>();
+        m_pendingExceptions->append(makeUnique<PendingException>(errorMessage, lineNumber, columnNumber, sourceURL, WTFMove(callStack)));
         return;
     }
 
@@ -409,9 +414,9 @@ void ScriptExecutionContext::reportUnhandledPromiseRejection(JSC::ExecState& sta
     String errorMessage = makeString("Unhandled Promise Rejection: ", resultMessage);
     std::unique_ptr<Inspector::ConsoleMessage> message;
     if (callStack)
-        message = std::make_unique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage, callStack.releaseNonNull());
+        message = makeUnique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage, callStack.releaseNonNull());
     else
-        message = std::make_unique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage);
+        message = makeUnique<Inspector::ConsoleMessage>(MessageSource::JS, MessageType::Log, MessageLevel::Error, errorMessage);
     addConsoleMessage(WTFMove(message));
 }
 
@@ -504,7 +509,7 @@ RejectedPromiseTracker& ScriptExecutionContext::ensureRejectedPromiseTrackerSlow
     // When initializing ScriptExecutionContext, vm() is not ready.
 
     ASSERT(!m_rejectedPromiseTracker);
-    m_rejectedPromiseTracker = std::make_unique<RejectedPromiseTracker>(*this, vm());
+    m_rejectedPromiseTracker = makeUnique<RejectedPromiseTracker>(*this, vm());
     return *m_rejectedPromiseTracker.get();
 }
 

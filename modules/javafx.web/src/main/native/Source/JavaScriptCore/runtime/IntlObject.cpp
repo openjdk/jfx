@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (andy@vanwagoner.family)
  * Copyright (C) 2015 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,6 +99,7 @@ namespace JSC {
   Collator              createCollatorConstructor                    DontEnum|PropertyCallback
   DateTimeFormat        createDateTimeFormatConstructor              DontEnum|PropertyCallback
   NumberFormat          createNumberFormatConstructor                DontEnum|PropertyCallback
+  PluralRules           createPluralRulesConstructor                 DontEnum|PropertyCallback
 @end
 */
 
@@ -120,17 +121,6 @@ IntlObject* IntlObject::create(VM& vm, Structure* structure)
     IntlObject* object = new (NotNull, allocateCell<IntlObject>(vm.heap)) IntlObject(vm, structure);
     object->finishCreation(vm);
     return object;
-}
-
-void IntlObject::finishCreation(VM& vm)
-{
-    Base::finishCreation(vm);
-    ASSERT(inherits(vm, info()));
-
-    // Constructor Properties of the Intl Object
-    // https://tc39.github.io/ecma402/#sec-constructor-properties-of-the-intl-object
-    if (Options::useIntlPluralRules())
-        putDirectWithoutTransition(vm, vm.propertyNames->PluralRules, createPluralRulesConstructor(vm, this), static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 Structure* IntlObject::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -559,9 +549,12 @@ Vector<String> canonicalizeLocaleList(ExecState& state, JSValue locales)
             JSString* tag = kValue.toString(&state);
             RETURN_IF_EXCEPTION(scope, Vector<String>());
 
-            String canonicalizedTag = canonicalizeLanguageTag(tag->value(&state));
+            auto tagValue = tag->value(&state);
+            RETURN_IF_EXCEPTION(scope, Vector<String>());
+
+            String canonicalizedTag = canonicalizeLanguageTag(tagValue);
             if (canonicalizedTag.isNull()) {
-                throwException(&state, scope, createRangeError(&state, "invalid language tag: " + tag->value(&state)));
+                throwException(&state, scope, createRangeError(&state, "invalid language tag: " + tagValue));
                 return Vector<String>();
             }
 
@@ -829,7 +822,7 @@ static JSArray* lookupSupportedLocales(ExecState& state, const HashSet<String>& 
         String noExtensionsLocale = removeUnicodeLocaleExtension(locale);
         String availableLocale = bestAvailableLocale(availableLocales, noExtensionsLocale);
         if (!availableLocale.isNull()) {
-            subset->putDirectIndex(&state, index++, jsString(&state, locale));
+            subset->putDirectIndex(&state, index++, jsString(vm, locale));
             RETURN_IF_EXCEPTION(scope, nullptr);
         }
     }
@@ -866,7 +859,7 @@ JSValue supportedLocales(ExecState& state, const HashSet<String>& availableLocal
         : lookupSupportedLocales(state, availableLocales, requestedLocales);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    PropertyNameArray keys(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    PropertyNameArray keys(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     supportedLocales->getOwnPropertyNames(supportedLocales, &state, keys, EnumerationMode());
     RETURN_IF_EXCEPTION(scope, JSValue());
 
@@ -944,7 +937,7 @@ EncodedJSValue JSC_HOST_CALL intlObjectFuncGetCanonicalLocales(ExecState* state)
     }
 
     for (size_t i = 0; i < length; ++i) {
-        localeArray->putDirectIndex(state, i, jsString(state, localeList[i]));
+        localeArray->putDirectIndex(state, i, jsString(vm, localeList[i]));
         RETURN_IF_EXCEPTION(scope, encodedJSValue());
     }
     return JSValue::encode(localeArray);

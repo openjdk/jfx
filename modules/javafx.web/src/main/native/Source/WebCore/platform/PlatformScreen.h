@@ -104,11 +104,9 @@ WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
 uint32_t primaryOpenGLDisplayMask();
 uint32_t displayMaskForDisplay(PlatformDisplayID);
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
 IORegistryGPUID primaryGPUID();
 IORegistryGPUID gpuIDForDisplay(PlatformDisplayID);
 IORegistryGPUID gpuIDForDisplayMask(uint32_t);
-#endif
 
 #endif // !PLATFORM(MAC)
 
@@ -120,6 +118,16 @@ WEBCORE_EXPORT FloatSize availableScreenSize();
 WEBCORE_EXPORT FloatSize overrideScreenSize();
 WEBCORE_EXPORT float screenScaleFactor(UIScreen * = nullptr);
 
+#endif
+
+#if ENABLE(TOUCH_EVENTS)
+#if PLATFORM(GTK) || PLATFORM(WPE)
+bool screenHasTouchDevice();
+bool screenIsTouchPrimaryInputDevice();
+#else
+constexpr bool screenHasTouchDevice() { return true; }
+constexpr bool screenIsTouchPrimaryInputDevice() { return true; }
+#endif
 #endif
 
 } // namespace WebCore

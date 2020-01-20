@@ -109,9 +109,9 @@ void HTMLTextAreaElement::didAddUserAgentShadowRoot(ShadowRoot& root)
     updateInnerTextElementEditability();
 }
 
-const AtomicString& HTMLTextAreaElement::formControlType() const
+const AtomString& HTMLTextAreaElement::formControlType() const
 {
-    static NeverDestroyed<const AtomicString> textarea("textarea", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomString> textarea("textarea", AtomString::ConstructFromLiteral);
     return textarea;
 }
 
@@ -148,7 +148,7 @@ bool HTMLTextAreaElement::isPresentationAttribute(const QualifiedName& name) con
     return HTMLTextFormControlElement::isPresentationAttribute(name);
 }
 
-void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == wrapAttr) {
         if (shouldWrapText()) {
@@ -162,7 +162,7 @@ void HTMLTextAreaElement::collectStyleForPresentationAttribute(const QualifiedNa
         HTMLTextFormControlElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
-void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == rowsAttr) {
         unsigned rows = limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(value, defaultRows);
@@ -201,13 +201,13 @@ void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const Atomic
         HTMLTextFormControlElement::parseAttribute(name, value);
 }
 
-void HTMLTextAreaElement::maxLengthAttributeChanged(const AtomicString& newValue)
+void HTMLTextAreaElement::maxLengthAttributeChanged(const AtomString& newValue)
 {
     internalSetMaxLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
     updateValidity();
 }
 
-void HTMLTextAreaElement::minLengthAttributeChanged(const AtomicString& newValue)
+void HTMLTextAreaElement::minLengthAttributeChanged(const AtomString& newValue)
 {
     internalSetMinLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
     updateValidity();
@@ -243,6 +243,11 @@ void HTMLTextAreaElement::reset()
 bool HTMLTextAreaElement::hasCustomFocusLogic() const
 {
     return true;
+}
+
+int HTMLTextAreaElement::defaultTabIndex() const
+{
+    return 0;
 }
 
 bool HTMLTextAreaElement::isKeyboardFocusable(KeyboardEvent*) const
@@ -551,13 +556,6 @@ RenderStyle HTMLTextAreaElement::createInnerTextStyle(const RenderStyle& style)
     textBlockStyle.inheritFrom(style);
     adjustInnerTextStyle(style, textBlockStyle);
     textBlockStyle.setDisplay(DisplayType::Block);
-
-#if PLATFORM(IOS_FAMILY)
-    // We're adding three extra pixels of padding to line textareas up with text fields.
-    textBlockStyle.setPaddingLeft(Length(3, Fixed));
-    textBlockStyle.setPaddingRight(Length(3, Fixed));
-#endif
-
     return textBlockStyle;
 }
 

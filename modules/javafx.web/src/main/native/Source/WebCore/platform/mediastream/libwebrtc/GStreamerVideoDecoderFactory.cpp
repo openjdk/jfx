@@ -54,6 +54,10 @@ class GStreamerVideoDecoder : public webrtc::VideoDecoder {
 public:
     GStreamerVideoDecoder()
         : m_pictureId(0)
+        , m_width(0)
+        , m_height(0)
+        , m_requireParse(false)
+        , m_needsKeyframe(true)
         , m_firstBufferPts(GST_CLOCK_TIME_NONE)
         , m_firstBufferDts(GST_CLOCK_TIME_NONE)
     {
@@ -80,37 +84,75 @@ public:
         return gst_element_factory_make(factoryName, name.get());
     }
 
-    int32_t InitDecode(const webrtc::VideoCodec*, int32_t) override
+    int32_t InitDecode(const webrtc::VideoCodec* codecSettings, int32_t) override
     {
         m_src = makeElement("appsrc");
 
+        GRefPtr<GstCaps> caps = nullptr;
         auto capsfilter = CreateFilter();
         auto decoder = makeElement("decodebin");
 
-        // Make the decoder output "parsed" frames only and let the main decodebin
-        // do the real decoding. This allows us to have optimized decoding/rendering
-        // happening in the main pipeline.
-        g_object_set(decoder, "caps", adoptGRef(gst_caps_from_string(Caps())).get(), nullptr);
-        auto sinkpad = gst_element_get_static_pad(capsfilter, "sink");
-        g_signal_connect(decoder, "pad-added", G_CALLBACK(decodebinPadAddedCb), sinkpad);
+        if (codecSettings) {
+            m_width = codecSettings->width;
+            m_height = codecSettings->height;
+        }
 
         m_pipeline = makeElement("pipeline");
         connectSimpleBusMessageCallback(m_pipeline.get());
 
-        auto sink = makeElement("appsink");
-        gst_app_sink_set_emit_signals(GST_APP_SINK(sink), true);
-        g_signal_connect(sink, "new-sample", G_CALLBACK(newSampleCallbackTramp), this);
-        // This is an encoder, everything should happen as fast as possible and not
-        // be synced on the clock.
-        g_object_set(sink, "sync", false, nullptr);
+        auto sinkpad = adoptGRef(gst_element_get_static_pad(capsfilter, "sink"));
+        g_signal_connect(decoder, "pad-added", G_CALLBACK(decodebinPadAddedCb), sinkpad.get());
+        // Make the decoder output "parsed" frames only and let the main decodebin
+        // do the real decoding. This allows us to have optimized decoding/rendering
+        // happening in the main pipeline.
+        if (m_requireParse) {
+            caps = gst_caps_new_simple(Caps(), "parsed", G_TYPE_BOOLEAN, TRUE, nullptr);
+            GRefPtr<GstBus> bus = adoptGRef(gst_pipeline_get_bus(GST_PIPELINE(m_pipeline.get())));
 
-        gst_bin_add_many(GST_BIN(pipeline()), m_src, decoder, capsfilter, sink, nullptr);
+            gst_bus_enable_sync_message_emission(bus.get());
+            g_signal_connect(bus.get(), "sync-message::warning",
+                G_CALLBACK(+[](GstBus*, GstMessage* message, GStreamerVideoDecoder* justThis) {
+                GUniqueOutPtr<GError> err;
+
+                switch (GST_MESSAGE_TYPE(message)) {
+                case GST_MESSAGE_WARNING: {
+                    gst_message_parse_warning(message, &err.outPtr(), nullptr);
+                    FALLTHROUGH;
+                }
+                case GST_MESSAGE_ERROR: {
+                    if (!err)
+                        gst_message_parse_error(message, &err.outPtr(), nullptr);
+
+                    if (g_error_matches(err.get(), GST_STREAM_ERROR, GST_STREAM_ERROR_DECODE)) {
+                        GST_INFO_OBJECT(justThis->pipeline(), "--> needs keyframe (%s)",
+                            err->message);
+                        justThis->m_needsKeyframe = true;
+                    }
+                    break;
+                }
+                default:
+                    break;
+                }
+                }), this);
+        } else {
+            /* FIXME - How could we handle missing keyframes case we do not plug parsers ? */
+            caps = gst_caps_new_empty_simple(Caps());
+        }
+        g_object_set(decoder, "caps", caps.get(), nullptr);
+
+        m_sink = makeElement("appsink");
+        gst_app_sink_set_emit_signals(GST_APP_SINK(m_sink), true);
+        // This is an decoder, everything should happen as fast as possible and not
+        // be synced on the clock.
+        g_object_set(m_sink, "sync", false, nullptr);
+
+        gst_bin_add_many(GST_BIN(pipeline()), m_src, decoder, capsfilter, m_sink, nullptr);
         if (!gst_element_link(m_src, decoder)) {
             GST_ERROR_OBJECT(pipeline(), "Could not link src to decoder.");
             return WEBRTC_VIDEO_CODEC_ERROR;
         }
 
-        if (!gst_element_link(capsfilter, sink)) {
+        if (!gst_element_link(capsfilter, m_sink)) {
             GST_ERROR_OBJECT(pipeline(), "Could not link capsfilter to sink.");
             return WEBRTC_VIDEO_CODEC_ERROR;
         }
@@ -143,6 +185,7 @@ public:
 
             gst_element_set_state(m_pipeline.get(), GST_STATE_NULL);
             m_src = nullptr;
+            m_sink = nullptr;
             m_pipeline = nullptr;
         }
 
@@ -154,6 +197,20 @@ public:
         const webrtc::CodecSpecificInfo*,
         int64_t renderTimeMs) override
     {
+        if (m_needsKeyframe) {
+            if (inputImage._frameType != webrtc::kVideoFrameKey) {
+                GST_ERROR("Waiting for keyframe but got a delta unit... asking for keyframe");
+                return WEBRTC_VIDEO_CODEC_ERROR;
+            }
+            if (inputImage._completeFrame)
+                m_needsKeyframe = false;
+            else {
+                GST_ERROR("Waiting for keyframe but didn't get full frame, getting out");
+                return WEBRTC_VIDEO_CODEC_ERROR;
+            }
+        }
+
+
         if (!m_src) {
             GST_ERROR("No source set, can't decode.");
 
@@ -171,30 +228,55 @@ public:
             inputImage._size));
         GST_BUFFER_DTS(buffer.get()) = (static_cast<guint64>(inputImage.Timestamp()) * GST_MSECOND) - m_firstBufferDts;
         GST_BUFFER_PTS(buffer.get()) = (static_cast<guint64>(renderTimeMs) * GST_MSECOND) - m_firstBufferPts;
-        {
-            auto locker = holdLock(m_bufferMapLock);
-            InputTimestamps timestamps = {inputImage.Timestamp(), renderTimeMs};
-            m_dtsPtsMap[GST_BUFFER_PTS(buffer.get())] = timestamps;
-        }
+        InputTimestamps timestamps = {inputImage.Timestamp(), renderTimeMs};
+        m_dtsPtsMap[GST_BUFFER_PTS(buffer.get())] = timestamps;
 
-        GST_LOG_OBJECT(pipeline(), "%ld Decoding: %" GST_PTR_FORMAT, renderTimeMs, buffer.get());
+        GST_LOG_OBJECT(pipeline(), "%" G_GINT64_FORMAT " Decoding: %" GST_PTR_FORMAT, renderTimeMs, buffer.get());
         auto sample = adoptGRef(gst_sample_new(buffer.get(), GetCapsForFrame(inputImage), nullptr, nullptr));
         switch (gst_app_src_push_sample(GST_APP_SRC(m_src), sample.get())) {
         case GST_FLOW_OK:
-            return WEBRTC_VIDEO_CODEC_OK;
+            break;
         case GST_FLOW_FLUSHING:
             return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
         default:
             return WEBRTC_VIDEO_CODEC_ERROR;
         }
+
+        return pullSample();
+    }
+
+    int32_t pullSample()
+    {
+        auto sample = gst_app_sink_try_pull_sample(GST_APP_SINK(m_sink), GST_SECOND / 30);
+        if (!sample) {
+            GST_ERROR("Needs more data");
+            return WEBRTC_VIDEO_CODEC_OK;
+        }
+        auto buffer = gst_sample_get_buffer(sample);
+
+        // Make sure that the frame.timestamp == previsouly input_frame._timeStamp
+        // as it is required by the VideoDecoder baseclass.
+        auto timestamps = m_dtsPtsMap[GST_BUFFER_PTS(buffer)];
+        m_dtsPtsMap.erase(GST_BUFFER_PTS(buffer));
+
+        auto frame(LibWebRTCVideoFrameFromGStreamerSample(sample, webrtc::kVideoRotation_0,
+            timestamps.timestamp, timestamps.renderTimeMs));
+
+        GST_BUFFER_DTS(buffer) = GST_CLOCK_TIME_NONE;
+        GST_LOG_OBJECT(pipeline(), "Output decoded frame! %d -> %" GST_PTR_FORMAT,
+            frame->timestamp(), buffer);
+
+        m_imageReadyCb->Decoded(*frame.get(), absl::optional<int32_t>(), absl::optional<uint8_t>());
+
+        return WEBRTC_VIDEO_CODEC_OK;
     }
 
     virtual GstCaps* GetCapsForFrame(const webrtc::EncodedImage& image)
     {
         if (!m_caps) {
             m_caps = adoptGRef(gst_caps_new_simple(Caps(),
-                "width", G_TYPE_INT, image._encodedWidth,
-                "height", G_TYPE_INT, image._encodedHeight,
+                "width", G_TYPE_INT, image._encodedWidth ? image._encodedWidth : m_width,
+                "height", G_TYPE_INT, image._encodedHeight ? image._encodedHeight : m_height,
                 nullptr));
         }
 
@@ -237,30 +319,6 @@ public:
         return GstDecoderFactory(Caps());
     }
 
-    GstFlowReturn newSampleCallback(GstElement* sink)
-    {
-        auto sample = gst_app_sink_pull_sample(GST_APP_SINK(sink));
-        auto buffer = gst_sample_get_buffer(sample);
-
-        m_bufferMapLock.lock();
-        // Make sure that the frame.timestamp == previsouly input_frame._timeStamp
-        // as it is required by the VideoDecoder baseclass.
-        auto timestamps = m_dtsPtsMap[GST_BUFFER_PTS(buffer)];
-        m_dtsPtsMap.erase(GST_BUFFER_PTS(buffer));
-        m_bufferMapLock.unlock();
-
-        auto frame(LibWebRTCVideoFrameFromGStreamerSample(sample, webrtc::kVideoRotation_0,
-            timestamps.timestamp, timestamps.renderTimeMs));
-
-        GST_BUFFER_DTS(buffer) = GST_CLOCK_TIME_NONE;
-        GST_LOG_OBJECT(pipeline(), "Output decoded frame! %d -> %" GST_PTR_FORMAT,
-            frame->timestamp(), buffer);
-
-        m_imageReadyCb->Decoded(*frame.get(), absl::optional<int32_t>(), absl::optional<uint8_t>());
-
-        return GST_FLOW_OK;
-    }
-
     virtual const gchar* Caps() = 0;
     virtual webrtc::VideoCodecType CodecType() = 0;
     const char* ImplementationName() const { return "GStreamer"; }
@@ -269,20 +327,19 @@ public:
 protected:
     GRefPtr<GstCaps> m_caps;
     gint m_pictureId;
+    gint m_width;
+    gint m_height;
+    bool m_requireParse = false;
+    bool m_needsKeyframe;
 
 private:
-    static GstFlowReturn newSampleCallbackTramp(GstElement* sink, GStreamerVideoDecoder* enc)
-    {
-        return enc->newSampleCallback(sink);
-    }
-
     GRefPtr<GstElement> m_pipeline;
+    GstElement* m_sink;
     GstElement* m_src;
 
     GstVideoInfo m_info;
     webrtc::DecodedImageCallback* m_imageReadyCb;
 
-    Lock m_bufferMapLock;
     StdMap<GstClockTime, InputTimestamps> m_dtsPtsMap;
     GstClockTime m_firstBufferPts;
     GstClockTime m_firstBufferDts;
@@ -290,7 +347,7 @@ private:
 
 class H264Decoder : public GStreamerVideoDecoder {
 public:
-    H264Decoder() { }
+    H264Decoder() { m_requireParse = true; }
 
     int32_t InitDecode(const webrtc::VideoCodec* codecInfo, int32_t nCores) final
     {
@@ -327,10 +384,8 @@ public:
     {
         if (!m_caps) {
             m_caps = adoptGRef(gst_caps_new_simple(Caps(),
-                "width", G_TYPE_INT, image._encodedWidth,
-                "height", G_TYPE_INT, image._encodedHeight,
-                "profile", G_TYPE_STRING, m_profile ? m_profile : "baseline",
-                "stream-format", G_TYPE_STRING, "byte-stream",
+                "width", G_TYPE_INT, image._encodedWidth ? image._encodedWidth : m_width,
+                "height", G_TYPE_INT, image._encodedHeight ? image._encodedHeight : m_height,
                 "alignment", G_TYPE_STRING, "au",
                 nullptr));
         }

@@ -27,7 +27,8 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
-#include "UniqueIDBDatabaseTransaction.h"
+#include "IDBServer.h"
+#include "UniqueIDBDatabase.h"
 #include <wtf/HashMap.h>
 #include <wtf/Identified.h>
 #include <wtf/Ref.h>
@@ -54,6 +55,7 @@ public:
 
     const IDBResourceIdentifier& openRequestIdentifier() { return m_openRequestIdentifier; }
     UniqueIDBDatabase* database() { return m_database.get(); }
+    IDBServer* server() { return m_server.get(); }
     IDBConnectionToClient& connectionToClient() { return m_connectionToClient; }
 
     void connectionPendingCloseFromClient();
@@ -90,6 +92,7 @@ private:
     UniqueIDBDatabaseConnection(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
     WeakPtr<UniqueIDBDatabase> m_database;
+    WeakPtr<IDBServer> m_server;
     Ref<IDBConnectionToClient> m_connectionToClient;
     IDBResourceIdentifier m_openRequestIdentifier;
 

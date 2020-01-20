@@ -79,6 +79,12 @@ public:
 #undef ICEVENT_KIND_DECLARATION
     };
 
+    enum PropertyLocation {
+        Unknown,
+        BaseObject,
+        ProtoLookup
+    };
+
     ICEvent()
     {
     }
@@ -87,6 +93,15 @@ public:
         : m_kind(kind)
         , m_classInfo(classInfo)
         , m_propertyName(propertyName)
+        , m_propertyLocation(Unknown)
+    {
+    }
+
+    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName, bool isBaseProperty)
+        : m_kind(kind)
+        , m_classInfo(classInfo)
+        , m_propertyName(propertyName)
+        , m_propertyLocation(isBaseProperty ? BaseObject : ProtoLookup)
     {
     }
 
@@ -123,7 +138,9 @@ public:
 
     unsigned hash() const
     {
-        return m_kind + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo) + StringHash::hash(m_propertyName.string());
+        if (m_propertyName.isNull())
+            return m_kind + m_propertyLocation + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo);
+        return m_kind + m_propertyLocation + WTF::PtrHash<const ClassInfo*>::hash(m_classInfo) + StringHash::hash(m_propertyName.string());
     }
 
     bool isHashTableDeletedValue() const
@@ -140,6 +157,7 @@ private:
     Kind m_kind { InvalidKind };
     const ClassInfo* m_classInfo { nullptr };
     Identifier m_propertyName;
+    PropertyLocation m_propertyLocation;
 };
 
 struct ICEventHash {

@@ -27,7 +27,9 @@
 
 #if ENABLE(SERVICE_WORKER)
 
+#include "ClientOrigin.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
+#include "RegistrableDomain.h"
 #include "ServiceWorkerClientData.h"
 #include "ServiceWorkerContextData.h"
 #include "ServiceWorkerData.h"
@@ -35,14 +37,13 @@
 #include "ServiceWorkerRegistrationKey.h"
 #include "ServiceWorkerTypes.h"
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-struct ClientOrigin;
 class SWServer;
 class SWServerRegistration;
 class SWServerToContextConnection;
-struct ServiceWorkerClientData;
 struct ServiceWorkerClientIdentifier;
 struct ServiceWorkerClientQueryOptions;
 struct ServiceWorkerContextData;
@@ -72,7 +73,7 @@ public:
     bool isTerminating() const { return m_state == State::Terminating; }
     void setState(State);
 
-    SWServer& server() { return m_server; }
+    SWServer* server() { return m_server.get(); }
     const ServiceWorkerRegistrationKey& registrationKey() const { return m_registrationKey; }
     const URL& scriptURL() const { return m_data.scriptURL; }
     const String& script() const { return m_script; }
@@ -106,7 +107,7 @@ public:
     ServiceWorkerContextData contextData() const;
 
     const ClientOrigin& origin() const;
-    WEBCORE_EXPORT const SecurityOriginData& securityOrigin() const;
+    const RegistrableDomain& registrableDomain() const { return m_registrableDomain; }
 
     WEBCORE_EXPORT SWServerToContextConnection* contextConnection();
     String userAgent() const;
@@ -116,7 +117,7 @@ private:
 
     void callWhenActivatedHandler(bool success);
 
-    SWServer& m_server;
+    WeakPtr<SWServer> m_server;
     ServiceWorkerRegistrationKey m_registrationKey;
     ServiceWorkerData m_data;
     String m_script;
@@ -125,6 +126,7 @@ private:
     bool m_hasPendingEvents { false };
     State m_state { State::NotRunning };
     mutable Optional<ClientOrigin> m_origin;
+    RegistrableDomain m_registrableDomain;
     bool m_isSkipWaitingFlagSet { false };
     Vector<Function<void(bool)>> m_whenActivatedHandlers;
     HashMap<URL, ServiceWorkerContextData::ImportedScript> m_scriptResourceMap;

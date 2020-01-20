@@ -66,7 +66,9 @@ public:
     std::unique_ptr<TextureMapperPlatformLayerBuffer> clone();
 
     class HolePunchClient {
+        WTF_MAKE_FAST_ALLOCATED();
     public:
+        virtual ~HolePunchClient() = default;
         virtual void setVideoRectangle(const IntRect&) = 0;
     };
 

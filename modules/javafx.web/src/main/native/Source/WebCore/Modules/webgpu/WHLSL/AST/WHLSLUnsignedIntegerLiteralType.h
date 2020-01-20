@@ -28,6 +28,7 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLResolvableType.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,32 +40,33 @@ namespace AST {
 
 class TypeReference;
 
-class UnsignedIntegerLiteralType : public ResolvableType {
+class UnsignedIntegerLiteralType final : public ResolvableType {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    UnsignedIntegerLiteralType(Lexer::Token&& origin, unsigned value);
+    UnsignedIntegerLiteralType(CodeLocation, unsigned value);
 
-    virtual ~UnsignedIntegerLiteralType();
+    ~UnsignedIntegerLiteralType() = default;
 
     UnsignedIntegerLiteralType(const UnsignedIntegerLiteralType&) = delete;
-    UnsignedIntegerLiteralType(UnsignedIntegerLiteralType&&);
+    UnsignedIntegerLiteralType(UnsignedIntegerLiteralType&&) = default;
 
     UnsignedIntegerLiteralType& operator=(const UnsignedIntegerLiteralType&) = delete;
-    UnsignedIntegerLiteralType& operator=(UnsignedIntegerLiteralType&&);
-
-    bool isUnsignedIntegerLiteralType() const override { return true; }
+    UnsignedIntegerLiteralType& operator=(UnsignedIntegerLiteralType&&) = default;
 
     unsigned value() const { return m_value; }
 
     TypeReference& preferredType() { return m_preferredType; }
 
-    bool canResolve(const Type&) const override;
-    unsigned conversionCost(const UnnamedType&) const override;
+    bool canResolve(const Type&) const;
+    unsigned conversionCost(const UnnamedType&) const;
+
+    UnsignedIntegerLiteralType clone() const;
 
 private:
     unsigned m_value;
     // This is a unique_ptr to resolve a circular dependency between
     // ConstantExpression -> LiteralType -> TypeReference -> TypeArguments -> ConstantExpression
-    UniqueRef<TypeReference> m_preferredType;
+    Ref<TypeReference> m_preferredType;
 };
 
 } // namespace AST
@@ -73,6 +75,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_RESOLVABLE_TYPE(UnsignedIntegerLiteralType, isUnsignedIntegerLiteralType())
+DEFINE_DEFAULT_DELETE(UnsignedIntegerLiteralType)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(UnsignedIntegerLiteralType, isUnsignedIntegerLiteralType())
 
 #endif

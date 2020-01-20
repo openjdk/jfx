@@ -54,11 +54,12 @@ int Scrollbar::maxOverlapBetweenPages()
     return maxOverlapBetweenPages;
 }
 
-Scrollbar::Scrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarControlSize controlSize, ScrollbarTheme* customTheme)
+Scrollbar::Scrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orientation, ScrollbarControlSize controlSize, ScrollbarTheme* customTheme, bool isCustomScrollbar)
     : m_scrollableArea(scrollableArea)
     , m_orientation(orientation)
     , m_controlSize(controlSize)
     , m_theme(customTheme ? *customTheme : ScrollbarTheme::theme())
+    , m_isCustomScrollbar(isCustomScrollbar)
     , m_scrollTimer(*this, &Scrollbar::autoscrollTimerFired)
 {
     theme().registerScrollbar(*this);
@@ -69,7 +70,7 @@ Scrollbar::Scrollbar(ScrollableArea& scrollableArea, ScrollbarOrientation orient
     int thickness = theme().scrollbarThickness(controlSize);
     Widget::setFrameRect(IntRect(0, 0, thickness, thickness));
 
-    m_currentPos = static_cast<float>(m_scrollableArea.scrollOffset(m_orientation));
+    m_currentPos = static_cast<float>(offsetForOrientation(m_scrollableArea.scrollOffset(), m_orientation));
 }
 
 Scrollbar::~Scrollbar()
@@ -91,7 +92,7 @@ int Scrollbar::occupiedHeight() const
 
 void Scrollbar::offsetDidChange()
 {
-    float position = static_cast<float>(m_scrollableArea.scrollOffset(m_orientation));
+    float position = static_cast<float>(offsetForOrientation(m_scrollableArea.scrollOffset(), m_orientation));
     if (position == m_currentPos)
         return;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Matt Lilek <webkit@mattlilek.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 #include "Document.h"
 #include "Editor.h"
 #include "Event.h"
+#include "FloatRect.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "HitTestResult.h"
@@ -157,7 +158,7 @@ void InspectorFrontendHost::addSelfToGlobalObjectInWorld(DOMWrapperWorld& world)
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
     auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(state.lexicalGlobalObject());
-    globalObject.putDirect(vm, JSC::Identifier::fromString(&vm, "InspectorFrontendHost"), toJS<IDLInterface<InspectorFrontendHost>>(state, globalObject, *this));
+    globalObject.putDirect(vm, JSC::Identifier::fromString(vm, "InspectorFrontendHost"), toJS<IDLInterface<InspectorFrontendHost>>(state, globalObject, *this));
     if (UNLIKELY(scope.exception()))
         reportException(&state, scope.exception());
 }
@@ -194,6 +195,13 @@ void InspectorFrontendHost::reopen()
 {
     if (m_client)
         m_client->reopen();
+}
+
+void InspectorFrontendHost::reset()
+{
+    if (m_client)
+        m_client->resetState();
+    reopen();
 }
 
 void InspectorFrontendHost::bringToFront()
@@ -240,6 +248,12 @@ void InspectorFrontendHost::setAttachedWindowWidth(unsigned width)
 {
     if (m_client)
         m_client->changeAttachedWindowWidth(width);
+}
+
+void InspectorFrontendHost::setSheetRect(float x, float y, unsigned width, unsigned height)
+{
+    if (m_client)
+        m_client->changeSheetRect(FloatRect(x, y, width, height));
 }
 
 void InspectorFrontendHost::startWindowDrag()
@@ -395,7 +409,8 @@ void InspectorFrontendHost::showContextMenu(Event& event, Vector<ContextMenuItem
     ASSERT(m_frontendPage);
 
     auto& state = *execStateFromPage(debuggerWorld(), m_frontendPage);
-    auto value = state.lexicalGlobalObject()->get(&state, JSC::Identifier::fromString(&state.vm(), "InspectorFrontendAPI"));
+    auto& vm = state.vm();
+    auto value = state.lexicalGlobalObject()->get(&state, JSC::Identifier::fromString(vm, "InspectorFrontendAPI"));
     ASSERT(value);
     ASSERT(value.isObject());
     auto* frontendAPIObject = asObject(value);
@@ -419,10 +434,8 @@ void InspectorFrontendHost::dispatchEventAsContextMenuEvent(Event& event)
         return;
 
     auto& mouseEvent = downcast<MouseEvent>(event);
-    IntPoint mousePoint { mouseEvent.clientX(), mouseEvent.clientY() };
     auto& frame = *downcast<Node>(mouseEvent.target())->document().frame();
-
-    m_frontendPage->contextMenuController().showContextMenuAt(frame, mousePoint);
+    m_frontendPage->contextMenuController().showContextMenuAt(frame, roundedIntPoint(mouseEvent.absoluteLocation()));
 #else
     UNUSED_PARAM(event);
 #endif

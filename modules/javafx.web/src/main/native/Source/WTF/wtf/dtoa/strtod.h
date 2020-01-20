@@ -42,6 +42,6 @@ double Strtod(BufferReference<const char> buffer, int exponent);
 float Strtof(BufferReference<const char> buffer, int exponent);
 
 }  // namespace double_conversion
-} // namespace WTF
+}  // namespace WTF
 
 #endif  // DOUBLE_CONVERSION_STRTOD_H_

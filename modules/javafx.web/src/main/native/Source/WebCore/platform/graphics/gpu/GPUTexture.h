@@ -27,8 +27,10 @@
 
 #if ENABLE(WEBGPU)
 
-#include <wtf/Ref.h>
+#include "GPUTextureUsage.h"
+#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
 
 OBJC_PROTOCOL(MTLTexture);
@@ -44,17 +46,28 @@ using PlatformTextureSmartPtr = RetainPtr<MTLTexture>;
 
 class GPUTexture : public RefCounted<GPUTexture> {
 public:
-    static RefPtr<GPUTexture> tryCreate(const GPUDevice&, GPUTextureDescriptor&&);
-    static Ref<GPUTexture> create(PlatformTextureSmartPtr&&);
+    static RefPtr<GPUTexture> tryCreate(const GPUDevice&, const GPUTextureDescriptor&);
+    static Ref<GPUTexture> create(PlatformTextureSmartPtr&&, OptionSet<GPUTextureUsage::Flags>);
 
     PlatformTexture *platformTexture() const { return m_platformTexture.get(); }
+    bool isTransferSource() const { return m_usage.contains(GPUTextureUsage::Flags::TransferSource); }
+    bool isTransferDestination() const { return m_usage.contains(GPUTextureUsage::Flags::TransferDestination); }
+    bool isOutputAttachment() const { return m_usage.contains(GPUTextureUsage::Flags::OutputAttachment); }
+    bool isReadOnly() const { return m_usage.containsAny({ GPUTextureUsage::Flags::TransferSource, GPUTextureUsage::Flags::Sampled }); }
+    bool isSampled() const { return m_usage.contains(GPUTextureUsage::Flags::Sampled); }
+    bool isStorage() const { return m_usage.contains(GPUTextureUsage::Flags::Storage); }
+    unsigned platformUsage() const { return m_platformUsage; }
 
-    RefPtr<GPUTexture> createDefaultTextureView();
+    RefPtr<GPUTexture> tryCreateDefaultTextureView();
+    void destroy() { m_platformTexture = nullptr; }
 
 private:
-    explicit GPUTexture(PlatformTextureSmartPtr&&);
+    explicit GPUTexture(PlatformTextureSmartPtr&&, OptionSet<GPUTextureUsage::Flags>);
 
     PlatformTextureSmartPtr m_platformTexture;
+
+    OptionSet<GPUTextureUsage::Flags> m_usage;
+    unsigned m_platformUsage;
 };
 
 } // namespace WebCore

@@ -89,8 +89,8 @@ Ref<UploadButtonElement> UploadButtonElement::createForMultiple(Document& docume
 UploadButtonElement::UploadButtonElement(Document& document)
     : HTMLInputElement(inputTag, document, 0, false)
 {
-    setType(AtomicString("button", AtomicString::ConstructFromLiteral));
-    setPseudo(AtomicString("-webkit-file-upload-button", AtomicString::ConstructFromLiteral));
+    setType(AtomString("button", AtomString::ConstructFromLiteral));
+    setPseudo(AtomString("-webkit-file-upload-button", AtomString::ConstructFromLiteral));
 }
 
 FileInputType::FileInputType(HTMLInputElement& element)
@@ -125,7 +125,7 @@ Vector<FileChooserFileInfo> FileInputType::filesFromFormControlState(const FormC
     return files;
 }
 
-const AtomicString& FileInputType::formControlType() const
+const AtomString& FileInputType::formControlType() const
 {
     return InputTypeNames::file();
 }
@@ -175,7 +175,7 @@ bool FileInputType::appendFormData(DOMFormData& formData, bool multipart) const
     // If no filename at all is entered, return successful but empty.
     // Null would be more logical, but Netscape posts an empty file. Argh.
     if (fileList->isEmpty()) {
-        formData.append(name, File::create(emptyString()));
+        formData.append(name, File::create(element()->document().sessionID(), emptyString()));
         return true;
     }
 
@@ -332,7 +332,7 @@ void FileInputType::requestIcon(const Vector<String>& paths)
         m_fileIconLoader->invalidate();
 
     FileIconLoaderClient& client = *this;
-    m_fileIconLoader = std::make_unique<FileIconLoader>(client);
+    m_fileIconLoader = makeUnique<FileIconLoader>(client);
 
     chrome->loadIconForFiles(paths, *m_fileIconLoader);
 }
@@ -414,12 +414,12 @@ void FileInputType::filesChosen(const Vector<FileChooserFileInfo>& paths, const 
 
     auto shouldResolveDirectories = allowsDirectories() ? FileListCreator::ShouldResolveDirectories::Yes : FileListCreator::ShouldResolveDirectories::No;
     auto shouldRequestIcon = icon ? RequestIcon::Yes : RequestIcon::No;
-    m_fileListCreator = FileListCreator::create(paths, shouldResolveDirectories, [this, shouldRequestIcon](Ref<FileList>&& fileList) {
+    m_fileListCreator = FileListCreator::create(element()->document().sessionID(), paths, shouldResolveDirectories, [this, shouldRequestIcon](Ref<FileList>&& fileList) {
         setFiles(WTFMove(fileList), shouldRequestIcon);
         m_fileListCreator = nullptr;
     });
 
-    if (icon)
+    if (icon && !m_fileList->isEmpty())
         iconLoaded(icon);
 }
 

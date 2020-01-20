@@ -76,6 +76,7 @@ void LargeMap::add(const LargeRange& range)
         merged = merge(merged, m_free.pop(i--));
     }
 
+    merged.setUsedSinceLastScavenge();
     m_free.push(merged);
 }
 

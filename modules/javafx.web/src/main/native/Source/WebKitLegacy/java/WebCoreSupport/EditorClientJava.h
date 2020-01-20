@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <WebCore/DOMPasteAccess.h>
 #include <WebCore/EditorClient.h>
 #include <WebCore/TextCheckerClient.h>
 #include <WebCore/PlatformJavaClasses.h>
@@ -87,8 +88,8 @@ public:
     void undo() override;
     void redo() override;
 
-    void handleKeyboardEvent(KeyboardEvent*) override;
-    void handleInputMethodKeydown(KeyboardEvent*) override;
+    void handleKeyboardEvent(KeyboardEvent&) override;
+    void handleInputMethodKeydown(KeyboardEvent&) override;
 
     void textFieldDidBeginEditing(Element*) override;
     void textFieldDidEndEditing(Element*) override;
@@ -151,7 +152,10 @@ public:
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(WebCore::DocumentFragment&, WebCore::Range&, bool) final { return false; }
-    String replacementURLForResource(Ref<WebCore::SharedBuffer>&&, const String&) override;
+    bool canShowFontPanel() const final { return false; }
+
+    DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
+
 protected:
     JGObject m_webPage;
 

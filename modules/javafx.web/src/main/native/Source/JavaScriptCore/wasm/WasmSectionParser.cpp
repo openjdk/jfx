@@ -30,11 +30,13 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "IdentifierInlines.h"
+#include "JSCJSValueInlines.h"
 #include "WasmMemoryInformation.h"
 #include "WasmNameSectionParser.h"
 #include "WasmOps.h"
 #include "WasmSections.h"
 #include "WasmSignatureInlines.h"
+#include <wtf/Optional.h>
 
 namespace JSC { namespace Wasm {
 
@@ -117,6 +119,7 @@ auto SectionParser::parseImport() -> PartialResult
         }
         case ExternalKind::Table: {
             bool isImport = true;
+            kindIndex = m_info->tables.size();
             PartialResult result = parseTableHelper(isImport);
             if (UNLIKELY(!result))
                 return makeUnexpected(WTFMove(result.error()));
@@ -182,7 +185,7 @@ auto SectionParser::parseResizableLimits(uint32_t& initial, Optional<uint32_t>& 
     if (flags) {
         uint32_t maximumInt;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(maximumInt), "can't parse resizable limits maximum page count");
-        WASM_PARSER_FAIL_IF(initial > maximumInt, "resizable limits has a initial page count of ", initial, " which is greater than its maximum ", maximumInt);
+        WASM_PARSER_FAIL_IF(initial > maximumInt, "resizable limits has an initial page count of ", initial, " which is greater than its maximum ", maximumInt);
         maximum = maximumInt;
     }
 
@@ -191,11 +194,11 @@ auto SectionParser::parseResizableLimits(uint32_t& initial, Optional<uint32_t>& 
 
 auto SectionParser::parseTableHelper(bool isImport) -> PartialResult
 {
-    WASM_PARSER_FAIL_IF(m_info->tableCount() > 0, "Cannot have more than one Table for now");
+    WASM_PARSER_FAIL_IF(m_info->tableCount() >= maxTables, "Table count of ", m_info->tableCount(), " is too big, maximum ", maxTables);
 
     int8_t type;
     WASM_PARSER_FAIL_IF(!parseInt7(type), "can't parse Table type");
-    WASM_PARSER_FAIL_IF(type != Wasm::Anyfunc, "Table type should be anyfunc, got ", type);
+    WASM_PARSER_FAIL_IF(type != Wasm::Funcref && type != Wasm::Anyref, "Table type should be funcref or anyref, got ", type);
 
     uint32_t initial;
     Optional<uint32_t> maximum;
@@ -206,7 +209,8 @@ auto SectionParser::parseTableHelper(bool isImport) -> PartialResult
 
     ASSERT(!maximum || *maximum >= initial);
 
-    m_info->tableInformation = TableInformation(initial, maximum, isImport);
+    TableElementType tableType = type == Wasm::Funcref ? TableElementType::Funcref : TableElementType::Anyref;
+    m_info->tables.append(TableInformation(initial, maximum, isImport, tableType));
 
     return { };
 }
@@ -215,15 +219,13 @@ auto SectionParser::parseTable() -> PartialResult
 {
     uint32_t count;
     WASM_PARSER_FAIL_IF(!parseVarUInt32(count), "can't get Table's count");
-    WASM_PARSER_FAIL_IF(count > 1, "Table count of ", count, " is invalid, at most 1 is allowed for now");
 
-    if (!count)
-        return { };
-
-    bool isImport = false;
-    PartialResult result = parseTableHelper(isImport);
-    if (UNLIKELY(!result))
-        return makeUnexpected(WTFMove(result.error()));
+    for (unsigned i = 0; i < count; ++i) {
+        bool isImport = false;
+        PartialResult result = parseTableHelper(isImport);
+        if (UNLIKELY(!result))
+            return makeUnexpected(WTFMove(result.error()));
+    }
 
     return { };
 }
@@ -288,9 +290,11 @@ auto SectionParser::parseGlobal() -> PartialResult
         WASM_FAIL_IF_HELPER_FAILS(parseInitExpr(initOpcode, global.initialBitsOrImportNumber, typeForInitOpcode));
         if (initOpcode == GetGlobal)
             global.initializationType = Global::FromGlobalImport;
+        else if (initOpcode == RefFunc)
+            global.initializationType = Global::FromRefFunc;
         else
             global.initializationType = Global::FromExpression;
-        WASM_PARSER_FAIL_IF(typeForInitOpcode != global.type, "Global init_expr opcode of type ", typeForInitOpcode, " doesn't match global's type ", global.type);
+        WASM_PARSER_FAIL_IF(!isSubtype(typeForInitOpcode, global.type), "Global init_expr opcode of type ", typeForInitOpcode, " doesn't match global's type ", global.type);
 
         m_info->globals.uncheckedAppend(WTFMove(global));
     }
@@ -372,17 +376,25 @@ auto SectionParser::parseElement() -> PartialResult
         uint8_t initOpcode;
         uint32_t indexCount;
 
-        WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get ", elementNum, "th Element table index");
+        uint8_t magic;
+        WASM_PARSER_FAIL_IF(!parseUInt8(magic) || (magic && magic != 2), "can't get ", elementNum, "th Element reserved byte, which should be either 0x00 or 0x02 followed by a table index");
+
+        if (magic == 2)
+            WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get ", elementNum, "th Element table index");
+        else
+            tableIndex = 0;
+
         WASM_PARSER_FAIL_IF(tableIndex >= m_info->tableCount(), "Element section for Table ", tableIndex, " exceeds available Table ", m_info->tableCount());
+        WASM_PARSER_FAIL_IF(m_info->tables[tableIndex].type() != TableElementType::Funcref, "Table ", tableIndex, " must have type 'funcref' to have an element section");
         Type initExprType;
         WASM_FAIL_IF_HELPER_FAILS(parseInitExpr(initOpcode, initExprBits, initExprType));
         WASM_PARSER_FAIL_IF(initExprType != I32, "Element init_expr must produce an i32");
         WASM_PARSER_FAIL_IF(!parseVarUInt32(indexCount), "can't get ", elementNum, "th index count for Element section");
         WASM_PARSER_FAIL_IF(indexCount == std::numeric_limits<uint32_t>::max(), "Element section's ", elementNum, "th index count is too big ", indexCount);
 
-        ASSERT(!!m_info->tableInformation);
+        ASSERT(!!m_info->tables[tableIndex]);
 
-        Element element(makeI32InitExpr(initOpcode, initExprBits));
+        Element element(tableIndex, makeI32InitExpr(initOpcode, initExprBits));
         WASM_PARSER_FAIL_IF(!element.functionIndices.tryReserveCapacity(indexCount), "can't allocate memory for ", indexCount, " Element indices");
 
         for (unsigned index = 0; index < indexCount; ++index) {
@@ -402,6 +414,7 @@ auto SectionParser::parseElement() -> PartialResult
 // This function will be changed to be RELEASE_ASSERT_NOT_REACHED once we switch our parsing infrastructure to the streaming parser.
 auto SectionParser::parseCode() -> PartialResult
 {
+    m_info->codeSectionSize = length();
     uint32_t count;
     WASM_PARSER_FAIL_IF(!parseVarUInt32(count), "can't get Code section's count");
     WASM_PARSER_FAIL_IF(count == std::numeric_limits<uint32_t>::max(), "Code section's count is too big ", count);
@@ -471,6 +484,22 @@ auto SectionParser::parseInitExpr(uint8_t& opcode, uint64_t& bitsOrImportNumber,
 
         ASSERT(m_info->globals[index].mutability == Global::Immutable);
         resultType = m_info->globals[index].type;
+        bitsOrImportNumber = index;
+        break;
+    }
+
+    case RefNull: {
+        resultType = Funcref;
+        bitsOrImportNumber = JSValue::encode(jsNull());
+        break;
+    }
+
+    case RefFunc: {
+        uint32_t index;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(index), "can't get ref.func index");
+        WASM_PARSER_FAIL_IF(index >= m_info->functions.size(), "ref.func index", index, " exceeds the number of functions ", m_info->functions.size());
+
+        resultType = Funcref;
         bitsOrImportNumber = index;
         break;
     }

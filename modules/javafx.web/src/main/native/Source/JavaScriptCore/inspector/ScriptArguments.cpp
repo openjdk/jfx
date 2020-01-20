@@ -35,6 +35,7 @@
 #include "CatchScope.h"
 #include "JSCInlines.h"
 #include "ProxyObject.h"
+#include "StrongInlines.h"
 
 namespace Inspector {
 
@@ -65,7 +66,7 @@ JSC::ExecState* ScriptArguments::globalState() const
     return nullptr;
 }
 
-bool ScriptArguments::getFirstArgumentAsString(String& result)
+bool ScriptArguments::getFirstArgumentAsString(String& result) const
 {
     if (!argumentCount())
         return false;
@@ -110,7 +111,7 @@ bool ScriptArguments::isEqual(const ScriptArguments& other) const
                 return false;
         } else {
             auto scope = DECLARE_CATCH_SCOPE(state->vm());
-            bool result = JSValue::strictEqual(state, a, b);
+            bool result = JSC::JSValue::strictEqual(state, a, b);
             scope.clearException();
             if (!result)
                 return false;

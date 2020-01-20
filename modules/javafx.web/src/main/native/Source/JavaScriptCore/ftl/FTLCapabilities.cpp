@@ -56,14 +56,15 @@ inline CapabilityLevel canCompile(Node* node)
     case Phantom:
     case Flush:
     case PhantomLocal:
-    case SetArgument:
+    case SetArgumentDefinitely:
+    case SetArgumentMaybe:
     case Return:
     case ArithBitNot:
     case ArithBitAnd:
     case ArithBitOr:
     case ArithBitXor:
     case BitRShift:
-    case BitLShift:
+    case ArithBitLShift:
     case BitURShift:
     case CheckStructure:
     case CheckStructureOrEmpty:
@@ -91,11 +92,15 @@ inline CapabilityLevel canCompile(Node* node)
     case ValueBitAnd:
     case ValueBitXor:
     case ValueBitOr:
+    case ValueBitNot:
+    case ValueBitLShift:
     case ValueNegate:
     case ValueAdd:
     case ValueSub:
     case ValueMul:
     case ValueDiv:
+    case ValueMod:
+    case ValuePow:
     case StrCat:
     case ArithAdd:
     case ArithClz32:
@@ -399,7 +404,7 @@ inline CapabilityLevel canCompile(Node* node)
 
 CapabilityLevel canCompile(Graph& graph)
 {
-    if (graph.m_codeBlock->instructionCount() > Options::maximumFTLCandidateInstructionCount()) {
+    if (graph.m_codeBlock->bytecodeCost() > Options::maximumFTLCandidateBytecodeCost()) {
         if (verboseCapabilities())
             dataLog("FTL rejecting ", *graph.m_codeBlock, " because it's too big.\n");
         return CannotCompile;

@@ -31,9 +31,12 @@
 #include "AudioContext.h"
 #include "AudioNodeOutput.h"
 #include "Logging.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/Locker.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaStreamAudioSourceNode);
 
 Ref<MediaStreamAudioSourceNode> MediaStreamAudioSourceNode::create(AudioContext& context, MediaStream& mediaStream, MediaStreamTrack& audioTrack)
 {
@@ -45,15 +48,15 @@ MediaStreamAudioSourceNode::MediaStreamAudioSourceNode(AudioContext& context, Me
     , m_mediaStream(mediaStream)
     , m_audioTrack(audioTrack)
 {
+    setNodeType(NodeTypeMediaStreamAudioSource);
+
     AudioSourceProvider* audioSourceProvider = m_audioTrack->audioSourceProvider();
     ASSERT(audioSourceProvider);
 
     audioSourceProvider->setClient(this);
 
     // Default to stereo. This could change depending on the format of the MediaStream's audio track.
-    addOutput(std::make_unique<AudioNodeOutput>(this, 2));
-
-    setNodeType(NodeTypeMediaStreamAudioSource);
+    addOutput(makeUnique<AudioNodeOutput>(this, 2));
 
     initialize();
 }
@@ -69,7 +72,7 @@ MediaStreamAudioSourceNode::~MediaStreamAudioSourceNode()
 void MediaStreamAudioSourceNode::setFormat(size_t numberOfChannels, float sourceSampleRate)
 {
     float sampleRate = this->sampleRate();
-    if (numberOfChannels == m_sourceNumberOfChannels && sourceSampleRate == sampleRate)
+    if (numberOfChannels == m_sourceNumberOfChannels && sourceSampleRate == m_sourceSampleRate)
         return;
 
     // The sample-rate must be equal to the context's sample-rate.
@@ -90,7 +93,7 @@ void MediaStreamAudioSourceNode::setFormat(size_t numberOfChannels, float source
         m_multiChannelResampler = nullptr;
     else {
         double scaleFactor = sourceSampleRate / sampleRate;
-        m_multiChannelResampler = std::make_unique<MultiChannelResampler>(scaleFactor, numberOfChannels);
+        m_multiChannelResampler = makeUnique<MultiChannelResampler>(scaleFactor, numberOfChannels);
     }
 
     m_sourceNumberOfChannels = numberOfChannels;
@@ -120,6 +123,10 @@ void MediaStreamAudioSourceNode::process(size_t numberOfFrames)
     std::unique_lock<Lock> lock(m_processMutex, std::try_to_lock);
     if (!lock.owns_lock()) {
         // We failed to acquire the lock.
+        outputBus->zero();
+        return;
+    }
+    if (m_sourceNumberOfChannels != outputBus->numberOfChannels()) {
         outputBus->zero();
         return;
     }

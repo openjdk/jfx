@@ -33,6 +33,7 @@
 #include "Document.h"
 #include "DocumentTimeline.h"
 #include "Element.h"
+#include "FullscreenManager.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSlotElement.h"
 #include "InspectorInstrumentation.h"
@@ -50,25 +51,10 @@
 #include <wtf/SystemTracing.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "WKContentObservation.h"
-#include "WKContentObservationInternal.h"
+#include "ContentChangeObserver.h"
 #endif
 
 namespace WebCore {
-
-#if PLATFORM(IOS_FAMILY)
-class CheckForVisibilityChange {
-public:
-    CheckForVisibilityChange(const Element&);
-    ~CheckForVisibilityChange();
-
-private:
-    const Element& m_element;
-    DisplayType m_previousDisplay;
-    Visibility m_previousVisibility;
-    Visibility m_previousImplicitVisibility;
-};
-#endif // PLATFORM(IOS_FAMILY)
 
 RenderTreeUpdater::Parent::Parent(ContainerNode& root)
     : element(is<Document>(root) ? nullptr : downcast<Element>(&root))
@@ -85,7 +71,7 @@ RenderTreeUpdater::Parent::Parent(Element& element, const Style::ElementUpdates*
 
 RenderTreeUpdater::RenderTreeUpdater(Document& document)
     : m_document(document)
-    , m_generatedContent(std::make_unique<GeneratedContent>(*this))
+    , m_generatedContent(makeUnique<GeneratedContent>(*this))
     , m_builder(renderView())
 {
 }
@@ -308,7 +294,7 @@ void RenderTreeUpdater::updateRendererStyle(RenderElement& renderer, RenderStyle
 void RenderTreeUpdater::updateElementRenderer(Element& element, const Style::ElementUpdate& update)
 {
 #if PLATFORM(IOS_FAMILY)
-    CheckForVisibilityChange checkForVisibilityChange(element);
+    ContentChangeObserver::StyleChangeScope observingScope(m_document, element);
 #endif
 
     bool shouldTearDownRenderers = update.change == Style::Detach && (element.renderer() || element.hasDisplayContents());
@@ -387,7 +373,7 @@ void RenderTreeUpdater::createRenderer(Element& element, RenderStyle&& style)
     newRenderer->initializeStyle();
 
 #if ENABLE(FULLSCREEN_API)
-    if (m_document.webkitIsFullScreen() && m_document.webkitCurrentFullScreenElement() == &element) {
+    if (m_document.fullscreenManager().isFullscreen() && m_document.fullscreenManager().currentFullscreenElement() == &element) {
         newRenderer = RenderFullScreen::wrapNewRenderer(m_builder, WTFMove(newRenderer), insertionPosition.parent(), m_document);
         if (!newRenderer)
             return;
@@ -642,62 +628,5 @@ RenderView& RenderTreeUpdater::renderView()
 {
     return *m_document.renderView();
 }
-
-#if PLATFORM(IOS_FAMILY)
-static Visibility elementImplicitVisibility(const Element& element)
-{
-    auto* renderer = element.renderer();
-    if (!renderer)
-        return Visibility::Visible;
-
-    auto& style = renderer->style();
-
-    auto width = style.width();
-    auto height = style.height();
-    if ((width.isFixed() && width.value() <= 0) || (height.isFixed() && height.value() <= 0))
-        return Visibility::Hidden;
-
-    auto top = style.top();
-    auto left = style.left();
-    if (left.isFixed() && width.isFixed() && -left.value() >= width.value())
-        return Visibility::Hidden;
-
-    if (top.isFixed() && height.isFixed() && -top.value() >= height.value())
-        return Visibility::Hidden;
-    return Visibility::Visible;
-}
-
-CheckForVisibilityChange::CheckForVisibilityChange(const Element& element)
-    : m_element(element)
-    , m_previousDisplay(element.renderStyle() ? element.renderStyle()->display() : DisplayType::None)
-    , m_previousVisibility(element.renderStyle() ? element.renderStyle()->visibility() : Visibility::Hidden)
-    , m_previousImplicitVisibility(WKObservingContentChanges() && WKObservedContentChange() != WKContentVisibilityChange ? elementImplicitVisibility(element) : Visibility::Visible)
-{
-}
-
-CheckForVisibilityChange::~CheckForVisibilityChange()
-{
-    if (!WKObservingContentChanges())
-        return;
-
-    auto* style = m_element.renderStyle();
-
-    auto qualifiesForVisibilityCheck = [&] {
-        if (!style)
-            return false;
-        if (m_element.isInUserAgentShadowTree())
-            return false;
-        if (!const_cast<Element&>(m_element).willRespondToMouseClickEvents())
-            return false;
-        return true;
-    };
-
-    if (!qualifiesForVisibilityCheck())
-        return;
-    if ((m_previousDisplay == DisplayType::None && style->display() != DisplayType::None) || (m_previousVisibility == Visibility::Hidden && style->visibility() != Visibility::Hidden)
-        || (m_previousImplicitVisibility == Visibility::Hidden && elementImplicitVisibility(m_element) == Visibility::Visible))
-        WKSetObservedContentChange(WKContentVisibilityChange);
-}
-#endif
 
 }

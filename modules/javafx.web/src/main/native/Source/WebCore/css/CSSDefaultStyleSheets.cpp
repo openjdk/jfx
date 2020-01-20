@@ -31,6 +31,7 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "FullscreenManager.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLBRElement.h"
 #include "HTMLBodyElement.h"
@@ -80,8 +81,8 @@ StyleSheetContents* CSSDefaultStyleSheets::colorInputStyleSheet;
 #endif
 
 // FIXME: It would be nice to use some mechanism that guarantees this is in sync with the real UA stylesheet.
-#if PLATFORM(MAC)
-// The only difference in the simple style sheet for macOS is the addition of html{color:text}.
+#if HAVE(OS_DARK_MODE_SUPPORT)
+// The only difference in the simple style sheet for dark mode is the addition of html{color:text}.
 static const char* simpleUserAgentStyleSheet = "html,body,div{display:block}html{color:text}head{display:none}body{margin:8px}div:focus,span:focus,a:focus{outline:auto 5px -webkit-focus-ring-color}a:any-link{color:-webkit-link;text-decoration:underline}a:any-link:active{color:-webkit-activelink}";
 #else
 static const char* simpleUserAgentStyleSheet = "html,body,div{display:block}head{display:none}body{margin:8px}div:focus,span:focus,a:focus{outline:auto 5px -webkit-focus-ring-color}a:any-link{color:-webkit-link;text-decoration:underline}a:any-link:active{color:-webkit-activelink}";
@@ -166,11 +167,11 @@ void CSSDefaultStyleSheets::loadFullDefaultStyle()
         simpleDefaultStyleSheet = nullptr;
     } else {
         ASSERT(!defaultStyle);
-        defaultQuirksStyle = std::make_unique<RuleSet>().release();
+        defaultQuirksStyle = makeUnique<RuleSet>().release();
     }
 
-    defaultStyle = std::make_unique<RuleSet>().release();
-    defaultPrintStyle = std::make_unique<RuleSet>().release();
+    defaultStyle = makeUnique<RuleSet>().release();
+    defaultPrintStyle = makeUnique<RuleSet>().release();
     mediaQueryStyleSheet = &StyleSheetContents::create(CSSParserContext(UASheetMode)).leakRef();
 
     // Strict-mode rules.
@@ -189,10 +190,10 @@ void CSSDefaultStyleSheets::loadSimpleDefaultStyle()
     ASSERT(!defaultStyle);
     ASSERT(!simpleDefaultStyleSheet);
 
-    defaultStyle = std::make_unique<RuleSet>().release();
+    defaultStyle = makeUnique<RuleSet>().release();
     // There are no media-specific rules in the simple default style.
     defaultPrintStyle = defaultStyle;
-    defaultQuirksStyle = std::make_unique<RuleSet>().release();
+    defaultQuirksStyle = makeUnique<RuleSet>().release();
 
     simpleDefaultStyleSheet = parseUASheet(simpleUserAgentStyleSheet, strlen(simpleUserAgentStyleSheet));
     defaultStyle->addRulesFromSheet(*simpleDefaultStyleSheet, screenEval());
@@ -268,7 +269,7 @@ void CSSDefaultStyleSheets::ensureDefaultStyleSheetsForElement(const Element& el
 #endif // ENABLE(MATHML)
 
 #if ENABLE(FULLSCREEN_API)
-    if (!fullscreenStyleSheet && element.document().webkitIsFullScreen()) {
+    if (!fullscreenStyleSheet && element.document().fullscreenManager().isFullscreen()) {
         String fullscreenRules = String(fullscreenUserAgentStyleSheet, sizeof(fullscreenUserAgentStyleSheet)) + RenderTheme::singleton().extraFullScreenStyleSheet();
         fullscreenStyleSheet = parseUASheet(fullscreenRules);
         addToDefaultStyle(*fullscreenStyleSheet);

@@ -29,6 +29,9 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "CCallHelpers.h"
+#include "DisallowMacroScratchRegisterUsage.h"
+#include "JSCInlines.h"
+#include "JSWebAssemblyHelpers.h"
 #include "JSWebAssemblyInstance.h"
 #include "JSWebAssemblyRuntimeError.h"
 #include "MaxFrameExtentForSlowPathCall.h"
@@ -43,7 +46,7 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
 {
     CCallHelpers& jit = *compilationContext.embedderEntrypointJIT;
 
-    auto result = std::make_unique<InternalFunction>();
+    auto result = makeUnique<InternalFunction>();
     jit.emitFunctionPrologue();
 
     // FIXME Stop using 0 as codeBlocks. https://bugs.webkit.org/show_bug.cgi?id=165321
@@ -80,6 +83,8 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
             argumentsIncludeI64 = true;
             FALLTHROUGH;
         case Wasm::I32:
+        case Wasm::Anyref:
+        case Wasm::Funcref:
             if (numGPRs >= wasmCallingConvention().m_gprArgs.size())
                 totalFrameSize += sizeof(void*);
             ++numGPRs;
@@ -119,20 +124,7 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
             jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, JSWebAssemblyInstance::offsetOfInstance()), GPRInfo::argumentGPR2);
         }
 
-        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR2, Instance::offsetOfPointerToTopEntryFrame()), GPRInfo::argumentGPR0);
-        jit.loadPtr(CCallHelpers::Address(GPRInfo::argumentGPR0), GPRInfo::argumentGPR0);
-        jit.copyCalleeSavesToEntryFrameCalleeSavesBuffer(GPRInfo::argumentGPR0);
-        jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
-        jit.move(CCallHelpers::TrustedImm32(static_cast<int32_t>(argumentsIncludeI64 ? ExceptionType::I64ArgumentType : ExceptionType::I64ReturnType)), GPRInfo::argumentGPR1);
-
-        CCallHelpers::Call call = jit.call(OperationPtrTag);
-
-        jit.jump(GPRInfo::returnValueGPR, ExceptionHandlerPtrTag);
-        jit.breakpoint(); // We should not reach this.
-
-        jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
-            linkBuffer.link(call, FunctionPtr<OperationPtrTag>(wasmToJSException));
-        });
+        emitThrowWasmToJSException(jit, GPRInfo::argumentGPR2, argumentsIncludeI64 ? ExceptionType::I64ArgumentType : ExceptionType::I64ReturnType);
         return result;
     }
 
@@ -162,6 +154,8 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
             switch (signature.argument(i)) {
             case Wasm::I32:
             case Wasm::I64:
+            case Wasm::Funcref:
+            case Wasm::Anyref:
                 if (numGPRs >= wasmCallingConvention().m_gprArgs.size()) {
                     if (signature.argument(i) == Wasm::I32) {
                         jit.load32(CCallHelpers::Address(GPRInfo::callFrameRegister, jsOffset), scratchReg);
@@ -208,21 +202,23 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
 
     if (!!info.memory) {
         GPRReg baseMemory = pinnedRegs.baseMemoryPointer;
+        GPRReg scratchOrSize = wasmCallingConventionAir().prologueScratch(0);
 
         if (Context::useFastTLS())
             jit.loadWasmContextInstance(baseMemory);
 
         GPRReg currentInstanceGPR = Context::useFastTLS() ? baseMemory : wasmContextInstanceGPR;
-        if (mode != MemoryMode::Signaling) {
-            const auto& sizeRegs = pinnedRegs.sizeRegisters;
-            ASSERT(sizeRegs.size() >= 1);
-            ASSERT(!sizeRegs[0].sizeOffset); // The following code assumes we start at 0, and calculates subsequent size registers relative to 0.
-            jit.loadPtr(CCallHelpers::Address(currentInstanceGPR, Wasm::Instance::offsetOfCachedMemorySize()), sizeRegs[0].sizeRegister);
-            for (unsigned i = 1; i < sizeRegs.size(); ++i)
-                jit.add64(CCallHelpers::TrustedImm32(-sizeRegs[i].sizeOffset), sizeRegs[0].sizeRegister, sizeRegs[i].sizeRegister);
+        if (isARM64E()) {
+            if (mode != Wasm::MemoryMode::Signaling)
+                scratchOrSize = pinnedRegs.sizeRegister;
+            jit.loadPtr(CCallHelpers::Address(currentInstanceGPR, Wasm::Instance::offsetOfCachedMemorySize()), scratchOrSize);
+        } else {
+            if (mode != Wasm::MemoryMode::Signaling)
+                jit.loadPtr(CCallHelpers::Address(currentInstanceGPR, Wasm::Instance::offsetOfCachedMemorySize()), pinnedRegs.sizeRegister);
         }
 
         jit.loadPtr(CCallHelpers::Address(currentInstanceGPR, Wasm::Instance::offsetOfCachedMemory()), baseMemory);
+        jit.cageConditionally(Gigacage::Primitive, baseMemory, scratchOrSize, scratchOrSize);
     }
 
     CCallHelpers::Call call = jit.threadSafePatchableNearCall();
@@ -243,6 +239,9 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
     case Wasm::Void:
         jit.moveTrustedValue(jsUndefined(), JSValueRegs { GPRInfo::returnValueGPR });
         break;
+    case Wasm::Anyref:
+    case Wasm::Funcref:
+        break;
     case Wasm::I32:
         jit.zeroExtend32ToPtr(GPRInfo::returnValueGPR, GPRInfo::returnValueGPR);
         jit.boxInt32(GPRInfo::returnValueGPR, JSValueRegs { GPRInfo::returnValueGPR }, DoNotHaveTagRegisters);
@@ -259,7 +258,6 @@ std::unique_ptr<InternalFunction> createJSToWasmWrapper(CompilationContext& comp
     }
     case Wasm::I64:
     case Wasm::Func:
-    case Wasm::Anyfunc:
         jit.breakpoint();
         break;
     default:

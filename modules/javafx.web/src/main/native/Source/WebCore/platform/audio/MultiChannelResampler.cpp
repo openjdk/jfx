@@ -97,11 +97,13 @@ MultiChannelResampler::MultiChannelResampler(double scaleFactor, unsigned number
 {
     // Create each channel's resampler.
     for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-        m_kernels.append(std::make_unique<SincResampler>(scaleFactor));
+        m_kernels.append(makeUnique<SincResampler>(scaleFactor));
 }
 
 void MultiChannelResampler::process(AudioSourceProvider* provider, AudioBus* destination, size_t framesToProcess)
 {
+    ASSERT(m_numberOfChannels == destination->numberOfChannels());
+
     // The provider can provide us with multi-channel audio data. But each of our single-channel resamplers (kernels)
     // below requires a provider which provides a single unique channel of data.
     // channelProvider wraps the original multi-channel provider and dishes out one channel at a time.

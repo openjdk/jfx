@@ -37,14 +37,20 @@
 
 namespace WebCore {
 
+// For catching <rdar://problem/53413013>
+bool DocumentRuleSets::s_isInvalidatingStyleWithRuleSets { false };
+
 DocumentRuleSets::DocumentRuleSets(StyleResolver& styleResolver)
     : m_styleResolver(styleResolver)
 {
-    m_authorStyle = std::make_unique<RuleSet>();
+    m_authorStyle = makeUnique<RuleSet>();
     m_authorStyle->disableAutoShrinkToFit();
 }
 
-DocumentRuleSets::~DocumentRuleSets() = default;
+DocumentRuleSets::~DocumentRuleSets()
+{
+    RELEASE_ASSERT(!s_isInvalidatingStyleWithRuleSets);
+}
 
 RuleSet* DocumentRuleSets::userAgentMediaQueryStyle() const
 {
@@ -72,7 +78,7 @@ void DocumentRuleSets::updateUserAgentMediaQueryStyleIfNeeded() const
 
     // Media queries on user agent sheet need to evaluated in document context. They behave like author sheets in this respect.
     auto& mediaQueryEvaluator = m_styleResolver.mediaQueryEvaluator();
-    m_userAgentMediaQueryStyle = std::make_unique<RuleSet>();
+    m_userAgentMediaQueryStyle = makeUnique<RuleSet>();
     m_userAgentMediaQueryStyle->addRulesFromSheet(*CSSDefaultStyleSheets::mediaQueryStyleSheet, mediaQueryEvaluator, &m_styleResolver);
 
     // Viewport dependent queries are currently too inefficient to allow on UA sheet.
@@ -90,7 +96,7 @@ void DocumentRuleSets::initializeUserStyle()
 {
     auto& extensionStyleSheets = m_styleResolver.document().extensionStyleSheets();
     auto& mediaQueryEvaluator = m_styleResolver.mediaQueryEvaluator();
-    auto tempUserStyle = std::make_unique<RuleSet>();
+    auto tempUserStyle = makeUnique<RuleSet>();
     if (CSSStyleSheet* pageUserSheet = extensionStyleSheets.pageUserSheet())
         tempUserStyle->addRulesFromSheet(pageUserSheet->contents(), mediaQueryEvaluator, &m_styleResolver);
     collectRulesFromUserStyleSheets(extensionStyleSheets.injectedUserStyleSheets(), *tempUserStyle, mediaQueryEvaluator, m_styleResolver);
@@ -112,7 +118,7 @@ static std::unique_ptr<RuleSet> makeRuleSet(const Vector<RuleFeature>& rules)
     size_t size = rules.size();
     if (!size)
         return nullptr;
-    auto ruleSet = std::make_unique<RuleSet>();
+    auto ruleSet = makeUnique<RuleSet>();
     for (size_t i = 0; i < size; ++i)
         ruleSet->addRule(rules[i].rule, rules[i].selectorIndex, rules[i].selectorListIndex);
     ruleSet->shrinkToFit();
@@ -122,7 +128,7 @@ static std::unique_ptr<RuleSet> makeRuleSet(const Vector<RuleFeature>& rules)
 void DocumentRuleSets::resetAuthorStyle()
 {
     m_isAuthorStyleDefined = true;
-    m_authorStyle = std::make_unique<RuleSet>();
+    m_authorStyle = makeUnique<RuleSet>();
     m_authorStyle->disableAutoShrinkToFit();
 }
 
@@ -148,6 +154,8 @@ void DocumentRuleSets::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet
 
 void DocumentRuleSets::collectFeatures() const
 {
+    RELEASE_ASSERT(!s_isInvalidatingStyleWithRuleSets);
+
     m_features.clear();
     // Collect all ids and rules using sibling selectors (:first-child and similar)
     // in the current set of stylesheets. Style sharing code uses this information to reject
@@ -174,7 +182,7 @@ void DocumentRuleSets::collectFeatures() const
     m_features.shrinkToFit();
 }
 
-static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const AtomicString& key, HashMap<AtomicString, std::unique_ptr<Vector<InvalidationRuleSet>>>& ruleSetMap, const HashMap<AtomicString, std::unique_ptr<Vector<RuleFeature>>>& ruleFeatures)
+static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const AtomString& key, HashMap<AtomString, std::unique_ptr<Vector<InvalidationRuleSet>>>& ruleSetMap, const HashMap<AtomString, std::unique_ptr<Vector<RuleFeature>>>& ruleFeatures)
 {
     return ruleSetMap.ensure(key, [&] () -> std::unique_ptr<Vector<InvalidationRuleSet>> {
         auto* features = ruleFeatures.get(key);
@@ -187,12 +195,12 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const AtomicStrin
             auto arrayIndex = static_cast<unsigned>(*feature.matchElement);
             auto& ruleSet = matchElementArray[arrayIndex];
             if (!ruleSet)
-                ruleSet = std::make_unique<RuleSet>();
+                ruleSet = makeUnique<RuleSet>();
             ruleSet->addRule(feature.rule, feature.selectorIndex, feature.selectorListIndex);
             if (feature.invalidationSelector)
                 invalidationSelectorArray[arrayIndex].append(feature.invalidationSelector);
         }
-        auto invalidationRuleSets = std::make_unique<Vector<InvalidationRuleSet>>();
+        auto invalidationRuleSets = makeUnique<Vector<InvalidationRuleSet>>();
         for (unsigned i = 0; i < matchElementArray.size(); ++i) {
             if (matchElementArray[i])
                 invalidationRuleSets->append({ static_cast<MatchElement>(i), WTFMove(matchElementArray[i]), WTFMove(invalidationSelectorArray[i]) });
@@ -201,12 +209,12 @@ static Vector<InvalidationRuleSet>* ensureInvalidationRuleSets(const AtomicStrin
     }).iterator->value.get();
 }
 
-const Vector<InvalidationRuleSet>* DocumentRuleSets::classInvalidationRuleSets(const AtomicString& className) const
+const Vector<InvalidationRuleSet>* DocumentRuleSets::classInvalidationRuleSets(const AtomString& className) const
 {
     return ensureInvalidationRuleSets(className, m_classInvalidationRuleSets, m_features.classRules);
 }
 
-const Vector<InvalidationRuleSet>* DocumentRuleSets::attributeInvalidationRuleSets(const AtomicString& attributeName) const
+const Vector<InvalidationRuleSet>* DocumentRuleSets::attributeInvalidationRuleSets(const AtomString& attributeName) const
 {
     return ensureInvalidationRuleSets(attributeName, m_attributeInvalidationRuleSets, m_features.attributeRules);
 }

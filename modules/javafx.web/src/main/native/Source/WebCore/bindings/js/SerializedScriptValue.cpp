@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -58,7 +58,6 @@
 #include "SharedBuffer.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/APICast.h>
-#include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/BooleanObject.h>
 #include <JavaScriptCore/CatchScope.h>
 #include <JavaScriptCore/DateInstance.h>
@@ -83,7 +82,9 @@
 #include <JavaScriptCore/TypedArrayInlines.h>
 #include <JavaScriptCore/TypedArrays.h>
 #include <JavaScriptCore/WasmModule.h>
+#include <JavaScriptCore/YarrFlags.h>
 #include <limits>
+#include <wtf/CompletionHandler.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Vector.h>
@@ -549,13 +550,13 @@ public:
 #if ENABLE(WEBASSEMBLY)
             WasmModuleArray& wasmModules,
 #endif
-        Vector<String>& blobURLs, const PAL::SessionID& sessionID, Vector<uint8_t>& out, SerializationContext context, ArrayBufferContentsArray& sharedBuffers)
+        Vector<String>& blobURLs, Vector<uint8_t>& out, SerializationContext context, ArrayBufferContentsArray& sharedBuffers)
     {
         CloneSerializer serializer(exec, messagePorts, arrayBuffers, imageBitmaps,
 #if ENABLE(WEBASSEMBLY)
             wasmModules,
 #endif
-            blobURLs, sessionID, out, context, sharedBuffers);
+            blobURLs, out, context, sharedBuffers);
         return serializer.serialize(value);
     }
 
@@ -582,12 +583,11 @@ private:
 #if ENABLE(WEBASSEMBLY)
             WasmModuleArray& wasmModules,
 #endif
-        Vector<String>& blobURLs, const PAL::SessionID& sessionID, Vector<uint8_t>& out, SerializationContext context, ArrayBufferContentsArray& sharedBuffers)
+        Vector<String>& blobURLs, Vector<uint8_t>& out, SerializationContext context, ArrayBufferContentsArray& sharedBuffers)
         : CloneBase(exec)
         , m_buffer(out)
         , m_blobURLs(blobURLs)
-        , m_sessionID(sessionID)
-        , m_emptyIdentifier(Identifier::fromString(exec, emptyString()))
+        , m_emptyIdentifier(Identifier::fromString(exec->vm(), emptyString()))
         , m_context(context)
         , m_sharedBuffers(sharedBuffers)
 #if ENABLE(WEBASSEMBLY)
@@ -1059,7 +1059,6 @@ private:
                 write(CryptoKeyTag);
                 Vector<uint8_t> serializedKey;
                 Vector<String> dummyBlobURLs;
-                PAL::SessionID dummySessionID;
                 Vector<RefPtr<MessagePort>> dummyMessagePorts;
                 Vector<RefPtr<JSC::ArrayBuffer>> dummyArrayBuffers;
 #if ENABLE(WEBASSEMBLY)
@@ -1070,7 +1069,7 @@ private:
 #if ENABLE(WEBASSEMBLY)
                     dummyModules,
 #endif
-                    dummyBlobURLs, dummySessionID, serializedKey, SerializationContext::Default, dummySharedBuffers);
+                    dummyBlobURLs, serializedKey, SerializationContext::Default, dummySharedBuffers);
                 rawKeySerializer.write(key);
                 Vector<uint8_t> wrappedKey;
                 if (!wrapCryptoKey(m_exec, serializedKey, wrappedKey))
@@ -1260,7 +1259,7 @@ private:
         if (str.isNull())
             write(m_emptyIdentifier);
         else
-            write(Identifier::fromString(m_exec, str));
+            write(Identifier::fromString(m_exec->vm(), str));
     }
 
     void write(const Vector<uint8_t>& vector)
@@ -1469,7 +1468,6 @@ private:
 
     Vector<uint8_t>& m_buffer;
     Vector<String>& m_blobURLs;
-    PAL::SessionID m_sessionID;
     ObjectPool m_objectPool;
     ObjectPool m_transferredMessagePorts;
     ObjectPool m_transferredArrayBuffers;
@@ -1522,7 +1520,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     indexStack.removeLast();
                     lengthStack.removeLast();
 
-                    propertyStack.append(PropertyNameArray(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
+                    propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                     array->methodTable(vm)->getOwnNonIndexPropertyNames(array, m_exec, propertyStack.last(), EnumerationMode());
                     if (propertyStack.last().size()) {
                         write(NonIndexPropertiesTag);
@@ -1572,7 +1570,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     return SerializationReturnCode::DataCloneError;
                 inputObjectStack.append(inObject);
                 indexStack.append(0);
-                propertyStack.append(PropertyNameArray(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
+                propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                 inObject->methodTable(vm)->getOwnPropertyNames(inObject, m_exec, propertyStack.last(), EnumerationMode());
             }
             objectStartVisitMember:
@@ -1625,7 +1623,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 JSMap* inMap = jsCast<JSMap*>(inValue);
                 if (!startMap(inMap))
                     break;
-                JSMapIterator* iterator = JSMapIterator::create(vm, vm.mapIteratorStructure.get(), inMap, IterateKeyValue);
+                JSMapIterator* iterator = JSMapIterator::create(vm, vm.mapIteratorStructure(), inMap, IterateKeyValue);
                 m_gcBuffer.appendWithCrashOnOverflow(inMap);
                 m_gcBuffer.appendWithCrashOnOverflow(iterator);
                 mapIteratorStack.append(iterator);
@@ -1640,7 +1638,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     mapIteratorStack.removeLast();
                     JSObject* object = inputObjectStack.last();
                     ASSERT(jsDynamicCast<JSMap*>(vm, object));
-                    propertyStack.append(PropertyNameArray(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
+                    propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                     object->methodTable(vm)->getOwnPropertyNames(object, m_exec, propertyStack.last(), EnumerationMode());
                     write(NonMapPropertiesTag);
                     indexStack.append(0);
@@ -1669,7 +1667,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 JSSet* inSet = jsCast<JSSet*>(inValue);
                 if (!startSet(inSet))
                     break;
-                JSSetIterator* iterator = JSSetIterator::create(vm, vm.setIteratorStructure.get(), inSet, IterateKey);
+                JSSetIterator* iterator = JSSetIterator::create(vm, vm.setIteratorStructure(), inSet, IterateKey);
                 m_gcBuffer.appendWithCrashOnOverflow(inSet);
                 m_gcBuffer.appendWithCrashOnOverflow(iterator);
                 setIteratorStack.append(iterator);
@@ -1684,7 +1682,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                     setIteratorStack.removeLast();
                     JSObject* object = inputObjectStack.last();
                     ASSERT(jsDynamicCast<JSSet*>(vm, object));
-                    propertyStack.append(PropertyNameArray(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
+                    propertyStack.append(PropertyNameArray(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude));
                     object->methodTable(vm)->getOwnPropertyNames(object, m_exec, propertyStack.last(), EnumerationMode());
                     write(NonSetPropertiesTag);
                     indexStack.append(0);
@@ -1753,7 +1751,7 @@ public:
         return str;
     }
 
-    static DeserializationResult deserialize(ExecState* exec, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, Vector<std::pair<std::unique_ptr<ImageBuffer>, bool>>&& imageBuffers, ArrayBufferContentsArray* arrayBufferContentsArray, const Vector<uint8_t>& buffer, const Vector<String>& blobURLs, const PAL::SessionID& sessionID, const Vector<String> blobFilePaths, ArrayBufferContentsArray* sharedBuffers
+    static DeserializationResult deserialize(ExecState* exec, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, Vector<std::pair<std::unique_ptr<ImageBuffer>, bool>>&& imageBuffers, ArrayBufferContentsArray* arrayBufferContentsArray, const Vector<uint8_t>& buffer, const Vector<String>& blobURLs, const Vector<String> blobFilePaths, ArrayBufferContentsArray* sharedBuffers
 #if ENABLE(WEBASSEMBLY)
         , WasmModuleArray* wasmModules
 #endif
@@ -1761,7 +1759,7 @@ public:
     {
         if (!buffer.size())
             return std::make_pair(jsNull(), SerializationReturnCode::UnspecifiedError);
-        CloneDeserializer deserializer(exec, globalObject, messagePorts, arrayBufferContentsArray, buffer, blobURLs, sessionID, blobFilePaths, sharedBuffers, WTFMove(imageBuffers)
+        CloneDeserializer deserializer(exec, globalObject, messagePorts, arrayBufferContentsArray, buffer, blobURLs, blobFilePaths, sharedBuffers, WTFMove(imageBuffers)
 #if ENABLE(WEBASSEMBLY)
             , wasmModules
 #endif
@@ -1781,7 +1779,7 @@ private:
         JSValue jsString(ExecState* exec)
         {
             if (!m_jsString)
-                m_jsString = JSC::jsString(exec, m_string);
+                m_jsString = JSC::jsString(exec->vm(), m_string);
             return m_jsString;
         }
         const String& string() { return m_string; }
@@ -1835,7 +1833,7 @@ private:
             m_version = 0xFFFFFFFF;
     }
 
-    CloneDeserializer(ExecState* exec, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, ArrayBufferContentsArray* arrayBufferContents, const Vector<uint8_t>& buffer, const Vector<String>& blobURLs, const PAL::SessionID& sessionID, const Vector<String> blobFilePaths, ArrayBufferContentsArray* sharedBuffers, Vector<std::pair<std::unique_ptr<ImageBuffer>, bool>>&& imageBuffers
+    CloneDeserializer(ExecState* exec, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, ArrayBufferContentsArray* arrayBufferContents, const Vector<uint8_t>& buffer, const Vector<String>& blobURLs, const Vector<String> blobFilePaths, ArrayBufferContentsArray* sharedBuffers, Vector<std::pair<std::unique_ptr<ImageBuffer>, bool>>&& imageBuffers
 #if ENABLE(WEBASSEMBLY)
         , WasmModuleArray* wasmModules
 #endif
@@ -1850,7 +1848,6 @@ private:
         , m_arrayBufferContents(arrayBufferContents)
         , m_arrayBuffers(arrayBufferContents ? arrayBufferContents->size() : 0)
         , m_blobURLs(blobURLs)
-        , m_sessionID(sessionID)
         , m_blobFilePaths(blobFilePaths)
         , m_sharedBuffers(sharedBuffers)
         , m_imageBuffers(WTFMove(imageBuffers))
@@ -2096,7 +2093,7 @@ private:
             filePath = path->string();
 
         if (m_isDOMGlobalObject)
-            file = File::deserialize(filePath, URL(URL(), url->string()), type->string(), name->string(), optionalLastModified);
+            file = File::deserialize(jsCast<JSDOMGlobalObject*>(m_globalObject)->scriptExecutionContext()->sessionID(), filePath, URL(URL(), url->string()), type->string(), name->string(), optionalLastModified);
         return true;
     }
 
@@ -2137,7 +2134,7 @@ private:
         RefPtr<ArrayBuffer> arrayBuffer = toPossiblySharedArrayBuffer(vm, arrayBufferObj);
         switch (arrayBufferViewSubtag) {
         case DataViewTag:
-            arrayBufferView = getJSValue(DataView::create(WTFMove(arrayBuffer), byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, DataView::create(WTFMove(arrayBuffer), byteOffset, length).get());
             return true;
         case Int8ArrayTag:
             arrayBufferView = toJS(m_exec, m_globalObject, Int8Array::tryCreate(WTFMove(arrayBuffer), byteOffset, length).get());
@@ -2656,7 +2653,7 @@ private:
         if (!read(point.w))
             return WTF::nullopt;
 
-        return WTFMove(point);
+        return point;
     }
 
     JSValue readDOMQuad()
@@ -2862,7 +2859,7 @@ private:
                 return JSValue();
             if (!m_isDOMGlobalObject)
                 return jsNull();
-            return getJSValue(Blob::deserialize(URL(URL(), url->string()), type->string(), size, blobFilePathForBlobURL(url->string())).get());
+            return getJSValue(Blob::deserialize(jsCast<JSDOMGlobalObject*>(m_globalObject)->scriptExecutionContext()->sessionID(), URL(URL(), url->string()), type->string(), size, blobFilePathForBlobURL(url->string())).get());
         }
         case StringTag: {
             CachedStringRef cachedString;
@@ -2871,7 +2868,7 @@ private:
             return cachedString->jsString(m_exec);
         }
         case EmptyStringTag:
-            return jsEmptyString(&m_exec->vm());
+            return jsEmptyString(m_exec->vm());
         case StringObjectTag: {
             CachedStringRef cachedString;
             if (!readStringData(cachedString))
@@ -2882,7 +2879,7 @@ private:
         }
         case EmptyStringObjectTag: {
             VM& vm = m_exec->vm();
-            StringObject* obj = constructString(vm, m_globalObject, jsEmptyString(&vm));
+            StringObject* obj = constructString(vm, m_globalObject, jsEmptyString(vm));
             m_gcBuffer.appendWithCrashOnOverflow(obj);
             return obj;
         }
@@ -2893,10 +2890,10 @@ private:
             CachedStringRef flags;
             if (!readStringData(flags))
                 return JSValue();
-            RegExpFlags reFlags = regExpFlags(flags->string());
-            ASSERT(reFlags != InvalidFlags);
+            auto reFlags = Yarr::parseFlags(flags->string());
+            ASSERT(reFlags.hasValue());
             VM& vm = m_exec->vm();
-            RegExp* regExp = RegExp::create(vm, pattern->string(), reFlags);
+            RegExp* regExp = RegExp::create(vm, pattern->string(), reFlags.value());
             return RegExpObject::create(vm, m_globalObject->regExpStructure(), regExp);
         }
         case ObjectReferenceTag: {
@@ -2925,7 +2922,7 @@ private:
                 return JSValue();
             }
             auto scope = DECLARE_THROW_SCOPE(m_exec->vm());
-            JSValue result = JSC::JSWebAssemblyModule::createStub(m_exec->vm(), m_exec, m_globalObject->WebAssemblyModuleStructure(), m_wasmModules->at(index));
+            JSValue result = JSC::JSWebAssemblyModule::createStub(m_exec->vm(), m_exec, m_globalObject->webAssemblyModuleStructure(), m_wasmModules->at(index));
             // Since we are cloning a JSWebAssemblyModule, it's impossible for that
             // module to not have been a valid module. Therefore, createStub should
             // not trow.
@@ -3060,7 +3057,6 @@ private:
     ArrayBufferContentsArray* m_arrayBufferContents;
     Vector<RefPtr<JSC::ArrayBuffer>> m_arrayBuffers;
     Vector<String> m_blobURLs;
-    PAL::SessionID m_sessionID;
     Vector<String> m_blobFilePaths;
     ArrayBufferContentsArray* m_sharedBuffers;
     Vector<std::pair<std::unique_ptr<ImageBuffer>, bool>> m_imageBuffers;
@@ -3168,11 +3164,11 @@ DeserializationResult CloneDeserializer::deserialize()
             }
 
             if (JSValue terminal = readTerminal()) {
-                putProperty(outputObjectStack.last(), Identifier::fromString(m_exec, cachedString->string()), terminal);
+                putProperty(outputObjectStack.last(), Identifier::fromString(vm, cachedString->string()), terminal);
                 goto objectStartVisitMember;
             }
             stateStack.append(ObjectEndVisitMember);
-            propertyNameStack.append(Identifier::fromString(m_exec, cachedString->string()));
+            propertyNameStack.append(Identifier::fromString(vm, cachedString->string()));
             goto stateUnknown;
         }
         case ObjectEndVisitMember: {
@@ -3281,7 +3277,7 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, std::uniq
 {
 }
 
-SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, const Vector<String>& blobURLs, const PAL::SessionID& sessionID,  std::unique_ptr<ArrayBufferContentsArray> arrayBufferContentsArray, std::unique_ptr<ArrayBufferContentsArray> sharedBufferContentsArray, Vector<std::pair<std::unique_ptr<ImageBuffer>, bool>>&& imageBuffers
+SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, const Vector<String>& blobURLs, std::unique_ptr<ArrayBufferContentsArray> arrayBufferContentsArray, std::unique_ptr<ArrayBufferContentsArray> sharedBufferContentsArray, Vector<std::pair<std::unique_ptr<ImageBuffer>, bool>>&& imageBuffers
 #if ENABLE(WEBASSEMBLY)
         , std::unique_ptr<WasmModuleArray> wasmModulesArray
 #endif
@@ -3293,7 +3289,6 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, const Vec
 #if ENABLE(WEBASSEMBLY)
     , m_wasmModulesArray(WTFMove(wasmModulesArray))
 #endif
-    , m_sessionID(sessionID)
 {
     // Since this SerializedScriptValue is meant to be passed between threads, its String data members
     // need to be isolatedCopies so we don't run into thread safety issues for the StringImpls.
@@ -3307,7 +3302,7 @@ static ExceptionOr<std::unique_ptr<ArrayBufferContentsArray>> transferArrayBuffe
     if (arrayBuffers.isEmpty())
         return nullptr;
 
-    auto contents = std::make_unique<ArrayBufferContentsArray>(arrayBuffers.size());
+    auto contents = makeUnique<ArrayBufferContentsArray>(arrayBuffers.size());
 
     HashSet<JSC::ArrayBuffer*> visited;
     for (size_t arrayBufferIndex = 0; arrayBufferIndex < arrayBuffers.size(); arrayBufferIndex++) {
@@ -3320,7 +3315,7 @@ static ExceptionOr<std::unique_ptr<ArrayBufferContentsArray>> transferArrayBuffe
             return Exception { TypeError };
     }
 
-    return WTFMove(contents);
+    return contents;
 }
 
 static void maybeThrowExceptionIfSerializationFailed(ExecState& state, SerializationReturnCode code)
@@ -3376,7 +3371,6 @@ RefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState& exec, JSV
 {
     Vector<uint8_t> buffer;
     Vector<String> blobURLs;
-    PAL::SessionID sessionID;
     Vector<RefPtr<MessagePort>> dummyMessagePorts;
     Vector<RefPtr<ImageBitmap>> dummyImageBitmaps;
     Vector<RefPtr<JSC::ArrayBuffer>> dummyArrayBuffers;
@@ -3388,7 +3382,7 @@ RefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState& exec, JSV
 #if ENABLE(WEBASSEMBLY)
         dummyModules,
 #endif
-        blobURLs, sessionID, buffer, SerializationContext::Default, dummySharedBuffers);
+        blobURLs, buffer, SerializationContext::Default, dummySharedBuffers);
 
 #if ENABLE(WEBASSEMBLY)
     ASSERT_WITH_MESSAGE(dummyModules.isEmpty(), "Wasm::Module serialization is only allowed in the postMessage context");
@@ -3400,7 +3394,7 @@ RefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState& exec, JSV
     if (code != SerializationReturnCode::SuccessfullyCompleted)
         return nullptr;
 
-    return adoptRef(*new SerializedScriptValue(WTFMove(buffer), blobURLs, sessionID, nullptr, nullptr, { }
+    return adoptRef(*new SerializedScriptValue(WTFMove(buffer), blobURLs, nullptr, nullptr, { }
 #if ENABLE(WEBASSEMBLY)
         , nullptr
 #endif
@@ -3456,16 +3450,15 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(ExecState&
 
     Vector<uint8_t> buffer;
     Vector<String> blobURLs;
-    PAL::SessionID sessionID;
 #if ENABLE(WEBASSEMBLY)
     WasmModuleArray wasmModules;
 #endif
-    std::unique_ptr<ArrayBufferContentsArray> sharedBuffers = std::make_unique<ArrayBufferContentsArray>();
+    std::unique_ptr<ArrayBufferContentsArray> sharedBuffers = makeUnique<ArrayBufferContentsArray>();
     auto code = CloneSerializer::serialize(&state, value, messagePorts, arrayBuffers, imageBitmaps,
 #if ENABLE(WEBASSEMBLY)
         wasmModules,
 #endif
-        blobURLs, sessionID, buffer, context, *sharedBuffers);
+        blobURLs, buffer, context, *sharedBuffers);
 
     if (code != SerializationReturnCode::SuccessfullyCompleted)
         return exceptionForSerializationFailure(code);
@@ -3476,9 +3469,9 @@ ExceptionOr<Ref<SerializedScriptValue>> SerializedScriptValue::create(ExecState&
 
     auto imageBuffers = ImageBitmap::detachBitmaps(WTFMove(imageBitmaps));
 
-    return adoptRef(*new SerializedScriptValue(WTFMove(buffer), blobURLs, sessionID, arrayBufferContentsArray.releaseReturnValue(), context == SerializationContext::WorkerPostMessage ? WTFMove(sharedBuffers) : nullptr, WTFMove(imageBuffers)
+    return adoptRef(*new SerializedScriptValue(WTFMove(buffer), blobURLs, arrayBufferContentsArray.releaseReturnValue(), context == SerializationContext::WorkerPostMessage ? WTFMove(sharedBuffers) : nullptr, WTFMove(imageBuffers)
 #if ENABLE(WEBASSEMBLY)
-                , std::make_unique<WasmModuleArray>(wasmModules)
+                , makeUnique<WasmModuleArray>(wasmModules)
 #endif
                 ));
 }
@@ -3524,13 +3517,12 @@ JSValue SerializedScriptValue::deserialize(ExecState& exec, JSGlobalObject* glob
 {
     Vector<String> dummyBlobs;
     Vector<String> dummyPaths;
-    PAL::SessionID dummySessionID;
-    return deserialize(exec, globalObject, messagePorts, dummyBlobs, dummySessionID, dummyPaths, throwExceptions);
+    return deserialize(exec, globalObject, messagePorts, dummyBlobs, dummyPaths, throwExceptions);
 }
 
-JSValue SerializedScriptValue::deserialize(ExecState& exec, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, const Vector<String>& blobURLs, const PAL::SessionID& sessionID, const Vector<String>& blobFilePaths, SerializationErrorMode throwExceptions)
+JSValue SerializedScriptValue::deserialize(ExecState& exec, JSGlobalObject* globalObject, const Vector<RefPtr<MessagePort>>& messagePorts, const Vector<String>& blobURLs, const Vector<String>& blobFilePaths, SerializationErrorMode throwExceptions)
 {
-    DeserializationResult result = CloneDeserializer::deserialize(&exec, globalObject, messagePorts, WTFMove(m_imageBuffers), m_arrayBufferContentsArray.get(), m_data, blobURLs, sessionID, blobFilePaths, m_sharedBufferContentsArray.get()
+    DeserializationResult result = CloneDeserializer::deserialize(&exec, globalObject, messagePorts, WTFMove(m_imageBuffers), m_arrayBufferContentsArray.get(), m_data, blobURLs, blobFilePaths, m_sharedBufferContentsArray.get()
 #if ENABLE(WEBASSEMBLY)
         , m_wasmModulesArray.get()
 #endif
@@ -3579,13 +3571,12 @@ Vector<String> SerializedScriptValue::blobURLsIsolatedCopy() const
     return result;
 }
 
-void SerializedScriptValue::writeBlobsToDiskForIndexedDB(CompletionHandler<void(IDBValue&&)>&& completionHandler)
+void SerializedScriptValue::writeBlobsToDiskForIndexedDB(PAL::SessionID sessionID, CompletionHandler<void(IDBValue&&)>&& completionHandler)
 {
     ASSERT(isMainThread());
     ASSERT(hasBlobURLs());
 
-    // FIXME: Add m_sessionID as a parameter here.
-    blobRegistry().writeBlobsToTemporaryFiles(m_blobURLs, [completionHandler = WTFMove(completionHandler), this, protectedThis = makeRef(*this)] (auto&& blobFilePaths) mutable {
+    blobRegistry().writeBlobsToTemporaryFiles(sessionID, m_blobURLs, [completionHandler = WTFMove(completionHandler), this, protectedThis = makeRef(*this)] (auto&& blobFilePaths) mutable {
         ASSERT(isMainThread());
 
         if (blobFilePaths.isEmpty()) {
@@ -3597,11 +3588,11 @@ void SerializedScriptValue::writeBlobsToDiskForIndexedDB(CompletionHandler<void(
 
         ASSERT(m_blobURLs.size() == blobFilePaths.size());
 
-        completionHandler({ *this, m_blobURLs, m_sessionID, blobFilePaths });
+        completionHandler({ *this, m_blobURLs, blobFilePaths });
     });
 }
 
-IDBValue SerializedScriptValue::writeBlobsToDiskForIndexedDBSynchronously()
+IDBValue SerializedScriptValue::writeBlobsToDiskForIndexedDBSynchronously(PAL::SessionID sessionID)
 {
     ASSERT(!isMainThread());
 
@@ -3610,8 +3601,8 @@ IDBValue SerializedScriptValue::writeBlobsToDiskForIndexedDBSynchronously()
     Condition condition;
     lock.lock();
 
-    RunLoop::main().dispatch([this, conditionPtr = &condition, valuePtr = &value] {
-        writeBlobsToDiskForIndexedDB([conditionPtr, valuePtr](IDBValue&& result) {
+    RunLoop::main().dispatch([this, sessionID, conditionPtr = &condition, valuePtr = &value] {
+        writeBlobsToDiskForIndexedDB(sessionID, [conditionPtr, valuePtr](IDBValue&& result) {
             ASSERT(isMainThread());
             valuePtr->setAsIsolatedCopy(result);
 

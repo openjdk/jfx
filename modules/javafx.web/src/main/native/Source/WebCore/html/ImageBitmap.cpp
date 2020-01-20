@@ -45,9 +45,14 @@
 #include "RenderElement.h"
 #include "SharedBuffer.h"
 #include "TypedOMCSSImageValue.h"
+#include <wtf/IsoMallocInlines.h>
+#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/Variant.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ImageBitmap);
 
 #if USE(IOSURFACE_CANVAS_BACKING_STORE) || ENABLE(ACCELERATED_2D_CANVAS)
 static RenderingMode bufferRenderingMode = Accelerated;
@@ -318,10 +323,7 @@ void ImageBitmap::createPromise(ScriptExecutionContext&, RefPtr<HTMLImageElement
     }
 
     FloatRect destRect(FloatPoint(), outputSize);
-    ImagePaintingOptions paintingOptions;
-    paintingOptions.m_interpolationQuality = interpolationQualityForResizeQuality(options.resizeQuality);
-
-    bitmapData->context().drawImage(*imageForRender, destRect, sourceRectangle.releaseReturnValue(), paintingOptions);
+    bitmapData->context().drawImage(*imageForRender, destRect, sourceRectangle.releaseReturnValue(), { interpolationQualityForResizeQuality(options.resizeQuality) });
 
     // 7. Create a new ImageBitmap object.
     auto imageBitmap = create(WTFMove(bitmapData));
@@ -368,10 +370,7 @@ void ImageBitmap::createPromise(ScriptExecutionContext&, RefPtr<HTMLCanvasElemen
     }
 
     FloatRect destRect(FloatPoint(), outputSize);
-    ImagePaintingOptions paintingOptions;
-    paintingOptions.m_interpolationQuality = interpolationQualityForResizeQuality(options.resizeQuality);
-
-    bitmapData->context().drawImage(*imageForRender, destRect, sourceRectangle.releaseReturnValue(), paintingOptions);
+    bitmapData->context().drawImage(*imageForRender, destRect, sourceRectangle.releaseReturnValue(), { interpolationQualityForResizeQuality(options.resizeQuality) });
 
     // 3. Create a new ImageBitmap object.
     auto imageBitmap = create(WTFMove(bitmapData));
@@ -479,10 +478,7 @@ void ImageBitmap::createPromise(ScriptExecutionContext&, RefPtr<ImageBitmap>& ex
     auto imageForRender = existingImageBitmap->buffer()->copyImage();
 
     FloatRect destRect(FloatPoint(), outputSize);
-    ImagePaintingOptions paintingOptions;
-    paintingOptions.m_interpolationQuality = interpolationQualityForResizeQuality(options.resizeQuality);
-
-    bitmapData->context().drawImage(*imageForRender, destRect, sourceRectangle.releaseReturnValue(), paintingOptions);
+    bitmapData->context().drawImage(*imageForRender, destRect, sourceRectangle.releaseReturnValue(), { interpolationQualityForResizeQuality(options.resizeQuality) });
 
     // 3. Create a new ImageBitmap object.
     auto imageBitmap = create(WTFMove(bitmapData));
@@ -646,10 +642,7 @@ void ImageBitmap::createFromBuffer(
     }
 
     FloatRect destRect(FloatPoint(), outputSize);
-    ImagePaintingOptions paintingOptions;
-    paintingOptions.m_interpolationQuality = interpolationQualityForResizeQuality(options.resizeQuality);
-
-    bitmapData->context().drawImage(*image, destRect, sourceRectangle.releaseReturnValue(), paintingOptions);
+    bitmapData->context().drawImage(*image, destRect, sourceRectangle.releaseReturnValue(), { interpolationQualityForResizeQuality(options.resizeQuality) });
 
     auto imageBitmap = create(WTFMove(bitmapData));
 

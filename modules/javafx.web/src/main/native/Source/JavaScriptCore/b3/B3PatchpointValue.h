@@ -52,8 +52,9 @@ public:
 
     // The input representation (i.e. constraint) of the return value. This defaults to WarmAny if the
     // type is Void and it defaults to SomeRegister otherwise. It's illegal to mess with this if the type
-    // is Void. Otherwise you can set this to any input constraint.
-    ValueRep resultConstraint;
+    // is Void. Otherwise you can set this to any input constraint. If the type of the patchpoint is a tuple
+    // the constrants must be set explicitly.
+    Vector<ValueRep, 1> resultConstraints;
 
     // The number of scratch registers that this patchpoint gets. The scratch register is guaranteed
     // to be different from any input register and the destination register. It's also guaranteed not
@@ -61,14 +62,16 @@ public:
     uint8_t numGPScratchRegisters { 0 };
     uint8_t numFPScratchRegisters { 0 };
 
+    B3_SPECIALIZE_VALUE_FOR_FINAL_SIZE_VARARGS_CHILDREN
+
 protected:
     void dumpMeta(CommaPrinter&, PrintStream&) const override;
 
-    Value* cloneImpl() const override;
-
 private:
     friend class Procedure;
+    friend class Value;
 
+    static Opcode opcodeFromConstructor(Type, Origin) { return Patchpoint; }
     JS_EXPORT_PRIVATE PatchpointValue(Type, Origin);
 };
 

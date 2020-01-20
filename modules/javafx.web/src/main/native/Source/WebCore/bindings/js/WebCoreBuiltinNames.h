@@ -1,6 +1,6 @@
 /*
  *  Copyright (c) 2015, Canon Inc. All rights reserved.
- *  Copyright (C) 2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -81,11 +81,39 @@ namespace WebCore {
     macro(Gamepad) \
     macro(GamepadButton) \
     macro(GamepadEvent) \
+    macro(GPU) \
+    macro(GPUAdapter) \
+    macro(GPUBindGroup) \
+    macro(GPUBindGroupLayout) \
+    macro(GPUBuffer) \
+    macro(GPUBufferUsage) \
+    macro(GPUCanvasContext) \
+    macro(GPUColorWriteBits) \
+    macro(GPUCommandBuffer) \
+    macro(GPUCommandEncoder) \
+    macro(GPUComputePassEncoder) \
+    macro(GPUComputePipeline) \
+    macro(GPUDevice) \
+    macro(GPUOutOfMemoryError) \
+    macro(GPUPipelineLayout) \
+    macro(GPUProgrammablePassEncoder) \
+    macro(GPUQueue) \
+    macro(GPURenderPassEncoder) \
+    macro(GPURenderPipeline) \
+    macro(GPUSampler) \
+    macro(GPUShaderModule) \
+    macro(GPUShaderStageBit) \
+    macro(GPUSwapChain) \
+    macro(GPUTexture) \
     macro(GPUTextureUsage) \
+    macro(GPUTextureView) \
+    macro(GPUValidationError) \
     macro(HTMLAttachmentElement) \
     macro(HTMLAudioElement) \
+    macro(HTMLDialogElement) \
     macro(HTMLDataListElement) \
     macro(HTMLMenuItemElement) \
+    macro(HTMLKeygenElement) \
     macro(HTMLSlotElement) \
     macro(Headers) \
     macro(IDBCursor) \
@@ -146,6 +174,8 @@ namespace WebCore {
     macro(PerformanceServerTiming) \
     macro(PointerEvent) \
     macro(PublicKeyCredential) \
+    macro(ResizeObserver) \
+    macro(ResizeObserverEntry) \
     macro(RTCCertificate) \
     macro(RTCDTMFSender) \
     macro(RTCDTMFToneChangeEvent) \
@@ -191,50 +221,6 @@ namespace WebCore {
     macro(VisualViewport) \
     macro(WebGL2RenderingContext) \
     macro(WebGLVertexArrayObject) \
-    macro(WebGPU) \
-    macro(WebGPUAdapter) \
-    macro(WebGPUBindGroup) \
-    macro(WebGPUBindGroupLayout) \
-    macro(WebGPUBuffer) \
-    macro(WebGPUBufferUsage) \
-    macro(WebGPUCommandBuffer) \
-    macro(WebGPUDevice) \
-    macro(WebGPUIndexFormat) \
-    macro(WebGPUInputStepMode) \
-    macro(WebGPUQueue) \
-    macro(WebGPUPipelineLayout) \
-    macro(WebGPUProgrammablePassEncoder) \
-    macro(WebGPURenderingContext) \
-    macro(WebGPURenderPassEncoder) \
-    macro(WebGPURenderPipeline) \
-    macro(WebGPUShaderModule) \
-    macro(WebGPUShaderStageBit) \
-    macro(WebGPUSwapChain) \
-    macro(WebGPUTexture) \
-    macro(WebGPUTextureView) \
-    macro(WebGPUVertexFormat) \
-    macro(WebMetalBuffer) \
-    macro(WebMetalCommandBuffer) \
-    macro(WebMetalCommandQueue) \
-    macro(WebMetalComputeCommandEncoder) \
-    macro(WebMetalComputePipelineState) \
-    macro(WebMetalDepthStencilDescriptor) \
-    macro(WebMetalDepthStencilState) \
-    macro(WebMetalDrawable) \
-    macro(WebMetalFunction) \
-    macro(WebMetalLibrary) \
-    macro(WebMetalRenderCommandEncoder) \
-    macro(WebMetalRenderPassAttachmentDescriptor) \
-    macro(WebMetalRenderPassColorAttachmentDescriptor) \
-    macro(WebMetalRenderPassDepthAttachmentDescriptor) \
-    macro(WebMetalRenderPassDescriptor) \
-    macro(WebMetalRenderPipelineColorAttachmentDescriptor) \
-    macro(WebMetalRenderPipelineDescriptor) \
-    macro(WebMetalRenderPipelineState) \
-    macro(WebMetalRenderingContext) \
-    macro(WebMetalSize) \
-    macro(WebMetalTexture) \
-    macro(WebMetalTextureDescriptor) \
     macro(WebKitMediaKeyError) \
     macro(WebKitMediaKeyMessageEvent) \
     macro(WebKitMediaKeyNeededEvent) \
@@ -279,6 +265,7 @@ namespace WebCore {
     macro(frames) \
     macro(getTracks) \
     macro(getUserMedia) \
+    macro(gpu) \
     macro(header) \
     macro(href) \
     macro(indexedDB) \
@@ -292,7 +279,11 @@ namespace WebCore {
     macro(makeThisTypeError) \
     macro(matchingElementInFlatTree) \
     macro(mediaStreamTrackConstraints) \
-    macro(openDatabase) \
+    macro(ontouchcancel) \
+    macro(ontouchend) \
+    macro(ontouchmove) \
+    macro(ontouchstart) \
+    macro(ontouchforcechange) \
     macro(onvrdisplayactivate) \
     macro(onvrdisplayblur) \
     macro(onvrdisplayconnect) \
@@ -362,15 +353,14 @@ namespace WebCore {
     macro(webkitIDBRequest) \
     macro(webkitIDBTransaction) \
     macro(webkitIndexedDB) \
-    macro(webgpu) \
     macro(window) \
     macro(writing) \
     WEBCORE_ADDITIONAL_PRIVATE_IDENTIFIERS(macro) \
 
 class WebCoreBuiltinNames {
 public:
-    explicit WebCoreBuiltinNames(JSC::VM* vm)
-        : m_vm(*vm)
+    explicit WebCoreBuiltinNames(JSC::VM& vm)
+        : m_vm(vm)
         WEBCORE_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(INITIALIZE_BUILTIN_NAMES)
     {
 #define EXPORT_NAME(name) m_vm.propertyNames->appendExternalName(name##PublicName(), name##PrivateName());

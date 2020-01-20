@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -162,18 +162,27 @@ bool JSValue::putToPrimitive(ExecState* exec, PropertyName propertyName, JSValue
         return false;
     JSValue prototype;
     if (propertyName != vm.propertyNames->underscoreProto) {
-        for (; !obj->structure(vm)->hasReadOnlyOrGetterSetterPropertiesExcludingProto(); obj = asObject(prototype)) {
+        while (true) {
+            Structure* structure = obj->structure(vm);
+            if (structure->hasReadOnlyOrGetterSetterPropertiesExcludingProto() || structure->typeInfo().hasPutPropertySecurityCheck())
+                break;
             prototype = obj->getPrototype(vm, exec);
             RETURN_IF_EXCEPTION(scope, false);
 
             if (prototype.isNull())
                 return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
+            obj = asObject(prototype);
         }
     }
 
     for (; ; obj = asObject(prototype)) {
+        Structure* structure = obj->structure(vm);
+        if (UNLIKELY(structure->typeInfo().hasPutPropertySecurityCheck())) {
+            obj->methodTable(vm)->doPutPropertySecurityCheck(obj, exec, propertyName, slot);
+            RETURN_IF_EXCEPTION(scope, false);
+        }
         unsigned attributes;
-        PropertyOffset offset = obj->structure(vm)->get(vm, propertyName, attributes);
+        PropertyOffset offset = structure->get(vm, propertyName, attributes);
         if (offset != invalidOffset) {
             if (attributes & PropertyAttribute::ReadOnly)
                 return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
@@ -206,7 +215,7 @@ bool JSValue::putToPrimitiveByIndex(ExecState* exec, unsigned propertyName, JSVa
 
     if (propertyName > MAX_ARRAY_INDEX) {
         PutPropertySlot slot(*this, shouldThrow);
-        return putToPrimitive(exec, Identifier::from(exec, propertyName), value, slot);
+        return putToPrimitive(exec, Identifier::from(vm, propertyName), value, slot);
     }
 
     JSObject* prototype = synthesizePrototype(exec);
@@ -259,9 +268,9 @@ void JSValue::dumpInContextAssumingStructure(
                 out.print(" (rope)");
             const StringImpl* impl = string->tryGetValueImpl();
             if (impl) {
-                if (impl->isAtomic())
+                if (impl->isAtom())
                     out.print(" (atomic)");
-                if (impl->isAtomic())
+                if (impl->isAtom())
                     out.print(" (identifier)");
                 if (impl->isSymbol())
                     out.print(" (symbol)");
@@ -306,7 +315,7 @@ void JSValue::dumpForBacktrace(PrintStream& out) const
     else if (isDouble())
         out.printf("%lf", asDouble());
     else if (isCell()) {
-        VM& vm = *asCell()->vm();
+        VM& vm = asCell()->vm();
         if (asCell()->inherits<JSString>(vm)) {
             JSString* string = asString(asCell());
             const StringImpl* impl = string->tryGetValueImpl();
@@ -351,7 +360,7 @@ JSString* JSValue::toStringSlowCase(ExecState* exec, bool returnEmptyStringOnErr
 
     auto errorValue = [&] () -> JSString* {
         if (returnEmptyStringOnError)
-            return jsEmptyString(exec);
+            return jsEmptyString(vm);
         return nullptr;
     };
 
@@ -360,10 +369,10 @@ JSString* JSValue::toStringSlowCase(ExecState* exec, bool returnEmptyStringOnErr
         auto integer = asInt32();
         if (static_cast<unsigned>(integer) <= 9)
             return vm.smallStrings.singleCharacterString(integer + '0');
-        return jsNontrivialString(&vm, vm.numericStrings.add(integer));
+        return jsNontrivialString(vm, vm.numericStrings.add(integer));
     }
     if (isDouble())
-        return jsString(&vm, vm.numericStrings.add(asDouble()));
+        return jsString(vm, vm.numericStrings.add(asDouble()));
     if (isTrue())
         return vm.smallStrings.trueString();
     if (isFalse())
@@ -380,7 +389,7 @@ JSString* JSValue::toStringSlowCase(ExecState* exec, bool returnEmptyStringOnErr
         JSBigInt* bigInt = asBigInt(*this);
         if (auto digit = bigInt->singleDigitValueForString())
             return vm.smallStrings.singleCharacterString(*digit + '0');
-        JSString* returnString = jsNontrivialString(&vm, bigInt->toString(exec, 10));
+        JSString* returnString = jsNontrivialString(vm, bigInt->toString(exec, 10));
         RETURN_IF_EXCEPTION(scope, errorValue());
         return returnString;
     }

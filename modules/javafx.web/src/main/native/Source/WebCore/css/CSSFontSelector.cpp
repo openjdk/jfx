@@ -46,6 +46,7 @@
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "Logging.h"
+#include "Quirks.h"
 #include "ResourceLoadObserver.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
@@ -55,14 +56,14 @@
 #include "WebKitFontFamilyNames.h"
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 static unsigned fontSelectorId;
 
 CSSFontSelector::CSSFontSelector(Document& document)
-    : m_document(&document)
+    : m_document(makeWeakPtr(document))
     , m_cssFontFaceSet(CSSFontFaceSet::create(this))
     , m_beginLoadingTimer(*this, &CSSFontSelector::beginLoadTimerFired)
     , m_uniqueId(++fontSelectorId)
@@ -81,6 +82,11 @@ CSSFontSelector::~CSSFontSelector()
     clearDocument();
     m_cssFontFaceSet->removeClient(*this);
     FontCache::singleton().removeClient(*this);
+}
+
+FontFaceSet* CSSFontSelector::optionalFontFaceSet()
+{
+    return m_fontFaceSet.get();
 }
 
 FontFaceSet& CSSFontSelector::fontFaceSet()
@@ -207,7 +213,7 @@ void CSSFontSelector::addFontFaceRule(StyleRuleFontFace& fontFaceRule, bool isIn
     if (loadingBehavior)
         fontFace->setLoadingBehavior(*loadingBehavior);
 
-    CSSFontFace::appendSources(fontFace, srcList, m_document, isInitiatingElementInUserAgentShadowTree);
+    CSSFontFace::appendSources(fontFace, srcList, m_document.get(), isInitiatingElementInUserAgentShadowTree);
     if (fontFace->computeFailureState())
         return;
 
@@ -249,7 +255,7 @@ void CSSFontSelector::dispatchInvalidationCallbacks()
         client->fontsNeedUpdate(*this);
 }
 
-void CSSFontSelector::opportunisticallyStartFontDataURLLoading(const FontCascadeDescription& description, const AtomicString& familyName)
+void CSSFontSelector::opportunisticallyStartFontDataURLLoading(const FontCascadeDescription& description, const AtomString& familyName)
 {
     const auto& segmentedFontFace = m_cssFontFaceSet->fontFace(description.fontSelectionRequest(), familyName);
     if (!segmentedFontFace)
@@ -274,14 +280,14 @@ void CSSFontSelector::fontCacheInvalidated()
     dispatchInvalidationCallbacks();
 }
 
-static AtomicString resolveGenericFamily(Document* document, const FontDescription& fontDescription, const AtomicString& familyName)
+static Optional<AtomString> resolveGenericFamily(Document* document, const FontDescription& fontDescription, const AtomString& familyName)
 {
     auto platformResult = FontDescription::platformResolveGenericFamily(fontDescription.script(), fontDescription.locale(), familyName);
     if (!platformResult.isNull())
         return platformResult;
 
     if (!document)
-        return familyName;
+        return WTF::nullopt;
 
     const Settings& settings = document->settings();
 
@@ -301,10 +307,10 @@ static AtomicString resolveGenericFamily(Document* document, const FontDescripti
     if (familyName == standardFamily)
         return settings.standardFontFamily(script);
 
-    return familyName;
+    return WTF::nullopt;
 }
 
-FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescription, const AtomicString& familyName)
+FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescription, const AtomString& familyName)
 {
     // If this ASSERT() fires, it usually means you forgot a document.updateStyleIfNeeded() somewhere.
     ASSERT(!m_buildIsUnderway || m_computingRootStyleFontCount);
@@ -312,18 +318,34 @@ FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescr
     // FIXME: The spec (and Firefox) says user specified generic families (sans-serif etc.) should be resolved before the @font-face lookup too.
     bool resolveGenericFamilyFirst = familyName == standardFamily;
 
-    AtomicString familyForLookup = resolveGenericFamilyFirst ? resolveGenericFamily(m_document, fontDescription, familyName) : familyName;
-    auto* face = m_cssFontFaceSet->fontFace(fontDescription.fontSelectionRequest(), familyForLookup);
+    AtomString familyForLookup = familyName;
+    Optional<FontDescription> overrideFontDescription;
+    const FontDescription* fontDescriptionForLookup = &fontDescription;
+    auto resolveGenericFamily = [&]() {
+        if (auto genericFamilyOptional = WebCore::resolveGenericFamily(m_document.get(), fontDescription, familyName)) {
+            if (m_document && m_document->quirks().shouldLightenJapaneseBoldSansSerif() && familyForLookup == sansSerifFamily && fontDescription.weight() == boldWeightValue() && fontDescription.script() == USCRIPT_KATAKANA_OR_HIRAGANA) {
+                overrideFontDescription = fontDescription;
+                overrideFontDescription->setWeight(FontSelectionValue(600));
+                fontDescriptionForLookup = &*overrideFontDescription;
+            }
+            familyForLookup = *genericFamilyOptional;
+        }
+    };
+
+    if (resolveGenericFamilyFirst)
+        resolveGenericFamily();
+    auto* face = m_cssFontFaceSet->fontFace(fontDescriptionForLookup->fontSelectionRequest(), familyForLookup);
     if (face) {
         if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
             if (m_document)
                 ResourceLoadObserver::shared().logFontLoad(*m_document, familyForLookup.string(), true);
         }
-        return face->fontRanges(fontDescription);
+        return face->fontRanges(*fontDescriptionForLookup);
     }
+
     if (!resolveGenericFamilyFirst)
-        familyForLookup = resolveGenericFamily(m_document, fontDescription, familyName);
-    auto font = FontCache::singleton().fontForFamily(fontDescription, familyForLookup);
+        resolveGenericFamily();
+    auto font = FontCache::singleton().fontForFamily(*fontDescriptionForLookup, familyForLookup);
     if (RuntimeEnabledFeatures::sharedFeatures().webAPIStatisticsEnabled()) {
         if (m_document)
             ResourceLoadObserver::shared().logFontLoad(*m_document, familyForLookup.string(), !!font);

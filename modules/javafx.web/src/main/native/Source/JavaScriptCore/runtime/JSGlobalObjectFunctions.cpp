@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -44,6 +44,7 @@
 #include "Lexer.h"
 #include "LiteralParser.h"
 #include "Nodes.h"
+#include "ObjectConstructor.h"
 #include "JSCInlines.h"
 #include "ParseInt.h"
 #include "Parser.h"
@@ -57,11 +58,8 @@
 #include <wtf/MathExtras.h>
 #include <wtf/dtoa.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/unicode/UTF8Conversion.h>
 
 namespace JSC {
-
-using namespace WTF::Unicode;
 
 const ASCIILiteral ObjectProtoCalledOnNullOrUndefinedError { "Object.prototype.__proto__ called on null or undefined"_s };
 
@@ -154,7 +152,7 @@ static JSValue encode(ExecState* exec, const Bitmap<256>& doNotEscape, const Cha
 
     if (UNLIKELY(builder.hasOverflowed()))
         return throwOutOfMemoryError(exec, scope);
-    return jsString(exec, builder.toString());
+    return jsString(vm, builder.toString());
 }
 
 static JSValue encode(ExecState* exec, const Bitmap<256>& doNotEscape)
@@ -183,10 +181,15 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
             int charLen = 0;
             if (k <= length - 3 && isASCIIHexDigit(p[1]) && isASCIIHexDigit(p[2])) {
                 const char b0 = Lexer<CharType>::convertHex(p[1], p[2]);
-                const int sequenceLen = UTF8SequenceLength(b0);
-                if (sequenceLen && k <= length - sequenceLen * 3) {
+                const int sequenceLen = 1 + U8_COUNT_TRAIL_BYTES(b0);
+                if (k <= length - sequenceLen * 3) {
                     charLen = sequenceLen * 3;
-                    char sequence[5];
+#if U_ICU_VERSION_MAJOR_NUM >= 60
+                    uint8_t sequence[U8_MAX_LENGTH];
+#else
+                    // In pre-60 ICU, U8_COUNT_TRAIL_BYTES returns 0..5
+                    uint8_t sequence[6];
+#endif
                     sequence[0] = b0;
                     for (int i = 1; i < sequenceLen; ++i) {
                         const CharType* q = p + i * 3;
@@ -198,16 +201,20 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
                         }
                     }
                     if (charLen != 0) {
-                        sequence[sequenceLen] = 0;
-                        const int character = decodeUTF8Sequence(sequence);
-                        if (character < 0 || character >= 0x110000)
+                        UChar32 character;
+                        int32_t offset = 0;
+                        U8_NEXT(sequence, offset, sequenceLen, character);
+                        if (character < 0)
                             charLen = 0;
-                        else if (character >= 0x10000) {
+                        else if (!U_IS_BMP(character)) {
                             // Convert to surrogate pair.
-                            builder.append(static_cast<UChar>(0xD800 | ((character - 0x10000) >> 10)));
-                            u = static_cast<UChar>(0xDC00 | ((character - 0x10000) & 0x3FF));
-                        } else
+                            ASSERT(U_IS_SUPPLEMENTARY(character));
+                            builder.append(U16_LEAD(character));
+                            u = U16_TRAIL(character);
+                        } else {
+                            ASSERT(!U_IS_SURROGATE(character));
                             u = static_cast<UChar>(character);
+                        }
                     }
                 }
             }
@@ -234,7 +241,7 @@ static JSValue decode(ExecState* exec, const CharType* characters, int length, c
     }
     if (UNLIKELY(builder.hasOverflowed()))
         return throwOutOfMemoryError(exec, scope);
-    RELEASE_AND_RETURN(scope, jsString(&vm, builder.toString()));
+    RELEASE_AND_RETURN(scope, jsString(vm, builder.toString()));
 }
 
 static JSValue decode(ExecState* exec, const Bitmap<256>& doNotUnescape, bool strict)
@@ -594,6 +601,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
     );
 
     return JSValue::encode(toStringView(exec, exec->argument(0), [&] (StringView view) {
+        VM& vm = exec->vm();
         StringBuilder builder;
         if (view.is8Bit()) {
             const LChar* c = view.characters8();
@@ -606,7 +614,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
                     appendByteAsHex(u, builder);
                 }
             }
-            return jsString(exec, builder.toString());
+            return jsString(vm, builder.toString());
         }
 
         const UChar* c = view.characters16();
@@ -624,7 +632,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncEscape(ExecState* exec)
             }
         }
 
-        return jsString(exec, builder.toString());
+        return jsString(vm, builder.toString());
     }));
 }
 
@@ -680,7 +688,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncUnescape(ExecState* exec)
             }
         }
 
-        return jsString(exec, builder.toString());
+        return jsString(exec->vm(), builder.toString());
     }));
 }
 
@@ -696,6 +704,13 @@ EncodedJSValue JSC_HOST_CALL globalFuncThrowTypeErrorArgumentsCalleeAndCaller(Ex
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     return throwVMTypeError(exec, scope, "'arguments', 'callee', and 'caller' cannot be accessed in this context.");
+}
+
+EncodedJSValue JSC_HOST_CALL globalFuncMakeTypeError(ExecState* exec)
+{
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    Structure* errorStructure = globalObject->errorStructure(ErrorType::TypeError);
+    return JSValue::encode(ErrorInstance::create(exec, errorStructure, exec->argument(0), nullptr, TypeNothing, false));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncProtoGetter(ExecState* exec)
@@ -752,10 +767,12 @@ EncodedJSValue JSC_HOST_CALL globalFuncHostPromiseRejectionTracker(ExecState* ex
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (!globalObject->globalObjectMethodTable()->promiseRejectionTracker)
+    JSPromise* promise = jsCast<JSPromise*>(exec->argument(0));
+
+    // InternalPromises should not be exposed to user scripts.
+    if (jsDynamicCast<JSInternalPromise*>(vm, promise))
         return JSValue::encode(jsUndefined());
 
-    JSPromise* promise = jsCast<JSPromise*>(exec->argument(0));
     JSValue operationValue = exec->argument(1);
 
     ASSERT(operationValue.isNumber());
@@ -763,7 +780,18 @@ EncodedJSValue JSC_HOST_CALL globalFuncHostPromiseRejectionTracker(ExecState* ex
     ASSERT(operation == JSPromiseRejectionOperation::Reject || operation == JSPromiseRejectionOperation::Handle);
     scope.assertNoException();
 
-    globalObject->globalObjectMethodTable()->promiseRejectionTracker(globalObject, exec, promise, operation);
+    if (globalObject->globalObjectMethodTable()->promiseRejectionTracker)
+        globalObject->globalObjectMethodTable()->promiseRejectionTracker(globalObject, exec, promise, operation);
+    else {
+        switch (operation) {
+        case JSPromiseRejectionOperation::Reject:
+            vm.promiseRejected(promise);
+            break;
+        case JSPromiseRejectionOperation::Handle:
+            // do nothing
+            break;
+        }
+    }
     RETURN_IF_EXCEPTION(scope, { });
 
     return JSValue::encode(jsUndefined());
@@ -777,7 +805,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncBuiltinLog(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL globalFuncBuiltinDescribe(ExecState* exec)
 {
-    return JSValue::encode(jsString(exec, toString(exec->argument(0))));
+    return JSValue::encode(jsString(exec->vm(), toString(exec->argument(0))));
 }
 
 EncodedJSValue JSC_HOST_CALL globalFuncImportModule(ExecState* exec)
@@ -830,6 +858,15 @@ EncodedJSValue JSC_HOST_CALL globalFuncPropertyIsEnumerable(ExecState* exec)
     PropertyDescriptor descriptor;
     bool enumerable = object->getOwnPropertyDescriptor(exec, propertyName, descriptor) && descriptor.enumerable();
     return JSValue::encode(jsBoolean(enumerable));
+}
+
+EncodedJSValue JSC_HOST_CALL globalFuncOwnKeys(ExecState* exec)
+{
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSObject* object = exec->argument(0).toObject(exec);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    RELEASE_AND_RETURN(scope, JSValue::encode(ownPropertyKeys(exec, object, PropertyNameMode::StringsAndSymbols, DontEnumPropertiesMode::Include)));
 }
 
 #if ENABLE(INTL)

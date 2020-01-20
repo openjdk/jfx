@@ -48,15 +48,12 @@ using namespace Inspector;
 
 InspectorLayerTreeAgent::InspectorLayerTreeAgent(WebAgentContext& context)
     : InspectorAgentBase("LayerTree"_s, context)
-    , m_frontendDispatcher(std::make_unique<Inspector::LayerTreeFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<Inspector::LayerTreeFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::LayerTreeBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
 
-InspectorLayerTreeAgent::~InspectorLayerTreeAgent()
-{
-    reset();
-}
+InspectorLayerTreeAgent::~InspectorLayerTreeAgent() = default;
 
 void InspectorLayerTreeAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
 {
@@ -64,8 +61,8 @@ void InspectorLayerTreeAgent::didCreateFrontendAndBackend(Inspector::FrontendRou
 
 void InspectorLayerTreeAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
-    ErrorString unused;
-    disable(unused);
+    ErrorString ignored;
+    disable(ignored);
 }
 
 void InspectorLayerTreeAgent::reset()
@@ -85,6 +82,8 @@ void InspectorLayerTreeAgent::enable(ErrorString&)
 void InspectorLayerTreeAgent::disable(ErrorString&)
 {
     m_instrumentingAgents.setInspectorLayerTreeAgent(nullptr);
+
+    reset();
 }
 
 void InspectorLayerTreeAgent::layerTreeDidChange()
@@ -113,13 +112,13 @@ void InspectorLayerTreeAgent::layersForNode(ErrorString& errorString, int nodeId
 
     auto* node = m_instrumentingAgents.inspectorDOMAgent()->nodeForId(nodeId);
     if (!node) {
-        errorString = "Provided node id doesn't match any known node"_s;
+        errorString = "Missing node for given nodeId"_s;
         return;
     }
 
     auto* renderer = node->renderer();
     if (!renderer) {
-        errorString = "Node for provided node id doesn't have a renderer"_s;
+        errorString = "Missing renderer of node for given nodeId"_s;
         return;
     }
 
@@ -239,7 +238,7 @@ void InspectorLayerTreeAgent::reasonsForCompositingLayer(ErrorString& errorStrin
     const RenderLayer* renderLayer = m_idToLayer.get(layerId);
 
     if (!renderLayer) {
-        errorString = "Could not find a bound layer for the provided id"_s;
+        errorString = "Missing render layer for given layerId"_s;
         return;
     }
 
@@ -276,8 +275,10 @@ void InspectorLayerTreeAgent::reasonsForCompositingLayer(ErrorString& errorStrin
     if (reasons.contains(CompositingReason::PositionSticky))
         compositingReasons->setPositionSticky(true);
 
-    if (reasons.contains(CompositingReason::OverflowScrollingTouch))
+    if (reasons.contains(CompositingReason::OverflowScrolling))
         compositingReasons->setOverflowScrollingTouch(true);
+
+    // FIXME: handle OverflowScrollPositioning (webkit.org/b/195985).
 
     if (reasons.contains(CompositingReason::Stacking))
         compositingReasons->setStacking(true);

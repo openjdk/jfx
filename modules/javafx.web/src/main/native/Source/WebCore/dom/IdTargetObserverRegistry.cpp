@@ -30,19 +30,19 @@
 
 namespace WebCore {
 
-void IdTargetObserverRegistry::addObserver(const AtomicString& id, IdTargetObserver* observer)
+void IdTargetObserverRegistry::addObserver(const AtomString& id, IdTargetObserver* observer)
 {
     if (id.isEmpty())
         return;
 
     IdToObserverSetMap::AddResult result = m_registry.add(id.impl(), nullptr);
     if (result.isNewEntry)
-        result.iterator->value = std::make_unique<ObserverSet>();
+        result.iterator->value = makeUnique<ObserverSet>();
 
     result.iterator->value->add(observer);
 }
 
-void IdTargetObserverRegistry::removeObserver(const AtomicString& id, IdTargetObserver* observer)
+void IdTargetObserverRegistry::removeObserver(const AtomString& id, IdTargetObserver* observer)
 {
     if (id.isEmpty() || m_registry.isEmpty())
         return;
@@ -55,7 +55,7 @@ void IdTargetObserverRegistry::removeObserver(const AtomicString& id, IdTargetOb
         m_registry.remove(iter);
 }
 
-void IdTargetObserverRegistry::notifyObserversInternal(const AtomicStringImpl& id)
+void IdTargetObserverRegistry::notifyObserversInternal(const AtomStringImpl& id)
 {
     ASSERT(!m_registry.isEmpty());
 

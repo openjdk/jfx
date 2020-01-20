@@ -65,16 +65,15 @@ class ScrollView : public Widget, public ScrollableArea {
 public:
     virtual ~ScrollView();
 
+    using WeakValueType = Widget::WeakValueType;
+    using Widget::weakPtrFactory;
+
     // ScrollableArea functions.
-    int scrollSize(ScrollbarOrientation) const final;
-    int scrollOffset(ScrollbarOrientation) const final;
     WEBCORE_EXPORT void setScrollOffset(const ScrollOffset&) final;
     bool isScrollCornerVisible() const final;
     void scrollbarStyleChanged(ScrollbarStyle, bool forceUpdate) override;
 
     virtual void notifyPageThatContentAreaWillPaint() const;
-
-    using Widget::weakPtrFactory;
 
     IntPoint locationOfContents() const;
 
@@ -110,8 +109,8 @@ public:
     void setHorizontalScrollbarMode(ScrollbarMode mode, bool lock = false) { setScrollbarModes(mode, verticalScrollbarMode(), lock, verticalScrollbarLock()); }
     void setVerticalScrollbarMode(ScrollbarMode mode, bool lock = false) { setScrollbarModes(horizontalScrollbarMode(), mode, horizontalScrollbarLock(), lock); };
     WEBCORE_EXPORT void scrollbarModes(ScrollbarMode& horizontalMode, ScrollbarMode& verticalMode) const;
-    ScrollbarMode horizontalScrollbarMode() const { ScrollbarMode horizontal, vertical; scrollbarModes(horizontal, vertical); return horizontal; }
-    ScrollbarMode verticalScrollbarMode() const { ScrollbarMode horizontal, vertical; scrollbarModes(horizontal, vertical); return vertical; }
+    ScrollbarMode horizontalScrollbarMode() const final { ScrollbarMode horizontal, vertical; scrollbarModes(horizontal, vertical); return horizontal; }
+    ScrollbarMode verticalScrollbarMode() const final { ScrollbarMode horizontal, vertical; scrollbarModes(horizontal, vertical); return vertical; }
 
     void setHorizontalScrollbarLock(bool lock = true) { m_horizontalScrollbarLock = lock; }
     bool horizontalScrollbarLock() const { return m_horizontalScrollbarLock; }
@@ -196,8 +195,6 @@ public:
     LegacyTileCache* legacyTileCache();
 #endif
 
-    virtual bool inProgrammaticScroll() const { return false; }
-
     // Size available for view contents, including content inset areas. Not affected by zooming.
     IntSize sizeForVisibleContent(VisibleContentRectIncludesScrollbars = ExcludeScrollbars) const;
     // FIXME: remove this. It's only used for the incorrectly behaving ScrollView::unobscuredContentRectInternal().
@@ -232,7 +229,7 @@ public:
     int scrollY() const { return scrollPosition().y(); }
 
     // Scroll position used by web-exposed features (has legacy iOS behavior).
-    IntPoint contentsScrollPosition() const;
+    WEBCORE_EXPORT IntPoint contentsScrollPosition() const;
     void setContentsScrollPosition(const IntPoint&);
 
 #if PLATFORM(IOS_FAMILY)
@@ -281,12 +278,17 @@ public:
 
     WEBCORE_EXPORT IntPoint rootViewToContents(const IntPoint&) const;
     WEBCORE_EXPORT IntPoint contentsToRootView(const IntPoint&) const;
+    WEBCORE_EXPORT FloatPoint contentsToRootView(const FloatPoint&) const;
     WEBCORE_EXPORT IntRect rootViewToContents(const IntRect&) const;
     WEBCORE_EXPORT IntRect contentsToRootView(const IntRect&) const;
     WEBCORE_EXPORT FloatRect rootViewToContents(const FloatRect&) const;
+    WEBCORE_EXPORT FloatRect contentsToRootView(const FloatRect&) const;
 
     IntPoint viewToContents(const IntPoint&) const;
     IntPoint contentsToView(const IntPoint&) const;
+
+    FloatPoint viewToContents(const FloatPoint&) const;
+    FloatPoint contentsToView(const FloatPoint&) const;
 
     IntRect viewToContents(IntRect) const;
     IntRect contentsToView(IntRect) const;
