@@ -108,9 +108,7 @@ static OSStatus AVFTapRenderCallback(void *inRefCon,
                 if (noErr == MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks,
                         kMTAudioProcessingTapCreationFlag_PreEffects,
                         &audioProcessingTap)) {
-                    objc_msgSend(audioMixInputParameters,
-                            @selector(setAudioTapProcessor :),
-                            audioProcessingTap);
+                    [audioMixInputParameters setAudioTapProcessor:audioProcessingTap];
 
                     CFRelease(audioProcessingTap); // owned by the mixer now
                     mixer.inputParameters = @[audioMixInputParameters];
