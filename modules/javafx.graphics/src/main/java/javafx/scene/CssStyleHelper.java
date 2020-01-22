@@ -299,6 +299,9 @@ final class CssStyleHelper {
             return false;
         }
 
+        //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
+        node.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+
         // If the style maps are the same instance, we can re-use the current styleHelper if the cacheContainer is null.
         // Under this condition, there are no styles for this node _and_ no styles inherit.
         if (node.styleHelper.cacheContainer == null) {
@@ -318,8 +321,7 @@ final class CssStyleHelper {
         if (parent == null) {
             return true;
         }
-        //update ancestor since this node may have changed positions in the scene graph (JDK-8237469)
-        node.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+
         CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor);
 
         if (parentHelper != null && parentHelper.cacheContainer != null) {
