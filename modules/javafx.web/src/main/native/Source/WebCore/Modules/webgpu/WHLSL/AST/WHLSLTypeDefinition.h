@@ -27,10 +27,10 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLNamedType.h"
-#include "WHLSLNode.h"
 #include "WHLSLUnnamedType.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,35 +40,30 @@ namespace WHLSL {
 
 namespace AST {
 
-class TypeDefinition : public NamedType {
+class TypeDefinition final : public NamedType {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    TypeDefinition(Lexer::Token&& origin, String&& name, UniqueRef<UnnamedType>&& type)
-        : NamedType(WTFMove(origin), WTFMove(name))
+    TypeDefinition(CodeLocation location, String&& name, Ref<UnnamedType> type)
+        : NamedType(Kind::TypeDefinition, location, WTFMove(name))
         , m_type(WTFMove(type))
     {
     }
 
-    virtual ~TypeDefinition() = default;
+    ~TypeDefinition() = default;
 
     TypeDefinition(const TypeDefinition&) = delete;
     TypeDefinition(TypeDefinition&&) = default;
 
-    bool isTypeDefinition() const override { return true; }
-
     UnnamedType& type() { return m_type; }
 
-    const Type& unifyNode() const override
-    {
-        return m_type->unifyNode();
-    }
-
-    Type& unifyNode() override
-    {
-        return m_type->unifyNode();
-    }
-
 private:
-    UniqueRef<UnnamedType> m_type;
+    friend class Type;
+    Type& unifyNodeImpl()
+    {
+        return m_type->unifyNode();
+    }
+
+    Ref<UnnamedType> m_type;
 };
 
 } // namespace AST
@@ -77,6 +72,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_NAMED_TYPE(TypeDefinition, isTypeDefinition())
+DEFINE_DEFAULT_DELETE(TypeDefinition)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(TypeDefinition, isTypeDefinition())
 
 #endif

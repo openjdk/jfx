@@ -28,13 +28,19 @@
 
 #include "Animation.h"
 #include "AnimationEvent.h"
+#include "CSSAnimation.h"
+#include "CSSTransition.h"
+#include "DocumentTimeline.h"
 #include "Element.h"
 #include "EventNames.h"
 #include "KeyframeEffect.h"
 #include "PseudoElement.h"
 #include "TransitionEvent.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(DeclarativeAnimation);
 
 DeclarativeAnimation::DeclarativeAnimation(Element& owningElement, const Animation& backingAnimation)
     : WebAnimation(owningElement.document())
@@ -324,7 +330,7 @@ void DeclarativeAnimation::invalidateDOMEvents(Seconds elapsedTime)
     m_previousIteration = iteration;
 }
 
-void DeclarativeAnimation::enqueueDOMEvent(const AtomicString& eventType, Seconds elapsedTime)
+void DeclarativeAnimation::enqueueDOMEvent(const AtomString& eventType, Seconds elapsedTime)
 {
     ASSERT(m_owningElement);
     auto time = secondsToWebAnimationsAPITime(elapsedTime) / 1000;

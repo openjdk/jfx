@@ -54,6 +54,18 @@ const char* const opcodeNames[] = {
 
 #if ENABLE(OPCODE_STATS)
 
+inline const char* padOpcodeName(OpcodeID op, unsigned width)
+{
+    auto padding = "                                ";
+    auto paddingLength = strlen(padding);
+    auto opcodeNameLength = strlen(opcodeNames[op]);
+    if (opcodeNameLength >= width)
+        return "";
+    if (paddingLength + opcodeNameLength < width)
+        return padding;
+    return &padding[paddingLength + opcodeNameLength - width];
+}
+
 long long OpcodeStats::opcodeCounts[numOpcodeIDs];
 long long OpcodeStats::opcodePairCounts[numOpcodeIDs][numOpcodeIDs];
 int OpcodeStats::lastOpcode = -1;
@@ -85,9 +97,9 @@ static int compareOpcodeIndices(const void* left, const void* right)
 
 static int compareOpcodePairIndices(const void* left, const void* right)
 {
-    std::pair<int, int> leftPair = *(pair<int, int>*) left;
+    std::pair<int, int> leftPair = *(std::pair<int, int>*) left;
     long long leftValue = OpcodeStats::opcodePairCounts[leftPair.first][leftPair.second];
-    std::pair<int, int> rightPair = *(pair<int, int>*) right;
+    std::pair<int, int> rightPair = *(std::pair<int, int>*) right;
     long long rightValue = OpcodeStats::opcodePairCounts[rightPair.first][rightPair.second];
 
     if (leftValue < rightValue)
@@ -191,7 +203,7 @@ void OpcodeStats::resetLastInstruction()
 
 #endif
 
-static unsigned metadataSizes[] = {
+static const unsigned metadataSizes[] = {
 
 #define METADATA_SIZE(size) size,
     FOR_EACH_BYTECODE_METADATA_SIZE(METADATA_SIZE)
@@ -199,7 +211,7 @@ static unsigned metadataSizes[] = {
 
 };
 
-static unsigned metadataAlignments[] = {
+static const unsigned metadataAlignments[] = {
 
 #define METADATA_ALIGNMENT(size) size,
     FOR_EACH_BYTECODE_METADATA_ALIGNMENT(METADATA_ALIGNMENT)

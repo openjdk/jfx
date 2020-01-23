@@ -339,6 +339,16 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage()
     frame()->createView(IntRect(pageRect).size(), backgroundColor, /* fixedLayoutSize */ { }, /* fixedVisibleContentRect */ { });
 }
 
+void FrameLoaderClientJava::didSaveToPageCache()
+{
+    notImplemented();
+}
+
+void FrameLoaderClientJava::didRestoreFromPageCache()
+{
+    notImplemented();
+}
+
 WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
 {
     return DocumentLoader::create(request, substituteData);
@@ -359,7 +369,7 @@ void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const char* da
     loader->commitData(data, length);
 }
 
-void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, PolicyCheckIdentifier identifier, FramePolicyFunction&& policyFunction)
+void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, PolicyCheckIdentifier identifier, const String&, FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
     PolicyAction action;
@@ -678,7 +688,7 @@ void FrameLoaderClientJava::dispatchDidFailLoading(DocumentLoader* dl, unsigned 
     removeRequestURL(f, identifier);
 }
 
-void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& error)
+void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& error, WillContinueLoading)
 {
     ASSERT(frame());
     if (!frame()) {
@@ -702,7 +712,7 @@ void FrameLoaderClientJava::dispatchDidFailProvisionalLoad(const ResourceError& 
 
 void FrameLoaderClientJava::dispatchDidFailLoad(const ResourceError& error)
 {
-    dispatchDidFailProvisionalLoad(error);
+    dispatchDidFailProvisionalLoad(error, WillContinueLoading::No);
 }
 
 // client-side redirection
@@ -1056,14 +1066,6 @@ bool FrameLoaderClientJava::canCachePage() const
     return true;
 }
 
-void FrameLoaderClientJava::didSaveToPageCache()
-{
-}
-
-void FrameLoaderClientJava::didRestoreFromPageCache()
-{
-}
-
 void FrameLoaderClientJava::dispatchUnableToImplementPolicy(const ResourceError&)
 {
     notImplemented();
@@ -1157,21 +1159,19 @@ void FrameLoaderClientJava::prefetchDNS(const String& hostname)
     WebCore::prefetchDNS(hostname);
 }
 
-Optional<uint64_t> FrameLoaderClientJava::pageID() const
+Optional<PageIdentifier> FrameLoaderClientJava::pageID() const
 {
     return WTF::nullopt;
 }
 
-Optional<uint64_t> FrameLoaderClientJava::frameID() const
+Optional<FrameIdentifier> FrameLoaderClientJava::frameID() const
 {
     return WTF::nullopt;
 }
 
 PAL::SessionID FrameLoaderClientJava::sessionID() const
 {
-    RELEASE_ASSERT_NOT_REACHED();
-    return PAL::SessionID::defaultSessionID();
+    return m_frame && m_frame->page() ? m_frame->page()->sessionID() : PAL::SessionID::defaultSessionID();
 }
-
 
 }

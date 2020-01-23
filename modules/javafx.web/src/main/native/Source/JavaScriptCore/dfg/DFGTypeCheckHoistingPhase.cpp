@@ -122,10 +122,10 @@ public:
                 // cases where we need to append, we first carefully extract everything we need
                 // from the node, before doing any appending.
                 switch (node->op()) {
-                case SetArgument: {
+                case SetArgumentDefinitely: {
                     // Insert a GetLocal and a CheckStructure immediately following this
-                    // SetArgument, if the variable was a candidate for structure hoisting.
-                    // If the basic block previously only had the SetArgument as its
+                    // SetArgumentDefinitely, if the variable was a candidate for structure hoisting.
+                    // If the basic block previously only had the SetArgumentDefinitely as its
                     // variable-at-tail, then replace it with this GetLocal.
                     VariableAccessData* variable = node->variableAccessData();
                     HashMap<VariableAccessData*, CheckData>::iterator iter = m_map.find(variable);
@@ -147,7 +147,7 @@ public:
                         auto checkOp = CheckStructure;
                         if (SpecCellCheck & SpecEmpty) {
                             VirtualRegister local = node->variableAccessData()->local();
-                            auto* inlineCallFrame = node->origin.semantic.inlineCallFrame;
+                            auto* inlineCallFrame = node->origin.semantic.inlineCallFrame();
                             if ((local - (inlineCallFrame ? inlineCallFrame->stackOffset : 0)) == virtualRegisterForArgument(0)) {
                                 // |this| can be the TDZ value. The call entrypoint won't have |this| as TDZ,
                                 // but a catch or a loop OSR entry may have |this| be TDZ.

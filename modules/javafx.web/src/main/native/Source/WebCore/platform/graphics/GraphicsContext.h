@@ -33,6 +33,7 @@
 #include "GraphicsTypes.h"
 #include "Image.h"
 #include "ImageOrientation.h"
+#include "ImagePaintingOptions.h"
 #include "Pattern.h"
 #include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
@@ -44,7 +45,10 @@ interface ID2D1DCRenderTarget;
 interface ID2D1RenderTarget;
 interface ID2D1Factory;
 interface ID2D1SolidColorBrush;
-typedef ID2D1RenderTarget PlatformGraphicsContext;
+namespace WebCore {
+class PlatformContextDirect2D;
+}
+typedef WebCore::PlatformContextDirect2D PlatformGraphicsContext;
 #elif USE(CAIRO)
 namespace WebCore {
 class PlatformContextCairo;
@@ -171,6 +175,9 @@ struct GraphicsContextState {
         ShouldSubpixelQuantizeFontsChange       = 1 << 19,
         DrawLuminanceMaskChange                 = 1 << 20,
         ImageInterpolationQualityChange         = 1 << 21,
+#if HAVE(OS_DARK_MODE_SUPPORT)
+        UseDarkAppearanceChange                 = 1 << 22,
+#endif
     };
     typedef uint32_t StateChangeFlags;
 
@@ -211,43 +218,9 @@ struct GraphicsContextState {
     FloatRect clipBounds;
 #endif
     bool drawLuminanceMask : 1;
-};
-
-struct ImagePaintingOptions {
-    ImagePaintingOptions(CompositeOperator compositeOperator = CompositeSourceOver, BlendMode blendMode = BlendMode::Normal, DecodingMode decodingMode = DecodingMode::Synchronous, ImageOrientationDescription orientationDescription = ImageOrientationDescription(), InterpolationQuality interpolationQuality = InterpolationDefault)
-        : m_compositeOperator(compositeOperator)
-        , m_blendMode(blendMode)
-        , m_decodingMode(decodingMode)
-        , m_orientationDescription(orientationDescription)
-        , m_interpolationQuality(interpolationQuality)
-    {
-    }
-
-    ImagePaintingOptions(ImageOrientationDescription orientationDescription, InterpolationQuality interpolationQuality = InterpolationDefault, CompositeOperator compositeOperator = CompositeSourceOver, BlendMode blendMode = BlendMode::Normal, DecodingMode decodingMode = DecodingMode::Synchronous)
-        : m_compositeOperator(compositeOperator)
-        , m_blendMode(blendMode)
-        , m_decodingMode(decodingMode)
-        , m_orientationDescription(orientationDescription)
-        , m_interpolationQuality(interpolationQuality)
-    {
-    }
-
-    ImagePaintingOptions(InterpolationQuality interpolationQuality, ImageOrientationDescription orientationDescription = ImageOrientationDescription(), CompositeOperator compositeOperator = CompositeSourceOver, BlendMode blendMode = BlendMode::Normal, DecodingMode decodingMode = DecodingMode::Synchronous)
-        : m_compositeOperator(compositeOperator)
-        , m_blendMode(blendMode)
-        , m_decodingMode(decodingMode)
-        , m_orientationDescription(orientationDescription)
-        , m_interpolationQuality(interpolationQuality)
-    {
-    }
-
-    bool usesDefaultInterpolation() const { return m_interpolationQuality == InterpolationDefault; }
-
-    CompositeOperator m_compositeOperator;
-    BlendMode m_blendMode;
-    DecodingMode m_decodingMode;
-    ImageOrientationDescription m_orientationDescription;
-    InterpolationQuality m_interpolationQuality;
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    bool useDarkAppearance : 1;
+#endif
 };
 
 struct GraphicsContextStateChange {
@@ -289,6 +262,14 @@ public:
         InvalidatingImagesWithAsyncDecodes
     };
     GraphicsContext(PaintInvalidationReasons);
+
+#if USE(DIRECT2D)
+    enum class BitmapRenderingContextType : uint8_t {
+        CPUMemory,
+        GPUMemory
+    };
+    WEBCORE_EXPORT GraphicsContext(PlatformGraphicsContext*, BitmapRenderingContextType);
+#endif
 
     WEBCORE_EXPORT bool hasPlatformContext() const;
     WEBCORE_EXPORT PlatformGraphicsContext* platformContext() const;
@@ -342,7 +323,7 @@ public:
     const GraphicsContextState& state() const { return m_state; }
 
 #if USE(CG) || USE(DIRECT2D) || USE(CAIRO)
-    WEBCORE_EXPORT void drawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator = CompositeSourceOver, BlendMode = BlendMode::Normal, ImageOrientation = ImageOrientation());
+    WEBCORE_EXPORT void drawNativeImage(const NativeImagePtr&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { });
 #endif
 
 #if USE(CG) || USE(DIRECT2D)
@@ -360,6 +341,8 @@ public:
 
     WEBCORE_EXPORT void save();
     WEBCORE_EXPORT void restore();
+
+    unsigned stackSize() const { return m_stack.size(); }
 
     // These draw methods will do both stroking and filling.
     // FIXME: ...except drawRect(), which fills properly but always strokes
@@ -388,23 +371,22 @@ public:
 
     WEBCORE_EXPORT void strokeRect(const FloatRect&, float lineWidth);
 
-    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatPoint& destination, const ImagePaintingOptions& = ImagePaintingOptions());
-    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatRect& destination, const ImagePaintingOptions& = ImagePaintingOptions());
-    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = ImagePaintingOptions());
+    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatPoint& destination, const ImagePaintingOptions& = { });
+    WEBCORE_EXPORT ImageDrawResult drawImage(Image&, const FloatRect& destination, const ImagePaintingOptions& = { });
+    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { });
 
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = ImagePaintingOptions());
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor,
-        Image::TileRule, Image::TileRule, const ImagePaintingOptions& = ImagePaintingOptions());
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = { });
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { });
 
-    WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatPoint& destination, const ImagePaintingOptions& = ImagePaintingOptions());
-    void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const ImagePaintingOptions& = ImagePaintingOptions());
-    void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = ImagePaintingOptions());
+    WEBCORE_EXPORT void drawImageBuffer(ImageBuffer&, const FloatPoint& destination, const ImagePaintingOptions& = { });
+    void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const ImagePaintingOptions& = { });
+    void drawImageBuffer(ImageBuffer&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { });
 
-    void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal);
+    void drawPattern(Image&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { });
 
-    WEBCORE_EXPORT void drawConsumingImageBuffer(std::unique_ptr<ImageBuffer>, const FloatPoint& destination, const ImagePaintingOptions& = ImagePaintingOptions());
-    void drawConsumingImageBuffer(std::unique_ptr<ImageBuffer>, const FloatRect& destination, const ImagePaintingOptions& = ImagePaintingOptions());
-    void drawConsumingImageBuffer(std::unique_ptr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = ImagePaintingOptions());
+    WEBCORE_EXPORT void drawConsumingImageBuffer(std::unique_ptr<ImageBuffer>, const FloatPoint& destination, const ImagePaintingOptions& = { });
+    void drawConsumingImageBuffer(std::unique_ptr<ImageBuffer>, const FloatRect& destination, const ImagePaintingOptions& = { });
+    void drawConsumingImageBuffer(std::unique_ptr<ImageBuffer>, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { });
 
     WEBCORE_EXPORT void setImageInterpolationQuality(InterpolationQuality);
     InterpolationQuality imageInterpolationQuality() const { return m_state.imageInterpolationQuality; }
@@ -422,9 +404,14 @@ public:
     void setTextDrawingMode(TextDrawingModeFlags);
     TextDrawingModeFlags textDrawingMode() const { return m_state.textDrawingMode; }
 
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    void setUseDarkAppearance(bool);
+    bool useDarkAppearance() const { return m_state.useDarkAppearance; }
+#endif
+
     float drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, Optional<unsigned> to = WTF::nullopt);
     void drawGlyphs(const Font&, const GlyphBuffer&, unsigned from, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode);
-    void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomicString& mark, const FloatPoint&, unsigned from = 0, Optional<unsigned> to = WTF::nullopt);
+    void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, Optional<unsigned> to = WTF::nullopt);
     void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady);
 
     void applyState(const GraphicsContextState&);
@@ -546,6 +533,7 @@ public:
     bool shouldIncludeChildWindows() const;
 
     class WindowsBitmap {
+        WTF_MAKE_FAST_ALLOCATED;
         WTF_MAKE_NONCOPYABLE(WindowsBitmap);
     public:
         WindowsBitmap(HDC, const IntSize&);
@@ -606,8 +594,7 @@ private:
 
 #if USE(DIRECT2D)
     void platformInit(HDC, ID2D1RenderTarget**, RECT, bool hasAlpha = false);
-    void drawWithoutShadow(const FloatRect& boundingRect, const WTF::Function<void(ID2D1RenderTarget*)>&);
-    void drawWithShadow(const FloatRect& boundingRect, const WTF::Function<void(ID2D1RenderTarget*)>&);
+    void platformInit(PlatformContextDirect2D*, BitmapRenderingContextType);
 #endif
 
     void savePlatformState();
@@ -697,6 +684,27 @@ private:
     GraphicsContext& m_context;
     bool m_saveAndRestore;
 };
+
+
+class GraphicsContextStateStackChecker {
+public:
+    GraphicsContextStateStackChecker(GraphicsContext& context)
+        : m_context(context)
+        , m_stackSize(context.stackSize())
+    { }
+
+    ~GraphicsContextStateStackChecker()
+    {
+        if (m_context.stackSize() != m_stackSize)
+            WTFLogAlways("GraphicsContext %p stack changed by %d", this, (int)m_context.stackSize() - (int)m_stackSize);
+    }
+
+private:
+    GraphicsContext& m_context;
+    unsigned m_stackSize;
+};
+
+
 
 class InterpolationQualityMaintainer {
 public:

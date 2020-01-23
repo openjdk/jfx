@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,7 +65,7 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyMemory(ExecState* exec
 
     Wasm::PageCount initialPageCount;
     {
-        Identifier initial = Identifier::fromString(&vm, "initial");
+        Identifier initial = Identifier::fromString(vm, "initial");
         JSValue minSizeValue = memoryDescriptor->get(exec, initial);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
         uint32_t size = toNonWrappingUint32(exec, minSizeValue);
@@ -79,12 +79,12 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyMemory(ExecState* exec
 
     Wasm::PageCount maximumPageCount;
     {
-        Identifier maximum = Identifier::fromString(&vm, "maximum");
-        bool hasProperty = memoryDescriptor->hasProperty(exec, maximum);
+        // In WebIDL, "present" means that [[Get]] result is undefined, not [[HasProperty]] result.
+        // https://heycam.github.io/webidl/#idl-dictionaries
+        Identifier maximum = Identifier::fromString(vm, "maximum");
+        JSValue maxSizeValue = memoryDescriptor->get(exec, maximum);
         RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-        if (hasProperty) {
-            JSValue maxSizeValue = memoryDescriptor->get(exec, maximum);
-            RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
+        if (!maxSizeValue.isUndefined()) {
             uint32_t size = toNonWrappingUint32(exec, maxSizeValue);
             RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
             if (!Wasm::PageCount::isValid(size))
@@ -98,7 +98,7 @@ static EncodedJSValue JSC_HOST_CALL constructJSWebAssemblyMemory(ExecState* exec
         }
     }
 
-    auto* jsMemory = JSWebAssemblyMemory::create(exec, vm, exec->lexicalGlobalObject()->WebAssemblyMemoryStructure());
+    auto* jsMemory = JSWebAssemblyMemory::create(exec, vm, exec->lexicalGlobalObject()->webAssemblyMemoryStructure());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
     RefPtr<Wasm::Memory> memory = Wasm::Memory::tryCreate(initialPageCount, maximumPageCount,
@@ -134,9 +134,9 @@ Structure* WebAssemblyMemoryConstructor::createStructure(VM& vm, JSGlobalObject*
 
 void WebAssemblyMemoryConstructor::finishCreation(VM& vm, WebAssemblyMemoryPrototype* prototype)
 {
-    Base::finishCreation(vm, "Memory"_s);
+    Base::finishCreation(vm, "Memory"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 WebAssemblyMemoryConstructor::WebAssemblyMemoryConstructor(VM& vm, Structure* structure)

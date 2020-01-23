@@ -137,23 +137,22 @@ void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, 
     ctxt.setCompositeOperation(previousOperator);
 }
 
-void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op, BlendMode blendMode)
+void Image::drawPattern(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform,  const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
-    if (!nativeImageForCurrentFrame())
+    if (!nativeImageForCurrentFrame(&ctxt))
         return;
 
-    ctxt.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, op, blendMode);
+    ctxt.drawPattern(*this, destRect, tileRect, patternTransform, phase, spacing, options);
 
     if (imageObserver())
         imageObserver()->didDraw(*this);
 }
 
-ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, CompositeOperator op, BlendMode blendMode, DecodingMode decodingMode)
+ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
     Color color = singlePixelSolidColor();
     if (color.isValid()) {
-        fillWithSolidColor(ctxt, destRect, color, op);
+        fillWithSolidColor(ctxt, destRect, color, options.compositeOperator());
         return ImageDrawResult::DidDraw;
     }
 
@@ -161,11 +160,7 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
     ASSERT(!isBitmapImage() || notSolidColor());
 #endif
 
-#if PLATFORM(IOS_FAMILY)
-    FloatSize intrinsicTileSize = originalSize();
-#else
     FloatSize intrinsicTileSize = size();
-#endif
     if (hasRelativeWidth())
         intrinsicTileSize.setWidth(scaledTileSize.width());
     if (hasRelativeHeight())
@@ -186,7 +181,7 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
         visibleSrcRect.setY((destRect.y() - oneTileRect.y()) / scale.height());
         visibleSrcRect.setWidth(destRect.width() / scale.width());
         visibleSrcRect.setHeight(destRect.height() / scale.height());
-        return draw(ctxt, destRect, visibleSrcRect, op, blendMode, decodingMode, ImageOrientationDescription());
+        return draw(ctxt, destRect, visibleSrcRect, options);
     }
 
 #if PLATFORM(IOS_FAMILY)
@@ -198,7 +193,7 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
             visibleSrcRect.setY((destRect.y() - oneTileRect.y()) / scale.height());
             visibleSrcRect.setWidth(1);
             visibleSrcRect.setHeight(destRect.height() / scale.height());
-            return draw(ctxt, destRect, visibleSrcRect, op, BlendMode::Normal, decodingMode, ImageOrientationDescription());
+            return draw(ctxt, destRect, visibleSrcRect, { options, BlendMode::Normal });
         }
         if (size().height() == 1 && intersection(oneTileRect, destRect).width() == destRect.width()) {
             FloatRect visibleSrcRect;
@@ -206,7 +201,7 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
             visibleSrcRect.setY(0);
             visibleSrcRect.setWidth(destRect.width() / scale.width());
             visibleSrcRect.setHeight(1);
-            return draw(ctxt, destRect, visibleSrcRect, op, BlendMode::Normal, decodingMode, ImageOrientationDescription());
+            return draw(ctxt, destRect, visibleSrcRect, { options, BlendMode::Normal });
         }
     }
 #endif
@@ -238,7 +233,7 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
                 FloatRect fromRect(toFloatPoint(currentTileRect.location() - oneTileRect.location()), currentTileRect.size());
                 fromRect.scale(1 / scale.width(), 1 / scale.height());
 
-                result = draw(ctxt, toRect, fromRect, op, BlendMode::Normal, decodingMode, ImageOrientationDescription());
+                result = draw(ctxt, toRect, fromRect, { options, BlendMode::Normal });
                 if (result == ImageDrawResult::DidRequestDecoding)
                     return result;
                 toX += currentTileRect.width();
@@ -252,17 +247,17 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRec
 
     AffineTransform patternTransform = AffineTransform().scaleNonUniform(scale.width(), scale.height());
     FloatRect tileRect(FloatPoint(), intrinsicTileSize);
-    drawPattern(ctxt, destRect, tileRect, patternTransform, oneTileRect.location(), spacing, op, blendMode);
+    drawPattern(ctxt, destRect, tileRect, patternTransform, oneTileRect.location(), spacing, options);
     startAnimation();
     return ImageDrawResult::DidDraw;
 }
 
 // FIXME: Merge with the other drawTiled eventually, since we need a combination of both for some things.
-ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, CompositeOperator op)
+ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, const ImagePaintingOptions& options)
 {
     Color color = singlePixelSolidColor();
     if (color.isValid()) {
-        fillWithSolidColor(ctxt, dstRect, color, op);
+        fillWithSolidColor(ctxt, dstRect, color, options.compositeOperator());
         return ImageDrawResult::DidDraw;
     }
 
@@ -332,18 +327,14 @@ ImageDrawResult Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect
         vPhase -= (dstRect.height() - scaledTileHeight) / 2;
 
     FloatPoint patternPhase(dstRect.x() - hPhase, dstRect.y() - vPhase);
-    drawPattern(ctxt, dstRect, srcRect, patternTransform, patternPhase, spacing, op);
+    drawPattern(ctxt, dstRect, srcRect, patternTransform, patternPhase, spacing, options);
     startAnimation();
     return ImageDrawResult::DidDraw;
 }
 
 void Image::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
 {
-#if PLATFORM(IOS_FAMILY)
-    intrinsicRatio = originalSize();
-#else
     intrinsicRatio = size();
-#endif
     intrinsicWidth = Length(intrinsicRatio.width(), Fixed);
     intrinsicHeight = Length(intrinsicRatio.height(), Fixed);
 }
@@ -351,7 +342,7 @@ void Image::computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsic
 void Image::startAnimationAsynchronously()
 {
     if (!m_animationStartTimer)
-        m_animationStartTimer = std::make_unique<Timer>(*this, &Image::startAnimation);
+        m_animationStartTimer = makeUnique<Timer>(*this, &Image::startAnimation);
     if (m_animationStartTimer->isActive())
         return;
     m_animationStartTimer->startOneShot(0_s);

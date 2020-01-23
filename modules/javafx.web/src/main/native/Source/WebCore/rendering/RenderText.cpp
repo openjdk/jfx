@@ -1,7 +1,7 @@
 /*
  * (C) 1999 Lars Knoll (knoll@kde.org)
  * (C) 2000 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004-2007, 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Andrew Wellington (proton@wiretapped.net)
  * Copyright (C) 2006 Graham Dennis (graham.dennis@gmail.com)
  *
@@ -51,7 +51,6 @@
 #include "VisiblePosition.h"
 #include <wtf/IsoMallocInlines.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -141,46 +140,43 @@ static HashMap<const RenderText*, WeakPtr<RenderInline>>& inlineWrapperForDispla
     return map;
 }
 
+static constexpr UChar convertNoBreakSpaceToSpace(UChar character)
+{
+    return character == noBreakSpace ? ' ' : character;
+}
+
 String capitalize(const String& string, UChar previousCharacter)
 {
-    // FIXME: Need to change this to use u_strToTitle instead of u_totitle and to consider locale.
-
-    if (string.isNull())
-        return string;
+    // FIXME: Change this to use u_strToTitle instead of u_totitle and to consider locale.
 
     unsigned length = string.length();
     auto& stringImpl = *string.impl();
 
-    if (length >= std::numeric_limits<unsigned>::max())
-        CRASH();
+    static_assert(String::MaxLength < std::numeric_limits<unsigned>::max(), "Must be able to add one without overflowing unsigned");
 
-    StringBuffer<UChar> stringWithPrevious(length + 1);
-    stringWithPrevious[0] = previousCharacter == noBreakSpace ? ' ' : previousCharacter;
-    for (unsigned i = 1; i < length + 1; i++) {
-        // Replace NO BREAK SPACE with a real space since ICU does not treat it as a word separator.
-        if (stringImpl[i - 1] == noBreakSpace)
-            stringWithPrevious[i] = ' ';
-        else
-            stringWithPrevious[i] = stringImpl[i - 1];
-    }
+    // Replace NO BREAK SPACE with a normal spaces since ICU does not treat it as a word separator.
+    Vector<UChar> stringWithPrevious(length + 1);
+    stringWithPrevious[0] = convertNoBreakSpaceToSpace(previousCharacter);
+    for (unsigned i = 1; i < length + 1; i++)
+        stringWithPrevious[i] = convertNoBreakSpaceToSpace(stringImpl[i - 1]);
 
-    auto* boundary = wordBreakIterator(StringView(stringWithPrevious.characters(), length + 1));
-    if (!boundary)
+    auto* breakIterator = wordBreakIterator(StringView { stringWithPrevious.data(), length + 1 });
+    if (!breakIterator)
         return string;
 
     StringBuilder result;
     result.reserveCapacity(length);
 
+    int32_t startOfWord = ubrk_first(breakIterator);
     int32_t endOfWord;
-    int32_t startOfWord = ubrk_first(boundary);
-    for (endOfWord = ubrk_next(boundary); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(boundary)) {
-        if (startOfWord) // Ignore first char of previous string
-            result.append(stringImpl[startOfWord - 1] == noBreakSpace ? noBreakSpace : u_totitle(stringWithPrevious[startOfWord]));
+    for (endOfWord = ubrk_next(breakIterator); endOfWord != UBRK_DONE; startOfWord = endOfWord, endOfWord = ubrk_next(breakIterator)) {
+        if (startOfWord) // Do not append the first character, since it's the previous character, not from this string.
+            result.appendCharacter(u_totitle(stringImpl[startOfWord - 1]));
         for (int i = startOfWord + 1; i < endOfWord; i++)
             result.append(stringImpl[i - 1]);
     }
 
-    return result.toString();
+    return result == string ? string : result.toString();
 }
 
 inline RenderText::RenderText(Node& node, const String& text)
@@ -384,8 +380,8 @@ void RenderText::collectSelectionRects(Vector<SelectionRect>& rects, unsigned st
         RenderBlock* containingBlock = this->containingBlock();
         // Map rect, extended left to leftOffset, and right to rightOffset, through transforms to get minX and maxX.
         LogicalSelectionOffsetCaches cache(*containingBlock);
-        LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, box->logicalTop(), cache);
-        LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, box->logicalTop(), cache);
+        LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(box->logicalTop()), cache);
+        LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(box->logicalTop()), cache);
         LayoutRect extentsRect = rect;
         if (box->isHorizontal()) {
             extentsRect.setX(leftOffset);
@@ -710,6 +706,7 @@ LineBreakIteratorMode mapLineBreakToIteratorMode(LineBreak lineBreak)
     switch (lineBreak) {
     case LineBreak::Auto:
     case LineBreak::AfterWhiteSpace:
+    case LineBreak::Anywhere:
         return LineBreakIteratorMode::Default;
     case LineBreak::Loose:
         return LineBreakIteratorMode::Loose;
@@ -834,6 +831,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     // Note the deliberate omission of word-wrap and overflow-wrap from this breakAll check. Those
     // do not affect minimum preferred sizes. Note that break-word is a non-standard value for
     // word-break, but we support it as though it means break-all.
+    bool breakAnywhere = style.lineBreak() == LineBreak::Anywhere && style.autoWrap();
     bool breakAll = (style.wordBreak() == WordBreak::BreakAll || style.wordBreak() == WordBreak::BreakWord) && style.autoWrap();
     bool keepAllWords = style.wordBreak() == WordBreak::KeepAll;
     bool canUseLineBreakShortcut = iteratorMode == LineBreakIteratorMode::Default;
@@ -882,7 +880,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
             continue;
         }
 
-        bool hasBreak = breakAll || isBreakable(breakIterator, i, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords);
+        bool hasBreak = breakAll || isBreakable(breakIterator, i, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere);
         bool betweenWords = true;
         unsigned j = i;
         while (c != '\n' && !isSpaceAccordingToStyle(c, style) && c != '\t' && (c != softHyphen || style.hyphens() == Hyphens::None)) {
@@ -890,7 +888,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
             if (j == length)
                 break;
             c = string[j];
-            if (isBreakable(breakIterator, j, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords) && characterAt(j - 1) != softHyphen)
+            if (isBreakable(breakIterator, j, nextBreakable, breakNBSP, canUseLineBreakShortcut, keepAllWords, breakAnywhere) && characterAt(j - 1) != softHyphen)
                 break;
             if (breakAll) {
                 betweenWords = false;
@@ -1313,7 +1311,7 @@ void RenderText::dirtyLineBoxes(bool fullLayout)
 
 std::unique_ptr<InlineTextBox> RenderText::createTextBox()
 {
-    return std::make_unique<InlineTextBox>(*this);
+    return makeUnique<InlineTextBox>(*this);
 }
 
 void RenderText::positionLineBox(InlineTextBox& textBox)
@@ -1491,14 +1489,15 @@ unsigned RenderText::countRenderedCharacterOffsetsUntil(unsigned offset) const
 
 bool RenderText::containsRenderedCharacterOffset(unsigned offset) const
 {
-    ASSERT(!simpleLineLayout());
+    if (auto* layout = simpleLineLayout())
+        return SimpleLineLayout::containsOffset(*this, *layout, offset, SimpleLineLayout::OffsetType::CharacterOffset);
     return m_lineBoxes.containsOffset(*this, offset, RenderTextLineBoxes::CharacterOffset);
 }
 
 bool RenderText::containsCaretOffset(unsigned offset) const
 {
     if (auto* layout = simpleLineLayout())
-        return SimpleLineLayout::containsCaretOffset(*this, *layout, offset);
+        return SimpleLineLayout::containsOffset(*this, *layout, offset, SimpleLineLayout::OffsetType::CaretOffset);
     return m_lineBoxes.containsOffset(*this, offset, RenderTextLineBoxes::CaretOffset);
 }
 
@@ -1546,7 +1545,7 @@ void RenderText::momentarilyRevealLastTypedCharacter(unsigned offsetAfterLastTyp
         return;
     auto& secureTextTimer = secureTextTimers().add(this, nullptr).iterator->value;
     if (!secureTextTimer)
-        secureTextTimer = std::make_unique<SecureTextTimer>(*this);
+        secureTextTimer = makeUnique<SecureTextTimer>(*this);
     secureTextTimer->restart(offsetAfterLastTypedCharacter);
 }
 

@@ -64,6 +64,7 @@ struct RTCRtpCapabilities;
 enum class MDNSRegisterError { NotImplemented, BadParameter, DNSSD, Internal, Timeout };
 
 class WEBCORE_EXPORT LibWebRTCProvider {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static UniqueRef<LibWebRTCProvider> create();
 
@@ -91,7 +92,7 @@ public:
     }
 
 #if USE(LIBWEBRTC)
-    virtual rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, webrtc::PeerConnectionInterface::RTCConfiguration&&);
+    virtual rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::PacketSocketFactory*, webrtc::PeerConnectionInterface::RTCConfiguration&&);
 
     webrtc::PeerConnectionFactoryInterface* factory();
 
@@ -115,6 +116,11 @@ public:
 
     void clearFactory() { m_factory = nullptr; }
 
+    void setEnableLogging(bool);
+    void setEnableWebRTCEncryption(bool);
+
+    virtual std::unique_ptr<rtc::PacketSocketFactory> createSocketFactory(PAL::SessionID, String&& /* userAgent */) { return nullptr; }
+
 protected:
     LibWebRTCProvider() = default;
 
@@ -131,6 +137,7 @@ protected:
     rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> m_factory;
     bool m_disableNonLocalhostConnections { false };
     bool m_supportsVP8 { false };
+    bool m_enableLogging { true };
 #endif
 };
 

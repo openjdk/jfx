@@ -247,11 +247,6 @@ void TestRunner::setTabKeyCyclesThroughElements(bool cycles)
     // FIXME: implement
 }
 
-void TestRunner::setUseDashboardCompatibilityMode(bool flag)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setUserStyleSheetEnabled(bool flag)
 {
     // FIXME: implement
@@ -604,11 +599,6 @@ void TestRunner::forceImmediateCompletion()
 void TestRunner::setSpellCheckerResults(JSContextRef, JSObjectRef)
 {
     fprintf(testResult, "ERROR: TestRunner::setSpellCheckerResults() not implemented\n");
-}
-
-void TestRunner::setIDBPerOriginQuota(uint64_t)
-{
-    fprintf(testResult, "ERROR: TestRunner::setIDBPerOriginQuota() not implemented\n");
 }
 
 void TestRunner::setOnlyAcceptFirstPartyCookies(bool)

@@ -28,8 +28,8 @@
 
 namespace WebCore {
 
-class DOMImplementation : public ScriptWrappable {
-    WTF_MAKE_FAST_ALLOCATED;
+class DOMImplementation final : public ScriptWrappable {
+    WTF_MAKE_ISO_ALLOCATED(DOMImplementation);
 public:
     explicit DOMImplementation(Document&);
 
@@ -43,7 +43,7 @@ public:
     static bool hasFeature() { return true; }
     WEBCORE_EXPORT static Ref<CSSStyleSheet> createCSSStyleSheet(const String& title, const String& media);
 
-    static Ref<Document> createDocument(const String& MIMEType, Frame*, const URL&);
+    static Ref<Document> createDocument(PAL::SessionID, const String& MIMEType, Frame*, const URL&);
 
 private:
     Document& m_document;

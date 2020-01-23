@@ -27,16 +27,16 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
+#include "IDBError.h"
 #include "IDBTransactionInfo.h"
-#include "UniqueIDBDatabaseConnection.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class IDBCursorInfo;
 class IDBDatabaseInfo;
-class IDBError;
 class IDBIndexInfo;
 class IDBKeyData;
 class IDBObjectStoreInfo;
@@ -50,10 +50,13 @@ struct IDBKeyRangeData;
 
 namespace IDBServer {
 
+class IDBServer;
 class UniqueIDBDatabaseConnection;
 
-class UniqueIDBDatabaseTransaction : public RefCounted<UniqueIDBDatabaseTransaction> {
+class UniqueIDBDatabaseTransaction : public RefCounted<UniqueIDBDatabaseTransaction>, public CanMakeWeakPtr<UniqueIDBDatabaseTransaction> {
 public:
+    enum class State { Running, Aborting, Committing, Aborted, Committed };
+
     static Ref<UniqueIDBDatabaseTransaction> create(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
 
     ~UniqueIDBDatabaseTransaction();
@@ -88,6 +91,11 @@ public:
 
     const Vector<uint64_t>& objectStoreIdentifiers();
 
+    void setState(State state) { m_state = state; }
+    State state() const { return m_state; }
+    void setResult(const IDBError& error) { m_result = error; }
+    const IDBError& result() const { return m_result; }
+
 private:
     UniqueIDBDatabaseTransaction(UniqueIDBDatabaseConnection&, const IDBTransactionInfo&);
 
@@ -97,6 +105,9 @@ private:
     std::unique_ptr<IDBDatabaseInfo> m_originalDatabaseInfo;
 
     Vector<uint64_t> m_objectStoreIdentifiers;
+
+    State m_state { State::Running };
+    IDBError m_result;
 };
 
 } // namespace IDBServer

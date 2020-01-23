@@ -28,12 +28,11 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
 #include "WHLSLQualifier.h"
 #include "WHLSLSemantic.h"
 #include "WHLSLType.h"
-#include "WHLSLValue.h"
 #include <memory>
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -44,42 +43,70 @@ namespace WHLSL {
 
 namespace AST {
 
-class VariableDeclaration : public Value {
+class VariableDeclaration final {
+    WTF_MAKE_FAST_ALLOCATED;
+// Final because we made the destructor non-virtual.
 public:
-    VariableDeclaration(Lexer::Token&& origin, Qualifiers&& qualifiers, Optional<UniqueRef<UnnamedType>>&& type, String&& name, Optional<Semantic>&& semantic, Optional<UniqueRef<Expression>>&& initializer)
-        : m_origin(WTFMove(origin))
-        , m_qualifiers(WTFMove(qualifiers))
+    struct RareData {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        RareData(Qualifiers&& qualifiersArgument, std::unique_ptr<Semantic>&& semanticArgument)
+            : qualifiers(WTFMove(qualifiersArgument))
+            , semantic(WTFMove(semanticArgument))
+        {
+        }
+        Qualifiers qualifiers;
+        std::unique_ptr<Semantic> semantic;
+    };
+
+    VariableDeclaration(CodeLocation codeLocation, Qualifiers&& qualifiers, RefPtr<UnnamedType> type, String&& name, std::unique_ptr<Semantic>&& semantic, std::unique_ptr<Expression>&& initializer)
+        : m_codeLocation(codeLocation)
         , m_type(WTFMove(type))
-        , m_name(WTFMove(name))
-        , m_semantic(WTFMove(semantic))
         , m_initializer(WTFMove(initializer))
+        , m_name(WTFMove(name))
     {
+        if (semantic || !qualifiers.isEmpty())
+            m_rareData = makeUnique<RareData>(WTFMove(qualifiers), WTFMove(semantic));
     }
 
-    virtual ~VariableDeclaration() = default;
+    ~VariableDeclaration() = default;
 
     VariableDeclaration(const VariableDeclaration&) = delete;
     VariableDeclaration(VariableDeclaration&&) = default;
 
-    const Lexer::Token& origin() const { return m_origin; }
     String& name() { return m_name; }
 
-    const Optional<UniqueRef<UnnamedType>>& type() const { return m_type; } // Anonymous variables inside ReadModifyWriteExpressions have their type set by the type checker.
+    // We use this for ReadModifyWrite expressions, since we don't know the type of their
+    // internal variables until the checker runs. All other variables should start life out
+    // with a type.
+    void setType(Ref<UnnamedType> type)
+    {
+        ASSERT(!m_type);
+        m_type = WTFMove(type);
+    }
+    const RefPtr<UnnamedType>& type() const { return m_type; }
     UnnamedType* type() { return m_type ? &*m_type : nullptr; }
-    Optional<Semantic>& semantic() { return m_semantic; }
-    Expression* initializer() { return m_initializer ? &*m_initializer : nullptr; }
+    Expression* initializer() { return m_initializer.get(); }
     bool isAnonymous() const { return m_name.isNull(); }
+    std::unique_ptr<Expression> takeInitializer() { return WTFMove(m_initializer); }
+    void setInitializer(std::unique_ptr<Expression> expression)
+    {
+        ASSERT(!initializer());
+        ASSERT(expression);
+        m_initializer = WTFMove(expression);
+    }
+    CodeLocation codeLocation() const { return m_codeLocation; }
+
+    Semantic* semantic() { return m_rareData ? m_rareData->semantic.get() : nullptr; }
 
 private:
-    Lexer::Token m_origin;
-    Qualifiers m_qualifiers;
-    Optional<UniqueRef<UnnamedType>> m_type;
+    CodeLocation m_codeLocation;
+    RefPtr<UnnamedType> m_type;
+    std::unique_ptr<Expression> m_initializer;
+    std::unique_ptr<RareData> m_rareData { nullptr };
     String m_name;
-    Optional<Semantic> m_semantic;
-    Optional<UniqueRef<Expression>> m_initializer;
 };
 
-using VariableDeclarations = Vector<VariableDeclaration>;
+using VariableDeclarations = Vector<UniqueRef<VariableDeclaration>>;
 
 } // namespace AST
 

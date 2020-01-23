@@ -31,8 +31,13 @@
 #include "ApplePayMerchantCapability.h"
 #include "ApplePayPaymentContact.h"
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/ApplePayRequestBaseAdditions.h>
+#endif
+
 namespace WebCore {
 
+class Document;
 class PaymentCoordinator;
 
 struct ApplePayRequestBase {
@@ -48,9 +53,14 @@ struct ApplePayRequestBase {
 
     String applicationData;
     Vector<String> supportedCountries;
+
+#if defined(APPLEPAYREQUESTBASE_ADDITIONS)
+APPLEPAYREQUESTBASE_ADDITIONS
+#undef APPLEPAYREQUESTBASE_ADDITIONS
+#endif
 };
 
-ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(unsigned version, ApplePayRequestBase&, const PaymentCoordinator&);
+ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document&, unsigned version, ApplePayRequestBase&, const PaymentCoordinator&);
 
 } // namespace WebCore
 

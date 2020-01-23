@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,10 +34,13 @@
 #include "JSDOMConvertCallbacks.h"
 #include "JSDOMConvertSequences.h"
 #include "RenderView.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/SetForScope.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(PaintWorkletGlobalScope);
 
 Ref<PaintWorkletGlobalScope> PaintWorkletGlobalScope::create(Document& document, ScriptSourceCode&& code)
 {
@@ -56,7 +59,7 @@ double PaintWorkletGlobalScope::devicePixelRatio() const
     return responsibleDocument()->domWindow()->devicePixelRatio();
 }
 
-PaintWorkletGlobalScope::PaintDefinition::PaintDefinition(const AtomicString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&& paintCallback, Vector<String>&& inputProperties, Vector<String>&& inputArguments)
+PaintWorkletGlobalScope::PaintDefinition::PaintDefinition(const AtomString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&& paintCallback, Vector<String>&& inputProperties, Vector<String>&& inputArguments)
     : name(name)
     , paintConstructor(paintConstructor)
     , paintCallback(WTFMove(paintCallback))
@@ -68,7 +71,7 @@ PaintWorkletGlobalScope::PaintDefinition::PaintDefinition(const AtomicString& na
 // https://drafts.css-houdini.org/css-paint-api/#registering-custom-paint
 ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::ExecState& state, JSDOMGlobalObject& globalObject, const String& name, Strong<JSObject> paintConstructor)
 {
-    auto& vm = *paintConstructor->vm();
+    auto& vm = paintConstructor->vm();
     JSC::JSLockHolder lock(vm);
     auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -88,7 +91,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::ExecState& state, 
 
         Vector<String> inputProperties;
 
-        JSValue inputPropertiesIterableValue = paintConstructor->get(&state, Identifier::fromString(&vm, "inputProperties"));
+        JSValue inputPropertiesIterableValue = paintConstructor->get(&state, Identifier::fromString(vm, "inputProperties"));
         RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
         if (!inputPropertiesIterableValue.isUndefined())
@@ -99,7 +102,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::ExecState& state, 
 
         Vector<String> inputArguments;
 
-        JSValue inputArgumentsIterableValue = paintConstructor->get(&state, Identifier::fromString(&vm, "inputArguments"));
+        JSValue inputArgumentsIterableValue = paintConstructor->get(&state, Identifier::fromString(vm, "inputArguments"));
         RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
         if (!inputArgumentsIterableValue.isUndefined())
@@ -108,7 +111,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::ExecState& state, 
 
         // FIXME: Parse syntax for inputArguments here (steps 11 and 12).
 
-        JSValue contextOptionsValue = paintConstructor->get(&state, Identifier::fromString(&vm, "contextOptions"));
+        JSValue contextOptionsValue = paintConstructor->get(&state, Identifier::fromString(vm, "contextOptions"));
         RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
         UNUSED_PARAM(contextOptionsValue);
 
@@ -123,7 +126,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::ExecState& state, 
         if (!prototypeValue.isObject())
             return Exception { TypeError, "The second argument must have a prototype that is an object" };
 
-        JSValue paintValue = prototypeValue.get(&state, Identifier::fromString(&vm, "paint"));
+        JSValue paintValue = prototypeValue.get(&state, Identifier::fromString(vm, "paint"));
         RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
         if (paintValue.isUndefined())
@@ -132,7 +135,7 @@ ExceptionOr<void> PaintWorkletGlobalScope::registerPaint(JSC::ExecState& state, 
         RefPtr<JSCSSPaintCallback> paint = convert<IDLCallbackFunction<JSCSSPaintCallback>>(state, paintValue, globalObject);
         RETURN_IF_EXCEPTION(scope, Exception { ExistingExceptionError });
 
-        auto paintDefinition = std::make_unique<PaintDefinition>(name, paintConstructor.get(), paint.releaseNonNull(), WTFMove(inputProperties), WTFMove(inputArguments));
+        auto paintDefinition = makeUnique<PaintDefinition>(name, paintConstructor.get(), paint.releaseNonNull(), WTFMove(inputProperties), WTFMove(inputArguments));
         paintDefinitionMap().add(name, WTFMove(paintDefinition));
     }
 

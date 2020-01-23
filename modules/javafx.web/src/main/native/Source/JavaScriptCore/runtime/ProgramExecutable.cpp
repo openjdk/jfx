@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,10 +41,10 @@
 
 namespace JSC {
 
-const ClassInfo ProgramExecutable::s_info = { "ProgramExecutable", &ScriptExecutable::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ProgramExecutable) };
+const ClassInfo ProgramExecutable::s_info = { "ProgramExecutable", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ProgramExecutable) };
 
 ProgramExecutable::ProgramExecutable(ExecState* exec, const SourceCode& source)
-    : ScriptExecutable(exec->vm().programExecutableStructure.get(), exec->vm(), source, false, DerivedContextType::None, false, EvalContextType::None, NoIntrinsic)
+    : Base(exec->vm().programExecutableStructure.get(), exec->vm(), source, false, DerivedContextType::None, false, EvalContextType::None, NoIntrinsic)
 {
     ASSERT(source.provider()->sourceType() == SourceProviderSourceType::Program);
     VM& vm = exec->vm();
@@ -83,10 +83,9 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, CallFrame* callF
 
     ParserError error;
     JSParserStrictMode strictMode = isStrictMode() ? JSParserStrictMode::Strict : JSParserStrictMode::NotStrict;
-    DebuggerMode debuggerMode = globalObject->hasInteractiveDebugger() ? DebuggerOn : DebuggerOff;
-
+    OptionSet<CodeGenerationMode> codeGenerationMode = globalObject->defaultCodeGenerationMode();
     UnlinkedProgramCodeBlock* unlinkedCodeBlock = vm.codeCache()->getUnlinkedProgramCodeBlock(
-        vm, this, source(), strictMode, debuggerMode, error);
+        vm, this, source(), strictMode, codeGenerationMode, error);
 
     if (globalObject->hasDebugger())
         globalObject->debugger()->sourceParsed(callFrame, source().provider(), error.line(), error.message());
@@ -121,7 +120,7 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, CallFrame* callF
         for (auto& entry : lexicalDeclarations) {
             // The ES6 spec says that RestrictedGlobalProperty can't be shadowed.
             GlobalPropertyLookUpStatus status = hasRestrictedGlobalProperty(exec, globalObject, entry.key.get());
-            RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
+            RETURN_IF_EXCEPTION(throwScope, nullptr);
             switch (status) {
             case GlobalPropertyLookUpStatus::NonConfigurable:
                 return createSyntaxError(exec, makeString("Can't create duplicate variable that shadows a global property: '", String(entry.key.get()), "'"));
@@ -138,7 +137,7 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, CallFrame* callF
             }
 
             bool hasProperty = globalLexicalEnvironment->hasProperty(exec, entry.key.get());
-            RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
+            RETURN_IF_EXCEPTION(throwScope, nullptr);
             if (hasProperty) {
                 if (UNLIKELY(entry.value.isConst() && !vm.globalConstRedeclarationShouldThrow() && !isStrictMode())) {
                     // We only allow "const" duplicate declarations under this setting.
@@ -155,7 +154,7 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, CallFrame* callF
         if (!globalLexicalEnvironment->isEmpty()) {
             for (auto& entry : variableDeclarations) {
                 bool hasProperty = globalLexicalEnvironment->hasProperty(exec, entry.key.get());
-                RETURN_IF_EXCEPTION(throwScope, throwScope.exception());
+                RETURN_IF_EXCEPTION(throwScope, nullptr);
                 if (hasProperty)
                     return createSyntaxError(exec, makeString("Can't create duplicate variable: '", String(entry.key.get()), "'"));
             }
@@ -180,7 +179,7 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, CallFrame* callF
 
     for (auto& entry : variableDeclarations) {
         ASSERT(entry.value.isVar());
-        globalObject->addVar(callFrame, Identifier::fromUid(&vm, entry.key.get()));
+        globalObject->addVar(callFrame, Identifier::fromUid(vm, entry.key.get()));
         throwScope.assertNoException();
     }
 
@@ -217,6 +216,11 @@ JSObject* ProgramExecutable::initializeGlobalProperties(VM& vm, CallFrame* callF
     return nullptr;
 }
 
+auto ProgramExecutable::ensureTemplateObjectMap(VM&) -> TemplateObjectMap&
+{
+    return ensureTemplateObjectMapImpl(m_templateObjectMap);
+}
+
 void ProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     ProgramExecutable* thisObject = jsCast<ProgramExecutable*>(cell);
@@ -224,6 +228,11 @@ void ProgramExecutable::visitChildren(JSCell* cell, SlotVisitor& visitor)
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_unlinkedProgramCodeBlock);
     visitor.append(thisObject->m_programCodeBlock);
+    if (TemplateObjectMap* map = thisObject->m_templateObjectMap.get()) {
+        auto locker = holdLock(thisObject->cellLock());
+        for (auto& entry : *map)
+            visitor.append(entry.value);
+    }
 }
 
 } // namespace JSC

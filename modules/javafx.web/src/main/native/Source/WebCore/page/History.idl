@@ -24,8 +24,9 @@
  */
 
 [
-    GenerateIsReachable=ImplFrame,
+    GenerateIsReachable=ReachableFromDOMWindow,
     JSCustomMarkFunction,
+    ImplementationLacksVTable,
 ] interface History {
     readonly attribute unsigned long length;
     attribute ScrollRestoration scrollRestoration;

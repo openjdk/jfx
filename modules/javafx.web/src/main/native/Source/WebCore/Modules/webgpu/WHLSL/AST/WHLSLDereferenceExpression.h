@@ -28,7 +28,7 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -37,20 +37,19 @@ namespace WHLSL {
 
 namespace AST {
 
-class DereferenceExpression : public Expression {
+class DereferenceExpression final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    DereferenceExpression(Lexer::Token&& origin, UniqueRef<Expression>&& pointer)
-        : Expression(WTFMove(origin))
+    DereferenceExpression(CodeLocation location, UniqueRef<Expression>&& pointer)
+        : Expression(location, Kind::Dereference)
         , m_pointer(WTFMove(pointer))
     {
     }
 
-    virtual ~DereferenceExpression() = default;
+    ~DereferenceExpression() = default;
 
     DereferenceExpression(const DereferenceExpression&) = delete;
     DereferenceExpression(DereferenceExpression&&) = default;
-
-    bool isDereferenceExpression() const override { return true; }
 
     Expression& pointer() { return m_pointer; }
 
@@ -63,6 +62,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(DereferenceExpression)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(DereferenceExpression, isDereferenceExpression())
 

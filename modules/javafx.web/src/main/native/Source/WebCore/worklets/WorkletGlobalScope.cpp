@@ -29,7 +29,6 @@
 
 #if ENABLE(CSS_PAINTING_API)
 
-#include "Document.h"
 #include "Frame.h"
 #include "InspectorInstrumentation.h"
 #include "JSWorkletGlobalScope.h"
@@ -37,18 +36,20 @@
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
 #include "WorkletScriptController.h"
-
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSLock.h>
 #include <JavaScriptCore/ScriptCallStack.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace Inspector;
 
+WTF_MAKE_ISO_ALLOCATED_IMPL(WorkletGlobalScope);
+
 WorkletGlobalScope::WorkletGlobalScope(Document& document, ScriptSourceCode&& code)
     : m_document(makeWeakPtr(document))
     , m_sessionID(m_document->sessionID())
-    , m_script(std::make_unique<WorkletScriptController>(this))
+    , m_script(makeUnique<WorkletScriptController>(this))
     , m_topOrigin(SecurityOrigin::createUnique())
     , m_eventQueue(*this)
     , m_code(WTFMove(code))
@@ -61,7 +62,7 @@ WorkletGlobalScope::WorkletGlobalScope(Document& document, ScriptSourceCode&& co
     ASSERT(document.page());
 
     setSecurityOriginPolicy(SecurityOriginPolicy::create(m_topOrigin.copyRef()));
-    setContentSecurityPolicy(std::make_unique<ContentSecurityPolicy>(URL { m_code.url() }, *this));
+    setContentSecurityPolicy(makeUnique<ContentSecurityPolicy>(URL { m_code.url() }, *this));
 }
 
 WorkletGlobalScope::~WorkletGlobalScope()
@@ -139,7 +140,7 @@ void WorkletGlobalScope::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMes
 {
     if (!m_document || isJSExecutionForbidden() || !message)
         return;
-    m_document->addConsoleMessage(std::make_unique<Inspector::ConsoleMessage>(message->source(), message->type(), message->level(), message->message(), 0));
+    m_document->addConsoleMessage(makeUnique<Inspector::ConsoleMessage>(message->source(), message->type(), message->level(), message->message(), 0));
 }
 
 void WorkletGlobalScope::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, unsigned long requestIdentifier)

@@ -291,8 +291,8 @@ bool KeyframeAnimation::hasAnimationForProperty(CSSPropertyID property) const
 
 bool KeyframeAnimation::startAnimation(double timeOffset)
 {
-    if (auto* renderer = compositedRenderer())
-        return renderer->startAnimation(timeOffset, m_animation.ptr(), m_keyframes);
+    if (auto* renderer = this->renderer())
+        return renderer->startAnimation(timeOffset, m_animation, m_keyframes);
     return false;
 }
 
@@ -301,7 +301,7 @@ void KeyframeAnimation::pauseAnimation(double timeOffset)
     if (!element())
         return;
 
-    if (auto* renderer = compositedRenderer())
+    if (auto* renderer = this->renderer())
         renderer->animationPaused(timeOffset, m_keyframes.animationName());
 
     // Restore the original (unanimated) style
@@ -314,7 +314,7 @@ void KeyframeAnimation::endAnimation(bool fillingForwards)
     if (!element())
         return;
 
-    if (auto* renderer = compositedRenderer())
+    if (auto* renderer = this->renderer())
         renderer->animationFinished(m_keyframes.animationName());
 
     // Restore the original (unanimated) style
@@ -343,7 +343,7 @@ void KeyframeAnimation::onAnimationEnd(double elapsedTime)
     endAnimation(m_animation->fillsForwards());
 }
 
-bool KeyframeAnimation::sendAnimationEvent(const AtomicString& eventType, double elapsedTime)
+bool KeyframeAnimation::sendAnimationEvent(const AtomString& eventType, double elapsedTime)
 {
     Document::ListenerType listenerType;
     if (eventType == eventNames().webkitAnimationIterationEvent || eventType == eventNames().animationiterationEvent)

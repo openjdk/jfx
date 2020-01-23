@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,16 +34,19 @@
 #include "MediaCanStartListener.h"
 #include "MediaProducer.h"
 #include "PlatformMediaSession.h"
+#include "ScriptExecutionContext.h"
 #include "VisibilityChangeClient.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <JavaScriptCore/Float32Array.h>
 #include <atomic>
 #include <wtf/HashSet.h>
+#include <wtf/LoggerHelper.h>
 #include <wtf/MainThread.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
-#include <wtf/text/AtomicStringHash.h>
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
@@ -71,12 +74,25 @@ class OscillatorNode;
 class PannerNode;
 class PeriodicWave;
 class ScriptProcessorNode;
+class SecurityOrigin;
 class WaveShaperNode;
 
 // AudioContext is the cornerstone of the web audio API and all AudioNodes are created from it.
 // For thread safety between the audio thread and the main thread, it has a rendering graph locking mechanism.
 
-class AudioContext : public ActiveDOMObject, public ThreadSafeRefCounted<AudioContext>, public EventTargetWithInlineData, public MediaCanStartListener, public MediaProducer, private PlatformMediaSessionClient, private VisibilityChangeClient {
+class AudioContext
+    : public ActiveDOMObject
+    , public ThreadSafeRefCounted<AudioContext>
+    , public EventTargetWithInlineData
+    , public MediaCanStartListener
+    , public MediaProducer
+    , private PlatformMediaSessionClient
+    , private VisibilityChangeClient
+#if !RELEASE_LOG_DISABLED
+    , private LoggerHelper
+#endif
+{
+    WTF_MAKE_ISO_ALLOCATED(AudioContext);
 public:
     // Create an AudioContext for rendering to the audio hardware.
     static RefPtr<AudioContext> create(Document&);
@@ -92,9 +108,9 @@ public:
     Document* hostingDocument() const final;
 
     AudioDestinationNode* destination() { return m_destinationNode.get(); }
-    size_t currentSampleFrame() const { return m_destinationNode->currentSampleFrame(); }
-    double currentTime() const { return m_destinationNode->currentTime(); }
-    float sampleRate() const { return m_destinationNode->sampleRate(); }
+    size_t currentSampleFrame() const { return m_destinationNode ? m_destinationNode->currentSampleFrame() : 0; }
+    double currentTime() const { return m_destinationNode ? m_destinationNode->currentTime() : 0.; }
+    float sampleRate() const { return m_destinationNode ? m_destinationNode->sampleRate() : 0.f; }
     unsigned long activeSourceCount() const { return static_cast<unsigned long>(m_activeSourceCount); }
 
     void incrementActiveSourceCount();
@@ -117,30 +133,31 @@ public:
 
     enum class State { Suspended, Running, Interrupted, Closed };
     State state() const;
+    bool isClosed() const { return m_state == State::Closed; }
 
     bool wouldTaintOrigin(const URL&) const;
 
     // The AudioNode create methods are called on the main thread (from JavaScript).
-    Ref<AudioBufferSourceNode> createBufferSource();
+    ExceptionOr<Ref<AudioBufferSourceNode>> createBufferSource();
 #if ENABLE(VIDEO)
     ExceptionOr<Ref<MediaElementAudioSourceNode>> createMediaElementSource(HTMLMediaElement&);
 #endif
 #if ENABLE(MEDIA_STREAM)
     ExceptionOr<Ref<MediaStreamAudioSourceNode>> createMediaStreamSource(MediaStream&);
-    Ref<MediaStreamAudioDestinationNode> createMediaStreamDestination();
+    ExceptionOr<Ref<MediaStreamAudioDestinationNode>> createMediaStreamDestination();
 #endif
-    Ref<GainNode> createGain();
-    Ref<BiquadFilterNode> createBiquadFilter();
-    Ref<WaveShaperNode> createWaveShaper();
+    ExceptionOr<Ref<GainNode>> createGain();
+    ExceptionOr<Ref<BiquadFilterNode>> createBiquadFilter();
+    ExceptionOr<Ref<WaveShaperNode>> createWaveShaper();
     ExceptionOr<Ref<DelayNode>> createDelay(double maxDelayTime);
-    Ref<PannerNode> createPanner();
-    Ref<ConvolverNode> createConvolver();
-    Ref<DynamicsCompressorNode> createDynamicsCompressor();
-    Ref<AnalyserNode> createAnalyser();
+    ExceptionOr<Ref<PannerNode>> createPanner();
+    ExceptionOr<Ref<ConvolverNode>> createConvolver();
+    ExceptionOr<Ref<DynamicsCompressorNode>> createDynamicsCompressor();
+    ExceptionOr<Ref<AnalyserNode>> createAnalyser();
     ExceptionOr<Ref<ScriptProcessorNode>> createScriptProcessor(size_t bufferSize, size_t numberOfInputChannels, size_t numberOfOutputChannels);
     ExceptionOr<Ref<ChannelSplitterNode>> createChannelSplitter(size_t numberOfOutputs);
     ExceptionOr<Ref<ChannelMergerNode>> createChannelMerger(size_t numberOfInputs);
-    Ref<OscillatorNode> createOscillator();
+    ExceptionOr<Ref<OscillatorNode>> createOscillator();
     ExceptionOr<Ref<PeriodicWave>> createPeriodicWave(Float32Array& real, Float32Array& imaginary);
 
     // When a source node has no more processing to do (has finished playing), then it tells the context to dereference it.
@@ -236,14 +253,13 @@ public:
 
     // EventTarget
     EventTargetInterface eventTargetInterface() const final { return AudioContextEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final;
 
     // Reconcile ref/deref which are defined both in ThreadSafeRefCounted and EventTarget.
     using ThreadSafeRefCounted::ref;
     using ThreadSafeRefCounted::deref;
 
     void startRendering();
-    void fireCompletionEvent();
+    void finishedRendering(bool didRendering);
 
     static unsigned s_hardwareContextCount;
 
@@ -263,11 +279,26 @@ public:
 
     void nodeWillBeginPlayback();
 
+#if !RELEASE_LOG_DISABLED
+    const Logger& logger() const final { return m_logger.get(); }
+    const void* logIdentifier() const final { return m_logIdentifier; }
+    WTFLogChannel& logChannel() const final;
+    const void* nextAudioNodeLogIdentifier() { return childLogIdentifier(++m_nextAudioNodeIdentifier); }
+    const void* nextAudioParameterLogIdentifier() { return childLogIdentifier(++m_nextAudioParameterIdentifier); }
+#endif
+
+    void postTask(WTF::Function<void()>&&);
+    bool isStopped() const { return m_isStopScheduled; }
+    const SecurityOrigin* origin() const;
+    void addConsoleMessage(MessageSource, MessageLevel, const String& message);
+
 protected:
     explicit AudioContext(Document&);
     AudioContext(Document&, unsigned numberOfChannels, size_t numberOfFrames, float sampleRate);
 
     static bool isSampleRateRangeGood(float sampleRate);
+    void clearPendingActivity();
+    void makePendingActivity();
 
 private:
     void constructCommon();
@@ -288,6 +319,10 @@ private:
     void scheduleNodeDeletion();
 
     void mediaCanStart(Document&) override;
+
+    // EventTarget
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    void dispatchEvent(Event&) final;
 
     // MediaProducer
     MediaProducer::MediaStateFlags mediaState() const override;
@@ -335,6 +370,15 @@ private:
 
     void addReaction(State, DOMPromiseDeferred<void>&&);
     void updateAutomaticPullNodes();
+
+#if !RELEASE_LOG_DISABLED
+    const char* logClassName() const final { return "AudioContext"; }
+
+    Ref<Logger> m_logger;
+    const void* m_logIdentifier;
+    uint64_t m_nextAudioNodeIdentifier { 0 };
+    uint64_t m_nextAudioParameterIdentifier { 0 };
+#endif
 
     // Only accessed in the audio thread.
     Vector<AudioNode*> m_finishedNodes;
@@ -388,7 +432,7 @@ private:
     Thread* volatile m_audioThread { nullptr };
     Thread* volatile m_graphOwnerThread { nullptr }; // if the lock is held then this is the thread which owns it, otherwise == nullptr.
 
-    AsyncAudioDecoder m_audioDecoder;
+    std::unique_ptr<AsyncAudioDecoder> m_audioDecoder;
 
     // This is considering 32 is large enough for multiple channels audio.
     // It is somewhat arbitrary and could be increased if necessary.
@@ -400,6 +444,7 @@ private:
     BehaviorRestrictions m_restrictions { NoRestrictions };
 
     State m_state { State::Suspended };
+    RefPtr<PendingActivity<AudioContext>> m_pendingActivity;
 };
 
 // FIXME: Find out why these ==/!= functions are needed and remove them if possible.

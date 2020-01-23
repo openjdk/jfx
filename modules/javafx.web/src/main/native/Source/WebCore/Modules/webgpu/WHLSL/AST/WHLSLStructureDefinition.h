@@ -27,9 +27,10 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLNamedType.h"
 #include "WHLSLStructureElement.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,23 +40,22 @@ namespace WHLSL {
 
 namespace AST {
 
-class StructureDefinition : public NamedType {
+class StructureDefinition final : public NamedType {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    StructureDefinition(Lexer::Token&& origin, String&& name, StructureElements&& structureElements)
-        : NamedType(WTFMove(origin), WTFMove(name))
+    StructureDefinition(CodeLocation location, String&& name, StructureElements&& structureElements)
+        : NamedType(Kind::StructureDefinition, location, WTFMove(name))
         , m_structureElements(WTFMove(structureElements))
     {
     }
 
-    virtual ~StructureDefinition() = default;
+    ~StructureDefinition() = default;
 
     StructureDefinition(const StructureDefinition&) = delete;
     StructureDefinition(StructureDefinition&&) = default;
 
-    bool isStructureDefinition() const override { return true; }
-
     StructureElements& structureElements() { return m_structureElements; }
-    StructureElement* find(String& name)
+    StructureElement* find(const String& name)
     {
         auto iterator = std::find_if(m_structureElements.begin(), m_structureElements.end(), [&](StructureElement& structureElement) -> bool {
             return structureElement.name() == name;
@@ -75,6 +75,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_NAMED_TYPE(StructureDefinition, isStructureDefinition())
+DEFINE_DEFAULT_DELETE(StructureDefinition)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(StructureDefinition, isStructureDefinition())
 
 #endif

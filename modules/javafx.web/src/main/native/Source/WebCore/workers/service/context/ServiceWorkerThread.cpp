@@ -35,6 +35,7 @@
 #include "JSDOMPromise.h"
 #include "LoaderStrategy.h"
 #include "PlatformStrategies.h"
+#include "SWContextManager.h"
 #include "SecurityOrigin.h"
 #include "ServiceWorkerFetch.h"
 #include "ServiceWorkerGlobalScope.h"
@@ -76,7 +77,7 @@ ServiceWorkerThread::ServiceWorkerThread(const ServiceWorkerContextData& data, P
     , m_data(data.isolatedCopy())
     , m_workerObjectProxy(DummyServiceWorkerThreadProxy::shared())
 {
-    AtomicString::init();
+    AtomString::init();
 }
 
 ServiceWorkerThread::~ServiceWorkerThread() = default;

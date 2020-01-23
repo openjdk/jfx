@@ -69,7 +69,7 @@ JIT::compileSetupFrame(const Op& bytecode, CallLinkInfo*)
         emitGetVirtualRegister(registerOffset + CallFrame::argumentOffsetIncludingThis(0), regT0);
         Jump done = branchIfNotCell(regT0);
         load32(Address(regT0, JSCell::structureIDOffset()), regT0);
-        store32(regT0, metadata.m_arrayProfile.addressOfLastSeenStructureID());
+        store32(regT0, metadata.m_callLinkInfo.m_arrayProfile.addressOfLastSeenStructureID());
         done.link(this);
     }
 
@@ -162,7 +162,7 @@ void JIT::compileCallEvalSlowCase(const Instruction* instruction, Vector<SlowCas
     addPtr(TrustedImm32(registerOffset * sizeof(Register) + sizeof(CallerFrameAndPC)), callFrameRegister, stackPointerRegister);
 
     load64(Address(stackPointerRegister, sizeof(Register) * CallFrameSlot::callee - sizeof(CallerFrameAndPC)), regT0);
-    emitDumbVirtualCall(*vm(), info);
+    emitDumbVirtualCall(vm(), info);
     addPtr(TrustedImm32(stackPointerOffsetFor(m_codeBlock) * sizeof(Register)), callFrameRegister, stackPointerRegister);
     checkStackPointerAlignment();
 

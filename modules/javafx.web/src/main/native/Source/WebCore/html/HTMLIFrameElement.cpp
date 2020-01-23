@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Simon Hausmann (hausmann@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2006, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Ericsson AB. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -30,6 +30,7 @@
 #include "Frame.h"
 #include "HTMLNames.h"
 #include "RenderIFrame.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptableDocumentParser.h"
 #include <wtf/IsoMallocInlines.h>
 
@@ -52,10 +53,11 @@ Ref<HTMLIFrameElement> HTMLIFrameElement::create(const QualifiedName& tagName, D
 
 DOMTokenList& HTMLIFrameElement::sandbox()
 {
-    if (!m_sandbox)
-        m_sandbox = std::make_unique<DOMTokenList>(*this, sandboxAttr, [](Document&, StringView token) {
+    if (!m_sandbox) {
+        m_sandbox = makeUnique<DOMTokenList>(*this, sandboxAttr, [](Document&, StringView token) {
             return SecurityContext::isSupportedSandboxPolicy(token);
         });
+    }
     return *m_sandbox;
 }
 
@@ -66,7 +68,7 @@ bool HTMLIFrameElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLFrameElementBase::isPresentationAttribute(name);
 }
 
-void HTMLIFrameElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLIFrameElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr)
         addHTMLLengthToStyle(style, CSSPropertyWidth, value);
@@ -85,7 +87,7 @@ void HTMLIFrameElement::collectStyleForPresentationAttribute(const QualifiedName
         HTMLFrameElementBase::collectStyleForPresentationAttribute(name, value, style);
 }
 
-void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == sandboxAttr) {
         if (m_sandbox)
@@ -96,19 +98,43 @@ void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicSt
         if (!invalidTokens.isNull())
             document().addConsoleMessage(MessageSource::Other, MessageLevel::Error, "Error while parsing the 'sandbox' attribute: " + invalidTokens);
     } else if (name == allowAttr)
-        m_allow = value;
+        m_featurePolicy = WTF::nullopt;
     else
         HTMLFrameElementBase::parseAttribute(name, value);
 }
 
 bool HTMLIFrameElement::rendererIsNeeded(const RenderStyle& style)
 {
-    return isURLAllowed() && style.display() != DisplayType::None;
+    return style.display() != DisplayType::None && canLoad();
 }
 
 RenderPtr<RenderElement> HTMLIFrameElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     return createRenderer<RenderIFrame>(*this, WTFMove(style));
+}
+
+void HTMLIFrameElement::setReferrerPolicyForBindings(const AtomString& value)
+{
+    setAttributeWithoutSynchronization(referrerpolicyAttr, value);
+}
+
+String HTMLIFrameElement::referrerPolicyForBindings() const
+{
+    return referrerPolicyToString(referrerPolicy());
+}
+
+ReferrerPolicy HTMLIFrameElement::referrerPolicy() const
+{
+    if (RuntimeEnabledFeatures::sharedFeatures().referrerPolicyAttributeEnabled())
+        return parseReferrerPolicy(attributeWithoutSynchronization(referrerpolicyAttr), ReferrerPolicySource::ReferrerPolicyAttribute).valueOr(ReferrerPolicy::EmptyString);
+    return ReferrerPolicy::EmptyString;
+}
+
+const FeaturePolicy& HTMLIFrameElement::featurePolicy() const
+{
+    if (!m_featurePolicy)
+        m_featurePolicy = FeaturePolicy::parse(document(), attributeWithoutSynchronization(allowAttr));
+    return *m_featurePolicy;
 }
 
 }

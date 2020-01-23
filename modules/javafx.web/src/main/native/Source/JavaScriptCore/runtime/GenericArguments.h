@@ -61,7 +61,8 @@ protected:
 
     void copyToArguments(ExecState*, VirtualRegister firstElementDest, unsigned offset, unsigned length);
 
-    CagedBarrierPtr<Gigacage::Primitive, bool> m_modifiedArgumentsDescriptor;
+    using ModifiedArgumentsPtr = CagedBarrierPtr<Gigacage::Primitive, bool>;
+    ModifiedArgumentsPtr m_modifiedArgumentsDescriptor;
 };
 
 } // namespace JSC

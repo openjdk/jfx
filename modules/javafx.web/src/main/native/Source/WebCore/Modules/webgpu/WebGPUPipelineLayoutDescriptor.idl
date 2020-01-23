@@ -22,11 +22,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://github.com/gpuweb/gpuweb/blob/master/design/sketch.webidl
+// https://gpuweb.github.io/gpuweb
 
 [
     Conditional=WEBGPU,
     EnabledAtRuntime=WebGPU
 ] dictionary WebGPUPipelineLayoutDescriptor {
-    sequence<WebGPUBindGroupLayout> bindGroupLayouts;
+    required sequence<WebGPUBindGroupLayout> bindGroupLayouts;
 };

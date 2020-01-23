@@ -38,6 +38,7 @@
 
 #if USE(DIRECT2D)
 #include "GraphicsContext.h"
+#include "PlatformContextDirect2D.h"
 #endif
 
 namespace WebCore {
@@ -47,10 +48,13 @@ ImageSource::ImageSource(BitmapImage* image, AlphaOption alphaOption, GammaAndCo
     , m_alphaOption(alphaOption)
     , m_gammaAndColorProfileOption(gammaAndColorProfileOption)
 {
+    ASSERT(isMainThread());
 }
 
 ImageSource::ImageSource(NativeImagePtr&& nativeImage)
 {
+    ASSERT(isMainThread());
+
     m_frameCount = 1;
     m_encodedDataStatus = EncodedDataStatus::Complete;
     growFrames();
@@ -68,6 +72,7 @@ ImageSource::ImageSource(NativeImagePtr&& nativeImage)
 ImageSource::~ImageSource()
 {
     ASSERT(!hasAsyncDecodingQueue());
+    ASSERT(isMainThread());
 }
 
 bool ImageSource::ensureDecoderAvailable(SharedBuffer* data)
@@ -661,7 +666,7 @@ ImageOrientation ImageSource::frameOrientationAtIndex(size_t index)
 void ImageSource::setTargetContext(const GraphicsContext* targetContext)
 {
     if (isDecoderAvailable() && targetContext)
-        m_decoder->setTargetContext(targetContext->platformContext());
+        m_decoder->setTargetContext(targetContext->platformContext()->renderTarget());
 }
 #endif
 
@@ -688,7 +693,7 @@ void ImageSource::dump(TextStream& ts)
     ts.dumpProperty("solid-color", singlePixelSolidColor());
 
     ImageOrientation orientation = frameOrientationAtIndex(0);
-    if (orientation != OriginTopLeft)
+    if (orientation != ImageOrientation::None)
         ts.dumpProperty("orientation", orientation);
 }
 

@@ -47,13 +47,23 @@
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
 #include <wtf/StringPrintStream.h>
+#include <wtf/Vector.h>
 
 namespace JSC { namespace B3 {
 
 const char* const Value::dumpPrefix = "@";
+void DeepValueDump::dump(PrintStream& out) const
+{
+    if (m_value)
+        m_value->deepDump(m_proc, out);
+    else
+        out.print("<null>");
+}
 
 Value::~Value()
 {
+    if (m_numChildren == VarArgs)
+        bitwise_cast<Vector<Value*, 3> *>(childrenAlloc())->Vector<Value*, 3>::~Vector();
 }
 
 void Value::replaceWithIdentity(Value* value)
@@ -62,26 +72,13 @@ void Value::replaceWithIdentity(Value* value)
     // a plain Identity Value. We first collect all of the information we need, then we destruct the
     // previous value in place, and then we construct the Identity Value in place.
 
-    ASSERT(m_type == value->m_type);
+    RELEASE_ASSERT(m_type == value->m_type);
+    ASSERT(value != this);
 
-    if (m_type == Void) {
+    if (m_type == Void)
         replaceWithNopIgnoringType();
-        return;
-    }
-
-    unsigned index = m_index;
-    Type type = m_type;
-    Origin origin = m_origin;
-    BasicBlock* owner = this->owner;
-
-    RELEASE_ASSERT(type == value->type());
-
-    this->~Value();
-
-    new (this) Value(Identity, type, origin, value);
-
-    this->owner = owner;
-    this->m_index = index;
+    else
+        replaceWith(Identity, m_type, this->owner, value);
 }
 
 void Value::replaceWithBottom(InsertionSet& insertionSet, size_t index)
@@ -97,16 +94,7 @@ void Value::replaceWithNop()
 
 void Value::replaceWithNopIgnoringType()
 {
-    unsigned index = m_index;
-    Origin origin = m_origin;
-    BasicBlock* owner = this->owner;
-
-    this->~Value();
-
-    new (this) Value(Nop, Void, origin);
-
-    this->owner = owner;
-    this->m_index = index;
+    replaceWith(Nop, Void, this->owner);
 }
 
 void Value::replaceWithPhi()
@@ -116,50 +104,20 @@ void Value::replaceWithPhi()
         return;
     }
 
-    unsigned index = m_index;
-    Origin origin = m_origin;
-    BasicBlock* owner = this->owner;
-    Type type = m_type;
-
-    this->~Value();
-
-    new (this) Value(Phi, type, origin);
-
-    this->owner = owner;
-    this->m_index = index;
+    replaceWith(Phi, m_type, this->owner);
 }
 
 void Value::replaceWithJump(BasicBlock* owner, FrequentedBlock target)
 {
     RELEASE_ASSERT(owner->last() == this);
-
-    unsigned index = m_index;
-    Origin origin = m_origin;
-
-    this->~Value();
-
-    new (this) Value(Jump, Void, origin);
-
-    this->owner = owner;
-    this->m_index = index;
-
+    replaceWith(Jump, Void, this->owner);
     owner->setSuccessors(target);
 }
 
 void Value::replaceWithOops(BasicBlock* owner)
 {
     RELEASE_ASSERT(owner->last() == this);
-
-    unsigned index = m_index;
-    Origin origin = m_origin;
-
-    this->~Value();
-
-    new (this) Value(Oops, Void, origin);
-
-    this->owner = owner;
-    this->m_index = index;
-
+    replaceWith(Oops, Void, this->owner);
     owner->clearSuccessors();
 }
 
@@ -171,6 +129,30 @@ void Value::replaceWithJump(FrequentedBlock target)
 void Value::replaceWithOops()
 {
     replaceWithOops(owner);
+}
+
+void Value::replaceWith(Kind kind, Type type, BasicBlock* owner)
+{
+    unsigned index = m_index;
+
+    this->~Value();
+
+    new (this) Value(kind, type, m_origin);
+
+    this->m_index = index;
+    this->owner = owner;
+}
+
+void Value::replaceWith(Kind kind, Type type, BasicBlock* owner, Value* value)
+{
+    unsigned index = m_index;
+
+    this->~Value();
+
+    new (this) Value(kind, type, m_origin, value);
+
+    this->m_index = index;
+    this->owner = owner;
 }
 
 void Value::dump(PrintStream& out) const
@@ -202,11 +184,6 @@ void Value::dump(PrintStream& out) const
 
     if (isConstant)
         out.print(")");
-}
-
-Value* Value::cloneImpl() const
-{
-    return new Value(*this);
 }
 
 void Value::dumpChildren(CommaPrinter& comma, PrintStream& out) const
@@ -457,18 +434,18 @@ TriState Value::equalOrUnorderedConstant(const Value*) const
 
 Value* Value::invertedCompare(Procedure& proc) const
 {
-    if (!numChildren())
+    if (numChildren() != 2)
         return nullptr;
     if (Optional<Opcode> invertedOpcode = B3::invertedCompare(opcode(), child(0)->type())) {
         ASSERT(!kind().hasExtraBits());
-        return proc.add<Value>(*invertedOpcode, type(), origin(), children());
+        return proc.add<Value>(*invertedOpcode, type(), origin(), child(0), child(1));
     }
     return nullptr;
 }
 
 bool Value::isRounded() const
 {
-    ASSERT(isFloat(type()));
+    ASSERT(type().isFloat());
     switch (opcode()) {
     case Floor:
     case Ceil:
@@ -495,6 +472,7 @@ bool Value::returnsBool() const
 {
     if (type() != Int32)
         return false;
+
     switch (opcode()) {
     case Const32:
         return asInt32() == 0 || asInt32() == 1;
@@ -600,6 +578,7 @@ Effects Value::effects() const
     case EqualOrUnordered:
     case Select:
     case Depend:
+    case Extract:
         break;
     case Div:
     case UDiv:
@@ -883,7 +862,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case IToF:
         return Float;
     case BitwiseCast:
-        switch (firstChild->type()) {
+        switch (firstChild->type().kind()) {
         case Int64:
             return Double;
         case Double:
@@ -893,6 +872,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
         case Float:
             return Int32;
         case Void:
+        case Tuple:
             ASSERT_NOT_REACHED();
         }
         return Void;

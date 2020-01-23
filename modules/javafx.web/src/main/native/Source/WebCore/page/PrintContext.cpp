@@ -25,7 +25,9 @@
 #include "GraphicsContext.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "LengthBox.h"
 #include "RenderView.h"
+#include "RuntimeEnabledFeatures.h"
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
@@ -76,6 +78,33 @@ void PrintContext::computePageRects(const FloatRect& printRect, float headerHeig
     }
 
     computePageRectsWithPageSizeInternal(FloatSize(pageWidth / userScaleFactor, pageHeight / userScaleFactor), allowHorizontalTiling);
+}
+
+FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
+{
+    if (!frame() || !frame()->document())
+        return printMargin;
+    if (!RuntimeEnabledFeatures::sharedFeatures().pageAtRuleSupportEnabled())
+        return printMargin;
+    // FIXME Currently no pseudo class is supported.
+    auto style = frame()->document()->styleScope().resolver().styleForPage(0);
+
+    float pixelToPointScaleFactor = 1 / CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(CSSPrimitiveValue::CSS_PT);
+    return { style->marginTop().isAuto() ? printMargin.top() : style->marginTop().value() * pixelToPointScaleFactor,
+        style->marginRight().isAuto() ? printMargin.right() : style->marginRight().value() * pixelToPointScaleFactor,
+        style->marginBottom().isAuto() ? printMargin.bottom() : style->marginBottom().value() * pixelToPointScaleFactor,
+        style->marginLeft().isAuto() ? printMargin.left() : style->marginLeft().value() * pixelToPointScaleFactor };
+}
+
+FloatSize PrintContext::computedPageSize(FloatSize pageSize, FloatBoxExtent printMargin)
+{
+    auto computedMargin = computedPageMargin(printMargin);
+    if (computedMargin == printMargin)
+        return pageSize;
+
+    auto horizontalMarginDelta = (printMargin.left() - computedMargin.left()) + (printMargin.right() - computedMargin.right());
+    auto verticalMarginDelta = (printMargin.top() - computedMargin.top()) + (printMargin.bottom() - computedMargin.bottom());
+    return { pageSize.width() + horizontalMarginDelta, pageSize.height() + verticalMarginDelta };
 }
 
 void PrintContext::computePageRectsWithPageSize(const FloatSize& pageSizeInPixels, bool allowHorizontalTiling)
@@ -292,7 +321,7 @@ void PrintContext::outputLinkedDestinations(GraphicsContext& graphicsContext, Do
         return;
 
     if (!m_linkedDestinations) {
-        m_linkedDestinations = std::make_unique<HashMap<String, Ref<Element>>>();
+        m_linkedDestinations = makeUnique<HashMap<String, Ref<Element>>>();
         collectLinkedDestinations(document);
     }
 
@@ -337,7 +366,7 @@ String PrintContext::pageProperty(Frame* frame, const char* propertyName, int pa
     if (!strcmp(propertyName, "font-family"))
         return style->fontDescription().firstFamily();
     if (!strcmp(propertyName, "size"))
-        return makeString(FormattedNumber::fixedPrecision(style->pageSize().width.value()), ' ', FormattedNumber::fixedPrecision(style->pageSize().height.value()));
+        return makeString(style->pageSize().width.value(), ' ', style->pageSize().height.value());
 
     return makeString("pageProperty() unimplemented for: ", propertyName);
 }

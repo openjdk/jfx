@@ -94,14 +94,14 @@ void HTMLVideoElement::didAttachRenderers()
     updateDisplayState();
     if (shouldDisplayPosterImage()) {
         if (!m_imageLoader)
-            m_imageLoader = std::make_unique<HTMLImageLoader>(*this);
+            m_imageLoader = makeUnique<HTMLImageLoader>(*this);
         m_imageLoader->updateFromElement();
         if (auto* renderer = this->renderer())
             renderer->imageResource().setCachedImage(m_imageLoader->image());
     }
 }
 
-void HTMLVideoElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLVideoElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr)
         addHTMLLengthToStyle(style, CSSPropertyWidth, value);
@@ -118,7 +118,7 @@ bool HTMLVideoElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLMediaElement::isPresentationAttribute(name);
 }
 
-void HTMLVideoElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLVideoElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == posterAttr) {
         // Force a poster recalc by setting m_displayMode to Unknown directly before calling updateDisplayState.
@@ -127,7 +127,7 @@ void HTMLVideoElement::parseAttribute(const QualifiedName& name, const AtomicStr
 
         if (shouldDisplayPosterImage()) {
             if (!m_imageLoader)
-                m_imageLoader = std::make_unique<HTMLImageLoader>(*this);
+                m_imageLoader = makeUnique<HTMLImageLoader>(*this);
             m_imageLoader->updateFromElementIgnoringPreviousError();
         } else {
             if (auto* renderer = this->renderer())
@@ -232,9 +232,9 @@ bool HTMLVideoElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == posterAttr || HTMLMediaElement::isURLAttribute(attribute);
 }
 
-const AtomicString& HTMLVideoElement::imageSourceURL() const
+const AtomString& HTMLVideoElement::imageSourceURL() const
 {
-    const AtomicString& url = attributeWithoutSynchronization(posterAttr);
+    const AtomString& url = attributeWithoutSynchronization(posterAttr);
     if (!stripLeadingAndTrailingHTMLSpaces(url).isEmpty())
         return url;
     return m_defaultPosterURL;
@@ -318,7 +318,7 @@ NativeImagePtr HTMLVideoElement::nativeImageForCurrentTime()
 
 ExceptionOr<void> HTMLVideoElement::webkitEnterFullscreen()
 {
-    LOG(Media, "HTMLVideoElement::webkitEnterFullscreen(%p)", this);
+    ALWAYS_LOG(LOGIDENTIFIER);
     if (isFullscreen())
         return { };
 
@@ -333,7 +333,7 @@ ExceptionOr<void> HTMLVideoElement::webkitEnterFullscreen()
 
 void HTMLVideoElement::webkitExitFullscreen()
 {
-    LOG(Media, "HTMLVideoElement::webkitExitFullscreen(%p)", this);
+    ALWAYS_LOG(LOGIDENTIFIER);
     if (isFullscreen())
         exitFullscreen();
 }
@@ -443,7 +443,7 @@ static inline HTMLMediaElementEnums::VideoFullscreenMode toFullscreenMode(HTMLVi
 
 void HTMLVideoElement::webkitSetPresentationMode(VideoPresentationMode mode)
 {
-    LOG(Media, "HTMLVideoElement::webkitSetPresentationMode(%p) - %d", this, mode);
+    ALWAYS_LOG(LOGIDENTIFIER, mode);
     setFullscreenMode(toFullscreenMode(mode));
 }
 
@@ -483,7 +483,7 @@ auto HTMLVideoElement::webkitPresentationMode() const -> VideoPresentationMode
 void HTMLVideoElement::fullscreenModeChanged(VideoFullscreenMode mode)
 {
     if (mode != fullscreenMode()) {
-        LOG(Media, "HTMLVideoElement::fullscreenModeChanged(%p) - mode changed from %i to %i", this, fullscreenMode(), mode);
+        ALWAYS_LOG(LOGIDENTIFIER, "changed from ", fullscreenMode(), ", to ", mode);
         scheduleEvent(eventNames().webkitpresentationmodechangedEvent);
     }
 

@@ -49,6 +49,11 @@ void* prepareOSREntry(
     DFG::JITCode* dfgCode = dfgCodeBlock->jitCode()->dfg();
     ForOSREntryJITCode* entryCode = entryCodeBlock->jitCode()->ftlForOSREntry();
 
+    if (!entryCode->dfgCommon()->isStillValid) {
+        dfgCode->clearOSREntryBlockAndResetThresholds(dfgCodeBlock);
+        return 0;
+    }
+
     if (Options::verboseOSR()) {
         dataLog(
             "FTL OSR from ", *dfgCodeBlock, " to ", *entryCodeBlock, " at bc#",

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,6 @@
 #include <JavaScriptCore/FastMallocAlignedMemoryAllocator.h>
 #include <JavaScriptCore/HeapInlines.h>
 #include <JavaScriptCore/JSDestructibleObjectHeapCellType.h>
-#include <JavaScriptCore/JSSegmentedVariableObjectHeapCellType.h>
 #include <JavaScriptCore/MarkingConstraint.h>
 #include <JavaScriptCore/SubspaceInlines.h>
 #include <JavaScriptCore/VM.h>
@@ -43,10 +42,10 @@ using namespace JSC;
 
 JSVMClientData::JSVMClientData(VM& vm)
     : m_builtinFunctions(vm)
-    , m_builtinNames(&vm)
-    , m_runtimeMethodSpace ISO_SUBSPACE_INIT(vm.heap, vm.destructibleObjectHeapCellType.get(), RuntimeMethod)
-    , m_outputConstraintSpace("WebCore Wrapper w/ Output Constraint", vm.heap, vm.destructibleObjectHeapCellType.get(), vm.fastMallocAllocator.get())
-    , m_globalObjectOutputConstraintSpace("WebCore Global Object w/ Output Constraint", vm.heap, vm.segmentedVariableObjectHeapCellType.get(), vm.fastMallocAllocator.get())
+    , m_builtinNames(vm)
+    , m_runtimeMethodSpace ISO_SUBSPACE_INIT(vm.heap, vm.destructibleObjectHeapCellType.get(), RuntimeMethod) // Hash:0xf70c4a85
+    , m_outputConstraintSpace("WebCore Wrapper w/ Output Constraint", vm.heap, vm.destructibleObjectHeapCellType.get(), vm.fastMallocAllocator.get()) // Hash:0x7724c2e4
+    , m_globalObjectOutputConstraintSpace("WebCore Global Object w/ Output Constraint", vm.heap, vm.cellHeapCellType.get(), vm.fastMallocAllocator.get()) // Hash:0x522d6ec9
 {
 }
 
@@ -73,7 +72,7 @@ void JSVMClientData::initNormalWorld(VM* vm)
     JSVMClientData* clientData = new JSVMClientData(*vm);
     vm->clientData = clientData; // ~VM deletes this pointer.
 
-    vm->heap.addMarkingConstraint(std::make_unique<DOMGCOutputConstraint>(*vm, *clientData));
+    vm->heap.addMarkingConstraint(makeUnique<DOMGCOutputConstraint>(*vm, *clientData));
 
     clientData->m_normalWorld = DOMWrapperWorld::create(*vm, true);
     vm->m_typedArrayController = adoptRef(new WebCoreTypedArrayController());

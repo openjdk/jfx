@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,9 @@
 #include "JSDOMPromise.h"
 #include "JSPaymentDetailsUpdate.h"
 #include "JSPaymentResponse.h"
+#include "Page.h"
 #include "PaymentAddress.h"
+#include "PaymentCoordinator.h"
 #include "PaymentCurrencyAmount.h"
 #include "PaymentDetailsInit.h"
 #include "PaymentHandler.h"
@@ -47,11 +49,14 @@
 #include <JavaScriptCore/JSONObject.h>
 #include <JavaScriptCore/ThrowScope.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
 #include <wtf/UUID.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(PaymentRequest);
 
 // Implements the IsWellFormedCurrencyCode abstract operation from ECMA 402
 // https://tc39.github.io/ecma402/#sec-iswellformedcurrencycode
@@ -348,6 +353,11 @@ ExceptionOr<Ref<PaymentRequest>> PaymentRequest::create(Document& document, Vect
     return adoptRef(*new PaymentRequest(document, WTFMove(options), WTFMove(details), WTFMove(std::get<1>(shippingOptionAndModifierData)), WTFMove(serializedMethodData), WTFMove(std::get<0>(shippingOptionAndModifierData))));
 }
 
+bool PaymentRequest::enabledForContext(ScriptExecutionContext& context)
+{
+    return PaymentHandler::enabledForContext(context);
+}
+
 PaymentRequest::PaymentRequest(Document& document, PaymentOptions&& options, PaymentDetailsInit&& details, Vector<String>&& serializedModifierData, Vector<Method>&& serializedMethodData, String&& selectedShippingOption)
     : ActiveDOMObject { document }
     , m_options { WTFMove(options) }
@@ -394,6 +404,7 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
 
     if (PaymentHandler::hasActiveSession(document)) {
         promise.reject(Exception { AbortError });
+        m_state = State::Closed;
         return;
     }
 
@@ -428,7 +439,7 @@ void PaymentRequest::show(Document& document, RefPtr<DOMPromise>&& detailsPromis
         return;
     }
 
-    auto exception = selectedPaymentHandler->show();
+    auto exception = selectedPaymentHandler->show(document);
     if (exception.hasException()) {
         settleShowPromise(exception.releaseException());
         return;
@@ -506,7 +517,7 @@ void PaymentRequest::canMakePayment(Document& document, CanMakePaymentPromise&& 
         if (!handler)
             continue;
 
-        handler->canMakePayment([promise = WTFMove(promise)](bool canMakePayment) mutable {
+        handler->canMakePayment(document, [promise = WTFMove(promise)](bool canMakePayment) mutable {
             promise.resolve(canMakePayment);
         });
         return;

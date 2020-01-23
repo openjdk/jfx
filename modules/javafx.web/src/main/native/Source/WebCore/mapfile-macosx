@@ -821,7 +821,6 @@
                _Java_com_sun_webkit_dom_HTMLElementImpl_getLangImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getOuterTextImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getSpellcheckImpl
-               _Java_com_sun_webkit_dom_HTMLElementImpl_getTabIndexImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getTitleImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getTranslateImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getWebkitdropzoneImpl
@@ -837,7 +836,6 @@
                _Java_com_sun_webkit_dom_HTMLElementImpl_setLangImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setOuterTextImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setSpellcheckImpl
-               _Java_com_sun_webkit_dom_HTMLElementImpl_setTabIndexImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setTitleImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setTranslateImpl

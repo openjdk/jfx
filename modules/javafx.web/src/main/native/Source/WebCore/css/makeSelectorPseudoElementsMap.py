@@ -175,7 +175,7 @@ static inline CSSSelector::PseudoElementType parsePseudoElementString(const UCha
 
     for (unsigned i = 0; i < length; ++i) {
         UChar character = characters[i];
-        if (character & ~0xff)
+        if (!isLatin1(character))
             return CSSSelector::PseudoElementUnknown;
 
         buffer[i] = static_cast<LChar>(character);
@@ -185,7 +185,7 @@ static inline CSSSelector::PseudoElementType parsePseudoElementString(const UCha
 """ % longest_keyword)
 
 output_file.write("""
-CSSSelector::PseudoElementType parsePseudoElementString(const StringImpl& pseudoTypeString)
+CSSSelector::PseudoElementType parsePseudoElementString(StringView pseudoTypeString)
 {
     if (pseudoTypeString.is8Bit())
         return parsePseudoElementString(pseudoTypeString.characters8(), pseudoTypeString.length());

@@ -31,11 +31,12 @@
 #include "StyleInvalidationFunctions.h"
 #include "StyleInvalidator.h"
 #include <wtf/BitVector.h>
+#include <wtf/SetForScope.h>
 
 namespace WebCore {
 namespace Style {
 
-using ClassChangeVector = Vector<AtomicStringImpl*, 4>;
+using ClassChangeVector = Vector<AtomStringImpl*, 4>;
 
 static ClassChangeVector collectClasses(const SpaceSplitString& classes)
 {
@@ -119,6 +120,8 @@ void ClassChangeInvalidation::computeInvalidation(const SpaceSplitString& oldCla
 
 void ClassChangeInvalidation::invalidateStyleWithRuleSets()
 {
+    SetForScope<bool> isInvalidating(DocumentRuleSets::s_isInvalidatingStyleWithRuleSets, true);
+
     for (auto* invalidationRuleSet : m_invalidationRuleSets) {
         Invalidator invalidator(*invalidationRuleSet->ruleSet);
         invalidator.invalidateStyleWithMatchElement(m_element, invalidationRuleSet->matchElement);

@@ -27,6 +27,8 @@
 
 #include "AudioArray.h"
 
+#include <wtf/Noncopyable.h>
+
 namespace WebCore {
 
 class AudioResampler;
@@ -34,7 +36,9 @@ class AudioResampler;
 // AudioResamplerKernel does resampling on a single mono channel.
 // It uses a simple linear interpolation for good performance.
 
-class AudioResamplerKernel {
+class AudioResamplerKernel final {
+    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(AudioResamplerKernel);
 public:
     AudioResamplerKernel(AudioResampler*);
 

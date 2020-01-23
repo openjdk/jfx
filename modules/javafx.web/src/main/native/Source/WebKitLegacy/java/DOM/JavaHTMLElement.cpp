@@ -106,18 +106,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setDirImpl(JNIEnv
     IMPL->setDir(String(env, value));
 }
 
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getTabIndexImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->tabIndex();
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_setTabIndexImpl(JNIEnv*, jclass, jlong peer, jint value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setTabIndex(value);
-}
-
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLElementImpl_getDraggableImpl(JNIEnv*, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;

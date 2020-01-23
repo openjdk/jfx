@@ -39,6 +39,7 @@
 #include "CachedResourceRequestInitiators.h"
 #include "CachedScript.h"
 #include "CertificateInfo.h"
+#include "CustomHeaderFields.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "DocumentThreadableLoader.h"
@@ -171,12 +172,14 @@ private:
 
 InspectorNetworkAgent::InspectorNetworkAgent(WebAgentContext& context)
     : InspectorAgentBase("Network"_s, context)
-    , m_frontendDispatcher(std::make_unique<Inspector::NetworkFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<Inspector::NetworkFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(Inspector::NetworkBackendDispatcher::create(context.backendDispatcher, this))
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_resourcesData(std::make_unique<NetworkResourcesData>())
+    , m_resourcesData(makeUnique<NetworkResourcesData>())
 {
 }
+
+InspectorNetworkAgent::~InspectorNetworkAgent() = default;
 
 void InspectorNetworkAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
 {
@@ -184,8 +187,8 @@ void InspectorNetworkAgent::didCreateFrontendAndBackend(Inspector::FrontendRoute
 
 void InspectorNetworkAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
-    ErrorString unused;
-    disable(unused);
+    ErrorString ignored;
+    disable(ignored);
 }
 
 static Ref<JSON::Object> buildObjectForHeaders(const HTTPHeaderMap& headers)
@@ -360,7 +363,7 @@ RefPtr<Inspector::Protocol::Network::Response> InspectorNetworkAgent::buildObjec
             for (auto& ipAddress : certificateSummaryInfo.value().ipAddresses)
                 ipAddressesPayload->addItem(ipAddress);
             if (ipAddressesPayload->length())
-                certificatePayload->setDnsNames(WTFMove(ipAddressesPayload));
+                certificatePayload->setIpAddresses(WTFMove(ipAddressesPayload));
 
             securityPayload->setCertificate(WTFMove(certificatePayload));
         }
@@ -368,7 +371,7 @@ RefPtr<Inspector::Protocol::Network::Response> InspectorNetworkAgent::buildObjec
         responseObject->setSecurity(WTFMove(securityPayload));
     }
 
-    return WTFMove(responseObject);
+    return responseObject;
 }
 
 Ref<Inspector::Protocol::Network::CachedResource> InspectorNetworkAgent::buildObjectForCachedResource(CachedResource* cachedResource)
@@ -387,15 +390,6 @@ Ref<Inspector::Protocol::Network::CachedResource> InspectorNetworkAgent::buildOb
         resourceObject->setSourceMapURL(sourceMappingURL);
 
     return resourceObject;
-}
-
-InspectorNetworkAgent::~InspectorNetworkAgent()
-{
-    if (m_enabled) {
-        ErrorString unused;
-        disable(unused);
-    }
-    ASSERT(!m_instrumentingAgents.inspectorNetworkAgent());
 }
 
 double InspectorNetworkAgent::timestamp()
@@ -814,7 +808,12 @@ void InspectorNetworkAgent::enable()
 
             unsigned identifier = channel->identifier();
             didCreateWebSocket(identifier, webSocket->url());
-            willSendWebSocketHandshakeRequest(identifier, channel->clientHandshakeRequest());
+            auto cookieRequestHeaderFieldValue = [document = makeWeakPtr(channel->document())] (const URL& url) -> String {
+                if (!document || !document->page())
+                    return { };
+                return document->page()->cookieJar().cookieRequestHeaderFieldValue(*document, url);
+            };
+            willSendWebSocketHandshakeRequest(identifier, channel->clientHandshakeRequest(WTFMove(cookieRequestHeaderFieldValue)));
 
             if (channel->handshakeMode() == WebSocketHandshake::Connected)
                 didReceiveWebSocketHandshakeResponse(identifier, channel->serverHandshakeResponse());
@@ -848,7 +847,7 @@ void InspectorNetworkAgent::getResponseBody(ErrorString& errorString, const Stri
 {
     NetworkResourcesData::ResourceData const* resourceData = m_resourcesData->data(requestId);
     if (!resourceData) {
-        errorString = "No resource with given identifier found"_s;
+        errorString = "Missing resource for given requestId"_s;
         return;
     }
 
@@ -859,7 +858,7 @@ void InspectorNetworkAgent::getResponseBody(ErrorString& errorString, const Stri
     }
 
     if (resourceData->isContentEvicted()) {
-        errorString = "Request content was evicted from inspector cache"_s;
+        errorString = "Resource content was evicted from inspector cache"_s;
         return;
     }
 
@@ -874,7 +873,7 @@ void InspectorNetworkAgent::getResponseBody(ErrorString& errorString, const Stri
             return;
     }
 
-    errorString = "No data found for resource with given identifier"_s;
+    errorString = "Missing content of resource for given requestId"_s;
 }
 
 void InspectorNetworkAgent::setResourceCachingDisabled(ErrorString&, bool disabled)
@@ -884,10 +883,10 @@ void InspectorNetworkAgent::setResourceCachingDisabled(ErrorString&, bool disabl
 
 void InspectorNetworkAgent::loadResource(const String& frameId, const String& urlString, Ref<LoadResourceCallback>&& callback)
 {
-    ErrorString error;
-    auto* context = scriptExecutionContext(error, frameId);
+    ErrorString errorString;
+    auto* context = scriptExecutionContext(errorString, frameId);
     if (!context) {
-        callback->sendFailure(error);
+        callback->sendFailure(errorString);
         return;
     }
 
@@ -922,13 +921,13 @@ void InspectorNetworkAgent::getSerializedCertificate(ErrorString& errorString, c
 {
     auto* resourceData = m_resourcesData->data(requestId);
     if (!resourceData) {
-        errorString = "No resource with given identifier found"_s;
+        errorString = "Missing resource for given requestId"_s;
         return;
     }
 
     auto& certificate = resourceData->certificateInfo();
     if (!certificate || certificate.value().isEmpty()) {
-        errorString = "No certificate for resource"_s;
+        errorString = "Missing certificate of resource for given requestId"_s;
         return;
     }
 
@@ -961,7 +960,7 @@ void InspectorNetworkAgent::resolveWebSocket(ErrorString& errorString, const Str
 {
     WebSocket* webSocket = webSocketForRequestId(requestId);
     if (!webSocket) {
-        errorString = "WebSocket not found"_s;
+        errorString = "Missing web socket for given requestId"_s;
         return;
     }
 
@@ -972,7 +971,7 @@ void InspectorNetworkAgent::resolveWebSocket(ErrorString& errorString, const Str
     auto* document = downcast<Document>(webSocket->scriptExecutionContext());
     auto* frame = document->frame();
     if (!frame) {
-        errorString = "WebSocket belongs to document without a frame"_s;
+        errorString = "Missing frame of web socket for given requestId"_s;
         return;
     }
 
@@ -1101,12 +1100,12 @@ void InspectorNetworkAgent::searchInRequest(ErrorString& errorString, const Stri
 {
     NetworkResourcesData::ResourceData const* resourceData = m_resourcesData->data(requestId);
     if (!resourceData) {
-        errorString = "No resource with given identifier found"_s;
+        errorString = "Missing resource for given requestId"_s;
         return;
     }
 
     if (!resourceData->hasContent()) {
-        errorString = "No resource content"_s;
+        errorString = "Missing content of resource for given requestId"_s;
         return;
     }
 

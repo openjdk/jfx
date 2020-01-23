@@ -30,6 +30,7 @@
 #import <mach/task_info.h>
 #import <malloc/malloc.h>
 #import <notify.h>
+#import <wtf/ResourceUsage.h>
 #import <wtf/spi/darwin/DispatchSPI.h>
 
 #define ENABLE_FMW_FOOTPRINT_COMPARISON 0
@@ -199,7 +200,6 @@ void MemoryPressureHandler::respondToMemoryPressure(Critical critical, Synchrono
 
 Optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler::ReliefLogger::platformMemoryUsage()
 {
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101100
     task_vm_info_data_t vmInfo;
     mach_msg_type_number_t count = TASK_VM_INFO_COUNT;
     kern_return_t err = task_info(mach_task_self(), TASK_VM_INFO, (task_info_t) &vmInfo, &count);
@@ -207,9 +207,6 @@ Optional<MemoryPressureHandler::ReliefLogger::MemoryUsage> MemoryPressureHandler
         return WTF::nullopt;
 
     return MemoryUsage {static_cast<size_t>(vmInfo.internal), static_cast<size_t>(vmInfo.phys_footprint)};
-#else
-    return std::nullopt;
-#endif
 }
 
 } // namespace WTF

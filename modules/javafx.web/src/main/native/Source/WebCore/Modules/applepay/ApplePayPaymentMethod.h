@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,10 @@
 #include "ApplePayPaymentPass.h"
 #include <wtf/Optional.h>
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/ApplePayPaymentMethodAdditions.h>
+#endif
+
 namespace WebCore {
 
 enum class ApplePayPaymentMethodType;
@@ -41,6 +45,11 @@ struct ApplePayPaymentMethod {
     String network;
     Optional<Type> type;
     Optional<ApplePayPaymentPass> paymentPass;
+
+#if defined(APPLEPAYPAYMENTMETHOD_ADDITIONS)
+APPLEPAYPAYMENTMETHOD_ADDITIONS
+#undef APPLEPAYPAYMENTMETHOD_ADDITIONS
+#endif
 };
 
 }

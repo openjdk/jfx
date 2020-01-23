@@ -82,6 +82,24 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     }
 }
 
+ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, Ref<ScriptCallStack>&& callStack, unsigned long requestIdentifier)
+    : m_source(source)
+    , m_type(type)
+    , m_level(level)
+    , m_message(message)
+    , m_arguments(WTFMove(arguments))
+    , m_callStack(WTFMove(callStack))
+    , m_url()
+    , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
+{
+    const ScriptCallFrame* frame = m_callStack ? m_callStack->firstNonNativeCallFrame() : nullptr;
+    if (frame) {
+        m_url = frame->sourceURL();
+        m_line = frame->lineNumber();
+        m_column = frame->columnNumber();
+    }
+}
+
 ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, Ref<ScriptArguments>&& arguments, JSC::ExecState* state, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
@@ -170,6 +188,7 @@ static Protocol::Console::ChannelSource messageSourceValue(MessageSource source)
     case MessageSource::Other: return Protocol::Console::ChannelSource::Other;
     case MessageSource::Media: return Protocol::Console::ChannelSource::Media;
     case MessageSource::WebRTC: return Protocol::Console::ChannelSource::WebRTC;
+    case MessageSource::MediaSource: return Protocol::Console::ChannelSource::MediaSource;
     }
     return Protocol::Console::ChannelSource::Other;
 }
@@ -190,6 +209,7 @@ static Protocol::Console::ConsoleMessage::Type messageTypeValue(MessageType type
     case MessageType::Timing: return Protocol::Console::ConsoleMessage::Type::Timing;
     case MessageType::Profile: return Protocol::Console::ConsoleMessage::Type::Profile;
     case MessageType::ProfileEnd: return Protocol::Console::ConsoleMessage::Type::ProfileEnd;
+    case MessageType::Image: return Protocol::Console::ConsoleMessage::Type::Image;
     }
     return Protocol::Console::ConsoleMessage::Type::Log;
 }

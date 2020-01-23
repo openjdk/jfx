@@ -33,6 +33,7 @@
 #include "MIMETypeRegistry.h"
 #include "ResourceError.h"
 #include "ResourceResponse.h"
+#include "ScriptExecutionContext.h"
 #include "ServiceWorkerJobData.h"
 #include "ServiceWorkerRegistration.h"
 
@@ -163,15 +164,17 @@ void ServiceWorkerJob::notifyFinished()
     auto& error = scriptLoader->error();
     ASSERT(!error.isNull());
 
-    m_client.jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? SecurityError : TypeError, "Script load failed"_s });
+    m_client.jobFailedLoadingScript(*this, error, Exception { error.isAccessControl() ? SecurityError : TypeError, makeString("Script ", scriptLoader->url().string(), " load failed") });
 }
 
-void ServiceWorkerJob::cancelPendingLoad()
+bool ServiceWorkerJob::cancelPendingLoad()
 {
     if (!m_scriptLoader)
-        return;
+        return false;
+
     m_scriptLoader->cancel();
     m_scriptLoader = nullptr;
+    return true;
 }
 
 } // namespace WebCore

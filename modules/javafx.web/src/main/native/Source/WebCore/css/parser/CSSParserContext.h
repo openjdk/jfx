@@ -49,7 +49,9 @@ public:
 #if ENABLE(TEXT_AUTOSIZING)
     bool textAutosizingEnabled { false };
 #endif
-    bool needsSiteSpecificQuirks { false };
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+    bool legacyOverflowScrollingTouchEnabled { false };
+#endif
     bool enforcesCSSMIMETypeInNoQuirksMode { true };
     bool useLegacyBackgroundSizeShorthandBehavior { false };
     bool springTimingFunctionEnabled { false };
@@ -87,14 +89,18 @@ WEBCORE_EXPORT const CSSParserContext& strictCSSParserContext();
 struct CSSParserContextHash {
     static unsigned hash(const CSSParserContext& key)
     {
-        auto hash = WTF::URLHash::hash(key.baseURL);
+        unsigned hash = 0;
+        if (!key.baseURL.isNull())
+            hash ^= WTF::URLHash::hash(key.baseURL);
         if (!key.charset.isEmpty())
             hash ^= StringHash::hash(key.charset);
         unsigned bits = key.isHTMLDocument                  << 0
 #if ENABLE(TEXT_AUTOSIZING)
             & key.textAutosizingEnabled                     << 1
 #endif
-            & key.needsSiteSpecificQuirks                   << 2
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+            & key.legacyOverflowScrollingTouchEnabled       << 2
+#endif
             & key.enforcesCSSMIMETypeInNoQuirksMode         << 3
             & key.useLegacyBackgroundSizeShorthandBehavior  << 4
             & key.springTimingFunctionEnabled               << 5

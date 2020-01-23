@@ -22,16 +22,16 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://github.com/gpuweb/gpuweb/blob/master/design/sketch.webidl
+// https://gpuweb.github.io/gpuweb
 
 typedef unsigned long u32;
 
 [
     Conditional=WEBGPU,
     EnabledAtRuntime=WebGPU,
+    InterfaceName=GPUProgrammablePassEncoder,
     SkipVTableValidation
 ] interface WebGPUProgrammablePassEncoder {
-    WebGPUCommandBuffer endPass();
+    void endPass();
     void setBindGroup(u32 index, WebGPUBindGroup bindGroup/*, optional sequence<u32> dynamicOffsets*/);
-    void setPipeline(WebGPURenderPipeline pipeline); // FIXME: Support WebGPUComputePipelines.
 };

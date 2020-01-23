@@ -39,47 +39,29 @@ namespace WebCore {
 
 namespace WHLSL {
 
-void synthesizeStructureAccessors(Program& program)
+Expected<void, Error> synthesizeStructureAccessors(Program& program)
 {
     bool isOperator = true;
     for (auto& structureDefinition : program.structureDefinitions()) {
         for (auto& structureElement : structureDefinition->structureElements()) {
-            {
-                // The getter: operator.field
-                AST::VariableDeclaration variableDeclaration(Lexer::Token(structureElement.origin()), AST::Qualifiers(), { AST::TypeReference::wrap(Lexer::Token(structureElement.origin()), structureDefinition) }, String(), WTF::nullopt, WTF::nullopt);
-                AST::VariableDeclarations parameters;
-                parameters.append(WTFMove(variableDeclaration));
-                AST::NativeFunctionDeclaration nativeFunctionDeclaration(AST::FunctionDeclaration(Lexer::Token(structureElement.origin()), AST::AttributeBlock(), WTF::nullopt, structureElement.type().clone(), makeString("operator.", structureElement.name()), WTFMove(parameters), WTF::nullopt, isOperator));
-                program.append(WTFMove(nativeFunctionDeclaration));
-            }
-
-            {
-                // The setter: operator.field=
-                AST::VariableDeclaration variableDeclaration1(Lexer::Token(structureElement.origin()), AST::Qualifiers(), { AST::TypeReference::wrap(Lexer::Token(structureElement.origin()), structureDefinition) }, String(), WTF::nullopt, WTF::nullopt);
-                AST::VariableDeclaration variableDeclaration2(Lexer::Token(structureElement.origin()), AST::Qualifiers(), { structureElement.type().clone() }, String(), WTF::nullopt, WTF::nullopt);
-                AST::VariableDeclarations parameters;
-                parameters.append(WTFMove(variableDeclaration1));
-                parameters.append(WTFMove(variableDeclaration2));
-                AST::NativeFunctionDeclaration nativeFunctionDeclaration(AST::FunctionDeclaration(Lexer::Token(structureElement.origin()), AST::AttributeBlock(), WTF::nullopt, AST::TypeReference::wrap(Lexer::Token(structureElement.origin()), structureDefinition), makeString("operator.", structureElement.name(), '='), WTFMove(parameters), WTF::nullopt, isOperator));
-                program.append(WTFMove(nativeFunctionDeclaration));
-            }
-
             // The ander: operator&.field
             auto createAnder = [&](AST::AddressSpace addressSpace) -> AST::NativeFunctionDeclaration {
-                auto argumentType = makeUniqueRef<AST::PointerType>(Lexer::Token(structureElement.origin()), addressSpace, AST::TypeReference::wrap(Lexer::Token(structureElement.origin()), structureDefinition));
-                AST::VariableDeclaration variableDeclaration(Lexer::Token(structureElement.origin()), AST::Qualifiers(), { WTFMove(argumentType) }, String(), WTF::nullopt, WTF::nullopt);
+                auto argumentType = AST::PointerType::create(structureElement.codeLocation(), addressSpace, AST::TypeReference::wrap(structureElement.codeLocation(), structureDefinition));
+                auto variableDeclaration = makeUniqueRef<AST::VariableDeclaration>(structureElement.codeLocation(), AST::Qualifiers(), WTFMove(argumentType), String(), nullptr, nullptr);
                 AST::VariableDeclarations parameters;
                 parameters.append(WTFMove(variableDeclaration));
-                auto returnType = makeUniqueRef<AST::PointerType>(Lexer::Token(structureElement.origin()), addressSpace, structureElement.type().clone());
-                AST::NativeFunctionDeclaration nativeFunctionDeclaration(AST::FunctionDeclaration(Lexer::Token(structureElement.origin()), AST::AttributeBlock(), WTF::nullopt, WTFMove(returnType), makeString("operator&.", structureElement.name()), WTFMove(parameters), WTF::nullopt, isOperator));
+                auto returnType = AST::PointerType::create(structureElement.codeLocation(), addressSpace, structureElement.type());
+                AST::NativeFunctionDeclaration nativeFunctionDeclaration(AST::FunctionDeclaration(structureElement.codeLocation(), AST::AttributeBlock(), WTF::nullopt, WTFMove(returnType), makeString("operator&.", structureElement.name()), WTFMove(parameters), nullptr, isOperator, ParsingMode::StandardLibrary));
                 return nativeFunctionDeclaration;
             };
-            program.append(createAnder(AST::AddressSpace::Constant));
-            program.append(createAnder(AST::AddressSpace::Device));
-            program.append(createAnder(AST::AddressSpace::Threadgroup));
-            program.append(createAnder(AST::AddressSpace::Thread));
+            if (!program.append(createAnder(AST::AddressSpace::Constant))
+                || !program.append(createAnder(AST::AddressSpace::Device))
+                || !program.append(createAnder(AST::AddressSpace::Threadgroup))
+                || !program.append(createAnder(AST::AddressSpace::Thread)))
+                return makeUnexpected(Error("Can not create ander"));
         }
     }
+    return { };
 }
 
 } // namespace WHLSL

@@ -90,7 +90,9 @@ void WorkerScriptController::initScript()
         ASSERT(structure->globalObject() == m_workerGlobalScopeWrapper);
         ASSERT(m_workerGlobalScopeWrapper->structure(*m_vm)->globalObject() == m_workerGlobalScopeWrapper);
         dedicatedContextPrototype->structure(*m_vm)->setGlobalObject(*m_vm, m_workerGlobalScopeWrapper.get());
-        dedicatedContextPrototype->structure(*m_vm)->setPrototypeWithoutTransition(*m_vm, JSWorkerGlobalScope::prototype(*m_vm, *m_workerGlobalScopeWrapper.get()));
+        auto* workerGlobalScopePrototype = JSWorkerGlobalScope::prototype(*m_vm, *m_workerGlobalScopeWrapper.get());
+        workerGlobalScopePrototype->didBecomePrototype();
+        dedicatedContextPrototype->structure(*m_vm)->setPrototypeWithoutTransition(*m_vm, workerGlobalScopePrototype);
 
         proxy->setTarget(*m_vm, m_workerGlobalScopeWrapper.get());
         proxy->structure(*m_vm)->setGlobalObject(*m_vm, m_workerGlobalScopeWrapper.get());
@@ -107,7 +109,9 @@ void WorkerScriptController::initScript()
         ASSERT(structure->globalObject() == m_workerGlobalScopeWrapper);
         ASSERT(m_workerGlobalScopeWrapper->structure()->globalObject() == m_workerGlobalScopeWrapper);
         contextPrototype->structure(*m_vm)->setGlobalObject(*m_vm, m_workerGlobalScopeWrapper.get());
-        contextPrototype->structure(*m_vm)->setPrototypeWithoutTransition(*m_vm, JSWorkerGlobalScope::prototype(*m_vm, *m_workerGlobalScopeWrapper.get()));
+        auto* workerGlobalScopePrototype = JSWorkerGlobalScope::prototype(*m_vm, *m_workerGlobalScopeWrapper.get());
+        workerGlobalScopePrototype->didBecomePrototype();
+        contextPrototype->structure(*m_vm)->setPrototypeWithoutTransition(*m_vm, workerGlobalScopePrototype);
 
         proxy->setTarget(*m_vm, m_workerGlobalScopeWrapper.get());
         proxy->structure(*m_vm)->setGlobalObject(*m_vm, m_workerGlobalScopeWrapper.get());
@@ -117,7 +121,7 @@ void WorkerScriptController::initScript()
     ASSERT(m_workerGlobalScopeWrapper->globalObject() == m_workerGlobalScopeWrapper);
     ASSERT(asObject(m_workerGlobalScopeWrapper->getPrototypeDirect(*m_vm))->globalObject() == m_workerGlobalScopeWrapper);
 
-    m_consoleClient = std::make_unique<WorkerConsoleClient>(*m_workerGlobalScope);
+    m_consoleClient = makeUnique<WorkerConsoleClient>(*m_workerGlobalScope);
     m_workerGlobalScopeWrapper->setConsoleClient(m_consoleClient.get());
 }
 
@@ -246,7 +250,7 @@ void WorkerScriptController::addTimerSetNotification(JSC::JSRunLoopTimer::TimerN
 
     processTimer(m_vm->heap.fullActivityCallback());
     processTimer(m_vm->heap.edenActivityCallback());
-    processTimer(m_vm->promiseDeferredTimer.get());
+    processTimer(m_vm->promiseDeferredTimer.ptr());
 }
 
 void WorkerScriptController::removeTimerSetNotification(JSC::JSRunLoopTimer::TimerNotificationCallback callback)
@@ -259,7 +263,7 @@ void WorkerScriptController::removeTimerSetNotification(JSC::JSRunLoopTimer::Tim
 
     processTimer(m_vm->heap.fullActivityCallback());
     processTimer(m_vm->heap.edenActivityCallback());
-    processTimer(m_vm->promiseDeferredTimer.get());
+    processTimer(m_vm->promiseDeferredTimer.ptr());
 }
 
 void WorkerScriptController::attachDebugger(JSC::Debugger* debugger)

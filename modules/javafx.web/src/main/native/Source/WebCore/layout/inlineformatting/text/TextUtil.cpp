@@ -34,19 +34,19 @@
 namespace WebCore {
 namespace Layout {
 
-Optional<ItemPosition> TextUtil::hyphenPositionBefore(const InlineItem&, ItemPosition, unsigned)
+Optional<unsigned> TextUtil::hyphenPositionBefore(const InlineItem&, unsigned, unsigned)
 {
     return WTF::nullopt;
 }
 
-LayoutUnit TextUtil::width(const InlineItem& inlineTextItem, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft)
+LayoutUnit TextUtil::width(const Box& inlineBox, unsigned from, unsigned to, LayoutUnit contentLogicalLeft)
 {
-    auto& style = inlineTextItem.style();
+    auto& style = inlineBox.style();
     auto& font = style.fontCascade();
     if (!font.size() || from == to)
         return 0;
 
-    auto text = inlineTextItem.textContent();
+    auto text = inlineBox.textContent();
     ASSERT(to <= text.length());
 
     if (font.isFixedPitch())
@@ -57,7 +57,7 @@ LayoutUnit TextUtil::width(const InlineItem& inlineTextItem, ItemPosition from, 
     if (measureWithEndSpace)
         ++to;
     LayoutUnit width;
-    auto tabWidth = style.collapseWhiteSpace() ? 0 : style.tabSize();
+    auto tabWidth = style.collapseWhiteSpace() ? TabSize(0) : style.tabSize();
 
     WebCore::TextRun run(StringView(text).substring(from, to - from), contentLogicalLeft);
     if (tabWidth)
@@ -70,7 +70,7 @@ LayoutUnit TextUtil::width(const InlineItem& inlineTextItem, ItemPosition from, 
     return std::max<LayoutUnit>(0, width);
 }
 
-LayoutUnit TextUtil::fixedPitchWidth(String text, const RenderStyle& style, ItemPosition from, ItemPosition to, LayoutUnit contentLogicalLeft)
+LayoutUnit TextUtil::fixedPitchWidth(String text, const RenderStyle& style, unsigned from, unsigned to, LayoutUnit contentLogicalLeft)
 {
     auto& font = style.fontCascade();
     auto monospaceCharacterWidth = font.spaceWidth();
@@ -87,6 +87,42 @@ LayoutUnit TextUtil::fixedPitchWidth(String text, const RenderStyle& style, Item
     }
 
     return width;
+}
+
+bool TextUtil::isTrimmableContent(const InlineItem& inlineItem)
+{
+    if (!is<InlineTextItem>(inlineItem))
+        return false;
+    auto& inlineTextItem = downcast<InlineTextItem>(inlineItem);
+    return inlineTextItem.isWhitespace() && inlineTextItem.style().collapseWhiteSpace();
+}
+
+TextUtil::SplitData TextUtil::split(const Box& inlineBox, unsigned startPosition, unsigned length, LayoutUnit textWidth, LayoutUnit availableWidth, LayoutUnit contentLogicalLeft)
+{
+    // FIXME This should take hypens into account.
+    ASSERT(availableWidth >= 0);
+    auto left = startPosition;
+    // Pathological case of (extremely)long string and narrow lines.
+    // Adjust the range so that we can pick a reasonable midpoint.
+    LayoutUnit averageCharacterWidth = textWidth / length;
+    auto right = std::min<unsigned>(left + (2 * availableWidth / averageCharacterWidth).toUnsigned(), (startPosition + length - 1));
+    // Preserve the left width for the final split position so that we don't need to remeasure the left side again.
+    LayoutUnit leftSideWidth = 0;
+    while (left < right) {
+        auto middle = (left + right) / 2;
+        auto width = TextUtil::width(inlineBox, startPosition, middle + 1, contentLogicalLeft);
+        if (width < availableWidth) {
+            left = middle + 1;
+            leftSideWidth = width;
+        } else if (width > availableWidth)
+            right = middle;
+        else {
+            right = middle + 1;
+            leftSideWidth = width;
+            break;
+        }
+    }
+    return { startPosition, right - startPosition, leftSideWidth };
 }
 
 }

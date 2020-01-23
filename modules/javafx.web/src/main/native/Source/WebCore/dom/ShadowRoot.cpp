@@ -58,7 +58,7 @@ ShadowRoot::ShadowRoot(Document& document, ShadowRootMode type)
     : DocumentFragment(document, CreateShadowRoot)
     , TreeScope(*this, document)
     , m_type(type)
-    , m_styleScope(std::make_unique<Style::Scope>(*this))
+    , m_styleScope(makeUnique<Style::Scope>(*this))
 {
 }
 
@@ -67,7 +67,7 @@ ShadowRoot::ShadowRoot(Document& document, std::unique_ptr<SlotAssignment>&& slo
     : DocumentFragment(document, CreateShadowRoot)
     , TreeScope(*this, document)
     , m_type(ShadowRootMode::UserAgent)
-    , m_styleScope(std::make_unique<Style::Scope>(*this))
+    , m_styleScope(makeUnique<Style::Scope>(*this))
     , m_slotAssignment(WTFMove(slotAssignment))
 {
 }
@@ -147,7 +147,7 @@ void ShadowRoot::moveShadowRootToNewDocument(Document& newDocument)
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!parentTreeScope() || &parentTreeScope()->documentScope() == &newDocument);
 
     // Style scopes are document specific.
-    m_styleScope = std::make_unique<Style::Scope>(*this);
+    m_styleScope = makeUnique<Style::Scope>(*this);
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(&m_styleScope->document() == &newDocument);
 }
 
@@ -218,22 +218,22 @@ HTMLSlotElement* ShadowRoot::findAssignedSlot(const Node& node)
     return m_slotAssignment->findAssignedSlot(node, *this);
 }
 
-void ShadowRoot::renameSlotElement(HTMLSlotElement& slot, const AtomicString& oldName, const AtomicString& newName)
+void ShadowRoot::renameSlotElement(HTMLSlotElement& slot, const AtomString& oldName, const AtomString& newName)
 {
     ASSERT(m_slotAssignment);
     return m_slotAssignment->renameSlotElement(slot, oldName, newName, *this);
 }
 
-void ShadowRoot::addSlotElementByName(const AtomicString& name, HTMLSlotElement& slot)
+void ShadowRoot::addSlotElementByName(const AtomString& name, HTMLSlotElement& slot)
 {
     ASSERT(&slot.rootNode() == this);
     if (!m_slotAssignment)
-        m_slotAssignment = std::make_unique<SlotAssignment>();
+        m_slotAssignment = makeUnique<SlotAssignment>();
 
     return m_slotAssignment->addSlotElementByName(name, slot, *this);
 }
 
-void ShadowRoot::removeSlotElementByName(const AtomicString& name, HTMLSlotElement& slot, ContainerNode& oldParentOfRemovedTree)
+void ShadowRoot::removeSlotElementByName(const AtomString& name, HTMLSlotElement& slot, ContainerNode& oldParentOfRemovedTree)
 {
     ASSERT(m_slotAssignment);
     return m_slotAssignment->removeSlotElementByName(name, slot, &oldParentOfRemovedTree, *this);

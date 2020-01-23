@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,20 +29,35 @@
 #include "config.h"
 #include "PageConsoleClient.h"
 
+#include "CachedImage.h"
 #include "CanvasRenderingContext2D.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "Document.h"
+#include "ElementChildIterator.h"
 #include "Frame.h"
+#include "FrameSnapshotting.h"
 #include "HTMLCanvasElement.h"
+#include "HTMLImageElement.h"
+#include "HTMLPictureElement.h"
+#include "HTMLVideoElement.h"
+#include "Image.h"
+#include "ImageBitmap.h"
 #include "ImageBitmapRenderingContext.h"
+#include "ImageBuffer.h"
+#include "ImageData.h"
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
+#include "IntRect.h"
 #include "JSCanvasRenderingContext2D.h"
 #include "JSExecState.h"
 #include "JSHTMLCanvasElement.h"
+#include "JSImageBitmap.h"
 #include "JSImageBitmapRenderingContext.h"
+#include "JSImageData.h"
+#include "JSNode.h"
 #include "JSOffscreenCanvas.h"
+#include "Node.h"
 #include "OffscreenCanvas.h"
 #include "Page.h"
 #include "ScriptableDocumentParser.h"
@@ -59,6 +74,10 @@
 #include "WebGLRenderingContext.h"
 #endif
 
+#if ENABLE(WEBGL2)
+#include "JSWebGL2RenderingContext.h"
+#include "WebGL2RenderingContext.h"
+#endif
 
 namespace WebCore {
 using namespace Inspector;
@@ -94,36 +113,24 @@ void PageConsoleClient::unmute()
     muteCount--;
 }
 
-static void getParserLocationForConsoleMessage(Document* document, String& url, unsigned& line, unsigned& column)
-{
-    if (!document)
-        return;
-
-    // We definitely cannot associate the message with a location being parsed if we are not even parsing.
-    if (!document->parsing())
-        return;
-
-    ScriptableDocumentParser* parser = document->scriptableDocumentParser();
-    if (!parser)
-        return;
-
-    // When the parser waits for scripts, any messages must be coming from some other source, and are not related to the location of the script element that made the parser wait.
-    if (!parser->shouldAssociateConsoleMessagesWithTextPosition())
-        return;
-
-    url = document->url().string();
-    TextPosition position = parser->textPosition();
-    line = position.m_line.oneBasedInt();
-    column = position.m_column.oneBasedInt();
-}
-
 void PageConsoleClient::addMessage(std::unique_ptr<Inspector::ConsoleMessage>&& consoleMessage)
 {
-    if (consoleMessage->source() != MessageSource::CSS && !m_page.usesEphemeralSession()) {
-        m_page.chrome().client().addMessageToConsole(consoleMessage->source(), consoleMessage->level(), consoleMessage->message(), consoleMessage->line(), consoleMessage->column(), consoleMessage->url());
+    if (!m_page.usesEphemeralSession()) {
+        String message;
+        if (consoleMessage->type() == MessageType::Image) {
+            ASSERT(consoleMessage->arguments());
+            consoleMessage->arguments()->getFirstArgumentAsString(message);
+        } else
+            message = consoleMessage->message();
+        m_page.chrome().client().addMessageToConsole(consoleMessage->source(), consoleMessage->level(), message, consoleMessage->line(), consoleMessage->column(), consoleMessage->url());
 
-        if (m_page.settings().logsPageMessagesToSystemConsoleEnabled() || shouldPrintExceptions())
-            ConsoleClient::printConsoleMessage(MessageSource::ConsoleAPI, MessageType::Log, consoleMessage->level(), consoleMessage->message(), consoleMessage->url(), consoleMessage->line(), consoleMessage->column());
+        if (UNLIKELY(m_page.settings().logsPageMessagesToSystemConsoleEnabled() || shouldPrintExceptions())) {
+            if (consoleMessage->type() == MessageType::Image) {
+                ASSERT(consoleMessage->arguments());
+                ConsoleClient::printConsoleMessageWithArguments(MessageSource::ConsoleAPI, MessageType::Log, consoleMessage->level(), consoleMessage->arguments()->globalState(), *consoleMessage->arguments());
+            } else
+                ConsoleClient::printConsoleMessage(MessageSource::ConsoleAPI, MessageType::Log, consoleMessage->level(), consoleMessage->message(), consoleMessage->url(), consoleMessage->line(), consoleMessage->column());
+        }
     }
 
     InspectorInstrumentation::addMessageToConsole(m_page, WTFMove(consoleMessage));
@@ -134,7 +141,8 @@ void PageConsoleClient::addMessage(MessageSource source, MessageLevel level, con
     String url;
     unsigned line = 0;
     unsigned column = 0;
-    getParserLocationForConsoleMessage(document, url, line, column);
+    if (document)
+        document->getParserLocation(url, line, column);
 
     addMessage(source, level, message, url, line, column, 0, JSExecState::currentState(), requestIdentifier);
 }
@@ -152,9 +160,9 @@ void PageConsoleClient::addMessage(MessageSource source, MessageLevel level, con
     std::unique_ptr<Inspector::ConsoleMessage> message;
 
     if (callStack)
-        message = std::make_unique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, callStack.releaseNonNull(), requestIdentifier);
+        message = makeUnique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, callStack.releaseNonNull(), requestIdentifier);
     else
-        message = std::make_unique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, suggestedURL, suggestedLineNumber, suggestedColumnNumber, state, requestIdentifier);
+        message = makeUnique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, suggestedURL, suggestedLineNumber, suggestedColumnNumber, state, requestIdentifier);
 
     addMessage(WTFMove(message));
 }
@@ -165,7 +173,7 @@ void PageConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel l
     String messageText;
     bool gotMessage = arguments->getFirstArgumentAsString(messageText);
 
-    auto message = std::make_unique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, type, level, messageText, arguments.copyRef(), exec);
+    auto message = makeUnique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, type, level, messageText, arguments.copyRef(), exec);
 
     String url = message->url();
     unsigned lineNumber = message->line();
@@ -183,9 +191,14 @@ void PageConsoleClient::messageWithTypeAndLevel(MessageType type, MessageLevel l
         ConsoleClient::printConsoleMessageWithArguments(MessageSource::ConsoleAPI, type, level, exec, WTFMove(arguments));
 }
 
-void PageConsoleClient::count(JSC::ExecState* exec, Ref<ScriptArguments>&& arguments)
+void PageConsoleClient::count(JSC::ExecState* exec, const String& label)
 {
-    InspectorInstrumentation::consoleCount(m_page, exec, WTFMove(arguments));
+    InspectorInstrumentation::consoleCount(m_page, exec, label);
+}
+
+void PageConsoleClient::countReset(JSC::ExecState* exec, const String& label)
+{
+    InspectorInstrumentation::consoleCountReset(m_page, exec, label);
 }
 
 void PageConsoleClient::profile(JSC::ExecState* exec, const String& title)
@@ -205,14 +218,19 @@ void PageConsoleClient::takeHeapSnapshot(JSC::ExecState*, const String& title)
     InspectorInstrumentation::takeHeapSnapshot(m_page.mainFrame(), title);
 }
 
-void PageConsoleClient::time(JSC::ExecState*, const String& title)
+void PageConsoleClient::time(JSC::ExecState* exec, const String& label)
 {
-    InspectorInstrumentation::startConsoleTiming(m_page.mainFrame(), title);
+    InspectorInstrumentation::startConsoleTiming(m_page.mainFrame(), exec, label);
 }
 
-void PageConsoleClient::timeEnd(JSC::ExecState* exec, const String& title)
+void PageConsoleClient::timeLog(JSC::ExecState* exec, const String& label, Ref<ScriptArguments>&& arguments)
 {
-    InspectorInstrumentation::stopConsoleTiming(m_page.mainFrame(), title, createScriptCallStackForConsole(exec, 1));
+    InspectorInstrumentation::logConsoleTiming(m_page.mainFrame(), exec, label, WTFMove(arguments));
+}
+
+void PageConsoleClient::timeEnd(JSC::ExecState* exec, const String& label)
+{
+    InspectorInstrumentation::stopConsoleTiming(m_page.mainFrame(), exec, label);
 }
 
 void PageConsoleClient::timeStamp(JSC::ExecState*, Ref<ScriptArguments>&& arguments)
@@ -225,12 +243,8 @@ static JSC::JSObject* objectArgumentAt(ScriptArguments& arguments, unsigned inde
     return arguments.argumentCount() > index ? arguments.argumentAt(index).getObject() : nullptr;
 }
 
-static CanvasRenderingContext* canvasRenderingContext(JSC::VM& vm, ScriptArguments& arguments)
+static CanvasRenderingContext* canvasRenderingContext(JSC::VM& vm, JSC::JSValue target)
 {
-    auto* target = objectArgumentAt(arguments, 0);
-    if (!target)
-        return nullptr;
-
     if (auto* canvas = JSHTMLCanvasElement::toWrapped(vm, target))
         return canvas->renderingContext();
     if (auto* canvas = JSOffscreenCanvas::toWrapped(vm, target))
@@ -243,19 +257,163 @@ static CanvasRenderingContext* canvasRenderingContext(JSC::VM& vm, ScriptArgumen
     if (auto* context = JSWebGLRenderingContext::toWrapped(vm, target))
         return context;
 #endif
+#if ENABLE(WEBGL2)
+    if (auto* context = JSWebGL2RenderingContext::toWrapped(vm, target))
+        return context;
+#endif
     return nullptr;
 }
 
 void PageConsoleClient::record(JSC::ExecState* state, Ref<ScriptArguments>&& arguments)
 {
-    if (auto* context = canvasRenderingContext(state->vm(), arguments))
-        InspectorInstrumentation::consoleStartRecordingCanvas(*context, *state, objectArgumentAt(arguments, 1));
+    if (auto* target = objectArgumentAt(arguments, 0)) {
+        if (auto* context = canvasRenderingContext(state->vm(), target))
+            InspectorInstrumentation::consoleStartRecordingCanvas(*context, *state, objectArgumentAt(arguments, 1));
+    }
 }
 
 void PageConsoleClient::recordEnd(JSC::ExecState* state, Ref<ScriptArguments>&& arguments)
 {
-    if (auto* context = canvasRenderingContext(state->vm(), arguments))
-        InspectorInstrumentation::didFinishRecordingCanvasFrame(*context, true);
+    if (auto* target = objectArgumentAt(arguments, 0)) {
+        if (auto* context = canvasRenderingContext(state->vm(), target))
+            InspectorInstrumentation::didFinishRecordingCanvasFrame(*context, true);
+    }
+}
+
+static Optional<String> snapshotCanvas(HTMLCanvasElement& canvasElement, CanvasRenderingContext& canvasRenderingContext)
+{
+#if ENABLE(WEBGL)
+    if (is<WebGLRenderingContextBase>(canvasRenderingContext))
+        downcast<WebGLRenderingContextBase>(canvasRenderingContext).setPreventBufferClearForInspector(true);
+#endif
+
+    auto result = canvasElement.toDataURL("image/png"_s);
+
+#if ENABLE(WEBGL)
+    if (is<WebGLRenderingContextBase>(canvasRenderingContext))
+        downcast<WebGLRenderingContextBase>(canvasRenderingContext).setPreventBufferClearForInspector(false);
+#endif
+
+    if (!result.hasException())
+        return result.releaseReturnValue().string;
+
+    return WTF::nullopt;
+}
+
+void PageConsoleClient::screenshot(JSC::ExecState* state, Ref<ScriptArguments>&& arguments)
+{
+    JSC::VM& vm = state->vm();
+    String dataURL;
+    JSC::JSValue target;
+
+    if (arguments->argumentCount()) {
+        auto possibleTarget = arguments->argumentAt(0);
+
+        if (auto* node = JSNode::toWrapped(vm, possibleTarget)) {
+            target = possibleTarget;
+            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+                std::unique_ptr<ImageBuffer> snapshot;
+
+                // Only try to do something special for subclasses of Node if they're detached from the DOM tree.
+                if (!node->document().contains(node)) {
+                    auto snapshotImageElement = [&snapshot] (HTMLImageElement& imageElement) {
+                        if (auto* cachedImage = imageElement.cachedImage()) {
+                            auto* image = cachedImage->image();
+                            if (image && image != &Image::nullImage()) {
+                                snapshot = ImageBuffer::create(image->size(), RenderingMode::Unaccelerated);
+                                snapshot->context().drawImage(*image, FloatPoint(0, 0));
+                            }
+                        }
+                    };
+
+                    if (is<HTMLImageElement>(node))
+                        snapshotImageElement(downcast<HTMLImageElement>(*node));
+                    else if (is<HTMLPictureElement>(node)) {
+                        if (auto* firstImage = childrenOfType<HTMLImageElement>(downcast<HTMLPictureElement>(*node)).first())
+                            snapshotImageElement(*firstImage);
+                    }
+#if ENABLE(VIDEO)
+                    else if (is<HTMLVideoElement>(node)) {
+                        auto& videoElement = downcast<HTMLVideoElement>(*node);
+                        unsigned videoWidth = videoElement.videoWidth();
+                        unsigned videoHeight = videoElement.videoHeight();
+                        snapshot = ImageBuffer::create(FloatSize(videoWidth, videoHeight), RenderingMode::Unaccelerated);
+                        videoElement.paintCurrentFrameInContext(snapshot->context(), FloatRect(0, 0, videoWidth, videoHeight));
+                    }
+#endif
+                    else if (is<HTMLCanvasElement>(node)) {
+                        auto& canvasElement = downcast<HTMLCanvasElement>(*node);
+                        if (auto* canvasRenderingContext = canvasElement.renderingContext()) {
+                            if (auto result = snapshotCanvas(canvasElement, *canvasRenderingContext))
+                                dataURL = result.value();
+                        }
+                    }
+                }
+
+                if (dataURL.isEmpty()) {
+                    if (!snapshot)
+                        snapshot = WebCore::snapshotNode(m_page.mainFrame(), *node);
+
+                    if (snapshot)
+                        dataURL = snapshot->toDataURL("image/png"_s, WTF::nullopt, PreserveResolution::Yes);
+                }
+            }
+        } else if (auto* imageData = JSImageData::toWrapped(vm, possibleTarget)) {
+            target = possibleTarget;
+            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+                auto sourceSize = imageData->size();
+                if (auto imageBuffer = ImageBuffer::create(sourceSize, RenderingMode::Unaccelerated)) {
+                    IntRect sourceRect(IntPoint(), sourceSize);
+                    imageBuffer->putByteArray(*imageData->data(), AlphaPremultiplication::Unpremultiplied, sourceSize, sourceRect, IntPoint());
+                    dataURL = imageBuffer->toDataURL("image/png"_s, WTF::nullopt, PreserveResolution::Yes);
+                }
+            }
+        } else if (auto* imageBitmap = JSImageBitmap::toWrapped(vm, possibleTarget)) {
+            target = possibleTarget;
+            if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+                if (auto* imageBuffer = imageBitmap->buffer())
+                    dataURL = imageBuffer->toDataURL("image/png"_s, WTF::nullopt, PreserveResolution::Yes);
+            }
+        } else if (auto* context = canvasRenderingContext(vm, possibleTarget)) {
+            auto& canvas = context->canvasBase();
+            if (is<HTMLCanvasElement>(canvas)) {
+                target = possibleTarget;
+                if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+                    if (auto result = snapshotCanvas(downcast<HTMLCanvasElement>(canvas), *context))
+                        dataURL = result.value();
+                }
+            }
+
+            // FIXME: <https://webkit.org/b/180833> Web Inspector: support OffscreenCanvas for Canvas related operations
+        } else {
+            String base64;
+            if (possibleTarget.getString(state, base64) && base64.startsWithIgnoringASCIICase("data:"_s) && base64.length() > 5) {
+                target = possibleTarget;
+                dataURL = base64;
+            }
+        }
+    }
+
+    if (UNLIKELY(InspectorInstrumentation::hasFrontends())) {
+        if (!target) {
+            // If no target is provided, capture an image of the viewport.
+            IntRect imageRect(IntPoint::zero(), m_page.mainFrame().view()->sizeForVisibleContent());
+            if (auto snapshot = WebCore::snapshotFrameRect(m_page.mainFrame(), imageRect, SnapshotOptionsInViewCoordinates))
+                dataURL = snapshot->toDataURL("image/png"_s, WTF::nullopt, PreserveResolution::Yes);
+        }
+
+        if (dataURL.isEmpty()) {
+            addMessage(makeUnique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Image, MessageLevel::Error, "Could not capture screenshot"_s, WTFMove(arguments)));
+            return;
+        }
+    }
+
+    Vector<JSC::Strong<JSC::Unknown>> adjustedArguments;
+    adjustedArguments.append({ vm, target ? target : JSC::jsNontrivialString(vm, "Viewport"_s) });
+    for (size_t i = (!target ? 0 : 1); i < arguments->argumentCount(); ++i)
+        adjustedArguments.append({ vm, arguments->argumentAt(i) });
+    arguments = ScriptArguments::create(*state, WTFMove(adjustedArguments));
+    addMessage(makeUnique<Inspector::ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Image, MessageLevel::Log, dataURL, WTFMove(arguments)));
 }
 
 } // namespace WebCore

@@ -34,6 +34,7 @@
 #include "CSSFontVariationValue.h"
 #include "CSSFunctionValue.h"
 #include "CSSGridAutoRepeatValue.h"
+#include "CSSGridIntegerRepeatValue.h"
 #include "CSSGridLineNamesValue.h"
 #include "CSSImageGeneratorValue.h"
 #include "CSSImageSetValue.h"
@@ -52,6 +53,7 @@
 #include "Settings.h"
 #include "StyleResolver.h"
 #include "StyleScrollSnapPoints.h"
+#include "TabSize.h"
 #include "TouchAction.h"
 #include "TransformFunctions.h"
 #include <wtf/Optional.h>
@@ -65,6 +67,7 @@ public:
     static Length convertLengthOrAuto(const StyleResolver&, const CSSValue&);
     static Length convertLengthSizing(const StyleResolver&, const CSSValue&);
     static Length convertLengthMaxSizing(const StyleResolver&, const CSSValue&);
+    static TabSize convertTabSize(const StyleResolver&, const CSSValue&);
     template<typename T> static T convertComputedLength(StyleResolver&, const CSSValue&);
     template<typename T> static T convertLineWidth(StyleResolver&, const CSSValue&);
     static float convertSpacing(StyleResolver&, const CSSValue&);
@@ -79,7 +82,7 @@ public:
     template<CSSPropertyID> static RefPtr<StyleImage> convertStyleImage(StyleResolver&, CSSValue&);
     static TransformOperations convertTransform(StyleResolver&, const CSSValue&);
 #if ENABLE(DARK_MODE_CSS)
-    static StyleSupportedColorSchemes convertSupportedColorSchemes(StyleResolver&, const CSSValue&);
+    static StyleColorScheme convertColorScheme(StyleResolver&, const CSSValue&);
 #endif
     static String convertString(StyleResolver&, const CSSValue&);
     static String convertStringOrAuto(StyleResolver&, const CSSValue&);
@@ -121,7 +124,7 @@ public:
 #if ENABLE(POINTER_EVENTS)
     static OptionSet<TouchAction> convertTouchAction(StyleResolver&, const CSSValue&);
 #endif
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     static bool convertOverflowScrolling(StyleResolver&, const CSSValue&);
 #endif
     static FontFeatureSettings convertFontFeatureSettings(StyleResolver&, const CSSValue&);
@@ -173,7 +176,7 @@ private:
 #endif
 
 #if ENABLE(DARK_MODE_CSS)
-    static void updateSupportedColorSchemes(const CSSPrimitiveValue&, StyleSupportedColorSchemes&);
+    static void updateColorScheme(const CSSPrimitiveValue&, StyleColorScheme&);
 #endif
 
     static Length convertTo100PercentMinusLength(const Length&);
@@ -252,6 +255,14 @@ inline Length StyleBuilderConverter::convertLengthMaxSizing(const StyleResolver&
     if (downcast<CSSPrimitiveValue>(value).valueID() == CSSValueNone)
         return Length(Undefined);
     return convertLengthSizing(styleResolver, value);
+}
+
+inline TabSize StyleBuilderConverter::convertTabSize(const StyleResolver& styleResolver, const CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.isNumber())
+        return TabSize(primitiveValue.floatValue(), SpaceValueType);
+    return TabSize(primitiveValue.computeLength<float>(styleResolver.state().cssToLengthConversionData()), LengthValueType);
 }
 
 template<typename T>
@@ -337,9 +348,9 @@ inline Length StyleBuilderConverter::convertTo100PercentMinusLength(const Length
     // Turn this into a calc expression: calc(100% - length)
     Vector<std::unique_ptr<CalcExpressionNode>> lengths;
     lengths.reserveInitialCapacity(2);
-    lengths.uncheckedAppend(std::make_unique<CalcExpressionLength>(Length(100, Percent)));
-    lengths.uncheckedAppend(std::make_unique<CalcExpressionLength>(length));
-    auto op = std::make_unique<CalcExpressionOperation>(WTFMove(lengths), CalcOperator::Subtract);
+    lengths.uncheckedAppend(makeUnique<CalcExpressionLength>(Length(100, Percent)));
+    lengths.uncheckedAppend(makeUnique<CalcExpressionLength>(length));
+    auto op = makeUnique<CalcExpressionOperation>(WTFMove(lengths), CalcOperator::Subtract);
     return Length(CalculationValue::create(WTFMove(op), ValueRangeAll));
 }
 
@@ -465,22 +476,22 @@ inline TransformOperations StyleBuilderConverter::convertTransform(StyleResolver
 }
 
 #if ENABLE(DARK_MODE_CSS)
-inline void StyleBuilderConverter::updateSupportedColorSchemes(const CSSPrimitiveValue& primitiveValue, StyleSupportedColorSchemes& supportedColorSchemes)
+inline void StyleBuilderConverter::updateColorScheme(const CSSPrimitiveValue& primitiveValue, StyleColorScheme& colorScheme)
 {
     ASSERT(primitiveValue.isValueID());
 
     switch (primitiveValue.valueID()) {
     case CSSValueAuto:
-        supportedColorSchemes = StyleSupportedColorSchemes();
+        colorScheme = StyleColorScheme();
         break;
     case CSSValueOnly:
-        supportedColorSchemes.setAllowsTransformations(false);
+        colorScheme.setAllowsTransformations(false);
         break;
     case CSSValueLight:
-        supportedColorSchemes.add(ColorSchemes::Light);
+        colorScheme.add(ColorScheme::Light);
         break;
     case CSSValueDark:
-        supportedColorSchemes.add(ColorSchemes::Dark);
+        colorScheme.add(ColorScheme::Dark);
         break;
     default:
         // Unknown identifiers are allowed and ignored.
@@ -488,21 +499,21 @@ inline void StyleBuilderConverter::updateSupportedColorSchemes(const CSSPrimitiv
     }
 }
 
-inline StyleSupportedColorSchemes StyleBuilderConverter::convertSupportedColorSchemes(StyleResolver&, const CSSValue& value)
+inline StyleColorScheme StyleBuilderConverter::convertColorScheme(StyleResolver&, const CSSValue& value)
 {
-    StyleSupportedColorSchemes supportedColorSchemes;
+    StyleColorScheme colorScheme;
 
     if (is<CSSValueList>(value)) {
         for (auto& currentValue : downcast<CSSValueList>(value))
-            updateSupportedColorSchemes(downcast<CSSPrimitiveValue>(currentValue.get()), supportedColorSchemes);
+            updateColorScheme(downcast<CSSPrimitiveValue>(currentValue.get()), colorScheme);
     } else if (is<CSSPrimitiveValue>(value))
-        updateSupportedColorSchemes(downcast<CSSPrimitiveValue>(value), supportedColorSchemes);
+        updateColorScheme(downcast<CSSPrimitiveValue>(value), colorScheme);
 
     // If the value was just "only", that is synonymous for "only light".
-    if (supportedColorSchemes.isOnly())
-        supportedColorSchemes.add(ColorSchemes::Light);
+    if (colorScheme.isOnly())
+        colorScheme.add(ColorScheme::Light);
 
-    return supportedColorSchemes;
+    return colorScheme;
 }
 #endif
 
@@ -579,9 +590,9 @@ inline RefPtr<ClipPathOperation> StyleBuilderConverter::convertClipPath(StyleRes
         auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
         if (primitiveValue.primitiveType() == CSSPrimitiveValue::CSS_URI) {
             String cssURLValue = primitiveValue.stringValue();
-            URL url = styleResolver.document().completeURL(cssURLValue);
+            String fragment = SVGURIReference::fragmentIdentifierFromIRIString(cssURLValue, styleResolver.document());
             // FIXME: It doesn't work with external SVG references (see https://bugs.webkit.org/show_bug.cgi?id=126133)
-            return ReferenceClipPathOperation::create(cssURLValue, url.fragmentIdentifier());
+            return ReferenceClipPathOperation::create(cssURLValue, fragment);
         }
         ASSERT(primitiveValue.valueID() == CSSValueNone);
         return nullptr;
@@ -746,7 +757,7 @@ inline RefPtr<StyleReflection> StyleBuilderConverter::convertReflection(StyleRes
     styleResolver.styleMap()->mapNinePieceImage(CSSPropertyWebkitBoxReflect, reflectValue.mask(), mask);
     reflection->setMask(mask);
 
-    return WTFMove(reflection);
+    return reflection;
 }
 
 inline IntSize StyleBuilderConverter::convertInitialLetter(StyleResolver&, const CSSValue& value)
@@ -989,12 +1000,16 @@ inline bool StyleBuilderConverter::createGridTrackList(const CSSValue& value, Tr
         return false;
 
     unsigned currentNamedGridLine = 0;
-    for (auto& currentValue : downcast<CSSValueList>(value)) {
-        if (is<CSSGridLineNamesValue>(currentValue)) {
-            createGridLineNamesList(currentValue.get(), currentNamedGridLine, tracksData.m_namedGridLines, tracksData.m_orderedNamedGridLines);
-            continue;
+    auto handleLineNameOrTrackSize = [&](const CSSValue& currentValue) {
+        if (is<CSSGridLineNamesValue>(currentValue))
+            createGridLineNamesList(currentValue, currentNamedGridLine, tracksData.m_namedGridLines, tracksData.m_orderedNamedGridLines);
+        else {
+            ++currentNamedGridLine;
+            tracksData.m_trackSizes.append(createGridTrackSize(currentValue, styleResolver));
         }
+    };
 
+    for (auto& currentValue : downcast<CSSValueList>(value)) {
         if (is<CSSGridAutoRepeatValue>(currentValue)) {
             ASSERT(tracksData.m_autoRepeatTrackSizes.isEmpty());
             unsigned autoRepeatIndex = 0;
@@ -1013,8 +1028,16 @@ inline bool StyleBuilderConverter::createGridTrackList(const CSSValue& value, Tr
             continue;
         }
 
-        ++currentNamedGridLine;
-        tracksData.m_trackSizes.append(createGridTrackSize(currentValue, styleResolver));
+        if (is<CSSGridIntegerRepeatValue>(currentValue)) {
+            size_t repetitions = downcast<CSSGridIntegerRepeatValue>(currentValue.get()).repetitions();
+            for (size_t i = 0; i < repetitions; ++i) {
+                for (auto& integerRepeatValue : downcast<CSSValueList>(currentValue.get()))
+                    handleLineNameOrTrackSize(integerRepeatValue);
+            }
+            continue;
+        }
+
+        handleLineNameOrTrackSize(currentValue);
     }
 
     // The parser should have rejected any <track-list> without any <track-size> as
@@ -1099,6 +1122,7 @@ inline Vector<GridTrackSize> StyleBuilderConverter::convertGridTrackSizeList(Sty
     for (auto& currValue : valueList) {
         ASSERT(!currValue->isGridLineNamesValue());
         ASSERT(!currValue->isGridAutoRepeatValue());
+        ASSERT(!currValue->isGridIntegerRepeatValue());
         trackSizes.uncheckedAppend(convertGridTrackSize(styleResolver, currValue));
     }
     return trackSizes;
@@ -1373,7 +1397,7 @@ inline OptionSet<TouchAction> StyleBuilderConverter::convertTouchAction(StyleRes
 }
 #endif
 
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
 inline bool StyleBuilderConverter::convertOverflowScrolling(StyleResolver&, const CSSValue& value)
 {
     return downcast<CSSPrimitiveValue>(value).valueID() == CSSValueTouch;
@@ -1565,42 +1589,6 @@ inline FontSynthesis StyleBuilderConverter::convertFontSynthesis(StyleResolver&,
     }
 
     return result;
-}
-
-inline BreakBetween StyleBuilderConverter::convertPageBreakBetween(StyleResolver&, const CSSValue& value)
-{
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-    if (primitiveValue.valueID() == CSSValueAlways)
-        return BreakBetween::Page;
-    if (primitiveValue.valueID() == CSSValueAvoid)
-        return BreakBetween::AvoidPage;
-    return primitiveValue;
-}
-
-inline BreakInside StyleBuilderConverter::convertPageBreakInside(StyleResolver&, const CSSValue& value)
-{
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-    if (primitiveValue.valueID() == CSSValueAvoid)
-        return BreakInside::AvoidPage;
-    return primitiveValue;
-}
-
-inline BreakBetween StyleBuilderConverter::convertColumnBreakBetween(StyleResolver&, const CSSValue& value)
-{
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-    if (primitiveValue.valueID() == CSSValueAlways)
-        return BreakBetween::Column;
-    if (primitiveValue.valueID() == CSSValueAvoid)
-        return BreakBetween::AvoidColumn;
-    return primitiveValue;
-}
-
-inline BreakInside StyleBuilderConverter::convertColumnBreakInside(StyleResolver&, const CSSValue& value)
-{
-    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
-    if (primitiveValue.valueID() == CSSValueAvoid)
-        return BreakInside::AvoidColumn;
-    return primitiveValue;
 }
 
 inline OptionSet<SpeakAs> StyleBuilderConverter::convertSpeakAs(StyleResolver&, const CSSValue& value)

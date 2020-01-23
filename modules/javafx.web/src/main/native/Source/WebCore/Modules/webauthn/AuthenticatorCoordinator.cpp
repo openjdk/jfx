@@ -37,6 +37,8 @@
 #include "PublicKeyCredentialCreationOptions.h"
 #include "PublicKeyCredentialData.h"
 #include "PublicKeyCredentialRequestOptions.h"
+#include "RegistrableDomain.h"
+#include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/JSONValues.h>
@@ -78,6 +80,38 @@ static Vector<uint8_t> produceClientDataJsonHash(const ArrayBuffer& clientDataJs
     return crypto->computeHash();
 }
 
+static bool needsAppIdQuirks(const String& host, const String& appId)
+{
+    // FIXME(197524): Remove this quirk in 2023. As an early adopter of U2F features, Google has a large number of
+    // existing device registrations that authenticate 'google.com' against 'gstatic.com'. Firefox and other browsers
+    // have agreed to grant an exception to the AppId rules for a limited time period (5 years from January, 2018) to
+    // allow existing Google users to seamlessly transition to proper WebAuthN behavior.
+    if (equalLettersIgnoringASCIICase(host, "google.com") || host.endsWithIgnoringASCIICase(".google.com"))
+        return (appId == "https://www.gstatic.com/securitykey/origins.json"_s) || (appId == "https://www.gstatic.com/securitykey/a/google.com/origins.json"_s);
+    return false;
+}
+
+// The following roughly implements Step 1-3 of the spec to avoid the complexity of making unnecessary network requests:
+// https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-appid-and-facets-v2.0-id-20180227.html#determining-if-a-caller-s-facetid-is-authorized-for-an-appid
+// It follows what Chrome and Firefox do, see:
+// https://bugzilla.mozilla.org/show_bug.cgi?id=1244959#c8
+// https://bugs.chromium.org/p/chromium/issues/detail?id=818303
+static String processAppIdExtension(const SecurityOrigin& facetId, const String& appId)
+{
+    // Step 1. Skipped since facetId should always be secure origins.
+    ASSERT(SchemeRegistry::shouldTreatURLSchemeAsSecure(facetId.protocol()));
+
+    // Step 2. Follow Chrome and Firefox to use the origin directly without adding a trailing slash.
+    if (appId.isEmpty())
+        return facetId.toString();
+
+    // Step 3. Relax the comparison to same site.
+    URL appIdURL(URL(), appId);
+    if (!appIdURL.isValid() || facetId.protocol() != appIdURL.protocol() || (RegistrableDomain(appIdURL) != RegistrableDomain::uncheckedCreateFromHost(facetId.host()) && !needsAppIdQuirks(facetId.host(), appId)))
+        return String();
+    return appId;
+}
+
 } // namespace AuthenticatorCoordinatorInternal
 
 AuthenticatorCoordinator::AuthenticatorCoordinator(std::unique_ptr<AuthenticatorCoordinatorClient>&& client)
@@ -95,7 +129,7 @@ void AuthenticatorCoordinator::create(const SecurityOrigin& callerOrigin, const 
     using namespace AuthenticatorCoordinatorInternal;
 
     // The following implements https://www.w3.org/TR/webauthn/#createCredential as of 5 December 2017.
-    // FIXME: Extensions are not supported yet. Skip Step 11-12.
+    // Extensions are not supported. Skip Step 11-12.
     // Step 1, 3, 16 are handled by the caller.
     // Step 2.
     if (!sameOriginWithAncestors) {
@@ -103,16 +137,21 @@ void AuthenticatorCoordinator::create(const SecurityOrigin& callerOrigin, const 
         return;
     }
 
-    // Step 5-7.
-    // FIXME(181950): We lack fundamental support from SecurityOrigin to determine if a host is a valid domain or not.
-    // Step 6 is therefore skipped. Also, we lack the support to determine whether a domain is a registrable
-    // domain suffix of another domain. Hence restrict the comparison to equal in Step 7.
-    if (!options.rp.id.isEmpty() && callerOrigin.host() != options.rp.id) {
-        promise.reject(Exception { SecurityError, "The origin of the document is not a registrable domain suffix of the provided RP ID."_s });
+    // Step 5. Skipped since SecurityOrigin doesn't have the concept of "opaque origin".
+    // Step 6. The effective domain may be represented in various manners, such as a domain or an ip address.
+    // Only the domain format of host is permitted in WebAuthN.
+    if (URL::hostIsIPAddress(callerOrigin.domain())) {
+        promise.reject(Exception { SecurityError, "The effective domain of the document is not a valid domain."_s });
+        return;
+    }
+
+    // Step 7.
+    if (!options.rp.id.isEmpty() && !callerOrigin.isMatchingRegistrableDomainSuffix(options.rp.id)) {
+        promise.reject(Exception { SecurityError, "The provided RP ID is not a registrable domain suffix of the effective domain of the document."_s });
         return;
     }
     if (options.rp.id.isEmpty())
-        options.rp.id = callerOrigin.host();
+        options.rp.id = callerOrigin.domain();
 
     // Step 8-10.
     // Most of the jobs are done by bindings. However, we can't know if the JSValue of options.pubKeyCredParams
@@ -127,10 +166,7 @@ void AuthenticatorCoordinator::create(const SecurityOrigin& callerOrigin, const 
     auto clientDataJsonHash = produceClientDataJsonHash(clientDataJson);
 
     // Step 4, 17-21.
-    // Only platform attachments will be supported at this stage. Assuming one authenticator per device.
-    // Also, resident keys, user verifications and direct attestation are enforced at this tage.
-    // For better performance, transports of options.excludeCredentials are checked in LocalAuthenticator.
-    if (!m_client)  {
+    if (!m_client) {
         promise.reject(Exception { UnknownError, "Unknown internal error."_s });
         return;
     }
@@ -158,7 +194,6 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const SecurityOrigin& 
     using namespace AuthenticatorCoordinatorInternal;
 
     // The following implements https://www.w3.org/TR/webauthn/#createCredential as of 5 December 2017.
-    // FIXME: Extensions are not supported yet. Skip Step 8-9.
     // Step 1, 3, 13 are handled by the caller.
     // Step 2.
     if (!sameOriginWithAncestors) {
@@ -166,26 +201,40 @@ void AuthenticatorCoordinator::discoverFromExternalSource(const SecurityOrigin& 
         return;
     }
 
-    // Step 5-7.
-    // FIXME(181950): We lack fundamental support from SecurityOrigin to determine if a host is a valid domain or not.
-    // Step 6 is therefore skipped. Also, we lack the support to determine whether a domain is a registrable
-    // domain suffix of another domain. Hence restrict the comparison to equal in Step 7.
-    if (!options.rpId.isEmpty() && callerOrigin.host() != options.rpId) {
-        promise.reject(Exception { SecurityError, "The origin of the document is not a registrable domain suffix of the provided RP ID."_s });
+    // Step 5. Skipped since SecurityOrigin doesn't have the concept of "opaque origin".
+    // Step 6. The effective domain may be represented in various manners, such as a domain or an ip address.
+    // Only the domain format of host is permitted in WebAuthN.
+    if (URL::hostIsIPAddress(callerOrigin.domain())) {
+        promise.reject(Exception { SecurityError, "The effective domain of the document is not a valid domain."_s });
+        return;
+    }
+
+    // Step 7.
+    if (!options.rpId.isEmpty() && !callerOrigin.isMatchingRegistrableDomainSuffix(options.rpId)) {
+        promise.reject(Exception { SecurityError, "The provided RP ID is not a registrable domain suffix of the effective domain of the document."_s });
         return;
     }
     if (options.rpId.isEmpty())
-        options.rpId = callerOrigin.host();
+        options.rpId = callerOrigin.domain();
+
+    // Step 8-9.
+    // Only FIDO AppID Extension is supported.
+    if (options.extensions && !options.extensions->appid.isNull()) {
+        // The following implements https://www.w3.org/TR/webauthn/#sctn-appid-extension as of 4 March 2019.
+        auto appid = processAppIdExtension(callerOrigin, options.extensions->appid);
+        if (!appid) {
+            promise.reject(Exception { SecurityError, "The origin of the document is not authorized for the provided App ID."_s });
+            return;
+        }
+        options.extensions->appid = appid;
+    }
 
     // Step 10-12.
     auto clientDataJson = produceClientDataJson(ClientDataType::Get, options.challenge, callerOrigin);
     auto clientDataJsonHash = produceClientDataJsonHash(clientDataJson);
 
     // Step 4, 14-19.
-    // Only platform attachments will be supported at this stage. Assuming one authenticator per device.
-    // Also, resident keys, user verifications and direct attestation are enforced at this tage.
-    // For better performance, filtering of options.allowCredentials is done in LocalAuthenticator.
-    if (!m_client)  {
+    if (!m_client) {
         promise.reject(Exception { UnknownError, "Unknown internal error."_s });
         return;
     }

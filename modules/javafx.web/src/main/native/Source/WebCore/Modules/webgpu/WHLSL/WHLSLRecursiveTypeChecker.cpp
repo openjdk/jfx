@@ -30,6 +30,7 @@
 
 #include "WHLSLStructureDefinition.h"
 #include "WHLSLTypeDefinition.h"
+#include "WHLSLProgram.h"
 #include "WHLSLTypeReference.h"
 #include "WHLSLVisitor.h"
 #include <wtf/HashSet.h>
@@ -40,65 +41,75 @@ namespace WHLSL {
 
 class RecursiveTypeChecker : public Visitor {
 public:
-    ~RecursiveTypeChecker() = default;
-
-    void visit(AST::TypeDefinition& typeDefinition) override
-    {
-        auto addResult = m_types.add(&typeDefinition);
-        if (!addResult.isNewEntry) {
-            setError();
-            return;
-        }
-
-        Visitor::visit(typeDefinition);
-
-        auto success = m_types.remove(&typeDefinition);
-        ASSERT_UNUSED(success, success);
-    }
-
-    void visit(AST::StructureDefinition& structureDefinition) override
-    {
-        auto addResult = m_types.add(&structureDefinition);
-        if (!addResult.isNewEntry) {
-            setError();
-            return;
-        }
-
-        Visitor::visit(structureDefinition);
-
-        auto success = m_types.remove(&structureDefinition);
-        ASSERT_UNUSED(success, success);
-    }
-
-    void visit(AST::TypeReference& typeReference) override
-    {
-        auto addResult = m_types.add(&typeReference);
-        if (!addResult.isNewEntry) {
-            setError();
-            return;
-        }
-
-        for (auto& typeArgument : typeReference.typeArguments())
-            checkErrorAndVisit(typeArgument);
-        checkErrorAndVisit(*typeReference.resolvedType());
-
-        auto success = m_types.remove(&typeReference);
-        ASSERT_UNUSED(success, success);
-    }
-
-    void visit(AST::ReferenceType&) override
-    {
-    }
+    void visit(AST::TypeDefinition&) override;
+    void visit(AST::StructureDefinition&) override;
+    void visit(AST::TypeReference&) override;
+    void visit(AST::ReferenceType&) override;
 
 private:
-    HashSet<AST::Type*> m_types;
+    HashSet<AST::Type*> m_startedVisiting;
+    HashSet<AST::Type*> m_finishedVisiting;
 };
 
-bool checkRecursiveTypes(Program& program)
+#define START_VISITING(t) \
+do { \
+    if (m_finishedVisiting.contains(t)) \
+        return; \
+    auto resultStartedVisiting = m_startedVisiting.add(t); \
+    if (!resultStartedVisiting.isNewEntry) { \
+        setError(Error("Cannot declare recursive types.", (t)->codeLocation())); \
+        return; \
+    } \
+} while (false);
+
+#define END_VISITING(t) \
+do { \
+    auto resultFinishedVisiting = m_finishedVisiting.add(t); \
+    ASSERT_UNUSED(resultFinishedVisiting, resultFinishedVisiting.isNewEntry); \
+} while (false);
+
+void RecursiveTypeChecker::visit(AST::TypeDefinition& typeDefinition)
+{
+    START_VISITING(&typeDefinition);
+
+    Visitor::visit(typeDefinition);
+
+    END_VISITING(&typeDefinition);
+}
+
+void RecursiveTypeChecker::visit(AST::StructureDefinition& structureDefinition)
+{
+    START_VISITING(&structureDefinition);
+
+    Visitor::visit(structureDefinition);
+
+    END_VISITING(&structureDefinition);
+}
+
+void RecursiveTypeChecker::visit(AST::TypeReference& typeReference)
+{
+    START_VISITING(&typeReference);
+
+    for (auto& typeArgument : typeReference.typeArguments())
+        checkErrorAndVisit(typeArgument);
+    if (typeReference.maybeResolvedType()) // FIXME: https://bugs.webkit.org/show_bug.cgi?id=198161 Shouldn't we know by now whether the type has been resolved or not?
+        checkErrorAndVisit(typeReference.resolvedType());
+
+    END_VISITING(&typeReference);
+}
+
+void RecursiveTypeChecker::visit(AST::ReferenceType&)
+{
+}
+
+Expected<void, Error> checkRecursiveTypes(Program& program)
 {
     RecursiveTypeChecker recursiveTypeChecker;
-    recursiveTypeChecker.checkErrorAndVisit(program);
-    return recursiveTypeChecker.error();
+    for (auto& typeDefinition : program.typeDefinitions())
+        recursiveTypeChecker.checkErrorAndVisit(typeDefinition);
+    for (auto& structureDefinition : program.structureDefinitions())
+        recursiveTypeChecker.checkErrorAndVisit(structureDefinition);
+    return recursiveTypeChecker.result();
 }
 
 } // namespace WHLSL

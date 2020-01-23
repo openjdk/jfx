@@ -101,6 +101,10 @@ bool RenderVideo::updateIntrinsicSize()
     if (size.isEmpty() && document().isMediaDocument())
         return false;
 
+    // Treat the media player's natural size as visually non-empty.
+    if (videoElement().readyState() >= HTMLMediaElementEnums::HAVE_METADATA)
+        incrementVisuallyNonEmptyPixelCountIfNeeded(roundedIntSize(size));
+
     if (size == intrinsicSize())
         return false;
 

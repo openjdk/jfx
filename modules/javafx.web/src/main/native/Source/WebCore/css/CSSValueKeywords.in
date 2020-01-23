@@ -222,22 +222,11 @@ threedshadow
 window
 windowframe
 windowtext
-#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+#if (defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC) || (defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
 -apple-system-header-text
 -apple-system-text-background
 -apple-system-control-background
--apple-system-alternate-selected-text
--apple-system-control-accent
--apple-system-even-alternating-content-background
--apple-system-odd-alternating-content-background
--apple-system-selected-content-background
--apple-system-unemphasized-selected-content-background
--apple-system-selected-text
--apple-system-unemphasized-selected-text
--apple-system-selected-text-background
--apple-system-unemphasized-selected-text-background
 -apple-system-placeholder-text
--apple-system-find-highlight-background
 -apple-system-label
 -apple-system-secondary-label
 -apple-system-tertiary-label
@@ -245,7 +234,14 @@ windowtext
 -apple-system-grid
 -apple-system-separator
 -apple-system-container-border
-#endif
+-apple-system-background
+-apple-system-secondary-background
+-apple-system-tertiary-background
+-apple-system-grouped-background
+-apple-system-secondary-grouped-background
+-apple-system-tertiary-grouped-background
+-apple-system-selected-content-background
+-apple-system-unemphasized-selected-content-background
 -apple-wireless-playback-target-active
 -apple-system-blue
 -apple-system-brown
@@ -256,6 +252,25 @@ windowtext
 -apple-system-purple
 -apple-system-red
 -apple-system-yellow
+#endif
+#if defined(WTF_PLATFORM_MAC) && WTF_PLATFORM_MAC
+-apple-system-alternate-selected-text
+-apple-system-control-accent
+-apple-system-even-alternating-content-background
+-apple-system-odd-alternating-content-background
+-apple-system-selected-text
+-apple-system-unemphasized-selected-text
+-apple-system-selected-text-background
+-apple-system-unemphasized-selected-text-background
+-apple-system-find-highlight-background
+#endif
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+-apple-system-indigo
+-apple-system-teal
+#endif
+#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
+-webkit-control-background
+#endif
 -webkit-focus-ring-color
 currentcolor
 //
@@ -439,6 +454,7 @@ inline-flex
 contents
 grid
 inline-grid
+flow-root
 //none
 //
 // CSS_PROP_CURSOR:
@@ -757,6 +773,11 @@ keep-all
 break-word
 
 //
+// CSS_PROP_WHITE_SPACE
+//
+break-spaces
+
+//
 // CSS_PROP__KHTML_NBSP_MODE
 //
 space
@@ -769,6 +790,7 @@ loose
 // normal
 strict
 after-white-space
+anywhere
 
 // -webkit-appearance
 // The order here must match the order in the ControlPart enum in ThemeTypes.h.
@@ -1032,7 +1054,7 @@ manual
 -webkit-letterpress
 #endif
 
-#if defined(ENABLE_ACCELERATED_OVERFLOW_SCROLLING) && ENABLE_ACCELERATED_OVERFLOW_SCROLLING
+#if defined(ENABLE_OVERFLOW_SCROLLING_TOUCH) && ENABLE_OVERFLOW_SCROLLING_TOUCH
 // -webkit-overflow-scrolling
 // auto
 touch
@@ -1136,6 +1158,7 @@ edges
 alphabetic
 
 // position
+sticky
 -webkit-sticky
 
 // (pointer:) media feature
@@ -1200,7 +1223,6 @@ repeating-conic-gradient
 -webkit-named-image
 filter
 -webkit-filter
-dashboard-region
 #if defined(ENABLE_CSS_PAINTING_API) && ENABLE_CSS_PAINTING_API
 paint
 #endif
@@ -1390,7 +1412,7 @@ light
 dark
 // no-preference
 
-// supported-color-schemes
+// color-scheme
 only
 // light
 // dark

@@ -35,13 +35,17 @@
 #include "DOMWrapperWorld.h"
 #include "EventNames.h"
 #include "HTMLBodyElement.h"
+#include "HTMLHtmlElement.h"
 #include "InspectorInstrumentation.h"
 #include "JSEventListener.h"
+#include "JSLazyEventListener.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptController.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
 #include "WebKitAnimationEvent.h"
 #include "WebKitTransitionEvent.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
@@ -50,6 +54,9 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(EventTarget);
+WTF_MAKE_ISO_ALLOCATED_IMPL(EventTargetWithInlineData);
 
 bool EventTarget::isNode() const
 {
@@ -61,8 +68,12 @@ bool EventTarget::isPaymentRequest() const
     return false;
 }
 
-bool EventTarget::addEventListener(const AtomicString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
+bool EventTarget::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
+#if !ASSERT_DISABLED
+    listener->checkValidityForEventTarget(*this);
+#endif
+
     auto passive = options.passive;
 
     if (!passive.hasValue() && eventNames().isTouchScrollBlockingEventType(eventType)) {
@@ -89,7 +100,7 @@ bool EventTarget::addEventListener(const AtomicString& eventType, Ref<EventListe
     return true;
 }
 
-void EventTarget::addEventListenerForBindings(const AtomicString& eventType, RefPtr<EventListener>&& listener, AddEventListenerOptionsOrBoolean&& variant)
+void EventTarget::addEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&& listener, AddEventListenerOptionsOrBoolean&& variant)
 {
     if (!listener)
         return;
@@ -103,7 +114,7 @@ void EventTarget::addEventListenerForBindings(const AtomicString& eventType, Ref
     WTF::visit(visitor, variant);
 }
 
-void EventTarget::removeEventListenerForBindings(const AtomicString& eventType, RefPtr<EventListener>&& listener, ListenerOptionsOrBoolean&& variant)
+void EventTarget::removeEventListenerForBindings(const AtomString& eventType, RefPtr<EventListener>&& listener, ListenerOptionsOrBoolean&& variant)
 {
     if (!listener)
         return;
@@ -117,7 +128,7 @@ void EventTarget::removeEventListenerForBindings(const AtomicString& eventType, 
     WTF::visit(visitor, variant);
 }
 
-bool EventTarget::removeEventListener(const AtomicString& eventType, EventListener& listener, const ListenerOptions& options)
+bool EventTarget::removeEventListener(const AtomString& eventType, EventListener& listener, const ListenerOptions& options)
 {
     auto* data = eventTargetData();
     if (!data)
@@ -128,7 +139,7 @@ bool EventTarget::removeEventListener(const AtomicString& eventType, EventListen
     return data->eventListenerMap.remove(eventType, listener, options.capture);
 }
 
-bool EventTarget::setAttributeEventListener(const AtomicString& eventType, RefPtr<EventListener>&& listener, DOMWrapperWorld& isolatedWorld)
+bool EventTarget::setAttributeEventListener(const AtomString& eventType, RefPtr<EventListener>&& listener, DOMWrapperWorld& isolatedWorld)
 {
     auto* existingListener = attributeEventListener(eventType, isolatedWorld);
     if (!listener) {
@@ -138,6 +149,10 @@ bool EventTarget::setAttributeEventListener(const AtomicString& eventType, RefPt
     }
     if (existingListener) {
         InspectorInstrumentation::willRemoveEventListener(*this, eventType, *existingListener, false);
+
+#if !ASSERT_DISABLED
+        listener->checkValidityForEventTarget(*this);
+#endif
 
         auto listenerPointer = listener.copyRef();
         eventTargetData()->eventListenerMap.replace(eventType, *existingListener, listener.releaseNonNull(), { });
@@ -149,7 +164,7 @@ bool EventTarget::setAttributeEventListener(const AtomicString& eventType, RefPt
     return addEventListener(eventType, listener.releaseNonNull());
 }
 
-EventListener* EventTarget::attributeEventListener(const AtomicString& eventType, DOMWrapperWorld& isolatedWorld)
+EventListener* EventTarget::attributeEventListener(const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
 {
     for (auto& eventListener : eventListeners(eventType)) {
         auto& listener = eventListener->callback();
@@ -164,7 +179,7 @@ EventListener* EventTarget::attributeEventListener(const AtomicString& eventType
     return nullptr;
 }
 
-bool EventTarget::hasActiveEventListeners(const AtomicString& eventType) const
+bool EventTarget::hasActiveEventListeners(const AtomString& eventType) const
 {
     auto* data = eventTargetData();
     return data && data->eventListenerMap.containsActive(eventType);
@@ -203,7 +218,7 @@ void EventTarget::uncaughtExceptionInEventHandler()
 {
 }
 
-static const AtomicString& legacyType(const Event& event)
+static const AtomString& legacyType(const Event& event)
 {
     if (event.type() == eventNames().animationendEvent)
         return eventNames().webkitAnimationEndEvent;
@@ -245,10 +260,10 @@ void EventTarget::fireEventListeners(Event& event, EventInvokePhase phase)
     if (!event.isTrusted())
         return;
 
-    const AtomicString& legacyTypeName = legacyType(event);
+    const AtomString& legacyTypeName = legacyType(event);
     if (!legacyTypeName.isNull()) {
         if (auto* legacyListenersVector = data->eventListenerMap.find(legacyTypeName)) {
-            AtomicString typeName = event.type();
+            AtomString typeName = event.type();
             event.setType(legacyTypeName);
             innerInvokeEventListeners(event, *legacyListenersVector, phase);
             event.setType(typeName);
@@ -295,6 +310,10 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
         if (registeredListener->isPassive())
             event.setInPassiveListener(true);
 
+#if !ASSERT_DISABLED
+        registeredListener->callback().checkValidityForEventTarget(*this);
+#endif
+
         InspectorInstrumentation::willHandleEvent(context, event, *registeredListener);
         registeredListener->callback().handleEvent(context, event);
         InspectorInstrumentation::didHandleEvent(context);
@@ -304,10 +323,17 @@ void EventTarget::innerInvokeEventListeners(Event& event, EventListenerVector li
     }
 
     if (contextIsDocument)
-        InspectorInstrumentation::didDispatchEvent(willDispatchEventCookie);
+        InspectorInstrumentation::didDispatchEvent(willDispatchEventCookie, event.defaultPrevented());
 }
 
-const EventListenerVector& EventTarget::eventListeners(const AtomicString& eventType)
+Vector<AtomString> EventTarget::eventTypes()
+{
+    if (auto* data = eventTargetData())
+        return data->eventListenerMap.eventTypes();
+    return { };
+}
+
+const EventListenerVector& EventTarget::eventListeners(const AtomString& eventType)
 {
     auto* data = eventTargetData();
     auto* listenerVector = data ? data->eventListenerMap.find(eventType) : nullptr;

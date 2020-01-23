@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -320,8 +320,7 @@ bool PropertyCondition::isWatchableWhenValid(
             set = structure->propertyReplacementWatchpointSet(offset);
             break;
         case EnsureWatchability:
-            set = structure->ensurePropertyReplacementWatchpointSet(
-                *structure->vm(), offset);
+            set = structure->ensurePropertyReplacementWatchpointSet(structure->vm(), offset);
             break;
         }
 
@@ -352,15 +351,15 @@ bool PropertyCondition::isWatchable(
         && isWatchableWhenValid(structure, effort);
 }
 
-bool PropertyCondition::isStillLive() const
+bool PropertyCondition::isStillLive(VM& vm) const
 {
-    if (hasPrototype() && prototype() && !Heap::isMarked(prototype()))
+    if (hasPrototype() && prototype() && !vm.heap.isMarked(prototype()))
         return false;
 
     if (hasRequiredValue()
         && requiredValue()
         && requiredValue().isCell()
-        && !Heap::isMarked(requiredValue().asCell()))
+        && !vm.heap.isMarked(requiredValue().asCell()))
         return false;
 
     return true;

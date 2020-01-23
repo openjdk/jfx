@@ -26,6 +26,8 @@
 #include "config.h"
 #include "SocketStreamHandleImpl.h"
 
+#if !USE(SOUP)
+
 #include "CookieRequestHeaderFieldProxy.h"
 #include "NetworkStorageSession.h"
 #include "SocketStreamHandleClient.h"
@@ -82,9 +84,7 @@ static Optional<std::pair<Vector<uint8_t>, bool>> cookieDataForHandshake(const N
     if (!networkStorageSession)
         return WTF::nullopt;
 
-    String cookieDataString;
-    bool secureCookiesAccessed = false;
-    std::tie(cookieDataString, secureCookiesAccessed) = networkStorageSession->cookieRequestHeaderFieldValue(headerFieldProxy);
+    auto [cookieDataString, secureCookiesAccessed] = networkStorageSession->cookieRequestHeaderFieldValue(headerFieldProxy);
     if (cookieDataString.isEmpty())
         return std::pair<Vector<uint8_t>, bool> { { }, secureCookiesAccessed };
 
@@ -187,3 +187,5 @@ size_t SocketStreamHandleImpl::bufferedAmount()
 }
 
 } // namespace WebCore
+
+#endif // !USE(SOUP)

@@ -31,6 +31,8 @@
 #include "ExceptionOr.h"
 #include "IDBActiveDOMObject.h"
 #include "IDBError.h"
+#include "IDBGetAllResult.h"
+#include "IDBGetResult.h"
 #include "IDBKeyData.h"
 #include "IDBResourceIdentifier.h"
 #include "IDBValue.h"
@@ -39,6 +41,7 @@
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Function.h>
 #include <wtf/Scope.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -58,7 +61,8 @@ class IDBConnectionProxy;
 class IDBConnectionToServer;
 }
 
-class IDBRequest : public EventTargetWithInlineData, public IDBActiveDOMObject, public RefCounted<IDBRequest>, public CanMakeWeakPtr<IDBRequest> {
+class IDBRequest : public EventTargetWithInlineData, public IDBActiveDOMObject, public ThreadSafeRefCounted<IDBRequest>, public CanMakeWeakPtr<IDBRequest> {
+    WTF_MAKE_ISO_ALLOCATED(IDBRequest);
 public:
     enum class NullResultType {
         Empty,
@@ -75,9 +79,10 @@ public:
 
     virtual ~IDBRequest();
 
-    using Result = Variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBValue, Vector<IDBValue>, uint64_t, NullResultType>;
+    using Result = Variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBGetResult, IDBGetAllResult, uint64_t, NullResultType>;
     ExceptionOr<Result> result() const;
     JSValueInWrappedObject& resultWrapper() { return m_resultWrapper; }
+    JSValueInWrappedObject& cursorWrapper() { return m_cursorWrapper; }
 
     using Source = Variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
     const Optional<Source>& source() const { return m_source; }
@@ -98,16 +103,16 @@ public:
 
     ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    using ThreadSafeRefCounted::ref;
+    using ThreadSafeRefCounted::deref;
 
     void completeRequestAndDispatchEvent(const IDBResultData&);
 
     void setResult(const IDBKeyData&);
     void setResult(const Vector<IDBKeyData>&);
-    void setResult(const Vector<IDBValue>&);
+    void setResultToStructuredClone(const IDBGetResult&);
+    void setResult(const IDBGetAllResult&);
     void setResult(uint64_t);
-    void setResultToStructuredClone(const IDBValue&);
     void setResultToUndefined();
 
     void willIterateCursor(IDBCursor&);
@@ -156,8 +161,8 @@ private:
     void stop() final;
     virtual void cancelForStop();
 
-    void refEventTarget() final { RefCounted::ref(); }
-    void derefEventTarget() final { RefCounted::deref(); }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
     void uncaughtExceptionInEventHandler() final;
 
     virtual bool isOpenDBRequest() const { return false; }
@@ -165,12 +170,15 @@ private:
     void onError();
     void onSuccess();
 
+    void clearWrappers();
+
     IDBCursor* resultCursor();
 
     IDBError m_idbError;
     IDBResourceIdentifier m_resourceIdentifier;
 
     JSValueInWrappedObject m_resultWrapper;
+    JSValueInWrappedObject m_cursorWrapper;
     Result m_result;
     Optional<Source> m_source;
 
@@ -181,6 +189,9 @@ private:
     RefPtr<IDBCursor> m_pendingCursor;
 
     Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+
+    bool m_dispatchingEvent { false };
+    bool m_hasUncaughtException { false };
 };
 
 } // namespace WebCore

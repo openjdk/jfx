@@ -56,7 +56,7 @@ PaymentMethodChangeEvent conditional=PAYMENT_REQUEST
 PaymentRequestUpdateEvent conditional=PAYMENT_REQUEST
 RTCPeerConnectionIceEvent conditional=WEB_RTC
 RTCDataChannelEvent conditional=WEB_RTC
-RTCDTMFToneChangeEvent conditional=WEB_RTC_DTMF
+RTCDTMFToneChangeEvent conditional=WEB_RTC
 RTCPeerConnectionIceEvent conditional=WEB_RTC
 RTCTrackEvent conditional=WEB_RTC
 SpeechSynthesisEvent conditional=SPEECH_SYNTHESIS
@@ -81,5 +81,4 @@ OverconstrainedErrorEvent conditional=MEDIA_STREAM
 MediaEncryptedEvent conditional=ENCRYPTED_MEDIA
 MediaKeyMessageEvent conditional=ENCRYPTED_MEDIA
 VRDisplayEvent
-AccessibleSetValueEvent
 PointerEvent conditional=POINTER_EVENTS

@@ -20,7 +20,7 @@
 #include "config.h"
 #include "AXObjectCache.h"
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include "AccessibilityObject.h"
 #include "AccessibilityRenderObject.h"
@@ -38,13 +38,13 @@ namespace WebCore {
 
 static AtkObject* wrapperParent(WebKitAccessible* wrapper)
 {
-            // Look for the right object to emit the signal from, but using the implementation
-            // of atk_object_get_parent from AtkObject class (which uses a cached pointer if set)
-            // since the accessibility hierarchy in WebCore will no longer be navigable.
-            gpointer webkitAccessibleClass = g_type_class_peek_parent(WEBKIT_ACCESSIBLE_GET_CLASS(wrapper));
-            gpointer atkObjectClass = g_type_class_peek_parent(webkitAccessibleClass);
-            AtkObject* atkParent = ATK_OBJECT_CLASS(atkObjectClass)->get_parent(ATK_OBJECT(wrapper));
-            // We don't want to emit any signal from an object outside WebKit's world.
+    // Look for the right object to emit the signal from, but using the implementation
+    // of atk_object_get_parent from AtkObject class (which uses a cached pointer if set)
+    // since the accessibility hierarchy in WebCore will no longer be navigable.
+    gpointer webkitAccessibleClass = g_type_class_peek_parent(WEBKIT_ACCESSIBLE_GET_CLASS(wrapper));
+    gpointer atkObjectClass = g_type_class_peek_parent(webkitAccessibleClass);
+    AtkObject* atkParent = ATK_OBJECT_CLASS(atkObjectClass)->get_parent(ATK_OBJECT(wrapper));
+    // We don't want to emit any signal from an object outside WebKit's world.
     return WEBKIT_IS_ACCESSIBLE(atkParent) ? atkParent : nullptr;
 }
 
@@ -94,14 +94,14 @@ void AXObjectCache::platformPerformDeferredCacheUpdate()
         if (!wrapper)
             continue;
 
-    // Don't emit the signal for objects whose parents won't be exposed directly.
+        // Don't emit the signal for objects whose parents won't be exposed directly.
         auto* coreParent = coreObject->parentObjectUnignored();
-    if (!coreParent || coreParent->accessibilityIsIgnoredByDefault())
+        if (!coreParent || coreParent->accessibilityIsIgnoredByDefault())
             continue;
 
-    // Look for the right object to emit the signal from.
+        // Look for the right object to emit the signal from.
         auto* atkParent = coreParent->wrapper();
-    if (!atkParent)
+        if (!atkParent)
             continue;
 
         size_t index = coreParent->children(false).find(coreObject);
@@ -240,13 +240,10 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* coreObject, AX
             propertyValues.property_name = "accessible-value";
 
             memset(&propertyValues.new_value,  0, sizeof(GValue));
-#if ATK_CHECK_VERSION(2,11,92)
+
             double value;
             atk_value_get_value_and_text(ATK_VALUE(axObject), &value, nullptr);
             g_value_set_double(g_value_init(&propertyValues.new_value, G_TYPE_DOUBLE), value);
-#else
-            atk_value_get_current_value(ATK_VALUE(axObject), &propertyValues.new_value);
-#endif
 
             g_signal_emit_by_name(axObject, "property-change::accessible-value", &propertyValues, NULL);
         }
@@ -288,9 +285,7 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* coreObject, AX
         break;
 
     case AXReadOnlyStatusChanged:
-#if ATK_CHECK_VERSION(2,15,3)
         atk_object_notify_state_change(axObject, ATK_STATE_READ_ONLY, !coreObject->canSetValueAttribute());
-#endif
         break;
 
     case AXRequiredStatusChanged:

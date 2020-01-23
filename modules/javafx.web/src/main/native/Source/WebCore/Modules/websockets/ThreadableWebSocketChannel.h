@@ -32,6 +32,7 @@
 
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/URL.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -40,6 +41,8 @@ class ArrayBuffer;
 namespace WebCore {
 
 class Blob;
+class Document;
+class ResourceRequest;
 class ScriptExecutionContext;
 class SocketProvider;
 class WebSocketChannelClient;
@@ -47,6 +50,7 @@ class WebSocketChannelClient;
 class ThreadableWebSocketChannel {
     WTF_MAKE_NONCOPYABLE(ThreadableWebSocketChannel);
 public:
+    static Ref<ThreadableWebSocketChannel> create(Document&, WebSocketChannelClient&, SocketProvider&);
     static Ref<ThreadableWebSocketChannel> create(ScriptExecutionContext&, WebSocketChannelClient&, SocketProvider&);
     ThreadableWebSocketChannel() = default;
 
@@ -57,7 +61,8 @@ public:
         SendFail
     };
 
-    virtual void connect(const URL&, const String& protocol) = 0;
+    enum class ConnectStatus { KO, OK };
+    virtual ConnectStatus connect(const URL&, const String& protocol) = 0;
     virtual String subprotocol() = 0; // Will be available after didConnect() callback is invoked.
     virtual String extensions() = 0; // Will be available after didConnect() callback is invoked.
     virtual SendResult send(const String& message) = 0;
@@ -79,6 +84,13 @@ protected:
     virtual ~ThreadableWebSocketChannel() = default;
     virtual void refThreadableWebSocketChannel() = 0;
     virtual void derefThreadableWebSocketChannel() = 0;
+
+    struct ValidatedURL {
+        URL url;
+        bool areCookiesAllowed { true };
+    };
+    static Optional<ValidatedURL> validateURL(Document&, const URL&);
+    WEBCORE_EXPORT static Optional<ResourceRequest> webSocketConnectRequest(Document&, const URL&);
 };
 
 } // namespace WebCore

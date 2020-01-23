@@ -28,59 +28,89 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUDevice.h"
+#include "GPUErrorScopes.h"
+#include "JSDOMPromiseDeferred.h"
 #include "WebGPUAdapter.h"
-#include "WebGPUBindGroupLayoutDescriptor.h"
-#include "WebGPUBufferDescriptor.h"
 #include "WebGPUQueue.h"
-
+#include "WebGPUSwapChainDescriptor.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/Vector.h>
+
+namespace JSC {
+class ArrayBuffer;
+class JSValue;
+}
 
 namespace WebCore {
 
+class GPUOutOfMemoryError;
+class GPUValidationError;
 class ScriptExecutionContext;
 class WebGPUBindGroup;
 class WebGPUBindGroupLayout;
 class WebGPUBuffer;
-class WebGPUCommandBuffer;
+class WebGPUCommandEncoder;
+class WebGPUComputePipeline;
 class WebGPUPipelineLayout;
 class WebGPURenderPipeline;
+class WebGPUSampler;
 class WebGPUShaderModule;
+class WebGPUSwapChain;
 class WebGPUTexture;
 
+struct GPUBindGroupLayoutDescriptor;
+struct GPUBufferDescriptor;
+struct GPUSamplerDescriptor;
 struct GPUTextureDescriptor;
 struct WebGPUBindGroupDescriptor;
+struct WebGPUComputePipelineDescriptor;
 struct WebGPUPipelineLayoutDescriptor;
 struct WebGPURenderPipelineDescriptor;
 struct WebGPUShaderModuleDescriptor;
 
+enum class GPUErrorFilter;
+
+using ErrorIDLUnion = IDLUnion<IDLInterface<GPUOutOfMemoryError>, IDLInterface<GPUValidationError>>;
+using ErrorPromise = DOMPromiseDeferred<IDLNullable<ErrorIDLUnion>>;
+
 class WebGPUDevice : public RefCounted<WebGPUDevice> {
 public:
-    static RefPtr<WebGPUDevice> create(Ref<WebGPUAdapter>&&);
+    static RefPtr<WebGPUDevice> tryCreate(Ref<const WebGPUAdapter>&&);
 
     const WebGPUAdapter& adapter() const { return m_adapter.get(); }
+    GPUDevice& device() { return m_device.get(); }
     const GPUDevice& device() const { return m_device.get(); }
 
-    RefPtr<WebGPUBuffer> createBuffer(WebGPUBufferDescriptor&&) const;
-    Ref<WebGPUTexture> createTexture(GPUTextureDescriptor&&) const;
+    Ref<WebGPUBuffer> createBuffer(const GPUBufferDescriptor&) const;
+    Vector<JSC::JSValue> createBufferMapped(JSC::ExecState&, const GPUBufferDescriptor&) const;
+    Ref<WebGPUTexture> createTexture(const GPUTextureDescriptor&) const;
+    Ref<WebGPUSampler> createSampler(const GPUSamplerDescriptor&) const;
 
-    Ref<WebGPUBindGroupLayout> createBindGroupLayout(WebGPUBindGroupLayoutDescriptor&&) const;
-    Ref<WebGPUPipelineLayout> createPipelineLayout(WebGPUPipelineLayoutDescriptor&&) const;
-    Ref<WebGPUBindGroup> createBindGroup(WebGPUBindGroupDescriptor&&) const;
+    Ref<WebGPUBindGroupLayout> createBindGroupLayout(const GPUBindGroupLayoutDescriptor&) const;
+    Ref<WebGPUPipelineLayout> createPipelineLayout(const WebGPUPipelineLayoutDescriptor&) const;
+    Ref<WebGPUBindGroup> createBindGroup(const WebGPUBindGroupDescriptor&) const;
 
-    RefPtr<WebGPUShaderModule> createShaderModule(WebGPUShaderModuleDescriptor&&) const;
-    RefPtr<WebGPURenderPipeline> createRenderPipeline(WebGPURenderPipelineDescriptor&&) const;
+    Ref<WebGPUShaderModule> createShaderModule(const WebGPUShaderModuleDescriptor&) const;
+    Ref<WebGPURenderPipeline> createRenderPipeline(const WebGPURenderPipelineDescriptor&) const;
+    Ref<WebGPUComputePipeline> createComputePipeline(const WebGPUComputePipelineDescriptor&) const;
 
-    RefPtr<WebGPUCommandBuffer> createCommandBuffer() const;
-    RefPtr<WebGPUQueue> getQueue();
+    Ref<WebGPUCommandEncoder> createCommandEncoder() const;
+
+    Ref<WebGPUQueue> getQueue() const;
+
+    void pushErrorScope(GPUErrorFilter filter) { m_errorScopes->pushErrorScope(filter); }
+    void popErrorScope(ErrorPromise&&);
 
 private:
-    WebGPUDevice(Ref<WebGPUAdapter>&&, Ref<GPUDevice>&&);
+    WebGPUDevice(Ref<const WebGPUAdapter>&&, Ref<GPUDevice>&&);
 
-    Ref<WebGPUAdapter> m_adapter;
+    Ref<const WebGPUAdapter> m_adapter;
     Ref<GPUDevice> m_device;
-    RefPtr<WebGPUQueue> m_queue;
+    mutable RefPtr<WebGPUQueue> m_queue;
+
+    Ref<GPUErrorScopes> m_errorScopes;
 };
 
 } // namespace WebCore

@@ -44,7 +44,7 @@ class MediaPlayerPrivateHolePunch : public MediaPlayerPrivateInterface, public C
     , public PlatformLayer
 #endif
 {
-
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     MediaPlayerPrivateHolePunch(MediaPlayer*);
     ~MediaPlayerPrivateHolePunch();
@@ -79,7 +79,7 @@ public:
     MediaPlayer::NetworkState networkState() const final { return MediaPlayer::Empty; };
     MediaPlayer::ReadyState readyState() const final { return MediaPlayer::HaveMetadata; };
 
-    std::unique_ptr<PlatformTimeRanges> buffered() const final { return std::make_unique<PlatformTimeRanges>(); };
+    std::unique_ptr<PlatformTimeRanges> buffered() const final { return makeUnique<PlatformTimeRanges>(); };
 
     bool didLoadingProgress() const final { return false; };
 

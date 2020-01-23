@@ -40,6 +40,7 @@
 #include "ApplePayShippingMethodSelectedEvent.h"
 #include "ApplePayShippingMethodUpdate.h"
 #include "ApplePayValidateMerchantEvent.h"
+#include "CustomHeaderFields.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -59,8 +60,11 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "UserGestureIndicator.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ApplePaySession);
 
 // The amount follows the regular expression -?[0-9]+(\.[0-9][0-9])?.
 static bool validateAmount(const String& amountString)
@@ -207,9 +211,9 @@ static ExceptionOr<Vector<ApplePaySessionPaymentRequest::ShippingMethod>> conver
     return WTFMove(result);
 }
 
-static ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(unsigned version, ApplePayPaymentRequest&& paymentRequest, const PaymentCoordinator& paymentCoordinator)
+static ExceptionOr<ApplePaySessionPaymentRequest> convertAndValidate(Document& document, unsigned version, ApplePayPaymentRequest&& paymentRequest, const PaymentCoordinator& paymentCoordinator)
 {
-    auto convertedRequest = convertAndValidate(version, paymentRequest, paymentCoordinator);
+    auto convertedRequest = convertAndValidate(document, version, paymentRequest, paymentCoordinator);
     if (convertedRequest.hasException())
         return convertedRequest.releaseException();
 
@@ -399,7 +403,7 @@ ExceptionOr<Ref<ApplePaySession>> ApplePaySession::create(Document& document, un
     if (!document.page())
         return Exception { InvalidAccessError, "Frame is detached" };
 
-    auto convertedPaymentRequest = convertAndValidate(version, WTFMove(paymentRequest), document.page()->paymentCoordinator());
+    auto convertedPaymentRequest = convertAndValidate(document, version, WTFMove(paymentRequest), document.page()->paymentCoordinator());
     if (convertedPaymentRequest.hasException())
         return convertedPaymentRequest.releaseException();
 
@@ -411,18 +415,16 @@ ApplePaySession::ApplePaySession(Document& document, unsigned version, ApplePayS
     , m_paymentRequest { WTFMove(paymentRequest) }
     , m_version { version }
 {
-    ASSERT(document.page()->paymentCoordinator().supportsVersion(version));
+    ASSERT(document.page()->paymentCoordinator().supportsVersion(document, version));
     suspendIfNeeded();
 }
 
 ApplePaySession::~ApplePaySession() = default;
 
-ExceptionOr<bool> ApplePaySession::supportsVersion(ScriptExecutionContext& scriptExecutionContext, unsigned version)
+ExceptionOr<bool> ApplePaySession::supportsVersion(Document& document, unsigned version)
 {
     if (!version)
         return Exception { InvalidAccessError };
-
-    auto& document = downcast<Document>(scriptExecutionContext);
 
     auto canCall = canCreateSession(document);
     if (canCall.hasException())
@@ -432,7 +434,7 @@ ExceptionOr<bool> ApplePaySession::supportsVersion(ScriptExecutionContext& scrip
     if (!page)
         return Exception { InvalidAccessError };
 
-    return page->paymentCoordinator().supportsVersion(version);
+    return page->paymentCoordinator().supportsVersion(document, version);
 }
 
 static bool shouldDiscloseApplePayCapability(Document& document)
@@ -444,10 +446,8 @@ static bool shouldDiscloseApplePayCapability(Document& document)
     return document.settings().applePayCapabilityDisclosureAllowed();
 }
 
-ExceptionOr<bool> ApplePaySession::canMakePayments(ScriptExecutionContext& scriptExecutionContext)
+ExceptionOr<bool> ApplePaySession::canMakePayments(Document& document)
 {
-    auto& document = downcast<Document>(scriptExecutionContext);
-
     auto canCall = canCreateSession(document);
     if (canCall.hasException())
         return canCall.releaseException();
@@ -456,13 +456,11 @@ ExceptionOr<bool> ApplePaySession::canMakePayments(ScriptExecutionContext& scrip
     if (!page)
         return Exception { InvalidAccessError };
 
-    return page->paymentCoordinator().canMakePayments();
+    return page->paymentCoordinator().canMakePayments(document);
 }
 
-ExceptionOr<void> ApplePaySession::canMakePaymentsWithActiveCard(ScriptExecutionContext& scriptExecutionContext, const String& merchantIdentifier, Ref<DeferredPromise>&& passedPromise)
+ExceptionOr<void> ApplePaySession::canMakePaymentsWithActiveCard(Document& document, const String& merchantIdentifier, Ref<DeferredPromise>&& passedPromise)
 {
-    auto& document = downcast<Document>(scriptExecutionContext);
-
     auto canCall = canCreateSession(document);
     if (canCall.hasException())
         return canCall.releaseException();
@@ -474,7 +472,7 @@ ExceptionOr<void> ApplePaySession::canMakePaymentsWithActiveCard(ScriptExecution
             return Exception { InvalidAccessError };
 
         auto& paymentCoordinator = page->paymentCoordinator();
-        bool canMakePayments = paymentCoordinator.canMakePayments();
+        bool canMakePayments = paymentCoordinator.canMakePayments(document);
 
         RunLoop::main().dispatch([promise, canMakePayments]() mutable {
             promise->resolve<IDLBoolean>(canMakePayments);
@@ -488,16 +486,14 @@ ExceptionOr<void> ApplePaySession::canMakePaymentsWithActiveCard(ScriptExecution
 
     auto& paymentCoordinator = page->paymentCoordinator();
 
-    paymentCoordinator.canMakePaymentsWithActiveCard(merchantIdentifier, document.domain(), [promise](bool canMakePayments) mutable {
+    paymentCoordinator.canMakePaymentsWithActiveCard(document, merchantIdentifier, [promise](bool canMakePayments) mutable {
         promise->resolve<IDLBoolean>(canMakePayments);
     });
     return { };
 }
 
-ExceptionOr<void> ApplePaySession::openPaymentSetup(ScriptExecutionContext& scriptExecutionContext, const String& merchantIdentifier, Ref<DeferredPromise>&& passedPromise)
+ExceptionOr<void> ApplePaySession::openPaymentSetup(Document& document, const String& merchantIdentifier, Ref<DeferredPromise>&& passedPromise)
 {
-    auto& document = downcast<Document>(scriptExecutionContext);
-
     auto canCall = canCreateSession(document);
     if (canCall.hasException())
         return canCall.releaseException();
@@ -512,14 +508,14 @@ ExceptionOr<void> ApplePaySession::openPaymentSetup(ScriptExecutionContext& scri
     auto& paymentCoordinator = page->paymentCoordinator();
 
     RefPtr<DeferredPromise> promise(WTFMove(passedPromise));
-    paymentCoordinator.openPaymentSetup(merchantIdentifier, document.domain(), [promise](bool result) mutable {
+    paymentCoordinator.openPaymentSetup(document, merchantIdentifier, [promise](bool result) mutable {
         promise->resolve<IDLBoolean>(result);
     });
 
     return { };
 }
 
-ExceptionOr<void> ApplePaySession::begin()
+ExceptionOr<void> ApplePaySession::begin(Document& document)
 {
     if (!canBegin())
         return Exception { InvalidAccessError, "Payment session is already active." };
@@ -527,13 +523,7 @@ ExceptionOr<void> ApplePaySession::begin()
     if (paymentCoordinator().hasActiveSession())
         return Exception { InvalidAccessError, "Page already has an active payment session." };
 
-    auto& document = *downcast<Document>(scriptExecutionContext());
-
-    Vector<URL> linkIconURLs;
-    for (auto& icon : LinkIconCollector { document }.iconsOfTypes({ LinkIconType::TouchIcon, LinkIconType::TouchPrecomposedIcon }))
-        linkIconURLs.append(icon.url);
-
-    if (!paymentCoordinator().beginPaymentSession(*this, document.url(), linkIconURLs, m_paymentRequest))
+    if (!paymentCoordinator().beginPaymentSession(document, *this, m_paymentRequest))
         return Exception { InvalidAccessError, "There is already has an active payment session." };
 
     m_state = State::Active;

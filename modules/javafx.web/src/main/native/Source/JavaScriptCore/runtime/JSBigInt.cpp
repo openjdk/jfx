@@ -59,8 +59,7 @@
 
 namespace JSC {
 
-const ClassInfo JSBigInt::s_info =
-    { "JSBigInt", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSBigInt) };
+const ClassInfo JSBigInt::s_info = { "BigInt", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(JSBigInt) };
 
 JSBigInt::JSBigInt(VM& vm, Structure* structure, unsigned length)
     : Base(vm, structure)
@@ -226,15 +225,115 @@ String JSBigInt::toString(ExecState* exec, unsigned radix)
         return exec->vm().smallStrings.singleCharacterStringRep('0');
 
     if (hasOneBitSet(radix))
-        return toStringBasePowerOfTwo(exec, this, radix);
+        return toStringBasePowerOfTwo(exec->vm(), exec, this, radix);
 
-    return toStringGeneric(exec, this, radix);
+    return toStringGeneric(exec->vm(), exec, this, radix);
+}
+
+String JSBigInt::tryGetString(VM& vm, JSBigInt* bigInt, unsigned radix)
+{
+    if (bigInt->isZero())
+        return vm.smallStrings.singleCharacterStringRep('0');
+
+    if (hasOneBitSet(radix))
+        return toStringBasePowerOfTwo(vm, nullptr, bigInt, radix);
+
+    return toStringGeneric(vm, nullptr, bigInt, radix);
 }
 
 // Multiplies {this} with {factor} and adds {summand} to the result.
 void JSBigInt::inplaceMultiplyAdd(Digit factor, Digit summand)
 {
     internalMultiplyAdd(this, factor, summand, length(), this);
+}
+
+JSBigInt* JSBigInt::exponentiate(ExecState* exec, JSBigInt* base, JSBigInt* exponent)
+{
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (exponent->sign()) {
+        throwRangeError(exec, scope, "Negative exponent is not allowed"_s);
+        return nullptr;
+    }
+
+    // 2. If base is 0n and exponent is 0n, return 1n.
+    if (exponent->isZero())
+        return JSBigInt::createFrom(vm, 1);
+
+    // 3. Return a BigInt representing the mathematical value of base raised
+    //    to the power exponent.
+    if (base->isZero())
+        return base;
+
+    if (base->length() == 1 && base->digit(0) == 1) {
+        // (-1) ** even_number == 1.
+        if (base->sign() && !(exponent->digit(0) & 1))
+            return JSBigInt::unaryMinus(vm, base);
+
+        // (-1) ** odd_number == -1; 1 ** anything == 1.
+        return base;
+    }
+
+    // For all bases >= 2, very large exponents would lead to unrepresentable
+    // results.
+    static_assert(maxLengthBits < std::numeric_limits<Digit>::max(), "maxLengthBits needs to be less than digit::max()");
+    if (exponent->length() > 1) {
+        throwRangeError(exec, scope, "BigInt generated from this operation is too big"_s);
+        return nullptr;
+    }
+
+    Digit expValue = exponent->digit(0);
+    if (expValue == 1)
+        return base;
+    if (expValue >= maxLengthBits) {
+        throwRangeError(exec, scope, "BigInt generated from this operation is too big"_s);
+        return nullptr;
+    }
+
+    static_assert(maxLengthBits <= maxInt, "maxLengthBits needs to be <= maxInt");
+    int n = static_cast<int>(expValue);
+    if (base->length() == 1 && base->digit(0) == 2) {
+        // Fast path for 2^n.
+        int neededDigits = 1 + (n / digitBits);
+        JSBigInt* result = JSBigInt::tryCreateWithLength(exec, neededDigits);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+
+        result->initialize(InitializationType::WithZero);
+        // All bits are zero. Now set the n-th bit.
+        Digit msd = static_cast<Digit>(1) << (n % digitBits);
+        result->setDigit(neededDigits - 1, msd);
+        // Result is negative for odd powers of -2n.
+        if (base->sign())
+            result->setSign(static_cast<bool>(n & 1));
+
+        return result;
+    }
+
+    JSBigInt* result = nullptr;
+    JSBigInt* runningSquare = base;
+
+    // This implicitly sets the result's sign correctly.
+    if (n & 1)
+        result = base;
+
+    n >>= 1;
+    for (; n; n >>= 1) {
+        JSBigInt* maybeResult = JSBigInt::multiply(exec, runningSquare, runningSquare);
+        RETURN_IF_EXCEPTION(scope, nullptr);
+        runningSquare = maybeResult;
+        if (n & 1) {
+            if (!result)
+                result = runningSquare;
+            else {
+                maybeResult = JSBigInt::multiply(exec, result, runningSquare);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = maybeResult;
+            }
+        }
+    }
+
+    return result;
 }
 
 JSBigInt* JSBigInt::multiply(ExecState* exec, JSBigInt* x, JSBigInt* y)
@@ -525,6 +624,16 @@ JSBigInt* JSBigInt::signedRightShift(ExecState* exec, JSBigInt* x, JSBigInt* y)
     return rightShiftByAbsolute(exec, x, y);
 }
 
+JSBigInt* JSBigInt::bitwiseNot(ExecState* exec, JSBigInt* x)
+{
+    if (x->sign()) {
+        // ~(-x) == ~(~(x-1)) == x-1
+        return absoluteSubOne(exec, x, x->length());
+    }
+    // ~x == -x-1 == -(x+1)
+    return absoluteAddOne(exec, x, SignOption::Signed);
+}
+
 #if USE(JSVALUE32_64)
 #define HAVE_TWO_DIGIT 1
 typedef uint64_t TwoDigit;
@@ -637,11 +746,7 @@ inline JSBigInt::Digit JSBigInt::digitDiv(Digit high, Digit low, Digit divisor, 
 #else
     static constexpr Digit halfDigitBase = 1ull << halfDigitBits;
     // Adapted from Warren, Hacker's Delight, p. 152.
-#if USE(JSVALUE64)
-    unsigned s = clz64(divisor);
-#else
-    unsigned s = clz32(divisor);
-#endif
+    unsigned s = clz(divisor);
     // If {s} is digitBits here, it causes an undefined behavior.
     // But {s} is never digitBits since {divisor} is never zero here.
     ASSERT(s != digitBits);
@@ -974,7 +1079,7 @@ void JSBigInt::absoluteDivWithBigIntDivisor(ExecState* exec, JSBigInt* dividend,
     // overflowing (they take a two digits wide input, and return a one digit
     // result).
     Digit lastDigit = divisor->digit(n - 1);
-    unsigned shift = sizeof(lastDigit) == 8 ? clz64(lastDigit) : clz32(lastDigit);
+    unsigned shift = clz(lastDigit);
 
     if (shift > 0) {
         divisor = absoluteLeftShiftAlwaysCopy(exec, divisor, shift, LeftShiftMode::SameSizeResult);
@@ -1049,7 +1154,7 @@ void JSBigInt::absoluteDivWithBigIntDivisor(ExecState* exec, JSBigInt* dividend,
     }
 }
 
-// Returns whether (factor1 * factor2) > (high << kDigitBits) + low.
+// Returns whether (factor1 * factor2) > (high << digitBits) + low.
 inline bool JSBigInt::productGreaterThan(Digit factor1, Digit factor2, Digit high, Digit low)
 {
     Digit resultHigh;
@@ -1435,11 +1540,7 @@ static constexpr size_t bitsPerCharTableMultiplier = 1u << bitsPerCharTableShift
 // Divide bit length of the BigInt by bits representable per character.
 uint64_t JSBigInt::calculateMaximumCharactersRequired(unsigned length, unsigned radix, Digit lastDigit, bool sign)
 {
-    unsigned leadingZeros;
-    if (sizeof(lastDigit) == 8)
-        leadingZeros = clz64(lastDigit);
-    else
-        leadingZeros = clz32(lastDigit);
+    unsigned leadingZeros = clz(lastDigit);
 
     size_t bitLength = length * digitBits - leadingZeros;
 
@@ -1463,33 +1564,30 @@ uint64_t JSBigInt::calculateMaximumCharactersRequired(unsigned length, unsigned 
     return maximumCharactersRequired;
 }
 
-String JSBigInt::toStringBasePowerOfTwo(ExecState* exec, JSBigInt* x, unsigned radix)
+String JSBigInt::toStringBasePowerOfTwo(VM& vm, ExecState* exec, JSBigInt* x, unsigned radix)
 {
     ASSERT(hasOneBitSet(radix));
     ASSERT(radix >= 2 && radix <= 32);
     ASSERT(!x->isZero());
-    VM& vm = exec->vm();
 
     const unsigned length = x->length();
     const bool sign = x->sign();
-    const unsigned bitsPerChar = ctz32(radix);
+    const unsigned bitsPerChar = ctz(radix);
     const unsigned charMask = radix - 1;
     // Compute the length of the resulting string: divide the bit length of the
     // BigInt by the number of bits representable per character (rounding up).
     const Digit msd = x->digit(length - 1);
 
-#if USE(JSVALUE64)
-    const unsigned msdLeadingZeros = clz64(msd);
-#else
-    const unsigned msdLeadingZeros = clz32(msd);
-#endif
+    const unsigned msdLeadingZeros = clz(msd);
 
     const size_t bitLength = length * digitBits - msdLeadingZeros;
     const size_t charsRequired = (bitLength + bitsPerChar - 1) / bitsPerChar + sign;
 
     if (charsRequired > JSString::MaxLength) {
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        throwOutOfMemoryError(exec, scope);
+        if (exec) {
+            auto scope = DECLARE_THROW_SCOPE(vm);
+            throwOutOfMemoryError(exec, scope);
+        }
         return String();
     }
 
@@ -1528,13 +1626,11 @@ String JSBigInt::toStringBasePowerOfTwo(ExecState* exec, JSBigInt* x, unsigned r
     return StringImpl::adopt(WTFMove(resultString));
 }
 
-String JSBigInt::toStringGeneric(ExecState* exec, JSBigInt* x, unsigned radix)
+String JSBigInt::toStringGeneric(VM& vm, ExecState* exec, JSBigInt* x, unsigned radix)
 {
     // FIXME: [JSC] Revisit usage of Vector into JSBigInt::toString
     // https://bugs.webkit.org/show_bug.cgi?id=18067
     Vector<LChar> resultString;
-
-    VM& vm = exec->vm();
 
     ASSERT(radix >= 2 && radix <= 36);
     ASSERT(!x->isZero());
@@ -1546,8 +1642,10 @@ String JSBigInt::toStringGeneric(ExecState* exec, JSBigInt* x, unsigned radix)
     uint64_t maximumCharactersRequired = calculateMaximumCharactersRequired(length, radix, x->digit(length - 1), sign);
 
     if (maximumCharactersRequired > JSString::MaxLength) {
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        throwOutOfMemoryError(exec, scope);
+        if (exec) {
+            auto scope = DECLARE_THROW_SCOPE(vm);
+            throwOutOfMemoryError(exec, scope);
+        }
         return String();
     }
 
@@ -1866,7 +1964,7 @@ JSBigInt::ComparisonResult JSBigInt::compareToDouble(JSBigInt* x, double y)
 
     int xLength = x->length();
     Digit xMSD = x->digit(xLength - 1);
-    int msdLeadingZeros = sizeof(xMSD) == 8  ? clz64(xMSD) : clz32(xMSD);
+    int msdLeadingZeros = clz(xMSD);
 
     int xBitLength = xLength * digitBits - msdLeadingZeros;
     int yBitLength = exponent + 1;

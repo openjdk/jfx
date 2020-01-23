@@ -90,7 +90,7 @@ ExceptionOr<void> MutationObserver::observe(Node& node, const Init& init)
     if (init.characterDataOldValue.valueOr(false))
         options |= CharacterDataOldValue;
 
-    HashSet<AtomicString> attributeFilter;
+    HashSet<AtomString> attributeFilter;
     if (init.attributeFilter) {
         for (auto& value : init.attributeFilter.value())
             attributeFilter.add(value);
@@ -175,7 +175,7 @@ static void queueMutationObserverCompoundMicrotask()
     if (mutationObserverCompoundMicrotaskQueuedFlag)
         return;
     mutationObserverCompoundMicrotaskQueuedFlag = true;
-    MicrotaskQueue::mainThreadQueue().append(std::make_unique<MutationObserverMicrotask>());
+    MicrotaskQueue::mainThreadQueue().append(makeUnique<MutationObserverMicrotask>());
 }
 
 void MutationObserver::enqueueMutationRecord(Ref<MutationRecord>&& mutation)

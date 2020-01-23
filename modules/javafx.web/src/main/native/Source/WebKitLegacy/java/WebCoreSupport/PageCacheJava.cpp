@@ -26,7 +26,7 @@
 
 #include <WebCore/PageCache.h>
 #include <WebCore/PlatformJavaClasses.h>
-
+// FIXME: Openjfx2.26 rename pagecache to backforwardcache
 #include "com_sun_webkit_PageCache.h"
 
 extern "C" {

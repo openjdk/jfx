@@ -198,7 +198,7 @@ void RenderTableCell::computePreferredLogicalWidths()
         // to make the minwidth of the cell into the fixed width. They do this
         // even in strict mode, so do not make this a quirk. Affected the top
         // of hiptop.com.
-        m_minPreferredLogicalWidth = std::max<LayoutUnit>(w.value(), m_minPreferredLogicalWidth);
+        m_minPreferredLogicalWidth = std::max(LayoutUnit(w.value()), m_minPreferredLogicalWidth);
     }
 }
 
@@ -357,7 +357,7 @@ LayoutRect RenderTableCell::clippedOverflowRectForRepaint(const RenderLayerModel
         return RenderBlockFlow::clippedOverflowRectForRepaint(repaintContainer);
 
     bool rtl = !styleForCellFlow().isLeftToRightDirection();
-    LayoutUnit outlineSize = style().outlineSize();
+    LayoutUnit outlineSize { style().outlineSize() };
     LayoutUnit left = std::max(borderHalfLeft(true), outlineSize);
     LayoutUnit right = std::max(borderHalfRight(true), outlineSize);
     LayoutUnit top = std::max(borderHalfTop(true), outlineSize);
@@ -1287,10 +1287,8 @@ void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const Lay
     const auto& style = backgroundObject->style();
     auto& bgLayer = style.backgroundLayers();
 
-    CompositeOperator compositeOp = CompositeSourceOver;
-    Color color = style.visitedDependentColor(CSSPropertyBackgroundColor);
-    if (document().settings().punchOutWhiteBackgroundsInDarkMode() && Color::isWhiteColor(color) && useDarkAppearance())
-        compositeOp = CompositeDestinationOut;
+    auto color = style.visitedDependentColor(CSSPropertyBackgroundColor);
+    auto compositeOp = document().compositeOperatorForBackgroundColor(color, *this);
 
     color = style.colorByApplyingColorFilter(color);
 

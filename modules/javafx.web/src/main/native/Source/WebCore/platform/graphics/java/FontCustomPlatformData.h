@@ -37,6 +37,11 @@ namespace WebCore {
 class FontDescription;
 class FontPlatformData;
 class SharedBuffer;
+struct FontSelectionSpecifiedCapabilities;
+struct FontVariantSettings;
+
+template <typename T> class FontTaggedSettings;
+typedef FontTaggedSettings<int> FontFeatureSettings;
 
 struct FontCustomPlatformData {
     WTF_MAKE_NONCOPYABLE(FontCustomPlatformData);
