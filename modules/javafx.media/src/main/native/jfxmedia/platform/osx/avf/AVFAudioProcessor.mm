@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@
 #import <AVFoundation/AVFoundation.h>
 #import <MediaToolbox/MediaToolbox.h>
 
-#import "AVFKernelProcessor.h"
 #import <CoreFoundation/CoreFoundation.h>
 
 #import <pthread.h>
@@ -38,48 +37,20 @@
 static void InitAudioTap(MTAudioProcessingTapRef tapRef, void *clientInfo, void **tapStorageOut);
 static void FinalizeAudioTap(MTAudioProcessingTapRef tapRef);
 static void PrepareAudioTap(MTAudioProcessingTapRef tapRef,
-                            CMItemCount maxFrames,
-                            const AudioStreamBasicDescription *processingFormat);
+        CMItemCount maxFrames,
+        const AudioStreamBasicDescription *processingFormat);
 static void UnprepareAudioTap(MTAudioProcessingTapRef tapRef);
 static void ProcessAudioTap(MTAudioProcessingTapRef tapRef, CMItemCount numberFrames,
-                            MTAudioProcessingTapFlags flags,
-                            AudioBufferList *bufferListInOut,
-                            CMItemCount *numberFramesOut,
-                            MTAudioProcessingTapFlags *flagsOut);
-
+        MTAudioProcessingTapFlags flags,
+        AudioBufferList *bufferListInOut,
+        CMItemCount *numberFramesOut,
+        MTAudioProcessingTapFlags *flagsOut);
 static OSStatus AVFTapRenderCallback(void *inRefCon,
                                      AudioUnitRenderActionFlags *ioActionFlags,
                                      const AudioTimeStamp *inTimeStamp,
                                      UInt32 inBusNumber,
                                      UInt32 inNumberFrames,
                                      AudioBufferList *ioData);
-
-class AVFTapContext {
-public:
-    AVFTapContext(AVFSoundLevelUnitPtr slu, AVFAudioSpectrumUnitPtr spectrum, AVFAudioEqualizerPtr eq) :
-        audioSLU(slu),
-        audioSpectrum(spectrum),
-        audioEQ(eq)
-    {
-    }
-
-    ~AVFTapContext() {
-        // AudioUnits have already been deallocated by now
-        // shared_ptrs get freed automatically
-    }
-
-    AudioUnit spectrumUnit;
-    AudioUnit volumeUnit;
-    AudioUnit eqUnit;
-
-    AudioUnit renderUnit; // the last unit in our chain
-    CMItemCount totalFrames;
-    
-    // Hold on to these while we're running
-    AVFSoundLevelUnitPtr audioSLU;
-    AVFAudioSpectrumUnitPtr audioSpectrum;
-    AVFAudioEqualizerPtr audioEQ;
-};
 
 @implementation AVFAudioProcessor
 
@@ -96,13 +67,13 @@ public:
     return self;
 }
 
-- (void) dealloc {
+-(void) dealloc {
     _soundLevelUnit = nullptr;
     _audioSpectrum = nullptr;
     _audioEqualizer = nullptr;
 }
 
-- (void) setAudioTrack:(AVAssetTrack *)track {
+-(void) setAudioTrack : (AVAssetTrack *) track {
     if (track != _audioTrack) {
         // reset the audio mixer if it's already been created
         // this theoretically should never happen...
@@ -111,7 +82,7 @@ public:
     _audioTrack = track;
 }
 
-- (AVAudioMix*) mixer {
+-(AVAudioMix*) mixer {
     if (!self.audioTrack) {
         return nil;
     }
@@ -120,13 +91,13 @@ public:
         AVMutableAudioMix *mixer = [AVMutableAudioMix audioMix];
         if (mixer) {
             AVMutableAudioMixInputParameters *audioMixInputParameters =
-                [AVMutableAudioMixInputParameters audioMixInputParametersWithTrack:self.audioTrack];
+                    [AVMutableAudioMixInputParameters audioMixInputParametersWithTrack : self.audioTrack];
             if (audioMixInputParameters &&
-                [audioMixInputParameters respondsToSelector:@selector(setAudioTapProcessor:)]) {
+                    [audioMixInputParameters respondsToSelector : @selector(setAudioTapProcessor :)]) {
                 MTAudioProcessingTapCallbacks callbacks;
 
                 callbacks.version = kMTAudioProcessingTapCallbacksVersion_0;
-                callbacks.clientInfo = (__bridge void *)self;
+                callbacks.clientInfo = (__bridge void *) self;
                 callbacks.init = InitAudioTap;
                 callbacks.finalize = FinalizeAudioTap;
                 callbacks.prepare = PrepareAudioTap;
@@ -135,12 +106,9 @@ public:
 
                 MTAudioProcessingTapRef audioProcessingTap;
                 if (noErr == MTAudioProcessingTapCreate(kCFAllocatorDefault, &callbacks,
-                                             kMTAudioProcessingTapCreationFlag_PreEffects,
-                                             &audioProcessingTap))
-                {
-                    objc_msgSend(audioMixInputParameters,
-                                 @selector(setAudioTapProcessor:),
-                                 audioProcessingTap);
+                        kMTAudioProcessingTapCreationFlag_PreEffects,
+                        &audioProcessingTap)) {
+                    [audioMixInputParameters setAudioTapProcessor:audioProcessingTap];
 
                     CFRelease(audioProcessingTap); // owned by the mixer now
                     mixer.inputParameters = @[audioMixInputParameters];
@@ -153,14 +121,14 @@ public:
     return _mixer;
 }
 
-- (void) setVolume:(float)volume {
+-(void) setVolume : (float) volume {
     _volume = volume;
     if (_soundLevelUnit != nullptr) {
         _soundLevelUnit->setVolume(volume);
     }
 }
 
-- (void) setBalance:(float)balance {
+-(void) setBalance : (float) balance {
     _balance = balance;
     if (_soundLevelUnit != nullptr) {
         _soundLevelUnit->setBalance(balance);
@@ -169,22 +137,33 @@ public:
 
 @end
 
-void InitAudioTap(MTAudioProcessingTapRef tapRef, void *clientInfo, void **tapStorageOut)
-{
+AVFTapContext::AVFTapContext(AVFSoundLevelUnitPtr slu, AVFAudioSpectrumUnitPtr spectrum,
+                             AVFAudioEqualizerPtr eq) : audioSLU(slu),
+                                                        audioSpectrum(spectrum),
+                                                        audioEQ(eq),
+                                                        // Some reasonable defaults
+                                                        mSampleRate(48000),
+                                                        mChannels(2) {
+}
+
+AVFTapContext::~AVFTapContext() {
+    // AudioUnits have already been deallocated by now
+    // shared_ptrs get freed automatically
+}
+
+void InitAudioTap(MTAudioProcessingTapRef tapRef, void *clientInfo, void **tapStorageOut) {
     // retain the AU kernels so they don't get freed while we're running
-    AVFAudioProcessor *processor = (__bridge AVFAudioProcessor *)clientInfo;
+    AVFAudioProcessor *processor = (__bridge AVFAudioProcessor *) clientInfo;
     if (processor) {
         AVFTapContext *context = new AVFTapContext(processor.soundLevelUnit,
-                                                   processor.audioSpectrum,
-                                                   processor.audioEqualizer);
+                processor.audioSpectrum,
+                processor.audioEqualizer);
         *tapStorageOut = context;
     }
 }
 
-void FinalizeAudioTap(MTAudioProcessingTapRef tapRef)
-{
-    AVFTapContext *context = (AVFTapContext*)MTAudioProcessingTapGetStorage(tapRef);
-
+void FinalizeAudioTap(MTAudioProcessingTapRef tapRef) {
+    AVFTapContext *context = (AVFTapContext*) MTAudioProcessingTapGetStorage(tapRef);
     if (context) {
         delete context;
     }
@@ -218,41 +197,12 @@ static OSStatus SetupAudioUnit(AudioUnit unit,
     return status;
 }
 
-static OSStatus ConnectAudioUnits(AudioUnit source, AudioUnit sink) {
-    AudioUnitConnection connection;
-    connection.sourceAudioUnit = source;
-    connection.sourceOutputNumber = 0;
-    connection.destInputNumber = 0;
-    return AudioUnitSetProperty(sink, kAudioUnitProperty_MakeConnection,
-                                kAudioUnitScope_Input, 0,
-                                &connection, sizeof(connection));
-}
-
-AudioUnit FindAudioUnit(OSType type, OSType subType, OSType manu) {
-    AudioUnit audioUnit = NULL;
-
-    AudioComponentDescription audioComponentDescription;
-    audioComponentDescription.componentType = type;
-    audioComponentDescription.componentSubType = subType;
-    audioComponentDescription.componentManufacturer = manu;
-    audioComponentDescription.componentFlags = 0;
-    audioComponentDescription.componentFlagsMask = 0;
-
-    AudioComponent audioComponent = AudioComponentFindNext(NULL, &audioComponentDescription);
-    if (audioComponent) {
-        AudioComponentInstanceNew(audioComponent, &audioUnit);
-    }
-    return audioUnit;
-}
-
 void PrepareAudioTap(MTAudioProcessingTapRef tapRef,
-                     CMItemCount maxFrames,
-                     const AudioStreamBasicDescription *processingFormat)
-{
-    AVFTapContext *context = (AVFTapContext*)MTAudioProcessingTapGetStorage(tapRef);
+        CMItemCount maxFrames,
+        const AudioStreamBasicDescription *processingFormat) {
+    AVFTapContext *context = (AVFTapContext*) MTAudioProcessingTapGetStorage(tapRef);
 
     // Validate the audio format before we enable the processor
-
     // Failures here should rarely, if ever, happen so leave the NSLogs in for
     // easier diagnosis in the field
     if (processingFormat->mFormatID != kAudioFormatLinearPCM) {
@@ -263,175 +213,70 @@ void PrepareAudioTap(MTAudioProcessingTapRef tapRef,
     // Use the convenient kAudioFormatFlagsNativeFloatPacked to check if we can
     // process the incoming audio
     if ((processingFormat->mFormatFlags & kAudioFormatFlagsNativeFloatPacked)
-        != kAudioFormatFlagsNativeFloatPacked) {
+            != kAudioFormatFlagsNativeFloatPacked) {
         NSLog(@"AVFAudioProcessor needs native endian packed float samples!!");
         return;
     }
 
-    // Get an instance of our sound level unit
-    context->eqUnit = NULL;
+    context->mSampleRate = processingFormat->mSampleRate;
+    context->mChannels = processingFormat->mChannelsPerFrame;
+    context->mMaxFrames = maxFrames;
+
+    // Configure audio equalizer
     if (context->audioEQ != nullptr) {
-        context->eqUnit = NewKernelProcessorUnit(static_pointer_cast<AVFKernelProcessor>(context->audioEQ));
-        if (context->eqUnit) {
-            OSStatus status = SetupAudioUnit(context->eqUnit,
-                                             processingFormat,
-                                             (UInt32)maxFrames);
-            if (noErr != status) {
-                NSLog(@"Error creating audio equalizer unit: %d", status);
-                AudioComponentInstanceDispose(context->eqUnit);
-                context->eqUnit = NULL;
-            }
-        }
+        context->audioEQ.get()->SetSampleRate(context->mSampleRate);
+        context->audioEQ.get()->SetChannels(context->mChannels);
+        context->audioEQ.get()->ResetBandParameters();
     }
 
-    context->spectrumUnit = NULL;
+    // Configure spectrum
     if (context->audioSpectrum != nullptr) {
-        context->spectrumUnit = NewKernelProcessorUnit(static_pointer_cast<AVFKernelProcessor>(context->audioSpectrum));
-        if (context->spectrumUnit) {
-            OSStatus status = SetupAudioUnit(context->spectrumUnit,
-                                             processingFormat,
-                                             (UInt32)maxFrames);
-            if (noErr != status) {
-                NSLog(@"Error creating audio spectrum unit: %d", status);
-                AudioComponentInstanceDispose(context->spectrumUnit);
-                context->spectrumUnit = NULL;
-            }
-        }
+        context->audioSpectrum.get()->SetSampleRate(context->mSampleRate);
+        context->audioSpectrum.get()->SetChannels(context->mChannels);
+        context->audioSpectrum.get()->SetMaxFrames(context->mMaxFrames);
     }
 
-    context->volumeUnit = NULL;
     if (context->audioSLU != nullptr) {
-        context->volumeUnit = NewKernelProcessorUnit(static_pointer_cast<AVFKernelProcessor>(context->audioSLU));
-        if (context->volumeUnit) {
-            OSStatus status = SetupAudioUnit(context->volumeUnit,
-                                             processingFormat,
-                                             (UInt32)maxFrames);
-            if (noErr != status) {
-                NSLog(@"Error setting up Sound Level Unit: %d", status);
-                AudioComponentInstanceDispose(context->volumeUnit);
-                context->volumeUnit = NULL;
-            }
-        }
+        context->audioSLU.get()->SetChannels(context->mChannels);
     }
-
-    /*
-     * Use AudioUnitConnections to build a processing graph
-     * The last unit in the chain will be the unit we call to render, it will
-     * pull through the graph until we get to the first, which will fetch samples
-     * via the render proc we install.
-     *
-     * The graph will look like this:
-     *    (render proc) -> eqUnit -> spectrumUnit -> volUnit
-     *
-     * This will allow the EQ settings to affect the spectrum output, but not
-     * the volume or balance.
-     */
-    AudioUnit firstUnit = NULL;
-    context->renderUnit = NULL;
-
-    // Set initial settings
-    if (context->eqUnit) {
-        if (context->renderUnit) {
-            ConnectAudioUnits(context->renderUnit, context->eqUnit);
-        }
-        context->renderUnit = context->eqUnit;
-        if (!firstUnit) {
-            firstUnit = context->eqUnit;
-        }
-    }
-    if (context->spectrumUnit) {
-        if (context->renderUnit) {
-            ConnectAudioUnits(context->renderUnit, context->spectrumUnit);
-        }
-        context->renderUnit = context->spectrumUnit;
-        if (!firstUnit) {
-            firstUnit = context->spectrumUnit;
-        }
-    }
-    if (context->volumeUnit) {
-        if (context->renderUnit) {
-            ConnectAudioUnits(context->renderUnit, context->volumeUnit);
-        }
-        context->renderUnit = context->volumeUnit;
-        if (!firstUnit) {
-            firstUnit = context->volumeUnit;
-        }
-    }
-
-    // Set up a render callback on our first unit
-    if (firstUnit) {
-        AURenderCallbackStruct renderCB;
-        renderCB.inputProc = (AURenderCallback)AVFTapRenderCallback;
-        renderCB.inputProcRefCon = (void*)tapRef;
-        AudioUnitSetProperty(firstUnit,
-                             kAudioUnitProperty_SetRenderCallback,
-                             kAudioUnitScope_Input, 0,
-                             &renderCB, sizeof(renderCB));
-    }
-    context->totalFrames = 0;
 }
 
-void UnprepareAudioTap(MTAudioProcessingTapRef tapRef)
-{
-    AVFTapContext *context = (AVFTapContext*)MTAudioProcessingTapGetStorage(tapRef);
-    context->renderUnit = NULL;
-
-    if (context->spectrumUnit) {
-        AudioUnitUninitialize(context->spectrumUnit);
-        AudioComponentInstanceDispose(context->spectrumUnit);
-        context->spectrumUnit = NULL;
-    }
-    if (context->volumeUnit) {
-        AudioUnitUninitialize(context->volumeUnit);
-        AudioComponentInstanceDispose(context->volumeUnit);
-        context->volumeUnit = NULL;
-    }
-    if (context->eqUnit) {
-        AudioUnitUninitialize(context->eqUnit);
-        AudioComponentInstanceDispose(context->eqUnit);
-        context->eqUnit = NULL;
-    }
+void UnprepareAudioTap(MTAudioProcessingTapRef tapRef) {
+    // We do not need it anymore
 }
 
 void ProcessAudioTap(MTAudioProcessingTapRef tapRef,
-                     CMItemCount numberFrames,
-                     uint32_t flags,
-                     AudioBufferList *bufferListInOut,
-                     CMItemCount *numberFramesOut,
-                     uint32_t *flagsOut)
-{
-    AVFTapContext *context = (AVFTapContext*)MTAudioProcessingTapGetStorage(tapRef);
-    OSStatus status = noErr;
+        CMItemCount numberFrames,
+        uint32_t flags,
+        AudioBufferList *bufferListInOut,
+        CMItemCount *numberFramesOut,
+        uint32_t *flagsOut) {
+    AVFTapContext *context = (AVFTapContext*) MTAudioProcessingTapGetStorage(tapRef);
+    OSStatus status = MTAudioProcessingTapGetSourceAudio(tapRef, numberFrames, bufferListInOut,
+            flagsOut, NULL, numberFramesOut);
+    if (status != noErr) {
+        NSLog(@"MTAudioProcessingTapGetSourceAudio failed: %d", status);
+        return;
+    }
 
-    if (context->renderUnit) {
-        AudioTimeStamp audioTimeStamp;
-        audioTimeStamp.mSampleTime = context->totalFrames;
-        audioTimeStamp.mFlags = kAudioTimeStampSampleTimeValid;
-
-        status = AudioUnitRender(context->renderUnit,
-                                 0,
-                                 &audioTimeStamp,
-                                 0,
-                                 (UInt32)numberFrames,
-                                 bufferListInOut);
-        if (noErr != status) {
+    if (context->audioEQ != nullptr) {
+        if (!context->audioEQ.get()->ProcessBufferLists(*bufferListInOut, numberFrames)) {
+            NSLog(@"audioEQ ProcessBufferLists() failed");
             return;
         }
-        context->totalFrames += numberFrames;
-        *numberFramesOut = numberFrames;
-    } else {
-        MTAudioProcessingTapGetSourceAudio(tapRef, numberFrames, bufferListInOut,
-                                flagsOut, NULL, numberFramesOut);
     }
-}
 
-static OSStatus AVFTapRenderCallback(void *inRefCon,
-                                     AudioUnitRenderActionFlags *ioActionFlags,
-                                     const AudioTimeStamp *inTimeStamp,
-                                     UInt32 inBusNumber,
-                                     UInt32 inNumberFrames,
-                                     AudioBufferList *ioData)
-{
-    MTAudioProcessingTapRef tapRef = static_cast<MTAudioProcessingTapRef>(inRefCon);
-    return MTAudioProcessingTapGetSourceAudio(tapRef, inNumberFrames, ioData, NULL, NULL, NULL);
+    if (context->audioSpectrum != nullptr) {
+        if (!context->audioSpectrum.get()->ProcessBufferLists(*bufferListInOut, numberFrames)) {
+            NSLog(@"audioSpectrum ProcessBufferLists() failed");
+            return;
+        }
+    }
+
+    if (context->audioSLU != nullptr) {
+        if (!context->audioSLU.get()->ProcessBufferLists(*bufferListInOut, numberFrames)) {
+            NSLog(@"audioSLU ProcessBufferLists() failed");
+            return;
+        }
+    }
 }

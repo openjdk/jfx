@@ -124,44 +124,6 @@ EGLSurface getSharedWindowSurface(EGLDisplay dpy,
     return sharedWindowSurface;
 }
 
-void setEGLAttrs(jint *attrs, int *eglAttrs) {
-    int index = 0;
-
-    eglAttrs[index++] = EGL_SURFACE_TYPE;
-    if (attrs[ONSCREEN] != 0) {
-        eglAttrs[index++] = (EGL_WINDOW_BIT);
-    } else {
-        eglAttrs[index++] = EGL_PBUFFER_BIT;
-    }
-
-    // NOTE: EGL_TRANSPARENT_TYPE ?
-
-    if (attrs[RED_SIZE] == 5 && attrs[GREEN_SIZE] == 6
-            && attrs[BLUE_SIZE] == 5 && attrs[ALPHA_SIZE] == 0) {
-        // Optimization for Raspberry Pi model B. Even though the result
-        // of setting EGL_BUFFER_SIZE to 16 should be the same as setting
-        // component sizes separately, we get less per-frame overhead if we
-        // only set EGL_BUFFER_SIZE.
-        eglAttrs[index++] = EGL_BUFFER_SIZE;
-        eglAttrs[index++] = 16;
-    } else {
-        eglAttrs[index++] = EGL_RED_SIZE;
-        eglAttrs[index++] = attrs[RED_SIZE];
-        eglAttrs[index++] = EGL_GREEN_SIZE;
-        eglAttrs[index++] = attrs[GREEN_SIZE];
-        eglAttrs[index++] = EGL_BLUE_SIZE;
-        eglAttrs[index++] = attrs[BLUE_SIZE];
-        eglAttrs[index++] = EGL_ALPHA_SIZE;
-        eglAttrs[index++] = attrs[ALPHA_SIZE];
-    }
-
-    eglAttrs[index++] = EGL_DEPTH_SIZE;
-    eglAttrs[index++] = attrs[DEPTH_SIZE];
-    eglAttrs[index++] = EGL_RENDERABLE_TYPE;
-    eglAttrs[index++] = EGL_OPENGL_ES2_BIT;
-    eglAttrs[index] = EGL_NONE;
-}
-
 ContextInfo *eglContextFromConfig(EGLDisplay *dpy, EGLConfig config) {
 
     EGLSurface surface = getDummyWindowSurface(dpy, config);

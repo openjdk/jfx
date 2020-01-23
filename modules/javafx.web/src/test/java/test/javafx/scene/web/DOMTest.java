@@ -415,6 +415,26 @@ public class DOMTest extends TestBase {
         });
     }
 
+    // JDK-8233747
+    @Test public void testCreateAttribute() {
+        final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
+        submit(() -> {
+            try {
+                //invalid attribute
+                Attr attr = doc.createAttribute(":/test");
+                fail("DOMException expected but not thrown");
+            } catch (DOMException ex) {
+                // Expected.
+            } catch (Throwable ex) {
+                fail("DOMException expected but instead threw " + ex.getClass().getName());
+            }
+
+            String attributeName = "test";
+            Attr attr = doc.createAttribute(attributeName);
+            assertEquals("Created attribute", attributeName, attr.getName());
+        });
+    }
+
     // helper methods
 
     private void verifyChildRemoved(Node parent,
