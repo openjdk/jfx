@@ -44,8 +44,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import test.util.Util;
+import static org.junit.Assert.assertTrue;
 
-public class ShapeViewOrderLeakTest extends Application {
+public class ShapeViewOrderLeakTest {
 
     private static CountDownLatch startupLatch;
     private static StackPane root;
@@ -53,39 +54,36 @@ public class ShapeViewOrderLeakTest extends Application {
     private static Group group;
     private static WeakReference<Shape> shapeWeakRef;
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        stage = primaryStage;
-        Shape shape1 = new Rectangle();
-        Shape shape2 = new Circle();
-        shape1.setViewOrder(1);
-        shape2.setViewOrder(0);
-        shapeWeakRef = new WeakReference<>(shape1);
+    public static class TestApp extends Application {
+        @Override
+        public void start(Stage primaryStage) throws Exception {
+            stage = primaryStage;
+            Shape shape1 = new Rectangle();
+            Shape shape2 = new Circle();
+            shape1.setViewOrder(1);
+            shape2.setViewOrder(0);
+            shapeWeakRef = new WeakReference<>(shape1);
 
-        group = new Group(shape1, shape2);
-        shape1 = null;
-        shape2 = null;
+            group = new Group(shape1, shape2);
+            shape1 = null;
+            shape2 = null;
 
-        root = new StackPane(group);
-        Scene scene = new Scene(root);
-        primaryStage.setScene(scene);
-        primaryStage.setOnShown(l -> {
-            startupLatch.countDown();
-        });
-        primaryStage.show();
+            root = new StackPane(group);
+            Scene scene = new Scene(root);
+            primaryStage.setScene(scene);
+            primaryStage.setOnShown(l -> {
+                Platform.runLater(() -> startupLatch.countDown());
+            });
+            primaryStage.show();
+        }
     }
 
     @BeforeClass
-    public static void initFX() {
+    public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(ShapeViewOrderLeakTest.class, (String[]) null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
+        assertTrue("Timeout waiting for FX runtime to start",
+                   startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Test

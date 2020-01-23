@@ -43,8 +43,9 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import test.util.Util;
+import static org.junit.Assert.assertTrue;
 
-public class TabPaneHeaderLeakTest extends Application {
+public class TabPaneHeaderLeakTest {
 
     private static CountDownLatch startupLatch;
     private static StackPane root;
@@ -53,37 +54,34 @@ public class TabPaneHeaderLeakTest extends Application {
     private static WeakReference<TextField> textFieldWeakRef;
     private static WeakReference<Tab> tabWeakRef;
 
-    @Override
-    public void start(Stage primaryStage) throws Exception {
-        stage = primaryStage;
-        TextField tf = new TextField("Weak ref TF");
-        textFieldWeakRef = new WeakReference<>(tf);
-        Tab tab = new Tab("Tab", tf);
-        tabWeakRef = new WeakReference<>(tab);
-        tabPane = new TabPane(tab, new Tab("Tab1"));
-        tab = null;
-        tf = null;
+    public static class TestApp extends Application {
+        @Override
+        public void start(Stage primaryStage) throws Exception {
+            stage = primaryStage;
+            TextField tf = new TextField("Weak ref TF");
+            textFieldWeakRef = new WeakReference<>(tf);
+            Tab tab = new Tab("Tab", tf);
+            tabWeakRef = new WeakReference<>(tab);
+            tabPane = new TabPane(tab, new Tab("Tab1"));
+            tab = null;
+            tf = null;
 
-        root = new StackPane(tabPane);
-        Scene scene = new Scene(root);
-        primaryStage.setScene(scene);
-        primaryStage.setOnShown(l -> {
-            startupLatch.countDown();
-        });
-        primaryStage.show();
+            root = new StackPane(tabPane);
+            Scene scene = new Scene(root);
+            primaryStage.setScene(scene);
+            primaryStage.setOnShown(l -> {
+                Platform.runLater(() -> startupLatch.countDown());
+            });
+            primaryStage.show();
+        }
     }
 
     @BeforeClass
-    public static void initFX() {
+    public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TabPaneHeaderLeakTest.class, (String[]) null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
+        assertTrue("Timeout waiting for FX runtime to start",
+                   startupLatch.await(15, TimeUnit.SECONDS));
     }
 
     @Test
