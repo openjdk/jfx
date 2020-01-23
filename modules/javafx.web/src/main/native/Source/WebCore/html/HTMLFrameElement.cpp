@@ -51,7 +51,7 @@ Ref<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Doc
 bool HTMLFrameElement::rendererIsNeeded(const RenderStyle&)
 {
     // For compatibility, frames render even when display: none is set.
-    return isURLAllowed();
+    return canLoad();
 }
 
 RenderPtr<RenderElement> HTMLFrameElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
@@ -74,7 +74,7 @@ void HTMLFrameElement::didAttachRenderers()
         m_frameBorder = containingFrameSet->hasFrameBorder();
 }
 
-void HTMLFrameElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLFrameElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == frameborderAttr) {
         m_frameBorder = value.toInt();

@@ -46,8 +46,11 @@
 #include "SecurityOriginData.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(MediaKeySession);
 
 Ref<MediaKeySession> MediaKeySession::create(ScriptExecutionContext& context, WeakPtr<MediaKeys>&& keys, MediaKeySessionType sessionType, bool useDistinctiveIdentifier, Ref<CDM>&& implementation, Ref<CDMInstanceSession>&& instanceSession)
 {
@@ -91,7 +94,7 @@ MediaKeySession::MediaKeySession(ScriptExecutionContext& context, WeakPtr<MediaK
     UNUSED_PARAM(m_closed);
     UNUSED_PARAM(m_uninitialized);
 
-    m_instanceSession->setClient(m_cdmInstanceSessionClientWeakPtrFactory.createWeakPtr(*this));
+    m_instanceSession->setClient(makeWeakPtr(*this));
 }
 
 MediaKeySession::~MediaKeySession()
@@ -115,7 +118,7 @@ Ref<MediaKeyStatusMap> MediaKeySession::keyStatuses() const
     return m_keyStatuses.copyRef();
 }
 
-void MediaKeySession::generateRequest(const AtomicString& initDataType, const BufferSource& initData, Ref<DeferredPromise>&& promise)
+void MediaKeySession::generateRequest(const AtomString& initDataType, const BufferSource& initData, Ref<DeferredPromise>&& promise)
 {
     // https://w3c.github.io/encrypted-media/#dom-mediakeysession-generaterequest
     // W3C Editor's Draft 09 November 2016
@@ -200,7 +203,7 @@ void MediaKeySession::generateRequest(const AtomicString& initDataType, const Bu
         }
 
         LOG(EME, "EME - request license from CDM implementation");
-        m_instanceSession->requestLicense(m_sessionType, initDataType, WTFMove(initData), [this, weakThis = makeWeakPtr(*this), promise = WTFMove(promise)] (Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, CDMInstanceSession::SuccessValue succeeded) mutable {
+        m_instanceSession->requestLicense(m_sessionType, initDataType, sanitizedInitData.releaseNonNull(), [this, weakThis = makeWeakPtr(*this), promise = WTFMove(promise)] (Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, CDMInstanceSession::SuccessValue succeeded) mutable {
             if (!weakThis)
                 return;
 

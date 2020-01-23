@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2017 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2019 Apple Inc.  All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2011 University of Szeged. All rights reserved.
  *
@@ -298,7 +298,7 @@ void WTFPrintBacktrace(void** stack, int size)
     out.print(stackTrace);
 }
 
-#if !defined(NDEBUG) || !OS(DARWIN)
+#if !defined(NDEBUG) || !(OS(DARWIN) || PLATFORM(PLAYSTATION))
 void WTFCrash()
 {
     WTFReportBacktrace();
@@ -326,7 +326,7 @@ void WTFCrash()
 {
     CRASH();
 }
-#endif // !defined(NDEBUG) || !OS(DARWIN)
+#endif // !defined(NDEBUG) || !(OS(DARWIN) || PLATFORM(PLAYSTATION))
 
 void WTFCrashWithSecurityImplication()
 {
@@ -368,6 +368,7 @@ void WTFReportError(const char* file, int line, const char* function, const char
 }
 
 class WTFLoggingAccumulator {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     void accumulate(const String&);
     void resetAccumulatedLogs();
@@ -416,15 +417,15 @@ void WTFSetLogChannelLevel(WTFLogChannel* channel, WTFLogLevel level)
 
 bool WTFWillLogWithLevel(WTFLogChannel* channel, WTFLogLevel level)
 {
-    return channel->level >= level && channel->state != WTFLogChannelOff;
+    return channel->level >= level && channel->state != WTFLogChannelState::Off;
 }
 
 void WTFLogWithLevel(WTFLogChannel* channel, WTFLogLevel level, const char* format, ...)
 {
-    if (level != WTFLogLevelAlways && level > channel->level)
+    if (level != WTFLogLevel::Always && level > channel->level)
         return;
 
-    if (channel->level != WTFLogLevelAlways && channel->state == WTFLogChannelOff)
+    if (channel->level != WTFLogLevel::Always && channel->state == WTFLogChannelState::Off)
         return;
 
     va_list args;
@@ -437,29 +438,21 @@ void WTFLogWithLevel(WTFLogChannel* channel, WTFLogLevel level, const char* form
     va_end(args);
 }
 
-void WTFLog(WTFLogChannel* channel, const char* format, ...)
+static void WTFLogVaList(WTFLogChannel* channel, const char* format, va_list args)
 {
-    if (channel->state == WTFLogChannelOff)
+    if (channel->state == WTFLogChannelState::Off)
         return;
 
-    if (channel->state == WTFLogChannelOn) {
-        va_list args;
-        va_start(args, format);
+    if (channel->state == WTFLogChannelState::On) {
         vprintf_stderr_with_trailing_newline(format, args);
-        va_end(args);
         return;
     }
 
-    ASSERT(channel->state == WTFLogChannelOnWithAccumulation);
-
-    va_list args;
-    va_start(args, format);
+    ASSERT(channel->state == WTFLogChannelState::OnWithAccumulation);
 
     ALLOW_NONLITERAL_FORMAT_BEGIN
     String loggingString = WTF::createWithFormatAndArguments(format, args);
     ALLOW_NONLITERAL_FORMAT_END
-
-    va_end(args);
 
     if (!loggingString.endsWith('\n'))
         loggingString.append('\n');
@@ -469,16 +462,26 @@ void WTFLog(WTFLogChannel* channel, const char* format, ...)
     logToStderr(loggingString.utf8().data());
 }
 
+void WTFLog(WTFLogChannel* channel, const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    WTFLogVaList(channel, format, args);
+
+    va_end(args);
+}
+
 void WTFLogVerbose(const char* file, int line, const char* function, WTFLogChannel* channel, const char* format, ...)
 {
-    if (channel->state != WTFLogChannelOn)
+    if (channel->state != WTFLogChannelState::On)
         return;
 
     va_list args;
     va_start(args, format);
 
     ALLOW_NONLITERAL_FORMAT_BEGIN
-    WTFLog(channel, format, args);
+    WTFLogVaList(channel, format, args);
     ALLOW_NONLITERAL_FORMAT_END
 
     va_end(args);
@@ -538,9 +541,9 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
         Vector<String> componentInfo = logLevelComponent.split('=');
         String component = componentInfo[0].stripWhiteSpace();
 
-        WTFLogChannelState logChannelState = WTFLogChannelOn;
+        WTFLogChannelState logChannelState = WTFLogChannelState::On;
         if (component.startsWith('-')) {
-            logChannelState = WTFLogChannelOff;
+            logChannelState = WTFLogChannelState::Off;
             component = component.substring(1);
         }
 
@@ -549,17 +552,17 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
             continue;
         }
 
-        WTFLogLevel logChannelLevel = WTFLogLevelError;
+        WTFLogLevel logChannelLevel = WTFLogLevel::Error;
         if (componentInfo.size() > 1) {
             String level = componentInfo[1].stripWhiteSpace();
             if (equalLettersIgnoringASCIICase(level, "error"))
-                logChannelLevel = WTFLogLevelError;
+                logChannelLevel = WTFLogLevel::Error;
             else if (equalLettersIgnoringASCIICase(level, "warning"))
-                logChannelLevel = WTFLogLevelWarning;
+                logChannelLevel = WTFLogLevel::Warning;
             else if (equalLettersIgnoringASCIICase(level, "info"))
-                logChannelLevel = WTFLogLevelInfo;
+                logChannelLevel = WTFLogLevel::Info;
             else if (equalLettersIgnoringASCIICase(level, "debug"))
-                logChannelLevel = WTFLogLevelDebug;
+                logChannelLevel = WTFLogLevel::Debug;
             else
                 WTFLogAlways("Unknown logging level: %s", level.utf8().data());
         }
@@ -625,7 +628,7 @@ void WTFReleaseLogStackTrace(WTFLogChannel* channel)
 
 #endif // CPU(ARM64)
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4, uint64_t misc5, uint64_t misc6)
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4, uint64_t misc5, uint64_t misc6)
 {
     register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
     register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
@@ -638,7 +641,7 @@ void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint6
     __builtin_unreachable();
 }
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4, uint64_t misc5)
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4, uint64_t misc5)
 {
     register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
     register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
@@ -650,7 +653,7 @@ void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint6
     __builtin_unreachable();
 }
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4)
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3, uint64_t misc4)
 {
     register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
     register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
@@ -661,7 +664,7 @@ void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint6
     __builtin_unreachable();
 }
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3)
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2, uint64_t misc3)
 {
     register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
     register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
@@ -671,7 +674,7 @@ void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint6
     __builtin_unreachable();
 }
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2)
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1, uint64_t misc2)
 {
     register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
     register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
@@ -680,7 +683,7 @@ void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint6
     __builtin_unreachable();
 }
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint64_t misc1)
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason, uint64_t misc1)
 {
     register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
     register uint64_t misc1GPR asm(CRASH_GPR1) = misc1;
@@ -688,7 +691,7 @@ void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason, uint6
     __builtin_unreachable();
 }
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason)
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t reason)
 {
     register uint64_t reasonGPR asm(CRASH_GPR0) = reason;
     __asm__ volatile (CRASH_INST : : "r"(reasonGPR));
@@ -697,13 +700,13 @@ void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t reason)
 
 #else
 
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t) { CRASH(); }
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t, uint64_t) { CRASH(); }
-void WTFCrashWithInfo(int, const char*, const char*, int, uint64_t) { CRASH(); }
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t, uint64_t) { CRASH(); }
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t, uint64_t) { CRASH(); }
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t, uint64_t) { CRASH(); }
+void WTFCrashWithInfoImpl(int, const char*, const char*, int, uint64_t) { CRASH(); }
 
 #endif // OS(DARWIN) && (CPU(X64_64) || CPU(ARM64))
 

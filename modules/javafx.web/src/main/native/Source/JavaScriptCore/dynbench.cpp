@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "JSObject.h"
 #include "VM.h"
 #include <wtf/MainThread.h>
+#include <wtf/text/StringCommon.h>
 
 using namespace JSC;
 
@@ -54,7 +55,7 @@ unsigned requestedIterationCount;
 template<typename Callback>
 NEVER_INLINE void benchmarkImpl(const char* name, unsigned iterationCount, const Callback& callback)
 {
-    if (nameFilter && !strcasestr(name, nameFilter))
+    if (nameFilter && WTF::findIgnoringASCIICaseWithoutLength(name, nameFilter) == WTF::notFound)
         return;
 
     if (requestedIterationCount)
@@ -89,22 +90,22 @@ int main(int argc, char** argv)
     WTF::initializeMainThread();
     JSC::initializeThreading();
 
-    VM* vm = &VM::create(LargeHeap).leakRef();
+    VM& vm = VM::create(LargeHeap).leakRef();
     {
         JSLockHolder locker(vm);
 
         JSGlobalObject* globalObject =
-            JSGlobalObject::create(*vm, JSGlobalObject::createStructure(*vm, jsNull()));
+            JSGlobalObject::create(vm, JSGlobalObject::createStructure(vm, jsNull()));
         ExecState* exec = globalObject->globalExec();
 
-        Identifier identF = Identifier::fromString(exec, "f");
-        Identifier identG = Identifier::fromString(exec, "g");
+        Identifier identF = Identifier::fromString(vm, "f");
+        Identifier identG = Identifier::fromString(vm, "g");
 
         Structure* objectStructure =
-            JSFinalObject::createStructure(*vm, globalObject, globalObject->objectPrototype(), 2);
+            JSFinalObject::createStructure(vm, globalObject, globalObject->objectPrototype(), 2);
 
         // Non-strict dynamic get by id:
-        JSValue object = JSFinalObject::create(*vm, objectStructure);
+        JSValue object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false, PutPropertySlot::PutById);
             object.putInline(exec, identF, jsNumber(42), slot);
@@ -126,7 +127,7 @@ int main(int argc, char** argv)
             });
 
         // Non-strict dynamic put by id replace:
-        object = JSFinalObject::create(*vm, objectStructure);
+        object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false, PutPropertySlot::PutById);
             object.putInline(exec, identF, jsNumber(42), slot);
@@ -157,7 +158,7 @@ int main(int argc, char** argv)
             1000000,
             [&] (unsigned iterationCount) {
                 for (unsigned i = iterationCount; i--;) {
-                    JSValue object = JSFinalObject::create(*vm, objectStructure);
+                    JSValue object = JSFinalObject::create(vm, objectStructure);
                     {
                         PutPropertySlot slot(object, false, PutPropertySlot::PutById);
                         object.putInline(exec, identF, jsNumber(i), slot);
@@ -170,7 +171,7 @@ int main(int argc, char** argv)
             });
 
         // Non-strict dynamic get by id with dynamic store context:
-        object = JSFinalObject::create(*vm, objectStructure);
+        object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false);
             object.putInline(exec, identF, jsNumber(42), slot);
@@ -192,7 +193,7 @@ int main(int argc, char** argv)
             });
 
         // Non-strict dynamic put by id replace with dynamic store context:
-        object = JSFinalObject::create(*vm, objectStructure);
+        object = JSFinalObject::create(vm, objectStructure);
         {
             PutPropertySlot slot(object, false);
             object.putInline(exec, identF, jsNumber(42), slot);
@@ -223,7 +224,7 @@ int main(int argc, char** argv)
             1000000,
             [&] (unsigned iterationCount) {
                 for (unsigned i = iterationCount; i--;) {
-                    JSValue object = JSFinalObject::create(*vm, objectStructure);
+                    JSValue object = JSFinalObject::create(vm, objectStructure);
                     {
                         PutPropertySlot slot(object, false);
                         object.putInline(exec, identF, jsNumber(i), slot);

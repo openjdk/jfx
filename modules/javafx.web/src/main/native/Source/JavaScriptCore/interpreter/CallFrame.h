@@ -271,8 +271,8 @@ namespace JSC  {
         }
 
         void convertToStackOverflowFrame(VM&, CodeBlock* codeBlockToKeepAliveUntilFrameIsUnwound);
-        inline bool isStackOverflowFrame() const;
-        inline bool isWasmFrame() const;
+        bool isStackOverflowFrame() const;
+        bool isWasmFrame() const;
 
         void setArgumentCountIncludingThis(int count) { static_cast<Register*>(this)[CallFrameSlot::argumentCount].payload() = count; }
         void setCallee(JSObject* callee) { static_cast<Register*>(this)[CallFrameSlot::callee] = callee; }

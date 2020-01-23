@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -103,7 +103,7 @@ ObjectConstructor::ObjectConstructor(VM& vm, Structure* structure)
 
 void ObjectConstructor::finishCreation(VM& vm, JSGlobalObject* globalObject, ObjectPrototype* objectPrototype)
 {
-    Base::finishCreation(vm, objectPrototype->classInfo(vm)->className);
+    Base::finishCreation(vm, vm.propertyNames->Object.string(), NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
 
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, objectPrototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
@@ -204,7 +204,7 @@ JSValue objectConstructorGetOwnPropertyDescriptors(ExecState* exec, JSObject* ob
 {
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    PropertyNameArray properties(&vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     object->methodTable(vm)->getOwnPropertyNames(object, exec, properties, EnumerationMode(DontEnumPropertiesMode::Include));
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -373,7 +373,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorAssign(ExecState* exec)
         // For example, [[Get]] of source object could configure setter to target object. So disable the fast path.
         targetCanPerformFastPut = false;
 
-        PropertyNameArray properties(&vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+        PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
         source->methodTable(vm)->getOwnPropertyNames(source, exec, properties, EnumerationMode(DontEnumPropertiesMode::Include));
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -440,7 +440,7 @@ EncodedJSValue JSC_HOST_CALL objectConstructorValues(ExecState* exec)
     JSArray* values = constructEmptyArray(exec, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
 
-    PropertyNameArray properties(&vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    PropertyNameArray properties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     target->methodTable(vm)->getOwnPropertyNames(target, exec, properties, EnumerationMode(DontEnumPropertiesMode::Include));
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -600,22 +600,24 @@ static JSValue defineProperties(ExecState* exec, JSObject* object, JSObject* pro
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    PropertyNameArray propertyNames(&vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     asObject(properties)->methodTable(vm)->getOwnPropertyNames(asObject(properties), exec, propertyNames, EnumerationMode(DontEnumPropertiesMode::Exclude));
     RETURN_IF_EXCEPTION(scope, { });
     size_t numProperties = propertyNames.size();
     Vector<PropertyDescriptor> descriptors;
     MarkedArgumentBuffer markBuffer;
+#define RETURN_IF_EXCEPTION_CLEARING_OVERFLOW(value) do { \
+    if (scope.exception()) { \
+        markBuffer.overflowCheckNotNeeded(); \
+        return value; \
+    } \
+} while (false)
     for (size_t i = 0; i < numProperties; i++) {
         JSValue prop = properties->get(exec, propertyNames[i]);
-        RETURN_IF_EXCEPTION(scope, { });
+        RETURN_IF_EXCEPTION_CLEARING_OVERFLOW({ });
         PropertyDescriptor descriptor;
-        bool success = toPropertyDescriptor(exec, prop, descriptor);
-        EXCEPTION_ASSERT(!scope.exception() || !success);
-        if (UNLIKELY(!success)) {
-            markBuffer.overflowCheckNotNeeded();
-            return jsNull();
-        }
+        toPropertyDescriptor(exec, prop, descriptor);
+        RETURN_IF_EXCEPTION_CLEARING_OVERFLOW({ });
         descriptors.append(descriptor);
         // Ensure we mark all the values that we're accumulating
         if (descriptor.isDataDescriptor() && descriptor.value())
@@ -628,6 +630,7 @@ static JSValue defineProperties(ExecState* exec, JSObject* object, JSObject* pro
         }
     }
     RELEASE_ASSERT(!markBuffer.hasOverflowed());
+#undef RETURN_IF_EXCEPTION_CLEARING_OVERFLOW
     for (size_t i = 0; i < numProperties; i++) {
         auto& propertyName = propertyNames[i];
         ASSERT(!propertyName.isPrivateName());
@@ -666,9 +669,10 @@ EncodedJSValue JSC_HOST_CALL objectConstructorCreate(ExecState* exec)
         : constructEmptyObject(exec, exec->lexicalGlobalObject()->nullPrototypeObjectStructure());
     if (exec->argument(1).isUndefined())
         return JSValue::encode(newObject);
-    if (!exec->argument(1).isObject())
-        return throwVMTypeError(exec, scope, "Property descriptor list must be an Object."_s);
-    RELEASE_AND_RETURN(scope, JSValue::encode(defineProperties(exec, newObject, asObject(exec->argument(1)))));
+    JSObject* properties = exec->uncheckedArgument(1).toObject(exec);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    RELEASE_AND_RETURN(scope, JSValue::encode(defineProperties(exec, newObject, properties)));
 }
 
 enum class IntegrityLevel {
@@ -687,7 +691,7 @@ bool setIntegrityLevel(ExecState* exec, VM& vm, JSObject* object)
     if (UNLIKELY(!success))
         return false;
 
-    PropertyNameArray properties(&vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     object->methodTable(vm)->getOwnPropertyNames(object, exec, properties, EnumerationMode(DontEnumPropertiesMode::Include));
     RETURN_IF_EXCEPTION(scope, false);
 
@@ -734,7 +738,7 @@ bool testIntegrityLevel(ExecState* exec, VM& vm, JSObject* object)
         return false;
 
     // 6. Let keys be ? O.[[OwnPropertyKeys]]().
-    PropertyNameArray keys(&vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArray keys(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     object->methodTable(vm)->getOwnPropertyNames(object, exec, keys, EnumerationMode(DontEnumPropertiesMode::Include));
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -778,8 +782,10 @@ JSObject* objectConstructorSeal(ExecState* exec, JSObject* object)
 
     bool success = setIntegrityLevel<IntegrityLevel::Sealed>(exec, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!success))
-        return throwTypeError(exec, scope, "Unable to prevent extension in Object.seal"_s);
+    if (UNLIKELY(!success)) {
+        throwTypeError(exec, scope, "Unable to prevent extension in Object.seal"_s);
+        return nullptr;
+    }
 
     return object;
 }
@@ -809,8 +815,10 @@ JSObject* objectConstructorFreeze(ExecState* exec, JSObject* object)
 
     bool success = setIntegrityLevel<IntegrityLevel::Frozen>(exec, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (!success)
-        return throwTypeError(exec, scope, "Unable to prevent extension in Object.freeze"_s);
+    if (UNLIKELY(!success)) {
+        throwTypeError(exec, scope, "Unable to prevent extension in Object.freeze"_s);
+        return nullptr;
+    }
     return object;
 }
 
@@ -909,27 +917,13 @@ JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode pro
         }
     }
 
-    PropertyNameArray properties(&vm, propertyNameMode, PrivateSymbolMode::Exclude);
+    PropertyNameArray properties(vm, propertyNameMode, PrivateSymbolMode::Exclude);
     object->methodTable(vm)->getOwnPropertyNames(object, exec, properties, EnumerationMode(dontEnumPropertiesMode));
     RETURN_IF_EXCEPTION(scope, nullptr);
 
-    // https://tc39.github.io/ecma262/#sec-enumerableownproperties
-    // If {object} is a Proxy, an explicit and observable [[GetOwnProperty]] op is required to filter out non-enumerable properties.
-    // In other cases, filtering has already been performed.
-    const bool mustFilterProperty = dontEnumPropertiesMode == DontEnumPropertiesMode::Exclude && object->type() == ProxyObjectType;
-    auto filterPropertyIfNeeded = [exec, object, mustFilterProperty](const Identifier& identifier) {
-        if (!mustFilterProperty)
-            return true;
-        PropertyDescriptor descriptor;
-        PropertyName name(identifier);
-        return object->getOwnPropertyDescriptor(exec, name, descriptor) && descriptor.enumerable();
-    };
-
-    // If !mustFilterProperty and PropertyNameMode::Strings mode, we do not need to filter out any entries in PropertyNameArray.
-    // We can use fast allocation and initialization.
     if (propertyNameMode != PropertyNameMode::StringsAndSymbols) {
         ASSERT(propertyNameMode == PropertyNameMode::Strings || propertyNameMode == PropertyNameMode::Symbols);
-        if (!mustFilterProperty && properties.size() < MIN_SPARSE_ARRAY_INDEX) {
+        if (properties.size() < MIN_SPARSE_ARRAY_INDEX) {
             if (LIKELY(!globalObject->isHavingABadTime())) {
                 if (isObjectKeys) {
                     Structure* structure = object->structure(vm);
@@ -941,7 +935,7 @@ JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode pro
                             for (size_t i = 0; i < numProperties; i++) {
                                 const auto& identifier = properties[i];
                                 ASSERT(!identifier.isSymbol());
-                                newButterfly->setIndex(vm, i, jsOwnedString(&vm, identifier.string()));
+                                newButterfly->setIndex(vm, i, jsOwnedString(vm, identifier.string()));
                             }
 
                             structure->setCachedOwnKeys(vm, newButterfly);
@@ -961,7 +955,7 @@ JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode pro
                     const auto& identifier = properties[i];
                     if (propertyNameMode == PropertyNameMode::Strings) {
                         ASSERT(!identifier.isSymbol());
-                        buffer[i].set(vm, keys, jsOwnedString(&vm, identifier.string()));
+                        buffer[i].set(vm, keys, jsOwnedString(vm, identifier.string()));
                     } else {
                         ASSERT(identifier.isSymbol());
                         buffer[i].set(vm, keys, Symbol::create(vm, static_cast<SymbolImpl&>(*identifier.impl())));
@@ -986,10 +980,7 @@ JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode pro
         for (size_t i = 0; i < numProperties; i++) {
             const auto& identifier = properties[i];
             ASSERT(!identifier.isSymbol());
-            bool hasProperty = filterPropertyIfNeeded(identifier);
-            EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-            if (hasProperty)
-                pushDirect(exec, keys, jsOwnedString(exec, identifier.string()));
+            pushDirect(exec, keys, jsOwnedString(vm, identifier.string()));
             RETURN_IF_EXCEPTION(scope, nullptr);
         }
         break;
@@ -1001,10 +992,7 @@ JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode pro
             const auto& identifier = properties[i];
             ASSERT(identifier.isSymbol());
             ASSERT(!identifier.isPrivateName());
-            bool hasProperty = filterPropertyIfNeeded(identifier);
-            EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-            if (hasProperty)
-                pushDirect(exec, keys, Symbol::create(vm, static_cast<SymbolImpl&>(*identifier.impl())));
+            pushDirect(exec, keys, Symbol::create(vm, static_cast<SymbolImpl&>(*identifier.impl())));
             RETURN_IF_EXCEPTION(scope, nullptr);
         }
         break;
@@ -1021,19 +1009,13 @@ JSArray* ownPropertyKeys(ExecState* exec, JSObject* object, PropertyNameMode pro
                 continue;
             }
 
-            bool hasProperty = filterPropertyIfNeeded(identifier);
-            EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-            if (hasProperty)
-                pushDirect(exec, keys, jsOwnedString(exec, identifier.string()));
+            pushDirect(exec, keys, jsOwnedString(vm, identifier.string()));
             RETURN_IF_EXCEPTION(scope, nullptr);
         }
 
         // To ensure the order defined in the spec (9.1.12), we append symbols at the last elements of keys.
         for (const auto& identifier : propertySymbols) {
-            bool hasProperty = filterPropertyIfNeeded(identifier);
-            EXCEPTION_ASSERT(!scope.exception() || !hasProperty);
-            if (hasProperty)
-                pushDirect(exec, keys, Symbol::create(vm, static_cast<SymbolImpl&>(*identifier.impl())));
+            pushDirect(exec, keys, Symbol::create(vm, static_cast<SymbolImpl&>(*identifier.impl())));
             RETURN_IF_EXCEPTION(scope, nullptr);
         }
 

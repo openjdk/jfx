@@ -36,6 +36,7 @@
 #include "IDBRequestData.h"
 #include "IDBResultData.h"
 #include "Logging.h"
+#include "SecurityOrigin.h"
 #include "TransactionOperation.h"
 #include <wtf/MainThread.h>
 
@@ -49,7 +50,7 @@ Ref<IDBConnectionToServer> IDBConnectionToServer::create(IDBConnectionToServerDe
 
 IDBConnectionToServer::IDBConnectionToServer(IDBConnectionToServerDelegate& delegate)
     : m_delegate(makeWeakPtr(delegate))
-    , m_proxy(std::make_unique<IDBConnectionProxy>(*this))
+    , m_proxy(makeUnique<IDBConnectionProxy>(*this))
 {
 }
 

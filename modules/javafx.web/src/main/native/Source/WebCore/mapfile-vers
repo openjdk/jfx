@@ -998,7 +998,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLElementImpl_getOuterHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getOuterTextImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getSpellcheckImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_getTabIndexImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getTitleImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getTranslateImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getWebkitdropzoneImpl;
@@ -1017,7 +1016,6 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLElementImpl_setOuterHTMLImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setOuterTextImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setSpellcheckImpl;
-               Java_com_sun_webkit_dom_HTMLElementImpl_setTabIndexImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setTitleImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setTranslateImpl;

@@ -27,6 +27,8 @@
 
 #include "JSGlobalObject.h"
 
+OBJC_CLASS JSScript;
+
 namespace JSC {
 
 class JSAPIGlobalObject : public JSGlobalObject {
@@ -54,6 +56,9 @@ public:
     static Identifier moduleLoaderResolve(JSGlobalObject*, ExecState*, JSModuleLoader*, JSValue keyValue, JSValue referrerValue, JSValue);
     static JSInternalPromise* moduleLoaderFetch(JSGlobalObject*, ExecState*, JSModuleLoader*, JSValue, JSValue, JSValue);
     static JSObject* moduleLoaderCreateImportMetaProperties(JSGlobalObject*, ExecState*, JSModuleLoader*, JSValue, JSModuleRecord*, JSValue);
+    static JSValue moduleLoaderEvaluate(JSGlobalObject*, ExecState*, JSModuleLoader*, JSValue, JSValue, JSValue);
+
+    JSValue loadAndEvaluateJSScriptModule(const JSLockHolder&, JSScript *);
 
 private:
     JSAPIGlobalObject(VM& vm, Structure* structure)

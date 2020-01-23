@@ -30,6 +30,11 @@
 
 namespace WebCore {
 
+enum class ScrollType : uint8_t {
+    User,
+    Programmatic
+};
+
 enum ScrollDirection : uint8_t {
     ScrollUp,
     ScrollDown,
@@ -44,6 +49,10 @@ enum ScrollLogicalDirection : uint8_t {
     ScrollInlineDirectionForward
 };
 
+enum class ScrollPositionClamp : uint8_t {
+    None,
+    ToContentEdges,
+};
 
 inline ScrollDirection logicalToPhysical(ScrollLogicalDirection direction, bool isVertical, bool isFlipped)
 {
@@ -208,6 +217,12 @@ enum class SelectionRevealMode : uint8_t  {
     Reveal,
     RevealUpToMainFrame, // Scroll overflow and iframes, but not the main frame.
     DoNotReveal
+};
+
+enum class ScrollPositioningBehavior : uint8_t {
+    None,
+    Moves,
+    Stationary
 };
 
 using ScrollbarControlState = unsigned;

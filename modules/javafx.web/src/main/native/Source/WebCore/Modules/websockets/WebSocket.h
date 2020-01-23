@@ -51,6 +51,7 @@ class Blob;
 class ThreadableWebSocketChannel;
 
 class WebSocket final : public RefCounted<WebSocket>, public EventTargetWithInlineData, public ActiveDOMObject, private WebSocketChannelClient {
+    WTF_MAKE_ISO_ALLOCATED(WebSocket);
 public:
     static const char* subprotocolSeparator();
 
@@ -126,6 +127,8 @@ private:
     void didUpgradeURL() final;
 
     size_t getFramingOverhead(size_t payloadSize);
+
+    void failAsynchronously();
 
     enum class BinaryType { Blob, ArrayBuffer };
 

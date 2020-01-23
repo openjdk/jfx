@@ -33,14 +33,18 @@
 #include "ExecutableAllocator.h"
 #include "Heap.h"
 #include "Identifier.h"
+#include "JSCPtrTag.h"
 #include "JSDateMath.h"
 #include "JSGlobalObject.h"
 #include "JSLock.h"
 #include "LLIntData.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Options.h"
+#include "SigillCrashAnalyzer.h"
 #include "StructureIDTable.h"
 #include "SuperSampler.h"
+#include "WasmCalleeRegistry.h"
+#include "WasmCapabilities.h"
 #include "WasmThunks.h"
 #include "WriteBarrier.h"
 #include <mutex>
@@ -61,14 +65,17 @@ void initializeThreading()
         WTF::initializeThreading();
         Options::initialize();
 
+        initializePtrTagLookup();
+
 #if ENABLE(WRITE_BARRIER_PROFILING)
         WriteBarrierCounters::initialize();
 #endif
 
-#if ENABLE(ASSEMBLER)
-        ExecutableAllocator::initializeAllocator();
-#endif
+        ExecutableAllocator::initialize();
         VM::computeCanUseJIT();
+
+        if (VM::canUseJIT() && Options::useSigillCrashAnalyzer())
+            enableSigillCrashAnalyzer();
 
         LLInt::initialize();
 #ifndef NDEBUG
@@ -80,8 +87,10 @@ void initializeThreading()
         thread.setSavedLastStackTop(thread.stack().origin());
 
 #if ENABLE(WEBASSEMBLY)
-        if (Options::useWebAssembly())
+        if (Wasm::isSupported()) {
             Wasm::Thunks::initialize();
+            Wasm::CalleeRegistry::initialize();
+        }
 #endif
 
         if (VM::isInMiniMode())

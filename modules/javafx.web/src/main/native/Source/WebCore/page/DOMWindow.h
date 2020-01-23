@@ -82,6 +82,11 @@ class VisualViewport;
 class WebKitNamespace;
 class WebKitPoint;
 
+#if ENABLE(DEVICE_ORIENTATION)
+class DeviceMotionController;
+class DeviceOrientationController;
+#endif
+
 struct ImageBitmapOptions;
 struct WindowFeatures;
 
@@ -95,7 +100,9 @@ class DOMWindow final
     , public ContextDestructionObserver
     , public Base64Utilities
     , public Supplementable<DOMWindow> {
+    WTF_MAKE_ISO_ALLOCATED(DOMWindow);
 public:
+
     static Ref<DOMWindow> create(Document& document) { return adoptRef(*new DOMWindow(document)); }
     WEBCORE_EXPORT virtual ~DOMWindow();
 
@@ -108,8 +115,19 @@ public:
     // the network load. See also SecurityContext::isSecureTransitionTo.
     void didSecureTransitionTo(Document&);
 
-    void registerProperty(DOMWindowProperty&);
-    void unregisterProperty(DOMWindowProperty&);
+    class Observer {
+    public:
+        virtual ~Observer() { }
+
+        virtual void suspendForPageCache() { }
+        virtual void resumeFromPageCache() { }
+        virtual void willDestroyGlobalObjectInCachedFrame() { }
+        virtual void willDestroyGlobalObjectInFrame() { }
+        virtual void willDetachGlobalObjectFromFrame() { }
+    };
+
+    void registerObserver(Observer&);
+    void unregisterObserver(Observer&);
 
     void resetUnlessSuspendedForDocumentSuspension();
     void suspendForPageCache();
@@ -140,7 +158,7 @@ public:
     BarProp& scrollbars();
     BarProp& statusbar();
     BarProp& toolbar();
-    Navigator& navigator();
+    WEBCORE_EXPORT Navigator& navigator();
     Navigator* optionalNavigator() const { return m_navigator.get(); }
     Navigator& clientInformation() { return navigator(); }
 
@@ -159,9 +177,11 @@ public:
     void print();
     void stop();
 
-    WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> open(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString, const AtomicString& frameName, const String& windowFeaturesString);
+    WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> open(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString, const AtomString& frameName, const String& windowFeaturesString);
 
     void showModalDialog(const String& urlString, const String& dialogFeaturesString, DOMWindow& activeWindow, DOMWindow& firstWindow, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction);
+
+    void prewarmLocalStorageIfNecessary();
 
     void alert(const String& message = emptyString());
     bool confirm(const String& message);
@@ -193,8 +213,6 @@ public:
     void setStatus(const String&);
     String defaultStatus() const;
     void setDefaultStatus(const String&);
-
-    WindowProxy* self() const;
 
     WindowProxy* opener() const;
     void disownOpener();
@@ -266,8 +284,8 @@ public:
 
     // Events
     // EventTarget API
-    bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
-    bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) final;
+    bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
+    bool removeEventListener(const AtomString& eventType, EventListener&, const ListenerOptions&) final;
     void removeAllEventListeners() final;
 
     using EventTarget::dispatchEvent;
@@ -311,6 +329,19 @@ public:
     unsigned scrollEventListenerCount() const { return m_scrollEventListenerCount; }
 #endif
 
+#if ENABLE(DEVICE_ORIENTATION)
+    void startListeningForDeviceOrientationIfNecessary();
+    void stopListeningForDeviceOrientationIfNecessary();
+    void startListeningForDeviceMotionIfNecessary();
+    void stopListeningForDeviceMotionIfNecessary();
+
+    bool isAllowedToUseDeviceMotionOrientation(String& message) const;
+    bool isAllowedToAddDeviceMotionOrientationListener(String& message) const;
+
+    DeviceOrientationController* deviceOrientationController() const;
+    DeviceMotionController* deviceMotionController() const;
+#endif
+
     void resetAllGeolocationPermission();
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
@@ -348,10 +379,12 @@ private:
     Page* page();
     bool allowedToChangeWindowGeometry() const;
 
-    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction = nullptr);
+    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction = nullptr);
     bool isInsecureScriptAccess(DOMWindow& activeWindow, const String& urlString);
 
-    void resetDOMWindowProperties();
+#if ENABLE(DEVICE_ORIENTATION)
+    void failedToRegisterDeviceMotionEventListener();
+#endif
 
     bool isSameSecurityOriginAsMainFrame() const;
 
@@ -362,9 +395,10 @@ private:
 
     bool m_shouldPrintWhenFinishedLoading { false };
     bool m_suspendedForDocumentSuspension { false };
+    bool m_isSuspendingObservers { false };
     Optional<bool> m_canShowModalDialogOverride;
 
-    HashSet<DOMWindowProperty*> m_properties;
+    HashSet<Observer*> m_observers;
 
     mutable RefPtr<Crypto> m_crypto;
     mutable RefPtr<History> m_history;

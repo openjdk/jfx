@@ -41,10 +41,11 @@
 #undef GST_USE_UNSTABLE_API
 #include <gst/pbutils/encoding-profile.h>
 #include <gst/video/video.h>
+#include <wtf/Atomics.h>
 #include <wtf/HashMap.h>
-#include <wtf/HexNumber.h>
 #include <wtf/Lock.h>
 #include <wtf/StdMap.h>
+#include <wtf/text/StringConcatenateNumbers.h>
 
 // Required for unified builds
 #ifdef GST_CAT_DEFAULT
@@ -58,24 +59,17 @@ GST_DEBUG_CATEGORY(webkit_webrtcenc_debug);
 
 namespace WebCore {
 
-typedef struct {
-    uint64_t rtpTimestamp;
-    int64_t captureTimeMs;
-    webrtc::CodecSpecificInfo codecInfo;
-} FrameData;
-
 class GStreamerVideoEncoder : public webrtc::VideoEncoder {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     GStreamerVideoEncoder(const webrtc::SdpVideoFormat&)
         : m_firstFramePts(GST_CLOCK_TIME_NONE)
         , m_restrictionCaps(adoptGRef(gst_caps_new_empty_simple("video/x-raw")))
-        , m_adapter(adoptGRef(gst_adapter_new()))
     {
     }
     GStreamerVideoEncoder()
         : m_firstFramePts(GST_CLOCK_TIME_NONE)
         , m_restrictionCaps(adoptGRef(gst_caps_new_empty_simple("video/x-raw")))
-        , m_adapter(adoptGRef(gst_adapter_new()))
     {
     }
 
@@ -101,7 +95,8 @@ public:
 
     GstElement* makeElement(const gchar* factoryName)
     {
-        auto name = makeString(Name(), "_enc_", factoryName, "_0x", hex(reinterpret_cast<uintptr_t>(this)));
+        static Atomic<uint32_t> elementId;
+        auto name = makeString(Name(), "-enc-", factoryName, "-", elementId.exchangeAdd(1));
         auto elem = gst_element_factory_make(factoryName, name.utf8().data());
 
         return elem;
@@ -139,18 +134,19 @@ public:
         g_object_set(m_src, "is-live", true, "format", GST_FORMAT_TIME, nullptr);
 
         auto videoconvert = makeElement("videoconvert");
-        auto sink = makeElement("appsink");
-        gst_app_sink_set_emit_signals(GST_APP_SINK(sink), TRUE);
-        g_signal_connect(sink, "new-sample", G_CALLBACK(newSampleCallbackTramp), this);
+        m_sink = makeElement("appsink");
+        g_object_set(m_sink, "sync", FALSE, nullptr);
 
-        auto name = makeString(Name(), "_enc_rawcapsfilter_0x", hex(reinterpret_cast<uintptr_t>(this)));
-        m_capsFilter = gst_element_factory_make("capsfilter", name.utf8().data());
+        m_capsFilter = makeElement("capsfilter");
         if (m_restrictionCaps)
             g_object_set(m_capsFilter, "caps", m_restrictionCaps.get(), nullptr);
 
-        gst_bin_add_many(GST_BIN(m_pipeline.get()), m_src, videoconvert, m_capsFilter, encoder.leakRef(), sink, nullptr);
-        if (!gst_element_link_many(m_src, videoconvert, m_capsFilter, m_encoder, sink, nullptr))
+        gst_bin_add_many(GST_BIN(m_pipeline.get()), m_src, videoconvert, m_capsFilter, encoder.leakRef(), m_sink, nullptr);
+        if (!gst_element_link_many(m_src, videoconvert, m_capsFilter, m_encoder, m_sink, nullptr)) {
+            GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS(GST_BIN(m_pipeline.get()), GST_DEBUG_GRAPH_SHOW_VERBOSE, "webkit-webrtc-encoder.error");
+
             ASSERT_NOT_REACHED();
+        }
 
         gst_element_set_state(m_pipeline.get(), GST_STATE_PLAYING);
 
@@ -181,16 +177,31 @@ public:
             m_src = nullptr;
             m_encoder = nullptr;
             m_capsFilter = nullptr;
+            m_sink = nullptr;
             m_pipeline = nullptr;
         }
 
         return WEBRTC_VIDEO_CODEC_OK;
     }
 
+    int32_t returnFromFlowReturn(GstFlowReturn flow)
+    {
+        switch (flow) {
+        case GST_FLOW_OK:
+            return WEBRTC_VIDEO_CODEC_OK;
+        case GST_FLOW_FLUSHING:
+            return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
+        default:
+            return WEBRTC_VIDEO_CODEC_ERROR;
+        }
+    }
+
     int32_t Encode(const webrtc::VideoFrame& frame,
-        const webrtc::CodecSpecificInfo* codecInfo,
+        const webrtc::CodecSpecificInfo*,
         const std::vector<webrtc::FrameType>* frameTypes) final
     {
+        int32_t res;
+
         if (!m_imageReadyCb) {
             GST_INFO_OBJECT(m_pipeline.get(), "No encoded callback set yet!");
 
@@ -212,13 +223,6 @@ public:
             gst_pad_set_offset(pad.get(), -m_firstFramePts);
         }
 
-        webrtc::CodecSpecificInfo localCodecInfo;
-        FrameData frameData = { frame.timestamp(), frame.render_time_ms(), codecInfo ? *codecInfo : localCodecInfo };
-        {
-            auto locker = holdLock(m_bufferMapLock);
-            m_framesData.append(frameData);
-        }
-
         for (auto frame_type : *frameTypes) {
             if (frame_type == webrtc::kVideoFrameKey) {
                 auto pad = adoptGRef(gst_element_get_static_pad(m_src, "src"));
@@ -233,70 +237,45 @@ public:
             }
         }
 
-        switch (gst_app_src_push_sample(GST_APP_SRC(m_src), sample.get())) {
-        case GST_FLOW_OK:
-            return WEBRTC_VIDEO_CODEC_OK;
-        case GST_FLOW_FLUSHING:
-            return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
-        default:
+        res = returnFromFlowReturn(gst_app_src_push_sample(GST_APP_SRC(m_src), sample.get()));
+        if (res != WEBRTC_VIDEO_CODEC_OK)
+            return res;
+
+        auto encodedSample = adoptGRef(gst_app_sink_try_pull_sample(GST_APP_SINK(m_sink), 5 * GST_SECOND));
+        if (!encodedSample) {
+            GST_ERROR("Didn't get any encodedSample");
             return WEBRTC_VIDEO_CODEC_ERROR;
         }
-    }
 
-    GstFlowReturn newSampleCallback(GstElement* sink)
-    {
-        auto sample = adoptGRef(gst_app_sink_pull_sample(GST_APP_SINK(sink)));
-        auto buffer = gst_sample_get_buffer(sample.get());
-        auto caps = gst_sample_get_caps(sample.get());
-
-        webrtc::CodecSpecificInfo localCodecInfo;
-        FrameData frameData = { 0, 0, localCodecInfo};
-        {
-            auto locker = holdLock(m_bufferMapLock);
-            if (!m_framesData.size()) {
-                gst_adapter_push(m_adapter.get(), gst_buffer_ref(buffer));
-
-                return GST_FLOW_OK;
-            }
-
-            if (gst_adapter_available(m_adapter.get()) > 0) {
-                uint flags = GST_BUFFER_FLAGS(buffer);
-
-                GST_INFO_OBJECT(m_pipeline.get(), "Got more buffer than pushed frame, trying to deal with it.");
-                gst_adapter_push(m_adapter.get(), gst_buffer_ref(buffer));
-
-                buffer = gst_adapter_take_buffer(m_adapter.get(), gst_adapter_available(m_adapter.get()));
-                GST_BUFFER_FLAGS(buffer) = flags;
-            }
-            frameData = m_framesData[0];
-            m_framesData.remove(static_cast<size_t>(0));
-        }
+        auto encodedBuffer = gst_sample_get_buffer(encodedSample.get());
+        auto encodedCaps = gst_sample_get_caps(encodedSample.get());
 
         webrtc::RTPFragmentationHeader fragmentationInfo;
-        Fragmentize(&m_encodedFrame, &m_encodedImageBuffer, &m_encodedImageBufferSize, buffer, &fragmentationInfo);
-        if (!m_encodedFrame._size)
-            return GST_FLOW_OK;
 
-        gst_structure_get(gst_caps_get_structure(caps, 0),
+        Fragmentize(&m_encodedFrame, &m_encodedImageBuffer, &m_encodedImageBufferSize, encodedBuffer, &fragmentationInfo);
+        if (!m_encodedFrame._size)
+            return WEBRTC_VIDEO_CODEC_OK;
+
+        gst_structure_get(gst_caps_get_structure(encodedCaps, 0),
             "width", G_TYPE_INT, &m_encodedFrame._encodedWidth,
             "height", G_TYPE_INT, &m_encodedFrame._encodedHeight,
             nullptr);
 
-        m_encodedFrame._frameType = GST_BUFFER_FLAG_IS_SET(buffer, GST_BUFFER_FLAG_DELTA_UNIT) ? webrtc::kVideoFrameDelta : webrtc::kVideoFrameKey;
-        m_encodedFrame._completeFrame = false;
-        m_encodedFrame.capture_time_ms_ = frameData.captureTimeMs;
-        m_encodedFrame.SetTimestamp(frameData.rtpTimestamp);
+        m_encodedFrame._frameType = GST_BUFFER_FLAG_IS_SET(encodedBuffer, GST_BUFFER_FLAG_DELTA_UNIT) ? webrtc::kVideoFrameDelta : webrtc::kVideoFrameKey;
+        m_encodedFrame._completeFrame = true;
+        m_encodedFrame.capture_time_ms_ = frame.render_time_ms();
+        m_encodedFrame.SetTimestamp(frame.timestamp());
 
-        GST_LOG_OBJECT(m_pipeline.get(), "Got buffer capture_time_ms: %ld _timestamp: %u",
+        GST_LOG_OBJECT(m_pipeline.get(), "Got buffer capture_time_ms: %" G_GINT64_FORMAT  " _timestamp: %u",
             m_encodedFrame.capture_time_ms_, m_encodedFrame.Timestamp());
 
-        PopulateCodecSpecific(&frameData.codecInfo, buffer);
-
-        webrtc::EncodedImageCallback::Result result = m_imageReadyCb->OnEncodedImage(m_encodedFrame, &frameData.codecInfo, &fragmentationInfo);
+        webrtc::CodecSpecificInfo codecInfo;
+        PopulateCodecSpecific(&codecInfo, encodedBuffer);
+        webrtc::EncodedImageCallback::Result result = m_imageReadyCb->OnEncodedImage(m_encodedFrame, &codecInfo, &fragmentationInfo);
         if (result.error != webrtc::EncodedImageCallback::Result::OK)
             GST_ERROR_OBJECT(m_pipeline.get(), "Encode callback failed: %d", result.error);
 
-        return GST_FLOW_OK;
+        return WEBRTC_VIDEO_CODEC_OK;
     }
 
     GRefPtr<GstElement> createEncoder(void)
@@ -385,11 +364,6 @@ public:
     }
 
 private:
-    static GstFlowReturn newSampleCallbackTramp(GstElement* sink, GStreamerVideoEncoder* enc)
-    {
-        return enc->newSampleCallback(sink);
-    }
-
     GRefPtr<GstElement> m_pipeline;
     GstElement* m_src;
     GstElement* m_encoder;
@@ -403,8 +377,7 @@ private:
     size_t m_encodedImageBufferSize;
 
     Lock m_bufferMapLock;
-    GRefPtr<GstAdapter> m_adapter;
-    Vector<FrameData> m_framesData;
+    GstElement* m_sink;
 };
 
 class GStreamerH264Encoder : public GStreamerVideoEncoder {
@@ -494,11 +467,11 @@ public:
     GstH264NalParser* m_parser;
     webrtc::VideoCodecType CodecType() final { return webrtc::kVideoCodecH264; }
 
-    void PopulateCodecSpecific(webrtc::CodecSpecificInfo* codecSpecifiInfos, GstBuffer*) final
+    void PopulateCodecSpecific(webrtc::CodecSpecificInfo* codecSpecificInfos, GstBuffer*) final
     {
-        codecSpecifiInfos->codecType = CodecType();
-        codecSpecifiInfos->codec_name = ImplementationName();
-        webrtc::CodecSpecificInfoH264* h264Info = &(codecSpecifiInfos->codecSpecific.H264);
+        codecSpecificInfos->codecType = CodecType();
+        codecSpecificInfos->codec_name = ImplementationName();
+        webrtc::CodecSpecificInfoH264* h264Info = &(codecSpecificInfos->codecSpecific.H264);
         h264Info->packetization_mode = packetizationMode;
     }
 
@@ -518,11 +491,11 @@ public:
         return codecSettings->VP8().keyFrameInterval;
     }
 
-    void PopulateCodecSpecific(webrtc::CodecSpecificInfo* codecSpecifiInfos, GstBuffer* buffer) final
+    void PopulateCodecSpecific(webrtc::CodecSpecificInfo* codecSpecificInfos, GstBuffer* buffer) final
     {
-        codecSpecifiInfos->codecType = webrtc::kVideoCodecVP8;
-        codecSpecifiInfos->codec_name = ImplementationName();
-        webrtc::CodecSpecificInfoVP8* vp8Info = &(codecSpecifiInfos->codecSpecific.VP8);
+        codecSpecificInfos->codecType = webrtc::kVideoCodecVP8;
+        codecSpecificInfos->codec_name = ImplementationName();
+        webrtc::CodecSpecificInfoVP8* vp8Info = &(codecSpecificInfos->codecSpecific.VP8);
         vp8Info->temporalIdx = 0;
 
         vp8Info->keyIdx = webrtc::kNoKeyIdx;
@@ -540,14 +513,14 @@ std::unique_ptr<webrtc::VideoEncoder> GStreamerVideoEncoderFactory::CreateVideoE
         g_object_get(webrtcencoder.get(), "encoder", &encoder.outPtr(), NULL);
 
         if (encoder)
-            return std::make_unique<GStreamerVP8Encoder>(format);
+            return makeUnique<GStreamerVP8Encoder>(format);
 
         GST_INFO("Using VP8 Encoder from LibWebRTC.");
-        return std::make_unique<webrtc::LibvpxVp8Encoder>();
+        return makeUniqueWithoutFastMallocCheck<webrtc::LibvpxVp8Encoder>();
     }
 
     if (format.name == cricket::kH264CodecName)
-        return std::make_unique<GStreamerH264Encoder>(format);
+        return makeUnique<GStreamerH264Encoder>(format);
 
     return nullptr;
 }

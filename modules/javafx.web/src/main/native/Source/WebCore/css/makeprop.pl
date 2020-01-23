@@ -248,7 +248,7 @@ print GPERF << "EOF";
 #include \"HashTools.h\"
 #include "RuntimeEnabledFeatures.h"
 #include <wtf/ASCIICType.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 #include <wtf/text/WTFString.h>
 #include <string.h>
 
@@ -350,7 +350,7 @@ const char* getPropertyName(CSSPropertyID id)
     return propertyNameStrings[index];
 }
 
-const AtomicString& getPropertyNameAtomicString(CSSPropertyID id)
+const AtomString& getPropertyNameAtomString(CSSPropertyID id)
 {
     if (id < firstCSSProperty)
         return nullAtom();
@@ -358,19 +358,19 @@ const AtomicString& getPropertyNameAtomicString(CSSPropertyID id)
     if (index >= numCSSProperties)
         return nullAtom();
 
-    static AtomicString* propertyStrings = new AtomicString[numCSSProperties]; // Intentionally never destroyed.
-    AtomicString& propertyString = propertyStrings[index];
+    static AtomString* propertyStrings = new AtomString[numCSSProperties]; // Intentionally never destroyed.
+    AtomString& propertyString = propertyStrings[index];
     if (propertyString.isNull()) {
         const char* propertyName = propertyNameStrings[index];
-        propertyString = AtomicString(propertyName, strlen(propertyName), AtomicString::ConstructFromLiteral);
+        propertyString = AtomString(propertyName, strlen(propertyName), AtomString::ConstructFromLiteral);
     }
     return propertyString;
 }
 
 String getPropertyNameString(CSSPropertyID id)
 {
-    // We share the StringImpl with the AtomicStrings.
-    return getPropertyNameAtomicString(id).string();
+    // We share the StringImpl with the AtomStrings.
+    return getPropertyNameAtomString(id).string();
 }
 
 String getJSPropertyName(CSSPropertyID id)
@@ -487,7 +487,7 @@ print HEADER << "EOF";
 bool isInternalCSSProperty(const CSSPropertyID);
 bool isEnabledCSSProperty(const CSSPropertyID);
 const char* getPropertyName(CSSPropertyID);
-const WTF::AtomicString& getPropertyNameAtomicString(CSSPropertyID id);
+const WTF::AtomString& getPropertyNameAtomString(CSSPropertyID id);
 WTF::String getPropertyNameString(CSSPropertyID id);
 WTF::String getJSPropertyName(CSSPropertyID);
 
@@ -811,7 +811,7 @@ sub generateFillLayerPropertyInheritValueSetter {
   $setterContent .= $indent . "FillLayer* previousChild = nullptr;\n";
   $setterContent .= $indent . "for (auto* parent = &styleResolver.parentStyle()->" . getLayersFunction($name) . "(); parent && parent->" . $testFunction . "(); parent = parent->next()) {\n";
   $setterContent .= $indent . "    if (!child) {\n";
-  $setterContent .= $indent . "        previousChild->setNext(std::make_unique<FillLayer>(" . getFillLayerType($name) . "));\n";
+  $setterContent .= $indent . "        previousChild->setNext(makeUnique<FillLayer>(" . getFillLayerType($name) . "));\n";
   $setterContent .= $indent . "        child = previousChild->next();\n";
   $setterContent .= $indent . "    }\n";
   $setterContent .= $indent . "    child->" . $setter . "(parent->" . $getter . "());\n";
@@ -837,7 +837,7 @@ sub generateFillLayerPropertyValueSetter {
   $setterContent .= $indent . "    // Walk each value and put it into a layer, creating new layers as needed.\n";
   $setterContent .= $indent . "    for (auto& item : downcast<CSSValueList>(value)) {\n";
   $setterContent .= $indent . "        if (!child) {\n";
-  $setterContent .= $indent . "            previousChild->setNext(std::make_unique<FillLayer>(" . getFillLayerType($name) . "));\n";
+  $setterContent .= $indent . "            previousChild->setNext(makeUnique<FillLayer>(" . getFillLayerType($name) . "));\n";
   $setterContent .= $indent . "            child = previousChild->next();\n";
   $setterContent .= $indent . "        }\n";
   $setterContent .= $indent . "        styleResolver.styleMap()->" . getFillLayerMapfunction($name) . "(" . $CSSPropertyId . ", *child, item);\n";

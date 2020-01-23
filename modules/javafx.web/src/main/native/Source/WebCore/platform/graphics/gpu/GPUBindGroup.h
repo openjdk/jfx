@@ -27,28 +27,49 @@
 
 #if ENABLE(WEBGPU)
 
-#include "GPUBindGroupBinding.h"
-#include "GPUBindGroupLayout.h"
-#include <wtf/Ref.h>
+#include "GPUBindGroupAllocator.h"
+#include "GPUBuffer.h"
+#include "GPUTexture.h"
+#include <objc/NSObjCRuntime.h>
+#include <utility>
+#include <wtf/HashSet.h>
 #include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
+#include <wtf/RefPtr.h>
+#include <wtf/RetainPtr.h>
+
+#if USE(METAL)
+OBJC_PROTOCOL(MTLBuffer);
+#endif
 
 namespace WebCore {
 
 struct GPUBindGroupDescriptor;
 
+#if USE(METAL)
+using ArgumentBuffer = std::pair<const MTLBuffer *, const GPUBindGroupAllocator::ArgumentBufferOffsets&>;
+#endif
+
 class GPUBindGroup : public RefCounted<GPUBindGroup> {
 public:
-    static Ref<GPUBindGroup> create(GPUBindGroupDescriptor&&);
+    static RefPtr<GPUBindGroup> tryCreate(const GPUBindGroupDescriptor&, GPUBindGroupAllocator&);
 
-    const GPUBindGroupLayout& layout() const { return m_layout.get(); }
-    const Vector<GPUBindGroupBinding>& bindings() const { return m_bindings; }
+    ~GPUBindGroup();
+
+#if USE(METAL)
+    const ArgumentBuffer argumentBuffer() const { return { m_allocator->argumentBuffer(), m_argumentBufferOffsets }; }
+#endif
+    const HashSet<Ref<GPUBuffer>>& boundBuffers() const { return m_boundBuffers; }
+    const HashSet<Ref<GPUTexture>>& boundTextures() const { return m_boundTextures; }
 
 private:
-    explicit GPUBindGroup(GPUBindGroupDescriptor&&);
+#if USE(METAL)
+    GPUBindGroup(GPUBindGroupAllocator::ArgumentBufferOffsets&&, GPUBindGroupAllocator&, HashSet<Ref<GPUBuffer>>&&, HashSet<Ref<GPUTexture>>&&);
 
-    Ref<GPUBindGroupLayout> m_layout;
-    Vector<GPUBindGroupBinding> m_bindings;
+    GPUBindGroupAllocator::ArgumentBufferOffsets m_argumentBufferOffsets;
+    Ref<GPUBindGroupAllocator> m_allocator;
+#endif
+    HashSet<Ref<GPUBuffer>> m_boundBuffers;
+    HashSet<Ref<GPUTexture>> m_boundTextures;
 };
 
 } // namespace WebCore

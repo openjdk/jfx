@@ -41,17 +41,21 @@
 #endif
 #endif
 
-#if OS(WINDOWS)
+#if PLATFORM(WIN) && !PLATFORM(JAVA)
 #undef WEBCORE_EXPORT
-#if PLATFORM(JAVA)
-#define WEBCORE_EXPORT
-#else
 #define WEBCORE_EXPORT WTF_EXPORT_DECLARATION
-#endif
-
-#else
+#undef WEBCORE_TESTSUPPORT_EXPORT
+#define WEBCORE_TESTSUPPORT_EXPORT WTF_EXPORT_DECLARATION
+#elif !PLATFORM(JAVA)
 #include <pthread.h>
-#endif // OS(WINDOWS)
+#endif // PLATFORM(WIN)
+
+#if PLATFORM(JAVA)
+#undef WEBCORE_EXPORT
+#define WEBCORE_EXPORT
+#undef WEBCORE_TESTSUPPORT_EXPORT
+#define WEBCORE_TESTSUPPORT_EXPORT WTF_EXPORT_DECLARATION
+#endif
 
 #include <sys/types.h>
 #include <fcntl.h>
@@ -154,6 +158,11 @@
 #endif
 
 #if PLATFORM(MAC)
+#if !USE(APPLE_INTERNAL_SDK)
+/* SecTrustedApplication.h declares SecTrustedApplicationCreateFromPath(...) to
+ * be unavailable on macOS, so do not include that header. */
+#define _SECURITY_SECTRUSTEDAPPLICATION_H_
+#endif
 #include <CoreServices/CoreServices.h>
 #endif
 
@@ -177,7 +186,7 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Optional.h>
 #import <wtf/StdLibExtras.h>
-#import <wtf/text/AtomicString.h>
+#import <wtf/text/AtomString.h>
 #import <wtf/text/WTFString.h>
 #endif
 #endif

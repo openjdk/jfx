@@ -32,11 +32,13 @@
 #include "GraphicsTypes.h"
 #include "GraphicsTypes3D.h"
 #include "ImageBufferData.h"
+#include "ImagePaintingOptions.h"
 #include "IntSize.h"
 #include "PlatformLayer.h"
 #include <JavaScriptCore/Uint8ClampedArray.h>
 #include <memory>
 #include <wtf/Forward.h>
+#include <wtf/IsoMalloc.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
@@ -62,7 +64,8 @@ enum class PreserveResolution {
 };
 
 class ImageBuffer {
-    WTF_MAKE_NONCOPYABLE(ImageBuffer); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED_EXPORT(ImageBuffer, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(ImageBuffer);
     friend class IOSurface;
 public:
     // Will return a null pointer on allocation failure.
@@ -149,10 +152,10 @@ private:
     void flushContext() const;
 #endif
 
-    void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), CompositeOperator = CompositeSourceOver, BlendMode = BlendMode::Normal);
-    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal);
+    void draw(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), const ImagePaintingOptions& = { });
+    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { });
 
-    static void drawConsuming(std::unique_ptr<ImageBuffer>, GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), CompositeOperator = CompositeSourceOver, BlendMode = BlendMode::Normal);
+    static void drawConsuming(std::unique_ptr<ImageBuffer>, GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect = FloatRect(0, 0, -1, -1), const ImagePaintingOptions& = { });
 
     inline void genericConvertToLuminanceMask();
 

@@ -28,6 +28,7 @@
 #include "JSContextRefInternal.h"
 
 #include "APICast.h"
+#include "APIUtils.h"
 #include "CallFrame.h"
 #include "InitializeThreading.h"
 #include "JSAPIGlobalObject.h"
@@ -37,6 +38,7 @@
 #include "JSCInlines.h"
 #include "SourceProvider.h"
 #include "StackVisitor.h"
+#include "StrongInlines.h"
 #include "Watchdog.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
@@ -66,6 +68,7 @@ using namespace JSC;
 
 JSContextGroupRef JSContextGroupCreate()
 {
+    WTF::initializeMainThread();
     initializeThreading();
     return toRef(&VM::createContextGroup().leakRef());
 }
@@ -116,6 +119,7 @@ void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef group)
 
 JSGlobalContextRef JSGlobalContextCreate(JSClassRef globalObjectClass)
 {
+    WTF::initializeMainThread();
     initializeThreading();
 
 #if OS(DARWIN)
@@ -131,6 +135,7 @@ JSGlobalContextRef JSGlobalContextCreate(JSClassRef globalObjectClass)
 
 JSGlobalContextRef JSGlobalContextCreateInGroup(JSContextGroupRef group, JSClassRef globalObjectClass)
 {
+    WTF::initializeMainThread();
     initializeThreading();
 
     Ref<VM> vm = group ? Ref<VM>(*toJS(group)) : VM::createContextGroup();
@@ -249,6 +254,25 @@ void JSGlobalContextSetName(JSGlobalContextRef ctx, JSStringRef name)
     vm.vmEntryGlobalObject(exec)->setName(name ? name->string() : String());
 }
 
+void JSGlobalContextSetUnhandledRejectionCallback(JSGlobalContextRef ctx, JSObjectRef function, JSValueRef* exception)
+{
+    if (!ctx) {
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    ExecState* exec = toJS(ctx);
+    VM& vm = exec->vm();
+    JSLockHolder locker(vm);
+
+    JSObject* object = toJS(function);
+    if (!object->isFunction(vm)) {
+        *exception = toRef(createTypeError(exec));
+        return;
+    }
+
+    vm.vmEntryGlobalObject(exec)->setUnhandledRejectionCallback(vm, object);
+}
 
 class BacktraceFunctor {
 public:

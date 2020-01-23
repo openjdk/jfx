@@ -47,9 +47,6 @@ public:
     bool hasDocumentOverlays() const;
     bool hasViewOverlays() const;
 
-    void attachViewOverlayLayers();
-    void detachViewOverlayLayers();
-
     GraphicsLayer& layerWithDocumentOverlays();
     GraphicsLayer& layerWithViewOverlays();
 
@@ -87,14 +84,16 @@ private:
     WEBCORE_EXPORT GraphicsLayer* documentOverlayRootLayer() const;
     WEBCORE_EXPORT GraphicsLayer* viewOverlayRootLayer() const;
 
-    void willDetachRootLayer();
+    void installedPageOverlaysChanged();
+    void attachViewOverlayLayers();
+    void detachViewOverlayLayers();
 
     void updateSettingsForLayer(GraphicsLayer&);
     void updateForceSynchronousScrollLayerPositionUpdates();
 
     // GraphicsLayerClient
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void paintContents(const GraphicsLayer*, GraphicsContext&, GraphicsLayerPaintingPhase, const FloatRect& clipRect, GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, OptionSet<GraphicsLayerPaintingPhase>, const FloatRect& clipRect, GraphicsLayerPaintBehavior) override;
     float deviceScaleFactor() const override;
     bool shouldSkipLayerInDump(const GraphicsLayer*, LayerTreeAsTextBehavior) const override;
     void tiledBackingUsageChanged(const GraphicsLayer*, bool) override;

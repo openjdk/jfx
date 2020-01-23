@@ -116,7 +116,8 @@ private:
                 break;
 
             case GetLocal:
-            case SetArgument:
+            case SetArgumentDefinitely:
+            case SetArgumentMaybe:
                 m_values.operand(node->local()) = nullptr;
                 break;
 
@@ -151,6 +152,8 @@ private:
                 Node* killedNode = m_values.operand(reg);
                 if (!killedNode)
                     return;
+
+                m_values.operand(reg) = nullptr;
 
                 // We only need to insert a Phantom if the node hasn't been used since the last
                 // exit, and was born before the last exit.

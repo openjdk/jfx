@@ -31,6 +31,7 @@
 #include <webrtc/media/engine/webrtcvideodecoderfactory.h>
 #include <webrtc/media/engine/webrtcvideoencoderfactory.h>
 #include <webrtc/sdk/WebKit/WebKitUtilities.h>
+#include <wtf/MainThread.h>
 #include <wtf/darwin/WeakLinking.h>
 
 namespace WebCore {
@@ -51,12 +52,16 @@ void LibWebRTCProviderCocoa::setH264HardwareEncoderAllowed(bool allowed)
 
 std::unique_ptr<webrtc::VideoDecoderFactory> LibWebRTCProviderCocoa::createDecoderFactory()
 {
+    ASSERT(isMainThread());
+
     auto codecSupport = m_supportsVP8 ? webrtc::WebKitCodecSupport::H264AndVP8 : webrtc::WebKitCodecSupport::H264;
     return webrtc::createWebKitDecoderFactory(codecSupport);
 }
 
 std::unique_ptr<webrtc::VideoEncoderFactory> LibWebRTCProviderCocoa::createEncoderFactory()
 {
+    ASSERT(isMainThread());
+
     auto codecSupport = m_supportsVP8 ? webrtc::WebKitCodecSupport::H264AndVP8 : webrtc::WebKitCodecSupport::H264;
     return webrtc::createWebKitEncoderFactory(codecSupport);
 }

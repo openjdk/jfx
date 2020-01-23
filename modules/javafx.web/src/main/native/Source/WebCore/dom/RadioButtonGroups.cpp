@@ -186,11 +186,9 @@ bool RadioButtonGroup::contains(HTMLInputElement& button) const
 
 // ----------------------------------------------------------------
 
-// Explicity define empty constructor and destructor in order to prevent the
-// compiler from generating them as inlines. So we don't need to to define
-// RadioButtonGroup in the header.
+// Explicitly define default constructor and destructor here outside the header
+// so we can compile the header without including the definition of RadioButtonGroup.
 RadioButtonGroups::RadioButtonGroups() = default;
-
 RadioButtonGroups::~RadioButtonGroups() = default;
 
 void RadioButtonGroups::addButton(HTMLInputElement& element)
@@ -200,11 +198,11 @@ void RadioButtonGroups::addButton(HTMLInputElement& element)
         return;
 
     if (!m_nameToGroupMap)
-        m_nameToGroupMap = std::make_unique<NameToGroupMap>();
+        m_nameToGroupMap = makeUnique<NameToGroupMap>();
 
     auto& group = m_nameToGroupMap->add(element.name().impl(), nullptr).iterator->value;
     if (!group)
-        group = std::make_unique<RadioButtonGroup>();
+        group = makeUnique<RadioButtonGroup>();
     group->add(element);
 }
 
@@ -251,10 +249,10 @@ void RadioButtonGroups::requiredStateChanged(HTMLInputElement& element)
     group->requiredStateChanged(element);
 }
 
-HTMLInputElement* RadioButtonGroups::checkedButtonForGroup(const AtomicString& name) const
+HTMLInputElement* RadioButtonGroups::checkedButtonForGroup(const AtomString& name) const
 {
     if (!m_nameToGroupMap)
-        return 0;
+        return nullptr;
     m_nameToGroupMap->checkConsistency();
     RadioButtonGroup* group = m_nameToGroupMap->get(name.impl());
     return group ? group->checkedButton() : nullptr;
@@ -263,7 +261,7 @@ HTMLInputElement* RadioButtonGroups::checkedButtonForGroup(const AtomicString& n
 bool RadioButtonGroups::hasCheckedButton(const HTMLInputElement& element) const
 {
     ASSERT(element.isRadioButton());
-    const AtomicString& name = element.name();
+    const AtomString& name = element.name();
     if (name.isEmpty() || !m_nameToGroupMap)
         return element.checked();
     return m_nameToGroupMap->get(name.impl())->checkedButton();
@@ -296,7 +294,7 @@ void RadioButtonGroups::removeButton(HTMLInputElement& element)
     if (it->value->isEmpty()) {
         // FIXME: We may skip deallocating the empty RadioButtonGroup for
         // performance improvement. If we do so, we need to change the key type
-        // of m_nameToGroupMap from AtomicStringImpl* to RefPtr<AtomicStringImpl>.
+        // of m_nameToGroupMap from AtomStringImpl* to RefPtr<AtomStringImpl>.
         m_nameToGroupMap->remove(it);
         if (m_nameToGroupMap->isEmpty())
             m_nameToGroupMap = nullptr;

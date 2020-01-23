@@ -58,16 +58,17 @@ DeviceOrientation* toDeviceOrientation(JSContextRef context, JSValueRef value)
     return nullptr;
 }
 
+#if !PLATFORM(GTK) && !PLATFORM(COCOA)
+Ref<UIScriptController> UIScriptController::create(UIScriptContext& context)
+{
+    return adoptRef(*new UIScriptController(context));
+}
+#endif
+
 UIScriptController::UIScriptController(UIScriptContext& context)
     : m_context(&context)
 {
 }
-
-#if !PLATFORM(IOS_FAMILY)
-void UIScriptController::checkForOutstandingCallbacks()
-{
-}
-#endif
 
 void UIScriptController::contextDestroyed()
 {
@@ -84,32 +85,9 @@ JSClassRef UIScriptController::wrapperClass()
     return JSUIScriptController::uIScriptControllerClass();
 }
 
-#if !PLATFORM(COCOA)
-void UIScriptController::doAsyncTask(JSValueRef)
-{
-}
-
-void simulateAccessibilitySettingsChangeNotification(JSValueRef)
-{
-}
-
-void UIScriptController::doAfterPresentationUpdate(JSValueRef)
-{
-}
-
-void UIScriptController::doAfterNextStablePresentationUpdate(JSValueRef)
-{
-}
-
-void UIScriptController::doAfterVisibleContentRectUpdate(JSValueRef)
-{
-}
-#endif
-
 void UIScriptController::setDidStartFormControlInteractionCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidStartFormControlInteraction);
-    platformSetDidStartFormControlInteractionCallback();
 }
 
 JSValueRef UIScriptController::didStartFormControlInteractionCallback() const
@@ -120,7 +98,6 @@ JSValueRef UIScriptController::didStartFormControlInteractionCallback() const
 void UIScriptController::setDidEndFormControlInteractionCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidEndFormControlInteraction);
-    platformSetDidEndFormControlInteractionCallback();
 }
 
 JSValueRef UIScriptController::didEndFormControlInteractionCallback() const
@@ -131,7 +108,6 @@ JSValueRef UIScriptController::didEndFormControlInteractionCallback() const
 void UIScriptController::setDidShowForcePressPreviewCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidShowForcePressPreview);
-    platformSetDidShowForcePressPreviewCallback();
 }
 
 JSValueRef UIScriptController::didShowForcePressPreviewCallback() const
@@ -142,7 +118,6 @@ JSValueRef UIScriptController::didShowForcePressPreviewCallback() const
 void UIScriptController::setDidDismissForcePressPreviewCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidDismissForcePressPreview);
-    platformSetDidDismissForcePressPreviewCallback();
 }
 
 JSValueRef UIScriptController::didDismissForcePressPreviewCallback() const
@@ -153,7 +128,6 @@ JSValueRef UIScriptController::didDismissForcePressPreviewCallback() const
 void UIScriptController::setWillBeginZoomingCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeWillBeginZooming);
-    platformSetWillBeginZoomingCallback();
 }
 
 JSValueRef UIScriptController::willBeginZoomingCallback() const
@@ -164,7 +138,6 @@ JSValueRef UIScriptController::willBeginZoomingCallback() const
 void UIScriptController::setDidEndZoomingCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidEndZooming);
-    platformSetDidEndZoomingCallback();
 }
 
 JSValueRef UIScriptController::didEndZoomingCallback() const
@@ -172,10 +145,19 @@ JSValueRef UIScriptController::didEndZoomingCallback() const
     return m_context->callbackWithID(CallbackTypeDidEndZooming);
 }
 
+void UIScriptController::setWillCreateNewPageCallback(JSValueRef callback)
+{
+    m_context->registerCallback(callback, CallbackTypeWillCreateNewPage);
+}
+
+JSValueRef UIScriptController::willCreateNewPageCallback() const
+{
+    return m_context->callbackWithID(CallbackTypeWillCreateNewPage);
+}
+
 void UIScriptController::setDidEndScrollingCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidEndScrolling);
-    platformSetDidEndScrollingCallback();
 }
 
 JSValueRef UIScriptController::didEndScrollingCallback() const
@@ -186,7 +168,6 @@ JSValueRef UIScriptController::didEndScrollingCallback() const
 void UIScriptController::setDidShowKeyboardCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidShowKeyboard);
-    platformSetDidShowKeyboardCallback();
 }
 
 JSValueRef UIScriptController::didShowKeyboardCallback() const
@@ -197,7 +178,6 @@ JSValueRef UIScriptController::didShowKeyboardCallback() const
 void UIScriptController::setDidHideKeyboardCallback(JSValueRef callback)
 {
     m_context->registerCallback(callback, CallbackTypeDidHideKeyboard);
-    platformSetDidHideKeyboardCallback();
 }
 
 JSValueRef UIScriptController::didHideKeyboardCallback() const
@@ -205,424 +185,50 @@ JSValueRef UIScriptController::didHideKeyboardCallback() const
     return m_context->callbackWithID(CallbackTypeDidHideKeyboard);
 }
 
-#if !PLATFORM(COCOA)
-
-void UIScriptController::zoomToScale(double, JSValueRef)
-{
-}
-
-void UIScriptController::setViewScale(double)
-{
-}
-
-void UIScriptController::setMinimumEffectiveWidth(double)
-{
-}
-
-void UIScriptController::resignFirstResponder()
-{
-}
-
-void UIScriptController::simulateAccessibilitySettingsChangeNotification(JSValueRef)
-{
-}
-
-JSObjectRef UIScriptController::contentsOfUserInterfaceItem(JSStringRef interfaceItem) const
-{
-    return nullptr;
-}
-
-void UIScriptController::setDefaultCalendarType(JSStringRef calendarIdentifier)
-{
-}
-
-JSObjectRef UIScriptController::calendarType() const
-{
-    return nullptr;
-}
-
-void UIScriptController::toggleCapsLock(JSValueRef)
-{
-}
-
-#endif // !PLATFORM(COCOA)
-
-void UIScriptController::playBackEventStream(JSStringRef stream, JSValueRef callback)
-{
-    platformPlayBackEventStream(stream, callback);
-}
-
-#if !PLATFORM(IOS_FAMILY)
-void UIScriptController::touchDownAtPoint(long x, long y, long touchCount, JSValueRef)
-{
-}
-
-void UIScriptController::liftUpAtPoint(long x, long y, long touchCount, JSValueRef)
-{
-}
-
-void UIScriptController::singleTapAtPoint(long x, long y, JSValueRef)
-{
-}
-
-void UIScriptController::singleTapAtPointWithModifiers(long x, long y, JSValueRef modifierArray, JSValueRef callback)
-{
-}
-
-void UIScriptController::doubleTapAtPoint(long x, long y, JSValueRef)
-{
-}
-
-void UIScriptController::dragFromPointToPoint(long startX, long startY, long endX, long endY, double durationSeconds, JSValueRef callback)
-{
-}
-
-void UIScriptController::longPressAtPoint(long x, long y, JSValueRef)
-{
-}
-
-void UIScriptController::stylusDownAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef callback)
-{
-}
-
-void UIScriptController::stylusMoveToPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef callback)
-{
-}
-
-void UIScriptController::stylusUpAtPoint(long x, long y, JSValueRef callback)
-{
-}
-
-void UIScriptController::stylusTapAtPoint(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef callback)
-{
-}
-
-void UIScriptController::stylusTapAtPointWithModifiers(long x, long y, float azimuthAngle, float altitudeAngle, float pressure, JSValueRef modifierArray, JSValueRef callback)
-{
-}
-
-void UIScriptController::sendEventStream(JSStringRef eventsJSON, JSValueRef callback)
-{
-}
-
-void UIScriptController::enterText(JSStringRef)
-{
-}
-
-void UIScriptController::typeCharacterUsingHardwareKeyboard(JSStringRef, JSValueRef)
-{
-}
-
-void UIScriptController::keyDown(JSStringRef, JSValueRef)
-{
-}
-
-void UIScriptController::dismissFormAccessoryView()
-{
-}
-
-void UIScriptController::setTimePickerValue(long, long)
-{
-}
-
-void UIScriptController::selectFormAccessoryPickerRow(long)
-{
-}
-
-JSRetainPtr<JSStringRef> UIScriptController::textContentType() const
-{
-    return nullptr;
-}
-
-JSRetainPtr<JSStringRef> UIScriptController::selectFormPopoverTitle() const
-{
-    return nullptr;
-}
-
-JSRetainPtr<JSStringRef> UIScriptController::formInputLabel() const
-{
-    return nullptr;
-}
-
-bool UIScriptController::isPresentingModally() const
-{
-    return false;
-}
-
-double UIScriptController::contentOffsetX() const
-{
-    return 0;
-}
-
-double UIScriptController::contentOffsetY() const
-{
-    return 0;
-}
-
-void UIScriptController::scrollToOffset(long x, long y)
-{
-}
-
-void UIScriptController::immediateScrollToOffset(long x, long y)
-{
-}
-
-void UIScriptController::immediateZoomToScale(double scale)
-{
-}
-
-void UIScriptController::keyboardAccessoryBarNext()
-{
-}
-
-void UIScriptController::keyboardAccessoryBarPrevious()
-{
-}
-
-void UIScriptController::applyAutocorrection(JSStringRef, JSStringRef, JSValueRef)
-{
-}
-
-bool UIScriptController::isShowingKeyboard() const
-{
-    return false;
-}
-
-double UIScriptController::zoomScale() const
-{
-    return 1;
-}
-
-double UIScriptController::minimumZoomScale() const
-{
-    return 1;
-}
-
-double UIScriptController::maximumZoomScale() const
-{
-    return 1;
-}
-
-Optional<bool> UIScriptController::stableStateOverride() const
-{
-    return WTF::nullopt;
-}
-
-void UIScriptController::setStableStateOverride(Optional<bool>)
-{
-}
-
-JSObjectRef UIScriptController::contentVisibleRect() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::textSelectionRangeRects() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::textSelectionCaretRect() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::selectionStartGrabberViewRect() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::selectionCaretViewRect() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::selectionRangeViewRects() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::selectionEndGrabberViewRect() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::inputViewBounds() const
-{
-    return nullptr;
-}
-
-void UIScriptController::removeAllDynamicDictionaries()
-{
-}
-
-JSRetainPtr<JSStringRef> UIScriptController::scrollingTreeAsText() const
-{
-    return nullptr;
-}
-
-JSObjectRef UIScriptController::propertiesOfLayerWithID(uint64_t layerID) const
-{
-    return nullptr;
-}
-
-void UIScriptController::platformSetDidStartFormControlInteractionCallback()
-{
-}
-
-void UIScriptController::platformSetDidEndFormControlInteractionCallback()
-{
-}
-
-void UIScriptController::platformSetDidShowForcePressPreviewCallback()
-{
-}
-
-void UIScriptController::platformSetDidDismissForcePressPreviewCallback()
-{
-}
-
-void UIScriptController::platformSetWillBeginZoomingCallback()
-{
-}
-
-void UIScriptController::platformSetDidEndZoomingCallback()
-{
-}
-
-void UIScriptController::platformSetDidEndScrollingCallback()
+void UIScriptController::setDidShowMenuCallback(JSValueRef callback)
 {
+    m_context->registerCallback(callback, CallbackTypeDidShowMenu);
 }
 
-void UIScriptController::platformSetDidShowKeyboardCallback()
+JSValueRef UIScriptController::didShowMenuCallback() const
 {
+    return m_context->callbackWithID(CallbackTypeDidShowMenu);
 }
 
-void UIScriptController::platformSetDidHideKeyboardCallback()
+void UIScriptController::setDidHideMenuCallback(JSValueRef callback)
 {
+    m_context->registerCallback(callback, CallbackTypeDidHideMenu);
 }
 
-void UIScriptController::platformClearAllCallbacks()
+JSValueRef UIScriptController::didHideMenuCallback() const
 {
+    return m_context->callbackWithID(CallbackTypeDidHideMenu);
 }
 
-void UIScriptController::retrieveSpeakSelectionContent(JSValueRef)
+void UIScriptController::setWillPresentPopoverCallback(JSValueRef callback)
 {
+    m_context->registerCallback(callback, CallbackTypeWillPresentPopover);
 }
 
-JSRetainPtr<JSStringRef> UIScriptController::accessibilitySpeakSelectionContent() const
+JSValueRef UIScriptController::willPresentPopoverCallback() const
 {
-    return nullptr;
+    return m_context->callbackWithID(CallbackTypeWillPresentPopover);
 }
 
-void UIScriptController::setSafeAreaInsets(double top, double right, double bottom, double left)
+void UIScriptController::setDidDismissPopoverCallback(JSValueRef callback)
 {
+    m_context->registerCallback(callback, CallbackTypeDidDismissPopover);
 }
 
-void UIScriptController::drawSquareInEditableImage()
+JSValueRef UIScriptController::didDismissPopoverCallback() const
 {
+    return m_context->callbackWithID(CallbackTypeDidDismissPopover);
 }
-
-long UIScriptController::numberOfStrokesInEditableImage()
-{
-    return 0;
-}
-
-JSObjectRef UIScriptController::attachmentInfo(JSStringRef)
-{
-    return nullptr;
-}
-
-void UIScriptController::setKeyboardInputModeIdentifier(JSStringRef)
-{
-}
-
-#endif
-
-#if !PLATFORM(COCOA)
-
-void UIScriptController::simulateRotation(DeviceOrientation*, JSValueRef callback)
-{
-}
-
-void UIScriptController::simulateRotationLikeSafari(DeviceOrientation*, JSValueRef callback)
-{
-}
-
-void UIScriptController::findString(JSStringRef, unsigned long options, unsigned long maxCount)
-{
-}
-
-void UIScriptController::removeViewFromWindow(JSValueRef)
-{
-}
-
-void UIScriptController::addViewToWindow(JSValueRef)
-{
-}
-
-void UIScriptController::beginBackSwipe(JSValueRef callback)
-{
-}
-
-void UIScriptController::completeBackSwipe(JSValueRef callback)
-{
-}
-
-void UIScriptController::setShareSheetCompletesImmediatelyWithResolution(bool)
-{
-}
-
-bool UIScriptController::isShowingDataListSuggestions() const
-{
-    return false;
-}
-
-void UIScriptController::overridePreference(JSStringRef, JSStringRef)
-{
-}
-
-JSRetainPtr<JSStringRef> UIScriptController::lastUndoLabel() const
-{
-    return nullptr;
-}
-
-JSRetainPtr<JSStringRef> UIScriptController::firstRedoLabel() const
-{
-    return nullptr;
-}
-
-#endif // !PLATFORM(COCOA)
-
-#if !PLATFORM(MAC)
-
-void UIScriptController::replaceTextAtRange(JSStringRef, int, int)
-{
-}
-
-void UIScriptController::platformPlayBackEventStream(JSStringRef, JSValueRef)
-{
-}
-
-void UIScriptController::firstResponderSuppressionForWebView(bool)
-{
-}
-
-void UIScriptController::makeWindowContentViewFirstResponder()
-{
-}
-
-bool UIScriptController::isWindowContentViewFirstResponder() const
-{
-    return false;
-}
-
-#endif
 
 void UIScriptController::uiScriptComplete(JSStringRef result)
 {
     m_context->requestUIScriptCompletion(result);
-    platformClearAllCallbacks();
+    clearAllCallbacks();
 }
 
 }

@@ -31,8 +31,8 @@
 #include "FloatingContext.h"
 #include "FloatingState.h"
 #include "InlineFormattingState.h"
+#include "InlineLine.h"
 #include "InlineLineBreaker.h"
-#include "InlineRunProvider.h"
 #include "LayoutBox.h"
 #include "LayoutContainer.h"
 #include "LayoutState.h"
@@ -41,564 +41,462 @@
 namespace WebCore {
 namespace Layout {
 
-class Line {
-public:
-    void init(const LayoutPoint& topLeft, LayoutUnit availableWidth, LayoutUnit minimalHeight);
-    void close();
-
-    void appendContent(const InlineRunProvider::Run&, const LayoutSize&);
-
-    void adjustLogicalLeft(LayoutUnit delta);
-    void adjustLogicalRight(LayoutUnit delta);
-
-    bool hasContent() const { return !m_inlineRuns.isEmpty(); }
-    bool isClosed() const { return m_closed; }
-    bool isFirstLine() const { return m_isFirstLine; }
-    Vector<InlineRun>& runs() { return m_inlineRuns; }
-
-    LayoutUnit contentLogicalRight() const;
-    LayoutUnit contentLogicalLeft() const { return m_logicalRect.left(); }
-    LayoutUnit availableWidth() const { return m_availableWidth; }
-    Optional<InlineRunProvider::Run::Type> lastRunType() const { return m_lastRunType; }
-
-    LayoutUnit logicalTop() const { return m_logicalRect.top(); }
-    LayoutUnit logicalBottom() const { return m_logicalRect.bottom(); }
-    LayoutUnit logicalHeight() const { return logicalBottom() - logicalTop(); }
-
-private:
-    struct TrailingTrimmableContent {
-        LayoutUnit width;
-        unsigned length;
-    };
-    Optional<TrailingTrimmableContent> m_trailingTrimmableContent;
-    Optional<InlineRunProvider::Run::Type> m_lastRunType;
-    bool m_lastRunCanExpand { false };
-
-    Display::Box::Rect m_logicalRect;
-    LayoutUnit m_availableWidth;
-
-    Vector<InlineRun> m_inlineRuns;
-    bool m_isFirstLine { true };
-    bool m_closed { true };
-};
-
-void Line::init(const LayoutPoint& topLeft, LayoutUnit availableWidth, LayoutUnit minimalHeight)
+static LayoutUnit inlineItemWidth(const LayoutState& layoutState, const InlineItem& inlineItem, LayoutUnit contentLogicalLeft)
 {
-    m_logicalRect.setTopLeft(topLeft);
-    m_logicalRect.setWidth(availableWidth);
-    m_logicalRect.setHeight(minimalHeight);
-    m_availableWidth = availableWidth;
+    if (inlineItem.isLineBreak())
+        return 0;
 
-    m_inlineRuns.clear();
-    m_lastRunType = { };
-    m_lastRunCanExpand = false;
-    m_trailingTrimmableContent = { };
-    m_closed = false;
-}
-
-void Line::adjustLogicalLeft(LayoutUnit delta)
-{
-    ASSERT(delta > 0);
-
-    m_availableWidth -= delta;
-    m_logicalRect.shiftLeftTo(m_logicalRect.left() + delta);
-
-    for (auto& inlineRun : m_inlineRuns)
-        inlineRun.moveHorizontally(delta);
-}
-
-void Line::adjustLogicalRight(LayoutUnit delta)
-{
-    ASSERT(delta > 0);
-
-    m_availableWidth -= delta;
-    m_logicalRect.shiftRightTo(m_logicalRect.right() - delta);
-}
-
-static bool isTrimmableContent(const InlineRunProvider::Run& inlineRun)
-{
-    return inlineRun.isWhitespace() && inlineRun.style().collapseWhiteSpace();
-}
-
-LayoutUnit Line::contentLogicalRight() const
-{
-    if (m_inlineRuns.isEmpty())
-        return m_logicalRect.left();
-
-    return m_inlineRuns.last().logicalRight();
-}
-
-void Line::appendContent(const InlineRunProvider::Run& run, const LayoutSize& runSize)
-{
-    ASSERT(!isClosed());
-
-    // Append this text run to the end of the last text run, if the last run is continuous.
-    Optional<InlineRun::TextContext> textRun;
-    if (run.isText()) {
-        auto textContext = run.textContext();
-        auto runLength = textContext->isCollapsed() ? 1 : textContext->length();
-        textRun = InlineRun::TextContext { textContext->start(), runLength };
+    if (is<InlineTextItem>(inlineItem)) {
+        auto& inlineTextItem = downcast<InlineTextItem>(inlineItem);
+        auto end = inlineTextItem.isCollapsed() ? inlineTextItem.start() + 1 : inlineTextItem.end();
+        return TextUtil::width(inlineTextItem.layoutBox(), inlineTextItem.start(), end, contentLogicalLeft);
     }
 
-    auto requiresNewInlineRun = !hasContent() || !run.isText() || !m_lastRunCanExpand;
-    if (requiresNewInlineRun) {
-        // FIXME: This needs proper baseline handling
-        auto inlineRun = InlineRun { { logicalTop(), contentLogicalRight(), runSize.width(), runSize.height() }, run.inlineItem() };
-        if (textRun)
-            inlineRun.setTextContext({ textRun->start(), textRun->length() });
-        m_inlineRuns.append(inlineRun);
-        m_logicalRect.setHeight(std::max(runSize.height(), m_logicalRect.height()));
-    } else {
-        // Non-text runs always require new inline run.
-        ASSERT(textRun);
-        auto& inlineRun = m_inlineRuns.last();
-        ASSERT(runSize.height() == inlineRun.logicalHeight());
-        inlineRun.setLogicalWidth(inlineRun.logicalWidth() + runSize.width());
-        inlineRun.textContext()->setLength(inlineRun.textContext()->length() + textRun->length());
-    }
+    auto& layoutBox = inlineItem.layoutBox();
+    ASSERT(layoutState.hasDisplayBox(layoutBox));
+    auto& displayBox = layoutState.displayBoxForLayoutBox(layoutBox);
 
-    m_availableWidth -= runSize.width();
-    m_lastRunType = run.type();
-    m_lastRunCanExpand = run.isText() && !run.textContext()->isCollapsed();
-    m_trailingTrimmableContent = { };
-    if (isTrimmableContent(run))
-        m_trailingTrimmableContent = TrailingTrimmableContent { runSize.width(), textRun->length() };
+    if (layoutBox.isFloatingPositioned())
+        return displayBox.marginBoxWidth();
+
+    if (layoutBox.replaced())
+        return displayBox.width();
+
+    if (inlineItem.isContainerStart())
+        return displayBox.marginStart() + displayBox.borderLeft() + displayBox.paddingLeft().valueOr(0);
+
+    if (inlineItem.isContainerEnd())
+        return displayBox.marginEnd() + displayBox.borderRight() + displayBox.paddingRight().valueOr(0);
+
+    // Non-replaced inline box (e.g. inline-block)
+    return displayBox.width();
 }
 
-void Line::close()
-{
-    auto trimTrailingContent = [&] {
-        if (!m_trailingTrimmableContent)
-            return;
-        auto& lastInlineRun = m_inlineRuns.last();
-        lastInlineRun.setLogicalWidth(lastInlineRun.logicalWidth() - m_trailingTrimmableContent->width);
-        lastInlineRun.textContext()->setLength(lastInlineRun.textContext()->length() - m_trailingTrimmableContent->length);
-
-        if (!lastInlineRun.textContext()->length())
-            m_inlineRuns.removeLast();
-        m_availableWidth += m_trailingTrimmableContent->width;
-        m_trailingTrimmableContent = { };
-    };
-
-    if (!hasContent())
-        return;
-
-    trimTrailingContent();
-    m_isFirstLine = false;
-    m_closed = true;
-}
-
-InlineFormattingContext::LineLayout::LineLayout(const InlineFormattingContext& inlineFormattingContext)
-    : m_formattingContext(inlineFormattingContext)
-    , m_formattingState(m_formattingContext.formattingState())
-    , m_floatingState(m_formattingState.floatingState())
-    , m_formattingRoot(downcast<Container>(m_formattingContext.root()))
-{
-}
-
-static bool isTrimmableContent(const InlineLineBreaker::Run& run)
-{
-    return run.content.isWhitespace() && run.content.style().collapseWhiteSpace();
-}
-
-void InlineFormattingContext::LineLayout::layout(const InlineRunProvider& inlineRunProvider) const
-{
-    auto& layoutState = m_formattingContext.layoutState();
-    auto floatingContext = FloatingContext { m_floatingState };
-
-    Line line;
-    initializeNewLine(line);
-
-    InlineLineBreaker lineBreaker(layoutState, m_formattingState.inlineContent(), inlineRunProvider.runs());
-    while (auto run = lineBreaker.nextRun(line.contentLogicalRight(), line.availableWidth(), !line.hasContent())) {
-        auto isFirstRun = run->position == InlineLineBreaker::Run::Position::LineBegin;
-        auto isLastRun = run->position == InlineLineBreaker::Run::Position::LineEnd;
-        auto generatesInlineRun = true;
-
-        // Position float and adjust the runs on line.
-        if (run->content.isFloat()) {
-            auto& floatBox = run->content.inlineItem().layoutBox();
-            computeFloatPosition(floatingContext, line, floatBox);
-            m_floatingState.append(floatBox);
-
-            auto floatBoxWidth = layoutState.displayBoxForLayoutBox(floatBox).marginBox().width();
-            // Shrink availble space for current line and move existing inline runs.
-            floatBox.isLeftFloatingPositioned() ? line.adjustLogicalLeft(floatBoxWidth) : line.adjustLogicalRight(floatBoxWidth);
-
-            generatesInlineRun = false;
-        }
-
-        // 1. Initialize new line if needed.
-        // 2. Append inline run unless it is skipped.
-        // 3. Close current line if needed.
-        if (isFirstRun) {
-            // When the first run does not generate an actual inline run, the next run comes in first-run as well.
-            // No need to spend time on closing/initializing.
-            // Skip leading whitespace.
-            if (!generatesInlineRun || isTrimmableContent(*run))
-                continue;
-
-            if (line.hasContent()) {
-                // Previous run ended up being at the line end. Adjust the line accordingly.
-                if (!line.isClosed())
-                    closeLine(line, IsLastLine::No);
-                initializeNewLine(line);
-            }
-        }
-
-        if (generatesInlineRun) {
-            auto width = run->width;
-            auto height = run->content.isText() ? LayoutUnit(m_formattingRoot.style().computedLineHeight()) : layoutState.displayBoxForLayoutBox(run->content.inlineItem().layoutBox()).height();
-            appendContentToLine(line, run->content, { width, height });
-        }
-
-        if (isLastRun)
-            closeLine(line, IsLastLine::No);
-    }
-
-    closeLine(line, IsLastLine::Yes);
-}
-
-void InlineFormattingContext::LineLayout::initializeNewLine(Line& line) const
-{
-    auto& formattingRootDisplayBox = m_formattingContext.layoutState().displayBoxForLayoutBox(m_formattingRoot);
-
-    auto lineLogicalLeft = formattingRootDisplayBox.contentBoxLeft();
-    auto lineLogicalTop = line.isFirstLine() ? formattingRootDisplayBox.contentBoxTop() : line.logicalBottom();
-    auto availableWidth = formattingRootDisplayBox.contentBoxWidth();
-
-    // Check for intruding floats and adjust logical left/available width for this line accordingly.
-    if (!m_floatingState.isEmpty()) {
-        auto floatConstraints = m_floatingState.constraints({ lineLogicalTop }, m_formattingRoot);
-        // Check if these constraints actually put limitation on the line.
-        if (floatConstraints.left && *floatConstraints.left <= formattingRootDisplayBox.contentBoxLeft())
-            floatConstraints.left = { };
-
-        if (floatConstraints.right && *floatConstraints.right >= formattingRootDisplayBox.contentBoxRight())
-            floatConstraints.right = { };
-
-        if (floatConstraints.left && floatConstraints.right) {
-            ASSERT(*floatConstraints.left < *floatConstraints.right);
-            availableWidth = *floatConstraints.right - *floatConstraints.left;
-            lineLogicalLeft = *floatConstraints.left;
-        } else if (floatConstraints.left) {
-            ASSERT(*floatConstraints.left > lineLogicalLeft);
-            availableWidth -= (*floatConstraints.left - lineLogicalLeft);
-            lineLogicalLeft = *floatConstraints.left;
-        } else if (floatConstraints.right) {
-            ASSERT(*floatConstraints.right > lineLogicalLeft);
-            availableWidth = *floatConstraints.right - lineLogicalLeft;
-        }
-    }
-
-    line.init({ lineLogicalLeft, lineLogicalTop }, availableWidth, m_formattingRoot.style().computedLineHeight());
-}
-
-void InlineFormattingContext::LineLayout::splitInlineRunIfNeeded(const InlineRun& inlineRun, InlineRuns& splitRuns) const
-{
-    ASSERT(inlineRun.textContext());
-    ASSERT(inlineRun.overlapsMultipleInlineItems());
-    // In certain cases, a run can overlap multiple inline elements like this:
-    // <span>normal text content</span><span style="position: relative; left: 10px;">but this one needs a dedicated run</span><span>end of text</span>
-    // The content above generates one long run <normal text contentbut this one needs dedicated runend of text>
-    // However, since the middle run is positioned, it needs to be moved independently from the rest of the content, hence it needs a dedicated inline run.
-
-    // 1. Start with the first inline item (element) and travers the list until
-    // 2. either find an inline item that needs a dedicated run or we reach the end of the run
-    // 3. Create dedicate inline runs.
-    auto& inlineContent = m_formattingState.inlineContent();
-    auto contentStart = inlineRun.logicalLeft();
-    auto startPosition = inlineRun.textContext()->start();
-    auto remaningLength = inlineRun.textContext()->length();
-
-    struct Uncommitted {
-        const InlineItem* firstInlineItem { nullptr };
-        const InlineItem* lastInlineItem { nullptr };
+struct IndexAndRange {
+    unsigned index { 0 };
+    struct Range {
+        unsigned start { 0 };
         unsigned length { 0 };
     };
-    Optional<Uncommitted> uncommitted;
+    Optional<Range> partialContext;
+};
 
-    auto commit = [&] {
-        if (!uncommitted)
-            return;
+struct LineInput {
+    LineInput(const Line::InitialConstraints& initialLineConstraints, Line::SkipVerticalAligment, IndexAndRange firstToProcess, const InlineItems&);
 
-        contentStart += uncommitted->firstInlineItem->nonBreakableStart();
+    Line::InitialConstraints initialConstraints;
+    // FIXME Alternatively we could just have a second pass with vertical positioning (preferred width computation opts out)
+    Line::SkipVerticalAligment skipVerticalAligment;
+    IndexAndRange firstInlineItem;
+    const InlineItems& inlineItems;
+    Optional<LayoutUnit> floatMinimumLogicalBottom;
+};
 
-        auto runWidth = this->runWidth(inlineContent, *uncommitted->firstInlineItem, startPosition, uncommitted->length, contentStart);
-        auto run = InlineRun { { inlineRun.logicalTop(), contentStart, runWidth, inlineRun.logicalHeight() }, *uncommitted->firstInlineItem };
-        run.setTextContext({ startPosition, uncommitted->length });
-        splitRuns.append(run);
+struct LineContent {
+    Optional<IndexAndRange> lastCommitted;
+    Vector<WeakPtr<InlineItem>> floats;
+    std::unique_ptr<Line::Content> runs;
+};
 
-        contentStart += runWidth + uncommitted->lastInlineItem->nonBreakableEnd();
+class LineLayout {
+public:
+    LineLayout(const LayoutState&, const LineInput&);
 
-        startPosition = 0;
-        uncommitted = { };
+    LineContent layout();
+
+private:
+    const LayoutState& layoutState() const { return m_layoutState; }
+    enum class IsEndOfLine { No, Yes };
+    IsEndOfLine placeInlineItem(const InlineItem&);
+    void commitPendingContent();
+    LineContent close();
+
+    struct UncommittedContent {
+        struct Run {
+            const InlineItem& inlineItem;
+            LayoutUnit logicalWidth;
+        };
+        void add(const InlineItem&, LayoutUnit logicalWidth);
+        void reset();
+
+        Vector<Run> runs() { return m_uncommittedRuns; }
+        bool isEmpty() const { return m_uncommittedRuns.isEmpty(); }
+        unsigned size() const { return m_uncommittedRuns.size(); }
+        LayoutUnit width() const { return m_width; }
+
+    private:
+        Vector<Run> m_uncommittedRuns;
+        LayoutUnit m_width;
     };
 
-    for (auto iterator = inlineContent.find(const_cast<InlineItem*>(&inlineRun.inlineItem())); iterator != inlineContent.end() && remaningLength > 0; ++iterator) {
-        auto& inlineItem = **iterator;
+    const LayoutState& m_layoutState;
+    const LineInput& m_lineInput;
+    Line m_line;
+    LineBreaker m_lineBreaker;
+    bool m_lineHasFloatBox { false };
+    UncommittedContent m_uncommittedContent;
+    unsigned m_committedInlineItemCount { 0 };
+    Vector<WeakPtr<InlineItem>> m_floats;
+    std::unique_ptr<InlineTextItem> m_leadingPartialInlineTextItem;
+    std::unique_ptr<InlineTextItem> m_trailingPartialInlineTextItem;
+};
 
-        // Skip all non-inflow boxes (floats, out-of-flow positioned elements). They don't participate in the inline run context.
-        if (!inlineItem.layoutBox().isInFlow())
-            continue;
+void LineLayout::UncommittedContent::add(const InlineItem& inlineItem, LayoutUnit logicalWidth)
+{
+    m_uncommittedRuns.append({ inlineItem, logicalWidth });
+    m_width += logicalWidth;
+}
 
-        auto currentLength = [&] {
-            return std::min(remaningLength, inlineItem.textContent().length() - startPosition);
-        };
+void LineLayout::UncommittedContent::reset()
+{
+    m_uncommittedRuns.clear();
+    m_width = 0;
+}
 
-        // 1. Break before/after -> requires dedicated run -> commit what we've got so far and also commit the current inline element as a separate inline run.
-        // 2. Break at the beginning of the inline element -> commit what we've got so far. Current element becomes the first uncommitted.
-        // 3. Break at the end of the inline element -> commit what we've got so far including the current element.
-        // 4. Inline element does not require run breaking -> add current inline element to uncommitted. Jump to the next element.
-        auto detachingRules = inlineItem.detachingRules();
+LineLayout::LineLayout(const LayoutState& layoutState, const LineInput& lineInput)
+    : m_layoutState(layoutState)
+    , m_lineInput(lineInput)
+    , m_line(layoutState, lineInput.initialConstraints, lineInput.skipVerticalAligment)
+    , m_lineHasFloatBox(lineInput.floatMinimumLogicalBottom.hasValue())
+{
+}
 
-        // #1
-        if (detachingRules.containsAll({ InlineItem::DetachingRule::BreakAtStart, InlineItem::DetachingRule::BreakAtEnd })) {
-            commit();
-            auto contentLength = currentLength();
-            uncommitted = Uncommitted { &inlineItem, &inlineItem, contentLength };
-            remaningLength -= contentLength;
-            commit();
+void LineLayout::commitPendingContent()
+{
+    if (m_uncommittedContent.isEmpty())
+        return;
+    m_committedInlineItemCount += m_uncommittedContent.size();
+    for (auto& uncommittedRun : m_uncommittedContent.runs())
+        m_line.append(uncommittedRun.inlineItem, uncommittedRun.logicalWidth);
+    m_uncommittedContent.reset();
+}
+
+LineContent LineLayout::close()
+{
+    ASSERT(m_committedInlineItemCount || m_lineHasFloatBox);
+    if (!m_committedInlineItemCount)
+        return LineContent { WTF::nullopt, WTFMove(m_floats), m_line.close() };
+
+    auto lastInlineItemIndex = m_lineInput.firstInlineItem.index + m_committedInlineItemCount - 1;
+    Optional<IndexAndRange::Range> partialContext;
+    if (m_trailingPartialInlineTextItem)
+        partialContext = IndexAndRange::Range { m_trailingPartialInlineTextItem->start(), m_trailingPartialInlineTextItem->length() };
+
+    auto lastCommitedItem = IndexAndRange { lastInlineItemIndex, partialContext };
+    return LineContent { lastCommitedItem, WTFMove(m_floats), m_line.close() };
+}
+
+LineLayout::IsEndOfLine LineLayout::placeInlineItem(const InlineItem& inlineItem)
+{
+    auto availableWidth = m_line.availableWidth() - m_uncommittedContent.width();
+    auto currentLogicalRight = m_line.contentLogicalRight() + m_uncommittedContent.width();
+    auto itemLogicalWidth = inlineItemWidth(layoutState(), inlineItem, currentLogicalRight);
+
+    // FIXME: Ensure LineContext::trimmableWidth includes uncommitted content if needed.
+    auto lineIsConsideredEmpty = !m_line.hasContent() && !m_lineHasFloatBox;
+    auto breakingContext = m_lineBreaker.breakingContext(inlineItem, itemLogicalWidth, { availableWidth, currentLogicalRight, m_line.trailingTrimmableWidth(), lineIsConsideredEmpty });
+    if (breakingContext.isAtBreakingOpportunity)
+        commitPendingContent();
+
+    // Content does not fit the current line.
+    if (breakingContext.breakingBehavior == LineBreaker::BreakingBehavior::Wrap)
+        return IsEndOfLine::Yes;
+
+    // Partial content stays on the current line.
+    if (breakingContext.breakingBehavior == LineBreaker::BreakingBehavior::Split) {
+        ASSERT(inlineItem.isText());
+        auto& inlineTextItem = downcast<InlineTextItem>(inlineItem);
+        auto splitData = TextUtil::split(inlineTextItem.layoutBox(), inlineTextItem.start(), inlineTextItem.length(), itemLogicalWidth, availableWidth, currentLogicalRight);
+        // Construct a partial trailing inline item.
+        ASSERT(!m_trailingPartialInlineTextItem);
+        m_trailingPartialInlineTextItem = inlineTextItem.split(splitData.start, splitData.length);
+        m_uncommittedContent.add(*m_trailingPartialInlineTextItem, splitData.logicalWidth);
+        commitPendingContent();
+        return IsEndOfLine::Yes;
+    }
+
+    ASSERT(breakingContext.breakingBehavior == LineBreaker::BreakingBehavior::Keep);
+    if (inlineItem.isFloat()) {
+        auto& floatBox = inlineItem.layoutBox();
+        ASSERT(layoutState().hasDisplayBox(floatBox));
+        // Shrink available space for current line and move existing inline runs.
+        auto floatBoxWidth = layoutState().displayBoxForLayoutBox(floatBox).marginBoxWidth();
+        floatBox.isLeftFloatingPositioned() ? m_line.moveLogicalLeft(floatBoxWidth) : m_line.moveLogicalRight(floatBoxWidth);
+        m_floats.append(makeWeakPtr(inlineItem));
+        ++m_committedInlineItemCount;
+        m_lineHasFloatBox = true;
+        return IsEndOfLine::No;
+    }
+
+    m_uncommittedContent.add(inlineItem, itemLogicalWidth);
+    if (breakingContext.isAtBreakingOpportunity)
+        commitPendingContent();
+
+    return inlineItem.isHardLineBreak() ? IsEndOfLine::Yes : IsEndOfLine::No;
+}
+
+LineContent LineLayout::layout()
+{
+    // Iterate through the inline content and place the inline boxes on the current line.
+    // Start with the partial text from the previous line.
+    auto firstInlineItem = m_lineInput.firstInlineItem;
+    unsigned firstNonPartialIndex = firstInlineItem.index;
+    if (firstInlineItem.partialContext) {
+        // Handle partial inline item (split text from the previous line).
+        auto& originalTextItem = m_lineInput.inlineItems[firstInlineItem.index];
+        RELEASE_ASSERT(originalTextItem->isText());
+
+        auto textRange = *firstInlineItem.partialContext;
+        // Construct a partial leading inline item.
+        ASSERT(!m_leadingPartialInlineTextItem);
+        m_leadingPartialInlineTextItem = downcast<InlineTextItem>(*originalTextItem).split(textRange.start, textRange.length);
+        if (placeInlineItem(*m_leadingPartialInlineTextItem) == IsEndOfLine::Yes)
+            return close();
+        ++firstNonPartialIndex;
+    }
+
+    for (auto inlineItemIndex = firstNonPartialIndex; inlineItemIndex < m_lineInput.inlineItems.size(); ++inlineItemIndex) {
+        if (placeInlineItem(*m_lineInput.inlineItems[inlineItemIndex]) == IsEndOfLine::Yes)
+            return close();
+    }
+    commitPendingContent();
+    return close();
+}
+
+LineInput::LineInput(const Line::InitialConstraints& initialLineConstraints, Line::SkipVerticalAligment skipVerticalAligment, IndexAndRange firstToProcess, const InlineItems& inlineItems)
+    : initialConstraints(initialLineConstraints)
+    , skipVerticalAligment(skipVerticalAligment)
+    , firstInlineItem(firstToProcess)
+    , inlineItems(inlineItems)
+{
+}
+
+InlineFormattingContext::InlineLayout::InlineLayout(const InlineFormattingContext& inlineFormattingContext)
+    : m_layoutState(inlineFormattingContext.layoutState())
+    , m_formattingRoot(downcast<Container>(inlineFormattingContext.root()))
+{
+}
+
+void InlineFormattingContext::InlineLayout::layout(const InlineItems& inlineItems, LayoutUnit widthConstraint) const
+{
+    auto& formattingRootDisplayBox = layoutState().displayBoxForLayoutBox(m_formattingRoot);
+    auto& floatingState = layoutState().establishedFormattingState(m_formattingRoot).floatingState();
+
+    auto lineLogicalTop = formattingRootDisplayBox.contentBoxTop();
+    auto lineLogicalLeft = formattingRootDisplayBox.contentBoxLeft();
+
+    auto applyFloatConstraint = [&](auto& lineInput) {
+        // Check for intruding floats and adjust logical left/available width for this line accordingly.
+        if (floatingState.isEmpty())
+            return;
+        auto availableWidth = lineInput.initialConstraints.availableLogicalWidth;
+        auto lineLogicalLeft = lineInput.initialConstraints.logicalTopLeft.x();
+        auto floatConstraints = floatingState.constraints({ lineLogicalTop }, m_formattingRoot);
+        // Check if these constraints actually put limitation on the line.
+        if (floatConstraints.left && floatConstraints.left->x <= formattingRootDisplayBox.contentBoxLeft())
+            floatConstraints.left = { };
+
+        if (floatConstraints.right && floatConstraints.right->x >= formattingRootDisplayBox.contentBoxRight())
+            floatConstraints.right = { };
+
+        // Set the minimum float bottom value as a hint for the next line if needed.
+        static auto inifitePoint = PointInContextRoot::max();
+        auto floatMinimumLogicalBottom = std::min(floatConstraints.left.valueOr(inifitePoint).y, floatConstraints.right.valueOr(inifitePoint).y);
+        if (floatMinimumLogicalBottom != inifitePoint.y)
+            lineInput.floatMinimumLogicalBottom = floatMinimumLogicalBottom;
+
+        if (floatConstraints.left && floatConstraints.right) {
+            ASSERT(floatConstraints.left->x <= floatConstraints.right->x);
+            availableWidth = floatConstraints.right->x - floatConstraints.left->x;
+            lineLogicalLeft = floatConstraints.left->x;
+        } else if (floatConstraints.left) {
+            ASSERT(floatConstraints.left->x >= lineLogicalLeft);
+            availableWidth -= (floatConstraints.left->x - lineLogicalLeft);
+            lineLogicalLeft = floatConstraints.left->x;
+        } else if (floatConstraints.right) {
+            ASSERT(floatConstraints.right->x >= lineLogicalLeft);
+            availableWidth = floatConstraints.right->x - lineLogicalLeft;
+        }
+        lineInput.initialConstraints.availableLogicalWidth = availableWidth;
+        lineInput.initialConstraints.logicalTopLeft.setX(lineLogicalLeft);
+    };
+
+    IndexAndRange currentInlineItem;
+    while (currentInlineItem.index < inlineItems.size()) {
+        auto lineInput = LineInput { { { lineLogicalLeft, lineLogicalTop }, widthConstraint, Quirks::lineHeightConstraints(layoutState(), m_formattingRoot) }, Line::SkipVerticalAligment::No, currentInlineItem, inlineItems };
+        applyFloatConstraint(lineInput);
+        auto lineContent = LineLayout(layoutState(), lineInput).layout();
+        createDisplayRuns(*lineContent.runs, lineContent.floats, widthConstraint);
+        if (!lineContent.lastCommitted) {
+            // Floats prevented us putting any content on the line.
+            ASSERT(lineInput.floatMinimumLogicalBottom);
+            ASSERT(lineContent.runs->isEmpty());
+            lineLogicalTop = *lineInput.floatMinimumLogicalBottom;
+        } else {
+            currentInlineItem = { lineContent.lastCommitted->index + 1, WTF::nullopt };
+            lineLogicalTop = lineContent.runs->logicalBottom();
+        }
+    }
+}
+
+LayoutUnit InlineFormattingContext::InlineLayout::computedIntrinsicWidth(const InlineItems& inlineItems, LayoutUnit widthConstraint) const
+{
+    LayoutUnit maximumLineWidth;
+    IndexAndRange currentInlineItem;
+    while (currentInlineItem.index < inlineItems.size()) {
+        auto lineContent = LineLayout(layoutState(), { { { }, widthConstraint, Quirks::lineHeightConstraints(layoutState(), m_formattingRoot) }, Line::SkipVerticalAligment::Yes, currentInlineItem, inlineItems }).layout();
+        currentInlineItem = { lineContent.lastCommitted->index + 1, WTF::nullopt };
+        LayoutUnit floatsWidth;
+        for (auto& floatItem : lineContent.floats)
+            floatsWidth += layoutState().displayBoxForLayoutBox(floatItem->layoutBox()).marginBoxWidth();
+        maximumLineWidth = std::max(maximumLineWidth, floatsWidth + lineContent.runs->logicalWidth());
+    }
+    return maximumLineWidth;
+}
+
+void InlineFormattingContext::InlineLayout::createDisplayRuns(const Line::Content& lineContent, const Vector<WeakPtr<InlineItem>>& floats, LayoutUnit widthConstraint) const
+{
+    auto& formattingState = downcast<InlineFormattingState>(layoutState().establishedFormattingState(m_formattingRoot));
+    auto& floatingState = formattingState.floatingState();
+    auto floatingContext = FloatingContext { floatingState };
+
+    // Move floats to their final position.
+    for (auto floatItem : floats) {
+        auto& floatBox = floatItem->layoutBox();
+        ASSERT(layoutState().hasDisplayBox(floatBox));
+        auto& displayBox = layoutState().displayBoxForLayoutBox(floatBox);
+        // Set static position first.
+        displayBox.setTopLeft({ lineContent.logicalLeft(), lineContent.logicalTop() });
+        // Float it.
+        displayBox.setTopLeft(floatingContext.positionForFloat(floatBox));
+        floatingState.append(floatBox);
+    }
+
+    if (lineContent.isEmpty()) {
+        // Spec tells us to create a zero height, empty line box.
+        auto lineBoxRect = Display::Rect { lineContent.logicalTop(), lineContent.logicalLeft(), 0 , 0 };
+        formattingState.addLineBox({ lineBoxRect, lineContent.baseline(), lineContent.baselineOffset() });
+        return;
+    }
+
+    auto& inlineDisplayRuns = formattingState.inlineRuns();
+    Optional<unsigned> previousLineLastRunIndex = inlineDisplayRuns.isEmpty() ? Optional<unsigned>() : inlineDisplayRuns.size() - 1;
+    // 9.4.2 Inline formatting contexts
+    // A line box is always tall enough for all of the boxes it contains.
+    auto lineBoxRect = Display::Rect { lineContent.logicalTop(), lineContent.logicalLeft(), 0, lineContent.logicalHeight()};
+    // Create final display runs.
+    auto& lineRuns = lineContent.runs();
+    for (unsigned index = 0; index < lineRuns.size(); ++index) {
+        auto& lineRun = lineRuns.at(index);
+        auto& logicalRect = lineRun->logicalRect();
+        auto& layoutBox = lineRun->layoutBox();
+        auto& displayBox = layoutState().displayBoxForLayoutBox(layoutBox);
+
+        if (lineRun->isLineBreak()) {
+            displayBox.setTopLeft(logicalRect.topLeft());
+            displayBox.setContentBoxWidth(logicalRect.width());
+            displayBox.setContentBoxHeight(logicalRect.height());
+            formattingState.addInlineRun(makeUnique<Display::Run>(logicalRect));
             continue;
         }
 
-        // #2
-        if (detachingRules.contains(InlineItem::DetachingRule::BreakAtStart))
-            commit();
-
-        // Add current inline item to uncommitted.
-        // #3 and #4
-        auto contentLength = currentLength();
-        if (!uncommitted)
-            uncommitted = Uncommitted { &inlineItem, &inlineItem, 0 };
-        uncommitted->length += contentLength;
-        uncommitted->lastInlineItem = &inlineItem;
-        remaningLength -= contentLength;
-
-        // #3
-        if (detachingRules.contains(InlineItem::DetachingRule::BreakAtEnd))
-            commit();
-    }
-    // Either all inline elements needed dedicated runs or neither of them.
-    if (!remaningLength || remaningLength == inlineRun.textContext()->length())
-        return;
-
-    commit();
-}
-
-void InlineFormattingContext::LineLayout::createFinalRuns(Line& line) const
-{
-    for (auto& inlineRun : line.runs()) {
-        if (inlineRun.overlapsMultipleInlineItems()) {
-            InlineRuns splitRuns;
-            splitInlineRunIfNeeded(inlineRun, splitRuns);
-            for (auto& splitRun : splitRuns)
-                m_formattingState.appendInlineRun(splitRun);
-
-            if (!splitRuns.isEmpty())
-                continue;
+        // Inline level box (replaced or inline-block)
+        if (lineRun->isBox()) {
+            auto topLeft = logicalRect.topLeft();
+            if (layoutBox.isInFlowPositioned())
+                topLeft += Geometry::inFlowPositionedPositionOffset(layoutState(), layoutBox);
+            displayBox.setTopLeft(topLeft);
+            lineBoxRect.expandHorizontally(logicalRect.width());
+            formattingState.addInlineRun(makeUnique<Display::Run>(logicalRect));
+            continue;
         }
 
-        auto finalRun = [&] {
-            auto& inlineItem = inlineRun.inlineItem();
-            if (inlineItem.detachingRules().isEmpty())
-                return inlineRun;
+        // Inline level container start (<span>)
+        if (lineRun->isContainerStart()) {
+            displayBox.setTopLeft(logicalRect.topLeft());
+            lineBoxRect.expandHorizontally(logicalRect.width());
+            continue;
+        }
 
-            InlineRun adjustedRun = inlineRun;
-            auto width = inlineRun.logicalWidth() - inlineItem.nonBreakableStart() - inlineItem.nonBreakableEnd();
-            adjustedRun.setLogicalLeft(inlineRun.logicalLeft() + inlineItem.nonBreakableStart());
-            adjustedRun.setLogicalWidth(width);
-            return adjustedRun;
-        };
-
-        m_formattingState.appendInlineRun(finalRun());
-    }
-}
-
-void InlineFormattingContext::LineLayout::postProcessInlineRuns(Line& line, IsLastLine isLastLine) const
-{
-    alignRuns(m_formattingRoot.style().textAlign(), line, isLastLine);
-    auto firstRunIndex = m_formattingState.inlineRuns().size();
-    createFinalRuns(line);
-
-    placeInFlowPositionedChildren(firstRunIndex);
-}
-
-void InlineFormattingContext::LineLayout::closeLine(Line& line, IsLastLine isLastLine) const
-{
-    line.close();
-    if (!line.hasContent())
-        return;
-
-    postProcessInlineRuns(line, isLastLine);
-}
-
-void InlineFormattingContext::LineLayout::appendContentToLine(Line& line, const InlineRunProvider::Run& run, const LayoutSize& runSize) const
-{
-    auto lastRunType = line.lastRunType();
-    line.appendContent(run, runSize);
-
-    if (m_formattingRoot.style().textAlign() == TextAlignMode::Justify)
-        computeExpansionOpportunities(line, run, lastRunType.valueOr(InlineRunProvider::Run::Type::NonWhitespace));
-}
-
-void InlineFormattingContext::LineLayout::computeFloatPosition(const FloatingContext& floatingContext, Line& line, const Box& floatBox) const
-{
-    auto& layoutState = m_formattingContext.layoutState();
-    ASSERT(layoutState.hasDisplayBox(floatBox));
-    auto& displayBox = layoutState.displayBoxForLayoutBox(floatBox);
-
-    // Set static position first.
-    displayBox.setTopLeft({ line.contentLogicalRight(), line.logicalTop() });
-    // Float it.
-    displayBox.setTopLeft(floatingContext.positionForFloat(floatBox));
-}
-
-void InlineFormattingContext::LineLayout::placeInFlowPositionedChildren(unsigned fistRunIndex) const
-{
-    auto& layoutState = m_formattingContext.layoutState();
-    auto& inlineRuns = m_formattingState.inlineRuns();
-    for (auto runIndex = fistRunIndex; runIndex < inlineRuns.size(); ++runIndex) {
-        auto& inlineRun = inlineRuns[runIndex];
-
-        auto positionOffset = [&](auto& layoutBox) {
-            // FIXME: Need to figure out whether in-flow offset should stick. This might very well be temporary.
-            Optional<LayoutSize> offset;
-            for (auto* box = &layoutBox; box != &m_formattingRoot; box = box->parent()) {
-                if (!box->isInFlowPositioned())
-                    continue;
-                offset = offset.valueOr(LayoutSize()) + Geometry::inFlowPositionedPositionOffset(layoutState, *box);
+        // Inline level container end (</span>)
+        if (lineRun->isContainerEnd()) {
+            if (layoutBox.isInFlowPositioned()) {
+                auto inflowOffset = Geometry::inFlowPositionedPositionOffset(layoutState(), layoutBox);
+                displayBox.moveHorizontally(inflowOffset.width());
+                displayBox.moveVertically(inflowOffset.height());
             }
-            return offset;
-        };
+            auto marginBoxWidth = logicalRect.left() - displayBox.left();
+            auto contentBoxWidth = marginBoxWidth - (displayBox.marginStart() + displayBox.borderLeft() + displayBox.paddingLeft().valueOr(0));
+            // FIXME fix it for multiline.
+            displayBox.setContentBoxWidth(contentBoxWidth);
+            displayBox.setContentBoxHeight(logicalRect.height());
+            lineBoxRect.expandHorizontally(logicalRect.width());
+            continue;
+        }
 
-        if (auto offset = positionOffset(inlineRun.inlineItem().layoutBox())) {
-            inlineRun.moveVertically(offset->height());
-            inlineRun.moveHorizontally(offset->width());
+        // Text content. Try to join multiple text runs when possible.
+        ASSERT(lineRun->isText());
+        auto textContext = lineRun->textContext();
+        const Line::Content::Run* previousLineRun = !index ? nullptr : lineRuns[index - 1].get();
+        if (!textContext->isCollapsed) {
+            auto previousRunCanBeExtended = previousLineRun && previousLineRun->textContext() ? previousLineRun->textContext()->canBeExtended : false;
+            auto requiresNewRun = !index || !previousRunCanBeExtended || &layoutBox != &previousLineRun->layoutBox();
+            if (requiresNewRun)
+                formattingState.addInlineRun(makeUnique<Display::Run>(logicalRect, Display::Run::TextContext { textContext->start, textContext->length }));
+            else {
+                auto& lastDisplayRun = formattingState.inlineRuns().last();
+                lastDisplayRun->expandHorizontally(logicalRect.width());
+                lastDisplayRun->textContext()->expand(textContext->length);
+            }
+            lineBoxRect.expandHorizontally(logicalRect.width());
+        }
+        // FIXME take content breaking into account when part of the layout box is on the previous line.
+        auto firstInlineRunForLayoutBox = !previousLineRun || &previousLineRun->layoutBox() != &layoutBox;
+        if (firstInlineRunForLayoutBox) {
+            // Setup display box for the associated layout box.
+            displayBox.setTopLeft(logicalRect.topLeft());
+            displayBox.setContentBoxWidth(textContext->isCollapsed ? LayoutUnit() : logicalRect.width());
+            displayBox.setContentBoxHeight(logicalRect.height());
+        } else if (!textContext->isCollapsed) {
+            // FIXME fix it for multirun/multiline.
+            displayBox.setContentBoxWidth(displayBox.contentBoxWidth() + logicalRect.width());
         }
     }
+    // FIXME linebox needs to be ajusted after content alignment.
+    formattingState.addLineBox({ lineBoxRect, lineContent.baseline(), lineContent.baselineOffset() });
+    alignRuns(m_formattingRoot.style().textAlign(), inlineDisplayRuns, previousLineLastRunIndex.valueOr(-1) + 1, widthConstraint - lineContent.logicalWidth());
 }
 
-static LayoutUnit adjustedLineLogicalLeft(TextAlignMode align, LayoutUnit lineLogicalLeft, LayoutUnit remainingWidth)
+static Optional<LayoutUnit> horizontalAdjustmentForAlignment(TextAlignMode align, LayoutUnit remainingWidth)
 {
     switch (align) {
     case TextAlignMode::Left:
     case TextAlignMode::WebKitLeft:
     case TextAlignMode::Start:
-        return lineLogicalLeft;
+        return { };
     case TextAlignMode::Right:
     case TextAlignMode::WebKitRight:
     case TextAlignMode::End:
-        return lineLogicalLeft + std::max(remainingWidth, 0_lu);
+        return std::max(remainingWidth, 0_lu);
     case TextAlignMode::Center:
     case TextAlignMode::WebKitCenter:
-        return lineLogicalLeft + std::max(remainingWidth / 2, 0_lu);
+        return std::max(remainingWidth / 2, 0_lu);
     case TextAlignMode::Justify:
         ASSERT_NOT_REACHED();
         break;
     }
     ASSERT_NOT_REACHED();
-    return lineLogicalLeft;
+    return { };
 }
 
-void InlineFormattingContext::LineLayout::justifyRuns(Line& line)
+void InlineFormattingContext::InlineLayout::alignRuns(TextAlignMode textAlign, InlineRuns& inlineDisplayRuns, unsigned firstRunIndex, LayoutUnit availableWidth) const
 {
-    auto& inlineRuns = line.runs();
-    auto& lastInlineRun = inlineRuns.last();
-
-    // Adjust (forbid) trailing expansion for the last text run on line.
-    auto expansionBehavior = lastInlineRun.expansionOpportunity().behavior;
-    // Remove allow and add forbid.
-    expansionBehavior ^= AllowTrailingExpansion;
-    expansionBehavior |= ForbidTrailingExpansion;
-    lastInlineRun.expansionOpportunity().behavior = expansionBehavior;
-
-    // Collect expansion opportunities and justify the runs.
-    auto widthToDistribute = line.availableWidth();
-    if (widthToDistribute <= 0)
+    auto adjustment = horizontalAdjustmentForAlignment(textAlign, availableWidth);
+    if (!adjustment)
         return;
 
-    auto expansionOpportunities = 0;
-    for (auto& inlineRun : inlineRuns)
-        expansionOpportunities += inlineRun.expansionOpportunity().count;
-
-    if (!expansionOpportunities)
-        return;
-
-    float expansion = widthToDistribute.toFloat() / expansionOpportunities;
-    LayoutUnit accumulatedExpansion;
-    for (auto& inlineRun : inlineRuns) {
-        auto expansionForRun = inlineRun.expansionOpportunity().count * expansion;
-
-        inlineRun.expansionOpportunity().expansion = expansionForRun;
-        inlineRun.setLogicalLeft(inlineRun.logicalLeft() + accumulatedExpansion);
-        inlineRun.setLogicalWidth(inlineRun.logicalWidth() + expansionForRun);
-        accumulatedExpansion += expansionForRun;
-    }
-}
-
-void InlineFormattingContext::LineLayout::computeExpansionOpportunities(Line& line, const InlineRunProvider::Run& run, InlineRunProvider::Run::Type lastRunType) const
-{
-    auto isExpansionOpportunity = [](auto currentRunIsWhitespace, auto lastRunIsWhitespace) {
-        return currentRunIsWhitespace || (!currentRunIsWhitespace && !lastRunIsWhitespace);
-    };
-
-    auto expansionBehavior = [](auto isAtExpansionOpportunity) {
-        ExpansionBehavior expansionBehavior = AllowTrailingExpansion;
-        expansionBehavior |= isAtExpansionOpportunity ? ForbidLeadingExpansion : AllowLeadingExpansion;
-        return expansionBehavior;
-    };
-
-    auto isAtExpansionOpportunity = isExpansionOpportunity(run.isWhitespace(), lastRunType == InlineRunProvider::Run::Type::Whitespace);
-
-    auto& currentInlineRun = line.runs().last();
-    auto& expansionOpportunity = currentInlineRun.expansionOpportunity();
-    if (isAtExpansionOpportunity)
-        ++expansionOpportunity.count;
-
-    expansionOpportunity.behavior = expansionBehavior(isAtExpansionOpportunity);
-}
-
-void InlineFormattingContext::LineLayout::alignRuns(TextAlignMode textAlign, Line& line,  IsLastLine isLastLine) const
-{
-    auto adjutedTextAlignment = textAlign != TextAlignMode::Justify ? textAlign : isLastLine == IsLastLine::No ? TextAlignMode::Justify : TextAlignMode::Left;
-    if (adjutedTextAlignment == TextAlignMode::Justify) {
-        justifyRuns(line);
-        return;
-    }
-
-    auto lineLogicalLeft = line.contentLogicalLeft();
-    auto adjustedLogicalLeft = adjustedLineLogicalLeft(adjutedTextAlignment, lineLogicalLeft, line.availableWidth());
-    if (adjustedLogicalLeft == lineLogicalLeft)
-        return;
-
-    auto delta = adjustedLogicalLeft - lineLogicalLeft;
-    for (auto& inlineRun : line.runs())
-        inlineRun.setLogicalLeft(inlineRun.logicalLeft() + delta);
-}
-
-LayoutUnit InlineFormattingContext::LineLayout::runWidth(const InlineContent& inlineContent, const InlineItem& inlineItem, ItemPosition from, unsigned length, LayoutUnit contentLogicalLeft) const
-{
-    LayoutUnit width;
-    auto startPosition = from;
-    auto iterator = inlineContent.find(const_cast<InlineItem*>(&inlineItem));
-#if !ASSERT_DISABLED
-    auto inlineItemEnd = inlineContent.end();
-#endif
-    while (length) {
-        ASSERT(iterator != inlineItemEnd);
-        auto& currentInlineItem = **iterator;
-        auto endPosition = std::min<ItemPosition>(startPosition + length, currentInlineItem.textContent().length());
-        auto textWidth = TextUtil::width(currentInlineItem, startPosition, endPosition, contentLogicalLeft);
-
-        contentLogicalLeft += textWidth;
-        width += textWidth;
-        length -= (endPosition - startPosition);
-
-        startPosition = 0;
-        ++iterator;
-    }
-    return width;
+    for (unsigned index = firstRunIndex; index < inlineDisplayRuns.size(); ++index)
+        inlineDisplayRuns[index]->moveHorizontally(*adjustment);
 }
 
 }

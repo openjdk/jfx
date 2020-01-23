@@ -30,6 +30,7 @@
 #include "WHLSLType.h"
 #include "WHLSLUnnamedType.h"
 #include <memory>
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -38,10 +39,16 @@ namespace WHLSL {
 namespace AST {
 
 class ResolvableType : public Type {
-public:
-    ResolvableType() = default;
+    WTF_MAKE_FAST_ALLOCATED;
 
-    virtual ~ResolvableType() = default;
+protected:
+    ~ResolvableType() = default;
+
+public:
+    ResolvableType(Kind kind)
+        : Type(kind)
+    { }
+
 
     ResolvableType(const ResolvableType&) = delete;
     ResolvableType(ResolvableType&&) = default;
@@ -49,25 +56,30 @@ public:
     ResolvableType& operator=(const ResolvableType&) = delete;
     ResolvableType& operator=(ResolvableType&&) = default;
 
-    bool isResolvableType() const override { return true; }
-    virtual bool isFloatLiteralType() const { return false; }
-    virtual bool isIntegerLiteralType() const { return false; }
-    virtual bool isNullLiteralType() const { return false; }
-    virtual bool isUnsignedIntegerLiteralType() const { return false; }
+    bool canResolve(const Type&) const;
+    unsigned conversionCost(const UnnamedType&) const;
 
-    virtual bool canResolve(const Type&) const = 0;
-    virtual unsigned conversionCost(const UnnamedType&) const = 0;
+    const UnnamedType* maybeResolvedType() const { return m_resolvedType ? &*m_resolvedType : nullptr; }
+    const UnnamedType& resolvedType() const
+    {
+        ASSERT(m_resolvedType);
+        return *m_resolvedType;
+    }
 
-    const UnnamedType* resolvedType() const { return m_resolvedType ? &*m_resolvedType : nullptr; }
-    UnnamedType* resolvedType() { return m_resolvedType ? &*m_resolvedType : nullptr; }
+    UnnamedType* maybeResolvedType() { return m_resolvedType ? &*m_resolvedType : nullptr; }
+    UnnamedType& resolvedType()
+    {
+        ASSERT(m_resolvedType);
+        return *m_resolvedType;
+    }
 
-    void resolve(UniqueRef<UnnamedType>&& type)
+    void resolve(Ref<UnnamedType> type)
     {
         m_resolvedType = WTFMove(type);
     }
 
 private:
-    Optional<UniqueRef<UnnamedType>> m_resolvedType;
+    RefPtr<UnnamedType> m_resolvedType;
 };
 
 } // namespace AST
@@ -76,10 +88,7 @@ private:
 
 }
 
-#define SPECIALIZE_TYPE_TRAITS_WHLSL_RESOLVABLE_TYPE(ToValueTypeName, predicate) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WHLSL::AST::ToValueTypeName) \
-    static bool isType(const WebCore::WHLSL::AST::ResolvableType& type) { return type.predicate; } \
-SPECIALIZE_TYPE_TRAITS_END()
+DEFINE_DEFAULT_DELETE(ResolvableType)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(ResolvableType, isResolvableType())
 

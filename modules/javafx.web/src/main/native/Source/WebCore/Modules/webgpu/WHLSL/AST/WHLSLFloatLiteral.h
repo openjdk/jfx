@@ -29,7 +29,7 @@
 
 #include "WHLSLExpression.h"
 #include "WHLSLFloatLiteralType.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -37,16 +37,17 @@ namespace WHLSL {
 
 namespace AST {
 
-class FloatLiteral : public Expression {
+class FloatLiteral final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    FloatLiteral(Lexer::Token&& origin, float value)
-        : Expression(Lexer::Token(origin))
-        , m_type(WTFMove(origin), value)
+    FloatLiteral(CodeLocation location, float value)
+        : Expression(location, Kind::FloatLiteral)
+        , m_type(location, value)
         , m_value(value)
     {
     }
 
-    virtual ~FloatLiteral() = default;
+    ~FloatLiteral() = default;
 
     FloatLiteral(const FloatLiteral&) = delete;
     FloatLiteral(FloatLiteral&&) = default;
@@ -57,13 +58,13 @@ public:
     FloatLiteralType& type() { return m_type; }
     float value() const { return m_value; }
 
-    bool isFloatLiteral() const override { return true; }
-
     FloatLiteral clone() const
     {
-        FloatLiteral result(Lexer::Token(origin()), m_value);
-        if (result.m_type.resolvedType())
-            result.m_type.resolve(result.m_type.resolvedType()->clone());
+        FloatLiteral result(codeLocation(), m_value);
+        result.m_type = m_type.clone();
+        if (auto* resolvedType = m_type.maybeResolvedType())
+            result.m_type.resolve(const_cast<AST::UnnamedType&>(*resolvedType));
+        copyTypeTo(result);
         return result;
     }
 
@@ -77,6 +78,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(FloatLiteral)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(FloatLiteral, isFloatLiteral())
 

@@ -91,7 +91,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::openInternal(ScriptExecutionConte
         return Exception { SecurityError, "IDBFactory.open() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    IDBDatabaseIdentifier databaseIdentifier(name, context.sessionID(), SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() });
+    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() });
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.open() called with an invalid security origin"_s };
 
@@ -111,7 +111,7 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::deleteDatabase(ScriptExecutionCon
         return Exception { SecurityError, "IDBFactory.deleteDatabase() called in an invalid security context"_s };
 
     ASSERT(context.securityOrigin());
-    IDBDatabaseIdentifier databaseIdentifier(name, context.sessionID(), SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() });
+    IDBDatabaseIdentifier databaseIdentifier(name, SecurityOriginData { context.securityOrigin()->data() }, SecurityOriginData { context.topOrigin().data() });
     if (!databaseIdentifier.isValid())
         return Exception { TypeError, "IDBFactory.deleteDatabase() called with an invalid security origin"_s };
 
@@ -123,9 +123,11 @@ ExceptionOr<Ref<IDBOpenDBRequest>> IDBFactory::deleteDatabase(ScriptExecutionCon
 ExceptionOr<short> IDBFactory::cmp(ExecState& execState, JSValue firstValue, JSValue secondValue)
 {
     auto first = scriptValueToIDBKey(execState, firstValue);
-    auto second = scriptValueToIDBKey(execState, secondValue);
+    if (!first->isValid())
+        return Exception { DataError, "Failed to execute 'cmp' on 'IDBFactory': The parameter is not a valid key."_s };
 
-    if (!first->isValid() || !second->isValid())
+    auto second = scriptValueToIDBKey(execState, secondValue);
+    if (!second->isValid())
         return Exception { DataError, "Failed to execute 'cmp' on 'IDBFactory': The parameter is not a valid key."_s };
 
     return first->compare(second.get());

@@ -40,6 +40,7 @@ namespace WebCore {
 class JSDOMGlobalObject;
 
 class PaintWorkletGlobalScope : public WorkletGlobalScope {
+    WTF_MAKE_ISO_ALLOCATED(PaintWorkletGlobalScope);
 public:
     static Ref<PaintWorkletGlobalScope> create(Document&, ScriptSourceCode&&);
 
@@ -48,9 +49,10 @@ public:
 
     // All paint definitions must be destroyed before the vm is destroyed, because otherwise they will point to freed memory.
     struct PaintDefinition : public CanMakeWeakPtr<PaintDefinition> {
-        PaintDefinition(const AtomicString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&&, Vector<String>&& inputProperties, Vector<String>&& inputArguments);
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        PaintDefinition(const AtomString& name, JSC::JSObject* paintConstructor, Ref<CSSPaintCallback>&&, Vector<String>&& inputProperties, Vector<String>&& inputArguments);
 
-        const AtomicString name;
+        const AtomString name;
         const JSC::JSObject* const paintConstructor;
         const Ref<CSSPaintCallback> paintCallback;
         const Vector<String> inputProperties;

@@ -46,7 +46,7 @@ static const size_t prefetchLimit = 8;
 
 std::unique_ptr<SQLiteIDBCursor> SQLiteIDBCursor::maybeCreate(SQLiteIDBTransaction& transaction, const IDBCursorInfo& info)
 {
-    auto cursor = std::make_unique<SQLiteIDBCursor>(transaction, info);
+    auto cursor = makeUnique<SQLiteIDBCursor>(transaction, info);
 
     if (!cursor->establishStatement())
         return nullptr;
@@ -59,7 +59,7 @@ std::unique_ptr<SQLiteIDBCursor> SQLiteIDBCursor::maybeCreate(SQLiteIDBTransacti
 
 std::unique_ptr<SQLiteIDBCursor> SQLiteIDBCursor::maybeCreateBackingStoreCursor(SQLiteIDBTransaction& transaction, const uint64_t objectStoreID, const uint64_t indexID, const IDBKeyRangeData& range)
 {
-    auto cursor = std::make_unique<SQLiteIDBCursor>(transaction, objectStoreID, indexID, range);
+    auto cursor = makeUnique<SQLiteIDBCursor>(transaction, objectStoreID, indexID, range);
 
     if (!cursor->establishStatement())
         return nullptr;
@@ -101,7 +101,7 @@ SQLiteIDBCursor::~SQLiteIDBCursor()
         m_transaction->closeCursor(*this);
 }
 
-void SQLiteIDBCursor::currentData(IDBGetResult& result)
+void SQLiteIDBCursor::currentData(IDBGetResult& result, const Optional<IDBKeyPath>& keyPath)
 {
     ASSERT(!m_fetchedRecords.isEmpty());
 
@@ -112,7 +112,7 @@ void SQLiteIDBCursor::currentData(IDBGetResult& result)
         return;
     }
 
-    result = { currentRecord.record.key, currentRecord.record.primaryKey, currentRecord.record.value ? *currentRecord.record.value : IDBValue() };
+    result = { currentRecord.record.key, currentRecord.record.primaryKey, currentRecord.record.value ? *currentRecord.record.value : IDBValue(), keyPath};
 }
 
 static String buildIndexStatement(const IDBKeyRangeData& keyRange, IndexedDB::CursorDirection cursorDirection)
@@ -199,7 +199,7 @@ bool SQLiteIDBCursor::createSQLiteStatement(const String& sql)
     ASSERT(!m_currentUpperKey.isNull());
     ASSERT(m_transaction->sqliteTransaction());
 
-    m_statement = std::make_unique<SQLiteStatement>(m_transaction->sqliteTransaction()->database(), sql);
+    m_statement = makeUnique<SQLiteStatement>(m_transaction->sqliteTransaction()->database(), sql);
 
     if (m_statement->prepare() != SQLITE_OK) {
         LOG_ERROR("Could not create cursor statement (prepare/id) - '%s'", m_transaction->sqliteTransaction()->database().lastErrorMsg());
@@ -456,8 +456,7 @@ SQLiteIDBCursor::FetchResult SQLiteIDBCursor::internalFetchNextRecord(SQLiteCurs
         record.record.primaryKey = record.record.key;
 
         Vector<String> blobURLs, blobFilePaths;
-        PAL::SessionID sessionID;
-        auto error = m_transaction->backingStore().getBlobRecordsForObjectStoreRecord(record.rowID, blobURLs, sessionID, blobFilePaths);
+        auto error = m_transaction->backingStore().getBlobRecordsForObjectStoreRecord(record.rowID, blobURLs, blobFilePaths);
         if (!error.isNull()) {
             LOG_ERROR("Unable to fetch blob records from database while advancing cursor");
             markAsErrored(record);
@@ -465,7 +464,7 @@ SQLiteIDBCursor::FetchResult SQLiteIDBCursor::internalFetchNextRecord(SQLiteCurs
         }
 
         if (m_cursorType == IndexedDB::CursorType::KeyAndValue)
-            record.record.value = std::make_unique<IDBValue>(ThreadSafeDataBuffer::create(WTFMove(keyData)), blobURLs, sessionID, blobFilePaths);
+            record.record.value = makeUnique<IDBValue>(ThreadSafeDataBuffer::create(WTFMove(keyData)), blobURLs, blobFilePaths);
     } else {
         if (!deserializeIDBKeyData(keyData.data(), keyData.size(), record.record.primaryKey)) {
             LOG_ERROR("Unable to deserialize value data from database while advancing index cursor");
@@ -487,7 +486,7 @@ SQLiteIDBCursor::FetchResult SQLiteIDBCursor::internalFetchNextRecord(SQLiteCurs
 
         if (result == SQLITE_ROW) {
             objectStoreStatement.getColumnBlobAsVector(0, keyData);
-            record.record.value = std::make_unique<IDBValue>(ThreadSafeDataBuffer::create(WTFMove(keyData)));
+            record.record.value = makeUnique<IDBValue>(ThreadSafeDataBuffer::create(WTFMove(keyData)));
         } else if (result == SQLITE_DONE) {
             // This indicates that the record we're trying to retrieve has been removed from the object store.
             // Skip over it.

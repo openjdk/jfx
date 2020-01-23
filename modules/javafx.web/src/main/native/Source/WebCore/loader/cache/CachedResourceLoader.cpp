@@ -40,8 +40,10 @@
 #include "ChromeClient.h"
 #include "ContentExtensionError.h"
 #include "ContentExtensionRule.h"
+#include "ContentRuleListResults.h"
 #include "ContentSecurityPolicy.h"
 #include "CrossOriginAccessControl.h"
+#include "CustomHeaderFields.h"
 #include "DOMWindow.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
@@ -119,6 +121,7 @@ static CachedResource* createResource(CachedResource::Type type, CachedResourceR
     case CachedResource::Type::FontResource:
         return new CachedFont(WTFMove(request), sessionID, cookieJar);
     case CachedResource::Type::Beacon:
+    case CachedResource::Type::Ping:
     case CachedResource::Type::MediaResource:
     case CachedResource::Type::RawResource:
     case CachedResource::Type::Icon:
@@ -307,6 +310,12 @@ ResourceErrorOr<CachedResourceHandle<CachedRawResource>> CachedResourceLoader::r
     return castCachedResourceTo<CachedRawResource>(requestResource(CachedResource::Type::Beacon, WTFMove(request)));
 }
 
+ResourceErrorOr<CachedResourceHandle<CachedRawResource>> CachedResourceLoader::requestPingResource(CachedResourceRequest&& request)
+{
+    ASSERT(request.options().destination == FetchOptions::Destination::EmptyString);
+    return castCachedResourceTo<CachedRawResource>(requestResource(CachedResource::Type::Ping, WTFMove(request)));
+}
+
 ResourceErrorOr<CachedResourceHandle<CachedRawResource>> CachedResourceLoader::requestMainResource(CachedResourceRequest&& request)
 {
     return castCachedResourceTo<CachedRawResource>(requestResource(CachedResource::Type::MainResource, WTFMove(request)));
@@ -340,6 +349,7 @@ static MixedContentChecker::ContentType contentTypeFromResourceType(CachedResour
 #endif
 
     case CachedResource::Type::Beacon:
+    case CachedResource::Type::Ping:
     case CachedResource::Type::RawResource:
     case CachedResource::Type::Icon:
     case CachedResource::Type::SVGDocumentResource:
@@ -411,6 +421,7 @@ bool CachedResourceLoader::checkInsecureContent(CachedResource::Type type, const
     }
     case CachedResource::Type::MainResource:
     case CachedResource::Type::Beacon:
+    case CachedResource::Type::Ping:
     case CachedResource::Type::LinkPrefetch:
         // Prefetch cannot affect the current document.
 #if ENABLE(APPLICATION_MANIFEST)
@@ -462,6 +473,7 @@ bool CachedResourceLoader::allowedByContentSecurityPolicy(CachedResource::Type t
             return false;
         break;
     case CachedResource::Type::Beacon:
+    case CachedResource::Type::Ping:
     case CachedResource::Type::RawResource:
         return true;
 #if ENABLE(APPLICATION_MANIFEST)
@@ -500,7 +512,7 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const URL& url,
         return false;
     }
 
-    if (options.mode == FetchOptions::Mode::NoCors && options.redirect != FetchOptions::Redirect::Follow) {
+    if (options.mode == FetchOptions::Mode::NoCors && options.redirect != FetchOptions::Redirect::Follow && type != CachedResource::Type::Ping) {
         ASSERT(type != CachedResource::Type::MainResource);
         frame()->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, "No-Cors mode requires follow redirect mode"_s);
         return false;
@@ -577,7 +589,7 @@ bool CachedResourceLoader::canRequestInContentDispositionAttachmentSandbox(Cache
         }
         return true;
     case CachedResource::Type::CSSStyleSheet:
-        document = m_document;
+        document = m_document.get();
         break;
     default:
         return true;
@@ -638,7 +650,7 @@ bool CachedResourceLoader::shouldUpdateCachedResourceWithCurrentRequest(const Ca
         break;
     }
 
-    if (resource.options().mode != request.options().mode || !originsMatch(request.origin(), resource.origin()))
+    if (resource.options().mode != request.options().mode || !serializedOriginsMatch(request.origin(), resource.origin()))
         return true;
 
     if (resource.options().redirect != request.options().redirect && resource.hasRedirections())
@@ -668,7 +680,7 @@ static inline bool isResourceSuitableForDirectReuse(const CachedResource& resour
     if (resource.type() == CachedResource::Type::RawResource || resource.type() == CachedResource::Type::MediaResource)
         return false;
 
-    if (resource.type() == CachedResource::Type::Beacon)
+    if (resource.type() == CachedResource::Type::Beacon || resource.type() == CachedResource::Type::Ping)
         return false;
 
     return true;
@@ -761,6 +773,7 @@ static FetchOptions::Destination destinationForType(CachedResource::Type type)
         return FetchOptions::Destination::Manifest;
 #endif
     case CachedResource::Type::Beacon:
+    case CachedResource::Type::Ping:
     case CachedResource::Type::LinkPrefetch:
     case CachedResource::Type::RawResource:
     case CachedResource::Type::MediaResource:
@@ -778,7 +791,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     // Entry point to https://fetch.spec.whatwg.org/#main-fetch.
     std::unique_ptr<ResourceRequest> originalRequest;
     if (CachedResource::shouldUsePingLoad(type) || request.options().destination == FetchOptions::Destination::EmptyString) {
-        originalRequest = std::make_unique<ResourceRequest>(request.resourceRequest());
+        originalRequest = makeUnique<ResourceRequest>(request.resourceRequest());
         originalRequest->clearHTTPReferrer();
         originalRequest->clearHTTPOrigin();
     }
@@ -808,20 +821,22 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
     if (frame() && frame()->page() && m_documentLoader) {
         const auto& resourceRequest = request.resourceRequest();
         auto* page = frame()->page();
-        auto blockedStatus = page->userContentProvider().processContentExtensionRulesForLoad(resourceRequest.url(), toResourceType(type), *m_documentLoader);
-        request.applyBlockedStatus(blockedStatus, page);
-        if (blockedStatus.blockedLoad) {
+        auto results = page->userContentProvider().processContentRuleListsForLoad(resourceRequest.url(), ContentExtensions::toResourceType(type), *m_documentLoader);
+        bool blockedLoad = results.summary.blockedLoad;
+        bool madeHTTPS = results.summary.madeHTTPS;
+        request.applyResults(WTFMove(results), page);
+        if (blockedLoad) {
             RELEASE_LOG_IF_ALLOWED("requestResource: Resource blocked by content blocker (frame = %p)", frame());
             if (type == CachedResource::Type::MainResource) {
                 CachedResourceHandle<CachedResource> resource = createResource(type, WTFMove(request), page->sessionID(), &page->cookieJar());
                 ASSERT(resource);
                 resource->error(CachedResource::Status::LoadError);
                 resource->setResourceError(ResourceError(ContentExtensions::WebKitContentBlockerDomain, 0, resourceRequest.url(), WEB_UI_STRING("The URL was blocked by a content blocker", "WebKitErrorBlockedByContentBlocker description")));
-                return WTFMove(resource);
+                return resource;
             }
             return makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, url, "Resource blocked by content blocker"_s, ResourceError::Type::AccessControl });
         }
-        if (blockedStatus.madeHTTPS
+        if (madeHTTPS
             && type == CachedResource::Type::MainResource
             && m_documentLoader->isLoadingMainResource()) {
             // This is to make sure the correct 'new' URL shows in the location bar.
@@ -844,9 +859,11 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
             sameOriginRequest = document()->topDocument().securityOrigin().isSameSchemeHostPort(requestedOrigin.get())
                 && document()->securityOrigin().isSameSchemeHostPort(requestedOrigin.get());
         }
-        if (sameOriginRequest) {
-            for (auto& field : m_documentLoader->customHeaderFields())
-                request.resourceRequest().setHTTPHeaderField(field.name(), field.value());
+        for (auto& fields : m_documentLoader->customHeaderFields()) {
+            if (sameOriginRequest || fields.thirdPartyDomainsMatch(url)) {
+                for (auto& field : fields.fields)
+                    request.resourceRequest().setHTTPHeaderField(field.name(), field.value());
+            }
         }
     }
 
@@ -956,7 +973,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::requ
 
     ASSERT(resource->url() == url.string());
     m_documentResources.set(resource->url(), resource);
-    return WTFMove(resource);
+    return resource;
 }
 
 void CachedResourceLoader::documentDidFinishLoadEvent()
@@ -1300,7 +1317,7 @@ CachePolicy CachedResourceLoader::cachePolicy(CachedResource::Type type, const U
 void CachedResourceLoader::loadDone(LoadCompletionType type, bool shouldPerformPostLoadActions)
 {
     RefPtr<DocumentLoader> protectDocumentLoader(m_documentLoader);
-    RefPtr<Document> protectDocument(m_document);
+    RefPtr<Document> protectDocument(m_document.get());
 
     ASSERT(shouldPerformPostLoadActions || type == LoadCompletionType::Cancel);
 
@@ -1374,7 +1391,7 @@ ResourceErrorOr<CachedResourceHandle<CachedResource>> CachedResourceLoader::prel
         resourceValue->increasePreloadCount();
 
         if (!m_preloads)
-            m_preloads = std::make_unique<ListHashSet<CachedResource*>>();
+            m_preloads = makeUnique<ListHashSet<CachedResource*>>();
         m_preloads->add(resourceValue.get());
     }
     return resource;
@@ -1416,7 +1433,7 @@ void CachedResourceLoader::clearPreloads(ClearPreloadsMode mode)
         ASSERT(resource);
         if (mode == ClearPreloadsMode::ClearSpeculativePreloads && resource->isLinkPreload()) {
             if (!remainingLinkPreloads)
-                remainingLinkPreloads = std::make_unique<ListHashSet<CachedResource*>>();
+                remainingLinkPreloads = makeUnique<ListHashSet<CachedResource*>>();
             remainingLinkPreloads->add(resource);
             continue;
         }

@@ -156,7 +156,7 @@ bool HTMLAttachmentElement::hasEnclosingImage() const
     return is<HTMLImageElement>(shadowHost());
 }
 
-void HTMLAttachmentElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLAttachmentElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == progressAttr || name == subtitleAttr || name == titleAttr || name == typeAttr) {
         if (auto* renderer = this->renderer())
@@ -246,7 +246,7 @@ void HTMLAttachmentElement::updateEnclosingImageWithData(const String& contentTy
     if (!mimeTypeIsSuitableForInlineImageAttachment(mimeType))
         return;
 
-    hostElement->setAttributeWithoutSynchronization(HTMLNames::srcAttr, DOMURL::createObjectURL(document(), Blob::create(WTFMove(data), mimeType)));
+    hostElement->setAttributeWithoutSynchronization(HTMLNames::srcAttr, DOMURL::createObjectURL(document(), Blob::create(document().sessionID(), WTFMove(data), mimeType)));
 }
 
 } // namespace WebCore

@@ -34,20 +34,23 @@
 
 namespace PAL {
 
-static char * const loggingEnvironmentVariable = "WebCoreLogging";
-
 String logLevelString()
 {
+#if !LOG_DISABLED
+    static constexpr const char* loggingEnvironmentVariable = "WebCoreLogging";
     DWORD length = GetEnvironmentVariableA(loggingEnvironmentVariable, 0, 0);
     if (!length)
         return emptyString();
 
-    auto buffer = std::make_unique<char[]>(length);
+    Vector<char> buffer(length);
 
-    if (!GetEnvironmentVariableA(loggingEnvironmentVariable, buffer.get(), length))
+    if (!GetEnvironmentVariableA(loggingEnvironmentVariable, buffer.data(), length))
         return emptyString();
 
-    return String(buffer.get());
+    return String(buffer.data());
+#else
+    return String();
+#endif
 }
 
 }

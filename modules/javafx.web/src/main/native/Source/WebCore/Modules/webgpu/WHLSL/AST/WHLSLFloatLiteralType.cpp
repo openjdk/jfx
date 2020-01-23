@@ -38,17 +38,12 @@ namespace WHLSL {
 
 namespace AST {
 
-FloatLiteralType::FloatLiteralType(Lexer::Token&& origin, float value)
-    : m_value(value)
-    , m_preferredType(makeUniqueRef<TypeReference>(WTFMove(origin), "float"_str, TypeArguments()))
+FloatLiteralType::FloatLiteralType(CodeLocation location, float value)
+    : ResolvableType(Kind::FloatLiteral)
+    , m_value(value)
+    , m_preferredType(TypeReference::create(location, "float"_str, TypeArguments()))
 {
 }
-
-FloatLiteralType::~FloatLiteralType() = default;
-
-FloatLiteralType::FloatLiteralType(FloatLiteralType&&) = default;
-
-FloatLiteralType& FloatLiteralType::operator=(FloatLiteralType&&) = default;
 
 bool FloatLiteralType::canResolve(const Type& type) const
 {
@@ -71,6 +66,16 @@ unsigned FloatLiteralType::conversionCost(const UnnamedType& unnamedType) const
         return 0;
     return 1;
 }
+
+FloatLiteralType FloatLiteralType::clone() const
+{
+    FloatLiteralType result(m_preferredType->codeLocation(), m_value);
+    if (auto* type = maybeResolvedType())
+        result.resolve(const_cast<AST::UnnamedType&>(*type));
+    result.m_preferredType = m_preferredType.copyRef();
+    return result;
+}
+
 
 } // namespace AST
 

@@ -31,35 +31,17 @@
 #include "DocumentLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(DOMApplicationCache);
 
 DOMApplicationCache::DOMApplicationCache(DOMWindow& window)
     : DOMWindowProperty(&window)
 {
     if (auto* host = applicationCacheHost())
         host->setDOMApplicationCache(this);
-}
-
-void DOMApplicationCache::suspendForPageCache()
-{
-    if (auto* host = applicationCacheHost())
-        host->setDOMApplicationCache(nullptr);
-    DOMWindowProperty::suspendForPageCache();
-}
-
-void DOMApplicationCache::resumeFromPageCache()
-{
-    DOMWindowProperty::resumeFromPageCache();
-    if (auto* host = applicationCacheHost())
-        host->setDOMApplicationCache(this);
-}
-
-void DOMApplicationCache::willDestroyGlobalObjectInFrame()
-{
-    if (auto* host = applicationCacheHost())
-        host->setDOMApplicationCache(nullptr);
-    DOMWindowProperty::willDestroyGlobalObjectInFrame();
 }
 
 ApplicationCacheHost* DOMApplicationCache::applicationCacheHost() const

@@ -26,7 +26,7 @@
 #include "config.h"
 
 #include "NotImplemented.h"
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 #include "FontCache.h"
 #include "FontRanges.h"
 #include "FontPlatformData.h"
@@ -45,7 +45,7 @@ RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, cons
 }
 
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family, const FontFeatureSettings*, const FontVariantSettings*, FontSelectionSpecifiedCapabilities) {
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontFeatureSettings*, const FontVariantSettings*, FontSelectionSpecifiedCapabilities) {
 
     return FontPlatformData::create(fontDescription, family);
 }
@@ -54,7 +54,7 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
 {
     // We want to return a fallback font here, otherwise the logic preventing FontConfig
     // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
-    static AtomicString timesStr("serif");
+    static AtomString timesStr("serif");
     return *fontForFamily(fontDescription, timesStr);
 }
 
@@ -66,13 +66,18 @@ Vector<String> FontCache::systemFontFamilies()
     return Vector<String>();
 }
 
-const AtomicString& FontCache::platformAlternateFamilyName(const AtomicString&)
+bool FontCache::isSystemFontForbiddenForEditing(const String&)
+{
+    return false;
+}
+
+const AtomString& FontCache::platformAlternateFamilyName(const AtomString&)
 {
     notImplemented();
     return nullAtom();
 }
 
-Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomicString&, AllowUserInstalledFonts)
+Vector<FontSelectionCapabilities> FontCache::getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts)
 {
     notImplemented();
     return { };

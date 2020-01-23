@@ -28,6 +28,7 @@
 #include "Path.h"
 #include "FloatRect.h"
 #include "StrokeStyleApplier.h"
+#include "PlatformContextJava.h"
 #include "PlatformJavaClasses.h"
 #include "NotImplemented.h"
 #include "GraphicsContextJava.h"

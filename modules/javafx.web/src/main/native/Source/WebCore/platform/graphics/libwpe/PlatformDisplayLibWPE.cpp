@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PlatformDisplayLibWPE.h"
 
-#if USE(LIBWPE)
+#if USE(WPE_RENDERER)
 
 #include "GLContextEGL.h"
 
@@ -36,6 +36,11 @@
 #define __GBM__ 1
 #include "EpoxyEGL.h"
 #else
+#if PLATFORM(WAYLAND)
+// These includes need to be in this order because wayland-egl.h defines WL_EGL_PLATFORM
+// and eglplatform.h, included by egl.h, checks that to decide whether it's Wayland platform.
+#include <wayland-egl.h>
+#endif
 #include <EGL/egl.h>
 #endif
 
@@ -51,6 +56,9 @@ std::unique_ptr<PlatformDisplayLibWPE> PlatformDisplayLibWPE::create()
 PlatformDisplayLibWPE::PlatformDisplayLibWPE()
     : PlatformDisplay(NativeDisplayOwned::No)
 {
+#if PLATFORM(GTK)
+    PlatformDisplay::setSharedDisplayForCompositing(*this);
+#endif
 }
 
 PlatformDisplayLibWPE::~PlatformDisplayLibWPE()
@@ -58,19 +66,20 @@ PlatformDisplayLibWPE::~PlatformDisplayLibWPE()
     wpe_renderer_backend_egl_destroy(m_backend);
 }
 
-void PlatformDisplayLibWPE::initialize(int hostFd)
+bool PlatformDisplayLibWPE::initialize(int hostFd)
 {
     m_backend = wpe_renderer_backend_egl_create(hostFd);
 
     m_eglDisplay = eglGetDisplay(wpe_renderer_backend_egl_get_native_display(m_backend));
     if (m_eglDisplay == EGL_NO_DISPLAY) {
         WTFLogAlways("PlatformDisplayLibWPE: could not create the EGL display: %s.", GLContextEGL::lastErrorString());
-        return;
+        return false;
     }
 
     PlatformDisplay::initializeEGLDisplay();
+    return m_eglDisplay != EGL_NO_DISPLAY;
 }
 
 } // namespace WebCore
 
-#endif // USE(LIBWPE)
+#endif // USE(WPE_RENDERER)

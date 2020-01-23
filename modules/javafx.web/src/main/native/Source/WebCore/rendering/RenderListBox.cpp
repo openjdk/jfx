@@ -645,14 +645,9 @@ void RenderListBox::valueChanged(unsigned listIndex)
     selectElement().dispatchFormControlChangeEvent();
 }
 
-int RenderListBox::scrollSize(ScrollbarOrientation orientation) const
+ScrollPosition RenderListBox::scrollPosition() const
 {
-    return ((orientation == VerticalScrollbar) && m_vBar) ? (m_vBar->totalSize() - m_vBar->visibleSize()) : 0;
-}
-
-int RenderListBox::scrollOffset(ScrollbarOrientation) const
-{
-    return m_indexOffset;
+    return { 0, m_indexOffset };
 }
 
 ScrollPosition RenderListBox::minimumScrollPosition() const
@@ -749,7 +744,7 @@ int RenderListBox::scrollLeft() const
     return 0;
 }
 
-void RenderListBox::setScrollLeft(int, ScrollClamping)
+void RenderListBox::setScrollLeft(int, ScrollType, ScrollClamping)
 {
 }
 
@@ -766,7 +761,7 @@ static void setupWheelEventTestTrigger(RenderListBox& renderer)
     renderer.scrollAnimator().setWheelEventTestTrigger(renderer.page().testTrigger());
 }
 
-void RenderListBox::setScrollTop(int newTop, ScrollClamping)
+void RenderListBox::setScrollTop(int newTop, ScrollType, ScrollClamping)
 {
     // Determine an index and scroll to it.
     int index = newTop / itemHeight();
@@ -804,8 +799,6 @@ LayoutRect RenderListBox::controlClipRect(const LayoutPoint& additionalOffset) c
     // Clip against the padding box, to give <option>s and overlay scrollbar some extra space
     // to get painted.
     LayoutRect clipRect = paddingBoxRect();
-    if (shouldPlaceBlockDirectionScrollbarOnLeft())
-        clipRect.move(m_vBar->occupiedWidth(), 0);
     clipRect.moveBy(additionalOffset);
     return clipRect;
 }
@@ -953,8 +946,6 @@ void RenderListBox::setHasVerticalScrollbar(bool hasScrollbar)
 
     if (m_vBar)
         m_vBar->styleChanged();
-
-    document().invalidateScrollbarDependentRegions();
 }
 
 bool RenderListBox::scrolledToTop() const

@@ -28,7 +28,7 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -37,28 +37,34 @@ namespace WHLSL {
 
 namespace AST {
 
-class AssignmentExpression : public Expression {
+class AssignmentExpression final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    AssignmentExpression(Lexer::Token&& origin, UniqueRef<Expression>&& left, UniqueRef<Expression>&& right)
-        : Expression(WTFMove(origin))
+    AssignmentExpression(CodeLocation location, UniqueRef<Expression>&& left, UniqueRef<Expression>&& right)
+        : Expression(location, Kind::Assignment)
         , m_left(WTFMove(left))
         , m_right(WTFMove(right))
     {
+#if CPU(ADDRESS32)
+        UNUSED_PARAM(m_pad);
+#endif
     }
 
-    virtual ~AssignmentExpression() = default;
+    ~AssignmentExpression() = default;
 
     AssignmentExpression(const AssignmentExpression&) = delete;
     AssignmentExpression(AssignmentExpression&&) = default;
 
-    bool isAssignmentExpression() const override { return true; }
-
     Expression& left() { return m_left; }
     Expression& right() { return m_right; }
+    UniqueRef<Expression> takeRight() { return WTFMove(m_right); }
 
 private:
     UniqueRef<Expression> m_left;
     UniqueRef<Expression> m_right;
+#if CPU(ADDRESS32)
+    char m_pad[1];
+#endif
 };
 
 } // namespace AST
@@ -66,6 +72,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(AssignmentExpression)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(AssignmentExpression, isAssignmentExpression())
 

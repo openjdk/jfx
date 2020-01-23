@@ -46,7 +46,6 @@
 #include "WebKitLegacy/Storage/WebDatabaseProvider.h"
 #include "WebKitVersion.h" //generated
 #include "WebPageConfig.h"
-#include "WebKitLogging.h"
 #include <WebCore/WebCoreTestSupport.h>
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/InitializeThreading.h>
@@ -455,10 +454,10 @@ void WebPage::notifyFlushRequired(const GraphicsLayer*)
 }
 
 void WebPage::paintContents(const GraphicsLayer*,
-                            GraphicsContext& context,
-                            GraphicsLayerPaintingPhase,
-                            const FloatRect& inClip,
-                            GraphicsLayerPaintBehavior)
+                   GraphicsContext& context,
+                   OptionSet<GraphicsLayerPaintingPhase>,
+                   const FloatRect& inClip,
+                   GraphicsLayerPaintBehavior)
 {
     context.save();
     context.clip(inClip);
@@ -803,26 +802,21 @@ public:
 private:
     String m_localStorageDatabasePath;
 
-    Ref<StorageNamespace> createSessionStorageNamespace(Page&, unsigned quota) override
+    Ref<StorageNamespace> createSessionStorageNamespace(Page& page, unsigned quota) override
     {
-        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota);
+        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota, page.sessionID());
     }
 
-    Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota) override
+    Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota, PAL::SessionID sessionID) override
     {
-        return WebKit::StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota);
+        return WebKit::StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota, sessionID);
     }
 
-    Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned quota) override
+    Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned quota, PAL::SessionID sessionID) override
     {
         // FIXME: A smarter implementation would create a special namespace type instead of just piggy-backing off
         // SessionStorageNamespace here.
-        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota);
-    }
-
-    Ref<StorageNamespace> createEphemeralLocalStorageNamespace(Page&, unsigned quota) override
-    {
-        return WebKit::StorageNamespaceImpl::createEphemeralLocalStorageNamespace(quota);
+        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota, sessionID);
     }
 };
 
@@ -1319,6 +1313,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setJavaScriptCanAccessClipboard(nativePropertyValue.toInt() != 0);
     } else if (nativePropertyName == "enableColorFilter") {
         settings.setColorFilterEnabled(nativePropertyValue == "true");
+    } else if (nativePropertyName == "enableKeygenElement") {
+        // removed from Chrome, Firefox, and the HTML specification in 2017.
+        // https://trac.webkit.org/changeset/248960/webkit
+        RuntimeEnabledFeatures::sharedFeatures().setKeygenElementEnabled(nativePropertyValue == "true");
     } else if (nativePropertyName == "experimental:WebAnimationsCSSIntegrationEnabled") {
         RuntimeEnabledFeatures::sharedFeatures().setWebAnimationsCSSIntegrationEnabled(nativePropertyValue == "true");
     } else if (nativePropertyName == "enableIntersectionObserver") {

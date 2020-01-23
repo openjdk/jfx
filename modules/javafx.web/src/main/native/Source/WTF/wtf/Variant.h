@@ -1440,6 +1440,7 @@ class Variant:
         private __variant_base<
     Variant<_Types...>,__all_trivially_destructible<_Types...>::__value>
 {
+    WTF_MAKE_FAST_ALLOCATED;
     typedef __variant_base<Variant<_Types...>,__all_trivially_destructible<_Types...>::__value> __base_type;
     friend __base_type;
     friend struct __copy_construct_op_table<Variant>;
@@ -1725,6 +1726,7 @@ public:
 template<>
 class Variant<>{
 public:
+    WTF_MAKE_FAST_ALLOCATED;
     Variant()=delete;
 
     constexpr bool valueless_by_exception() const __NOEXCEPT{
@@ -1868,13 +1870,13 @@ struct __visitor_table{
         return __visitor(get<_Type>(__v));
     }
 
-    static constexpr __func_type __trampoline[sizeof...(_Types)]={
-        &__trampoline_func<_Types>...
-    };
+    static const __func_type __trampoline[sizeof...(_Types)];
 };
 
 template<typename _Visitor,typename ... _Types>
-constexpr typename __visitor_table<_Visitor,_Types...>::__func_type __visitor_table<_Visitor,_Types...>::__trampoline[sizeof...(_Types)];
+const typename __visitor_table<_Visitor,_Types...>::__func_type __visitor_table<_Visitor,_Types...>::__trampoline[sizeof...(_Types)]={
+        &__trampoline_func<_Types>...
+    };
 
 template<typename _Visitor,typename ... _Types>
 constexpr typename __visitor_return_type<_Visitor,_Types...>::__type
@@ -2044,9 +2046,9 @@ struct __hash_visitor{
 // -- WebKit Additions --
 
 template<class V, class... F>
-auto switchOn(V&& v, F&&... f) -> decltype(visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v)))
+auto switchOn(V&& v, F&&... f) -> decltype(WTF::visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v)))
 {
-    return visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v));
+    return WTF::visit(makeVisitor(std::forward<F>(f)...), std::forward<V>(v));
 }
 
 } // namespace WTF

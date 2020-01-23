@@ -28,6 +28,7 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLResolvableType.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,32 +40,33 @@ namespace AST {
 
 class TypeReference;
 
-class FloatLiteralType : public ResolvableType {
+class FloatLiteralType final : public ResolvableType {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    FloatLiteralType(Lexer::Token&& origin, float value);
+    FloatLiteralType(CodeLocation, float value);
 
-    virtual ~FloatLiteralType();
+    ~FloatLiteralType() = default;
 
     FloatLiteralType(const FloatLiteralType&) = delete;
-    FloatLiteralType(FloatLiteralType&&);
+    FloatLiteralType(FloatLiteralType&&) = default;
 
     FloatLiteralType& operator=(const FloatLiteralType&) = delete;
-    FloatLiteralType& operator=(FloatLiteralType&&);
-
-    bool isFloatLiteralType() const override { return true; }
+    FloatLiteralType& operator=(FloatLiteralType&&) = default;
 
     float value() const { return m_value; }
 
     TypeReference& preferredType() { return m_preferredType; }
 
-    bool canResolve(const Type&) const override;
-    unsigned conversionCost(const UnnamedType&) const override;
+    bool canResolve(const Type&) const;
+    unsigned conversionCost(const UnnamedType&) const;
+
+    FloatLiteralType clone() const;
 
 private:
     float m_value;
     // This is a unique_ptr to resolve a circular dependency between
     // ConstantExpression -> LiteralType -> TypeReference -> TypeArguments -> ConstantExpression
-    UniqueRef<TypeReference> m_preferredType;
+    Ref<TypeReference> m_preferredType;
 };
 
 } // namespace AST
@@ -73,6 +75,8 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_WHLSL_RESOLVABLE_TYPE(FloatLiteralType, isFloatLiteralType())
+DEFINE_DEFAULT_DELETE(FloatLiteralType)
+
+SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(FloatLiteralType, isFloatLiteralType())
 
 #endif

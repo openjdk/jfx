@@ -28,7 +28,7 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -37,20 +37,19 @@ namespace WHLSL {
 
 namespace AST {
 
-class LogicalNotExpression : public Expression {
+class LogicalNotExpression final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    LogicalNotExpression(Lexer::Token&& origin, UniqueRef<Expression>&& operand)
-        : Expression(WTFMove(origin))
+    LogicalNotExpression(CodeLocation location, UniqueRef<Expression>&& operand)
+        : Expression(location, Kind::LogicalNot)
         , m_operand(WTFMove(operand))
     {
     }
 
-    virtual ~LogicalNotExpression() = default;
+    ~LogicalNotExpression() = default;
 
     LogicalNotExpression(const LogicalNotExpression&) = delete;
     LogicalNotExpression(LogicalNotExpression&&) = default;
-
-    bool isLogicalNotExpression() const override { return true; }
 
     Expression& operand() { return m_operand; }
 
@@ -63,6 +62,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(LogicalNotExpression)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(LogicalNotExpression, isLogicalNotExpression())
 

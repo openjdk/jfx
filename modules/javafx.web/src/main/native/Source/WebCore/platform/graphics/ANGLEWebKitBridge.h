@@ -23,8 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ANGLEWebKitBridge_h
-#define ANGLEWebKitBridge_h
+#pragma once
+
+#if ENABLE(WEBGL)
 
 #if USE(LIBEPOXY)
 // libepoxy headers have to be included before <ANGLE/ShaderLang.h> in order to avoid
@@ -39,8 +40,12 @@
 
 #if USE(OPENGL_ES)
 #import <OpenGLES/ES2/glext.h>
-#else
+#elif USE(OPENGL)
 #include <OpenGL/gl.h>
+#elif USE(ANGLE)
+#include <ANGLE/gl2.h>
+#else
+#error Unsupported configuration
 #endif
 
 #elif PLATFORM(WIN)
@@ -55,6 +60,11 @@
 #else
 #include "OpenGLShims.h"
 #endif
+
+// FIXME
+#define GL_VERTEX_SHADER 0x8B31
+#define GL_FRAGMENT_SHADER 0x8B30
+//
 
 namespace WebCore {
 

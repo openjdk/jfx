@@ -42,6 +42,7 @@ SocketStreamHandle::SocketStreamHandle(const URL& url, SocketStreamHandleClient&
     , m_client(client)
     , m_state(Connecting)
 {
+    ASSERT(isMainThread());
 }
 
 SocketStreamHandle::SocketStreamState SocketStreamHandle::state() const
@@ -60,7 +61,7 @@ void SocketStreamHandle::sendHandshake(CString&& handshake, Optional<CookieReque
 {
     if (m_state == Connecting || m_state == Closing)
         return completionHandler(false, false);
-    platformSendHandshake(reinterpret_cast<const uint8_t*>(handshake.data()), handshake.length(), headerFieldProxy, WTFMove(completionHandler));
+    platformSendHandshake(reinterpret_cast<const uint8_t*>(handshake.data()), handshake.length(), WTFMove(headerFieldProxy), WTFMove(completionHandler));
 }
 
 void SocketStreamHandle::close()

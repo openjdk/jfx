@@ -34,6 +34,7 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "DOMWindow.h"
+#include "Page.h"
 
 namespace WebCore {
 
@@ -54,7 +55,7 @@ DOMWindowSpeechSynthesis* DOMWindowSpeechSynthesis::from(DOMWindow* window)
 {
     DOMWindowSpeechSynthesis* supplement = static_cast<DOMWindowSpeechSynthesis*>(Supplement<DOMWindow>::from(window, supplementName()));
     if (!supplement) {
-        auto newSupplement = std::make_unique<DOMWindowSpeechSynthesis>(window);
+        auto newSupplement = makeUnique<DOMWindowSpeechSynthesis>(window);
         supplement = newSupplement.get();
         provideTo(window, supplementName(), WTFMove(newSupplement));
     }
@@ -70,7 +71,7 @@ SpeechSynthesis* DOMWindowSpeechSynthesis::speechSynthesis(DOMWindow& window)
 SpeechSynthesis* DOMWindowSpeechSynthesis::speechSynthesis()
 {
     if (!m_speechSynthesis && frame())
-        m_speechSynthesis = SpeechSynthesis::create();
+        m_speechSynthesis = SpeechSynthesis::create(makeWeakPtr(frame()->page()->speechSynthesisClient()));
     return m_speechSynthesis.get();
 }
 

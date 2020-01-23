@@ -57,11 +57,13 @@ public:
 
     // Attributes.
     JSC::JSValue evaluate(JSC::ExecState*) const;
+    JSC::JSValue savedResultAlias(JSC::ExecState*) const;
 
     // Functions.
     JSC::JSValue evaluateWithScopeExtension(JSC::ExecState*);
     JSC::JSValue internalConstructorName(JSC::ExecState*);
     JSC::JSValue isHTMLAllCollection(JSC::ExecState*);
+    JSC::JSValue isPromiseRejectedWithNativeGetterTypeError(JSC::ExecState*);
     JSC::JSValue subtype(JSC::ExecState*);
     JSC::JSValue functionDetails(JSC::ExecState*);
     JSC::JSValue getInternalProperties(JSC::ExecState*);
@@ -71,7 +73,8 @@ public:
     JSC::JSValue weakSetSize(JSC::ExecState*);
     JSC::JSValue weakSetEntries(JSC::ExecState*);
     JSC::JSValue iteratorEntries(JSC::ExecState*);
-    JSC::JSValue queryObjects(JSC::ExecState*);
+    JSC::JSValue queryInstances(JSC::ExecState*);
+    JSC::JSValue queryHolders(JSC::ExecState*);
 
 protected:
     void finishCreation(JSC::VM&);

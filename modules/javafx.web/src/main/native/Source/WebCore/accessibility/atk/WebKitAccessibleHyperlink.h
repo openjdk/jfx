@@ -19,7 +19,7 @@
 
 #pragma once
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include <atk/atk.h>
 
@@ -32,9 +32,9 @@ G_BEGIN_DECLS
 #define WEBKIT_IS_ACCESSIBLE_HYPERLINK_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), WEBKIT_TYPE_ACCESSIBLE_HYPERLINK))
 #define WEBKIT_ACCESSIBLE_HYPERLINK_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), WEBKIT_TYPE_ACCESSIBLE_HYPERLINK, WebKitAccessibleHyperlinkClass))
 
-typedef struct _WebKitAccessibleHyperlink                WebKitAccessibleHyperlink;
-typedef struct _WebKitAccessibleHyperlinkClass           WebKitAccessibleHyperlinkClass;
-typedef struct _WebKitAccessibleHyperlinkPrivate         WebKitAccessibleHyperlinkPrivate;
+typedef struct _WebKitAccessibleHyperlink        WebKitAccessibleHyperlink;
+typedef struct _WebKitAccessibleHyperlinkClass   WebKitAccessibleHyperlinkClass;
+typedef struct _WebKitAccessibleHyperlinkPrivate WebKitAccessibleHyperlinkPrivate;
 
 struct _WebKitAccessibleHyperlink {
     AtkHyperlink parent;
@@ -52,4 +52,4 @@ WebKitAccessibleHyperlink* webkitAccessibleHyperlinkGetOrCreate(AtkHyperlinkImpl
 
 G_END_DECLS
 
-#endif // HAVE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY)

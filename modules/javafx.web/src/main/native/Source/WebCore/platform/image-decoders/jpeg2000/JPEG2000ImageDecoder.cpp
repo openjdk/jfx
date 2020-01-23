@@ -380,7 +380,7 @@ void JPEG2000ImageDecoder::decode(bool onlySize, bool allDataReceived)
     }
 
     struct Reader {
-        SharedBuffer& data;
+        SharedBuffer::DataSegment& data;
         size_t offset;
     } reader = { *m_data, 0 };
 
@@ -479,7 +479,7 @@ void JPEG2000ImageDecoder::decode(bool onlySize, bool allDataReceived)
     }
 
     auto& buffer = m_frameBufferCache[0];
-    if (!buffer.initialize(scaledSize(), m_premultiplyAlpha)) {
+    if (!buffer.initialize(size(), m_premultiplyAlpha)) {
         setFailed();
         return;
     }

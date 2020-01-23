@@ -28,7 +28,7 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 
@@ -38,20 +38,19 @@ namespace WHLSL {
 
 namespace AST {
 
-class CommaExpression : public Expression {
+class CommaExpression final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    CommaExpression(Lexer::Token&& origin, Vector<UniqueRef<Expression>>&& list)
-        : Expression(WTFMove(origin))
+    CommaExpression(CodeLocation location, Vector<UniqueRef<Expression>>&& list)
+        : Expression(location, Kind::Comma)
         , m_list(WTFMove(list))
     {
     }
 
-    virtual ~CommaExpression() = default;
+    ~CommaExpression() = default;
 
     CommaExpression(const CommaExpression&) = delete;
     CommaExpression(CommaExpression&&) = default;
-
-    bool isCommaExpression() const override { return true; }
 
     Vector<UniqueRef<Expression>>& list() { return m_list; }
 
@@ -64,6 +63,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(CommaExpression)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(CommaExpression, isCommaExpression())
 

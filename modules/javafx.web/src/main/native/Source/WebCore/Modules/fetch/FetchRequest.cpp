@@ -33,6 +33,7 @@
 #include "HTTPParsers.h"
 #include "JSAbortSignal.h"
 #include "Logging.h"
+#include "Quirks.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
@@ -144,25 +145,12 @@ ExceptionOr<void> FetchRequest::initializeOptions(const Init& init)
     return { };
 }
 
-static inline bool needsSignalQuirk(ScriptExecutionContext& context)
-{
-    if (!is<Document>(context))
-        return false;
-
-    auto& document = downcast<Document>(context);
-    if (!document.settings().needsSiteSpecificQuirks())
-        return false;
-
-    auto host = document.topDocument().url().host();
-    return equalLettersIgnoringASCIICase(host, "leetcode.com") || equalLettersIgnoringASCIICase(host, "www.thrivepatientportal.com");
-}
-
 static inline Optional<Exception> processInvalidSignal(ScriptExecutionContext& context)
 {
-    ASCIILiteral message { "FetchRequestInit.signal should be undefined, null or an AbortSignal object."_s };
+    ASCIILiteral message { "FetchRequestInit.signal should be undefined, null or an AbortSignal object. This will throw in a future release."_s };
     context.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, message);
 
-    if (needsSignalQuirk(context))
+    if (is<Document>(context) && downcast<Document>(context).quirks().shouldIgnoreInvalidSignal())
         return { };
 
     RELEASE_LOG_ERROR(ResourceLoading, "FetchRequestInit.signal should be undefined, null or an AbortSignal object.");
@@ -215,9 +203,6 @@ ExceptionOr<void> FetchRequest::initializeWith(const String& url, Init&& init)
 
 ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
 {
-    if (input.isDisturbedOrLocked())
-        return Exception {TypeError, "Request input is disturbed or locked."_s };
-
     m_request = input.m_request;
     m_options = input.m_options;
     m_referrer = input.m_referrer;
@@ -237,25 +222,13 @@ ExceptionOr<void> FetchRequest::initializeWith(FetchRequest& input, Init&& init)
     } else
         m_signal->follow(input.m_signal.get());
 
-    if (init.headers) {
-        auto fillResult = m_headers->fill(*init.headers);
-        if (fillResult.hasException())
-            return fillResult.releaseException();
-    } else {
-        auto fillResult = m_headers->fill(input.headers());
-        if (fillResult.hasException())
-            return fillResult.releaseException();
-    }
+    auto fillResult = init.headers ? m_headers->fill(*init.headers) : m_headers->fill(input.headers());
+    if (fillResult.hasException())
+        return fillResult;
 
-    if (init.body) {
-        auto setBodyResult = setBody(WTFMove(*init.body));
-        if (setBodyResult.hasException())
-            return setBodyResult.releaseException();
-    } else {
-        auto setBodyResult = setBody(input);
-        if (setBodyResult.hasException())
-            return setBodyResult.releaseException();
-    }
+    auto setBodyResult = init.body ? setBody(WTFMove(*init.body)) : setBody(input);
+    if (setBodyResult.hasException())
+        return setBodyResult;
 
     updateContentType();
     return { };
@@ -267,7 +240,9 @@ ExceptionOr<void> FetchRequest::setBody(FetchBody::Init&& body)
         return Exception { TypeError, makeString("Request has method '", m_request.httpMethod(), "' and cannot have a body") };
 
     ASSERT(scriptExecutionContext());
-    extractBody(*scriptExecutionContext(), WTFMove(body));
+    auto result = extractBody(WTFMove(body));
+    if (result.hasException())
+        return result;
 
     if (m_options.keepAlive && hasReadableStreamBody())
         return Exception { TypeError, "Request cannot have a ReadableStream body and keepalive set to true"_s };
@@ -276,6 +251,9 @@ ExceptionOr<void> FetchRequest::setBody(FetchBody::Init&& body)
 
 ExceptionOr<void> FetchRequest::setBody(FetchRequest& request)
 {
+    if (request.isDisturbedOrLocked())
+        return Exception { TypeError, "Request input is disturbed or locked."_s };
+
     if (!request.isBodyNull()) {
         if (!methodCanHaveBody(m_request))
             return Exception { TypeError, makeString("Request has method '", m_request.httpMethod(), "' and cannot have a body") };
@@ -303,7 +281,7 @@ ExceptionOr<Ref<FetchRequest>> FetchRequest::create(ScriptExecutionContext& cont
             return result.releaseException();
     }
 
-    return WTFMove(request);
+    return request;
 }
 
 String FetchRequest::referrer() const
@@ -343,7 +321,7 @@ ExceptionOr<Ref<FetchRequest>> FetchRequest::clone(ScriptExecutionContext& conte
     auto clone = adoptRef(*new FetchRequest(context, WTF::nullopt, FetchHeaders::create(m_headers.get()), ResourceRequest { m_request }, FetchOptions { m_options}, String { m_referrer }));
     clone->cloneBody(*this);
     clone->m_signal->follow(m_signal);
-    return WTFMove(clone);
+    return clone;
 }
 
 const char* FetchRequest::activeDOMObjectName() const

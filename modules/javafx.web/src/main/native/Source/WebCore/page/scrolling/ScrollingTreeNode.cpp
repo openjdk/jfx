@@ -50,7 +50,7 @@ void ScrollingTreeNode::appendChild(Ref<ScrollingTreeNode>&& childNode)
     childNode->setParent(this);
 
     if (!m_children)
-        m_children = std::make_unique<Vector<RefPtr<ScrollingTreeNode>>>();
+        m_children = makeUnique<Vector<RefPtr<ScrollingTreeNode>>>();
     m_children->append(WTFMove(childNode));
 }
 
@@ -90,6 +90,15 @@ ScrollingTreeFrameScrollingNode* ScrollingTreeNode::enclosingFrameNodeIncludingS
         node = node->parent();
 
     return downcast<ScrollingTreeFrameScrollingNode>(node);
+}
+
+ScrollingTreeScrollingNode* ScrollingTreeNode::enclosingScrollingNodeIncludingSelf()
+{
+    auto* node = this;
+    while (node && !node->isScrollingNode())
+        node = node->parent();
+
+    return downcast<ScrollingTreeScrollingNode>(node);
 }
 
 void ScrollingTreeNode::dump(TextStream& ts, ScrollingStateTreeAsTextBehavior behavior) const

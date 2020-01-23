@@ -32,6 +32,7 @@
 #include "SharedBuffer.h"
 #include "TextEncoding.h"
 #include <wtf/MainThread.h>
+#include <wtf/Optional.h>
 #include <wtf/RunLoop.h>
 #include <wtf/URL.h>
 #include <wtf/WorkQueue.h>
@@ -144,7 +145,7 @@ private:
 
 static std::unique_ptr<DecodeTask> createDecodeTask(const URL& url, const ScheduleContext& scheduleContext, DecodeCompletionHandler&& completionHandler)
 {
-    return std::make_unique<DecodeTask>(
+    return makeUnique<DecodeTask>(
         url.string(),
         scheduleContext,
         WTFMove(completionHandler)

@@ -92,7 +92,7 @@ NetworkStorageSession::~NetworkStorageSession()
 {
 }
 
-void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, const String& value) const
+void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, const String& value) const
 {
     using namespace CookieInternalJava;
     JNIEnv* env = WTF::GetJavaEnv();
@@ -106,13 +106,13 @@ void NetworkStorageSession::setCookiesFromDOM(const URL& /*firstParty*/, const S
     WTF::CheckAndClearException(env);
 }
 
-std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, IncludeSecureCookies) const
+std::pair<String, bool> NetworkStorageSession::cookiesForDOM(const URL&, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies) const
 {
     // 'HttpOnly' cookies should no be accessible from scripts, so we filter them out here.
     return { CookieInternalJava::getCookies(url, false), false };
 }
 
-std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<uint64_t>, Optional<uint64_t>, IncludeSecureCookies) const
+std::pair<String, bool> NetworkStorageSession::cookieRequestHeaderFieldValue(const URL& /*firstParty*/, const SameSiteInfo&, const URL& url, Optional<FrameIdentifier>, Optional<PageIdentifier>, IncludeSecureCookies) const
 {
     return { CookieInternalJava::getCookies(url, true), true };
 }
@@ -127,7 +127,7 @@ bool NetworkStorageSession::cookiesEnabled() const
     return true;
 }
 
-bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, Optional<uint64_t>, Optional<uint64_t>, Vector<Cookie>&) const
+bool NetworkStorageSession::getRawCookies(const URL& /*firstParty*/, const SameSiteInfo&, const URL&, Optional<FrameIdentifier>, Optional<PageIdentifier>, Vector<Cookie>&) const
 {
     notImplemented();
     return false;

@@ -22,7 +22,7 @@
         "AppleCopyright": {
             "contextsAllowed": ["interface", "attribute", "operation"]
         },
-        "AtomicString": {
+        "AtomString": {
             "contextsAllowed": ["type"]
         },
         "CEReactions": {
@@ -154,6 +154,9 @@
         "CustomToStringName": {
             "contextsAllowed": ["interface"]
         },
+        "CustomEnabled": {
+            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant", "iterable"]
+        },
         "DOMJIT": {
             "contextsAllowed": ["interface", "attribute", "operation"],
             "values": ["", "ReadDOM", "Getter"]
@@ -181,12 +184,15 @@
             "values": ["*"]
         },
         "EnabledBySetting": {
-            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
+            "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant", "dictionary-member"],
             "values": ["*"]
         },
         "DisabledByQuirk": {
             "contextsAllowed": ["interface", "dictionary", "enum", "attribute", "operation", "constant"],
             "values": ["*"]
+        },
+        "EnabledForContext": {
+            "contextsAllowed": ["attribute", "interface"]
         },
         "EnabledForWorld": {
             "contextsAllowed": ["attribute", "operation"],
@@ -220,7 +226,7 @@
         },
         "GenerateIsReachable": {
             "contextsAllowed": ["interface"],
-            "values": ["", "Impl", "ImplWebGLRenderingContext", "ImplDocument", "ImplElementRoot", "ImplFrame", "ImplOwnerNodeRoot", "ImplScriptExecutionContext"]
+            "values": ["", "Impl", "ImplWebGLRenderingContext", "ImplDocument", "ImplElementRoot", "ImplOwnerNodeRoot", "ImplScriptExecutionContext", "ReachableFromDOMWindow", "ReachableFromNavigator"]
         },
         "Global": {
             "contextsAllowed": ["interface"],
@@ -401,7 +407,7 @@
         "ReportExternalMemoryCost": {
             "contextsAllowed": ["interface"]
         },
-        "RequiresExistingAtomicString": {
+        "RequiresExistingAtomString": {
             "contextsAllowed": ["type"]
         },
         "RethrowException": {

@@ -33,8 +33,8 @@
 #include "JSFetchResponse.h"
 #include "ReadableStreamChunk.h"
 #include "ScriptExecutionContext.h"
+#include <wtf/CompletionHandler.h>
 #include <wtf/URL.h>
-
 
 namespace WebCore {
 using namespace WebCore::DOMCacheEngine;
@@ -155,10 +155,7 @@ static inline bool hasResponseVaryStarHeaderValue(const FetchResponse& response)
 
 class FetchTasksHandler : public RefCounted<FetchTasksHandler> {
 public:
-    explicit FetchTasksHandler(Function<void(ExceptionOr<Vector<Record>>&&)>&& callback)
-        : m_callback(WTFMove(callback))
-    {
-    }
+    static Ref<FetchTasksHandler> create(Ref<DOMCache>&& domCache, CompletionHandler<void(ExceptionOr<Vector<Record>>&&)>&& callback) { return adoptRef(*new FetchTasksHandler(WTFMove(domCache), WTFMove(callback))); }
 
     ~FetchTasksHandler()
     {
@@ -175,10 +172,12 @@ public:
         return m_records.size() - 1;
     }
 
-    void addResponseBody(size_t position, Ref<SharedBuffer>&& data)
+    void addResponseBody(size_t position, FetchResponse& response, DOMCacheEngine::ResponseBody&& data)
     {
         ASSERT(!isDone());
-        m_records[position].responseBody = WTFMove(data);
+        auto& record = m_records[position];
+        record.responseBodySize = m_domCache->connection().computeRecordBodySize(response, data);
+        record.responseBody = WTFMove(data);
     }
 
     bool isDone() const { return !m_callback; }
@@ -190,8 +189,15 @@ public:
     }
 
 private:
+    FetchTasksHandler(Ref<DOMCache>&& domCache, CompletionHandler<void(ExceptionOr<Vector<Record>>&&)>&& callback)
+        : m_domCache(WTFMove(domCache))
+        , m_callback(WTFMove(callback))
+    {
+    }
+
+    Ref<DOMCache> m_domCache;
     Vector<Record> m_records;
-    Function<void(ExceptionOr<Vector<Record>>&&)> m_callback;
+    CompletionHandler<void(ExceptionOr<Vector<Record>>&&)> m_callback;
 };
 
 ExceptionOr<Ref<FetchRequest>> DOMCache::requestFromInfo(RequestInfo&& info, bool ignoreMethod)
@@ -227,7 +233,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
         requests.uncheckedAppend(requestOrException.releaseReturnValue());
     }
 
-    auto taskHandler = adoptRef(*new FetchTasksHandler([protectedThis = makeRef(*this), this, promise = WTFMove(promise)](ExceptionOr<Vector<Record>>&& result) mutable {
+    auto taskHandler = FetchTasksHandler::create(*this, [this, promise = WTFMove(promise)](ExceptionOr<Vector<Record>>&& result) mutable {
         if (result.hasException()) {
             promise.reject(result.releaseException());
             return;
@@ -235,7 +241,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
         batchPutOperation(result.releaseReturnValue(), [promise = WTFMove(promise)](ExceptionOr<void>&& result) mutable {
             promise.settle(WTFMove(result));
         });
-    }));
+    });
 
     for (auto& request : requests) {
         auto& requestReference = request.get();
@@ -275,7 +281,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
             }
             size_t recordPosition = taskHandler->addRecord(toConnectionRecord(request.get(), response, nullptr));
 
-            response.consumeBodyReceivedByChunk([taskHandler = WTFMove(taskHandler), recordPosition, data = SharedBuffer::create()] (ExceptionOr<ReadableStreamChunk*>&& result) mutable {
+            response.consumeBodyReceivedByChunk([taskHandler = WTFMove(taskHandler), recordPosition, data = SharedBuffer::create(), response = makeRef(response)] (ExceptionOr<ReadableStreamChunk*>&& result) mutable {
                 if (taskHandler->isDone())
                     return;
 
@@ -287,7 +293,7 @@ void DOMCache::addAll(Vector<RequestInfo>&& infos, DOMPromiseDeferred<void>&& pr
                 if (auto chunk = result.returnValue())
                     data->append(reinterpret_cast<const char*>(chunk->data), chunk->size);
                 else
-                    taskHandler->addResponseBody(recordPosition, WTFMove(data));
+                    taskHandler->addResponseBody(recordPosition, response, WTFMove(data));
             });
         });
     }
@@ -431,23 +437,20 @@ void DOMCache::keys(Optional<RequestInfo>&& info, CacheQueryOptions&& options, K
 
 void DOMCache::retrieveRecords(const URL& url, WTF::Function<void(Optional<Exception>&&)>&& callback)
 {
-    setPendingActivity(*this);
-
     URL retrieveURL = url;
     retrieveURL.removeQueryAndFragmentIdentifier();
 
-    m_connection->retrieveRecords(m_identifier, retrieveURL, [this, callback = WTFMove(callback)](RecordsOrError&& result) {
-        if (!m_isStopped) {
-            if (!result.has_value()) {
-                callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
-                return;
-            }
+    m_connection->retrieveRecords(m_identifier, retrieveURL, [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](RecordsOrError&& result) {
+        if (m_isStopped)
+            return;
 
-            if (result.has_value())
-                updateRecords(WTFMove(result.value()));
-            callback(WTF::nullopt);
+        if (!result.has_value()) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+            return;
         }
-        unsetPendingActivity(*this);
+
+        updateRecords(WTFMove(result.value()));
+        callback(WTF::nullopt);
     });
 }
 
@@ -484,15 +487,15 @@ Vector<CacheStorageRecord> DOMCache::queryCacheWithTargetStorage(const FetchRequ
 
 void DOMCache::batchDeleteOperation(const FetchRequest& request, CacheQueryOptions&& options, WTF::Function<void(ExceptionOr<bool>&&)>&& callback)
 {
-    setPendingActivity(*this);
-    m_connection->batchDeleteOperation(m_identifier, request.internalRequest(), WTFMove(options), [this, callback = WTFMove(callback)](RecordIdentifiersOrError&& result) {
-        if (!m_isStopped) {
-            if (!result.has_value())
-                callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
-            else
-                callback(!result.value().isEmpty());
+    m_connection->batchDeleteOperation(m_identifier, request.internalRequest(), WTFMove(options), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](RecordIdentifiersOrError&& result) {
+        if (m_isStopped)
+            return;
+
+        if (!result.has_value()) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+            return;
         }
-        unsetPendingActivity(*this);
+        callback(!result.value().isEmpty());
     });
 }
 
@@ -507,7 +510,7 @@ Record DOMCache::toConnectionRecord(const FetchRequest& request, FetchResponse& 
 
     auto sizeWithPadding = response.bodySizeWithPadding();
     if (!sizeWithPadding) {
-        sizeWithPadding = m_connection->computeRecordBodySize(response, responseBody, cachedResponse.tainting());
+        sizeWithPadding = m_connection->computeRecordBodySize(response, responseBody);
         response.setBodySizeWithPadding(sizeWithPadding);
     }
 
@@ -527,15 +530,14 @@ void DOMCache::batchPutOperation(const FetchRequest& request, FetchResponse& res
 
 void DOMCache::batchPutOperation(Vector<Record>&& records, WTF::Function<void(ExceptionOr<void>&&)>&& callback)
 {
-    setPendingActivity(*this);
-    m_connection->batchPutOperation(m_identifier, WTFMove(records), [this, callback = WTFMove(callback)](RecordIdentifiersOrError&& result) {
-        if (!m_isStopped) {
-            if (!result.has_value())
-                callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
-            else
-                callback({ });
+    m_connection->batchPutOperation(m_identifier, WTFMove(records), [this, pendingActivity = makePendingActivity(*this), callback = WTFMove(callback)](RecordIdentifiersOrError&& result) {
+        if (m_isStopped)
+            return;
+        if (!result.has_value()) {
+            callback(DOMCacheEngine::convertToExceptionAndLog(scriptExecutionContext(), result.error()));
+            return;
         }
-        unsetPendingActivity(*this);
+        callback({ });
     });
 }
 

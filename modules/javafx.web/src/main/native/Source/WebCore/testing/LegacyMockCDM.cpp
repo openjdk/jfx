@@ -38,6 +38,7 @@
 namespace WebCore {
 
 class MockCDMSession : public LegacyCDMSession {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     MockCDMSession(LegacyCDMSessionClient*);
     virtual ~MockCDMSession() = default;
@@ -73,7 +74,7 @@ bool LegacyMockCDM::supportsMIMEType(const String& mimeType)
 
 std::unique_ptr<LegacyCDMSession> LegacyMockCDM::createSession(LegacyCDMSessionClient* client)
 {
-    return std::make_unique<MockCDMSession>(client);
+    return makeUnique<MockCDMSession>(client);
 }
 
 static Uint8Array* initDataPrefix()
