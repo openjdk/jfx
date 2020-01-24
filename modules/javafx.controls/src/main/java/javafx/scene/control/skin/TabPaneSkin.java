@@ -1954,6 +1954,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 completeHeaderReordering();
             });
         }
+        @Override
         protected void interpolate(double frac) {
             dropAnimHeader.setLayoutX(dropHeaderSourceX + dropHeaderTransitionX * frac);
         }
@@ -1970,6 +1971,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 resetDrag();
             });
         }
+        @Override
         protected void interpolate(double frac) {
             dragTabHeader.setLayoutX(dragHeaderSourceX + dragHeaderTransitionX * frac);
         }
@@ -1989,6 +1991,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
     }
 
     private ListChangeListener childListener = new ListChangeListener<Node>() {
+        @Override
         public void onChanged(Change<? extends Node> change) {
             while (change.next()) {
                 if (change.wasAdded()) {
@@ -2210,10 +2213,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         if (dragState == DragState.START) {
             // No drag action was performed.
             resetDrag();
-            return;
-        }
-        // Animate tab header being dragged to its final position.
-        if (dragTabHeader != null) {
+        } else if (dragState == DragState.REORDER) {
+            // Animate tab header being dragged to its final position.
             dragHeaderSourceX = dragTabHeader.getLayoutX();
             dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
             dragHeaderAnim.playFromStart();
