@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,7 @@ const ClassInfo TerminatedExecutionError::s_info = { "TerminatedExecutionError",
 JSValue TerminatedExecutionError::defaultValue(const JSObject*, ExecState* exec, PreferredPrimitiveType hint)
 {
     if (hint == PreferString)
-        return jsNontrivialString(exec, String("JavaScript execution terminated."_s));
+        return jsNontrivialString(exec->vm(), String("JavaScript execution terminated."_s));
     return JSValue(PNaN);
 }
 
@@ -81,29 +81,31 @@ JSObject* createStackOverflowError(ExecState* exec, JSGlobalObject* globalObject
 
 JSObject* createUndefinedVariableError(ExecState* exec, const Identifier& ident)
 {
-    if (ident.isPrivateName()) {
-        String message(makeString("Can't find private variable: PrivateSymbol.", ident.string()));
-        return createReferenceError(exec, message);
-    }
-    String message(makeString("Can't find variable: ", ident.string()));
-    return createReferenceError(exec, message);
+    if (ident.isPrivateName())
+        return createReferenceError(exec, makeString("Can't find private variable: PrivateSymbol.", ident.string()));
+    return createReferenceError(exec, makeString("Can't find variable: ", ident.string()));
 }
 
-JSString* errorDescriptionForValue(ExecState* exec, JSValue v)
+String errorDescriptionForValue(ExecState* exec, JSValue v)
 {
-    if (v.isString())
-        return jsNontrivialString(exec, makeString('"', asString(v)->value(exec), '"'));
+    if (v.isString()) {
+        String string = asString(v)->value(exec);
+        if (!string)
+            return string;
+        return tryMakeString('"', string, '"');
+    }
+
     if (v.isSymbol())
-        return jsNontrivialString(exec, asSymbol(v)->descriptiveString());
+        return asSymbol(v)->descriptiveString();
     if (v.isObject()) {
         VM& vm = exec->vm();
         CallData callData;
         JSObject* object = asObject(v);
         if (object->methodTable(vm)->getCallData(object, callData) != CallType::None)
-            return vm.smallStrings.functionString();
-        return jsString(exec, JSObject::calculatedClassName(object));
+            return vm.smallStrings.functionString()->value(exec);
+        return JSObject::calculatedClassName(object);
     }
-    return v.toString(exec);
+    return v.toString(exec)->value(exec);
 }
 
 static String defaultApproximateSourceError(const String& originalMessage, const String& sourceText)
@@ -171,6 +173,10 @@ static String functionCallBase(const String& sourceText)
         return String();
     }
 
+    // Don't display the ?. of an optional call.
+    if (idx > 1 && sourceText[idx] == '.' && sourceText[idx - 1] == '?')
+        idx -= 2;
+
     return sourceText.left(idx + 1);
 }
 
@@ -193,13 +199,8 @@ static String notAFunctionSourceAppender(const String& originalMessage, const St
     String base = functionCallBase(sourceText);
     if (!base)
         return defaultApproximateSourceError(originalMessage, sourceText);
-    StringBuilder builder;
-    builder.append(base);
-    builder.appendLiteral(" is not a function. (In '");
-    builder.append(sourceText);
-    builder.appendLiteral("', '");
-    builder.append(base);
-    builder.appendLiteral("' is ");
+    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    builder.append(base, " is not a function. (In '", sourceText, "', '", base, "' is ");
     if (type == TypeSymbol)
         builder.appendLiteral("a Symbol");
     else {
@@ -208,6 +209,9 @@ static String notAFunctionSourceAppender(const String& originalMessage, const St
         builder.append(displayValue);
     }
     builder.append(')');
+
+    if (builder.hasOverflowed())
+        return "object is not a function."_s;
 
     return builder.toString();
 }
@@ -253,12 +257,12 @@ inline String invalidParameterInstanceofSourceAppender(const String& content, co
 
 static String invalidParameterInstanceofNotFunctionSourceAppender(const String& originalMessage, const String& sourceText, RuntimeType runtimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
 {
-    return invalidParameterInstanceofSourceAppender(WTF::makeString(" is not a function"), originalMessage, sourceText, runtimeType, occurrence);
+    return invalidParameterInstanceofSourceAppender(" is not a function"_s, originalMessage, sourceText, runtimeType, occurrence);
 }
 
 static String invalidParameterInstanceofhasInstanceValueNotFunctionSourceAppender(const String& originalMessage, const String& sourceText, RuntimeType runtimeType, ErrorInstance::SourceTextWhereErrorOccurred occurrence)
 {
-    return invalidParameterInstanceofSourceAppender(WTF::makeString("[Symbol.hasInstance] is not a function, undefined, or null"), originalMessage, sourceText, runtimeType, occurrence);
+    return invalidParameterInstanceofSourceAppender("[Symbol.hasInstance] is not a function, undefined, or null"_s, originalMessage, sourceText, runtimeType, occurrence);
 }
 
 JSObject* createError(ExecState* exec, JSValue value, const String& message, ErrorInstance::SourceAppender appender)
@@ -266,8 +270,14 @@ JSObject* createError(ExecState* exec, JSValue value, const String& message, Err
     VM& vm = exec->vm();
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    String errorMessage = tryMakeString(errorDescriptionForValue(exec, value)->value(exec), ' ', message);
-    if (errorMessage.isNull())
+    String valueDescription = errorDescriptionForValue(exec, value);
+    ASSERT(scope.exception() || !!valueDescription);
+    if (!valueDescription) {
+        scope.clearException();
+        return createOutOfMemoryError(exec);
+    }
+    String errorMessage = tryMakeString(valueDescription, ' ', message);
+    if (!errorMessage)
         return createOutOfMemoryError(exec);
     scope.assertNoException();
     JSObject* exception = createTypeError(exec, errorMessage, appender, runtimeTypeForValue(vm, value));
@@ -278,25 +288,22 @@ JSObject* createError(ExecState* exec, JSValue value, const String& message, Err
 
 JSObject* createInvalidFunctionApplyParameterError(ExecState* exec, JSValue value)
 {
-    VM& vm = exec->vm();
-    JSObject* exception = createTypeError(exec, makeString("second argument to Function.prototype.apply must be an Array-like object"), defaultSourceAppender, runtimeTypeForValue(vm, value));
-    ASSERT(exception->isErrorInstance());
-    return exception;
+    return createTypeError(exec, "second argument to Function.prototype.apply must be an Array-like object"_s, defaultSourceAppender, runtimeTypeForValue(exec->vm(), value));
 }
 
 JSObject* createInvalidInParameterError(ExecState* exec, JSValue value)
 {
-    return createError(exec, value, makeString("is not an Object."), invalidParameterInSourceAppender);
+    return createError(exec, value, "is not an Object."_s, invalidParameterInSourceAppender);
 }
 
 JSObject* createInvalidInstanceofParameterErrorNotFunction(ExecState* exec, JSValue value)
 {
-    return createError(exec, value, makeString(" is not a function"), invalidParameterInstanceofNotFunctionSourceAppender);
+    return createError(exec, value, " is not a function"_s, invalidParameterInstanceofNotFunctionSourceAppender);
 }
 
 JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(ExecState* exec, JSValue value)
 {
-    return createError(exec, value, makeString("[Symbol.hasInstance] is not a function, undefined, or null"), invalidParameterInstanceofhasInstanceValueNotFunctionSourceAppender);
+    return createError(exec, value, "[Symbol.hasInstance] is not a function, undefined, or null"_s, invalidParameterInstanceofhasInstanceValueNotFunctionSourceAppender);
 }
 
 JSObject* createNotAConstructorError(ExecState* exec, JSValue value)
@@ -324,19 +331,19 @@ JSObject* createTDZError(ExecState* exec)
     return createReferenceError(exec, "Cannot access uninitialized variable.");
 }
 
-JSObject* throwOutOfMemoryError(ExecState* exec, ThrowScope& scope)
+Exception* throwOutOfMemoryError(ExecState* exec, ThrowScope& scope)
 {
     return throwException(exec, scope, createOutOfMemoryError(exec));
 }
 
-JSObject* throwStackOverflowError(ExecState* exec, ThrowScope& scope)
+Exception* throwStackOverflowError(ExecState* exec, ThrowScope& scope)
 {
     VM& vm = exec->vm();
     ErrorHandlingScope errorScope(vm);
     return throwException(exec, scope, createStackOverflowError(exec));
 }
 
-JSObject* throwTerminatedExecutionException(ExecState* exec, ThrowScope& scope)
+Exception* throwTerminatedExecutionException(ExecState* exec, ThrowScope& scope)
 {
     VM& vm = exec->vm();
     ErrorHandlingScope errorScope(vm);

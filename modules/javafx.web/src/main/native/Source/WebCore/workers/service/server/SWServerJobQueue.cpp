@@ -30,6 +30,7 @@
 
 #include "ExceptionData.h"
 #include "SWServer.h"
+#include "SWServerRegistration.h"
 #include "SWServerWorker.h"
 #include "SchemeRegistry.h"
 #include "SecurityOrigin.h"
@@ -234,6 +235,10 @@ void SWServerJobQueue::runNextJob()
 
 void SWServerJobQueue::runNextJobSynchronously()
 {
+    ASSERT(!m_jobQueue.isEmpty());
+    if (m_jobQueue.isEmpty())
+        return;
+
     auto& job = firstJob();
     switch (job.type) {
     case ServiceWorkerJobType::Register:
@@ -247,7 +252,7 @@ void SWServerJobQueue::runNextJobSynchronously()
         return;
     }
 
-    RELEASE_ASSERT_NOT_REACHED();
+    ASSERT_NOT_REACHED();
 }
 
 // https://w3c.github.io/ServiceWorker/#register-algorithm
@@ -281,7 +286,7 @@ void SWServerJobQueue::runRegisterJob(const ServiceWorkerJobData& job)
             registration->setUpdateViaCache(job.registrationOptions.updateViaCache);
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: Found registration %llu for job %s but it needs updating", this, registration->identifier().toUInt64(), job.identifier().loggingString().utf8().data());
     } else {
-        auto newRegistration = std::make_unique<SWServerRegistration>(m_server, m_registrationKey, job.registrationOptions.updateViaCache, job.scopeURL, job.scriptURL);
+        auto newRegistration = makeUnique<SWServerRegistration>(m_server, m_registrationKey, job.registrationOptions.updateViaCache, job.scopeURL, job.scriptURL);
         m_server.addRegistration(WTFMove(newRegistration));
 
         RELEASE_LOG(ServiceWorker, "%p - SWServerJobQueue::runRegisterJob: No existing registration for job %s, constructing a new one.", this, job.identifier().loggingString().utf8().data());

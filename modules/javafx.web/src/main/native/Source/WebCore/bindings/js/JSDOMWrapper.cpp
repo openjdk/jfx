@@ -36,8 +36,6 @@
 
 namespace WebCore {
 
-using namespace JSC;
-
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSDOMObject);
 
 JSDOMObject::JSDOMObject(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)

@@ -37,6 +37,7 @@ namespace WebCore {
 class Document;
 
 class History final : public ScriptWrappable, public RefCounted<History>, public DOMWindowProperty {
+    WTF_MAKE_ISO_ALLOCATED(History);
 public:
     static Ref<History> create(DOMWindow& window) { return adoptRef(*new History(window)); }
 
@@ -52,6 +53,7 @@ public:
 
     SerializedScriptValue* state();
     JSValueInWrappedObject& cachedState();
+    JSValueInWrappedObject& cachedStateForGC() { return m_cachedState; }
 
     void back();
     void forward();

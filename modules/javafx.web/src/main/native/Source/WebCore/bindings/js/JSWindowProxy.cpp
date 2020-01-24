@@ -42,7 +42,6 @@
 #include <JavaScriptCore/StrongInlines.h>
 
 namespace WebCore {
-using namespace JSC;
 
 using namespace JSC;
 
@@ -112,6 +111,7 @@ void JSWindowProxy::setWindow(AbstractDOMWindow& domWindow)
 
     auto& propertiesStructure = *JSDOMWindowProperties::createStructure(vm, window, JSEventTarget::prototype(vm, *window));
     auto& properties = *JSDOMWindowProperties::create(&propertiesStructure, *window);
+    properties.didBecomePrototype();
     prototype->structure(vm)->setPrototypeWithoutTransition(vm, &properties);
 
     setWindow(vm, *window);

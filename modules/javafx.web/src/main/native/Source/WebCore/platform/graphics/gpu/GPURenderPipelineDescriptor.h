@@ -27,39 +27,42 @@
 
 #if ENABLE(WEBGPU)
 
+#include "GPUColorStateDescriptor.h"
 #include "GPUDepthStencilStateDescriptor.h"
-#include "GPUInputStateDescriptor.h"
 #include "GPUPipelineDescriptorBase.h"
 #include "GPUPipelineStageDescriptor.h"
-
+#include "GPUVertexInputDescriptor.h"
+#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-struct GPURenderPipelineDescriptor : GPUPipelineDescriptorBase {
-    enum class PrimitiveTopology {
-        PointList,
-        LineList,
-        LineStrip,
-        TriangleList,
-        TriangleStrip
-    };
+enum class GPUPrimitiveTopology {
+    PointList,
+    LineList,
+    LineStrip,
+    TriangleList,
+    TriangleStrip
+};
 
-    GPURenderPipelineDescriptor(RefPtr<GPUPipelineLayout>&& layout, GPUPipelineStageDescriptor&& vertex, GPUPipelineStageDescriptor&& fragment, PrimitiveTopology topology, GPUDepthStencilStateDescriptor&& depth, GPUInputStateDescriptor&& input)
+struct GPURenderPipelineDescriptorBase {
+    GPUPrimitiveTopology primitiveTopology;
+    Vector<GPUColorStateDescriptor> colorStates;
+    Optional<GPUDepthStencilStateDescriptor> depthStencilState;
+    GPUVertexInputDescriptor vertexInput;
+};
+
+struct GPURenderPipelineDescriptor : GPUPipelineDescriptorBase, GPURenderPipelineDescriptorBase {
+    GPURenderPipelineDescriptor(RefPtr<GPUPipelineLayout>&& layout, GPUPipelineStageDescriptor&& vertex, Optional<GPUPipelineStageDescriptor>&& fragment, const GPURenderPipelineDescriptorBase& base)
         : GPUPipelineDescriptorBase { WTFMove(layout) }
+        , GPURenderPipelineDescriptorBase(base)
         , vertexStage(WTFMove(vertex))
         , fragmentStage(WTFMove(fragment))
-        , primitiveTopology(topology)
-        , depthStencilState(WTFMove(depth))
-        , inputState(WTFMove(input))
     {
     }
 
     GPUPipelineStageDescriptor vertexStage;
-    GPUPipelineStageDescriptor fragmentStage;
-    PrimitiveTopology primitiveTopology;
-    GPUDepthStencilStateDescriptor depthStencilState;
-    GPUInputStateDescriptor inputState;
+    Optional<GPUPipelineStageDescriptor> fragmentStage;
 };
 
 } // namespace WebCore

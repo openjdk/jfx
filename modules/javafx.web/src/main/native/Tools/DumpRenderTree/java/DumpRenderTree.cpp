@@ -85,6 +85,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     makeEventSender(gContext, windowObject, jlEventSender, &exception);
     ASSERT(!exception);
     WebCoreTestSupport::injectInternalsObject(gContext);
+
     gGCController->makeWindowObject(gContext, windowObject, &exception);
     ASSERT(!exception);
 }

@@ -143,7 +143,7 @@ private:
     void newTransceiver(rtc::scoped_refptr<webrtc::RtpTransceiverInterface>&&);
     void removeRemoteTrack(rtc::scoped_refptr<webrtc::RtpReceiverInterface>&&);
 
-    void fireTrackEvent(Ref<RTCRtpReceiver>&&, MediaStreamTrack&, const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&, RefPtr<RTCRtpTransceiver>&&);
+    void addPendingTrackEvent(Ref<RTCRtpReceiver>&&, MediaStreamTrack&, const std::vector<rtc::scoped_refptr<webrtc::MediaStreamInterface>>&, RefPtr<RTCRtpTransceiver>&&);
 
     template<typename T>
     Optional<Backends> createTransceiverBackends(T&&, const RTCRtpTransceiverInit&, LibWebRTCRtpSenderBackend::Source&&);
@@ -153,7 +153,7 @@ private:
     void startLoggingStats();
     void stopLoggingStats();
 
-    void getStats(Ref<DeferredPromise>&&, WTF::Function<void(rtc::scoped_refptr<LibWebRTCStatsCollector>&&)>&&);
+    rtc::scoped_refptr<LibWebRTCStatsCollector> createStatsCollector(Ref<DeferredPromise>&&);
 
     MediaStream& mediaStreamFromRTCStream(webrtc::MediaStreamInterface&);
 
@@ -198,6 +198,7 @@ private:
 
     HashMap<String, rtc::scoped_refptr<webrtc::MediaStreamInterface>> m_localStreams;
 
+    std::unique_ptr<rtc::PacketSocketFactory> m_rtcSocketFactory;
 #if !RELEASE_LOG_DISABLED
     int64_t m_statsFirstDeliveredTimestamp { 0 };
     Ref<const Logger> m_logger;

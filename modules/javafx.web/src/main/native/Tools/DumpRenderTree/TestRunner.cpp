@@ -53,6 +53,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/UniqueArray.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
@@ -74,61 +75,9 @@ const unsigned TestRunner::w3cSVGViewWidth = 480;
 const unsigned TestRunner::w3cSVGViewHeight = 360;
 
 TestRunner::TestRunner(const std::string& testURL, const std::string& expectedPixelHash)
-    : m_disallowIncreaseForApplicationCacheQuota(false)
-    , m_dumpApplicationCacheDelegateCallbacks(false)
-    , m_dumpAsAudio(false)
-    , m_dumpAsPDF(false)
-    , m_dumpAsText(false)
-    , m_dumpBackForwardList(false)
-    , m_dumpChildFrameScrollPositions(false)
-    , m_dumpChildFramesAsText(false)
-    , m_dumpDOMAsWebArchive(false)
-    , m_dumpDatabaseCallbacks(false)
-    , m_dumpEditingCallbacks(false)
-    , m_dumpFrameLoadCallbacks(false)
-    , m_dumpProgressFinishedCallback(false)
-    , m_dumpUserGestureInFrameLoadCallbacks(false)
-    , m_dumpHistoryDelegateCallbacks(false)
-    , m_dumpResourceLoadCallbacks(false)
-    , m_dumpResourceResponseMIMETypes(false)
-    , m_dumpSelectionRect(false)
-    , m_dumpSourceAsWebArchive(false)
-    , m_dumpStatusCallbacks(false)
-    , m_dumpTitleChanges(false)
-    , m_dumpVisitedLinksCallback(false)
-    , m_dumpWillCacheResponse(false)
-    , m_generatePixelResults(true)
-    , m_callCloseOnWebViews(true)
-    , m_canOpenWindows(false)
-    , m_closeRemainingWindowsWhenComplete(true)
-    , m_newWindowsCopyBackForwardList(false)
-    , m_stopProvisionalFrameLoads(false)
-    , m_testOnscreen(false)
-    , m_testRepaint(false)
-    , m_testRepaintSweepHorizontally(false)
-    , m_waitToDump(false)
-    , m_willSendRequestReturnsNull(false)
-    , m_willSendRequestReturnsNullOnRedirect(false)
-    , m_windowIsKey(true)
-    , m_alwaysAcceptCookies(false)
-    , m_globalFlag(false)
-    , m_isGeolocationPermissionSet(false)
-    , m_geolocationPermission(false)
-    , m_rejectsProtectionSpaceAndContinueForAuthenticationChallenges(false)
-    , m_handlesAuthenticationChallenges(false)
-    , m_isPrinting(false)
-    , m_useDeferredFrameLoading(false)
-    , m_shouldPaintBrokenImage(true)
-    , m_shouldStayOnPageAfterHandlingBeforeUnload(false)
-    , m_areLegacyWebNotificationPermissionRequestsIgnored(false)
-    , m_customFullScreenBehavior(false)
-    , m_hasPendingWebNotificationClick(false)
-    , m_databaseDefaultQuota(-1)
-    , m_databaseMaxQuota(-1)
-    , m_testURL(testURL)
+    : m_testURL(testURL)
     , m_expectedPixelHash(expectedPixelHash)
     , m_titleTextDirection("ltr")
-    , m_timeout(0)
 {
 }
 
@@ -157,6 +106,17 @@ static JSValueRef dumpAsPDFCallback(JSContextRef context, JSObjectRef function, 
 {
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     controller->setDumpAsPDF(true);
+    return JSValueMakeUndefined(context);
+}
+
+static JSValueRef setRenderTreeDumpOptionsCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+
+    double options = JSValueToNumber(context, arguments[0], exception);
+    ASSERT(!*exception);
+
+    controller->setRenderTreeDumpOptions(static_cast<unsigned>(options));
     return JSValueMakeUndefined(context);
 }
 
@@ -406,11 +366,11 @@ static JSValueRef addURLToRedirectCallback(JSContextRef context, JSObjectRef fun
     ASSERT(!*exception);
 
     size_t maxLength = JSStringGetMaximumUTF8CStringSize(origin.get());
-    auto originBuffer = std::make_unique<char[]>(maxLength + 1);
+    auto originBuffer = makeUniqueArray<char>(maxLength + 1);
     JSStringGetUTF8CString(origin.get(), originBuffer.get(), maxLength + 1);
 
     maxLength = JSStringGetMaximumUTF8CStringSize(destination.get());
-    auto destinationBuffer = std::make_unique<char[]>(maxLength + 1);
+    auto destinationBuffer = makeUniqueArray<char>(maxLength + 1);
     JSStringGetUTF8CString(destination.get(), destinationBuffer.get(), maxLength + 1);
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
@@ -936,20 +896,6 @@ static JSValueRef setDatabaseQuotaCallback(JSContextRef context, JSObjectRef fun
     return JSValueMakeUndefined(context);
 }
 
-static JSValueRef setIDBPerOriginQuotaCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    auto* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-
-    double quota = JSValueToNumber(context, arguments[0], nullptr);
-    if (!std::isnan(quota))
-        controller->setIDBPerOriginQuota(static_cast<uint64_t>(quota));
-
-    return JSValueMakeUndefined(context);
-}
-
 static JSValueRef setDefersLoadingCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount < 1)
@@ -1309,18 +1255,6 @@ static JSValueRef setPagePausedCallback(JSContextRef context, JSObjectRef functi
 }
 #endif
 
-static JSValueRef setUseDashboardCompatibilityModeCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    // Has mac implementation
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->setUseDashboardCompatibilityMode(JSValueToBoolean(context, arguments[0]));
-
-    return JSValueMakeUndefined(context);
-}
-
 static JSValueRef setUserStyleSheetEnabledCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     // Has mac implementation
@@ -1373,7 +1307,7 @@ static JSValueRef setWillSendRequestClearHeaderCallback(JSContextRef context, JS
     ASSERT(!*exception);
 
     size_t maxLength = JSStringGetMaximumUTF8CStringSize(header.get());
-    auto headerBuffer = std::make_unique<char[]>(maxLength + 1);
+    auto headerBuffer = makeUniqueArray<char>(maxLength + 1);
     JSStringGetUTF8CString(header.get(), headerBuffer.get(), maxLength + 1);
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
@@ -1831,6 +1765,15 @@ static JSValueRef setOpenPanelFilesCallback(JSContextRef context, JSObjectRef fu
     return JSValueMakeUndefined(context);
 }
 
+#if PLATFORM(IOS_FAMILY)
+static JSValueRef SetOpenPanelFilesMediaIconCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    if (argumentCount == 1)
+        static_cast<TestRunner*>(JSObjectGetPrivate(thisObject))->setOpenPanelFilesMediaIcon(context, arguments[0]);
+    return JSValueMakeUndefined(context);
+}
+#endif
+
 // Static Values
 
 static JSValueRef getTimeoutCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
@@ -2065,8 +2008,12 @@ static JSValueRef accummulateLogsForChannel(JSContextRef context, JSObjectRef fu
     ASSERT(!*exception);
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+#if OS(WINDOWS) && PLATFORM(JAVA)
+    // FIXME : error LNK2019: unresolved external symbol
+    // controller->setAccummulateLogsForChannel(channel.get());
+#else
     controller->setAccummulateLogsForChannel(channel.get());
-
+#endif
     return JSValueMakeUndefined(context);
 }
 
@@ -2116,6 +2063,38 @@ JSClassRef TestRunner::getJSClass()
     return JSClassCreate(&classDefinition);
 }
 
+// Constants
+
+static JSValueRef getRENDER_TREE_SHOW_ALL_LAYERS(JSContextRef context, JSObjectRef, JSStringRef, JSValueRef*)
+{
+    return JSValueMakeNumber(context, 1);
+}
+
+static JSValueRef getRENDER_TREE_SHOW_LAYER_NESTING(JSContextRef context, JSObjectRef, JSStringRef, JSValueRef*)
+{
+    return JSValueMakeNumber(context, 2);
+}
+
+static JSValueRef getRENDER_TREE_SHOW_COMPOSITED_LAYERS(JSContextRef context, JSObjectRef, JSStringRef, JSValueRef*)
+{
+    return JSValueMakeNumber(context, 4);
+}
+
+static JSValueRef getRENDER_TREE_SHOW_OVERFLOW(JSContextRef context, JSObjectRef, JSStringRef, JSValueRef*)
+{
+    return JSValueMakeNumber(context, 8);
+}
+
+static JSValueRef getRENDER_TREE_SHOW_SVG_GEOMETRY(JSContextRef context, JSObjectRef, JSStringRef, JSValueRef*)
+{
+    return JSValueMakeNumber(context, 16);
+}
+
+static JSValueRef getRENDER_TREE_SHOW_LAYER_FRAGMENTS(JSContextRef context, JSObjectRef, JSStringRef, JSValueRef*)
+{
+    return JSValueMakeNumber(context, 32);
+}
+
 JSStaticValue* TestRunner::staticValues()
 {
     static JSStaticValue staticValues[] = {
@@ -2128,6 +2107,12 @@ JSStaticValue* TestRunner::staticValues()
         { "databaseDefaultQuota", getDatabaseDefaultQuotaCallback, setDatabaseDefaultQuotaCallback, kJSPropertyAttributeNone },
         { "databaseMaxQuota", getDatabaseMaxQuotaCallback, setDatabaseMaxQuotaCallback, kJSPropertyAttributeNone },
         { "inspectorTestStubURL", getInspectorTestStubURLCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "RENDER_TREE_SHOW_ALL_LAYERS", getRENDER_TREE_SHOW_ALL_LAYERS, 0, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly },
+        { "RENDER_TREE_SHOW_LAYER_NESTING", getRENDER_TREE_SHOW_LAYER_NESTING, 0, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly },
+        { "RENDER_TREE_SHOW_COMPOSITED_LAYERS", getRENDER_TREE_SHOW_COMPOSITED_LAYERS, 0, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly },
+        { "RENDER_TREE_SHOW_OVERFLOW", getRENDER_TREE_SHOW_OVERFLOW, 0, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly },
+        { "RENDER_TREE_SHOW_SVG_GEOMETRY", getRENDER_TREE_SHOW_SVG_GEOMETRY, 0, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly },
+        { "RENDER_TREE_SHOW_LAYER_FRAGMENTS", getRENDER_TREE_SHOW_LAYER_FRAGMENTS, 0, kJSPropertyAttributeDontDelete | kJSPropertyAttributeReadOnly },
         { 0, 0, 0, 0 }
     };
     return staticValues;
@@ -2157,6 +2142,7 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "display", displayCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "displayAndTrackRepaints", displayAndTrackRepaintsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "dumpApplicationCacheDelegateCallbacks", dumpApplicationCacheDelegateCallbacksCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setRenderTreeDumpOptions", setRenderTreeDumpOptionsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "dumpAsText", dumpAsTextCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "dumpBackForwardList", dumpBackForwardListCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "dumpChildFrameScrollPositions", dumpChildFrameScrollPositionsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2227,7 +2213,6 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setRejectsProtectionSpaceAndContinueForAuthenticationChallenges", setRejectsProtectionSpaceAndContinueForAuthenticationChallengesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setHandlesAuthenticationChallenges", setHandlesAuthenticationChallengesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setIconDatabaseEnabled", setIconDatabaseEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "setIDBPerOriginQuota", setIDBPerOriginQuotaCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAutomaticLinkDetectionEnabled", setAutomaticLinkDetectionEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setMainFrameIsFirstResponder", setMainFrameIsFirstResponderCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setMockDeviceOrientation", setMockDeviceOrientationCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2249,7 +2234,6 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setTelephoneNumberParsingEnabled", setTelephoneNumberParsingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setPagePaused", setPagePausedCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
 #endif
-        { "setUseDashboardCompatibilityMode", setUseDashboardCompatibilityModeCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setUserStyleSheetEnabled", setUserStyleSheetEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setUserStyleSheetLocation", setUserStyleSheetLocationCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setValueForUser", setValueForUserCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2295,6 +2279,9 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setSpellCheckerLoggingEnabled", setSpellCheckerLoggingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setSpellCheckerResults", setSpellCheckerResultsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setOpenPanelFiles", setOpenPanelFilesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+#if PLATFORM(IOS_FAMILY)
+        { "setOpenPanelFilesMediaIcon", SetOpenPanelFilesMediaIconCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+#endif
         { "forceImmediateCompletion", forceImmediateCompletionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { 0, 0, 0 }
     };
@@ -2386,6 +2373,11 @@ const char* TestRunner::redirectionDestinationForURL(const char* origin)
     return iterator->second.data();
 }
 
+void TestRunner::setRenderTreeDumpOptions(unsigned options)
+{
+    m_renderTreeDumpOptions = options;
+}
+
 void TestRunner::setShouldPaintBrokenImage(bool shouldPaintBrokenImage)
 {
     m_shouldPaintBrokenImage = shouldPaintBrokenImage;
@@ -2394,10 +2386,15 @@ void TestRunner::setShouldPaintBrokenImage(bool shouldPaintBrokenImage)
 void TestRunner::setAccummulateLogsForChannel(JSStringRef channel)
 {
     size_t maxLength = JSStringGetMaximumUTF8CStringSize(channel);
-    auto buffer = std::make_unique<char[]>(maxLength + 1);
+    auto buffer = makeUniqueArray<char>(maxLength + 1);
     JSStringGetUTF8CString(channel, buffer.get(), maxLength + 1);
 
+#if OS(WINDOWS) && PLATFORM(JAVA)
+    // FIXME : error LNK2019: unresolved external symbol
+    // WebCoreTestSupport::setLogChannelToAccumulate({ buffer.get() });
+#else
     WebCoreTestSupport::setLogChannelToAccumulate({ buffer.get() });
+#endif
 }
 
 typedef WTF::HashMap<unsigned, JSValueRef> CallbackMap;
@@ -2464,7 +2461,7 @@ void TestRunner::runUIScript(JSContextRef context, JSStringRef script, JSValueRe
     cacheTestRunnerCallback(callbackID, callback);
 
     if (!m_UIScriptContext)
-        m_UIScriptContext = std::make_unique<WTR::UIScriptContext>(*this);
+        m_UIScriptContext = makeUniqueWithoutFastMallocCheck<WTR::UIScriptContext>(*this);
 
     String scriptString(JSStringGetCharactersPtr(script), JSStringGetLength(script));
     m_UIScriptContext->runUIScript(scriptString, callbackID);
@@ -2498,7 +2495,12 @@ void TestRunner::uiScriptDidComplete(const String& result, unsigned callbackID)
 
 void TestRunner::setAllowsAnySSLCertificate(bool allowsAnySSLCertificate)
 {
+#if OS(WINDOWS) && PLATFORM(JAVA)
+    // FIXME : error LNK2019: unresolved external symbol
+    // WebCoreTestSupport::setAllowsAnySSLCertificate(allowsAnySSLCertificate);
+#else
     WebCoreTestSupport::setAllowsAnySSLCertificate(allowsAnySSLCertificate);
+#endif
 }
 
 void TestRunner::setOpenPanelFiles(JSContextRef context, JSValueRef filesValue)
@@ -2521,12 +2523,29 @@ void TestRunner::setOpenPanelFiles(JSContextRef context, JSValueRef filesValue)
 
         auto file = adopt(JSValueToStringCopy(context, fileValue, nullptr));
         size_t fileBufferSize = JSStringGetMaximumUTF8CStringSize(file.get()) + 1;
-        auto fileBuffer = std::make_unique<char[]>(fileBufferSize);
+        auto fileBuffer = makeUniqueArray<char>(fileBufferSize);
         JSStringGetUTF8CString(file.get(), fileBuffer.get(), fileBufferSize);
 
         m_openPanelFiles.push_back(fileBuffer.get());
     }
 }
+
+#if PLATFORM(IOS_FAMILY)
+void TestRunner::setOpenPanelFilesMediaIcon(JSContextRef context, JSValueRef mediaIcon)
+{
+    // FIXME (123058): Use a JSC API to get buffer contents once such is exposed.
+    JSC::VM& vm = toJS(context)->vm();
+    JSC::JSLockHolder lock(vm);
+
+    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(vm, toJS(toJS(context), mediaIcon));
+    ASSERT(jsBufferView);
+    RefPtr<JSC::ArrayBufferView> bufferView = jsBufferView->unsharedImpl();
+    const char* buffer = static_cast<const char*>(bufferView->baseAddress());
+    std::vector<char> mediaIconData(buffer, buffer + bufferView->byteLength());
+
+    m_openPanelFilesMediaIcon = mediaIconData;
+}
+#endif
 
 void TestRunner::cleanup()
 {

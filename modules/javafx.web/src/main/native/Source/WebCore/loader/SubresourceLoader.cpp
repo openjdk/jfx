@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "CachedRawResource.h"
 #include "CachedResourceLoader.h"
 #include "CrossOriginAccessControl.h"
+#include "CustomHeaderFields.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
 #include "Document.h"
@@ -63,6 +64,7 @@
 #endif
 
 #if USE(QUICK_LOOK)
+#include "PreviewConverter.h"
 #include "PreviewLoader.h"
 #endif
 
@@ -87,19 +89,19 @@ SubresourceLoader::RequestCountTracker::~RequestCountTracker()
     m_cachedResourceLoader.decrementRequestCount(m_resource);
 }
 
-SubresourceLoader::SubresourceLoader(DocumentLoader& documentLoader, CachedResource& resource, const ResourceLoaderOptions& options)
-    : ResourceLoader(documentLoader, options)
+SubresourceLoader::SubresourceLoader(Frame& frame, CachedResource& resource, const ResourceLoaderOptions& options)
+    : ResourceLoader(frame, options)
     , m_resource(&resource)
     , m_state(Uninitialized)
-    , m_requestCountTracker(std::in_place, documentLoader.cachedResourceLoader(), resource)
+    , m_requestCountTracker(std::in_place, frame.document()->cachedResourceLoader(), resource)
 {
 #ifndef NDEBUG
     subresourceLoaderCounter.increment();
 #endif
 #if ENABLE(CONTENT_EXTENSIONS)
-    m_resourceType = toResourceType(resource.type());
+    m_resourceType = ContentExtensions::toResourceType(resource.type());
 #endif
-    m_canCrossOriginRequestsAskUserForCredentials = resource.type() == CachedResource::Type::MainResource || (documentLoader.frame() && documentLoader.frame()->settings().allowCrossOriginSubresourcesToAskForCredentials());
+    m_canCrossOriginRequestsAskUserForCredentials = resource.type() == CachedResource::Type::MainResource || frame.settings().allowCrossOriginSubresourcesToAskForCredentials();
 }
 
 SubresourceLoader::~SubresourceLoader()
@@ -111,9 +113,9 @@ SubresourceLoader::~SubresourceLoader()
 #endif
 }
 
-void SubresourceLoader::create(DocumentLoader& documentLoader, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
+void SubresourceLoader::create(Frame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<SubresourceLoader>&&)>&& completionHandler)
 {
-    auto subloader(adoptRef(*new SubresourceLoader(documentLoader, resource, options)));
+    auto subloader(adoptRef(*new SubresourceLoader(frame, resource, options)));
 #if PLATFORM(IOS_FAMILY)
     if (!IOSApplication::isWebProcess()) {
         // On iOS, do not invoke synchronous resource load delegates while resource load scheduling
@@ -162,6 +164,11 @@ void SubresourceLoader::init(ResourceRequest&& request, CompletionHandler<void(b
     ResourceLoader::init(WTFMove(request), [this, protectedThis = makeRef(*this), completionHandler = WTFMove(completionHandler)] (bool initialized) mutable {
         if (!initialized)
             return completionHandler(false);
+        if (!m_documentLoader) {
+            ASSERT_NOT_REACHED();
+            RELEASE_LOG_ERROR(ResourceLoading, "SubresourceLoader::init: resource load canceled because document loader is null (frame = %p, frameLoader = %p, resourceID = %lu)", frame(), frameLoader(), identifier());
+            return completionHandler(false);
+        }
         ASSERT(!reachedTerminalState());
         m_state = Initialized;
         m_documentLoader->addSubresourceLoader(this);
@@ -304,7 +311,7 @@ bool SubresourceLoader::shouldCreatePreviewLoaderForResponse(const ResourceRespo
     if (m_previewLoader)
         return false;
 
-    return PreviewLoader::shouldCreateForMIMEType(response.mimeType());
+    return PreviewConverter::supportsMIMEType(response.mimeType());
 }
 
 #endif
@@ -319,7 +326,8 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response, Com
 #if USE(QUICK_LOOK)
     if (shouldCreatePreviewLoaderForResponse(response)) {
         m_previewLoader = PreviewLoader::create(*this, response);
-        return;
+        if (m_previewLoader->didReceiveResponse(response))
+            return;
     }
 #endif
 #if ENABLE(SERVICE_WORKER)
@@ -516,8 +524,7 @@ static void logResourceLoaded(Frame* frame, CachedResource::Type type)
         resourceType = DiagnosticLoggingKeys::fontKey();
         break;
     case CachedResource::Type::Beacon:
-        ASSERT_NOT_REACHED();
-        break;
+    case CachedResource::Type::Ping:
     case CachedResource::Type::MediaResource:
     case CachedResource::Type::Icon:
     case CachedResource::Type::RawResource:
@@ -685,9 +692,8 @@ void SubresourceLoader::didFail(const ResourceError& error)
     ASSERT(!reachedTerminalState());
     LOG(ResourceLoading, "Failed to load '%s'.\n", m_resource->url().string().latin1().data());
 
-    if (m_frame->document() && error.isAccessControl())
+    if (m_frame->document() && error.isAccessControl() && m_resource->type() != CachedResource::Type::Ping)
         m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, error.localizedDescription());
-
 
     Ref<SubresourceLoader> protectedThis(*this);
     CachedResourceHandle<CachedResource> protectResource(m_resource);

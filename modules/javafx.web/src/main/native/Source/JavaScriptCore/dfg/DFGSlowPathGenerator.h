@@ -66,8 +66,8 @@ public:
 
 protected:
     virtual void generateInternal(SpeculativeJIT*) = 0;
-    MacroAssembler::Label m_label;
     Node* m_currentNode;
+    MacroAssembler::Label m_label;
     unsigned m_streamIndex;
     NodeOrigin m_origin;
 };
@@ -97,7 +97,7 @@ protected:
     MacroAssembler::Label m_to;
 };
 
-enum class ExceptionCheckRequirement {
+enum class ExceptionCheckRequirement : uint8_t {
     CheckNeeded,
     CheckNotNeeded
 };
@@ -109,10 +109,10 @@ public:
         JumpType from, SpeculativeJIT* jit, FunctionType function,
         SpillRegistersMode spillMode, ExceptionCheckRequirement requirement, ResultType result)
         : JumpingSlowPathGenerator<JumpType>(from, jit)
-        , m_function(function)
         , m_spillMode(spillMode)
         , m_exceptionCheckRequirement(requirement)
         , m_result(result)
+        , m_function(function)
     {
         if (m_spillMode == NeedToSpill)
             jit->silentSpillAllRegistersImpl(false, m_plans, extractResult(result));
@@ -149,11 +149,11 @@ protected:
         this->jumpTo(jit);
     }
 
-    FunctionType m_function;
+    MacroAssembler::Call m_call;
     SpillRegistersMode m_spillMode;
     ExceptionCheckRequirement m_exceptionCheckRequirement;
     ResultType m_result;
-    MacroAssembler::Call m_call;
+    FunctionType m_function;
     Vector<SilentRegisterSavePlan, 2> m_plans;
 };
 
@@ -193,7 +193,7 @@ inline std::unique_ptr<SlowPathGenerator> slowPathCall(
     SpillRegistersMode spillMode, ExceptionCheckRequirement requirement,
     ResultType result, Arguments... arguments)
 {
-    return std::make_unique<CallResultAndArgumentsSlowPathGenerator<JumpType, FunctionType, ResultType, Arguments...>>(
+    return makeUnique<CallResultAndArgumentsSlowPathGenerator<JumpType, FunctionType, ResultType, Arguments...>>(
         from, jit, function, spillMode, requirement, result, arguments...);
 }
 
@@ -239,7 +239,7 @@ template<typename JumpType, typename DestinationType, typename SourceType, unsig
 inline std::unique_ptr<SlowPathGenerator> slowPathMove(
     JumpType from, SpeculativeJIT* jit, SourceType source[numberOfAssignments], DestinationType destination[numberOfAssignments])
 {
-    return std::make_unique<AssigningSlowPathGenerator<JumpType, DestinationType, SourceType, numberOfAssignments>>(
+    return makeUnique<AssigningSlowPathGenerator<JumpType, DestinationType, SourceType, numberOfAssignments>>(
         from, jit, destination, source);
 }
 
@@ -249,7 +249,7 @@ inline std::unique_ptr<SlowPathGenerator> slowPathMove(
 {
     SourceType sourceArray[1] = { source };
     DestinationType destinationArray[1] = { destination };
-    return std::make_unique<AssigningSlowPathGenerator<JumpType, DestinationType, SourceType, 1>>(
+    return makeUnique<AssigningSlowPathGenerator<JumpType, DestinationType, SourceType, 1>>(
         from, jit, destinationArray, sourceArray);
 }
 
@@ -259,7 +259,7 @@ inline std::unique_ptr<SlowPathGenerator> slowPathMove(
 {
     SourceType sourceArray[2] = { source1, source2 };
     DestinationType destinationArray[2] = { destination1, destination2 };
-    return std::make_unique<AssigningSlowPathGenerator<JumpType, DestinationType, SourceType, 2>>(
+    return makeUnique<AssigningSlowPathGenerator<JumpType, DestinationType, SourceType, 2>>(
         from, jit, destinationArray, sourceArray);
 }
 

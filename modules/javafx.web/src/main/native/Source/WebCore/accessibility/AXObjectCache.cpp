@@ -28,7 +28,7 @@
 
 #include "config.h"
 
-#if HAVE(ACCESSIBILITY)
+#if ENABLE(ACCESSIBILITY)
 
 #include "AXObjectCache.h"
 
@@ -851,7 +851,7 @@ void AXObjectCache::handleLiveRegionCreated(Node* node)
     Element* element = downcast<Element>(node);
     String liveRegionStatus = element->attributeWithoutSynchronization(aria_liveAttr);
     if (liveRegionStatus.isEmpty()) {
-        const AtomicString& ariaRole = element->attributeWithoutSynchronization(roleAttr);
+        const AtomString& ariaRole = element->attributeWithoutSynchronization(roleAttr);
         if (!ariaRole.isEmpty())
             liveRegionStatus = AccessibilityObject::defaultLiveRegionStatusForRole(AccessibilityObject::ariaRoleToWebCoreRole(ariaRole));
     }
@@ -1575,7 +1575,7 @@ void AXObjectCache::recomputeIsIgnored(RenderObject* renderer)
 void AXObjectCache::startCachingComputedObjectAttributesUntilTreeMutates()
 {
     if (!m_computedObjectAttributeCache)
-        m_computedObjectAttributeCache = std::make_unique<AXComputedObjectAttributeCache>();
+        m_computedObjectAttributeCache = makeUnique<AXComputedObjectAttributeCache>();
 }
 
 void AXObjectCache::stopCachingComputedObjectAttributes()
@@ -1785,7 +1785,7 @@ RefPtr<Range> AXObjectCache::rangeForNodeContents(Node* node)
         if (range->selectNodeContents(*node).hasException())
             return nullptr;
     }
-    return WTFMove(range);
+    return range;
 }
 
 RefPtr<Range> AXObjectCache::rangeMatchesTextNearRange(RefPtr<Range> originalRange, const String& matchText)
@@ -1906,7 +1906,7 @@ RefPtr<Range> AXObjectCache::rangeForUnorderedCharacterOffsets(const CharacterOf
         return nullptr;
     if (!setRangeStartOrEndWithCharacterOffset(result, endCharacterOffset, false))
         return nullptr;
-    return WTFMove(result);
+    return result;
 }
 
 void AXObjectCache::setTextMarkerDataWithCharacterOffset(TextMarkerData& textMarkerData, const CharacterOffset& characterOffset)
@@ -2475,7 +2475,8 @@ CharacterOffset AXObjectCache::nextBoundary(const CharacterOffset& characterOffs
     return characterOffset;
 }
 
-CharacterOffset AXObjectCache::previousBoundary(const CharacterOffset& characterOffset, BoundarySearchFunction searchFunction)
+// FIXME: Share code with the one in VisibleUnits.cpp.
+CharacterOffset AXObjectCache::previousBoundary(const CharacterOffset& characterOffset, BoundarySearchFunction searchFunction, NeedsContextAtParagraphStart needsContextAtParagraphStart)
 {
     if (characterOffset.isNull())
         return CharacterOffset();
@@ -2488,7 +2489,17 @@ CharacterOffset AXObjectCache::previousBoundary(const CharacterOffset& character
     Vector<UChar, 1024> string;
     unsigned suffixLength = 0;
 
-    if (requiresContextForWordBoundary(characterBefore(characterOffset))) {
+    if (needsContextAtParagraphStart == NeedsContextAtParagraphStart::Yes && startCharacterOffsetOfParagraph(characterOffset).isEqual(characterOffset)) {
+        auto forwardsScanRange = boundary->document().createRange();
+        auto endOfCurrentParagraph = endCharacterOffsetOfParagraph(characterOffset);
+        if (!setRangeStartOrEndWithCharacterOffset(forwardsScanRange, characterOffset, true))
+            return { };
+        if (!setRangeStartOrEndWithCharacterOffset(forwardsScanRange, endOfCurrentParagraph, false))
+            return { };
+        for (TextIterator forwardsIterator(forwardsScanRange.ptr()); !forwardsIterator.atEnd(); forwardsIterator.advance())
+            append(string, forwardsIterator.text());
+        suffixLength = string.size();
+    } else if (requiresContextForWordBoundary(characterBefore(characterOffset))) {
         auto forwardsScanRange = boundary->document().createRange();
         if (forwardsScanRange->setEndAfter(*boundary).hasException())
             return { };
@@ -2516,14 +2527,16 @@ CharacterOffset AXObjectCache::previousBoundary(const CharacterOffset& character
     if (&node != characterOffset.node && AccessibilityObject::replacedNodeNeedsCharacter(nextSibling))
         return startOrEndCharacterOffsetForRange(rangeForNodeContents(nextSibling), false);
 
-    if ((node.isTextNode() && static_cast<int>(next) <= node.maxCharacterOffset()) || (node.renderer() && node.renderer()->isBR() && !next)) {
+    if ((!suffixLength && node.isTextNode() && static_cast<int>(next) <= node.maxCharacterOffset()) || (node.renderer() && node.renderer()->isBR() && !next)) {
         // The next variable contains a usable index into a text node
         if (node.isTextNode())
             return traverseToOffsetInRange(rangeForNodeContents(&node), next, TraverseOptionValidateOffset);
         return characterOffsetForNodeAndOffset(node, next, TraverseOptionIncludeStart);
     }
 
-    int characterCount = characterOffset.offset - (string.size() - suffixLength - next);
+    int characterCount = characterOffset.offset;
+    if (next < string.size() - suffixLength)
+        characterCount -= string.size() - suffixLength - next;
     // We don't want to go to the previous node if the node is at the start of a new line.
     if (characterCount < 0 && (characterOffsetNodeIsBR(characterOffset) || string[string.size() - suffixLength - 1] == '\n'))
         characterCount = 0;
@@ -2613,7 +2626,7 @@ CharacterOffset AXObjectCache::previousParagraphStartCharacterOffset(const Chara
 
 CharacterOffset AXObjectCache::startCharacterOffsetOfSentence(const CharacterOffset& characterOffset)
 {
-    return previousBoundary(characterOffset, startSentenceBoundary);
+    return previousBoundary(characterOffset, startSentenceBoundary, NeedsContextAtParagraphStart::Yes);
 }
 
 CharacterOffset AXObjectCache::endCharacterOffsetOfSentence(const CharacterOffset& characterOffset)
@@ -2952,7 +2965,7 @@ Ref<AXIsolatedTree> AXObjectCache::generateIsolatedAccessibilityTree()
 
     Vector<Ref<AXIsolatedTreeNode>> nodeChanges;
     auto root = createIsolatedAccessibilityTreeHierarchy(*rootObject(), InvalidAXID, *tree, nodeChanges);
-    root->setIsRootNode(true);
+    tree->setRootNodeID(root->identifier());
     tree->appendNodeChanges(nodeChanges);
 
     return makeRef(*tree);
@@ -3026,7 +3039,7 @@ bool isNodeAriaVisible(Node* node)
     bool ariaHiddenFalsePresent = false;
     for (Node* testNode = node; testNode; testNode = testNode->parentNode()) {
         if (is<Element>(*testNode)) {
-            const AtomicString& ariaHiddenValue = downcast<Element>(*testNode).attributeWithoutSynchronization(aria_hiddenAttr);
+            const AtomString& ariaHiddenValue = downcast<Element>(*testNode).attributeWithoutSynchronization(aria_hiddenAttr);
             if (equalLettersIgnoringASCIICase(ariaHiddenValue, "true"))
                 return false;
 
@@ -3089,4 +3102,4 @@ AXTextChange AXObjectCache::textChangeForEditType(AXTextEditType type)
 
 } // namespace WebCore
 
-#endif // HAVE(ACCESSIBILITY)
+#endif // ENABLE(ACCESSIBILITY)

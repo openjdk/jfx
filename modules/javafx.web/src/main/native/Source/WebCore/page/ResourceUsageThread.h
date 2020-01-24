@@ -72,7 +72,7 @@ private:
     void recomputeCollectionMode();
 
     void createThreadIfNeeded();
-    void threadBody();
+    NO_RETURN void threadBody();
 
     void platformSaveStateBeforeStarting();
     void platformCollectCPUData(JSC::VM*, ResourceUsageData&);
@@ -93,19 +93,6 @@ private:
 #endif
 
 };
-
-#if PLATFORM(COCOA)
-struct TagInfo {
-    TagInfo() { }
-    size_t dirty { 0 };
-    size_t reclaimable { 0 };
-};
-
-const char* displayNameForVMTag(unsigned);
-size_t vmPageSize();
-std::array<TagInfo, 256> pagesPerVMTag();
-void logFootprintComparison(const std::array<TagInfo, 256>&, const std::array<TagInfo, 256>&);
-#endif
 
 } // namespace WebCore
 

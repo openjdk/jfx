@@ -27,7 +27,7 @@
 #include "JSDOMPromiseDeferred.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
@@ -61,6 +61,7 @@ public:
     CachedImage* image() const { return m_image.get(); }
     void clearImage(); // Cancels pending beforeload and load events, and doesn't dispatch new ones.
 
+    size_t pendingDecodePromisesCountForTesting() const { return m_decodingPromises.size(); }
     void decode(Ref<DeferredPromise>&&);
 
     void setLoadManually(bool loadManually) { m_loadManually = loadManually; }
@@ -80,7 +81,7 @@ protected:
 
 private:
     virtual void dispatchLoadEvent() = 0;
-    virtual String sourceURI(const AtomicString&) const = 0;
+    virtual String sourceURI(const AtomString&) const = 0;
 
     void updatedHasPendingEvent();
 
@@ -95,7 +96,8 @@ private:
     void clearFailedLoadURL();
 
     bool hasPendingDecodePromises() const { return !m_decodingPromises.isEmpty(); }
-    void decodeError(const char*);
+    void resolveDecodePromises();
+    void rejectDecodePromises(const char* message);
     void decode();
 
     void timerFired();
@@ -104,8 +106,8 @@ private:
     CachedResourceHandle<CachedImage> m_image;
     Timer m_derefElementTimer;
     RefPtr<Element> m_protectedElement;
-    AtomicString m_failedLoadURL;
-    Vector<RefPtr<DeferredPromise>, 1> m_decodingPromises;
+    AtomString m_failedLoadURL;
+    Vector<RefPtr<DeferredPromise>> m_decodingPromises;
     bool m_hasPendingBeforeLoadEvent : 1;
     bool m_hasPendingLoadEvent : 1;
     bool m_hasPendingErrorEvent : 1;

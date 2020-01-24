@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,7 +49,7 @@ namespace JSC { namespace B3 {
 Procedure::Procedure()
     : m_cfg(new CFG(*this))
     , m_lastPhaseName("initial")
-    , m_byproducts(std::make_unique<OpaqueByproducts>())
+    , m_byproducts(makeUnique<OpaqueByproducts>())
     , m_code(new Air::Code(*this))
 {
     m_code->setNumEntrypoints(m_numEntrypoints);
@@ -85,6 +85,24 @@ Variable* Procedure::addVariable(Type type)
     return m_variables.addNew(type);
 }
 
+Type Procedure::addTuple(Vector<Type>&& types)
+{
+    Type result = Type::tupleFromIndex(m_tuples.size());
+    m_tuples.append(WTFMove(types));
+    ASSERT(result.isTuple());
+    return result;
+}
+
+bool Procedure::isValidTuple(Type tuple) const
+{
+    return tuple.tupleIndex() < m_tuples.size();
+}
+
+const Vector<Type>& Procedure::tupleForType(Type tuple) const
+{
+    return m_tuples[tuple.tupleIndex()];
+}
+
 Value* Procedure::clone(Value* value)
 {
     std::unique_ptr<Value> clone(value->cloneImpl());
@@ -93,10 +111,9 @@ Value* Procedure::clone(Value* value)
     return m_values.add(WTFMove(clone));
 }
 
-
 Value* Procedure::addIntConstant(Origin origin, Type type, int64_t value)
 {
-    switch (type) {
+    switch (type.kind()) {
     case Int32:
         return add<Const32Value>(origin, static_cast<int32_t>(value));
     case Int64:
@@ -118,7 +135,7 @@ Value* Procedure::addIntConstant(Value* likeValue, int64_t value)
 
 Value* Procedure::addConstant(Origin origin, Type type, uint64_t bits)
 {
-    switch (type) {
+    switch (type.kind()) {
     case Int32:
         return add<Const32Value>(origin, static_cast<int32_t>(bits));
     case Int64:
@@ -294,28 +311,28 @@ void Procedure::deleteOrphans()
 Dominators& Procedure::dominators()
 {
     if (!m_dominators)
-        m_dominators = std::make_unique<Dominators>(*this);
+        m_dominators = makeUnique<Dominators>(*this);
     return *m_dominators;
 }
 
 NaturalLoops& Procedure::naturalLoops()
 {
     if (!m_naturalLoops)
-        m_naturalLoops = std::make_unique<NaturalLoops>(*this);
+        m_naturalLoops = makeUnique<NaturalLoops>(*this);
     return *m_naturalLoops;
 }
 
 BackwardsCFG& Procedure::backwardsCFG()
 {
     if (!m_backwardsCFG)
-        m_backwardsCFG = std::make_unique<BackwardsCFG>(*this);
+        m_backwardsCFG = makeUnique<BackwardsCFG>(*this);
     return *m_backwardsCFG;
 }
 
 BackwardsDominators& Procedure::backwardsDominators()
 {
     if (!m_backwardsDominators)
-        m_backwardsDominators = std::make_unique<BackwardsDominators>(*this);
+        m_backwardsDominators = makeUnique<BackwardsDominators>(*this);
     return *m_backwardsDominators;
 }
 
@@ -341,7 +358,7 @@ void* Procedure::addDataSection(size_t size)
 {
     if (!size)
         return nullptr;
-    std::unique_ptr<DataSection> dataSection = std::make_unique<DataSection>(size);
+    std::unique_ptr<DataSection> dataSection = makeUnique<DataSection>(size);
     void* result = dataSection->data();
     m_byproducts->add(WTFMove(dataSection));
     return result;

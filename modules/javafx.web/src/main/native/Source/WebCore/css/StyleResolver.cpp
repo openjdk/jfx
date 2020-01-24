@@ -76,6 +76,7 @@
 #include "PageRuleCollector.h"
 #include "PaintWorkletGlobalScope.h"
 #include "Pair.h"
+#include "Quirks.h"
 #include "RenderScrollbar.h"
 #include "RenderStyleConstants.h"
 #include "RenderTheme.h"
@@ -110,14 +111,7 @@
 #include <wtf/Seconds.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/Vector.h>
-#include <wtf/text/AtomicStringHash.h>
-
-
-#if ENABLE(DASHBOARD_SUPPORT)
-#endif
-
-#if ENABLE(VIDEO_TRACK)
-#endif
+#include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
@@ -261,7 +255,7 @@ void StyleResolver::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>&
 // This is a simplified style setting function for keyframe styles
 void StyleResolver::addKeyframeStyle(Ref<StyleRuleKeyframes>&& rule)
 {
-    AtomicString s(rule->name());
+    AtomString s(rule->name());
     m_keyframesRuleMap.set(s.impl(), WTFMove(rule));
 }
 
@@ -465,7 +459,7 @@ std::unique_ptr<RenderStyle> StyleResolver::styleForKeyframe(const RenderStyle* 
 
 bool StyleResolver::isAnimationNameValid(const String& name)
 {
-    return m_keyframesRuleMap.find(AtomicString(name).impl()) != m_keyframesRuleMap.end();
+    return m_keyframesRuleMap.find(AtomString(name).impl()) != m_keyframesRuleMap.end();
 }
 
 void StyleResolver::keyframeStylesForAnimation(const Element& element, const RenderStyle* elementStyle, KeyframeList& list)
@@ -695,6 +689,7 @@ static DisplayType equivalentBlockDisplay(const RenderStyle& style, const Docume
     case DisplayType::Flex:
     case DisplayType::WebKitFlex:
     case DisplayType::Grid:
+    case DisplayType::FlowRoot:
         return display;
 
     case DisplayType::ListItem:
@@ -745,7 +740,7 @@ static bool doesNotInheritTextDecoration(const RenderStyle& style, const Element
         || style.isFloating() || style.hasOutOfFlowPosition();
 }
 
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH) || ENABLE(POINTER_EVENTS)
 static bool isScrollableOverflow(Overflow overflow)
 {
     return overflow == Overflow::Scroll || overflow == Overflow::Auto;
@@ -765,7 +760,7 @@ void StyleResolver::adjustStyleForInterCharacterRuby()
 static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
 {
     // https://drafts.csswg.org/css-display-3/#unbox-html
-    static NeverDestroyed<HashSet<AtomicString>> tagNames = [] {
+    static NeverDestroyed<HashSet<AtomString>> tagNames = [] {
         static const HTMLQualifiedName* const tagList[] = {
             &brTag.get(),
             &wbrTag.get(),
@@ -785,7 +780,7 @@ static bool hasEffectiveDisplayNoneForDisplayContents(const Element& element)
             &textareaTag.get(),
             &selectTag.get(),
         };
-        HashSet<AtomicString> set;
+        HashSet<AtomString> set;
         for (auto& name : tagList)
             set.add(name->localName());
         return set;
@@ -841,6 +836,104 @@ void StyleResolver::adjustSVGElementStyle(const SVGElement& svgElement, RenderSt
     if ((svgElement.hasTagName(SVGNames::foreignObjectTag) || svgElement.hasTagName(SVGNames::textTag)) && style.isDisplayInlineType())
         style.setDisplay(DisplayType::Block);
 }
+
+#if ENABLE(POINTER_EVENTS)
+static OptionSet<TouchAction> computeEffectiveTouchActions(const RenderStyle& style, OptionSet<TouchAction> effectiveTouchActions)
+{
+    // https://w3c.github.io/pointerevents/#determining-supported-touch-behavior
+    // "A touch behavior is supported if it conforms to the touch-action property of each element between
+    // the hit tested element and its nearest ancestor with the default touch behavior (including both the
+    // hit tested element and the element with the default touch behavior)."
+
+    bool hasDefaultTouchBehavior = isScrollableOverflow(style.overflowX()) || isScrollableOverflow(style.overflowY());
+    if (hasDefaultTouchBehavior)
+        effectiveTouchActions = RenderStyle::initialTouchActions();
+
+    auto touchActions = style.touchActions();
+    if (touchActions == RenderStyle::initialTouchActions())
+        return effectiveTouchActions;
+
+    if (effectiveTouchActions.contains(TouchAction::None))
+        return { TouchAction::None };
+
+    if (effectiveTouchActions.containsAny({ TouchAction::Auto, TouchAction::Manipulation }))
+        return touchActions;
+
+    if (touchActions.containsAny({ TouchAction::Auto, TouchAction::Manipulation }))
+        return effectiveTouchActions;
+
+    auto sharedTouchActions = effectiveTouchActions & touchActions;
+    if (sharedTouchActions.isEmpty())
+        return { TouchAction::None };
+
+    return sharedTouchActions;
+}
+#endif
+
+#if ENABLE(TEXT_AUTOSIZING)
+static bool hasTextChild(const Element& element)
+{
+    for (auto* child = element.firstChild(); child; child = child->nextSibling()) {
+        if (is<Text>(child))
+            return true;
+    }
+    return false;
+}
+
+bool StyleResolver::adjustRenderStyleForTextAutosizing(RenderStyle& style, const Element& element)
+{
+    if (!settings().textAutosizingEnabled() || !settings().textAutosizingUsesIdempotentMode())
+        return false;
+
+    AutosizeStatus::updateStatus(style);
+    if (style.textSizeAdjust().isNone())
+        return false;
+
+    float initialScale = document().page() ? document().page()->initialScale() : 1;
+    auto adjustLineHeightIfNeeded = [&](auto computedFontSize) {
+        auto lineHeight = style.specifiedLineHeight();
+        constexpr static unsigned eligibleFontSize = 12;
+        if (computedFontSize * initialScale >= eligibleFontSize)
+            return;
+
+        constexpr static float boostFactor = 1.25;
+        auto minimumLineHeight = boostFactor * computedFontSize;
+        if (!lineHeight.isFixed() || lineHeight.value() >= minimumLineHeight)
+            return;
+
+        if (AutosizeStatus::probablyContainsASmallFixedNumberOfLines(style))
+            return;
+
+        style.setLineHeight({ minimumLineHeight, Fixed });
+    };
+
+    auto fontDescription = style.fontDescription();
+    auto initialComputedFontSize = fontDescription.computedSize();
+    auto specifiedFontSize = fontDescription.specifiedSize();
+    bool isCandidate = style.isIdempotentTextAutosizingCandidate();
+    if (!isCandidate && WTF::areEssentiallyEqual(initialComputedFontSize, specifiedFontSize))
+        return false;
+
+    auto adjustedFontSize = AutosizeStatus::idempotentTextSize(fontDescription.specifiedSize(), initialScale);
+    if (isCandidate && WTF::areEssentiallyEqual(initialComputedFontSize, adjustedFontSize))
+        return false;
+
+    if (!hasTextChild(element))
+        return false;
+
+    fontDescription.setComputedSize(isCandidate ? adjustedFontSize : specifiedFontSize);
+    style.setFontDescription(WTFMove(fontDescription));
+    style.fontCascade().update(&document().fontSelector());
+
+    // FIXME: We should restore computed line height to its original value in the case where the element is not
+    // an idempotent text autosizing candidate; otherwise, if an element that is a text autosizing candidate contains
+    // children which are not autosized, the non-autosized content will end up with a boosted line height.
+    if (isCandidate)
+        adjustLineHeightIfNeeded(adjustedFontSize);
+
+    return true;
+}
+#endif
 
 void StyleResolver::adjustRenderStyle(RenderStyle& style, const RenderStyle& parentStyle, const RenderStyle* parentBoxStyle, const Element* element)
 {
@@ -1037,7 +1130,7 @@ void StyleResolver::adjustRenderStyle(RenderStyle& style, const RenderStyle& par
         style.setOverflowY(Overflow::Visible);
     }
 
-#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
     // Touch overflow scrolling creates a stacking context.
     if (style.hasAutoZIndex() && style.useTouchOverflowScrolling() && (isScrollableOverflow(style.overflowX()) || isScrollableOverflow(style.overflowY())))
         style.setZIndex(0);
@@ -1087,22 +1180,47 @@ void StyleResolver::adjustRenderStyle(RenderStyle& style, const RenderStyle& par
     // 'center'), 'legacy' computes to the the inherited value. Otherwise, 'auto' computes to 'normal'.
     if (parentBoxStyle->justifyItems().positionType() == ItemPositionType::Legacy && style.justifyItems().position() == ItemPosition::Legacy)
         style.setJustifyItems(parentBoxStyle->justifyItems());
+
+#if ENABLE(POINTER_EVENTS)
+    style.setEffectiveTouchActions(computeEffectiveTouchActions(style, parentStyle.effectiveTouchActions()));
+#endif
+
+    if (element) {
+#if ENABLE(TEXT_AUTOSIZING)
+        adjustRenderStyleForTextAutosizing(style, *element);
+#endif
+        adjustRenderStyleForSiteSpecificQuirks(style, *element);
+    }
 }
 
-static void checkForOrientationChange(RenderStyle* style)
+void StyleResolver::adjustRenderStyleForSiteSpecificQuirks(RenderStyle& style, const Element& element)
 {
-    FontOrientation fontOrientation;
-    NonCJKGlyphOrientation glyphOrientation;
-    std::tie(fontOrientation, glyphOrientation) = style->fontAndGlyphOrientation();
+    if (document().quirks().needsGMailOverflowScrollQuirk()) {
+        // This turns sidebar scrollable without mouse move event.
+        static NeverDestroyed<AtomString> roleValue("navigation", AtomString::ConstructFromLiteral);
+        if (style.overflowY() == Overflow::Hidden && element.attributeWithoutSynchronization(roleAttr) == roleValue)
+            style.setOverflowY(Overflow::Auto);
+    }
+    if (document().quirks().needsYouTubeOverflowScrollQuirk()) {
+        // This turns sidebar scrollable without hover.
+        static NeverDestroyed<AtomString> idValue("guide-inner-content", AtomString::ConstructFromLiteral);
+        if (style.overflowY() == Overflow::Hidden && element.idForStyleResolution() == idValue)
+            style.setOverflowY(Overflow::Auto);
+    }
+}
 
-    const auto& fontDescription = style->fontDescription();
+static void checkForOrientationChange(RenderStyle& style)
+{
+    auto [fontOrientation, glyphOrientation] = style.fontAndGlyphOrientation();
+
+    const auto& fontDescription = style.fontDescription();
     if (fontDescription.orientation() == fontOrientation && fontDescription.nonCJKGlyphOrientation() == glyphOrientation)
         return;
 
     auto newFontDescription = fontDescription;
     newFontDescription.setNonCJKGlyphOrientation(glyphOrientation);
     newFontDescription.setOrientation(fontOrientation);
-    style->setFontDescription(WTFMove(newFontDescription));
+    style.setFontDescription(WTFMove(newFontDescription));
 }
 
 void StyleResolver::updateFont()
@@ -1110,16 +1228,16 @@ void StyleResolver::updateFont()
     if (!m_state.fontDirty())
         return;
 
-    RenderStyle* style = m_state.style();
+    auto& style = *m_state.style();
 #if ENABLE(TEXT_AUTOSIZING)
     checkForTextSizeAdjust(style);
 #endif
     checkForGenericFamilyChange(style, m_state.parentStyle());
     checkForZoomChange(style, m_state.parentStyle());
     checkForOrientationChange(style);
-    style->fontCascade().update(&document().fontSelector());
+    style.fontCascade().update(&document().fontSelector());
     if (m_state.fontSizeHasViewportUnits())
-        style->setHasViewportUnits(true);
+        style.setHasViewportUnits(true);
     m_state.setFontDirty(false);
 }
 
@@ -1384,7 +1502,7 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
 
 #if ENABLE(DARK_MODE_CSS)
         // Supported color schemes can affect resolved colors, so we need to apply that property before any color properties.
-        applyCascadedProperties(CSSPropertySupportedColorSchemes, CSSPropertySupportedColorSchemes, applyState);
+        applyCascadedProperties(CSSPropertyColorScheme, CSSPropertyColorScheme, applyState);
 #endif
 
         applyCascadedProperties(firstCSSProperty, lastHighPriorityProperty, applyState);
@@ -1413,7 +1531,7 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
 
 #if ENABLE(DARK_MODE_CSS)
     // Supported color schemes can affect resolved colors, so we need to apply that property before any color properties.
-    applyCascadedProperties(CSSPropertySupportedColorSchemes, CSSPropertySupportedColorSchemes, applyState);
+    applyCascadedProperties(CSSPropertyColorScheme, CSSPropertyColorScheme, applyState);
 #endif
 
     applyCascadedProperties(firstCSSProperty, lastHighPriorityProperty, applyState);
@@ -1597,7 +1715,7 @@ StyleResolver::CascadedProperties* StyleResolver::cascadedPropertiesForRollback(
         if (authorRollback)
             return authorRollback;
 
-        auto newAuthorRollback(std::make_unique<CascadedProperties>(direction, writingMode));
+        auto newAuthorRollback(makeUnique<CascadedProperties>(direction, writingMode));
 
         // This special rollback cascade contains UA rules and user rules but no author rules.
         newAuthorRollback->addNormalMatches(matchResult, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, false);
@@ -1614,7 +1732,7 @@ StyleResolver::CascadedProperties* StyleResolver::cascadedPropertiesForRollback(
         if (userRollback)
             return userRollback;
 
-        auto newUserRollback(std::make_unique<CascadedProperties>(direction, writingMode));
+        auto newUserRollback(makeUnique<CascadedProperties>(direction, writingMode));
 
         // This special rollback cascade contains only UA rules.
         newUserRollback->addNormalMatches(matchResult, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, false);
@@ -1763,37 +1881,39 @@ RefPtr<StyleImage> StyleResolver::styleImage(CSSValue& value)
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
-void StyleResolver::checkForTextSizeAdjust(RenderStyle* style)
+void StyleResolver::checkForTextSizeAdjust(RenderStyle& style)
 {
-    if (style->textSizeAdjust().isAuto())
+    if (style.textSizeAdjust().isAuto()
+        || !settings().textAutosizingEnabled()
+        || (settings().textAutosizingUsesIdempotentMode() && !style.textSizeAdjust().isNone()))
         return;
 
-    auto newFontDescription = style->fontDescription();
-    if (!style->textSizeAdjust().isNone())
-        newFontDescription.setComputedSize(newFontDescription.specifiedSize() * style->textSizeAdjust().multiplier());
+    auto newFontDescription = style.fontDescription();
+    if (!style.textSizeAdjust().isNone())
+        newFontDescription.setComputedSize(newFontDescription.specifiedSize() * style.textSizeAdjust().multiplier());
     else
         newFontDescription.setComputedSize(newFontDescription.specifiedSize());
-    style->setFontDescription(WTFMove(newFontDescription));
+    style.setFontDescription(WTFMove(newFontDescription));
 }
 #endif
 
-void StyleResolver::checkForZoomChange(RenderStyle* style, const RenderStyle* parentStyle)
+void StyleResolver::checkForZoomChange(RenderStyle& style, const RenderStyle* parentStyle)
 {
     if (!parentStyle)
         return;
 
-    if (style->effectiveZoom() == parentStyle->effectiveZoom() && style->textZoom() == parentStyle->textZoom())
+    if (style.effectiveZoom() == parentStyle->effectiveZoom() && style.textZoom() == parentStyle->textZoom())
         return;
 
-    const auto& childFont = style->fontDescription();
+    const auto& childFont = style.fontDescription();
     auto newFontDescription = childFont;
     setFontSize(newFontDescription, childFont.specifiedSize());
-    style->setFontDescription(WTFMove(newFontDescription));
+    style.setFontDescription(WTFMove(newFontDescription));
 }
 
-void StyleResolver::checkForGenericFamilyChange(RenderStyle* style, const RenderStyle* parentStyle)
+void StyleResolver::checkForGenericFamilyChange(RenderStyle& style, const RenderStyle* parentStyle)
 {
-    const auto& childFont = style->fontDescription();
+    const auto& childFont = style.fontDescription();
 
     if (childFont.isAbsoluteSize() || !parentStyle)
         return;
@@ -1819,7 +1939,7 @@ void StyleResolver::checkForGenericFamilyChange(RenderStyle* style, const Render
 
     auto newFontDescription = childFont;
     setFontSize(newFontDescription, size);
-    style->setFontDescription(WTFMove(newFontDescription));
+    style.setFontDescription(WTFMove(newFontDescription));
 }
 
 void StyleResolver::initializeFontStyle()
@@ -1830,6 +1950,7 @@ void StyleResolver::initializeFontStyle()
     fontDescription.setKeywordSizeFromIdentifier(CSSValueMedium);
     setFontSize(fontDescription, Style::fontSizeForKeyword(CSSValueMedium, false, document()));
     fontDescription.setShouldAllowUserInstalledFonts(settings().shouldAllowUserInstalledFonts() ? AllowUserInstalledFonts::Yes : AllowUserInstalledFonts::No);
+    fontDescription.setShouldAllowDesignSystemUIFonts(settings().shouldAllowDesignSystemUIFonts());
     setFontDescription(WTFMove(fontDescription));
 }
 

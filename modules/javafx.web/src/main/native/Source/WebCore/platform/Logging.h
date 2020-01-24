@@ -38,9 +38,13 @@ namespace WebCore {
 #endif
 
 #define WEBCORE_LOG_CHANNELS(M) \
+    M(AdClickAttribution) \
     M(Animations) \
+    M(ApplePay) \
     M(Archives) \
+    M(ClipRects) \
     M(Compositing) \
+    M(CompositingOverlap) \
     M(ContentFiltering) \
     M(ContentObservation) \
     M(DatabaseTracker) \
@@ -59,7 +63,6 @@ namespace WebCore {
     M(History) \
     M(IOSurface) \
     M(IconDatabase) \
-    M(LiveConnect) \
     M(Images) \
     M(IndexedDB) \
     M(IndexedDBOperations) \
@@ -93,6 +96,7 @@ namespace WebCore {
     M(ServiceWorker) \
     M(SpellingAndGrammar) \
     M(SQLDatabase) \
+    M(Storage) \
     M(StorageAPI) \
     M(SVG) \
     M(TextAutosizing) \
@@ -103,7 +107,6 @@ namespace WebCore {
     M(WebAudio) \
     M(WebGL) \
     M(WebGPU) \
-    M(WebMetal) \
     M(WebRTC) \
     M(WebRTCStats) \
     M(WheelEventTestTriggers) \

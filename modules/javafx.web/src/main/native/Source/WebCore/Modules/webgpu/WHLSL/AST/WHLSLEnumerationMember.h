@@ -27,9 +27,9 @@
 
 #if ENABLE(WEBGPU)
 
+#include "WHLSLCodeLocation.h"
 #include "WHLSLConstantExpression.h"
-#include "WHLSLLexer.h"
-#include "WHLSLNode.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Optional.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -40,12 +40,13 @@ namespace WHLSL {
 
 namespace AST {
 
-class EnumerationMember : public Node {
+class EnumerationMember {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    EnumerationMember(Lexer::Token&& origin, String&& name, Optional<ConstantExpression>&& value = WTF::nullopt)
-        : m_origin(WTFMove(origin))
+    EnumerationMember(CodeLocation location, String&& name, int64_t value)
+        : m_codeLocation(location)
         , m_name(WTFMove(name))
-        , m_value(WTFMove(value))
+        , m_value(value)
     {
     }
 
@@ -54,20 +55,14 @@ public:
     EnumerationMember(const EnumerationMember&) = delete;
     EnumerationMember(EnumerationMember&&) = default;
 
-    const Lexer::Token& origin() const { return m_origin; }
-    String& name() { return m_name; }
-    Optional<ConstantExpression>& value() { return m_value; }
-
-    void setValue(ConstantExpression&& value)
-    {
-        ASSERT(!m_value);
-        m_value = WTFMove(value);
-    }
+    const CodeLocation& codeLocation() const { return m_codeLocation; }
+    String name() { return m_name; }
+    int64_t value() { return m_value; }
 
 private:
-    Lexer::Token m_origin;
+    CodeLocation m_codeLocation;
     String m_name;
-    Optional<ConstantExpression> m_value;
+    int64_t m_value;
 };
 
 using EnumerationMembers = Vector<EnumerationMember>;

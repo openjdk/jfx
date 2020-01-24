@@ -34,11 +34,11 @@ Ref<DOMParser> DOMParser::create(Document& contextDocument)
     return adoptRef(*new DOMParser(contextDocument));
 }
 
-ExceptionOr<Ref<Document>> DOMParser::parseFromString(const String& string, const String& contentType)
+ExceptionOr<Ref<Document>> DOMParser::parseFromString(ScriptExecutionContext& context, const String& string, const String& contentType)
 {
     if (contentType != "text/html" && contentType != "text/xml" && contentType != "application/xml" && contentType != "application/xhtml+xml" && contentType != "image/svg+xml")
         return Exception { TypeError };
-    auto document = DOMImplementation::createDocument(contentType, nullptr, URL { });
+    auto document = DOMImplementation::createDocument(context.sessionID(), contentType, nullptr, URL { });
     if (m_contextDocument)
         document->setContextDocument(*m_contextDocument.get());
     document->setContent(string);
@@ -46,7 +46,7 @@ ExceptionOr<Ref<Document>> DOMParser::parseFromString(const String& string, cons
         document->setURL(m_contextDocument->url());
         document->setSecurityOriginPolicy(m_contextDocument->securityOriginPolicy());
     }
-    return WTFMove(document);
+    return document;
 }
 
 } // namespace WebCore

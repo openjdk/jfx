@@ -58,7 +58,7 @@ using namespace Inspector;
 
 WorkerInspectorController::WorkerInspectorController(WorkerGlobalScope& workerGlobalScope)
     : m_instrumentingAgents(InstrumentingAgents::create(*this))
-    , m_injectedScriptManager(std::make_unique<WebInjectedScriptManager>(*this, WebInjectedScriptHost::create()))
+    , m_injectedScriptManager(makeUnique<WebInjectedScriptManager>(*this, WebInjectedScriptHost::create()))
     , m_frontendRouter(FrontendRouter::create())
     , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
     , m_executionStopwatch(Stopwatch::create())
@@ -69,18 +69,9 @@ WorkerInspectorController::WorkerInspectorController(WorkerGlobalScope& workerGl
 
     auto workerContext = workerAgentContext();
 
-    auto heapAgent = std::make_unique<WebHeapAgent>(workerContext);
-    auto consoleAgent = std::make_unique<WorkerConsoleAgent>(workerContext, heapAgent.get());
-
+    auto consoleAgent = makeUnique<WorkerConsoleAgent>(workerContext);
     m_instrumentingAgents->setWebConsoleAgent(consoleAgent.get());
-
-    m_agents.append(std::make_unique<WorkerRuntimeAgent>(workerContext));
-    m_agents.append(std::make_unique<WorkerDebuggerAgent>(workerContext));
     m_agents.append(WTFMove(consoleAgent));
-    m_agents.append(WTFMove(heapAgent));
-
-    if (CommandLineAPIHost* commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())
-        commandLineAPIHost->init(nullptr, m_instrumentingAgents->webConsoleAgent(), nullptr, nullptr, nullptr);
 }
 
 WorkerInspectorController::~WorkerInspectorController()
@@ -114,7 +105,7 @@ void WorkerInspectorController::connectFrontend()
     m_executionStopwatch->reset();
     m_executionStopwatch->start();
 
-    m_forwardingChannel = std::make_unique<WorkerToPageFrontendChannel>(m_workerGlobalScope);
+    m_forwardingChannel = makeUnique<WorkerToPageFrontendChannel>(m_workerGlobalScope);
     m_frontendRouter->connectFrontend(*m_forwardingChannel.get());
     m_agents.didCreateFrontendAndBackend(&m_frontendRouter.get(), &m_backendDispatcher.get());
 }
@@ -169,16 +160,25 @@ void WorkerInspectorController::createLazyAgents()
 
     m_didCreateLazyAgents = true;
 
+    m_injectedScriptManager->connect();
+
     auto workerContext = workerAgentContext();
+
+    m_agents.append(makeUnique<WorkerRuntimeAgent>(workerContext));
 
 #if ENABLE(SERVICE_WORKER)
     if (is<ServiceWorkerGlobalScope>(m_workerGlobalScope)) {
-        m_agents.append(std::make_unique<ServiceWorkerAgent>(workerContext));
-        m_agents.append(std::make_unique<WorkerNetworkAgent>(workerContext));
+        m_agents.append(makeUnique<ServiceWorkerAgent>(workerContext));
+        m_agents.append(makeUnique<WorkerNetworkAgent>(workerContext));
     }
 #endif
 
-    m_agents.append(std::make_unique<WorkerAuditAgent>(workerContext));
+    m_agents.append(makeUnique<WebHeapAgent>(workerContext));
+    m_agents.append(makeUnique<WorkerDebuggerAgent>(workerContext));
+    m_agents.append(makeUnique<WorkerAuditAgent>(workerContext));
+
+    if (auto& commandLineAPIHost = m_injectedScriptManager->commandLineAPIHost())
+        commandLineAPIHost->init(m_instrumentingAgents.copyRef());
 }
 
 InspectorFunctionCallHandler WorkerInspectorController::functionCallHandler() const

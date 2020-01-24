@@ -291,6 +291,13 @@ int writeToFile(PlatformFileHandle, const char*, int)
     return -1;
 }
 
+bool truncateFile(PlatformFileHandle handle, long long offset)
+{
+    // FIXME: openjfx2.26 implement truncateFile
+    fprintf(stderr, "FileSystemJava::truncateFile notImplemented\n");
+    return false;
+}
+
 String pathGetFileName(const String& path)
 {
     JNIEnv* env = WTF::GetJavaEnv();
@@ -339,6 +346,23 @@ Optional<int32_t> getFileDeviceId(const CString&)
     return {};
 }
 
+MappedFileData::MappedFileData(const String& filePath, MappedFileMode mode, bool& success)
+{
+    fprintf(stderr, "MappedFileData::MappedFileData(const String&, MappedFileMode, bool&) notImplemented() \n");
+    success = false;
+}
+
+bool MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode)
+{
+    fprintf(stderr, "MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode) notImplemented()\n");
+    return false;
+}
+
+bool unmapViewOfFile(void* , size_t)
+{
+    fprintf(stderr, "unmapViewOfFile(void* , size_t) notImplemented()\n");
+    return false;
+}
 } // namespace FileSystemImpl
 
 } // namespace WTF

@@ -38,7 +38,7 @@ OBJC_CLASS WebSpeechSynthesisWrapper;
 
 namespace WebCore {
 
-enum SpeechBoundary {
+enum class SpeechBoundary : uint8_t {
     SpeechWordBoundary,
     SpeechSentenceBoundary
 };
@@ -73,6 +73,7 @@ public:
     virtual void resume();
     virtual void cancel();
 
+    void resetState();
     PlatformSpeechSynthesizerClient* client() const { return m_speechSynthesizerClient; }
 
 protected:

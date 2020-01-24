@@ -28,7 +28,8 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLBaseSemantic.h"
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -37,6 +38,7 @@ namespace WHLSL {
 namespace AST {
 
 class ResourceSemantic : public BaseSemantic {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum class Mode : uint8_t {
         UnorderedAccessView,
@@ -45,8 +47,8 @@ public:
         Sampler
     };
 
-    ResourceSemantic(Lexer::Token&& origin, Mode mode, unsigned index, unsigned space)
-        : BaseSemantic(WTFMove(origin))
+    ResourceSemantic(CodeLocation location, Mode mode, unsigned index, unsigned space)
+        : BaseSemantic(location)
         , m_mode(mode)
         , m_index(index)
         , m_space(space)
@@ -57,6 +59,20 @@ public:
 
     ResourceSemantic(const ResourceSemantic&) = delete;
     ResourceSemantic(ResourceSemantic&&) = default;
+
+    StringView toString()
+    {
+        switch (m_mode) {
+        case Mode::UnorderedAccessView:
+            return "UnorderedAccessView";
+        case Mode::Texture:
+            return "Texture";
+        case Mode::Buffer:
+            return "Buffer";
+        case Mode::Sampler:
+            return "Sampler";
+        }
+    }
 
     Mode mode() const { return m_mode; }
     unsigned index() const { return m_index; }

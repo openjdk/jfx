@@ -31,6 +31,7 @@
 #include "CSSParserTokenRange.h"
 #include "CSSPropertyParserHelpers.h"
 #include "CSSTokenizer.h"
+#include "DOMWindow.h"
 #include "Element.h"
 #include "InspectorInstrumentation.h"
 #include "IntersectionObserverCallback.h"
@@ -157,7 +158,7 @@ void IntersectionObserver::observe(Element& target)
     auto* document = trackingDocument();
     if (!hadObservationTargets)
         document->addIntersectionObserver(*this);
-    document->scheduleForcedIntersectionObservationUpdate();
+    document->scheduleInitialIntersectionObservationUpdate();
 }
 
 void IntersectionObserver::unobserve(Element& target)

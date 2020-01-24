@@ -25,12 +25,17 @@
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
+namespace JSC {
+class VM;
+} // namespace JSC
+
 namespace WebCore {
 
 class MicrotaskQueue;
 class ScriptExecutionContext;
 
 class Microtask {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     virtual ~Microtask()
     {
@@ -48,7 +53,6 @@ protected:
 };
 
 class VoidMicrotask final : public Microtask {
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit VoidMicrotask(Function<void()>&& function)
         : m_function(WTFMove(function))
@@ -65,26 +69,31 @@ private:
     Function<void()> m_function;
 };
 
-class MicrotaskQueue {
+class MicrotaskQueue final {
+    WTF_MAKE_FAST_ALLOCATED;
     friend NeverDestroyed<MicrotaskQueue>;
     friend class Microtask;
 public:
     WEBCORE_EXPORT static MicrotaskQueue& mainThreadQueue();
     WEBCORE_EXPORT static MicrotaskQueue& contextQueue(ScriptExecutionContext&);
 
-    WEBCORE_EXPORT MicrotaskQueue();
+    WEBCORE_EXPORT MicrotaskQueue(JSC::VM&);
     WEBCORE_EXPORT ~MicrotaskQueue();
 
     WEBCORE_EXPORT void append(std::unique_ptr<Microtask>&&);
     WEBCORE_EXPORT void performMicrotaskCheckpoint();
+
+    JSC::VM& vm() const { return m_vm.get(); }
 
 private:
     WEBCORE_EXPORT void remove(const Microtask&);
 
     void timerFired();
 
-    bool m_performingMicrotaskCheckpoint = false;
+    bool m_performingMicrotaskCheckpoint { false };
     Vector<std::unique_ptr<Microtask>> m_microtaskQueue;
+    // For the main thread the VM lives forever. For workers it's lifetime is tied to our owning WorkerGlobalScope. Regardless, we retain the VM here to be safe.
+    Ref<JSC::VM> m_vm;
 
     // FIXME: Instead of a Timer, we should have a centralized Event Loop that calls performMicrotaskCheckpoint()
     // on every iteration, implementing https://html.spec.whatwg.org/multipage/webappapis.html#processing-model-9

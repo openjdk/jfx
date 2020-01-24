@@ -29,22 +29,24 @@
 
 namespace WebCore {
 
+class Page;
+
 class PageNetworkAgent final : public InspectorNetworkAgent {
     WTF_MAKE_NONCOPYABLE(PageNetworkAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PageNetworkAgent(PageAgentContext&, InspectorPageAgent*);
-    virtual ~PageNetworkAgent() = default;
+    PageNetworkAgent(PageAgentContext&);
+    virtual ~PageNetworkAgent();
 
 private:
-    String loaderIdentifier(DocumentLoader*) final;
-    String frameIdentifier(DocumentLoader*) final;
-    Vector<WebSocket*> activeWebSockets(const LockHolder&) final;
-    void setResourceCachingDisabled(bool) final;
-    ScriptExecutionContext* scriptExecutionContext(ErrorString&, const String& frameId) final;
-    bool shouldForceBufferingNetworkResourceData() const final { return false; }
+    String loaderIdentifier(DocumentLoader*);
+    String frameIdentifier(DocumentLoader*);
+    Vector<WebSocket*> activeWebSockets(const LockHolder&);
+    void setResourceCachingDisabled(bool);
+    ScriptExecutionContext* scriptExecutionContext(ErrorString&, const String& frameId);
+    bool shouldForceBufferingNetworkResourceData() const { return false; }
 
-    InspectorPageAgent* m_pageAgent { nullptr };
+    Page& m_inspectedPage;
 };
 
 } // namespace WebCore

@@ -39,17 +39,17 @@ class WebGPUCommandBuffer;
 
 class WebGPUQueue : public RefCounted<WebGPUQueue> {
 public:
-    static RefPtr<WebGPUQueue> create(RefPtr<GPUQueue>&&);
+    static Ref<WebGPUQueue> create(RefPtr<GPUQueue>&&);
 
-    void submit(Vector<RefPtr<WebGPUCommandBuffer>>&&);
+    void submit(const Vector<RefPtr<WebGPUCommandBuffer>>&);
 
     String label() const { return m_queue->label(); }
     void setLabel(const String& label) { m_queue->setLabel(label); }
 
 private:
-    WebGPUQueue(Ref<GPUQueue>&&);
+    WebGPUQueue(RefPtr<GPUQueue>&&);
 
-    Ref<GPUQueue> m_queue;
+    RefPtr<GPUQueue> m_queue;
 };
 
 } // namespace WebCore

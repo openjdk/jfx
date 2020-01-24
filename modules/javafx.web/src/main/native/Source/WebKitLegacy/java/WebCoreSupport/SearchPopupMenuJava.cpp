@@ -46,12 +46,12 @@ bool SearchPopupMenuJava::enabled()
     return false;
 }
 
-void SearchPopupMenuJava::saveRecentSearches(const AtomicString&, const Vector<RecentSearch>&)
+void SearchPopupMenuJava::saveRecentSearches(const AtomString&, const Vector<RecentSearch>&)
 {
     notImplemented();
 }
 
-void SearchPopupMenuJava::loadRecentSearches(const AtomicString&, Vector<RecentSearch>&)
+void SearchPopupMenuJava::loadRecentSearches(const AtomString&, Vector<RecentSearch>&)
 {
     notImplemented();
 }

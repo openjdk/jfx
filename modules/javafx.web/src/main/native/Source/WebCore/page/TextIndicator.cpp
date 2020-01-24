@@ -132,7 +132,7 @@ static bool hasNonInlineOrReplacedElements(const Range& range)
 
 static SnapshotOptions snapshotOptionsForTextIndicatorOptions(TextIndicatorOptions options)
 {
-    SnapshotOptions snapshotOptions = SnapshotOptionsNone;
+    SnapshotOptions snapshotOptions = SnapshotOptionsPaintWithIntegralScaleFactor;
 
     if (!(options & TextIndicatorOptionPaintAllContent)) {
         if (options & TextIndicatorOptionPaintBackgrounds)
@@ -169,7 +169,7 @@ static bool takeSnapshots(TextIndicatorData& data, Frame& frame, IntRect snapsho
     if (data.options & TextIndicatorOptionIncludeSnapshotWithSelectionHighlight) {
         float snapshotScaleFactor;
         data.contentImageWithHighlight = takeSnapshot(frame, snapshotRect, SnapshotOptionsNone, snapshotScaleFactor, clipRectsInDocumentCoordinates);
-        ASSERT(!data.contentImageWithHighlight || data.contentImageScaleFactor == snapshotScaleFactor);
+        ASSERT(!data.contentImageWithHighlight || data.contentImageScaleFactor >= snapshotScaleFactor);
     }
 
     if (data.options & TextIndicatorOptionIncludeSnapshotOfAllVisibleContentWithoutSelection) {
@@ -222,6 +222,15 @@ static HashSet<Color> estimatedTextColorsForRange(const Range& range)
     return colors;
 }
 
+static FloatRect absoluteBoundingRectForRange(const Range& range)
+{
+    return range.absoluteBoundingRect({
+        Range::BoundingRectBehavior::RespectClipping,
+        Range::BoundingRectBehavior::UseVisibleBounds,
+        Range::BoundingRectBehavior::IgnoreTinyRects,
+    });
+}
+
 static Color estimatedBackgroundColorForRange(const Range& range, const Frame& frame)
 {
     auto estimatedBackgroundColor = frame.view() ? frame.view()->documentBackgroundColor() : Color::transparent;
@@ -236,7 +245,7 @@ static Color estimatedBackgroundColorForRange(const Range& range, const Frame& f
         commonAncestor = commonAncestor->parentOrShadowHostElement();
     }
 
-    auto boundingRectForRange = enclosingIntRect(range.absoluteBoundingRect(Range::RespectClippingForTextRects::Yes));
+    auto boundingRectForRange = enclosingIntRect(absoluteBoundingRectForRange(range));
     Vector<Color> parentRendererBackgroundColors;
     for (; !!renderer; renderer = renderer->parent()) {
         auto absoluteBoundingBox = renderer->absoluteBoundingBoxRect();
@@ -311,7 +320,7 @@ static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const Ran
 #endif
     else {
         Vector<IntRect> absoluteTextRects;
-        range.absoluteTextRects(absoluteTextRects, textRectHeight == FrameSelection::TextRectangleHeight::SelectionHeight, nullptr, Range::RespectClippingForTextRects::Yes);
+        range.absoluteTextRects(absoluteTextRects, textRectHeight == FrameSelection::TextRectangleHeight::SelectionHeight, nullptr, Range::BoundingRectBehavior::RespectClipping);
 
         textRects.reserveInitialCapacity(absoluteTextRects.size());
         for (auto& rect : absoluteTextRects)
@@ -319,7 +328,7 @@ static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const Ran
     }
 
     if (textRects.isEmpty())
-        textRects.append(range.absoluteBoundingRect(Range::RespectClippingForTextRects::Yes));
+        textRects.append(absoluteBoundingRectForRange(range));
 
     auto frameView = frame.view();
 
@@ -372,7 +381,7 @@ static bool initializeIndicator(TextIndicatorData& data, Frame& frame, const Ran
 
     // Store the selection rect in window coordinates, to be used subsequently
     // to determine if the indicator and selection still precisely overlap.
-    data.selectionRectInRootViewCoordinates = frame.view()->contentsToRootView(enclosingIntRect(frame.selection().selectionBounds()));
+    data.selectionRectInRootViewCoordinates = frame.view()->contentsToRootView(enclosingIntRect(frame.selection().selectionBounds(FrameSelection::ClipToVisibleContent::No)));
     data.textBoundingRectInRootViewCoordinates = textBoundingRectInRootViewCoordinates;
     data.textRectsInBoundingRectCoordinates = textRectsInBoundingRectCoordinates;
 

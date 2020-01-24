@@ -34,6 +34,7 @@
 #import <PencilKit/PencilKit.h>
 
 #import <PencilKit/PKDrawing_Private.h>
+#import <PencilKit/PKInk_Private.h>
 #import <PencilKit/PKStroke_Private.h>
 
 #else
@@ -41,7 +42,7 @@
 typedef NSInteger PKInkType;
 
 @interface PKInk : NSObject
-+ (PKInk *)inkWithType:(PKInkType)type color:(UIColor *)color weight:(CGFloat)weight;
++ (PKInk *)inkWithIdentifier:(NSString *)type color:(UIColor *)color weight:(CGFloat)weight;
 @end
 
 @interface PKStroke : NSObject

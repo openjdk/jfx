@@ -147,7 +147,7 @@ public:
         m_readOffset = 0;
     }
 
-    bool decode(const SharedBuffer& data, bool sizeOnly, unsigned haltAtFrame)
+    bool decode(const SharedBuffer::DataSegment& data, bool sizeOnly, unsigned haltAtFrame)
     {
         m_decodingSizeOnly = sizeOnly;
         PNGImageDecoder* decoder = static_cast<PNGImageDecoder*>(png_get_progressive_ptr(m_png));
@@ -157,24 +157,16 @@ public:
             return decoder->setFailed();
 
         auto bytesToSkip = m_readOffset;
+        auto bytesToUse = data.size() - bytesToSkip;
+        m_readOffset += bytesToUse;
+        m_currentBufferSize = m_readOffset;
+        png_process_data(m_png, m_info, reinterpret_cast<png_bytep>(const_cast<char*>(data.data() + bytesToSkip)), bytesToUse);
+        // We explicitly specify the superclass encodedDataStatus() because we
+        // merely want to check if we've managed to set the size, not
+        // (recursively) trigger additional decoding if we haven't.
+        if (sizeOnly ? decoder->ScalableImageDecoder::encodedDataStatus() >= EncodedDataStatus::SizeAvailable : decoder->isCompleteAtIndex(haltAtFrame))
+            return true;
 
-        // FIXME: Use getSomeData which is O(log(n)) instead of skipping bytes which is O(n).
-        for (const auto& element : data) {
-            if (bytesToSkip > element.segment->size()) {
-                bytesToSkip -= element.segment->size();
-                continue;
-            }
-            auto bytesToUse = element.segment->size() - bytesToSkip;
-            m_readOffset += bytesToUse;
-            m_currentBufferSize = m_readOffset;
-            png_process_data(m_png, m_info, reinterpret_cast<png_bytep>(const_cast<char*>(element.segment->data() + bytesToSkip)), bytesToUse);
-            bytesToSkip = 0;
-            // We explicitly specify the superclass encodedDataStatus() because we
-            // merely want to check if we've managed to set the size, not
-            // (recursively) trigger additional decoding if we haven't.
-            if (sizeOnly ? decoder->ScalableImageDecoder::encodedDataStatus() >= EncodedDataStatus::SizeAvailable : decoder->isCompleteAtIndex(haltAtFrame))
-                return true;
-        }
         return false;
     }
 
@@ -247,15 +239,6 @@ RepetitionCount PNGImageDecoder::repetitionCount() const
     return m_playCount;
 }
 #endif
-
-bool PNGImageDecoder::setSize(const IntSize& size)
-{
-    if (!ScalableImageDecoder::setSize(size))
-        return false;
-
-    prepareScaleDataIfNecessary();
-    return true;
-}
 
 ScalableImageDecoderFrame* PNGImageDecoder::frameBufferAtIndex(size_t index)
 {
@@ -435,7 +418,7 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     auto& buffer = m_frameBufferCache[m_currentFrame];
     if (buffer.isInvalid()) {
         png_structp png = m_reader->pngPtr();
-        if (!buffer.initialize(scaledSize(), m_premultiplyAlpha)) {
+        if (!buffer.initialize(size(), m_premultiplyAlpha)) {
             longjmp(JMPBUF(png), 1);
             return;
         }
@@ -477,8 +460,7 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     // make our lives easier.
     if (!rowBuffer)
         return;
-    int y = !m_scaled ? rowIndex : scaledY(rowIndex);
-    if (y < 0 || y >= scaledSize().height())
+    if (rowIndex >= size().height())
         return;
 
     /* libpng comments (continued).
@@ -516,8 +498,8 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
     }
 
     // Write the decoded row pixels to the frame buffer.
-    auto* address = buffer.backingStore()->pixelAt(0, y);
-    int width = scaledSize().width();
+    auto* address = buffer.backingStore()->pixelAt(0, rowIndex);
+    int width = size().width();
     unsigned char nonTrivialAlphaMask = 0;
 
     png_bytep pixel = row;
@@ -556,7 +538,7 @@ void PNGImageDecoder::decode(bool onlySize, unsigned haltAtFrame, bool allDataRe
         return;
 
     if (!m_reader)
-        m_reader = std::make_unique<PNGImageReader>(this);
+        m_reader = makeUnique<PNGImageReader>(this);
 
     // If we couldn't decode the image but we've received all the data, decoding
     // has failed.
@@ -777,7 +759,7 @@ void PNGImageDecoder::initFrameBuffer(size_t frameIndex)
         // We want to clear the previous frame to transparent, without
         // affecting pixels in the image outside of the frame.
         IntRect prevRect = prevBuffer->backingStore()->frameRect();
-        if (!frameIndex || prevRect.contains(IntRect(IntPoint(), scaledSize()))) {
+        if (!frameIndex || prevRect.contains(IntRect(IntPoint(), size()))) {
             // Clearing the first frame, or a frame the size of the whole
             // image, results in a completely empty image.
             buffer.backingStore()->clear();
@@ -801,11 +783,7 @@ void PNGImageDecoder::initFrameBuffer(size_t frameIndex)
     if (frameRect.maxY() > size().height())
         frameRect.setHeight(size().height() - m_yOffset);
 
-    int left = upperBoundScaledX(frameRect.x());
-    int right = lowerBoundScaledX(frameRect.maxX(), left);
-    int top = upperBoundScaledY(frameRect.y());
-    int bottom = lowerBoundScaledY(frameRect.maxY(), top);
-    buffer.backingStore()->setFrameRect(IntRect(left, top, right - left, bottom - top));
+    buffer.backingStore()->setFrameRect(frameRect);
 }
 
 void PNGImageDecoder::frameComplete()
@@ -826,7 +804,6 @@ void PNGImageDecoder::frameComplete()
         if (m_blend && !hasAlpha)
             m_blend = 0;
 
-        ASSERT(!m_scaled);
         png_bytep row = interlaceBuffer;
         for (int y = rect.y(); y < rect.maxY(); ++y, row += colorChannels * size().width()) {
             png_bytep pixel = row;
@@ -843,7 +820,7 @@ void PNGImageDecoder::frameComplete()
 
         if (!nonTrivialAlpha) {
             IntRect rect = buffer.backingStore()->frameRect();
-            if (rect.contains(IntRect(IntPoint(), scaledSize())))
+            if (rect.contains(IntRect(IntPoint(), size())))
                 buffer.setHasAlpha(false);
             else {
                 size_t frameIndex = m_currentFrame;

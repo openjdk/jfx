@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "CustomHeaderFields.h"
 #include "DOMWindow.h"
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -57,10 +58,10 @@ UserMediaController::~UserMediaController()
 
 void provideUserMediaTo(Page* page, UserMediaClient* client)
 {
-    UserMediaController::provideTo(page, UserMediaController::supplementName(), std::make_unique<UserMediaController>(client));
+    UserMediaController::provideTo(page, UserMediaController::supplementName(), makeUnique<UserMediaController>(client));
 }
 
-static bool isSecure(DocumentLoader& documentLoader)
+static inline bool isSecure(DocumentLoader& documentLoader)
 {
     auto& response = documentLoader.response();
     if (SecurityOrigin::isLocalHostOrLoopbackIPAddress(documentLoader.response().url().host()))
@@ -70,7 +71,21 @@ static bool isSecure(DocumentLoader& documentLoader)
         && !response.certificateInfo()->containsNonRootSHA1SignedCertificate();
 }
 
-static UserMediaController::GetUserMediaAccess isAllowedToUse(Document& document, Document& topDocument, OptionSet<UserMediaController::CaptureType> types)
+static inline bool isAllowedByFeaturePolicy(const FeaturePolicy& featurePolicy, const SecurityOriginData& origin, OptionSet<UserMediaController::CaptureType> types)
+{
+    if ((types & UserMediaController::CaptureType::Camera) && !featurePolicy.allows(FeaturePolicy::Type::Camera, origin))
+        return false;
+
+    if ((types & UserMediaController::CaptureType::Microphone) && !featurePolicy.allows(FeaturePolicy::Type::Microphone, origin))
+        return false;
+
+    if ((types & UserMediaController::CaptureType::Display) && !featurePolicy.allows(FeaturePolicy::Type::DisplayCapture, origin))
+        return false;
+
+    return true;
+}
+
+static UserMediaController::GetUserMediaAccess isAllowedToUse(const Document& document, const Document& topDocument, OptionSet<UserMediaController::CaptureType> types)
 {
     if (&document == &topDocument)
         return UserMediaController::GetUserMediaAccess::CanCall;
@@ -79,37 +94,19 @@ static UserMediaController::GetUserMediaAccess isAllowedToUse(Document& document
     if (!parentDocument)
         return UserMediaController::GetUserMediaAccess::BlockedByParent;
 
-    if (document.securityOrigin().isSameSchemeHostPort(parentDocument->securityOrigin()))
-        return UserMediaController::GetUserMediaAccess::CanCall;
-
     auto* element = document.ownerElement();
     ASSERT(element);
-    if (!element)
+    if (!element || !is<HTMLIFrameElement>(*element))
         return UserMediaController::GetUserMediaAccess::BlockedByParent;
 
-    if (!is<HTMLIFrameElement>(*element))
-        return UserMediaController::GetUserMediaAccess::BlockedByParent;
-    auto& allow = downcast<HTMLIFrameElement>(*element).allow();
-
-    bool allowCameraAccess = false;
-    bool allowMicrophoneAccess = false;
-    bool allowDisplay = false;
-    for (auto allowItem : StringView { allow }.split(';')) {
-        auto item = allowItem.stripLeadingAndTrailingMatchedCharacters(isHTMLSpace<UChar>);
-        if (!allowCameraAccess && item == "camera")
-            allowCameraAccess = true;
-        else if (!allowMicrophoneAccess && item == "microphone")
-            allowMicrophoneAccess = true;
-        else if (!allowDisplay && item == "display")
-            allowDisplay = true;
-    }
-    if ((allowCameraAccess || !(types & UserMediaController::CaptureType::Camera)) && (allowMicrophoneAccess || !(types & UserMediaController::CaptureType::Microphone)) && (allowDisplay || !(types & UserMediaController::CaptureType::Display)))
+    auto& featurePolicy = downcast<HTMLIFrameElement>(*element).featurePolicy();
+    if (isAllowedByFeaturePolicy(featurePolicy, document.securityOrigin().data(), types))
         return UserMediaController::GetUserMediaAccess::CanCall;
 
     return UserMediaController::GetUserMediaAccess::BlockedByFeaturePolicy;
 }
 
-UserMediaController::GetUserMediaAccess UserMediaController::canCallGetUserMedia(Document& document, OptionSet<UserMediaController::CaptureType> types)
+UserMediaController::GetUserMediaAccess UserMediaController::canCallGetUserMedia(const Document& document, OptionSet<UserMediaController::CaptureType> types) const
 {
     ASSERT(!types.isEmpty());
 

@@ -171,12 +171,12 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/gamepad/GamepadButton.idl \
     $(WebCore)/Modules/gamepad/GamepadEvent.idl \
     $(WebCore)/Modules/gamepad/NavigatorGamepad.idl \
-    $(WebCore)/Modules/geolocation/Coordinates.idl \
     $(WebCore)/Modules/geolocation/Geolocation.idl \
-    $(WebCore)/Modules/geolocation/Geoposition.idl \
+    $(WebCore)/Modules/geolocation/GeolocationCoordinates.idl \
+    $(WebCore)/Modules/geolocation/GeolocationPosition.idl \
+    $(WebCore)/Modules/geolocation/GeolocationPositionError.idl \
     $(WebCore)/Modules/geolocation/NavigatorGeolocation.idl \
     $(WebCore)/Modules/geolocation/PositionCallback.idl \
-    $(WebCore)/Modules/geolocation/PositionError.idl \
     $(WebCore)/Modules/geolocation/PositionErrorCallback.idl \
     $(WebCore)/Modules/geolocation/PositionOptions.idl \
     $(WebCore)/Modules/indexeddb/DOMWindowIndexedDatabase.idl \
@@ -196,6 +196,8 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.idl \
     $(WebCore)/Modules/mediacapabilities/AudioConfiguration.idl \
     $(WebCore)/Modules/mediacapabilities/MediaCapabilities.idl \
+	$(WebCore)/Modules/mediacapabilities/MediaCapabilitiesDecodingInfo.idl \
+	$(WebCore)/Modules/mediacapabilities/MediaCapabilitiesEncodingInfo.idl \
     $(WebCore)/Modules/mediacapabilities/MediaCapabilitiesInfo.idl \
     $(WebCore)/Modules/mediacapabilities/MediaConfiguration.idl \
     $(WebCore)/Modules/mediacapabilities/MediaDecodingConfiguration.idl \
@@ -349,6 +351,8 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/webaudio/PeriodicWave.idl \
     $(WebCore)/Modules/webaudio/ScriptProcessorNode.idl \
     $(WebCore)/Modules/webaudio/WaveShaperNode.idl \
+    $(WebCore)/Modules/webauthn/AttestationConveyancePreference.idl \
+    $(WebCore)/Modules/webauthn/AuthenticationExtensionsClientInputs.idl \
     $(WebCore)/Modules/webauthn/AuthenticatorAssertionResponse.idl \
     $(WebCore)/Modules/webauthn/AuthenticatorAttestationResponse.idl \
     $(WebCore)/Modules/webauthn/AuthenticatorResponse.idl \
@@ -371,54 +375,66 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/webdatabase/SQLTransactionCallback.idl \
     $(WebCore)/Modules/webdatabase/SQLTransactionErrorCallback.idl \
     $(WebCore)/Modules/webdriver/NavigatorWebDriver.idl \
-    $(WebCore)/Modules/webgpu/DOMWindowWebGPU.idl \
+    $(WebCore)/Modules/webgpu/GPUCanvasContext.idl \
+    $(WebCore)/Modules/webgpu/GPUColor.idl \
+    $(WebCore)/Modules/webgpu/GPUColorStateDescriptor.idl \
+    $(WebCore)/Modules/webgpu/GPUColorWriteBits.idl \
+    $(WebCore)/Modules/webgpu/GPUBindGroupLayoutBinding.idl \
+    $(WebCore)/Modules/webgpu/GPUBindGroupLayoutDescriptor.idl \
+    $(WebCore)/Modules/webgpu/GPUBlendDescriptor.idl \
+    $(WebCore)/Modules/webgpu/GPUBufferDescriptor.idl \
+    $(WebCore)/Modules/webgpu/GPUBufferUsage.idl \
     $(WebCore)/Modules/webgpu/GPUCompareFunction.idl \
     $(WebCore)/Modules/webgpu/GPUDepthStencilStateDescriptor.idl \
+    $(WebCore)/Modules/webgpu/GPUErrorFilter.idl \
     $(WebCore)/Modules/webgpu/GPUExtent3D.idl \
+    $(WebCore)/Modules/webgpu/GPULoadOp.idl \
+    $(WebCore)/Modules/webgpu/GPUOrigin3D.idl \
+    $(WebCore)/Modules/webgpu/GPUOutOfMemoryError.idl \
     $(WebCore)/Modules/webgpu/GPURequestAdapterOptions.idl \
+    $(WebCore)/Modules/webgpu/GPUSamplerDescriptor.idl \
+    $(WebCore)/Modules/webgpu/GPUShaderStageBit.idl \
+    $(WebCore)/Modules/webgpu/GPUStoreOp.idl \
     $(WebCore)/Modules/webgpu/GPUTextureDescriptor.idl \
-    $(WebCore)/Modules/webgpu/GPUTextureDimension.idl \
     $(WebCore)/Modules/webgpu/GPUTextureFormat.idl \
     $(WebCore)/Modules/webgpu/GPUTextureUsage.idl \
+    $(WebCore)/Modules/webgpu/GPUValidationError.idl \
+    $(WebCore)/Modules/webgpu/GPUVertexAttributeDescriptor.idl \
+    $(WebCore)/Modules/webgpu/GPUVertexBufferDescriptor.idl \
+	$(WebCore)/Modules/webgpu/GPUVertexInputDescriptor.idl \
+    $(WebCore)/Modules/webgpu/NavigatorGPU.idl \
     $(WebCore)/Modules/webgpu/WebGPU.idl \
     $(WebCore)/Modules/webgpu/WebGPUAdapter.idl \
     $(WebCore)/Modules/webgpu/WebGPUBindGroup.idl \
     $(WebCore)/Modules/webgpu/WebGPUBindGroupBinding.idl \
     $(WebCore)/Modules/webgpu/WebGPUBindGroupDescriptor.idl \
     $(WebCore)/Modules/webgpu/WebGPUBindGroupLayout.idl \
-    $(WebCore)/Modules/webgpu/WebGPUBindGroupLayoutBinding.idl \
-    $(WebCore)/Modules/webgpu/WebGPUBindGroupLayoutDescriptor.idl \
     $(WebCore)/Modules/webgpu/WebGPUBuffer.idl \
 	$(WebCore)/Modules/webgpu/WebGPUBufferBinding.idl \
-    $(WebCore)/Modules/webgpu/WebGPUBufferDescriptor.idl \
-    $(WebCore)/Modules/webgpu/WebGPUBufferUsage.idl \
-    $(WebCore)/Modules/webgpu/WebGPUColor.idl \
     $(WebCore)/Modules/webgpu/WebGPUCommandBuffer.idl \
+    $(WebCore)/Modules/webgpu/WebGPUCommandEncoder.idl \
+    $(WebCore)/Modules/webgpu/WebGPUComputePassEncoder.idl \
+    $(WebCore)/Modules/webgpu/WebGPUComputePipeline.idl \
+    $(WebCore)/Modules/webgpu/WebGPUComputePipelineDescriptor.idl \
     $(WebCore)/Modules/webgpu/WebGPUDevice.idl \
-    $(WebCore)/Modules/webgpu/WebGPUIndexFormat.idl \
-    $(WebCore)/Modules/webgpu/WebGPUInputStateDescriptor.idl \
-    $(WebCore)/Modules/webgpu/WebGPUInputStepMode.idl \
+	$(WebCore)/Modules/webgpu/WebGPUDeviceErrorScopes.idl \
     $(WebCore)/Modules/webgpu/WebGPUQueue.idl \
     $(WebCore)/Modules/webgpu/WebGPUPipelineDescriptorBase.idl \
     $(WebCore)/Modules/webgpu/WebGPUPipelineLayout.idl \
     $(WebCore)/Modules/webgpu/WebGPUPipelineLayoutDescriptor.idl \
     $(WebCore)/Modules/webgpu/WebGPUPipelineStageDescriptor.idl \
     $(WebCore)/Modules/webgpu/WebGPUProgrammablePassEncoder.idl \
-    $(WebCore)/Modules/webgpu/WebGPURenderPassColorAttachmentDescriptor.idl \
     $(WebCore)/Modules/webgpu/WebGPURenderPassDescriptor.idl \
     $(WebCore)/Modules/webgpu/WebGPURenderPassEncoder.idl \
     $(WebCore)/Modules/webgpu/WebGPURenderPipeline.idl \
     $(WebCore)/Modules/webgpu/WebGPURenderPipelineDescriptor.idl \
-    $(WebCore)/Modules/webgpu/WebGPURenderingContext.idl \
+    $(WebCore)/Modules/webgpu/WebGPUSampler.idl \
     $(WebCore)/Modules/webgpu/WebGPUShaderModule.idl \
     $(WebCore)/Modules/webgpu/WebGPUShaderModuleDescriptor.idl \
-    $(WebCore)/Modules/webgpu/WebGPUShaderStageBit.idl \
     $(WebCore)/Modules/webgpu/WebGPUSwapChain.idl \
     $(WebCore)/Modules/webgpu/WebGPUTexture.idl \
     $(WebCore)/Modules/webgpu/WebGPUTextureView.idl \
-	$(WebCore)/Modules/webgpu/WebGPUVertexAttributeDescriptor.idl \
-    $(WebCore)/Modules/webgpu/WebGPUVertexFormat.idl \
-	$(WebCore)/Modules/webgpu/WebGPUVertexInputDescriptor.idl \
+    $(WebCore)/Modules/webgpu/WorkerNavigatorGPU.idl \
     $(WebCore)/Modules/websockets/CloseEvent.idl \
     $(WebCore)/Modules/websockets/WebSocket.idl \
     $(WebCore)/Modules/webvr/DOMWindowWebVR.idl \
@@ -436,7 +452,6 @@ JS_BINDING_IDLS = \
     $(WebCore)/Modules/webvr/VRPose.idl \
     $(WebCore)/Modules/webvr/VRStageParameters.idl \
     $(WebCore)/accessibility/AccessibilityRole.idl \
-    $(WebCore)/accessibility/AccessibleSetValueEvent.idl \
     $(WebCore)/accessibility/AriaAttributes.idl \
     $(WebCore)/animation/Animatable.idl \
     $(WebCore)/animation/AnimationEffect.idl \
@@ -567,10 +582,14 @@ JS_BINDING_IDLS = \
     $(WebCore)/dom/DataTransferItemList.idl \
     $(WebCore)/dom/DeviceMotionEvent.idl \
     $(WebCore)/dom/DeviceOrientationEvent.idl \
+    $(WebCore)/dom/DeviceOrientationOrMotionEvent.idl \
+    $(WebCore)/dom/DeviceOrientationOrMotionPermissionState.idl \
     $(WebCore)/dom/Document.idl \
     $(WebCore)/dom/DocumentAndElementEventHandlers.idl \
+    $(WebCore)/dom/DocumentFullscreen.idl \
     $(WebCore)/dom/DocumentFragment.idl \
     $(WebCore)/dom/DocumentOrShadowRoot.idl \
+    $(WebCore)/dom/DocumentStorageAccess.idl \
     $(WebCore)/dom/DocumentType.idl \
     $(WebCore)/dom/Element.idl \
     $(WebCore)/dom/ErrorEvent.idl \
@@ -594,6 +613,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/dom/MutationObserver.idl \
     $(WebCore)/dom/MutationRecord.idl \
     $(WebCore)/dom/NamedNodeMap.idl \
+    $(WebCore)/dom/NavigatorMaxTouchPoints.idl \
     $(WebCore)/dom/Node.idl \
     $(WebCore)/dom/NodeFilter.idl \
     $(WebCore)/dom/NodeIterator.idl \
@@ -658,6 +678,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/html/HTMLDataElement.idl \
     $(WebCore)/html/HTMLDataListElement.idl \
     $(WebCore)/html/HTMLDetailsElement.idl \
+    $(WebCore)/html/HTMLDialogElement.idl \
     $(WebCore)/html/HTMLDirectoryElement.idl \
     $(WebCore)/html/HTMLDivElement.idl \
     $(WebCore)/html/HTMLDocument.idl \
@@ -809,33 +830,12 @@ JS_BINDING_IDLS = \
     $(WebCore)/html/canvas/WebGLUniformLocation.idl \
     $(WebCore)/html/canvas/WebGLVertexArrayObject.idl \
     $(WebCore)/html/canvas/WebGLVertexArrayObjectOES.idl \
-    $(WebCore)/html/canvas/WebMetalBuffer.idl \
-    $(WebCore)/html/canvas/WebMetalCommandBuffer.idl \
-    $(WebCore)/html/canvas/WebMetalCommandQueue.idl \
-    $(WebCore)/html/canvas/WebMetalComputeCommandEncoder.idl \
-    $(WebCore)/html/canvas/WebMetalComputePipelineState.idl \
-    $(WebCore)/html/canvas/WebMetalDepthStencilDescriptor.idl \
-    $(WebCore)/html/canvas/WebMetalDepthStencilState.idl \
-    $(WebCore)/html/canvas/WebMetalDrawable.idl \
-    $(WebCore)/html/canvas/WebMetalFunction.idl \
-    $(WebCore)/html/canvas/WebMetalLibrary.idl \
-    $(WebCore)/html/canvas/WebMetalRenderCommandEncoder.idl \
-    $(WebCore)/html/canvas/WebMetalRenderPassAttachmentDescriptor.idl \
-    $(WebCore)/html/canvas/WebMetalRenderPassColorAttachmentDescriptor.idl \
-    $(WebCore)/html/canvas/WebMetalRenderPassDepthAttachmentDescriptor.idl \
-    $(WebCore)/html/canvas/WebMetalRenderPassDescriptor.idl \
-    $(WebCore)/html/canvas/WebMetalRenderPipelineColorAttachmentDescriptor.idl \
-    $(WebCore)/html/canvas/WebMetalRenderPipelineDescriptor.idl \
-    $(WebCore)/html/canvas/WebMetalRenderPipelineState.idl \
-    $(WebCore)/html/canvas/WebMetalRenderingContext.idl \
-    $(WebCore)/html/canvas/WebMetalSize.idl \
-    $(WebCore)/html/canvas/WebMetalTexture.idl \
-    $(WebCore)/html/canvas/WebMetalTextureDescriptor.idl \
     $(WebCore)/html/track/AudioTrack.idl \
     $(WebCore)/html/track/AudioTrackList.idl \
     $(WebCore)/html/track/DataCue.idl \
     $(WebCore)/html/track/TextTrack.idl \
     $(WebCore)/html/track/TextTrackCue.idl \
+    $(WebCore)/html/track/TextTrackCueGeneric.idl \
     $(WebCore)/html/track/TextTrackCueList.idl \
     $(WebCore)/html/track/TextTrackList.idl \
     $(WebCore)/html/track/TrackEvent.idl \
@@ -847,6 +847,7 @@ JS_BINDING_IDLS = \
     $(WebCore)/inspector/CommandLineAPIHost.idl \
     $(WebCore)/inspector/InspectorAuditAccessibilityObject.idl \
     $(WebCore)/inspector/InspectorAuditDOMObject.idl \
+    $(WebCore)/inspector/InspectorAuditResourcesObject.idl \
     $(WebCore)/inspector/InspectorFrontendHost.idl \
     $(WebCore)/loader/appcache/DOMApplicationCache.idl \
     $(WebCore)/page/BarProp.idl \
@@ -879,6 +880,9 @@ JS_BINDING_IDLS = \
     $(WebCore)/page/PerformanceServerTiming.idl \
     $(WebCore)/page/PerformanceTiming.idl \
     $(WebCore)/page/RemoteDOMWindow.idl \
+    $(WebCore)/page/ResizeObserver.idl \
+    $(WebCore)/page/ResizeObserverCallback.idl \
+    $(WebCore)/page/ResizeObserverEntry.idl \
     $(WebCore)/page/Screen.idl \
     $(WebCore)/page/ScrollIntoViewOptions.idl \
     $(WebCore)/page/ScrollLogicalPosition.idl \
@@ -1120,29 +1124,35 @@ ifeq ($(USE_LLVM_TARGET_TRIPLES_FOR_CLANG),YES)
     TARGET_TRIPLE_FLAGS=-target $(WK_CURRENT_ARCH)-$(LLVM_TARGET_TRIPLE_VENDOR)-$(LLVM_TARGET_TRIPLE_OS_VERSION)$(LLVM_TARGET_TRIPLE_SUFFIX)
 endif
 
-ifeq ($(shell $(CC) -std=gnu++14 -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ' WTF_PLATFORM_IOS_FAMILY ' | cut -d' ' -f3), 1)
+ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ' WTF_PLATFORM_IOS_FAMILY ' | cut -d' ' -f3), 1)
     WTF_PLATFORM_IOS_FAMILY = 1
 else
     WTF_PLATFORM_IOS_FAMILY = 0
 endif
 
-ifeq ($(shell $(CC) -std=gnu++14 -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ' WTF_PLATFORM_MAC ' | cut -d' ' -f3), 1)
+ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ' WTF_PLATFORM_MAC ' | cut -d' ' -f3), 1)
     WTF_PLATFORM_MAC = 1
 else
     WTF_PLATFORM_MAC = 0
 endif
 
-ifeq ($(shell $(CC) -std=gnu++14 -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep USE_APPLE_INTERNAL_SDK | cut -d' ' -f3), 1)
+ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep USE_APPLE_INTERNAL_SDK | cut -d' ' -f3), 1)
     USE_APPLE_INTERNAL_SDK = 1
 else
     USE_APPLE_INTERNAL_SDK = 0
 endif
 
-ifeq ($(shell $(CC) -std=gnu++14 -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_ORIENTATION_EVENTS | cut -d' ' -f3), 1)
+ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep HAVE_OS_DARK_MODE_SUPPORT | cut -d' ' -f3), 1)
+    HAVE_OS_DARK_MODE_SUPPORT = 1
+else
+    HAVE_OS_DARK_MODE_SUPPORT = 0
+endif
+
+ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_ORIENTATION_EVENTS | cut -d' ' -f3), 1)
     ENABLE_ORIENTATION_EVENTS = 1
 endif
 
-ifeq ($(shell $(CC) -std=gnu++14 -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_MEDIA_SOURCE | cut -d' ' -f3), 1)
+ifeq ($(shell $(CC) -std=gnu++1z -x c++ -E -P -dM $(SDK_FLAGS) $(TARGET_TRIPLE_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_MEDIA_SOURCE | cut -d' ' -f3), 1)
 	ENABLE_MEDIA_SOURCE = 1
 endif
 
@@ -1152,6 +1162,10 @@ else ifeq ($(WTF_PLATFORM_MAC), 1)
 FEATURE_AND_PLATFORM_DEFINES = $(FEATURE_DEFINES) WTF_PLATFORM_MAC
 else
 FEATURE_AND_PLATFORM_DEFINES = $(FEATURE_DEFINES)
+endif
+
+ifeq ($(HAVE_OS_DARK_MODE_SUPPORT), 1)
+FEATURE_AND_PLATFORM_DEFINES += HAVE_OS_DARK_MODE_SUPPORT
 endif
 
 ifeq ($(PLATFORM_FEATURE_DEFINES),)
@@ -1627,10 +1641,13 @@ $(GENERATE_SETTINGS_PATTERNS) : $(WebCore)/Scripts/GenerateSettings.rb $(GENERAT
 
 # WHLSL Standard Library
 
-all : WHLSLStandardLibrary.cpp
+all : WHLSLStandardLibrary.h WHLSLStandardLibraryFunctionMap.cpp
 
-WHLSLStandardLibrary.cpp : $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl $(WebCore)/Modules/webgpu/WHLSL/WHLSLStandardLibrary.txt
-	$(PERL) $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl WHLSLStandardLibrary $(WebCore)/Modules/webgpu/WHLSL/WHLSLStandardLibrary.txt WHLSLStandardLibrary.h
+WHLSLStandardLibrary.h : $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl $(WebCore)/Modules/webgpu/WHLSL/WHLSLStandardLibrary.txt
+	bash -c "$(PERL) $< WHLSLStandardLibrary <(gzip -cn $(WebCore)/Modules/webgpu/WHLSL/WHLSLStandardLibrary.txt) $@"
+
+WHLSLStandardLibraryFunctionMap.cpp : $(WebCore)/Modules/webgpu/WHLSL/WHLSLBuildStandardLibraryFunctionMap.py $(WebCore)/Modules/webgpu/WHLSL/WHLSLStandardLibrary.txt
+	$(PYTHON) $< $(WebCore)/Modules/webgpu/WHLSL/WHLSLStandardLibrary.txt $@
 
 # --------
 
@@ -1723,13 +1740,6 @@ ifneq ($(NO_SUPPLEMENTAL_FILES),1)
 endif
 
 # Inspector interfaces
-
-all : InspectorOverlayPage.h
-
-InspectorOverlayPage.h : InspectorOverlayPage.html InspectorOverlayPage.css InspectorOverlayPage.js
-	$(PYTHON) $(JavaScriptCore_SCRIPTS_DIR)/inline-and-minify-stylesheets-and-scripts.py $(WebCore)/inspector/InspectorOverlayPage.html ./InspectorOverlayPage.combined.html
-	$(PERL) $(JavaScriptCore_SCRIPTS_DIR)/xxd.pl InspectorOverlayPage_html ./InspectorOverlayPage.combined.html InspectorOverlayPage.h
-	$(DELETE) InspectorOverlayPage.combined.html
 
 all : CommandLineAPIModuleSource.h
 

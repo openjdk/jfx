@@ -2,13 +2,13 @@
 # Determine CMake version and build type.
 # -----------------------------------------------------------------------------
 #
-# NOTE: cmake_minimum_required() and project() *MUST* be the two fist commands
+# NOTE: cmake_minimum_required() and project() *MUST* be the two first commands
 # used, see https://cmake.org/cmake/help/v3.3/command/project.html -- the
 # latter in particular handles loading a bunch of shared CMake definitions
 # and loading the cross-compilation settings from CMAKE_TOOLCHAIN_FILE.
 #
 
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.10)
 
 project(WebKit)
 
@@ -37,6 +37,7 @@ endif ()
 set(ALL_PORTS
     AppleWin
     Efl
+    FTW
     GTK
     JSCOnly
     Mac
@@ -62,8 +63,8 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQU
 endif ()
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-    if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "6.0.0")
-        message(FATAL_ERROR "GCC 6.0.0 is required to build WebKitGTK+, use a newer GCC version or clang")
+    if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "7.3.0")
+        message(FATAL_ERROR "GCC 7.3 or newer is required to build WebKit. Use a newer GCC version or Clang.")
     endif ()
 endif ()
 
@@ -94,7 +95,15 @@ elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^mips64")
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^mips")
     set(WTF_CPU_MIPS 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(x64|x86_64|amd64)")
-    set(WTF_CPU_X86_64 1)
+    # FORCE_32BIT is set in the build script when --32-bit is passed
+    # on a Linux/intel 64bit host. This allows us to produce 32bit
+    # binaries without setting the build up as a crosscompilation,
+    # which is the only way to modify CMAKE_SYSTEM_PROCESSOR.
+    if (FORCE_32BIT)
+        set(WTF_CPU_X86 1)
+    else ()
+        set(WTF_CPU_X86_64 1)
+    endif ()
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "(i[3-6]86|x86)")
     set(WTF_CPU_X86 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "ppc")
@@ -132,6 +141,7 @@ endif ()
 # By default, only the highest-level libraries, WebKitLegacy and WebKit, are
 # shared, because properly building shared libraries that depend on each other
 # can be tricky. Override these in Options*.cmake for your port as needed.
+set(bmalloc_LIBRARY_TYPE STATIC)
 set(WTF_LIBRARY_TYPE STATIC)
 set(JavaScriptCore_LIBRARY_TYPE STATIC)
 set(PAL_LIBRARY_TYPE STATIC)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple, Inc. All rights reserved.
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,29 +27,22 @@
 #include "config.h"
 #include "StringIteratorPrototype.h"
 
+#include "JSCBuiltins.h"
 #include "JSCInlines.h"
 #include "JSGlobalObject.h"
 #include "JSStringIterator.h"
 #include "ObjectConstructor.h"
 
-#include "StringIteratorPrototype.lut.h"
-
 namespace JSC {
 
-const ClassInfo StringIteratorPrototype::s_info = { "String Iterator", &Base::s_info, &stringIteratorPrototypeTable, nullptr, CREATE_METHOD_TABLE(StringIteratorPrototype) };
+const ClassInfo StringIteratorPrototype::s_info = { "String Iterator", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(StringIteratorPrototype) };
 
-/* Source for StringIteratorPrototype.lut.h
-@begin stringIteratorPrototypeTable
-  next      JSBuiltin    DontEnum|Function 0
-@end
-*/
-
-void StringIteratorPrototype::finishCreation(VM& vm, JSGlobalObject*)
+void StringIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "String Iterator"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
-    didBecomePrototype();
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "String Iterator"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->next, stringIteratorPrototypeNextCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
 } // namespace JSC

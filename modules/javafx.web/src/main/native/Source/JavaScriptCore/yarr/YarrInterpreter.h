@@ -27,6 +27,7 @@
 
 #include "ConcurrentJSLock.h"
 #include "YarrErrorCode.h"
+#include "YarrFlags.h"
 #include "YarrPattern.h"
 
 namespace WTF {
@@ -39,7 +40,38 @@ namespace JSC { namespace Yarr {
 class ByteDisjunction;
 
 struct ByteTerm {
-    enum Type {
+    union {
+        struct {
+            union {
+                UChar32 patternCharacter;
+                struct {
+                    UChar32 lo;
+                    UChar32 hi;
+                } casedCharacter;
+                CharacterClass* characterClass;
+                unsigned subpatternId;
+            };
+            union {
+                ByteDisjunction* parenthesesDisjunction;
+                unsigned parenthesesWidth;
+            };
+            QuantifierType quantityType;
+            unsigned quantityMinCount;
+            unsigned quantityMaxCount;
+        } atom;
+        struct {
+            int next;
+            int end;
+            bool onceThrough;
+        } alternative;
+        struct {
+            bool m_bol : 1;
+            bool m_eol : 1;
+        } anchors;
+        unsigned checkInputCount;
+    };
+    unsigned frameLocation;
+    enum Type : uint8_t {
         TypeBodyAlternativeBegin,
         TypeBodyAlternativeDisjunction,
         TypeBodyAlternativeEnd,
@@ -72,37 +104,6 @@ struct ByteTerm {
         TypeUncheckInput,
         TypeDotStarEnclosure,
     } type;
-    union {
-        struct {
-            union {
-                UChar32 patternCharacter;
-                struct {
-                    UChar32 lo;
-                    UChar32 hi;
-                } casedCharacter;
-                CharacterClass* characterClass;
-                unsigned subpatternId;
-            };
-            union {
-                ByteDisjunction* parenthesesDisjunction;
-                unsigned parenthesesWidth;
-            };
-            QuantifierType quantityType;
-            unsigned quantityMinCount;
-            unsigned quantityMaxCount;
-        } atom;
-        struct {
-            int next;
-            int end;
-            bool onceThrough;
-        } alternative;
-        struct {
-            bool m_bol : 1;
-            bool m_eol : 1;
-        } anchors;
-        unsigned checkInputCount;
-    };
-    unsigned frameLocation;
     bool m_capture : 1;
     bool m_invert : 1;
     unsigned inputPosition;
@@ -368,16 +369,16 @@ public:
 
     size_t estimatedSizeInBytes() const { return m_body->estimatedSizeInBytes(); }
 
-    bool ignoreCase() const { return m_flags & FlagIgnoreCase; }
-    bool multiline() const { return m_flags & FlagMultiline; }
-    bool sticky() const { return m_flags & FlagSticky; }
-    bool unicode() const { return m_flags & FlagUnicode; }
-    bool dotAll() const { return m_flags & FlagDotAll; }
+    bool ignoreCase() const { return m_flags.contains(Flags::IgnoreCase); }
+    bool multiline() const { return m_flags.contains(Flags::Multiline); }
+    bool sticky() const { return m_flags.contains(Flags::Sticky); }
+    bool unicode() const { return m_flags.contains(Flags::Unicode); }
+    bool dotAll() const { return m_flags.contains(Flags::DotAll); }
 
     std::unique_ptr<ByteDisjunction> m_body;
-    RegExpFlags m_flags;
+    OptionSet<Flags> m_flags;
     // Each BytecodePattern is associated with a RegExp, each RegExp is associated
-    // with a VM.  Cache a pointer to out VM's m_regExpAllocator.
+    // with a VM.  Cache a pointer to our VM's m_regExpAllocator.
     BumpPointerAllocator* m_allocator;
     ConcurrentJSLock* m_lock;
 

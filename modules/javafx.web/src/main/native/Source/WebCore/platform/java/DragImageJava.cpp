@@ -51,7 +51,7 @@ DragImageRef dissolveDragImageToFraction(DragImageRef pr, float)
     return pr;
 }
 
-DragImageRef createDragImageFromImage(Image* img, ImageOrientationDescription)
+DragImageRef createDragImageFromImage(Image* img, ImageOrientation)
 {
     return img;
 }
@@ -59,7 +59,7 @@ DragImageRef createDragImageFromImage(Image* img, ImageOrientationDescription)
 DragImageRef createDragImageIconForCachedImage(CachedImage *cimg)
 {
     if (cimg->hasImage()) return nullptr;
-    return createDragImageFromImage(cimg->image(), ImageOrientationDescription(RespectImageOrientation)); // todo tav valid orientation?
+    return createDragImageFromImage(cimg->image(), ImageOrientation::None); // todo tav valid orientation?
 }
 
 DragImageRef createDragImageForLink(Element&, URL&, const String&, TextIndicatorData&, FontRenderingMode, float)

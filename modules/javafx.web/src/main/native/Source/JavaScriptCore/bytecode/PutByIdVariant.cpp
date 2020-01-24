@@ -46,7 +46,7 @@ PutByIdVariant& PutByIdVariant::operator=(const PutByIdVariant& other)
     m_conditionSet = other.m_conditionSet;
     m_offset = other.m_offset;
     if (other.m_callLinkStatus)
-        m_callLinkStatus = std::make_unique<CallLinkStatus>(*other.m_callLinkStatus);
+        m_callLinkStatus = makeUnique<CallLinkStatus>(*other.m_callLinkStatus);
     else
         m_callLinkStatus = nullptr;
     return *this;
@@ -270,15 +270,15 @@ void PutByIdVariant::markIfCheap(SlotVisitor& visitor)
         m_newStructure->markIfCheap(visitor);
 }
 
-bool PutByIdVariant::finalize()
+bool PutByIdVariant::finalize(VM& vm)
 {
-    if (!m_oldStructure.isStillAlive())
+    if (!m_oldStructure.isStillAlive(vm))
         return false;
-    if (m_newStructure && !Heap::isMarked(m_newStructure))
+    if (m_newStructure && !vm.heap.isMarked(m_newStructure))
         return false;
-    if (!m_conditionSet.areStillLive())
+    if (!m_conditionSet.areStillLive(vm))
         return false;
-    if (m_callLinkStatus && !m_callLinkStatus->finalize())
+    if (m_callLinkStatus && !m_callLinkStatus->finalize(vm))
         return false;
     return true;
 }

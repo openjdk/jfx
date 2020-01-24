@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.
+ * Copyright (C) 2017-2019 Apple Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted, provided that the following conditions
@@ -69,16 +69,10 @@ public:
     bool setSource(Ref<MediaStreamTrackPrivate>&&);
     MediaStreamTrackPrivate& source() const { return m_audioSource.get(); }
 
-#if !RELEASE_LOG_DISABLED
-    void setLogger(Ref<const Logger>&& logger) { m_logger = WTFMove(logger); }
-#endif
-
 protected:
     explicit RealtimeOutgoingAudioSource(Ref<MediaStreamTrackPrivate>&&);
 
     void unobserveSource();
-
-    virtual void pullAudioData() { }
 
     bool isSilenced() const { return m_muted || !m_enabled; }
 
@@ -86,8 +80,8 @@ protected:
 
 #if !RELEASE_LOG_DISABLED
     // LoggerHelper API
-    const Logger& logger() const final;
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    const Logger& logger() const final { return m_audioSource->logger(); }
+    const void* logIdentifier() const final { return m_audioSource->logIdentifier(); }
     const char* logClassName() const final { return "RealtimeOutgoingAudioSource"; }
     WTFLogChannel& logChannel() const final;
 #endif
@@ -119,6 +113,7 @@ private:
     virtual bool isReachingBufferedAudioDataHighLimit() { return false; };
     virtual bool isReachingBufferedAudioDataLowLimit() { return false; };
     virtual bool hasBufferedEnoughData() { return false; };
+    virtual void sourceUpdated() { }
 
     // MediaStreamTrackPrivate::Observer API
     void trackMutedChanged(MediaStreamTrackPrivate&) final { sourceMutedChanged(); }
@@ -137,8 +132,6 @@ private:
     HashSet<webrtc::AudioTrackSinkInterface*> m_sinks;
 
 #if !RELEASE_LOG_DISABLED
-    mutable RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
     size_t m_chunksSent { 0 };
 #endif
 };

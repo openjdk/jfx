@@ -30,16 +30,15 @@
 #include "DisplayBox.h"
 #include "FormattingContext.h"
 #include "InlineFormattingState.h"
-#include "InlineRun.h"
+#include "InlineLine.h"
 #include <wtf/IsoMalloc.h>
 
 namespace WebCore {
 namespace Layout {
 
 class FloatingState;
-class InlineContainer;
-class InlineRunProvider;
-class Line;
+struct LineContent;
+struct LineInput;
 
 // This class implements the layout logic for inline formatting contexts.
 // https://www.w3.org/TR/CSS22/visuren.html#inline-formatting
@@ -50,35 +49,29 @@ public:
     void layout() const override;
 
 private:
-    void computeIntrinsicWidthConstraints() const override;
+    IntrinsicWidthConstraints computedIntrinsicWidthConstraints() const override;
 
-    class LineLayout {
+    class InlineLayout {
     public:
-        LineLayout(const InlineFormattingContext&);
-        void layout(const InlineRunProvider&) const;
+        InlineLayout(const InlineFormattingContext&);
+        void layout(const InlineItems&, LayoutUnit widthConstraint) const;
+        LayoutUnit computedIntrinsicWidth(const InlineItems&, LayoutUnit widthConstraint) const;
 
     private:
-        enum class IsLastLine { No, Yes };
-        void initializeNewLine(Line&) const;
-        void closeLine(Line&, IsLastLine) const;
-        void appendContentToLine(Line&, const InlineRunProvider::Run&, const LayoutSize&) const;
-        void postProcessInlineRuns(Line&, IsLastLine) const;
-        void createFinalRuns(Line&) const;
-        void splitInlineRunIfNeeded(const InlineRun&, InlineRuns& splitRuns) const;
-        void computeFloatPosition(const FloatingContext&, Line&, const Box&) const;
-        void placeInFlowPositionedChildren(unsigned firstRunIndex) const;
-        void alignRuns(TextAlignMode, Line&, IsLastLine) const;
-        void computeExpansionOpportunities(Line&, const InlineRunProvider::Run&, InlineRunProvider::Run::Type lastRunType) const;
-        LayoutUnit runWidth(const InlineContent&, const InlineItem&, ItemPosition from, unsigned length, LayoutUnit contentLogicalLeft) const;
+        LayoutState& layoutState() const { return m_layoutState; }
+        LineContent placeInlineItems(const LineInput&) const;
+        void createDisplayRuns(const Line::Content&, const Vector<WeakPtr<InlineItem>>& floats, LayoutUnit widthConstraint) const;
+        void alignRuns(TextAlignMode, InlineRuns&, unsigned firstRunIndex, LayoutUnit availableWidth) const;
 
     private:
-        static void justifyRuns(Line&);
-
-    private:
-        const InlineFormattingContext& m_formattingContext;
-        InlineFormattingState& m_formattingState;
-        FloatingState& m_floatingState;
+        LayoutState& m_layoutState;
         const Container& m_formattingRoot;
+    };
+
+    class Quirks {
+    public:
+        static bool lineDescentNeedsCollapsing(const LayoutState&, const Line::Content&);
+        static Line::InitialConstraints::HeightAndBaseline lineHeightConstraints(const LayoutState&, const Box& formattingRoot);
     };
 
     class Geometry : public FormattingContext::Geometry {
@@ -88,16 +81,19 @@ private:
     };
 
     void layoutFormattingContextRoot(const Box&, UsedHorizontalValues) const;
-    void computeIntrinsicWidthForFloatBox(const Box&) const;
-    void computeIntrinsicWidthForInlineBlock(const Box&) const;
+    void computeMarginBorderAndPaddingForInlineContainer(const Container&, UsedHorizontalValues) const;
+    void initializeMarginBorderAndPaddingForGenericInlineBox(const Box&) const;
+    void computeIntrinsicWidthForFormattingRoot(const Box&) const;
     void computeWidthAndHeightForReplacedInlineBox(const Box&, UsedHorizontalValues) const;
-    void computeMargin(const Box&, UsedHorizontalValues) const;
+    void computeHorizontalMargin(const Box&, UsedHorizontalValues) const;
     void computeHeightAndMargin(const Box&) const;
     void computeWidthAndMargin(const Box&, UsedHorizontalValues) const;
 
-    void collectInlineContent(InlineRunProvider&) const;
+    void collectInlineContent() const;
 
     InlineFormattingState& formattingState() const { return downcast<InlineFormattingState>(FormattingContext::formattingState()); }
+    // FIXME: Come up with a structure that requires no friending.
+    friend class Line;
 };
 
 }

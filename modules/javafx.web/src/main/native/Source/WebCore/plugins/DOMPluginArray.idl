@@ -19,8 +19,9 @@
 */
 
 [
-    GenerateIsReachable=ImplFrame,
+    GenerateIsReachable=ReachableFromNavigator,
     LegacyUnenumerableNamedProperties,
+    ImplementationLacksVTable,
     InterfaceName=PluginArray,
 ] interface DOMPluginArray {
     readonly attribute unsigned long length;

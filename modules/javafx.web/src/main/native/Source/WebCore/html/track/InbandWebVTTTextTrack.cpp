@@ -32,9 +32,12 @@
 #include "Logging.h"
 #include "VTTCue.h"
 #include "VTTRegionList.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(InbandWebVTTTextTrack);
 
 inline InbandWebVTTTextTrack::InbandWebVTTTextTrack(ScriptExecutionContext& context, TextTrackClient& client, InbandTextTrackPrivate& trackPrivate)
     : InbandTextTrack(context, client, trackPrivate)
@@ -51,7 +54,7 @@ InbandWebVTTTextTrack::~InbandWebVTTTextTrack() = default;
 WebVTTParser& InbandWebVTTTextTrack::parser()
 {
     if (!m_webVTTParser)
-        m_webVTTParser = std::make_unique<WebVTTParser>(static_cast<WebVTTParserClient*>(this), scriptExecutionContext());
+        m_webVTTParser = makeUnique<WebVTTParser>(static_cast<WebVTTParserClient*>(this), scriptExecutionContext());
     return *m_webVTTParser;
 }
 
@@ -72,11 +75,11 @@ void InbandWebVTTTextTrack::newCuesParsed()
     for (auto& cueData : cues) {
         auto vttCue = VTTCue::create(*scriptExecutionContext(), *cueData);
         if (hasCue(vttCue.ptr(), TextTrackCue::IgnoreDuration)) {
-            DEBUG_LOG(LOGIDENTIFIER, "ignoring already added cue: ", vttCue.get());
+            INFO_LOG(LOGIDENTIFIER, "ignoring already added cue: ", vttCue.get());
             return;
         }
 
-        DEBUG_LOG(LOGIDENTIFIER, vttCue.get());
+        INFO_LOG(LOGIDENTIFIER, vttCue.get());
 
         addCue(WTFMove(vttCue));
     }

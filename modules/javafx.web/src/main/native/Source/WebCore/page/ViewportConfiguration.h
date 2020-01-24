@@ -86,11 +86,39 @@ public:
     WEBCORE_EXPORT bool setViewportArguments(const ViewportArguments&);
 
     WEBCORE_EXPORT bool setCanIgnoreScalingConstraints(bool);
-    void setForceAlwaysUserScalable(bool forceAlwaysUserScalable) { m_forceAlwaysUserScalable = forceAlwaysUserScalable; }
+    constexpr bool canIgnoreScalingConstraints() const { return m_canIgnoreScalingConstraints; }
 
+    WEBCORE_EXPORT bool setMinimumEffectiveDeviceWidth(double);
+    constexpr double minimumEffectiveDeviceWidth() const
+    {
+        if (shouldIgnoreMinimumEffectiveDeviceWidth())
+            return 0;
+        return m_minimumEffectiveDeviceWidth;
+    }
+
+    constexpr bool isKnownToLayOutWiderThanViewport() const { return m_isKnownToLayOutWiderThanViewport; }
+    WEBCORE_EXPORT bool setIsKnownToLayOutWiderThanViewport(bool value);
+
+    constexpr bool shouldIgnoreMinimumEffectiveDeviceWidth() const
+    {
+        if (m_canIgnoreScalingConstraints)
+            return true;
+
+        if (m_viewportArguments == ViewportArguments())
+            return false;
+
+        if ((m_viewportArguments.zoom == 1. || m_viewportArguments.width == ViewportArguments::ValueDeviceWidth) && !m_isKnownToLayOutWiderThanViewport)
+            return true;
+
+        return false;
+    }
+
+    void setForceAlwaysUserScalable(bool forceAlwaysUserScalable) { m_forceAlwaysUserScalable = forceAlwaysUserScalable; }
     double layoutSizeScaleFactor() const { return m_layoutSizeScaleFactor; }
 
     WEBCORE_EXPORT IntSize layoutSize() const;
+    WEBCORE_EXPORT int layoutWidth() const;
+    WEBCORE_EXPORT int layoutHeight() const;
     WEBCORE_EXPORT double initialScale() const;
     WEBCORE_EXPORT double initialScaleIgnoringContentSize() const;
     WEBCORE_EXPORT double minimumScale() const;
@@ -98,12 +126,12 @@ public:
     double maximumScaleIgnoringAlwaysScalable() const { return m_configuration.maximumScale; }
     WEBCORE_EXPORT bool allowsUserScaling() const;
     WEBCORE_EXPORT bool allowsUserScalingIgnoringAlwaysScalable() const;
-    bool allowsShrinkToFit() const;
     bool avoidsUnsafeArea() const { return m_configuration.avoidsUnsafeArea; }
 
     // Matches a width=device-width, initial-scale=1 viewport.
-    WEBCORE_EXPORT static Parameters nativeWebpageParameters();
-    static Parameters scalableNativeWebpageParameters();
+    WEBCORE_EXPORT Parameters nativeWebpageParameters();
+    static Parameters nativeWebpageParametersWithoutShrinkToFit();
+    static Parameters nativeWebpageParametersWithShrinkToFit();
     WEBCORE_EXPORT static Parameters webpageParameters();
     WEBCORE_EXPORT static Parameters textDocumentParameters();
     WEBCORE_EXPORT static Parameters imageDocumentParameters();
@@ -119,8 +147,6 @@ private:
     void updateConfiguration();
     double viewportArgumentsLength(double length) const;
     double initialScaleFromSize(double width, double height, bool shouldIgnoreScalingConstraints) const;
-    int layoutWidth() const;
-    int layoutHeight() const;
 
     bool shouldOverrideDeviceWidthAndShrinkToFit() const;
     bool shouldIgnoreScalingConstraintsRegardlessOfContentSize() const;
@@ -130,25 +156,9 @@ private:
     void updateDefaultConfiguration();
     bool canOverrideConfigurationParameters() const;
 
-    constexpr bool shouldIgnoreMinimumEffectiveDeviceWidth() const
+    constexpr bool layoutSizeIsExplicitlyScaled() const
     {
-        if (m_canIgnoreScalingConstraints)
-            return true;
-
-        if (m_viewportArguments == ViewportArguments())
-            return false;
-
-        if (m_viewportArguments.width == ViewportArguments::ValueDeviceWidth || m_viewportArguments.zoom == 1.)
-            return true;
-
-        return false;
-    }
-
-    constexpr double minimumEffectiveDeviceWidth() const
-    {
-        if (shouldIgnoreMinimumEffectiveDeviceWidth())
-            return 0;
-        return m_minimumEffectiveDeviceWidth;
+        return m_layoutSizeScaleFactor != 1;
     }
 
     constexpr double forceAlwaysUserScalableMaximumScale() const
@@ -184,6 +194,7 @@ private:
     double m_minimumEffectiveDeviceWidth { 0 };
     bool m_canIgnoreScalingConstraints;
     bool m_forceAlwaysUserScalable;
+    bool m_isKnownToLayOutWiderThanViewport { false };
 };
 
 WTF::TextStream& operator<<(WTF::TextStream&, const ViewportConfiguration::Parameters&);

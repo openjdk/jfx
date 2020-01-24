@@ -54,7 +54,7 @@ bool CredentialsContainer::doesHaveSameOriginAsItsAncestors()
 
     auto& origin = m_document->securityOrigin();
     for (auto* document = m_document->parentDocument(); document; document = document->parentDocument()) {
-        if (!originsMatch(document->securityOrigin(), origin))
+        if (!origin.isSameOriginAs(document->securityOrigin()))
             return false;
     }
     return true;
@@ -80,6 +80,12 @@ void CredentialsContainer::get(CredentialRequestOptions&& options, CredentialPro
     // be requested from [[discoverFromExternalSource]].
     if (!options.publicKey) {
         promise.reject(Exception { NotSupportedError, "Only PublicKeyCredential is supported."_s });
+        return;
+    }
+
+    // Extra.
+    if (!m_document->hasFocus()) {
+        promise.reject(Exception { NotAllowedError, "The document is not focused."_s });
         return;
     }
 
@@ -109,6 +115,12 @@ void CredentialsContainer::isCreate(CredentialCreationOptions&& options, Credent
     // Step 3-7. Shortcut as we only support one kind of credentials.
     if (!options.publicKey) {
         promise.reject(Exception { NotSupportedError, "Only PublicKeyCredential is supported."_s });
+        return;
+    }
+
+    // Extra.
+    if (!m_document->hasFocus()) {
+        promise.reject(Exception { NotAllowedError, "The document is not focused."_s });
         return;
     }
 

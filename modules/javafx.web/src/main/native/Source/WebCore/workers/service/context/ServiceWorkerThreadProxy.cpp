@@ -29,11 +29,15 @@
 #if ENABLE(SERVICE_WORKER)
 
 #include "CacheStorageProvider.h"
+#include "EventNames.h"
+#include "FetchLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "LoaderStrategy.h"
 #include "PlatformStrategies.h"
+#include "ServiceWorkerClientIdentifier.h"
 #include "Settings.h"
+#include "WorkerGlobalScope.h"
 #include <pal/SessionID.h>
 #include <wtf/MainThread.h>
 #include <wtf/RunLoop.h>
@@ -110,7 +114,7 @@ ServiceWorkerThreadProxy::ServiceWorkerThreadProxy(PageConfiguration&& pageConfi
     allServiceWorkerThreadProxies().add(this);
 
 #if ENABLE(REMOTE_INSPECTOR)
-    m_remoteDebuggable = std::make_unique<ServiceWorkerDebuggable>(*this, data);
+    m_remoteDebuggable = makeUnique<ServiceWorkerDebuggable>(*this, data);
     m_remoteDebuggable->setRemoteDebuggingAllowed(true);
     m_remoteDebuggable->init();
 #endif
@@ -164,7 +168,7 @@ Ref<CacheStorageConnection> ServiceWorkerThreadProxy::createCacheStorageConnecti
 
 std::unique_ptr<FetchLoader> ServiceWorkerThreadProxy::createBlobLoader(FetchLoaderClient& client, const URL& blobURL)
 {
-    auto loader = std::make_unique<FetchLoader>(client, nullptr);
+    auto loader = makeUnique<FetchLoader>(client, nullptr);
     loader->startLoadingBlobURL(m_document, blobURL);
     if (!loader->isStarted())
         return nullptr;

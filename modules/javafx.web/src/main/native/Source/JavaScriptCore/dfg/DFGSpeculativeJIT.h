@@ -113,7 +113,7 @@ public:
 
     VM& vm()
     {
-        return *m_jit.vm();
+        return m_jit.vm();
     }
 
     struct TrustedImmPtr {
@@ -578,6 +578,8 @@ public:
     bool isKnownNotCell(Node* node) { return !(m_state.forNode(node).m_type & SpecCell); }
     bool isKnownNotOther(Node* node) { return !(m_state.forNode(node).m_type & SpecOther); }
 
+    bool canBeRope(Edge&);
+
     UniquedStringImpl* identifierUID(unsigned index)
     {
         return m_jit.graph().identifiers()[index];
@@ -661,7 +663,7 @@ public:
         case BitRShift:
             m_jit.rshift32(op1, Imm32(shiftAmount), result);
             break;
-        case BitLShift:
+        case ArithBitLShift:
             m_jit.lshift32(op1, Imm32(shiftAmount), result);
             break;
         case BitURShift:
@@ -677,7 +679,7 @@ public:
         case BitRShift:
             m_jit.rshift32(op1, shiftAmount, result);
             break;
-        case BitLShift:
+        case ArithBitLShift:
             m_jit.lshift32(op1, shiftAmount, result);
             break;
         case BitURShift:
@@ -989,7 +991,7 @@ public:
         // anyway since it was not being updated by JIT'ed code by design.
 
         for (unsigned i = 0; i < sizeof(void*) / 4; i++)
-            m_jit.store32(TrustedImm32(0xbadbeef), reinterpret_cast<char*>(&m_jit.vm()->topCallFrame) + i * 4);
+            m_jit.store32(TrustedImm32(0xbadbeef), reinterpret_cast<char*>(&vm().topCallFrame) + i * 4);
     }
 #else
     void prepareForExternalCall() { }
@@ -1323,6 +1325,7 @@ public:
     void compileUInt32ToNumber(Node*);
     void compileDoubleAsInt32(Node*);
 
+    void compileValueBitNot(Node*);
     void compileBitwiseNot(Node*);
 
     template<typename SnippetGenerator, J_JITOperation_EJJ slowPathFunction>
@@ -1331,6 +1334,7 @@ public:
     void compileValueBitwiseOp(Node*);
 
     void emitUntypedRightShiftBitOp(Node*);
+    void compileValueLShiftOp(Node*);
     void compileShiftOp(Node*);
 
     template <typename Generator, typename RepatchingFunction, typename NonRepatchingFunction>
@@ -1353,8 +1357,10 @@ public:
     void compileValueDiv(Node*);
     void compileArithDiv(Node*);
     void compileArithFRound(Node*);
+    void compileValueMod(Node*);
     void compileArithMod(Node*);
     void compileArithPow(Node*);
+    void compileValuePow(Node*);
     void compileArithRounding(Node*);
     void compileArithRandom(Node*);
     void compileArithUnary(Node*);
@@ -1512,7 +1518,7 @@ public:
         GPRReg resultGPR, StructureType structure, StorageType storage, GPRReg scratchGPR1,
         GPRReg scratchGPR2, MacroAssembler::JumpList& slowPath, size_t size)
     {
-        m_jit.emitAllocateJSObjectWithKnownSize<ClassType>(*m_jit.vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath, size);
+        m_jit.emitAllocateJSObjectWithKnownSize<ClassType>(vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath, size);
     }
 
     // Convenience allocator for a built-in object.
@@ -1520,20 +1526,20 @@ public:
     void emitAllocateJSObject(GPRReg resultGPR, StructureType structure, StorageType storage,
         GPRReg scratchGPR1, GPRReg scratchGPR2, MacroAssembler::JumpList& slowPath)
     {
-        m_jit.emitAllocateJSObject<ClassType>(*m_jit.vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath);
+        m_jit.emitAllocateJSObject<ClassType>(vm(), resultGPR, structure, storage, scratchGPR1, scratchGPR2, slowPath);
     }
 
     template <typename ClassType, typename StructureType> // StructureType and StorageType can be GPR or ImmPtr.
     void emitAllocateVariableSizedJSObject(GPRReg resultGPR, StructureType structure, GPRReg allocationSize, GPRReg scratchGPR1, GPRReg scratchGPR2, MacroAssembler::JumpList& slowPath)
     {
-        m_jit.emitAllocateVariableSizedJSObject<ClassType>(*m_jit.vm(), resultGPR, structure, allocationSize, scratchGPR1, scratchGPR2, slowPath);
+        m_jit.emitAllocateVariableSizedJSObject<ClassType>(vm(), resultGPR, structure, allocationSize, scratchGPR1, scratchGPR2, slowPath);
     }
 
     template<typename ClassType>
     void emitAllocateDestructibleObject(GPRReg resultGPR, RegisteredStructure structure,
         GPRReg scratchGPR1, GPRReg scratchGPR2, MacroAssembler::JumpList& slowPath)
     {
-        m_jit.emitAllocateDestructibleObject<ClassType>(*m_jit.vm(), resultGPR, structure.get(), scratchGPR1, scratchGPR2, slowPath);
+        m_jit.emitAllocateDestructibleObject<ClassType>(vm(), resultGPR, structure.get(), scratchGPR1, scratchGPR2, slowPath);
     }
 
     void emitAllocateRawObject(GPRReg resultGPR, RegisteredStructure, GPRReg storageGPR, unsigned numElements, unsigned vectorLength);
@@ -1647,13 +1653,7 @@ public:
     template<bool strict>
     GPRReg fillSpeculateInt32Internal(Edge, DataFormat& returnFormat);
 
-    void cageTypedArrayStorage(GPRReg);
-
-    // It is possible, during speculative generation, to reach a situation in which we
-    // can statically determine a speculation will fail (for example, when two nodes
-    // will make conflicting speculations about the same operand). In such cases this
-    // flag is cleared, indicating no further code generation should take place.
-    bool m_compileOkay;
+    void cageTypedArrayStorage(GPRReg, GPRReg);
 
     void recordSetLocal(
         VirtualRegister bytecodeReg, VirtualRegister machineReg, DataFormat format)
@@ -1696,6 +1696,12 @@ public:
     Vector<GenerationInfo, 32> m_generationInfo;
     RegisterBank<GPRInfo> m_gprs;
     RegisterBank<FPRInfo> m_fprs;
+
+    // It is possible, during speculative generation, to reach a situation in which we
+    // can statically determine a speculation will fail (for example, when two nodes
+    // will make conflicting speculations about the same operand). In such cases this
+    // flag is cleared, indicating no further code generation should take place.
+    bool m_compileOkay;
 
     Vector<MacroAssembler::Label> m_osrEntryHeads;
 
@@ -1741,6 +1747,7 @@ public:
 // in order to make space available for another.
 
 class JSValueOperand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit JSValueOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -1896,6 +1903,7 @@ private:
 };
 
 class StorageOperand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit StorageOperand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -1953,6 +1961,7 @@ private:
 enum ReuseTag { Reuse };
 
 class GPRTemporary {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     GPRTemporary();
     GPRTemporary(SpeculativeJIT*);
@@ -2023,6 +2032,7 @@ private:
 };
 
 class JSValueRegsTemporary {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     JSValueRegsTemporary();
     JSValueRegsTemporary(SpeculativeJIT*);
@@ -2043,7 +2053,7 @@ private:
 };
 
 class FPRTemporary {
-    WTF_MAKE_NONCOPYABLE(FPRTemporary);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     FPRTemporary(FPRTemporary&&);
     FPRTemporary(SpeculativeJIT*);
@@ -2117,6 +2127,7 @@ private:
 };
 
 class JSValueRegsFlushedCallResult {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     JSValueRegsFlushedCallResult(SpeculativeJIT* jit)
 #if USE(JSVALUE64)
@@ -2158,6 +2169,7 @@ private:
 // a bail-out to the non-speculative path will be taken.
 
 class SpeculateInt32Operand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SpeculateInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2216,6 +2228,7 @@ private:
 };
 
 class SpeculateStrictInt32Operand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SpeculateStrictInt32Operand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)
@@ -2264,6 +2277,7 @@ private:
 
 // Gives you a canonical Int52 (i.e. it's left-shifted by 16, low bits zero).
 class SpeculateInt52Operand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SpeculateInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2311,6 +2325,7 @@ private:
 
 // Gives you a strict Int52 (i.e. the payload is in the low 48 bits, high 16 bits are sign-extended).
 class SpeculateStrictInt52Operand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SpeculateStrictInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2359,6 +2374,7 @@ private:
 enum OppositeShiftTag { OppositeShift };
 
 class SpeculateWhicheverInt52Operand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SpeculateWhicheverInt52Operand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2436,6 +2452,7 @@ private:
 };
 
 class SpeculateDoubleOperand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SpeculateDoubleOperand(SpeculativeJIT* jit, Edge edge)
         : m_jit(jit)
@@ -2483,7 +2500,7 @@ private:
 };
 
 class SpeculateCellOperand {
-    WTF_MAKE_NONCOPYABLE(SpeculateCellOperand);
+    WTF_MAKE_FAST_ALLOCATED;
 
 public:
     explicit SpeculateCellOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
@@ -2548,6 +2565,7 @@ private:
 };
 
 class SpeculateBooleanOperand {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit SpeculateBooleanOperand(SpeculativeJIT* jit, Edge edge, OperandSpeculationMode mode = AutomaticOperandSpeculation)
         : m_jit(jit)

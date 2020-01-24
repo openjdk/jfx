@@ -47,6 +47,7 @@
 #include "SchemeRegistry.h"
 #include "Settings.h"
 #include "UserMediaController.h"
+#include <wtf/Scope.h>
 
 namespace WebCore {
 
@@ -214,11 +215,14 @@ void UserMediaRequest::start()
     controller->requestUserMediaAccess(*this);
 }
 
-void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, String&& deviceIdentifierHashSalt)
+void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoDevice, String&& deviceIdentifierHashSalt, CompletionHandler<void()>&& completionHandler)
 {
     RELEASE_LOG(MediaStream, "UserMediaRequest::allow %s %s", audioDevice ? audioDevice.persistentId().utf8().data() : "", videoDevice ? videoDevice.persistentId().utf8().data() : "");
 
-    auto callback = [this, protector = makePendingActivity(*this)](RefPtr<MediaStreamPrivate>&& privateStream) mutable {
+    auto callback = [this, protector = makePendingActivity(*this), completionHandler = WTFMove(completionHandler)](RefPtr<MediaStreamPrivate>&& privateStream) mutable {
+        auto scopeExit = makeScopeExit([&] {
+            completionHandler();
+        });
         if (!m_scriptExecutionContext)
             return;
 
@@ -229,19 +233,20 @@ void UserMediaRequest::allow(CaptureDevice&& audioDevice, CaptureDevice&& videoD
         }
         privateStream->monitorOrientation(downcast<Document>(m_scriptExecutionContext)->orientationNotifier());
 
-        auto stream = MediaStream::create(*m_scriptExecutionContext, privateStream.releaseNonNull());
+        auto stream = MediaStream::create(*downcast<Document>(m_scriptExecutionContext), privateStream.releaseNonNull());
         if (stream->getTracks().isEmpty()) {
             deny(MediaAccessDenialReason::HardwareError);
             return;
         }
 
-        m_pendingActivationMediaStream = PendingActivationMediaStream::create(WTFMove(protector), *this, WTFMove(stream));
+        scopeExit.release();
+        m_pendingActivationMediaStream = makeUnique<PendingActivationMediaStream>(WTFMove(protector), *this, WTFMove(stream), WTFMove(completionHandler));
     };
 
     auto& document = downcast<Document>(*scriptExecutionContext());
     document.setDeviceIDHashSalt(deviceIdentifierHashSalt);
 
-    RealtimeMediaSourceCenter::singleton().createMediaStream(WTFMove(callback), WTFMove(deviceIdentifierHashSalt), WTFMove(audioDevice), WTFMove(videoDevice), m_request);
+    RealtimeMediaSourceCenter::singleton().createMediaStream(document.logger(), WTFMove(callback), WTFMove(deviceIdentifierHashSalt), WTFMove(audioDevice), WTFMove(videoDevice), m_request);
 
     if (!m_scriptExecutionContext)
         return;
@@ -330,10 +335,11 @@ Document* UserMediaRequest::document() const
     return downcast<Document>(m_scriptExecutionContext);
 }
 
-UserMediaRequest::PendingActivationMediaStream::PendingActivationMediaStream(Ref<PendingActivity<UserMediaRequest>>&& protectingUserMediaRequest, UserMediaRequest& userMediaRequest, Ref<MediaStream>&& stream)
+UserMediaRequest::PendingActivationMediaStream::PendingActivationMediaStream(Ref<PendingActivity<UserMediaRequest>>&& protectingUserMediaRequest, UserMediaRequest& userMediaRequest, Ref<MediaStream>&& stream, CompletionHandler<void()>&& completionHandler)
     : m_protectingUserMediaRequest(WTFMove(protectingUserMediaRequest))
     , m_userMediaRequest(userMediaRequest)
     , m_mediaStream(WTFMove(stream))
+    , m_completionHandler(WTFMove(completionHandler))
 {
     m_mediaStream->privateStream().addObserver(*this);
     m_mediaStream->startProducingData();
@@ -342,6 +348,9 @@ UserMediaRequest::PendingActivationMediaStream::PendingActivationMediaStream(Ref
 UserMediaRequest::PendingActivationMediaStream::~PendingActivationMediaStream()
 {
     m_mediaStream->privateStream().removeObserver(*this);
+    m_completionHandler();
+    if (auto* document = m_mediaStream->document())
+        document->updateIsPlayingMedia();
 }
 
 void UserMediaRequest::PendingActivationMediaStream::characteristicsChanged()
@@ -386,8 +395,7 @@ void UserMediaRequest::mediaStreamDidFail(RealtimeMediaSource::Type type)
         break;
     }
     m_promise.reject(NotReadableError, makeString("Failed starting capture of a "_s, typeDescription, " track"_s));
-    // We are in an observer iterator loop, we do not want to change the observers within this loop.
-    callOnMainThread([stream = WTFMove(m_pendingActivationMediaStream)] { });
+    m_pendingActivationMediaStream = nullptr;
 }
 
 } // namespace WebCore

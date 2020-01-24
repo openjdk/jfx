@@ -30,8 +30,10 @@
 
 #include "AdClickAttribution.h"
 #include "BackForwardItemIdentifier.h"
+#include "FrameIdentifier.h"
 #include "FrameLoaderTypes.h"
 #include "LayoutPoint.h"
+#include "PageIdentifier.h"
 #include "ResourceRequest.h"
 #include "SecurityOrigin.h"
 #include "UserGestureIndicator.h"
@@ -52,8 +54,8 @@ class UIEventWithKeyState;
 class NavigationAction {
 public:
     NavigationAction();
-    WEBCORE_EXPORT NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, NavigationType = NavigationType::Other, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, Event* = nullptr, const AtomicString& downloadAttribute = nullAtom());
-    NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, FrameLoadType, bool isFormSubmission, Event* = nullptr, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, const AtomicString& downloadAttribute = nullAtom());
+    WEBCORE_EXPORT NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, NavigationType = NavigationType::Other, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, Event* = nullptr, const AtomString& downloadAttribute = nullAtom());
+    NavigationAction(Document&, const ResourceRequest&, InitiatedByMainFrame, FrameLoadType, bool isFormSubmission, Event* = nullptr, ShouldOpenExternalURLsPolicy = ShouldOpenExternalURLsPolicy::ShouldNotAllow, const AtomString& downloadAttribute = nullAtom());
 
     WEBCORE_EXPORT ~NavigationAction();
 
@@ -63,15 +65,15 @@ public:
     NavigationAction(NavigationAction&&);
     NavigationAction& operator=(NavigationAction&&);
 
-    using PageIDAndFrameIDPair = std::pair<uint64_t /* pageID */, uint64_t /* frameID */>;
+    using PageIDAndFrameIDPair = std::pair<PageIdentifier, FrameIdentifier>; // FIXME: Use GlobalFrameIdentifier.
     class Requester {
     public:
         Requester(const Document&);
 
         const URL& url() const { return m_url; }
         const SecurityOrigin& securityOrigin() const { return *m_origin; }
-        uint64_t pageID() const { return m_pageIDAndFrameIDPair.first; }
-        uint64_t frameID() const { return m_pageIDAndFrameIDPair.second; }
+        PageIdentifier pageID() const { return m_pageIDAndFrameIDPair.first; }
+        FrameIdentifier frameID() const { return m_pageIDAndFrameIDPair.second; }
     private:
         URL m_url;
         RefPtr<SecurityOrigin> m_origin;
@@ -93,7 +95,7 @@ public:
 
         LayoutPoint absoluteLocation;
         FloatPoint locationInRootViewCoordinates;
-        unsigned short button;
+        short button;
         unsigned short syntheticClickType;
         bool buttonDown;
     };
@@ -116,7 +118,7 @@ public:
     void setShouldOpenExternalURLsPolicy(ShouldOpenExternalURLsPolicy policy) {  m_shouldOpenExternalURLsPolicy = policy; }
     InitiatedByMainFrame initiatedByMainFrame() const { return m_initiatedByMainFrame; }
 
-    const AtomicString& downloadAttribute() const { return m_downloadAttribute; }
+    const AtomString& downloadAttribute() const { return m_downloadAttribute; }
 
     bool treatAsSameOriginNavigation() const { return m_treatAsSameOriginNavigation; }
 
@@ -129,13 +131,16 @@ public:
     void setTargetBackForwardItem(HistoryItem&);
     const Optional<BackForwardItemIdentifier>& targetBackForwardItemIdentifier() const { return m_targetBackForwardItemIdentifier; }
 
+    void setSourceBackForwardItem(HistoryItem*);
+    const Optional<BackForwardItemIdentifier>& sourceBackForwardItemIdentifier() const { return m_sourceBackForwardItemIdentifier; }
+
     LockHistory lockHistory() const { return m_lockHistory; }
     void setLockHistory(LockHistory lockHistory) { m_lockHistory = lockHistory; }
 
     LockBackForwardList lockBackForwardList() const { return m_lockBackForwardList; }
     void setLockBackForwardList(LockBackForwardList lockBackForwardList) { m_lockBackForwardList = lockBackForwardList; }
 
-    const Optional<AdClickAttribution>& adClickAttribution() { return m_adClickAttribution; };
+    const Optional<AdClickAttribution>& adClickAttribution() const { return m_adClickAttribution; };
     void setAdClickAttribution(AdClickAttribution&& adClickAttribution) { m_adClickAttribution = adClickAttribution; };
 
 private:
@@ -149,11 +154,12 @@ private:
     Optional<UIEventWithKeyStateData> m_keyStateEventData;
     Optional<MouseEventData> m_mouseEventData;
     RefPtr<UserGestureToken> m_userGestureToken { UserGestureIndicator::currentUserGesture() };
-    AtomicString m_downloadAttribute;
+    AtomString m_downloadAttribute;
     bool m_treatAsSameOriginNavigation;
     bool m_hasOpenedFrames { false };
     bool m_openedByDOMWithOpener { false };
     Optional<BackForwardItemIdentifier> m_targetBackForwardItemIdentifier;
+    Optional<BackForwardItemIdentifier> m_sourceBackForwardItemIdentifier;
     LockHistory m_lockHistory { LockHistory::No };
     LockBackForwardList m_lockBackForwardList { LockBackForwardList::No };
     Optional<AdClickAttribution> m_adClickAttribution;

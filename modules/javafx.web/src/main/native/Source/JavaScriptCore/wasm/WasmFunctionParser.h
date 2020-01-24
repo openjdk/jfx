@@ -43,16 +43,17 @@ enum class BlockType {
 template<typename Context>
 class FunctionParser : public Parser<void> {
 public:
-    typedef typename Context::ExpressionType ExpressionType;
-    typedef typename Context::ControlType ControlType;
-    typedef typename Context::ExpressionList ExpressionList;
+    using ExpressionType = typename Context::ExpressionType;
+    using ControlType = typename Context::ControlType;
+    using ExpressionList = typename Context::ExpressionList;
+    using Stack = typename Context::Stack;
 
     FunctionParser(Context&, const uint8_t* functionStart, size_t functionLength, const Signature&, const ModuleInformation&);
 
     Result WARN_UNUSED_RETURN parse();
 
     struct ControlEntry {
-        ExpressionList enclosedExpressionStack;
+        Stack enclosedExpressionStack;
         ControlType controlData;
     };
 
@@ -84,7 +85,7 @@ private:
     // FIXME add a macro as above for WASM_TRY_APPEND_TO_CONTROL_STACK https://bugs.webkit.org/show_bug.cgi?id=165862
 
     Context& m_context;
-    ExpressionList m_expressionStack;
+    Stack m_expressionStack;
     Vector<ControlEntry> m_controlStack;
     const Signature& m_signature;
     const ModuleInformation& m_info;
@@ -95,35 +96,38 @@ private:
     Vector<ExpressionType, 8> m_toKillAfterExpression;
 
     unsigned m_unreachableBlocks { 0 };
+    unsigned m_loopIndex { 0 };
 };
 
 template<typename Context>
 FunctionParser<Context>::FunctionParser(Context& context, const uint8_t* functionStart, size_t functionLength, const Signature& signature, const ModuleInformation& info)
     : Parser(functionStart, functionLength)
     , m_context(context)
+    , m_expressionStack(context.createStack())
     , m_signature(signature)
     , m_info(info)
 {
     if (verbose)
-        dataLogLn("Parsing function starting at: ", (uintptr_t)functionStart, " of length: ", functionLength);
+        dataLogLn("Parsing function starting at: ", (uintptr_t)functionStart, " of length: ", functionLength, " with signature: ", signature);
     m_context.setParser(this);
 }
 
 template<typename Context>
 auto FunctionParser<Context>::parse() -> Result
 {
-    uint32_t localCount;
+    uint32_t localGroupsCount;
 
     WASM_PARSER_FAIL_IF(!m_context.addArguments(m_signature), "can't add ", m_signature.argumentCount(), " arguments to Function");
-    WASM_PARSER_FAIL_IF(!parseVarUInt32(localCount), "can't get local count");
-    WASM_PARSER_FAIL_IF(localCount > maxFunctionLocals, "Function section's local count is too big ", localCount, " maximum ", maxFunctionLocals);
+    WASM_PARSER_FAIL_IF(!parseVarUInt32(localGroupsCount), "can't get local groups count");
 
-    for (uint32_t i = 0; i < localCount; ++i) {
+    uint64_t totalNumberOfLocals = m_signature.argumentCount();
+    for (uint32_t i = 0; i < localGroupsCount; ++i) {
         uint32_t numberOfLocals;
         Type typeOfLocal;
 
         WASM_PARSER_FAIL_IF(!parseVarUInt32(numberOfLocals), "can't get Function's number of locals in group ", i);
-        WASM_PARSER_FAIL_IF(numberOfLocals > maxFunctionLocals, "Function section's ", i, "th local group count is too big ", numberOfLocals, " maximum ", maxFunctionLocals);
+        totalNumberOfLocals += numberOfLocals;
+        WASM_PARSER_FAIL_IF(totalNumberOfLocals > maxFunctionLocals, "Function's number of locals is too big ", totalNumberOfLocals, " maximum ", maxFunctionLocals);
         WASM_PARSER_FAIL_IF(!parseValueType(typeOfLocal), "can't get Function local's type in group ", i);
         WASM_TRY_ADD_TO_CONTEXT(addLocal(typeOfLocal, numberOfLocals));
     }
@@ -136,7 +140,7 @@ auto FunctionParser<Context>::parse() -> Result
 template<typename Context>
 auto FunctionParser<Context>::parseBody() -> PartialResult
 {
-    m_controlStack.append({ ExpressionList(), m_context.addTopLevel(m_signature.returnType()) });
+    m_controlStack.append({ m_context.createStack(), m_context.addTopLevel(m_signature.returnType()) });
     uint8_t op;
     while (m_controlStack.size()) {
         ASSERT(m_toKillAfterExpression.isEmpty());
@@ -281,6 +285,91 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         return { };
     }
 
+    case TableGet: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
+        unsigned tableIndex;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index");
+        ExpressionType result, index;
+        WASM_TRY_POP_EXPRESSION_STACK_INTO(index, "table.get");
+        WASM_TRY_ADD_TO_CONTEXT(addTableGet(tableIndex, index, result));
+        m_expressionStack.append(result);
+        return { };
+    }
+
+    case TableSet: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
+        unsigned tableIndex;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index");
+        ExpressionType val, index;
+        WASM_TRY_POP_EXPRESSION_STACK_INTO(val, "table.set");
+        WASM_TRY_POP_EXPRESSION_STACK_INTO(index, "table.set");
+        WASM_TRY_ADD_TO_CONTEXT(addTableSet(tableIndex, index, val));
+        return { };
+    }
+
+    case ExtTable: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
+        uint8_t extOp;
+        WASM_PARSER_FAIL_IF(!parseUInt8(extOp), "can't parse table extended opcode");
+        unsigned tableIndex;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index");
+
+        switch (static_cast<ExtTableOpType>(extOp)) {
+        case ExtTableOpType::TableSize: {
+            ExpressionType result;
+            WASM_TRY_ADD_TO_CONTEXT(addTableSize(tableIndex, result));
+            m_expressionStack.append(result);
+            break;
+        }
+        case ExtTableOpType::TableGrow: {
+            ExpressionType fill, delta, result;
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(delta, "table.grow");
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(fill, "table.grow");
+            WASM_TRY_ADD_TO_CONTEXT(addTableGrow(tableIndex, fill, delta, result));
+            m_expressionStack.append(result);
+            break;
+        }
+        case ExtTableOpType::TableFill: {
+            ExpressionType offset, fill, count;
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(count, "table.fill");
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(fill, "table.fill");
+            WASM_TRY_POP_EXPRESSION_STACK_INTO(offset, "table.fill");
+            WASM_TRY_ADD_TO_CONTEXT(addTableFill(tableIndex, offset, fill, count));
+            break;
+        }
+        default:
+            WASM_PARSER_FAIL_IF(true, "invalid extended table op ", extOp);
+            break;
+        }
+        return { };
+    }
+
+    case RefNull: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
+        m_expressionStack.append(m_context.addConstant(Funcref, JSValue::encode(jsNull())));
+        return { };
+    }
+
+    case RefIsNull: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
+        ExpressionType result, value;
+        WASM_TRY_POP_EXPRESSION_STACK_INTO(value, "ref.is_null");
+        WASM_TRY_ADD_TO_CONTEXT(addRefIsNull(value, result));
+        m_expressionStack.append(result);
+        return { };
+    }
+
+    case RefFunc: {
+        uint32_t index;
+        ExpressionType result;
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(index), "can't get index for ref.func");
+
+        WASM_TRY_ADD_TO_CONTEXT(addRefFunc(index, result));
+        m_expressionStack.append(result);
+        return { };
+    }
+
     case GetLocal: {
         uint32_t index;
         ExpressionType result;
@@ -338,7 +427,7 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         Vector<ExpressionType> args;
         WASM_PARSER_FAIL_IF(!args.tryReserveCapacity(calleeSignature.argumentCount()), "can't allocate enough memory for call's ", calleeSignature.argumentCount(), " arguments");
         for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i)
-            args.uncheckedAppend(m_expressionStack[i]);
+            args.uncheckedAppend(m_expressionStack.at(i));
         m_expressionStack.shrink(firstArgumentIndex);
 
         ExpressionType result = Context::emptyExpression();
@@ -352,12 +441,13 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
 
     case CallIndirect: {
         uint32_t signatureIndex;
-        uint8_t reserved;
-        WASM_PARSER_FAIL_IF(!m_info.tableInformation, "call_indirect is only valid when a table is defined or imported");
+        uint32_t tableIndex;
+        WASM_PARSER_FAIL_IF(!m_info.tableCount(), "call_indirect is only valid when a table is defined or imported");
         WASM_PARSER_FAIL_IF(!parseVarUInt32(signatureIndex), "can't get call_indirect's signature index");
-        WASM_PARSER_FAIL_IF(!parseVarUInt1(reserved), "can't get call_indirect's reserved byte");
-        WASM_PARSER_FAIL_IF(reserved, "call_indirect's 'reserved' varuint1 must be 0x0");
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't get call_indirect's table index");
+        WASM_PARSER_FAIL_IF(tableIndex >= m_info.tableCount(), "call_indirect's table index ", tableIndex, " invalid, limit is ", m_info.tableCount());
         WASM_PARSER_FAIL_IF(m_info.usedSignatures.size() <= signatureIndex, "call_indirect's signature index ", signatureIndex, " exceeds known signatures ", m_info.usedSignatures.size());
+        WASM_PARSER_FAIL_IF(m_info.tables[tableIndex].type() != TableElementType::Funcref, "call_indirect is only valid when a table has type funcref");
 
         const Signature& calleeSignature = m_info.usedSignatures[signatureIndex].get();
         size_t argumentCount = calleeSignature.argumentCount() + 1; // Add the callee's index.
@@ -367,11 +457,11 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         WASM_PARSER_FAIL_IF(!args.tryReserveCapacity(argumentCount), "can't allocate enough memory for ", argumentCount, " call_indirect arguments");
         size_t firstArgumentIndex = m_expressionStack.size() - argumentCount;
         for (size_t i = firstArgumentIndex; i < m_expressionStack.size(); ++i)
-            args.uncheckedAppend(m_expressionStack[i]);
+            args.uncheckedAppend(m_expressionStack.at(i));
         m_expressionStack.shrink(firstArgumentIndex);
 
         ExpressionType result = Context::emptyExpression();
-        WASM_TRY_ADD_TO_CONTEXT(addCallIndirect(calleeSignature, args, result));
+        WASM_TRY_ADD_TO_CONTEXT(addCallIndirect(tableIndex, calleeSignature, args, result));
 
         if (result != Context::emptyExpression())
             m_expressionStack.append(result);
@@ -383,15 +473,17 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         Type inlineSignature;
         WASM_PARSER_FAIL_IF(!parseResultType(inlineSignature), "can't get block's inline signature");
         m_controlStack.append({ WTFMove(m_expressionStack), m_context.addBlock(inlineSignature) });
-        m_expressionStack = ExpressionList();
+        m_expressionStack = m_context.createStack();
         return { };
     }
 
     case Loop: {
         Type inlineSignature;
         WASM_PARSER_FAIL_IF(!parseResultType(inlineSignature), "can't get loop's inline signature");
-        m_controlStack.append({ WTFMove(m_expressionStack), m_context.addLoop(inlineSignature) });
-        m_expressionStack = ExpressionList();
+        auto expressionStack = WTFMove(m_expressionStack);
+        auto loop = m_context.addLoop(inlineSignature, expressionStack, m_loopIndex++);
+        m_controlStack.append({ expressionStack, loop });
+        m_expressionStack = m_context.createStack();
         return { };
     }
 
@@ -403,7 +495,7 @@ auto FunctionParser<Context>::parseExpression() -> PartialResult
         WASM_TRY_POP_EXPRESSION_STACK_INTO(condition, "if condition");
         WASM_TRY_ADD_TO_CONTEXT(addIf(condition, inlineSignature, control));
         m_controlStack.append({ WTFMove(m_expressionStack), control });
-        m_expressionStack = ExpressionList();
+        m_expressionStack = m_context.createStack();
         return { };
     }
 
@@ -586,9 +678,9 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
 
     case CallIndirect: {
         uint32_t unused;
-        uint8_t unused2;
+        uint32_t unused2;
         WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get call_indirect's signature index in unreachable context");
-        WASM_PARSER_FAIL_IF(!parseVarUInt1(unused2), "can't get call_indirect's reserved byte in unreachable context");
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(unused2), "can't get call_indirect's reserved byte in unreachable context");
         return { };
     }
 
@@ -636,6 +728,26 @@ auto FunctionParser<Context>::parseUnreachableExpression() -> PartialResult
     case I64Const: {
         int64_t unused;
         WASM_PARSER_FAIL_IF(!parseVarInt64(unused), "can't get immediate for ", m_currentOpcode, " in unreachable context");
+        return { };
+    }
+
+    case ExtTable:
+    case TableGet:
+    case TableSet: {
+        unsigned tableIndex;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(tableIndex), "can't parse table index");
+        FALLTHROUGH;
+    }
+    case RefIsNull:
+    case RefNull: {
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
+        return { };
+    }
+
+    case RefFunc: {
+        uint32_t unused;
+        WASM_PARSER_FAIL_IF(!parseVarUInt32(unused), "can't get immediate for ", m_currentOpcode, " in unreachable context");
+        WASM_PARSER_FAIL_IF(!Options::useWebAssemblyReferences(), "references are not enabled");
         return { };
     }
 

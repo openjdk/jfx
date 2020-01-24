@@ -36,23 +36,32 @@ using namespace Inspector;
 
 WebInjectedScriptManager::WebInjectedScriptManager(InspectorEnvironment& environment, Ref<InjectedScriptHost>&& host)
     : InjectedScriptManager(environment, WTFMove(host))
-    , m_commandLineAPIHost(CommandLineAPIHost::create())
 {
+}
+
+void WebInjectedScriptManager::connect()
+{
+    InjectedScriptManager::connect();
+
+    m_commandLineAPIHost = CommandLineAPIHost::create();
 }
 
 void WebInjectedScriptManager::disconnect()
 {
     InjectedScriptManager::disconnect();
 
-    m_commandLineAPIHost->disconnect();
-    m_commandLineAPIHost = nullptr;
+    if (m_commandLineAPIHost) {
+        m_commandLineAPIHost->disconnect();
+        m_commandLineAPIHost = nullptr;
+    }
 }
 
 void WebInjectedScriptManager::discardInjectedScripts()
 {
     InjectedScriptManager::discardInjectedScripts();
 
-    m_commandLineAPIHost->clearAllWrappers();
+    if (m_commandLineAPIHost)
+        m_commandLineAPIHost->clearAllWrappers();
 }
 
 void WebInjectedScriptManager::didCreateInjectedScript(const Inspector::InjectedScript& injectedScript)
@@ -68,8 +77,7 @@ void WebInjectedScriptManager::discardInjectedScriptsFor(DOMWindow* window)
     Vector<long> idsToRemove;
     for (const auto& it : m_idToInjectedScript) {
         JSC::ExecState* scriptState = it.value.scriptState();
-        // JDK-8164076
-        if (scriptState == nullptr || window != domWindowFromExecState(scriptState))
+        if (window != domWindowFromExecState(scriptState))
             continue;
         m_scriptStateToId.remove(scriptState);
         idsToRemove.append(it.key);

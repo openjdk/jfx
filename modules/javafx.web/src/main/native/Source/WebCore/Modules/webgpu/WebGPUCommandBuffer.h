@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,29 +28,21 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUCommandBuffer.h"
-
-#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class WebGPURenderPassEncoder;
-
-struct WebGPURenderPassDescriptor;
-
 class WebGPUCommandBuffer : public RefCounted<WebGPUCommandBuffer> {
 public:
-    static Ref<WebGPUCommandBuffer> create(Ref<GPUCommandBuffer>&&);
+    static Ref<WebGPUCommandBuffer> create(RefPtr<GPUCommandBuffer>&&);
 
-    const GPUCommandBuffer& commandBuffer() const { return m_commandBuffer.get(); }
-
-    RefPtr<WebGPURenderPassEncoder> beginRenderPass(WebGPURenderPassDescriptor&&);
+    GPUCommandBuffer* commandBuffer() { return m_commandBuffer.get(); }
 
 private:
-    WebGPUCommandBuffer(Ref<GPUCommandBuffer>&&);
+    WebGPUCommandBuffer(RefPtr<GPUCommandBuffer>&&);
 
-    Ref<GPUCommandBuffer> m_commandBuffer;
+    RefPtr<GPUCommandBuffer> m_commandBuffer;
 };
 
 } // namespace WebCore

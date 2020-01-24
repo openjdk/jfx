@@ -28,8 +28,8 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
 #include "WHLSLVariableDeclaration.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -38,27 +38,27 @@ namespace WHLSL {
 
 namespace AST {
 
-class VariableReference : public Expression {
+class VariableReference final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    VariableReference(Lexer::Token&& origin, String&& name)
-        : Expression(WTFMove(origin))
+    VariableReference(CodeLocation location, String&& name)
+        : Expression(location, Kind::VariableReference)
         , m_name(WTFMove(name))
     {
     }
 
-    virtual ~VariableReference() = default;
+    ~VariableReference() = default;
 
     VariableReference(const VariableReference&) = delete;
     VariableReference(VariableReference&&) = default;
 
     static VariableReference wrap(VariableDeclaration& variableDeclaration)
     {
-        VariableReference result(Lexer::Token(variableDeclaration.origin()));
+        VariableReference result(variableDeclaration.codeLocation());
         result.m_variable = &variableDeclaration;
+        result.m_name = variableDeclaration.name();
         return result;
     }
-
-    bool isVariableReference() const override { return true; }
 
     String& name() { return m_name; }
 
@@ -70,13 +70,13 @@ public:
     }
 
 private:
-    VariableReference(Lexer::Token&& origin)
-        : Expression(WTFMove(origin))
+    VariableReference(CodeLocation location)
+        : Expression(location, Kind::VariableReference)
     {
     }
 
     String m_name;
-    VariableDeclaration* m_variable;
+    VariableDeclaration* m_variable { nullptr };
 };
 
 } // namespace AST
@@ -84,6 +84,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(VariableReference)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(VariableReference, isVariableReference())
 

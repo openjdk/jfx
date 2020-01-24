@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "StackVisitor.h"
 
+#include "CallFrameInlines.h"
 #include "ClonedArguments.h"
 #include "DebuggerPrimitives.h"
 #include "InlineCallFrame.h"
@@ -33,6 +34,7 @@
 #include "JSCInlines.h"
 #include "WasmCallee.h"
 #include "WasmIndexOrName.h"
+#include "WebAssemblyFunction.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -96,8 +98,8 @@ void StackVisitor::unwindToMachineCodeBlockFrame()
 #if ENABLE(DFG_JIT)
     if (m_frame.isInlinedFrame()) {
         CodeOrigin codeOrigin = m_frame.inlineCallFrame()->directCaller;
-        while (codeOrigin.inlineCallFrame)
-            codeOrigin = codeOrigin.inlineCallFrame->directCaller;
+        while (codeOrigin.inlineCallFrame())
+            codeOrigin = codeOrigin.inlineCallFrame()->directCaller;
         readNonInlinedFrame(m_frame.callFrame(), &codeOrigin);
     }
 #endif
@@ -144,7 +146,7 @@ void StackVisitor::readFrame(CallFrame* callFrame)
     }
 
     CodeOrigin codeOrigin = codeBlock->codeOrigin(index);
-    if (!codeOrigin.inlineCallFrame) {
+    if (!codeOrigin.inlineCallFrame()) {
         readNonInlinedFrame(callFrame, &codeOrigin);
         return;
     }
@@ -177,7 +179,7 @@ void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOri
     } else {
         m_frame.m_codeBlock = callFrame->codeBlock();
         m_frame.m_bytecodeOffset = !m_frame.codeBlock() ? 0
-            : codeOrigin ? codeOrigin->bytecodeIndex
+            : codeOrigin ? codeOrigin->bytecodeIndex()
             : callFrame->bytecodeOffset();
 
     }
@@ -190,7 +192,7 @@ void StackVisitor::readNonInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOri
 #if ENABLE(DFG_JIT)
 static int inlinedFrameOffset(CodeOrigin* codeOrigin)
 {
-    InlineCallFrame* inlineCallFrame = codeOrigin->inlineCallFrame;
+    InlineCallFrame* inlineCallFrame = codeOrigin->inlineCallFrame();
     int frameOffset = inlineCallFrame ? inlineCallFrame->stackOffset : 0;
     return frameOffset;
 }
@@ -203,7 +205,7 @@ void StackVisitor::readInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOrigin
     int frameOffset = inlinedFrameOffset(codeOrigin);
     bool isInlined = !!frameOffset;
     if (isInlined) {
-        InlineCallFrame* inlineCallFrame = codeOrigin->inlineCallFrame;
+        InlineCallFrame* inlineCallFrame = codeOrigin->inlineCallFrame();
 
         m_frame.m_callFrame = callFrame;
         m_frame.m_inlineCallFrame = inlineCallFrame;
@@ -212,7 +214,7 @@ void StackVisitor::readInlinedFrame(CallFrame* callFrame, CodeOrigin* codeOrigin
         else
             m_frame.m_argumentCountIncludingThis = inlineCallFrame->argumentCountIncludingThis;
         m_frame.m_codeBlock = inlineCallFrame->baselineCodeBlock.get();
-        m_frame.m_bytecodeOffset = codeOrigin->bytecodeIndex;
+        m_frame.m_bytecodeOffset = codeOrigin->bytecodeIndex();
 
         JSFunction* callee = inlineCallFrame->calleeForCallFrame(callFrame);
         m_frame.m_callee = callee;
@@ -252,31 +254,37 @@ StackVisitor::Frame::CodeType StackVisitor::Frame::codeType() const
     return CodeType::Global;
 }
 
-const RegisterAtOffsetList* StackVisitor::Frame::calleeSaveRegisters()
+#if ENABLE(ASSEMBLER)
+Optional<RegisterAtOffsetList> StackVisitor::Frame::calleeSaveRegistersForUnwinding()
 {
-    if (isInlinedFrame())
-        return nullptr;
+    if (!NUMBER_OF_CALLEE_SAVES_REGISTERS)
+        return WTF::nullopt;
 
-#if !ENABLE(C_LOOP) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
+    if (isInlinedFrame())
+        return WTF::nullopt;
 
 #if ENABLE(WEBASSEMBLY)
     if (isWasmFrame()) {
         if (callee().isCell()) {
             RELEASE_ASSERT(isWebAssemblyToJSCallee(callee().asCell()));
-            return nullptr;
+            return WTF::nullopt;
         }
         Wasm::Callee* wasmCallee = callee().asWasmCallee();
-        return wasmCallee->calleeSaveRegisters();
+        return *wasmCallee->calleeSaveRegisters();
+    }
+
+    if (callee().isCell()) {
+        if (auto* jsToWasmICCallee = jsDynamicCast<JSToWasmICCallee*>(callee().asCell()->vm(), callee().asCell()))
+            return jsToWasmICCallee->function()->usedCalleeSaveRegisters();
     }
 #endif // ENABLE(WEBASSEMBLY)
 
     if (CodeBlock* codeBlock = this->codeBlock())
-        return codeBlock->calleeSaveRegisters();
+        return *codeBlock->calleeSaveRegisters();
 
-#endif // !ENABLE(C_LOOP) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
-
-    return nullptr;
+    return WTF::nullopt;
 }
+#endif // ENABLE(ASSEMBLER)
 
 String StackVisitor::Frame::functionName() const
 {
@@ -406,7 +414,7 @@ void StackVisitor::Frame::computeLineAndColumn(unsigned& line, unsigned& column)
     line = divotLine + codeBlock->ownerExecutable()->firstLine();
     column = divotColumn + (divotLine ? 1 : codeBlock->firstLineColumnOffset());
 
-    if (Optional<int> overrideLineNumber = codeBlock->ownerExecutable()->overrideLineNumber(*codeBlock->vm()))
+    if (Optional<int> overrideLineNumber = codeBlock->ownerExecutable()->overrideLineNumber(codeBlock->vm()))
         line = overrideLineNumber.value();
 }
 
@@ -484,8 +492,8 @@ void StackVisitor::Frame::dump(PrintStream& out, Indenter indent, WTF::Function<
                     CallSiteIndex callSiteIndex = callFrame->callSiteIndex();
                     out.print(indent, "callSiteIndex: ", callSiteIndex.bits(), " of ", codeBlock->codeOrigins().size(), "\n");
 
-                    JITCode::JITType jitType = codeBlock->jitType();
-                    if (jitType != JITCode::FTLJIT) {
+                    JITType jitType = codeBlock->jitType();
+                    if (jitType != JITType::FTLJIT) {
                         JITCode* jitCode = codeBlock->jitCode().get();
                         out.print(indent, "jitCode: ", RawPointer(jitCode),
                             " start ", RawPointer(jitCode->start()),

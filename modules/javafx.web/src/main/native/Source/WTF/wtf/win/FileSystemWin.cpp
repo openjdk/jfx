@@ -51,7 +51,7 @@ static const ULONGLONG kSecondsFromFileTimeToTimet = 11644473600;
 
 static bool getFindData(String path, WIN32_FIND_DATAW& findData)
 {
-    HANDLE handle = FindFirstFileW(stringToNullTerminatedWChar(path).data(), &findData);
+    HANDLE handle = FindFirstFileW(path.wideCharacters().data(), &findData);
     if (handle == INVALID_HANDLE_VALUE)
         return false;
     FindClose(handle);
@@ -152,13 +152,13 @@ static String getFinalPathName(const String& path)
         return String();
 
     Vector<UChar> buffer(MAX_PATH);
-    if (::GetFinalPathNameByHandleW(handle, buffer.data(), buffer.size(), VOLUME_NAME_NT) >= MAX_PATH) {
+    if (::GetFinalPathNameByHandleW(handle, wcharFrom(buffer.data()), buffer.size(), VOLUME_NAME_NT) >= MAX_PATH) {
         closeFile(handle);
         return String();
     }
     closeFile(handle);
 
-    buffer.shrink(wcslen(buffer.data()));
+    buffer.shrink(wcslen(wcharFrom(buffer.data())));
     return String::adopt(WTFMove(buffer));
 }
 
@@ -221,7 +221,7 @@ Optional<FileMetadata> fileMetadataFollowingSymlinks(const String& path)
 
 bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath)
 {
-    return !::CreateSymbolicLinkW(stringToNullTerminatedWChar(symbolicLinkPath).data(), stringToNullTerminatedWChar(targetPath).data(), 0);
+    return !::CreateSymbolicLinkW(symbolicLinkPath.wideCharacters().data(), targetPath.wideCharacters().data(), 0);
 }
 
 bool fileExists(const String& path)
@@ -233,37 +233,35 @@ bool fileExists(const String& path)
 bool deleteFile(const String& path)
 {
     String filename = path;
-    return !!DeleteFileW(stringToNullTerminatedWChar(filename).data());
+    return !!DeleteFileW(filename.wideCharacters().data());
 }
 
 bool deleteEmptyDirectory(const String& path)
 {
     String filename = path;
-    return !!RemoveDirectoryW(stringToNullTerminatedWChar(filename).data());
+    return !!RemoveDirectoryW(filename.wideCharacters().data());
 }
 
 bool moveFile(const String& oldPath, const String& newPath)
 {
     String oldFilename = oldPath;
     String newFilename = newPath;
-    return !!::MoveFileEx(stringToNullTerminatedWChar(oldFilename).data(), stringToNullTerminatedWChar(newFilename).data(), MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING);
+    return !!::MoveFileEx(oldFilename.wideCharacters().data(), newFilename.wideCharacters().data(), MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING);
 }
 
 String pathByAppendingComponent(const String& path, const String& component)
 {
     Vector<UChar> buffer(MAX_PATH);
-
     if (path.length() + 1 > buffer.size())
         return String();
 
     StringView(path).getCharactersWithUpconvert(buffer.data());
     buffer[path.length()] = '\0';
 
-    if (!PathAppendW(buffer.data(), stringToNullTerminatedWChar(component).data()))
+    if (!PathAppendW(wcharFrom(buffer.data()), component.wideCharacters().data()))
         return String();
 
-    buffer.shrink(wcslen(buffer.data()));
-
+    buffer.shrink(wcslen(wcharFrom(buffer.data())));
     return String::adopt(WTFMove(buffer));
 }
 
@@ -279,9 +277,7 @@ String pathByAppendingComponents(StringView path, const Vector<StringView>& comp
 
 CString fileSystemRepresentation(const String& path)
 {
-    auto upconvertedCharacters = StringView(path).upconvertedCharacters();
-
-    const UChar* characters = upconvertedCharacters;
+    auto characters = wcharFrom(StringView(path).upconvertedCharacters());
     int size = WideCharToMultiByte(CP_ACP, 0, characters, path.length(), 0, 0, 0, 0) - 1;
 
     char* buffer;
@@ -297,7 +293,7 @@ CString fileSystemRepresentation(const String& path)
 bool makeAllDirectories(const String& path)
 {
     String fullPath = path;
-    if (SHCreateDirectoryEx(0, stringToNullTerminatedWChar(fullPath).data(), 0) != ERROR_SUCCESS) {
+    if (SHCreateDirectoryEx(0, fullPath.wideCharacters().data(), 0) != ERROR_SUCCESS) {
         DWORD error = GetLastError();
         if (error != ERROR_FILE_EXISTS && error != ERROR_ALREADY_EXISTS) {
             LOG_ERROR("Failed to create path %s", path.ascii().data());
@@ -314,7 +310,7 @@ String homeDirectoryPath()
 
 String pathGetFileName(const String& path)
 {
-    return nullTerminatedWCharToString(::PathFindFileName(stringToNullTerminatedWChar(path).data()));
+    return String(::PathFindFileName(path.wideCharacters().data()));
 }
 
 String directoryName(const String& path)
@@ -350,9 +346,10 @@ static String bundleName()
 static String storageDirectory(DWORD pathIdentifier)
 {
     Vector<UChar> buffer(MAX_PATH);
-    if (FAILED(SHGetFolderPathW(0, pathIdentifier | CSIDL_FLAG_CREATE, 0, 0, buffer.data())))
+    if (FAILED(SHGetFolderPathW(0, pathIdentifier | CSIDL_FLAG_CREATE, 0, 0, wcharFrom(buffer.data()))))
         return String();
-    buffer.resize(wcslen(buffer.data()));
+
+    buffer.shrink(wcslen(wcharFrom(buffer.data())));
     String directory = String::adopt(WTFMove(buffer));
 
     directory = pathByAppendingComponent(directory, "Apple Computer\\" + bundleName());
@@ -397,7 +394,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
 
         ASSERT(wcslen(tempFile) == WTF_ARRAY_LENGTH(tempFile) - 1);
 
-        proposedPath = pathByAppendingComponent(nullTerminatedWCharToString(tempPath), nullTerminatedWCharToString(tempFile));
+        proposedPath = pathByAppendingComponent(tempPath, tempFile);
         if (proposedPath.isEmpty())
             break;
     } while (!action(proposedPath));
@@ -411,7 +408,7 @@ String openTemporaryFile(const String&, PlatformFileHandle& handle)
 
     String proposedPath = generateTemporaryPath([&handle](const String& proposedPath) {
         // use CREATE_NEW to avoid overwriting an existing file with the same name
-        handle = ::CreateFileW(stringToNullTerminatedWChar(proposedPath).data(), GENERIC_READ | GENERIC_WRITE, 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
+        handle = ::CreateFileW(proposedPath.wideCharacters().data(), GENERIC_READ | GENERIC_WRITE, 0, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, 0);
 
         return isHandleValid(handle) || GetLastError() == ERROR_ALREADY_EXISTS;
     });
@@ -442,7 +439,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode)
     }
 
     String destination = path;
-    return CreateFile(stringToNullTerminatedWChar(destination).data(), desiredAccess, shareMode, 0, creationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
+    return CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, 0, creationDisposition, FILE_ATTRIBUTE_NORMAL, 0);
 }
 
 void closeFile(PlatformFileHandle& handle)
@@ -473,6 +470,14 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin o
     return largeOffset.QuadPart;
 }
 
+bool truncateFile(PlatformFileHandle handle, long long offset)
+{
+    FILE_END_OF_FILE_INFO eofInfo;
+    eofInfo.EndOfFile.QuadPart = offset;
+
+    return SetFileInformationByHandle(handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
+}
+
 int writeToFile(PlatformFileHandle handle, const char* data, int length)
 {
     if (!isHandleValid(handle))
@@ -499,9 +504,18 @@ int readFromFile(PlatformFileHandle handle, char* data, int length)
     return static_cast<int>(bytesRead);
 }
 
+bool hardLink(const String& source, const String& destination)
+{
+    return CreateHardLink(destination.wideCharacters().data(), source.wideCharacters().data(), nullptr);
+}
+
 bool hardLinkOrCopyFile(const String& source, const String& destination)
 {
-    return !!::CopyFile(stringToNullTerminatedWChar(source).data(), stringToNullTerminatedWChar(destination).data(), TRUE);
+    if (hardLink(source, destination))
+        return true;
+
+    // Hard link failed. Perform a copy instead.
+    return !!::CopyFile(source.wideCharacters().data(), destination.wideCharacters().data(), TRUE);
 }
 
 String localUserSpecificStorageDirectory()
@@ -572,7 +586,7 @@ bool deleteNonEmptyDirectory(const String& directoryPath)
     SHFILEOPSTRUCT deleteOperation = {
         nullptr,
         FO_DELETE,
-        stringToNullTerminatedWChar(directoryPath).data(),
+        directoryPath.wideCharacters().data(),
         L"",
         FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT,
         false,
@@ -580,6 +594,45 @@ bool deleteNonEmptyDirectory(const String& directoryPath)
         L""
     };
     return !SHFileOperation(&deleteOperation);
+}
+
+bool unmapViewOfFile(void* buffer, size_t)
+{
+    return UnmapViewOfFile(buffer);
+}
+
+MappedFileData::MappedFileData(const String& filePath, MappedFileMode mode, bool& success)
+{
+    auto file = CreateFile(filePath.wideCharacters().data(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+
+    success = mapFileHandle(file, mode);
+    closeFile(file);
+}
+
+bool MappedFileData::mapFileHandle(PlatformFileHandle handle, MappedFileMode)
+{
+    if (!isHandleValid(handle))
+        return false;
+
+    long long size;
+    if (!getFileSize(handle, size) || size > std::numeric_limits<size_t>::max() || size > std::numeric_limits<decltype(m_fileSize)>::max()) {
+        return false;
+    }
+
+    if (!size) {
+        return true;
+    }
+
+    auto mapping = CreateFileMapping(handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!mapping)
+        return false;
+
+    m_fileData = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, size);
+    CloseHandle(mapping);
+    if (!m_fileData)
+        return false;
+    m_fileSize = size;
+    return true;
 }
 
 } // namespace FileSystemImpl

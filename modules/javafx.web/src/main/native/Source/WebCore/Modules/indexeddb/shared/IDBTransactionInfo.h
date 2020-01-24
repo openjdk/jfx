@@ -50,6 +50,8 @@ public:
     static IDBTransactionInfo versionChange(const IDBServer::IDBConnectionToClient&, const IDBDatabaseInfo& originalDatabaseInfo, uint64_t newVersion);
 
     IDBTransactionInfo(const IDBTransactionInfo&);
+    IDBTransactionInfo(IDBTransactionInfo&&) = default;
+    IDBTransactionInfo& operator=(IDBTransactionInfo&&) = default;
 
     enum IsolatedCopyTag { IsolatedCopy };
     IDBTransactionInfo(const IDBTransactionInfo&, IsolatedCopyTag);
@@ -117,7 +119,7 @@ bool IDBTransactionInfo::decode(Decoder& decoder, IDBTransactionInfo& info)
         return false;
 
     if (hasObject) {
-        std::unique_ptr<IDBDatabaseInfo> object = std::make_unique<IDBDatabaseInfo>();
+        std::unique_ptr<IDBDatabaseInfo> object = makeUnique<IDBDatabaseInfo>();
         if (!decoder.decode(*object))
             return false;
         info.m_originalDatabaseInfo = WTFMove(object);

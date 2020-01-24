@@ -30,20 +30,20 @@
 #include "Image.h"
 #include "IntSize.h"
 #include "NicosiaAnimatedBackingStoreClient.h"
+#include "NicosiaAnimation.h"
 #include "NicosiaBuffer.h"
 #include "NicosiaPlatformLayer.h"
-#include "TextureMapperAnimation.h"
 #include "TransformationMatrix.h"
 #include <wtf/RunLoop.h>
 #include <wtf/text/StringHash.h>
 
 namespace Nicosia {
+class Animations;
 class PaintingEngine;
 }
 
 namespace WebCore {
 class CoordinatedGraphicsLayer;
-class TextureMapperAnimations;
 
 class CoordinatedGraphicsLayerClient {
 public:
@@ -150,7 +150,7 @@ public:
     void requestBackingStoreUpdate();
 
 private:
-    bool isCoordinatedGraphicsLayer() const;
+    bool isCoordinatedGraphicsLayer() const override;
 
     void updatePlatformLayer();
 
@@ -193,7 +193,6 @@ private:
     bool m_isPurging;
 #endif
     bool m_shouldUpdateVisibleRect: 1;
-    bool m_shouldSyncLayerState: 1;
     bool m_movingVisibleRect : 1;
     bool m_pendingContentsScaleAdjustment : 1;
     bool m_pendingVisibleRectAdjustment : 1;
@@ -211,7 +210,7 @@ private:
 
     Timer m_animationStartedTimer;
     RunLoop::Timer<CoordinatedGraphicsLayer> m_requestPendingTileCreationTimer;
-    TextureMapperAnimations m_animations;
+    Nicosia::Animations m_animations;
     MonotonicTime m_lastAnimationStartTime;
 
     struct {

@@ -15,13 +15,14 @@
                 "MockCaptureDevicesEnabled",
                 "NeedsSiteSpecificQuirks",
                 "ScriptEnabled",
+                "WebRTCEncryptionEnabled",
                 "WebSecurityEnabled"
             ]
         },
         {
             "id": "ResourceType",
             "type": "string",
-            "enum": ["Document", "Stylesheet", "Image", "Font", "Script", "XHR", "Fetch", "Ping", "Beacon", "WebSocket", "Other"],
+            "enum": ["Document", "StyleSheet", "Image", "Font", "Script", "XHR", "Fetch", "Ping", "Beacon", "WebSocket", "Other"],
             "description": "Resource type as it was perceived by the rendering engine."
         },
         {

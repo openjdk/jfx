@@ -165,7 +165,8 @@ public:
     WEBCORE_EXPORT bool canCopy() const;
     WEBCORE_EXPORT bool canPaste() const;
     WEBCORE_EXPORT bool canDelete() const;
-    bool canSmartCopyOrDelete();
+    WEBCORE_EXPORT bool canSmartCopyOrDelete();
+    bool shouldSmartDelete();
 
     WEBCORE_EXPORT void cut();
     WEBCORE_EXPORT void copy();
@@ -300,6 +301,7 @@ public:
     void markBadGrammar(const VisibleSelection&);
     void markMisspellingsAndBadGrammar(const VisibleSelection& spellingSelection, bool markGrammar, const VisibleSelection& grammarSelection);
     void markAndReplaceFor(const SpellCheckRequest&, const Vector<TextCheckingResult>&);
+    WEBCORE_EXPORT void replaceRangeForSpellChecking(Range&, const String&);
 
     bool isOverwriteModeEnabled() const { return m_overwriteModeEnabled; }
     WEBCORE_EXPORT void toggleOverwriteModeEnabled();
@@ -498,8 +500,6 @@ public:
 #endif
 
     bool canCopyExcludingStandaloneImages() const;
-
-    String clientReplacementURLForResource(Ref<SharedBuffer>&& resourceData, const String& mimeType);
 
 #if !PLATFORM(WIN)
     WEBCORE_EXPORT void writeSelectionToPasteboard(Pasteboard&);

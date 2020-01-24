@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Apple Inc. All rights reserved.
+# Copyright (C) 2005-2019 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2010 moiji-mobile.com All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
@@ -73,6 +73,7 @@ my $coverageSupport = 0;
 my $shouldRunStaticAnalyzer = 0;
 my $noExperimentalFeatures = 0;
 my $ltoMode = "default";
+my $xcbuild = undef;
 my $startTime = time();
 my $archs32bit = 0;
 my $skipLibraryUpdate = 0;
@@ -114,7 +115,8 @@ Usage: $programName [options] [options to pass to build system]
   --simulator                       DEPRECATED alias of --ios-simulator
   --coverage                        Enable code coverage support (Mac only)
   --analyze                         Enable static anaylsis (iOS and Mac only)
-  --lto-mode=<mode>                 Set Link Time Optimization mode (full, thin, or none) (Xcode only)
+  --lto-mode=<mode>                 Set Link Time Optimization mode (full, thin, or none) (LLVM only)
+  --[no-]xcbuild                    Force the use of XCBuild or not
 
   --java                            Build the Open JavaFX port
   --gtk                             Build the GTK+ port
@@ -154,6 +156,7 @@ my %options = (
     'analyze' => \$shouldRunStaticAnalyzer,
     'no-experimental-features' => \$noExperimentalFeatures,
     'lto-mode=s' => \$ltoMode,
+    'xcbuild!' => \$xcbuild,
     'skip-library-update' => \$skipLibraryUpdate,
     'use-ccache!' => \$useCCache,
 );
@@ -208,6 +211,18 @@ my @options = ();
 
 if (isAppleCocoaWebKit()) {
     push @options, XcodeOptions();
+
+    if (not defined $xcbuild) {
+        $xcbuild = canUseXCBuild();
+    }
+
+    if ($xcbuild) {
+        push @options, "-UseNewBuildSystem=YES";
+        push @options, "USE_NEW_BUILD_SYSTEM=YES";
+    } else {
+        push @options, "-UseNewBuildSystem=NO";
+    }
+
     sub option($$)
     {
         my ($feature, $isEnabled) = @_;
@@ -258,10 +273,6 @@ if (isAppleCocoaWebKit()) {
     (system("perl Tools/Scripts/update-webkit-support-libs") == 0) or die;
     (system("perl Tools/Scripts/update-webkit-auxiliary-libs") == 0) or die;
     setupAppleWinEnv()
-}
-
-if (isAnyWindows()) {
-    system("python Tools/Scripts/update-vswhere.py");
 }
 
 # If asked to build just the WebKit project, overwrite the projects

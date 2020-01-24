@@ -81,6 +81,8 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
             enableIntersectionObserver = parseBooleanTestHeaderValue(value);
         else if (key == "enableMenuItemElement")
             enableMenuItemElement = parseBooleanTestHeaderValue(value);
+        else if (key == "enableKeygenElement")
+            enableKeygenElement = parseBooleanTestHeaderValue(value);
         else if (key == "enableModernMediaControls")
             enableModernMediaControls = parseBooleanTestHeaderValue(value);
         else if (key == "enablePointerLock")
@@ -105,12 +107,20 @@ TestOptions::TestOptions(const std::string& pathOrURL, const std::string& absolu
             enableColorFilter = parseBooleanTestHeaderValue(value);
         else if (key == "jscOptions")
             jscOptions = value;
+        else if (key == "additionalSupportedImageTypes")
+            additionalSupportedImageTypes = value;
         else if (key == "experimental:WebGPUEnabled")
             enableWebGPU = parseBooleanTestHeaderValue(value);
         else if (key == "internal:CSSLogicalEnabled")
             enableCSSLogical = parseBooleanTestHeaderValue(value);
-        else if (key == "internal:AdClickAttributionEnabled")
+        else if (key == "experimental:AdClickAttributionEnabled")
             adClickAttributionEnabled = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:ResizeObserverEnabled")
+            enableResizeObserver = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:CoreMathMLEnabled")
+            enableCoreMathML = parseBooleanTestHeaderValue(value);
+        else if (key == "experimental:LazyImageLoadingEnabled")
+            enableLazyImageLoading = parseBooleanTestHeaderValue(value);
         pairStart = pairEnd + 1;
     }
 }
