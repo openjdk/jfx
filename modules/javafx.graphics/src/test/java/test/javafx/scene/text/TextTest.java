@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeTrue;
 import javafx.geometry.VPos;
 import test.javafx.scene.NodeTest;
 import javafx.scene.text.Font;
@@ -235,6 +236,9 @@ public class TextTest {
 
     // Test for JDK-8130738
     @Test public void testTabSize() {
+        // Test is unstable until JDK-8236728 is fixed
+        assumeTrue(Boolean.getBoolean("unstable.test"));
+
         Toolkit tk = (StubToolkit)Toolkit.getToolkit();
         HBox root = new HBox();
         Scene scene = new Scene(root);
