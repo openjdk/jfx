@@ -1300,10 +1300,14 @@ public class Scene implements EventTarget {
             height = (int)wimg.getHeight();
         }
 
-        int maxTextureSize = PrismSettings.maxTextureSize;
-        if (height > maxTextureSize || width > maxTextureSize) {
-            // The requested size for the screenshot is too big to fit a single texture,
-            // so we need to take several snapshot tiles and merge them into single image (fixes JDK-8088198)
+        // Attempt to capture snapshot
+        try {
+            wimg = doSnapshotTile(scene, xMin, yMin, width, height, root, transform, depthBuffer, fill, camera, wimg);
+        } catch (Exception e) {
+            // A first attempt to capture a snapshot failed, most likely because it is larger than
+            // maxTextureSize: retry by taking several snapshot tiles and merge them into single image
+            // (Addresses JDK-8088198)
+            int maxTextureSize = PrismSettings.maxTextureSize;
             int numVerticalTiles = (int) Math.ceil(height / (double) maxTextureSize);
             int numHorizontalTiles = (int) Math.ceil(width / (double) maxTextureSize);
             for (int i = 0; i < numHorizontalTiles; i++) {
@@ -1317,10 +1321,6 @@ public class Scene implements EventTarget {
                     wimg.getPixelWriter().setPixels(xOffset, yOffset, tileWidth, tileHeight, tile.getPixelReader(), 0, 0);
                 }
             }
-        } else {
-            // The requested size for the screenshot fits max texture size,
-            // so we can directly return the one generated tile and avoid the extra pixel copy.
-            wimg = doSnapshotTile(scene, xMin, yMin, width, height, root, transform, depthBuffer, fill, camera, wimg);
         }
 
         // if this scene belongs to some stage
