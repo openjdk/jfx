@@ -27,7 +27,6 @@ package test.javafx.animation;
 
 
 import javafx.animation.Animation.Status;
-import javafx.animation.TranslateTransition;
 import javafx.util.Duration;
 import test.com.sun.scenario.animation.shared.ClipEnvelopeMock;
 import org.junit.Before;
