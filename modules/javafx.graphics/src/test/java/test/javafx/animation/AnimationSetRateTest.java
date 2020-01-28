@@ -27,6 +27,7 @@ package test.javafx.animation;
 
 
 import javafx.animation.Animation.Status;
+import javafx.animation.TranslateTransition;
 import javafx.util.Duration;
 import test.com.sun.scenario.animation.shared.ClipEnvelopeMock;
 import org.junit.Before;
@@ -370,5 +371,18 @@ public class AnimationSetRateTest {
         assertAnimation(0.5, 0.0, Status.PAUSED, false);
         animation.play();
         assertAnimation(0.5, -0.5, Status.RUNNING, true);
+    }
+
+    @Test
+    public void testFlipRateAndPlayForPausedNonEmbeddedAnimation() {
+        animation.setRate(0.2);
+        animation.doTimePulse(100);
+        animation.pause();
+        double timeBefore = animation.getCurrentTime().toMillis();
+        animation.setRate(-0.2);
+        animation.doTimePulse(100);
+        animation.pause();
+        double timeAfter = animation.getCurrentTime().toMillis();
+        assertTrue("Playing backwards should reduce the current ticks", timeAfter < timeBefore);
     }
 }
