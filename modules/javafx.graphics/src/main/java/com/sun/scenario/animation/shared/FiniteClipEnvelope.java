@@ -82,9 +82,9 @@ public class FiniteClipEnvelope extends ClipEnvelope {
         final long newTicks = toggled? totalTicks - ticks : ticks;
         final Status status = animation.getStatus();
         if (status != Status.STOPPED) {
-            if (status == Status.RUNNING) {
-                setCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
-            }
+//            if (status == Status.RUNNING) {
+                setInternalCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
+//            }
             deltaTicks = newTicks - Math.round((ticks - deltaTicks) * Math.abs(rate / this.rate));
             abortCurrentPulse();
         }
