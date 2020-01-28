@@ -54,7 +54,6 @@ import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -480,7 +479,6 @@ public class TabPaneTest {
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+75, yval+20));
         tk.firePulse();
     }
-
 
     @Test public void setRotateGraphicAndSeeValueIsReflectedInModel() {
         tabPane.setRotateGraphic(true);
