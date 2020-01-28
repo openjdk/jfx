@@ -110,6 +110,10 @@ public abstract class ClipEnvelope {
 
     protected abstract double calculateCurrentRate();
 
+    protected void setInternalCurrentRate(double currentRate) {
+        this.currentRate = currentRate;
+    }
+
     protected void setCurrentRate(double currentRate) {
         this.currentRate = currentRate;
         AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
