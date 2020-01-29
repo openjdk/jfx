@@ -30,7 +30,9 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.util.concurrent.FutureTask;
 
-import javafx.application.Platform;
+import javafx.event.Event;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 
@@ -52,6 +54,18 @@ public class WebViewTest extends TestBase {
 
         checkFontScale(view, SCALE);
         checkZoom(view, ZOOM);
+    }
+
+    @Test public void testForwardMouseButton() {
+        WebView view = getView();
+        Event forward = new MouseEvent(MouseEvent.MOUSE_PRESSED, 0, 0, 0, 0, MouseButton.FORWARD, 1, false, false, false, false, false, false, false, false, true, true, false, true, null);
+        view.fireEvent(forward);    // must not throw NullPointerException (JDK-8236912)
+    }
+
+    @Test public void testBackMouseButton() {
+        WebView view = getView();
+        Event back = new MouseEvent(MouseEvent.MOUSE_PRESSED, 0, 0, 0, 0, MouseButton.BACK, 1, false, false, false, false, false, false, false, true, false, true, false, true, null);
+        view.fireEvent(back);    // must not throw NullPointerException (JDK-8236912)
     }
 
     void checkFontScale(WebView view, float scale) {
