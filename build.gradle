@@ -539,7 +539,7 @@ if (jfxReleasePatchVersion == "0") {
 defineProperty("RELEASE_VERSION", relVer)
 defineProperty("RELEASE_VERSION_PADDED", "${jfxReleaseMajorVersion}.${jfxReleaseMinorVersion}.${jfxReleaseSecurityVersion}.${jfxReleasePatchVersion}")
 
-def buildDate = new java.util.Date()
+def buildDate = System.getenv("SOURCE_DATE_EPOCH") == null ? new java.util.Date() : new java.util.Date(1000 * Long.parseLong(System.getenv("SOURCE_DATE_EPOCH")))
 def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss").format(buildDate)
 defineProperty("BUILD_TIMESTAMP", buildTimestamp)
 def relSuffix = ""
