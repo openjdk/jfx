@@ -463,6 +463,23 @@ public class TabPaneTest {
         assertSame(TabPane.TabDragPolicy.FIXED, tabPane.getTabDragPolicy());
     }
 
+    @Test public void tabDragPolicyReorderAndAsymmetricMouseEvent() {
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        root.getChildren().add(tabPane);
+        show();
+
+        root.layout();
+
+        double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
+        double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
+
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+75, yval+20));
+        tk.firePulse();
+    }
+
     @Test public void setRotateGraphicAndSeeValueIsReflectedInModel() {
         tabPane.setRotateGraphic(true);
         assertTrue(tabPane.rotateGraphicProperty().getValue());
