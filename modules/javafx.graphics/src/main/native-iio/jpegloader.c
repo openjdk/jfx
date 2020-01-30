@@ -1664,8 +1664,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
 
         num_scanlines = jpeg_read_scanlines(cinfo, &scanline_ptr, 1);
         if (num_scanlines == 1) {
-            jboolean iscopy = FALSE;
-            jbyte *body = (*env)->GetPrimitiveArrayCritical(env, barray, &iscopy);
+            jbyte *body = (*env)->GetPrimitiveArrayCritical(env, barray, NULL);
             if (body == NULL) {
                 fprintf(stderr, "decompressIndirect: GetPrimitiveArrayCritical returns NULL: out of memory\n");
                 return JNI_FALSE;
