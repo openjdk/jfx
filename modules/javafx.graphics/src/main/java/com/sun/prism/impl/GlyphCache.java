@@ -291,7 +291,12 @@ public class GlyphCache {
                     }
                     // If add fails,clear up the cache. Try add again.
                     clearAll();
-                    packer.add(rect);
+                    if (!packer.add(rect)) {
+                        if (PrismSettings.verbose) {
+                            System.out.println(rect + " won't fit in GlyphCache");
+                        }
+                        return null;
+                    }
                 }
 
                 // We always pass skipFlush=true to backingStore.update()
@@ -320,7 +325,9 @@ public class GlyphCache {
                                         0, 0, emw, emh, stride,
                                         skipFlush);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if (PrismSettings.verbose) {
+                        e.printStackTrace();
+                    }
                     return null;
                 }
                 // Upload the glyph
