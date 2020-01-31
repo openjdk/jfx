@@ -28,8 +28,8 @@
 #ifdef GL_ES
 
 #ifndef EXTENSION_APPLIED
-#extension GL_OES_standard_derivatives : enable
 #define EXTENSION_APPLIED
+#extension GL_OES_standard_derivatives : enable
 #endif
 
 // Define default float precision for fragment shaders
