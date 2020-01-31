@@ -42,6 +42,7 @@
 
 
 static GlassTouches* glassTouches = nil;
+static BOOL useEventTap = NO;
 
 
 @interface GlassTouches (hidden)
@@ -176,7 +177,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 
 - (id)init
 {
-    BOOL useEventTap = YES;
+    useEventTap = YES;
     if (@available(macOS 10.15, *)) {
         useEventTap = NO;
     }
@@ -232,11 +233,6 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 @implementation GlassTouches (hidden)
 - (void)terminateImpl
 {
-    BOOL useEventTap = YES;
-    if (@available(macOS 10.15, *)) {
-        useEventTap = NO;
-    }
-
     if (useEventTap) {
         LOG("TOUCHES: terminateImpl eventTap=%p runLoopSource=%p\n", self->eventTap,
             self->runLoopSource);
@@ -260,11 +256,6 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 
 - (void)enableTouchInputEventTap
 {
-    BOOL useEventTap = YES;
-    if (@available(macOS 10.15, *)) {
-        useEventTap = NO;
-    }
-
     if (useEventTap) {
         CGEventTapEnable(self->eventTap, true);
     }
