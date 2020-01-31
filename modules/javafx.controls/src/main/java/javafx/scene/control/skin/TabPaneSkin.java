@@ -2210,17 +2210,17 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         if (dragState == DragState.START) {
             // No drag action was performed.
             resetDrag();
-            return;
-        }
-        // Animate tab header being dragged to its final position.
-        dragHeaderSourceX = dragTabHeader.getLayoutX();
-        dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
-        dragHeaderAnim.playFromStart();
+        } else if (dragState == DragState.REORDER) {
+            // Animate tab header being dragged to its final position.
+            dragHeaderSourceX = dragTabHeader.getLayoutX();
+            dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
+            dragHeaderAnim.playFromStart();
 
-        // Reorder the tab list.
-        if (dragHeaderStartX != dragHeaderDestX) {
-            ((TabObservableList<Tab>) getSkinnable().getTabs()).reorder(dragTabHeader.tab, swapTab);
-            swapTab = null;
+            // Reorder the tab list.
+            if (dragHeaderStartX != dragHeaderDestX) {
+                ((TabObservableList<Tab>) getSkinnable().getTabs()).reorder(dragTabHeader.tab, swapTab);
+                swapTab = null;
+            }
         }
     }
 
