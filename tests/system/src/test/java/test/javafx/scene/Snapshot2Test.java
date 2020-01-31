@@ -41,7 +41,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -373,26 +372,22 @@ public class Snapshot2Test extends SnapshotCommon {
         doTestSnapshotScaleNodeDefer(3, 3);
     }
 
-    // TODO: Re-enable this test when RT-22073 is fixed
-    @Ignore @Test
+    @Test
     public void testSnapshotBigXScaleNodeImm() {
         doTestSnapshotScaleNodeImm(100, 1);
     }
 
-    // TODO: Re-enable this test when RT-22073 is fixed
-    @Ignore @Test
+    @Test
     public void testSnapshotBigXScaleNodeDefer() {
         doTestSnapshotScaleNodeDefer(100, 1);
     }
 
-    // TODO: Re-enable this test when RT-22073 is fixed
-    @Ignore @Test
+    @Test
     public void testSnapshotBigYScaleNodeImm() {
         doTestSnapshotScaleNodeImm(1, 200);
     }
 
-    // TODO: Re-enable this test when RT-22073 is fixed
-    @Ignore @Test
+    @Test
     public void testSnapshotBigYScaleNodeDefer() {
         doTestSnapshotScaleNodeDefer(1, 200);
     }
