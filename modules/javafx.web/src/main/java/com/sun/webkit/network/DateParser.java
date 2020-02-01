@@ -30,9 +30,7 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 
 import java.text.ParseException;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
@@ -55,24 +53,20 @@ final class DateParser {
             "(\\d{1,2})(?:[^\\d].*)*");
     private static final Pattern YEAR_PATTERN = Pattern.compile(
             "(\\d{2,4})(?:[^\\d].*)*");
-    private static final Map<String,Integer> MONTH_MAP;
-    static {
-        Map<String,Integer> map = new HashMap<String,Integer>(12);
-        map.put("jan", 0);
-        map.put("feb", 1);
-        map.put("mar", 2);
-        map.put("apr", 3);
-        map.put("may", 4);
-        map.put("jun", 5);
-        map.put("jul", 6);
-        map.put("aug", 7);
-        map.put("sep", 8);
-        map.put("oct", 9);
-        map.put("nov", 10);
-        map.put("dec", 11);
-        MONTH_MAP = Collections.unmodifiableMap(map);
-    }
 
+    private static final Map<String, Integer> MONTH_MAP = Map.ofEntries(
+        Map.entry("jan", 0),
+        Map.entry("feb", 1),
+        Map.entry("mar", 2),
+        Map.entry("apr", 3),
+        Map.entry("may", 4),
+        Map.entry("jun", 5),
+        Map.entry("jul", 6),
+        Map.entry("aug", 7),
+        Map.entry("sep", 8),
+        Map.entry("oct", 9),
+        Map.entry("nov", 10),
+        Map.entry("dec", 11));
 
     /**
      * The private default constructor. Ensures non-instantiability.

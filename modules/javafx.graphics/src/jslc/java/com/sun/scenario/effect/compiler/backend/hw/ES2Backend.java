@@ -25,7 +25,6 @@
 
 package com.sun.scenario.effect.compiler.backend.hw;
 
-import java.util.HashMap;
 import java.util.Map;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.Precision;
@@ -42,31 +41,27 @@ public class ES2Backend extends GLSLBackend {
 
     // GLSL v1.10 no longer has gl_TexCoord*; these are now passed in
     // from vertex shader as texCoord0/1
-    private static final Map<String, String> varMap = new HashMap<String, String>();
-    static {
-        varMap.put("pos0",     "texCoord0");
-        varMap.put("pos1",     "texCoord1");
-        varMap.put("color",    "gl_FragColor");
-        varMap.put("jsl_vertexColor", "perVertexColor");
-    }
+    private static final Map<String, String> VAR_MAP = Map.of(
+        "pos0",            "texCoord0",
+        "pos1",            "texCoord1",
+        "color",           "gl_FragColor",
+        "jsl_vertexColor", "perVertexColor");
 
-    private static final Map<String, String> funcMap = new HashMap<String, String>();
-    static {
-        funcMap.put("sample", "texture2D");
-        funcMap.put("ddx", "dFdx");
-        funcMap.put("ddy", "dFdy");
-        funcMap.put("intcast", "int");
-    }
+    private static final Map<String, String> FUNC_MAP = Map.of(
+        "sample",  "texture2D",
+        "ddx",     "dFdx",
+        "ddy",     "dFdy",
+        "intcast", "int");
 
     @Override
     protected String getVar(String v) {
-        String s = varMap.get(v);
+        String s = VAR_MAP.get(v);
         return (s != null) ? s : v;
     }
 
     @Override
     protected String getFuncName(String f) {
-        String s = funcMap.get(f);
+        String s = FUNC_MAP.get(f);
         return (s != null) ? s : f;
     }
 
