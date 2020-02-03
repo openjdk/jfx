@@ -32,4 +32,7 @@ public class SingleLoopClipEnvelopeShim extends SingleLoopClipEnvelope {
         super(animation);
     }
 
+    public long getTicks() {
+        return ticks;
+    }
 }

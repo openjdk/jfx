@@ -48,6 +48,10 @@ public abstract class AnimationShim extends Animation {
         return clipEnvelope;
     }
 
+    public void setClipEnvelope(ClipEnvelope clipEnvelope) {
+        this.clipEnvelope= clipEnvelope;
+    }
+
     @Override
     public void doPause() {
         super.doPause();

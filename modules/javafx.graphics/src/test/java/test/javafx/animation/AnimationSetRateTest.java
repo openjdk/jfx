@@ -32,6 +32,8 @@ import test.com.sun.scenario.animation.shared.ClipEnvelopeMock;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.sun.scenario.animation.shared.SingleLoopClipEnvelopeShim;
+
 import static org.junit.Assert.*;
 
 public class AnimationSetRateTest {
@@ -370,5 +372,23 @@ public class AnimationSetRateTest {
         assertAnimation(0.5, 0.0, Status.PAUSED, false);
         animation.play();
         assertAnimation(0.5, -0.5, Status.RUNNING, true);
+    }
+
+    @Test
+    public void testFlipRateAndPlayForPausedNonEmbeddedAnimation() {
+        var clip = new SingleLoopClipEnvelopeShim(animation);
+        animation.setClipEnvelope(clip);
+        animation.setRate(0.2);
+        animation.play();
+        clip.timePulse(10);
+        animation.pause();
+        long timeBefore = clip.getTicks();
+        animation.setRate(-0.2);
+        animation.play();
+        clip.timePulse(5);
+        animation.pause();
+        long timeAfter = clip.getTicks();
+        assertEquals("A pulse to 10 at rate 0.2 with deltaTicks = 0 should reach 10 * 0.2 = 2", 2, timeBefore);
+        assertEquals("A pulse to 5 at rate -0.2 with deltaTicks = 4 should reach 4 + 5 * (-0.2) = 3", 3, timeAfter);
     }
 }
