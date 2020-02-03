@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,9 +70,7 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
     public void setRate(double rate) {
         final Status status = animation.getStatus();
         if (status != Status.STOPPED) {
-            if (status == Status.RUNNING) {
-                setCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
-            }
+            setInternalCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
             deltaTicks = ticks - Math.round((ticks - deltaTicks) * Math.abs(rate / this.rate));
             if (rate * this.rate < 0) {
                 final long delta = 2 * cycleTicks - pos;
