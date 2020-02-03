@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,6 +42,7 @@
 
 
 static GlassTouches* glassTouches = nil;
+static BOOL useEventTap = NO;
 
 
 @interface GlassTouches (hidden)
@@ -176,6 +177,11 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 
 - (id)init
 {
+    useEventTap = YES;
+    if (@available(macOS 10.15, *)) {
+        useEventTap = NO;
+    }
+
     self = [super init];
     if (self != nil)
     {
@@ -185,35 +191,37 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
         self->touches       = nil;
         self->lastTouchId   = 0;
 
-        //
-        // Notes after fixing RT-23199:
-        //
-        //  Don't use NSMachPort and NSRunLoop to integrate CFMachPortRef
-        //  instance into run loop.
-        //
-        // Ignoring the above "don't"s results into performance degradation
-        // referenced in the bug.
-        //
+        if (useEventTap) {
+            //
+            // Notes after fixing RT-23199:
+            //
+            //  Don't use NSMachPort and NSRunLoop to integrate CFMachPortRef
+            //  instance into run loop.
+            //
+            // Ignoring the above "don't"s results into performance degradation
+            // referenced in the bug.
+            //
 
-        self->eventTap = CGEventTapCreate(kCGHIDEventTap,
-                                          kCGHeadInsertEventTap,
-                                          kCGEventTapOptionListenOnly,
-                                          CGEventMaskBit(NSEventTypeGesture),
-                                          listenTouchEvents, nil);
+            self->eventTap = CGEventTapCreate(kCGHIDEventTap,
+                                              kCGHeadInsertEventTap,
+                                              kCGEventTapOptionListenOnly,
+                                              CGEventMaskBit(NSEventTypeGesture),
+                                              listenTouchEvents, nil);
 
-        LOG("TOUCHES: eventTap=%p\n", self->eventTap);
+            LOG("TOUCHES: eventTap=%p\n", self->eventTap);
 
-        if (self->eventTap)
-        {   // Create a run loop source.
-            self->runLoopSource = CFMachPortCreateRunLoopSource(
-                                                        kCFAllocatorDefault,
-                                                        self->eventTap, 0);
+            if (self->eventTap)
+            {   // Create a run loop source.
+                self->runLoopSource = CFMachPortCreateRunLoopSource(
+                                                            kCFAllocatorDefault,
+                                                            self->eventTap, 0);
 
-            LOG("TOUCHES: runLoopSource=%p\n", self->runLoopSource);
+                LOG("TOUCHES: runLoopSource=%p\n", self->runLoopSource);
 
-            // Add to the current run loop.
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), self->runLoopSource,
-                               kCFRunLoopCommonModes);
+                // Add to the current run loop.
+                CFRunLoopAddSource(CFRunLoopGetCurrent(), self->runLoopSource,
+                                   kCFRunLoopCommonModes);
+            }
         }
     }
     return self;
@@ -225,29 +233,32 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 @implementation GlassTouches (hidden)
 - (void)terminateImpl
 {
-    LOG("TOUCHES: terminateImpl eventTap=%p runLoopSource=%p\n", self->eventTap,
-        self->runLoopSource);
+    if (useEventTap) {
+        LOG("TOUCHES: terminateImpl eventTap=%p runLoopSource=%p\n", self->eventTap,
+            self->runLoopSource);
 
-    if (self->runLoopSource)
-    {
-        CFRunLoopRemoveSource(CFRunLoopGetCurrent(), self->runLoopSource,
-                              kCFRunLoopCommonModes);
-        CFRelease(self->runLoopSource);
-        self->runLoopSource = nil;
+        if (self->runLoopSource)
+        {
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), self->runLoopSource,
+                                  kCFRunLoopCommonModes);
+            CFRelease(self->runLoopSource);
+            self->runLoopSource = nil;
+        }
+
+        if (self->eventTap)
+        {
+            CFRelease(self->eventTap);
+            self->eventTap = nil;
+        }
     }
-
-    if (self->eventTap)
-    {
-        CFRelease(self->eventTap);
-        self->eventTap = nil;
-    }
-
     [self releaseTouches];
 }
 
 - (void)enableTouchInputEventTap
 {
-    CGEventTapEnable(self->eventTap, true);
+    if (useEventTap) {
+        CGEventTapEnable(self->eventTap, true);
+    }
 }
 
 - (void)sendJavaTouchEvent:(NSEvent *)theEvent

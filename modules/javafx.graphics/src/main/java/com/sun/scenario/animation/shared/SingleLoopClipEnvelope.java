@@ -37,9 +37,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
     public void setRate(double rate) {
         final Status status = animation.getStatus();
         if (status != Status.STOPPED) {
-            if (status == Status.RUNNING) {
-                setCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
-            }
+            setInternalCurrentRate((Math.abs(currentRate - this.rate) < EPSILON) ? rate : -rate);
             deltaTicks = ticks - Math.round((ticks - deltaTicks) * rate / this.rate);
             abortCurrentPulse();
         }
