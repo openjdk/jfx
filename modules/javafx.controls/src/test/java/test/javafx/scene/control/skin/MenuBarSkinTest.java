@@ -30,7 +30,6 @@ import static org.junit.Assert.assertTrue;
 
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.stage.WindowHelper;
-import javafx.scene.control.MenuItem;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ObservableValue;
@@ -39,6 +38,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.stage.Stage;
 
 import java.util.List;
