@@ -27,9 +27,10 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
-#include "WHLSLNode.h"
+#include "WHLSLCodeLocation.h"
+#include "WHLSLNameSpace.h"
 #include "WHLSLType.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,33 +40,36 @@ namespace WHLSL {
 namespace AST {
 
 class NamedType : public Type {
+    WTF_MAKE_FAST_ALLOCATED;
+
+protected:
+    ~NamedType() = default;
+
 public:
-    NamedType(Lexer::Token&& origin, String&& name)
-        : m_origin(WTFMove(origin))
+    NamedType(Kind kind, CodeLocation location, String&& name)
+        : Type(kind)
+        , m_codeLocation(location)
         , m_name(WTFMove(name))
     {
     }
 
-    virtual ~NamedType() = default;
-
     NamedType(const NamedType&) = delete;
     NamedType(NamedType&&) = default;
 
-    const Lexer::Token& origin() const { return m_origin; }
+    CodeLocation codeLocation() const { return m_codeLocation; }
+    void updateCodeLocation(CodeLocation location) { m_codeLocation = location; }
+
     String& name() { return m_name; }
 
-    bool isNamedType() const override { return true; }
-    virtual bool isTypeDefinition() const { return false; }
-    virtual bool isStructureDefinition() const { return false; }
-    virtual bool isEnumerationDefinition() const { return false; }
-    virtual bool isNativeTypeDeclaration() const { return false; }
-
-    virtual const Type& unifyNode() const { return *this; }
-    virtual Type& unifyNode() { return *this; }
+    NameSpace nameSpace() const { return m_nameSpace; }
+    void setNameSpace(NameSpace nameSpace) { m_nameSpace = nameSpace; }
 
 private:
-    Lexer::Token m_origin;
+    friend class Type;
+    Type& unifyNodeImpl() { return *this; }
+    CodeLocation m_codeLocation;
     String m_name;
+    NameSpace m_nameSpace { NameSpace::StandardLibrary };
 };
 
 } // namespace AST
@@ -74,10 +78,7 @@ private:
 
 }
 
-#define SPECIALIZE_TYPE_TRAITS_WHLSL_NAMED_TYPE(ToValueTypeName, predicate) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WHLSL::AST::ToValueTypeName) \
-    static bool isType(const WebCore::WHLSL::AST::NamedType& type) { return type.predicate; } \
-SPECIALIZE_TYPE_TRAITS_END()
+DEFINE_DEFAULT_DELETE(NamedType)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(NamedType, isNamedType())
 

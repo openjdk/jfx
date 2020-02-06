@@ -28,7 +28,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D) && !PLATFORM(IOS_FAMILY)
+#if ENABLE(GRAPHICS_CONTEXT_3D) && USE(OPENGL_ES) && !PLATFORM(IOS_FAMILY)
 
 #include "GraphicsContext3D.h"
 
@@ -37,11 +37,7 @@
 #include "IntSize.h"
 #include "NotImplemented.h"
 
-#if PLATFORM(WIN)
-#include <GLSLANG/ShaderLang.h>
-#else
 #include <ANGLE/ShaderLang.h>
-#endif
 
 namespace WebCore {
 
@@ -83,15 +79,13 @@ bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
 {
     const int width = size.width();
     const int height = size.height();
-    GLuint colorFormat = 0, pixelDataType = 0;
+    GLuint colorFormat = 0;
     if (m_attrs.alpha) {
         m_internalColorFormat = GL_RGBA;
         colorFormat = GL_RGBA;
-        pixelDataType = GL_UNSIGNED_BYTE;
     } else {
         m_internalColorFormat = GL_RGB;
         colorFormat = GL_RGB;
-        pixelDataType = GL_UNSIGNED_SHORT_5_6_5;
     }
 
     // We don't allow the logic where stencil is required and depth is not.
@@ -107,7 +101,7 @@ bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
 
     ASSERT(m_texture);
     ::glBindTexture(GL_TEXTURE_2D, m_texture);
-    ::glTexImage2D(GL_TEXTURE_2D, 0, m_internalColorFormat, width, height, 0, colorFormat, pixelDataType, 0);
+    ::glTexImage2D(GL_TEXTURE_2D, 0, m_internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
     ::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texture, 0);
 
 #if USE(COORDINATED_GRAPHICS)
@@ -248,12 +242,12 @@ void GraphicsContext3D::clearDepth(GC3Dclampf depth)
 Extensions3D& GraphicsContext3D::getExtensions()
 {
     if (!m_extensions)
-        m_extensions = std::make_unique<Extensions3DOpenGLES>(this, isGLES2Compliant());
+        m_extensions = makeUnique<Extensions3DOpenGLES>(this, isGLES2Compliant());
     return *m_extensions;
 }
 #endif
 
-#if PLATFORM(WIN) && !USE(CAIRO)
+#if PLATFORM(WIN) && USE(CA)
 RefPtr<GraphicsContext3D> GraphicsContext3D::create(GraphicsContext3DAttributes attributes, HostWindow* hostWindow, GraphicsContext3D::RenderStyle renderStyle)
 {
     // This implementation doesn't currently support rendering directly to the HostWindow.
@@ -277,7 +271,7 @@ RefPtr<GraphicsContext3D> GraphicsContext3D::create(GraphicsContext3DAttributes 
 GraphicsContext3D::GraphicsContext3D(GraphicsContext3DAttributes attributes, HostWindow*, GraphicsContext3D::RenderStyle renderStyle, GraphicsContext3D* sharedContext)
     : m_attrs(attributes)
     , m_compiler(isGLES2Compliant() ? SH_ESSL_OUTPUT : SH_GLSL_COMPATIBILITY_OUTPUT)
-    , m_private(std::make_unique<GraphicsContext3DPrivate>(this, renderStyle))
+    , m_private(makeUnique<GraphicsContext3DPrivate>(this, renderStyle))
 {
     ASSERT_UNUSED(sharedContext, !sharedContext);
     makeContextCurrent();
@@ -404,4 +398,4 @@ PlatformLayer* GraphicsContext3D::platformLayer() const
 
 }
 
-#endif // ENABLE(GRAPHICS_CONTEXT_3D) && !PLATFORM(IOS_FAMILY)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D) && USE(OPENGL_ES) && !PLATFORM(IOS_FAMILY)

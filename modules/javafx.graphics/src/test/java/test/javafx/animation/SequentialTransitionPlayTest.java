@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -637,10 +637,10 @@ public class SequentialTransitionPlayTest {
         st.play();
 
         assertEquals(Status.RUNNING, st.getStatus());
-        assertEquals(Status.RUNNING, child1X.getStatus());
-        assertEquals(Status.STOPPED, child1Y.getStatus());
-        assertEquals(0, xProperty.get());
-        assertEquals(0, yProperty.get());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.RUNNING, child1Y.getStatus());
+        assertEquals(60000, xProperty.get());
+        assertTrue(0 < yProperty.get() && yProperty.get() < 10000);
 
         st.jumpTo(TickCalculation.toDuration(100));
 

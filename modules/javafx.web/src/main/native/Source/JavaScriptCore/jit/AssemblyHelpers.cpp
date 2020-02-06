@@ -44,10 +44,10 @@ namespace JSC {
 
 ExecutableBase* AssemblyHelpers::executableFor(const CodeOrigin& codeOrigin)
 {
-    if (!codeOrigin.inlineCallFrame)
+    auto* inlineCallFrame = codeOrigin.inlineCallFrame();
+    if (!inlineCallFrame)
         return m_codeBlock->ownerExecutable();
-
-    return codeOrigin.inlineCallFrame->baselineCodeBlock->ownerExecutable();
+    return inlineCallFrame->baselineCodeBlock->ownerExecutable();
 }
 
 AssemblyHelpers::Jump AssemblyHelpers::branchIfFastTypedArray(GPRReg baseGPR)
@@ -546,7 +546,7 @@ void AssemblyHelpers::emitAllocateWithNonNullAllocator(GPRReg resultGPR, const J
 
     // The object is half-allocated: we have what we know is a fresh object, but
     // it's still on the GC's free list.
-    loadPtr(Address(resultGPR), scratchGPR);
+    loadPtr(Address(resultGPR, FreeCell::offsetOfScrambledNext()), scratchGPR);
     storePtr(scratchGPR, Address(allocatorGPR, LocalAllocator::offsetOfFreeList() + FreeList::offsetOfScrambledHead()));
 
     done.link(this);
@@ -634,7 +634,7 @@ void AssemblyHelpers::emitDumbVirtualCall(VM& vm, CallLinkInfo* info)
     Call call = nearCall();
     addLinkTask(
         [=, &vm] (LinkBuffer& linkBuffer) {
-            MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunk = virtualThunkFor(&vm, *info);
+            MacroAssemblerCodeRef<JITStubRoutinePtrTag> virtualThunk = virtualThunkFor(vm, *info);
             info->setSlowStub(createJITStubRoutine(virtualThunk, vm, nullptr, true));
             linkBuffer.link(call, CodeLocationLabel<JITStubRoutinePtrTag>(virtualThunk.code()));
         });
@@ -727,7 +727,7 @@ void AssemblyHelpers::emitConvertValueToBoolean(VM& vm, JSValueRegs value, GPRRe
     done.append(jump());
 
     isString.link(this);
-    move(TrustedImmPtr(jsEmptyString(&vm)), result);
+    move(TrustedImmPtr(jsEmptyString(vm)), result);
     comparePtr(invert ? Equal : NotEqual, value.payloadGPR(), result, result);
     done.append(jump());
 
@@ -817,7 +817,7 @@ AssemblyHelpers::JumpList AssemblyHelpers::branchIfValue(VM& vm, JSValueRegs val
     }
 
     isString.link(this);
-    truthy.append(branchPtr(invert ? Equal : NotEqual, value.payloadGPR(), TrustedImmPtr(jsEmptyString(&vm))));
+    truthy.append(branchPtr(invert ? Equal : NotEqual, value.payloadGPR(), TrustedImmPtr(jsEmptyString(vm))));
     done.append(jump());
 
     isBigInt.link(this);

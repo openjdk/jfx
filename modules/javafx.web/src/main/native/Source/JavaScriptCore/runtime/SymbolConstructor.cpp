@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,11 +64,11 @@ SymbolConstructor::SymbolConstructor(VM& vm, Structure* structure)
 }
 
 #define INITIALIZE_WELL_KNOWN_SYMBOLS(name) \
-putDirectWithoutTransition(vm, Identifier::fromString(&vm, #name), Symbol::create(vm, static_cast<SymbolImpl&>(*vm.propertyNames->name##Symbol.impl())), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
+putDirectWithoutTransition(vm, Identifier::fromString(vm, #name), Symbol::create(vm, static_cast<SymbolImpl&>(*vm.propertyNames->name##Symbol.impl())), PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
 
 void SymbolConstructor::finishCreation(VM& vm, SymbolPrototype* prototype)
 {
-    Base::finishCreation(vm, prototype->classInfo(vm)->className);
+    Base::finishCreation(vm, vm.propertyNames->Symbol.string(), NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 
@@ -115,12 +115,13 @@ EncodedJSValue JSC_HOST_CALL symbolConstructorKeyFor(ExecState* exec)
     if (!symbolValue.isSymbol())
         return JSValue::encode(throwTypeError(exec, scope, SymbolKeyForTypeError));
 
-    SymbolImpl& uid = asSymbol(symbolValue)->privateName().uid();
+    PrivateName privateName = asSymbol(symbolValue)->privateName();
+    SymbolImpl& uid = privateName.uid();
     if (!uid.symbolRegistry())
         return JSValue::encode(jsUndefined());
 
     ASSERT(uid.symbolRegistry() == &vm.symbolRegistry());
-    return JSValue::encode(jsString(exec, &uid));
+    return JSValue::encode(jsString(vm, &uid));
 }
 
 } // namespace JSC

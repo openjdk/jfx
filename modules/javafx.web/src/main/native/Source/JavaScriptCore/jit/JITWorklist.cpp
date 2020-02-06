@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,7 +75,7 @@ public:
     }
 
     CodeBlock* codeBlock() { return m_codeBlock; }
-    VM* vm() { return m_codeBlock->vm(); }
+    VM& vm() { return m_codeBlock->vm(); }
 
     bool isFinishedCompiling()
     {
@@ -179,7 +179,7 @@ bool JITWorklist::completeAllForVM(VM& vm)
                 bool didFindUnfinishedPlan = false;
                 m_plans.removeAllMatching(
                     [&] (RefPtr<Plan>& plan) {
-                        if (plan->vm() != &vm)
+                        if (&plan->vm() != &vm)
                             return false;
                         if (!plan->isFinishedCompiling()) {
                             didFindUnfinishedPlan = true;
@@ -216,7 +216,7 @@ void JITWorklist::poll(VM& vm)
         LockHolder locker(*m_lock);
         m_plans.removeAllMatching(
             [&] (RefPtr<Plan>& plan) {
-                if (plan->vm() != &vm)
+                if (&plan->vm() != &vm)
                     return false;
                 if (!plan->isFinishedCompiling())
                     return false;
@@ -230,8 +230,8 @@ void JITWorklist::poll(VM& vm)
 
 void JITWorklist::compileLater(CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
 {
-    DeferGC deferGC(codeBlock->vm()->heap);
-    RELEASE_ASSERT(codeBlock->jitType() == JITCode::InterpreterThunk);
+    DeferGC deferGC(codeBlock->vm().heap);
+    RELEASE_ASSERT(codeBlock->jitType() == JITType::InterpreterThunk);
 
     if (codeBlock->m_didFailJITCompilation) {
         codeBlock->dontJITAnytimeSoon();
@@ -282,9 +282,9 @@ void JITWorklist::compileLater(CodeBlock* codeBlock, unsigned loopOSREntryByteco
 
 void JITWorklist::compileNow(CodeBlock* codeBlock, unsigned loopOSREntryBytecodeOffset)
 {
-    VM* vm = codeBlock->vm();
-    DeferGC deferGC(vm->heap);
-    if (codeBlock->jitType() != JITCode::InterpreterThunk)
+    VM& vm = codeBlock->vm();
+    DeferGC deferGC(vm.heap);
+    if (codeBlock->jitType() != JITType::InterpreterThunk)
         return;
 
     bool isPlanned;
@@ -296,11 +296,11 @@ void JITWorklist::compileNow(CodeBlock* codeBlock, unsigned loopOSREntryBytecode
     if (isPlanned) {
         RELEASE_ASSERT(Options::useConcurrentJIT());
         // This is expensive, but probably good enough.
-        completeAllForVM(*vm);
+        completeAllForVM(vm);
     }
 
     // Now it might be compiled!
-    if (codeBlock->jitType() != JITCode::InterpreterThunk)
+    if (codeBlock->jitType() != JITType::InterpreterThunk)
         return;
 
     // We do this in case we had previously attempted, and then failed, to compile with the

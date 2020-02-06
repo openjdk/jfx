@@ -51,7 +51,7 @@ protected:
 
 class NetscapePlugInStreamLoader final : public ResourceLoader {
 public:
-    WEBCORE_EXPORT static void create(DocumentLoader&, NetscapePlugInStreamLoaderClient&, ResourceRequest&&, CompletionHandler<void(RefPtr<NetscapePlugInStreamLoader>&&)>&&);
+    WEBCORE_EXPORT static void create(Frame&, NetscapePlugInStreamLoaderClient&, ResourceRequest&&, CompletionHandler<void(RefPtr<NetscapePlugInStreamLoader>&&)>&&);
     virtual ~NetscapePlugInStreamLoader();
 
     WEBCORE_EXPORT bool isDone() const;
@@ -68,7 +68,7 @@ private:
 
     void releaseResources() override;
 
-    NetscapePlugInStreamLoader(DocumentLoader&, NetscapePlugInStreamLoaderClient&);
+    NetscapePlugInStreamLoader(Frame&, NetscapePlugInStreamLoaderClient&);
 
     void willCancel(const ResourceError&) override;
     void didCancel(const ResourceError&) override;

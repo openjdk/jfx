@@ -39,15 +39,15 @@ namespace WHLSL {
 
 class FindArrayTypes : public Visitor {
 public:
-    ~FindArrayTypes() = default;
+    virtual ~FindArrayTypes() = default;
 
     void visit(AST::ArrayType& arrayType) override
     {
         m_arrayTypes.append(arrayType);
-        checkErrorAndVisit(arrayType);
+        Visitor::visit(arrayType);
     }
 
-    Vector<std::reference_wrapper<AST::ArrayType>>&& takeArrayTypes()
+    Vector<std::reference_wrapper<AST::ArrayType>> takeArrayTypes()
     {
         return WTFMove(m_arrayTypes);
     }
@@ -56,7 +56,7 @@ private:
     Vector<std::reference_wrapper<AST::ArrayType>> m_arrayTypes;
 };
 
-void synthesizeArrayOperatorLength(Program& program)
+Expected<void, Error> synthesizeArrayOperatorLength(Program& program)
 {
     FindArrayTypes findArrayTypes;
     findArrayTypes.checkErrorAndVisit(program);
@@ -65,12 +65,15 @@ void synthesizeArrayOperatorLength(Program& program)
     bool isOperator = true;
 
     for (auto& arrayType : arrayTypes) {
-        AST::VariableDeclaration variableDeclaration(Lexer::Token(arrayType.get().origin()), AST::Qualifiers(), { arrayType.get().clone() }, String(), WTF::nullopt, WTF::nullopt);
+        auto location = arrayType.get().codeLocation();
+        auto variableDeclaration = makeUniqueRef<AST::VariableDeclaration>(location, AST::Qualifiers(), &arrayType.get(), String(), nullptr, nullptr);
         AST::VariableDeclarations parameters;
         parameters.append(WTFMove(variableDeclaration));
-        AST::NativeFunctionDeclaration nativeFunctionDeclaration(AST::FunctionDeclaration(Lexer::Token(arrayType.get().origin()), AST::AttributeBlock(), WTF::nullopt, AST::TypeReference::wrap(Lexer::Token(arrayType.get().origin()), program.intrinsics().uintType()), "operator.length"_str, WTFMove(parameters), WTF::nullopt, isOperator));
-        program.append(WTFMove(nativeFunctionDeclaration));
+        AST::NativeFunctionDeclaration nativeFunctionDeclaration(AST::FunctionDeclaration(location, AST::AttributeBlock(), WTF::nullopt, AST::TypeReference::wrap(location, program.intrinsics().uintType()), "operator.length"_str, WTFMove(parameters), nullptr, isOperator, ParsingMode::StandardLibrary));
+        if (!program.append(WTFMove(nativeFunctionDeclaration)))
+            return makeUnexpected(Error("Cannot synthesize operator.length for array type."));
     }
+    return { };
 }
 
 } // namespace WHLSL

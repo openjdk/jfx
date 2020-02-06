@@ -43,9 +43,9 @@ FloatAvoider::FloatAvoider(const Box& layoutBox, const FloatingState& floatingSt
     , m_floatingState(floatingState)
     , m_absoluteDisplayBox(FormattingContext::mapBoxToAncestor(layoutState, layoutBox, downcast<Container>(floatingState.root())))
     , m_containingBlockAbsoluteDisplayBox(layoutBox.containingBlock() == &floatingState.root() ? Display::Box(layoutState.displayBoxForLayoutBox(*layoutBox.containingBlock())) : FormattingContext::mapBoxToAncestor(layoutState, *layoutBox.containingBlock(), downcast<Container>(floatingState.root())))
-    , m_initialVerticalPosition({ m_absoluteDisplayBox.top() })
 {
     ASSERT(m_layoutBox->establishesBlockFormattingContext());
+    m_absoluteDisplayBox.setLeft({ initialHorizontalPosition() });
 }
 
 void FloatAvoider::setHorizontalConstraints(HorizontalConstraints horizontalConstraints)
@@ -87,11 +87,6 @@ PositionInContextRoot FloatAvoider::verticalPositionCandidate(PositionInContextR
     return verticalConstraint;
 }
 
-void FloatAvoider::resetPosition()
-{
-    m_absoluteDisplayBox.setTopLeft({ initialHorizontalPosition(), initialVerticalPosition() });
-}
-
 PositionInContextRoot FloatAvoider::initialHorizontalPosition() const
 {
     // Align the box with the containing block's content box.
@@ -118,7 +113,7 @@ bool FloatAvoider::overflowsContainingBlock() const
     return containingBlockContentBoxRight < right;
 }
 
-Display::Box::Rect FloatAvoider::rectInContainingBlock() const
+Display::Rect FloatAvoider::rectInContainingBlock() const
 {
     // From formatting root coordinate system back to containing block's.
     if (layoutBox().containingBlock() == &floatingState().root())

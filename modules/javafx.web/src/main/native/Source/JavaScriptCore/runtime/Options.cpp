@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -205,7 +205,7 @@ bool Options::overrideAliasedOptionWithHeuristic(const char* name)
 
 static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int minimum = 1)
 {
-    int cpusToUse = std::min(WTF::numberOfProcessorCores(), maxNumberOfWorkerThreads);
+    int cpusToUse = std::min(kernTCSMAwareNumberOfProcessorCores(), maxNumberOfWorkerThreads);
 
     // Be paranoid, it is the OS we're dealing with, after all.
     ASSERT(cpusToUse >= 1);
@@ -214,7 +214,7 @@ static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int m
 
 static int32_t computePriorityDeltaOfWorkerThreads(int32_t twoCorePriorityDelta, int32_t multiCorePriorityDelta)
 {
-    if (WTF::numberOfProcessorCores() <= 2)
+    if (kernTCSMAwareNumberOfProcessorCores() <= 2)
         return twoCorePriorityDelta;
 
     return multiCorePriorityDelta;
@@ -392,15 +392,17 @@ static void recomputeDependentOptions()
 #if !ENABLE(JIT)
     Options::useLLInt() = true;
     Options::useJIT() = false;
+    Options::useBaselineJIT() = false;
     Options::useDFGJIT() = false;
     Options::useFTLJIT() = false;
     Options::useDOMJIT() = false;
-#endif
-#if !ENABLE(YARR_JIT)
     Options::useRegExpJIT() = false;
 #endif
 #if !ENABLE(CONCURRENT_JS)
     Options::useConcurrentJIT() = false;
+#endif
+#if !ENABLE(YARR_JIT)
+    Options::useRegExpJIT() = false;
 #endif
 #if !ENABLE(DFG_JIT)
     Options::useDFGJIT() = false;
@@ -414,16 +416,13 @@ static void recomputeDependentOptions()
     Options::useConcurrentGC() = false;
 #endif
 
-#if ENABLE(JIT) && CPU(X86)
-    // Disable JIT on IA-32 if SSE2 is not present
-    if (!MacroAssemblerX86::supportsFloatingPoint())
-        Options::useJIT() = false;
-#endif
-
-    WTF_SET_POINTER_PREPARATION_OPTIONS();
-
-    if (!Options::useJIT())
+    if (!Options::useJIT()) {
+        Options::useSigillCrashAnalyzer() = false;
         Options::useWebAssembly() = false;
+    }
+
+    if (!jitEnabledByDefault() && !Options::useJIT())
+        Options::useLLInt() = true;
 
     if (!Options::useWebAssembly())
         Options::useFastTLSForWasmContext() = false;
@@ -451,7 +450,8 @@ static void recomputeDependentOptions()
         || Options::logPhaseTimes()
         || Options::verboseCFA()
         || Options::verboseDFGFailure()
-        || Options::verboseFTLFailure())
+        || Options::verboseFTLFailure()
+        || Options::dumpRandomizingFuzzerAgentPredictions())
         Options::alwaysComputeHash() = true;
 
     if (!Options::useConcurrentGC())
@@ -471,11 +471,6 @@ static void recomputeDependentOptions()
         Options::maximumEvalCacheableSourceLength() = 150000;
         Options::useConcurrentJIT() = false;
     }
-    if (Options::useMaximalFlushInsertionPhase()) {
-        Options::useOSREntryToDFG() = false;
-        Options::useOSREntryToFTL() = false;
-    }
-
 #if ENABLE(SEPARATED_WX_HEAP)
     // Override globally for now. Longer term we'll just make the default
     // be to have this option enabled, and have platforms that don't support
@@ -511,9 +506,6 @@ static void recomputeDependentOptions()
         Options::sweepSynchronously() = true;
         Options::scribbleFreeCells() = true;
     }
-
-    if (Options::useSigillCrashAnalyzer())
-        enableSigillCrashAnalyzer();
 
     if (Options::reservedZoneSize() < minimumReservedZoneSize)
         Options::reservedZoneSize() = minimumReservedZoneSize;
@@ -606,6 +598,11 @@ void Options::initialize()
                     Options::useWebAssemblyFastMemory() = false;
                 }
             }
+#endif
+
+#if CPU(X86_64) && OS(DARWIN)
+            Options::dumpZappedCellCrashData() =
+                (hwPhysicalCPUMax() >= 4) && (hwL3CacheSize() >= static_cast<int64_t>(6 * MB));
 #endif
         });
 }
@@ -864,8 +861,7 @@ void Options::dumpOption(StringBuilder& builder, DumpLevel level, Options::ID id
 
     if (header)
         builder.append(header);
-    builder.append(option.name());
-    builder.append('=');
+    builder.append(option.name(), '=');
     option.dump(builder);
 
     if (wasOverridden && (dumpDefaultsOption == DumpDefaults)) {
@@ -874,10 +870,8 @@ void Options::dumpOption(StringBuilder& builder, DumpLevel level, Options::ID id
         builder.appendLiteral(")");
     }
 
-    if (needsDescription) {
-        builder.appendLiteral("   ... ");
-        builder.append(option.description());
-    }
+    if (needsDescription)
+        builder.append("   ... ", option.description());
 
     builder.append(footer);
 }
@@ -906,7 +900,7 @@ void Option::dump(StringBuilder& builder) const
         builder.appendNumber(m_entry.sizeVal);
         break;
     case Options::Type::doubleType:
-        builder.appendNumber(m_entry.doubleVal);
+        builder.appendFixedPrecisionNumber(m_entry.doubleVal);
         break;
     case Options::Type::int32Type:
         builder.appendNumber(m_entry.int32Val);

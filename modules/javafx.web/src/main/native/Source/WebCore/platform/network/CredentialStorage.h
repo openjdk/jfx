@@ -27,6 +27,7 @@
 
 #include "Credential.h"
 #include "ProtectionSpaceHash.h"
+#include "SecurityOriginData.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
@@ -42,9 +43,13 @@ public:
     WEBCORE_EXPORT void set(const String&, const Credential&, const ProtectionSpace&, const URL&);
     WEBCORE_EXPORT Credential get(const String&, const ProtectionSpace&);
     WEBCORE_EXPORT void remove(const String&, const ProtectionSpace&);
+    WEBCORE_EXPORT void removeCredentialsWithOrigin(const SecurityOriginData&);
 
-    // OS persistent storage.
+    // OS credential storage.
     WEBCORE_EXPORT static Credential getFromPersistentStorage(const ProtectionSpace&);
+    WEBCORE_EXPORT static HashSet<SecurityOriginData> originsWithSessionCredentials();
+    WEBCORE_EXPORT static void removeSessionCredentialsWithOrigins(const Vector<SecurityOriginData>& origins);
+    WEBCORE_EXPORT static void clearSessionCredentials();
 
     WEBCORE_EXPORT void clearCredentials();
 
@@ -53,7 +58,7 @@ public:
     WEBCORE_EXPORT bool set(const String&, const Credential&, const URL&); // Returns true if the URL corresponds to a known protection space, so credentials could be updated.
     WEBCORE_EXPORT Credential get(const String&, const URL&);
 
-    const HashSet<String>& originsWithCredentials() const { return m_originsWithCredentials; }
+    WEBCORE_EXPORT HashSet<SecurityOriginData> originsWithCredentials() const;
 
 private:
     HashMap<std::pair<String /* partitionName */, ProtectionSpace>, Credential> m_protectionSpaceToCredentialMap;

@@ -164,7 +164,6 @@ const Shape& ShapeOutsideInfo::computedShape() const
 {
     if (Shape* shape = m_shape.get())
         return *shape;
-    SetForScope<bool> isInComputingShape(m_isComputingShape, true);
 
     const RenderStyle& style = m_renderer.style();
     ASSERT(m_renderer.containingBlock());
@@ -338,11 +337,11 @@ ShapeOutsideDeltas ShapeOutsideInfo::computeDeltasForContainingBlockLine(const R
             LineSegment segment = computedShape().getExcludedInterval((borderBoxLineTop - logicalTopOffset()), std::min(lineHeight, shapeLogicalBottom() - borderBoxLineTop));
             if (segment.isValid) {
                 LayoutUnit logicalLeftMargin = containingBlock.style().isLeftToRightDirection() ? containingBlock.marginStartForChild(m_renderer) : containingBlock.marginEndForChild(m_renderer);
-                LayoutUnit rawLeftMarginBoxDelta = segment.logicalLeft + logicalLeftOffset() + logicalLeftMargin;
+                LayoutUnit rawLeftMarginBoxDelta { segment.logicalLeft + logicalLeftOffset() + logicalLeftMargin };
                 LayoutUnit leftMarginBoxDelta = clampTo<LayoutUnit>(rawLeftMarginBoxDelta, 0_lu, floatMarginBoxWidth);
 
                 LayoutUnit logicalRightMargin = containingBlock.style().isLeftToRightDirection() ? containingBlock.marginEndForChild(m_renderer) : containingBlock.marginStartForChild(m_renderer);
-                LayoutUnit rawRightMarginBoxDelta = segment.logicalRight + logicalLeftOffset() - containingBlock.logicalWidthForChild(m_renderer) - logicalRightMargin;
+                LayoutUnit rawRightMarginBoxDelta { segment.logicalRight + logicalLeftOffset() - containingBlock.logicalWidthForChild(m_renderer) - logicalRightMargin };
                 LayoutUnit rightMarginBoxDelta = clampTo<LayoutUnit>(rawRightMarginBoxDelta, -floatMarginBoxWidth, 0_lu);
 
                 m_shapeOutsideDeltas = ShapeOutsideDeltas(leftMarginBoxDelta, rightMarginBoxDelta, true, borderBoxLineTop, lineHeight);

@@ -35,30 +35,22 @@ class PlatformWheelEvent;
 class ScrollingTree;
 class ScrollingStateScrollingNode;
 
-class ScrollingTreeFrameScrollingNode : public ScrollingTreeScrollingNode {
+class WEBCORE_EXPORT ScrollingTreeFrameScrollingNode : public ScrollingTreeScrollingNode {
 public:
     virtual ~ScrollingTreeFrameScrollingNode();
 
     void commitStateBeforeChildren(const ScrollingStateNode&) override;
 
-    // FIXME: We should implement this when we support ScrollingTreeScrollingNodes as children.
-    void updateLayersAfterAncestorChange(const ScrollingTreeNode& /*changedNode*/, const FloatRect& /*fixedPositionRect*/, const FloatSize& /*cumulativeDelta*/) override { }
-
-    ScrollingEventResult handleWheelEvent(const PlatformWheelEvent&) override = 0;
-    void setScrollPosition(const FloatPoint&) override;
-    void setScrollPositionWithoutContentEdgeConstraints(const FloatPoint&) override = 0;
-
-    void updateLayersAfterViewportChange(const FloatRect& fixedPositionRect, double scale) override = 0;
-    void updateLayersAfterDelegatedScroll(const FloatPoint&) override { }
-
     SynchronousScrollingReasons synchronousScrollingReasons() const { return m_synchronousScrollingReasons; }
     bool shouldUpdateScrollLayerPositionSynchronously() const { return m_synchronousScrollingReasons; }
     bool fixedElementsLayoutRelativeToFrame() const { return m_fixedElementsLayoutRelativeToFrame; }
+    bool visualViewportIsSmallerThanLayoutViewport() const { return m_visualViewportIsSmallerThanLayoutViewport; }
 
     FloatSize viewToContentsOffset(const FloatPoint& scrollPosition) const;
     FloatRect layoutViewportForScrollPosition(const FloatPoint& visibleContentOrigin, float scale) const;
 
-    FloatRect fixedPositionRect() { return FloatRect(lastCommittedScrollPosition(), scrollableAreaSize()); };
+    FloatRect layoutViewport() const { return m_layoutViewport; };
+    void setLayoutViewport(const FloatRect& r) { m_layoutViewport = r; };
 
     float frameScaleFactor() const { return m_frameScaleFactor; }
 
@@ -69,23 +61,24 @@ protected:
     int footerHeight() const { return m_footerHeight; }
     float topContentInset() const { return m_topContentInset; }
 
-    FloatRect layoutViewport() const { return m_layoutViewport; };
-    void setLayoutViewport(const FloatRect& r) { m_layoutViewport = r; };
-
     FloatPoint minLayoutViewportOrigin() const { return m_minLayoutViewportOrigin; }
     FloatPoint maxLayoutViewportOrigin() const { return m_maxLayoutViewportOrigin; }
 
     ScrollBehaviorForFixedElements scrollBehaviorForFixedElements() const { return m_behaviorForFixed; }
 
 private:
-    WEBCORE_EXPORT LayoutPoint parentToLocalPoint(LayoutPoint) const final;
-    WEBCORE_EXPORT LayoutPoint localToContentsPoint(LayoutPoint) const final;
+    LayoutPoint parentToLocalPoint(LayoutPoint) const final;
+    LayoutPoint localToContentsPoint(LayoutPoint) const final;
 
-    WEBCORE_EXPORT void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
+    void updateViewportForCurrentScrollPosition(Optional<FloatRect>) override;
+    bool scrollPositionAndLayoutViewportMatch(const FloatPoint& position, Optional<FloatRect> overrideLayoutViewport) override;
+
+    void dumpProperties(WTF::TextStream&, ScrollingStateTreeAsTextBehavior) const override;
 
     FloatRect m_layoutViewport;
     FloatPoint m_minLayoutViewportOrigin;
     FloatPoint m_maxLayoutViewportOrigin;
+    Optional<FloatSize> m_overrideVisualViewportSize;
 
     float m_frameScaleFactor { 1 };
     float m_topContentInset { 0 };
@@ -97,6 +90,7 @@ private:
     ScrollBehaviorForFixedElements m_behaviorForFixed { StickToDocumentBounds };
 
     bool m_fixedElementsLayoutRelativeToFrame { false };
+    bool m_visualViewportIsSmallerThanLayoutViewport { false };
 };
 
 } // namespace WebCore

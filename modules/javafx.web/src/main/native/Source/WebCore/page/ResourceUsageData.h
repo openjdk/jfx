@@ -29,6 +29,8 @@
 
 #include <array>
 #include <wtf/MonotonicTime.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -37,12 +39,13 @@ namespace WebCore {
     v(bmalloc, 0, false) \
     v(LibcMalloc, 1, false) \
     v(JSJIT, 2, false) \
-    v(WebAssembly, 3, false) \
+    v(Gigacage, 3, false) \
     v(Images, 4, false) \
     v(GCHeap, 5, true) \
     v(GCOwned, 6, true) \
     v(Other, 7, false) \
     v(Layers, 8, false) \
+    v(IsoHeap, 9, false) \
 
 namespace MemoryCategory {
 #define WEBCORE_DEFINE_MEMORY_CATEGORY(name, id, subcategory) static constexpr unsigned name = id;
@@ -71,11 +74,26 @@ struct MemoryCategoryInfo {
     unsigned type { MemoryCategory::NumberOfCategories };
 };
 
+struct ThreadCPUInfo {
+    enum class Type : uint8_t {
+        Unknown,
+        Main,
+        WebKit,
+    };
+
+    String name;
+    String identifier;
+    float cpu { 0 };
+    Type type { ThreadCPUInfo::Type::Unknown };
+};
+
 struct ResourceUsageData {
-    constexpr ResourceUsageData() = default;
+    ResourceUsageData() = default;
 
     float cpu { 0 };
     float cpuExcludingDebuggerThreads { 0 };
+    Vector<ThreadCPUInfo> cpuThreads;
+
     size_t totalDirtySize { 0 };
     size_t totalExternalSize { 0 };
     std::array<MemoryCategoryInfo, MemoryCategory::NumberOfCategories> categories { {

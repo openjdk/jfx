@@ -79,10 +79,12 @@ void TypeSet::addTypeInformation(RuntimeType type, RefPtr<StructureShape>&& pass
     }
 }
 
-void TypeSet::invalidateCache()
+void TypeSet::invalidateCache(VM& vm)
 {
     ConcurrentJSLocker locker(m_lock);
-    auto keepMarkedStructuresFilter = [] (Structure* structure) -> bool { return Heap::isMarked(structure); };
+    auto keepMarkedStructuresFilter = [&] (Structure* structure) -> bool {
+        return vm.heap.isMarked(structure);
+    };
     m_structureSet.genericFilter(keepMarkedStructuresFilter);
 }
 
@@ -187,6 +189,8 @@ String TypeSet::displayName() const
         return "String"_s;
     if (doesTypeConformTo(TypeSymbol))
         return "Symbol"_s;
+    if (doesTypeConformTo(TypeBigInt))
+        return "BigInt"_s;
 
     if (doesTypeConformTo(TypeNull | TypeUndefined))
         return "(?)"_s;
@@ -203,6 +207,8 @@ String TypeSet::displayName() const
         return "String?"_s;
     if (doesTypeConformTo(TypeSymbol | TypeNull | TypeUndefined))
         return "Symbol?"_s;
+    if (doesTypeConformTo(TypeBigInt | TypeNull | TypeUndefined))
+        return "BigInt?"_s;
 
     if (doesTypeConformTo(TypeObject | TypeFunction | TypeString))
         return "Object"_s;
@@ -239,6 +245,7 @@ Ref<Inspector::Protocol::Runtime::TypeSet> TypeSet::inspectorTypeSet() const
         .setIsString((m_seenTypes & TypeString) != TypeNothing)
         .setIsObject((m_seenTypes & TypeObject) != TypeNothing)
         .setIsSymbol((m_seenTypes & TypeSymbol) != TypeNothing)
+        .setIsBigInt((m_seenTypes & TypeBigInt) != TypeNothing)
         .release();
 }
 
@@ -319,10 +326,10 @@ String TypeSet::toJSONString() const
 }
 
 StructureShape::StructureShape()
-    : m_proto(nullptr)
-    , m_propertyHash(nullptr)
-    , m_final(false)
+    : m_final(false)
     , m_isInDictionaryMode(false)
+    , m_proto(nullptr)
+    , m_propertyHash(nullptr)
 {
 }
 
@@ -360,7 +367,7 @@ String StructureShape::propertyHash()
         builder.append(m_proto->propertyHash());
     }
 
-    m_propertyHash = std::make_unique<String>(builder.toString());
+    m_propertyHash = makeUnique<String>(builder.toString());
     return *m_propertyHash;
 }
 
@@ -405,18 +412,10 @@ String StructureShape::stringRepresentation()
 
     representation.append('{');
     while (curShape) {
-        for (auto it = curShape->m_fields.begin(), end = curShape->m_fields.end(); it != end; ++it) {
-            String prop((*it).get());
-            representation.append(prop);
-            representation.appendLiteral(", ");
-        }
-
-        if (curShape->m_proto) {
-            representation.appendLiteral("__proto__ [");
-            representation.append(curShape->m_proto->m_constructorName);
-            representation.appendLiteral("], ");
-        }
-
+        for (auto& field : curShape->m_fields)
+            representation.append(StringView { field.get() }, ", ");
+        if (curShape->m_proto)
+            representation.append("__proto__ [", curShape->m_proto->m_constructorName, "], ");
         curShape = curShape->m_proto;
     }
 

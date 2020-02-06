@@ -208,7 +208,7 @@ LayoutUnit RenderView::clientLogicalWidthForFixedPosition() const
 {
     // FIXME: If the FrameView's fixedVisibleContentRect() is not empty, perhaps it should be consulted here too?
     if (frameView().fixedElementsLayoutRelativeToFrame())
-        return (isHorizontalWritingMode() ? frameView().visibleWidth() : frameView().visibleHeight()) / frameView().frame().frameScaleFactor();
+        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleWidth() : frameView().visibleHeight()) / frameView().frame().frameScaleFactor());
 
 #if PLATFORM(IOS_FAMILY)
     if (frameView().useCustomFixedPositionLayoutRect())
@@ -225,7 +225,7 @@ LayoutUnit RenderView::clientLogicalHeightForFixedPosition() const
 {
     // FIXME: If the FrameView's fixedVisibleContentRect() is not empty, perhaps it should be consulted here too?
     if (frameView().fixedElementsLayoutRelativeToFrame())
-        return (isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth()) / frameView().frame().frameScaleFactor();
+        return LayoutUnit((isHorizontalWritingMode() ? frameView().visibleHeight() : frameView().visibleWidth()) / frameView().frame().frameScaleFactor());
 
 #if PLATFORM(IOS_FAMILY)
     if (frameView().useCustomFixedPositionLayoutRect())
@@ -492,7 +492,7 @@ void RenderView::repaintViewRectangle(const LayoutRect& repaintRect) const
     // FIXME: Maybe there should be a region type that does this automatically.
     static const unsigned maximumRepaintRegionGridSize = 16 * 16;
     if (m_accumulatedRepaintRegion->gridSize() > maximumRepaintRegionGridSize)
-        m_accumulatedRepaintRegion = std::make_unique<Region>(m_accumulatedRepaintRegion->bounds());
+        m_accumulatedRepaintRegion = makeUnique<Region>(m_accumulatedRepaintRegion->bounds());
 }
 
 void RenderView::flushAccumulatedRepaintRegion() const
@@ -512,14 +512,6 @@ void RenderView::repaintViewAndCompositedLayers()
     RenderLayerCompositor& compositor = this->compositor();
     if (compositor.usesCompositing())
         compositor.repaintCompositedLayers();
-}
-
-LayoutRect RenderView::visualOverflowRect() const
-{
-    if (frameView().paintsEntireContents())
-        return layoutOverflowRect();
-
-    return RenderBlockFlow::visualOverflowRect();
 }
 
 Optional<LayoutRect> RenderView::computeVisibleRectInContainer(const LayoutRect& rect, const RenderLayerModelObject* container, VisibleRectContext context) const
@@ -724,7 +716,7 @@ bool RenderView::usesCompositing() const
 RenderLayerCompositor& RenderView::compositor()
 {
     if (!m_compositor)
-        m_compositor = std::make_unique<RenderLayerCompositor>(*this);
+        m_compositor = makeUnique<RenderLayerCompositor>(*this);
 
     return *m_compositor;
 }
@@ -745,7 +737,7 @@ void RenderView::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
 ImageQualityController& RenderView::imageQualityController()
 {
     if (!m_imageQualityController)
-        m_imageQualityController = std::make_unique<ImageQualityController>(*this);
+        m_imageQualityController = makeUnique<ImageQualityController>(*this);
     return *m_imageQualityController;
 }
 
@@ -809,7 +801,7 @@ void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer
         images.removeFirst(&image);
 }
 
-void RenderView::resumePausedImageAnimationsIfNeeded(IntRect visibleRect)
+void RenderView::resumePausedImageAnimationsIfNeeded(const IntRect& visibleRect)
 {
     Vector<std::pair<RenderElement*, CachedImage*>, 10> toRemove;
     for (auto& it : m_renderersWithPausedImageAnimation) {
@@ -834,7 +826,7 @@ RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator(RenderView* view)
 
     m_wasAccumulatingRepaintRegion = !!rootRenderView->m_accumulatedRepaintRegion;
     if (!m_wasAccumulatingRepaintRegion)
-        rootRenderView->m_accumulatedRepaintRegion = std::make_unique<Region>();
+        rootRenderView->m_accumulatedRepaintRegion = makeUnique<Region>();
     m_rootView = makeWeakPtr(*rootRenderView);
 }
 

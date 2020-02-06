@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-static inline const AtomicString& eventTypeForKeyboardEventType(PlatformEvent::Type type)
+static inline const AtomString& eventTypeForKeyboardEventType(PlatformEvent::Type type)
 {
     switch (type) {
         case PlatformEvent::KeyUp:
@@ -96,7 +96,7 @@ inline KeyboardEvent::KeyboardEvent() = default;
 inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<WindowProxy>&& view)
     : UIEventWithKeyState(eventTypeForKeyboardEventType(key.type()), CanBubble::Yes, IsCancelable::Yes, IsComposed::Yes,
         key.timestamp().approximateMonotonicTime(), view.copyRef(), 0, key.modifiers(), IsTrusted::Yes)
-    , m_underlyingPlatformEvent(std::make_unique<PlatformKeyboardEvent>(key))
+    , m_underlyingPlatformEvent(makeUnique<PlatformKeyboardEvent>(key))
 #if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
     , m_key(key.key())
 #endif
@@ -107,14 +107,16 @@ inline KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, RefPtr<Win
     , m_location(keyLocationCode(key))
     , m_repeat(key.isAutoRepeat())
     , m_isComposing(view && is<DOMWindow>(view->window()) && downcast<DOMWindow>(*view->window()).frame() && downcast<DOMWindow>(*view->window()).frame()->editor().hasComposition())
-#if USE(APPKIT)
+#if USE(APPKIT) || USE(UIKIT_KEYBOARD_ADDITIONS)
     , m_handledByInputMethod(key.handledByInputMethod())
+#endif
+#if USE(APPKIT)
     , m_keypressCommands(key.commands())
 #endif
 {
 }
 
-inline KeyboardEvent::KeyboardEvent(const AtomicString& eventType, const Init& initializer)
+inline KeyboardEvent::KeyboardEvent(const AtomString& eventType, const Init& initializer)
     : UIEventWithKeyState(eventType, initializer)
 #if ENABLE(KEYBOARD_KEY_ATTRIBUTE)
     , m_key(initializer.key)
@@ -144,12 +146,12 @@ Ref<KeyboardEvent> KeyboardEvent::createForBindings()
     return adoptRef(*new KeyboardEvent);
 }
 
-Ref<KeyboardEvent> KeyboardEvent::create(const AtomicString& type, const Init& initializer)
+Ref<KeyboardEvent> KeyboardEvent::create(const AtomString& type, const Init& initializer)
 {
     return adoptRef(*new KeyboardEvent(type, initializer));
 }
 
-void KeyboardEvent::initKeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view,
+void KeyboardEvent::initKeyboardEvent(const AtomString& type, bool canBubble, bool cancelable, RefPtr<WindowProxy>&& view,
     const String& keyIdentifier, unsigned location, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
 {
     if (isBeingDispatched())

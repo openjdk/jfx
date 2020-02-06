@@ -38,6 +38,7 @@
 
 namespace WebCore {
 
+class FloatRect;
 class Frame;
 class InspectorController;
 class InspectorBackendDispatchTask;
@@ -49,15 +50,19 @@ class InspectorFrontendClientLocal : public InspectorFrontendClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     class WEBCORE_EXPORT Settings {
+        WTF_MAKE_FAST_ALLOCATED;
     public:
         Settings() = default;
         virtual ~Settings() = default;
         virtual String getProperty(const String& name);
         virtual void setProperty(const String& name, const String& value);
+        virtual void deleteProperty(const String& name);
     };
 
     WEBCORE_EXPORT InspectorFrontendClientLocal(InspectorController* inspectedPageController, Page* frontendPage, std::unique_ptr<Settings>);
     WEBCORE_EXPORT virtual ~InspectorFrontendClientLocal();
+
+    WEBCORE_EXPORT void resetState() override;
 
     WEBCORE_EXPORT void windowObjectCleared() final;
     WEBCORE_EXPORT void frontendLoaded() override;
@@ -70,6 +75,7 @@ public:
     WEBCORE_EXPORT void requestSetDockSide(DockSide) final;
     WEBCORE_EXPORT void changeAttachedWindowHeight(unsigned) final;
     WEBCORE_EXPORT void changeAttachedWindowWidth(unsigned) final;
+    WEBCORE_EXPORT void changeSheetRect(const FloatRect&) final;
     WEBCORE_EXPORT void openInNewTab(const String& url) final;
     bool canSave()  override { return false; }
     void save(const String&, const String&, bool, bool) override { }
@@ -111,10 +117,17 @@ public:
 
     WEBCORE_EXPORT Page* inspectedPage() const;
     Page* frontendPage() const { return m_frontendPage; }
+
+    WEBCORE_EXPORT void dispatch(const String& signature);
+    WEBCORE_EXPORT void dispatchMessage(const String& messageObject);
+    WEBCORE_EXPORT void dispatchMessageAsync(const String& messageObject);
+
 protected:
     virtual void setAttachedWindowHeight(unsigned) = 0;
     virtual void setAttachedWindowWidth(unsigned) = 0;
     WEBCORE_EXPORT void restoreAttachedWindowHeight();
+
+    virtual void setSheetRect(const WebCore::FloatRect&) = 0;
 
 private:
     bool evaluateAsBoolean(const String& expression);

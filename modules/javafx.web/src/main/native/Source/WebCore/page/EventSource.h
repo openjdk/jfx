@@ -46,7 +46,7 @@ class TextResourceDecoder;
 class ThreadableLoader;
 
 class EventSource final : public RefCounted<EventSource>, public EventTargetWithInlineData, private ThreadableLoaderClient, public ActiveDOMObject {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(EventSource);
 public:
     struct Init {
         bool withCredentials;
@@ -112,7 +112,7 @@ private:
     bool m_discardTrailingNewline { false };
     bool m_requestInFlight { false };
 
-    AtomicString m_eventName;
+    AtomString m_eventName;
     Vector<UChar> m_data;
     String m_currentlyParsedEventId;
     String m_lastEventId;

@@ -35,8 +35,12 @@
 #include "MessageWithMessagePorts.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
+#include <wtf/CompletionHandler.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(MessagePort);
 
 static Lock allMessagePortsLock;
 static HashMap<MessagePortIdentifier, MessagePort*>& allMessagePorts()
@@ -191,7 +195,7 @@ void MessagePort::messageAvailable()
 {
     // This MessagePort object might be disentangled because the port is being transferred,
     // in which case we'll notify it that messages are available once a new end point is created.
-    if (!m_scriptExecutionContext)
+    if (!m_scriptExecutionContext || m_scriptExecutionContext->activeDOMObjectsAreSuspended())
         return;
 
     m_scriptExecutionContext->processMessageWithMessagePortsSoon();
@@ -239,7 +243,7 @@ void MessagePort::dispatchMessages()
     // The HTML5 spec specifies that any messages sent to a document that is not fully active should be dropped, so this behavior is OK.
     ASSERT(started());
 
-    if (!isEntangled())
+    if (!m_scriptExecutionContext || m_scriptExecutionContext->activeDOMObjectsAreSuspended() || !isEntangled())
         return;
 
     RefPtr<WorkerThread> workerThread;
@@ -377,7 +381,7 @@ ExceptionOr<TransferredMessagePortArray> MessagePort::disentanglePorts(Vector<Re
         port->disentangle();
     }
 
-    return WTFMove(portArray);
+    return portArray;
 }
 
 Vector<RefPtr<MessagePort>> MessagePort::entanglePorts(ScriptExecutionContext& context, TransferredMessagePortArray&& transferredPorts)
@@ -397,7 +401,7 @@ Vector<RefPtr<MessagePort>> MessagePort::entanglePorts(ScriptExecutionContext& c
     return ports;
 }
 
-bool MessagePort::addEventListener(const AtomicString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
+bool MessagePort::addEventListener(const AtomString& eventType, Ref<EventListener>&& listener, const AddEventListenerOptions& options)
 {
     if (eventType == eventNames().messageEvent) {
         if (listener->isAttribute())
@@ -409,7 +413,7 @@ bool MessagePort::addEventListener(const AtomicString& eventType, Ref<EventListe
     return EventTargetWithInlineData::addEventListener(eventType, WTFMove(listener), options);
 }
 
-bool MessagePort::removeEventListener(const AtomicString& eventType, EventListener& listener, const ListenerOptions& options)
+bool MessagePort::removeEventListener(const AtomString& eventType, EventListener& listener, const ListenerOptions& options)
 {
     auto result = EventTargetWithInlineData::removeEventListener(eventType, listener, options);
 
@@ -426,7 +430,7 @@ const char* MessagePort::activeDOMObjectName() const
 
 bool MessagePort::canSuspendForDocumentSuspension() const
 {
-    return !hasPendingActivity() || (!m_started || m_closed);
+    return true;
 }
 
 } // namespace WebCore

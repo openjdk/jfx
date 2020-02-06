@@ -44,6 +44,7 @@
 #include "RenderSVGContainer.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGRoot.h"
+#include "RenderSVGText.h"
 #include "RenderTable.h"
 #include "RenderTableRow.h"
 #include "RenderTableSection.h"
@@ -121,22 +122,22 @@ static void getInlineRun(RenderObject* start, RenderObject* boundary, RenderObje
 
 RenderTreeBuilder::RenderTreeBuilder(RenderView& view)
     : m_view(view)
-    , m_firstLetterBuilder(std::make_unique<FirstLetter>(*this))
-    , m_listBuilder(std::make_unique<List>(*this))
-    , m_multiColumnBuilder(std::make_unique<MultiColumn>(*this))
-    , m_tableBuilder(std::make_unique<Table>(*this))
-    , m_rubyBuilder(std::make_unique<Ruby>(*this))
-    , m_formControlsBuilder(std::make_unique<FormControls>(*this))
-    , m_blockBuilder(std::make_unique<Block>(*this))
-    , m_blockFlowBuilder(std::make_unique<BlockFlow>(*this))
-    , m_inlineBuilder(std::make_unique<Inline>(*this))
-    , m_svgBuilder(std::make_unique<SVG>(*this))
+    , m_firstLetterBuilder(makeUnique<FirstLetter>(*this))
+    , m_listBuilder(makeUnique<List>(*this))
+    , m_multiColumnBuilder(makeUnique<MultiColumn>(*this))
+    , m_tableBuilder(makeUnique<Table>(*this))
+    , m_rubyBuilder(makeUnique<Ruby>(*this))
+    , m_formControlsBuilder(makeUnique<FormControls>(*this))
+    , m_blockBuilder(makeUnique<Block>(*this))
+    , m_blockFlowBuilder(makeUnique<BlockFlow>(*this))
+    , m_inlineBuilder(makeUnique<Inline>(*this))
+    , m_svgBuilder(makeUnique<SVG>(*this))
 #if ENABLE(MATHML)
-    , m_mathMLBuilder(std::make_unique<MathML>(*this))
+    , m_mathMLBuilder(makeUnique<MathML>(*this))
 #endif
-    , m_continuationBuilder(std::make_unique<Continuation>(*this))
+    , m_continuationBuilder(makeUnique<Continuation>(*this))
 #if ENABLE(FULLSCREEN_API)
-    , m_fullScreenBuilder(std::make_unique<FullScreen>(*this))
+    , m_fullScreenBuilder(makeUnique<FullScreen>(*this))
 #endif
 {
     RELEASE_ASSERT(!s_current || &m_view != &s_current->m_view);
@@ -683,15 +684,28 @@ void RenderTreeBuilder::removeAnonymousWrappersForInlineChildrenIfNeeded(RenderE
     // otherwise we can proceed to stripping solitary anonymous wrappers from the inlines.
     // FIXME: We should also handle split inlines here - we exclude them at the moment by returning
     // if we find a continuation.
-    auto* current = blockParent.firstChild();
-    while (current && ((current->isAnonymousBlock() && !downcast<RenderBlock>(*current).isContinuation()) || current->style().isFloating() || current->style().hasOutOfFlowPosition()))
-        current = current->nextSibling();
+    Optional<bool> shouldAllChildrenBeInline;
+    for (auto* current = blockParent.firstChild(); current; current = current->nextSibling()) {
+        if (current->style().isFloating() || current->style().hasOutOfFlowPosition())
+            continue;
+        if (!current->isAnonymousBlock() || downcast<RenderBlock>(*current).isContinuation())
+            return;
+        // Anonymous block not in continuation. Check if it holds a set of inline or block children and try not to mix them.
+        auto* firstChild = current->firstChildSlow();
+        if (!firstChild)
+            continue;
+        auto isInlineLevelBox = firstChild->isInline();
+        if (!shouldAllChildrenBeInline.hasValue()) {
+            shouldAllChildrenBeInline = isInlineLevelBox;
+            continue;
+        }
+        // Mixing inline and block level boxes?
+        if (*shouldAllChildrenBeInline != isInlineLevelBox)
+            return;
+    }
 
-    if (current)
-        return;
-
-    RenderObject* next;
-    for (current = blockParent.firstChild(); current; current = next) {
+    RenderObject* next = nullptr;
+    for (auto* current = blockParent.firstChild(); current; current = next) {
         next = current->nextSibling();
         if (current->isAnonymousBlock())
             blockBuilder().dropAnonymousBoxChild(blockParent, downcast<RenderBlock>(*current));

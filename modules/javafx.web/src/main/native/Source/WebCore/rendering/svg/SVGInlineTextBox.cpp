@@ -123,7 +123,7 @@ FloatRect SVGInlineTextBox::selectionRectForTextFragment(const SVGTextFragment& 
 
     textOrigin.move(0, -scaledFontMetrics.floatAscent());
 
-    LayoutRect selectionRect = LayoutRect(textOrigin, LayoutSize(0, fragment.height * scalingFactor));
+    LayoutRect selectionRect { textOrigin, LayoutSize(0, LayoutUnit(fragment.height * scalingFactor)) };
     TextRun run = constructTextRun(style, fragment);
     scaledFont.adjustSelectionRectForText(run, selectionRect, startPosition, endPosition);
     FloatRect snappedSelectionRect = snapRectToDevicePixelsWithWritingDirection(selectionRect, renderer().document().deviceScaleFactor(), run.ltr());
@@ -202,9 +202,7 @@ void SVGInlineTextBox::paintSelectionBackground(PaintInfo& paintInfo)
 
     auto& style = parentRenderer.style();
 
-    unsigned startPosition;
-    unsigned endPosition;
-    std::tie(startPosition, endPosition) = selectionStartEnd();
+    auto [startPosition, endPosition] = selectionStartEnd();
 
     unsigned fragmentStartPosition = 0;
     unsigned fragmentEndPosition = 0;

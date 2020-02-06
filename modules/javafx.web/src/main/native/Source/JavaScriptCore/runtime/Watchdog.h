@@ -63,6 +63,8 @@ private:
     void startTimer(Seconds timeLimit);
     void stopTimer();
 
+    bool m_hasEnteredVM { false };
+
     Lock m_lock; // Guards access to m_vm.
     VM* m_vm;
 
@@ -71,12 +73,10 @@ private:
     Seconds m_cpuDeadline;
     MonotonicTime m_deadline;
 
-    bool m_hasEnteredVM { false };
-
     ShouldTerminateCallback m_callback;
     void* m_callbackData1;
     void* m_callbackData2;
-    friend class Watchdog::Scope;
+
     Ref<WorkQueue> m_timerQueue;
 
     friend class LLIntOffsetsExtractor;

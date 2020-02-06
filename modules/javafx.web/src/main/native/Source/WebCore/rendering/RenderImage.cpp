@@ -109,8 +109,8 @@ void RenderImage::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, 
         isFirstOnLine = !inlineBox->previousOnLineExists();
         isLastOnLine = !inlineBox->nextOnLineExists();
         LogicalSelectionOffsetCaches cache(*containingBlock);
-        LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, inlineBox->logicalTop(), cache);
-        LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, inlineBox->logicalTop(), cache);
+        LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, LayoutUnit(inlineBox->logicalTop()), cache);
+        LayoutUnit rightOffset = containingBlock->logicalRightSelectionOffset(*containingBlock, LayoutUnit(inlineBox->logicalTop()), cache);
         lineExtentRect = IntRect(leftOffset - logicalLeft(), imageRect.y(), rightOffset - leftOffset, imageRect.height());
         if (!inlineBox->isHorizontal()) {
             imageRect = imageRect.transposedRect();
@@ -134,7 +134,7 @@ using namespace HTMLNames;
 
 RenderImage::RenderImage(Element& element, RenderStyle&& style, StyleImage* styleImage, const float imageDevicePixelRatio)
     : RenderReplaced(element, WTFMove(style), IntSize())
-    , m_imageResource(styleImage ? std::make_unique<RenderImageResourceStyleImage>(*styleImage) : std::make_unique<RenderImageResource>())
+    , m_imageResource(styleImage ? makeUnique<RenderImageResourceStyleImage>(*styleImage) : makeUnique<RenderImageResource>())
     , m_imageDevicePixelRatio(imageDevicePixelRatio)
 {
     updateAltText();
@@ -144,7 +144,7 @@ RenderImage::RenderImage(Element& element, RenderStyle&& style, StyleImage* styl
 
 RenderImage::RenderImage(Document& document, RenderStyle&& style, StyleImage* styleImage)
     : RenderReplaced(document, WTFMove(style), IntSize())
-    , m_imageResource(styleImage ? std::make_unique<RenderImageResourceStyleImage>(*styleImage) : std::make_unique<RenderImageResource>())
+    , m_imageResource(styleImage ? makeUnique<RenderImageResourceStyleImage>(*styleImage) : makeUnique<RenderImageResource>())
 {
 }
 
@@ -270,11 +270,8 @@ void RenderImage::imageChanged(WrappedImagePtr newImage, const IntRect* rect)
     if (newImage != imageResource().imagePtr() || !newImage)
         return;
 
-    if (!m_didIncrementVisuallyNonEmptyPixelCount) {
-        // At a zoom level of 1 the image is guaranteed to have an integer size.
-        view().frameView().incrementVisuallyNonEmptyPixelCount(flooredIntSize(imageResource().imageSize(1.0f)));
-        m_didIncrementVisuallyNonEmptyPixelCount = true;
-    }
+    // At a zoom level of 1 the image is guaranteed to have an integer size.
+    incrementVisuallyNonEmptyPixelCountIfNeeded(flooredIntSize(imageResource().imageSize(1.0f)));
 
     ImageSizeChangeType imageSizeChange = ImageSizeChangeNone;
 
@@ -378,6 +375,9 @@ void RenderImage::notifyFinished(CachedResource& newImage)
         // that the image is done and they can reference it directly.
         contentChanged(ImageChanged);
     }
+
+    if (is<HTMLImageElement>(element()))
+        page().didFinishLoadingImageForElement(downcast<HTMLImageElement>(*element()));
 }
 
 bool RenderImage::isShowingMissingOrImageError() const
@@ -461,19 +461,15 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 FloatSize imageSize = image->size();
                 imageSize.scale(1 / brokenImageAndImageScaleFactor.second);
                 // Center the error image, accounting for border and padding.
-                LayoutUnit centerX = (usableSize.width() - imageSize.width()) / 2;
+                LayoutUnit centerX { (usableSize.width() - imageSize.width()) / 2 };
                 if (centerX < 0)
                     centerX = 0;
-                LayoutUnit centerY = (usableSize.height() - imageSize.height()) / 2;
+                LayoutUnit centerY { (usableSize.height() - imageSize.height()) / 2 };
                 if (centerY < 0)
                     centerY = 0;
                 imageOffset = LayoutSize(leftBorder + leftPad + centerX + missingImageBorderWidth, topBorder + topPad + centerY + missingImageBorderWidth);
 
-                ImageOrientationDescription orientationDescription(shouldRespectImageOrientation());
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-                orientationDescription.setImageOrientationEnum(style().imageOrientation());
-#endif
-                context.drawImage(*image, snapRectToDevicePixels(LayoutRect(paintOffset + imageOffset, imageSize), deviceScaleFactor), orientationDescription);
+                context.drawImage(*image, snapRectToDevicePixels(LayoutRect(paintOffset + imageOffset, imageSize), deviceScaleFactor), { imageOrientation() });
                 errorPictureDrawn = true;
             }
 
@@ -489,7 +485,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 // Only draw the alt text if it'll fit within the content box,
                 // and only if it fits above the error image.
                 TextRun textRun = RenderBlock::constructTextRun(text, style());
-                LayoutUnit textWidth = font.width(textRun);
+                LayoutUnit textWidth { font.width(textRun) };
                 if (errorPictureDrawn) {
                     if (usableSize.width() >= textWidth && fontMetrics.height() <= imageOffset.height())
                         context.drawText(font, textRun, altTextOffset);
@@ -635,9 +631,8 @@ ImageDrawResult RenderImage::paintIntoRect(PaintInfo& paintInfo, const FloatRect
     if (is<BitmapImage>(image))
         downcast<BitmapImage>(*image).updateFromSettings(settings());
 
-    ImageOrientationDescription orientationDescription(shouldRespectImageOrientation(), style().imageOrientation());
     auto decodingMode = decodingModeForImageDraw(*image, paintInfo);
-    auto drawResult = paintInfo.context().drawImage(*img, rect, ImagePaintingOptions(compositeOperator, BlendMode::Normal, decodingMode, orientationDescription, interpolation));
+    auto drawResult = paintInfo.context().drawImage(*img, rect, { compositeOperator, BlendMode::Normal, decodingMode, imageOrientation(), interpolation });
     if (drawResult == ImageDrawResult::DidRequestDecoding)
         imageResource().cachedImage()->addClientWaitingForAsyncDecoding(*this);
 
@@ -845,6 +840,15 @@ RenderBox* RenderImage::embeddedContentBox() const
         return downcast<SVGImage>(*cachedImage->image()).embeddedContentBox();
 
     return nullptr;
+}
+
+void RenderImage::incrementVisuallyNonEmptyPixelCountIfNeeded(const IntSize& size)
+{
+    if (m_didIncrementVisuallyNonEmptyPixelCount)
+        return;
+
+    view().frameView().incrementVisuallyNonEmptyPixelCount(size);
+    m_didIncrementVisuallyNonEmptyPixelCount = true;
 }
 
 } // namespace WebCore

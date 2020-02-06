@@ -36,6 +36,7 @@
 #include "LocaleToScriptMapping.h"
 #include "Page.h"
 #include "PageGroup.h"
+#include "PlatformMediaSessionManager.h"
 #include "RenderTheme.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
@@ -50,6 +51,10 @@
 #include "SoupNetworkSession.h"
 #endif
 
+#if PLATFORM(GTK)
+#include <gtk/gtk.h>
+#endif
+
 namespace WebCore {
 
 InternalSettings::Backup::Backup(Settings& settings)
@@ -57,6 +62,7 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(TEXT_AUTOSIZING)
     , m_originalTextAutosizingEnabled(settings.textAutosizingEnabled())
     , m_originalTextAutosizingWindowSizeOverride(settings.textAutosizingWindowSizeOverride())
+    , m_originalTextAutosizingUsesIdempotentMode(settings.textAutosizingUsesIdempotentMode())
 #endif
     , m_originalMediaTypeOverride(settings.mediaTypeOverride())
     , m_originalCanvasUsesAcceleratedDrawing(settings.canvasUsesAcceleratedDrawing())
@@ -94,9 +100,10 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_deferredCSSParserEnabled(settings.deferredCSSParserEnabled())
     , m_inputEventsEnabled(settings.inputEventsEnabled())
     , m_incompleteImageBorderEnabled(settings.incompleteImageBorderEnabled())
-#if ENABLE(ACCESSIBILITY_EVENTS)
-    , m_accessibilityEventsEnabled(settings.accessibilityEventsEnabled())
-#endif
+    , m_shouldDispatchSyntheticMouseEventsWhenModifyingSelection(settings.shouldDispatchSyntheticMouseEventsWhenModifyingSelection())
+    , m_shouldDispatchSyntheticMouseOutAfterSyntheticClick(settings.shouldDispatchSyntheticMouseOutAfterSyntheticClick())
+    , m_shouldDeactivateAudioSession(PlatformMediaSessionManager::shouldDeactivateAudioSession())
+    , m_animatedImageDebugCanvasDrawingEnabled(settings.animatedImageDebugCanvasDrawingEnabled())
     , m_userInterfaceDirectionPolicy(settings.userInterfaceDirectionPolicy())
     , m_systemLayoutDirection(settings.systemLayoutDirection())
     , m_pdfImageCachingPolicy(settings.pdfImageCachingPolicy())
@@ -111,9 +118,6 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(WEBGL2)
     , m_webGL2Enabled(RuntimeEnabledFeatures::sharedFeatures().webGL2Enabled())
 #endif
-#if ENABLE(WEBMETAL)
-    , m_webMetalEnabled(RuntimeEnabledFeatures::sharedFeatures().webMetalEnabled())
-#endif
     , m_webVREnabled(RuntimeEnabledFeatures::sharedFeatures().webVREnabled())
 #if ENABLE(MEDIA_STREAM)
     , m_setScreenCaptureEnabled(RuntimeEnabledFeatures::sharedFeatures().screenCaptureEnabled())
@@ -123,7 +127,6 @@ InternalSettings::Backup::Backup(Settings& settings)
     , m_shouldManageAudioSessionCategory(DeprecatedGlobalSettings::shouldManageAudioSessionCategory())
 #endif
     , m_customPasteboardDataEnabled(RuntimeEnabledFeatures::sharedFeatures().customPasteboardDataEnabled())
-    , m_promptForStorageAccessAPIEnabled(RuntimeEnabledFeatures::sharedFeatures().storageAccessPromptsEnabled())
 {
 }
 
@@ -162,6 +165,7 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #if ENABLE(TEXT_AUTOSIZING)
     settings.setTextAutosizingEnabled(m_originalTextAutosizingEnabled);
     settings.setTextAutosizingWindowSizeOverride(m_originalTextAutosizingWindowSizeOverride);
+    settings.setTextAutosizingUsesIdempotentMode(m_originalTextAutosizingUsesIdempotentMode);
 #endif
     settings.setMediaTypeOverride(m_originalMediaTypeOverride);
     settings.setCanvasUsesAcceleratedDrawing(m_originalCanvasUsesAcceleratedDrawing);
@@ -206,18 +210,16 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
     FontCache::singleton().setShouldMockBoldSystemFontForAccessibility(m_shouldMockBoldSystemFontForAccessibility);
     settings.setFrameFlattening(m_frameFlattening);
     settings.setIncompleteImageBorderEnabled(m_incompleteImageBorderEnabled);
-#if ENABLE(ACCESSIBILITY_EVENTS)
-    settings.setAccessibilityEventsEnabled(m_accessibilityEventsEnabled);
-#endif
+    settings.setShouldDispatchSyntheticMouseEventsWhenModifyingSelection(m_shouldDispatchSyntheticMouseEventsWhenModifyingSelection);
+    settings.setShouldDispatchSyntheticMouseOutAfterSyntheticClick(m_shouldDispatchSyntheticMouseOutAfterSyntheticClick);
+    PlatformMediaSessionManager::setShouldDeactivateAudioSession(m_shouldDeactivateAudioSession);
+    settings.setAnimatedImageDebugCanvasDrawingEnabled(m_animatedImageDebugCanvasDrawingEnabled);
 
 #if ENABLE(INDEXED_DATABASE_IN_WORKERS)
     RuntimeEnabledFeatures::sharedFeatures().setIndexedDBWorkersEnabled(m_indexedDBWorkersEnabled);
 #endif
 #if ENABLE(WEBGL2)
     RuntimeEnabledFeatures::sharedFeatures().setWebGL2Enabled(m_webGL2Enabled);
-#endif
-#if ENABLE(WEBMETAL)
-    RuntimeEnabledFeatures::sharedFeatures().setWebMetalEnabled(m_webMetalEnabled);
 #endif
     RuntimeEnabledFeatures::sharedFeatures().setWebVREnabled(m_webVREnabled);
 #if ENABLE(MEDIA_STREAM)
@@ -228,11 +230,10 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #if USE(AUDIO_SESSION)
     DeprecatedGlobalSettings::setShouldManageAudioSessionCategory(m_shouldManageAudioSessionCategory);
 #endif
-
-    RuntimeEnabledFeatures::sharedFeatures().setStorageAccessPromptsEnabled(m_promptForStorageAccessAPIEnabled);
 }
 
 class InternalSettingsWrapper : public Supplement<Page> {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit InternalSettingsWrapper(Page* page)
         : m_internalSettings(InternalSettings::create(page)) { }
@@ -254,7 +255,7 @@ const char* InternalSettings::supplementName()
 InternalSettings* InternalSettings::from(Page* page)
 {
     if (!Supplement<Page>::from(page, supplementName()))
-        Supplement<Page>::provideTo(page, supplementName(), std::make_unique<InternalSettingsWrapper>(page));
+        Supplement<Page>::provideTo(page, supplementName(), makeUnique<InternalSettingsWrapper>(page));
     return static_cast<InternalSettingsWrapper*>(Supplement<Page>::from(page, supplementName()))->internalSettings();
 }
 
@@ -286,7 +287,7 @@ void InternalSettings::resetToConsistentState()
     m_page->setPageScaleFactor(1, { 0, 0 });
     m_page->mainFrame().setPageAndTextZoomFactors(1, 1);
     m_page->setCanStartMedia(true);
-    m_page->setUseDarkAppearance(false);
+    setUseDarkAppearanceInternal(false);
 
     settings().setForcePendingWebGLPolicy(false);
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -429,6 +430,18 @@ ExceptionOr<void> InternalSettings::setTextAutosizingWindowSizeOverride(int widt
     return { };
 }
 
+ExceptionOr<void> InternalSettings::setTextAutosizingUsesIdempotentMode(bool enabled)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+#if ENABLE(TEXT_AUTOSIZING)
+    settings().setTextAutosizingUsesIdempotentMode(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+    return { };
+}
+
 ExceptionOr<void> InternalSettings::setMediaTypeOverride(const String& mediaType)
 {
     if (!m_page)
@@ -527,11 +540,27 @@ ExceptionOr<bool> InternalSettings::shouldDisplayTrackKind(const String& kind)
 #endif
 }
 
+void InternalSettings::setUseDarkAppearanceInternal(bool useDarkAppearance)
+{
+#if PLATFORM(GTK)
+    // GTK doesn't allow to change the theme from the web process, but tests need to do it, so
+    // we do it here only for tests.
+    if (auto* settings = gtk_settings_get_default()) {
+        gboolean preferDarkTheme;
+        g_object_get(settings, "gtk-application-prefer-dark-theme", &preferDarkTheme, nullptr);
+        if (preferDarkTheme != useDarkAppearance)
+            g_object_set(settings, "gtk-application-prefer-dark-theme", useDarkAppearance, nullptr);
+    }
+#endif
+    ASSERT(m_page);
+    m_page->effectiveAppearanceDidChange(useDarkAppearance, m_page->useElevatedUserInterfaceLevel());
+}
+
 ExceptionOr<void> InternalSettings::setUseDarkAppearance(bool useDarkAppearance)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
-    m_page->setUseDarkAppearance(useDarkAppearance);
+    setUseDarkAppearanceInternal(useDarkAppearance);
     return { };
 }
 
@@ -749,6 +778,14 @@ ExceptionOr<void> InternalSettings::setShouldMockBoldSystemFontForAccessibility(
     return { };
 }
 
+ExceptionOr<void> InternalSettings::setAnimatedImageDebugCanvasDrawingEnabled(bool ignore)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    settings().setAnimatedImageDebugCanvasDrawingEnabled(ignore);
+    return { };
+}
+
 void InternalSettings::setIndexedDBWorkersEnabled(bool enabled)
 {
 #if ENABLE(INDEXED_DATABASE_IN_WORKERS)
@@ -767,10 +804,10 @@ void InternalSettings::setWebGL2Enabled(bool enabled)
 #endif
 }
 
-void InternalSettings::setWebMetalEnabled(bool enabled)
+void InternalSettings::setWebGPUEnabled(bool enabled)
 {
-#if ENABLE(WEBMETAL)
-    RuntimeEnabledFeatures::sharedFeatures().setWebMetalEnabled(enabled);
+#if ENABLE(WEBGPU)
+    RuntimeEnabledFeatures::sharedFeatures().setWebGPUEnabled(enabled);
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -788,11 +825,6 @@ void InternalSettings::setScreenCaptureEnabled(bool enabled)
 #else
     UNUSED_PARAM(enabled);
 #endif
-}
-
-void InternalSettings::setStorageAccessPromptsEnabled(bool enabled)
-{
-    RuntimeEnabledFeatures::sharedFeatures().setStorageAccessPromptsEnabled(enabled);
 }
 
 ExceptionOr<String> InternalSettings::userInterfaceDirectionPolicy()
@@ -901,23 +933,27 @@ ExceptionOr<void> InternalSettings::setCustomPasteboardDataEnabled(bool enabled)
     return { };
 }
 
-ExceptionOr<void> InternalSettings::setAccessibilityEventsEnabled(bool enabled)
-{
-    if (!m_page)
-        return Exception { InvalidAccessError };
-#if ENABLE(ACCESSIBILITY_EVENTS)
-    settings().setAccessibilityEventsEnabled(enabled);
-#else
-    UNUSED_PARAM(enabled);
-#endif
-    return { };
-}
-
 ExceptionOr<void> InternalSettings::setIncompleteImageBorderEnabled(bool enabled)
 {
     if (!m_page)
         return Exception { InvalidAccessError };
     settings().setIncompleteImageBorderEnabled(enabled);
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setShouldDispatchSyntheticMouseEventsWhenModifyingSelection(bool shouldDispatch)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    settings().setShouldDispatchSyntheticMouseEventsWhenModifyingSelection(shouldDispatch);
+    return { };
+}
+
+ExceptionOr<void> InternalSettings::setShouldDispatchSyntheticMouseOutAfterSyntheticClick(bool shouldDispatch)
+{
+    if (!m_page)
+        return Exception { InvalidAccessError };
+    settings().setShouldDispatchSyntheticMouseOutAfterSyntheticClick(shouldDispatch);
     return { };
 }
 
@@ -984,6 +1020,11 @@ void InternalSettings::setForcedPrefersReducedMotionAccessibilityValue(InternalS
 bool InternalSettings::webAnimationsCSSIntegrationEnabled()
 {
     return RuntimeEnabledFeatures::sharedFeatures().webAnimationsCSSIntegrationEnabled();
+}
+
+void InternalSettings::setShouldDeactivateAudioSession(bool should)
+{
+    PlatformMediaSessionManager::setShouldDeactivateAudioSession(should);
 }
 
 // If you add to this class, make sure that you update the Backup class for test reproducability!

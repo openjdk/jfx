@@ -63,4 +63,6 @@ TEST_SUPPORT_EXPORT void setMockGamepadButtonValue(unsigned index, unsigned butt
 
 TEST_SUPPORT_EXPORT void setupNewlyCreatedServiceWorker(uint64_t serviceWorkerIdentifier);
 
+TEST_SUPPORT_EXPORT void setAdditionalSupportedImageTypesForTesting(const WTF::String&);
+
 } // namespace WebCoreTestSupport

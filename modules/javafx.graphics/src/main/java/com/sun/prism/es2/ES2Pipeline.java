@@ -43,6 +43,7 @@ public class ES2Pipeline extends GraphicsPipeline {
             pixelFormatAttributes = new GLPixelFormat.Attributes();
     static final boolean msaa;
     static final boolean npotSupported;
+    private static final boolean supports3D;
     private static boolean es2Enabled;
     private static boolean isEglfb = false;
 
@@ -89,10 +90,14 @@ public class ES2Pipeline extends GraphicsPipeline {
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
             msaa = glFactory.isGLExtensionSupported("GL_ARB_multisample");
             npotSupported = glFactory.isNPOTSupported();
+            // 3D requires platform that has non-power of two (NPOT) support, but
+            // also works on iOS with OpenGL ES 2.0 or greater
+            supports3D = npotSupported || PlatformUtil.isIOS();
         } else {
             theInstance = null;
             msaa = false;
             npotSupported = false;
+            supports3D = false;
         }
 
     }
@@ -201,8 +206,7 @@ public class ES2Pipeline extends GraphicsPipeline {
 
     @Override
     public boolean is3DSupported() {
-        // 3D requires platform that has non-power of two (NPOT) support.
-        return npotSupported;
+        return supports3D;
     }
 
     @Override

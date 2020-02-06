@@ -30,9 +30,15 @@ macro nextInstruction()
     jmp [t1, t0, PtrSize], BytecodePtrTag
 end
 
-macro nextInstructionWide()
+macro nextInstructionWide16()
+    loadh 1[PB, PC, 1], t0
+    leap _g_opcodeMapWide16, t1
+    jmp [t1, t0, PtrSize], BytecodePtrTag
+end
+
+macro nextInstructionWide32()
     loadi 1[PB, PC, 1], t0
-    leap _g_opcodeMapWide, t1
+    leap _g_opcodeMapWide32, t1
     jmp [t1, t0, PtrSize], BytecodePtrTag
 end
 
@@ -41,14 +47,22 @@ macro getuOperandNarrow(opcodeStruct, fieldName, dst)
 end
 
 macro getOperandNarrow(opcodeStruct, fieldName, dst)
-    loadbsp constexpr %opcodeStruct%_%fieldName%_index[PB, PC, 1], dst
+    loadbsq constexpr %opcodeStruct%_%fieldName%_index[PB, PC, 1], dst
 end
 
-macro getuOperandWide(opcodeStruct, fieldName, dst)
+macro getuOperandWide16(opcodeStruct, fieldName, dst)
+    loadh constexpr %opcodeStruct%_%fieldName%_index * 2 + 1[PB, PC, 1], dst
+end
+
+macro getOperandWide16(opcodeStruct, fieldName, dst)
+    loadhsq constexpr %opcodeStruct%_%fieldName%_index * 2 + 1[PB, PC, 1], dst
+end
+
+macro getuOperandWide32(opcodeStruct, fieldName, dst)
     loadi constexpr %opcodeStruct%_%fieldName%_index * 4 + 1[PB, PC, 1], dst
 end
 
-macro getOperandWide(opcodeStruct, fieldName, dst)
+macro getOperandWide32(opcodeStruct, fieldName, dst)
     loadis constexpr %opcodeStruct%_%fieldName%_index * 4 + 1[PB, PC, 1], dst
 end
 
@@ -109,7 +123,7 @@ macro cCall2(function)
         addp 48, sp
         move 8[r0], r1
         move [r0], r0
-    elsif C_LOOP
+    elsif C_LOOP or C_LOOP_WIN
         cloopCallSlowPath function, a0, a1
     else
         error
@@ -117,7 +131,7 @@ macro cCall2(function)
 end
 
 macro cCall2Void(function)
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         cloopCallSlowPathVoid function, a0, a1
     elsif X86_64_WIN
         # Note: we cannot use the cCall2 macro for Win64 in this case,
@@ -179,7 +193,7 @@ macro doVMEntry(makeCall)
     # Ensure that we have enough additional stack capacity for the incoming args,
     # and the frame for the JS code we're executing. We need to do this check
     # before we start copying the args from the protoCallFrame below.
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         bpaeq t3, VM::m_cloopStackLimit[vm], .stackHeightOK
         move entry, t4
         move vm, t5
@@ -285,7 +299,7 @@ end
 
 macro makeJavaScriptCall(entry, temp, unused)
     addp 16, sp
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         cloopCallJSFunction entry
     else
         call entry, JSEntryPtrTag
@@ -297,7 +311,7 @@ macro makeHostFunctionCall(entry, temp, unused)
     move entry, temp
     storep cfr, [sp]
     move sp, a0
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         storep lr, 8[sp]
         cloopCallNative temp
     elsif X86_64_WIN
@@ -408,8 +422,8 @@ macro checkSwitchToJITForLoop()
         end)
 end
 
-macro uncage(basePtr, mask, ptr, scratch)
-    if GIGACAGE_ENABLED and not C_LOOP
+macro cage(basePtr, mask, ptr, scratch)
+    if GIGACAGE_ENABLED and not (C_LOOP or C_LOOP_WIN)
         loadp basePtr, scratch
         btpz scratch, .done
         andp mask, ptr
@@ -418,9 +432,28 @@ macro uncage(basePtr, mask, ptr, scratch)
     end
 end
 
-macro loadCaged(basePtr, mask, source, dest, scratch)
+macro cagedPrimitive(ptr, length, scratch, scratch2)
+    if ARM64E
+        const source = scratch2
+        move ptr, scratch2
+    else
+        const source = ptr
+    end
+    if GIGACAGE_ENABLED
+        cage(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, source, scratch)
+        if ARM64E
+            const numberOfPACBits = constexpr MacroAssembler::numberOfPACBits
+            bfiq scratch2, 0, 64 - numberOfPACBits, ptr
+        end
+    end
+    if ARM64E
+        untagArrayPtr length, ptr
+    end
+end
+
+macro loadCagedJSValue(source, dest, scratchOrLength)
     loadp source, dest
-    uncage(basePtr, mask, dest, scratch)
+    cage(_g_gigacageBasePtrs + Gigacage::BasePtrs::jsValue, constexpr Gigacage::jsValueGigacageMask, dest, scratchOrLength)
 end
 
 macro loadVariable(get, fieldName, valueReg)
@@ -441,19 +474,30 @@ macro loadConstantOrVariable(size, index, value)
     .done:
     end
 
-    macro loadWide()
-        bpgteq index, FirstConstantRegisterIndexWide, .constant
+    macro loadWide16()
+        bpgteq index, FirstConstantRegisterIndexWide16, .constant
         loadq [cfr, index, 8], value
         jmp .done
     .constant:
         loadp CodeBlock[cfr], value
         loadp CodeBlock::m_constantRegisters + VectorBufferOffset[value], value
-        subp FirstConstantRegisterIndexWide, index
+        loadq -(FirstConstantRegisterIndexWide16 * 8)[value, index, 8], value
+    .done:
+    end
+
+    macro loadWide32()
+        bpgteq index, FirstConstantRegisterIndexWide32, .constant
+        loadq [cfr, index, 8], value
+        jmp .done
+    .constant:
+        loadp CodeBlock[cfr], value
+        loadp CodeBlock::m_constantRegisters + VectorBufferOffset[value], value
+        subp FirstConstantRegisterIndexWide32, index
         loadq [value, index, 8], value
     .done:
     end
 
-    size(loadNarrow, loadWide, macro (load) load() end)
+    size(loadNarrow, loadWide16, loadWide32, macro (load) load() end)
 end
 
 macro loadConstantOrVariableInt32(size, index, value, slow)
@@ -466,19 +510,23 @@ macro loadConstantOrVariableCell(size, index, value, slow)
     btqnz value, tagMask, slow
 end
 
-macro writeBarrierOnOperandWithReload(size, get, cellFieldName, reloadAfterSlowPath)
-    get(cellFieldName, t1)
-    loadConstantOrVariableCell(size, t1, t2, .writeBarrierDone)
+macro writeBarrierOnCellWithReload(cell, reloadAfterSlowPath)
     skipIfIsRememberedOrInEden(
-        t2,
+        cell,
         macro()
             push PB, PC
-            move t2, a1 # t2 can be a0 (not on 64 bits, but better safe than sorry)
+            move cell, a1 # cell can be a0
             move cfr, a0
             cCall2Void(_llint_write_barrier_slow)
             pop PC, PB
             reloadAfterSlowPath()
         end)
+end
+
+macro writeBarrierOnOperandWithReload(size, get, cellFieldName, reloadAfterSlowPath)
+    get(cellFieldName, t1)
+    loadConstantOrVariableCell(size, t1, t2, .writeBarrierDone)
+    writeBarrierOnCellWithReload(t2, reloadAfterSlowPath)
 .writeBarrierDone:
 end
 
@@ -501,15 +549,7 @@ macro writeBarrierOnGlobal(size, get, valueFieldName, loadMacro)
     btpz t0, .writeBarrierDone
 
     loadMacro(t3)
-    skipIfIsRememberedOrInEden(
-        t3,
-        macro()
-            push PB, PC
-            move cfr, a0
-            move t3, a1
-            cCall2Void(_llint_write_barrier_slow)
-            pop PC, PB
-        end)
+    writeBarrierOnCellWithReload(t3, macro() end)
 .writeBarrierDone:
 end
 
@@ -585,11 +625,8 @@ macro functionArityCheck(doneLabel, slowPath)
     btiz t1, .continue
 
 .noExtraSlot:
-    if POINTER_PROFILING
-        if ARM64 or ARM64E
-            loadp 8[cfr], lr
-        end
-
+    if ARM64E
+        loadp 8[cfr], lr
         addp 16, cfr, t3
         untagReturnAddress t3
     end
@@ -618,13 +655,10 @@ macro functionArityCheck(doneLabel, slowPath)
     addp 8, t3
     baddinz 1, t2, .fillLoop
 
-    if POINTER_PROFILING
+    if ARM64E
         addp 16, cfr, t1
         tagReturnAddress t1
-
-        if ARM64 or ARM64E
-            storep lr, 8[cfr]
-        end
+        storep lr, 8[cfr]
     end
 
 .continue:
@@ -648,8 +682,8 @@ end
 _llint_op_enter:
     traceExecution()
     checkStackPointerAlignment(t2, 0xdead00e1)
-    loadp CodeBlock[cfr], t2                // t2<CodeBlock> = cfr.CodeBlock
-    loadi CodeBlock::m_numVars[t2], t2      // t2<size_t> = t2<CodeBlock>.m_numVars
+    loadp CodeBlock[cfr], t3                // t3<CodeBlock> = cfr.CodeBlock
+    loadi CodeBlock::m_numVars[t3], t2      // t2<size_t> = t3<CodeBlock>.m_numVars
     subq CalleeSaveSpaceAsVirtualRegisters, t2
     move cfr, t1
     subq CalleeSaveSpaceAsVirtualRegisters * 8, t1
@@ -662,9 +696,16 @@ _llint_op_enter:
     addq 1, t2
     btqnz t2, .opEnterLoop
 .opEnterDone:
-    callSlowPath(_slow_path_enter)
+    writeBarrierOnCellWithReload(t3, macro ()
+        loadp CodeBlock[cfr], t3 # Reload CodeBlock
+    end)
+    loadp CodeBlock::m_vm[t3], t1
+    btbnz VM::m_traps + VMTraps::m_needTrapHandling[t1], .handleTraps
+.afterHandlingTraps:
     dispatchOp(narrow, op_enter)
-
+.handleTraps:
+    callTrapHandler(_llint_throw_from_slow_path_trampoline)
+    jmp .afterHandlingTraps
 
 llintOpWithProfile(op_get_argument, OpGetArgument, macro (size, get, dispatch, return)
     get(m_index, t2)
@@ -698,10 +739,10 @@ llintOpWithMetadata(op_to_this, OpToThis, macro (size, get, dispatch, metadata, 
     loadq [cfr, t0, 8], t0
     btqnz t0, tagMask, .opToThisSlow
     bbneq JSCell::m_type[t0], FinalObjectType, .opToThisSlow
-    loadStructureWithScratch(t0, t1, t2, t3)
+    loadi JSCell::m_structureID[t0], t1
     metadata(t2, t3)
-    loadp OpToThis::Metadata::m_cachedStructure[t2], t2
-    bpneq t1, t2, .opToThisSlow
+    loadi OpToThis::Metadata::m_cachedStructureID[t2], t2
+    bineq t1, t2, .opToThisSlow
     dispatch()
 
 .opToThisSlow:
@@ -791,8 +832,8 @@ equalNullComparisonOp(op_neq_null, OpNeqNull,
 
 
 llintOpWithReturn(op_is_undefined_or_null, OpIsUndefinedOrNull, macro (size, get, dispatch, return)
-    get(m_operand, t0)
-    loadq [cfr, t0, 8], t0
+    get(m_operand, t1)
+    loadConstantOrVariable(size, t1, t0)
     andq ~TagBitUndefined, t0
     cqeq t0, ValueNull, t0
     orq ValueFalse, t0
@@ -1110,7 +1151,7 @@ macro bitOpProfiled(opcodeName, opcodeStruct, operation)
     commonBitOp(llintOpWithProfile, opcodeName, opcodeStruct, operation)
 end
 
-bitOp(lshift, OpLshift,
+bitOpProfiled(lshift, OpLshift,
     macro (left, right) lshifti left, right end)
 
 
@@ -1285,7 +1326,7 @@ end)
 
 llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadata, return)
     metadata(t2, t1)
-    loadb OpGetById::Metadata::m_mode[t2], t1
+    loadb OpGetById::Metadata::m_modeMetadata.mode[t2], t1
     get(m_base, t0)
     loadConstantOrVariableCell(size, t0, t3, .opGetByIdSlow)
 
@@ -1316,7 +1357,7 @@ llintOpWithMetadata(op_get_by_id, OpGetById, macro (size, get, dispatch, metadat
     arrayProfile(OpGetById::Metadata::m_modeMetadata.arrayLengthMode.arrayProfile, t0, t2, t5)
     btiz t0, IsArray, .opGetByIdSlow
     btiz t0, IndexingShapeMask, .opGetByIdSlow
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::jsValue, constexpr Gigacage::jsValueGigacageMask, JSObject::m_butterfly[t3], t0, t1)
+    loadCagedJSValue(JSObject::m_butterfly[t3], t0, t1)
     loadi -sizeof IndexingHeader + IndexingHeader::u.lengths.publicLength[t0], t0
     bilt t0, 0, .opGetByIdSlow
     orq tagTypeNumber, t0
@@ -1439,7 +1480,7 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
     loadConstantOrVariableInt32(size, t3, t1, .opGetByValSlow)
     sxi2q t1, t1
 
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::jsValue, constexpr Gigacage::jsValueGigacageMask, JSObject::m_butterfly[t0], t3, tagTypeNumber)
+    loadCagedJSValue(JSObject::m_butterfly[t0], t3, tagTypeNumber)
     move TagTypeNumber, tagTypeNumber
 
     andi IndexingShapeMask, t2
@@ -1483,7 +1524,19 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
     biaeq t2, NumberOfTypedArrayTypesExcludingDataView, .opGetByValSlow
     
     # Sweet, now we know that we have a typed array. Do some basic things now.
-    biaeq t1, JSArrayBufferView::m_length[t0], .opGetByValSlow
+
+    if ARM64E
+        const length = t6
+        const scratch = t7
+        loadi JSArrayBufferView::m_length[t0], length
+        biaeq t1, length, .opGetByValSlow
+    else
+        # length and scratch are intentionally undefined on this branch because they are not used on other platforms.
+        biaeq t1, JSArrayBufferView::m_length[t0], .opGetByValSlow
+    end
+
+    loadp JSArrayBufferView::m_vector[t0], t3
+    cagedPrimitive(t3, length, t0, scratch)
 
     # Now bisect through the various types:
     #    Int8ArrayType,
@@ -1505,21 +1558,18 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
     bia t2, Int8ArrayType - FirstTypedArrayType, .opGetByValUint8ArrayOrUint8ClampedArray
 
     # We have Int8ArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
-    loadbs [t3, t1], t0
+    loadbsi [t3, t1], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValUint8ArrayOrUint8ClampedArray:
     bia t2, Uint8ArrayType - FirstTypedArrayType, .opGetByValUint8ClampedArray
 
     # We have Uint8ArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
     loadb [t3, t1], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValUint8ClampedArray:
     # We have Uint8ClampedArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
     loadb [t3, t1], t0
     finishIntGetByVal(t0, t1)
 
@@ -1528,13 +1578,11 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
     bia t2, Int16ArrayType - FirstTypedArrayType, .opGetByValUint16Array
 
     # We have Int16ArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
-    loadhs [t3, t1, 2], t0
+    loadhsi [t3, t1, 2], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValUint16Array:
     # We have Uint16ArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
     loadh [t3, t1, 2], t0
     finishIntGetByVal(t0, t1)
 
@@ -1546,13 +1594,11 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
     bia t2, Int32ArrayType - FirstTypedArrayType, .opGetByValUint32Array
 
     # We have Int32ArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
     loadi [t3, t1, 4], t0
     finishIntGetByVal(t0, t1)
 
 .opGetByValUint32Array:
     # We have Uint32ArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
     # This is the hardest part because of large unsigned values.
     loadi [t3, t1, 4], t0
     bilt t0, 0, .opGetByValSlow # This case is still awkward to implement in LLInt.
@@ -1564,7 +1610,6 @@ llintOpWithMetadata(op_get_by_val, OpGetByVal, macro (size, get, dispatch, metad
     bieq t2, Float32ArrayType - FirstTypedArrayType, .opGetByValSlow
 
     # We have Float64ArrayType.
-    loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::primitive, constexpr Gigacage::primitiveGigacageMask, JSArrayBufferView::m_vector[t0], t3, t2)
     loadd [t3, t1, 8], ft0
     bdnequn ft0, ft0, .opGetByValSlow
     finishDoubleGetByVal(ft0, t0, t1)
@@ -1600,7 +1645,7 @@ macro putByValOp(opcodeName, opcodeStruct)
         get(m_property, t0)
         loadConstantOrVariableInt32(size, t0, t3, .opPutByValSlow)
         sxi2q t3, t3
-        loadCaged(_g_gigacageBasePtrs + Gigacage::BasePtrs::jsValue, constexpr Gigacage::jsValueGigacageMask, JSObject::m_butterfly[t1], t0, tagTypeNumber)
+        loadCagedJSValue(JSObject::m_butterfly[t1], t0, tagTypeNumber)
         move TagTypeNumber, tagTypeNumber
         btinz t2, CopyOnWrite, .opPutByValSlow
         andi IndexingShapeMask, t2
@@ -1729,6 +1774,24 @@ equalNullJumpOp(jneq_null, OpJneqNull,
     end,
     macro (value, target) bqneq value, ValueNull, target end)
 
+macro undefinedOrNullJumpOp(opcodeName, opcodeStruct, fn)
+    llintOpWithJump(op_%opcodeName%, opcodeStruct, macro (size, get, jump, dispatch)
+        get(m_value, t1)
+        loadConstantOrVariable(size, t1, t0)
+        andq ~TagBitUndefined, t0
+        fn(t0, .target)
+        dispatch()
+
+    .target:
+        jump(m_targetLabel)
+    end)
+end
+
+undefinedOrNullJumpOp(jundefined_or_null, OpJundefinedOrNull,
+    macro (value, target) bqeq value, ValueNull, target end)
+
+undefinedOrNullJumpOp(jnundefined_or_null, OpJnundefinedOrNull,
+    macro (value, target) bqneq value, ValueNull, target end)
 
 llintOpWithMetadata(op_jneq_ptr, OpJneqPtr, macro (size, get, dispatch, metadata, return)
     get(m_value, t0)
@@ -1898,6 +1961,9 @@ llintOpWithJump(op_switch_char, OpSwitchChar, macro (size, get, jump, dispatch)
     jump(m_defaultOffset)
 
 .opSwitchOnRope:
+    bineq JSRopeString::m_compactFibers + JSRopeString::CompactFibers::m_length[t1], 1, .opSwitchCharFallThrough
+
+.opSwitchOnRopeChar:
     callSlowPath(_llint_slow_path_switch_char)
     nextInstruction()
 end)
@@ -1910,7 +1976,7 @@ macro arrayProfileForCall(opcodeStruct, getu)
     loadq ThisArgumentOffset[cfr, t3, 8], t0
     btqnz t0, tagMask, .done
     loadi JSCell::m_structureID[t0], t3
-    storei t3, %opcodeStruct%::Metadata::m_arrayProfile.m_lastSeenStructureID[t5]
+    storei t3, %opcodeStruct%::Metadata::m_callLinkInfo.m_arrayProfile.m_lastSeenStructureID[t5]
 .done:
 end
 
@@ -1923,7 +1989,7 @@ macro commonCallOp(opcodeName, slowPath, opcodeStruct, prepareCall, prologue)
         end, metadata)
 
         get(m_callee, t0)
-        loadp %opcodeStruct%::Metadata::m_callLinkInfo.callee[t5], t2
+        loadp %opcodeStruct%::Metadata::m_callLinkInfo.m_calleeOrLastSeenCalleeWithLinkBit[t5], t2
         loadConstantOrVariable(size, t0, t3)
         bqneq t3, t2, .opCallSlow
         getu(size, opcodeStruct, m_argv, t3)
@@ -1935,8 +2001,8 @@ macro commonCallOp(opcodeName, slowPath, opcodeStruct, prepareCall, prologue)
         storei PC, ArgumentCount + TagOffset[cfr]
         storei t2, ArgumentCount + PayloadOffset[t3]
         move t3, sp
-        prepareCall(%opcodeStruct%::Metadata::m_callLinkInfo.machineCodeTarget[t5], t2, t3, t4, JSEntryPtrTag)
-        callTargetFunction(size, opcodeStruct, dispatch, %opcodeStruct%::Metadata::m_callLinkInfo.machineCodeTarget[t5], JSEntryPtrTag)
+        prepareCall(%opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], t2, t3, t4, JSEntryPtrTag)
+        callTargetFunction(size, opcodeStruct, dispatch, %opcodeStruct%::Metadata::m_callLinkInfo.m_machineCodeTarget[t5], JSEntryPtrTag)
 
     .opCallSlow:
         slowPathForCall(size, opcodeStruct, dispatch, slowPath, prepareCall)
@@ -2052,14 +2118,14 @@ macro nativeCallTrampoline(executableOffsetToFunction)
     andp MarkedBlockMask, t0, t1
     loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[t1], t1
     storep cfr, VM::topCallFrame[t1]
-    if ARM64 or ARM64E or C_LOOP
+    if ARM64 or ARM64E or C_LOOP or C_LOOP_WIN
         storep lr, ReturnPC[cfr]
     end
     move cfr, a0
     loadp Callee[cfr], t1
     loadp JSFunction::m_executable[t1], t1
     checkStackPointerAlignment(t3, 0xdead0001)
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         cloopCallNative executableOffsetToFunction[t1]
     else
         if X86_64_WIN
@@ -2092,13 +2158,13 @@ macro internalFunctionCallTrampoline(offsetOfFunction)
     andp MarkedBlockMask, t0, t1
     loadp MarkedBlockFooterOffset + MarkedBlock::Footer::m_vm[t1], t1
     storep cfr, VM::topCallFrame[t1]
-    if ARM64 or ARM64E or C_LOOP
+    if ARM64 or ARM64E or C_LOOP or C_LOOP_WIN
         storep lr, ReturnPC[cfr]
     end
     move cfr, a0
     loadp Callee[cfr], t1
     checkStackPointerAlignment(t3, 0xdead0001)
-    if C_LOOP
+    if C_LOOP or C_LOOP_WIN
         cloopCallNative offsetOfFunction[t1]
     else
         if X86_64_WIN

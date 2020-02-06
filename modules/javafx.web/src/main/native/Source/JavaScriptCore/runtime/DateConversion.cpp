@@ -32,7 +32,6 @@
 
 #if OS(WINDOWS)
 #include <windows.h>
-#include <wtf/text/win/WCharStringExtras.h>
 #endif
 
 namespace JSC {
@@ -42,14 +41,12 @@ using namespace WTF;
 template<int width>
 static inline void appendNumber(StringBuilder& builder, int value)
 {
-    int fillingZerosCount = width;
     if (value < 0) {
         builder.append('-');
         value = -value;
-        --fillingZerosCount;
     }
     String valueString = String::number(value);
-    fillingZerosCount -= valueString.length();
+    int fillingZerosCount = width - valueString.length();
     for (int i = 0; i < fillingZerosCount; ++i)
         builder.append('0');
     builder.append(valueString);
@@ -109,7 +106,7 @@ String formatDateTime(const GregorianDateTime& t, DateTimeFormat format, bool as
             TIME_ZONE_INFORMATION timeZoneInformation;
             GetTimeZoneInformation(&timeZoneInformation);
             const WCHAR* winTimeZoneName = t.isDST() ? timeZoneInformation.DaylightName : timeZoneInformation.StandardName;
-            String timeZoneName = nullTerminatedWCharToString(winTimeZoneName);
+            String timeZoneName(winTimeZoneName);
 #else
             struct tm gtm = t;
             char timeZoneName[70];

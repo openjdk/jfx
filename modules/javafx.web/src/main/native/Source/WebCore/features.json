@@ -25,7 +25,7 @@
     {
         "name": "Beacon API",
         "status": {
-            "status": "Supported In Preview"
+            "status": "Supported"
         },
         "url": "https://www.w3.org/TR/beacon/",
         "webkit-url": "https://webkit.org/b/147885",
@@ -214,9 +214,24 @@
         }
     },
     {
+        "name": "CSS Shadow Parts",
+        "status": {
+            "status": "Under Consideration"
+        },
+        "url": "https://drafts.csswg.org/css-shadow-parts/",
+        "webkit-url": "https://webkit.org/b/149443",
+        "keywords": ["css selectors", "selectors", "shadow dom", "shadow parts"],
+        "category": "css",
+        "description": "Allows web components to define and expose stylable parts",
+        "contact": {
+            "name": "Ryosuke Niwa",
+            "email": "rniwa@webkit.org"
+        }
+    },
+    {
         "name": "CSS Text Decoration Level 4",
         "status": {
-            "status": "Supported in Preview",
+            "status": "Supported",
             "enabled-by-default": true
         },
         "url": "https://drafts.csswg.org/css-text-decor-4/",
@@ -427,7 +442,7 @@
     {
         "name": "Intersection Observer",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://wicg.github.io/IntersectionObserver/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=159475",
@@ -872,7 +887,7 @@
     {
         "name": "Conic Gradients",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://www.w3.org/TR/css4-images/#conic-gradients",
         "specification": "CSS Image Values and Replaced Content Module Level 4",
@@ -900,7 +915,7 @@
     {
         "name": "Datalist Element",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://html.spec.whatwg.org/multipage/form-elements.html#the-datalist-element",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=27247",
@@ -1056,6 +1071,16 @@
         "description": "Allows pages to override default editing behaviors and to monitor DOM changes due to user input."
     },
     {
+        "name": "Input modalities (inputmode attribute)",
+        "status": {
+            "status": "Supported",
+            "enabled-by-default": false
+        },
+        "url": "https://html.spec.whatwg.org/multipage/interaction.html#input-modalities:-the-inputmode-attribute",
+        "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inputmode",
+        "description": "Allows pages to specify what kind of input mechanism would be most suitable to a given form control or a contenteditable element."
+    },
+    {
         "name": "Interaction Media Features (pointer, hover, any-pointer, any-hover)",
         "status": {
             "status": "Supported",
@@ -1132,6 +1157,21 @@
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=138967",
         "specification": "Streams",
         "comment": "The implementation does not support ReadableStreamBYOBReader."
+    },
+    {
+        "name": "Resize Observer",
+        "status": {
+            "status": "In Development",
+            "enabled-by-default": false
+        },
+        "url": "https://drafts.csswg.org/resize-observer/",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=157743",
+        "keywords": ["resize", "resize observer", "resizeobserver"],
+        "description": "An API for observing changes to Element's size.",
+        "contact": {
+            "name": "Cathie Chen",
+            "email": "cathiechen@igalia.com"
+        }
     },
     {
         "name": "Scroll Anchoring",
@@ -1299,7 +1339,7 @@
     {
         "name": "Web Authentication",
         "status": {
-            "status": "In Development"
+            "status": "Supported In Preview"
         },
         "url": "https://w3c.github.io/webauthn/",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=181943",
@@ -1321,6 +1361,15 @@
         "description": "An API to discover and communicate with devices over the Bluetooth."
     },
     {
+        "name": "Web Bluetooth Scanning",
+        "status": {
+            "status": "Not Considering"
+        },
+        "url": "https://webbluetoothcg.github.io/web-bluetooth/",
+        "keywords": ["bluetooth"],
+        "description": "An API to listen for Bluetooth Low Energy advertising packets."
+    },
+    {
         "name": "Web MIDI",
         "status": {
             "status": "Not Considering"
@@ -1332,7 +1381,7 @@
     {
         "name": "Web Share",
         "status": {
-            "status": "Supported in Preview"
+            "status": "Supported"
         },
         "url": "https://github.com/WICG/web-share/blob/master/docs/interface.md",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=171100",

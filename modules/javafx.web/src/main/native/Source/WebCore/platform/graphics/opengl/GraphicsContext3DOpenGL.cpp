@@ -26,7 +26,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#if ENABLE(GRAPHICS_CONTEXT_3D) && (USE(OPENGL) || (PLATFORM(COCOA) && USE(OPENGL_ES)))
 
 #include "GraphicsContext3D.h"
 
@@ -475,7 +475,7 @@ void GraphicsContext3D::clearDepth(GC3Dclampf depth)
 Extensions3D& GraphicsContext3D::getExtensions()
 {
     if (!m_extensions)
-        m_extensions = std::make_unique<Extensions3DOpenGL>(this, isGLES2Compliant());
+        m_extensions = makeUnique<Extensions3DOpenGL>(this, isGLES2Compliant());
     return *m_extensions;
 }
 #endif
@@ -503,4 +503,4 @@ void GraphicsContext3D::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsi
 
 }
 
-#endif // ENABLE(GRAPHICS_CONTEXT_3D)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D) && (USE(OPENGL) || (PLATFORM(COCOA) && USE(OPENGL_ES)))

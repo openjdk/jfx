@@ -130,7 +130,7 @@ String HTMLTextFormControlElement::strippedPlaceholder() const
 {
     // According to the HTML5 specification, we need to remove CR and LF from
     // the attribute value.
-    const AtomicString& attributeValue = attributeWithoutSynchronization(placeholderAttr);
+    const AtomString& attributeValue = attributeWithoutSynchronization(placeholderAttr);
     if (!attributeValue.contains(newlineCharacter) && !attributeValue.contains(carriageReturn))
         return attributeValue;
 
@@ -150,7 +150,7 @@ static bool isNotLineBreak(UChar ch) { return ch != newlineCharacter && ch != ca
 
 bool HTMLTextFormControlElement::isPlaceholderEmpty() const
 {
-    const AtomicString& attributeValue = attributeWithoutSynchronization(placeholderAttr);
+    const AtomString& attributeValue = attributeWithoutSynchronization(placeholderAttr);
     return attributeValue.string().find(isNotLineBreak) == notFound;
 }
 
@@ -376,11 +376,11 @@ int HTMLTextFormControlElement::computeSelectionEnd() const
     return indexForPosition(frame->selection().selection().end());
 }
 
-static const AtomicString& directionString(TextFieldSelectionDirection direction)
+static const AtomString& directionString(TextFieldSelectionDirection direction)
 {
-    static NeverDestroyed<const AtomicString> none("none", AtomicString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomicString> forward("forward", AtomicString::ConstructFromLiteral);
-    static NeverDestroyed<const AtomicString> backward("backward", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomString> none("none", AtomString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomString> forward("forward", AtomString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomString> backward("backward", AtomString::ConstructFromLiteral);
 
     switch (direction) {
     case SelectionHasNoDirection:
@@ -395,7 +395,7 @@ static const AtomicString& directionString(TextFieldSelectionDirection direction
     return none;
 }
 
-const AtomicString& HTMLTextFormControlElement::selectionDirection() const
+const AtomString& HTMLTextFormControlElement::selectionDirection() const
 {
     if (!isTextField())
         return directionString(SelectionHasNoDirection);
@@ -486,7 +486,7 @@ void HTMLTextFormControlElement::selectionChanged(bool shouldFireSelectEvent)
         dispatchEvent(Event::create(eventNames().selectEvent, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
 
-void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == placeholderAttr) {
         updatePlaceholderText();
@@ -515,7 +515,7 @@ bool HTMLTextFormControlElement::isInnerTextElementEditable() const
 void HTMLTextFormControlElement::updateInnerTextElementEditability()
 {
     if (auto innerText = innerTextElement()) {
-        auto value = isInnerTextElementEditable() ? AtomicString { "plaintext-only", AtomicString::ConstructFromLiteral } : AtomicString { "false", AtomicString::ConstructFromLiteral };
+        auto value = isInnerTextElementEditable() ? AtomString { "plaintext-only", AtomString::ConstructFromLiteral } : AtomString { "false", AtomString::ConstructFromLiteral };
         innerText->setAttributeWithoutSynchronization(contenteditableAttr, value);
     }
 }
@@ -559,7 +559,7 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
     String previousValue = innerTextValueFrom(*innerText);
     bool textIsChanged = value != previousValue;
     if (textIsChanged || !innerText->hasChildNodes()) {
-#if HAVE(ACCESSIBILITY) && !PLATFORM(COCOA)
+#if ENABLE(ACCESSIBILITY) && !PLATFORM(COCOA)
         if (textIsChanged && renderer()) {
             if (AXObjectCache* cache = document().existingAXObjectCache())
                 cache->postNotification(this, AXObjectCache::AXValueChanged, TargetObservableParent);
@@ -576,7 +576,7 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
                 innerText->appendChild(HTMLBRElement::create(document()));
         }
 
-#if HAVE(ACCESSIBILITY) && PLATFORM(COCOA)
+#if ENABLE(ACCESSIBILITY) && PLATFORM(COCOA)
         if (textIsChanged && renderer()) {
             if (AXObjectCache* cache = document().existingAXObjectCache())
                 cache->deferTextReplacementNotificationForTextControl(*this, previousValue);
@@ -717,13 +717,13 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
             unsigned position = 0;
             while (breakNode == node && breakOffset <= length) {
                 if (breakOffset > position) {
-                    result.append(data, position, breakOffset - position);
+                    result.appendSubstring(data, position, breakOffset - position);
                     position = breakOffset;
                     result.append(newlineCharacter);
                 }
                 getNextSoftBreak(line, breakNode, breakOffset);
             }
-            result.append(data, position, length - position);
+            result.appendSubstring(data, position, length - position);
         }
         while (breakNode == node)
             getNextSoftBreak(line, breakNode, breakOffset);
@@ -758,7 +758,7 @@ static const Element* parentHTMLElement(const Element* element)
 String HTMLTextFormControlElement::directionForFormData() const
 {
     for (const Element* element = this; element; element = parentHTMLElement(element)) {
-        const AtomicString& dirAttributeValue = element->attributeWithoutSynchronization(dirAttr);
+        const AtomString& dirAttributeValue = element->attributeWithoutSynchronization(dirAttr);
         if (dirAttributeValue.isNull())
             continue;
 

@@ -89,7 +89,7 @@ FloatPointGraph::Node* FloatPointGraph::findOrCreateNode(FloatPoint point)
             return testNode.get();
     }
 
-    m_allNodes.append(std::make_unique<FloatPointGraph::Node>(point));
+    m_allNodes.append(makeUnique<FloatPointGraph::Node>(point));
     return m_allNodes.last().get();
 }
 
@@ -580,14 +580,10 @@ Path PathUtilities::pathWithShrinkWrappedRectsForOutline(const Vector<FloatRect>
             continue;
         }
         }
-        FloatPoint startPoint;
-        FloatPoint endPoint;
-        std::tie(startPoint, endPoint) = startAndEndPointsForCorner(fromEdge, toEdge, radius);
+        auto [startPoint, endPoint] = startAndEndPointsForCorner(fromEdge, toEdge, radius);
         moveOrAddLineTo(startPoint);
 
-        FloatPoint cp1;
-        FloatPoint cp2;
-        std::tie(cp1, cp2) = controlPointsForBezierCurve(corner, fromEdge, toEdge, radius);
+        auto [cp1, cp2] = controlPointsForBezierCurve(corner, fromEdge, toEdge, radius);
         path.addBezierCurveTo(cp1, cp2, endPoint);
     }
     path.closeSubpath();

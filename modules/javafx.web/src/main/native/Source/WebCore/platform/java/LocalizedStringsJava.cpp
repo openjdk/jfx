@@ -712,6 +712,11 @@ String unsupportedPluginText()
     return String::fromUTF8("Unsupported Plug-in");
 }
 
+String pluginTooSmallText()
+{
+    return String::fromUTF8("Plug-In too small");
+}
+
 String localizedString(const char* key)
 {
     return String::fromUTF8(key, strlen(key));

@@ -39,15 +39,13 @@ namespace Inspector {
 
 InspectorScriptProfilerAgent::InspectorScriptProfilerAgent(AgentContext& context)
     : InspectorAgentBase("ScriptProfiler"_s)
-    , m_frontendDispatcher(std::make_unique<ScriptProfilerFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUnique<ScriptProfilerFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(ScriptProfilerBackendDispatcher::create(context.backendDispatcher, this))
     , m_environment(context.environment)
 {
 }
 
-InspectorScriptProfilerAgent::~InspectorScriptProfilerAgent()
-{
-}
+InspectorScriptProfilerAgent::~InspectorScriptProfilerAgent() = default;
 
 void InspectorScriptProfilerAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
 {
@@ -203,6 +201,8 @@ static Ref<Protocol::ScriptProfiler::Samples> buildSamples(VM& vm, Vector<Sampli
 
 void InspectorScriptProfilerAgent::trackingComplete()
 {
+    auto timestamp = m_environment.executionStopwatch()->elapsedTime().seconds();
+
 #if ENABLE(SAMPLING_PROFILER)
     if (m_enabledSamplingProfiler) {
         VM& vm = m_environment.scriptDebugServer().vm();
@@ -220,11 +220,11 @@ void InspectorScriptProfilerAgent::trackingComplete()
 
         m_enabledSamplingProfiler = false;
 
-        m_frontendDispatcher->trackingComplete(WTFMove(samples));
+        m_frontendDispatcher->trackingComplete(timestamp, WTFMove(samples));
     } else
-        m_frontendDispatcher->trackingComplete(nullptr);
+        m_frontendDispatcher->trackingComplete(timestamp, nullptr);
 #else
-    m_frontendDispatcher->trackingComplete(nullptr);
+    m_frontendDispatcher->trackingComplete(timestamp, nullptr);
 #endif // ENABLE(SAMPLING_PROFILER)
 }
 
@@ -244,16 +244,6 @@ void InspectorScriptProfilerAgent::stopSamplingWhenDisconnecting()
 
     m_enabledSamplingProfiler = false;
 #endif
-}
-
-void InspectorScriptProfilerAgent::programmaticCaptureStarted()
-{
-    m_frontendDispatcher->programmaticCaptureStarted();
-}
-
-void InspectorScriptProfilerAgent::programmaticCaptureStopped()
-{
-    m_frontendDispatcher->programmaticCaptureStopped();
 }
 
 } // namespace Inspector

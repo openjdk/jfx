@@ -36,9 +36,13 @@
 #include "KeyframeEffect.h"
 #include "Microtasks.h"
 #include "WebAnimationUtilities.h"
+#include <wtf/IsoMallocInlines.h>
+#include <wtf/Optional.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(WebAnimation);
 
 Ref<WebAnimation> WebAnimation::create(Document& document, AnimationEffect* effect)
 {
@@ -527,7 +531,7 @@ auto WebAnimation::playState() const -> PlayState
     // animation's effective playback rate > 0 and current time ≥ target effect end; or
     // animation's effective playback rate < 0 and current time ≤ 0,
     // → finished
-    if (animationCurrentTime && ((effectivePlaybackRate() > 0 && animationCurrentTime.value() >= effectEndTime()) || (effectivePlaybackRate() < 0 && animationCurrentTime.value() <= 0_s)))
+    if (animationCurrentTime && ((effectivePlaybackRate() > 0 && (*animationCurrentTime + timeEpsilon) >= effectEndTime()) || (effectivePlaybackRate() < 0 && (*animationCurrentTime - timeEpsilon) <= 0_s)))
         return PlayState::Finished;
 
     // Otherwise → running
@@ -594,7 +598,7 @@ void WebAnimation::cancel(Silently silently)
     invalidateEffect();
 }
 
-void WebAnimation::enqueueAnimationPlaybackEvent(const AtomicString& type, Optional<Seconds> currentTime, Optional<Seconds> timelineTime)
+void WebAnimation::enqueueAnimationPlaybackEvent(const AtomString& type, Optional<Seconds> currentTime, Optional<Seconds> timelineTime)
 {
     auto event = AnimationPlaybackEvent::create(type, currentTime, timelineTime);
     event->setTarget(this);
@@ -773,7 +777,7 @@ void WebAnimation::updateFinishedState(DidSeek didSeek, SynchronouslyNotify sync
             // Otherwise, if synchronously notify is false, queue a microtask to run finish notification steps for animation unless there
             // is already a microtask queued to run those steps for animation.
             m_finishNotificationStepsMicrotaskPending = true;
-            MicrotaskQueue::mainThreadQueue().append(std::make_unique<VoidMicrotask>([this, protectedThis = makeRef(*this)] () {
+            MicrotaskQueue::mainThreadQueue().append(makeUnique<VoidMicrotask>([this, protectedThis = makeRef(*this)] () {
                 if (m_finishNotificationStepsMicrotaskPending) {
                     m_finishNotificationStepsMicrotaskPending = false;
                     finishNotificationSteps();
@@ -1153,13 +1157,23 @@ const char* WebAnimation::activeDOMObjectName() const
 
 bool WebAnimation::canSuspendForDocumentSuspension() const
 {
-    return !hasPendingActivity();
+    // Use the base class's implementation of hasPendingActivity() since we wouldn't want the custom implementation
+    // in this class designed to keep JS wrappers alive to interfere with the ability for a page using animations
+    // to enter the page cache.
+    return !ActiveDOMObject::hasPendingActivity();
 }
 
 void WebAnimation::stop()
 {
+    ActiveDOMObject::stop();
     m_isStopped = true;
     removeAllEventListeners();
+}
+
+bool WebAnimation::hasPendingActivity() const
+{
+    // Keep the JS wrapper alive if the animation is considered relevant or could become relevant again by virtue of having a timeline.
+    return m_timeline || m_isRelevant || ActiveDOMObject::hasPendingActivity();
 }
 
 void WebAnimation::updateRelevance()

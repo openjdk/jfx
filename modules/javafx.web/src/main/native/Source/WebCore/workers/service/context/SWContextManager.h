@@ -62,6 +62,8 @@ public:
         virtual void findClientByIdentifier(ServiceWorkerIdentifier, ServiceWorkerClientIdentifier, FindClientByIdentifierCallback&&) = 0;
         virtual void matchAll(ServiceWorkerIdentifier, const ServiceWorkerClientQueryOptions&, ServiceWorkerClientsMatchAllCallback&&) = 0;
         virtual void claim(ServiceWorkerIdentifier, CompletionHandler<void()>&&) = 0;
+
+        virtual bool isThrottleable() const = 0;
     };
 
     WEBCORE_EXPORT void setConnection(std::unique_ptr<Connection>&&);
@@ -87,7 +89,7 @@ private:
     SWContextManager() = default;
 
     void startedServiceWorker(Optional<ServiceWorkerJobDataIdentifier>, ServiceWorkerIdentifier, const String& exceptionMessage);
-    void serviceWorkerFailedToTerminate(ServiceWorkerIdentifier);
+    NO_RETURN_DUE_TO_CRASH void serviceWorkerFailedToTerminate(ServiceWorkerIdentifier);
 
     HashMap<ServiceWorkerIdentifier, RefPtr<ServiceWorkerThreadProxy>> m_workerMap;
     std::unique_ptr<Connection> m_connection;

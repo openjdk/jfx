@@ -34,10 +34,9 @@
 #include "DirectArguments.h"
 #include "GetterSetter.h"
 #include "GetterSetterAccessCase.h"
-#include "HeapInlines.h"
 #include "InstanceOfAccessCase.h"
 #include "IntrinsicGetterAccessCase.h"
-#include "JSCJSValueInlines.h"
+#include "JSCInlines.h"
 #include "JSModuleEnvironment.h"
 #include "JSModuleNamespaceObject.h"
 #include "LinkBuffer.h"
@@ -45,7 +44,6 @@
 #include "PolymorphicAccess.h"
 #include "ScopedArguments.h"
 #include "ScratchRegisterAllocator.h"
-#include "SlotVisitorInlines.h"
 #include "StructureStubInfo.h"
 #include "SuperSampler.h"
 #include "ThunkGenerators.h"
@@ -323,34 +321,34 @@ void AccessCase::dump(PrintStream& out) const
 
 bool AccessCase::visitWeak(VM& vm) const
 {
-    if (m_structure && !Heap::isMarked(m_structure.get()))
+    if (m_structure && !vm.heap.isMarked(m_structure.get()))
         return false;
     if (m_polyProtoAccessChain) {
         for (Structure* structure : m_polyProtoAccessChain->chain()) {
-            if (!Heap::isMarked(structure))
+            if (!vm.heap.isMarked(structure))
                 return false;
         }
     }
-    if (!m_conditionSet.areStillLive())
+    if (!m_conditionSet.areStillLive(vm))
         return false;
     if (isAccessor()) {
         auto& accessor = this->as<GetterSetterAccessCase>();
         if (accessor.callLinkInfo())
             accessor.callLinkInfo()->visitWeak(vm);
-        if (accessor.customSlotBase() && !Heap::isMarked(accessor.customSlotBase()))
+        if (accessor.customSlotBase() && !vm.heap.isMarked(accessor.customSlotBase()))
             return false;
     } else if (type() == IntrinsicGetter) {
         auto& intrinsic = this->as<IntrinsicGetterAccessCase>();
-        if (intrinsic.intrinsicFunction() && !Heap::isMarked(intrinsic.intrinsicFunction()))
+        if (intrinsic.intrinsicFunction() && !vm.heap.isMarked(intrinsic.intrinsicFunction()))
             return false;
     } else if (type() == ModuleNamespaceLoad) {
         auto& accessCase = this->as<ModuleNamespaceAccessCase>();
-        if (accessCase.moduleNamespaceObject() && !Heap::isMarked(accessCase.moduleNamespaceObject()))
+        if (accessCase.moduleNamespaceObject() && !vm.heap.isMarked(accessCase.moduleNamespaceObject()))
             return false;
-        if (accessCase.moduleEnvironment() && !Heap::isMarked(accessCase.moduleEnvironment()))
+        if (accessCase.moduleEnvironment() && !vm.heap.isMarked(accessCase.moduleEnvironment()))
             return false;
     } else if (type() == InstanceOfHit || type() == InstanceOfMiss) {
-        if (as<InstanceOfAccessCase>().prototype() && !Heap::isMarked(as<InstanceOfAccessCase>().prototype()))
+        if (as<InstanceOfAccessCase>().prototype() && !vm.heap.isMarked(as<InstanceOfAccessCase>().prototype()))
             return false;
     }
 
@@ -371,7 +369,7 @@ bool AccessCase::propagateTransitions(SlotVisitor& visitor) const
 
     switch (m_type) {
     case Transition:
-        if (Heap::isMarked(m_structure->previousID()))
+        if (visitor.vm().heap.isMarked(m_structure->previousID()))
             visitor.appendUnbarriered(m_structure.get());
         else
             result = false;
@@ -855,7 +853,7 @@ void AccessCase::generateImpl(AccessGenerationState& state)
             state.setSpillStateForJSGetterSetter(spillState);
 
             RELEASE_ASSERT(!access.callLinkInfo());
-            access.m_callLinkInfo = std::make_unique<CallLinkInfo>();
+            access.m_callLinkInfo = makeUnique<CallLinkInfo>();
 
             // FIXME: If we generated a polymorphic call stub that jumped back to the getter
             // stub, which then jumped back to the main code, then we'd have a reachability
@@ -1215,14 +1213,14 @@ void AccessCase::generateImpl(AccessGenerationState& state)
     case StringLength: {
         jit.loadPtr(CCallHelpers::Address(baseGPR, JSString::offsetOfValue()), scratchGPR);
         auto isRope = jit.branchIfRopeStringImpl(scratchGPR);
-        jit.load32(CCallHelpers::Address(scratchGPR, StringImpl::lengthMemoryOffset()), scratchGPR);
+        jit.load32(CCallHelpers::Address(scratchGPR, StringImpl::lengthMemoryOffset()), valueRegs.payloadGPR());
         auto done = jit.jump();
 
         isRope.link(&jit);
-        jit.load32(CCallHelpers::Address(baseGPR, JSRopeString::offsetOfLength()), scratchGPR);
+        jit.load32(CCallHelpers::Address(baseGPR, JSRopeString::offsetOfLength()), valueRegs.payloadGPR());
 
         done.link(&jit);
-        jit.boxInt32(scratchGPR, valueRegs);
+        jit.boxInt32(valueRegs.payloadGPR(), valueRegs);
         state.succeed();
         return;
     }

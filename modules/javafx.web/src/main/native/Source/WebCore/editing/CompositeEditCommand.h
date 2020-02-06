@@ -41,6 +41,7 @@ class StyledElement;
 class Text;
 
 class AccessibilityUndoReplacedText {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     AccessibilityUndoReplacedText() { }
     void configureRangeDeletedByReapplyWithStartingSelection(const VisibleSelection&);
@@ -152,6 +153,7 @@ protected:
     void insertNodeAt(Ref<Node>&&, const Position&);
     void insertNodeAtTabSpanPosition(Ref<Node>&&, const Position&);
     void insertNodeBefore(Ref<Node>&&, Node& refChild, ShouldAssumeContentIsAlwaysEditable = DoNotAssumeContentIsAlwaysEditable);
+    void insertParagraphSeparatorAtPosition(const Position&, bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false);
     void insertParagraphSeparator(bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false);
     void insertLineBreak();
     void insertTextIntoNode(Text&, unsigned offset, const String& text);
@@ -175,7 +177,7 @@ protected:
     Position replaceSelectedTextInNode(const String&);
     void replaceTextInNodePreservingMarkers(Text&, unsigned offset, unsigned count, const String& replacementText);
     Position positionOutsideTabSpan(const Position&);
-    void setNodeAttribute(Element&, const QualifiedName& attribute, const AtomicString& value);
+    void setNodeAttribute(Element&, const QualifiedName& attribute, const AtomString& value);
     void splitElement(Element&, Node& atChild);
     void splitTextNode(Text&, unsigned offset);
     void splitTextNodeContainingElement(Text&, unsigned offset);

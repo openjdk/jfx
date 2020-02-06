@@ -28,73 +28,8 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLArrayReferenceType.h"
-#include "WHLSLArrayType.h"
-#include "WHLSLAssignmentExpression.h"
-#include "WHLSLBaseFunctionAttribute.h"
-#include "WHLSLBaseSemantic.h"
-#include "WHLSLBlock.h"
-#include "WHLSLBooleanLiteral.h"
-#include "WHLSLBreak.h"
-#include "WHLSLBuiltInSemantic.h"
-#include "WHLSLCallExpression.h"
-#include "WHLSLCommaExpression.h"
-#include "WHLSLConstantExpression.h"
-#include "WHLSLContinue.h"
-#include "WHLSLDereferenceExpression.h"
-#include "WHLSLDoWhileLoop.h"
-#include "WHLSLDotExpression.h"
-#include "WHLSLEffectfulExpressionStatement.h"
-#include "WHLSLEnumerationDefinition.h"
-#include "WHLSLEnumerationMember.h"
-#include "WHLSLEnumerationMemberLiteral.h"
-#include "WHLSLExpression.h"
-#include "WHLSLFallthrough.h"
-#include "WHLSLFloatLiteral.h"
-#include "WHLSLForLoop.h"
-#include "WHLSLFunctionAttribute.h"
-#include "WHLSLFunctionDeclaration.h"
-#include "WHLSLFunctionDefinition.h"
-#include "WHLSLIfStatement.h"
-#include "WHLSLIndexExpression.h"
-#include "WHLSLIntegerLiteral.h"
-#include "WHLSLLogicalExpression.h"
-#include "WHLSLLogicalNotExpression.h"
-#include "WHLSLMakeArrayReferenceExpression.h"
-#include "WHLSLMakePointerExpression.h"
-#include "WHLSLNativeFunctionDeclaration.h"
-#include "WHLSLNativeTypeDeclaration.h"
-#include "WHLSLNode.h"
-#include "WHLSLNullLiteral.h"
-#include "WHLSLNumThreadsFunctionAttribute.h"
-#include "WHLSLPointerType.h"
+#include "WHLSLAST.h"
 #include "WHLSLProgram.h"
-#include "WHLSLPropertyAccessExpression.h"
-#include "WHLSLQualifier.h"
-#include "WHLSLReadModifyWriteExpression.h"
-#include "WHLSLReferenceType.h"
-#include "WHLSLResourceSemantic.h"
-#include "WHLSLReturn.h"
-#include "WHLSLSemantic.h"
-#include "WHLSLSpecializationConstantSemantic.h"
-#include "WHLSLStageInOutSemantic.h"
-#include "WHLSLStatement.h"
-#include "WHLSLStructureDefinition.h"
-#include "WHLSLStructureElement.h"
-#include "WHLSLSwitchCase.h"
-#include "WHLSLSwitchStatement.h"
-#include "WHLSLTernaryExpression.h"
-#include "WHLSLTrap.h"
-#include "WHLSLType.h"
-#include "WHLSLTypeArgument.h"
-#include "WHLSLTypeDefinition.h"
-#include "WHLSLTypeReference.h"
-#include "WHLSLUnsignedIntegerLiteral.h"
-#include "WHLSLValue.h"
-#include "WHLSLVariableDeclaration.h"
-#include "WHLSLVariableDeclarationsStatement.h"
-#include "WHLSLVariableReference.h"
-#include "WHLSLWhileLoop.h"
 
 namespace WebCore {
 
@@ -125,10 +60,8 @@ void Visitor::visit(AST::UnnamedType& unnamedType)
         checkErrorAndVisit(downcast<AST::PointerType>(unnamedType));
     else if (is<AST::ArrayReferenceType>(unnamedType))
         checkErrorAndVisit(downcast<AST::ArrayReferenceType>(unnamedType));
-    else {
-        ASSERT(is<AST::ArrayType>(unnamedType));
+    else
         checkErrorAndVisit(downcast<AST::ArrayType>(unnamedType));
-    }
 }
 
 void Visitor::visit(AST::NamedType& namedType)
@@ -139,10 +72,8 @@ void Visitor::visit(AST::NamedType& namedType)
         checkErrorAndVisit(downcast<AST::StructureDefinition>(namedType));
     else if (is<AST::EnumerationDefinition>(namedType))
         checkErrorAndVisit(downcast<AST::EnumerationDefinition>(namedType));
-    else {
-        ASSERT(is<AST::NativeTypeDeclaration>(namedType));
+    else
         checkErrorAndVisit(downcast<AST::NativeTypeDeclaration>(namedType));
-    }
 }
 
 void Visitor::visit(AST::TypeDefinition& typeDefinition)
@@ -184,8 +115,8 @@ void Visitor::visit(AST::TypeReference& typeReference)
 {
     for (auto& typeArgument : typeReference.typeArguments())
         checkErrorAndVisit(typeArgument);
-    if (typeReference.resolvedType() && is<AST::TypeDefinition>(*typeReference.resolvedType())) {
-        auto& typeDefinition = downcast<AST::TypeDefinition>(*typeReference.resolvedType());
+    if (typeReference.maybeResolvedType() && is<AST::TypeDefinition>(typeReference.resolvedType())) {
+        auto& typeDefinition = downcast<AST::TypeDefinition>(typeReference.resolvedType());
         checkErrorAndVisit(typeDefinition.type());
     }
 }
@@ -212,10 +143,8 @@ void Visitor::visit(AST::StructureElement& structureElement)
         checkErrorAndVisit(*structureElement.semantic());
 }
 
-void Visitor::visit(AST::EnumerationMember& enumerationMember)
+void Visitor::visit(AST::EnumerationMember&)
 {
-    if (enumerationMember.value())
-        checkErrorAndVisit(*enumerationMember.value());
 }
 
 void Visitor::visit(AST::FunctionDeclaration& functionDeclaration)
@@ -232,7 +161,7 @@ void Visitor::visit(AST::TypeArgument& typeArgument)
 {
     WTF::visit(WTF::makeVisitor([&](AST::ConstantExpression& constantExpression) {
         checkErrorAndVisit(constantExpression);
-    }, [&](UniqueRef<AST::TypeReference>& typeReference) {
+    }, [&](Ref<AST::TypeReference>& typeReference) {
         checkErrorAndVisit(typeReference);
     }), typeArgument);
 }
@@ -320,29 +249,29 @@ void Visitor::visit(AST::BooleanLiteral&)
 
 void Visitor::visit(AST::IntegerLiteralType& integerLiteralType)
 {
-    if (integerLiteralType.resolvedType())
-        checkErrorAndVisit(*integerLiteralType.resolvedType());
+    if (integerLiteralType.maybeResolvedType())
+        checkErrorAndVisit(integerLiteralType.resolvedType());
     checkErrorAndVisit(integerLiteralType.preferredType());
 }
 
 void Visitor::visit(AST::UnsignedIntegerLiteralType& unsignedIntegerLiteralType)
 {
-    if (unsignedIntegerLiteralType.resolvedType())
-        checkErrorAndVisit(*unsignedIntegerLiteralType.resolvedType());
+    if (unsignedIntegerLiteralType.maybeResolvedType())
+        checkErrorAndVisit(unsignedIntegerLiteralType.resolvedType());
     checkErrorAndVisit(unsignedIntegerLiteralType.preferredType());
 }
 
 void Visitor::visit(AST::FloatLiteralType& floatLiteralType)
 {
-    if (floatLiteralType.resolvedType())
-        checkErrorAndVisit(*floatLiteralType.resolvedType());
+    if (floatLiteralType.maybeResolvedType())
+        checkErrorAndVisit(floatLiteralType.resolvedType());
     checkErrorAndVisit(floatLiteralType.preferredType());
 }
 
 void Visitor::visit(AST::NullLiteralType& nullLiteralType)
 {
-    if (nullLiteralType.resolvedType())
-        checkErrorAndVisit(*nullLiteralType.resolvedType());
+    if (nullLiteralType.maybeResolvedType())
+        checkErrorAndVisit(nullLiteralType.resolvedType());
 }
 
 void Visitor::visit(AST::EnumerationMemberLiteral&)
@@ -366,37 +295,57 @@ void Visitor::visit(AST::Block& block)
         checkErrorAndVisit(statement);
 }
 
+void Visitor::visit(AST::StatementList& statementList)
+{
+    for (auto& statement : statementList.statements())
+        checkErrorAndVisit(statement);
+}
+
 void Visitor::visit(AST::Statement& statement)
 {
-    if (is<AST::Block>(statement))
+    switch (statement.kind()) {
+    case AST::Statement::Kind::Block:
         checkErrorAndVisit(downcast<AST::Block>(statement));
-    else if (is<AST::Break>(statement))
+        break;
+    case AST::Statement::Kind::Break:
         checkErrorAndVisit(downcast<AST::Break>(statement));
-    else if (is<AST::Continue>(statement))
+        break;
+    case AST::Statement::Kind::Continue:
         checkErrorAndVisit(downcast<AST::Continue>(statement));
-    else if (is<AST::DoWhileLoop>(statement))
+        break;
+    case AST::Statement::Kind::DoWhileLoop:
         checkErrorAndVisit(downcast<AST::DoWhileLoop>(statement));
-    else if (is<AST::EffectfulExpressionStatement>(statement))
+        break;
+    case AST::Statement::Kind::EffectfulExpression:
         checkErrorAndVisit(downcast<AST::EffectfulExpressionStatement>(statement));
-    else if (is<AST::Fallthrough>(statement))
+        break;
+    case AST::Statement::Kind::Fallthrough:
         checkErrorAndVisit(downcast<AST::Fallthrough>(statement));
-    else if (is<AST::ForLoop>(statement))
+        break;
+    case AST::Statement::Kind::ForLoop:
         checkErrorAndVisit(downcast<AST::ForLoop>(statement));
-    else if (is<AST::IfStatement>(statement))
+        break;
+    case AST::Statement::Kind::If:
         checkErrorAndVisit(downcast<AST::IfStatement>(statement));
-    else if (is<AST::Return>(statement))
+        break;
+    case AST::Statement::Kind::Return:
         checkErrorAndVisit(downcast<AST::Return>(statement));
-    else if (is<AST::SwitchCase>(statement))
+        break;
+    case AST::Statement::Kind::StatementList:
+        checkErrorAndVisit(downcast<AST::StatementList>(statement));
+        break;
+    case AST::Statement::Kind::SwitchCase:
         checkErrorAndVisit(downcast<AST::SwitchCase>(statement));
-    else if (is<AST::SwitchStatement>(statement))
+        break;
+    case AST::Statement::Kind::Switch:
         checkErrorAndVisit(downcast<AST::SwitchStatement>(statement));
-    else if (is<AST::Trap>(statement))
-        checkErrorAndVisit(downcast<AST::Trap>(statement));
-    else if (is<AST::VariableDeclarationsStatement>(statement))
+        break;
+    case AST::Statement::Kind::VariableDeclarations:
         checkErrorAndVisit(downcast<AST::VariableDeclarationsStatement>(statement));
-    else {
-        ASSERT(is<AST::WhileLoop>(statement));
+        break;
+    case AST::Statement::Kind::WhileLoop:
         checkErrorAndVisit(downcast<AST::WhileLoop>(statement));
+        break;
     }
 }
 
@@ -416,51 +365,78 @@ void Visitor::visit(AST::DoWhileLoop& doWhileLoop)
 
 void Visitor::visit(AST::Expression& expression)
 {
-    if (is<AST::AssignmentExpression>(expression))
+    switch (expression.kind()) {
+    case AST::Expression::Kind::Assignment:
         checkErrorAndVisit(downcast<AST::AssignmentExpression>(expression));
-    else if (is<AST::BooleanLiteral>(expression))
+        break;
+    case AST::Expression::Kind::BooleanLiteral:
         checkErrorAndVisit(downcast<AST::BooleanLiteral>(expression));
-    else if (is<AST::CallExpression>(expression))
+        break;
+    case AST::Expression::Kind::Call:
         checkErrorAndVisit(downcast<AST::CallExpression>(expression));
-    else if (is<AST::CommaExpression>(expression))
+        break;
+    case AST::Expression::Kind::Comma:
         checkErrorAndVisit(downcast<AST::CommaExpression>(expression));
-    else if (is<AST::DereferenceExpression>(expression))
+        break;
+    case AST::Expression::Kind::Dereference:
         checkErrorAndVisit(downcast<AST::DereferenceExpression>(expression));
-    else if (is<AST::FloatLiteral>(expression))
+        break;
+    case AST::Expression::Kind::FloatLiteral:
         checkErrorAndVisit(downcast<AST::FloatLiteral>(expression));
-    else if (is<AST::IntegerLiteral>(expression))
+        break;
+    case AST::Expression::Kind::IntegerLiteral:
         checkErrorAndVisit(downcast<AST::IntegerLiteral>(expression));
-    else if (is<AST::LogicalExpression>(expression))
+        break;
+    case AST::Expression::Kind::Logical:
         checkErrorAndVisit(downcast<AST::LogicalExpression>(expression));
-    else if (is<AST::LogicalNotExpression>(expression))
+        break;
+    case AST::Expression::Kind::LogicalNot:
         checkErrorAndVisit(downcast<AST::LogicalNotExpression>(expression));
-    else if (is<AST::MakeArrayReferenceExpression>(expression))
+        break;
+    case AST::Expression::Kind::MakeArrayReference:
         checkErrorAndVisit(downcast<AST::MakeArrayReferenceExpression>(expression));
-    else if (is<AST::MakePointerExpression>(expression))
+        break;
+    case AST::Expression::Kind::MakePointer:
         checkErrorAndVisit(downcast<AST::MakePointerExpression>(expression));
-    else if (is<AST::NullLiteral>(expression))
+        break;
+    case AST::Expression::Kind::NullLiteral:
         checkErrorAndVisit(downcast<AST::NullLiteral>(expression));
-    else if (is<AST::DotExpression>(expression))
+        break;
+    case AST::Expression::Kind::Dot:
         checkErrorAndVisit(downcast<AST::DotExpression>(expression));
-    else if (is<AST::IndexExpression>(expression))
+        break;
+    case AST::Expression::Kind::GlobalVariableReference:
+        checkErrorAndVisit(downcast<AST::GlobalVariableReference>(expression));
+        break;
+    case AST::Expression::Kind::Index:
         checkErrorAndVisit(downcast<AST::IndexExpression>(expression));
-    else if (is<AST::ReadModifyWriteExpression>(expression))
+        break;
+    case AST::Expression::Kind::ReadModifyWrite:
         checkErrorAndVisit(downcast<AST::ReadModifyWriteExpression>(expression));
-    else if (is<AST::TernaryExpression>(expression))
+        break;
+    case AST::Expression::Kind::Ternary:
         checkErrorAndVisit(downcast<AST::TernaryExpression>(expression));
-    else if (is<AST::UnsignedIntegerLiteral>(expression))
+        break;
+    case AST::Expression::Kind::UnsignedIntegerLiteral:
         checkErrorAndVisit(downcast<AST::UnsignedIntegerLiteral>(expression));
-    else if (is<AST::EnumerationMemberLiteral>(expression))
+        break;
+    case AST::Expression::Kind::EnumerationMemberLiteral:
         checkErrorAndVisit(downcast<AST::EnumerationMemberLiteral>(expression));
-    else {
-        ASSERT(is<AST::VariableReference>(expression));
+        break;
+    case AST::Expression::Kind::VariableReference:
         checkErrorAndVisit(downcast<AST::VariableReference>(expression));
+        break;
     }
 }
 
 void Visitor::visit(AST::DotExpression& dotExpression)
 {
     checkErrorAndVisit(static_cast<AST::PropertyAccessExpression&>(dotExpression));
+}
+
+void Visitor::visit(AST::GlobalVariableReference& globalVariableReference)
+{
+    checkErrorAndVisit(globalVariableReference.base());
 }
 
 void Visitor::visit(AST::IndexExpression& indexExpression)
@@ -485,11 +461,7 @@ void Visitor::visit(AST::Fallthrough&)
 
 void Visitor::visit(AST::ForLoop& forLoop)
 {
-    WTF::visit(WTF::makeVisitor([&](AST::VariableDeclarationsStatement& variableDeclarationsStatement) {
-        checkErrorAndVisit(variableDeclarationsStatement);
-    }, [&](UniqueRef<AST::Expression>& expression) {
-        checkErrorAndVisit(expression);
-    }), forLoop.initialization());
+    checkErrorAndVisit(forLoop.initialization());
     if (forLoop.condition())
         checkErrorAndVisit(*forLoop.condition());
     if (forLoop.increment())
@@ -525,14 +497,10 @@ void Visitor::visit(AST::SwitchStatement& switchStatement)
         checkErrorAndVisit(switchCase);
 }
 
-void Visitor::visit(AST::Trap&)
-{
-}
-
 void Visitor::visit(AST::VariableDeclarationsStatement& variableDeclarationsStatement)
 {
     for (auto& variableDeclaration : variableDeclarationsStatement.variableDeclarations())
-        checkErrorAndVisit(variableDeclaration);
+        checkErrorAndVisit(variableDeclaration.get());
 }
 
 void Visitor::visit(AST::WhileLoop& whileLoop)
@@ -562,7 +530,7 @@ void Visitor::visit(AST::CallExpression& callExpression)
     for (auto& argument : callExpression.arguments())
         checkErrorAndVisit(argument);
     if (callExpression.castReturnType())
-        checkErrorAndVisit(callExpression.castReturnType()->get());
+        checkErrorAndVisit(*callExpression.castReturnType());
 }
 
 void Visitor::visit(AST::CommaExpression& commaExpression)
@@ -589,23 +557,21 @@ void Visitor::visit(AST::LogicalNotExpression& logicalNotExpression)
 
 void Visitor::visit(AST::MakeArrayReferenceExpression& makeArrayReferenceExpression)
 {
-    checkErrorAndVisit(makeArrayReferenceExpression.lValue());
+    checkErrorAndVisit(makeArrayReferenceExpression.leftValue());
 }
 
 void Visitor::visit(AST::MakePointerExpression& makePointerExpression)
 {
-    checkErrorAndVisit(makePointerExpression.lValue());
+    checkErrorAndVisit(makePointerExpression.leftValue());
 }
 
 void Visitor::visit(AST::ReadModifyWriteExpression& readModifyWriteExpression)
 {
-    checkErrorAndVisit(readModifyWriteExpression.lValue());
+    checkErrorAndVisit(readModifyWriteExpression.leftValue());
     checkErrorAndVisit(readModifyWriteExpression.oldValue());
     checkErrorAndVisit(readModifyWriteExpression.newValue());
-    if (readModifyWriteExpression.newValueExpression())
-        checkErrorAndVisit(*readModifyWriteExpression.newValueExpression());
-    if (readModifyWriteExpression.resultExpression())
-        checkErrorAndVisit(*readModifyWriteExpression.resultExpression());
+    checkErrorAndVisit(readModifyWriteExpression.newValueExpression());
+    checkErrorAndVisit(readModifyWriteExpression.resultExpression());
 }
 
 void Visitor::visit(AST::TernaryExpression& ternaryExpression)

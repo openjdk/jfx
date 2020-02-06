@@ -90,6 +90,17 @@ static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggi
         return false;
     }
 
+    if (!frame.document()) {
+        PCLOG("   -Frame has no document");
+        return false;
+    }
+
+    if (!frame.document()->frame()) {
+        PCLOG("   -Document is detached from frame");
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
     DocumentLoader* documentLoader = frameLoader.documentLoader();
     if (!documentLoader) {
         PCLOG("   -There is no DocumentLoader object");
@@ -445,6 +456,15 @@ bool PageCache::addIfCacheable(HistoryItem& item, Page* page)
     // Fire the pagehide event in all frames.
     firePageHideEventRecursively(page->mainFrame());
 
+    destroyRenderTree(page->mainFrame());
+
+    // Stop all loads again before checking if we can still cache the page after firing the pagehide
+    // event, since the page may have started ping loads in its pagehide event handler.
+    for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (auto* documentLoader = frame->loader().documentLoader())
+            documentLoader->stopLoading();
+    }
+
     // Check that the page is still page-cacheable after firing the pagehide event. The JS event handlers
     // could have altered the page in a way that could prevent caching.
     if (!canCache(*page)) {
@@ -452,15 +472,13 @@ bool PageCache::addIfCacheable(HistoryItem& item, Page* page)
         return false;
     }
 
-    destroyRenderTree(page->mainFrame());
-
     setPageCacheState(*page, Document::InPageCache);
 
     {
         // Make sure we don't fire any JS events in this scope.
         ScriptDisallowedScope::InMainThread scriptDisallowedScope;
 
-        item.m_cachedPage = std::make_unique<CachedPage>(*page);
+        item.m_cachedPage = makeUnique<CachedPage>(*page);
         item.m_pruningReason = PruningReason::None;
         m_items.add(&item);
     }

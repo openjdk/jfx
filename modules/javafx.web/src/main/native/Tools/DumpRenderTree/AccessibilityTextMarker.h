@@ -76,8 +76,9 @@ public:
     static JSObjectRef makeJSAccessibilityTextMarkerRange(JSContextRef, const AccessibilityTextMarkerRange&);
     bool isEqual(AccessibilityTextMarkerRange*);
 
-private:
     static JSClassRef getJSClass();
+
+private:
 #if SUPPORTS_AX_TEXTMARKERS && PLATFORM(MAC)
     RetainPtr<PlatformTextMarkerRange> m_textMarkerRange;
 #else

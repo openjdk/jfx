@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,16 @@
 #if HAVE(AVASSETREADER)
 #include "ContentType.h"
 #include "ImageDecoderAVFObjC.h"
+#endif
+
+#if USE(QUICK_LOOK)
+#include "PreviewConverter.h"
+#endif
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/AdditionalSystemPreviewTypes.h>
+#else
+#define ADDITIONAL_SYSTEM_PREVIEW_TYPES
 #endif
 
 namespace WebCore {
@@ -173,7 +183,7 @@ static const HashSet<String, ASCIICaseInsensitiveHash>& supportedImageMIMETypesF
     }());
 #else
     static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> supportedImageMIMETypesForEncoding =std::initializer_list<String> {
-#if USE(CG)
+#if USE(CG) || USE(DIRECT2D)
         // FIXME: Add Windows support for all the supported UTI's when a way to convert from MIMEType to UTI reliably is found.
         // For now, only support PNG, JPEG and GIF. See <rdar://problem/6095286>.
         "image/png"_s,
@@ -647,6 +657,11 @@ bool MIMETypeRegistry::canShowMIMEType(const String& mimeType)
     if (isSupportedJavaScriptMIMEType(mimeType) || isSupportedJSONMIMEType(mimeType))
         return true;
 
+#if USE(QUICK_LOOK)
+    if (PreviewConverter::supportsMIMEType(mimeType))
+        return true;
+#endif
+
     if (startsWithLettersIgnoringASCIICase(mimeType, "text/"))
         return !isUnsupportedTextMIMEType(mimeType);
 
@@ -666,7 +681,8 @@ const HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::systemPreview
         "model/vnd.usdz+zip",
         // Unofficial, but supported because we documented them.
         "model/usd",
-        "model/vnd.pixar.usd"
+        "model/vnd.pixar.usd",
+        ADDITIONAL_SYSTEM_PREVIEW_TYPES
     };
     return systemPreviewMIMETypes;
 }

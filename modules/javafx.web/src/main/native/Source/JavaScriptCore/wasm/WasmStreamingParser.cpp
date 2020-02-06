@@ -30,6 +30,7 @@
 
 #include "WasmModuleParser.h"
 #include "WasmSectionParser.h"
+#include <wtf/Optional.h>
 #include <wtf/UnalignedAccess.h>
 
 namespace JSC { namespace Wasm {
@@ -109,6 +110,7 @@ auto StreamingParser::parseSectionSize(uint32_t sectionLength) -> State
 
 auto StreamingParser::parseCodeSectionSize(uint32_t functionCount) -> State
 {
+    m_info->codeSectionSize = m_sectionLength;
     m_functionCount = functionCount;
     m_functionIndex = 0;
     m_codeOffset = m_offset;
@@ -178,7 +180,7 @@ auto StreamingParser::consume(const uint8_t* bytes, size_t bytesSize, size_t& of
     if (m_remaining.size() == requiredSize) {
         Vector<uint8_t> result = WTFMove(m_remaining);
         m_nextOffset += requiredSize;
-        return WTFMove(result);
+        return result;
     }
 
     if (m_remaining.size() > requiredSize) {
@@ -186,7 +188,7 @@ auto StreamingParser::consume(const uint8_t* bytes, size_t bytesSize, size_t& of
         memcpy(result.data(), m_remaining.data(), requiredSize);
         m_remaining.remove(0, requiredSize);
         m_nextOffset += requiredSize;
-        return WTFMove(result);
+        return result;
     }
 
     ASSERT(m_remaining.size() < requiredSize);
@@ -203,7 +205,7 @@ auto StreamingParser::consume(const uint8_t* bytes, size_t bytesSize, size_t& of
     offsetInBytes += usedSize;
     Vector<uint8_t> result = WTFMove(m_remaining);
     m_nextOffset += requiredSize;
-    return WTFMove(result);
+    return result;
 }
 
 auto StreamingParser::consumeVarUInt32(const uint8_t* bytes, size_t bytesSize, size_t& offsetInBytes, IsEndOfStream isEndOfStream) -> Expected<uint32_t, State>

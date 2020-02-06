@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "JSCJSValueInlines.h"
 #include "WasmFunctionParser.h"
 #include <wtf/CommaPrinter.h>
 
@@ -78,12 +79,14 @@ public:
     typedef String ErrorType;
     typedef Unexpected<ErrorType> UnexpectedResult;
     typedef Expected<void, ErrorType> Result;
-    typedef Type ExpressionType;
+    using ExpressionType = Type;
+    using ExpressionList = Vector<ExpressionType, 1>;
+    using Stack = ExpressionList;
     typedef ControlData ControlType;
-    typedef Vector<ExpressionType, 1> ExpressionList;
     typedef FunctionParser<Validate>::ControlEntry ControlEntry;
 
     static constexpr ExpressionType emptyExpression() { return Void; }
+    Stack createStack() { return Stack(); }
 
     template <typename ...Args>
     NEVER_INLINE UnexpectedResult WARN_UNUSED_RETURN fail(Args... args) const
@@ -100,6 +103,16 @@ public:
     Result WARN_UNUSED_RETURN addLocal(Type, uint32_t);
     ExpressionType addConstant(Type type, uint64_t) { return type; }
 
+    // References
+    Result WARN_UNUSED_RETURN addRefIsNull(ExpressionType& value, ExpressionType& result);
+    Result WARN_UNUSED_RETURN addRefFunc(uint32_t index, ExpressionType& result);
+
+    // Tables
+    Result WARN_UNUSED_RETURN addTableGet(unsigned, ExpressionType& index, ExpressionType& result);
+    Result WARN_UNUSED_RETURN addTableSet(unsigned, ExpressionType& index, ExpressionType& value);
+    Result WARN_UNUSED_RETURN addTableSize(unsigned, ExpressionType& result);
+    Result WARN_UNUSED_RETURN addTableGrow(unsigned, ExpressionType& fill, ExpressionType& delta, ExpressionType& result);
+    Result WARN_UNUSED_RETURN addTableFill(unsigned, ExpressionType& offset, ExpressionType& fill, ExpressionType& count);
     // Locals
     Result WARN_UNUSED_RETURN getLocal(uint32_t index, ExpressionType& result);
     Result WARN_UNUSED_RETURN setLocal(uint32_t index, ExpressionType value);
@@ -122,15 +135,15 @@ public:
     // Control flow
     ControlData WARN_UNUSED_RETURN addTopLevel(Type signature);
     ControlData WARN_UNUSED_RETURN addBlock(Type signature);
-    ControlData WARN_UNUSED_RETURN addLoop(Type signature);
+    ControlData WARN_UNUSED_RETURN addLoop(Type signature, const Stack&, uint32_t);
     Result WARN_UNUSED_RETURN addIf(ExpressionType condition, Type signature, ControlData& result);
-    Result WARN_UNUSED_RETURN addElse(ControlData&, const ExpressionList&);
+    Result WARN_UNUSED_RETURN addElse(ControlData&, const Stack&);
     Result WARN_UNUSED_RETURN addElseToUnreachable(ControlData&);
 
-    Result WARN_UNUSED_RETURN addReturn(ControlData& topLevel, const ExpressionList& returnValues);
-    Result WARN_UNUSED_RETURN addBranch(ControlData&, ExpressionType condition, const ExpressionList& expressionStack);
-    Result WARN_UNUSED_RETURN addSwitch(ExpressionType condition, const Vector<ControlData*>& targets, ControlData& defaultTarget, const ExpressionList& expressionStack);
-    Result WARN_UNUSED_RETURN endBlock(ControlEntry&, ExpressionList& expressionStack);
+    Result WARN_UNUSED_RETURN addReturn(ControlData& topLevel, const Stack& returnValues);
+    Result WARN_UNUSED_RETURN addBranch(ControlData&, ExpressionType condition, const Stack& expressionStack);
+    Result WARN_UNUSED_RETURN addSwitch(ExpressionType condition, const Vector<ControlData*>& targets, ControlData& defaultTarget, const Stack& expressionStack);
+    Result WARN_UNUSED_RETURN endBlock(ControlEntry&, Stack& expressionStack);
     Result WARN_UNUSED_RETURN addEndToUnreachable(ControlEntry&);
     Result WARN_UNUSED_RETURN addGrowMemory(ExpressionType delta, ExpressionType& result);
     Result WARN_UNUSED_RETURN addCurrentMemory(ExpressionType& result);
@@ -139,7 +152,7 @@ public:
 
     // Calls
     Result WARN_UNUSED_RETURN addCall(unsigned calleeIndex, const Signature&, const Vector<ExpressionType>& args, ExpressionType& result);
-    Result WARN_UNUSED_RETURN addCallIndirect(const Signature&, const Vector<ExpressionType>& args, ExpressionType& result);
+    Result WARN_UNUSED_RETURN addCallIndirect(unsigned tableIndex, const Signature&, const Vector<ExpressionType>& args, ExpressionType& result);
 
     ALWAYS_INLINE void didKill(ExpressionType) { }
 
@@ -150,13 +163,13 @@ public:
     {
     }
 
-    void dump(const Vector<ControlEntry>&, const ExpressionList*);
+    void dump(const Vector<ControlEntry>&, const Stack*);
     void setParser(FunctionParser<Validate>*) { }
 
 private:
-    Result WARN_UNUSED_RETURN unify(const ExpressionList&, const ControlData&);
+    Result WARN_UNUSED_RETURN unify(const Stack&, const ControlData&);
 
-    Result WARN_UNUSED_RETURN checkBranchTarget(ControlData& target, const ExpressionList& expressionStack);
+    Result WARN_UNUSED_RETURN checkBranchTarget(ControlData& target, const Stack& expressionStack);
 
     Vector<Type> m_locals;
     const ModuleInformation& m_module;
@@ -169,10 +182,77 @@ auto Validate::addArguments(const Signature& signature) -> Result
     return { };
 }
 
+auto Validate::addTableGet(unsigned tableIndex, ExpressionType& index, ExpressionType& result) -> Result
+{
+    WASM_VALIDATOR_FAIL_IF(tableIndex >= m_module.tableCount(), "table index ", tableIndex, " is invalid, limit is ", m_module.tableCount());
+    result = m_module.tables[tableIndex].wasmType();
+    WASM_VALIDATOR_FAIL_IF(Type::I32 != index, "table.get index to type ", index, " expected ", Type::I32);
+
+    return { };
+}
+
+auto Validate::addTableSet(unsigned tableIndex, ExpressionType& index, ExpressionType& value) -> Result
+{
+    WASM_VALIDATOR_FAIL_IF(tableIndex >= m_module.tableCount(), "table index ", tableIndex, " is invalid, limit is ", m_module.tableCount());
+    auto type = m_module.tables[tableIndex].wasmType();
+    WASM_VALIDATOR_FAIL_IF(Type::I32 != index, "table.set index to type ", index, " expected ", Type::I32);
+    WASM_VALIDATOR_FAIL_IF(!isSubtype(value, type), "table.set value to type ", value, " expected ", type);
+    RELEASE_ASSERT(m_module.tables[tableIndex].type() == TableElementType::Anyref || m_module.tables[tableIndex].type() == TableElementType::Funcref);
+
+    return { };
+}
+
+auto Validate::addTableSize(unsigned tableIndex, ExpressionType& result) -> Result
+{
+    result = Type::I32;
+    WASM_VALIDATOR_FAIL_IF(tableIndex >= m_module.tableCount(), "table index ", tableIndex, " is invalid, limit is ", m_module.tableCount());
+
+    return { };
+}
+
+auto Validate::addTableGrow(unsigned tableIndex, ExpressionType& fill, ExpressionType& delta, ExpressionType& result) -> Result
+{
+    result = Type::I32;
+    WASM_VALIDATOR_FAIL_IF(tableIndex >= m_module.tableCount(), "table index ", tableIndex, " is invalid, limit is ", m_module.tableCount());
+    WASM_VALIDATOR_FAIL_IF(!isSubtype(fill, m_module.tables[tableIndex].wasmType()), "table.grow expects fill value of type ", m_module.tables[tableIndex].wasmType(), " got ", fill);
+    WASM_VALIDATOR_FAIL_IF(Type::I32 != delta, "table.grow expects an i32 delta value, got ", delta);
+
+    return { };
+}
+
+auto Validate::addTableFill(unsigned tableIndex, ExpressionType& offset, ExpressionType& fill, ExpressionType& count) -> Result
+{
+    WASM_VALIDATOR_FAIL_IF(tableIndex >= m_module.tableCount(), "table index ", tableIndex, " is invalid, limit is ", m_module.tableCount());
+    WASM_VALIDATOR_FAIL_IF(!isSubtype(fill, m_module.tables[tableIndex].wasmType()), "table.fill expects fill value of type ", m_module.tables[tableIndex].wasmType(), " got ", fill);
+    WASM_VALIDATOR_FAIL_IF(Type::I32 != offset, "table.fill expects an i32 offset value, got ", offset);
+    WASM_VALIDATOR_FAIL_IF(Type::I32 != count, "table.fill expects an i32 count value, got ", count);
+
+    return { };
+}
+
+auto Validate::addRefIsNull(ExpressionType& value, ExpressionType& result) -> Result
+{
+    result = Type::I32;
+    WASM_VALIDATOR_FAIL_IF(!isSubtype(value, Type::Anyref), "ref.is_null to type ", value, " expected ", Type::Anyref);
+
+    return { };
+}
+
+auto Validate::addRefFunc(uint32_t index, ExpressionType& result) -> Result
+{
+    result = Type::Funcref;
+    WASM_VALIDATOR_FAIL_IF(index >= m_module.functionIndexSpaceSize(), "ref.func index ", index, " is too large, max is ", m_module.functionIndexSpaceSize());
+    m_module.addReferencedFunction(index);
+
+    return { };
+}
+
 auto Validate::addLocal(Type type, uint32_t count) -> Result
 {
-    size_t size = m_locals.size() + count;
-    WASM_VALIDATOR_FAIL_IF(!m_locals.tryReserveCapacity(size), "can't allocate memory for ", size, " locals");
+    size_t newSize = m_locals.size() + count;
+    ASSERT(!(CheckedUint32(count) + m_locals.size()).hasOverflowed());
+    ASSERT(newSize <= maxFunctionLocals);
+    WASM_VALIDATOR_FAIL_IF(!m_locals.tryReserveCapacity(newSize), "can't allocate memory for ", newSize, " locals");
 
     for (uint32_t i = 0; i < count; ++i)
         m_locals.uncheckedAppend(type);
@@ -190,7 +270,7 @@ auto Validate::setLocal(uint32_t index, ExpressionType value) -> Result
 {
     ExpressionType localType;
     WASM_FAIL_IF_HELPER_FAILS(getLocal(index, localType));
-    WASM_VALIDATOR_FAIL_IF(localType != value, "set_local to type ", value, " expected ", localType);
+    WASM_VALIDATOR_FAIL_IF(!isSubtype(value, localType), "set_local to type ", value, " expected ", localType);
     return { };
 }
 
@@ -223,7 +303,7 @@ Validate::ControlType Validate::addBlock(Type signature)
     return ControlData(BlockType::Block, signature);
 }
 
-Validate::ControlType Validate::addLoop(Type signature)
+Validate::ControlType Validate::addLoop(Type signature, const Stack&, uint32_t)
 {
     return ControlData(BlockType::Loop, signature);
 }
@@ -243,7 +323,7 @@ auto Validate::addIf(ExpressionType condition, Type signature, ControlType& resu
     return { };
 }
 
-auto Validate::addElse(ControlType& current, const ExpressionList& values) -> Result
+auto Validate::addElse(ControlType& current, const Stack& values) -> Result
 {
     WASM_FAIL_IF_HELPER_FAILS(unify(values, current));
     return addElseToUnreachable(current);
@@ -266,7 +346,7 @@ auto Validate::addReturn(ControlType& topLevel, const ExpressionList& returnValu
     return { };
 }
 
-auto Validate::checkBranchTarget(ControlType& target, const ExpressionList& expressionStack) -> Result
+auto Validate::checkBranchTarget(ControlType& target, const Stack& expressionStack) -> Result
 {
     if (target.branchTargetSignature() == Void)
         return { };
@@ -277,14 +357,14 @@ auto Validate::checkBranchTarget(ControlType& target, const ExpressionList& expr
     return { };
 }
 
-auto Validate::addBranch(ControlType& target, ExpressionType condition, const ExpressionList& stack) -> Result
+auto Validate::addBranch(ControlType& target, ExpressionType condition, const Stack& stack) -> Result
 {
     // Void means this is an unconditional branch.
     WASM_VALIDATOR_FAIL_IF(condition != Void && condition != I32, "conditional branch with non-i32 condition ", condition);
     return checkBranchTarget(target, stack);
 }
 
-auto Validate::addSwitch(ExpressionType condition, const Vector<ControlData*>& targets, ControlData& defaultTarget, const ExpressionList& expressionStack) -> Result
+auto Validate::addSwitch(ExpressionType condition, const Vector<ControlData*>& targets, ControlData& defaultTarget, const Stack& expressionStack) -> Result
 {
     WASM_VALIDATOR_FAIL_IF(condition != I32, "br_table with non-i32 condition ", condition);
 
@@ -307,7 +387,7 @@ auto Validate::addCurrentMemory(ExpressionType& result) -> Result
     return { };
 }
 
-auto Validate::endBlock(ControlEntry& entry, ExpressionList& stack) -> Result
+auto Validate::endBlock(ControlEntry& entry, Stack& stack) -> Result
 {
     WASM_FAIL_IF_HELPER_FAILS(unify(stack, entry.controlData));
     return addEndToUnreachable(entry);
@@ -328,19 +408,21 @@ auto Validate::addCall(unsigned, const Signature& signature, const Vector<Expres
     WASM_VALIDATOR_FAIL_IF(signature.argumentCount() != args.size(), "arity mismatch in call, got ", args.size(), " arguments, expected ", signature.argumentCount());
 
     for (unsigned i = 0; i < args.size(); ++i)
-        WASM_VALIDATOR_FAIL_IF(args[i] != signature.argument(i), "argument type mismatch in call, got ", args[i], ", expected ", signature.argument(i));
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(args[i], signature.argument(i)), "argument type mismatch in call, got ", args[i], ", expected ", signature.argument(i));
 
     result = signature.returnType();
     return { };
 }
 
-auto Validate::addCallIndirect(const Signature& signature, const Vector<ExpressionType>& args, ExpressionType& result) -> Result
+auto Validate::addCallIndirect(unsigned tableIndex, const Signature& signature, const Vector<ExpressionType>& args, ExpressionType& result) -> Result
 {
+    RELEASE_ASSERT(tableIndex < m_module.tableCount());
+    RELEASE_ASSERT(m_module.tables[tableIndex].type() == TableElementType::Funcref);
     const auto argumentCount = signature.argumentCount();
     WASM_VALIDATOR_FAIL_IF(argumentCount != args.size() - 1, "arity mismatch in call_indirect, got ", args.size() - 1, " arguments, expected ", argumentCount);
 
     for (unsigned i = 0; i < argumentCount; ++i)
-        WASM_VALIDATOR_FAIL_IF(args[i] != signature.argument(i), "argument type mismatch in call_indirect, got ", args[i], ", expected ", signature.argument(i));
+        WASM_VALIDATOR_FAIL_IF(!isSubtype(args[i], signature.argument(i)), "argument type mismatch in call_indirect, got ", args[i], ", expected ", signature.argument(i));
 
     WASM_VALIDATOR_FAIL_IF(args.last() != I32, "non-i32 call_indirect index ", args.last());
 
@@ -348,7 +430,7 @@ auto Validate::addCallIndirect(const Signature& signature, const Vector<Expressi
     return { };
 }
 
-auto Validate::unify(const ExpressionList& values, const ControlType& block) -> Result
+auto Validate::unify(const Stack& values, const ControlType& block) -> Result
 {
     if (block.signature() == Void) {
         WASM_VALIDATOR_FAIL_IF(!values.isEmpty(), "void block should end with an empty stack");
@@ -356,18 +438,18 @@ auto Validate::unify(const ExpressionList& values, const ControlType& block) -> 
     }
 
     WASM_VALIDATOR_FAIL_IF(values.size() != 1, "block with type: ", block.signature(), " ends with a stack containing more than one value");
-    WASM_VALIDATOR_FAIL_IF(values[0] != block.signature(), "control flow returns with unexpected type");
+    WASM_VALIDATOR_FAIL_IF(!isSubtype(values[0], block.signature()), "control flow returns with unexpected type");
     return { };
 }
 
-static void dumpExpressionStack(const CommaPrinter& comma, const Validate::ExpressionList& expressionStack)
+static void dumpExpressionStack(const CommaPrinter& comma, const Validate::Stack& expressionStack)
 {
     dataLog(comma, " ExpressionStack:");
     for (const auto& expression : expressionStack)
         dataLog(comma, makeString(expression));
 }
 
-void Validate::dump(const Vector<ControlEntry>& controlStack, const ExpressionList* expressionStack)
+void Validate::dump(const Vector<ControlEntry>& controlStack, const Stack* expressionStack)
 {
     for (size_t i = controlStack.size(); i--;) {
         dataLog("  ", controlStack[i].controlData);

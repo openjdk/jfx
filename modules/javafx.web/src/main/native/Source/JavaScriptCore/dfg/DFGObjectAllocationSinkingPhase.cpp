@@ -840,7 +840,7 @@ private:
         case NewGeneratorFunction:
         case NewAsyncGeneratorFunction:
         case NewAsyncFunction: {
-            if (isStillValid(node->castOperand<FunctionExecutable*>()->singletonFunction())) {
+            if (isStillValid(node->castOperand<FunctionExecutable*>())) {
                 m_heap.escape(node->child1().node());
                 break;
             }
@@ -868,7 +868,7 @@ private:
         }
 
         case CreateActivation: {
-            if (isStillValid(node->castOperand<SymbolTable*>()->singletonScope())) {
+            if (isStillValid(node->castOperand<SymbolTable*>())) {
                 m_heap.escape(node->child1().node());
                 break;
             }
@@ -1268,10 +1268,10 @@ private:
 
             forEachEscapee([&] (HashMap<Node*, Allocation>& escapees, Node* where) {
                 for (Node* allocation : escapees.keys()) {
-                    InlineCallFrame* inlineCallFrame = allocation->origin.semantic.inlineCallFrame;
+                    InlineCallFrame* inlineCallFrame = allocation->origin.semantic.inlineCallFrame();
                     if (!inlineCallFrame)
                         continue;
-                    if ((inlineCallFrame->isClosureCall || inlineCallFrame->isVarargs()) && inlineCallFrame != where->origin.semantic.inlineCallFrame)
+                    if ((inlineCallFrame->isClosureCall || inlineCallFrame->isVarargs()) && inlineCallFrame != where->origin.semantic.inlineCallFrame())
                         m_sinkCandidates.remove(allocation);
                 }
             });
@@ -2266,10 +2266,21 @@ private:
         case NamedPropertyPLoc: {
             Allocation& allocation = m_heap.getAllocation(location.base());
 
-            Vector<RegisteredStructure> structures;
-            structures.appendRange(allocation.structures().begin(), allocation.structures().end());
             unsigned identifierNumber = location.info();
             UniquedStringImpl* uid = m_graph.identifiers()[identifierNumber];
+
+            Vector<RegisteredStructure> structures;
+            for (RegisteredStructure structure : allocation.structures()) {
+                // This structure set is conservative. This set can include Structure which does not have a legit property.
+                // We filter out such an apparently inappropriate structures here since MultiPutByOffset assumes all the structures
+                // have valid corresponding offset for the given property.
+                if (structure->getConcurrently(uid) != invalidOffset)
+                    structures.append(structure);
+            }
+
+            // Since we filter structures, it is possible that we no longer have any structures here. In this case, we emit ForceOSRExit.
+            if (structures.isEmpty())
+                return m_graph.addNode(ForceOSRExit, origin.takeValidExit(canExit));
 
             std::sort(
                 structures.begin(),
@@ -2382,10 +2393,16 @@ private:
     // different answers. It turns out that this analysis works OK regardless of what this
     // returns but breaks badly if this changes its mind for any particular InferredValue. This
     // method protects us from that.
-    bool isStillValid(InferredValue* value)
+    bool isStillValid(SymbolTable* value)
     {
-        return m_validInferredValues.add(value, value->isStillValid()).iterator->value;
+        return m_validInferredValues.add(value, value->singleton().isStillValid()).iterator->value;
     }
+
+    bool isStillValid(FunctionExecutable* value)
+    {
+        return m_validInferredValues.add(value, value->singleton().isStillValid()).iterator->value;
+    }
+
 
     SSACalculator m_pointerSSA;
     SSACalculator m_allocationSSA;
@@ -2397,7 +2414,7 @@ private:
     InsertionSet m_insertionSet;
     CombinedLiveness m_combinedLiveness;
 
-    HashMap<InferredValue*, bool> m_validInferredValues;
+    HashMap<JSCell*, bool> m_validInferredValues;
 
     HashMap<Node*, Node*> m_materializationToEscapee;
     HashMap<Node*, Vector<Node*>> m_materializationSiteToMaterializations;

@@ -44,8 +44,11 @@
 #include "SecurityOrigin.h"
 #include "TextResourceDecoder.h"
 #include "ThreadableLoader.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(EventSource);
 
 const uint64_t EventSource::defaultReconnectDelay = 3000;
 
@@ -77,7 +80,7 @@ ExceptionOr<Ref<EventSource>> EventSource::create(ScriptExecutionContext& contex
     source->setPendingActivity(source.get());
     source->scheduleInitialConnect();
     source->suspendIfNeeded();
-    return WTFMove(source);
+    return source;
 }
 
 EventSource::~EventSource()
@@ -346,7 +349,8 @@ void EventSource::parseEventStreamLine(unsigned position, Optional<unsigned> fie
         m_eventName = { &m_receiveBuffer[position], valueLength };
     else if (field == "id") {
         StringView parsedEventId = { &m_receiveBuffer[position], valueLength };
-        if (!parsedEventId.contains('\0'))
+        constexpr UChar nullCharacter = '\0';
+        if (!parsedEventId.contains(nullCharacter))
             m_currentlyParsedEventId = parsedEventId.toString();
     } else if (field == "retry") {
         if (!valueLength)

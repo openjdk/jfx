@@ -27,7 +27,8 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLNode.h"
+#include "WHLSLDefaultDelete.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
@@ -36,11 +37,36 @@ namespace WHLSL {
 
 namespace AST {
 
-class Type : public Node {
-public:
-    Type() = default;
+class Type {
+    WTF_MAKE_FAST_ALLOCATED;
 
-    virtual ~Type() = default;
+protected:
+    ~Type() = default;
+
+public:
+    enum class Kind : uint8_t {
+        // UnnamedTypes
+        TypeReference,
+        Pointer,
+        ArrayReference,
+        Array,
+        // NamedTypes
+        TypeDefinition,
+        StructureDefinition,
+        EnumerationDefinition,
+        NativeTypeDeclaration,
+        // ResolvableTypes
+        FloatLiteral,
+        IntegerLiteral,
+        NullLiteral,
+        UnsignedIntegerLiteral,
+    };
+
+    Type(Kind kind)
+        : m_kind(kind)
+    { }
+    static void destroy(Type&);
+    static void destruct(Type&);
 
     explicit Type(const Type&) = delete;
     Type(Type&&) = default;
@@ -48,11 +74,36 @@ public:
     Type& operator=(const Type&) = delete;
     Type& operator=(Type&&) = default;
 
-    virtual bool isNamedType() const { return false; }
-    virtual bool isUnnamedType() const { return false; }
-    virtual bool isResolvableType() const { return false; }
+    Kind kind() const { return m_kind; }
+
+    bool isUnnamedType() const { return kind() >= Kind::TypeReference && kind() <= Kind::Array; }
+    bool isNamedType() const { return kind() >= Kind::TypeDefinition && kind() <= Kind::NativeTypeDeclaration; }
+    bool isResolvableType() const { return kind() >= Kind::FloatLiteral && kind() <= Kind::UnsignedIntegerLiteral; }
+
+    bool isTypeReference() const { return kind() == Kind::TypeReference; }
+    bool isPointerType() const { return kind() == Kind::Pointer; }
+    bool isArrayReferenceType() const { return kind() == Kind::ArrayReference; }
+    bool isArrayType() const { return kind() == Kind::Array; }
+    bool isReferenceType() const { return isPointerType() || isArrayReferenceType(); }
+
+    bool isTypeDefinition() const { return kind() == Kind::TypeDefinition; }
+    bool isStructureDefinition() const { return kind() == Kind::StructureDefinition; }
+    bool isEnumerationDefinition() const { return kind() == Kind::EnumerationDefinition; }
+    bool isNativeTypeDeclaration() const { return kind() == Kind::NativeTypeDeclaration; }
+
+    bool isFloatLiteralType() const { return kind() == Kind::FloatLiteral; }
+    bool isIntegerLiteralType() const { return kind() == Kind::IntegerLiteral; }
+    bool isNullLiteralType() const { return kind() == Kind::NullLiteral; }
+    bool isUnsignedIntegerLiteralType() const { return kind() == Kind::UnsignedIntegerLiteral; }
+
+    Type& unifyNode();
+    const Type& unifyNode() const
+    {
+        return const_cast<Type*>(this)->unifyNode();
+    }
 
 private:
+    Kind m_kind;
 };
 
 } // namespace AST
@@ -60,6 +111,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(Type)
 
 #define SPECIALIZE_TYPE_TRAITS_WHLSL_TYPE(ToValueTypeName, predicate) \
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WHLSL::AST::ToValueTypeName) \

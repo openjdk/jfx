@@ -51,10 +51,9 @@ public:
     void makeRepresentation(DocumentLoader*) override;
     void forceLayoutForNonHTML() override;
 
-    Optional<uint64_t> pageID() const final;
-    Optional<uint64_t> frameID() const final;
+    Optional<PageIdentifier> pageID() const final;
+    Optional<FrameIdentifier> frameID() const final;
     PAL::SessionID sessionID() const final;
-
 
     void setCopiesOnScroll() override;
 
@@ -84,7 +83,7 @@ public:
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
     void dispatchDidCommitLoad(Optional<HasInsecureContent>) override;
-    void dispatchDidFailProvisionalLoad(const ResourceError&) override;
+    void dispatchDidFailProvisionalLoad(const ResourceError&, WillContinueLoading) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
     void dispatchDidFinishLoad() override;
@@ -93,7 +92,7 @@ public:
     Frame* dispatchCreatePage(const NavigationAction&) override;
     void dispatchShow() override;
 
-    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, FramePolicyFunction&&) override;
+    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String& downloadAttribute, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, PolicyCheckIdentifier, FramePolicyFunction&&) override;
     void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) override;
     void cancelPolicyCheck() override;
@@ -112,7 +111,6 @@ public:
                                const String& referrer) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
     RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
-    void recreatePlugin(Widget*) override {}
     void redirectDataToPlugin(Widget&) override;
     RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) override;
     String overrideMediaType() const override;
@@ -182,12 +180,11 @@ public:
     void savePlatformDataToCachedFrame(CachedFrame*) override;
     void transitionToCommittedFromCachedFrame(CachedFrame*) override;
     void transitionToCommittedForNewPage() override;
+    void didSaveToPageCache() override;
+    void didRestoreFromPageCache() override;
 
     bool canCachePage() const override;
     void convertMainResourceLoadToDownload(DocumentLoader*, PAL::SessionID, const ResourceRequest&, const ResourceResponse&) override;
-
-    void didSaveToPageCache() override;
-    void didRestoreFromPageCache() override;
 
     void dispatchDidBecomeFrameset(bool) override; // Can change due to navigation or DOM modification override.
 

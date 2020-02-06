@@ -27,9 +27,9 @@
 
 #if ENABLE(WEBGPU)
 
+#include "WHLSLCodeLocation.h"
 #include "WHLSLEntryPointType.h"
-#include "WHLSLLexer.h"
-#include "WHLSLNode.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Optional.h>
 
 namespace WebCore {
@@ -43,10 +43,11 @@ namespace AST {
 class FunctionDefinition;
 class UnnamedType;
 
-class BaseSemantic : public Node {
+class BaseSemantic {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    BaseSemantic(Lexer::Token&& origin)
-        : m_origin(WTFMove(origin))
+    BaseSemantic(CodeLocation location)
+        : m_codeLocation(location)
     {
     }
 
@@ -64,7 +65,7 @@ public:
     virtual bool isAcceptableForShaderItemDirection(ShaderItemDirection, const Optional<EntryPointType>&) const = 0;
 
 private:
-    Lexer::Token m_origin;
+    CodeLocation m_codeLocation;
 };
 
 } // namespace AST

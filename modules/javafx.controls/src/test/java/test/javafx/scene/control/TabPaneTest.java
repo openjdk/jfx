@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -461,6 +461,23 @@ public class TabPaneTest {
 
         tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
         assertSame(TabPane.TabDragPolicy.FIXED, tabPane.getTabDragPolicy());
+    }
+
+    @Test public void tabDragPolicyReorderAndAsymmetricMouseEvent() {
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
+        tabPane.getTabs().add(tab1);
+        tabPane.getTabs().add(tab2);
+        root.getChildren().add(tabPane);
+        show();
+
+        root.layout();
+
+        double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
+        double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
+
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+75, yval+20));
+        tk.firePulse();
     }
 
     @Test public void setRotateGraphicAndSeeValueIsReflectedInModel() {

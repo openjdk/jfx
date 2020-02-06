@@ -30,11 +30,9 @@
 
 #include "InlineFormattingState.h"
 #include "InlineLineBreaker.h"
-#include "InlineRunProvider.h"
+#include "InlineTextItem.h"
 #include "LayoutBox.h"
 #include "LayoutContainer.h"
-#include "LayoutInlineBox.h"
-#include "LayoutInlineContainer.h"
 #include "LayoutState.h"
 #include "Logging.h"
 #include "Textutil.h"
@@ -51,13 +49,13 @@ InlineFormattingContext::InlineFormattingContext(const Box& formattingContextRoo
 {
 }
 
-static inline const Box* nextInPreOrder(const Box& layoutBox, const Container& root)
+static inline const Box* nextInPreOrder(const Box& layoutBox, const Container& stayWithin)
 {
     const Box* nextInPreOrder = nullptr;
     if (!layoutBox.establishesFormattingContext() && is<Container>(layoutBox) && downcast<Container>(layoutBox).hasInFlowOrFloatingChild())
         return downcast<Container>(layoutBox).firstInFlowOrFloatingChild();
 
-    for (nextInPreOrder = &layoutBox; nextInPreOrder && nextInPreOrder != &root; nextInPreOrder = nextInPreOrder->parent()) {
+    for (nextInPreOrder = &layoutBox; nextInPreOrder && nextInPreOrder != &stayWithin; nextInPreOrder = nextInPreOrder->parent()) {
         if (auto* nextSibling = nextInPreOrder->nextInFlowOrFloatingSibling())
             return nextSibling;
     }
@@ -69,120 +67,128 @@ void InlineFormattingContext::layout() const
     if (!is<Container>(root()))
         return;
 
-    LOG_WITH_STREAM(FormattingContextLayout, stream << "[Start] -> inline formatting context -> formatting root(" << &root() << ")");
     auto& root = downcast<Container>(this->root());
-    auto usedValues = UsedHorizontalValues { layoutState().displayBoxForLayoutBox(root).contentBoxWidth() };
+    if (!root.hasInFlowOrFloatingChild())
+        return;
+
+    LOG_WITH_STREAM(FormattingContextLayout, stream << "[Start] -> inline formatting context -> formatting root(" << &root << ")");
+    auto availableWidth = layoutState().displayBoxForLayoutBox(root).contentBoxWidth();
+    auto usedValues = UsedHorizontalValues { availableWidth };
     auto* layoutBox = root.firstInFlowOrFloatingChild();
     // Compute width/height for non-text content and margin/border/padding for inline containers.
     while (layoutBox) {
         if (layoutBox->establishesFormattingContext())
             layoutFormattingContextRoot(*layoutBox, usedValues);
-        else if (is<Container>(*layoutBox)) {
-            auto& inlineContainer = downcast<InlineContainer>(*layoutBox);
-            computeMargin(inlineContainer, usedValues);
-            computeBorderAndPadding(inlineContainer, usedValues);
-        } else if (layoutBox->isReplaced())
+        else if (is<Container>(*layoutBox))
+            computeMarginBorderAndPaddingForInlineContainer(downcast<Container>(*layoutBox), usedValues);
+        else if (layoutBox->isReplaced())
             computeWidthAndHeightForReplacedInlineBox(*layoutBox, usedValues);
+        else {
+            ASSERT(layoutBox->isInlineLevelBox());
+            initializeMarginBorderAndPaddingForGenericInlineBox(*layoutBox);
+        }
         layoutBox = nextInPreOrder(*layoutBox, root);
     }
 
-    InlineRunProvider inlineRunProvider;
-    collectInlineContent(inlineRunProvider);
-    LineLayout(*this).layout(inlineRunProvider);
+    // FIXME: This is such a waste when intrinsic width computation already collected the inline items.
+    formattingState().inlineItems().clear();
+    formattingState().inlineRuns().clear();
+
+    collectInlineContent();
+    InlineLayout(*this).layout(formattingState().inlineItems(), availableWidth);
     LOG_WITH_STREAM(FormattingContextLayout, stream << "[End] -> inline formatting context -> formatting root(" << &root << ")");
 }
 
-void InlineFormattingContext::computeIntrinsicWidthConstraints() const
+FormattingContext::IntrinsicWidthConstraints InlineFormattingContext::computedIntrinsicWidthConstraints() const
 {
-    ASSERT(is<Container>(root()));
-
     auto& layoutState = this->layoutState();
-    auto& root = downcast<Container>(this->root());
-    ASSERT(!layoutState.formattingStateForBox(root).intrinsicWidthConstraints(root));
+    ASSERT(!formattingState().intrinsicWidthConstraints());
 
+    if (!is<Container>(root()) || !downcast<Container>(root()).hasInFlowOrFloatingChild()) {
+        auto constraints = Geometry::constrainByMinMaxWidth(root(), { });
+        formattingState().setIntrinsicWidthConstraints(constraints);
+        return constraints;
+    }
+
+    auto& root = downcast<Container>(this->root());
     Vector<const Box*> formattingContextRootList;
     auto usedValues = UsedHorizontalValues { };
     auto* layoutBox = root.firstInFlowOrFloatingChild();
     while (layoutBox) {
         if (layoutBox->establishesFormattingContext()) {
             formattingContextRootList.append(layoutBox);
-            if (layoutBox->isFloatingPositioned())
-                computeIntrinsicWidthForFloatBox(*layoutBox);
-            else if (layoutBox->isInlineBlockBox())
-                computeIntrinsicWidthForInlineBlock(*layoutBox);
-            else
-                ASSERT_NOT_REACHED();
+            computeIntrinsicWidthForFormattingRoot(*layoutBox);
         } else if (layoutBox->isReplaced() || is<Container>(*layoutBox)) {
             computeBorderAndPadding(*layoutBox, usedValues);
             // inline-block and replaced.
-            auto needsWidthComputation = layoutBox->isReplaced() || layoutBox->establishesFormattingContext();
+            auto needsWidthComputation = layoutBox->isReplaced();
             if (needsWidthComputation)
                 computeWidthAndMargin(*layoutBox, usedValues);
             else {
                 // Simple inline container with no intrinsic width <span>.
-                computeMargin(*layoutBox, usedValues);
+                computeHorizontalMargin(*layoutBox, usedValues);
             }
         }
         layoutBox = nextInPreOrder(*layoutBox, root);
     }
 
-    InlineRunProvider inlineRunProvider;
-    collectInlineContent(inlineRunProvider);
+    collectInlineContent();
 
     auto maximumLineWidth = [&](auto availableWidth) {
-        LayoutUnit maxContentLogicalRight;
-        auto lineBreaker = InlineLineBreaker { layoutState, formattingState().inlineContent(), inlineRunProvider.runs() };
-        LayoutUnit lineLogicalRight;
-
         // Switch to the min/max formatting root width values before formatting the lines.
         for (auto* formattingRoot : formattingContextRootList) {
-            auto intrinsicWidths = layoutState.formattingStateForBox(*formattingRoot).intrinsicWidthConstraints(*formattingRoot);
-            layoutState.displayBoxForLayoutBox(*formattingRoot).setContentBoxWidth(availableWidth ? intrinsicWidths->maximum : intrinsicWidths->minimum);
+            auto intrinsicWidths = layoutState.formattingStateForBox(*formattingRoot).intrinsicWidthConstraintsForBox(*formattingRoot);
+            auto& displayBox = layoutState.displayBoxForLayoutBox(*formattingRoot);
+            auto contentWidth = (availableWidth ? intrinsicWidths->maximum : intrinsicWidths->minimum) - displayBox.horizontalMarginBorderAndPadding();
+            displayBox.setContentBoxWidth(contentWidth);
         }
-
-        while (auto run = lineBreaker.nextRun(lineLogicalRight, availableWidth, !lineLogicalRight)) {
-            if (run->position == InlineLineBreaker::Run::Position::LineBegin)
-                lineLogicalRight = 0;
-            lineLogicalRight += run->width;
-
-            maxContentLogicalRight = std::max(maxContentLogicalRight, lineLogicalRight);
-        }
-        return maxContentLogicalRight;
+        return InlineLayout(*this).computedIntrinsicWidth(formattingState().inlineItems(), availableWidth);
     };
 
-    auto intrinsicWidthConstraints = Geometry::constrainByMinMaxWidth(root, { maximumLineWidth(0), maximumLineWidth(LayoutUnit::max()) });
-    layoutState.formattingStateForBox(root).setIntrinsicWidthConstraints(root, intrinsicWidthConstraints);
+    auto constraints = Geometry::constrainByMinMaxWidth(root, { maximumLineWidth(0), maximumLineWidth(LayoutUnit::max()) });
+    formattingState().setIntrinsicWidthConstraints(constraints);
+    return constraints;
 }
 
-void InlineFormattingContext::computeIntrinsicWidthForFloatBox(const Box& layoutBox) const
+void InlineFormattingContext::initializeMarginBorderAndPaddingForGenericInlineBox(const Box& layoutBox) const
 {
-    ASSERT(layoutBox.isFloatingPositioned());
+    ASSERT(layoutBox.isAnonymous() || layoutBox.isLineBreakBox());
+    auto& displayBox = layoutState().displayBoxForLayoutBox(layoutBox);
+
+    displayBox.setVerticalMargin({ { }, { } });
+    displayBox.setHorizontalMargin({ });
+    displayBox.setBorder({ { }, { } });
+    displayBox.setPadding({ });
+}
+
+void InlineFormattingContext::computeMarginBorderAndPaddingForInlineContainer(const Container& container, UsedHorizontalValues usedValues) const
+{
+    computeHorizontalMargin(container, usedValues);
+    computeBorderAndPadding(container, usedValues);
+    // Inline containers (<span>) have 0 vertical margins.
+    layoutState().displayBoxForLayoutBox(container).setVerticalMargin({ { }, { } });
+}
+
+void InlineFormattingContext::computeIntrinsicWidthForFormattingRoot(const Box& formattingRoot) const
+{
+    ASSERT(formattingRoot.establishesFormattingContext());
     auto& layoutState = this->layoutState();
 
-    auto usedHorizontalValues = UsedHorizontalValues { };
-    computeBorderAndPadding(layoutBox, usedHorizontalValues);
-    computeMargin(layoutBox, usedHorizontalValues);
-    layoutState.createFormattingContext(layoutBox)->computeIntrinsicWidthConstraints();
-
-    auto usedVerticalValues = UsedVerticalValues { };
-    auto heightAndMargin = Geometry::floatingHeightAndMargin(layoutState, layoutBox, usedVerticalValues, usedHorizontalValues);
-
-    auto& displayBox = layoutState.displayBoxForLayoutBox(layoutBox);
-    displayBox.setContentBoxHeight(heightAndMargin.height);
-    displayBox.setVerticalMargin({ heightAndMargin.nonCollapsedMargin, { } });
-}
-
-void InlineFormattingContext::computeIntrinsicWidthForInlineBlock(const Box& layoutBox) const
-{
-    ASSERT(layoutBox.isInlineBlockBox());
-
     auto usedValues = UsedHorizontalValues { };
-    computeBorderAndPadding(layoutBox, usedValues);
-    computeMargin(layoutBox, usedValues);
-    layoutState().createFormattingContext(layoutBox)->computeIntrinsicWidthConstraints();
+    computeBorderAndPadding(formattingRoot, usedValues);
+    computeHorizontalMargin(formattingRoot, usedValues);
+
+    IntrinsicWidthConstraints constraints;
+    if (auto fixedWidth = Geometry::fixedValue(formattingRoot.style().logicalWidth()))
+        constraints = { *fixedWidth, *fixedWidth };
+    else
+        constraints = layoutState.createFormattingContext(formattingRoot)->computedIntrinsicWidthConstraints();
+    constraints = Geometry::constrainByMinMaxWidth(formattingRoot, constraints);
+    constraints.expand(layoutState.displayBoxForLayoutBox(formattingRoot).horizontalMarginBorderAndPadding());
+    formattingState().setIntrinsicWidthConstraintsForBox(formattingRoot, constraints);
 }
 
-void InlineFormattingContext::computeMargin(const Box& layoutBox, UsedHorizontalValues usedValues) const
+void InlineFormattingContext::computeHorizontalMargin(const Box& layoutBox, UsedHorizontalValues usedValues) const
 {
     auto computedHorizontalMargin = Geometry::computedHorizontalMargin(layoutBox, usedValues);
     auto& displayBox = layoutState().displayBoxForLayoutBox(layoutBox);
@@ -235,13 +241,15 @@ void InlineFormattingContext::layoutFormattingContextRoot(const Box& root, UsedH
 
     computeBorderAndPadding(root, usedValues);
     computeWidthAndMargin(root, usedValues);
+    // This is similar to static positioning in block formatting context. We just need to initialize the top left position.
+    layoutState().displayBoxForLayoutBox(root).setTopLeft({ 0, 0 });
     // Swich over to the new formatting context (the one that the root creates).
     auto formattingContext = layoutState().createFormattingContext(root);
     formattingContext->layout();
     // Come back and finalize the root's height and margin.
     computeHeightAndMargin(root);
-    // Now that we computed the root's height, we can go back and layout the out-of-flow descedants (if any).
-    formattingContext->layoutOutOfFlowDescendants(root);
+    // Now that we computed the root's height, we can go back and layout the out-of-flow content.
+    formattingContext->layoutOutOfFlowContent();
 }
 
 void InlineFormattingContext::computeWidthAndHeightForReplacedInlineBox(const Box& layoutBox, UsedHorizontalValues usedValues) const
@@ -256,88 +264,25 @@ void InlineFormattingContext::computeWidthAndHeightForReplacedInlineBox(const Bo
     computeHeightAndMargin(layoutBox);
 }
 
-static void addDetachingRules(InlineItem& inlineItem, Optional<LayoutUnit> nonBreakableStartWidth, Optional<LayoutUnit> nonBreakableEndWidth)
+void InlineFormattingContext::collectInlineContent() const
 {
-    OptionSet<InlineItem::DetachingRule> detachingRules;
-    if (nonBreakableStartWidth) {
-        detachingRules.add(InlineItem::DetachingRule::BreakAtStart);
-        inlineItem.addNonBreakableStart(*nonBreakableStartWidth);
-    }
-    if (nonBreakableEndWidth) {
-        detachingRules.add(InlineItem::DetachingRule::BreakAtEnd);
-        inlineItem.addNonBreakableEnd(*nonBreakableEndWidth);
-    }
-    inlineItem.addDetachingRule(detachingRules);
-}
-
-static InlineItem& createAndAppendInlineItem(InlineRunProvider& inlineRunProvider, InlineContent& inlineContent, const Box& layoutBox)
-{
-    ASSERT(layoutBox.isInlineLevelBox() || layoutBox.isFloatingPositioned());
-    auto inlineItem = std::make_unique<InlineItem>(layoutBox);
-    auto* inlineItemPtr = inlineItem.get();
-    inlineContent.add(WTFMove(inlineItem));
-    inlineRunProvider.append(*inlineItemPtr);
-    return *inlineItemPtr;
-}
-
-void InlineFormattingContext::collectInlineContent(InlineRunProvider& inlineRunProvider) const
-{
-    if (!is<Container>(root()))
-        return;
     auto& root = downcast<Container>(this->root());
-    if (!root.hasInFlowOrFloatingChild())
-        return;
-    // The logic here is very similar to BFC layout.
-    // 1. Travers down the layout tree and collect "start" unbreakable widths (margin-left, border-left, padding-left)
-    // 2. Create InlineItem per leaf inline box (text nodes, inline-blocks, floats) and set "start" unbreakable width on them.
-    // 3. Climb back and collect "end" unbreakable width and set it on the last InlineItem.
-    auto& layoutState = this->layoutState();
-    auto& inlineContent = formattingState().inlineContent();
-
-    enum class NonBreakableWidthType { Start, End };
-    auto nonBreakableWidth = [&](auto& container, auto type) {
-        auto& displayBox = layoutState.displayBoxForLayoutBox(container);
-        if (type == NonBreakableWidthType::Start)
-            return displayBox.marginStart() + displayBox.borderLeft() + displayBox.paddingLeft().valueOr(0);
-        return displayBox.marginEnd() + displayBox.borderRight() + displayBox.paddingRight().valueOr(0);
-    };
-
+    // Traverse the tree and create inline items out of containers and leaf nodes. This essentially turns the tree inline structure into a flat one.
+    // <span>text<span></span><img></span> -> [ContainerStart][InlineBox][ContainerStart][ContainerEnd][InlineBox][ContainerEnd]
+    auto& formattingState = this->formattingState();
     LayoutQueue layoutQueue;
     layoutQueue.append(root.firstInFlowOrFloatingChild());
-
-    Optional<LayoutUnit> nonBreakableStartWidth;
-    Optional<LayoutUnit> nonBreakableEndWidth;
-    InlineItem* lastInlineItem = nullptr;
     while (!layoutQueue.isEmpty()) {
+        auto treatAsInlineContainer = [](auto& layoutBox) {
+            return is<Container>(layoutBox) && !layoutBox.establishesFormattingContext();
+        };
         while (true) {
             auto& layoutBox = *layoutQueue.last();
-            if (!is<Container>(layoutBox))
+            if (!treatAsInlineContainer(layoutBox))
                 break;
+            // This is the start of an inline container (e.g. <span>).
+            formattingState.addInlineItem(makeUnique<InlineItem>(layoutBox, InlineItem::Type::ContainerStart));
             auto& container = downcast<Container>(layoutBox);
-
-            if (container.establishesFormattingContext()) {
-                // Formatting contexts are treated as leaf nodes.
-                auto& inlineItem = createAndAppendInlineItem(inlineRunProvider, inlineContent, container);
-                auto& displayBox = layoutState.displayBoxForLayoutBox(container);
-                auto currentNonBreakableStartWidth = nonBreakableStartWidth.valueOr(0) + displayBox.marginStart() + nonBreakableEndWidth.valueOr(0);
-                addDetachingRules(inlineItem, currentNonBreakableStartWidth, displayBox.marginEnd());
-                nonBreakableStartWidth = { };
-                nonBreakableEndWidth = { };
-
-                // Formatting context roots take care of their subtrees. Continue with next sibling if exists.
-                layoutQueue.removeLast();
-                if (!container.nextInFlowOrFloatingSibling())
-                    break;
-                layoutQueue.append(container.nextInFlowOrFloatingSibling());
-                continue;
-            }
-
-            // Check if this non-formatting context container has any non-breakable start properties (margin-left, border-left, padding-left)
-            // <span style="padding-left: 5px"><span style="padding-left: 5px">foobar</span></span> -> 5px + 5px
-            auto currentNonBreakableStartWidth = nonBreakableWidth(layoutBox, NonBreakableWidthType::Start);
-            if (currentNonBreakableStartWidth || layoutBox.isPositioned())
-                nonBreakableStartWidth = nonBreakableStartWidth.valueOr(0) + currentNonBreakableStartWidth;
-
             if (!container.hasInFlowOrFloatingChild())
                 break;
             layoutQueue.append(container.firstInFlowOrFloatingChild());
@@ -345,29 +290,19 @@ void InlineFormattingContext::collectInlineContent(InlineRunProvider& inlineRunP
 
         while (!layoutQueue.isEmpty()) {
             auto& layoutBox = *layoutQueue.takeLast();
-            if (is<Container>(layoutBox)) {
-                // This is the end of an inline container. Compute the non-breakable end width and add it to the last inline box.
-                // <span style="padding-right: 5px">foobar</span> -> 5px; last inline item -> "foobar"
-                auto currentNonBreakableEndWidth = nonBreakableWidth(layoutBox, NonBreakableWidthType::End);
-                if (currentNonBreakableEndWidth || layoutBox.isPositioned())
-                    nonBreakableEndWidth = nonBreakableEndWidth.valueOr(0) + currentNonBreakableEndWidth;
-                // Add it to the last inline box
-                if (lastInlineItem) {
-                    addDetachingRules(*lastInlineItem, { }, nonBreakableEndWidth);
-                    nonBreakableEndWidth = { };
-                }
-            } else {
-                // Leaf inline box
-                auto& inlineItem = createAndAppendInlineItem(inlineRunProvider, inlineContent, layoutBox);
-                // Add start and the (through empty containers) accumulated end width.
-                // <span style="padding-left: 1px">foobar</span> -> nonBreakableStartWidth: 1px;
-                // <span style="padding: 5px"></span>foobar -> nonBreakableStartWidth: 5px; nonBreakableEndWidth: 5px
-                if (nonBreakableStartWidth || nonBreakableEndWidth) {
-                    addDetachingRules(inlineItem, nonBreakableStartWidth.valueOr(0) + nonBreakableEndWidth.valueOr(0), { });
-                    nonBreakableStartWidth = { };
-                    nonBreakableEndWidth = { };
-                }
-                lastInlineItem = &inlineItem;
+            // This is the end of an inline container (e.g. </span>).
+            if (treatAsInlineContainer(layoutBox))
+                formattingState.addInlineItem(makeUnique<InlineItem>(layoutBox, InlineItem::Type::ContainerEnd));
+            else if (layoutBox.isLineBreakBox())
+                formattingState.addInlineItem(makeUnique<InlineItem>(layoutBox, InlineItem::Type::HardLineBreak));
+            else if (layoutBox.isFloatingPositioned())
+                formattingState.addInlineItem(makeUnique<InlineItem>(layoutBox, InlineItem::Type::Float));
+            else {
+                ASSERT(layoutBox.isInlineLevelBox());
+                if (layoutBox.hasTextContent())
+                    InlineTextItem::createAndAppendTextItems(formattingState.inlineItems(), layoutBox);
+                else
+                    formattingState.addInlineItem(makeUnique<InlineItem>(layoutBox, InlineItem::Type::Box));
             }
 
             if (auto* nextSibling = layoutBox.nextInFlowOrFloatingSibling()) {

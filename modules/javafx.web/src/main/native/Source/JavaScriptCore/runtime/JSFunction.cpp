@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2018 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *  Copyright (C) 2015 Canon Inc. All rights reserved.
@@ -48,6 +48,7 @@
 #include "Parser.h"
 #include "PropertyNameArray.h"
 #include "StackVisitor.h"
+#include "WebAssemblyFunction.h"
 
 namespace JSC {
 
@@ -59,6 +60,9 @@ EncodedJSValue JSC_HOST_CALL callHostFunctionAsConstructor(ExecState* exec)
 }
 
 const ClassInfo JSFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSFunction) };
+const ClassInfo JSStrictFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSStrictFunction) };
+const ClassInfo JSSloppyFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSSloppyFunction) };
+const ClassInfo JSArrowFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSArrowFunction) };
 
 bool JSFunction::isHostFunctionNonInline() const
 {
@@ -98,6 +102,16 @@ JSFunction* JSFunction::create(VM& vm, JSGlobalObject* globalObject, int length,
     return function;
 }
 
+JSFunction* JSFunction::createFunctionThatMasqueradesAsUndefined(VM& vm, JSGlobalObject* globalObject, int length, const String& name, NativeFunction nativeFunction, Intrinsic intrinsic, NativeFunction nativeConstructor, const DOMJIT::Signature* signature)
+{
+    NativeExecutable* executable = vm.getHostFunction(nativeFunction, intrinsic, nativeConstructor, signature, name);
+    Structure* structure = Structure::create(vm, globalObject, globalObject->objectPrototype(), TypeInfo(JSFunctionType, JSFunction::StructureFlags | MasqueradesAsUndefined), JSFunction::info());
+    globalObject->masqueradesAsUndefinedWatchpoint()->fireAll(globalObject->vm(), "Allocated masquerading object");
+    JSFunction* function = new (NotNull, allocateCell<JSFunction>(vm.heap)) JSFunction(vm, globalObject, structure);
+    function->finishCreation(vm, executable, length, name);
+    return function;
+}
+
 JSFunction::JSFunction(VM& vm, JSGlobalObject* globalObject, Structure* structure)
     : Base(vm, globalObject, structure)
     , m_executable()
@@ -111,7 +125,7 @@ void JSFunction::finishCreation(VM& vm)
     Base::finishCreation(vm);
     ASSERT(jsDynamicCast<JSFunction*>(vm, this));
     ASSERT(type() == JSFunctionType);
-    if (isBuiltinFunction() && jsExecutable()->name().isPrivateName()) {
+    if (isAnonymousBuiltinFunction()) {
         // This is anonymous builtin function.
         rareData(vm)->setHasReifiedName();
     }
@@ -125,7 +139,7 @@ void JSFunction::finishCreation(VM& vm, NativeExecutable* executable, int length
     m_executable.set(vm, this, executable);
     // Some NativeExecutable functions, like JSBoundFunction, decide to lazily allocate their name string.
     if (!name.isNull())
-        putDirect(vm, vm.propertyNames->name, jsString(&vm, name), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+        putDirect(vm, vm.propertyNames->name, jsString(vm, name), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
     putDirect(vm, vm.propertyNames->length, jsNumber(length), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
@@ -226,7 +240,7 @@ const String JSFunction::calculatedDisplayName(VM& vm)
     if (!actualName.isEmpty() || isHostOrBuiltinFunction())
         return actualName;
 
-    return jsExecutable()->inferredName().string();
+    return jsExecutable()->ecmaName().string();
 }
 
 const SourceCode* JSFunction::sourceCode() const
@@ -320,7 +334,7 @@ public:
 
         JSCell* callee = visitor->callee().asCell();
 
-        if (callee && callee->inherits<JSBoundFunction>(*callee->vm()))
+        if (callee && callee->inherits<JSBoundFunction>(callee->vm()))
             return StackVisitor::Continue;
 
         if (!m_hasFoundFrame && (callee != m_targetCallee))
@@ -627,9 +641,13 @@ ConstructType JSFunction::getConstructData(JSCell* cell, ConstructData& construc
 
 String getCalculatedDisplayName(VM& vm, JSObject* object)
 {
+#if ENABLE(WEBASSEMBLY)
+    if (jsDynamicCast<JSToWasmICCallee*>(vm, object))
+        return "wasm-stub"_s;
+#endif
+
     if (!jsDynamicCast<JSFunction*>(vm, object) && !jsDynamicCast<InternalFunction*>(vm, object))
         return emptyString();
-
 
     Structure* structure = object->structure(vm);
     unsigned attributes;
@@ -646,7 +664,7 @@ String getCalculatedDisplayName(VM& vm, JSObject* object)
         if (!actualName.isEmpty() || function->isHostOrBuiltinFunction())
             return actualName;
 
-        return function->jsExecutable()->inferredName().string();
+        return function->jsExecutable()->ecmaName().string();
     }
     if (auto* function = jsDynamicCast<InternalFunction*>(vm, object))
         return function->name();
@@ -669,7 +687,8 @@ void JSFunction::setFunctionName(ExecState* exec, JSValue value)
     ASSERT(jsExecutable()->ecmaName().isNull());
     String name;
     if (value.isSymbol()) {
-        SymbolImpl& uid = asSymbol(value)->privateName().uid();
+        PrivateName privateName = asSymbol(value)->privateName();
+        SymbolImpl& uid = privateName.uid();
         if (uid.isNullSymbol())
             name = emptyString();
         else
@@ -733,7 +752,7 @@ void JSFunction::reifyName(VM& vm, ExecState* exec, String name)
         name = makeString("set ", name);
 
     rareData->setHasReifiedName();
-    putDirect(vm, propID, jsString(exec, name), initialAttributes);
+    putDirect(vm, propID, jsString(vm, name), initialAttributes);
 }
 
 JSFunction::PropertyStatus JSFunction::reifyLazyPropertyIfNeeded(VM& vm, ExecState* exec, PropertyName propertyName)
@@ -800,7 +819,7 @@ JSFunction::PropertyStatus JSFunction::reifyLazyBoundNameIfNeeded(VM& vm, ExecSt
         String name = makeString("bound ", static_cast<NativeExecutable*>(m_executable.get())->name());
         unsigned initialAttributes = PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly;
         rareData->setHasReifiedName();
-        putDirect(vm, nameIdent, jsString(exec, name), initialAttributes);
+        putDirect(vm, nameIdent, jsString(vm, name), initialAttributes);
     }
     return PropertyStatus::Reified;
 }
@@ -809,7 +828,7 @@ JSFunction::PropertyStatus JSFunction::reifyLazyBoundNameIfNeeded(VM& vm, ExecSt
 void JSFunction::assertTypeInfoFlagInvariants()
 {
     // If you change this, you'll need to update speculationFromClassInfo.
-    const ClassInfo* info = classInfo(*vm());
+    const ClassInfo* info = classInfo(vm());
     if (!(inlineTypeFlags() & ImplementsDefaultHasInstance))
         RELEASE_ASSERT(info == JSBoundFunction::info());
     else

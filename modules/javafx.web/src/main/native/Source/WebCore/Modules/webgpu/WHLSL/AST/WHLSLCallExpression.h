@@ -29,7 +29,7 @@
 
 #include "WHLSLExpression.h"
 #include "WHLSLFunctionDeclaration.h"
-#include "WHLSLLexer.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -40,55 +40,49 @@ namespace AST {
 
 class NamedType;
 
-class CallExpression : public Expression {
+class CallExpression final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    CallExpression(Lexer::Token&& origin, String&& name, Vector<UniqueRef<Expression>>&& arguments)
-        : Expression(WTFMove(origin))
+    CallExpression(CodeLocation location, String&& name, Vector<UniqueRef<Expression>>&& arguments)
+        : Expression(location, Kind::Call)
         , m_name(WTFMove(name))
         , m_arguments(WTFMove(arguments))
     {
     }
 
-    virtual ~CallExpression() = default;
-
     CallExpression(const CallExpression&) = delete;
     CallExpression(CallExpression&&) = default;
-
-    bool isCallExpression() const override { return true; }
 
     Vector<UniqueRef<Expression>>& arguments() { return m_arguments; }
 
     String& name() { return m_name; }
 
+    ~CallExpression() = default;
+
     void setCastData(NamedType& namedType)
     {
-        m_castReturnType = { namedType };
+        m_castReturnType = &namedType;
     }
 
-    bool isCast() { return static_cast<bool>(m_castReturnType); }
-    Optional<std::reference_wrapper<NamedType>>& castReturnType() { return m_castReturnType; }
-    bool hasOverloads() const { return static_cast<bool>(m_overloads); }
-    Optional<Vector<std::reference_wrapper<FunctionDeclaration>, 1>>& overloads() { return m_overloads; }
-    void setOverloads(const Vector<std::reference_wrapper<FunctionDeclaration>, 1>& overloads)
+    bool isCast() { return m_castReturnType; }
+    NamedType* castReturnType() { return m_castReturnType; }
+    FunctionDeclaration& function()
     {
-        assert(!hasOverloads());
-        m_overloads = overloads;
+        ASSERT(m_function);
+        return *m_function;
     }
-
-    FunctionDeclaration* function() { return m_function; }
 
     void setFunction(FunctionDeclaration& functionDeclaration)
     {
-        assert(!m_function);
+        ASSERT(!m_function);
         m_function = &functionDeclaration;
     }
 
 private:
     String m_name;
     Vector<UniqueRef<Expression>> m_arguments;
-    Optional<Vector<std::reference_wrapper<FunctionDeclaration>, 1>> m_overloads;
     FunctionDeclaration* m_function { nullptr };
-    Optional<std::reference_wrapper<NamedType>> m_castReturnType { WTF::nullopt };
+    NamedType* m_castReturnType { nullptr };
 };
 
 } // namespace AST
@@ -96,6 +90,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(CallExpression)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(CallExpression, isCallExpression())
 

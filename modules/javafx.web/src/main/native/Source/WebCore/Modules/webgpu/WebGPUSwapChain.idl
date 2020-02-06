@@ -22,28 +22,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://github.com/gpuweb/gpuweb/blob/master/design/sketch.webidl
+// https://gpuweb.github.io/gpuweb
 
 [
     Conditional=WEBGPU,
     EnabledAtRuntime=WebGPU,
+    InterfaceName=GPUSwapChain,
     SkipVTableValidation
 ] interface WebGPUSwapChain {
-    void configure(WebGPUSwapChainDescriptor descriptor);
-    WebGPUTexture getNextTexture();
-    void present();
+    WebGPUTexture getCurrentTexture();
 };
-
-typedef unsigned long u32;
-
-[
-    Conditional=WEBGPU,
-    EnabledAtRuntime=WebGPU
-] dictionary WebGPUSwapChainDescriptor {
-    WebGPUDevice? device;
-    // WebGPUTextureUsageFlags usage;
-    GPUTextureFormat format;
-    u32 width;
-    u32 height;
-};
-

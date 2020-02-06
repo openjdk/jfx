@@ -39,6 +39,8 @@ WebDebuggerAgent::WebDebuggerAgent(WebAgentContext& context)
 {
 }
 
+WebDebuggerAgent::~WebDebuggerAgent() = default;
+
 void WebDebuggerAgent::enable()
 {
     InspectorDebuggerAgent::enable();
@@ -47,8 +49,8 @@ void WebDebuggerAgent::enable()
 
 void WebDebuggerAgent::disable(bool isBeingDestroyed)
 {
-    InspectorDebuggerAgent::disable(isBeingDestroyed);
     m_instrumentingAgents.setInspectorDebuggerAgent(nullptr);
+    InspectorDebuggerAgent::disable(isBeingDestroyed);
 }
 
 } // namespace WebCore

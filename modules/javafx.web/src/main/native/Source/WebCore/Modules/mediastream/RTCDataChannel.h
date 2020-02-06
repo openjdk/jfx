@@ -47,6 +47,7 @@ class Blob;
 class RTCPeerConnectionHandler;
 
 class RTCDataChannel final : public ActiveDOMObject, public RTCDataChannelHandlerClient, public EventTargetWithInlineData {
+    WTF_MAKE_ISO_ALLOCATED(RTCDataChannel);
 public:
     static Ref<RTCDataChannel> create(ScriptExecutionContext&, std::unique_ptr<RTCDataChannelHandler>&&, String&&, RTCDataChannelInit&&);
 
@@ -63,8 +64,8 @@ public:
     size_t bufferedAmountLowThreshold() const { return m_bufferedAmountLowThreshold; }
     void setBufferedAmountLowThreshold(size_t value) { m_bufferedAmountLowThreshold = value; }
 
-    const AtomicString& binaryType() const;
-    ExceptionOr<void> setBinaryType(const AtomicString&);
+    const AtomString& binaryType() const;
+    ExceptionOr<void> setBinaryType(const AtomString&);
 
     ExceptionOr<void> send(const String&);
     ExceptionOr<void> send(JSC::ArrayBuffer&);

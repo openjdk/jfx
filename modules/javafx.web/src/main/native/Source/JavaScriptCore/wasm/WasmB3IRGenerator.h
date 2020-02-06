@@ -31,6 +31,7 @@
 #include "B3Compilation.h"
 #include "B3OpaqueByproducts.h"
 #include "CCallHelpers.h"
+#include "WasmCompilationMode.h"
 #include "WasmEmbedder.h"
 #include "WasmMemory.h"
 #include "WasmModuleInformation.h"
@@ -43,11 +44,6 @@ namespace JSC { namespace Wasm {
 
 class MemoryInformation;
 
-enum class CompilationMode {
-    BBQMode,
-    OMGMode,
-};
-
 struct CompilationContext {
     std::unique_ptr<CCallHelpers> embedderEntrypointJIT;
     std::unique_ptr<B3::OpaqueByproducts> embedderEntrypointByproducts;
@@ -55,7 +51,7 @@ struct CompilationContext {
     std::unique_ptr<B3::OpaqueByproducts> wasmEntrypointByproducts;
 };
 
-Expected<std::unique_ptr<InternalFunction>, String> parseAndCompile(CompilationContext&, const uint8_t*, size_t, const Signature&, Vector<UnlinkedWasmToWasmCall>&, const ModuleInformation&, MemoryMode, CompilationMode, uint32_t functionIndex, TierUpCount* = nullptr, ThrowWasmException = nullptr);
+Expected<std::unique_ptr<InternalFunction>, String> parseAndCompile(CompilationContext&, const uint8_t*, size_t, const Signature&, Vector<UnlinkedWasmToWasmCall>&, unsigned& osrEntryScratchBufferSize, const ModuleInformation&, MemoryMode, CompilationMode, uint32_t functionIndex, uint32_t loopIndexForOSREntry, TierUpCount* = nullptr, ThrowWasmException = nullptr);
 
 } } // namespace JSC::Wasm
 

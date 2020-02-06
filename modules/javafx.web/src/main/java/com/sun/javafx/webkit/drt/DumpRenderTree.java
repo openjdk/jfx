@@ -196,7 +196,6 @@ public final class DumpRenderTree {
     private void resetToConsistentStateBeforeTesting(final TestOptions options) {
         // Assign default values for all supported TestOptions
         webPage.overridePreference("experimental:CSSCustomPropertiesAndValuesEnabled", "false");
-        webPage.overridePreference("experimental:WebAnimationsCSSIntegrationEnabled", "true");
         webPage.overridePreference("enableColorFilter", "false");
         webPage.overridePreference("enableIntersectionObserver", "false");
         // Enable features based on TestOption

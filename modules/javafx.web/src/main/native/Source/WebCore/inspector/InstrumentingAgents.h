@@ -39,6 +39,7 @@
 namespace Inspector {
 class InspectorAgent;
 class InspectorDebuggerAgent;
+class InspectorScriptProfilerAgent;
 }
 
 namespace WebCore {
@@ -102,11 +103,14 @@ public:
     PageRuntimeAgent* pageRuntimeAgent() const { return m_pageRuntimeAgent; }
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
 
+    Inspector::InspectorScriptProfilerAgent* inspectorScriptProfilerAgent() const { return m_inspectorScriptProfilerAgent; }
+    void setInspectorScriptProfilerAgent(Inspector::InspectorScriptProfilerAgent* agent) { m_inspectorScriptProfilerAgent = agent; }
+
     InspectorTimelineAgent* inspectorTimelineAgent() const { return m_inspectorTimelineAgent; }
     void setInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_inspectorTimelineAgent = agent; }
 
-    InspectorTimelineAgent* persistentInspectorTimelineAgent() const { return m_persistentInspectorTimelineAgent; }
-    void setPersistentInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_persistentInspectorTimelineAgent = agent; }
+    InspectorTimelineAgent* trackingInspectorTimelineAgent() const { return m_trackingInspectorTimelineAgent; }
+    void setTrackingInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_trackingInspectorTimelineAgent = agent; }
 
     InspectorDOMStorageAgent* inspectorDOMStorageAgent() const { return m_inspectorDOMStorageAgent; }
     void setInspectorDOMStorageAgent(InspectorDOMStorageAgent* agent) { m_inspectorDOMStorageAgent = agent; }
@@ -157,8 +161,9 @@ private:
     InspectorDOMAgent* m_inspectorDOMAgent { nullptr };
     InspectorNetworkAgent* m_inspectorNetworkAgent { nullptr };
     PageRuntimeAgent* m_pageRuntimeAgent { nullptr };
+    Inspector::InspectorScriptProfilerAgent* m_inspectorScriptProfilerAgent { nullptr };
     InspectorTimelineAgent* m_inspectorTimelineAgent { nullptr };
-    InspectorTimelineAgent* m_persistentInspectorTimelineAgent { nullptr };
+    InspectorTimelineAgent* m_trackingInspectorTimelineAgent { nullptr };
     InspectorDOMStorageAgent* m_inspectorDOMStorageAgent { nullptr };
 #if ENABLE(RESOURCE_USAGE)
     InspectorCPUProfilerAgent* m_inspectorCPUProfilerAgent { nullptr };

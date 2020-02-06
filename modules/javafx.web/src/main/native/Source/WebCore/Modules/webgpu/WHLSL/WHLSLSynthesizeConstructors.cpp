@@ -31,12 +31,14 @@
 #include "WHLSLArrayType.h"
 #include "WHLSLArrayReferenceType.h"
 #include "WHLSLEnumerationDefinition.h"
+#include "WHLSLInferTypes.h"
 #include "WHLSLNativeFunctionDeclaration.h"
 #include "WHLSLNativeTypeDeclaration.h"
 #include "WHLSLPointerType.h"
 #include "WHLSLProgram.h"
 #include "WHLSLStructureDefinition.h"
 #include "WHLSLTypeReference.h"
+#include "WHLSLUnnamedTypeHash.h"
 #include "WHLSLVariableDeclaration.h"
 #include "WHLSLVisitor.h"
 
@@ -46,89 +48,119 @@ namespace WHLSL {
 
 class FindAllTypes : public Visitor {
 public:
-    ~FindAllTypes() = default;
+    virtual ~FindAllTypes() = default;
 
     void visit(AST::PointerType& pointerType) override
     {
-        m_unnamedTypes.append(pointerType);
-        checkErrorAndVisit(pointerType);
+        m_unnamedTypes.add(UnnamedTypeKey { pointerType });
+        Visitor::visit(pointerType);
     }
 
     void visit(AST::ArrayReferenceType& arrayReferenceType) override
     {
-        m_unnamedTypes.append(arrayReferenceType);
-        checkErrorAndVisit(arrayReferenceType);
+        m_unnamedTypes.add(UnnamedTypeKey { arrayReferenceType });
+        Visitor::visit(arrayReferenceType);
     }
 
     void visit(AST::ArrayType& arrayType) override
     {
-        m_unnamedTypes.append(arrayType);
-        checkErrorAndVisit(arrayType);
+        m_unnamedTypes.add(UnnamedTypeKey { arrayType });
+        Visitor::visit(arrayType);
     }
 
     void visit(AST::EnumerationDefinition& enumerationDefinition) override
     {
-        m_namedTypes.append(enumerationDefinition);
-        checkErrorAndVisit(enumerationDefinition);
+        appendNamedType(enumerationDefinition);
+        Visitor::visit(enumerationDefinition);
     }
 
     void visit(AST::StructureDefinition& structureDefinition) override
     {
-        m_namedTypes.append(structureDefinition);
-        checkErrorAndVisit(structureDefinition);
+        appendNamedType(structureDefinition);
+        Visitor::visit(structureDefinition);
     }
 
     void visit(AST::NativeTypeDeclaration& nativeTypeDeclaration) override
     {
-        m_namedTypes.append(nativeTypeDeclaration);
-        checkErrorAndVisit(nativeTypeDeclaration);
+        appendNamedType(nativeTypeDeclaration);
+        Visitor::visit(nativeTypeDeclaration);
     }
 
-    Vector<std::reference_wrapper<AST::UnnamedType>>&& takeUnnamedTypes()
+    HashSet<UnnamedTypeKey> takeUnnamedTypes()
     {
         return WTFMove(m_unnamedTypes);
     }
 
-    Vector<std::reference_wrapper<AST::NamedType>>&& takeNamedTypes()
+    Vector<std::reference_wrapper<AST::NamedType>> takeNamedTypes()
     {
         return WTFMove(m_namedTypes);
     }
 
 private:
-    Vector<std::reference_wrapper<AST::UnnamedType>> m_unnamedTypes;
+    void appendNamedType(AST::NamedType& type)
+    {
+        // The way we walk the AST ensures we should never visit a named type twice.
+#if !ASSERT_DISABLED
+        for (auto& entry : m_namedTypes)
+            ASSERT(&entry.get().unifyNode() != &type.unifyNode());
+#endif
+        m_namedTypes.append(type);
+    }
+
+    HashSet<UnnamedTypeKey> m_unnamedTypes;
     Vector<std::reference_wrapper<AST::NamedType>> m_namedTypes;
 };
 
-void synthesizeConstructors(Program& program)
+Expected<void, Error> synthesizeConstructors(Program& program)
 {
     FindAllTypes findAllTypes;
     findAllTypes.checkErrorAndVisit(program);
-    auto m_unnamedTypes = findAllTypes.takeUnnamedTypes();
-    auto m_namedTypes = findAllTypes.takeNamedTypes();
+    auto unnamedTypes = findAllTypes.takeUnnamedTypes();
+    auto namedTypes = findAllTypes.takeNamedTypes();
 
     bool isOperator = true;
 
-    for (auto& unnamedType : m_unnamedTypes) {
-        AST::VariableDeclaration variableDeclaration(Lexer::Token(unnamedType.get().origin()), AST::Qualifiers(), { unnamedType.get().clone() }, String(), WTF::nullopt, WTF::nullopt);
-        AST::VariableDeclarations parameters;
-        parameters.append(WTFMove(variableDeclaration));
-        AST::NativeFunctionDeclaration copyConstructor(AST::FunctionDeclaration(Lexer::Token(unnamedType.get().origin()), AST::AttributeBlock(), WTF::nullopt, unnamedType.get().clone(), "operator cast"_str, WTFMove(parameters), WTF::nullopt, isOperator));
-        program.append(WTFMove(copyConstructor));
+    for (auto& unnamedTypeKey : unnamedTypes) {
+        auto& unnamedType = unnamedTypeKey.unnamedType();
+        auto location = unnamedType.codeLocation();
 
-        AST::NativeFunctionDeclaration defaultConstructor(AST::FunctionDeclaration(Lexer::Token(unnamedType.get().origin()), AST::AttributeBlock(), WTF::nullopt, unnamedType.get().clone(), "operator cast"_str, AST::VariableDeclarations(), WTF::nullopt, isOperator));
-        program.append(WTFMove(defaultConstructor));
+        {
+            auto variableDeclaration = makeUniqueRef<AST::VariableDeclaration>(location, AST::Qualifiers(), &unnamedType, String(), nullptr, nullptr);
+            AST::VariableDeclarations parameters;
+            parameters.append(WTFMove(variableDeclaration));
+            AST::NativeFunctionDeclaration copyConstructor(AST::FunctionDeclaration(location, AST::AttributeBlock(), WTF::nullopt, unnamedType, "operator cast"_str, WTFMove(parameters), nullptr, isOperator, ParsingMode::StandardLibrary));
+            program.append(WTFMove(copyConstructor));
+        }
+
+        AST::NativeFunctionDeclaration defaultConstructor(AST::FunctionDeclaration(location, AST::AttributeBlock(), WTF::nullopt, unnamedType, "operator cast"_str, AST::VariableDeclarations(), nullptr, isOperator, ParsingMode::StandardLibrary));
+        if (!program.append(WTFMove(defaultConstructor)))
+            return makeUnexpected(Error("Could not synthesize default constructor"));
     }
 
-    for (auto& namedType : m_namedTypes) {
-        AST::VariableDeclaration variableDeclaration(Lexer::Token(namedType.get().origin()), AST::Qualifiers(), { AST::TypeReference::wrap(Lexer::Token(namedType.get().origin()), namedType.get()) }, String(), WTF::nullopt, WTF::nullopt);
+    for (auto& namedType : namedTypes) {
+        if (matches(namedType, program.intrinsics().voidType()))
+            continue;
+        if (is<AST::NativeTypeDeclaration>(static_cast<AST::NamedType&>(namedType)) && downcast<AST::NativeTypeDeclaration>(static_cast<AST::NamedType&>(namedType)).isAtomic())
+            continue;
+
+        auto location = namedType.get().codeLocation();
+
+        auto variableDeclaration = makeUniqueRef<AST::VariableDeclaration>(location, AST::Qualifiers(), AST::TypeReference::wrap(location, namedType.get()), String(), nullptr, nullptr);
         AST::VariableDeclarations parameters;
         parameters.append(WTFMove(variableDeclaration));
-        AST::NativeFunctionDeclaration copyConstructor(AST::FunctionDeclaration(Lexer::Token(namedType.get().origin()), AST::AttributeBlock(), WTF::nullopt, AST::TypeReference::wrap(Lexer::Token(namedType.get().origin()), namedType.get()), "operator cast"_str, WTFMove(parameters), WTF::nullopt, isOperator));
+        AST::NativeFunctionDeclaration copyConstructor(AST::FunctionDeclaration(location, AST::AttributeBlock(), WTF::nullopt, AST::TypeReference::wrap(location, namedType.get()), "operator cast"_str, WTFMove(parameters), nullptr, isOperator, ParsingMode::StandardLibrary));
         program.append(WTFMove(copyConstructor));
 
-        AST::NativeFunctionDeclaration defaultConstructor(AST::FunctionDeclaration(Lexer::Token(namedType.get().origin()), AST::AttributeBlock(), WTF::nullopt, AST::TypeReference::wrap(Lexer::Token(namedType.get().origin()), namedType.get()), "operator cast"_str, AST::VariableDeclarations(), WTF::nullopt, isOperator));
-        program.append(WTFMove(defaultConstructor));
+        if (is<AST::NativeTypeDeclaration>(static_cast<AST::NamedType&>(namedType))) {
+            auto& nativeTypeDeclaration = downcast<AST::NativeTypeDeclaration>(static_cast<AST::NamedType&>(namedType));
+            if (nativeTypeDeclaration.isOpaqueType())
+                continue;
+        }
+        AST::NativeFunctionDeclaration defaultConstructor(AST::FunctionDeclaration(location, AST::AttributeBlock(), WTF::nullopt, AST::TypeReference::wrap(location, namedType.get()), "operator cast"_str, AST::VariableDeclarations(), nullptr, isOperator, ParsingMode::StandardLibrary));
+        if (!program.append(WTFMove(defaultConstructor)))
+            return makeUnexpected(Error("Could not synthesize default constructor"));
     }
+    return { };
 }
 
 } // namespace WHLSL

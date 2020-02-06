@@ -33,8 +33,13 @@
 #include "StyleProperties.h"
 #include "StyleSheetContents.h"
 #include "StyledElement.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(PropertySetCSSStyleDeclaration);
+WTF_MAKE_ISO_ALLOCATED_IMPL(StyleRuleCSSStyleDeclaration);
+WTF_MAKE_ISO_ALLOCATED_IMPL(InlineCSSStyleDeclaration);
 
 class StyleAttributeMutationScope {
     WTF_MAKE_NONCOPYABLE(StyleAttributeMutationScope);
@@ -99,8 +104,9 @@ public:
         PropertySetCSSStyleDeclaration* localCopyStyleDecl = s_currentDecl;
         s_currentDecl = nullptr;
         s_shouldNotifyInspector = false;
-        if (localCopyStyleDecl->parentElement())
-            InspectorInstrumentation::didInvalidateStyleAttr(localCopyStyleDecl->parentElement()->document(), *localCopyStyleDecl->parentElement());
+
+        if (auto* parentElement = localCopyStyleDecl->parentElement())
+            InspectorInstrumentation::didInvalidateStyleAttr(*parentElement);
     }
 
     void enqueueMutationRecord()
@@ -120,7 +126,7 @@ private:
     static bool s_shouldDeliver;
 
     std::unique_ptr<MutationObserverInterestGroup> m_mutationRecipients;
-    AtomicString m_oldValue;
+    AtomString m_oldValue;
     RefPtr<Element> m_customElement;
 };
 
@@ -283,7 +289,7 @@ ExceptionOr<String> PropertySetCSSStyleDeclaration::removeProperty(const String&
 
     if (changed)
         mutationScope.enqueueMutationRecord();
-    return WTFMove(result);
+    return result;
 }
 
 RefPtr<CSSValue> PropertySetCSSStyleDeclaration::getPropertyCSSValueInternal(CSSPropertyID propertyID)
@@ -323,7 +329,7 @@ RefPtr<DeprecatedCSSOMValue> PropertySetCSSStyleDeclaration::wrapForDeprecatedCS
     // The map is here to maintain the object identity of the CSSValues over multiple invocations.
     // FIXME: It is likely that the identity is not important for web compatibility and this code should be removed.
     if (!m_cssomValueWrappers)
-        m_cssomValueWrappers = std::make_unique<HashMap<CSSValue*, WeakPtr<DeprecatedCSSOMValue>>>();
+        m_cssomValueWrappers = makeUnique<HashMap<CSSValue*, WeakPtr<DeprecatedCSSOMValue>>>();
 
     auto& clonedValue = m_cssomValueWrappers->add(internalValue, WeakPtr<DeprecatedCSSOMValue>()).iterator->value;
     if (clonedValue)
@@ -414,6 +420,13 @@ void StyleRuleCSSStyleDeclaration::reattach(MutableStyleProperties& propertySet)
     m_propertySet->deref();
     m_propertySet = &propertySet;
     m_propertySet->ref();
+}
+
+bool InlineCSSStyleDeclaration::willMutate()
+{
+    if (m_parentElement)
+        InspectorInstrumentation::willInvalidateStyleAttr(*m_parentElement);
+    return true;
 }
 
 void InlineCSSStyleDeclaration::didMutate(MutationType type)

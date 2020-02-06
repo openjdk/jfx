@@ -80,9 +80,11 @@ public:
 
     // Additional platform dependent hooked APIs.
     JSValue evaluate(ExecState*, JSValue key, JSValue moduleRecord, JSValue scriptFetcher);
+    JSValue evaluateNonVirtual(ExecState*, JSValue key, JSValue moduleRecord, JSValue scriptFetcher);
 
     // Utility functions.
     JSModuleNamespaceObject* getModuleNamespaceObject(ExecState*, JSValue moduleRecord);
+    JSArray* dependencyKeysIfEvaluated(ExecState*, JSValue key);
 
 protected:
     void finishCreation(ExecState*, VM&, JSGlobalObject*);

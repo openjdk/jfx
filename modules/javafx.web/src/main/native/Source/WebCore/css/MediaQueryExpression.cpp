@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-static inline bool featureWithValidIdent(const AtomicString& mediaFeature, const CSSPrimitiveValue& value, const MediaQueryParserContext& context)
+static inline bool featureWithValidIdent(const AtomString& mediaFeature, const CSSPrimitiveValue& value, const MediaQueryParserContext& context)
 {
     if (value.primitiveType() != CSSPrimitiveValue::UnitType::CSS_IDENT)
         return false;
@@ -55,7 +55,7 @@ static inline bool featureWithValidIdent(const AtomicString& mediaFeature, const
     || mediaFeature == MediaFeatureNames::displayMode
 #endif
 #if ENABLE(DARK_MODE_CSS)
-    || (mediaFeature == MediaFeatureNames::prefersColorScheme && RuntimeEnabledFeatures::sharedFeatures().darkModeCSSEnabled())
+    || (mediaFeature == MediaFeatureNames::prefersColorScheme)
 #endif
     || mediaFeature == MediaFeatureNames::prefersReducedMotion
     || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)));
@@ -132,7 +132,7 @@ static inline bool featureWithZeroOrOne(const String& mediaFeature, const CSSPri
     return mediaFeature == MediaFeatureNames::grid;
 }
 
-static inline bool isAspectRatioFeature(const AtomicString& mediaFeature)
+static inline bool isAspectRatioFeature(const AtomString& mediaFeature)
 {
     return mediaFeature == MediaFeatureNames::aspectRatio
         || mediaFeature == MediaFeatureNames::deviceAspectRatio
@@ -142,7 +142,7 @@ static inline bool isAspectRatioFeature(const AtomicString& mediaFeature)
         || mediaFeature == MediaFeatureNames::maxDeviceAspectRatio;
 }
 
-static inline bool isFeatureValidWithoutValue(const AtomicString& mediaFeature, const MediaQueryParserContext& context)
+static inline bool isFeatureValidWithoutValue(const AtomString& mediaFeature, const MediaQueryParserContext& context)
 {
     // Media features that are prefixed by min/max cannot be used without a value.
     return mediaFeature == MediaFeatureNames::anyHover
@@ -168,7 +168,7 @@ static inline bool isFeatureValidWithoutValue(const AtomicString& mediaFeature, 
         || mediaFeature == MediaFeatureNames::prefersReducedMotion
         || (mediaFeature == MediaFeatureNames::prefersDarkInterface && (context.useSystemAppearance || isUASheetBehavior(context.mode)))
 #if ENABLE(DARK_MODE_CSS)
-        || (mediaFeature == MediaFeatureNames::prefersColorScheme && RuntimeEnabledFeatures::sharedFeatures().darkModeCSSEnabled())
+        || (mediaFeature == MediaFeatureNames::prefersColorScheme)
 #endif
         || mediaFeature == MediaFeatureNames::devicePixelRatio
         || mediaFeature == MediaFeatureNames::resolution

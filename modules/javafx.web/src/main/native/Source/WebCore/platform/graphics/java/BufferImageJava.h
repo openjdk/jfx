@@ -54,11 +54,16 @@ public:
 
     FloatSize size() const override { return FloatSize(m_width, m_height); }
 
-    ImageDrawResult draw(GraphicsContext& gc, const FloatRect& dstRect,
-              const FloatRect& srcRect, CompositeOperator op, BlendMode bm, DecodingMode dm, ImageOrientationDescription) override;
+    // ImageDrawResult draw(GraphicsContext& gc, const FloatRect& dstRect,
+    //           const FloatRect& srcRect, CompositeOperator op, BlendMode bm, DecodingMode dm, ImageOrientationDescription) override;
+
+    ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect,
+        const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
 
     void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, BlendMode = BlendMode::Normal) override;
+        const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+
+
 
     NativeImagePtr nativeImageForCurrentFrame(const GraphicsContext* = nullptr) override;
 

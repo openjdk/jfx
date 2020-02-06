@@ -27,6 +27,7 @@
 #include "CSSParserContext.h"
 
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "Page.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
@@ -44,12 +45,6 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
     : baseURL(baseURL)
     , mode(mode)
 {
-#if PLATFORM(IOS_FAMILY)
-    // FIXME: Force the site specific quirk below to work on iOS. Investigating other site specific quirks
-    // to see if we can enable the preference all together is to be handled by:
-    // <rdar://problem/8493309> Investigate Enabling Site Specific Quirks in MobileSafari and UIWebView
-    needsSiteSpecificQuirks = true;
-#endif
 }
 
 CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBaseURL, const String& charset)
@@ -59,12 +54,19 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
     , isHTMLDocument(document.isHTMLDocument())
     , hasDocumentSecurityOrigin(sheetBaseURL.isNull() || document.securityOrigin().canRequest(baseURL))
 {
-
-    needsSiteSpecificQuirks = document.settings().needsSiteSpecificQuirks();
     enforcesCSSMIMETypeInNoQuirksMode = document.settings().enforceCSSMIMETypeInNoQuirksMode();
     useLegacyBackgroundSizeShorthandBehavior = document.settings().useLegacyBackgroundSizeShorthandBehavior();
 #if ENABLE(TEXT_AUTOSIZING)
     textAutosizingEnabled = document.settings().textAutosizingEnabled();
+#endif
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+    legacyOverflowScrollingTouchEnabled = document.settings().legacyOverflowScrollingTouchEnabled();
+    // The legacy -webkit-overflow-scrolling: touch behavior may have been disabled through the website policy,
+    // in that case we want to disable the legacy behavior regardless of what the setting says.
+    if (auto* loader = document.loader()) {
+        if (loader->legacyOverflowScrollingTouchPolicy() == LegacyOverflowScrollingTouchPolicy::Disable)
+            legacyOverflowScrollingTouchEnabled = false;
+    }
 #endif
     springTimingFunctionEnabled = document.settings().springTimingFunctionEnabled();
     constantPropertiesEnabled = document.settings().constantPropertiesEnabled();
@@ -74,13 +76,6 @@ CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBas
 #endif
     deferredCSSParserEnabled = document.settings().deferredCSSParserEnabled();
     useSystemAppearance = document.page() ? document.page()->useSystemAppearance() : false;
-
-#if PLATFORM(IOS_FAMILY)
-    // FIXME: Force the site specific quirk below to work on iOS. Investigating other site specific quirks
-    // to see if we can enable the preference all together is to be handled by:
-    // <rdar://problem/8493309> Investigate Enabling Site Specific Quirks in MobileSafari and UIWebView
-    needsSiteSpecificQuirks = true;
-#endif
 }
 
 bool operator==(const CSSParserContext& a, const CSSParserContext& b)
@@ -92,7 +87,9 @@ bool operator==(const CSSParserContext& a, const CSSParserContext& b)
 #if ENABLE(TEXT_AUTOSIZING)
         && a.textAutosizingEnabled == b.textAutosizingEnabled
 #endif
-        && a.needsSiteSpecificQuirks == b.needsSiteSpecificQuirks
+#if ENABLE(OVERFLOW_SCROLLING_TOUCH)
+        && a.legacyOverflowScrollingTouchEnabled == b.legacyOverflowScrollingTouchEnabled
+#endif
         && a.enforcesCSSMIMETypeInNoQuirksMode == b.enforcesCSSMIMETypeInNoQuirksMode
         && a.useLegacyBackgroundSizeShorthandBehavior == b.useLegacyBackgroundSizeShorthandBehavior
         && a.springTimingFunctionEnabled == b.springTimingFunctionEnabled

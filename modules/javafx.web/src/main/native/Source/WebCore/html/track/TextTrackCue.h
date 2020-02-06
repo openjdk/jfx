@@ -42,8 +42,9 @@ namespace WebCore {
 class TextTrack;
 
 class TextTrackCue : public RefCounted<TextTrackCue>, public EventTargetWithInlineData {
+    WTF_MAKE_ISO_ALLOCATED(TextTrackCue);
 public:
-    static const AtomicString& cueShadowPseudoId();
+    static const AtomString& cueShadowPseudoId();
 
     TextTrack* track() const;
     void setTrack(TextTrack*);

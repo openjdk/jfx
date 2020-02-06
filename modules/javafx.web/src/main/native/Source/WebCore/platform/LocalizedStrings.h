@@ -83,9 +83,8 @@ namespace WebCore {
     String contextMenuItemTagUnicodeInsertZWSMark();
     String contextMenuItemTagUnicodeInsertZWJMark();
     String contextMenuItemTagUnicodeInsertZWNJMark();
-#endif
-#if PLATFORM(GTK)
     String contextMenuItemTagSelectAll();
+    String contextMenuItemTagInsertEmoji();
 #endif
     String contextMenuItemTagNoGuessesFound();
     String contextMenuItemTagIgnoreSpelling();
@@ -213,6 +212,15 @@ namespace WebCore {
     String AXMeterGaugeRegionLessGoodText();
 #endif
 #endif
+#if ENABLE(APPLE_PAY)
+    String AXApplePayPlainLabel();
+    String AXApplePayBuyLabel();
+    String AXApplePaySetupLabel();
+    String AXApplePayDonateLabel();
+    String AXApplePayCheckOutLabel();
+    String AXApplePayBookLabel();
+    String AXApplePaySubscribeLabel();
+#endif
 
     String AXAutoFillCredentialsLabel();
     String AXAutoFillContactsLabel();
@@ -225,8 +233,9 @@ namespace WebCore {
     String blockedPluginByContentSecurityPolicyText();
     String insecurePluginVersionText();
     String unsupportedPluginText();
+    WEBCORE_EXPORT String pluginTooSmallText();
 
-    String multipleFileUploadText(unsigned numberOfFiles);
+    WEBCORE_EXPORT String multipleFileUploadText(unsigned numberOfFiles);
     String unknownFileSizeText();
 
 #if PLATFORM(WIN)

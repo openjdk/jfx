@@ -39,14 +39,10 @@
 #include "OpenTypeMathData.h"
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/AtomicStringHash.h>
+#include <wtf/text/AtomStringHash.h>
 
 #if ENABLE(OPENTYPE_VERTICAL)
 #include "OpenTypeVerticalData.h"
-#endif
-
-#if USE(DIRECT2D)
-#include <dwrite.h>
 #endif
 
 namespace WebCore {
@@ -358,7 +354,7 @@ static RefPtr<GlyphPage> createAndFillGlyphPage(unsigned pageNumber, const Font&
     if (!haveGlyphs)
         return nullptr;
 
-    return WTFMove(glyphPage);
+    return glyphPage;
 }
 
 const GlyphPage* Font::glyphPage(unsigned pageNumber) const
@@ -394,7 +390,7 @@ GlyphData Font::glyphDataForCharacter(UChar32 character) const
 auto Font::ensureDerivedFontData() const -> DerivedFonts&
 {
     if (!m_derivedFontData)
-        m_derivedFontData = std::make_unique<DerivedFonts>();
+        m_derivedFontData = makeUnique<DerivedFonts>();
     return *m_derivedFontData;
 }
 
@@ -517,7 +513,7 @@ public:
     {
     }
 
-    CharacterFallbackMapKey(const AtomicString& locale, UChar32 character, IsForPlatformFont isForPlatformFont)
+    CharacterFallbackMapKey(const AtomString& locale, UChar32 character, IsForPlatformFont isForPlatformFont)
         : locale(locale)
         , character(character)
         , isForPlatformFont(isForPlatformFont == IsForPlatformFont::Yes)
@@ -541,7 +537,7 @@ public:
 private:
     friend struct CharacterFallbackMapKeyHash;
 
-    AtomicString locale;
+    AtomString locale;
     UChar32 character { 0 };
     bool isForPlatformFont { false };
 };

@@ -64,7 +64,7 @@ std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerBuff
     auto texture = BitmapTextureGL::create(TextureMapperContextAttributes::get(), m_internalFormat);
     texture->reset(m_size);
     static_cast<BitmapTextureGL&>(texture.get()).copyFromExternalTexture(m_textureID);
-    return std::make_unique<TextureMapperPlatformLayerBuffer>(WTFMove(texture), m_extraFlags);
+    return makeUnique<TextureMapperPlatformLayerBuffer>(WTFMove(texture), m_extraFlags);
 }
 
 void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textureMapper, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity)
@@ -81,7 +81,7 @@ void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textu
     if (m_extraFlags & TextureMapperGL::ShouldNotBlend) {
         ASSERT(!m_texture);
         if (m_holePunchClient)
-        m_holePunchClient->setVideoRectangle(enclosingIntRect(modelViewMatrix.mapRect(targetRect)));
+            m_holePunchClient->setVideoRectangle(enclosingIntRect(modelViewMatrix.mapRect(targetRect)));
         texmapGL.drawSolidColor(targetRect, modelViewMatrix, Color(0, 0, 0, 0), false);
         return;
     }

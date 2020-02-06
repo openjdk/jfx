@@ -194,11 +194,11 @@ bool StorageAreaImpl::contains(const String& key)
     return m_storageMap->contains(key);
 }
 
-void StorageAreaImpl::importItems(const HashMap<String, String>& items)
+void StorageAreaImpl::importItems(HashMap<String, String>&& items)
 {
     ASSERT(!m_isShutdown);
 
-    m_storageMap->importItems(items);
+    m_storageMap->importItems(WTFMove(items));
 }
 
 void StorageAreaImpl::close()
@@ -290,6 +290,24 @@ void StorageAreaImpl::dispatchStorageEvent(const String& key, const String& oldV
         StorageEventDispatcher::dispatchLocalStorageEvents(key, oldValue, newValue, m_securityOrigin, sourceFrame);
     else
         StorageEventDispatcher::dispatchSessionStorageEvents(key, oldValue, newValue, m_securityOrigin, sourceFrame);
+}
+
+void StorageAreaImpl::sessionChanged(bool isNewSessionPersistent)
+{
+    ASSERT(isMainThread());
+
+    unsigned quota = m_storageMap->quota();
+    m_storageMap = StorageMap::create(quota);
+
+    if (isNewSessionPersistent && !m_storageAreaSync && m_storageSyncManager) {
+        m_storageAreaSync = StorageAreaSync::create(m_storageSyncManager.get(), *this, m_securityOrigin.databaseIdentifier());
+        return;
+    }
+
+    if (!isNewSessionPersistent && m_storageAreaSync) {
+        m_storageAreaSync->scheduleFinalSync();
+        m_storageAreaSync = nullptr;
+    }
 }
 
 } // namespace WebCore
