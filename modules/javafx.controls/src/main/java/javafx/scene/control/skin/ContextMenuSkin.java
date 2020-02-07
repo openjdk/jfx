@@ -32,15 +32,17 @@ import com.sun.javafx.scene.control.skin.Utils;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
+import javafx.geometry.Side;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Control;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
+import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 
@@ -215,24 +217,41 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
 
     private void performPopupShifts() {
         final ContextMenu contextMenu = getSkinnable();
-        final Node ownerNode = contextMenu.getOwnerNode();
-        if (ownerNode == null) return;
+        Point2D ownerPos = getOwnerPosition();
+        if (ownerPos == null) return;
 
-        final Bounds ownerBounds = ownerNode.localToScreen(ownerNode.getLayoutBounds());
-        if (ownerBounds == null) return;
-
-        // shifting vertically
-        final double rootPrefHeight = root.prefHeight(-1);
-        shiftY = prefHeight - rootPrefHeight;
-        if (shiftY > 0 && (contextMenu.getY() + rootPrefHeight) < ownerBounds.getMinY()) {
-            contextMenu.setY(contextMenu.getY() + shiftY);
+        final Side side = (Side) contextMenu.getProperties().get("SIDE");
+        if (side == Side.TOP) {
+            // shifting vertically
+            final double rootPrefHeight = root.prefHeight(-1);
+            shiftY = prefHeight - rootPrefHeight;
+            double dy = (double) contextMenu.getProperties().get("dy");
+            if (shiftY != 0 && (contextMenu.getY() + rootPrefHeight + dy) != ownerPos.getY()) {
+                contextMenu.setY(contextMenu.getY() + shiftY);
+            }
         }
 
-        // shifting horizontally
-        final double rootPrefWidth = root.prefWidth(-1);
-        shiftX = prefWidth - rootPrefWidth;
-        if (shiftX > 0 && (contextMenu.getX() + rootPrefWidth) < ownerBounds.getMinX()) {
-            contextMenu.setX(contextMenu.getX() + shiftX);
+        if (side == Side.LEFT) {
+            // shifting horizontally
+            final double rootPrefWidth = root.prefWidth(-1);
+            shiftX = prefWidth - rootPrefWidth;
+            double dx = (double) contextMenu.getProperties().get("dx");
+            if (shiftX != 0 && (contextMenu.getX() + rootPrefWidth + dx) != ownerPos.getX()) {
+                contextMenu.setX(contextMenu.getX() + shiftX);
+            }
         }
+    }
+
+    private Point2D getOwnerPosition() {
+        Point2D pos = null;
+        final Node ownerNode = getSkinnable().getOwnerNode();
+        final Window ownerWindow = getSkinnable().getOwnerWindow();
+        if (ownerNode != null) {
+            final Bounds ownerNodeBounds = ownerNode.localToScreen(ownerNode.getLayoutBounds());
+            pos = new Point2D(ownerNodeBounds.getMinX(), ownerNodeBounds.getMinX());
+        } else if (ownerWindow != null) {
+            pos = new Point2D(ownerWindow.getX(), ownerWindow.getY());
+        }
+        return pos;
     }
 }

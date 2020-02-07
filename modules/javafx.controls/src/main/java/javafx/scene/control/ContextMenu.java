@@ -44,8 +44,6 @@ import javafx.stage.Window;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import javafx.scene.control.skin.ContextMenuSkin;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.SimpleBooleanProperty;
 
 /**
  * <p>
@@ -250,7 +248,9 @@ public class ContextMenu extends PopupControl {
      public void show(Node anchor, Side side, double dx, double dy) {
         if (anchor == null) return;
         if (getItems().size() == 0) return;
-
+        getProperties().put("dx", dx);
+        getProperties().put("dy", dy);
+        getProperties().put("SIDE", side);
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
         // FIXME because Side is not yet in javafx.geometry, we have to convert
         // to the old HPos/VPos API here, as Utils can not refer to Side in the
