@@ -26,6 +26,7 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.stage.WindowHelper;
@@ -37,6 +38,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.stage.Stage;
 
 import java.util.List;
@@ -160,6 +162,35 @@ public class MenuBarSkinTest {
             // setting useSystemMenuBar to true again, should add back the system menus.
             menubar.setUseSystemMenuBar(true);
             assertEquals(menubar.getMenus().size(), getSystemMenus().size());
+        }
+    }
+
+    @Test public void testModifyingNonSystemMenuBar() {
+        if (tk.getSystemMenu().isSupported()) {
+            // Set system menubar to true
+            menubar.setUseSystemMenuBar(true);
+
+            // Create a secondary menubar that is not
+            // a system menubar
+            MenuBar secondaryMenuBar = new MenuBar(
+                    new Menu("Menu 1", null, new MenuItem("Item 1")),
+                    new Menu("Menu 2", null, new MenuItem("Item 2")));
+            secondaryMenuBar.setSkin(new MenuBarSkin(secondaryMenuBar));
+
+            // Add the secondary menubar to the scene
+            ((Group)scene.getRoot()).getChildren().add(secondaryMenuBar);
+
+            // Verify that the menubar is the system menubar
+            assertTrue(menubar.isUseSystemMenuBar());
+
+            // Remove a menu from the secondary menubar
+            // to trigger a rebuild of its UI and a call
+            // to the sceneProperty listener
+            secondaryMenuBar.getMenus().remove(1);
+
+            // Verify that this has not affected whether the
+            // original menubar is the system menubar
+            assertTrue(menubar.isUseSystemMenuBar());
         }
     }
 
