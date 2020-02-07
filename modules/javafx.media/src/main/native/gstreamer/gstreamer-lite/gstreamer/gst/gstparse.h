@@ -73,7 +73,7 @@ typedef enum
  *     just return the element.
  * @GST_PARSE_FLAG_PLACE_IN_BIN: If more than one toplevel element is described
  *     by the pipeline description string, put them in a #GstBin instead of a
- *     #GstPipeline. (Since 1.10)
+ *     #GstPipeline. (Since: 1.10)
  *
  * Parsing options.
  */

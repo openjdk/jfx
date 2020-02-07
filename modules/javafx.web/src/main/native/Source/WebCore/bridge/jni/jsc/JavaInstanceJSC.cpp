@@ -46,7 +46,7 @@
 #include <JavaScriptCore/Error.h>
 #include <JavaScriptCore/FunctionPrototype.h>
 #include <JavaScriptCore/JSLock.h>
-
+#include <JavaScriptCore/JSString.h>
 
 using namespace JSC::Bindings;
 using namespace JSC;
@@ -130,7 +130,7 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
     const jchar* c = getUCharactersFromJStringInEnv(env, stringValue);
     String u((const UChar*)c, (int)env->GetStringLength(stringValue));
     releaseUCharactersForJStringInEnv(env, stringValue, c);
-    return jsString(exec, u);
+    return jsString(vm, u);
 }
 
 static JSValue numberValueForCharacter(jobject obj) {

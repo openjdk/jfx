@@ -315,15 +315,15 @@ GstVideoRegionOfInterestMeta *gst_buffer_get_video_region_of_interest_meta_id (G
 
 GST_VIDEO_API
 GstVideoRegionOfInterestMeta *gst_buffer_add_video_region_of_interest_meta    (GstBuffer   * buffer,
-                                           const gchar * roi_type,
-                                           guint         x,
+                         const gchar * roi_type,
+                         guint         x,
                                                                                guint         y,
                                                                                guint         w,
                                                                                guint         h);
 
 GST_VIDEO_API
 GstVideoRegionOfInterestMeta *gst_buffer_add_video_region_of_interest_meta_id (GstBuffer   * buffer,
-                                           GQuark        roi_type,
+                         GQuark        roi_type,
                                                                                guint         x,
                                                                                guint         y,
                                                                                guint         w,

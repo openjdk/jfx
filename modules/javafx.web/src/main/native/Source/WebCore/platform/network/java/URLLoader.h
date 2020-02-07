@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,7 +41,8 @@ class ResourceResponse;
 class URLLoader {
 public:
     static std::unique_ptr<URLLoader> loadAsynchronously(NetworkingContext* context,
-                                                    ResourceHandle* handle);
+                                                    ResourceHandle* handle,
+                                                    const ResourceRequest& request);
     void cancel();
     static void loadSynchronously(NetworkingContext* context,
                                   const ResourceRequest& request,
@@ -54,9 +55,7 @@ public:
     public:
         virtual void didSendData(long totalBytesSent,
                                  long totalBytesToBeSent) = 0;
-        virtual bool willSendRequest(const String& newUrl,
-                                     const String& newMethod,
-                                     const ResourceResponse& response) = 0;
+        virtual bool willSendRequest(const ResourceResponse& response) = 0;
         virtual void didReceiveResponse(const ResourceResponse& response) = 0;
         virtual void didReceiveData(const char* data, int length) = 0;
         virtual void didFinishLoading() = 0;
@@ -78,9 +77,7 @@ private:
         AsynchronousTarget(ResourceHandle* handle);
 
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
-        bool willSendRequest(const String& newUrl,
-                             const String& newMethod,
-                             const ResourceResponse& response) final;
+        bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
         void didReceiveData(const char* data, int length) final;
         void didFinishLoading() final;
@@ -97,9 +94,7 @@ private:
                           Vector<char>& data);
 
         void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
-        bool willSendRequest(const String& newUrl,
-                             const String& newMethod,
-                             const ResourceResponse& response) final;
+        bool willSendRequest(const ResourceResponse& response) final;
         void didReceiveResponse(const ResourceResponse& response) final;
         void didReceiveData(const char* data, int length) final;
         void didFinishLoading() final;

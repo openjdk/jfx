@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -291,7 +291,12 @@ public class GlyphCache {
                     }
                     // If add fails,clear up the cache. Try add again.
                     clearAll();
-                    packer.add(rect);
+                    if (!packer.add(rect)) {
+                        if (PrismSettings.verbose) {
+                            System.out.println(rect + " won't fit in GlyphCache");
+                        }
+                        return null;
+                    }
                 }
 
                 // We always pass skipFlush=true to backingStore.update()
@@ -320,7 +325,9 @@ public class GlyphCache {
                                         0, 0, emw, emh, stride,
                                         skipFlush);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if (PrismSettings.verbose) {
+                        e.printStackTrace();
+                    }
                     return null;
                 }
                 // Upload the glyph

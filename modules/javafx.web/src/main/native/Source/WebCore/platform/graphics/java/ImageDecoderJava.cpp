@@ -324,7 +324,7 @@ Optional<IntPoint> ImageDecoderJava::hotSpot() const
 ImageOrientation ImageDecoderJava::frameOrientationAtIndex(size_t) const
 {
     notImplemented();
-    return ImageOrientation(DefaultImageOrientation);
+    return ImageOrientation(ImageOrientation::None);
 }
 
 size_t ImageDecoderJava::bytesDecodedToDetermineProperties() const

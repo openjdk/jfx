@@ -105,7 +105,7 @@ void CachedImage::setBodyDataFrom(const CachedResource& resource)
         m_imageObserver->cachedImages().add(this);
 
     if (m_image && is<SVGImage>(*m_image))
-        m_svgImageCache = std::make_unique<SVGImageCache>(&downcast<SVGImage>(*m_image));
+        m_svgImageCache = makeUnique<SVGImageCache>(&downcast<SVGImage>(*m_image));
 }
 
 void CachedImage::didAddClient(CachedResourceClient& client)
@@ -275,21 +275,24 @@ void CachedImage::setContainerContextForClient(const CachedImageClient& client, 
     m_svgImageCache->setContainerContextForClient(client, containerSize, containerZoom, imageURL);
 }
 
-LayoutSize CachedImage::imageSizeForRenderer(const RenderElement* renderer, float multiplier, SizeType sizeType)
+FloatSize CachedImage::imageSizeForRenderer(const RenderElement* renderer, SizeType sizeType) const
 {
     if (!m_image)
-        return LayoutSize();
+        return { };
 
-    LayoutSize imageSize;
+    if (is<BitmapImage>(*m_image) && renderer && renderer->imageOrientation() == ImageOrientation::FromImage)
+        return downcast<BitmapImage>(*m_image).sizeRespectingOrientation();
 
-    if (is<BitmapImage>(*m_image) && renderer && renderer->shouldRespectImageOrientation() == RespectImageOrientation)
-        imageSize = LayoutSize(downcast<BitmapImage>(*m_image).sizeRespectingOrientation());
-    else if (is<SVGImage>(*m_image) && sizeType == UsedSize)
-        imageSize = LayoutSize(m_svgImageCache->imageSizeForRenderer(renderer));
-    else
-        imageSize = LayoutSize(m_image->size());
+    if (is<SVGImage>(*m_image) && sizeType == UsedSize)
+        return m_svgImageCache->imageSizeForRenderer(renderer);
 
-    if (multiplier == 1.0f)
+    return m_image->size();
+}
+
+LayoutSize CachedImage::imageSizeForRenderer(const RenderElement* renderer, float multiplier, SizeType sizeType) const
+{
+    LayoutSize imageSize = LayoutSize(imageSizeForRenderer(renderer, sizeType));
+    if (imageSize.isEmpty() || multiplier == 1.0f)
         return imageSize;
 
     // Don't let images that have a width/height >= 1 shrink below 1 when zoomed.
@@ -354,7 +357,7 @@ inline void CachedImage::createImage()
 
     if (m_image) {
         if (is<SVGImage>(*m_image))
-            m_svgImageCache = std::make_unique<SVGImageCache>(&downcast<SVGImage>(*m_image));
+            m_svgImageCache = makeUnique<SVGImageCache>(&downcast<SVGImage>(*m_image));
 
         // Send queued container size requests.
         if (m_image->usesContainerSize()) {

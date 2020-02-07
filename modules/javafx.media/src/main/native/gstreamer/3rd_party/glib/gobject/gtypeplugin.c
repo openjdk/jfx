@@ -85,9 +85,9 @@ g_type_plugin_get_type (void)
   if (!type_plugin_type)
     {
       const GTypeInfo type_plugin_info = {
-    sizeof (GTypePluginClass),
-    NULL,           /* base_init */
-    NULL,           /* base_finalize */
+  sizeof (GTypePluginClass),
+  NULL,           /* base_init */
+  NULL,           /* base_finalize */
       };
 
       type_plugin_type = g_type_register_static (G_TYPE_INTERFACE, g_intern_static_string ("GTypePlugin"), &type_plugin_info, 0);
@@ -147,9 +147,9 @@ g_type_plugin_unuse (GTypePlugin *plugin)
  */
 void
 g_type_plugin_complete_type_info (GTypePlugin     *plugin,
-                  GType            g_type,
-                  GTypeInfo       *info,
-                  GTypeValueTable *value_table)
+          GType            g_type,
+          GTypeInfo       *info,
+          GTypeValueTable *value_table)
 {
   GTypePluginClass *iface;
 
@@ -159,9 +159,9 @@ g_type_plugin_complete_type_info (GTypePlugin     *plugin,
 
   iface = G_TYPE_PLUGIN_GET_CLASS (plugin);
   iface->complete_type_info (plugin,
-                 g_type,
-                 info,
-                 value_table);
+           g_type,
+           info,
+           value_table);
 }
 
 /**
@@ -178,9 +178,9 @@ g_type_plugin_complete_type_info (GTypePlugin     *plugin,
  */
 void
 g_type_plugin_complete_interface_info (GTypePlugin    *plugin,
-                       GType           instance_type,
-                       GType           interface_type,
-                       GInterfaceInfo *info)
+               GType           instance_type,
+               GType           interface_type,
+               GInterfaceInfo *info)
 {
   GTypePluginClass *iface;
 
@@ -189,7 +189,7 @@ g_type_plugin_complete_interface_info (GTypePlugin    *plugin,
 
   iface = G_TYPE_PLUGIN_GET_CLASS (plugin);
   iface->complete_interface_info (plugin,
-                  instance_type,
-                  interface_type,
-                  info);
+          instance_type,
+          interface_type,
+          info);
 }

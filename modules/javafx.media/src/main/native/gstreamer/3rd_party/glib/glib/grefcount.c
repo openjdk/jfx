@@ -96,7 +96,7 @@ void
   /* Non-atomic refcounting is implemented using the negative range
    * of signed integers:
    *
-   * G_MININT                 Z¯< 0 > Z⁺                G_MAXINT
+   * G_MININT                 Z-< 0 > Z+                G_MAXINT
    * |----------------------------|----------------------------|
    *
    * Acquiring a reference moves us towards MININT, and releasing a
@@ -199,7 +199,7 @@ gboolean
  * g_atomic_ref_count_init:
  * @arc: the address of an atomic reference count variable
  *
- * Atomically initializes a reference count variable.
+ * Initializes a reference count variable.
  *
  * Since: 2.58
  */
@@ -211,13 +211,13 @@ void
   /* Atomic refcounting is implemented using the positive range
    * of signed integers:
    *
-   * G_MININT                 Z¯< 0 > Z⁺                G_MAXINT
+   * G_MININT                 Z-< 0 > Z+                G_MAXINT
    * |----------------------------|----------------------------|
    *
    * Acquiring a reference moves us towards MAXINT, and releasing a
    * reference moves us towards 0.
    */
-  g_atomic_int_set (arc, 1);
+  *arc = 1;
 }
 
 /**

@@ -415,13 +415,13 @@ g_async_queue_pop_intern_unlocked (GAsyncQueue *queue,
       queue->waiting_threads++;
       while (!g_queue_peek_tail_link (&queue->queue))
         {
-      if (end_time == -1)
-        g_cond_wait (&queue->cond, &queue->mutex);
-      else
-        {
-          if (!g_cond_wait_until (&queue->cond, &queue->mutex, end_time))
-        break;
-        }
+    if (end_time == -1)
+      g_cond_wait (&queue->cond, &queue->mutex);
+    else
+      {
+        if (!g_cond_wait_until (&queue->cond, &queue->mutex, end_time))
+    break;
+      }
         }
       queue->waiting_threads--;
     }
@@ -534,7 +534,7 @@ g_async_queue_try_pop_unlocked (GAsyncQueue *queue)
  */
 gpointer
 g_async_queue_timeout_pop (GAsyncQueue *queue,
-               guint64      timeout)
+         guint64      timeout)
 {
   gint64 end_time = g_get_monotonic_time () + timeout;
   gpointer retval;
@@ -565,7 +565,7 @@ g_async_queue_timeout_pop (GAsyncQueue *queue,
  */
 gpointer
 g_async_queue_timeout_pop_unlocked (GAsyncQueue *queue,
-                    guint64      timeout)
+            guint64      timeout)
 {
   gint64 end_time = g_get_monotonic_time () + timeout;
 
@@ -584,7 +584,7 @@ g_async_queue_timeout_pop_unlocked (GAsyncQueue *queue,
  *
  * If no data is received before @end_time, %NULL is returned.
  *
- * To easily calculate @end_time, a combination of g_get_current_time()
+ * To easily calculate @end_time, a combination of g_get_real_time()
  * and g_time_val_add() can be used.
  *
  * Returns: data from the queue or %NULL, when no data is
@@ -592,6 +592,7 @@ g_async_queue_timeout_pop_unlocked (GAsyncQueue *queue,
  *
  * Deprecated: use g_async_queue_timeout_pop().
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gpointer
 g_async_queue_timed_pop (GAsyncQueue *queue,
                          GTimeVal    *end_time)
@@ -615,6 +616,7 @@ g_async_queue_timed_pop (GAsyncQueue *queue,
 
   return retval;
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_async_queue_timed_pop_unlocked:
@@ -626,7 +628,7 @@ g_async_queue_timed_pop (GAsyncQueue *queue,
  *
  * If no data is received before @end_time, %NULL is returned.
  *
- * To easily calculate @end_time, a combination of g_get_current_time()
+ * To easily calculate @end_time, a combination of g_get_real_time()
  * and g_time_val_add() can be used.
  *
  * This function must be called while holding the @queue's lock.
@@ -636,6 +638,7 @@ g_async_queue_timed_pop (GAsyncQueue *queue,
  *
  * Deprecated: use g_async_queue_timeout_pop_unlocked().
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gpointer
 g_async_queue_timed_pop_unlocked (GAsyncQueue *queue,
                                   GTimeVal    *end_time)
@@ -654,6 +657,7 @@ g_async_queue_timed_pop_unlocked (GAsyncQueue *queue,
 
   return g_async_queue_pop_intern_unlocked (queue, TRUE, m_end_time);
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_async_queue_length:

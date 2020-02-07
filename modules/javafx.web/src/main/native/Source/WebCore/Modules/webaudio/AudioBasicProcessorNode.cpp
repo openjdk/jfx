@@ -33,14 +33,17 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioProcessor.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(AudioBasicProcessorNode);
 
 AudioBasicProcessorNode::AudioBasicProcessorNode(AudioContext& context, float sampleRate)
     : AudioNode(context, sampleRate)
 {
-    addInput(std::make_unique<AudioNodeInput>(this));
-    addOutput(std::make_unique<AudioNodeOutput>(this, 1));
+    addInput(makeUnique<AudioNodeInput>(this));
+    addOutput(makeUnique<AudioNodeOutput>(this, 1));
 
     // The subclass must create m_processor.
 }

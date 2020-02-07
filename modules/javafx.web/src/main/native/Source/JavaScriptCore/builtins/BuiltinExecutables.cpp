@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,9 +37,6 @@ namespace JSC {
 BuiltinExecutables::BuiltinExecutables(VM& vm)
     : m_vm(vm)
     , m_combinedSourceProvider(StringSourceProvider::create(StringImpl::createFromLiteral(s_JSCCombinedCode, s_JSCCombinedCodeLength), { }, URL()))
-#define INITIALIZE_BUILTIN_SOURCE_MEMBERS(name, functionName, overrideName, length) , m_##name##Source(m_combinedSourceProvider.copyRef(), s_##name - s_JSCCombinedCode, (s_##name - s_JSCCombinedCode) + length, 1, 1)
-    JSC_FOREACH_BUILTIN_CODE(INITIALIZE_BUILTIN_SOURCE_MEMBERS)
-#undef INITIALIZE_BUILTIN_SOURCE_MEMBERS
 {
 }
 
@@ -216,7 +213,7 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         ParserError error;
         JSParserBuiltinMode builtinMode = isBuiltinDefaultClassConstructor ? JSParserBuiltinMode::NotBuiltin : JSParserBuiltinMode::Builtin;
         std::unique_ptr<ProgramNode> program = parse<ProgramNode>(
-            &vm, source, Identifier(), builtinMode,
+            vm, source, Identifier(), builtinMode,
             JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded, error,
             &positionBeforeLastNewlineFromParser, constructorKind);
 
@@ -257,28 +254,36 @@ UnlinkedFunctionExecutable* BuiltinExecutables::createExecutable(VM& vm, const S
         }
     }
 
-    VariableEnvironment dummyTDZVariables;
-    UnlinkedFunctionExecutable* functionExecutable = UnlinkedFunctionExecutable::create(&vm, source, &metadata, kind, constructAbility, JSParserScriptMode::Classic, vm.m_compactVariableMap->get(dummyTDZVariables), DerivedContextType::None, isBuiltinDefaultClassConstructor);
+    UnlinkedFunctionExecutable* functionExecutable = UnlinkedFunctionExecutable::create(vm, source, &metadata, kind, constructAbility, JSParserScriptMode::Classic, WTF::nullopt, DerivedContextType::None, isBuiltinDefaultClassConstructor);
     return functionExecutable;
 }
 
-void BuiltinExecutables::finalize(Handle<Unknown>, void* context)
+void BuiltinExecutables::finalizeUnconditionally()
 {
-    static_cast<Weak<UnlinkedFunctionExecutable>*>(context)->clear();
+    for (auto*& unlinkedExecutable : m_unlinkedExecutables) {
+        if (unlinkedExecutable && !m_vm.heap.isMarked(unlinkedExecutable))
+            unlinkedExecutable = nullptr;
+    }
 }
 
 #define DEFINE_BUILTIN_EXECUTABLES(name, functionName, overrideName, length) \
+SourceCode BuiltinExecutables::name##Source() \
+{\
+    return SourceCode { m_combinedSourceProvider.copyRef(), static_cast<int>(s_##name - s_JSCCombinedCode), static_cast<int>((s_##name - s_JSCCombinedCode) + length), 1, 1 };\
+}\
+\
 UnlinkedFunctionExecutable* BuiltinExecutables::name##Executable() \
 {\
-    if (!m_##name##Executable) {\
+    unsigned index = static_cast<unsigned>(BuiltinCodeIndex::name);\
+    if (!m_unlinkedExecutables[index]) {\
         Identifier executableName = m_vm.propertyNames->builtinNames().functionName##PublicName();\
         if (overrideName)\
-            executableName = Identifier::fromString(&m_vm, overrideName);\
-        m_##name##Executable = Weak<UnlinkedFunctionExecutable>(createBuiltinExecutable(m_##name##Source, executableName, s_##name##ConstructAbility), this, &m_##name##Executable);\
+            executableName = Identifier::fromString(m_vm, overrideName);\
+        m_unlinkedExecutables[index] = createBuiltinExecutable(name##Source(), executableName, s_##name##ConstructAbility);\
     }\
-    return m_##name##Executable.get();\
+    return m_unlinkedExecutables[index];\
 }
 JSC_FOREACH_BUILTIN_CODE(DEFINE_BUILTIN_EXECUTABLES)
-#undef EXPOSE_BUILTIN_SOURCES
+#undef DEFINE_BUILTIN_EXECUTABLES
 
 }

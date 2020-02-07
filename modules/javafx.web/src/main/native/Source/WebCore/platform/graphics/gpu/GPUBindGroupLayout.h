@@ -28,11 +28,11 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUBindGroupLayoutDescriptor.h"
-
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/Variant.h>
 
 #if USE(METAL)
 OBJC_PROTOCOL(MTLArgumentEncoder);
@@ -45,29 +45,53 @@ class GPUDevice;
 
 class GPUBindGroupLayout : public RefCounted<GPUBindGroupLayout> {
 public:
-    static RefPtr<GPUBindGroupLayout> tryCreate(const GPUDevice&, GPUBindGroupLayoutDescriptor&&);
+    static RefPtr<GPUBindGroupLayout> tryCreate(const GPUDevice&, const GPUBindGroupLayoutDescriptor&);
 
-    using BindingsMapType = HashMap<unsigned long long, GPUBindGroupLayoutBinding, WTF::IntHash<unsigned long long>, WTF::UnsignedWithZeroKeyHashTraits<unsigned long long>>;
+    struct UniformBuffer {
+        unsigned internalLengthName;
+    };
+
+    struct DynamicUniformBuffer {
+        unsigned internalLengthName;
+    };
+
+    struct Sampler {
+    };
+
+    struct SampledTexture {
+    };
+
+    struct StorageBuffer {
+        unsigned internalLengthName;
+    };
+
+    struct DynamicStorageBuffer {
+        unsigned internalLengthName;
+    };
+
+    using InternalBindingDetails = Variant<UniformBuffer, DynamicUniformBuffer, Sampler, SampledTexture, StorageBuffer, DynamicStorageBuffer>;
+
+    struct Binding {
+        GPUBindGroupLayoutBinding externalBinding;
+        unsigned internalName;
+        InternalBindingDetails internalBindingDetails;
+    };
+
+    using BindingsMapType = HashMap<uint64_t, Binding, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
     const BindingsMapType& bindingsMap() const { return m_bindingsMap; }
 #if USE(METAL)
-    struct ArgumentEncoderBuffer {
-        RetainPtr<MTLArgumentEncoder> encoder;
-        RetainPtr<MTLBuffer> buffer;
-
-        bool isValid() const { return encoder && buffer; }
-    };
-    const ArgumentEncoderBuffer& vertexArguments() const { return m_vertexArguments; }
-    const ArgumentEncoderBuffer& fragmentArguments() const { return m_fragmentArguments; }
-    const ArgumentEncoderBuffer& computeArguments() const { return m_computeArguments; }
+    MTLArgumentEncoder *vertexEncoder() const { return m_vertexEncoder.get(); }
+    MTLArgumentEncoder *fragmentEncoder() const { return m_fragmentEncoder.get(); }
+    MTLArgumentEncoder *computeEncoder() const { return m_computeEncoder.get(); }
 #endif // USE(METAL)
 
 private:
 #if USE(METAL)
-    GPUBindGroupLayout(BindingsMapType&&, ArgumentEncoderBuffer&& vertex, ArgumentEncoderBuffer&& fragment, ArgumentEncoderBuffer&& compute);
+    GPUBindGroupLayout(BindingsMapType&&, RetainPtr<MTLArgumentEncoder>&& vertex, RetainPtr<MTLArgumentEncoder>&& fragment, RetainPtr<MTLArgumentEncoder>&& compute);
 
-    ArgumentEncoderBuffer m_vertexArguments;
-    ArgumentEncoderBuffer m_fragmentArguments;
-    ArgumentEncoderBuffer m_computeArguments;
+    RetainPtr<MTLArgumentEncoder> m_vertexEncoder;
+    RetainPtr<MTLArgumentEncoder> m_fragmentEncoder;
+    RetainPtr<MTLArgumentEncoder> m_computeEncoder;
 #endif // USE(METAL)
     const BindingsMapType m_bindingsMap;
 };

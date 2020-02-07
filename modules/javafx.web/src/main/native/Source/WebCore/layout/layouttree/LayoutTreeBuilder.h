@@ -30,6 +30,8 @@
 namespace WebCore {
 
 class RenderElement;
+class RenderObject;
+class RenderTable;
 class RenderView;
 
 namespace Layout {
@@ -44,6 +46,8 @@ public:
 
 private:
     static void createSubTree(const RenderElement& rootRenderer, Container& rootContainer);
+    static void createTableStructure(const RenderTable& tableRenderer, Container& tableWrapperBox);
+    static std::unique_ptr<Box> createLayoutBox(const RenderElement& parentRenderer, const RenderObject& childRenderer);
 };
 
 #if ENABLE(TREE_DEBUGGING)

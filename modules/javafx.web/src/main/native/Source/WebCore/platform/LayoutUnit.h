@@ -68,22 +68,25 @@ public:
     LayoutUnit(int value) { setValue(value); }
     LayoutUnit(unsigned short value) { setValue(value); }
     LayoutUnit(unsigned value) { setValue(value); }
-    LayoutUnit(unsigned long value)
+    explicit LayoutUnit(unsigned long value)
     {
         m_value = clampTo<int>(value * kFixedPointDenominator);
     }
-    LayoutUnit(unsigned long long value)
+    explicit LayoutUnit(unsigned long long value)
     {
         m_value = clampTo<int>(value * kFixedPointDenominator);
     }
-    LayoutUnit(float value)
+    explicit LayoutUnit(float value)
     {
         m_value = clampToInteger(value * kFixedPointDenominator);
     }
-    LayoutUnit(double value)
+    explicit LayoutUnit(double value)
     {
         m_value = clampToInteger(value * kFixedPointDenominator);
     }
+
+    LayoutUnit& operator=(const LayoutUnit& other) = default;
+    LayoutUnit& operator=(const float& other) { return *this = LayoutUnit(other); }
 
     static LayoutUnit fromFloatCeil(float value)
     {
@@ -811,6 +814,11 @@ inline float ceilToDevicePixel(LayoutUnit value, float pixelSnappingFactor)
     return ceilf((value.rawValue() * pixelSnappingFactor) / kFixedPointDenominator) / pixelSnappingFactor;
 }
 
+inline int roundToInt(float value) { return roundToInt(LayoutUnit(value)); }
+inline float roundToDevicePixel(float value, float pixelSnappingFactor, bool needsDirectionalRounding = false) { return roundToDevicePixel(LayoutUnit(value), pixelSnappingFactor, needsDirectionalRounding); }
+inline float floorToDevicePixel(float value, float pixelSnappingFactor) { return floorToDevicePixel(LayoutUnit(value), pixelSnappingFactor); }
+inline float ceilToDevicePixel(float value, float pixelSnappingFactor) { return ceilToDevicePixel(LayoutUnit(value), pixelSnappingFactor); }
+
 inline LayoutUnit absoluteValue(const LayoutUnit& value)
 {
     return value.abs();
@@ -833,12 +841,14 @@ inline LayoutUnit operator"" _lu(unsigned long long value)
 } // namespace WebCore
 
 #ifndef NDEBUG
+
 namespace WTF {
+
 // This structure is used by PODIntervalTree for debugging.
-template <>
-struct ValueToString<WebCore::LayoutUnit> {
-    static String string(const WebCore::LayoutUnit value) { return String::number(value.toFloat()); }
+template<> struct ValueToString<WebCore::LayoutUnit> {
+    static String string(WebCore::LayoutUnit value) { return String::numberToStringFixedPrecision(value.toFloat()); }
 };
 
 } // namespace WTF
+
 #endif

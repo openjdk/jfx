@@ -88,13 +88,18 @@ public:
 private:
     RefPtr<TypedOMCSSStyleValue> get(const String& property) const final
     {
-        return extractInlineProperty(property, m_element.get());
+        ASSERT(m_element); // Hitting this assertion would imply a GC bug. Element is collected while this property map is alive.
+        if (!m_element)
+            return nullptr;
+        return extractInlineProperty(property, *m_element);
     }
 
     explicit StyledElementInlineStylePropertyMap(StyledElement& element)
-        : m_element(makeRef(element))
+        : m_element(&element)
     {
     }
+
+    void clearElement() override { m_element = nullptr; }
 
     static RefPtr<TypedOMCSSStyleValue> extractInlineProperty(const String& name, StyledElement& element)
     {
@@ -114,7 +119,7 @@ private:
         return StylePropertyMapReadOnly::reifyValue(value.get(), element.document(), &element);
     }
 
-    Ref<StyledElement> m_element;
+    StyledElement* m_element { nullptr };
 };
 
 StylePropertyMap& StyledElement::ensureAttributeStyleMap()
@@ -135,7 +140,7 @@ MutableStyleProperties& StyledElement::ensureMutableInlineStyle()
     return downcast<MutableStyleProperties>(*inlineStyle);
 }
 
-void StyledElement::attributeChanged(const QualifiedName& name, const AtomicString& oldValue, const AtomicString& newValue, AttributeModificationReason reason)
+void StyledElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason reason)
 {
     if (oldValue != newValue) {
         if (name == styleAttr)
@@ -163,7 +168,7 @@ static bool usesStyleBasedEditability(const StyleProperties& properties)
     return properties.getPropertyCSSValue(CSSPropertyWebkitUserModify);
 }
 
-void StyledElement::setInlineStyleFromString(const AtomicString& newStyleString)
+void StyledElement::setInlineStyleFromString(const AtomString& newStyleString)
 {
     RefPtr<StyleProperties>& inlineStyle = elementData()->m_inlineStyle;
 
@@ -185,7 +190,7 @@ void StyledElement::setInlineStyleFromString(const AtomicString& newStyleString)
         document().setHasElementUsingStyleBasedEditability();
 }
 
-void StyledElement::styleAttributeChanged(const AtomicString& newStyleString, AttributeModificationReason reason)
+void StyledElement::styleAttributeChanged(const AtomString& newStyleString, AttributeModificationReason reason)
 {
     WTF::OrdinalNumber startLineNumber = WTF::OrdinalNumber::beforeFirst();
     if (document().scriptableDocumentParser() && !document().isInDocumentWrite())
@@ -201,7 +206,7 @@ void StyledElement::styleAttributeChanged(const AtomicString& newStyleString, At
     elementData()->setStyleAttributeIsDirty(false);
 
     invalidateStyle();
-    InspectorInstrumentation::didInvalidateStyleAttr(document(), *this);
+    InspectorInstrumentation::didInvalidateStyleAttr(*this);
 }
 
 void StyledElement::invalidateStyleAttribute()
@@ -226,7 +231,7 @@ void StyledElement::invalidateStyleAttribute()
 void StyledElement::inlineStyleChanged()
 {
     invalidateStyleAttribute();
-    InspectorInstrumentation::didInvalidateStyleAttr(document(), *this);
+    InspectorInstrumentation::didInvalidateStyleAttr(*this);
 }
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, CSSValueID identifier, bool important)

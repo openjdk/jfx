@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2016 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2019 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,10 +37,9 @@ void SetIteratorPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
-    didBecomePrototype();
 
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("next", setIteratorPrototypeNextCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
-    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "Set Iterator"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(vm, "Set Iterator"), PropertyAttribute::DontEnum | PropertyAttribute::ReadOnly);
 }
 
 }

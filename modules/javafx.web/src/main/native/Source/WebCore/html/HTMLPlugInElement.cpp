@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Stefan Schimanski (1Stein@gmx.de)
- * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2019 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -165,7 +165,7 @@ bool HTMLPlugInElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLFrameOwnerElement::isPresentationAttribute(name);
 }
 
-void HTMLPlugInElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLPlugInElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == widthAttr)
         addHTMLLengthToStyle(style, CSSPropertyWidth, value);
@@ -379,14 +379,14 @@ static ReplacementPlugin* pluginReplacementForType(const URL& url, const String&
     return nullptr;
 }
 
-bool HTMLPlugInElement::requestObject(const String& url, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
+bool HTMLPlugInElement::requestObject(const String& relativeURL, const String& mimeType, const Vector<String>& paramNames, const Vector<String>& paramValues)
 {
     if (m_pluginReplacement)
         return true;
 
     URL completedURL;
-    if (!url.isEmpty())
-        completedURL = document().completeURL(url);
+    if (!relativeURL.isEmpty())
+        completedURL = document().completeURL(relativeURL);
 
     ReplacementPlugin* replacement = pluginReplacementForType(completedURL, mimeType);
     if (!replacement || !replacement->isEnabledBySettings(document().settings()))
@@ -404,6 +404,15 @@ JSC::JSObject* HTMLPlugInElement::scriptObjectForPluginReplacement()
     if (m_pluginReplacement)
         return m_pluginReplacement->scriptObject();
     return nullptr;
+}
+
+bool HTMLPlugInElement::isBelowSizeThreshold() const
+{
+    auto* renderObject = renderer();
+    if (!is<RenderEmbeddedObject>(renderObject))
+        return true;
+    auto& renderEmbeddedObject = downcast<RenderEmbeddedObject>(*renderObject);
+    return renderEmbeddedObject.isPluginUnavailable() && renderEmbeddedObject.pluginUnavailabilityReason() == RenderEmbeddedObject::PluginTooSmall;
 }
 
 bool HTMLPlugInElement::setReplacement(RenderEmbeddedObject::PluginUnavailabilityReason reason, const String& unavailabilityDescription)
@@ -488,6 +497,12 @@ bool HTMLPlugInElement::isReplacementObscured()
     if (!hit || result.innerNode() != &pluginRenderer.frameOwnerElement())
         return true;
     return false;
+}
+
+bool HTMLPlugInElement::canLoadScriptURL(const URL&) const
+{
+    // FIXME: Probably want to at least check canAddSubframe.
+    return true;
 }
 
 }

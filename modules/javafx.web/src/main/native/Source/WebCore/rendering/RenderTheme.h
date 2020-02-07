@@ -140,7 +140,7 @@ public:
     virtual bool supportsHover(const RenderStyle&) const { return false; }
 
     // A method asking if the platform is able to show datalist suggestions for a given input type.
-    virtual bool supportsDataListUI(const AtomicString&) const { return false; }
+    virtual bool supportsDataListUI(const AtomString&) const { return false; }
 
     // Text selection colors.
     Color activeSelectionBackgroundColor(OptionSet<StyleColor::Options>) const;
@@ -441,8 +441,7 @@ protected:
     virtual ColorCache& colorCache(OptionSet<StyleColor::Options>) const;
 
 private:
-    mutable ColorCache m_colorCache;
-    mutable ColorCache m_darkColorCache;
+    mutable HashMap<uint8_t, ColorCache, DefaultHash<uint8_t>::Hash, WTF::UnsignedWithZeroKeyHashTraits<uint8_t>> m_colorCacheMap;
 };
 
 } // namespace WebCore

@@ -33,12 +33,14 @@
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TypeCasts.h>
 
 namespace WebCore {
 
 class ScriptExecutionContext;
 
 class DataCue final : public TextTrackCue {
+    WTF_MAKE_ISO_ALLOCATED(DataCue);
 public:
     static Ref<DataCue> create(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, ArrayBuffer& data)
     {
@@ -100,7 +102,10 @@ private:
     RefPtr<ArrayBuffer> m_data;
     String m_type;
     RefPtr<SerializedPlatformRepresentation> m_platformValue;
-    JSC::JSValue m_value;
+    // FIXME: The following use of JSC::Strong is incorrect and can lead to storage leaks
+    // due to reference cycles; we should use JSValueInWrappedObject instead.
+    // https://bugs.webkit.org/show_bug.cgi?id=201173
+    JSC::Strong<JSC::Unknown> m_value;
 };
 
 DataCue* toDataCue(TextTrackCue*);
@@ -122,5 +127,9 @@ struct LogArgument<WebCore::DataCue> {
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DataCue)
+static bool isType(const WebCore::TextTrackCue& cue) { return cue.cueType() == WebCore::TextTrackCue::Data; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

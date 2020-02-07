@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -225,9 +225,8 @@ public final class MonocleApplication extends Application {
                                    0, 0, ns.getWidth(), ns.getHeight(),
                                    0, 0, ns.getWidth(), ns.getHeight(),
                                    0, 0, ns.getWidth(), ns.getHeight(),
-                                   ns.getDPI(), ns.getDPI(),
-                                   ns.getScale(), ns.getScale(),
-                                   ns.getScale(), ns.getScale());
+                                   ns.getWidth(), ns.getHeight(),
+                                   1.f, 1.f, ns.getScale(), ns.getScale());
         // Move the cursor to the middle of the screen
         MouseState mouseState = new MouseState();
         mouseState.setX(ns.getWidth() / 2);

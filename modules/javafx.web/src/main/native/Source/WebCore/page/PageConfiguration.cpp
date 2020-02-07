@@ -29,6 +29,7 @@
 #include "ApplicationCacheStorage.h"
 #include "BackForwardClient.h"
 #include "CacheStorageProvider.h"
+#include "CookieJar.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
 #include "EditorClient.h"
@@ -36,12 +37,14 @@
 #include "PerformanceLoggingClient.h"
 #include "PluginInfoProvider.h"
 #include "SocketProvider.h"
+#include "SpeechSynthesisClient.h"
 #include "StorageNamespaceProvider.h"
 #include "UserContentController.h"
 #include "ValidationMessageClient.h"
 #include "VisitedLinkStore.h"
+#if ENABLE(WEBGL)
 #include "WebGLStateTracker.h"
-
+#endif
 #if ENABLE(WEB_AUTHN)
 #include "AuthenticatorCoordinatorClient.h"
 #endif

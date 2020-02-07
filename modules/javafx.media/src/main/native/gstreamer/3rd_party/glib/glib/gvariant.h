@@ -1,6 +1,6 @@
 /*
- * Copyright © 2007, 2008 Ryan Lortie
- * Copyright © 2009, 2010 Codethink Limited
+ * Copyright (C) 2007, 2008 Ryan Lortie
+ * Copyright (C) 2009, 2010 Codethink Limited
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -306,7 +306,7 @@ struct _GVariantBuilder {
       const GVariantType *type;
       gsize y[14];
     } s;
-  gsize x[16];
+    gsize x[16];
   } u;
 };
 
@@ -445,7 +445,7 @@ struct _GVariantDict {
       gsize partial_magic;
       gsize y[14];
     } s;
-  gsize x[16];
+    gsize x[16];
   } u;
 };
 

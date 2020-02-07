@@ -197,7 +197,7 @@ void HTMLElementStack::pop()
     popCommon();
 }
 
-void HTMLElementStack::popUntil(const AtomicString& tagName)
+void HTMLElementStack::popUntil(const AtomString& tagName)
 {
     while (!topStackItem().matchesHTMLTag(tagName)) {
         // pop() will ASSERT if a <body>, <head> or <html> will be popped.
@@ -205,7 +205,7 @@ void HTMLElementStack::popUntil(const AtomicString& tagName)
     }
 }
 
-void HTMLElementStack::popUntilPopped(const AtomicString& tagName)
+void HTMLElementStack::popUntilPopped(const AtomString& tagName)
 {
     popUntil(tagName);
     pop();
@@ -346,7 +346,7 @@ void HTMLElementStack::insertAbove(Ref<HTMLStackItem>&& item, ElementRecord& rec
             continue;
 
         ++m_stackDepth;
-        recordAbove->setNext(std::make_unique<ElementRecord>(WTFMove(item), recordAbove->releaseNext()));
+        recordAbove->setNext(makeUnique<ElementRecord>(WTFMove(item), recordAbove->releaseNext()));
         recordAbove->next()->element().beginParsingChildren();
         return;
     }
@@ -399,7 +399,7 @@ auto HTMLElementStack::find(Element& element) const -> ElementRecord*
     return nullptr;
 }
 
-auto HTMLElementStack::topmost(const AtomicString& tagName) const -> ElementRecord*
+auto HTMLElementStack::topmost(const AtomString& tagName) const -> ElementRecord*
 {
     for (auto* record = m_top.get(); record; record = record->next()) {
         if (record->stackItem().matchesHTMLTag(tagName))
@@ -413,12 +413,12 @@ bool HTMLElementStack::contains(Element& element) const
     return !!find(element);
 }
 
-bool HTMLElementStack::contains(const AtomicString& tagName) const
+bool HTMLElementStack::contains(const AtomString& tagName) const
 {
     return !!topmost(tagName);
 }
 
-template <bool isMarker(HTMLStackItem&)> bool inScopeCommon(HTMLElementStack::ElementRecord* top, const AtomicString& targetTag)
+template <bool isMarker(HTMLStackItem&)> bool inScopeCommon(HTMLElementStack::ElementRecord* top, const AtomString& targetTag)
 {
     for (auto* record = top; record; record = record->next()) {
         auto& item = record->stackItem();
@@ -457,7 +457,7 @@ bool HTMLElementStack::inScope(Element& targetElement) const
     return false;
 }
 
-bool HTMLElementStack::inScope(const AtomicString& targetTag) const
+bool HTMLElementStack::inScope(const AtomString& targetTag) const
 {
     return inScopeCommon<isScopeMarker>(m_top.get(), targetTag);
 }
@@ -467,7 +467,7 @@ bool HTMLElementStack::inScope(const QualifiedName& tagName) const
     return inScope(tagName.localName());
 }
 
-bool HTMLElementStack::inListItemScope(const AtomicString& targetTag) const
+bool HTMLElementStack::inListItemScope(const AtomString& targetTag) const
 {
     return inScopeCommon<isListItemScopeMarker>(m_top.get(), targetTag);
 }
@@ -477,7 +477,7 @@ bool HTMLElementStack::inListItemScope(const QualifiedName& tagName) const
     return inListItemScope(tagName.localName());
 }
 
-bool HTMLElementStack::inTableScope(const AtomicString& targetTag) const
+bool HTMLElementStack::inTableScope(const AtomString& targetTag) const
 {
     return inScopeCommon<isTableScopeMarker>(m_top.get(), targetTag);
 }
@@ -487,7 +487,7 @@ bool HTMLElementStack::inTableScope(const QualifiedName& tagName) const
     return inTableScope(tagName.localName());
 }
 
-bool HTMLElementStack::inButtonScope(const AtomicString& targetTag) const
+bool HTMLElementStack::inButtonScope(const AtomString& targetTag) const
 {
     return inScopeCommon<isButtonScopeMarker>(m_top.get(), targetTag);
 }
@@ -497,7 +497,7 @@ bool HTMLElementStack::inButtonScope(const QualifiedName& tagName) const
     return inButtonScope(tagName.localName());
 }
 
-bool HTMLElementStack::inSelectScope(const AtomicString& targetTag) const
+bool HTMLElementStack::inSelectScope(const AtomString& targetTag) const
 {
     return inScopeCommon<isSelectScopeMarker>(m_top.get(), targetTag);
 }
@@ -540,7 +540,7 @@ void HTMLElementStack::pushCommon(Ref<HTMLStackItem>&& item)
     ASSERT(m_rootNode);
 
     ++m_stackDepth;
-    m_top = std::make_unique<ElementRecord>(WTFMove(item), WTFMove(m_top));
+    m_top = makeUnique<ElementRecord>(WTFMove(item), WTFMove(m_top));
 }
 
 void HTMLElementStack::popCommon()

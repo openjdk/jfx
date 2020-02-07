@@ -57,7 +57,7 @@ Ref<HTMLAppletElement> HTMLAppletElement::create(const QualifiedName& tagName, D
     return result;
 }
 
-void HTMLAppletElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLAppletElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == altAttr
         || name == archiveAttr
@@ -117,9 +117,8 @@ void HTMLAppletElement::updateWidget(CreatePlugins createPlugins)
 #if PLATFORM(IOS_FAMILY)
     UNUSED_PARAM(createPlugins);
 #else
-    // FIXME: It's sadness that we have this special case here.
-    //        See http://trac.webkit.org/changeset/25128 and
-    //        plugins/netscape-plugin-setwindow-size.html
+    // FIXME: It's unfortunate that we have this special case here.
+    // See http://trac.webkit.org/changeset/25128 and the plugins/netscape-plugin-setwindow-size.html test.
     if (createPlugins == CreatePlugins::No)
         return;
 
@@ -138,19 +137,19 @@ void HTMLAppletElement::updateWidget(CreatePlugins createPlugins)
     paramNames.append("code");
     paramValues.append(attributeWithoutSynchronization(codeAttr).string());
 
-    const AtomicString& codeBase = attributeWithoutSynchronization(codebaseAttr);
+    const AtomString& codeBase = attributeWithoutSynchronization(codebaseAttr);
     if (!codeBase.isNull()) {
         paramNames.append("codeBase"_s);
         paramValues.append(codeBase.string());
     }
 
-    const AtomicString& name = document().isHTMLDocument() ? getNameAttribute() : getIdAttribute();
+    const AtomString& name = document().isHTMLDocument() ? getNameAttribute() : getIdAttribute();
     if (!name.isNull()) {
         paramNames.append("name");
         paramValues.append(name.string());
     }
 
-    const AtomicString& archive = attributeWithoutSynchronization(archiveAttr);
+    const AtomString& archive = attributeWithoutSynchronization(archiveAttr);
     if (!archive.isNull()) {
         paramNames.append("archive"_s);
         paramValues.append(archive.string());
@@ -159,7 +158,7 @@ void HTMLAppletElement::updateWidget(CreatePlugins createPlugins)
     paramNames.append("baseURL"_s);
     paramValues.append(document().baseURL().string());
 
-    const AtomicString& mayScript = attributeWithoutSynchronization(mayscriptAttr);
+    const AtomString& mayScript = attributeWithoutSynchronization(mayscriptAttr);
     if (!mayScript.isNull()) {
         paramNames.append("mayScript"_s);
         paramValues.append(mayScript.string());

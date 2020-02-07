@@ -60,10 +60,10 @@ public:
 
     ~StackmapValue();
 
-    // Use this to add children. Note that you could also add children by doing
-    // children().append(). That will work fine, but it's not recommended.
+    // Use this to add children.
     void append(const ConstrainedValue& value)
     {
+        ASSERT(value.value()->type().isNumeric());
         append(value.value(), value.rep());
     }
 
@@ -221,6 +221,7 @@ public:
 
     class ConstrainedValueCollection {
     public:
+
         ConstrainedValueCollection(const StackmapValue& value)
             : m_value(value)
         {
@@ -234,6 +235,12 @@ public:
 
         class iterator {
         public:
+            using iterator_category = std::forward_iterator_tag;
+            using value_type = ConstrainedValue;
+            using difference_type = int;
+            using pointer = void;
+            using reference = ConstrainedValue;
+
             iterator()
                 : m_collection(nullptr)
                 , m_index(0)
@@ -284,6 +291,8 @@ public:
     {
         return ConstrainedValueCollection(*this);
     }
+
+    B3_SPECIALIZE_VALUE_FOR_VARARGS_CHILDREN
 
 protected:
     void dumpChildren(CommaPrinter&, PrintStream&) const override;

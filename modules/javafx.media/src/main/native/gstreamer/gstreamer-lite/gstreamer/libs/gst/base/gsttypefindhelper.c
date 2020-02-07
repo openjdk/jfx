@@ -249,6 +249,57 @@ helper_find_get_length (gpointer data)
   return helper->size;
 }
 
+static GList *
+prioritize_extension (GstObject * obj, GList * type_list,
+    const gchar * extension)
+{
+  gint pos = 0;
+  GList *next, *l;
+
+  if (!extension)
+    return type_list;
+
+  /* move the typefinders for the extension first in the list. The idea is that
+   * when one of them returns MAX we don't need to search further as there is a
+   * very high chance we got the right type. */
+
+  GST_LOG_OBJECT (obj, "sorting typefind for extension %s to head", extension);
+
+  for (l = type_list; l; l = next) {
+    const gchar *const *ext;
+    GstTypeFindFactory *factory;
+
+    next = l->next;
+
+    factory = GST_TYPE_FIND_FACTORY (l->data);
+
+    ext = gst_type_find_factory_get_extensions (factory);
+    if (ext == NULL)
+      continue;
+
+    GST_LOG_OBJECT (obj, "testing factory %s for extension %s",
+        GST_OBJECT_NAME (factory), extension);
+
+    while (*ext != NULL) {
+      if (strcmp (*ext, extension) == 0) {
+        /* found extension, move in front */
+        GST_LOG_OBJECT (obj, "moving typefind for extension %s to head",
+            extension);
+        /* remove entry from list */
+        type_list = g_list_delete_link (type_list, l);
+        /* insert at the position */
+        type_list = g_list_insert (type_list, factory, pos);
+        /* next element will be inserted after this one */
+        pos++;
+        break;
+      }
+      ++ext;
+    }
+  }
+
+  return type_list;
+}
+
 /**
  * gst_type_find_helper_get_range:
  * @obj: A #GstObject that will be passed as first argument to @func
@@ -256,7 +307,7 @@ helper_find_get_length (gpointer data)
  * @func: (scope call): A generic #GstTypeFindHelperGetRangeFunction that will
  *        be used to access data at random offsets when doing the typefinding
  * @size: The length in bytes
- * @extension: extension of the media
+ * @extension: (allow-none): extension of the media, or %NULL
  * @prob: (out) (allow-none): location to store the probability of the found
  *     caps, or %NULL
  *
@@ -331,7 +382,6 @@ gst_type_find_helper_get_range_full (GstObject * obj, GstObject * parent,
   GSList *walk;
   GList *l, *type_list;
   GstCaps *result = NULL;
-  gint pos = 0;
 
   g_return_val_if_fail (GST_IS_OBJECT (obj), GST_FLOW_ERROR);
   g_return_val_if_fail (func != NULL, GST_FLOW_ERROR);
@@ -360,48 +410,7 @@ gst_type_find_helper_get_range_full (GstObject * obj, GstObject * parent,
   }
 
   type_list = gst_type_find_factory_get_list ();
-
-  /* move the typefinders for the extension first in the list. The idea is that
-   * when one of them returns MAX we don't need to search further as there is a
-   * very high chance we got the right type. */
-  if (extension) {
-    GList *next;
-
-    GST_LOG_OBJECT (obj, "sorting typefind for extension %s to head",
-        extension);
-
-    for (l = type_list; l; l = next) {
-      const gchar *const *ext;
-      GstTypeFindFactory *factory;
-
-      next = l->next;
-
-      factory = GST_TYPE_FIND_FACTORY (l->data);
-
-      ext = gst_type_find_factory_get_extensions (factory);
-      if (ext == NULL)
-        continue;
-
-      GST_LOG_OBJECT (obj, "testing factory %s for extension %s",
-          GST_OBJECT_NAME (factory), extension);
-
-      while (*ext != NULL) {
-        if (strcmp (*ext, extension) == 0) {
-          /* found extension, move in front */
-          GST_LOG_OBJECT (obj, "moving typefind for extension %s to head",
-              extension);
-          /* remove entry from list */
-          type_list = g_list_delete_link (type_list, l);
-          /* insert at the position */
-          type_list = g_list_insert (type_list, factory, pos);
-          /* next element will be inserted after this one */
-          pos++;
-          break;
-        }
-        ++ext;
-      }
-    }
-  }
+  type_list = prioritize_extension (obj, type_list, extension);
 
   for (l = type_list; l; l = l->next) {
     helper.factory = GST_TYPE_FIND_FACTORY (l->data);
@@ -418,7 +427,7 @@ gst_type_find_helper_get_range_full (GstObject * obj, GstObject * parent,
        * we would've gotten when continuing if there was no error */
       gst_caps_replace (&helper.caps, NULL);
       break;
-  }
+    }
   }
   gst_plugin_feature_list_free (type_list);
 
@@ -586,6 +595,48 @@ GstCaps *
 gst_type_find_helper_for_data (GstObject * obj, const guint8 * data, gsize size,
     GstTypeFindProbability * prob)
 {
+  return gst_type_find_helper_for_data_with_extension (obj, data, size, NULL,
+      prob);
+}
+
+/**
+ * gst_type_find_helper_for_data_with_extension:
+ * @obj: (allow-none): object doing the typefinding, or %NULL (used for logging)
+ * @data: (transfer none) (array length=size): * a pointer with data to typefind
+ * @size: the size of @data
+ * @extension: (allow-none): extension of the media, or %NULL
+ * @prob: (out) (allow-none): location to store the probability of the found
+ *     caps, or %NULL
+ *
+ * Tries to find what type of data is contained in the given @data, the
+ * assumption being that the data represents the beginning of the stream or
+ * file.
+ *
+ * All available typefinders will be called on the data in order of rank. If
+ * a typefinding function returns a probability of %GST_TYPE_FIND_MAXIMUM,
+ * typefinding is stopped immediately and the found caps will be returned
+ * right away. Otherwise, all available typefind functions will the tried,
+ * and the caps with the highest probability will be returned, or %NULL if
+ * the content of @data could not be identified.
+ *
+ * When @extension is not %NULL, this function will first try the typefind
+ * functions for the given extension, which might speed up the typefinding
+ * in many cases.
+ *
+ * Free-function: gst_caps_unref
+ *
+ * Returns: (transfer full) (nullable): the #GstCaps corresponding to the data,
+ *     or %NULL if no type could be found. The caller should free the caps
+ *     returned with gst_caps_unref().
+ *
+ * Since: 1.16
+ *
+ */
+GstCaps *
+gst_type_find_helper_for_data_with_extension (GstObject * obj,
+    const guint8 * data, gsize size, const gchar * extension,
+    GstTypeFindProbability * prob)
+{
   GstTypeFindBufHelper helper;
   GstTypeFind find;
   GList *l, *type_list;
@@ -608,6 +659,7 @@ gst_type_find_helper_for_data (GstObject * obj, const guint8 * data, gsize size,
   find.get_length = NULL;
 
   type_list = gst_type_find_factory_get_list ();
+  type_list = prioritize_extension (obj, type_list, extension);
 
   for (l = type_list; l; l = l->next) {
     helper.factory = GST_TYPE_FIND_FACTORY (l->data);
@@ -657,6 +709,45 @@ GstCaps *
 gst_type_find_helper_for_buffer (GstObject * obj, GstBuffer * buf,
     GstTypeFindProbability * prob)
 {
+  return gst_type_find_helper_for_buffer_with_extension (obj, buf, NULL, prob);
+}
+
+/**
+ * gst_type_find_helper_for_buffer_with_extension:
+ * @obj: (allow-none): object doing the typefinding, or %NULL (used for logging)
+ * @buf: (in) (transfer none): a #GstBuffer with data to typefind
+ * @extension: (allow-none): extension of the media, or %NULL
+ * @prob: (out) (allow-none): location to store the probability of the found
+ *     caps, or %NULL
+ *
+ * Tries to find what type of data is contained in the given #GstBuffer, the
+ * assumption being that the buffer represents the beginning of the stream or
+ * file.
+ *
+ * All available typefinders will be called on the data in order of rank. If
+ * a typefinding function returns a probability of %GST_TYPE_FIND_MAXIMUM,
+ * typefinding is stopped immediately and the found caps will be returned
+ * right away. Otherwise, all available typefind functions will the tried,
+ * and the caps with the highest probability will be returned, or %NULL if
+ * the content of the buffer could not be identified.
+ *
+ * When @extension is not %NULL, this function will first try the typefind
+ * functions for the given extension, which might speed up the typefinding
+ * in many cases.
+ *
+ * Free-function: gst_caps_unref
+ *
+ * Returns: (transfer full) (nullable): the #GstCaps corresponding to the data,
+ *     or %NULL if no type could be found. The caller should free the caps
+ *     returned with gst_caps_unref().
+ *
+ * Since: 1.16
+ *
+ */
+GstCaps *
+gst_type_find_helper_for_buffer_with_extension (GstObject * obj,
+    GstBuffer * buf, const gchar * extension, GstTypeFindProbability * prob)
+{
   GstCaps *result;
   GstMapInfo info;
 
@@ -667,7 +758,9 @@ gst_type_find_helper_for_buffer (GstObject * obj, GstBuffer * buf,
 
   if (!gst_buffer_map (buf, &info, GST_MAP_READ))
     return NULL;
-  result = gst_type_find_helper_for_data (obj, info.data, info.size, prob);
+  result =
+      gst_type_find_helper_for_data_with_extension (obj, info.data, info.size,
+      extension, prob);
   gst_buffer_unmap (buf, &info);
 
   return result;

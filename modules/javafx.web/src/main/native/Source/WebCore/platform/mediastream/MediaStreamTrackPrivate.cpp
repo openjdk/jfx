@@ -1,6 +1,7 @@
 /*
- *  Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
- *  Copyright (C) 2015 Ericsson AB. All rights reserved.
+ * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
+ * Copyright (C) 2015 Ericsson AB. All rights reserved.
+ * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +32,7 @@
 
 #include "GraphicsContext.h"
 #include "IntRect.h"
+#include "Logging.h"
 #include <wtf/UUID.h>
 
 #if PLATFORM(COCOA)
@@ -43,25 +45,35 @@
 
 namespace WebCore {
 
-Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<RealtimeMediaSource>&& source)
+Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source)
 {
-    return create(WTFMove(source), createCanonicalUUIDString());
+    return create(WTFMove(logger), WTFMove(source), createCanonicalUUIDString());
 }
 
-Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<RealtimeMediaSource>&& source, String&& id)
+Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source, String&& id)
 {
-    return adoptRef(*new MediaStreamTrackPrivate(WTFMove(source), WTFMove(id)));
+    return adoptRef(*new MediaStreamTrackPrivate(WTFMove(logger), WTFMove(source), WTFMove(id)));
 }
 
-MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<RealtimeMediaSource>&& source, String&& id)
+MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<const Logger>&& logger, Ref<RealtimeMediaSource>&& source, String&& id)
     : m_source(WTFMove(source))
     , m_id(WTFMove(id))
+    , m_logger(WTFMove(logger))
+#if !RELEASE_LOG_DISABLED
+    , m_logIdentifier(uniqueLogIdentifier())
+#endif
 {
+    ASSERT(isMainThread());
+    UNUSED_PARAM(logger);
+#if !RELEASE_LOG_DISABLED
+    m_source->setLogger(m_logger.copyRef(), m_logIdentifier);
+#endif
     m_source->addObserver(*this);
 }
 
 MediaStreamTrackPrivate::~MediaStreamTrackPrivate()
 {
+    ASSERT(isMainThread());
     m_source->removeObserver(*this);
 }
 
@@ -146,11 +158,15 @@ void MediaStreamTrackPrivate::endTrack()
 
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
 {
-    auto clonedMediaStreamTrackPrivate = create(m_source.copyRef());
+    auto clonedMediaStreamTrackPrivate = create(m_logger.copyRef(), m_source->clone());
+
     clonedMediaStreamTrackPrivate->m_isEnabled = this->m_isEnabled;
     clonedMediaStreamTrackPrivate->m_isEnded = this->m_isEnded;
     clonedMediaStreamTrackPrivate->m_contentHint = this->m_contentHint;
     clonedMediaStreamTrackPrivate->updateReadyState();
+
+    if (isProducingData())
+        clonedMediaStreamTrackPrivate->startProducingData();
 
     return clonedMediaStreamTrackPrivate;
 }
@@ -229,6 +245,7 @@ bool MediaStreamTrackPrivate::preventSourceFromStopping()
 
 void MediaStreamTrackPrivate::videoSampleAvailable(MediaSample& mediaSample)
 {
+    ASSERT(isMainThread());
     if (!m_haveProducedData) {
         m_haveProducedData = true;
         updateReadyState();
@@ -246,16 +263,24 @@ void MediaStreamTrackPrivate::videoSampleAvailable(MediaSample& mediaSample)
 // May get called on a background thread.
 void MediaStreamTrackPrivate::audioSamplesAvailable(const MediaTime& mediaTime, const PlatformAudioData& data, const AudioStreamDescription& description, size_t sampleCount)
 {
-    if (!m_haveProducedData) {
-        m_haveProducedData = true;
-        updateReadyState();
+    if (!m_hasSentStartProducedData) {
+        callOnMainThread([this, weakThis = makeWeakPtr(this)] {
+            if (!weakThis)
+                return;
+
+            if (!m_haveProducedData) {
+                m_haveProducedData = true;
+                updateReadyState();
+            }
+            m_hasSentStartProducedData = true;
+        });
+        return;
     }
 
     forEachObserver([&](auto& observer) {
         observer.audioSamplesAvailable(*this, mediaTime, data, description, sampleCount);
     });
 }
-
 
 void MediaStreamTrackPrivate::updateReadyState()
 {
@@ -269,11 +294,20 @@ void MediaStreamTrackPrivate::updateReadyState()
     if (state == m_readyState)
         return;
 
+    ALWAYS_LOG(LOGIDENTIFIER);
+
     m_readyState = state;
     forEachObserver([this](auto& observer) {
         observer.readyStateChanged(*this);
     });
 }
+
+#if !RELEASE_LOG_DISABLED
+WTFLogChannel& MediaStreamTrackPrivate::logChannel() const
+{
+    return LogWebRTC;
+}
+#endif
 
 } // namespace WebCore
 

@@ -63,7 +63,7 @@
 #include "markup.h"
 #include <pal/system/Sound.h>
 #include <pal/text/KillRing.h>
-#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
@@ -297,7 +297,7 @@ static bool executeDelete(Frame& frame, Event*, EditorCommandSource source, cons
     case CommandFromDOMWithUserInterface:
         // If the current selection is a caret, delete the preceding character. IE performs forwardDelete, but we currently side with Firefox.
         // Doesn't scroll to make the selection visible, or modify the kill ring (this time, siding with IE, not Firefox).
-        TypingCommand::deleteKeyPressed(*frame.document(), frame.selection().granularity() == WordGranularity ? TypingCommand::SmartDelete : 0);
+        TypingCommand::deleteKeyPressed(*frame.document(), frame.editor().shouldSmartDelete() ? TypingCommand::SmartDelete : 0);
         return true;
     }
     ASSERT_NOT_REACHED();
@@ -585,7 +585,7 @@ static bool executeMakeTextWritingDirectionLeftToRight(Frame& frame, Event*, Edi
     auto style = MutableStyleProperties::create();
     style->setProperty(CSSPropertyUnicodeBidi, CSSValueEmbed);
     style->setProperty(CSSPropertyDirection, CSSValueLtr);
-    frame.editor().applyStyle(style.ptr(), EditAction::SetWritingDirection);
+    frame.editor().applyStyle(style.ptr(), EditAction::SetInlineWritingDirection);
     return true;
 }
 
@@ -593,7 +593,7 @@ static bool executeMakeTextWritingDirectionNatural(Frame& frame, Event*, EditorC
 {
     auto style = MutableStyleProperties::create();
     style->setProperty(CSSPropertyUnicodeBidi, CSSValueNormal);
-    frame.editor().applyStyle(style.ptr(), EditAction::SetWritingDirection);
+    frame.editor().applyStyle(style.ptr(), EditAction::SetInlineWritingDirection);
     return true;
 }
 
@@ -602,7 +602,7 @@ static bool executeMakeTextWritingDirectionRightToLeft(Frame& frame, Event*, Edi
     auto style = MutableStyleProperties::create();
     style->setProperty(CSSPropertyUnicodeBidi, CSSValueEmbed);
     style->setProperty(CSSPropertyDirection, CSSValueRtl);
-    frame.editor().applyStyle(style.ptr(), EditAction::SetWritingDirection);
+    frame.editor().applyStyle(style.ptr(), EditAction::SetInlineWritingDirection);
     return true;
 }
 
@@ -908,8 +908,13 @@ static bool executePaste(Frame& frame, Event*, EditorCommandSource source, const
     if (source == CommandFromMenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().paste();
-    } else
-        frame.editor().paste();
+        return true;
+    }
+
+    if (!frame.requestDOMPasteAccess())
+        return false;
+
+    frame.editor().paste();
     return true;
 }
 
@@ -934,8 +939,13 @@ static bool executePasteAndMatchStyle(Frame& frame, Event*, EditorCommandSource 
     if (source == CommandFromMenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().pasteAsPlainText();
-    } else
-        frame.editor().pasteAsPlainText();
+        return true;
+    }
+
+    if (!frame.requestDOMPasteAccess())
+        return false;
+
+    frame.editor().pasteAsPlainText();
     return true;
 }
 
@@ -944,8 +954,13 @@ static bool executePasteAsPlainText(Frame& frame, Event*, EditorCommandSource so
     if (source == CommandFromMenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().pasteAsPlainText();
-    } else
-        frame.editor().pasteAsPlainText();
+        return true;
+    }
+
+    if (!frame.requestDOMPasteAccess())
+        return false;
+
+    frame.editor().pasteAsPlainText();
     return true;
 }
 
@@ -954,8 +969,13 @@ static bool executePasteAsQuotation(Frame& frame, Event*, EditorCommandSource so
     if (source == CommandFromMenuOrKeyBinding) {
         UserTypingGestureIndicator typingGestureIndicator(frame);
         frame.editor().pasteAsQuotation();
-    } else
-        frame.editor().pasteAsQuotation();
+        return true;
+    }
+
+    if (!frame.requestDOMPasteAccess())
+        return false;
+
+    frame.editor().pasteAsQuotation();
     return true;
 }
 
@@ -1220,7 +1240,8 @@ static bool supportedPaste(Frame* frame)
     if (!frame)
         return false;
 
-    bool defaultValue = frame->settings().javaScriptCanAccessClipboard() && frame->settings().DOMPasteAllowed();
+    auto& settings = frame->settings();
+    bool defaultValue = (settings.javaScriptCanAccessClipboard() && settings.DOMPasteAllowed()) || settings.domPasteAccessRequestsEnabled();
 
     EditorClient* client = frame->editor().client();
     return client ? client->canPaste(frame, defaultValue) : defaultValue;

@@ -77,7 +77,7 @@ public:
     TextLayout(RenderText& text, const FontCascade& font, float xPos)
         : m_font(font)
         , m_run(constructTextRun(text, xPos))
-        , m_controller(std::make_unique<ComplexTextController>(m_font, m_run, true))
+        , m_controller(makeUnique<ComplexTextController>(m_font, m_run, true))
     {
     }
 
@@ -788,8 +788,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 if (treatAsSpace || ideograph || forceLeadingExpansion || forceTrailingExpansion) {
                     // Distribute the run's total expansion evenly over all expansion opportunities in the run.
                     if (m_expansion) {
-                        bool expandLeft, expandRight;
-                        std::tie(expandLeft, expandRight) = expansionLocation(ideograph, treatAsSpace, m_run.ltr(), afterExpansion, forbidLeadingExpansion, forbidTrailingExpansion, forceLeadingExpansion, forceTrailingExpansion);
+                        auto [expandLeft, expandRight] = expansionLocation(ideograph, treatAsSpace, m_run.ltr(), afterExpansion, forbidLeadingExpansion, forbidTrailingExpansion, forceLeadingExpansion, forceTrailingExpansion);
                         if (expandLeft) {
                             m_expansion -= m_expansionPerOpportunity;
                             // Increase previous width

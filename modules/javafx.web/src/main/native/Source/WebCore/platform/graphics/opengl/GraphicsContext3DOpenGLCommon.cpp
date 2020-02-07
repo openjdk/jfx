@@ -28,7 +28,7 @@
 
 #include "config.h"
 
-#if ENABLE(GRAPHICS_CONTEXT_3D)
+#if ENABLE(GRAPHICS_CONTEXT_3D) && (USE(OPENGL) || USE(OPENGL_ES))
 
 #include "GraphicsContext3D.h"
 #if PLATFORM(IOS_FAMILY)
@@ -55,6 +55,7 @@
 #include <wtf/MainThread.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/UniqueArray.h>
+#include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -655,7 +656,7 @@ void GraphicsContext3D::compileShader(Platform3DObject shader)
     ANGLEResources.HashFunction = nameHashForShader;
 
     if (!nameHashMapForShaders)
-        nameHashMapForShaders = std::make_unique<ShaderNameHash>();
+        nameHashMapForShaders = makeUnique<ShaderNameHash>();
     setCurrentNameHashMapForShader(nameHashMapForShaders.get());
     m_compiler.setResources(ANGLEResources);
 
@@ -1022,7 +1023,7 @@ String GraphicsContext3D::mappedSymbolName(Platform3DObject program, ANGLEShader
         // Attributes are a special case: they may be requested before any shaders have been compiled,
         // and aren't even required to be used in any shader program.
         if (!nameHashMapForShaders)
-            nameHashMapForShaders = std::make_unique<ShaderNameHash>();
+            nameHashMapForShaders = makeUnique<ShaderNameHash>();
         setCurrentNameHashMapForShader(nameHashMapForShaders.get());
 
         auto generatedName = generateHashedName(name);
@@ -2016,6 +2017,9 @@ void GraphicsContext3D::markContextChanged()
 void GraphicsContext3D::markLayerComposited()
 {
     m_layerComposited = true;
+
+    for (auto* client : copyToVector(m_clients))
+        client->didComposite();
 }
 
 bool GraphicsContext3D::layerComposited() const
@@ -2025,26 +2029,20 @@ bool GraphicsContext3D::layerComposited() const
 
 void GraphicsContext3D::forceContextLost()
 {
-#if ENABLE(WEBGL)
-    if (m_webglContext)
-        m_webglContext->forceLostContext(WebGLRenderingContextBase::RealLostContext);
-#endif
+    for (auto* client : copyToVector(m_clients))
+        client->forceContextLost();
 }
 
 void GraphicsContext3D::recycleContext()
 {
-#if ENABLE(WEBGL)
-    if (m_webglContext)
-        m_webglContext->recycleContext();
-#endif
+    for (auto* client : copyToVector(m_clients))
+        client->recycleContext();
 }
 
 void GraphicsContext3D::dispatchContextChangedNotification()
 {
-#if ENABLE(WEBGL)
-    if (m_webglContext)
-        m_webglContext->dispatchContextChangedEvent();
-#endif
+    for (auto* client : copyToVector(m_clients))
+        client->dispatchContextChangedNotification();
 }
 
 void GraphicsContext3D::texImage2DDirect(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, const void* pixels)
@@ -2081,4 +2079,4 @@ void GraphicsContext3D::primitiveRestartIndex(GC3Duint index)
 
 }
 
-#endif // ENABLE(GRAPHICS_CONTEXT_3D)
+#endif // ENABLE(GRAPHICS_CONTEXT_3D) && (USE(OPENGL) || USE(OPENGL_ES))

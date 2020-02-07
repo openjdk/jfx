@@ -32,12 +32,13 @@ SYSTEM_LIBS = Ws2_32.lib \
 
 LDFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo -incremental:no -libpath:$(shell cygpath -ma $(BUILD_DIR)) -dll $(SYSTEM_LIBS) \
           -manifest -manifestfile:$(MANIFEST) -manifestuac:"level='asInvoker' uiAccess='false'" \
-          -subsystem:windows -tlbid:1 -dynamicbase -nxcompat -errorreport:queue -implib:$(IMPLIB)
+          -subsystem:windows -tlbid:1 -dynamicbase -nxcompat -errorreport:queue -implib:$(IMPLIB) \
+          -def:$(DEF_DIR)/glib-lite.def
 
 ifeq ($(BUILD_TYPE), Release)
-    LDFLAGS += -def:$(DEF_DIR)/glib-lite.def -opt:ref -opt:icf
+    LDFLAGS += -opt:ref -opt:icf
 else # debug
-    LDFLAGS += -debug -def:$(DEF_DIR)/glib-liteD.def -pdb:$(shell cygpath -ma $(PDB))
+    LDFLAGS += -debug -pdb:$(shell cygpath -ma $(PDB))
 endif
 
 ifeq ($(ARCH), x32)

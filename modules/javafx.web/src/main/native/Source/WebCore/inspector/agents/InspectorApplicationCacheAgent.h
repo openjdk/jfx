@@ -37,7 +37,6 @@ class ApplicationCacheFrontendDispatcher;
 namespace WebCore {
 
 class Frame;
-class InspectorPageAgent;
 class Page;
 
 typedef String ErrorString;
@@ -46,19 +45,23 @@ class InspectorApplicationCacheAgent final : public InspectorAgentBase, public I
     WTF_MAKE_NONCOPYABLE(InspectorApplicationCacheAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    InspectorApplicationCacheAgent(WebAgentContext&, InspectorPageAgent*);
-    virtual ~InspectorApplicationCacheAgent() = default;
+    InspectorApplicationCacheAgent(PageAgentContext&);
+    virtual ~InspectorApplicationCacheAgent();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    // InspectorAgentBase
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
+    // ApplicationCacheBackendDispatcherHandler
+    void enable(ErrorString&);
+    void disable(ErrorString&);
+    void getFramesWithManifests(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::ApplicationCache::FrameWithManifest>>& result);
+    void getManifestForFrame(ErrorString&, const String& frameId, String* manifestURL);
+    void getApplicationCacheForFrame(ErrorString&, const String& frameId, RefPtr<Inspector::Protocol::ApplicationCache::ApplicationCache>&);
+
+    // InspectorInstrumentation
     void updateApplicationCacheStatus(Frame*);
     void networkStateChanged();
-
-    void enable(ErrorString&) override;
-    void getFramesWithManifests(ErrorString&, RefPtr<JSON::ArrayOf<Inspector::Protocol::ApplicationCache::FrameWithManifest>>& result) override;
-    void getManifestForFrame(ErrorString&, const String& frameId, String* manifestURL) override;
-    void getApplicationCacheForFrame(ErrorString&, const String& frameId, RefPtr<Inspector::Protocol::ApplicationCache::ApplicationCache>&) override;
 
 private:
     Ref<Inspector::Protocol::ApplicationCache::ApplicationCache> buildObjectForApplicationCache(const Vector<ApplicationCacheHost::ResourceInfo>&, const ApplicationCacheHost::CacheInfo&);
@@ -69,7 +72,7 @@ private:
 
     std::unique_ptr<Inspector::ApplicationCacheFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::ApplicationCacheBackendDispatcher> m_backendDispatcher;
-    InspectorPageAgent* m_pageAgent { nullptr };
+    Page& m_inspectedPage;
 };
 
 } // namespace WebCore

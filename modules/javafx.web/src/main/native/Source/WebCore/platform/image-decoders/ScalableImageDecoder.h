@@ -76,7 +76,10 @@ public:
         if (m_encodedDataStatus == EncodedDataStatus::Error)
             return;
 
-        m_data = &data;
+        if (data.data()) {
+            // SharedBuffer::data() combines all segments into one in case there's more than one.
+            m_data = data.begin()->segment.copyRef();
+        }
         if (m_encodedDataStatus == EncodedDataStatus::TypeAvailable) {
             m_decodingSizeFromSetData = true;
             tryDecodeSize(allDataReceived);
@@ -97,11 +100,6 @@ public:
     bool isSizeAvailable() const override { return m_encodedDataStatus >= EncodedDataStatus::SizeAvailable; }
 
     IntSize size() const override { return isSizeAvailable() ? m_size : IntSize(); }
-
-    IntSize scaledSize()
-    {
-        return m_scaled ? IntSize(m_scaledColumns.size(), m_scaledRows.size()) : size();
-    }
 
     // This will only differ from size() for ICO (where each frame is a
     // different icon) or other formats where different frames are different
@@ -197,19 +195,9 @@ public:
     Optional<IntPoint> hotSpot() const override { return WTF::nullopt; }
 
 protected:
-    void prepareScaleDataIfNecessary();
-    int upperBoundScaledX(int origX, int searchStart = 0);
-    int lowerBoundScaledX(int origX, int searchStart = 0);
-    int upperBoundScaledY(int origY, int searchStart = 0);
-    int lowerBoundScaledY(int origY, int searchStart = 0);
-    int scaledY(int origY, int searchStart = 0);
-
-    RefPtr<SharedBuffer> m_data; // The encoded data.
+    RefPtr<SharedBuffer::DataSegment> m_data;
     Vector<ScalableImageDecoderFrame, 1> m_frameBufferCache;
     mutable Lock m_mutex;
-    bool m_scaled { false };
-    Vector<int> m_scaledColumns;
-    Vector<int> m_scaledRows;
     bool m_premultiplyAlpha;
     bool m_ignoreGammaAndColorProfile;
     ImageOrientation m_orientation;
@@ -217,15 +205,13 @@ protected:
 private:
     virtual void tryDecodeSize(bool) = 0;
 
+#if USE(DIRECT2D)
+    void setTargetContext(ID2D1RenderTarget*) override;
+#endif
+
     IntSize m_size;
     EncodedDataStatus m_encodedDataStatus { EncodedDataStatus::TypeAvailable };
     bool m_decodingSizeFromSetData { false };
-
-    // FIXME: Evaluate the need for decoded data scaling. m_scaled,
-    // m_scaledColumns and m_scaledRows are member variables that are
-    // affected by this value, and are not used at all since the value
-    // is negavite (see prepareScaleDataIfNecessary()).
-    static const int m_maxNumPixels { -1 };
 };
 
 } // namespace WebCore

@@ -143,31 +143,18 @@ static bool hasDoubleValue(CSSPrimitiveValue::UnitType type)
     case CSSPrimitiveValue::CSS_CALC_PERCENTAGE_WITH_LENGTH:
     case CSSPrimitiveValue::CSS_PROPERTY_ID:
     case CSSPrimitiveValue::CSS_VALUE_ID:
-#if ENABLE(DASHBOARD_SUPPORT)
-    case CSSPrimitiveValue::CSS_DASHBOARD_REGION:
-#endif
         return false;
     };
     ASSERT_NOT_REACHED();
     return false;
 }
 
-static String buildCssText(const String& expression)
-{
-    StringBuilder result;
-    result.appendLiteral("calc");
-    bool expressionHasSingleTerm = expression[0] != '(';
-    if (expressionHasSingleTerm)
-        result.append('(');
-    result.append(expression);
-    if (expressionHasSingleTerm)
-        result.append(')');
-    return result.toString();
-}
-
 String CSSCalcValue::customCSSText() const
 {
-    return buildCssText(m_expression->customCSSText());
+    auto expression = m_expression->customCSSText();
+    if (expression[0] == '(')
+        return makeString("calc", expression);
+    return makeString("calc(", expression, ')');
 }
 
 bool CSSCalcValue::equals(const CSSCalcValue& other) const
@@ -220,12 +207,12 @@ private:
     {
         switch (category()) {
         case CalculationCategory::Number:
-            return std::make_unique<CalcExpressionNumber>(m_value->floatValue());
+            return makeUnique<CalcExpressionNumber>(m_value->floatValue());
         case CalculationCategory::Length:
-            return std::make_unique<CalcExpressionLength>(Length(m_value->computeLength<float>(conversionData), WebCore::Fixed));
+            return makeUnique<CalcExpressionLength>(Length(m_value->computeLength<float>(conversionData), WebCore::Fixed));
         case CalculationCategory::Percent:
         case CalculationCategory::PercentLength: {
-            return std::make_unique<CalcExpressionLength>(m_value->convertToLength<FixedFloatConversion | PercentConversion>(conversionData));
+            return makeUnique<CalcExpressionLength>(m_value->convertToLength<FixedFloatConversion | PercentConversion>(conversionData));
         }
         // Only types that could be part of a Length expression can be converted
         // to a CalcExpressionNode. CalculationCategory::PercentNumber makes no sense as a Length.
@@ -523,7 +510,7 @@ private:
                 return nullptr;
             nodes.uncheckedAppend(WTFMove(node));
         }
-        return std::make_unique<CalcExpressionOperation>(WTFMove(nodes), m_operator);
+        return makeUnique<CalcExpressionOperation>(WTFMove(nodes), m_operator);
     }
 
     double doubleValue() const final

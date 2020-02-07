@@ -223,17 +223,17 @@ struct _GstVideoEncoder
  *                  Query handler on the sink pad. This function should
  *                  return TRUE if the query could be performed. Subclasses
  *                  should chain up to the parent implementation to invoke the
- *                  default handler. Since 1.4
+ *                  default handler. Since: 1.4
  * @src_query:      Optional.
  *                  Query handler on the source pad. This function should
  *                  return TRUE if the query could be performed. Subclasses
  *                  should chain up to the parent implementation to invoke the
- *                  default handler. Since 1.4
+ *                  default handler. Since: 1.4
  * @transform_meta: Optional. Transform the metadata on the input buffer to the
  *                  output buffer. By default this method is copies all meta without
  *                  tags and meta with only the "video" tag. subclasses can
  *                  implement this method and return %TRUE if the metadata is to be
- *                  copied. Since 1.6
+ *                  copied. Since: 1.6
  *
  * Subclasses can override any of the available virtual methods or not, as
  * needed. At minimum @handle_frame needs to be overridden, and @set_format
@@ -255,27 +255,27 @@ struct _GstVideoEncoderClass
   gboolean      (*stop)         (GstVideoEncoder *encoder);
 
   gboolean      (*set_format)   (GstVideoEncoder *encoder,
-                 GstVideoCodecState *state);
+         GstVideoCodecState *state);
 
   GstFlowReturn (*handle_frame) (GstVideoEncoder *encoder,
-                 GstVideoCodecFrame *frame);
+         GstVideoCodecFrame *frame);
 
   gboolean      (*reset)        (GstVideoEncoder *encoder,
-                 gboolean hard);
+         gboolean hard);
 
   GstFlowReturn (*finish)       (GstVideoEncoder *encoder);
 
   GstFlowReturn (*pre_push)     (GstVideoEncoder *encoder,
-                 GstVideoCodecFrame *frame);
+         GstVideoCodecFrame *frame);
 
   GstCaps *     (*getcaps)      (GstVideoEncoder *enc,
                                  GstCaps *filter);
 
   gboolean      (*sink_event)   (GstVideoEncoder *encoder,
-                 GstEvent *event);
+         GstEvent *event);
 
   gboolean      (*src_event)    (GstVideoEncoder *encoder,
-                 GstEvent *event);
+         GstEvent *event);
 
   gboolean      (*negotiate)    (GstVideoEncoder *encoder);
 
@@ -286,10 +286,10 @@ struct _GstVideoEncoderClass
   gboolean      (*flush)              (GstVideoEncoder *encoder);
 
   gboolean      (*sink_query)     (GstVideoEncoder *encoder,
-                   GstQuery *query);
+           GstQuery *query);
 
   gboolean      (*src_query)      (GstVideoEncoder *encoder,
-                   GstQuery *query);
+           GstQuery *query);
 
   gboolean      (*transform_meta) (GstVideoEncoder *encoder,
                                    GstVideoCodecFrame *frame,
@@ -307,15 +307,15 @@ GstVideoCodecState*  gst_video_encoder_get_output_state (GstVideoEncoder *encode
 
 GST_VIDEO_API
 GstVideoCodecState*  gst_video_encoder_set_output_state (GstVideoEncoder * encoder,
-                             GstCaps * caps,
-                             GstVideoCodecState * reference);
+               GstCaps * caps,
+               GstVideoCodecState * reference);
 
 GST_VIDEO_API
 gboolean             gst_video_encoder_negotiate        (GstVideoEncoder * encoder);
 
 GST_VIDEO_API
 GstVideoCodecFrame*  gst_video_encoder_get_frame        (GstVideoEncoder *encoder,
-                                 int frame_number);
+                     int frame_number);
 
 GST_VIDEO_API
 GstVideoCodecFrame*  gst_video_encoder_get_oldest_frame (GstVideoEncoder *encoder);
@@ -329,31 +329,31 @@ GstBuffer *          gst_video_encoder_allocate_output_buffer (GstVideoEncoder *
 
 GST_VIDEO_API
 GstFlowReturn        gst_video_encoder_allocate_output_frame  (GstVideoEncoder *encoder,
-                                       GstVideoCodecFrame *frame,
+                           GstVideoCodecFrame *frame,
                                                                gsize size);
 
 GST_VIDEO_API
 GstFlowReturn        gst_video_encoder_finish_frame (GstVideoEncoder *encoder,
-                             GstVideoCodecFrame *frame);
+                 GstVideoCodecFrame *frame);
 
 GST_VIDEO_API
 GstCaps *            gst_video_encoder_proxy_getcaps (GstVideoEncoder * enc,
-                              GstCaps         * caps,
+                  GstCaps         * caps,
                                                       GstCaps         * filter);
 
 GST_VIDEO_API
 void                 gst_video_encoder_set_latency (GstVideoEncoder *encoder,
-                            GstClockTime min_latency,
-                            GstClockTime max_latency);
+                GstClockTime min_latency,
+                GstClockTime max_latency);
 
 GST_VIDEO_API
-void             gst_video_encoder_get_latency (GstVideoEncoder *encoder,
-                            GstClockTime *min_latency,
-                            GstClockTime *max_latency);
+void         gst_video_encoder_get_latency (GstVideoEncoder *encoder,
+                GstClockTime *min_latency,
+                GstClockTime *max_latency);
 
 GST_VIDEO_API
 void                 gst_video_encoder_set_headers (GstVideoEncoder *encoder,
-                            GList *headers);
+                GList *headers);
 
 GST_VIDEO_API
 void                 gst_video_encoder_merge_tags  (GstVideoEncoder *encoder,

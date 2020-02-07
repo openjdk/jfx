@@ -27,6 +27,7 @@
 
 #if ENABLE(WEBGPU)
 
+#include "WHLSLPrepare.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
@@ -44,14 +45,17 @@ using PlatformShaderModuleSmartPtr = RetainPtr<MTLLibrary>;
 
 class GPUShaderModule : public RefCounted<GPUShaderModule> {
 public:
-    static RefPtr<GPUShaderModule> create(const GPUDevice&, GPUShaderModuleDescriptor&&);
+    static RefPtr<GPUShaderModule> tryCreate(const GPUDevice&, const GPUShaderModuleDescriptor&);
 
-    PlatformShaderModule* platformShaderModule() const { return m_platformShaderModule.get(); }
+    PlatformShaderModule* platformShaderModule() const { return m_whlslModule ? nullptr : m_platformShaderModule.get(); }
+    const WHLSL::ShaderModule* whlslModule() const { return m_whlslModule.get(); }
 
 private:
     GPUShaderModule(PlatformShaderModuleSmartPtr&&);
+    GPUShaderModule(UniqueRef<WHLSL::ShaderModule>&& whlslModule);
 
     PlatformShaderModuleSmartPtr m_platformShaderModule;
+    std::unique_ptr<WHLSL::ShaderModule> m_whlslModule;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,6 +67,24 @@ static BOOL doPerformKeyEquivalent(NSEvent* theEvent, NSWindow* panel)
         }
     }
     return false;
+}
+
+/*
+ * Function to determine whether or not to use raw NSPanel classes
+ * (either NSSavePanel or NSOpenPanel).
+ *
+ * Return: YES if we need to use the raw NSPanel classes; NO if we
+ * can use the Glass subclasses
+ */
+static BOOL useNSPanel()
+{
+    // As of macOS 10.15 all file dialogs are out of process, so we
+    // effectively can't subclass them.
+    if (@available(macOS 10.15, *)) {
+        return YES;
+    } else {
+        return [GlassApplication isSandboxed];
+    }
 }
 
 @interface GlassSavePanel : NSSavePanel
@@ -485,7 +503,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileO
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSOpenPanel *panel = [GlassApplication isSandboxed] ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
+        NSOpenPanel *panel = useNSPanel() ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
         [panel setAllowsMultipleSelection:(jMultipleMode==JNI_TRUE)];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
@@ -561,7 +579,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSSavePanel *panel = [GlassApplication isSandboxed] ? [NSSavePanel savePanel] : [GlassSavePanel savePanel];
+        NSSavePanel *panel = useNSPanel() ? [NSSavePanel savePanel] : [GlassSavePanel savePanel];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
         if ([folder length] > 0)
@@ -633,7 +651,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolde
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSOpenPanel *panel = [GlassApplication isSandboxed] ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
+        NSOpenPanel *panel = useNSPanel() ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
         if ([folder length] > 0)

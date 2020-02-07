@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "CodeOrigin.h"
 #include "ConcurrentJSLock.h"
 #include "ICStatusMap.h"
 #include "InstanceOfVariant.h"
@@ -38,6 +37,7 @@ class CodeBlock;
 class StructureStubInfo;
 
 class InstanceOfStatus {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     enum State {
         // It's uncached so we have no information.

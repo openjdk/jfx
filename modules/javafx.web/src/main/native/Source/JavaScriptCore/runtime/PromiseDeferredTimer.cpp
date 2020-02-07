@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,7 +39,7 @@ static const bool verbose = false;
 }
 
 PromiseDeferredTimer::PromiseDeferredTimer(VM& vm)
-    : Base(&vm)
+    : Base(vm)
 {
 }
 
@@ -54,9 +54,7 @@ void PromiseDeferredTimer::doWork(VM& vm)
     }
 
     while (!m_tasks.isEmpty()) {
-        JSPromiseDeferred* ticket;
-        Task task;
-        std::tie(ticket, task) = m_tasks.takeLast();
+        auto [ticket, task] = m_tasks.takeLast();
         dataLogLnIf(PromiseDeferredTimerInternal::verbose, "Doing work on promise: ", RawPointer(ticket));
 
         // We may have already canceled these promises.
@@ -123,13 +121,13 @@ void PromiseDeferredTimer::addPendingPromise(VM& vm, JSPromiseDeferred* ticket, 
 
 bool PromiseDeferredTimer::hasPendingPromise(JSPromiseDeferred* ticket)
 {
-    ASSERT(ticket->vm()->currentThreadIsHoldingAPILock());
+    ASSERT(ticket->vm().currentThreadIsHoldingAPILock());
     return m_pendingPromises.contains(ticket);
 }
 
 bool PromiseDeferredTimer::hasDependancyInPendingPromise(JSPromiseDeferred* ticket, JSCell* dependency)
 {
-    ASSERT(ticket->vm()->currentThreadIsHoldingAPILock());
+    ASSERT(ticket->vm().currentThreadIsHoldingAPILock());
     ASSERT(m_pendingPromises.contains(ticket));
 
     auto result = m_pendingPromises.get(ticket);
@@ -138,7 +136,7 @@ bool PromiseDeferredTimer::hasDependancyInPendingPromise(JSPromiseDeferred* tick
 
 bool PromiseDeferredTimer::cancelPendingPromise(JSPromiseDeferred* ticket)
 {
-    ASSERT(ticket->vm()->currentThreadIsHoldingAPILock());
+    ASSERT(ticket->vm().currentThreadIsHoldingAPILock());
     bool result = m_pendingPromises.remove(ticket);
 
     if (result)

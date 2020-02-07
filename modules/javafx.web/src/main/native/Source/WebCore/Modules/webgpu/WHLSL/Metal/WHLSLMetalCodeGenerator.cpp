@@ -30,6 +30,7 @@
 
 #include "WHLSLFunctionWriter.h"
 #include "WHLSLTypeNamer.h"
+#include <wtf/DataLog.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -38,23 +39,59 @@ namespace WHLSL {
 
 namespace Metal {
 
-String generateMetalCode(Program& program)
+static constexpr bool dumpMetalCode = false;
+
+static StringView metalCodeProlog()
+{
+    return StringView {
+        "#include <metal_stdlib>\n"
+        "#include <metal_atomic>\n"
+        "#include <metal_math>\n"
+        "#include <metal_relational>\n"
+        "#include <metal_compute>\n"
+        "#include <metal_texture>\n"
+        "\n"
+        "using namespace metal;\n"
+        "\n"
+    };
+}
+
+static void dumpMetalCodeIfNeeded(StringBuilder& stringBuilder)
+{
+    if (dumpMetalCode) {
+        dataLogLn("Generated Metal code: ");
+        dataLogLn(stringBuilder.toString());
+    }
+}
+
+RenderMetalCode generateMetalCode(Program& program, MatchedRenderSemantics&& matchedSemantics, Layout& layout)
 {
     StringBuilder stringBuilder;
-    stringBuilder.append("#include <metal_stdlib>\n");
-    stringBuilder.append("#include <metal_atomic>\n");
-    stringBuilder.append("#include <metal_math>\n");
-    stringBuilder.append("#include <metal_relational>\n");
-    stringBuilder.append("#include <metal_compute>\n");
-    stringBuilder.append("#include <metal_texture>\n");
-    stringBuilder.append("\n");
-    stringBuilder.append("using namespace metal;\n");
-    stringBuilder.append("\n");
+    stringBuilder.append(metalCodeProlog());
 
     TypeNamer typeNamer(program);
-    stringBuilder.append(typeNamer.metalTypes());
-    stringBuilder.append(metalFunctions(program, typeNamer));
-    return stringBuilder.toString();
+    typeNamer.emitMetalTypes(stringBuilder);
+
+    auto metalFunctionEntryPoints = Metal::emitMetalFunctions(stringBuilder, program, typeNamer, WTFMove(matchedSemantics), layout);
+
+    dumpMetalCodeIfNeeded(stringBuilder);
+
+    return { WTFMove(stringBuilder), WTFMove(metalFunctionEntryPoints.mangledVertexEntryPointName), WTFMove(metalFunctionEntryPoints.mangledFragmentEntryPointName) };
+}
+
+ComputeMetalCode generateMetalCode(Program& program, MatchedComputeSemantics&& matchedSemantics, Layout& layout)
+{
+    StringBuilder stringBuilder;
+    stringBuilder.append(metalCodeProlog());
+
+    TypeNamer typeNamer(program);
+    typeNamer.emitMetalTypes(stringBuilder);
+
+    auto metalFunctionEntryPoints = Metal::emitMetalFunctions(stringBuilder, program, typeNamer, WTFMove(matchedSemantics), layout);
+
+    dumpMetalCodeIfNeeded(stringBuilder);
+
+    return { WTFMove(stringBuilder), WTFMove(metalFunctionEntryPoints.mangledEntryPointName) };
 }
 
 }

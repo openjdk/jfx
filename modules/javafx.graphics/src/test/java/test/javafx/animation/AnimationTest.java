@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -322,10 +322,19 @@ public class AnimationTest {
         assertFalse(listener.wasCalled);
         assertFalse(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
         animation.stop();
-        animation.setRate(1.0);
+
+        // stopped timeline, rate = -1
+        listener.wasCalled = false;
+        animation.setRate(-1.0);
+        animation.play();
+        assertEquals(ONE_SEC.toMillis(), animation.getCurrentTime().toMillis(), EPSILON);
+        assertFalse(listener.wasCalled);
+        assertTrue(timer.containsPulseReceiver(animation.shim_pulseReceiver()));
+        animation.stop();
 
         // stopped timeline, cycleDuration = 0
         listener.wasCalled = false;
+        animation.setRate(1.0);
         animation.shim_setCycleDuration(Duration.ZERO);
         animation.play();
         assertEquals(Status.STOPPED, animation.getStatus());

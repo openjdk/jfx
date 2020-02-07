@@ -53,6 +53,13 @@
  *
  * ## Floating references # {#floating-ref}
  *
+ * **Note**: Floating references are a C convenience API and should not be
+ * used in modern GObject code. Language bindings in particular find the
+ * concept highly problematic, as floating references are not identifiable
+ * through annotations, and neither are deviations from the floating reference
+ * behavior, like types that inherit from #GInitiallyUnowned and still return
+ * a full reference from g_object_new().
+ *
  * GInitiallyUnowned is derived from GObject. The only difference between
  * the two is that the initial reference of a GInitiallyUnowned is flagged
  * as a "floating" reference. This means that it is not specifically
@@ -83,7 +90,23 @@
  * Since floating references are useful almost exclusively for C convenience,
  * language bindings that provide automated reference and memory ownership
  * maintenance (such as smart pointers or garbage collection) should not
- * expose floating references in their API.
+ * expose floating references in their API. The best practice for handling
+ * types that have initially floating references is to immediately sink those
+ * references after g_object_new() returns, by checking if the #GType
+ * inherits from #GInitiallyUnowned. For instance:
+ *
+ * |[<!-- language="C" -->
+ * GObject *res = g_object_new_with_properties (gtype,
+ *                                              n_props,
+ *                                              prop_names,
+ *                                              prop_values);
+ *
+ * // or: if (g_type_is_a (gtype, G_TYPE_INITIALLY_UNOWNED))
+ * if (G_IS_INITIALLY_UNOWNED (res))
+ *   g_object_ref_sink (res);
+ *
+ * return res;
+ * ]|
  *
  * Some object implementations may need to save an objects floating state
  * across certain code portions (an example is #GtkMenu), to achieve this,
@@ -107,7 +130,7 @@
 
 
 /* --- macros --- */
-#define PARAM_SPEC_PARAM_ID(pspec)      ((pspec)->param_id)
+#define PARAM_SPEC_PARAM_ID(pspec)    ((pspec)->param_id)
 #define PARAM_SPEC_SET_PARAM_ID(pspec, id)  ((pspec)->param_id = (id))
 
 #define OBJECT_HAS_TOGGLE_REF_FLAG 0x1
@@ -141,48 +164,48 @@ enum {
 
 
 /* --- prototypes --- */
-static void g_object_base_class_init        (GObjectClass   *class);
-static void g_object_base_class_finalize        (GObjectClass   *class);
-static void g_object_do_class_init          (GObjectClass   *class);
-static void g_object_init               (GObject    *object,
-                             GObjectClass   *class);
-static GObject* g_object_constructor            (GType                  type,
-                             guint                  n_construct_properties,
-                             GObjectConstructParam *construct_params);
+static void g_object_base_class_init    (GObjectClass *class);
+static void g_object_base_class_finalize    (GObjectClass *class);
+static void g_object_do_class_init      (GObjectClass *class);
+static void g_object_init       (GObject  *object,
+               GObjectClass *class);
+static GObject* g_object_constructor      (GType                  type,
+               guint                  n_construct_properties,
+               GObjectConstructParam *construct_params);
 static void     g_object_constructed                    (GObject        *object);
-static void g_object_real_dispose           (GObject    *object);
-static void g_object_finalize           (GObject    *object);
-static void g_object_do_set_property        (GObject        *object,
-                             guint           property_id,
-                             const GValue   *value,
-                             GParamSpec     *pspec);
-static void g_object_do_get_property        (GObject        *object,
-                             guint           property_id,
-                             GValue         *value,
-                             GParamSpec     *pspec);
-static void g_value_object_init         (GValue     *value);
-static void g_value_object_free_value       (GValue     *value);
-static void g_value_object_copy_value       (const GValue   *src_value,
-                             GValue     *dest_value);
-static void g_value_object_transform_value      (const GValue   *src_value,
-                             GValue     *dest_value);
+static void g_object_real_dispose     (GObject  *object);
+static void g_object_finalize     (GObject  *object);
+static void g_object_do_set_property    (GObject        *object,
+               guint           property_id,
+               const GValue   *value,
+               GParamSpec     *pspec);
+static void g_object_do_get_property    (GObject        *object,
+               guint           property_id,
+               GValue         *value,
+               GParamSpec     *pspec);
+static void g_value_object_init     (GValue   *value);
+static void g_value_object_free_value   (GValue   *value);
+static void g_value_object_copy_value   (const GValue *src_value,
+               GValue   *dest_value);
+static void g_value_object_transform_value    (const GValue *src_value,
+               GValue   *dest_value);
 static gpointer g_value_object_peek_pointer             (const GValue   *value);
-static gchar*   g_value_object_collect_value        (GValue     *value,
-                             guint           n_collect_values,
-                             GTypeCValue    *collect_values,
-                             guint           collect_flags);
-static gchar*   g_value_object_lcopy_value      (const GValue   *value,
-                             guint           n_collect_values,
-                             GTypeCValue    *collect_values,
-                             guint           collect_flags);
-static void g_object_dispatch_properties_changed    (GObject    *object,
-                             guint       n_pspecs,
-                             GParamSpec    **pspecs);
+static gchar* g_value_object_collect_value    (GValue   *value,
+               guint           n_collect_values,
+               GTypeCValue    *collect_values,
+               guint           collect_flags);
+static gchar* g_value_object_lcopy_value    (const GValue *value,
+               guint           n_collect_values,
+               GTypeCValue    *collect_values,
+               guint           collect_flags);
+static void g_object_dispatch_properties_changed  (GObject  *object,
+               guint     n_pspecs,
+               GParamSpec    **pspecs);
 static guint               object_floating_flag_handler (GObject        *object,
                                                          gint            job);
 
 static void object_interface_check_properties           (gpointer        check_data,
-                             gpointer        g_iface);
+               gpointer        g_iface);
 
 /* --- typedefs --- */
 typedef struct _GObjectNotifyQueue            GObjectNotifyQueue;
@@ -198,16 +221,16 @@ struct _GObjectNotifyQueue
 G_LOCK_DEFINE_STATIC (closure_array_mutex);
 G_LOCK_DEFINE_STATIC (weak_refs_mutex);
 G_LOCK_DEFINE_STATIC (toggle_refs_mutex);
-static GQuark               quark_closure_array = 0;
-static GQuark               quark_weak_refs = 0;
-static GQuark               quark_toggle_refs = 0;
+static GQuark             quark_closure_array = 0;
+static GQuark             quark_weak_refs = 0;
+static GQuark             quark_toggle_refs = 0;
 static GQuark               quark_notify_queue;
 static GQuark               quark_in_construction;
 static GParamSpecPool      *pspec_pool = NULL;
-static gulong               gobject_signals[LAST_SIGNAL] = { 0, };
+static gulong             gobject_signals[LAST_SIGNAL] = { 0, };
 static guint (*floating_flag_handler) (GObject*, gint) = object_floating_flag_handler;
 /* qdata pointing to GSList<GWeakRef *>, protected by weak_locations_lock */
-static GQuark               quark_weak_locations = 0;
+static GQuark             quark_weak_locations = 0;
 static GRWLock              weak_locations_lock;
 
 G_LOCK_DEFINE_STATIC(notify_lock);
@@ -263,7 +286,6 @@ g_object_notify_queue_thaw (GObject            *object,
   GSList *slist;
   guint n_pspecs = 0;
 
-  g_return_if_fail (nqueue->freeze_count > 0);
   g_return_if_fail (g_atomic_int_get(&object->ref_count) > 0);
 
   G_LOCK(notify_lock);
@@ -317,20 +339,20 @@ g_object_notify_queue_add (GObject            *object,
 
 #ifdef  G_ENABLE_DEBUG
 G_LOCK_DEFINE_STATIC     (debug_objects);
-static guint         debug_objects_count = 0;
-static GHashTable   *debug_objects_ht = NULL;
+static guint     debug_objects_count = 0;
+static GHashTable *debug_objects_ht = NULL;
 
 static void
 debug_objects_foreach (gpointer key,
-               gpointer value,
-               gpointer user_data)
+           gpointer value,
+           gpointer user_data)
 {
   GObject *object = value;
 
   g_message ("[%p] stale %s\tref_count=%u",
-         object,
-         G_OBJECT_TYPE_NAME (object),
-         object->ref_count);
+       object,
+       G_OBJECT_TYPE_NAME (object),
+       object->ref_count);
 }
 
 #ifdef G_HAS_CONSTRUCTORS
@@ -365,24 +387,24 @@ _g_object_type_init (void)
     (GBaseInitFunc) g_object_base_class_init,
     (GBaseFinalizeFunc) g_object_base_class_finalize,
     (GClassInitFunc) g_object_do_class_init,
-    NULL    /* class_destroy */,
-    NULL    /* class_data */,
+    NULL  /* class_destroy */,
+    NULL  /* class_data */,
     sizeof (GObject),
-    0       /* n_preallocs */,
+    0   /* n_preallocs */,
     (GInstanceInitFunc) g_object_init,
-    NULL,   /* value_table */
+    NULL, /* value_table */
   };
   static const GTypeValueTable value_table = {
-    g_value_object_init,      /* value_init */
+    g_value_object_init,    /* value_init */
     g_value_object_free_value,    /* value_free */
     g_value_object_copy_value,    /* value_copy */
     g_value_object_peek_pointer,  /* value_peek_pointer */
-    "p",              /* collect_format */
+    "p",        /* collect_format */
     g_value_object_collect_value, /* collect_value */
-    "p",              /* lcopy_format */
+    "p",        /* lcopy_format */
     g_value_object_lcopy_value,   /* lcopy_value */
   };
-  GType type;
+  GType type G_GNUC_UNUSED  /* when compiling with G_DISABLE_ASSERT */;
 
   g_return_if_fail (initialized == FALSE);
   initialized = TRUE;
@@ -503,13 +525,13 @@ g_object_do_class_init (GObjectClass *class)
    */
   gobject_signals[NOTIFY] =
     g_signal_new (g_intern_static_string ("notify"),
-          G_TYPE_FROM_CLASS (class),
-          G_SIGNAL_RUN_FIRST | G_SIGNAL_NO_RECURSE | G_SIGNAL_DETAILED | G_SIGNAL_NO_HOOKS | G_SIGNAL_ACTION,
-          G_STRUCT_OFFSET (GObjectClass, notify),
-          NULL, NULL,
-          g_cclosure_marshal_VOID__PARAM,
-          G_TYPE_NONE,
-          1, G_TYPE_PARAM);
+      G_TYPE_FROM_CLASS (class),
+      G_SIGNAL_RUN_FIRST | G_SIGNAL_NO_RECURSE | G_SIGNAL_DETAILED | G_SIGNAL_NO_HOOKS | G_SIGNAL_ACTION,
+      G_STRUCT_OFFSET (GObjectClass, notify),
+      NULL, NULL,
+      NULL,
+      G_TYPE_NONE,
+      1, G_TYPE_PARAM);
 
   /* Install a check function that we'll use to verify that classes that
    * implement an interface implement all properties for that interface
@@ -519,14 +541,14 @@ g_object_do_class_init (GObjectClass *class)
 
 static inline gboolean
 install_property_internal (GType       g_type,
-               guint       property_id,
-               GParamSpec *pspec)
+         guint       property_id,
+         GParamSpec *pspec)
 {
   if (g_param_spec_pool_lookup (pspec_pool, pspec->name, g_type, FALSE))
     {
       g_warning ("When installing property: type '%s' already has a property named '%s'",
-         g_type_name (g_type),
-         pspec->name);
+     g_type_name (g_type),
+     pspec->name);
       return FALSE;
     }
 
@@ -540,7 +562,7 @@ static gboolean
 validate_pspec_to_install (GParamSpec *pspec)
 {
   g_return_val_if_fail (G_IS_PARAM_SPEC (pspec), FALSE);
-  g_return_val_if_fail (PARAM_SPEC_PARAM_ID (pspec) == 0, FALSE);   /* paranoid */
+  g_return_val_if_fail (PARAM_SPEC_PARAM_ID (pspec) == 0, FALSE); /* paranoid */
 
   g_return_val_if_fail (pspec->flags & (G_PARAM_READABLE | G_PARAM_WRITABLE), FALSE);
 
@@ -606,8 +628,8 @@ validate_and_install_class_property (GObjectClass *class,
  */
 void
 g_object_class_install_property (GObjectClass *class,
-                 guint         property_id,
-                                 GParamSpec   *pspec)
+         guint         property_id,
+         GParamSpec   *pspec)
 {
   GType oclass_type, parent_type;
 
@@ -761,7 +783,7 @@ g_object_class_install_properties (GObjectClass  *oclass,
  */
 void
 g_object_interface_install_property (gpointer      g_iface,
-                     GParamSpec   *pspec)
+             GParamSpec   *pspec)
 {
   GTypeInterface *iface_class = g_iface;
 
@@ -786,7 +808,7 @@ g_object_interface_install_property (gpointer      g_iface,
  */
 GParamSpec*
 g_object_class_find_property (GObjectClass *class,
-                  const gchar  *property_name)
+            const gchar  *property_name)
 {
   GParamSpec *pspec;
   GParamSpec *redirect;
@@ -795,16 +817,16 @@ g_object_class_find_property (GObjectClass *class,
   g_return_val_if_fail (property_name != NULL, NULL);
 
   pspec = g_param_spec_pool_lookup (pspec_pool,
-                    property_name,
-                    G_OBJECT_CLASS_TYPE (class),
-                    TRUE);
+            property_name,
+            G_OBJECT_CLASS_TYPE (class),
+            TRUE);
   if (pspec)
     {
       redirect = g_param_spec_get_redirect_target (pspec);
       if (redirect)
-    return redirect;
+  return redirect;
       else
-    return pspec;
+  return pspec;
     }
   else
     return NULL;
@@ -814,7 +836,7 @@ g_object_class_find_property (GObjectClass *class,
  * g_object_interface_find_property:
  * @g_iface: (type GObject.TypeInterface): any interface vtable for the
  *  interface, or the default vtable for the interface
- * @property_name: name of a property to lookup.
+ * @property_name: name of a property to look up.
  *
  * Find the #GParamSpec with the given name for an
  * interface. Generally, the interface vtable passed in as @g_iface
@@ -830,7 +852,7 @@ g_object_class_find_property (GObjectClass *class,
  */
 GParamSpec*
 g_object_interface_find_property (gpointer      g_iface,
-                  const gchar  *property_name)
+          const gchar  *property_name)
 {
   GTypeInterface *iface_class = g_iface;
 
@@ -838,9 +860,9 @@ g_object_interface_find_property (gpointer      g_iface,
   g_return_val_if_fail (property_name != NULL, NULL);
 
   return g_param_spec_pool_lookup (pspec_pool,
-                   property_name,
-                   iface_class->g_type,
-                   FALSE);
+           property_name,
+           iface_class->g_type,
+           FALSE);
 }
 
 /**
@@ -871,8 +893,8 @@ g_object_interface_find_property (gpointer      g_iface,
  */
 void
 g_object_class_override_property (GObjectClass *oclass,
-                  guint         property_id,
-                  const gchar  *name)
+          guint         property_id,
+          const gchar  *name)
 {
   GParamSpec *overridden = NULL;
   GParamSpec *new;
@@ -887,9 +909,9 @@ g_object_class_override_property (GObjectClass *oclass,
   parent_type = g_type_parent (G_OBJECT_CLASS_TYPE (oclass));
   if (parent_type != G_TYPE_NONE)
     overridden = g_param_spec_pool_lookup (pspec_pool,
-                       name,
-                       parent_type,
-                       TRUE);
+             name,
+             parent_type,
+             TRUE);
   if (!overridden)
     {
       GType *ifaces;
@@ -899,12 +921,12 @@ g_object_class_override_property (GObjectClass *oclass,
        */
       ifaces = g_type_interfaces (G_OBJECT_CLASS_TYPE (oclass), &n_ifaces);
       while (n_ifaces-- && !overridden)
-    {
-      overridden = g_param_spec_pool_lookup (pspec_pool,
-                         name,
-                         ifaces[n_ifaces],
-                         FALSE);
-    }
+  {
+    overridden = g_param_spec_pool_lookup (pspec_pool,
+             name,
+             ifaces[n_ifaces],
+             FALSE);
+  }
 
       g_free (ifaces);
     }
@@ -912,7 +934,7 @@ g_object_class_override_property (GObjectClass *oclass,
   if (!overridden)
     {
       g_warning ("%s: Can't find property to override for '%s::%s'",
-         G_STRFUNC, G_OBJECT_CLASS_NAME (oclass), name);
+     G_STRFUNC, G_OBJECT_CLASS_NAME (oclass), name);
       return;
     }
 
@@ -932,7 +954,7 @@ g_object_class_override_property (GObjectClass *oclass,
  */
 GParamSpec** /* free result */
 g_object_class_list_properties (GObjectClass *class,
-                guint        *n_properties_p)
+        guint        *n_properties_p)
 {
   GParamSpec **pspecs;
   guint n;
@@ -940,8 +962,8 @@ g_object_class_list_properties (GObjectClass *class,
   g_return_val_if_fail (G_IS_OBJECT_CLASS (class), NULL);
 
   pspecs = g_param_spec_pool_list (pspec_pool,
-                   G_OBJECT_CLASS_TYPE (class),
-                   &n);
+           G_OBJECT_CLASS_TYPE (class),
+           &n);
   if (n_properties_p)
     *n_properties_p = n;
 
@@ -969,7 +991,7 @@ g_object_class_list_properties (GObjectClass *class,
  */
 GParamSpec**
 g_object_interface_list_properties (gpointer      g_iface,
-                    guint        *n_properties_p)
+            guint        *n_properties_p)
 {
   GTypeInterface *iface_class = g_iface;
   GParamSpec **pspecs;
@@ -978,8 +1000,8 @@ g_object_interface_list_properties (gpointer      g_iface,
   g_return_val_if_fail (G_TYPE_IS_INTERFACE (iface_class->g_type), NULL);
 
   pspecs = g_param_spec_pool_list (pspec_pool,
-                   iface_class->g_type,
-                   &n);
+           iface_class->g_type,
+           &n);
   if (n_properties_p)
     *n_properties_p = n;
 
@@ -993,8 +1015,8 @@ object_in_construction (GObject *object)
 }
 
 static void
-g_object_init (GObject      *object,
-           GObjectClass *class)
+g_object_init (GObject    *object,
+         GObjectClass *class)
 {
   object->ref_count = 1;
   object->qdata = NULL;
@@ -1022,9 +1044,9 @@ g_object_init (GObject      *object,
 
 static void
 g_object_do_set_property (GObject      *object,
-              guint         property_id,
-              const GValue *value,
-              GParamSpec   *pspec)
+        guint         property_id,
+        const GValue *value,
+        GParamSpec   *pspec)
 {
   switch (property_id)
     {
@@ -1036,9 +1058,9 @@ g_object_do_set_property (GObject      *object,
 
 static void
 g_object_do_get_property (GObject     *object,
-              guint        property_id,
-              GValue      *value,
-              GParamSpec  *pspec)
+        guint        property_id,
+        GValue      *value,
+        GParamSpec  *pspec)
 {
   switch (property_id)
     {
@@ -1079,8 +1101,8 @@ g_object_finalize (GObject *object)
 
 static void
 g_object_dispatch_properties_changed (GObject     *object,
-                      guint        n_pspecs,
-                      GParamSpec **pspecs)
+              guint        n_pspecs,
+              GParamSpec **pspecs)
 {
   guint i;
 
@@ -1101,7 +1123,7 @@ void
 g_object_run_dispose (GObject *object)
 {
   g_return_if_fail (G_IS_OBJECT (object));
-  g_return_if_fail (object->ref_count > 0);
+  g_return_if_fail (g_atomic_int_get (&object->ref_count) > 0);
 
   g_object_ref (object);
   TRACE (GOBJECT_OBJECT_DISPOSE(object,G_TYPE_FROM_INSTANCE(object), 0));
@@ -1157,7 +1179,7 @@ get_notify_pspec (GParamSpec *pspec)
 
 static inline void
 g_object_notify_by_spec_internal (GObject    *object,
-                  GParamSpec *pspec)
+          GParamSpec *pspec)
 {
   GParamSpec *notify_pspec;
 
@@ -1201,7 +1223,7 @@ g_object_notify_by_spec_internal (GObject    *object,
  */
 void
 g_object_notify (GObject     *object,
-         const gchar *property_name)
+     const gchar *property_name)
 {
   GParamSpec *pspec;
 
@@ -1216,15 +1238,15 @@ g_object_notify (GObject     *object,
    * because g_object_notify_queue_add() does that
    */
   pspec = g_param_spec_pool_lookup (pspec_pool,
-                    property_name,
-                    G_OBJECT_TYPE (object),
-                    TRUE);
+            property_name,
+            G_OBJECT_TYPE (object),
+            TRUE);
 
   if (!pspec)
     g_warning ("%s: object class '%s' has no property named '%s'",
-           G_STRFUNC,
-           G_OBJECT_TYPE_NAME (object),
-           property_name);
+         G_STRFUNC,
+         G_OBJECT_TYPE_NAME (object),
+         property_name);
   else
     g_object_notify_by_spec_internal (object, pspec);
   g_object_unref (object);
@@ -1278,7 +1300,7 @@ g_object_notify (GObject     *object,
  */
 void
 g_object_notify_by_pspec (GObject    *object,
-              GParamSpec *pspec)
+        GParamSpec *pspec)
 {
 
   g_return_if_fail (G_IS_OBJECT (object));
@@ -1379,8 +1401,8 @@ consider_issuing_property_deprecation_warning (const GParamSpec *pspec)
 
 static inline void
 object_get_property (GObject     *object,
-             GParamSpec  *pspec,
-             GValue      *value)
+         GParamSpec  *pspec,
+         GValue      *value)
 {
   GObjectClass *class = g_type_class_peek (pspec->owner_type);
   guint param_id = PARAM_SPEC_PARAM_ID (pspec);
@@ -1404,9 +1426,9 @@ object_get_property (GObject     *object,
 
 static inline void
 object_set_property (GObject             *object,
-             GParamSpec          *pspec,
-             const GValue        *value,
-             GObjectNotifyQueue  *nqueue)
+         GParamSpec          *pspec,
+         const GValue        *value,
+         GObjectNotifyQueue  *nqueue)
 {
   GValue tmp_value = G_VALUE_INIT;
   GObjectClass *class = g_type_class_peek (pspec->owner_type);
@@ -1428,18 +1450,18 @@ object_set_property (GObject             *object,
   g_value_init (&tmp_value, pspec->value_type);
   if (!g_value_transform (value, &tmp_value))
     g_warning ("unable to set property '%s' of type '%s' from value of type '%s'",
-           pspec->name,
-           g_type_name (pspec->value_type),
-           G_VALUE_TYPE_NAME (value));
+         pspec->name,
+         g_type_name (pspec->value_type),
+         G_VALUE_TYPE_NAME (value));
   else if (g_param_value_validate (pspec, &tmp_value) && !(pspec->flags & G_PARAM_LAX_VALIDATION))
     {
       gchar *contents = g_strdup_value_contents (value);
 
       g_warning ("value \"%s\" of type '%s' is invalid or out of range for property '%s' of type '%s'",
-         contents,
-         G_VALUE_TYPE_NAME (value),
-         pspec->name,
-         g_type_name (pspec->value_type));
+     contents,
+     G_VALUE_TYPE_NAME (value),
+     pspec->name,
+     g_type_name (pspec->value_type));
       g_free (contents);
     }
   else
@@ -1461,7 +1483,7 @@ object_set_property (GObject             *object,
 
 static void
 object_interface_check_properties (gpointer check_data,
-                   gpointer g_iface)
+           gpointer g_iface)
 {
   GTypeInterface *iface_class = g_iface;
   GObjectClass *class;
@@ -1482,20 +1504,20 @@ object_interface_check_properties (gpointer check_data,
   while (n--)
     {
       GParamSpec *class_pspec = g_param_spec_pool_lookup (pspec_pool,
-                              pspecs[n]->name,
-                              G_OBJECT_CLASS_TYPE (class),
-                              TRUE);
+                pspecs[n]->name,
+                G_OBJECT_CLASS_TYPE (class),
+                TRUE);
 
       if (!class_pspec)
-    {
-      g_critical ("Object class %s doesn't implement property "
-              "'%s' from interface '%s'",
-              g_type_name (G_OBJECT_CLASS_TYPE (class)),
-              pspecs[n]->name,
-              g_type_name (iface_type));
+  {
+    g_critical ("Object class %s doesn't implement property "
+          "'%s' from interface '%s'",
+          g_type_name (G_OBJECT_CLASS_TYPE (class)),
+          pspecs[n]->name,
+          g_type_name (iface_type));
 
-      continue;
-    }
+    continue;
+  }
 
       /* We do a number of checks on the properties of an interface to
        * make sure that all classes implementing the interface are
@@ -1634,8 +1656,8 @@ g_object_get_type (void)
  */
 gpointer
 g_object_new (GType    object_type,
-              const gchar *first_property_name,
-              ...)
+        const gchar *first_property_name,
+        ...)
 {
   GObject *object;
   va_list var_args;
@@ -1707,7 +1729,7 @@ g_object_new_with_custom_constructor (GObjectClass          *class,
             break;
           }
 
-      if (j == n_params)
+      if (value == NULL)
         {
           value = &cvalues[cvals_used++];
           g_value_init (value, pspec->value_type);
@@ -1833,7 +1855,7 @@ g_object_new_internal (GObjectClass          *class,
                 break;
               }
 
-          if (j == n_params)
+          if (value == NULL)
             value = g_param_spec_get_default_value (pspec);
 
           object_set_property (object, pspec, value, nqueue);
@@ -1995,6 +2017,7 @@ g_object_new_with_properties (GType          object_type,
  * Deprecated: 2.54: Use g_object_new_with_properties() instead.
  * deprecated. See #GParameter for more information.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gpointer
 g_object_newv (GType       object_type,
                guint       n_parameters,
@@ -2046,6 +2069,7 @@ g_object_newv (GType       object_type,
 
   return object;
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_object_new_valist: (skip)
@@ -2145,8 +2169,8 @@ g_object_new_valist (GType        object_type,
 
 static GObject*
 g_object_constructor (GType                  type,
-              guint                  n_construct_properties,
-              GObjectConstructParam *construct_params)
+          guint                  n_construct_properties,
+          GObjectConstructParam *construct_params)
 {
   GObject *object;
 
@@ -2160,13 +2184,13 @@ g_object_constructor (GType                  type,
 
       /* set construct properties */
       while (n_construct_properties--)
-    {
-      GValue *value = construct_params->value;
-      GParamSpec *pspec = construct_params->pspec;
+  {
+    GValue *value = construct_params->value;
+    GParamSpec *pspec = construct_params->pspec;
 
-      construct_params++;
-      object_set_property (object, pspec, value, nqueue);
-    }
+    construct_params++;
+    object_set_property (object, pspec, value, nqueue);
+  }
       g_object_notify_queue_thaw (object, nqueue);
       /* the notification queue is still frozen from g_object_init(), so
        * we don't need to handle it here, g_object_newv() takes
@@ -2267,9 +2291,9 @@ g_object_setv (GObject       *object,
  * Sets properties on an object.
  */
 void
-g_object_set_valist (GObject     *object,
-                     const gchar *first_property_name,
-             va_list      var_args)
+g_object_set_valist (GObject   *object,
+         const gchar *first_property_name,
+         va_list    var_args)
 {
   GObjectNotifyQueue *nqueue;
   const gchar *name;
@@ -2287,22 +2311,22 @@ g_object_set_valist (GObject     *object,
       gchar *error = NULL;
 
       pspec = g_param_spec_pool_lookup (pspec_pool,
-                    name,
-                    G_OBJECT_TYPE (object),
-                    TRUE);
+          name,
+          G_OBJECT_TYPE (object),
+          TRUE);
 
       if (!g_object_set_is_valid_property (object, pspec, name))
         break;
 
       G_VALUE_COLLECT_INIT (&value, pspec->value_type, var_args,
-                0, &error);
+          0, &error);
       if (error)
-    {
-      g_warning ("%s: %s", G_STRFUNC, error);
-      g_free (error);
+  {
+    g_warning ("%s: %s", G_STRFUNC, error);
+    g_free (error);
           g_value_unset (&value);
-      break;
-    }
+    break;
+  }
 
       consider_issuing_property_deprecation_warning (pspec);
       object_set_property (object, pspec, &value, nqueue);
@@ -2370,9 +2394,9 @@ g_object_getv (GObject      *object,
   for (i = 0; i < n_properties; i++)
     {
       pspec = g_param_spec_pool_lookup (pspec_pool,
-                        names[i],
-                        obj_type,
-                        TRUE);
+                names[i],
+                obj_type,
+                TRUE);
       if (!g_object_get_is_valid_property (object, pspec, names[i]))
         break;
 
@@ -2399,9 +2423,9 @@ g_object_getv (GObject      *object,
  * See g_object_get().
  */
 void
-g_object_get_valist (GObject     *object,
-                     const gchar *first_property_name,
-             va_list      var_args)
+g_object_get_valist (GObject   *object,
+         const gchar *first_property_name,
+         va_list    var_args)
 {
   const gchar *name;
 
@@ -2418,9 +2442,9 @@ g_object_get_valist (GObject     *object,
       gchar *error;
 
       pspec = g_param_spec_pool_lookup (pspec_pool,
-                    name,
-                    G_OBJECT_TYPE (object),
-                    TRUE);
+          name,
+          G_OBJECT_TYPE (object),
+          TRUE);
 
       if (!g_object_get_is_valid_property (object, pspec, name))
         break;
@@ -2431,12 +2455,12 @@ g_object_get_valist (GObject     *object,
 
       G_VALUE_LCOPY (&value, var_args, 0, &error);
       if (error)
-    {
-      g_warning ("%s: %s", G_STRFUNC, error);
-      g_free (error);
-      g_value_unset (&value);
-      break;
-    }
+  {
+    g_warning ("%s: %s", G_STRFUNC, error);
+    g_free (error);
+    g_value_unset (&value);
+    break;
+  }
 
       g_value_unset (&value);
 
@@ -2461,8 +2485,8 @@ g_object_get_valist (GObject     *object,
  */
 void
 g_object_set (gpointer     _object,
-          const gchar *first_property_name,
-          ...)
+        const gchar *first_property_name,
+        ...)
 {
   GObject *object = _object;
   va_list var_args;
@@ -2508,8 +2532,8 @@ g_object_set (gpointer     _object,
  */
 void
 g_object_get (gpointer     _object,
-          const gchar *first_property_name,
-          ...)
+        const gchar *first_property_name,
+        ...)
 {
   GObject *object = _object;
   va_list var_args;
@@ -2531,8 +2555,8 @@ g_object_get (gpointer     _object,
  */
 void
 g_object_set_property (GObject      *object,
-                       const gchar  *property_name,
-                       const GValue *value)
+           const gchar  *property_name,
+           const GValue *value)
 {
   g_object_setv (object, 1, &property_name, value);
 }
@@ -2543,9 +2567,16 @@ g_object_set_property (GObject      *object,
  * @property_name: the name of the property to get
  * @value: return location for the property value
  *
- * Gets a property of an object. @value must have been initialized to the
- * expected type of the property (or a type to which the expected type can be
- * transformed) using g_value_init().
+ * Gets a property of an object.
+ *
+ * The @value can be:
+ *
+ *  - an empty #GValue initialized by %G_VALUE_INIT, which will be
+ *    automatically initialized with the expected type of the property
+ *    (since GLib 2.60)
+ *  - a #GValue initialized with the expected type of the property
+ *  - a #GValue initialized with a type to which the expected type
+ *    of the property can be transformed
  *
  * In general, a copy is made of the property contents and the caller is
  * responsible for freeing the memory by calling g_value_unset().
@@ -2555,53 +2586,58 @@ g_object_set_property (GObject      *object,
  */
 void
 g_object_get_property (GObject     *object,
-                       const gchar *property_name,
-               GValue      *value)
+           const gchar *property_name,
+           GValue    *value)
 {
   GParamSpec *pspec;
 
   g_return_if_fail (G_IS_OBJECT (object));
   g_return_if_fail (property_name != NULL);
-  g_return_if_fail (G_IS_VALUE (value));
+  g_return_if_fail (value != NULL);
 
   g_object_ref (object);
 
   pspec = g_param_spec_pool_lookup (pspec_pool,
-                    property_name,
-                    G_OBJECT_TYPE (object),
-                    TRUE);
+            property_name,
+            G_OBJECT_TYPE (object),
+            TRUE);
 
   if (g_object_get_is_valid_property (object, pspec, property_name))
     {
       GValue *prop_value, tmp_value = G_VALUE_INIT;
 
-      /* auto-conversion of the callers value type
-       */
-      if (G_VALUE_TYPE (value) == pspec->value_type)
-    {
-      g_value_reset (value);
-      prop_value = value;
-    }
+      if (G_VALUE_TYPE (value) == G_TYPE_INVALID)
+        {
+          /* zero-initialized value */
+          g_value_init (value, pspec->value_type);
+          prop_value = value;
+        }
+      else if (G_VALUE_TYPE (value) == pspec->value_type)
+        {
+          /* auto-conversion of the callers value type */
+          g_value_reset (value);
+          prop_value = value;
+        }
       else if (!g_value_type_transformable (pspec->value_type, G_VALUE_TYPE (value)))
-    {
-      g_warning ("%s: can't retrieve property '%s' of type '%s' as value of type '%s'",
-             G_STRFUNC, pspec->name,
-             g_type_name (pspec->value_type),
-             G_VALUE_TYPE_NAME (value));
-      g_object_unref (object);
-      return;
-    }
+        {
+          g_warning ("%s: can't retrieve property '%s' of type '%s' as value of type '%s'",
+                     G_STRFUNC, pspec->name,
+                     g_type_name (pspec->value_type),
+                     G_VALUE_TYPE_NAME (value));
+          g_object_unref (object);
+          return;
+        }
       else
-    {
-      g_value_init (&tmp_value, pspec->value_type);
-      prop_value = &tmp_value;
-    }
+        {
+          g_value_init (&tmp_value, pspec->value_type);
+          prop_value = &tmp_value;
+        }
       object_get_property (object, pspec, prop_value);
       if (prop_value != value)
-    {
-      g_value_transform (prop_value, value);
-      g_value_unset (&tmp_value);
-    }
+        {
+          g_value_transform (prop_value, value);
+          g_value_unset (&tmp_value);
+        }
     }
 
   g_object_unref (object);
@@ -2619,7 +2655,7 @@ g_object_get_property (GObject     *object,
  *
  * The signal specs expected by this function have the form
  * "modifier::signal_name", where modifier can be one of the following:
- * * - signal: equivalent to g_signal_connect_data (..., NULL, 0)
+ * - signal: equivalent to g_signal_connect_data (..., NULL, 0)
  * - object-signal, object_signal: equivalent to g_signal_connect_object (..., 0)
  * - swapped-signal, swapped_signal: equivalent to g_signal_connect_data (..., NULL, G_CONNECT_SWAPPED)
  * - swapped_object_signal, swapped-object-signal: equivalent to g_signal_connect_object (..., G_CONNECT_SWAPPED)
@@ -2630,21 +2666,21 @@ g_object_get_property (GObject     *object,
  *
  * |[<!-- language="C" -->
  *   menu->toplevel = g_object_connect (g_object_new (GTK_TYPE_WINDOW,
- *                         "type", GTK_WINDOW_POPUP,
- *                         "child", menu,
- *                         NULL),
- *                   "signal::event", gtk_menu_window_event, menu,
- *                   "signal::size_request", gtk_menu_window_size_request, menu,
- *                   "signal::destroy", gtk_widget_destroyed, &menu->toplevel,
- *                   NULL);
+ *               "type", GTK_WINDOW_POPUP,
+ *               "child", menu,
+ *               NULL),
+ *             "signal::event", gtk_menu_window_event, menu,
+ *             "signal::size_request", gtk_menu_window_size_request, menu,
+ *             "signal::destroy", gtk_widget_destroyed, &menu->toplevel,
+ *             NULL);
  * ]|
  *
  * Returns: (transfer none) (type GObject.Object): @object
  */
 gpointer
 g_object_connect (gpointer     _object,
-          const gchar *signal_spec,
-          ...)
+      const gchar *signal_spec,
+      ...)
 {
   GObject *object = _object;
   va_list var_args;
@@ -2659,49 +2695,49 @@ g_object_connect (gpointer     _object,
       gpointer data = va_arg (var_args, gpointer);
 
       if (strncmp (signal_spec, "signal::", 8) == 0)
-    g_signal_connect_data (object, signal_spec + 8,
-                   callback, data, NULL,
-                   0);
+  g_signal_connect_data (object, signal_spec + 8,
+             callback, data, NULL,
+             0);
       else if (strncmp (signal_spec, "object_signal::", 15) == 0 ||
                strncmp (signal_spec, "object-signal::", 15) == 0)
-    g_signal_connect_object (object, signal_spec + 15,
-                 callback, data,
-                 0);
+  g_signal_connect_object (object, signal_spec + 15,
+         callback, data,
+         0);
       else if (strncmp (signal_spec, "swapped_signal::", 16) == 0 ||
                strncmp (signal_spec, "swapped-signal::", 16) == 0)
-    g_signal_connect_data (object, signal_spec + 16,
-                   callback, data, NULL,
-                   G_CONNECT_SWAPPED);
+  g_signal_connect_data (object, signal_spec + 16,
+             callback, data, NULL,
+             G_CONNECT_SWAPPED);
       else if (strncmp (signal_spec, "swapped_object_signal::", 23) == 0 ||
                strncmp (signal_spec, "swapped-object-signal::", 23) == 0)
-    g_signal_connect_object (object, signal_spec + 23,
-                 callback, data,
-                 G_CONNECT_SWAPPED);
+  g_signal_connect_object (object, signal_spec + 23,
+         callback, data,
+         G_CONNECT_SWAPPED);
       else if (strncmp (signal_spec, "signal_after::", 14) == 0 ||
                strncmp (signal_spec, "signal-after::", 14) == 0)
-    g_signal_connect_data (object, signal_spec + 14,
-                   callback, data, NULL,
-                   G_CONNECT_AFTER);
+  g_signal_connect_data (object, signal_spec + 14,
+             callback, data, NULL,
+             G_CONNECT_AFTER);
       else if (strncmp (signal_spec, "object_signal_after::", 21) == 0 ||
                strncmp (signal_spec, "object-signal-after::", 21) == 0)
-    g_signal_connect_object (object, signal_spec + 21,
-                 callback, data,
-                 G_CONNECT_AFTER);
+  g_signal_connect_object (object, signal_spec + 21,
+         callback, data,
+         G_CONNECT_AFTER);
       else if (strncmp (signal_spec, "swapped_signal_after::", 22) == 0 ||
                strncmp (signal_spec, "swapped-signal-after::", 22) == 0)
-    g_signal_connect_data (object, signal_spec + 22,
-                   callback, data, NULL,
-                   G_CONNECT_SWAPPED | G_CONNECT_AFTER);
+  g_signal_connect_data (object, signal_spec + 22,
+             callback, data, NULL,
+             G_CONNECT_SWAPPED | G_CONNECT_AFTER);
       else if (strncmp (signal_spec, "swapped_object_signal_after::", 29) == 0 ||
                strncmp (signal_spec, "swapped-object-signal-after::", 29) == 0)
-    g_signal_connect_object (object, signal_spec + 29,
-                 callback, data,
-                 G_CONNECT_SWAPPED | G_CONNECT_AFTER);
+  g_signal_connect_object (object, signal_spec + 29,
+         callback, data,
+         G_CONNECT_SWAPPED | G_CONNECT_AFTER);
       else
-    {
-      g_warning ("%s: invalid signal spec \"%s\"", G_STRFUNC, signal_spec);
-      break;
-    }
+  {
+    g_warning ("%s: invalid signal spec \"%s\"", G_STRFUNC, signal_spec);
+    break;
+  }
       signal_spec = va_arg (var_args, gchar*);
     }
   va_end (var_args);
@@ -2726,8 +2762,8 @@ g_object_connect (gpointer     _object,
  */
 void
 g_object_disconnect (gpointer     _object,
-             const gchar *signal_spec,
-             ...)
+         const gchar *signal_spec,
+         ...)
 {
   GObject *object = _object;
   va_list var_args;
@@ -2744,29 +2780,29 @@ g_object_disconnect (gpointer     _object,
 
       if (strncmp (signal_spec, "any_signal::", 12) == 0 ||
           strncmp (signal_spec, "any-signal::", 12) == 0)
-    {
-      signal_spec += 12;
-      mask = G_SIGNAL_MATCH_ID | G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA;
-    }
+  {
+    signal_spec += 12;
+    mask = G_SIGNAL_MATCH_ID | G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA;
+  }
       else if (strcmp (signal_spec, "any_signal") == 0 ||
                strcmp (signal_spec, "any-signal") == 0)
-    {
-      signal_spec += 10;
-      mask = G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA;
-    }
+  {
+    signal_spec += 10;
+    mask = G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA;
+  }
       else
-    {
-      g_warning ("%s: invalid signal spec \"%s\"", G_STRFUNC, signal_spec);
-      break;
-    }
+  {
+    g_warning ("%s: invalid signal spec \"%s\"", G_STRFUNC, signal_spec);
+    break;
+  }
 
       if ((mask & G_SIGNAL_MATCH_ID) &&
-      !g_signal_parse_name (signal_spec, G_OBJECT_TYPE (object), &sid, &detail, FALSE))
-    g_warning ("%s: invalid signal name \"%s\"", G_STRFUNC, signal_spec);
+    !g_signal_parse_name (signal_spec, G_OBJECT_TYPE (object), &sid, &detail, FALSE))
+  g_warning ("%s: invalid signal name \"%s\"", G_STRFUNC, signal_spec);
       else if (!g_signal_handlers_disconnect_matched (object, mask | (detail ? G_SIGNAL_MATCH_DETAIL : 0),
-                              sid, detail,
-                              NULL, (gpointer)callback, data))
-    g_warning ("%s: signal handler %p(%p) is not connected", G_STRFUNC, callback, data);
+                  sid, detail,
+                  NULL, (gpointer)callback, data))
+  g_warning ("%s: signal handler %p(%p) is not connected", G_STRFUNC, callback, data);
       signal_spec = va_arg (var_args, gchar*);
     }
   va_end (var_args);
@@ -2811,15 +2847,15 @@ weak_refs_notify (gpointer data)
  */
 void
 g_object_weak_ref (GObject    *object,
-           GWeakNotify notify,
-           gpointer    data)
+       GWeakNotify notify,
+       gpointer    data)
 {
   WeakRefStack *wstack;
   guint i;
 
   g_return_if_fail (G_IS_OBJECT (object));
   g_return_if_fail (notify != NULL);
-  g_return_if_fail (object->ref_count >= 1);
+  g_return_if_fail (g_atomic_int_get (&object->ref_count) >= 1);
 
   G_LOCK (weak_refs_mutex);
   wstack = g_datalist_id_remove_no_notify (&object->qdata, quark_weak_refs);
@@ -2851,8 +2887,8 @@ g_object_weak_ref (GObject    *object,
  */
 void
 g_object_weak_unref (GObject    *object,
-             GWeakNotify notify,
-             gpointer    data)
+         GWeakNotify notify,
+         gpointer    data)
 {
   WeakRefStack *wstack;
   gboolean found_one = FALSE;
@@ -2867,16 +2903,16 @@ g_object_weak_unref (GObject    *object,
       guint i;
 
       for (i = 0; i < wstack->n_weak_refs; i++)
-    if (wstack->weak_refs[i].notify == notify &&
-        wstack->weak_refs[i].data == data)
-      {
-        found_one = TRUE;
-        wstack->n_weak_refs -= 1;
-        if (i != wstack->n_weak_refs)
-          wstack->weak_refs[i] = wstack->weak_refs[wstack->n_weak_refs];
+  if (wstack->weak_refs[i].notify == notify &&
+      wstack->weak_refs[i].data == data)
+    {
+      found_one = TRUE;
+      wstack->n_weak_refs -= 1;
+      if (i != wstack->n_weak_refs)
+        wstack->weak_refs[i] = wstack->weak_refs[wstack->n_weak_refs];
 
-        break;
-      }
+      break;
+    }
     }
   G_UNLOCK (weak_refs_mutex);
   if (!found_one)
@@ -3001,7 +3037,7 @@ gpointer
   GObject *object = _object;
   gboolean was_floating;
   g_return_val_if_fail (G_IS_OBJECT (object), object);
-  g_return_val_if_fail (object->ref_count >= 1, object);
+  g_return_val_if_fail (g_atomic_int_get (&object->ref_count) >= 1, object);
   g_object_ref (object);
   was_floating = floating_flag_handler (object, -1);
   if (was_floating)
@@ -3024,7 +3060,7 @@ void
 g_object_force_floating (GObject *object)
 {
   g_return_if_fail (G_IS_OBJECT (object));
-  g_return_if_fail (object->ref_count >= 1);
+  g_return_if_fail (g_atomic_int_get (&object->ref_count) >= 1);
 
   floating_flag_handler (object, +1);
 }
@@ -3040,7 +3076,7 @@ typedef struct {
 
 static void
 toggle_refs_notify (GObject *object,
-            gboolean is_last_ref)
+        gboolean is_last_ref)
 {
   ToggleRefStack tstack, *tstackptr;
 
@@ -3097,15 +3133,15 @@ toggle_refs_notify (GObject *object,
  */
 void
 g_object_add_toggle_ref (GObject       *object,
-             GToggleNotify  notify,
-             gpointer       data)
+       GToggleNotify  notify,
+       gpointer       data)
 {
   ToggleRefStack *tstack;
   guint i;
 
   g_return_if_fail (G_IS_OBJECT (object));
   g_return_if_fail (notify != NULL);
-  g_return_if_fail (object->ref_count >= 1);
+  g_return_if_fail (g_atomic_int_get (&object->ref_count) >= 1);
 
   g_object_ref (object);
 
@@ -3133,7 +3169,7 @@ g_object_add_toggle_ref (GObject       *object,
   tstack->toggle_refs[i].notify = notify;
   tstack->toggle_refs[i].data = data;
   g_datalist_id_set_data_full (&object->qdata, quark_toggle_refs, tstack,
-                   (GDestroyNotify)g_free);
+             (GDestroyNotify)g_free);
   G_UNLOCK (toggle_refs_mutex);
 }
 
@@ -3152,8 +3188,8 @@ g_object_add_toggle_ref (GObject       *object,
  */
 void
 g_object_remove_toggle_ref (GObject       *object,
-                GToggleNotify  notify,
-                gpointer       data)
+          GToggleNotify  notify,
+          gpointer       data)
 {
   ToggleRefStack *tstack;
   gboolean found_one = FALSE;
@@ -3168,19 +3204,19 @@ g_object_remove_toggle_ref (GObject       *object,
       guint i;
 
       for (i = 0; i < tstack->n_toggle_refs; i++)
-    if (tstack->toggle_refs[i].notify == notify &&
-        tstack->toggle_refs[i].data == data)
-      {
-        found_one = TRUE;
-        tstack->n_toggle_refs -= 1;
-        if (i != tstack->n_toggle_refs)
-          tstack->toggle_refs[i] = tstack->toggle_refs[tstack->n_toggle_refs];
+  if (tstack->toggle_refs[i].notify == notify &&
+      tstack->toggle_refs[i].data == data)
+    {
+      found_one = TRUE;
+      tstack->n_toggle_refs -= 1;
+      if (i != tstack->n_toggle_refs)
+        tstack->toggle_refs[i] = tstack->toggle_refs[tstack->n_toggle_refs];
 
-        if (tstack->n_toggle_refs == 0)
-          g_datalist_unset_flags (&object->qdata, OBJECT_HAS_TOGGLE_REF_FLAG);
+      if (tstack->n_toggle_refs == 0)
+        g_datalist_unset_flags (&object->qdata, OBJECT_HAS_TOGGLE_REF_FLAG);
 
-        break;
-      }
+      break;
+    }
     }
   G_UNLOCK (toggle_refs_mutex);
 
@@ -3210,9 +3246,9 @@ gpointer
   gint old_val;
 
   g_return_val_if_fail (G_IS_OBJECT (object), NULL);
-  g_return_val_if_fail (object->ref_count > 0, NULL);
 
   old_val = g_atomic_int_add (&object->ref_count, 1);
+  g_return_val_if_fail (old_val > 0, NULL);
 
   if (old_val == 1 && OBJECT_HAS_TOGGLE_REF (object))
     toggle_refs_notify (object, FALSE);
@@ -3241,7 +3277,6 @@ g_object_unref (gpointer _object)
   gint old_ref;
 
   g_return_if_fail (G_IS_OBJECT (object));
-  g_return_if_fail (object->ref_count > 0);
 
   /* here we want to atomically do: if (ref_count>1) { ref_count--; return; } */
  retry_atomic_decrement1:
@@ -3252,13 +3287,13 @@ g_object_unref (gpointer _object)
       gboolean has_toggle_ref = OBJECT_HAS_TOGGLE_REF (object);
 
       if (!g_atomic_int_compare_and_exchange ((int *)&object->ref_count, old_ref, old_ref - 1))
-    goto retry_atomic_decrement1;
+  goto retry_atomic_decrement1;
 
       TRACE (GOBJECT_OBJECT_UNREF(object,G_TYPE_FROM_INSTANCE(object),old_ref));
 
       /* if we went from 2->1 we need to notify toggle refs if any */
       if (old_ref == 2 && has_toggle_ref) /* The last ref being held in this case is owned by the toggle_ref */
-    toggle_refs_notify (object, TRUE);
+  toggle_refs_notify (object, TRUE);
     }
   else
     {
@@ -3318,16 +3353,16 @@ g_object_unref (gpointer _object)
           gboolean has_toggle_ref = OBJECT_HAS_TOGGLE_REF (object);
 
           if (!g_atomic_int_compare_and_exchange ((int *)&object->ref_count, old_ref, old_ref - 1))
-        goto retry_atomic_decrement2;
+      goto retry_atomic_decrement2;
 
-      TRACE (GOBJECT_OBJECT_UNREF(object,G_TYPE_FROM_INSTANCE(object),old_ref));
+    TRACE (GOBJECT_OBJECT_UNREF(object,G_TYPE_FROM_INSTANCE(object),old_ref));
 
           /* if we went from 2->1 we need to notify toggle refs if any */
           if (old_ref == 2 && has_toggle_ref) /* The last ref being held in this case is owned by the toggle_ref */
-        toggle_refs_notify (object, TRUE);
+      toggle_refs_notify (object, TRUE);
 
-      return;
-    }
+    return;
+  }
 
       /* we are still in the process of taking away the last ref */
       g_datalist_id_set_data (&object->qdata, quark_closure_array, NULL);
@@ -3336,26 +3371,33 @@ g_object_unref (gpointer _object)
 
       /* decrement the last reference */
       old_ref = g_atomic_int_add (&object->ref_count, -1);
+      g_return_if_fail (old_ref > 0);
 
       TRACE (GOBJECT_OBJECT_UNREF(object,G_TYPE_FROM_INSTANCE(object),old_ref));
 
       /* may have been re-referenced meanwhile */
       if (G_LIKELY (old_ref == 1))
-    {
-      TRACE (GOBJECT_OBJECT_FINALIZE(object,G_TYPE_FROM_INSTANCE(object)));
+  {
+    TRACE (GOBJECT_OBJECT_FINALIZE(object,G_TYPE_FROM_INSTANCE(object)));
           G_OBJECT_GET_CLASS (object)->finalize (object);
 
-      TRACE (GOBJECT_OBJECT_FINALIZE_END(object,G_TYPE_FROM_INSTANCE(object)));
+    TRACE (GOBJECT_OBJECT_FINALIZE_END(object,G_TYPE_FROM_INSTANCE(object)));
 
           GOBJECT_IF_DEBUG (OBJECTS,
-        {
-          /* catch objects not chaining finalize handlers */
-          G_LOCK (debug_objects);
-          g_assert (!g_hash_table_contains (debug_objects_ht, object));
-          G_UNLOCK (debug_objects);
-        });
+      {
+              gboolean was_present;
+
+              /* catch objects not chaining finalize handlers */
+              G_LOCK (debug_objects);
+              was_present = g_hash_table_remove (debug_objects_ht, object);
+              G_UNLOCK (debug_objects);
+
+              if (was_present)
+                g_critical ("Object %p of type %s not finalized correctly.",
+                            object, G_OBJECT_TYPE_NAME (object));
+      });
           g_type_free_instance ((GTypeInstance*) object);
-    }
+  }
     }
 }
 
@@ -3395,7 +3437,7 @@ g_clear_object (GObject **object_ptr)
  */
 gpointer
 g_object_get_qdata (GObject *object,
-            GQuark   quark)
+        GQuark   quark)
 {
   g_return_val_if_fail (G_IS_OBJECT (object), NULL);
 
@@ -3419,8 +3461,8 @@ g_object_get_qdata (GObject *object,
  */
 void
 g_object_set_qdata (GObject *object,
-            GQuark   quark,
-            gpointer data)
+        GQuark   quark,
+        gpointer data)
 {
   g_return_if_fail (G_IS_OBJECT (object));
   g_return_if_fail (quark > 0);
@@ -3529,15 +3571,15 @@ g_object_replace_qdata (GObject        *object,
  */
 void
 g_object_set_qdata_full (GObject       *object,
-             GQuark     quark,
-             gpointer   data,
-                         GDestroyNotify destroy)
+       GQuark   quark,
+       gpointer data,
+       GDestroyNotify destroy)
 {
   g_return_if_fail (G_IS_OBJECT (object));
   g_return_if_fail (quark > 0);
 
   g_datalist_id_set_data_full (&object->qdata, quark, data,
-                   data ? destroy : (GDestroyNotify) NULL);
+             data ? destroy : (GDestroyNotify) NULL);
 }
 
 /**
@@ -3585,7 +3627,7 @@ g_object_set_qdata_full (GObject       *object,
  */
 gpointer
 g_object_steal_qdata (GObject *object,
-              GQuark   quark)
+          GQuark   quark)
 {
   g_return_val_if_fail (G_IS_OBJECT (object), NULL);
   g_return_val_if_fail (quark > 0, NULL);
@@ -3624,6 +3666,11 @@ g_object_get_data (GObject     *object,
  *
  * If the object already had an association with that name,
  * the old association will be destroyed.
+ *
+ * Internally, the @key is converted to a #GQuark using g_quark_from_string().
+ * This means a copy of @key is kept permanently (even after @object has been
+ * finalized) - so it is recommended to only use a small, bounded set of values
+ * for @key in your program, to avoid the #GQuark storage growing unbounded.
  */
 void
 g_object_set_data (GObject     *object,
@@ -3702,6 +3749,9 @@ g_object_dup_data (GObject        *object,
  * or may not include using @old_destroy as sometimes replacement
  * should not destroy the object in the normal way.
  *
+ * See g_object_set_data() for guidance on using a small, bounded set of values
+ * for @key.
+ *
  * Returns: %TRUE if the existing value for @key was replaced
  *  by @newval, %FALSE otherwise.
  *
@@ -3747,7 +3797,7 @@ g_object_set_data_full (GObject       *object,
   g_return_if_fail (key != NULL);
 
   g_datalist_id_set_data_full (&object->qdata, g_quark_from_string (key), data,
-                   data ? destroy : (GDestroyNotify) NULL);
+             data ? destroy : (GDestroyNotify) NULL);
 }
 
 /**
@@ -3790,7 +3840,7 @@ g_value_object_free_value (GValue *value)
 
 static void
 g_value_object_copy_value (const GValue *src_value,
-               GValue   *dest_value)
+         GValue *dest_value)
 {
   if (src_value->data[0].v_pointer)
     dest_value->data[0].v_pointer = g_object_ref (src_value->data[0].v_pointer);
@@ -3800,7 +3850,7 @@ g_value_object_copy_value (const GValue *src_value,
 
 static void
 g_value_object_transform_value (const GValue *src_value,
-                GValue       *dest_value)
+        GValue       *dest_value)
 {
   if (src_value->data[0].v_pointer && g_type_is_a (G_OBJECT_TYPE (src_value->data[0].v_pointer), G_VALUE_TYPE (dest_value)))
     dest_value->data[0].v_pointer = g_object_ref (src_value->data[0].v_pointer);
@@ -3815,27 +3865,27 @@ g_value_object_peek_pointer (const GValue *value)
 }
 
 static gchar*
-g_value_object_collect_value (GValue      *value,
-                              guint        n_collect_values,
-                              GTypeCValue *collect_values,
-                              guint        collect_flags)
+g_value_object_collect_value (GValue    *value,
+            guint        n_collect_values,
+            GTypeCValue *collect_values,
+            guint        collect_flags)
 {
   if (collect_values[0].v_pointer)
     {
       GObject *object = collect_values[0].v_pointer;
 
       if (object->g_type_instance.g_class == NULL)
-    return g_strconcat ("invalid unclassed object pointer for value type '",
-                G_VALUE_TYPE_NAME (value),
-                "'",
-                NULL);
+  return g_strconcat ("invalid unclassed object pointer for value type '",
+          G_VALUE_TYPE_NAME (value),
+          "'",
+          NULL);
       else if (!g_value_type_compatible (G_OBJECT_TYPE (object), G_VALUE_TYPE (value)))
-    return g_strconcat ("invalid object type '",
-                G_OBJECT_TYPE_NAME (object),
-                "' for value type '",
-                G_VALUE_TYPE_NAME (value),
-                "'",
-                NULL);
+  return g_strconcat ("invalid object type '",
+          G_OBJECT_TYPE_NAME (object),
+          "' for value type '",
+          G_VALUE_TYPE_NAME (value),
+          "'",
+          NULL);
       /* never honour G_VALUE_NOCOPY_CONTENTS for ref-counted types */
       value->data[0].v_pointer = g_object_ref (object);
     }
@@ -3847,9 +3897,9 @@ g_value_object_collect_value (GValue      *value,
 
 static gchar*
 g_value_object_lcopy_value (const GValue *value,
-                guint        n_collect_values,
-                GTypeCValue *collect_values,
-                guint        collect_flags)
+          guint        n_collect_values,
+          GTypeCValue *collect_values,
+          guint        collect_flags)
 {
   GObject **object_p = collect_values[0].v_pointer;
 
@@ -3885,7 +3935,7 @@ g_value_object_lcopy_value (const GValue *value,
  */
 void
 g_value_set_object (GValue   *value,
-            gpointer  v_object)
+        gpointer  v_object)
 {
   GObject *old;
 
@@ -3919,7 +3969,7 @@ g_value_set_object (GValue   *value,
  */
 void
 g_value_set_object_take_ownership (GValue  *value,
-                   gpointer v_object)
+           gpointer v_object)
 {
   g_value_take_object (value, v_object);
 }
@@ -3930,7 +3980,7 @@ g_value_set_object_take_ownership (GValue  *value,
  * @v_object: (nullable): object value to be set
  *
  * Sets the contents of a %G_TYPE_OBJECT derived #GValue to @v_object
- * and takes over the ownership of the callers reference to @v_object;
+ * and takes over the ownership of the caller's reference to @v_object;
  * the caller doesn't have to unref it any more (i.e. the reference
  * count of the object is not increased).
  *
@@ -3941,7 +3991,7 @@ g_value_set_object_take_ownership (GValue  *value,
  */
 void
 g_value_take_object (GValue  *value,
-             gpointer v_object)
+         gpointer v_object)
 {
   g_return_if_fail (G_VALUE_HOLDS_OBJECT (value));
 
@@ -4017,10 +4067,10 @@ g_value_dup_object (const GValue *value)
  */
 gulong
 g_signal_connect_object (gpointer      instance,
-             const gchar  *detailed_signal,
-             GCallback     c_handler,
-             gpointer      gobject,
-             GConnectFlags connect_flags)
+       const gchar  *detailed_signal,
+       GCallback     c_handler,
+       gpointer      gobject,
+       GConnectFlags connect_flags)
 {
   g_return_val_if_fail (G_TYPE_CHECK_INSTANCE (instance), 0);
   g_return_val_if_fail (detailed_signal != NULL, 0);
@@ -4066,7 +4116,7 @@ typedef struct {
 
 static void
 object_remove_closure (gpointer  data,
-               GClosure *closure)
+           GClosure *closure)
 {
   GObject *object = data;
   CArray *carray;
@@ -4077,11 +4127,11 @@ object_remove_closure (gpointer  data,
   for (i = 0; i < carray->n_closures; i++)
     if (carray->closures[i] == closure)
       {
-    carray->n_closures--;
-    if (i < carray->n_closures)
-      carray->closures[i] = carray->closures[carray->n_closures];
-    G_UNLOCK (closure_array_mutex);
-    return;
+  carray->n_closures--;
+  if (i < carray->n_closures)
+    carray->closures[i] = carray->closures[carray->n_closures];
+  G_UNLOCK (closure_array_mutex);
+  return;
       }
   G_UNLOCK (closure_array_mutex);
   g_assert_not_reached ();
@@ -4109,8 +4159,8 @@ destroy_closure_array (gpointer data)
 
 /**
  * g_object_watch_closure:
- * @object: GObject restricting lifetime of @closure
- * @closure: GClosure to watch
+ * @object: #GObject restricting lifetime of @closure
+ * @closure: #GClosure to watch
  *
  * This function essentially limits the life time of the @closure to
  * the life time of the object. That is, when the object is finalized,
@@ -4124,7 +4174,7 @@ destroy_closure_array (gpointer data)
  */
 void
 g_object_watch_closure (GObject  *object,
-            GClosure *closure)
+      GClosure *closure)
 {
   CArray *carray;
   guint i;
@@ -4133,12 +4183,12 @@ g_object_watch_closure (GObject  *object,
   g_return_if_fail (closure != NULL);
   g_return_if_fail (closure->is_invalid == FALSE);
   g_return_if_fail (closure->in_marshal == FALSE);
-  g_return_if_fail (object->ref_count > 0); /* this doesn't work on finalizing objects */
+  g_return_if_fail (g_atomic_int_get (&object->ref_count) > 0); /* this doesn't work on finalizing objects */
 
   g_closure_add_invalidate_notifier (closure, object, object_remove_closure);
   g_closure_add_marshal_guards (closure,
-                object, (GClosureNotify) g_object_ref,
-                object, (GClosureNotify) g_object_unref);
+        object, (GClosureNotify) g_object_ref,
+        object, (GClosureNotify) g_object_unref);
   G_LOCK (closure_array_mutex);
   carray = g_datalist_id_remove_no_notify (&object->qdata, quark_closure_array);
   if (!carray)
@@ -4174,12 +4224,12 @@ g_object_watch_closure (GObject  *object,
  */
 GClosure*
 g_closure_new_object (guint    sizeof_closure,
-              GObject *object)
+          GObject *object)
 {
   GClosure *closure;
 
   g_return_val_if_fail (G_IS_OBJECT (object), NULL);
-  g_return_val_if_fail (object->ref_count > 0, NULL);     /* this doesn't work on finalizing objects */
+  g_return_val_if_fail (g_atomic_int_get (&object->ref_count) > 0, NULL);     /* this doesn't work on finalizing objects */
 
   closure = g_closure_new_simple (sizeof_closure, object);
   g_object_watch_closure (object, closure);
@@ -4202,12 +4252,12 @@ g_closure_new_object (guint    sizeof_closure,
  */
 GClosure*
 g_cclosure_new_object (GCallback callback_func,
-               GObject  *object)
+           GObject  *object)
 {
   GClosure *closure;
 
   g_return_val_if_fail (G_IS_OBJECT (object), NULL);
-  g_return_val_if_fail (object->ref_count > 0, NULL);     /* this doesn't work on finalizing objects */
+  g_return_val_if_fail (g_atomic_int_get (&object->ref_count) > 0, NULL);     /* this doesn't work on finalizing objects */
   g_return_val_if_fail (callback_func != NULL, NULL);
 
   closure = g_cclosure_new (callback_func, object, NULL);
@@ -4231,12 +4281,12 @@ g_cclosure_new_object (GCallback callback_func,
  */
 GClosure*
 g_cclosure_new_object_swap (GCallback callback_func,
-                GObject  *object)
+          GObject  *object)
 {
   GClosure *closure;
 
   g_return_val_if_fail (G_IS_OBJECT (object), NULL);
-  g_return_val_if_fail (object->ref_count > 0, NULL);     /* this doesn't work on finalizing objects */
+  g_return_val_if_fail (g_atomic_int_get (&object->ref_count) > 0, NULL);     /* this doesn't work on finalizing objects */
   g_return_val_if_fail (callback_func != NULL, NULL);
 
   closure = g_cclosure_new_swap (callback_func, object, NULL);

@@ -1,10 +1,11 @@
-list(APPEND WebCore_INCLUDE_DIRECTORIES
+list(APPEND WebCore_PRIVATE_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/freetype"
     "${WEBCORE_DIR}/platform/graphics/harfbuzz"
     "${WEBCORE_DIR}/platform/graphics/harfbuzz/ng"
 )
 
 list(APPEND WebCore_SOURCES
+    platform/graphics/freetype/FontCacheFreeType.cpp
     platform/graphics/freetype/FontCustomPlatformDataFreeType.cpp
     platform/graphics/freetype/FontPlatformDataFreeType.cpp
     platform/graphics/freetype/GlyphPageTreeNodeFreeType.cpp
@@ -14,15 +15,12 @@ list(APPEND WebCore_SOURCES
     platform/graphics/harfbuzz/ComplexTextControllerHarfBuzz.cpp
 )
 
-if (PORT STREQUAL "GTK")
-    list(APPEND WebCorePlatformGTK_SOURCES
-        platform/graphics/freetype/FontCacheFreeType.cpp
+list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+    platform/graphics/freetype/FcUniquePtr.h
+    platform/graphics/freetype/RefPtrFontconfig.h
+
+    platform/graphics/harfbuzz/HbUniquePtr.h
 )
-else ()
-    list(APPEND WebCore_SOURCES
-        platform/graphics/freetype/FontCacheFreeType.cpp
-)
-endif ()
 
 if (USE_CAIRO)
     list(APPEND WebCore_SOURCES

@@ -61,28 +61,7 @@ static bool matches(const AST::Type& unifyThis, const AST::Type& unifyOther)
         auto& unnamedThis = downcast<AST::UnnamedType>(unifyThis);
         auto& unnamedOther = downcast<AST::UnnamedType>(unifyOther);
         ASSERT(!is<AST::TypeReference>(unnamedThis) && !is<AST::TypeReference>(unnamedOther));
-        if (is<AST::PointerType>(unnamedThis) && is<AST::PointerType>(unnamedOther)) {
-            auto& pointerThis = downcast<AST::PointerType>(unnamedThis);
-            auto& pointerOther = downcast<AST::PointerType>(unnamedOther);
-            if (pointerThis.addressSpace() != pointerOther.addressSpace())
-                return false;
-            return matches(pointerThis.elementType(), pointerOther.elementType());
-        }
-        if (is<AST::ArrayReferenceType>(unnamedThis) && is<AST::ArrayReferenceType>(unnamedOther)) {
-            auto& arrayReferenceThis = downcast<AST::ArrayReferenceType>(unnamedThis);
-            auto& arrayReferenceOther = downcast<AST::ArrayReferenceType>(unnamedOther);
-            if (arrayReferenceThis.addressSpace() != arrayReferenceOther.addressSpace())
-                return false;
-            return matches(arrayReferenceThis.elementType(), arrayReferenceOther.elementType());
-        }
-        if (is<AST::ArrayType>(unnamedThis) && is<AST::ArrayType>(unnamedOther)) {
-            auto& arrayThis = downcast<AST::ArrayType>(unnamedThis);
-            auto& arrayOther = downcast<AST::ArrayType>(unnamedOther);
-            if (arrayThis.numElements() != arrayOther.numElements())
-                return false;
-            return matches(arrayThis.type(), arrayOther.type());
-        }
-        return false;
+        return unnamedThis == unnamedOther;
     }
     return false;
 }
@@ -102,82 +81,82 @@ bool matches(const AST::UnnamedType& unnamedType, const AST::NamedType& other)
     return matches(unnamedType.unifyNode(), other.unifyNode());
 }
 
-static Optional<UniqueRef<AST::UnnamedType>> matchAndCommit(AST::Type& unifyNode, AST::ResolvableType& resolvableType)
+static RefPtr<AST::UnnamedType> matchAndCommit(AST::Type& unifyNode, AST::ResolvableType& resolvableType)
 {
-    ASSERT(!resolvableType.resolvedType());
+    ASSERT(!resolvableType.maybeResolvedType());
     if (!resolvableType.canResolve(unifyNode))
-        return WTF::nullopt;
+        return nullptr;
     if (is<AST::NamedType>(unifyNode)) {
         auto& namedUnifyNode = downcast<AST::NamedType>(unifyNode);
-        auto result = AST::TypeReference::wrap(Lexer::Token(namedUnifyNode.origin()), namedUnifyNode);
-        resolvableType.resolve(result->clone());
+        auto result = AST::TypeReference::wrap(namedUnifyNode.codeLocation(), namedUnifyNode);
+        resolvableType.resolve(result.copyRef());
         return { WTFMove(result) };
     }
 
-    auto result = downcast<AST::UnnamedType>(unifyNode).clone();
-    resolvableType.resolve(result->clone());
+    Ref<AST::UnnamedType> result = downcast<AST::UnnamedType>(unifyNode);
+    resolvableType.resolve(result.copyRef());
     return result;
 }
 
-Optional<UniqueRef<AST::UnnamedType>> matchAndCommit(AST::UnnamedType& unnamedType, AST::ResolvableType& resolvableType)
+RefPtr<AST::UnnamedType> matchAndCommit(AST::UnnamedType& unnamedType, AST::ResolvableType& resolvableType)
 {
     return matchAndCommit(unnamedType.unifyNode(), resolvableType);
 }
 
-Optional<UniqueRef<AST::UnnamedType>> matchAndCommit(AST::NamedType& namedType, AST::ResolvableType& resolvableType)
+RefPtr<AST::UnnamedType> matchAndCommit(AST::NamedType& namedType, AST::ResolvableType& resolvableType)
 {
     return matchAndCommit(namedType.unifyNode(), resolvableType);
 }
 
-Optional<UniqueRef<AST::UnnamedType>> matchAndCommit(AST::ResolvableType& resolvableType1, AST::ResolvableType& resolvableType2)
+RefPtr<AST::UnnamedType> matchAndCommit(AST::ResolvableType& resolvableType1, AST::ResolvableType& resolvableType2)
 {
-    ASSERT(!resolvableType1.resolvedType());
-    ASSERT(!resolvableType2.resolvedType());
+    ASSERT(!resolvableType1.maybeResolvedType());
+    ASSERT(!resolvableType2.maybeResolvedType());
     if (is<AST::FloatLiteralType>(resolvableType1) && is<AST::FloatLiteralType>(resolvableType2)) {
-        resolvableType1.resolve(downcast<AST::FloatLiteralType>(resolvableType1).preferredType().clone());
-        resolvableType2.resolve(downcast<AST::FloatLiteralType>(resolvableType2).preferredType().clone());
-        return downcast<AST::FloatLiteralType>(resolvableType1).preferredType().clone();
+        resolvableType1.resolve(downcast<AST::FloatLiteralType>(resolvableType1).preferredType());
+        resolvableType2.resolve(downcast<AST::FloatLiteralType>(resolvableType2).preferredType());
+        return &downcast<AST::FloatLiteralType>(resolvableType1).preferredType();
     }
     if (is<AST::IntegerLiteralType>(resolvableType1) && is<AST::IntegerLiteralType>(resolvableType2)) {
-        resolvableType1.resolve(downcast<AST::IntegerLiteralType>(resolvableType1).preferredType().clone());
-        resolvableType2.resolve(downcast<AST::IntegerLiteralType>(resolvableType2).preferredType().clone());
-        return downcast<AST::IntegerLiteralType>(resolvableType1).preferredType().clone();
+        resolvableType1.resolve(downcast<AST::IntegerLiteralType>(resolvableType1).preferredType());
+        resolvableType2.resolve(downcast<AST::IntegerLiteralType>(resolvableType2).preferredType());
+        return &downcast<AST::IntegerLiteralType>(resolvableType1).preferredType();
     }
     if (is<AST::UnsignedIntegerLiteralType>(resolvableType1) && is<AST::UnsignedIntegerLiteralType>(resolvableType2)) {
-        resolvableType1.resolve(downcast<AST::UnsignedIntegerLiteralType>(resolvableType1).preferredType().clone());
-        resolvableType2.resolve(downcast<AST::UnsignedIntegerLiteralType>(resolvableType2).preferredType().clone());
-        return downcast<AST::UnsignedIntegerLiteralType>(resolvableType1).preferredType().clone();
+        resolvableType1.resolve(downcast<AST::UnsignedIntegerLiteralType>(resolvableType1).preferredType());
+        resolvableType2.resolve(downcast<AST::UnsignedIntegerLiteralType>(resolvableType2).preferredType());
+        return &downcast<AST::UnsignedIntegerLiteralType>(resolvableType1).preferredType();
     }
     if (is<AST::NullLiteralType>(resolvableType1) && is<AST::NullLiteralType>(resolvableType2)) {
         // FIXME: Trying to match nullptr and nullptr fails.
-        return WTF::nullopt;
+        return nullptr;
     }
-    return WTF::nullopt;
+    return nullptr;
 }
 
-Optional<UniqueRef<AST::UnnamedType>> commit(AST::ResolvableType& resolvableType)
+RefPtr<AST::UnnamedType> commit(AST::ResolvableType& resolvableType)
 {
-    ASSERT(!resolvableType.resolvedType());
+    ASSERT(!resolvableType.maybeResolvedType());
     if (is<AST::FloatLiteralType>(resolvableType)) {
         auto& floatLiteralType = downcast<AST::FloatLiteralType>(resolvableType);
-        resolvableType.resolve(floatLiteralType.preferredType().clone());
-        return floatLiteralType.preferredType().clone();
+        resolvableType.resolve(floatLiteralType.preferredType());
+        return &floatLiteralType.preferredType();
     }
     if (is<AST::IntegerLiteralType>(resolvableType)) {
         auto& integerLiteralType = downcast<AST::IntegerLiteralType>(resolvableType);
-        resolvableType.resolve(integerLiteralType.preferredType().clone());
-        return integerLiteralType.preferredType().clone();
+        resolvableType.resolve(integerLiteralType.preferredType());
+        return &integerLiteralType.preferredType();
     }
     if (is<AST::UnsignedIntegerLiteralType>(resolvableType)) {
         auto& unsignedIntegerLiteralType = downcast<AST::UnsignedIntegerLiteralType>(resolvableType);
-        resolvableType.resolve(unsignedIntegerLiteralType.preferredType().clone());
-        return unsignedIntegerLiteralType.preferredType().clone();
+        resolvableType.resolve(unsignedIntegerLiteralType.preferredType());
+        return &unsignedIntegerLiteralType.preferredType();
     }
     if (is<AST::NullLiteralType>(resolvableType)) {
         // FIXME: Trying to match nullptr and nullptr fails.
-        return WTF::nullopt;
+        return nullptr;
     }
-    return WTF::nullopt;
+    return nullptr;
 }
 
 bool inferTypesForTypeArguments(AST::NamedType& possibleType, AST::TypeArguments& typeArguments)
@@ -188,7 +167,6 @@ bool inferTypesForTypeArguments(AST::NamedType& possibleType, AST::TypeArguments
         return typeArguments.isEmpty();
     }
 
-    ASSERT(is<AST::NativeTypeDeclaration>(possibleType));
     auto& nativeTypeDeclaration = downcast<AST::NativeTypeDeclaration>(possibleType);
     if (nativeTypeDeclaration.typeArguments().size() != typeArguments.size())
         return false;
@@ -201,8 +179,8 @@ bool inferTypesForTypeArguments(AST::NamedType& possibleType, AST::TypeArguments
         auto assign = [&](AST::TypeArgument& typeArgument, AST::ConstantExpression*& expression, AST::TypeReference*& typeReference) {
             WTF::visit(WTF::makeVisitor([&](AST::ConstantExpression& constantExpression) {
                 expression = &constantExpression;
-            }, [&](UniqueRef<AST::TypeReference>& theTypeReference) {
-                typeReference = &theTypeReference;
+            }, [&](Ref<AST::TypeReference>& theTypeReference) {
+                typeReference = theTypeReference.ptr();
             }), typeArgument);
         };
 
@@ -221,22 +199,33 @@ bool inferTypesForTypeArguments(AST::NamedType& possibleType, AST::TypeArguments
     return true;
 }
 
-bool inferTypesForCall(AST::FunctionDeclaration& possibleFunction, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, Optional<std::reference_wrapper<AST::NamedType>>& castReturnType)
+template <typename TypeKind>
+ALWAYS_INLINE bool inferTypesForCallImpl(AST::FunctionDeclaration& possibleFunction, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, const TypeKind* castReturnType)
 {
     if (possibleFunction.parameters().size() != argumentTypes.size())
         return false;
     for (size_t i = 0; i < possibleFunction.parameters().size(); ++i) {
-        auto success = WTF::visit(WTF::makeVisitor([&](UniqueRef<AST::UnnamedType>& unnamedType) -> bool {
-            return matches(*possibleFunction.parameters()[i].type(), unnamedType);
-        }, [&](Ref<ResolvableTypeReference>& resolvableTypeReference) -> bool {
-            return resolvableTypeReference->resolvableType().canResolve(*possibleFunction.parameters()[i].type());
-        }), argumentTypes[i].get());
+        auto success = argumentTypes[i].get().visit(WTF::makeVisitor([&](Ref<AST::UnnamedType>& unnamedType) -> bool {
+            return matches(*possibleFunction.parameters()[i]->type(), unnamedType);
+        }, [&](RefPtr<ResolvableTypeReference>& resolvableTypeReference) -> bool {
+            return resolvableTypeReference->resolvableType().canResolve(possibleFunction.parameters()[i]->type()->unifyNode());
+        }));
         if (!success)
             return false;
     }
-    if (castReturnType && !matches(castReturnType->get(), possibleFunction.type()))
+    if (castReturnType && !matches(possibleFunction.type(), *castReturnType))
         return false;
     return true;
+}
+
+bool inferTypesForCall(AST::FunctionDeclaration& possibleFunction, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, const AST::NamedType* castReturnType)
+{
+    return inferTypesForCallImpl(possibleFunction, argumentTypes, castReturnType);
+}
+
+bool inferTypesForCall(AST::FunctionDeclaration& possibleFunction, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, const AST::UnnamedType* castReturnType)
+{
+    return inferTypesForCallImpl(possibleFunction, argumentTypes, castReturnType);
 }
 
 } // namespace WHLSL

@@ -65,7 +65,7 @@ FontPlatformData::FontPlatformData(RefPtr<RQRef> font, float size)
 }
 
 std::unique_ptr<FontPlatformData> FontPlatformData::create(
-        const FontDescription& fontDescription, const AtomicString& family)
+        const FontDescription& fontDescription, const AtomString& family)
 {
     RefPtr<RQRef> wcFont = getJavaFont(
             family,

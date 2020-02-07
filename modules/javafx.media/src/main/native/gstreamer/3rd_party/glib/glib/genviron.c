@@ -44,11 +44,24 @@
 #include "gquark.h"
 
 /* Environ array functions {{{1 */
+static gboolean
+g_environ_matches (const gchar *env, const gchar *variable, gsize len)
+{
+#ifdef G_OS_WIN32
+    /* TODO handle Unicode environment variable names */
+    /* Like filesystem paths, environment variables are case-insensitive. */
+    return g_ascii_strncasecmp (env, variable, len) == 0 && env[len] == '=';
+#else
+    return strncmp (env, variable, len) == 0 && env[len] == '=';
+#endif
+}
+
 static gint
 g_environ_find (gchar       **envp,
                 const gchar  *variable)
 {
-  gint len, i;
+  gsize len;
+  gint i;
 
   if (envp == NULL)
     return -1;
@@ -57,8 +70,7 @@ g_environ_find (gchar       **envp,
 
   for (i = 0; envp[i]; i++)
     {
-      if (strncmp (envp[i], variable, len) == 0 &&
-          envp[i][len] == '=')
+      if (g_environ_matches (envp[i], variable, len))
         return i;
     }
 
@@ -155,7 +167,7 @@ g_environ_unsetenv_internal (gchar        **envp,
                              const gchar   *variable,
                              gboolean       free_value)
 {
-  gint len;
+  gsize len;
   gchar **e, **f;
 
   len = strlen (variable);
@@ -166,7 +178,7 @@ g_environ_unsetenv_internal (gchar        **envp,
   e = f = envp;
   while (*e != NULL)
     {
-      if (strncmp (*e, variable, len) != 0 || (*e)[len] != '=')
+      if (!g_environ_matches (*e, variable, len))
         {
           *f = *e;
           f++;
@@ -656,8 +668,8 @@ g_getenv_utf8 (const gchar *variable)
 
 gboolean
 g_setenv_utf8 (const gchar *variable,
-          const gchar *value,
-          gboolean     overwrite)
+               const gchar *value,
+               gboolean     overwrite)
 {
   return g_setenv (variable, value, overwrite);
 }

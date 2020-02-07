@@ -628,6 +628,43 @@ String AXListItemActionVerb()
     return "select";
 }
 
+#if ENABLE(APPLE_PAY)
+String AXApplePayPlainLabel()
+{
+    return WEB_UI_STRING("Apple Pay", "Label for the plain Apple Pay button.");
+}
+
+String AXApplePayBuyLabel()
+{
+    return WEB_UI_STRING("Buy with Apple Pay", "Label for the buy with Apple Pay button.");
+}
+
+String AXApplePaySetupLabel()
+{
+    return WEB_UI_STRING("Set up with Apple Pay", "Label for the set up with Apple Pay button.");
+}
+
+String AXApplePayDonateLabel()
+{
+    return WEB_UI_STRING("Donate with Apple Pay", "Label for the donate with Apple Pay button.");
+}
+
+String AXApplePayCheckOutLabel()
+{
+    return WEB_UI_STRING("Check out with Apple Pay", "Label for the check out with Apple Pay button.");
+}
+
+String AXApplePayBookLabel()
+{
+    return WEB_UI_STRING("Book with Apple Pay", "Label for the book with Apple Pay button.");
+}
+
+String AXApplePaySubscribeLabel()
+{
+    return WEB_UI_STRING("Subscribe with Apple Pay", "Label for the subcribe with Apple Pay button.");
+}
+#endif
+
 String AXAutoFillCredentialsLabel()
 {
     return WEB_UI_STRING("password AutoFill", "Label for the AutoFill credentials button inside a text field.");
@@ -676,6 +713,11 @@ String insecurePluginVersionText()
 String unsupportedPluginText()
 {
     return WEB_UI_STRING_KEY("Unsupported Plug-in", "Unsupported Plug-In", "Label text to be used when an unsupported plug-in was blocked from loading");
+}
+
+String pluginTooSmallText()
+{
+    return WEB_UI_STRING_KEY("Plug-In too small", "Plug-In too small", "Label text to be used when a plug-in was blocked from loading because it was too small");
 }
 
 String multipleFileUploadText(unsigned numberOfFiles)
@@ -790,7 +832,7 @@ String localizedMediaControlElementHelpText(const String& name)
     if (name == "RewindButton")
         return WEB_UI_STRING("seek movie back 30 seconds", "accessibility help text for jump back 30 seconds button");
     if (name == "ReturnToRealtimeButton")
-        return WEB_UI_STRING("return streaming movie to real time", "accessibility help text for return streaming movie to real time button");
+        return WEB_UI_STRING("resume real time streaming", "accessibility help text for return streaming movie to real time button");
     if (name == "CurrentTimeDisplay")
         return WEB_UI_STRING("current movie time in seconds", "accessibility help text for elapsed time display");
     if (name == "TimeRemainingDisplay")

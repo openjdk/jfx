@@ -33,8 +33,11 @@
 #include "TextTrackCueList.h"
 #include "VTTCue.h"
 #include "VTTRegionList.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(LoadableTextTrack);
 
 LoadableTextTrack::LoadableTextTrack(HTMLTrackElement& track, const String& kind, const String& label, const String& language)
     : TextTrack(&track.document(), &track, kind, emptyString(), label, language, TrackElement)
@@ -81,7 +84,7 @@ void LoadableTextTrack::loadTimerFired()
     // 4. Download: If URL is not the empty string, perform a potentially CORS-enabled fetch of URL, with the
     // mode being the state of the media element's crossorigin content attribute, the origin being the
     // origin of the media element's Document, and the default origin behaviour set to fail.
-    m_loader = std::make_unique<TextTrackLoader>(static_cast<TextTrackLoaderClient&>(*this), static_cast<ScriptExecutionContext*>(&m_trackElement->document()));
+    m_loader = makeUnique<TextTrackLoader>(static_cast<TextTrackLoaderClient&>(*this), static_cast<ScriptExecutionContext*>(&m_trackElement->document()));
     if (!m_loader->load(m_url, *m_trackElement))
         m_trackElement->didCompleteLoad(HTMLTrackElement::Failure);
 }
@@ -98,7 +101,7 @@ void LoadableTextTrack::newCuesAvailable(TextTrackLoader& loader)
 
     for (auto& newCue : newCues) {
         newCue->setTrack(this);
-        DEBUG_LOG(LOGIDENTIFIER, *toVTTCue(newCue.get()));
+        INFO_LOG(LOGIDENTIFIER, *toVTTCue(newCue.get()));
         m_cues->add(newCue.releaseNonNull());
     }
 
@@ -137,7 +140,7 @@ void LoadableTextTrack::newStyleSheetsAvailable(TextTrackLoader& loader)
     m_styleSheets = m_loader->getNewStyleSheets();
 }
 
-AtomicString LoadableTextTrack::id() const
+AtomString LoadableTextTrack::id() const
 {
     if (!m_trackElement)
         return emptyAtom();

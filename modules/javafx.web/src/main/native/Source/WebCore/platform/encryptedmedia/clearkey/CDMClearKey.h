@@ -40,6 +40,7 @@
 namespace WebCore {
 
 class CDMFactoryClearKey final : public CDMFactory {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static CDMFactoryClearKey& singleton();
 
@@ -54,11 +55,12 @@ private:
 };
 
 class CDMPrivateClearKey final : public CDMPrivate {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     CDMPrivateClearKey();
     virtual ~CDMPrivateClearKey();
 
-    bool supportsInitDataType(const AtomicString&) const final;
+    bool supportsInitDataType(const AtomString&) const final;
     bool supportsConfiguration(const CDMKeySystemConfiguration&) const final;
     bool supportsConfigurationWithRestrictions(const CDMKeySystemConfiguration&, const CDMRestrictions&) const final;
     bool supportsSessionTypeWithConfiguration(CDMSessionType&, const CDMKeySystemConfiguration&) const final;
@@ -70,7 +72,7 @@ public:
     void loadAndInitialize() final;
     bool supportsServerCertificates() const final;
     bool supportsSessions() const final;
-    bool supportsInitData(const AtomicString&, const SharedBuffer&) const final;
+    bool supportsInitData(const AtomString&, const SharedBuffer&) const final;
     RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&) const final;
     Optional<String> sanitizeSessionId(const String&) const final;
 };
@@ -97,11 +99,14 @@ public:
     };
 
     const Vector<Key> keys() const;
+
+private:
+    mutable Lock m_keysMutex;
 };
 
 class CDMInstanceSessionClearKey final : public CDMInstanceSession, public CanMakeWeakPtr<CDMInstanceSessionClearKey> {
 public:
-    void requestLicense(LicenseType, const AtomicString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
+    void requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
     void updateLicense(const String&, LicenseType, const SharedBuffer&, LicenseUpdateCallback&&) final;
     void loadSession(LicenseType, const String&, const String&, LoadSessionCallback&&) final;
     void closeSession(const String&, CloseSessionCallback&&) final;

@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/WeakPtr.h>
+
 namespace WebCore {
 
-class MediaProducer {
+class MediaProducer : public CanMakeWeakPtr<MediaProducer> {
 public:
     enum MediaState {
         IsNotPlaying = 0,
@@ -56,6 +58,7 @@ public:
         AudioCaptureMask = HasActiveAudioCaptureDevice | HasMutedAudioCaptureDevice | HasInterruptedAudioCaptureDevice,
         VideoCaptureMask = HasActiveVideoCaptureDevice | HasMutedVideoCaptureDevice | HasInterruptedVideoCaptureDevice,
         DisplayCaptureMask = HasActiveDisplayCaptureDevice | HasMutedDisplayCaptureDevice | HasInterruptedDisplayCaptureDevice,
+        MutedCaptureMask =  HasMutedAudioCaptureDevice | HasMutedVideoCaptureDevice | HasMutedDisplayCaptureDevice,
         MediaCaptureMask = AudioCaptureMask | VideoCaptureMask | DisplayCaptureMask,
     };
     typedef unsigned MediaStateFlags;
@@ -67,7 +70,10 @@ public:
     enum MutedState {
         NoneMuted = 0,
         AudioIsMuted = 1 << 0,
-        CaptureDevicesAreMuted = 1 << 1,
+        AudioAndVideoCaptureIsMuted = 1 << 1,
+        ScreenCaptureIsMuted = 1 << 2,
+
+        MediaStreamCaptureIsMuted = AudioAndVideoCaptureIsMuted | ScreenCaptureIsMuted,
     };
     typedef unsigned MutedStateFlags;
 

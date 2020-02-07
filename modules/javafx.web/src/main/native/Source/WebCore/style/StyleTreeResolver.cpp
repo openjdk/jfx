@@ -42,6 +42,7 @@
 #include "NodeRenderStyle.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
+#include "Quirks.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
@@ -158,9 +159,9 @@ static void resetStyleForNonRenderedDescendants(Element& current)
 
 static bool affectsRenderedSubtree(Element& element, const RenderStyle& newStyle)
 {
-    if (element.renderer())
-        return true;
     if (newStyle.display() != DisplayType::None)
+        return true;
+    if (element.renderOrDisplayContentsStyle())
         return true;
     if (element.rendererIsNeeded(newStyle))
         return true;
@@ -237,9 +238,10 @@ ElementUpdates TreeResolver::resolveElement(Element& element)
     auto beforeUpdate = resolvePseudoStyle(element, update, PseudoId::Before);
     auto afterUpdate = resolvePseudoStyle(element, update, PseudoId::After);
 
-#if ENABLE(POINTER_EVENTS)
-    if (RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled())
-        m_document.updateTouchActionElements(element, *update.style.get());
+#if ENABLE(POINTER_EVENTS) && PLATFORM(IOS_FAMILY)
+    // FIXME: Track this exactly.
+    if (update.style->touchActions() != TouchAction::Auto && !m_document.quirks().shouldDisablePointerEventsQuirk() && RuntimeEnabledFeatures::sharedFeatures().pointerEventsEnabled())
+        m_document.setMayHaveElementsWithNonAutoTouchAction();
 #endif
 
     return { WTFMove(update), descendantsToResolve, WTFMove(beforeUpdate), WTFMove(afterUpdate) };
@@ -546,7 +548,7 @@ std::unique_ptr<Update> TreeResolver::resolve()
 
     m_didSeePendingStylesheet = m_document.styleScope().hasPendingSheetsBeforeBody();
 
-    m_update = std::make_unique<Update>(m_document);
+    m_update = makeUnique<Update>(m_document);
     m_scopeStack.append(adoptRef(*new Scope(m_document)));
     m_parentStack.append(Parent(m_document));
 

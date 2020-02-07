@@ -26,6 +26,7 @@
 #include "FormData.h"
 #include "ResourceResponse.h"
 #include "ThreadableLoaderClient.h"
+#include "UserGestureIndicator.h"
 #include <wtf/URL.h>
 #include "XMLHttpRequestEventTarget.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
@@ -50,7 +51,7 @@ class XMLHttpRequestUpload;
 struct OwnedString;
 
 class XMLHttpRequest final : public ActiveDOMObject, public RefCounted<XMLHttpRequest>, private ThreadableLoaderClient, public XMLHttpRequestEventTarget {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(XMLHttpRequest);
 public:
     static Ref<XMLHttpRequest> create(ScriptExecutionContext&);
     WEBCORE_EXPORT ~XMLHttpRequest();
@@ -127,8 +128,12 @@ public:
 
     size_t memoryCost() const;
 
+    WEBCORE_EXPORT void setMaximumIntervalForUserGestureForwarding(double);
+
 private:
     explicit XMLHttpRequest(ScriptExecutionContext&);
+
+    TextEncoding finalResponseCharset() const;
 
     // ActiveDOMObject
     void contextDestroyed() override;
@@ -143,10 +148,6 @@ private:
 
     Document* document() const;
     SecurityOrigin* securityOrigin() const;
-
-#if ENABLE(DASHBOARD_SUPPORT)
-    bool usesDashboardBackwardCompatibilityMode() const;
-#endif
 
     // ThreadableLoaderClient
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
@@ -183,7 +184,10 @@ private:
     void networkError();
     void abortError();
 
-    void dispatchErrorEvents(const AtomicString&);
+    void dispatchErrorEvents(const AtomString&);
+
+    using EventTarget::dispatchEvent;
+    void dispatchEvent(Event&) override;
 
     void resumeTimerFired();
     Ref<TextResourceDecoder> createDecoder() const;
@@ -241,6 +245,8 @@ private:
     MonotonicTime m_sendingTime;
 
     Optional<ExceptionCode> m_exceptionCode;
+    RefPtr<UserGestureToken> m_userGestureToken;
+    Seconds m_maximumIntervalForUserGestureForwarding;
 };
 
 inline auto XMLHttpRequest::responseType() const -> ResponseType

@@ -91,6 +91,18 @@ public:
     }
 
     template<class IDLType>
+    void resolveCallbackValueWithNewlyCreated(const Function<typename IDLType::InnerParameterType(ScriptExecutionContext&)>& createValue)
+    {
+        if (isSuspended())
+            return;
+        ASSERT(deferred());
+        ASSERT(globalObject());
+        auto* exec = globalObject()->globalExec();
+        JSC::JSLockHolder locker(exec);
+        resolve(*exec, toJSNewlyCreated<IDLType>(*exec, *globalObject(), createValue(*globalObject()->scriptExecutionContext())));
+    }
+
+    template<class IDLType>
     void reject(typename IDLType::ParameterType value)
     {
         if (isSuspended())
@@ -257,7 +269,9 @@ void fulfillPromiseWithJSON(Ref<DeferredPromise>&&, const String&);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, ArrayBuffer*);
 void fulfillPromiseWithArrayBuffer(Ref<DeferredPromise>&&, const void*, size_t);
 WEBCORE_EXPORT void rejectPromiseWithExceptionIfAny(JSC::ExecState&, JSDOMGlobalObject&, JSC::JSPromiseDeferred&);
-JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::ExecState&, const String&);
+
+enum class RejectedPromiseWithTypeErrorCause { NativeGetter, InvalidThis };
+JSC::EncodedJSValue createRejectedPromiseWithTypeError(JSC::ExecState&, const String&, RejectedPromiseWithTypeErrorCause);
 
 using PromiseFunction = void(JSC::ExecState&, Ref<DeferredPromise>&&);
 

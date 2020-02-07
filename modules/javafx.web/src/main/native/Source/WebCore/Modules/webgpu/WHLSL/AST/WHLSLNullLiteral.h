@@ -28,8 +28,8 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
 #include "WHLSLNullLiteralType.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -37,14 +37,15 @@ namespace WHLSL {
 
 namespace AST {
 
-class NullLiteral : public Expression {
+class NullLiteral final : public Expression {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    NullLiteral(Lexer::Token&& origin)
-        : Expression(WTFMove(origin))
+    NullLiteral(CodeLocation location)
+        : Expression(location, Kind::NullLiteral)
     {
     }
 
-    virtual ~NullLiteral() = default;
+    ~NullLiteral() = default;
 
     NullLiteral(const NullLiteral&) = delete;
     NullLiteral(NullLiteral&&) = default;
@@ -54,13 +55,12 @@ public:
 
     NullLiteralType& type() { return m_type; }
 
-    bool isNullLiteral() const override { return true; }
-
     NullLiteral clone() const
     {
-        auto result = NullLiteral(Lexer::Token(origin()));
-        if (result.m_type.resolvedType())
-            result.m_type.resolve(result.m_type.resolvedType()->clone());
+        auto result = NullLiteral(codeLocation());
+        if (auto* resolvedType = m_type.maybeResolvedType())
+            result.m_type.resolve(const_cast<AST::UnnamedType&>(*resolvedType));
+        copyTypeTo(result);
         return result;
     }
 
@@ -73,6 +73,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(NullLiteral)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_EXPRESSION(NullLiteral, isNullLiteral())
 

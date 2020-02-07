@@ -36,12 +36,12 @@ G_BEGIN_DECLS
 #define GST_DISABLE_GST_DEBUG
 #endif // GSTREAMER_LITE
 
-#define GST_TYPE_OBJECT         (gst_object_get_type ())
-#define GST_IS_OBJECT(obj)      (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_OBJECT))
+#define GST_TYPE_OBJECT     (gst_object_get_type ())
+#define GST_IS_OBJECT(obj)    (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_OBJECT))
 #define GST_IS_OBJECT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_OBJECT))
-#define GST_OBJECT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_OBJECT, GstObjectClass))
-#define GST_OBJECT(obj)         (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_OBJECT, GstObject))
-#define GST_OBJECT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_OBJECT, GstObjectClass))
+#define GST_OBJECT_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), GST_TYPE_OBJECT, GstObjectClass))
+#define GST_OBJECT(obj)     (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_OBJECT, GstObject))
+#define GST_OBJECT_CLASS(klass)   (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_OBJECT, GstObjectClass))
 #define GST_OBJECT_CAST(obj)            ((GstObject*)(obj))
 #define GST_OBJECT_CLASS_CAST(klass)    ((GstObjectClass*)(klass))
 
@@ -49,7 +49,7 @@ G_BEGIN_DECLS
  * GstObjectFlags:
  * @GST_OBJECT_FLAG_MAY_BE_LEAKED: the object is expected to stay alive even
  * after gst_deinit() has been called and so should be ignored by leak
- * detection tools. (Since 1.10)
+ * detection tools. (Since: 1.10)
  * @GST_OBJECT_FLAG_LAST: subclasses can add additional flags starting from this flag
  *
  * The standard flags that an gstobject may have.
@@ -203,7 +203,7 @@ struct _GstObject {
 struct _GstObjectClass {
   GInitiallyUnownedClass parent_class;
 
-  const gchar   *path_string_separator;
+  const gchar *path_string_separator;
 
   /* signals */
   void          (*deep_notify)      (GstObject * object, GstObject * orig, GParamSpec * pspec);
@@ -218,35 +218,35 @@ struct _GstObjectClass {
 /* normal GObject stuff */
 
 GST_API
-GType       gst_object_get_type     (void);
+GType   gst_object_get_type   (void);
 
 /* name routines */
 
 GST_API
-gboolean    gst_object_set_name     (GstObject *object, const gchar *name);
+gboolean  gst_object_set_name   (GstObject *object, const gchar *name);
 
 GST_API
-gchar*      gst_object_get_name     (GstObject *object);
+gchar*    gst_object_get_name   (GstObject *object);
 
 /* parentage routines */
 
 GST_API
-gboolean    gst_object_set_parent       (GstObject *object, GstObject *parent);
+gboolean  gst_object_set_parent   (GstObject *object, GstObject *parent);
 
 GST_API
-GstObject*  gst_object_get_parent       (GstObject *object);
+GstObject*  gst_object_get_parent   (GstObject *object);
 
 GST_API
-void        gst_object_unparent     (GstObject *object);
+void    gst_object_unparent   (GstObject *object);
 
 GST_API
-gboolean    gst_object_has_as_parent        (GstObject *object, GstObject *parent);
+gboolean  gst_object_has_as_parent    (GstObject *object, GstObject *parent);
 
 GST_API
-gboolean    gst_object_has_as_ancestor  (GstObject *object, GstObject *ancestor);
+gboolean  gst_object_has_as_ancestor  (GstObject *object, GstObject *ancestor);
 
 GST_DEPRECATED_FOR(gst_object_has_as_ancestor)
-gboolean    gst_object_has_ancestor     (GstObject *object, GstObject *ancestor);
+gboolean  gst_object_has_ancestor   (GstObject *object, GstObject *ancestor);
 
 GST_API
 void            gst_object_default_deep_notify  (GObject *object, GstObject *orig,
@@ -255,28 +255,32 @@ void            gst_object_default_deep_notify  (GObject *object, GstObject *ori
 /* refcounting + life cycle */
 
 GST_API
-gpointer    gst_object_ref          (gpointer object);
+gpointer  gst_object_ref      (gpointer object);
 
 GST_API
-void        gst_object_unref        (gpointer object);
+void    gst_object_unref    (gpointer object);
 
 GST_API
-gpointer        gst_object_ref_sink     (gpointer object);
+void        gst_clear_object (GstObject **object_ptr);
+#define     gst_clear_object(object_ptr) g_clear_pointer ((object_ptr), gst_object_unref)
+
+GST_API
+gpointer        gst_object_ref_sink   (gpointer object);
 
 /* replace object pointer */
 
 GST_API
-gboolean        gst_object_replace      (GstObject **oldobj, GstObject *newobj);
+gboolean        gst_object_replace    (GstObject **oldobj, GstObject *newobj);
 
 /* printing out the 'path' of the object */
 
 GST_API
-gchar *     gst_object_get_path_string  (GstObject *object);
+gchar *   gst_object_get_path_string  (GstObject *object);
 
 /* misc utils */
 
 GST_API
-gboolean    gst_object_check_uniqueness (GList *list, const gchar *name);
+gboolean  gst_object_check_uniqueness (GList *list, const gchar *name);
 
 /* controller functions */
 #include <gst/gstcontrolbinding.h>

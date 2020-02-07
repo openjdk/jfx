@@ -90,7 +90,7 @@ RenderWidget* HTMLEmbedElement::renderWidgetLoadingPlugin() const
     return findWidgetRenderer(this);
 }
 
-void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
+void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomString& value, MutableStyleProperties& style)
 {
     if (name == hiddenAttr) {
         if (equalLettersIgnoringASCIICase(value, "yes") || equalLettersIgnoringASCIICase(value, "true")) {
@@ -106,7 +106,7 @@ static bool hasTypeOrSrc(const HTMLEmbedElement& embed)
     return embed.hasAttributeWithoutSynchronization(typeAttr) || embed.hasAttributeWithoutSynchronization(srcAttr);
 }
 
-void HTMLEmbedElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLEmbedElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == typeAttr) {
         m_serviceType = value.string().left(value.find(';')).convertToASCIILowercase();
@@ -154,14 +154,13 @@ void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
 
     // Note these pass m_url and m_serviceType to allow better code sharing with
     // <object> which modifies url and serviceType before calling these.
-    if (!allowedToLoadFrameURL(m_url)) {
+    if (!canLoadURL(m_url)) {
         setNeedsWidgetUpdate(false);
         return;
     }
 
-    // FIXME: It's sadness that we have this special case here.
-    //        See http://trac.webkit.org/changeset/25128 and
-    //        plugins/netscape-plugin-setwindow-size.html
+    // FIXME: It's unfortunate that we have this special case here.
+    // See http://trac.webkit.org/changeset/25128 and the plugins/netscape-plugin-setwindow-size.html test.
     if (createPlugins == CreatePlugins::No && wouldLoadAsPlugIn(m_url, m_serviceType))
         return;
 
@@ -186,8 +185,9 @@ void HTMLEmbedElement::updateWidget(CreatePlugins createPlugins)
     if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
         return;
 
-    // beforeLoad could have changed the document. Make sure the URL is still safe to load.
-    if (!allowedToLoadFrameURL(m_url))
+    // Dispatching a beforeLoad event could have executed code that changed the document.
+    // Make sure the URL is still safe to load.
+    if (!canLoadURL(m_url))
         return;
 
     // FIXME: beforeLoad could have detached the renderer!  Just like in the <object> case above.
@@ -214,12 +214,6 @@ bool HTMLEmbedElement::rendererIsNeeded(const RenderStyle& style)
         }
     }
 
-#if ENABLE(DASHBOARD_SUPPORT)
-    // Workaround for <rdar://problem/6642221>.
-    if (document().settings().usesDashboardBackwardCompatibilityMode())
-        return true;
-#endif
-
     return HTMLPlugInImageElement::rendererIsNeeded(style);
 }
 
@@ -228,7 +222,7 @@ bool HTMLEmbedElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == srcAttr || HTMLPlugInImageElement::isURLAttribute(attribute);
 }
 
-const AtomicString& HTMLEmbedElement::imageSourceURL() const
+const AtomString& HTMLEmbedElement::imageSourceURL() const
 {
     return attributeWithoutSynchronization(srcAttr);
 }

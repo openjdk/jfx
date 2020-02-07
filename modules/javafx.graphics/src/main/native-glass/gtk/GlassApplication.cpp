@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -442,10 +442,6 @@ static void process_events(GdkEvent* event, gpointer data)
             ctx = (WindowContext*) ctx_plug->embedded_children.back();
             window = ctx->get_gdk_window();
         }
-    }
-
-    if (is_in_drag()) {
-        process_dnd_source(window, event);
     }
 
     if (ctx != NULL) {

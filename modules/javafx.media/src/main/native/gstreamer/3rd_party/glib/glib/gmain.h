@@ -30,7 +30,7 @@ G_BEGIN_DECLS
 
 typedef enum /*< flags >*/
 {
-  G_IO_IN   GLIB_SYSDEF_POLLIN,
+  G_IO_IN GLIB_SYSDEF_POLLIN,
   G_IO_OUT  GLIB_SYSDEF_POLLOUT,
   G_IO_PRI  GLIB_SYSDEF_POLLPRI,
   G_IO_ERR  GLIB_SYSDEF_POLLERR,
@@ -392,9 +392,9 @@ gint     g_main_context_query    (GMainContext *context,
                                   gint          n_fds);
 GLIB_AVAILABLE_IN_ALL
 gboolean     g_main_context_check    (GMainContext *context,
-                                  gint          max_priority,
-                                  GPollFD      *fds,
-                                  gint          n_fds);
+                                      gint          max_priority,
+                                      GPollFD      *fds,
+                                      gint          n_fds);
 GLIB_AVAILABLE_IN_ALL
 void     g_main_context_dispatch (GMainContext *context);
 
@@ -532,21 +532,23 @@ void g_source_set_callback_indirect (GSource              *source,
 
 GLIB_AVAILABLE_IN_ALL
 void     g_source_add_poll            (GSource        *source,
-                       GPollFD        *fd);
+               GPollFD        *fd);
 GLIB_AVAILABLE_IN_ALL
 void     g_source_remove_poll         (GSource        *source,
-                       GPollFD        *fd);
+               GPollFD        *fd);
 
 GLIB_AVAILABLE_IN_ALL
 void     g_source_add_child_source    (GSource        *source,
-                       GSource        *child_source);
+               GSource        *child_source);
 GLIB_AVAILABLE_IN_ALL
 void     g_source_remove_child_source (GSource        *source,
-                       GSource        *child_source);
+               GSource        *child_source);
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 GLIB_DEPRECATED_IN_2_28_FOR(g_source_get_time)
 void     g_source_get_current_time (GSource        *source,
                                     GTimeVal       *timeval);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 GLIB_AVAILABLE_IN_ALL
 gint64   g_source_get_time         (GSource        *source);
@@ -570,8 +572,11 @@ GSource *g_timeout_source_new_seconds (guint interval);
 
 /* Miscellaneous functions
  */
-GLIB_AVAILABLE_IN_ALL
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+GLIB_DEPRECATED_IN_2_62_FOR(g_get_real_time)
 void   g_get_current_time                 (GTimeVal       *result);
+G_GNUC_END_IGNORE_DEPRECATIONS
+
 GLIB_AVAILABLE_IN_ALL
 gint64 g_get_monotonic_time               (void);
 GLIB_AVAILABLE_IN_ALL
@@ -616,7 +621,8 @@ void    g_clear_handle_id (guint           *tag_ptr,
         *_tag_ptr = 0;                                     \
         clear_func (_handle_id);                           \
       }                                                    \
-  } G_STMT_END
+  } G_STMT_END                                             \
+  GLIB_AVAILABLE_MACRO_IN_2_56
 
 /* Idles, child watchers and timeouts */
 GLIB_AVAILABLE_IN_ALL

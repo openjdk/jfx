@@ -57,6 +57,10 @@ namespace JSC { namespace Yarr {
 class RegularExpression;
 } }
 
+namespace PAL {
+class SessionID;
+}
+
 namespace WebCore {
 
 class CSSAnimationController;
@@ -106,15 +110,17 @@ using NodeQualifier = Function<Node* (const HitTestResult&, Node* terminationNod
 #endif
 
 enum {
-    LayerTreeFlagsIncludeDebugInfo = 1 << 0,
-    LayerTreeFlagsIncludeVisibleRects = 1 << 1,
-    LayerTreeFlagsIncludeTileCaches = 1 << 2,
-    LayerTreeFlagsIncludeRepaintRects = 1 << 3,
-    LayerTreeFlagsIncludePaintingPhases = 1 << 4,
-    LayerTreeFlagsIncludeContentLayers = 1 << 5,
-    LayerTreeFlagsIncludeAcceleratesDrawing = 1 << 6,
-    LayerTreeFlagsIncludeBackingStoreAttached = 1 << 7,
-    LayerTreeFlagsIncludeRootLayerProperties = 1 << 8,
+    LayerTreeFlagsIncludeDebugInfo              = 1 << 0,
+    LayerTreeFlagsIncludeVisibleRects           = 1 << 1,
+    LayerTreeFlagsIncludeTileCaches             = 1 << 2,
+    LayerTreeFlagsIncludeRepaintRects           = 1 << 3,
+    LayerTreeFlagsIncludePaintingPhases         = 1 << 4,
+    LayerTreeFlagsIncludeContentLayers          = 1 << 5,
+    LayerTreeFlagsIncludeAcceleratesDrawing     = 1 << 6,
+    LayerTreeFlagsIncludeClipping               = 1 << 7,
+    LayerTreeFlagsIncludeBackingStoreAttached   = 1 << 8,
+    LayerTreeFlagsIncludeRootLayerProperties    = 1 << 9,
+    LayerTreeFlagsIncludeEventRegion            = 1 << 10,
 };
 typedef unsigned LayerTreeFlags;
 
@@ -176,6 +182,8 @@ public:
     bool hasHadUserInteraction() const { return m_hasHadUserInteraction; }
     void setHasHadUserInteraction() { m_hasHadUserInteraction = true; }
 
+    bool requestDOMPasteAccess();
+
 // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
     WEBCORE_EXPORT void injectUserScripts(UserScriptInjectionTime);
@@ -216,7 +224,9 @@ public:
 
     WEBCORE_EXPORT Node* deepestNodeAtLocation(const FloatPoint& viewportLocation);
     WEBCORE_EXPORT Node* nodeRespondingToClickEvents(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation, SecurityOrigin* = nullptr);
+    WEBCORE_EXPORT Node* nodeRespondingToDoubleClickEvent(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation);
     WEBCORE_EXPORT Node* nodeRespondingToScrollWheelEvents(const FloatPoint& viewportLocation);
+    WEBCORE_EXPORT Node* approximateNodeAtViewportLocationLegacy(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation);
 
     WEBCORE_EXPORT NSArray *wordsInCurrentParagraph() const;
     WEBCORE_EXPORT CGRect renderRectForPoint(CGPoint, bool* isReplaced, float* fontSize) const;
@@ -255,9 +265,6 @@ public:
     String matchLabelsAgainstElement(const Vector<String>& labels, Element*);
 
 #if PLATFORM(IOS_FAMILY)
-    // Scroll the selection in an overflow layer.
-    void scrollOverflowLayer(RenderLayer*, const IntRect& visibleRect, const IntRect& exposeRect);
-
     WEBCORE_EXPORT int preferredHeight() const;
     WEBCORE_EXPORT void updateLayout() const;
     WEBCORE_EXPORT NSRect caretRect();
@@ -284,13 +291,17 @@ public:
     void resumeActiveDOMObjectsAndAnimations();
     bool activeDOMObjectsAndAnimationsSuspended() const { return m_activeDOMObjectsAndAnimationsSuspendedCount > 0; }
 
-    bool isURLAllowed(const URL&) const;
     WEBCORE_EXPORT bool isAlwaysOnLoggingAllowed() const;
+
+    void didPrewarmLocalStorage();
+    bool mayPrewarmLocalStorage() const;
 
 // ========
 
     void selfOnlyRef();
     void selfOnlyDeref();
+
+    PAL::SessionID sessionID() const;
 
 private:
     friend class NavigationDisabler;
@@ -330,17 +341,10 @@ private:
     bool hitTestResultAtViewportLocation(const FloatPoint& viewportLocation, HitTestResult&, IntPoint& center);
     Node* qualifyingNodeAtViewportLocation(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation, const NodeQualifier&, bool shouldApproximate);
 
-    void overflowAutoScrollTimerFired();
-    void startOverflowAutoScroll(const IntPoint&);
-    int checkOverflowScroll(OverflowScrollAction);
-
     void setTimersPausedInternal(bool);
 
-    Timer m_overflowAutoScrollTimer;
-    float m_overflowAutoScrollDelta;
-    IntPoint m_overflowAutoScrollPos;
     ViewportArguments m_viewportArguments;
-    bool m_selectionChangeCallbacksDisabled;
+    bool m_selectionChangeCallbacksDisabled { false };
     VisibleSelection m_rangedSelectionBase;
     VisibleSelection m_rangedSelectionInitialExtent;
 #endif
@@ -348,11 +352,12 @@ private:
     float m_pageZoomFactor;
     float m_textZoomFactor;
 
-    int m_activeDOMObjectsAndAnimationsSuspendedCount;
+    int m_activeDOMObjectsAndAnimationsSuspendedCount { 0 };
     bool m_documentIsBeingReplaced { false };
     unsigned m_navigationDisableCount { 0 };
     unsigned m_selfOnlyRefCount { 0 };
     bool m_hasHadUserInteraction { false };
+    unsigned m_localStoragePrewarmingCount { 0 };
 
 protected:
     UniqueRef<EventHandler> m_eventHandler;

@@ -533,7 +533,8 @@ enum class LineBreak : uint8_t {
     Loose,
     Normal,
     Strict,
-    AfterWhiteSpace
+    AfterWhiteSpace,
+    Anywhere
 };
 
 enum class Resize : uint8_t {
@@ -658,7 +659,8 @@ enum class WhiteSpace : uint8_t {
     PreWrap,
     PreLine,
     NoWrap,
-    KHTMLNoWrap
+    KHTMLNoWrap,
+    BreakSpaces
 };
 
 // The order of this enum must match the order of the text align values in CSSValueKeywords.in.
@@ -874,6 +876,7 @@ enum class DisplayType : uint8_t {
     Contents,
     Grid,
     InlineGrid,
+    FlowRoot,
     None
 };
 
@@ -1019,12 +1022,12 @@ enum class RubyPosition : uint8_t {
 };
 
 #if ENABLE(DARK_MODE_CSS)
-enum class ColorSchemes : uint8_t {
+enum class ColorScheme : uint8_t {
     Light = 1 << 0,
     Dark = 1 << 1
 };
 
-static const size_t ColorSchemesBits = 2;
+static const size_t ColorSchemeBits = 2;
 #endif
 
 static const size_t GridAutoFlowBits = 4;

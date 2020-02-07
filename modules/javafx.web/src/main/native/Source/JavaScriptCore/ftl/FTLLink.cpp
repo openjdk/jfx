@@ -71,7 +71,7 @@ void link(State& state)
     if (UNLIKELY(compilation)) {
         compilation->addDescription(
             Profiler::OriginStack(),
-            toCString("Generated FTL JIT code for ", CodeBlockWithJITType(codeBlock, JITCode::FTLJIT), ", instruction count = ", graph.m_codeBlock->instructionCount(), ":\n"));
+            toCString("Generated FTL JIT code for ", CodeBlockWithJITType(codeBlock, JITType::FTLJIT), ", instructions size = ", graph.m_codeBlock->instructionsSize(), ":\n"));
 
         graph.ensureSSADominators();
         graph.ensureSSANaturalLoops();
@@ -166,7 +166,7 @@ void link(State& state)
             jit.untagReturnAddress();
             mainPathJumps.append(jit.jump());
 
-            linkBuffer = std::make_unique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+            linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
             if (linkBuffer->didFailToAllocate()) {
                 state.allocationFailed = true;
                 return;
@@ -191,7 +191,7 @@ void link(State& state)
         jit.untagReturnAddress();
         CCallHelpers::Jump mainPathJump = jit.jump();
 
-        linkBuffer = std::make_unique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
+        linkBuffer = makeUnique<LinkBuffer>(jit, codeBlock, JITCompilationCanFail);
         if (linkBuffer->didFailToAllocate()) {
             state.allocationFailed = true;
             return;

@@ -99,26 +99,28 @@ typedef struct _GstMessage GstMessage;
  *     e.g. when using playbin in gapless playback mode, to get notified when
  *     the next title actually starts playing (which will be some time after
  *     the URI for the next title has been set).
- * @GST_MESSAGE_NEED_CONTEXT: Message indicating that an element wants a specific context (Since 1.2)
- * @GST_MESSAGE_HAVE_CONTEXT: Message indicating that an element created a context (Since 1.2)
+ * @GST_MESSAGE_NEED_CONTEXT: Message indicating that an element wants a specific context (Since: 1.2)
+ * @GST_MESSAGE_HAVE_CONTEXT: Message indicating that an element created a context (Since: 1.2)
  * @GST_MESSAGE_EXTENDED: Message is an extended message type (see below).
  *     These extended message IDs can't be used directly with mask-based API
  *     like gst_bus_poll() or gst_bus_timed_pop_filtered(), but you can still
  *     filter for GST_MESSAGE_EXTENDED and then check the result for the
- *     specific type. (Since 1.4)
+ *     specific type. (Since: 1.4)
  * @GST_MESSAGE_DEVICE_ADDED: Message indicating a #GstDevice was added to
- *     a #GstDeviceProvider (Since 1.4)
+ *     a #GstDeviceProvider (Since: 1.4)
  * @GST_MESSAGE_DEVICE_REMOVED: Message indicating a #GstDevice was removed
- *     from a #GstDeviceProvider (Since 1.4)
+ *     from a #GstDeviceProvider (Since: 1.4)
  * @GST_MESSAGE_PROPERTY_NOTIFY: Message indicating a #GObject property has
- *     changed (Since 1.10)
+ *     changed (Since: 1.10)
  * @GST_MESSAGE_STREAM_COLLECTION: Message indicating a new #GstStreamCollection
- *     is available (Since 1.10)
+ *     is available (Since: 1.10)
  * @GST_MESSAGE_STREAMS_SELECTED: Message indicating the active selection of
- *     #GstStreams has changed (Since 1.10)
+ *     #GstStreams has changed (Since: 1.10)
  * @GST_MESSAGE_REDIRECT: Message indicating to request the application to
  *     try to play the given URL(s). Useful if for example a HTTP 302/303
- *     response is received with a non-HTTP URL inside. (Since 1.10)
+ *     response is received with a non-HTTP URL inside. (Since: 1.10)
+ * @GST_MESSAGE_DEVICE_CHANGED: Message indicating a #GstDevice was changed
+ *     a #GstDeviceProvider (Since: 1.16)
  * @GST_MESSAGE_ANY: mask for all of the above messages.
  *
  * The different message types that are available.
@@ -171,6 +173,7 @@ typedef enum
   GST_MESSAGE_STREAM_COLLECTION = GST_MESSAGE_EXTENDED + 4,
   GST_MESSAGE_STREAMS_SELECTED  = GST_MESSAGE_EXTENDED + 5,
   GST_MESSAGE_REDIRECT          = GST_MESSAGE_EXTENDED + 6,
+  GST_MESSAGE_DEVICE_CHANGED    = GST_MESSAGE_EXTENDED + 7,
   GST_MESSAGE_ANY               = (gint) (0xffffffff)
 } GstMessageType;
 
@@ -199,7 +202,7 @@ GST_EXPORT GType _gst_message_type;
 #define GST_MESSAGE(obj)                         (GST_MESSAGE_CAST(obj))
 
 /* the lock is used to handle the synchronous handling of messages,
- * the emiting thread is block until the handling thread processed
+ * the emitting thread is blocked until the handling thread processed
  * the message using this mutex/cond pair */
 #define GST_MESSAGE_GET_LOCK(message)   (&GST_MESSAGE_CAST(message)->lock)
 #define GST_MESSAGE_LOCK(message)       g_mutex_lock(GST_MESSAGE_GET_LOCK(message))
@@ -385,6 +388,25 @@ gst_message_unref (GstMessage * msg)
   gst_mini_object_unref (GST_MINI_OBJECT_CAST (msg));
 }
 
+/**
+ * gst_clear_message: (skip)
+ * @msg_ptr: a pointer to a #GstMessage reference
+ *
+ * Clears a reference to a #GstMessage.
+ *
+ * @msg_ptr must not be %NULL.
+ *
+ * If the reference is %NULL then this function does nothing. Otherwise, the
+ * reference count of the message is decreased and the pointer is set to %NULL.
+ *
+ * Since: 1.16
+ */
+static inline void
+gst_clear_message (GstMessage ** msg_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) msg_ptr);
+}
+
 /* copy message */
 /**
  * gst_message_copy:
@@ -442,6 +464,28 @@ static inline gboolean
 gst_message_replace (GstMessage **old_message, GstMessage *new_message)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_message, (GstMiniObject *) new_message);
+}
+
+/**
+ * gst_message_take:
+ * @old_message: (inout) (transfer full): pointer to a pointer to a #GstMessage
+ *     to be replaced.
+ * @new_message: (transfer full) (allow-none): pointer to a #GstMessage that
+ *     will replace the message pointed to by @old_message.
+ *
+ * Modifies a pointer to a #GstMessage to point to a different #GstMessage. This
+ * function is similar to gst_message_replace() except that it takes ownership
+ * of @new_message.
+ *
+ * Returns: %TRUE if @new_message was different from @old_message
+ *
+ * Since: 1.16
+ */
+static inline gboolean
+gst_message_take (GstMessage **old_message, GstMessage *new_message)
+{
+  return gst_mini_object_take ((GstMiniObject **) old_message,
+      (GstMiniObject *) new_message);
 }
 
 
@@ -771,6 +815,15 @@ GstMessage *    gst_message_new_device_removed    (GstObject * src, GstDevice * 
 
 GST_API
 void            gst_message_parse_device_removed  (GstMessage * message, GstDevice ** device);
+
+/* DEVICE_CHANGED */
+
+GST_API
+GstMessage *    gst_message_new_device_changed    (GstObject * src, GstDevice * device, GstDevice *changed_device);
+
+GST_API
+void            gst_message_parse_device_changed  (GstMessage * message, GstDevice ** device, GstDevice ** changed_device);
+
 #endif // GSTREAMER_LITE
 
 /* PROPERTY_NOTIFY */

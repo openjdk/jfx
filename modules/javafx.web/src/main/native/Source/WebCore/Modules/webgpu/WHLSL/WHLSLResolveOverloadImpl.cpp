@@ -41,22 +41,30 @@ static unsigned conversionCost(AST::FunctionDeclaration& candidate, const Vector
 {
     unsigned conversionCost = 0;
     for (size_t i = 0; i < candidate.parameters().size(); ++i) {
-        conversionCost += WTF::visit(WTF::makeVisitor([&](UniqueRef<AST::UnnamedType>&) -> unsigned {
+        conversionCost += argumentTypes[i].get().visit(WTF::makeVisitor([&](Ref<AST::UnnamedType>&) -> unsigned {
             return 0;
-        }, [&](Ref<ResolvableTypeReference>& resolvableTypeReference) -> unsigned {
-            return resolvableTypeReference->resolvableType().conversionCost(*candidate.parameters()[i].type());
-        }), argumentTypes[i].get());
+        }, [&](RefPtr<ResolvableTypeReference>& resolvableTypeReference) -> unsigned {
+            return resolvableTypeReference->resolvableType().conversionCost(*candidate.parameters()[i]->type());
+        }));
     }
     // The return type can never be a literal type, so its conversion cost is always 0.
     return conversionCost;
 }
 
-AST::FunctionDeclaration* resolveFunctionOverloadImpl(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, Optional<std::reference_wrapper<AST::NamedType>>& castReturnType)
+template <typename TypeKind>
+static AST::FunctionDeclaration* resolveFunctionOverloadImpl(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, TypeKind* castReturnType, AST::NameSpace nameSpace)
 {
     Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1> candidates;
     for (auto& possibleFunction : possibleFunctions) {
         if (possibleFunction.get().entryPointType())
             continue;
+        if (nameSpace == AST::NameSpace::StandardLibrary) {
+            if (possibleFunction.get().nameSpace() != AST::NameSpace::StandardLibrary)
+                continue;
+        } else {
+            if (possibleFunction.get().nameSpace() != AST::NameSpace::StandardLibrary && possibleFunction.get().nameSpace() != nameSpace)
+                continue;
+        }
         if (inferTypesForCall(possibleFunction.get(), argumentTypes, castReturnType))
             candidates.append(possibleFunction.get());
     }
@@ -74,6 +82,21 @@ AST::FunctionDeclaration* resolveFunctionOverloadImpl(Vector<std::reference_wrap
     if (minimumCostCandidates.size() == 1)
         return &minimumCostCandidates[0].get();
     return nullptr;
+}
+
+AST::FunctionDeclaration* resolveFunctionOverload(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, AST::NameSpace nameSpace)
+{
+    return resolveFunctionOverloadImpl(possibleFunctions, argumentTypes, static_cast<AST::NamedType*>(nullptr), nameSpace);
+}
+
+AST::FunctionDeclaration* resolveFunctionOverload(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, AST::NamedType* castReturnType, AST::NameSpace nameSpace)
+{
+    return resolveFunctionOverloadImpl(possibleFunctions, argumentTypes, castReturnType, nameSpace);
+}
+
+AST::FunctionDeclaration* resolveFunctionOverload(Vector<std::reference_wrapper<AST::FunctionDeclaration>, 1>& possibleFunctions, Vector<std::reference_wrapper<ResolvingType>>& argumentTypes, AST::UnnamedType* castReturnType, AST::NameSpace nameSpace)
+{
+    return resolveFunctionOverloadImpl(possibleFunctions, argumentTypes, castReturnType, nameSpace);
 }
 
 AST::NamedType* resolveTypeOverloadImpl(Vector<std::reference_wrapper<AST::NamedType>, 1>& possibleTypes, AST::TypeArguments& typeArguments)

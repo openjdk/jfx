@@ -26,6 +26,7 @@
 #pragma once
 
 #include "CanvasActivityRecord.h"
+#include "RegistrableDomain.h"
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
@@ -40,8 +41,8 @@ class KeyedDecoder;
 class KeyedEncoder;
 
 struct ResourceLoadStatistics {
-    explicit ResourceLoadStatistics(const String& primaryDomain)
-        : highLevelDomain(primaryDomain)
+    explicit ResourceLoadStatistics(const RegistrableDomain& domain)
+        : registrableDomain { domain }
     {
     }
 
@@ -52,9 +53,6 @@ struct ResourceLoadStatistics {
     ResourceLoadStatistics(ResourceLoadStatistics&&) = default;
     ResourceLoadStatistics& operator=(ResourceLoadStatistics&&) = default;
 
-    WEBCORE_EXPORT static String primaryDomain(const URL&);
-    WEBCORE_EXPORT static String primaryDomain(StringView host);
-
     WEBCORE_EXPORT static WallTime reduceTimeResolution(WallTime);
 
     WEBCORE_EXPORT void encode(KeyedEncoder&) const;
@@ -64,7 +62,7 @@ struct ResourceLoadStatistics {
 
     WEBCORE_EXPORT void merge(const ResourceLoadStatistics&);
 
-    String highLevelDomain;
+    RegistrableDomain registrableDomain;
 
     WallTime lastSeen;
 
@@ -75,19 +73,21 @@ struct ResourceLoadStatistics {
     bool grandfathered { false };
 
     // Storage access
-    HashSet<String> storageAccessUnderTopFrameOrigins;
+    HashSet<RegistrableDomain> storageAccessUnderTopFrameDomains;
 
     // Top frame stats
-    HashCountedSet<String> topFrameUniqueRedirectsTo;
-    HashCountedSet<String> topFrameUniqueRedirectsFrom;
+    HashSet<RegistrableDomain> topFrameUniqueRedirectsTo;
+    HashSet<RegistrableDomain> topFrameUniqueRedirectsFrom;
+    HashSet<RegistrableDomain> topFrameLinkDecorationsFrom;
+    bool gotLinkDecorationFromPrevalentResource { false };
 
     // Subframe stats
-    HashCountedSet<String> subframeUnderTopFrameOrigins;
+    HashSet<RegistrableDomain> subframeUnderTopFrameDomains;
 
     // Subresource stats
-    HashCountedSet<String> subresourceUnderTopFrameOrigins;
-    HashCountedSet<String> subresourceUniqueRedirectsTo;
-    HashCountedSet<String> subresourceUniqueRedirectsFrom;
+    HashSet<RegistrableDomain> subresourceUnderTopFrameDomains;
+    HashSet<RegistrableDomain> subresourceUniqueRedirectsTo;
+    HashSet<RegistrableDomain> subresourceUniqueRedirectsFrom;
 
     // Prevalent resource stats
     bool isPrevalentResource { false };

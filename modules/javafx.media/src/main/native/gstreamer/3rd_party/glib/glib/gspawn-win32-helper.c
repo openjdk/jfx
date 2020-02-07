@@ -38,12 +38,12 @@
 #undef G_LOG_DOMAIN
 #include "glib.h"
 #define GSPAWN_HELPER
-#include "gspawn-win32.c"   /* For shared definitions */
+#include "gspawn-win32.c" /* For shared definitions */
 
 
 static void
 write_err_and_exit (gint    fd,
-            gintptr msg)
+        gintptr msg)
 {
   gintptr en = errno;
 
@@ -69,8 +69,8 @@ write_err_and_exit (gint    fd,
 
 static gint
 protect_wargv (gint       argc,
-           wchar_t  **wargv,
-           wchar_t ***new_wargv)
+         wchar_t  **wargv,
+         wchar_t ***new_wargv)
 {
   gint i;
 
@@ -82,7 +82,7 @@ protect_wargv (gint       argc,
    * rather different than what Unix shells do. See stdargv.c in the C
    * runtime sources (in the Platform SDK, in src/crt).
    *
-   * Note that an new_wargv[0] constructed by this function should
+   * Note that a new_wargv[0] constructed by this function should
    * *not* be passed as the filename argument to a _wspawn* or _wexec*
    * family function. That argument should be the real file name
    * without any quoting.
@@ -92,49 +92,60 @@ protect_wargv (gint       argc,
       wchar_t *p = wargv[i];
       wchar_t *q;
       gint len = 0;
+      gint pre_bslash = 0;
       gboolean need_dblquotes = FALSE;
       while (*p)
-    {
-      if (*p == ' ' || *p == '\t')
-        need_dblquotes = TRUE;
-      else if (*p == '"')
-        len++;
-      else if (*p == '\\')
-        {
-          wchar_t *pp = p;
-          while (*pp && *pp == '\\')
-        pp++;
-          if (*pp == '"')
-        len++;
-        }
-      len++;
-      p++;
-    }
+  {
+    if (*p == ' ' || *p == '\t')
+      need_dblquotes = TRUE;
+    /* estimate max len, assuming that all escapable chracters will be escaped */
+    if (*p == '"' || *p == '\\')
+      len += 2;
+    else
+      len += 1;
+    p++;
+  }
 
       q = (*new_wargv)[i] = g_new (wchar_t, len + need_dblquotes*2 + 1);
       p = wargv[i];
 
       if (need_dblquotes)
-    *q++ = '"';
+  *q++ = '"';
 
+      /* Only quotes and backslashes preceeding quotes are escaped:
+       * see "Parsing C Command-Line Arguments" at
+       * https://docs.microsoft.com/en-us/cpp/c-language/parsing-c-command-line-arguments
+       */
       while (*p)
-    {
-      if (*p == '"')
+  {
+    if (*p == '"')
+      {
+        /* Add backslash for escaping quote itself */
         *q++ = '\\';
-      else if (*p == '\\')
-        {
-          wchar_t *pp = p;
-          while (*pp && *pp == '\\')
-        pp++;
-          if (*pp == '"')
-        *q++ = '\\';
-        }
-      *q++ = *p;
-      p++;
-    }
+        /* Add backslash for every preceeding backslash for escaping it */
+        for (;pre_bslash > 0; --pre_bslash)
+    *q++ = '\\';
+      }
+
+    /* Count length of continuous sequence of preceeding backslashes. */
+    if (*p == '\\')
+      ++pre_bslash;
+    else
+      pre_bslash = 0;
+
+    *q++ = *p;
+    p++;
+  }
 
       if (need_dblquotes)
+  {
+    /* Add backslash for every preceeding backslash for escaping it,
+     * do NOT escape quote itself.
+     */
+    for (;pre_bslash > 0; --pre_bslash)
+      *q++ = '\\';
     *q++ = '"';
+  }
       *q++ = '\0';
     }
   (*new_wargv)[argc] = NULL;
@@ -169,9 +180,9 @@ myInvalidParameterHandler(const wchar_t *expression,
 #ifndef HELPER_CONSOLE
 int _stdcall
 WinMain (struct HINSTANCE__ *hInstance,
-     struct HINSTANCE__ *hPrevInstance,
-     char               *lpszCmdLine,
-     int                 nCmdShow)
+   struct HINSTANCE__ *hPrevInstance,
+   char               *lpszCmdLine,
+   int                 nCmdShow)
 #else
 int
 main (int ignored_argc, char **ignored_argv)
@@ -179,6 +190,7 @@ main (int ignored_argc, char **ignored_argv)
 {
   int child_err_report_fd = -1;
   int helper_sync_fd = -1;
+  int saved_stderr_fd = -1;
   int i;
   int fd;
   int mode;
@@ -244,19 +256,19 @@ main (int ignored_argc, char **ignored_argv)
     {
       fd = open ("NUL:", O_RDONLY);
       if (fd != 0)
-    {
-      dup2 (fd, 0);
-      close (fd);
-    }
+  {
+    dup2 (fd, 0);
+    close (fd);
+  }
     }
   else
     {
       fd = atoi (argv[ARG_STDIN]);
       if (fd != 0)
-    {
-      dup2 (fd, 0);
-      close (fd);
-    }
+  {
+    dup2 (fd, 0);
+    close (fd);
+  }
     }
 
   if (argv[ARG_STDOUT][0] == '-')
@@ -265,40 +277,41 @@ main (int ignored_argc, char **ignored_argv)
     {
       fd = open ("NUL:", O_WRONLY);
       if (fd != 1)
-    {
-      dup2 (fd, 1);
-      close (fd);
-    }
+  {
+    dup2 (fd, 1);
+    close (fd);
+  }
     }
   else
     {
       fd = atoi (argv[ARG_STDOUT]);
       if (fd != 1)
-    {
-      dup2 (fd, 1);
-      close (fd);
-    }
+  {
+    dup2 (fd, 1);
+    close (fd);
+  }
     }
 
+  saved_stderr_fd = reopen_noninherited (dup (2), _O_WRONLY);
   if (argv[ARG_STDERR][0] == '-')
     ; /* Nothing */
   else if (argv[ARG_STDERR][0] == 'z')
     {
       fd = open ("NUL:", O_WRONLY);
       if (fd != 2)
-    {
-      dup2 (fd, 2);
-      close (fd);
-    }
+  {
+    dup2 (fd, 2);
+    close (fd);
+  }
     }
   else
     {
       fd = atoi (argv[ARG_STDERR]);
       if (fd != 2)
-    {
-      dup2 (fd, 2);
-      close (fd);
-    }
+  {
+    dup2 (fd, 2);
+    close (fd);
+  }
     }
 
   /* argv[ARG_WORKING_DIRECTORY] is the directory in which to run the
@@ -315,15 +328,15 @@ main (int ignored_argc, char **ignored_argv)
    */
   if (argv[ARG_CLOSE_DESCRIPTORS][0] == 'y')
     for (i = 3; i < 1000; i++)  /* FIXME real limit? */
-      if (i != child_err_report_fd && i != helper_sync_fd)
+      if (i != child_err_report_fd && i != helper_sync_fd && i != saved_stderr_fd)
         if (_get_osfhandle (i) != -1)
           close (i);
 
   /* We don't want our child to inherit the error report and
    * helper sync fds.
    */
-  child_err_report_fd = dup_noninherited (child_err_report_fd, _O_WRONLY);
-  helper_sync_fd = dup_noninherited (helper_sync_fd, _O_RDONLY);
+  child_err_report_fd = reopen_noninherited (child_err_report_fd, _O_WRONLY);
+  helper_sync_fd = reopen_noninherited (helper_sync_fd, _O_RDONLY);
 
   /* argv[ARG_WAIT] is "w" to wait for the program to exit */
   if (argv[ARG_WAIT][0] == 'w')
@@ -351,6 +364,11 @@ main (int ignored_argc, char **ignored_argv)
 
   saved_errno = errno;
 
+  /* Some coverage warnings may be printed on stderr during this process exit.
+   * Remove redirection so that they would go to original stderr
+   * instead of being treated as part of stderr of child process.
+   */
+  dup2 (saved_stderr_fd, 2);
   if (handle == -1 && saved_errno != 0)
     {
       int ec = (saved_errno == ENOENT)

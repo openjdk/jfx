@@ -34,13 +34,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Optional.h>
-#include <wtf/text/StringBuffer.h>
 #include <wtf/text/TextBreakIterator.h>
-#include <wtf/unicode/UTF8Conversion.h>
 
 namespace WTF {
-
-using namespace Unicode;
 
 bool StringView::containsIgnoringASCIICase(const StringView& matchString) const
 {
@@ -60,6 +56,11 @@ size_t StringView::findIgnoringASCIICase(const StringView& matchString) const
 size_t StringView::findIgnoringASCIICase(const StringView& matchString, unsigned startOffset) const
 {
     return ::WTF::findIgnoringASCIICase(*this, matchString, startOffset);
+}
+
+bool StringView::startsWith(UChar character) const
+{
+    return m_length && (*this)[0] == character;
 }
 
 bool StringView::startsWith(const StringView& prefix) const
@@ -178,7 +179,7 @@ private:
 };
 
 StringView::GraphemeClusters::Iterator::Iterator(const StringView& stringView, unsigned index)
-    : m_impl(std::make_unique<Impl>(stringView, stringView.isNull() ? WTF::nullopt : Optional<NonSharedCharacterBreakIterator>(NonSharedCharacterBreakIterator(stringView)), index))
+    : m_impl(makeUnique<Impl>(stringView, stringView.isNull() ? WTF::nullopt : Optional<NonSharedCharacterBreakIterator>(NonSharedCharacterBreakIterator(stringView)), index))
 {
 }
 
@@ -220,11 +221,11 @@ String convertASCIICase(const CharacterType* input, unsigned length)
     if (!input)
         return { };
 
-    StringBuffer<CharacterType> buffer(length);
-    CharacterType* characters = buffer.characters();
+    CharacterType* characters;
+    auto result = String::createUninitialized(length, characters);
     for (unsigned i = 0; i < length; ++i)
         characters[i] = type == ASCIICase::Lower ? toASCIILower(input[i]) : toASCIIUpper(input[i]);
-    return String::adopt(WTFMove(buffer));
+    return result;
 }
 
 String StringView::convertToASCIILowercase() const
@@ -283,6 +284,7 @@ String normalizedNFC(const String& string)
 // Manage reference count manually so UnderlyingString does not need to be defined in the header.
 
 struct StringView::UnderlyingString {
+    WTF_MAKE_STRUCT_FAST_ALLOCATED;
     std::atomic_uint refCount { 1u };
     bool isValid { true };
     const StringImpl& string;

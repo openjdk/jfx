@@ -27,8 +27,9 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
+#include "WHLSLCodeLocation.h"
 #include "WHLSLStatement.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -36,19 +37,18 @@ namespace WHLSL {
 
 namespace AST {
 
-class Break : public Statement {
+class Break final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    Break(Lexer::Token&& origin)
-        : Statement(WTFMove(origin))
+    Break(CodeLocation location)
+        : Statement(location, Kind::Break)
     {
     }
 
-    virtual ~Break() = default;
+    ~Break() = default;
 
     Break(const Break&) = delete;
     Break(Break&&) = default;
-
-    bool isBreak() const override { return true; }
 
 private:
 };
@@ -58,6 +58,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(Break)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(Break, isBreak())
 

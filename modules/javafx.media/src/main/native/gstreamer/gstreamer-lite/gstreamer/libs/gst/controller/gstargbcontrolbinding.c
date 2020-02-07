@@ -29,6 +29,9 @@
  * gobject properties representing a color. A control value of 0.0 will turn the
  * color component off and a value of 1.0 will be the color level.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <glib-object.h>
 #include <gst/gst.h>

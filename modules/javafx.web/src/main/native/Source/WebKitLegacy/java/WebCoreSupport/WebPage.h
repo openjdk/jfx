@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/OptionSet.h>
+#include <wtf/java/JavaRef.h>
 #include <WebCore/GraphicsLayerClient.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/PrintContext.h>
@@ -32,8 +34,6 @@
 #include <WebCore/ScrollTypes.h>
 
 #include <jni.h> // todo tav remove when building w/ pch
-#include <wtf/java/JavaRef.h>
-
 
 namespace WebCore {
 
@@ -112,11 +112,7 @@ private:
     // GraphicsLayerClient
     void notifyAnimationStarted(const GraphicsLayer*, const String& /*animationKey*/, MonotonicTime /*time*/) override;
     void notifyFlushRequired(const GraphicsLayer*) override;
-    void paintContents(const GraphicsLayer*,
-                       GraphicsContext&,
-                       GraphicsLayerPaintingPhase,
-                       const FloatRect&,
-                       GraphicsLayerPaintBehavior) override;
+    void paintContents(const GraphicsLayer*, GraphicsContext&, OptionSet<GraphicsLayerPaintingPhase>, const FloatRect& /* inClip */, GraphicsLayerPaintBehavior) override;
 
     bool keyEvent(const PlatformKeyboardEvent& event);
     bool charEvent(const PlatformKeyboardEvent& event);

@@ -100,7 +100,6 @@ typedef struct _GstURIHandler GstURIHandler;
 typedef struct _GstURIHandlerInterface GstURIHandlerInterface;
 
 #include <gst/gstelement.h>
-#include <gst/gstconfig.h>
 #include "gstminiobject.h"
 
 /**

@@ -26,6 +26,12 @@
 #include <gst/video/video.h>
 #include "gstvideoutils.h"
 
+/**
+ * SECTION:gstvideoutils
+ * @title: GstVideo Codec utility function
+ * @short_description: Extra utility functions for video codecs
+ */
+
 #include <string.h>
 
 G_DEFINE_BOXED_TYPE (GstVideoCodecFrame, gst_video_codec_frame,

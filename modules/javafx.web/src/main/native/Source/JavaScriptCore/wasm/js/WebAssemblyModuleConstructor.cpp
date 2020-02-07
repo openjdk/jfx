@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,9 +59,9 @@ const ClassInfo WebAssemblyModuleConstructor::s_info = { "Function", &Base::s_in
 
 /* Source for WebAssemblyModuleConstructor.lut.h
  @begin constructorTableWebAssemblyModule
- customSections webAssemblyModuleCustomSections DontEnum|Function 2
- imports        webAssemblyModuleImports        DontEnum|Function 1
- exports        webAssemblyModuleExports        DontEnum|Function 1
+ customSections webAssemblyModuleCustomSections Function 2
+ imports        webAssemblyModuleImports        Function 1
+ exports        webAssemblyModuleExports        Function 1
  @end
  */
 
@@ -71,11 +71,14 @@ EncodedJSValue JSC_HOST_CALL webAssemblyModuleCustomSections(ExecState* exec)
     auto* globalObject = exec->lexicalGlobalObject();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(vm, exec->argument(0));
+    if (UNLIKELY(exec->argumentCount() < 2))
+        return JSValue::encode(throwException(exec, throwScope, createNotEnoughArgumentsError(exec)));
+
+    JSWebAssemblyModule* module = jsDynamicCast<JSWebAssemblyModule*>(vm, exec->uncheckedArgument(0));
     if (!module)
         return JSValue::encode(throwException(exec, throwScope, createTypeError(exec, "WebAssembly.Module.customSections called with non WebAssembly.Module argument"_s)));
 
-    const String sectionNameString = exec->argument(1).getString(exec);
+    const String sectionNameString = exec->uncheckedArgument(1).getString(exec);
     RETURN_IF_EXCEPTION(throwScope, { });
 
     JSArray* result = constructEmptyArray(exec, nullptr, globalObject);
@@ -88,7 +91,7 @@ EncodedJSValue JSC_HOST_CALL webAssemblyModuleCustomSections(ExecState* exec)
             if (!buffer)
                 return JSValue::encode(throwException(exec, throwScope, createOutOfMemoryError(exec)));
 
-            result->push(exec, JSArrayBuffer::create(vm, globalObject->m_arrayBufferStructure.get(), WTFMove(buffer)));
+            result->push(exec, JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(buffer)));
             RETURN_IF_EXCEPTION(throwScope, { });
         }
     }
@@ -111,15 +114,15 @@ EncodedJSValue JSC_HOST_CALL webAssemblyModuleImports(ExecState* exec)
 
     const auto& imports = module->moduleInformation().imports;
     if (imports.size()) {
-        Identifier module = Identifier::fromString(exec, "module");
-        Identifier name = Identifier::fromString(exec, "name");
-        Identifier kind = Identifier::fromString(exec, "kind");
+        Identifier module = Identifier::fromString(vm, "module");
+        Identifier name = Identifier::fromString(vm, "name");
+        Identifier kind = Identifier::fromString(vm, "kind");
         for (const Wasm::Import& imp : imports) {
             JSObject* obj = constructEmptyObject(exec);
             RETURN_IF_EXCEPTION(throwScope, { });
-            obj->putDirect(vm, module, jsString(exec, String::fromUTF8(imp.module)));
-            obj->putDirect(vm, name, jsString(exec, String::fromUTF8(imp.field)));
-            obj->putDirect(vm, kind, jsString(exec, String(makeString(imp.kind))));
+            obj->putDirect(vm, module, jsString(vm, String::fromUTF8(imp.module)));
+            obj->putDirect(vm, name, jsString(vm, String::fromUTF8(imp.field)));
+            obj->putDirect(vm, kind, jsString(vm, String(makeString(imp.kind))));
             result->push(exec, obj);
             RETURN_IF_EXCEPTION(throwScope, { });
         }
@@ -143,13 +146,13 @@ EncodedJSValue JSC_HOST_CALL webAssemblyModuleExports(ExecState* exec)
 
     const auto& exports = module->moduleInformation().exports;
     if (exports.size()) {
-        Identifier name = Identifier::fromString(exec, "name");
-        Identifier kind = Identifier::fromString(exec, "kind");
+        Identifier name = Identifier::fromString(vm, "name");
+        Identifier kind = Identifier::fromString(vm, "kind");
         for (const Wasm::Export& exp : exports) {
             JSObject* obj = constructEmptyObject(exec);
             RETURN_IF_EXCEPTION(throwScope, { });
-            obj->putDirect(vm, name, jsString(exec, String::fromUTF8(exp.field)));
-            obj->putDirect(vm, kind, jsString(exec, String(makeString(exp.kind))));
+            obj->putDirect(vm, name, jsString(vm, String::fromUTF8(exp.field)));
+            obj->putDirect(vm, kind, jsString(vm, String(makeString(exp.kind))));
             result->push(exec, obj);
             RETURN_IF_EXCEPTION(throwScope, { });
         }
@@ -181,7 +184,7 @@ JSWebAssemblyModule* WebAssemblyModuleConstructor::createModule(ExecState* exec,
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto* structure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), exec->lexicalGlobalObject()->WebAssemblyModuleStructure());
+    auto* structure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), exec->lexicalGlobalObject()->webAssemblyModuleStructure());
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     RELEASE_AND_RETURN(scope, JSWebAssemblyModule::createStub(vm, exec, structure, Wasm::Module::validateSync(&vm.wasmContext, WTFMove(buffer))));
@@ -201,9 +204,9 @@ Structure* WebAssemblyModuleConstructor::createStructure(VM& vm, JSGlobalObject*
 
 void WebAssemblyModuleConstructor::finishCreation(VM& vm, WebAssemblyModulePrototype* prototype)
 {
-    Base::finishCreation(vm, "Module"_s);
+    Base::finishCreation(vm, "Module"_s, NameVisibility::Visible, NameAdditionMode::WithoutStructureTransition);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, PropertyAttribute::DontEnum | PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum | PropertyAttribute::DontDelete);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
 WebAssemblyModuleConstructor::WebAssemblyModuleConstructor(VM& vm, Structure* structure)

@@ -25,7 +25,6 @@
 #include "CSSStyleSheet.h"
 #include "DOMWindow.h"
 #include "Document.h"
-#include "MediaFeatureNames.h"
 #include "MediaQuery.h"
 #include "MediaQueryParser.h"
 #include <wtf/NeverDestroyed.h>
@@ -74,7 +73,6 @@ MediaQuerySet::MediaQuerySet() = default;
 
 MediaQuerySet::MediaQuerySet(const MediaQuerySet& o)
     : RefCounted()
-    , m_lastLine(o.m_lastLine)
     , m_queries(o.m_queries)
 {
 }

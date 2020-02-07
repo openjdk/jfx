@@ -32,11 +32,15 @@
 #include "SWContextManager.h"
 #include "ServiceWorkerClient.h"
 #include "ServiceWorkerClients.h"
+#include "ServiceWorkerContainer.h"
 #include "ServiceWorkerThread.h"
 #include "ServiceWorkerWindowClient.h"
 #include "WorkerNavigator.h"
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(ServiceWorkerGlobalScope);
 
 Ref<ServiceWorkerGlobalScope> ServiceWorkerGlobalScope::create(const ServiceWorkerContextData& data, const URL& url, Ref<SecurityOrigin>&& origin, const String& identifier, const String& userAgent, bool isOnline, ServiceWorkerThread& thread, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicy, bool shouldBypassMainWorldContentSecurityPolicy, Ref<SecurityOrigin>&& topOrigin, MonotonicTime timeOrigin, IDBClient::IDBConnectionProxy* connectionProxy, SocketProvider* socketProvider, PAL::SessionID sessionID)
 {

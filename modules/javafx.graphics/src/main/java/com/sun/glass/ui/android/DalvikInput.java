@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ import javafx.application.Platform;
 import javafx.scene.Node;
 
 public class DalvikInput {
+/*
 
     public static void onMultiTouchEvent(final int count, final int[] actions,
             final int[] ids, final int[] touchXs, final int[] touchYs) {
@@ -71,4 +72,5 @@ public class DalvikInput {
     public static native void onSurfaceRedrawNeededNative();
 
     public static native void onConfigurationChangedNative(int flag);
+*/
 }

@@ -22,12 +22,6 @@
 #include "gwakeup.h"
 #include "gstdioprivate.h"
 
-#if defined(__GNUC__)
-# define _g_alignof(type) (__alignof__ (type))
-#else
-# define _g_alignof(type) (G_STRUCT_OFFSET (struct { char a; type b; }, b))
-#endif
-
 GMainContext *          g_get_worker_context            (void);
 gboolean                g_check_setuid                  (void);
 GMainContext *          g_main_context_new_with_next_id (guint next_id);
@@ -67,18 +61,20 @@ typedef struct {
 
   /* See gstdio.c */
 #ifdef G_OS_WIN32
-  int                   (* g_win32_stat_utf8)           (const gchar       *filename,
-                                                         GWin32PrivateStat *buf);
+  int                   (* g_win32_stat_utf8)           (const gchar        *filename,
+                                                         GWin32PrivateStat  *buf);
 
-  int                   (* g_win32_lstat_utf8)          (const gchar       *filename,
-                                                         GWin32PrivateStat *buf);
+  int                   (* g_win32_lstat_utf8)          (const gchar        *filename,
+                                                         GWin32PrivateStat  *buf);
 
-  int                   (* g_win32_readlink_utf8)       (const gchar *filename,
-                                                         gchar       *buf,
-                                                         gsize        buf_size);
+  int                   (* g_win32_readlink_utf8)       (const gchar        *filename,
+                                                         gchar              *buf,
+                                                         gsize               buf_size,
+                                                         gchar             **alloc_buf,
+                                                         gboolean            terminate);
 
-  int                   (* g_win32_fstat)               (int                fd,
-                                                         GWin32PrivateStat *buf);
+  int                   (* g_win32_fstat)               (int                 fd,
+                                                         GWin32PrivateStat  *buf);
 #endif
 
 
@@ -87,5 +83,26 @@ typedef struct {
 
 GLIB_AVAILABLE_IN_ALL
 GLibPrivateVTable *glib__private__ (void);
+
+/* Please see following for the use of ".ACP" over ""
+ * on Windows, although both are accepted at compile-time
+ * but "" renders translated console messages unreadable if
+ * built with Visual Studio 2012 and later (this is, unfortunately,
+ * undocumented):
+ *
+ * https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/setlocale-wsetlocale
+ * https://gitlab.gnome.org/GNOME/glib/merge_requests/895#note_525881
+ * https://gitlab.gnome.org/GNOME/glib/merge_requests/895#note_525900
+ *
+ * Additional related items:
+ * https://stackoverflow.com/questions/22604329/php-5-5-setlocale-not-working-in-cli-on-windows
+ * https://bugs.php.net/bug.php?id=66265
+ */
+
+#ifdef G_OS_WIN32
+# define GLIB_DEFAULT_LOCALE ".ACP"
+#else
+# define GLIB_DEFAULT_LOCALE ""
+#endif
 
 #endif /* __GLIB_PRIVATE_H__ */

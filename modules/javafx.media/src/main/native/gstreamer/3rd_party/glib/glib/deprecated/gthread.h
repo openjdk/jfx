@@ -33,7 +33,7 @@
 
 G_BEGIN_DECLS
 
-#ifndef G_DISABLE_DEPRECATED
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
 typedef enum
 {
@@ -41,9 +41,7 @@ typedef enum
   G_THREAD_PRIORITY_NORMAL,
   G_THREAD_PRIORITY_HIGH,
   G_THREAD_PRIORITY_URGENT
-} GThreadPriority;
-
-#endif
+} GThreadPriority GLIB_DEPRECATED_TYPE_IN_2_32;
 
 struct  _GThread
 {
@@ -60,9 +58,7 @@ struct  _GThread
 #endif // GSTREAMER_LITE
 };
 
-#ifndef G_DISABLE_DEPRECATED
-
-typedef struct _GThreadFunctions GThreadFunctions;
+typedef struct _GThreadFunctions GThreadFunctions GLIB_DEPRECATED_TYPE_IN_2_32;
 struct _GThreadFunctions
 {
   GMutex*  (*mutex_new)           (void);
@@ -99,7 +95,7 @@ struct _GThreadFunctions
   void      (*thread_self)        (gpointer              thread);
   gboolean  (*thread_equal)       (gpointer              thread1,
                                    gpointer              thread2);
-};
+} GLIB_DEPRECATED_TYPE_IN_2_32;
 
 GLIB_VAR GThreadFunctions       g_thread_functions_for_glib_use;
 GLIB_VAR gboolean               g_thread_use_default_impl;
@@ -134,8 +130,8 @@ void     g_thread_foreach      (GFunc             thread_func,
 #include <pthread.h>
 #endif
 
-#define g_static_mutex_get_mutex g_static_mutex_get_mutex_impl
-#define G_STATIC_MUTEX_INIT { NULL }
+#define g_static_mutex_get_mutex g_static_mutex_get_mutex_impl GLIB_DEPRECATED_MACRO_IN_2_32
+#define G_STATIC_MUTEX_INIT { NULL } GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_mutex_init)
 typedef struct
 {
   GMutex *mutex;
@@ -143,14 +139,14 @@ typedef struct
   /* only for ABI compatibility reasons */
   pthread_mutex_t unused;
 #endif
-} GStaticMutex;
+} GStaticMutex GLIB_DEPRECATED_TYPE_IN_2_32_FOR(GMutex);
 
 #define g_static_mutex_lock(mutex) \
-    g_mutex_lock (g_static_mutex_get_mutex (mutex))
+    g_mutex_lock (g_static_mutex_get_mutex (mutex)) GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_mutex_lock)
 #define g_static_mutex_trylock(mutex) \
-    g_mutex_trylock (g_static_mutex_get_mutex (mutex))
+    g_mutex_trylock (g_static_mutex_get_mutex (mutex)) GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_mutex_trylock)
 #define g_static_mutex_unlock(mutex) \
-    g_mutex_unlock (g_static_mutex_get_mutex (mutex))
+    g_mutex_unlock (g_static_mutex_get_mutex (mutex)) GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_mutex_unlock)
 
 GLIB_DEPRECATED_IN_2_32_FOR(g_mutex_init)
 void    g_static_mutex_init           (GStaticMutex *mutex);
@@ -159,7 +155,7 @@ void    g_static_mutex_free           (GStaticMutex *mutex);
 GLIB_DEPRECATED_IN_2_32_FOR(GMutex)
 GMutex *g_static_mutex_get_mutex_impl (GStaticMutex *mutex);
 
-typedef struct _GStaticRecMutex GStaticRecMutex;
+typedef struct _GStaticRecMutex GStaticRecMutex GLIB_DEPRECATED_TYPE_IN_2_32_FOR(GRecMutex);
 struct _GStaticRecMutex
 {
   /*< private >*/
@@ -175,9 +171,9 @@ struct _GStaticRecMutex
 #endif
     gdouble dummy;
   } unused;
-};
+} GLIB_DEPRECATED_TYPE_IN_2_32_FOR(GRecMutex);
 
-#define G_STATIC_REC_MUTEX_INIT { G_STATIC_MUTEX_INIT }
+#define G_STATIC_REC_MUTEX_INIT { G_STATIC_MUTEX_INIT, 0, { 0 } } GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_rec_mutex_init)
 GLIB_DEPRECATED_IN_2_32_FOR(g_rec_mutex_init)
 void     g_static_rec_mutex_init        (GStaticRecMutex *mutex);
 
@@ -200,7 +196,7 @@ guint    g_static_rec_mutex_unlock_full (GStaticRecMutex *mutex);
 GLIB_DEPRECATED_IN_2_32_FOR(g_rec_mutex_free)
 void     g_static_rec_mutex_free        (GStaticRecMutex *mutex);
 
-typedef struct _GStaticRWLock GStaticRWLock;
+typedef struct _GStaticRWLock GStaticRWLock GLIB_DEPRECATED_TYPE_IN_2_32_FOR(GRWLock);
 struct _GStaticRWLock
 {
   /*< private >*/
@@ -211,9 +207,9 @@ struct _GStaticRWLock
   gboolean have_writer;
   guint want_to_read;
   guint want_to_write;
-};
+} GLIB_DEPRECATED_TYPE_IN_2_32_FOR(GRWLock);
 
-#define G_STATIC_RW_LOCK_INIT { G_STATIC_MUTEX_INIT, NULL, NULL, 0, FALSE, 0, 0 }
+#define G_STATIC_RW_LOCK_INIT { G_STATIC_MUTEX_INIT, NULL, NULL, 0, FALSE, 0, 0 } GLIB_DEPRECATED_MACRO_IN_2_32_FOR(g_rw_lock_init)
 
 GLIB_DEPRECATED_IN_2_32_FOR(g_rw_lock_init)
 void      g_static_rw_lock_init           (GStaticRWLock *lock);
@@ -242,14 +238,14 @@ void      g_static_rw_lock_free           (GStaticRWLock *lock);
 GLIB_DEPRECATED_IN_2_32
 GPrivate *      g_private_new             (GDestroyNotify notify);
 
-typedef struct _GStaticPrivate  GStaticPrivate;
+typedef struct _GStaticPrivate  GStaticPrivate GLIB_DEPRECATED_TYPE_IN_2_32_FOR(GPrivate);
 struct _GStaticPrivate
 {
   /*< private >*/
   guint index;
-};
+} GLIB_DEPRECATED_TYPE_IN_2_32_FOR(GPrivate);
 
-#define G_STATIC_PRIVATE_INIT { 0 }
+#define G_STATIC_PRIVATE_INIT { 0 } GLIB_DEPRECATED_MACRO_IN_2_32_FOR(G_PRIVATE_INIT)
 GLIB_DEPRECATED_IN_2_32
 void     g_static_private_init           (GStaticPrivate *private_key);
 
@@ -277,7 +273,7 @@ gboolean g_thread_get_initialized        (void);
 
 GLIB_VAR gboolean g_threads_got_initialized;
 
-#define g_thread_supported()     (1)
+#define g_thread_supported()     (1) GLIB_DEPRECATED_MACRO_IN_2_32
 
 GLIB_DEPRECATED_IN_2_32
 GMutex *        g_mutex_new             (void);
@@ -292,7 +288,7 @@ gboolean        g_cond_timed_wait       (GCond          *cond,
                                          GMutex         *mutex,
                                          GTimeVal       *timeval);
 
-#endif
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 G_END_DECLS
 

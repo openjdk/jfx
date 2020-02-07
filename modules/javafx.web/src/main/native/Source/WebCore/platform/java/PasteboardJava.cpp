@@ -327,7 +327,7 @@ void Pasteboard::writeImage(Element& node, const URL& url, const String& title)
     // Write the bytes of the image to the file format
     writeImageToDataObject(m_dataObject,    node, url);
 
-    AtomicString imageURL = node.getAttribute(HTMLNames::srcAttr);
+    AtomString imageURL = node.getAttribute(HTMLNames::srcAttr);
     if (!imageURL.isEmpty()) {
         String fullURL = node.document().completeURL(stripLeadingAndTrailingHTMLSpaces(imageURL));
         if (!fullURL.isEmpty()) {

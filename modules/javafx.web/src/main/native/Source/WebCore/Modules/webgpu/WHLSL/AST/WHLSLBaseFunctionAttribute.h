@@ -27,8 +27,8 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLLexer.h"
-#include "WHLSLNode.h"
+#include "WHLSLCodeLocation.h"
+#include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
@@ -36,10 +36,11 @@ namespace WHLSL {
 
 namespace AST {
 
-class BaseFunctionAttribute : public Node {
+class BaseFunctionAttribute {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    BaseFunctionAttribute(Lexer::Token&& origin)
-        : m_origin(WTFMove(origin))
+    BaseFunctionAttribute(CodeLocation location)
+        : m_codeLocation(location)
     {
     }
 
@@ -49,7 +50,7 @@ public:
     BaseFunctionAttribute(BaseFunctionAttribute&&) = default;
 
 private:
-    Lexer::Token m_origin;
+    CodeLocation m_codeLocation;
 };
 
 } // namespace AST

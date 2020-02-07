@@ -45,17 +45,18 @@ Ref<UniqueIDBDatabaseConnection> UniqueIDBDatabaseConnection::create(UniqueIDBDa
 
 UniqueIDBDatabaseConnection::UniqueIDBDatabaseConnection(UniqueIDBDatabase& database, ServerOpenDBRequest& request)
     : m_database(makeWeakPtr(database))
+    , m_server(makeWeakPtr(m_database->server()))
     , m_connectionToClient(request.connection())
     , m_openRequestIdentifier(request.requestData().requestIdentifier())
 {
-    m_database->server().registerDatabaseConnection(*this);
+    m_server->registerDatabaseConnection(*this);
     m_connectionToClient->registerDatabaseConnection(*this);
 }
 
 UniqueIDBDatabaseConnection::~UniqueIDBDatabaseConnection()
 {
-    if (m_database)
-        m_database->server().unregisterDatabaseConnection(*this);
+    if (m_server)
+        m_server->unregisterDatabaseConnection(*this);
     m_connectionToClient->unregisterDatabaseConnection(*this);
 }
 
@@ -75,7 +76,7 @@ void UniqueIDBDatabaseConnection::abortTransactionWithoutCallback(UniqueIDBDatab
     if (!m_database)
         return;
 
-    m_database->abortTransaction(transaction, [this, protectedThis, transactionIdentifier](const IDBError&) {
+    m_database->abortTransaction(transaction, UniqueIDBDatabase::WaitForPendingTasks::No, [this, protectedThis, transactionIdentifier](const IDBError&) {
         ASSERT(m_transactionMap.contains(transactionIdentifier));
         m_transactionMap.remove(transactionIdentifier);
     });
@@ -169,8 +170,7 @@ void UniqueIDBDatabaseConnection::didAbortTransaction(UniqueIDBDatabaseTransacti
     auto transactionIdentifier = transaction.info().identifier();
     auto takenTransaction = m_transactionMap.take(transactionIdentifier);
 
-    ASSERT(m_database);
-    ASSERT(takenTransaction || m_database->hardClosedForUserDelete());
+    ASSERT(takenTransaction || (!m_database && !error.isNull()) || (m_database && m_database->hardClosedForUserDelete()));
     if (takenTransaction)
         m_connectionToClient->didAbortTransaction(transactionIdentifier, error);
 }
@@ -181,7 +181,7 @@ void UniqueIDBDatabaseConnection::didCommitTransaction(UniqueIDBDatabaseTransact
 
     auto transactionIdentifier = transaction.info().identifier();
 
-    ASSERT(m_transactionMap.contains(transactionIdentifier));
+    ASSERT(m_transactionMap.contains(transactionIdentifier) || !error.isNull());
     m_transactionMap.remove(transactionIdentifier);
 
     m_connectionToClient->didCommitTransaction(transactionIdentifier, error);

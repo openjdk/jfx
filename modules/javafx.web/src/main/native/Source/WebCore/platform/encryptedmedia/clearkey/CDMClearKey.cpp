@@ -124,7 +124,7 @@ static Optional<Vector<CDMInstanceClearKey::Key>> parseLicenseFormat(const JSON:
         });
     if (!validFormat)
         return WTF::nullopt;
-    return WTFMove(decodedKeys);
+    return decodedKeys;
 }
 
 static bool parseLicenseReleaseAcknowledgementFormat(const JSON::Object& root)
@@ -303,7 +303,7 @@ std::unique_ptr<CDMPrivate> CDMFactoryClearKey::createCDM(const String& keySyste
 #else
     ASSERT(supportsKeySystem(keySystem));
 #endif
-    return std::make_unique<CDMPrivateClearKey>();
+    return makeUnique<CDMPrivateClearKey>();
 }
 
 bool CDMFactoryClearKey::supportsKeySystem(const String& keySystem)
@@ -315,7 +315,7 @@ bool CDMFactoryClearKey::supportsKeySystem(const String& keySystem)
 CDMPrivateClearKey::CDMPrivateClearKey() = default;
 CDMPrivateClearKey::~CDMPrivateClearKey() = default;
 
-bool CDMPrivateClearKey::supportsInitDataType(const AtomicString& initDataType) const
+bool CDMPrivateClearKey::supportsInitDataType(const AtomString& initDataType) const
 {
     // `keyids` and 'cenc' are the only supported init data type.
     return (equalLettersIgnoringASCIICase(initDataType, "keyids") || equalLettersIgnoringASCIICase(initDataType, "cenc") || equalLettersIgnoringASCIICase(initDataType, "webm"));
@@ -419,7 +419,7 @@ bool CDMPrivateClearKey::supportsSessions() const
     return true;
 }
 
-bool CDMPrivateClearKey::supportsInitData(const AtomicString& initDataType, const SharedBuffer& initData) const
+bool CDMPrivateClearKey::supportsInitData(const AtomString& initDataType, const SharedBuffer& initData) const
 {
     // Validate the initData buffer as an JSON object in keyids case.
     if (equalLettersIgnoringASCIICase(initDataType, "keyids") && parseJSONObject(initData))
@@ -507,6 +507,7 @@ const Vector<CDMInstanceClearKey::Key> CDMInstanceClearKey::keys() const
 {
     // Return the keys of all sessions.
     Vector<CDMInstanceClearKey::Key> allKeys { };
+    auto locker = holdLock(m_keysMutex);
     size_t initialCapacity = 0;
     for (auto& key : ClearKeyState::singleton().keys().values())
         initialCapacity += key.size();
@@ -518,7 +519,7 @@ const Vector<CDMInstanceClearKey::Key> CDMInstanceClearKey::keys() const
     return allKeys;
 }
 
-void CDMInstanceSessionClearKey::requestLicense(LicenseType, const AtomicString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&& callback)
+void CDMInstanceSessionClearKey::requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&& callback)
 {
     static uint32_t s_sessionIdValue = 0;
     ++s_sessionIdValue;

@@ -31,9 +31,14 @@
 #include "config.h"
 #include "ThreadableWebSocketChannel.h"
 
+#include "ContentRuleListResults.h"
 #include "Document.h"
+#include "Page.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptExecutionContext.h"
+#include "SocketProvider.h"
 #include "ThreadableWebSocketChannelClientWrapper.h"
+#include "UserContentProvider.h"
 #include "WebSocketChannel.h"
 #include "WebSocketChannelClient.h"
 #include "WorkerGlobalScope.h"
@@ -43,6 +48,25 @@
 
 namespace WebCore {
 
+Ref<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(Document& document, WebSocketChannelClient& client, SocketProvider& provider)
+{
+#if USE(SOUP)
+    auto channel = provider.createWebSocketChannel(document, client);
+    ASSERT(channel);
+    return channel.releaseNonNull();
+#else
+
+#if HAVE(NSURLSESSION_WEBSOCKET)
+    if (RuntimeEnabledFeatures::sharedFeatures().isNSURLSessionWebSocketEnabled()) {
+        if (auto channel = provider.createWebSocketChannel(document, client))
+            return channel.releaseNonNull();
+    }
+#endif
+
+    return WebSocketChannel::create(document, client, provider);
+#endif
+}
+
 Ref<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(ScriptExecutionContext& context, WebSocketChannelClient& client, SocketProvider& provider)
 {
     if (is<WorkerGlobalScope>(context)) {
@@ -51,7 +75,52 @@ Ref<ThreadableWebSocketChannel> ThreadableWebSocketChannel::create(ScriptExecuti
         return WorkerThreadableWebSocketChannel::create(workerGlobalScope, client, makeString("webSocketChannelMode", runLoop.createUniqueId()), provider);
     }
 
-    return WebSocketChannel::create(downcast<Document>(context), client, provider);
+    return create(downcast<Document>(context), client, provider);
+}
+
+Optional<ThreadableWebSocketChannel::ValidatedURL> ThreadableWebSocketChannel::validateURL(Document& document, const URL& requestedURL)
+{
+    ValidatedURL validatedURL { requestedURL, true };
+#if ENABLE(CONTENT_EXTENSIONS)
+    if (auto* page = document.page()) {
+        if (auto* documentLoader = document.loader()) {
+            auto results = page->userContentProvider().processContentRuleListsForLoad(validatedURL.url, ContentExtensions::ResourceType::Raw, *documentLoader);
+            if (results.summary.blockedLoad)
+                return { };
+            if (results.summary.madeHTTPS) {
+                ASSERT(validatedURL.url.protocolIs("ws"));
+                validatedURL.url.setProtocol("wss");
+            }
+            validatedURL.areCookiesAllowed = !results.summary.blockedCookies;
+        }
+    }
+#else
+    UNUSED_PARAM(document);
+#endif
+    return validatedURL;
+}
+
+Optional<ResourceRequest> ThreadableWebSocketChannel::webSocketConnectRequest(Document& document, const URL& url)
+{
+    auto validatedURL = validateURL(document, url);
+    if (!validatedURL)
+        return { };
+
+    ResourceRequest request { validatedURL->url };
+    request.setHTTPUserAgent(document.userAgent(validatedURL->url));
+    request.setDomainForCachePartition(document.domainForCachePartition());
+    request.setAllowCookies(validatedURL->areCookiesAllowed);
+    request.setFirstPartyForCookies(document.firstPartyForCookies());
+    request.setHTTPHeaderField(HTTPHeaderName::Origin, document.securityOrigin().toString());
+
+    // Add no-cache headers to avoid compatibility issue.
+    // There are some proxies that rewrite "Connection: upgrade"
+    // to "Connection: close" in the response if a request doesn't contain
+    // these headers.
+    request.addHTTPHeaderField(HTTPHeaderName::Pragma, "no-cache");
+    request.addHTTPHeaderField(HTTPHeaderName::CacheControl, "no-cache");
+
+    return request;
 }
 
 } // namespace WebCore

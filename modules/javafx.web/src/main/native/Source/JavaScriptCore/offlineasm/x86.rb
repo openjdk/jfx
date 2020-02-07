@@ -49,7 +49,8 @@ require "config"
 # rdx => t2, a2, r1
 # rcx => t3, a3
 #  r8 => t4
-# r10 => t5
+#  r9 => t5
+# r10 => t6
 # rbx =>             csr0 (callee-save, PB, unused in baseline)
 # r12 =>             csr1 (callee-save)
 # r13 =>             csr2 (callee-save)
@@ -64,7 +65,7 @@ require "config"
 # the registers. Also, >8 return types are returned in a weird way.
 #
 # rax => t0,     r0
-# rcx =>     a0
+# rcx => t5, a0
 # rdx => t1, a1, r1
 #  r8 => t2, a2
 #  r9 => t3, a3
@@ -105,21 +106,6 @@ def isWin
         false
     when "X86_64_WIN"
         true
-    else
-        raise "bad value for $activeBackend: #{$activeBackend}"
-    end
-end
-
-def useX87
-    case $activeBackend
-    when "X86"
-        true
-    when "X86_WIN"
-        true
-    when "X86_64"
-        false
-    when "X86_64_WIN"
-        false
     else
         raise "bad value for $activeBackend: #{$activeBackend}"
     end
@@ -341,7 +327,6 @@ end
 class FPRegisterID
     def x86Operand(kind)
         raise unless kind == :double
-        raise if useX87
         case name
         when "ft0", "fa0", "fr"
             register("xmm0")
@@ -358,23 +343,6 @@ class FPRegisterID
         else
             raise "Bad register #{name} for X86 at #{codeOriginString}"
         end
-    end
-    def x87DefaultStackPosition
-        case name
-        when "ft0", "fr"
-            0
-        when "ft1"
-            1
-        when "ft2", "ft3", "ft4", "ft5"
-            raise "Unimplemented register #{name} for X86 at #{codeOriginString}"
-        else
-            raise "Bad register #{name} for X86 at #{codeOriginString}"
-        end
-    end
-    def x87Operand(offset)
-        raise unless useX87
-        raise unless offset == 0 or offset == 1
-        "#{register("st")}(#{x87DefaultStackPosition + offset})"
     end
     def x86CallOperand(kind)
         "#{callPrefix}#{x86Operand(kind)}"
@@ -561,7 +529,7 @@ class Instruction
         when :quad
             isX64 ? "q" : raise
         when :double
-            not useX87 ? "sd" : raise
+            "sd"
         else
             raise
         end
@@ -633,17 +601,13 @@ class Instruction
     end
     
     def handleX86DoubleBranch(branchOpcode, mode)
-        if useX87
-            handleX87Compare(mode)
+        case mode
+        when :normal
+            $asm.puts "ucomisd #{orderOperands(operands[1].x86Operand(:double), operands[0].x86Operand(:double))}"
+        when :reverse
+            $asm.puts "ucomisd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
         else
-            case mode
-            when :normal
-                $asm.puts "ucomisd #{orderOperands(operands[1].x86Operand(:double), operands[0].x86Operand(:double))}"
-            when :reverse
-                $asm.puts "ucomisd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
-            else
-                raise mode.inspect
-            end
+            raise mode.inspect
         end
         $asm.puts "#{branchOpcode} #{operands[2].asmLabel}"
     end
@@ -861,43 +825,6 @@ class Instruction
         end
     end
 
-    def handleX87Compare(mode)
-        floatingPointCompareImplicitOperand = getImplicitOperandString
-        case mode
-        when :normal
-            if (operands[0].x87DefaultStackPosition == 0)
-                $asm.puts "fucomi #{floatingPointCompareImplicitOperand}#{operands[1].x87Operand(0)}"
-            else
-                $asm.puts "fld #{operands[0].x87Operand(0)}"
-                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[1].x87Operand(1)}"
-            end
-        when :reverse
-            if (operands[1].x87DefaultStackPosition == 0)
-                $asm.puts "fucomi #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(0)}"
-            else
-                $asm.puts "fld #{operands[1].x87Operand(0)}"
-                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(1)}"
-            end
-        else
-            raise mode.inspect
-        end
-    end
-
-    def handleX87BinOp(opcode, opcodereverse)
-        if (operands[1].x87DefaultStackPosition == 0)
-            $asm.puts "#{opcode} #{orderOperands(operands[0].x87Operand(0), register("st"))}"
-        elsif (operands[0].x87DefaultStackPosition == 0)
-            if !isIntelSyntax
-                $asm.puts "#{opcodereverse} #{register("st")}, #{operands[1].x87Operand(0)}"
-            else
-                $asm.puts "#{opcode} #{operands[1].x87Operand(0)}, #{register("st")}"
-            end
-        else
-            $asm.puts "fld #{operands[0].x87Operand(0)}"
-            $asm.puts "#{opcodereverse}p #{orderOperands(register("st"), operands[1].x87Operand(1))}"
-        end
-    end
-
     def lowerX86
         raise unless $activeBackend == "X86"
         lowerX86Common
@@ -1012,17 +939,17 @@ class Instruction
             else
                 $asm.puts "movzx #{x86LoadOperands(:byte, :int)}"
             end
-        when "loadbs"
+        when "loadbsi"
             if !isIntelSyntax
                 $asm.puts "movsbl #{x86LoadOperands(:byte, :int)}"
             else
                 $asm.puts "movsx #{x86LoadOperands(:byte, :int)}"
             end
-        when "loadbsp"
+        when "loadbsq"
             if !isIntelSyntax
-                $asm.puts "movsb#{x86Suffix(:ptr)} #{x86LoadOperands(:byte, :ptr)}"
+                $asm.puts "movsbq #{x86LoadOperands(:byte, :quad)}"
             else
-                $asm.puts "movsx #{x86LoadOperands(:byte, :ptr)}"
+                $asm.puts "movsx #{x86LoadOperands(:byte, :quad)}"
             end
         when "loadh"
             if !isIntelSyntax
@@ -1030,98 +957,40 @@ class Instruction
             else
                 $asm.puts "movzx #{x86LoadOperands(:half, :int)}"
             end
-        when "loadhs"
+        when "loadhsi"
             if !isIntelSyntax
                 $asm.puts "movswl #{x86LoadOperands(:half, :int)}"
             else
                 $asm.puts "movsx #{x86LoadOperands(:half, :int)}"
             end
+        when "loadhsq"
+            if !isIntelSyntax
+                $asm.puts "movswq #{x86LoadOperands(:half, :quad)}"
+            else
+                $asm.puts "movsx #{x86LoadOperands(:half, :quad)}"
+            end
         when "storeb"
             $asm.puts "mov#{x86Suffix(:byte)} #{x86Operands(:byte, :byte)}"
         when "loadd"
-            if useX87
-                if !isIntelSyntax
-                    $asm.puts "fldl #{operands[0].x86Operand(:double)}"
-                else
-                    $asm.puts "fld #{operands[0].x86Operand(:double)}"
-                end
-                $asm.puts "fstp #{operands[1].x87Operand(1)}"
-            else
-                $asm.puts "movsd #{x86Operands(:double, :double)}"
-            end
+            $asm.puts "movsd #{x86Operands(:double, :double)}"
         when "moved"
-            if useX87
-                if (operands[0].x87DefaultStackPosition == 0)
-                    $asm.puts "fst #{operands[1].x87Operand(0)}"
-                else
-                    $asm.puts "fld #{operands[0].x87Operand(0)}"
-                    $asm.puts "fstp #{operands[1].x87Operand(1)}"
-                end
-            else
-                $asm.puts "movsd #{x86Operands(:double, :double)}"
-            end
+            $asm.puts "movsd #{x86Operands(:double, :double)}"
         when "stored"
-            if useX87
-                if (operands[0].x87DefaultStackPosition == 0)
-                    $asm.puts "fst#{x86Suffix(:int)} #{operands[1].x86Operand(:double)}"
-                else
-                    $asm.puts "fld #{operands[0].x87Operand(0)}"
-                    if !isIntelSyntax
-                        $asm.puts "fstpl #{operands[1].x86Operand(:double)}"
-                    else
-                        $asm.puts "fstp #{operands[1].x86Operand(:double)}"
-                    end
-                end
-            else
-                $asm.puts "movsd #{x86Operands(:double, :double)}"
-            end
+            $asm.puts "movsd #{x86Operands(:double, :double)}"
         when "addd"
-            if useX87
-                handleX87BinOp("fadd", "fadd")
-            else
-                $asm.puts "addsd #{x86Operands(:double, :double)}"
-            end
+            $asm.puts "addsd #{x86Operands(:double, :double)}"
         when "muld"
-            if useX87
-                handleX87BinOp("fmul", "fmul")
-            else
-                $asm.puts "mulsd #{x86Operands(:double, :double)}"
-            end
+            $asm.puts "mulsd #{x86Operands(:double, :double)}"
         when "subd"
-            if useX87
-                handleX87BinOp("fsub", "fsubr")
-            else
-                $asm.puts "subsd #{x86Operands(:double, :double)}"
-            end
+            $asm.puts "subsd #{x86Operands(:double, :double)}"
         when "divd"
-            if useX87
-                handleX87BinOp("fdiv", "fdivr")
-            else
-                $asm.puts "divsd #{x86Operands(:double, :double)}"
-            end
+            $asm.puts "divsd #{x86Operands(:double, :double)}"
         when "sqrtd"
-            if useX87
-                $asm.puts "fld #{operands[0].x87Operand(0)}"
-                $asm.puts "fsqrtl"
-                $asm.puts "fstp #{operands[1].x87Operand(1)}"
-            else
-                $asm.puts "sqrtsd #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
-            end
+            $asm.puts "sqrtsd #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:double)}"
         when "ci2d"
-            if useX87
-                sp = RegisterID.new(nil, "sp")
-                $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(operands[0].x86Operand(:int), offsetRegister(-4, sp.x86Operand(:ptr)))}"
-                $asm.puts "fild#{x86Suffix(:ptr)} #{getSizeString(:ptr)}#{offsetRegister(-4, sp.x86Operand(:ptr))}"
-                $asm.puts "fstp #{operands[1].x87Operand(1)}"
-            else
-                $asm.puts "cvtsi2sd #{orderOperands(operands[0].x86Operand(:int), operands[1].x86Operand(:double))}"
-            end
+            $asm.puts "cvtsi2sd #{orderOperands(operands[0].x86Operand(:int), operands[1].x86Operand(:double))}"
         when "bdeq"
-            if useX87
-                handleX87Compare(:normal)
-            else
-                $asm.puts "ucomisd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
-            end
+            $asm.puts "ucomisd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
             if operands[0] == operands[1]
                 # This is just a jump ordered, which is a jnp.
                 $asm.puts "jnp #{operands[2].asmLabel}"
@@ -1144,11 +1013,7 @@ class Instruction
         when "bdequn"
             handleX86DoubleBranch("je", :normal)
         when "bdnequn"
-            if useX87
-                handleX87Compare(:normal)
-            else
-                $asm.puts "ucomisd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
-            end
+            $asm.puts "ucomisd #{orderOperands(operands[0].x86Operand(:double), operands[1].x86Operand(:double))}"
             if operands[0] == operands[1]
                 # This is just a jump unordered, which is a jp.
                 $asm.puts "jp #{operands[2].asmLabel}"
@@ -1170,48 +1035,21 @@ class Instruction
         when "bdltequn"
             handleX86DoubleBranch("jbe", :normal)
         when "btd2i"
-            # FIXME: unused and unimplemented for x87
-            raise if useX87
             $asm.puts "cvttsd2si #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
             $asm.puts "cmpl $0x80000000 #{operands[1].x86Operand(:int)}"
             $asm.puts "je #{operands[2].asmLabel}"
         when "td2i"
-            # FIXME: unused and unimplemented for x87
-            raise if useX87
             $asm.puts "cvttsd2si #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
         when "bcd2i"
-            if useX87
-                floatingPointCompareImplicitOperand = getImplicitOperandString
-                sp = RegisterID.new(nil, "sp")
-                if (operands[0].x87DefaultStackPosition == 0)
-                    $asm.puts "fistl -4(#{sp.x86Operand(:ptr)})"
-                else
-                    $asm.puts "fld #{operands[0].x87Operand(0)}"
-                    $asm.puts "fistp#{x86Suffix(:ptr)} #{getSizeString(:ptr)}#{offsetRegister(-4, sp.x86Operand(:ptr))}"
-                end
-                $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(offsetRegister(-4, sp.x86Operand(:ptr)), operands[1].x86Operand(:int))}"
-                $asm.puts "test#{x86Suffix(:int)} #{operands[1].x86Operand(:int)}, #{operands[1].x86Operand(:int)}"
-                $asm.puts "je #{operands[2].asmLabel}"
-                $asm.puts "fild#{x86Suffix(:int)} #{getSizeString(:int)}#{offsetRegister(-4, sp.x86Operand(:ptr))}"
-                $asm.puts "fucomip #{floatingPointCompareImplicitOperand}#{operands[0].x87Operand(1)}"
-                $asm.puts "jp #{operands[2].asmLabel}"
-                $asm.puts "jne #{operands[2].asmLabel}"
-            else
-                $asm.puts "cvttsd2si #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
-                $asm.puts "test#{x86Suffix(:int)} #{operands[1].x86Operand(:int)}, #{operands[1].x86Operand(:int)}"
-                $asm.puts "je #{operands[2].asmLabel}"
-                $asm.puts "cvtsi2sd #{operands[1].x86Operand(:int)}, %xmm7"
-                $asm.puts "ucomisd #{operands[0].x86Operand(:double)}, %xmm7"
-                $asm.puts "jp #{operands[2].asmLabel}"
-                $asm.puts "jne #{operands[2].asmLabel}"
-            end
+            $asm.puts "cvttsd2si #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
+            $asm.puts "test#{x86Suffix(:int)} #{operands[1].x86Operand(:int)}, #{operands[1].x86Operand(:int)}"
+            $asm.puts "je #{operands[2].asmLabel}"
+            $asm.puts "cvtsi2sd #{operands[1].x86Operand(:int)}, %xmm7"
+            $asm.puts "ucomisd #{operands[0].x86Operand(:double)}, %xmm7"
+            $asm.puts "jp #{operands[2].asmLabel}"
+            $asm.puts "jne #{operands[2].asmLabel}"
         when "movdz"
-            if useX87
-                $asm.puts "fldzl"
-                $asm.puts "fstp #{operands[0].x87Operand(1)}"
-            else
-                $asm.puts "xorpd #{operands[0].x86Operand(:double)}, #{operands[0].x86Operand(:double)}"
-            end
+            $asm.puts "xorpd #{operands[0].x86Operand(:double)}, #{operands[0].x86Operand(:double)}"
         when "pop"
             operands.each {
                 | op |
@@ -1391,12 +1229,6 @@ class Instruction
         when "break"
             $asm.puts "int #{const(3)}"
         when "call"
-            if useX87
-                2.times {
-                    | offset |
-                    $asm.puts "ffree #{register("st")}(#{offset})"
-                }
-            end
             op = operands[0].x86CallOperand(:ptr)
             if operands[0].is_a? LabelReference
                 operands[0].used
@@ -1517,68 +1349,30 @@ class Instruction
         when "idivi"
             $asm.puts "idiv#{x86Suffix(:int)} #{operands[0].x86Operand(:int)}"
         when "fii2d"
-            if useX87
-                sp = RegisterID.new(nil, "sp")
-                $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(operands[0].x86Operand(:int), offsetRegister(-8, sp.x86Operand(:ptr)))}"
-                $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(operands[1].x86Operand(:int), offsetRegister(-4, sp.x86Operand(:ptr)))}"
-                $asm.puts "fld#{x86Suffix(:ptr)} #{getSizeString(:double)}#{offsetRegister(-8, sp.x86Operand(:ptr))}"
-                $asm.puts "fstp #{operands[2].x87Operand(1)}"
-            else
-                $asm.puts "movd #{operands[0].x86Operand(:int)}, #{operands[2].x86Operand(:double)}"
-                $asm.puts "movd #{operands[1].x86Operand(:int)}, %xmm7"
-                $asm.puts "psllq $32, %xmm7"
-                $asm.puts "por %xmm7, #{operands[2].x86Operand(:double)}"
-            end
+            $asm.puts "movd #{operands[0].x86Operand(:int)}, #{operands[2].x86Operand(:double)}"
+            $asm.puts "movd #{operands[1].x86Operand(:int)}, %xmm7"
+            $asm.puts "psllq $32, %xmm7"
+            $asm.puts "por %xmm7, #{operands[2].x86Operand(:double)}"
         when "fd2ii"
-            if useX87
-                sp = RegisterID.new(nil, "sp")
-                if (operands[0].x87DefaultStackPosition == 0)
-                    $asm.puts "fst#{x86Suffix(:ptr)} #{getSizeString(:double)}#{offsetRegister(-8, sp.x86Operand(:ptr))}"
-                else
-                    $asm.puts "fld #{operands[0].x87Operand(0)}"
-                    $asm.puts "fstpl -8(#{sp.x86Operand(:ptr)})"
-                end
-                $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(offsetRegister(-8, sp.x86Operand(:ptr)), operands[1].x86Operand(:int))}"
-                $asm.puts "mov#{x86Suffix(:int)} #{orderOperands(offsetRegister(-4, sp.x86Operand(:ptr)), operands[2].x86Operand(:int))}"
-            else
-                $asm.puts "movd #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
-                $asm.puts "movsd #{operands[0].x86Operand(:double)}, %xmm7"
-                $asm.puts "psrlq $32, %xmm7"
-                $asm.puts "movd %xmm7, #{operands[2].x86Operand(:int)}"
-            end
+            $asm.puts "movd #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:int)}"
+            $asm.puts "movsd #{operands[0].x86Operand(:double)}, %xmm7"
+            $asm.puts "psrlq $32, %xmm7"
+            $asm.puts "movd %xmm7, #{operands[2].x86Operand(:int)}"
         when "fq2d"
-            if useX87
-                sp = RegisterID.new(nil, "sp")
-                $asm.puts "movq #{operands[0].x86Operand(:quad)}, -8(#{sp.x86Operand(:ptr)})"
-                $asm.puts "fldl -8(#{sp.x86Operand(:ptr)})"
-                $asm.puts "fstp #{operands[1].x87Operand(1)}"
+            if !isIntelSyntax
+                $asm.puts "movq #{operands[0].x86Operand(:quad)}, #{operands[1].x86Operand(:double)}"
             else
-                if !isIntelSyntax
-                    $asm.puts "movq #{operands[0].x86Operand(:quad)}, #{operands[1].x86Operand(:double)}"
-                else
-                    # MASM does not accept register operands with movq.
-                    # Debugging shows that movd actually moves a qword when using MASM.
-                    $asm.puts "movd #{operands[1].x86Operand(:double)}, #{operands[0].x86Operand(:quad)}"
-                end
+                # MASM does not accept register operands with movq.
+                # Debugging shows that movd actually moves a qword when using MASM.
+                $asm.puts "movd #{operands[1].x86Operand(:double)}, #{operands[0].x86Operand(:quad)}"
             end
         when "fd2q"
-            if useX87
-                sp = RegisterID.new(nil, "sp")
-                if (operands[0].x87DefaultStackPosition == 0)
-                    $asm.puts "fst#{x86Suffix(:int)} #{getSizeString(:int)}#{offsetRegister(-8, sp.x86Operand(:ptr))}"
-                else
-                    $asm.puts "fld #{operands[0].x87Operand(0)}"
-                    $asm.puts "fstpl -8(#{sp.x86Operand(:ptr)})"
-                end
-                $asm.puts "movq -8(#{sp.x86Operand(:ptr)}), #{operands[1].x86Operand(:quad)}"
+            if !isIntelSyntax
+                $asm.puts "movq #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:quad)}"
             else
-                if !isIntelSyntax
-                    $asm.puts "movq #{operands[0].x86Operand(:double)}, #{operands[1].x86Operand(:quad)}"
-                else
-                    # MASM does not accept register operands with movq.
-                    # Debugging shows that movd actually moves a qword when using MASM.
-                    $asm.puts "movd #{operands[1].x86Operand(:quad)}, #{operands[0].x86Operand(:double)}"
-                end
+                # MASM does not accept register operands with movq.
+                # Debugging shows that movd actually moves a qword when using MASM.
+                $asm.puts "movd #{operands[1].x86Operand(:quad)}, #{operands[0].x86Operand(:double)}"
             end
         when "bo"
             $asm.puts "jo #{operands[0].asmLabel}"

@@ -58,7 +58,7 @@ public:
     unsigned version() const final { return m_version; }
     unsigned uniqueId() const final { return m_uniqueId; }
 
-    FontRanges fontRangesForFamily(const FontDescription&, const AtomicString&) final;
+    FontRanges fontRangesForFamily(const FontDescription&, const AtomString&) final;
     size_t fallbackFontCount() final;
     RefPtr<Font> fallbackFontAt(const FontDescription&, size_t) final;
 
@@ -77,10 +77,11 @@ public:
     void registerForInvalidationCallbacks(FontSelectorClient&) final;
     void unregisterForInvalidationCallbacks(FontSelectorClient&) final;
 
-    Document* document() const { return m_document; }
+    Document* document() const { return m_document.get(); }
 
     void beginLoadingFontSoon(CachedFont&);
 
+    FontFaceSet* optionalFontFaceSet();
     FontFaceSet& fontFaceSet();
 
     void incrementIsComputingRootStyleFont() { ++m_computingRootStyleFontCount; }
@@ -91,7 +92,7 @@ private:
 
     void dispatchInvalidationCallbacks();
 
-    void opportunisticallyStartFontDataURLLoading(const FontCascadeDescription&, const AtomicString& family) final;
+    void opportunisticallyStartFontDataURLLoading(const FontCascadeDescription&, const AtomString& family) final;
 
     void fontModified() final;
 
@@ -103,7 +104,7 @@ private:
     };
     Vector<PendingFontFaceRule> m_stagingArea;
 
-    Document* m_document;
+    WeakPtr<Document> m_document;
     RefPtr<FontFaceSet> m_fontFaceSet;
     Ref<CSSFontFaceSet> m_cssFontFaceSet;
     HashSet<FontSelectorClient*> m_clients;

@@ -66,9 +66,11 @@ _gst_sample_copy (GstSample * sample)
   copy = gst_sample_new (sample->buffer, sample->caps, &sample->segment,
       (sample->info) ? gst_structure_copy (sample->info) : NULL);
 
-  if (sample->buffer_list)
-    copy->buffer_list = (GstBufferList *)
-        gst_mini_object_ref (GST_MINI_OBJECT_CAST (sample->buffer_list));
+  if (sample->buffer_list) {
+    copy->buffer_list = gst_buffer_list_ref (sample->buffer_list);
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (copy->buffer_list),
+        GST_MINI_OBJECT_CAST (copy));
+  }
 
   return copy;
 }
@@ -78,16 +80,30 @@ _gst_sample_free (GstSample * sample)
 {
   GST_LOG ("free %p", sample);
 
-  if (sample->buffer)
+  if (sample->buffer) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (sample->buffer),
+        GST_MINI_OBJECT_CAST (sample));
     gst_buffer_unref (sample->buffer);
-  if (sample->caps)
+  }
+
+  if (sample->caps) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (sample->caps),
+        GST_MINI_OBJECT_CAST (sample));
     gst_caps_unref (sample->caps);
+  }
+
   if (sample->info) {
     gst_structure_set_parent_refcount (sample->info, NULL);
     gst_structure_free (sample->info);
   }
-  if (sample->buffer_list)
-    gst_mini_object_unref (GST_MINI_OBJECT_CAST (sample->buffer_list));
+  if (sample->buffer_list) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (sample->buffer_list),
+        GST_MINI_OBJECT_CAST (sample));
+    gst_buffer_list_unref (sample->buffer_list);
+  }
+#ifdef USE_POISONING
+  memset (sample, 0xff, sizeof (GstSample));
+#endif
 
   g_slice_free1 (sizeof (GstSample), sample);
 }
@@ -120,9 +136,19 @@ gst_sample_new (GstBuffer * buffer, GstCaps * caps, const GstSegment * segment,
       (GstMiniObjectCopyFunction) _gst_sample_copy, NULL,
       (GstMiniObjectFreeFunction) _gst_sample_free);
 
-  sample->buffer = buffer ? gst_buffer_ref (buffer) : NULL;
-  sample->caps = caps ? gst_caps_ref (caps) : NULL;
+  if (buffer) {
+    sample->buffer = gst_buffer_ref (buffer);
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (sample->buffer),
+        GST_MINI_OBJECT_CAST (sample));
+  }
 
+  if (caps) {
+    sample->caps = gst_caps_ref (caps);
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (sample->caps),
+        GST_MINI_OBJECT_CAST (sample));
+  }
+
+  /* FIXME 2.0: initialize with GST_FORMAT_UNDEFINED by default */
   if (segment)
     gst_segment_copy_into (segment, &sample->segment);
   else
@@ -244,7 +270,7 @@ gst_sample_get_buffer_list (GstSample * sample)
  * @sample: a #GstSample
  * @buffer_list: a #GstBufferList
  *
- * Set the buffer list associated with @sample
+ * Set the buffer list associated with @sample. @sample must be writable.
  *
  * Since: 1.6
  */
@@ -253,10 +279,156 @@ gst_sample_set_buffer_list (GstSample * sample, GstBufferList * buffer_list)
 {
   GstBufferList *old = NULL;
   g_return_if_fail (GST_IS_SAMPLE (sample));
-  old = sample->buffer_list;
-  sample->buffer_list = (GstBufferList *)
-      gst_mini_object_ref (GST_MINI_OBJECT_CAST (buffer_list));
+  g_return_if_fail (gst_sample_is_writable (sample));
 
-  if (old)
-    gst_mini_object_unref (GST_MINI_OBJECT_CAST (old));
+  old = sample->buffer_list;
+
+  if (old == buffer_list)
+    return;
+
+  if (buffer_list) {
+    sample->buffer_list = gst_buffer_list_ref (buffer_list);
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (sample->buffer_list),
+        GST_MINI_OBJECT_CAST (sample));
+  } else {
+    sample->buffer_list = NULL;
+  }
+
+  if (old) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (old),
+        GST_MINI_OBJECT_CAST (sample));
+    gst_buffer_list_unref (old);
+  }
+}
+
+/**
+ * gst_sample_set_buffer:
+ * @sample: A #GstSample
+ * @buffer: (transfer none): A #GstBuffer
+ *
+ * Set the buffer associated with @sample. @sample must be writable.
+ *
+ * Since: 1.16
+ */
+void
+gst_sample_set_buffer (GstSample * sample, GstBuffer * buffer)
+{
+  GstBuffer *old = NULL;
+
+  g_return_if_fail (GST_IS_SAMPLE (sample));
+  g_return_if_fail (gst_sample_is_writable (sample));
+
+  old = sample->buffer;
+
+  if (old == buffer)
+    return;
+
+  if (buffer) {
+    sample->buffer = gst_buffer_ref (buffer);
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (sample->buffer),
+        GST_MINI_OBJECT_CAST (sample));
+  } else {
+    sample->buffer = NULL;
+  }
+
+  if (old) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (old),
+        GST_MINI_OBJECT_CAST (sample));
+    gst_buffer_unref (old);
+  }
+}
+
+/**
+ * gst_sample_set_caps:
+ * @sample: A #GstSample
+ * @caps: (transfer none): A #GstCaps
+ *
+ * Set the caps associated with @sample. @sample must be writable.
+ *
+ * Since: 1.16
+ */
+void
+gst_sample_set_caps (GstSample * sample, GstCaps * caps)
+{
+  GstCaps *old = NULL;
+
+  g_return_if_fail (GST_IS_SAMPLE (sample));
+  g_return_if_fail (gst_sample_is_writable (sample));
+
+  old = sample->caps;
+
+  if (old == caps)
+    return;
+
+  if (caps) {
+    sample->caps = gst_caps_ref (caps);
+    gst_mini_object_add_parent (GST_MINI_OBJECT_CAST (sample->caps),
+        GST_MINI_OBJECT_CAST (sample));
+  } else {
+    sample->caps = NULL;
+  }
+
+  if (old) {
+    gst_mini_object_remove_parent (GST_MINI_OBJECT_CAST (old),
+        GST_MINI_OBJECT_CAST (sample));
+    gst_caps_unref (old);
+  }
+}
+
+/**
+ * gst_sample_set_segment:
+ * @sample: A #GstSample
+ * @segment: (transfer none): A #GstSegment
+ *
+ * Set the segment associated with @sample. @sample must be writable.
+ *
+ * Since: 1.16
+ */
+void
+gst_sample_set_segment (GstSample * sample, const GstSegment * segment)
+{
+  g_return_if_fail (GST_IS_SAMPLE (sample));
+  g_return_if_fail (gst_sample_is_writable (sample));
+
+  /* FIXME 2.0: initialize with GST_FORMAT_UNDEFINED by default */
+  if (segment)
+    gst_segment_copy_into (segment, &sample->segment);
+  else
+    gst_segment_init (&sample->segment, GST_FORMAT_TIME);
+}
+
+/**
+ * gst_sample_set_info:
+ * @sample: A #GstSample
+ * @info: (transfer full): A #GstStructure
+ *
+ * Set the info structure associated with @sample. @sample must be writable,
+ * and @info must not have a parent set already.
+ *
+ * Since: 1.16
+ */
+gboolean
+gst_sample_set_info (GstSample * sample, GstStructure * info)
+{
+  g_return_val_if_fail (GST_IS_SAMPLE (sample), FALSE);
+  g_return_val_if_fail (gst_sample_is_writable (sample), FALSE);
+
+  if (info) {
+    if (!gst_structure_set_parent_refcount (info,
+            &sample->mini_object.refcount))
+      goto had_parent;
+  }
+
+  if (sample->info) {
+    gst_structure_set_parent_refcount (sample->info, NULL);
+    gst_structure_free (sample->info);
+  }
+
+  sample->info = info;
+
+  return TRUE;
+
+had_parent:
+  g_warning ("structure is already owned by another object");
+  return FALSE;
 }

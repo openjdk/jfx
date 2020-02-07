@@ -44,7 +44,9 @@ G_STMT_START { \
 
 G_BEGIN_DECLS
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 extern GTypeDebugFlags _g_type_debug_flags;
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 typedef struct _GRealClosure  GRealClosure;
 struct _GRealClosure
@@ -79,16 +81,16 @@ void            _g_type_boxed_init      (GType          type,
                                          GBoxedFreeFunc free_func);
 
 gboolean    _g_closure_is_void (GClosure       *closure,
-                gpointer        instance);
+        gpointer        instance);
 gboolean    _g_closure_supports_invoke_va (GClosure       *closure);
 void        _g_closure_set_va_marshal (GClosure       *closure,
-                       GVaClosureMarshal marshal);
+               GVaClosureMarshal marshal);
 void        _g_closure_invoke_va (GClosure       *closure,
-                  GValue /*out*/ *return_value,
-                  gpointer        instance,
-                  va_list         args,
-                  int             n_params,
-                  GType          *param_types);
+          GValue /*out*/ *return_value,
+          gpointer        instance,
+          va_list         args,
+          int             n_params,
+          GType          *param_types);
 
 /**
  * _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE:
@@ -100,7 +102,7 @@ void        _g_closure_invoke_va (GClosure       *closure,
  *
  * Currently private.
  */
-#define _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)       _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TN, t_n, T_P) {_P_;} _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TN, t_n, T_P, _f_){_C_;} _G_DEFINE_TYPE_EXTENDED_END()
+#define _G_DEFINE_TYPE_EXTENDED_WITH_PRELUDE(TN, t_n, T_P, _f_, _P_, _C_)     _G_DEFINE_TYPE_EXTENDED_BEGIN_PRE (TN, t_n, T_P) {_P_;} _G_DEFINE_TYPE_EXTENDED_BEGIN_REGISTER (TN, t_n, T_P, _f_){_C_;} _G_DEFINE_TYPE_EXTENDED_END()
 
 G_END_DECLS
 

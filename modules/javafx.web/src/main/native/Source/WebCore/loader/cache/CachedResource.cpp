@@ -89,6 +89,7 @@ ResourceLoadPriority CachedResource::defaultPriorityForResourceType(Type type)
     case Type::SVGDocumentResource:
         return ResourceLoadPriority::Low;
     case Type::Beacon:
+    case Type::Ping:
         return ResourceLoadPriority::VeryLow;
     case Type::LinkPrefetch:
         return ResourceLoadPriority::VeryLow;
@@ -271,39 +272,37 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
         m_fragmentIdentifierForRequest = String();
     }
 
-    if (m_options.keepAlive) {
-        if (!cachedResourceLoader.keepaliveRequestTracker().tryRegisterRequest(*this)) {
-            setResourceError({ errorDomainWebKitInternal, 0, request.url(), "Reached maximum amount of queued data of 64Kb for keepalive requests"_s, ResourceError::Type::AccessControl });
-            failBeforeStarting();
-            return;
-        }
-        // FIXME: We should not special-case Beacon here.
-        if (shouldUsePingLoad(type())) {
-            ASSERT(m_originalRequest);
-            CachedResourceHandle<CachedResource> protectedThis(this);
-
-            // FIXME: Move beacon loads to normal subresource loading to get normal inspector request instrumentation hooks.
-            unsigned long identifier = frame.page()->progress().createUniqueIdentifier();
-            InspectorInstrumentation::willSendRequestOfType(&frame, identifier, frameLoader.activeDocumentLoader(), request, InspectorInstrumentation::LoadType::Beacon);
-
-            platformStrategies()->loaderStrategy()->startPingLoad(frame, request, m_originalRequest->httpHeaderFields(), m_options, m_options.contentSecurityPolicyImposition, [this, protectedThis = WTFMove(protectedThis), protectedFrame = makeRef(frame), identifier] (const ResourceError& error, const ResourceResponse& response) {
-                if (!response.isNull())
-                    InspectorInstrumentation::didReceiveResourceResponse(protectedFrame, identifier, protectedFrame->loader().activeDocumentLoader(), response, nullptr);
-                if (error.isNull()) {
-                    finishLoading(nullptr);
-                    NetworkLoadMetrics emptyMetrics;
-                    InspectorInstrumentation::didFinishLoading(protectedFrame.ptr(), protectedFrame->loader().activeDocumentLoader(), identifier, emptyMetrics, nullptr);
-                } else {
-                    setResourceError(error);
-                    this->error(LoadError);
-                    InspectorInstrumentation::didFailLoading(protectedFrame.ptr(), protectedFrame->loader().activeDocumentLoader(), identifier, error);
-                }
-            });
-            return;
-        }
+    if (m_options.keepAlive && type() != Type::Ping && !cachedResourceLoader.keepaliveRequestTracker().tryRegisterRequest(*this)) {
+        setResourceError({ errorDomainWebKitInternal, 0, request.url(), "Reached maximum amount of queued data of 64Kb for keepalive requests"_s, ResourceError::Type::AccessControl });
+        failBeforeStarting();
+        return;
     }
 
-    platformStrategies()->loaderStrategy()->loadResource(*cachedResourceLoader.documentLoader(), *this, WTFMove(request), m_options, [this, protectedThis = CachedResourceHandle<CachedResource>(this), frame = makeRef(frame), loggingAllowed = cachedResourceLoader.isAlwaysOnLoggingAllowed()] (RefPtr<SubresourceLoader>&& loader) {
+    // FIXME: Deprecate that code path.
+    if (m_options.keepAlive && shouldUsePingLoad(type()) && platformStrategies()->loaderStrategy()->usePingLoad()) {
+        ASSERT(m_originalRequest);
+        CachedResourceHandle<CachedResource> protectedThis(this);
+
+        unsigned long identifier = frame.page()->progress().createUniqueIdentifier();
+        InspectorInstrumentation::willSendRequestOfType(&frame, identifier, frameLoader.activeDocumentLoader(), request, InspectorInstrumentation::LoadType::Beacon);
+
+        platformStrategies()->loaderStrategy()->startPingLoad(frame, request, m_originalRequest->httpHeaderFields(), m_options, m_options.contentSecurityPolicyImposition, [this, protectedThis = WTFMove(protectedThis), protectedFrame = makeRef(frame), identifier] (const ResourceError& error, const ResourceResponse& response) {
+            if (!response.isNull())
+                InspectorInstrumentation::didReceiveResourceResponse(protectedFrame, identifier, protectedFrame->loader().activeDocumentLoader(), response, nullptr);
+            if (!error.isNull()) {
+                setResourceError(error);
+                this->error(LoadError);
+                InspectorInstrumentation::didFailLoading(protectedFrame.ptr(), protectedFrame->loader().activeDocumentLoader(), identifier, error);
+                return;
+            }
+            finishLoading(nullptr);
+            NetworkLoadMetrics emptyMetrics;
+            InspectorInstrumentation::didFinishLoading(protectedFrame.ptr(), protectedFrame->loader().activeDocumentLoader(), identifier, emptyMetrics, nullptr);
+        });
+        return;
+    }
+
+    platformStrategies()->loaderStrategy()->loadResource(frame, *this, WTFMove(request), m_options, [this, protectedThis = CachedResourceHandle<CachedResource>(this), frame = makeRef(frame), loggingAllowed = cachedResourceLoader.isAlwaysOnLoggingAllowed()] (RefPtr<SubresourceLoader>&& loader) {
         m_loader = WTFMove(loader);
         if (!m_loader) {
             RELEASE_LOG_IF(loggingAllowed, Network, "%p - CachedResource::load: Unable to create SubresourceLoader (frame = %p)", this, frame.ptr());
@@ -384,7 +383,12 @@ void CachedResource::cancelLoad()
     if (!isLoading() && !stillNeedsLoad())
         return;
 
-    setStatus(LoadError);
+    auto* documentLoader = (m_loader && m_loader->frame()) ? m_loader->frame()->loader().activeDocumentLoader() : nullptr;
+    if (m_options.keepAlive && (!documentLoader || documentLoader->isStopping()))
+        m_error = { };
+    else
+        setStatus(LoadError);
+
     setLoading(false);
     checkNotify();
 }
@@ -542,7 +546,7 @@ bool CachedResource::addClientToSet(CachedResourceClient& client)
         // Therefore, rather than immediately sending callbacks on a cache hit like other CachedResources,
         // we schedule the callbacks and ensure we never finish synchronously.
         ASSERT(!m_clientsAwaitingCallback.contains(&client));
-        m_clientsAwaitingCallback.add(&client, std::make_unique<Callback>(*this, client));
+        m_clientsAwaitingCallback.add(&client, makeUnique<Callback>(*this, client));
         return false;
     }
 

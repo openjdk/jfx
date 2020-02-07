@@ -38,8 +38,9 @@
     CustomPut,
     CustomPutOnPrototype,
     CustomToStringName,
-    GenerateIsReachable=ImplFrame,
+    GenerateIsReachable=ReachableFromDOMWindow,
     IsImmutablePrototypeExoticObject,
+    ImplementationLacksVTable,
     Unforgeable
 ] interface Location {
     [SetterCallWith=ActiveWindow&FirstWindow, DoNotCheckSecurityOnSetter] stringifier attribute USVString href;
