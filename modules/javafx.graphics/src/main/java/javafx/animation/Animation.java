@@ -417,7 +417,7 @@ public abstract class Animation {
 
     /**
      * Read-only variable to indicate the total duration of this
-     * {@code Animation}, including repeats. A {@code Animation} with a {@code cycleCount}
+     * {@code Animation}, including repeats. An {@code Animation} with a {@code cycleCount}
      * of {@code Animation.INDEFINITE} will have a {@code totalDuration} of
      * {@code Duration.INDEFINITE}.
      *
@@ -961,7 +961,7 @@ public abstract class Animation {
 
     /**
      * Stops the animation and resets the play head to its initial position. If
-     * the animation is not currently running, this method has no effect.
+     * the animation is already stopped, this method has no effect.
      * <p>
      * Note: <ul>
      * <li>{@code stop()} is an asynchronous call, the {@code Animation} may not stop
