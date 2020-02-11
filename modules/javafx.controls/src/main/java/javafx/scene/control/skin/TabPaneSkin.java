@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2210,17 +2210,17 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         if (dragState == DragState.START) {
             // No drag action was performed.
             resetDrag();
-            return;
-        }
-        // Animate tab header being dragged to its final position.
-        dragHeaderSourceX = dragTabHeader.getLayoutX();
-        dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
-        dragHeaderAnim.playFromStart();
+        } else if (dragState == DragState.REORDER) {
+            // Animate tab header being dragged to its final position.
+            dragHeaderSourceX = dragTabHeader.getLayoutX();
+            dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
+            dragHeaderAnim.playFromStart();
 
-        // Reorder the tab list.
-        if (dragHeaderStartX != dragHeaderDestX) {
-            ((TabObservableList<Tab>) getSkinnable().getTabs()).reorder(dragTabHeader.tab, swapTab);
-            swapTab = null;
+            // Reorder the tab list.
+            if (dragHeaderStartX != dragHeaderDestX) {
+                ((TabObservableList<Tab>) getSkinnable().getTabs()).reorder(dragTabHeader.tab, swapTab);
+                swapTab = null;
+            }
         }
     }
 

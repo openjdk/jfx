@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -994,12 +994,13 @@ final public class WebView extends Parent {
         }
 
         final Integer id = idMap.get(type);
-        if (id == null) {
+        final Integer button = idMap.get(ev.getButton());
+        if (id == null || button == null) {
             // not supported by webkit
             return;
         }
         WCMouseEvent mouseEvent =
-                new WCMouseEvent(id, idMap.get(ev.getButton()),
+                new WCMouseEvent(id, button,
                     ev.getClickCount(), (int) x, (int) y,
                     (int) screenX, (int) screenY,
                     System.currentTimeMillis(),
