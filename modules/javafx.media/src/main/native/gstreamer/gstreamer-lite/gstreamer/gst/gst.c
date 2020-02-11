@@ -122,10 +122,12 @@
 
 #include "gst.h"
 
+#ifdef GSTREAMER_LITE
 #ifdef STATIC_BUILD
 gboolean fxplugins_init (GstPlugin * plugin);
 gboolean fxavplugins_init (GstPlugin * plugin);
-#endif
+#endif // STATIC_BUILD
+#endif // GSTREAMER_LITE
 
 #define GST_CAT_DEFAULT GST_CAT_GST_INIT
 
