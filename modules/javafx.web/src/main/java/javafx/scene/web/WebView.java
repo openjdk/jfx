@@ -1005,13 +1005,13 @@ final public class WebView extends Parent {
         }
 
         final Integer id = ID_MAP.get(type);
-        final Integer button = idMap.get(ev.getButton());
+        final Integer button = ID_MAP.get(ev.getButton());
         if (id == null || button == null) {
             // not supported by webkit
             return;
         }
         WCMouseEvent mouseEvent =
-                new WCMouseEvent(ID_MAP, button,
+                new WCMouseEvent(id, button,
                     ev.getClickCount(), (int) x, (int) y,
                     (int) screenX, (int) screenY,
                     System.currentTimeMillis(),
@@ -1052,7 +1052,7 @@ final public class WebView extends Parent {
         }
 
         WCKeyEvent keyEvent = new WCKeyEvent(
-                idMap.get(ev.getEventType()),
+                ID_MAP.get(ev.getEventType()),
                 text,
                 keyIdentifier,
                 windowsVirtualKeyCode,

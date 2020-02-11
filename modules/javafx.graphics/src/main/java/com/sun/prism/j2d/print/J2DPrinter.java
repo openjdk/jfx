@@ -630,9 +630,9 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private static Map<MediaSizeName, Paper> predefinedPaperMap;
-    private static Map<MediaTray, PaperSource> preDefinedTrayMap;
+    private static Map<MediaTray, PaperSource> predefinedTrayMap;
 
-    private static void initPrefinedMediaMaps() {
+    private static void initPredefinedMediaMaps() {
         if (predefinedPaperMap == null) {
             // North American papers
             predefinedPaperMap = Map.ofEntries(
@@ -662,8 +662,8 @@ public class J2DPrinter implements PrinterImpl {
                 Map.entry(MediaSizeName.JAPANESE_POSTCARD,     Paper.JAPANESE_POSTCARD));
         }
 
-        if (preDefinedTrayMap == null) {
-            preDefinedTrayMap = Map.of(
+        if (predefinedTrayMap == null) {
+            predefinedTrayMap = Map.of(
                 MediaTray.MAIN,           PaperSource.MAIN,
                 MediaTray.MANUAL,         PaperSource.MANUAL,
                 MediaTray.BOTTOM,         PaperSource.BOTTOM,
@@ -676,7 +676,7 @@ public class J2DPrinter implements PrinterImpl {
     }
 
     private void populateMedia() {
-        initPrefinedMediaMaps();
+        initPredefinedMediaMaps();
 
         if (paperSet != null) {
             return; // already inited
@@ -754,7 +754,7 @@ public class J2DPrinter implements PrinterImpl {
 
     private synchronized final PaperSource addPaperSource(MediaTray tray) {
 
-        PaperSource source = preDefinedTrayMap.get(tray);
+        PaperSource source = predefinedTrayMap.get(tray);
 
         if (source == null) {
             source = PrintHelper.createPaperSource(tray.toString());
