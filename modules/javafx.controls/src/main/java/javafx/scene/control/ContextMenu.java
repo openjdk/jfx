@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.scene.control.ContextMenuHelper;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -120,6 +121,26 @@ root.getChildren().add(textField);
 @IDProperty("id")
 public class ContextMenu extends PopupControl {
 
+    static {
+        ContextMenuHelper.setContextMenuAccessor(new ContextMenuHelper.ContextMenuAccessor() {
+
+            @Override
+            public Side getSide(ContextMenu contextMenu) {
+                return contextMenu.side;
+            }
+
+            @Override
+            public double getDeltaX(ContextMenu contextMenu) {
+                return contextMenu.deltaX;
+            }
+
+            @Override
+            public double getDeltaY(ContextMenu contextMenu) {
+                return contextMenu.deltaY;
+            }
+        });
+    }
+
     /***************************************************************************
      *                                                                         *
      * Fields                                                                  *
@@ -127,7 +148,9 @@ public class ContextMenu extends PopupControl {
      **************************************************************************/
 
     private boolean showRelativeToWindow = false;
-
+    private double deltaX;
+    private double deltaY;
+    private Side side;
 
 
     /***************************************************************************
@@ -143,6 +166,7 @@ public class ContextMenu extends PopupControl {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAutoHide(true);
         setConsumeAutoHidingEvents(false);
+        ContextMenuHelper.initHelper(this);
     }
 
     /**
@@ -248,9 +272,9 @@ public class ContextMenu extends PopupControl {
      public void show(Node anchor, Side side, double dx, double dy) {
         if (anchor == null) return;
         if (getItems().size() == 0) return;
-        getProperties().put("dx", dx);
-        getProperties().put("dy", dy);
-        getProperties().put("SIDE", side);
+        deltaX = dx;
+        deltaY = dy;
+        this.side = side;
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
         // FIXME because Side is not yet in javafx.geometry, we have to convert
         // to the old HPos/VPos API here, as Utils can not refer to Side in the

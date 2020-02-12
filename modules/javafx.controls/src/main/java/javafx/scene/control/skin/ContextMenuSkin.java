@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
+import com.sun.javafx.scene.control.ContextMenuHelper;
 import com.sun.javafx.scene.control.EmbeddedTextContextMenuContent;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.skin.Utils;
@@ -220,12 +221,12 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         Point2D ownerPos = getOwnerPosition();
         if (ownerPos == null) return;
 
-        final Side side = (Side) contextMenu.getProperties().get("SIDE");
+        final Side side = ContextMenuHelper.getSide(contextMenu);
         if (side == Side.TOP) {
             // shifting vertically
             final double rootPrefHeight = root.prefHeight(-1);
             shiftY = prefHeight - rootPrefHeight;
-            double dy = (double) contextMenu.getProperties().get("dy");
+            double dy = ContextMenuHelper.getDeltaY(contextMenu);
             if (shiftY != 0 && (contextMenu.getY() + rootPrefHeight + dy) != ownerPos.getY()) {
                 contextMenu.setY(contextMenu.getY() + shiftY);
             }
@@ -235,7 +236,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
             // shifting horizontally
             final double rootPrefWidth = root.prefWidth(-1);
             shiftX = prefWidth - rootPrefWidth;
-            double dx = (double) contextMenu.getProperties().get("dx");
+            double dx = ContextMenuHelper.getDeltaX(contextMenu);
             if (shiftX != 0 && (contextMenu.getX() + rootPrefWidth + dx) != ownerPos.getX()) {
                 contextMenu.setX(contextMenu.getX() + shiftX);
             }
