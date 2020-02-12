@@ -258,7 +258,7 @@ public abstract class ConnectionHolder {
         boolean isSeekable() {
             return (urlConnection instanceof HttpURLConnection) ||
                    (urlConnection instanceof JarURLConnection) ||
-                   isJRT();
+                   isJRT() || isResource();
         }
 
         boolean isRandomAccess() {
@@ -299,7 +299,7 @@ public abstract class ConnectionHolder {
                         Locator.closeConnection(tmpURLConnection);
                     }
                 }
-            } else if ((urlConnection instanceof JarURLConnection) || isJRT()) {
+            } else if ((urlConnection instanceof JarURLConnection) || isJRT() || isResource()) {
                 try {
                     closeConnection();
 
@@ -342,6 +342,12 @@ public abstract class ConnectionHolder {
             String scheme = uri.getScheme().toLowerCase();
             return "jrt".equals(scheme);
         }
+
+        private boolean isResource() {
+            String scheme = uri.getScheme().toLowerCase();
+            return "resource".equals(scheme);
+        }
+
     }
 
     // A "ConnectionHolder" that "reads" from a ByteBuffer, generally loaded from
