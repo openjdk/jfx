@@ -27,6 +27,7 @@ package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.ContextMenuContentShim;
+import javafx.geometry.Bounds;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -619,5 +620,49 @@ public class ContextMenuTest {
         assertEquals(0, getCurrentFocusedIndex(cm));
         assertEquals("Expected " + item1.getText() + ", found " + focusedItem.getText(),
                 item1, focusedItem);
+    }
+
+    @Test public void test_position_showOnScreen() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn,100, 100);
+
+        assertEquals(cm.getAnchorX(), 100, 0.0);
+        assertEquals(cm.getAnchorY(), 100, 0.0);
+    }
+
+    @Test public void test_position_showOnTop() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.TOP, 0, 0);
+
+        final Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        assertEquals(cm.getAnchorX(), anchorBounds.getMinX(), 0.0);
+        assertEquals(cm.getAnchorY() + cm.getHeight(), anchorBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_position_showOnRight() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.RIGHT, 0, 0);
+
+        final Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        assertEquals(cm.getAnchorX(), anchorBounds.getMaxX(), 0.0);
+        assertEquals(cm.getAnchorY(), anchorBounds.getMinY(), 0.0);
+    }
+
+    @Test public void test_position_showOnBottom() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.BOTTOM, 0, 0);
+
+        final Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        assertEquals(cm.getAnchorX(), anchorBounds.getMinX(), 0.0);
+        assertEquals(cm.getAnchorY(), anchorBounds.getMaxY(), 0.0);
+    }
+
+    @Test public void test_position_showOnLeft() {
+        ContextMenu cm = createContextMenu(false);
+        cm.show(anchorBtn, Side.LEFT, 0, 0);
+
+        final Bounds anchorBounds = anchorBtn.localToScreen(anchorBtn.getLayoutBounds());
+        assertEquals(cm.getAnchorX() + cm.getWidth(), anchorBounds.getMinX(), 0.0);
+        assertEquals(cm.getAnchorY(), anchorBounds.getMinY(), 0.0);
     }
 }
