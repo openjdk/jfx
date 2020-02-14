@@ -118,7 +118,7 @@ public class ObjectPropertyLeakTest {
         for (int i = 0; i < OBJ_COUNT; i++) {
             // Create original and wrapped property objects
             final ObjectProperty<Boolean> origProp = new SimpleObjectProperty<>(true);
-            BooleanProperty wrappedProp = BooleanProperty.booleanProperty(origProp);
+            final BooleanProperty wrappedProp = BooleanProperty.booleanProperty(origProp);
 
             // Save reference to original and wrapped objects
             origList.add(origProp);
@@ -154,7 +154,7 @@ public class ObjectPropertyLeakTest {
         for (int i = 0; i < OBJ_COUNT; i++) {
             // Create original and wrapped property objects
             final ObjectProperty<Double> origProp = new SimpleObjectProperty<>(1.0);
-            DoubleProperty wrappedProp = DoubleProperty.doubleProperty(origProp);
+            final DoubleProperty wrappedProp = DoubleProperty.doubleProperty(origProp);
 
             // Save reference to original and wrapped objects
             origList.add(origProp);
@@ -190,7 +190,7 @@ public class ObjectPropertyLeakTest {
         for (int i = 0; i < OBJ_COUNT; i++) {
             // Create original and wrapped property objects
             final ObjectProperty<Float> origProp = new SimpleObjectProperty<>(1.0f);
-            FloatProperty wrappedProp = FloatProperty.floatProperty(origProp);
+            final FloatProperty wrappedProp = FloatProperty.floatProperty(origProp);
 
             // Save reference to original and wrapped objects
             origList.add(origProp);
@@ -226,7 +226,7 @@ public class ObjectPropertyLeakTest {
         for (int i = 0; i < OBJ_COUNT; i++) {
             // Create original and wrapped property objects
             final ObjectProperty<Integer> origProp = new SimpleObjectProperty<>(1);
-            IntegerProperty wrappedProp = IntegerProperty.integerProperty(origProp);
+            final IntegerProperty wrappedProp = IntegerProperty.integerProperty(origProp);
 
             // Save reference to original and wrapped objects
             origList.add(origProp);
@@ -262,7 +262,7 @@ public class ObjectPropertyLeakTest {
         for (int i = 0; i < OBJ_COUNT; i++) {
             // Create original and wrapped property objects
             final ObjectProperty<Long> origProp = new SimpleObjectProperty<>(1L);
-            LongProperty wrappedProp = LongProperty.longProperty(origProp);
+            final LongProperty wrappedProp = LongProperty.longProperty(origProp);
 
             // Save reference to original and wrapped objects
             origList.add(origProp);
