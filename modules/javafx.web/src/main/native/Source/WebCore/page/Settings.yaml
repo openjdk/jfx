@@ -122,9 +122,6 @@ javaScriptCanAccessClipboard:
   initial: false
 shouldPrintBackgrounds:
   initial: false
-usesDashboardBackwardCompatibilityMode:
-  initial: false
-  conditional: DASHBOARD_SUPPORT
 clipboardAccessPolicy:
   type: ClipboardAccessPolicy
   initial: ClipboardAccessPolicy::RequiresUserGesture
@@ -163,10 +160,22 @@ resourceUsageOverlayVisible:
 disableScreenSizeOverride:
   initial: false
 
+googleAntiFlickerOptimizationQuirkEnabled:
+  initial: true
+
 # This is a quirk we are pro-actively applying to old applications. It changes keyboard event dispatching,
 # making keyIdentifier available on keypress events, making charCode available on keydown/keyup events,
 # and getting keypress dispatched in more cases.
 needsKeyboardEventDisambiguationQuirks:
+  initial: false
+
+# This is an iOS-specific quirk. Unlike Mac, keyboard operations are asynchronous and hence a DOM update as
+# a result of text insertion or deletion does not occur within the same event loop iteration as a dispatched
+# DOM keydown event. Some sites, notably Google Sheets, schedule timers on keypress and expect on a DOM update
+# to have occurred on expiration. When enabled, this quirk puts all such scheduled timers in a holding tank
+# until the keyboard performs the insertion or deletion. This gives Google Sheets the illusion that the DOM
+# update happened within the same event loop iteration that the keypress event was dispatched in.
+needsDeferKeyDownAndKeyPressTimersUntilNextEditingCommandQuirk:
   initial: false
 
 treatsAnyTextCSSLinkAsStylesheet:
@@ -235,8 +244,6 @@ webGLErrorsToConsoleEnabled:
   initial: true
 unhandledPromiseRejectionToConsoleEnabled:
   initial: true
-forceSoftwareWebGLRendering:
-  initial: false
 forceWebGLUsesLowPower:
   initial: false
 accelerated2dCanvasEnabled:
@@ -351,6 +358,9 @@ mediaEnabled:
 DOMPasteAllowed:
   initial: false
 
+domPasteAccessRequestsEnabled:
+  initial: false
+
 # When enabled, window.blur() does not change focus, and
 # window.focus() only changes focus when invoked from the context that
 # created the window.
@@ -391,6 +401,11 @@ asyncFrameScrollingEnabled:
 asyncOverflowScrollingEnabled:
   initial: false
   onChange: setNeedsRelayoutAllFrames
+
+legacyOverflowScrollingTouchEnabled:
+  initial: true
+  onChange: setNeedsRelayoutAllFrames
+  conditional: OVERFLOW_SCROLLING_TOUCH
 
 webSecurityEnabled:
   initial: true
@@ -439,6 +454,10 @@ minimumZoomFontSize:
   type: float
   initial: defaultMinimumZoomFontSize()
   conditional: TEXT_AUTOSIZING
+textAutosizingUsesIdempotentMode:
+  initial: false
+  onChange: setNeedsRecalcStyleInAllFrames
+  conditional: TEXT_AUTOSIZING
 
 subpixelAntialiasedLayerTextEnabled:
   initial: false
@@ -449,6 +468,9 @@ simpleLineLayoutEnabled:
 simpleLineLayoutDebugBordersEnabled:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
+
+contentChangeObserverEnabled:
+  initial: defaultContentChangeObserverEnabled()
 
 subpixelCSSOMElementMetricsEnabled:
   initial: false
@@ -575,11 +597,14 @@ layoutViewportHeightExpansionFactor:
 
 # Runtime-enabled features
 visualViewportEnabled:
-  initial: false
+  initial: true
   onChange: setNeedsRecalcStyleInAllFrames
 
 visualViewportAPIEnabled:
   initial: false
+
+syntheticEditingCommandsEnabled:
+  initial: true
 
 CSSOMViewScrollingAPIEnabled:
   initial: false
@@ -653,15 +678,18 @@ fontLoadTimingOverride:
 shouldIgnoreFontLoadCompletions:
   initial: false
 
-paymentRequestEnabled:
-  initial: false
-  conditional: PAYMENT_REQUEST
-applePayEnabled:
-  initial: false
-  conditional: APPLE_PAY
 applePayCapabilityDisclosureAllowed:
-  initial: true
   conditional: APPLE_PAY
+  initial: true
+applePayEnabled:
+  conditional: APPLE_PAY
+  initial: defaultApplePayEnabled
+applePayRemoteUIEnabled:
+  conditional: APPLE_PAY_REMOTE_UI
+  initial: true
+paymentRequestEnabled:
+  conditional: PAYMENT_REQUEST
+  initial: false
 
 javaEnabled:
   initial: false
@@ -724,12 +752,22 @@ shouldAllowUserInstalledFonts:
   initial: true
   onChange: setNeedsRecalcStyleInAllFrames
 
+shouldAllowDesignSystemUIFonts:
+  initial: false
+  onChange: setNeedsRecalcStyleInAllFrames
+
+resizeObserverEnabled:
+  initial: false
+  conditional: RESIZE_OBSERVER
+
 # Only set by Layout Tests.
 mediaTypeOverride:
   type: String
   initial: '"screen"'
   onChange: mediaTypeOverrideChanged
 
+animatedImageDebugCanvasDrawingEnabled:
+  initial: false
 
 fontRenderingMode:
   type: FontRenderingMode
@@ -768,6 +806,11 @@ deviceOrientationEventEnabled:
   initial: true
   conditional: DEVICE_ORIENTATION
 
+deviceOrientationPermissionAPIEnabled:
+  type: bool
+  initial: false
+  conditional: DEVICE_ORIENTATION
+
 shouldEnableTextAutosizingBoost:
   type: bool
   initial: false
@@ -777,13 +820,13 @@ shouldEnableTextAutosizingBoost:
 mediaCapabilitiesEnabled:
   initial: false
 
+mediaCapabilitiesExtensionsEnabled:
+  type: bool
+  initial: false
+
 clientCoordinatesRelativeToLayoutViewport:
   initial: false
   onChange: setNeedsRecalcStyleInAllFrames
-
-accessibilityEventsEnabled:
-  initial: true
-  conditional: ACCESSIBILITY_EVENTS
 
 incompleteImageBorderEnabled:
   initial: false
@@ -803,6 +846,32 @@ editableImagesEnabled:
 
 adClickAttributionEnabled:
   initial: false
+
+coreMathMLEnabled:
+  initial: false
+  onChange: setNeedsRecalcStyleInAllFrames
+
+blockingOfSmallPluginsEnabled:
+  initial: true
+
+shouldDecidePolicyBeforeLoadingQuickLookPreview:
+  initial: false
+
+shouldDispatchSyntheticMouseEventsWhenModifyingSelection:
+  initial: false
+
+shouldDispatchSyntheticMouseOutAfterSyntheticClick:
+  initial: false
+
+allowViewportShrinkToFitContent:
+  initial: true
+
+webRTCEncryptionEnabled:
+  initial: true
+  inspectorOverride: true
+
+isITPSessionSwitchingEnabled:
+  initial: true
 
 # Deprecated
 

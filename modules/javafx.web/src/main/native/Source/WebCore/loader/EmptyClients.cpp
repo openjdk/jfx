@@ -34,6 +34,7 @@
 #include "ColorChooser.h"
 #include "ContextMenuClient.h"
 #include "CookieJar.h"
+#include "DOMPasteAccess.h"
 #include "DataListSuggestionPicker.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
@@ -108,6 +109,10 @@ class EmptyContextMenuClient final : public ContextMenuClient {
     void searchWithSpotlight() final { }
 #endif
 
+#if PLATFORM(GTK)
+    void insertEmoji(Frame&) final { }
+#endif
+
 #if USE(ACCESSIBILITY_CONTEXT_MENUS)
     void showContextMenu() final { }
 #endif
@@ -117,9 +122,9 @@ class EmptyContextMenuClient final : public ContextMenuClient {
 
 class EmptyDatabaseProvider final : public DatabaseProvider {
 #if ENABLE(INDEXED_DATABASE)
-    IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(const PAL::SessionID&) final
+    IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(const PAL::SessionID& sessionID) final
     {
-        static auto& sharedConnection = InProcessIDBServer::create().leakRef();
+        static auto& sharedConnection = InProcessIDBServer::create(sessionID).leakRef();
         return sharedConnection.connectionToServer();
     }
 #endif
@@ -130,6 +135,7 @@ class EmptyDiagnosticLoggingClient final : public DiagnosticLoggingClient {
     void logDiagnosticMessageWithResult(const String&, const String&, DiagnosticLoggingResultType, ShouldSample) final { }
     void logDiagnosticMessageWithValue(const String&, const String&, double, unsigned, ShouldSample) final { }
     void logDiagnosticMessageWithEnhancedPrivacy(const String&, const String&, ShouldSample) final { }
+    void logDiagnosticMessageWithValueDictionary(const String&, const String&, const ValueDictionary&, ShouldSample) final { }
 };
 
 #if ENABLE(DRAG_SUPPORT)
@@ -182,13 +188,14 @@ private:
     void willWriteSelectionToPasteboard(Range*) final { }
     void didWriteSelectionToPasteboard() final { }
     void getClientPasteboardDataForRange(Range*, Vector<String>&, Vector<RefPtr<SharedBuffer>>&) final { }
-    String replacementURLForResource(Ref<SharedBuffer>&&, const String&) final { return { }; }
     void requestCandidatesForSelection(const VisibleSelection&) final { }
     void handleAcceptedCandidateWithSoftSpaces(TextCheckingResult) final { }
 
     void registerUndoStep(UndoStep&) final;
     void registerRedoStep(UndoStep&) final;
     void clearUndoRedoOperations() final { }
+
+    DOMPasteAccessResponse requestDOMPasteAccess(const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
 
     bool canCopyCut(Frame*, bool defaultValue) const final { return defaultValue; }
     bool canPaste(Frame*, bool defaultValue) const final { return defaultValue; }
@@ -198,8 +205,8 @@ private:
     void undo() final { }
     void redo() final { }
 
-    void handleKeyboardEvent(KeyboardEvent*) final { }
-    void handleInputMethodKeydown(KeyboardEvent*) final { }
+    void handleKeyboardEvent(KeyboardEvent&) final { }
+    void handleInputMethodKeydown(KeyboardEvent&) final { }
 
     void textFieldDidBeginEditing(Element*) final { }
     void textFieldDidEndEditing(Element*) final { }
@@ -261,6 +268,8 @@ private:
     void willSetInputMethodState() final { }
     void setInputMethodState(bool) final { }
 
+    bool canShowFontPanel() const final { return false; }
+
     class EmptyTextCheckerClient final : public TextCheckerClient {
         bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const final { return true; }
         void ignoreWordInSpellDocument(const String&) final { }
@@ -314,8 +323,8 @@ class EmptyInspectorClient final : public InspectorClient {
 class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient {
     Optional<String> validatedPaymentNetwork(const String&) final { return WTF::nullopt; }
     bool canMakePayments() final { return false; }
-    void canMakePaymentsWithActiveCard(const String&, const String&, WTF::Function<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)] { completionHandler(false); }); }
-    void openPaymentSetup(const String&, const String&, WTF::Function<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)] { completionHandler(false); }); }
+    void canMakePaymentsWithActiveCard(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable { completionHandler(false); }); }
+    void openPaymentSetup(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable { completionHandler(false); }); }
     bool showPaymentUI(const URL&, const Vector<URL>&, const ApplePaySessionPaymentRequest&) final { return false; }
     void completeMerchantValidation(const PaymentMerchantSession&) final { }
     void completeShippingMethodSelection(Optional<ShippingMethodUpdate>&&) final { }
@@ -325,6 +334,7 @@ class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient {
     void cancelPaymentSession() final { }
     void abortPaymentSession() final { }
     void paymentCoordinatorDestroyed() final { }
+    bool supportsUnrestrictedApplePay() const final { return false; }
 };
 
 #endif
@@ -362,8 +372,8 @@ public:
 
 private:
     PopupMenu* popupMenu() final { return m_popup.ptr(); }
-    void saveRecentSearches(const AtomicString&, const Vector<RecentSearch>&) final { }
-    void loadRecentSearches(const AtomicString&, Vector<RecentSearch>&) final { }
+    void saveRecentSearches(const AtomString&, const Vector<RecentSearch>&) final { }
+    void loadRecentSearches(const AtomString&, Vector<RecentSearch>&) final { }
     bool enabled() final { return false; }
 
     Ref<EmptyPopupMenu> m_popup;
@@ -380,18 +390,26 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
         bool contains(const String&) final { return false; }
         StorageType storageType() const final { return StorageType::Local; }
         size_t memoryBytesUsedByCache() final { return 0; }
-        const SecurityOriginData& securityOrigin() const final { static NeverDestroyed<SecurityOriginData> origin; return origin.get(); }
     };
 
     struct EmptyStorageNamespace final : public StorageNamespace {
+        explicit EmptyStorageNamespace(PAL::SessionID sessionID)
+            : m_sessionID(sessionID)
+        {
+        }
+    private:
         Ref<StorageArea> storageArea(const SecurityOriginData&) final { return adoptRef(*new EmptyStorageArea); }
-        Ref<StorageNamespace> copy(Page*) final { return adoptRef(*new EmptyStorageNamespace); }
+        Ref<StorageNamespace> copy(Page*) final { return adoptRef(*new EmptyStorageNamespace { m_sessionID }); }
+        PAL::SessionID sessionID() const final { return m_sessionID; }
+        void setSessionIDForTesting(PAL::SessionID sessionID) final { m_sessionID = sessionID; };
+
+        PAL::SessionID m_sessionID;
     };
 
     Ref<StorageNamespace> createSessionStorageNamespace(Page&, unsigned) final;
-    Ref<StorageNamespace> createLocalStorageNamespace(unsigned) final;
-    Ref<StorageNamespace> createEphemeralLocalStorageNamespace(Page&, unsigned) final;
-    Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned) final;
+    Ref<StorageNamespace> createLocalStorageNamespace(unsigned, PAL::SessionID) final;
+    Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned, PAL::SessionID) final;
+
 };
 
 class EmptyUserContentProvider final : public UserContentProvider {
@@ -406,7 +424,7 @@ class EmptyUserContentProvider final : public UserContentProvider {
 };
 
 class EmptyVisitedLinkStore final : public VisitedLinkStore {
-    bool isLinkVisited(Page&, SharedStringHash, const URL&, const AtomicString&) final { return false; }
+    bool isLinkVisited(Page&, SharedStringHash, const URL&, const AtomString&) final { return false; }
     void addVisitedLink(Page&, SharedStringHash) final { }
 };
 
@@ -483,10 +501,6 @@ RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInEl
     return nullptr;
 }
 
-void EmptyFrameLoaderClient::recreatePlugin(Widget*)
-{
-}
-
 RefPtr<Widget> EmptyFrameLoaderClient::createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL&, const Vector<String>&, const Vector<String>&)
 {
     return nullptr;
@@ -514,24 +528,19 @@ void EmptyEditorClient::registerRedoStep(UndoStep&)
 {
 }
 
-Ref<StorageNamespace> EmptyStorageNamespaceProvider::createSessionStorageNamespace(Page&, unsigned)
+Ref<StorageNamespace> EmptyStorageNamespaceProvider::createSessionStorageNamespace(Page& page, unsigned)
 {
-    return adoptRef(*new EmptyStorageNamespace);
+    return adoptRef(*new EmptyStorageNamespace { page.sessionID() });
 }
 
-Ref<StorageNamespace> EmptyStorageNamespaceProvider::createLocalStorageNamespace(unsigned)
+Ref<StorageNamespace> EmptyStorageNamespaceProvider::createLocalStorageNamespace(unsigned, PAL::SessionID sessionID)
 {
-    return adoptRef(*new EmptyStorageNamespace);
+    return adoptRef(*new EmptyStorageNamespace { sessionID });
 }
 
-Ref<StorageNamespace> EmptyStorageNamespaceProvider::createEphemeralLocalStorageNamespace(Page&, unsigned)
+Ref<StorageNamespace> EmptyStorageNamespaceProvider::createTransientLocalStorageNamespace(SecurityOrigin&, unsigned, PAL::SessionID sessionID)
 {
-    return adoptRef(*new EmptyStorageNamespace);
-}
-
-Ref<StorageNamespace> EmptyStorageNamespaceProvider::createTransientLocalStorageNamespace(SecurityOrigin&, unsigned)
-{
-    return adoptRef(*new EmptyStorageNamespace);
+    return adoptRef(*new EmptyStorageNamespace { sessionID });
 }
 
 class EmptyStorageSessionProvider : public StorageSessionProvider {
@@ -576,7 +585,7 @@ PageConfiguration pageConfigurationWithEmptyClients()
     static NeverDestroyed<EmptyProgressTrackerClient> dummyProgressTrackerClient;
     pageConfiguration.progressTrackerClient = &dummyProgressTrackerClient.get();
 
-    pageConfiguration.diagnosticLoggingClient = std::make_unique<EmptyDiagnosticLoggingClient>();
+    pageConfiguration.diagnosticLoggingClient = makeUnique<EmptyDiagnosticLoggingClient>();
 
     pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { });
     pageConfiguration.databaseProvider = adoptRef(*new EmptyDatabaseProvider);

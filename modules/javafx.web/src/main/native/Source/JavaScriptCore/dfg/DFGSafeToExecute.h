@@ -197,12 +197,13 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case Phi:
     case Flush:
     case PhantomLocal:
-    case SetArgument:
+    case SetArgumentDefinitely:
+    case SetArgumentMaybe:
     case ArithBitNot:
     case ArithBitAnd:
     case ArithBitOr:
     case ArithBitXor:
-    case BitLShift:
+    case ArithBitLShift:
     case BitRShift:
     case BitURShift:
     case ValueToInt32:
@@ -231,11 +232,15 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ValueBitAnd:
     case ValueBitXor:
     case ValueBitOr:
+    case ValueBitNot:
+    case ValueBitLShift:
     case ValueNegate:
     case ValueAdd:
     case ValueSub:
     case ValueMul:
     case ValueDiv:
+    case ValueMod:
+    case ValuePow:
     case TryGetById:
     case DeleteById:
     case DeleteByVal:

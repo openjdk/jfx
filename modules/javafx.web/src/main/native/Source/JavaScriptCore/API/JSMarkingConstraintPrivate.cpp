@@ -40,12 +40,12 @@ struct Marker : JSMarker {
     SlotVisitor* visitor;
 };
 
-bool isMarked(JSMarkerRef, JSObjectRef objectRef)
+bool isMarked(JSMarkerRef markerRef, JSObjectRef objectRef)
 {
     if (!objectRef)
         return true; // Null is an immortal object.
 
-    return Heap::isMarked(toJS(objectRef));
+    return static_cast<Marker*>(markerRef)->visitor->vm().heap.isMarked(toJS(objectRef));
 }
 
 void mark(JSMarkerRef markerRef, JSObjectRef objectRef)
@@ -71,7 +71,7 @@ void JSContextGroupAddMarkingConstraint(JSContextGroupRef group, JSMarkingConstr
     // else gets marked.
     ConstraintVolatility volatility = ConstraintVolatility::GreyedByMarking;
 
-    auto constraint = std::make_unique<SimpleMarkingConstraint>(
+    auto constraint = makeUnique<SimpleMarkingConstraint>(
         toCString("Amc", constraintIndex, "(", RawPointer(bitwise_cast<void*>(constraintCallback)), ")"),
         toCString("API Marking Constraint #", constraintIndex, " (", RawPointer(bitwise_cast<void*>(constraintCallback)), ", ", RawPointer(userData), ")"),
         [constraintCallback, userData]

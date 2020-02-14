@@ -49,7 +49,7 @@ bool PutByIdStatus::appendVariant(const PutByIdVariant& variant)
 
 PutByIdStatus PutByIdStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned bytecodeIndex, UniquedStringImpl* uid)
 {
-    VM& vm = *profiledBlock->vm();
+    VM& vm = profiledBlock->vm();
 
     auto instruction = profiledBlock->instructions().at(bytecodeIndex);
     auto bytecode = instruction->as<OpPutById>();
@@ -122,7 +122,7 @@ PutByIdStatus PutByIdStatus::computeForStubInfo(const ConcurrentJSLocker& locker
 {
     return computeForStubInfo(
         locker, baselineBlock, stubInfo, uid,
-        CallLinkStatus::computeExitSiteData(baselineBlock, codeOrigin.bytecodeIndex));
+        CallLinkStatus::computeExitSiteData(baselineBlock, codeOrigin.bytecodeIndex()));
 }
 
 PutByIdStatus PutByIdStatus::computeForStubInfo(
@@ -202,7 +202,7 @@ PutByIdStatus PutByIdStatus::computeForStubInfo(
 
                 case ComplexGetStatus::Inlineable: {
                     std::unique_ptr<CallLinkStatus> callLinkStatus =
-                        std::make_unique<CallLinkStatus>();
+                        makeUnique<CallLinkStatus>();
                     if (CallLinkInfo* callLinkInfo = access.as<GetterSetterAccessCase>().callLinkInfo()) {
                         *callLinkStatus = CallLinkStatus::computeFor(
                             locker, profiledBlock, *callLinkInfo, callExitSiteData);
@@ -237,9 +237,9 @@ PutByIdStatus PutByIdStatus::computeForStubInfo(
 
 PutByIdStatus PutByIdStatus::computeFor(CodeBlock* baselineBlock, ICStatusMap& baselineMap, ICStatusContextStack& contextStack, CodeOrigin codeOrigin, UniquedStringImpl* uid)
 {
-    CallLinkStatus::ExitSiteData callExitSiteData =
-        CallLinkStatus::computeExitSiteData(baselineBlock, codeOrigin.bytecodeIndex);
-    ExitFlag didExit = hasBadCacheExitSite(baselineBlock, codeOrigin.bytecodeIndex);
+    unsigned bytecodeIndex = codeOrigin.bytecodeIndex();
+    CallLinkStatus::ExitSiteData callExitSiteData = CallLinkStatus::computeExitSiteData(baselineBlock, bytecodeIndex);
+    ExitFlag didExit = hasBadCacheExitSite(baselineBlock, bytecodeIndex);
 
     for (ICStatusContext* context : contextStack) {
         ICStatus status = context->get(codeOrigin);
@@ -247,7 +247,7 @@ PutByIdStatus PutByIdStatus::computeFor(CodeBlock* baselineBlock, ICStatusMap& b
         auto bless = [&] (const PutByIdStatus& result) -> PutByIdStatus {
             if (!context->isInlined(codeOrigin)) {
                 PutByIdStatus baselineResult = computeFor(
-                    baselineBlock, baselineMap, codeOrigin.bytecodeIndex, uid, didExit,
+                    baselineBlock, baselineMap, bytecodeIndex, uid, didExit,
                     callExitSiteData);
                 baselineResult.merge(result);
                 return baselineResult;
@@ -272,7 +272,7 @@ PutByIdStatus PutByIdStatus::computeFor(CodeBlock* baselineBlock, ICStatusMap& b
             return bless(*status.putStatus);
     }
 
-    return computeFor(baselineBlock, baselineMap, codeOrigin.bytecodeIndex, uid, didExit, callExitSiteData);
+    return computeFor(baselineBlock, baselineMap, bytecodeIndex, uid, didExit, callExitSiteData);
 }
 
 PutByIdStatus PutByIdStatus::computeFor(JSGlobalObject* globalObject, const StructureSet& set, UniquedStringImpl* uid, bool isDirect)
@@ -386,10 +386,10 @@ void PutByIdStatus::markIfCheap(SlotVisitor& visitor)
         variant.markIfCheap(visitor);
 }
 
-bool PutByIdStatus::finalize()
+bool PutByIdStatus::finalize(VM& vm)
 {
     for (PutByIdVariant& variant : m_variants) {
-        if (!variant.finalize())
+        if (!variant.finalize(vm))
             return false;
     }
     return true;

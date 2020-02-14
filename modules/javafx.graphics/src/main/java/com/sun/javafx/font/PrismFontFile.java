@@ -403,6 +403,15 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         this.peer = peer;
     }
 
+    int getTableLength(int tag) {
+        int len = 0;
+        DirectoryEntry tagDE = getDirectoryEntry(tag);
+        if (tagDE != null) {
+            len = tagDE.length;
+        }
+        return len;
+    }
+
     synchronized Buffer readTable(int tag) {
         Buffer buffer = null;
         boolean openedFile = false;
@@ -569,6 +578,15 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                 // font. For some fonts advanceWidthMax is much larger then "M"
                 // advanceWidthMax = (float)hhea.getChar(10);
                 numHMetrics = hhea.getChar(34) & 0xffff;
+                /* the hmtx table may have a trailing LSB array which we don't
+                 * use. But it means we must not assume these two values match.
+                 * We are only concerned here with not reading more data than
+                 * there is in the table.
+                 */
+                int hmtxEntries = getTableLength(hmtxTag) >> 2;
+                if (numHMetrics > hmtxEntries) {
+                    numHMetrics = hmtxEntries;
+                }
             }
 
             // maxp table is before the OS/2 table. Read it now

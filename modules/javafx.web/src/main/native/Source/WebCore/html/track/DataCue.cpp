@@ -33,10 +33,13 @@
 #include "TextTrack.h"
 #include "TextTrackCueList.h"
 #include <JavaScriptCore/JSCInlines.h>
-#include <JavaScriptCore/Protect.h>
+#include <JavaScriptCore/StrongInlines.h>
+#include <wtf/IsoMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(DataCue);
 
 DataCue::DataCue(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, ArrayBuffer& data, const String& type)
     : TextTrackCue(context, start, end)
@@ -61,16 +64,12 @@ DataCue::DataCue(ScriptExecutionContext& context, const MediaTime& start, const 
 DataCue::DataCue(ScriptExecutionContext& context, const MediaTime& start, const MediaTime& end, JSC::JSValue value, const String& type)
     : TextTrackCue(context, start, end)
     , m_type(type)
-    , m_value(value)
+    , m_value(context.vm(), value)
 {
-    if (m_value)
-        JSC::gcProtect(m_value);
 }
 
 DataCue::~DataCue()
 {
-    if (m_value)
-        JSC::gcUnprotect(m_value);
 }
 
 RefPtr<ArrayBuffer> DataCue::data() const
@@ -87,10 +86,7 @@ RefPtr<ArrayBuffer> DataCue::data() const
 void DataCue::setData(ArrayBuffer& data)
 {
     m_platformValue = nullptr;
-    if (m_value)
-        JSC::gcUnprotect(m_value);
-    m_value = JSC::JSValue();
-
+    m_value.clear();
     m_data = ArrayBuffer::create(data);
 }
 
@@ -161,20 +157,15 @@ JSC::JSValue DataCue::value(JSC::ExecState& state) const
         return m_platformValue->deserialize(&state);
 
     if (m_value)
-        return m_value;
+        return m_value.get();
 
     return JSC::jsNull();
 }
 
-void DataCue::setValue(JSC::ExecState&, JSC::JSValue value)
+void DataCue::setValue(JSC::ExecState& state, JSC::JSValue value)
 {
     // FIXME: this should use a SerializedScriptValue.
-    if (m_value)
-        JSC::gcUnprotect(m_value);
-    m_value = value;
-    if (m_value)
-        JSC::gcProtect(m_value);
-
+    m_value.set(state.vm(), value);
     m_platformValue = nullptr;
     m_data = nullptr;
 }
@@ -182,7 +173,7 @@ void DataCue::setValue(JSC::ExecState&, JSC::JSValue value)
 JSValue DataCue::valueOrNull() const
 {
     if (m_value)
-        return m_value;
+        return m_value.get();
 
     return jsNull();
 }

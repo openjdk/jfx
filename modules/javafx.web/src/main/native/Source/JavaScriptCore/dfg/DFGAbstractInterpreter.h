@@ -37,6 +37,7 @@ namespace JSC { namespace DFG {
 
 template<typename AbstractStateType>
 class AbstractInterpreter {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     AbstractInterpreter(Graph&, AbstractStateType&);
     ~AbstractInterpreter();
@@ -218,6 +219,8 @@ private:
     void clobberWorld();
     void didFoldClobberWorld();
 
+    bool handleConstantBinaryBitwiseOp(Node*);
+
     template<typename Functor>
     void forAllValues(unsigned indexInBlock, Functor&);
 
@@ -252,6 +255,8 @@ private:
     void verifyEdge(Node*, Edge);
     void verifyEdges(Node*);
     void executeDoubleUnaryOpEffects(Node*, double(*equivalentFunction)(double));
+
+    bool handleConstantDivOp(Node*);
 
     CodeBlock* m_codeBlock;
     Graph& m_graph;

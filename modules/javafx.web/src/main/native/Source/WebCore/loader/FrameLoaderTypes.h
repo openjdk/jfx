@@ -67,6 +67,8 @@ enum class FrameLoadType : uint8_t {
     ReloadExpiredOnly
 };
 
+enum class WillContinueLoading : bool { No, Yes };
+
 class PolicyCheckIdentifier {
 public:
     PolicyCheckIdentifier() = default;
@@ -137,6 +139,11 @@ enum class InitiatedByMainFrame : uint8_t {
 enum ClearProvisionalItemPolicy {
     ShouldClearProvisionalItem,
     ShouldNotClearProvisionalItem
+};
+
+enum class StopLoadingPolicy {
+    PreventDuringUnloadEvents,
+    AlwaysStopLoading
 };
 
 enum class ObjectContentType : uint8_t {
@@ -214,6 +221,15 @@ template<> struct EnumTraits<WebCore::FrameLoadType> {
         WebCore::FrameLoadType::Replace,
         WebCore::FrameLoadType::ReloadFromOrigin,
         WebCore::FrameLoadType::ReloadExpiredOnly
+    >;
+};
+
+template<> struct EnumTraits<WebCore::ShouldOpenExternalURLsPolicy> {
+    using values = EnumValues<
+        WebCore::ShouldOpenExternalURLsPolicy,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldNotAllow,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllowExternalSchemes,
+        WebCore::ShouldOpenExternalURLsPolicy::ShouldAllow
     >;
 };
 

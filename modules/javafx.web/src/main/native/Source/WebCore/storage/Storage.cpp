@@ -33,9 +33,12 @@
 #include "SecurityOrigin.h"
 #include "StorageArea.h"
 #include "StorageType.h"
+#include <wtf/IsoMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+WTF_MAKE_ISO_ALLOCATED_IMPL(Storage);
 
 Ref<Storage> Storage::create(DOMWindow& window, Ref<StorageArea>&& storageArea)
 {
@@ -114,11 +117,11 @@ bool Storage::isSupportedPropertyName(const String& propertyName) const
     return m_storageArea->contains(propertyName);
 }
 
-Vector<AtomicString> Storage::supportedPropertyNames() const
+Vector<AtomString> Storage::supportedPropertyNames() const
 {
     unsigned length = m_storageArea->length();
 
-    Vector<AtomicString> result;
+    Vector<AtomString> result;
     result.reserveInitialCapacity(length);
 
     for (unsigned i = 0; i < length; ++i)

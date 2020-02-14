@@ -34,6 +34,8 @@
 #include <mutex>
 #include <unicode/uidna.h>
 #include <unicode/uscript.h>
+#include <wtf/Optional.h>
+#include <wtf/text/WTFString.h>
 
 namespace WTF {
 namespace URLHelpers {
@@ -118,6 +120,7 @@ static bool isLookalikeCharacter(const Optional<UChar32>& previousCodePoint, UCh
     case 0x00BE: /* VULGAR FRACTION THREE QUARTERS */
     case 0x00ED: /* LATIN SMALL LETTER I WITH ACUTE */
     /* 0x0131 LATIN SMALL LETTER DOTLESS I is intentionally not considered a lookalike character because it is visually distinguishable from i and it has legitimate use in the Turkish language. */
+    case 0x01C0: /* LATIN LETTER DENTAL CLICK */
     case 0x01C3: /* LATIN LETTER RETROFLEX CLICK */
     case 0x0251: /* LATIN SMALL LETTER ALPHA */
     case 0x0261: /* LATIN SMALL LETTER SCRIPT G */
@@ -298,7 +301,7 @@ static bool allCharactersInIDNScriptWhiteList(const UChar* buffer, int32_t lengt
     Optional<UChar32> previousCodePoint;
     while (i < length) {
         UChar32 c;
-        U16_NEXT(buffer, i, length, c)
+        U16_NEXT(buffer, i, length, c);
         UErrorCode error = U_ZERO_ERROR;
         UScriptCode script = uscript_getScript(c, &error);
         if (error != U_ZERO_ERROR) {
@@ -324,7 +327,8 @@ static bool allCharactersInIDNScriptWhiteList(const UChar* buffer, int32_t lengt
     return true;
 }
 
-static bool isSecondLevelDomainNameAllowedByTLDRules(const UChar* buffer, int32_t length, const WTF::Function<bool(UChar)>& characterIsAllowed)
+template<typename Func>
+static inline bool isSecondLevelDomainNameAllowedByTLDRules(const UChar* buffer, int32_t length, Func characterIsAllowed)
 {
     ASSERT(length > 0);
 
@@ -673,35 +677,19 @@ static void applyHostNameFunctionToURLString(const String& string, const Optiona
     unsigned authorityStart = separatorIndex + strlen(separator);
 
     // Check that all characters before the :// are valid scheme characters.
-    auto invalidSchemeCharacter = string.substringSharingImpl(0, separatorIndex).find([](UChar ch) {
-        static const char* allowedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-.";
-        static size_t length = strlen(allowedCharacters);
-        for (size_t i = 0; i < length; ++i) {
-            if (allowedCharacters[i] == ch)
-                return false;
-        }
-        return true;
-    });
-
-    if (invalidSchemeCharacter != notFound)
+    if (StringView { string }.left(separatorIndex).contains([](UChar character) {
+        return !(isASCIIAlphanumeric(character) || character == '+' || character == '-' || character == '.');
+    }))
         return;
 
-    unsigned stringLength = string.length();
-
     // Find terminating character.
-    auto hostNameTerminator = string.find([](UChar ch) {
-        static const char* terminatingCharacters = ":/?#";
-        static size_t length = strlen(terminatingCharacters);
-        for (size_t i = 0; i < length; ++i) {
-            if (terminatingCharacters[i] == ch)
-                return true;
-        }
-        return false;
+    auto hostNameTerminator = string.find([](UChar character) {
+        return character == ':' || character == '/' || character == '?' || character == '#';
     }, authorityStart);
-    unsigned hostNameEnd = hostNameTerminator == notFound ? stringLength : hostNameTerminator;
+    unsigned hostNameEnd = hostNameTerminator == notFound ? string.length() : hostNameTerminator;
 
     // Find "@" for the start of the host name.
-    auto userInfoTerminator = string.substringSharingImpl(0, hostNameEnd).find('@', authorityStart);
+    auto userInfoTerminator = StringView { string }.left(hostNameEnd).find('@', authorityStart);
     unsigned hostNameStart = userInfoTerminator == notFound ? authorityStart : userInfoTerminator + 1;
 
     collectRangesThatNeedMapping(string, hostNameStart, hostNameEnd - hostNameStart, array, decodeFunction);
@@ -726,9 +714,7 @@ String mapHostNames(const String& string, const Optional<URLDecodeFunction>& dec
     // Do the mapping.
     String result = string;
     while (!hostNameRanges->isEmpty()) {
-        unsigned location, length;
-        String mappedHostName;
-        std::tie(location, length, mappedHostName) = hostNameRanges->takeLast();
+        auto [location, length, mappedHostName] = hostNameRanges->takeLast();
         result = result.replace(location, length, mappedHostName);
     }
     return result;
@@ -767,8 +753,8 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
             uint8_t utf8Buffer[4];
             size_t offset = 0;
             UBool failure = false;
-            U8_APPEND(utf8Buffer, offset, 4, c, failure)
-            ASSERT(!failure);
+            U8_APPEND(utf8Buffer, offset, 4, c, failure);
+            ASSERT_UNUSED(failure, !failure);
 
             for (size_t j = 0; j < offset; ++j) {
                 outBuffer.append('%');
@@ -781,7 +767,7 @@ static String escapeUnsafeCharacters(const String& sourceBuffer)
         }
         previousCodePoint = c;
         i += characterLength;
-        }
+    }
 
     return String::adopt(WTFMove(outBuffer));
 }

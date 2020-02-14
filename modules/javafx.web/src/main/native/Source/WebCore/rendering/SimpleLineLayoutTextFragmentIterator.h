@@ -111,17 +111,19 @@ public:
         bool collapseWhitespace;
         bool preserveNewline;
         bool wrapLines;
+        bool breakSpaces;
         bool breakAnyWordOnOverflow;
+        bool breakWordOnOverflow;
         bool breakFirstWordOnOverflow;
         bool breakNBSP;
         bool keepAllWordsForCJK;
         float wordSpacing;
-        unsigned tabWidth;
+        TabSize tabWidth;
         bool shouldHyphenate;
         float hyphenStringWidth;
         unsigned hyphenLimitBefore;
         unsigned hyphenLimitAfter;
-        AtomicString locale;
+        AtomString locale;
         Optional<unsigned> hyphenLimitLines;
     };
     const Style& style() const { return m_style; }

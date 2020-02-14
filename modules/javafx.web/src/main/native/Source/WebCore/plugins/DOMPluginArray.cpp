@@ -24,12 +24,15 @@
 #include "Frame.h"
 #include "Page.h"
 #include "PluginData.h"
-#include <wtf/text/AtomicString.h>
+#include <wtf/IsoMallocInlines.h>
+#include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
-DOMPluginArray::DOMPluginArray(DOMWindow* window)
-    : DOMWindowProperty(window)
+WTF_MAKE_ISO_ALLOCATED_IMPL(DOMPluginArray);
+
+DOMPluginArray::DOMPluginArray(Navigator& navigator)
+    : m_navigator(makeWeakPtr(navigator))
 {
 }
 
@@ -56,7 +59,7 @@ RefPtr<DOMPlugin> DOMPluginArray::item(unsigned index)
     return DOMPlugin::create(data, frame(), plugins[index]);
 }
 
-RefPtr<DOMPlugin> DOMPluginArray::namedItem(const AtomicString& propertyName)
+RefPtr<DOMPlugin> DOMPluginArray::namedItem(const AtomString& propertyName)
 {
     PluginData* data = pluginData();
     if (!data)
@@ -69,7 +72,7 @@ RefPtr<DOMPlugin> DOMPluginArray::namedItem(const AtomicString& propertyName)
     return nullptr;
 }
 
-Vector<AtomicString> DOMPluginArray::supportedPropertyNames()
+Vector<AtomString> DOMPluginArray::supportedPropertyNames()
 {
     PluginData* data = pluginData();
     if (!data)
@@ -77,7 +80,7 @@ Vector<AtomicString> DOMPluginArray::supportedPropertyNames()
 
     const auto& plugins = data->publiclyVisiblePlugins();
 
-    Vector<AtomicString> result;
+    Vector<AtomString> result;
     result.reserveInitialCapacity(plugins.size());
     for (auto& plugin : plugins)
         result.uncheckedAppend(plugin.name);

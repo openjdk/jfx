@@ -32,6 +32,7 @@
 #include "Timer.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
+#include <initializer_list>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -55,31 +56,37 @@ class WebGLRenderingContextBase;
 
 typedef String ErrorString;
 
-class InspectorCanvasAgent final : public InspectorAgentBase, public CanvasObserver, public Inspector::CanvasBackendDispatcherHandler {
+class InspectorCanvasAgent final : public InspectorAgentBase, public Inspector::CanvasBackendDispatcherHandler, public CanvasObserver {
     WTF_MAKE_NONCOPYABLE(InspectorCanvasAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit InspectorCanvasAgent(WebAgentContext&);
-    virtual ~InspectorCanvasAgent() = default;
+    InspectorCanvasAgent(PageAgentContext&);
+    virtual ~InspectorCanvasAgent();
 
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
-    void discardAgent() override;
+    // InspectorAgentBase
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
+    void discardAgent();
 
     // CanvasBackendDispatcherHandler
-    void enable(ErrorString&) override;
-    void disable(ErrorString&) override;
-    void requestNode(ErrorString&, const String& canvasId, int* nodeId) override;
-    void requestContent(ErrorString&, const String& canvasId, String* content) override;
-    void requestCSSCanvasClientNodes(ErrorString&, const String& canvasId, RefPtr<JSON::ArrayOf<int>>&) override;
-    void resolveCanvasContext(ErrorString&, const String& canvasId, const String* objectGroup, RefPtr<Inspector::Protocol::Runtime::RemoteObject>&) override;
-    void setRecordingAutoCaptureFrameCount(ErrorString&, int count) override;
-    void startRecording(ErrorString&, const String& canvasId, const int* frameCount, const int* memoryLimit) override;
-    void stopRecording(ErrorString&, const String& canvasId) override;
-    void requestShaderSource(ErrorString&, const String& programId, const String& shaderType, String*) override;
-    void updateShader(ErrorString&, const String& programId, const String& shaderType, const String& source) override;
-    void setShaderProgramDisabled(ErrorString&, const String& programId, bool disabled) override;
-    void setShaderProgramHighlighted(ErrorString&, const String& programId, bool highlighted) override;
+    void enable(ErrorString&);
+    void disable(ErrorString&);
+    void requestNode(ErrorString&, const String& canvasId, int* nodeId);
+    void requestContent(ErrorString&, const String& canvasId, String* content);
+    void requestCSSCanvasClientNodes(ErrorString&, const String& canvasId, RefPtr<JSON::ArrayOf<int>>&);
+    void resolveCanvasContext(ErrorString&, const String& canvasId, const String* objectGroup, RefPtr<Inspector::Protocol::Runtime::RemoteObject>&);
+    void setRecordingAutoCaptureFrameCount(ErrorString&, int count);
+    void startRecording(ErrorString&, const String& canvasId, const int* frameCount, const int* memoryLimit);
+    void stopRecording(ErrorString&, const String& canvasId);
+    void requestShaderSource(ErrorString&, const String& programId, const String& shaderType, String*);
+    void updateShader(ErrorString&, const String& programId, const String& shaderType, const String& source);
+    void setShaderProgramDisabled(ErrorString&, const String& programId, bool disabled);
+    void setShaderProgramHighlighted(ErrorString&, const String& programId, bool highlighted);
+
+    // CanvasObserver
+    void canvasChanged(CanvasBase&, const FloatRect&);
+    void canvasResized(CanvasBase&) { }
+    void canvasDestroyed(CanvasBase&);
 
     // InspectorInstrumentation
     void frameNavigated(Frame&);
@@ -87,7 +94,7 @@ public:
     void didCreateCanvasRenderingContext(CanvasRenderingContext&);
     void willDestroyCanvasRenderingContext(CanvasRenderingContext&);
     void didChangeCanvasMemory(CanvasRenderingContext&);
-    void recordCanvasAction(CanvasRenderingContext&, const String&, Vector<RecordCanvasActionVariant>&& = { });
+    void recordCanvasAction(CanvasRenderingContext&, const String&, std::initializer_list<RecordCanvasActionVariant>&& = { });
     void didFinishRecordingCanvasFrame(CanvasRenderingContext&, bool forceDispatch = false);
     void consoleStartRecordingCanvas(CanvasRenderingContext&, JSC::ExecState&, JSC::JSObject* options);
 #if ENABLE(WEBGL)
@@ -98,11 +105,6 @@ public:
     bool isShaderProgramHighlighted(WebGLProgram&);
 #endif
 
-    // CanvasObserver
-    void canvasChanged(CanvasBase&, const FloatRect&) override { }
-    void canvasResized(CanvasBase&) override { }
-    void canvasDestroyed(CanvasBase&) override;
-
 private:
     struct RecordingOptions {
         Optional<long> frameCount;
@@ -112,29 +114,32 @@ private:
     void startRecording(InspectorCanvas&, Inspector::Protocol::Recording::Initiator, RecordingOptions&& = { });
 
     void canvasDestroyedTimerFired();
-    void canvasRecordingTimerFired();
     void clearCanvasData();
+    InspectorCanvas& bindCanvas(CanvasRenderingContext&, bool captureBacktrace);
     String unbindCanvas(InspectorCanvas&);
-    InspectorCanvas* assertInspectorCanvas(ErrorString&, const String& identifier);
-    InspectorCanvas* findInspectorCanvas(CanvasRenderingContext&);
+    RefPtr<InspectorCanvas> assertInspectorCanvas(ErrorString&, const String& canvasId);
+    RefPtr<InspectorCanvas> findInspectorCanvas(CanvasRenderingContext&);
 #if ENABLE(WEBGL)
     String unbindProgram(InspectorShaderProgram&);
-    InspectorShaderProgram* assertInspectorProgram(ErrorString&, const String& identifier);
-    InspectorShaderProgram* findInspectorProgram(WebGLProgram&);
-
-    HashMap<String, RefPtr<InspectorShaderProgram>> m_identifierToInspectorProgram;
+    RefPtr<InspectorShaderProgram> assertInspectorProgram(ErrorString&, const String& programId);
+    RefPtr<InspectorShaderProgram> findInspectorProgram(WebGLProgram&);
 #endif
 
     std::unique_ptr<Inspector::CanvasFrontendDispatcher> m_frontendDispatcher;
     RefPtr<Inspector::CanvasBackendDispatcher> m_backendDispatcher;
+
     Inspector::InjectedScriptManager& m_injectedScriptManager;
+    Page& m_inspectedPage;
+
     HashMap<String, RefPtr<InspectorCanvas>> m_identifierToInspectorCanvas;
+#if ENABLE(WEBGL)
+    HashMap<String, RefPtr<InspectorShaderProgram>> m_identifierToInspectorProgram;
+#endif
     Vector<String> m_removedCanvasIdentifiers;
-    Timer m_canvasDestroyedTimer;
-    Timer m_canvasRecordingTimer;
+
     Optional<size_t> m_recordingAutoCaptureFrameCount;
 
-    bool m_enabled { false };
+    Timer m_canvasDestroyedTimer;
 };
 
 } // namespace WebCore

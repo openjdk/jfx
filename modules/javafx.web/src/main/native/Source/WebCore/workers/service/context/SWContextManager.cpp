@@ -115,7 +115,7 @@ void SWContextManager::terminateWorker(ServiceWorkerIdentifier identifier, Secon
 
     serviceWorker->setAsTerminatingOrTerminated();
 
-    m_pendingServiceWorkerTerminationRequests.add(identifier, std::make_unique<ServiceWorkerTerminationRequest>(*this, identifier, timeout));
+    m_pendingServiceWorkerTerminationRequests.add(identifier, makeUnique<ServiceWorkerTerminationRequest>(*this, identifier, timeout));
 
     auto& thread = serviceWorker->thread();
     thread.stop([this, identifier, serviceWorker = WTFMove(serviceWorker), completionHandler = WTFMove(completionHandler)]() mutable {
@@ -151,7 +151,7 @@ bool SWContextManager::postTaskToServiceWorker(ServiceWorkerIdentifier identifie
     return true;
 }
 
-NO_RETURN_DUE_TO_CRASH void SWContextManager::serviceWorkerFailedToTerminate(ServiceWorkerIdentifier serviceWorkerIdentifier)
+void SWContextManager::serviceWorkerFailedToTerminate(ServiceWorkerIdentifier serviceWorkerIdentifier)
 {
     UNUSED_PARAM(serviceWorkerIdentifier);
     RELEASE_LOG_ERROR(ServiceWorker, "Failed to terminate service worker with identifier %s, killing the service worker process", serviceWorkerIdentifier.loggingString().utf8().data());

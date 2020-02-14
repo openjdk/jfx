@@ -27,13 +27,15 @@
 
 #if ENABLE(WEBGPU)
 
+#include "WHLSLCodeLocation.h"
 #include "WHLSLEntryPointType.h"
 #include "WHLSLFunctionAttribute.h"
-#include "WHLSLLexer.h"
-#include "WHLSLNode.h"
+#include "WHLSLNameSpace.h"
+#include "WHLSLParsingMode.h"
 #include "WHLSLSemantic.h"
 #include "WHLSLUnnamedType.h"
 #include "WHLSLVariableDeclaration.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
@@ -43,17 +45,19 @@ namespace WHLSL {
 
 namespace AST {
 
-class FunctionDeclaration : public Node {
+class FunctionDeclaration {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    FunctionDeclaration(Lexer::Token&& origin, AttributeBlock&& attributeBlock, Optional<EntryPointType> entryPointType, UniqueRef<UnnamedType>&& type, String&& name, VariableDeclarations&& parameters, Optional<Semantic>&& semantic, bool isOperator)
-        : m_origin(WTFMove(origin))
+    FunctionDeclaration(CodeLocation location, AttributeBlock&& attributeBlock, Optional<EntryPointType> entryPointType, Ref<UnnamedType> type, String&& name, VariableDeclarations&& parameters, std::unique_ptr<Semantic>&& semantic, bool isOperator, ParsingMode parsingMode)
+        : m_codeLocation(location)
         , m_attributeBlock(WTFMove(attributeBlock))
         , m_entryPointType(entryPointType)
+        , m_isOperator(isOperator)
+        , m_parsingMode(parsingMode)
         , m_type(WTFMove(type))
         , m_name(WTFMove(name))
         , m_parameters(WTFMove(parameters))
         , m_semantic(WTFMove(semantic))
-        , m_isOperator(WTFMove(isOperator))
     {
     }
 
@@ -74,18 +78,26 @@ public:
     bool isCast() const { return m_name == "operator cast"; }
     const VariableDeclarations& parameters() const { return m_parameters; }
     VariableDeclarations& parameters() { return m_parameters; }
-    Optional<Semantic>& semantic() { return m_semantic; }
+    Semantic* semantic() { return m_semantic.get(); }
     bool isOperator() const { return m_isOperator; }
+    const CodeLocation& codeLocation() const { return m_codeLocation; }
+
+    ParsingMode parsingMode() const { return m_parsingMode; }
+
+    NameSpace nameSpace() const { return m_nameSpace; }
+    void setNameSpace(NameSpace nameSpace) { m_nameSpace = nameSpace; }
 
 private:
-    Lexer::Token m_origin;
+    CodeLocation m_codeLocation;
     AttributeBlock m_attributeBlock;
     Optional<EntryPointType> m_entryPointType;
-    UniqueRef<UnnamedType> m_type;
+    bool m_isOperator;
+    ParsingMode m_parsingMode;
+    Ref<UnnamedType> m_type;
     String m_name;
     VariableDeclarations m_parameters;
-    Optional<Semantic> m_semantic;
-    bool m_isOperator;
+    std::unique_ptr<Semantic> m_semantic;
+    NameSpace m_nameSpace { NameSpace::StandardLibrary };
 };
 
 } // namespace AST

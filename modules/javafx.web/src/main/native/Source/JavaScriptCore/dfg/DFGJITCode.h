@@ -121,7 +121,7 @@ public:
 #if ENABLE(FTL_JIT)
     CodeBlock* osrEntryBlock() { return m_osrEntryBlock.get(); }
     void setOSREntryBlock(VM&, const JSCell* owner, CodeBlock* osrEntryBlock);
-    void clearOSREntryBlock() { m_osrEntryBlock.clear(); }
+    void clearOSREntryBlockAndResetThresholds(CodeBlock* dfgCodeBlock);
 #endif
 
     static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
@@ -166,9 +166,6 @@ public:
     // This can never be modified after it has been initialized since the addresses of the triggers
     // are used by the JIT.
     HashMap<unsigned, TriggerReason> tierUpEntryTriggers;
-
-    // Set of bytecode that were the target of a TierUp operation.
-    HashSet<unsigned, WTF::IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> tierUpEntrySeen;
 
     WriteBarrier<CodeBlock> m_osrEntryBlock;
     unsigned osrEntryRetry;

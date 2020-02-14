@@ -44,7 +44,11 @@ inline SVGFEImageElement::SVGFEImageElement(const QualifiedName& tagName, Docume
     , SVGURIReference(this)
 {
     ASSERT(hasTagName(SVGNames::feImageTag));
-    registerAttributes();
+
+    static std::once_flag onceFlag;
+    std::call_once(onceFlag, [] {
+        PropertyRegistry::registerProperty<SVGNames::preserveAspectRatioAttr, &SVGFEImageElement::m_preserveAspectRatio>();
+    });
 }
 
 Ref<SVGFEImageElement> SVGFEImageElement::create(const QualifiedName& tagName, Document& document)
@@ -111,20 +115,12 @@ void SVGFEImageElement::buildPendingResource()
     invalidate();
 }
 
-void SVGFEImageElement::registerAttributes()
-{
-    auto& registry = attributeRegistry();
-    if (!registry.isEmpty())
-        return;
-    registry.registerAttribute<SVGNames::preserveAspectRatioAttr, &SVGFEImageElement::m_preserveAspectRatio>();
-}
-
-void SVGFEImageElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void SVGFEImageElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == SVGNames::preserveAspectRatioAttr) {
         SVGPreserveAspectRatioValue preserveAspectRatio;
         preserveAspectRatio.parse(value);
-        m_preserveAspectRatio.setValue(preserveAspectRatio);
+        m_preserveAspectRatio->setBaseValInternal(preserveAspectRatio);
         return;
     }
 
@@ -185,10 +181,15 @@ void SVGFEImageElement::notifyFinished(CachedResource&)
     RenderSVGResource::markForLayoutAndParentResourceInvalidation(*parentRenderer);
 }
 
-RefPtr<FilterEffect> SVGFEImageElement::build(SVGFilterBuilder*, Filter& filter)
+RefPtr<FilterEffect> SVGFEImageElement::build(SVGFilterBuilder*, Filter& filter) const
 {
     if (m_cachedImage)
         return FEImage::createWithImage(filter, m_cachedImage->imageForRenderer(renderer()), preserveAspectRatio());
+
+    auto target = SVGURIReference::targetElementFromIRIString(href(), treeScope());
+    if (isDescendantOrShadowDescendantOf(target.element.get()))
+        return nullptr;
+
     return FEImage::createWithIRIReference(filter, treeScope(), href(), preserveAspectRatio());
 }
 

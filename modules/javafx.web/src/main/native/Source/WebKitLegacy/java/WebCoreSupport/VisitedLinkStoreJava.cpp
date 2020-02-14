@@ -78,7 +78,7 @@ void VisitedLinkStoreJava::addVisitedLink(const String& urlString)
     addVisitedLinkHash(computeSharedStringHash(urlString));
 }
 
-bool VisitedLinkStoreJava::isLinkVisited(Page& page, SharedStringHash linkHash, const URL&, const AtomicString&)
+bool VisitedLinkStoreJava::isLinkVisited(Page& page, SharedStringHash linkHash, const URL&, const AtomString&)
 {
     populateVisitedLinksIfNeeded(page);
 

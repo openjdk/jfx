@@ -27,8 +27,11 @@
 
 #if ENABLE(WEBGPU)
 
+#include "WHLSLError.h"
 #include "WHLSLNameContext.h"
 #include "WHLSLVisitor.h"
+#include <wtf/Expected.h>
+#include <wtf/HashSet.h>
 
 namespace WebCore {
 
@@ -39,17 +42,15 @@ class Program;
 class NameResolver : public Visitor {
 public:
     NameResolver(NameContext&);
+    NameResolver(NameResolver&, NameContext&);
 
-    virtual ~NameResolver() = default;
+    virtual ~NameResolver();
 
-    void visit(AST::FunctionDefinition&) override;
-
-    void setCurrentFunctionDefinition(AST::FunctionDefinition* functionDefinition)
-    {
-        m_currentFunction = functionDefinition;
-    }
+    void setCurrentNameSpace(AST::NameSpace nameSpace) { m_currentNameSpace = nameSpace; }
 
 private:
+    void visit(AST::FunctionDefinition&) override;
+    void visit(AST::NativeFunctionDeclaration&) override;
     void visit(AST::TypeReference&) override;
     void visit(AST::Block&) override;
     void visit(AST::IfStatement&) override;
@@ -58,18 +59,17 @@ private:
     void visit(AST::ForLoop&) override;
     void visit(AST::VariableDeclaration&) override;
     void visit(AST::VariableReference&) override;
-    void visit(AST::Return&) override;
-    void visit(AST::PropertyAccessExpression&) override;
     void visit(AST::DotExpression&) override;
-    void visit(AST::CallExpression&) override;
     void visit(AST::EnumerationMemberLiteral&) override;
 
-    NameContext m_nameContext;
-    AST::FunctionDefinition* m_currentFunction { nullptr };
+    NameContext& m_nameContext;
+    HashSet<AST::TypeReference*> m_typeReferences;
+    NameResolver* m_parentNameResolver { nullptr };
+    AST::NameSpace m_currentNameSpace { AST::NameSpace::StandardLibrary };
 };
 
-bool resolveNamesInTypes(Program&, NameResolver&);
-bool resolveNamesInFunctions(Program&, NameResolver&);
+Expected<void, Error> resolveNamesInTypes(Program&, NameResolver&);
+Expected<void, Error> resolveTypeNamesInFunctions(Program&, NameResolver&);
 
 } // namespace WHLSL
 

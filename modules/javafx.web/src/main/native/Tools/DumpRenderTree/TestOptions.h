@@ -33,6 +33,7 @@ struct TestOptions {
     bool useAcceleratedDrawing { false };
     bool enableIntersectionObserver { false };
     bool enableMenuItemElement { false };
+    bool enableKeygenElement { false };
     bool enableModernMediaControls { true };
     bool enablePointerLock { false };
     bool enableDragDestinationActionLoad { false };
@@ -46,7 +47,11 @@ struct TestOptions {
     bool enableWebGPU { false };
     bool enableCSSLogical { false };
     bool adClickAttributionEnabled { false };
+    bool enableResizeObserver { false };
+    bool enableCoreMathML { false };
+    bool enableLazyImageLoading { false };
     std::string jscOptions;
+    std::string additionalSupportedImageTypes;
 
     TestOptions(const std::string& pathOrURL, const std::string& absolutePath);
     bool webViewIsCompatibleWithOptions(const TestOptions&) const;

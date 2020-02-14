@@ -48,9 +48,9 @@ my @ppExtraArgs;
 my $numOfJobs = 1;
 my $idlAttributesFile;
 my $showProgress;
-my $includeDirsList;
+my $includeDirlist = '';
 
-GetOptions('includeDirsList=s' => \$includeDirsList,
+GetOptions('include=s@' => \@idlDirectories,
            'outputDir=s' => \$outputDirectory,
            'idlFilesList=s' => \$idlFilesList,
            'generator=s' => \$generator,
@@ -62,17 +62,14 @@ GetOptions('includeDirsList=s' => \$includeDirsList,
            'ppExtraArgs=s@' => \@ppExtraArgs,
            'idlAttributesFile=s' => \$idlAttributesFile,
            'numOfJobs=i' => \$numOfJobs,
-           'showProgress' => \$showProgress);
+           'showProgress' => \$showProgress,
+           'includeDirList=s'=> \$includeDirlist);
 
 $| = 1;
 my @idlFiles;
 open(my $fh, '<', $idlFilesList) or die "Cannot open $idlFilesList";
-@idlFiles = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$fh>;
+@idlFiles = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
 close($fh) or die;
-
-open(my $dh, '<', $includeDirsList) or die "Cannot open $includeDirsList";
-@idlDirectories = map { (my $path = $_) =~ s/\r?\n?$//; CygwinPathIfNeeded($path) } <$dh>;
-close($dh) or die;
 
 my %oldSupplements;
 my %newSupplements;
@@ -99,7 +96,15 @@ my @args = (File::Spec->catfile($scriptDir, 'generate-bindings.pl'),
             '--preprocessor', $preprocessor,
             '--idlAttributesFile', $idlAttributesFile,
             '--write-dependencies');
-push @args, map { ('--includeDirsList', $_) } $includeDirsList;
+
+# Read --include dir list from file if passed as an argument.
+if ($includeDirlist) {
+    open(my $fh, '<', $includeDirlist) or die "Cannot open $includeDirlist";
+    @idlDirectories = map { CygwinPathIfNeeded(s/\r?\n?$//r) } <$fh>;
+    close($fh) or die;
+}
+
+push @args, map { ('--include', $_) } @idlDirectories;
 push @args, '--supplementalDependencyFile', $supplementalDependencyFile if $supplementalDependencyFile;
 
 my %directoryCache;
@@ -223,8 +228,7 @@ sub spawnCommand
 sub quoteCommand
 {
     return map {
-        (my $qStr = $_) =~ s/([\\\"])/\\$1/g;
-        '"' . $qStr . '"';
+        '"' . s/([\\\"])/\\$1/gr . '"';
     } @_;
 }
 

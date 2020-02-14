@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,32 +34,96 @@
 
 namespace JSC {
 
-LargeAllocation* LargeAllocation::tryCreate(Heap& heap, size_t size, Subspace* subspace)
+static inline bool isAlignedForLargeAllocation(void* memory)
+{
+    uintptr_t allocatedPointer = bitwise_cast<uintptr_t>(memory);
+    return !(allocatedPointer & (LargeAllocation::alignment - 1));
+}
+
+LargeAllocation* LargeAllocation::tryCreate(Heap& heap, size_t size, Subspace* subspace, unsigned indexInSpace)
 {
     if (validateDFGDoesGC)
         RELEASE_ASSERT(heap.expectDoesGC());
 
-    // This includes padding at the end of the allocation to maintain the distancing constraint.
-    constexpr size_t distancing = minimumDistanceBetweenCellsFromDifferentOrigins;
-    size_t sizeBeforeDistancing = headerSize() + size;
-    size_t sizeIncludingDistancing = sizeBeforeDistancing + distancing;
+    size_t adjustedAlignmentAllocationSize = headerSize() + size + halfAlignment;
+    static_assert(halfAlignment == 8, "We assume that memory returned by malloc has alignment >= 8.");
 
-    void* space = subspace->alignedMemoryAllocator()->tryAllocateAlignedMemory(alignment, sizeIncludingDistancing);
+    // We must use tryAllocateMemory instead of tryAllocateAlignedMemory since we want to use "realloc" feature.
+    void* space = subspace->alignedMemoryAllocator()->tryAllocateMemory(adjustedAlignmentAllocationSize);
     if (!space)
         return nullptr;
 
-    // Make sure that the padding does not contain useful things.
-    memset(static_cast<char*>(space) + sizeBeforeDistancing, 0, distancing);
+    bool adjustedAlignment = false;
+    if (!isAlignedForLargeAllocation(space)) {
+        space = bitwise_cast<void*>(bitwise_cast<uintptr_t>(space) + halfAlignment);
+        adjustedAlignment = true;
+        ASSERT(isAlignedForLargeAllocation(space));
+    }
 
     if (scribbleFreeCells())
         scribble(space, size);
-    return new (NotNull, space) LargeAllocation(heap, size, subspace);
+    return new (NotNull, space) LargeAllocation(heap, size, subspace, indexInSpace, adjustedAlignment);
 }
 
-LargeAllocation::LargeAllocation(Heap& heap, size_t size, Subspace* subspace)
+LargeAllocation* LargeAllocation::tryReallocate(size_t size, Subspace* subspace)
+{
+    size_t adjustedAlignmentAllocationSize = headerSize() + size + halfAlignment;
+    static_assert(halfAlignment == 8, "We assume that memory returned by malloc has alignment >= 8.");
+
+    ASSERT(subspace == m_subspace);
+
+    unsigned oldCellSize = m_cellSize;
+    bool oldAdjustedAlignment = m_adjustedAlignment;
+    void* oldBasePointer = basePointer();
+
+    void* newBasePointer = subspace->alignedMemoryAllocator()->tryReallocateMemory(oldBasePointer, adjustedAlignmentAllocationSize);
+    if (!newBasePointer)
+        return nullptr;
+
+    LargeAllocation* newAllocation = bitwise_cast<LargeAllocation*>(newBasePointer);
+    bool newAdjustedAlignment = false;
+    if (!isAlignedForLargeAllocation(newBasePointer)) {
+        newAdjustedAlignment = true;
+        newAllocation = bitwise_cast<LargeAllocation*>(bitwise_cast<uintptr_t>(newBasePointer) + halfAlignment);
+        ASSERT(isAlignedForLargeAllocation(static_cast<void*>(newAllocation)));
+    }
+
+    // We have 4 patterns.
+    // oldAdjustedAlignment = true  newAdjustedAlignment = true  => Do nothing.
+    // oldAdjustedAlignment = true  newAdjustedAlignment = false => Shift forward by halfAlignment
+    // oldAdjustedAlignment = false newAdjustedAlignment = true  => Shift backward by halfAlignment
+    // oldAdjustedAlignment = false newAdjustedAlignment = false => Do nothing.
+
+    if (oldAdjustedAlignment != newAdjustedAlignment) {
+        if (oldAdjustedAlignment) {
+            ASSERT(!newAdjustedAlignment);
+            ASSERT(newAllocation == newBasePointer);
+            // Old   [ 8 ][  content  ]
+            // Now   [   ][  content  ]
+            // New   [  content  ]...
+            memmove(newBasePointer, bitwise_cast<char*>(newBasePointer) + halfAlignment, oldCellSize + LargeAllocation::headerSize());
+        } else {
+            ASSERT(newAdjustedAlignment);
+            ASSERT(newAllocation != newBasePointer);
+            ASSERT(newAllocation == bitwise_cast<void*>(bitwise_cast<char*>(newBasePointer) + halfAlignment));
+            // Old   [  content  ]
+            // Now   [  content  ][   ]
+            // New   [ 8 ][  content  ]
+            memmove(bitwise_cast<char*>(newBasePointer) + halfAlignment, newBasePointer, oldCellSize + LargeAllocation::headerSize());
+        }
+    }
+
+    newAllocation->m_cellSize = size;
+    newAllocation->m_adjustedAlignment = newAdjustedAlignment;
+    return newAllocation;
+}
+
+LargeAllocation::LargeAllocation(Heap& heap, size_t size, Subspace* subspace, unsigned indexInSpace, bool adjustedAlignment)
     : m_cellSize(size)
+    , m_indexInSpace(indexInSpace)
     , m_isNewlyAllocated(true)
     , m_hasValidCell(true)
+    , m_adjustedAlignment(adjustedAlignment)
     , m_attributes(subspace->attributes())
     , m_subspace(subspace)
     , m_weakSet(heap.vm(), *this)
@@ -113,7 +177,7 @@ void LargeAllocation::sweep()
 
     if (m_hasValidCell && !isLive()) {
         if (m_attributes.destruction == NeedsDestruction)
-            m_subspace->destroy(*vm(), static_cast<JSCell*>(cell()));
+            m_subspace->destroy(vm(), static_cast<JSCell*>(cell()));
         m_hasValidCell = false;
     }
 }
@@ -121,8 +185,9 @@ void LargeAllocation::sweep()
 void LargeAllocation::destroy()
 {
     AlignedMemoryAllocator* allocator = m_subspace->alignedMemoryAllocator();
+    void* basePointer = this->basePointer();
     this->~LargeAllocation();
-    allocator->freeAlignedMemory(this);
+    allocator->freeMemory(basePointer);
 }
 
 void LargeAllocation::dump(PrintStream& out) const
@@ -133,7 +198,7 @@ void LargeAllocation::dump(PrintStream& out) const
 #if !ASSERT_DISABLED
 void LargeAllocation::assertValidCell(VM& vm, HeapCell* cell) const
 {
-    ASSERT(&vm == this->vm());
+    ASSERT(&vm == &this->vm());
     ASSERT(cell == this->cell());
     ASSERT(m_hasValidCell);
 }

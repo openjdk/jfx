@@ -22,29 +22,27 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-// https://github.com/gpuweb/gpuweb/blob/master/design/sketch.webidl
+// https://gpuweb.github.io/gpuweb
 
-enum WebGPUPrimitiveTopology {
-    "pointList",
-    "lineList",
-    "lineStrip",
-    "triangleList",
-    "triangleStrip"
+[
+    ImplementedAs=GPUPrimitiveTopology
+] enum GPUPrimitiveTopology {
+    "point-list",
+    "line-list",
+    "line-strip",
+    "triangle-list",
+    "triangle-strip"
 };
 
 [
     Conditional=WEBGPU,
     EnabledAtRuntime=WebGPU
 ] dictionary WebGPURenderPipelineDescriptor : WebGPUPipelineDescriptorBase {
-    WebGPUPipelineStageDescriptor vertexStage;
-    WebGPUPipelineStageDescriptor fragmentStage;
+    required WebGPUPipelineStageDescriptor vertexStage;
+    WebGPUPipelineStageDescriptor? fragmentStage = null;
 
-    WebGPUPrimitiveTopology primitiveTopology;
-    GPUDepthStencilStateDescriptor depthStencilState;
-    WebGPUInputStateDescriptor inputState;
-/* To Be Implemented:
-    sequence<WebGPUBlendStateDescriptor> blendStates;
-    WebGPUAttachmentsStateDescriptor attachmentsState;
-    // TODO other properties
-*/
+    required GPUPrimitiveTopology primitiveTopology;
+    required sequence<GPUColorStateDescriptor> colorStates;
+    GPUDepthStencilStateDescriptor? depthStencilState = null;
+    required GPUVertexInputDescriptor vertexInput;
 };

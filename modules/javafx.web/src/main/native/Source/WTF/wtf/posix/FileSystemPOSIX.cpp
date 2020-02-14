@@ -66,11 +66,17 @@ bool deleteFile(const String& path)
 {
     CString fsRep = fileSystemRepresentation(path);
 
-    if (!fsRep.data() || fsRep.data()[0] == '\0')
+    if (!fsRep.data() || fsRep.data()[0] == '\0') {
+        LOG_ERROR("File failed to delete. Failed to get filesystem representation to create CString from cfString or filesystem representation is a null value");
         return false;
+    }
 
     // unlink(...) returns 0 on successful deletion of the path and non-zero in any other case (including invalid permissions or non-existent file)
-    return !unlink(fsRep.data());
+    bool unlinked = !unlink(fsRep.data());
+    if (!unlinked && errno != ENOENT)
+        LOG_ERROR("File failed to delete. Error message: %s", strerror(errno));
+
+    return unlinked;
 }
 
 PlatformFileHandle openFile(const String& path, FileOpenMode mode)
@@ -301,10 +307,8 @@ String pathByAppendingComponents(StringView path, const Vector<StringView>& comp
 {
     StringBuilder builder;
     builder.append(path);
-    for (auto& component : components) {
-        builder.append('/');
-        builder.append(component);
-    }
+    for (auto& component : components)
+        builder.append('/', component);
     return builder.toString();
 }
 
@@ -444,23 +448,39 @@ end:
 }
 #endif // !PLATFORM(COCOA)
 
-bool hardLinkOrCopyFile(const String& source, const String& destination)
+bool hardLink(const String& source, const String& destination)
 {
     if (source.isEmpty() || destination.isEmpty())
         return false;
 
-    CString fsSource = fileSystemRepresentation(source);
+    auto fsSource = fileSystemRepresentation(source);
     if (!fsSource.data())
         return false;
 
-    CString fsDestination = fileSystemRepresentation(destination);
+    auto fsDestination = fileSystemRepresentation(destination);
     if (!fsDestination.data())
         return false;
 
-    if (!link(fsSource.data(), fsDestination.data()))
+    return !link(fsSource.data(), fsDestination.data());
+}
+
+bool hardLinkOrCopyFile(const String& source, const String& destination)
+{
+    if (hardLink(source, destination))
         return true;
 
     // Hard link failed. Perform a copy instead.
+    if (source.isEmpty() || destination.isEmpty())
+        return false;
+
+    auto fsSource = fileSystemRepresentation(source);
+    if (!fsSource.data())
+        return false;
+
+    auto fsDestination = fileSystemRepresentation(destination);
+    if (!fsDestination.data())
+        return false;
+
     auto handle = open(fsDestination.data(), O_WRONLY | O_CREAT | O_EXCL, 0666);
     if (handle == -1)
         return false;

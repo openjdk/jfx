@@ -26,6 +26,7 @@
 #include "RenderCounter.h"
 #include "RenderStyle.h"
 #include "ShadowData.h"
+#include "StyleCustomPropertyData.h"
 #include "StyleFilterData.h"
 #include "StyleTransformData.h"
 #include "StyleImage.h"
@@ -138,13 +139,13 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , scrollSnapArea(o.scrollSnapArea)
 #endif
     , content(o.content ? o.content->clone() : nullptr)
-    , counterDirectives(o.counterDirectives ? std::make_unique<CounterDirectiveMap>(*o.counterDirectives) : nullptr)
+    , counterDirectives(o.counterDirectives ? makeUnique<CounterDirectiveMap>(*o.counterDirectives) : nullptr)
     , altText(o.altText)
-    , boxShadow(o.boxShadow ? std::make_unique<ShadowData>(*o.boxShadow) : nullptr)
+    , boxShadow(o.boxShadow ? makeUnique<ShadowData>(*o.boxShadow) : nullptr)
     , willChange(o.willChange)
     , boxReflect(o.boxReflect)
-    , animations(o.animations ? std::make_unique<AnimationList>(*o.animations) : nullptr)
-    , transitions(o.transitions ? std::make_unique<AnimationList>(*o.transitions) : nullptr)
+    , animations(o.animations ? makeUnique<AnimationList>(*o.animations) : nullptr)
+    , transitions(o.transitions ? makeUnique<AnimationList>(*o.transitions) : nullptr)
     , mask(o.mask)
     , maskBoxImage(o.maskBoxImage)
     , pageSize(o.pageSize)
@@ -169,7 +170,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , justifyItems(o.justifyItems)
     , justifySelf(o.justifySelf)
     , customProperties(o.customProperties)
-    , customPaintWatchedProperties(o.customPaintWatchedProperties ? std::make_unique<HashSet<String>>(*o.customPaintWatchedProperties) : nullptr)
+    , customPaintWatchedProperties(o.customPaintWatchedProperties ? makeUnique<HashSet<String>>(*o.customPaintWatchedProperties) : nullptr)
 #if ENABLE(POINTER_EVENTS)
     , touchActions(o.touchActions)
 #endif
@@ -222,9 +223,6 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && perspectiveOriginY == o.perspectiveOriginY
         && lineClamp == o.lineClamp
         && initialLetter == o.initialLetter
-#if ENABLE(DASHBOARD_SUPPORT)
-        && dashboardRegions == o.dashboardRegions
-#endif
         && deprecatedFlexibleBox == o.deprecatedFlexibleBox
         && flexibleBox == o.flexibleBox
         && marquee == o.marquee

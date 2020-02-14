@@ -44,10 +44,6 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
-#if USE(JAVA_UNICODE)
-#include "java/TextCodecJava.h"
-#endif
-
 namespace WebCore {
 
 const size_t maxEncodingNameLength = 63;
@@ -240,11 +236,6 @@ static void extendTextCodecMaps()
 
     TextCodecICU::registerEncodingNames(addToTextEncodingNameMap);
     TextCodecICU::registerCodecs(addToTextCodecMap);
-
-#if USE(JAVA_UNICODE)
-    TextCodecJava::registerEncodingNames(addToTextEncodingNameMap);
-    TextCodecJava::registerCodecs(addToTextCodecMap);
-#endif
 
     pruneBlacklistedCodecs();
     buildQuirksSets();

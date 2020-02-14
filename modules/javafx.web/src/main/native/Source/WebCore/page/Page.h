@@ -32,6 +32,8 @@
 #include "Pagination.h"
 #include "RTCController.h"
 #include "Region.h"
+#include "RegistrableDomain.h"
+#include "RenderingUpdateScheduler.h"
 #include "ScrollTypes.h"
 #include "Supplementable.h"
 #include "Timer.h"
@@ -41,6 +43,7 @@
 #include "WheelEventTestTrigger.h"
 #include <memory>
 #include <pal/SessionID.h>
+#include <wtf/Assertions.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
@@ -144,6 +147,7 @@ class ValidationMessageClient;
 class ActivityStateChangeObserver;
 class VisitedLinkStore;
 class WebGLStateTracker;
+class SpeechSynthesisClient;
 class WheelEventDeltaFilter;
 
 typedef uint64_t SharedStringHash;
@@ -188,6 +192,9 @@ public:
 
     WEBCORE_EXPORT OptionSet<DisabledAdaptations> disabledAdaptations() const;
     WEBCORE_EXPORT ViewportArguments viewportArguments() const;
+
+    const Optional<ViewportArguments>& overrideViewportArguments() const { return m_overrideViewportArguments; }
+    WEBCORE_EXPORT void setOverrideViewportArguments(const Optional<ViewportArguments>&);
 
     static void refreshPlugins(bool reload);
     WEBCORE_EXPORT PluginData& pluginData();
@@ -261,6 +268,8 @@ public:
 
     PerformanceMonitor* performanceMonitor() { return m_performanceMonitor.get(); }
 
+    RenderingUpdateScheduler& renderingUpdateScheduler();
+
     ValidationMessageClient* validationMessageClient() const { return m_validationMessageClient.get(); }
     void updateValidationBubbleStateIfNeeded();
 
@@ -292,6 +301,9 @@ public:
     WEBCORE_EXPORT unsigned markAllMatchesForText(const String&, FindOptions, bool shouldHighlight, unsigned maxMatchCount);
 
     WEBCORE_EXPORT void unmarkAllTextMatches();
+
+    WEBCORE_EXPORT void dispatchBeforePrintEvent();
+    WEBCORE_EXPORT void dispatchAfterPrintEvent();
 
     // find all the Ranges for the matching text.
     // Upon return, indexForSelection will be one of the following:
@@ -333,8 +345,6 @@ public:
     void didStartProvisionalLoad();
     void didFinishLoad(); // Called when the load has been committed in the main frame.
 
-    WEBCORE_EXPORT void willDisplayPage();
-
     // The view scale factor is multiplied into the page scale factor by all
     // callers of setPageScaleFactor.
     WEBCORE_EXPORT void setViewScaleFactor(float);
@@ -345,6 +355,9 @@ public:
 
     float deviceScaleFactor() const { return m_deviceScaleFactor; }
     WEBCORE_EXPORT void setDeviceScaleFactor(float);
+
+    float initialScale() const { return m_initialScale; }
+    WEBCORE_EXPORT void setInitialScale(float);
 
     float topContentInset() const { return m_topContentInset; }
     WEBCORE_EXPORT void setTopContentInset(float);
@@ -367,13 +380,15 @@ public:
     WEBCORE_EXPORT void setUseSystemAppearance(bool);
 
     WEBCORE_EXPORT bool useDarkAppearance() const;
-    WEBCORE_EXPORT void setUseDarkAppearance(bool);
+    bool useElevatedUserInterfaceLevel() const { return m_useElevatedUserInterfaceLevel; }
+    WEBCORE_EXPORT void effectiveAppearanceDidChange(bool useDarkAppearance, bool useElevatedUserInterfaceLevel);
     bool defaultUseDarkAppearance() const { return m_useDarkAppearance; }
     void setUseDarkAppearanceOverride(Optional<bool>);
 
 #if ENABLE(TEXT_AUTOSIZING)
     float textAutosizingWidth() const { return m_textAutosizingWidth; }
     void setTextAutosizingWidth(float textAutosizingWidth) { m_textAutosizingWidth = textAutosizingWidth; }
+    WEBCORE_EXPORT void recomputeTextAutoSizingInAllFrames();
 #endif
 
     const FloatBoxExtent& fullscreenInsets() const { return m_fullscreenInsets; }
@@ -413,8 +428,6 @@ public:
 
     WheelEventDeltaFilter* wheelEventDeltaFilter() { return m_recentWheelEventDeltaFilter.get(); }
     PageOverlayController& pageOverlayController() { return *m_pageOverlayController; }
-
-    void installedPageOverlaysChanged();
 
 #if PLATFORM(MAC)
 #if ENABLE(SERVICE_CONTROLS) || ENABLE(TELEPHONE_NUMBER_DETECTION)
@@ -464,11 +477,8 @@ public:
     WEBCORE_EXPORT void addActivityStateChangeObserver(ActivityStateChangeObserver&);
     WEBCORE_EXPORT void removeActivityStateChangeObserver(ActivityStateChangeObserver&);
 
-#if ENABLE(INTERSECTION_OBSERVER)
-    void addDocumentNeedingIntersectionObservationUpdate(Document&);
-    void scheduleForcedIntersectionObservationUpdate(Document&);
-    void updateIntersectionObservations();
-#endif
+    WEBCORE_EXPORT void layoutIfNeeded();
+    WEBCORE_EXPORT void updateRendering();
 
     WEBCORE_EXPORT void suspendScriptedAnimations();
     WEBCORE_EXPORT void resumeScriptedAnimations();
@@ -497,9 +507,6 @@ public:
     StorageNamespace* sessionStorage(bool optionalCreate = true);
     void setSessionStorage(RefPtr<StorageNamespace>&&);
 
-    StorageNamespace* ephemeralLocalStorage(bool optionalCreate = true);
-    void setEphemeralLocalStorage(RefPtr<StorageNamespace>&&);
-
     bool hasCustomHTMLTokenizerTimeDelay() const;
     double customHTMLTokenizerTimeDelay() const;
 
@@ -517,6 +524,8 @@ public:
 
     WEBCORE_EXPORT VisibilityState visibilityState() const;
     WEBCORE_EXPORT void resumeAnimatingImages();
+
+    void didFinishLoadingImageForElement(HTMLImageElement&);
 
     WEBCORE_EXPORT void addLayoutMilestones(OptionSet<LayoutMilestone>);
     WEBCORE_EXPORT void removeLayoutMilestones(OptionSet<LayoutMilestone>);
@@ -587,7 +596,6 @@ public:
     CookieJar& cookieJar() { return m_cookieJar.get(); }
 
     StorageNamespaceProvider& storageNamespaceProvider() { return m_storageNamespaceProvider.get(); }
-    void setStorageNamespaceProvider(Ref<StorageNamespaceProvider>&&);
 
     PluginInfoProvider& pluginInfoProvider();
 
@@ -606,7 +614,7 @@ public:
     void updateIsPlayingMedia(uint64_t);
     MediaProducer::MutedStateFlags mutedState() const { return m_mutedState; }
     bool isAudioMuted() const { return m_mutedState & MediaProducer::AudioIsMuted; }
-    bool isMediaCaptureMuted() const { return m_mutedState & MediaProducer::CaptureDevicesAreMuted; };
+    bool isMediaCaptureMuted() const { return m_mutedState & MediaProducer::MediaStreamCaptureIsMuted; };
     void schedulePlaybackControlsManagerUpdate();
     WEBCORE_EXPORT void setMuted(MediaProducer::MutedStateFlags);
     WEBCORE_EXPORT void stopMediaCapture();
@@ -614,7 +622,10 @@ public:
     WEBCORE_EXPORT void stopAllMediaPlayback();
     WEBCORE_EXPORT void suspendAllMediaPlayback();
     WEBCORE_EXPORT void resumeAllMediaPlayback();
-    bool mediaPlaybackIsSuspended() { return m_mediaPlaybackIsSuspended; }
+    bool mediaPlaybackIsSuspended() const { return m_mediaPlaybackIsSuspended; }
+    WEBCORE_EXPORT void suspendAllMediaBuffering();
+    WEBCORE_EXPORT void resumeAllMediaBuffering();
+    bool mediaBufferingIsSuspended() const { return m_mediaBufferingIsSuspended; }
 
 #if ENABLE(MEDIA_SESSION)
     WEBCORE_EXPORT void handleMediaEvent(MediaEventType);
@@ -638,6 +649,9 @@ public:
     WEBCORE_EXPORT WheelEventTestTrigger& ensureTestTrigger();
     void clearTrigger() { m_testTrigger = nullptr; }
     bool expectsWheelEventTriggers() const { return !!m_testTrigger; }
+
+    void setIsForSanitizingWebContent() { m_isForSanitizingWebContent = true; }
+    bool isForSanitizingWebContent() const { return m_isForSanitizingWebContent; }
 
 #if ENABLE(VIDEO)
     bool allowsMediaDocumentInlinePlayback() const { return m_allowsMediaDocumentInlinePlayback; }
@@ -678,7 +692,13 @@ public:
     Optional<CompositingPolicy> compositingPolicyOverride() const { return m_compositingPolicyOverride; }
     void setCompositingPolicyOverride(Optional<CompositingPolicy> policy) { m_compositingPolicyOverride = policy; }
 
+#if ENABLE(WEBGL)
     WebGLStateTracker* webGLStateTracker() const { return m_webGLStateTracker.get(); }
+#endif
+
+#if ENABLE(SPEECH_SYNTHESIS)
+    SpeechSynthesisClient* speechSynthesisClient() const { return m_speechSynthesisClient.get(); }
+#endif
 
     bool isOnlyNonUtilityPage() const;
     bool isUtilityPage() const { return m_isUtilityPage; }
@@ -697,9 +717,11 @@ public:
 
     PerformanceLogging& performanceLogging() const { return *m_performanceLogging; }
 
+    void configureLoggingChannel(const String&, WTFLogChannelState, WTFLogLevel);
+
 private:
     struct Navigation {
-        String domain;
+        RegistrableDomain domain;
         FrameLoadType type;
     };
     void logNavigation(const Navigation&);
@@ -774,7 +796,13 @@ private:
     std::unique_ptr<DiagnosticLoggingClient> m_diagnosticLoggingClient;
     std::unique_ptr<PerformanceLoggingClient> m_performanceLoggingClient;
 
+#if ENABLE(WEBGL)
     std::unique_ptr<WebGLStateTracker> m_webGLStateTracker;
+#endif
+
+#if ENABLE(SPEECH_SYNTHESIS)
+    std::unique_ptr<SpeechSynthesisClient> m_speechSynthesisClient;
+#endif
 
     UniqueRef<LibWebRTCProvider> m_libWebRTCProvider;
     RTCController m_rtcController;
@@ -813,12 +841,14 @@ private:
 #endif
 
     bool m_useSystemAppearance { false };
+    bool m_useElevatedUserInterfaceLevel { false };
     bool m_useDarkAppearance { false };
     Optional<bool> m_useDarkAppearanceOverride;
 
 #if ENABLE(TEXT_AUTOSIZING)
     float m_textAutosizingWidth { 0 };
 #endif
+    float m_initialScale { 1.0f };
 
     bool m_suppressScrollbarAnimations { false };
 
@@ -843,7 +873,6 @@ private:
     bool m_canStartMedia { true };
 
     RefPtr<StorageNamespace> m_sessionStorage;
-    RefPtr<StorageNamespace> m_ephemeralLocalStorage;
 
     TimerThrottlingState m_timerThrottlingState { TimerThrottlingState::Disabled };
     MonotonicTime m_timerThrottlingStateLastChangedTime;
@@ -859,6 +888,8 @@ private:
 
     int m_headerHeight { 0 };
     int m_footerHeight { 0 };
+
+    std::unique_ptr<RenderingUpdateScheduler> m_renderingUpdateScheduler;
 
     HashSet<RenderObject*> m_relevantUnpaintedRenderObjects;
     Region m_topRelevantPaintedRegion;
@@ -899,14 +930,6 @@ private:
     RefPtr<WheelEventTestTrigger> m_testTrigger;
 
     HashSet<ActivityStateChangeObserver*> m_activityStateChangeObservers;
-
-#if ENABLE(INTERSECTION_OBSERVER)
-    Vector<WeakPtr<Document>> m_documentsNeedingIntersectionObservationUpdate;
-
-    // FIXME: Schedule intersection observation updates in a way that fits into the HTML
-    // EventLoop. See https://bugs.webkit.org/show_bug.cgi?id=160711.
-    Timer m_intersectionObservationUpdateTimer;
-#endif
 
 #if ENABLE(RESOURCE_USAGE)
     std::unique_ptr<ResourceUsageOverlay> m_resourceUsageOverlay;
@@ -965,8 +988,14 @@ private:
     Optional<ApplicationManifest> m_applicationManifest;
 #endif
 
+    Optional<ViewportArguments> m_overrideViewportArguments;
+
     bool m_shouldEnableICECandidateFilteringByDefault { true };
     bool m_mediaPlaybackIsSuspended { false };
+    bool m_mediaBufferingIsSuspended { false };
+    bool m_inUpdateRendering { false };
+
+    bool m_isForSanitizingWebContent { false };
 };
 
 inline PageGroup& Page::group()

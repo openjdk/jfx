@@ -27,99 +27,27 @@
 
 #if ENABLE(WEBGPU)
 
-#include "WHLSLArrayReferenceType.h"
-#include "WHLSLArrayType.h"
-#include "WHLSLAssignmentExpression.h"
-#include "WHLSLBaseFunctionAttribute.h"
-#include "WHLSLBaseSemantic.h"
-#include "WHLSLBlock.h"
-#include "WHLSLBooleanLiteral.h"
-#include "WHLSLBreak.h"
-#include "WHLSLBuiltInSemantic.h"
-#include "WHLSLCallExpression.h"
-#include "WHLSLCommaExpression.h"
-#include "WHLSLConstantExpression.h"
-#include "WHLSLContinue.h"
-#include "WHLSLDereferenceExpression.h"
-#include "WHLSLDoWhileLoop.h"
-#include "WHLSLDotExpression.h"
-#include "WHLSLEffectfulExpressionStatement.h"
-#include "WHLSLEnumerationDefinition.h"
-#include "WHLSLEnumerationMember.h"
-#include "WHLSLExpression.h"
-#include "WHLSLFallthrough.h"
-#include "WHLSLFloatLiteral.h"
-#include "WHLSLForLoop.h"
-#include "WHLSLFunctionAttribute.h"
-#include "WHLSLFunctionDeclaration.h"
-#include "WHLSLFunctionDefinition.h"
-#include "WHLSLIfStatement.h"
-#include "WHLSLIndexExpression.h"
-#include "WHLSLIntegerLiteral.h"
+#include "WHLSLAST.h"
+#include "WHLSLError.h"
 #include "WHLSLLexer.h"
-#include "WHLSLLogicalExpression.h"
-#include "WHLSLLogicalNotExpression.h"
-#include "WHLSLMakeArrayReferenceExpression.h"
-#include "WHLSLMakePointerExpression.h"
-#include "WHLSLNativeFunctionDeclaration.h"
-#include "WHLSLNativeTypeDeclaration.h"
-#include "WHLSLNode.h"
-#include "WHLSLNullLiteral.h"
-#include "WHLSLNumThreadsFunctionAttribute.h"
-#include "WHLSLPointerType.h"
-#include "WHLSLProgram.h"
-#include "WHLSLPropertyAccessExpression.h"
-#include "WHLSLQualifier.h"
-#include "WHLSLReadModifyWriteExpression.h"
-#include "WHLSLReferenceType.h"
-#include "WHLSLResourceSemantic.h"
-#include "WHLSLReturn.h"
-#include "WHLSLSemantic.h"
-#include "WHLSLSpecializationConstantSemantic.h"
-#include "WHLSLStageInOutSemantic.h"
-#include "WHLSLStatement.h"
-#include "WHLSLStructureDefinition.h"
-#include "WHLSLStructureElement.h"
-#include "WHLSLSwitchCase.h"
-#include "WHLSLSwitchStatement.h"
-#include "WHLSLTernaryExpression.h"
-#include "WHLSLTrap.h"
-#include "WHLSLType.h"
-#include "WHLSLTypeArgument.h"
-#include "WHLSLTypeDefinition.h"
-#include "WHLSLTypeReference.h"
-#include "WHLSLUnsignedIntegerLiteral.h"
-#include "WHLSLValue.h"
-#include "WHLSLVariableDeclaration.h"
-#include "WHLSLVariableDeclarationsStatement.h"
-#include "WHLSLVariableReference.h"
-#include "WHLSLWhileLoop.h"
+#include "WHLSLParsingMode.h"
 #include <wtf/Expected.h>
 #include <wtf/Optional.h>
+#include <wtf/PrintStream.h>
 
 namespace WebCore {
 
 namespace WHLSL {
 
+class Program;
+
 class Parser {
 public:
-    enum class Mode {
-        StandardLibrary,
-        User
-    };
-
-    struct Error {
-        Error(String&& error)
-            : error(WTFMove(error))
-        {
-        }
-
-        String error;
-    };
-
-    Optional<Error> parse(Program&, StringView, Mode);
+    Expected<void, Error> parse(Program&, StringView, ParsingMode, AST::NameSpace);
 
 private:
+    // FIXME: We should not need this
+    // https://bugs.webkit.org/show_bug.cgi?id=198357
     template<typename T> T backtrackingScope(std::function<T()> callback)
     {
         auto state = m_lexer.state();
@@ -130,12 +58,22 @@ private:
         return result;
     }
 
-    Unexpected<Error> fail(const String& message);
-    Expected<Lexer::Token, Error> peek();
-    Optional<Lexer::Token> tryType(Lexer::Token::Type);
-    Optional<Lexer::Token> tryTypes(Vector<Lexer::Token::Type>);
-    Expected<Lexer::Token, Error> consumeType(Lexer::Token::Type);
-    Expected<Lexer::Token, Error> consumeTypes(Vector<Lexer::Token::Type>);
+    enum class TryToPeek {
+        Yes,
+        No
+    };
+    Unexpected<Error> fail(const String& message, TryToPeek = TryToPeek::Yes);
+    Expected<Token, Error> peek();
+    Expected<Token, Error> peekFurther();
+    bool peekType(Token::Type);
+    template <Token::Type... types>
+    bool peekTypes();
+    Optional<Token> tryType(Token::Type);
+    template <Token::Type... types>
+    Optional<Token> tryTypes();
+    Expected<Token, Error> consumeType(Token::Type);
+    template <Token::Type... types>
+    Expected<Token, Error> consumeTypes();
 
     Expected<Variant<int, unsigned>, Error> consumeIntegralLiteral();
     Expected<unsigned, Error> consumeNonNegativeIntegralLiteral();
@@ -143,36 +81,39 @@ private:
     Expected<AST::TypeArgument, Error> parseTypeArgument();
     Expected<AST::TypeArguments, Error> parseTypeArguments();
     struct TypeSuffixAbbreviated {
-        Lexer::Token token;
+        CodeLocation location;
+        Token token;
         Optional<unsigned> numElements;
     };
     Expected<TypeSuffixAbbreviated, Error> parseTypeSuffixAbbreviated();
     struct TypeSuffixNonAbbreviated {
-        Lexer::Token token;
+        CodeLocation location;
+        Token token;
         Optional<AST::AddressSpace> addressSpace;
         Optional<unsigned> numElements;
     };
     Expected<TypeSuffixNonAbbreviated, Error> parseTypeSuffixNonAbbreviated();
-    Expected<UniqueRef<AST::UnnamedType>, Error> parseAddressSpaceType();
-    Expected<UniqueRef<AST::UnnamedType>, Error> parseNonAddressSpaceType();
-    Expected<UniqueRef<AST::UnnamedType>, Error> parseType();
+    Expected<Ref<AST::UnnamedType>, Error> parseAddressSpaceType();
+    Expected<Ref<AST::UnnamedType>, Error> parseNonAddressSpaceType();
+    Expected<Ref<AST::UnnamedType>, Error> parseType();
     Expected<AST::TypeDefinition, Error> parseTypeDefinition();
     Expected<AST::BuiltInSemantic, Error> parseBuiltInSemantic();
     Expected<AST::ResourceSemantic, Error> parseResourceSemantic();
     Expected<AST::SpecializationConstantSemantic, Error> parseSpecializationConstantSemantic();
     Expected<AST::StageInOutSemantic, Error> parseStageInOutSemantic();
-    Expected<AST::Semantic, Error> parseSemantic();
+    Expected<std::unique_ptr<AST::Semantic>, Error> parseSemantic();
     AST::Qualifiers parseQualifiers();
     Expected<AST::StructureElement, Error> parseStructureElement();
     Expected<AST::StructureDefinition, Error> parseStructureDefinition();
     Expected<AST::EnumerationDefinition, Error> parseEnumerationDefinition();
-    Expected<AST::EnumerationMember, Error> parseEnumerationMember();
+    Expected<AST::EnumerationMember, Error> parseEnumerationMember(int64_t defaultValue);
     Expected<AST::NativeTypeDeclaration, Error> parseNativeTypeDeclaration();
     Expected<AST::NumThreadsFunctionAttribute, Error> parseNumThreadsFunctionAttribute();
     Expected<AST::AttributeBlock, Error> parseAttributeBlock();
     Expected<AST::VariableDeclaration, Error> parseParameter();
     Expected<AST::VariableDeclarations, Error> parseParameters();
-    Expected<AST::FunctionDeclaration, Error> parseEntryPointFunctionDeclaration();
+    Expected<AST::FunctionDeclaration, Error> parseComputeFunctionDeclaration();
+    Expected<AST::FunctionDeclaration, Error> parseVertexOrFragmentFunctionDeclaration();
     Expected<AST::FunctionDeclaration, Error> parseRegularFunctionDeclaration();
     Expected<AST::FunctionDeclaration, Error> parseOperatorFunctionDeclaration();
     Expected<AST::FunctionDeclaration, Error> parseFunctionDeclaration();
@@ -180,21 +121,19 @@ private:
     Expected<AST::NativeFunctionDeclaration, Error> parseNativeFunctionDeclaration();
 
     Expected<AST::Block, Error> parseBlock();
-    AST::Block parseBlockBody(Lexer::Token&& origin);
+    Expected<AST::Block, Error> parseBlockBody();
     Expected<AST::IfStatement, Error> parseIfStatement();
     Expected<AST::SwitchStatement, Error> parseSwitchStatement();
     Expected<AST::SwitchCase, Error> parseSwitchCase();
     Expected<AST::ForLoop, Error> parseForLoop();
     Expected<AST::WhileLoop, Error> parseWhileLoop();
     Expected<AST::DoWhileLoop, Error> parseDoWhileLoop();
-    Expected<AST::VariableDeclaration, Error> parseVariableDeclaration(UniqueRef<AST::UnnamedType>&&);
+    Expected<AST::VariableDeclaration, Error> parseVariableDeclaration(Ref<AST::UnnamedType>&&);
     Expected<AST::VariableDeclarationsStatement, Error> parseVariableDeclarations();
     Expected<UniqueRef<AST::Statement>, Error> parseStatement();
 
-    Expected<UniqueRef<AST::Expression>, Error> parseEffectfulExpression();
+    Expected<UniqueRef<AST::Statement>, Error> parseEffectfulExpression();
     Expected<UniqueRef<AST::Expression>, Error> parseEffectfulAssignment();
-    Expected<UniqueRef<AST::Expression>, Error> parseEffectfulPrefix();
-    Expected<UniqueRef<AST::Expression>, Error> parseEffectfulSuffix();
     struct SuffixExpression {
         SuffixExpression(UniqueRef<AST::Expression>&& result, bool success)
             : result(WTFMove(result))
@@ -210,21 +149,26 @@ private:
     SuffixExpression parseSuffixOperator(UniqueRef<AST::Expression>&&);
 
     Expected<UniqueRef<AST::Expression>, Error> parseExpression();
-    Expected<UniqueRef<AST::Expression>, Error> parseTernaryConditional();
-    Expected<UniqueRef<AST::Expression>, Error> parseAssignment();
     Expected<UniqueRef<AST::Expression>, Error> parsePossibleTernaryConditional();
+    Expected<UniqueRef<AST::Expression>, Error> completeTernaryConditional(UniqueRef<AST::Expression>&& predicate);
+    Expected<UniqueRef<AST::Expression>, Error> completeAssignment(UniqueRef<AST::Expression>&& left);
     Expected<UniqueRef<AST::Expression>, Error> parsePossibleLogicalBinaryOperation();
+    Expected<UniqueRef<AST::Expression>, Error> completePossibleLogicalBinaryOperation(UniqueRef<AST::Expression>&& previous);
     Expected<UniqueRef<AST::Expression>, Error> parsePossibleRelationalBinaryOperation();
+    Expected<UniqueRef<AST::Expression>, Error> completePossibleRelationalBinaryOperation(UniqueRef<AST::Expression>&& previous);
     Expected<UniqueRef<AST::Expression>, Error> parsePossibleShift();
+    Expected<UniqueRef<AST::Expression>, Error> completePossibleShift(UniqueRef<AST::Expression>&& previous);
     Expected<UniqueRef<AST::Expression>, Error> parsePossibleAdd();
+    Expected<UniqueRef<AST::Expression>, Error> completePossibleAdd(UniqueRef<AST::Expression>&& previous);
     Expected<UniqueRef<AST::Expression>, Error> parsePossibleMultiply();
-    Expected<UniqueRef<AST::Expression>, Error> parsePossiblePrefix();
-    Expected<UniqueRef<AST::Expression>, Error> parsePossibleSuffix();
+    Expected<UniqueRef<AST::Expression>, Error> completePossibleMultiply(UniqueRef<AST::Expression>&& previous);
+    Expected<UniqueRef<AST::Expression>, Error> parsePossiblePrefix(bool *isEffectful = nullptr);
+    Expected<UniqueRef<AST::Expression>, Error> parsePossibleSuffix(bool *isEffectful = nullptr);
     Expected<UniqueRef<AST::Expression>, Error> parseCallExpression();
     Expected<UniqueRef<AST::Expression>, Error> parseTerm();
 
     Lexer m_lexer;
-    Mode m_mode;
+    ParsingMode m_mode;
 };
 
 } // namespace WHLSL

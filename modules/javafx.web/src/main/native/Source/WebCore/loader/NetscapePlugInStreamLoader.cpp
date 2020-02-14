@@ -29,6 +29,7 @@
 #include "config.h"
 #include "NetscapePlugInStreamLoader.h"
 
+#include "CustomHeaderFields.h"
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
@@ -43,8 +44,8 @@ namespace WebCore {
 
 // FIXME: Skip Content Security Policy check when associated plugin element is in a user agent shadow tree.
 // See <https://bugs.webkit.org/show_bug.cgi?id=146663>.
-NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client)
-    : ResourceLoader(documentLoader, ResourceLoaderOptions(
+NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(Frame& frame, NetscapePlugInStreamLoaderClient& client)
+    : ResourceLoader(frame, ResourceLoaderOptions(
         SendCallbackPolicy::SendCallbacks,
         ContentSniffingPolicy::SniffContent,
         DataBufferingPolicy::DoNotBufferData,
@@ -60,15 +61,15 @@ NetscapePlugInStreamLoader::NetscapePlugInStreamLoader(DocumentLoader& documentL
     , m_client(&client)
 {
 #if ENABLE(CONTENT_EXTENSIONS)
-    m_resourceType = ResourceType::PlugInStream;
+    m_resourceType = ContentExtensions::ResourceType::PlugInStream;
 #endif
 }
 
 NetscapePlugInStreamLoader::~NetscapePlugInStreamLoader() = default;
 
-void NetscapePlugInStreamLoader::create(DocumentLoader& documentLoader, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<NetscapePlugInStreamLoader>&&)>&& completionHandler)
+void NetscapePlugInStreamLoader::create(Frame& frame, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<NetscapePlugInStreamLoader>&&)>&& completionHandler)
 {
-    auto loader(adoptRef(*new NetscapePlugInStreamLoader(documentLoader, client)));
+    auto loader(adoptRef(*new NetscapePlugInStreamLoader(frame, client)));
     loader->init(WTFMove(request), [loader = loader.copyRef(), completionHandler = WTFMove(completionHandler)] (bool initialized) mutable {
         if (!initialized)
             return completionHandler(nullptr);

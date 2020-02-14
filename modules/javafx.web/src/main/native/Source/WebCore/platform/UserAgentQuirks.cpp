@@ -75,36 +75,44 @@ static bool urlRequiresMacintoshPlatform(const URL& url)
     String domain = url.host().toString();
     String baseDomain = topPrivatelyControlledDomain(domain);
 
-    // At least finance.yahoo.com displays a mobile version with WebKitGTK+'s standard user agent.
+    // At least finance.yahoo.com displays a mobile version with WebKitGTK's standard user agent.
     if (baseDomain == "yahoo.com")
         return true;
 
-    // taobao.com displays a mobile version with WebKitGTK+'s standard user agent.
+    // taobao.com displays a mobile version with WebKitGTK's standard user agent.
     if (baseDomain == "taobao.com")
         return true;
 
-    // web.whatsapp.com completely blocks users with WebKitGTK+'s standard user agent.
+    // web.whatsapp.com completely blocks users with WebKitGTK's standard user agent.
     if (baseDomain == "whatsapp.com")
         return true;
 
-    // paypal.com completely blocks users with WebKitGTK+'s standard user agent.
+    // paypal.com completely blocks users with WebKitGTK's standard user agent.
     if (baseDomain == "paypal.com")
         return true;
 
     // chase.com displays a huge "please update your browser" warning with
-    // WebKitGTK+'s standard user agent.
+    // WebKitGTK's standard user agent.
     if (baseDomain == "chase.com")
         return true;
 
-    // Microsoft Outlook Web App forces users with WebKitGTK+'s standard user
-    // agent to use the light version. Earlier versions even blocks users from
+    // Microsoft Outlook Web App forces users with WebKitGTK's standard user
+    // agent to use the light version. Earlier versions even block users from
     // accessing the calendar.
-    if (domain == "outlook.live.com" || domain == "mail.ntu.edu.tw")
+    if (domain == "outlook.live.com"
+        || domain == "mail.ntu.edu.tw"
+        || domain == "exchange.tu-berlin.de")
         return true;
 
-    // Google Docs shows a scary unsupported browser warning with WebKitGTK+'s
+    // Google Docs and Google Drive both show a scary unsupported browser
+    // warning with WebKitGTK's standard user agent.
+    if (domain == "docs.google.com"
+        || domain == "drive.google.com")
+        return true;
+
+    // Bank of America shows an unsupported browser warning with WebKitGTK's
     // standard user agent.
-    if (domain == "docs.google.com")
+    if (baseDomain == "bankofamerica.com")
         return true;
 
     return false;
@@ -112,8 +120,10 @@ static bool urlRequiresMacintoshPlatform(const URL& url)
 
 static bool urlRequiresLinuxDesktopPlatform(const URL& url)
 {
-    // docs.google.com requires the macOS platform quirk.
-    return isGoogle(url) && url.host() != "docs.google.com";
+    // docs.google.com and drive.google.com require the macOS platform quirk.
+    return isGoogle(url)
+        && url.host() != "docs.google.com"
+        && url.host() != "drive.google.com";
 }
 
 UserAgentQuirks UserAgentQuirks::quirksForURL(const URL& url)
@@ -138,9 +148,9 @@ String UserAgentQuirks::stringForQuirk(UserAgentQuirk quirk)
     switch (quirk) {
     case NeedsChromeBrowser:
         // Get versions from https://chromium.googlesource.com/chromium/src.git
-        return "Chrome/58.0.3029.81"_s;
+        return "Chrome/75.0.3770.141"_s;
     case NeedsMacintoshPlatform:
-        return "Macintosh; Intel Mac OS X 10_13_4"_s;
+        return "Macintosh; Intel Mac OS X 10_15"_s;
     case NeedsLinuxDesktopPlatform:
         return "X11; Linux x86_64"_s;
     case NumUserAgentQuirks:

@@ -135,13 +135,13 @@ static Optional<StringView> parseQuotedString(StringView input, unsigned& startI
         return WTF::nullopt;
 
     if (input[quotedStringEnd++] != '"' || quotedStringEnd >= inputLength)
-            return WTF::nullopt;
+        return WTF::nullopt;
 
     bool lastCharacterWasBackslash = false;
     char currentCharacter;
     while ((currentCharacter = input[quotedStringEnd++]) != '"' || lastCharacterWasBackslash) {
         if (quotedStringEnd >= inputLength)
-                return WTF::nullopt;
+            return WTF::nullopt;
         if (currentCharacter == '\\' && !lastCharacterWasBackslash) {
             lastCharacterWasBackslash = true;
             continue;
@@ -292,19 +292,19 @@ bool ParsedContentType::parseContentType(Mode mode)
             if (mode == Mode::MimeSniff) {
                 parameterValue = collectHTTPQuotedString(m_contentType, index);
                 parseToken(m_contentType, index, isNotSemicolon, mode);
-        } else
+            } else
                 valueRange = parseQuotedString(m_contentType, index);
         } else
             valueRange = parseToken(m_contentType, index, isNotSemicolon, mode, mode == Mode::MimeSniff);
 
 
         if (parameterValue.isNull()) {
-        if (!valueRange) {
-            if (mode == Mode::MimeSniff)
-                continue;
-            LOG_ERROR("Invalid Content-Type, invalid parameter value.");
-            return false;
-        }
+            if (!valueRange) {
+                if (mode == Mode::MimeSniff)
+                    continue;
+                LOG_ERROR("Invalid Content-Type, invalid parameter value.");
+                return false;
+            }
             parameterValue = valueRange->toString();
         }
 
@@ -344,6 +344,11 @@ ParsedContentType::ParsedContentType(const String& contentType)
 String ParsedContentType::charset() const
 {
     return parameterValueForName("charset");
+}
+
+void ParsedContentType::setCharset(String&& charset)
+{
+    m_parameterValues.set("charset"_s, WTFMove(charset));
 }
 
 String ParsedContentType::parameterValueForName(const String& name) const

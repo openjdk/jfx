@@ -57,7 +57,7 @@ public:
     WEBCORE_EXPORT void stop();
     bool isActive() const;
 
-    Seconds nextFireInterval() const;
+    WEBCORE_EXPORT Seconds nextFireInterval() const;
     Seconds nextUnalignedFireInterval() const;
     Seconds repeatInterval() const { return m_repeatInterval; }
 
@@ -96,7 +96,6 @@ private:
 
     MonotonicTime m_unalignedNextFireTime; // m_nextFireTime not considering alignment interval
     Seconds m_repeatInterval; // 0 if not repeating
-    bool m_wasDeleted { false };
 
     RefPtr<ThreadTimerHeapItem> m_heapItem;
     Ref<Thread> m_thread { Thread::current() };

@@ -57,6 +57,14 @@
     ],
     "commands": [
         {
+            "name": "enable",
+            "description": "Enables Timeline domain events."
+        },
+        {
+            "name": "disable",
+            "description": "Disables Timeline domain events."
+        },
+        {
             "name": "start",
             "description": "Starts capturing instrumentation events.",
             "parameters": [
@@ -107,14 +115,6 @@
         {
             "name": "autoCaptureStarted",
             "description": "Fired when auto capture started."
-        },
-        {
-            "name": "programmaticCaptureStarted",
-            "description": "Fired when programmatic capture starts (console.profile)."
-        },
-        {
-            "name": "programmaticCaptureStopped",
-            "description": "Fired when programmatic capture stops (console.profileEnd)."
         }
     ]
 }

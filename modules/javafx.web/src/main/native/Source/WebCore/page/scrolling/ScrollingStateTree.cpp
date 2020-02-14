@@ -26,14 +26,16 @@
 #include "config.h"
 #include "ScrollingStateTree.h"
 
-#if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#if ENABLE(ASYNC_SCROLLING)
 
 #include "AsyncScrollingCoordinator.h"
 #include "Logging.h"
 #include "ScrollingStateFixedNode.h"
 #include "ScrollingStateFrameHostingNode.h"
 #include "ScrollingStateFrameScrollingNode.h"
+#include "ScrollingStateOverflowScrollProxyNode.h"
 #include "ScrollingStateOverflowScrollingNode.h"
+#include "ScrollingStatePositionedNode.h"
 #include "ScrollingStateStickyNode.h"
 #include <wtf/text/CString.h>
 #include <wtf/text/TextStream.h>
@@ -71,10 +73,14 @@ Ref<ScrollingStateNode> ScrollingStateTree::createNode(ScrollingNodeType nodeTyp
         return ScrollingStateFrameHostingNode::create(*this, nodeID);
     case ScrollingNodeType::Overflow:
         return ScrollingStateOverflowScrollingNode::create(*this, nodeID);
+    case ScrollingNodeType::OverflowProxy:
+        return ScrollingStateOverflowScrollProxyNode::create(*this, nodeID);
     case ScrollingNodeType::Fixed:
         return ScrollingStateFixedNode::create(*this, nodeID);
     case ScrollingNodeType::Sticky:
         return ScrollingStateStickyNode::create(*this, nodeID);
+    case ScrollingNodeType::Positioned:
+        return ScrollingStatePositionedNode::create(*this, nodeID);
     }
     ASSERT_NOT_REACHED();
     return ScrollingStateFixedNode::create(*this, nodeID);
@@ -203,7 +209,7 @@ void ScrollingStateTree::unparentNode(ScrollingNodeID nodeID)
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingStateTree " << this << " unparentNode " << nodeID);
 
     // The node may not be found if clear() was recently called.
-    RefPtr<ScrollingStateNode> protectedNode = m_stateNodeMap.get(nodeID);
+    auto protectedNode = m_stateNodeMap.get(nodeID);
     if (!protectedNode)
         return;
 
@@ -222,7 +228,7 @@ void ScrollingStateTree::unparentChildrenAndDestroyNode(ScrollingNodeID nodeID)
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingStateTree " << this << " unparentChildrenAndDestroyNode " << nodeID);
 
     // The node may not be found if clear() was recently called.
-    RefPtr<ScrollingStateNode> protectedNode = m_stateNodeMap.take(nodeID);
+    auto protectedNode = m_stateNodeMap.take(nodeID);
     if (!protectedNode)
         return;
 
@@ -250,13 +256,13 @@ void ScrollingStateTree::detachAndDestroySubtree(ScrollingNodeID nodeID)
     LOG_WITH_STREAM(Scrolling, stream << "ScrollingStateTree " << this << " detachAndDestroySubtree " << nodeID);
 
     // The node may not be found if clear() was recently called.
-    auto* node = m_stateNodeMap.take(nodeID);
+    auto node = m_stateNodeMap.take(nodeID);
     if (!node)
         return;
 
     // If the node was unparented, remove it from m_unparentedNodes (keeping it alive until this function returns).
     auto unparentedNode = m_unparentedNodes.take(nodeID);
-    removeNodeAndAllDescendants(node);
+    removeNodeAndAllDescendants(node.get());
 }
 
 void ScrollingStateTree::clear()
@@ -271,7 +277,7 @@ void ScrollingStateTree::clear()
 void ScrollingStateTree::nodeWasReattachedRecursive(ScrollingStateNode& node)
 {
     // When a node is re-attached, the ScrollingTree is recreating the ScrollingNode from scratch, so we need to set all the dirty bits.
-    node.setAllPropertiesChanged();
+    node.setPropertyChangedBitsAfterReattach();
 
     if (auto* children = node.children()) {
         for (auto& child : *children)
@@ -287,7 +293,7 @@ std::unique_ptr<ScrollingStateTree> ScrollingStateTree::commit(LayerRepresentati
     }
 
     // This function clones and resets the current state tree, but leaves the tree structure intact.
-    std::unique_ptr<ScrollingStateTree> treeStateClone = std::make_unique<ScrollingStateTree>();
+    std::unique_ptr<ScrollingStateTree> treeStateClone = makeUnique<ScrollingStateTree>();
     treeStateClone->setPreferredLayerRepresentation(preferredLayerRepresentation);
 
     if (m_rootStateNode)
@@ -359,7 +365,32 @@ ScrollingStateNode* ScrollingStateTree::stateNodeForID(ScrollingNodeID scrollLay
         return nullptr;
 
     ASSERT(it->value->scrollingNodeID() == scrollLayerID);
-    return it->value;
+    return it->value.get();
+}
+
+void ScrollingStateTree::reconcileLayerPositionsRecursive(ScrollingStateNode& currNode, const LayoutRect& layoutViewport, ScrollingLayerPositionAction action)
+{
+    currNode.reconcileLayerPositionForViewportRect(layoutViewport, action);
+
+    if (!currNode.children())
+        return;
+
+    for (auto& child : *currNode.children()) {
+        // Never need to cross frame boundaries, since viewport rect reconciliation is per frame.
+        if (is<ScrollingStateFrameScrollingNode>(child))
+            continue;
+
+        reconcileLayerPositionsRecursive(*child, layoutViewport, action);
+    }
+}
+
+void ScrollingStateTree::reconcileViewportConstrainedLayerPositions(ScrollingNodeID scrollingNodeID, const LayoutRect& layoutViewport, ScrollingLayerPositionAction action)
+{
+    auto* scrollingNode = stateNodeForID(scrollingNodeID);
+    if (!scrollingNode)
+        return;
+
+    reconcileLayerPositionsRecursive(*scrollingNode, layoutViewport, action);
 }
 
 } // namespace WebCore
@@ -390,4 +421,4 @@ void showScrollingStateTree(const WebCore::ScrollingStateNode* node)
 
 #endif
 
-#endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
+#endif // ENABLE(ASYNC_SCROLLING)

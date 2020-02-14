@@ -35,6 +35,7 @@
 #include <wtf/URL.h>
 #include "TextEncoding.h"
 #include "ThreadableLoaderClient.h"
+#include <pal/SessionID.h>
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
 
@@ -61,11 +62,11 @@ public:
     };
 
     // If client is given, do the loading asynchronously. Otherwise, load synchronously.
-    FileReaderLoader(ReadType, FileReaderLoaderClient*);
+    WEBCORE_EXPORT FileReaderLoader(ReadType, FileReaderLoaderClient*);
     ~FileReaderLoader();
 
-    void start(ScriptExecutionContext*, Blob&);
-    void cancel();
+    WEBCORE_EXPORT void start(ScriptExecutionContext*, Blob&);
+    WEBCORE_EXPORT void cancel();
 
     // ThreadableLoaderClient
     void didReceiveResponse(unsigned long, const ResourceResponse&) override;
@@ -74,7 +75,7 @@ public:
     void didFail(const ResourceError&) override;
 
     String stringResult();
-    RefPtr<JSC::ArrayBuffer> arrayBufferResult() const;
+    WEBCORE_EXPORT RefPtr<JSC::ArrayBuffer> arrayBufferResult() const;
     unsigned bytesLoaded() const { return m_bytesLoaded; }
     unsigned totalBytes() const { return m_totalBytes; }
     FileError::ErrorCode errorCode() const { return m_errorCode; }
@@ -102,6 +103,7 @@ private:
     String m_dataType;
 
     URL m_urlForReading;
+    Optional<PAL::SessionID> m_sessionID;
     RefPtr<ThreadableLoader> m_loader;
 
     RefPtr<JSC::ArrayBuffer> m_rawData;

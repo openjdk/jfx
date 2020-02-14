@@ -52,11 +52,11 @@ bool CallFrame::callSiteBitsAreBytecodeOffset() const
 {
     ASSERT(codeBlock());
     switch (codeBlock()->jitType()) {
-    case JITCode::InterpreterThunk:
-    case JITCode::BaselineJIT:
+    case JITType::InterpreterThunk:
+    case JITType::BaselineJIT:
         return true;
-    case JITCode::None:
-    case JITCode::HostCallThunk:
+    case JITType::None:
+    case JITType::HostCallThunk:
         RELEASE_ASSERT_NOT_REACHED();
         return false;
     default:
@@ -71,11 +71,11 @@ bool CallFrame::callSiteBitsAreCodeOriginIndex() const
 {
     ASSERT(codeBlock());
     switch (codeBlock()->jitType()) {
-    case JITCode::DFGJIT:
-    case JITCode::FTLJIT:
+    case JITType::DFGJIT:
+    case JITType::FTLJIT:
         return true;
-    case JITCode::None:
-    case JITCode::HostCallThunk:
+    case JITType::None:
+    case JITType::HostCallThunk:
         RELEASE_ASSERT_NOT_REACHED();
         return false;
     default:
@@ -156,11 +156,11 @@ unsigned CallFrame::bytecodeOffset()
     if (callSiteBitsAreCodeOriginIndex()) {
         ASSERT(codeBlock());
         CodeOrigin codeOrigin = this->codeOrigin();
-        for (InlineCallFrame* inlineCallFrame = codeOrigin.inlineCallFrame; inlineCallFrame;) {
+        for (InlineCallFrame* inlineCallFrame = codeOrigin.inlineCallFrame(); inlineCallFrame;) {
             codeOrigin = inlineCallFrame->directCaller;
-            inlineCallFrame = codeOrigin.inlineCallFrame;
+            inlineCallFrame = codeOrigin.inlineCallFrame();
         }
-        return codeOrigin.bytecodeIndex;
+        return codeOrigin.bytecodeIndex();
     }
 #endif
     ASSERT(callSiteBitsAreBytecodeOffset());

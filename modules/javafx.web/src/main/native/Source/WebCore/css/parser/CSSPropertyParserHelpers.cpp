@@ -42,6 +42,7 @@
 #include "CSSParserIdioms.h"
 #include "CSSValuePool.h"
 #include "Pair.h"
+#include "RuntimeEnabledFeatures.h"
 #include "StyleColor.h"
 #include <wtf/text/StringConcatenateNumbers.h>
 
@@ -229,7 +230,7 @@ RefPtr<CSSPrimitiveValue> consumeFontWeightNumber(CSSParserTokenRange& range)
 {
     // Values less than or equal to 0 or greater than or equal to 1000 are parse errors.
     auto& token = range.peek();
-    if (token.type() == NumberToken && token.numericValue() > 0 && token.numericValue() < 1000
+    if (token.type() == NumberToken && token.numericValue() >= 1 && token.numericValue() <= 1000
 #if !ENABLE(VARIATION_FONTS)
         && token.numericValueType() == IntegerValueType && divisibleBy100(token.numericValue())
 #endif
@@ -1443,7 +1444,7 @@ static RefPtr<CSSValue> consumeImageSet(CSSParserTokenRange& range, const CSSPar
     CSSParserTokenRange args = consumeFunction(rangeCopy);
     RefPtr<CSSImageSetValue> imageSet = CSSImageSetValue::create(context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
     do {
-        AtomicString urlValue = consumeUrlAsStringView(args).toAtomicString();
+        AtomString urlValue = consumeUrlAsStringView(args).toAtomString();
         if (urlValue.isNull())
             return nullptr;
 
@@ -1660,7 +1661,7 @@ RefPtr<CSSShadowValue> consumeSingleShadow(CSSParserTokenRange& range, CSSParser
 
 RefPtr<CSSValue> consumeImage(CSSParserTokenRange& range, CSSParserContext context, ConsumeGeneratedImage generatedImage)
 {
-    AtomicString uri = consumeUrlAsStringView(range).toAtomicString();
+    AtomString uri = consumeUrlAsStringView(range).toAtomString();
     if (!uri.isNull())
         return CSSImageValue::create(completeURL(context, uri), context.isContentOpaque ? LoadedFromOpaqueSource::Yes : LoadedFromOpaqueSource::No);
 

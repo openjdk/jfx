@@ -195,21 +195,21 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_setDefaultStatusImp
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getSelfImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->self()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getWindowImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     // DOMWindow::frames() / DOMWindow::window() methods as they are just aliases for DOMWindow::self()
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->self()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getFramesImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
     // DOMWindow::frames() / DOMWindow::window() methods as they are just aliases for DOMWindow::self()
-    return JavaReturn<DOMWindow>(env, WTF::getPtr(downcast<DOMWindow>(IMPL->self()->window())));
+    return JavaReturn<DOMWindow>(env, WTF::getPtr(IMPL));
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_DOMWindowImpl_getOpenerImpl(JNIEnv* env, jclass, jlong peer)

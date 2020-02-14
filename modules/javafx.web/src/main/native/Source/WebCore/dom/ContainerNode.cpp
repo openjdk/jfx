@@ -394,8 +394,8 @@ ExceptionOr<void> ContainerNode::insertBefore(Node& newChild, Node* refChild)
     // We need this extra check because collectChildrenAndRemoveFromOldParent() can fire mutation events.
     for (auto& child : targets) {
         auto checkAcceptResult = checkAcceptChildGuaranteedNodeTypes(*this, child);
-    if (checkAcceptResult.hasException())
-        return checkAcceptResult.releaseException();
+        if (checkAcceptResult.hasException())
+            return checkAcceptResult.releaseException();
     }
 
     InspectorInstrumentation::willInsertDOMNode(document(), *this);
@@ -512,8 +512,8 @@ ExceptionOr<void> ContainerNode::replaceChild(Node& newChild, Node& oldChild)
     // Do this one more time because collectChildrenAndRemoveFromOldParent() fires a MutationEvent.
     for (auto& child : targets) {
         validityResult = checkPreReplacementValidity(*this, child, oldChild);
-    if (validityResult.hasException())
-        return validityResult.releaseException();
+        if (validityResult.hasException())
+            return validityResult.releaseException();
     }
 
     // Remove the node we're replacing.
@@ -530,9 +530,9 @@ ExceptionOr<void> ContainerNode::replaceChild(Node& newChild, Node& oldChild)
         // Does this one more time because removeChild() fires a MutationEvent.
         for (auto& child : targets) {
             validityResult = checkPreReplacementValidity(*this, child, oldChild);
-        if (validityResult.hasException())
-            return validityResult.releaseException();
-    }
+            if (validityResult.hasException())
+                return validityResult.releaseException();
+        }
     }
 
     InspectorInstrumentation::willInsertDOMNode(document(), *this);
@@ -711,8 +711,8 @@ ExceptionOr<void> ContainerNode::appendChildWithoutPreInsertionValidityCheck(Nod
     // We need this extra check because collectChildrenAndRemoveFromOldParent() can fire mutation events.
     for (auto& child : targets) {
         auto nodeTypeResult = checkAcceptChildGuaranteedNodeTypes(*this, child);
-    if (nodeTypeResult.hasException())
-        return nodeTypeResult.releaseException();
+        if (nodeTypeResult.hasException())
+            return nodeTypeResult.releaseException();
     }
 
     InspectorInstrumentation::willInsertDOMNode(document(), *this);
@@ -875,7 +875,7 @@ ExceptionOr<Ref<NodeList>> ContainerNode::querySelectorAll(const String& selecto
     return query.releaseReturnValue().queryAll(*this);
 }
 
-Ref<HTMLCollection> ContainerNode::getElementsByTagName(const AtomicString& qualifiedName)
+Ref<HTMLCollection> ContainerNode::getElementsByTagName(const AtomString& qualifiedName)
 {
     ASSERT(!qualifiedName.isNull());
 
@@ -887,7 +887,7 @@ Ref<HTMLCollection> ContainerNode::getElementsByTagName(const AtomicString& qual
     return ensureRareData().ensureNodeLists().addCachedCollection<TagCollection>(*this, ByTag, qualifiedName);
 }
 
-Ref<HTMLCollection> ContainerNode::getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName)
+Ref<HTMLCollection> ContainerNode::getElementsByTagNameNS(const AtomString& namespaceURI, const AtomString& localName)
 {
     ASSERT(!localName.isNull());
     return ensureRareData().ensureNodeLists().addCachedTagCollectionNS(*this, namespaceURI.isEmpty() ? nullAtom() : namespaceURI, localName);
@@ -898,12 +898,12 @@ Ref<NodeList> ContainerNode::getElementsByName(const String& elementName)
     return ensureRareData().ensureNodeLists().addCacheWithAtomicName<NameNodeList>(*this, elementName);
 }
 
-Ref<HTMLCollection> ContainerNode::getElementsByClassName(const AtomicString& classNames)
+Ref<HTMLCollection> ContainerNode::getElementsByClassName(const AtomString& classNames)
 {
     return ensureRareData().ensureNodeLists().addCachedCollection<ClassCollection>(*this, ByClass, classNames);
 }
 
-Ref<RadioNodeList> ContainerNode::radioNodeList(const AtomicString& name)
+Ref<RadioNodeList> ContainerNode::radioNodeList(const AtomString& name)
 {
     ASSERT(hasTagName(HTMLNames::formTag) || hasTagName(HTMLNames::fieldsetTag));
     return ensureRareData().ensureNodeLists().addCacheWithAtomicName<RadioNodeList>(*this, name);

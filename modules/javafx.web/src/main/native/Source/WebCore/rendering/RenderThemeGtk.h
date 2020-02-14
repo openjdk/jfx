@@ -48,8 +48,6 @@ private:
     void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
 
 public:
-#ifndef GTK_API_VERSION_2
-
     // A method asking if the theme's controls actually care about redrawing when hovered.
     bool supportsHover(const RenderStyle&) const override { return true; }
 
@@ -81,6 +79,8 @@ public:
     Color platformInactiveListBoxSelectionBackgroundColor(OptionSet<StyleColor::Options>) const override;
     Color platformInactiveListBoxSelectionForegroundColor(OptionSet<StyleColor::Options>) const override;
 
+    Color disabledTextColor(const Color&, const Color&) const override;
+
     Seconds caretBlinkInterval() const override;
 
     void platformColorsDidChange() override;
@@ -104,7 +104,6 @@ public:
     bool shouldHaveCapsLockIndicator(const HTMLInputElement&) const override;
 
 private:
-    RenderThemeGtk();
     virtual ~RenderThemeGtk();
 
     bool paintCheckbox(const RenderObject&, const PaintInfo&, const IntRect&) override;
@@ -143,6 +142,11 @@ private:
     void adjustSearchFieldCancelButtonStyle(StyleResolver&, RenderStyle&, const Element*) const override;
     bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
+#if ENABLE(DATALIST_ELEMENT)
+    void paintListButtonForInput(const RenderObject&, const PaintInfo&, const FloatRect&);
+    void adjustListButtonStyle(StyleResolver&, RenderStyle&, const Element*) const override;
+#endif
+
     bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
     void adjustSliderTrackStyle(StyleResolver&, RenderStyle&, const Element*) const override;
 
@@ -168,8 +172,6 @@ private:
 #endif
 #endif
 
-    bool isControlStyled(const RenderStyle&, const BorderData&, const FillLayer&, const Color&) const override;
-
     Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const override;
     Seconds animationDurationForProgressBar(RenderProgress&) const override;
     void adjustProgressBarStyle(StyleResolver&, RenderStyle&, const Element*) const override;
@@ -189,7 +191,6 @@ private:
 #endif
 
     static IntRect calculateProgressRect(const RenderObject&, const IntRect&);
-#endif // GTK_API_VERSION_2
 };
 
 } // namespace WebCore

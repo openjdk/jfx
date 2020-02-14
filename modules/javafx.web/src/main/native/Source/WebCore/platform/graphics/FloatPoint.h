@@ -63,6 +63,7 @@ class IntPoint;
 class IntSize;
 
 class FloatPoint {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     FloatPoint() { }
     FloatPoint(float x, float y) : m_x(x), m_y(y) { }
@@ -70,6 +71,7 @@ public:
     explicit FloatPoint(const FloatSize& size) : m_x(size.width()), m_y(size.height()) { }
 
     static FloatPoint zero() { return FloatPoint(); }
+    bool isZero() const { return !m_x && !m_y; }
 
     WEBCORE_EXPORT static FloatPoint narrowPrecision(double x, double y);
 

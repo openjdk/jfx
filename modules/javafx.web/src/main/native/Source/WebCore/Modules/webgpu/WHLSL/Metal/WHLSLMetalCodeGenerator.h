@@ -27,7 +27,10 @@
 
 #if ENABLE(WEBGPU)
 
-#include <wtf/text/WTFString.h>
+#include "WHLSLMangledNames.h"
+#include "WHLSLPipelineDescriptor.h"
+#include "WHLSLSemanticMatcher.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -37,8 +40,20 @@ class Program;
 
 namespace Metal {
 
-// FIXME: This needs to know about the pipeline state object to emit function prologues and epilogues.
-String generateMetalCode(Program&);
+struct RenderMetalCode {
+    StringBuilder metalSource;
+    MangledFunctionName mangledVertexEntryPointName;
+    MangledFunctionName mangledFragmentEntryPointName;
+};
+// Can't fail. Any failure checks need to be done earlier, in the backend-agnostic part of the compiler.
+RenderMetalCode generateMetalCode(Program&, MatchedRenderSemantics&& matchedSemantics, Layout&);
+
+struct ComputeMetalCode {
+    StringBuilder metalSource;
+    MangledFunctionName mangledEntryPointName;
+};
+// Can't fail. Any failure checks need to be done earlier, in the backend-agnostic part of the compiler.
+ComputeMetalCode generateMetalCode(Program&, MatchedComputeSemantics&& matchedSemantics, Layout&);
 
 }
 

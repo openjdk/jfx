@@ -50,7 +50,7 @@ enum class WorkerType;
 
 class ServiceWorkerContainer final : public EventTargetWithInlineData, public ActiveDOMObject, public ServiceWorkerJobClient {
     WTF_MAKE_NONCOPYABLE(ServiceWorkerContainer);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_ISO_ALLOCATED(ServiceWorkerContainer);
 public:
     ServiceWorkerContainer(ScriptExecutionContext*, NavigatorBase&);
     ~ServiceWorkerContainer();
@@ -66,9 +66,11 @@ public:
     void updateRegistration(const URL& scopeURL, const URL& scriptURL, WorkerType, RefPtr<DeferredPromise>&&);
 
     void getRegistration(const String& clientURL, Ref<DeferredPromise>&&);
-    void scheduleTaskToUpdateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const Optional<ServiceWorkerData>&);
-    void scheduleTaskToFireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
-    void scheduleTaskToFireControllerChangeEvent();
+    void updateRegistrationState(ServiceWorkerRegistrationIdentifier, ServiceWorkerRegistrationState, const Optional<ServiceWorkerData>&);
+    void fireUpdateFoundEvent(ServiceWorkerRegistrationIdentifier);
+    void fireControllerChangeEvent();
+
+    void postMessage(MessageWithMessagePorts&&, ServiceWorkerData&& sourceData, String&& sourceOrigin);
 
     void getRegistrations(Ref<DeferredPromise>&&);
 
@@ -84,6 +86,8 @@ public:
     bool isStopped() const { return m_isStopped; };
 
     bool isAlwaysOnLoggingAllowed() const;
+
+    NavigatorBase* navigator() { return &m_navigator; }
 
 private:
     void scheduleJob(std::unique_ptr<ServiceWorkerJob>&&);
@@ -101,7 +105,6 @@ private:
     void didFinishGetRegistrationRequest(uint64_t requestIdentifier, Optional<ServiceWorkerRegistrationData>&&);
     void didFinishGetRegistrationsRequest(uint64_t requestIdentifier, Vector<ServiceWorkerRegistrationData>&&);
 
-    SWServerConnectionIdentifier connectionIdentifier() final;
     DocumentOrWorkerIdentifier contextIdentifier() final;
 
     SWClientConnection& ensureSWClientConnection();
@@ -113,6 +116,8 @@ private:
     void refEventTarget() final;
     void derefEventTarget() final;
     void stop() final;
+
+    void notifyRegistrationIsSettled(const ServiceWorkerRegistrationKey&);
 
     std::unique_ptr<ReadyPromise> m_readyPromise;
 
@@ -134,6 +139,7 @@ private:
 #endif
 
     struct PendingPromise {
+        WTF_MAKE_STRUCT_FAST_ALLOCATED;
         PendingPromise(Ref<DeferredPromise>&& promise, Ref<PendingActivity<ServiceWorkerContainer>>&& pendingActivity)
             : promise(WTFMove(promise))
             , pendingActivity(WTFMove(pendingActivity))
@@ -145,6 +151,10 @@ private:
 
     uint64_t m_lastPendingPromiseIdentifier { 0 };
     HashMap<uint64_t, std::unique_ptr<PendingPromise>> m_pendingPromises;
+
+    uint64_t m_lastOngoingSettledRegistrationIdentifier { 0 };
+    HashMap<uint64_t, ServiceWorkerRegistrationKey> m_ongoingSettledRegistrations;
+
 };
 
 } // namespace WebCore

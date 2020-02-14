@@ -146,7 +146,7 @@ CSSParser::ParseResult CSSParser::parseValue(MutableStyleProperties& declaration
     return parser.parseValue(declaration, propertyID, string, important);
 }
 
-CSSParser::ParseResult CSSParser::parseCustomPropertyValue(MutableStyleProperties& declaration, const AtomicString& propertyName, const String& string, bool important, const CSSParserContext& context)
+CSSParser::ParseResult CSSParser::parseCustomPropertyValue(MutableStyleProperties& declaration, const AtomString& propertyName, const String& string, bool important, const CSSParserContext& context)
 {
     return CSSParserImpl::parseCustomPropertyValue(&declaration, propertyName, string, important, context);
 }
@@ -246,13 +246,8 @@ std::unique_ptr<Vector<double>> CSSParser::parseKeyframeKeyList(const String& se
 
 RefPtr<CSSValue> CSSParser::parseFontFaceDescriptor(CSSPropertyID propertyID, const String& propertyValue, const CSSParserContext& context)
 {
-    StringBuilder builder;
-    builder.appendLiteral("@font-face { ");
-    builder.append(getPropertyNameString(propertyID));
-    builder.appendLiteral(" : ");
-    builder.append(propertyValue);
-    builder.appendLiteral("; }");
-    RefPtr<StyleRuleBase> rule = parseRule(context, nullptr, builder.toString());
+    String string = makeString("@font-face { ", getPropertyNameString(propertyID), " : ", propertyValue, "; }");
+    RefPtr<StyleRuleBase> rule = parseRule(context, nullptr, string);
     if (!rule || !rule->isFontFaceRule())
         return nullptr;
     return downcast<StyleRuleFontFace>(*rule.get()).properties().getPropertyCSSValue(propertyID);

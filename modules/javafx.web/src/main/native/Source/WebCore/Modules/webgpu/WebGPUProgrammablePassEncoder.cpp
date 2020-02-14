@@ -29,40 +29,37 @@
 #if ENABLE(WEBGPU)
 
 #include "GPUProgrammablePassEncoder.h"
+#include "Logging.h"
 #include "WebGPUBindGroup.h"
-#include "WebGPURenderPipeline.h"
 
 namespace WebCore {
 
-WebGPUProgrammablePassEncoder::WebGPUProgrammablePassEncoder(Ref<WebGPUCommandBuffer>&& creator)
-    : m_commandBuffer(WTFMove(creator))
+void WebGPUProgrammablePassEncoder::endPass()
 {
+    if (!passEncoder()) {
+        LOG(WebGPU, "GPUProgrammablePassEncoder::endPass(): Invalid operation!");
+        return;
+    }
+    passEncoder()->endPass();
 }
 
-Ref<WebGPUCommandBuffer> WebGPUProgrammablePassEncoder::endPass()
+void WebGPUProgrammablePassEncoder::setBindGroup(unsigned index, WebGPUBindGroup& bindGroup)
 {
-    passEncoder().endPass();
-    return m_commandBuffer.copyRef();
-}
-
-void WebGPUProgrammablePassEncoder::setBindGroup(unsigned long index, const WebGPUBindGroup& bindGroup) const
-{
+    if (!passEncoder()) {
+        LOG(WebGPU, "GPUProgrammablePassEncoder::setBindGroup(): Invalid operation!");
+        return;
+    }
     // Maximum number of bind groups supported in Web GPU.
     if (index >= 4) {
-        LOG(WebGPU, "WebGPUProgrammablePassEncoder::setBindGroup(): Invalid index!");
+        LOG(WebGPU, "GPUProgrammablePassEncoder::setBindGroup(): Invalid index!");
         return;
     }
     if (!bindGroup.bindGroup()) {
-        LOG(WebGPU, "WebGPUProgrammablePassEncoder::setBindGroup(): Invalid WebGPUBindGroup!");
+        LOG(WebGPU, "GPUProgrammablePassEncoder::setBindGroup(): Invalid WebGPUBindGroup!");
         return;
     }
     // FIXME: Any validation (e.g. index duplicates, not in pipeline layout).
-    passEncoder().setBindGroup(index, *bindGroup.bindGroup());
-}
-
-void WebGPUProgrammablePassEncoder::setPipeline(Ref<WebGPURenderPipeline>&& pipeline)
-{
-    passEncoder().setPipeline(pipeline->renderPipeline());
+    passEncoder()->setBindGroup(index, *bindGroup.bindGroup());
 }
 
 } // namespace WebCore

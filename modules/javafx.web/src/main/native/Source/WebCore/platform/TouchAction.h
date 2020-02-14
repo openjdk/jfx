@@ -27,16 +27,20 @@
 
 #if ENABLE(POINTER_EVENTS)
 
+#include <wtf/text/TextStream.h>
+
 namespace WebCore {
 
 enum class TouchAction : uint8_t {
-    Auto         = 0,
-    None         = 1 << 0,
-    Manipulation = 1 << 1,
-    PanX         = 1 << 2,
-    PanY         = 1 << 3,
-    PinchZoom    = 1 << 4,
+    Auto         = 1 << 0,
+    None         = 1 << 1,
+    Manipulation = 1 << 2,
+    PanX         = 1 << 3,
+    PanY         = 1 << 4,
+    PinchZoom    = 1 << 5,
 };
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, TouchAction);
 
 }
 

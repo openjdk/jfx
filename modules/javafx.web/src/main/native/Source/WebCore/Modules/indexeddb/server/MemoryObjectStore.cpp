@@ -32,6 +32,7 @@
 #include "IDBError.h"
 #include "IDBGetAllResult.h"
 #include "IDBKeyRangeData.h"
+#include "IDBSerializationContext.h"
 #include "IDBValue.h"
 #include "IndexKey.h"
 #include "Logging.h"
@@ -45,13 +46,14 @@ namespace WebCore {
 using namespace JSC;
 namespace IDBServer {
 
-Ref<MemoryObjectStore> MemoryObjectStore::create(const IDBObjectStoreInfo& info)
+Ref<MemoryObjectStore> MemoryObjectStore::create(PAL::SessionID sessionID, const IDBObjectStoreInfo& info)
 {
-    return adoptRef(*new MemoryObjectStore(info));
+    return adoptRef(*new MemoryObjectStore(sessionID, info));
 }
 
-MemoryObjectStore::MemoryObjectStore(const IDBObjectStoreInfo& info)
+MemoryObjectStore::MemoryObjectStore(PAL::SessionID sessionID, const IDBObjectStoreInfo& info)
     : m_info(info)
+    , m_serializationContext(IDBSerializationContext::getOrCreateIDBSerializationContext(sessionID))
 {
 }
 
@@ -259,8 +261,8 @@ IDBError MemoryObjectStore::addRecord(MemoryBackingStoreTransaction& transaction
 
     if (!m_keyValueStore) {
         ASSERT(!m_orderedKeys);
-        m_keyValueStore = std::make_unique<KeyValueMap>();
-        m_orderedKeys = std::make_unique<IDBKeyDataSet>();
+        m_keyValueStore = makeUnique<KeyValueMap>();
+        m_orderedKeys = makeUniqueWithoutFastMallocCheck<IDBKeyDataSet>();
     }
 
     auto mapResult = m_keyValueStore->set(keyData, value.data());
@@ -299,9 +301,9 @@ void MemoryObjectStore::updateIndexesForDeleteRecord(const IDBKeyData& value)
 
 IDBError MemoryObjectStore::updateIndexesForPutRecord(const IDBKeyData& key, const ThreadSafeDataBuffer& value)
 {
-    JSLockHolder locker(UniqueIDBDatabase::databaseThreadVM());
+    JSLockHolder locker(m_serializationContext->vm());
 
-    auto jsValue = deserializeIDBValueToJSValue(UniqueIDBDatabase::databaseThreadExecState(), value);
+    auto jsValue = deserializeIDBValueToJSValue(m_serializationContext->execState(), value);
     if (jsValue.isUndefinedOrNull())
         return IDBError { };
 
@@ -310,7 +312,7 @@ IDBError MemoryObjectStore::updateIndexesForPutRecord(const IDBKeyData& key, con
 
     for (auto& index : m_indexesByName.values()) {
         IndexKey indexKey;
-        generateIndexKeyForValue(UniqueIDBDatabase::databaseThreadExecState(), index->info(), jsValue, indexKey);
+        generateIndexKeyForValue(m_serializationContext->execState(), index->info(), jsValue, indexKey, m_info.keyPath(), key);
 
         if (indexKey.isNull())
             continue;
@@ -336,15 +338,15 @@ IDBError MemoryObjectStore::populateIndexWithExistingRecords(MemoryIndex& index)
     if (!m_keyValueStore)
         return IDBError { };
 
-    JSLockHolder locker(UniqueIDBDatabase::databaseThreadVM());
+    JSLockHolder locker(m_serializationContext->vm());
 
     for (const auto& iterator : *m_keyValueStore) {
-        auto jsValue = deserializeIDBValueToJSValue(UniqueIDBDatabase::databaseThreadExecState(), iterator.value);
+        auto jsValue = deserializeIDBValueToJSValue(m_serializationContext->execState(), iterator.value);
         if (jsValue.isUndefinedOrNull())
             return IDBError { };
 
         IndexKey indexKey;
-        generateIndexKeyForValue(UniqueIDBDatabase::databaseThreadExecState(), index.info(), jsValue, indexKey);
+        generateIndexKeyForValue(m_serializationContext->execState(), index.info(), jsValue, indexKey, m_info.keyPath(), iterator.key);
 
         if (indexKey.isNull())
             continue;
@@ -407,7 +409,7 @@ ThreadSafeDataBuffer MemoryObjectStore::valueForKeyRange(const IDBKeyRangeData& 
 
 void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, Optional<uint32_t> count, IndexedDB::GetAllType type, IDBGetAllResult& result) const
 {
-    result = { type };
+    result = { type, m_info.keyPath() };
 
     uint32_t targetCount;
     if (count && count.value())
@@ -424,11 +426,9 @@ void MemoryObjectStore::getAllRecords(const IDBKeyRangeData& keyRangeData, Optio
 
         range.lowerKey = key;
         range.lowerOpen = true;
-
-        if (type == IndexedDB::GetAllType::Keys)
-            result.addKey(WTFMove(key));
-        else
+        if (type == IndexedDB::GetAllType::Values)
             result.addValue(valueForKey(key));
+        result.addKey(WTFMove(key));
 
         ++currentCount;
     }
@@ -499,7 +499,7 @@ MemoryObjectStoreCursor* MemoryObjectStore::maybeOpenCursor(const IDBCursorInfo&
     if (!result.isNewEntry)
         return nullptr;
 
-    result.iterator->value = std::make_unique<MemoryObjectStoreCursor>(*this, info);
+    result.iterator->value = makeUnique<MemoryObjectStoreCursor>(*this, info);
     return result.iterator->value.get();
 }
 

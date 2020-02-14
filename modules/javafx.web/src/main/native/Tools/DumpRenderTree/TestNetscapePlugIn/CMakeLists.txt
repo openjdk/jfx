@@ -32,8 +32,12 @@ set(WebKitTestNetscapePlugIn_SOURCES
 set(WebKitTestNetscapePlugIn_INCLUDE_DIRECTORIES
     ${WEBKIT_TESTNETSCAPEPLUGIN_DIR}
     ${WEBKIT_TESTNETSCAPEPLUGIN_DIR}/ForwardingHeaders
-    ${WEBCORE_DIR}
+    ${WebCore_PRIVATE_FRAMEWORK_HEADERS_DIR}
     ${WTF_DIR}
+)
+
+set(WebKitTestNetscapePlugIn_LIBRARIES
+    WebKit::WTF
 )
 
 if (MOZ_X11)
@@ -41,7 +45,7 @@ if (MOZ_X11)
         ${X11_INCLUDE_DIR}
     )
 
-    set(WebKitTestNetscapePlugIn_LIBRARIES
+    list(APPEND WebKitTestNetscapePlugIn_LIBRARIES
         ${X11_LIBRARIES}
     )
 
@@ -61,6 +65,7 @@ include_directories(SYSTEM ${WebKitTestNetscapePlugIn_SYSTEM_INCLUDE_DIRECTORIES
 
 add_library(TestNetscapePlugIn SHARED ${WebKitTestNetscapePlugIn_SOURCES})
 target_link_libraries(TestNetscapePlugIn ${WebKitTestNetscapePlugIn_LIBRARIES})
+add_dependencies(TestNetscapePlugIn WebCorePrivateFrameworkHeaders)
 set_target_properties(TestNetscapePlugIn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/plugins)
 
 WEBKIT_ADD_TARGET_CXX_FLAGS(TestNetscapePlugIn -Wno-unused-parameter)

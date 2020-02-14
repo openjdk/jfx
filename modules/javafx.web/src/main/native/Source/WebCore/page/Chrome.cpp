@@ -111,8 +111,6 @@ IntRect Chrome::rootViewToScreen(const IntRect& rect) const
     return m_client.rootViewToScreen(rect);
 }
 
-#if PLATFORM(IOS_FAMILY)
-
 IntPoint Chrome::accessibilityScreenToRootView(const IntPoint& point) const
 {
     return m_client.accessibilityScreenToRootView(point);
@@ -122,8 +120,6 @@ IntRect Chrome::rootViewToAccessibilityScreen(const IntRect& rect) const
 {
     return m_client.rootViewToAccessibilityScreen(rect);
 }
-
-#endif
 
 PlatformPageClient Chrome::platformPageClient() const
 {
@@ -193,8 +189,6 @@ Page* Chrome::createWindow(Frame& frame, const FrameLoadRequest& request, const 
 
     if (auto* oldSessionStorage = m_page.sessionStorage(false))
         newPage->setSessionStorage(oldSessionStorage->copy(newPage));
-    if (auto* oldEphemeralLocalStorage = m_page.ephemeralLocalStorage(false))
-        newPage->setEphemeralLocalStorage(oldEphemeralLocalStorage->copy(newPage));
 
     return newPage;
 }
@@ -527,23 +521,6 @@ void Chrome::windowScreenDidChange(PlatformDisplayID displayID)
 #if PLATFORM(MAC) && ENABLE(GRAPHICS_CONTEXT_3D)
     GraphicsContext3DManager::sharedManager().screenDidChange(displayID, this);
 #endif
-}
-
-#if ENABLE(DASHBOARD_SUPPORT)
-void ChromeClient::annotatedRegionsChanged()
-{
-}
-#endif
-
-bool ChromeClient::shouldReplaceWithGeneratedFileForUpload(const String&, String&)
-{
-    return false;
-}
-
-String ChromeClient::generateReplacementFile(const String&)
-{
-    ASSERT_NOT_REACHED();
-    return String();
 }
 
 bool Chrome::selectItemWritingDirectionIsNatural()

@@ -49,35 +49,33 @@ public:
 public:
     void visit(AST::CallExpression& callExpression) override
     {
-        ASSERT(callExpression.function());
-        if ((callExpression.function() == &m_intrinsics.ddx() || callExpression.function() == &m_intrinsics.ddy()) && m_entryPointType != AST::EntryPointType::Fragment) {
-            setError();
+        if ((&callExpression.function() == m_intrinsics.ddx() || &callExpression.function() == m_intrinsics.ddy()) && m_entryPointType != AST::EntryPointType::Fragment) {
+            setError(Error("Cannot use ddx or ddy in a non-fragment shader.", callExpression.codeLocation()));
             return;
         }
-        if ((callExpression.function() == &m_intrinsics.allMemoryBarrier() || callExpression.function() == &m_intrinsics.deviceMemoryBarrier() || callExpression.function() == &m_intrinsics.groupMemoryBarrier())
+        if ((&callExpression.function() == m_intrinsics.allMemoryBarrier() || &callExpression.function() == m_intrinsics.deviceMemoryBarrier() || &callExpression.function() == m_intrinsics.groupMemoryBarrier())
             && m_entryPointType != AST::EntryPointType::Compute) {
-            setError();
+            setError(Error("Cannot use memory barrier in a non-compute shader.", callExpression.codeLocation()));
             return;
         }
-        ASSERT(callExpression.function());
-        Visitor::visit(*callExpression.function());
+        Visitor::visit(callExpression.function());
     }
 
     AST::EntryPointType m_entryPointType;
     const Intrinsics& m_intrinsics;
 };
 
-bool checkFunctionStages(Program& program)
+Expected<void, Error> checkFunctionStages(Program& program)
 {
     for (auto& functionDefinition : program.functionDefinitions()) {
         if (!functionDefinition->entryPointType())
             continue;
         FunctionStageChecker functionStageChecker(*functionDefinition->entryPointType(), program.intrinsics());
         functionStageChecker.Visitor::visit(functionDefinition);
-        if (functionStageChecker.error())
-            return false;
+        if (functionStageChecker.hasError())
+            return makeUnexpected(functionStageChecker.result().error());
     }
-    return true;
+    return { };
 }
 
 }

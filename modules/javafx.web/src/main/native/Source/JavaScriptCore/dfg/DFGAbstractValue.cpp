@@ -134,22 +134,38 @@ void AbstractValue::fixTypeForRepresentation(Graph& graph, NodeFlags representat
             if (m_value.isInt32())
                 m_value = jsDoubleNumber(m_value.asNumber());
         }
-        if (m_type & SpecAnyInt) {
-            m_type &= ~SpecAnyInt;
+        if (m_type & SpecIntAnyFormat) {
+            m_type &= ~SpecIntAnyFormat;
             m_type |= SpecAnyIntAsDouble;
         }
         if (m_type & ~SpecFullDouble)
             DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for double node has type outside SpecFullDouble.\n").data());
     } else if (representation == NodeResultInt52) {
         if (m_type & SpecAnyIntAsDouble) {
+            // AnyIntAsDouble can produce i32 or i52. SpecAnyIntAsDouble doesn't bound the magnitude of the value.
             m_type &= ~SpecAnyIntAsDouble;
-            m_type |= SpecInt52Only;
+            m_type |= SpecInt52Any;
         }
-        if (m_type & ~SpecAnyInt)
-            DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for int52 node has type outside SpecAnyInt.\n").data());
+
+        if (m_type & SpecInt32Only) {
+            m_type &= ~SpecInt32Only;
+            m_type |= SpecInt32AsInt52;
+        }
+
+        if (m_type & ~SpecInt52Any)
+            DFG_CRASH(graph, node, toCString("Abstract value ", *this, " for int52 node has type outside SpecInt52Any.\n").data());
+
+        if (m_value) {
+            DFG_ASSERT(graph, node, m_value.isAnyInt());
+            m_type = int52AwareSpeculationFromValue(m_value);
+        }
     } else {
-        if (m_type & SpecInt52Only) {
-            m_type &= ~SpecInt52Only;
+        if (m_type & SpecInt32AsInt52) {
+            m_type &= ~SpecInt32AsInt52;
+            m_type |= SpecInt32Only;
+        }
+        if (m_type & SpecNonInt32AsInt52) {
+            m_type &= ~SpecNonInt32AsInt52;
             m_type |= SpecAnyIntAsDouble;
         }
         if (m_type & ~SpecBytecodeTop)
@@ -164,8 +180,19 @@ void AbstractValue::fixTypeForRepresentation(Graph& graph, Node* node)
     fixTypeForRepresentation(graph, node->result(), node);
 }
 
-bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value)
+bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value, VariableAccessData* variable, Node* node)
 {
+    FlushFormat flushFormat = variable->flushFormat();
+
+    {
+        if (flushFormat == FlushedDouble && value.isNumber())
+            value = jsDoubleNumber(value.asNumber());
+        SpeculatedType incomingType = resultFor(flushFormat) == NodeResultInt52 ? int52AwareSpeculationFromValue(value) : speculationFromValue(value);
+        SpeculatedType requiredType = typeFilterFor(flushFormat);
+        if (incomingType & ~requiredType)
+            return false;
+    }
+
     AbstractValue oldMe = *this;
 
     if (isClear()) {
@@ -191,8 +218,11 @@ bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value)
             m_value = JSValue();
     }
 
-    checkConsistency();
     assertIsRegistered(graph);
+
+    fixTypeForRepresentation(graph, resultFor(flushFormat), node);
+
+    checkConsistency();
 
     return oldMe != *this;
 }
@@ -341,17 +371,17 @@ void AbstractValue::filterValueByType()
     // the value, then we could clear both of those things. But that's unlikely to help
     // in any realistic scenario, so we don't do it. Simpler is better.
 
-    if (!!m_type) {
-        // The type is still non-empty. It may be that the new type renders
-        // the value empty because it contravenes the constant value we had.
-        if (m_value && !validateType(m_value))
-            clear();
+    if (!m_value)
         return;
-    }
 
-    // The type has been rendered empty. That means that the value must now be invalid,
-    // as well.
-    ASSERT(!m_value || !validateType(m_value));
+    if (validateTypeAcceptingBoxedInt52(m_value))
+        return;
+
+    // We assume that the constant value can produce a narrower type at
+    // some point. For example, rope JSString produces SpecString, but
+    // it produces SpecStringIdent once it is resolved to AtomStringImpl.
+    // We do not make this AbstractValue cleared, but clear the constant
+    // value if validation fails currently.
     m_value = JSValue();
 }
 
@@ -415,21 +445,15 @@ FiltrationResult AbstractValue::normalizeClarity(Graph& graph)
 void AbstractValue::checkConsistency() const
 {
     if (!(m_type & SpecCell)) {
-        ASSERT(m_structure.isClear());
-        ASSERT(!m_arrayModes);
+        RELEASE_ASSERT(m_structure.isClear());
+        RELEASE_ASSERT(!m_arrayModes);
     }
 
     if (isClear())
-        ASSERT(!m_value);
+        RELEASE_ASSERT(!m_value);
 
-    if (!!m_value) {
-        SpeculatedType type = m_type;
-        // This relaxes the assertion below a bit, since we don't know the representation of the
-        // node.
-        if (type & SpecInt52Only)
-            type |= SpecAnyIntAsDouble;
-        ASSERT(mergeSpeculations(type, speculationFromValue(m_value)) == type);
-    }
+    if (!!m_value)
+        RELEASE_ASSERT(validateTypeAcceptingBoxedInt52(m_value));
 
     // Note that it's possible for a prediction like (Final, []). This really means that
     // the value is bottom and that any code that uses the value is unreachable. But
@@ -441,7 +465,7 @@ void AbstractValue::assertIsRegistered(Graph& graph) const
 {
     m_structure.assertIsRegistered(graph);
 }
-#endif
+#endif // !ASSERT_DISABLED
 
 ResultType AbstractValue::resultType() const
 {

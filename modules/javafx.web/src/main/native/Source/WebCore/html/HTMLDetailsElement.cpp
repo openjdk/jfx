@@ -49,16 +49,16 @@ static DetailEventSender& detailToggleEventSender()
     return sharedToggleEventSender;
 }
 
-static const AtomicString& summarySlotName()
+static const AtomString& summarySlotName()
 {
-    static NeverDestroyed<AtomicString> summarySlot("summarySlot");
+    static NeverDestroyed<AtomString> summarySlot("summarySlot");
     return summarySlot;
 }
 
 class DetailsSlotAssignment final : public SlotAssignment {
 private:
     void hostChildElementDidChange(const Element&, ShadowRoot&) override;
-    const AtomicString& slotNameForHostChild(const Node&) const override;
+    const AtomString& slotNameForHostChild(const Node&) const override;
 };
 
 void DetailsSlotAssignment::hostChildElementDidChange(const Element& childElement, ShadowRoot& shadowRoot)
@@ -71,7 +71,7 @@ void DetailsSlotAssignment::hostChildElementDidChange(const Element& childElemen
         didChangeSlot(SlotAssignment::defaultSlotName(), shadowRoot);
 }
 
-const AtomicString& DetailsSlotAssignment::slotNameForHostChild(const Node& child) const
+const AtomString& DetailsSlotAssignment::slotNameForHostChild(const Node& child) const
 {
     auto& parent = *child.parentNode();
     ASSERT(is<HTMLDetailsElement>(parent));
@@ -88,7 +88,7 @@ const AtomicString& DetailsSlotAssignment::slotNameForHostChild(const Node& chil
 Ref<HTMLDetailsElement> HTMLDetailsElement::create(const QualifiedName& tagName, Document& document)
 {
     auto details = adoptRef(*new HTMLDetailsElement(tagName, document));
-    details->addShadowRoot(ShadowRoot::create(document, std::make_unique<DetailsSlotAssignment>()));
+    details->addShadowRoot(ShadowRoot::create(document, makeUnique<DetailsSlotAssignment>()));
     return details;
 }
 
@@ -145,7 +145,7 @@ void HTMLDetailsElement::dispatchPendingEvent(DetailEventSender* eventSender)
     dispatchEvent(Event::create(eventNames().toggleEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
+void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomString& value)
 {
     if (name == openAttr) {
         bool oldValue = m_isOpen;

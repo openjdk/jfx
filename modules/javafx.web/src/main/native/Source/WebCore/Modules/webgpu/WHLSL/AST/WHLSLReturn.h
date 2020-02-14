@@ -28,9 +28,9 @@
 #if ENABLE(WEBGPU)
 
 #include "WHLSLExpression.h"
-#include "WHLSLLexer.h"
 #include "WHLSLStatement.h"
 #include <memory>
+#include <wtf/FastMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -39,29 +39,24 @@ namespace WHLSL {
 
 namespace AST {
 
-class Return : public Statement {
+class Return final : public Statement {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    Return(Lexer::Token&& origin, Optional<UniqueRef<Expression>>&& value)
-        : Statement(WTFMove(origin))
+    Return(CodeLocation location, std::unique_ptr<Expression>&& value)
+        : Statement(location, Kind::Return)
         , m_value(WTFMove(value))
     {
     }
 
-    virtual ~Return() = default;
+    ~Return() = default;
 
     Return(const Return&) = delete;
     Return(Return&&) = default;
 
-    bool isReturn() const override { return true; }
-
-    Expression* value() { return m_value ? &*m_value : nullptr; }
-
-    FunctionDefinition* function() { return m_function; }
-    void setFunction(FunctionDefinition* functionDefinition) { m_function = functionDefinition; }
+    Expression* value() { return m_value.get(); }
 
 private:
-    Optional<UniqueRef<Expression>> m_value;
-    FunctionDefinition* m_function;
+    std::unique_ptr<Expression> m_value;
 };
 
 } // namespace AST
@@ -69,6 +64,8 @@ private:
 }
 
 }
+
+DEFINE_DEFAULT_DELETE(Return)
 
 SPECIALIZE_TYPE_TRAITS_WHLSL_STATEMENT(Return, isReturn())
 

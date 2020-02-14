@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,7 +56,7 @@ static JSObject* getCustomElementCallback(ExecState& state, JSObject& prototype,
     return callback.getObject();
 }
 
-static bool validateCustomElementNameAndThrowIfNeeded(ExecState& state, const AtomicString& name)
+static bool validateCustomElementNameAndThrowIfNeeded(ExecState& state, const AtomString& name)
 {
     auto scope = DECLARE_THROW_SCOPE(state.vm());
     switch (Document::validateCustomElementName(name)) {
@@ -91,7 +91,7 @@ JSValue JSCustomElementRegistry::define(ExecState& state)
     if (UNLIKELY(state.argumentCount() < 2))
         return throwException(&state, scope, createNotEnoughArgumentsError(&state));
 
-    AtomicString localName(state.uncheckedArgument(0).toString(&state)->toAtomicString(&state));
+    AtomString localName(state.uncheckedArgument(0).toString(&state)->toAtomString(&state));
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     JSValue constructorValue = state.uncheckedArgument(1);
@@ -129,25 +129,25 @@ JSValue JSCustomElementRegistry::define(ExecState& state)
     QualifiedName name(nullAtom(), localName, HTMLNames::xhtmlNamespaceURI);
     auto elementInterface = JSCustomElementInterface::create(name, constructor, globalObject());
 
-    auto* connectedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(&vm, "connectedCallback"));
+    auto* connectedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(vm, "connectedCallback"));
     if (connectedCallback)
         elementInterface->setConnectedCallback(connectedCallback);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    auto* disconnectedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(&vm, "disconnectedCallback"));
+    auto* disconnectedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(vm, "disconnectedCallback"));
     if (disconnectedCallback)
         elementInterface->setDisconnectedCallback(disconnectedCallback);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    auto* adoptedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(&vm, "adoptedCallback"));
+    auto* adoptedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(vm, "adoptedCallback"));
     if (adoptedCallback)
         elementInterface->setAdoptedCallback(adoptedCallback);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
-    auto* attributeChangedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(&vm, "attributeChangedCallback"));
+    auto* attributeChangedCallback = getCustomElementCallback(state, prototypeObject, Identifier::fromString(vm, "attributeChangedCallback"));
     RETURN_IF_EXCEPTION(scope, JSValue());
     if (attributeChangedCallback) {
-        auto observedAttributesValue = constructor->get(&state, Identifier::fromString(&state, "observedAttributes"));
+        auto observedAttributesValue = constructor->get(&state, Identifier::fromString(vm, "observedAttributes"));
         RETURN_IF_EXCEPTION(scope, JSValue());
         if (!observedAttributesValue.isUndefined()) {
             auto observedAttributes = convert<IDLSequence<IDLDOMString>>(state, observedAttributesValue);
@@ -182,7 +182,7 @@ static JSValue whenDefinedPromise(ExecState& state, JSDOMGlobalObject& globalObj
     if (UNLIKELY(state.argumentCount() < 1))
         return throwException(&state, scope, createNotEnoughArgumentsError(&state));
 
-    AtomicString localName(state.uncheckedArgument(0).toString(&state)->toAtomicString(&state));
+    AtomString localName(state.uncheckedArgument(0).toString(&state)->toAtomString(&state));
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     if (!validateCustomElementNameAndThrowIfNeeded(state, localName)) {

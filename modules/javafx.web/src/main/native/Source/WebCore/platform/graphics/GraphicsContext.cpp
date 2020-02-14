@@ -53,12 +53,6 @@ public:
     {
     }
 
-    TextRunIterator(const TextRunIterator& other)
-        : m_textRun(other.m_textRun)
-        , m_offset(other.m_offset)
-    {
-    }
-
     unsigned offset() const { return m_offset; }
     void increment() { m_offset++; }
     bool atEnd() const { return !m_textRun || m_offset >= m_textRun->length(); }
@@ -114,6 +108,10 @@ GraphicsContextState::StateChangeFlags GraphicsContextStateChange::changesFromSt
     CHECK_FOR_CHANGED_PROPERTY(ShadowsIgnoreTransformsChange, shadowsIgnoreTransforms);
     CHECK_FOR_CHANGED_PROPERTY(DrawLuminanceMaskChange, drawLuminanceMask);
     CHECK_FOR_CHANGED_PROPERTY(ImageInterpolationQualityChange, imageInterpolationQuality);
+
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    CHECK_FOR_CHANGED_PROPERTY(UseDarkAppearanceChange, useDarkAppearance);
+#endif
 
     return changeFlags;
 }
@@ -184,6 +182,11 @@ void GraphicsContextStateChange::accumulate(const GraphicsContextState& state, G
     if (flags & GraphicsContextState::ImageInterpolationQualityChange)
         m_state.imageInterpolationQuality = state.imageInterpolationQuality;
 
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    if (flags & GraphicsContextState::UseDarkAppearanceChange)
+        m_state.useDarkAppearance = state.useDarkAppearance;
+#endif
+
     m_changeFlags |= flags;
 }
 
@@ -251,6 +254,11 @@ void GraphicsContextStateChange::apply(GraphicsContext& context) const
 
     if (m_changeFlags & GraphicsContextState::ImageInterpolationQualityChange)
         context.setImageInterpolationQuality(m_state.imageInterpolationQuality);
+
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    if (m_changeFlags & GraphicsContextState::UseDarkAppearanceChange)
+        context.setUseDarkAppearance(m_state.useDarkAppearance);
+#endif
 }
 
 void GraphicsContextStateChange::dump(TextStream& ts) const
@@ -318,6 +326,11 @@ void GraphicsContextStateChange::dump(TextStream& ts) const
 
     if (m_changeFlags & GraphicsContextState::DrawLuminanceMaskChange)
         ts.dumpProperty("draw-luminance-mask", m_state.drawLuminanceMask);
+
+#if HAVE(OS_DARK_MODE_SUPPORT)
+    if (m_changeFlags & GraphicsContextState::UseDarkAppearanceChange)
+        ts.dumpProperty("use-dark-appearance", m_state.useDarkAppearance);
+#endif
 }
 
 TextStream& operator<<(TextStream& ts, const GraphicsContextStateChange& stateChange)
@@ -653,7 +666,7 @@ void GraphicsContext::drawGlyphs(const Font& font, const GlyphBuffer& buffer, un
     FontCascade::drawGlyphs(*this, font, buffer, from, numGlyphs, point, fontSmoothingMode);
 }
 
-void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomicString& mark, const FloatPoint& point, unsigned from, Optional<unsigned> to)
+void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomString& mark, const FloatPoint& point, unsigned from, Optional<unsigned> to)
 {
     if (paintingDisabled())
         return;
@@ -702,55 +715,50 @@ ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatPoint& desti
 
 ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, const ImagePaintingOptions& imagePaintingOptions)
 {
-#if PLATFORM(IOS_FAMILY)
-    FloatRect srcRect(FloatPoint(), image.originalSize());
-#else
     FloatRect srcRect(FloatPoint(), image.size());
-#endif
-
     return drawImage(image, destination, srcRect, imagePaintingOptions);
 }
 
-ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& imagePaintingOptions)
+ImageDrawResult GraphicsContext::drawImage(Image& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
 {
     if (paintingDisabled())
         return ImageDrawResult::DidNothing;
 
     if (m_impl)
-        return m_impl->drawImage(image, destination, source, imagePaintingOptions);
+        return m_impl->drawImage(image, destination, source, options);
 
-    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, imagePaintingOptions.m_interpolationQuality);
-    return image.draw(*this, destination, source, imagePaintingOptions.m_compositeOperator, imagePaintingOptions.m_blendMode, imagePaintingOptions.m_decodingMode, imagePaintingOptions.m_orientationDescription);
+    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
+    return image.draw(*this, destination, source, options);
 }
 
-ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& imagePaintingOptions)
+ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& options)
 {
     if (paintingDisabled())
         return ImageDrawResult::DidNothing;
 
     if (m_impl)
-        return m_impl->drawTiledImage(image, destination, source, tileSize, spacing, imagePaintingOptions);
+        return m_impl->drawTiledImage(image, destination, source, tileSize, spacing, options);
 
-    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, imagePaintingOptions.m_interpolationQuality);
-    return image.drawTiled(*this, destination, source, tileSize, spacing, imagePaintingOptions.m_compositeOperator, imagePaintingOptions.m_blendMode, imagePaintingOptions.m_decodingMode);
+    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
+    return image.drawTiled(*this, destination, source, tileSize, spacing, options);
 }
 
 ImageDrawResult GraphicsContext::drawTiledImage(Image& image, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor,
-    Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions& imagePaintingOptions)
+    Image::TileRule hRule, Image::TileRule vRule, const ImagePaintingOptions& options)
 {
     if (paintingDisabled())
         return ImageDrawResult::DidNothing;
 
     if (m_impl)
-        return m_impl->drawTiledImage(image, destination, source, tileScaleFactor, hRule, vRule, imagePaintingOptions);
+        return m_impl->drawTiledImage(image, destination, source, tileScaleFactor, hRule, vRule, options);
 
     if (hRule == Image::StretchTile && vRule == Image::StretchTile) {
         // Just do a scale.
-        return drawImage(image, destination, source, imagePaintingOptions);
+        return drawImage(image, destination, source, options);
     }
 
-    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, imagePaintingOptions.m_interpolationQuality);
-    return image.drawTiled(*this, destination, source, tileScaleFactor, hRule, vRule, imagePaintingOptions.m_compositeOperator);
+    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
+    return image.drawTiled(*this, destination, source, tileScaleFactor, hRule, vRule, options.compositeOperator());
 }
 
 void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
@@ -763,13 +771,13 @@ void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& desti
     drawImageBuffer(image, destination, FloatRect(FloatPoint(), FloatSize(image.logicalSize())), imagePaintingOptions);
 }
 
-void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& imagePaintingOptions)
+void GraphicsContext::drawImageBuffer(ImageBuffer& image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
 {
     if (paintingDisabled())
         return;
 
-    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, imagePaintingOptions.m_interpolationQuality);
-    image.draw(*this, destination, source, imagePaintingOptions.m_compositeOperator, imagePaintingOptions.m_blendMode);
+    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
+    image.draw(*this, destination, source, options);
 }
 
 void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
@@ -788,13 +796,13 @@ void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> imag
     drawConsumingImageBuffer(WTFMove(image), destination, FloatRect(FloatPoint(), FloatSize(imageLogicalSize)), imagePaintingOptions);
 }
 
-void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& imagePaintingOptions)
+void GraphicsContext::drawConsumingImageBuffer(std::unique_ptr<ImageBuffer> image, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& options)
 {
     if (paintingDisabled() || !image)
         return;
 
-    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, imagePaintingOptions.m_interpolationQuality);
-    ImageBuffer::drawConsuming(WTFMove(image), *this, destination, source, imagePaintingOptions.m_compositeOperator, imagePaintingOptions.m_blendMode);
+    InterpolationQualityMaintainer interpolationQualityForThisScope(*this, options.interpolationQuality());
+    ImageBuffer::drawConsuming(WTFMove(image), *this, destination, source, options);
 }
 
 void GraphicsContext::clipRoundedRect(const FloatRoundedRect& rect)
@@ -946,6 +954,15 @@ void GraphicsContext::setDrawLuminanceMask(bool drawLuminanceMask)
     if (m_impl)
         m_impl->updateState(m_state, GraphicsContextState::DrawLuminanceMaskChange);
 }
+
+#if HAVE(OS_DARK_MODE_SUPPORT)
+void GraphicsContext::setUseDarkAppearance(bool useDarkAppearance)
+{
+    m_state.useDarkAppearance = useDarkAppearance;
+    if (m_impl)
+        m_impl->updateState(m_state, GraphicsContextState::UseDarkAppearanceChange);
+}
+#endif
 
 #if !USE(CG) && !USE(DIRECT2D) && !PLATFORM(JAVA)
 // Implement this if you want to go push the drawing mode into your native context immediately.

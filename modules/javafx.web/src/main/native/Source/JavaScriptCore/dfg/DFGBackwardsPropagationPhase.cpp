@@ -123,7 +123,8 @@ private:
         case ArithBitXor:
         case ValueBitOr:
         case ValueBitXor:
-        case BitLShift: {
+        case ValueBitLShift:
+        case ArithBitLShift: {
             return power > 31;
         }
 
@@ -210,6 +211,7 @@ private:
         case CheckVarargs:
             break;
 
+        case ValueBitNot:
         case ArithBitNot: {
             flags |= NodeBytecodeUsesAsInt;
             flags &= ~(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeUsesAsOther);
@@ -225,7 +227,8 @@ private:
         case ValueBitOr:
         case ValueBitXor:
         case BitRShift:
-        case BitLShift:
+        case ValueBitLShift:
+        case ArithBitLShift:
         case BitURShift:
         case ArithIMul: {
             flags |= NodeBytecodeUsesAsInt;
@@ -362,6 +365,7 @@ private:
             break;
         }
 
+        case ValueMod:
         case ArithMod: {
             flags |= NodeBytecodeUsesAsNumber;
             flags &= ~NodeBytecodeUsesAsOther;

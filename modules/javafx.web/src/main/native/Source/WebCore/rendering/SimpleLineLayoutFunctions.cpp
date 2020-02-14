@@ -28,6 +28,7 @@
 
 #include "BidiRun.h"
 #include "BidiRunList.h"
+#include "EventRegion.h"
 #include "FontCache.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
@@ -76,6 +77,18 @@ FloatRect computeOverflow(const RenderBlockFlow& flow, const FloatRect& layoutRe
 
 void paintFlow(const RenderBlockFlow& flow, const Layout& layout, PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    if (paintInfo.phase == PaintPhase::EventRegion) {
+        if (!flow.visibleToHitTesting())
+            return;
+        auto paintRect = paintInfo.rect;
+        paintRect.moveBy(-paintOffset);
+        for (auto run : layout.runResolver().rangeForRect(paintRect)) {
+            FloatRect visualOverflowRect = computeOverflow(flow, run.rect());
+            paintInfo.eventRegionContext->unite(enclosingIntRect(visualOverflowRect), flow.style());
+        }
+        return;
+    }
+
     if (paintInfo.phase != PaintPhase::Foreground)
         return;
 
@@ -89,7 +102,7 @@ void paintFlow(const RenderBlockFlow& flow, const Layout& layout, PaintInfo& pai
 
     std::unique_ptr<ShadowData> debugShadow = nullptr;
     if (flow.settings().simpleLineLayoutDebugBordersEnabled()) {
-        debugShadow = std::make_unique<ShadowData>(IntPoint(0, 0), 10, 20, ShadowStyle::Normal, true, Color(0, 255, 0, 200));
+        debugShadow = makeUnique<ShadowData>(IntPoint(0, 0), 10, 20, ShadowStyle::Normal, true, Color(0, 255, 0, 200));
         textPainter.setShadow(debugShadow.get());
     }
 
@@ -250,10 +263,9 @@ Vector<FloatQuad> collectAbsoluteQuadsForRange(const RenderObject& renderer, uns
             quads.append(renderer.localToAbsoluteQuad(FloatQuad(runRect), UseTransforms, wasFixed));
             continue;
         }
-        ASSERT(start < run.end());
-        ASSERT(end > run.start());
         auto localStart = std::max(run.start(), start) - run.start();
         auto localEnd = std::min(run.end(), end) - run.start();
+        ASSERT(localStart <= localEnd);
         style.fontCascade().adjustSelectionRectForText(textRun, runRect, localStart, localEnd);
         quads.append(renderer.localToAbsoluteQuad(FloatQuad(runRect), UseTransforms, wasFixed));
     }
@@ -273,6 +285,10 @@ void simpleLineLayoutWillBeDeleted(const Layout& layout)
 
 bool canUseForLineBoxTree(RenderBlockFlow& flow, const Layout& layout)
 {
+    // Line breaking requires some context that SLL can't provide at the moment (see RootInlineBox::setLineBreakInfo).
+    if (layout.lineCount() > 1)
+        return false;
+
     if (layout.isPaginated())
         return false;
 
@@ -315,7 +331,7 @@ static void initializeInlineTextBox(RenderBlockFlow& flow, InlineTextBox& inline
 
 void generateLineBoxTree(RenderBlockFlow& flow, const Layout& layout)
 {
-    ASSERT(!flow.lineBoxes().firstLineBox());
+    ASSERT(!flow.complexLineLayout()->lineBoxes().firstLineBox());
     if (!layout.runCount())
         return;
 
@@ -331,16 +347,16 @@ void generateLineBoxTree(RenderBlockFlow& flow, const Layout& layout)
         BidiRunList<BidiRun> bidiRuns;
         for (auto it = range.begin(); it != range.end(); ++it) {
             auto run = *it;
-            bidiRuns.appendRun(std::make_unique<BidiRun>(run.localStart(), run.localEnd(), const_cast<RenderObject&>(run.renderer()), bidiContext.ptr(), U_LEFT_TO_RIGHT));
+            bidiRuns.appendRun(makeUnique<BidiRun>(run.localStart(), run.localEnd(), const_cast<RenderObject&>(run.renderer()), bidiContext.ptr(), U_LEFT_TO_RIGHT));
         }
 
         LineInfo lineInfo;
-        lineInfo.setFirstLine(!flow.lineBoxes().firstLineBox());
+        lineInfo.setFirstLine(!flow.complexLineLayout()->lineBoxes().firstLineBox());
         // FIXME: This is needed for flow boxes -but we don't have them yet.
         // lineInfo.setLastLine(lastLine);
         lineInfo.setEmpty(!bidiRuns.runCount());
         bidiRuns.setLogicallyLastRun(bidiRuns.lastRun());
-        auto* root = flow.constructLine(bidiRuns, lineInfo);
+        auto* root = flow.complexLineLayout()->constructLine(bidiRuns, lineInfo);
         bidiRuns.clear();
         if (!root)
             continue;
@@ -363,7 +379,7 @@ void generateLineBoxTree(RenderBlockFlow& flow, const Layout& layout)
         auto lineTop = firstRun.rect().y();
         auto lineHeight = firstRun.rect().height();
         rootLineBox.setLogicalTop(lineTop);
-        rootLineBox.setLineTopBottomPositions(lineTop, lineTop + lineHeight, lineTop, lineTop + lineHeight);
+        rootLineBox.setLineTopBottomPositions(LayoutUnit(lineTop), LayoutUnit(lineTop + lineHeight), LayoutUnit(lineTop), LayoutUnit(lineTop + lineHeight));
     }
 }
 

@@ -743,6 +743,21 @@ IntRect ChromeClientJava::rootViewToScreen(const IntRect& r) const
     );
 }
 
+IntPoint ChromeClientJava::accessibilityScreenToRootView(const WebCore::IntPoint& point) const
+{
+    return screenToRootView(point);
+}
+
+IntRect ChromeClientJava::rootViewToAccessibilityScreen(const WebCore::IntRect& rect) const
+{
+    return rootViewToScreen(rect);
+}
+
+void ChromeClientJava::intrinsicContentsSizeChanged(const IntSize&) const
+{
+    notImplemented();
+}
+
 PlatformPageClient ChromeClientJava::platformPageClient() const
 {
     using namespace ChromeClientJavaInternal;
@@ -808,6 +823,10 @@ RefPtr<SearchPopupMenu> ChromeClientJava::createSearchPopupMenu(PopupMenuClient&
 RefPtr<Icon> ChromeClientJava::createIconForFiles(const Vector<String>& filenames)
 {
     return Icon::createIconForFiles(filenames);
+}
+
+void ChromeClientJava::didFinishLoadingImageForElement(WebCore::HTMLImageElement&)
+{
 }
 
 } // namespace WebCore

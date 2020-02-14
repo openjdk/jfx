@@ -103,6 +103,11 @@ enum class FileLockMode {
     Nonblocking = 1 << 2,
 };
 
+enum class MappedFileMode {
+    Shared,
+    Private,
+};
+
 enum class ShouldFollowSymbolicLinks { No, Yes };
 
 WTF_EXPORT_PRIVATE bool fileExists(const String&);
@@ -126,6 +131,7 @@ WTF_EXPORT_PRIVATE String directoryName(const String&);
 WTF_EXPORT_PRIVATE bool getVolumeFreeSpace(const String&, uint64_t&);
 WTF_EXPORT_PRIVATE Optional<int32_t> getFileDeviceId(const CString&);
 WTF_EXPORT_PRIVATE bool createSymbolicLink(const String& targetPath, const String& symbolicLinkPath);
+WTF_EXPORT_PRIVATE String createTemporaryZipArchive(const String& directory);
 
 WTF_EXPORT_PRIVATE void setMetadataURL(const String& path, const String& urlString, const String& referrer = { });
 
@@ -145,7 +151,7 @@ WTF_EXPORT_PRIVATE PlatformFileHandle openFile(const String& path, FileOpenMode)
 WTF_EXPORT_PRIVATE void closeFile(PlatformFileHandle&);
 // Returns the resulting offset from the beginning of the file if successful, -1 otherwise.
 WTF_EXPORT_PRIVATE long long seekFile(PlatformFileHandle, long long offset, FileSeekOrigin);
-bool truncateFile(PlatformFileHandle, long long offset);
+WTF_EXPORT_PRIVATE bool truncateFile(PlatformFileHandle, long long offset);
 // Returns number of bytes actually read if successful, -1 otherwise.
 WTF_EXPORT_PRIVATE int writeToFile(PlatformFileHandle, const char* data, int length);
 // Returns number of bytes actually written if successful, -1 otherwise.
@@ -158,6 +164,7 @@ WTF_EXPORT_PRIVATE void unlockAndCloseFile(PlatformFileHandle);
 // Returns true if the write was successful, false if it was not.
 WTF_EXPORT_PRIVATE bool appendFileContentsToFileHandle(const String& path, PlatformFileHandle&);
 
+WTF_EXPORT_PRIVATE bool hardLink(const String& source, const String& destination);
 // Hard links a file if possible, copies it if not.
 WTF_EXPORT_PRIVATE bool hardLinkOrCopyFile(const String& source, const String& destination);
 
@@ -194,11 +201,18 @@ WTF_EXPORT_PRIVATE bool deleteNonEmptyDirectory(const String&);
 
 WTF_EXPORT_PRIVATE String realPath(const String&);
 
+WTF_EXPORT_PRIVATE bool isSafeToUseMemoryMapForPath(const String&);
+WTF_EXPORT_PRIVATE void makeSafeToUseMemoryMapForPath(const String&);
+
+WTF_EXPORT_PRIVATE bool unmapViewOfFile(void* buffer, size_t);
+
 class MappedFileData {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     MappedFileData() { }
     MappedFileData(MappedFileData&&);
-    WTF_EXPORT_PRIVATE MappedFileData(const String& filePath, bool& success);
+    WTF_EXPORT_PRIVATE MappedFileData(const String& filePath, MappedFileMode, bool& success);
+    WTF_EXPORT_PRIVATE MappedFileData(PlatformFileHandle, MappedFileMode, bool& success);
     WTF_EXPORT_PRIVATE ~MappedFileData();
     MappedFileData& operator=(MappedFileData&&);
 
@@ -206,10 +220,19 @@ public:
     const void* data() const { return m_fileData; }
     unsigned size() const { return m_fileSize; }
 
+    void* leakHandle() { return std::exchange(m_fileData, nullptr); }
+
 private:
+    WTF_EXPORT_PRIVATE bool mapFileHandle(PlatformFileHandle, MappedFileMode);
+
     void* m_fileData { nullptr };
     unsigned m_fileSize { 0 };
 };
+
+inline MappedFileData::MappedFileData(PlatformFileHandle handle, MappedFileMode mode, bool& success)
+{
+    success = mapFileHandle(handle, mode);
+}
 
 inline MappedFileData::MappedFileData(MappedFileData&& other)
     : m_fileData(std::exchange(other.m_fileData, nullptr))

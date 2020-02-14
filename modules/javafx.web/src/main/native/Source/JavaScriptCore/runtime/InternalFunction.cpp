@@ -45,17 +45,21 @@ InternalFunction::InternalFunction(VM& vm, Structure* structure, NativeFunction 
     ASSERT(m_functionForConstruct);
 }
 
-void InternalFunction::finishCreation(VM& vm, const String& name, NameVisibility nameVisibility)
+void InternalFunction::finishCreation(VM& vm, const String& name, NameVisibility nameVisibility, NameAdditionMode nameAdditionMode)
 {
     Base::finishCreation(vm);
     ASSERT(jsDynamicCast<InternalFunction*>(vm, this));
     ASSERT(methodTable(vm)->getCallData == InternalFunction::info()->methodTable.getCallData);
     ASSERT(methodTable(vm)->getConstructData == InternalFunction::info()->methodTable.getConstructData);
     ASSERT(type() == InternalFunctionType);
-    JSString* nameString = jsString(&vm, name);
+    JSString* nameString = jsString(vm, name);
     m_originalName.set(vm, this, nameString);
-    if (nameVisibility == NameVisibility::Visible)
-        putDirect(vm, vm.propertyNames->name, nameString, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+    if (nameVisibility == NameVisibility::Visible) {
+        if (nameAdditionMode == NameAdditionMode::WithStructureTransition)
+            putDirect(vm, vm.propertyNames->name, nameString, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+        else
+            putDirectWithoutTransition(vm, vm.propertyNames->name, nameString, PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
+    }
 }
 
 void InternalFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
