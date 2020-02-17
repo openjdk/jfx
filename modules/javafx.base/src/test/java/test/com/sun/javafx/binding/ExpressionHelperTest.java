@@ -645,4 +645,42 @@ public class ExpressionHelperTest {
         assertEquals(4, called.get());
     }
 
+    @Test
+    public void testRegisteringAndRemovingSameChangeListenerTwice() {
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, changeListener[0]);
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+        changeListener[0].check(observable, DATA_1, DATA_2, 2);
+
+        helper = ExpressionHelper.removeListener(helper, changeListener[0]);
+        observable.set(DATA_1);
+        ExpressionHelper.fireValueChangedEvent(helper);
+        changeListener[0].check(observable, DATA_2, DATA_1, 1);
+
+        helper = ExpressionHelper.removeListener(helper, changeListener[0]);
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+        changeListener[0].check(null, UNDEFINED, UNDEFINED, 0);
+    }
+
+    @Test
+    public void testRegisteringAndRemovingSameInvalidationListenerTwice() {
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        helper = ExpressionHelper.addListener(helper, observable, invalidationListener[0]);
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(observable, 2);
+
+        helper = ExpressionHelper.removeListener(helper, invalidationListener[0]);
+        observable.set(DATA_1);
+        ExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(observable, 1);
+
+        helper = ExpressionHelper.removeListener(helper, invalidationListener[0]);
+        observable.set(DATA_2);
+        ExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(null, 0);
+    }
+
 }
