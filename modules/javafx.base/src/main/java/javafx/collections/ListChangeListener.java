@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -231,11 +231,9 @@ public interface ListChangeListener<E> {
          * Returns a subList view of the list that contains only the elements added. This is actually a shortcut to
          * <code>c.getList().subList(c.getFrom(), c.getTo());</code>
          *
-         * <pre>{@code
-         * for (Node n : change.getAddedSubList()) {
+         * <pre><code> for (Node n : change.getAddedSubList()) {
          *       // do something
-         * }
-         * }</pre>
+         * }</code></pre>
          * @return the newly created sublist view that contains all the added elements.
          * @throws IllegalStateException if this Change instance is in initial state
          */
