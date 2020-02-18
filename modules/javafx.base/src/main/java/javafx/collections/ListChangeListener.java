@@ -231,9 +231,11 @@ public interface ListChangeListener<E> {
          * Returns a subList view of the list that contains only the elements added. This is actually a shortcut to
          * <code>c.getList().subList(c.getFrom(), c.getTo());</code>
          *
-         * <pre><code> for (Node n : change.getAddedSubList()) {
+         * <pre>{@code
+         * for (Node n : change.getAddedSubList()) {
          *       // do something
-         * }</code></pre>
+         * }
+         * }</pre>
          * @return the newly created sublist view that contains all the added elements.
          * @throws IllegalStateException if this Change instance is in initial state
          */
