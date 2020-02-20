@@ -54,6 +54,18 @@ public class ObjectPropertyLeakTest {
     private final ArrayList<WeakReference<Property<?>>> origRefs = new ArrayList<>();
     private final ArrayList<WeakReference<Property<?>>> wrappedRefs = new ArrayList<>();
 
+    private void checkRefs(String name, int numExpected,
+            ArrayList<WeakReference<Property<?>>> refs) {
+
+        int count = 0;
+        for (var ref : refs) {
+            if (ref.get() != null) count++;
+        }
+        final String msg = name + " properties should "
+                + (numExpected > 0 ? "NOT be GCed" : "be GCed");
+        assertEquals(msg, numExpected, count);
+    }
+
     private void commonLeakTest(int origExpected, int wrappedExpected)
             throws Exception {
 
@@ -63,23 +75,8 @@ public class ObjectPropertyLeakTest {
             Thread.sleep(50);
         }
 
-        int origCount = 0;
-        for (var ref : origRefs) {
-            if (ref.get() != null) origCount++;
-        }
-        final String origMsg = origExpected > 0
-                ? "Original properties should NOT be GCed"
-                : "Original properties should be GCed";
-        assertEquals(origMsg, origExpected, origCount);
-
-        int wrappedCount = 0;
-        for (var ref : wrappedRefs) {
-            if (ref.get() != null) wrappedCount++;
-        }
-        final String wrappedMsg = wrappedExpected > 0
-                ? "Wrapped properties should NOT be GCed"
-                : "Wrapped properties should be GCed";
-        assertEquals(wrappedMsg, wrappedExpected, wrappedCount);
+        checkRefs("Original", origExpected, origRefs);
+        checkRefs("Wrapped", wrappedExpected, wrappedRefs);
     }
 
     private void commonLeakTest() throws Exception {
@@ -95,20 +92,23 @@ public class ObjectPropertyLeakTest {
         commonLeakTest(0, 0);
     }
 
+    private void saveRefs(Property<?> origProp, Property<?> wrappedProp) {
+        // Save reference to original and wrapped objects
+        origList.add(origProp);
+        wrappedList.add(wrappedProp);
+
+        // Save weak references for GC detection
+        origRefs.add(new WeakReference<>(origProp));
+        wrappedRefs.add(new WeakReference<>(wrappedProp));
+    }
+
     @Test
     public void testBooleanPropertyAsObjectLeak() throws Exception {
         for (int i = 0; i < OBJ_COUNT; i++) {
             // Create original and wrapped property objects
             final BooleanProperty origProp = new SimpleBooleanProperty(true);
             final ObjectProperty<Boolean> wrappedProp = origProp.asObject();
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -119,14 +119,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final ObjectProperty<Boolean> origProp = new SimpleObjectProperty<>(true);
             final BooleanProperty wrappedProp = BooleanProperty.booleanProperty(origProp);
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -137,14 +130,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final DoubleProperty origProp = new SimpleDoubleProperty(1.0);
             final ObjectProperty<Double> wrappedProp = origProp.asObject();
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -155,14 +141,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final ObjectProperty<Double> origProp = new SimpleObjectProperty<>(1.0);
             final DoubleProperty wrappedProp = DoubleProperty.doubleProperty(origProp);
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -173,14 +152,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final FloatProperty origProp = new SimpleFloatProperty(1.0f);
             final ObjectProperty<Float> wrappedProp = origProp.asObject();
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -191,14 +163,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final ObjectProperty<Float> origProp = new SimpleObjectProperty<>(1.0f);
             final FloatProperty wrappedProp = FloatProperty.floatProperty(origProp);
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -209,14 +174,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final IntegerProperty origProp = new SimpleIntegerProperty(1);
             final ObjectProperty<Integer> wrappedProp = origProp.asObject();
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -227,14 +185,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final ObjectProperty<Integer> origProp = new SimpleObjectProperty<>(1);
             final IntegerProperty wrappedProp = IntegerProperty.integerProperty(origProp);
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -245,14 +196,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final LongProperty origProp = new SimpleLongProperty(1L);
             final ObjectProperty<Long> wrappedProp = origProp.asObject();
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
@@ -263,14 +207,7 @@ public class ObjectPropertyLeakTest {
             // Create original and wrapped property objects
             final ObjectProperty<Long> origProp = new SimpleObjectProperty<>(1L);
             final LongProperty wrappedProp = LongProperty.longProperty(origProp);
-
-            // Save reference to original and wrapped objects
-            origList.add(origProp);
-            wrappedList.add(wrappedProp);
-
-            // Save weak references for GC detection
-            origRefs.add(new WeakReference<>(origProp));
-            wrappedRefs.add(new WeakReference<>(wrappedProp));
+            saveRefs(origProp, wrappedProp);
         }
         commonLeakTest();
     }
