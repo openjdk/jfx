@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1566,7 +1566,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Specifies a {@code Node} to use to define the the clipping shape for this
+     * Specifies a {@code Node} to use to define the clipping shape for this
      * Node. This clipping Node is not a child of this {@code Node} in the scene
      * graph sense. Rather, it is used to define the clip for this {@code Node}.
      * <p>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package test.javafx.scene.control;
 import com.sun.javafx.scene.control.VirtualScrollBar;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.tk.Toolkit;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1974,5 +1975,29 @@ public class ListViewTest {
         assertEquals("Two items should be selected.", 2, sm.getSelectedIndices().size());
         assertEquals("List item at index 1 should be selected", 1, (int) sm.getSelectedIndices().get(0));
         assertEquals("List item at index 2 should be selected", 2, (int) sm.getSelectedIndices().get(1));
+    }
+
+    @Test
+    public void testListViewLeak() {
+        ObservableList<String> items = FXCollections.observableArrayList();
+        WeakReference<ListView<String>> listViewRef = new WeakReference<>(new ListView<>(items));
+        attemptGC(listViewRef, 10);
+        assertNull("ListView has a leak.", listViewRef.get());
+    }
+
+    private void attemptGC(WeakReference<ListView<String>> weakRef, int n) {
+        for (int i = 0; i < n; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (weakRef.get() == null) {
+                break;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                fail("InterruptedException occurred during Thread.sleep()");
+            }
+        }
     }
 }
