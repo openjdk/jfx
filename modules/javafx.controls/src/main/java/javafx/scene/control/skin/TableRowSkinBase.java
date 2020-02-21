@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,9 +37,11 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.collections.transformation.FilteredList;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableObjectProperty;
 import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -135,7 +137,6 @@ public abstract class TableRowSkinBase<T,
 
     double fixedCellSize;
     boolean fixedCellSizeEnabled;
-
 
 
     /***************************************************************************
@@ -257,7 +258,8 @@ public abstract class TableRowSkinBase<T,
         if (cellsMap.isEmpty()) return;
 
         ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
-        if (visibleLeafColumns.isEmpty()) {
+        final int visibleLeafColumnsSize =  visibleLeafColumns.size();
+        if (visibleLeafColumnsSize==0) {
             super.layoutChildren(x,y,w,h);
             return;
         }
@@ -306,9 +308,8 @@ public abstract class TableRowSkinBase<T,
                         // earlier rows to update themselves to take into account
                         // this increased indentation.
                         final VirtualFlow<C> flow = getVirtualFlow();
-                        final int thisIndex = getSkinnable().getIndex();
-                        for (int i = 0; i < flow.cells.size(); i++) {
-                            C cell = flow.cells.get(i);
+                        for (int i = 0, max = flow.getCellCount(); i < max; i++) {
+                            C cell = flow.getCell(i);
                             if (cell == null || cell.isEmpty()) continue;
                             cell.requestLayout();
                             cell.layout();
@@ -326,7 +327,6 @@ public abstract class TableRowSkinBase<T,
         double height;
 
         final double verticalPadding = snappedTopInset() + snappedBottomInset();
-        final double horizontalPadding = snappedLeftInset() + snappedRightInset();
         final double controlHeight = control.getHeight();
 
         /**
@@ -339,45 +339,79 @@ public abstract class TableRowSkinBase<T,
         int index = control.getIndex();
         if (index < 0/* || row >= itemsProperty().get().size()*/) return;
 
+        int firstVisibleColumnIndex = -1;
+        int lastVisibleColumnIndex = -1;
+        final VirtualFlow<?> virtualFlow = getVirtualFlow();
+        final double scrollX = virtualFlow == null ? 0.0 : virtualFlow.getHbar().getValue();
+        final Insets padding = getSkinnable().getPadding();
+        final double vfWidth = virtualFlow == null ? 0.0:virtualFlow.getWidth();
+        final double headerWidth = vfWidth - (padding.getLeft() + padding.getRight());
+        for (int column = 0, max = cells.size(); column < max; column++) {
+            R tableCell = cells.get(column);
+
+            TableColumnBase<T, ?> col = getTableColumn(tableCell);
+            if (col == null || !col.isVisible()) {
+                continue;
+            }
+
+            // work out where this column header is, and it's width (start -> end)
+            double start = 0;
+            for (int i = 0; i < visibleLeafColumnsSize; i++) {
+                TableColumnBase<?,?> c = visibleLeafColumns.get(i);
+                if (c.equals(col)) break;
+                start += snapSizeX(c.getWidth());
+            }
+            double end = start + col.getWidth();
+            // determine the width of the table
+
+            final boolean visible = isOverlap(start, end, scrollX, headerWidth + scrollX);
+            if(visible) {
+                if(firstVisibleColumnIndex == -1) {
+                    firstVisibleColumnIndex = column;
+                }
+                lastVisibleColumnIndex = column;
+            }else if( firstVisibleColumnIndex != -1 ) {
+                break;
+            }
+        }
+
+        final ObservableList<Node> children = getChildren();
+        if(fixedCellSizeEnabled) {
+            for (int column = 0, max = cells.size(); column < max; column++) {
+                R tableCell = cells.get(column);
+                final boolean isVisible = firstVisibleColumnIndex <= column && column <= lastVisibleColumnIndex;
+                if (isVisible ) {
+                    if(tableCell.getParent()==null){
+                        children.add(tableCell);
+                    }
+                }else{
+                    // we only add/remove to the scenegraph if the fixed cell
+                    // length support is enabled - otherwise we keep all
+                    // TableCells in the scenegraph
+                    children.remove(tableCell);
+                }
+            }
+        }
+
+        // Added for RT-32700, and then updated for RT-34074.
+        // We change the alignment from CENTER_LEFT to TOP_LEFT if the
+        // height of the row is greater than the default size, and if
+        // the alignment is the default alignment.
+        // What I would rather do is only change the alignment if the
+        // alignment has not been manually changed, but for now this will
+        // do.
+        final boolean centreContent = h <= 24.0;
+
+        double layoutY = snappedTopInset();
+        final double snapSizeYVerticalPadding = snapSizeY(verticalPadding);
+
         for (int column = 0, max = cells.size(); column < max; column++) {
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
 
-            boolean isVisible = true;
-            if (fixedCellSizeEnabled) {
-                // we determine if the cell is visible, and if not we have the
-                // ability to take it out of the scenegraph to help improve
-                // performance. However, we only do this when there is a
-                // fixed cell length specified in the TableView. This is because
-                // when we have a fixed cell length it is possible to know with
-                // certainty the height of each TableCell - it is the fixed value
-                // provided by the developer, and this means that we do not have
-                // to concern ourselves with the possibility that the height
-                // may be variable and / or dynamic.
-                isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
-
-                height = fixedCellSize;
-            } else {
-                height = Math.max(controlHeight, tableCell.prefHeight(-1));
-                height = snapSizeY(height) - snapSizeY(verticalPadding);
-            }
-
-            if (isVisible) {
-                if (fixedCellSizeEnabled && tableCell.getParent() == null) {
-                    getChildren().add(tableCell);
-                }
-
-                width = tableCell.prefWidth(height) - snapSizeX(horizontalPadding);
-
-                // Added for RT-32700, and then updated for RT-34074.
-                // We change the alignment from CENTER_LEFT to TOP_LEFT if the
-                // height of the row is greater than the default size, and if
-                // the alignment is the default alignment.
-                // What I would rather do is only change the alignment if the
-                // alignment has not been manually changed, but for now this will
-                // do.
-                final boolean centreContent = h <= 24.0;
-
+            boolean isVisible = firstVisibleColumnIndex <= column && column <= lastVisibleColumnIndex;
+            width = snapSizeX(tableColumn.getWidth());
+            if (isVisible || isOverlap(tableCell.getLayoutX(), tableCell.getLayoutX()+width, scrollX, headerWidth + scrollX)) {
                 // if the style origin is null then the property has not been
                 // set (or it has been reset to its default), which means that
                 // we can set it without overwriting someone elses settings.
@@ -429,27 +463,35 @@ public abstract class TableRowSkinBase<T,
                         }
                     }
                 }
+
+                if (fixedCellSizeEnabled) {
+                    // we determine if the cell is visible, and if not we have the
+                    // ability to take it out of the scenegraph to help improve
+                    // performance. However, we only do this when there is a
+                    // fixed cell length specified in the TableView. This is because
+                    // when we have a fixed cell length it is possible to know with
+                    // certainty the height of each TableCell - it is the fixed value
+                    // provided by the developer, and this means that we do not have
+                    // to concern ourselves with the possibility that the height
+                    // may be variable and / or dynamic.
+
+                    height = fixedCellSize;
+                } else {
+                    height = Math.max(controlHeight, tableCell.prefHeight(-1));
+                    height = snapSizeY(height) - snapSizeYVerticalPadding;
+                }
+
                 ///////////////////////////////////////////
                 // further indentation code ends here
                 ///////////////////////////////////////////
-
-                tableCell.resize(width, height);
-                tableCell.relocate(x, snappedTopInset());
+                tableCell.resizeRelocate(x, layoutY, width, height);
 
                 // Request layout is here as (partial) fix for RT-28684.
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
-            } else {
-                width = snapSizeX(tableCell.prefWidth(-1)) - snapSizeX(horizontalPadding);
-
-                if (fixedCellSizeEnabled) {
-                    // we only add/remove to the scenegraph if the fixed cell
-                    // length support is enabled - otherwise we keep all
-                    // TableCells in the scenegraph
-                    getChildren().remove(tableCell);
-                }
+            }else if(fixedCellSizeEnabled && lastVisibleColumnIndex<column){
+                break;
             }
-
             x += width;
         }
     }
@@ -540,20 +582,10 @@ public abstract class TableRowSkinBase<T,
             cells.add(cell);
         }
 
-        // update children of each row
         if (fixedCellSizeEnabled) {
-            // we leave the adding / removing up to the layoutChildren method mostly,
-            // but here we remove any children cells that refer to columns that are
-            // not visible
-            List<Node> toRemove = new ArrayList<>();
-            for (Node cell : getChildren()) {
-                if (! (cell instanceof IndexedCell)) continue;
-                if (!getTableColumn((R)cell).isVisible()) {
-                    toRemove.add(cell);
-                }
-            }
-            getChildren().removeAll(toRemove);
-        } else if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
+            return;
+        }
+        if (resetChildren || cellsEmpty) {
             getChildren().setAll(cells);
         }
     }
@@ -571,11 +603,15 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double prefWidth = 0.0;
-        for (R cell : cells) {
-            prefWidth += cell.prefWidth(height);
+        double width = 0;
+        ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
+        for (TableColumnBase<?,?> c: visibleLeafColumns) {
+            if( c.isVisible() ) {
+                width += snapSizeX(c.getWidth());
+            }
         }
-        return prefWidth;
+        final Insets padding = getSkinnable().getPadding();
+        return width + padding.getLeft() + padding.getRight();
     }
 
     /** {@inheritDoc} */
@@ -591,8 +627,9 @@ public abstract class TableRowSkinBase<T,
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
-        if (getCellSize() < DEFAULT_CELL_SIZE) {
-            return getCellSize();
+        final double cellSize = getCellSize();
+        if (cellSize < DEFAULT_CELL_SIZE) {
+            return cellSize;
         }
 
         // FIXME according to profiling, this method is slow and should
@@ -603,8 +640,7 @@ public abstract class TableRowSkinBase<T,
             final R tableCell = cells.get(i);
             prefHeight = Math.max(prefHeight, tableCell.prefHeight(-1));
         }
-        double ph = Math.max(prefHeight, Math.max(getCellSize(), getSkinnable().minHeight(-1)));
-
+        double ph = Math.max(prefHeight, Math.max(cellSize, getSkinnable().minHeight(-1)));
         return ph;
     }
 
@@ -621,8 +657,9 @@ public abstract class TableRowSkinBase<T,
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
-        if (getCellSize() < DEFAULT_CELL_SIZE) {
-            return getCellSize();
+        final double cellSize = getCellSize();
+        if (cellSize < DEFAULT_CELL_SIZE) {
+            return cellSize;
         }
 
         // FIXME according to profiling, this method is slow and should
@@ -663,27 +700,8 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    private boolean isColumnPartiallyOrFullyVisible(TableColumnBase col) {
-        if (col == null || !col.isVisible()) return false;
-
-        final VirtualFlow<?> virtualFlow = getVirtualFlow();
-        double scrollX = virtualFlow == null ? 0.0 : virtualFlow.getHbar().getValue();
-
-        // work out where this column header is, and it's width (start -> end)
-        double start = 0;
-        final ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
-        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-            TableColumnBase<?,?> c = visibleLeafColumns.get(i);
-            if (c.equals(col)) break;
-            start += c.getWidth();
-        }
-        double end = start + col.getWidth();
-
-        // determine the width of the table
-        final Insets padding = getSkinnable().getPadding();
-        double headerWidth = getSkinnable().getWidth() - padding.getLeft() + padding.getRight();
-
-        return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
+    private static boolean isOverlap(double start, double end, double start2, double end2){
+        return (start<=end2 && end >= start2);
     }
 
     private void requestCellUpdate() {
