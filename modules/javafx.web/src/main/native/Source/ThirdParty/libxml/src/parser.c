@@ -2646,7 +2646,8 @@ xmlStringLenDecodeEntities(xmlParserCtxtPtr ctxt, const xmlChar *str, int len,
     else
         c = 0;
     while ((c != 0) && (c != end) && /* non input consuming loop */
-       (c != end2) && (c != end3)) {
+           (c != end2) && (c != end3) &&
+           (ctxt->instate != XML_PARSER_EOF)) {
 
     if (c == 0) break;
         if ((c == '&') && (str[1] == '#')) {
