@@ -620,7 +620,7 @@ public class FXMLLoader {
                             }
                             eventHandler = new ScriptEventHandler(handlerName, scriptEngine, location.getPath()
                                         + "-" + attribute.name  + "_attribute_in_element_ending_at_line_"  + getLineNumber());
-			}
+                        }
 
                         // Add the handler
                         getValueAdapter().put(attribute.name, eventHandler);
