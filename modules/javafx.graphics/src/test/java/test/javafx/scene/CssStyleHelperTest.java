@@ -50,7 +50,7 @@ public class CssStyleHelperTest {
     private Stage stage;
     private StackPane root;
 
-    private static void initStyleManager() {
+    private static void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
@@ -65,12 +65,12 @@ public class CssStyleHelperTest {
         scene = new Scene(root);
         stage = new Stage();
         stage.setScene(scene);
-        initStyleManager();
+        resetStyleManager();
     }
 
     @AfterClass
     public static void cleanupOnce() {
-        initStyleManager();
+        resetStyleManager();
     }
 
     @Test
