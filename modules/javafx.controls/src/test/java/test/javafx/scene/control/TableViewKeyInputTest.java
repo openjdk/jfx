@@ -4711,4 +4711,66 @@ public class TableViewKeyInputTest {
 
         assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
     }
+
+    @Test public void test_dynamic_NodeOrientation_change() {
+
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(1, col2);
+
+        keyboard.doLeftArrowPress();
+
+        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
+            assertFalse(sm.isSelected(1, col0));
+            assertTrue(sm.isSelected(1, col1));
+            assertFalse(sm.isSelected(1, col2));
+            assertFalse(sm.isSelected(1, col3));
+            assertFalse(sm.isSelected(1, col4));
+
+            tableView.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+            orientation = NodeOrientation.RIGHT_TO_LEFT;
+
+        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+            assertFalse(sm.isSelected(1, col0));
+            assertFalse(sm.isSelected(1, col1));
+            assertFalse(sm.isSelected(1, col2));
+            assertTrue(sm.isSelected(1, col3));
+            assertFalse(sm.isSelected(1, col4));
+
+            tableView.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
+            orientation = NodeOrientation.LEFT_TO_RIGHT;
+         }
+
+        keyboard.doRightArrowPress();
+
+        if (tableView.getNodeOrientation() == NodeOrientation.LEFT_TO_RIGHT) {
+            assertFalse(sm.isSelected(1, col0));
+            assertFalse(sm.isSelected(1, col1));
+            assertFalse(sm.isSelected(1, col2));
+            assertFalse(sm.isSelected(1, col3));
+            assertTrue(sm.isSelected(1, col4));
+
+            keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+
+            assertFalse(sm.isSelected(1, col0));
+            assertFalse(sm.isSelected(1, col1));
+            assertFalse(sm.isSelected(1, col2));
+            assertTrue(sm.isSelected(1, col3));
+            assertTrue(sm.isSelected(1, col4));
+
+        } else if (tableView.getNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            assertTrue(debug(), sm.isSelected(1, col0));
+            assertFalse(debug(), sm.isSelected(1, col1));
+            assertFalse(debug(), sm.isSelected(1, col2));
+            assertFalse(debug(), sm.isSelected(1, col3));
+            assertFalse(debug(), sm.isSelected(1, col4));
+
+            keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+
+            assertTrue(debug(), sm.isSelected(1, col0));
+            assertTrue(debug(), sm.isSelected(1, col1));
+            assertFalse(debug(), sm.isSelected(1, col2));
+            assertFalse(debug(), sm.isSelected(1, col3));
+            assertFalse(debug(), sm.isSelected(1, col4));
+        }
+    }
 }
