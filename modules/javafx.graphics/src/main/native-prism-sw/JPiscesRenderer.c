@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,6 @@ static jboolean fieldIdsInitialized = JNI_FALSE;
 static jboolean initializeRendererFieldIds(JNIEnv *env, jobject objectHandle);
 
 static int toPiscesCoords(unsigned int ff);
-static void renderer_finalize(JNIEnv *env, jobject objectHandle);
 static void fillAlphaMask(Renderer* rdr, jint minX, jint minY, jint maxX, jint maxY,
     JNIEnv *env, jobject this, jint maskType, jbyteArray jmask, jint x, jint y,
     jint maskWidth, jint maskHeight, jint offset, jint stride);
@@ -82,14 +81,11 @@ Java_com_sun_pisces_PiscesRenderer_initialize(JNIEnv* env, jobject objectHandle)
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_PiscesRenderer_nativeFinalize(JNIEnv* env,
-                                                  jobject objectHandle)
+Java_com_sun_pisces_PiscesRenderer_disposeNative(JNIEnv *env, jclass cls, jlong nativePtr)
 {
-    renderer_finalize(env, objectHandle);
-
-    if (JNI_TRUE == readAndClearMemErrorFlag()) {
-        JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
-                     "Allocation of internal renderer buffer failed.");
+    Renderer* rdr = (Renderer*) JLongToPointer(nativePtr);
+    if (rdr != NULL) {
+        renderer_dispose(rdr);
     }
 }
 
@@ -291,24 +287,6 @@ renderer_get(JNIEnv* env, jobject objectHandle) {
     return (Renderer*)JLongToPointer(
                 (*env)->GetLongField(env, objectHandle,
                                      fieldIds[RENDERER_NATIVE_PTR]));
-}
-
-static void
-renderer_finalize(JNIEnv *env, jobject objectHandle) {
-    Renderer* rdr;
-
-    if (!fieldIdsInitialized) {
-        return;
-    }
-
-    rdr = (Renderer*)JLongToPointer((*env)->GetLongField(env, objectHandle,
-                                    fieldIds[RENDERER_NATIVE_PTR]));
-
-    if (rdr != (Renderer*)0) {
-        renderer_dispose(rdr);
-        (*env)->SetLongField(env, objectHandle, fieldIds[RENDERER_NATIVE_PTR],
-                         (jlong)0);
-    }
 }
 
 static jboolean
