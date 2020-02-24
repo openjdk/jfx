@@ -4758,19 +4758,19 @@ public class TableViewKeyInputTest {
             assertTrue(sm.isSelected(1, col4));
 
         } else if (tableView.getNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(debug(), sm.isSelected(1, col0));
-            assertFalse(debug(), sm.isSelected(1, col1));
-            assertFalse(debug(), sm.isSelected(1, col2));
-            assertFalse(debug(), sm.isSelected(1, col3));
-            assertFalse(debug(), sm.isSelected(1, col4));
+            assertTrue(sm.isSelected(1, col0));
+            assertFalse(sm.isSelected(1, col1));
+            assertFalse(sm.isSelected(1, col2));
+            assertFalse(sm.isSelected(1, col3));
+            assertFalse(sm.isSelected(1, col4));
 
             keyboard.doLeftArrowPress(KeyModifier.SHIFT);
 
-            assertTrue(debug(), sm.isSelected(1, col0));
-            assertTrue(debug(), sm.isSelected(1, col1));
-            assertFalse(debug(), sm.isSelected(1, col2));
-            assertFalse(debug(), sm.isSelected(1, col3));
-            assertFalse(debug(), sm.isSelected(1, col4));
+            assertTrue(sm.isSelected(1, col0));
+            assertTrue(sm.isSelected(1, col1));
+            assertFalse(sm.isSelected(1, col2));
+            assertFalse(sm.isSelected(1, col3));
+            assertFalse(sm.isSelected(1, col4));
         }
     }
 }
