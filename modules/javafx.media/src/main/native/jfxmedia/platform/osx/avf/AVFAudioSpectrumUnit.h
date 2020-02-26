@@ -49,7 +49,8 @@
  * timeStamp: the beginning time in seconds of the sample period (from beginning of stream)
  * duration: the length of time in seconds of the sample period
  */
-typedef void (*AVFSpectrumUnitCallbackProc)(void *callbackContext, double duration);
+typedef void (*AVFSpectrumUnitCallbackProc)(void *callbackContext, double duration,
+                                            double timestamp);
 
 class AVFAudioSpectrumUnit : public CAudioSpectrum {
 public:
@@ -80,6 +81,7 @@ public:
     void SetChannels(UInt32 count);
     void SetMaxFrames(UInt32 maxFrames);
     void SetSpectrumCallbackProc(AVFSpectrumUnitCallbackProc proc, void *context);
+    void SetFirstBufferDelivered(bool isFirstBufferDelivered);
 
 private:
     AVFSpectrumUnitCallbackProc mSpectrumCallbackProc;
@@ -102,6 +104,7 @@ private:
     UInt32 mSamplesPerInterval;
 
     bool mRebuildCrunch;
+    bool mFirstBufferDelivered;
 
     // GStreamer
     GstElement *mSpectrumElement;
