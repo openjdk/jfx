@@ -41,6 +41,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import static org.junit.Assert.*;
 
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -49,14 +50,23 @@ public class Node_cssStateTransition_Test {
     public Node_cssStateTransition_Test() {
     }
 
-    @Before
-    public void setUp() {
+    private static void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
         sm.stylesheetContainerMap.clear();
         sm.cacheContainerMap.clear();
         sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @Before
+    public void setUp() {
+        resetStyleManager();
+    }
+
+    @AfterClass
+    public static void cleanupOnce() {
+        resetStyleManager();
     }
 
     @Test

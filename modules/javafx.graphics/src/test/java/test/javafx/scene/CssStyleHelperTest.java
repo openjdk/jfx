@@ -40,6 +40,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -49,19 +50,27 @@ public class CssStyleHelperTest {
     private Stage stage;
     private StackPane root;
 
-    @Before
-    public void setup() {
-        root = new StackPane();
-        scene = new Scene(root);
-        stage = new Stage();
-        stage.setScene(scene);
-
+    private static void resetStyleManager() {
         StyleManager sm = StyleManager.getInstance();
         sm.userAgentStylesheetContainers.clear();
         sm.platformUserAgentStylesheetContainers.clear();
         sm.stylesheetContainerMap.clear();
         sm.cacheContainerMap.clear();
         sm.hasDefaultUserAgentStylesheet = false;
+    }
+
+    @Before
+    public void setup() {
+        root = new StackPane();
+        scene = new Scene(root);
+        stage = new Stage();
+        stage.setScene(scene);
+        resetStyleManager();
+    }
+
+    @AfterClass
+    public static void cleanupOnce() {
+        resetStyleManager();
     }
 
     @Test

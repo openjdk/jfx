@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,6 +71,7 @@ public class PlatformUtil {
     private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
     private static final boolean SOLARIS = os.startsWith("SunOS");
     private static final boolean IOS = os.startsWith("iOS");
+    private static final boolean STATIC_BUILD = "Substrate VM".equals(System.getProperty("java.vm.name"));
 
     /**
      * Utility method used to determine whether the version number as
@@ -175,6 +176,13 @@ public class PlatformUtil {
      */
     public static boolean isIOS(){
         return IOS;
+    }
+
+    /**
+     * Returns true if the current runtime is a statically linked image
+     */
+    public static boolean isStaticBuild(){
+        return STATIC_BUILD;
     }
 
     private static void loadPropertiesFromFile(final File file) {

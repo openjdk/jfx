@@ -4148,7 +4148,7 @@ project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
     // Download the Lucene libraries needed for the Ensemble8 app
-    def luceneVersion = "7.7.1"
+    def luceneVersion = "7.7.2"
     getConfigurations().create("lucene");
     dependencies {
         lucene group: "org.apache.lucene", name: "lucene-core", version: luceneVersion
