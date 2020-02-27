@@ -71,7 +71,7 @@ public class FXMLScriptDeployment extends Application {
             if (args.length > 0) {
                bDebug = true;
             }
-            new FXMLScriptTest().launch();
+            new FXMLScriptDeployment().launch();
             // for debugging, allows to study invocation logs in detail
             if (bDebug) { dumpEvalInformation(); }
             assertCorrectInvocations();
@@ -94,7 +94,7 @@ public class FXMLScriptDeployment extends Application {
         Scene scene = null;
         Button btn = null;
         try {
-             fxmlUrl = Util.getURL(FXMLScriptTest.class, "demo_01");
+             fxmlUrl = Util.getURL(FXMLScriptDeployment.class, "demo_01");
              rootNode = FXMLLoader.load(fxmlUrl);
              scene = new Scene(rootNode);
              btn = (Button) scene.lookup("#idButton");
@@ -248,8 +248,8 @@ public class FXMLScriptDeployment extends Application {
                     break;
 
                 case 3:
-                    Util.assertEndsWith("demo_01.fxml-script_starting_at_line_25", filename);
-                    Util.assertStartsWith("demo_01.fxml embedded script rpsl - line # 25", script);
+                    Util.assertEndsWith("demo_01.fxml-script_starting_at_line_52", filename);
+                    Util.assertStartsWith("demo_01.fxml embedded script rpsl - line # 52", script);
                     break;
 
                 case 4:
@@ -279,7 +279,7 @@ public class FXMLScriptDeployment extends Application {
 
                 case 9:
                     Util.assertEndsWith("demo_01.fxml-onMouseClicked_attribute_in_element_ending_at_line_46", filename);
-                    Util.assertStartsWith("demo_01.fxml embedded event - MouseClicked - line # 45", script);
+                    Util.assertStartsWith("demo_01.fxml embedded event - MouseClicked - line # 44", script);
                     break;
             }
         }
