@@ -33,19 +33,16 @@ import java.util.Arrays;
 import java.util.List;
 
 
-public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory
-{
-    final static String       ENGINE_NAME       = "RgfPseudoScriptLanguage (RPSL) 1.0.0";
-    final static String       SHORT_ENGINE_NAME = "rpsl";
-    final static String       ENGINE_VERSION    = "100.20200220";
-    final static List<String> EXTENSIONS        = Arrays.asList("rpsl", "RPSL" );
-    final static String       LANGUAGE_NAME     = "RgfPseudoScriptLanguage";
-    final static String       LANGUAGE_VERSION  = "1.0.0.100.20200220";
-
-    final static List<String> MIME_TYPES        = Arrays.asList("text/rpsl", "application/x-rpsl");
-    final static String       THREADING         = "MULTITHREADED";
-
-    final static List<String> ENGINE_NAMES = Arrays.asList(SHORT_ENGINE_NAME, "RgfPseudoSL");
+public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory {
+    static final String       ENGINE_NAME       = "RgfPseudoScriptLanguage (RPSL) 1.0.0";
+    static final String       SHORT_ENGINE_NAME = "rpsl";
+    static final String       ENGINE_VERSION    = "100.20200228";
+    static final List<String> EXTENSIONS        = Arrays.asList("rpsl", "RPSL");
+    static final String       LANGUAGE_NAME     = "RgfPseudoScriptLanguage";
+    static final String       LANGUAGE_VERSION  = "1.0.0.100.20200228";
+    static final List<String> MIME_TYPES        = Arrays.asList("text/rpsl", "application/x-rpsl");
+    static final String       THREADING         = "MULTITHREADED";
+    static final List<String> ENGINE_NAMES      = Arrays.asList(SHORT_ENGINE_NAME, "RgfPseudoSL");
 
     public String getEngineName() {
         return ENGINE_NAME;
@@ -84,12 +81,12 @@ public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory
     }
 
     public String getOutputStatement(String toDisplay) {
-        String tmpDisplay=toStringLiteral(toDisplay);
-        return "say "+tmpDisplay+" /* Rexx style (duplicate quotes within string) */ ";
+        String tmpDisplay = toStringLiteral(toDisplay);
+        return "say " + tmpDisplay + " /* Rexx style (duplicate quotes within string) */ ";
     }
 
     String toStringLiteral(String toDisplay) {
-        if (toDisplay==null) {
+        if (toDisplay == null) {
             return "\"\"";
         }
         return '"' + toDisplay.replace("\"","\"\"") + '"';
@@ -121,17 +118,17 @@ public class RgfPseudoScriptEngineFactory implements ScriptEngineFactory
     }
 
     public String getProgram(String... statements) {
-        if (statements==null) {
+        if (statements == null) {
             return "";
         }
 
         StringBuilder sb = new StringBuilder();
-        for (int i=0;i<statements.length;i++) {
-            if (statements[i]==null) {
+        for (int i = 0; i < statements.length; i++) {
+            if (statements[i] == null) {
                 sb.append("\tsay 'null'; /* Rexx style */ \n");
             }
             else {
-                sb.append("\t"+statements[i]+";\n");
+                sb.append("\t" + statements[i] + ";\n");
             }
         }
         return sb.toString();

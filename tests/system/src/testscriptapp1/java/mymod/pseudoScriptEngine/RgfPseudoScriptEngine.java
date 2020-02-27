@@ -45,11 +45,11 @@ import java.time.Instant;
 
 public class RgfPseudoScriptEngine extends AbstractScriptEngine
 {
-    final static boolean bDebug = false; // true;
+    static final boolean bDebug = false; // true;
 
     /** Allows to log and access the ScriptEngine instances with their evalDataList. */
-    final static ArrayList<RgfPseudoScriptEngine> enginesUsed = new ArrayList();
-    static public ArrayList<RgfPseudoScriptEngine> getEnginesUsed() {
+    static final ArrayList<RgfPseudoScriptEngine> enginesUsed = new ArrayList();
+    public static ArrayList<RgfPseudoScriptEngine> getEnginesUsed() {
         return enginesUsed;
     }
 
@@ -76,35 +76,35 @@ public class RgfPseudoScriptEngine extends AbstractScriptEngine
     }
 
     public Object eval(Reader reader, ScriptContext context) {
-        if (bDebug) System.err.println("[debug: "+this+".eval(Reader,ScriptContext), ScriptContext="+context+"]");
+        if (bDebug) System.err.println("[debug: " + this + ".eval(Reader,ScriptContext), ScriptContext=" + context + "]");
 
         return eval(readReader(reader), context);
     }
 
 
     public Object eval(String script, ScriptContext context) {
-        if (bDebug) System.err.print("[debug: "+this+".eval(String,ScriptContext), ScriptContext="+context+"]");
+        if (bDebug) System.err.print("[debug: " + this + ".eval(String,ScriptContext), ScriptContext=" + context + "]");
 
             // create copies of the Bindings for later inspection as they may
             // get reused and changed on each eval() invocation
         TreeMap<Integer,TreeMap> bindings = new TreeMap();
         for (Integer scope : context.getScopes()) {
             Bindings binding = context.getBindings(scope);
-            bindings.put(scope, binding==null ? new TreeMap<String,Object>() : new TreeMap<String,Object>( binding ) );
+            bindings.put(scope, binding == null ? new TreeMap<String,Object>() : new TreeMap<String,Object>(binding));
         }
-        invocationList.add( new InvocationInfos(script,context) );
-        if (bDebug) System.err.println(" | invocationList.size()="+invocationList.size());
+        invocationList.add(new InvocationInfos(script,context));
+        if (bDebug) System.err.println(" | invocationList.size()=" + invocationList.size());
         return invocationList;
     }
 
 
-    String readReader (Reader reader) {
-        if (reader==null) {
+    String readReader(Reader reader) {
+        if (reader == null) {
             return "";
         }
 
         BufferedReader bufferedReader = new BufferedReader(reader);
-        StringBuilder  sb     = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         // caters for possible IOException in read() and close()
         try {
             try {
@@ -123,4 +123,3 @@ public class RgfPseudoScriptEngine extends AbstractScriptEngine
         return sb.toString();
     }
 }
-

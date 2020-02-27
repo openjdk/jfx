@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -277,8 +277,8 @@ public class ModuleLauncherTest {
     }
 
     @Test (timeout = 15000)
-    public void testModuleFXMLScriptTest() throws Exception {
-        doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptTest");
+    public void testFXMLScriptDeployment() throws Exception {
+        doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
     }
 
 }

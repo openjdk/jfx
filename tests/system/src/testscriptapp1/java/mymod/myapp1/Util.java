@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,7 @@ public class Util {
 
     public static void assertNull(String message, Object o) {
         if (o != null) {
-            throw new AssertionError("(assertNull) "+message+", expected null object, but was non-null");
+            throw new AssertionError("(assertNull) " + message + ", expected null object, but was non-null");
         }
     }
 
@@ -94,20 +94,18 @@ public class Util {
     }
 
     public static void assertType(String message, Class clz, Object obj) {
-        if (obj==null)
-        {
+        if (obj == null) {
             throw new AssertionError("(assertType): " + message+": \"obj\" is null");
         }
-        else if (clz==null)
-        {
+        else if (clz == null) {
             throw new AssertionError("(assertType): " + message+": \"clz\" is null");
         }
 
-        if (! clz.isInstance(obj) ) {
+        if (! clz.isInstance(obj)) {
             throw new AssertionError("(assertType): " + message
-                                      + ", object "+obj+
-                                      " is not an instance of class "+
-                                      clz+" -> "+clz.getName()+"]");
+                                      + ", object " + obj +
+                                      " is not an instance of class " +
+                                      clz + " -> " + clz.getName() + "]");
         }
     }
 

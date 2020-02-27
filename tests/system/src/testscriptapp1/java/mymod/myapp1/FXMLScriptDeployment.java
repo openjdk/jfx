@@ -55,10 +55,9 @@ import pseudoScriptEngine.RgfPseudoScriptEngine;
 
 /**
  * Modular test application for testing FXML.
- * This is launched by ModuleLauncherTest. To only run the ModuleLauncherTest:
- * <code>./gradlew -PFULL_TEST=true :systemTests:test --tests ModuleLauncherTest</code>
+ * This is launched by ModuleLauncherTest.
  */
-public class FXMLScriptTest extends Application {
+public class FXMLScriptDeployment extends Application {
 
     static boolean bDebug = false; // true; // display invocation list
 
@@ -66,10 +65,10 @@ public class FXMLScriptTest extends Application {
      *  @param args the command line arguments, if any given the RgfPseudoScriptEngine invocation logs get displayed
      *              which are used in the asserCorrectInvocations() method
      */
-    public static void main (String args[]) {
+    public static void main(String[] args) {
         try {
             // any argument will cause the bDebug flag to be set to true
-            if (args.length>0) {
+            if (args.length > 0) {
                bDebug = true;
             }
             new FXMLScriptTest().launch();
@@ -89,27 +88,25 @@ public class FXMLScriptTest extends Application {
     }
 
     @Override
-    public void start (Stage mainStage) {
-        URL fxmlUrl     = null;
+    public void start(Stage mainStage) {
+        URL fxmlUrl = null;
         Parent rootNode = null;
-        Scene  scene    = null;
-        Button btn      = null;
-        try
-        {
-             fxmlUrl    = Util.getURL(FXMLScriptTest.class, "demo_01");
-             rootNode   = FXMLLoader.load(fxmlUrl);
-             scene      = new Scene(rootNode);
-             btn        = (Button) scene.lookup("#idButton");
+        Scene scene = null;
+        Button btn = null;
+        try {
+             fxmlUrl = Util.getURL(FXMLScriptTest.class, "demo_01");
+             rootNode = FXMLLoader.load(fxmlUrl);
+             scene = new Scene(rootNode);
+             btn = (Button) scene.lookup("#idButton");
         }
-        catch (Exception ioe)
-        {
+        catch (Exception ioe) {
             ioe.printStackTrace();
             System.exit(-1);
         }
             // fire three events on the button
         btn.fire();
-        btn.fireEvent( new ActionEvent() );
-        btn.fireEvent( new MouseEvent( MouseEvent.MOUSE_CLICKED,
+        btn.fireEvent(new ActionEvent());
+        btn.fireEvent(new MouseEvent( MouseEvent.MOUSE_CLICKED,
                                        0,       // double x,
                                        0,       // double y,
                                        0,       // double screenX,
@@ -136,22 +133,19 @@ public class FXMLScriptTest extends Application {
     }
 
     // show engine invocations with script text and their Bindings
-    static void dumpEvalInformation()
-    {
+    static void dumpEvalInformation() {
         System.err.println("\nListing eval() invocation information (invocationList):");
 
         Iterator<RgfPseudoScriptEngine> it = RgfPseudoScriptEngine.getEnginesUsed().iterator();
-        while (it.hasNext())
-        {
+        while (it.hasNext()) {
             RgfPseudoScriptEngine rpse = it.next();
-            ArrayList invocationList   = rpse.getInvocationList();
-            System.err.println("ScriptEngine: ["+rpse+"]");
+            ArrayList invocationList = rpse.getInvocationList();
+            System.err.println("ScriptEngine: [" + rpse + "]");
 
             Iterator<InvocationInfos> itEval = invocationList.iterator();
             int count = 1;
-            while (itEval.hasNext())
-            {
-                System.err.println("\teval() invocation # "+count+": ");
+            while (itEval.hasNext()) {
+                System.err.println("\teval() invocation # " + count + ": ");
                 InvocationInfos entry = itEval.next();
                 System.err.println(entry.toDebugFormat("\t\t"));    // indentation
                 count++;
@@ -160,88 +154,79 @@ public class FXMLScriptTest extends Application {
         }
     }
 
-    static void assertCorrectInvocations()
-    {
+    static void assertCorrectInvocations() {
             // test only creates one engine for a script controller
-        Util.assertTrue( "exactly one pseudo script engine instance", RgfPseudoScriptEngine.getEnginesUsed().size()==1);
+        Util.assertTrue("exactly one pseudo script engine instance",
+                        RgfPseudoScriptEngine.getEnginesUsed().size() == 1);
         RgfPseudoScriptEngine rpse = RgfPseudoScriptEngine.getEnginesUsed().get(0);
 
-        ArrayList invocationList   = rpse.getInvocationList();
-        Util.assertTrue( "exactly nine script engine invocations", invocationList.size()==9);
+        ArrayList invocationList = rpse.getInvocationList();
+        Util.assertTrue("exactly nine script engine invocations", invocationList.size() == 9);
 
-        final String FILENAME  = "javax.script.filename";
-        final String ARGV      = "javax.script.argv";
-        final String EVENT     = "event";
-
-        final String IDBUTTON  = "idButton";
-        final String IDROOT    = "idRoot";
-        final String LOCATION  = "location";    // always FXML File hosting script controller code
+        final String FILENAME = "javax.script.filename";
+        final String ARGV = "javax.script.argv";
+        final String EVENT = "event";
+        final String IDBUTTON = "idButton";
+        final String IDROOT = "idRoot";
+        final String LOCATION = "location";    // always FXML File hosting script controller code
         final String RESOURCES = "resources";   // always null in this test
 
-
-        for (Integer invocation=1; invocation<= invocationList.size(); invocation++ )
-        {
-            InvocationInfos entry= (InvocationInfos) invocationList.get(invocation-1);
-            String                   script=entry.script;
-            TreeMap<Integer,TreeMap> scopes=(TreeMap) entry.bindings;
+        for (Integer invocation = 1; invocation <= invocationList.size(); invocation++) {
+            InvocationInfos entry = (InvocationInfos) invocationList.get(invocation - 1);
+            String script = entry.script;
+            TreeMap<Integer,TreeMap> scopes = (TreeMap) entry.bindings;
 
             TreeMap<String,Object> engineBindings = scopes.get(100);
             TreeMap<String,Object> globalBindings = scopes.get(200);
 
-            Object obj=null;
-            Button btn=null;
+            Object obj = null;
+            Button btn = null;
 
                 // global Bindings
-            Util.assertExists(IDROOT+" in global scope Bindings",    globalBindings.containsKey(IDROOT));
-            obj=globalBindings.get(IDROOT);
+            Util.assertExists(IDROOT + " in global scope Bindings", globalBindings.containsKey(IDROOT));
+            obj = globalBindings.get(IDROOT);
             Util.assertType(IDROOT, AnchorPane.class, obj);
 
-            Util.assertExists(LOCATION+" in global scope Bindings",  globalBindings.containsKey(LOCATION));
-            obj=globalBindings.get(LOCATION);
+            Util.assertExists(LOCATION + " in global scope Bindings", globalBindings.containsKey(LOCATION));
+            obj = globalBindings.get(LOCATION);
             Util.assertType(LOCATION, URL.class, obj);
 
-            Util.assertExists(RESOURCES+" in global scope Bindings", globalBindings.containsKey(RESOURCES));
-            obj=globalBindings.get(RESOURCES);
+            Util.assertExists(RESOURCES + " in global scope Bindings", globalBindings.containsKey(RESOURCES));
+            obj = globalBindings.get(RESOURCES);
             Util.assertNull(RESOURCES,obj);
 
-            if (invocation==1)
-            {
-                Util.assertNotExists(IDBUTTON+" in global scope Bindings", globalBindings.containsKey(IDBUTTON));
+            if (invocation == 1) {
+                Util.assertNotExists(IDBUTTON + " in global scope Bindings", globalBindings.containsKey(IDBUTTON));
             }
-            else
-            {
-                Util.assertExists(IDBUTTON+" in global scope Bindings", globalBindings.containsKey(IDBUTTON));
-                obj=globalBindings.get(IDBUTTON);
+            else {
+                Util.assertExists(IDBUTTON + " in global scope Bindings", globalBindings.containsKey(IDBUTTON));
+                obj = globalBindings.get(IDBUTTON);
                 Util.assertType(IDBUTTON, Button.class, obj);
-                btn=(Button) obj;
+                btn = (Button) obj;
             }
 
                 // engine Bindings
-            Util.assertExists(FILENAME+" in engine scope Bindings", engineBindings.containsKey(FILENAME));
-            if (invocation<7)   // no event objects, no arguments
-            {
-                Util.assertNotExists(ARGV+" in engine scope Bindings", engineBindings.containsKey(ARGV));
-                Util.assertNotExists(EVENT+" in engine scope Bindings", engineBindings.containsKey(EVENT));
+            Util.assertExists(FILENAME + " in engine scope Bindings", engineBindings.containsKey(FILENAME));
+            if (invocation < 7) {  // no event objects, no arguments
+                Util.assertNotExists(ARGV + " in engine scope Bindings", engineBindings.containsKey(ARGV));
+                Util.assertNotExists(EVENT + " in engine scope Bindings", engineBindings.containsKey(EVENT));
             }
-            else    // this has events on the Button
-            {
-                Util.assertExists(ARGV+" in engine scope Bindings", engineBindings.containsKey(ARGV));
-                Object [] argv = (Object []) engineBindings.get(ARGV);
+            else {    // this has events on the Button
+                Util.assertExists(ARGV + " in engine scope Bindings", engineBindings.containsKey(ARGV));
+                Object[] argv = (Object[]) engineBindings.get(ARGV);
 
-                Util.assertExists(EVENT+" in engine scope Bindings", engineBindings.containsKey(EVENT));
-                obj=engineBindings.get(EVENT);
+                Util.assertExists(EVENT + " in engine scope Bindings", engineBindings.containsKey(EVENT));
+                obj = engineBindings.get(EVENT);
 
                 Util.assertSame("argv[0] == event", argv[0], obj);
 
-                if (invocation==9)
-                {
+                if (invocation == 9) {
                     Util.assertType(EVENT, MouseEvent.class, obj);
                     MouseEvent ev = (MouseEvent) obj;
                     Util.assertSame("MouseEvent.getSource() == btn", ev.getSource(), btn);
                     Util.assertSame("MouseEvent.MOUSE_CLICKED", MouseEvent.MOUSE_CLICKED, ev.getEventType());
                 }
-                else
-                {
+                else {
                     Util.assertType(EVENT, ActionEvent.class, obj);
                     ActionEvent ev = (ActionEvent) obj;
                     Util.assertSame("ActionEvent.getSource() == btn", ev.getSource(), btn);
@@ -251,8 +236,7 @@ public class FXMLScriptTest extends Application {
             // check filename and script
             String filename = (String) engineBindings.get(FILENAME);
             boolean ok = false;
-            switch (invocation)
-            {
+            switch (invocation) {
                 case 1:
                     Util.assertEndsWith  ("demo_01_topscript.rpsl", filename);
                     Util.assertStartsWith("demo_01_topscript.rpsl file - pseudo script", script);
@@ -264,7 +248,7 @@ public class FXMLScriptTest extends Application {
                     break;
 
                 case 3:
-                    Util.assertEndsWith  ("demo_01.fxml-script_starting_at_line_25", filename);
+                    Util.assertEndsWith("demo_01.fxml-script_starting_at_line_25", filename);
                     Util.assertStartsWith("demo_01.fxml embedded script rpsl - line # 25", script);
                     break;
 
@@ -274,28 +258,28 @@ public class FXMLScriptTest extends Application {
                     break;
 
                 case 5:
-                    Util.assertEndsWith  ("demo_01.fxml-script_starting_at_line_29", filename);
-                    Util.assertStartsWith("something (line # 29)", script);
+                    Util.assertEndsWith("demo_01.fxml-script_starting_at_line_56", filename);
+                    Util.assertStartsWith("something (line # 56)", script);
                     break;
 
                 case 6:
-                    Util.assertEndsWith  ("demo_01.fxml-script_starting_at_line_32", filename);
-                    Util.assertStartsWith("demo_01.fxml (line # 32):", script);
+                    Util.assertEndsWith("demo_01.fxml-script_starting_at_line_59", filename);
+                    Util.assertStartsWith("demo_01.fxml (line # 59):", script);
                     break;
 
                 case 7:     // same as case 8 (same button clicked)
-                    Util.assertEndsWith  ("demo_01.fxml-onAction_attribute_in_element_ending_at_line_19", filename);
-                    Util.assertStartsWith("demo_01.fxml embedded event - ActionEvent - line # 18 -", script);
+                    Util.assertEndsWith("demo_01.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
+                    Util.assertStartsWith("demo_01.fxml embedded event - ActionEvent - line # 45 -", script);
                     break;
 
                 case 8:     // same as case 7 (same button clicked)
-                    Util.assertEndsWith  ("demo_01.fxml-onAction_attribute_in_element_ending_at_line_19", filename);
-                    Util.assertStartsWith("demo_01.fxml embedded event - ActionEvent - line # 18 -", script);
+                    Util.assertEndsWith("demo_01.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
+                    Util.assertStartsWith("demo_01.fxml embedded event - ActionEvent - line # 45 -", script);
                     break;
 
                 case 9:
-                    Util.assertEndsWith  ("demo_01.fxml-onMouseClicked_attribute_in_element_ending_at_line_19", filename);
-                    Util.assertStartsWith("demo_01.fxml embedded event - MouseClicked - line # 17", script);
+                    Util.assertEndsWith("demo_01.fxml-onMouseClicked_attribute_in_element_ending_at_line_46", filename);
+                    Util.assertStartsWith("demo_01.fxml embedded event - MouseClicked - line # 45", script);
                     break;
             }
         }
