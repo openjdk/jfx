@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,11 @@ import javafx.scene.web.HTMLEditor;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.control.behavior.KeyBinding;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import com.sun.javafx.scene.control.behavior.FocusTraversalInputMap;
+
+import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
 import javafx.scene.web.HTMLEditorSkin;
 import static javafx.scene.input.KeyCode.B;
 import static javafx.scene.input.KeyCode.I;
