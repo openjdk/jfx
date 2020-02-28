@@ -63,6 +63,8 @@ import javafx.util.BuilderFactory;
 import javafx.util.Callback;
 
 import javax.script.Bindings;
+import javax.script.Compilable;
+import javax.script.CompiledScript;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
@@ -1563,7 +1565,12 @@ public class FXMLLoader {
                     InputStreamReader scriptReader = null;
                     try {
                         scriptReader = new InputStreamReader(location.openStream(), charset);
-                        engine.eval(scriptReader);
+                        if (engine instanceof Compilable) {
+                            ((Compilable) engine).compile(scriptReader).eval();
+                        }
+                        else {
+                           engine.eval(scriptReader);
+                        }
                     } catch(ScriptException exception) {
                         exception.printStackTrace();
                     } finally {
@@ -1587,7 +1594,13 @@ public class FXMLLoader {
                     Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
                     engineBindings.put(scriptEngine.FILENAME, location.getPath() + "-script_starting_at_line_"
                                        + (getLineNumber() - (int) ((String) value).codePoints().filter(c -> c == '\n').count()));
-                    scriptEngine.eval((String)value);
+
+                    if (scriptEngine instanceof Compilable) {
+                       ((Compilable) scriptEngine).compile((String)value).eval();
+                    }
+                    else {
+                       scriptEngine.eval((String)value);
+                    }
                 } catch (ScriptException exception) {
                     System.err.println(exception.getMessage());
                 }
@@ -1682,10 +1695,23 @@ public class FXMLLoader {
         public final ScriptEngine scriptEngine;
         public final String filename;
 
+        public CompiledScript compiledScript;
+        public boolean isCompiled;
+
         public ScriptEventHandler(String script, ScriptEngine scriptEngine, String filename) {
             this.script = script;
             this.scriptEngine = scriptEngine;
             this.filename = filename;
+            if (scriptEngine instanceof Compilable) {
+               try {
+                  // supply the filename to the scriptEngine engine scope Bindings in case it is needed for compilation
+                  scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE).put(scriptEngine.FILENAME, filename);
+                  this.compiledScript = ((Compilable) scriptEngine).compile(script);
+                  this.isCompiled = true;
+               } catch (ScriptException exception){
+                   throw new RuntimeException(exception);
+               }
+            }
         }
 
         @Override
@@ -1699,7 +1725,12 @@ public class FXMLLoader {
             localBindings.put(scriptEngine.FILENAME, filename);
             // Execute the script
             try {
-                scriptEngine.eval(script, localBindings);
+                if (isCompiled) {
+                   compiledScript.eval(localBindings);
+                }
+                else {
+                   scriptEngine.eval(script, localBindings);
+                }
             } catch (ScriptException exception){
                 throw new RuntimeException(exception);
             }

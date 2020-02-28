@@ -44,6 +44,7 @@ public class ModuleLauncherTest {
     private static final String modulePath5 = System.getProperty("launchertest.testapp5.module.path");
     private static final String modulePath6 = System.getProperty("launchertest.testapp6.module.path");
     private static final String modulePathScript1 = System.getProperty("launchertest.testscriptapp1.module.path");
+    private static final String modulePathScript2 = System.getProperty("launchertest.testscriptapp2.module.path");
 
     private static final String moduleName = "mymod";
 
@@ -277,8 +278,13 @@ public class ModuleLauncherTest {
     }
 
     @Test (timeout = 15000)
-    public void testFXMLScriptDeployment() throws Exception {
+    public void testFXMLScriptDeployment1() throws Exception {
         doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment");
     }
 
 }
