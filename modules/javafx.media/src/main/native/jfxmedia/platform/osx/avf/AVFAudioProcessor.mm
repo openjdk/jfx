@@ -281,4 +281,8 @@ void ProcessAudioTap(MTAudioProcessingTapRef tapRef,
             return;
         }
     }
+
+    if (context->audioSpectrum != nullptr) {
+        context->audioSpectrum.get()->SetFirstBufferDelivered(true);
+    }
 }
