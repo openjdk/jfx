@@ -30,13 +30,18 @@
 #include <videodecoder.h>
 #include <mpegtsdemuxer.h>
 
+#ifdef STATIC_BUILD
+gboolean fxavplugins_init (GstPlugin * plugin)
+#else
 static gboolean fxplugins_init (GstPlugin * plugin)
+#endif
 {
     return audiodecoder_plugin_init(plugin) &&
            videodecoder_plugin_init(plugin) &&
            mpegts_demuxer_plugin_init(plugin);
 }
 
+#ifndef STATIC_BUILD
 GstPluginDesc gst_plugin_desc =
 {
     GST_VERSION_MAJOR,
@@ -51,3 +56,4 @@ GstPluginDesc gst_plugin_desc =
     "http://javafx.com/",
     NULL
 };
+#endif

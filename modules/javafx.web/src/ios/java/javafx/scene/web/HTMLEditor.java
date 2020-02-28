@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package javafx.scene.web;
 
 
+import com.sun.javafx.scene.control.ControlHelper;
+
 import javafx.css.StyleableProperty;
 
 import javafx.scene.control.Control;
@@ -45,7 +47,7 @@ public class HTMLEditor extends Control {
      * Creates a new instance of the HTMLEditor control.
      */
     public HTMLEditor() {
-        ((StyleableProperty)super.skinClassNameProperty()).applyStyle(
+        ((StyleableProperty) ControlHelper.skinClassNameProperty(this)).applyStyle(
             null,
             "com.sun.javafx.scene.web.skin.HTMLEditorSkin"
         );

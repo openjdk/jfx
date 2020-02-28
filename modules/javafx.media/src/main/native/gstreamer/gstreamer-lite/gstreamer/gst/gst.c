@@ -122,6 +122,13 @@
 
 #include "gst.h"
 
+#ifdef GSTREAMER_LITE
+#ifdef STATIC_BUILD
+gboolean fxplugins_init (GstPlugin * plugin);
+gboolean fxavplugins_init (GstPlugin * plugin);
+#endif // STATIC_BUILD
+#endif // GSTREAMER_LITE
+
 #define GST_CAT_DEFAULT GST_CAT_GST_INIT
 
 #define MAX_PATH_SPLIT  16
@@ -818,6 +825,16 @@ init_post (GOptionContext * context, GOptionGroup * group, gpointer data,
       "gstplugins-lite", "gstplugins-lite",
       lite_plugins_init, VERSION, GST_LICENSE, PACKAGE,
       GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+#ifdef STATIC_BUILD
+  gst_plugin_register_static (GST_VERSION_MAJOR, GST_VERSION_MINOR,
+      "fxplugins", "fxplugin",
+      fxplugins_init, VERSION, GST_LICENSE, PACKAGE,
+      GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+  gst_plugin_register_static (GST_VERSION_MAJOR, GST_VERSION_MINOR,
+     "fxavplugins", "fxavplugin",
+      fxavplugins_init, VERSION, GST_LICENSE, PACKAGE,
+      GST_PACKAGE_NAME, GST_PACKAGE_ORIGIN);
+#endif // STATIC_BUILD
 #endif // GSTREAMER_LITE
 
   /*

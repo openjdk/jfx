@@ -417,7 +417,7 @@ public class Locator {
                             }
 
                             // FIXME: get cache settings from server, honor them
-                        } else if (scheme.equals("file") || scheme.equals("jar") || scheme.equals("jrt")) {
+                        } else if (scheme.equals("file") || scheme.equals("jar") || scheme.equals("jrt") || (scheme.equals("resource")) ) {
                             InputStream stream = getInputStream(uri);
                             stream.close();
                             isConnected = true;
