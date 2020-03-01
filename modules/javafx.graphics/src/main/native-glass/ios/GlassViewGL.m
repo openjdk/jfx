@@ -217,8 +217,6 @@ static EAGLContext * ctx = nil;
             if ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending) {
                 displayLink = [[UIScreen mainScreen] displayLinkWithTarget:[GlassTimer getDelegate]
                                                                   selector:@selector(displayLinkUpdate:)];
-                // 1 is 60hz, 2 is 30 Hz, 3 is 20 Hz ...
-                [displayLink setFrameInterval:2];
                 [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
                 [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:UITrackingRunLoopMode];
                 GLASS_LOG("GlassViewGL: displayLink SET");
