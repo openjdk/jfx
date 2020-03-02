@@ -93,7 +93,6 @@ final class IosGestureSupport {
     public static void magnifyGesturePerformed(View view, int modifiers, int x,
                                                int y, int xAbs, int yAbs,
                                                float scale) {
-        System.out.println(scale);
         gestures.handleDeltaZooming(view, modifiers, isDirect, false, x, y, xAbs,
                                     yAbs, scale, View.GESTURE_NO_DOUBLE_VALUE);
     }
