@@ -25,7 +25,6 @@
 
 package com.sun.scenario.effect.compiler.backend.hw;
 
-import java.util.HashMap;
 import java.util.Map;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.Qualifier;
@@ -40,49 +39,41 @@ public class GLSLBackend extends SLBackend {
         super(parser, visitor);
     }
 
-    private static final Map<String, String> qualMap = new HashMap<String, String>();
-    static {
-        qualMap.put("const", "const");
-        qualMap.put("param", "uniform");
-    }
+    private static final Map<String, String> QUAL_MAP = Map.of(
+        "const", "const",
+        "param", "uniform");
 
-    private static final Map<String, String> typeMap = new HashMap<String, String>();
-    static {
-        typeMap.put("void",    "void");
-        typeMap.put("float",   "float");
-        typeMap.put("float2",  "vec2");
-        typeMap.put("float3",  "vec3");
-        typeMap.put("float4",  "vec4");
-        typeMap.put("int",     "int");
-        typeMap.put("int2",    "ivec2");
-        typeMap.put("int3",    "ivec3");
-        typeMap.put("int4",    "ivec4");
-        typeMap.put("bool",    "bool");
-        typeMap.put("bool2",   "bvec2");
-        typeMap.put("bool3",   "bvec3");
-        typeMap.put("bool4",   "bvec4");
-        typeMap.put("sampler", "sampler2D");
-        typeMap.put("lsampler","sampler2D");
-        typeMap.put("fsampler","sampler2D");
-    }
+    private static final Map<String, String> TYPE_MAP = Map.ofEntries(
+        Map.entry("void",     "void"),
+        Map.entry("float",    "float"),
+        Map.entry("float2",   "vec2"),
+        Map.entry("float3",   "vec3"),
+        Map.entry("float4",   "vec4"),
+        Map.entry("int",      "int"),
+        Map.entry("int2",     "ivec2"),
+        Map.entry("int3",     "ivec3"),
+        Map.entry("int4",     "ivec4"),
+        Map.entry("bool",     "bool"),
+        Map.entry("bool2",    "bvec2"),
+        Map.entry("bool3",    "bvec3"),
+        Map.entry("bool4",    "bvec4"),
+        Map.entry("sampler",  "sampler2D"),
+        Map.entry("lsampler", "sampler2D"),
+        Map.entry("fsampler", "sampler2D"));
 
-    private static final Map<String, String> varMap = new HashMap<String, String>();
-    static {
-        varMap.put("pos0", "gl_TexCoord[0].st");
-        varMap.put("pos1", "gl_TexCoord[1].st");
-        varMap.put("color", "gl_FragColor");
-        varMap.put("jsl_vertexColor", "gl_Color");
-    }
+    private static final Map<String, String> VAR_MAP = Map.of(
+        "pos0",            "gl_TexCoord[0].st",
+        "pos1",            "gl_TexCoord[1].st",
+        "color",           "gl_FragColor",
+        "jsl_vertexColor", "gl_Color");
 
-    private static final Map<String, String> funcMap = new HashMap<String, String>();
-    static {
-        funcMap.put("sample", "jsl_sample");
-        funcMap.put("ddx", "dFdx");
-        funcMap.put("ddy", "dFdy");
-        funcMap.put("intcast", "int");
-        funcMap.put("any", "any");
-        funcMap.put("length", "length");
-    }
+    private static final Map<String, String> FUNC_MAP = Map.of(
+        "sample",  "jsl_sample",
+        "ddx",     "dFdx",
+        "ddy",     "dFdy",
+        "intcast", "int",
+        "any",     "any",
+        "length",  "length");
 
 
     static String PIXCOORD = "vec2 pixcoord = vec2(\n"+
@@ -94,23 +85,23 @@ public class GLSLBackend extends SLBackend {
 
     @Override
     protected String getType(Type t) {
-        return typeMap.get(t.toString());
+        return TYPE_MAP.get(t.toString());
     }
 
     @Override
     protected String getQualifier(Qualifier q) {
-        return qualMap.get(q.toString());
+        return QUAL_MAP.get(q.toString());
     }
 
     @Override
     protected String getVar(String v) {
-        String s = varMap.get(v);
+        String s = VAR_MAP.get(v);
         return (s != null) ? s : v;
     }
 
     @Override
     protected String getFuncName(String f) {
-        String s = funcMap.get(f);
+        String s = FUNC_MAP.get(f);
         return (s != null) ? s : f;
     }
 

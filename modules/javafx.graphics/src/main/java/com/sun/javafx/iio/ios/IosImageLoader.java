@@ -40,7 +40,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import java.util.Map;
-import java.util.HashMap;
 
 import java.net.URL;
 import java.net.MalformedURLException;
@@ -62,7 +61,7 @@ public class IosImageLoader extends ImageLoaderImpl {
     public static final int RGBA = 8;
     public static final int RGBA_PRE = 9;
 
-    private static final Map<Integer, ImageType> colorSpaceMapping = new HashMap<Integer, ImageType>();
+    private static final Map<Integer, ImageType> COLOR_SPACE_MAPPING;
 
     /** Pointer to the native loader */
     private long structPointer;
@@ -115,16 +114,17 @@ public class IosImageLoader extends ImageLoaderImpl {
             return null;
         });
 
-        colorSpaceMapping.put(GRAY, ImageType.GRAY);
-        colorSpaceMapping.put(GRAY_ALPHA, ImageType.GRAY_ALPHA);
-        colorSpaceMapping.put(GRAY_ALPHA_PRE, ImageType.GRAY_ALPHA_PRE);
-        colorSpaceMapping.put(PALETTE, ImageType.PALETTE);
-        colorSpaceMapping.put(PALETTE_ALPHA, ImageType.PALETTE_ALPHA);
-        colorSpaceMapping.put(PALETTE_ALPHA_PRE, ImageType.PALETTE_ALPHA_PRE);
-        colorSpaceMapping.put(PALETTE_TRANS, ImageType.PALETTE_TRANS);
-        colorSpaceMapping.put(RGB, ImageType.RGB);
-        colorSpaceMapping.put(RGBA, ImageType.RGBA);
-        colorSpaceMapping.put(RGBA_PRE, ImageType.RGBA_PRE);
+        COLOR_SPACE_MAPPING = Map.of(
+            GRAY,              ImageType.GRAY,
+            GRAY_ALPHA,        ImageType.GRAY_ALPHA,
+            GRAY_ALPHA_PRE,    ImageType.GRAY_ALPHA_PRE,
+            PALETTE,           ImageType.PALETTE,
+            PALETTE_ALPHA,     ImageType.PALETTE_ALPHA,
+            PALETTE_ALPHA_PRE, ImageType.PALETTE_ALPHA_PRE,
+            PALETTE_TRANS,     ImageType.PALETTE_TRANS,
+            RGB,               ImageType.RGB,
+            RGBA,              ImageType.RGBA,
+            RGBA_PRE,          ImageType.RGBA_PRE);
 
         initNativeLoading();
     }
@@ -249,7 +249,7 @@ public class IosImageLoader extends ImageLoaderImpl {
         // the color model and the number of components can change when resizing
         final int nComponents = getNumberOfComponents(structPointer);
         final int colorSpaceCode = getColorSpaceCode(structPointer);
-        final ImageType imageType = colorSpaceMapping.get(colorSpaceCode);
+        final ImageType imageType = COLOR_SPACE_MAPPING.get(colorSpaceCode);
 
         final byte[] pixels = getImageBuffer(structPointer, imageIndex);
 

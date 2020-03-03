@@ -637,22 +637,19 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
     }
 
     private static Object getDefaultValue(Class clazz) {
-        return defaultsMap.get(clazz);
+        return DEFAULTS_MAP.get(clazz);
     }
 
-    private static final Map<Class<?>, Object> defaultsMap;
-
+    private static final Map<Class<?>, Object> DEFAULTS_MAP = new HashMap<>(9);
     static {
-        defaultsMap = new HashMap<>();
-        defaultsMap.put(byte.class, (byte) 0);
-        defaultsMap.put(short.class, (short) 0);
-        defaultsMap.put(int.class, 0);
-        defaultsMap.put(long.class, 0L);
-        defaultsMap.put(int.class, 0);
-        defaultsMap.put(float.class, 0.0f);
-        defaultsMap.put(double.class, 0.0d);
-        defaultsMap.put(char.class, '\u0000');
-        defaultsMap.put(boolean.class, false);
-        defaultsMap.put(Object.class, null);
+        DEFAULTS_MAP.put(byte.class,    (byte) 0);
+        DEFAULTS_MAP.put(short.class,   (short) 0);
+        DEFAULTS_MAP.put(int.class,     0);
+        DEFAULTS_MAP.put(long.class,    0L);
+        DEFAULTS_MAP.put(float.class,   0.0f);
+        DEFAULTS_MAP.put(double.class,  0.0d);
+        DEFAULTS_MAP.put(char.class,   '\u0000');
+        DEFAULTS_MAP.put(boolean.class, false);
+        DEFAULTS_MAP.put(Object.class,  null);
     }
 }
