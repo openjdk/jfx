@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@ import javafx.css.PseudoClass;
 
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+
 import javafx.scene.control.skin.ComboBoxListViewSkin;
 
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -2057,5 +2059,49 @@ public class ComboBoxTest {
         tk.firePulse();
 
         assertEquals("ComboBox skinProperty changed more than once, which is not expected.", 1, skinChangedCount);
+    }
+
+    @Test public void test_JDK_8129123() {
+        final int LIST_SIZE = 50;
+
+        ComboBox<String> comboBox = new ComboBox<>();
+
+        BorderPane p = new BorderPane();
+        p.setCenter(comboBox);
+
+        Scene scene = new Scene(p);
+
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.setWidth(500);
+        stage.setHeight(400);
+        stage.show();
+
+        Toolkit.getToolkit().firePulse();
+
+        for (int i = 0; i < LIST_SIZE; i++) {
+            comboBox.getItems().add(String.valueOf(i));
+        }
+        comboBox.show();
+
+        VirtualFlow<IndexedCell<?>> virtualFlow = (VirtualFlow<IndexedCell<?>>) VirtualFlowTestUtils.getVirtualFlow(comboBox);
+
+        int index = 0;
+        comboBox.getSelectionModel().select(index);
+        Toolkit.getToolkit().firePulse();
+
+        int first = virtualFlow.getFirstVisibleCell().getIndex();
+        int last = virtualFlow.getLastVisibleCell().getIndex();
+        assertTrue(" visible range [" + first + ", " + last + "] must include " + index,
+                first <= index  && index <= last);
+
+        index = LIST_SIZE - 1;
+        comboBox.getSelectionModel().select(index);
+        Toolkit.getToolkit().firePulse();
+
+        first = virtualFlow.getFirstVisibleCell().getIndex();
+        last = virtualFlow.getLastVisibleCell().getIndex();
+        assertTrue(" visible range [" + first + ", " + last + "] must include " + index,
+                first <= index  && index <= last);
     }
 }

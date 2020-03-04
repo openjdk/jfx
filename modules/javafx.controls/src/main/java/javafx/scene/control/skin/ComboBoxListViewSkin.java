@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -417,8 +417,10 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                     T itemsObj = comboBoxItems.get(index);
                     if ((itemsObj != null && itemsObj.equals(newValue)) || (itemsObj == null && newValue == null)) {
                         listViewSM.select(index);
+                        listView.scrollTo(index);
                     } else {
                         listViewSM.select(newValue);
+                        listView.scrollTo(newValue);
                     }
                 } else {
                     // just select the first instance of newValue in the list
@@ -429,6 +431,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                         updateDisplayNode();
                     } else {
                         listViewSM.select(listViewIndex);
+                        listView.scrollTo(listViewIndex);
                     }
                 }
             }
