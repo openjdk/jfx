@@ -41,6 +41,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -62,14 +63,23 @@ public class StyleManagerTest {
     public StyleManagerTest() {
     }
 
-    @Before
-    public void setUp() {
+    private static void resetStyleManager() {
         StyleManagerShim sm = StyleManagerShim.getInstance();
         sm.userAgentStylesheetContainers_clear();
         sm.platformUserAgentStylesheetContainers_clear();
         sm.stylesheetContainerMap_clear();
         sm.cacheContainerMap_clear();
         sm.set_hasDefaultUserAgentStylesheet(false);
+    }
+
+    @Before
+    public void setUp() {
+        resetStyleManager();
+    }
+
+    @AfterClass
+    public static void cleanupOnce() {
+        resetStyleManager();
     }
 
     @Test

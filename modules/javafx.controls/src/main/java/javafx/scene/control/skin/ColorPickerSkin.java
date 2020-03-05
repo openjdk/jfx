@@ -54,7 +54,6 @@ import javafx.css.converter.SizeConverter;
 import javafx.css.converter.StringConverter;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import javafx.scene.control.ColorPicker;
@@ -281,7 +280,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
         String displayNodeText = displayNode.getText();
         double width = 0;
-        for (String name : colorNameMap.values()) {
+        for (String name : COLOR_NAME_MAP.values()) {
             displayNode.setText(name);
             width = Math.max(width, super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset));
         }
@@ -347,191 +346,189 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         }
     }
 
-    private static final Map<Color, String> colorNameMap = new HashMap<>(30);
-    private static final Map<Color, String> cssNameMap = new HashMap<>(139);
-    static {
-        // Translatable display names for the most common colors
-        colorNameMap.put(TRANSPARENT, Properties.getColorPickerString("colorName.transparent"));
-        colorNameMap.put(BLACK,       Properties.getColorPickerString("colorName.black"));
-        colorNameMap.put(BLUE,        Properties.getColorPickerString("colorName.blue"));
-        colorNameMap.put(CYAN,        Properties.getColorPickerString("colorName.cyan"));
-        colorNameMap.put(DARKBLUE,    Properties.getColorPickerString("colorName.darkblue"));
-        colorNameMap.put(DARKCYAN,    Properties.getColorPickerString("colorName.darkcyan"));
-        colorNameMap.put(DARKGRAY,    Properties.getColorPickerString("colorName.darkgray"));
-        colorNameMap.put(DARKGREEN,   Properties.getColorPickerString("colorName.darkgreen"));
-        colorNameMap.put(DARKMAGENTA, Properties.getColorPickerString("colorName.darkmagenta"));
-        colorNameMap.put(DARKRED,     Properties.getColorPickerString("colorName.darkred"));
-        colorNameMap.put(GRAY,        Properties.getColorPickerString("colorName.gray"));
-        colorNameMap.put(GREEN,       Properties.getColorPickerString("colorName.green"));
-        colorNameMap.put(LIGHTBLUE,   Properties.getColorPickerString("colorName.lightblue"));
-        colorNameMap.put(LIGHTCYAN,   Properties.getColorPickerString("colorName.lightcyan"));
-        colorNameMap.put(LIGHTGRAY,   Properties.getColorPickerString("colorName.lightgray"));
-        colorNameMap.put(LIGHTGREEN,  Properties.getColorPickerString("colorName.lightgreen"));
-        colorNameMap.put(LIGHTYELLOW, Properties.getColorPickerString("colorName.lightyellow"));
-        colorNameMap.put(LIME,        Properties.getColorPickerString("colorName.lime"));
-        colorNameMap.put(MAGENTA,     Properties.getColorPickerString("colorName.magenta"));
-        colorNameMap.put(MAROON,      Properties.getColorPickerString("colorName.maroon"));
-        colorNameMap.put(MEDIUMBLUE,  Properties.getColorPickerString("colorName.mediumblue"));
-        colorNameMap.put(NAVY,        Properties.getColorPickerString("colorName.navy"));
-        colorNameMap.put(OLIVE,       Properties.getColorPickerString("colorName.olive"));
-        colorNameMap.put(ORANGE,      Properties.getColorPickerString("colorName.orange"));
-        colorNameMap.put(PINK,        Properties.getColorPickerString("colorName.pink"));
-        colorNameMap.put(PURPLE,      Properties.getColorPickerString("colorName.purple"));
-        colorNameMap.put(RED,         Properties.getColorPickerString("colorName.red"));
-        colorNameMap.put(TEAL,        Properties.getColorPickerString("colorName.teal"));
-        colorNameMap.put(WHITE,       Properties.getColorPickerString("colorName.white"));
-        colorNameMap.put(YELLOW,      Properties.getColorPickerString("colorName.yellow"));
+    // Translatable display names for the most common colors
+    private static final Map<Color, String> COLOR_NAME_MAP = Map.ofEntries(
+        Map.entry(TRANSPARENT, Properties.getColorPickerString("colorName.transparent")),
+        Map.entry(BLACK,       Properties.getColorPickerString("colorName.black")),
+        Map.entry(BLUE,        Properties.getColorPickerString("colorName.blue")),
+        Map.entry(CYAN,        Properties.getColorPickerString("colorName.cyan")),
+        Map.entry(DARKBLUE,    Properties.getColorPickerString("colorName.darkblue")),
+        Map.entry(DARKCYAN,    Properties.getColorPickerString("colorName.darkcyan")),
+        Map.entry(DARKGRAY,    Properties.getColorPickerString("colorName.darkgray")),
+        Map.entry(DARKGREEN,   Properties.getColorPickerString("colorName.darkgreen")),
+        Map.entry(DARKMAGENTA, Properties.getColorPickerString("colorName.darkmagenta")),
+        Map.entry(DARKRED,     Properties.getColorPickerString("colorName.darkred")),
+        Map.entry(GRAY,        Properties.getColorPickerString("colorName.gray")),
+        Map.entry(GREEN,       Properties.getColorPickerString("colorName.green")),
+        Map.entry(LIGHTBLUE,   Properties.getColorPickerString("colorName.lightblue")),
+        Map.entry(LIGHTCYAN,   Properties.getColorPickerString("colorName.lightcyan")),
+        Map.entry(LIGHTGRAY,   Properties.getColorPickerString("colorName.lightgray")),
+        Map.entry(LIGHTGREEN,  Properties.getColorPickerString("colorName.lightgreen")),
+        Map.entry(LIGHTYELLOW, Properties.getColorPickerString("colorName.lightyellow")),
+        Map.entry(LIME,        Properties.getColorPickerString("colorName.lime")),
+        Map.entry(MAGENTA,     Properties.getColorPickerString("colorName.magenta")),
+        Map.entry(MAROON,      Properties.getColorPickerString("colorName.maroon")),
+        Map.entry(MEDIUMBLUE,  Properties.getColorPickerString("colorName.mediumblue")),
+        Map.entry(NAVY,        Properties.getColorPickerString("colorName.navy")),
+        Map.entry(OLIVE,       Properties.getColorPickerString("colorName.olive")),
+        Map.entry(ORANGE,      Properties.getColorPickerString("colorName.orange")),
+        Map.entry(PINK,        Properties.getColorPickerString("colorName.pink")),
+        Map.entry(PURPLE,      Properties.getColorPickerString("colorName.purple")),
+        Map.entry(RED,         Properties.getColorPickerString("colorName.red")),
+        Map.entry(TEAL,        Properties.getColorPickerString("colorName.teal")),
+        Map.entry(WHITE,       Properties.getColorPickerString("colorName.white")),
+        Map.entry(YELLOW,      Properties.getColorPickerString("colorName.yellow")));
 
-        // CSS names.
-        // Note that synonyms (such as "grey") have been removed here,
-        // since a color can be presented with only one name in this
-        // skin. If a reverse map is created for parsing names in the
-        // future, then the synonyms should be included there. For a
-        // full list of CSS names, see Color.java.
-        cssNameMap.put(ALICEBLUE,            "aliceblue");
-        cssNameMap.put(ANTIQUEWHITE,         "antiquewhite");
-        cssNameMap.put(AQUAMARINE,           "aquamarine");
-        cssNameMap.put(AZURE,                "azure");
-        cssNameMap.put(BEIGE,                "beige");
-        cssNameMap.put(BISQUE,               "bisque");
-        cssNameMap.put(BLACK,                "black");
-        cssNameMap.put(BLANCHEDALMOND,       "blanchedalmond");
-        cssNameMap.put(BLUE,                 "blue");
-        cssNameMap.put(BLUEVIOLET,           "blueviolet");
-        cssNameMap.put(BROWN,                "brown");
-        cssNameMap.put(BURLYWOOD,            "burlywood");
-        cssNameMap.put(CADETBLUE,            "cadetblue");
-        cssNameMap.put(CHARTREUSE,           "chartreuse");
-        cssNameMap.put(CHOCOLATE,            "chocolate");
-        cssNameMap.put(CORAL,                "coral");
-        cssNameMap.put(CORNFLOWERBLUE,       "cornflowerblue");
-        cssNameMap.put(CORNSILK,             "cornsilk");
-        cssNameMap.put(CRIMSON,              "crimson");
-        cssNameMap.put(CYAN,                 "cyan");
-        cssNameMap.put(DARKBLUE,             "darkblue");
-        cssNameMap.put(DARKCYAN,             "darkcyan");
-        cssNameMap.put(DARKGOLDENROD,        "darkgoldenrod");
-        cssNameMap.put(DARKGRAY,             "darkgray");
-        cssNameMap.put(DARKGREEN,            "darkgreen");
-        cssNameMap.put(DARKKHAKI,            "darkkhaki");
-        cssNameMap.put(DARKMAGENTA,          "darkmagenta");
-        cssNameMap.put(DARKOLIVEGREEN,       "darkolivegreen");
-        cssNameMap.put(DARKORANGE,           "darkorange");
-        cssNameMap.put(DARKORCHID,           "darkorchid");
-        cssNameMap.put(DARKRED,              "darkred");
-        cssNameMap.put(DARKSALMON,           "darksalmon");
-        cssNameMap.put(DARKSEAGREEN,         "darkseagreen");
-        cssNameMap.put(DARKSLATEBLUE,        "darkslateblue");
-        cssNameMap.put(DARKSLATEGRAY,        "darkslategray");
-        cssNameMap.put(DARKTURQUOISE,        "darkturquoise");
-        cssNameMap.put(DARKVIOLET,           "darkviolet");
-        cssNameMap.put(DEEPPINK,             "deeppink");
-        cssNameMap.put(DEEPSKYBLUE,          "deepskyblue");
-        cssNameMap.put(DIMGRAY,              "dimgray");
-        cssNameMap.put(DODGERBLUE,           "dodgerblue");
-        cssNameMap.put(FIREBRICK,            "firebrick");
-        cssNameMap.put(FLORALWHITE,          "floralwhite");
-        cssNameMap.put(FORESTGREEN,          "forestgreen");
-        cssNameMap.put(GAINSBORO,            "gainsboro");
-        cssNameMap.put(GHOSTWHITE,           "ghostwhite");
-        cssNameMap.put(GOLD,                 "gold");
-        cssNameMap.put(GOLDENROD,            "goldenrod");
-        cssNameMap.put(GRAY,                 "gray");
-        cssNameMap.put(GREEN,                "green");
-        cssNameMap.put(GREENYELLOW,          "greenyellow");
-        cssNameMap.put(HONEYDEW,             "honeydew");
-        cssNameMap.put(HOTPINK,              "hotpink");
-        cssNameMap.put(INDIANRED,            "indianred");
-        cssNameMap.put(INDIGO,               "indigo");
-        cssNameMap.put(IVORY,                "ivory");
-        cssNameMap.put(KHAKI,                "khaki");
-        cssNameMap.put(LAVENDER,             "lavender");
-        cssNameMap.put(LAVENDERBLUSH,        "lavenderblush");
-        cssNameMap.put(LAWNGREEN,            "lawngreen");
-        cssNameMap.put(LEMONCHIFFON,         "lemonchiffon");
-        cssNameMap.put(LIGHTBLUE,            "lightblue");
-        cssNameMap.put(LIGHTCORAL,           "lightcoral");
-        cssNameMap.put(LIGHTCYAN,            "lightcyan");
-        cssNameMap.put(LIGHTGOLDENRODYELLOW, "lightgoldenrodyellow");
-        cssNameMap.put(LIGHTGRAY,            "lightgray");
-        cssNameMap.put(LIGHTGREEN,           "lightgreen");
-        cssNameMap.put(LIGHTPINK,            "lightpink");
-        cssNameMap.put(LIGHTSALMON,          "lightsalmon");
-        cssNameMap.put(LIGHTSEAGREEN,        "lightseagreen");
-        cssNameMap.put(LIGHTSKYBLUE,         "lightskyblue");
-        cssNameMap.put(LIGHTSLATEGRAY,       "lightslategray");
-        cssNameMap.put(LIGHTSTEELBLUE,       "lightsteelblue");
-        cssNameMap.put(LIGHTYELLOW,          "lightyellow");
-        cssNameMap.put(LIME,                 "lime");
-        cssNameMap.put(LIMEGREEN,            "limegreen");
-        cssNameMap.put(LINEN,                "linen");
-        cssNameMap.put(MAGENTA,              "magenta");
-        cssNameMap.put(MAROON,               "maroon");
-        cssNameMap.put(MEDIUMAQUAMARINE,     "mediumaquamarine");
-        cssNameMap.put(MEDIUMBLUE,           "mediumblue");
-        cssNameMap.put(MEDIUMORCHID,         "mediumorchid");
-        cssNameMap.put(MEDIUMPURPLE,         "mediumpurple");
-        cssNameMap.put(MEDIUMSEAGREEN,       "mediumseagreen");
-        cssNameMap.put(MEDIUMSLATEBLUE,      "mediumslateblue");
-        cssNameMap.put(MEDIUMSPRINGGREEN,    "mediumspringgreen");
-        cssNameMap.put(MEDIUMTURQUOISE,      "mediumturquoise");
-        cssNameMap.put(MEDIUMVIOLETRED,      "mediumvioletred");
-        cssNameMap.put(MIDNIGHTBLUE,         "midnightblue");
-        cssNameMap.put(MINTCREAM,            "mintcream");
-        cssNameMap.put(MISTYROSE,            "mistyrose");
-        cssNameMap.put(MOCCASIN,             "moccasin");
-        cssNameMap.put(NAVAJOWHITE,          "navajowhite");
-        cssNameMap.put(NAVY,                 "navy");
-        cssNameMap.put(OLDLACE,              "oldlace");
-        cssNameMap.put(OLIVE,                "olive");
-        cssNameMap.put(OLIVEDRAB,            "olivedrab");
-        cssNameMap.put(ORANGE,               "orange");
-        cssNameMap.put(ORANGERED,            "orangered");
-        cssNameMap.put(ORCHID,               "orchid");
-        cssNameMap.put(PALEGOLDENROD,        "palegoldenrod");
-        cssNameMap.put(PALEGREEN,            "palegreen");
-        cssNameMap.put(PALETURQUOISE,        "paleturquoise");
-        cssNameMap.put(PALEVIOLETRED,        "palevioletred");
-        cssNameMap.put(PAPAYAWHIP,           "papayawhip");
-        cssNameMap.put(PEACHPUFF,            "peachpuff");
-        cssNameMap.put(PERU,                 "peru");
-        cssNameMap.put(PINK,                 "pink");
-        cssNameMap.put(PLUM,                 "plum");
-        cssNameMap.put(POWDERBLUE,           "powderblue");
-        cssNameMap.put(PURPLE,               "purple");
-        cssNameMap.put(RED,                  "red");
-        cssNameMap.put(ROSYBROWN,            "rosybrown");
-        cssNameMap.put(ROYALBLUE,            "royalblue");
-        cssNameMap.put(SADDLEBROWN,          "saddlebrown");
-        cssNameMap.put(SALMON,               "salmon");
-        cssNameMap.put(SANDYBROWN,           "sandybrown");
-        cssNameMap.put(SEAGREEN,             "seagreen");
-        cssNameMap.put(SEASHELL,             "seashell");
-        cssNameMap.put(SIENNA,               "sienna");
-        cssNameMap.put(SILVER,               "silver");
-        cssNameMap.put(SKYBLUE,              "skyblue");
-        cssNameMap.put(SLATEBLUE,            "slateblue");
-        cssNameMap.put(SLATEGRAY,            "slategray");
-        cssNameMap.put(SNOW,                 "snow");
-        cssNameMap.put(SPRINGGREEN,          "springgreen");
-        cssNameMap.put(STEELBLUE,            "steelblue");
-        cssNameMap.put(TAN,                  "tan");
-        cssNameMap.put(TEAL,                 "teal");
-        cssNameMap.put(THISTLE,              "thistle");
-        cssNameMap.put(TOMATO,               "tomato");
-        cssNameMap.put(TRANSPARENT,          "transparent");
-        cssNameMap.put(TURQUOISE,            "turquoise");
-        cssNameMap.put(VIOLET,               "violet");
-        cssNameMap.put(WHEAT,                "wheat");
-        cssNameMap.put(WHITE,                "white");
-        cssNameMap.put(WHITESMOKE,           "whitesmoke");
-        cssNameMap.put(YELLOW,               "yellow");
-        cssNameMap.put(YELLOWGREEN,          "yellowgreen");
-    }
+    // CSS names.
+    // Note that synonyms (such as "grey") have been removed here,
+    // since a color can be presented with only one name in this
+    // skin. If a reverse map is created for parsing names in the
+    // future, then the synonyms should be included there. For a
+    // full list of CSS names, see Color.java.
+    private static final Map<Color, String> CSS_NAME_MAP = Map.ofEntries(
+        Map.entry(ALICEBLUE,            "aliceblue"),
+        Map.entry(ANTIQUEWHITE,         "antiquewhite"),
+        Map.entry(AQUAMARINE,           "aquamarine"),
+        Map.entry(AZURE,                "azure"),
+        Map.entry(BEIGE,                "beige"),
+        Map.entry(BISQUE,               "bisque"),
+        Map.entry(BLACK,                "black"),
+        Map.entry(BLANCHEDALMOND,       "blanchedalmond"),
+        Map.entry(BLUE,                 "blue"),
+        Map.entry(BLUEVIOLET,           "blueviolet"),
+        Map.entry(BROWN,                "brown"),
+        Map.entry(BURLYWOOD,            "burlywood"),
+        Map.entry(CADETBLUE,            "cadetblue"),
+        Map.entry(CHARTREUSE,           "chartreuse"),
+        Map.entry(CHOCOLATE,            "chocolate"),
+        Map.entry(CORAL,                "coral"),
+        Map.entry(CORNFLOWERBLUE,       "cornflowerblue"),
+        Map.entry(CORNSILK,             "cornsilk"),
+        Map.entry(CRIMSON,              "crimson"),
+        Map.entry(CYAN,                 "cyan"),
+        Map.entry(DARKBLUE,             "darkblue"),
+        Map.entry(DARKCYAN,             "darkcyan"),
+        Map.entry(DARKGOLDENROD,        "darkgoldenrod"),
+        Map.entry(DARKGRAY,             "darkgray"),
+        Map.entry(DARKGREEN,            "darkgreen"),
+        Map.entry(DARKKHAKI,            "darkkhaki"),
+        Map.entry(DARKMAGENTA,          "darkmagenta"),
+        Map.entry(DARKOLIVEGREEN,       "darkolivegreen"),
+        Map.entry(DARKORANGE,           "darkorange"),
+        Map.entry(DARKORCHID,           "darkorchid"),
+        Map.entry(DARKRED,              "darkred"),
+        Map.entry(DARKSALMON,           "darksalmon"),
+        Map.entry(DARKSEAGREEN,         "darkseagreen"),
+        Map.entry(DARKSLATEBLUE,        "darkslateblue"),
+        Map.entry(DARKSLATEGRAY,        "darkslategray"),
+        Map.entry(DARKTURQUOISE,        "darkturquoise"),
+        Map.entry(DARKVIOLET,           "darkviolet"),
+        Map.entry(DEEPPINK,             "deeppink"),
+        Map.entry(DEEPSKYBLUE,          "deepskyblue"),
+        Map.entry(DIMGRAY,              "dimgray"),
+        Map.entry(DODGERBLUE,           "dodgerblue"),
+        Map.entry(FIREBRICK,            "firebrick"),
+        Map.entry(FLORALWHITE,          "floralwhite"),
+        Map.entry(FORESTGREEN,          "forestgreen"),
+        Map.entry(GAINSBORO,            "gainsboro"),
+        Map.entry(GHOSTWHITE,           "ghostwhite"),
+        Map.entry(GOLD,                 "gold"),
+        Map.entry(GOLDENROD,            "goldenrod"),
+        Map.entry(GRAY,                 "gray"),
+        Map.entry(GREEN,                "green"),
+        Map.entry(GREENYELLOW,          "greenyellow"),
+        Map.entry(HONEYDEW,             "honeydew"),
+        Map.entry(HOTPINK,              "hotpink"),
+        Map.entry(INDIANRED,            "indianred"),
+        Map.entry(INDIGO,               "indigo"),
+        Map.entry(IVORY,                "ivory"),
+        Map.entry(KHAKI,                "khaki"),
+        Map.entry(LAVENDER,             "lavender"),
+        Map.entry(LAVENDERBLUSH,        "lavenderblush"),
+        Map.entry(LAWNGREEN,            "lawngreen"),
+        Map.entry(LEMONCHIFFON,         "lemonchiffon"),
+        Map.entry(LIGHTBLUE,            "lightblue"),
+        Map.entry(LIGHTCORAL,           "lightcoral"),
+        Map.entry(LIGHTCYAN,            "lightcyan"),
+        Map.entry(LIGHTGOLDENRODYELLOW, "lightgoldenrodyellow"),
+        Map.entry(LIGHTGRAY,            "lightgray"),
+        Map.entry(LIGHTGREEN,           "lightgreen"),
+        Map.entry(LIGHTPINK,            "lightpink"),
+        Map.entry(LIGHTSALMON,          "lightsalmon"),
+        Map.entry(LIGHTSEAGREEN,        "lightseagreen"),
+        Map.entry(LIGHTSKYBLUE,         "lightskyblue"),
+        Map.entry(LIGHTSLATEGRAY,       "lightslategray"),
+        Map.entry(LIGHTSTEELBLUE,       "lightsteelblue"),
+        Map.entry(LIGHTYELLOW,          "lightyellow"),
+        Map.entry(LIME,                 "lime"),
+        Map.entry(LIMEGREEN,            "limegreen"),
+        Map.entry(LINEN,                "linen"),
+        Map.entry(MAGENTA,              "magenta"),
+        Map.entry(MAROON,               "maroon"),
+        Map.entry(MEDIUMAQUAMARINE,     "mediumaquamarine"),
+        Map.entry(MEDIUMBLUE,           "mediumblue"),
+        Map.entry(MEDIUMORCHID,         "mediumorchid"),
+        Map.entry(MEDIUMPURPLE,         "mediumpurple"),
+        Map.entry(MEDIUMSEAGREEN,       "mediumseagreen"),
+        Map.entry(MEDIUMSLATEBLUE,      "mediumslateblue"),
+        Map.entry(MEDIUMSPRINGGREEN,    "mediumspringgreen"),
+        Map.entry(MEDIUMTURQUOISE,      "mediumturquoise"),
+        Map.entry(MEDIUMVIOLETRED,      "mediumvioletred"),
+        Map.entry(MIDNIGHTBLUE,         "midnightblue"),
+        Map.entry(MINTCREAM,            "mintcream"),
+        Map.entry(MISTYROSE,            "mistyrose"),
+        Map.entry(MOCCASIN,             "moccasin"),
+        Map.entry(NAVAJOWHITE,          "navajowhite"),
+        Map.entry(NAVY,                 "navy"),
+        Map.entry(OLDLACE,              "oldlace"),
+        Map.entry(OLIVE,                "olive"),
+        Map.entry(OLIVEDRAB,            "olivedrab"),
+        Map.entry(ORANGE,               "orange"),
+        Map.entry(ORANGERED,            "orangered"),
+        Map.entry(ORCHID,               "orchid"),
+        Map.entry(PALEGOLDENROD,        "palegoldenrod"),
+        Map.entry(PALEGREEN,            "palegreen"),
+        Map.entry(PALETURQUOISE,        "paleturquoise"),
+        Map.entry(PALEVIOLETRED,        "palevioletred"),
+        Map.entry(PAPAYAWHIP,           "papayawhip"),
+        Map.entry(PEACHPUFF,            "peachpuff"),
+        Map.entry(PERU,                 "peru"),
+        Map.entry(PINK,                 "pink"),
+        Map.entry(PLUM,                 "plum"),
+        Map.entry(POWDERBLUE,           "powderblue"),
+        Map.entry(PURPLE,               "purple"),
+        Map.entry(RED,                  "red"),
+        Map.entry(ROSYBROWN,            "rosybrown"),
+        Map.entry(ROYALBLUE,            "royalblue"),
+        Map.entry(SADDLEBROWN,          "saddlebrown"),
+        Map.entry(SALMON,               "salmon"),
+        Map.entry(SANDYBROWN,           "sandybrown"),
+        Map.entry(SEAGREEN,             "seagreen"),
+        Map.entry(SEASHELL,             "seashell"),
+        Map.entry(SIENNA,               "sienna"),
+        Map.entry(SILVER,               "silver"),
+        Map.entry(SKYBLUE,              "skyblue"),
+        Map.entry(SLATEBLUE,            "slateblue"),
+        Map.entry(SLATEGRAY,            "slategray"),
+        Map.entry(SNOW,                 "snow"),
+        Map.entry(SPRINGGREEN,          "springgreen"),
+        Map.entry(STEELBLUE,            "steelblue"),
+        Map.entry(TAN,                  "tan"),
+        Map.entry(TEAL,                 "teal"),
+        Map.entry(THISTLE,              "thistle"),
+        Map.entry(TOMATO,               "tomato"),
+        Map.entry(TRANSPARENT,          "transparent"),
+        Map.entry(TURQUOISE,            "turquoise"),
+        Map.entry(VIOLET,               "violet"),
+        Map.entry(WHEAT,                "wheat"),
+        Map.entry(WHITE,                "white"),
+        Map.entry(WHITESMOKE,           "whitesmoke"),
+        Map.entry(YELLOW,               "yellow"),
+        Map.entry(YELLOWGREEN,          "yellowgreen"));
 
     static String colorDisplayName(Color c) {
         if (c != null) {
-            String displayName = colorNameMap.get(c);
+            String displayName = COLOR_NAME_MAP.get(c);
             if (displayName == null) {
                 displayName = Utils.formatHexString(c);
             }
@@ -544,14 +541,14 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     static String tooltipString(Color c) {
         if (c != null) {
             String tooltipStr = "";
-            String displayName = colorNameMap.get(c);
+            String displayName = COLOR_NAME_MAP.get(c);
             if (displayName != null) {
                 tooltipStr += displayName + " ";
             }
 
             tooltipStr += Utils.formatHexString(c);
 
-            String cssName = cssNameMap.get(c);
+            String cssName = CSS_NAME_MAP.get(c);
             if (cssName != null) {
                 tooltipStr += " (css: " + cssName + ")";
             }

@@ -866,7 +866,8 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                                         setSystemMenu(stage);
                                     }
                                 } else {
-                                    if (curMBSkin != null && curMBSkin.getSkinnable() != null &&
+                                    if (getSkinnable().isUseSystemMenuBar() &&
+                                            curMBSkin != null && curMBSkin.getSkinnable() != null &&
                                             curMBSkin.getSkinnable().isUseSystemMenuBar()) {
                                         curMBSkin.getSkinnable().setUseSystemMenuBar(false);
                                     }

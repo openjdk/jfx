@@ -13,10 +13,10 @@ To update to a new version of Lucene:
     gradle clean
     gradle sdk apps
 
-NOTE: if upgrading to a new major version there are usually compilation errors that need to be fixed.
+NOTE: if upgrading to a new major version there are usually compilation or runtime errors that need to be fixed.
 
 
-3. Regenerate the index files:
+3. Regenerate the index files. This step can be skipped if only the "bugfix" number (the third digit) of the release changes:
 
 $ cd apps/samples/Ensemble8
 $ rm -rf src/generated/resources/ensemble/search/index

@@ -39,7 +39,11 @@
 gboolean dshowwrapper_init(GstPlugin* aacdecoder);
 #endif
 
+#ifdef STATIC_BUILD
+gboolean fxplugins_init (GstPlugin * plugin)
+#else
 static gboolean fxplugins_init (GstPlugin * plugin)
+#endif
 {
     return java_source_plugin_init(plugin) &&
            hls_progress_buffer_plugin_init(plugin) &&

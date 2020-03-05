@@ -163,17 +163,6 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         return binding;
     }
 
-    public static <T extends Number> void unbindNumber(Property<T> property1, Property<Number> property2) {
-        checkParameters(property1, property2);
-        final BidirectionalBinding binding = new UntypedGenericBidirectionalBinding(property1, property2);
-        if (property1 instanceof ObservableValue) {
-            ((ObservableValue) property1).removeListener(binding);
-        }
-        if (property2 instanceof Observable) {
-            ((ObservableValue) property2).removeListener(binding);
-        }
-    }
-
     private final int cachedHashCode;
 
     private BidirectionalBinding(Object property1, Object property2) {

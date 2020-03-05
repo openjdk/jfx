@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package com.sun.pisces;
 
+import com.sun.prism.impl.Disposer;
+
 public abstract class AbstractSurface implements Surface {
 
     private long nativePtr = 0L;
@@ -44,6 +46,10 @@ public abstract class AbstractSurface implements Surface {
         }
         this.width = width;
         this.height = height;
+    }
+
+    protected void addDisposerRecord() {
+        Disposer.addRecord(this, new AbstractSurfaceDisposerRecord(nativePtr));
     }
 
     public final void getRGB(int[] argb, int offset, int scanLength, int x, int y, int width, int height) {
@@ -97,8 +103,22 @@ public abstract class AbstractSurface implements Surface {
         }
     }
 
-    protected void finalize() {
-        this.nativeFinalize();
+    private static native void disposeNative(long nativeHandle);
+
+    private static class AbstractSurfaceDisposerRecord implements Disposer.Record {
+        private long nativeHandle;
+
+        AbstractSurfaceDisposerRecord(long nh) {
+            nativeHandle = nh;
+        }
+
+        @Override
+        public void dispose() {
+            if (nativeHandle != 0L) {
+                disposeNative(nativeHandle);
+                nativeHandle = 0L;
+            }
+        }
     }
 
     public final int getWidth() {
@@ -108,6 +128,4 @@ public abstract class AbstractSurface implements Surface {
     public final int getHeight() {
         return height;
     }
-
-    private native void nativeFinalize();
 }
