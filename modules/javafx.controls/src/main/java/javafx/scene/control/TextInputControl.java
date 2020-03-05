@@ -166,7 +166,7 @@ public abstract class TextInputControl extends Control {
                 int length = txt.length();
                 if (end > start + length) end = length;
                 if (start > length-1) start = end = 0;
-                return txt.substring(start, end);
+                return txt.substring(start, Utils.clamp(0, end, txt.length()));
             }
         });
 

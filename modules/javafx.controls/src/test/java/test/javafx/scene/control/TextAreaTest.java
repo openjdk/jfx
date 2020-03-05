@@ -482,4 +482,13 @@ public class TextAreaTest {
         dummyTxtArea.deleteText(0,6);
         assertEquals(dummyTxtArea.getParagraphs().get(0).toString(), "another");
     }
+
+    @Test public void replaceSelectionAtEndWithListener() {
+        StringBuilder log = new StringBuilder();
+        txtArea.setText("x xxx");
+        txtArea.selectRange(2, 5);
+        txtArea.selectedTextProperty().addListener((__, ___, selection) -> log.append("."));
+        txtArea.replaceSelection("a");
+        assertFalse(log.toString().isEmpty());
+    }
 }

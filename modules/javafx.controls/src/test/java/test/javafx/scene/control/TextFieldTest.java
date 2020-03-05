@@ -448,6 +448,16 @@ public class TextFieldTest {
         assertTrue("action must be consumed ", actions.get(0).isConsumed());
     }
 
+    @Test public void replaceSelectionAtEndWithListener() {
+        StringBuilder log = new StringBuilder();
+        txtField.setText("x xxx");
+        txtField.selectedTextProperty().addListener((__, ___, selection) -> log.append("."));
+        txtField.selectRange(2, 5);
+        txtField.replaceSelection("a");
+        assertFalse(log.toString().isEmpty());
+    }
+
+
     /**
      * Helper method to init the stage only if really needed.
      */
