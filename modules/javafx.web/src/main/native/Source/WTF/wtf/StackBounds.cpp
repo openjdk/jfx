@@ -244,6 +244,9 @@ StackBounds StackBounds::currentThreadStackBoundsInternal()
 #endif
 #endif // NDEBUG
     void* bound = static_cast<char*>(endOfStack) + guardPage.RegionSize;
+#if PLATFORM(JAVA)
+    bound = static_cast<char*>(bound) + JAVA_RED_ZONE;
+#endif
     return StackBounds { origin, bound };
 }
 
