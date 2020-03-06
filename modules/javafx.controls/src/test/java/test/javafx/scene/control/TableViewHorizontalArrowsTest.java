@@ -56,7 +56,7 @@ public class TableViewHorizontalArrowsTest {
     public static Collection<?> implementations() {
         return Arrays.asList(new Object[][] {
             {NodeOrientation.LEFT_TO_RIGHT},
-            {NodeOrientation.RIGHT_TO_LEFT} 
+            {NodeOrientation.RIGHT_TO_LEFT}
         });
     }
 
