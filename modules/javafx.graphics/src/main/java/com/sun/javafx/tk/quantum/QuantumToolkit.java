@@ -1524,6 +1524,11 @@ public final class QuantumToolkit extends Toolkit {
             }
 
             private int computeOptimumTileSize(int size, int maxSize, AtomicBoolean isDivExact) {
+                // This methods attempts to find the smallest integer divider for the provided `size`
+                // while the result of the division is less than `maxSize`.
+                // It tests all potential dividers from 2 to 6 and returns the result of the division
+                // if all conditions can be satisfied or, failing that, `maxSize`.
+                // The value for `isDivExact` reflects whether or not an exact divider could be found.
                 for (int n = 2; n <= 6; n++) {
                     int optimumSize = size / n;
                     if (optimumSize <= maxSize && optimumSize * n == size) {
@@ -1531,6 +1536,7 @@ public final class QuantumToolkit extends Toolkit {
                         return optimumSize;
                     }
                 }
+                isDivExact.set(false);
                 return maxSize;
             }
 
