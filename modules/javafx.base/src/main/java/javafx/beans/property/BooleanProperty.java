@@ -25,6 +25,8 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
@@ -133,22 +135,11 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      * @since JavaFX 8.0
      */
     public static BooleanProperty booleanProperty(final Property<Boolean> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
-        return property instanceof BooleanProperty ? (BooleanProperty)property : new BooleanPropertyBase() {
+        Objects.requireNonNull(property, "Property cannot be null");
+        return property instanceof BooleanProperty ? (BooleanProperty) property :
+                new SimpleBooleanProperty(null, property.getName()) { // Virtual property, no bean
             {
                 BidirectionalBinding.bind(this, property);
-            }
-
-            @Override
-            public Object getBean() {
-                return null; // Virtual property, no bean
-            }
-
-            @Override
-            public String getName() {
-                return property.getName();
             }
         };
     }
@@ -164,19 +155,9 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      */
     @Override
     public ObjectProperty<Boolean> asObject() {
-        return new ObjectPropertyBase<Boolean> () {
+        return new SimpleObjectProperty<>(null, BooleanProperty.this.getName()) { // Virtual property, does not exist on a bean
             {
                 BidirectionalBinding.bind(this, BooleanProperty.this);
-            }
-
-            @Override
-            public Object getBean() {
-                return null; // Virtual property, does not exist on a bean
-            }
-
-            @Override
-            public String getName() {
-                return BooleanProperty.this.getName();
             }
         };
     }
