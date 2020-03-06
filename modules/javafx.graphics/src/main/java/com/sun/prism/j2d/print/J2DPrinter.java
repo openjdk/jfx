@@ -629,65 +629,54 @@ public class J2DPrinter implements PrinterImpl {
         return paperSet;
     }
 
-    private static Map<MediaTray, PaperSource> preDefinedTrayMap = null;
-    private static Map<MediaSizeName, Paper> predefinedPaperMap = null;
-    private static void initPrefinedMediaMaps() {
+    private static Map<MediaSizeName, Paper> predefinedPaperMap;
+    private static Map<MediaTray, PaperSource> predefinedTrayMap;
 
+    private static void initPredefinedMediaMaps() {
         if (predefinedPaperMap == null) {
             // North American papers
-            HashMap<MediaSizeName, Paper> map =
-                new HashMap<MediaSizeName, Paper>();
-            map.put(MediaSizeName.NA_LETTER, Paper.NA_LETTER);
-            map.put(MediaSizeName.TABLOID, Paper.TABLOID);
-            map.put(MediaSizeName.NA_LEGAL, Paper.LEGAL);
-            map.put(MediaSizeName.EXECUTIVE, Paper.EXECUTIVE);
-            map.put(MediaSizeName.NA_8X10, Paper.NA_8X10);
-            // Envelopes
-            map.put(MediaSizeName.MONARCH_ENVELOPE,
-                    Paper.MONARCH_ENVELOPE);
-
-            map.put(MediaSizeName.NA_NUMBER_10_ENVELOPE,
-                    Paper.NA_NUMBER_10_ENVELOPE);
-            // ISO sizes.
-            map.put(MediaSizeName.ISO_A0, Paper.A0);
-            map.put(MediaSizeName.ISO_A1, Paper.A1);
-            map.put(MediaSizeName.ISO_A2, Paper.A2);
-            map.put(MediaSizeName.ISO_A3, Paper.A3);
-            map.put(MediaSizeName.ISO_A4, Paper.A4);
-            map.put(MediaSizeName.ISO_A5, Paper.A5);
-            map.put(MediaSizeName.ISO_A6, Paper.A6);
-            map.put(MediaSizeName.C, Paper.C); // Eng. size
-            // I've seen this as "Envelope DL" on HP inkjet drivers
-            // for OS X and WIndows.
-            map.put(MediaSizeName.ISO_DESIGNATED_LONG,
-                    Paper.DESIGNATED_LONG);
-            // Common Japanese sizes.
-            map.put(MediaSizeName.JIS_B4, Paper.JIS_B4);
-            map.put(MediaSizeName.JIS_B5, Paper.JIS_B5);
-            map.put(MediaSizeName.JIS_B6, Paper.JIS_B6);
-            map.put(MediaSizeName.JAPANESE_POSTCARD,
-                    Paper.JAPANESE_POSTCARD);
-
-            predefinedPaperMap = map;
+            predefinedPaperMap = Map.ofEntries(
+                Map.entry(MediaSizeName.NA_LETTER,             Paper.NA_LETTER),
+                Map.entry(MediaSizeName.TABLOID,               Paper.TABLOID),
+                Map.entry(MediaSizeName.NA_LEGAL,              Paper.LEGAL),
+                Map.entry(MediaSizeName.EXECUTIVE,             Paper.EXECUTIVE),
+                Map.entry(MediaSizeName.NA_8X10,               Paper.NA_8X10),
+                // Envelopes
+                Map.entry(MediaSizeName.MONARCH_ENVELOPE,      Paper.MONARCH_ENVELOPE),
+                Map.entry(MediaSizeName.NA_NUMBER_10_ENVELOPE, Paper.NA_NUMBER_10_ENVELOPE),
+                // ISO sizes.
+                Map.entry(MediaSizeName.ISO_A0,                Paper.A0),
+                Map.entry(MediaSizeName.ISO_A1,                Paper.A1),
+                Map.entry(MediaSizeName.ISO_A2,                Paper.A2),
+                Map.entry(MediaSizeName.ISO_A3,                Paper.A3),
+                Map.entry(MediaSizeName.ISO_A4,                Paper.A4),
+                Map.entry(MediaSizeName.ISO_A5,                Paper.A5),
+                Map.entry(MediaSizeName.ISO_A6,                Paper.A6),
+                Map.entry(MediaSizeName.C,                     Paper.C), // Eng. size
+                // I've seen this as "Envelope DL" on HP inkjet drivers for OS X and WIndows.
+                Map.entry(MediaSizeName.ISO_DESIGNATED_LONG,   Paper.DESIGNATED_LONG),
+                // Common Japanese sizes.
+                Map.entry(MediaSizeName.JIS_B4,                Paper.JIS_B4),
+                Map.entry(MediaSizeName.JIS_B5,                Paper.JIS_B5),
+                Map.entry(MediaSizeName.JIS_B6,                Paper.JIS_B6),
+                Map.entry(MediaSizeName.JAPANESE_POSTCARD,     Paper.JAPANESE_POSTCARD));
         }
 
-        if (preDefinedTrayMap == null) {
-            HashMap<MediaTray, PaperSource> map =
-                new HashMap<MediaTray, PaperSource>();
-            map.put(MediaTray.MAIN, PaperSource.MAIN);
-            map.put(MediaTray.MANUAL, PaperSource.MANUAL);
-            map.put(MediaTray.BOTTOM, PaperSource.BOTTOM);
-            map.put(MediaTray.MIDDLE, PaperSource.MIDDLE);
-            map.put(MediaTray.TOP, PaperSource.TOP);
-            map.put(MediaTray.SIDE, PaperSource.SIDE);
-            map.put(MediaTray.ENVELOPE, PaperSource.ENVELOPE);
-            map.put(MediaTray.LARGE_CAPACITY, PaperSource.LARGE_CAPACITY);
-            preDefinedTrayMap = map;
+        if (predefinedTrayMap == null) {
+            predefinedTrayMap = Map.of(
+                MediaTray.MAIN,           PaperSource.MAIN,
+                MediaTray.MANUAL,         PaperSource.MANUAL,
+                MediaTray.BOTTOM,         PaperSource.BOTTOM,
+                MediaTray.MIDDLE,         PaperSource.MIDDLE,
+                MediaTray.TOP,            PaperSource.TOP,
+                MediaTray.SIDE,           PaperSource.SIDE,
+                MediaTray.ENVELOPE,       PaperSource.ENVELOPE,
+                MediaTray.LARGE_CAPACITY, PaperSource.LARGE_CAPACITY);
         }
     }
 
     private void populateMedia() {
-        initPrefinedMediaMaps();
+        initPredefinedMediaMaps();
 
         if (paperSet != null) {
             return; // already inited
@@ -765,7 +754,7 @@ public class J2DPrinter implements PrinterImpl {
 
     private synchronized final PaperSource addPaperSource(MediaTray tray) {
 
-        PaperSource source = preDefinedTrayMap.get(tray);
+        PaperSource source = predefinedTrayMap.get(tray);
 
         if (source == null) {
             source = PrintHelper.createPaperSource(tray.toString());

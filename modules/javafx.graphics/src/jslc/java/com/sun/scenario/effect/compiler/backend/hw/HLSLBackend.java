@@ -25,7 +25,6 @@
 
 package com.sun.scenario.effect.compiler.backend.hw;
 
-import java.util.HashMap;
 import java.util.Map;
 import com.sun.scenario.effect.compiler.JSLParser;
 import com.sun.scenario.effect.compiler.model.BaseType;
@@ -46,66 +45,58 @@ public class HLSLBackend extends SLBackend {
         super(parser, visitor);
     }
 
-    private static final Map<String, String> qualMap = new HashMap<String, String>();
-    static {
-        qualMap.put("const", "");
-        qualMap.put("param", "");
-    }
+    private static final Map<String, String> QUAL_MAP = Map.of(
+        "const", "",
+        "param", "");
 
-    private static final Map<String, String> typeMap = new HashMap<String, String>();
-    static {
-        typeMap.put("void",    "void");
-        typeMap.put("float",   "float");
-        typeMap.put("float2",  "float2");
-        typeMap.put("float3",  "float3");
-        typeMap.put("float4",  "float4");
-        typeMap.put("int",     "int");
-        typeMap.put("int2",    "int2");
-        typeMap.put("int3",    "int3");
-        typeMap.put("int4",    "int4");
-        typeMap.put("bool",    "bool");
-        typeMap.put("bool2",   "bool2");
-        typeMap.put("bool3",   "bool3");
-        typeMap.put("bool4",   "bool4");
-        typeMap.put("sampler", "sampler2D");
-        typeMap.put("lsampler","sampler2D");
-        typeMap.put("fsampler","sampler2D");
-    }
+    private static final Map<String, String> TYPE_MAP = Map.ofEntries(
+        Map.entry("void",     "void"),
+        Map.entry("float",    "float"),
+        Map.entry("float2",   "float2"),
+        Map.entry("float3",   "float3"),
+        Map.entry("float4",   "float4"),
+        Map.entry("int",      "int"),
+        Map.entry("int2",     "int2"),
+        Map.entry("int3",     "int3"),
+        Map.entry("int4",     "int4"),
+        Map.entry("bool",     "bool"),
+        Map.entry("bool2",    "bool2"),
+        Map.entry("bool3",    "bool3"),
+        Map.entry("bool4",    "bool4"),
+        Map.entry("sampler",  "sampler2D"),
+        Map.entry("lsampler", "sampler2D"),
+        Map.entry("fsampler", "sampler2D"));
 
-    private static final Map<String, String> varMap = new HashMap<String, String>();
-    static {
-    }
+    private static final Map<String, String> VAR_MAP = Map.of();
 
-    private static final Map<String, String> funcMap = new HashMap<String, String>();
-    static {
-        funcMap.put("sample", "tex2D");
-        funcMap.put("fract", "frac");
-        funcMap.put("mix", "lerp");
-        funcMap.put("mod", "fmod");
-        funcMap.put("intcast", "int");
-        funcMap.put("any", "any");
-        funcMap.put("length", "length");
-    }
+    private static final Map<String, String> FUNC_MAP = Map.of(
+        "sample",  "tex2D",
+        "fract",   "frac",
+        "mix",     "lerp",
+        "mod",     "fmod",
+        "intcast", "int",
+        "any",     "any",
+        "length",  "length");
 
     @Override
     protected String getType(Type t) {
-        return typeMap.get(t.toString());
+        return TYPE_MAP.get(t.toString());
     }
 
     @Override
     protected String getQualifier(Qualifier q) {
-        return qualMap.get(q.toString());
+        return QUAL_MAP.get(q.toString());
     }
 
     @Override
     protected String getVar(String v) {
-        String s = varMap.get(v);
+        String s = VAR_MAP.get(v);
         return (s != null) ? s : v;
     }
 
     @Override
     protected String getFuncName(String f) {
-        String s = funcMap.get(f);
+        String s = FUNC_MAP.get(f);
         return (s != null) ? s : f;
     }
 

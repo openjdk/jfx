@@ -28,8 +28,7 @@ package javafx.beans.value;
 /**
  * A writable typed value.
  *
- * @param T
- *            The type of the wrapped value
+ * @param <T> the type of the wrapped value
  *
  * @see WritableValue
  *

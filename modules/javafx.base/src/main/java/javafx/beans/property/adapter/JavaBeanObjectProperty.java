@@ -87,7 +87,7 @@ import java.security.PrivilegedAction;
  * @see javafx.beans.property.ObjectProperty
  * @see JavaBeanObjectPropertyBuilder
  *
- * @param T type of the wrapped {@code Object}
+ * @param <T> type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
 public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implements JavaBeanProperty<T> {

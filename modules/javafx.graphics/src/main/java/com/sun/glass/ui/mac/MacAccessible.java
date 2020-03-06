@@ -599,7 +599,7 @@ final class MacAccessible extends Accessible {
      * Do not access the following lists directly from the Mac enums.
      * It can cause the static initialization to happen in an unexpected order.
      */
-    private static final List<MacAttribute> baseAttributes = Arrays.asList(
+    private static final List<MacAttribute> BASE_ATTRIBUTES = List.of(
         MacAttribute.NSAccessibilityRoleAttribute,
         MacAttribute.NSAccessibilityRoleDescriptionAttribute,
         MacAttribute.NSAccessibilityHelpAttribute,
@@ -613,7 +613,7 @@ final class MacAccessible extends Accessible {
         MacAttribute.NSAccessibilityTitleUIElementAttribute
     );
 
-    private static final List<MacAttribute> textAttributes = Arrays.asList(
+    private static final List<MacAttribute> TEXT_ATTRIBUTES = List.of(
         MacAttribute.NSAccessibilityEnabledAttribute,
         MacAttribute.NSAccessibilityValueAttribute,
         MacAttribute.NSAccessibilityNumberOfCharactersAttribute,
@@ -623,7 +623,7 @@ final class MacAccessible extends Accessible {
         MacAttribute.NSAccessibilityVisibleCharacterRangeAttribute
     );
 
-    private static final List<MacAttribute> textParameterizedAttributes = Arrays.asList(
+    private static final List<MacAttribute> TEXT_PARAMETRIZED_ATTRIBUTES = List.of(
         MacAttribute.NSAccessibilityLineForIndexParameterizedAttribute,
         MacAttribute.NSAccessibilityRangeForLineParameterizedAttribute,
         MacAttribute.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
@@ -968,7 +968,7 @@ final class MacAccessible extends Accessible {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
-            List<MacAttribute> attrs = new ArrayList<>(baseAttributes);
+            List<MacAttribute> attrs = new ArrayList<>(BASE_ATTRIBUTES);
             MacRole macRole = getRole(role);
             if (macRole != null && macRole.macAttributes != null) {
                 attrs.addAll(macRole.macAttributes);
@@ -1001,7 +1001,7 @@ final class MacAccessible extends Accessible {
                 case TEXT_AREA:
                 case PASSWORD_FIELD:
                 case COMBO_BOX:
-                    attrs.addAll(textAttributes);
+                    attrs.addAll(TEXT_ATTRIBUTES);
                     break;
                 default:
             }
@@ -1704,7 +1704,7 @@ final class MacAccessible extends Accessible {
                 case TEXT_AREA:
                 case PASSWORD_FIELD:
                 case COMBO_BOX:
-                    attrs.addAll(textParameterizedAttributes);
+                    attrs.addAll(TEXT_PARAMETRIZED_ATTRIBUTES);
                     break;
                 default:
             }

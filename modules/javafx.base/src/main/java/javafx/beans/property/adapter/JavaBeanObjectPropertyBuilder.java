@@ -56,7 +56,7 @@ import java.lang.reflect.Method;
  *
  * @see JavaBeanObjectProperty
  *
- * @param T the type of the wrapped {@code Object}
+ * @param <T> the type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
 public final class JavaBeanObjectPropertyBuilder<T> {

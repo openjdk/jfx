@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableListBase;
-import javafx.collections.WeakListChangeListener;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -38,20 +37,7 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
 
     // This is the actual observable list of selected indices used in the selection model
     private final ObservableList<Integer> selectedIndices;
-
-    private ObservableList<E> itemsList;
-
-    private boolean itemsListChanged = false;
-    private ListChangeListener.Change<? extends E> itemsListChange;
-    private final ListChangeListener itemsListListener = c -> {
-        itemsListChanged = true;
-        itemsListChange = c;
-    };
-    private final WeakListChangeListener weakItemsListListener =
-            new WeakListChangeListener(itemsListListener);
-
     private final Supplier<Integer> modelSizeSupplier;
-
     private final List<WeakReference<E>> itemsRefList;
 
     public SelectedItemsReadOnlyObservableList(ObservableList<Integer> selectedIndices, Supplier<Integer> modelSizeSupplier) {
@@ -100,9 +86,6 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
                 itemsRefList.add(new WeakReference<>(getModelItem(selectedIndex)));
             }
 
-            itemsListChanged = false;
-            itemsListChange = null;
-
             endChange();
         });
     }
@@ -118,17 +101,6 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
     @Override
     public int size() {
         return selectedIndices.size();
-    }
-
-    // Used by ListView and TableView to allow for improved handling.
-    public void setItemsList(ObservableList<E> itemsList) {
-        if (this.itemsList != null) {
-            this.itemsList.removeListener(weakItemsListListener);
-        }
-        this.itemsList = itemsList;
-        if (itemsList != null) {
-            itemsList.addListener(weakItemsListListener);
-        }
     }
 
     private E _getModelItem(int index) {

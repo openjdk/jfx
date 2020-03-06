@@ -79,7 +79,7 @@ import java.security.PrivilegedAction;
  * @see javafx.beans.property.ReadOnlyObjectProperty
  * @see ReadOnlyJavaBeanObjectPropertyBuilder
  *
- * @param T the type of the wrapped {@code Object}
+ * @param <T> the type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPropertyBase<T> implements ReadOnlyJavaBeanProperty<T> {

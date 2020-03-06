@@ -44,7 +44,6 @@ import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -59,7 +58,6 @@ import javafx.stage.Stage;
 import javafx.stage.Window;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +98,20 @@ import com.sun.webkit.event.WCMouseWheelEvent;
  */
 final public class WebView extends Parent {
 
-    private static final Map<Object, Integer> idMap = new HashMap<Object, Integer>();
+    private static final Map<Object, Integer> ID_MAP = Map.ofEntries(
+        Map.entry(MouseButton.NONE, WCMouseEvent.NOBUTTON),
+        Map.entry(MouseButton.PRIMARY, WCMouseEvent.BUTTON1),
+        Map.entry(MouseButton.MIDDLE, WCMouseEvent.BUTTON2),
+        Map.entry(MouseButton.SECONDARY, WCMouseEvent.BUTTON3),
+
+        Map.entry(MouseEvent.MOUSE_PRESSED, WCMouseEvent.MOUSE_PRESSED),
+        Map.entry(MouseEvent.MOUSE_RELEASED, WCMouseEvent.MOUSE_RELEASED),
+        Map.entry(MouseEvent.MOUSE_MOVED, WCMouseEvent.MOUSE_MOVED),
+        Map.entry(MouseEvent.MOUSE_DRAGGED, WCMouseEvent.MOUSE_DRAGGED),
+
+        Map.entry(KeyEvent.KEY_PRESSED, WCKeyEvent.KEY_PRESSED),
+        Map.entry(KeyEvent.KEY_RELEASED, WCKeyEvent.KEY_RELEASED),
+        Map.entry(KeyEvent.KEY_TYPED, WCKeyEvent.KEY_TYPED));
 
     private static final boolean DEFAULT_CONTEXT_MENU_ENABLED = true;
     private static final FontSmoothingType DEFAULT_FONT_SMOOTHING_TYPE = FontSmoothingType.LCD;
@@ -993,8 +1004,8 @@ final public class WebView extends Parent {
             screenY = screenPoint.getY();
         }
 
-        final Integer id = idMap.get(type);
-        final Integer button = idMap.get(ev.getButton());
+        final Integer id = ID_MAP.get(type);
+        final Integer button = ID_MAP.get(ev.getButton());
         if (id == null || button == null) {
             // not supported by webkit
             return;
@@ -1041,7 +1052,7 @@ final public class WebView extends Parent {
         }
 
         WCKeyEvent keyEvent = new WCKeyEvent(
-                idMap.get(ev.getEventType()),
+                ID_MAP.get(ev.getEventType()),
                 text,
                 keyIdentifier,
                 windowsVirtualKeyCode,
@@ -1302,19 +1313,5 @@ final public class WebView extends Parent {
                 ((WebView) node).doPickNodeLocal(localPickRay, result);
             }
         });
-
-        idMap.put(MouseButton.NONE, WCMouseEvent.NOBUTTON);
-        idMap.put(MouseButton.PRIMARY, WCMouseEvent.BUTTON1);
-        idMap.put(MouseButton.MIDDLE, WCMouseEvent.BUTTON2);
-        idMap.put(MouseButton.SECONDARY, WCMouseEvent.BUTTON3);
-
-        idMap.put(MouseEvent.MOUSE_PRESSED, WCMouseEvent.MOUSE_PRESSED);
-        idMap.put(MouseEvent.MOUSE_RELEASED, WCMouseEvent.MOUSE_RELEASED);
-        idMap.put(MouseEvent.MOUSE_MOVED, WCMouseEvent.MOUSE_MOVED);
-        idMap.put(MouseEvent.MOUSE_DRAGGED, WCMouseEvent.MOUSE_DRAGGED);
-
-        idMap.put(KeyEvent.KEY_PRESSED, WCKeyEvent.KEY_PRESSED);
-        idMap.put(KeyEvent.KEY_RELEASED, WCKeyEvent.KEY_RELEASED);
-        idMap.put(KeyEvent.KEY_TYPED, WCKeyEvent.KEY_TYPED);
     }
 }
