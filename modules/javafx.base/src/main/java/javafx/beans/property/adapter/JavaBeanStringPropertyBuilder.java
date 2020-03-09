@@ -61,11 +61,7 @@ public final class JavaBeanStringPropertyBuilder {
 
     private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
 
-    /**
-     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
-     */
-    @Deprecated(since="14", forRemoval=true)
-    public JavaBeanStringPropertyBuilder() {}
+    private JavaBeanStringPropertyBuilder() {}
 
     /**
      * Creates a new instance of {@code JavaBeanStringPropertyBuilder}.
