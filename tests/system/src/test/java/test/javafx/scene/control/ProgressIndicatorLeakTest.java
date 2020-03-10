@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
 package test.javafx.scene.control;
 
 import javafx.application.Application;
@@ -39,7 +64,7 @@ public class ProgressIndicatorLeakTest {
             primaryStage.setScene(scene);
             stage = primaryStage;
             indicator.setProgress(1.0);
-            Assert.assertTrue("size was: " + indicator.getChildrenUnmodifiable().size(), indicator.getChildrenUnmodifiable().size() == 1);
+            Assert.assertEquals("size is wrong", 1, indicator.getChildrenUnmodifiable().size());
             detIndicator = new WeakReference<Node>(indicator.getChildrenUnmodifiable().get(0));
             indicator.setProgress(-1.0);
             indicator.setProgress(1.0);
@@ -54,48 +79,42 @@ public class ProgressIndicatorLeakTest {
     }
 
     @BeforeClass
-    public static void initFX() {
+    public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[])null)).start();
-        try {
-            if (!startupLatch.await(15, TimeUnit.SECONDS)) {
-                Assert.fail("Timeout waiting for FX runtime to start");
-            }
-        } catch (InterruptedException ex) {
-            Assert.fail("Unexpected exception: " + ex);
-        }
+        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
+
+        Assert.assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
 
 
     @Test
-    public void memoryTest() throws NoSuchFieldException,IllegalAccessException {
-        System.out.println("detIndicator: " + detIndicator.get());
+    public void memoryTest() throws Exception {
         assertCollectable(detIndicator);
     }
 
-    public static void assertCollectable(WeakReference weakReference) {
+    public static void assertCollectable(WeakReference weakReference) throws Exception {
         int counter = 0;
 
         createGarbage();
         System.gc();
+        System.runFinalization();
 
-        while(counter < 10 && weakReference.get() != null) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {}
+        while (counter < 10 && weakReference.get() != null) {
+            Thread.sleep(100);
             counter = counter + 1;
             createGarbage();
             System.gc();
+            System.runFinalization();
         }
 
-        if(weakReference.get() != null) {
+        if (weakReference.get() != null) {
             throw new AssertionError("Content of WeakReference was not collected. content: " + weakReference.get());
         }
     }
     public static void createGarbage() {
         LinkedList list = new LinkedList<Integer>();
         int counter = 0;
-        while(counter < 999999) {
+        while (counter < 999999) {
             counter += 1;
             list.add(1);
         }

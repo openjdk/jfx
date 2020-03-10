@@ -30,7 +30,6 @@ import com.sun.javafx.scene.control.skin.Utils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
 
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -39,7 +38,6 @@ import javafx.animation.Timeline;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -57,7 +55,6 @@ import javafx.scene.paint.Paint;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
-import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 import javafx.scene.transform.Scale;
@@ -328,7 +325,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         boolean isIndeterminate = control.isIndeterminate();
         if (isIndeterminate) {
             // clean up the old determinateIndicator
-            if(determinateIndicator != null) {
+            if (determinateIndicator != null) {
                 determinateIndicator.unregisterListener();
             }
             determinateIndicator = null;
