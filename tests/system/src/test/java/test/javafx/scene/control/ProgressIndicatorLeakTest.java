@@ -87,27 +87,17 @@ public class ProgressIndicatorLeakTest {
     public static void assertCollectable(WeakReference weakReference) throws Exception {
         int counter = 0;
 
-        createGarbage();
         System.gc();
         System.runFinalization();
 
         while (counter < 10 && weakReference.get() != null) {
             Thread.sleep(100);
             counter = counter + 1;
-            createGarbage();
             System.gc();
             System.runFinalization();
         }
 
         Assert.assertNull(weakReference.get());
-    }
-    public static void createGarbage() {
-        LinkedList list = new LinkedList<Integer>();
-        int counter = 0;
-        while (counter < 999999) {
-            counter += 1;
-            list.add(1);
-        }
     }
 
     @AfterClass
