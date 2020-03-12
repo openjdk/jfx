@@ -27,9 +27,7 @@ package test.javafx.scene.control;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.skin.ProgressIndicatorSkin;
@@ -37,9 +35,7 @@ import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -69,10 +65,8 @@ public class ProgressIndicatorLeakTest {
             indicator.setProgress(-1.0);
             indicator.setProgress(1.0);
 
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
-                Platform.runLater(() -> {
-                    startupLatch.countDown();
-                });
+            primaryStage.setOnShown(l -> {
+                Platform.runLater(() -> startupLatch.countDown());
             });
             primaryStage.show();
         }
@@ -82,10 +76,8 @@ public class ProgressIndicatorLeakTest {
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
         new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-
         Assert.assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
     }
-
 
     @Test
     public void memoryTest() throws Exception {
@@ -107,9 +99,7 @@ public class ProgressIndicatorLeakTest {
             System.runFinalization();
         }
 
-        if (weakReference.get() != null) {
-            throw new AssertionError("Content of WeakReference was not collected. content: " + weakReference.get());
-        }
+        Assert.assertNull(weakReference.get());
     }
     public static void createGarbage() {
         LinkedList list = new LinkedList<Integer>();
@@ -127,5 +117,4 @@ public class ProgressIndicatorLeakTest {
             Platform.exit();
         });
     }
-
 }
