@@ -257,7 +257,7 @@ public class TableViewHorizontalArrowsTest {
         assertTrue("Selected cell remains selected", sm.isSelected(0, col0));
         assertTrue("forward cell must also be selected", sm.isSelected(0, col1));
     }
-    
+
     @Test public void testShiftBackwardWhenAtLastCol() {
         sm.select(0, col4);
         backward(KeyModifier.SHIFT);
