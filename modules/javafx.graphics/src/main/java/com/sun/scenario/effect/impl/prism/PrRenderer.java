@@ -26,7 +26,6 @@
 package com.sun.scenario.effect.impl.prism;
 
 import java.lang.reflect.Method;
-import java.util.HashSet;
 import java.util.Set;
 import com.sun.glass.ui.Screen;
 import com.sun.prism.GraphicsPipeline;
@@ -42,14 +41,11 @@ public abstract class PrRenderer extends Renderer {
      * we can do a fast check to see whether the given peer name is an
      * intrinsic one instead of relying on reflection to do the check.
      */
-    private static final Set<String> intrinsicPeerNames;
-    static {
-        intrinsicPeerNames = new HashSet<String>(4);
-        intrinsicPeerNames.add("Crop");
-        intrinsicPeerNames.add("Flood");
-        intrinsicPeerNames.add("Merge");
-        intrinsicPeerNames.add("Reflection");
-    }
+    private static final Set<String> INTRINSIC_PEER_NAMES = Set.of(
+        "Crop",
+        "Flood",
+        "Merge",
+        "Reflection");
 
     /**
      * Private constructor to prevent instantiation.
@@ -90,6 +86,6 @@ public abstract class PrRenderer extends Renderer {
     }
 
     public static boolean isIntrinsicPeer(String name) {
-        return intrinsicPeerNames.contains(name);
+        return INTRINSIC_PEER_NAMES.contains(name);
     }
 }

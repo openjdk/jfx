@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.sun.javafx.scene.control.Properties;
-import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -1221,9 +1220,6 @@ public class ListView<T> extends Control {
 
             this.listView = listView;
 
-            ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(listView.getItems());
-
-
             /*
              * The following two listeners are used in conjunction with
              * SelectionModel.select(T obj) to allow for a developer to select
@@ -1238,7 +1234,6 @@ public class ListView<T> extends Control {
                 @Override public void invalidated(Observable observable) {
                     ObservableList<T> oldItems = weakItemsRef.get();
                     weakItemsRef = new WeakReference<>(listView.getItems());
-                    ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(listView.getItems());
                     updateItemsObserver(oldItems, listView.getItems());
                 }
             };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.scene.web.skin;
+package javafx.scene.web;
 
 import java.util.ResourceBundle;
 import com.sun.javafx.scene.ParentHelper;
@@ -77,9 +77,6 @@ import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
-//import com.sun.webkit.WebPage;
-//import com.sun.webkit.event.WCFocusEvent;
-//import com.sun.javafx.webkit.Accessor;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -90,15 +87,17 @@ import java.util.Map;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import javafx.collections.ListChangeListener;
 
 import static javafx.geometry.NodeOrientation.*;
 
+import static javafx.scene.web.HTMLEditorSkin.Command.*;
+
+
 /**
  * HTML editor skin.
  */
-public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehavior> implements TraverseListener {
+public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseListener {
     private GridPane gridPane;
 
     private ToolBar toolbar1;
@@ -108,8 +107,6 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
     private Button copyButton;
     private Button pasteButton;
 
-//    private Button undoButton;
-//    private Button redoButton;
 
     private Button insertHorizontalRuleButton;
 
@@ -144,7 +141,6 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
     private ColorPicker bgColorButton;
 
     private WebView webView;
-//    private WebPage webPage;
 
     private static final String CUT_COMMAND = "cut";
     private static final String COPY_COMMAND = "copy";
@@ -258,7 +254,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         }
     };
     public HTMLEditorSkin(HTMLEditor htmlEditor) {
-        super(htmlEditor, new HTMLEditorBehavior(htmlEditor));
+        super(htmlEditor);
 
         getChildren().clear();
 
@@ -764,14 +760,14 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         fgColorButton.setFocusTraversable(false);
         toolbar1.getItems().add(fgColorButton);
 
-        fgColorButton.applyCss();
-        ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
-        String fgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override public String run() {
-                return HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
-            }
-        });
-        ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
+        // fgColorButton.applyCss();
+        // ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
+        // String fgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
+            // @Override public String run() {
+                // return HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
+            // }
+        // });
+        // ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
 
         fgColorButton.setValue(DEFAULT_FG_COLOR);
         fgColorButton.setTooltip(new Tooltip(resources.getString("foregroundColor")));
@@ -790,14 +786,14 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         bgColorButton.setFocusTraversable(false);
         toolbar1.getItems().add(bgColorButton);
 
-        bgColorButton.applyCss();
-        ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
-        String bgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override public String run() {
-                return HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
-            }
-        });
-        ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
+        // bgColorButton.applyCss();
+        // ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
+        // String bgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
+            // @Override public String run() {
+                // return HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
+            // }
+        // });
+        // ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
 
         bgColorButton.setValue(DEFAULT_BG_COLOR);
         bgColorButton.setTooltip(new Tooltip(resources.getString("backgroundColor")));
@@ -1219,5 +1215,62 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
     private static final int FONT_FAMILY_MENUBUTTON_WIDTH = 150;
     private static final int FONT_FAMILY_MENU_WIDTH = 100;
     private static final int FONT_SIZE_MENUBUTTON_WIDTH = 80;
+
+    public void performCommand(final Command command) {
+        switch (command) {
+            case BOLD: boldButton.fire(); break;
+            case ITALIC: italicButton.setSelected(!italicButton.isSelected()); break;
+            case UNDERLINE: underlineButton.setSelected(!underlineButton.isSelected()); break;
+        }
+    }
+
+    public enum Command {
+        CUT("cut"),
+        COPY("copy"),
+        PASTE("paste"),
+
+        UNDO("undo"),
+        REDO("redo"),
+
+        INSERT_HORIZONTAL_RULE("inserthorizontalrule"),
+
+        ALIGN_LEFT("justifyleft"),
+        ALIGN_CENTER("justifycenter"),
+        ALIGN_RIGHT("justifyright"),
+        ALIGN_JUSTIFY("justifyfull"),
+
+        BULLETS("insertUnorderedList"),
+        NUMBERS("insertOrderedList"),
+
+        INDENT("indent"),
+        OUTDENT("outdent"),
+
+        FORMAT("formatblock"),
+        FONT_FAMILY("fontname"),
+        FONT_SIZE("fontsize"),
+
+        BOLD("bold"),
+        ITALIC("italic"),
+        UNDERLINE("underline"),
+        STRIKETHROUGH("strikethrough"),
+
+        FOREGROUND_COLOR("forecolor"),
+        BACKGROUND_COLOR("backcolor"),
+        STYLEWITHCSS("styleWithCSS"),
+
+        INSERT_NEW_LINE("insertnewline"),
+        INSERT_TAB("inserttab");
+
+        private final String command;
+
+        Command(String command) {
+            this.command = command;
+        }
+
+        public String getCommand() {
+            return command;
+        }
+    }
+
 
 }

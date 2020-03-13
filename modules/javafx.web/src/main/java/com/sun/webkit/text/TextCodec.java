@@ -29,7 +29,6 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,11 +36,8 @@ final class TextCodec {
     private final Charset charset;
 
     // The list of aliases where Java mappings are not compatible with WebKit.
-    private static final Map<String, String> reMap =
-            new HashMap<String, String>();
-    static {
-        reMap.put("ISO-10646-UCS-2", "UTF-16");
-    }
+    private static final Map<String, String> RE_MAP = Map.of(
+        "ISO-10646-UCS-2", "UTF-16");
 
     /**
      * This could throw a runtime exception (see the documentation for the
@@ -87,7 +83,7 @@ final class TextCodec {
                 if (a.equals("8859_1")) continue;
 
                 encodings.add(a);
-                String r = reMap.get(a);
+                String r = RE_MAP.get(a);
                 encodings.add(r == null ? e : r);
             }
         }

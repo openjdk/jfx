@@ -678,6 +678,11 @@ static void imageio_abort(JNIEnv *env, jobject this,
     data->abortFlag = JNI_TRUE;
 }
 
+static void disposeIIO(JNIEnv *env, imageIODataPtr data) {
+    j_common_ptr info = destroyImageioData(env, data);
+    imageio_dispose(info);
+}
+
 /*************** end of shared utility code ****************/
 
 /********************** Loader Support **************************/
@@ -1267,9 +1272,7 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initJPEGMeth
 JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_disposeNative
 (JNIEnv *env, jclass cls, jlong ptr) {
     imageIODataPtr data = (imageIODataPtr) jlong_to_ptr(ptr);
-    j_common_ptr info = destroyImageioData(env, data);
-
-    imageio_dispose(info);
+    disposeIIO(env, data);
 }
 
 #define JPEG_APP1  (JPEG_APP0 + 1)  /* EXIF APP1 marker code  */
@@ -1330,6 +1333,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
         char buffer[JMSG_LENGTH_MAX];
         (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
                 buffer);
+        free(cinfo->err);
+        free(cinfo);
         ThrowByName(env, "java/io/IOException", buffer);
         return 0;
     }
@@ -1347,6 +1352,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     cinfo->src =
             (struct jpeg_source_mgr *) malloc(sizeof (struct jpeg_source_mgr));
     if (cinfo->src == NULL) {
+        imageio_dispose((j_common_ptr) cinfo);
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
                 "Initializing Reader");
@@ -1363,6 +1369,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     /* set up the association to persist for future calls */
     data = initImageioData(env, (j_common_ptr) cinfo, this);
     if (data == NULL) {
+        imageio_dispose((j_common_ptr) cinfo);
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
                 "Initializing Reader");
@@ -1371,7 +1378,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
 
     imageio_set_stream(env, (j_common_ptr) cinfo, data, stream);
 
-    if ((*env)->ExceptionCheck(env)) return 0;
+    if ((*env)->ExceptionCheck(env)) {
+        disposeIIO(env, data);
+        return 0;
+    }
 
     imageio_init_source((j_decompress_ptr) cinfo);
 
@@ -1382,13 +1392,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     if (setjmp(jerr->setjmp_buffer)) {
         /* If we get here, the JPEG code has signaled an error
            while reading the header. */
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
+        disposeIIO(env, data);
         if (!(*env)->ExceptionOccurred(env)) {
             char buffer[JMSG_LENGTH_MAX];
             (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
                     buffer);
             ThrowByName(env, "java/io/IOException", buffer);
         }
+
         return 0;
     }
 
@@ -1396,6 +1407,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
         ThrowByName(env,
                 "java/io/IOException",
                 "Array pin failed");
+        disposeIIO(env, data);
         return 0;
     }
 
@@ -1492,6 +1504,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
         profileData = read_icc_profile(env, cinfo);
 
         if ((*env)->ExceptionCheck(env)) {
+            disposeIIO(env, data);
             return 0;
         }
 
@@ -1504,6 +1517,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
                 cinfo->num_components,
                 profileData);
         if ((*env)->ExceptionCheck(env)) {
+            disposeIIO(env, data);
             return 0;
         }
     }
@@ -1598,8 +1612,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     struct jpeg_source_mgr *src = cinfo->src;
     sun_jpeg_error_ptr jerr;
     int bytes_per_row = cinfo->output_width * cinfo->output_components;
-    JSAMPROW scanline_ptr = (JSAMPROW) malloc(bytes_per_row * sizeof (JSAMPLE));
     int offset = 0;
+    JSAMPROW scanline_ptr = NULL;
 
     if (!SAFE_TO_MULT(cinfo->output_width, cinfo->output_components) ||
         !SAFE_TO_MULT(bytes_per_row, cinfo->output_height) ||
@@ -1619,14 +1633,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
         return JNI_FALSE;
     }
 
-    if (scanline_ptr == NULL) {
-        ThrowByName(env,
-                "java/lang/OutOfMemoryError",
-                "Reading JPEG Stream");
-        RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
-        return JNI_FALSE;
-    }
-
     /* Establish the setjmp return context for sun_jpeg_error_exit to use. */
     jerr = (sun_jpeg_error_ptr) cinfo->err;
 
@@ -1639,10 +1645,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
                     buffer);
             ThrowByName(env, "java/io/IOException", buffer);
         }
-        if (scanline_ptr != NULL) {
-            free(scanline_ptr);
-        }
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
+        return JNI_FALSE;
+    }
+
+    scanline_ptr = (JSAMPROW) malloc(bytes_per_row * sizeof(JSAMPLE));
+    if (scanline_ptr == NULL) {
+        ThrowByName(env,
+                "java/lang/OutOfMemoryError",
+                "Reading JPEG Stream");
         return JNI_FALSE;
     }
 
@@ -1653,12 +1664,16 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             (*env)->CallVoidMethod(env, this,
                     JPEGImageLoader_updateImageProgressID,
                     cinfo->output_scanline);
-            if ((*env)->ExceptionCheck(env)) return JNI_FALSE;
+            if ((*env)->ExceptionCheck(env)) {
+                free(scanline_ptr);
+                return JNI_FALSE;
+            }
             if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-              ThrowByName(env,
+                free(scanline_ptr);
+                ThrowByName(env,
                           "java/io/IOException",
                           "Array pin failed");
-              return JNI_FALSE;
+                return JNI_FALSE;
             }
         }
 
@@ -1667,6 +1682,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             jbyte *body = (*env)->GetPrimitiveArrayCritical(env, barray, NULL);
             if (body == NULL) {
                 fprintf(stderr, "decompressIndirect: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+                free(scanline_ptr);
                 return JNI_FALSE;
             }
             memcpy(body+offset,scanline_ptr, bytes_per_row);
@@ -1674,23 +1690,25 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             offset += bytes_per_row;
         }
     }
+    free(scanline_ptr);
 
     if (report_progress == JNI_TRUE) {
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
         (*env)->CallVoidMethod(env, this,
                 JPEGImageLoader_updateImageProgressID,
                 cinfo->output_height);
-      if ((*env)->ExceptionCheck(env)) return JNI_FALSE;
-      if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
-          ThrowByName(env,
+        if ((*env)->ExceptionCheck(env)) {
+            return JNI_FALSE;
+        }
+        if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
+            ThrowByName(env,
                 "java/io/IOException",
                 "Array pin failed");
-          return JNI_FALSE;
-      }
+            return JNI_FALSE;
+        }
     }
 
     jpeg_finish_decompress(cinfo);
-    free(scanline_ptr);
 
     RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
     return JNI_TRUE;

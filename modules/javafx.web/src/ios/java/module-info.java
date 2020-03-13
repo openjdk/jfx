@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,41 +23,25 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
+/**
+ * Defines APIs for the WebView functionality contained within the the
+ * JavaFX UI toolkit.
+ *
+ * @moduleGraph
+ * @since 9
+ */
+module javafx.web {
+    requires java.desktop;
+    requires java.net.http;
+    requires javafx.media;
+    requires jdk.jsobject;
+    requires jdk.xml.dom;
 
-@interface NSApplication (NiblessAdditions)
+    requires transitive java.xml;
+    requires transitive javafx.base;
+    requires transitive javafx.controls;
+    requires transitive javafx.graphics;
 
--(void)setAppleMenu:(NSMenu *)aMenu;
+    exports javafx.scene.web;
 
-@end
-
-@interface GlassApplication : NSObject <NSApplicationDelegate>
-{
-    BOOL            started;
-
-    jobject         jApplication;
-    jobject         jLaunchable;
-    jboolean        jTaskBarApp;
-    jlong           jshareContextPtr;
-
-    // local and intra-app event monitoring
-    //
-    // id              localMonitor;
-    // id              globalMonitor;
 }
-
-- (void)runLoop:(id)selector;
-- (BOOL)started;
-
-+ (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env;
-+ (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue;
-
-+ (void)enterFullScreenExitingLoop;
-+ (void)leaveFullScreenExitingLoopIfNeeded;
-
-+ (void)registerKeyEvent:(NSEvent*)event;
-+ (jint)getKeyCodeForChar:(jchar)c;
-
-+ (BOOL)syncRenderingDisabled;
-
-@end

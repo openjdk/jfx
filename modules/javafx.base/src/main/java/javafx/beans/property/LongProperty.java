@@ -31,10 +31,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableLongValue;
 import com.sun.javafx.binding.Logging;
 
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /**
  * This class defines a {@link Property} wrapping a {@code long} value.
  * <p>
@@ -149,7 +145,6 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
             throw new NullPointerException("Property cannot be null");
         }
         return new LongPropertyBase() {
-            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -162,18 +157,6 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
             @Override
             public String getName() {
                 return property.getName();
-            }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(property, this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
             }
         };
     }
@@ -200,7 +183,6 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
     @Override
     public ObjectProperty<Long> asObject() {
         return new ObjectPropertyBase<Long> () {
-            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, LongProperty.this);
             }
@@ -214,19 +196,6 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
             public String getName() {
                 return LongProperty.this.getName();
             }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(this, LongProperty.this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
-            }
-
         };
     }
 }

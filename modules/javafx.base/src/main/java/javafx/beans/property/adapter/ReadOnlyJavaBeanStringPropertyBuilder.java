@@ -60,11 +60,7 @@ public final class ReadOnlyJavaBeanStringPropertyBuilder {
 
     private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
 
-    /**
-     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
-     */
-    @Deprecated(since="14", forRemoval=true)
-    public ReadOnlyJavaBeanStringPropertyBuilder() {}
+    private ReadOnlyJavaBeanStringPropertyBuilder() {}
 
     /**
      * Create a new instance of {@code ReadOnlyJavaBeanStringPropertyBuilder}
