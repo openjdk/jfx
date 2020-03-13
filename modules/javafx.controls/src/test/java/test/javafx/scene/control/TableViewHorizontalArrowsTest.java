@@ -27,7 +27,6 @@ package test.javafx.scene.control;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.function.BiConsumer;
 
 import org.junit.After;
 import org.junit.Before;
@@ -38,17 +37,22 @@ import org.junit.runners.Parameterized;
 import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.KeyModifier.*;
 
+import com.sun.javafx.util.Utils;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.input.KeyCode;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
+import test.com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
+
 /**
- * Test basic horizontal navigation mappings for TableView. It's parametrized on NodeOrientation
+ * Test basic horizontal navigation mappings for TableView.
+ * It is parameterized on NodeOrientation
  */
 @RunWith(Parameterized.class)
 public class TableViewHorizontalArrowsTest {
@@ -86,10 +90,9 @@ public class TableViewHorizontalArrowsTest {
         fm = tableView.getFocusModel();
 
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        sm.setCellSelectionEnabled(false);
+        sm.setCellSelectionEnabled(true);
 
-        tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9",
-                                    "10", "11", "12");
+        tableView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
 
         col0 = new TableColumn<String, String>("col0");
         col1 = new TableColumn<String, String>("col1");
@@ -144,12 +147,25 @@ public class TableViewHorizontalArrowsTest {
         }
     }
 
+    private TablePosition getAnchor() {
+        return TableViewAnchorRetriever.getAnchor(tableView);
+    }
+
+    private boolean isAnchor(int row) {
+        TablePosition tp = new TablePosition(tableView, row, null);
+        return getAnchor() != null && getAnchor().equals(tp);
+    }
+
+    private boolean isAnchor(int row, int col) {
+        TablePosition tp = new TablePosition(tableView, row, tableView.getColumns().get(col));
+        return getAnchor() != null && getAnchor().equals(tp);
+    }
+
 
     // ----------------------- Tests ----------------------------
 
     @Test
     public void testForwardSelect() {
-        sm.setCellSelectionEnabled(true);
         sm.select(0, col0);
         forward();
         assertTrue("next cell must be selected", sm.isSelected(0, col1));
@@ -158,7 +174,6 @@ public class TableViewHorizontalArrowsTest {
 
     @Test
     public void testBackwardSelect() {
-        sm.setCellSelectionEnabled(true);
         sm.select(0, col4);
         backward();
         assertTrue("next cell must be selected", sm.isSelected(0, col3));
@@ -167,7 +182,6 @@ public class TableViewHorizontalArrowsTest {
 
     @Test
     public void testForwardFocus() {
-        sm.setCellSelectionEnabled(true);
         sm.select(0, col0);
         forward(getShortcutKey());
         assertTrue("selected cell must still be selected", sm.isSelected(0, col0));
@@ -178,7 +192,6 @@ public class TableViewHorizontalArrowsTest {
 
     @Test
     public void testBackwardFocus() {
-        sm.setCellSelectionEnabled(true);
         sm.select(0, col4);
         backward(getShortcutKey());
         assertTrue("selected cell must still be selected", sm.isSelected(0, col4));
@@ -188,10 +201,9 @@ public class TableViewHorizontalArrowsTest {
     }
 
 
-
+    // Note : Any test that changs NodeOrientation must restore it back at the end of it
     @Test
     public void testChangeOrientationSimpleForwardSelect() {
-        sm.setCellSelectionEnabled(true);
         sm.select(0, col0);
         forward();
         assertTrue(sm.isSelected(0, col1));
@@ -199,16 +211,19 @@ public class TableViewHorizontalArrowsTest {
 
         changeNodeOrientation();
 
-        // Now, test that the forward select resprects change in NodeOrientation
+        // Now, test that the forward select respects change in NodeOrientation
         forward();
 
         assertFalse(sm.isSelected(0, col1));
         assertTrue(sm.isSelected(0, col2));
+
+        // Restore Node orientation
+        changeNodeOrientation();
     }
 
+    // Note : Any test that changs NodeOrientation must restore it back at the end of it
     @Test
     public void testChangeOrientationSimpleBackwardSelect() {
-        sm.setCellSelectionEnabled(true);
         sm.select(0, col4);
         backward();
         assertTrue(sm.isSelected(0, col3));
@@ -216,11 +231,179 @@ public class TableViewHorizontalArrowsTest {
 
         changeNodeOrientation();
 
-        // Now, test that the backward select resprects change in NodeOrientation
+        // Now, test that the backward select respects change in NodeOrientation
         backward();
         assertFalse(sm.isSelected(0, col3));
         assertTrue(sm.isSelected(0, col2));
+
+        // Restore Node orientation
+        changeNodeOrientation();
     }
 
-    // TBD: add tests for all keyMappings with modifiers
+    @Test public void testShiftBackwardWhenAtFirstCol() {
+        sm.select(0, col0);
+        backward(KeyModifier.SHIFT);
+
+        assertTrue("Selected cell remains selected", sm.isSelected(0, col0));
+
+        // We are at the first colum, there is no backward cell
+        assertFalse("sanity - forward cell must not be selected", sm.isSelected(0, col1));
+    }
+
+    @Test public void testShiftForwardWhenAtFirstCol() {
+        sm.select(0, col0);
+        forward(KeyModifier.SHIFT);
+
+        assertTrue("Selected cell remains selected", sm.isSelected(0, col0));
+        assertTrue("forward cell must also be selected", sm.isSelected(0, col1));
+    }
+    
+    @Test public void testShiftBackwardWhenAtLastCol() {
+        sm.select(0, col4);
+        backward(KeyModifier.SHIFT);
+        assertTrue("Selected cell remains selected", sm.isSelected(0, col4));
+        assertTrue("backward cell must also be selected", sm.isSelected(0, col3));
+    }
+
+    @Test public void testShiftForwardWhenAtLastCol() {
+        sm.select(0, col4);
+        forward(KeyModifier.SHIFT);
+        assertTrue("Selected cell remains selected", sm.isSelected(0, col4));
+
+        // We are at the last colum, there is no forward cell
+        assertFalse("sanity - backward cell must not be selected", sm.isSelected(0, col3));
+    }
+
+    @Test public void testCtrlBackwardDoesNotMoveRowFocus() {
+        // Select first row
+        sm.clearAndSelect(0);
+        assertTrue(fm.isFocused(0));
+
+        backward(KeyModifier.getShortcutKey());
+
+        assertTrue("Focus should not change", fm.isFocused(0));
+        assertTrue("Selection should not change", sm.isSelected(0));
+    }
+
+    @Test public void testCtrlForwardDoesNotMoveRowFocus() {
+        // Select first row
+        sm.clearAndSelect(0);
+        assertTrue(fm.isFocused(0));
+
+        forward(KeyModifier.getShortcutKey());
+
+        assertTrue("Focus should not change", fm.isFocused(0));
+        assertTrue("Selection should not change", sm.isSelected(0));
+    }
+
+    // Tests for discontinuous multiple cell selection (RT-18951)
+    @Test public void test_rt18591_select_forward_then_backward() {
+        sm.select(0, col0);
+
+        forward(KeyModifier.getShortcutKey());
+        forward(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE,
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()? KeyModifier.CTRL : null));
+        assertTrue(sm.isSelected(0, col0));
+        assertFalse(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(isAnchor(0, 2));
+
+        forward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        forward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+
+        assertTrue(sm.isSelected(0, col0));
+        assertFalse(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(isAnchor(0,2));
+
+
+        backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+    }
+
+    @Test public void test_rt18591_select_backward_then_forward() {
+        sm.select(0, col4);
+
+        backward(KeyModifier.getShortcutKey());
+        backward(KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.SPACE,
+                KeyModifier.getShortcutKey(),
+                (Utils.isMac()? KeyModifier.CTRL : null));
+
+        assertTrue(sm.isSelected(0, col4));
+        assertFalse(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(isAnchor(0, 2));
+
+        backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+
+        assertTrue(sm.isSelected(0, col4));
+        assertFalse(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(isAnchor(0,2));
+
+        forward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        forward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        forward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col0));
+    }
+
+    @Test public void test_rt18536_forward_focus_and_selectAll() {
+        // Test shift selection when focus is elsewhere (so as to select a range)
+        sm.clearAndSelect(1, col0);
+
+        // move focus by holding down ctrl button
+        forward(KeyModifier.getShortcutKey());   // move focus to (1, col1)
+        forward(KeyModifier.getShortcutKey());   // move focus to (1, col2)
+        forward(KeyModifier.getShortcutKey());   // move focus to (1, col3)
+        forward(KeyModifier.getShortcutKey());   // move focus to (1, col4)
+        assertTrue(fm.isFocused(1, col4));
+
+        // press shift + space to select all cells between (1, col0) and (1, col4)
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col4));
+    }
+
+    @Test public void test_rt18536_backward_focus_and_selectAll() {
+        // Test shift selection when focus is elsewhere (so as to select a range)
+        sm.clearAndSelect(1, col4);
+
+        // move focus by holding down ctrl button
+        backward(KeyModifier.getShortcutKey());   // move focus to (1, col3)
+        backward(KeyModifier.getShortcutKey());   // move focus to (1, col2)
+        backward(KeyModifier.getShortcutKey());   // move focus to (1, col1)
+        backward(KeyModifier.getShortcutKey());   // move focus to (1, col0)
+        assertTrue(fm.isFocused(1, col0));
+
+        // press shift + space to select all cells between (1, col0) and (1, col4)
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col4));
+    }
 }

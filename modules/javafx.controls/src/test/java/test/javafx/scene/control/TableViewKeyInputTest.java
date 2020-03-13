@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,8 +35,6 @@ import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
@@ -59,31 +57,18 @@ import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
-import javafx.geometry.NodeOrientation;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import static org.junit.Assert.fail;
 
-@RunWith(Parameterized.class)
 public class TableViewKeyInputTest {
-    @Parameterized.Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][]{
-                {NodeOrientation.LEFT_TO_RIGHT},
-                {NodeOrientation.RIGHT_TO_LEFT}
-        });
-    }
-
     private TableView<String> tableView;
 //    private TableSelectionModel<String> sm;
     private TableView.TableViewSelectionModel<String> sm;
@@ -99,15 +84,8 @@ public class TableViewKeyInputTest {
     private TableColumn<String, String> col3;
     private TableColumn<String, String> col4;
 
-    private NodeOrientation orientation;
-
-    public TableViewKeyInputTest(NodeOrientation val) {
-        orientation = val;
-    }
-
     @Before public void setup() {
         tableView = new TableView<String>();
-        tableView.setNodeOrientation(orientation);
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
 
@@ -1131,14 +1109,8 @@ public class TableViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
         sm.select(0, col0);
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-        }
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.SPACE,
                 KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
@@ -1146,13 +1118,8 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        }
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col2));
         assertTrue(sm.isSelected(0,col3));
@@ -1165,13 +1132,8 @@ public class TableViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
         sm.select(0, col4);
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        }
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.SPACE,
                 KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
@@ -1179,13 +1141,8 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        }
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(0,col2));
@@ -1198,13 +1155,8 @@ public class TableViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
         sm.select(0, col0);
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-        }
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.SPACE,
                 KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
@@ -1212,28 +1164,17 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        }
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col2));
         assertTrue(sm.isSelected(0,col3));
         assertTrue(sm.isSelected(0,col4));
         assertTrue(isAnchor(0,2));
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        }
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(0,col2));
@@ -1247,14 +1188,8 @@ public class TableViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
         sm.select(0, col4);
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-        }
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.SPACE,
                 KeyModifier.getShortcutKey(),
                 (Utils.isMac()  ? KeyModifier.CTRL : null));
@@ -1262,28 +1197,17 @@ public class TableViewKeyInputTest {
         assertTrue(sm.isSelected(0,col2));
         assertTrue(isAnchor(0,2));
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        }
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(0,col2));
         assertTrue(sm.isSelected(0,col4));
         assertTrue(isAnchor(0,2));
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
-        }
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
+        keyboard.doRightArrowPress(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         assertTrue(sm.isSelected(0,col0));
         assertTrue(sm.isSelected(0,col1));
         assertTrue(sm.isSelected(0,col2));
@@ -1559,33 +1483,18 @@ public class TableViewKeyInputTest {
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (1, col3)
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (1, col2)
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // select (1, col1)
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(sm.isSelected(1, col4));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col0));
-        }
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
 
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // deselect (1, col1)
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(debug(), sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-        }
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(debug(), sm.isSelected(1, col1));
+        assertFalse(sm.isSelected(1, col0));
     }
 
     @Test public void test_rt18488_selectToRight() {
@@ -1596,36 +1505,18 @@ public class TableViewKeyInputTest {
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col3)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col4)
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col5)
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertFalse(sm.isSelected(1, col4));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        }
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
 
         keyboard.doLeftArrowPress(KeyModifier.SHIFT);   // deselect (1, col5)
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertFalse(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertFalse(sm.isSelected(1, col4));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        }
+        assertFalse(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
 
     @Test public void test_rt18488_comment1() {
@@ -1638,124 +1529,62 @@ public class TableViewKeyInputTest {
         keyboard.doRightArrowPress(KeyModifier.SHIFT);   // select (1, col5)
         keyboard.doDownArrowPress(KeyModifier.SHIFT);    // select (2, col5)
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(sm.isSelected(2, col4));
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT)  {
-            assertFalse(sm.isSelected(1, col4));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-            assertTrue(sm.isSelected(2, col0));
-        }
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
 
         keyboard.doUpArrowPress(KeyModifier.SHIFT);     // deselect (2, col5)
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertFalse(sm.isSelected(2, col4));
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT)  {
-            assertFalse(sm.isSelected(1, col4));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-            assertFalse(sm.isSelected(2, col0));
-        }
+        assertFalse(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
 
     @Test public void test_rt18536_positive_horizontal() {
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            // Test shift selection when focus is elsewhere (so as to select a range)
-            sm.setCellSelectionEnabled(true);
-            sm.clearAndSelect(1, col0);
+        // Test shift selection when focus is elsewhere (so as to select a range)
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(1, col0);
 
-            // move focus by holding down ctrl button
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col4)
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col5)
-            assertTrue(fm.isFocused(1, col4));
+        // move focus by holding down ctrl button
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col4)
+        keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col5)
+        assertTrue(fm.isFocused(1, col4));
 
-            // press shift + space to select all cells between (1, col1) and (1, col5)
-            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(debug(), sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            // Test shift selection when focus is elsewhere (so as to select a range)
-            sm.setCellSelectionEnabled(true);
-            sm.clearAndSelect(1, col4);
-
-            // move focus by holding down ctrl button
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col1)
-            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col0)
-            assertTrue(fm.isFocused(1, col0));
-
-            // press shift + space to select all cells between (1, col1) and (1, col5)
-            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-            assertTrue(sm.isSelected(1, col0));
-            assertTrue(debug(), sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        }
+        // press shift + space to select all cells between (1, col1) and (1, col5)
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(debug(), sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
 
     @Test public void test_rt18536_negative_horizontal() {
+        // Test shift selection when focus is elsewhere (so as to select a range)
+        sm.setCellSelectionEnabled(true);
+        sm.clearAndSelect(1, col4);
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            // Test shift selection when focus is elsewhere (so as to select a range)
-            sm.setCellSelectionEnabled(true);
-            sm.clearAndSelect(1, col4);
+        // move focus by holding down ctrl button
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col4)
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
+        keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col1)
+        assertTrue(fm.isFocused(1, col0));
 
-            // move focus by holding down ctrl button
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col4)
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col1)
-            assertTrue(fm.isFocused(1, col0));
-
-            // press shift + space to select all cells between (1, col1) and (1, col5)
-            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-            assertTrue(debug(), sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            // Test shift selection when focus is elsewhere (so as to select a range)
-            sm.setCellSelectionEnabled(true);
-            sm.clearAndSelect(1, col0);
-
-            // move focus by holding down ctrl button
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col1)
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col2)
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col3)
-            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());   // move focus to (1, col4)
-            assertTrue(fm.isFocused(1, col4));
-
-            // press shift + space to select all cells between (1, col1) and (1, col5)
-            keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-            assertTrue(debug(), sm.isSelected(1, col0));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col1));
-            assertTrue(sm.isSelected(1, col0));
-        }
+        // press shift + space to select all cells between (1, col1) and (1, col5)
+        keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
+        assertTrue(debug(), sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(1, col3));
+        assertTrue(sm.isSelected(1, col2));
+        assertTrue(sm.isSelected(1, col1));
+        assertTrue(sm.isSelected(1, col0));
     }
 
     //
@@ -2803,11 +2632,11 @@ public class TableViewKeyInputTest {
 
         sm.setCellSelectionEnabled(true);
 
-        sm.clearAndSelect(6, col1);
+        sm.clearAndSelect(6, col0);
         assertEquals(6, getAnchor().getRow());
-        assertEquals(1, getAnchor().getColumn());
-        assertTrue(fm.isFocused(6, col1));
-        assertTrue(sm.isSelected(6, col1));
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(6, col0));
+        assertTrue(sm.isSelected(6, col0));
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
@@ -2815,32 +2644,18 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         assertEquals(6, getAnchor().getRow());
-        assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(3, col2));
-            assertTrue(sm.isSelected(6, col1));
-            assertFalse(sm.isSelected(3, col2));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(3, col0));
-            assertTrue(sm.isSelected(6, col1));
-            assertFalse(sm.isSelected(3, col0));
-        }
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(3, col1));
+        assertTrue(sm.isSelected(6, col0));
+        assertFalse(sm.isSelected(3, col1));
 
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
         assertEquals(6, getAnchor().getRow());
-        assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(3, col2));
-            assertTrue(sm.isSelected(3, col2));
-            assertTrue(sm.isSelected(6, col1));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(3, col0));
-            assertTrue(sm.isSelected(3, col0));
-            assertTrue(sm.isSelected(6, col1));
-        }
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(3, col1));
+        assertTrue(sm.isSelected(3, col1));
+        assertTrue(sm.isSelected(6, col0));
     }
 
     @Test public void test_rt33613_up_multipleColumn_left() {
@@ -2865,31 +2680,17 @@ public class TableViewKeyInputTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(6, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(3, col0));
-            assertTrue(sm.isSelected(6, col1));
-            assertFalse(sm.isSelected(3, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(3, col2));
-            assertTrue(sm.isSelected(6, col1));
-            assertFalse(sm.isSelected(3, col2));
-        }
+        assertTrue(fm.isFocused(3, col0));
+        assertTrue(sm.isSelected(6, col1));
+        assertFalse(sm.isSelected(3, col0));
 
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
         assertEquals(6, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(3, col0));
-            assertTrue(sm.isSelected(3, col0));
-            assertTrue(sm.isSelected(6, col1));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(3, col2));
-            assertTrue(sm.isSelected(3, col2));
-            assertTrue(sm.isSelected(6, col1));
-        }
+        assertTrue(fm.isFocused(3, col0));
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(6, col1));
     }
 
     @Test public void test_rt33613_down_oneColumn() {
@@ -2933,11 +2734,11 @@ public class TableViewKeyInputTest {
 
         sm.setCellSelectionEnabled(true);
 
-        sm.clearAndSelect(3, col1);
+        sm.clearAndSelect(3, col0);
         assertEquals(3, getAnchor().getRow());
-        assertEquals(1, getAnchor().getColumn());
-        assertTrue(fm.isFocused(3, col1));
-        assertTrue(sm.isSelected(3, col1));
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(3, col0));
+        assertTrue(sm.isSelected(3, col0));
 
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
@@ -2945,32 +2746,18 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
         assertEquals(3, getAnchor().getRow());
-        assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(6, col2));
-            assertTrue(sm.isSelected(3, col1));
-            assertFalse(sm.isSelected(6, col2));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(6, col0));
-            assertTrue(sm.isSelected(3, col1));
-            assertFalse(sm.isSelected(6, col0));
-        }
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(6, col1));
+        assertTrue(sm.isSelected(3, col0));
+        assertFalse(sm.isSelected(6, col1));
 
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
         assertEquals(3, getAnchor().getRow());
-        assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(6, col2));
-            assertTrue(sm.isSelected(6, col2));
-            assertTrue(sm.isSelected(3, col1));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(6, col0));
-            assertTrue(sm.isSelected(6, col0));
-            assertTrue(sm.isSelected(3, col1));
-        }
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(6, col1));
+        assertTrue(sm.isSelected(6, col1));
+        assertTrue(sm.isSelected(3, col0));
     }
 
     @Test public void test_rt33613_down_multipleColumn_left() {
@@ -2994,34 +2781,19 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey());
         assertEquals(3, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(6, col0));
-            assertTrue(sm.isSelected(3, col1));
-            assertFalse(sm.isSelected(6, col0));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(6, col2));
-            assertTrue(sm.isSelected(3, col1));
-            assertFalse(sm.isSelected(6, col2));
-        }
+        assertTrue(fm.isFocused(6, col0));
+        assertTrue(sm.isSelected(3, col1));
+        assertFalse(sm.isSelected(6, col0));
 
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
         assertEquals(3, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertTrue(fm.isFocused(6, col0));
-            assertTrue(sm.isSelected(6, col0));
-            assertTrue(sm.isSelected(3, col1));
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(fm.isFocused(6, col2));
-            assertTrue(sm.isSelected(6, col2));
-            assertTrue(sm.isSelected(3, col1));
-        }
+        assertTrue(fm.isFocused(6, col0));
+        assertTrue(sm.isSelected(6, col0));
+        assertTrue(sm.isSelected(3, col1));
     }
 
     @Test public void test_rt18439() {
-
         final int items = 10;
         tableView.getItems().clear();
         for (int i = 0; i < items; i++) {
@@ -3031,138 +2803,70 @@ public class TableViewKeyInputTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            sm.clearAndSelect(0, col0);
+        sm.clearAndSelect(0, col0);
 
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(0, getAnchor().getColumn());              // anchor does not move
-            assertTrue(fm.isFocused(0, col4));
-            assertTrue(sm.isSelected(0, col0));
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col4));
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());              // anchor does not move
+        assertTrue(fm.isFocused(0, col4));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
 
-            keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
-            keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(0, getAnchor().getColumn());             // anchor does not move
-            assertTrue(fm.isFocused(2, col4));
-            assertTrue(sm.isSelected(0, col0));
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col4));
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(2, col4));
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());             // anchor does not move
+        assertTrue(fm.isFocused(2, col4));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
 
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(0, getAnchor().getColumn());             // anchor does not move
-            assertTrue(fm.isFocused(2, col0));
-            assertTrue(sm.isSelected(0, col0));
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col4));
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(2, col4));
-            assertTrue(sm.isSelected(2, col3));
-            assertTrue(sm.isSelected(2, col2));
-            assertTrue(sm.isSelected(2, col1));
-            assertTrue(sm.isSelected(2, col0));
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());             // anchor does not move
+        assertTrue(fm.isFocused(2, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(2, col3));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(2, col1));
+        assertTrue(sm.isSelected(2, col0));
 
-            keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 1
-            keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 0
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(0, getAnchor().getColumn());           // anchor does not move
-            assertTrue(fm.isFocused(0, col0));
-            assertFalse(sm.isSelected(0, col0));                // we've gone right around - this cell is now unselected
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col4));
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(2, col4));
-            assertTrue(sm.isSelected(2, col3));
-            assertTrue(sm.isSelected(2, col2));
-            assertTrue(sm.isSelected(2, col1));
-            assertTrue(sm.isSelected(2, col0));
-            assertTrue(sm.isSelected(1, col0));
-        }
-        else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            sm.clearAndSelect(0, col4);
-
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 0
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(4, getAnchor().getColumn());              // anchor does not move
-            assertTrue(fm.isFocused(0, col0));
-            assertTrue(sm.isSelected(0, col4));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col0));
-
-            keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
-            keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(4, getAnchor().getColumn());             // anchor does not move
-            assertTrue(fm.isFocused(2, col0));
-            assertTrue(sm.isSelected(0, col4));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col0));
-            assertTrue(sm.isSelected(1, col0));
-            assertTrue(sm.isSelected(2, col0));
-
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(4, getAnchor().getColumn());             // anchor does not move
-            assertTrue(fm.isFocused(2, col4));
-            assertTrue(sm.isSelected(0, col0));
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col4));
-            assertTrue(sm.isSelected(1, col0));
-            assertTrue(sm.isSelected(2, col4));
-            assertTrue(sm.isSelected(2, col3));
-            assertTrue(sm.isSelected(2, col2));
-            assertTrue(sm.isSelected(2, col1));
-            assertTrue(sm.isSelected(2, col0));
-
-            keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 0
-            keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 1
-            assertEquals(0, getAnchor().getRow());
-            assertEquals(4, getAnchor().getColumn());           // anchor does not move
-            assertTrue(fm.isFocused(0, col4));
-            assertFalse(sm.isSelected(0, col4));                // we've gone right around - this cell is now unselected
-            assertTrue(sm.isSelected(0, col1));
-            assertTrue(sm.isSelected(0, col2));
-            assertTrue(sm.isSelected(0, col3));
-            assertTrue(sm.isSelected(0, col0));
-            assertTrue(sm.isSelected(1, col4));
-            assertTrue(sm.isSelected(2, col4));
-            assertTrue(sm.isSelected(2, col3));
-            assertTrue(sm.isSelected(2, col2));
-            assertTrue(sm.isSelected(2, col1));
-            assertTrue(sm.isSelected(2, col0));
-            assertTrue(sm.isSelected(1, col0));
-        }
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 0
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());           // anchor does not move
+        assertTrue(fm.isFocused(0, col0));
+        assertFalse(sm.isSelected(0, col0));                // we've gone right around - this cell is now unselected
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(2, col3));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(2, col1));
+        assertTrue(sm.isSelected(2, col0));
+        assertTrue(sm.isSelected(1, col0));
     }
 
     // this is an extension of the previous test, where we had a bug where going up resulted in all cells between the
@@ -3180,34 +2884,21 @@ public class TableViewKeyInputTest {
 
         sm.clearAndSelect(0, col0);
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 4
-        }
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
 
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 3
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 4
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
-        }
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
+
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 3
         assertEquals(0, getAnchor().getRow());
         assertEquals(0, getAnchor().getColumn());           // anchor does not move
@@ -3249,28 +2940,17 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 3
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 4
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 0
-        }
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 3
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 2
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 1
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 0
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-        }
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
         assertEquals(0, getAnchor().getRow());
         assertEquals(4, getAnchor().getColumn());           // anchor does not move
         assertTrue(fm.isFocused(0, col1));
@@ -3306,34 +2986,20 @@ public class TableViewKeyInputTest {
 
         sm.clearAndSelect(4, col4);
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 0
-        }
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 3
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 2
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 1
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 0
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 4
-        }
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
 
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
         assertEquals(4, getAnchor().getRow());
@@ -3376,28 +3042,17 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 1
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 0
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 1
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 2
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 3
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 4
-        } if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT);   // col 1
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT);   // col 2
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT);   // col 3
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT);   // col 4
-        }
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 4
 
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 3
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 4
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
-        } if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
-        }
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
         assertEquals(4, getAnchor().getRow());
         assertEquals(0, getAnchor().getColumn());           // anchor does not move
         assertTrue(fm.isFocused(4, col3));
@@ -4363,59 +4018,31 @@ public class TableViewKeyInputTest {
     }
 
     @Test public void test_rt_18440_goLeft() {
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            test_rt_18440(KeyCode.LEFT, 3, false, colIndex -> {
-                keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-                return colIndex - 1;
-            });
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            test_rt_18440(KeyCode.LEFT, 0, false, colIndex -> {
-                keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-                return colIndex + 1;
-            });
-        }
+        test_rt_18440(KeyCode.LEFT, 3, false, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+            return colIndex - 1;
+        });
     }
 
     @Test public void test_rt_18440_goLeft_toEnd() {
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            test_rt_18440(KeyCode.LEFT, 3, true, colIndex -> {
-                keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-                return colIndex - 1;
-            });
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            test_rt_18440(KeyCode.LEFT, 0, true, colIndex -> {
-                keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
-                return colIndex + 1;
-            });
-        }
+        test_rt_18440(KeyCode.LEFT, 3, true, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+            return colIndex - 1;
+        });
     }
 
     @Test public void test_rt_18440_goRight() {
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            test_rt_18440(KeyCode.RIGHT, 0, false, colIndex -> {
-                keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-                return colIndex + 1;
-            });
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            test_rt_18440(KeyCode.RIGHT, 3, false, colIndex -> {
-                keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-                return colIndex - 1;
-            });
-        }
+        test_rt_18440(KeyCode.RIGHT, 0, false, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+            return colIndex + 1;
+        });
     }
 
     @Test public void test_rt_18440_goRight_toEnd() {
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            test_rt_18440(KeyCode.RIGHT, 0, true, colIndex -> {
-                keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-                return colIndex + 1;
-            });
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            test_rt_18440(KeyCode.RIGHT, 3, true, colIndex -> {
-                keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
-                return colIndex - 1;
-            });
-        }
+        test_rt_18440(KeyCode.RIGHT, 0, true, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+            return colIndex + 1;
+        });
     }
 
     private void test_rt_18440(KeyCode direction, int startColumn, boolean goToEnd, Function<Integer, Integer> r) {
@@ -4472,21 +4099,13 @@ public class TableViewKeyInputTest {
             assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
         }
 
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            expectedColumn = direction == KeyCode.RIGHT ? 3 : 0;
-            keyboard.doKeyPress(direction, KeyModifier.SHIFT);
-            assertEquals(0, sm.getSelectedIndex());
-            assertEquals(debug(), 4, sm.getSelectedCells().size());
-            assertEquals(0, fm.getFocusedIndex());
-            assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            expectedColumn = direction == KeyCode.LEFT ? 3 : 0;
-            keyboard.doKeyPress(direction, KeyModifier.SHIFT);
-            assertEquals(0, sm.getSelectedIndex());
-            assertEquals(debug(), 4, sm.getSelectedCells().size());
-            assertEquals(0, fm.getFocusedIndex());
-            assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
-        }
+        expectedColumn = direction == KeyCode.RIGHT ? 3 : 0;
+        keyboard.doKeyPress(direction, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(debug(), 4, sm.getSelectedCells().size());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+
         sl.dispose();
     }
 
@@ -4599,33 +4218,17 @@ public class TableViewKeyInputTest {
     }
 
     @Test public void test_rt_39792_goLeft_goPastEnd() {
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            test_rt_39792(3, colIndex -> {
-                keyboard.doLeftArrowPress(KeyModifier.SHIFT);
-                return colIndex - 1;
-            });
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            test_rt_39792(0, colIndex -> {
-                keyboard.doLeftArrowPress(KeyModifier.SHIFT);
-                return colIndex + 1;
-            });
-        }
+        test_rt_39792(3, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+            return colIndex - 1;
+        });
     }
 
     @Test public void test_rt_39792_goRight_goPastEnd() {
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            test_rt_39792(0, colIndex -> {
-                keyboard.doRightArrowPress(KeyModifier.SHIFT);
-                return colIndex + 1;
-            });
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            test_rt_39792(3, colIndex -> {
-                keyboard.doRightArrowPress(KeyModifier.SHIFT);
-                return colIndex - 1;
-            });
-        }
+        test_rt_39792(0, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.SHIFT);
+            return colIndex + 1;
+        });
     }
 
     private void test_rt_39792(int startColumn, Function<Integer, Integer> r) {
@@ -4710,67 +4313,5 @@ public class TableViewKeyInputTest {
         keyboard.doUpArrowPress();
 
         assertEquals(0, tableView.getSelectionModel().getSelectedIndex());
-    }
-
-    @Test public void test_dynamic_NodeOrientation_change() {
-
-        sm.setCellSelectionEnabled(true);
-        sm.clearAndSelect(1, col2);
-
-        keyboard.doLeftArrowPress();
-
-        if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
-            assertFalse(sm.isSelected(1, col0));
-            assertTrue(sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col4));
-
-            tableView.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
-            orientation = NodeOrientation.RIGHT_TO_LEFT;
-
-        } else if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
-            assertFalse(sm.isSelected(1, col0));
-            assertFalse(sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col4));
-
-            tableView.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
-            orientation = NodeOrientation.LEFT_TO_RIGHT;
-         }
-
-        keyboard.doRightArrowPress();
-
-        if (tableView.getNodeOrientation() == NodeOrientation.LEFT_TO_RIGHT) {
-            assertFalse(sm.isSelected(1, col0));
-            assertFalse(sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col4));
-
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT);
-
-            assertFalse(sm.isSelected(1, col0));
-            assertFalse(sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col2));
-            assertTrue(sm.isSelected(1, col3));
-            assertTrue(sm.isSelected(1, col4));
-
-        } else if (tableView.getNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-            assertTrue(sm.isSelected(1, col0));
-            assertFalse(sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col4));
-
-            keyboard.doLeftArrowPress(KeyModifier.SHIFT);
-
-            assertTrue(sm.isSelected(1, col0));
-            assertTrue(sm.isSelected(1, col1));
-            assertFalse(sm.isSelected(1, col2));
-            assertFalse(sm.isSelected(1, col3));
-            assertFalse(sm.isSelected(1, col4));
-        }
     }
 }

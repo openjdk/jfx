@@ -159,7 +159,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 new KeyMapping(LEFT,   e -> { if(isRTL()) focusTraverseRight(); else focusTraverseLeft(); }),
                 new KeyMapping(KP_LEFT, e -> { if(isRTL()) focusTraverseRight(); else focusTraverseLeft(); }),
                 new KeyMapping(RIGHT, e -> { if(isRTL()) focusTraverseLeft(); else focusTraverseRight(); }),
-                new KeyMapping(KP_RIGHT,e -> { if(isRTL()) focusTraverseLeft(); else focusTraverseRight(); }),
+                new KeyMapping(KP_RIGHT, e -> { if(isRTL()) focusTraverseLeft(); else focusTraverseRight(); }),
                 new KeyMapping(UP, FocusTraversalInputMap::traverseUp),
                 new KeyMapping(KP_UP, FocusTraversalInputMap::traverseUp),
                 new KeyMapping(DOWN, FocusTraversalInputMap::traverseDown),
