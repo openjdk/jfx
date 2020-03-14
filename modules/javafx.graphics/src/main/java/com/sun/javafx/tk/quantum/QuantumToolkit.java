@@ -25,66 +25,10 @@
 
 package com.sun.javafx.tk.quantum;
 
-import javafx.application.ConditionalFeature;
-import javafx.geometry.Dimension2D;
-import javafx.scene.image.Image;
-import javafx.scene.image.PixelBuffer;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.InputMethodRequests;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.TransferMode;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.CycleMethod;
-import javafx.scene.paint.ImagePattern;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.RadialGradient;
-import javafx.scene.paint.Stop;
-import javafx.scene.shape.ClosePath;
-import javafx.scene.shape.CubicCurveTo;
-import javafx.scene.shape.FillRule;
-import javafx.scene.shape.LineTo;
-import javafx.scene.shape.MoveTo;
-import javafx.scene.shape.PathElement;
-import javafx.scene.shape.QuadCurveTo;
-import javafx.scene.shape.SVGPath;
-import javafx.scene.shape.StrokeLineCap;
-import javafx.scene.shape.StrokeLineJoin;
-import javafx.scene.shape.StrokeType;
-import javafx.stage.FileChooser;
-import javafx.stage.Modality;
-import javafx.stage.StageStyle;
-import javafx.stage.Window;
-import java.io.File;
-import java.io.InputStream;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
-import com.sun.glass.ui.ClipboardAssistance;
-import com.sun.glass.ui.CommonDialogs;
-import com.sun.glass.ui.CommonDialogs.FileChooserResult;
-import com.sun.glass.ui.EventLoop;
-import com.sun.glass.ui.GlassRobot;
-import com.sun.glass.ui.Screen;
+import com.sun.glass.ui.*;
 import com.sun.glass.ui.Timer;
-import com.sun.glass.ui.View;
+import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
@@ -92,35 +36,15 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.logging.PulseLogger;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.async.AbstractRemoteResource;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
+import com.sun.javafx.scene.input.DragboardHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.tk.AppletWindow;
-import com.sun.javafx.tk.CompletionListener;
-import com.sun.javafx.tk.FileChooserType;
-import com.sun.javafx.tk.FontLoader;
-import com.sun.javafx.tk.ImageLoader;
-import com.sun.javafx.tk.PlatformImage;
-import com.sun.javafx.tk.RenderJob;
-import com.sun.javafx.tk.ScreenConfigurationAccessor;
-import com.sun.javafx.tk.TKClipboard;
-import com.sun.javafx.tk.TKDragGestureListener;
-import com.sun.javafx.tk.TKDragSourceListener;
-import com.sun.javafx.tk.TKDropTargetListener;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.tk.TKScreenConfigurationListener;
-import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.TKSystemMenu;
-import com.sun.javafx.tk.Toolkit;
-import com.sun.prism.BasicStroke;
-import com.sun.prism.Graphics;
-import com.sun.prism.GraphicsPipeline;
-import com.sun.prism.PixelFormat;
-import com.sun.prism.RTTexture;
-import com.sun.prism.ResourceFactory;
-import com.sun.prism.ResourceFactoryListener;
+import com.sun.javafx.tk.*;
+import com.sun.prism.*;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.PrismSettings;
@@ -130,9 +54,34 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
-import com.sun.javafx.logging.PulseLogger;
+import javafx.application.ConditionalFeature;
+import javafx.geometry.Dimension2D;
+import javafx.scene.image.Image;
+import javafx.scene.image.PixelBuffer;
+import javafx.scene.input.*;
+import javafx.scene.paint.*;
+import javafx.scene.shape.*;
+import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
+
+import java.io.File;
+import java.io.InputStream;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
-import com.sun.javafx.scene.input.DragboardHelper;
 
 public final class QuantumToolkit extends Toolkit {
 
@@ -1489,8 +1438,7 @@ public final class QuantumToolkit extends Toolkit {
                 int[] pixels = rt.getPixels();
                 if (pixels != null) {
                     buffer.put(pixels);
-                }
-                else {
+                } else {
                     rt.readPixels(buffer, rt.getContentX(), rt.getContentY(), w, h);
                 }
                 //Copy tile's pixel into the target image
@@ -1509,13 +1457,11 @@ public final class QuantumToolkit extends Toolkit {
                 int[] pixels = rt.getPixels();
                 if (pixels != null) {
                     pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(pixels, w, h));
-                }
-                else {
+                } else {
                     IntBuffer ib = IntBuffer.allocate(w * h);
                     if (rt.readPixels(ib, rt.getContentX(), rt.getContentY(), w, h)) {
                         pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(ib, w, h));
-                    }
-                    else {
+                    } else {
                         pImage.dispose();
                         pImage = null;
                     }
@@ -1523,20 +1469,29 @@ public final class QuantumToolkit extends Toolkit {
                 rt.unlock();
             }
 
+            private int computeOptimumTileSize(int size, int maxSize){
+                return computeOptimumTileSize(size, maxSize, null);
+            }
+
             private int computeOptimumTileSize(int size, int maxSize, AtomicBoolean isDivExact) {
-                // This methods attempts to find the smallest integer divider for the provided `size`
+                // This method attempts to find the smallest exact divider for the provided `size`
                 // while the result of the division is less than `maxSize`.
                 // It tests all potential dividers from 2 to 6 and returns the result of the division
                 // if all conditions can be satisfied or, failing that, `maxSize`.
-                // The value for `isDivExact` reflects whether or not an exact divider could be found.
+                // If non-null, the value for `isDivExact` is set so as to reflect whether or not
+                // an exact divider could be found.
                 for (int n = 2; n <= 6; n++) {
                     int optimumSize = size / n;
                     if (optimumSize <= maxSize && optimumSize * n == size) {
-                        isDivExact.set(true);
+                        if (isDivExact != null) {
+                            isDivExact.set(true);
+                        }
                         return optimumSize;
                     }
                 }
-                isDivExact.set(false);
+                if (isDivExact != null) {
+                    isDivExact.set(false);
+                }
                 return maxSize;
             }
 
@@ -1572,13 +1527,27 @@ public final class QuantumToolkit extends Toolkit {
                         if (pImage.image == null) {
                             pImage.setImage(com.sun.prism.Image.fromIntArgbPreData(IntBuffer.allocate(w * h), w, h));
                         }
-                        // Find out it is is possible to divide up the image in tiles of the same size
-                        AtomicBoolean exactWidthDivFound = new AtomicBoolean(false);
-                        int tileWidth = computeOptimumTileSize(w, maxTextureSize, exactWidthDivFound);
+                        // Find out if it is possible to divide up the image in tiles of the same size
+                        int tileWidth = computeOptimumTileSize(w, maxTextureSize);
                         AtomicBoolean exactHeightDivFound = new AtomicBoolean(false);
                         int tileHeight = computeOptimumTileSize(h, maxTextureSize, exactHeightDivFound);
                         IntBuffer buffer = IntBuffer.allocate(tileWidth * tileHeight);
-                        // choose tiling loop order to minimize surface thrashing
+                        // In order to minimize the number of time we have to resize the underlying
+                        // surface for capturing a tile, choose a dimension that has an exact divider
+                        // (if any) to be processed in the inner most loop.
+                        // E.g. looping on width then height in the example bellow requires four
+                        // surface resizing, whereas the opposite requires only two:
+                        //
+                        //       for (w;;)                    for (h;;)
+                        //           for(h;;)                     for(w;;)
+                        //       -----------------           -----------------
+                        //       |       |       |           |       |       |
+                        //       |   1   |   3   |           |   1   |   2   |
+                        //    h  |       |       |        h  |       |       |
+                        //       -----------------           -----------------
+                        //       |   2   |   4   |           |   3   |   4   |
+                        //       -----------------           -----------------
+                        //               w                           w
                         if (exactHeightDivFound.get()) {
                             for (int xOffset = 0; xOffset < w; xOffset += tileWidth) {
                                 tileWidth = Math.min(tileWidth, w - xOffset);
@@ -1588,8 +1557,7 @@ public final class QuantumToolkit extends Toolkit {
                                             buffer, rf, tileRttCache, pImage);
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             for (int yOffset = 0; yOffset < h; yOffset += tileHeight) {
                                 tileHeight = Math.min(tileHeight, h - yOffset);
                                 for (int xOffset = 0; xOffset < w; xOffset += tileWidth) {
@@ -1599,8 +1567,7 @@ public final class QuantumToolkit extends Toolkit {
                                 }
                             }
                         }
-                    }
-                    else {
+                    } else {
                         // The requested size for the screenshot fits max texture size,
                         // so we can directly render it in the target image.
                         renderWholeImage(x, y, w, h, rf, pImage);
