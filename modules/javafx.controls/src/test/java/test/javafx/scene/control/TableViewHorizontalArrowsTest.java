@@ -115,9 +115,10 @@ public class TableViewHorizontalArrowsTest {
 
     // ---------------- Helper methods -------------------------
     /**
-     * Toggles the nodeOrientation of tableView.
+     * Toggles the parameter nodeOrientation and
+     * sets the tableView's orientation to the new toggled value
      */
-    private void changeNodeOrientation() {
+    private void toggleNodeOrientation() {
         orientation = (orientation == NodeOrientation.LEFT_TO_RIGHT?
             NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
         tableView.setNodeOrientation(orientation);
@@ -200,8 +201,6 @@ public class TableViewHorizontalArrowsTest {
         assertEquals("focused cell must moved to prev", col3, focusedCell.getTableColumn());
     }
 
-
-    // Note : Any test that changs NodeOrientation must restore it back at the end of it
     @Test
     public void testChangeOrientationSimpleForwardSelect() {
         sm.select(0, col0);
@@ -209,19 +208,15 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0, col1));
         assertFalse(sm.isSelected(0, col0));
 
-        changeNodeOrientation();
+        toggleNodeOrientation();
 
         // Now, test that the forward select respects change in NodeOrientation
         forward();
 
         assertFalse(sm.isSelected(0, col1));
         assertTrue(sm.isSelected(0, col2));
-
-        // Restore Node orientation
-        changeNodeOrientation();
     }
 
-    // Note : Any test that changs NodeOrientation must restore it back at the end of it
     @Test
     public void testChangeOrientationSimpleBackwardSelect() {
         sm.select(0, col4);
@@ -229,15 +224,12 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0, col3));
         assertFalse(sm.isSelected(0, col4));
 
-        changeNodeOrientation();
+        toggleNodeOrientation();
 
         // Now, test that the backward select respects change in NodeOrientation
         backward();
         assertFalse(sm.isSelected(0, col3));
         assertTrue(sm.isSelected(0, col2));
-
-        // Restore Node orientation
-        changeNodeOrientation();
     }
 
     @Test public void testShiftBackwardWhenAtFirstCol() {
