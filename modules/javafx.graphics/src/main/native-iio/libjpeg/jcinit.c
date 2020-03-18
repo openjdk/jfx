@@ -225,9 +225,9 @@ jinit_compress_master (j_compress_ptr cinfo)
   /* Forward DCT */
   jinit_forward_dct(cinfo);
   /* Entropy encoding: either Huffman or arithmetic coding. */
-  if (cinfo->arith_code)
+  if (cinfo->arith_code) {
     ERREXIT(cinfo, JERR_ARITH_NOTIMPL);
-  else {
+  } else {
     jinit_huff_encoder(cinfo);
   }
 
