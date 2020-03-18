@@ -70,7 +70,7 @@ public class ToolBarHorizontalArrowsTest {
     private Button btn3;
     private Button btn4;
     private Button btn5;
-   
+
     private KeyEventFirer keyboard;
     private StageLoader stageLoader;
     private NodeOrientation orientation;
