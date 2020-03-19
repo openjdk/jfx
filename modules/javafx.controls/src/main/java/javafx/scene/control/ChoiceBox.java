@@ -182,6 +182,7 @@ public class ChoiceBox<T> extends Control {
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
+                // unfixed part of JDK-8090015 - why exclude null?
                 if (sm.getSelectedItem() != null && ! valueProperty().isBound()) {
                     ChoiceBox.this.setValue(sm.getSelectedItem());
                 }
