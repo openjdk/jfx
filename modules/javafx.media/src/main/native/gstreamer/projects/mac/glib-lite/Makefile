@@ -12,7 +12,6 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/glib-lite
 DIRLIST = glib \
 	  glib/libcharset/ \
 	  glib/gnulib/ \
-	  glib/pcre/ \
 	  gobject/ \
 	  gthread/ \
 	  gmodule/
@@ -30,7 +29,6 @@ CFLAGS += -fPIC \
          -DGSTREAMER_LITE \
          -DG_DISABLE_DEPRECATED \
          -DG_DISABLE_ASSERT \
-         -DPCRE_STATIC \
          -DLINK_SIZE=2 \
          -DMAX_NAME_SIZE=32 \
          -DMAX_NAME_COUNT=10000 \
@@ -100,7 +98,6 @@ C_SOURCES = glib/garray.c \
             glib/gquark.c \
             glib/gqueue.c \
             glib/grand.c \
-            glib/gregex.c \
             glib/grcbox.c \
             glib/grefcount.c \
             glib/gscanner.c \
@@ -142,19 +139,6 @@ C_SOURCES = glib/garray.c \
             glib/gnulib/printf-parse.c \
             glib/gnulib/printf.c \
             glib/gnulib/vasnprintf.c \
-            glib/pcre/pcre_chartables.c \
-	    glib/pcre/pcre_compile.c \
-	    glib/pcre/pcre_config.c \
-	    glib/pcre/pcre_dfa_exec.c \
-	    glib/pcre/pcre_exec.c \
-	    glib/pcre/pcre_fullinfo.c \
-	    glib/pcre/pcre_get.c \
-	    glib/pcre/pcre_globals.c \
-	    glib/pcre/pcre_newline.c \
-	    glib/pcre/pcre_ord2utf8.c \
-	    glib/pcre/pcre_study.c \
-	    glib/pcre/pcre_tables.c \
-	    glib/pcre/pcre_xclass.c \
             gobject/gatomicarray.c \
             gobject/gbinding.c \
             gobject/gboxed.c \
