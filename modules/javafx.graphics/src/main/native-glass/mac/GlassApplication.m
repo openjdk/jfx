@@ -755,44 +755,6 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     return disableSyncRendering;
 }
 
-+ (BOOL)isSandboxed
-{
-    static int isSandboxed = -1;
-
-    if (isSandboxed == -1) {
-        isSandboxed = 0;
-
-        NSBundle *mainBundle = [NSBundle mainBundle];
-        NSURL *url = [mainBundle bundleURL];
-        SecStaticCodeRef staticCodeRef = NULL;
-        SecStaticCodeCreateWithPath((CFURLRef)url, kSecCSDefaultFlags, &staticCodeRef);
-
-        if (staticCodeRef) {
-            // Check if the app is signed
-            OSStatus res_signed = SecStaticCodeCheckValidityWithErrors(staticCodeRef, kSecCSBasicValidateOnly, NULL, NULL);
-            if (res_signed == errSecSuccess) {
-                // It is signed, now check if it's sandboxed
-                SecRequirementRef sandboxRequirementRef = NULL;
-                SecRequirementCreateWithString(CFSTR("entitlement[\"com.apple.security.app-sandbox\"] exists"), kSecCSDefaultFlags, &sandboxRequirementRef);
-
-                if (sandboxRequirementRef) {
-                    OSStatus res_sandboxed = SecStaticCodeCheckValidityWithErrors(staticCodeRef, kSecCSBasicValidateOnly, sandboxRequirementRef, NULL);
-                    if (res_sandboxed == errSecSuccess) {
-                        // Yep, sandboxed
-                        isSandboxed = 1;
-                    }
-
-                    CFRelease(sandboxRequirementRef);
-                }
-            }
-
-            CFRelease(staticCodeRef);
-        }
-    }
-
-    return isSandboxed == 1 ? YES : NO;
-}
-
 @end
 
 #pragma mark --- JNI
