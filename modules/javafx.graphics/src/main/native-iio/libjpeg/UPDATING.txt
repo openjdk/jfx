@@ -22,6 +22,7 @@ Copy only the same 41 .c and 9 .h files as are already there.
 * jdtrans.c
 * jerror.h
 * jmorecfg.h
+* jmemmgr.c
 
 ** The modifications are,
 4.1) Remove arithmetic encoding/decoding.
@@ -39,6 +40,9 @@ Pointer to these functions is used while initializing decompressor.
 
 4.4) Improve image filling.
 Files: jdhuff.c
+
+4.5) Improve JPEG processing
+Files: jmemmgr.c
 
 5) Expand tabs and remove trailing white spaces from source files.
 
