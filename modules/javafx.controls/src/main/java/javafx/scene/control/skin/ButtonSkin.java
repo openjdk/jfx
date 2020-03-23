@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package javafx.scene.control.skin;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
@@ -78,6 +80,24 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
         }
     };
 
+    ChangeListener<Scene> sceneChangeListener = (ov, oldScene, newScene) -> {
+        if (oldScene != null) {
+            if (getSkinnable().isDefaultButton()) {
+                setDefaultButton(oldScene, false);
+            }
+            if (getSkinnable().isCancelButton()) {
+                setCancelButton(oldScene, false);
+            }
+        }
+        if (newScene != null) {
+            if (getSkinnable().isDefaultButton()) {
+                setDefaultButton(newScene, true);
+            }
+            if (getSkinnable().isCancelButton()) {
+                setCancelButton(newScene, true);
+            }
+        }
+    };
 
 
     /***************************************************************************
@@ -124,24 +144,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
                 }
             }
         });
-        control.sceneProperty().addListener((ov, oldScene, newScene) -> {
-            if (oldScene != null) {
-                if (getSkinnable().isDefaultButton()) {
-                    setDefaultButton(oldScene, false);
-                }
-                if (getSkinnable().isCancelButton()) {
-                    setCancelButton(oldScene, false);
-                }
-            }
-            if (newScene != null) {
-                if (getSkinnable().isDefaultButton()) {
-                    setDefaultButton(newScene, true);
-                }
-                if (getSkinnable().isCancelButton()) {
-                    setCancelButton(newScene, true);
-                }
-            }
-        });
+        control.sceneProperty().addListener(new WeakChangeListener<>(sceneChangeListener));
 
         // set visuals
         if (getSkinnable().isDefaultButton()) {

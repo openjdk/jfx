@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
@@ -45,6 +47,8 @@ import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import java.lang.ref.WeakReference;
 
 /**
  */
@@ -149,6 +153,46 @@ public class ButtonSkinTest {
             button.layout();
 
             assertEquals(1, countMnemonicNodes(scene, mnemonicKeyCombo, button));
+        }
+    }
+
+    class ButtonSkin1 extends ButtonSkin {
+        ButtonSkin1(Button btn) {
+            super(btn);
+        }
+    }
+
+    class ButtonSkin2 extends ButtonSkin {
+        ButtonSkin2(Button btn) {
+            super(btn);
+        }
+    }
+
+    @Test
+    public void testSkinLeakOnSwitch() {
+        Button button = new Button();
+        ButtonSkin skin = new ButtonSkin1(button);
+        WeakReference<ButtonSkin> skinRef = new WeakReference<>(skin);
+        button.setSkin(skin);
+        skin = null;
+        button.setSkin(new ButtonSkin2(button));
+        attemptGC(skinRef);
+        assertNull("Button skin should be GCed.", skinRef.get());
+    }
+
+    private void attemptGC(WeakReference<ButtonSkin> weakRef) {
+        for (int i = 0; i < 10; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (weakRef.get() == null) {
+                break;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                fail("InterruptedException occurred during Thread.sleep()");
+            }
         }
     }
 
