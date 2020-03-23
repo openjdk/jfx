@@ -146,9 +146,19 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      */
     public static IntegerProperty integerProperty(final Property<Integer> property) {
         Objects.requireNonNull(property, "Property cannot be null");
-        return new SimpleIntegerProperty(null, property.getName()) { // Virtual property, no bean
+        return new IntegerPropertyBase() {
             {
                 BidirectionalBinding.bindNumber(this, property);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, no bean
+            }
+
+            @Override
+            public String getName() {
+                return property.getName();
             }
         };
     }
@@ -174,9 +184,19 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      */
     @Override
     public ObjectProperty<Integer> asObject() {
-        return new SimpleObjectProperty<>(null, IntegerProperty.this.getName()) { // Virtual property, does not exist on a bean
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, IntegerProperty.this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, does not exist on a bean
+            }
+
+            @Override
+            public String getName() {
+                return IntegerProperty.this.getName();
             }
         };
     }

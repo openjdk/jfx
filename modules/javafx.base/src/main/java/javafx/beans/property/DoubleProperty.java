@@ -146,9 +146,19 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      */
     public static DoubleProperty doubleProperty(final Property<Double> property) {
         Objects.requireNonNull(property, "Property cannot be null");
-        return new SimpleDoubleProperty(null, property.getName()) {  // Virtual property, no bean
+        return new DoublePropertyBase() {
             {
                 BidirectionalBinding.bindNumber(this, property);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, no bean
+            }
+
+            @Override
+            public String getName() {
+                return property.getName();
             }
         };
     }
@@ -174,9 +184,19 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      */
     @Override
     public ObjectProperty<Double> asObject() {
-        return new SimpleObjectProperty<>(null, DoubleProperty.this.getName()) {// Virtual property, does not exist on a bean
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, DoubleProperty.this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, does not exist on a bean
+            }
+
+            @Override
+            public String getName() {
+                return DoubleProperty.this.getName();
             }
         };
     }

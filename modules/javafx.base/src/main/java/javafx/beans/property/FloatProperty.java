@@ -146,9 +146,19 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      */
     public static FloatProperty floatProperty(final Property<Float> property) {
         Objects.requireNonNull(property, "Property cannot be null");
-        return new SimpleFloatProperty(null, property.getName()) {  // Virtual property, no bean
+        return new FloatPropertyBase() {
             {
                 BidirectionalBinding.bindNumber(this, property);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, no bean
+            }
+
+            @Override
+            public String getName() {
+                return property.getName();
             }
         };
     }
@@ -174,9 +184,19 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      */
     @Override
     public ObjectProperty<Float> asObject() {
-        return new SimpleObjectProperty<>(null, FloatProperty.this.getName()) { // Virtual property, does not exist on a bean
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, FloatProperty.this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, does not exist on a bean
+            }
+
+            @Override
+            public String getName() {
+                return FloatProperty.this.getName();
             }
         };
     }

@@ -144,9 +144,19 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      */
     public static LongProperty longProperty(final Property<Long> property) {
         Objects.requireNonNull(property, "Property cannot be null");
-        return new SimpleLongProperty(null, property.getName()) { // Virtual property, no bean
+        return new LongPropertyBase() {
             {
                 BidirectionalBinding.bindNumber(this, property);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, no bean
+            }
+
+            @Override
+            public String getName() {
+                return property.getName();
             }
         };
     }
@@ -172,9 +182,19 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      */
     @Override
     public ObjectProperty<Long> asObject() {
-        return new SimpleObjectProperty<>(null, LongProperty.this.getName()) { // Virtual property, does not exist on a bean
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, LongProperty.this);
+            }
+
+            @Override
+            public Object getBean() {
+                return null; // Virtual property, does not exist on a bean
+            }
+
+            @Override
+            public String getName() {
+                return LongProperty.this.getName();
             }
         };
     }
