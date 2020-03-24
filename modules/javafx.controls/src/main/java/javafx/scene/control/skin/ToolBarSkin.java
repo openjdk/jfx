@@ -165,6 +165,9 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
 
             @Override
             public Node select(Node owner, Direction dir, TraversalContext context) {
+
+                dir = dir.getDirectionForNodeOrientation(control.getEffectiveNodeOrientation());
+
                 final ObservableList<Node> boxChildren = box.getChildren();
                 if (owner == overflowMenu) {
                     if (dir.isForward()) {
