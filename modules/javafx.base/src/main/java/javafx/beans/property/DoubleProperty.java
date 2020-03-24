@@ -25,17 +25,14 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.Logging;
+
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableDoubleValue;
-import com.sun.javafx.binding.Logging;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.WeakInvalidationListener;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableDoubleValue;
 
 /**
  * This class defines a {@link Property} wrapping a {@code double} value.
@@ -148,9 +145,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      * @since JavaFX 8.0
      */
     public static DoubleProperty doubleProperty(final Property<Double> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+        Objects.requireNonNull(property, "Property cannot be null");
         return new DoublePropertyBase() {
             {
                 BidirectionalBinding.bindNumber(this, property);
@@ -189,7 +184,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
      */
     @Override
     public ObjectProperty<Double> asObject() {
-        return new ObjectPropertyBase<Double> () {
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, DoubleProperty.this);
             }
@@ -205,6 +200,4 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
             }
         };
     }
-
-
 }
