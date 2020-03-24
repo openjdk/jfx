@@ -43,7 +43,7 @@ LINUX.library = { name -> return (IS_STATIC_BUILD ? "lib${name}.a" : "lib${name}
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
         "-fstack-protector",
-        "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration", "-Werror=trampolines"] // warning flags
+        "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=trampolines"] // warning flags
 
 if (!IS_64) {
     commonFlags += "-m32"
