@@ -79,7 +79,7 @@ if (hasProperty('toolchainDir')) {
     toolchainDir = ""
 }
 
-def gtk2CCFlags = [  ];
+def gtk2CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
 def gtk2LinkFlags = [ ];
 def gtk3LinkFlags = [ ];
