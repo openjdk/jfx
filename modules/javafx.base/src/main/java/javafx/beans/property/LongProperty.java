@@ -25,6 +25,8 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
@@ -140,10 +142,8 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      * @see #asObject()
      * @since JavaFX 8.0
      */
-     public static LongProperty longProperty(final Property<Long> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+    public static LongProperty longProperty(final Property<Long> property) {
+        Objects.requireNonNull(property, "Property cannot be null");
         return new LongPropertyBase() {
             {
                 BidirectionalBinding.bindNumber(this, property);
@@ -182,7 +182,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      */
     @Override
     public ObjectProperty<Long> asObject() {
-        return new ObjectPropertyBase<Long> () {
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, LongProperty.this);
             }
