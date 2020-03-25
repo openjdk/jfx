@@ -118,16 +118,19 @@ public class CanvasTest {
             webView.focusedProperty().
                 addListener((observable, oldValue, newValue) -> {
                 if (newValue) {
-                    int redColor = 255;
-                    assertEquals("Rect top-left corner", redColor, (int) webView.getEngine().executeScript(
-                        "document.getElementById('canvas').getContext('2d').getImageData(1, 1, 1, 1).data[0]"));
-                    assertEquals("Rect bottom-right corner", redColor, (int) webView.getEngine().executeScript(
-                        "document.getElementById('canvas').getContext('2d').getImageData(99, 99, 1, 1).data[0]"));
                     webViewStateLatch.countDown();
                 }
             });
         });
 
         assertTrue("Timeout when waiting for focus change ", Util.await(webViewStateLatch));
+
+        Util.runAndWait(() -> {
+            int redColor = 255;
+            assertEquals("Rect top-left corner", redColor, (int) webView.getEngine().executeScript(
+                "document.getElementById('canvas').getContext('2d').getImageData(1, 1, 1, 1).data[0]"));
+            assertEquals("Rect bottom-right corner", redColor, (int) webView.getEngine().executeScript(
+                "document.getElementById('canvas').getContext('2d').getImageData(99, 99, 1, 1).data[0]"));
+        });
     }
 }
