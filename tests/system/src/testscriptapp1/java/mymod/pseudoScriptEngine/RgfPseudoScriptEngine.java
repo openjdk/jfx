@@ -43,8 +43,7 @@ import java.io.IOException;
 
 import java.time.Instant;
 
-public class RgfPseudoScriptEngine extends AbstractScriptEngine
-{
+public class RgfPseudoScriptEngine extends AbstractScriptEngine {
     static final boolean bDebug = false; // true;
 
     /** Allows to log and access the ScriptEngine instances with their evalDataList. */
@@ -85,8 +84,8 @@ public class RgfPseudoScriptEngine extends AbstractScriptEngine
     public Object eval(String script, ScriptContext context) {
         if (bDebug) System.err.print("[debug: " + this + ".eval(String,ScriptContext), ScriptContext=" + context + "]");
 
-            // create copies of the Bindings for later inspection as they may
-            // get reused and changed on each eval() invocation
+        // create copies of the Bindings for later inspection as they may
+        // get reused and changed on each eval() invocation
         TreeMap<Integer,TreeMap> bindings = new TreeMap();
         for (Integer scope : context.getScopes()) {
             Bindings binding = context.getBindings(scope);
