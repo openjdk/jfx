@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.WeakListChangeListener;
 import javafx.geometry.Side;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
@@ -672,6 +673,8 @@ public class TabPane extends Control {
     static class TabPaneSelectionModel extends SingleSelectionModel<Tab> {
         private final TabPane tabPane;
 
+        private ListChangeListener<Tab> itemsContentObserver;
+
         public TabPaneSelectionModel(final TabPane t) {
             if (t == null) {
                 throw new NullPointerException("TabPane can not be null");
@@ -679,7 +682,7 @@ public class TabPane extends Control {
             this.tabPane = t;
 
             // watching for changes to the items list content
-            final ListChangeListener<Tab> itemsContentObserver = c -> {
+            itemsContentObserver = c -> {
                 while (c.next()) {
                     for (Tab tab : c.getRemoved()) {
                         if (tab != null && !tabPane.getTabs().contains(tab)) {
@@ -710,7 +713,7 @@ public class TabPane extends Control {
                 }
             };
             if (this.tabPane.getTabs() != null) {
-                this.tabPane.getTabs().addListener(itemsContentObserver);
+                this.tabPane.getTabs().addListener(new WeakListChangeListener<>(itemsContentObserver));
             }
         }
 

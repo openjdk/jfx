@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,8 +58,6 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-
-import java.lang.ref.WeakReference;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -573,36 +571,4 @@ public class ChoiceBoxTest {
         assertTrue("onHiding event not received", onHidingPass);
         assertTrue("onHidden event not received", onHiddenPass);
     }
-
-    /**
-     * Memory leak on replacing selectionModel.
-     * https://bugs.openjdk.java.net/browse/JDK-8241455
-     */
-    @Test
-    public void testReplaceSelectionModelMemory() {
-        weakSmRef = new WeakReference<>(box.getSelectionModel());
-        SingleSelectionModel<String> replacingSm = ChoiceBoxShim.get_ChoiceBoxSelectionModel(box);
-        box.setSelectionModel(replacingSm);
-        attemptGC(10);
-        assertNull("selectionModel must be gc'ed", weakSmRef.get());
-    }
-
-    private WeakReference<SingleSelectionModel<?>> weakSmRef;
-    private void attemptGC(int n) {
-        // Attempt gc n times
-        for (int i = 0; i < n; i++) {
-            System.gc();
-            System.runFinalization();
-
-            if (weakSmRef.get() == null) {
-                break;
-            }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-               System.err.println("InterruptedException occurred during Thread.sleep()");
-            }
-        }
-    }
-
 }
