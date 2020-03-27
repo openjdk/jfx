@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -148,7 +148,7 @@ public class Utils {
     }
 
     public static Point2D computeMnemonicPosition(Font font, String text, int mnemonicIndex, double wrappingWidth,
-                                                  double lineSpacing) {
+                                                  double lineSpacing, boolean isRTL) {
         // Input validation
         if ((font == null) || (text == null) ||
             (mnemonicIndex < 0) || (mnemonicIndex > text.length())) {
@@ -165,8 +165,9 @@ public class Utils {
         int start = 0;
         int i = 0;
         int totalLines = layout.getLines().length;
+        int lineLength = 0;
         while (i < totalLines) {
-            int lineLength = layout.getLines()[i].getLength();
+            lineLength = layout.getLines()[i].getLength();
 
             if ((mnemonicIndex >= start) &&
                 (mnemonicIndex < (start + lineLength))) {
@@ -182,6 +183,10 @@ public class Utils {
         // in line numbered 'i'
         double lineHeight = layout.getBounds().getHeight() / totalLines;
         double x = Utils.computeTextWidth(font, text.substring(start, mnemonicIndex), 0);
+        if (isRTL) {
+            double lineWidth = Utils.computeTextWidth(font, text.substring(start, (start + lineLength - 1)), 0);
+            x = lineWidth - x;
+        }
 
         double y = (lineHeight * (i+1));
         // Adjust y offset for linespacing except for the last line.
