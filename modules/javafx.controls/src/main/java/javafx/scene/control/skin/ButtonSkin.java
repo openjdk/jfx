@@ -98,6 +98,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
             }
         }
     };
+    WeakChangeListener<Scene> weakChangeListener = new WeakChangeListener<>(sceneChangeListener);
 
 
     /***************************************************************************
@@ -144,7 +145,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
                 }
             }
         });
-        control.sceneProperty().addListener(new WeakChangeListener<>(sceneChangeListener));
+        control.sceneProperty().addListener(weakChangeListener);
 
         // set visuals
         if (getSkinnable().isDefaultButton()) {
@@ -174,6 +175,7 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        getSkinnable().sceneProperty().removeListener(weakChangeListener);
         super.dispose();
 
         if (behavior != null) {

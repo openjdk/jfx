@@ -26,6 +26,7 @@
 package test.javafx.scene.control.skin;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
@@ -169,15 +170,64 @@ public class ButtonSkinTest {
     }
 
     @Test
-    public void testSkinLeakOnSwitch() {
+    public void testOldSkinShouldGC() {
         Button button = new Button();
+        Group root = new Group(button);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        WeakReference<ButtonSkin> defSkinRef = new WeakReference<>((ButtonSkin)button.getSkin());
         ButtonSkin skin = new ButtonSkin1(button);
-        WeakReference<ButtonSkin> skinRef = new WeakReference<>(skin);
+        WeakReference<ButtonSkin> oldSkinRef = new WeakReference<>(skin);
+        button.setSkin(skin);
+        skin = new ButtonSkin2(button);
+        WeakReference<ButtonSkin> currSkinRef = new WeakReference<>(skin);
         button.setSkin(skin);
         skin = null;
-        button.setSkin(new ButtonSkin2(button));
+
+        attemptGC(oldSkinRef);
+        assertNull("Old ButtonSkin should be GCed.", oldSkinRef.get());
+        assertNull("Default ButtonSkin should be GCed.", defSkinRef.get());
+        assertNotNull("Current ButtonSkin should NOT be GCed.", currSkinRef.get());
+    }
+
+    @Test
+    public void testUnusedSkinShouldGC() {
+        Button button = new Button();
+        Group root = new Group(button);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        WeakReference<ButtonSkin> defSkinRef = new WeakReference<>((ButtonSkin)button.getSkin());
+        ButtonSkin skin = new ButtonSkin1(button);
+        WeakReference<ButtonSkin> skinRef1 = new WeakReference<>(skin);
+        skin = new ButtonSkin2(button);
+        WeakReference<ButtonSkin> skinRef2 = new WeakReference<>(skin);
+        skin = null;
+
+        attemptGC(skinRef1);
+        assertNull("Unused ButtonSkin should be GCed.", skinRef1.get());
+        assertNull("Unused ButtonSkin should be GCed.", skinRef2.get());
+        assertNotNull("Default ButtonSkin should NOT be GCed.", defSkinRef.get());
+    }
+
+    @Test
+    public void testButtonAndSkinShouldGC() {
+        Button button = new Button();
+        ButtonSkin skin = new ButtonSkin1(button);
+        WeakReference<Button> buttonRef = new WeakReference<>(button);
+        WeakReference<ButtonSkin> skinRef = new WeakReference<>(skin);
+        button.setSkin(skin);
+        button = null;
+        skin = null;
+
         attemptGC(skinRef);
-        assertNull("Button skin should be GCed.", skinRef.get());
+        assertNull("Button should be GCed.", buttonRef.get());
+        assertNull("ButtonSkin should be GCed.", skinRef.get());
     }
 
     private void attemptGC(WeakReference<ButtonSkin> weakRef) {
