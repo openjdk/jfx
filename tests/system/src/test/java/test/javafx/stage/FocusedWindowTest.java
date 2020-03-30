@@ -80,23 +80,16 @@ public class FocusedWindowTest {
     public void testLeak() throws Exception {
         int counter = 0;
         while(counter <= 100) {
-            System.out.println("test counter: " + counter);
             counter += 1;
             testLeakOnce();
         }
-        //  throw new RuntimeException("Simulated crash!");
     }
-
-
 
     static WeakReference<Stage> closedFocusedStageWeak = null;
 
     public void testLeakOnce() throws Exception {
-
         CountDownLatch leakLatch = new CountDownLatch(1);
-
         closedFocusedStageWeak = null;
-
         Platform.runLater(() -> {
             Stage closedFocusedStage = new Stage();
             closedFocusedStage.setTitle("Focused Stage");
@@ -143,7 +136,6 @@ public class FocusedWindowTest {
     @AfterClass
     public static void teardownOnce() {
         Platform.runLater(() -> {
-            //stage.hide();
             Platform.exit();
         });
     }
