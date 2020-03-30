@@ -47,6 +47,7 @@ import javafx.scene.control.skin.ButtonSkin;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 
 import java.lang.ref.WeakReference;
@@ -64,7 +65,17 @@ public class ButtonSkinTest {
         // computed but wasn't expected will be caught.
         button.setPadding(new Insets(10, 10, 10, 10));
         button.setSkin(skin);
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
 
+    @After public void cleanup() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     @Test public void maxWidthTracksPreferred() {
@@ -228,6 +239,19 @@ public class ButtonSkinTest {
         attemptGC(skinRef);
         assertNull("Button should be GCed.", buttonRef.get());
         assertNull("ButtonSkin should be GCed.", skinRef.get());
+    }
+
+    @Test
+    public void testNPEOnSwitchSkinAndRemoveButton() {
+        Button button = new Button();
+        Group root = new Group(button);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        button.setSkin(new ButtonSkin1(button));
+        root.getChildren().remove(button);
     }
 
     private void attemptGC(WeakReference<ButtonSkin> weakRef) {
