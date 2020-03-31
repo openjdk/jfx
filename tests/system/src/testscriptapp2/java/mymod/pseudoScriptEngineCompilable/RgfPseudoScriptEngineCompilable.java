@@ -66,7 +66,7 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
     /** ArrayList of eval() (invocation) information. */
     final ArrayList<InvocationInfos> invocationList = new ArrayList();
 
-    /** 
+    /**
      * Returns ArrayList of eval() (invocation) information.
      * @return invocationList
      */
@@ -134,3 +134,4 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return sb.toString();
     }
 }
+

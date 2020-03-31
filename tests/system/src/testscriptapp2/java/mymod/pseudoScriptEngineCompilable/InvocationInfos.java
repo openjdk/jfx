@@ -50,7 +50,7 @@ public class InvocationInfos {
         }
     }
 
-    /** 
+    /**
      * Creates and returns a string having all information formatted to ease debugging.
      * @return string formatted to ease debugging
      */
@@ -75,3 +75,4 @@ public class InvocationInfos {
         return sb.toString();
     }
 }
+
