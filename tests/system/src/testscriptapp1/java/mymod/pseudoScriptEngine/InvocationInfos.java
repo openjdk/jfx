@@ -50,9 +50,16 @@ public class InvocationInfos {
         }
     }
 
+<<<<<<< HEAD
     /** Creates and returns a string having all information formatted to ease debugging.
      * @return string formatted to ease debugging
     */
+=======
+    /**
+     * Creates and returns a string having all information formatted to ease debugging.
+     * @return string formatted to ease debugging
+     */
+>>>>>>> 159f6516879ca1d176223b2e28ee19a0ad1e3e19
     public String toDebugFormat(String indentation) {
         StringBuilder sb = new StringBuilder();
         String indent = (indentation == null ? "\t\t" : indentation);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,9 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.java.scene.web.WebViewHelper;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.java.scene.web.WebViewHelper;
+
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
@@ -335,7 +336,7 @@ final public class WebView extends Parent {
 
         });
 
-        impl_treeVisibleProperty().addListener(new ChangeListener<Boolean>() {
+        NodeHelper.treeVisibleProperty(this).addListener(new ChangeListener<Boolean>() {
 
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
@@ -1020,7 +1021,7 @@ final public class WebView extends Parent {
         // pending render queues, if any, become obsolete and should be
         // discarded.
 
-        boolean reallyVisible = impl_isTreeVisible()
+        boolean reallyVisible = NodeHelper.isTreeVisible(this)
                 && getScene() != null
                 && getScene().getWindow() != null
                 && getScene().getWindow().isShowing();

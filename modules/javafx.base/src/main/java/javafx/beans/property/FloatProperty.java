@@ -25,15 +25,13 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableFloatValue;
 import com.sun.javafx.binding.Logging;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * This class defines a {@link Property} wrapping a {@code float} value.
@@ -146,12 +144,9 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      * @see #asObject()
      * @since JavaFX 8.0
      */
-     public static FloatProperty floatProperty(final Property<Float> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+    public static FloatProperty floatProperty(final Property<Float> property) {
+        Objects.requireNonNull(property, "Property cannot be null");
         return new FloatPropertyBase() {
-            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -164,18 +159,6 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
             @Override
             public String getName() {
                 return property.getName();
-            }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(property, this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
             }
         };
     }
@@ -201,8 +184,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      */
     @Override
     public ObjectProperty<Float> asObject() {
-        return new ObjectPropertyBase<Float> () {
-            private final AccessControlContext acc = AccessController.getContext();
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, FloatProperty.this);
             }
@@ -216,20 +198,6 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
             public String getName() {
                 return FloatProperty.this.getName();
             }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(this, FloatProperty.this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
-            }
-
         };
     }
-
 }

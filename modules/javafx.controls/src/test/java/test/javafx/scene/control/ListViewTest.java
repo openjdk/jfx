@@ -1982,10 +1982,20 @@ public class ListViewTest {
         ObservableList<String> items = FXCollections.observableArrayList();
         WeakReference<ListView<String>> listViewRef = new WeakReference<>(new ListView<>(items));
         attemptGC(listViewRef, 10);
-        assertNull("ListView has a leak.", listViewRef.get());
+        assertNull("ListView is not GCed.", listViewRef.get());
     }
 
-    private void attemptGC(WeakReference<ListView<String>> weakRef, int n) {
+    @Test
+    public void testItemLeak() {
+        WeakReference<String> itemRef = new WeakReference<>(new String("Leak Item"));
+        ObservableList<String> items = FXCollections.observableArrayList(itemRef.get());
+        ListView<String> listView = new ListView<>(items);
+        items.clear();
+        attemptGC(itemRef, 10);
+        assertNull("ListView item is not GCed.", itemRef.get());
+    }
+
+    private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
         for (int i = 0; i < n; i++) {
             System.gc();
             System.runFinalization();

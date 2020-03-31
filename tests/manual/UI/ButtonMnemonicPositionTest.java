@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -40,7 +41,7 @@ public class ButtonMnemonicPositionTest extends Application {
         String str =
             "This test is to check mnemonic position is correctly shown " +
             "in a single and multi-line button.\n" +
-            "Test shows 4 buttons of varying widths one below another - " +
+            "Test shows 8 buttons of varying widths stacked in 2 groups of 4 buttons each - " +
             "The buttons are made up of a string consisting of A to Z English" +
             " characters\n"+
             "------------------------------------------------------\n"+
@@ -70,7 +71,7 @@ public class ButtonMnemonicPositionTest extends Application {
             new Label("------------------------------------------------------");
 
 
-        // Test buttons ---------------------------------------
+        // LTR Test buttons ---------------------------------------
         Button b1 = new Button("ABCDEFGHIJKLMNOPQRST_UVWXYZ");
         Button b2 = new Button("ABCDEFGHIJKLMNOPQRST_UVWXYZ");
         Button b3 = new Button("ABCDEFGHIJKLMNOPQRST_UVWXYZ");
@@ -85,12 +86,42 @@ public class ButtonMnemonicPositionTest extends Application {
         b4.setMaxWidth(60);
         b4.wrapTextProperty().setValue(true);
 
+        VBox LTRBox = new VBox();
+        LTRBox.setSpacing(10.0);
+        LTRBox.getChildren().addAll(b1, b2, b3, b4);
+
+        // RTL Test buttons ---------------------------------------
+        Button b5 = new Button("ABCDEFGHIJKLMNOPQRST_UVWXYZ");
+        Button b6 = new Button("ABCDEFGHIJKLMNOPQRST_UVWXYZ");
+        Button b7 = new Button("ABCDEFGHIJKLMNOPQRST_UVWXYZ");
+        Button b8 = new Button("ABCDEFGHIJKLMNOPQRST_UVWXYZ");
+
+        b5.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        b6.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        b6.setMaxWidth(130);
+        b6.wrapTextProperty().setValue(true);
+
+        b7.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        b7.setMaxWidth(85);
+        b7.wrapTextProperty().setValue(true);
+
+        b8.setNodeOrientation(NodeOrientation.RIGHT_TO_LEFT);
+        b8.setMaxWidth(60);
+        b8.wrapTextProperty().setValue(true);
+
+        VBox RTLBox = new VBox();
+        RTLBox.setSpacing(10.0);
+        RTLBox.getChildren().addAll(b5, b6, b7, b8);
+
+        HBox btnBox = new HBox();
+        btnBox.getChildren().addAll(LTRBox, RTLBox);
+
         VBox box = new VBox();
         box.setSpacing(10.0);
 
         Scene s = new Scene(box);
         box.getChildren().addAll(testInstructions, testBtnBox, lbl,
-                                 b1, b2, b3, b4);
+                                 btnBox);
         primaryStage.setScene(s);
         primaryStage.show();
     }

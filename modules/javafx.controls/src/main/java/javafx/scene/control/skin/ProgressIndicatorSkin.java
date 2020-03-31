@@ -324,7 +324,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     void initialize() {
         boolean isIndeterminate = control.isIndeterminate();
         if (isIndeterminate) {
-            // clean up determinateIndicator
+            // clean up the old determinateIndicator
+            if (determinateIndicator != null) {
+                determinateIndicator.unregisterListener();
+            }
             determinateIndicator = null;
 
             // create spinner
@@ -539,6 +542,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
             getChildren().setAll(indicator, progress, text, tick);
             updateProgress(control.getProgress());
+        }
+
+        private void unregisterListener() {
+            unregisterChangeListeners(text.fontProperty());
         }
 
         private void setFillOverride(Paint fillOverride) {

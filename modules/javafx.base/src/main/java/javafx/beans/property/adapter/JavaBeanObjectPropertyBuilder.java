@@ -56,18 +56,14 @@ import java.lang.reflect.Method;
  *
  * @see JavaBeanObjectProperty
  *
- * @param T the type of the wrapped {@code Object}
+ * @param <T> the type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
 public final class JavaBeanObjectPropertyBuilder<T> {
 
     private JavaBeanPropertyBuilderHelper helper = new JavaBeanPropertyBuilderHelper();
 
-    /**
-     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
-     */
-    @Deprecated(since="14", forRemoval=true)
-    public JavaBeanObjectPropertyBuilder() {}
+    private JavaBeanObjectPropertyBuilder() {}
 
     /**
      * Creates a new instance of {@code JavaBeanObjectPropertyBuilder}.

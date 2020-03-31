@@ -55,18 +55,14 @@ import java.lang.reflect.Method;
  *
  * @see ReadOnlyJavaBeanObjectProperty
  *
- * @param T the type of the wrapped {@code Object}
+ * @param <T> the type of the wrapped {@code Object}
  * @since JavaFX 2.1
  */
 public final class ReadOnlyJavaBeanObjectPropertyBuilder<T> {
 
     private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
 
-    /**
-     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
-     */
-    @Deprecated(since="14", forRemoval=true)
-    public ReadOnlyJavaBeanObjectPropertyBuilder() {}
+    private ReadOnlyJavaBeanObjectPropertyBuilder() {}
 
     /**
      * Create a new instance of {@code ReadOnlyJavaBeanObjectPropertyBuilder}

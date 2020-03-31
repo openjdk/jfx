@@ -40,7 +40,6 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
-import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 
@@ -2104,8 +2103,6 @@ public class TableView<S> extends Control {
                     ObservableList<S> oldItems = weakItemsRef.get();
                     weakItemsRef = new WeakReference<>(tableView.getItems());
                     updateItemsObserver(oldItems, tableView.getItems());
-
-                    ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(tableView.getItems());
                 }
             };
             this.tableView.itemsProperty().addListener(itemsPropertyListener);
@@ -2142,7 +2139,6 @@ public class TableView<S> extends Control {
             // watching for changes to the items list content
             ObservableList<S> items = getTableView().getItems();
             if (items != null) {
-                ((SelectedItemsReadOnlyObservableList)getSelectedItems()).setItemsList(items);
                 items.addListener(weakItemsContentListener);
             }
 

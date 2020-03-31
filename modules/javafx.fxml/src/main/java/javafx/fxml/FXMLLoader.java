@@ -1694,9 +1694,8 @@ public class FXMLLoader {
         public final String script;
         public final ScriptEngine scriptEngine;
         public final String filename;
-
         public CompiledScript compiledScript;
-        public boolean isCompiled;
+        public boolean isCompiled=false;
 
         public ScriptEventHandler(String script, ScriptEngine scriptEngine, String filename) {
             this.script = script;

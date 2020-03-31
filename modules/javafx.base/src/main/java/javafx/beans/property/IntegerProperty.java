@@ -25,15 +25,13 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableIntegerValue;
 import com.sun.javafx.binding.Logging;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * This class defines a {@link Property} wrapping an {@code int} value.
@@ -146,12 +144,9 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      * @see #asObject()
      * @since JavaFX 8.0
      */
-     public static IntegerProperty integerProperty(final Property<Integer> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+    public static IntegerProperty integerProperty(final Property<Integer> property) {
+        Objects.requireNonNull(property, "Property cannot be null");
         return new IntegerPropertyBase() {
-            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -164,18 +159,6 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
             @Override
             public String getName() {
                 return property.getName();
-            }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(property, this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
             }
         };
     }
@@ -201,8 +184,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      */
     @Override
     public ObjectProperty<Integer> asObject() {
-        return new ObjectPropertyBase<Integer> () {
-            private final AccessControlContext acc = AccessController.getContext();
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bindNumber(this, IntegerProperty.this);
             }
@@ -216,19 +198,6 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
             public String getName() {
                 return IntegerProperty.this.getName();
             }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbindNumber(this, IntegerProperty.this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
-            }
-
         };
     }
 }

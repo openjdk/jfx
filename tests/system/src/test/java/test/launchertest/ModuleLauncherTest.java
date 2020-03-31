@@ -286,5 +286,4 @@ public class ModuleLauncherTest {
     public void testFXMLScriptDeployment2() throws Exception {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment");
     }
-
 }

@@ -34,7 +34,7 @@
 /*
  * Currently supported platforms use either autoconf or
  * copy to config.h own "preset" configuration file.
- * As result ifdef HAVE_CONFIG_H is omited here.
+ * As result ifdef HAVE_CONFIG_H is omitted here.
  */
 #include "config.h"
 #include <libxml/xmlversion.h>
@@ -53,7 +53,7 @@ int vfprintf(FILE *, const char *, va_list);
 /**
  * TRIO_REPLACE_STDIO:
  *
- * This macro is defined if teh trio string formatting functions are to
+ * This macro is defined if the trio string formatting functions are to
  * be used instead of the default stdio ones.
  */
 #define TRIO_REPLACE_STDIO
@@ -70,6 +70,13 @@ int vfprintf(FILE *, const char *, va_list);
 #else
 #define XML_IGNORE_PEDANTIC_WARNINGS
 #define XML_POP_WARNINGS
+#endif
+
+#if defined(__clang__) || \
+    (defined(__GNUC__) && (__GNUC__ >= 8))
+#define ATTRIBUTE_NO_SANITIZE(arg) __attribute__((no_sanitize(arg)))
+#else
+#define ATTRIBUTE_NO_SANITIZE(arg)
 #endif
 
 /*

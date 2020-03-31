@@ -25,15 +25,13 @@
 
 package javafx.beans.property;
 
+import java.util.Objects;
+
 import com.sun.javafx.binding.BidirectionalBinding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableBooleanValue;
 import com.sun.javafx.binding.Logging;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * This class provides a full implementation of a {@link Property} wrapping a
@@ -137,11 +135,8 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      * @since JavaFX 8.0
      */
     public static BooleanProperty booleanProperty(final Property<Boolean> property) {
-        if (property == null) {
-            throw new NullPointerException("Property cannot be null");
-        }
+        Objects.requireNonNull(property, "Property cannot be null");
         return property instanceof BooleanProperty ? (BooleanProperty)property : new BooleanPropertyBase() {
-            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bind(this, property);
             }
@@ -154,18 +149,6 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
             @Override
             public String getName() {
                 return property.getName();
-            }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbind(property, this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
             }
         };
     }
@@ -181,8 +164,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
      */
     @Override
     public ObjectProperty<Boolean> asObject() {
-        return new ObjectPropertyBase<Boolean> () {
-            private final AccessControlContext acc = AccessController.getContext();
+        return new ObjectPropertyBase<> () {
             {
                 BidirectionalBinding.bind(this, BooleanProperty.this);
             }
@@ -196,19 +178,6 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
             public String getName() {
                 return BooleanProperty.this.getName();
             }
-
-            @Override
-            protected void finalize() throws Throwable {
-                try {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        BidirectionalBinding.unbind(this, BooleanProperty.this);
-                        return null;
-                    }, acc);
-                } finally {
-                    super.finalize();
-                }
-            }
-
         };
     }
 }

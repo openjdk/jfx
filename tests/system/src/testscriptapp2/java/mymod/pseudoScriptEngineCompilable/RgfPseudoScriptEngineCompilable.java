@@ -46,8 +46,7 @@ import java.io.IOException;
 
 import java.time.Instant;
 
-public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implements Compilable
-{
+public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implements Compilable {
     static final boolean bDebug = false; // true;
 
     /** Allows to log and access the ScriptEngine instances with their evalDataList. */
@@ -67,9 +66,10 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
     /** ArrayList of eval() (invocation) information. */
     final ArrayList<InvocationInfos> invocationList = new ArrayList();
 
-    /** Returns ArrayList of eval() (invocation) information.
+    /** 
+     * Returns ArrayList of eval() (invocation) information.
      * @return invocationList
-    */
+     */
     public ArrayList<InvocationInfos> getInvocationList() {
         return invocationList;
     }
@@ -84,12 +84,11 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return eval(readReader(reader), context);
     }
 
-
     public Object eval(String script, ScriptContext context) {
         if (bDebug) System.err.print("[debug: " + this + ".eval(String,ScriptContext), ScriptContext=" + context + "]");
 
-            // create copies of the Bindings for later inspection as they may
-            // get reused and changed on each eval() invocation
+        // create copies of the Bindings for later inspection as they may
+        // get reused and changed on each eval() invocation
         TreeMap<Integer,TreeMap> bindings = new TreeMap();
         for (Integer scope : context.getScopes()) {
             Bindings binding = context.getBindings(scope);
@@ -100,7 +99,6 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return invocationList;
     }
 
-
     public CompiledScript compile(Reader script) {
         return compile (readReader(script));
     }
@@ -110,7 +108,6 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         RgfPseudoCompiledScript rpcs = new RgfPseudoCompiledScript(code, this);
         return rpcs;
     }
-
 
     String readReader(Reader reader) {
         if (reader == null) {

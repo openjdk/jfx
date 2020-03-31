@@ -32,8 +32,6 @@ import java.net.URLStreamHandler;
 import java.security.AccessController;
 import java.security.Permission;
 import java.security.PrivilegedAction;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -45,14 +43,9 @@ public final class URLs {
      * The mapping between WebPane-specific protocol names and their
      * respective handlers.
      */
-    private static final Map<String,URLStreamHandler> handlerMap;
-    static {
-        Map<String,URLStreamHandler> map =
-                new HashMap<String,URLStreamHandler>(2);
-        map.put("about", new com.sun.webkit.network.about.Handler());
-        map.put("data", new com.sun.webkit.network.data.Handler());
-        handlerMap = Collections.unmodifiableMap(map);
-    }
+    private static final Map<String,URLStreamHandler> HANDLER_MAP = Map.of(
+        "about", new com.sun.webkit.network.about.Handler(),
+        "data", new com.sun.webkit.network.data.Handler());
 
     private static final Permission streamHandlerPermission =
         new NetPermission("specifyStreamHandler");
@@ -98,7 +91,7 @@ public final class URLs {
             // Try WebPane-specific protocol handler, if any
             int colonPosition = spec.indexOf(':');
             final URLStreamHandler handler = (colonPosition != -1) ?
-                handlerMap.get(spec.substring(0, colonPosition).toLowerCase()) :
+                HANDLER_MAP.get(spec.substring(0, colonPosition).toLowerCase()) :
                 null;
 
             if (handler == null) throw ex;

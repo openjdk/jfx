@@ -53,7 +53,11 @@ extern "C" {
     /*
      * Specify the require JNI version.
      */
+#ifdef STATIC_BUILD
+    JNIEXPORT jint JNICALL JNI_OnLoad_jfxmedia(JavaVM *vm, void *reserved)
+#else
     JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+#endif
     {
         g_pJVM = vm;
         return JNI_VERSION_1_2;

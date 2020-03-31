@@ -60,11 +60,7 @@ public final class ReadOnlyJavaBeanLongPropertyBuilder {
 
     private final ReadOnlyJavaBeanPropertyBuilderHelper helper = new ReadOnlyJavaBeanPropertyBuilderHelper();
 
-    /**
-     * @deprecated This constructor was exposed erroneously and will be removed in the next version. Use {@link #create()} instead.
-     */
-    @Deprecated(since="14", forRemoval=true)
-    public ReadOnlyJavaBeanLongPropertyBuilder() {}
+    private ReadOnlyJavaBeanLongPropertyBuilder() {}
 
     /**
      * Create a new instance of {@code ReadOnlyJavaBeanLongPropertyBuilder}
