@@ -101,20 +101,12 @@ public class FXMLScriptDeployment extends Application {
         }
         catch (Exception ioe) {
             ioe.printStackTrace();
-<<<<<<< HEAD
-            System.exit(-1);
-=======
             System.exit(ERROR_UNEXPECTED_EXCEPTION);
->>>>>>> 159f6516879ca1d176223b2e28ee19a0ad1e3e19
         }
             // fire three events on the button
         btn.fire();
         btn.fireEvent(new ActionEvent());
-<<<<<<< HEAD
-        btn.fireEvent(new MouseEvent( MouseEvent.MOUSE_CLICKED,
-=======
         btn.fireEvent(new MouseEvent(MouseEvent.MOUSE_CLICKED,
->>>>>>> 159f6516879ca1d176223b2e28ee19a0ad1e3e19
                                        0,       // double x,
                                        0,       // double y,
                                        0,       // double screenX,
@@ -190,11 +182,7 @@ public class FXMLScriptDeployment extends Application {
             Object obj = null;
             Button btn = null;
 
-<<<<<<< HEAD
-                // global Bindings
-=======
             // global Bindings
->>>>>>> 159f6516879ca1d176223b2e28ee19a0ad1e3e19
             Util.assertExists(IDROOT + " in global scope Bindings", globalBindings.containsKey(IDROOT));
             obj = globalBindings.get(IDROOT);
             Util.assertType(IDROOT, AnchorPane.class, obj);
@@ -217,11 +205,7 @@ public class FXMLScriptDeployment extends Application {
                 btn = (Button) obj;
             }
 
-<<<<<<< HEAD
-                // engine Bindings
-=======
             // engine Bindings
->>>>>>> 159f6516879ca1d176223b2e28ee19a0ad1e3e19
             Util.assertExists(FILENAME + " in engine scope Bindings", engineBindings.containsKey(FILENAME));
             if (invocation < 7) {  // no event objects, no arguments
                 Util.assertNotExists(ARGV + " in engine scope Bindings", engineBindings.containsKey(ARGV));
@@ -241,12 +225,7 @@ public class FXMLScriptDeployment extends Application {
                     MouseEvent ev = (MouseEvent) obj;
                     Util.assertSame("MouseEvent.getSource() == btn", ev.getSource(), btn);
                     Util.assertSame("MouseEvent.MOUSE_CLICKED", MouseEvent.MOUSE_CLICKED, ev.getEventType());
-<<<<<<< HEAD
-                }
-                else {
-=======
                 } else {
->>>>>>> 159f6516879ca1d176223b2e28ee19a0ad1e3e19
                     Util.assertType(EVENT, ActionEvent.class, obj);
                     ActionEvent ev = (ActionEvent) obj;
                     Util.assertSame("ActionEvent.getSource() == btn", ev.getSource(), btn);
