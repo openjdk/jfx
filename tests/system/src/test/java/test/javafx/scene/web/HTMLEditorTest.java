@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.web;
 
+import com.sun.javafx.PlatformUtil;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +46,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.util.Util;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
@@ -60,6 +63,7 @@ public class HTMLEditorTest {
 
     private HTMLEditor htmlEditor;
     private WebView webView;
+    private Scene scene;
 
     public static class HTMLEditorTestApp extends Application {
         Stage primaryStage = null;
@@ -105,7 +109,7 @@ public class HTMLEditorTest {
     public void setupTestObjects() {
         Platform.runLater(() -> {
             htmlEditor = new HTMLEditor();
-            Scene scene = new Scene(htmlEditor);
+            scene = new Scene(htmlEditor);
             htmlEditorTestApp.primaryStage.setScene(scene);
             htmlEditorTestApp.primaryStage.show();
 
@@ -353,5 +357,109 @@ public class HTMLEditorTest {
         assertNotNull("result must have a valid reference ", result.get());
         assertTrue("font-family must be 'WebKit Layout Test 2' ", result.get().
             contains("font-family: &quot;WebKit Layout Tests 2&quot;"));
+    }
+
+    /**
+     * @test
+     * @bug 8230809
+     * Summary HTMLEditor formatting lost when selecting all (CTRL-A)
+     */
+    @Test
+    public void checkFontSizeOnSelectAll_ctrl_A() throws Exception {
+        final CountDownLatch editorStateLatch = new CountDownLatch(1);
+
+        final String editorCommand1 =
+            "document.execCommand('fontSize', false, '7');" +
+            "document.execCommand('insertText', false, 'First_word ');";
+        final String editorCommand2 =
+            "document.execCommand('fontSize', false, '1');" +
+            "document.execCommand('insertText', false, 'Second_word');";
+
+        Util.runAndWait(() -> {
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    htmlEditor.requestFocus();
+                }
+            });
+
+            htmlEditor.setHtmlText(htmlEditor.getHtmlText());
+
+            webView.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    webView.getEngine().executeScript("document.body.focus();");
+                    webView.getEngine().executeScript(editorCommand1);
+                    webView.getEngine().executeScript(editorCommand2);
+
+                    editorStateLatch.countDown();
+                }
+            });
+        });
+
+        assertTrue("Timeout while waiting for test html text setup", Util.await(editorStateLatch));
+
+        String expectedHtmlText = htmlEditor.getHtmlText();
+
+        // Select entire text using Ctrl+A (on mac Cmd + A)
+        Util.runAndWait(() -> {
+            KeyEventFirer keyboard = new KeyEventFirer(htmlEditor, scene);
+
+            keyboard.doKeyPress(KeyCode.A,
+                                PlatformUtil.isMac()? KeyModifier.META : KeyModifier.CTRL);
+        });
+
+        String actualHtmlText = htmlEditor.getHtmlText();
+
+        assertEquals("Expected and Actual HTML text does not match. ", expectedHtmlText, actualHtmlText);
+    }
+
+
+    @Test
+    public void checkFontSizeOnSelectAll_Shift_LeftArrowKey() throws Exception {
+        final CountDownLatch editorStateLatch = new CountDownLatch(1);
+
+        final String editorCommand1 =
+            "document.execCommand('fontSize', false, '7');" +
+            "document.execCommand('insertText', false, 'Hello');";
+        final String editorCommand2 =
+            "document.execCommand('fontSize', false, '1');" +
+            "document.execCommand('insertText', false, 'World');";
+
+        Util.runAndWait(() -> {
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    htmlEditor.requestFocus();
+                }
+            });
+
+            htmlEditor.setHtmlText(htmlEditor.getHtmlText());
+
+            webView.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    webView.getEngine().executeScript("document.body.focus();");
+                    webView.getEngine().executeScript(editorCommand1);
+                    webView.getEngine().executeScript(editorCommand2);
+
+                    editorStateLatch.countDown();
+                }
+            });
+        });
+
+        assertTrue("Timeout while waiting for test html text setup", Util.await(editorStateLatch));
+
+        String expectedHtmlText = htmlEditor.getHtmlText();
+
+        // Select entire text using SHIFT + series of Left arrows
+        Util.runAndWait(() -> {
+            KeyEventFirer keyboard = new KeyEventFirer(htmlEditor, scene);
+            for (int i = 0; i < 10; i++) {
+                keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+            }
+        });
+
+        String actualHtmlText = htmlEditor.getHtmlText();
+
+        assertEquals("Expected and Actual HTML text does not match. ", expectedHtmlText, actualHtmlText);
     }
 }
