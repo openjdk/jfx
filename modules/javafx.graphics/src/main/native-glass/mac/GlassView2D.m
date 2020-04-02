@@ -228,16 +228,6 @@
     [self->delegate doMagnifyWithEvent:theEvent];
 }
 
-- (void)endGestureWithEvent:(NSEvent *)theEvent
-{
-    fprintf(stderr, "GlassView2D: endGestureWithEvent -- ignored\n");
-}
-
-- (void)beginGestureWithEvent:(NSEvent *)theEvent
-{
-    fprintf(stderr, "GlassView2D: beginGestureWithEvent -- ignored\n");
-}
-
 - (void)scrollWheel:(NSEvent *)theEvent
 {
     [self->delegate doScrollWheel:theEvent];

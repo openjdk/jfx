@@ -617,7 +617,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                 sender = com_sun_glass_ui_mac_MacGestureSupport_SCROLL_SRC_GESTURE;
             }
 
-            fprintf(stderr, "MOUSE_WHEEL event: type = %d\n", type);
             const jclass jGestureSupportClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacGestureSupport"
                                                                   withEnv:env];
             if (jGestureSupportClass)
@@ -790,7 +789,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     GET_MAIN_JENV;
     const jclass jGestureSupportClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacGestureSupport"
                                                           withEnv:env];
-    fprintf(stderr, "sendJavaGestureEvent: type = %d\n", type);
     if (jGestureSupportClass)
     {
         switch (type)
@@ -826,13 +824,11 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)sendJavaGestureBeginEvent:(NSEvent *)theEvent
 {
-    fprintf(stderr, "sendJavaGestureBeginEvent\n");
     self->gestureInProgress = YES;
 }
 
 - (void)sendJavaGestureEndEvent:(NSEvent *)theEvent
 {
-    fprintf(stderr, "sendJavaGestureEndEvent\n");
     self->gestureInProgress = NO;
 
     NSPoint viewPoint = [nsView convertPoint:[theEvent locationInWindow] fromView:nil]; // convert from window coordinates to view coordinates
@@ -865,7 +861,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (void)maybeBeginGestureWithEvent:(NSEvent *)theEvent withMask:(GestureMaskType)theMask
 {
     NSEventPhase phase = [theEvent phase];
-    fprintf(stderr, "maybeBeginGestureWithEvent: phase = 0x%lx\n", (unsigned long)phase);
     if (phase == NSEventPhaseBegan) {
         if (gesturesBeganMask == 0) {
             [self sendJavaGestureBeginEvent:theEvent];
@@ -884,7 +879,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (void)maybeEndGestureWithEvent:(NSEvent *)theEvent withMask:(GestureMaskType)theMask
 {
     NSEventPhase phase = [theEvent phase];
-    fprintf(stderr, "maybeEndGestureWithEvent: phase = 0x%lx\n", (unsigned long)phase);
     if (phase == NSEventPhaseEnded || phase == NSEventPhaseCancelled) {
         if ((gesturesBeganMask & theMask) != 0) {
             gesturesBeganMask &= ~theMask;
@@ -897,7 +891,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)doRotateWithEvent:(NSEvent *)theEvent
 {
-    fprintf(stderr, "GlassViewDelegate: rotateWithEvent\n");
     [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_ROTATE];
     [self sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_ROTATE];
     [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_ROTATE];
@@ -905,7 +898,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)doSwipeWithEvent:(NSEvent *)theEvent
 {
-    fprintf(stderr, "GlassViewDelegate: swipeWithEvent\n");
     [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_SWIPE];
     [self sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_SWIPE];
     [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_SWIPE];
@@ -913,7 +905,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)doMagnifyWithEvent:(NSEvent *)theEvent
 {
-    fprintf(stderr, "GlassViewDelegate: magnifyWithEvent\n");
     [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_MAGNIFY];
     [self sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_MAGNIFY];
     [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_MAGNIFY];
@@ -921,7 +912,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
 - (void)doScrollWheel:(NSEvent *)theEvent
 {
-    fprintf(stderr, "GlassViewDelegate: scrollWheel\n");
     [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_SCROLL];
     [self sendJavaMouseEvent:theEvent];
     [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_SCROLL];

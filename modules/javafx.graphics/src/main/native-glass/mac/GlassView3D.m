@@ -454,16 +454,6 @@
     [self->_delegate doMagnifyWithEvent:theEvent];
 }
 
-- (void)endGestureWithEvent:(NSEvent *)theEvent
-{
-    fprintf(stderr, "GlassView3D: endGestureWithEvent -- ignored\n");
-}
-
-- (void)beginGestureWithEvent:(NSEvent *)theEvent
-{
-    fprintf(stderr, "GlassView3D: beginGestureWithEvent -- ignored\n");
-}
-
 - (void)scrollWheel:(NSEvent *)theEvent
 {
     MOUSELOG("scrollWheel");
