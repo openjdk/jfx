@@ -101,7 +101,7 @@ public class FXMLScriptDeployment extends Application {
         }
         catch (Exception ioe) {
             ioe.printStackTrace();
-            System.exit(UNEXPECTED_EXCEPTION);
+            System.exit(ERROR_UNEXPECTED_EXCEPTION);
         }
             // fire three events on the button
         btn.fire();
