@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package test.robot.javafx.iio;
+package test.com.sun.javafx.iio;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -31,8 +31,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -42,7 +40,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.fail;
@@ -61,12 +58,12 @@ public class LoadCorruptJPEGTest {
     @Test
     public void testCorruptJPEGImage() {
         Util.runAndWait(() -> {
-            URL resource = this.getClass().getResource("corrupt.jpg");
+            URL resource = LoadCorruptJPEGTest.class.getResource("corrupt.jpg");
             FileInputStream input = null;
             try {
                 input = new FileInputStream(resource.getFile());
             } catch (FileNotFoundException e) {
-                e.printStackTrace();
+                fail("File not found: corrupt.jpg");
             }
             Image image = new Image(input);
             ImageView iv = new ImageView(image);
@@ -81,11 +78,9 @@ public class LoadCorruptJPEGTest {
             root = new HBox();
             scene = new Scene(root, SCENE_WIDTH, SCENE_HEIGHT);
             stage.setScene(scene);
-            stage.initStyle(StageStyle.UNDECORATED);
             stage.setOnShown(l -> {
                 Platform.runLater(() -> startupLatch.countDown());
             });
-            stage.setAlwaysOnTop(true);
             stage.show();
         }
     }
@@ -111,15 +106,5 @@ public class LoadCorruptJPEGTest {
         Util.runAndWait(() -> {
             root.getChildren().clear();
         });
-    }
-
-    private static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
-        try {
-            if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                fail(msg);
-            }
-        } catch (Exception ex) {
-            fail("Unexpected exception: " + ex);
-        }
     }
 }
