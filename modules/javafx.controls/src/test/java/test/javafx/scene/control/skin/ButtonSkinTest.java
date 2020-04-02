@@ -37,6 +37,8 @@ import javafx.scene.control.Button;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.Mnemonic;
 import javafx.collections.ObservableList;
 import javafx.scene.input.KeyCombination;
@@ -199,9 +201,9 @@ public class ButtonSkinTest {
         skin = null;
 
         attemptGC(oldSkinRef);
-        assertNull("Old ButtonSkin should be GCed.", oldSkinRef.get());
-        assertNull("Default ButtonSkin should be GCed.", defSkinRef.get());
-        assertNotNull("Current ButtonSkin should NOT be GCed.", currSkinRef.get());
+        assertNull("Old ButtonSkin must be GCed.", oldSkinRef.get());
+        assertNull("Default ButtonSkin must be GCed.", defSkinRef.get());
+        assertNotNull("Current ButtonSkin must NOT be GCed.", currSkinRef.get());
     }
 
     @Test
@@ -221,9 +223,9 @@ public class ButtonSkinTest {
         skin = null;
 
         attemptGC(skinRef1);
-        assertNull("Unused ButtonSkin should be GCed.", skinRef1.get());
-        assertNull("Unused ButtonSkin should be GCed.", skinRef2.get());
-        assertNotNull("Default ButtonSkin should NOT be GCed.", defSkinRef.get());
+        assertNull("Unused ButtonSkin must be GCed.", skinRef1.get());
+        assertNull("Unused ButtonSkin must be GCed.", skinRef2.get());
+        assertNotNull("Default ButtonSkin must NOT be GCed.", defSkinRef.get());
     }
 
     @Test
@@ -237,8 +239,8 @@ public class ButtonSkinTest {
         skin = null;
 
         attemptGC(skinRef);
-        assertNull("Button should be GCed.", buttonRef.get());
-        assertNull("ButtonSkin should be GCed.", skinRef.get());
+        assertNull("Button must be GCed.", buttonRef.get());
+        assertNull("ButtonSkin must be GCed.", skinRef.get());
     }
 
     @Test
@@ -252,6 +254,44 @@ public class ButtonSkinTest {
 
         button.setSkin(new ButtonSkin1(button));
         root.getChildren().remove(button);
+    }
+
+    @Test
+    public void testDefaultButtonNullSkinReleased() {
+        Button button = new Button();
+        button.setDefaultButton(true);
+        Group root = new Group(button);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        WeakReference<ButtonSkin> defSkinRef = new WeakReference<>((ButtonSkin)button.getSkin());
+        KeyCodeCombination key = new KeyCodeCombination(KeyCode.ENTER);
+        assertNotNull(scene.getAccelerators().get(key));
+        button.setSkin(null);
+        assertNull(scene.getAccelerators().get(key));
+
+        attemptGC(defSkinRef);
+        assertNull("ButtonSkin must be GCed", defSkinRef.get());
+    }
+
+    @Test
+    public void testCancelButtonNullSkinReleased() {
+        Button button = new Button();
+        button.setCancelButton(true);
+        Group root = new Group(button);
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        WeakReference<ButtonSkin> defSkinRef = new WeakReference<>((ButtonSkin)button.getSkin());
+        KeyCodeCombination key = new KeyCodeCombination(KeyCode.ESCAPE);
+        assertNotNull(scene.getAccelerators().get(key));
+        button.setSkin(null);
+        assertNull(scene.getAccelerators().get(key));
+
+        attemptGC(defSkinRef);
+        assertNull("ButtonSkin must be GCed", defSkinRef.get());
     }
 
     private void attemptGC(WeakReference<ButtonSkin> weakRef) {

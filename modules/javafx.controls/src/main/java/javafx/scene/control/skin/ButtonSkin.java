@@ -175,6 +175,12 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (getSkinnable().isDefaultButton()) {
+            setDefaultButton(false);
+        }
+        if (getSkinnable().isCancelButton()) {
+            setCancelButton(false);
+        }
         getSkinnable().sceneProperty().removeListener(weakSceneChangeListener);
         super.dispose();
 
