@@ -196,11 +196,10 @@ public class SelectionFocusModelMemoryTest {
     public void testTabPaneSelectionModel() {
         // FIXME
         // can't formally ignore just one parameter, so backing out if showBeforeReplaceSM
-        // has its own issue https://bugs.openjdk.java.net/browse/JDK-8241737
-        if (showBeforeReplaceSM) return;
+        if (showBeforeReplaceSM) return; //@Ignore("8241737")
         TabPane control = new TabPane();
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
-        data.forEach(text -> control.getTabs().add(new Tab("text")));
+        data.forEach(text -> control.getTabs().add(new Tab(text)));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         SingleSelectionModel<Tab> replacingSm = TabPaneShim.getTabPaneSelectionModel(control);
         maybeShowControl(control);
@@ -224,8 +223,8 @@ public class SelectionFocusModelMemoryTest {
     public void testChoiceBoxSelectionModel() {
         // FIXME
         // can't formally ignore just one parameter, so backing out if showBeforeReplaceSM
-        // will be fixed as side-effect of skin cleanup in https://bugs.openjdk.java.net/browse/JDK-8087555
-        if (showBeforeReplaceSM) return;
+        // will be fixed as side-effect of skin cleanup
+        if (showBeforeReplaceSM) return; //@Ignore("8087555")
         ChoiceBox<String> control = new ChoiceBox<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         SingleSelectionModel<String> replacingSm = ChoiceBoxShim.get_ChoiceBoxSelectionModel(control);
