@@ -181,6 +181,7 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
     if (@available(macOS 10.15, *)) {
         useEventTap = NO;
     }
+    fprintf(stderr, "useEventTap = %s\n", (useEventTap ? "YES" : "NO"));
 
     self = [super init];
     if (self != nil)
