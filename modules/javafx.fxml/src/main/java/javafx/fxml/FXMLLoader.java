@@ -618,8 +618,8 @@ public class FXMLLoader {
                                 throw constructLoadException("Error resolving " + attribute.name + "='" + attribute.value
                                         + "', either the event handler is not in the Namespace or there is an error in the script.");
                             }
-
-                            eventHandler = new ScriptEventHandler(handlerName, scriptEngine);
+                            eventHandler = new ScriptEventHandler(handlerName, scriptEngine, location.getPath()
+                                        + "-" + attribute.name  + "_attribute_in_element_ending_at_line_"  + getLineNumber());
                         }
 
                         // Add the handler
@@ -1557,6 +1557,8 @@ public class FXMLLoader {
 
                         location = new URL(FXMLLoader.this.location, source);
                     }
+                    Bindings engineBindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
+                    engineBindings.put(engine.FILENAME, location.getPath());
 
                     InputStreamReader scriptReader = null;
                     try {
@@ -1582,6 +1584,9 @@ public class FXMLLoader {
             if (value != null && !staticLoad) {
                 // Evaluate the script
                 try {
+                    Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
+                    engineBindings.put(scriptEngine.FILENAME, location.getPath() + "-script_starting_at_line_"
+                                       + (getLineNumber() - (int) ((String) value).codePoints().filter(c -> c == '\n').count()));
                     scriptEngine.eval((String)value);
                 } catch (ScriptException exception) {
                     System.err.println(exception.getMessage());
@@ -1675,10 +1680,12 @@ public class FXMLLoader {
     private static class ScriptEventHandler implements EventHandler<Event> {
         public final String script;
         public final ScriptEngine scriptEngine;
+        public final String filename;
 
-        public ScriptEventHandler(String script, ScriptEngine scriptEngine) {
+        public ScriptEventHandler(String script, ScriptEngine scriptEngine, String filename) {
             this.script = script;
             this.scriptEngine = scriptEngine;
+            this.filename = filename;
         }
 
         @Override
@@ -1686,19 +1693,16 @@ public class FXMLLoader {
             // Don't pollute the page namespace with values defined in the script
             Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
             Bindings localBindings = scriptEngine.createBindings();
-            localBindings.put(EVENT_KEY, event);
             localBindings.putAll(engineBindings);
-            scriptEngine.setBindings(localBindings, ScriptContext.ENGINE_SCOPE);
-
+            localBindings.put(EVENT_KEY, event);
+            localBindings.put(scriptEngine.ARGV, new Object[]{event});
+            localBindings.put(scriptEngine.FILENAME, filename);
             // Execute the script
             try {
-                scriptEngine.eval(script);
+                scriptEngine.eval(script, localBindings);
             } catch (ScriptException exception){
                 throw new RuntimeException(exception);
             }
-
-            // Restore the original bindings
-            scriptEngine.setBindings(engineBindings, ScriptContext.ENGINE_SCOPE);
         }
     }
 
