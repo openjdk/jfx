@@ -30,6 +30,7 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.tk.Toolkit;
+import java.lang.ref.WeakReference;
 import javafx.event.ActionEvent;
 import javafx.event.EventType;
 import javafx.geometry.Pos;
@@ -142,6 +143,80 @@ public class ToggleButtonTest {
         assertPseudoClassDoesNotExist(toggle, "selected");
     }
 
+    /*********************************************************************
+     * Toggle group Tests                                                *
+     ********************************************************************/
+    @Test public void setToggleGroupAndSeeValueIsReflectedInModel() {
+        toggle.setToggleGroup(toggleGroup);
+        assertSame(toggle.toggleGroupProperty().getValue(), toggleGroup);
+    }
+
+    @Test public void setToggleGroupAndSeeValue() {
+        toggle.setToggleGroup(toggleGroup);
+        assertSame(toggle.getToggleGroup(), toggleGroup);
+    }
+
+    @Test public void toggleGroupViaGroupAddAndRemoveClearsReference() {
+        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+
+        toggleGroup.getToggles().add(toggle);
+        toggleGroup.getToggles().clear();
+
+        toggle = null;
+        attemptGC(ref, 5);
+
+        assertNull(ref.get());
+    }
+
+    @Test public void toggleGroupViaToggleSetClearsReference() {
+        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+
+        toggle.setToggleGroup(toggleGroup);
+        toggle.setToggleGroup(null);
+
+        toggle = null;
+        attemptGC(ref, 5);
+
+        assertNull(ref.get());
+    }
+
+    @Test public void toggleGroupViaToggleThenGroupClearsReference() {
+        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+
+        toggle.setToggleGroup(toggleGroup);
+        toggleGroup.getToggles().clear();
+
+        toggle = null;
+        attemptGC(ref, 5);
+
+        assertNull(ref.get());
+    }
+
+    @Test public void toggleGroupViaGroupThenToggleClearsReference() {
+        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+
+        toggleGroup.getToggles().add(toggle);
+        toggle.setToggleGroup(null);
+
+        toggle = null;
+        attemptGC(ref, 5);
+
+        assertNull(ref.get());
+    }
+
+    @Test public void toggleGroupSwitchingClearsReference() {
+        WeakReference<ToggleButton> ref = new WeakReference<>(toggle);
+
+        ToggleGroup anotherToggleGroup = new ToggleGroup();
+        toggle.setToggleGroup(toggleGroup);
+        toggle.setToggleGroup(anotherToggleGroup);
+        toggle.setToggleGroup(null);
+
+        toggle = null;
+        attemptGC(ref, 5);
+
+        assertNull(ref.get());
+    }
 
     /*********************************************************************
      * Miscellaneous Tests                                         *
@@ -154,16 +229,6 @@ public class ToggleButtonTest {
     @Test public void setSelectedAndSeeValue() {
         toggle.setSelected(false);
         assertFalse(toggle.isSelected());
-    }
-
-    @Test public void setToggleGroupAndSeeValueIsReflectedInModel() {
-        toggle.setToggleGroup(toggleGroup);
-        assertSame(toggle.toggleGroupProperty().getValue(), toggleGroup);
-    }
-
-    @Test public void setToggleGroupAndSeeValue() {
-        toggle.setToggleGroup(toggleGroup);
-        assertSame(toggle.getToggleGroup(), toggleGroup);
     }
 
     @Test public void fireAndCheckSelectionToggled() {
@@ -190,4 +255,20 @@ public class ToggleButtonTest {
         assertTrue("fire() doesnt emit ActionEvent!", flag[0]);
     }
 
+    private void attemptGC(WeakReference<? extends Object> weakRef, int n) {
+        // Attempt gc n times
+        for (int i = 0; i < n; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (weakRef.get() == null) {
+                break;
+            }
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+               System.err.println("InterruptedException occurred during Thread.sleep()");
+            }
+        }
+    }
 }
