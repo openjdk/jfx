@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -146,20 +146,20 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 new KeyMapping(PAGE_UP, e -> scrollUp()),
                 new KeyMapping(PAGE_DOWN, e -> scrollDown()),
 
-                new KeyMapping(LEFT, e -> selectLeftCell()),
-                new KeyMapping(KP_LEFT, e -> selectLeftCell()),
-                new KeyMapping(RIGHT, e -> selectRightCell()),
-                new KeyMapping(KP_RIGHT, e -> selectRightCell()),
+                new KeyMapping(LEFT, e -> { if(isRTL()) selectRightCell(); else selectLeftCell(); }),
+                new KeyMapping(KP_LEFT,e -> { if(isRTL()) selectRightCell(); else selectLeftCell(); }),
+                new KeyMapping(RIGHT, e -> { if(isRTL()) selectLeftCell(); else selectRightCell(); }),
+                new KeyMapping(KP_RIGHT, e -> { if(isRTL()) selectLeftCell(); else selectRightCell(); }),
 
                 new KeyMapping(UP, e -> selectPreviousRow()),
                 new KeyMapping(KP_UP, e -> selectPreviousRow()),
                 new KeyMapping(DOWN, e -> selectNextRow()),
                 new KeyMapping(KP_DOWN, e -> selectNextRow()),
 
-                new KeyMapping(LEFT, FocusTraversalInputMap::traverseLeft),
-                new KeyMapping(KP_LEFT, FocusTraversalInputMap::traverseLeft),
-                new KeyMapping(RIGHT, FocusTraversalInputMap::traverseRight),
-                new KeyMapping(KP_RIGHT, FocusTraversalInputMap::traverseRight),
+                new KeyMapping(LEFT,   e -> { if(isRTL()) focusTraverseRight(); else focusTraverseLeft(); }),
+                new KeyMapping(KP_LEFT, e -> { if(isRTL()) focusTraverseRight(); else focusTraverseLeft(); }),
+                new KeyMapping(RIGHT, e -> { if(isRTL()) focusTraverseLeft(); else focusTraverseRight(); }),
+                new KeyMapping(KP_RIGHT, e -> { if(isRTL()) focusTraverseLeft(); else focusTraverseRight(); }),
                 new KeyMapping(UP, FocusTraversalInputMap::traverseUp),
                 new KeyMapping(KP_UP, FocusTraversalInputMap::traverseUp),
                 new KeyMapping(DOWN, FocusTraversalInputMap::traverseDown),
@@ -178,17 +178,17 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 new KeyMapping(new KeyBinding(SPACE).shift(), e -> selectAllToFocus(false)),
                 new KeyMapping(new KeyBinding(SPACE).shortcut().shift(), e -> selectAllToFocus(true)),
 
-                new KeyMapping(new KeyBinding(LEFT).shift(), e -> alsoSelectLeftCell()),
-                new KeyMapping(new KeyBinding(KP_LEFT).shift(), e -> alsoSelectLeftCell()),
-                new KeyMapping(new KeyBinding(RIGHT).shift(), e -> alsoSelectRightCell()),
-                new KeyMapping(new KeyBinding(KP_RIGHT).shift(), e -> alsoSelectRightCell()),
+                new KeyMapping(new KeyBinding(LEFT).shift(), e -> { if(isRTL()) alsoSelectRightCell(); else alsoSelectLeftCell(); }),
+                new KeyMapping(new KeyBinding(KP_LEFT).shift(),  e -> { if(isRTL()) alsoSelectRightCell(); else alsoSelectLeftCell(); }),
+                new KeyMapping(new KeyBinding(RIGHT).shift(),  e -> { if(isRTL()) alsoSelectLeftCell(); else alsoSelectRightCell(); }),
+                new KeyMapping(new KeyBinding(KP_RIGHT).shift(), e -> { if(isRTL()) alsoSelectLeftCell(); else alsoSelectRightCell(); }),
 
                 new KeyMapping(new KeyBinding(UP).shortcut(), e -> focusPreviousRow()),
                 new KeyMapping(new KeyBinding(DOWN).shortcut(), e -> focusNextRow()),
-                new KeyMapping(new KeyBinding(RIGHT).shortcut(), e -> focusRightCell()),
-                new KeyMapping(new KeyBinding(KP_RIGHT).shortcut(), e -> focusRightCell()),
-                new KeyMapping(new KeyBinding(LEFT).shortcut(), e -> focusLeftCell()),
-                new KeyMapping(new KeyBinding(KP_LEFT).shortcut(), e -> focusLeftCell()),
+                new KeyMapping(new KeyBinding(RIGHT).shortcut(), e -> { if(isRTL()) focusLeftCell(); else focusRightCell(); }),
+                new KeyMapping(new KeyBinding(KP_RIGHT).shortcut(), e -> { if(isRTL()) focusLeftCell(); else focusRightCell(); }),
+                new KeyMapping(new KeyBinding(LEFT).shortcut(), e -> { if(isRTL()) focusRightCell(); else focusLeftCell(); }),
+                new KeyMapping(new KeyBinding(KP_LEFT).shortcut(), e -> { if(isRTL()) focusRightCell(); else focusLeftCell(); }),
 
                 new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()),
                 new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
@@ -198,8 +198,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
                 new KeyMapping(new KeyBinding(UP).shortcut().shift(), e -> discontinuousSelectPreviousRow()),
                 new KeyMapping(new KeyBinding(DOWN).shortcut().shift(), e -> discontinuousSelectNextRow()),
-                new KeyMapping(new KeyBinding(LEFT).shortcut().shift(), e -> discontinuousSelectPreviousColumn()),
-                new KeyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> discontinuousSelectNextColumn()),
+                new KeyMapping(new KeyBinding(LEFT).shortcut().shift(), e -> { if(isRTL()) discontinuousSelectNextColumn(); else discontinuousSelectPreviousColumn(); }),
+                new KeyMapping(new KeyBinding(RIGHT).shortcut().shift(), e -> { if(isRTL()) discontinuousSelectPreviousColumn(); else discontinuousSelectNextColumn(); }),
                 new KeyMapping(new KeyBinding(PAGE_UP).shortcut().shift(), e -> discontinuousSelectPageUp()),
                 new KeyMapping(new KeyBinding(PAGE_DOWN).shortcut().shift(), e -> discontinuousSelectPageDown()),
                 new KeyMapping(new KeyBinding(HOME).shortcut().shift(), e -> discontinuousSelectAllToFirstRow()),
@@ -1308,5 +1308,13 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         }
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
+    }
+
+    private EventHandler<KeyEvent> focusTraverseLeft() {
+        return FocusTraversalInputMap::traverseLeft;
+    }
+
+    private EventHandler<KeyEvent> focusTraverseRight() {
+        return FocusTraversalInputMap::traverseRight;
     }
 }
