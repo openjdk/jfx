@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,36 +23,35 @@
  * questions.
  */
 
-#import <UIKit/UIKit.h>
-#import <QuartzCore/QuartzCore.h>
-#import <OpenGLES/ES2/gl.h>
-#import <OpenGLES/ES2/glext.h>
+package javafx.scene.control.skin;
 
-#import "GlassStatics.h"
-#import "GlassView.h"
-#import "common.h"
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.scene.control.TextField;
 
+import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
+import javafx.scene.control.skin.TextFieldSkin;
 
-@interface GLView : UIScrollView
-{
-    @public GLuint renderBuffer;
-    @public GLuint frameBuffer;
-    BOOL                isHiDPIAware;
+public class TextFieldSkinIos extends TextFieldSkin {
+
+    public TextFieldSkinIos(final TextField textField) {
+        super(textField);
+
+        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            public void changed(ObservableValue<? extends Boolean> observable,
+                    Boolean wasFocused, Boolean isFocused) {
+                if (textField.isEditable()) {
+                    if (isFocused) {
+                        showSoftwareKeyboard();
+                    } else {
+                        hideSoftwareKeyboard();
+                    }
+                }
+            }
+        });
+    }
+
+    native void showSoftwareKeyboard();
+    native void hideSoftwareKeyboard();
+
 }
-
-@end
-
-
-@interface GlassViewGL : GLView <GlassView>
-{
-    @public GlassViewDelegate    *delegate;
-
-    CGRect              _bounds; // used to temporarily hold frame being set on main thread
-    //User input help views
-    UIView              *inputAccessoryView;
-    UIView              *nativeView; // view used for user input
-}
--(void) doInsertText:(NSString*)myText;
--(void) doDeleteBackward;
-
-@end
