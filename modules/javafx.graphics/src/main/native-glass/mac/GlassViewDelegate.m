@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,11 @@
 
 // Tracks pressed modifier keys
 static NSUInteger s_modifierFlags = 0;
+
+@interface GlassViewDelegate (hidden)
+- (void)maybeBeginGestureWithEvent:(NSEvent *)theEvent withMask:(GestureMaskType)theMask;
+- (void)maybeEndGestureWithEvent:(NSEvent *)theEvent withMask:(GestureMaskType)theMask;
+@end
 
 // Extracted from class-dump utility output for NSEvent class
 @interface NSEvent (hidden)
@@ -150,6 +155,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         self->mouseDownMask = 0;
 
         self->gestureInProgress = NO;
+        self->gesturesBeganMask = 0;
 
         self->nativeFullScreenModeWindow = nil;
 
@@ -843,6 +849,72 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 
     }
     GLASS_CHECK_EXCEPTION(env);
+}
+
+/*
+ * This method is a replacement for the deprecated beginGestureWithEvent
+ * method, which is no longer delivered to a View by macOS. This
+ * is called for each gesture event to track the beginning of a
+ * gesture using the phase of the event. We call sendJavaGestureBeginEvent
+ * if there are no other gestures active.
+ */
+- (void)maybeBeginGestureWithEvent:(NSEvent *)theEvent withMask:(GestureMaskType)theMask
+{
+    NSEventPhase phase = [theEvent phase];
+    if (phase == NSEventPhaseBegan) {
+        if (gesturesBeganMask == 0) {
+            [self sendJavaGestureBeginEvent:theEvent];
+        }
+        gesturesBeganMask |= theMask;
+    }
+}
+
+/*
+ * This method is a replacement for the deprecated endGestureWithEvent
+ * method, which is no longer delivered to a View by macOS. This
+ * is called for each gesture event to track the end of a
+ * gesture using the phase of the event. We call sendJavaGestureEndEvent
+ * if there are no other gestures active.
+ */
+- (void)maybeEndGestureWithEvent:(NSEvent *)theEvent withMask:(GestureMaskType)theMask
+{
+    NSEventPhase phase = [theEvent phase];
+    if (phase == NSEventPhaseEnded || phase == NSEventPhaseCancelled) {
+        if ((gesturesBeganMask & theMask) != 0) {
+            gesturesBeganMask &= ~theMask;
+            if (gesturesBeganMask == 0) {
+                [self sendJavaGestureEndEvent:theEvent];
+            }
+        }
+    }
+}
+
+- (void)doRotateWithEvent:(NSEvent *)theEvent
+{
+    [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_ROTATE];
+    [self sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_ROTATE];
+    [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_ROTATE];
+}
+
+- (void)doSwipeWithEvent:(NSEvent *)theEvent
+{
+    [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_SWIPE];
+    [self sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_SWIPE];
+    [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_SWIPE];
+}
+
+- (void)doMagnifyWithEvent:(NSEvent *)theEvent
+{
+    [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_MAGNIFY];
+    [self sendJavaGestureEvent:theEvent type:com_sun_glass_ui_mac_MacGestureSupport_GESTURE_MAGNIFY];
+    [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_MAGNIFY];
+}
+
+- (void)doScrollWheel:(NSEvent *)theEvent
+{
+    [self maybeBeginGestureWithEvent:theEvent withMask:GESTURE_MASK_SCROLL];
+    [self sendJavaMouseEvent:theEvent];
+    [self maybeEndGestureWithEvent:theEvent withMask:GESTURE_MASK_SCROLL];
 }
 
 - (NSDragOperation)sendJavaDndEvent:(id <NSDraggingInfo>)info type:(jint)type
