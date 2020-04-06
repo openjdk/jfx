@@ -478,6 +478,10 @@ public class TabPaneTest {
         SceneHelper.processMouseEvent(scene,
             MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+75, yval+20));
         tk.firePulse();
+
+        SceneHelper.processMouseEvent(scene,
+                MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_DRAGGED, xval+75, yval+20));
+        tk.firePulse();
     }
 
     @Test public void setRotateGraphicAndSeeValueIsReflectedInModel() {
