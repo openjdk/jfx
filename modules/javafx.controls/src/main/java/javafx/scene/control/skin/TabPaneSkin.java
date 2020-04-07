@@ -2048,7 +2048,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     private void handleHeaderDragged(MouseEvent event) {
         if (event.getButton().equals(MouseButton.PRIMARY)) {
-            perfromDrag(event);
+            performDrag(event);
         }
     }
 
@@ -2071,7 +2071,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         return MAX_TO_MIN;
     }
 
-    private void perfromDrag(MouseEvent event) {
+    private void performDrag(MouseEvent event) {
+        if (dragState == DragState.NONE) {
+            return;
+        }
         int dragDirection;
         double dragHeaderNewLayoutX;
         Bounds dragHeaderBounds;
