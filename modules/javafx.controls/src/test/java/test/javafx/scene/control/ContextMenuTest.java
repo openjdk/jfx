@@ -452,6 +452,22 @@ public class ContextMenuTest {
                 subMenuItem1, focusedItem);
     }
 
+    @Test public void test_emptySubMenu_rightKeyDoesNothing() {
+        Menu testMenu = new Menu("Menu1");
+        ContextMenu testCM = new ContextMenu();
+
+        testCM.getItems().addAll(testMenu);
+        testCM.show(anchorBtn, Side.RIGHT, 0, 0);
+        assertNotNull(getShowingMenuContent(testCM));
+
+        // Go to testMenu
+        pressDownKey(testCM);
+
+        // testMenu does not have any subMenu - try to open it
+        // this used to casue NPE - fixed in JDK-8241710
+        pressRightKey(testCM);
+    }
+
     @Test public void test_navigateSubMenu_leftKeyClosesSubMenu() {
         ContextMenu cm = createContextMenuAndShowSubMenu();
 

@@ -650,15 +650,19 @@ public class ContextMenuContent extends Region {
 
     private void showMenu(Menu menu) {
         menu.show();
-        // request focus on the first item of the submenu after it is shown
-        ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
-        if (cmContent != null) {
-           if (cmContent.itemsContainer.getChildren().size() > 0) {
-               cmContent.itemsContainer.getChildren().get(0).requestFocus();
-               cmContent.currentFocusedIndex = 0;
-           } else {
-               cmContent.requestFocus();
-           }
+
+        // if there is a submenu
+        if (submenu != null) {
+            // request focus on the first item of the submenu after it is shown
+            ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
+            if (cmContent != null) {
+               if (cmContent.itemsContainer.getChildren().size() > 0) {
+                   cmContent.itemsContainer.getChildren().get(0).requestFocus();
+                   cmContent.currentFocusedIndex = 0;
+               } else {
+                   cmContent.requestFocus();
+               }
+            }
         }
     }
 
