@@ -204,6 +204,11 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
         super.saveState();
     }
 
+    @Override public void scale(float sx, float sy) {
+        init();
+        super.scale(sx, sy);
+    }
+
     @Override public void setTransform(WCTransform tm) {
         init();
         super.setTransform(tm);
