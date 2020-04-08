@@ -289,5 +289,5 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_IOSGLContext_nMakeCurrent
     interval = (vSyncNeeded) ? 1 : 0;
     ctxInfo->state.vSyncEnabled = vSyncNeeded;
     setSwapInterval(ctxInfo->context, interval);
-    fprintf(stderr, "setSwapInterval(%d)\n", interval);
+    // fprintf(stderr, "setSwapInterval(%d)\n", interval);
 }
