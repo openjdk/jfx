@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -450,6 +450,22 @@ public class ContextMenuTest {
         assertEquals(0, getCurrentFocusedIndex(cm));
         assertEquals("Expected " + subMenuItem1.getText() + ", found " + focusedItem.getText(),
                 subMenuItem1, focusedItem);
+    }
+
+    @Test public void test_emptySubMenu_rightKeyDoesNothing() {
+        Menu testMenu = new Menu("Menu1");
+        ContextMenu testCM = new ContextMenu();
+
+        testCM.getItems().addAll(testMenu);
+        testCM.show(anchorBtn, Side.RIGHT, 0, 0);
+        assertNotNull(getShowingMenuContent(testCM));
+
+        // Go to testMenu
+        pressDownKey(testCM);
+
+        // testMenu does not have any subMenu - try to open it
+        // this used to casue NPE - fixed in JDK-8241710
+        pressRightKey(testCM);
     }
 
     @Test public void test_navigateSubMenu_leftKeyClosesSubMenu() {
