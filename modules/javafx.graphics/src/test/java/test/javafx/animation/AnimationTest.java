@@ -268,7 +268,7 @@ public class AnimationTest {
         animation.shim_setCycleDuration(Duration.INDEFINITE);
 
         animation.jumpTo("end");
-        assertEquals(Duration.INDEFINITE, animation.getCurrentTime());
+        assertEquals(Duration.millis(Long.MAX_VALUE), animation.getCurrentTime());
     }
 
     @Test
