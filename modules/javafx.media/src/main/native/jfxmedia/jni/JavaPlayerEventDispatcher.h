@@ -59,7 +59,7 @@ public:
     virtual bool SendMarkerEvent(string name, double time);
     virtual bool SendBufferProgressEvent(double clipDuration, int64_t start, int64_t stop, int64_t position);
     virtual bool SendDurationUpdateEvent(double time);
-    virtual bool SendAudioSpectrumEvent(double time, double duration);
+    virtual bool SendAudioSpectrumEvent(double time, double duration, bool queryTimestamp);
     virtual void Warning(int warningCode, const char* warningMessage);
 
 private:
