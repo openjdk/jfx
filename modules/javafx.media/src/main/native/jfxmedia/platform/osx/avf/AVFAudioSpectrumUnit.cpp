@@ -191,7 +191,9 @@ void AVFAudioSpectrumUnit::UpdateBands(int size, const float* magnitudes, const 
     // Call our listener to dispatch the spectrum event
     if (mSpectrumCallbackProc) {
         double duration = (double) mSamplesPerInterval / (double) 44100;
-        // Timestamp is ignored and it will be queried from event loop
+        // We do not provide timestamp here. It will be queried from EventQueueThread
+        // due to reading current time from AVPlayer might hang when called
+        // from audio processing thread. This function is called from this thread.
         mSpectrumCallbackProc(mSpectrumCallbackContext, duration, -1.0);
     }
 

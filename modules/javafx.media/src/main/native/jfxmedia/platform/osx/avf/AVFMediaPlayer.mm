@@ -653,7 +653,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
 - (void) sendSpectrumEventDuration:(double)duration timestamp:(double)timestamp {
     if (eventHandler) {
-        // Always true for queryTimestamp do to JDK-8240694
+        // Always true for queryTimestamp to avoid hang. See JDK-8240694.
         eventHandler->SendAudioSpectrumEvent(timestamp, duration, true);
     }
 }

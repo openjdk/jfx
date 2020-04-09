@@ -719,6 +719,9 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
             for (ListIterator<WeakReference<AudioSpectrumListener>> it = audioSpectrumListeners.listIterator(); it.hasNext();) {
                 AudioSpectrumListener listener = it.next().get();
                 if (listener != null) {
+                    // OSXPlatfrom will set queryTimestamp to true, so we can request
+                    // time here from EventQueueThread, since requesting time from
+                    // audio processing thread might hang. See JDK-8240694.
                     if (evt.queryTimestamp()) {
                         double timestamp = playerGetPresentationTime();
                         evt.setTimestamp(timestamp);
