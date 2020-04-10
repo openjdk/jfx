@@ -264,11 +264,11 @@ public class AnimationTest {
     }
 
     @Test
-    public void testJumpTo_IndefiniteDuration() {
+    public void testJumpTo_IndefiniteCycleDuration() {
         animation.shim_setCycleDuration(Duration.INDEFINITE);
 
         animation.jumpTo("end");
-        assertEquals(Duration.millis(Long.MAX_VALUE), animation.getCurrentTime());
+        assertEquals(Duration.millis(Long.MAX_VALUE / 6), animation.getCurrentTime());
     }
 
     @Test
