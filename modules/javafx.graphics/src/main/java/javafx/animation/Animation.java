@@ -394,7 +394,7 @@ public abstract class Animation {
      * <li> When the status is changed (paused/stopped/resumed/started).
      * <li> When switching between a forwards and backwards cycle.
      * </ol>
-     * 
+     *
      * 1 happens when the user changes the rate of the animation or its root parent.
      * 2 happens when the user changes the status or when the animation is finished.
      * 3 happens when the clip envelope flips the rate when the cycle is alternated, through the accessor
