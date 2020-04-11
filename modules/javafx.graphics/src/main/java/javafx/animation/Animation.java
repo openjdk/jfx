@@ -36,6 +36,7 @@ import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoublePropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -557,7 +558,7 @@ public abstract class Animation {
 
     public final ObjectProperty<Duration> delayProperty() {
         if (delay == null) {
-            delay = new SimpleObjectProperty<>(this, "delay", DEFAULT_DELAY) {
+            delay = new ObjectPropertyBase<>(DEFAULT_DELAY) {
 
                 @Override
                 public Object getBean() {
