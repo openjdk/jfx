@@ -171,6 +171,40 @@ public class ListViewTest {
         assertSame(sm, sm);
     }
 
+    @Test public void test_SwitchingSelectionModel() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<String> sm;
+        StageLoader sl = new StageLoader(listView);
+        KeyEventFirer keyboard = new KeyEventFirer(listView);
+
+        MultipleSelectionModel<String> smMultiple = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
+        smMultiple.setSelectionMode(SelectionMode.MULTIPLE);
+        MultipleSelectionModel<String> smSingle = ListViewShim.<String>getListViewBitSetSelectionModel(listView);
+        smSingle.setSelectionMode(SelectionMode.SINGLE);
+
+        listView.setSelectionModel(smMultiple);
+        sm = listView.getSelectionModel();
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(4, sm.getSelectedItems().size());
+
+        listView.setSelectionModel(smSingle);
+        sm = listView.getSelectionModel();
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
+    }
+
     @Test public void canSetSelectedItemToAnItemEvenWhenThereAreNoItems() {
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
         sm.select(randomString);
@@ -1461,6 +1495,37 @@ public class ListViewTest {
         assertEquals(2, sm.getSelectedItems().size());
         assertEquals("a", sm.getSelectedItems().get(0));
         assertEquals("b", sm.getSelectedItems().get(1));
+
+        sl.dispose();
+    }
+
+    @Test public void test_switchingSelectionMode() {
+        ListView<String> listView = new ListView<>();
+        listView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        StageLoader sl = new StageLoader(listView);
+        KeyEventFirer keyboard = new KeyEventFirer(listView);
+
+        assertEquals(0, sm.getSelectedItems().size());
+        sm.clearAndSelect(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(4, sm.getSelectedItems().size());
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(1, sm.getSelectedItems().size());
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        assertEquals(1, sm.getSelectedItems().size());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals(4, sm.getSelectedItems().size());
 
         sl.dispose();
     }

@@ -1339,6 +1339,42 @@ public class ComboBoxTest {
         sl.dispose();
     }
 
+    @Test public void test_ArrowKeysWhenPopupIsShowing() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        StageLoader sl = new StageLoader(cb);
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+
+        new StageLoader(cb);
+
+        assertFalse(cb.isShowing());
+        cb.requestFocus();
+        keyboard.doDownArrowPress(KeyModifier.ALT);  // show the popup
+        assertTrue(cb.isShowing());
+
+        // Enter some text
+        keyboard.doKeyTyped(KeyCode.A);
+        keyboard.doKeyTyped(KeyCode.C);
+        assertEquals("AC", cb.getEditor().getText());
+
+        // Test LEFT key
+        keyboard.doLeftArrowPress();
+        keyboard.doKeyTyped(KeyCode.B);
+        assertEquals("ABC", cb.getEditor().getText());
+
+        // Test RIGHT key
+        keyboard.doRightArrowPress();
+        keyboard.doKeyTyped(KeyCode.D);
+        assertEquals("ABCD", cb.getEditor().getText());
+
+        // Test CTRL + A key
+        assertEquals("", cb.getEditor().getSelectedText());
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        assertEquals("ABCD", cb.getEditor().getSelectedText());
+
+        sl.dispose();
+    }
+
     @Test public void test_rt36280_nonEditable_enterHidesShowingPopup() {
         final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
         StageLoader sl = new StageLoader(cb);

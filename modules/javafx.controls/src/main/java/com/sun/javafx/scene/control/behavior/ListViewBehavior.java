@@ -78,7 +78,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         listViewInputMap = createInputMap();
 
         // add focus traversal mappings
-        addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getFocusTraversalMappings());
+        addDefaultMapping(listViewInputMap, FocusTraversalInputMap.getModifierArrowKeyMappings());
         addDefaultMapping(listViewInputMap,
             new KeyMapping(HOME, e -> selectFirstRow()),
             new KeyMapping(END, e -> selectLastRow()),
@@ -98,7 +98,6 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             new KeyMapping(F2, e -> activate()),
             new KeyMapping(ESCAPE, e -> cancelEdit()),
 
-            new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()),
             new KeyMapping(new KeyBinding(HOME).shortcut(), e -> focusFirstRow()),
             new KeyMapping(new KeyBinding(END).shortcut(), e -> focusLastRow()),
             new KeyMapping(new KeyBinding(PAGE_UP).shortcut(), e -> focusPageUp()),
@@ -197,6 +196,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         }
     }
 
+    public void updateSelectionModeKeyMapping(SelectionMode selectionMode) {
+        if (selectionMode.equals(SelectionMode.SINGLE)) {
+            removeMapping(new KeyBinding(A).shortcut());
+        } else {
+            addDefaultMapping(listViewInputMap, new KeyMapping(new KeyBinding(A).shortcut(), e -> selectAll()));
+        }
+    }
 
 
     /***************************************************************************

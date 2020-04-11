@@ -31,6 +31,8 @@ import java.util.List;
 import com.sun.javafx.scene.control.Properties;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
@@ -49,6 +51,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SelectionModel;
 import com.sun.javafx.scene.control.behavior.ListViewBehavior;
 import javafx.scene.input.MouseEvent;
@@ -251,8 +254,29 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
         registerChangeListener(control.fixedCellSizeProperty(), o ->
             flow.setFixedCellSize(control.getFixedCellSize())
         );
+
+        if (control.getSelectionModel() != null) {
+            behavior.updateSelectionModeKeyMapping(control.getSelectionModel().getSelectionMode());
+            control.getSelectionModel().selectionModeProperty().addListener(weakSelectionModeCL);
+        }
+        control.selectionModelProperty().addListener(weakSelectionModelCL);
     }
 
+    ChangeListener<SelectionMode> selectionModeCL = (ov, oldMode, newMode) -> {
+        behavior.updateSelectionModeKeyMapping(newMode);
+    };
+    WeakChangeListener<SelectionMode> weakSelectionModeCL = new WeakChangeListener<>(selectionModeCL);
+
+    ChangeListener<MultipleSelectionModel<?>> selectionModelCL = (ov, oldSM, newSM) -> {
+        if (oldSM != null) {
+            oldSM.selectionModeProperty().removeListener(weakSelectionModeCL);
+        }
+        if (newSM != null) {
+            behavior.updateSelectionModeKeyMapping(newSM.getSelectionMode());
+            newSM.selectionModeProperty().addListener(weakSelectionModeCL);
+        }
+    };
+    WeakChangeListener<MultipleSelectionModel<?>> weakSelectionModelCL = new WeakChangeListener<>(selectionModelCL);
 
 
     /***************************************************************************
@@ -263,6 +287,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListCell<
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        getSkinnable().selectionModelProperty().removeListener(weakSelectionModelCL);
+        if (getSkinnable().getSelectionModel() != null) {
+            getSkinnable().getSelectionModel().selectionModeProperty().removeListener(weakSelectionModeCL);
+        }
         super.dispose();
 
         if (behavior != null) {
