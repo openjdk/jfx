@@ -332,13 +332,13 @@ public abstract class Animation {
                         throw new IllegalArgumentException("Cannot set rate of embedded animation while running.");
                     }
                     if (isNearZero(newRate)) {
-                        if (getStatus() == Status.RUNNING) {
+                        if (isRunning()) {
                             lastPlayedForward = areNearEqual(getCurrentRate(), oldRate);
                         }
                         doSetCurrentRate(0.0);
                         pauseReceiver();
                     } else {
-                        if (getStatus() == Status.RUNNING) {
+                        if (isRunning()) {
                             final double currentRate = getCurrentRate();
                             if (isNearZero(currentRate)) {
                                 doSetCurrentRate(lastPlayedForward ? newRate : -newRate);
@@ -578,8 +578,7 @@ public abstract class Animation {
                             unbind();
                         }
                         set(Duration.ZERO);
-                        throw new IllegalArgumentException(
-                                "Cannot set delay to negative value. Setting to Duration.ZERO");
+                        throw new IllegalArgumentException("Cannot set delay to negative value. Setting to Duration.ZERO");
                     }
                 }
 
@@ -604,13 +603,13 @@ public abstract class Animation {
     private static final int DEFAULT_CYCLE_COUNT = 1;
 
     public final void setCycleCount(int value) {
-        if ((cycleCount != null) || (value != DEFAULT_CYCLE_COUNT)) {
+        if (cycleCount != null || value != DEFAULT_CYCLE_COUNT) {
             cycleCountProperty().set(value);
         }
     }
 
     public final int getCycleCount() {
-        return (cycleCount == null)? DEFAULT_CYCLE_COUNT : cycleCount.get();
+        return (cycleCount == null) ? DEFAULT_CYCLE_COUNT : cycleCount.get();
     }
 
     public final IntegerProperty cycleCountProperty() {
