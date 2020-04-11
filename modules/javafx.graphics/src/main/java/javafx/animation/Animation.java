@@ -572,14 +572,15 @@ public abstract class Animation {
 
                 @Override
                 protected void invalidated() {
-                        final Duration newDuration = get();
-                        if (newDuration.lessThan(Duration.ZERO)) {
-                            if (isBound()) {
-                                unbind();
-                            }
-                            set(Duration.ZERO);
-                            throw new IllegalArgumentException("Cannot set delay to negative value. Setting to Duration.ZERO");
+                    final Duration newDuration = get();
+                    if (newDuration.lessThan(Duration.ZERO)) {
+                        if (isBound()) {
+                            unbind();
                         }
+                        set(Duration.ZERO);
+                        throw new IllegalArgumentException(
+                                "Cannot set delay to negative value. Setting to Duration.ZERO");
+                    }
                 }
 
             };
