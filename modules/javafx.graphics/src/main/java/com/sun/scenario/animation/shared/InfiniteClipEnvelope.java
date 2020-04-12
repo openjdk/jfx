@@ -29,6 +29,9 @@ import javafx.animation.Animation;
 import javafx.animation.Animation.Status;
 import javafx.util.Duration;
 
+/**
+ * Clip envelope implementation for infinite cycles: cycleCount = indefinite
+ */
 public class InfiniteClipEnvelope extends ClipEnvelope {
 
     private boolean autoReverse;
@@ -44,12 +47,6 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
     @Override
     public void setAutoReverse(boolean autoReverse) {
         this.autoReverse = autoReverse;
-    }
-
-    @Override
-    protected double calculateCurrentRate() {
-        return !autoReverse? rate
-                : (ticks % (2 * cycleTicks) < cycleTicks)? rate : -rate;
     }
 
     @Override
@@ -83,6 +80,12 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
     }
 
     @Override
+    protected double calculateCurrentRate() {
+        return !autoReverse? rate
+                : (ticks % (2 * cycleTicks) < cycleTicks)? rate : -rate;
+    }
+
+    @Override
     public void timePulse(long currentTick) {
         if (cycleTicks == 0L) {
             return;
@@ -92,18 +95,19 @@ public class InfiniteClipEnvelope extends ClipEnvelope {
 
         try {
             final long oldTicks = ticks;
-            ticks = Math.max(0, deltaTicks + Math.round(currentTick * Math.abs(rate)));
+            long ticksChange = Math.round(currentTick * Math.abs(rate));
+            ticks = Math.max(0, deltaTicks + ticksChange);
 
             long overallDelta = ticks - oldTicks; // overall delta between current position and new position
             if (overallDelta == 0) {
                 return;
             }
 
-            long cycleDelta = (currentRate > 0)? cycleTicks - pos : pos; // delta to reach end of cycle
+            long cycleDelta = (currentRate > 0) ? cycleTicks - pos : pos; // delta to reach end of cycle
 
             while (overallDelta >= cycleDelta) {
                 if (cycleDelta > 0) {
-                    pos = (currentRate > 0)? cycleTicks : 0;
+                    pos = (currentRate > 0) ? cycleTicks : 0;
                     overallDelta -= cycleDelta;
                     AnimationAccessor.getDefault().playTo(animation, pos, cycleTicks);
                     if (aborted) {

@@ -92,6 +92,16 @@ public class Utils {
 
     /**
      * Simple utility function which clamps the given value to be strictly
+     * between the min and max values.
+     */
+    public static long clamp(long min, long value, long max) {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
+
+    /**
+     * Simple utility function which clamps the given value to be strictly
      * above the min value.
      */
     public static double clampMin(double value, double min) {

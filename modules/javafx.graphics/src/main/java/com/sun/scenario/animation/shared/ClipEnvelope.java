@@ -43,18 +43,30 @@ import com.sun.javafx.animation.TickCalculation;
  * implementation plus eventually some fast-track implementations for common use
  * cases.
  */
-
 public abstract class ClipEnvelope {
 
     protected static final long INDEFINITE = Long.MAX_VALUE;
     protected static final double EPSILON = 1e-12;
 
     protected Animation animation;
+    /**
+     * The rate of the animation that is used to calculate the current rate of an animation.
+     * It is the same as animation.rate, only ignores animation.rate = 0, so can never be 0.
+     */
     protected double rate = 1;
+    /**
+     * The number of ticks in a single cycle. Calculated from the cycle duration. Always >=0.
+     */
     protected long cycleTicks = 0;
+    /**
+     * The number of the current cycle. Always >=0.
+     */
+    protected int currentCycle = 0; // useful only for infinite. single is 1, finite can calculate ticks/totalTicks
 
-    // internal state-variables used by all implementations
     protected long deltaTicks = 0;
+    /**
+     * The current position of the play head. 0 <= ticks <= totalTicks 
+     */
     protected long ticks = 0;
     protected double currentRate = rate;
     protected boolean inTimePulse = false;
@@ -63,8 +75,7 @@ public abstract class ClipEnvelope {
     protected ClipEnvelope(Animation animation) {
         this.animation = animation;
         if (animation != null) {
-            final Duration cycleDuration = animation.getCycleDuration();
-            cycleTicks = TickCalculation.fromDuration(cycleDuration);
+            cycleTicks = TickCalculation.fromDuration(animation.getCycleDuration());
             rate = animation.getRate();
         }
     }
@@ -79,10 +90,34 @@ public abstract class ClipEnvelope {
         }
     }
 
-    public abstract ClipEnvelope setCycleDuration(Duration cycleDuration);
-    public abstract void setRate(double rate);
     public abstract void setAutoReverse(boolean autoReverse);
+    public abstract ClipEnvelope setCycleDuration(Duration cycleDuration);
     public abstract ClipEnvelope setCycleCount(int cycleCount);
+    public abstract void setRate(double rate);
+
+
+    protected abstract double calculateCurrentRate();
+
+    protected void setInternalCurrentRate(double currentRate) {
+        this.currentRate = currentRate;
+    }
+
+    protected void setCurrentRate(double currentRate) {
+        this.currentRate = currentRate;
+        AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
+    }
+
+    protected static long checkBounds(long value, long max) {
+        return Math.max(0L, Math.min(value, max));
+    }
+
+    public double getCurrentRate() {
+        return currentRate;
+    }
+
+    protected final long ticksRateChange(double newRate) {
+        return Math.round((ticks - deltaTicks) * newRate / rate);
+     }
 
     protected void updateCycleTicks(Duration cycleDuration) {
         cycleTicks = TickCalculation.fromDuration(cycleDuration);
@@ -106,24 +141,5 @@ public abstract class ClipEnvelope {
             aborted = true;
             inTimePulse = false;
         }
-    }
-
-    protected abstract double calculateCurrentRate();
-
-    protected void setInternalCurrentRate(double currentRate) {
-        this.currentRate = currentRate;
-    }
-
-    protected void setCurrentRate(double currentRate) {
-        this.currentRate = currentRate;
-        AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
-    }
-
-    protected static long checkBounds(long value, long max) {
-        return Math.max(0L, Math.min(value, max));
-    }
-
-    public double getCurrentRate() {
-        return currentRate;
     }
 }
