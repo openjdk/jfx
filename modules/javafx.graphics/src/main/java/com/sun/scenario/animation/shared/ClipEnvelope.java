@@ -49,21 +49,25 @@ public abstract class ClipEnvelope {
     protected static final double EPSILON = 1e-12;
 
     protected Animation animation;
+
     /**
      * The rate of the animation that is used to calculate the current rate of an animation.
      * It is the same as animation.rate, only ignores animation.rate = 0, so can never be 0.
      */
     protected double rate = 1;
+
     /**
      * The number of ticks in a single cycle. Calculated from the cycle duration. Always >=0.
      */
     protected long cycleTicks = 0;
+
     /**
      * The number of the current cycle. Always >=0.
      */
     protected int currentCycle = 0; // useful only for infinite. single is 1, finite can calculate ticks/totalTicks
 
     protected long deltaTicks = 0;
+
     /**
      * The current position of the play head. 0 <= ticks <= totalTicks 
      */
@@ -107,15 +111,11 @@ public abstract class ClipEnvelope {
         AnimationAccessor.getDefault().setCurrentRate(animation, currentRate);
     }
 
-    protected static long checkBounds(long value, long max) {
-        return Math.max(0L, Math.min(value, max));
-    }
-
     public double getCurrentRate() {
         return currentRate;
     }
 
-    protected final long ticksRateChange(double newRate) {
+    protected long ticksRateChange(double newRate) {
         return Math.round((ticks - deltaTicks) * newRate / rate);
      }
 
@@ -136,7 +136,7 @@ public abstract class ClipEnvelope {
 
     public abstract void jumpTo(long ticks);
 
-    public void abortCurrentPulse() {
+    public final void abortCurrentPulse() {
         if (inTimePulse) {
             aborted = true;
             inTimePulse = false;

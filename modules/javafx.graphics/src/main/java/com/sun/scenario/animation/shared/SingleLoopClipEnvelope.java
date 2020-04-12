@@ -98,7 +98,7 @@ public class SingleLoopClipEnvelope extends ClipEnvelope {
         inTimePulse = true;
 
         try {
-            long ticksChange = Math.round(currentTick * currentRate); // curRate == rate
+            long ticksChange = Math.round(currentTick * currentRate);
             ticks = Utils.clamp(0, deltaTicks + ticksChange, cycleTicks);
             AnimationAccessor.getDefault().playTo(animation, ticks, cycleTicks);
 
