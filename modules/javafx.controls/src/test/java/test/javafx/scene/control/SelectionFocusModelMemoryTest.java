@@ -194,9 +194,6 @@ public class SelectionFocusModelMemoryTest {
 
     @Test
     public void testTabPaneSelectionModel() {
-        // FIXME
-        // can't formally ignore just one parameter, so backing out if showBeforeReplaceSM
-        if (showBeforeReplaceSM) return; //@Ignore("8241737")
         TabPane control = new TabPane();
         ObservableList<String> data = FXCollections.observableArrayList("Apple", "Orange", "Banana");
         data.forEach(text -> control.getTabs().add(new Tab(text)));
