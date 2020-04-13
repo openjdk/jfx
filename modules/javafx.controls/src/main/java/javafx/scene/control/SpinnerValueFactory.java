@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -578,7 +578,7 @@ public abstract class SpinnerValueFactory<T> {
             final int min = getMin();
             final int max = getMax();
             final int newIndex = getValue() - steps * getAmountToStepBy();
-            setValue(newIndex >= min ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, min, max) + 1 : min));
+            setValue(newIndex >= min ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, min, max, false) : min));
         }
 
         /** {@inheritDoc} */
@@ -587,11 +587,9 @@ public abstract class SpinnerValueFactory<T> {
             final int max = getMax();
             final int currentValue = getValue();
             final int newIndex = currentValue + steps * getAmountToStepBy();
-            setValue(newIndex <= max ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, min, max) - 1 : max));
+            setValue(newIndex <= max ? newIndex : (isWrapAround() ? Spinner.wrapValue(newIndex, min, max, true) : max));
         }
     }
-
-
 
     /**
      * A {@link javafx.scene.control.SpinnerValueFactory} implementation designed to iterate through

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -783,6 +783,22 @@ public class Spinner<T> extends Control {
             r = r + max - min;
         }
         return r;
+    }
+
+    /*
+     * Convenience method to support wrapping values around their min / max
+     * constraints. Used by the SpinnerValueFactory implementations when
+     * the Spinner wrapAround property is true.
+     */
+    static int wrapValue(int value, int min, int max, boolean wrapUp) {
+        int ret = 0;
+        if (wrapUp) {
+            ret = (min + (value - (max + 1)));
+        } else {
+            ret = (max - ((min-1) - value));
+        }
+
+        return ret;
     }
 
     /*

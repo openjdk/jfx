@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,6 +89,7 @@ public class SpinnerTest {
 
         intSpinner = new Spinner<>(0, 10, 5, 1);
         intValueFactory = (IntegerSpinnerValueFactory) intSpinner.getValueFactory();
+        intValueFactory.setWrapAround(false);
 
         dblSpinner = new Spinner<>(0.0, 1.0, 0.5, 0.05);
         dblValueFactory = (DoubleSpinnerValueFactory) dblSpinner.getValueFactory();
@@ -388,6 +389,184 @@ public class SpinnerTest {
         intValueFactory.increment(1); // 0
         intValueFactory.increment(1); // 1
         assertEquals(1, (int) intValueFactory.getValue());
+    }
+
+    // TODO : This should wrap around and select a value between min and max
+    @Test public void intSpinner_testWrapAround_increment_LargeStep() {
+        intValueFactory.setWrapAround(true);
+        intValueFactory.increment(1000);
+        intValueFactory.increment(1000);
+        assertEquals(10, (int) intValueFactory.getValue());
+    }
+
+    @Test public void intSpinner_testWrapAround_increment_general() {
+        IntegerSpinnerValueFactory factory = new IntegerSpinnerValueFactory(4, 10, 4, 1);
+        factory.setWrapAround(true);
+        factory.increment(1); // 5
+        factory.increment(1); // 6
+        factory.increment(1); // 7
+        factory.increment(1); // 8
+        factory.increment(1); // 9
+        factory.increment(1); // 10
+        factory.increment(1); // 4 -- wrapped around
+        factory.increment(1); // 5
+        assertEquals(5, (int) factory.getValue());
+
+        factory.setValue(4);
+        factory.setAmountToStepBy(2);
+        factory.increment(1); // 6
+        factory.increment(1); // 8
+        factory.increment(1); // 10
+        factory.increment(1); // 5
+        factory.increment(1); // 7
+        factory.increment(1); // 9
+        factory.increment(1); // 4 -- wrapped around
+        factory.increment(1); // 6
+        assertEquals(6, (int) factory.getValue());
+
+        factory.setValue(4);
+        factory.setAmountToStepBy(3);
+        factory.increment(1); // 7
+        factory.increment(1); // 10
+        factory.increment(1); // 6 -- wrapped around
+        factory.increment(1); // 9
+        factory.increment(1); // 5 -- wrapped around
+        factory.increment(1); // 8
+        factory.increment(1); // 4 -- wrapped around
+        factory.increment(1); // 7
+        assertEquals(7, (int) factory.getValue());
+
+        factory.setValue(4);
+        factory.setAmountToStepBy(4);
+        factory.increment(1); // 8
+        factory.increment(1); // 5 -- wrapped around
+        factory.increment(1); // 9
+        factory.increment(1); // 6 -- wrapped around
+        factory.increment(1); // 10
+        factory.increment(1); // 7 -- wrapped around
+        factory.increment(1); // 4 -- wrapped around
+        factory.increment(1); // 8
+        assertEquals(8, (int) factory.getValue());
+
+        factory.setValue(4);
+        factory.setAmountToStepBy(5);
+        factory.increment(1); // 9
+        factory.increment(1); // 7 -- wrapped around
+        factory.increment(1); // 5 -- wrapped around
+        factory.increment(1); // 10
+        factory.increment(1); // 8 -- wrapped around
+        factory.increment(1); // 6 -- wrapped around
+        factory.increment(1); // 4 -- wrapped around
+        factory.increment(1); // 9
+        assertEquals(9, (int) factory.getValue());
+
+        factory.setValue(4);
+        factory.setAmountToStepBy(6);
+        factory.increment(1); // 10
+        factory.increment(1); // 9 -- wrapped around
+        factory.increment(1); // 8 -- wrapped around
+        factory.increment(1); // 7 -- wrapped around
+        factory.increment(1); // 6 -- wrapped around
+        factory.increment(1); // 5 -- wrapped around
+        factory.increment(1); // 4 -- wrapped around
+        factory.increment(1); // 10
+        assertEquals(10, (int) factory.getValue());
+
+
+        // TODO: Set amount to step-by greater than the total numbers between max and min
+        // Wrap around should wrap and select a value.
+        factory.setValue(7);
+        factory.setAmountToStepBy(10);
+        factory.increment(1);
+        factory.increment(1);
+        factory.increment(1);
+        factory.increment(1);
+        assertEquals(10, (int) factory.getValue());
+    }
+
+    @Test public void intSpinner_testWrapAround_decrement_general() {
+        IntegerSpinnerValueFactory factory = new IntegerSpinnerValueFactory(4, 10, 8, 1);
+        factory.setWrapAround(true);
+        factory.decrement(1); // 7
+        factory.decrement(1); // 6
+        factory.decrement(1); // 5
+        factory.decrement(1); // 4
+        factory.decrement(1); // 10 -- wrapped around
+        factory.decrement(1); // 9
+        factory.decrement(1); // 8
+        factory.decrement(1); // 7
+        assertEquals(7, (int) factory.getValue());
+
+        factory.setValue(8);
+        factory.setAmountToStepBy(2);
+        factory.decrement(1); // 6
+        factory.decrement(1); // 4
+        factory.decrement(1); // 9  -- wrapped around
+        factory.decrement(1); // 7
+        factory.decrement(1); // 5
+        factory.decrement(1); // 10  -- wrapped around
+        factory.decrement(1); // 8
+        factory.decrement(1); // 6
+        factory.setValue(6);
+        factory.setAmountToStepBy(3);
+        factory.decrement(1); // 10  -- wrapped around
+        factory.decrement(1); // 7
+        assertEquals(7, (int) factory.getValue());
+
+        factory.decrement(1); // 4
+        factory.decrement(1); // 8  -- wrapped around
+        factory.decrement(1); // 5
+        factory.decrement(1); // 9  -- wrapped around
+        factory.decrement(1); // 6
+        factory.decrement(1); // 10 -- wrapped around
+        assertEquals(10, (int) factory.getValue());
+
+        factory.setValue(4);
+        factory.setAmountToStepBy(4);
+        factory.decrement(1); // 7
+        factory.decrement(1); // 10 -- wrapped around
+        factory.decrement(1); // 6
+        factory.decrement(1); // 9 -- wrapped around
+        factory.decrement(1); // 5
+        factory.decrement(1); // 8 -- wrapped around
+        factory.decrement(1); // 4
+        factory.decrement(1); // 7 -- wrapped around
+        assertEquals(7, (int) factory.getValue());
+
+        factory.setValue(10);
+        factory.setAmountToStepBy(5);
+        factory.decrement(1); // 5
+        factory.decrement(1); // 7 -- wrapped around
+        factory.decrement(1); // 9 -- wrapped around
+        factory.decrement(1); // 4
+        factory.decrement(1); // 6 -- wrapped around
+        factory.decrement(1); // 8 -- wrapped around
+        factory.decrement(1); // 10 -- wrapped around
+        factory.decrement(1); // 5
+        assertEquals(5, (int) factory.getValue());
+
+        factory.setValue(10);
+        factory.setAmountToStepBy(6);
+        factory.decrement(1); // 4
+        factory.decrement(1); // 5 -- wrapped around
+        factory.decrement(1); // 6 -- wrapped around
+        factory.decrement(1); // 7 -- wrapped around
+        factory.decrement(1); // 8 -- wrapped around
+        factory.decrement(1); // 9 -- wrapped around
+        factory.decrement(1); // 10 -- wrapped around
+        factory.decrement(1); // 4
+        assertEquals(4, (int) factory.getValue());
+
+
+        // TODO: Set amount to step-by greater than the total numbers between max and min
+        // Wrap around should wrap and select a value.
+        factory.setValue(7);
+        factory.setAmountToStepBy(10);
+        factory.decrement(1);
+        factory.decrement(1);
+        factory.decrement(1);
+        factory.decrement(1);
+        assertEquals(4, (int) factory.getValue());
     }
 
     @Test public void intSpinner_testWrapAround_increment_twoSteps() {
