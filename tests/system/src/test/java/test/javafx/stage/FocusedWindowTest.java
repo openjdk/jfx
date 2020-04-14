@@ -41,6 +41,7 @@ import junit.framework.Assert;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import test.util.Util;
 
 public class FocusedWindowTest {
 
@@ -76,45 +77,29 @@ public class FocusedWindowTest {
         Platform.runLater(() -> stage.close());
     }
 
+    static WeakReference<Stage> closedFocusedStageWeak = null;
+    static Stage closedFocusedStage = null;
+
     @Test
     public void testLeak() throws Exception {
-        int counter = 0;
-        while(counter <= 100) {
-            counter += 1;
-            testLeakOnce();
-        }
-    }
-
-    static WeakReference<Stage> closedFocusedStageWeak = null;
-
-    public void testLeakOnce() throws Exception {
-        CountDownLatch leakLatch = new CountDownLatch(1);
-        closedFocusedStageWeak = null;
-        Platform.runLater(() -> {
-            Stage closedFocusedStage = new Stage();
+        Util.runAndWait(() -> {
+            closedFocusedStage = new Stage();
             closedFocusedStage.setTitle("Focused Stage");
             closedFocusedStageWeak = new WeakReference<>(closedFocusedStage);
             TextField textField = new TextField();
             closedFocusedStage.setScene(new Scene(textField));
-            Platform.runLater(() -> {
-                closedFocusedStage.show();
-                Platform.runLater(() -> {
-                    closedFocusedStage.close();
-                    Platform.runLater(() -> {
-                        closedFocusedStage.requestFocus();
-                        //textField.requestFocus();
-                        Platform.runLater(() -> {
-                            leakLatch.countDown();
-                        });
-                    });
-                });
-            });
         });
-
-        Assert.assertTrue("Timeout, waiting for runLater. ", leakLatch.await(15, TimeUnit.SECONDS));
-
+        Util.runAndWait(() -> {
+            closedFocusedStage.show();
+        });
+        Util.runAndWait(() -> {
+            closedFocusedStage.close();
+        });
+        Util.runAndWait(() -> {
+            closedFocusedStage.requestFocus();
+        });
+        closedFocusedStage = null;
         assertCollectable(closedFocusedStageWeak);
-
     }
 
     public static void assertCollectable(WeakReference weakReference) throws Exception {

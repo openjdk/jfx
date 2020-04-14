@@ -351,7 +351,7 @@ public abstract class Window {
         if (this.ptr != 0L) {
             _close(this.ptr);
         }
-        if(Window.focusedWindow == this) {
+        if (Window.focusedWindow == this) {
             Window.focusedWindow = null;
         }
     }
