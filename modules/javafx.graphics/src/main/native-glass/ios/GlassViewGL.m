@@ -124,6 +124,19 @@ static EAGLContext * ctx = nil;
 
 @implementation GlassViewGL : GLView
 
+-(void) doInsertText:(NSString*)myText {
+    int asciiCode = [myText characterAtIndex:0];
+    [self->delegate sendJavaKeyEventWithType:111 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:113 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:112 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+}
+
+-(void) doDeleteBackward {
+    int asciiCode = 8;
+    [self->delegate sendJavaKeyEventWithType:111 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:113 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+    [self->delegate sendJavaKeyEventWithType:112 keyCode:asciiCode chars:(char)asciiCode modifiers:0];
+}
 
 -(BOOL) touchesShouldBegin:(NSSet *)touches withEvent:(UIEvent *)event inContentView:(UIView *)view
 {
@@ -217,8 +230,6 @@ static EAGLContext * ctx = nil;
             if ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending) {
                 displayLink = [[UIScreen mainScreen] displayLinkWithTarget:[GlassTimer getDelegate]
                                                                   selector:@selector(displayLinkUpdate:)];
-                // 1 is 60hz, 2 is 30 Hz, 3 is 20 Hz ...
-                [displayLink setFrameInterval:2];
                 [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
                 [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:UITrackingRunLoopMode];
                 GLASS_LOG("GlassViewGL: displayLink SET");

@@ -31,8 +31,6 @@
 #import "GlassViewDelegate.h"
 
 // main GlassView protocol
-// not optimal since we'll have to duplicate code for GlassView2D and GlassView3D
-// but we'll use delegate to implement shared code to minimize this
 // TODO: now that we removed GlassView2D, we should collapse the delegate back into GlassView3D
 // and use Obj-C catgegories to partition the implementation (just like GlassWindow)
 @protocol GlassView <NSObject>
