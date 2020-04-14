@@ -41,7 +41,6 @@ AVFAudioSpectrumUnit::AVFAudioSpectrumUnit() : mSpectrumCallbackProc(NULL),
                                                mMaxFrames(0),
                                                mSamplesPerInterval(0),
                                                mRebuildCrunch(true),
-                                               mFirstBufferDelivered(false),
                                                mSpectrumElement(NULL),
                                                mSpectrum(NULL) {
     mMixBuffer.mNumberBuffers = 1;
@@ -192,8 +191,10 @@ void AVFAudioSpectrumUnit::UpdateBands(int size, const float* magnitudes, const 
     // Call our listener to dispatch the spectrum event
     if (mSpectrumCallbackProc) {
         double duration = (double) mSamplesPerInterval / (double) 44100;
-        double timestamp = mFirstBufferDelivered ? -1.0 : 0.0;
-        mSpectrumCallbackProc(mSpectrumCallbackContext, duration, timestamp);
+        // We do not provide timestamp here. It will be queried from EventQueueThread
+        // due to reading current time from AVPlayer might hang when called
+        // from audio processing thread. This function is called from this thread.
+        mSpectrumCallbackProc(mSpectrumCallbackContext, duration, -1.0);
     }
 
     unlockBands();
@@ -214,10 +215,6 @@ void AVFAudioSpectrumUnit::SetMaxFrames(UInt32 maxFrames) {
 void AVFAudioSpectrumUnit::SetSpectrumCallbackProc(AVFSpectrumUnitCallbackProc proc, void *context) {
     mSpectrumCallbackProc = proc;
     mSpectrumCallbackContext = context;
-}
-
-void AVFAudioSpectrumUnit::SetFirstBufferDelivered(bool isFirstBufferDelivered) {
-    mFirstBufferDelivered = isFirstBufferDelivered;
 }
 
 static gboolean PostMessageCallback(GstElement * element, GstMessage * message) {

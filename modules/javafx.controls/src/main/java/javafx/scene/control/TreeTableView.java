@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3406,12 +3406,13 @@ public class TreeTableView<S> extends Control {
             TreeTablePosition<S,?> pos = new TreeTablePosition<>(treeTableView, focusRow, null);
             setFocusedCell(pos);
 
-            treeTableView.showRootProperty().addListener(o -> {
+            showRootListener = obs -> {
                 if (isFocused(0)) {
                     focus(-1);
                     focus(0);
                 }
-            });
+            };
+            treeTableView.showRootProperty().addListener(new WeakInvalidationListener(showRootListener));
 
             focusedCellProperty().addListener(o -> {
                 treeTableView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
@@ -3424,6 +3425,8 @@ public class TreeTableView<S> extends Control {
 
         private final WeakChangeListener<TreeItem<S>> weakRootPropertyListener =
                 new WeakChangeListener<>(rootPropertyListener);
+
+        private final InvalidationListener showRootListener;
 
         private void updateTreeEventListener(TreeItem<S> oldRoot, TreeItem<S> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {

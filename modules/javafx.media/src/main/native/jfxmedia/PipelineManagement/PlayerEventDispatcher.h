@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ public:
     virtual bool SendMarkerEvent(string name, double time) = 0;
     virtual bool SendBufferProgressEvent(double clipDuration, int64_t start, int64_t stop, int64_t position) = 0;
     virtual bool SendDurationUpdateEvent(double time) = 0;
-    virtual bool SendAudioSpectrumEvent(double time, double duration) = 0;
+    virtual bool SendAudioSpectrumEvent(double time, double duration, bool queryTimestamp) = 0;
     virtual void Warning(int warningCode, const char* warningMessage) = 0;
 };
 #endif // _PLAYER_EVENT_DISPATCHER_H_

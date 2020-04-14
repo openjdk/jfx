@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.scene.control.skin;
+package javafx.scene.control.skin;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -40,12 +40,16 @@ public class TextAreaSkinAndroid extends TextAreaSkin {
                     Boolean wasFocused, Boolean isFocused) {
                 if (textArea.isEditable()) {
                     if (isFocused) {
-                        com.sun.glass.ui.android.SoftwareKeyboard.show();
+                        showSoftwareKeyboard();
                     } else {
-                        com.sun.glass.ui.android.SoftwareKeyboard.hide();
+                        hideSoftwareKeyboard();
                     }
                 }
             }
         });
     }
+
+    native void showSoftwareKeyboard();
+    native void hideSoftwareKeyboard();
+
 }

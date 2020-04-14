@@ -40,7 +40,7 @@
 
 @end
 
-@interface GlassWindow : UIView
+@interface GlassWindow : UIView<UIKeyInput>
 {
     jobject             jWindow; // Glass java Window object
 

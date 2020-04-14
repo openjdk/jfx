@@ -77,6 +77,10 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
     }
 
 
+    public static void dispatchKeyEventFromNative(int type, int key, char[] chars, int modifiers) {
+        instance.processor.dispatchKeyEvent(type, key, chars, modifiers);
+    }
+
     public static void gotKeyEventFromNative(int action, int linuxKey) {
         instance.gotKeyEvent (action, linuxKey);
     }

@@ -81,7 +81,6 @@ public:
     void SetChannels(UInt32 count);
     void SetMaxFrames(UInt32 maxFrames);
     void SetSpectrumCallbackProc(AVFSpectrumUnitCallbackProc proc, void *context);
-    void SetFirstBufferDelivered(bool isFirstBufferDelivered);
 
 private:
     AVFSpectrumUnitCallbackProc mSpectrumCallbackProc;
@@ -104,7 +103,6 @@ private:
     UInt32 mSamplesPerInterval;
 
     bool mRebuildCrunch;
-    bool mFirstBufferDelivered;
 
     // GStreamer
     GstElement *mSpectrumElement;
