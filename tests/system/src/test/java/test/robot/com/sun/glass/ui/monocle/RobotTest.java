@@ -91,7 +91,7 @@ public class RobotTest {
             robot.mouseRelease(button);
             robot.keyRelease(code);
         });
-    	TestLogShim.waitForLog(message);
+        TestLogShim.waitForLog(message);
     }
 
     private static String modifierString(MouseEvent evt) {
