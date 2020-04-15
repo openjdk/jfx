@@ -61,10 +61,10 @@ public class RobotTest {
         TestLogShim.log(name.getMethodName());
         TestApplication.showFullScreenScene();
     }
-    
+
     @Test
     public void clickKeyModifierTest() throws Exception {
-    	runWithKeyPress(KeyCode.CONTROL, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'CTRL'", evt -> {
+        runWithKeyPress(KeyCode.CONTROL, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'CTRL'", evt -> {
             assertTrue("Ctrl should be down",evt.isControlDown());
         });
         runWithKeyPress(KeyCode.SHIFT, MouseButton.PRIMARY, "Clicked at 300, 400 with modifier 'SHIFT'", evt -> {
@@ -74,16 +74,16 @@ public class RobotTest {
             assertTrue("Alt should be down",evt.isAltDown());
         });
     }
-    
+
     private void runWithKeyPress(KeyCode code, MouseButton button, String message, Consumer<MouseEvent> test) throws Exception {
         TestApplication.getStage().getScene().setOnMouseClicked(
                 (e) -> {
-                	test.accept(e);
-                	TestLogShim.format("Clicked at %.0f, %.0f with modifier '%s'", e.getScreenX(), e.getScreenY(), modifierString(e));
+                    test.accept(e);
+                    TestLogShim.format("Clicked at %.0f, %.0f with modifier '%s'", e.getScreenX(), e.getScreenY(), modifierString(e));
                 }
         );
-    	
-    	Platform.runLater(() -> {
+
+        Platform.runLater(() -> {
             Robot robot = new Robot();
             robot.mouseMove(300, 400);
             robot.keyPress(code);
@@ -93,7 +93,7 @@ public class RobotTest {
         });
     	TestLogShim.waitForLog(message);
     }
-    
+
     private static String modifierString(MouseEvent evt) {
     	List<String> modifiers = new ArrayList<>();
     	if(evt.isAltDown()) {
