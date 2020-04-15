@@ -95,17 +95,17 @@ public class RobotTest {
     }
 
     private static String modifierString(MouseEvent evt) {
-    	List<String> modifiers = new ArrayList<>();
-    	if(evt.isAltDown()) {
-    		modifiers.add("ALT");
-    	}
-    	if(evt.isControlDown()) {
-    		modifiers.add("CTRL");
-    	}
-    	if(evt.isShiftDown()) {
-    		modifiers.add("SHIFT");
-    	}
-    	return modifiers.stream().collect(Collectors.joining(", "));
+        List<String> modifiers = new ArrayList<>();
+        if(evt.isAltDown()) {
+            modifiers.add("ALT");
+        }
+        if(evt.isControlDown()) {
+            modifiers.add("CTRL");
+        }
+        if(evt.isShiftDown()) {
+            modifiers.add("SHIFT");
+        }
+        return modifiers.stream().collect(Collectors.joining(", "));
     }
 
     @Test
