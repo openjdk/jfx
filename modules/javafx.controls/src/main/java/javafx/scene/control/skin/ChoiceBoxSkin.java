@@ -413,6 +413,8 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
                 if (selectedItem instanceof RadioMenuItem) {
                     ((RadioMenuItem) selectedItem).setSelected(true);
                 } else {
+                    // need to unselect toggles if selectionModel allows a Separator/MenuItem
+                    // to be selected
                     toggleGroup.selectToggle(null);
                 }
                 // update the label

@@ -99,7 +99,7 @@ public class ChoiceBoxSelectionTest {
     }
 
     /**
-     * toggle must be unselected if separator is selected
+     * Toggle must be unselected if separator is selected
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Test
@@ -112,6 +112,8 @@ public class ChoiceBoxSelectionTest {
         int selectedIndex = 1;
         sm.select(selectedIndex);
         sm.select(separatorIndex);
+        // implementation detail of current sm (openjfx14): it allows a Separator
+        // to be selected - skin must unselect its toggles
         assertToggleSelected(box, -1);
     }
 
