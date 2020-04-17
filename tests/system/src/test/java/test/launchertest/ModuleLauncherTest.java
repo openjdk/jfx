@@ -278,12 +278,33 @@ public class ModuleLauncherTest {
     }
 
     @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2CompileOff() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2CompileOff");
+    }
+
+    @Test (timeout = 15000)
     public void testFXMLScriptDeployment1() throws Exception {
         doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
     }
 
     @Test (timeout = 15000)
-    public void testFXMLScriptDeployment2() throws Exception {
-        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment");
+    public void testFXMLScriptDeployment2Compile_On() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_On");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_Off() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Off");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_On_Off() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_On_Off");
+    }
+
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_Off_On() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Off_On");
     }
 }
+

@@ -1565,7 +1565,7 @@ public class FXMLLoader {
                     InputStreamReader scriptReader = null;
                     try {
                         scriptReader = new InputStreamReader(location.openStream(), charset);
-                        if (engine instanceof Compilable) {
+                        if (engine instanceof Compilable && compileScript) {
                             ((Compilable) engine).compile(scriptReader).eval();
                         }
                         else {
@@ -1595,7 +1595,7 @@ public class FXMLLoader {
                     engineBindings.put(scriptEngine.FILENAME, location.getPath() + "-script_starting_at_line_"
                                        + (getLineNumber() - (int) ((String) value).codePoints().filter(c -> c == '\n').count()));
 
-                    if (scriptEngine instanceof Compilable) {
+                    if (scriptEngine instanceof Compilable && compileScript) {
                        ((Compilable) scriptEngine).compile((String)value).eval();
                     }
                     else {
@@ -1701,7 +1701,7 @@ public class FXMLLoader {
             this.script = script;
             this.scriptEngine = scriptEngine;
             this.filename = filename;
-            if (scriptEngine instanceof Compilable) {
+            if (scriptEngine instanceof Compilable  && compileScript) {
                try {
                   // supply the filename to the scriptEngine engine scope Bindings in case it is needed for compilation
                   scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE).put(scriptEngine.FILENAME, filename);
@@ -1849,6 +1849,7 @@ public class FXMLLoader {
     private Element current = null;
 
     private ScriptEngine scriptEngine = null;
+    private static boolean compileScript = false;
 
     private List<String> packages = new LinkedList<String>();
     private Map<String, Class<?>> classes = new HashMap<String, Class<?>>();
@@ -1874,6 +1875,11 @@ public class FXMLLoader {
      * The tag name of import processing instruction.
      */
     public static final String IMPORT_PROCESSING_INSTRUCTION = "import";
+
+    /**
+     * The tag name of the compile processing instruction.
+     */
+    public static final String COMPILE_PROCESSING_INSTRUCTION = "compile";
 
     /**
      * Prefix of 'fx' namespace.
@@ -2708,6 +2714,10 @@ public class FXMLLoader {
             processLanguage();
         } else if (piTarget.equals(IMPORT_PROCESSING_INSTRUCTION)) {
             processImport();
+        } else if (piTarget.equals(COMPILE_PROCESSING_INSTRUCTION)) {
+            String strCompile=xmlStreamReader.getPIData().trim();
+            // if PIData() is empty string then default to true, otherwise use Boolean.parseBoolean(string) to determine the boolean value
+            compileScript = (strCompile.length()==0 ? true : Boolean.parseBoolean(strCompile));
         }
     }
 
@@ -3585,3 +3595,4 @@ public class FXMLLoader {
         }
     }
 }
+

@@ -57,7 +57,7 @@ import pseudoScriptEngineCompilable.RgfPseudoScriptEngineCompilable;
  * Modular test application for testing FXML.
  * This is launched by ModuleLauncherTest.
  */
-public class FXMLScriptDeployment extends Application {
+public class FXMLScriptDeployment2Compile_On extends Application {
 
     static boolean bDebug = false; // true; // display invocation list
 
@@ -71,7 +71,7 @@ public class FXMLScriptDeployment extends Application {
             if (args.length > 0) {
                bDebug = true;
             }
-            new FXMLScriptDeployment().launch();
+            new FXMLScriptDeployment2Compile_On().launch();
             // for debugging, allows to study invocation logs in detail
             if (bDebug) { dumpEvalInformation(); }
             assertCorrectInvocations();
@@ -94,7 +94,7 @@ public class FXMLScriptDeployment extends Application {
         Scene scene = null;
         Button btn = null;
         try {
-             fxmlUrl = Util.getURL(FXMLScriptDeployment.class, "demo_02");
+             fxmlUrl = Util.getURL(FXMLScriptDeployment2Compile_On.class, "demo_02_on");
              rootNode = FXMLLoader.load(fxmlUrl);
              scene = new Scene(rootNode);
              btn = (Button) scene.lookup("#idButton");
@@ -247,8 +247,8 @@ public class FXMLScriptDeployment extends Application {
                     break;
 
                 case 3:
-                    Util.assertEndsWith("demo_02.fxml-script_starting_at_line_52", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02.fxml embedded script sqtmc - line # 52", script);
+                    Util.assertEndsWith("demo_02_on.fxml-script_starting_at_line_52", filename);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_on.fxml embedded script sqtmc - line # 52", script);
                     break;
 
                 case 4:
@@ -257,28 +257,28 @@ public class FXMLScriptDeployment extends Application {
                     break;
 
                 case 5:
-                    Util.assertEndsWith("demo_02.fxml-script_starting_at_line_56", filename);
+                    Util.assertEndsWith("demo_02_on.fxml-script_starting_at_line_56", filename);
                     Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[something (line # 56)", script);
                     break;
 
                 case 6:
-                    Util.assertEndsWith("demo_02.fxml-script_starting_at_line_59", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02.fxml (line # 59):", script);
+                    Util.assertEndsWith("demo_02_on.fxml-script_starting_at_line_59", filename);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(): RgfPseudoCompiledScript=[demo_02_on.fxml (line # 59):", script);
                     break;
 
                 case 7:     // same as case 8 (same button clicked)
-                    Util.assertEndsWith("demo_02.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02.fxml embedded event - ActionEvent - line # 45 -", script);
+                    Util.assertEndsWith("demo_02_on.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml embedded event - ActionEvent - line # 45 -", script);
                     break;
 
                 case 8:     // same as case 7 (same button clicked)
-                    Util.assertEndsWith("demo_02.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02.fxml embedded event - ActionEvent - line # 45 -", script);
+                    Util.assertEndsWith("demo_02_on.fxml-onAction_attribute_in_element_ending_at_line_46", filename);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml embedded event - ActionEvent - line # 45 -", script);
                     break;
 
                 case 9:
-                    Util.assertEndsWith("demo_02.fxml-onMouseClicked_attribute_in_element_ending_at_line_46", filename);
-                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02.fxml embedded event - MouseClicked - line # 44", script);
+                    Util.assertEndsWith("demo_02_on.fxml-onMouseClicked_attribute_in_element_ending_at_line_46", filename);
+                    Util.assertStartsWith("RgfPseudoCompiledScript.eval(Bindings bindings): RgfPseudoCompiledScript=[demo_02_on.fxml embedded event - MouseClicked - line # 44", script);
                     break;
             }
         }
