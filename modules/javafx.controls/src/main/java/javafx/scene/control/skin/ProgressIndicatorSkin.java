@@ -26,6 +26,7 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.TreeShowingExpression;
 import com.sun.javafx.scene.control.skin.Utils;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -104,6 +105,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     private IndeterminateSpinner spinner;
     private DeterminateIndicator determinateIndicator;
     private ProgressIndicator control;
+    private TreeShowingExpression treeShowingExpression;
 
     Animation indeterminateTransition;
 
@@ -129,8 +131,10 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         // register listeners
         registerChangeListener(control.indeterminateProperty(), e -> initialize());
         registerChangeListener(control.progressProperty(), e -> updateProgress());
-        registerChangeListener(NodeHelper.treeShowingProperty(control), e -> updateAnimation());
         registerChangeListener(control.sceneProperty(), e->updateAnimation());
+
+        treeShowingExpression = new TreeShowingExpression(control);
+        treeShowingExpression.addListener((obs, old, current) -> updateAnimation());
 
         initialize();
         updateAnimation();
@@ -231,6 +235,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
     /** {@inheritDoc} */
     @Override public void dispose() {
         super.dispose();
+
+        treeShowingExpression.dispose();
 
         if (indeterminateTransition != null) {
             indeterminateTransition.stop();
