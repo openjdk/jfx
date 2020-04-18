@@ -29,6 +29,7 @@ import javax.script.Bindings;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
+import javax.script.ScriptException;
 
 import javax.script.Compilable;
 import javax.script.CompiledScript;
@@ -99,11 +100,15 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return invocationList;
     }
 
-    public CompiledScript compile(Reader script) {
+    public CompiledScript compile(Reader script) throws ScriptException {
         return compile (readReader(script));
     }
 
-    public CompiledScript compile(String script) {
+    public CompiledScript compile(String script) throws ScriptException {
+        if (script.indexOf("FAIL COMPILATION") != -1) {
+                throw new ScriptException("test script contains FAIL COMPILATION");
+        }
+
         String code = "RgfPseudoCompiledScript=[" + script + "]";
         RgfPseudoCompiledScript rpcs = new RgfPseudoCompiledScript(code, this);
         return rpcs;
@@ -134,4 +139,5 @@ public class RgfPseudoScriptEngineCompilable extends AbstractScriptEngine implem
         return sb.toString();
     }
 }
+
 

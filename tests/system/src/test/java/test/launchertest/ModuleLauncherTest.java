@@ -306,5 +306,10 @@ public class ModuleLauncherTest {
     public void testFXMLScriptDeployment2Compile_Off_On() throws Exception {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Off_On");
     }
+    @Test (timeout = 15000)
+    public void testFXMLScriptDeployment2Compile_Fail_Compilation() throws Exception {
+        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Fail_Compilation");
+    }
 }
+
 
