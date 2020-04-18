@@ -2095,6 +2095,15 @@ public class ComboBoxTest {
         assertTrue(" visible range [" + first + ", " + last + "] must include " + index,
                 first <= index  && index <= last);
 
+        index = LIST_SIZE / 2;
+        comboBox.getSelectionModel().select(index);
+        Toolkit.getToolkit().firePulse();
+
+        first = virtualFlow.getFirstVisibleCell().getIndex();
+        last = virtualFlow.getLastVisibleCell().getIndex();
+        assertTrue(" visible range [" + first + ", " + last + "] must include " + index,
+                first <= index  && index <= last);
+
         index = LIST_SIZE - 1;
         comboBox.getSelectionModel().select(index);
         Toolkit.getToolkit().firePulse();
