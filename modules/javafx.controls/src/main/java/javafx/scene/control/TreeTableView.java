@@ -835,11 +835,9 @@ public class TreeTableView<S> extends Control {
 
             // update the lastKnownColumnIndex map
             lastKnownColumnIndex.clear();
-            for (TreeTableColumn<S,?> tc : getColumns()) {
-                int index = getVisibleLeafIndex(tc);
-                if (index > -1) {
-                    lastKnownColumnIndex.put(tc, index);
-                }
+            ObservableList<TreeTableColumn<S,?>> visibleLeafColumns = getVisibleLeafColumns();
+            for( int index =0, max = visibleLeafColumns.size(); index<max; index++) {
+                lastKnownColumnIndex.put(visibleLeafColumns.get(index), index);
             }
         }
     };
@@ -1790,6 +1788,11 @@ public class TreeTableView<S> extends Control {
      * visible leaf columns
      */
     public int getVisibleLeafIndex(TreeTableColumn<S,?> column) {
+        final int indexHint = this.lastKnownColumnIndex.getOrDefault(column, -1);
+        if (indexHint >= 0 && indexHint < getVisibleLeafColumns().size() &&
+            getVisibleLeafColumns().get(indexHint) == column) {
+            return indexHint;
+        }
         return getVisibleLeafColumns().indexOf(column);
     }
 

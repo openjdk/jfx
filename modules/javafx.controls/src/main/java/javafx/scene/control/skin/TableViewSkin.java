@@ -115,12 +115,13 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
                 control.requestFocus();
             }
         };
-        flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         final ScrollBar hbar = flow.getHbar();
+        final ScrollBar vbar = flow.getVbar();
+        vbar.addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         hbar.addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
-        hbar.valueProperty().addListener(o -> flow.requestCellLayout());
-        hbar.widthProperty().addListener(o -> flow.requestCellLayout());
+        vbar.heightProperty().addListener(o -> requestCellLayout());
+        hbar.widthProperty().addListener(o -> requestCellLayout());
 
         // init the behavior 'closures'
         behavior.setOnFocusPreviousRow(() -> onFocusAboveCell());
@@ -240,6 +241,10 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
     /** {@inheritDoc} */
     @Override void horizontalScroll() {
         super.horizontalScroll();
+        requestCellLayout();
+    }
+
+    private void requestCellLayout(){
         if (getSkinnable().getFixedCellSize() > 0) {
             flow.requestCellLayout();
         }

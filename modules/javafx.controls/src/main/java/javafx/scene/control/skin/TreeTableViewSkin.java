@@ -160,8 +160,12 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
                 control.requestFocus();
             }
         };
-        flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
-        flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        final ScrollBar hbar = flow.getHbar();
+        final ScrollBar vbar = flow.getVbar();
+        vbar.addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        hbar.addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+        vbar.heightProperty().addListener(o -> requestCellLayout());
+        hbar.widthProperty().addListener(o -> requestCellLayout());
 
         // init the behavior 'closures'
         behavior.setOnFocusPreviousRow(() -> onFocusAboveCell());
@@ -335,9 +339,7 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
     /** {@inheritDoc} */
     @Override void horizontalScroll() {
         super.horizontalScroll();
-        if (getSkinnable().getFixedCellSize() > 0) {
-            flow.requestCellLayout();
-        }
+        requestCellLayout();
     }
 
     /** {@inheritDoc} */
@@ -362,6 +364,12 @@ public class TreeTableViewSkin<T> extends TableViewSkinBase<T, TreeItem<T>, Tree
             // requestRebuildCells();
         } else {
             needCellsReconfigured = true;
+        }
+    }
+
+    private void requestCellLayout(){
+        if (getSkinnable().getFixedCellSize() > 0) {
+            flow.requestCellLayout();
         }
     }
 }

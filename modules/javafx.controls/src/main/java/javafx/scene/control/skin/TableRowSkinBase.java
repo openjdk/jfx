@@ -157,8 +157,24 @@ public abstract class TableRowSkinBase<T,
         getSkinnable().setPickOnBounds(false);
 
         recreateCells();
-        updateCells(true);
 
+        if(control instanceof TableRow){
+            TableRow tableRow = (TableRow)control;
+            TableView tableView = tableRow.getTableView();
+            if(tableView!=null){
+                fixedCellSize = tableView.getFixedCellSize();
+                fixedCellSizeEnabled = fixedCellSize >= 0;
+            }
+        }else if(control instanceof TreeTableRow){
+            TreeTableRow treeTableRow = (TreeTableRow)control;
+            TreeTableView treeTableView = treeTableRow.getTreeTableView();
+            if(treeTableView!=null){
+                fixedCellSize = treeTableView.getFixedCellSize();
+                fixedCellSizeEnabled = fixedCellSize >= 0;
+            }
+        }
+
+        updateCells(true);
         // init bindings
         // watches for any change in the leaf columns observableArrayList - this will indicate
         // that the column order has changed and that we should update the row
@@ -346,38 +362,27 @@ public abstract class TableRowSkinBase<T,
         final Insets padding = getSkinnable().getPadding();
         final double vfWidth = virtualFlow == null ? 0.0:virtualFlow.getWidth();
         final double headerWidth = vfWidth - (padding.getLeft() + padding.getRight());
-        for (int column = 0, max = cells.size(); column < max; column++) {
-            R tableCell = cells.get(column);
 
-            TableColumnBase<T, ?> col = getTableColumn(tableCell);
-            if (col == null || !col.isVisible()) {
-                continue;
-            }
-
-            // work out where this column header is, and it's width (start -> end)
-            double start = 0;
-            for (int i = 0; i < visibleLeafColumnsSize; i++) {
-                TableColumnBase<?,?> c = visibleLeafColumns.get(i);
-                if (c.equals(col)) break;
-                start += snapSizeX(c.getWidth());
-            }
-            double end = start + col.getWidth();
-            // determine the width of the table
-
+        double start = 0;
+        for (int i = 0; i < visibleLeafColumnsSize; i++) {
+            TableColumnBase<?,?> c = visibleLeafColumns.get(i);
+            double end = start + snapSizeX(c.getWidth());
             final boolean visible = isOverlap(start, end, scrollX, headerWidth + scrollX);
             if(visible) {
                 if(firstVisibleColumnIndex == -1) {
-                    firstVisibleColumnIndex = column;
+                    firstVisibleColumnIndex = i;
                 }
-                lastVisibleColumnIndex = column;
+                lastVisibleColumnIndex = i;
             }else if( firstVisibleColumnIndex != -1 ) {
                 break;
             }
+            start = end;
         }
 
         final ObservableList<Node> children = getChildren();
         if(fixedCellSizeEnabled) {
-            for (int column = 0, max = cells.size(); column < max; column++) {
+            final Set<R> removeCells = new HashSet<>();
+            for (int column = cells.size()-1; column >= 0; column--) {
                 R tableCell = cells.get(column);
                 final boolean isVisible = firstVisibleColumnIndex <= column && column <= lastVisibleColumnIndex;
                 if (isVisible ) {
@@ -388,9 +393,13 @@ public abstract class TableRowSkinBase<T,
                     // we only add/remove to the scenegraph if the fixed cell
                     // length support is enabled - otherwise we keep all
                     // TableCells in the scenegraph
-                    children.remove(tableCell);
+                    if(tableCell.getParent()!=null){
+                        removeCells.add(tableCell);
+                    }
                 }
             }
+            // Batch Remove
+            children.removeAll(removeCells);
         }
 
         // Added for RT-32700, and then updated for RT-34074.
@@ -558,8 +567,7 @@ public abstract class TableRowSkinBase<T,
         final int skinnableIndex = skinnable.getIndex();
         final List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
 
-        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-            TableColumnBase<T,?> col = visibleLeafColumns.get(i);
+        for (TableColumnBase<T,?> col : visibleLeafColumns) {
 
             R cell = null;
             if (cellsMap.containsKey(col)) {
