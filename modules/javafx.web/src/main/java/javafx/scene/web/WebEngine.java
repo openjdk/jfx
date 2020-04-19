@@ -325,7 +325,7 @@ window.setMember("app", javaApp);
  * {@link Module#isExported(String) exports} the containing package
  * unconditionally.
  * </p>
- * 
+ *
  * <p>
  * Starting with JavaFX 14, <a href="https://tools.ietf.org/html/rfc7540">HTTP/2</a> support has been added to WebEngine.
  * This is achieved by using {@link java.net.http.HttpClient} instead of {@link URLConnection}. HTTP/2 is activated
