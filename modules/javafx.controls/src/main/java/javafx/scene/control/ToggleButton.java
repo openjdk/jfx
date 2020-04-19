@@ -193,17 +193,14 @@ import javafx.css.StyleableProperty;
      * being added to the new group.
      */
     private ObjectProperty<ToggleGroup> toggleGroup;
-    @Override
     public final void setToggleGroup(ToggleGroup value) {
         toggleGroupProperty().set(value);
     }
 
-    @Override
     public final ToggleGroup getToggleGroup() {
         return toggleGroup == null ? null : toggleGroup.get();
     }
 
-    @Override
     public final ObjectProperty<ToggleGroup> toggleGroupProperty() {
         if (toggleGroup == null) {
             toggleGroup = new ObjectPropertyBase<ToggleGroup>() {
