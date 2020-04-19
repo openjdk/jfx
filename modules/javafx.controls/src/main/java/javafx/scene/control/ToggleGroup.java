@@ -71,7 +71,7 @@ public class ToggleGroup {
     private final ObservableList<Toggle> toggles = new VetoableListDecorator<Toggle>(new TrackableObservableList<Toggle>() {
         @Override protected void onChanged(Change<Toggle> c) {
             while (c.next()) {
-                List<Toggle> addedToggles = c.getAddedSubList();
+                final List<Toggle> addedToggles = c.getAddedSubList();
 
                 // Look through the removed toggles.
                 for (Toggle t : c.getRemoved()) {
