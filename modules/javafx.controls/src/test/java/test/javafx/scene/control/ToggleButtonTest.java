@@ -267,7 +267,7 @@ public class ToggleButtonTest {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-               System.err.println("InterruptedException occurred during Thread.sleep()");
+                fail("InterruptedException occurred during Thread.sleep()");
             }
         }
     }
