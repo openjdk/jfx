@@ -161,6 +161,11 @@ public final class GraphicsDecoder  {
                 case SET_STROKE_GRADIENT:
                     gc.setStrokeGradient(getGradient(gc, buf));
                     break;
+                case SET_FILL_PATTERN:
+                    gc.setFillPattern(
+                        WCImage.getImage(gm.getRef(buf.getInt())),
+                        getRectangle(buf),
+                        (WCTransform)gm.getRef(buf.getInt()));
                 case SET_LINE_DASH:
                     gc.setLineDash(buf.getFloat(), getFloatArray(buf));
                     break;
