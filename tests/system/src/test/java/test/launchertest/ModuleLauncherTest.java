@@ -278,11 +278,6 @@ public class ModuleLauncherTest {
     }
 
     @Test (timeout = 15000)
-    public void testFXMLScriptDeployment2CompileOff() throws Exception {
-        doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2CompileOff");
-    }
-
-    @Test (timeout = 15000)
     public void testFXMLScriptDeployment1() throws Exception {
         doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
     }

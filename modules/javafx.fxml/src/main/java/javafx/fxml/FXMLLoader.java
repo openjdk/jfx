@@ -1597,7 +1597,7 @@ public class FXMLLoader {
                             }
                             else {        // fallback to uncompiled mode
                                engine.eval(script);
-                                }
+                            }
                         }
                         else {
                            engine.eval(script);
@@ -1773,7 +1773,7 @@ public class FXMLLoader {
                    scriptEngine.eval(script, localBindings);
                 }
             } catch (ScriptException exception){
-                throw new RuntimeException(filename+": caused ScriptException",exception);
+                throw new RuntimeException(filename+": caused ScriptException", exception);
             }
         }
     }
