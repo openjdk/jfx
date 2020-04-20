@@ -85,6 +85,7 @@ public final class GraphicsDecoder  {
     @Native public final static int SET_MITER_LIMIT        = 54;
     @Native public final static int SET_TEXT_MODE          = 55;
     @Native public final static int SET_PERSPECTIVE_TRANSFORM = 56;
+    @Native public final static int SET_FILL_PATTERN       = 57;
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(GraphicsDecoder.class.getName());
