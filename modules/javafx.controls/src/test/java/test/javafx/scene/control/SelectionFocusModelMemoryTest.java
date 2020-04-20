@@ -221,10 +221,6 @@ public class SelectionFocusModelMemoryTest {
 
     @Test
     public void testChoiceBoxSelectionModel() {
-        // FIXME
-        // can't formally ignore just one parameter, so backing out if showBeforeReplaceSM
-        // will be fixed as side-effect of skin cleanup
-        if (showBeforeReplaceSM) return; //@Ignore("8087555")
         ChoiceBox<String> control = new ChoiceBox<>(FXCollections.observableArrayList("Apple", "Orange", "Banana"));
         WeakReference<SelectionModel<?>> weakRef = new WeakReference<>(control.getSelectionModel());
         SingleSelectionModel<String> replacingSm = ChoiceBoxShim.get_ChoiceBoxSelectionModel(control);
