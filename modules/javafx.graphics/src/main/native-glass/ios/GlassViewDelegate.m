@@ -96,6 +96,7 @@ static jint getTouchStateFromPhase(int phase)
 @synthesize isScrolling;
 @synthesize mouseTouch;
 @synthesize lastEventPoint;
+@synthesize beginTouchEventPoint;
 
 
 - (void)touchesBeganCallback:(NSSet *)involvedTouches withEvent:(UIEvent *)event
@@ -116,6 +117,7 @@ static jint getTouchStateFromPhase(int phase)
     if (self.mouseTouch == nil) {
         UITouch *touch = [[event allTouches] anyObject];
         CGPoint viewPoint = [touch locationInView:self.uiView.superview];
+        self.beginTouchEventPoint = viewPoint;
 
         self.mouseTouch = touch;
 
@@ -144,7 +146,11 @@ static jint getTouchStateFromPhase(int phase)
     // emulate mouse
     if (self.mouseTouch != nil && [involvedTouches containsObject:self.mouseTouch] == YES) {
         CGPoint viewPoint = [self.mouseTouch locationInView:self.uiView.superview];
-        [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_DRAG button:com_sun_glass_events_MouseEvent_BUTTON_LEFT];
+        // iOS might send one or more 'NSTouchPhaseMoved', even if the initial event location didn't change.
+        // This check prevents emulating mouse drag events in such cases
+        if (!CGPointEqualToPoint(viewPoint, self.beginTouchEventPoint)) {
+            [self sendJavaMouseEvent:viewPoint type:com_sun_glass_events_MouseEvent_DRAG button:com_sun_glass_events_MouseEvent_BUTTON_LEFT];
+        }
     }
 }
 
