@@ -1590,7 +1590,7 @@ public class FXMLLoader {
                             try {
                                 compiledScript=((Compilable) engine).compile(script);
                             } catch (ScriptException compileExc) {
-                               Logging.getJavaFXLogger().warning("While compiling script \""+filename+"\", exception \""+compileExc+"\" has occurred, falling back to evaluating script in uncompiled mode");
+                               Logging.getJavaFXLogger().warning(filename+": compiling caused \""+compileExc+"\", falling back to evaluating script in uncompiled mode");
                             }
                             if (compiledScript != null) {
                                compiledScript.eval();
@@ -1629,7 +1629,7 @@ public class FXMLLoader {
                         try {
                             compiledScript=((Compilable) scriptEngine).compile(script);
                         } catch (ScriptException compileExc) {
-                            Logging.getJavaFXLogger().warning("While compiling script \""+filename+"\", exception \""+compileExc+"\" has occurred, falling back to evaluating script in uncompiled mode");
+                            Logging.getJavaFXLogger().warning(filename+": compiling caused \""+compileExc+"\", falling back to evaluating script in uncompiled mode");
                         }
                         if (compiledScript != null) {
                            compiledScript.eval();
@@ -1748,7 +1748,7 @@ public class FXMLLoader {
                   this.compiledScript = ((Compilable) scriptEngine).compile(script);
                   this.isCompiled = true;
                } catch (ScriptException compileExc){
-                    Logging.getJavaFXLogger().warning("While compiling script \""+filename+"\", exception \""+compileExc+"\" has occurred, falling back to evaluating script in uncompiled mode");
+                    Logging.getJavaFXLogger().warning(filename+": compiling caused \""+compileExc+"\", falling back to evaluating script in uncompiled mode");
                }
             }
         }
