@@ -278,7 +278,7 @@ public class ModuleLauncherTest {
     }
 
     @Test (timeout = 15000)
-    public void testFXMLScriptDeployment1() throws Exception {
+    public void testFXMLScriptDeployment() throws Exception {
         doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
     }
 
