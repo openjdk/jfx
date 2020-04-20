@@ -1603,6 +1603,7 @@ public class FXMLLoader {
                            engine.eval(script);
                         }
                     } catch (ScriptException exception) {
+                        System.err.println(filename+": caused ScriptException");
                         exception.printStackTrace();
                     }
                 }
@@ -1618,10 +1619,11 @@ public class FXMLLoader {
 
             if (value != null && !staticLoad) {
                 // Evaluate the script
+                String filename = null;
                 try {
                     Bindings engineBindings = scriptEngine.getBindings(ScriptContext.ENGINE_SCOPE);
                     String script = (String) value;
-                    String filename = location.getPath() + "-script_starting_at_line_"
+                    filename = location.getPath() + "-script_starting_at_line_"
                                        + (getLineNumber() - (int) script.codePoints().filter(c -> c == '\n').count());
                     engineBindings.put(scriptEngine.FILENAME, filename);
                     if (scriptEngine instanceof Compilable && compileScript) {
@@ -1642,7 +1644,7 @@ public class FXMLLoader {
                        scriptEngine.eval(script);
                     }
                 } catch (ScriptException exception) {
-                    System.err.println(exception.getMessage());
+                    System.err.println(filename+": caused ScriptException\n"+exception.getMessage());
                 }
             }
         }
@@ -1771,7 +1773,7 @@ public class FXMLLoader {
                    scriptEngine.eval(script, localBindings);
                 }
             } catch (ScriptException exception){
-                throw new RuntimeException(exception);
+                throw new RuntimeException(filename+": caused ScriptException",exception);
             }
         }
     }
