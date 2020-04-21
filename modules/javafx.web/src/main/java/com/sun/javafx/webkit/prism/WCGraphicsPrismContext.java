@@ -773,17 +773,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         if (texture != null) {
             new Composite() {
                 @Override void doPaint(Graphics g) {
-                    // The handling of pattern transform is modeled after the WebKit
-                    // ImageCG.cpp's Image::drawPattern()
-                    float adjustedX = phase.getX()
-                            + srcRect.getX() * (float) patternTransform.getMatrix()[0];
-                    float adjustedY = phase.getY()
-                            + srcRect.getY() * (float) patternTransform.getMatrix()[3];
-                    float scaledTileWidth =
-                            srcRect.getWidth() * (float) patternTransform.getMatrix()[0];
-                    float scaledTileHeight =
-                            srcRect.getHeight() * (float) patternTransform.getMatrix()[3];
-
                     Image img = ((PrismImage)texture).getImage();
 
                     // Create subImage only if srcRect doesn't fit the texture bounds. See RT-20193.
@@ -794,11 +783,16 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                                                  (int)Math.ceil(srcRect.getWidth()),
                                                  (int)Math.ceil(srcRect.getHeight()));
                     }
+
+                    double m[] = patternTransform.getMatrix();
+                    Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));
+
                     g.setPaint(new ImagePattern(
                                img,
-                               adjustedX, adjustedY,
-                               scaledTileWidth, scaledTileHeight,
-                               false, false));
+                               phase.getX() + srcRect.getX(),
+                               phase.getY() + srcRect.getY(),
+                               srcRect.getWidth(), srcRect.getHeight(),
+                               at, false, false));
 
                     g.fillRect(destRect.getX(), destRect.getY(),
                                destRect.getWidth(), destRect.getHeight());
