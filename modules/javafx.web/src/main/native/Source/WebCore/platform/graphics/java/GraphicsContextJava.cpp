@@ -116,45 +116,6 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
     }
 }
 
-static FloatRect setPattern(Pattern &pattern, PlatformGraphicsContext* context)
-{
-    JNIEnv* env = WTF::GetJavaEnv();
-    Image& img = pattern.tileImage();
-
-    FloatRect srcRect = img.rect();
-    if (srcRect.isEmpty()) {
-        return FloatRect();
-    }
-
-    NativeImagePtr currFrame = img.nativeImageForCurrentFrame();
-    if (!currFrame) {
-        return FloatRect();
-    }
-
-    TransformationMatrix tm = pattern.getPatternSpaceTransform().toTransformationMatrix();
-
-    static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
-                "createTransform",
-                "(DDDDDD)Lcom/sun/webkit/graphics/WCTransform;");
-    ASSERT(mid);
-    JLObject transform(env->CallObjectMethod(PL_GetGraphicsManager(env), mid,
-                tm.a(), tm.b(), tm.c(), tm.d(), tm.e(), tm.f()));
-    ASSERT(transform);
-    WTF::CheckAndClearException(env);
-
-    context->rq().freeSpace(28)
-    << (jint) com_sun_webkit_graphics_GraphicsDecoder_SET_FILL_PATTERN
-    << currFrame
-    << srcRect.x() << srcRect.y()
-    << srcRect.width() << srcRect.height()
-    << RQRef::create(transform);
-
-    FloatRect destRect(srcRect.x(), srcRect.y(),
-        pattern.repeatX() ? srcRect.width() : img.width(),
-        pattern.repeatY() ? srcRect.height() : img.height());
-    return destRect;
-}
-
 class GraphicsContextPlatformPrivate : public PlatformGraphicsContext {
 };
 
@@ -254,17 +215,20 @@ void GraphicsContext::fillRect(const FloatRect& rect)
         return;
 
     if (m_state.fillPattern) {
-        FloatRect destRect = setPattern(
-            *m_state.fillPattern,
-            platformContext());
-
-        if (destRect.isEmpty())
-            return;
-
-        platformContext()->rq().freeSpace(20)
-        << (jint)com_sun_webkit_graphics_GraphicsDecoder_FILLRECT_FFFF
-        << destRect.x() << destRect.y()
-        << destRect.width() << destRect.height();
+        Image& img = m_state.fillPattern->tileImage();
+        FloatRect destRect(
+            rect.x(),
+            rect.y(),
+            m_state.fillPattern->repeatX() ? rect.width() : img.width(),
+            m_state.fillPattern->repeatY() ? rect.height() : img.height());
+        img.drawPattern(
+            *this,
+            destRect,
+            FloatRect(0., 0., img.width(), img.height()),
+            m_state.fillPattern->getPatternSpaceTransform(),
+            FloatPoint(),
+            FloatSize(),
+            CompositeCopy);
     } else {
         if (m_state.fillGradient) {
             setGradient(

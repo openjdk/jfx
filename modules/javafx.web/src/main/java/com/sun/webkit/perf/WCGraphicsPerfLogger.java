@@ -125,14 +125,6 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     }
 
     @Override
-    public void setFillPattern(WCImage image, WCRectangle srcRect,
-            WCTransform patternTransform) {
-        logger.resumeCount("SET_FILL_PATTERN");
-        gc.setFillPattern(image, srcRect, patternTransform);
-        logger.suspendCount("SET_FILL_PATTERN");
-    }
-
-    @Override
     public void setTextMode(boolean fill, boolean stroke, boolean clip) {
         logger.resumeCount("SET_TEXT_MODE");
         gc.setTextMode(fill, stroke, clip);

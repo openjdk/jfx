@@ -601,24 +601,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void setFillPattern(WCImage image,
-        WCRectangle srcRect, WCTransform patternTransform) {
-        if (log.isLoggable(Level.FINE)) {
-            log.fine("setFillPattern({0}, {1}, {2}, {3})",
-                new Object[] {srcRect.getX(), srcRect.getY(),
-                              srcRect.getWidth(), srcRect.getHeight()});
-        }
-
-        Image img = ((PrismImage)image).getImage();
-        double m[] = patternTransform.getMatrix();
-        Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));
-        state.setPaint(new ImagePattern(img,
-                    srcRect.getX(), srcRect.getY(),
-                    srcRect.getWidth(), srcRect.getHeight(),
-                    at, false, false));
-    }
-
-    @Override
     public void setTextMode(boolean fill, boolean stroke, boolean clip) {
         if (log.isLoggable(Level.FINE)) {
             log.fine("setTextMode(fill:" + fill + ",stroke:" + stroke + ",clip:" + clip + ")");

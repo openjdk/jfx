@@ -85,7 +85,6 @@ public final class GraphicsDecoder  {
     @Native public final static int SET_MITER_LIMIT        = 54;
     @Native public final static int SET_TEXT_MODE          = 55;
     @Native public final static int SET_PERSPECTIVE_TRANSFORM = 56;
-    @Native public final static int SET_FILL_PATTERN       = 57;
 
     private final static PlatformLogger log =
             PlatformLogger.getLogger(GraphicsDecoder.class.getName());
@@ -161,11 +160,6 @@ public final class GraphicsDecoder  {
                 case SET_STROKE_GRADIENT:
                     gc.setStrokeGradient(getGradient(gc, buf));
                     break;
-                case SET_FILL_PATTERN:
-                    gc.setFillPattern(
-                        WCImage.getImage(gm.getRef(buf.getInt())),
-                        getRectangle(buf),
-                        (WCTransform)gm.getRef(buf.getInt()));
                 case SET_LINE_DASH:
                     gc.setLineDash(buf.getFloat(), getFloatArray(buf));
                     break;
