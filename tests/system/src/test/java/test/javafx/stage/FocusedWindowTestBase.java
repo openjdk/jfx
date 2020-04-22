@@ -38,23 +38,17 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.Assert;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.Ignore;
 import test.util.Util;
 
-public class FocusedWindowTest {
+@Ignore
+abstract public class FocusedWindowTestBase {
 
     static CountDownLatch startupLatch;
     static Stage stage = null;
 
-    static {
-        System.setProperty("glass.platform","Monocle");
-        System.setProperty("monocle.platform","Headless");
-    }
 
-    @BeforeClass
-    public static void initFX() throws Exception {
+    public static void initFXBase() throws Exception {
         startupLatch = new CountDownLatch(1);
         Platform.startup(startupLatch::countDown);
         Platform.setImplicitExit(false);
@@ -65,8 +59,7 @@ public class FocusedWindowTest {
     static WeakReference<Stage> closedFocusedStageWeak = null;
     static Stage closedFocusedStage = null;
 
-    @Test
-    public void testClosedFocusedStageLeak() throws Exception {
+    public void testClosedFocusedStageLeakBase() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             closedFocusedStage = new Stage();
@@ -109,12 +102,5 @@ public class FocusedWindowTest {
         }
 
         Assert.assertNull(weakReference.get());
-    }
-
-    @AfterClass
-    public static void teardownOnce() {
-        Platform.runLater(() -> {
-            Platform.exit();
-        });
     }
 }
