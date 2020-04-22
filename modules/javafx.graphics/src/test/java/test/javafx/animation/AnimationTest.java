@@ -255,6 +255,23 @@ public class AnimationTest {
     }
 
     @Test
+    public void testJumpTo_IndefiniteCycles() {
+        animation.shim_setCycleDuration(TWO_SECS);
+        animation.setCycleCount(Animation.INDEFINITE);
+
+        animation.jumpTo("end");
+        assertEquals(TWO_SECS, animation.getCurrentTime());
+    }
+
+    @Test
+    public void testJumpTo_IndefiniteCycleDuration() {
+        animation.shim_setCycleDuration(Duration.INDEFINITE);
+
+        animation.jumpTo("end");
+        assertEquals(Duration.millis(Long.MAX_VALUE / 6), animation.getCurrentTime());
+    }
+
+    @Test
     public void testJumpToCuePoint_Default() {
         animation.getCuePoints().put("ONE_SEC", ONE_SEC);
         animation.getCuePoints().put("THREE_SECS", THREE_SECS);
