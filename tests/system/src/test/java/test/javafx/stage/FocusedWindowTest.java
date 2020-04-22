@@ -53,51 +53,44 @@ public class FocusedWindowTest {
         System.setProperty("monocle.platform","Headless");
     }
 
-    public static class TestApp extends Application {
-
-        @Override
-        public void start(Stage primaryStage) throws Exception {
-            primaryStage.setTitle("Primary Stage");
-            primaryStage.setScene(new Scene(new TextField()));
-
-            primaryStage.setOnShown(l -> {
-                Platform.runLater(() -> startupLatch.countDown());
-            });
-            primaryStage.show();
-            Platform.setImplicitExit(false);
-            stage = primaryStage;
-        }
-    }
-
     @BeforeClass
     public static void initFX() throws Exception {
         startupLatch = new CountDownLatch(1);
-        new Thread(() -> Application.launch(TestApp.class, (String[]) null)).start();
-        Assert.assertTrue("Timeout waiting for FX runtime to start", startupLatch.await(15, TimeUnit.SECONDS));
-        Platform.runLater(() -> stage.close());
+        Platform.startup(startupLatch::countDown);
+        Platform.setImplicitExit(false);
+        Assert.assertTrue("Timeout waiting for FX runtime to start",
+                startupLatch.await(15, TimeUnit.MILLISECONDS));
     }
 
     static WeakReference<Stage> closedFocusedStageWeak = null;
     static Stage closedFocusedStage = null;
 
     @Test
-    public void testLeak() throws Exception {
+    public void testClosedFocusedStageLeak() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
         Util.runAndWait(() -> {
             closedFocusedStage = new Stage();
             closedFocusedStage.setTitle("Focused Stage");
             closedFocusedStageWeak = new WeakReference<>(closedFocusedStage);
             TextField textField = new TextField();
             closedFocusedStage.setScene(new Scene(textField));
-        });
-        Util.runAndWait(() -> {
+            closedFocusedStage.setOnShown(l -> {
+                latch.countDown();
+            });
             closedFocusedStage.show();
         });
-        Util.runAndWait(() -> {
-            closedFocusedStage.close();
+        Assert.assertTrue("Timeout waiting for closedFocusedStage to show`",
+                latch.await(15, TimeUnit.MILLISECONDS));
+
+        CountDownLatch hideLatch = new CountDownLatch(1);
+        closedFocusedStage.setOnHidden(a -> {
+            hideLatch.countDown();
         });
-        Util.runAndWait(() -> {
-            closedFocusedStage.requestFocus();
-        });
+        Util.runAndWait(() -> closedFocusedStage.close());
+        Assert.assertTrue("Timeout waiting for closedFocusedStage to hide`",
+                hideLatch.await(15, TimeUnit.MILLISECONDS));
+
+        closedFocusedStage.requestFocus();
         closedFocusedStage = null;
         assertCollectable(closedFocusedStageWeak);
     }
