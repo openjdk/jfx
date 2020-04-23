@@ -28,7 +28,7 @@ package com.sun.scenario.animation.shared;
 import javafx.animation.Animation;
 
 /**
- * Clip envelope for multi-cycle animations. In this case, autoReverse and cyclePosition, which can be different from ticks
+ * Clip envelope for multi-cycle animations. In this case, autoReverse and cyclePosition (which can be different from ticks)
  * are important.
  */
 abstract class MultiLoopClipEnvelope extends ClipEnvelope {

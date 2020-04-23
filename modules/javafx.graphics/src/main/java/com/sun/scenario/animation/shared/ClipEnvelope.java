@@ -61,11 +61,6 @@ public abstract class ClipEnvelope {
      */
     protected long cycleTicks = 0;
 
-    /**
-     * The number of the current cycle. Always >=0.
-     */
-    protected int currentCycle = 0; // useful only for infinite. single is 1, finite can calculate ticks/totalTicks
-
     protected long deltaTicks = 0;
 
     /**
@@ -98,7 +93,6 @@ public abstract class ClipEnvelope {
     public abstract ClipEnvelope setCycleDuration(Duration cycleDuration);
     public abstract ClipEnvelope setCycleCount(int cycleCount);
     public abstract void setRate(double rate);
-
 
     protected abstract double calculateCurrentRate();
 
