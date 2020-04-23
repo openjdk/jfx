@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -785,12 +785,13 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                     }
 
                     double m[] = patternTransform.getMatrix();
-                    Affine3D at = new Affine3D(new Affine2D(m[0], m[1], m[2], m[3], m[4], m[5]));
+                    Affine3D at = new Affine3D();
+                    at.translate(phase.getX(), phase.getY());
+                    at.concatenate(m[0], m[1], m[4], m[2], m[3], m[5]);
 
                     g.setPaint(new ImagePattern(
                                img,
-                               phase.getX() + srcRect.getX(),
-                               phase.getY() + srcRect.getY(),
+                               srcRect.getX(), srcRect.getY(),
                                srcRect.getWidth(), srcRect.getHeight(),
                                at, false, false));
 
