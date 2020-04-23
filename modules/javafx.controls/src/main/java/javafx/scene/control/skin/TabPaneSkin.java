@@ -69,6 +69,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -195,12 +196,9 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
 
         initializeTabListener();
+        updateSelectionModel();
 
-        registerChangeListener(control.getSelectionModel().selectedItemProperty(), e -> {
-            isSelectingTab = true;
-            selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
-            getSkinnable().requestLayout();
-        });
+        registerChangeListener(control.selectionModelProperty(), e -> updateSelectionModel());
         registerChangeListener(control.sideProperty(), e -> updateTabPosition());
         registerChangeListener(control.widthProperty(), e -> clipRect.setWidth(getSkinnable().getWidth()));
         registerChangeListener(control.heightProperty(), e -> clipRect.setHeight(getSkinnable().getHeight()));
@@ -257,8 +255,6 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         }
     };
 
-
-
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
@@ -267,6 +263,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
     /** {@inheritDoc} */
     @Override public void dispose() {
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
+            selectionModel = null;
+        }
+
         super.dispose();
 
         if (behavior != null) {
@@ -428,6 +429,25 @@ public class TabPaneSkin extends SkinBase<TabPane> {
      * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    private SelectionModel<Tab> selectionModel;
+    private InvalidationListener selectionChangeListener = observable -> {
+        isSelectingTab = true;
+        selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
+        getSkinnable().requestLayout();
+    };
+    private WeakInvalidationListener weakSelectionChangeListener =
+            new WeakInvalidationListener(selectionChangeListener);
+
+    private void updateSelectionModel() {
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().removeListener(weakSelectionChangeListener);
+        }
+        selectionModel = getSkinnable().getSelectionModel();
+        if (selectionModel != null) {
+            selectionModel.selectedItemProperty().addListener(weakSelectionChangeListener);
+        }
+    }
 
     private static int getRotation(Side pos) {
         switch (pos) {
