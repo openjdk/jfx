@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,9 +48,6 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
 
     private final static PlatformLogger log = PlatformLogger.getLogger(ScrollBarThemeImpl.class.getName());
 
-    private WeakReference<ScrollBar> testSBRef = // used for scrollbar thickness calculation
-            new WeakReference<ScrollBar>(null);
-
     private final Accessor accessor;
 
     private final Pool<ScrollBarWidget> pool;
@@ -81,17 +78,12 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         accessor.addViewListener(new ViewListener(pool, accessor) {
             @Override public void invalidated(Observable ov) {
                 super.invalidated(ov);
-                ScrollBar testSB = new ScrollBarWidget(ScrollBarThemeImpl.this);
+                ScrollBar testSB = new ScrollBarWidget();
                 // testSB should be added to the new WebView (if any)
                 accessor.addChild(testSB);
-                testSBRef = new WeakReference<ScrollBar>(testSB);
             }
         });
 
-    }
-
-    ScrollBar getTestSBRef() {
-        return testSBRef.get();
     }
 
     private static Orientation convertOrientation(int orientation) {
@@ -156,7 +148,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     {
         ScrollBarWidget sb = pool.get(id);
         if (sb == null) {
-            sb = new ScrollBarWidget(this);
+            sb = new ScrollBarWidget();
             pool.put(id, sb, accessor.getPage().getUpdateContentCycleID());
             accessor.addChild(sb);
         }

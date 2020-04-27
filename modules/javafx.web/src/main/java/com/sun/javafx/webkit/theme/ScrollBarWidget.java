@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,15 +40,12 @@ public final class ScrollBarWidget extends ScrollBar implements RenderThemeImpl.
         });
     }
 
-    private ScrollBarThemeImpl sbtImpl;
-
     {
         // To initialize the class helper at the begining each constructor of this class
         ScrollBarWidgetHelper.initHelper(this);
     }
 
-    public ScrollBarWidget(ScrollBarThemeImpl sbtImpl) {
-        this.sbtImpl = sbtImpl;
+    public ScrollBarWidget() {
         setOrientation(Orientation.VERTICAL);
         setMin(0);
         setManaged(false);
@@ -72,14 +69,10 @@ public final class ScrollBarWidget extends ScrollBar implements RenderThemeImpl.
         initializeThickness();
     }
 
-    private boolean thicknessInitialized = false;
+    private static boolean thicknessInitialized = false;
     private void initializeThickness() {
         if (!thicknessInitialized) {
-            ScrollBar testSB = sbtImpl.getTestSBRef();
-            if (testSB == null) {
-                return;
-            }
-            int thickness = (int) testSB.prefWidth(-1);
+            int thickness = (int) prefWidth(-1);
             if (thickness != 0 && ScrollBarTheme.getThickness() != thickness) {
                 ScrollBarTheme.setThickness(thickness);
             }
