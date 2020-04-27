@@ -613,7 +613,7 @@ public class MenuItemTest {
         Group root = (Group)scene.getRoot();
         root.getChildren().clear();
 
-        // Assert that the MenuItem's action listner is not invoked
+        // Assert that the MenuItem's action listener is not invoked
         // after MenuItem has been removed from the scene
         keyboard.doKeyPress(KeyCode.DIGIT1, KeyModifier.ALT);
         assertEquals(2, eventCounter);
