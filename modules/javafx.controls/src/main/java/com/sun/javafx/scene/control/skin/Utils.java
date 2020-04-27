@@ -429,7 +429,7 @@ public class Utils {
         // However the calculations include the line spacing as part of a
         // line's height.  In order to not cut off the last line because its
         // line spacing wouldn't fit, the height used for the calculation
-        // is increase here with the line spacing amount.
+        // is increased here with the line spacing amount.
 
         height += lineSpacing;
 
