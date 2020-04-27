@@ -75,6 +75,13 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
 
     private ObservableList<E> value;
     private boolean valid = false;
+
+    /**
+     * Invalidation listener used for observing dependencies.  This
+     * is never cleared once created as there is no way to determine
+     * when all dependencies that were previously bound were removed
+     * in one or more calls to {@link #unbind(Observable...)}.
+     */
     private BindingHelperObserver observer;
     private ListExpressionHelper<E> helper = null;
 
@@ -203,7 +210,6 @@ public abstract class ListBinding<E> extends ListExpression<E> implements Bindin
                     dep.removeListener(observer);
                 }
             }
-            observer = null;
         }
     }
 
