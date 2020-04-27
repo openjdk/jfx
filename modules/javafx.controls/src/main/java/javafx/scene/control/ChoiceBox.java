@@ -182,6 +182,7 @@ public class ChoiceBox<T> extends Control {
             oldSM = sm;
             if (sm != null) {
                 sm.selectedItemProperty().addListener(selectedItemListener);
+                // FIXME JDK-8242001 - must sync to model state always
                 if (sm.getSelectedItem() != null && ! valueProperty().isBound()) {
                     ChoiceBox.this.setValue(sm.getSelectedItem());
                 }

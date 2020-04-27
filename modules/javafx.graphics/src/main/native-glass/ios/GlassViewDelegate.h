@@ -57,6 +57,7 @@ typedef __attribute__((NSObject)) CFMutableDictionaryRef GlassMutableDictionaryR
 // touches
 @property (nonatomic, strong) GlassMutableDictionaryRef touches;
 @property (nonatomic) jlong lastTouchId;
+@property (nonatomic) CGPoint beginTouchEventPoint; // coordinates at the beginning of a 'touch' event
 // gestures
 @property (nonatomic, retain) GlassGestureDelegate *delegate;
 

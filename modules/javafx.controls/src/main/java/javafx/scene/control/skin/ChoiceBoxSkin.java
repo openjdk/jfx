@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,6 @@ package javafx.scene.control.skin;
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.beans.WeakInvalidationListener;
-import javafx.scene.Node;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
 import javafx.util.StringConverter;
@@ -156,20 +153,11 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         registerChangeListener(control.selectionModelProperty(), e -> updateSelectionModel());
         registerChangeListener(control.showingProperty(), e -> {
             if (getSkinnable().isShowing()) {
-                MenuItem item = null;
 
-                SelectionModel sm = getSkinnable().getSelectionModel();
+                SelectionModel<T> sm = getSkinnable().getSelectionModel();
                 if (sm == null) return;
 
                 long currentSelectedIndex = sm.getSelectedIndex();
-                int itemInControlCount = choiceBoxItems.size();
-                boolean hasSelection = currentSelectedIndex >= 0 && currentSelectedIndex < itemInControlCount;
-                if (hasSelection) {
-                    item = popup.getItems().get((int) currentSelectedIndex);
-                    if (item != null && item instanceof RadioMenuItem) ((RadioMenuItem)item).setSelected(true);
-                } else {
-                    if (itemInControlCount > 0) item = popup.getItems().get(0);
-                }
 
                 // This is a fix for RT-9071. Ideally this won't be necessary in
                 // the long-run, but for now at least this resolves the
@@ -199,15 +187,6 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
             updateSelection();
             if(selectionModel != null && selectionModel.getSelectedIndex() == -1) {
                 label.setText(""); // clear label text when selectedIndex is -1
-            }
-        });
-        registerChangeListener(control.getSelectionModel().selectedItemProperty(), e -> {
-            if (getSkinnable().getSelectionModel() != null) {
-                int index = getSkinnable().getSelectionModel().getSelectedIndex();
-                if (index != -1) {
-                    MenuItem item = popup.getItems().get(index);
-                    if (item instanceof RadioMenuItem) ((RadioMenuItem)item).setSelected(true);
-                }
             }
         });
         registerChangeListener(control.converterProperty(), e -> {
@@ -364,6 +343,11 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         return label.getText();
     }
 
+    // Test only purpose
+    ContextMenu getChoiceBoxPopup() {
+        return popup;
+    }
+
     private void addPopupItem(final T o, int i) {
         MenuItem popupItem = null;
         if (o instanceof Separator) {
@@ -428,6 +412,9 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
                 MenuItem selectedItem = popup.getItems().get(selectedIndex);
                 if (selectedItem instanceof RadioMenuItem) {
                     ((RadioMenuItem) selectedItem).setSelected(true);
+                } else {
+                    // need to unselect toggles if selectionModel allows a Separator/MenuItem
+                    // to be selected
                     toggleGroup.selectToggle(null);
                 }
                 // update the label
