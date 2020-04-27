@@ -31,6 +31,7 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.util.Utils;
 import com.sun.prism.Graphics;
 import com.sun.prism.Material;
 import com.sun.prism.MeshView;
@@ -182,9 +183,9 @@ public abstract class NGShape3D extends NGNode {
                     ambientBlue  += bL;
                 }
             }
-            ambientRed = saturate(ambientRed);
-            ambientGreen = saturate(ambientGreen);
-            ambientBlue = saturate(ambientBlue);
+            ambientRed = Utils.clamp(0, ambientRed, 1);
+            ambientGreen = Utils.clamp(0, ambientGreen, 1);
+            ambientBlue = Utils.clamp(0, ambientBlue, 1);
             meshView.setAmbientLight(ambientRed, ambientGreen, ambientBlue);
         }
         // TODO: 3D Required for D3D implementation of lights, which is limited to 3
@@ -199,11 +200,6 @@ public abstract class NGShape3D extends NGNode {
         }
 
         meshView.render(g);
-    }
-
-    // Clamp between [0, 1]
-    private static float saturate(float value) {
-        return value < 1.0f ? ((value < 0.0f) ? 0.0f : value) : 1.0f;
     }
 
     public void setMesh(NGTriangleMesh triangleMesh) {
