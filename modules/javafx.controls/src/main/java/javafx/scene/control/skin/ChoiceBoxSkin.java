@@ -185,13 +185,14 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
             updatePopupItems();
             updateSelectionModel();
             updateSelection();
-            if(selectionModel != null && selectionModel.getSelectedIndex() == -1) {
-                label.setText(""); // clear label text when selectedIndex is -1
-            }
         });
         registerChangeListener(control.converterProperty(), e -> {
             updateChoiceBoxItems();
             updatePopupItems();
+            updateLabelText();
+        });
+        registerChangeListener(control.valueProperty(), e -> {
+            updateLabelText();
         });
     }
 
@@ -323,9 +324,19 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
 
         updateSelectionModel();
         updateSelection();
-        if(selectionModel != null && selectionModel.getSelectedIndex() == -1) {
-            label.setText(""); // clear label text when selectedIndex is -1
+        updateLabelText();
+    }
+
+    private void updateLabelText() {
+        T value = getSkinnable().getValue();
+        label.setText(getDisplayText(value));
+    }
+
+    private String getDisplayText(T value) {
+        if (getSkinnable().getConverter() != null) {
+            return getSkinnable().getConverter().toString(value);
         }
+        return value == null ? "" : value.toString();
     }
 
     private void updateChoiceBoxItems() {
@@ -356,9 +367,7 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
         } else if (o instanceof SeparatorMenuItem) {
             popupItem = (SeparatorMenuItem) o;
         } else {
-            StringConverter<T> c = getSkinnable().getConverter();
-            String displayString = (c == null) ? ((o == null) ? "" : o.toString()) :  c.toString(o);
-            final RadioMenuItem item = new RadioMenuItem(displayString);
+            final RadioMenuItem item = new RadioMenuItem(getDisplayText(o));
             item.setId("choice-box-menu-item");
             item.setToggleGroup(toggleGroup);
             item.setOnAction(e -> {
@@ -401,11 +410,11 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
     private void updateSelection() {
         if (selectionModel == null || selectionModel.isEmpty()) {
             toggleGroup.selectToggle(null);
-            label.setText("");
-        } else {
+         } else {
             int selectedIndex = selectionModel.getSelectedIndex();
             if (selectedIndex == -1 || selectedIndex > popup.getItems().size()) {
-                label.setText(""); // clear label text
+                // FIXME: when do we get here?
+                // and if, shouldn't we unselect the toggles?
                 return;
             }
             if (selectedIndex < popup.getItems().size()) {
@@ -417,8 +426,6 @@ public class ChoiceBoxSkin<T> extends SkinBase<ChoiceBox<T>> {
                     // to be selected
                     toggleGroup.selectToggle(null);
                 }
-                // update the label
-                label.setText(popup.getItems().get(selectedIndex).getText());
             }
         }
     }
