@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,6 +69,14 @@ import test.util.Util;
  *       3.1 tab[0] should remain selected tab.
  *       3.2 tab[1] is the first tab in tab header.
  *       3.3 Pressing RIGHT key should select tabs in order: tab 4,3,2,0
+ *
+ * b1. testPermuteGetTabsWithMoreTabs1()
+ *    1. Add tabs 0,1
+ *    2. Permute tabs to tab 0,1,2,3 using TabPane.getTabs().setAll().
+ *    3. Verify that,
+ *       3.1 tab[1] should remain selected tab.
+ *       3.2 tab[0] is the first tab in tab header.
+ *       3.3 Pressing RIGHT key should select tabs in order: tab 1,2,3
  *
  * c. testPermuteGetTabsWithLessTabs()
  *    1. Add tab 3,1 and some(6) more tabs, and select tab 1.
@@ -170,6 +178,59 @@ public class TabPanePermuteGetTabsTest {
         // Step #3.3
         for (int i = 4; i >= 0; i--) {
             if (i == 1) continue;
+            Util.runAndWait(() -> {
+                robot.keyPress(KeyCode.RIGHT);
+                robot.keyRelease(KeyCode.RIGHT);
+            });
+            waitForLatch(selectionLatch[i], 5,
+                "Timeout: Waiting for tab[" + i + "] to get selected.");
+            Assert.assertSame("tab[" + i + "] should get selected on RIGHT key press.",
+                tab[i], tabPane.getSelectionModel().getSelectedItem());
+        }
+    }
+
+    // Test for JDK-8237602
+    @Test
+    public void testPermutGetTabsWithMoreTabs1() {
+        // Step #1
+        Util.runAndWait(() -> {
+            tabPane.getTabs().setAll(tab[0], tab[1]);
+            tabPane.getSelectionModel().select(tab[1]);
+        });
+        delay();
+
+        Assert.assertSame("Sanity: tab[1] should be the selected tab.",
+            tab[1], tabPane.getSelectionModel().getSelectedItem());
+
+        // Step #2
+        Util.runAndWait(() -> {
+            tabPane.getTabs().setAll(tab[0], tab[1], tab[2], tab[3]);
+        });
+        delay();
+
+        // Step #3.1
+        Assert.assertSame("Sanity: tab[1] should remain selected tab after permuting.",
+            tab[1], tabPane.getSelectionModel().getSelectedItem());
+
+        // Step #3.2
+        // Click on first tab header
+        selectionLatch[0] = new CountDownLatch(1);
+        Util.runAndWait(() -> {
+            robot.mouseMove((int) (scene.getWindow().getX() + scene.getX() + firstTabdXY),
+                    (int) (scene.getWindow().getY() + scene.getY() + firstTabdXY));
+            robot.mousePress(MouseButton.PRIMARY);
+            robot.mouseRelease(MouseButton.PRIMARY);
+        });
+        delay();
+
+        waitForLatch(selectionLatch[0], 5,
+            "Timeout: Waiting for tab[" + 0 + "] to get selected.");
+        Assert.assertSame("tab[0] should be first tab after permuting.",
+            tab[0], tabPane.getSelectionModel().getSelectedItem());
+
+        // step #3.3
+        selectionLatch[1] = new CountDownLatch(1);
+        for (int i = 1; i <= 3; i++) {
             Util.runAndWait(() -> {
                 robot.keyPress(KeyCode.RIGHT);
                 robot.keyRelease(KeyCode.RIGHT);
