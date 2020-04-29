@@ -108,7 +108,7 @@ public class WebViewTest extends TestBase {
             "   </div>" +
             "</body> </html>"
             );
-        submit(()->{
+        submit(() -> {
             assertFalse("Font weight test failed ",
                 (Boolean) getEngine().executeScript(
                 "document.getElementById('six').offsetWidth == document.getElementById('nine').offsetWidth"));
