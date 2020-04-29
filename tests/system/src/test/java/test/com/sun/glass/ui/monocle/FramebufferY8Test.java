@@ -190,7 +190,7 @@ public class FramebufferY8Test {
     private void printTime(Object source, String method, long duration) {
         float msPerFrame = (float) duration / ITERATIONS;
         System.out.println(String.format(
-                "Converted %,d frames of %,d × %,d px to RGB565 in %,d ms (%,.0f ms/frame): %s.%s",
+                "Converted %,d frames of %,d x %,d px to RGB565 in %,d ms (%,.0f ms/frame): %s.%s",
                 ITERATIONS, WIDTH, HEIGHT, duration, msPerFrame,
                 source.getClass().getSuperclass().getSimpleName(), method));
     }
